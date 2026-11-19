@@ -11,6 +11,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
@@ -234,17 +235,12 @@ namespace sw
         {
             projectile._tags.addTag( tag );
         }
-        for ( XMLNode actionNode = node.findChild( "OnHit" ); actionNode; actionNode = actionNode.findNextSibling( "OnHit" ) )
+        bValid = GameDataXML::readChildrenInto( node, "OnHit", projectile._listHitAction, [&]( const XMLNode& actionNode, ProjectileHitAction& outAction )
         {
             ProjectileHitActionDef text;
-            ProjectileHitAction    action;
-            const bool             bProperties = XMLFields::readProperties( actionNode, text, sourceName );
-            const bool             bCompiled   = bProperties && ConditionExpr::compile( text._when, sourceName, action._when, ProjectileDefInternal::kBareTag ) &&
-                                   GameActionCall::compileText( text._call, sourceName, action._call );
-            bValid = bValid && bCompiled;
-            if ( bCompiled )
-                projectile._listHitAction.push_back( action );
-        }
+            return XMLFields::readProperties( actionNode, text, sourceName ) && ConditionExpr::compile( text._when, sourceName, outAction._when, ProjectileDefInternal::kBareTag ) &&
+                   GameActionCall::compileText( text._call, sourceName, outAction._call );
+        } ) && bValid;
         if ( projectile._id.empty() || bValid == false )
         {
             SW_LOG_ERROR_ID( "Projectile.ProjectileInvalidSkipped", "%#: projectile '%#' has invalid fields - skipped", sourceName, projectile._id.c_str() );

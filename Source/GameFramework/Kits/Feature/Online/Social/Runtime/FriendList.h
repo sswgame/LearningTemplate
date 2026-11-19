@@ -1,5 +1,5 @@
 /**
- * @file FriendListModel.h
+ * @file FriendList.h
  * @brief 친구 목록 화면이 읽는 친구 목록 상태입니다. `SocialMethod::ListLinks` 와 `FriendPresence` 의 응답과 접속 상태 알림을 받아 친구 줄(계정, 접속 상태, 활동)과 받은 신청 수를 보관합니다(온라인 키트 U1).
  * @details 화면(`FriendListScreen`)은 요청을 직접 보내지 않고 이 객체를 읽는다. 목록은 두 요청(관계 목록 → 접속 상태)이 모두 끝나야 `Loaded` 이고, 어느 쪽이든 실패하면 `Failed` 로 끝나며 이전 목록을 남기지 않는다.
  *          `update` 가 클라이언트의 알림을 꺼내 쓴다 — 접속 상태 변화는 줄에 바로 반영하고, 친구가 늘거나 줄거나 신청이 오면 목록을 다시 묻는다(이미 한 번 받은 뒤에만).
@@ -38,15 +38,15 @@ namespace sw
 namespace sw
 {
     /**
-     * @class FriendListModel
+     * @class FriendList
      * @brief 친구 목록 한 벌과 그 상태입니다.
      */
-    class SW_KIT_API FriendListModel
+    class SW_KIT_API FriendList
     {
     public:
-        FriendListModel();
-        FriendListModel( const FriendListModel& )            = delete; // 응답 델리게이트가 this 를 가리킨다
-        FriendListModel& operator=( const FriendListModel& ) = delete;
+        FriendList();
+        FriendList( const FriendList& )            = delete; // 응답 델리게이트가 this 를 가리킨다
+        FriendList& operator=( const FriendList& ) = delete;
 
         /**
          * @brief 클라이언트를 빌려 쓰고 그 알림 버퍼를 꺼낼 권한을 받습니다(`SocialClient` 가 서비스 클라이언트에 등록 · 초기화된 것).

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Admin/Editor/Model/AdminToolModel.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/Model/AdminToolUtil.h"
 
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -9,7 +9,7 @@
 
 namespace sw::editor
 {
-    bool AdminToolModel::parseAccountID( string_view text, AccountID& outAccountID )
+    bool AdminToolUtil::parseAccountID( string_view text, AccountID& outAccountID )
     {
         uint64 value = 0;
         if ( StringUtil::parseUint64( text, value, 16 ) == false || value == kInvalidAccountID )
@@ -18,21 +18,21 @@ namespace sw::editor
         return true;
     }
 
-    string AdminToolModel::formatAccountID( AccountID accountID )
+    string AdminToolUtil::formatAccountID( AccountID accountID )
     {
         StringBuilder<constant::buffer::kMax32> text;
         text.appendFormat( "%#", Fmt( accountID, Format( 16, Format::Padding::Zero ).hex() ) );
         return string( text.view() );
     }
 
-    string AdminToolModel::formatBalance( const LedgerBalance& balance )
+    string AdminToolUtil::formatBalance( const LedgerBalance& balance )
     {
         StringBuilder<constant::buffer::kMax64> text;
         text.appendFormat( "%#%#", balance._amount, balance.isDebt() ? " (debt)" : "" );
         return string( text.view() );
     }
 
-    string AdminToolModel::formatClock( int64 unixMs )
+    string AdminToolUtil::formatClock( int64 unixMs )
     {
         // 서버가 준 값이다 - 1970 앞의 시각에도 음수 칸이 나오지 않게 하루 안으로 접는다.
         const int64                             secondOfDay = ( unixMs / constant::time::kMillisecondsPerSecond % constant::time::kSecondsPerDay + constant::time::kSecondsPerDay ) % constant::time::kSecondsPerDay;
@@ -44,7 +44,7 @@ namespace sw::editor
         return string( text.view() );
     }
 
-    string AdminToolModel::formatSanction( int64 untilMs, int64 nowMs )
+    string AdminToolUtil::formatSanction( int64 untilMs, int64 nowMs )
     {
         if ( untilMs == 0 )
             return "none";
@@ -58,7 +58,7 @@ namespace sw::editor
         return string( text.view() );
     }
 
-    bool AdminToolModel::tryMakeEndMs( int64 nowMs, int64 durationSeconds, int64& outEndMs )
+    bool AdminToolUtil::tryMakeEndMs( int64 nowMs, int64 durationSeconds, int64& outEndMs )
     {
         if ( durationSeconds < 0 )
             return false;
@@ -74,7 +74,7 @@ namespace sw::editor
         return true;
     }
 
-    const utf8* AdminToolModel::getMethodName( uint16 method )
+    const utf8* AdminToolUtil::getMethodName( uint16 method )
     {
         if ( method == AdminMethod::LookupAccount::kID )
             return "LookupAccount";

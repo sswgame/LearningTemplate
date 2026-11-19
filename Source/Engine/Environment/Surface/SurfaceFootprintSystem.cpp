@@ -53,12 +53,9 @@ namespace sw
                     return nullptr;
                 if ( bTarget == false )
                     return &pSystem->getSceneRecord();
-                const GameObject* pTarget = query.findTargetObject();
+                const GameObject* pTarget = query.findTargetObject( outValue );
                 if ( pTarget == nullptr )
-                {
-                    outValue.setText( query.getTargetProblem() );
                     return nullptr;
-                }
                 const SurfaceFootstepRecord* pRecord = pSystem->findObjectRecord( pTarget->getObjectID() );
                 if ( pRecord == nullptr )
                     outValue.setText( "the target has not stepped yet" );

@@ -77,12 +77,9 @@ namespace sw
             /** @brief 감시 값 `Zone.Value` 입니다. 대상이 든 지역들의 위치 값 중 가장 큰 것이고, 어느 지역에도 없으면 0 입니다. */
             [[nodiscard]] static bool readValue( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject* pTarget = query.findTargetObject();
+                const GameObject* pTarget = query.findTargetObject( outValue );
                 if ( pTarget == nullptr || query._pManager == nullptr )
-                {
-                    outValue.setText( query.getTargetProblem() );
                     return false;
-                }
                 float32 probe = 0.0f;
                 if ( readSampleValue( ZoneSample{}, query._key, probe ) == false )
                 {
@@ -103,12 +100,9 @@ namespace sw
             /** @brief 감시 값 `Zone.Sources` 입니다. 대상이 든 지역의 출처를 이름 순으로 `,` 로 이은 글이고, 없으면 `None` 입니다. */
             [[nodiscard]] static bool readSources( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject* pTarget = query.findTargetObject();
+                const GameObject* pTarget = query.findTargetObject( outValue );
                 if ( pTarget == nullptr || query._pManager == nullptr )
-                {
-                    outValue.setText( query.getTargetProblem() );
                     return false;
-                }
                 vector<string> listName;
                 forEachZone( *query._pManager, *pTarget, [&listName]( const hashed_string& source, const ZoneSample& /*sample*/ )
                 { listName.push_back( source.c_str() ); } );

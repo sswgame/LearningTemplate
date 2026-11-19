@@ -224,12 +224,9 @@ namespace sw
             /** @brief 감시 값 `Mesh.LOD` — 대상 오브젝트의 메시마다 판정 한 줄(`MeshLODSystem::explainLOD`)입니다. */
             [[nodiscard]] static bool readLOD( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject* pTarget = query.findTargetObject();
+                const GameObject* pTarget = query.findTargetObject( outValue );
                 if ( pTarget == nullptr )
-                {
-                    outValue.setText( query.getTargetProblem() );
                     return false;
-                }
                 string text;
                 if ( describeObject( *pTarget, text ) == false )
                 {

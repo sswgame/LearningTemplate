@@ -258,12 +258,4 @@ namespace sw
             }
         }
     }
-
-    void TileMap::debugLogTileHd2d( int32 x, int32 y ) const
-    {
-        [[maybe_unused]] const OverworldTileVisual tileVisual = getTileVisual( x, y );
-        SW_LOG_TRACE_ID( "TileMap.TileHTintFlags", "tile (%#,%#) h=%# tint=(%#,%#,%#) flags walk=%# enc=%# pt=%#",
-                         x, y, tileVisual._height, tileVisual._tintR, tileVisual._tintG, tileVisual._tintB,
-                         isWalkable( x, y ) ? 1 : 0, isEncounterTile( x, y ) ? 1 : 0, isPassThrough( x, y ) ? 1 : 0 );
-    }
 } // namespace sw

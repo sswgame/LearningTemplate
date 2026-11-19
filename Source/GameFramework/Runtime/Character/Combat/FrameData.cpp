@@ -12,6 +12,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
@@ -98,39 +99,35 @@ namespace sw
             move._name = pID;
         const int32 lastFrame = move.getTotalFrames();
 
-        for ( XMLNode child = node.findChild( "Hitbox" ); child; child = child.findNextSibling( "Hitbox" ) )
+        bValid = GameDataXML::readChildrenInto( node, "Hitbox", move._listHitbox, [&]( const XMLNode& child, MoveHitbox& outHitbox )
         {
             // 프레임 구간을 적지 않으면 기술의 활성 구간이다(이 기술의 데이터에서 온 값).
-            MoveHitbox hitbox;
-            hitbox._fromFrame = move._startup;
-            hitbox._toFrame   = move.getLastActiveFrame();
-            bool bHitboxValid = XMLFields::readProperties( child, hitbox, sourceName ); // 크기 >= 0 · to >= from · 모양은 ENUM() 이름
-            if ( bHitboxValid && hitbox._fromFrame > lastFrame )
+            outHitbox._fromFrame = move._startup;
+            outHitbox._toFrame   = move.getLastActiveFrame();
+            if ( XMLFields::readProperties( child, outHitbox, sourceName ) == false ) // 크기 >= 0 · to >= from · 모양은 ENUM() 이름
+                return false;
+            if ( outHitbox._fromFrame > lastFrame )
             {
                 SW_LOG_ERROR_ID( "FrameData.MoveHitboxOutsideFrames", "%#: move '%#' has a hitbox outside its frames", sourceName, pID );
-                bHitboxValid = false;
+                return false;
             }
-            if ( bHitboxValid )
-                move._listHitbox.push_back( hitbox );
-            bValid = bHitboxValid && bValid;
-        }
+            return true;
+        } ) && bValid;
 
-        for ( XMLNode child = node.findChild( "Cancel" ); child; child = child.findNextSibling( "Cancel" ) )
+        bValid = GameDataXML::readChildrenInto( node, "Cancel", move._listCancel, [&]( const XMLNode& child, MoveCancelWindow& outWindow )
         {
             // 구간을 적지 않으면 활성 구간 다음부터 기술 끝까지다.
-            MoveCancelWindow window;
-            window._fromFrame = move.getLastActiveFrame() + 1;
-            window._toFrame   = lastFrame;
-            bool bWindowValid = XMLFields::readProperties( child, window, sourceName ); // to >= from 은 PROPERTY 가 본다
-            if ( bWindowValid && ( window._listMoveID.empty() || window._toFrame < window._fromFrame ) )
+            outWindow._fromFrame = move.getLastActiveFrame() + 1;
+            outWindow._toFrame   = lastFrame;
+            if ( XMLFields::readProperties( child, outWindow, sourceName ) == false ) // to >= from 은 PROPERTY 가 본다
+                return false;
+            if ( outWindow._listMoveID.empty() || outWindow._toFrame < outWindow._fromFrame )
             {
                 SW_LOG_ERROR_ID( "FrameData.MoveEmptyCancelWindow", "%#: move '%#' has an empty cancel window", sourceName, pID );
-                bWindowValid = false;
+                return false;
             }
-            if ( bWindowValid )
-                move._listCancel.push_back( window );
-            bValid = bWindowValid && bValid;
-        }
+            return true;
+        } ) && bValid;
 
         if ( bValid == false )
         {

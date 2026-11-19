@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Social/Runtime/FriendListModel.h"
+#include "GameFramework/Kits/Feature/Online/Social/Runtime/FriendList.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 
@@ -10,7 +10,7 @@ namespace sw
 {
     namespace
     {
-        struct FriendListModelInternal
+        struct FriendListInternal
         {
             /** @brief 접속 중인 친구를 앞에, 같은 쪽끼리는 계정 번호 순으로 둡니다. */
             struct EntryOrder
@@ -27,7 +27,7 @@ namespace sw
         };
     } // namespace
 
-    FriendListModel::FriendListModel()
+    FriendList::FriendList()
         : _listEntry{}
         , _listPolled{}
         , _pClient{ nullptr }
@@ -39,7 +39,7 @@ namespace sw
     {
     }
 
-    void FriendListModel::fail( uint16 errorCode )
+    void FriendList::fail( uint16 errorCode )
     {
         _listEntry.clear(); // 낡은 목록을 새것처럼 남기지 않는다
         _pendingRequestCount = 0;
@@ -48,7 +48,7 @@ namespace sw
         ++_revision;
     }
 
-    bool FriendListModel::refresh()
+    bool FriendList::refresh()
     {
         if ( _state == FriendListState::Loading )
             return false;
@@ -62,11 +62,11 @@ namespace sw
         _bStale    = SW_FALSE;
         ++_revision; // 로딩 표시를 그리게 한다
         // 준비되지 않은 클라이언트는 이 호출 안에서 바로 onLinksReply(오류)로 끝난다.
-        (void)_pClient->call<SocialMethod::ListLinks>( OnlineReplyDelegate<SocialMethod::ListLinks>::create<&FriendListModel::onLinksReply>( this ) );
+        (void)_pClient->call<SocialMethod::ListLinks>( OnlineReplyDelegate<SocialMethod::ListLinks>::create<&FriendList::onLinksReply>( this ) );
         return _state != FriendListState::Failed;
     }
 
-    void FriendListModel::onLinksReply( const OnlineResult<SocialLinksReply>& reply )
+    void FriendList::onLinksReply( const OnlineResult<SocialLinksReply>& reply )
     {
         if ( reply._errorCode != OnlineError::kOk )
         {
@@ -81,10 +81,10 @@ namespace sw
             return;
         }
         // 접속 상태는 서버가 관계를 읽은 뒤에야 답할 수 있어 관계 목록 다음에 묻는다.
-        (void)_pClient->call<SocialMethod::FriendPresence>( OnlineReplyDelegate<SocialMethod::FriendPresence>::create<&FriendListModel::onPresenceReply>( this ) );
+        (void)_pClient->call<SocialMethod::FriendPresence>( OnlineReplyDelegate<SocialMethod::FriendPresence>::create<&FriendList::onPresenceReply>( this ) );
     }
 
-    void FriendListModel::applyLinks( const SocialLinksReply& reply )
+    void FriendList::applyLinks( const SocialLinksReply& reply )
     {
         _listEntry.clear();
         _pendingRequestCount = 0;
@@ -101,7 +101,7 @@ namespace sw
         }
     }
 
-    void FriendListModel::onPresenceReply( const OnlineResult<SocialPresenceReply>& reply )
+    void FriendList::onPresenceReply( const OnlineResult<SocialPresenceReply>& reply )
     {
         if ( reply._errorCode != OnlineError::kOk )
         {
@@ -124,7 +124,7 @@ namespace sw
         ++_revision;
     }
 
-    void FriendListModel::applyNotification( const SocialNotification& notification )
+    void FriendList::applyNotification( const SocialNotification& notification )
     {
         switch ( notification._kind )
         {
@@ -158,7 +158,7 @@ namespace sw
         }
     }
 
-    bool FriendListModel::initialize( SocialClient* pClient )
+    bool FriendList::initialize( SocialClient* pClient )
     {
         _consumerLease.release();
         _pClient = nullptr;
@@ -168,7 +168,7 @@ namespace sw
         return true;
     }
 
-    void FriendListModel::update()
+    void FriendList::update()
     {
         if ( _pClient == nullptr )
             return;
@@ -184,8 +184,8 @@ namespace sw
             (void)refresh();
     }
 
-    void FriendListModel::sortEntries()
+    void FriendList::sortEntries()
     {
-        VectorUtil::sort( _listEntry, FriendListModelInternal::EntryOrder{} );
+        VectorUtil::sort( _listEntry, FriendListInternal::EntryOrder{} );
     }
 } // namespace sw

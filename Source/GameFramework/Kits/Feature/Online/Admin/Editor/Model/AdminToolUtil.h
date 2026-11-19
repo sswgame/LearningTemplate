@@ -1,5 +1,5 @@
 /**
- * @file AdminToolModel.h
+ * @file AdminToolUtil.h
  * @brief GM 도구 패널의 그리기와 섞여 있던 규칙입니다. 입력 칸 해석, 표 칸의 글, 기간 계산을 화면 없이 합니다(ImGui 없음).
  */
 #pragma once
@@ -11,10 +11,10 @@
 namespace sw::editor
 {
     /**
-     * @struct AdminToolModel
+     * @struct AdminToolUtil
      * @brief 파일 머리말을 참고하세요.
      */
-    struct AdminToolModel
+    struct AdminToolUtil
     {
         /** @brief 편집 칸의 16 진 글을 계정 id 로 바꿉니다. 비었거나 16 진이 아니거나 0 이면 false 입니다. */
         [[nodiscard]] static bool parseAccountID( string_view text, AccountID& outAccountID );

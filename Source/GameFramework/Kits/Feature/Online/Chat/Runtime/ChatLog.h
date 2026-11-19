@@ -1,5 +1,5 @@
 /**
- * @file ChatLogModel.h
+ * @file ChatLog.h
  * @brief 채팅 화면이 읽는 받은 메시지 기록과 마지막 보내기 결과입니다. `ChatClient::pollMessages` 로 꺼낸 메시지를 시간 순으로 쌓고(`kMaxLines` 줄까지, 넘치면 가장 오래된 줄부터 버린다),
  *        `ChatMethod::Send` 호출의 결과를 보관합니다(온라인 키트 U1).
  * @details 화면(`ChatScreen`)은 요청을 직접 보내지 않고 이 객체로 보낸다 — 응답 델리게이트가 화면 수명에 묶이지 않게 한다. `update` 가 클라이언트의 메시지 버퍼를 꺼내므로 한 클라이언트에 모델 하나만 붙을 수 있다(`initialize` 가 false).
@@ -19,17 +19,17 @@
 namespace sw
 {
     /**
-     * @class ChatLogModel
+     * @class ChatLog
      * @brief 받은 메시지 기록 한 벌과 마지막 보내기 결과입니다.
      */
-    class SW_KIT_API ChatLogModel
+    class SW_KIT_API ChatLog
     {
     public:
         static constexpr size_t kMaxLines = 200; ///< 기록에 남기는 줄 수의 상한이다
 
-        ChatLogModel();
-        ChatLogModel( const ChatLogModel& )            = delete; // 응답 델리게이트가 this 를 가리킨다
-        ChatLogModel& operator=( const ChatLogModel& ) = delete;
+        ChatLog();
+        ChatLog( const ChatLog& )            = delete; // 응답 델리게이트가 this 를 가리킨다
+        ChatLog& operator=( const ChatLog& ) = delete;
 
         /**
          * @brief 클라이언트를 빌려 쓰고 그 메시지 버퍼를 꺼낼 권한을 받습니다(`ChatClient` 가 서비스 클라이언트에 등록 · 초기화된 것).

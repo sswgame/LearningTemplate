@@ -14,6 +14,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -244,22 +245,15 @@ namespace sw
         const utf8* const pID = def._id.c_str();
         if ( def._currency.empty() )
             def._currency = Wallet::getDefaultCurrency();
-        for ( XMLNode stockNode = node.findChild( "Stock" ); stockNode; stockNode = stockNode.findNextSibling( "Stock" ) )
+        bValid = GameDataXML::readChildrenInto( node, "Stock", def._listStock, [&]( const XMLNode& stockNode, ShopStockDef& outStock ) // item 필수 · 재고 범위는 PROPERTY 가 본다
         {
-            ShopStockDef stock; // item 필수 · 재고 범위는 PROPERTY 가 본다
-            if ( XMLFields::readProperties( stockNode, stock, sourceName ) == false || stock._itemID.empty() )
+            if ( XMLFields::readProperties( stockNode, outStock, sourceName ) == false || outStock._itemID.empty() )
             {
                 SW_LOG_ERROR_ID( "Shop.ShopStockInvalid", "%#: shop '%#' has a <Stock> without an item or with invalid fields", sourceName, pID );
-                bValid = false;
-                continue;
+                return false;
             }
-            if ( ConditionExpr::compile( stock._requirement, sourceName, stock._condition ) == false )
-            {
-                bValid = false;
-                continue;
-            }
-            def._listStock.push_back( stock );
-        }
+            return ConditionExpr::compile( outStock._requirement, sourceName, outStock._condition );
+        } ) && bValid;
         // 손님이 판 값이 산 값보다 크면 사고 되파는 것만으로 돈이 무한히 는다(감사 G-8). 읽기 끝에서 거절하고 쿠커도 같은 읽기를 돈다.
         if ( def._sellMultiplier > def._buyMultiplier )
         {

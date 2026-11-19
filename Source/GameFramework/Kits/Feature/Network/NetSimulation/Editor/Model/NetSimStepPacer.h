@@ -1,10 +1,9 @@
 /**
- * @file NetSimPlayModel.h
- * @brief 한 프로세스 재생의 화면 없는 규칙입니다. 프레임 시간을 고정 스텝 수로 바꾸는 진행기와 월드 뷰포트 칸의 크기입니다(ImGui 없음).
+ * @file NetSimStepPacer.h
+ * @brief 한 프로세스 재생이 프레임 시간을 고정 스텝 수로 바꾸는 진행기입니다(ImGui 없음).
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-#include "Core/Math/Math.h"
 
 namespace sw::editor
 {
@@ -28,18 +27,5 @@ namespace sw::editor
 
     private:
         float64 _accumulatedSeconds;
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /**
-     * @struct NetSimWorldLayout
-     * @brief 월드 뷰포트를 가로로 나란히 놓을 때의 칸 크기입니다.
-     */
-    struct NetSimWorldLayout
-    {
-        /** @brief 한 칸의 크기입니다. 머리글 두 줄 몫을 뺀 높이이고, 좁아도 폭 1 · 높이 @p minHeight 아래로 내려가지 않습니다. 월드가 없으면 한 칸으로 봅니다. */
-        static float2 computeViewSize( float2 available, int32 worldCount, float32 itemSpacingX, float32 lineHeight, float32 minHeight );
     };
 } // namespace sw::editor

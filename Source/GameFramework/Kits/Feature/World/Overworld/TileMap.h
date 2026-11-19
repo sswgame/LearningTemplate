@@ -130,9 +130,6 @@ namespace sw
         /** @brief 맵 가장자리에 워프 프리셋을 칠합니다. edge 는 0이 북, 1이 동, 2가 남, 3이 서쪽입니다. */
         void paintEdgeWarpPreset( int32 edge /*0=N,1=E,2=S,3=W*/, string_view targetMap, int32 tx, int32 ty );
 
-        /** @brief HD-2D 타일 디버그 로그를 남깁니다. */
-        void debugLogTileHd2d( int32 x, int32 y ) const;
-
         /**
          * @brief 맵의 셀 격자(셀 번호 · 경계)를 반환합니다. 크기의 원본은 파일 스키마 `_data` 이고, 이것은 그 값으로 만든 뷰입니다.
          * @details 셀 수는 `TileMapXMLData::kMaxTileCount` 로 막혀 있어 int32 셀 번호가 넘치지 않습니다.

@@ -1,4 +1,4 @@
-// ServerListModelTest — 서버 목록 상태: 클라이언트가 없거나 연결 전이면 Failed(kUnavailable), 종류가 상한을 넘으면 보내지 않고 Failed(kInvalidRequest),
+// ServerListTest — 서버 목록 상태: 클라이언트가 없거나 연결 전이면 Failed(kUnavailable), 종류가 상한을 넘으면 보내지 않고 Failed(kInvalidRequest),
 // 실패마다 목록을 비우고 수(revision)를 올린다. 응답이 오는 길은 루프백 서버(`OnlineHostTestUtil` — 호스트 + 가짜 디렉터리 서비스)로 본다: 응답이 오면 Loaded,
 // 묻는 중에 다시 물으면 보내지 않고 거절, 서버가 오류로 답하면 앞서 받은 목록을 비운다.
 // 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
@@ -8,7 +8,7 @@
 
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryClient.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryProtocol.h"
-#include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerListModel.h"
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerList.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -114,7 +114,7 @@ namespace
         FakeServerDirectoryService _service{};
         ServerDirectoryClient      _directoryClient{};
         test::OnlineTestFixture    _rig{ false };
-        ServerListModel            _model{};
+        ServerList                 _model{};
         uint8                      _bReady : 1;
 
         ServerListFixture()
@@ -139,10 +139,10 @@ namespace
     }
 } // namespace
 
-/** @brief [ServerListModelTest] 클라이언트가 없으면 묻지 않고 Failed(kUnavailable) 로 끝난다 */
-SW_TEST_CASE( ServerListModelTest, NoClientFailsAsUnavailable )
+/** @brief [ServerListTest] 클라이언트가 없으면 묻지 않고 Failed(kUnavailable) 로 끝난다 */
+SW_TEST_CASE( ServerListTest, NoClientFailsAsUnavailable )
 {
-    ServerListModel model;
+    ServerList model;
     SW_EXPECT_TRUE( model.getState() == ServerListState::Idle );
     SW_EXPECT_FALSE( model.refresh( "dedicated" ) );
     SW_EXPECT_TRUE( model.getState() == ServerListState::Failed );
@@ -151,13 +151,13 @@ SW_TEST_CASE( ServerListModelTest, NoClientFailsAsUnavailable )
     SW_EXPECT_TRUE( model.getEntries().empty() );
 }
 
-/** @brief [ServerListModelTest] 연결 전 클라이언트는 그 호출 안에서 kUnavailable 로 답하고, 상태는 Loading 에 머물지 않는다(다시 물을 수 있다) */
-SW_TEST_CASE( ServerListModelTest, UnconnectedClientFailsInsideTheCall )
+/** @brief [ServerListTest] 연결 전 클라이언트는 그 호출 안에서 kUnavailable 로 답하고, 상태는 Loading 에 머물지 않는다(다시 물을 수 있다) */
+SW_TEST_CASE( ServerListTest, UnconnectedClientFailsInsideTheCall )
 {
     OnlineServiceClient   serviceClient; // 디렉터리 클라이언트보다 먼저 만들어 나중에 사라진다
     ServerDirectoryClient directoryClient;
     directoryClient.initialize( &serviceClient );
-    ServerListModel model;
+    ServerList model;
     model.initialize( &directoryClient );
 
     SW_EXPECT_FALSE( model.refresh( "dedicated" ) );
@@ -169,13 +169,13 @@ SW_TEST_CASE( ServerListModelTest, UnconnectedClientFailsInsideTheCall )
     SW_EXPECT_EQUAL( uint64{ 4 }, model.getRevision() );
 }
 
-/** @brief [ServerListModelTest] 종류가 상한보다 길면 보내지 않고 kInvalidRequest 로 끝난다 */
-SW_TEST_CASE( ServerListModelTest, OversizedKindIsRejected )
+/** @brief [ServerListTest] 종류가 상한보다 길면 보내지 않고 kInvalidRequest 로 끝난다 */
+SW_TEST_CASE( ServerListTest, OversizedKindIsRejected )
 {
     OnlineServiceClient   serviceClient;
     ServerDirectoryClient directoryClient;
     directoryClient.initialize( &serviceClient );
-    ServerListModel model;
+    ServerList model;
     model.initialize( &directoryClient );
 
     SW_EXPECT_LOG( "OnlineProtocol.MessageOutOfRange" ); // 쓰지 못한 메시지는 오류 로그를 남긴다
@@ -186,8 +186,8 @@ SW_TEST_CASE( ServerListModelTest, OversizedKindIsRejected )
     SW_EXPECT_TRUE( model.getEntries().empty() );
 }
 
-/** @brief [ServerListModelTest] 서버가 목록으로 답하면 Loaded 이고 받은 목록을 그대로 든다(로딩 표시 한 번 + 응답 한 번) */
-SW_TEST_CASE( ServerListModelTest, AnsweredListIsLoaded )
+/** @brief [ServerListTest] 서버가 목록으로 답하면 Loaded 이고 받은 목록을 그대로 든다(로딩 표시 한 번 + 응답 한 번) */
+SW_TEST_CASE( ServerListTest, AnsweredListIsLoaded )
 {
     ServerListFixture rig;
     SW_REQUIRE_TRUE( rig._bReady );
@@ -208,8 +208,8 @@ SW_TEST_CASE( ServerListModelTest, AnsweredListIsLoaded )
     }
 }
 
-/** @brief [ServerListModelTest] 묻는 중에 다시 물으면 보내지 않고 false 다 — 서버는 요청 하나만 받고, 답이 온 뒤에는 다시 물을 수 있다 */
-SW_TEST_CASE( ServerListModelTest, OverlappingRefreshIsRejectedWhileLoading )
+/** @brief [ServerListTest] 묻는 중에 다시 물으면 보내지 않고 false 다 — 서버는 요청 하나만 받고, 답이 온 뒤에는 다시 물을 수 있다 */
+SW_TEST_CASE( ServerListTest, OverlappingRefreshIsRejectedWhileLoading )
 {
     ServerListFixture rig;
     SW_REQUIRE_TRUE( rig._bReady );
@@ -236,8 +236,8 @@ SW_TEST_CASE( ServerListModelTest, OverlappingRefreshIsRejectedWhileLoading )
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loaded );
 }
 
-/** @brief [ServerListModelTest] 받은 목록이 있어도 서버가 오류(모르는 종류)로 답하면 Failed 이고 낡은 목록을 비운다 */
-SW_TEST_CASE( ServerListModelTest, ServerErrorClearsTheLoadedList )
+/** @brief [ServerListTest] 받은 목록이 있어도 서버가 오류(모르는 종류)로 답하면 Failed 이고 낡은 목록을 비운다 */
+SW_TEST_CASE( ServerListTest, ServerErrorClearsTheLoadedList )
 {
     ServerListFixture rig;
     SW_REQUIRE_TRUE( rig._bReady );

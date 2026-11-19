@@ -37,12 +37,9 @@ namespace sw
             /** @brief 질의 감시 값 `Object.Speed` 입니다. 대상의 강체(3D · 2D) 선속도나 캐릭터 컨트롤러 속도의 크기(m/s)입니다. 둘 다 없으면 값이 없습니다. */
             [[nodiscard]] static bool readObjectSpeed( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const GameObject* pTarget = query.findTargetObject();
+                const GameObject* pTarget = query.findTargetObject( outValue );
                 if ( pTarget == nullptr )
-                {
-                    outValue.setText( query.getTargetProblem() );
                     return false;
-                }
                 if ( const RigidBodyComponent* pBody = pTarget->getComponent<RigidBodyComponent>(); pBody != nullptr )
                 {
                     outValue.setNumber( static_cast<float64>( pBody->getLinearVelocity().getLength() ) );

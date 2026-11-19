@@ -11,7 +11,7 @@
 
 #include "Engine/Reflection/EnumName.h"
 
-#include "GameFramework/Kits/Feature/Online/Admin/Editor/Model/AdminToolModel.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/Model/AdminToolUtil.h"
 
 namespace sw::editor
 {
@@ -140,7 +140,7 @@ namespace sw::editor
         request._reasonCode   = string( reasonCode );
         request._memo         = string( memo );
         // 예전에는 음수 기간이 0(해제)이 되고 큰 기간은 넘쳐 음수 시각이 되었다.
-        if ( AdminToolModel::tryMakeEndMs( WallClock::nowUnixMilliseconds().count(), durationSeconds, request._untilMs ) == false )
+        if ( AdminToolUtil::tryMakeEndMs( WallClock::nowUnixMilliseconds().count(), durationSeconds, request._untilMs ) == false )
         {
             rejectLocally( AdminMethod::SetSanction::kID );
             return;
@@ -180,7 +180,7 @@ namespace sw::editor
         request._startMs    = nowMs;
         request._memo       = string( memo );
         // 예전에는 음수 기간이 0(해제할 때까지)이 되어 끝나지 않는 점검이 걸렸다.
-        if ( AdminToolModel::tryMakeEndMs( nowMs, durationSeconds, request._endMs ) == false )
+        if ( AdminToolUtil::tryMakeEndMs( nowMs, durationSeconds, request._endMs ) == false )
         {
             rejectLocally( AdminMethod::SetMaintenance::kID );
             return;
@@ -206,7 +206,7 @@ namespace sw::editor
         request._bLiteralText   = SW_TRUE;
         request._startMs        = nowMs;
         request._memo           = string( memo );
-        if ( AdminToolModel::tryMakeEndMs( nowMs, durationSeconds, request._endMs ) == false )
+        if ( AdminToolUtil::tryMakeEndMs( nowMs, durationSeconds, request._endMs ) == false )
         {
             rejectLocally( AdminMethod::PostAnnouncement::kID );
             return;
@@ -264,9 +264,9 @@ namespace sw::editor
     {
         StringBuilder<constant::buffer::kMax128> line;
         if ( reply._errorCode != OnlineError::kOk )
-            line.appendFormat( "%#: error %#", AdminToolModel::getMethodName( reply._method ), reply._errorCode ); // 공통 범주(권한 · 형식 · 장애)는 업무 결과가 없다
+            line.appendFormat( "%#: error %#", AdminToolUtil::getMethodName( reply._method ), reply._errorCode ); // 공통 범주(권한 · 형식 · 장애)는 업무 결과가 없다
         else
-            line.appendFormat( "%#: %#", AdminToolModel::getMethodName( reply._method ), getEnumName( reply._reply._result ) );
+            line.appendFormat( "%#: %#", AdminToolUtil::getMethodName( reply._method ), getEnumName( reply._reply._result ) );
         return string( line.view() );
     }
 
@@ -275,7 +275,7 @@ namespace sw::editor
         _lastResult    = AdminServiceResult::fail( OnlineError::kInvalidRequest );
         _lastMethod    = method;
         _bLastReplayed = SW_FALSE;
-        _statusLine    = string( AdminToolModel::getMethodName( method ) ) + ": InvalidRequest (the duration must be zero or a positive number that fits)";
+        _statusLine    = string( AdminToolUtil::getMethodName( method ) ) + ": InvalidRequest (the duration must be zero or a positive number that fits)";
         SW_LOG_INFO_ID( "Admin.CommandResult", "Admin command %#", _statusLine.c_str() );
     }
 

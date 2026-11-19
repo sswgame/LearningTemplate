@@ -355,3 +355,33 @@ SW_TEST_CASE( OverworldZoneTrackerTest, MapMakesOneActiveZoneWithItsTags )
     SW_EXPECT_TRUE( tracker.getActiveZone() == nullptr );
     SW_EXPECT_EQUAL( 0, tracker.getCameraBounds()._max._x );
 }
+
+/** @brief [OverworldTileMapTest] 통과 표시와 타일 비주얼은 맵 안 칸에만 적힌다. 맵 밖 쓰기는 무시하고 맵 밖 읽기는 기본값이다. */
+SW_TEST_CASE( OverworldTileMapTest, PassThroughAndVisualAreWrittenInsideTheMapOnly )
+{
+    TileMap map;
+    map.resize( 3, 2 );
+    SW_EXPECT_FALSE( map.isPassThrough( 1, 1 ) );
+    map.setPassThrough( 1, 1, true );
+    SW_EXPECT_TRUE( map.isPassThrough( 1, 1 ) );
+    SW_EXPECT_FALSE( map.isPassThrough( 0, 1 ) ); // 이웃 칸은 그대로다
+    map.setPassThrough( 1, 1, false );
+    SW_EXPECT_FALSE( map.isPassThrough( 1, 1 ) );
+    map.setPassThrough( 9, 9, true ); // 맵 밖 쓰기는 무시한다
+    SW_EXPECT_FALSE( map.isPassThrough( 9, 9 ) );
+
+    OverworldTileVisual visual;
+    visual._height  = 3;
+    visual._tintR   = 10;
+    visual._atlasID = 2;
+    map.setTileVisual( 2, 1, visual );
+    const OverworldTileVisual written = map.getTileVisual( 2, 1 );
+    SW_EXPECT_EQUAL( uint8( 3 ), written._height );
+    SW_EXPECT_EQUAL( uint8( 10 ), written._tintR );
+    SW_EXPECT_EQUAL( uint8( 2 ), written._atlasID );
+    SW_EXPECT_EQUAL( uint8( 0 ), map.getTileVisual( 1, 1 )._height ); // 이웃 칸은 그대로다
+
+    map.setTileVisual( 3, 0, visual ); // 맵 밖 쓰기는 무시한다
+    SW_EXPECT_EQUAL( uint8( 0 ), map.getTileVisual( 3, 0 )._height );
+    SW_EXPECT_EQUAL( OverworldTileVisual{}._tintR, map.getTileVisual( 3, 0 )._tintR ); // 맵 밖 읽기는 기본값이다
+}

@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatLogModel.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatLog.h"
 
 namespace sw
 {
-    ChatLogModel::ChatLogModel()
+    ChatLog::ChatLog()
         : _listLine{}
         , _listPolled{}
         , _pClient{ nullptr }
@@ -14,7 +14,7 @@ namespace sw
     {
     }
 
-    bool ChatLogModel::initialize( ChatClient* pClient )
+    bool ChatLog::initialize( ChatClient* pClient )
     {
         _consumerLease.release();
         _pClient = nullptr;
@@ -24,7 +24,7 @@ namespace sw
         return true;
     }
 
-    void ChatLogModel::update()
+    void ChatLog::update()
     {
         if ( _pClient == nullptr )
             return;
@@ -36,7 +36,7 @@ namespace sw
         }
     }
 
-    bool ChatLogModel::send( string_view channelID, string_view text )
+    bool ChatLog::send( string_view channelID, string_view text )
     {
         _retryAfterMs = 0;
         if ( text.empty() )
@@ -55,11 +55,11 @@ namespace sw
         ChatSendRequest request;
         request._channelID = string( channelID );
         request._text      = string( text );
-        (void)_pClient->call<ChatMethod::Send>( request, OnlineReplyDelegate<ChatMethod::Send>::create<&ChatLogModel::onSendReply>( this ) );
+        (void)_pClient->call<ChatMethod::Send>( request, OnlineReplyDelegate<ChatMethod::Send>::create<&ChatLog::onSendReply>( this ) );
         return true;
     }
 
-    void ChatLogModel::appendMessage( const ChatMessage& message )
+    void ChatLog::appendMessage( const ChatMessage& message )
     {
         _listLine.push_back( message );
         if ( _listLine.size() > kMaxLines )
@@ -67,7 +67,7 @@ namespace sw
         ++_revision;
     }
 
-    void ChatLogModel::onSendReply( const OnlineResult<ChatSendReply>& reply )
+    void ChatLog::onSendReply( const OnlineResult<ChatSendReply>& reply )
     {
         _lastResult   = reply._errorCode != OnlineError::kOk ? ChatServiceResult::fail( reply._errorCode ) : ChatServiceResult{ reply._reply._result };
         _retryAfterMs = reply._reply._retryAfterMs;

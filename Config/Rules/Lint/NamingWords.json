@@ -1754,7 +1754,21 @@
     "AccountClientOperation": "AccountMethodName — AccountMethodName 의 별칭이었다 — 한 형식에 이름 하나(2026-11-19)",
     "ActionCombatRig": "ActionCombatSimulation — Rig 은 애니메이션 리그만(NamingCpp) — 프레임마다 나아가는 결정적 전투 시뮬레이션(ProjectileSimulation 과 같은 끝말)(2026-11-19)",
     "ActionCombatRigTest": "ActionCombatSimulationTest — ActionCombatRig → ActionCombatSimulation 을 따른다(2026-11-19)",
-    "ActionCombatRigTestUtil": "ActionCombatSimulationTestUtil — ActionCombatRig → ActionCombatSimulation 을 따른다(2026-11-19)"
+    "ActionCombatRigTestUtil": "ActionCombatSimulationTestUtil — ActionCombatRig → ActionCombatSimulation 을 따른다(2026-11-19)",
+    "MultiplayerSyncModel": "MultiplayerSyncClientQuery — 곁에 같은 이름의 창 ViewModel(MultiplayerSyncViewModel)이 있고, 내용은 클라이언트 프로세스에 묻고 답을 모으는 질의다(끝말 Model 은 내용을 말하지 않는다 — NamingCpp)(2026-11-19)",
+    "MultiplayerSyncModelTest": "MultiplayerSyncClientQueryTest — MultiplayerSyncModel → MultiplayerSyncClientQuery 를 따른다(2026-11-19)",
+    "AdminToolModel": "AdminToolUtil — 상태 없는 정적 함수 묶음(입력 칸 해석 · 표 칸의 글 · 기간 계산)이고 주인 형식이 없다(Helpers 2 번 — XxxUtil). 창의 상태 · 명령이 아니라 Model 이 아니다(2026-11-19)",
+    "AdminToolModelTest": "AdminToolUtilTest — AdminToolModel → AdminToolUtil 을 따른다(2026-11-19)",
+    "NetSimPlayModel": "NetSimStepPacer · NetSimWorldLayout — 그 이름의 형식은 없었고 파일이 두 형식을 한데 담았다. 파일 이름은 담은 형식의 이름으로(FolderLayout)(2026-11-19)",
+    "NetSimPlayModelTest": "NetSimStepPacerTest · NetSimWorldLayoutTest — NetSimPlayModel 파일을 형식 이름으로 나눈 것을 따른다(2026-11-19)",
+    "ChatLogModel": "ChatLog — 받은 메시지 기록과 보내기 결과다. 게임 화면의 뷰모델은 UIViewModel(Engine/Presentation) 하나라 끝말 Model 을 붙이지 않고 내용 이름으로 둔다(2026-11-19)",
+    "ServerListModel": "ServerList — 서버 목록 한 벌과 그 상태다(곁의 ServerListState · ServerListEntry 와 한 벌). 끝말 Model 은 내용을 말하지 않는다(2026-11-19)",
+    "ServerListModelTest": "ServerListTest — ServerListModel → ServerList 를 따른다(2026-11-19)",
+    "FriendListModel": "FriendList — 친구 목록 한 벌과 그 상태다(곁의 FriendListState · FriendEntry 와 한 벌). 끝말 Model 은 내용을 말하지 않는다(2026-11-19)",
+    "FriendListModelTest": "FriendListTest — FriendListModel → FriendList 를 따른다(2026-11-19)",
+    "FriendListModelInternal": "FriendListInternal — FriendListModel → FriendList 를 따른다(2026-11-19)",
+    "FriendListModelTestUtil": "FriendListTestUtil — FriendListModel → FriendList 를 따른다(2026-11-19)",
+    "debugLogTileHd2d": "지웠다 — 부르는 곳이 없던 디버그 추적 한 줄(TileMap::getTileVisual · isWalkable · isEncounterTile · isPassThrough 를 한 줄로 찍기만 했다). 같은 값은 그 네 읽기로 본다(2026-11-19)"
   },
   "_keep": {
     "DummyType": "리플렉션 테스트의 형식 이름 표본(열거형 끝말 kind 규칙의 예외)",

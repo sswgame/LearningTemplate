@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Editor/Panels/Multiplayer/Model/MultiplayerSyncModel.h"
+#include "Editor/Panels/Multiplayer/Model/MultiplayerSyncClientQuery.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/String/formatString.h"
 
 namespace sw::editor
 {
-    MultiplayerSyncModel::MultiplayerSyncModel()
+    MultiplayerSyncClientQuery::MultiplayerSyncClientQuery()
         : _arrPendingProcess{ -1, -1 }
         , _arrPendingReportCount{}
         , _arrObjectPendingProcess{ -1, -1 }
@@ -22,7 +22,7 @@ namespace sw::editor
         static_assert( EditorStateHashCompare::kSourceCount == 2, "the pending client tables are initialized for two sources" );
     }
 
-    bool MultiplayerSyncModel::requestClientHistory( IEditorNetPlayProcesses& processes, const EditorStateHashCompare& compare, int32 sourceIndex, int32 processIndex )
+    bool MultiplayerSyncClientQuery::requestClientHistory( IEditorNetPlayProcesses& processes, const EditorStateHashCompare& compare, int32 sourceIndex, int32 processIndex )
     {
         const EditorNetPlayProcessStatus         status  = processes.getProcessStatus( processIndex );
         const string&                            channel = compare.getHashChannel();
@@ -41,7 +41,7 @@ namespace sw::editor
         return true;
     }
 
-    void MultiplayerSyncModel::pollHistory( const IEditorNetPlayProcesses& processes, EditorStateHashCompare& compare, int64 timeoutMilliseconds )
+    void MultiplayerSyncClientQuery::pollHistory( const IEditorNetPlayProcesses& processes, EditorStateHashCompare& compare, int64 timeoutMilliseconds )
     {
         for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
         {
@@ -77,7 +77,7 @@ namespace sw::editor
         }
     }
 
-    void MultiplayerSyncModel::startObjectCompare( IEditorNetPlayProcesses& processes, EditorStateHashCompare& compare, int64 timeoutMilliseconds )
+    void MultiplayerSyncClientQuery::startObjectCompare( IEditorNetPlayProcesses& processes, EditorStateHashCompare& compare, int64 timeoutMilliseconds )
     {
         _bObjectRequest    = SW_FALSE;
         uint64 channelTick = 0;
@@ -115,7 +115,7 @@ namespace sw::editor
         pollObjects( processes, compare, timeoutMilliseconds ); // 채널 칸뿐이면 바로 견준다
     }
 
-    void MultiplayerSyncModel::pollObjects( const IEditorNetPlayProcesses& processes, EditorStateHashCompare& compare, int64 timeoutMilliseconds )
+    void MultiplayerSyncClientQuery::pollObjects( const IEditorNetPlayProcesses& processes, EditorStateHashCompare& compare, int64 timeoutMilliseconds )
     {
         if ( _bObjectRequest == SW_FALSE )
             return;
@@ -157,7 +157,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotCompare", "Sync could not compare objects: %#", compare.getLastError() );
     }
 
-    void MultiplayerSyncModel::poll( IEditorNetPlayProcesses& processes, EditorStateHashCompare& compare, int64 timeoutMilliseconds )
+    void MultiplayerSyncClientQuery::poll( IEditorNetPlayProcesses& processes, EditorStateHashCompare& compare, int64 timeoutMilliseconds )
     {
         pollHistory( processes, compare, timeoutMilliseconds );
         pollObjects( processes, compare, timeoutMilliseconds );

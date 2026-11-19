@@ -36,17 +36,11 @@ namespace sw
                 }
                 outReward._items.addItem( hashed_string( row._item ), row._count );
             }
-            for ( XMLNode action = rewardNode.findChild( "Action" ); action; action = action.findNextSibling( "Action" ) )
+            bValid = GameDataXML::readChildrenInto( rewardNode, "Action", outReward._listAction, [&]( const XMLNode& action, GameActionCall& outCall )
             {
                 QuestRewardActionRowDef row;
-                GameActionCall          call;
-                if ( XMLFields::readProperties( action, row, sourceName ) == false || GameActionCall::compileText( row._call, sourceName, call ) == false )
-                {
-                    bValid = false;
-                    continue;
-                }
-                outReward._listAction.push_back( std::move( call ) );
-            }
+                return XMLFields::readProperties( action, row, sourceName ) && GameActionCall::compileText( row._call, sourceName, outCall );
+            } ) && bValid;
             return bValid;
         }
     } // namespace

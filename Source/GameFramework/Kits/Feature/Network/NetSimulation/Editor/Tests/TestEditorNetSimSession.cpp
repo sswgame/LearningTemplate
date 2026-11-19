@@ -3,18 +3,19 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.h"
-#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/NetSimPlayModel.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/NetSimStepPacer.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/NetSimWorldLayout.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Sample/NetSimSampleGame.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
 
 #include <limits>
 
-// NetSimPlayModelTest · EditorNetSimSessionTest — 한 프로세스 재생: 프레임 시간 → 고정 스텝, 뷰포트 칸 크기, 돌지 않는 세션의 답과 시작 거절(에디터 케이스, 씬을 세우지 않는다).
+// NetSimStepPacerTest · NetSimWorldLayoutTest · EditorNetSimSessionTest — 한 프로세스 재생: 프레임 시간 → 고정 스텝, 뷰포트 칸 크기, 돌지 않는 세션의 답과 시작 거절(에디터 케이스, 씬을 세우지 않는다).
 
 using namespace sw;
 using namespace sw::editor;
 
-SW_TEST_CASE( NetSimPlayModelTest, FrameTimeBecomesFixedSteps )
+SW_TEST_CASE( NetSimStepPacerTest, FrameTimeBecomesFixedSteps )
 {
     NetSimStepPacer pacer;
     SW_EXPECT_EQUAL( uint32( 0 ), pacer.consume( 0.5, 1.0, 4 ) ); // 아직 한 스텝이 안 된다
@@ -27,7 +28,7 @@ SW_TEST_CASE( NetSimPlayModelTest, FrameTimeBecomesFixedSteps )
 }
 
 /** @brief 중단점 뒤 밀린 시간은 몰아 돌지 않는다. */
-SW_TEST_CASE( NetSimPlayModelTest, BacklogBeyondTheCapIsDropped )
+SW_TEST_CASE( NetSimStepPacerTest, BacklogBeyondTheCapIsDropped )
 {
     NetSimStepPacer pacer;
     SW_EXPECT_EQUAL( uint32( 4 ), pacer.consume( 100.0, 1.0, 4 ) );
@@ -36,7 +37,7 @@ SW_TEST_CASE( NetSimPlayModelTest, BacklogBeyondTheCapIsDropped )
 }
 
 /** @brief 결함: 상한에 딱 닿기만 해도 남은 몫을 버려, 느린 프레임이 이어지면 재생 시간이 그만큼 빠졌다. */
-SW_TEST_CASE( NetSimPlayModelTest, ReachingTheCapKeepsTheRemainder )
+SW_TEST_CASE( NetSimStepPacerTest, ReachingTheCapKeepsTheRemainder )
 {
     NetSimStepPacer pacer;
     SW_EXPECT_EQUAL( uint32( 4 ), pacer.consume( 4.5, 1.0, 4 ) );
@@ -44,7 +45,7 @@ SW_TEST_CASE( NetSimPlayModelTest, ReachingTheCapKeepsTheRemainder )
 }
 
 /** @brief 결함: NaN 프레임 시간 하나로 모은 시간이 영원히 NaN 이 되어 재생이 말없이 멈췄다. 음수는 시간을 되돌렸다. */
-SW_TEST_CASE( NetSimPlayModelTest, UnusableFrameTimeIsIgnored )
+SW_TEST_CASE( NetSimStepPacerTest, UnusableFrameTimeIsIgnored )
 {
     NetSimStepPacer pacer;
     SW_EXPECT_EQUAL( uint32( 0 ), pacer.consume( 0.5, 1.0, 4 ) );
@@ -57,7 +58,7 @@ SW_TEST_CASE( NetSimPlayModelTest, UnusableFrameTimeIsIgnored )
     SW_EXPECT_EQUAL( 0.0, pacer.getAccumulatedSeconds() );
 }
 
-SW_TEST_CASE( NetSimPlayModelTest, ViewSizeSplitsTheWidthAndKeepsAMinimumHeight )
+SW_TEST_CASE( NetSimWorldLayoutTest, ViewSizeSplitsTheWidthAndKeepsAMinimumHeight )
 {
     const float2 three = NetSimWorldLayout::computeViewSize( float2{ 900.0f, 600.0f }, 3, 8.0f, 20.0f, 160.0f );
     SW_EXPECT_NEAR( 292.0f, three._x, 0.001f );

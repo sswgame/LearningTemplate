@@ -89,7 +89,14 @@ namespace sw
         /** @brief 활성 씬 @p pManager 에서 @p target 을 고르기 규칙으로 찾아 둔 질의를 만듭니다. @p target 이 비면 대상이 없는 질의입니다. */
         [[nodiscard]] static AutomationWatchQuery make( const GameObjectManager* pManager, string_view target, string_view key );
 
-        const GameObject*      findTargetObject() const { return _pTargetObject; }
+        const GameObject* findTargetObject() const { return _pTargetObject; }
+        /** @brief 대상 오브젝트입니다. 없으면 @p outValue 에 까닭(`getTargetProblem`)을 적고 nullptr 입니다 — 대상에서 컴포넌트가 아닌 것을 읽는 감시 값이 씁니다. */
+        [[nodiscard]] const GameObject* findTargetObject( AutomationWatchValue& outValue ) const
+        {
+            if ( _pTargetObject == nullptr )
+                outValue.setText( _targetProblem );
+            return _pTargetObject;
+        }
         AutomationTargetLookup getTargetLookup() const { return _targetLookup; }
         /** @brief 대상 오브젝트가 없을 때 그 까닭입니다(`no object named 'X'`, 여럿이라 고를 수 없음 등). 찾았으면 비어 있습니다. */
         const string& getTargetProblem() const { return _targetProblem; }

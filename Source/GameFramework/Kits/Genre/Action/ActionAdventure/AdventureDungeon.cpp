@@ -77,35 +77,30 @@ namespace sw
     bool AdventureDungeonCatalog::loadDungeon( const XMLNode& dungeonNode, string_view sourceName )
     {
         AdventureDungeonDef dungeon;
-        bool                bValid = XMLFields::readProperties( dungeonNode, dungeon, sourceName );
-        for ( XMLNode node = dungeonNode.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
+        bool                bValid   = XMLFields::readProperties( dungeonNode, dungeon, sourceName );
+        const auto          readDoor = [&]( const XMLNode& node, AdventureDoorDef& outDoor )
         {
-            AdventureDoorDef door;
-            bool             bDoorValid = XMLFields::readProperties( node, door, sourceName );
-            if ( door._kind == AdventureDoorKind::Condition && door._requires.empty() )
+            bool bDoorValid = XMLFields::readProperties( node, outDoor, sourceName );
+            if ( outDoor._kind == AdventureDoorKind::Condition && outDoor._requires.empty() )
             {
-                SW_LOG_ERROR_ID( "AdventureDungeon.ConditionDoorNeedsRequires", "%#: condition door '%#' needs requires=\"...\"", sourceName, door._id.c_str() );
+                SW_LOG_ERROR_ID( "AdventureDungeon.ConditionDoorNeedsRequires", "%#: condition door '%#' needs requires=\"...\"", sourceName, outDoor._id.c_str() );
                 bDoorValid = false;
             }
-            bDoorValid = ConditionExpr::compile( door._requires, sourceName, door._condition ) && bDoorValid;
-            if ( bDoorValid )
-                dungeon._listDoor.push_back( door );
-            bValid = bDoorValid && bValid;
-        }
-        bValid = GameDataXML::readChildrenInto( dungeonNode, "Treasure", sourceName, dungeon._listTreasure ) && bValid;
-        for ( XMLNode node = dungeonNode.findChild( "Device" ); node; node = node.findNextSibling( "Device" ) )
+            return ConditionExpr::compile( outDoor._requires, sourceName, outDoor._condition ) && bDoorValid;
+        };
+        bValid                = GameDataXML::readChildrenInto( dungeonNode, "Door", dungeon._listDoor, readDoor ) && bValid;
+        bValid                = GameDataXML::readChildrenInto( dungeonNode, "Treasure", sourceName, dungeon._listTreasure ) && bValid;
+        const auto readDevice = [&]( const XMLNode& node, AdventureDeviceDef& outDevice )
         {
-            AdventureDeviceDef device;
-            bool               bDeviceValid = XMLFields::readProperties( node, device, sourceName );
-            if ( device._kind == AdventureDeviceKind::TimedSwitch && device._duration <= 0.0f )
+            const bool bDeviceRead = XMLFields::readProperties( node, outDevice, sourceName );
+            if ( outDevice._kind == AdventureDeviceKind::TimedSwitch && outDevice._duration <= 0.0f )
             {
-                SW_LOG_ERROR_ID( "AdventureDungeon.TimedSwitchNeedsDuration", "%#: timed switch '%#' needs duration=\"...\" above 0", sourceName, device._id.c_str() );
-                bDeviceValid = false;
+                SW_LOG_ERROR_ID( "AdventureDungeon.TimedSwitchNeedsDuration", "%#: timed switch '%#' needs duration=\"...\" above 0", sourceName, outDevice._id.c_str() );
+                return false;
             }
-            if ( bDeviceValid )
-                dungeon._listDevice.push_back( device );
-            bValid = bDeviceValid && bValid;
-        }
+            return bDeviceRead;
+        };
+        bValid = GameDataXML::readChildrenInto( dungeonNode, "Device", dungeon._listDevice, readDevice ) && bValid;
         // 같은 id 의 문 · 상자 · 장치는 뒤의 것에 영영 닿지 못한다.
         const AdventureDoorDef*     pDuplicateDoor     = VectorUtil::findDuplicateBy<&AdventureDoorDef::_id>( dungeon._listDoor );
         const AdventureTreasureDef* pDuplicateTreasure = VectorUtil::findDuplicateBy<&AdventureTreasureDef::_id>( dungeon._listTreasure );

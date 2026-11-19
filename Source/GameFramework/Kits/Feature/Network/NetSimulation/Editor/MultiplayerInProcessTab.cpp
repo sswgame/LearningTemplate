@@ -14,7 +14,7 @@
 #include "Engine/Localization/TextFormatter.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/MultiplayerInProcessViewModel.h"
-#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/NetSimPlayModel.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/NetSimWorldLayout.h"
 
 #include <imgui.h>
 

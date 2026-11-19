@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Panels/Multiplayer/Model/MultiplayerSyncModel.h"
+#include "Editor/Panels/Multiplayer/Model/MultiplayerSyncClientQuery.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -40,15 +40,15 @@ namespace
     };
 
     /** @brief 서버(0)와 클라이언트 둘(1 · 2)입니다. 넉넉한 시한(한 시간)을 기본으로 씁니다. */
-    struct MultiplayerSyncModelTest
+    struct MultiplayerSyncClientQueryTest
     {
         static constexpr int64 kLongTimeout = 3600000;
 
-        FakeNetPlayProcesses   _processes;
-        EditorStateHashCompare _compare;
-        MultiplayerSyncModel   _model;
+        FakeNetPlayProcesses       _processes;
+        EditorStateHashCompare     _compare;
+        MultiplayerSyncClientQuery _model;
 
-        MultiplayerSyncModelTest()
+        MultiplayerSyncClientQueryTest()
             : _processes{}
             , _compare{}
             , _model{}
@@ -97,12 +97,12 @@ namespace
 } // namespace
 
 // 묻고 나면 답 수가 늘 때까지 기다리고, 답이 오면 칸에 담고 어느 프로세스의 것인지 적는다.
-SW_TEST_CASE_F( MultiplayerSyncModelTest, HistoryWaitsForANewAnswer )
+SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, HistoryWaitsForANewAnswer )
 {
     SW_REQUIRE_TRUE( _model.requestClientHistory( _processes, _compare, 0, 1 ) );
     SW_REQUIRE_EQUAL( _processes._listCommand.size(), size_t{ 1 } );
     StringBuilder<constant::buffer::kMax256> textBuilder;
-    textBuilder.appendFormat( "state.hashline %#", MultiplayerSyncModel::kClientHistoryTicks );
+    textBuilder.appendFormat( "state.hashline %#", MultiplayerSyncClientQuery::kClientHistoryTicks );
     SW_EXPECT_EQUAL( _processes._listCommand[0], string( textBuilder.view() ) );
     SW_EXPECT_TRUE( _model.isWaitingForHistory( 0, 1 ) );
     SW_EXPECT_FALSE( _model.isWaitingForHistory( 1, 1 ) );
@@ -120,17 +120,17 @@ SW_TEST_CASE_F( MultiplayerSyncModelTest, HistoryWaitsForANewAnswer )
 }
 
 // 씬 줄이 아닌 줄을 고르면 그 이름을 함께 묻는다.
-SW_TEST_CASE_F( MultiplayerSyncModelTest, HistoryAsksForTheChosenChannel )
+SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, HistoryAsksForTheChosenChannel )
 {
     SW_REQUIRE_TRUE( _compare.setHashChannel( "destruction" ) );
     SW_REQUIRE_TRUE( _model.requestClientHistory( _processes, _compare, 0, 1 ) );
     StringBuilder<constant::buffer::kMax256> textBuilder;
-    textBuilder.appendFormat( "state.hashline %# destruction", MultiplayerSyncModel::kClientHistoryTicks );
+    textBuilder.appendFormat( "state.hashline %# destruction", MultiplayerSyncClientQuery::kClientHistoryTicks );
     SW_EXPECT_EQUAL( _processes._listCommand[0], string( textBuilder.view() ) );
 }
 
 // 끝난 프로세스에는 묻지 못한다. 대기 상태가 되지 않는다.
-SW_TEST_CASE_F( MultiplayerSyncModelTest, HistoryRequestFailsWhenTheProcessIsGone )
+SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, HistoryRequestFailsWhenTheProcessIsGone )
 {
     SW_EXPECT_LOG( "MultiplayerSync.SyncCouldNotAsk" );
     _processes._bSendFails = SW_TRUE;
@@ -139,7 +139,7 @@ SW_TEST_CASE_F( MultiplayerSyncModelTest, HistoryRequestFailsWhenTheProcessIsGon
 }
 
 // 답이 안 오면 시한에서 오류로 끝난다. 새 질의는 오류를 지운다.
-SW_TEST_CASE_F( MultiplayerSyncModelTest, HistoryTimesOut )
+SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, HistoryTimesOut )
 {
     SW_EXPECT_LOG( "MultiplayerSync.Sync" );
     SW_REQUIRE_TRUE( _model.requestClientHistory( _processes, _compare, 0, 1 ) );
@@ -152,7 +152,7 @@ SW_TEST_CASE_F( MultiplayerSyncModelTest, HistoryTimesOut )
 }
 
 // 세션이 끝나면 말없이 기다림을 접는다.
-SW_TEST_CASE_F( MultiplayerSyncModelTest, HistoryStopsWaitingWhenTheSessionEnds )
+SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, HistoryStopsWaitingWhenTheSessionEnds )
 {
     SW_REQUIRE_TRUE( _model.requestClientHistory( _processes, _compare, 0, 1 ) );
     _processes._bRunning = SW_FALSE;
@@ -162,7 +162,7 @@ SW_TEST_CASE_F( MultiplayerSyncModelTest, HistoryStopsWaitingWhenTheSessionEnds 
 }
 
 // 빈 이력 답은 담지 못한다고 알리고 칸을 클라이언트 것으로 적지 않는다.
-SW_TEST_CASE_F( MultiplayerSyncModelTest, EmptyHistoryIsNotTaken )
+SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, EmptyHistoryIsNotTaken )
 {
     SW_EXPECT_LOG( "MultiplayerSync.SyncCouldNotTake" );
     SW_REQUIRE_TRUE( _model.requestClientHistory( _processes, _compare, 0, 1 ) );
@@ -172,7 +172,7 @@ SW_TEST_CASE_F( MultiplayerSyncModelTest, EmptyHistoryIsNotTaken )
 }
 
 // 두 클라이언트의 오브젝트 답이 모두 모여야 견주고, 다른 오브젝트 이름을 짚는다.
-SW_TEST_CASE_F( MultiplayerSyncModelTest, ObjectCompareWaitsForBothClients )
+SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, ObjectCompareWaitsForBothClients )
 {
     loadBothClients();
     _model.startObjectCompare( _processes, _compare, kLongTimeout );
@@ -195,7 +195,7 @@ SW_TEST_CASE_F( MultiplayerSyncModelTest, ObjectCompareWaitsForBothClients )
 }
 
 // 다른 틱의 답은 견주지 않는다.
-SW_TEST_CASE_F( MultiplayerSyncModelTest, ObjectAnswersAtDifferentTicksAreRefused )
+SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, ObjectAnswersAtDifferentTicksAreRefused )
 {
     SW_EXPECT_LOG( "MultiplayerSync.SyncCouldNotCompare" );
     loadBothClients();
@@ -207,7 +207,7 @@ SW_TEST_CASE_F( MultiplayerSyncModelTest, ObjectAnswersAtDifferentTicksAreRefuse
     SW_EXPECT_FALSE( _compare.hasObjectComparison() );
 }
 
-SW_TEST_CASE_F( MultiplayerSyncModelTest, ObjectCompareTimesOut )
+SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, ObjectCompareTimesOut )
 {
     SW_EXPECT_LOG( "MultiplayerSync.Sync" );
     loadBothClients();
@@ -217,7 +217,7 @@ SW_TEST_CASE_F( MultiplayerSyncModelTest, ObjectCompareTimesOut )
 }
 
 // 물을 수 없거나 세션이 끝나면 기다리지 않는다. 읽어 둔 칸이 없으면 채널을 못 읽어 알린다.
-SW_TEST_CASE_F( MultiplayerSyncModelTest, ObjectCompareHandlesAGoneSession )
+SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, ObjectCompareHandlesAGoneSession )
 {
     loadBothClients();
     _model.startObjectCompare( _processes, _compare, kLongTimeout );
@@ -231,7 +231,7 @@ SW_TEST_CASE_F( MultiplayerSyncModelTest, ObjectCompareHandlesAGoneSession )
     SW_EXPECT_FALSE( _model.isWaitingForObjects() );
 }
 
-SW_TEST_CASE_F( MultiplayerSyncModelTest, ObjectCompareWithoutASourceReportsTheChannelError )
+SW_TEST_CASE_F( MultiplayerSyncClientQueryTest, ObjectCompareWithoutASourceReportsTheChannelError )
 {
     SW_EXPECT_LOG( "MultiplayerSync.SyncCouldNotCompare" );
     _model.startObjectCompare( _processes, _compare, kLongTimeout );
