@@ -60,3 +60,27 @@ SW_TEST_CASE( AssetStreamingQueueTest, CancelLeavesOtherRequesters )
     SW_EXPECT_TRUE( kept._byteCount > 0 );
     SW_EXPECT_FALSE( queue.requestAssetData( "", sw::StreamingPriority::Normal, {} ).isValid() ); // 받지 못한 요청은 무효다
 }
+
+/**
+ * @brief [AssetStreamingQueueTest] 프리페치의 완료는 `TaskFuture<bool>` 로도 받는다 — 있는 에셋은 `update` 뒤 true, 받지 못한 요청(빈 경로)은 바로 false 다
+ * @details 콜백 대신 값을 기다리는 쪽(`whenAll` · 로딩 화면)이 쓰는 입구다. 무효 요청이 영영 안 끝나는 future 를 돌려주면 기다리는 쪽이 멈춘다 — 바로 끝난 값이어야 한다.
+ */
+SW_TEST_CASE( AssetStreamingQueueTest, FutureCarriesTheCompletion )
+{
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
+
+    const sw::TaskFuture<bool> rejected = queue.requestAssetFuture( "" );
+    SW_REQUIRE_TRUE( rejected.isReady() );
+    SW_EXPECT_FALSE( rejected.get() );
+
+    const sw::TaskFuture<bool> found = queue.requestAssetFuture( "materials/defaultmaterial.material" );
+    SW_REQUIRE_TRUE( found.isValid() );
+    SW_REQUIRE_TRUE( sw::test::waitUntil( [&]()
+    {
+        queue.update();
+        return found.isReady();
+    } ) );
+    queue.shutdown();
+    SW_EXPECT_TRUE( found.get() );
+}

@@ -81,6 +81,8 @@ namespace sw
         /** @brief 에셋 바이트를 백그라운드에서 읽어 완료 콜백으로 넘깁니다. 받지 못했으면(빈 경로) 무효 요청입니다. */
         StreamingRequest requestAssetData( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, const OnStreamingDataCompleteDelegate& onComplete = {} );
 
+        /** @brief 에셋 프리페치를 비동기로 요청하고 완료 여부를 TaskFuture<bool> 로 반환합니다. */
+        TaskFuture<bool> requestAssetFuture( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal );
         /**
          * @brief 요청자 하나의 요청을 거둡니다 — 그 요청자의 콜백은 실패로 한 번 불리고, 같은 경로를 기다리는 다른 요청자는 그대로 결과를 받습니다.
          * @details 마지막 요청자가 거두면 걸린 읽기도 멈춘다. 예전에는 경로 단위라 한 쪽의 취소가 같은 경로의 모든 대기자를 실패로 끝냈다.

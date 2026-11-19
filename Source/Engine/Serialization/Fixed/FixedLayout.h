@@ -249,6 +249,21 @@ namespace sw
         static void                 writeRawBits( BitWriter& writer, uint64 value, int32 bitCount );
         [[nodiscard]] static uint64 readRawBits( BitReader& reader, int32 bitCount );
 
+        /** @brief 비트 플래그 열거형(`ENUM( Flags )`)을 기반 타입 전체 폭으로 씁니다. 플래그가 아닌 열거형은 열거자 범위 비트(`writeRangedInteger`)로 씁니다. */
+        template <typename E>
+        static void writeEnumBits( BitWriter& writer, const E value )
+        {
+            using Unsigned = std::make_unsigned_t<std::underlying_type_t<E>>;
+            writeRawBits( writer, static_cast<uint64>( static_cast<Unsigned>( value ) ), static_cast<int32>( sizeof( Unsigned ) * 8 ) );
+        }
+
+        template <typename E>
+        [[nodiscard]] static E readEnumBits( BitReader& reader )
+        {
+            using Unsigned = std::make_unsigned_t<std::underlying_type_t<E>>;
+            return static_cast<E>( static_cast<Unsigned>( readRawBits( reader, static_cast<int32>( sizeof( Unsigned ) * 8 ) ) ) );
+        }
+
     private:
         /** @brief 범위 비트 수로 쓸 수 있는 범위인지(뒤집히지 않았고 폭이 32 비트 이하인지) 봅니다. 필드 이름 범위는 실행 시간에 정해지므로 매번 봅니다. */
         static bool                 isRangeEncodable( int64 minValue, int64 maxValue ) noexcept;

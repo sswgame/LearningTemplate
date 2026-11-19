@@ -174,6 +174,11 @@ namespace sw
         add( ValidationSeverity::Error, message, fix );
     }
 
+    void ValidationContext::addWarningWithFix( const string_view message, const ValidationPropertyEdit& fix )
+    {
+        add( ValidationSeverity::Warning, message, fix );
+    }
+
     bool ValidationContext::hasError() const noexcept
     {
         return VectorUtil::containsBy<&ValidationIssue::_severity>( _listIssue, ValidationSeverity::Error );

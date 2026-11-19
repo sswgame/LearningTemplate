@@ -489,6 +489,13 @@ namespace sw
             *pDst = *pSrc;
     }
 
+    void JSONValue::setNull() const
+    {
+        JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
+        if ( pValue != nullptr )
+            *pValue = nullptr;
+    }
+
     void JSONValue::setBool( bool value ) const
     {
         JSONImpl* pJSON = JSONDocumentInternal::asJSON( _pValue );
@@ -739,6 +746,22 @@ namespace sw
         if ( parsed.is_discarded() == false && parsed.is_string() )
             return JSONDocumentInternal::fromJSONString( parsed.get_ref<const JSONDocumentInternal::JSONString&>() );
         return string( value );
+    }
+
+    string JSONDocument::extractStringField( string_view json, string_view fieldName )
+    {
+        JSONDocument doc;
+        if ( doc.parse( json ) == false )
+            return {};
+        const JSONValue root = doc.getRoot();
+        if ( root.isObject() == false )
+            return {};
+        const JSONValue field = root.get( fieldName );
+        if ( field.isValid() == false )
+            return {};
+        if ( field.isObject() || field.isArray() )
+            return {};
+        return field.asString();
     }
 
 } // namespace sw

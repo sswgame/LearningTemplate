@@ -283,6 +283,11 @@ namespace sw
         return XMLReadUtilInternal::readFloatAttribute( node, pAttribute, sourceName, false, "x y z", inoutValue, &XMLReadUtil::parseFloat3 );
     }
 
+    bool XMLReadUtil::readRequiredFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& outValue )
+    {
+        return XMLReadUtilInternal::readFloatAttribute( node, pAttribute, sourceName, true, "x y z", outValue, &XMLReadUtil::parseFloat3 );
+    }
+
     bool XMLReadUtil::readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, int32 minValue, int32 maxValue, int32& inoutValue )
     {
         return XMLReadUtilInternal::readOptionalInRange( node, pAttribute, sourceName, minValue, maxValue, inoutValue );

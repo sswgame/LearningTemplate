@@ -226,3 +226,18 @@ SW_TEST_CASE( FixedLayoutTest, DescriptorCodecRefusesOutOfBoundValuesOnWrite )
         SW_EXPECT_FALSE( FixedLayout::write( bad, writer ) );
     }
 }
+
+/**
+ * @brief [FixedLayoutTest] 비트 플래그 열거형은 기반 타입 전체 폭으로 쓰고 읽는다 — uint8 플래그는 한 바이트이고, 등록되지 않은 비트 조합도 그대로 돌아온다
+ */
+SW_TEST_CASE( FixedLayoutTest, EnumBitsUseTheWholeUnderlyingWidth )
+{
+    const FixedLayoutSampleFlags flags = static_cast<FixedLayoutSampleFlags>( 0xA5 );
+    BitWriter                    writer;
+    FixedCodecUtil::writeEnumBits( writer, flags );
+    const vector<uint8> bytes = writer.getBytes();
+    SW_REQUIRE_EQUAL( size_t{ 1 }, bytes.size() );
+
+    BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+    SW_EXPECT_TRUE( FixedCodecUtil::readEnumBits<FixedLayoutSampleFlags>( reader ) == flags );
+}

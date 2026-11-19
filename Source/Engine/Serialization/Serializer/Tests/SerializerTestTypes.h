@@ -64,4 +64,20 @@ namespace sw
         PROPERTY()
         DataPath _path;
     };
+
+    /** @brief 이름이 같은 칸 옮기기(`SerializerUtil::copySameNamedProperties`)의 받는 쪽 샘플입니다 — `_count` · `_name` 만 `SerializerSample` 과 이름이 같다. */
+    REFLECT()
+    struct SerializerSamplePart
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _count = 0;
+
+        PROPERTY()
+        string _name;
+
+        PROPERTY()
+        float32 _extra = 1.5f;
+    };
 } // namespace sw

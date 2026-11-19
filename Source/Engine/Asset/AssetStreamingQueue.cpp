@@ -205,6 +205,24 @@ namespace sw
         return request;
     }
 
+    TaskFuture<bool> AssetStreamingQueue::requestAssetFuture( string_view assetPath, StreamingPriority priority )
+    {
+        auto                   pPromise = sw::make_shared<TaskPromise<bool>>();
+        const StreamingRequest request  = requestAsset(
+            assetPath,
+            priority,
+            SW_DELEGATE_LAMBDA(
+                OnStreamingCompleteDelegate,
+                [pPromise]( string_view /*path*/, bool bSuccess )
+        {
+            pPromise->setValue( bSuccess );
+        } ) );
+
+        if ( request.isValid() == false )
+            pPromise->setValue( false );
+        return pPromise->getFuture();
+    }
+
     TaskPriority AssetStreamingQueue::toTaskPriority( StreamingPriority priority )
     {
         switch ( priority )
