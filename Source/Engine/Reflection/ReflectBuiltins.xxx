@@ -62,6 +62,8 @@ SW_REFLECT_BUILTIN_TYPE( snorm16x2, sw::snorm16x2, packed, sw, _ )
 SW_REFLECT_BUILTIN_TYPE( snorm16x4, sw::snorm16x4, packed, sw, _ )
 SW_REFLECT_BUILTIN_TYPE( OctahedralNormal, sw::OctahedralNormal, packed, sw, _ )
 SW_REFLECT_BUILTIN_TYPE( RGB10A2, sw::RGB10A2, packed, sw, _ )
+// 각(`Core/Math/Radians.h`) — 압축 타입은 아니지만 같은 성분 규칙을 탄다. 메모리는 라디안이고 성분(글 · 인스펙터 · 숫자 · Min/Max)은 도다.
+SW_REFLECT_BUILTIN_TYPE( Radians, sw::Radians, packed, sw, _ )
 
 // -----------------------------------------------------------------------------
 // std:: / 서드파티 컨테이너

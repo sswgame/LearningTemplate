@@ -58,10 +58,10 @@ namespace sw
                     LimitSpec spec{};
                     spec._bone              = params._bone;
                     spec._limit._type       = params._type;
-                    spec._limit._swingLimit = params._swingDegrees * MathUtil::kDegreeToRadian;
-                    spec._limit._twistLimit = params._twistDegrees * MathUtil::kDegreeToRadian;
-                    spec._limit._minAngle   = params._minDegrees * MathUtil::kDegreeToRadian;
-                    spec._limit._maxAngle   = params._maxDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._swingLimit = params._swingLimit.radians();
+                    spec._limit._twistLimit = params._twistLimit.radians();
+                    spec._limit._minAngle   = params._minAngle.radians();
+                    spec._limit._maxAngle   = params._maxAngle.radians();
                     spec._limit._hingeAxis  = params._axis.normalize();
                     if ( spec._limit._hingeAxis.getLengthSquared() < 0.5f )
                         spec._limit._hingeAxis = float3::UnitX;
@@ -247,7 +247,7 @@ namespace sw
                 bool bOk                  = ( _bFABRIK == SW_TRUE ) ? reader.readProperties( static_cast<RigChainIKParams&>( _params ) ) : reader.readProperties( _params );
                 _settings._iterationCount = _params._iterations;
                 _settings._tolerance      = _params._tolerance;
-                _settings._maxStepAngle   = _params._maxStepDegrees * MathUtil::kDegreeToRadian;
+                _settings._maxStepAngle   = _params._maxStep.radians();
                 bOk                       = reader.readNameList( "bones", _listBoneName, true ) && bOk;
                 bOk                       = bOk && RigIKNodesInternal::parseLimits( reader, _listLimitSpec );
                 if ( bOk && _listBoneName.size() < 2 )
@@ -308,7 +308,7 @@ namespace sw
             {
 
                 bool bOk               = reader.readProperties( _params ); // 0..180 도는 PROPERTY 가 본다
-                _maxAngle              = _params._maxDegrees * MathUtil::kDegreeToRadian;
+                _maxAngle              = _params._maxAngle.radians();
                 _aimAxis               = _params._aimAxis.normalize();
                 const RigXMLList chain = reader.readArray( "chain", false );
                 for ( size_t index = 0; bOk && chain.isValid() && index < chain.size(); ++index )
@@ -320,7 +320,7 @@ namespace sw
                     ChainEntry entry{};
                     entry._name     = entryParams._bone;
                     entry._weight   = entryParams._weight;
-                    entry._maxAngle = entryParams._maxDegrees * MathUtil::kDegreeToRadian;
+                    entry._maxAngle = entryParams._maxAngle.radians();
                     _listChain.push_back( entry );
                 }
                 if ( bOk && _aimAxis.getLengthSquared() < 0.5f )
@@ -434,7 +434,7 @@ namespace sw
             {
 
                 bool bOk       = reader.readProperties( _params );
-                _maxAlignAngle = _params._maxAlignDegrees * MathUtil::kDegreeToRadian;
+                _maxAlignAngle = _params._maxAlignAngle.radians();
                 bOk            = RigIKNodesInternal::parseLegs( reader, _listFoot ) && bOk;
                 return bOk && reader.isOk();
             }

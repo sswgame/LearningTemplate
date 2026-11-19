@@ -89,7 +89,7 @@ namespace sw
         candidate._partID                    = step._partID;
         candidate._transform._position       = step._position;
         candidate._transform._level          = step._level;
-        candidate._transform._yaw            = step._yawDegrees * MathUtil::kDegreeToRadian;
+        candidate._transform._yaw            = step._yaw.radians();
         uint32                   placementID = 0;
         const HousingPlaceResult result      = pPlot->place( candidate, placementID );
         if ( result != HousingPlaceResult::Ok && result != HousingPlaceResult::Pending )

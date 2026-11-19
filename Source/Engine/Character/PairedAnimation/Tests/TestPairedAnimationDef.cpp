@@ -30,7 +30,7 @@ SW_TEST_CASE( PairedAnimationDefTest, DefLoadsRolesAlignmentAndNotifies )
     const PairedAnimationRoleDef& victim = def.getRoles()[*victimIndex];
     SW_EXPECT_TRUE( victim._align == PairedAnimationAlign::Warp );
     SW_EXPECT_NEAR( 1.2f, victim._offset._z, 1e-6f );
-    SW_EXPECT_NEAR( MathUtil::kPi, victim._yawRadians, 1e-5f );
+    SW_EXPECT_NEAR( MathUtil::kPi, victim._yaw.radians(), 1e-5f );
     SW_EXPECT_NEAR( 0.4f, victim._warpEndSeconds, 1e-6f );
     SW_EXPECT_TRUE( victim._skeletonPath == "characters/humanoid.skeleton.xml" );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( def.getNotifies().size() ) );

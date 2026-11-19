@@ -893,11 +893,11 @@ namespace sw::editor
                 float32     _max;
             };
             const JiggleField arrField[] = {
-                {      "stiffness",       params._stiffness,                       1.0f},
-                {        "damping",         params._damping,                       1.0f},
-                {   "gravityScale",    params._gravityScale, Internal::kMaxGravityScale},
-                {"maxSwingDegrees", params._maxSwingDegrees, Internal::kMaxSwingDegrees},
-                {   "impulseScale",    params._impulseScale, Internal::kMaxImpulseScale}
+                {      "stiffness",          params._stiffness,                       1.0f},
+                {        "damping",            params._damping,                       1.0f},
+                {   "gravityScale",       params._gravityScale, Internal::kMaxGravityScale},
+                {"maxSwingDegrees", params._maxSwing.degrees(), Internal::kMaxSwingDegrees},
+                {   "impulseScale",       params._impulseScale, Internal::kMaxImpulseScale}
             };
             for ( const JiggleField& field : arrField )
             {

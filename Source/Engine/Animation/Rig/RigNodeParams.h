@@ -3,11 +3,12 @@
  * @brief 리그 파일(`*.rig.xml`)의 원소마다 받는 칸입니다 — 에셋 루트 · 대상 · 노드 공통 키 · 노드 종류마다의 키와 그 목록 원소(`<item>`).
  * @details `RigXMLReader::readProperties` 가 이 스키마로 속성을 읽는다. 칸의 초기값이 "적지 않음" 값이고, 범위는 PROPERTY( Min · Max ) 가 정본이다.
  *          이름 목록(`<bones><item>…`)과 객체 목록(`<feet>` 등)은 자식 요소라 노드가 손으로 푼다. 파일 키는 밑줄 이름이라 칸마다 `Name` 을 적는다.
- *          도 단위로 적는 각은 파일 단위 그대로(`Units = deg`) 읽고, 노드가 라디안이나 쿼터니언으로 옮긴다.
+ *          도 단위로 적는 스칼라 각은 `Radians` 칸이라 읽는 입구가 라디안으로 담는다(파일 글은 도). 오일러 각(`float3`)은 파일 단위 그대로(`Units = deg`) 읽고 노드가 쿼터니언으로 옮긴다.
  *          언리얼 애님 노드의 UPROPERTY 파라미터 구조체 자리다 — 키 · 기본값 · 범위를 한 곳에 둔다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
@@ -242,11 +243,11 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Name = "max_step_degrees", Min = 0.0, Max = 180.0, Units = deg )
-        float32 _maxStepDegrees{ 180.0f };
+        PROPERTY( Name = "max_step_degrees", Min = 0.0, Max = 180.0 )
+        Radians _maxStep{ Radians::fromDegrees( 180.0f ) };
     };
 
-    /** @brief 관절 제한(`<limits><item …/>`) 하나의 칸입니다. 각은 도 단위다. */
+    /** @brief 관절 제한(`<limits><item …/>`) 하나의 칸입니다. 파일의 각은 도 단위다(`Radians`). */
     REFLECT()
     struct SW_API RigJointLimitParams
     {
@@ -256,16 +257,16 @@ namespace sw
         hashed_string _bone{};
         PROPERTY( Name = "type", Required )
         RigJointLimitKind _type{ RigJointLimitKind::None };
-        PROPERTY( Name = "swing_degrees", Units = deg )
-        float32 _swingDegrees{ 180.0f };
-        PROPERTY( Name = "twist_degrees", Units = deg )
-        float32 _twistDegrees{ 180.0f };
+        PROPERTY( Name = "swing_degrees" )
+        Radians _swingLimit{ Radians::fromDegrees( 180.0f ) };
+        PROPERTY( Name = "twist_degrees" )
+        Radians _twistLimit{ Radians::fromDegrees( 180.0f ) };
         PROPERTY( Name = "axis" )
         float3 _axis{ 1.0f, 0.0f, 0.0f };
-        PROPERTY( Name = "min_degrees", Units = deg )
-        float32 _minDegrees{ -180.0f };
-        PROPERTY( Name = "max_degrees", Units = deg )
-        float32 _maxDegrees{ 180.0f };
+        PROPERTY( Name = "min_degrees" )
+        Radians _minAngle{ Radians::fromDegrees( -180.0f ) };
+        PROPERTY( Name = "max_degrees" )
+        Radians _maxAngle{ Radians::fromDegrees( 180.0f ) };
     };
 
     /**
@@ -281,8 +282,8 @@ namespace sw
         hashed_string _bone{};
         PROPERTY( Name = "weight", Required, Min = 0.0, Max = 1.0 )
         float32 _weight{ 0.0f };
-        PROPERTY( Name = "max_degrees", Min = 0.0, Max = 180.0, Units = deg )
-        float32 _maxDegrees{ 180.0f };
+        PROPERTY( Name = "max_degrees", Min = 0.0, Max = 180.0 )
+        Radians _maxAngle{ Radians::fromDegrees( 180.0f ) };
     };
 
     /** @brief 조준(`Aim`)의 칸입니다. 조준 사슬(`chain`)은 `RigAimChainParams` 목록이다. */
@@ -297,8 +298,8 @@ namespace sw
         hashed_string _target{};
         PROPERTY( Name = "aim_axis" )
         float3 _aimAxis{ 0.0f, 0.0f, 1.0f };
-        PROPERTY( Name = "max_degrees", Min = 0.0, Max = 180.0, Units = deg )
-        float32 _maxDegrees{ 180.0f };
+        PROPERTY( Name = "max_degrees", Min = 0.0, Max = 180.0 )
+        Radians _maxAngle{ Radians::fromDegrees( 180.0f ) };
         /** @brief 켜면 `aim_axis` 는 레퍼런스 포즈의 모델 공간 방향이다(캐릭터 앞 +Z) — 본 로컬 축을 모르는 임포트 리그(UBC · Mixamo)도 같은 데이터로 쓴다. 묶을 때 본 로컬로 바꾼다. */
         PROPERTY( Name = "aim_axis_in_model" )
         bool _bAimAxisInModel{ false };
@@ -338,8 +339,8 @@ namespace sw
         float32 _interpSpeed{ 15.0f };
         PROPERTY( Name = "align_to_normal" )
         bool _bAlignToNormal{ true };
-        PROPERTY( Name = "max_align_degrees", Min = 0.0, Max = 90.0, Units = deg )
-        float32 _maxAlignDegrees{ 30.0f };
+        PROPERTY( Name = "max_align_degrees", Min = 0.0, Max = 90.0 )
+        Radians _maxAlignAngle{ Radians::fromDegrees( 30.0f ) };
     };
 
     /** @brief 보폭 워핑(`StrideWarping`)의 칸입니다. 모두 필수다. `0 < min_scale <= max_scale` 은 노드가 본다. */
@@ -470,8 +471,8 @@ namespace sw
 
         PROPERTY( Name = "driver", Required )
         hashed_string _driver{};
-        PROPERTY( Name = "radius_degrees", Min = 1.0, Max = 180.0, Units = deg )
-        float32 _radiusDegrees{ 45.0f };
+        PROPERTY( Name = "radius_degrees", Min = 1.0, Max = 180.0 )
+        Radians _radius{ Radians::fromDegrees( 45.0f ) };
         /** @brief 이보다 작은 포즈 가중치는 0 으로 둔다(언리얼 RBF WeightThreshold) — 가우스 핵은 먼 포즈도 0 이 아니라 모든 포즈의 보정을 늘 내던 것을 막는다. */
         PROPERTY( Name = "weight_threshold", Min = 0.0, Max = 1.0, Units = ratio )
         float32 _weightThreshold{ 0.001f };

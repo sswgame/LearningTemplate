@@ -103,6 +103,11 @@ namespace sw
             {"quaternion",                                                     "_x,_y,_z,_w"},
             {  "float4x4", "_11,_12,_13,_14,_21,_22,_23,_24,_31,_32,_33,_34,_41,_42,_43,_44"},
         };
+        /**
+         * @brief 각 형식(`Core/Math/Radians.h`)의 정규 이름입니다. 리플렉션 표에서는 성분을 도로 내는 `packed` 줄이지만 메모리는 라디안 float32 하나라
+         *        코덱은 float32 칸으로 싣고, 도로 적힌 숫자 경계(`Min = 0, Max = 90`)는 데이터 읽기와 같은 변환(`Radians::fromDegrees`)으로 라디안 경계로 낸다.
+         */
+        inline constexpr const utf8* kAngleTypeName = "Radians";
         /** @brief 대상마다 정규 문자열을 모아 두는 진단 파일 이름입니다. 빌드는 읽지 않습니다. */
         inline constexpr const utf8* kSchemaListFile = "FixedSchemas.gen.txt";
     } // namespace fixedlayout

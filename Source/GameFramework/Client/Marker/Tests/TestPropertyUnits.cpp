@@ -70,7 +70,8 @@ namespace
  * @details 인스펙터는 `Units` 로 보이는 값 · 드래그 속도 · 단위 글자를 정한다(`InspectorPropertyLayout::getDisplayUnit`). 철자는 파서가 단위 표(`ReflectionUnits.h`)로
  *          막지만, 표에 있는 단위가 값과 맞는지는 모른다. 규칙은 다섯이다. (1) `deg` 를 쓰지 않는다 — 엔진의 각도는 라디안이다. (2) 이름이 각도인 실수 칸은 `rad` 다.
  *          (3) `percent` 는 0..100 값이다 — 위 경계가 1 이하면 `ratio` 다. (4) `ratio` 의 위 경계는 1 이하, `rad` 의 위 경계는 2π 이하다.
- *          (5) 툴팁이 `Units` 와 다른 단위를 말하지 않는다(`kArrConflictingUnitWord`).
+ *          (5) 툴팁이 `Units` 와 다른 단위를 말하지 않는다(`kArrConflictingUnitWord`). (6) `Radians` 칸은 `Units` 를 적지 않는다 — 형식이 단위를 말하고,
+ *          바깥 표현(XML 글 · 인스펙터 · `Min`/`Max`)은 늘 도다(`PackedValueTraits<Radians>`). 라디안 칸에 `Units = rad` 를 더하면 인스펙터가 도를 다시 도로 바꾼다.
  */
 SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
 {
@@ -86,6 +87,7 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
     uint32            unitCount{ 0 };
     uint32            angleCount{ 0 };
     uint32            ratioCount{ 0 };
+    uint32            radiansCount{ 0 };
     for ( const sw::TypeInfo* pType : listType )
     {
         for ( const sw::PropertyInfo& prop : pType->_listProperty )
@@ -98,10 +100,16 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
             if ( pUnits != nullptr )
                 ++unitCount;
             // 파일 스키마(`…Fields` — 원소 하나의 칸, `XMLFields::readProperties`)의 칸은 파일 글 그대로의 단위다. 손으로 쓰는 데이터는 각을 도로 적고
-            // 읽은 뒤 라디안으로 옮긴다(`SocketSet` · `PairedAnimationDef`). 그 칸은 `Units = deg` 로 파일 단위를 밝힌다 — 라디안 규칙은 엔진이 쥐는 값의 타입에 건다.
+            // 읽은 뒤 라디안으로 옮긴다(`SocketSet` 의 오일러 회전 · `SkinLayerValueParams`). 그 칸은 `Units = deg` 로 파일 단위를 밝힌다(스칼라 각은 `Radians` 칸이 낫다) — 라디안 규칙은 엔진이 쥐는 값의 타입에 건다.
             const bool bFileSchema = sw::StringUtil::endsWith( pType->_name.view(), "Params" );
             if ( units == "deg" && bFileSchema == false )
                 offenders += where + "angles are stored in radians — write Units=rad\n";
+            if ( prop._typeName == sw::hashed_string( "Radians" ) )
+            {
+                ++radiansCount;
+                if ( pUnits != nullptr )
+                    offenders += where + "a Radians property names its unit by type — remove Units\n";
+            }
             if ( isAngleName( prop._name ) && isFloatType( prop._typeName ) )
             {
                 ++angleCount;
@@ -126,8 +134,9 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
             }
         }
     }
-    // 규칙이 아무것도 보지 않으면 이 테스트는 아무것도 지키지 않는다 — 회전 · FOV · 원뿔 각 둘 · HP 바 비율 셋이 있다.
+    // 규칙이 아무것도 보지 않으면 이 테스트는 아무것도 지키지 않는다 — 회전 · FOV · 원뿔 각 둘 · HP 바 비율 셋, 무기 퍼짐 · 리그 관절 제한의 `Radians` 칸이 있다.
     SW_EXPECT_TRUE( unitCount >= 10 );
+    SW_EXPECT_TRUE( radiansCount >= 8 );
     SW_EXPECT_TRUE( angleCount >= 4 );
     SW_EXPECT_TRUE( ratioCount >= 3 );
     SW_EXPECT_TRUE_MSG( offenders.empty(), offenders.c_str() );

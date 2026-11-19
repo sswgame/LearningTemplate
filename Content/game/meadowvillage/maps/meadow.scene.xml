@@ -94,15 +94,15 @@
 					                             _bAutoPlay="false"
 					                             _stepInterval="0.25">
 						<_listStep>
-							<MeadowBuildStep _partID="floor" _position="0.5,0.5" _level="0" _yawDegrees="0" />
-							<MeadowBuildStep _partID="floor" _position="1.5,0.5" _level="0" _yawDegrees="0" />
-							<MeadowBuildStep _partID="floor" _position="2.5,0.5" _level="0" _yawDegrees="0" />
-							<MeadowBuildStep _partID="floor" _position="0.5,1.5" _level="0" _yawDegrees="0" />
-							<MeadowBuildStep _partID="floor" _position="1.5,1.5" _level="0" _yawDegrees="0" />
-							<MeadowBuildStep _partID="floor" _position="2.5,1.5" _level="0" _yawDegrees="0" />
-							<MeadowBuildStep _partID="wall" _position="0.5,1.5" _level="0" _yawDegrees="0" />
-							<MeadowBuildStep _partID="door" _position="1.3,1.6" _level="0" _yawDegrees="0" />
-							<MeadowBuildStep _partID="table" _position="2,0.5" _level="0" _yawDegrees="0" />
+							<MeadowBuildStep _partID="floor" _position="0.5,0.5" _level="0" _yaw="0" />
+							<MeadowBuildStep _partID="floor" _position="1.5,0.5" _level="0" _yaw="0" />
+							<MeadowBuildStep _partID="floor" _position="2.5,0.5" _level="0" _yaw="0" />
+							<MeadowBuildStep _partID="floor" _position="0.5,1.5" _level="0" _yaw="0" />
+							<MeadowBuildStep _partID="floor" _position="1.5,1.5" _level="0" _yaw="0" />
+							<MeadowBuildStep _partID="floor" _position="2.5,1.5" _level="0" _yaw="0" />
+							<MeadowBuildStep _partID="wall" _position="0.5,1.5" _level="0" _yaw="0" />
+							<MeadowBuildStep _partID="door" _position="1.3,1.6" _level="0" _yaw="0" />
+							<MeadowBuildStep _partID="table" _position="2,0.5" _level="0" _yaw="0" />
 						</_listStep>
 					</MeadowHomeGameModeComponent>
 					<HousingNetSessionComponent _componentName="HousingNetSessionComponent" _bActive="true" _maxRequestsPerTick="8" />

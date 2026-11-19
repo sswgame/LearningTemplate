@@ -18,11 +18,12 @@ namespace sw
             static constexpr const utf8* kRootName                = "PairedAnimation";
             static constexpr const utf8* kArrAlignOnlyAttribute[] = { "offset", "yaw", "maxAlignDistance" };
 
-            /** @brief 각(도)이 [-180, 180] 밖이거나 유한하지 않으면 오류를 남깁니다. */
-            static void requireHalfTurn( CharacterDataReader& reader, const XMLNode& node, const utf8* pName, float32 degrees )
+            /** @brief 각이 [-180, 180] 도 밖이거나 유한하지 않으면 오류를 남깁니다. 경계는 데이터 글 `180` 이 읽히는 것과 같은 라디안이다. */
+            static void requireHalfTurn( CharacterDataReader& reader, const XMLNode& node, const utf8* pName, const Radians angle )
             {
-                requireFinite( reader, node, pName, degrees );
-                const bool bInRange = -180.0f <= degrees && degrees <= 180.0f;
+                requireFinite( reader, node, pName, angle.radians() );
+                const Radians halfTurn = Radians::fromDegrees( 180.0f );
+                const bool    bInRange = -halfTurn <= angle && angle <= halfTurn;
                 if ( bInRange == false )
                 {
                     utf8 arrMessage[constant::buffer::kMax256];
@@ -127,8 +128,8 @@ namespace sw
             if ( bAligned )
             {
                 node.appendAttribute( "offset", CharacterDataReader::formatFloat3( role._offset ).c_str() );
-                if ( role._yawRadians != 0.0f || bWriteAll )
-                    node.appendAttribute( "yaw", CharacterDataReader::formatFloat( role._yawRadians * MathUtil::kRadianToDegree ).c_str() );
+                if ( role._yaw != Radians{} || bWriteAll )
+                    node.appendAttribute( "yaw", CharacterDataReader::formatFloat( role._yaw.degrees() ).c_str() );
                 node.appendAttribute( "maxAlignDistance", CharacterDataReader::formatFloat( role._maxAlignDistance ).c_str() );
             }
             if ( role._bAnchor == false && role._align == PairedAnimationAlign::Warp )
@@ -148,8 +149,8 @@ namespace sw
         {
             XMLNode node = root.appendChild( "Select" );
             node.appendAttribute( "role", content._select._role.view() );
-            node.appendAttribute( "minAngle", CharacterDataReader::formatFloat( content._select._minBearingRadians * MathUtil::kRadianToDegree ).c_str() );
-            node.appendAttribute( "maxAngle", CharacterDataReader::formatFloat( content._select._maxBearingRadians * MathUtil::kRadianToDegree ).c_str() );
+            node.appendAttribute( "minAngle", CharacterDataReader::formatFloat( content._select._minBearing.degrees() ).c_str() );
+            node.appendAttribute( "maxAngle", CharacterDataReader::formatFloat( content._select._maxBearing.degrees() ).c_str() );
             node.appendAttribute( "maxDistance", CharacterDataReader::formatFloat( content._select._maxDistance ).c_str() );
         }
         return document.saveToString();
@@ -165,18 +166,19 @@ namespace sw
         offset._y               = 0.0f;
         if ( offset.getLength() > _content._select._maxDistance )
             return false;
-        const float32 bearing = MathUtil::wrapAngle( MathUtil::atan2( offset._x, offset._z ) - anchorYaw );
+        const Radians bearing = Radians::fromRadians( MathUtil::wrapAngle( MathUtil::atan2( offset._x, offset._z ) - anchorYaw ) );
         // 최소가 최대보다 크면 ±180° 를 지나는 구간(뒤쪽)이다.
-        if ( _content._select._minBearingRadians <= _content._select._maxBearingRadians )
-            return _content._select._minBearingRadians <= bearing && bearing <= _content._select._maxBearingRadians;
-        return bearing >= _content._select._minBearingRadians || bearing <= _content._select._maxBearingRadians;
+        const PairedAnimationSelectDef& select = _content._select;
+        if ( select._minBearing <= select._maxBearing )
+            return select._minBearing <= bearing && bearing <= select._maxBearing;
+        return bearing >= select._minBearing || bearing <= select._maxBearing;
     }
 
     void PairedAnimationDef::computeAlignTarget( const float3& anchorPosition, float32 anchorYaw, const PairedAnimationRoleDef& role, float3& outPosition, float32& outYaw )
     {
         const quaternion turn = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, anchorYaw );
         outPosition           = anchorPosition + float3::transform( role._offset, turn );
-        outYaw                = MathUtil::wrapAngle( anchorYaw + role._yawRadians );
+        outYaw                = MathUtil::wrapAngle( anchorYaw + role._yaw.radians() );
     }
 
     bool PairedAnimationDef::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -274,13 +276,13 @@ namespace sw
                     reader.addError( "Character.AttributeMissing", node, string( "needs attribute '" ) + pName + "'" );
             }
             role._offset           = params._offset;
-            role._yawRadians       = params._yaw * MathUtil::kDegreeToRadian; // 데이터의 요는 도 단위다
+            role._yaw              = params._yaw;
             role._maxAlignDistance = params._maxAlignDistance;
             for ( uint32 axis = 0; axis < 3; ++axis )
             {
                 PairedAnimationDefInternal::requireFinite( reader, node, "offset", role._offset.data()[axis] );
             }
-            PairedAnimationDefInternal::requireFinite( reader, node, "yaw", role._yawRadians );
+            PairedAnimationDefInternal::requireFinite( reader, node, "yaw", role._yaw.radians() );
             PairedAnimationDefInternal::requireNonNegative( reader, node, "maxAlignDistance", role._maxAlignDistance );
         }
         else
@@ -334,15 +336,13 @@ namespace sw
             reader.addError( "Character.PairedSelectRepeated", node, "repeats <Select> (a paired animation has at most one)" );
             return;
         }
-        _content._bHasSelect                = true;
-        _content._select._role              = params._role;
-        const float32 minDegrees            = params._minAngle;
-        const float32 maxDegrees            = params._maxAngle;
-        _content._select._maxDistance       = params._maxDistance;
-        _content._select._minBearingRadians = minDegrees * MathUtil::kDegreeToRadian;
-        _content._select._maxBearingRadians = maxDegrees * MathUtil::kDegreeToRadian;
-        PairedAnimationDefInternal::requireHalfTurn( reader, node, "minAngle", minDegrees );
-        PairedAnimationDefInternal::requireHalfTurn( reader, node, "maxAngle", maxDegrees );
+        _content._bHasSelect          = true;
+        _content._select._role        = params._role;
+        _content._select._maxDistance = params._maxDistance;
+        _content._select._minBearing  = params._minAngle;
+        _content._select._maxBearing  = params._maxAngle;
+        PairedAnimationDefInternal::requireHalfTurn( reader, node, "minAngle", params._minAngle );
+        PairedAnimationDefInternal::requireHalfTurn( reader, node, "maxAngle", params._maxAngle );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "maxDistance", _content._select._maxDistance );
     }
 

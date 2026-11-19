@@ -57,9 +57,9 @@ namespace
             sw::WeaponDef weapon;
             weapon._id             = sw::hashed_string( "gun" );
             weapon._projectileID   = sw::hashed_string( "pellet" );
-            weapon._minSpread      = 0.0f;
-            weapon._maxSpread      = 0.0f;
-            weapon._spreadPerShot  = 0.0f;
+            weapon._minSpread      = sw::Radians{};
+            weapon._maxSpread      = sw::Radians{};
+            weapon._spreadPerShot  = sw::Radians{};
             weapon._pelletCount    = 3;
             weapon._magazineSize   = 2;
             weapon._maxReserveAmmo = 0;

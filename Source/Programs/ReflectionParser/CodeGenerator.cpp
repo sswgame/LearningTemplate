@@ -82,7 +82,7 @@ namespace sw
                     return;
                 // 접근자 프로퍼티는 메서드를 부른다(`_pValueAccessor` 와 같은 규칙). 이름이 틀리거나 숫자가 아닌 필드면 생성된 코드가 컴파일되지 않는다.
                 const utf8* pCall = pField->_bIsAccessor == SW_TRUE ? "()" : "";
-                emit.linef( "m.%# = []( const void* pInstance ) -> ::float64 { return %#static_cast<::float64>( static_cast<const %#*>( pInstance )->%#%# ); };",
+                emit.linef( "m.%# = []( const void* pInstance ) -> ::float64 { return %#::sw::PropertyMetadata::toRangeNumber( static_cast<const %#*>( pInstance )->%#%# ); };",
                             pMemberName, bNegate ? "-" : "", typeInfo._fullyQualifiedName, pField->_memberName, pCall );
             }
 

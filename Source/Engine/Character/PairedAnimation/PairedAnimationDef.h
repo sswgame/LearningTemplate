@@ -23,6 +23,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
@@ -60,7 +61,7 @@ namespace sw
         hashed_string        _exitState{};
         string               _skeletonPath{};       ///< 비었으면 스켈레톤을 묻지 않는다
         float3               _offset{};             ///< 앵커 요로 돌릴 앵커 기준 자리(m)
-        float32              _yawRadians{ 0.0f };   ///< 앵커 요에 더할 요(라디안)
+        Radians              _yaw{};                ///< 앵커 요에 더할 요
         float32              _startSeconds{ 0.0f }; ///< 공유 타임라인에서 들어오는 시각
         float32              _enterBlendSeconds{ 0.0f };
         float32              _exitBlendSeconds{ 0.0f };
@@ -87,14 +88,14 @@ namespace sw
 {
     /**
      * @brief 세트 고르기 조건입니다(`<Select>`). 여러 에셋 가운데 시작할 것을 고를 때(처형 · 잡기 세트), 그 역할 루트가 앵커 루트에서 보이는 자리가 맞아야 합니다.
-     * @details 방위각은 앵커 앞(+Z)에서 측정한 수평 각(라디안, `atan2( x, z )`, 오른쪽 +X 가 양수)이고 거리는 수평 거리입니다. `_minBearingRadians > _maxBearingRadians` 면
+     * @details 방위각은 앵커 앞(+Z)에서 측정한 수평 각(`atan2( x, z )`, 오른쪽 +X 가 양수)이고 거리는 수평 거리입니다. `_minBearing > _maxBearing` 면
      *          ±180° 를 지나는 구간(뒤쪽)입니다.
      */
     struct PairedAnimationSelectDef
     {
         hashed_string _role{};
-        float32       _minBearingRadians{ 0.0f };
-        float32       _maxBearingRadians{ 0.0f };
+        Radians       _minBearing{};
+        Radians       _maxBearing{};
         float32       _maxDistance{ 0.0f };
     };
 } // namespace sw
@@ -112,7 +113,7 @@ namespace sw
     };
 
     /**
-     * @brief `<Role>` 의 칸입니다. 각은 파일에서 도 단위이고 읽은 뒤 라디안으로 옮긴다.
+     * @brief `<Role>` 의 칸입니다. 각(`Radians`)은 파일에서 도 단위이고 읽는 입구가 라디안으로 담는다.
      * @details 정렬(`align` — none · snap · warp)에 따라 받는 칸이 다르다: snap · warp 는 `offset` · `maxAlignDistance` 가 필수, warp 는 `warpEnd` 도 필수,
      *          그 밖에는 셋을 적으면 오류다. 그 "적었는지"는 `PairedAnimationDef::readRole` 이 본다.
      */
@@ -143,8 +144,8 @@ namespace sw
         string _align{};
         PROPERTY( Units = m )
         float3 _offset{};
-        PROPERTY( Units = deg )
-        float32 _yaw{ 0.0f };
+        PROPERTY()
+        Radians _yaw{};
         PROPERTY( Units = m )
         float32 _maxAlignDistance{ 0.0f };
         PROPERTY( Units = s )
@@ -165,7 +166,7 @@ namespace sw
         float32 _time{ 0.0f };
     };
 
-    /** @brief `<Select>` 의 칸입니다. 각은 도 단위다. */
+    /** @brief `<Select>` 의 칸입니다. 파일의 각은 도 단위다(`Radians`). */
     REFLECT()
     struct SW_API PairedAnimationSelectParams
     {
@@ -173,10 +174,10 @@ namespace sw
 
         PROPERTY( Required )
         hashed_string _role{};
-        PROPERTY( Required, Units = deg )
-        float32 _minAngle{ 0.0f };
-        PROPERTY( Required, Units = deg )
-        float32 _maxAngle{ 0.0f };
+        PROPERTY( Required )
+        Radians _minAngle{};
+        PROPERTY( Required )
+        Radians _maxAngle{};
         PROPERTY( Required, Units = m )
         float32 _maxDistance{ 0.0f };
     };
@@ -184,7 +185,7 @@ namespace sw
     /**
      * @struct PairedAnimationContentDef
      * @brief 파일 한 장의 내용 그대로입니다(타임라인 길이 · 역할 · 알림 · 고르기 조건). 에디터는 이것을 고치고 `PairedAnimationDef::makeXMLText` 로 쓴 뒤 다시 읽어 검사합니다.
-     * @details 각(`_yawRadians`, 고르기 방위각)은 라디안이고 파일에는 도로 적힌다. 알림은 읽은 뒤 시각 순서다.
+     * @details 각(`_yaw`, 고르기 방위각)은 `Radians` 이고 파일에는 도로 적힌다. 알림은 읽은 뒤 시각 순서다.
      */
     struct PairedAnimationContentDef
     {

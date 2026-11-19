@@ -83,7 +83,7 @@ namespace
             CoasterTrackPiece piece;
             piece._type   = CoasterPieceKind::TurnRight;
             piece._radius = radius;
-            piece._angle  = angle;
+            piece._angle  = Radians::fromRadians( angle );
             return piece;
         }
 

@@ -661,7 +661,7 @@ namespace sw
         if ( bKillerNotReady )
             return KillerAttackResult::NotReady;
         const AsymmetricHorrorKillerDef& def    = *_killer._pDef;
-        const float32                    minDot = MathUtil::cos( def._lungeAngle * 0.5f );
+        const float32                    minDot = MathUtil::cos( def._lungeAngle.radians() * 0.5f );
         int32                            victim = constant::invalid_index::kInt32;
         float32                          best   = MathUtil::kMaxFloat;
         for ( int32 index = 0; index < getSurvivorCount(); ++index )

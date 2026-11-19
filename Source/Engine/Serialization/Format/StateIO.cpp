@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
@@ -39,6 +40,14 @@ namespace sw
             return;
         }
         writeInt2( *_pArchive, inoutValue );
+    }
+
+    void StateIO::value( Radians& inoutValue )
+    {
+        float32 radians = inoutValue.radians();
+        value( radians );
+        if ( isReading() )
+            inoutValue = Radians::fromRadians( radians );
     }
 
     void StateIO::value( Countdown& inoutCountdown )

@@ -322,8 +322,8 @@ namespace sw
     void CoasterTrackBuilder::appendTurn( const CoasterTrackPiece& piece, float32 directionSign )
     {
         const float32 radius       = MathUtil::max( 1.0f, piece._radius );
-        const float32 totalAngle   = piece._angle; // 스키마가 0 보다 큰 라디안을 보장한다
-        const float32 bank         = piece._bank * MathUtil::kDegreeToRadian * directionSign;
+        const float32 totalAngle   = piece._angle.radians(); // 스키마가 0 보다 큰 각을 보장한다
+        const float32 bank         = piece._bank.radians() * directionSign;
         const float32 rise         = piece._height;
         const float3  start        = _position;
         const float32 startHeading = _heading;

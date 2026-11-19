@@ -30,7 +30,7 @@ namespace
   <Window fastTime="0.5" mediumTime="1" killerTime="1" fastSpeedRatio="0.9" noiseRadius="40" blockTime="2" blockCount="2"/>
   <Locker searchTime="1"/>
   <Endgame gateTime="1" collapseTime="2" slowScale="0.5" hatchRemaining="1"/>
-  <Killer id="trapper" speedRatio="1.25" lungeRange="3" lungeAngle="1" hitCooldown="1" missCooldown="1" cooldownSpeedScale="0.5" terrorRadius="32" abilityCooldown="5" carrySpeedScale="0.5"/>
+  <Killer id="trapper" speedRatio="1.25" lungeRange="3" lungeAngle="57.29578" hitCooldown="1" missCooldown="1" cooldownSpeedScale="0.5" terrorRadius="32" abilityCooldown="5" carrySpeedScale="0.5"/>
   <Killer id="nurse"/>
   <Category id="Objectives" cap="100"/>
   <Score action="Repair" category="Objectives" points="500"/>

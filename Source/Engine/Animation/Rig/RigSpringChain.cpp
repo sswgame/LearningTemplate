@@ -216,8 +216,8 @@ namespace sw
                     next = next - planeNormal * ( next - root ).dot( planeNormal );
                 next = RigSpringChainInternal::keepLength( _listPosition[index - 1], next, _listLength[index] );
                 next = RigSpringChainInternal::pushOutOfColliders( next, particle._radius, listCollider, pose, worldFromModel );
-                if ( settings._maxSwingDegrees > 0.0f )
-                    next = RigSpringChainInternal::limitSwing( _listPosition[index - 1], next, animatedOffset, settings._maxSwingDegrees * MathUtil::kDegreeToRadian );
+                if ( settings._maxSwing > Radians{} )
+                    next = RigSpringChainInternal::limitSwing( _listPosition[index - 1], next, animatedOffset, settings._maxSwing.radians() );
                 _listPosition[index] = RigSpringChainInternal::keepLength( _listPosition[index - 1], next, _listLength[index] );
             }
         }

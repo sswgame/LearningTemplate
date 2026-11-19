@@ -56,7 +56,7 @@ SW_TEST_CASE( RigJiggleTest, ImpulseDisplacesThenSettles )
     makeBustPose( buffer );
     sw::RigJiggleGroupParams group;
     group._gravityScale                   = 0.0f;
-    group._maxSwingDegrees                = 0.0f;
+    group._maxSwing                       = sw::Radians{};
     const sw::RigSpringSettings settings  = sw::RigJiggleNode::makeSettings( group, 1.0f );
     const uint32                arrBone[] = { 0, 1 };
     sw::RigSpringChain          chain;
@@ -90,7 +90,7 @@ SW_TEST_CASE( RigJiggleTest, MaxSwingClampsDisplacement )
     makeBustPose( buffer );
     sw::RigJiggleGroupParams group;
     group._gravityScale                   = 0.0f;
-    group._maxSwingDegrees                = 10.0f;
+    group._maxSwing                       = sw::Radians::fromDegrees( 10.0f );
     const sw::RigSpringSettings settings  = sw::RigJiggleNode::makeSettings( group, 2.0f );
     const uint32                arrBone[] = { 0, 1 };
     sw::RigSpringChain          chain;
