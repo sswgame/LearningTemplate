@@ -14,11 +14,13 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
+    struct WeatherDef;
     class WeatherCatalog;
 
     /**
@@ -43,7 +45,7 @@ namespace sw
         PROPERTY( Category = "Weather", DisplayName = "Weather Data", Tooltip = "Weather catalog (*.weather.xml)" )
         AssetRef<WeatherCatalog> _weatherDataPath;
         PROPERTY( Category = "Weather", DisplayName = "Start Weather", Tooltip = "Weather set at once on a fresh game (empty: the catalog picks by season weights)" )
-        hashed_string _startWeather;
+        CatalogKey<WeatherDef> _startWeather;
         PROPERTY( Category = "Weather", DisplayName = "Seed", Min = 1, Tooltip = "Seed of the weather sequence" )
         uint32 _seed;
 
