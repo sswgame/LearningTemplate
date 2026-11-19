@@ -214,7 +214,6 @@ namespace sw
         uint8         _bReadOnly     : 1;
         uint8         _bXMLAttribute : 1;
         uint8         _bAssetPath    : 1;
-        uint8         _bPolymorphic  : 1;
         uint8         _bHasMinRange  : 1;
         uint8         _bHasMaxRange  : 1;
         uint8         _bIsContainer  : 1;
@@ -291,7 +290,6 @@ namespace sw
             , _bReadOnly{ SW_FALSE }
             , _bXMLAttribute{ SW_FALSE }
             , _bAssetPath{ SW_FALSE }
-            , _bPolymorphic{ SW_FALSE }
             , _bHasMinRange{ SW_FALSE }
             , _bHasMaxRange{ SW_FALSE }
             , _bIsContainer{ SW_FALSE }

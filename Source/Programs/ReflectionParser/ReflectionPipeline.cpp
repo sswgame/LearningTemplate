@@ -139,7 +139,6 @@ namespace sw
                             {       prop._bReadOnly,        "ReadOnly"},
                             {      prop._bTransient,       "Transient"},
                             {   prop._bXMLAttribute,    "XMLAttribute"},
-                            {    prop._bPolymorphic,     "Polymorphic"},
                             {    prop._bSkipIfEmpty,     "SkipIfEmpty"},
                             {       prop._bRequired,        "Required"},
                             {     prop._bInheritKey,      "InheritKey"},
