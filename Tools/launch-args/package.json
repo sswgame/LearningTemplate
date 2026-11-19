@@ -27,6 +27,11 @@
     "onDebugResolve"
   ],
   "main": "./Source/Extension.js",
+  "files": [
+    "Source",
+    "Webview",
+    "Profiles"
+  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [

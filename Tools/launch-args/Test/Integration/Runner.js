@@ -3,7 +3,7 @@
 /**
  * @file Runner.js
  * @brief 실제 VS Code 확장 호스트 안에서 도는 통합 테스트입니다(`--extensionTestsPath`).
- * @details `Scripts/ExtensionTool.py test --integration` 이 임시 작업 폴더(`Fixture/` 사본 — 엔진과 무관한 프로필)를 만들고
+ * @details `Tools/Scripts/ExtensionTool.py test --integration Tools/launch-args` 가 임시 작업 폴더(`Fixture/` 사본 — 엔진과 무관한 프로필)를 만들고
  *          격리된 VS Code 를 띄워 이 파일의 `run()` 을 부릅니다. 보는 것:
  *          - 프로필대로 카탈로그가 만들어지는가(`--` 접두사 · 다른 매크로).
  *          - 값을 바꾸면 `.vscode/settings.json` 의 `cmake.debugConfig.args` 에 쓰이고 **주석과 다른 키가 남는가**.
