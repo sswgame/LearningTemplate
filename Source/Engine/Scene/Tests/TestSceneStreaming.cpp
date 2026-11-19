@@ -1,4 +1,5 @@
-// SceneStreamingTest — 씬 스트리밍(감사 A-13): 시간 예산으로 나눈 짓기가 한 번에 지은 것과 같고, 내렸다 올린 셀이 바뀐 상태를 지키며, 읽는 중에 내리면 취소되고 새지 않는다.
+// SceneStreamingTest — 씬 스트리밍(감사 A-13): 시간 예산으로 나눈 짓기가 한 번에 지은 것과 같고, 내렸다 올린 셀이 바뀐 상태(런타임 칸 포함)를 지키며, 읽는 중에 내리면 취소되고 새지 않는다.
+// 셀 경계(설계 "스트리밍 셀 경계 정합 · 저장"): 걸어 나간 오브젝트 · 런타임 스폰은 자리의 셀을 따르고, 세이브 몫은 비운 매니저 위에서 셀 상태를 되살린다.
 #include "pch.h"
 
 #include "Core/Concurrency/Futex.h"
@@ -14,6 +15,7 @@
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/Tests/StateHashTestComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Scene/Scene.h"
@@ -96,6 +98,20 @@ namespace
         }
 
         static void setSource( SceneStreamingSubsystem& streaming, const float3& source ) { streaming.setExternalSources( span<const float3>( &source, 1 ) ); }
+
+        /** @brief 이름이 @p pName 인(번호 붙은 겹침 포함) 살아 있는 오브젝트 수입니다 — 같은 엔티티가 두 번 서면 2 다. */
+        static uint32 countNamed( GameObjectManager& objects, const utf8* pName )
+        {
+            objects.processDeferredDestruction();
+            vector<GameObject*> listObject;
+            objects.findGameObjectsByBaseName( pName, listObject );
+            uint32 count = 0;
+            for ( const GameObject* pObject : listObject )
+            {
+                count += pObject->isPendingDestroy() ? 0u : 1u;
+            }
+            return count;
+        }
     };
     using Util = SceneStreamingTestUtil;
 
@@ -323,4 +339,185 @@ SW_TEST_CASE( SceneStreamingTest, UnloadWhileReadingCancelsWithoutLeak )
     const float3 position = Util::findPosition( scene, 1 );
     SW_EXPECT_EQUAL( 2.0f, position._x );
     SW_EXPECT_EQUAL( 5.0f, position._z );
+}
+
+/**
+ * @brief [SceneStreamingTest] 셀 A 의 오브젝트가 셀 B 자리로 가면 — B 가 올라 있으면 A 를 내려도 그대로 살아 B 에 들고, B 가 내려가 있으면 B 의 떠 둔 상태에 합쳐 B 가 오를 때 선다(어느 쪽이든 하나뿐)
+ * @details 문서: 셀 (0,0) · (1,0) · (2,0), 한 변 10 m, 반경 6 m, 여유 0. 셀 x 의 엔티티는 x*10+2 · x*10+8 자리(파일 id 1 부터).
+ */
+SW_TEST_CASE( SceneStreamingTest, MovedObjectFollowsTheCellOfItsPosition )
+{
+    const ScopedFreeRunningPolicy policy;
+    Scene                         scene{ "Moved" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeDocument( Util::kWholeBudgetMicroseconds ) ) );
+    GameObjectManager&       objects   = *scene.getObjectManager();
+    SceneStreamingSubsystem& streaming = objects.getSubsystem<SceneStreamingSubsystem>();
+    Util::setSource( streaming, float3{ 5.0f, 0.0f, 5.0f } ); // (0,0) · (1,0)
+    streaming.update( 0.0f );
+    SW_REQUIRE_EQUAL( 2u, streaming.getLoadedCellCount() );
+
+    // (0,0) 의 Crate1 이 올라 있는 (1,0) 자리로 걷는다 — (0,0) 을 내려도 같은 오브젝트가 (1,0) 에 들어 산다.
+    GameObject* pMover = Util::findByFileID( scene, 1 );
+    SW_REQUIRE_TRUE( pMover != nullptr && pMover->getPrimarySceneComponent() != nullptr );
+    const uint64 moverID = pMover->getObjectID();
+    pMover->getPrimarySceneComponent()->setLocalPosition( float3{ 15.0f, 0.0f, 5.0f } );
+    Util::setSource( streaming, float3{ 25.0f, 0.0f, 5.0f } ); // (0,0) 은 15 m 밖 — 내린다. (1,0) · (2,0) 은 반경 안
+    streaming.update( 0.0f );
+    SW_EXPECT_FALSE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) );
+    const GameObject* pAfter = Util::findByFileID( scene, 1 );
+    SW_REQUIRE_TRUE( pAfter != nullptr );
+    SW_EXPECT_EQUAL( moverID, pAfter->getObjectID() ); // 다시 지은 것이 아니라 그 오브젝트다
+    SW_EXPECT_TRUE( streaming.isCellObject( moverID ) );
+    SW_EXPECT_TRUE( Util::findByFileID( scene, 2 ) == nullptr ); // 남은 (0,0) 엔티티는 셀과 함께 내렸다
+
+    // (1,0) 의 Crate3 이 내려간 (0,0) 자리로 간다 — (1,0) 을 내릴 때 (0,0) 의 떠 둔 상태에 합친다.
+    GameObject* pCrate3 = Util::findByFileID( scene, 3 );
+    SW_REQUIRE_TRUE( pCrate3 != nullptr && pCrate3->getPrimarySceneComponent() != nullptr );
+    pCrate3->getPrimarySceneComponent()->setLocalPosition( float3{ 4.0f, 0.0f, 6.0f } );
+    Util::setSource( streaming, float3{ 500.0f, 0.0f, 500.0f } );
+    streaming.update( 0.0f );
+    SW_EXPECT_EQUAL( 0u, streaming.getLoadedCellCount() );
+    SW_EXPECT_EQUAL( 0u, Util::countNamed( objects, "Crate1" ) );
+    SW_EXPECT_EQUAL( 0u, Util::countNamed( objects, "Crate3" ) );
+
+    // 두 셀을 함께 올린다 — 옮긴 둘은 새 자리에 하나씩만 선다.
+    const float3 arrSource[] = {
+        float3{ 5.0f, 0.0f, 5.0f},
+        float3{15.0f, 0.0f, 5.0f}
+    };
+    streaming.setExternalSources( span<const float3>( arrSource, 2 ) );
+    streaming.update( 0.0f );
+    SW_REQUIRE_TRUE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) && streaming.isCellLoaded( StreamingCellCoord{ 1, 0 } ) );
+    SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Crate1" ) );
+    SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Crate3" ) );
+    SW_EXPECT_EQUAL( 15.0f, Util::findPosition( scene, 1 )._x );
+    SW_EXPECT_EQUAL( 4.0f, Util::findPosition( scene, 3 )._x );
+    SW_EXPECT_EQUAL( 6.0f, Util::findPosition( scene, 3 )._z );
+}
+
+/**
+ * @brief [SceneStreamingTest] 셀에 들지 않은 런타임 스폰은 반경 밖이 되면 자리의 셀에 들어 함께 내리고 그 셀이 오를 때 다시 선다 — 늘 올라 있음 표시가 있으면 셀에 들지 않는다
+ */
+SW_TEST_CASE( SceneStreamingTest, RuntimeSpawnJoinsTheCellOfItsPosition )
+{
+    const ScopedFreeRunningPolicy policy;
+    Scene                         scene{ "Spawned" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeDocument( Util::kWholeBudgetMicroseconds ) ) );
+    GameObjectManager&       objects   = *scene.getObjectManager();
+    SceneStreamingSubsystem& streaming = objects.getSubsystem<SceneStreamingSubsystem>();
+    Util::setSource( streaming, float3{ 5.0f, 0.0f, 5.0f } );
+    streaming.update( 0.0f );
+    SW_REQUIRE_EQUAL( 2u, streaming.getLoadedCellCount() );
+
+    GameObject* pSpawned  = objects.createGameObject( hashed_string( "Spawned" ) );
+    GameObject* pResident = objects.createGameObject( hashed_string( "Resident" ) );
+    SW_REQUIRE_TRUE( pSpawned != nullptr && pResident != nullptr );
+    SceneComponent* pSpawnedRoot  = pSpawned->addComponent<SceneComponent>();
+    SceneComponent* pResidentRoot = pResident->addComponent<SceneComponent>();
+    SW_REQUIRE_TRUE( pSpawnedRoot != nullptr && pResidentRoot != nullptr );
+    pSpawnedRoot->setLocalPosition( float3{ 15.0f, 0.0f, 5.0f } );
+    pResidentRoot->setLocalPosition( float3{ 15.0f, 0.0f, 5.0f } );
+    pResident->setAlwaysLoaded( true );
+    objects.mergePendingAdds();
+    SW_EXPECT_FALSE( streaming.isCellObject( pSpawned->getObjectID() ) ); // 반경 안에서는 셀 밖이다
+
+    Util::setSource( streaming, float3{ 500.0f, 0.0f, 500.0f } );
+    streaming.update( 0.0f );
+    SW_EXPECT_EQUAL( 0u, Util::countNamed( objects, "Spawned" ) );  // (1,0) 에 들어 함께 내렸다
+    SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Resident" ) ); // 늘 올라 있음 표시는 셀에 들지 않는다
+
+    Util::setSource( streaming, float3{ 15.0f, 0.0f, 5.0f } );
+    streaming.update( 0.0f );
+    SW_REQUIRE_EQUAL( 1u, Util::countNamed( objects, "Spawned" ) );
+    const GameObject* pBack = objects.findGameObjectByName( hashed_string( "Spawned" ) );
+    SW_REQUIRE_TRUE( pBack != nullptr && pBack->getPrimarySceneComponent() != nullptr );
+    SW_EXPECT_EQUAL( 15.0f, pBack->getPrimarySceneComponent()->getLocalPosition()._x );
+    SW_EXPECT_TRUE( streaming.isCellObject( pBack->getObjectID() ) );
+}
+
+/** @brief [SceneStreamingTest] 내렸다 다시 올린 셀은 런타임 칸(`RuntimeState`)까지 지킨다 — 떠 둔 상태의 목적이 스냅숏이다(저작 목적이면 처음 값으로 돌아온다) */
+SW_TEST_CASE( SceneStreamingTest, ReloadedCellKeepsRuntimeState )
+{
+    const ScopedFreeRunningPolicy policy;
+    Scene                         scene{ "Runtime" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeDocument( Util::kWholeBudgetMicroseconds ) ) );
+    GameObjectManager&       objects   = *scene.getObjectManager();
+    SceneStreamingSubsystem& streaming = objects.getSubsystem<SceneStreamingSubsystem>();
+    Util::setSource( streaming, float3{ 5.0f, 0.0f, 5.0f } );
+    streaming.update( 0.0f );
+
+    GameObject* pCrate = Util::findByFileID( scene, 1 );
+    SW_REQUIRE_TRUE( pCrate != nullptr );
+    StateHashTestComponent* pState = pCrate->addComponent<StateHashTestComponent>();
+    SW_REQUIRE_NOT_NULL( pState );
+    pState->_steps = 7;
+    pState->_phase = "opened";
+
+    Util::setSource( streaming, float3{ 500.0f, 0.0f, 500.0f } );
+    streaming.update( 0.0f );
+    objects.processDeferredDestruction();
+    Util::setSource( streaming, float3{ 5.0f, 0.0f, 5.0f } );
+    streaming.update( 0.0f );
+
+    const GameObject* pBack = Util::findByFileID( scene, 1 );
+    SW_REQUIRE_TRUE( pBack != nullptr );
+    const StateHashTestComponent* pBackState = pBack->getComponent<StateHashTestComponent>();
+    SW_REQUIRE_NOT_NULL( pBackState );
+    SW_EXPECT_EQUAL( 7, pBackState->_steps );
+    SW_EXPECT_TRUE( pBackState->_phase == "opened" );
+}
+
+/**
+ * @brief [SceneStreamingTest] 세이브 몫은 내려간 셀의 떠 둔 상태와 올라 있는 셀의 지금 상태를 싣고, 비운 매니저(복원) 위에서 셀이 그 상태로 다시 선다 — 저장 뒤에 바꾼 것은 덮인다
+ * @details 복원 흐름(`GameStateSnapshot::readEnvelope`)과 같다: 매니저를 비우면 조각이 문서 내용으로 돌아가되 월드는 남고, 세이브의 상태를 얹은 뒤 다음 갱신이 짓는다.
+ */
+SW_TEST_CASE( SceneStreamingTest, SaveStateRestoresCellsOverAClearedManager )
+{
+    const ScopedFreeRunningPolicy policy;
+    Scene                         scene{ "Saved" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeDocument( Util::kWholeBudgetMicroseconds ) ) );
+    GameObjectManager&       objects   = *scene.getObjectManager();
+    SceneStreamingSubsystem& streaming = objects.getSubsystem<SceneStreamingSubsystem>();
+    Util::setSource( streaming, float3{ 5.0f, 0.0f, 5.0f } );
+    streaming.update( 0.0f );
+
+    GameObject* pCrate1 = Util::findByFileID( scene, 1 );
+    GameObject* pCrate3 = Util::findByFileID( scene, 3 );
+    SW_REQUIRE_TRUE( pCrate1 != nullptr && pCrate3 != nullptr );
+    pCrate1->getPrimarySceneComponent()->setLocalPosition( float3{ 3.0f, 0.0f, 7.0f } );
+    pCrate3->getPrimarySceneComponent()->setLocalPosition( float3{ 13.0f, 0.0f, 7.0f } );
+    Util::setSource( streaming, float3{ 25.0f, 0.0f, 5.0f } ); // (0,0) 은 떠 두고 내린다 · (1,0) 은 올라 있다
+    streaming.update( 0.0f );
+    SW_REQUIRE_FALSE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) );
+    SW_REQUIRE_TRUE( streaming.isCellLoaded( StreamingCellCoord{ 1, 0 } ) );
+
+    vector<uint8> bytes;
+    streaming.writeSaveState( bytes );
+    SceneStreamingSubsystem::SaveState state;
+    SW_REQUIRE_TRUE( SceneStreamingSubsystem::readSaveState( bytes.data(), bytes.size(), state ) );
+    SW_EXPECT_TRUE( state._listCell.empty() == false );
+
+    // 저장 뒤에 바꾼다 — 복원이 덮는다.
+    pCrate3 = Util::findByFileID( scene, 3 );
+    SW_REQUIRE_TRUE( pCrate3 != nullptr );
+    pCrate3->getPrimarySceneComponent()->setLocalPosition( float3{ 18.0f, 0.0f, 7.0f } );
+
+    objects.clear();
+    scene.rebindRestoredFileIDs( {} );
+    SW_EXPECT_TRUE( streaming.isStreaming() ); // 월드는 남는다
+    SW_EXPECT_EQUAL( 0u, streaming.getLoadedCellCount() );
+    streaming.applySaveState( std::move( state ) );
+
+    const float3 arrSource[] = {
+        float3{ 5.0f, 0.0f, 5.0f},
+        float3{15.0f, 0.0f, 5.0f}
+    };
+    streaming.setExternalSources( span<const float3>( arrSource, 2 ) );
+    streaming.update( 0.0f );
+    SW_REQUIRE_TRUE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) && streaming.isCellLoaded( StreamingCellCoord{ 1, 0 } ) );
+    SW_EXPECT_EQUAL( 3.0f, Util::findPosition( scene, 1 )._x ); // 내려가 있던 셀의 떠 둔 상태
+    SW_EXPECT_EQUAL( 7.0f, Util::findPosition( scene, 1 )._z );
+    SW_EXPECT_EQUAL( 13.0f, Util::findPosition( scene, 3 )._x ); // 올라 있던 셀은 저장 때 뜬 상태(뒤에 바꾼 18 이 아니다)
+    SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Crate1" ) );
+    SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Crate3" ) );
 }
