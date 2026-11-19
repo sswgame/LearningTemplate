@@ -235,9 +235,16 @@ namespace sw
 
     bool UserSettingsEngineHandlers::applyLanguage( const UserSettingApplyParams& context )
     {
-        if ( _targets._pLocalizationManager == nullptr || context._value.empty() )
+        if ( _targets._pLocalizationManager == nullptr )
             return true;
         LocalizationManager& localization = *_targets._pLocalizationManager;
+        // 빈 값은 "게임 기본 언어"(스키마 주석)다 — 기동 적용은 아직 고른 언어가 없어 그대로 두고, 그 뒤에는 기동 때 고른 언어로 돌아간다.
+        // 예전에는 빈 값을 늘 건너뛰어, 다른 언어를 골랐다가 "게임 기본" 으로 돌아와도 언어가 바뀌지 않았다.
+        if ( context._value.empty() )
+        {
+            const string startupLanguage = localization.getStartupLanguage();
+            return context._bStartup || startupLanguage.empty() || localization.setCurrentLanguage( startupLanguage );
+        }
         if ( localization.hasLanguage( context._value ) == false )
         {
             // 기동 적용은 게임이 언어 팩을 읽기 전이다. 게임이 읽은 뒤의 다시 적용에서 적용된다.

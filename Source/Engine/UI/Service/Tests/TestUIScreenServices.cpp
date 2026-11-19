@@ -15,6 +15,17 @@ using namespace sw;
 
 namespace
 {
+    /** @brief 자막 테스트의 표시 규칙 — 커밋한 엔진 설정(`Config/Engine/EngineConfig.json` 의 `_subtitles`)과 같은 값이다(서비스는 기동 때 그 파일로 받는다). */
+    SubtitleConfig makeSubtitleTestConfig()
+    {
+        SubtitleConfig config;
+        config._maxVisibleLineCount        = 2;
+        config._minDisplaySeconds          = 2.0f;
+        config._readingSecondsPerCharacter = 0.06f;
+        config._listSizeScale              = { 0.85f, 1.0f, 1.3f };
+        return config;
+    }
+
     struct UICommandProbe
     {
         Subscription _subscription{};
@@ -102,20 +113,67 @@ SW_TEST_CASE( UIScreenServicesTest, CursorAndTooltipOwnerTraverseThePath )
 /** @brief [UIScreenServicesTest] 읽는 시간은 바이트가 아니라 글자 수로 세고 하한이 있다. 크기 설정은 범위 안으로 자른다 */
 SW_TEST_CASE( UIScreenServicesTest, SubtitleReadingTimeAndSize )
 {
-    SW_EXPECT_NEAR( UISubtitleService::kMinReadingSeconds, UISubtitleService::computeReadingSeconds( "" ), 1.0e-5f );
+    const SubtitleConfig config = makeSubtitleTestConfig();
+    UISubtitleService    service;
+    SW_REQUIRE_TRUE( service.configure( config ) );
+    SW_EXPECT_NEAR( config._minDisplaySeconds, service.computeReadingSeconds( "" ), 1.0e-5f );
     const string longLatin( 100, 'a' );
-    SW_EXPECT_NEAR( 100.0f * UISubtitleService::kReadingSecondsPerCharacter, UISubtitleService::computeReadingSeconds( longLatin ), 1.0e-4f );
+    SW_EXPECT_NEAR( 100.0f * config._readingSecondsPerCharacter, service.computeReadingSeconds( longLatin ), 1.0e-4f );
 
     string longKorean;
     for ( int32 index = 0; index < 100; ++index )
     {
         longKorean += "가";
     }
-    SW_EXPECT_NEAR( 100.0f * UISubtitleService::kReadingSecondsPerCharacter, UISubtitleService::computeReadingSeconds( longKorean ), 1.0e-4f );
+    SW_EXPECT_NEAR( 100.0f * config._readingSecondsPerCharacter, service.computeReadingSeconds( longKorean ), 1.0e-4f );
 
-    SW_EXPECT_NEAR( UISubtitleService::computeSizeScale( 0 ), UISubtitleService::computeSizeScale( -5 ), 1.0e-5f );
-    SW_EXPECT_NEAR( UISubtitleService::computeSizeScale( 2 ), UISubtitleService::computeSizeScale( 99 ), 1.0e-5f );
-    SW_EXPECT_NEAR( 1.0f, UISubtitleService::computeSizeScale( 1 ), 1.0e-5f );
+    SW_EXPECT_NEAR( service.computeSizeScale( 0 ), service.computeSizeScale( -5 ), 1.0e-5f );
+    SW_EXPECT_NEAR( service.computeSizeScale( 2 ), service.computeSizeScale( 99 ), 1.0e-5f );
+    SW_EXPECT_NEAR( 1.0f, service.computeSizeScale( 1 ), 1.0e-5f );
+    SW_EXPECT_NEAR( 1.3f, service.computeSizeScale( 2 ), 1.0e-5f );
+}
+
+/** @brief [UIScreenServicesTest] 자막 규칙이 비었거나 0 이면(설정 파일에 칸이 없다) 받지 않고 알린다 — 코드 값으로 대신하지 않는다 */
+SW_TEST_CASE( UIScreenServicesTest, SubtitleConfigMustBeComplete )
+{
+    SW_EXPECT_LOG( "UISubtitle.InvalidConfig" );
+    UISubtitleService service;
+    SW_EXPECT_FALSE( service.configure( SubtitleConfig{} ) );
+    SubtitleConfig noScale = makeSubtitleTestConfig();
+    noScale._listSizeScale.clear();
+    SW_EXPECT_FALSE( service.configure( noScale ) );
+    SW_EXPECT_TRUE( service.configure( makeSubtitleTestConfig() ) );
+    SW_EXPECT_EQUAL( uint32( 2 ), service.getConfig()._maxVisibleLineCount );
+}
+
+/** @brief [UIScreenServicesTest] 줄 번호로 일찍 내린다(시퀀서 자막 구간을 나갈 때) — 보이는 줄이든 기다리는 줄이든, 없는 번호는 아무 일도 없다 */
+SW_TEST_CASE( UIScreenServicesTest, SubtitleRemoveByLineID )
+{
+    const bool bSaved = gv_subtitles;
+    gv_subtitles      = false; // 화면을 열지 않고 차례만 본다
+    {
+        UISubtitleService service;
+        SW_REQUIRE_TRUE( service.configure( makeSubtitleTestConfig() ) );
+        ISubtitleSink& sink    = service.getSubtitleSink();
+        const uint32   firstID = sink.postSubtitle( "", "first", 5.0f );
+        (void)sink.postSubtitle( "", "second", 5.0f );
+        const uint32 thirdID = sink.postSubtitle( "", "third", 5.0f );
+        service.update( 0.1f );
+        SW_EXPECT_EQUAL( uint32( 2 ), service.getActiveLineCount() );
+        SW_EXPECT_EQUAL( uint32( 1 ), service.getQueuedLineCount() );
+
+        sink.removeSubtitle( thirdID ); // 기다리는 줄
+        SW_EXPECT_EQUAL( uint32( 0 ), service.getQueuedLineCount() );
+        sink.removeSubtitle( firstID ); // 보이는 줄
+        SW_EXPECT_EQUAL( uint32( 1 ), service.getActiveLineCount() );
+        SW_EXPECT_TRUE( service.getActiveLine( 0 )._text == "second" );
+        sink.removeSubtitle( firstID ); // 이미 내려간 번호
+        SW_EXPECT_EQUAL( uint32( 1 ), service.getActiveLineCount() );
+
+        sink.clearSubtitles();
+        SW_EXPECT_EQUAL( uint32( 0 ), service.getActiveLineCount() );
+    }
+    gv_subtitles = bSaved;
 }
 
 /** @brief [UIScreenServicesTest] 자막 차례: 두 줄까지 보이고 나머지는 기다린다. 기다리는 동안 시간이 흐르지 않고, 앞줄이 끝나면 먼저 온 줄이 올라온다. 꺼 두어도 시간은 흐른다 */
@@ -124,14 +182,16 @@ SW_TEST_CASE( UIScreenServicesTest, SubtitleQueueOrder )
     const bool bSaved = gv_subtitles;
     gv_subtitles      = false; // 화면을 열지 않고 차례만 본다
     {
-        UISubtitleService service;
-        const uint32      firstID = service.post( "", "first", 1.0f );
+        const SubtitleConfig config = makeSubtitleTestConfig();
+        UISubtitleService    service;
+        SW_REQUIRE_TRUE( service.configure( config ) );
+        const uint32 firstID = service.post( "", "first", 1.0f );
         (void)service.post( "", "second", 3.0f );
         (void)service.post( "", "third", 1.0f );
         SW_EXPECT_EQUAL( uint32( 3 ), service.getQueuedLineCount() );
 
         service.update( 0.1f );
-        SW_EXPECT_EQUAL( UISubtitleService::kMaxVisibleLineCount, service.getActiveLineCount() );
+        SW_EXPECT_EQUAL( config._maxVisibleLineCount, service.getActiveLineCount() );
         SW_EXPECT_EQUAL( uint32( 1 ), service.getQueuedLineCount() );
 
         service.update( 1.0f ); // 첫 줄이 끝났다
@@ -146,7 +206,7 @@ SW_TEST_CASE( UIScreenServicesTest, SubtitleQueueOrder )
 
         const uint32 nextID = service.post( "", "again", 0.0f ); // 0 이면 읽는 시간으로 정한다
         SW_EXPECT_FALSE( nextID == firstID );
-        service.update( UISubtitleService::kMinReadingSeconds - 0.5f );
+        service.update( config._minDisplaySeconds - 0.5f );
         SW_EXPECT_EQUAL( uint32( 1 ), service.getActiveLineCount() );
 
         service.clear();

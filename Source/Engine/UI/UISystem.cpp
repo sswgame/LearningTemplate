@@ -993,7 +993,9 @@ namespace sw
         {
             vector<AudioSubtitleCue> listCue;
             pAudio->getEngine().takeSubtitleCues( listCue );
-            engine::getSubsystem<UISubtitleService>().postAudioCues( listCue );
+            UISubtitleService& subtitles = engine::getSubsystem<UISubtitleService>();
+            subtitles.postAudioCues( listCue );
+            subtitles.refreshVoiceState( pAudio->getEngine() ); // 음성이 낸 줄은 그 음성이 끝날 때까지 남는다
         }
         update( frame._unscaledDeltaSeconds, viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
     }

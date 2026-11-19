@@ -632,7 +632,6 @@
     "Source/Engine/UI/Layout/ScrollPanel.cpp": {"float": 2},
     "Source/Engine/UI/Menu/OptionsMenuScreen.cpp": {"float": 1},
     "Source/Engine/UI/Screen/UIOffscreenScreens.cpp": {"float": 3},
-    "Source/Engine/UI/Service/UISubtitleService.cpp": {"float": 2},
     "Source/Engine/UI/UISystem.cpp": {"integer": 1},
     "Source/Engine/UI/Widgets/ButtonWidget.cpp": {"float": 8},
     "Source/Engine/UI/Widgets/CheckBoxWidget.cpp": {"float": 21},

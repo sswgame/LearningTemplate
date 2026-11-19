@@ -116,6 +116,70 @@ namespace sw
             outValue.setText( count > 0 ? string_view{ pSubtitles->getActiveLine( count - 1 )._speaker } : string_view{ "none" } );
             return true;
         }
+
+        /** @brief 자막 서비스입니다. 없으면(UI 없는 실행) 까닭을 적고 nullptr 입니다. */
+        const UISubtitleService* findSubtitles( AutomationWatchValue& outValue )
+        {
+            const UISubtitleService* pSubtitles = engine::findSubsystem<UISubtitleService>();
+            if ( pSubtitles == nullptr )
+                outValue.setText( "no subtitle service" );
+            return pSubtitles;
+        }
+
+        /** @brief 감시 값 `UI.SubtitleLineCount` 입니다 — 지금 보이는(시간이 흐르는) 자막 줄 수. 설정으로 화면을 꺼도 센다. */
+        [[nodiscard]] bool readSubtitleLineCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            (void)query;
+            const UISubtitleService* pSubtitles = findSubtitles( outValue );
+            if ( pSubtitles == nullptr )
+                return false;
+            outValue.setNumber( static_cast<float64>( pSubtitles->getActiveLineCount() ) );
+            return true;
+        }
+
+        /** @brief 감시 값 `UI.SubtitleShown` 입니다 — 자막 화면이 열려 있으면 1(사용자 설정 `accessibility.subtitles` 를 끄면 줄이 있어도 0). */
+        [[nodiscard]] bool readSubtitleShown( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            (void)query;
+            const UISubtitleService* pSubtitles = findSubtitles( outValue );
+            if ( pSubtitles == nullptr )
+                return false;
+            outValue.setNumber( pSubtitles->getScreen() != kInvalidUIScreenHandle ? 1.0 : 0.0 );
+            return true;
+        }
+
+        /** @brief 감시 값 `UI.SubtitleTextSize` 입니다 — 가장 최근 줄의 본문 글 크기(문서 크기 × 크기 설정 배율, UI 단위). 화면이 없으면 0. */
+        [[nodiscard]] bool readSubtitleTextSize( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            (void)query;
+            const UISubtitleService* pSubtitles = findSubtitles( outValue );
+            if ( pSubtitles == nullptr )
+                return false;
+            outValue.setNumber( static_cast<float64>( pSubtitles->makeLayoutReport()._newestTextFontSize ) );
+            return true;
+        }
+
+        /** @brief 감시 값 `UI.SubtitleWrappedLines` 입니다 — 보이는 줄 가운데 가장 많이 접힌 본문의 줄 수(긴 언어가 최대 폭에서 접히는지). */
+        [[nodiscard]] bool readSubtitleWrappedLines( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            (void)query;
+            const UISubtitleService* pSubtitles = findSubtitles( outValue );
+            if ( pSubtitles == nullptr )
+                return false;
+            outValue.setNumber( static_cast<float64>( pSubtitles->makeLayoutReport()._maxWrappedLineCount ) );
+            return true;
+        }
+
+        /** @brief 감시 값 `UI.SubtitleOverflow` 입니다 — 보이는 본문이 잘렸거나 자기 칸 · 화면 폭을 넘었으면 1(의사 문화권 qps-ploc 처럼 길어지는 언어). */
+        [[nodiscard]] bool readSubtitleOverflow( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            (void)query;
+            const UISubtitleService* pSubtitles = findSubtitles( outValue );
+            if ( pSubtitles == nullptr )
+                return false;
+            outValue.setNumber( pSubtitles->makeLayoutReport()._bOverflow ? 1.0 : 0.0 );
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_WATCH( uiSafeInsetTop, "UI.SafeInsetTop", "Top safe-area inset of the UI viewport in UI units (notch or status bar, or the debug safe zone)", &readSafeInsetTop );
@@ -127,4 +191,12 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( widgetMarkerVisible, "UI.MarkerVisible", "1 while the target object's screen-space widget marker is shown (0: collapsed, world space or no content)",
                                &readWidgetMarkerVisible, true, false );
     SW_AUTOMATION_QUERY_WATCH( uiSubtitleSpeaker, "UI.SubtitleSpeaker", "Speaker of the newest visible subtitle line (none: no line is shown)", &readSubtitleSpeaker, false, false );
+    SW_AUTOMATION_QUERY_WATCH( uiSubtitleLineCount, "UI.SubtitleLineCount", "Subtitle lines on screen whose time runs (counted even while the subtitles setting is off)", &readSubtitleLineCount, false,
+                               false );
+    SW_AUTOMATION_QUERY_WATCH( uiSubtitleShown, "UI.SubtitleShown", "1 while the subtitle screen is open (0 when the subtitles setting is off, even with lines)", &readSubtitleShown, false, false );
+    SW_AUTOMATION_QUERY_WATCH( uiSubtitleTextSize, "UI.SubtitleTextSize", "Body font size of the newest subtitle line (document size times the size setting scale; 0 without the screen)",
+                               &readSubtitleTextSize, false, false );
+    SW_AUTOMATION_QUERY_WATCH( uiSubtitleWrappedLines, "UI.SubtitleWrappedLines", "Most wrapped text lines among the visible subtitle lines (last UI layout)", &readSubtitleWrappedLines, false, false );
+    SW_AUTOMATION_QUERY_WATCH( uiSubtitleOverflow, "UI.SubtitleOverflow", "1 when a visible subtitle body is truncated or wider than its box or the screen (long languages such as qps-ploc)",
+                               &readSubtitleOverflow, false, false );
 } // namespace sw

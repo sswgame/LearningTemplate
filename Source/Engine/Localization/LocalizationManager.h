@@ -170,6 +170,11 @@ namespace sw
         void setFallbackLanguage( string_view languageCode );
         /** @brief 폴백 언어 코드를 값으로 반환합니다. */
         string getFallbackLanguage() const;
+        /**
+         * @brief 게임 기본 언어 — `initialize` 가 고른 언어(명령줄 `-language`, 게임 기본, 폴백 순)입니다. 아직 고르지 않았으면 빈 글입니다.
+         * @details 사용자 설정 `language.text` 의 빈 값("게임 기본")이 이 언어로 돌아간다. 다른 언어를 골랐다가 빈 값을 고르면 원래 언어로 돌아와야 한다.
+         */
+        string getStartupLanguage() const;
         /** @brief 그 언어의 텍스트(원문, 번역, 낱개 테이블, 의사 문화권)가 있는지 확인합니다. */
         bool hasLanguage( string_view languageCode ) const;
         /** @brief 고를 수 있는 언어 코드입니다(사전 순). 의사 문화권은 Dev 빌드에서만 들어 있습니다. */
@@ -279,6 +284,7 @@ namespace sw
         mutable shared_mutex                                            _mutex;
         string _currentLanguage                                         SW_GUARDED_BY( _mutex );
         string _fallbackLanguage                                        SW_GUARDED_BY( _mutex );
+        string _startupLanguage                                         SW_GUARDED_BY( _mutex ); ///< `initialize` 가 고른 게임 기본 언어(`getStartupLanguage`)
         CultureTable _cultureTable                                      SW_GUARDED_BY( _mutex );
         TimeZoneTable _timeZoneTable                                    SW_GUARDED_BY( _mutex );
         CultureInfo _currentCulture                                     SW_GUARDED_BY( _mutex ); ///< 지금 문화권의 형식 데이터(사슬을 다시 셀 때 함께)
