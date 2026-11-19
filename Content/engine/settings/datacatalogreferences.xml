@@ -177,4 +177,6 @@
 	<Field owner="VoxelGameModeComponent" field="_ironOreBlock" tag="VoxelBlockDef"/>
 	<Field owner="VoxelPlayerComponent" field="_waterBlock" tag="VoxelBlockDef"/>
 	<Field owner="VoxelPlayerComponent" field="_listStartBlock" tag="VoxelBlockDef"/>
+	<CatalogKey tag="CharacterAppearanceDef" catalog="CharacterAppearanceCatalog" entry="CharacterAppearance"/>
+	<Field owner="FarmVillageGameModeComponent" field="_listVillagerPreset" tag="CharacterAppearanceDef"/>
 </DataCatalogReferenceTable>

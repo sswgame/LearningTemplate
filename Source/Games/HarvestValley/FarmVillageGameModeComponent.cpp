@@ -236,7 +236,7 @@ namespace sw
             // 외형은 NPC 마다 다르게 — 프리셋을 번호로 돌려 고르고 번호를 씨앗으로 준다(같은 저장이면 같은 사람이 같은 차림이다).
             CharacterAppearanceComponent* pAppearance = pVillager->getComponent<CharacterAppearanceComponent>();
             if ( pAppearance != nullptr && _listVillagerPreset.empty() == false )
-                pAppearance->setPreset( _listVillagerPreset[static_cast<size_t>( npcIndex ) % _listVillagerPreset.size()], static_cast<uint32>( npcIndex + 1 ) );
+                pAppearance->setPreset( _listVillagerPreset[static_cast<size_t>( npcIndex ) % _listVillagerPreset.size()].key(), static_cast<uint32>( npcIndex + 1 ) );
         }
     }
 
