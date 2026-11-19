@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetFormat.h"
@@ -42,8 +43,9 @@ namespace sw
             // 판 8 부터 셀 목록은 색인(좌표 · 레이어 · 내용 구간)이고 셀 내용(엔티티 목록)은 색인 뒤에 셀마다 이어 붙는다 — 씬을 열 때 색인만 풀고 내용은 셀을 올릴 때 구간으로 읽는다(감사 A-13).
             // 판 9 부터 매직 · 판 뒤에 머리 길이(이 고정 머리 포함) · 내용 길이가 온다 — 로더는 고정 머리와 머리만 구간으로 읽고 셀 내용은 읽지 않는다.
             // 구간의 시작은 머리 끝에서 센 값으로 적는다(머리 길이가 레이어 이름에 달려 쓰기 전에 절대 위치를 모른다).
+            // 판 10 부터 셀 색인 뒤에 셀 엔티티의 가장 큰 파일 id(`_maxCellFileID`)가 온다 — 색인만 읽은 씬이 새 파일 id 를 내려간 셀과 겹치지 않게 고른다.
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
-            static constexpr uint32 kBinVersion = 9;
+            static constexpr uint32 kBinVersion = 10;
             // 고정 머리: 매직 · 판 · 머리 길이 · 내용 길이.
             static constexpr uint64 kFixedHeadBytes = 2u * sizeof( uint32 ) + 2u * sizeof( uint64 );
             // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯, 목록 수 둘, 파일 id · id 범위 · 앵커 id(8바이트씩)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
@@ -716,6 +718,7 @@ namespace sw
                 return false;
             }
         }
+        arch >> _maxCellFileID;
         // 셀 내용은 머리 바로 뒤부터다 — 구간을 파일 안 절대 위치로 바꾸고 내용 영역을 넘는 구간은 받지 않는다(런타임 읽기가 `OutOfRange` 로 지기 전에 여기서 멈춘다).
         const uint64 contentBase = headSize;
         for ( StreamingCell& cell : _listStreamingCell )
@@ -780,6 +783,13 @@ namespace sw
             SceneDocumentInternal::writeTextList( arch, cell._listDataLayer );
             arch << contentOffset << static_cast<uint64>( content.getSize() - contentOffset );
         }
+        // 셀 엔티티의 가장 큰 파일 id(판 10) — 런타임은 셀 내용을 읽지 않고도 새 파일 id 를 이 위에서 고른다.
+        uint64 maxCellFileID = 0;
+        for ( const StreamingCell& cell : _listStreamingCell )
+        {
+            maxCellFileID = MathUtil::max( maxCellFileID, computeMaxFileID( cell._listSceneObjectNode ) );
+        }
+        arch << maxCellFileID;
         Archive file;
         file << SceneDocumentInternal::kBinMagic << SceneDocumentInternal::kBinVersion << static_cast<uint64>( SceneDocumentInternal::kFixedHeadBytes + arch.getSize() )
              << static_cast<uint64>( content.getSize() );
@@ -811,6 +821,17 @@ namespace sw
         Archive arch;
         SceneDocumentInternal::writeEntities( arch, listNode );
         outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
+    }
+
+    uint64 SceneDocument::computeMaxFileID( const vector<SceneObjectNode>& listNode )
+    {
+        uint64 maxFileID = 0;
+        for ( const SceneObjectNode& node : listNode )
+        {
+            if ( node._instanceAnchorFileID == 0 )
+                maxFileID = MathUtil::max( maxFileID, node._fileID );
+        }
+        return maxFileID;
     }
 
     size_t SceneDocument::computeTotalEntityCount() const

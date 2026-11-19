@@ -81,7 +81,7 @@ namespace sw
         /**
          * @brief 오브젝트(@p listObjectID — 셀 짓기가 지은 것 · 셀로 옮겨 온 것)의 지금 상태를 셀 엔티티로 씁니다(비우고 채웁니다). 스트리밍이 셀을 내리기 전 · 세이브에 실을 때 부르고, 다시 올릴 때 이것으로 짓는다(셀 상태 보존).
          * @details 저장과 같은 길이다(`serializeToDocument` 의 엔티티 쓰기) — 프리팹 엔티티는 원형과 다른 것만(`PrefabOverrides` 델타), 그 밖은 전체 상태를 적되 목적은 `SerializePurpose::Snapshot` 이다
-         *          (런타임 칸까지 — 엔티티의 `_statePurpose` 가 그 목적으로 읽게 한다). 파일 id · 레이어 · 인스턴스 앵커를 그대로 둔다(파일 id 가 없는 런타임 스폰은 0). 상태는 이미 평평한 파일 id 라
+         *          (런타임 칸까지 — 엔티티의 `_statePurpose` 가 그 목적으로 읽게 한다). 파일 id · 레이어 · 인스턴스 앵커를 그대로 둔다(셀에 드는 런타임 스폰은 스트리밍이 먼저 파일 id 를 준다). 상태는 이미 평평한 파일 id 라
          *          id 범위는 0 이다. 플레이 중 지운 오브젝트는 적지 않아 다시 올려도 없다(언리얼 레벨 스트리밍의 상태 보존 · 세이브 델타와 같은 생각).
          */
         void captureCellNodes( const vector<uint64>& listObjectID, vector<SceneDocument::SceneObjectNode>& outListNode ) const;
@@ -239,7 +239,7 @@ namespace sw
         void shutdown();
         /** @brief 기본 머티리얼 참조를 해제합니다. */
         void releaseDefaultMaterial();
-        /** @brief 새 오브젝트에 줄 파일 id 입니다 — 이 씬이 쓴 어느 파일 id(해석하지 못한 엔티티 · 짓지 않은 레이어 엔티티 포함)보다 큽니다. 인스턴스 멤버의 평평한 id 는 넓은 값이라 세지 않습니다. */
+        /** @brief 새 오브젝트에 줄 파일 id 입니다 — 이 씬이 쓴 어느 파일 id(해석하지 못한 엔티티 · 짓지 않은 레이어 엔티티 · 스트리밍 셀이 든 엔티티 포함)보다 큽니다. 인스턴스 멤버의 평평한 id 는 넓은 값이라 세지 않습니다. */
         uint64 computeNextFileID() const;
         /**
          * @brief 맨 위 앵커의 파일 id 마다 멤버에 덮어쓴 것(`<Part>` 항목)을 모읍니다(비우고 채웁니다).

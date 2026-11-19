@@ -433,6 +433,32 @@ SW_TEST_CASE( SceneStreamingTest, RuntimeSpawnJoinsTheCellOfItsPosition )
     SW_REQUIRE_TRUE( pBack != nullptr && pBack->getPrimarySceneComponent() != nullptr );
     SW_EXPECT_EQUAL( 15.0f, pBack->getPrimarySceneComponent()->getLocalPosition()._x );
     SW_EXPECT_TRUE( streaming.isCellObject( pBack->getObjectID() ) );
+    // 셀에 들 때 파일 id 를 받았다 — 셀 엔티티(1..6) 위의 새 id 다.
+    SW_EXPECT_TRUE( scene.findFileID( pBack->getObjectID() ) > 6 );
+}
+
+/**
+ * @brief [SceneStreamingTest] 쿠킹본 머리는 셀 엔티티의 가장 큰 파일 id 를 싣고, 셀을 하나도 읽지 않은 씬이 새 오브젝트에 주는 파일 id 는 그 위다 — 내려간 셀의 엔티티와 겹치지 않는다
+ */
+SW_TEST_CASE( SceneStreamingTest, NewFileIDSkipsUnreadCellEntities )
+{
+    constexpr const utf8*           kFileName = "streammaxid.scene.bin";
+    const ScopedFreeRunningPolicy   policy;
+    const test::ScopedScratchDomain domain;
+    const optional<AbsolutePath>    binPath = FileUtil::requireAbsolutePath( domain.makeDiskPath( kFileName ) );
+    SW_REQUIRE_TRUE( binPath.has_value() );
+    SW_REQUIRE_TRUE( Util::makeDocument( Util::kWholeBudgetMicroseconds ).saveBinary( *binPath ) );
+
+    SceneDocument cooked{};
+    SW_REQUIRE_TRUE( cooked.loadBinary( test::ScopedScratchDomain::makeID( kFileName ) ) );
+    SW_EXPECT_EQUAL( uint64{ Util::kCellCount * Util::kEntitiesPerCell }, cooked._maxCellFileID ); // 셀 셋 × 엔티티 둘 — 파일 id 1..6
+
+    Scene scene{ "MaxID" };
+    SW_REQUIRE_TRUE( scene.instantiate( cooked ) ); // 원점이 없다 — 셀을 읽지 않는다
+    GameObject* pFresh = scene.getObjectManager()->createGameObject( hashed_string( "Fresh" ) );
+    SW_REQUIRE_NOT_NULL( pFresh );
+    scene.getObjectManager()->mergePendingAdds();
+    SW_EXPECT_EQUAL( uint64{ Util::kCellCount * Util::kEntitiesPerCell + 1 }, scene.getOrAssignFileID( pFresh->getObjectID() ) );
 }
 
 /** @brief [SceneStreamingTest] 내렸다 다시 올린 셀은 런타임 칸(`RuntimeState`)까지 지킨다 — 떠 둔 상태의 목적이 스냅숏이다(저작 목적이면 처음 값으로 돌아온다) */

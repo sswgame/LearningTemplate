@@ -93,9 +93,11 @@ namespace sw
         /**
          * @brief 씬 @p scene 의 셀을 받습니다. 받은 셀은 모두 내려가 있고, 다음 갱신부터 원점 둘레를 올립니다.
          * @param contentPath 셀 내용이 든 쿠킹본의 리소스 id 입니다(`SceneDocument::_sourcePath`). 내용이 메모리에 있는 셀만 받으면 쓰지 않습니다.
+         * @param maxFileCellFileID 파일에 남은(색인만 읽은) 셀 엔티티의 가장 큰 파일 id 입니다(`SceneDocument::_maxCellFileID`).
          * @return 설정이 스트리밍하지 않거나 격자를 만들 수 없거나 같은 셀이 두 번 있거나 파일 내용을 읽을 쿠킹본이 없으면 오류를 남기고 false 입니다(셀을 받지 않는다).
          */
-        [[nodiscard]] bool beginWorld( Scene& scene, const SceneSettings& settings, const vector<SceneDocument::StreamingCell>& listCell, string_view contentPath );
+        [[nodiscard]] bool beginWorld( Scene& scene, const SceneSettings& settings, const vector<SceneDocument::StreamingCell>& listCell, string_view contentPath,
+                                       uint64 maxFileCellFileID );
         /** @brief 셀을 모두 버립니다. 올라 있는 셀의 오브젝트도 내립니다. */
         void endWorld();
 
@@ -139,6 +141,11 @@ namespace sw
         [[nodiscard]] static bool readSaveState( const uint8* pData, size_t size, SaveState& outState );
         /** @brief 세이브의 상태를 조각에 얹습니다(없는 조각은 만든다). 매니저를 비운 뒤(`onSceneCleared` — 조각이 문서 내용으로 돌아왔다) 부릅니다. 올라 있는 조각은 먼저 상태 없이 내립니다. */
         void applySaveState( SaveState state );
+        /**
+         * @brief 셀이 들고 있을 수 있는 엔티티(읽지 않은 쿠킹 내용 · 떠 둔 상태 · 들어온 엔티티, 인스턴스 멤버 제외)의 가장 큰 파일 id 입니다. 스트리밍하지 않으면 0 입니다.
+         * @details 씬이 새 오브젝트에 파일 id 를 줄 때(`Scene::computeNextFileID`) 이 위에서 고른다 — 내려간 셀의 엔티티와 겹치면 그 셀이 오를 때 참조가 엉뚱한 오브젝트에 붙는다.
+         */
+        uint64 getMaxCellFileID() const;
         /** @brief 오브젝트(또는 그 조상)가 셀에 들어 있으면 true 입니다 — 세이브의 씬 섹션이 빼는 오브젝트입니다(셀 몫은 `writeSaveState` 가 싣는다). */
         bool isCellObject( uint64 objectID ) const;
         /**
@@ -260,6 +267,7 @@ namespace sw
         vector<unique_ptr<CellSlot>>          _listCell;             ///< 문서의 조각(문서 순서) 뒤에 옮겨 온 오브젝트를 받으려 만든 조각
         unordered_map<uint64, vector<uint32>> _mapCellIndex;         ///< `makeCellKey` → 그 좌표의 조각들(`_listCell` 인덱스, 문서 순서)
         unordered_map<uint64, uint32>         _mapObjectSlot;        ///< 다 지었거나 옮겨 온 오브젝트 id → 든 조각(`_listObjectID` 의 거울)
+        uint64                                _maxFileCellFileID;    ///< 파일에 남은 셀 엔티티의 가장 큰 파일 id(`beginWorld`)
         vector<float3>                        _listExternalSource;   ///< `setExternalSources`
         float3                                _cameraSource;         ///< `setCameraSource`
         uint8                                 _bCameraSourceSet : 1; ///< 카메라 원점을 한 번이라도 받았다

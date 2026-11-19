@@ -612,7 +612,7 @@ namespace sw
         // 셀로 나눈 쿠킹본이면 셀은 지금 짓지 않는다 — 스트리밍 원점이 다가올 때 서비스가 나눠 짓는다(`beginCellBuild`).
         if ( doc._listStreamingCell.empty() )
             return true;
-        return _objectManager->getSubsystem<SceneStreamingSubsystem>().beginWorld( *this, _sceneSettings, doc._listStreamingCell, doc._sourcePath );
+        return _objectManager->getSubsystem<SceneStreamingSubsystem>().beginWorld( *this, _sceneSettings, doc._listStreamingCell, doc._sourcePath, doc._maxCellFileID );
     }
 
     /** @brief 짓는 배치 하나 — 엔티티를 모두 하나의 배치로 읽고 끝에서 잇는다(`instantiateNodes` · `continueCellBuild`). */
@@ -1243,6 +1243,9 @@ namespace sw
                 }
             }
         }
+        // 스트리밍 셀이 든 엔티티(읽지 않은 쿠킹 내용 — 쿠킹본 머리의 최대값, 떠 둔 상태)와 겹치지 않는다.
+        if ( _objectManager != nullptr )
+            nextFileID = MathUtil::max( nextFileID, _objectManager->getSubsystem<SceneStreamingSubsystem>().getMaxCellFileID() + 1 );
         return nextFileID;
     }
 

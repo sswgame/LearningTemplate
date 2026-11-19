@@ -98,6 +98,7 @@ namespace sw
         , _listCell{}
         , _mapCellIndex{}
         , _mapObjectSlot{}
+        , _maxFileCellFileID{ 0 }
         , _listExternalSource{}
         , _cameraSource{}
         , _bCameraSourceSet{ SW_FALSE }
@@ -109,7 +110,8 @@ namespace sw
     {
     }
 
-    bool SceneStreamingSubsystem::beginWorld( Scene& scene, const SceneSettings& settings, const vector<SceneDocument::StreamingCell>& listCell, string_view contentPath )
+    bool SceneStreamingSubsystem::beginWorld( Scene& scene, const SceneSettings& settings, const vector<SceneDocument::StreamingCell>& listCell, string_view contentPath,
+                                              const uint64 maxFileCellFileID )
     {
         endWorld();
         if ( settings._bStreaming == false || settings.validate( scene.getName() ) == false )
@@ -141,10 +143,11 @@ namespace sw
             }
             listSeenIndex.push_back( cellIndex );
         }
-        _listSourceCell = listCell;
-        _settings       = settings;
-        _contentPath    = contentPath;
-        _pScene         = &scene;
+        _listSourceCell    = listCell;
+        _maxFileCellFileID = maxFileCellFileID;
+        _settings          = settings;
+        _contentPath       = contentPath;
+        _pScene            = &scene;
         resetCells();
         SW_LOG_INFO_ID( "SceneStreaming.SceneStreamsCellsCell", "Scene '%#' streams %# cells (cell %# m, radius %# m)", scene.getName(), static_cast<uint32>( _listCell.size() ),
                         _settings._cellGrid._cellSize, _settings._cellGrid._loadingRadius );
@@ -164,6 +167,7 @@ namespace sw
         _mapCellIndex.clear();
         _mapObjectSlot.clear();
         _listSourceCell.clear();
+        _maxFileCellFileID = 0;
         _contentPath.clear();
         _pScene = nullptr;
     }
@@ -284,6 +288,20 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    uint64 SceneStreamingSubsystem::getMaxCellFileID() const
+    {
+        if ( _pScene == nullptr )
+            return 0;
+        // 올라 있는 셀의 오브젝트는 씬의 파일 id 표가 이미 센다 — 여기는 오브젝트가 없는 엔티티(읽지 않은 내용 · 떠 둔 상태 · 들어온 엔티티)만 센다.
+        uint64 maxFileID = _maxFileCellFileID;
+        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
+        {
+            maxFileID = MathUtil::max( maxFileID, SceneDocument::computeMaxFileID( pSlot->_listNode ) );
+            maxFileID = MathUtil::max( maxFileID, SceneDocument::computeMaxFileID( pSlot->_listArrivedNode ) );
+        }
+        return maxFileID;
     }
 
     bool SceneStreamingSubsystem::isCellObject( const uint64 objectID ) const
@@ -567,6 +585,8 @@ namespace sw
         }
         if ( bKeepAlive )
         {
+            if ( fromIndex == kNoSlot )
+                (void)_pScene->getOrAssignFileID( rootObjectID ); // 셀에 드는 스폰도 셀 엔티티처럼 파일 id 를 든다
             for ( const uint64 objectID : listGroup )
             {
                 to._listObjectID.push_back( objectID );
@@ -576,6 +596,9 @@ namespace sw
         }
 
         // 조각이 내려가 있다 — 떠서 그 조각의 상태에 합치고 지운다. 다음에 오를 때 그 조각과 같은 배치로 다시 선다.
+        // 런타임 스폰은 여기서 파일 id 를 받는다 — 다른 엔티티가 가리키던 핸들이 떠 둔 상태에서 이어지고, 세이브 몫이 같은 id 로 싣는다(새 id 는 읽지 않은 셀 내용 위에서 고른다).
+        if ( fromIndex == kNoSlot )
+            (void)_pScene->getOrAssignFileID( rootObjectID );
         vector<SceneDocument::SceneObjectNode> listNode;
         _pScene->captureCellNodes( listGroup, listNode );
         for ( const uint64 objectID : listGroup )
