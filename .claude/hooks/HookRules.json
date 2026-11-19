@@ -11,6 +11,10 @@
   },
   "agentPrompt": {
     "_comment": "코드를 고치는 작업자(subagentTypes)에게 일을 맡길 때 지시문에 있어야 할 것. 각 항목은 정규식 하나라도 맞으면 있다고 본다.",
+    "refusedIsolation": {
+      "_comment": "Agent 의 isolation 값마다 거절 사유. 모든 작업자 종류에 걸린다.",
+      "worktree": "이 기계에서는 Agent 의 isolation: worktree 가 드라이브 글자 대소문자(d: 대 D:) 차이로 거절되고 잠긴 빈 워크트리만 남긴다(2026-11-19 · 11-20 되풀이). `git worktree add -b w-<이름> D:/Projects/Personal/LT-wt/<이름> main` 으로 직접 만들고 isolation 없이 지시문 첫 줄에 그 작업 폴더를 적는다."
+    },
     "subagentTypes": ["general-purpose", "claude", "code-reviewer", "test-engineer", "security-auditor", ""],
     "required": [
       { "name": "C++ 표준(C++17 — concept · consteval 금지)", "anyOf": ["C\\+\\+17"] },
