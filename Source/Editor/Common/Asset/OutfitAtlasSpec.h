@@ -100,7 +100,9 @@ namespace sw::editor
         /** @brief 명세 파일의 접미사입니다. */
         static constexpr string_view kExtension = ".outfitatlas.xml";
 
-        /** @brief 리소스 경로의 명세 파일을 읽습니다. 모르는 속성 · 원소, 빠진 필수 값, 부품에 없는 이름, 부품마다 텍스처가 하나씩 아닌 `Map` 은 오류입니다. */
+        /** @brief XML 본문에서 명세를 읽습니다. 모르는 속성 · 원소, 빠진 필수 값, 부품에 없는 이름, 부품마다 텍스처가 하나씩 아닌 `Map` 은 오류입니다. */
+        [[nodiscard]] static bool parseSpec( string_view xmlText, string_view sourceName, OutfitAtlasSpec& outSpec );
+        /** @brief 리소스 경로의 명세 파일을 읽습니다. */
         [[nodiscard]] static bool loadSpec( const AssetID& assetID, OutfitAtlasSpec& outSpec );
         /**
          * @brief 명세대로 굽습니다 — 메시와 이미지를 읽고, 배치하고, 병합 메시와 아틀라스 이미지를 씁니다. 경로는 리소스 루트 기준입니다.

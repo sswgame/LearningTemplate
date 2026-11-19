@@ -66,12 +66,34 @@ SW_TEST_CASE( CommandStackTest, RefusesUndoWhileTransactionOpen )
     sw::CommandStack          stack{ Internal::kRoomyLimit };
     stack.push( Internal::makeCommand( owner, "A" ) );
 
+    SW_EXPECT_FALSE( stack.isInsideTransaction() );
     stack.beginTransaction( "Open" );
+    SW_EXPECT_TRUE( stack.isInsideTransaction() );
     SW_EXPECT_FALSE( stack.undo() );
     SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCurrentIndex() );
     stack.endTransaction();
+    SW_EXPECT_FALSE( stack.isInsideTransaction() );
     SW_EXPECT_TRUE( stack.undo() );
     SW_EXPECT_EQUAL( size_t{ 0 }, stack.getCurrentIndex() );
+}
+
+/** @brief [CommandStackTest] 겹쳐 연 거래는 가장 바깥이 닫혀야 끝나고, 취소는 깊이와 무관하게 거래 전체를 닫는다(언리얼 `GUndo` 가 열린 동안의 `IsTransactionActive`) */
+SW_TEST_CASE( CommandStackTest, TransactionStaysOpenUntilTheOutermostCloses )
+{
+    using Internal = CommandStackTestInternal;
+
+    sw::CommandStack stack{ Internal::kRoomyLimit };
+    stack.beginTransaction( "Outer" );
+    stack.beginTransaction( "Inner" );
+    stack.endTransaction();
+    SW_EXPECT_TRUE( stack.isInsideTransaction() );
+    stack.endTransaction();
+    SW_EXPECT_FALSE( stack.isInsideTransaction() );
+
+    stack.beginTransaction( "Outer" );
+    stack.beginTransaction( "Inner" );
+    stack.cancelTransaction();
+    SW_EXPECT_FALSE( stack.isInsideTransaction() );
 }
 
 /** @brief [CommandStackTest] 쥔 바이트가 한도(설정의 Undo Buffer Size)를 넘으면 가장 오래된 명령부터 버리고 위치를 맞춘다 — 개수 상수만 있던 때는 문서 글을 쥔 단계가 끝없이 쌓였다(감사 E-13) */

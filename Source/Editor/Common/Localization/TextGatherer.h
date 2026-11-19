@@ -66,6 +66,8 @@ namespace sw
         vector<TextGatherIssue> _listIssue;
         uint32                  _unchangedCount{ 0 };
 
+        /** @brief 테이블이 바뀌었는지 반환합니다(위치만 바뀐 것은 세지 않습니다). */
+        bool hasTextChanges() const { return _listAdded.empty() == false || _listChanged.empty() == false || _listRemoved.empty() == false; }
         /** @brief 오류가 있는지입니다. */
         bool hasErrors() const;
     };

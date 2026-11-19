@@ -74,6 +74,8 @@ namespace sw::editor
         void setClientOrigin( int32 sourceIndex, int32 processIndex );
         /** @brief 칸이 세션 클라이언트에서 읽은 것이면 그 프로세스 번호, 아니면 -1 입니다. */
         int32 getClientOrigin( int32 sourceIndex ) const;
+        /** @brief 칸이 디버그 채널에서 읽은 것이면 true 입니다. */
+        bool hasChannelOrigin( int32 sourceIndex ) const;
         /**
          * @brief 틱을 단 오브젝트 해시 두 목록을 견줘 다른 오브젝트 이름을 채웁니다. 두 틱이 다르면 거절합니다(다른 시각의 해시를 견주지 않는다).
          * @details `compareObjectReports` 와 탭의 클라이언트 칸(표준 입력으로 받은 목록)이 같이 쓰는 하나의 규칙이다.

@@ -36,6 +36,8 @@ namespace sw::editor
 
         /** @brief 기준 글을 @p text 로 맞춥니다(로드 · 저장 · 되돌리기 뒤). 쥔 구간은 버린다 — 그 기준선이 없어졌다. */
         void resetBaseline( string text );
+        /** @brief 마지막으로 기록한(또는 맞춘) 글입니다. */
+        const string& getBaseline() const { return _baseline; }
         /** @brief 구간을 쥐고 있으면 true 입니다(편집이 있었고 아직 기록하지 않았다). */
         bool isHolding() const { return _bHolding == SW_TRUE; }
 

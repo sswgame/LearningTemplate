@@ -245,6 +245,14 @@ namespace sw::editor
         return ImGui::BeginPopup( pPopupID );
     }
 
+    bool EditorInputGUI::beginWindowContextMenu( const utf8* pPopupID )
+    {
+        const bool bOverEmpty = ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByPopup ) && ImGui::IsAnyItemHovered() == false;
+        if ( bOverEmpty && EditorInputGUIInternal::wasClickedWithoutDrag( ImGuiMouseButton_Right ) )
+            ImGui::OpenPopup( pPopupID );
+        return ImGui::BeginPopup( pPopupID );
+    }
+
     bool EditorInputGUI::wasItemClicked( EditorMouseButton button )
     {
         return ImGui::IsItemClicked( static_cast<ImGuiMouseButton>( button ) );
@@ -270,6 +278,7 @@ namespace sw::editor
             state._arrDown[index]               = ImGui::IsMouseDown( button );
             state._arrPressed[index]            = ImGui::IsMouseClicked( button );
             state._arrReleased[index]           = ImGui::IsMouseReleased( button );
+            state._arrDoubleClicked[index]      = ImGui::IsMouseDoubleClicked( button );
             state._arrDragging[index]           = ImGui::IsMouseDragging( button );
             state._arrClickedWithoutDrag[index] = EditorInputGUIInternal::wasClickedWithoutDrag( button );
             const ImVec2 dragDelta              = ImGui::GetMouseDragDelta( button, 0.0f );

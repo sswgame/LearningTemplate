@@ -29,6 +29,12 @@ namespace sw::editor
         return pValue;
     }
 
+    uint32 EditorStateStore::getStateCount() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return static_cast<uint32>( _listEntry.size() );
+    }
+
     void EditorStateStore::resetAll()
     {
         ScopedLock<mutex> lock{ _mutex };

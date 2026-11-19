@@ -31,5 +31,7 @@ namespace sw::editor
         static void release( const void* pOwner );
         /** @brief 누군가 마우스를 가져갔으면 true 입니다. */
         static bool isCaptured();
+        /** @brief @p pOwner 가 지금 소유자이면 true 입니다(언리얼 `FSlateApplication::DoesWidgetHaveMouseCapture`). nullptr 는 소유자가 아니다. */
+        static bool isCapturedBy( const void* pOwner );
     };
 } // namespace sw::editor

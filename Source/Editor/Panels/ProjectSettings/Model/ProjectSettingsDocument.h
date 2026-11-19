@@ -82,7 +82,9 @@ namespace sw::editor
         static constexpr const utf8* kBaseLayerMeta = "ConfigBaseLayer"; ///< 바탕 층 표시 메타
 
         /** @brief 편집할 현재 값입니다. 그리드가 직접 고친다. 열려 있지 않으면 nullptr 입니다. */
-        void*           getInstance() { return _current.get(); }
+        void* getInstance() { return _current.get(); }
+        /** @brief 기본값 인스턴스입니다. 없으면 nullptr 입니다. */
+        const void*     getDefaultInstance() const { return _default.get(); }
         const TypeInfo* getType() const { return _pType; }
         const string&   getPath() const { return _path; }
 
