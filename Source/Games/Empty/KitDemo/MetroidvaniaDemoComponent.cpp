@@ -109,8 +109,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.MetroidvaniaDone", "[KitDemo] metroidvania: corpse held %#, recovered balance %#, respawn at rest %#", _corpseCurrency, _recoveredBalance, _respawnAtRest );
     }
 
-    void MetroidvaniaDemoComponent::serializeState( StateIO& io )
+    void MetroidvaniaDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, MetroidvaniaDemoComponentInternal::kStateTag, MetroidvaniaDemoComponentInternal::kStateVersion, { &_corpseCurrency, &_recoveredBalance, &_respawnAtRest } );
+        serializeResults( io, MetroidvaniaDemoComponentInternal::kStateTag, MetroidvaniaDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

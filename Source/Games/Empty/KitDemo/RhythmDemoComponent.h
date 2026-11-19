@@ -30,7 +30,7 @@ namespace sw
         RhythmDemoComponent();
         virtual ~RhythmDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getScore() const { return _score; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<RhythmChart> _catalogPath;
 
         SharedAssetRef<RhythmChart> _pChart;
-        int32                       _score;    ///< 곡이 끝난 점수
-        int32                       _maxCombo; ///< 최대 콤보
-        int32                       _cleared;  ///< 곡을 깼으면 1
+        PROPERTY( RuntimeState )
+        int32 _score; ///< 곡이 끝난 점수
+        PROPERTY( RuntimeState )
+        int32 _maxCombo; ///< 최대 콤보
+        PROPERTY( RuntimeState )
+        int32 _cleared; ///< 곡을 깼으면 1
     };
 } // namespace sw

@@ -42,7 +42,7 @@ namespace sw
         FrontierSkirmishGameModeComponent();
         virtual ~FrontierSkirmishGameModeComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         const RTSWorld& getWorld() const { return _world; }
 
@@ -91,9 +91,11 @@ namespace sw
         SimulationViewSync<RTSUnitID> _unitViews; ///< 유닛 슬롯 번호 → 보일 유닛(죽으면 없다)
         RTSUnitID                     _worker;
         RTSUnitID                     _soldier;
-        int32                         _tickCount;
-        uint8                         _bPatrolToB  : 1; ///< 해병이 지금 B 쪽으로 간다
-        uint8                         _bViewsDirty : 1;
-        [[maybe_unused]] uint8        _reserved    : 6;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _tickCount;
+        PROPERTY( RuntimeState )
+        uint8                  _bPatrolToB  : 1; ///< 해병이 지금 B 쪽으로 간다
+        uint8                  _bViewsDirty : 1;
+        [[maybe_unused]] uint8 _reserved    : 6;
     };
 } // namespace sw

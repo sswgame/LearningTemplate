@@ -30,7 +30,7 @@ namespace sw
         MetroidvaniaDemoComponent();
         virtual ~MetroidvaniaDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getCorpseCurrency() const { return _corpseCurrency; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<MetroidvaniaCatalog> _catalogPath;
 
         SharedAssetRef<MetroidvaniaCatalog> _pCatalog;
-        int32                               _corpseCurrency;   ///< 죽을 때 시체에 떨어진 통화
-        int32                               _recoveredBalance; ///< 시체를 되찾은 뒤 지갑의 통화
-        int32                               _respawnAtRest;    ///< 죽은 뒤 되살아날 곳이 쉰 곳이면 1
+        PROPERTY( RuntimeState )
+        int32 _corpseCurrency; ///< 죽을 때 시체에 떨어진 통화
+        PROPERTY( RuntimeState )
+        int32 _recoveredBalance; ///< 시체를 되찾은 뒤 지갑의 통화
+        PROPERTY( RuntimeState )
+        int32 _respawnAtRest; ///< 죽은 뒤 되살아날 곳이 쉰 곳이면 1
     };
 } // namespace sw

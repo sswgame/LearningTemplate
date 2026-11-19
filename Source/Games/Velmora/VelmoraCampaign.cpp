@@ -152,8 +152,7 @@ namespace sw
 
     void VelmoraCampaign::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion );
-        io.value( _vitals );
-        io.value( _respawnRegion ); // 판 상태 안에 실리는 본문이다 — 끝 검사(`end`)는 바깥 디렉터가 한다
+        io.reflected( *this );
+        io.value( _vitals ); // 판 상태 안에 실리는 본문이다 — 끝 검사(`end`)는 바깥 디렉터가 한다
     }
 } // namespace sw

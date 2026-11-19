@@ -89,8 +89,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.PartyArenaDone", "[KitDemo] party arena: player %# won with %# points after %# rounds", _winner, _winnerTotal, _roundsPlayed );
     }
 
-    void PartyArenaDemoComponent::serializeState( StateIO& io )
+    void PartyArenaDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, PartyArenaDemoComponentInternal::kStateTag, PartyArenaDemoComponentInternal::kStateVersion, { &_winner, &_winnerTotal, &_roundsPlayed } );
+        serializeResults( io, PartyArenaDemoComponentInternal::kStateTag, PartyArenaDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

@@ -24,31 +24,9 @@ namespace sw
         (void)bRespawnViews;
     }
 
-    void KitDemoComponent::serializeResults( StateIO& io, uint32 stateTag, uint32 stateVersion, std::initializer_list<int32*> listResult )
+    void KitDemoComponent::serializeResults( StateIO& io, uint32 stateTag, uint32 stateVersion )
     {
-        SW_ASSERT( listResult.size() <= kMaxResultCount );
         io.header( stateTag, stateVersion );
-        if ( io.isOk() == false )
-            return;
-        int32 demoState = _demoState;
-        io.value( demoState );
-        int32  arrResult[kMaxResultCount] = {};
-        uint32 resultCount                = 0;
-        for ( const int32* pResult : listResult )
-        {
-            arrResult[resultCount] = *pResult;
-            io.value( arrResult[resultCount] );
-            ++resultCount;
-        }
         io.end();
-        if ( io.isWriting() || io.isOk() == false )
-            return;
-        _demoState         = demoState;
-        uint32 resultIndex = 0;
-        for ( int32* pResult : listResult )
-        {
-            *pResult = arrResult[resultIndex];
-            ++resultIndex;
-        }
     }
 } // namespace sw

@@ -44,7 +44,7 @@ namespace sw
         MeadowFarmGameModeComponent();
         virtual ~MeadowFarmGameModeComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         const FarmField& getField() const { return _field; }
 

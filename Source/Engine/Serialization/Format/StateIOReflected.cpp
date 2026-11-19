@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -191,10 +192,27 @@ namespace sw
         return FixedLayout::computeSchemaHash( StateIOReflectedInternal::kLayoutRuleVersion, canonical, {} );
     }
 
-    void StateIO::reflectedObject( const TypeInfo& type, void* pObject )
+    uint64 StateIO::findReflectedLayoutHash( const TypeInfo& type )
     {
-        const uint32 version    = type._metadata->getVersion();
-        const uint64 layoutHash = computeReflectedLayoutHash( type );
+        struct LayoutSlot
+        {
+            uint32 _generation{ 0 };
+            uint64 _layoutHash{ 0 };
+        };
+        thread_local unordered_map<const TypeInfo*, LayoutSlot> t_mapLayoutSlot;
+        const uint32                                            generation = TypeRegistry::getGeneration();
+        LayoutSlot&                                             slot       = t_mapLayoutSlot[&type];
+        if ( slot._generation != generation || generation == 0 )
+        {
+            slot._generation = generation;
+            slot._layoutHash = computeReflectedLayoutHash( type );
+        }
+        return slot._layoutHash;
+    }
+
+    void StateIO::reflectedObject( const TypeInfo& type, void* pObject, const uint64 layoutHash )
+    {
+        const uint32 version = type._metadata->getVersion();
         if ( isWriting() )
         {
             *_pArchive << version;
@@ -237,6 +255,14 @@ namespace sw
             check( SerializerUtil::isWithinDeclaredRanges( type, ObjectAddress{ pObject } ) );
     }
 
+    void StateIO::reflectedDerived( const TypeInfo& dynamicType, const hashed_string& staticFqn, void* pObject )
+    {
+        if ( dynamicType.isDerivedFrom( staticFqn ) == false )
+            SW_FATAL( "StateIO::reflectedAs: '%#' is not '%#' or derived from it - the fields would be read at another type's offsets", dynamicType._fullyQualifiedName.c_str(),
+                      staticFqn.c_str() );
+        reflectedObject( dynamicType, pObject, findReflectedLayoutHash( dynamicType ) );
+    }
+
     void StateIO::reflectedProperties( const TypeInfo& type, void* pObject, const bool bStateRoleOnly, const uint32 depth )
     {
         using Internal               = StateIOReflectedInternal;
@@ -248,10 +274,10 @@ namespace sw
             return;
         }
 
-        // 잎 하나(칸 값 또는 시퀀스 원소)를 싣는다.
-        auto valueLeaf = [&]( const PropertyInfo& prop, const hashed_string& leafType, void* pValue )
+        // 잎 하나(칸 값 또는 시퀀스 원소)를 싣는다. 종류(@p kind)는 칸마다 한 번 가른다 — 시퀀스 원소마다 이름을 다시 맞추지 않는다.
+        auto valueLeaf = [&]( const PropertyInfo& prop, const hashed_string& leafType, const LeafKind kind, void* pValue )
         {
-            switch ( Internal::classify( registry, leafType ) )
+            switch ( kind )
             {
                 case LeafKind::Bool:
                 {
@@ -343,14 +369,15 @@ namespace sw
                         }
                     }
                 }
+                const LeafKind elementKind = Internal::classify( registry, prop._elementTypeName );
                 for ( uint32 index = 0; index < elementCount && isOk(); ++index )
                 {
-                    valueLeaf( prop, prop._elementTypeName, pSequence->getElement( pContainer, index ) );
+                    valueLeaf( prop, prop._elementTypeName, elementKind, pSequence->getElement( pContainer, index ) );
                 }
             }
             else
             {
-                valueLeaf( prop, prop._typeName, prop.getRawPtr( pObject ) );
+                valueLeaf( prop, prop._typeName, Internal::classify( registry, prop._typeName ), prop.getRawPtr( pObject ) );
             }
             if ( isOk() == false )
                 return;

@@ -92,8 +92,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.SurvivalHorrorDone", "[KitDemo] survival horror: sanity %#, health %#", _sanity, _health );
     }
 
-    void SurvivalHorrorDemoComponent::serializeState( StateIO& io )
+    void SurvivalHorrorDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, SurvivalHorrorDemoComponentInternal::kStateTag, SurvivalHorrorDemoComponentInternal::kStateVersion, { &_sanity, &_health } );
+        serializeResults( io, SurvivalHorrorDemoComponentInternal::kStateTag, SurvivalHorrorDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

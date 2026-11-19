@@ -186,7 +186,7 @@ namespace sw
         (void)bRespawnViews;
     }
 
-    void ActionCombatDemoComponent::serializeState( StateIO& io )
+    void ActionCombatDemoComponent::serializeGameState( StateIO& io )
     {
         io.header( ActionCombatDemoComponentInternal::kStateTag, ActionCombatDemoComponentInternal::kStateVersion );
         if ( io.isOk() == false )
@@ -200,24 +200,16 @@ namespace sw
             restoredRoom.setLayout( layout );
         }
         io.value( io.isWriting() ? _room : restoredRoom );
-        Countdown             bossDelay      = _bossDelay;
-        float2                playerPosition = _playerPosition;
-        FacingDir             facing         = _facing;
-        int32                 playerHP       = _playerHP;
-        ActionCombatDemoPhase phase          = _phase;
+        // 자리 · HP · 단계는 상태 칸이다(`GameModeComponent::serializeState`). 손 본문은 룸 · 보스 지연(`Countdown`) · 방향(리플렉션 열거가 아니다)만.
+        Countdown bossDelay = _bossDelay;
+        FacingDir facing    = _facing;
         io.value( bossDelay );
-        io.value( playerPosition );
         io.enumValue( facing, FacingDir::Up );
-        io.value( playerHP );
-        io.enumValue( phase, ActionCombatDemoPhase::Defeat );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _room           = std::move( restoredRoom );
-        _bossDelay      = bossDelay;
-        _playerPosition = playerPosition;
-        _facing         = facing;
-        _playerHP       = playerHP;
-        _phase          = phase;
+        _room      = std::move( restoredRoom );
+        _bossDelay = bossDelay;
+        _facing    = facing;
     }
 } // namespace sw

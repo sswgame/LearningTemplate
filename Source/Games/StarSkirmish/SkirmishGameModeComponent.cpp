@@ -421,7 +421,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 데이터
     // ------------------------------------------------------------------------------
-    void SkirmishGameModeComponent::serializeState( StateIO& io )
+    void SkirmishGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( SkirmishGameModeComponentInternal::kStateTag, SkirmishGameModeComponentInternal::kStateVersion );
         if ( io.isOk() == false )

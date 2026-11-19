@@ -48,7 +48,7 @@ namespace sw
         WildWestGameModeComponent();
         virtual ~WildWestGameModeComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         /** @brief 판이 열렸으면 읽은 서부극 카탈로그이고, 아니면 nullptr 입니다(말 컴포넌트가 품종을 찾는다). */
         const WesternCatalog* findWesternCatalog() const override { return isStarted() ? _pWesternCatalog.get() : nullptr; }

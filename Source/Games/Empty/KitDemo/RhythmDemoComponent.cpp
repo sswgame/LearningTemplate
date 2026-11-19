@@ -80,8 +80,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.RhythmDone", "[KitDemo] rhythm: score %#, max combo %#, cleared %#", _score, _maxCombo, _cleared );
     }
 
-    void RhythmDemoComponent::serializeState( StateIO& io )
+    void RhythmDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, RhythmDemoComponentInternal::kStateTag, RhythmDemoComponentInternal::kStateVersion, { &_score, &_maxCombo, &_cleared } );
+        serializeResults( io, RhythmDemoComponentInternal::kStateTag, RhythmDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

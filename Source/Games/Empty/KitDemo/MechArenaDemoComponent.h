@@ -30,7 +30,7 @@ namespace sw
         MechArenaDemoComponent();
         virtual ~MechArenaDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getWinningTeam() const { return _winningTeam; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<MechCatalog> _catalogPath;
 
         SharedAssetRef<MechCatalog> _pCatalog;
-        int32                       _winningTeam; ///< 이긴 팀 번호(-1 없음)
-        int32                       _winnerKills; ///< A 조종사의 격추 수
-        int32                       _loserGauge;  ///< 판이 끝난 뒤 B 팀 게이지
+        PROPERTY( RuntimeState )
+        int32 _winningTeam; ///< 이긴 팀 번호(-1 없음)
+        PROPERTY( RuntimeState )
+        int32 _winnerKills; ///< A 조종사의 격추 수
+        PROPERTY( RuntimeState )
+        int32 _loserGauge; ///< 판이 끝난 뒤 B 팀 게이지
     };
 } // namespace sw

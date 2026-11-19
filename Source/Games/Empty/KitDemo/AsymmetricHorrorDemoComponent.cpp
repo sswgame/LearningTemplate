@@ -119,8 +119,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.AsymmetricHorrorDone", "[KitDemo] asymmetric horror: %# generators repaired, %# escaped, team %# won", _completedGenerators, _escapedCount, _winningTeam );
     }
 
-    void AsymmetricHorrorDemoComponent::serializeState( StateIO& io )
+    void AsymmetricHorrorDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, AsymmetricHorrorDemoComponentInternal::kStateTag, AsymmetricHorrorDemoComponentInternal::kStateVersion, { &_completedGenerators, &_escapedCount, &_winningTeam } );
+        serializeResults( io, AsymmetricHorrorDemoComponentInternal::kStateTag, AsymmetricHorrorDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

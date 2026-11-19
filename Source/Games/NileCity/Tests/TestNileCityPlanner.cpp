@@ -109,8 +109,10 @@ SW_TEST_CASE_F( NileCityPlannerTest, ProgressStateRoundTripsAndRefusesStepsOutsi
     SW_EXPECT_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( 0, restored.getNextStep() );
 
-    // 다음 단계 3 · 건너뛴 수 0 — 빈 순서표에는 없는 단계다.
-    Archive invalidWritten;
+    // 다음 단계 3 · 건너뛴 수 0 — 빈 순서표에는 없는 단계다. 머리(판 · 칸 배치 해시)는 쓴 바이트에서 진행 칸 둘을 뺀 앞부분 그대로 둔다.
+    const uint64 headerSize = written.getSize() - sizeof( int32 ) * 2;
+    Archive      invalidWritten;
+    invalidWritten.writeBytes( written.getData(), headerSize );
     invalidWritten << int32{ 3 } << int32{ 0 };
     Archive invalidReading{ invalidWritten.getData(), invalidWritten.getSize() };
     SW_EXPECT_FALSE( restored.readState( invalidReading ) );

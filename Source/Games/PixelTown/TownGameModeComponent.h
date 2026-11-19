@@ -49,7 +49,7 @@ namespace sw
         virtual ~TownGameModeComponent() override;
 
         /** @brief 걸음 상태(키트 이동기의 바이트)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         /** @brief 주인공 발의 월드 자리입니다. 걷는 동안은 두 칸 사이를 걸음 시간에 맞춰 잇습니다. 뷰는 PostUpdate 에서 이것만 읽습니다. */
         const float3& getHeroPosition() const { return _heroPosition; }

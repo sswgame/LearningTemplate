@@ -84,11 +84,14 @@ namespace sw
 {
     /**
      * @class NileCityPlanner
-     * @brief 나일 강가 땅을 칠하고, 자동 플레이의 짓기 순서표를 한 단계씩 실행합니다.
+     * @brief 나일 강가 땅을 칠하고, 자동 플레이의 짓기 순서표를 한 단계씩 실행합니다. 진행은 리플렉션 상태 칸입니다(`StateIO::reflected`).
      */
+    REFLECT()
     class NileCityPlanner
     {
     public:
+        REFLECT_BODY();
+
         static constexpr int32 kMapWidth  = 48;
         static constexpr int32 kMapHeight = 40;
 
@@ -142,7 +145,9 @@ namespace sw
 
     private:
         vector<PlanStep> _listStep;
-        int32            _nextStep;
-        int32            _skippedCount;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _nextStep;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _skippedCount;
     };
 } // namespace sw

@@ -31,7 +31,7 @@ namespace sw
         CardGameDemoComponent();
         virtual ~CardGameDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getPhase() const { return _phase; }
@@ -51,8 +51,11 @@ namespace sw
         AssetRef<CardBattleCatalog> _catalogPath;
 
         SharedAssetRef<CardBattleCatalog> _pCatalog;
-        int32                             _phase;    ///< 끝난 단계(`CardBattlePhase` 0 내 턴, 1 승리, 2 패배)
-        int32                             _turn;     ///< 끝난 턴 번호(1 부터)
-        int32                             _playerHP; ///< 끝난 뒤 내 체력
+        PROPERTY( RuntimeState )
+        int32 _phase; ///< 끝난 단계(`CardBattlePhase` 0 내 턴, 1 승리, 2 패배)
+        PROPERTY( RuntimeState )
+        int32 _turn; ///< 끝난 턴 번호(1 부터)
+        PROPERTY( RuntimeState )
+        int32 _playerHP; ///< 끝난 뒤 내 체력
     };
 } // namespace sw

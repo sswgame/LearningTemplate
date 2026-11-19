@@ -9,10 +9,10 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureVitals.h"
@@ -28,13 +28,13 @@ namespace sw
 
     /**
      * @class VelmoraCampaign
-     * @brief 한 판의 진행 규칙과 플레이어의 몸 · 일어설 지역입니다.
+     * @brief 한 판의 진행 규칙과 플레이어의 몸 · 일어설 지역입니다. 일어설 지역은 리플렉션 상태 칸(`StateIO::reflected` — 머리가 타입 판 · 칸 배치 해시)이고 몸은 손 본문이 싣는다.
      */
+    REFLECT()
     class VelmoraCampaign
     {
     public:
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "VLCP" );
-        static constexpr uint32 kStateVersion = 1;
+        REFLECT_BODY();
 
         static constexpr const utf8* kRewardGold  = "gold";  ///< 퀘스트 보상 값 이름 — 지갑의 기본 통화
         static constexpr const utf8* kRewardHeart = "heart"; ///< 퀘스트 보상 값 이름 — 하트 그릇 수
@@ -81,7 +81,8 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        AdventureVitals _vitals;
-        hashed_string   _respawnRegion;
+        AdventureVitals _vitals; ///< 리플렉션 형식이 아니다 — 손 본문이 그 형식의 `serializeState` 로 싣는다
+        PROPERTY( RuntimeState )
+        hashed_string _respawnRegion;
     };
 } // namespace sw

@@ -136,12 +136,23 @@ namespace sw
          *          - 새 판(내리기)이거나 단계가 빠졌으면 거절한다.
          *          칸 형식: 수 · bool · 열거(이름이 아닌 값, 열거자 밖은 거절) · `string` · `hashed_string` · float2/3/4 · quaternion · 반사 구조체(그 구조체의 Transient 가 아닌 칸 전부를
          *          머리 없이 안에 — 구조체 배치는 바깥 타입의 해시에 든다) · 이것들의 시퀀스. 그 밖의 형식은 프로세스를 멈춘다(칸을 리플렉션 밖으로 빼고 손 본문에서 `value` 로 싣는다).
-         *          읽은 뒤 `PROPERTY( Min · Max )` 를 지키지 않으면 거절한다. 컴포넌트에는 쓰지 않는다 — 컴포넌트의 상태 칸은 씬 스냅숏이 이미 옮긴다.
+         *          읽은 뒤 `PROPERTY( Min · Max )` 를 지키지 않으면 거절한다. 컴포넌트에는 쓰지 않는다 — 컴포넌트는 기반으로 받아 동적 형식이 따로라 `reflectedAs` 를
+         *          기반의 상태 입구 한 곳(`GameModeComponent::serializeState`)이 부른다.
          */
         template <typename T>
         void reflected( T& inoutObject )
         {
-            reflectedObject( requireReflectedType( typeFqn<T>() ), &inoutObject );
+            const TypeInfo& type = requireReflectedType( typeFqn<T>() );
+            reflectedObject( type, &inoutObject, findReflectedLayoutHash( type ) );
+        }
+        /**
+         * @brief `reflected` 와 같되 칸 목록을 @p dynamicType(@p inoutObject 의 실제 형식 — 기반 참조로 받은 컴포넌트)에서 읽습니다.
+         * @details @p dynamicType 이 @p T 이거나 그 파생이 아니면 프로세스를 멈춘다(다른 객체의 칸 자리로 읽지 않는다). 다중 상속을 쓰지 않아 기반 주소가 객체 주소다.
+         */
+        template <typename T>
+        void reflectedAs( const TypeInfo& dynamicType, T& inoutObject )
+        {
+            reflectedDerived( dynamicType, typeFqn<T>(), &inoutObject );
         }
         /** @brief `reflected` 가 싣는 칸 배치(이름 · 형식 · 순서, 구조체 칸은 안쪽까지)의 해시입니다. `FixedLayout::computeSchemaHash` 와 같은 FNV-1a 64 입니다. */
         [[nodiscard]] static uint64 computeReflectedLayoutHash( const TypeInfo& type );
@@ -412,10 +423,18 @@ namespace sw
         [[nodiscard]] static bool readRateAccumulator( Archive& archive, RateAccumulator& outAccumulator );
 
     private:
+        /**
+         * @brief @p type 의 칸 배치 해시를 타입마다 한 번 셈해 둔 값입니다 — 롤백 · 스냅숏 프레임 경로가 호출마다 칸 배치 글을 짜지 않게 한다.
+         * @details 타입 표 세대(`TypeRegistry::getGeneration`)가 오르면(핫 리로드 · 모듈 해제) 다시 센다. 캐시는 스레드마다라 잠그지 않는다(롤백 워커가 함께 부른다).
+         *          캐시를 머리의 템플릿에 두지 않는다 — DLL 로 내보낸 클래스의 인라인 함수는 thread_local 정적 지역을 가질 수 없다(MSVC C2492).
+         */
+        [[nodiscard]] static uint64 findReflectedLayoutHash( const TypeInfo& type );
         /** @brief 이름이 @p fqn 인 등록된 타입입니다. 없으면(리플렉션 생성이 빠짐) 프로세스를 멈춥니다 — 대체 형식으로 읽지 않는다. */
         static const TypeInfo& requireReflectedType( const hashed_string& fqn );
-        /** @brief `reflected` 의 본문입니다(머리 + 칸). */
-        void reflectedObject( const TypeInfo& type, void* pObject );
+        /** @brief `reflected` 의 본문입니다(머리 + 칸). @p layoutHash 는 부르는 쪽이 셈해 둔 `computeReflectedLayoutHash( type )` 입니다(`findReflectedLayoutHash`). */
+        void reflectedObject( const TypeInfo& type, void* pObject, uint64 layoutHash );
+        /** @brief `reflectedAs` 의 본문입니다. @p dynamicType 이 @p staticFqn 이거나 그 파생인지 본 뒤 `reflectedObject` 로 넘깁니다. */
+        void reflectedDerived( const TypeInfo& dynamicType, const hashed_string& staticFqn, void* pObject );
         /** @brief 칸만(머리 없이) 씁니다 · 읽습니다. @p bStateRoleOnly 면 `RuntimeState` 칸만(최상위), 아니면 Transient 가 아닌 칸 전부(안쪽 구조체)입니다. */
         void reflectedProperties( const TypeInfo& type, void* pObject, bool bStateRoleOnly, uint32 depth );
 

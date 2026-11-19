@@ -30,7 +30,7 @@ namespace sw
         MonsterHuntRPGDemoComponent();
         virtual ~MonsterHuntRPGDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getSolved() const { return _solved; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<MonsterHuntCatalog> _catalogPath;
 
         SharedAssetRef<MonsterHuntCatalog> _pCatalog;
-        int32                              _solved;    ///< 조사가 풀렸으면 1
-        int32                              _reward;    ///< 흥정으로 정한 보상(끝나지 않았으면 0)
-        int32                              _knowledge; ///< 처치 뒤 대상의 도감 지식 단계
+        PROPERTY( RuntimeState )
+        int32 _solved; ///< 조사가 풀렸으면 1
+        PROPERTY( RuntimeState )
+        int32 _reward; ///< 흥정으로 정한 보상(끝나지 않았으면 0)
+        PROPERTY( RuntimeState )
+        int32 _knowledge; ///< 처치 뒤 대상의 도감 지식 단계
     };
 } // namespace sw

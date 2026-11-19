@@ -186,12 +186,11 @@ namespace sw
         updatePlayerView();
     }
 
-    void ShooterGameModeComponent::serializeState( StateIO& io )
+    void ShooterGameModeComponent::serializeGameState( StateIO& io )
     {
-        uint32 killCount = _killCount;
-        uint8  bPacing   = static_cast<uint8>( _bPacingReady );
+        // 처치 수는 상태 칸이다(`GameModeComponent::serializeState`). 감독 유무는 지금 판과 대조만 하고 덮지 않아 손 본문에 남는다.
+        uint8 bPacing = static_cast<uint8>( _bPacingReady );
         io.header( ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion );
-        io.value( killCount );
         io.value( bPacing );
         if ( io.check( bPacing != SW_TRUE || _bPacingReady != SW_FALSE ) == false )
             return;
@@ -201,10 +200,6 @@ namespace sw
             io.valueAtomic( _director );
         }
         io.end();
-        if ( io.isReading() && io.isOk() )
-        {
-            _killCount = killCount;
-        }
     }
 
     void ShooterGameModeComponent::onStateRestored( bool bRestored )

@@ -66,7 +66,7 @@ namespace sw
         void onEndPlay() override;
 
         /** @brief 도시 상태(시뮬레이션, 자동 계획 진행, 월 수, 속도, 선택한 도구)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것(게임 스레드, 틱 뒤) ----
         int32  getPopulation() const;
@@ -259,13 +259,17 @@ namespace sw
         size_t                                     _wantedWalkerCount; ///< 스폰할 일꾼 풀 크기(틱이 쓴다).
         int2                                       _cursorTile;
         GameSpeedControl                           _speed; ///< 배속 · 일시정지(디렉터가 쥐고 도시 · 달력이 받는다)
-        int32                                      _selectedTool;
-        int32                                      _monthCount;
-        int32                                      _evolvedCount;  ///< 이번 달 올라간 집 수(월말 로그).
-        uint32                                     _buildCount;    ///< 자동화 감시 값 `Nile.BuildCount` — 저장하지 않는 이번 판 수
-        uint32                                     _demolishCount; ///< 자동화 감시 값 `Nile.DemolishCount` — 저장하지 않는 이번 판 수
-        uint8                                      _bCursorValid    : 1;
-        uint8                                      _bAutoPlanToggle : 1; ///< P 로 켠 자동 계획(PROPERTY 와 전역 변수와는 별개다).
-        [[maybe_unused]] uint8                     _reserved        : 6;
+        PROPERTY( RuntimeState )
+        int32 _selectedTool;
+        PROPERTY( RuntimeState )
+        int32 _monthCount;
+        PROPERTY( RuntimeState )
+        int32  _evolvedCount;  ///< 이번 달 올라간 집 수(월말 로그).
+        uint32 _buildCount;    ///< 자동화 감시 값 `Nile.BuildCount` — 저장하지 않는 이번 판 수
+        uint32 _demolishCount; ///< 자동화 감시 값 `Nile.DemolishCount` — 저장하지 않는 이번 판 수
+        uint8  _bCursorValid : 1;
+        PROPERTY( RuntimeState )
+        uint8                  _bAutoPlanToggle : 1; ///< P 로 켠 자동 계획(설정 PROPERTY 와 전역 변수와는 별개인 실행 상태다).
+        [[maybe_unused]] uint8 _reserved        : 6;
     };
 } // namespace sw

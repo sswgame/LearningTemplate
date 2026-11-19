@@ -127,7 +127,8 @@ namespace sw
 
     void SkirmishMatch::serializeState( StateIO& io )
     {
-        io.expect( _humanMask );
+        io.expect( _humanMask ); // 설정 값 — 같은 사람 여부로 `initialize` 한 판에만 읽는다(무엇을 바꾸기 전에 본다)
+        io.reflected( *this );
         io.value( _world );
         if ( io.isOk() == false )
             return;
@@ -142,9 +143,6 @@ namespace sw
                 io.value( _arrAI[player] );
             }
         }
-        io.value( _statusTimer );
-        io.value( _huntTimer );
-        io.value( _bReportedOver );
         if ( io.isReading() )
         {
             _listEvent.clear();

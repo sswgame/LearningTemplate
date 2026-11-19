@@ -30,7 +30,7 @@ namespace sw
         MonsterCollectorDemoComponent();
         virtual ~MonsterCollectorDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getWonExp() const { return _wonExp; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<MonsterCollectorCatalog> _catalogPath;
 
         SharedAssetRef<MonsterCollectorCatalog> _pCatalog;
-        int32                                   _wonExp;        ///< 이긴 전투에서 받은 경험치(이기지 못하면 0)
-        int32                                   _captured;      ///< 포획 판이 잡음으로 끝났으면 1
-        int32                                   _captureShakes; ///< 포획 판의 볼 흔들림 수
+        PROPERTY( RuntimeState )
+        int32 _wonExp; ///< 이긴 전투에서 받은 경험치(이기지 못하면 0)
+        PROPERTY( RuntimeState )
+        int32 _captured; ///< 포획 판이 잡음으로 끝났으면 1
+        PROPERTY( RuntimeState )
+        int32 _captureShakes; ///< 포획 판의 볼 흔들림 수
     };
 } // namespace sw

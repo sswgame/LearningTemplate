@@ -298,7 +298,7 @@ namespace sw
         (void)bRespawnViews;
     }
 
-    void TacticsSRPGDemoComponent::serializeState( StateIO& io )
+    void TacticsSRPGDemoComponent::serializeGameState( StateIO& io )
     {
         io.header( TacticsSRPGDemoComponentInternal::kStateTag, TacticsSRPGDemoComponentInternal::kStateVersion );
         if ( io.isOk() == false )
@@ -316,20 +316,14 @@ namespace sw
             restoredField.initialize( *_pCatalog, _width, _height, _defaultTerrain.key(), _seed );
         }
         io.value( io.isWriting() ? _field : restoredField );
-        int2              cursor       = _cursor;
-        int32             selectedUnit = _selectedUnit;
-        TacticsDemoResult result       = _result;
+        int2 cursor = _cursor; // 고른 유닛 · 결과는 상태 칸이다(`GameModeComponent::serializeState`)
         io.value( cursor );
-        io.value( selectedUnit );
-        io.enumValue( result, TacticsDemoResult::Defeat );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _field        = std::move( restoredField );
-        _cursor       = cursor;
-        _lastStep     = int2{};
-        _selectedUnit = selectedUnit;
-        _result       = result;
+        _field    = std::move( restoredField );
+        _cursor   = cursor;
+        _lastStep = int2{};
     }
 
     void TacticsSRPGDemoComponent::writeGrowthDebugLines( DebugHUDSectionWriter& writer ) const

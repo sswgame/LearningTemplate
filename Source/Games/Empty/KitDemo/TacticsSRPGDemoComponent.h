@@ -28,6 +28,7 @@
 namespace sw
 {
     /** @brief 전투 결과입니다(감시 값 `KitDemo.Tactics.Result` 의 수). */
+    ENUM()
     enum class TacticsDemoResult : uint8
     {
         Ongoing = 0,
@@ -51,7 +52,7 @@ namespace sw
         TacticsSRPGDemoComponent();
         virtual ~TacticsSRPGDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getPhaseTeam() const { return static_cast<int32>( _field.getPhaseTeam() ); }
@@ -115,10 +116,12 @@ namespace sw
         SRPGCommanderAI             _ai;
         ConsumerLease               _eventLease;
         vector<SRPGEvent>           _listEvent;
-        int2                        _cursor;
+        int2                        _cursor;   ///< 리플렉션 상태 칸이 `int2` 를 싣지 않아 손 본문이 싣는다
         int2                        _lastStep; ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 칸을 옮긴다
-        int32                       _selectedUnit;
-        TacticsDemoResult           _result;
-        GrowthLog                   _growthLog; ///< 레벨 오름과 그 출처(명중 · 격파) — 표시용이라 저장하지 않는다
+        PROPERTY( RuntimeState, Min = -1 )
+        int32 _selectedUnit;
+        PROPERTY( RuntimeState )
+        TacticsDemoResult _result;
+        GrowthLog         _growthLog; ///< 레벨 오름과 그 출처(명중 · 격파) — 표시용이라 저장하지 않는다
     };
 } // namespace sw

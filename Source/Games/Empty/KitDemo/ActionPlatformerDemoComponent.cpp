@@ -218,7 +218,7 @@ namespace sw
         (void)bRespawnViews;
     }
 
-    void ActionPlatformerDemoComponent::serializeState( StateIO& io )
+    void ActionPlatformerDemoComponent::serializeGameState( StateIO& io )
     {
         io.header( ActionPlatformerDemoComponentInternal::kStateTag, ActionPlatformerDemoComponentInternal::kStateVersion );
         if ( io.isOk() == false )
@@ -232,14 +232,11 @@ namespace sw
             restoredRun.bindCatalog( _pCatalog.get() );
         }
         io.value( io.isWriting() ? _body : restoredBody );
-        io.value( io.isWriting() ? _run : restoredRun );
-        uint8 bJumpHeldLastFrame = _bJumpHeldLastFrame;
-        io.value( bJumpHeldLastFrame );
+        io.value( io.isWriting() ? _run : restoredRun ); // 점프 키 깃발은 상태 칸이다(`GameModeComponent::serializeState`)
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _body               = std::move( restoredBody );
-        _run                = std::move( restoredRun );
-        _bJumpHeldLastFrame = bJumpHeldLastFrame == SW_FALSE ? SW_FALSE : SW_TRUE;
+        _body = std::move( restoredBody );
+        _run  = std::move( restoredRun );
     }
 } // namespace sw

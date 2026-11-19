@@ -305,7 +305,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태 쓰기 · 복원하기(핫 리로드 · 세이브)
     // ------------------------------------------------------------------------------
-    void ParkGameModeComponent::serializeState( StateIO& io )
+    void ParkGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion );
         if ( io.isOk() == false )
@@ -351,13 +351,7 @@ namespace sw
             pCoaster->_train.setSpeed( speed );
             listCoaster.push_back( std::move( pCoaster ) );
         }
-        float32 statusTimer       = _statusTimer;
-        float32 autoBuildTimer    = _autoBuildTimer;
-        int32   selectedPlacement = _selectedPlacement;
-        Wallet  restoredWallet;
-        io.value( statusTimer );
-        io.value( autoBuildTimer );
-        io.value( selectedPlacement );
+        Wallet restoredWallet; // 두 시계 · 고른 배치는 상태 칸이다(`GameModeComponent::serializeState`)
         io.value( io.isWriting() ? _wallet : restoredWallet );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
@@ -372,9 +366,7 @@ namespace sw
                 placement._ride = _simulation.getRides()[static_cast<size_t>( placement._rideIndex )];
         }
         _listCoaster       = std::move( listCoaster );
-        _statusTimer       = statusTimer;
-        _autoBuildTimer    = autoBuildTimer;
-        _selectedPlacement = MathUtil::clamp( selectedPlacement, 0, static_cast<int32>( placementCount ) - 1 );
+        _selectedPlacement = MathUtil::clamp( _selectedPlacement, 0, static_cast<int32>( placementCount ) - 1 );
         _ridingCoaster     = -1;
     }
 

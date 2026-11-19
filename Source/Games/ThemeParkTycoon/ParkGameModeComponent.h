@@ -57,7 +57,7 @@ namespace sw
         virtual ~ParkGameModeComponent() override;
 
         /** @brief 공원 상태(시뮬레이션, 건설한 배치, 열차 위치, 타이머, 선택한 배치)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         const ThemeParkSimulation& getSimulation() const { return _simulation; }
@@ -187,12 +187,15 @@ namespace sw
         vector<int32>                        _listPendingRideView; ///< 모습을 스폰할 배치 번호(틱이 끝난 뒤 처리).
         MaterialTintCache                    _tintCache;           ///< 평지 놀이기구 색(같은 색은 나눠 쓴다. 배치 키가 인스턴스다).
         shared_ptr<MaterialInstance>         _arrGuestLook[3];
-        float32                              _statusTimer;
-        float32                              _autoBuildTimer;
-        int32                                _startingCash;
-        int32                                _selectedPlacement;
-        int32                                _ridingCoaster; ///< 0 이상이면 그 코스터에 타고 있다.
-        uint8                                _bWasRiding : 1;
-        [[maybe_unused]] uint8               _reserved   : 7;
+        PROPERTY( RuntimeState )
+        float32 _statusTimer;
+        PROPERTY( RuntimeState )
+        float32 _autoBuildTimer;
+        int32   _startingCash;
+        PROPERTY( RuntimeState )
+        int32                  _selectedPlacement;
+        int32                  _ridingCoaster; ///< 0 이상이면 그 코스터에 타고 있다.
+        uint8                  _bWasRiding : 1;
+        [[maybe_unused]] uint8 _reserved   : 7;
     };
 } // namespace sw

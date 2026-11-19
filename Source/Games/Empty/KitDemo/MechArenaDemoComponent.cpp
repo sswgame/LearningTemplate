@@ -112,8 +112,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.MechArenaDone", "[KitDemo] mech arena: team %# won with %# kills, loser gauge %#", _winningTeam, _winnerKills, _loserGauge );
     }
 
-    void MechArenaDemoComponent::serializeState( StateIO& io )
+    void MechArenaDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, MechArenaDemoComponentInternal::kStateTag, MechArenaDemoComponentInternal::kStateVersion, { &_winningTeam, &_winnerKills, &_loserGauge } );
+        serializeResults( io, MechArenaDemoComponentInternal::kStateTag, MechArenaDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

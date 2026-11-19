@@ -471,7 +471,7 @@ namespace sw
         GameModeComponent::onEndPlay();
     }
 
-    void HousingPlotComponent::serializeState( StateIO& io )
+    void HousingPlotComponent::serializeGameState( StateIO& io )
     {
         io.header( kStateTag, kStateVersion );
         if ( io.isWriting() )

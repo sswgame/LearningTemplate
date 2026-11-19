@@ -30,7 +30,7 @@ namespace sw
         BattleRoyaleDemoComponent();
         virtual ~BattleRoyaleDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getWinningTeam() const { return _winningTeam; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<BattleRoyaleCatalog> _catalogPath;
 
         SharedAssetRef<BattleRoyaleCatalog> _pCatalog;
-        int32                               _winningTeam;      ///< 이긴 팀 번호(-1 없음)
-        int32                               _winnerKills;      ///< 이긴 사람의 처치 수
-        int32                               _remainingPlayers; ///< 판이 끝난 뒤 남은 사람
+        PROPERTY( RuntimeState )
+        int32 _winningTeam; ///< 이긴 팀 번호(-1 없음)
+        PROPERTY( RuntimeState )
+        int32 _winnerKills; ///< 이긴 사람의 처치 수
+        PROPERTY( RuntimeState )
+        int32 _remainingPlayers; ///< 판이 끝난 뒤 남은 사람
     };
 } // namespace sw

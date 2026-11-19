@@ -113,7 +113,7 @@ namespace sw
         virtual ~FarmGameModeComponent() override;
 
         /** @brief 농장 상태(밭, 출하함 구간, 농부, 날씨)를 씁니다. 달력, 가방, 돈은 공유 상태(`SessionStateComponent`)가 싣습니다. `ComponentStateStore::capture` 가 부릅니다. */
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         /** @brief 공유 시계의 시각(0~24)입니다. 디렉터가 틱마다 옮겨 적으며, 뷰는 PostUpdate 에서 이것만 읽습니다. */
@@ -294,22 +294,28 @@ namespace sw
         shared_ptr<MaterialInstance>   _arrSoilLook[3];
         shared_ptr<MaterialInstance>   _plainCropLook;
         shared_ptr<MaterialInstance>   _witheredCropLook;
-        float3                         _playerPosition;
-        float3                         _facing;
-        float3                         _shippingBinPosition;
-        float3                         _shopPosition;
-        GameObjectHandle               _autoFarmerObject; ///< 자동 농부 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
-        int32                          _stamina;
-        int32                          _selectedSeedIndex;
-        int32                          _lastLoggedHour;
-        int32                          _dayStarted; ///< 농부의 하루가 시작된 공유 시계의 날(쓰러짐 판정에 쓴다).
-        float32                        _hourOfDay;  ///< 뷰가 읽는 시각.
-        FarmTool                       _tool;
-        FarmTool                       _lastUsedTool;
-        uint32                         _toolUseCount;
-        uint8                          _bRaining         : 1; ///< 판 상태 날씨의 비를 디렉터가 틱마다 옮겨 적은 것(뷰가 읽는다 — 저장하지 않는다, 날씨는 판 상태가 싣는다)
-        uint8                          _bPossessionDirty : 1; ///< 농부 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
-        uint8                          _bFarmerWalking   : 1; ///< 지난 틱에 이동 의도가 있었다(`isFarmerWalking` — 저장하지 않는다)
-        [[maybe_unused]] uint8         _reserved         : 5;
+        PROPERTY( RuntimeState )
+        float3 _playerPosition;
+        PROPERTY( RuntimeState )
+        float3           _facing;
+        float3           _shippingBinPosition;
+        float3           _shopPosition;
+        GameObjectHandle _autoFarmerObject; ///< 자동 농부 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
+        PROPERTY( RuntimeState )
+        int32 _stamina;
+        PROPERTY( RuntimeState )
+        int32 _selectedSeedIndex;
+        int32 _lastLoggedHour;
+        PROPERTY( RuntimeState )
+        int32   _dayStarted; ///< 농부의 하루가 시작된 공유 시계의 날(쓰러짐 판정에 쓴다).
+        float32 _hourOfDay;  ///< 뷰가 읽는 시각.
+        PROPERTY( RuntimeState )
+        FarmTool               _tool;
+        FarmTool               _lastUsedTool;
+        uint32                 _toolUseCount;
+        uint8                  _bRaining         : 1; ///< 판 상태 날씨의 비를 디렉터가 틱마다 옮겨 적은 것(뷰가 읽는다 — 저장하지 않는다, 날씨는 판 상태가 싣는다)
+        uint8                  _bPossessionDirty : 1; ///< 농부 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
+        uint8                  _bFarmerWalking   : 1; ///< 지난 틱에 이동 의도가 있었다(`isFarmerWalking` — 저장하지 않는다)
+        [[maybe_unused]] uint8 _reserved         : 5;
     };
 } // namespace sw

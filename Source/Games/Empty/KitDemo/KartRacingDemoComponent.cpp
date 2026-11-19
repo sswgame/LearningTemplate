@@ -147,8 +147,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.KartRacingDone", "[KitDemo] kart racing: racer %# won, %# second, %# third", _winner, _runnerUp, _last );
     }
 
-    void KartRacingDemoComponent::serializeState( StateIO& io )
+    void KartRacingDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, KartRacingDemoComponentInternal::kStateTag, KartRacingDemoComponentInternal::kStateVersion, { &_winner, &_runnerUp, &_last } );
+        serializeResults( io, KartRacingDemoComponentInternal::kStateTag, KartRacingDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

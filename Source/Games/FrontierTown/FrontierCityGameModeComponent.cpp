@@ -45,14 +45,12 @@ namespace sw
 
     FrontierCityGameModeComponent::~FrontierCityGameModeComponent() = default;
 
-    void FrontierCityGameModeComponent::serializeState( StateIO& io )
+    void FrontierCityGameModeComponent::serializeGameState( StateIO& io )
     {
         SessionStateComponent* pState = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
         if ( io.check( pState != nullptr ) == false )
             return;
-        io.header( kStateTag, kStateVersion );
-        uint8 bLaidOut = _bLaidOut;
-        io.value( bLaidOut );
+        io.header( kStateTag, kStateVersion ); // 배치를 마쳤는지는 상태 칸이다(`GameModeComponent::serializeState`)
         if ( io.isOk() == false )
             return;
         CitySimulation restoredCity;
@@ -65,7 +63,6 @@ namespace sw
         if ( io.isWriting() || io.isOk() == false )
             return;
         _city        = std::move( restoredCity );
-        _bLaidOut    = bLaidOut == SW_FALSE ? SW_FALSE : SW_TRUE;
         _bViewsDirty = SW_TRUE;
     }
 

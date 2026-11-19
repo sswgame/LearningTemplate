@@ -95,8 +95,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.GhostHuntDone", "[KitDemo] ghost hunt: %# stunned, %# coins, %# ghosts left", _stunnedCount, _caughtCoins, _remainingGhosts );
     }
 
-    void GhostHuntDemoComponent::serializeState( StateIO& io )
+    void GhostHuntDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, GhostHuntDemoComponentInternal::kStateTag, GhostHuntDemoComponentInternal::kStateVersion, { &_stunnedCount, &_caughtCoins, &_remainingGhosts } );
+        serializeResults( io, GhostHuntDemoComponentInternal::kStateTag, GhostHuntDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

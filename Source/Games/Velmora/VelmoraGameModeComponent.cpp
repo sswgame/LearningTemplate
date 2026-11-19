@@ -435,29 +435,23 @@ namespace sw
         _pendingCheckpoint = hashed_string{};
     }
 
-    void VelmoraGameModeComponent::serializeState( StateIO& io )
+    void VelmoraGameModeComponent::serializeGameState( StateIO& io )
     {
         // 싸움은 싣지 않는다 — 불러온 판은 그 지역에 다시 들어서며 전투를 처음부터 연다(보스 앞 자동 저장도 같은 자리에서 다시 싸운다).
         // 그래서 확장 팩을 끈 판이 확장 지역의 적 종을 모르는 바이트를 만나지 않는다. 판 상태(퀘스트 · 깃발 · 지갑)는 같은 오브젝트의 판 상태가 싣는다.
         io.header( kStateTag, kStateVersion );
         if ( io.isOk() == false )
             return;
-        VelmoraCampaign campaign       = _campaign;
-        float2          playerPosition = _playerPosition;
-        FacingDir       facing         = _facing;
-        int32           fallCount      = _fallCount;
+        // 자리 · 쓰러진 수는 상태 칸이다(`GameModeComponent::serializeState`). 판 진행(리플렉션 칸이 아닌 멤버) · 방향(리플렉션 열거가 아니다)은 손 본문이 싣는다.
+        VelmoraCampaign campaign = _campaign;
+        FacingDir       facing   = _facing;
         io.value( campaign );
-        io.value( playerPosition );
         io.enumValue( facing, FacingDir::Up );
-        io.value( fallCount );
-        io.check( fallCount >= 0 );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _campaign       = campaign;
-        _playerPosition = playerPosition;
-        _facing         = facing;
-        _fallCount      = fallCount;
+        _campaign = campaign;
+        _facing   = facing;
         _room.clear();
         _bossDelay.clear();
         _currentRegion   = hashed_string{};

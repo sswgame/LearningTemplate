@@ -63,7 +63,7 @@ namespace sw
 
     MeadowFarmGameModeComponent::~MeadowFarmGameModeComponent() = default;
 
-    void MeadowFarmGameModeComponent::serializeState( StateIO& io )
+    void MeadowFarmGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( kStateTag, kStateVersion );
         if ( io.isOk() == false )

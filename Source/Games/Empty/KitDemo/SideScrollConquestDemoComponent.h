@@ -30,7 +30,7 @@ namespace sw
         SideScrollConquestDemoComponent();
         virtual ~SideScrollConquestDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getVictory() const { return _victory; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<ConquestCatalog> _catalogPath;
 
         SharedAssetRef<ConquestCatalog> _pCatalog;
-        int32                           _victory;   ///< 1 승리, 0 아님
-        int32                           _territory; ///< 판이 끝난 뒤 플레이어 거점 수
-        int32                           _squadSize; ///< 지휘관 부대의 병사 수
+        PROPERTY( RuntimeState )
+        int32 _victory; ///< 1 승리, 0 아님
+        PROPERTY( RuntimeState )
+        int32 _territory; ///< 판이 끝난 뒤 플레이어 거점 수
+        PROPERTY( RuntimeState )
+        int32 _squadSize; ///< 지휘관 부대의 병사 수
     };
 } // namespace sw

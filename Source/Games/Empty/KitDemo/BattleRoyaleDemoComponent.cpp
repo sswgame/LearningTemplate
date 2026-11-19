@@ -97,8 +97,8 @@ namespace sw
         SW_LOG_INFO_ID( "KitDemo.BattleRoyaleDone", "[KitDemo] battle royale: team %# won with %# kills, %# players left", _winningTeam, _winnerKills, _remainingPlayers );
     }
 
-    void BattleRoyaleDemoComponent::serializeState( StateIO& io )
+    void BattleRoyaleDemoComponent::serializeGameState( StateIO& io )
     {
-        serializeResults( io, BattleRoyaleDemoComponentInternal::kStateTag, BattleRoyaleDemoComponentInternal::kStateVersion, { &_winningTeam, &_winnerKills, &_remainingPlayers } );
+        serializeResults( io, BattleRoyaleDemoComponentInternal::kStateTag, BattleRoyaleDemoComponentInternal::kStateVersion );
     }
 } // namespace sw

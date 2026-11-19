@@ -212,7 +212,7 @@ namespace sw
         logStatus( false );
     }
 
-    void FarmGameModeComponent::serializeState( StateIO& io )
+    void FarmGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion );
         if ( io.isOk() == false )
@@ -229,30 +229,14 @@ namespace sw
         { bodyIO.value( field ); } );
         io.section( FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, [&shipment]( StateIO& bodyIO )
         { bodyIO.value( shipment ); } );
-        // 날씨(난수 · 지금 날씨)는 판 상태가 싣는다 — 판 4 부터 이 칸에 비 · 난수가 없다.
-        float3   playerPosition    = _playerPosition;
-        float3   facing            = _facing;
-        int32    stamina           = _stamina;
-        int32    selectedSeedIndex = _selectedSeedIndex;
-        FarmTool tool              = _tool;
-        int32    dayStarted        = _dayStarted;
-        io.value( playerPosition );
-        io.value( facing );
-        io.value( stamina );
-        io.value( selectedSeedIndex );
-        io.enumValue( tool, FarmTool::Hand );
-        io.value( dayStarted );
+        // 날씨(난수 · 지금 날씨)는 판 상태가 싣는다 — 판 4 부터 이 칸에 비 · 난수가 없다. 농부 자리 · 기력 · 도구 · 하루는 상태 칸이다(`GameModeComponent::serializeState`).
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
         _field             = std::move( restoredField );
         _shipment          = std::move( restoredShipment );
-        _dayStarted        = dayStarted;
-        _playerPosition    = playerPosition;
-        _facing            = facing;
-        _stamina           = MathUtil::clamp( stamina, 0, _maxStamina );
-        _selectedSeedIndex = _listSeed.empty() ? 0 : MathUtil::clamp( selectedSeedIndex, 0, static_cast<int32>( _listSeed.size() ) - 1 );
-        _tool              = tool;
+        _stamina           = MathUtil::clamp( _stamina, 0, _maxStamina ); // 칸 사이 맞춤 — 최대는 설정이다
+        _selectedSeedIndex = _listSeed.empty() ? 0 : MathUtil::clamp( _selectedSeedIndex, 0, static_cast<int32>( _listSeed.size() ) - 1 );
     }
 
     void FarmGameModeComponent::onStateRestored( bool bRestored )

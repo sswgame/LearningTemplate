@@ -30,7 +30,7 @@ namespace sw
         AsymmetricHorrorDemoComponent();
         virtual ~AsymmetricHorrorDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getCompletedGenerators() const { return _completedGenerators; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<AsymmetricHorrorRulesCatalog> _catalogPath;
 
         SharedAssetRef<AsymmetricHorrorRulesCatalog> _pCatalog;
-        int32                                        _completedGenerators; ///< 고친 발전기 수
-        int32                                        _escapedCount;        ///< 탈출한 생존자 수
-        int32                                        _winningTeam;         ///< 이긴 팀 번호(-1 없음, 0 생존자)
+        PROPERTY( RuntimeState )
+        int32 _completedGenerators; ///< 고친 발전기 수
+        PROPERTY( RuntimeState )
+        int32 _escapedCount; ///< 탈출한 생존자 수
+        PROPERTY( RuntimeState )
+        int32 _winningTeam; ///< 이긴 팀 번호(-1 없음, 0 생존자)
     };
 } // namespace sw

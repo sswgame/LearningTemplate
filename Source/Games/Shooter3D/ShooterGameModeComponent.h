@@ -159,7 +159,7 @@ namespace sw
         virtual ~ShooterGameModeComponent() override;
 
         /** @brief 판의 진행(처치 수, 페이싱 감독 상태)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. 적과 효과는 모습이라 정리합니다. */
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
         /** @brief 플레이어가 쓰러졌습니다. 적을 정리하고 감독을 처음부터 다시 돌립니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
         void restartRound();
         /** @brief 플레이어가 맞았습니다. 감독의 긴장도 신호로 넣습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
@@ -316,6 +316,7 @@ namespace sw
         float32                             _statusTimer;
         float32                             _pendingHeal; ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
         uint32                              _spawnCursor; ///< 다음 적의 스폰 위치 순번.
+        PROPERTY( RuntimeState )
         uint32                              _killCount;
         AssetReloadWatch<AIDirectorProfile> _profileReload;    ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수(바뀌면 판을 이어 새 프로필로 옮긴다)
         uint32                              _nextEnemyNetID;   ///< 다음 적의 복제 엔티티 번호

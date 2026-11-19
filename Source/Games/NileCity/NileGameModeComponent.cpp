@@ -463,7 +463,7 @@ namespace sw
         return _wallet.getBalance( _city.getCurrency() );
     }
 
-    void NileGameModeComponent::serializeState( StateIO& io )
+    void NileGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( NileGameModeComponentInternal::kStateTag, NileGameModeComponentInternal::kStateVersion );
         if ( io.isOk() == false )
@@ -483,33 +483,23 @@ namespace sw
         io.value( io.isWriting() ? _planner : restoredPlanner );
         io.value( io.isWriting() ? _wallet : restoredWallet );
         io.value( io.isWriting() ? _clock : restoredClock );
-        float32 timeScale       = _speed.getTimeScale();
-        int32   selectedTool    = _selectedTool;
-        int32   monthCount      = _monthCount;
-        int32   evolvedCount    = _evolvedCount;
-        uint8   bPaused         = _speed.isPaused() ? SW_TRUE : SW_FALSE;
-        uint8   bAutoPlanToggle = static_cast<uint8>( _bAutoPlanToggle );
+        // 고른 도구 · 달 수 · 진화 수 · 자동 계획 토글은 상태 칸이다(`GameModeComponent::serializeState`). 배속은 `GameSpeedControl` 이 검사하며 되돌린다.
+        float32 timeScale = _speed.getTimeScale();
+        uint8   bPaused   = _speed.isPaused() ? SW_TRUE : SW_FALSE;
         io.value( timeScale );
-        io.value( selectedTool );
-        io.value( monthCount );
-        io.value( evolvedCount );
         io.value( bPaused );
-        io.value( bAutoPlanToggle );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
         GameSpeedControl restoredSpeed;
         if ( io.check( restoredSpeed.restore( timeScale, bPaused != SW_FALSE ) ) == false )
             return; // 범위 밖 배속(깨진 세이브)은 거절한다
-        _city            = std::move( restoredCity );
-        _planner         = std::move( restoredPlanner );
-        _wallet          = std::move( restoredWallet );
-        _clock           = std::move( restoredClock );
-        _speed           = restoredSpeed;
-        _selectedTool    = _listTool.empty() ? 0 : MathUtil::clamp( selectedTool, 0, static_cast<int32>( _listTool.size() ) - 1 );
-        _monthCount      = monthCount;
-        _evolvedCount    = evolvedCount;
-        _bAutoPlanToggle = bAutoPlanToggle != SW_FALSE ? SW_TRUE : SW_FALSE;
+        _city         = std::move( restoredCity );
+        _planner      = std::move( restoredPlanner );
+        _wallet       = std::move( restoredWallet );
+        _clock        = std::move( restoredClock );
+        _speed        = restoredSpeed;
+        _selectedTool = _listTool.empty() ? 0 : MathUtil::clamp( _selectedTool, 0, static_cast<int32>( _listTool.size() ) - 1 );
         _listEvent.clear();
     }
 

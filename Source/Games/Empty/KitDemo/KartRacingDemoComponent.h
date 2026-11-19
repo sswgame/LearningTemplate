@@ -30,7 +30,7 @@ namespace sw
         KartRacingDemoComponent();
         virtual ~KartRacingDemoComponent() override;
 
-        void serializeState( StateIO& io ) override;
+        void serializeGameState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것 ----
         int32 getWinner() const { return _winner; }
@@ -50,8 +50,11 @@ namespace sw
         AssetRef<KartTrackCatalog> _catalogPath;
 
         SharedAssetRef<KartTrackCatalog> _pCatalog;
-        int32                            _winner;   ///< 1 등 차 번호(-1 없음)
-        int32                            _runnerUp; ///< 2 등 차 번호(-1 없음)
-        int32                            _last;     ///< 3 등 차 번호(-1 없음)
+        PROPERTY( RuntimeState )
+        int32 _winner; ///< 1 등 차 번호(-1 없음)
+        PROPERTY( RuntimeState )
+        int32 _runnerUp; ///< 2 등 차 번호(-1 없음)
+        PROPERTY( RuntimeState )
+        int32 _last; ///< 3 등 차 번호(-1 없음)
     };
 } // namespace sw
