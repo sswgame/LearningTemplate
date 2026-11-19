@@ -50,6 +50,7 @@ namespace sw
         , _pLogPolicy{ std::move( pLogPolicy ) }
         , _listFailure{}
         , _listUpdatedGolden{}
+        , _listReferencedGolden{}
         , _listNearLimitGolden{}
         , _listGoldenSample{}
         , _goldenPolicy{ unexpected( Error{ ErrorKind::NotFound, "the golden policy is read when a scenario starts" } ) }
@@ -493,11 +494,10 @@ namespace sw
             context.recordFailure( step, "could not judge the image: " + AutomationStep::describeReason( _goldenWriteMode.error() ) );
             return;
         }
-        const GoldenWriteMode                          recording = *_goldenWriteMode;
-        const AutomationGoldenPolicy&                  policy    = *_goldenPolicy;
-        const AutomationStepArgsUtil::ExpectImageArgs& args      = *parsedArgs;
-        const AutomationGoldenLimits                   limits    = args.resolveLimits( policy._limits );
-        const string                                   file      = step.readValidatedProperties<AutomationExpectImageParams>()._file;
+        const AutomationGoldenPolicy&                  policy = *_goldenPolicy;
+        const AutomationStepArgsUtil::ExpectImageArgs& args   = *parsedArgs;
+        const AutomationGoldenLimits                   limits = args.resolveLimits( policy._limits );
+        const string                                   file   = step.readValidatedProperties<AutomationExpectImageParams>()._file;
         const expected<AutomationImage>                loaded =
             AutomationImage::loadPpm( context.resolveOutputPath( file ) ).and_then( [&]( const AutomationImage& image )
         { return AutomationImage::reduce( image, args._region, AutomationImage::kGoldenMaxWidth ); } );
@@ -506,8 +506,21 @@ namespace sw
             context.recordFailure( step, "could not read the image: " + AutomationStep::describeReason( loaded.error() ) );
             return;
         }
-        const AutomationImage&                    reduced  = *loaded;
-        const string                              goldenID = AutomationGoldenUtil::makeGoldenID( _goldenFolderID, _goldenPrefix, args._golden, backendTag, AutomationGoldenUtil::getPlatformTag() );
+        const AutomationImage& reduced  = *loaded;
+        const string           goldenID = AutomationGoldenUtil::makeGoldenID( _goldenFolderID, _goldenPrefix, args._golden, backendTag, AutomationGoldenUtil::getPlatformTag() );
+        // 골든은 처음 가리킨 단언의 것이다 — 같은 골든을 허용치를 바꿔 다시 대조하는 단언(업스케일한 장을 배율 1 골든에 견주기)은 대조만 하고 쓰지 않는다.
+        // 기록 실행에서 뒤 단언이 잘린 그림으로 원본 골든을 덮었다(temporalupscale_native). 영역이 다르면 골든과 같은 화면이 아니라 견줄 수 없다.
+        const auto owner       = std::find_if( _listReferencedGolden.begin(), _listReferencedGolden.end(), [&]( const ReferencedGolden& referenced )
+              { return referenced._goldenID == goldenID; } );
+        const bool bOwnsGolden = owner == _listReferencedGolden.end();
+        if ( bOwnsGolden )
+            _listReferencedGolden.push_back( ReferencedGolden{ goldenID, args._region } );
+        else if ( owner->_region._x0 != args._region._x0 || owner->_region._y0 != args._region._y0 || owner->_region._x1 != args._region._x1 || owner->_region._y1 != args._region._y1 )
+        {
+            context.recordFailure( step, "golden " + goldenID + " is the region of an earlier assertion - a second assertion on it must use the same region" );
+            return;
+        }
+        const GoldenWriteMode                     recording = bOwnsGolden ? *_goldenWriteMode : GoldenWriteMode::Off;
         vector<uint8>                             listBytes;
         const bool                                bReadGolden = AssetIO::hasAsset( AssetID{ goldenID } ) && AssetIO::readBinaryAsset( AssetID{ goldenID }, listBytes );
         const expected<AutomationImage>           golden      = bReadGolden ? AutomationImage::parsePpm( listBytes.data(), listBytes.size() )
@@ -530,7 +543,7 @@ namespace sw
             SW_LOG_INFO_ID( "Automation.Image", "[Scenario] image %#", line.c_str() );
             _listMetricLine.push_back( line );
             // 모두 쓰는 기록 실행은 앞 골든과의 차이라 같은 골든의 실행 사이 흔들림이 아니다 — 있는 골든을 덮지 않는 실행만 모은다.
-            if ( recording != GoldenWriteMode::All )
+            if ( *_goldenWriteMode != GoldenWriteMode::All )
                 _listGoldenSample.push_back( AutomationGoldenSample{ goldenID, difference, limits } );
         }
         switch ( AutomationGoldenUtil::decide( bHasGolden, bCompared, evaluation, recording ) )
@@ -665,6 +678,7 @@ namespace sw
         prepareWatches( scenario );
         _stored.clear();
         _listUpdatedGolden.clear();
+        _listReferencedGolden.clear();
         _listNearLimitGolden.clear();
         _listGoldenSample.clear();
         _recordingCommit.clear();

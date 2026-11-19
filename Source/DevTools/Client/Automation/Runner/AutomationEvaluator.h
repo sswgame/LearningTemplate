@@ -181,6 +181,13 @@ namespace sw
         };
 
         /** @brief 미룬 `<ExpectImage>` 하나입니다. 단계는 시나리오가 들고 있어 실행 동안 산다. */
+        /** @brief 이 실행에서 골든을 처음 가리킨 이미지 단언의 골든 id 와 영역입니다(골든은 그 영역을 줄인 그림이다). */
+        struct ReferencedGolden
+        {
+            string                _goldenID{};
+            AutomationImageRegion _region{};
+        };
+
         struct DeferredImageCheck
         {
             const AutomationStep* _pStep{ nullptr };
@@ -212,6 +219,7 @@ namespace sw
         vector<string>                   _listFailure;                                          ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
         AutomationFailureKind            _firstFailureKind{ AutomationFailureKind::Assertion }; ///< 첫 실패 줄의 종류(`addFailure`)
         vector<string>                   _listUpdatedGolden;                                    ///< 이 실행이 쓴 골든(리소스 id)
+        vector<ReferencedGolden>         _listReferencedGolden;                                 ///< 이 실행의 이미지 단언이 가리킨 골든 — 처음 가리킨 단언만 그 골든을 쓴다
         vector<string>                   _listNearLimitGolden;                                  ///< 통과했지만 허용치에 가까운 골든의 비교 줄
         vector<AutomationGoldenSample>   _listGoldenSample;                                     ///< 기록 모드가 아닌 실행의 골든 측정값
         expected<AutomationGoldenPolicy> _goldenPolicy;                                         ///< 시작 때 읽은 판정 정책(`Config/Dev/GoldenImage.json`) — 못 읽었으면 이미지 단언마다 그 이유로 진다
