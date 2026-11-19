@@ -58,6 +58,7 @@ namespace sw
         : _listHandler{}
         , _arrKindHandler{}
         , _arrNotificationHandler{}
+        , _arrKindDirection{}
         , _kindStats{}
         , _inbound{}
         , _malformedCount{ 0 }
@@ -79,6 +80,14 @@ namespace sw
         const uint8  rangeBase    = pHandler->getMessageRangeBase();
         const uint16 kindMask     = pHandler->getMessageKindMask();
         const uint16 notifiedMask = pHandler->getNotifiedKindMask();
+        // 방향을 적지 않은 종류는 받지 않는다 — 어느 역할이 받아도 되는지 모르면 반대 방향을 거를 수 없다(폴백 없음).
+        const uint16 missingDirectionMask = static_cast<uint16>( kindMask & ~pHandler->getMessageDirectionMask().getDeclaredMask() );
+        if ( missingDirectionMask != 0 )
+        {
+            SW_LOG_ERROR_ID( "Net.RouterKindWithoutDirection", "NetMessageRouter: range 0x%02x kinds (mask 0x%04x) have no declared direction - the handler is refused (declare each message ToServer, ToClient or Both)",
+                             static_cast<int32>( rangeBase ), static_cast<int32>( missingDirectionMask ) );
+            return Subscription{};
+        }
         // 한 영역은 표 하나다 — 영역을 나눠 맡는 처리기(락스텝 · 롤백)는 같은 표의 판을 낸다. 다르면 상대와 견줄 판이 둘이 된다.
         const uint32 wireVersion     = pHandler->getWireVersion();
         const uint32 existingVersion = findWireVersion( rangeBase );
@@ -214,12 +223,14 @@ namespace sw
         {
             _arrKindHandler[kind]         = nullptr;
             _arrNotificationHandler[kind] = nullptr;
+            _arrKindDirection[kind]       = 0;
         }
         for ( INetMessageHandler* pHandler : _listHandler )
         {
-            const uint8  rangeBase    = pHandler->getMessageRangeBase();
-            const uint16 kindMask     = pHandler->getMessageKindMask();
-            const uint16 notifiedMask = pHandler->getNotifiedKindMask();
+            const uint8                   rangeBase     = pHandler->getMessageRangeBase();
+            const uint16                  kindMask      = pHandler->getMessageKindMask();
+            const uint16                  notifiedMask  = pHandler->getNotifiedKindMask();
+            const NetMessageDirectionMask directionMask = pHandler->getMessageDirectionMask();
             for ( int32 offset = 0; offset < NetMessageRange::kSize; ++offset )
             {
                 const int32 kind = static_cast<int32>( rangeBase ) + offset;
@@ -235,7 +246,9 @@ namespace sw
                     SW_LOG_ERROR_ID( "Net.RouterKindClaimedTwice", "NetMessageRouter: message kind 0x%02x is claimed by two handlers - the first one keeps it", kind );
                     continue;
                 }
-                _arrKindHandler[kind] = pHandler;
+                _arrKindHandler[kind]   = pHandler;
+                _arrKindDirection[kind] = static_cast<uint8>( ( ( ( directionMask._toServerMask >> offset ) & 1u ) != 0 ? kDirectionToServerBit : 0u ) |
+                                                              ( ( ( directionMask._toClientMask >> offset ) & 1u ) != 0 ? kDirectionToClientBit : 0u ) );
             }
         }
     }
@@ -254,13 +267,33 @@ namespace sw
         ++_unclaimedNotificationCount;
     }
 
-    NetHandleResult NetMessageRouter::dispatch( const NetMessageContext& context, const uint8* pData, int32 size )
+    bool NetMessageRouter::isInboundAllowed( uint8 kind, NetPeerRole role ) const
+    {
+        const uint8 roleBit = role == NetPeerRole::Server ? kDirectionToServerBit : kDirectionToClientBit;
+        return ( _arrKindDirection[kind] & roleBit ) != 0;
+    }
+
+    void NetMessageRouter::refuseWrongDirection( INetPeers& peers, int32 connectionID, uint8 kind, NetPeerRole role )
+    {
+        ++_malformedCount;
+        SW_LOG_WARNING_ID( "Net.RouterWrongDirection", "NetMessageRouter: connection %# sent message kind 0x%02x that does not travel toward the %# - disconnecting it", connectionID,
+                           static_cast<int32>( kind ), role == NetPeerRole::Server ? "server" : "client" );
+        peers.disconnect( connectionID );
+        _listRefusedConnection.push_back( connectionID );
+    }
+
+    NetHandleResult NetMessageRouter::dispatch( NetPeerRole role, const NetMessageContext& context, const uint8* pData, int32 size )
     {
         if ( pData == nullptr || size <= 0 )
             return NetHandleResult::NotMine;
         INetMessageHandler* pHandler = _arrKindHandler[pData[0]];
         if ( pHandler == nullptr )
             return NetHandleResult::NotMine;
+        if ( isInboundAllowed( pData[0], role ) == false )
+        {
+            ++_malformedCount;
+            return NetHandleResult::Malformed; // 반대 방향 종류다 — 처리기는 자기 역할이 받는 종류만 본다
+        }
         BitReader             body( pData + 1, size - 1 );
         const NetHandleResult result = pHandler->handleNetMessage( NetMessageContext{ pData, size, context._connectionID, context._channel, pData[0] }, body );
         if ( result == NetHandleResult::Malformed )
@@ -283,6 +316,7 @@ namespace sw
     {
         peers.pollInbound( _inbound );
         _listRefusedConnection.clear();
+        const NetPeerRole role = peers.isServer() ? NetPeerRole::Server : NetPeerRole::Client;
         for ( const NetEndpointEvent& event : _inbound._listEvent )
         {
             dispatchEvent( event );
@@ -328,7 +362,13 @@ namespace sw
                 receiveWireVersions( peers, message._connectionID, pData, message._size );
                 continue;
             }
-            if ( dispatch( NetMessageContext{ pData, message._size, message._connectionID, message._channel, message._size > 0 ? pData[0] : uint8{ 0 } }, pData, message._size ) !=
+            const bool bWrongDirection = message._size > 0 && _arrKindHandler[pData[0]] != nullptr && isInboundAllowed( pData[0], role ) == false;
+            if ( bWrongDirection )
+            {
+                refuseWrongDirection( peers, message._connectionID, pData[0], role );
+                continue;
+            }
+            if ( dispatch( role, NetMessageContext{ pData, message._size, message._connectionID, message._channel, message._size > 0 ? pData[0] : uint8{ 0 } }, pData, message._size ) !=
                      NetHandleResult::NotMine ||
                  pOutUnhandled == nullptr )
                 continue;

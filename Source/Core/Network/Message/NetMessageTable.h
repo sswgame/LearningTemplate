@@ -20,14 +20,6 @@
 
 namespace sw
 {
-    /** @brief 메시지가 가는 방향입니다. 와이어 버전에 섞인다. */
-    enum class NetMessageDirection : uint8
-    {
-        ToServer = 0, ///< 클라이언트 → 서버
-        ToClient,     ///< 서버 → 클라이언트
-        Both          ///< 양쪽(락스텝 입력처럼 서버가 받아 다시 나눈다)
-    };
-
     /**
      * @brief 메시지 서술자입니다. 키트는 `using Input = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;` 로 씁니다.
      * @tparam Offset 영역 안 번호(0 ~ 15)
@@ -77,6 +69,17 @@ namespace sw
             return static_cast<uint16>( ( 0u | ... | ( 1u << TSubset::kOffset ) ) );
         }
 
+        /** @brief 메시지 @p TSubset 들의 방향 마스크입니다(`INetMessageHandler::getMessageDirectionMask`). 라우터가 받는 쪽 역할과 견준다. */
+        template <typename... TSubset>
+        static constexpr NetMessageDirectionMask makeDirectionMask()
+        {
+            static_assert( ( contains<TSubset>() && ... ), "every message of the mask must be in this table" );
+            NetMessageDirectionMask mask{};
+            mask._toServerMask = static_cast<uint16>( ( 0u | ... | ( TSubset::kDirection != NetMessageDirection::ToClient ? 1u << TSubset::kOffset : 0u ) ) );
+            mask._toClientMask = static_cast<uint16>( ( 0u | ... | ( TSubset::kDirection != NetMessageDirection::ToServer ? 1u << TSubset::kOffset : 0u ) ) );
+            return mask;
+        }
+
         /** @brief 번호가 @p kind 인 메시지의 `visitor.visit<TMessage>()` 를 부르고 그 값을 돌려줍니다. 표에 없으면 @p notFound 입니다. */
         template <typename TResult, typename TVisitor>
         static TResult dispatch( uint8 kind, TVisitor& visitor, TResult notFound )
@@ -123,6 +126,8 @@ namespace sw
         }
 
         static_assert( sizeof...( TMessage ) > 0, "a message table needs at least one message" );
+        // 라우터의 판 알림 종류(엔진 영역 0x0F)를 표 메시지가 쓰면 받는 라우터가 그 메시지를 판 알림으로 읽는다(상대 판을 빈 목록으로 덮어 판 맞춤이 꺼진다).
+        static_assert( ( ( RangeBase + TMessage::kOffset != NetMessageRange::kRouterWireVersionKind ) && ... ), "the router owns the table version notice kind" );
     };
 } // namespace sw
 
@@ -140,10 +145,11 @@ namespace sw
     public:
         static constexpr uint16 kReceivedMask = TTable::template makeMask<TReceived...>();
 
-        uint8           getMessageRangeBase() const final { return TTable::kRangeBase; }
-        uint16          getMessageKindMask() const final { return kReceivedMask; }
-        uint32          getWireVersion() const final { return TTable::computeWireVersion(); }
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) final
+        uint8                   getMessageRangeBase() const final { return TTable::kRangeBase; }
+        uint16                  getMessageKindMask() const final { return kReceivedMask; }
+        NetMessageDirectionMask getMessageDirectionMask() const final { return TTable::template makeDirectionMask<TReceived...>(); }
+        uint32                  getWireVersion() const final { return TTable::computeWireVersion(); }
+        NetHandleResult         handleNetMessage( const NetMessageContext& context, BitReader& body ) final
         {
             ReceiveVisitor visitor{ static_cast<TDerived&>( *this ), context, body };
             return TTable::template dispatch<NetHandleResult>( context._kind, visitor, NetHandleResult::Handled ); // 마스크가 거른 뒤라 표 밖 종류는 오지 않는다

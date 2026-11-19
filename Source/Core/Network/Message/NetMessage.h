@@ -66,6 +66,38 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 메시지가 가는 방향입니다. 메시지 서술자(`NetMessageDef`)마다 하나를 적고, 라우터가 받는 쪽 역할과 견준다. 와이어 버전에 섞인다. */
+    enum class NetMessageDirection : uint8
+    {
+        ToServer = 0, ///< 클라이언트 → 서버
+        ToClient,     ///< 서버 → 클라이언트
+        Both          ///< 양쪽(락스텝 입력처럼 서버가 받아 다시 나눈다)
+    };
+
+    /** @brief 라우터가 메시지를 받는 쪽의 역할입니다. 서버는 `ToServer` · `Both` 종류만, 클라이언트는 `ToClient` · `Both` 종류만 받는다. */
+    enum class NetPeerRole : uint8
+    {
+        Server = 0,
+        Client
+    };
+
+    /**
+     * @brief 처리기가 맡는 종류마다 갈 수 있는 방향입니다. 비트 n 이 (영역 + n)이다(XMachinaServer 의 패킷 방향 표 자리).
+     * @details 맡는 종류(`getMessageKindMask`)는 모두 둘 중 한쪽 이상에 있어야 한다 — 방향을 적지 않은 종류가 있으면 라우터가 등록을 받지 않는다(폴백 없음).
+     *          받는 쪽 역할의 마스크 밖 종류(서버가 받은 `ToClient` 종류)는 라우터가 `Malformed` 로 세고 그 연결을 끊는다.
+     */
+    struct NetMessageDirectionMask
+    {
+        uint16 _toServerMask{ 0 }; ///< 클라이언트 → 서버로 갈 수 있는 종류(`ToServer` · `Both`)
+        uint16 _toClientMask{ 0 }; ///< 서버 → 클라이언트로 갈 수 있는 종류(`ToClient` · `Both`)
+
+        constexpr uint16 getInboundMask( NetPeerRole role ) const { return role == NetPeerRole::Server ? _toServerMask : _toClientMask; }
+        constexpr uint16 getDeclaredMask() const { return static_cast<uint16>( _toServerMask | _toClientMask ); }
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 받은 메시지 하나의 컨텍스트입니다. 보낸 연결(클라이언트에서는 서버가 0), 채널, 종류(첫 바이트), 메시지 전체(종류 포함, 그대로 중계할 때 씁니다)를 담습니다. */
     struct NetMessageContext
     {
@@ -108,6 +140,11 @@ namespace sw
         virtual uint32 getWireVersion() const = 0;
         /** @brief 영역 안에서 맡는 종류의 마스크입니다. 비트 n 이 (영역 + n)에 해당하며, 한 영역을 여럿이 나눠 맡을 때 겹치지 않게 고릅니다. 0이면 사건만 받습니다. */
         virtual uint16 getMessageKindMask() const { return 0xFFFFu; }
+        /**
+         * @brief 맡는 종류마다 갈 수 있는 방향입니다(`NetMessageDirectionMask`). 표 기반 처리기(`NetTableHandler`)는 표의 `NetMessageDef` 에서 저절로 낸다.
+         * @details 순수 가상이라 빠뜨릴 수 없다. 맡는 종류 중 방향이 없는 것이 있으면 라우터가 등록을 거절한다. 사건만 받는 처리기는 빈 값을 낸다.
+         */
+        virtual NetMessageDirectionMask getMessageDirectionMask() const = 0;
         /**
          * @brief 맡은 종류의 메시지 하나를 처리합니다. @p body 는 종류 바이트 다음부터입니다.
          * @return 본문을 읽지 못했으면 Malformed 를 반환하며, 라우터가 세고 버립니다. 낡은 것을 버린 경우는 Handled 입니다.
@@ -193,8 +230,12 @@ namespace sw
          *          키트는 자기 영역(`NetKitMessageRange`)을 쓰고, 게임 처리기 여럿은 영역 안에서 서로 다른 마스크를 쓴다.
          */
         [[nodiscard]] Subscription registerHandler( INetMessageHandler* pHandler );
-        /** @brief 메시지 하나를 그 종류의 처리기에 넘깁니다. 처리기가 없으면(빈 메시지도) NotMine 을 반환합니다. */
-        NetHandleResult dispatch( const NetMessageContext& context, const uint8* pData, int32 size );
+        /**
+         * @brief 메시지 하나를 그 종류의 처리기에 넘깁니다. 처리기가 없으면(빈 메시지도) NotMine 을 반환합니다.
+         * @details 받는 쪽 역할 @p role 로 갈 수 없는 종류(서버가 받은 `ToClient` 종류)는 처리기에 넘기지 않고 세고 Malformed 를 반환합니다.
+         *          `poll` 은 그 연결도 끊는다 — 반대 방향 종류는 상대가 프로토콜을 어긴 것이다.
+         */
+        NetHandleResult dispatch( NetPeerRole role, const NetMessageContext& context, const uint8* pData, int32 size );
         /** @brief 연결 사건 하나를 모든 처리기에 등록 순서대로 알립니다. */
         void dispatchEvent( const NetEndpointEvent& event );
         /**
@@ -226,6 +267,10 @@ namespace sw
         void sendWireVersions( INetPeers& peers, int32 connectionID );
         /** @brief 상대 @p connectionID 의 판 알림을 읽어 들고 이 쪽과 견줍니다. 깨졌거나 다르면 연결을 끊습니다. */
         void receiveWireVersions( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size );
+        /** @brief 종류 @p kind 를 역할 @p role 쪽이 받을 수 있으면 true 입니다(맡은 처리기의 방향 선언). */
+        bool isInboundAllowed( uint8 kind, NetPeerRole role ) const;
+        /** @brief 반대 방향 종류를 보낸 연결 @p connectionID 를 세고 끊습니다. 같은 `poll` 의 남은 메시지도 넘기지 않는다. */
+        void refuseWrongDirection( INetPeers& peers, int32 connectionID, uint8 kind, NetPeerRole role );
         /** @brief 들고 있는 상대 판과 이 쪽 판을 견주어 다른 연결을 끊습니다. 다르면 true 입니다. */
         bool disconnectOnWireVersionMismatch( INetPeers& peers, int32 connectionID );
 
@@ -236,10 +281,14 @@ namespace sw
             uint8  _rangeBase{ 0 };
         };
 
+        static constexpr uint8 kDirectionToServerBit = 1u << 0;
+        static constexpr uint8 kDirectionToClientBit = 1u << 1;
+
     private:
         vector<INetMessageHandler*>                   _listHandler; ///< 등록 순서대로 보관한다. 사건만 받는 처리기는 등록마다 하나씩 오르므로(중복 허용) `RegistrationList` 가 아니다.
         INetMessageHandler*                           _arrKindHandler[kKindCount];
         INetMessageHandler*                           _arrNotificationHandler[kKindCount]; ///< 종류마다 그 종류를 전달 통지로 보내는 처리기(`getNotifiedKindMask`).
+        uint8                                         _arrKindDirection[kKindCount];       ///< 종류마다 맡은 처리기가 적은 방향 비트(`kDirectionToServerBit` · `kDirectionToClientBit`).
         NetMessageKindStatsTable                      _kindStats;                          ///< `poll` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
         NetInbound                                    _inbound;                            ///< `poll` 가 다시 쓰는 버퍼.
         uint64                                        _malformedCount;

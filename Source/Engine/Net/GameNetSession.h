@@ -167,8 +167,9 @@ namespace sw
         /**
          * @brief `net.traffic` 부하 메시지입니다. 처리기가 없어 받는 쪽 라우터가 버린다.
          * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Empty)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
+         *          0x0F 는 라우터의 판 알림 종류다(`NetMessageRange::kRouterWireVersionKind`) — 예전에 여기 있어 받는 라우터가 부하 메시지를 판 알림으로 읽었다(표가 이제 컴파일 오류로 막는다).
          */
-        using Traffic = NetMessageDef<0x0F, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
+        using Traffic = NetMessageDef<0x0E, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
         using Table   = NetMessageTable<NetMessageRange::kEngine, ServerTick, ShutdownNotice, ResourceDigest, Traffic>;
 
         static constexpr uint8 kServerTick     = Table::getKindOf<ServerTick>();
@@ -397,10 +398,11 @@ namespace sw
             }
 
             /** @brief 라우터에 달기 전에 역할을 정합니다 — 맡는 종류가 역할마다 다르다. */
-            void   setRole( GameNetRole role ) { _role = role; }
-            uint8  getMessageRangeBase() const override { return GameNetSessionMessage::Table::kRangeBase; }
-            uint32 getWireVersion() const override { return GameNetSessionMessage::Table::computeWireVersion(); }
-            uint16 getMessageKindMask() const override;
+            void                    setRole( GameNetRole role ) { _role = role; }
+            uint8                   getMessageRangeBase() const override { return GameNetSessionMessage::Table::kRangeBase; }
+            uint32                  getWireVersion() const override { return GameNetSessionMessage::Table::computeWireVersion(); }
+            uint16                  getMessageKindMask() const override;
+            NetMessageDirectionMask getMessageDirectionMask() const override;
             /** @brief 표(`GameNetSessionMessage::Table`)가 종류를 세션의 `receive` 오버로드로 나눈다. */
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
             /** @brief 클라이언트가 서버에 붙었다 — 합성 해시를 보낸다(`sendResourceDigest`). */

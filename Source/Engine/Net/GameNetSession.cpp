@@ -821,6 +821,14 @@ namespace sw
         return Table::makeMask<GameNetSessionMessage::ServerTick, GameNetSessionMessage::ShutdownNotice>();
     }
 
+    NetMessageDirectionMask GameNetSession::EngineMessageHandler::getMessageDirectionMask() const
+    {
+        using Table = GameNetSessionMessage::Table;
+        if ( _role == GameNetRole::Server )
+            return Table::makeDirectionMask<GameNetSessionMessage::ResourceDigest>();
+        return Table::makeDirectionMask<GameNetSessionMessage::ServerTick, GameNetSessionMessage::ShutdownNotice>();
+    }
+
     NetHandleResult GameNetSession::EngineMessageHandler::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
         ReceiveVisitor visitor{ _owner, context, body };

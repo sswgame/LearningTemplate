@@ -116,8 +116,9 @@ namespace sw
                     SW_LOG_ERROR_ID( "NetSimSampleGame.NetSimSampleGameServerCouldNot", "NetSimSampleGame: the server could not claim its message kinds - no input arrives" );
             }
 
-            uint8  getMessageRangeBase() const { return NetSimSampleGameInternal::MessageTable::kRangeBase; }
-            uint16 getMessageKindMask() const { return NetSimSampleGameInternal::MessageTable::makeMask<NetSimSampleGameInternal::InputMessage>(); }
+            uint8                   getMessageRangeBase() const { return NetSimSampleGameInternal::MessageTable::kRangeBase; }
+            uint16                  getMessageKindMask() const { return NetSimSampleGameInternal::MessageTable::makeMask<NetSimSampleGameInternal::InputMessage>(); }
+            NetMessageDirectionMask getMessageDirectionMask() const { return NetSimSampleGameInternal::MessageTable::makeDirectionMask<NetSimSampleGameInternal::InputMessage>(); }
 
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body )
             {
@@ -185,12 +186,13 @@ namespace sw
                 {
                 }
 
-                uint8           getMessageRangeBase() const override { return _owner.getMessageRangeBase(); }
-                uint16          getMessageKindMask() const override { return _owner.getMessageKindMask(); }
-                uint32          getWireVersion() const override { return NetSimSampleGameInternal::MessageTable::computeWireVersion(); }
-                NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleNetMessage( context, body ); }
-                void            onConnectionOpened( int32 connectionID ) override { _owner.onConnectionOpened( connectionID ); }
-                void            onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override { _owner.onConnectionClosed( connectionID, reason ); }
+                uint8                   getMessageRangeBase() const override { return _owner.getMessageRangeBase(); }
+                uint16                  getMessageKindMask() const override { return _owner.getMessageKindMask(); }
+                NetMessageDirectionMask getMessageDirectionMask() const override { return _owner.getMessageDirectionMask(); }
+                uint32                  getWireVersion() const override { return NetSimSampleGameInternal::MessageTable::computeWireVersion(); }
+                NetHandleResult         handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleNetMessage( context, body ); }
+                void                    onConnectionOpened( int32 connectionID ) override { _owner.onConnectionOpened( connectionID ); }
+                void                    onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override { _owner.onConnectionClosed( connectionID, reason ); }
 
             private:
                 NetSimSampleServerSession& _owner;
@@ -294,8 +296,9 @@ namespace sw
                     SW_LOG_ERROR_ID( "NetSimSampleGame.NetSimSampleGameClientCouldNot", "NetSimSampleGame: the client could not claim its message kinds - nothing is shown" );
             }
 
-            uint8  getMessageRangeBase() const { return NetSimSampleGameInternal::MessageTable::kRangeBase; }
-            uint16 getMessageKindMask() const { return NetSimSampleGameInternal::MessageTable::makeMask<NetSimSampleGameInternal::StateMessage>(); }
+            uint8                   getMessageRangeBase() const { return NetSimSampleGameInternal::MessageTable::kRangeBase; }
+            uint16                  getMessageKindMask() const { return NetSimSampleGameInternal::MessageTable::makeMask<NetSimSampleGameInternal::StateMessage>(); }
+            NetMessageDirectionMask getMessageDirectionMask() const { return NetSimSampleGameInternal::MessageTable::makeDirectionMask<NetSimSampleGameInternal::StateMessage>(); }
 
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body )
             {
@@ -340,10 +343,11 @@ namespace sw
                 {
                 }
 
-                uint8           getMessageRangeBase() const override { return _owner.getMessageRangeBase(); }
-                uint16          getMessageKindMask() const override { return _owner.getMessageKindMask(); }
-                uint32          getWireVersion() const override { return NetSimSampleGameInternal::MessageTable::computeWireVersion(); }
-                NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleNetMessage( context, body ); }
+                uint8                   getMessageRangeBase() const override { return _owner.getMessageRangeBase(); }
+                uint16                  getMessageKindMask() const override { return _owner.getMessageKindMask(); }
+                NetMessageDirectionMask getMessageDirectionMask() const override { return _owner.getMessageDirectionMask(); }
+                uint32                  getWireVersion() const override { return NetSimSampleGameInternal::MessageTable::computeWireVersion(); }
+                NetHandleResult         handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleNetMessage( context, body ); }
 
             private:
                 NetSimSampleClientSession& _owner;

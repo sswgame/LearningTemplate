@@ -1577,7 +1577,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 옮길 것(가치 순, 크기 S/M/L, 측정 조건은 끝 괄호):
 - 형식으로 막는 결함 모양
   - 병렬 본문 출력 칸 `runParallelInto<T>( span<T>, body( i, T& ) )` · 결정적 `runParallelReduce`(Taskflow transform · 감사 4번, S).
-  - 메시지 방향 강제 — 라우터가 역할별 마스크로 반대 방향 종류를 `Malformed`(XMachina, S).
+  - 메시지 방향 강제 — 라우터가 역할별 마스크로 반대 방향 종류를 `Malformed`(XMachina, S). 했다: `INetMessageHandler::getMessageDirectionMask`(순수 가상, 방향 없는 종류는 등록 거절), `poll` 이 반대 방향 연결을 끊는다. 표 메시지가 라우터 판 알림 종류(0x0F)를 쓰면 컴파일 오류 — `net.traffic` 이 그 자리라 상대 판을 빈 목록으로 덮던 결함을 함께 고쳤다.
   - 게임 넷 메시지 본문을 REFLECT 고정 배치로, 본문 판은 스키마 해시(GameServer PacketGenerator, M — NetMessageDef 37 곳).
   - 열거형: 등록기를 항목 표 하나로(생성 바이트 약 0.7 MB↓), 플래그 글은 단일 비트 이름만, 끝 열거자 `Count` 자동 센티널, Core `EnumArray<E,T>` · `makeEnumTable`(개수 모자람을 컴파일 오류로), 열거자 단위 데이터 철자(magic_enum, S~M).
   - 렌더 그래프 접근 종류를 핸들 형식에 — 손 전이 81 곳 제거(Adria, L, HZB 뒤).
