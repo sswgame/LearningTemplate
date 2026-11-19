@@ -685,6 +685,7 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterStateRoundTrip )
  */
 SW_TEST_CASE_F( GhostHuntTest, EncounterReadRefusesCraftedBytes )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     GhostFixtureEncounter good;
     SW_REQUIRE_TRUE( good.read( _encounter ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 1, _encounter.countRemaining() );

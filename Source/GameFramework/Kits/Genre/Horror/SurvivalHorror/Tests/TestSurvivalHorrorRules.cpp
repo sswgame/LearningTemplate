@@ -965,6 +965,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, ResetSequenceWritesSameBytesAsUntouched
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesCraftedBytes )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SurvivalFixtureSession good;
     good._listMonster  = { "zombie" };
     good._listDocument = { "diary" };
@@ -1290,6 +1291,7 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterStateRoundTrip )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterReadRefusesCraftedBytes )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SurvivalHorrorEncounter encounter;
     SW_REQUIRE_TRUE( encounter.initialize( _monster, { makeInvestigator( 1 ) }, 7u ) );
     const SurvivalHorrorInvestigator good  = makeInvestigator( 1 );

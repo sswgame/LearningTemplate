@@ -329,6 +329,7 @@ SW_TEST_CASE( ActionStageRunTest, ReadRejectsARunningStateWithoutStage )
  */
 SW_TEST_CASE( ActionStageRunTest, ReadRejectsInconsistentBytes )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kStageRunXML, "ActionStageRunTest" ) );
     sw::ActionStageRun target;

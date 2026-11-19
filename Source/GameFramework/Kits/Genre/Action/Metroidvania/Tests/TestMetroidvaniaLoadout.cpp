@@ -447,6 +447,7 @@ SW_TEST_CASE( MetroidvaniaTrinketLoadoutTest, StatsMergeFromEquippedCharms )
  */
 SW_TEST_CASE( MetroidvaniaTrinketLoadoutTest, StateRoundTripAndRejection )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kLoadoutXML, "MetroidvaniaTrinketLoadoutTest" ) );
     sw::MetroidvaniaTrinketLoadout original;

@@ -332,6 +332,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, StateRoundTripResumes )
  */
 SW_TEST_CASE( MetroidvaniaDeathRestTest, ReadRejectsBrokenBytes )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     DeathRestBench bench;
     SW_REQUIRE_TRUE( bench.setUp() );
     SW_REQUIRE_TRUE( bench._state.rest( kBench, bench._healthMachine ) );
@@ -578,6 +579,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, RiposteAndStaggerMultiplyOnce )
  */
 SW_TEST_CASE( MetroidvaniaDuelistTest, StateRoundTripAndRejection )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDuelistTest" ) );
     sw::MetroidvaniaDuelist original;

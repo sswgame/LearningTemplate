@@ -1327,6 +1327,7 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesWrongHost )
  */
 SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesCraftedBytes )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_REQUIRE_TRUE( _match.addSurvivor( AsymmetricHorrorTestUtil::at( 90.0f, 0.0f ) ) == 0 );
     SW_REQUIRE_TRUE( _match.addSurvivor( AsymmetricHorrorTestUtil::at( 90.0f, 0.0f ) ) == 1 );
     SW_REQUIRE_TRUE( _match.addHook( float3{} ) == 0 );

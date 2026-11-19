@@ -1439,6 +1439,7 @@ SW_TEST_CASE_F( KartRaceTest, ReadStateRefusesCheckpointOutsideTrack )
  */
 SW_TEST_CASE_F( KartRaceTest, ReadStateRefusesBrokenTimes )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     open( KartTestUtil::makeRingDef( 3, {} ), 1 );
     stepTimes( 5 );
     sw::Archive written;
