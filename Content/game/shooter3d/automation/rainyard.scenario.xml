@@ -13,7 +13,9 @@
   ⑥ 플레이어 1인칭: W 로 흙 → 웅덩이 → 진흙을 지나며 표면마다 흙먼지 · 물 튀김 · 진흙 튐과 그 소리가 난다.
   ⑦ 플레이어 3인칭: 시점을 바꿔 S 로 되돌아오며 같은 반응이 난다(발걸음은 시점과 무관한 몸의 포즈에서 온다).
   ⑧ 비(cheat.weather rain): 판 상태가 카탈로그의 바인딩대로 Weather.x = 1 · Rain.x = 1 을 쓰고, 같은 흙이 젖은 반응(진흙 튐 · Footstep.DirtWet)을 낸다.
-  ⑨ 비 물결은 판정하지 않는다 — 프로브 밖 반사가 고른 앰비언트라 링이 화소 1 ~ 2 단계로만 보인다(NEXT 5 "하늘 반사").
+  ⑨ 비 물결: 시간을 멈추고(링이 같은 위상, 팔 · 입자도 멈춘다) Rain.x 1 · 0 · 1 세 장을 찍는다. 1 과 0 은 달라야 하고(젖은 땅과 웅덩이가 비추는 흐린 하늘 — 스카이 라이트 — 이
+     링의 노멀로 흔들린다), 처음과 마지막 1 은 같아야 한다(멈춘 시간의 두 장이 같다 — 팔 흔들림 · 입자 같은 다른 차이로 거짓 통과하지 않는다).
+     날씨는 그대로라 판 상태는 Rain 을 다시 쓰지 않는다(바뀔 때만 쓴다).
   골든은 통합 때 기록한다(-scenario-record-missing-golden).
   실행: App -scenario=game/shooter3d/automation/rainyard.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
@@ -113,6 +115,23 @@
 	<Expect watch="Surface.ObjectLastFootstepEffect" target="Walker" is="engine/vfx/footstep_mud.vfx.xml"/>
 	<Expect watch="Surface.ObjectLastFootstepSound" target="Walker" is="Footstep.DirtWet"/>
 
+	<!-- ⑨ 비 물결 켜기 · 끄기 · 다시 켜기: 걷는 이를 화면 밖으로 옮기고 시간을 멈춰 세 장이 링만 다르게 한다 -->
+	<AdvanceSimulation frames="1"/>
+	<DevCommand line="object.place Walker 16 0.05 -18"/>
+	<AdvanceSimulation frames="90"/> <!-- 흙 패드의 마지막 진흙 튐(수명 0.5 초)이 다 사라질 시간 — 화면에 남은 입자가 사진의 차이에 섞이지 않게(시간이 내용) -->
+	<Variable name="gv_timeScale" value="0"/>
+	<Screenshot file="rain_rings_on.ppm" stability="assets"/>
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Rain 0"/>
+	<WaitUntil watch="Material.CollectionValue" target="engine/materials/weather.matparams.xml" key="Rain.x" equals="0" timeoutFrames="10"/>
+	<Screenshot file="rain_rings_off.ppm" stability="assets"/>
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Rain 1"/>
+	<WaitUntil watch="Material.CollectionValue" target="engine/materials/weather.matparams.xml" key="Rain.x" equals="1" timeoutFrames="10"/>
+	<Screenshot file="rain_rings_again.ppm" stability="assets"/>
+	<Variable name="gv_timeScale" value="1"/>
+	<ExpectImagesDiffer first="rain_rings_on.ppm" second="rain_rings_off.ppm" region="0,0.5,1,1" minDiffering="0.002"/>
+	<ExpectImagesDiffer first="rain_rings_on.ppm" second="rain_rings_again.ppm" region="0,0.5,1,1" minDiffering="0" maxDiffering="0.0005"/>
+
 	<ExpectImage file="dirt_footprints.ppm" golden="dirt_footprints"/>
+	<ExpectImage file="rain_rings_on.ppm" golden="rain_rings_on"/>
 	<Pass/>
 </Scenario>
