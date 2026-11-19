@@ -558,7 +558,7 @@ SW_TEST_CASE( RealtimeProbeTest, CollectsRealtimeVolumeWithPlaceholderAndRequest
     const size_t                                       probeCount = static_cast<size_t>( pVolume->computeLayout().getProbeCount() );
     const sw::shared_ptr<const sw::vector<sw::float4>> pProbe     = probeElement.getElements();
     SW_REQUIRE_NOT_NULL( pProbe.get() );
-    SW_EXPECT_EQUAL( probeCount * sw::shaderslot::kLightProbeFloat4Count, pProbe->size() );
+    SW_EXPECT_EQUAL( size_t( sw::LightProbeElementBuilder::computeRealtimeElementCount( static_cast<uint32>( probeCount ) ) ), pProbe->size() ); // SH9 자리 + 가시성 모먼트 자리
     for ( const sw::float4& element : *pProbe )
     {
         SW_EXPECT_NEAR( 0.0f, element._x + element._y + element._z + element._w, 0.0f ); // 자리는 0 - 값은 컴퓨트가 쓴다
