@@ -370,6 +370,7 @@ namespace sw
                 case RenderPassKind::ScreenRotation:
                 case RenderPassKind::ProbeUpdate:
                 case RenderPassKind::DeferredTileClassify:
+                case RenderPassKind::AutoExposureHistogram:
                 {
                     SW_LOG_WARNING_ID( "FramePassExecutor.UnknownPassType", "Unknown pass type '%#' in '%#'", passType, passName );
                     break;

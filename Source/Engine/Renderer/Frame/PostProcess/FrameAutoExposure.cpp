@@ -6,7 +6,10 @@
  *          톤맵은 이번 칸을 `g_AutoExposureIndex` 로 읽어 2^-EV 를 곱한다(post_grade.hlsli). 칸이 둘인 까닭은 한 텍스처를 읽으며 쓸 수 없어서다.
  *          EV 는 평균 휘도가 중간 회색(0.18)일 때 0 이다 — 카메라의 범위가 0 · 0(기본)이면 노출 1 이라 자동 노출을 쓰지 않는 카메라의 화면이 그대로다.
  *          기록을 버리는 프레임(처음 · 컷 — `FrameViewTarget::_bHistoryReset`)은 다가가는 비율이 1 이라 측정값을 그대로 쓴다(지난 칸은 읽어도 섞지 않는다).
- * @note 히스토그램 방식(밝은 끝 · 어두운 끝을 잘라 내는 언리얼 기본값)은 없다 — 화면 대부분이 하늘인 장면은 평균이 하늘 쪽으로 끌린다.
+ *          측정은 휘도 히스토그램(log2 휘도 64 칸) + 백분위 컷이다(언리얼 Auto Exposure Histogram · Adria) — 아래 · 위 몫(EngineConfig `_render._autoExposureLowPercent` ·
+ *          `_autoExposureHighPercent`, 셰이더 define)을 버린 평균이라 화면 대부분이 하늘이거나 광원이 든 장면에서도 평균이 끝으로 끌리지 않는다.
+ *          네이티브 bindless(DX12 · Vulkan)는 컴퓨트 한 그룹(256 스레드가 128² 표본을 그룹 공유 히스토그램에 모은 뒤 한 스레드가 컷 · 적응)이 RW 번호로 기록 칸에 쓴다.
+ *          에뮬 백엔드(DX11 · GL · WebGPU)는 컴퓨트가 샘플 텍스처를 못 읽어(binding.hlsli) 1x1 풀스크린이 32² 표본으로 같은 식을 돈다 — 능력 깃발로 가른 것이다(웹만의 제약이 아니다).
  */
 #include "pch.h"
 
@@ -34,6 +37,8 @@ namespace sw
     {
         struct FrameAutoExposureInternal
         {
+            /// 백분율(0..100)을 몫(0..1)으로 바꾸는 배율입니다 — 설정의 백분위 컷은 언리얼 Low · High Percent 처럼 % 로 적는다.
+            static constexpr float32 kPercentToFraction = 0.01f;
             /// 측정 셰이더의 루트 상수입니다 — auto_exposure.hlsl 의 `SwRootConstants` 와 같은 순서 · 크기다.
             struct RootConstants
             {
@@ -45,8 +50,9 @@ namespace sw
                 float32 _rateDown{ 1.0f };
                 uint32  _sourceWidth{ 0 }; ///< 원본에서 뷰 사각형이 덮는 크기(px) — 사각형 밖(자동 렌더 배율로 그리지 않은 곳)을 재지 않는다
                 uint32  _sourceHeight{ 0 };
+                uint32  _output{ kInvalidDescriptorIndex }; ///< 이번 칸의 RW 번호(히스토그램 컴퓨트). 풀스크린은 쓰지 않는다
             };
-            static_assert( sizeof( RootConstants ) == 8 * sizeof( uint32 ), "auto_exposure.hlsl 의 루트 상수와 크기가 같아야 한다" );
+            static_assert( sizeof( RootConstants ) == 9 * sizeof( uint32 ), "auto_exposure.hlsl 의 루트 상수와 크기가 같아야 한다" );
 
             /** @brief 지수 적응에서 @p deltaSeconds 동안 목표로 다가가는 비율(1 - e^(-속도 · dt))입니다. 기록을 버리는 프레임은 1(측정값 그대로)입니다. */
             static float32 computeAdaptRate( float32 speed, float32 deltaSeconds, bool bReset )
@@ -61,6 +67,52 @@ namespace sw
         , _pipeline{ pipeline }
         , _psoManager{ psoManager }
     {
+    }
+
+    uint32 FrameAutoExposure::computeHistogramBin( float32 luminance, float32 logMin, float32 logMax, uint32 binCount )
+    {
+        if ( binCount == 0 )
+            return 0;
+        constexpr float32 kMinLuminance = 1.0e-6f; // 검은 텍셀의 log2 가 -무한이 되지 않게 자른다(첫 칸에 든다)
+        const float32     range         = MathUtil::max( logMax - logMin, MathUtil::kEpsilon );
+        const float32     position      = ( MathUtil::log2( MathUtil::max( luminance, kMinLuminance ) ) - logMin ) / range * static_cast<float32>( binCount );
+        return static_cast<uint32>( MathUtil::clamp( MathUtil::floor( position ), 0.0f, static_cast<float32>( binCount - 1u ) ) );
+    }
+
+    float32 FrameAutoExposure::computeHistogramPercentileMeanLog( vector_reference<const uint32> listBinCount, float32 logMin, float32 logMax, float32 lowPercent, float32 highPercent )
+    {
+        const uint32  binCount = static_cast<uint32>( listBinCount.size() );
+        const float32 binWidth = binCount > 0 ? ( logMax - logMin ) / static_cast<float32>( binCount ) : 0.0f;
+        float32       total    = 0.0f;
+        for ( const uint32 count : listBinCount )
+            total += static_cast<float32>( count );
+        if ( total <= 0.0f )
+            return 0.5f * ( logMin + logMax );
+        const float32 lowFraction  = MathUtil::saturate( lowPercent * FrameAutoExposureInternal::kPercentToFraction );
+        const float32 lowCount     = total * lowFraction;
+        const float32 highCount    = total * MathUtil::max( lowFraction, MathUtil::saturate( highPercent * FrameAutoExposureInternal::kPercentToFraction ) );
+        float32       sumLog       = 0.0f;
+        float32       sumWeight    = 0.0f;
+        float32       cumulative   = 0.0f;
+        float32       lowBinCenter = 0.5f * ( logMin + logMax ); // 남는 몫이 없을 때 — 아래 경계가 든 칸의 가운데
+        bool          bLowBinFound = false;
+        for ( uint32 bin = 0; bin < binCount; ++bin )
+        {
+            const float32 count  = static_cast<float32>( listBinCount[bin] );
+            const float32 start  = cumulative;
+            const float32 end    = cumulative + count;
+            const float32 center = logMin + ( static_cast<float32>( bin ) + 0.5f ) * binWidth;
+            const float32 kept   = MathUtil::max( 0.0f, MathUtil::min( end, highCount ) - MathUtil::max( start, lowCount ) );
+            sumLog += kept * center;
+            sumWeight += kept;
+            if ( bLowBinFound == false && count > 0.0f && end >= lowCount )
+            {
+                lowBinCenter = center;
+                bLowBinFound = true;
+            }
+            cumulative = end;
+        }
+        return sumWeight > 0.0f ? sumLog / sumWeight : lowBinCenter;
     }
 
     const RenderGraphPassDesc* FrameAutoExposure::findTonemapPass( const RenderPipelineAsset& pipeline )
@@ -79,11 +131,14 @@ namespace sw
         if ( bNotNeeded )
             return;
         RHITextureDesc desc{};
-        desc._width                   = 1;
-        desc._height                  = 1;
-        desc._format                  = getRenderPassKindInfo( RenderPassKind::AutoExposure )._pColorFormat[0]; // 측정 PSO 와 같은 포맷 한 곳(R 지금 EV · G 목표 EV)
-        desc._bIsRenderTarget         = SW_TRUE;
-        desc._bIsShaderResource       = SW_TRUE;
+        desc._width             = 1;
+        desc._height            = 1;
+        desc._format            = getRenderPassKindInfo( RenderPassKind::AutoExposure )._pColorFormat[0]; // 측정 PSO 와 같은 포맷 한 곳(R 지금 EV · G 목표 EV)
+        desc._bIsRenderTarget   = SW_TRUE;
+        desc._bIsShaderResource = SW_TRUE;
+        // 히스토그램 컴퓨트가 도는 백엔드(PSO 를 만드는 조건과 같다 — 네이티브 bindless + 컴퓨트)는 같은 칸에 RW 로도 쓴다. 풀스크린 길은 RT 로 쓴다.
+        const bool bHistogramCompute  = _pDevice->supportsNativeBindlessSampling() && _pDevice->getCapabilities()._bCompute != SW_FALSE;
+        desc._bIsUnorderedAccess      = bHistogramCompute ? SW_TRUE : SW_FALSE;
         IRHIResourceFactory* pFactory = _pDevice->getResourceFactory();
         for ( uint32 slot = 0; slot < 2; ++slot )
         {
@@ -91,6 +146,8 @@ namespace sw
             pFactory->setTextureDebugName( view._arrAutoExposure[slot], "AutoExposure" );
             if ( view._arrAutoExposure[slot] != 0 )
                 view._arrAutoExposureSRV[slot] = pFactory->registerBindlessTexture( view._arrAutoExposure[slot] );
+            if ( view._arrAutoExposure[slot] != 0 && bHistogramCompute )
+                view._arrAutoExposureUAV[slot] = pFactory->registerBindlessTextureUAV( view._arrAutoExposure[slot] );
         }
         const bool bCreated = view._arrAutoExposureSRV[0] != kInvalidDescriptorIndex && view._arrAutoExposureSRV[1] != kInvalidDescriptorIndex;
         if ( bCreated == false )
@@ -105,13 +162,16 @@ namespace sw
         view._exposureAdaptationEv   = 0.0f;
         for ( uint32 slot = 0; slot < 2; ++slot )
         {
-            // SRV 등록을 먼저 놓고 텍스처를 지운다(레지스트리에 죽은 핸들을 남기지 않는다 — 깊이 히스토리와 같은 순서).
+            // SRV · RW 등록을 먼저 놓고 텍스처를 지운다(레지스트리에 죽은 핸들을 남기지 않는다 — 깊이 히스토리와 같은 순서).
             if ( _pDevice != nullptr && view._arrAutoExposureSRV[slot] != kInvalidDescriptorIndex )
                 _pDevice->getResourceFactory()->unregisterBindlessTexture( view._arrAutoExposureSRV[slot] );
+            if ( _pDevice != nullptr && view._arrAutoExposureUAV[slot] != kInvalidDescriptorIndex )
+                _pDevice->getResourceFactory()->unregisterBindlessUAV( view._arrAutoExposureUAV[slot] );
             if ( _pDevice != nullptr && view._arrAutoExposure[slot] != 0 )
                 _pDevice->getResourceFactory()->destroyTexture( view._arrAutoExposure[slot] );
             view._arrAutoExposure[slot]    = 0;
             view._arrAutoExposureSRV[slot] = kInvalidDescriptorIndex;
+            view._arrAutoExposureUAV[slot] = kInvalidDescriptorIndex;
         }
         view._bAutoExposureThisFrame = SW_FALSE;
         view._bAutoExposureMeasured  = SW_FALSE;
@@ -129,7 +189,8 @@ namespace sw
             return;
         }
         const bool bHasHistory = view._arrAutoExposureSRV[0] != kInvalidDescriptorIndex && view._arrAutoExposureSRV[1] != kInvalidDescriptorIndex;
-        const bool bMeasures   = view._settings.usesPostProcess() && bHasHistory && _psoManager.getEnginePSO( RenderPassKind::AutoExposure ) != 0;
+        const bool bHasPSO     = _psoManager.getEnginePSO( RenderPassKind::AutoExposure ) != 0 || findHistogramPSO( view ) != 0;
+        const bool bMeasures   = view._settings.usesPostProcess() && bHasHistory && bHasPSO;
         if ( bMeasures == false )
             return;
         readBackAdaptation( view ); // 칸을 바꾸기 전 — 지난 프레임이 쓴 칸(`_autoExposureWrite`)을 읽는다
@@ -149,6 +210,12 @@ namespace sw
         // 물체 움직임으로는 되돌리지 않는다 — 캐릭터가 늘 숨 쉬는 장면은 그러면 상한이 끝내 줄지 않았다(TAA 조건과 같은 카메라 기준).
         view._exposureErrorEv = RenderStabilityUtil::advanceExposureError( view._exposureErrorEv, bReset, view._cameraStillFrameCount == 0, post._autoExposureMaxEv - post._autoExposureMinEv,
                                                                            MathUtil::min( view._autoExposureParams._z, view._autoExposureParams._w ) );
+    }
+
+    RHIPipelineStateHandle FrameAutoExposure::findHistogramPSO( const FrameViewTarget& view ) const
+    {
+        const bool bWritable = view._arrAutoExposureUAV[0] != kInvalidDescriptorIndex && view._arrAutoExposureUAV[1] != kInvalidDescriptorIndex;
+        return bWritable ? _psoManager.getEnginePSO( RenderPassKind::AutoExposureHistogram ) : RHIPipelineStateHandle{ 0 };
     }
 
     void FrameAutoExposure::readBackAdaptation( FrameViewTarget& view ) const
@@ -197,12 +264,37 @@ namespace sw
         if ( source._texture == 0 )
             return;
 
-        const uint32           writeSlot = view._autoExposureWrite;
-        const uint32           readSlot  = 1u - writeSlot;
-        const RHITextureHandle target    = view._arrAutoExposure[writeSlot];
-        IRHICommandList&       cmd       = *context._pCmd;
+        const uint32                             writeSlot       = view._autoExposureWrite;
+        const uint32                             readSlot        = 1u - writeSlot;
+        const RHITextureHandle                   target          = view._arrAutoExposure[writeSlot];
+        IRHICommandList&                         cmd             = *context._pCmd;
+        const bool                               bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        FrameAutoExposureInternal::RootConstants constants{};
+        constants._source       = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
+        constants._history      = bNativeBindless ? static_cast<uint32>( view._arrAutoExposureSRV[readSlot] ) : 0u;
+        constants._minEv        = view._autoExposureParams._x;
+        constants._maxEv        = view._autoExposureParams._y;
+        constants._rateUp       = view._autoExposureParams._z;
+        constants._rateDown     = view._autoExposureParams._w;
+        constants._sourceWidth  = view.scaleToRect( source._width, source._bViewSized != 0, true );
+        constants._sourceHeight = view.scaleToRect( source._height, source._bViewSized != 0, false );
         cmd.prepareTextureForShaderRead( source._texture );
         cmd.prepareTextureForShaderRead( view._arrAutoExposure[readSlot] );
+
+        // 히스토그램 컴퓨트(네이티브 bindless) — 한 그룹이 표본을 모아 컷 · 적응까지 하고 이번 칸에 RW 로 쓴다. 풀스크린보다 표본이 16 배다.
+        const RHIPipelineStateHandle histogramPSO = findHistogramPSO( view );
+        if ( histogramPSO != 0 )
+        {
+            constants._output = static_cast<uint32>( view._arrAutoExposureUAV[writeSlot] );
+            cmd.prepareTextureForUnorderedAccess( target );
+            cmd.setComputePipelineState( histogramPSO );
+            cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+            cmd.dispatchCompute( 1, 1, 1 );
+            cmd.prepareTextureForShaderRead( target );
+            context.resetBindingCache();
+            context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, view._arrAutoExposureSRV[writeSlot] );
+            return;
+        }
         cmd.prepareTextureForRenderTarget( target );
 
         RHIRenderPassBeginInfo beginInfo{};
@@ -216,16 +308,6 @@ namespace sw
         cmd.beginRenderPass( beginInfo );
         cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::AutoExposure ) );
         // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(auto_exposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
-        const bool                               bNativeBindless = _pDevice->supportsNativeBindlessSampling();
-        FrameAutoExposureInternal::RootConstants constants{};
-        constants._source       = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
-        constants._history      = bNativeBindless ? static_cast<uint32>( view._arrAutoExposureSRV[readSlot] ) : 0u;
-        constants._minEv        = view._autoExposureParams._x;
-        constants._maxEv        = view._autoExposureParams._y;
-        constants._rateUp       = view._autoExposureParams._z;
-        constants._rateDown     = view._autoExposureParams._w;
-        constants._sourceWidth  = view.scaleToRect( source._width, source._bViewSized != 0, true );
-        constants._sourceHeight = view.scaleToRect( source._height, source._bViewSized != 0, false );
         if ( bNativeBindless == false )
         {
             constexpr uint32 kSourceSlot  = shaderslot::emulated::getSlot( "SourceColor" );

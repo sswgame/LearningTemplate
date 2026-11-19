@@ -77,6 +77,8 @@ namespace sw
     inline constexpr const utf8* kPassFSRRcasDefine = "SW_PASS_FSR_RCAS=1";
     /// @brief 컬링 셰이더(gpu_cull.hlsl)를 간접 인자 개수 되돌리기 커널로 만든다(`RenderPassKind::IndirectArgsReset`).
     inline constexpr const utf8* kPassIndirectArgsResetDefine = "SW_CULL_RESET_ARGS=1";
+    /// @brief 자동 노출 셰이더(auto_exposure.hlsl)를 히스토그램 컴퓨트 커널로 만든다(`RenderPassKind::AutoExposureHistogram`). 없으면 같은 파일이 1x1 풀스크린이다.
+    inline constexpr const utf8* kPassAutoExposureHistogramDefine = "SW_PASS_AUTO_EXPOSURE_HISTOGRAM=1";
 
     /**
      * @brief 메시 외곽선 패스가 그리는 배치의 머티리얼 define 입니다. 퍼뮤테이션에 이것이 없는 배치는 그 패스에서 빠집니다.
@@ -133,7 +135,7 @@ namespace sw
     inline constexpr const utf8* kGPUMessagesDefine = "SW_GPU_MESSAGES_ENABLED";
 
     /** @brief `RenderPassKind` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
-    inline constexpr uint32 kRenderPassKindCount = static_cast<uint32>( RenderPassKind::DeferredTileClassify ) + 1;
+    inline constexpr uint32 kRenderPassKindCount = static_cast<uint32>( RenderPassKind::AutoExposureHistogram ) + 1;
 
     /** @brief 디퍼드 조명 타일 분류의 종류 수 · 타일 한 변(px)입니다 — 셰이더와 같은 표(deferred_tile_class.hlsli)의 값입니다. */
     inline constexpr uint32 kDeferredTileClassCount = SW_DEFERRED_TILE_CLASS_COUNT;

@@ -508,6 +508,14 @@ namespace sw
                         info._flags          = Flag::kCompute | Flag::kDiagnostic | Flag::kRequiresNativeBindless;
                         break;
                     }
+                    case RenderPassKind::AutoExposureHistogram:
+                    {
+                        // HDR 원본을 엔진 텍스처(bindless)로 읽고 노출 기록 칸에 RW 로 쓴다 — 샘플 텍스처를 컴퓨트에서 읽을 수 없는 에뮬 백엔드에는 만들지 않는다(풀스크린 `AutoExposure` 가 돈다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderAutoExposure;
+                        info._pPassDefine    = kPassAutoExposureHistogramDefine;
+                        info._flags          = Flag::kCompute | Flag::kRequiresNativeBindless;
+                        break;
+                    }
                     case RenderPassKind::DeferredTileClassify:
                     {
                         // G버퍼 알베도를 엔진 텍스처(bindless)로 읽고 간접 인자를 쓴다 — 간접 인자 능력(컬링과 같다)과 네이티브 bindless 가 함께 있어야 한다. 에뮬은 풀스크린 조명이다.

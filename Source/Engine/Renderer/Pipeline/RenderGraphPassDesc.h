@@ -251,6 +251,12 @@ namespace sw
          *        컴파일한 변형으로 타일 사각형을 간접 그리기 한다(`FramePassExecutor::executeTiledLighting`). 컴퓨트가 G버퍼를 샘플해야 해 네이티브 bindless 에서만 돈다.
          */
         DeferredTileClassify,
+        /**
+         * @brief 자동 노출의 휘도 히스토그램 컴퓨트(auto_exposure.hlsl 의 `SW_PASS_AUTO_EXPOSURE_HISTOGRAM`)입니다. 한 그룹이 HDR 원본 표본을 그룹 공유 히스토그램(64 칸)에 모으고
+         *        백분위 컷 평균으로 목표 EV 를 정해 지난 EV 에서 다가간 값을 뷰의 노출 기록 칸에 RW 로 쓴다(언리얼 Histogram + Eye Adaptation, Adria). `AutoExposure` 풀스크린을 대신하는
+         *        자리라 같은 때(톤맵하는 패스 앞)에 기록한다(`FrameAutoExposure::recordAutoExposure`). 원본을 샘플해야 해 네이티브 bindless 에서만 돈다 — 에뮬은 풀스크린이 같은 식이다.
+         */
+        AutoExposureHistogram,
     };
 
     /**

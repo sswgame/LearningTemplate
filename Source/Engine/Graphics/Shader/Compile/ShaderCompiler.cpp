@@ -778,7 +778,9 @@ namespace sw
 
     ShaderEnginePolicy ShaderEnginePolicy::capture()
     {
-        return ShaderEnginePolicy{ engine::getSubsystem<EngineConfig>()._render._taaHistoryWeight };
+        const RenderConfig& render = engine::getSubsystem<EngineConfig>()._render;
+        return ShaderEnginePolicy{ render._taaHistoryWeight, render._taaMinHistoryWeight, render._taaVarianceClipGamma, render._taaVelocityRejectPixels,
+                                   render._autoExposureLowPercent, render._autoExposureHighPercent, render._autoExposureHistogramLogMin, render._autoExposureHistogramLogMax };
     }
 
     void ShaderCompiler::appendEngineDefines( vector<ShaderMacroDefine>& inoutList, const ShaderEnginePolicy& enginePolicy )
@@ -797,10 +799,28 @@ namespace sw
             inoutList.push_back( std::move( indexDefine ) );
         }
         // 렌더 정책(셰이더가 읽는 몫) — 설정 파일이 정본이고 셰이더는 기본값을 두지 않는다(없으면 #error). 도구 지문에 섞여 값이 바뀌면 셰이더 캐시가 함께 낡는다.
-        ShaderMacroDefine taaDefine;
-        taaDefine._name  = "SW_TAA_HISTORY_WEIGHT";
-        taaDefine._value = to_string( enginePolicy._taaHistoryWeight );
-        inoutList.push_back( std::move( taaDefine ) );
+        struct PolicyDefine
+        {
+            const utf8* _pName;
+            float32     _value;
+        };
+        const PolicyDefine arrPolicyDefine[] = {
+            {             "SW_TAA_HISTORY_WEIGHT",            enginePolicy._taaHistoryWeight},
+            {         "SW_TAA_MIN_HISTORY_WEIGHT",         enginePolicy._taaMinHistoryWeight},
+            {        "SW_TAA_VARIANCE_CLIP_GAMMA",        enginePolicy._taaVarianceClipGamma},
+            {     "SW_TAA_VELOCITY_REJECT_PIXELS",     enginePolicy._taaVelocityRejectPixels},
+            {      "SW_AUTO_EXPOSURE_LOW_PERCENT",      enginePolicy._autoExposureLowPercent},
+            {     "SW_AUTO_EXPOSURE_HIGH_PERCENT",     enginePolicy._autoExposureHighPercent},
+            {"SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MIN", enginePolicy._autoExposureHistogramLogMin},
+            {"SW_AUTO_EXPOSURE_HISTOGRAM_LOG_MAX", enginePolicy._autoExposureHistogramLogMax},
+        };
+        for ( const PolicyDefine& entry : arrPolicyDefine )
+        {
+            ShaderMacroDefine policyDefine;
+            policyDefine._name  = entry._pName;
+            policyDefine._value = to_string( entry._value );
+            inoutList.push_back( std::move( policyDefine ) );
+        }
     }
 
     void* ShaderCompiler::findDXCCreateInstance()

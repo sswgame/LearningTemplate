@@ -13,7 +13,7 @@ using namespace sw;
 namespace
 {
     /** @brief 스탬프의 도구 지문이 섞는 엔진 설정 사본입니다(값은 무엇이든 — 쓰기와 읽기가 같은 사본이면 된다). */
-    const ShaderEnginePolicy kTestEnginePolicy{ 0.9f };
+    const ShaderEnginePolicy kTestEnginePolicy{ 0.9f, 0.75f, 1.0f, 8.0f, 10.0f, 90.0f, -10.0f, 6.0f };
 
     /** @brief 케이스 폴더 아래 자기 도메인(game) · engine · common 의 `shaders` 와 쿠킹 폴더입니다. */
     struct StampFixture

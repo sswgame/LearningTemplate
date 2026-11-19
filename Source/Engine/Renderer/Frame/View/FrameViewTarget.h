@@ -120,6 +120,8 @@ namespace sw
          */
         RHITextureHandle   _arrAutoExposure[2]{};
         RHIDescriptorIndex _arrAutoExposureSRV[2]{ kInvalidDescriptorIndex, kInvalidDescriptorIndex };
+        /// @brief 자동 노출 기록 둘의 RW 번호입니다 — 히스토그램 컴퓨트(네이티브 bindless, `RenderPassKind::AutoExposureHistogram`)가 씁니다. 그 PSO 가 없으면 등록하지 않습니다.
+        RHIDescriptorIndex _arrAutoExposureUAV[2]{ kInvalidDescriptorIndex, kInvalidDescriptorIndex };
         /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
         float4  _autoExposureParams{};
         float32 _autoExposureClock{ 0.0f };    ///< 지난번 이 뷰의 노출을 측정한 게임 시각(초, `GPUScene::getVertexAnimationTime`)

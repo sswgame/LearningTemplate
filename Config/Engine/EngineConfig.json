@@ -39,6 +39,13 @@
         "_shadowLocalMinTileResolution": 128,
         "_shadowLocalCullSlotLimit": 16,
         "_taaHistoryWeight": 0.9,
+        "_taaMinHistoryWeight": 0.75,
+        "_taaVarianceClipGamma": 1.0,
+        "_taaVelocityRejectPixels": 8.0,
+        "_autoExposureLowPercent": 10.0,
+        "_autoExposureHighPercent": 90.0,
+        "_autoExposureHistogramLogMin": -10.0,
+        "_autoExposureHistogramLogMax": 6.0,
         "_maxExtraViewCount": 8,
         "_textureStreaming": {
             "_uploadsPerFrame": 8,

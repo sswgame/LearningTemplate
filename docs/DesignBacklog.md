@@ -1585,10 +1585,10 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
   - 타입별 판 + 패치 `REFLECT( Version = N )` — 그릇마다가 아니라 타입 한 곳(ezEngine GraphPatch, M).
 - 화질
   - 스카이 라이트 · 반사 프로브 거르기를 filtered importance sampling(원본 밉을 pdf 로 고름), HDRI 반사를 SH9 대신 거른 텍스처로(VQEngine, S → GPU 찍기 M).
-  - TAA: YCoCg 분산 클리핑 · Catmull-Rom 히스토리 · 적응 블렌드 → 그 위에 TAAU(Adria, S → M).
+  - TAA: YCoCg 분산 클리핑 · Catmull-Rom 히스토리 · 적응 블렌드 → 그 위에 TAAU(Adria, S → M). 앞 셋은 옮겼다(taa.hlsl · `TAAUtil`, 계수는 EngineConfig `_render._taa*`). TAAU 는 남았다 — 첨부 풀이 크기 하나(`TransientAttachmentPool`)라 TAA 뒤 패스(피사계 심도 · 모션 블러가 렌더 해상도 깊이 · 속도를 읽는다)를 출력 해상도로 돌릴 자리가 없다. 언리얼의 1 차 · 2 차 화면 배율처럼 풀을 "TAA 앞(렌더) · 뒤(출력)" 두 크기로 가르는 일이 먼저다(L).
   - 프로브 GI 빛샘: 거리 모먼트 + 체비쇼프 가시성 · 뒷면 가중(Adria DDGI, M — GI 골든 전부).
   - 2 단계 HZB 가림(지난 HZB → 새 HZB 로 다시 시험) — SSR 계층 탐색 · 큰 물체 컬링도 같은 피라미드(Adria · VQEngine, L).
-  - 자동 노출 히스토그램 + 백분위 컷(Adria, S~M), HDR 디스플레이 출력 `DisplayOutputDesc` 한 값에서 스왑체인 포맷 · 톤맵 변형(VQEngine, M~L), 볼류메트릭 구름 · 비 가림 맵(Adria).
+  - 자동 노출 히스토그램 + 백분위 컷(Adria, S~M — 옮겼다: 네이티브 bindless 는 컴퓨트 한 그룹 `AutoExposureHistogram`, 에뮬 백엔드는 같은 식의 1x1 풀스크린, 컷은 EngineConfig `_render._autoExposure*`), HDR 디스플레이 출력 `DisplayOutputDesc` 한 값에서 스왑체인 포맷 · 톤맵 변형(VQEngine, M~L), 볼류메트릭 구름 · 비 가림 맵(Adria).
 - 작업 시스템(측정 먼저 — 합류 대기 구간 · park 수 계기부터): 묶음 제출 `submitBatch`, `runParallel` 우선순위 레인, guided 청크, 후속 하나 이어 실행, 넘침 보조 큐, 단계 그래프 위상 순서 재사용(Taskflow).
 - 도구: 엔진 안 MCP 서버(루프백, 자동화 단계 하나 = 도구 하나, 스키마는 TParams 리플렉션 — security-and-hardening 먼저), 선언형 조작기 · 시각화 속성(PROPERTY Shape), Fileserve(장치가 PC 콘텐츠를 TCP 로 — 개발 전용)(ezEngine).
 - 측정 뒤에만: DX12 PipelineLibrary(차가운 시작 PSO 합), 깊이 전용 배치 키(그림자 드로우 수), 서버 MMO 관찰자 거리 기반 틱 주기 · 컴포넌트 TickInterval 버킷(XMachina · ezEngine), 서버 쿠킹의 축약 애니메이션 클립, 온라인 프로토콜 퍼저 타깃 ⑦(퍼징 1 단계 뒤).
