@@ -414,15 +414,25 @@ namespace sw
         return true;
     }
 
+    template <bool bIndexed, typename TIssue>
+    void D3D11RHICommandContext::drawWith( TIssue&& issue )
+    {
+        if ( bindGraphicsPipelineForDraw() == false )
+            return;
+        if constexpr ( bIndexed )
+        {
+            if ( bindIndexBufferForDraw() == false )
+                return;
+        }
+        issue( *_pContext );
+    }
+
     void D3D11RHICommandContext::drawNative( uint32 vertexCount, uint32 startVertex )
     {
         if ( _pContext == nullptr || vertexCount == 0 )
             return;
-
-        if ( bindGraphicsPipelineForDraw() == false )
-            return;
-
-        _pContext->Draw( vertexCount, startVertex );
+        drawWith<false>( [&]( ID3D11DeviceContext& context )
+        { context.Draw( vertexCount, startVertex ); } );
     }
 
     void D3D11RHICommandContext::drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
@@ -431,10 +441,8 @@ namespace sw
         if ( bNothingToDraw )
             return;
 
-        if ( bindGraphicsPipelineForDraw() == false )
-            return;
-
-        _pContext->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
+        drawWith<false>( [&]( ID3D11DeviceContext& context )
+        { context.DrawInstanced( vertexCount, instanceCount, startVertex, startInstance ); } );
     }
 
     void D3D11RHICommandContext::updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size )
@@ -638,16 +646,13 @@ namespace sw
         if ( pBuf == nullptr )
             return;
 
-        // **파이프라인 상태를 여기서도 걸어야 한다.** DX11 은 setPipelineState 가 핸들만 기록하고
-        // 실제 VS/PS/InputLayout 바인딩은 드로우 시점에 한다(draw/drawInstanced 참고). 빠뜨리면 GPU 드리븐
-        // 경로(엔진의 기본 경로)의 모든 드로우가 셰이더도 정점 버퍼도 없이 나가 화면에 클리어 색만 남는다.
-        if ( bindGraphicsPipelineForDraw() == false )
-            return;
-
-        for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )
+        drawWith<false>( [&]( ID3D11DeviceContext& context )
         {
-            _pContext->DrawInstancedIndirect( pBuf, argumentBufferOffset + commandIndex * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
-        }
+            for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )
+            {
+                context.DrawInstancedIndirect( pBuf, argumentBufferOffset + commandIndex * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
+            }
+        } );
     }
 
     bool D3D11RHICommandContext::bindIndexBufferForDraw()
@@ -667,9 +672,8 @@ namespace sw
         const bool bNothingToDraw = _pContext == nullptr || indexCount == 0 || instanceCount == 0;
         if ( bNothingToDraw )
             return;
-        if ( bindGraphicsPipelineForDraw() == false || bindIndexBufferForDraw() == false )
-            return;
-        _pContext->DrawIndexedInstanced( indexCount, instanceCount, startIndex, baseVertex, startInstance );
+        drawWith<true>( [&]( ID3D11DeviceContext& context )
+        { context.DrawIndexedInstanced( indexCount, instanceCount, startIndex, baseVertex, startInstance ); } );
     }
 
     void D3D11RHICommandContext::drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
@@ -685,14 +689,13 @@ namespace sw
         if ( pBuf == nullptr )
             return;
 
-        // 다른 드로우 진입점과 같이 파이프라인 · 인덱스 버퍼를 여기서 건다. 엔진에서 부르는 곳이 없어 빠뜨려도 드러나지 않는 자리다.
-        if ( bindGraphicsPipelineForDraw() == false || bindIndexBufferForDraw() == false )
-            return;
-
-        for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )
+        drawWith<true>( [&]( ID3D11DeviceContext& context )
         {
-            _pContext->DrawIndexedInstancedIndirect( pBuf, argumentBufferOffset + commandIndex * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ) );
-        }
+            for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )
+            {
+                context.DrawIndexedInstancedIndirect( pBuf, argumentBufferOffset + commandIndex * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ) );
+            }
+        } );
     }
 
     void D3D11RHICommandContext::dispatchIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
