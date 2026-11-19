@@ -150,9 +150,76 @@ namespace sw
         /** @brief 발행을 거둡니다(다음 조회는 "짓지 않았다"). 판 자체는 지우지 않는다 — 든 읽기가 있을 수 있다. */
         void withdraw() { _pPublished.store( nullptr, std::memory_order_release ); }
 
+    public:
+        TypeInheritedPropertySlot() = default;
+        /**
+         * @brief @p other 의 발행 판을 넘겨받습니다. 이 칸이 들던 옛 판은 지우지 않고 계속 든다(RCU — 든 읽기가 있을 수 있다).
+         * @details 빈 칸을 대입하면 `withdraw` 와 같다 — `TypeDerivedCache` 를 통째로 비우는 대입(`_derived = {}`)이 이 길을 탄다.
+         */
+        TypeInheritedPropertySlot& operator=( TypeInheritedPropertySlot&& other ) noexcept
+        {
+            if ( this == &other )
+                return *this;
+            _pPublished.store( other._pPublished.load( std::memory_order_relaxed ), std::memory_order_release );
+            other._pPublished.store( nullptr, std::memory_order_release );
+            for ( unique_ptr<Snapshot>& pSnapshot : other._listOwned )
+            {
+                _listOwned.push_back( std::move( pSnapshot ) );
+            }
+            other._listOwned.clear();
+            return *this;
+        }
+
     private:
         atomic<const Snapshot*>      _pPublished{ nullptr };
         vector<unique_ptr<Snapshot>> _listOwned; ///< 지금 판과 옛 판 — 이 칸이 사는 동안 산다
+    };
+
+    /**
+     * @struct TypeDerivedCache
+     * @brief `TypeInfo` 의 선언에서 **파생된** 캐시(상속 병합 목록, 자기 이름 맵, 부모 포인터, 판정)를 한 칸에 묶습니다.
+     * @details 비우기는 `_derived = {}` 한 줄입니다(`TypeInfo::invalidateDerivedCaches`) — 칸마다 손으로 비우던 목록은 캐시를 더하고 비우기를 빠뜨리면
+     *          대입된 타입이 **이전 타입의 캐시**로 답했다(이름 조회가 다른 오프셋). 새 캐시는 이 구조체에 기본값과 함께 두면 저절로 비워진다.
+     *          원자 칸(`sw::atomic`)은 대입이 값을 옮기고, 상속 판 칸은 대입이 옛 판을 지우지 않는다(`TypeInheritedPropertySlot`).
+     *          조상 테이블(`TypeInfo::_castHeader`)은 캐스트가 맨 앞 주소로 읽어 이 묶음 밖에 둔다.
+     */
+    struct TypeDerivedCache
+    {
+        /**
+         * @brief 상속 병합 목록과 그 이름 맵의 발행된 판입니다 — 원소는 선언한 타입의 `_listProperty` 를 가리킨다(`PropertyListView`).
+         * @details `TypeRegistry` 가 등록 · 해제 때 **그 타입과 자손만** 독점 잠금 안에서 새 판으로 바꾼다(`rebuildDerivedCaches`). 조회는 잠금 없이 판 하나를 읽는다
+         *          (`TypeInheritedPropertySlot`) — `mutable` 지연 캐시가, 다음에는 잠금 밖 제자리 다시 짓기가 워커의 조회와 경합하던 자리다.
+         */
+        TypeInheritedPropertySlot                         _inheritedProperties;
+        unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;
+        unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
+        /**
+         * @brief `_parentFQN` 을 한 번 찾아 둔 부모 `TypeInfo` 입니다. 없거나 아직 찾지 못했으면 nullptr 입니다.
+         * @details `isDerivedFrom` 이 조상마다 `findType(_parentFQN)`(shared_mutex 잠금과 해시맵 조회)을 부르지 않도록,
+         *          등록 배치가 끝날 때(`TypeRegistry::populateLookupCaches`) 한 번 찾아 둔다. 그러면 조상을 따라가는 비용은 포인터 역참조 몇 번이다.
+         *
+         *          **레지스트리에 든 타입은 쓰기 쪽만 이 값을 바꾼다.** 등록 · 별칭 · 해제가 바뀐 타입과 자손의 부모를 독점 잠금 안에서 이름으로 다시 찾아
+         *          새 값으로 바로 바꾼다(`TypeRegistry::relinkAffectedLocked` — 비웠다가 잠금 밖에서 다시 찾던 틈이 없다). 그래서 읽기(`getParentType`)는
+         *          레지스트리를 잠그지 않는다 — 예전에는 세대가 오를 때마다 부모가 미등록인 타입마다 `findType` 을 잠가, 별칭을 쉬지 않고 거는 쓰기와
+         *          `getDerivedTypes` 가 잠금을 다투다 시한에 걸렸다. 레지스트리 밖 사본만 첫 조회가 이름으로 찾는다(여러 스레드가 같은 값을 써 relaxed 로 충분하다).
+         */
+        mutable TypeParentLink _parentLink;
+        /**
+         * @brief `_parentFQN` 을 이름으로 찾아 봤지만 찾지 못했던 때의 타입 테이블 세대입니다. 0 이면 아직 찾아 보지 않았습니다. 레지스트리 밖 사본만 씁니다.
+         * @details 등록되지 않은 기반 타입은 이름만 적혀 있다. 부모를 물을 때마다(계층 프로퍼티 조회, 이름 따라가기, 기본값 체인 수집)
+         *          레지스트리를 잠그고 다시 찾지 않도록, 세대가 같으면 결과도 같으므로 세대를 적어 두고 등록이나 해제로 세대가 바뀔 때만 다시 찾는다.
+         */
+        mutable atomic<uint32> _parentMissGeneration{ 0 };
+        /**
+         * @brief 판정(POD · 세이브 · 검증)과 "구했다" 표시의 비트(`TypeInfo::kDerived*`)입니다. `TypeInfo::computeDerivedFlags` 가 한 번에 구한다 — 조회는 읽기만 한다.
+         * @details 레지스트리는 등록 · 별칭 · 해제 때 바뀐 타입의 상속 목록을 **모두** 다시 지은 뒤 **같은 독점 잠금 안에서** 판정을 구한다(`TypeRegistry::relinkAffectedLocked`)
+         *          — 발행 전에 끝나 다른 스레드가 "구하지 않은" 타입을 보지 않는다. 검증 판정이 칸 타입의 상속 목록을 재귀로 읽어 모두 지은 뒤다.
+         *          원자값인 까닭: 자손을 다시 이을 때 잠금 없이 읽는 스레드(`canConstruct` 등)와 겹쳐 쓴다 — 비트필드였을 때는 쓰기의 읽고-고쳐-쓰기가
+         *          같은 바이트의 다른 비트를 옛 값으로 되돌릴 수 있었다. 레지스트리 밖 사본(테스트)은 `rebuildDerivedCaches` → `computeDerivedFlags` 를 직접 부른다.
+         *          구하지 않은 채 물으면 멈춘다.
+         */
+        atomic<uint8> _derivedFlags{ 0 };
+        uint8         _bIsCacheBuilt{ SW_FALSE }; ///< 자기 이름 맵(`_mapNameToProperty` · `_mapNameToMethod`)을 지었다. 아니면 이름 조회는 선형으로 찾는다
     };
 
     struct TypeInfo;
@@ -214,32 +281,9 @@ namespace sw
         ///        (`TypeRegistry::reportFieldNameHashClashes`, 언리얼 CoreRedirects 의 지운 프로퍼티 기록과 같은 자리).
         vector<hashed_string>            _listRemovedField;
         ReflectMetadataBox<TypeMetadata> _metadata; ///< `REFLECT()` 에 적은 메타데이터(`ReflectionMetadata.h`)
-        /**
-         * @brief 상속 병합 목록과 그 이름 맵의 발행된 판입니다 — 원소는 선언한 타입의 `_listProperty` 를 가리킨다(`PropertyListView`).
-         * @details `TypeRegistry` 가 등록 · 해제 때 **그 타입과 자손만** 독점 잠금 안에서 새 판으로 바꾼다(`rebuildDerivedCaches`). 조회는 잠금 없이 판 하나를 읽는다
-         *          (`TypeInheritedPropertySlot`) — `mutable` 지연 캐시가, 다음에는 잠금 밖 제자리 다시 짓기가 워커의 조회와 경합하던 자리다.
-         */
-        TypeInheritedPropertySlot                         _inheritedProperties;
-        unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;
-        unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
-        /**
-         * @brief `_parentFQN` 을 한 번 찾아 둔 부모 `TypeInfo` 입니다. 없거나 아직 찾지 못했으면 nullptr 입니다.
-         * @details `isDerivedFrom` 이 조상마다 `findType(_parentFQN)`(shared_mutex 잠금과 해시맵 조회)을 부르지 않도록,
-         *          등록 배치가 끝날 때(`TypeRegistry::populateLookupCaches`) 한 번 찾아 둔다. 그러면 조상을 따라가는 비용은 포인터 역참조 몇 번이다.
-         *
-         *          **레지스트리에 든 타입은 쓰기 쪽만 이 값을 바꾼다.** 등록 · 별칭 · 해제가 바뀐 타입과 자손의 부모를 독점 잠금 안에서 이름으로 다시 찾아
-         *          새 값으로 바로 바꾼다(`TypeRegistry::relinkAffectedLocked` — 비웠다가 잠금 밖에서 다시 찾던 틈이 없다). 그래서 읽기(`getParentType`)는
-         *          레지스트리를 잠그지 않는다 — 예전에는 세대가 오를 때마다 부모가 미등록인 타입마다 `findType` 을 잠가, 별칭을 쉬지 않고 거는 쓰기와
-         *          `getDerivedTypes` 가 잠금을 다투다 시한에 걸렸다. 레지스트리 밖 사본만 첫 조회가 이름으로 찾는다(여러 스레드가 같은 값을 써 relaxed 로 충분하다).
-         */
-        mutable TypeParentLink _parentLink;
-        /**
-         * @brief `_parentFQN` 을 이름으로 찾아 봤지만 찾지 못했던 때의 타입 테이블 세대입니다. 0 이면 아직 찾아 보지 않았습니다. 레지스트리 밖 사본만 씁니다.
-         * @details 등록되지 않은 기반 타입은 이름만 적혀 있다. 부모를 물을 때마다(계층 프로퍼티 조회, 이름 따라가기, 기본값 체인 수집)
-         *          레지스트리를 잠그고 다시 찾지 않도록, 세대가 같으면 결과도 같으므로 세대를 적어 두고 등록이나 해제로 세대가 바뀔 때만 다시 찾는다.
-         */
-        mutable atomic<uint32> _parentMissGeneration;
-        uint32                 _typeID;
+        /** @brief 선언에서 파생된 캐시 묶음입니다(`TypeDerivedCache`). 비우기는 `_derived = {}` 한 줄입니다. */
+        TypeDerivedCache _derived;
+        uint32           _typeID;
         /**
          * @brief 이 내용이 등록된 때의 타입 표 세대입니다(`TypeRegistry::registerClass` 가 적는다, 사본 · 미등록은 0).
          * @details 같은 FQN 을 다시 등록하면(핫 리로드) 주소는 그대로 두고 목록을 바꾸므로 이 값이 바뀐다 — 오래 든 프로퍼티 참조(`PropertyHandle`)가 낡았음을 안다.
@@ -251,18 +295,8 @@ namespace sw
         uint8 _bStatic : 1;
         /** @brief 내장 스칼라나 문자열 타입입니다(int32, bool, sw::string 등). REFLECT 코드젠이 없습니다. */
         uint8                  _bPrimitive    : 1;
-        uint8                  _bIsCacheBuilt : 1; ///< 자기 이름 맵(`_mapNameToProperty` · `_mapNameToMethod`)을 지었다. 아니면 이름 조회는 선형으로 찾는다
-        [[maybe_unused]] uint8 _reservedFlags : 4;
-        /**
-         * @brief 판정(POD · 세이브 · 검증)과 "구했다" 표시의 비트(`kDerived*`)입니다. `computeDerivedFlags` 가 한 번에 구한다 — 조회는 읽기만 한다(`mutable` 지연 계산이 없다).
-         * @details 레지스트리는 등록 · 별칭 · 해제 때 바뀐 타입의 상속 목록을 **모두** 다시 지은 뒤 **같은 독점 잠금 안에서** 판정을 구한다(`TypeRegistry::relinkAffectedLocked`)
-         *          — 발행 전에 끝나 다른 스레드가 "구하지 않은" 타입을 보지 않는다. 검증 판정이 칸 타입의 상속 목록을 재귀로 읽어 모두 지은 뒤다.
-         *          위 비트필드와 따로 원자값인 까닭: 자손을 다시 이을 때 잠금 없이 읽는 스레드(`canConstruct` 등)와 겹쳐 쓴다 — 같은 바이트의 비트필드였을 때는 쓰기의
-         *          읽고-고쳐-쓰기가 그 바이트의 다른 비트(`_bIsCacheBuilt`)를 옛 값으로 되돌릴 수 있었다. 레지스트리 밖 사본(테스트)은 `rebuildDerivedCaches` →
-         *          `computeDerivedFlags` 를 직접 부른다. 구하지 않은 채 물으면 멈춘다.
-         */
-        atomic<uint8>          _derivedFlags;
-        [[maybe_unused]] uint8 _reservedPadding[2];
+        [[maybe_unused]] uint8 _reservedFlags : 5;
+        [[maybe_unused]] uint8 _reservedPadding[3];
 
         static constexpr uint8 kDerivedPODFastPath         = 1u << 0;
         static constexpr uint8 kDerivedHasSaveGameProperty = 1u << 1;
@@ -319,7 +353,7 @@ namespace sw
         void computeDerivedFlags( const TypeResolver& resolver );
         void computeDerivedFlags();
         /** @brief 판정을 구했는지입니다(`computeDerivedFlags`). 레지스트리에 든 살아 있는 타입은 늘 true 입니다. */
-        bool hasDerivedFlags() const { return ( _derivedFlags.load( std::memory_order_acquire ) & kDerivedFlagsBuilt ) != 0; }
+        bool hasDerivedFlags() const { return ( _derived._derivedFlags.load( std::memory_order_acquire ) & kDerivedFlagsBuilt ) != 0; }
         /** @brief 이 타입이 targetFqn 이거나 그 파생이면 true 입니다. 부모가 등록되지 않았어도 `_parentFQN` 이 같으면 true 입니다. */
         bool isDerivedFrom( const hashed_string& targetFqn ) const;
         /**
@@ -343,16 +377,16 @@ namespace sw
         /** @brief 레지스트리가 찾은 부모로 부모 포인터를 바꿉니다. `TypeRegistry` 가 독점 잠금 안에서만 부릅니다(`relinkAffectedLocked`). 자기 자신은 nullptr 로 둡니다. */
         void linkParentType( const TypeInfo* pParent ) const
         {
-            _parentLink._pType.store( pParent != this ? pParent : nullptr, std::memory_order_release ); // 읽기가 잠금 없이 부모의 칸을 따라간다
-            _parentMissGeneration.store( 0, std::memory_order_relaxed );
+            _derived._parentLink._pType.store( pParent != this ? pParent : nullptr, std::memory_order_release ); // 읽기가 잠금 없이 부모의 칸을 따라간다
+            _derived._parentMissGeneration.store( 0, std::memory_order_relaxed );
         }
         /** @brief 레지스트리가 가진 타입이면 true 입니다(`registerClass` 가 내용 세대를 적는다). 사본 · 미등록은 0 이라 false 입니다. */
         bool isRegistryOwned() const { return _contentGeneration != 0; }
         /** @brief 부모 포인터와 "찾지 못했다"는 기록을 비웁니다. 해제 뒤에는 부모가 사라졌을 수 있으므로 `TypeRegistry` 가 부릅니다. */
         void clearParentType() const
         {
-            _parentLink._pType.store( nullptr, std::memory_order_relaxed );
-            _parentMissGeneration.store( 0, std::memory_order_relaxed );
+            _derived._parentLink._pType.store( nullptr, std::memory_order_relaxed );
+            _derived._parentMissGeneration.store( 0, std::memory_order_relaxed );
         }
 
         /** @brief 조상 테이블이 만들어져 있으면 true 입니다. 이때 상속 검사는 부모를 따라가지 않고 O(1) 로 답합니다. */
@@ -381,8 +415,8 @@ namespace sw
         void clearInheritedProperties();
         /**
          * @brief 선언에서 **파생된** 캐시(이름 맵, 상속 포함 목록, 부모 포인터, 조상 테이블, POD 판정)를 모두 비웁니다.
-         * @details 복사 대입과 이동 대입이 함께 쓴다. 캐시를 추가하면 여기서도 비워야 한다. 빠뜨리면 대입된 타입이 **이전 타입의 캐시**로 답한다
-         *          (이름으로 조회하면 다른 오프셋을 준다).
+         * @details 복사 대입과 이동 대입이 함께 쓴다. 파생 캐시는 `_derived` 한 칸이라 `_derived = {}` 로 모두 비워진다 — 새 캐시는 `TypeDerivedCache` 에 둔다
+         *          (예전의 손 목록은 빠뜨리면 대입된 타입이 이전 타입의 캐시로 답했다). 조상 테이블만 맨 앞 `_castHeader` 에 있어 따로 비운다.
          */
         void invalidateDerivedCaches();
         /**
@@ -416,29 +450,29 @@ namespace sw
         const PropertyInfo* findPropertyByNameText( string_view nameText ) const;
 
         /** @brief 자기 이름 맵이 지어져 있으면 true 입니다(레지스트리에 든 타입은 등록 뒤 늘 true 입니다). */
-        bool isLookupCacheBuilt() const { return _bIsCacheBuilt != SW_FALSE; }
+        bool isLookupCacheBuilt() const { return _derived._bIsCacheBuilt != SW_FALSE; }
 
         /** @brief 이름이나 별칭으로 프로퍼티를 찾습니다. 맵을 짓지 않은 사본은 선형으로 찾습니다(같은 답, 읽기만 한다). */
         const PropertyInfo* findProperty( const hashed_string& propertyNameOrAlias ) const
         {
-            if ( _bIsCacheBuilt == SW_FALSE || _listProperty.size() <= constant::reflection::kLinearSearchThreshold )
+            if ( _derived._bIsCacheBuilt == SW_FALSE || _listProperty.size() <= constant::reflection::kLinearSearchThreshold )
             {
                 return VectorUtil::findIf( _listProperty, [&]( const PropertyInfo& propertyInfo )
                 { return propertyInfo.matchesName( propertyNameOrAlias ); } );
             }
 
-            auto it = _mapNameToProperty.find( propertyNameOrAlias );
-            return it != _mapNameToProperty.end() ? it->second : nullptr;
+            auto it = _derived._mapNameToProperty.find( propertyNameOrAlias );
+            return it != _derived._mapNameToProperty.end() ? it->second : nullptr;
         }
 
         /** @brief 이름으로 메서드를 찾습니다. 맵을 짓지 않은 사본은 선형으로 찾습니다. */
         const FunctionInfo* findMethod( const hashed_string& methodName ) const
         {
-            if ( _bIsCacheBuilt == SW_FALSE || _listMethod.size() <= constant::reflection::kLinearSearchThreshold )
+            if ( _derived._bIsCacheBuilt == SW_FALSE || _listMethod.size() <= constant::reflection::kLinearSearchThreshold )
                 return VectorUtil::findBy<&FunctionInfo::_hashName>( _listMethod, methodName );
 
-            auto it = _mapNameToMethod.find( methodName );
-            return it != _mapNameToMethod.end() ? it->second : nullptr;
+            auto it = _derived._mapNameToMethod.find( methodName );
+            return it != _derived._mapNameToMethod.end() ? it->second : nullptr;
         }
 
         /**

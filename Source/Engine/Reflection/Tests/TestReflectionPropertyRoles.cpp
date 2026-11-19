@@ -144,6 +144,31 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, DerivedFlagsAreBuiltByRegistrationNotB
 }
 
 /**
+ * @brief [ReflectionPropertyRoleTest] 대입은 지어 둔 파생 캐시(이름 맵 · 판정 · 상속 판)를 한 번에 비운다(`TypeDerivedCache` — `_derived = {}`) — 다시 지으면 같은 답이다
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, AssignmentClearsEveryDerivedCache )
+{
+    const sw::TypeInfo* pType = sw::PropertyRoleActor::StaticType();
+    SW_REQUIRE_NOT_NULL( pType );
+
+    sw::TypeInfo copy = *pType;
+    copy.rebuildDerivedCaches();
+    copy.computeDerivedFlags();
+    SW_REQUIRE_TRUE( copy.isLookupCacheBuilt() );
+    SW_REQUIRE_TRUE( copy.hasDerivedFlags() );
+
+    copy = *pType; // 지어 둔 사본에 다시 대입한다
+    SW_EXPECT_FALSE( copy.isLookupCacheBuilt() );
+    SW_EXPECT_FALSE( copy.hasDerivedFlags() );
+
+    copy.rebuildDerivedCaches();
+    copy.computeDerivedFlags();
+    SW_EXPECT_TRUE( copy.isLookupCacheBuilt() );
+    SW_EXPECT_EQUAL( pType->getPropertiesWithBase().size(), copy.getPropertiesWithBase().size() );
+    SW_EXPECT_EQUAL( pType->hasSaveGameProperty(), copy.hasSaveGameProperty() );
+}
+
+/**
  * @brief [ReflectionPropertyRoleTest] SaveGame 이 하나도 없는 타입은 세이브 문맥에서도 전부 쓴다(옵트인이 아닌 타입은 지금 동작 그대로)
  */
 SW_TEST_CASE( ReflectionPropertyRoleTest, TypeWithoutSaveGameSavesEverything )
