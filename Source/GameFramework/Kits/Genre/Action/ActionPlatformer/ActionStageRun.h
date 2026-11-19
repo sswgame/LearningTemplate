@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -22,6 +23,7 @@ namespace sw
     class Archive;
 
     /** @brief 한 판의 상태입니다. */
+    ENUM()
     enum class ActionStageState : uint8
     {
         NotStarted = 0,
@@ -52,9 +54,12 @@ namespace sw
      * @class ActionStageRun
      * @brief 스테이지 하나의 진행 상태입니다. 정의는 카탈로그에서 빌려 씁니다.
      */
+    REFLECT()
     class SW_KIT_API ActionStageRun
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "APST" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -110,11 +115,17 @@ namespace sw
         const ActionStageDef*          _pStage;
         vector<hashed_string>          _listSecretCommitted; ///< 체크포인트나 클리어로 확정된 것
         vector<hashed_string>          _listSecretPending;   ///< 주웠지만 아직 확정되지 않은 것
-        float32                        _elapsed;
-        int32                          _lives;
-        int32                          _checkpointIndex; ///< 지난 마지막 체크포인트 인덱스(−1이면 시작점)
-        int32                          _hitCount;
-        int32                          _deathCount;
-        ActionStageState               _state;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _elapsed;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _lives;
+        PROPERTY( RuntimeState, Min = -1 )
+        int32 _checkpointIndex; ///< 지난 마지막 체크포인트 인덱스(−1이면 시작점)
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _hitCount;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _deathCount;
+        PROPERTY( RuntimeState )
+        ActionStageState _state;
     };
 } // namespace sw

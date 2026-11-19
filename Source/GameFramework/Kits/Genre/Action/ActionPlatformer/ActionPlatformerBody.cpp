@@ -399,7 +399,7 @@ namespace sw
 
     void ActionPlatformerBody::serializeState( StateIO& io )
     {
-        io.enumValue( _mode, ActionMoveMode::Drill );
+        io.reflected( *this ); // 모드 · 위치 · 속도 · 닻 · 줄 길이 · 흙 속 — 줄 길이 바닥은 칸의 `PROPERTY( Min )`
         if ( io.isOk() == false )
             return;
         // 기반 몸의 설정은 모드가 정하므로(활공이면 활공 설정) 설정을 먼저 적용한 뒤 몸의 값을 읽는다.
@@ -408,14 +408,8 @@ namespace sw
             _motor.setSettings( makeMotorSettings( _mode == ActionMoveMode::Glide ) );
             _events = 0;
         }
-        io.value( _motor );
-        io.value( _position );
-        io.value( _velocity );
-        io.value( _anchor );
-        io.value( _ropeLength );
-        io.value( _drillSearchTimer );
-        io.flag( _bInsideDirt );
-        io.check( 0.0f <= _ropeLength );
+        io.value( _motor );            // 리플렉션 밖 값 — 기반 몸은 자기 `serializeState` 가 있다
+        io.value( _drillSearchTimer ); // `Countdown` 은 늦음까지 싣는 손 코덱이 있다
     }
 
 } // namespace sw

@@ -39,13 +39,18 @@ namespace
 
     struct ActionEnemyBrainTestUtil
     {
+        /** @brief `ActionEnemyBrain::writeState` 와 같은 모양의 바이트입니다. 리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 다른 이유로 거절되어 거짓 통과한다. */
         static void writeBrainBytes( sw::Archive& outArchive, const sw::hashed_string& patternID, const sw::hashed_string& stateID, int32 frame, int32 facing, uint8 bEntered )
         {
-            sw::StateIO::writeName( outArchive, patternID );
-            sw::StateIO::writeName( outArchive, stateID );
+            sw::ActionEnemyBrain blank;
+            sw::Archive          blankBytes;
+            blank.writeState( blankBytes );
+            outArchive.writeBytes( blankBytes.getData(), sw::StateIO::kReflectedHeaderBytes );
             outArchive << frame;
             outArchive << facing;
             outArchive << bEntered;
+            sw::StateIO::writeName( outArchive, patternID );
+            sw::StateIO::writeName( outArchive, stateID );
         }
     };
 } // namespace

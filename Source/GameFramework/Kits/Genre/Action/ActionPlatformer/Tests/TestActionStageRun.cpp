@@ -33,17 +33,24 @@ namespace
 
     struct ActionStageRunTestUtil
     {
-        /** @brief `ActionStageRun::writeState` 와 같은 모양의 바이트를 씁니다. 정상 경로로 만들 수 없는 판을 읽기에 넣을 때 씁니다. */
+        /**
+         * @brief `ActionStageRun::writeState` 와 같은 모양의 바이트를 씁니다. 정상 경로로 만들 수 없는 판을 읽기에 넣을 때 씁니다.
+         * @details 리플렉션 머리(타입 판 + 칸 배치 해시)는 정상 `writeState` 바이트에서 그대로 가져온다 — 손으로 짜면 머리가 달라 다른 이유로 거절되어 거짓 통과한다.
+         */
         static void writeRunBytes( sw::Archive& outArchive, const sw::hashed_string& stageID, sw::ActionStageState state, int32 checkpointIndex, const sw::vector<sw::hashed_string>& listCommitted,
                                    const sw::vector<sw::hashed_string>& listPending )
         {
-            sw::StateIO::writeName( outArchive, stageID );
-            outArchive << static_cast<uint8>( state );
+            sw::ActionStageRun blank;
+            sw::Archive        blankBytes;
+            blank.writeState( blankBytes );
+            outArchive.writeBytes( blankBytes.getData(), sw::StateIO::kReflectedHeaderBytes );
             outArchive << 1.0f;                    // 경과 시간
             outArchive << static_cast<int32>( 1 ); // 목숨
             outArchive << checkpointIndex;
-            outArchive << static_cast<int32>( 0 ); // 피격
-            outArchive << static_cast<int32>( 0 ); // 죽은 수
+            outArchive << static_cast<int32>( 0 );     // 피격
+            outArchive << static_cast<int32>( 0 );     // 죽은 수
+            outArchive << static_cast<int64>( state ); // 리플렉션 열거는 int64 로 놓인다
+            sw::StateIO::writeName( outArchive, stageID );
             outArchive << static_cast<uint32>( listCommitted.size() );
             for ( const sw::hashed_string& secretID : listCommitted )
             {
@@ -335,6 +342,14 @@ SW_TEST_CASE( ActionStageRunTest, ReadRejectsInconsistentBytes )
         SW_EXPECT_NEAR( 4.0f, target.getElapsed(), kStageTolerance );
         SW_EXPECT_EQUAL( 0, target.getSecretCommittedCount() );
     };
+
+    // 대조: 같은 도우미로 짠 맞는 판은 읽힌다(아래 거절이 바이트 모양 탓이 아님을 본다).
+    sw::Archive consistent;
+    ActionStageRunTestUtil::writeRunBytes( consistent, kStage1, sw::ActionStageState::Playing, -1, { kSecret1 }, { kSecret2 } );
+    sw::ActionStageRun consistentTarget;
+    consistentTarget.bindCatalog( &catalog );
+    sw::Archive consistentReading( consistent.getData(), consistent.getSize() );
+    SW_EXPECT_TRUE( consistentTarget.readState( consistentReading ) );
 
     sw::Archive twiceCommitted;
     ActionStageRunTestUtil::writeRunBytes( twiceCommitted, kStage1, sw::ActionStageState::Playing, -1, { kSecret1, kSecret1 }, {} );
