@@ -767,6 +767,7 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
+        io.reflected( *this );
         for ( Side& side : _arrSide )
         {
             io.list( side._listMonster, MonsterInstance::kStateMinBytes, [&]( MonsterInstance& monster )
@@ -795,22 +796,14 @@ namespace sw
                 side._bNeedsSwitch = bNeedsSwitch == SW_TRUE;
             }
         }
-        io.value( _turnOrder );
+        io.value( _turnOrder ); // 리플렉션 밖 값 — 턴 순서 · 난수는 손 코덱, 잡은 개체는 제 본문(머리 · 칸 사이 검사)으로 싣는다
         io.value( _random );
         io.value( _captured );
-        io.value( _weatherID );
-        io.value( _weatherTurns );
-        io.value( _escapeAttempts );
-        io.enumValue( _result, MonsterBattleResult::Escaped );
-        uint8 bWild = _bWild ? SW_TRUE : SW_FALSE;
-        io.flag( bWild );
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _bWild = bWild == SW_TRUE;
         // 날씨가 없으면 턴도 0 이고, 있으면 남은 턴이거나 끝없음(-1)이다.
         io.check( _weatherID.empty() ? _weatherTurns == 0 : ( _pCatalog->findWeather( _weatherID ) != nullptr && ( _weatherTurns == kEndlessWeather || _weatherTurns > 0 ) ) );
         io.check( _captured._speciesID.empty() ? _result != MonsterBattleResult::Captured : _captured.isKnownTo( *_pCatalog ) );
-        io.check( 0 <= _escapeAttempts );
         for ( int32 side = 0; side < kSideCount; ++side )
         {
             io.check( isSideStateValid( side ) );

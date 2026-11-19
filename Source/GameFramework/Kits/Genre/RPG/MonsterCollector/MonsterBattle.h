@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -52,6 +53,7 @@ namespace sw
 namespace sw
 {
     /** @brief 전투의 끝입니다. */
+    ENUM()
     enum class MonsterBattleResult : uint8
     {
         Ongoing = 0,
@@ -144,9 +146,12 @@ namespace sw
      * @details 한 라운드는 양쪽이 `setAction` 을 호출한 뒤 `resolveRound` 를 호출하는 순서다. 교체, 볼, 도망은 기술보다 먼저 처리하고(우선도 +7), 기술끼리는 우선도, 스피드(능력 변화와 마비 반영), 시드 난수 순으로 정한다.
      *          쓰러진 개체의 남은 행동은 버린다. 라운드 끝에 날씨 피해, 상태이상 피해, 날씨 턴 감소 순서로 처리한다.
      */
+    REFLECT()
     class SW_KIT_API MonsterBattle
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag        = FourCCUtil::make( "MCBT" );
         static constexpr uint32 kStateVersion    = 1;
         static constexpr int32  kPlayerSide      = 0;
@@ -176,7 +181,7 @@ namespace sw
         [[nodiscard]] bool switchFainted( int32 side, int32 partyIndex );
         void               pollEvents( vector<MonsterBattleEvent>& outListEvent );
         /**
-         * @brief 양쪽(개체, 능력 변화, 정한 행동, 나선 개체, 교체 대기), 턴 순서, 난수, 잡은 개체, 날씨, 도망 횟수, 결과, 야생 여부를 씁니다. 카탈로그와 상성표는 싣지 않습니다.
+         * @brief 날씨, 도망 횟수, 결과, 야생 여부(리플렉션 상태 칸)와 양쪽(개체, 능력 변화, 정한 행동, 나선 개체, 교체 대기), 턴 순서, 난수, 잡은 개체(손 본문 — 개체는 제 머리로 싣는다)를 씁니다. 카탈로그와 상성표는 싣지 않습니다.
          *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 종, 기술, 성격, 날씨이거나 값이 범위 밖이거나(쓸 수 없는 행동, 교체할 개체가 없는 교체 대기 등) 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
         SW_DECLARE_STATE_IO();
@@ -260,12 +265,17 @@ namespace sw
         TurnOrder                       _turnOrder;
         GameRandom                      _random;
         MonsterInstance                 _captured;
-        hashed_string                   _weatherID;
-        const MonsterCollectorCatalog*  _pCatalog;
-        const ElementChart*             _pChart;
-        int32                           _weatherTurns;
-        int32                           _escapeAttempts;
-        MonsterBattleResult             _result;
-        bool                            _bWild; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        PROPERTY( RuntimeState )
+        hashed_string                  _weatherID;
+        const MonsterCollectorCatalog* _pCatalog;
+        const ElementChart*            _pChart;
+        PROPERTY( RuntimeState )
+        int32 _weatherTurns;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _escapeAttempts;
+        PROPERTY( RuntimeState )
+        MonsterBattleResult _result;
+        PROPERTY( RuntimeState )
+        bool _bWild; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 } // namespace sw

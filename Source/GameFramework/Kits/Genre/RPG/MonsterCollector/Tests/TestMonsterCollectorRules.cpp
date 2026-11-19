@@ -87,6 +87,13 @@ namespace
             sw::TurnOrder  order;
             sw::GameRandom random;
             random.setSeed( 3 );
+            // 리플렉션 상태 칸(선언 순서 — 열거는 int64) 뒤에 손 본문(양쪽, 턴 순서, 난수, 잡은 개체)이다
+            sw::StateIO::writeReflectedHeader<sw::MonsterBattle>( written );
+            sw::StateIO::writeName( written, _weatherID );
+            written << _weatherTurns;
+            written << _escapeAttempts;
+            written << static_cast<int64>( _result );
+            written << _wild;
             written << static_cast<uint32>( _listPlayer.size() );
             for ( const sw::MonsterInstance& monster : _listPlayer )
             {
@@ -117,11 +124,6 @@ namespace
             order.writeState( written );
             sw::StateIO::writeRandom( written, random );
             _captured.writeState( written );
-            sw::StateIO::writeName( written, _weatherID );
-            written << _weatherTurns;
-            written << _escapeAttempts;
-            written << _result;
-            written << _wild;
         }
     };
 
