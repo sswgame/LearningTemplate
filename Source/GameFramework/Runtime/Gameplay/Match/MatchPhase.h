@@ -8,9 +8,12 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
-    /** @brief 판의 단계입니다. */
+    /** @brief 판의 단계입니다. 리플렉션 열거(점수판의 상태 칸이 값으로 싣는다)입니다. */
+    ENUM()
     enum class MatchPhase : uint8
     {
         Waiting = 0, ///< `start` 전이다. 참가자(카트는 차)를 이때 더한다

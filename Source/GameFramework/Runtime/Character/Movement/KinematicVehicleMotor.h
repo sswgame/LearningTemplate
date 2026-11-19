@@ -289,10 +289,14 @@ namespace sw
      *          그다음 새 방향으로 속도를 나눠 옆 성분을 접지(그립 × 표면 그립 배율)로 줄이고, 점프 · 중력 · 착지(호버면 용수철)를 처리한 뒤 위치를 갱신한다.
      *          드리프트는 버튼을 누른 채 조향하면 그 방향으로 시작한다. 시간이 쌓이면 미니터보 단계가 오르고, 버튼을 떼면 단계만큼 부스트한다.
      *          드리프트하는 동안 니트로 게이지가 차서 1 이 될 때마다 니트로가 하나 생기며(최대 `_maxNitroCount`), `_bBoostPressed` 로 쓴다.
+     *          상태는 리플렉션 상태 칸(`StateIO::reflected`)과 손 본문의 걸음 타이머 · 부스트(`FixedStepTimer` · `Countdown` — 리플렉션 형식이 아니다)다.
      */
+    REFLECT()
     class SW_GF_API KinematicVehicleMotor
     {
     public:
+        REFLECT_BODY();
+
         /** @brief 경사를 재는 앞뒤 거리(m)입니다. 차 길이의 절반쯤 — 작은 요철에 흔들리지 않는다. */
         static constexpr float32 kSlopeProbeDistance = 0.5f;
 
@@ -370,15 +374,24 @@ namespace sw
         FixedStepTimer                     _timer;
         const IVehicleGround*              _pGround;
         const SplinePath*                  _pRail;
-        float3                             _position;
-        float3                             _velocity; ///< 월드 속도(_y 는 위아래)
-        float32                            _yaw;
-        float32                            _driftCharge; ///< 이번 드리프트의 시간
-        Countdown                          _boost;
-        float32                            _nitroGauge;   ///< 0..1
-        float32                            _railDistance; ///< 레일 위 거리(레일 모듈)
-        int32                              _nitroCount;
-        int32                              _driftDirection; ///< -1 은 왼쪽, 1 은 오른쪽, 0 은 드리프트 아님
-        uint8                              _bAirborne;
+        PROPERTY( RuntimeState )
+        float3 _position;
+        PROPERTY( RuntimeState )
+        float3 _velocity; ///< 월드 속도(_y 는 위아래)
+        PROPERTY( RuntimeState )
+        float32 _yaw;
+        PROPERTY( RuntimeState )
+        float32   _driftCharge; ///< 이번 드리프트의 시간
+        Countdown _boost;
+        PROPERTY( RuntimeState )
+        float32 _nitroGauge; ///< 0..1
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _railDistance; ///< 레일 위 거리(레일 모듈)
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _nitroCount;
+        PROPERTY( RuntimeState, Min = -1, Max = 1 )
+        int32 _driftDirection; ///< -1 은 왼쪽, 1 은 오른쪽, 0 은 드리프트 아님
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bAirborne;
     };
 } // namespace sw

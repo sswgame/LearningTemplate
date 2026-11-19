@@ -548,21 +548,13 @@ namespace sw
 
     void PlatformerMotor2D::serializeState( StateIO& io )
     {
-        io.value( _position );
-        io.value( _velocity );
-        io.value( _coyote );
+        io.reflected( *this ); // 깃발의 0 · 1 은 칸의 `PROPERTY( Min · Max )` 가 지킨다
+        io.value( _coyote );   // 리플렉션 밖 값 — `Countdown` 은 늦음까지 싣는 손 코덱이 있다
         io.value( _jumpBuffer );
         io.value( _wallLock );
         io.value( _dash );
         io.value( _dashCooldown );
         io.value( _dropThrough );
-        io.value( _extraJumpsLeft );
-        io.value( _airDashesLeft );
-        io.value( _wallSide );
-        io.value( _facing );
-        io.flag( _bGrounded );
-        io.flag( _bClimbing );
-        io.flag( _bRising );
         if ( io.isReading() )
         {
             _events = 0;

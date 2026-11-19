@@ -26,11 +26,9 @@ namespace sw
         {
             static constexpr const utf8* kArrBlockName[] = { "weight", "pacing", "cooldown", "maxCount", "cycle", "minTime", "intensity", "area", "condition", "cost" };
             /** @brief 스폰 감독의 씨앗을 감독 씨앗에서 떼어 낼 때 섞는 값입니다(같은 씨앗이 두 수열에서 같은 수를 내지 않게). */
-            static constexpr uint32 kSpawnSeedSalt  = 0x5bd1e995u;
-            static constexpr uint32 kStateTag       = FourCCUtil::make( "AIDR" );
-            static constexpr uint32 kStateVersion   = 1;
-            static constexpr uint32 kPoolMinBytes   = 20; ///< 풀 하나의 최소 바이트(타이머 · 예산 · 마지막 고른 시각 · 골라 둔 것 · 항목 수)
-            static constexpr uint32 kEncounterBytes = 8;  ///< 항목 하나(마지막 시각 · 횟수)
+            static constexpr uint32 kSpawnSeedSalt = 0x5bd1e995u;
+            static constexpr uint32 kStateTag      = FourCCUtil::make( "AIDR" );
+            static constexpr uint32 kStateVersion  = 2; ///< 판 2 부터 리플렉션 상태 칸이다 — 판 1(손 칸)은 올림 단계 없이 거절한다
 
             template <typename T>
             static uint64 hashValue( uint64 hash, const T& value )
@@ -569,52 +567,24 @@ namespace sw
         io.header( Internal::kStateTag, Internal::kStateVersion );
         if ( io.isOk() == false )
             return;
-        int32 phaseCount = _pProfile != nullptr ? static_cast<int32>( _pProfile->getPhases().size() ) : 0;
-        io.value( phaseCount );
-        io.value( _time );
-        io.value( _phaseTime );
-        io.value( _intensity );
-        io.value( _phaseIndex );
-        io.value( _cycle );
-        io.value( _pickSerial );
+        io.reflected( *this ); // 시계 · 단계 · 풀 · 항목 칸의 하한은 칸의 `PROPERTY( Min )` 이 지킨다
+        // 리플렉션 밖 값 — `GameRandom` 은 손 코덱이 있고, 단계 수는 프로필 구조를 대조하려고 싣는다
         io.value( _random );
-        uint32 poolCount = static_cast<uint32>( _listPoolState.size() );
-        io.count( Internal::kPoolMinBytes, poolCount );
+        int32 phaseCount = static_cast<int32>( _pProfile->getPhases().size() );
+        io.value( phaseCount );
         if ( io.isOk() == false )
             return;
         if ( io.isReading() )
         {
-            const bool bShape = phaseCount == static_cast<int32>( _pProfile->getPhases().size() ) && 0 <= _phaseIndex && _phaseIndex < phaseCount && poolCount == _pProfile->getPools().size();
-            const bool bClock = _time >= 0.0f && _phaseTime >= 0.0f && _intensity >= 0.0f && _cycle >= 0;
-            if ( io.check( bShape && bClock ) == false )
-                return;
-            _listPoolState.clear();
-            _listPoolState.resize( poolCount );
-        }
-        for ( size_t poolIndex = 0; poolIndex < _listPoolState.size(); ++poolIndex )
-        {
-            PoolState& state = _listPoolState[poolIndex];
-            io.value( state._timer );
-            io.value( state._budget );
-            io.value( state._lastPickTime );
-            io.value( state._pendingIndex );
-            uint32 encounterCount = static_cast<uint32>( state._listEncounter.size() );
-            io.count( Internal::kEncounterBytes, encounterCount );
-            if ( io.isOk() == false )
-                return;
-            if ( io.isReading() )
+            // 칸 사이 검사 — 단계 · 풀 · 항목 수와 예산 상한은 프로필이 정한다
+            bool bShape = phaseCount == static_cast<int32>( _pProfile->getPhases().size() ) && _phaseIndex < phaseCount && _listPoolState.size() == _pProfile->getPools().size();
+            for ( size_t poolIndex = 0; bShape && poolIndex < _listPoolState.size(); ++poolIndex )
             {
-                if ( io.check( encounterCount == _pProfile->getPools()[poolIndex]._listEncounter.size() ) == false )
-                    return;
-                state._listEncounter.resize( encounterCount );
+                const PoolState& state = _listPoolState[poolIndex];
+                bShape                 = state._listEncounter.size() == _pProfile->getPools()[poolIndex]._listEncounter.size() && state._budget <= _pProfile->getPools()[poolIndex]._maxBudget &&
+                         state._pendingIndex < static_cast<int32>( state._listEncounter.size() );
             }
-            for ( EncounterState& encounter : state._listEncounter )
-            {
-                io.value( encounter._lastTime );
-                io.value( encounter._count );
-                io.check( 0 <= encounter._count );
-            }
-            if ( io.isReading() && io.check( state._timer >= 0.0f && state._budget >= 0.0f && state._budget <= _pProfile->getPools()[poolIndex]._maxBudget && state._pendingIndex >= -1 && state._pendingIndex < static_cast<int32>( encounterCount ) ) == false )
+            if ( io.check( bShape ) == false )
                 return;
         }
         // 태그 거르기는 단계가 정한다(싣지 않았다) — 읽기 전에 걸어야 실린 골라 둔 것을 그대로 받는다(뒤에 걸면 상한에 걸린 것을 비워 원본과 갈린다).

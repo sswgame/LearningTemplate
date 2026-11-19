@@ -296,35 +296,24 @@ namespace sw
 
     void GridInventory::serializeState( StateIO& io )
     {
+        io.reflected( *this ); // 번호 · 개수 · 회전의 범위는 칸의 `PROPERTY( Min · Max )` 가 지킨다
+        // 리플렉션 밖 값 — 크기는 격자(`GridTopology`)의 것이다
         int32 width  = _topology._width;
         int32 height = _topology._height;
         io.value( width );
         io.value( height );
-        io.value( _nextInstanceID );
-        if ( io.isReading() )
+        if ( io.isReading() == false || io.isOk() == false )
+            return;
+        // 칸 사이 검사 — 셀 수는 크기의 곱이고, 아이템 번호는 다음 번호보다 작다
+        const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
+        if ( io.check( 0 <= width && 0 <= height && _listCell.size() == cellCount ) == false )
+            return;
+        for ( const GridItem& item : _listItem )
         {
-            const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
-            if ( io.check( 0 <= width && 0 <= height && io.getArchive().hasBytesAvailable( cellCount * 4 ) ) == false )
-                return;
-            _topology = GridTopology( width, height );
-            _listCell.assign( static_cast<size_t>( cellCount ), constant::invalid_index::kInt32 );
-            ++_revision;
+            io.check( item._instanceID < _nextInstanceID );
         }
-        for ( int32& cell : _listCell )
-        {
-            io.value( cell );
-        }
-        // 아이템마다 이름(4) + 번호, 개수, 위치(16) + 회전 여부(1)
-        io.list( _listItem, 21, [&]( GridItem& item )
-        {
-            io.value( item._itemID );
-            io.value( item._instanceID );
-            io.value( item._count );
-            io.value( item._x );
-            io.value( item._y );
-            io.flag( item._bRotated );
-            io.check( 0 <= item._instanceID && item._instanceID < _nextInstanceID && 0 < item._count );
-        } );
+        _topology = GridTopology( width, height );
+        ++_revision;
     }
 
 } // namespace sw

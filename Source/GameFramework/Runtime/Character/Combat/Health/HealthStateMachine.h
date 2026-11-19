@@ -75,7 +75,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 체력 상태입니다. */
+    /** @brief 체력 상태입니다. 리플렉션 열거(상태 칸 `HealthStateMachine::_state` 가 값으로 싣는다)입니다. */
+    ENUM()
     enum class LifeState : uint8
     {
         Alive = 0,
@@ -130,10 +131,14 @@ namespace sw
      * @details 넘친 피해는 실드에서 체력으로 넘어가지만, 체력에서 출혈 체력으로는 넘어가지 않는다. 기절한 순간의 한 방이 바로 죽이지 않게 하려는 것이다.
      *          기절 중에는 실드, 재생, 경직이 멈추고 `heal` 도 듣지 않는다. 복원하는 길은 부활(`startRevive`) 하나뿐이다.
      *          부활은 여럿이 함께 살릴 수 있도록 속도 배율을 받는다. `startRevive` 를 다시 부르면 배율만 바뀐다.
+     *          상태는 리플렉션 상태 칸(`StateIO::reflected`)과 손 본문의 남은 시간(`Countdown`) · 마지막 가해자(`optional`)다 — 둘 다 리플렉션 형식이 아니다.
      */
+    REFLECT()
     class SW_GF_API HealthStateMachine
     {
     public:
+        REFLECT_BODY();
+
         /** @brief 기본 설정(`HealthSettings{}`, 범위 안)으로 가득 찬 상태입니다. 다른 설정은 `initialize` 로 줍니다. */
         HealthStateMachine();
 
@@ -227,21 +232,33 @@ namespace sw
     private:
         HealthSettings           _settings;
         EventBuffer<HealthEvent> _eventBuffer;
-        float32                  _health;
-        float32                  _shield;
-        float32                  _downedHealth;
-        float32                  _poise;
-        float32                  _timeSinceDamage;      ///< 마지막 피해 뒤 지난 시간(재생 지연)
-        float32                  _timeSincePoiseDamage; ///< 마지막 경직 피해 뒤 지난 시간
-        Countdown                _poiseBreak;
-        Countdown                _invulnerable;
-        float32                  _reviveElapsed; ///< 배율을 곱해 쌓인 부활 시간
-        float32                  _reviveSpeedScale;
-        int32                    _reviverID;
-        optional<int32>          _lastInstigatorID; ///< 상태 바이트에는 `kNoInstigator` 로 적는다
-        int32                    _downCount;
-        LifeState                _state;
-        uint8                    _bReviving;
-        uint8                    _bDamageImmune; ///< `setDamageImmune` — 상태 바이트에 싣지 않는다
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _health;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _shield;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _downedHealth;
+        PROPERTY( RuntimeState )
+        float32 _poise;
+        PROPERTY( RuntimeState )
+        float32 _timeSinceDamage; ///< 마지막 피해 뒤 지난 시간(재생 지연)
+        PROPERTY( RuntimeState )
+        float32   _timeSincePoiseDamage; ///< 마지막 경직 피해 뒤 지난 시간
+        Countdown _poiseBreak;
+        Countdown _invulnerable;
+        PROPERTY( RuntimeState )
+        float32 _reviveElapsed; ///< 배율을 곱해 쌓인 부활 시간
+        PROPERTY( RuntimeState )
+        float32 _reviveSpeedScale;
+        PROPERTY( RuntimeState )
+        int32           _reviverID;
+        optional<int32> _lastInstigatorID; ///< 상태 바이트에는 `kNoInstigator` 로 적는다
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _downCount;
+        PROPERTY( RuntimeState )
+        LifeState _state;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bReviving;
+        uint8 _bDamageImmune; ///< `setDamageImmune` — 상태 바이트에 싣지 않는다
     };
 } // namespace sw

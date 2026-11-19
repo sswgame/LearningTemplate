@@ -147,11 +147,14 @@ namespace sw
      * @class WeatherSystem
      * @brief 지금 날씨와 넘어가는 중인 이전 날씨를 보관합니다. 시간은 게임 초(`WorldClock` 과 같은 배율)로 넘기며, 시드가 같으면 같은 날씨가 이어집니다.
      */
+    REFLECT()
     class SW_GF_API WeatherSystem
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "WTHR" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 리플렉션 상태 칸(판 1 손 본문은 칸을 옮겨 써 올린다)
 
         WeatherSystem();
 
@@ -172,7 +175,7 @@ namespace sw
         float32 getRemaining() const { return _remaining; }
 
         /**
-         * @brief 지금과 이전 날씨 id, 난수, 남은 시간, 전환 경과를 씁니다. 카탈로그는 `initialize` 의 것이라 싣지 않습니다.
+         * @brief 남은 시간, 전환 경과(리플렉션 상태 칸)와 지금 · 이전 날씨 id, 난수(손 본문 — 정의 포인터 ↔ id, `GameRandom`)를 씁니다. 카탈로그는 `initialize` 의 것이라 싣지 않습니다.
          *        `writeState` 의 바이트로 상태를 바꿉니다. 날씨 id 가 지금 카탈로그에 없거나 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
          */
         SW_DECLARE_STATE_IO();
@@ -186,7 +189,9 @@ namespace sw
         const WeatherDef*     _pCurrent;
         const WeatherDef*     _pPrevious;
         GameRandom            _random;
-        float32               _remaining;
-        float32               _transitionElapsed;
+        PROPERTY( RuntimeState )
+        float32 _remaining;
+        PROPERTY( RuntimeState )
+        float32 _transitionElapsed;
     };
 } // namespace sw

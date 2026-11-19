@@ -58,19 +58,23 @@ namespace sw
      * @brief 크기까지 계산을 마친 변경 하나입니다. 실행 계산(`IGameplayEffectExecution`)의 출력이고, 활성 이펙트가 보관하는 값이기도 합니다.
      * @details 걸린 이펙트는 적용 순간의 이 값을 그대로 세이브에 싣는다(스냅샷이라 다시 계산하지 않는다 — `SavedAbilityEffect::_listModifier`).
      */
+    REFLECT()
     struct SW_GF_API EvaluatedModifier
     {
-        hashed_string  _attribute{};
+        REFLECT_BODY();
+
+        PROPERTY()
+        hashed_string _attribute{};
+        PROPERTY()
         AttributeModOp _op{ AttributeModOp::Add };
-        float32        _magnitude{ 0.0f }; ///< 스택 하나의 크기
+        PROPERTY()
+        float32 _magnitude{ 0.0f }; ///< 스택 하나의 크기
 
         /** @brief 나누기 분모가 이보다 0 에 가까우면 나누지 않습니다(0 나누기 · 폭주 방지 — 즉시 실행과 지속 집계가 같은 문턱을 쓴다). */
         static constexpr float32 kMinDenominator = 1.0e-4f;
 
         /** @brief 즉시 실행 한 번이 base @p baseValue 에 쓰는 값입니다(스택 @p stackScale 만큼). */
         float32 applyToBase( float32 baseValue, float32 stackScale ) const;
-        /** @brief 세이브 본문의 모디파이어 하나를 읽고 씁니다(이름 · 연산 · 크기 — 빈 이름과 유한하지 않은 크기는 거절한다). 본문은 `AbilitySaveState.cpp`. */
-        void serializeState( StateIO& io );
     };
 } // namespace sw
 

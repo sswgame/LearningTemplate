@@ -8,6 +8,7 @@
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/Tests/StateIOTestUtil.h"
 
 #include "GameFramework/Runtime/Character/AI/Director/AIDirector.h"
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
@@ -418,23 +419,27 @@ SW_TEST_CASE( AIDirectorStateTest, OutOfRangeValuesAreRefused )
     def._max = 1.0f;
     model.initialize( &def );
 
-    Archive stress; // 스트레스 2, 평온 0, 신호 0 개 — 상한 1 을 넘는다
-    stress << 2.0f << 0.0f << uint32( 0 );
-    Archive reading( stress.getData(), stress.getSize() );
+    // 모델은 리플렉션 본문뿐이다 — 끝의 두 칸이 스트레스, 평온 시간이다(신호 목록이 앞에 있어 끝에서 센다).
+    const vector<uint8> listModel  = StateIOTestUtil::computeStateBytes( model );
+    const size_t        stressAt   = listModel.size() - sizeof( float32 ) * 2;
+    vector<uint8>       listStress = listModel; // 스트레스 2 — 상한 1 을 넘는다
+    SW_REQUIRE_TRUE( StateIOTestUtil::overwrite( listStress, stressAt, 2.0f ) );
+    Archive reading( listStress.data(), listStress.size() );
     SW_EXPECT_FALSE( model.readState( reading ) );
 
-    Archive calm; // 평온 시간이 음수다
-    calm << 0.5f << -1.0f << uint32( 0 );
-    Archive readingCalm( calm.getData(), calm.getSize() );
+    vector<uint8> listCalm = listModel; // 평온 시간이 음수다
+    SW_REQUIRE_TRUE( StateIOTestUtil::overwrite( listCalm, stressAt + sizeof( float32 ), -1.0f ) );
+    Archive readingCalm( listCalm.data(), listCalm.size() );
     SW_EXPECT_FALSE( model.readState( readingCalm ) );
 
-    // 머리(태그 · 버전) 뒤: 단계 수 int32, 시간 float32, 단계 시간, 긴장도, 단계 번호, 순환 — 순환을 음수로 바꾼다.
-    vector<uint8> listFixture = DirectorRig::save( rig._director );
-    Archive       header;
-    rig._director.writeState( header );
+    Archive untouched( listModel.data(), listModel.size() ); // 고치지 않은 바이트는 읽힌다 — 위 거절이 칸 값 때문임을 보인다
+    SW_EXPECT_TRUE( model.readState( untouched ) );
+
+    // 머리(태그 · 버전) 뒤 리플렉션 본문의 마지막 칸이 순환이다 — 순환을 음수로 바꾼다.
+    vector<uint8>    listFixture  = DirectorRig::save( rig._director );
     constexpr size_t kHeaderBytes = sizeof( uint32 ) * 2;
-    constexpr size_t kCycleOffset = kHeaderBytes + sizeof( int32 ) + sizeof( float32 ) * 3 + sizeof( int32 );
-    listFixture[kCycleOffset + 3] = 0xff;
+    const size_t     cycleAt      = kHeaderBytes + StateIOTestUtil::computeReflectedBytes( rig._director ) - sizeof( int32 );
+    SW_REQUIRE_TRUE( StateIOTestUtil::overwrite( listFixture, cycleAt, int32{ -1 } ) );
     DirectorRig target;
     Archive     fixture( listFixture.data(), listFixture.size() );
     SW_EXPECT_FALSE( target._director.readState( fixture ) );

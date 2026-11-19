@@ -12,6 +12,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -76,9 +77,12 @@ namespace sw
      * @details 스킬 체크는 붙어 있는 사람 중 하나에게 뜬다. 누구에게 뜰지는 시드로 정한다. 응답이 없거나 판정 창 밖이면 실패로 처리해 진행량을 깎고, 맞히면 등급 보너스를 더한다.
      *          판정기가 없거나 간격이 0 이면 스킬 체크는 뜨지 않는다. 끝나면 더 움직이지 않으며, `reset` 으로 다시 시작할 수 있다.
      */
+    REFLECT()
     class SW_GF_API InteractionProgress
     {
     public:
+        REFLECT_BODY();
+
         InteractionProgress();
 
         /**
@@ -116,7 +120,7 @@ namespace sw
         void pollEvents( vector<InteractionEvent>& outListEvent );
 
         /**
-         * @brief 참가자, 난수, 시드, 진행량, 시계, 스킬 체크(대상, 남은 시간, 목표 시각, 대기), 끝남, 퇴행을 씁니다. 규칙과 판정기는 `initialize` 가 받은 것이므로 저장하지 않고, 알림은 읽을 때 비웁니다.
+         * @brief 참가자, 시드, 진행량, 시계, 스킬 체크(대상, 목표 시각, 대기), 끝남, 퇴행(리플렉션 상태 칸)과 난수 · 스킬 체크 남은 시간(손 본문)을 씁니다. 규칙과 판정기는 `initialize` 가 받은 것이므로 저장하지 않고, 알림은 읽을 때 비웁니다.
          *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 참가자가 규칙의 상한을 넘거나 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
          */
         SW_DECLARE_STATE_IO();
@@ -128,19 +132,28 @@ namespace sw
         void pushEvent( InteractionEvent::Kind kind, uint32 actorID, float32 value = 0.0f );
 
     private:
-        InteractionConfig             _config;
+        InteractionConfig _config;
+        PROPERTY( RuntimeState )
         vector<uint32>                _listParticipant; ///< 붙은 순서
         EventBuffer<InteractionEvent> _eventBuffer;
         const TimingJudge*            _pJudge;
         GameRandom                    _random;
-        uint32                        _seed;
-        uint32                        _skillCheckActor;
-        float32                       _progress;
-        float32                       _time;
-        Countdown                     _skillCheckCountdown; ///< 다음 체크까지 남은 시간. 참가자가 있는 동안에만 줄어든다
-        float32                       _skillCheckTarget;
-        uint8                         _bCompleted;
-        uint8                         _bSkillCheckPending;
-        uint8                         _bRegressing;
+        PROPERTY( RuntimeState )
+        uint32 _seed;
+        PROPERTY( RuntimeState )
+        uint32 _skillCheckActor;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        float32 _progress;
+        PROPERTY( RuntimeState )
+        float32   _time;
+        Countdown _skillCheckCountdown; ///< 다음 체크까지 남은 시간. 참가자가 있는 동안에만 줄어든다
+        PROPERTY( RuntimeState )
+        float32 _skillCheckTarget;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bCompleted;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bSkillCheckPending;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bRegressing;
     };
 } // namespace sw

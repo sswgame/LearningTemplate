@@ -10,6 +10,8 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/ReflectedStateUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -34,6 +36,8 @@ namespace sw
 
 namespace sw
 {
+    SW_STATE_FORMAT_UPGRADE( reputationState1To2, "REPU", 1, 2, &ReflectedStateUpgrade::prependHead<ReputationState> ); // 판 1 손 본문은 칸 순서 · 폭이 같다
+
     uint32 ReputationCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<ReputationCatalog>;
@@ -203,17 +207,14 @@ namespace sw
 
     void ReputationState::serializeState( StateIO& io )
     {
-        // 세력마다 이름 길이(4) + 값(4) 이상
-        io.list( _listEntry, 8, [&]( Entry& entry )
+        io.reflected( *this );
+        if ( io.isReading() == false )
+            return;
+        for ( const Entry& entry : _listEntry )
         {
-            io.value( entry._factionID );
-            io.value( entry._value );
-            io.check( entry._factionID.empty() == false );
-        } );
-        if ( io.isReading() )
-        {
-            _eventBuffer.clear();
+            io.check( entry._factionID.empty() == false ); // 이름 칸은 범위로 적을 수 없다
         }
+        _eventBuffer.clear();
     }
 
 } // namespace sw

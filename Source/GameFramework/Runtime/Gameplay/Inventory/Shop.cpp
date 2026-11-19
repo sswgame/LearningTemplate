@@ -9,6 +9,7 @@
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/ReflectedStateUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -106,6 +107,7 @@ namespace sw
         };
     } // namespace
 
+    SW_STATE_FORMAT_UPGRADE( wallet1To2, "WALT", 1, 2, &ReflectedStateUpgrade::prependHead<Wallet> ); // 판 1 손 본문은 칸 순서 · 폭이 같다
     SW_STATE_FORMAT_UPGRADE( shop2To3, "SHOP", 2, 3, &ShopStateInternal::upgradeStateFrom2 );
 } // namespace sw
 
@@ -176,18 +178,15 @@ namespace sw
 
     void Wallet::serializeState( StateIO& io )
     {
-        // 통화마다 이름 길이(4) + 잔액(8) 이상
-        io.list( _listBalance, 12, [&]( WalletBalance& balance )
+        io.reflected( *this );
+        if ( io.isReading() == false )
+            return;
+        for ( const WalletBalance& balance : _listBalance )
         {
-            io.value( balance._currency );
-            io.value( balance._amount );
-            io.check( balance._currency.empty() == false );
-        } );
-        if ( io.isReading() )
-        {
-            _eventBuffer.clear();
-            ++_revision;
+            io.check( balance._currency.empty() == false ); // 이름 칸은 범위로 적을 수 없다
         }
+        _eventBuffer.clear();
+        ++_revision;
     }
 
     int64 Wallet::getBalance( const hashed_string& currency ) const

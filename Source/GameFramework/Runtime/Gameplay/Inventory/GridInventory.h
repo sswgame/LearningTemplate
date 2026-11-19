@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -32,15 +33,24 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 격자에 놓인 아이템 하나입니다. `_x` 와 `_y` 는 왼쪽 위 셀의 좌표입니다. */
+    /** @brief 격자에 놓인 아이템 하나입니다. `_x` 와 `_y` 는 왼쪽 위 셀의 좌표입니다. 리플렉션 구조체 — 가방의 상태 칸(`vector`)이 원소로 싣는다. */
+    REFLECT()
     struct GridItem
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _itemID{};
-        int32         _instanceID{ constant::invalid_index::kInt32 }; ///< 놓을 때 받는 번호(다시 쓰지 않음)
-        int32         _count{ 0 };
-        int32         _x{ 0 };
-        int32         _y{ 0 };
-        uint8         _bRotated{ SW_FALSE }; ///< 회전하면 가로와 세로가 바뀐다
+        PROPERTY( Min = 0 )
+        int32 _instanceID{ constant::invalid_index::kInt32 }; ///< 놓을 때 받는 번호(다시 쓰지 않음)
+        PROPERTY( Min = 1 )
+        int32 _count{ 0 };
+        PROPERTY()
+        int32 _x{ 0 };
+        PROPERTY()
+        int32 _y{ 0 };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bRotated{ SW_FALSE }; ///< 회전하면 가로와 세로가 바뀐다
     };
 } // namespace sw
 
@@ -52,9 +62,12 @@ namespace sw
      * @details 빈 위치 찾기는 회전하지 않은 채로 위쪽 줄의 왼쪽부터 먼저 찾고, 없으면 회전해서 같은 순서로 찾는다. 그래서 같은 상태에서는 항상 같은 위치가 나온다.
      *          넣기는 같은 아이템의 덜 찬 위치를 먼저 채우고, 남는 것을 새 위치에 둔다. 빼기는 모두 있을 때만 빼며, 나중에 놓은 위치부터 뺀다.
      */
+    REFLECT()
     class SW_GF_API GridInventory
     {
     public:
+        REFLECT_BODY();
+
         /** @brief 아이템 id 로 모양을 얻는 함수입니다. 알 수 없는 아이템이면 false 를 반환하고, 그 아이템은 놓을 수 없습니다. */
         using ShapeDelegate = Delegate<bool( const hashed_string& itemID, GridItemShape& outShape )>;
 
@@ -95,7 +108,7 @@ namespace sw
         uint32                  getRevision() const { return _revision; }
 
         /**
-         * @brief 크기, 셀, 아이템(id, 번호, 개수, 위치, 회전 여부), 다음 번호를 씁니다. 모양 조회 함수는 `initialize` 가 받은 것이므로 저장하지 않습니다.
+         * @brief 셀, 아이템(id, 번호, 개수, 위치, 회전 여부), 다음 번호(리플렉션 상태 칸)와 크기(손 본문 — 격자 형식이 리플렉션 밖이다)를 씁니다. 모양 조회 함수는 `initialize` 가 받은 것이므로 저장하지 않습니다.
          *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
          */
         SW_DECLARE_STATE_IO();
@@ -108,11 +121,14 @@ namespace sw
         void                          eraseItemAt( size_t itemIndex );
 
     private:
-        vector<int32>    _listCell; ///< 셀마다 차지한 번호(-1 이면 빔), 줄 단위로 나열
+        PROPERTY( RuntimeState )
+        vector<int32> _listCell; ///< 셀마다 차지한 번호(-1 이면 빔), 줄 단위로 나열
+        PROPERTY( RuntimeState )
         vector<GridItem> _listItem; ///< 놓은 순서
         ShapeDelegate    _shapeLookup;
         GridTopology     _topology; ///< 격자의 너비, 높이, 셀 번호 계산
-        int32            _nextInstanceID;
-        uint32           _revision;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32  _nextInstanceID;
+        uint32 _revision;
     };
 } // namespace sw

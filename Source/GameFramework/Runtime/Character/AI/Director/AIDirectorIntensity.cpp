@@ -140,18 +140,11 @@ namespace sw
 
     void AIDirectorIntensityModel::serializeState( StateIO& io )
     {
-        io.value( _stress );
-        io.value( _calmSeconds );
-        io.expect( static_cast<uint32>( _listSignalValue.size() ) );
-        if ( io.isOk() == false )
-            return;
-        for ( float32& value : _listSignalValue )
-        {
-            io.value( value );
-        }
-        // 스트레스는 0 ~ max, 평온 시간은 음수가 아니다 - 쓰는 쪽은 이 범위만 쓴다.
+        const size_t signalCount = _listSignalValue.size(); // 신호 수는 정의가 정한다 — 읽은 목록이 지금 수와 다르면 거절한다
+        io.reflected( *this );
+        // 칸 사이 검사 — 스트레스 상한은 정의의 `max` 다(하한 · 평온 시간은 칸의 `PROPERTY( Min )`).
         const float32 maxStress = _pDef != nullptr ? _pDef->_max : 0.0f;
-        io.check( 0.0f <= _stress && _stress <= maxStress && 0.0f <= _calmSeconds );
+        io.check( _listSignalValue.size() == signalCount && _stress <= maxStress );
     }
 
 } // namespace sw

@@ -127,11 +127,4 @@ namespace sw
         _hiddenTime = 0.0f;
     }
 
-    void LockOnSelector::serializeState( StateIO& io )
-    {
-        io.value( _target );
-        io.value( _hiddenTime );
-        io.check( 0.0f <= _hiddenTime );
-    }
-
 } // namespace sw

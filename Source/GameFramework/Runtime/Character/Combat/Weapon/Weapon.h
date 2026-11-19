@@ -186,9 +186,12 @@ namespace sw
      *          멈춘 프레임 뒤에 몰아서 쏘지 않으며, CS 의 "한 틱 안의 늦음만 이어 준다"와 같은 규칙이다.
      *          쉬다가 당긴 첫 발은 쉰 시간을 이어 주지 않는다.
      */
+    REFLECT()
     class SW_GF_API WeaponState
     {
     public:
+        REFLECT_BODY();
+
         WeaponState();
 
         /**
@@ -224,7 +227,7 @@ namespace sw
         float32 getReloadRemaining() const { return _reload.getRemaining(); }
 
         /**
-         * @brief 무기 정의 id, 장전한 탄 id, 난수, 쿨다운, 장전, 퍼짐, 탄창, 예비탄을 씁니다. 정의와 조합은 `equip` · `loadProjectile` 의 것이라 id 만 싣고, 읽을 때 지금 것과 id 가 다르면 거절합니다.
+         * @brief 탄창, 예비탄(리플렉션 상태 칸), 무기 정의 id, 장전한 탄 id, 난수, 쿨다운, 장전, 퍼짐(손 본문 — 리플렉션 형식이 아니다)을 씁니다. 정의와 조합은 `equip` · `loadProjectile` 의 것이라 id 만 싣고, 읽을 때 지금 것과 id 가 다르면 거절합니다.
          *        `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
          */
         SW_DECLARE_STATE_IO();
@@ -236,7 +239,9 @@ namespace sw
         Countdown    _cooldown; ///< 다음 발까지 남은 시간. 발사는 `restart` 로 시작해 늦음을 다음 간격에서 뺀다
         Countdown    _reload;
         Radians      _currentSpread;
-        int32        _magazineAmmo;
-        int32        _reserveAmmo;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _magazineAmmo;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _reserveAmmo;
     };
 } // namespace sw

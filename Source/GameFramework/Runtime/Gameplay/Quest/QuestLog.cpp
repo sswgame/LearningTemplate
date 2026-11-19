@@ -11,12 +11,62 @@
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/ReflectedStateUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct QuestLogInternal
+        {
+            /**
+             * @brief 판 1 → 2: 손 본문 바이트 앞에 리플렉션 머리를 붙이고 퀘스트마다 상태를 uint8 에서 int64(리플렉션 열거 폭)로 다시 씁니다. 다른 칸은 순서 · 폭이 같다.
+             */
+            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
+            {
+                if ( ReflectedStateUpgrade::writeHead<QuestLog>( outNewBody ) == false )
+                    return false;
+                StateIO in( inOldBody );
+                StateIO out( outNewBody );
+                uint32  progressCount = 0;
+                in.count( 1, progressCount );
+                out.count( 1, progressCount );
+                for ( uint32 index = 0; index < progressCount && in.isOk(); ++index )
+                {
+                    hashed_string questID;
+                    hashed_string stageID;
+                    vector<int32> listCount;
+                    float32       stageTime       = 0.0f;
+                    int32         completedCount  = 0;
+                    uint8         status          = 0;
+                    uint8         bAwaitingChoice = SW_FALSE;
+                    in.value( questID );
+                    in.value( stageID );
+                    in.list( listCount );
+                    in.value( stageTime );
+                    in.value( completedCount );
+                    in.value( status );
+                    in.value( bAwaitingChoice );
+                    int64 storedStatus = status;
+                    out.value( questID );
+                    out.value( stageID );
+                    out.list( listCount );
+                    out.value( stageTime );
+                    out.value( completedCount );
+                    out.value( storedStatus );
+                    out.value( bAwaitingChoice );
+                }
+                return in.isOk();
+            }
+        };
+    } // namespace
+
+    SW_STATE_FORMAT_UPGRADE( questLog1To2, "QLOG", 1, 2, &QuestLogInternal::upgradeStateFrom1 );
+
     QuestLog::QuestLog()
         : _listProgress{}
         , _eventBuffer{}
@@ -416,27 +466,13 @@ namespace sw
 
     void QuestLog::serializeState( StateIO& io )
     {
-        uint32 progressCount = static_cast<uint32>( _listProgress.size() );
-        // 퀘스트마다 이름 두 개(8) + 목표 수(4) + 단계 시간(4) + 완료 횟수(4) + 상태(1) + 선택 대기(1) 이상
-        io.count( 22, progressCount );
-        if ( io.isOk() == false )
+        io.reflected( *this ); // 단계 시간 · 완료 횟수의 하한과 상태 열거자는 칸이 지킨다
+        if ( io.isReading() == false || io.isOk() == false )
             return;
+        // 읽은 진행을 지금 카탈로그에 맞춘다 — 리플렉션 밖 일(정의 대조)이다
         vector<QuestProgress> listRestored;
-        for ( uint32 progressIndex = 0; progressIndex < progressCount; ++progressIndex )
+        for ( QuestProgress& progress : _listProgress )
         {
-            QuestProgress  restored;
-            QuestProgress& progress = io.isWriting() ? _listProgress[progressIndex] : restored;
-            io.value( progress._questID );
-            io.value( progress._stageID );
-            io.list( progress._listCount );
-            io.value( progress._stageTime );
-            io.value( progress._completedCount );
-            io.enumValue( progress._status, QuestStatus::Failed );
-            io.flag( progress._bAwaitingChoice );
-            if ( io.check( progress._stageTime >= 0.0f && progress._completedCount >= 0 ) == false )
-                return;
-            if ( io.isWriting() )
-                continue;
             const QuestDef* pQuest = _pCatalog != nullptr ? _pCatalog->find( progress._questID ) : nullptr;
             if ( _pCatalog != nullptr && pQuest == nullptr )
             {
@@ -447,11 +483,8 @@ namespace sw
                 reconcileWithDefinition( progress, *pQuest );
             listRestored.push_back( std::move( progress ) );
         }
-        if ( io.isReading() )
-        {
-            _listProgress = std::move( listRestored );
-            _eventBuffer.clear();
-        }
+        _listProgress = std::move( listRestored );
+        _eventBuffer.clear();
     }
 
 } // namespace sw
