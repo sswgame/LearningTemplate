@@ -1140,7 +1140,9 @@ namespace sw
             listTarget.push_back( std::move( info ) );
         };
         appendDisplayTarget( "DisplaySceneTarget", _displayEncode.getSceneTarget(), FrameDisplayEncode::getSceneFormat() );
-        appendDisplayTarget( "DisplayUITarget", _displayEncode.getUITarget(), constant::render::kBackBufferFormat );
+        // UI RT 는 장치가 고른 포맷으로 선다(`FrameDisplayEncode::prepare`) — RT 가 있으면 장치도 있다.
+        if ( _pDevice != nullptr )
+            appendDisplayTarget( "DisplayUITarget", _displayEncode.getUITarget(), _pDevice->getUITargetFormat() );
 
         // 이름순으로 정렬해 둔다. 해시맵 순서는 실행마다 달라서, 정렬하지 않으면 목록이 프레임마다
         // 흔들리는 것처럼 보이고 "어디 있었더라" 를 매번 다시 찾게 된다.
