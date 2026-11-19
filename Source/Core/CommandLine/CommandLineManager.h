@@ -246,6 +246,8 @@ namespace sw
          *          재현 명령)이 `find( '=' )` · 하이픈 떼기를 따로 적으면 공백 · 빈 키 처리가 파서와 어긋난다. 등록된 이름인지는 보지 않습니다.
          */
         [[nodiscard]] static string_view getArgumentName( string_view argumentLine );
+        /** @brief 엔진이 서기 전 @p argument 가 적힌 첫 줄(앞뒤 공백을 뗀 글)입니다. 없으면 빈 값이다 — `isFlagGivenBeforeParse` · `findValueBeforeParse` 의 찾기 하나. */
+        [[nodiscard]] static optional<string_view> findLineBeforeParse( int32 argc, utf8* pPpArgv[], CommandLineArgument argument );
 
     private:
         /** @brief 보류표에 담을 키의 접두어입니다. 이것으로 시작하는 미등록 키만 남깁니다. */

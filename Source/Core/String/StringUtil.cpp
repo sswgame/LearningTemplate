@@ -180,19 +180,42 @@ namespace sw
                 return { codepoint, lead._sequenceLength, true };
             }
 
+            /** @brief 코드 포인트 하나를 UTF-16 단위로 @p out 끝에 붙입니다 — 평면 밖은 서로게이트 쌍이다(인코딩은 여기 하나). */
+            template <typename TUnitContainer>
+            static void appendUTF16Units( TUnitContainer& out, const uint32 codepoint )
+            {
+                using Unit = typename TUnitContainer::value_type;
+                if ( codepoint < kUTF16LowBoundary )
+                {
+                    out.push_back( static_cast<Unit>( codepoint ) );
+                    return;
+                }
+                const uint32 value = codepoint - kUTF16LowBoundary;
+                out.push_back( static_cast<Unit>( kSurrogateBegin + ( value >> kSurrogatePayloadBits ) ) );
+                out.push_back( static_cast<Unit>( kLowSurrogateBegin + ( value & kSurrogatePayloadMask ) ) );
+            }
+
+            /**
+             * @brief UTF-16 단위 열 @p pUnit(@p count 개)의 @p inoutIndex 자리 글자 하나를 읽고 다음 자리로 옮깁니다 — 쌍은 한 글자, 짝 없는 서로게이트는 U+FFFD(디코딩은 여기 하나).
+             */
+            template <typename TUnit>
+            static uint32 decodeUTF16Unit( const TUnit* pUnit, const size_t count, size_t& inoutIndex )
+            {
+                const uint32 unit = static_cast<uint32>( pUnit[inoutIndex] );
+                ++inoutIndex;
+                if ( unit < kSurrogateBegin || unit > kSurrogateEnd )
+                    return unit;
+                const uint32 next = inoutIndex < count ? static_cast<uint32>( pUnit[inoutIndex] ) : 0u;
+                if ( unit >= kLowSurrogateBegin || next < kLowSurrogateBegin || next > kSurrogateEnd )
+                    return kReplacementCodepoint;
+                ++inoutIndex;
+                return kUTF16LowBoundary + ( ( unit - kSurrogateBegin ) << kSurrogatePayloadBits ) + ( next - kLowSurrogateBegin );
+            }
+
             static void appendWideChar( wstring& out, const uint32 codepoint )
             {
                 if constexpr ( sizeof( utf16 ) == 2 )
-                {
-                    if ( codepoint < kUTF16LowBoundary )
-                        out.push_back( static_cast<utf16>( codepoint ) );
-                    else
-                    {
-                        const uint32 value = codepoint - kUTF16LowBoundary;
-                        out.push_back( static_cast<utf16>( 0xD800 + ( value >> 10 ) ) );
-                        out.push_back( static_cast<utf16>( 0xDC00 + ( value & 0x3FF ) ) );
-                    }
-                }
+                    appendUTF16Units( out, codepoint );
                 else
                     out.push_back( static_cast<utf16>( codepoint ) );
             }
@@ -533,25 +556,8 @@ namespace sw
 
             if constexpr ( sizeof( utf16 ) == 2 )
             {
-                const bool bIsHighSurrogate = ( 0xD800 <= codepoint && codepoint <= 0xDBFF );
-                if ( bIsHighSurrogate )
-                {
-                    if ( pos + 1 < length )
-                    {
-                        const uint32 lowSurrogate = pInput[pos + 1];
-                        if ( 0xDC00 <= lowSurrogate && lowSurrogate <= 0xDFFF )
-                        {
-                            codepoint = StringUtilInternal::kUTF16LowBoundary + ( ( codepoint - 0xD800 ) << 10 ) + ( lowSurrogate - 0xDC00 );
-                            ++pos;
-                        }
-                        else
-                            codepoint = 0xFFFD;
-                    }
-                    else
-                        codepoint = 0xFFFD;
-                }
-                else if ( 0xDC00 <= codepoint && codepoint <= 0xDFFF )
-                    codepoint = 0xFFFD;
+                StringUtilInternal::appendUTF8( result, StringUtilInternal::decodeUTF16Unit( pInput, length, pos ) );
+                continue;
             }
 
             StringUtilInternal::appendUTF8( result, codepoint );
@@ -1288,14 +1294,7 @@ namespace sw
         {
             uint32 codepoint = 0;
             (void)tryDecodeUTF8( text, offset, codepoint ); // 잘못된 시퀀스면 U+FFFD 다
-            if ( codepoint < Internal::kUTF16LowBoundary )
-            {
-                outListUnit.push_back( static_cast<uint16>( codepoint ) );
-                continue;
-            }
-            const uint32 value = codepoint - Internal::kUTF16LowBoundary;
-            outListUnit.push_back( static_cast<uint16>( Internal::kSurrogateBegin + ( value >> Internal::kSurrogatePayloadBits ) ) );
-            outListUnit.push_back( static_cast<uint16>( Internal::kLowSurrogateBegin + ( value & Internal::kSurrogatePayloadMask ) ) );
+            Internal::appendUTF16Units( outListUnit, codepoint );
         }
     }
 
@@ -1303,22 +1302,10 @@ namespace sw
     {
         using Internal = StringUtilInternal;
         outText.clear();
-        for ( size_t index = 0; index < count; ++index )
+        size_t index = 0;
+        while ( index < count )
         {
-            const uint32 unit = pUnit[index];
-            if ( unit < Internal::kSurrogateBegin || unit > Internal::kSurrogateEnd )
-            {
-                Internal::appendUTF8( outText, unit );
-                continue;
-            }
-            const uint32 next = index + 1 < count ? static_cast<uint32>( pUnit[index + 1] ) : 0u;
-            if ( unit < Internal::kLowSurrogateBegin && next >= Internal::kLowSurrogateBegin && next <= Internal::kSurrogateEnd )
-            {
-                Internal::appendUTF8( outText, Internal::kUTF16LowBoundary + ( ( unit - Internal::kSurrogateBegin ) << Internal::kSurrogatePayloadBits ) + ( next - Internal::kLowSurrogateBegin ) );
-                ++index;
-                continue;
-            }
-            Internal::appendUTF8( outText, Internal::kReplacementCodepoint ); // 짝 없는 서로게이트
+            Internal::appendUTF8( outText, Internal::decodeUTF16Unit( pUnit, count, index ) );
         }
     }
 
