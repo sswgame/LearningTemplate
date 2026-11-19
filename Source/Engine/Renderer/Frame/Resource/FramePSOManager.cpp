@@ -122,8 +122,17 @@ namespace sw
             state                    = RenderState{};
             state._bEnableDepthTest  = info.hasFlag( RenderPassTraitFlag::kDepthTest ) ? SW_TRUE : SW_FALSE;
             state._bEnableDepthWrite = ( info.hasFlag( RenderPassTraitFlag::kDepthTest ) && info.hasFlag( RenderPassTraitFlag::kDepthWrite ) ) ? SW_TRUE : SW_FALSE;
-            if ( info.hasFlag( RenderPassTraitFlag::kBlend ) )
-                state.setAllBlendTargets( info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) ? BlendTargetState::makePremultipliedAlpha() : BlendTargetState::makeStraightAlpha() );
+            switch ( info._blend )
+            {
+                case RenderPassBlend::None:
+                    break;
+                case RenderPassBlend::Straight:
+                    state.setAllBlendTargets( BlendTargetState::makeStraightAlpha() );
+                    break;
+                case RenderPassBlend::Premultiplied:
+                    state.setAllBlendTargets( BlendTargetState::makePremultipliedAlpha() );
+                    break;
+            }
             // 풀스크린 삼각형의 와인딩에는 앞뒤 의미가 없다. 컬링하면 화면이 빈다.
             if ( getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false )
                 state._cullMode = CullMode::None;
