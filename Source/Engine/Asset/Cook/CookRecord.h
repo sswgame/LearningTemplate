@@ -69,11 +69,24 @@ namespace sw
         Valid,          ///< 서술이 같고 본문 해시가 맞다
     };
 
-    /** @struct DerivedDataLayer @brief DDC 층 하나(폴더 루트와 쓰기 권한)입니다. */
+    /**
+     * @struct DerivedDataEvictionPolicy
+     * @brief 쓰기 가능 층의 정리 규칙입니다(`DerivedDataCache::evictUnusedEntries`).
+     * @details 언리얼 파일 시스템 DDC 의 `UnusedFileAge`(찾을 때 파일 시각을 갱신하고 오래 안 쓴 항목을 지운다)에 Zen 캐시의 디스크 상한을 더한 꼴이다 —
+     *          쿠킹 팩 항목이 코드 지문마다 새로 생겨 나이만으로는 하루 수십 GB 가 쌓인다.
+     */
+    struct DerivedDataEvictionPolicy
+    {
+        uint32 _unusedFileAgeDays{ 0 }; ///< 이 날 수 넘게 찾거나 쓰지 않은 항목을 지운다
+        uint64 _maxSizeBytes{ 0 };      ///< 층 합계가 넘으면 오래 안 쓴 항목부터 지운다
+    };
+
+    /** @struct DerivedDataLayer @brief DDC 층 하나(폴더 루트와 쓰기 권한, 정리 규칙)입니다. */
     struct DerivedDataLayer
     {
-        string            _rootPath;
-        DerivedDataAccess _access{ DerivedDataAccess::ReadOnly };
+        string                              _rootPath;
+        DerivedDataAccess                   _access{ DerivedDataAccess::ReadOnly };
+        optional<DerivedDataEvictionPolicy> _evictionPolicy; ///< 없으면 이 프로세스가 지우지 않는다(읽기 전용 층 · 테스트 층)
     };
 
     /**
@@ -103,6 +116,7 @@ namespace sw
          * @brief `Config/Dev/DerivedData.json` 의 층 목록으로 만듭니다. 파일이 없거나 칸이 틀리면 오류입니다(폴백 없음).
          * @details 층은 `_root`(파생 데이터 루트 `<프로젝트>/Saved` 기준 폴더)나 `_rootEnvironment`(머신마다 다른 절대 경로를 담은 환경 변수) 중 하나를 쓴다.
          *          환경 변수가 없거나 비었으면 그 층은 없는 것이다(로그 `DDC.SharedLayerOff` — 층은 선택 항목이지 필수 값이 아니다).
+         *          쓰기 가능 층은 정리 규칙 `_unusedFileAgeDays` · `_maxSizeGB`(둘 다 1 이상)가 필수다.
          */
         [[nodiscard]] static expected<DerivedDataCache> loadFromConfig();
 
@@ -120,6 +134,12 @@ namespace sw
         [[nodiscard]] bool store( uint64 key, string_view keyDescription, const vector<uint8>& bytes ) const;
         /** @brief `store` 의 파일 꼴입니다 — 파일 @p sourcePath 를 조각으로 읽어 항목으로 씁니다(메모리로 들지 않는다). */
         [[nodiscard]] bool store( uint64 key, string_view keyDescription, string_view sourcePath ) const;
+        /**
+         * @brief 정리 규칙이 있는 층마다 오래 안 쓴 항목(마지막 쓰기 시각 — 찾기 히트가 갱신한다)을 지우고, 합계가 상한을 넘으면 오래된 것부터 더 지웁니다.
+         * @details 쿠킹 시작에 한 번 부른다. 다른 프로세스가 읽는 중이라 못 지운 항목은 건너뛴다(다음 정리가 지운다). 지운 항목 찾기는 미스일 뿐이다.
+         * @return 지운 항목 수
+         */
+        uint32 evictUnusedEntries() const;
         /** @brief 항목 파일 @p path 를 검증합니다. Valid 면 @p outBytes 에 본문을 담습니다. 로그를 남기지 않습니다. */
         [[nodiscard]] static DerivedDataEntryState validateEntry( string_view path, string_view keyDescription, vector<uint8>& outBytes );
         /** @brief 층 @p layerIndex 의 키 파일 경로입니다. */

@@ -1,7 +1,8 @@
-// DerivedDataCacheTest — DDC 층 목록: 뒤(공유) 층 히트는 앞(로컬) 층에 채우고, 키 서술이 다르거나 본문이 깨진 항목은 미스이며, 읽기 전용 층에는 쓰지 않는다(nogpu).
+// DerivedDataCacheTest — DDC 층 목록: 뒤(공유) 층 히트는 앞(로컬) 층에 채우고, 키 서술이 다르거나 본문이 깨진 항목은 미스이며, 읽기 전용 층에는 쓰지 않으며, 정리는 오래 안 쓴 항목부터 지운다(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Cook/CookRecord.h"
@@ -133,4 +134,37 @@ SW_TEST_CASE( DerivedDataCacheTest, ExistingSameEntryIsKept )
     SW_EXPECT_TRUE( bytes == changed );
     SW_EXPECT_TRUE( DerivedDataCache::validateEntry( path, "job-a", bytes ) == DerivedDataEntryState::Valid );
     SW_EXPECT_TRUE( DerivedDataCache::validateEntry( path, "job-b", bytes ) == DerivedDataEntryState::KeyCollision );
+}
+
+/**
+ * @brief [DerivedDataCacheTest] 정리는 나이가 지난 항목을 지우고, 합계가 상한을 넘으면 오래 안 쓴 것부터 더 지운다 — 찾기 히트는 시각을 올려 남는다
+ */
+SW_TEST_CASE( DerivedDataCacheTest, EvictsUnusedThenOldestOverLimit )
+{
+    const DerivedDataCacheFixture fixture;
+    constexpr int64               kDayTicks  = constant::time::kSecondsPerDay * FileUtil::kFileTimeTicksPerSecond;
+    const int64                   now        = FileUtil::getCurrentFileWriteTime();
+    const uint64                  keyExpired = 1, keyOld = 2, keyHit = 3, keyNew = 4;
+    DerivedDataCache              writer{ vector<DerivedDataLayer>{ DerivedDataLayer{ fixture._localRoot, DerivedDataAccess::ReadWrite } } };
+    for ( const uint64 key : { keyExpired, keyOld, keyHit, keyNew } )
+    {
+        SW_REQUIRE_TRUE( writer.store( key, "job", kPayload ) );
+    }
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( writer.makePath( 0, keyExpired ), now - 10 * kDayTicks ) );
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( writer.makePath( 0, keyOld ), now - 3 * kDayTicks ) );
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( writer.makePath( 0, keyHit ), now - 4 * kDayTicks ) );
+    uint64 entryBytes = 0;
+    SW_REQUIRE_TRUE( FileUtil::tryGetFileSize( writer.makePath( 0, keyNew ), entryBytes ) );
+
+    // 상한은 항목 둘 — 나이로 하나(10 일), 상한으로 하나(남은 셋 중 가장 오래 안 쓴 3 일)가 지워진다. 4 일 전 항목은 찾기 히트로 지금 시각이 됐다.
+    const DerivedDataCache cache{ vector<DerivedDataLayer>{
+        DerivedDataLayer{ fixture._localRoot, DerivedDataAccess::ReadWrite, DerivedDataEvictionPolicy{ 7, entryBytes * 2 } } } };
+    vector<uint8>          bytes;
+    SW_REQUIRE_TRUE( cache.find( keyHit, "job", bytes ) );
+    SW_EXPECT_EQUAL( 2u, cache.evictUnusedEntries() );
+    SW_EXPECT_FALSE( FileUtil::isRegularFile( cache.makePath( 0, keyExpired ) ) );
+    SW_EXPECT_FALSE( FileUtil::isRegularFile( cache.makePath( 0, keyOld ) ) );
+    SW_EXPECT_TRUE( FileUtil::isRegularFile( cache.makePath( 0, keyHit ) ) );
+    SW_EXPECT_TRUE( FileUtil::isRegularFile( cache.makePath( 0, keyNew ) ) );
+    SW_EXPECT_EQUAL( 0u, cache.evictUnusedEntries() );
 }

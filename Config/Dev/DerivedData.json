@@ -1,6 +1,6 @@
 {
     "_listLayer": [
-        { "_name": "Local", "_root": "DDC", "_rootEnvironment": "", "_access": "ReadWrite" },
+        { "_name": "Local", "_root": "DDC", "_rootEnvironment": "", "_access": "ReadWrite", "_unusedFileAgeDays": 14, "_maxSizeGB": 40 },
         { "_name": "Shared", "_root": "", "_rootEnvironment": "SW_SHARED_DDC", "_access": "ReadOnly" }
     ]
 }

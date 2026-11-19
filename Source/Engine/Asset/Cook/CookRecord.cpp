@@ -118,6 +118,16 @@ namespace sw
                 return false;
             }
 
+            /** @brief 히트한 항목의 쓰기 시각을 지금으로 올립니다(정리의 "마지막 사용" — 언리얼 파일 DDC 의 touch). 하루 안에 올린 항목은 건너뛴다(히트마다 메타데이터를 쓰지 않게). */
+            static void touchEntry( const DerivedDataLayer& layer, const string& path )
+            {
+                constexpr int64 kTouchIntervalTicks = constant::time::kSecondsPerDay * FileUtil::kFileTimeTicksPerSecond;
+                const int64     now                 = FileUtil::getCurrentFileWriteTime();
+                int64           writeTicks          = 0;
+                if ( layer._evictionPolicy.has_value() && FileUtil::getFileWriteTime( path, writeTicks ) && now - writeTicks > kTouchIntervalTicks )
+                    (void)FileUtil::setFileWriteTime( path, now ); // 실패는 setFileWriteTime 이 알린다 — 히트를 무르지 않는다(다음 정리에 일찍 지워질 뿐)
+            }
+
             /** @brief 파일 @p sourcePath 를 조각으로 @p writer 끝에 붙입니다(한 벡터로 들지 않는다). */
             [[nodiscard]] static bool appendFile( AtomicFileWriter& writer, string_view sourcePath )
             {
@@ -315,6 +325,15 @@ namespace sw
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a DDC layer needs _name, _access (ReadOnly or ReadWrite) and exactly one of _root or _rootEnvironment", path } );
             DerivedDataLayer layer;
             layer._access = *access == "ReadWrite" ? DerivedDataAccess::ReadWrite : DerivedDataAccess::ReadOnly;
+            if ( layer._access == DerivedDataAccess::ReadWrite )
+            {
+                // 쓰는 층은 정리 규칙이 필수다 — 없으면 쿠킹 팩 항목이 코드 지문마다 쌓여 디스크를 채운다(2026-11-19 로컬 111 GB).
+                const optional<uint32> ageDays = entry.readRequired<uint32>( "_unusedFileAgeDays" );
+                const optional<uint32> maxGB   = entry.readRequired<uint32>( "_maxSizeGB" );
+                if ( ageDays.has_value() == false || maxGB.has_value() == false || *ageDays == 0 || *maxGB == 0 )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a ReadWrite DDC layer needs _unusedFileAgeDays and _maxSizeGB of at least 1", path } );
+                layer._evictionPolicy = DerivedDataEvictionPolicy{ *ageDays, uint64{ *maxGB } * constant::memory::kBytesPerGigabyte };
+            }
             if ( root->empty() == false )
                 layer._rootPath = FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), *root );
             else if ( ProcessEnvironment::tryReadNonEmpty( *environment, layer._rootPath ) == false )
@@ -325,6 +344,59 @@ namespace sw
             listLayer.push_back( std::move( layer ) );
         }
         return DerivedDataCache{ std::move( listLayer ) };
+    }
+
+    uint32 DerivedDataCache::evictUnusedEntries() const
+    {
+        struct Entry
+        {
+            string _path;
+            uint64 _sizeBytes{ 0 };
+            uint64 _writeTime{ 0 };
+        };
+        uint32      removedTotal = 0;
+        const int64 now          = FileUtil::getCurrentFileWriteTime();
+        for ( const DerivedDataLayer& layer : _listLayer )
+        {
+            if ( layer._evictionPolicy.has_value() == false || FileUtil::isDirectory( layer._rootPath ) == false )
+                continue;
+            vector<Entry> listEntry;
+            uint64        totalBytes = 0;
+            const bool    bScanned   = FileUtil::forEachDirectoryEntry( layer._rootPath, true, [&]( const DirectoryEntry& entry )
+                 {
+                FileStamp stamp;
+                if ( entry._bDirectory == false && FileUtil::getFileStamp( entry._path, stamp ) )
+                {
+                    listEntry.push_back( Entry{ string( entry._path ), stamp._sizeBytes, stamp._writeTime } );
+                    totalBytes += stamp._sizeBytes;
+                }
+                return true;
+            } );
+            if ( bScanned == false )
+                continue; // forEachDirectoryEntry 가 경고했다 — 반만 본 목록으로 상한을 재지 않는다
+            VectorUtil::stableSort( listEntry, []( const Entry& lhs, const Entry& rhs )
+            { return lhs._writeTime < rhs._writeTime; } ); // 같은 시각은 순회 순서(이름 순) — 지우는 항목이 실행마다 같다
+            const int64 ageTicks   = int64{ layer._evictionPolicy->_unusedFileAgeDays } * constant::time::kSecondsPerDay * FileUtil::kFileTimeTicksPerSecond;
+            const int64 cutoff     = now - ageTicks;
+            uint32      removed    = 0;
+            uint64      freedBytes = 0;
+            // 오래된 것부터 — 나이도 지나지 않았고 합계도 상한 안이면 뒤는 모두 남긴다.
+            for ( const Entry& entry : listEntry )
+            {
+                if ( static_cast<int64>( entry._writeTime ) >= cutoff && totalBytes <= layer._evictionPolicy->_maxSizeBytes )
+                    break;
+                if ( FileUtil::tryRemoveFile( entry._path ) == false )
+                    continue; // 다른 프로세스가 읽는 중 — 다음 정리가 지운다
+                totalBytes -= entry._sizeBytes;
+                freedBytes += entry._sizeBytes;
+                ++removed;
+            }
+            if ( removed > 0 )
+                SW_LOG_INFO_ID( "DDC.EntriesEvicted", "DDC '%#': removed %# entries (%# MB) unused for %# days or over the %# GB limit - %# MB kept", layer._rootPath, removed,
+                                freedBytes / constant::memory::kBytesPerMegabyte, layer._evictionPolicy->_unusedFileAgeDays, layer._evictionPolicy->_maxSizeBytes / constant::memory::kBytesPerGigabyte, totalBytes / constant::memory::kBytesPerMegabyte );
+            removedTotal += removed;
+        }
+        return removedTotal;
     }
 
     string DerivedDataCache::makePath( size_t layerIndex, uint64 key ) const
@@ -340,6 +412,7 @@ namespace sw
             const string path = makePath( layerIndex, key );
             if ( CookRecordInternal::reportEntry( path, validateEntry( path, keyDescription, outBytes ) ) == false )
                 continue;
+            CookRecordInternal::touchEntry( _listLayer[layerIndex], path );
             // 뒤 층 히트는 앞의 쓰기 가능 층에 채운다 — 다음 찾기는 가까운 층에서 끝난다. 채우기 실패는 히트를 무르지 않는다(다음에 다시 채운다).
             const uint64 payloadHash = ContentHash::computeBytes( outBytes );
             for ( size_t fillIndex = 0; fillIndex < layerIndex; ++fillIndex )
@@ -378,6 +451,7 @@ namespace sw
                 continue; // writer 가 소멸하며 임시 파일을 지운다
             if ( writer.commit().has_value() == false )
                 return false;
+            CookRecordInternal::touchEntry( _listLayer[layerIndex], path );
             for ( size_t fillIndex = 0; fillIndex < layerIndex; ++fillIndex )
             {
                 const bool bFilled = _listLayer[fillIndex]._access == DerivedDataAccess::ReadOnly ||

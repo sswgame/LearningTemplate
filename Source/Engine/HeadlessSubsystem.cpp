@@ -506,6 +506,8 @@ namespace sw
                     return true;
                 }
                 const CookStore& cookStore = *localStore;
+                // 쿠킹 시작에 한 번 — 언리얼 파일 DDC 가 시작할 때 오래 안 쓴 항목을 지우는 자리다. 지운 수는 DDC.EntriesEvicted 로그가 남긴다.
+                cookStore.getDerivedDataCache().evictUnusedEntries();
                 // 앞 쿠킹이 남긴 내용 해시를 싣는다 — 도장이 같은 입력은 읽지 않는다. 캐시라 못 읽어도 빈 채로 계속한다(다음 저장이 새로 쓴다).
                 ContentHashCache&    hashCache = engine::getSubsystem<ContentHashCache>();
                 const expected<void> hashLoad  = hashCache.load( ContentHashCache::makeLocalCachePath() );
