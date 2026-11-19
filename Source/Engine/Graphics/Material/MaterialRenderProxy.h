@@ -61,7 +61,7 @@ namespace sw
         explicit MaterialRenderProxy( CreateKey );
         /** @brief Engine.dll 안에서 shared_ptr 로 만듭니다. */
         static shared_ptr<MaterialRenderProxy> create();
-        /** @brief 살아 있는 디바이스면 상수 버퍼 구간을 돌려줍니다. */
+        /** @brief 살아 있는 디바이스면 상수 버퍼 구간을 돌려줍니다(구간 핸들이 스스로 돌려준다). */
         ~MaterialRenderProxy() override;
 
         /**
@@ -77,12 +77,7 @@ namespace sw
         void clearRHI( IRHIDevice* pDevice ) override;
 
     private:
-        /** @brief 핸들을 비우고 다음 `sync` 가 다시 올리게 합니다. */
-        void clearHandles();
-
-    private:
-        IRHIDevice*                          _pDevice;  ///< 구간을 준 디바이스(통보를 받으므로 구간이 있으면 살아 있다)
-        ConstantBufferPoolSlice              _constant; ///< 페이지 풀의 구간과 그 bindless 인덱스
+        ConstantBufferPoolSlice              _constant; ///< 페이지 풀의 구간 · bindless 인덱스와 그것을 준 디바이스(소멸 때 돌려준다 — 통보를 받으므로 들고 있으면 산 디바이스다)
         shared_ptr<const MaterialRenderData> _uploaded; ///< 마지막으로 올린 사본. 같은 사본이면 다시 올리지 않는다
     };
 } // namespace sw
