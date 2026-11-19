@@ -189,6 +189,10 @@
 		<entry source="Graphics" text="그래픽" />
 		<entry source="Graphics Quality" text="그래픽 품질" />
 		<entry source="Groups" text="묶음" />
+		<entry source="HDR" text="HDR" />
+		<entry source="HDR Paper White" text="HDR 페이퍼 화이트" />
+		<entry source="HDR Peak Brightness" text="HDR 최대 밝기" />
+		<entry source="HDR10" text="HDR10" />
 		<entry source="Head Bob" text="걸음 흔들림" />
 		<entry source="Headphones (3D)" text="헤드폰 (3D)" />
 		<entry source="Height ratio (0 = pelvis)" text="높이 비(0 = 골반)" />
@@ -604,6 +608,7 @@
 		       text="오프셋 {offsetX}, {offsetY}, {offsetZ}  거리 {distance}  피치 {pitch}  요 {yaw}  시야각 {computeFieldOfViewY}" />
 		<entry source="removed here" text="여기서 뺌" />
 		<entry source="replaced here" text="여기서 갈아끼움" />
+		<entry source="scRGB" text="scRGB" />
 		<entry source="tick {tick}  input focus: world {inputFocus}" text="틱 {tick}  입력 초점: 월드 {inputFocus}" />
 		<entry source="unsupported" text="받지 않음" />
 		<entry source="{anchor}  clip {clip}  {stage} {clipSeconds} s{f}"
