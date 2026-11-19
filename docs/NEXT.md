@@ -8,7 +8,7 @@
 
 ## 0. 다음 순서
 
-1. **다음 묶음:** 작업자 갈래(w-gentu2 · w-rn4 · w-s8 · w-n11 · w-gvsnap · w-k11 · w-a13 · w-rn6 단계 · w-editorthread 단계)를 둘 · 셋씩 병합 → Debug · Release 증분 빌드로 컴파일 먼저 → `preflight --no-linux` → push → 워크트리 지움. 할 일을 끝낼 때 Linux(`linux_scenarios.py all` + sanitize)를 모아서 한 번.
+1. **이번 묶음(2026-11-19, 작업자 13):** w-par(병렬 출력 칸 · 작업 계기) · w-tickread(틱 중 남 읽기 검출) · w-schemaver(상태 직렬화 생성 · 타입 판 패치 · 저장 이관) · w-enum · w-angle(`Radians`) · w-net(메시지 방향 · 본문 스키마) · w-catalogkey · w-skyfis · w-post(TAA · 자동 노출) · w-ddgi · w-hzb · w-mcp · w-manip. 둘 · 셋씩 병합 → 합칠 때마다 Release · Shipping · Release-ASan · Shipping-Server 증분 빌드 + 그 갈래 테스트 · 시나리오(dx12, 그림이 바뀌면 네 백엔드 골든) → `preflight --no-linux` → push → 워크트리 지움. 다음 묶음: 헤더 팬인 다이어트(감사 8 — 다른 갈래와 헤더가 겹쳐 혼자 마지막), 렌더 그래프 접근 종류 핸들(HZB 뒤), HDR 디스플레이 출력, Fileserve, 5 절 남은 설계 일. Linux 는 사용자가 시킬 때.
    - 작업자 몫: `GameObjectManager.inl` 머리말의 "포함을 잊으면 링크에서 멈춘다" 를 맞춘다 — clang 은 `-Werror=undefined-func-template`(`sw_require_template_definitions`)로 컴파일에서 멈추고 MSVC 만 링크에서 멈춘다. 그 뒤 에셋 GUID 2 · 3 단계(5 절).
 2. **감사 열린 항목(7 절):** 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 작업자에게는 NEXT 를 고치지 말게 하고 통합 커밋이 줄을 지운다 — 커밋 메시지는 `감사 <ID>` 꼴(옛 백로그 번호와 겹친다).
 
@@ -107,7 +107,6 @@
 - **RN-6 [34] GPUScene 부분 수집 · 업로드(고정 칸 · 프리리스트 · 칸 순 버퍼 · 구성원 고치기)** — 1~4 단계 끝(`9af8af22b3` · `ee1b3d50d8` · 2 단계 칸 순 발행 · 3 단계 `patchBatchMembership` · 4 단계 머티리얼 대기 칸만 다시 보기). 잴 것: 측정 장치 커밋 `31f2492dc8` 과 4 단계 커밋에서 각각 `ctest -R Scenario.empty.load.instancechurn` 를 돌려 `GT.GPUScene.build.collect` · `GT.GPUScene.build.batches` · `RT.GPUScene.slotInstances` p50 을 견준다(`GT.GPUScene.build.patchEnter` 가 0 이 아니어야 구성원 고치기를 탔다). 남은 한계: 배치 사이 여유 칸이 없어 드나들면 차례 목록(uint32)을 O(N) 다시 쓴다(GPU 는 바뀐 구간만) · 새 키는 다시 나눈다(그리기 띠 · 차례 순서를 지키며 배치를 끼울 자리가 없다) — 측정이 문턱을 넘으면 배치 용량(유니티 GRD)부터.
 - **A-13 [36] 씬 스트리밍 — 측정만 남음**: `--cook-all` 뒤 `App -scenario=game/empty/automation/load/streamingcells.scenario.xml -unattended -cooked-content` 로 구간 `GT.Scene.service.SceneStreaming` 최대 프레임(셀 400 × 상자 2000, 짓기 예산 `_addToWorldBudgetMicroseconds` 2000 us). 셀 안 엔티티 단위 나눠 짓기 · 머리만 읽기 · 내비메시 타일 스트리밍까지 들어갔다(씬 쿠킹본 판 9, `.navmesh` 판 2 — 다시 쿠킹).
 - **S-8 [37] 캐릭터 일괄 이동 측정** — `App -scenario=game/empty/automation/load/charactermove.scenario.xml -unattended -workers=N`(N = 1 · 4 · 8, 캐릭터 500)의 `GT.Physics.moveCharacters` 를 잰다(PO-3).
-- **N-11 [43] 송신률 조절** — 코드 끝(`NetSendThrottle` AIMD, 계수 `Config/Engine/NetSendThrottle.json`). 통합 확인: `App --test --test-filter=NetSendThrottleTest.*,NetEndpointTest.*,ConfigFileSchemaTest.*,GameNetSessionFrameHooksTest.*` — 손실 20 % 에서 조절 연결의 `_resentMessageCount` 가 고정 버킷의 3/4 미만이고 속도가 하한(20000)에 머무는지, 손실 0 에서 상한으로 돌아오는지.
 - **A-24 [47]** 리플렉션 묶음 TU 가 헤더 하나에 전체를 다시 파싱 — 1 절 5-4 리플렉션.
 - **K-11 [50] 슈터 적 풀링 확인(통합)** — 코드는 섰다(`Component::resetToSpawnState` 풀 계약 · `PrefabPoolPolicy` · 종류마다 `_pool`). 통합 담당이 Tracy `GameModeFlush` 를 풀 전후로 재고, shooter3d 시나리오(`enemydeath` · `dismemberment` · `effectpool` · `autoplay`)를 한 번에 돌린다 — 다시 꺼낸 적이 래그돌 · 절단 · 무기 · 빙의 없이 서는지.
 
