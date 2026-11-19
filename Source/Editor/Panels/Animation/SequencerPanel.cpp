@@ -1231,7 +1231,7 @@ namespace sw::editor
         if ( _previewPlayer == nullptr )
             return;
         _previewPlayer->setAsset( captureAsset() );
-        _previewPlayer->setLoop( true );
+        _previewPlayer->setLoopMode( SequenceLoopMode::Loop );
     }
 
     void SequencerPanel::updatePreview( float32 deltaSeconds )

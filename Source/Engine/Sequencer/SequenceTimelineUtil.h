@@ -17,6 +17,7 @@ namespace sw
 {
     struct PropertyInfo;
     struct SequenceKeyTrack;
+    struct SequencePlaybackSegment;
     struct SequencePlaybackStep;
 
     class AnimationClip;
@@ -155,6 +156,7 @@ namespace sw
         GameObject*              _pTarget{ nullptr };
         SequenceSpanState*       _pState{ nullptr };
         float32                  _framesPerSecond{ 30.0f };
+        float32                  _playRate{ 1.0f }; ///< 재생 속도(음수 = 역방향) — 벽시계 길이(자막이 보이는 시간)는 시퀀스 길이 ÷ |속도|
         int32                    _frame{ 0 };
     };
 
@@ -175,26 +177,14 @@ namespace sw
     struct SW_API SequenceTimelineUtil
     {
         /**
-         * @brief "이전 프레임이 없다"는 표시입니다. 이 값을 넘기면 이벤트를 쏘지 않습니다.
-         * @details `-1` 이나 `previousFrame < 0` 판정을 쓰지 않는다. **음수 프레임이 있는 시퀀스에서는 멀쩡한 이전 프레임이
-         *          이 뜻으로 읽히고**, `_frameMin` 이 0 인 시퀀스에서는 "첫 프레임을 막 지났다"(-1)와 겹쳐 첫 프레임 이벤트를 쏠 수 없다.
-         */
-        static constexpr int32 kNoPreviousFrame = ( -2147483647 - 1 );
-
-        /**
-         * @brief 그 프레임의 클립 활성 상태, 카메라 컷, 키 트랙 값을 적용하고, 지나간 이벤트를 모읍니다.
-         * @param previousFrame 직전에 적용한 프레임입니다. 이벤트는 그 사이를 **지나간 것**만 셉니다.
-         *                      `kNoPreviousFrame` 이면 이벤트를 보지 않습니다.
-         * @param pOutListCrossedEvent nullptr 가 아니면 이번에 지나간 이벤트 항목들로 **채웁니다**(먼저 비웁니다).
-         *                             가리키는 `SequenceTrackItem` 은 @p asset 안의 원소이므로 에셋보다 오래 살지 않습니다.
+         * @brief 그 프레임의 클립 활성 상태, 카메라 컷, 키 트랙 값을 적용합니다(상태 — 이벤트는 보지 않는다, `applyPlayback`).
          * @details 묶이지 않은 바인딩의 항목 · 트랙은 건너뛴다(재생은 시작 때 누락을 오류로 멈춘다 — `SequencePlayerComponent::play`). 구간 동작은 `applySpans` 가 따로 돈다.
          */
-        static void applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame,
-                                int32                             previousFrame        = kNoPreviousFrame,
-                                vector<const SequenceTrackItem*>* pOutListCrossedEvent = nullptr );
+        static void applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame );
         /**
-         * @brief 플레이어의 이번 갱신을 적용합니다(`applyFrame`). 루프를 되감았으면 되감기 전 끝 구간(직전 프레임, `_frameMax`]의
-         *        이벤트를 먼저 모읍니다. 그 구간과 되감은 뒤 구간을 합친 것이 이번 갱신에 지나간 이벤트입니다.
+         * @brief 플레이어의 갱신 하나를 적용합니다 — 지금 프레임의 상태(`applyFrame`)를 쓰고, 지난 구간마다(`SequencePlaybackSegment::hasCrossed`) 문턱을 넘은 이벤트를 구간 순서대로 모읍니다.
+         * @param pOutListCrossedEvent nullptr 가 아니면 이번에 지난 이벤트 항목들로 **채웁니다**(먼저 비웁니다). 가리키는 항목은 @p asset 의 원소라 에셋보다 오래 살지 않습니다.
+         * @details 역방향 구간도 쏜다(언리얼 이벤트 트랙의 기본). 점프 갱신(구간 없음)은 쏘지 않는다.
          */
         static void applyPlayback( GameObjectManager* pManager, const SequenceAsset& asset, const SequencePlaybackStep& step, const SequenceBindingView& bindings,
                                    vector<const SequenceTrackItem*>* pOutListCrossedEvent = nullptr );
@@ -238,9 +228,10 @@ namespace sw
         /**
          * @brief 구간 처리기가 있는 항목(애니메이션 · 소리 · 자막)을 @p frame 에 맞춥니다 — 구간에 들어가면 들어가기, 머무는 동안 머물기, 벗어나면 나가기를 부른다(`SequenceSpanHandler`).
          * @details 구간 상태는 @p inoutListSpan 이 쥔다(항목 번호로 찾는다). 대상이 필요한 항목인데 바인딩이 묶이지 않았으면 들어가지 않는다.
+         *          구간은 상태다 — 지금 프레임이 안이면 들어가 있고 밖이면 나가 있다(방향 · 점프와 상관없이 바뀔 때 한 번). 한 갱신에 통째로 지나친 구간은 들어가지 않는다(언리얼 섹션 평가).
          *          @p pOutListEntered 가 있으면 이번에 들어간 항목을 더한다(재생 기록 `SequenceHistoryKind::Span`).
          */
-        static void applySpans( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, float32 framesPerSecond,
+        static void applySpans( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, float32 framesPerSecond, float32 playRate,
                                 vector<SequenceSpanState>& inoutListSpan, vector<const SequenceTrackItem*>* pOutListEntered = nullptr );
         /** @brief 들어가 있는 구간을 모두 나가고 목록을 비웁니다(멈춤 · 씬 나감 — 소리를 멈추고 애니메이션 덮어쓰기를 끈다). */
         static void releaseSpans( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, float32 framesPerSecond, vector<SequenceSpanState>& inoutListSpan );
@@ -249,20 +240,19 @@ namespace sw
         /** @brief `captureRestoreState` 가 기억한 상태로 대상을 되돌립니다(기억한 순서의 반대로 — 같은 대상의 두 기록은 처음 값이 남는다). */
         static void applyRestoreState( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, const vector<SequenceRestoreEntry>& listRestore );
         /**
-         * @brief (@p previousFrame, @p frame] 동안의 카메라 신호를 @p outListSignal 에 **덧붙입니다**.
-         * @details 순서는 컷 바뀜, 시네마틱 시작 · 끝, 대기 뷰, 흔들림이다. 듣는 쪽은 컷의 프리셋을 먼저 켜고 그 위에 게임 화면에서 섞는다.
-         *          @p previousFrame 이 `kNoPreviousFrame` 이면 이전에 덮던 컷이 없다고 보고, 흔들림은 @p frame 에서 시작하는 것만 낸다.
+         * @brief 플레이어의 갱신 하나 동안의 카메라 신호를 @p outListSignal 에 **덧붙입니다**.
+         * @details 순서는 컷 바뀜, 시네마틱 시작 · 끝, 대기 뷰, 흔들림이다(구간이 둘이면 구간마다). 듣는 쪽은 컷의 프리셋을 먼저 켜고 그 위에 게임 화면에서 섞는다.
+         *          앞에 덮던 컷은 시작 갱신이면 없고, 아니면 갱신 전 프레임의 컷이다 — 구간이 둘이면 첫 구간 끝의 컷을 지나 이어진다(같은 컷이 끝과 처음을 덮으면 시네마틱이 끊기지 않는다).
+         *          대기 뷰는 정방향 구간만(곧 볼 컷은 앞으로 갈 때의 말이다), 흔들림은 양방향으로 시작 문턱을 지날 때 낸다. 점프 갱신은 컷만 견준다.
          */
-        static void collectCameraSignals( const SequenceAsset& asset, int32 previousFrame, int32 frame, vector<SequenceCameraSignal>& outListSignal );
-        /** @brief 플레이어의 이번 갱신 동안의 카메라 신호입니다. 루프를 되감았으면 되감기 전 끝 구간을 먼저 보고, 끝과 처음을 덮는 컷은 이어진 것으로 봅니다. */
         static void collectPlaybackCameraSignals( const SequenceAsset& asset, const SequencePlaybackStep& step, vector<SequenceCameraSignal>& outListSignal );
 
     private:
-        /** @brief (@p previousFrame, @p frame] 에서 시작하는 이벤트를 @p pOutListCrossedEvent 에 **덧붙입니다**(비우지 않는다). */
-        static void appendCrossedEvents( const SequenceAsset& asset, int32 previousFrame, int32 frame,
-                                         vector<const SequenceTrackItem*>* pOutListCrossedEvent );
-        /** @brief 이전에 덮던 컷(@p pPreviousCut)을 알고 (@p previousFrame, @p frame] 의 카메라 신호를 덧붙입니다. */
-        static void appendCameraSignals( const SequenceAsset& asset, int32 previousFrame, int32 frame, const SequenceTrackItem* pPreviousCut,
-                                         vector<SequenceCameraSignal>& outListSignal );
+        /** @brief 구간 @p segment 에서 문턱을 넘은 이벤트를 @p pOutListCrossedEvent 에 **덧붙입니다**(비우지 않는다). */
+        static void appendCrossedEvents( const SequenceAsset& asset, const SequencePlaybackSegment& segment, vector<const SequenceTrackItem*>* pOutListCrossedEvent );
+        /** @brief 덮는 컷이 @p pPreviousCut 에서 @p pCut 으로 바뀐 신호(컷 바뀜 · 시네마틱 시작 · 끝)를 덧붙입니다. */
+        static void appendCutSignals( const SequenceAsset& asset, const SequenceTrackItem* pCut, const SequenceTrackItem* pPreviousCut, vector<SequenceCameraSignal>& outListSignal );
+        /** @brief 구간 @p segment 에서 문턱을 넘은 대기 뷰 · 흔들림 신호를 덧붙입니다. */
+        static void appendCrossingSignals( const SequenceAsset& asset, const SequencePlaybackSegment& segment, vector<SequenceCameraSignal>& outListSignal );
     };
 } // namespace sw

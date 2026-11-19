@@ -1,4 +1,5 @@
-// 시퀀스 재생(오브젝트 있음, nogpu) — 바인딩으로 대상 찾기, 묶이지 않은 바인딩이면 틀지 않음, 끝내기 계약(되돌림 · 유지), 기록, 구간 처리기.
+// 시퀀스 재생(오브젝트 있음, nogpu) — 바인딩으로 대상 찾기, 묶이지 않은 바인딩이면 틀지 않음, 끝내기 계약(되돌림 · 유지), 기록, 구간 처리기,
+// 정수 틱 재생(속도 · 역방향 · 반복 · 왕복 · 범위 · 건너뛰기)과 발화 규칙(문턱을 지날 때마다 한 번).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -8,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
+#include "Engine/Sequencer/SequencePlayer.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
 
@@ -241,12 +243,12 @@ SW_TEST_CASE( SequencePlaybackTest, AnimationSpanNeedsAnAnimator )
     view._pListSlot    = &listSlot;
     view._pListSpawned = &listSpawned;
     vector<SequenceSpanState> listSpan;
-    SequenceTimelineUtil::applySpans( &manager, asset, view, 1, 30.0f, listSpan );
+    SequenceTimelineUtil::applySpans( &manager, asset, view, 1, 30.0f, 1.0f, listSpan );
     SW_EXPECT_TRUE( listSpan.empty() ); // 아직 들어가지 않았다
-    SequenceTimelineUtil::applySpans( &manager, asset, view, 3, 30.0f, listSpan );
+    SequenceTimelineUtil::applySpans( &manager, asset, view, 3, 30.0f, 1.0f, listSpan );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listSpan.size() );
     SW_EXPECT_TRUE( listSpan[0]._bInside == SW_TRUE );
-    SequenceTimelineUtil::applySpans( &manager, asset, view, 8, 30.0f, listSpan );
+    SequenceTimelineUtil::applySpans( &manager, asset, view, 8, 30.0f, 1.0f, listSpan );
     SW_EXPECT_TRUE( listSpan[0]._bInside == SW_FALSE );
     SequenceTimelineUtil::releaseSpans( &manager, asset, view, 30.0f, listSpan );
     SW_EXPECT_TRUE( listSpan.empty() );
@@ -295,4 +297,351 @@ SW_TEST_CASE( SequencePlaybackTest, PausedPlayerStepsOverNothing )
     const SequencePlaybackStep resumed = player.update( 0.1f );
     SW_EXPECT_EQUAL( moved._frame, resumed._previousFrame ); // 이어서 지난 구간만 본다(멈춘 동안의 구간을 다시 보지 않는다)
     SW_EXPECT_TRUE( resumed._frame > resumed._previousFrame );
+}
+
+namespace
+{
+    struct SequenceStepTestUtil
+    {
+        /** @brief 0 · 5 · 10 프레임에 이벤트가 있는 0..10 시퀀스입니다(fps 10 이면 1 초). */
+        static SequenceAsset makeEventSequence()
+        {
+            SequenceAsset asset;
+            asset._frameMin = 0;
+            asset._frameMax = 10;
+            for ( const int32 frame : { 0, 5, 10 } )
+            {
+                SequenceTrackItem item{};
+                item._kind  = SequenceItemKind::Event;
+                item._name  = frame == 0 ? "E0" : ( frame == 5 ? "E5" : "E10" );
+                item._start = frame;
+                item._end   = frame;
+                asset._listItem.push_back( item );
+            }
+            return asset;
+        }
+
+        /** @brief 갱신 하나가 지난 이벤트의 시작 프레임들입니다(관리자 없이 — 문턱 판정만 본다). */
+        static vector<int32> collectFired( const SequenceAsset& asset, const SequencePlaybackStep& step )
+        {
+            vector<const SequenceTrackItem*> listCrossed;
+            SequenceTimelineUtil::applyPlayback( nullptr, asset, step, SequenceBindingView{}, &listCrossed );
+            vector<int32> listFrame;
+            for ( const SequenceTrackItem* pItem : listCrossed )
+                listFrame.push_back( pItem->_start );
+            return listFrame;
+        }
+
+        static void append( vector<int32>& inoutList, const vector<int32>& listMore ) { inoutList.insert( inoutList.end(), listMore.begin(), listMore.end() ); }
+    };
+} // namespace
+
+/** @brief [SequencePlaybackTest] 정방향: 처음 프레임(시작 갱신)부터 끝 프레임까지 이벤트마다 한 번, 끝에서 멈춘다 */
+SW_TEST_CASE( SequencePlaybackTest, ForwardFiresEveryEventOnce )
+{
+    using Util           = SequenceStepTestUtil;
+    SequenceAsset  asset = Util::makeEventSequence();
+    SequencePlayer player;
+    player.setAsset( asset );
+    player.setFramesPerSecond( 10.0f );
+    player.play();
+    vector<int32> listFired = Util::collectFired( asset, player.getStartStep() );
+    for ( int32 tick = 0; tick < 100 && player.isPlaying(); ++tick )
+        Util::append( listFired, Util::collectFired( asset, player.update( 0.05f ) ) );
+    SW_EXPECT_FALSE( player.isPlaying() );
+    SW_EXPECT_EQUAL( 10, player.getCurrentFrame() );
+    SW_REQUIRE_EQUAL( size_t( 3 ), listFired.size() );
+    SW_EXPECT_EQUAL( 0, listFired[0] );
+    SW_EXPECT_EQUAL( 5, listFired[1] );
+    SW_EXPECT_EQUAL( 10, listFired[2] );
+}
+
+/** @brief [SequencePlaybackTest] 역재생: 끝에서 시작해 10 · 5 · 0 차례로 한 번씩 쏘고 처음 프레임에서 멈춘다(역방향 문턱 `to <= 시작 < from`) */
+SW_TEST_CASE( SequencePlaybackTest, ReverseFiresEveryEventOnceFromTheEnd )
+{
+    using Util           = SequenceStepTestUtil;
+    SequenceAsset  asset = Util::makeEventSequence();
+    SequencePlayer player;
+    player.setAsset( asset );
+    player.setFramesPerSecond( 10.0f );
+    player.playReverse();
+    SW_EXPECT_TRUE( player.isReversed() );
+    SW_EXPECT_EQUAL( 10, player.getCurrentFrame() );
+    vector<int32> listFired = Util::collectFired( asset, player.getStartStep() );
+    for ( int32 tick = 0; tick < 100 && player.isPlaying(); ++tick )
+        Util::append( listFired, Util::collectFired( asset, player.update( 0.05f ) ) );
+    SW_EXPECT_EQUAL( 0, player.getCurrentFrame() );
+    SW_REQUIRE_EQUAL( size_t( 3 ), listFired.size() );
+    SW_EXPECT_EQUAL( 10, listFired[0] );
+    SW_EXPECT_EQUAL( 5, listFired[1] );
+    SW_EXPECT_EQUAL( 0, listFired[2] );
+}
+
+/** @brief [SequencePlaybackTest] 큰 dt 하나가 여러 문턱을 지나면 그 사이 이벤트를 모두 한 번씩 쏜다 */
+SW_TEST_CASE( SequencePlaybackTest, LargeStepFiresEveryCrossedEventOnce )
+{
+    using Util           = SequenceStepTestUtil;
+    SequenceAsset  asset = Util::makeEventSequence();
+    SequencePlayer player;
+    player.setAsset( asset );
+    player.setFramesPerSecond( 10.0f );
+    player.play();
+    (void)Util::collectFired( asset, player.getStartStep() );
+    const vector<int32> listFired = Util::collectFired( asset, player.update( 5.0f ) ); // 5 · 10 을 한 번에 지나 끝난다
+    SW_REQUIRE_EQUAL( size_t( 2 ), listFired.size() );
+    SW_EXPECT_EQUAL( 5, listFired[0] );
+    SW_EXPECT_EQUAL( 10, listFired[1] );
+    SW_EXPECT_FALSE( player.isPlaying() );
+}
+
+/** @brief [SequencePlaybackTest] 반복: 끝을 넘는 갱신은 끝 구간(10) 다음 되감은 처음 구간(0)을 쏜다 — 경계의 두 이벤트가 한 번씩 */
+SW_TEST_CASE( SequencePlaybackTest, LoopWrapFiresTheBoundaryEventsOnce )
+{
+    using Util           = SequenceStepTestUtil;
+    SequenceAsset  asset = Util::makeEventSequence();
+    SequencePlayer player;
+    player.setAsset( asset );
+    player.setFramesPerSecond( 10.0f );
+    player.setLoopMode( SequenceLoopMode::Loop );
+    player.play();
+    (void)Util::collectFired( asset, player.getStartStep() );
+    const vector<int32> listFirst = Util::collectFired( asset, player.update( 0.55f ) ); // 0 → 5.5
+    SW_REQUIRE_EQUAL( size_t( 1 ), listFirst.size() );
+    SW_EXPECT_EQUAL( 5, listFirst[0] );
+    const SequencePlaybackStep wrap     = player.update( 0.55f ); // 5.5 → 11 → 되감아 1
+    const vector<int32>        listWrap = Util::collectFired( asset, wrap );
+    SW_EXPECT_EQUAL( 2u, wrap._segmentCount );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listWrap.size() );
+    SW_EXPECT_EQUAL( 10, listWrap[0] );
+    SW_EXPECT_EQUAL( 0, listWrap[1] );
+    SW_EXPECT_EQUAL( 1, player.getCurrentFrame() );
+    SW_EXPECT_TRUE( player.isPlaying() );
+    SW_EXPECT_TRUE( Util::collectFired( asset, player.update( 0.2f ) ).empty() ); // 1 → 3
+}
+
+/** @brief [SequencePlaybackTest] 왕복: 끝에서 꺾여 돌아오며 꺾인 끝 프레임은 한 번만 쏘고, 돌아오는 길에 5 · 0 을 쏜 뒤 다시 정방향이다 */
+SW_TEST_CASE( SequencePlaybackTest, PingPongTurnsOnceAtEachEnd )
+{
+    using Util           = SequenceStepTestUtil;
+    SequenceAsset  asset = Util::makeEventSequence();
+    SequencePlayer player;
+    player.setAsset( asset );
+    player.setFramesPerSecond( 10.0f );
+    player.setLoopMode( SequenceLoopMode::PingPong );
+    player.play();
+    (void)Util::collectFired( asset, player.getStartStep() );
+    (void)Util::collectFired( asset, player.update( 0.55f ) );                          // 0 → 5.5 (5)
+    const vector<int32> listTurn = Util::collectFired( asset, player.update( 0.55f ) ); // 5.5 → 11 → 꺾여 9
+    SW_REQUIRE_EQUAL( size_t( 1 ), listTurn.size() );
+    SW_EXPECT_EQUAL( 10, listTurn[0] );
+    SW_EXPECT_TRUE( player.isReversed() );
+    SW_EXPECT_EQUAL( 9, player.getCurrentFrame() );
+    const vector<int32> listBack = Util::collectFired( asset, player.update( 0.5f ) ); // 9 → 4
+    SW_REQUIRE_EQUAL( size_t( 1 ), listBack.size() );
+    SW_EXPECT_EQUAL( 5, listBack[0] );
+    const vector<int32> listStart = Util::collectFired( asset, player.update( 0.5f ) ); // 4 → -1 → 꺾여 1
+    SW_REQUIRE_EQUAL( size_t( 1 ), listStart.size() );
+    SW_EXPECT_EQUAL( 0, listStart[0] );
+    SW_EXPECT_FALSE( player.isReversed() );
+    SW_EXPECT_EQUAL( 1, player.getCurrentFrame() );
+    SW_EXPECT_NEAR( 1.0f, player.getPlayRate(), 1e-6f ); // 속도 값은 그대로 — 방향 표지만 뒤집혔다
+}
+
+/** @brief [SequencePlaybackTest] 속도: 30 프레임(fps 30)을 60 Hz 갱신으로 2 배속은 30 번, 0.5 배속은 120 번에 끝낸다(정수 틱이라 정확하다) */
+SW_TEST_CASE( SequencePlaybackTest, PlayRateScalesTheUpdatesToTheEnd )
+{
+    SequenceAsset asset;
+    asset._frameMin = 0;
+    asset._frameMax = 30;
+    for ( const float32 rate : { 2.0f, 0.5f } )
+    {
+        SequencePlayer player;
+        player.setAsset( asset );
+        player.setFramesPerSecond( 30.0f );
+        SW_REQUIRE_TRUE( player.setPlayRate( rate ) );
+        player.play();
+        int32 updateCount = 0;
+        while ( player.isPlaying() && updateCount < 1000 )
+        {
+            (void)player.update( 1.0f / 60.0f );
+            ++updateCount;
+        }
+        SW_EXPECT_EQUAL( rate > 1.0f ? 30 : 120, updateCount );
+        SW_EXPECT_EQUAL( 30, player.getCurrentFrame() );
+    }
+}
+
+/** @brief [SequencePlaybackTest] 속도 0 · 무한대는 오류를 남기고 거절한다 — 앞 속도가 남는다 */
+SW_TEST_CASE( SequencePlaybackTest, ZeroPlayRateIsRejected )
+{
+    SW_EXPECT_LOG( "SequencePlayer.PlayRateInvalid" );
+    SequencePlayer player;
+    SW_EXPECT_FALSE( player.setPlayRate( 0.0f ) );
+    SW_EXPECT_FALSE( player.setPlayRate( std::numeric_limits<float32>::infinity() ) );
+    SW_EXPECT_NEAR( 1.0f, player.getPlayRate(), 1e-6f );
+}
+
+/** @brief [SequencePlaybackTest] 재생 범위: 3..7 만 돌아 그 안의 이벤트(5)만 쏘고 7 에서 끝난다. 거꾸로 된 범위 · 시퀀스 밖 범위는 거절한다 */
+SW_TEST_CASE( SequencePlaybackTest, PlaybackRangeLimitsThePlayback )
+{
+    SW_EXPECT_LOG( "SequencePlayer.PlaybackRangeInvalid" );
+    using Util           = SequenceStepTestUtil;
+    SequenceAsset  asset = Util::makeEventSequence();
+    SequencePlayer player;
+    player.setAsset( asset );
+    player.setFramesPerSecond( 10.0f );
+    SW_REQUIRE_TRUE( player.setPlaybackRange( 3, 7 ) );
+    SW_EXPECT_FALSE( player.setPlaybackRange( 7, 3 ) );
+    SW_EXPECT_FALSE( player.setPlaybackRange( 0, 11 ) );
+    player.play();
+    SW_EXPECT_EQUAL( 3, player.getCurrentFrame() );
+    vector<int32> listFired = Util::collectFired( asset, player.getStartStep() );
+    for ( int32 tick = 0; tick < 100 && player.isPlaying(); ++tick )
+        Util::append( listFired, Util::collectFired( asset, player.update( 0.05f ) ) );
+    SW_EXPECT_EQUAL( 7, player.getCurrentFrame() );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listFired.size() );
+    SW_EXPECT_EQUAL( 5, listFired[0] );
+    player.setAsset( asset ); // 에셋을 다시 주면 전체 범위다
+    SW_EXPECT_EQUAL( 0, player.getPlaybackStart() );
+    SW_EXPECT_EQUAL( 10, player.getPlaybackEnd() );
+}
+
+/** @brief [SequencePlaybackTest] 끝으로 건너뛰기는 점프다 — 구간이 없어 사이 이벤트를 쏘지 않고, 끝 프레임에 멈춘다(역방향이면 처음 프레임) */
+SW_TEST_CASE( SequencePlaybackTest, SkipToEndJumpsWithoutFiring )
+{
+    using Util           = SequenceStepTestUtil;
+    SequenceAsset  asset = Util::makeEventSequence();
+    SequencePlayer player;
+    player.setAsset( asset );
+    player.setFramesPerSecond( 10.0f );
+    player.play();
+    (void)player.update( 0.15f );
+    const SequencePlaybackStep jump = player.skipToEnd();
+    SW_EXPECT_TRUE( jump._kind == SequencePlaybackStepKind::Jump );
+    SW_EXPECT_EQUAL( 0u, jump._segmentCount );
+    SW_EXPECT_EQUAL( 10, jump._frame );
+    SW_EXPECT_TRUE( Util::collectFired( asset, jump ).empty() );
+    SW_EXPECT_FALSE( player.isPlaying() );
+    player.playReverse();
+    (void)player.update( 0.15f );
+    SW_EXPECT_EQUAL( 0, player.skipToEnd()._frame );
+}
+
+/** @brief [SequencePlaybackTest] 정수 틱이라 오래 반복해도 어긋나지 않는다 — 30 프레임 반복을 60 Hz 로 590 번(9 바퀴 + 25 프레임) 돌면 정확히 25 프레임이다 */
+SW_TEST_CASE( SequencePlaybackTest, IntegerTicksDoNotDrift )
+{
+    SequenceAsset asset;
+    asset._frameMin = 0;
+    asset._frameMax = 30;
+    SequencePlayer player;
+    player.setAsset( asset );
+    player.setFramesPerSecond( 30.0f );
+    player.setLoopMode( SequenceLoopMode::Loop );
+    player.play();
+    for ( int32 tick = 0; tick < 590; ++tick )
+        (void)player.update( 1.0f / 60.0f );
+    SW_EXPECT_EQUAL( 25, player.getCurrentFrame() );
+    SW_EXPECT_TRUE( player.isPlaying() );
+}
+
+/** @brief [SequencePlaybackTest] 역재생은 컷 순서도 뒤집는다 — 끝에서 들어오며 CutB 가 먼저, CutA 가 뒤다 */
+SW_TEST_CASE( SequencePlaybackTest, ReverseCameraCutsComeInReverseOrder )
+{
+    SequenceAsset asset;
+    asset._frameMin   = 0;
+    asset._frameMax   = 10;
+    const uint32 cutA = asset.addBinding( "CutA" );
+    const uint32 cutB = asset.addBinding( "CutB" );
+    for ( const uint32 binding : { cutA, cutB } )
+    {
+        SequenceTrackItem cut{};
+        cut._kind    = SequenceItemKind::CameraCut;
+        cut._binding = binding;
+        cut._name    = binding == cutA ? "A" : "B";
+        cut._start   = binding == cutA ? 2 : 6;
+        cut._end     = binding == cutA ? 4 : 8;
+        asset._listItem.push_back( cut );
+    }
+    SequencePlayer player;
+    player.setAsset( asset );
+    player.setFramesPerSecond( 10.0f );
+    player.playReverse();
+    vector<SequenceCameraSignal> listSignal;
+    SequenceTimelineUtil::collectPlaybackCameraSignals( asset, player.getStartStep(), listSignal );
+    for ( int32 tick = 0; tick < 100 && player.isPlaying(); ++tick )
+        SequenceTimelineUtil::collectPlaybackCameraSignals( asset, player.update( 0.05f ), listSignal );
+    vector<string> listCut;
+    uint32         beginCount = 0;
+    uint32         endCount   = 0;
+    for ( const SequenceCameraSignal& signal : listSignal )
+    {
+        if ( signal._kind == SequenceCameraSignalKind::CutBegin )
+            listCut.push_back( signal._item._name );
+        beginCount += signal._kind == SequenceCameraSignalKind::CinematicBegin ? 1u : 0u;
+        endCount += signal._kind == SequenceCameraSignalKind::CinematicEnd ? 1u : 0u;
+    }
+    SW_REQUIRE_EQUAL( size_t( 2 ), listCut.size() );
+    SW_EXPECT_TRUE( listCut[0] == "B" );
+    SW_EXPECT_TRUE( listCut[1] == "A" );
+    // 컷 사이(5 프레임)는 덮는 컷이 없어 시네마틱이 두 번 열리고 닫힌다
+    SW_EXPECT_EQUAL( 2u, beginCount );
+    SW_EXPECT_EQUAL( 2u, endCount );
+}
+
+/** @brief [SequencePlaybackTest] 구간은 상태다 — 한 갱신에 통째로 지나친 구간은 들어가지 않고, 역방향으로 들어가면 한 번 들어가 한 번 나간다 */
+SW_TEST_CASE( SequencePlaybackTest, SpansFollowTheCurrentFrame )
+{
+    GameObjectManager manager;
+    SequenceAsset     asset;
+    asset._frameMax = 10;
+    SequenceTrackItem audio{};
+    audio._kind  = SequenceItemKind::Audio;
+    audio._sound = "Beat";
+    audio._start = 2;
+    audio._end   = 4;
+    asset._listItem.push_back( audio );
+    vector<SequenceBindingSlot>   listSlot;
+    vector<SequenceSpawnedObject> listSpawned;
+    SequenceBindingView           view;
+    view._pAsset       = &asset;
+    view._pListSlot    = &listSlot;
+    view._pListSpawned = &listSpawned;
+    vector<SequenceSpanState>        listSpan;
+    vector<const SequenceTrackItem*> listEntered;
+    SequenceTimelineUtil::applySpans( &manager, asset, view, 1, 30.0f, 1.0f, listSpan, &listEntered );
+    SequenceTimelineUtil::applySpans( &manager, asset, view, 8, 30.0f, 1.0f, listSpan, &listEntered ); // 2..4 를 통째로 지나쳤다
+    SW_EXPECT_TRUE( listEntered.empty() );
+    SequenceTimelineUtil::applySpans( &manager, asset, view, 3, 30.0f, -1.0f, listSpan, &listEntered ); // 거꾸로 들어왔다
+    SequenceTimelineUtil::applySpans( &manager, asset, view, 2, 30.0f, -1.0f, listSpan, &listEntered ); // 머문다
+    SW_EXPECT_EQUAL( size_t( 1 ), listEntered.size() );
+    SequenceTimelineUtil::applySpans( &manager, asset, view, 0, 30.0f, -1.0f, listSpan, &listEntered );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listSpan.size() );
+    SW_EXPECT_TRUE( listSpan[0]._bInside == SW_FALSE );
+}
+
+/** @brief [SequencePlaybackTest] 컴포넌트의 끝으로 건너뛰기: 끝 상태를 적용하고(KeepState) 정상 끝 알림 · 기록이 한 번이다. 멈춤(`stop`)은 끝 알림이 아니다 */
+SW_TEST_CASE( SequencePlaybackTest, ComponentSkipToEndFinishesOnce )
+{
+    using Util = SequencePlaybackTestUtil;
+    GameObjectManager        manager;
+    GameObject*              pHero   = nullptr;
+    SequencePlayerComponent* pPlayer = Util::makeScene( manager, pHero );
+    SW_REQUIRE_NOT_NULL( pPlayer );
+    pPlayer->setSequence( Util::makeMoveSequence( SequenceFinishPolicy::KeepState ) );
+    pPlayer->setBinding( 1, pHero->getHandle() );
+    uint32             finishedCount = 0;
+    const Subscription finished      = pPlayer->registerFinished( OnSequenceFinishedDelegate::create( [&finishedCount]()
+    { ++finishedCount; } ) );
+
+    SW_EXPECT_FALSE( pPlayer->skipToEnd() ); // 재생 중이 아니다
+    pPlayer->play();
+    Util::update( manager, *pPlayer, 0.05f );
+    SW_REQUIRE_TRUE( pPlayer->skipToEnd() );
+    SW_EXPECT_FALSE( pPlayer->isPlaying() );
+    SW_EXPECT_EQUAL( 1u, finishedCount );
+    SW_EXPECT_EQUAL( 1u, pPlayer->getHistory().countKind( SequenceHistoryKind::Finished ) );
+    SW_EXPECT_NEAR( 5.0f, Util::readX( *pHero ), 1e-4f );
+    pPlayer->play();
+    pPlayer->stop();
+    SW_EXPECT_EQUAL( 1u, finishedCount );
 }

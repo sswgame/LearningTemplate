@@ -4,6 +4,7 @@
 
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/ScenarioPlayback.h"
@@ -88,7 +89,8 @@ namespace sw
         : _sequencePath{}
         , _listBinding{}
         , _framesPerSecond{ 30.0f }
-        , _bLoop{ SW_FALSE }
+        , _playRate{ 1.0f }
+        , _loopMode{ SequenceLoopMode::None }
         , _bAutoPlay{ SW_TRUE }
         , _reserved{ 0 }
         , _player{}
@@ -97,6 +99,7 @@ namespace sw
         , _history{}
         , _sequenceEventMulticast{}
         , _cameraSignalMulticast{}
+        , _finishedMulticast{}
     {
         setCanEverTick( true );
     }
@@ -105,8 +108,6 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
-        _player.setFramesPerSecond( _framesPerSecond );
-        _player.setLoop( _bLoop == SW_TRUE );
         loadSequenceFromPath();
         if ( _bAutoPlay == SW_TRUE )
             play();
@@ -170,8 +171,11 @@ namespace sw
         endPlayback( SequenceHistoryKind::Stopped );
         if ( validateBindings() == false )
             return;
+        // 속도 0 은 데이터 결함이다 — 오류를 남기고 틀지 않는다(1 배속으로 돌아가는 길은 없다).
+        if ( _player.setPlayRate( _playRate ) == false )
+            return;
         _player.setFramesPerSecond( _framesPerSecond );
-        _player.setLoop( _bLoop == SW_TRUE );
+        _player.setLoopMode( _loopMode );
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && _player.getAsset()._whenFinished == SequenceFinishPolicy::RestoreState )
         {
@@ -186,6 +190,36 @@ namespace sw
     void SequencePlayerComponent::stop()
     {
         endPlayback( SequenceHistoryKind::Stopped );
+    }
+
+    void SequencePlayerComponent::playReverse()
+    {
+        _playRate = -MathUtil::abs( _playRate );
+        play();
+    }
+
+    bool SequencePlayerComponent::skipToEnd()
+    {
+        if ( _player.isPlaying() == false )
+            return false;
+        // 끝 프레임으로 점프해 그 상태를 적용하고(이벤트는 쏘지 않는다) 정상 끝을 지난다 — 덮던 컷이 있으면 끝내기가 시네마틱 끝을 낸다.
+        applyTimeline( _player.skipToEnd() );
+        endPlayback( SequenceHistoryKind::Finished );
+        return true;
+    }
+
+    bool SequencePlayerComponent::setPlayRate( float32 playRate )
+    {
+        if ( _player.setPlayRate( playRate ) == false )
+            return false;
+        _playRate = playRate;
+        return true;
+    }
+
+    void SequencePlayerComponent::setLoopMode( SequenceLoopMode loopMode )
+    {
+        _loopMode = loopMode;
+        _player.setLoopMode( loopMode );
     }
 
     bool SequencePlayerComponent::validateBindings()
@@ -237,8 +271,11 @@ namespace sw
             SequenceTimelineUtil::applyRestoreState( pManager, asset, view, _state._listRestore );
         _state._listRestore.clear();
         _state._bRestoreCaptured = SW_FALSE;
-        if ( bWasPlaying )
-            _history.record( kind, frame, kSequenceNoBinding, _sequencePath.path() );
+        if ( bWasPlaying == false )
+            return;
+        _history.record( kind, frame, kSequenceNoBinding, _sequencePath.path() );
+        if ( kind == SequenceHistoryKind::Finished )
+            _finishedMulticast.broadcast(); // 마지막 — 듣는 쪽이 다른 시퀀스를 틀어도 이 끝내기는 이미 마쳤다
     }
 
     void SequencePlayerComponent::pause()
@@ -302,6 +339,11 @@ namespace sw
         return _cameraSignalMulticast.add( delegate );
     }
 
+    Subscription SequencePlayerComponent::registerFinished( const OnSequenceFinishedDelegate& delegate )
+    {
+        return _finishedMulticast.add( delegate );
+    }
+
     void SequencePlayerComponent::broadcastCameraSignals( vector<SequenceCameraSignal>& inoutListSignal )
     {
         if ( inoutListSignal.empty() )
@@ -331,13 +373,13 @@ namespace sw
         if ( pManager == nullptr )
             return;
 
-        // 루프를 되감은 갱신이면 끝 구간 이벤트까지 본다(`applyPlayback`).
+        // 지난 구간마다(반복 되감기 · 왕복 꺾임이면 둘) 문턱을 넘은 이벤트를 본다(`applyPlayback`).
         const SequenceBindingView        view = makeBindingView();
         vector<const SequenceTrackItem*> listCrossed;
         SequenceTimelineUtil::applyPlayback( pManager, _player.getAsset(), step, view, &listCrossed );
         SequenceTimelineUtil::applySpawns( pManager, _player.getAsset(), _player.getCurrentFrame(), _state._listSpawned );
         vector<const SequenceTrackItem*> listEnteredSpan;
-        SequenceTimelineUtil::applySpans( pManager, _player.getAsset(), view, _player.getCurrentFrame(), _framesPerSecond, _state._listSpan, &listEnteredSpan );
+        SequenceTimelineUtil::applySpans( pManager, _player.getAsset(), view, _player.getCurrentFrame(), _framesPerSecond, _player.getPlayRate(), _state._listSpan, &listEnteredSpan );
         for ( const SequenceTrackItem* pItem : listEnteredSpan )
             _history.record( SequenceHistoryKind::Span, _player.getCurrentFrame(), pItem->_binding, pItem->_name );
 

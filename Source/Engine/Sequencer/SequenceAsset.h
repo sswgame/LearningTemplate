@@ -149,6 +149,18 @@ namespace sw
         RestoreState = 0, /**< 재생을 시작하기 전의 활성 상태 · 트랜스폼 · 프로퍼티 · 리그 가중치 · 렌즈로 되돌립니다(언리얼 기본값과 같다). */
         KeepState    = 1, /**< 마지막 프레임의 상태를 그대로 둡니다(문이 열린 채 남는 연출). */
     };
+
+    /**
+     * @brief 재생 범위의 끝에 닿았을 때 무엇을 할지입니다(언리얼 `FMovieSceneSequencePlaybackSettings` 의 Loop Count · `bPingPongPlayback`, 유니티 `PlayableDirector.extrapolationMode`).
+     * @details 씬 파일에는 열거자 이름으로 적힌다(`SequencePlayerComponent::_loopMode`).
+     */
+    ENUM()
+    enum class SequenceLoopMode : int32
+    {
+        None     = 0, /**< 끝에서 멈추고 재생을 끝냅니다(`SequenceFinishPolicy` 를 따른다). */
+        Loop     = 1, /**< 끝을 지나면 반대쪽 끝에서 같은 방향으로 이어 갑니다. */
+        PingPong = 2, /**< 끝에서 방향을 뒤집어 돌아옵니다(속도 값은 그대로 — 방향 표지만 뒤집는다). */
+    };
 } // namespace sw
 
 namespace sw
@@ -243,6 +255,9 @@ namespace sw
         /** @brief 카메라 흔들림: 최대 흔들림(m) 입니다. 애니메이션: 섞는 세기(0..1)입니다. */
         PROPERTY( Tooltip = "Camera shake: largest shake offset (m); Animation: blend weight (0..1)" )
         float32 _amplitude{ 1.0f };
+        /** @brief 카메라 컷: 앞 컷 화면에서 이 컷으로 섞어 들어가는 시간(초)입니다. 0 이면 끊어 바꾼다(언리얼 Camera Cut 섹션의 Ease In · Can Blend). 첫 컷은 시퀀스의 Blend In 이 정한다. */
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Camera cut: blend from the previous cut's view into this cut (0: cut; the first cut uses the sequence Blend In)" )
+        float32 _cutBlendSeconds{ 0.0f };
         PROPERTY( Tooltip = "Editor colour (0xAABBGGRR)" )
         uint32 _color{ 0xFFAA8080 };
         PROPERTY( Tooltip = "Item kind" )

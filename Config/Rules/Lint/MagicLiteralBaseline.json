@@ -598,7 +598,6 @@
     "Source/Engine/Scene/SceneDocument.cpp": {"integer": 1, "hex": 3},
     "Source/Engine/Scene/SceneManager.cpp": {"integer": 3},
     "Source/Engine/Scene/SceneObjectHash.cpp": {"minus-one": 3, "integer": 12, "hex": 2},
-    "Source/Engine/Sequencer/SequencePlayer.cpp": {"float": 4},
     "Source/Engine/Sequencer/SequenceSpanTracks.cpp": {"float": 2},
     "Source/Engine/Serialization/Fixed/FixedLayout.cpp": {"integer": 4},
     "Source/Engine/Serialization/Format/Archive.cpp": {"integer": 2},

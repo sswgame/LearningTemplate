@@ -1284,7 +1284,7 @@
 					                         _bActive="true"
 					                         _sequencePath="game/wildwest/data/arrival.seq.xml"
 					                         _framesPerSecond="30"
-					                         _bLoop="false"
+					                         _loopMode="None"
 					                         _bAutoPlay="false">
 						<_listBinding>
 							<SequenceBindingSlot _binding="1" _object="110" />

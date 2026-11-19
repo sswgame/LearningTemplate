@@ -23,12 +23,14 @@ namespace sw
     SW_DECLARE_DELEGATE( void, OnSequenceEventDelegate, const SequenceFiredEvent& event );
     /** @brief 카메라 신호(컷 바뀜, 시네마틱 시작 · 끝, 대기 뷰, 흔들림) 하나를 냈을 때 부르는 델리게이트입니다. */
     SW_DECLARE_DELEGATE( void, OnSequenceCameraSignalDelegate, const SequenceCameraSignal& signal );
+    /** @brief 재생이 정상으로 끝났을 때(끝 프레임 · `skipToEnd`) 부르는 델리게이트입니다(언리얼 `OnFinished`). `stop` 은 부르지 않는다. */
+    using OnSequenceFinishedDelegate = Delegate<void()>;
 
     /**
      * @class SequencePlayerComponent
      * @brief 시퀀스 하나를 재생합니다. 시퀀스의 바인딩 id 마다 이 씬의 오브젝트를 `_listBinding` 으로 묶는다(유니티 PlayableDirector 의 바인딩, 언리얼 Level Sequence Actor 의 Binding Overrides).
      * @details **재생 계약**: 시작할 때 재생에 필요한 바인딩이 모두 묶였는지 보고, 하나라도 비면 오류를 남기고 틀지 않는다(이름 찾기 폴백 없음).
-     *          끝(루프가 아닐 때 끝 프레임) · `stop` · 씬 나감(`onEndPlay`) · 재생 중 다시 틀기(먼저 멈춘다) · 시퀀스 바꾸기는 모두 같은 끝내기(`endPlayback`)를 지난다 —
+     *          끝(반복이 아닐 때 진행 방향의 끝 프레임) · 끝으로 건너뛰기(`skipToEnd`) · `stop` · 씬 나감(`onEndPlay`) · 재생 중 다시 틀기(먼저 멈춘다) · 시퀀스 바꾸기는 모두 같은 끝내기(`endPlayback`)를 지난다 —
      *          덮던 컷이 있으면 시네마틱 끝을 알리고, 구간 동작(소리 · 애니메이션 덮어쓰기)을 나가고, 스폰을 지우고, 컷을 풀고, 시퀀스의 `_whenFinished` 가
      *          `RestoreState` 면 시작 전 상태로 되돌린다. 일시정지는 끝내기가 아니다.
      */
@@ -56,6 +58,25 @@ namespace sw
         void pause();
         FUNCTION( Category = "Playback", DisplayName = "Resume", CallInEditor )
         void resume();
+        /** @brief 속도를 음수로 두고(크기는 그대로) 끝에서 거꾸로 틉니다(언리얼 `PlayReverse`). */
+        FUNCTION( Category = "Playback", DisplayName = "Play Reverse", CallInEditor )
+        void playReverse();
+        /**
+         * @brief 진행 방향의 끝 프레임으로 점프해 그 상태를 적용하고 정상 끝으로 끝냅니다(언리얼 `GoToEndAndStop`). 사이의 이벤트는 쏘지 않는다(점프).
+         * @details 덮던 컷이 있으면 시네마틱 끝(Blend Out)을 알려 게임 카메라로 돌아온다. 재생 중이 아니면 아무것도 하지 않고 false 입니다.
+         */
+        FUNCTION( Category = "Playback", DisplayName = "Skip To End", CallInEditor )
+        bool skipToEnd();
+        /** @brief 재생 속도를 바꿉니다(음수 = 역방향, 재생 중에도). 0 · 유한하지 않은 값은 오류를 남기고 거절한다(false). */
+        [[nodiscard]] bool setPlayRate( float32 playRate );
+        float32            getPlayRate() const { return _playRate; }
+        /** @brief 지금 거꾸로 진행하는지입니다(속도 부호와 왕복이 뒤집은 방향). */
+        bool isReversed() const { return _player.isReversed(); }
+        /** @brief 반복 방식을 바꿉니다(재생 중에도). */
+        void             setLoopMode( SequenceLoopMode loopMode );
+        SequenceLoopMode getLoopMode() const { return _loopMode; }
+        /** @brief 재생 범위를 정합니다(`SequencePlayer::setPlaybackRange` — 시퀀스 안 · 시작 < 끝이 아니면 오류 · false). 시퀀스를 다시 열면 전체로 돌아간다. */
+        [[nodiscard]] bool setPlaybackRange( int32 startFrame, int32 endFrame ) { return _player.setPlaybackRange( startFrame, endFrame ); }
         /** @brief 시퀀스를 재생 중이면 true 입니다(시나리오의 `WaitSequence` 가 끝을 기다린다). */
         bool isPlaying() const { return _player.isPlaying(); }
         /** @brief 지금 프레임입니다(디버거 · 감시 값). */
@@ -94,6 +115,8 @@ namespace sw
          *          대기 뷰 신호는 카메라 매니저를 거쳐 LOD 까지 간다(`CameraManagerComponent` 의 대기 뷰 설명). 돌려준 구독이 사라지면 뗍니다.
          */
         [[nodiscard]] Subscription registerCameraSignal( const OnSequenceCameraSignalDelegate& delegate );
+        /** @brief 재생이 정상으로 끝날 때(끝 프레임 · `skipToEnd`) 부를 델리게이트를 등록합니다. 끝내기(되돌림 · 컷 풀기)를 마친 뒤 부른다. 돌려준 구독이 사라지면 뗍니다. */
+        [[nodiscard]] Subscription registerFinished( const OnSequenceFinishedDelegate& delegate );
         /** @brief 재생 빠르기(초당 프레임)입니다. */
         float32 getFramesPerSecond() const { return _framesPerSecond; }
 
@@ -115,11 +138,14 @@ namespace sw
         vector<SequenceBindingSlot> _listBinding;
         PROPERTY( Category = "Playback", DisplayName = "Frames Per Second", Min = 1.0, Max = 120.0 )
         float32 _framesPerSecond;
-        PROPERTY( Category = "Playback", DisplayName = "Loop" )
-        uint8 _bLoop : 1;
+        /** @brief 재생 속도입니다. 부호가 방향이다(음수 = 역방향). 0 이면 시작에서 오류로 틀지 않는다. */
+        PROPERTY( Category = "Playback", DisplayName = "Play Rate", Tooltip = "Playback speed; negative plays backwards from the end (0 is rejected)" )
+        float32 _playRate;
+        PROPERTY( Category = "Playback", DisplayName = "Loop Mode", Tooltip = "At the end of the range: stop, loop, or ping-pong" )
+        SequenceLoopMode _loopMode;
         PROPERTY( Category = "Playback", DisplayName = "Auto Play" )
         uint8                  _bAutoPlay : 1;
-        [[maybe_unused]] uint8 _reserved  : 6;
+        [[maybe_unused]] uint8 _reserved  : 7;
         SequencePlayer         _player;
         /** @brief 이번 틱이 민 재생 구간입니다 — 틱 뒤 작업이 묶인 오브젝트에 적용한다(틱 뒤 작업은 값을 캡처하지 않는다). 저장하지 않는다. */
         SequencePlaybackStep _pendingStep;
@@ -131,5 +157,7 @@ namespace sw
         MulticastDelegate<void( const SequenceFiredEvent& )> _sequenceEventMulticast;
         /** @brief 카메라 신호 구독자들입니다. 저장하지 않습니다. */
         MulticastDelegate<void( const SequenceCameraSignal& )> _cameraSignalMulticast;
+        /** @brief 정상 끝 구독자들입니다. 저장하지 않습니다. */
+        MulticastDelegate<void()> _finishedMulticast;
     };
 } // namespace sw
