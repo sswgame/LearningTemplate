@@ -68,13 +68,13 @@ namespace sw
         _mapMaterialScreenSize.clear();
         for ( uint32 index = 0; index < count; ++index )
         {
-            if ( arrScreenSize[index] <= 0.0f ) // 빈 칸도 여기서 빠진다
+            if ( _listMeshScreenSize[index] <= 0.0f ) // 빈 칸도 여기서 빠진다
                 continue;
             const Material* pMaterial = static_cast<MeshComponent&>( *listPrimitive[index] ).getMaterial();
             if ( pMaterial == nullptr )
                 continue;
             float32& maxScreenSize = _mapMaterialScreenSize[pMaterial];
-            maxScreenSize          = MathUtil::max( maxScreenSize, arrScreenSize[index] );
+            maxScreenSize          = MathUtil::max( maxScreenSize, _listMeshScreenSize[index] );
         }
         for ( const auto& [pMaterial, screenSize] : _mapMaterialScreenSize )
         {
