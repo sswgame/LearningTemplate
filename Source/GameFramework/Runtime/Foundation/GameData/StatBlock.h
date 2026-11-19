@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -19,10 +20,15 @@ namespace sw
     class XMLNode;
 
     /** @brief 이름 붙은 수치 하나입니다. */
+    REFLECT()
     struct StatValue
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _name{};
-        float32       _value{ 0.0f };
+        PROPERTY()
+        float32 _value{ 0.0f };
     };
 } // namespace sw
 
@@ -33,9 +39,12 @@ namespace sw
      * @brief 넣은 순서를 지키는 작은 이름 → 값 목록입니다(보통 열 개 안팎이라 선형 조회가 맵보다 빠르다).
      * @details XML 은 `<Stats armor="5" speed="-0.1"/>` 처럼 **속성 이름이 곧 능력치 이름**입니다(`MonsterDef::_mapDrop` 과 같은 방식).
      */
+    REFLECT()
     class SW_GF_API StatBlock
     {
     public:
+        REFLECT_BODY();
+
         void setValue( const hashed_string& name, float32 value );
         void addValue( const hashed_string& name, float32 value );
         /** @brief 더하는 값(보너스 · 비용 · 자원)으로 읽습니다. 없는 이름의 기여는 합의 항등원 0 입니다 — 호출부가 다른 기본값을 넣지 않는다. */
@@ -61,7 +70,7 @@ namespace sw
         size_t                   getCount() const { return _listValue.size(); }
 
         /**
-         * @brief 이름 → 값 목록(넣은 순서)을 씁니다.
+         * @brief 이름 → 값 목록(넣은 순서)을 씁니다(리플렉션 상태 칸 — 빈 이름만 손으로 거절한다).
          *        `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다.
          */
         SW_DECLARE_STATE_IO();
@@ -71,6 +80,7 @@ namespace sw
         StatValue* findMutableValue( const hashed_string& name );
 
     private:
+        PROPERTY( RuntimeState )
         vector<StatValue> _listValue{};
     };
 } // namespace sw

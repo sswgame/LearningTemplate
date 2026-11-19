@@ -114,13 +114,11 @@ namespace sw
 
     void StatBlock::serializeState( StateIO& io )
     {
-        // 칸마다 이름 길이(4) + 값(4) 이상
-        io.list( _listValue, 8, [&]( StatValue& value )
+        io.reflected( *this );
+        for ( const StatValue& value : _listValue )
         {
-            io.value( value._name );
-            io.value( value._value );
             io.check( value._name.empty() == false );
-        } );
+        }
     }
 
 } // namespace sw
