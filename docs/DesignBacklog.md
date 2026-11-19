@@ -1175,6 +1175,22 @@ struct SW_API ReplicatedLayout
 
 **확인.** 단위 `PhysicsOverlapTrackerTest.*`(물리 없음 — 여러 바디 한 번, 끝 먼저, 들고 남, 다시 짓기, 트리거 열쇠 분리, 유지), `TriggerOverlapContractTest.*`(Jolt · Box2D 씬 — 안에서 생성 · 파괴 · 비활성 · 트리거 끄고 켜기 · 순간 이동 · 몸 둘), `ZoneTest.*`(꺼진 볼륨 이탈 · 안에서 생성 첫 프레임 진입 · 파괴 이탈 기록) — 서버 단위(`Server --test`)에도 같은 케이스가 돈다. 시나리오 `triggercontract`(감시 값 `Physics.OverlapCount`).
 
+### 충돌 채널 · 응답 · 프리셋(설계 2026-11-20)
+
+**문제.** 충돌 거름이 이름 붙은 레이어(`physicssettings.xml` 의 `PhysicsLayerDef` 7 개)와 32 × 32 "부딪힘 / 안 부딪힘" 대칭 행렬 하나였다 — 응답이 둘뿐(막지 않고 겹침만 내는 쌍을 적을 수 없다), 질의 채널이 없어(카메라 · 시야 질의가 레이어 이름 목록을 저마다 들었다) 프리셋(오브젝트 종류 + 응답 묶음)이 없었다. 2D 콜라이더(`BoxCollider2DComponent`)만 레이어를 이름이 아닌 번호(`_colliderType`)로 들었다.
+
+**대조.** 언리얼: 채널(Object Channel · Trace Channel, 합쳐 32) · 응답 셋(`ECollisionResponse` Ignore · Overlap · Block) · 두 물체 응답 중 약한 쪽 · 프로필(Collision Preset — 오브젝트 종류 + 채널별 응답 + Query/Physics 켜기) · `LineTraceByChannel`. 유니티: 레이어 32 + 충돌 행렬(켜기/끄기) + 트리거 · `LayerMask` 질의. Godot: `collision_layer` / `collision_mask` 비트. → 언리얼 꼴로 간다. Jolt 의 `ObjectLayer` 는 "바디가 걸러지는 칸" 이라 칸을 **프로필 번호**로 쓰면 백엔드 구조(레이어 쌍 거름 · Box2D category/mask)를 그대로 둔 채 프로필 쌍 응답 표를 내릴 수 있다.
+
+**결정.**
+1. 데이터(`PhysicsSettings`): `_listChannel`(`CollisionChannelDef` — 이름 · 종류 Object/Trace · 기본 응답, 32 이하)과 `_listProfile`(`CollisionProfileDef` — 이름 · 오브젝트 채널 · 채널별 응답 목록 · `_bQueryEnabled` · `_bPhysicsEnabled`, 32 이하, 차례가 바디의 레이어 번호). 프로필이 적지 않은 채널은 그 채널의 기본 응답. 이름이 없거나 겹치거나, 프로필의 오브젝트 채널이 오브젝트 채널이 아니거나, 응답이 모르는 채널이면 읽기 오류. 정책 값은 이 설정 에셋(XML, 카탈로그 편집기가 반사 그리드로 고친다)에 둔다 — Config JSON 이 아니라 이미 있는 물리 설정 자리.
+2. 응답 표(`CollisionLayers` — 프로필 쌍 32 × 32, 세 값): 두 프로필의 응답은 서로의 오브젝트 채널에 준 응답 중 약한 쪽(무시 < 겹침 < 막음), 물리가 꺼진 프로필은 모두 무시. 백엔드는 무시가 아닌 쌍만 짝짓는다. 겹침 쌍: Jolt 는 그 쌍의 접촉을 센서로 돌리고(`ContactSettings::mIsSensor`) 이벤트를 겹침으로 알린다 → 트리거 계약 추적기(`PhysicsOverlapTracker`)가 진입 · 이탈을 낸다. Box2D 는 막는 셰이프끼리 겹침이면 사용자 거름(`b2World_SetCustomFilterCallback`)이 접촉을 뺀다 — Box2D 는 막는 셰이프끼리 겹침 이벤트를 못 내므로(센서만) 2D 에서 겹침 이벤트는 한쪽이 트리거일 때만이다(유니티 2D 와 같다). 마스크에서 겹침 쌍을 빼지 않는다 — 트리거가 그 상대를 봐야 한다.
+3. 트리거 표시(`_bTrigger`)는 남긴다 — 바디 단위 "센서로 만든다" 이고, 응답은 쌍 단위 "막을지" 다. 트리거 프로필은 상대에 겹침을 준다(데이터).
+4. 질의: `PhysicsSettings::makeTraceLayerMask( 채널 )`(그 채널을 막는, 질의 켜진 프로필), `ScenePhysics::makeTraceFilter( 채널 )` → `PhysicsQueryFilter`. 모르는 채널 · 오브젝트 채널이면 오류 + nullopt(모두 맞는 필터로 대신하지 않는다). Jolt · Box2D 질의는 이미 레이어 마스크로 거르므로 그대로 내려간다. 전용 서버도 같은 설정 · 같은 코드다.
+5. 이전: 프로필 이름 · 차례를 옛 레이어(Default · Static · Character · Ragdoll · Debris · Trigger · Projectile)와 같게 두고, 응답을 옛 행렬 그대로 적었다(테스트가 옛 표와 견준다) — 이름으로 적은 씬 · 프리팹(`_layer`)은 그대로 같은 동작이다. 오브젝트 채널은 WorldStatic · WorldDynamic · Pawn · Ragdoll · Debris · Trigger · Projectile, 트레이스 채널은 Visibility(기본 막음) · Camera(기본 무시, 세상만 막음). 2D 콜라이더의 번호 칸 `_colliderType` 은 이름 칸 `_layer` 로 바꾸고 콘텐츠 20 파일을 옮겼다(모두 0 → Default). 인스펙터 표시 이름은 "Collision Profile".
+6. 에디터: 채널 · 프로필 · 응답은 물리 설정 에셋을 카탈로그 편집기(반사 그리드)로 고친다. 컴포넌트의 프로필 칸은 이름 입력 + 검증(`PhysicsNameValidation::validateLayer`)이다. 남은 몫: 응답 행렬 표 보기(채널 × 프로필 격자)와 인스펙터 프로필 고르기 목록 — 인스펙터 이름 칸에 "고를 이름의 출처" 메타가 없어 반사 그리드 쪽 장치가 먼저다(`taste-skill` 앱 화면 규칙으로).
+
+**확인.** 단위 `CollisionProfileTest.*`(응답 표 대칭 · 약한 쪽, 프로필 해석 · 트레이스 마스크, 나쁜 데이터 오류, 배포 설정이 옛 표와 같음, Jolt · Box2D 막음 · 겹침 · 무시, 트레이스 채널 광선 거르기) — 서버 단위에도 돈다.
+
 ## 도구 · 에디터 · 콘텐츠 파이프라인 설계(2026-11-17)
 
 미뤄 둔 항목을 작업자에게 바로 나눠 줄 수 있게 정했다. 절마다 문제(코드 자리) → 상용 대조 → 결정 · 기각 → 초안 → 이전 순서 → 측정이다(일과 사용자 결정 대기는 [NEXT](NEXT.md)). 새 린트 규칙은 없다 — 막을 것은 형식 · API · 로드 오류로 막는다.

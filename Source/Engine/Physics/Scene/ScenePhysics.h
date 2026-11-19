@@ -26,6 +26,7 @@
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Physics/Collision/PhysicsContact.h"
+#include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/DebrisBudget.h"
 #include "Engine/Physics/Scene/PhysicsHookRegistry.h"
@@ -160,8 +161,13 @@ namespace sw
         [[nodiscard]] unique_ptr<IPhysicsScene3D> createStaticScene3D() const;
         /** @brief 물리 서비스의 설정 표입니다. 서비스가 없으면 nullptr 입니다. */
         const PhysicsSettings* findSettings() const;
-        /** @brief 레이어 이름의 번호입니다. 없는 이름이면 오류를 남기고 0(첫 레이어)입니다. 이름이 비면 0 입니다. */
+        /** @brief 충돌 프로필 이름의 레이어 번호입니다. 없는 이름이면 오류를 남기고 0(첫 프로필)입니다. 이름이 비면 0 입니다. */
         uint8 resolveLayer( const hashed_string& layerName ) const;
+        /**
+         * @brief 트레이스 채널 @p traceChannel 로 거르는 질의 필터입니다 — 그 채널을 막는(Block) 질의가 켜진 프로필의 바디만 맞는다(언리얼 `LineTraceByChannel`).
+         * @details 설정이 없거나 모르는 · 오브젝트 채널이면 오류를 남기고 nullopt 입니다(모두 맞는 필터로 대신하지 않는다). 쏘는 쪽 무시 칸은 부르는 쪽이 채운다.
+         */
+        [[nodiscard]] optional<PhysicsQueryFilter> makeTraceFilter( const hashed_string& traceChannel ) const;
 
         /**
          * @brief 이 씬의 고정 스텝(초)을 엔진 설정 대신 @p seconds 로 둡니다. 0 이면 엔진 설정으로 돌아갑니다. 다음 스텝 전에 누적기를 다시 맞춥니다.

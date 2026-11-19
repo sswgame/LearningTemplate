@@ -1,58 +1,89 @@
 <?asset guid="ce37bf1319aafa023874bf49d2fd11a0"?>
 <!--
-	물리 설정 표 — 충돌 레이어(순서가 번호 0..31) · 레이어끼리의 충돌 · 물리 재질 · 중력 · 서브스텝(고정 스텝 길이는 EngineConfig._fixedDeltaTime 하나).
-	코드는 이름으로만 고른다(PhysicsSettings::findLayerIndex · findMaterial). 모르는 이름 · 겹친 이름은 읽을 때 오류다.
-	충돌 목록은 대칭으로 읽는다 — 한쪽에만 적어도 둘이 부딪힌다.
+	물리 설정 표 — 충돌 채널 · 충돌 프로필(순서가 레이어 번호 0..31, 채널마다의 응답 Block · Overlap · Ignore) · 물리 재질 · 중력 · 서브스텝(고정 스텝 길이는 EngineConfig._fixedDeltaTime 하나).
+	코드는 이름으로만 고른다(PhysicsSettings::findLayerIndex — 프로필, makeTraceLayerMask — 트레이스 채널, findMaterial). 모르는 이름 · 겹친 이름은 읽을 때 오류다.
+	두 프로필의 응답은 서로의 오브젝트 채널에 준 응답 중 약한 쪽(Ignore < Overlap < Block)이다 — 언리얼 충돌 프리셋과 같다.
 	3D 씬 용량(바디 · 쌍 · 접촉 수, 임시 블록 바이트)은 필수다. 임시 블록이 넘치면 힙으로 이어 가며 경고한다 — 경고가 나면 _tempAllocatorBytes(캐릭터 이동 청크는 _characterChunkTempBytes)를 올린다.
 	재질마다 표면 종류(engine/environment/default.surfacekinds.xml)가 있어야 한다 — 발소리 · 이동 계수 · 발자국이 재질 이름으로 종류를 찾는다.
 -->
 <PhysicsSettings _gravity="0,-9.81,0" _gravity2D="0,-9.81" _subStepCount2D="4" _maxBodyCount="65536" _maxBodyPairCount="65536" _maxContactCount="32768" _tempAllocatorBytes="16777216" _maxDebrisBodyCount="512" _characterChunkCount="16" _characterChunkTempBytes="262144">
-	<_listLayer>
-		<PhysicsLayerDef _name="Default">
-			<_listCollidesWith>
-				<item>Default</item>
-				<item>Static</item>
-				<item>Character</item>
-				<item>Ragdoll</item>
-				<item>Debris</item>
-				<item>Trigger</item>
-				<item>Projectile</item>
-			</_listCollidesWith>
-		</PhysicsLayerDef>
-		<PhysicsLayerDef _name="Static">
-			<_listCollidesWith>
-				<item>Character</item>
-				<item>Ragdoll</item>
-				<item>Debris</item>
-				<item>Projectile</item>
-			</_listCollidesWith>
-		</PhysicsLayerDef>
-		<PhysicsLayerDef _name="Character">
-			<_listCollidesWith>
-				<item>Character</item>
-				<item>Trigger</item>
-			</_listCollidesWith>
-		</PhysicsLayerDef>
-		<PhysicsLayerDef _name="Ragdoll">
-			<_listCollidesWith>
-				<item>Ragdoll</item>
-				<item>Debris</item>
-				<item>Projectile</item>
-			</_listCollidesWith>
-		</PhysicsLayerDef>
-		<PhysicsLayerDef _name="Debris">
-			<_listCollidesWith>
-				<item>Debris</item>
-			</_listCollidesWith>
-		</PhysicsLayerDef>
-		<PhysicsLayerDef _name="Trigger">
-			<_listCollidesWith />
-		</PhysicsLayerDef>
-		<PhysicsLayerDef _name="Projectile">
-			<_listCollidesWith />
-		</PhysicsLayerDef>
-	</_listLayer>
-	<!-- 발 · 손 IK 의 땅 광선이 맞는 층 — 걸을 수 있는 세계만(캐릭터 · 래그돌 · 파편 · 투사체 위에 발이 올라타지 않는다) -->
+	<!-- 채널 — 오브젝트 채널(바디의 종류)과 트레이스 채널(질의의 종류). 프로필이 적지 않은 채널은 _defaultResponse 다. -->
+	<_listChannel>
+		<CollisionChannelDef _name="WorldStatic" _kind="Object" _defaultResponse="Ignore" />
+		<CollisionChannelDef _name="WorldDynamic" _kind="Object" _defaultResponse="Ignore" />
+		<CollisionChannelDef _name="Pawn" _kind="Object" _defaultResponse="Ignore" />
+		<CollisionChannelDef _name="Ragdoll" _kind="Object" _defaultResponse="Ignore" />
+		<CollisionChannelDef _name="Debris" _kind="Object" _defaultResponse="Ignore" />
+		<CollisionChannelDef _name="Trigger" _kind="Object" _defaultResponse="Ignore" />
+		<CollisionChannelDef _name="Projectile" _kind="Object" _defaultResponse="Ignore" />
+		<CollisionChannelDef _name="Visibility" _kind="Trace" _defaultResponse="Block" />
+		<CollisionChannelDef _name="Camera" _kind="Trace" _defaultResponse="Ignore" />
+	</_listChannel>
+	<!-- 프로필 — 차례가 바디의 레이어 번호(0..31), 바디 · 콜라이더는 이름으로 고른다. 두 프로필의 응답은 서로의 오브젝트 채널에 준 응답 중 약한 쪽이다. -->
+	<_listProfile>
+		<CollisionProfileDef _name="Default" _objectChannel="WorldDynamic">
+			<_listResponse>
+				<CollisionResponseDef _channel="WorldStatic" _response="Block" />
+				<CollisionResponseDef _channel="WorldDynamic" _response="Block" />
+				<CollisionResponseDef _channel="Pawn" _response="Block" />
+				<CollisionResponseDef _channel="Ragdoll" _response="Block" />
+				<CollisionResponseDef _channel="Debris" _response="Block" />
+				<CollisionResponseDef _channel="Trigger" _response="Overlap" />
+				<CollisionResponseDef _channel="Projectile" _response="Block" />
+				<CollisionResponseDef _channel="Camera" _response="Block" />
+			</_listResponse>
+		</CollisionProfileDef>
+		<CollisionProfileDef _name="Static" _objectChannel="WorldStatic">
+			<_listResponse>
+				<CollisionResponseDef _channel="WorldDynamic" _response="Block" />
+				<CollisionResponseDef _channel="Pawn" _response="Block" />
+				<CollisionResponseDef _channel="Ragdoll" _response="Block" />
+				<CollisionResponseDef _channel="Debris" _response="Block" />
+				<CollisionResponseDef _channel="Projectile" _response="Block" />
+				<CollisionResponseDef _channel="Camera" _response="Block" />
+			</_listResponse>
+		</CollisionProfileDef>
+		<CollisionProfileDef _name="Character" _objectChannel="Pawn">
+			<_listResponse>
+				<CollisionResponseDef _channel="WorldStatic" _response="Block" />
+				<CollisionResponseDef _channel="WorldDynamic" _response="Block" />
+				<CollisionResponseDef _channel="Pawn" _response="Block" />
+				<CollisionResponseDef _channel="Trigger" _response="Overlap" />
+			</_listResponse>
+		</CollisionProfileDef>
+		<CollisionProfileDef _name="Ragdoll" _objectChannel="Ragdoll">
+			<_listResponse>
+				<CollisionResponseDef _channel="WorldStatic" _response="Block" />
+				<CollisionResponseDef _channel="WorldDynamic" _response="Block" />
+				<CollisionResponseDef _channel="Ragdoll" _response="Block" />
+				<CollisionResponseDef _channel="Debris" _response="Block" />
+				<CollisionResponseDef _channel="Projectile" _response="Block" />
+			</_listResponse>
+		</CollisionProfileDef>
+		<CollisionProfileDef _name="Debris" _objectChannel="Debris">
+			<_listResponse>
+				<CollisionResponseDef _channel="WorldStatic" _response="Block" />
+				<CollisionResponseDef _channel="WorldDynamic" _response="Block" />
+				<CollisionResponseDef _channel="Ragdoll" _response="Block" />
+				<CollisionResponseDef _channel="Debris" _response="Block" />
+			</_listResponse>
+		</CollisionProfileDef>
+		<CollisionProfileDef _name="Trigger" _objectChannel="Trigger">
+			<_listResponse>
+				<CollisionResponseDef _channel="WorldDynamic" _response="Overlap" />
+				<CollisionResponseDef _channel="Pawn" _response="Overlap" />
+				<CollisionResponseDef _channel="Visibility" _response="Ignore" />
+			</_listResponse>
+		</CollisionProfileDef>
+		<CollisionProfileDef _name="Projectile" _objectChannel="Projectile">
+			<_listResponse>
+				<CollisionResponseDef _channel="WorldStatic" _response="Block" />
+				<CollisionResponseDef _channel="WorldDynamic" _response="Block" />
+				<CollisionResponseDef _channel="Ragdoll" _response="Block" />
+			</_listResponse>
+		</CollisionProfileDef>
+	</_listProfile>
+	<!-- 발 · 손 IK 의 땅 광선이 맞는 프로필 — 걸을 수 있는 세계만(캐릭터 · 래그돌 · 파편 · 투사체 위에 발이 올라타지 않는다) -->
 	<_listGroundQueryLayer>
 		<item>Default</item>
 		<item>Static</item>

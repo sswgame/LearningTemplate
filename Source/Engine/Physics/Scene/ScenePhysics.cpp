@@ -196,6 +196,22 @@ namespace sw
         return 0;
     }
 
+    optional<PhysicsQueryFilter> ScenePhysics::makeTraceFilter( const hashed_string& traceChannel ) const
+    {
+        const PhysicsSettings* pSettings = findSettings();
+        if ( pSettings == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ScenePhysics.TraceWithoutSettings", "Trace channel '%#' asked for but the scene has no physics settings", traceChannel.c_str() );
+            return nullopt;
+        }
+        const optional<uint32> mask = pSettings->makeTraceLayerMask( traceChannel );
+        if ( mask.has_value() == false )
+            return nullopt;
+        PhysicsQueryFilter filter;
+        filter._layerMask = *mask;
+        return filter;
+    }
+
     void ScenePhysics::configureOnce()
     {
         if ( _bConfigured )

@@ -95,7 +95,7 @@ namespace sw
         Radians _maxSlopeAngle;
         PROPERTY( Category = "Character", Tooltip = "Multiplier on scene gravity (0 floats)" )
         float32 _gravityScale;
-        PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
+        PROPERTY( Category = "Character", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer )
         hashed_string _layer;
 
         PhysicsCharacterHandle                  _character;
