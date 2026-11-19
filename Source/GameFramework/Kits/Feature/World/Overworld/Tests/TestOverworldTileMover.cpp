@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Overworld/OverworldTileMover.h"
 #include "GameFramework/Kits/Feature/World/Overworld/TileMap.h"
@@ -64,6 +65,17 @@ namespace
             Archive archive;
             mover.writeState( archive );
             return vector<uint8>( archive.getData(), archive.getData() + archive.getSize() );
+        }
+
+        /** @brief 워프 맵이 빈 이동기 바이트에서 첫 깃발(이동)의 자리입니다. 리플렉션 머리 + 빈 맵 이름 뒤에 깃발 다섯(이동 · 워프 · 조우 · 상호작용 · 입력)이 놓인다. */
+        static size_t findFirstFlagOffset()
+        {
+            Archive prefix;
+            StateIO::writeReflectedHeader<OverworldTileMover>( prefix );
+            StateIO io( prefix );
+            string  emptyMap;
+            io.value( emptyMap );
+            return static_cast<size_t>( prefix.getSize() );
         }
     };
 } // namespace
@@ -227,9 +239,9 @@ SW_TEST_CASE( OverworldTileMoverTest, StateRoundTripsMidStep )
 SW_TEST_CASE( OverworldTileMoverTest, CraftedPendingWarpWithoutAMapIsRefused )
 {
     OverworldFixture rig;
-    vector<uint8>    listBytes                 = OverworldFixture::save( rig._mover );
-    constexpr size_t kFlagFromEnd              = 4; // 플래그 다섯(이동 · 워프 · 조우 · 상호작용 · 입력) 중 워프는 끝에서 넷째다
-    listBytes[listBytes.size() - kFlagFromEnd] = SW_TRUE;
+    vector<uint8>    listBytes = OverworldFixture::save( rig._mover );
+    const size_t     warpFlag  = OverworldFixture::findFirstFlagOffset() + 1; // 워프 대기는 둘째 깃발이다
+    listBytes[warpFlag]        = SW_TRUE;
 
     OverworldFixture target;
     target._mover.setPosition( 1, 1 );
@@ -249,8 +261,8 @@ SW_TEST_CASE( OverworldTileMoverTest, TruncatedOrBadFlagBytesLeaveTheStateAlone 
     SW_EXPECT_FALSE( target._mover.readState( truncated ) );
     SW_EXPECT_EQUAL( 2, target._mover.getTileX() );
 
-    vector<uint8> listBadFlag = listSaved;
-    listBadFlag.back()        = 2;
+    vector<uint8> listBadFlag                            = listSaved;
+    listBadFlag[OverworldFixture::findFirstFlagOffset()] = 2; // 이동 깃발에 0 · 1 밖 값
     Archive badFlag( listBadFlag.data(), listBadFlag.size() );
     SW_EXPECT_FALSE( target._mover.readState( badFlag ) );
     SW_EXPECT_EQUAL( 2, target._mover.getTileX() );

@@ -264,6 +264,9 @@ namespace sw
             return findInMapByNameHash( _mapRedirectNameToValue, nameHash, outValue );
         }
 
+        /** @brief 선언된 열거자(비트플래그는 선언된 비트의 조합)이고 센티널이 아닌 값인지입니다. `isValidValue` 는 센티널만 보아 선언 밖 값(uint8 열거의 9)을 받는다. */
+        [[nodiscard]] bool isDeclaredValue( int64 value ) const { return valueToCString( value ) != nullptr; }
+
         /** @brief 값에 해당하는 열거자 이름 글입니다(열거자 `None` 은 "None"). Invalid 나 Count 센티널이거나 이름이 없으면 nullptr 입니다. */
         const utf8* valueToCString( int64 value ) const
         {

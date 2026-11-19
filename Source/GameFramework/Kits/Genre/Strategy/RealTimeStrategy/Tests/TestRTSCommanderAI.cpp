@@ -473,10 +473,15 @@ SW_TEST_CASE( RTSCommanderAITest, StateRoundTripKeepsTimerAndWaveCount )
     Archive written;
     rig._ai.writeState( written );
     Archive reading( written.getData(), written.getSize() );
+    // 리플렉션 머리(타입 판 + 칸 배치 해시) 뒤에 공격 횟수 칸, 그 뒤에 손 본문의 생각 타이머다
+    uint32  version         = 0;
+    uint64  layoutHash      = 0;
     float32 thinkTimer      = 0.0f;
     int32   attackWaveCount = 0;
-    reading >> thinkTimer;
+    reading >> version;
+    reading >> layoutHash;
     reading >> attackWaveCount;
+    reading >> thinkTimer;
     SW_EXPECT_NEAR( 0.4f, thinkTimer, 1.0e-6f );
     SW_EXPECT_EQUAL( 3, attackWaveCount );
 

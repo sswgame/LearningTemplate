@@ -615,11 +615,18 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, StorageState )
 
     const auto refuses = [this]( const sw::MonsterInstance& monster, uint32 partyCount )
     {
-        sw::Archive fixture;
+        // 보관함은 리플렉션 머리 뒤에 파티 · 박스를 안쪽 구조체 칸(개체마다 머리 없이 칸만)으로 싣는다 — 개체 바이트는 개체 머리 길이만큼 건너뛴 writeState 바이트다
+        sw::Archive monsterBytes;
+        sw::Archive monsterHeader;
+        monster.writeState( monsterBytes );
+        sw::StateIO::writeReflectedHeader<sw::MonsterInstance>( monsterHeader );
+        const uint64 fieldBytes = monsterBytes.getSize() - monsterHeader.getSize();
+        sw::Archive  fixture;
+        sw::StateIO::writeReflectedHeader<sw::MonsterStorage>( fixture );
         fixture << partyCount;
         for ( uint32 index = 0; index < partyCount; ++index )
         {
-            monster.writeState( fixture );
+            fixture.writeBytes( monsterBytes.getData() + monsterHeader.getSize(), fieldBytes );
         }
         fixture << static_cast<uint32>( 0 );
         sw::Archive        readingFixture( fixture.getData(), fixture.getSize() );
