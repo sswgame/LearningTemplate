@@ -57,6 +57,7 @@
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
+#include "Engine/Renderer/Frame/Screen/FrameDisplayEncode.h"
 #include "Engine/Renderer/Frame/Screen/FrameScreenRotation.h"
 #include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
@@ -373,6 +374,9 @@ namespace sw
                 case RenderPassKind::ProbeUpdate:
                 case RenderPassKind::DeferredTileClassify:
                 case RenderPassKind::AutoExposureHistogram:
+                case RenderPassKind::DisplayEncodeHDR10:
+                case RenderPassKind::DisplayEncodeScRGB:
+                case RenderPassKind::DisplayCompositeUI:
                 {
                     SW_LOG_WARNING_ID( "FramePassExecutor.UnknownPassType", "Unknown pass type '%#' in '%#'", passType, passName );
                     break;
@@ -1178,7 +1182,7 @@ namespace sw
         // 출력은 뷰가 정한다(resolvePresentTarget. Canvas 와 같은 판단). 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고,
         // Swapchain 을 쓰는 마지막 패스(보통 Canvas) 끝에서 백버퍼로 복사한다. 여기서 복사하면 뒤의 UI 가 캡처에 없다.
         const FrameViewTarget& activeView     = *_pActiveView;
-        const PresentTarget    target         = resolvePresentTarget();
+        const PresentTarget    target         = resolvePresentTarget( true );
         const bool             bOwnOutput     = target._bOwnOutput == SW_TRUE;
         const bool             bCaptureToBack = target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( passDesc );
         const RHITextureHandle dstTarget      = target._texture;
@@ -1246,7 +1250,7 @@ namespace sw
             }
             context._pCmd->endRenderPass();
             if ( bCaptureToBack )
-                context._pCmd->blitTexture( dstTarget, _screenRotation.getScreenTarget() );
+                context._pCmd->blitTexture( dstTarget, getScreenTarget() );
         }
         else
         {
@@ -1266,7 +1270,7 @@ namespace sw
         // (`_pMainOutputCanvasView` — 화면 사각형 뷰가 있으면 그 마지막 것, 없으면 주 시점). 그래야 PiP · 분할 화면이 UI 를 덮지 않는다.
         // 렌더 텍스처 · 호스트 타깃 뷰에는 그리지 않는다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
         FramePassContext&   context = input._context;
-        const PresentTarget target  = resolvePresentTarget();
+        const PresentTarget target  = resolvePresentTarget( false );
         const bool          bDraw   = _pActiveView == _pMainOutputCanvasView && _state._canvasFrame.getMainOutput().isEmpty() == false && target._width > 0 && target._height > 0;
         if ( bDraw )
         {
@@ -1285,7 +1289,7 @@ namespace sw
         }
         const bool bLastWriter = isLastSwapchainWriter( input._passDesc );
         if ( target._bCaptureToBack == SW_TRUE && bLastWriter )
-            context._pCmd->blitTexture( target._texture, _screenRotation.getScreenTarget() );
+            context._pCmd->blitTexture( target._texture, getScreenTarget() );
         if ( target._bCaptureFromOutput == SW_TRUE && bLastWriter )
             _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
         drawDevOverlay( context, input._passDesc, target );
@@ -1294,16 +1298,19 @@ namespace sw
     void FramePassExecutor::drawDevOverlay( FramePassContext& context, const RenderGraphPassDesc& passDesc, const PresentTarget& target )
     {
         // 순서가 계약이다: 사진 캡처(캡처 텍스처에 그리기 · 출력에서 복사)가 끝난 뒤, 화면에 나가는 대상에만 그린다 — 사진 · 골든에 개발 겹치기가 들지 않는다.
-        const CanvasDrawList&  list         = _state._canvasFrame.getDevOverlay();
-        const bool             bOnScreen    = target._bCapture == SW_FALSE || target._bCaptureToBack == SW_TRUE; // 크기를 덮어쓴 캡처는 화면에 나가지 않는다
-        const RHITextureHandle screen       = _screenRotation.getScreenTarget();                                 // 0 = 스왑체인, 회전한 화면이면 대기 텍스처
-        const bool             bBackBuffer  = target._bCaptureToBack == SW_TRUE || target._texture == screen;    // 호스트 타깃(에디터 게임 뷰)에는 그리지 않는다
-        const bool             bDrawOverlay = list.isEmpty() == false && isLastSwapchainWriter( passDesc ) && _pActiveView == _pMainOutputCanvasView && target._bOwnOutput == SW_FALSE &&
+        const CanvasDrawList&  list        = _state._canvasFrame.getDevOverlay();
+        const bool             bOnScreen   = target._bCapture == SW_FALSE || target._bCaptureToBack == SW_TRUE; // 크기를 덮어쓴 캡처는 화면에 나가지 않는다
+        const RHITextureHandle screen      = getScreenTarget();                                                 // 0 = 스왑체인, 회전한 화면이면 대기 텍스처, HDR 출력이면 UI RT
+        const RHITextureHandle sceneTarget = _displayEncode.getSceneTarget();
+        // 호스트 타깃(에디터 게임 뷰)에는 그리지 않는다. HDR 출력의 Present 는 장면 출력 RT 에 그렸어도 화면에 나가는 대상이다(겹치기는 UI RT 에 그린다).
+        const bool bBackBuffer  = target._bCaptureToBack == SW_TRUE || target._texture == screen || ( sceneTarget != 0 && target._texture == sceneTarget );
+        const bool bDrawOverlay = list.isEmpty() == false && isLastSwapchainWriter( passDesc ) && _pActiveView == _pMainOutputCanvasView && target._bOwnOutput == SW_FALSE &&
                                   bOnScreen && bBackBuffer && target._width > 0 && target._height > 0;
         if ( bDrawOverlay == false )
             return;
-        const RHIFormat              format = _pDevice->getBackBufferFormat();
-        const RHIPipelineStateHandle pso    = _psoManager.findOutputPSO( RenderPassKind::Canvas, format ); // 백버퍼 포맷의 캔버스 PSO 는 셋업이 늘 만든다
+        // 화면 대상의 실제 포맷이다 — 스왑체인이면 백버퍼 포맷, 회전 대기 텍스처 · HDR UI RT 면 그 텍스처의 포맷(둘 다 셋업이 캔버스 PSO 를 만든 포맷)이다.
+        const RHIFormat              format = screen == 0 ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( screen );
+        const RHIPipelineStateHandle pso    = _psoManager.findOutputPSO( RenderPassKind::Canvas, format ); // 셋업에 없으면 멈춘다
         RHIRenderPassBeginInfo       beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
         beginInfo._arrColorTarget[0] = screen; // 화면 — 캡처를 옮긴 뒤이거나 처음부터 화면에 그린 프레임이다

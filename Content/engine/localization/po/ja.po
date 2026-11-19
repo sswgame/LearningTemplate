@@ -2657,6 +2657,41 @@ msgstr "切り替え"
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
+msgctxt "settings.display.hdr"
+msgid "HDR"
+msgstr "HDR"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.hdr.hdr10"
+msgid "HDR10"
+msgstr "HDR10"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.hdr.scrgb"
+msgid "scRGB"
+msgstr "scRGB"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.hdrMaxLuminance"
+msgid "HDR Peak Brightness"
+msgstr "HDR 最大輝度"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.hdrPaperWhite"
+msgid "HDR Paper White"
+msgstr "HDR ペーパーホワイト"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
 msgctxt "settings.display.resolution"
 msgid "Resolution"
 msgstr "解像度"

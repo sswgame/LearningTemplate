@@ -49,6 +49,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -108,7 +109,7 @@ namespace sw
         , _bTessellationShader{ 0 }
         , _bSwapChainDirty{ SW_FALSE }
         , _bDepthHasStencil{ SW_FALSE }
-        , _reservedSwapChainBit{ 0 }
+        , _bSwapChainColorSpace{ SW_FALSE }
         , _bMemoryBudget{ SW_FALSE }
         , _bSurfaceLost{ SW_FALSE }
         , _bDeviceFault{ SW_FALSE }
@@ -121,6 +122,7 @@ namespace sw
         , _pCmdSetCheckpoint{ nullptr }
         , _pGetCheckpointData{ nullptr }
         , _pCmdWriteBufferMarker{ nullptr }
+        , _pSetHDRMetadata{ nullptr }
         , _pCmdDrawIndirectCount{ nullptr }
         , _pCmdDrawIndexedIndirectCount{ nullptr }
         , _breadcrumbBuffer{ VK_NULL_HANDLE }
@@ -252,7 +254,7 @@ namespace sw
             SW_LOG_WARNING_ID( "Vulkan.ValidationSwitchWithoutLayer", "EngineConfig _rhi asks for GPU-assisted or synchronization validation, but the Vulkan validation layer is off (_rhi._validationLayer, -rhi-validation) - ignored" );
 
         // 백버퍼 포맷 · 개수는 백엔드 간 계약값이다. 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
-        _swapChain.setRequested( desc._format, desc._bufferCount, desc._bVSync );
+        _swapChain.setRequested( desc._sdrFormat, desc._bufferCount, desc._bVSync );
 
         BLOCK( "Validation Layer Setup" )
         {
@@ -323,6 +325,8 @@ namespace sw
 
         BLOCK( "Swapchain / RenderPass / Framebuffers" )
         {
+            // 색 공간 확장은 인스턴스가 정했다 — 주 스왑체인은 SDR 로 만들고 `setBackBufferColorSpace` 가 바꾼다.
+            _swapChain.setRequestedColorSpace( desc._colorSpace, _bSwapChainColorSpace != SW_FALSE );
             if ( _swapChain.create( _physicalDevice, _device, _width, _height ) == false )
                 return false;
 
@@ -1083,6 +1087,10 @@ namespace sw
 #else
     #error "Unsupported platform"
 #endif
+        // HDR10 · scRGB 표면 색 공간(선택 — 없으면 SDR 만 낸다, `RHICapabilities::_displayOutputSupport`).
+        _bSwapChainColorSpace = VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME ) ? SW_TRUE : SW_FALSE;
+        if ( _bSwapChainColorSpace != SW_FALSE )
+            listExtension.push_back( VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME );
         if ( _bEnableValidationLayers == SW_TRUE && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
             listExtension.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
         else if ( _bEnableValidationLayers == SW_TRUE )
@@ -1456,6 +1464,9 @@ namespace sw
             _bMemoryBudget = VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME ) ? SW_TRUE : SW_FALSE;
             if ( _bMemoryBudget == SW_TRUE )
                 listDeviceExtension.push_back( VK_EXT_MEMORY_BUDGET_EXTENSION_NAME );
+            // HDR10 마스터링 값 알리기(선택 — 표면 색 공간 확장을 켠 인스턴스만 쓸 일이 있다).
+            if ( _bSwapChainColorSpace != SW_FALSE && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_HDR_METADATA_EXTENSION_NAME ) )
+                listDeviceExtension.push_back( VK_EXT_HDR_METADATA_EXTENSION_NAME );
         }
         // VK_EXT_device_fault(진단 전용): 디바이스를 잃었을 때 결함 주소 · 공급사 코드를 읽는다(reportDeviceFault). 기능 비트까지 있어야 켠다.
         VkPhysicalDeviceFaultFeaturesEXT faultFeatures{};
@@ -1513,6 +1524,8 @@ namespace sw
             return false;
 
         vkGetDeviceQueue( _device, _graphicsQueueFamilyIndex, 0, &_graphicsQueue );
+        // 켜지 않았으면 nullptr 이다(장치에 없는 함수를 물으면 nullptr — 명세).
+        _pSetHDRMetadata = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkSetHdrMetadataEXT" ) );
         if ( _bDrawIndirectCount != 0 )
         {
             _pCmdDrawIndirectCount        = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkCmdDrawIndirectCount" ) );
@@ -1713,6 +1726,30 @@ namespace sw
             _bSwapChainDirty = 1;
     }
 
+    bool VulkanRHIDevice::setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
+    {
+        // 크기 바꿈과 같은 재생성 길(GPU 대기 · 옛 스왑체인 물려주기 · 포맷이 바뀌면 렌더 패스 다시 만들기)을 지금 탄다 — 부르는 쪽이 렌더 스레드를 세웠다.
+        // shortcut: 다른 창(에디터 도구 창)은 주 창의 렌더 패스 포맷을 따르므로 HDR 인 동안 새로 열지 못한다(`createSwapChainInternal` 이 거절한다) — 도구 창을 SDR 렌더 패스로 따로 그릴 때 푼다.
+        _swapChain.setRequestedColorSpace( colorSpace, _bSwapChainColorSpace != SW_FALSE );
+        if ( recreateSwapChain() == false || _swapChain.getColorSpace() != colorSpace )
+            return false;
+        if ( colorSpace != RHIColorSpace::HDR10ST2084 || _pSetHDRMetadata == nullptr )
+            return true;
+        VkHdrMetadataEXT hdrMetadata{};
+        hdrMetadata.sType                     = VK_STRUCTURE_TYPE_HDR_METADATA_EXT;
+        hdrMetadata.displayPrimaryRed         = VkXYColorEXT{ RHIDisplayMetadata::kRedPrimaryX, RHIDisplayMetadata::kRedPrimaryY };
+        hdrMetadata.displayPrimaryGreen       = VkXYColorEXT{ RHIDisplayMetadata::kGreenPrimaryX, RHIDisplayMetadata::kGreenPrimaryY };
+        hdrMetadata.displayPrimaryBlue        = VkXYColorEXT{ RHIDisplayMetadata::kBluePrimaryX, RHIDisplayMetadata::kBluePrimaryY };
+        hdrMetadata.whitePoint                = VkXYColorEXT{ RHIDisplayMetadata::kWhitePointX, RHIDisplayMetadata::kWhitePointY };
+        hdrMetadata.maxLuminance              = metadata._maxLuminanceNits;
+        hdrMetadata.minLuminance              = metadata._minLuminanceNits;
+        hdrMetadata.maxContentLightLevel      = metadata._maxLuminanceNits;
+        hdrMetadata.maxFrameAverageLightLevel = metadata._maxFrameAverageNits;
+        const VkSwapchainKHR arrSwapChain[]   = { _swapChain.getSwapChain() };
+        reinterpret_cast<PFN_vkSetHdrMetadataEXT>( _pSetHDRMetadata )( _device, 1, arrSwapChain, &hdrMetadata );
+        return true;
+    }
+
     IRHISwapChain* VulkanRHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )
     {
         // 서피스 확장은 인스턴스를 만들 때 메인 창의 창 시스템으로 골랐다 — 다른 창 시스템의 핸들은 그 확장으로 읽지 못한다.
@@ -1720,6 +1757,11 @@ namespace sw
                                        ( desc._surfaceKind == NativeSurfaceKind::Wayland ) == ( _wsiKind == VulkanWsiKind::Wayland );
         if ( bSameWindowSystem == false || _device == nullptr || isDeviceLost() )
             return nullptr;
+        if ( _swapChain.getColorSpace() != RHIColorSpace::SRGBNonLinear )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.WindowSwapChainWhileHDR", "Another window cannot open while the main window presents %# - its UI draws with the SDR render pass", getEnumName( _swapChain.getColorSpace() ) );
+            return nullptr;
+        }
 
         unique_ptr<VulkanRHISwapChain> pSwapChain = make_unique<VulkanRHISwapChain>();
         pSwapChain->setRequested( _swapChain.getActualBackBufferFormat(), 0, isVSyncEnabled() );

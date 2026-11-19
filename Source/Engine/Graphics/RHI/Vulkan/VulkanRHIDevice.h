@@ -221,6 +221,7 @@ namespace sw
 
         /** @brief 크기를 기록하고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
         void                         resizeInternal( uint32 width, uint32 height ) override;
+        [[nodiscard]] bool           setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata ) override;
         [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
         void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
         void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
@@ -273,6 +274,7 @@ namespace sw
         RHICapabilities getCapabilities() const override
         {
             RHICapabilities caps        = RHIAvailability::query( RHIBackend::Vulkan );
+            caps._displayOutputSupport  = _swapChain.getDisplayOutputSupport();
             caps._bMultiDrawIndirect    = _bMultiDrawIndirect;
             caps._bNativeBindless       = hasTextureSet() ? 1u : 0u;
             caps._bWireframeFill        = _bFillModeNonSolid;
@@ -321,7 +323,8 @@ namespace sw
         void waitForAsyncCompute( RHIQueueSyncPoint point ) override;
 
         /** @brief 서피스 제약으로 계약 포맷을 낼 수 없는 경우가 있으므로 실제로 채택한 포맷을 보고합니다. */
-        RHIFormat getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
+        RHIFormat     getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
+        RHIColorSpace getBackBufferColorSpace() const override { return _swapChain.getColorSpace(); }
         /**
          * @brief 큐 호출(`vkQueueSubmit` · `vkQueueWaitIdle` · `vkWaitForFences`)의 결과를 봅니다. 성공이면 아무것도 하지 않습니다.
          * @details 실패면 어디서(@p pWhere) · 무슨 `VkResult` 인지와 마지막으로 제출 순서에 넣은 패스(이벤트 마커)를 오류 로그로 남긴다.
@@ -1029,32 +1032,32 @@ namespace sw
         vector<vector<VkSemaphore>> _listAsyncSemaphorePool;
         uint32                      _asyncSemaphoreCursor; ///< 이번 프레임 슬롯 풀에서 다음에 빌릴 칸
 
-        void*                   _pHWnd;
-        void*                   _pDisplayHandle;
-        NativeSurfaceKind       _surfaceKind; ///< 두 핸들의 창 시스템(리눅스 WSI 를 고른다 — X11 이면 xlib · xcb, Wayland 면 wayland)
-        VulkanWsiKind           _wsiKind;     ///< 인스턴스를 만들 때 고른 서피스 확장(`createSurface` 가 이 값으로 만든다). 인스턴스 전에는 None
-        uint32                  _width;
-        uint32                  _height;
-        uint32                  _depthFormat;      ///< VkFormat. createTexture2D 와 렌더 패스가 함께 쓰는 깊이 포맷
-        uint32                  _surfaceLostCount; ///< 이 디바이스가 서피스를 잃은 횟수(진단용)
-        uint16                  _bFrameStarted                       : 1;
-        uint16                  _bEnableValidationLayers             : 1;
-        uint16                  _bMultiDrawIndirect                  : 1;
-        uint16                  _bDrawIndirectCount                  : 1;
-        uint16                  _bSamplerAnisotropy                  : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
-        uint16                  _bFillModeNonSolid                   : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
-        uint16                  _bDepthClamp                         : 1; ///< 깊이 클립을 끌 수 있는가(렌더 상태의 `_bEnableDepthClip`)
-        uint16                  _bGeometryShader                     : 1; ///< 지오메트리 스테이지를 쓸 수 있는가
-        uint16                  _bTessellationShader                 : 1; ///< 헐 · 도메인 스테이지를 쓸 수 있는가
-        uint16                  _bSwapChainDirty                     : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
-        uint16                  _bDepthHasStencil                    : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
-        [[maybe_unused]] uint16 _reservedSwapChainBit                : 1;
-        uint16                  _bMemoryBudget                       : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
-        uint16                  _bSurfaceLost                        : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
-        uint16                  _bDeviceFault                        : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
-        uint16                  _bFragmentStores                     : 1; ///< 프래그먼트 셰이더가 스토리지 버퍼에 쓸 수 있는가(fragmentStoresAndAtomics — 셰이더 메시지 채널의 그래픽스 단계)
-        uint16                  _bGPUAssistedValidationRequested     : 1; ///< 검증 레이어의 GPU 보조 검증을 켠다(`RHISwapChainDesc::_bGPUBasedValidation`, R-9)
-        uint16                  _bSynchronizationValidationRequested : 1; ///< 검증 레이어의 동기화 검증을 켠다(`RHISwapChainDesc::_bSynchronizationValidation`, R-9)
+        void*             _pHWnd;
+        void*             _pDisplayHandle;
+        NativeSurfaceKind _surfaceKind; ///< 두 핸들의 창 시스템(리눅스 WSI 를 고른다 — X11 이면 xlib · xcb, Wayland 면 wayland)
+        VulkanWsiKind     _wsiKind;     ///< 인스턴스를 만들 때 고른 서피스 확장(`createSurface` 가 이 값으로 만든다). 인스턴스 전에는 None
+        uint32            _width;
+        uint32            _height;
+        uint32            _depthFormat;      ///< VkFormat. createTexture2D 와 렌더 패스가 함께 쓰는 깊이 포맷
+        uint32            _surfaceLostCount; ///< 이 디바이스가 서피스를 잃은 횟수(진단용)
+        uint16            _bFrameStarted                       : 1;
+        uint16            _bEnableValidationLayers             : 1;
+        uint16            _bMultiDrawIndirect                  : 1;
+        uint16            _bDrawIndirectCount                  : 1;
+        uint16            _bSamplerAnisotropy                  : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
+        uint16            _bFillModeNonSolid                   : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
+        uint16            _bDepthClamp                         : 1; ///< 깊이 클립을 끌 수 있는가(렌더 상태의 `_bEnableDepthClip`)
+        uint16            _bGeometryShader                     : 1; ///< 지오메트리 스테이지를 쓸 수 있는가
+        uint16            _bTessellationShader                 : 1; ///< 헐 · 도메인 스테이지를 쓸 수 있는가
+        uint16            _bSwapChainDirty                     : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
+        uint16            _bDepthHasStencil                    : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
+        uint16            _bSwapChainColorSpace                : 1; ///< 인스턴스에 VK_EXT_swapchain_colorspace 를 켰는가(HDR10 · scRGB 표면 색 공간)
+        uint16            _bMemoryBudget                       : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
+        uint16            _bSurfaceLost                        : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
+        uint16            _bDeviceFault                        : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
+        uint16            _bFragmentStores                     : 1; ///< 프래그먼트 셰이더가 스토리지 버퍼에 쓸 수 있는가(fragmentStoresAndAtomics — 셰이더 메시지 채널의 그래픽스 단계)
+        uint16            _bGPUAssistedValidationRequested     : 1; ///< 검증 레이어의 GPU 보조 검증을 켠다(`RHISwapChainDesc::_bGPUBasedValidation`, R-9)
+        uint16            _bSynchronizationValidationRequested : 1; ///< 검증 레이어의 동기화 검증을 켠다(`RHISwapChainDesc::_bSynchronizationValidation`, R-9)
         /// @brief 새 번호를 세 링 세트에 바로 쓰는가(장치 생성 때 고정 — `descriptorBindingUpdateUnusedWhilePending` 이 있으면). 없으면 지금 슬롯 세트만 쓰고 나머지는 그 슬롯의 차례에 쓴다(R-6).
         uint16 _bWriteAllRingSetsNow : 1;
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
@@ -1064,6 +1067,7 @@ namespace sw
         void*                _pCmdSetCheckpoint;     ///< `vkCmdSetCheckpointNV` 입니다(확장 함수라 void* 로 쥐고 cpp 가 형식을 정한다). NVCheckpoints 일 때만 읽는다
         void*                _pGetCheckpointData;    ///< `vkGetQueueCheckpointDataNV` 입니다. 위와 같다
         void*                _pCmdWriteBufferMarker; ///< `vkCmdWriteBufferMarkerAMD` 입니다. AMDBufferMarker 일 때만 읽는다
+        void*                _pSetHDRMetadata;       ///< `vkSetHdrMetadataEXT` 입니다(VK_EXT_hdr_metadata 를 켠 장치만). 없으면 HDR10 마스터링 값을 알리지 않는다(표시 엔진의 기본값)
         /// @brief Vulkan 1.2 간접 개수 그리기 함수입니다. 링크하지 않고 장치에서 얻는다 — Android libvulkan 은 1.0 · 1.1 함수만 내보낸다. 얻지 못하면 `_bDrawIndirectCount` 를 끈다.
         void*                  _pCmdDrawIndirectCount;
         void*                  _pCmdDrawIndexedIndirectCount;

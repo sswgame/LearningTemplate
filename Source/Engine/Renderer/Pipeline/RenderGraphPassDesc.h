@@ -258,6 +258,18 @@ namespace sw
          *        자리라 같은 때(톤맵하는 패스 앞)에 기록한다(`FrameAutoExposure::recordAutoExposure`). 원본을 샘플해야 해 네이티브 bindless 에서만 돈다 — 에뮬은 풀스크린이 같은 식이다.
          */
         AutoExposureHistogram,
+        /**
+         * @brief HDR10 인코딩 출력입니다(display_encode.hlsl, `SW_DISPLAY_OUTPUT=1`). HDR 출력이면 프레임 끝에 장면 출력 RT(UI 를 합성한 [0,1] 출력 신호)를 nits 로 풀어
+         *        BT.2020 + PQ 로 R10G10B10A2 백버퍼에 쓴다(`FrameDisplayEncode`). 백버퍼가 그 포맷일 때만 쓰는 고정 포맷 패스이고, 모니터가 HDR10 을 받을 때만 PSO 가 있다.
+         */
+        DisplayEncodeHDR10,
+        /** @brief scRGB 인코딩 출력입니다(display_encode.hlsl, `SW_DISPLAY_OUTPUT=2`) — 선형 Rec.709 × (nits / 80) 을 R16G16B16A16 실수 백버퍼에 쓴다. 나머지는 `DisplayEncodeHDR10` 과 같다. */
+        DisplayEncodeScRGB,
+        /**
+         * @brief HDR 출력의 UI 합성입니다(display_encode.hlsl, `SW_DISPLAY_UI_COMPOSITE`). SDR UI RT(미리 곱한 알파 — Canvas · 개발 겹치기 · 렌더 스레드 UI 가 그린다)를
+         *        종이 흰색 휘도의 출력 신호로 옮겨 장면 출력 RT 위에 섞는다(언리얼 `r.HDR.UI.CompositeMode`). 인코딩 바로 앞에 돈다. 모니터가 HDR 을 받을 때만 PSO 가 있다.
+         */
+        DisplayCompositeUI,
     };
 
     /**

@@ -527,7 +527,7 @@ namespace sw
         _backBufferWidth              = swapChainDesc._width;
         _backBufferHeight             = swapChainDesc._height;
         swapChainDesc._bufferCount    = kBackBufferCount;
-        swapChainDesc._format         = requestedFormat;
+        swapChainDesc._sdrFormat      = requestedFormat;
         swapChainDesc._bVSync         = _bPreferredVSync;
         // 0 은 그대로 넘긴다 — 쓰는 백엔드가 오류로 거절한다(기본값으로 바꿔 주지 않는다).
         swapChainDesc._stagingRingBytes                 = static_cast<uint64>( rhiConfig._stagingRingMegabytes ) * constant::memory::kBytesPerMegabyte;
@@ -609,7 +609,7 @@ namespace sw
         }
         // 요청과 채택이 다를 수 있다(Vulkan 서피스 협상). 백버퍼 PSO 는 채택값으로 만들어진다. 어느 쪽인지 로그로 남긴다.
         SW_LOG_INFO_ID( "RHI.BackBufferFormatRequested", "Back buffer format: requested %# -> adopted %# (getBackBufferFormat)",
-                        static_cast<uint32>( swapChainDesc._format ), static_cast<uint32>( getBackBufferFormat() ) );
+                        static_cast<uint32>( swapChainDesc.getFormat() ), static_cast<uint32>( getBackBufferFormat() ) );
         return true;
     }
 
@@ -648,6 +648,34 @@ namespace sw
         waitIdle( RHIWaitIdleReason::WindowSwapChain );
         ScopedThreadRoleBorrow borrow{ _renderThread };
         destroySwapChainInternal( *pSwapChain );
+    }
+
+    bool IRHIDevice::setBackBufferColorSpace( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
+    {
+        // HDR10 은 같은 색 공간이어도 마스터링 값(최대 휘도 · 종이 흰색)이 바뀌었을 수 있어 다시 알린다.
+        if ( colorSpace == getBackBufferColorSpace() && colorSpace != RHIColorSpace::HDR10ST2084 )
+            return true;
+        if ( ( getCapabilities()._displayOutputSupport & makeColorSpaceBit( colorSpace ) ) == 0 )
+        {
+            SW_LOG_ERROR_ID( "RHI.ColorSpaceUnsupported", "%# cannot present color space %# on this monitor - resolve the display output against the capabilities first",
+                             getBackendName(), getEnumName( colorSpace ) );
+            return false;
+        }
+        waitIdle( RHIWaitIdleReason::DisplayOutput );
+        ScopedThreadRoleBorrow borrow{ _renderThread }; // 렌더 스레드가 쉬는 동안 백버퍼 · 프레임 진행 상태를 이 스레드가 빌려 만진다(resize 와 같다)
+        if ( setBackBufferColorSpaceInternal( colorSpace, metadata ) == false )
+        {
+            SW_LOG_ERROR_ID( "RHI.ColorSpaceChangeFailed", "%# could not switch the back buffer to %# - it stays %#", getBackendName(), getEnumName( colorSpace ),
+                             getEnumName( getBackBufferColorSpace() ) );
+            return false;
+        }
+        SW_LOG_INFO_ID( "RHI.BackBufferColorSpace", "Back buffer color space: %# (format %#)", getEnumName( getBackBufferColorSpace() ), getRHIFormatName( getBackBufferFormat() ) );
+        return true;
+    }
+
+    bool IRHIDevice::setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& /*metadata*/ )
+    {
+        return colorSpace == RHIColorSpace::SRGBNonLinear;
     }
 
     void IRHIDevice::resize( uint32 width, uint32 height )

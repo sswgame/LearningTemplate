@@ -730,6 +730,11 @@
 		       text="スティックのデッドゾーン"
 		       sourceHash="7b03bd1e88a3ce47" />
 		<entry key="settings.controls.toggle" text="切り替え" sourceHash="2729d39ee6c0cca5" />
+		<entry key="settings.display.hdr" text="HDR" sourceHash="49c36419cdfbbf41" />
+		<entry key="settings.display.hdr.hdr10" text="HDR10" sourceHash="66d835bfb6f21420" />
+		<entry key="settings.display.hdr.scrgb" text="scRGB" sourceHash="ec2461fc004da69a" />
+		<entry key="settings.display.hdrMaxLuminance" text="HDR 最大輝度" sourceHash="7b387e2dcf3466cb" />
+		<entry key="settings.display.hdrPaperWhite" text="HDR ペーパーホワイト" sourceHash="acea316368f8ef1e" />
 		<entry key="settings.display.resolution" text="解像度" sourceHash="f74160a9dc86ab8f" />
 		<entry key="settings.display.vsync" text="垂直同期" sourceHash="b08b0fa02c4c669e" />
 		<entry key="settings.display.windowMode" text="ウィンドウモード" sourceHash="74e7a95114592520" />

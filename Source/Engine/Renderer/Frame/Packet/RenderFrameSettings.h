@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
+#include "Engine/Graphics/Display/DisplayOutput.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 
 namespace sw
@@ -24,6 +25,7 @@ namespace sw
     struct RenderFrameSettings
     {
         RenderDiagnosticsPolicy _diagnostics{};                                   ///< 이 프레임의 진단 정책(`RenderDiagnostics::get` 의 그 프레임 값 — 라이트 그리드 생산자 · 안개 진단 · 메시지 예산)
+        DisplayOutputDesc       _displayOutput{};                                 ///< 화면 출력 장치 값(`-gv_displayOutput` · 사용자 설정 display.hdr — 주 패킷은 렌더 드라이버가 능력에 맞춘 값으로 덮는다)
         float32                 _upscalerSharpness{ 0.2f };                       ///< FSR 1 RCAS 의 선명도를 줄이는 단계(0 = 가장 선명, 음수는 0 으로 자른 값 — `-gv_upscalerSharpness`)
         uint32                  _shadowMapResolution{ 2048 };                     ///< 그림자 맵 한 변의 텍셀 수(텍스처를 만들 수 있는 범위로 자른 값 — 사용자 설정 graphics.shadowQuality)
         int32                   _postQuality{ 2 };                                ///< 후처리 품질 0~3(패스의 `_minPostQuality` 보다 낮으면 건너뛴다 — 사용자 설정 graphics.postQuality)

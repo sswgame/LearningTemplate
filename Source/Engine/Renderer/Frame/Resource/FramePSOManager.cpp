@@ -336,6 +336,9 @@ namespace sw
                 continue;
             if ( info.hasFlag( RenderPassTraitFlag::kRequiresNativeBindless ) && _pDevice->supportsNativeBindlessSampling() == false )
                 continue;
+            // HDR 화면 출력 패스는 모니터가 HDR 을 받을 때만 만든다(능력 표가 정한 길 — HDR 이 없는 기계는 PSO 도 패스도 없다). 실행 중 HDR 을 켜도 셋업의 이 PSO 를 쓴다.
+            if ( isDisplayOutputPassType( passType ) && caps.hasHDRDisplayOutput() == false )
+                continue;
             // 출력 패스는 엔진 PSO 가 없다 — 대상 포맷마다 아래 collectOutputPSOJobs 가 만든다.
             if ( info.hasFlag( RenderPassTraitFlag::kOutputPass ) )
                 continue;
@@ -676,8 +679,12 @@ namespace sw
         // 계약값 kOffscreenColorFormat), 스크린샷 캡처 텍스처(계약값 kBackBufferFormat)다. 모두 **셋업에서** 만들어 둔다.
         // 출력 패스는 표의 kOutputPass 가 정한다.
         // 화면 회전 출력(kSurfaceRotation)은 스왑체인 이미지에만 그려 백버퍼 포맷 하나이고, 서피스를 돌릴 수 있는 장치에서만 만든다(데스크톱은 없다).
-        const RHIFormat arrTargetFormat[]   = { _pDevice->getBackBufferFormat(), constant::render::kOffscreenColorFormat, constant::render::kBackBufferFormat };
-        const bool      bSurfacePreRotation = _pDevice->getCapabilities()._bSurfacePreRotation != SW_FALSE;
+        // HDR 을 받는 모니터면 장면 출력 RT(`FrameDisplayEncode` — Present · RCAS 가 그린다)의 포맷도 더한다. 실행 중 HDR 을 켜도 셋업의 이 PSO 를 쓴다. 받지 않으면 Unknown(건너뛴다).
+        const RHICapabilities caps                = _pDevice->getCapabilities();
+        const bool            bDisplayHDR         = caps.hasHDRDisplayOutput();
+        const RHIFormat       arrTargetFormat[]   = { _pDevice->getBackBufferFormat(), constant::render::kOffscreenColorFormat, constant::render::kBackBufferFormat,
+                                              bDisplayHDR ? RHIFormat::R16G16B16A16_FLOAT : RHIFormat::Unknown };
+        const bool            bSurfacePreRotation = caps._bSurfacePreRotation != SW_FALSE;
         for ( uint32 typeIndex = 0; typeIndex < kRenderPassKindCount; ++typeIndex )
         {
             const RenderPassKind      passType = static_cast<RenderPassKind>( typeIndex );

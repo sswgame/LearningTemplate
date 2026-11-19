@@ -714,6 +714,11 @@
 		<entry key="settings.controls.sprintMode" text="달리기" sourceHash="f3b65f24b2611635" />
 		<entry key="settings.controls.stickDeadzone" text="스틱 데드존" sourceHash="7b03bd1e88a3ce47" />
 		<entry key="settings.controls.toggle" text="전환" sourceHash="2729d39ee6c0cca5" />
+		<entry key="settings.display.hdr" text="HDR" sourceHash="49c36419cdfbbf41" />
+		<entry key="settings.display.hdr.hdr10" text="HDR10" sourceHash="66d835bfb6f21420" />
+		<entry key="settings.display.hdr.scrgb" text="scRGB" sourceHash="ec2461fc004da69a" />
+		<entry key="settings.display.hdrMaxLuminance" text="HDR 최대 밝기" sourceHash="7b387e2dcf3466cb" />
+		<entry key="settings.display.hdrPaperWhite" text="HDR 페이퍼 화이트" sourceHash="acea316368f8ef1e" />
 		<entry key="settings.display.resolution" text="해상도" sourceHash="f74160a9dc86ab8f" />
 		<entry key="settings.display.vsync" text="수직 동기화" sourceHash="b08b0fa02c4c669e" />
 		<entry key="settings.display.windowMode" text="창 모드" sourceHash="74e7a95114592520" />

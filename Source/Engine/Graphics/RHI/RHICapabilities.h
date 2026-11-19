@@ -91,6 +91,18 @@ namespace sw
          * @details 렌더러는 이 능력이 있을 때만 회전 출력 패스의 PSO 를 만든다(`RenderPassTraitFlag::kSurfaceRotation`). 데스크톱은 PSO · 대기 텍스처 · 패스 모두 없다.
          */
         uint8 _bSurfacePreRotation{ SW_FALSE };
+        /**
+         * @brief 주 스왑체인이 낼 수 있는 출력 종류의 비트입니다(`makeColorSpaceBit( RHIColorSpace )` 들의 합 — `DisplayOutputKind` 비트와 같은 값). SDR 비트(bit 0)는 늘 있다.
+         * @details 백엔드와 **창이 놓인 모니터**가 함께 정한다 — DX12 · DX11 은 `IDXGIOutput6::GetDesc1`(OS 의 HDR 켬) + `IDXGISwapChain3::CheckColorSpaceSupport`,
+         *          Vulkan 은 `VK_EXT_swapchain_colorspace` 의 표면 포맷 목록이다. GL · WebGPU · Android 는 SDR 만이다(능력 표가 정한 길 — 실패의 대체가 아니다).
+         *          언리얼 `GRHISupportsHDROutput` · 유니티 `HDROutputSettings.available` 자리다. 렌더러는 `DisplayOutputDesc::resolve` 로 요청을 이 비트에 맞춘다.
+         */
+        uint8 _displayOutputSupport{ 1u }; // SDR 비트만
+        /** @brief 모니터가 알린 최대 휘도(nits)입니다. 모르면(SDR 만 내는 백엔드 · 표면 정보 없음) 0 입니다. 옵션 메뉴의 최대 휘도 기본을 고를 때 본다. */
+        float32 _displayMaxLuminanceNits{ 0.0f };
+
+        /** @brief SDR 밖 출력(HDR10 · scRGB) 가운데 하나라도 받으면 true 입니다 — HDR 화면 출력의 PSO · RT 를 지을지 가른다. */
+        [[nodiscard]] bool hasHDRDisplayOutput() const { return ( _displayOutputSupport & ~1u ) != 0; }
 
         /** @brief 기본값(컴퓨트만 켠 보수적 기본)으로 만듭니다. */
         RHICapabilities() noexcept = default;

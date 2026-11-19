@@ -88,6 +88,15 @@ namespace sw
         void setRequested( RHIFormat format, uint32 bufferCount, bool bVSync );
         /** @brief VSync 요청값만 바꿉니다. 다음 `create` 가 present 모드를 다시 고릅니다. */
         void setRequestedVSync( bool bVSync ) { _bRequestedVSync = bVSync; }
+        /**
+         * @brief 색 공간 요청값을 바꿉니다. 다음 `create` 가 그 색 공간의 표면 포맷(`getSwapChainFormat` 의 포맷과 짝)을 고른다.
+         * @param bColorSpaceExtension 인스턴스에 `VK_EXT_swapchain_colorspace` 를 켰는가 — 끈 인스턴스는 HDR 색 공간을 쓸 수 없어 SDR 만 받는다.
+         */
+        void setRequestedColorSpace( RHIColorSpace colorSpace, bool bColorSpaceExtension )
+        {
+            _requestedColorSpace  = colorSpace;
+            _bColorSpaceExtension = bColorSpaceExtension ? SW_TRUE : SW_FALSE;
+        }
 
         /**
          * @brief 스왑체인과 이미지 뷰를 만듭니다.
@@ -163,8 +172,14 @@ namespace sw
         uint32 getImageFormat() const { return _imageFormat; }
         /** @brief 실제로 채택된 백버퍼 포맷입니다. 요청과 다를 수 있습니다. */
         RHIFormat getActualBackBufferFormat() const { return _actualBackBufferFormat; }
+        /** @brief 실제로 채택된 색 공간입니다. 표면이 요청한 HDR 색 공간을 주지 않으면 SDR 이다(`create` 가 알린다). */
+        RHIColorSpace getColorSpace() const { return _colorSpace; }
+        /** @brief 표면이 받는 출력의 비트입니다(`makeColorSpaceBit` 들의 합 — 마지막 `create` 가 표면 포맷 목록에서 정한다). */
+        uint8 getDisplayOutputSupport() const { return _displayOutputSupport; }
 
         VkSurfaceKHR getSurface() const { return _surface; }
+        /** @brief 스왑체인 핸들입니다(HDR 마스터링 값 알리기 — `vkSetHdrMetadataEXT`). 없으면 VK_NULL_HANDLE 입니다. */
+        VkSwapchainKHR getSwapChain() const { return _swapChain; }
 
         /** @brief 현재 이미지입니다. 준비 안 됐으면 nullptr 입니다. */
         VkImage getCurrentImage() const;
@@ -212,6 +227,12 @@ namespace sw
         RHIFormat _requestedFormat;
         /// @brief 실제로 채택된 포맷입니다. 요청과 다르면 `IRHIDevice::getBackBufferFormat` 으로 드러납니다.
         RHIFormat _actualBackBufferFormat;
+        /// @brief 요청한 색 공간입니다(`setRequestedColorSpace`). 포맷은 이것과 `_requestedFormat`(SDR 포맷)에서 정한다.
+        RHIColorSpace _requestedColorSpace{ RHIColorSpace::SRGBNonLinear };
+        /// @brief 채택한 색 공간입니다.
+        RHIColorSpace _colorSpace{ RHIColorSpace::SRGBNonLinear };
+        /// @brief 표면이 받는 출력의 비트입니다(SDR 비트는 늘 있다).
+        uint8 _displayOutputSupport{ makeColorSpaceBit( RHIColorSpace::SRGBNonLinear ) };
         /// @brief 요청한 백버퍼 개수입니다. 0 이면 서피스 최소값 + 1 을 씁니다.
         uint32 _requestedBufferCount;
         /// @brief 요청한 VSync 입니다. Vulkan 에서는 present 모드가 이 역할을 합니다(FIFO = 켬).
@@ -220,5 +241,7 @@ namespace sw
         uint8 _bSurfaceEmpty : 1;
         /// @brief 획득했지만 아직 표시하지 않은 이미지를 쥐고 있는가입니다. `present` · `destroy` 가 내린다.
         uint8 _bImageHeld : 1;
+        /// @brief 인스턴스에 `VK_EXT_swapchain_colorspace` 를 켰는가입니다(`setRequestedColorSpace`). 끄면 HDR 색 공간을 받지 않는다.
+        uint8 _bColorSpaceExtension : 1;
     };
 } // namespace sw
