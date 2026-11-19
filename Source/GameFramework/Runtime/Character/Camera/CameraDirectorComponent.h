@@ -44,7 +44,11 @@ namespace sw
      *          대상은 오브젝트 하나(`_target`)이거나 그룹(`_listGroupTarget`, 프레이밍의 그룹 맞추기)이다. 초점은 월드 위치이고, 요와 피치는 그 오브젝트가 보는 쪽이다.
      *          입력(`<Input>` 이 있는 프리셋)은 `InputManager` 에서 읽는다.
      *          암 충돌(`<Collision>`)은 따로 준 질의(`setCollisionProbe`)가 없으면 씬의 물리(`SceneCameraProbe`)에 쓸어 본다. 대상 자신은 뺀다.
-     *          입력 맵 액션 `_cycleAction` 이 발동하면 카탈로그 순서로 다음 프리셋을 켠다.
+     *          입력 맵 액션 `_cycleAction` 이 발동하면 카탈로그 순서로 다음 프리셋을 켠다(상황 프리셋은 건너뛴다). 순환 액션이 있는 디렉터는 플레이어가 시점을 고르는 카메라라서,
+     *          고른 프리셋을 사용자 설정(`CameraUserSettings::saveChosenPreset`)에 쓰고 다음 시작에 그 프리셋에서 시작한다.
+     *          **선택 프리셋과 상황.** 플레이어 · 코드가 고른 프리셋(`_selectedPreset`) 위에 켜진 상황(카탈로그 `<Context>` — 조준 · 탈것 · 실내)이 보일 프리셋을 정한다
+     *          (`CameraPresetCatalog::resolveContextPreset`). 상황은 게임 코드가 `setContext` 으로 켜거나, 데이터의 `action` 을 누르고 있는 동안 켜진다.
+     *          보일 프리셋이 바뀔 때만 켜므로(블렌드 표를 따른다) 코드가 `activatePreset` 으로 직접 켠 프리셋(킬캠)과 다투지 않는다.
      *          블렌드 없는 전환(컷)은 카메라에 컷 표시를 넣어서 렌더러가 TAA 기록을 버리게 한다.
      *          켠 프리셋과 블렌드 스택(진행, 입력이 돌린 각과 줌)은 `ComponentStateStore` 계약(`serializeState` / `restoreState`)으로 저장한다.
      *          이 타입은 정의한 .cpp 가 `StatefulComponentRegistrar` 로 등록해 모든 게임의 스냅샷에 실린다. 게임 인스턴스가 따로 등록하지 않는다.
@@ -68,8 +72,20 @@ namespace sw
         [[nodiscard]] bool activatePreset( const hashed_string& id );
         /** @brief 프리셋을 @p blend 로 켭니다. 블렌드 표는 무시합니다. */
         [[nodiscard]] bool activatePreset( const hashed_string& id, const BlendCurveDef& blend );
-        /** @brief 카탈로그 순서로 다음 프리셋을 켭니다. 마지막 다음은 처음이며, 켠 id 를 반환합니다. 프리셋이 없으면 빈 id 입니다. */
+        /**
+         * @brief 선택 프리셋을 카탈로그 순서로 다음 것(상황 프리셋은 건너뛴다)으로 바꾸고, 켜진 상황을 적용한 프리셋을 켭니다. 마지막 다음은 처음입니다.
+         * @return 새 선택 프리셋 id 입니다. 고를 프리셋이 없으면 빈 id 입니다.
+         */
         hashed_string activateNextPreset();
+        /**
+         * @brief 상황 @p name 을 켜거나 끕니다. 보일 프리셋이 바뀌면 블렌드 표로 넘어갑니다. 켠 채 다시 켜거나 끈 채 다시 꺼도 같습니다.
+         * @return 카탈로그에 그 상황이 없으면 오류를 남기고 false 입니다(게임 코드와 데이터의 이름이 어긋났다).
+         */
+        [[nodiscard]] bool setContext( const hashed_string& name, bool bActive );
+        /** @brief 상황 @p name 이 켜져 있으면(코드가 켰거나 그 액션을 누르고 있다) true 입니다. */
+        bool isContextActive( const hashed_string& name ) const;
+        /** @brief 플레이어 · 코드가 고른 프리셋입니다. 보이는 프리셋(`getActivePresetID`)은 여기에 상황을 적용한 것입니다. */
+        const hashed_string& getSelectedPresetID() const { return _selectedPreset; }
         /** @brief 화면이 지금 @p from 이라고 보고 켠 프리셋으로 @p blend 를 따라 섞습니다(`CameraDirector::blendFromPose`). 시네마틱에서 게임 카메라로 돌아올 때 씁니다. */
         void blendFromPose( const CameraPose& from, const BlendCurveDef& blend ) { _director.blendFromPose( from, blend ); }
 
@@ -127,7 +143,7 @@ namespace sw
         /** @brief 초점을 미는 입력 맵 액션(2D 벡터)을 바꿉니다. 같은 게임에서 모드마다 다른 키로 밀 때 씁니다(관전은 WASD 도 받는다). */
         void setPanAction( const hashed_string& action ) { _panAction = action; }
         /**
-         * @brief 시작 프리셋을 @p id 로 정합니다. 이미 시작했으면 그 프리셋으로 끊어 바꿉니다(컷).
+         * @brief 시작 프리셋(선택 프리셋)을 @p id 로 정합니다. 이미 시작했으면 그 프리셋으로 끊어 바꿉니다(컷). 상황은 적용하지 않습니다(다음 상황 변화부터 적용).
          * @details 게임 디렉터가 `onGameStarted` 에서 부른다. 그래서 오브젝트의 시작 순서가 어느 쪽이어도 같은 프리셋에서 시작한다.
          *          시작 전에는 카탈로그가 없어 id 를 대어 보지 못하고, 시작할 때 없는 id 면 알린다(`onBeginPlay`).
          */
@@ -149,7 +165,9 @@ namespace sw
 
         const hashed_string& getActivePresetID() const { return _director.getActivePresetID(); }
         bool                 isBlending() const { return _director.isBlending(); }
-        const CameraPose&    getPose() const { return _director.getPose(); }
+        /** @brief 맨 위 층(보이는 프리셋)의 블렌드 가중치입니다(`CameraDirector::getBlendWeight`). 블렌드 중이 아니면 1 입니다. */
+        float32           getBlendWeight() const { return _director.getBlendWeight(); }
+        const CameraPose& getPose() const { return _director.getPose(); }
         /** @brief 켠 프리셋의 모드 상태입니다. 입력이 돌린 각, 줌, 팬, 암 길이를 담으며 테스트와 진단이 씁니다. */
         const CameraModeState& getModeState() const { return _director.getModeState(); }
         /** @brief 프리셋 카탈로그입니다(공유 캐시의 한 벌, 경로가 없거나 읽지 못했으면 빈 표). */
@@ -164,6 +182,10 @@ namespace sw
 
     private:
         CameraTarget computeTarget() const;
+        /** @brief 켜진 상황(코드 + 누르고 있는 액션)을 선택 프리셋에 적용하고, 보일 프리셋이 지난번과 다르면 켭니다. */
+        void refreshContextPreset();
+        /** @brief 상황 액션(`<Context action>`)을 누르고 있는 상황을 `_listHeldContext` 에 모읍니다. 입력을 읽지 않으면 비웁니다. */
+        void gatherContextInput();
         /** @brief 이번 프레임 입력을 `InputManager` 에서 모읍니다. 켠 프리셋이 받는 것만 쓰입니다. */
         void gatherInput( float32 deltaTime );
         /**
@@ -177,7 +199,7 @@ namespace sw
         void releasePhotoModeUILayers();
         /** @brief 포즈 계산과 쓰기를 합니다(게임 스레드, 틱 밖 — 암 충돌이 물리를 쓸어 본다). */
         void resolveCamera();
-        /** @brief 시작 프리셋을 고릅니다. `_initialPreset`, 그것도 아니면 첫 프리셋을 씁니다. */
+        /** @brief 시작 프리셋을 고릅니다. 순환 액션이 있으면 플레이어가 고른 프리셋(카탈로그에 있을 때), 아니면 `_initialPreset`, 그것도 아니면 첫 프리셋을 씁니다. */
         hashed_string resolveStartPreset() const;
         /** @brief 보관해 둔 상태 바이트를 디렉터에 적용합니다. 적용했으면 true 입니다. */
         [[nodiscard]] bool applyPendingState();
@@ -244,6 +266,10 @@ namespace sw
         vector<uint8>                       _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`). 카탈로그를 읽은 뒤 적용한다
         const ICameraCollisionProbe*        _pExternalProbe;
         hashed_string                       _inputCheckedPresetID; ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
+        hashed_string                       _selectedPreset;       ///< 플레이어 · 코드가 고른 프리셋(상황 적용 전)
+        hashed_string                       _contextPreset;        ///< 상황을 적용해 마지막으로 켠 프리셋. 바뀔 때만 켠다(직접 켠 프리셋과 다투지 않는다)
+        vector<hashed_string>               _listContext;          ///< 코드가 켠 상황(`setContext`)
+        vector<hashed_string>               _listHeldContext;      ///< 이번 프레임 액션을 누르고 있는 상황
         float32                             _pendingDeltaTime;     ///< 틱이 모은 시간. 미룬 계산이 쓴다
         bool                                _bResolvePending;      ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
     };

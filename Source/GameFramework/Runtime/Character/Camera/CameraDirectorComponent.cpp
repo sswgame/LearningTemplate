@@ -2,11 +2,14 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Ray.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -83,9 +86,85 @@ namespace sw
             }
         };
 
+        /**
+         * @brief 카메라 디렉터 감시 값(`CameraDirector.*`) — 대상은 디렉터가 붙은 오브젝트(카메라)다. 프리셋 전환 시나리오가 블렌드 중간 · 끝의 포즈를 값으로 본다.
+         * @details 포즈는 디렉터가 낸 것(블렌드 · 감쇠 · 흔들림 뒤, 시퀀서 값 트랙 · 포토 모드 덮기 전)이다.
+         */
+        struct CameraDirectorWatchInternal
+        {
+            static const CameraDirectorComponent* findDirector( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                return query.findTargetComponent<CameraDirectorComponent>( "camera director", outValue );
+            }
+
+            [[nodiscard]] static bool readActivePreset( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CameraDirectorComponent* pDirector = findDirector( query, outValue );
+                if ( pDirector == nullptr )
+                    return false;
+                outValue.setText( pDirector->getActivePresetID().empty() ? "none" : pDirector->getActivePresetID().c_str() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readSelectedPreset( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CameraDirectorComponent* pDirector = findDirector( query, outValue );
+                if ( pDirector == nullptr )
+                    return false;
+                outValue.setText( pDirector->getSelectedPresetID().empty() ? "none" : pDirector->getSelectedPresetID().c_str() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readBlendWeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CameraDirectorComponent* pDirector = findDirector( query, outValue );
+                if ( pDirector == nullptr )
+                    return false;
+                outValue.setNumber( static_cast<float64>( pDirector->getBlendWeight() ) );
+                return true;
+            }
+
+            [[nodiscard]] static bool readFieldOfView( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CameraDirectorComponent* pDirector = findDirector( query, outValue );
+                if ( pDirector == nullptr )
+                    return false;
+                outValue.setNumber( static_cast<float64>( MathUtil::toDegree( pDirector->getPose()._fieldOfViewY ) ) );
+                return true;
+            }
+
+            /** @brief 포즈 자리에서 대상 오브젝트 자리까지의 거리(m)입니다. 1인칭은 0 에 가깝고 3인칭은 암 길이다. 대상이 없으면 까닭을 적고 false 입니다. */
+            [[nodiscard]] static bool readTargetDistance( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CameraDirectorComponent* pDirector = findDirector( query, outValue );
+                if ( pDirector == nullptr )
+                    return false;
+                const GameObject*     pTarget = query._pManager->resolveGameObject( pDirector->getTarget() );
+                const SceneComponent* pScene  = pTarget != nullptr ? pTarget->getComponent<SceneComponent>() : nullptr;
+                if ( pScene == nullptr )
+                {
+                    outValue.setText( "the camera director has no target with a scene component" );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( ( pDirector->getPose()._position - pScene->getWorldMatrix().getTranslation() ).getLength() ) );
+                return true;
+            }
+        };
+
         /** @brief 켠 프리셋과 블렌드 스택을 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다). */
         const StatefulComponentRegistrar<CameraDirectorComponent> s_stateRegistration{ "CameraDirectorComponent" };
     } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( cameraDirectorActivePreset, "CameraDirector.ActivePreset", "Preset the target's camera director shows (selected preset with contexts applied); none without one",
+                               &CameraDirectorWatchInternal::readActivePreset, true, false );
+    SW_AUTOMATION_QUERY_WATCH( cameraDirectorSelectedPreset, "CameraDirector.SelectedPreset", "Preset the player or code chose on the target's camera director (before contexts); none without one",
+                               &CameraDirectorWatchInternal::readSelectedPreset, true, false );
+    SW_AUTOMATION_QUERY_WATCH( cameraDirectorBlendWeight, "CameraDirector.BlendWeight", "Blend weight of the target's camera director toward its active preset (1 when not blending)",
+                               &CameraDirectorWatchInternal::readBlendWeight, true, false );
+    SW_AUTOMATION_QUERY_WATCH( cameraDirectorFieldOfView, "CameraDirector.FieldOfView", "Vertical field of view of the target's camera director pose in degrees (blended)",
+                               &CameraDirectorWatchInternal::readFieldOfView, true, false );
+    SW_AUTOMATION_QUERY_WATCH( cameraDirectorTargetDistance, "CameraDirector.TargetDistance", "Distance in m from the target's camera director pose to the object it follows (0 in first person, the arm in third person)",
+                               &CameraDirectorWatchInternal::readTargetDistance, true, false );
 } // namespace sw
 
 namespace sw
@@ -124,6 +203,10 @@ namespace sw
         , _pendingStateBytes{}
         , _pExternalProbe{ nullptr }
         , _inputCheckedPresetID{}
+        , _selectedPreset{}
+        , _contextPreset{}
+        , _listContext{}
+        , _listHeldContext{}
         , _pendingDeltaTime{ 0.0f }
         , _bResolvePending{ false }
     {
@@ -177,6 +260,8 @@ namespace sw
             if ( _director.activatePreset( *_pCatalog, startID ) == false )
                 SW_LOG_ERROR_ID( "Camera.UnknownPreset", "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath.c_str() );
         }
+        _selectedPreset = _director.getActivePresetID();
+        _contextPreset  = _selectedPreset;
         updateCamera( 0.0f );
     }
 
@@ -289,7 +374,12 @@ namespace sw
         cut._curve    = BlendCurve::Cut;
         cut._duration = 0.0f;
         if ( _director.activatePreset( *_pCatalog, id, cut ) == false )
+        {
             SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetNot", "Camera preset '%#' is not in '%#'", id.c_str(), _catalogPath.c_str() );
+            return;
+        }
+        _selectedPreset = id;
+        _contextPreset  = id;
     }
 
     bool CameraDirectorComponent::findGroundPoint( const float2& mouseNormalized, float32 groundHeight, float3& outPoint ) const
@@ -336,6 +426,14 @@ namespace sw
 
     hashed_string CameraDirectorComponent::resolveStartPreset() const
     {
+        // 순환 액션이 있는 디렉터만 플레이어가 고른 시점을 따른다(감시 카메라 · 전략 시점은 고르지 않는다). 다른 게임 · 장면의 카탈로그에 없는 값이면 장면의 시작 프리셋이다.
+        if ( _cycleAction.empty() == false )
+        {
+            const hashed_string chosen  = CameraUserSettings::readChosenPreset();
+            const bool          bUsable = chosen.empty() == false && _pCatalog->find( chosen ) != nullptr && _pCatalog->isContextPreset( chosen ) == false;
+            if ( bUsable )
+                return chosen;
+        }
         return _initialPreset.empty() ? _pCatalog->getAll().front()._id : _initialPreset.key();
     }
 
@@ -358,20 +456,77 @@ namespace sw
     hashed_string CameraDirectorComponent::activateNextPreset()
     {
         const vector<CameraPresetDef>& listPreset = _pCatalog->getAll();
-        if ( listPreset.empty() )
-            return hashed_string{};
-        size_t nextIndex = 0;
-        for ( size_t index = 0; index < listPreset.size(); ++index )
+        const size_t                   count      = listPreset.size();
+        size_t                         fromIndex  = count - 1; // 선택이 없으면 처음부터
+        for ( size_t index = 0; index < count; ++index )
         {
-            if ( listPreset[index]._id == _director.getActivePresetID() )
-            {
-                nextIndex = ( index + 1 ) % listPreset.size();
-                break;
-            }
+            if ( listPreset[index]._id == _selectedPreset )
+                fromIndex = index;
         }
-        const hashed_string nextID = listPreset[nextIndex]._id;
-        (void)_director.activatePreset( *_pCatalog, nextID );
-        return nextID;
+        for ( size_t step = 1; step <= count; ++step )
+        {
+            const hashed_string& candidate = listPreset[( fromIndex + step ) % count]._id;
+            if ( _pCatalog->isContextPreset( candidate ) )
+                continue;
+            _selectedPreset = candidate;
+            _contextPreset.clear(); // 상황이 같아도 새 선택으로 다시 푼다
+            refreshContextPreset();
+            return candidate;
+        }
+        return hashed_string{};
+    }
+
+    bool CameraDirectorComponent::setContext( const hashed_string& name, bool bActive )
+    {
+        if ( _pCatalog->findContext( name ) == nullptr )
+        {
+            SW_LOG_ERROR_ID( "Camera.UnknownContext", "Camera context '%#' is not in '%#'", name.c_str(), _catalogPath.c_str() );
+            return false;
+        }
+        const bool bWasActive = VectorUtil::contains( _listContext, name );
+        if ( bActive == bWasActive )
+            return true;
+        if ( bActive )
+            _listContext.push_back( name );
+        else
+            VectorUtil::removeIf( _listContext, [&]( const hashed_string& active )
+            { return active == name; } );
+        refreshContextPreset();
+        return true;
+    }
+
+    bool CameraDirectorComponent::isContextActive( const hashed_string& name ) const
+    {
+        return VectorUtil::contains( _listContext, name ) || VectorUtil::contains( _listHeldContext, name );
+    }
+
+    void CameraDirectorComponent::gatherContextInput()
+    {
+        _listHeldContext.clear();
+        const InputManager* pInput = _bReadInput ? game::findSubsystem<InputManager>() : nullptr;
+        if ( pInput == nullptr )
+            return;
+        const GameInputView inputMap( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ); // 메뉴가 먹은 입력은 조준을 켜지 않는다
+        for ( const CameraContextDef& context : _pCatalog->getContextList() )
+        {
+            if ( context._action.empty() == false && inputMap.isActionDown( context._action ) )
+                _listHeldContext.push_back( context._name );
+        }
+    }
+
+    void CameraDirectorComponent::refreshContextPreset()
+    {
+        // 덮어쓴 시점(탑승) · 포토 모드 동안은 그쪽이 화면을 쥔다 — 풀린 뒤 다음 변화에서 다시 푼다.
+        if ( _selectedPreset.empty() || _bViewOverride || _photoMode.isActive() )
+            return;
+        vector<hashed_string> listActive = _listContext;
+        listActive.insert( listActive.end(), _listHeldContext.begin(), _listHeldContext.end() );
+        const hashed_string target = _pCatalog->resolveContextPreset( _selectedPreset, listActive );
+        if ( target == _contextPreset )
+            return;
+        _contextPreset = target;
+        if ( target != _director.getActivePresetID() )
+            (void)_director.activatePreset( *_pCatalog, target ); // 카탈로그 안의 id 다(읽을 때 대어 봤다)
     }
 
     void CameraDirectorComponent::updateCamera( float32 deltaTime )
@@ -382,7 +537,11 @@ namespace sw
         if ( _photoMode.isActive() )
             gatherPhotoModeInput( game::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() );
         else
+        {
+            gatherContextInput();
+            refreshContextPreset();
             gatherInput( deltaTime );
+        }
         // 틱 중이면 카메라 시스템이 늦은 틱 뒤에 푼다 — 대상의 이번 프레임 자리는 틱이 끝나야 적용된다. 여러 번 불려도 시간은 모아 한 번 쓴다.
         _pendingDeltaTime += MathUtil::max( 0.0f, deltaTime );
         const GameObject*        pOwner   = getOwner();
@@ -409,7 +568,9 @@ namespace sw
         const GameInputView inputMap( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ); // 메뉴가 먹은 입력과 모달 아래의 입력은 카메라가 보지 않는다
         if ( _cycleAction.empty() == false && inputMap.wasActionTriggered( _cycleAction ) )
         {
-            [[maybe_unused]] const hashed_string nextID = activateNextPreset(); // 로그는 Shipping 에서 빠진다
+            const hashed_string nextID = activateNextPreset();
+            if ( nextID.empty() == false )
+                CameraUserSettings::saveChosenPreset( nextID ); // 플레이어가 고른 시점은 다음 실행에도 남는다
             SW_LOG_INFO_ID( "CameraDirectorComponent.CameraPreset", "Camera preset -> '%#'", nextID.c_str() );
         }
         const CameraInputDef& inputDef = _director.getActivePreset()._input;
