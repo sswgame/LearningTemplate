@@ -5,6 +5,7 @@
 
 #include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Physics/Collision/PhysicsContact.h"
+#include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Collision/SweepHit.h"
 
 using namespace sw;
@@ -60,6 +61,42 @@ SW_TEST_CASE( PhysicsTest, CollisionLayersFilter )
 
     layers.setLayerCollision( 0, 1, true );
     SW_EXPECT_TRUE( queryOverlaps( a, 0, b, 1, layers ) );
+}
+
+/**
+ * @brief [PhysicsTest] 질의 필터는 마스크에 켜진 레이어만 받는다 — 기본은 모든 레이어, 32 이상의 레이어 번호는 받지 않는다
+ */
+SW_TEST_CASE( PhysicsTest, QueryFilterAcceptsOnlyMaskedLayers )
+{
+    PhysicsQueryFilter filter;
+    SW_EXPECT_TRUE( filter.canAcceptLayer( 0 ) );
+    SW_EXPECT_TRUE( filter.canAcceptLayer( 31 ) );
+    SW_EXPECT_FALSE( filter.canAcceptLayer( 32 ) ); // 마스크 폭 밖
+
+    filter._layerMask = ( 1u << 3 ) | ( 1u << 5 );
+    SW_EXPECT_TRUE( filter.canAcceptLayer( 3 ) );
+    SW_EXPECT_TRUE( filter.canAcceptLayer( 5 ) );
+    SW_EXPECT_FALSE( filter.canAcceptLayer( 4 ) );
+    SW_EXPECT_FALSE( filter.canAcceptLayer( 0 ) );
+}
+
+/**
+ * @brief [PhysicsTest] 접촉 이벤트는 어느 한쪽이 트리거면 트리거 접촉이다 — 둘 다 아니면 아니다
+ */
+SW_TEST_CASE( PhysicsTest, ContactEventUsesTriggerWhenEitherSideIsOne )
+{
+    PhysicsContactEvent3D event;
+    SW_EXPECT_FALSE( event.usesTrigger() );
+    event._bTriggerB = SW_TRUE;
+    SW_EXPECT_TRUE( event.usesTrigger() );
+    event._bTriggerB = SW_FALSE;
+    event._bTriggerA = SW_TRUE;
+    SW_EXPECT_TRUE( event.usesTrigger() );
+
+    PhysicsContactEvent2D event2D;
+    SW_EXPECT_FALSE( event2D.usesTrigger() );
+    event2D._bTriggerA = SW_TRUE;
+    SW_EXPECT_TRUE( event2D.usesTrigger() );
 }
 
 /**

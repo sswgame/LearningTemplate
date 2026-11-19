@@ -186,6 +186,13 @@ namespace sw
 #endif
     }
 
+#if SW_PROFILER_BACKEND_COMPILED
+    const TaskProfileHook* ProfilerBackend::getTaskProfileHook()
+    {
+        return &ProfilerBackendInternal::kTaskProfileHook;
+    }
+#endif
+
     IProfilerBackend* ProfilerBackend::getActiveBackend()
     {
         return ProfilerBackendInternal::s_pActive.load( std::memory_order_acquire );

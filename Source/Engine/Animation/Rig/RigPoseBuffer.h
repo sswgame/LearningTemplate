@@ -34,6 +34,8 @@ namespace sw
 
         uint32 getBoneCount() const { return static_cast<uint32>( _listParent.size() ); }
         int32  getParent( uint32 boneIndex ) const { return _listParent[boneIndex]; }
+        /** @brief @p ancestorIndex 가 @p boneIndex 의 조상(또는 자기)인지입니다. */
+        bool isAncestorOf( int32 ancestorIndex, int32 boneIndex ) const;
 
         /** @brief 로컬 변환입니다. */
         BoneTransform getLocal( uint32 boneIndex ) const;

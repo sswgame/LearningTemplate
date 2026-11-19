@@ -67,6 +67,20 @@ namespace sw
         }
     }
 
+    bool RigPoseBuffer::isAncestorOf( int32 ancestorIndex, int32 boneIndex ) const
+    {
+        if ( ancestorIndex < 0 )
+            return false;
+        int32 current = boneIndex;
+        while ( current >= 0 )
+        {
+            if ( current == ancestorIndex )
+                return true;
+            current = _listParent[static_cast<uint32>( current )];
+        }
+        return false;
+    }
+
     BoneTransform RigPoseBuffer::getLocal( uint32 boneIndex ) const
     {
         BoneTransform transform{};

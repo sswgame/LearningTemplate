@@ -37,3 +37,20 @@ SW_TEST_CASE( PairedAnimationSessionTest, RequestedAbortHasItsOwnReason )
     SW_EXPECT_TRUE( rig.getSession().getState() == PairedAnimationSessionState::Aborted );
     SW_EXPECT_TRUE( rig.getSession().getAbortReason() == PairedAnimationAbortReason::Requested );
 }
+
+/**
+ * @brief [PairedAnimationSessionTest] 역할 이름으로 재생 중인지 묻는다 — 들어온 역할은 재생 중이고, 없는 역할과 세션이 끝난 뒤의 역할은 아니다
+ */
+SW_TEST_CASE( PairedAnimationSessionTest, RolePlayingAnswersByRoleName )
+{
+    test::PairedAnimationTestRig rig;
+    rig.update();
+    SW_REQUIRE_TRUE( rig.getSession().isPlaying() );
+    SW_EXPECT_TRUE( rig.getSession().isRolePlaying( hashed_string( "Attacker" ) ) );
+    SW_EXPECT_TRUE( rig.getSession().isRolePlaying( hashed_string( "Victim" ) ) );
+    SW_EXPECT_FALSE( rig.getSession().isRolePlaying( hashed_string( "Bystander" ) ) ); // 묻는 함수다 — 없는 역할은 오류가 아니라 "아님"
+
+    rig.getSession().abort( rig.getManager() );
+    SW_EXPECT_FALSE( rig.getSession().isRolePlaying( hashed_string( "Attacker" ) ) );
+    SW_EXPECT_FALSE( rig.getSession().isRolePlaying( hashed_string( "Victim" ) ) );
+}

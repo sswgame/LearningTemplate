@@ -284,3 +284,22 @@ SW_TEST_CASE( TileMapCollisionTest, RescaleKeepsBodiesAndContacts )
     SW_EXPECT_FALSE( bFalseEdge );
     SW_EXPECT_TRUE( Internal::contains( rig.overlapAt( rig.toWorld( 7.5f, -0.5f ) ), chunk ) ); // 새 배율의 끝 칸(월드 x = 15)
 }
+
+/**
+ * @brief [TileMapCollisionTest] 칸마다 이동 비용은 타일셋을 따른다 — 단단한 벽은 못 가는 값(255), 빈 칸은 기본 비용(10)이고 칸 순서는 브러시 격자와 같다
+ * @details 맵 3 × 2, 0 행만 벽. `NavGrid` 가 그대로 받는 값이다(`TileGridUtil::makeNavCosts`).
+ */
+SW_TEST_CASE( TileMapCollisionTest, NavCostsFollowTheTileSet )
+{
+    using Internal = TestTileMapCollisionInternal;
+    Internal::Rig rig( 3, 2, { 0 } );
+    SW_REQUIRE_NOT_NULL( rig._pScene );
+    vector<uint8> listCost;
+    rig._pTiles->computeNavCosts( listCost );
+    SW_REQUIRE_EQUAL( size_t{ 6 }, listCost.size() );
+    for ( size_t index = 0; index < 3; ++index )
+    {
+        SW_EXPECT_EQUAL( 255, static_cast<int32>( listCost[index] ) );
+        SW_EXPECT_EQUAL( 10, static_cast<int32>( listCost[index + 3] ) );
+    }
+}
