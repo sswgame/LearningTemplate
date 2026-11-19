@@ -21,10 +21,10 @@ namespace sw
         , _nightEndHour{ 5.0f }
         , _horizonIntensity{ 0.25f }
         , _noonIntensity{ 1.5f }
-        , _horizonPitch{ 0.25f }
-        , _noonPitch{ 1.35f }
-        , _morningYaw{ -1.2f }
-        , _eveningYaw{ 1.2f }
+        , _horizonPitch{ Radians::fromRadians( 0.25f ) }
+        , _noonPitch{ Radians::fromRadians( 1.35f ) }
+        , _morningYaw{ Radians::fromRadians( -1.2f ) }
+        , _eveningYaw{ Radians::fromRadians( 1.2f ) }
     {
         setCanEverTick( true );
     }
@@ -54,6 +54,6 @@ namespace sw
         const float32 light      = MathUtil::lerp( _horizonIntensity, _noonIntensity, height ) * ( bPrecipitate ? _rainDimming : 1.0f );
         const bool    bNightTime = hour > _sunsetHour || hour < _nightEndHour; // 자정을 넘긴 밤(밤 끝 시각까지)도 밤
         pSun->setIntensity( bNightTime ? _nightIntensity : light );
-        pSun->setLocalRotation( float3{ MathUtil::lerp( _horizonPitch, _noonPitch, height ), MathUtil::lerp( _morningYaw, _eveningYaw, dayRatio ), 0.0f } );
+        pSun->setLocalRotation( float3{ MathUtil::lerp( _horizonPitch.radians(), _noonPitch.radians(), height ), MathUtil::lerp( _morningYaw.radians(), _eveningYaw.radians(), dayRatio ), 0.0f } );
     }
 } // namespace sw

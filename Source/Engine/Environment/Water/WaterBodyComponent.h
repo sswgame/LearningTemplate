@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
@@ -138,7 +139,7 @@ namespace sw
         void setFlow( float32 speed, float32 direction )
         {
             _flowSpeed     = speed;
-            _flowDirection = direction;
+            _flowDirection = Radians::fromRadians( direction );
         }
         void setRiverPath( const vector<float3>& listPoint, float32 width );
         /**
@@ -196,8 +197,8 @@ namespace sw
         vector<GerstnerWave> _listWave;
         PROPERTY( Category = "Flow", DisplayName = "Flow Speed", Min = 0.0, Units = "m/s", Tooltip = "Current that floating bodies and boats drift with (rivers: along the path, first point to last)" )
         float32 _flowSpeed;
-        PROPERTY( Category = "Flow", DisplayName = "Flow Direction", Units = rad, Tooltip = "Lake current direction, from +x towards +z (rivers follow their path)" )
-        float32 _flowDirection;
+        PROPERTY( Category = "Flow", DisplayName = "Flow Direction", Tooltip = "Lake current direction, from +x towards +z (rivers follow their path)" )
+        Radians _flowDirection;
         PROPERTY( Category = "Shading", DisplayName = "Shallow Color", Tooltip = "Linear RGB; alpha = opacity at the shore" )
         float4 _shallowColor;
         PROPERTY( Category = "Shading", DisplayName = "Deep Color", Tooltip = "Linear RGB; alpha = opacity in deep water" )

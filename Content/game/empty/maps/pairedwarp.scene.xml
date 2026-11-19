@@ -44,7 +44,7 @@
 					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="true" _bPlayOnBegin="true" />
 					<PairedAnimationComponent _pairedAnimationPath="game/empty/data/anim/cheer_warp.pairedanim.xml" _role="Partner" _bStartOnPlay="false" />
 					<MotionWarpingComponent />
-					<LocomotionWarpingComponent _bStrideWarping="true" _speedCurve="Speed" _minPlayRate="0.5" _maxPlayRate="2" _bOrientationWarping="false" _maxOrientationAngle="0.8">
+					<LocomotionWarpingComponent _bStrideWarping="true" _speedCurve="Speed" _minPlayRate="0.5" _maxPlayRate="2" _bOrientationWarping="false" _maxOrientationAngle="45.836624">
 						<_listOrientationBone />
 					</LocomotionWarpingComponent>
 				</_listComponent>

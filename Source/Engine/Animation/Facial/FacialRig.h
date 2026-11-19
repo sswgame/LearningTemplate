@@ -10,6 +10,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
@@ -86,14 +87,14 @@ namespace sw
         vector<hashed_string> _listEyeBone;
         PROPERTY( Tooltip = "Eye forward axis in bone space (normalized on load, must not be zero)" )
         float3 _forwardAxis{ 0.0f, 0.0f, 1.0f };
-        PROPERTY( Min = 0.0, Units = rad, Tooltip = "Largest angle the eyes turn from the forward axis" )
-        float32 _maxAngle{ 0.5235988f }; // 30 degrees
+        PROPERTY( Min = 0.0, Tooltip = "Largest angle the eyes turn from the forward axis" )
+        Radians _maxAngle{ Radians::fromDegrees( 30.0f ) };
         PROPERTY( Min = 0.0, Units = s, Tooltip = "Shortest time between saccades (greater than 0)" )
         float32 _saccadeMinInterval{ 0.4f };
         PROPERTY( Min = 0.0, Units = s, Tooltip = "Longest time between saccades (not below the shortest)" )
         float32 _saccadeMaxInterval{ 1.6f };
-        PROPERTY( Min = 0.0, Units = rad, Tooltip = "Size of one saccade" )
-        float32 _saccadeAmplitude{ 0.0523599f }; // 3 degrees
+        PROPERTY( Min = 0.0, Tooltip = "Size of one saccade" )
+        Radians _saccadeAmplitude{ Radians::fromDegrees( 3.0f ) };
     };
 } // namespace sw
 

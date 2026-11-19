@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
@@ -50,13 +51,13 @@ namespace sw
         float32 _horizonIntensity;
         PROPERTY( Category = "Sun Curve", DisplayName = "Noon Intensity", Tooltip = "Intensity with the sun at its highest", Min = 0.0 )
         float32 _noonIntensity;
-        PROPERTY( Category = "Sun Curve", DisplayName = "Horizon Pitch", Tooltip = "Light pitch with the sun on the horizon", Units = rad )
-        float32 _horizonPitch;
-        PROPERTY( Category = "Sun Curve", DisplayName = "Noon Pitch", Tooltip = "Light pitch with the sun at its highest", Units = rad )
-        float32 _noonPitch;
-        PROPERTY( Category = "Sun Curve", DisplayName = "Morning Yaw", Tooltip = "Light yaw at sunrise", Units = rad )
-        float32 _morningYaw;
-        PROPERTY( Category = "Sun Curve", DisplayName = "Evening Yaw", Tooltip = "Light yaw at sunset", Units = rad )
-        float32 _eveningYaw;
+        PROPERTY( Category = "Sun Curve", DisplayName = "Horizon Pitch", Tooltip = "Light pitch with the sun on the horizon" )
+        Radians _horizonPitch;
+        PROPERTY( Category = "Sun Curve", DisplayName = "Noon Pitch", Tooltip = "Light pitch with the sun at its highest" )
+        Radians _noonPitch;
+        PROPERTY( Category = "Sun Curve", DisplayName = "Morning Yaw", Tooltip = "Light yaw at sunrise" )
+        Radians _morningYaw;
+        PROPERTY( Category = "Sun Curve", DisplayName = "Evening Yaw", Tooltip = "Light yaw at sunset" )
+        Radians _eveningYaw;
     };
 } // namespace sw

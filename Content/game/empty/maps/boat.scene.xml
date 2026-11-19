@@ -83,8 +83,8 @@
 					                    _fogColor="0.05,0.2,0.25,1"
 					                    _fogDensity="0.15">
 						<_listWave>
-							<GerstnerWave _direction="0.3" _wavelength="14" _amplitude="0.15" _steepness="0.5" />
-							<GerstnerWave _direction="1.9" _wavelength="9" _amplitude="0.08" _steepness="0.4" />
+							<GerstnerWave _direction="17.188735" _wavelength="14" _amplitude="0.15" _steepness="0.5" />
+							<GerstnerWave _direction="108.86198" _wavelength="9" _amplitude="0.08" _steepness="0.4" />
 						</_listWave>
 					</WaterBodyComponent>
 					<WeatherWaveComponent _weatherValue="wind" _stormScale="4" />

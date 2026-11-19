@@ -21,7 +21,7 @@ namespace sw
         , _horizonExponent{ 4.0f }
         , _mode{ SkyMode::Gradient }
         , _hdriTexture{}
-        , _hdriRotation{ 0.0f }
+        , _hdriRotation{}
         , _hdriRadianceMap{}
         , _listHdriAmbient{}
         , _rayleighScale{ 1.0f }
@@ -29,7 +29,7 @@ namespace sw
         , _mieAnisotropy{ 0.76f }
         , _sunIntensity{ 20.0f }
         , _observerAltitudeKm{ 0.0f }
-        , _sunDiscAngle{ 0.03f }
+        , _sunDiscAngle{ Radians::fromRadians( 0.03f ) }
         , _planetRadiusKm{ 6360.0f }
         , _atmosphereHeightKm{ 60.0f }
         , _bClouds{ false }
@@ -37,7 +37,7 @@ namespace sw
         , _cloudAltitudeKm{ 2.0f }
         , _cloudScale{ 0.4f }
         , _cloudOpacity{ 0.9f }
-        , _cloudWindDirection{ 0.0f }
+        , _cloudWindDirection{}
         , _cloudWindSpeedKmPerSecond{ 0.01f }
         , _cloudSoftness{ 0.15f }
         , _cloudColor{ 1.0f, 1.0f, 1.0f }
@@ -53,7 +53,7 @@ namespace sw
         gradient._intensity       = _intensity;
         gradient._horizonExponent = _horizonExponent;
         gradient._mode            = _mode;
-        gradient._hdriRotation    = _hdriRotation;
+        gradient._hdriRotation    = _hdriRotation.radians();
         if ( _mode == SkyMode::Hdri )
         {
             gradient._hdriTexture     = hashed_string( _hdriTexture.c_str() );
@@ -73,7 +73,7 @@ namespace sw
         atmosphere._planetRadiusKm     = _planetRadiusKm;
         atmosphere._atmosphereHeightKm = _atmosphereHeightKm;
         atmosphere._observerAltitudeKm = _observerAltitudeKm;
-        atmosphere._sunDiscAngle       = _sunDiscAngle;
+        atmosphere._sunDiscAngle       = _sunDiscAngle.radians();
 
         SkyClouds& clouds            = gradient._clouds;
         clouds._bEnabled             = _bClouds ? SW_TRUE : SW_FALSE;
@@ -81,7 +81,7 @@ namespace sw
         clouds._altitudeKm           = _cloudAltitudeKm;
         clouds._scale                = _cloudScale;
         clouds._opacity              = _cloudOpacity;
-        clouds._windDirection        = _cloudWindDirection;
+        clouds._windDirection        = _cloudWindDirection.radians();
         clouds._windSpeedKmPerSecond = _cloudWindSpeedKmPerSecond;
         clouds._softness             = _cloudSoftness;
         clouds._color                = _cloudColor;

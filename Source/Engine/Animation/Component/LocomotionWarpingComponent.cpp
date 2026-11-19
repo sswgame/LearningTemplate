@@ -62,7 +62,7 @@ namespace sw
         , _minPlayRate{ 0.6f }
         , _maxPlayRate{ 1.6f }
         , _bOrientationWarping{ true }
-        , _maxOrientationAngle{ 1.0f }
+        , _maxOrientationAngle{ Radians::fromRadians( 1.0f ) }
         , _listOrientationBone{}
         , _binding{ *this }
         , _pSkeletalMesh{ nullptr }
@@ -159,7 +159,7 @@ namespace sw
                 difference -= MathUtil::kPi;
             else if ( difference < -MathUtil::kHalfPi )
                 difference += MathUtil::kPi;
-            _orientationAngle = MathUtil::clamp( difference, -_maxOrientationAngle, _maxOrientationAngle );
+            _orientationAngle = MathUtil::clamp( difference, -_maxOrientationAngle.radians(), _maxOrientationAngle.radians() );
         }
     }
 

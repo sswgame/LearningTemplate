@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -45,7 +46,7 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 지금 값입니다. */
         WindSettings makeSettings() const;
-        void         setDirection( float32 radians ) { _direction = radians; }
+        void         setDirection( float32 radians ) { _direction = Radians::fromRadians( radians ); }
         void         setStrength( float32 strength ) { _strength = strength; }
         void         setSpeed( float32 speed ) { _speed = speed; }
 
@@ -53,8 +54,8 @@ namespace sw
         [[nodiscard]] static bool findWind( const GameObjectManager& manager, WindSettings& outSettings );
 
     private:
-        PROPERTY( Category = "Wind", DisplayName = "Direction", Units = rad, Tooltip = "Blowing towards, from +x towards +z" )
-        float32 _direction;
+        PROPERTY( Category = "Wind", DisplayName = "Direction", Tooltip = "Blowing towards, from +x towards +z" )
+        Radians _direction;
         PROPERTY( Category = "Wind", DisplayName = "Strength", Min = 0.0, Units = m )
         float32 _strength;
         PROPERTY( Category = "Wind", DisplayName = "Gust Strength", Min = 0.0, Units = m )

@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/Sky/SkyGradient.h"
@@ -70,8 +71,8 @@ namespace sw
         SkyMode _mode;
         PROPERTY( Category = "HDRI", DisplayName = "Texture", EditCondition = "_mode == Hdri", Tooltip = "Equirectangular HDR texture drawn as the sky" )
         AssetRef<Texture2D> _hdriTexture;
-        PROPERTY( Category = "HDRI", DisplayName = "Rotation", Units = rad, EditCondition = "_mode == Hdri", Tooltip = "Turns the sky around the vertical axis" )
-        float32 _hdriRotation;
+        PROPERTY( Category = "HDRI", DisplayName = "Rotation", EditCondition = "_mode == Hdri", Tooltip = "Turns the sky around the vertical axis" )
+        Radians _hdriRotation;
         PROPERTY( AssetPath, Category = "HDRI", DisplayName = "Radiance Map", EditCondition = "_mode == Hdri", Tooltip = "Octahedral .radiancemap of the source image the sky light filters for reflections (roughness to level); written by Scripts/dev/make_sky_hdri_prefabs.py" )
         string _hdriRadianceMap;
         PROPERTY( Category = "HDRI", DisplayName = "Ambient SH", EditCondition = "_mode == Hdri", Tooltip = "27 SH9 coefficients of the source image (basis * 3 + channel) lighting the probes; written by Scripts/dev/make_sky_hdri_prefabs.py" )
@@ -86,8 +87,8 @@ namespace sw
         float32 _sunIntensity;
         PROPERTY( Category = "Atmosphere", DisplayName = "Observer Altitude", Min = 0.0, Units = km, EditCondition = "_mode == Atmosphere", Tooltip = "Eye altitude above the planet surface in kilometres (0.1 = 100 m)" )
         float32 _observerAltitudeKm;
-        PROPERTY( Category = "Atmosphere", DisplayName = "Sun Disc Angle", Min = 0.0, Max = 0.2, Units = rad, EditCondition = "_mode == Atmosphere", Tooltip = "Angular radius of the sun disc in radians; 0 hides the disc" )
-        float32 _sunDiscAngle;
+        PROPERTY( Category = "Atmosphere", DisplayName = "Sun Disc Angle", Min = 0.0, Max = 11.45, EditCondition = "_mode == Atmosphere", Tooltip = "Angular radius of the sun disc; 0 hides the disc" )
+        Radians _sunDiscAngle;
         PROPERTY( Category = "Atmosphere", DisplayName = "Planet Radius", Min = 100.0, Units = km, EditCondition = "_mode == Atmosphere", Tooltip = "Planet radius in kilometres" )
         float32 _planetRadiusKm;
         PROPERTY( Category = "Atmosphere", DisplayName = "Atmosphere Height", Min = 1.0, Units = km, EditCondition = "_mode == Atmosphere", Tooltip = "Atmosphere thickness in kilometres" )
@@ -102,8 +103,8 @@ namespace sw
         float32 _cloudScale;
         PROPERTY( Category = "Clouds", DisplayName = "Opacity", Min = 0.0, Max = 1.0, EditCondition = "_bClouds", Tooltip = "Maximum cloud opacity" )
         float32 _cloudOpacity;
-        PROPERTY( Category = "Clouds", DisplayName = "Wind Direction", Units = rad, EditCondition = "_bClouds", Tooltip = "Wind direction in radians (from +x toward +z)" )
-        float32 _cloudWindDirection;
+        PROPERTY( Category = "Clouds", DisplayName = "Wind Direction", EditCondition = "_bClouds", Tooltip = "Wind direction (from +x toward +z)" )
+        Radians _cloudWindDirection;
         PROPERTY( Category = "Clouds", DisplayName = "Wind Speed", Min = 0.0, EditCondition = "_bClouds", Tooltip = "Cloud drift speed in kilometres per second" )
         float32 _cloudWindSpeedKmPerSecond;
         PROPERTY( Category = "Clouds", DisplayName = "Softness", Min = 0.0, Max = 0.5, EditCondition = "_bClouds", Tooltip = "Softness of the cloud edge" )

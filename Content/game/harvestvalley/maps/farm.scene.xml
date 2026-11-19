@@ -63,10 +63,10 @@
 					                  _nightEndHour="5"
 					                  _horizonIntensity="0.25"
 					                  _noonIntensity="1.5"
-					                  _horizonPitch="0.25"
-					                  _noonPitch="1.35"
-					                  _morningYaw="-1.2"
-					                  _eveningYaw="1.2" />
+					                  _horizonPitch="14.323945"
+					                  _noonPitch="77.349304"
+					                  _morningYaw="-68.75494"
+					                  _eveningYaw="68.75494" />
 				</_listComponent>
 			</GameObject>
 		</entity>

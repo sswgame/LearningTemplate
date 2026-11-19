@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Environment/Placement/SurfaceLayerWeights.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -66,16 +67,16 @@ namespace sw
         float32 _scaleMin{ 1.0f };
         PROPERTY( Min = 0.01 )
         float32 _scaleMax{ 1.0f };
-        PROPERTY( Units = rad )
-        float32 _yawMin{ 0.0f };
-        PROPERTY( Units = rad )
-        float32 _yawMax{ MathUtil::kTwoPi };
+        PROPERTY()
+        Radians _yawMin{};
+        PROPERTY()
+        Radians _yawMax{ Radians::fromRadians( MathUtil::kTwoPi ) };
         PROPERTY( Min = 0.0, Max = 1.0, Units = ratio, Tooltip = "0 stands upright, 1 follows the surface normal" )
         float32 _alignToNormal{ 0.0f };
-        PROPERTY( Min = 0.0, Units = rad )
-        float32 _slopeMin{ 0.0f };
-        PROPERTY( Min = 0.0, Units = rad )
-        float32 _slopeMax{ MathUtil::kHalfPi };
+        PROPERTY( Min = 0.0 )
+        Radians _slopeMin{};
+        PROPERTY( Min = 0.0 )
+        Radians _slopeMax{ Radians::fromRadians( MathUtil::kHalfPi ) };
         PROPERTY( Units = m )
         float32 _heightMin{ -100000.0f };
         PROPERTY( Units = m )

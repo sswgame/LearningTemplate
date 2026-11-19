@@ -14,6 +14,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
@@ -113,8 +114,8 @@ namespace sw
         float32 _maxPlayRate;
         PROPERTY( Category = "Orientation", DisplayName = "Orientation Warping", Tooltip = "Turn the lower body toward the movement direction" )
         bool _bOrientationWarping;
-        PROPERTY( Category = "Orientation", DisplayName = "Max Angle", Min = 0.0, Max = 3.14, Units = rad )
-        float32 _maxOrientationAngle;
+        PROPERTY( Category = "Orientation", DisplayName = "Max Angle", Min = 0.0, Max = 179.9 )
+        Radians _maxOrientationAngle;
         PROPERTY( Category = "Orientation", DisplayName = "Bones", Tooltip = "Bones turned around the character up axis and their share" )
         vector<LocomotionOrientationBone> _listOrientationBone;
 

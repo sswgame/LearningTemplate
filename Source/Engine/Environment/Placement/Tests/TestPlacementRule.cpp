@@ -138,20 +138,20 @@ SW_TEST_CASE( PlacementRuleTest, SlopeAndHeightFiltersAreRespected )
 {
     const AnalyticSlopeSurface surface;
     PlacementRule              rule = PlacementRuleTestUtil::makeRule();
-    rule._slopeMax                  = MathUtil::toRadian( 20.0f );
+    rule._slopeMax                  = Radians::fromDegrees( 20.0f );
     vector<PlacementInstance> listInstance;
     PlacementScatter::scatter( rule, PlacementRuleTestUtil::makeRegion( 100.0f ), &surface, {}, {}, listInstance );
     SW_REQUIRE_TRUE( listInstance.empty() == false );
     bool bFlatOnly = true;
     for ( const PlacementInstance& instance : listInstance )
     {
-        bFlatOnly = bFlatOnly && instance._planePosition._x >= 50.0f && PlacementScatter::computeSlope( instance._normal ) <= rule._slopeMax;
+        bFlatOnly = bFlatOnly && instance._planePosition._x >= 50.0f && PlacementScatter::computeSlope( instance._normal ) <= rule._slopeMax.radians();
     }
     SW_EXPECT_TRUE( bFlatOnly );
 
     // 비탈만 — 경사 하한 20 도, 높이 5..15 m(x 10..30).
-    rule._slopeMax  = MathUtil::toRadian( 90.0f );
-    rule._slopeMin  = MathUtil::toRadian( 20.0f );
+    rule._slopeMax  = Radians::fromDegrees( 90.0f );
+    rule._slopeMin  = Radians::fromDegrees( 20.0f );
     rule._heightMin = 5.0f;
     rule._heightMax = 15.0f;
     PlacementScatter::scatter( rule, PlacementRuleTestUtil::makeRegion( 100.0f ), &surface, {}, {}, listInstance );

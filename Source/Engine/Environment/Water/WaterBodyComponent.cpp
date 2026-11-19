@@ -152,7 +152,7 @@ namespace sw
         , _bRiverPathDriven{ false }
         , _listWave{}
         , _flowSpeed{ 0.0f }
-        , _flowDirection{ 0.0f }
+        , _flowDirection{}
         , _shallowColor{ 0.10f, 0.45f, 0.45f, 0.35f }
         , _deepColor{ 0.01f, 0.08f, 0.16f, 0.92f }
         , _skyColor{ 0.55f, 0.70f, 0.85f, 1.0f }
@@ -566,7 +566,7 @@ namespace sw
         }
         if ( findBaseHeight( worldX, worldZ, baseHeight ) == false )
             return false;
-        outVelocity = float3{ MathUtil::cos( _flowDirection ), 0.0f, MathUtil::sin( _flowDirection ) } * _flowSpeed;
+        outVelocity = float3{ MathUtil::cos( _flowDirection.radians() ), 0.0f, MathUtil::sin( _flowDirection.radians() ) } * _flowSpeed;
         return true;
     }
 

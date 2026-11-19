@@ -10,6 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -33,8 +34,8 @@ namespace sw
         float32 _strength{ 0.0f };
         PROPERTY( Units = rad, Tooltip = "Slope band from horizontal (min, max)" )
         float2 _slopeRange{ 0.0f, MathUtil::kHalfPi };
-        PROPERTY( Units = rad, Min = 0.0, Tooltip = "Width of the soft edge at both ends of the slope band" )
-        float32 _slopeFade{ 6.0f * MathUtil::kDegreeToRadian };
+        PROPERTY( Min = 0.0, Tooltip = "Width of the soft edge at both ends of the slope band" )
+        Radians _slopeFade{ Radians::fromDegrees( 6.0f ) };
         PROPERTY( Units = m, Tooltip = "World height band (min, max)" )
         float2 _altitudeRange{ -100000.0f, 100000.0f };
         PROPERTY( Units = m, Min = 0.0, Tooltip = "Width of the soft edge at both ends of the height band" )
