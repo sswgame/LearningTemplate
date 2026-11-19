@@ -75,13 +75,13 @@ SW_TEST_CASE( AutomationReloadStepsTest, ConfigFileMustBeARelativeJSONPath )
     SW_EXPECT_FALSE( AutomationReloadSteps::validateConfigFile( "Editor/a.xml" ).has_value() );
 }
 
-/** @brief [AutomationReloadStepsTest] 단계 속성 검사 — OverwriteConfig 는 file 이 필수이고 경로 규칙을 따르며, RestoreOverwrites 는 속성이 없다 */
+/** @brief [AutomationReloadStepsTest] 단계 속성 검사 — OverwriteConfig 는 configFile 이 필수이고 경로 규칙을 따르며, RestoreOverwrites 는 속성이 없다 */
 SW_TEST_CASE( AutomationReloadStepsTest, StepAttributesAreValidatedAtLoad )
 {
-    SW_EXPECT_TRUE( validateSingleStep( "<OverwriteConfig file=\"Editor/editortooldefaults.json\"/>" ).has_value() );
+    SW_EXPECT_TRUE( validateSingleStep( "<OverwriteConfig configFile=\"Editor/editortooldefaults.json\"/>" ).has_value() );
     SW_EXPECT_FALSE( validateSingleStep( "<OverwriteConfig/>" ).has_value() );
-    SW_EXPECT_FALSE( validateSingleStep( "<OverwriteConfig file=\"../Config/a.json\"/>" ).has_value() );
-    SW_EXPECT_FALSE( validateSingleStep( "<OverwriteConfig file=\"Editor/a.json\" form=\"typo\"/>" ).has_value() ); // 모르는 속성
+    SW_EXPECT_FALSE( validateSingleStep( "<OverwriteConfig configFile=\"../Config/a.json\"/>" ).has_value() );
+    SW_EXPECT_FALSE( validateSingleStep( "<OverwriteConfig configFile=\"Editor/a.json\" form=\"typo\"/>" ).has_value() ); // 모르는 속성
     SW_EXPECT_TRUE( validateSingleStep( "<RestoreOverwrites/>" ).has_value() );
     SW_EXPECT_FALSE( validateSingleStep( "<RestoreOverwrites file=\"x\"/>" ).has_value() );
 }

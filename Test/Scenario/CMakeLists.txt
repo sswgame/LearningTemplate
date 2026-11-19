@@ -180,6 +180,21 @@ foreach(game IN LISTS list_built_game)
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 		set_tests_properties(${desktop_test_name} PROPERTIES LABELS hostgpu TIMEOUT 300 RUN_SERIAL TRUE SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
 	endforeach()
+	# 편집기를 켠 데스크톱 시나리오 — 프로세스 밖 상태(빌드 트리의 모듈 판 머리 · 다시 지은 모듈 · Config/Editor)를 바꾸므로 백엔드 넷이 함께 도는 체인에 넣지 못한다.
+	# 하나씩 기본 백엔드 한 프로세스로 혼자 돈다(RUN_SERIAL). 모듈을 다시 짓는 동안을 담아 시한이 길다. 예: 플레이 중 리로드(`playreload`).
+	if(TARGET EditorModule)
+		sw_glob_source_tree(list_desktop_editor_scenario RELATIVE "${scenario_root}" "${automation_dir}/desktop/editor/*.scenario.xml")
+		foreach(desktop_path IN LISTS list_desktop_editor_scenario)
+			get_filename_component(desktop_name "${desktop_path}" NAME)
+			string(REGEX REPLACE "\\.scenario\\.xml$" "" desktop_name "${desktop_name}")
+			sw_read_scenario_launch("${desktop_path}" list_desktop_launch)
+			set(desktop_test_name Scenario.${pack}.desktop.editor.${desktop_name})
+			add_test(NAME ${desktop_test_name}
+				COMMAND $<TARGET_FILE:App> ${game_argument} -EnableEditor -scenario=${desktop_path} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${desktop_test_name}.log ${list_desktop_launch}
+				WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+			set_tests_properties(${desktop_test_name} PROPERTIES LABELS hostgpu TIMEOUT 900 RUN_SERIAL TRUE SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
+		endforeach()
+	endif()
 
 	sw_glob_source_tree(list_game_load_scenario RELATIVE "${scenario_root}" "${automation_dir}/load/*.scenario.xml")
 	foreach(load_path IN LISTS list_game_load_scenario)

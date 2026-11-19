@@ -273,14 +273,17 @@ namespace sw
         string _variant{};
     };
 
-    /** @brief `OverwriteConfig` 의 인자입니다 — `Config/` 아래 파일(상대 경로)과 그 자리에 쓸 글의 리소스(비우면 지금 글을 그대로 다시 쓴다 — 바꾸지 않은 저장). */
+    /**
+     * @brief `OverwriteConfig` 의 인자입니다 — `Config/` 아래 파일(상대 경로)과 그 자리에 쓸 글의 리소스(비우면 지금 글을 그대로 다시 쓴다 — 바꾸지 않은 저장).
+     * @details 칸 이름이 `file` 이 아니라 `configFile` 이다 — `file` · `path` 속성은 에셋 경로로 읽혀(참조 검사) `Config/` 의 파일이 "없는 에셋" 이 된다.
+     */
     REFLECT()
     struct SW_API AutomationOverwriteConfigParams
     {
         REFLECT_BODY();
 
         PROPERTY( Required )
-        string _file{};
+        string _configFile{};
         PROPERTY( AssetPath )
         string _from{};
     };

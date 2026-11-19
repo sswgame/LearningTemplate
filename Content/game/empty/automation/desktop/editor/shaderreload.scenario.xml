@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f6df2c695c7d4fe5835d80fbeb0ce8b5"?>
+<!--
+  셰이더 리로드(Ctrl+F8) — 사본 셰이더(shaderreload/glow.hlsl)를 쓰는 상자를 그리는 동안 재컴파일 단축키를 누른다.
+  ⑤ 바뀌지 않은 재컴파일 묶음이 끝나고(Shader.RecompilePassCount) 걸린 시간이 적힌다(Reload.LastMs.Shader).
+  실패 길: 사본 셰이더를 깨뜨리면(asset.overwriteScratch — 원본 셰이더는 쓰기 게이트가 막는다) 재컴파일이 지고(ShaderRecompiler.ShaderReloadFailedEntry ·
+  Reload.FailedCount) 이전 바이트코드로 계속 그린다(앞뒤 사진이 같다). 되돌리면 낡음이 풀린다(Reload.StaleCount 0).
+  재컴파일기는 Debug 클라이언트만 세운다(LiveShaderSubsystem) — 그 밖의 구성은 건너뛴다(SkipUnless Shader.LiveRecompile).
+  편집 모드에서 누른다 — 플레이 중 맨 F8 은 편집기의 play.eject 이고, 셰이더 캐시 · 재컴파일기는 플레이와 편집이 같다.
+  실행: App -EnableEditor -scenario=game/empty/automation/desktop/editor/shaderreload.scenario.xml -unattended (ctest -R Scenario.empty.desktop.editor.shaderreload)
+-->
+<Scenario name="game.empty.shaderreload" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
+	<SkipUnless watch="Shader.LiveRecompile" reason="only Debug clients build the live shader recompiler (LiveShaderSubsystem) - Ctrl+F8 does nothing here"/>
+	<Scratch from="game/empty/automation/desktop/editor/shaderreload" as="scratch/shaderreload"/>
+	<EditorWaitStable/>
+	<DevCommand line="scene.open scratch/shaderreload/shaderreload.scene.xml"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitStable/>
+
+	<!-- ⑤ 바뀌지 않은 재컴파일 -->
+	<Store watch="Shader.RecompilePassCount" as="passStart"/>
+	<Press slot="Key.LeftControl"/>
+	<AdvanceSimulation frames="1"/> <!-- Ctrl 이 먼저 눌린 프레임 뒤에 F8 (프레임 경계) -->
+	<Tap slot="Key.F8"/>
+	<AdvanceSimulation frames="3"/>
+	<Release slot="Key.LeftControl"/>
+	<WaitUntil watch="Shader.RecompilePassCount" increaseFrom="passStart" increaseBy="1" timeoutFrames="600"/>
+	<EditorWaitStable/>
+	<Expect watch="Reload.LastMs.Shader" atLeast="0.001"/>
+	<Expect watch="Reload.StaleCount" equals="0"/>
+	<Screenshot file="before_broken.ppm"/>
+
+	<!-- 깨진 셰이더: 재컴파일이 지고 이전 바이트코드로 계속 그린다 -->
+	<DevCommand line="asset.overwriteScratch scratch/shaderreload/glow_broken.hlsl scratch/shaderreload/glow.hlsl"/>
+	<EditorWaitStable/>
+	<Store watch="Reload.FailedCount" as="failedBefore"/>
+	<Store watch="Reload.Count.Shader" as="shaderBefore"/>
+	<Store watch="Shader.RecompilePassCount" as="passBroken"/>
+	<Press slot="Key.LeftControl"/>
+	<AdvanceSimulation frames="1"/>
+	<Tap slot="Key.F8"/>
+	<AdvanceSimulation frames="3"/>
+	<Release slot="Key.LeftControl"/>
+	<WaitUntil watch="Shader.RecompilePassCount" increaseFrom="passBroken" increaseBy="1" timeoutFrames="600"/>
+	<EditorWaitStable/>
+	<Expect watch="Reload.FailedCount" differsFrom="failedBefore"/>
+	<Expect watch="Reload.Count.Shader" differsFrom="shaderBefore"/>
+	<Expect watch="Reload.StaleCount" atLeast="1"/>
+	<ExpectLog id="ShaderRecompiler.ShaderReloadFailedEntry" contains="scratch/shaderreload/glow.hlsl" atLeast="1"/>
+	<Screenshot file="after_broken.ppm"/>
+	<ExpectImagesDiffer first="before_broken.ppm" second="after_broken.ppm" minDiffering="0" maxDiffering="0.01"/>
+
+	<!-- 되돌리기: 같은 바이트로 컴파일되면 갱신으로 세지 않지만 낡음은 풀린다 -->
+	<DevCommand line="asset.overwriteScratch scratch/shaderreload/glow_good.hlsl scratch/shaderreload/glow.hlsl"/>
+	<EditorWaitStable/>
+	<Store watch="Shader.RecompilePassCount" as="passFixed"/>
+	<Press slot="Key.LeftControl"/>
+	<AdvanceSimulation frames="1"/>
+	<Tap slot="Key.F8"/>
+	<AdvanceSimulation frames="3"/>
+	<Release slot="Key.LeftControl"/>
+	<WaitUntil watch="Shader.RecompilePassCount" increaseFrom="passFixed" increaseBy="1" timeoutFrames="600"/>
+	<EditorWaitStable/>
+	<Expect watch="Reload.StaleCount" equals="0"/>
+	<Pass/>
+</Scenario>

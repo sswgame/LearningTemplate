@@ -1,6 +1,6 @@
 /**
  * @file DevTools/AssetReload/AutomationReloadSteps.h
- * @brief 플레이 중 리로드를 일으키는 시나리오 단계입니다 — `<RebuildModule name variant>`(모듈을 다시 지어 갈아 끼움) · `<OverwriteConfig file from>`(설정 파일 덮어쓰기) ·
+ * @brief 플레이 중 리로드를 일으키는 시나리오 단계입니다 — `<RebuildModule name variant>`(모듈을 다시 지어 갈아 끼움) · `<OverwriteConfig configFile from>`(설정 파일 덮어쓰기) ·
  *        `<RestoreOverwrites/>`(맡긴 파일을 지금 되돌림).
  * @details 바꾼 파일은 원본 글을 실행기에 맡기고(`AutomationStepContext::restoreFileAtEnd`) 시나리오가 어떻게 끝나든 되돌린다. 추적 소스는 고치지 않는다 — 모듈 판은
  *          빌드 트리의 판 머리(`<빌드>/generated/…`, CMake 가 기본 글로 만든다)를 덮는다. 설정은 쓰기 게이트가 연 폴더(`Config/Editor`)만 쓴다 — 게이트가 그 밖을 거절한다.
@@ -41,7 +41,7 @@ namespace sw
         [[nodiscard]] static expected<ModuleRebuildVariant> parseVariant( string_view jsonText, string_view sourceName, string_view variantName );
         /** @brief 비지 않았고, 절대 경로가 아니며, `..` 마디가 없는 상대 경로면 true 입니다(글 연산 — 판 머리 · 설정 파일 경로의 공통 판정). */
         [[nodiscard]] static bool isPlainRelativePath( string_view path );
-        /** @brief `OverwriteConfig file` 이 `Config/` 아래 `.json` 상대 경로인지 봅니다(빈 글 · 절대 경로 · `..` · 다른 확장자는 오류). 쓰기 허락은 쓰기 게이트가 따로 본다. */
+        /** @brief `OverwriteConfig configFile` 이 `Config/` 아래 `.json` 상대 경로인지 봅니다(빈 글 · 절대 경로 · `..` · 다른 확장자는 오류). 쓰기 허락은 쓰기 게이트가 따로 본다. */
         [[nodiscard]] static expected<void> validateConfigFile( string_view file );
     };
 } // namespace sw

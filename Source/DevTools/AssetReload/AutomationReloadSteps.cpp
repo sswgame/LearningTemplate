@@ -38,20 +38,20 @@ namespace sw
                 const expected<void>            read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
-                return AutomationReloadSteps::validateConfigFile( params._file );
+                return AutomationReloadSteps::validateConfigFile( params._configFile );
             }
 
             static bool runOverwriteConfig( AutomationStepContext& context, const AutomationStep& step )
             {
                 const AutomationOverwriteConfigParams params     = step.readValidatedProperties<AutomationOverwriteConfigParams>();
-                const string                          configPath = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config" ), params._file );
+                const string                          configPath = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config" ), params._configFile );
                 string                                original;
                 if ( FileUtil::readTextFile( configPath, original ) == false )
                 {
                     context.recordFailure( step, "no config file '" + configPath + "' to overwrite" );
                     return true;
                 }
-                string text = original; // 원본이 비면 바꾸지 않은 저장이다 — 감시가 같은 글을 다시 읽는다
+                string text = original; // from 이 비면 바꾸지 않은 저장이다 — 감시가 같은 글을 다시 읽는다
                 if ( params._from.empty() == false )
                 {
                     const optional<AbsolutePath> sourcePath = engine::getSubsystem<AssetPaths>().findLooseFile( params._from );
@@ -103,9 +103,9 @@ namespace sw
     expected<void> AutomationReloadSteps::validateConfigFile( string_view file )
     {
         if ( AutomationReloadStepsInternal::isPlainRelativePath( file ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "OverwriteConfig file is a relative path under Config/ (no '..', not absolute)", file } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "OverwriteConfig configFile is a relative path under Config/ (no '..', not absolute)", file } );
         if ( FileUtil::hasExtension( file, ".json" ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "OverwriteConfig file is a .json config", file } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "OverwriteConfig configFile is a .json config", file } );
         return {};
     }
 
