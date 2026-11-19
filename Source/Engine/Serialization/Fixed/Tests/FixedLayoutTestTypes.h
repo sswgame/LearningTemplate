@@ -190,7 +190,7 @@ namespace sw
         array<int32, 3> _arrValue{};
     };
 
-    /** @brief 열거자로 색인하는 배열 칸입니다 — 와이어는 원소 수가 같은 고정 배열과 한 비트도 다르지 않아야 한다(C 배열에서 옮겨도 스키마가 그대로다). */
+    /** @brief 열거자로 색인하는 배열 칸입니다 — 머리(스키마 해시) 뒤의 본문은 원소 수가 같은 고정 배열과 한 비트도 다르지 않아야 한다. 해시는 타입 · 칸 철자를 섞어 다르다. */
     REFLECT()
     struct FixedLayoutEnumArraySample
     {

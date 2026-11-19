@@ -141,7 +141,7 @@ namespace sw
             result->_element = classifyFixedType( clang_Type_getTemplateArgumentAsType( canonical, 0 ), session, depth + 1 );
             return result;
         }
-        // `EnumArray<E, T>` 는 와이어에서 `T[열거자 수]` 와 같다(개수 없이 원소 N 개 — C 배열에서 옮겨도 스키마 · 바이트가 그대로다). 원소는 두 번째 인자다.
+        // `EnumArray<E, T>` 의 본문은 `T[열거자 수]` 와 같다(개수 없이 원소 N 개). 스키마 해시는 칸 철자를 섞어 C 배열과 다르다. 원소는 두 번째 인자다.
         if ( StringUtil::startsWith( canonicalSpelling, "sw::EnumArray<" ) )
         {
             result->_kind    = FixedValueKind::FixedArray;
