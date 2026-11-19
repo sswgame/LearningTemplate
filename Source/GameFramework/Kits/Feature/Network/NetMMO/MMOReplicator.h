@@ -313,6 +313,8 @@ namespace sw
      * @brief 클라이언트에서 일어난 일을 알리는 이벤트입니다.
      * @details 동적 엔티티는 `Entered` · `Left`(게임이 스폰 · 지운다), 셀에 놓인 엔티티는 `Bound` · `Unbound`(이미 있는 셀 오브젝트 `_staticObjectID` 에 묶고 푼다 — 지우지 않는다).
      *          종류가 달라 `Entered` 에만 스폰하는 게임은 셀 오브젝트를 두 번 만들 수 없다.
+     *          `Entered` 로 세운 오브젝트는 존재를 복제가 정한다(`Left` 에 지운다) — 스트리밍 씬이 그 오브젝트를 런타임 스폰으로 셀에 넣어 셀과 함께 지우지 않게
+     *          `GameObject::setAlwaysLoaded( true )` 로 세운다(서버 생성 번호 `NetObjectTable::bindSpawned` 를 묶은 오브젝트는 이미 빠진다 — `SceneStreamingSubsystem::regroupObjects`).
      */
     struct MMOClientEvent
     {
