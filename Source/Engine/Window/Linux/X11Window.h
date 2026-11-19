@@ -126,6 +126,10 @@ namespace sw
         [[nodiscard]] bool setCursorShape( CursorShape shape ) override;
         /** @brief 숨기면 1x1 투명 커서를 겁니다(처음 쓸 때 만든다). 보이면 창 커서를 풀어 부모 창의 커서로 돌린다. */
         [[nodiscard]] bool setCursorVisible( bool bVisible ) override;
+        /** @brief XDND(판 5)로 들어옴 · 위치 · 나감 · 놓기를 받는다(`XdndAware` — `initializeWindow`). 경로는 놓은 뒤 `text/uri-list` 선택 변환으로 받는다. */
+        [[nodiscard]] WindowFileDropSupport getFileDropSupport() const override { return WindowFileDropSupport::Hover; }
+#else
+        [[nodiscard]] WindowFileDropSupport getFileDropSupport() const override { return WindowFileDropSupport::None; }
 #endif
 
     protected:
@@ -166,6 +170,14 @@ namespace sw
         void releaseInputResources();
         /** @brief 입력기가 낸 글을 처리기로 넘깁니다. */
         void onInputMethodText( WindowTextInputKind kind, string_view text ) { dispatchTextInput( kind, text ); }
+        /**
+         * @brief XDND 사건(`XdndEnter` · `XdndPosition` · `XdndLeave` · `XdndDrop` 클라이언트 메시지와 `XdndSelection` 의 `SelectionNotify`)이면 처리하고 true 입니다. @p pEvent 는 `XEvent*` 입니다.
+         * @details 위치마다 `XdndStatus` 로 답하고(`text/uri-list` 를 내놓는 끌기만 받는다), 놓기는 선택을 이 창 속성으로 변환해 받은 뒤 `XdndFinished` 로 끝낸다(freedesktop XDND 판 5).
+         */
+        bool                    handleDragAndDropEvent( const void* pEvent );
+        static constexpr uint32 kXdndDataWordCount = 4; ///< XDND 클라이언트 메시지에서 `l[0]`(보낸 창) 뒤의 값 수
+        /** @brief 끌기 원천 창에 XDND 클라이언트 메시지를 보냅니다(@p arrData 는 `data.l[1..4]`, `l[0]` 은 이 창). */
+        void sendDragAndDropMessage( const utf8* pMessageName, const int64 ( &arrData )[kXdndDataWordCount] );
 #endif
 
     private:
@@ -180,7 +192,11 @@ namespace sw
         [[maybe_unused]] uint64          _x11WmDelete;
         [[maybe_unused]] uint64          _invisibleCursor;                   ///< 숨길 때 거는 투명 커서(0 이면 아직 없음)
         [[maybe_unused]] uint64          _arrShapeCursor[kCursorShapeCount]; ///< 모양마다 만든 글꼴 커서(0 이면 아직 없음)
-        [[maybe_unused]] uint8           _reservedX11 : 8;
+        [[maybe_unused]] uint64          _xdndSource;                        ///< 지금 끌고 있는 XDND 원천 창(0 이면 끌기 없음)
+        [[maybe_unused]] int32           _xdndX;                             ///< 마지막 위치(창 좌표) — 놓기 사건의 자리
+        [[maybe_unused]] int32           _xdndY;                             ///< 위와 같다
+        [[maybe_unused]] uint8           _bXdndURIList : 1;                  ///< 원천이 `text/uri-list` 를 내놓는다(받는 끌기)
+        [[maybe_unused]] uint8           _reservedX11  : 7;
         [[maybe_unused]] uint16          _padding;
     };
 } // namespace sw

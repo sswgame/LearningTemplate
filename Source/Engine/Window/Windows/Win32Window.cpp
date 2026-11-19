@@ -9,6 +9,7 @@
 #include "Engine/Window/WindowMonitor.h"
 
 #include <imm.h>
+#include <shellapi.h>
 
 #pragma comment( lib, "imm32.lib" )
 
@@ -146,6 +147,7 @@ namespace sw
 
         if ( _hWnd == nullptr )
             return false;
+        DragAcceptFiles( _hWnd, TRUE ); // 탐색기의 파일 놓기를 받는다(`WM_DROPFILES` — `getFileDropSupport`)
         // 원하는 쪽이 없으면 입력기는 꺼 둔다(X11 · Wayland 와 같다) - 한글 입력기가 켜진 채 게임을 해도 WASD 가 조합으로 가지 않는다.
         applyTextInputWanted( isTextInputWanted() );
 
@@ -412,6 +414,34 @@ namespace sw
         return true;
     }
 
+    void Win32Window::dispatchDroppedFiles( void* pDropHandle )
+    {
+        const HDROP         hDrop = static_cast<HDROP>( pDropHandle );
+        WindowFileDropEvent event{};
+        event._phase = WindowFileDropPhase::Drop;
+        POINT dropPoint{};
+        if ( DragQueryPoint( hDrop, &dropPoint ) != FALSE )
+        {
+            event._x = static_cast<int32>( dropPoint.x );
+            event._y = static_cast<int32>( dropPoint.y );
+        }
+        const UINT fileCount = DragQueryFileW( hDrop, 0xFFFFFFFFu, nullptr, 0 );
+        for ( UINT fileIndex = 0; fileIndex < fileCount; ++fileIndex )
+        {
+            // 길이(NUL 제외)를 먼저 묻는다 — MAX_PATH 를 넘는 긴 경로도 잘리지 않는다.
+            const UINT length = DragQueryFileW( hDrop, fileIndex, nullptr, 0 );
+            if ( length == 0 )
+                continue;
+            wstring wide( static_cast<size_t>( length ) + 1, L'\0' );
+            if ( DragQueryFileW( hDrop, fileIndex, wide.data(), length + 1 ) == 0 )
+                continue;
+            wide.resize( length );
+            event._listPath.push_back( StringUtil::utf16ToUTF8( wide.c_str() ) );
+        }
+        DragFinish( hDrop ); // 셸이 준 핸들은 받는 쪽이 놓는다
+        dispatchFileDrop( event );
+    }
+
     LRESULT CALLBACK Win32Window::wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
     {
         Win32Window* pThis{ nullptr };
@@ -512,6 +542,12 @@ namespace sw
                 {
                     // 메뉴 없는 창에서 Alt+글자를 누르면 기본 처리가 경고음을 낸다 — 메뉴를 닫는다고 답한다.
                     return MAKELRESULT( 0, MNC_CLOSE );
+                }
+
+                case WM_DROPFILES:
+                {
+                    pThis->dispatchDroppedFiles( reinterpret_cast<HDROP>( wParam ) );
+                    return 0;
                 }
 
                 case WM_CLOSE:

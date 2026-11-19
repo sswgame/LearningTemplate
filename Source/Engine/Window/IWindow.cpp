@@ -22,6 +22,7 @@ namespace sw
         , _onLifecycle{}
         , _lifecycleListeners{}
         , _closeQuery{}
+        , _onFileDrop{}
         , _width{ 1280 }
         , _height{ 720 }
         , _bShouldClose{ SW_FALSE }
@@ -163,6 +164,12 @@ namespace sw
         event._message = NativeWindowEvent::kMessageTextInput;
         event._lParam  = reinterpret_cast<intptr_t>( &input );
         (void)_customHandler.get()( event ); // 글은 소비되어도 창이 달리 할 일이 없다
+    }
+
+    void IWindow::dispatchFileDrop( const WindowFileDropEvent& event )
+    {
+        if ( _onFileDrop.isBound() )
+            _onFileDrop.get()( event );
     }
 
     void IWindow::setMinimumClientSize( uint32 width, uint32 height )

@@ -11,6 +11,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Window/CursorShape.h"
 #include "Engine/Window/IRenderSurface.h"
+#include "Engine/Window/WindowFileDrop.h"
 #include "Engine/Window/WindowTextInput.h"
 
 namespace sw
@@ -296,6 +297,13 @@ namespace sw
         [[nodiscard]] virtual bool writeClipboardText( string_view text ) = 0;
         /** @brief 커서를 숨기거나 보입니다. 창이 스스로 하지 않으면 false 입니다. */
         [[nodiscard]] virtual bool setCursorVisible( bool bVisible ) = 0;
+        /**
+         * @brief 이 창이 OS 파일 끌어 놓기를 어디까지 받는지입니다(능력 표 — `WindowFileDrop.h`). 사건은 `bindFileDropHandler` 의 처리기로 온다.
+         * @details 순수 가상이다 — 기본값(받지 않음)이 있으면 새 플랫폼 창이 끌어 놓기 길을 빠뜨려도 조용히 컴파일된다(`applyTextInputWanted` 와 같은 까닭). 받지 않는 창은 `None` 을 돌려주며 까닭을 적는다.
+         */
+        [[nodiscard]] virtual WindowFileDropSupport getFileDropSupport() const = 0;
+        /** @brief OS 파일 끌어 놓기 처리기를 겁니다(칸 하나 — `DelegateSlot`). 창 스레드(메인 스레드)에서 걸고 부른다. 받지 않는 창(`getFileDropSupport` 가 `None`)에서는 불리지 않는다. */
+        [[nodiscard]] Subscription bindFileDropHandler( WindowFileDropDelegate handler ) { return _onFileDrop.bind( std::move( handler ) ); }
 
         // ---- 입력기(IME). 모양은 `WindowTextInput.h` 머리말. 글은 `NativeWindowEvent::kMessageTextInput` 으로 외부 처리기에 온다 ----
         /**
@@ -503,6 +511,8 @@ namespace sw
         virtual void applyTextInputArea( const WindowTextInputArea& area ) = 0;
         /** @brief 조합 · 확정 글을 외부 처리기(`bindCustomMessageHandler`)에 넘깁니다. 플랫폼 창만 부른다. */
         void dispatchTextInput( WindowTextInputKind kind, string_view text );
+        /** @brief 파일 끌어 놓기 사건을 처리기(`bindFileDropHandler`)에 넘깁니다. 처리기가 없으면 버린다. 플랫폼 창만 부른다. */
+        void dispatchFileDrop( const WindowFileDropEvent& event );
 
         /**
          * @brief @p pTitle 을 `_arrTitle` 에 담습니다(nullptr 은 빈 제목). 플랫폼의 `initializeWindow` 가 처음에 부릅니다.
@@ -535,6 +545,7 @@ namespace sw
         DelegateSlot<WindowLifecycleDelegate>           _onLifecycle;
         MulticastDelegate<void( WindowLifecycleEvent )> _lifecycleListeners; ///< `addLifecycleListener` — 렌더러 처리기보다 먼저 불린다
         DelegateSlot<WindowCloseQueryDelegate>          _closeQuery;
+        DelegateSlot<WindowFileDropDelegate>            _onFileDrop; ///< `bindFileDropHandler`
         uint32                                          _width;
         uint32                                          _height;
         uint8                                           _bShouldClose : 1;

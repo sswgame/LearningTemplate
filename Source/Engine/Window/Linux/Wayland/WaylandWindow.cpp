@@ -91,12 +91,18 @@ namespace sw
         wl_cursor_theme*  _pCursorTheme{ nullptr };
         wl_surface*       _pCursorSurface{ nullptr };
 
-        wl_data_device_manager* _pDataDeviceManager{ nullptr };
-        wl_data_device*         _pDataDevice{ nullptr };
-        wl_data_source*         _pDataSource{ nullptr };      ///< 우리가 내놓은 선택(없으면 nullptr). 글은 `_clipboardText`
-        wl_data_offer*          _pSelectionOffer{ nullptr };  ///< 다른 프로그램이 내놓은 현재 선택
-        wl_data_offer*          _pIntroducedOffer{ nullptr }; ///< 방금 소개된 제안(`selection` 이 오기 전까지 형식을 모은다)
-        string                  _clipboardText;
+        wl_data_device_manager*     _pDataDeviceManager{ nullptr };
+        wl_data_device*             _pDataDevice{ nullptr };
+        wl_data_source*             _pDataSource{ nullptr };      ///< 우리가 내놓은 선택(없으면 nullptr). 글은 `_clipboardText`
+        wl_data_offer*              _pSelectionOffer{ nullptr };  ///< 다른 프로그램이 내놓은 현재 선택
+        wl_data_offer*              _pIntroducedOffer{ nullptr }; ///< 방금 소개된 제안(`selection` 이 오기 전까지 형식을 모은다)
+        wl_data_offer*              _pDragOffer{ nullptr };       ///< 지금 이 표면 위로 끌리는 파일 목록 제안(받는 끌기만 — `enter` 가 소개된 제안을 넘겨받는다)
+        string                      _clipboardText;
+        vector<WindowFileDropEvent> _listPendingFileDrop;            ///< 리스너가 쌓고 `processMessages` 가 넘기는 끌어 놓기 사건
+        int32                       _dragX{ 0 };                     ///< 마지막 끌기 위치(표면 좌표)
+        int32                       _dragY{ 0 };                     ///< 위와 같다
+        bool                        _bIntroducedHasURIList{ false }; ///< `_pIntroducedOffer` 가 text/uri-list 를 내놓는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                        _bDropPending{ false };          ///< `drop` 이 왔다 — 목록 읽기는 `processMessages` 가 한다(리스너 안에서 파이프를 기다리지 않는다) NOLINT(sw-bool-flag): 위와 같다
 
         // 선택 확장(컴포지터에 없으면 nullptr — 없는 것이 정상인 길과 있어야 하는 길은 호출 쪽이 가른다: 소수 배율은 정수 배율로, 포인터 잠금은 호출 쪽이 오류로 알린다).
         wp_fractional_scale_manager_v1*  _pFractionalScaleManager{ nullptr };
@@ -198,11 +204,23 @@ namespace sw
         /** @brief 소개됐지만 선택이 되지 않은 제안(끌어다 놓기 따위)을 버립니다. */
         void dropIntroducedOffer()
         {
-            if ( _pIntroducedOffer != nullptr && _pIntroducedOffer != _pSelectionOffer )
+            if ( _pIntroducedOffer != nullptr && _pIntroducedOffer != _pSelectionOffer && _pIntroducedOffer != _pDragOffer )
                 wl_data_offer_destroy( _pIntroducedOffer );
-            _pIntroducedOffer    = nullptr;
-            _bIntroducedHasUTF8  = false;
-            _bIntroducedHasPlain = false;
+            _pIntroducedOffer      = nullptr;
+            _bIntroducedHasUTF8    = false;
+            _bIntroducedHasPlain   = false;
+            _bIntroducedHasURIList = false;
+        }
+
+        /** @brief 끌기 제안을 놓습니다(나감 · 놓기 뒤). */
+        void dropDragOffer()
+        {
+            if ( _pDragOffer != nullptr && _pDragOffer != _pSelectionOffer )
+                wl_data_offer_destroy( _pDragOffer );
+            if ( _pIntroducedOffer == _pDragOffer )
+                _pIntroducedOffer = nullptr;
+            _pDragOffer   = nullptr;
+            _bDropPending = false;
         }
 
         /** @brief 걸어 둔 잠금 · 가둠을 풉니다(없으면 아무것도 하지 않는다). */
@@ -281,6 +299,8 @@ namespace sw
             /** @brief 클립보드 글 형식입니다(우선순위 순서). */
             static constexpr const utf8* kMimeUTF8  = "text/plain;charset=utf-8";
             static constexpr const utf8* kMimePlain = "text/plain";
+            /** @brief 파일 끌어 놓기의 형식입니다(RFC 2483 — `WindowFileDropUtil::parseURIList`). */
+            static constexpr const utf8* kMimeURIList = "text/uri-list";
             /** @brief 클립보드 읽기 · 쓰기가 상대를 기다리는 한 번의 한도(ms)입니다(X11 의 200 ms 와 같다). */
             static constexpr int32 kClipboardWaitMs = 200;
             /** @brief 클립보드 글 한 번에 받는 최대 바이트입니다(끝없이 보내는 상대를 끊는다). */
@@ -395,6 +415,8 @@ namespace sw
                     state._bIntroducedHasUTF8 = true;
                 else if ( std::strcmp( pMime, kMimePlain ) == 0 )
                     state._bIntroducedHasPlain = true;
+                else if ( std::strcmp( pMime, kMimeURIList ) == 0 )
+                    state._bIntroducedHasURIList = true;
             }
 
             static void onDataOfferSourceActions( void* pData, wl_data_offer* pOffer, uint32 sourceActions )
@@ -422,34 +444,89 @@ namespace sw
 
             static void onDataDeviceEnter( void* pData, wl_data_device* pDevice, uint32 serial, wl_surface* pSurface, wl_fixed_t x, wl_fixed_t y, wl_data_offer* pOffer )
             {
-                (void)pData;
                 (void)pDevice;
-                (void)serial;
-                (void)pSurface;
-                (void)x;
-                (void)y;
-                (void)pOffer; // 끌어다 놓기는 받지 않는다(제안은 다음 `data_offer` 가 버린다)
+                State& state = *static_cast<State*>( pData );
+                if ( pSurface != state._pSurface || pOffer == nullptr || pOffer != state._pIntroducedOffer )
+                    return; // 다른 표면(떼어 낸 창) · 빈 끌기 · 낡은 제안 — 받지 않는다(제안은 다음 `data_offer` 가 버린다)
+                if ( state._bIntroducedHasURIList == false )
+                {
+                    wl_data_offer_accept( pOffer, serial, nullptr ); // 파일 목록이 아닌 끌기(글 · 이미지)는 받지 않는다고 답한다
+                    return;
+                }
+                // 파일 목록 제안을 넘겨받는다 — 다음 `data_offer` 가 버리지 않는다. 판 1 이라 받는다는 답(형식)만 있고 동작 고르기는 없다.
+                state.dropDragOffer();
+                state._pDragOffer = pOffer;
+                state._dragX      = wl_fixed_to_int( x );
+                state._dragY      = wl_fixed_to_int( y );
+                wl_data_offer_accept( pOffer, serial, kMimeURIList );
+                state._listPendingFileDrop.push_back( WindowFileDropEvent{ WindowFileDropPhase::Enter, state._dragX, state._dragY, {} } );
             }
 
             static void onDataDeviceLeave( void* pData, wl_data_device* pDevice )
             {
-                (void)pData;
                 (void)pDevice;
+                State& state = *static_cast<State*>( pData );
+                if ( state._pDragOffer == nullptr || state._bDropPending )
+                    return; // 놓은 뒤의 나감은 끝이 아니다 — 목록은 `processMessages` 가 읽고 놓는다
+                state.dropDragOffer();
+                state._listPendingFileDrop.push_back( WindowFileDropEvent{ WindowFileDropPhase::Leave, state._dragX, state._dragY, {} } );
             }
 
             static void onDataDeviceMotion( void* pData, wl_data_device* pDevice, uint32 time, wl_fixed_t x, wl_fixed_t y )
             {
-                (void)pData;
                 (void)pDevice;
                 (void)time;
-                (void)x;
-                (void)y;
+                State& state = *static_cast<State*>( pData );
+                if ( state._pDragOffer == nullptr )
+                    return;
+                state._dragX = wl_fixed_to_int( x );
+                state._dragY = wl_fixed_to_int( y );
+                state._listPendingFileDrop.push_back( WindowFileDropEvent{ WindowFileDropPhase::Over, state._dragX, state._dragY, {} } );
             }
 
             static void onDataDeviceDrop( void* pData, wl_data_device* pDevice )
             {
-                (void)pData;
                 (void)pDevice;
+                State& state = *static_cast<State*>( pData );
+                if ( state._pDragOffer != nullptr )
+                    state._bDropPending = true;
+            }
+
+            /**
+             * @brief 제안 @p pOffer 의 @p pMime 형식 글을 파이프로 받아 @p outBytes 에 담습니다. 상대가 끝까지 보냈으면 true 입니다(클립보드 · 끌어 놓기가 같이 쓴다).
+             * @details 상대가 느리면 주 스레드가 오래 서지 않도록 한 번 기다림을 `kClipboardWaitMs` 로, 전체를 `kClipboardMaxBytes` 로 끊는다.
+             */
+            static bool receiveOfferText( wl_display* pDisplay, wl_data_offer* pOffer, const utf8* pMime, string& outBytes )
+            {
+                outBytes.clear();
+                int32 arrPipeEnd[2]{ -1, -1 };
+                if ( pipe( arrPipeEnd ) != 0 )
+                {
+                    SW_LOG_WARNING_ID( "WaylandWindow.WaylandClipboardPipeCould", "Wayland data offer: a pipe could not be made - nothing received" );
+                    return false;
+                }
+                wl_data_offer_receive( pOffer, pMime, arrPipeEnd[1] );
+                close( arrPipeEnd[1] ); // 보내기 요청이 쓰기 끝을 복제해 들고 있다
+                wl_display_flush( pDisplay );
+                bool bCompleted = false;
+                utf8 arrBuffer[4096];
+                while ( outBytes.size() <= kClipboardMaxBytes )
+                {
+                    pollfd waitEntry{ arrPipeEnd[0], POLLIN, 0 };
+                    if ( poll( &waitEntry, 1, kClipboardWaitMs ) <= 0 )
+                        break;
+                    const ssize_t count = read( arrPipeEnd[0], arrBuffer, sizeof( arrBuffer ) );
+                    if ( count < 0 )
+                        break;
+                    if ( count == 0 )
+                    {
+                        bCompleted = true;
+                        break;
+                    }
+                    outBytes.append( arrBuffer, static_cast<size_t>( count ) );
+                }
+                close( arrPipeEnd[0] );
+                return bCompleted;
             }
 
             static void onDataDeviceSelection( void* pData, wl_data_device* pDevice, wl_data_offer* pOffer )
@@ -1249,6 +1326,23 @@ namespace sw
             notifyMonitorsChanged();
         }
 
+        // 놓은 파일 목록은 리스너 밖에서 읽는다(상대가 파이프에 쓰기를 기다린다). 읽은 뒤 제안을 놓는다.
+        if ( state._bDropPending && state._pDragOffer != nullptr )
+        {
+            WindowFileDropEvent drop{ WindowFileDropPhase::Drop, state._dragX, state._dragY, {} };
+            string              listText;
+            if ( WaylandWindowInternal::receiveOfferText( state._pDisplay, state._pDragOffer, WaylandWindowInternal::kMimeURIList, listText ) )
+                (void)WindowFileDropUtil::parseURIList( listText, drop._listPath ); // 버린 줄(다른 호스트 · 스킴)은 받는 쪽에 경로로 가지 않는다
+            else
+                SW_LOG_WARNING_ID( "WaylandWindow.FileDropListIncomplete", "Wayland file drop: the source did not finish sending the file list within %# ms - nothing dropped", WaylandWindowInternal::kClipboardWaitMs );
+            state.dropDragOffer();
+            state._listPendingFileDrop.push_back( std::move( drop ) );
+        }
+        vector<WindowFileDropEvent> listFileDrop;
+        listFileDrop.swap( state._listPendingFileDrop );
+        for ( const WindowFileDropEvent& fileDrop : listFileDrop )
+            dispatchFileDrop( fileDrop );
+
         // 입력은 X11 과 같이 처리기(입력 관리자 · 에디터)에 하나씩 넘긴다.
         vector<WaylandQueuedInput> listInput;
         listInput.swap( state._listPendingInput );
@@ -1434,6 +1528,11 @@ namespace sw
         return true;
     }
 
+    WindowFileDropSupport WaylandWindow::getFileDropSupport() const
+    {
+        return _pState->_pDataDevice != nullptr ? WindowFileDropSupport::Hover : WindowFileDropSupport::None;
+    }
+
     bool WaylandWindow::supportsClipboard() const
     {
         return _pState->_pDataDevice != nullptr;
@@ -1452,35 +1551,8 @@ namespace sw
         if ( state._pSelectionOffer == nullptr || pMime == nullptr )
             return false; // 선택이 없거나 글 형식이 없다(이미지 등)
 
-        int32 arrPipeEnd[2]{ -1, -1 };
-        if ( pipe( arrPipeEnd ) != 0 )
-        {
-            SW_LOG_WARNING_ID( "WaylandWindow.WaylandClipboardPipeCould", "Wayland clipboard: a pipe could not be made - nothing pasted" );
-            return false;
-        }
-        wl_data_offer_receive( state._pSelectionOffer, pMime, arrPipeEnd[1] );
-        close( arrPipeEnd[1] ); // 보내기 요청이 쓰기 끝을 복제해 들고 있다
-        wl_display_flush( state._pDisplay );
-
-        string bytes;
-        bool   bCompleted = false;
-        utf8   arrBuffer[4096];
-        while ( bytes.size() <= Internal::kClipboardMaxBytes )
-        {
-            pollfd waitEntry{ arrPipeEnd[0], POLLIN, 0 };
-            if ( poll( &waitEntry, 1, Internal::kClipboardWaitMs ) <= 0 )
-                break;
-            const ssize_t count = read( arrPipeEnd[0], arrBuffer, sizeof( arrBuffer ) );
-            if ( count < 0 )
-                break;
-            if ( count == 0 )
-            {
-                bCompleted = true;
-                break;
-            }
-            bytes.append( arrBuffer, static_cast<size_t>( count ) );
-        }
-        close( arrPipeEnd[0] );
+        string     bytes;
+        const bool bCompleted = Internal::receiveOfferText( state._pDisplay, state._pSelectionOffer, pMime, bytes );
         if ( bCompleted == false )
         {
             SW_LOG_WARNING_ID( "WaylandWindow.WaylandClipboardOwnerDid", "Wayland clipboard: the owner did not finish sending within %# ms (%# bytes received) - nothing pasted", Internal::kClipboardWaitMs, static_cast<uint64>( bytes.size() ) );
