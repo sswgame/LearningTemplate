@@ -58,3 +58,27 @@ SW_TEST_CASE( AbsolutePathTest, ResolveJoinsRelativeToTheGivenBase )
     SW_EXPECT_FALSE( AbsolutePath::tryResolve( "", *base ).has_value() );
     SW_EXPECT_FALSE( AbsolutePath::tryResolve( "C:foo", *base ).has_value() ); // 드라이브 상대
 }
+
+SW_TEST_CASE( AbsolutePathTest, ResolveCollapsesDotSegments )
+{
+#if defined( SW_PLATFORM_POSIX )
+    const optional<AbsolutePath> base        = AbsolutePath::tryMake( "/work/bin" );
+    const string                 expected    = "/work/cooked/engine";
+    const string                 absoluteDot = "/work/bin/../cooked/./engine";
+#elif defined( SW_PLATFORM_WINDOWS )
+    const optional<AbsolutePath> base        = AbsolutePath::tryMake( "C:/work/bin" );
+    const string                 expected    = "C:/work/cooked/engine";
+    const string                 absoluteDot = "C:\\work\\bin\\..\\cooked\\.\\engine";
+#else
+    #error "Unsupported platform"
+#endif
+    SW_REQUIRE_TRUE( base.has_value() );
+    // `--cooked-dir=../Cooked` 가 `..` 를 단 채 남으면 포함 판정이 스테이징 파일을 모두 밖으로 봐 팩에서 뺐다.
+    const optional<AbsolutePath> relative = AbsolutePath::tryResolve( "../cooked/./engine/", *base );
+    SW_REQUIRE_TRUE( relative.has_value() );
+    SW_EXPECT_EQUAL( expected, relative->str() );
+    const optional<AbsolutePath> absolute = AbsolutePath::tryResolve( absoluteDot, *base );
+    SW_REQUIRE_TRUE( absolute.has_value() );
+    SW_EXPECT_EQUAL( expected, absolute->str() );
+    SW_EXPECT_FALSE( AbsolutePath::tryResolve( "../../../x", *base ).has_value() ); // 뿌리 위
+}

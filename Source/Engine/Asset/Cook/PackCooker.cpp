@@ -50,6 +50,19 @@ namespace sw
     {
         struct PackCookerInternal
         {
+            /**
+             * @brief 폴더 @p folder 를 훑은 목록의 파일 @p absPath 를 그 폴더 기준 경로로 바꿉니다. 못 바꾸면 오류를 남기고 false 입니다.
+             * @details 목록은 그 폴더 아래에서 나왔으므로 못 바꾸는 것은 폴더 글이 잘못된 때다(`..` 구간 — 포함 판정이 밖으로 본다). 예전에는 조용히 넘겨
+             *          `--cooked-dir=../Cooked` 의 스테이징(셰이더 바이너리 · 번역 표)이 팩에서 통째로 빠지고 `-cooked-content` 실행에서야 드러났다.
+             */
+            [[nodiscard]] static bool makeListedRelativePath( const string& folder, const string& absPath, string& outRelativePath )
+            {
+                if ( FileUtil::tryMakePathUnderRoot( folder, absPath, outRelativePath ) )
+                    return true;
+                SW_LOG_ERROR_ID( "PackCooker.ListedFileOutsideFolder", "Pack cook: listed file '%#' is not under its folder '%#' (a '..' segment?) - no pack is written", absPath, folder );
+                return false;
+            }
+
             /** @brief 팩에서 뺀 셰이더 바이너리 가운데 로그 줄에 이름을 적는 수입니다. */
             static constexpr uint32 kDroppedShaderNameCount = 5;
 
@@ -221,8 +234,8 @@ namespace sw
                     for ( const string& absPath : listFile )
                     {
                         string relativePath;
-                        if ( FileUtil::tryMakePathUnderRoot( domainDir, absPath, relativePath ) == false )
-                            continue;
+                        if ( makeListedRelativePath( domainDir, absPath, relativePath ) == false )
+                            return false;
                         string assetID = makeAssetID( domain, relativePath );
                         files._setExisting.insert( assetID );
                         candidates._listExisting.push_back( assetID );
@@ -674,8 +687,8 @@ namespace sw
                 for ( const string& absPath : listSourceFile )
                 {
                     string relativePath;
-                    if ( FileUtil::tryMakePathUnderRoot( domainDir, absPath, relativePath ) == false )
-                        continue;
+                    if ( makeListedRelativePath( domainDir, absPath, relativePath ) == false )
+                        return false;
                     if ( PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) == false )
                         continue;
                     // 산출물은 스테이징에만 있다. 소스 트리에 남은 것은 낡은 쿠킹 잔재이고, Dev 런타임이 소스가 없을 때 그것으로 물러나 실패를 가리므로 넣지 않는다.
@@ -695,8 +708,8 @@ namespace sw
                 for ( const string& absPath : listStagedFile )
                 {
                     string relativePath;
-                    if ( FileUtil::tryMakePathUnderRoot( stagedDir, absPath, relativePath ) == false )
-                        continue;
+                    if ( makeListedRelativePath( stagedDir, absPath, relativePath ) == false )
+                        return false;
                     if ( PackCooker::shouldIncludeStagedFile( relativePath, params._shaderFolder, params._buildTarget ) == false )
                         continue;
                     // 산출물은 그 원본(같은 줄기의 원본 · 셰이더 원본)이 쓰일 때만 담는다 - 쓰지 않는 씬의 쿠킹본 · 쓰지 않는 셰이더의 바이너리를 싣지 않는다.

@@ -25,8 +25,9 @@ namespace sw
         /** @brief 엄격한 절대 경로면 구분자를 `/` 로 맞춘 값을, 아니면 빈 값을 돌려줍니다. */
         [[nodiscard]] static optional<AbsolutePath> tryMake( string_view path );
         /**
-         * @brief 사람이 적은 경로 @p text 를 절대 경로로 풉니다 - 절대면 그대로, 상대면 @p baseDirectory 아래다(R5 - 기준은 부르는 쪽이 기동 때 정한 폴더).
+         * @brief 사람이 적은 경로 @p text 를 절대 경로로 풉니다 - 절대면 그 글, 상대면 @p baseDirectory 아래다(R5 - 기준은 부르는 쪽이 기동 때 정한 폴더).
          * @details 드라이브 상대(`C:foo`) · 드라이브 없는 루트(`\foo`, Windows)는 어느 쪽도 아니라 빈 값이다. 빈 글도 빈 값이다. 명령줄(`CommandLineDiskPath`) · 전역 변수 경로가 함께 쓴다.
+         *          `.` · `..` 구간은 글로 풀어 없앤다(뿌리 위로 올라가면 빈 값) — 결과는 포함 판정(`FileUtil::tryMakePathUnderRoot`)이 거절하는 `..` 를 담지 않는다.
          */
         [[nodiscard]] static optional<AbsolutePath> tryResolve( string_view text, const AbsolutePath& baseDirectory );
 
