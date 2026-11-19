@@ -151,8 +151,12 @@ namespace sw
                     return true;
                 }
                 messageCount = MathUtil::min( messageCount, kMaxTrafficMessageCount );
-                vector<uint8> payloadBytes( static_cast<size_t>( MathUtil::min( messageBytes, NetConnection::kMaxSingleMessageSize ) ), uint8{ 0 } );
-                payloadBytes[0] = GameNetSessionMessage::kTraffic;
+                // 종류 바이트 뒤를 0 으로 채운 덩어리다. 채널은 서술자(`GameNetSessionMessage::Traffic`)에서 온다.
+                NetMessageWriter trafficWriter;
+                BitWriter&       payload    = trafficWriter.beginMessage<GameNetSessionMessage::Table, GameNetSessionMessage::Traffic>();
+                const int32      totalBytes = MathUtil::min( messageBytes, NetConnection::kMaxSingleMessageSize );
+                for ( int32 byteIndex = 1; byteIndex < totalBytes; ++byteIndex )
+                    payload.writeBits( 0u, 8 );
                 vector<int32> listConnection;
                 pSession->getPeers().collectConnected( listConnection );
                 int32 sentCount = 0;
@@ -160,7 +164,7 @@ namespace sw
                 {
                     for ( int32 index = 0; index < messageCount; ++index )
                     {
-                        const bool bSent = pSession->getPeers().trySendMessage( connectionID, NetChannelKind::ReliableOrdered, payloadBytes.data(), static_cast<int32>( payloadBytes.size() ) );
+                        const bool bSent = trafficWriter.trySendMessage( pSession->getPeers(), connectionID );
                         sentCount += bSent ? 1 : 0;
                     }
                 }
@@ -754,19 +758,19 @@ namespace sw
     {
         if ( _role != GameNetRole::Server )
             return;
-        BitWriter& writer = _tickWriter.begin( GameNetSessionMessage::kServerTick );
-        writer.writeVarUint( tick );
-        (void)_tickWriter.broadcast( _peers, NetChannelKind::UnreliableSequenced ); // 잃어도 다음 틱이 더 새 번호를 싣는다
+        GameServerTickBody body;
+        body._tick = tick;
+        if ( _tickWriter.writeMessage<GameNetSessionMessage::Table, GameNetSessionMessage::ServerTick>( body ) )
+            (void)_tickWriter.broadcastMessage( _peers ); // 잃어도 다음 틱이 더 새 번호를 싣는다
     }
 
     void GameNetSession::sendShutdownNotice( const GameShutdownNotice& notification )
     {
         if ( _role != GameNetRole::Server )
             return;
-        BitWriter& writer = _tickWriter.begin( GameNetSessionMessage::kShutdownNotice );
-        writer.writeBits( static_cast<uint32>( notification._reason ), 8 );
-        writer.writeVarUint( notification._graceSeconds );
-        const int32 sentCount = _tickWriter.broadcast( _peers, NetChannelKind::ReliableOrdered ); // 끊기 전에 사유가 닿아야 한다
+        if ( _tickWriter.writeMessage<GameNetSessionMessage::Table, GameNetSessionMessage::ShutdownNotice>( notification ) == false )
+            return;                                                     // 등록 열거자 밖 사유다 — 오류 로그가 남았다
+        const int32 sentCount = _tickWriter.broadcastMessage( _peers ); // 끊기 전에 사유가 닿아야 한다
         SW_LOG_INFO_ID( "GameNetSession.NetSessionNotifiedClients", "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notification._reason ), notification._graceSeconds );
     }
 
@@ -820,6 +824,14 @@ namespace sw
         if ( _role == GameNetRole::Server )
             return Table::makeMask<GameNetSessionMessage::ResourceDigest>();
         return Table::makeMask<GameNetSessionMessage::ServerTick, GameNetSessionMessage::ShutdownNotice>();
+    }
+
+    NetMessageDirectionMask GameNetSession::EngineMessageHandler::getMessageDirectionMask() const
+    {
+        using Table = GameNetSessionMessage::Table;
+        if ( _role == GameNetRole::Server )
+            return Table::makeDirectionMask<GameNetSessionMessage::ResourceDigest>();
+        return Table::makeDirectionMask<GameNetSessionMessage::ServerTick, GameNetSessionMessage::ShutdownNotice>();
     }
 
     NetHandleResult GameNetSession::EngineMessageHandler::handleNetMessage( const NetMessageContext& context, BitReader& body )
@@ -882,25 +894,21 @@ namespace sw
                 SW_LOG_ERROR_ID( "GameNetSession.DigestIDTooLong", "Resource id '%#' is longer than %# bytes - its composition is not compared with the server", entry._assetID, GameNetSessionMessage::kMaxDigestIDBytes );
                 continue;
             }
-            BitWriter& writer = _tickWriter.begin( GameNetSessionMessage::kResourceDigest );
-            writer.writeBlob( reinterpret_cast<const uint8*>( entry._assetID.data() ), static_cast<int32>( entry._assetID.size() ) );
-            writer.writeVarUint( entry._hash );
-            if ( _tickWriter.send( _peers, connectionID, NetChannelKind::ReliableOrdered ) )
+            GameResourceDigestBody body;
+            body._assetID = entry._assetID;
+            body._hash    = entry._hash;
+            if ( _tickWriter.writeMessage<GameNetSessionMessage::Table, GameNetSessionMessage::ResourceDigest>( body ) &&
+                 _tickWriter.sendMessage( _peers, connectionID ) )
                 ++sentCount;
         }
         SW_LOG_INFO_ID( "GameNetSession.DigestSent", "Net session sent %# resource composition digest(s) to the server", sentCount );
     }
 
-    NetHandleResult GameNetSession::receive( GameNetSessionMessage::ResourceDigest, const NetMessageContext& context, BitReader& body )
+    NetHandleResult GameNetSession::receive( GameNetSessionMessage::ResourceDigest, const NetMessageContext& context, const GameResourceDigestBody& body )
     {
-        vector<uint8> listIDByte;
-        if ( body.readBlob( listIDByte, GameNetSessionMessage::kMaxDigestIDBytes ) == false )
-            return NetHandleResult::Malformed;
         ResourceDigestEntry entry;
-        entry._assetID = string( reinterpret_cast<const utf8*>( listIDByte.data() ), listIDByte.size() );
-        entry._hash    = body.readVarUint();
-        if ( body.hasOverflowed() )
-            return NetHandleResult::Malformed;
+        entry._assetID = body._assetID;
+        entry._hash    = body._hash;
         if ( _digestComparer.addPeerLine( context._connectionID, entry, MonotonicClock::nowNanoseconds() ) == false )
         {
             SW_LOG_ERROR_ID( "Net.ResourceDigestFlood", "Net session client %# sent more than %# resource composition lines - disconnecting it", context._connectionID, ResourceDigestComparer::kMaxLinesPerPeer );
@@ -910,26 +918,19 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    NetHandleResult GameNetSession::receive( GameNetSessionMessage::ShutdownNotice, const NetMessageContext& context, BitReader& body )
+    NetHandleResult GameNetSession::receive( GameNetSessionMessage::ShutdownNotice, const NetMessageContext& context, const GameShutdownNotice& body )
     {
         (void)context;
-        const uint32 reasonValue  = static_cast<uint32>( body.readBits( 8 ) );
-        const uint32 graceSeconds = body.readVarUint32();
-        if ( body.hasOverflowed() || reasonValue > static_cast<uint32>( GameShutdownReason::ServerStopped ) )
-            return NetHandleResult::Malformed;
-        _shutdownNotice._reason       = static_cast<GameShutdownReason>( reasonValue );
-        _shutdownNotice._graceSeconds = graceSeconds;
-        _bShutdownNoticeKnown         = SW_TRUE;
-        SW_LOG_INFO_ID( "GameNetSession.NetSessionClientNotified", "Net session client was told the server is shutting down (reason %#, grace %# s)", reasonValue, graceSeconds );
+        _shutdownNotice       = body; // 등록 열거자 밖 사유는 본문 읽기가 거절했다
+        _bShutdownNoticeKnown = SW_TRUE;
+        SW_LOG_INFO_ID( "GameNetSession.NetSessionClientNotified", "Net session client was told the server is shutting down (reason %#, grace %# s)", static_cast<uint32>( body._reason ), body._graceSeconds );
         return NetHandleResult::Handled;
     }
 
-    NetHandleResult GameNetSession::receive( GameNetSessionMessage::ServerTick, const NetMessageContext& context, BitReader& body )
+    NetHandleResult GameNetSession::receive( GameNetSessionMessage::ServerTick, const NetMessageContext& context, const GameServerTickBody& body )
     {
         (void)context;
-        const uint64 tick = body.readVarUint();
-        if ( body.hasOverflowed() )
-            return NetHandleResult::Malformed;
+        const uint64 tick = body._tick;
         // 순서 있는 비신뢰 채널이라 옛 번호는 이미 걸러졌다. 다시 띄운 서버의 작은 번호도 그대로 받는다(새 연결의 첫 번호다).
         _latestServerTick = tick;
         _bServerTickKnown = SW_TRUE;

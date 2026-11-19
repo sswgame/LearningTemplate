@@ -10,6 +10,9 @@
 #include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/Replication/NetInputWindow.h"
 
+#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
 
@@ -18,12 +21,24 @@ namespace sw
     class BitReader;
     class BitWriter;
 
-    /** @brief 클라이언트-서버 복제 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
+    /** @brief 스냅샷 확인(클라이언트 → 서버) 본문입니다 — 복원한 가장 새 틱. */
+    REFLECT()
+    struct NetSnapshotAckBody
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint32 _tick{ 0 };
+    };
+
+    /**
+     * @brief 클라이언트-서버 복제 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
+     * @details 확인 본문은 고정 배치형(`NetMessageBodyDef`)이다. 스냅샷(기준 틱 델타 · 비트 예산)과 입력(입력 창 형식 `kInputFormat`)은 손 본문이다.
+     */
     struct NetClientServerMessage
     {
         using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced>;
-        using SnapshotAck = NetMessageDef<1, NetMessageDirection::ToServer, NetChannelKind::Unreliable>;
-        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::UnreliableSequenced, 6>; ///< 판 6: 의도 끝에 발동 순간 시선 필드(선택)가 붙는다(5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
+        using SnapshotAck = NetMessageBodyDef<1, NetMessageDirection::ToServer, NetChannelKind::UnreliableSequenced, NetSnapshotAckBody>; ///< 옛 확인은 새 확인이 덮는다
+        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelKind::Unreliable, 6>;                               ///< 비신뢰 — 입력 창을 겹쳐 보내고 서버가 틱 번호로 거르므로 순서 보장이 필요 없다(언리얼 이동 RPC 와 같다).                      ///< 판 6: 의도 끝에 발동 순간 시선 필드(선택)가 붙는다(5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
         using Table       = NetMessageTable<NetKitMessageRange::kClientServer, Snapshot, SnapshotAck, Input>;
 
         static constexpr uint8 kSnapshot    = Table::getKindOf<Snapshot>();

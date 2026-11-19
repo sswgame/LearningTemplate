@@ -568,3 +568,73 @@ SW_TEST_CASE( HousingReplicationTest, LargePlotTravelsInChunksThenAsDeltas )
     }
     SW_EXPECT_EQUAL( rig._pServerPlot->getFunds(), late._pPlot->getFunds() );
 }
+
+/**
+ * @brief [HousingReplicationTest] 고정 배치형 본문 — 판정의 등록 밖 결과 · 잘린 상태 조각 · 전체 밖 조각은 깨진 메시지이고 쌓이지 않는다
+ */
+SW_TEST_CASE( HousingReplicationTest, BodyMessagesRejectUnknownValuesAndTruncation )
+{
+    HousingReplicationClient client;
+    NetMessageWriter         writer;
+
+    // 판정 — 결과 열거자 자리에 등록 밖 값을 꾸민다(요청 번호 · 부지 해시 뒤 8 비트 0xFF).
+    BitWriter& badReply = writer.begin( NetHousingMessage::kReply );
+    badReply.writeVarUint( 1 );
+    badReply.writeVarUint( 7 );
+    badReply.writeBits( 0xFFu, 8 );
+    badReply.writeVarUint( 0 );
+    SW_EXPECT_TRUE( client.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+
+    HousingPlotSnapshotBody chunk;
+    chunk._plotHash  = 7;
+    chunk._owner     = HousingPlotOwner::Self;
+    chunk._totalSize = 4;
+    chunk._offset    = 2;
+    chunk._chunk     = vector<uint8>{ 1, 2, 3 }; // 2 + 3 > 4 — 전체 밖이다
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::PlotSnapshot>( chunk ) ) );
+    SW_EXPECT_TRUE( client.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+
+    chunk._offset = 0;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetHousingMessage::Table, NetHousingMessage::PlotSnapshot>( chunk ) ) );
+    const vector<uint8> listTruncated( writer.getBytes().begin(), writer.getBytes().end() - 1 );
+    SW_EXPECT_TRUE( client.handleMessage( 0, listTruncated.data(), static_cast<int32>( listTruncated.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+}
+
+/**
+ * @brief [HousingReplicationTest] 손 본문 — 종류에 맞지 않는 편집 꼬리(남는 바이트) · 등록 밖 주인 · 상한 넘는 델타 개수 · 델타 뒤 남는 바이트는 깨진 메시지다
+ */
+SW_TEST_CASE( HousingReplicationTest, HandBodiesRejectTrailingTailsAndUnknownOwners )
+{
+    {
+        HousingNetRig    rig( 100 );
+        NetMessageWriter writer;
+        BitWriter&       claim = writer.begin( NetHousingMessage::kEdit );
+        claim.writeVarUint( 1 );
+        claim.writeVarUint( static_cast<uint64>( hashed_string( "home" ).getHash() ) );
+        claim.writeBits( static_cast<uint32>( HousingEditOp::Claim ), 3 );
+        claim.writeVarUint( 99 ); // 차지에는 꼬리가 없다
+        SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+        SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._editCount );
+    }
+
+    HousingReplicationClient client;
+    NetMessageWriter         writer;
+    const auto               writeDeltaHead = [&writer]( uint32 owner, uint64 removedCount ) -> BitWriter&
+    {
+        BitWriter& delta = writer.begin( NetHousingMessage::kPlotDelta );
+        delta.writeVarUint( 7 );     // 부지
+        delta.writeBits( owner, 2 ); // 주인
+        delta.writeVarInt( 0 );      // 잔액
+        delta.writeVarUint( 1 );     // 다음 배치 id
+        delta.writeVarUint( removedCount );
+        return delta;
+    };
+    (void)writeDeltaHead( static_cast<uint32>( HousingPlotOwner::Count ), 0 ).writeVarUint( 0 );
+    SW_EXPECT_TRUE( client.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+    (void)writeDeltaHead( static_cast<uint32>( HousingPlotOwner::Self ), uint64{ 1 } << 30 );
+    SW_EXPECT_TRUE( client.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+    BitWriter& trailing = writeDeltaHead( static_cast<uint32>( HousingPlotOwner::Self ), 0 );
+    trailing.writeVarUint( 0 );     // 새로 · 바뀐 배치 수
+    trailing.writeBits( 0xFFu, 8 ); // 남는 바이트
+    SW_EXPECT_TRUE( client.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+}

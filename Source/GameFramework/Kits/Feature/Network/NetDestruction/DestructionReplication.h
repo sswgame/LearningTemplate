@@ -32,6 +32,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/NetTypes.h"
@@ -42,6 +43,8 @@
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/NetObjectID.h"
+#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
@@ -51,14 +54,53 @@ namespace sw
     class GameObjectManager;
     class INetPeers;
 
-    /** @brief 파괴 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
+    /** @brief 오브젝트 하나의 상태 스냅숏(서버 → 클라이언트) 본문입니다. 필드 순서가 와이어 형식이다. */
+    REFLECT()
+    struct DestructionSnapshotBody
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        NetObjectID _netID{ 0 };
+        PROPERTY()
+        uint32 _eventCount{ 0 }; ///< 스냅숏이 담은 이벤트 수 — 다음 이벤트 번호다
+        PROPERTY( MaxCount = NetConnection::kMaxReliableMessageSize, Min = 0, Max = 255 )
+        vector<uint8> _bytes{}; ///< `FractureComponentBase::makeNetworkSnapshot`
+    };
+
+    /** @brief (이벤트 수, 상태 해시)(서버 → 클라이언트) 본문입니다. */
+    REFLECT()
+    struct DestructionHashBody
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        NetObjectID _netID{ 0 };
+        PROPERTY()
+        uint32 _eventCount{ 0 };
+        PROPERTY()
+        uint64 _hash{ 0 };
+    };
+
+    /** @brief 스냅숏 요청(클라이언트 → 서버) 본문입니다. */
+    REFLECT()
+    struct DestructionSnapshotRequestBody
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        NetObjectID _netID{ 0 };
+    };
+
+    /**
+     * @brief 파괴 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
+     * @details 스냅숏 · 해시 · 요청 본문은 고정 배치형(`NetMessageBodyDef`)이다. 이벤트(피해 양자화 · 있으면 덩어리 자세)와 자세(예산에 맞춘 개수 · 멈춤 여부에 따른 양자화)는
+     *          값마다 인코딩을 고르는 손 본문이다.
+     */
     struct NetDestructionMessage
     {
-        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered, 2>; ///< 판 2: 오브젝트 번호가 64 비트(`NetObjectID`). 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
-        using Snapshot        = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 3>;   ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지). 판 2: 조각이 아니라 메시지 하나로 보낸다. 판 3: 번호 64 비트
-        using Pose            = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 2>;        ///< 판 2: 번호 64 비트. 덩어리 자세. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다
-        using Hash            = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>;   ///< (이벤트 수, 상태 해시). 판 2: 번호 64 비트
-        using SnapshotRequest = NetMessageDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, 2>;   ///< 스냅숏을 요청한다. 판 2: 번호 64 비트
+        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableUnordered, 2>;                         ///< 판 2: 오브젝트 번호가 64 비트(`NetObjectID`). 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
+        using Snapshot        = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionSnapshotBody>; ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지, 조각이 아니라 메시지 하나)
+        using Pose            = NetMessageSenderChannelDef<2, NetMessageDirection::ToClient, NetChannelKind::Unreliable, 2>;                   ///< 판 2: 번호 64 비트. 덩어리 자세. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다(`beginMessage( channel )`)
+        using Hash            = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, DestructionHashBody>;
+        using SnapshotRequest = NetMessageBodyDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, DestructionSnapshotRequestBody>;
         using Table           = NetMessageTable<NetKitMessageRange::kDestruction, Event, Snapshot, Pose, Hash, SnapshotRequest>;
 
         static constexpr uint8 kEvent           = Table::getKindOf<Event>();
@@ -126,7 +168,7 @@ namespace sw
         /** @brief 월드 틱 뒤에 부릅니다. 새 이벤트, 스냅숏, 자세, 해시 순서로 보냅니다. */
         void update( uint32 serverTick );
 
-        NetHandleResult receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, const DestructionSnapshotRequestBody& body );
         /** @brief 클라이언트가 들어오면 호출합니다. 이벤트가 있는 오브젝트마다 다음 `update` 에서 스냅숏을 보냅니다. */
         void onConnectionOpened( int32 connectionID ) override;
         /** @brief 그 연결에 쌓인 스냅숏 요청을 지웁니다. */
@@ -170,9 +212,12 @@ namespace sw
          * @brief 자세 목록 하나를 메시지 예산(`kPoseMessageBudget`)에서 끊어 보냅니다.
          * @details 멈춘 자세(@p bRest)는 비트 그대로, 움직이는 자세는 양자화해서 쓴다. 하나라도 양자화하지 못한 메시지는 보내지 않는다.
          */
-        void  sendPoseList( const Entry& entry, const vector<const FractureGroupPose*>& listPose, bool bRest, bool bReliable, uint32 serverTick );
-        void  sendHash( const Entry& entry, const FractureComponentBase& component );
-        int32 broadcast( NetChannelKind channel );
+        void sendPoseList( const Entry& entry, const vector<const FractureGroupPose*>& listPose, bool bRest, bool bReliable, uint32 serverTick );
+        void sendHash( const Entry& entry, const FractureComponentBase& component );
+        /** @brief 쓴 메시지를 서술자에 묶인 채널(시작에서 정했다)로 모두에게 보내고 셉니다. */
+        int32 broadcastMessage();
+        /** @brief 보낸 수 @p sentCount 를 통계에 더합니다. 신뢰 창이 찬 연결은 거절로 센다. */
+        int32 countBroadcast( int32 connectedCount, int32 sentCount );
 
     private:
         vector<Entry>                _listEntry;
@@ -213,9 +258,9 @@ namespace sw
 
         // 표의 메시지 — 이벤트, 스냅숏, 자세, 해시를 받는다. 같은 영역의 스냅숏 요청은 서버가 받는다
         NetHandleResult receive( NetDestructionMessage::Event, const NetMessageContext& context, BitReader& body );
-        NetHandleResult receive( NetDestructionMessage::Snapshot, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetDestructionMessage::Snapshot, const NetMessageContext& context, const DestructionSnapshotBody& body );
         NetHandleResult receive( NetDestructionMessage::Pose, const NetMessageContext& context, BitReader& body );
-        NetHandleResult receive( NetDestructionMessage::Hash, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetDestructionMessage::Hash, const NetMessageContext& context, const DestructionHashBody& body );
 
         /** @brief 덩어리를 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수입니다. 자세를 하나도 받지 않았으면 음수입니다. */
         float64                            getRenderTick() const { return _clock.getRenderTick(); }
@@ -269,9 +314,10 @@ namespace sw
         /** @brief 번호가 앞선 이벤트를 쌓아 둡니다. 같은 번호는 한 번만 보관합니다. */
         static void bufferEvent( Entry& entry, const BufferedEvent& received );
         static void applyToComponent( FractureComponentBase& component, const BufferedEvent& buffered );
-        /** @brief 스냅숏 하나를 적용합니다. 깨졌으면 false 입니다. */
-        [[nodiscard]] bool handleSnapshot( Entry& entry, BitReader& reader );
-        void               handlePose( BitReader& reader, bool bRest );
+        /** @brief 스냅숏 하나를 적용합니다. */
+        void handleSnapshot( Entry& entry, const DestructionSnapshotBody& body );
+        /** @brief 자세 메시지 본문을 끝까지 읽고 남는 비트가 없을 때만 적용합니다. 깨졌으면 아무것도 적용하지 않고 false 입니다. */
+        [[nodiscard]] bool handlePose( BitReader& reader, bool bRest );
         void               compareHashes( Entry& entry, FractureComponentBase& component );
         void               driveChunks( Entry& entry, FractureComponentBase& component );
         void               requestSnapshot( Entry& entry );

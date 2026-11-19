@@ -88,7 +88,8 @@ namespace sw
             [[nodiscard]] static bool writeCall( NetMessageWriter& messageWriter, uint32 sequence, uint32 targetID, const FunctionInfo& function, const vector<string>& listText,
                                                  NetChannelKind& outChannel )
             {
-                BitWriter& writer = messageWriter.begin( NetRemoteCallMessage::kCall );
+                outChannel        = function._metadata->_bReliable != SW_FALSE ? NetChannelKind::ReliableOrdered : NetChannelKind::Unreliable;
+                BitWriter& writer = messageWriter.beginMessage<NetRemoteCallMessage::Table, NetRemoteCallMessage::Call>( outChannel );
                 writer.writeVarUint( sequence );
                 writer.writeVarUint( targetID );
                 writer.writeUint32( RemoteCallTargets::getFunctionID( function ) );
@@ -97,7 +98,6 @@ namespace sw
                 {
                     writeText( writer, text );
                 }
-                outChannel           = function._metadata->_bReliable != SW_FALSE ? NetChannelKind::ReliableOrdered : NetChannelKind::Unreliable;
                 const int32 maxBytes = outChannel == NetChannelKind::ReliableOrdered ? NetConnection::kMaxReliableMessageSize : NetConnection::kMaxSingleMessageSize;
                 return messageWriter.getByteCount() <= maxBytes;
             }
@@ -113,11 +113,11 @@ namespace sw
             /** @brief 호출 메시지를 읽습니다. 상한을 넘거나 깨졌으면 false 입니다. */
             [[nodiscard]] static bool readCall( BitReader& body, ReadCall& outCall, vector<string>& outListText )
             {
-                outCall._sequence          = body.readVarUint32();
-                outCall._targetID          = body.readVarUint32();
-                outCall._functionID        = body.readUint32();
-                const uint64 argumentCount = body.readVarUint();
-                if ( body.hasOverflowed() || argumentCount > static_cast<uint64>( NetRemoteCallMessage::kMaxArgumentCount ) )
+                outCall._sequence    = body.readVarUint32();
+                outCall._targetID    = body.readVarUint32();
+                outCall._functionID  = body.readUint32();
+                uint32 argumentCount = 0;
+                if ( body.readCount( static_cast<uint32>( NetRemoteCallMessage::kMaxArgumentCount ), argumentCount ) == false )
                     return false;
                 outListText.resize( static_cast<size_t>( argumentCount ) );
                 for ( string& text : outListText )
@@ -125,7 +125,7 @@ namespace sw
                     if ( readText( body, NetRemoteCallMessage::kMaxArgumentBytes, text ) == false )
                         return false;
                 }
-                return body.hasOverflowed() == false;
+                return body.readEnd(); // 인자 뒤 남는 바이트도 깨진 호출이다
             }
         };
     } // namespace
@@ -357,7 +357,7 @@ namespace sw
                              _messageWriter.getByteCount(), NetConnection::kMaxSingleMessageSize );
             return false;
         }
-        return _messageWriter.send( *_pPeers, pTarget->_ownerConnectionID, channel );
+        return _messageWriter.sendMessage( *_pPeers, pTarget->_ownerConnectionID ); // 채널은 `writeCall` 이 시작에서 골랐다
     }
 
     NetHandleResult RemoteCallServer::receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body )
@@ -464,10 +464,11 @@ namespace sw
         ++_stats._rejectedCount;
         if ( _pPeers == nullptr )
             return;
-        BitWriter& writer = _messageWriter.begin( NetRemoteCallMessage::kRejected );
-        writer.writeVarUint( sequence );
-        writer.writeBits( static_cast<uint32>( error ), 8 );
-        (void)_messageWriter.send( *_pPeers, connectionID, NetChannelKind::ReliableOrdered ); // 끊긴 연결이면 보낼 곳이 없다
+        RemoteCallRejectedBody body;
+        body._sequence = sequence;
+        body._error    = error;
+        if ( _messageWriter.writeMessage<NetRemoteCallMessage::Table, NetRemoteCallMessage::Rejected>( body ) )
+            (void)_messageWriter.sendMessage( *_pPeers, connectionID ); // 끊긴 연결이면 보낼 곳이 없다
     }
 
     void RemoteCallServer::disconnectViolator( int32 connectionID, uint32 functionID, const utf8* pWhy )
@@ -529,7 +530,7 @@ namespace sw
                              NetConnection::kMaxSingleMessageSize );
             return 0;
         }
-        return _messageWriter.sendToPeers( *_pPeers, channel ) > 0 ? sequence : 0;
+        return _messageWriter.sendMessageToPeers( *_pPeers ) > 0 ? sequence : 0; // 채널은 `writeCall` 이 시작에서 골랐다
     }
 
     NetHandleResult RemoteCallClient::receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body )
@@ -552,15 +553,12 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    NetHandleResult RemoteCallClient::receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, BitReader& body )
+    NetHandleResult RemoteCallClient::receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, const RemoteCallRejectedBody& body )
     {
         (void)context;
         RemoteCallRejectNotification notification;
-        notification._sequence = body.readVarUint32();
-        const uint32 errorByte = body.readBits( 8 );
-        if ( body.hasOverflowed() || errorByte > static_cast<uint32>( RemoteCallError::RateLimited ) )
-            return NetHandleResult::Malformed;
-        notification._error = static_cast<RemoteCallError>( errorByte );
+        notification._sequence = body._sequence;
+        notification._error    = body._error; // 등록 열거자 밖 까닭은 본문 읽기가 거절했다
         _rejections.push( notification );
         return NetHandleResult::Handled;
     }

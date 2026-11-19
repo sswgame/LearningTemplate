@@ -196,7 +196,7 @@ namespace sw
 
     bool PairedAnimationReplicationServer::writeStateMessage( const PairedAnimationNetState& state )
     {
-        BitWriter& writer = _writer.begin( NetPairedAnimationMessage::kSessionState );
+        BitWriter& writer = _writer.beginMessage<NetPairedAnimationMessage::Table, NetPairedAnimationMessage::SessionState>();
         if ( state.write( writer ) )
             return true;
         SW_LOG_ERROR_ID( "PairedAnimationReplication.PairedAnimationSessionNot4", "Paired animation session %# is not replicated: path '%#' or %# roles exceed the message limits", state._snapshot._sessionID, state._assetPath.c_str(),
@@ -213,9 +213,10 @@ namespace sw
             const bool                    bEnded    = pSession == nullptr || pSession->isPlaying() == false;
             if ( bEnded == false )
                 continue;
-            BitWriter& writer = _writer.begin( NetPairedAnimationMessage::kSessionEnd );
-            writer.writeVarUint( sessionID );
-            (void)_writer.broadcast( *_pHost, NetChannelKind::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
+            PairedAnimationSessionEndBody body;
+            body._sessionID = sessionID;
+            if ( _writer.writeMessage<NetPairedAnimationMessage::Table, NetPairedAnimationMessage::SessionEnd>( body ) )
+                (void)_writer.broadcastMessage( *_pHost ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
             ++_stats._endSentCount;
             SW_LOG_INFO_ID( "PairedAnimationReplication.ServerEnd", "%#", formatEventLine( "server", "end", sessionID, 0.0f ).c_str() );
             _listAnnouncedID.erase( _listAnnouncedID.begin() + static_cast<ptrdiff_t>( index - 1 ) );
@@ -246,7 +247,7 @@ namespace sw
                 ++_stats._unreplicableCount;
                 continue;
             }
-            (void)_writer.broadcast( *_pHost, NetChannelKind::ReliableOrdered ); // 연결이 없어도 기록한다 — 나중에 들어온 쪽은 늦은 참가로 받는다
+            (void)_writer.broadcastMessage( *_pHost ); // 연결이 없어도 기록한다 — 나중에 들어온 쪽은 늦은 참가로 받는다
             ++_stats._stateSentCount;
             SW_LOG_INFO_ID( "PairedAnimationReplication.ServerStart", "%#", formatEventLine( "server", "start", session.getID(), state._snapshot._anchorTime ).c_str() );
             _listAnnouncedID.push_back( session.getID() );
@@ -267,7 +268,7 @@ namespace sw
                 continue; // 처음에 복제한 세션이라 여기서 실패하지 않는다 — 실패하면 오류는 남겼다
             for ( const int32 connectionID : _listJoiningConnection )
             {
-                if ( _writer.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) )
+                if ( _writer.sendMessage( *_pHost, connectionID ) )
                 {
                     ++_stats._stateSentCount;
                     SW_LOG_INFO_ID( "PairedAnimationReplication.ServerJoin", "%#", formatEventLine( "server", "join", sessionID, state._snapshot._anchorTime ).c_str() );
@@ -404,14 +405,12 @@ namespace sw
         return result;
     }
 
-    NetHandleResult PairedAnimationReplicationClient::receive( NetPairedAnimationMessage::SessionEnd, const NetMessageContext& context, BitReader& body )
+    NetHandleResult PairedAnimationReplicationClient::receive( NetPairedAnimationMessage::SessionEnd, const NetMessageContext& context, const PairedAnimationSessionEndBody& body )
     {
         (void)context;
         if ( _pManager == nullptr )
             return NetHandleResult::Handled; // 시작하지 않은 클라이언트 — 받을 씬이 없다
-        const uint32 sessionID = body.readVarUint32();
-        if ( body.hasOverflowed() )
-            return NetHandleResult::Malformed;
+        const uint32 sessionID = body._sessionID;
         dropPending( sessionID ); // 준비를 기다리던 상태가 끝난 세션이면 복원할 것이 없다
         PairedAnimationSystem*        pSystem  = PairedAnimationSystem::find( *_pManager );
         const PairedAnimationSession* pSession = pSystem != nullptr ? pSystem->findSession( sessionID ) : nullptr;
@@ -431,7 +430,7 @@ namespace sw
         if ( _pManager == nullptr )
             return NetHandleResult::Handled; // 시작하지 않은 클라이언트 — 받을 씬이 없다
         PairedAnimationNetState state{};
-        if ( PairedAnimationNetState::read( body, state ) == false )
+        if ( PairedAnimationNetState::read( body, state ) == false || body.readEnd() == false )
             return NetHandleResult::Malformed;
         (void)applyState( state ); // 거절은 applyState 가 오류로 남기고 셌다
         return NetHandleResult::Handled;

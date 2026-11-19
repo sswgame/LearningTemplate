@@ -387,6 +387,7 @@ namespace sw
         // 다른 길로 머리 없는 바이트를 만들면 다른 빌드의 바이트를 거절할 자리가 사라진다(Source/Engine/Serialization/Fixed/README.md 3.10).
         friend class NetMessageChannel;
         friend struct ReplicatedLayout;
+        friend struct NetMessageBodyCodec; // 게임 넷 메시지 본문 — 라우터가 표 판(스키마 해시 포함)을 상대와 맞춘 뒤에만 처리기에 넘긴다(`NetMessageBodyDef`)
         template <typename T>
         [[nodiscard]] static bool writeBody( const T& object, BitWriter& writer )
         {

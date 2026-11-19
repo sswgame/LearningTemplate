@@ -1,23 +1,74 @@
 /**
  * @file NetLockstepMessage.h
  * @brief 락스텝 키트(락스텝 · 롤백 세션)의 메시지 표입니다. 두 세션이 한 영역을 나눠 받으므로 표를 따로 둔다.
+ * @details 입력 · 체크섬 · 이탈 본문은 고정 배치형(`NetMessageBodyDef`)이다. 롤백 입력은 비트 예산에 맞춰 잘라 싣는 입력 버퍼(`RollbackInputBuffer`)라 손으로 쓰는 본문이다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/NetTypes.h"
 
+#include "Engine/Net/NetMessageBody.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
+
+namespace sw
+{
+    /** @brief 락스텝 선 형식의 상한입니다. 본문 형식(`PROPERTY( MaxCount )`)과 메시지 표가 함께 쓴다. */
+    struct LockstepLimit
+    {
+        static constexpr int32 kMaxInputBytes = LockstepLimit::kMaxInputBytes; ///< `NetLockstepMessage::kMaxInputBytes`
+    };
+
+    /** @brief 틱 하나의 입력(양쪽 — 서버가 받아 다른 클라이언트에 그대로 나눈다) 본문입니다. 필드 순서가 와이어 형식이다. */
+    REFLECT()
+    struct LockstepInputBody
+    {
+        REFLECT_BODY();
+        PROPERTY( Min = 0 )
+        int32 _player{ 0 };
+        PROPERTY()
+        uint32 _tick{ 0 };
+        PROPERTY( MaxCount = LockstepLimit::kMaxInputBytes, Min = 0, Max = 255 )
+        vector<uint8> _input{};
+    };
+
+    /** @brief 틱 하나의 상태 체크섬 본문입니다. */
+    REFLECT()
+    struct LockstepChecksumBody
+    {
+        REFLECT_BODY();
+        PROPERTY( Min = 0 )
+        int32 _player{ 0 };
+        PROPERTY()
+        uint32 _tick{ 0 };
+        PROPERTY()
+        uint32 _checksum{ 0 };
+    };
+
+    /** @brief 이탈 알림(서버 → 모두) 본문입니다. 그 플레이어가 빈 입력이 되는 틱이다. */
+    REFLECT()
+    struct LockstepLeaveBody
+    {
+        REFLECT_BODY();
+        PROPERTY( Min = 0 )
+        int32 _player{ 0 };
+        PROPERTY()
+        uint32 _tick{ 0 };
+    };
+} // namespace sw
 
 namespace sw
 {
     /** @brief 락스텝 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetLockstepMessage
     {
-        using Input         = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
-        using Checksum      = NetMessageDef<1, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
+        using Input         = NetMessageBodyDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepInputBody>;
+        using Checksum      = NetMessageBodyDef<1, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepChecksumBody>;
         using RollbackInput = NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::Unreliable>;
-        using Leave         = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>; ///< 서버 → 모두. 플레이어와, 그 플레이어가 빈 입력이 되는 틱을 알린다
+        using Leave         = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, LockstepLeaveBody>; ///< 서버 → 모두
         using Table         = NetMessageTable<NetKitMessageRange::kLockstep, Input, Checksum, RollbackInput, Leave>;
 
         static constexpr uint8 kInput         = Table::getKindOf<Input>();

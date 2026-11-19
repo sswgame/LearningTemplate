@@ -5,7 +5,7 @@
  *          - 등록(`registerMessage<T>( kind )`)이 (종류 바이트, `FixedLayout::getSchemaHash<T>`) 를 모으고, 봉인(`seal`)이 그 목록을 호스트 설정의 와이어 버전에
  *            섞은 설정을 돌려준다. 배치가 다른 빌드는 핸드셰이크에서 `VersionMismatch` 로 먼저 거절된다 — 메시지마다 싣던 스키마 해시 8 바이트가 빠진다.
  *          - **섞는 일을 따로 부를 자리가 없다**: 본문만 쓰고 읽는 길(`writeMessage` · `readMessage`)은 봉인한 채널에만 열리고, 봉인이 내준 설정만 그 해시를 가진다.
- *            봉인 뒤의 등록과 등록하지 않은 종류 · 타입의 쓰기는 오류다(거절 · 오류 로그). 머리 없는 바이트를 만드는 길은 이 클래스뿐이다(`FixedLayout` 의 friend).
+ *            봉인 뒤의 등록과 등록하지 않은 종류 · 타입의 쓰기는 오류다(거절 · 오류 로그). 머리 없는 바이트를 만드는 길은 이 클래스와 게임 넷 메시지 본문(`NetMessageBodyCodec` — 라우터가 표 판을 맞춘 뒤에만 넘긴다)뿐이다(`FixedLayout` 의 friend).
  *          - 연결 하나에 쓰는 채널 하나다. 같은 호스트에 그 설정으로 붙은 상대끼리만 본문을 주고받는다.
  *          - **복제 타입**(`registerReplicatedType<T>( kind )`)은 `PROPERTY( Replicated )` 칸의 복제 스키마 해시(`ReplicatedLayout`)를 같은 목록에 싣는다 —
  *            칸 순서 · 범위가 다른 빌드는 핸드셰이크에서 `VersionMismatch` 다(Iris 프로토콜 해시 · 유니티 고스트 모음 해시 자리). 메시지 종류와 엔티티 타입은 다른 이름공간이라

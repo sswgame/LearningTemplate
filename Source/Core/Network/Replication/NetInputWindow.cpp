@@ -202,6 +202,8 @@ namespace sw
             if ( skipEntry( check ) == false )
                 return false;
         }
+        if ( check.readEnd() == false )
+            return false; // 번들 뒤 남는 비트 — 앞 입력도 넣지 않는다
         if ( _mode == NetInputWindowMode::FollowNewest && count > 0 )
             followTick( static_cast<uint32>( first + count - 1u ) );
         for ( uint64 index = 0; index < count; ++index )

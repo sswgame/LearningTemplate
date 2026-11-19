@@ -205,7 +205,7 @@ namespace sw
                 acked = MathUtil::min( acked, _listPeer[static_cast<size_t>( player )]._ackedLocalFrame );
         }
         _sendWindow.acknowledge( static_cast<uint32>( acked + 1 ) );
-        BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kRollbackInput );
+        BitWriter& writer = _messageWriter.beginMessage<NetLockstepMessage::Table, NetLockstepMessage::RollbackInput>();
         writer.writeVarUint( static_cast<uint64>( _localPlayer ) );
         writer.writeVarUint( static_cast<uint64>( _frame ) );
         for ( int32 player = 0; player < _playerCount; ++player )
@@ -217,7 +217,7 @@ namespace sw
         NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         budget.reserveBits( writer.getBitCount() );
         (void)_sendWindow.write( writer, budget ); // 실은 수는 쓰지 않는다. 예산이 넘치지 않기 때문이다(위 주석)
-        (void)_messageWriter.sendToPeers( *_pHost, NetChannelKind::Unreliable );
+        (void)_messageWriter.sendMessageToPeers( *_pHost );
     }
 
     bool RollbackSession::advanceFrame( uint8 localInput )
@@ -291,7 +291,7 @@ namespace sw
         // 입력 묶음이 손상됐으면 하나도 넣지 않는다. 창 밖이거나 이미 받은 프레임은 버퍼가 버린다.
         NetInputReceiveBuffer& buffer = _listReceive[static_cast<size_t>( player )];
         if ( body.hasOverflowed() || buffer.read( body, &_listNewFrameScratch ) == false )
-            return NetHandleResult::Malformed;
+            return NetHandleResult::Malformed; // 번들은 메시지 끝이다 — 잘림 · 남는 바이트면 하나도 넣지 않는다
         PeerState& peer = _listPeer[static_cast<size_t>( player )];
         // 확인은 늘어나기만 한다. 비신뢰 채널이라 늦게 도착한 오래된 메시지가 있을 수 있다. 내가 아직 만들지 않은 프레임은 확인할 수 없다.
         peer._ackedLocalFrame = MathUtil::max( peer._ackedLocalFrame, MathUtil::min( ackedLocalFrame, getConfirmedInputFrame( _localPlayer ) ) );

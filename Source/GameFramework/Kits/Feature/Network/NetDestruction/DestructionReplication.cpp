@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/pair.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetEndpoint.h"
@@ -45,10 +46,8 @@ namespace sw
 
             [[nodiscard]] static bool readEvent( BitReader& reader, DestructionDamageEvent& outEvent )
             {
-                const uint32 kind = reader.readBits( 2 );
-                if ( kind >= static_cast<uint32>( DestructionDamageKind::Count ) )
+                if ( reader.readEnum( 2, outEvent._kind ) == false )
                     return false;
-                outEvent._kind     = static_cast<DestructionDamageKind>( kind );
                 outEvent._leafHint = reader.readVarInt32();
                 outEvent._groupID  = reader.readVarUint32();
                 return reader.readFiniteFloat( outEvent._position._x ) && reader.readFiniteFloat( outEvent._position._y ) &&
@@ -196,10 +195,10 @@ namespace sw
         }
     }
 
-    NetHandleResult DestructionReplicationServer::receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, BitReader& body )
+    NetHandleResult DestructionReplicationServer::receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, const DestructionSnapshotRequestBody& body )
     {
-        const NetObjectID netID = body.readVarUint();
-        if ( body.hasOverflowed() || context._connectionID < 0 )
+        const NetObjectID netID = body._netID;
+        if ( context._connectionID < 0 )
             return NetHandleResult::Malformed;
         if ( findEntry( netID ) != nullptr )
             queueRequest( context._connectionID, netID );
@@ -218,10 +217,14 @@ namespace sw
         _listRequest.push_back( Request{ connectionID, netID } );
     }
 
-    int32 DestructionReplicationServer::broadcast( NetChannelKind channel )
+    int32 DestructionReplicationServer::broadcastMessage()
     {
         const int32 connectedCount = _pHost->getConnectedCount();
-        const int32 sentCount      = _writer.broadcast( *_pHost, channel );
+        return countBroadcast( connectedCount, _writer.broadcastMessage( *_pHost ) );
+    }
+
+    int32 DestructionReplicationServer::countBroadcast( int32 connectedCount, int32 sentCount )
+    {
         _stats._sentBytes += static_cast<uint64>( _writer.getByteCount() ) * static_cast<uint64>( MathUtil::max( 0, sentCount ) );
         // 신뢰 창이 찬 연결은 거절한다(`NetConnection::kReliableWindow`). 그 클라이언트는 이벤트가 빠지지만 다음 해시 비교에서 스냅숏으로 바로잡힌다.
         if ( sentCount < connectedCount )
@@ -276,7 +279,7 @@ namespace sw
         const vector<optional<FractureGroupPose>>& listGroupPose = component.getEventGroupPoses();
         for ( uint32 index = entry._sentEventCount; index < static_cast<uint32>( listEvent.size() ); ++index )
         {
-            BitWriter& writer = _writer.begin( NetDestructionMessage::kEvent );
+            BitWriter& writer = _writer.beginMessage<NetDestructionMessage::Table, NetDestructionMessage::Event>();
             writer.writeVarUint( entry._netID );
             writer.writeVarUint( serverTick );
             writer.writeVarUint( index );
@@ -286,7 +289,7 @@ namespace sw
             writer.writeBool( bHasPose );
             if ( bHasPose )
                 DestructionReplicationInternal::writeExactPose( writer, listGroupPose[index]->_position, listGroupPose[index]->_rotation );
-            (void)broadcast( NetChannelKind::ReliableUnordered ); // 받는 쪽이 번호로 순서를 맞춘다. 앞 이벤트를 잃어도 뒤 이벤트가 기다리지 않는다
+            (void)broadcastMessage(); // 서술자 채널(신뢰 순서 없음) — 받는 쪽이 번호로 순서를 맞춘다. 앞 이벤트를 잃어도 뒤 이벤트가 기다리지 않는다
             ++_stats._eventMessageCount;
         }
         entry._sentEventCount = static_cast<uint32>( listEvent.size() );
@@ -297,21 +300,22 @@ namespace sw
         const uint32 eventCount = component.getState().getEventCount();
         if ( component.isStateReady() == false || eventCount == 0 )
             return true; // 처음 상태 그대로이므로 이벤트는 0번부터 보낸다
-        vector<uint8> bytes;
-        component.makeNetworkSnapshot( bytes );
-        BitWriter& writer = _writer.begin( NetDestructionMessage::kSnapshot );
-        writer.writeVarUint( entry._netID );
-        writer.writeVarUint( eventCount );
-        writer.writeBlob( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( _writer.getByteCount() > NetConnection::kMaxReliableMessageSize )
+        DestructionSnapshotBody body;
+        body._netID      = entry._netID;
+        body._eventCount = eventCount;
+        component.makeNetworkSnapshot( body._bytes );
+        // 상한은 본문 형식(`MaxCount`)이 아니라 머리까지 든 메시지 크기로 본다 — 바이트가 상한 근처면 머리가 넘긴다. 넘는 바이트는 쓰지 않는다(쓰기 실패 오류 대신 아래 오류 하나).
+        const bool bFits = body._bytes.size() <= static_cast<size_t>( NetConnection::kMaxReliableMessageSize ) &&
+                           _writer.writeMessage<NetDestructionMessage::Table, NetDestructionMessage::Snapshot>( body ) && _writer.getByteCount() <= NetConnection::kMaxReliableMessageSize;
+        if ( bFits == false )
         {
             // 다시 만들어도 같은 결과이므로 큐에 되돌려 놓지 않는다. 이 오브젝트는 늦은 참가와 복구를 받지 못하며, 해시 비교가 계속 어긋남을 알린다.
             SW_LOG_ERROR_ID( "DestructionReplication.DestructionReplicationSnapshotObjectBytes", "DestructionReplication: the snapshot of object %# is %# bytes, over the reliable message limit %# - it cannot be sent",
-                             entry._netID, _writer.getByteCount(), NetConnection::kMaxReliableMessageSize );
+                             entry._netID, body._bytes.size(), NetConnection::kMaxReliableMessageSize );
             ++_stats._sendRejectedCount;
             return true;
         }
-        if ( _writer.send( *_pHost, connectionID, NetChannelKind::ReliableOrdered ) == false )
+        if ( _writer.sendMessage( *_pHost, connectionID ) == false )
         {
             ++_stats._sendRejectedCount;
             return false;
@@ -399,7 +403,7 @@ namespace sw
         size_t start   = 0;
         while ( start < listPose.size() )
         {
-            BitWriter& writer = _writer.begin( NetDestructionMessage::kPose );
+            BitWriter& writer = _writer.beginMessage<NetDestructionMessage::Table, NetDestructionMessage::Pose>( bReliable ? NetChannelKind::ReliableOrdered : NetChannelKind::Unreliable );
             writer.writeBool( bRest );
             writer.writeVarUint( entry._netID );
             writer.writeVarUint( serverTick );
@@ -423,7 +427,7 @@ namespace sw
             // 움직이는 자세는 위에서 범위로 걸렀다. 그래도 하나라도 쓰지 못했으면 메시지가 어긋났으므로 보내지 않는다.
             if ( bPosesWritten == false )
                 continue;
-            (void)broadcast( bReliable ? NetChannelKind::ReliableOrdered : NetChannelKind::Unreliable );
+            (void)broadcastMessage(); // 채널은 시작에서 골랐다
             ++_stats._poseMessageCount;
             _stats._restPoseCount += bReliable ? count : 0u;
         }
@@ -435,13 +439,13 @@ namespace sw
         // 쌓였지만 아직 적용하지 않은 피해가 있어도 된다. (이벤트 수, 해시)는 그 순간의 상태 그대로이고, 쌓인 피해는 뒤 번호로 보낸다.
         if ( component.isStateReady() == false || eventCount == 0 )
             return;
-        BitWriter& writer = _writer.begin( NetDestructionMessage::kHash );
-        writer.writeVarUint( entry._netID );
-        writer.writeVarUint( eventCount );
-        const uint64 hash = component.getState().computeStateHash();
-        writer.writeUint32( static_cast<uint32>( hash & 0xFFFFFFFFull ) );
-        writer.writeUint32( static_cast<uint32>( hash >> 32 ) );
-        (void)broadcast( NetChannelKind::ReliableOrdered );
+        DestructionHashBody body;
+        body._netID      = entry._netID;
+        body._eventCount = eventCount;
+        body._hash       = component.getState().computeStateHash();
+        if ( _writer.writeMessage<NetDestructionMessage::Table, NetDestructionMessage::Hash>( body ) == false )
+            return;
+        (void)broadcastMessage();
         ++_stats._hashMessageCount;
     }
 } // namespace sw
@@ -509,9 +513,8 @@ namespace sw
     {
         (void)context;
         const bool bRest = body.readBool();
-        handlePose( body, bRest );
-        // 깨진 자세(모자란 비트, 유한하지 않은 값, 범위 밖 칸)는 읽기가 넘침으로 표시한다 — 깨진 메시지로 돌려준다.
-        return body.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
+        // 깨진 자세(모자란 비트, 유한하지 않은 값, 범위 밖 칸, 남는 비트)는 하나도 적용하지 않고 깨진 메시지로 돌려준다.
+        return handlePose( body, bRest ) ? NetHandleResult::Handled : NetHandleResult::Malformed;
     }
 
     DestructionReplicationClient::Entry* DestructionReplicationClient::readEntry( BitReader& reader, NetHandleResult& outEarly )
@@ -541,49 +544,45 @@ namespace sw
         _clock.observeServerTick( serverTick );
         BufferedEvent buffered;
         buffered._index = index;
-        if ( DestructionReplicationInternal::readEvent( reader, buffered._event ) )
-        {
-            buffered._bHasPose = reader.readBool() ? SW_TRUE : SW_FALSE;
-            if ( buffered._bHasPose == SW_TRUE )
-            {
-                buffered._groupPose._groupID = buffered._event._groupID;
-                const bool bPoseRead         = DestructionReplicationInternal::readExactPose( reader, buffered._groupPose._position, buffered._groupPose._rotation );
-                if ( bPoseRead == false )
-                    return NetHandleResult::Malformed;
-            }
-            if ( reader.hasOverflowed() == false )
-                handleEvent( *pEntry, buffered );
-        }
-        return reader.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
-    }
-
-    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Snapshot, const NetMessageContext& context, BitReader& body )
-    {
-        (void)context;
-        NetHandleResult early  = NetHandleResult::Handled;
-        Entry*          pEntry = readEntry( body, early );
-        if ( pEntry == nullptr )
-            return early;
-        if ( handleSnapshot( *pEntry, body ) == false )
+        // 예전에는 등록 밖 피해 종류가 넘침 없이 false 를 돌려 Handled 로 조용히 버려졌다 — 깨진 메시지로 센다.
+        if ( DestructionReplicationInternal::readEvent( reader, buffered._event ) == false )
             return NetHandleResult::Malformed;
-        return body.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
+        buffered._bHasPose = reader.readBool() ? SW_TRUE : SW_FALSE;
+        if ( buffered._bHasPose == SW_TRUE )
+        {
+            buffered._groupPose._groupID = buffered._event._groupID;
+            const bool bPoseRead         = DestructionReplicationInternal::readExactPose( reader, buffered._groupPose._position, buffered._groupPose._rotation );
+            if ( bPoseRead == false )
+                return NetHandleResult::Malformed;
+        }
+        if ( reader.readEnd() == false )
+            return NetHandleResult::Malformed;
+        handleEvent( *pEntry, buffered );
+        return NetHandleResult::Handled;
     }
 
-    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Hash, const NetMessageContext& context, BitReader& body )
+    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Snapshot, const NetMessageContext& context, const DestructionSnapshotBody& body )
     {
         (void)context;
-        NetHandleResult early  = NetHandleResult::Handled;
-        Entry*          pEntry = readEntry( body, early );
+        if ( body._bytes.empty() )
+            return NetHandleResult::Malformed; // 서버는 이벤트가 없으면 스냅숏을 보내지 않는다
+        Entry* pEntry = findEntry( body._netID );
+        if ( pEntry != nullptr ) // 이 클라이언트에 없는 오브젝트이면 메시지를 소비하고 버린다
+            handleSnapshot( *pEntry, body );
+        return NetHandleResult::Handled;
+    }
+
+    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Hash, const NetMessageContext& context, const DestructionHashBody& body )
+    {
+        (void)context;
+        Entry* pEntry = findEntry( body._netID );
         if ( pEntry == nullptr )
-            return early;
+            return NetHandleResult::Handled;
         HashCheck check;
-        check._eventCount = body.readVarUint32();
-        const uint64 low  = body.readUint32();
-        const uint64 high = body.readUint32();
-        check._hash       = low | ( high << 32 );
-        if ( body.hasOverflowed() == false )
-            pEntry->_listHashCheck.push_back( check );
-        return body.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
+        check._eventCount = body._eventCount;
+        check._hash       = body._hash;
+        pEntry->_listHashCheck.push_back( check );
+        return NetHandleResult::Handled;
     }
 
     void DestructionReplicationClient::handleEvent( Entry& entry, const BufferedEvent& received )
@@ -650,16 +649,13 @@ namespace sw
             component.applyDamage( buffered._event );
     }
 
-    bool DestructionReplicationClient::handleSnapshot( Entry& entry, BitReader& reader )
+    void DestructionReplicationClient::handleSnapshot( Entry& entry, const DestructionSnapshotBody& body )
     {
-        const uint32  eventCount = reader.readVarUint32();
-        vector<uint8> bytes;
-        if ( reader.readBlob( bytes, NetConnection::kMaxReliableMessageSize ) == false || bytes.empty() )
-            return false;
+        const uint32 eventCount = body._eventCount;
 
         FractureComponentBase* pComponent = resolve( entry );
         if ( pComponent != nullptr )
-            pComponent->applyNetworkSnapshot( bytes.data(), bytes.size() );
+            pComponent->applyNetworkSnapshot( body._bytes.data(), body._bytes.size() );
         ++_stats._snapshotAppliedCount;
         entry._bAwaitingSnapshot = SW_FALSE;
         entry._nextEventIndex    = eventCount;
@@ -675,33 +671,38 @@ namespace sw
             if ( buffered._index >= entry._nextEventIndex )
                 handleEvent( entry, buffered );
         }
-        return true;
     }
 
-    void DestructionReplicationClient::handlePose( BitReader& reader, bool bRest )
+    bool DestructionReplicationClient::handlePose( BitReader& reader, bool bRest )
     {
         using Internal          = DestructionReplicationInternal;
         const NetObjectID netID = reader.readVarUint();
         const uint32      tick  = reader.readVarUint32();
-        const uint64      count = reader.readVarUint();
-        if ( reader.hasOverflowed() )
-            return;
-        Entry* pEntry = findEntry( netID );
-        _clock.observeServerTick( tick );
-        for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
+        uint32            count = 0;
+        // 보내는 쪽은 예산(`kPoseMessageBudget` 바이트)에서 끊고 자세 하나가 적어도 1 바이트다 — 그보다 큰 수는 깨진 것이다.
+        if ( reader.readCount( static_cast<uint32>( Internal::kPoseMessageBudget ), count ) == false )
+            return false;
+        vector<pair<uint32, ChunkPose>> listPose;
+        listPose.reserve( count );
+        for ( uint32 index = 0; index < count; ++index )
         {
             ChunkPose    pose;
             const uint32 groupID = reader.readVarUint32();
-            if ( bRest )
-            {
-                if ( Internal::readExactPose( reader, pose._position, pose._rotation ) == false )
-                    return; // 유한하지 않은 자세는 깨진 메시지다 — 부른 쪽이 넘침으로 거절한다
-            }
-            else if ( Internal::readQuantizedPose( reader, pose._position, pose._rotation, _settings ) == false )
-                return; // 범위 밖의 칸은 깨진 메시지다. 뒤 자세의 위치도 믿을 수 없다
-            if ( pEntry == nullptr || reader.hasOverflowed() )
-                continue;
-            ChunkTrack* pTrack = nullptr;
+            const bool   bRead   = bRest ? Internal::readExactPose( reader, pose._position, pose._rotation ) : Internal::readQuantizedPose( reader, pose._position, pose._rotation, _settings );
+            if ( bRead == false || reader.hasOverflowed() )
+                return false; // 유한하지 않은 자세 · 범위 밖 칸 — 뒤 자세의 위치도 믿을 수 없다
+            listPose.emplace_back( groupID, pose );
+        }
+        if ( reader.readEnd() == false )
+            return false;
+        _clock.observeServerTick( tick );
+        Entry* pEntry = findEntry( netID );
+        if ( pEntry == nullptr )
+            return true; // 이 클라이언트에 없는 오브젝트 — 소비하고 버린다
+        for ( const pair<uint32, ChunkPose>& received : listPose )
+        {
+            const uint32 groupID = received.first;
+            ChunkTrack*  pTrack  = nullptr;
             for ( ChunkTrack& track : pEntry->_listChunk )
             {
                 if ( track._groupID == groupID )
@@ -715,8 +716,9 @@ namespace sw
                 pTrack->_poseBuffer.initialize( Internal::kMaxPoseSample );
             }
             // 틱 순서로 끼워 넣는다. 멈춤 확정은 다른 채널로 오므로 앞질러 도착할 수 있다. 같은 틱이면 멈춤 쪽이 이기고, 넘치면 가장 오래된 표본을 버린다.
-            pTrack->_poseBuffer.insert( tick, pose, bRest );
+            pTrack->_poseBuffer.insert( tick, received.second, bRest );
         }
+        return true;
     }
 
     void DestructionReplicationClient::update( float32 deltaTime )
@@ -783,9 +785,10 @@ namespace sw
         entry._listHashCheck.clear();
         if ( _pHost == nullptr )
             return;
-        BitWriter& writer = _writer.begin( NetDestructionMessage::kSnapshotRequest );
-        writer.writeVarUint( entry._netID );
-        if ( _writer.send( *_pHost, 0, NetChannelKind::ReliableOrdered ) )
+        DestructionSnapshotRequestBody body;
+        body._netID = entry._netID;
+        if ( _writer.writeMessage<NetDestructionMessage::Table, NetDestructionMessage::SnapshotRequest>( body ) &&
+             _writer.sendMessage( *_pHost, 0 ) )
             _stats._sentBytes += static_cast<uint64>( _writer.getByteCount() );
     }
 

@@ -98,18 +98,20 @@ namespace sw
         const NetSnapshot* pBaseline = baselineCode != 0 ? _listSnapshot.find( baselineCode - 1u ) : nullptr;
         if ( NetSnapshot::readDelta( body, pBaseline, _decodeScratch ) == false )
         {
-            ++_decodeFailureCount; // 기준을 이미 잃은 델타도 여기로 온다. 형식은 맞으므로 손상된 메시지로 세지 않는다
+            if ( body.hasOverflowed() )
+                return NetHandleResult::Malformed; // 잘림 · 상한 넘는 길이 — 깨진 메시지다
+            ++_decodeFailureCount;                 // 기준을 이미 잃은 델타도 여기로 온다. 형식은 맞으므로 손상된 메시지로 세지 않는다
             return NetHandleResult::Handled;
         }
+        if ( body.readEnd() == false )
+            return NetHandleResult::Malformed;                             // 적용 전에 본다 — 남는 바이트가 있는 스냅샷은 복원하지 않는다
         _inputWindow.acknowledge( _decodeScratch._firstMissingInputTick ); // 서버가 빈틈없이 받은 다음 틱이다. 그 이전 입력은 다시 싣지 않는다
         std::swap( _listSnapshot.acquire( tick ), _decodeScratch );        // 가장 새 틱도 이 스냅샷이 된다. 밀려난 이전 스냅샷의 버퍼는 다음 복원에 재사용한다
         _clock.observeServerTick( tick );                                  // 첫 스냅샷이면 렌더 틱을 바로 (그 틱 − 지연)에 둔다
-        if ( _pHost != nullptr )
-        {
-            BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kSnapshotAck );
-            writer.writeVarUint( tick );
-            (void)_pHost->sendMessage( 0, NetChannelKind::UnreliableSequenced, writer.getBytes() );
-        }
+        NetSnapshotAckBody ack;
+        ack._tick = tick;
+        if ( _pHost != nullptr && _messageWriter.writeMessage<NetClientServerMessage::Table, NetClientServerMessage::SnapshotAck>( ack ) )
+            (void)_messageWriter.sendMessage( *_pHost, 0 ); // 서술자의 채널(순서 있는 비신뢰 — 옛 확인은 새 확인이 덮는다)
         return NetHandleResult::Handled;
     }
 
@@ -206,12 +208,12 @@ namespace sw
         (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ), viewTickStamp );
         if ( _pHost == nullptr )
             return true;
-        BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kInput );
+        BitWriter& writer = _messageWriter.beginMessage<NetClientServerMessage::Table, NetClientServerMessage::Input>();
         // 서버가 확인한 다음 틱부터 메시지 상한 안에서 오래된 입력부터 싣는다. 못 실은 새 입력은 확인이 올라간 뒤 다음 메시지가 싣는다.
         NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         budget.reserveBits( writer.getBitCount() );
         (void)_inputWindow.write( writer, budget ); // 실은 수는 쓰지 않는다. 못 실은 입력은 다음 메시지가 싣는다
-        (void)_pHost->sendMessage( 0, NetChannelKind::Unreliable, writer.getBytes() );
+        (void)_messageWriter.sendMessage( *_pHost, 0 );
         return true;
     }
 

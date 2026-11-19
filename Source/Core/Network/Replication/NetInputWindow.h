@@ -170,6 +170,7 @@ namespace sw
         [[nodiscard]] bool store( uint32 tick, const uint8* pData, int32 byteCount, uint32 stamp = 0 );
         /**
          * @brief 번들 하나를 읽어 창 안의 새 틱만 넣습니다. 깨졌으면 하나도 넣지 않고 false 를 반환합니다(받은 쪽은 메시지를 깨진 것으로 센다).
+         * @details 번들은 메시지의 끝이다 — 남는 비트(`BitReader::readEnd`)도 깨짐이다. 넣기 전에 끝까지 훑어 보므로 깨진 메시지의 앞 입력이 버퍼에 남지 않는다.
          * @param pOutListNewTick 있으면 새로 넣은 틱을 오름차순으로 채웁니다(먼저 비운다).
          */
         [[nodiscard]] bool read( BitReader& reader, vector<uint32>* pOutListNewTick = nullptr );

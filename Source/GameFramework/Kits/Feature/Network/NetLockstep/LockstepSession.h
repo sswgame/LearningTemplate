@@ -97,9 +97,9 @@ namespace sw
         /** @brief 그 틱을 시뮬레이션한 뒤의 상태 체크섬을 알립니다. */
         void reportChecksum( uint32 tick, uint32 checksum );
         // 표의 메시지 — 입력, 체크섬, 이탈을 받는다. 같은 영역의 롤백 입력은 `RollbackSession` 이 받는다
-        NetHandleResult receive( NetLockstepMessage::Input, const NetMessageContext& context, BitReader& body );
-        NetHandleResult receive( NetLockstepMessage::Checksum, const NetMessageContext& context, BitReader& body );
-        NetHandleResult receive( NetLockstepMessage::Leave, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetLockstepMessage::Input, const NetMessageContext& context, const LockstepInputBody& body );
+        NetHandleResult receive( NetLockstepMessage::Checksum, const NetMessageContext& context, const LockstepChecksumBody& body );
+        NetHandleResult receive( NetLockstepMessage::Leave, const NetMessageContext& context, const LockstepLeaveBody& body );
         /** @brief 서버가 클라이언트 연결이 닫혔을 때 호출합니다. 그 플레이어의 이탈 틱을 정해 모두에게 알립니다. */
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 

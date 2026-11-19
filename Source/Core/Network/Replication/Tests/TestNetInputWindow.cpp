@@ -292,3 +292,21 @@ SW_TEST_CASE( NetInputWindowTest, StampsTravelWithEntries )
     SW_EXPECT_EQUAL( 1234u, buffer.find( 7 )->_stamp );
     SW_EXPECT_EQUAL( 99u, buffer.find( 8 )->_stamp );
 }
+
+/**
+ * @brief [NetInputWindowTest] 번들은 메시지 끝이다 — 온전한 번들 뒤에 바이트가 붙으면 하나도 넣지 않는다(깨진 메시지의 앞 입력이 버퍼에 남지 않는다)
+ */
+SW_TEST_CASE( NetInputWindowTest, TrailingBytesLeaveTheBufferUntouched )
+{
+    NetInputReceiveBuffer buffer;
+    buffer.initialize( 64, NetInputWindowTestInternal::kBlobFormat, NetInputWindowMode::Manual );
+    BitWriter writer;
+    writer.writeVarUint( 4 ); // 첫 틱
+    writer.writeVarUint( 1 ); // 수
+    const uint8 input = 9;
+    writer.writeBlob( &input, 1 );
+    writer.writeBits( 0xFFu, 8 ); // 남는 바이트
+    BitReader reader( writer.getBytes().data(), writer.getByteCount() );
+    SW_EXPECT_FALSE( buffer.read( reader ) );
+    SW_EXPECT_NULL( buffer.find( 4 ) );
+}

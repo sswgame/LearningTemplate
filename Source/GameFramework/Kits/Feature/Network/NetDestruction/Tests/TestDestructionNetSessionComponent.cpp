@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionNetSessionComponent.h"
+#include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.h"
 #include "GameFramework/Kits/Feature/Network/NetDestruction/Tests/DestructionNetTestComponents.h"
 
 // DestructionNetSessionComponentTest — 씬의 넷 링크(서버)에 붙은 파괴 세션이 틱 뒤 큐에서 프레임마다 한 번 복제를 돌리는지 본다(틱은 델타만 적는다).
@@ -76,4 +77,68 @@ SW_TEST_CASE( DestructionNetSessionComponentTest, ServerSessionUpdatesOncePerFra
     }
     SW_EXPECT_TRUE( pComponent->getSession().isActive() );
     manager.endPlay();
+}
+
+/**
+ * @brief [DestructionReplicationTest] 고정 배치형 본문 — 잘린 해시 · 남는 바이트 · 빈 스냅숏은 깨진 메시지이고, 등록하지 않은 오브젝트의 온전한 해시는 소비하고 버린다
+ */
+SW_TEST_CASE( DestructionReplicationTest, BodyMessagesRejectTruncatedAndTrailingBytes )
+{
+    DestructionReplicationClient client;
+    DestructionHashBody          hash;
+    hash._netID      = 42;
+    hash._eventCount = 3;
+    hash._hash       = 0x0123456789ABCDEFull;
+    NetMessageWriter writer;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetDestructionMessage::Table, NetDestructionMessage::Hash>( hash ) ) );
+    const vector<uint8> listExact = writer.getBytes();
+    SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, listExact ) );
+
+    const vector<uint8> listTruncated( listExact.begin(), listExact.end() - 1 );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, listTruncated ) );
+    vector<uint8> listTrailing = listExact;
+    listTrailing.push_back( 0xFF );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, listTrailing ) );
+
+    DestructionSnapshotBody snapshot; // 바이트가 없다 — 서버는 이벤트가 없으면 보내지 않는다
+    snapshot._netID = 42;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetDestructionMessage::Table, NetDestructionMessage::Snapshot>( snapshot ) ) );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, writer.getBytes() ) );
+
+    // 클라이언트는 스냅숏 요청(클라이언트 → 서버)을 맡지 않는다.
+    DestructionSnapshotRequestBody request;
+    request._netID = 42;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetDestructionMessage::Table, NetDestructionMessage::SnapshotRequest>( request ) ) );
+    SW_EXPECT_TRUE( NetHandleResult::NotMine == client.handleMessage( 0, writer.getBytes() ) );
+}
+
+/**
+ * @brief [DestructionReplicationTest] 손 본문 자세 — 남는 바이트 · 예산 넘는 개수 · 잘린 자세는 깨진 메시지다(하나도 적용하지 않는다)
+ */
+SW_TEST_CASE( DestructionReplicationTest, PoseMessagesRejectTrailingBytesAndHugeCounts )
+{
+    DestructionReplicationClient client;
+    BitWriter                    writer;
+    writer.writeBits( NetDestructionMessage::kPose, 8 );
+    writer.writeBool( true );  // 멈춤 — 정확한 자세
+    writer.writeVarUint( 42 ); // 오브젝트(등록 없음 — 소비하고 버린다)
+    writer.writeVarUint( 3 );  // 틱
+    writer.writeVarUint( 1 );  // 개수
+    writer.writeVarUint( 5 );  // 덩어리
+    for ( int32 index = 0; index < 7; ++index )
+        writer.writeFloat( index == 6 ? 1.0f : 0.0f ); // 위치 · 회전(w = 1)
+    SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, writer.getBytes() ) );
+    vector<uint8> listTrailing = writer.getBytes();
+    listTrailing.push_back( 0xFF );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, listTrailing ) );
+    const vector<uint8> listTruncated( writer.getBytes().begin(), writer.getBytes().end() - 2 );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, listTruncated ) );
+
+    writer.clear();
+    writer.writeBits( NetDestructionMessage::kPose, 8 );
+    writer.writeBool( false );
+    writer.writeVarUint( 42 );
+    writer.writeVarUint( 3 );
+    writer.writeVarUint( 1u << 20 ); // 예산(900 바이트)에 들 수 없는 수
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == client.handleMessage( 0, writer.getBytes() ) );
 }

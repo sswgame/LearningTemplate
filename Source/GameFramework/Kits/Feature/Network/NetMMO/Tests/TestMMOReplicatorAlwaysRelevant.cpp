@@ -126,3 +126,45 @@ SW_TEST_CASE( MMOReplicatorAlwaysRelevantTest, AlwaysRelevantCandidatesAreAskedW
     Internal::runTicks( server, cluster, kTickCount );
     SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), policy._callCount );
 }
+
+namespace
+{
+    /** @brief 새로 보임 메시지 하나(엔티티 하나)를 손으로 씁니다 — 보내는 쪽(`writeEntity`)과 같은 배치. */
+    void writeMMOEnterForTest( BitWriter& writer, uint32 entityID )
+    {
+        writer.writeBits( NetMMOMessage::kEnter, 8 );
+        writer.writeVarUint( 7 ); // 틱
+        writer.writeBool( true );
+        writer.writeVarUint( entityID ); // id
+        writer.writeVarUint( 1 );        // 타입
+        writer.writeFloat( 0.0f );
+        writer.writeFloat( 0.0f );
+        writer.writeFloat( 0.0f );
+        writer.writeVarUint( 0 ); // 상태 길이
+        writer.writeBool( false );
+    }
+} // namespace
+
+/**
+ * @brief [MMOReplicatorTest] 손 본문 — 남는 바이트가 붙은 새로 보임은 깨진 메시지이고 앞부분도 보이는 목록에 들지 않는다. 상한 넘는 사라짐 개수도 깨진 메시지다
+ */
+SW_TEST_CASE( MMOReplicatorTest, ClientViewRejectsTrailingBytesAndHugeCounts )
+{
+    MMOClientView view;
+    BitWriter     writer;
+    writeMMOEnterForTest( writer, 42 );
+    vector<uint8> listTrailing = writer.getBytes();
+    listTrailing.push_back( 0xFF );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == view.handleMessage( 0, listTrailing ) );
+    SW_EXPECT_EQUAL( 0, view.getEntityCount() );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == view.handleMessage( 0, writer.getBytes() ) );
+    SW_EXPECT_EQUAL( 1, view.getEntityCount() );
+
+    writer.clear();
+    writer.writeBits( NetMMOMessage::kLeave, 8 );
+    writer.writeVarUint( 1u << 20 ); // 조각 하나에 들 수 없는 수
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == view.handleMessage( 0, writer.getBytes() ) );
+    const uint8 arrTruncatedEnter[] = { NetMMOMessage::kEnter, 7, 0x80 };
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == view.handleMessage( 0, arrTruncatedEnter, 3 ) );
+    SW_EXPECT_EQUAL( 1, view.getEntityCount() );
+}

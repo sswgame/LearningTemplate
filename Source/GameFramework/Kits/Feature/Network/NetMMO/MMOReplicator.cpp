@@ -340,7 +340,7 @@ namespace sw
         vector<uint32>& listEnter = scratch._listEnter;
         listEnter.clear();
         {
-            BitWriter& writer = scratch._messageWriter.begin( NetMMOMessage::kEnter );
+            BitWriter& writer = scratch._messageWriter.beginMessage<NetMMOMessage::Table, NetMMOMessage::Enter>();
             writer.writeVarUint( _tick );
             NetSendBudget budget( NetConnection::kMaxReliableMessageSize, NetConnection::kMaxReliableMessageSize );
             budget.reserveBits( writer.getBitCount() + 1 ); // 헤더와 끝 표시
@@ -358,7 +358,7 @@ namespace sw
                 listEnter.push_back( ranked.second );
             }
             writer.writeBool( false );
-            if ( listEnter.empty() == false && _pHost->trySendMessage( connectionID, NetChannelKind::ReliableOrdered, writer.getBytes() ) )
+            if ( listEnter.empty() == false && scratch._messageWriter.trySendMessage( *_pHost, connectionID ) )
             {
                 for ( const uint32 entityID : listEnter )
                 {
@@ -392,7 +392,7 @@ namespace sw
         }
         vector<uint32>& listOrder = scratch._listOrder;
         prioritizer.collectOrder( listOrder );
-        BitWriter& writer = scratch._messageWriter.begin( NetMMOMessage::kUpdate );
+        BitWriter& writer = scratch._messageWriter.beginMessage<NetMMOMessage::Table, NetMMOMessage::Update>();
         writer.writeVarUint( _tick );
         NetSendBudget budget( observer._updateBudgetBytes );
         budget.reserveBits( writer.getBitCount() + 1 ); // 헤더와 끝 표시
@@ -412,8 +412,7 @@ namespace sw
         writer.writeBool( false );
         if ( listSent.empty() )
             return;
-        const vector<uint8>& bytes = writer.getBytes();
-        if ( _pHost->sendNotifiedMessage( connectionID, bytes.data(), static_cast<int32>( bytes.size() ), _tick ) == false )
+        if ( scratch._messageWriter.sendNotifiedMessage( *_pHost, connectionID, _tick ) == false )
             return; // 연결이 없다 — 보낸 것으로 적지 않으므로 우선도가 남는다
         for ( const uint32 entityID : listSent )
         {
@@ -456,7 +455,7 @@ namespace sw
         size_t                sentCount = 0;
         while ( sentCount < listLeave.size() )
         {
-            BitWriter&    writer = scratch._messageWriter.begin( NetMMOMessage::kLeave );
+            BitWriter&    writer = scratch._messageWriter.beginMessage<NetMMOMessage::Table, NetMMOMessage::Leave>();
             NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
             budget.reserveBits( writer.getBitCount() + BitMath::computeVarUintBits( listLeave.size() - sentCount ) );
             size_t count = 0;
@@ -469,7 +468,7 @@ namespace sw
             {
                 writer.writeVarUint( listLeave[sentCount + index] );
             }
-            if ( _pHost->trySendMessage( connectionID, NetChannelKind::ReliableOrdered, writer.getBytes() ) == false )
+            if ( scratch._messageWriter.trySendMessage( *_pHost, connectionID ) == false )
                 break; // 신뢰 창이 찼다. 남은 엔티티는 보이는 채로 두고 다음 틱에 보낸다
             for ( size_t index = 0; index < count; ++index )
             {
@@ -493,36 +492,49 @@ namespace sw
     NetHandleResult MMOClientView::receive( NetMMOMessage::Enter, const NetMessageContext& context, BitReader& body )
     {
         (void)context;
-        BitReader&   reader = body;
-        const uint32 tick   = reader.readVarUint32();
-        while ( reader.readBool() )
+        BitReader&        reader = body;
+        const uint32      tick   = reader.readVarUint32();
+        vector<MMOEntity> listEntered; // 끝까지 읽고 남는 비트가 없을 때만 적용한다 — 깨진 메시지의 앞부분이 보이는 목록에 들지 않게
+        while ( reader.hasOverflowed() == false && reader.readBool() )
         {
-            ClientEntity entry;
-            entry._tick = tick;
-            if ( MMOReplicatorInternal::readEntity( reader, entry._entity, true ) == false )
+            MMOEntity entity;
+            if ( MMOReplicatorInternal::readEntity( reader, entity, true ) == false )
                 return NetHandleResult::Malformed;
-            const uint32 entityID = entry._entity._entityID;
-            _mapEntity[entityID]  = std::move( entry );
+            listEntered.push_back( std::move( entity ) );
+        }
+        if ( reader.readEnd() == false )
+            return NetHandleResult::Malformed;
+        for ( MMOEntity& entity : listEntered )
+        {
+            const uint32 entityID = entity._entityID;
+            ClientEntity entry;
+            entry._tick          = tick;
+            entry._entity        = std::move( entity );
+            _mapEntity[entityID] = std::move( entry );
             _eventBuffer.push( MMOClientEvent{ entityID, MMOClientEvent::Kind::Entered } );
         }
-        if ( reader.hasOverflowed() )
-            return NetHandleResult::Malformed;
         return NetHandleResult::Handled;
     }
 
     NetHandleResult MMOClientView::receive( NetMMOMessage::Leave, const NetMessageContext& context, BitReader& body )
     {
         (void)context;
-        BitReader&   reader = body;
-        const uint64 count  = reader.readVarUint();
-        for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
+        BitReader& reader = body;
+        uint32     count  = 0;
+        // 보내는 쪽은 조각나지 않는 크기(`kMaxSingleMessageSize`)로 쪼개고 id 하나가 적어도 1 바이트다 — 그보다 큰 수는 깨진 것이다.
+        if ( reader.readCount( static_cast<uint32>( NetConnection::kMaxSingleMessageSize ), count ) == false )
+            return NetHandleResult::Malformed;
+        vector<uint32> listLeft;
+        listLeft.reserve( count );
+        for ( uint32 index = 0; index < count && reader.hasOverflowed() == false; ++index )
+            listLeft.push_back( reader.readVarUint32() );
+        if ( reader.readEnd() == false )
+            return NetHandleResult::Malformed;
+        for ( const uint32 entityID : listLeft )
         {
-            const uint32 entityID = reader.readVarUint32();
-            if ( reader.hasOverflowed() == false && _mapEntity.erase( entityID ) > 0 )
+            if ( _mapEntity.erase( entityID ) > 0 )
                 _eventBuffer.push( MMOClientEvent{ entityID, MMOClientEvent::Kind::Left } );
         }
-        if ( reader.hasOverflowed() )
-            return NetHandleResult::Malformed;
         return NetHandleResult::Handled;
     }
 
@@ -533,11 +545,18 @@ namespace sw
         const uint32 tick   = reader.readVarUint32();
         if ( reader.hasOverflowed() )
             return NetHandleResult::Malformed;
-        while ( reader.readBool() )
+        vector<MMOEntity> listUpdate; // 끝까지 읽고 남는 비트가 없을 때만 적용한다
+        while ( reader.hasOverflowed() == false && reader.readBool() )
         {
             MMOEntity update;
             if ( MMOReplicatorInternal::readEntity( reader, update, false ) == false )
                 return NetHandleResult::Malformed;
+            listUpdate.push_back( std::move( update ) );
+        }
+        if ( reader.readEnd() == false )
+            return NetHandleResult::Malformed;
+        for ( MMOEntity& update : listUpdate )
+        {
             const auto entityIter = _mapEntity.find( update._entityID );
             if ( entityIter == _mapEntity.end() )
                 continue; // 새로 보임보다 먼저 왔거나 이미 보이지 않게 된 엔티티이므로 버린다
@@ -551,8 +570,6 @@ namespace sw
             entityIter->second._entity._listState = std::move( update._listState );
             _eventBuffer.push( MMOClientEvent{ update._entityID, MMOClientEvent::Kind::Updated } );
         }
-        if ( reader.hasOverflowed() )
-            return NetHandleResult::Malformed;
         return NetHandleResult::Handled;
     }
 
