@@ -70,6 +70,11 @@ namespace sw
         _height = 0;
     }
 
+    RHIFormat FrameDisplayEncode::getSceneFormat()
+    {
+        return FrameDisplayEncodeInternal::kSceneFormat;
+    }
+
     void FrameDisplayEncode::prepare( uint32 width, uint32 height, const DisplayOutputDesc& output )
     {
         // SDR 은 여기서 물러난다 — RT 도 패스도 없다(비용 0).

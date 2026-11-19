@@ -50,6 +50,11 @@ namespace sw::editor
         _farPlane  = MathUtil::max( farPlane, _nearPlane + 0.001f );
     }
 
+    void RenderTargetViewSettings::setExposure( float32 exposure )
+    {
+        _exposure = MathUtil::clamp( exposure, -kMaxExposure, kMaxExposure );
+    }
+
     float32 RenderTargetViewSettings::linearizeDepth( float32 depth, float32 nearPlane, float32 farPlane )
     {
         if ( nearPlane <= 0.0f || farPlane <= nearPlane )
@@ -106,6 +111,8 @@ namespace sw::editor
         outImage._depthLow  = low;
         outImage._depthHigh = high;
         const float32 span  = high - low;
+        // 노출은 색에만 — 깊이는 위의 범위가, 알파는 덮임 비율이라 배율이 뜻이 없다.
+        const float32 exposureScale = MathUtil::pow( 2.0f, settings._exposure );
 
         outImage._width  = layout._width;
         outImage._height = layout._height;
@@ -125,10 +132,18 @@ namespace sw::editor
                         gray = span > 0.0f ? ( toDepthView( value._x ) - low ) / span : 0.0f;
                     shown = float4{ gray, gray, gray, 1.0f };
                 }
+                else if ( settings._channel == RenderTargetChannel::Alpha )
+                {
+                    shown = float4{ value._w, value._w, value._w, 1.0f };
+                }
                 else if ( settings._channel != RenderTargetChannel::RGBA )
                 {
-                    const float32 gray = RenderTargetViewSettingsInternal::selectChannel( value, settings._channel );
+                    const float32 gray = RenderTargetViewSettingsInternal::selectChannel( value, settings._channel ) * exposureScale;
                     shown              = float4{ gray, gray, gray, 1.0f };
+                }
+                else
+                {
+                    shown = float4{ value._x * exposureScale, value._y * exposureScale, value._z * exposureScale, value._w };
                 }
                 pOut[0] = RenderTargetViewSettingsInternal::toUnorm8( shown._x );
                 pOut[1] = RenderTargetViewSettingsInternal::toUnorm8( shown._y );

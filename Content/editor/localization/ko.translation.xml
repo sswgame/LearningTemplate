@@ -2691,6 +2691,35 @@
 		<entry key="EditorProfiler.UnloadTrace"
 		       text="불러온 트레이스를 타임라인에서 뺍니다"
 		       sourceHash="87280b27fd6b0d50" />
+		<entry key="EditorRenderDebug.BufferNotRead" text="버퍼를 읽지 못했습니다. 읽기를 눌러 다시 시도합니다." sourceHash="9139b427563cebc5" />
+		<entry key="EditorRenderDebug.BuffersTab" text="버퍼" sourceHash="7d30a9bcfe5ab1b8" />
+		<entry key="EditorRenderDebug.Capture" text="캡처" sourceHash="1a5230a71d9285c1" />
+		<entry key="EditorRenderDebug.CaptureTip" text="다음 프레임에 컴파일한 렌더 그래프(뷰 · 프레임)를 복사합니다: 레벨별 패스, 자원, 전이, 패스마다 GPU 시간." sourceHash="a1f27c2e58ec5c16" />
+		<entry key="EditorRenderDebug.DrawSummary" text="PSO {pso}  인덱스 {indexCount}  배치 {groupCount}  삼각형 최대 {triangleCount}" sourceHash="5be8fcde34fcdb05" />
+		<entry key="EditorRenderDebug.Enable" text="프레임 디버거" sourceHash="92c9d01c359ea4e1" />
+		<entry key="EditorRenderDebug.EnableTip" text="주 시점의 씬 드로우를 모두 기록합니다. 드로우를 고르면 거기서 멈춥니다: 뒤 드로우와 패스는 건너뛰어 게임 뷰와 렌더 타깃 창이 그 드로우까지 그린 프레임을 보입니다." sourceHash="999c50ee06f057f4" />
+		<entry key="EditorRenderDebug.FrameDebuggerHint" text="프레임 디버거를 켜면 이 프레임의 씬 드로우가 나열됩니다." sourceHash="9a0affb04bf86e79" />
+		<entry key="EditorRenderDebug.FrameDebuggerTab" text="프레임 디버거" sourceHash="8d18b2f9b24cdb01" />
+		<entry key="EditorRenderDebug.GraphSummary" text="패스 {passCount}  레벨 {levelCount}  자원 {resourceCount}  전이 {transitionCount}" sourceHash="99c4afe273d82ab6" />
+		<entry key="EditorRenderDebug.Next" text="다음" sourceHash="0fbf6dc6a1966408" />
+		<entry key="EditorRenderDebug.NoBindings" text="이 PSO 의 바인딩 레이아웃이 없습니다." sourceHash="463f6c2049009464" />
+		<entry key="EditorRenderDebug.NoBuffers" text="아직 프레임 그래프 버퍼 목록이 없습니다. 목록 새로 고침을 누릅니다." sourceHash="b48bdcb8f74f1df9" />
+		<entry key="EditorRenderDebug.NoGraph" text="아직 캡처한 렌더 그래프가 없습니다. 캡처를 누릅니다." sourceHash="a189d4198ec654fd" />
+		<entry key="EditorRenderDebug.NoOcclusion" text="가림 타일이 없습니다. 가림 컬링이 꺼져 있거나(-gv_occlusionCulling) 이 백엔드에 GPU 컬링이 없습니다." sourceHash="2938fe7758c0f6af" />
+		<entry key="EditorRenderDebug.NoRenderer" text="이 프로세스에는 렌더러 디버그 데이터가 없습니다." sourceHash="e257f3621b3edb00" />
+		<entry key="EditorRenderDebug.OcclusionHeader" text="가림 타일" sourceHash="86e15046c7bf9f23" />
+		<entry key="EditorRenderDebug.OcclusionSummary" text="타일 {columns} x {rows}, {tileCount} 중 {coveredCount} 덮임, 가장 가까운 깊이 {nearestDepth}" sourceHash="feefc24cbd25b8cb" />
+		<entry key="EditorRenderDebug.OcclusionTab" text="가림 · 스트리밍" sourceHash="0b245420ce25fcf3" />
+		<entry key="EditorRenderDebug.Previous" text="이전" sourceHash="f3ff78cc329d3528" />
+		<entry key="EditorRenderDebug.ReadBuffer" text="읽기" sourceHash="740d542bbe696de5" />
+		<entry key="EditorRenderDebug.ReadingBuffer" text="버퍼를 읽는 중..." sourceHash="463de26980138068" />
+		<entry key="EditorRenderDebug.RefreshList" text="목록 새로 고침" sourceHash="92c563806699b3c4" />
+		<entry key="EditorRenderDebug.RenderGraphTab" text="렌더 그래프" sourceHash="f63f73de8681a3e5" />
+		<entry key="EditorRenderDebug.StopAt" text="드로우 {event} / {eventCount}: {pass} #{draw}" sourceHash="f2d483ef565cf585" />
+		<entry key="EditorRenderDebug.StreamingHeader" text="텍스처 스트리밍" sourceHash="2f3f4de1d7ab06b4" />
+		<entry key="EditorRenderDebug.StreamingSummary" text="스트리밍 텍스처 {textureCount}, 원하는 밉보다 거친 것 {belowWantedCount}(밉 {missingMipCount}), 업로드 대기 {uploadsWaiting}" sourceHash="bc0ebd0406b31e09" />
+		<entry key="EditorRenderDebug.TargetsHint" text="렌더 타깃 창과 게임 뷰가 멈춘 드로우까지 그린 프레임을 보입니다." sourceHash="3043443c062bb43b" />
+		<entry key="EditorRenderDebug.WholeFrame" text="프레임 전체를 기록하는 중(드로우 {eventCount})" sourceHash="53930348bc89e392" />
 		<entry key="EditorRenderTarget.AutoRangeTip"
 		       text="이미지에 있는 깊이 값을 검정에서 흰색까지 전체 범위로 늘립니다."
 		       sourceHash="f02e10a467ed16a1" />
@@ -2702,9 +2731,13 @@
 		       sourceHash="c9586c7468528e2a" />
 		<entry key="EditorRenderTarget.Consumers" text="읽는 패스: {passes}" sourceHash="39d75cc91286cf17" />
 		<entry key="EditorRenderTarget.DepthLabel" text="깊이" sourceHash="75d8e97600b296ea" />
+		<entry key="EditorRenderTarget.ExposureLabel" text="노출" sourceHash="c33b882428a669a0" />
+		<entry key="EditorRenderTarget.ExposureTip" text="미리보기가 0..1 로 자르기 전에 색에 2^EV 를 곱합니다. 1 넘는 HDR 값을 보려면 내리고, 어두운 값을 보려면 올립니다. 알파 · 깊이에는 쓰지 않습니다." sourceHash="9ba5a57ac3cd8fb4" />
 		<entry key="EditorRenderTarget.FormatNotReadable"
 		       text="이 포맷은 다시 읽어 올 수 없습니다."
 		       sourceHash="64a9f8e6f23715e7" />
+		<entry key="EditorRenderTarget.FrameUpTo" text="그린 시점" sourceHash="e8dedf9faa1062cc" />
+		<entry key="EditorRenderTarget.FrameUpToTip" text="이 타깃을 쓰는 패스 하나의 끝 시점으로 봅니다. 뒤의 씬 드로우는 건너뜁니다(프레임 디버거). 전체 화면 · 컴퓨트 패스는 그대로 돕니다. 렌더 디버거 창에서 고른 드로우도 여기 보입니다." sourceHash="6a2e1909ab4fed8c" />
 		<entry key="EditorRenderTarget.Lifetime"
 		       text="패스 {firstPass} 부터 {lastPass} 까지 쓰입니다(파이프라인 순서)"
 		       sourceHash="b93871319673c4a4" />
@@ -2712,6 +2745,7 @@
 		<entry key="EditorRenderTarget.LinearizeTip"
 		       text="Near/Far 로 저장된 깊이를 뷰 거리로 되돌립니다. 원근 깊이는 1 근처에 몰려 있어 그대로 보면 거의 흰색입니다."
 		       sourceHash="52c352463dfca7f1" />
+		<entry key="EditorRenderTarget.MipLabel" text="밉" sourceHash="1dfd6919b50f5709" />
 		<entry key="EditorRenderTarget.NearFarTip"
 		       text="깊이를 렌더링한 카메라의 근평면과 원평면(월드 단위)입니다. 정확한 거리를 보려면 그 카메라에 맞춥니다."
 		       sourceHash="f460806fa3db54ea" />
@@ -2733,6 +2767,8 @@
 		       text="이 타깃을 ImGui 텍스처로 등록하지 못했습니다."
 		       sourceHash="814436dd318febe2" />
 		<entry key="EditorRenderTarget.SearchHint" text="렌더 타깃 검색..." sourceHash="5dcbf487d32c83fd" />
+		<entry key="EditorRenderTarget.StopDraw" text="{pass} #{draw}" sourceHash="01dfedea60d657a9" />
+		<entry key="EditorRenderTarget.WholeFrame" text="프레임 전체" sourceHash="a492aadfb45228d9" />
 		<entry key="EditorRenderTarget.ZoomTip"
 		       text="미리보기 배율(0~2)입니다. 0이면 패널에 맞추고, 원본 해상도로 픽셀을 보려면 1로 둡니다."
 		       sourceHash="2bbccc07fd2af660" />
@@ -3882,6 +3918,7 @@
 		       sourceHash="4dfd6339ebf98cf9" />
 		<entry key="Remove Component" text="컴포넌트 제거" sourceHash="7736527613907162" />
 		<entry key="Rename" text="이름 바꾸기" sourceHash="60320a18282b2b33" />
+		<entry key="Render Debugger" text="렌더 디버거" sourceHash="fbfcea60af3b3890" />
 		<entry key="Render Targets" text="렌더 타깃" sourceHash="c0aa3c1fac1b614b" />
 		<entry key="RenderDoc Capture" text="RenderDoc 캡처" sourceHash="1b19e0f7e711a50f" />
 		<entry key="Replace the active scene with an empty one"

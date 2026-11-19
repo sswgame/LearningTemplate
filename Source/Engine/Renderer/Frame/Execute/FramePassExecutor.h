@@ -22,6 +22,7 @@
 #include "Engine/Graphics/RHI/RHIBufferTransitionBatch.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Renderer/Debug/RenderBufferInspector.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/Execute/FrameGraphExecutor.h"
 #include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
@@ -542,6 +543,8 @@ namespace sw
         RenderGraphExecutionContext _frameGraphContext;
         /// @brief 프레임 그래프 자원(이름 · 뷰 칸) → RHI 핸들입니다. `recordFrameGraph` 가 프레임마다 비우고 주인이 다시 등록한다(`FrameGraphExecutor::beginFrame`).
         FrameBufferTable _frameBufferTable;
+        /// @brief 버퍼 보기(에디터 렌더 디버거 · 개발 명령)가 요청한 `_frameBufferTable` 버퍼를 프레임 그래프 끝에서 읽는다(`RenderDebugRegistry`). 읽기 버퍼는 장치 자원이라 여기서 놓는다.
+        RenderBufferInspector _bufferInspector;
         /// @brief 레벨 콜백이 모은 버퍼 전이입니다(`transitionBuffers` 한 번). 레벨 콜백은 한 스레드에서만 돈다 — 용량을 프레임 사이에 다시 쓴다.
         RHIBufferTransitionBatch _levelBufferTransitions;
         /// @brief 이번 프레임에 레벨 콜백이 낸 전이 · UAV 배리어 수입니다(지표 `RT.Graph.transitions` — 그래프로 옮긴 단계가 이 수를 늘리지 않아야 한다).

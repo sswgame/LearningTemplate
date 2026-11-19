@@ -52,6 +52,11 @@ namespace sw
          * @details `(최대 휘도 / 종이 흰색)^(1/2.2)` — 출력 신호 1 이 최대 휘도, 어두운 쪽은 SDR 과 같은 휘도가 되게 한다.
          */
         float32 getToneShoulder() const;
+        /** @brief 두 RT 의 크기(화면 크기)입니다. HDR 출력이 아니면 지난 값이다 — `isActive` 와 함께 본다(렌더 타깃 목록). */
+        uint32 getWidth() const { return _width; }
+        uint32 getHeight() const { return _height; }
+        /** @brief 장면 출력 RT 의 포맷입니다(렌더 타깃 목록이 적는다). */
+        static RHIFormat getSceneFormat();
 
         /**
          * @brief 프레임 끝(마지막 화면 쓰기 뒤 · 표시 앞)에 UI 를 장면 출력 RT 위에 합성하고 백버퍼로 인코딩한 뒤, UI RT 를 비웁니다(다음 프레임의 쓰기가 Load 로 연다). RT 가 없으면 아무것도 하지 않습니다.

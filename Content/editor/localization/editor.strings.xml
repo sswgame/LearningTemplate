@@ -7662,6 +7662,151 @@
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorRenderDebug.BufferNotRead" source="Could not read the buffer. Press Read to try again.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.BuffersTab" source="Buffers">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.Capture" source="Capture">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.CaptureTip" source="Copy the compiled render graphs (view and frame) on the next frame: passes by level, resources, transitions and GPU time per pass.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.DrawSummary" source="PSO {pso}  {indexCount} indices  {groupCount} batches  up to {triangleCount} triangles">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.Enable" source="Frame debugger">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.EnableTip" source="Record every main-view scene draw. Pick a draw to stop there: later draws and passes are skipped, so the game view and the Render Targets panel show the frame up to that draw.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.FrameDebuggerHint" source="Turn on the frame debugger to list this frame&#x27;s scene draws.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.FrameDebuggerTab" source="Frame Debugger">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.GraphSummary" source="{passCount} passes  {levelCount} levels  {resourceCount} resources  {transitionCount} transitions">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.Next" source="Next">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.NoBindings" source="No binding layout for this PSO.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.NoBuffers" source="No frame graph buffers listed yet. Press Refresh list.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.NoGraph" source="No render graph captured yet. Press Capture.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.NoOcclusion" source="No occlusion tiles. Occlusion culling is off (-gv_occlusionCulling) or this backend has no GPU culling.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.NoRenderer" source="No renderer debug data in this process.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.OcclusionHeader" source="Occlusion tiles">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.OcclusionSummary" source="{columns} x {rows} tiles, {coveredCount} of {tileCount} covered, nearest depth {nearestDepth}">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.OcclusionTab" source="Occlusion and Streaming">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.Previous" source="Previous">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.ReadBuffer" source="Read">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.ReadingBuffer" source="Reading the buffer...">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.RefreshList" source="Refresh list">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.RenderGraphTab" source="Render Graph">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.StopAt" source="Draw {event} of {eventCount}: {pass} #{draw}">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.StreamingHeader" source="Texture streaming">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.StreamingSummary" source="{textureCount} streaming textures, {belowWantedCount} below their wanted mip ({missingMipCount} mips), {uploadsWaiting} uploads waiting">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.TargetsHint" source="The Render Targets panel and the game view show the frame up to the stop draw.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.WholeFrame" source="Recording the whole frame ({eventCount} draws)">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorRenderTarget.AutoRangeTip"
 		       source="Stretch the depth values present in the image to the full black-to-white range.">
 			<origins>
@@ -7690,7 +7835,27 @@
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorRenderTarget.ExposureLabel" source="Exposure">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.ExposureTip" source="Multiplies color by 2^EV before the preview clips it to 0..1. Lower it to see HDR values above 1, raise it to see dark values. Not applied to alpha or depth.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorRenderTarget.FormatNotReadable" source="This format cannot be read back.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.FrameUpTo" source="Frame up to">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.FrameUpToTip" source="See this target as it was at the end of one of its writing passes: later scene draws are skipped (frame debugger). Fullscreen and compute passes still run. A draw picked in the Render Debugger panel shows here too.">
 			<origins>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
@@ -7707,6 +7872,11 @@
 		</entry>
 		<entry key="EditorRenderTarget.LinearizeTip"
 		       source="Convert stored depth back to view distance using Near/Far. Perspective depth crowds near 1, so the raw image looks almost white.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.MipLabel" source="Mip">
 			<origins>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
@@ -7754,6 +7924,16 @@
 			</origins>
 		</entry>
 		<entry key="EditorRenderTarget.SearchHint" source="Search render targets...">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.StopDraw" source="{pass} #{draw}">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.WholeFrame" source="whole frame">
 			<origins>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
@@ -10664,6 +10844,11 @@
 		<entry key="Rename" source="Rename" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Render Debugger" source="Render Debugger" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Render Targets" source="Render Targets" context="EditorPanelText._label">

@@ -11,6 +11,19 @@
 
 using namespace sw;
 
+namespace
+{
+    /** @brief 핸들 @p handle 의 구조 버퍼(원소 8 바이트 · 16 개)입니다 — 표는 크기 있는 등록만 받는다. */
+    RHIStructuredBuffer makeBuffer( uint64 handle )
+    {
+        RHIStructuredBuffer buffer{};
+        buffer._buffer           = RHIBufferHandle{ handle };
+        buffer._elementSize      = 8;
+        buffer._capacityElements = 16;
+        return buffer;
+    }
+} // namespace
+
 /**
  * @brief [FrameBufferTableTest] 등록한 핸들을 이름 · 칸 · 종류로 찾는다 — 다른 칸 · 종류 · 이름은 0 이다
  * @details 결함이면 레벨 콜백이 다른 뷰의 버퍼를 옮기거나(칸을 보지 않는다) 같은 이름의 텍스처를 버퍼로 옮긴다.
@@ -20,8 +33,8 @@ SW_TEST_CASE( FrameBufferTableTest, RegisteredHandlesAreFoundByNameAndSlot )
     FrameBufferTable    table;
     const hashed_string hzb( "HZB" );
     const hashed_string history( "DepthHistory" );
-    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 0, RHIBufferHandle{ 11 }, RenderGraphAccess::ShaderRead ) );
-    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 2, RHIBufferHandle{ 12 }, RenderGraphAccess::ShaderRead ) );
+    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead ) );
+    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 2, makeBuffer( 12 ), RenderGraphAccess::ShaderRead ) );
     SW_REQUIRE_TRUE( table.registerTexture( history, 0, RHITextureHandle{ 21 }, RenderGraphAccess::UnorderedAccess ) );
 
     SW_EXPECT_EQUAL( RHIBufferHandle{ 11 }, table.findBuffer( hzb, 0 ) );
@@ -49,10 +62,10 @@ SW_TEST_CASE( FrameBufferTableTest, DuplicateNamesAreRejected )
     SW_EXPECT_LOG( "FrameBufferTable.SlotMismatch" );
     FrameBufferTable    table;
     const hashed_string hzb( "HZB" );
-    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 0, RHIBufferHandle{ 11 }, RenderGraphAccess::ShaderRead ) );
-    SW_EXPECT_FALSE( table.registerBuffer( hzb, 0, RHIBufferHandle{ 99 }, RenderGraphAccess::ShaderRead ) );
-    SW_EXPECT_FALSE( table.registerBuffer( hashed_string( "LightGrid" ), 0, RHIBufferHandle{ 0 }, RenderGraphAccess::ShaderRead ) );
-    SW_EXPECT_FALSE( table.registerBuffer( hzb, 1, RHIBufferHandle{ 13 }, RenderGraphAccess::UnorderedAccess ) );
+    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead ) );
+    SW_EXPECT_FALSE( table.registerBuffer( hzb, 0, makeBuffer( 99 ), RenderGraphAccess::ShaderRead ) );
+    SW_EXPECT_FALSE( table.registerBuffer( hashed_string( "LightGrid" ), 0, makeBuffer( 0 ), RenderGraphAccess::ShaderRead ) );
+    SW_EXPECT_FALSE( table.registerBuffer( hzb, 1, makeBuffer( 13 ), RenderGraphAccess::UnorderedAccess ) );
     SW_EXPECT_FALSE( table.registerTexture( hzb, 1, RHITextureHandle{ 14 }, RenderGraphAccess::ShaderRead ) );
     SW_EXPECT_EQUAL( RHIBufferHandle{ 11 }, table.findBuffer( hzb, 0 ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, table.getEntries().size() );
@@ -69,8 +82,8 @@ SW_TEST_CASE( FrameBufferTableTest, PassContextHandsOutOnlyDeclaredAccesses )
     const hashed_string hzb( "HZB" );
     const hashed_string grid( "LightGrid" );
     FrameBufferTable    table;
-    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 0, RHIBufferHandle{ 11 }, RenderGraphAccess::ShaderRead ) );
-    SW_REQUIRE_TRUE( table.registerBuffer( grid, 0, RHIBufferHandle{ 31 }, RenderGraphAccess::ShaderRead ) );
+    SW_REQUIRE_TRUE( table.registerBuffer( hzb, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead ) );
+    SW_REQUIRE_TRUE( table.registerBuffer( grid, 0, makeBuffer( 31 ), RenderGraphAccess::ShaderRead ) );
 
     const vector<RenderGraphResourceAccess> listAccess{ RenderGraphBufferUAV{ hzb }, RenderGraphBufferSRV{ grid } };
     test::FakeRHICommandList                cmd( 0 );
@@ -95,4 +108,26 @@ SW_TEST_CASE( FrameBufferTableTest, PassContextHandsOutOnlyDeclaredAccesses )
     // 표가 없는 문맥(뷰 그래프)은 선언했어도 핸들이 없다.
     context._pResourceTable = nullptr;
     SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, context.getBuffer( RenderGraphBufferUAV{ hzb } ) );
+}
+
+/**
+ * @brief [FrameBufferTableTest] 등록은 크기(원소 바이트 · 용량)를 함께 적고, 크기 없는 버퍼는 거절한다
+ * @details 결함이면 버퍼 보기(`RenderBufferInspector`)가 크기를 모르는 버퍼를 아무 길이로 복사해 남의 메모리 끝을 넘는다.
+ */
+SW_TEST_CASE( FrameBufferTableTest, StructuredRegistrationCarriesSize )
+{
+    SW_EXPECT_LOG( "FrameBufferTable.SizeMissing" );
+    FrameBufferTable    table;
+    RHIStructuredBuffer pyramid{};
+    pyramid._buffer           = RHIBufferHandle{ 31 };
+    pyramid._elementSize      = 8;
+    pyramid._capacityElements = 100;
+    SW_REQUIRE_TRUE( table.registerBuffer( hashed_string( "HZB" ), 0, pyramid, RenderGraphAccess::ShaderRead ) );
+    RHIStructuredBuffer emptyBuffer{};
+    emptyBuffer._buffer = RHIBufferHandle{ 32 };
+    SW_EXPECT_FALSE( table.registerBuffer( hashed_string( "Raw" ), 0, emptyBuffer, RenderGraphAccess::ShaderRead ) ); // 크기 없는 버퍼는 거절
+    SW_REQUIRE_EQUAL( size_t{ 1 }, table.getEntries().size() );
+    SW_EXPECT_EQUAL( 8u, table.getEntries()[0]._elementSize );
+    SW_EXPECT_EQUAL( 100u, table.getEntries()[0]._elementCount );
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 31 }, table.findBuffer( hashed_string( "HZB" ), 0 ) );
 }

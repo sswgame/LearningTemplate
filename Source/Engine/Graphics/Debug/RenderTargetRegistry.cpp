@@ -218,21 +218,23 @@ namespace sw
         return VectorUtil::containsBy<&RenderTargetInfo::_texture>( _listTarget, texture );
     }
 
-    uint32 RenderTargetRegistry::requestReadback( RHITextureHandle texture )
+    uint32 RenderTargetRegistry::requestReadback( RHITextureHandle texture, uint32 mip )
     {
         ScopedLock<mutex> lock{ _readbackMutex };
         ++_lastRequestSerial;
         _pendingReadbackTexture = texture;
+        _pendingReadbackMip     = mip;
         _pendingReadbackSerial  = _lastRequestSerial;
         return _lastRequestSerial;
     }
 
-    bool RenderTargetRegistry::takeReadbackRequest( RHITextureHandle& outTexture, uint32& outSerial )
+    bool RenderTargetRegistry::takeReadbackRequest( RHITextureHandle& outTexture, uint32& outMip, uint32& outSerial )
     {
         ScopedLock<mutex> lock{ _readbackMutex };
         if ( _pendingReadbackSerial == 0 )
             return false;
         outTexture              = _pendingReadbackTexture;
+        outMip                  = _pendingReadbackMip;
         outSerial               = _pendingReadbackSerial;
         _pendingReadbackTexture = 0;
         _pendingReadbackSerial  = 0;

@@ -13,6 +13,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIHandles.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 
 namespace sw
@@ -32,17 +33,19 @@ namespace sw
             uint64                  _handle{ 0 };
             RenderGraphViewableKind _viewable{ RenderGraphViewableKind::Buffer };
             RenderGraphAccess       _initialAccess{ RenderGraphAccess::ShaderRead }; ///< 프레임 시작의 접근 — 그래프가 이 접근을 심는다(`RenderGraph::importResource`)
+            uint32                  _elementSize{ 0 };                               ///< 버퍼 원소 바이트(텍스처는 0)
+            uint32                  _elementCount{ 0 };                              ///< 원소 수(버퍼 용량, 텍스처는 0)
         };
 
         /** @brief 지난 프레임의 등록을 잊습니다(용량은 남긴다). 프레임 그래프를 돌리기 전에 부른다. */
         void reset() { _listEntry.clear(); }
 
         /**
-         * @brief 버퍼 @p buffer 를 이름 @p name 의 칸 @p slot 으로 등록합니다.
-         * @details 거절하고 오류를 남기는 것: 핸들 0, 같은 이름 · 칸을 두 번, 같은 이름의 다른 칸이 다른 처음 접근이나 종류(그래프는 이름마다 상태 하나를 든다).
+         * @brief 구조 버퍼 @p buffer 를 크기(원소 바이트 · 용량)와 함께 이름 @p name 의 칸 @p slot 으로 등록합니다 — 핸들만 받는 판은 없다(버퍼 보기 `RenderBufferInspector` 가 늘 읽을 길이를 안다).
+         * @details 거절하고 오류를 남기는 것: 핸들 0, 크기 0(원소 바이트 · 용량), 같은 이름 · 칸을 두 번, 같은 이름의 다른 칸이 다른 처음 접근이나 종류(그래프는 이름마다 상태 하나를 든다).
          * @param initialAccess 프레임 시작에 이 버퍼가 있는 상태입니다. 그래프의 첫 사용과 같을 때만 그 상태를 보증해야 한다 — 다르면 첫 사용이 늘 전이를 낸다.
          */
-        [[nodiscard]] bool registerBuffer( hashed_string name, uint32 slot, RHIBufferHandle buffer, RenderGraphAccess initialAccess );
+        [[nodiscard]] bool registerBuffer( hashed_string name, uint32 slot, const RHIStructuredBuffer& buffer, RenderGraphAccess initialAccess );
         /** @brief 텍스처 @p texture 를 이름 @p name 의 칸 @p slot 으로 등록합니다. 거절 규칙은 `registerBuffer` 와 같다. */
         [[nodiscard]] bool registerTexture( hashed_string name, uint32 slot, RHITextureHandle texture, RenderGraphAccess initialAccess );
 

@@ -55,6 +55,7 @@ namespace sw
      * @details 언리얼 RDG 의 `ERHIAccess`(SRVCompute · UAVCompute · RTV · DSVRead · DSVWrite · IndirectArgs · CopySrc · CopyDest), Adria `RGResourceAccess` 자리다.
      *          쓰기 접근(`isRenderGraphWriteAccess`)은 컴파일의 출력이고 나머지는 입력이다.
      */
+    ENUM()
     enum class RenderGraphAccess : uint8
     {
         ShaderRead,      ///< 셰이더 읽기(SRV)
@@ -479,6 +480,10 @@ namespace sw
 
         /** @brief 그래프의 전체 패스 노드 수를 반환합니다. */
         uint32 getNodeCount() const { return static_cast<uint32>( _listNode.size() ); }
+        /** @brief 이름 @p passName 의 패스 노드입니다. 없으면 nullptr 입니다(그래프 그림 `RenderGraphSnapshot` 이 선언한 접근을 읽는다). */
+        const RenderGraphNode* findNode( hashed_string passName ) const;
+        /** @brief `importResource` 로 들인 자원과 처음 접근입니다(등록 순서). */
+        const vector<RenderGraphResourceAccess>& getImportedResources() const { return _listImportedResource; }
 
         /**
          * @brief 각 리소스의 수명(처음부터 마지막으로 사용한 패스 인덱스까지)입니다. compile() 이 계산해 둔 값을 반환합니다.

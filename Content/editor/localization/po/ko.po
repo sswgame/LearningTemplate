@@ -7422,6 +7422,151 @@ msgctxt "EditorProfiler.UnloadTrace"
 msgid "Remove the loaded trace from the timeline"
 msgstr "불러온 트레이스를 타임라인에서 뺍니다"
 
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.BufferNotRead"
+msgid "Could not read the buffer. Press Read to try again."
+msgstr "버퍼를 읽지 못했습니다. 읽기를 눌러 다시 시도합니다."
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.BuffersTab"
+msgid "Buffers"
+msgstr "버퍼"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.Capture"
+msgid "Capture"
+msgstr "캡처"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.CaptureTip"
+msgid "Copy the compiled render graphs (view and frame) on the next frame: passes by level, resources, transitions and GPU time per pass."
+msgstr "다음 프레임에 컴파일한 렌더 그래프(뷰 · 프레임)를 복사합니다: 레벨별 패스, 자원, 전이, 패스마다 GPU 시간."
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.DrawSummary"
+msgid "PSO {pso}  {indexCount} indices  {groupCount} batches  up to {triangleCount} triangles"
+msgstr "PSO {pso}  인덱스 {indexCount}  배치 {groupCount}  삼각형 최대 {triangleCount}"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.Enable"
+msgid "Frame debugger"
+msgstr "프레임 디버거"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.EnableTip"
+msgid "Record every main-view scene draw. Pick a draw to stop there: later draws and passes are skipped, so the game view and the Render Targets panel show the frame up to that draw."
+msgstr "주 시점의 씬 드로우를 모두 기록합니다. 드로우를 고르면 거기서 멈춥니다: 뒤 드로우와 패스는 건너뛰어 게임 뷰와 렌더 타깃 창이 그 드로우까지 그린 프레임을 보입니다."
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.FrameDebuggerHint"
+msgid "Turn on the frame debugger to list this frame's scene draws."
+msgstr "프레임 디버거를 켜면 이 프레임의 씬 드로우가 나열됩니다."
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.FrameDebuggerTab"
+msgid "Frame Debugger"
+msgstr "프레임 디버거"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.GraphSummary"
+msgid "{passCount} passes  {levelCount} levels  {resourceCount} resources  {transitionCount} transitions"
+msgstr "패스 {passCount}  레벨 {levelCount}  자원 {resourceCount}  전이 {transitionCount}"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.Next"
+msgid "Next"
+msgstr "다음"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.NoBindings"
+msgid "No binding layout for this PSO."
+msgstr "이 PSO 의 바인딩 레이아웃이 없습니다."
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.NoBuffers"
+msgid "No frame graph buffers listed yet. Press Refresh list."
+msgstr "아직 프레임 그래프 버퍼 목록이 없습니다. 목록 새로 고침을 누릅니다."
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.NoGraph"
+msgid "No render graph captured yet. Press Capture."
+msgstr "아직 캡처한 렌더 그래프가 없습니다. 캡처를 누릅니다."
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.NoOcclusion"
+msgid "No occlusion tiles. Occlusion culling is off (-gv_occlusionCulling) or this backend has no GPU culling."
+msgstr "가림 타일이 없습니다. 가림 컬링이 꺼져 있거나(-gv_occlusionCulling) 이 백엔드에 GPU 컬링이 없습니다."
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.NoRenderer"
+msgid "No renderer debug data in this process."
+msgstr "이 프로세스에는 렌더러 디버그 데이터가 없습니다."
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.OcclusionHeader"
+msgid "Occlusion tiles"
+msgstr "가림 타일"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.OcclusionSummary"
+msgid "{columns} x {rows} tiles, {coveredCount} of {tileCount} covered, nearest depth {nearestDepth}"
+msgstr "타일 {columns} x {rows}, {tileCount} 중 {coveredCount} 덮임, 가장 가까운 깊이 {nearestDepth}"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.OcclusionTab"
+msgid "Occlusion and Streaming"
+msgstr "가림 · 스트리밍"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.Previous"
+msgid "Previous"
+msgstr "이전"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.ReadBuffer"
+msgid "Read"
+msgstr "읽기"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.ReadingBuffer"
+msgid "Reading the buffer..."
+msgstr "버퍼를 읽는 중..."
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.RefreshList"
+msgid "Refresh list"
+msgstr "목록 새로 고침"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.RenderGraphTab"
+msgid "Render Graph"
+msgstr "렌더 그래프"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.StopAt"
+msgid "Draw {event} of {eventCount}: {pass} #{draw}"
+msgstr "드로우 {event} / {eventCount}: {pass} #{draw}"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.StreamingHeader"
+msgid "Texture streaming"
+msgstr "텍스처 스트리밍"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.StreamingSummary"
+msgid "{textureCount} streaming textures, {belowWantedCount} below their wanted mip ({missingMipCount} mips), {uploadsWaiting} uploads waiting"
+msgstr "스트리밍 텍스처 {textureCount}, 원하는 밉보다 거친 것 {belowWantedCount}(밉 {missingMipCount}), 업로드 대기 {uploadsWaiting}"
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.TargetsHint"
+msgid "The Render Targets panel and the game view show the frame up to the stop draw."
+msgstr "렌더 타깃 창과 게임 뷰가 멈춘 드로우까지 그린 프레임을 보입니다."
+
+#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
+msgctxt "EditorRenderDebug.WholeFrame"
+msgid "Recording the whole frame ({eventCount} draws)"
+msgstr "프레임 전체를 기록하는 중(드로우 {eventCount})"
+
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
 msgctxt "EditorRenderTarget.AutoRangeTip"
 msgid "Stretch the depth values present in the image to the full black-to-white range."
@@ -7448,9 +7593,29 @@ msgid "depth"
 msgstr "깊이"
 
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EditorRenderTarget.ExposureLabel"
+msgid "Exposure"
+msgstr "노출"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EditorRenderTarget.ExposureTip"
+msgid "Multiplies color by 2^EV before the preview clips it to 0..1. Lower it to see HDR values above 1, raise it to see dark values. Not applied to alpha or depth."
+msgstr "미리보기가 0..1 로 자르기 전에 색에 2^EV 를 곱합니다. 1 넘는 HDR 값을 보려면 내리고, 어두운 값을 보려면 올립니다. 알파 · 깊이에는 쓰지 않습니다."
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
 msgctxt "EditorRenderTarget.FormatNotReadable"
 msgid "This format cannot be read back."
 msgstr "이 포맷은 다시 읽어 올 수 없습니다."
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EditorRenderTarget.FrameUpTo"
+msgid "Frame up to"
+msgstr "그린 시점"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EditorRenderTarget.FrameUpToTip"
+msgid "See this target as it was at the end of one of its writing passes: later scene draws are skipped (frame debugger). Fullscreen and compute passes still run. A draw picked in the Render Debugger panel shows here too."
+msgstr "이 타깃을 쓰는 패스 하나의 끝 시점으로 봅니다. 뒤의 씬 드로우는 건너뜁니다(프레임 디버거). 전체 화면 · 컴퓨트 패스는 그대로 돕니다. 렌더 디버거 창에서 고른 드로우도 여기 보입니다."
 
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
 msgctxt "EditorRenderTarget.Lifetime"
@@ -7466,6 +7631,11 @@ msgstr "선형"
 msgctxt "EditorRenderTarget.LinearizeTip"
 msgid "Convert stored depth back to view distance using Near/Far. Perspective depth crowds near 1, so the raw image looks almost white."
 msgstr "Near/Far 로 저장된 깊이를 뷰 거리로 되돌립니다. 원근 깊이는 1 근처에 몰려 있어 그대로 보면 거의 흰색입니다."
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EditorRenderTarget.MipLabel"
+msgid "Mip"
+msgstr "밉"
 
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
 msgctxt "EditorRenderTarget.NearFarTip"
@@ -7511,6 +7681,16 @@ msgstr "이 타깃을 ImGui 텍스처로 등록하지 못했습니다."
 msgctxt "EditorRenderTarget.SearchHint"
 msgid "Search render targets..."
 msgstr "렌더 타깃 검색..."
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EditorRenderTarget.StopDraw"
+msgid "{pass} #{draw}"
+msgstr "{pass} #{draw}"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EditorRenderTarget.WholeFrame"
+msgid "whole frame"
+msgstr "프레임 전체"
 
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
 msgctxt "EditorRenderTarget.ZoomTip"
@@ -10333,6 +10513,12 @@ msgstr "컴포넌트 제거"
 msgctxt "Rename"
 msgid "Rename"
 msgstr "이름 바꾸기"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Render Debugger"
+msgid "Render Debugger"
+msgstr "렌더 디버거"
 
 #. Context: EditorPanelText._label
 #: editor/panels/editor.panels.xml
