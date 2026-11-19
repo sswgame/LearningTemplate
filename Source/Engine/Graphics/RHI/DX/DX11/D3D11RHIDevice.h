@@ -486,6 +486,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 인덱스의 버퍼 핸들입니다. 범위 밖이면 0 입니다. */
         RHIBufferHandle bindlessBufferAt( RHIDescriptorIndex index ) const;
+        /** @brief 인덱스의 버퍼와 구간입니다(구간 등록이 아니면 오프셋 · 크기 0 — 버퍼 전체). 범위 밖이면 빈 구간입니다. */
+        RHIBufferSlice bindlessBufferSliceAt( RHIDescriptorIndex index ) const;
         /** @brief 인덱스의 텍스처 핸들입니다. 범위 밖이면 0 입니다. */
         RHITextureHandle bindlessTextureAt( RHIDescriptorIndex index ) const;
         /** @brief 인덱스의 UAV 입니다(참조를 하나 올려 반환합니다). 범위 밖이면 nullptr 입니다. */
@@ -589,7 +591,11 @@ namespace sw
         atomic<uint8> _bTimestampReady;
         uint8         _bTimestampFrameOpen;
         /// @brief 드라이버가 커맨드 리스트를 네이티브로 지원하면 SW_TRUE 입니다. 병렬 기록 능력을 판단하는 근거입니다.
-        uint8             _bDriverCommandLists;
+        uint8 _bDriverCommandLists;
+        /// @brief 셰이더 상수 하나(float4)의 바이트입니다. `*SetConstantBuffers1` 의 첫 상수 · 상수 수와 부분 갱신 상자의 단위다.
+        static constexpr uint32 kShaderConstantBytes = 4u * sizeof( float );
+        /// @brief D3D11.1 상수 버퍼 구간(`*SetConstantBuffers1` 오프셋 · `UpdateSubresource1` 부분 갱신)을 드라이버가 받으면 SW_TRUE 입니다. 아니면 페이지를 만들지 않는다(감사 R-4).
+        uint8             _bConstantBufferSlices;
         RHITimestampFrame _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
         /**
          * @brief GPU 시계 읽기(`readGPUClockNanos`)용 타임스탬프 쿼리입니다. 처음 읽을 때 만듭니다.
@@ -614,7 +620,17 @@ namespace sw
             RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _sourceBuffer, _sourceTexture }; }
         };
         /// @brief 세 번호 공간(`RHIBindlessRegistry`, `_bindlessMutex` 아래). DX11 은 번호를 기록 때 뷰로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`).
-        RHIBindlessRegistry<RHIBufferHandle, RHIBindlessBufferOwnerOf>   _bufferRegistry;
+        /// @brief 버퍼 번호 하나입니다 — 버퍼와, 상수 버퍼 페이지 구간이면 그 오프셋 · 크기(크기 0 이면 버퍼 전체).
+        struct BufferEntry
+        {
+            RHIBufferHandle _buffer{ 0 };
+            uint32          _sliceOffset{ 0 };
+            uint32          _sliceSize{ 0 };
+
+            bool             operator==( const BufferEntry& other ) const { return _buffer == other._buffer && _sliceOffset == other._sliceOffset && _sliceSize == other._sliceSize; }
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _buffer, 0 }; }
+        };
+        RHIBindlessRegistry<BufferEntry>                                 _bufferRegistry;
         RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> _textureRegistry;
         RHIBindlessRegistry<UAVEntry>                                    _uavRegistry;
 

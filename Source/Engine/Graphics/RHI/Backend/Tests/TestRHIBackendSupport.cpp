@@ -483,16 +483,17 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
     constexpr uint32 kSlotBytes = 8;
     uint8            arrSlot[kSlotCount][kSlotBytes]{};
     uint32           writeCount{ 0 };
-    auto             writeSlot = [&arrSlot, &writeCount]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+    auto             writeSlot = [&arrSlot, &writeCount]( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
     {
         SW_EXPECT_EQUAL( RHIBufferHandle{ 7 }, buffer );
+        SW_EXPECT_EQUAL( 0u, offset );
         Memory::copy( arrSlot[slot], pData, size );
         ++writeCount;
     };
 
     RHIConstantBufferMirror shadow;
     const uint8             arrFirst[kSlotBytes] = { 1, 2, 3, 4, 5, 6, 7, 8 };
-    shadow.write( 7, 0, arrFirst, kSlotBytes, writeSlot );
+    shadow.write( 7, 0, 0, arrFirst, kSlotBytes, writeSlot );
     SW_EXPECT_EQUAL( 1u, writeCount );
     SW_EXPECT_EQUAL( 1u, shadow.getPendingBufferCount() );
 
@@ -517,7 +518,7 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
 
     // 짧은 쓰기: 앞 두 바이트만 바뀌고 뒤는 그대로여야 한다.
     const uint8 arrPrefix[2] = { 9, 9 };
-    shadow.write( 7, 1, arrPrefix, 2, writeSlot );
+    shadow.write( 7, 0, 1, arrPrefix, 2, writeSlot );
     shadow.fillSlot( 2 % kSlotCount, writeSlot );
     const uint8 arrExpected[kSlotBytes] = { 9, 9, 3, 4, 5, 6, 7, 8 };
     SW_EXPECT_TRUE( Memory::compare( arrSlot[2 % kSlotCount], arrExpected, kSlotBytes ) == 0 );
@@ -531,6 +532,32 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
         shadow.fillSlot( slot, writeSlot );
     }
     SW_EXPECT_EQUAL( writeCountBeforeRemove, writeCount );
+}
+
+/**
+ * @brief [RHIConstantBufferMirrorTest] 페이지의 두 구간(같은 버퍼, 다른 오프셋)은 따로 기억 · 채우고, 페이지를 부수면 둘 다 잊는다(감사 R-4)
+ */
+SW_TEST_CASE( RHIConstantBufferMirrorTest, KeepsPageSlicesApart )
+{
+    constexpr uint32 kSlotCount = constant::render::kMaxFrameCountInFlight;
+    constexpr uint32 kPageBytes = 512;
+    uint8            arrSlot[kSlotCount][kPageBytes]{};
+    auto             writeSlot = [&arrSlot]( RHIBufferHandle, uint32 slot, uint32 offset, const void* pData, uint32 size )
+    { Memory::copy( arrSlot[slot] + offset, pData, size ); };
+
+    RHIConstantBufferMirror shadow;
+    const uint8             arrFirst[4]  = { 1, 2, 3, 4 };
+    const uint8             arrSecond[4] = { 5, 6, 7, 8 };
+    shadow.write( 9, 0, 0, arrFirst, 4, writeSlot );
+    shadow.write( 9, 256, 0, arrSecond, 4, writeSlot );
+    SW_EXPECT_EQUAL( 2u, shadow.getPendingBufferCount() );
+
+    shadow.fillSlot( 1 % kSlotCount, writeSlot );
+    SW_EXPECT_TRUE( Memory::compare( arrSlot[1 % kSlotCount], arrFirst, 4 ) == 0 );
+    SW_EXPECT_TRUE( Memory::compare( arrSlot[1 % kSlotCount] + 256, arrSecond, 4 ) == 0 );
+
+    shadow.remove( 9 );
+    SW_EXPECT_EQUAL( 0u, shadow.getPendingBufferCount() );
 }
 
 /**

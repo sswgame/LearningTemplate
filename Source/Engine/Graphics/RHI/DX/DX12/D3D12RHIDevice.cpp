@@ -2005,24 +2005,24 @@ namespace sw
         pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, heapStart );
     }
 
-    void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+    void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
     {
         const auto sizeIt                      = _mapCbAlignedSize.find( buffer );
         const auto mapIt                       = _mapCbMapped.find( buffer );
-        const bool bCannotUpdateConstantBuffer = sizeIt == _mapCbAlignedSize.end() || mapIt == _mapCbMapped.end() || mapIt->second == nullptr || pData == nullptr;
+        const bool bCannotUpdateConstantBuffer = sizeIt == _mapCbAlignedSize.end() || mapIt == _mapCbMapped.end() || mapIt->second == nullptr || pData == nullptr || offset >= sizeIt->second;
         if ( bCannotUpdateConstantBuffer )
             return;
         const uint32 alignedSize = sizeIt->second;
-        const uint32 copyBytes   = MathUtil::min( size, alignedSize );
-        Memory::copy( static_cast<uint8*>( mapIt->second ) + static_cast<size_t>( slot ) * alignedSize, pData, copyBytes );
+        const uint32 copyBytes   = MathUtil::min( size, alignedSize - offset ); // 페이지 구간이면 그 칸 안에서 자른다
+        Memory::copy( static_cast<uint8*>( mapIt->second ) + static_cast<size_t>( slot ) * alignedSize + offset, pData, copyBytes );
     }
 
     void D3D12RHIDevice::fillConstantBufferSlot()
     {
         // 맵 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
         ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
-        _constantBufferMirror.fillSlot( _frameRing.currentIndex(), [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
-        { writeConstantBufferSlot( buffer, slot, pData, size ); } );
+        _constantBufferMirror.fillSlot( _frameRing.currentIndex(), [this]( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
+        { writeConstantBufferSlot( buffer, slot, offset, pData, size ); } );
     }
 
     // 길이 유지(긴 함수 정리 기준): 루트 시그니처 · 힙 · 전역 리소스 생성의 순서가 곧 의미라 나누지 않는다.
@@ -2206,7 +2206,7 @@ namespace sw
             SW_FATAL( "D3D12: bindless index %# is outside the read table (%#)", index, kBindlessDescriptorCapacity );
         // 텍스처는 GPU 주소가 없다(GetGPUVirtualAddress 는 버퍼만 뜻이 있다). 상수 버퍼 크기는 등록이 같은 배타 락 안에서 읽는다. 값을 다 쓴 뒤 공개한다(`RHIBindlessReadSlot::publish`).
         const auto sizeIt = record._buffer != 0 ? _mapCbAlignedSize.find( record._buffer ) : _mapCbAlignedSize.end();
-        _arrBindlessReadSlot.get()[index].publish( registry, record._buffer != 0 && record._resource != nullptr ? record._resource->GetGPUVirtualAddress() : 0, record._offlineCPUHandle.ptr,
+        _arrBindlessReadSlot.get()[index].publish( registry, record._buffer != 0 && record._resource != nullptr ? record._resource->GetGPUVirtualAddress() + record._sliceOffset : 0, record._offlineCPUHandle.ptr,
                                                    sizeIt != _mapCbAlignedSize.end() ? sizeIt->second : 0u, record._texture != 0 );
     }
 

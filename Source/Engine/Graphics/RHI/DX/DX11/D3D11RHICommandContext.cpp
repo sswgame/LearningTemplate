@@ -478,18 +478,49 @@ namespace sw
 
     void D3D11RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        const bool bInvalidConstantBufferIndex = _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex;
+        bindConstantBufferAt( constantBufferIndex, slot, false );
+    }
+
+    void D3D11RHICommandContext::bindConstantBufferAt( RHIDescriptorIndex index, uint32 slot, bool bCompute )
+    {
+        const bool bInvalidConstantBufferIndex = _pContext == nullptr || index == kInvalidDescriptorIndex;
         if ( bInvalidConstantBufferIndex )
             return;
-        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( constantBufferIndex ) );
+        const RHIBufferSlice source = _pDevice->bindlessBufferSliceAt( index );
+        ID3D11Buffer*        pCb    = _pDevice->resolveBuffer( source._buffer );
         if ( pCb == nullptr )
             return;
-        _pContext->VSSetConstantBuffers( slot, 1, &pCb );
-        _pContext->PSSetConstantBuffers( slot, 1, &pCb );
-        _pContext->CSSetConstantBuffers( slot, 1, &pCb );
-        // 변위 머티리얼의 헐 · 도메인이 패스 상수(뷰-투영)를 읽는다 — 다른 세 백엔드는 모든 스테이지가 본다.
-        _pContext->HSSetConstantBuffers( slot, 1, &pCb );
-        _pContext->DSSetConstantBuffers( slot, 1, &pCb );
+        if ( source._size == 0 )
+        {
+            _pContext->CSSetConstantBuffers( slot, 1, &pCb );
+            if ( bCompute )
+                return;
+            _pContext->VSSetConstantBuffers( slot, 1, &pCb );
+            _pContext->PSSetConstantBuffers( slot, 1, &pCb );
+            // 변위 머티리얼의 헐 · 도메인이 패스 상수(뷰-투영)를 읽는다 — 다른 세 백엔드는 모든 스테이지가 본다.
+            _pContext->HSSetConstantBuffers( slot, 1, &pCb );
+            _pContext->DSSetConstantBuffers( slot, 1, &pCb );
+            return;
+        }
+        // 상수 버퍼 페이지의 구간이다 — 첫 상수 · 상수 수(16 B 단위, 16 의 배수)로 건다(D3D11.1).
+        if ( _context1 == nullptr && isHrSuccess( _pContext->QueryInterface( IID_PPV_ARGS( _context1.GetAddressOf() ) ), "QueryInterface (ID3D11DeviceContext1)" ) == false )
+            return;
+        const UINT firstConstant = source._offset / D3D11RHIDevice::kShaderConstantBytes;
+        const UINT constantCount = source._size / D3D11RHIDevice::kShaderConstantBytes;
+        // 같은 버퍼를 오프셋만 바꿔 다시 걸면 런타임이 중복 호출로 걸러 옛 오프셋이 남는 일이 알려져 있다 — 빈 칸을 먼저 건다.
+        ID3D11Buffer* const pNull = nullptr;
+        _pContext->CSSetConstantBuffers( slot, 1, &pNull );
+        _context1->CSSetConstantBuffers1( slot, 1, &pCb, &firstConstant, &constantCount );
+        if ( bCompute )
+            return;
+        _pContext->VSSetConstantBuffers( slot, 1, &pNull );
+        _pContext->PSSetConstantBuffers( slot, 1, &pNull );
+        _pContext->HSSetConstantBuffers( slot, 1, &pNull );
+        _pContext->DSSetConstantBuffers( slot, 1, &pNull );
+        _context1->VSSetConstantBuffers1( slot, 1, &pCb, &firstConstant, &constantCount );
+        _context1->PSSetConstantBuffers1( slot, 1, &pCb, &firstConstant, &constantCount );
+        _context1->HSSetConstantBuffers1( slot, 1, &pCb, &firstConstant, &constantCount );
+        _context1->DSSetConstantBuffers1( slot, 1, &pCb, &firstConstant, &constantCount );
     }
 
     ID3D11ShaderResourceView* D3D11RHICommandContext::findBindlessBufferSRV( RHIDescriptorIndex index ) const
@@ -521,13 +552,7 @@ namespace sw
 
     void D3D11RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        const bool bInvalidConstantBufferIndex = _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex;
-        if ( bInvalidConstantBufferIndex )
-            return;
-        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( constantBufferIndex ) );
-        if ( pCb == nullptr )
-            return;
-        _pContext->CSSetConstantBuffers( slot, 1, &pCb );
+        bindConstantBufferAt( constantBufferIndex, slot, true );
     }
 
     void D3D11RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )

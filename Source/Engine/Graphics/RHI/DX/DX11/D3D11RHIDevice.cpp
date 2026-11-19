@@ -97,6 +97,7 @@ namespace sw
         , _bTimestampReady{ SW_FALSE }
         , _bTimestampFrameOpen{ SW_FALSE }
         , _bDriverCommandLists{ SW_FALSE }
+        , _bConstantBufferSlices{ SW_FALSE }
         , _timestampFrame{}
         , _clockQuery{}
         , _idleQuery{}
@@ -247,7 +248,14 @@ namespace sw
     RHIBufferHandle D3D11RHIDevice::bindlessBufferAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        return _bufferRegistry.get( index );
+        return _bufferRegistry.get( index )._buffer;
+    }
+
+    RHIBufferSlice D3D11RHIDevice::bindlessBufferSliceAt( RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        const BufferEntry              entry = _bufferRegistry.get( index );
+        return RHIBufferSlice{ entry._buffer, entry._sliceOffset, entry._sliceSize };
     }
 
     RHITextureHandle D3D11RHIDevice::bindlessTextureAt( RHIDescriptorIndex index ) const
@@ -616,6 +624,14 @@ namespace sw
                                 static_cast<uint32>( threadingCaps.DriverConcurrentCreates ),
                                 static_cast<uint32>( threadingCaps.DriverCommandLists ) );
             }
+        }
+        // 상수 버퍼 페이지 구간(감사 R-4)은 D3D11.1 의 두 능력이 있어야 한다 — 오프셋 바인딩과 부분 갱신. Windows 8+ 런타임 · WDDM 1.2 드라이버면 기능 수준 11_0 에서도 켜진다.
+        {
+            D3D11_FEATURE_DATA_D3D11_OPTIONS options{};
+            if ( SUCCEEDED( _device->CheckFeatureSupport( D3D11_FEATURE_D3D11_OPTIONS, &options, sizeof( options ) ) ) )
+                _bConstantBufferSlices = options.ConstantBufferOffsetting != FALSE && options.ConstantBufferPartialUpdate != FALSE ? SW_TRUE : SW_FALSE;
+            if ( _bConstantBufferSlices == SW_FALSE )
+                SW_LOG_ERROR_ID( "D3D11.NoConstantBufferSlices", "D3D11.1 ConstantBufferOffsetting / ConstantBufferPartialUpdate are not supported - material constant buffer pages are not created" );
         }
 
         _swapChain.acquireNextImage( _device.Get() );

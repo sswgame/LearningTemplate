@@ -341,6 +341,26 @@ namespace sw
         pRecord->_overrideSerial = 0;
     }
 
+    RHIBufferHandle WebGPURHIResourceFactory::createConstantBufferPage( uint32 size )
+    {
+        // 균일 버퍼 하나를 구간이 나눠 쓴다(감사 R-4). 큐 쓰기는 큐 순서라 진행 중 프레임과 겹치지 않는다(`createConstantBuffer` 와 같다).
+        return createConstantBuffer( size );
+    }
+
+    void WebGPURHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    {
+        WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( slice._buffer );
+        if ( pRecord == nullptr || pData == nullptr || size == 0 )
+            return;
+        _pDevice->requireNoOpenRenderPassForUpload( "WebGPU.updateConstantBuffer(slice)" );
+        // 큐 쓰기 크기는 4 의 배수다 — 구간 안에서 0 으로 채운 사본을 올린다(구간 오프셋은 256 배수라 4 배수다).
+        const uint32  writeBytes  = MathUtil::min( size, slice._size );
+        const uint64  alignedSize = MathUtil::min( MathUtil::align( static_cast<uint64>( writeBytes ), WebGPURHIResourceFactoryInternal::kCopyAlignment ), static_cast<uint64>( slice._size ) );
+        vector<uint8> padded( static_cast<size_t>( alignedSize ), 0 );
+        Memory::copy( padded.data(), pData, MathUtil::min<size_t>( writeBytes, padded.size() ) );
+        wgpuQueueWriteBuffer( _pDevice->_queue, pRecord->_buffer, slice._offset, padded.data(), padded.size() );
+    }
+
     RHIBufferHandle WebGPURHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
     {
         if ( elementSize == 0 || elementCount == 0 )
@@ -863,6 +883,29 @@ namespace sw
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return _pDevice->_bufferTable.allocate( WebGPUBindlessEntry{ buffer, SW_FALSE } );
+    }
+
+    RHIDescriptorIndex WebGPURHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    {
+        _pDevice->requireRegistryMutableNow( "WebGPU.registerBindlessBufferSRV(slice)" );
+        const WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( slice._buffer );
+        if ( pRecord == nullptr )
+            return kInvalidDescriptorIndex;
+        // 바인딩 오프셋은 minUniformBufferOffsetAlignment(기본 한도 256)의 배수여야 한다 — 구간은 256 B 배수다. 버퍼를 넘는 구간은 부르는 쪽의 결함이다.
+        const bool bBadSlice = slice._size == 0 || slice._offset % constant::render::kConstantBufferAlignment != 0 ||
+                               static_cast<uint64>( slice._offset ) + slice._size > pRecord->_sizeBytes;
+        if ( bBadSlice )
+        {
+            SW_LOG_ERROR_ID( "WebGPU.BadConstantBufferSlice", "WebGPU: registerBindlessBufferSRV slice (offset %#, size %#) is not a 256-aligned slice of a constant buffer page", slice._offset,
+                             slice._size );
+            return kInvalidDescriptorIndex;
+        }
+        WebGPUBindlessEntry entry{};
+        entry._handle      = slice._buffer;
+        entry._sliceOffset = slice._offset;
+        entry._sliceSize   = slice._size;
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_bufferTable.allocate( entry );
     }
 
     void WebGPURHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )

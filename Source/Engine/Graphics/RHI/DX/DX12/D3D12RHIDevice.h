@@ -470,6 +470,7 @@ namespace sw
             D3D12_CPU_DESCRIPTOR_HANDLE            _offlineCPUHandle{}; ///< 오프라인 힙의 같은 뷰. 슬롯 테이블 복사 원본이다(가시 힙은 복사 원본이 될 수 없다).
             RHIBufferHandle                        _buffer{ 0 };
             RHITextureHandle                       _texture{ 0 };
+            uint32                                 _sliceOffset{ 0 }; ///< 상수 버퍼 페이지 구간의 오프셋(`registerBindlessBufferSRV( RHIBufferSlice )`, 아니면 0)
 
             /** @brief `RHIBindlessRegistry` 가 "이 칸이 비었는가" 를 묻는 데 씁니다(핸들 값은 번호에서 나오므로 보지 않는다). */
             bool operator==( const BindlessResourceRecord& other ) const
@@ -688,7 +689,7 @@ namespace sw
          * @brief 링 상수 버퍼의 `slot` 슬롯에 씁니다. `_bindlessMutex` 를 (읽기로라도) 잡고 부릅니다.
          * @details 만들 때 크기를 넘는 쓰기는 자른다. 그대로 복사하면 다음 슬롯(다음 프레임의 값)까지 덮어쓴다.
          */
-        void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
+        void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size );
         /** @brief 링이 넘어온 슬롯에 옛 값이 남은 상수 버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferMirror`). `waitForRingSlot` 이 부릅니다. */
         void fillConstantBufferSlot();
         /**

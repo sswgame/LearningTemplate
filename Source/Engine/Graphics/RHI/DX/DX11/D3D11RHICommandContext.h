@@ -101,6 +101,10 @@ namespace sw
          *          스테이지에 바인딩하는가뿐입니다(VS+PS / CS). 상한 검사와 WRITE_DISCARD 재명명 규칙이 두 벌이면 한쪽만 고쳐집니다.
          */
         void writeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues, bool bCompute );
+        /**
+         * @brief 번호 @p index 의 상수 버퍼를 @p slot 에 겁니다(그래픽스면 VS · PS · CS · HS · DS, 컴퓨트면 CS). 페이지 구간이면 `*SetConstantBuffers1` 오프셋으로 겁니다(감사 R-4).
+         */
+        void bindConstantBufferAt( RHIDescriptorIndex index, uint32 slot, bool bCompute );
 
     private:
         D3D11RHIDevice*      _pDevice;
@@ -110,6 +114,8 @@ namespace sw
         /** @brief _pContext 가 사는 동안 바뀌지 않아 첫 QueryInterface 결과를 다시 씁니다(마커마다 QI 하지 않습니다). */
         Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> _annotation;
         uint8                                             _bAnnotationQueried : 1;
+        /** @brief 상수 버퍼 구간 바인딩용 D3D11.1 컨텍스트입니다. 첫 구간 바인딩에서 한 번 묻는다. */
+        Microsoft::WRL::ComPtr<ID3D11DeviceContext1> _context1;
     };
 } // namespace sw
 #endif

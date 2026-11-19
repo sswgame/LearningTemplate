@@ -273,12 +273,14 @@ namespace sw
         struct BindlessResourceRecord
         {
             RHIBufferHandle  _buffer{ 0 };
-            RHITextureHandle _texture{ 0 }; ///< UAV 레지스트리에서 RW 텍스처(이미지 유닛)면 0이 아니다.
+            RHITextureHandle _texture{ 0 };     ///< UAV 레지스트리에서 RW 텍스처(이미지 유닛)면 0이 아니다.
+            uint32           _sliceOffset{ 0 }; ///< 상수 버퍼 페이지 구간(`glBindBufferRange`, 감사 R-4). 크기 0 이면 버퍼 전체(`glBindBufferBase`)
+            uint32           _sliceSize{ 0 };
 
             /** @brief `RHIBindlessRegistry` 가 "이 칸이 비었는가" 를 묻는 데 씁니다. */
             bool operator==( const BindlessResourceRecord& other ) const
             {
-                return _buffer == other._buffer && _texture == other._texture;
+                return _buffer == other._buffer && _texture == other._texture && _sliceOffset == other._sliceOffset && _sliceSize == other._sliceSize;
             }
             bool operator!=( const BindlessResourceRecord& other ) const { return ( *this == other ) == false; }
             /** @brief 자원을 부술 때 이 칸을 찾는 주인입니다(`RHIBindlessRegistry::releaseBuffer` · `releaseTexture`). */

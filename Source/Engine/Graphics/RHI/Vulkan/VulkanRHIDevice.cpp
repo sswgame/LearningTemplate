@@ -138,6 +138,7 @@ namespace sw
         , _uavRegistry{ kBindlessBufferCapacity }
         , _arrBufferReadSlot{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
         , _arrUAVBufferReadSlot{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
+        , _arrBufferReadSlice{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
         , _gpuTextures{}
         , _releaseQueue{}
         , _renderPassCache{}
@@ -380,17 +381,19 @@ namespace sw
         return true;
     }
 
-    void VulkanRHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+    void VulkanRHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
     {
         VulkanBufferRecord* pRecord                     = resolveAllocatedBuffer( buffer );
-        const bool          bCannotUpdateConstantBuffer = pRecord == nullptr || pRecord->_cbSlotSize == 0 || pRecord->_memory == VK_NULL_HANDLE || pData == nullptr || size == 0;
+        const bool          bCannotUpdateConstantBuffer = pRecord == nullptr || pRecord->_cbSlotSize == 0 || pRecord->_memory == VK_NULL_HANDLE || pData == nullptr || size == 0 ||
+                                                 offset >= pRecord->_cbSlotSize;
         if ( bCannotUpdateConstantBuffer )
             return;
         const uint32 slotSize  = pRecord->_cbSlotSize;
-        const uint32 copyBytes = MathUtil::min( size, slotSize );
+        const uint32 copyBytes = MathUtil::min( size, slotSize - offset ); // 페이지 구간이면 그 칸 안에서 자른다
         void*        pMapped{ nullptr };
         // Map 실패는 오류로 남긴다 — 조용히 건너뛰면 옛 상수로 그려 원인이 화면에서만 보인다.
-        if ( isVkSuccess( vkMapMemory( _device, pRecord->_memory, static_cast<VkDeviceSize>( slot ) * slotSize, copyBytes, 0, &pMapped ), "vkMapMemory (constant buffer slot)" ) == false || pMapped == nullptr )
+        if ( isVkSuccess( vkMapMemory( _device, pRecord->_memory, static_cast<VkDeviceSize>( slot ) * slotSize + offset, copyBytes, 0, &pMapped ), "vkMapMemory (constant buffer slot)" ) == false ||
+             pMapped == nullptr )
             return;
         Memory::copy( pMapped, pData, copyBytes );
         vkUnmapMemory( _device, pRecord->_memory );
@@ -400,8 +403,8 @@ namespace sw
     {
         // 칸 크기는 버퍼 레코드에서 락 없이 읽는다(`VulkanBufferRecord::_cbSlotSize`). 그림자 표는 제 뮤텍스가 지킨다.
         _constantBufferMirror.fillSlot( getFrameSlot() % constant::render::kMaxFrameCountInFlight,
-                                        [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
-        { writeConstantBufferSlot( buffer, slot, pData, size ); } );
+                                        [this]( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
+        { writeConstantBufferSlot( buffer, slot, offset, pData, size ); } );
     }
 
     void VulkanRHIDevice::detachCommandRecordingInternal()
@@ -3483,10 +3486,22 @@ namespace sw
         return index < kBindlessBufferCapacity ? _arrBufferReadSlot.get()[index].load( std::memory_order_acquire ) : 0;
     }
 
-    void VulkanRHIDevice::publishBufferReadSlot( RHIDescriptorIndex index, bool bUAV, RHIBufferHandle buffer )
+    RHIBufferSlice VulkanRHIDevice::bindlessSourceSliceAt( RHIDescriptorIndex index ) const
+    {
+        if ( index >= kBindlessBufferCapacity )
+            return RHIBufferSlice{};
+        // 버퍼 칸을 acquire 로 본 뒤 구간을 읽는다 — 등록이 구간을 먼저 쓰고 버퍼를 release 로 공개한다.
+        const RHIBufferHandle buffer = _arrBufferReadSlot.get()[index].load( std::memory_order_acquire );
+        const uint64          slice  = _arrBufferReadSlice.get()[index].load( std::memory_order_relaxed );
+        return RHIBufferSlice{ buffer, static_cast<uint32>( slice >> 32u ), static_cast<uint32>( slice & 0xFFFFFFFFull ) };
+    }
+
+    void VulkanRHIDevice::publishBufferReadSlot( RHIDescriptorIndex index, bool bUAV, RHIBufferHandle buffer, uint32 sliceOffset, uint32 sliceSize )
     {
         if ( index >= kBindlessBufferCapacity )
             SW_FATAL( "Vulkan: bindless buffer index %# is outside the read table (%#)", index, kBindlessBufferCapacity );
+        if ( bUAV == false )
+            _arrBufferReadSlice.get()[index].store( ( static_cast<uint64>( sliceOffset ) << 32u ) | sliceSize, std::memory_order_relaxed );
         ( bUAV ? _arrUAVBufferReadSlot : _arrBufferReadSlot ).get()[index].store( buffer, std::memory_order_release );
     }
 
