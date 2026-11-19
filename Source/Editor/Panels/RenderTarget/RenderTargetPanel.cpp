@@ -208,7 +208,7 @@ namespace sw::editor
             stopLabel = stop._stopDraw == MathUtil::kMaxUInt32 ? stop._stopPass : SW_LOCKEYFORMAT( "EditorRenderTarget", "StopDraw", TextArgumentList().addText( "pass", stop._stopPass.c_str() ).addInteger( "draw", static_cast<int64>( stop._stopDraw ) ) );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EditorRenderTarget", "FrameUpTo" ) );
         EditorChrome::setNextItemWidthColumns( kStopComboColumns );
-        if ( ImGui::BeginCombo( "##FrameUpTo", stopLabel.c_str() ) )
+        if ( EditorWidgets::beginCombo( "##FrameUpTo", stopLabel.c_str() ) )
         {
             if ( ImGui::Selectable( SW_LOCKEY( "EditorRenderTarget", "WholeFrame" ), bStopped == false ) )
                 _viewModel.setStopAfterPass( string{} );

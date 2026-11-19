@@ -275,6 +275,7 @@
 		<entry source="Broadcast" text="방송" />
 		<entry source="Brushes" text="브러시" />
 		<entry source="Budget: {budgetBuf}" text="예산: {budgetBuf}" />
+		<entry source="Buffers" text="버퍼" />
 		<entry source="Bug Report" text="버그 보고" />
 		<entry source="Bug report" text="버그 리포트" />
 		<entry source="Bug report saved" text="버그 리포트를 저장했습니다" />
@@ -303,6 +304,7 @@
 		<entry source="Cancel the running compile" text="진행 중인 컴파일을 취소합니다" />
 		<entry source="Cancels the compile in progress" text="현재 진행 중인 컴파일 작업을 취소합니다" />
 		<entry source="Cannot move: {reason}" text="옮길 수 없습니다: {reason}" />
+		<entry source="Capture" text="캡처" />
 		<entry source="Capture the next frame with RenderDoc" text="다음 프레임을 RenderDoc 으로 캡처합니다" />
 		<entry source="Capture the next frame with RenderDoc (Saved/RenderDoc/, Ctrl+F12)"
 		       text="다음 프레임을 RenderDoc 으로 캡처합니다 (Saved/RenderDoc/, Ctrl+F12)" />
@@ -461,6 +463,8 @@
 		<entry source="Copy item" text="항목 복사" />
 		<entry source="Copy keys" text="키 복사" />
 		<entry source="Copy the absolute folder path" text="폴더의 절대 경로를 복사합니다" />
+		<entry source="Copy the compiled render graphs (view and frame) on the next frame: passes by level, resources, transitions and GPU time per pass."
+		       text="다음 프레임에 컴파일한 렌더 그래프(뷰 · 프레임)를 복사합니다: 레벨별 패스, 자원, 전이, 패스마다 GPU 시간." />
 		<entry source="Copy the selected keys with their values, tangents and interpolation."
 		       text="고른 키를 값 · 접선 · 보간과 함께 복사합니다." />
 		<entry source="Copy the selected span item. Paste puts it at the current frame."
@@ -474,6 +478,8 @@
 		       text="에디터 창 및 팝업 대화상자 모서리의 둥글기(px, 0 ~ 12)" />
 		<entry source="Could not build the document (see the log)."
 		       text="문서를 만들지 못했습니다(로그를 확인합니다)." />
+		<entry source="Could not read the buffer. Press Read to try again."
+		       text="버퍼를 읽지 못했습니다. 읽기를 눌러 다시 시도합니다." />
 		<entry source="Could not register this target as an ImGui texture."
 		       text="이 타깃을 ImGui 텍스처로 등록하지 못했습니다." />
 		<entry source="Counters" text="카운터" />
@@ -611,6 +617,8 @@
 		       text="고른 노드가 쓰는 본을 뷰포트에 표시합니다" />
 		<entry source="Draw the recorded skeleton in the viewport at the time being viewed."
 		       text="보고 있는 시각의 기록된 스켈레톤을 뷰포트에 그립니다." />
+		<entry source="Draw {event} of {eventCount}: {pass} #{draw}"
+		       text="드로우 {event} / {eventCount}: {pass} #{draw}" />
 		<entry source="Drawing LOD {lod} of {count}" text="LOD {count} 개 중 {lod} 번을 그립니다" />
 		<entry source="Driver" text="드라이버" />
 		<entry source="Drop a .bonemask.xml preset to use it; its bones are then read-only here. Clear it to keep the bones in this graph."
@@ -680,6 +688,7 @@
 		<entry source="Exits the editor" text="에디터를 종료합니다" />
 		<entry source="Expand" text="펼치기" />
 		<entry source="Expand All" text="모두 펼치기" />
+		<entry source="Exposure" text="노출" />
 		<entry source="Expression the game evaluates when the conversation reaches this node; true follows the True link, false the False link."
 		       text="대화가 이 노드에 닿으면 게임이 평가하는 식입니다. 참이면 True 링크, 거짓이면 False 링크를 따라갑니다." />
 		<entry source="FOV (Deg)" text="시야각(도)" />
@@ -756,9 +765,12 @@
 		<entry source="Fraction of the screen trimmed from each edge, 0 to 0.1, as on TVs that cut off the border. The red frame shows the safe area."
 		       text="가장자리를 잘라 내는 TV 처럼 각 변에서 잘라 낼 화면 비율(0~0.1)입니다. 빨간 테두리가 안전 영역입니다." />
 		<entry source="Frame" text="맞춤" />
+		<entry source="Frame Debugger" text="프레임 디버거" />
 		<entry source="Frame Rounding" text="칸 둥글기" />
+		<entry source="Frame debugger" text="프레임 디버거" />
 		<entry source="Frame height as a fraction of the atlas height (0-1)."
 		       text="아틀라스 높이에 대한 프레임 높이의 비율(0~1)입니다." />
+		<entry source="Frame up to" text="그린 시점" />
 		<entry source="Frame width as a fraction of the atlas width (0-1)."
 		       text="아틀라스 너비에 대한 프레임 너비의 비율(0~1)입니다." />
 		<entry source="Frame {frame} of {frameMin} to {frameMax}, {state}"
@@ -1058,6 +1070,7 @@
 		<entry source="Methods" text="메서드" />
 		<entry source="Min Size" text="최소 크기" />
 		<entry source="Minimap" text="미니맵" />
+		<entry source="Mip" text="밉" />
 		<entry source="Mipmaps" text="밉맵" />
 		<entry source="Mirror axis" text="미러 축" />
 		<entry source="Mode" text="모드" />
@@ -1119,6 +1132,8 @@
 		<entry source="Multi-Object Alignment" text="여러 오브젝트 정렬" />
 		<entry source="Multiplayer" text="멀티플레이어" />
 		<entry source="Multiple values" text="값이 여러 개입니다" />
+		<entry source="Multiplies color by 2^EV before the preview clips it to 0..1. Lower it to see HDR values above 1, raise it to see dark values. Not applied to alpha or depth."
+		       text="미리보기가 0..1 로 자르기 전에 색에 2^EV 를 곱합니다. 1 넘는 HDR 값을 보려면 내리고, 어두운 값을 보려면 올립니다. 알파 · 깊이에는 쓰지 않습니다." />
 		<entry source="Mute" text="음소거" />
 		<entry source="NPC Schedule" text="NPC 일정" />
 		<entry source="Name" text="이름" />
@@ -1183,6 +1198,7 @@
 		<entry source="No assets of this kind under Content/."
 		       text="Content/ 아래에 이 종류의 에셋이 없습니다." />
 		<entry source="No atlas" text="아틀라스 없음" />
+		<entry source="No binding layout for this PSO." text="이 PSO 의 바인딩 레이아웃이 없습니다." />
 		<entry source="No bindings" text="바인딩 없음" />
 		<entry source="No bindings. Select an object and add a binding from it."
 		       text="바인딩이 없습니다. 오브젝트를 선택하고 그것으로 바인딩을 더하세요." />
@@ -1213,6 +1229,8 @@
 		<entry source="No file - defaults" text="파일 없음 - 기본값" />
 		<entry source="No fog in this scene. Add a Fog component to see volumetric fog."
 		       text="이 씬에 안개가 없습니다. 볼륨 안개를 보려면 Fog 컴포넌트를 더하세요." />
+		<entry source="No frame graph buffers listed yet. Press Refresh list."
+		       text="아직 프레임 그래프 버퍼 목록이 없습니다. 목록 새로 고침을 누릅니다." />
 		<entry source="No game camera - the load and unload column needs one."
 		       text="게임 카메라가 없습니다 - 올림 · 내림 열은 게임 카메라가 있어야 합니다." />
 		<entry source="No global variables registered." text="등록된 전역 변수가 없습니다." />
@@ -1239,12 +1257,18 @@
 		<entry source="No multiplayer session is running. Start one in the Session tab."
 		       text="실행 중인 멀티플레이 세션이 없습니다. Session 탭에서 시작하세요." />
 		<entry source="No node matches." text="일치하는 노드가 없습니다." />
+		<entry source="No occlusion tiles. Occlusion culling is off (-gv_occlusionCulling) or this backend has no GPU culling."
+		       text="가림 타일이 없습니다. 가림 컬링이 꺼져 있거나(-gv_occlusionCulling) 이 백엔드에 GPU 컬링이 없습니다." />
 		<entry source="No other modules change." text="다른 모듈은 바뀌지 않습니다." />
 		<entry source="No presets found." text="프리셋이 없습니다." />
 		<entry source="No processes - pick a Net Mode and press Play (toolbar or here)."
 		       text="프로세스가 없습니다 - Net Mode 를 고르고 Play 를 누르세요(툴바 또는 여기)." />
 		<entry source="No recent documents" text="최근에 연 문서가 없습니다" />
 		<entry source="No registered component types." text="등록된 컴포넌트 타입이 없습니다." />
+		<entry source="No render graph captured yet. Press Capture."
+		       text="아직 캡처한 렌더 그래프가 없습니다. 캡처를 누릅니다." />
+		<entry source="No renderer debug data in this process."
+		       text="이 프로세스에는 렌더러 디버그 데이터가 없습니다." />
 		<entry source="No saved layouts." text="저장된 레이아웃이 없습니다." />
 		<entry source="No saved presets." text="저장한 프리셋이 없습니다." />
 		<entry source="No saved searches or collections yet. Save a search or make a collection below."
@@ -1307,6 +1331,8 @@
 		<entry source="OK" text="확인" />
 		<entry source="Object not found in the active scene."
 		       text="활성 씬에서 오브젝트를 찾지 못했습니다." />
+		<entry source="Occlusion and Streaming" text="가림 · 스트리밍" />
+		<entry source="Occlusion tiles" text="가림 타일" />
 		<entry source="Off - {reason}" text="꺼짐 — {reason}" />
 		<entry source="Off only" text="꺼진 것만" />
 		<entry source="Off shows only the active game pack; on shows every pack under game/ (default: Preferences > Content Browser)"
@@ -1427,6 +1453,8 @@
 		       text="Override 는 마스크의 본을 바꾸고, Additive 는 클립의 첫 프레임과의 차이를 더합니다." />
 		<entry source="Overwrite the selected component from the clipboard"
 		       text="클립보드의 값으로 선택한 컴포넌트를 덮어씁니다" />
+		<entry source="PSO {pso}  {indexCount} indices  {groupCount} batches  up to {triangleCount} triangles"
+		       text="PSO {pso}  인덱스 {indexCount}  배치 {groupCount}  삼각형 최대 {triangleCount}" />
 		<entry source="Package" text="패키지" />
 		<entry source="Package the client (game) or the dedicated server"
 		       text="클라이언트(게임) 또는 전용 서버를 패키징합니다" />
@@ -1589,6 +1617,7 @@
 		       text="진입 상태부터 0.75초마다 다음 상태로 넘어가며 그래프를 미리 봅니다. 전이 순서를 확인할 때 씁니다." />
 		<entry source="Preview: {currentStateName}  Nodes: {nodeCount}  Links: {linkCount}"
 		       text="미리보기: {currentStateName}  노드: {nodeCount}  링크: {linkCount}" />
+		<entry source="Previous" text="이전" />
 		<entry source="Primary: {name}" text="주 선택: {name}" />
 		<entry source="Priority" text="우선순위" />
 		<entry source="Process the tabs act on: the server or one client"
@@ -1619,6 +1648,7 @@
 		<entry source="Ragdoll Preview" text="래그돌 미리보기" />
 		<entry source="Raw XML" text="원본 XML" />
 		<entry source="Raw text" text="원본 글" />
+		<entry source="Read" text="읽기" />
 		<entry source="Read by: {passes}" text="읽는 패스: {passes}" />
 		<entry source="Read frames from the replay file, replacing the current recording. Stops any playback first."
 		       text="리플레이 파일에서 프레임을 읽어 지금 기록을 바꿉니다. 재생 중이면 먼저 멈춥니다." />
@@ -1649,6 +1679,7 @@
 		       text="서버의 계층을 다시 읽습니다(scene.tree). 이름을 누르면 그 컴포넌트 값을 읽습니다(object.dump) - 서버가 일시 정지 중이어도 됩니다" />
 		<entry source="Read this client's state hash history (the latest ticks it recorded under the server tick numbers)"
 		       text="이 클라이언트의 상태 해시 기록을 읽습니다(서버 틱 번호로 기록한 최근 틱)" />
+		<entry source="Reading the buffer..." text="버퍼를 읽는 중..." />
 		<entry source="Reading the target..." text="타깃을 읽는 중..." />
 		<entry source="Ready to restore" text="되살릴 수 있음" />
 		<entry source="Real voices" text="실제 보이스" />
@@ -1681,11 +1712,15 @@
 		       text="게임이 도는 동안 애니메이션 캐릭터의 포즈와 상태를 프레임마다 기록해 되감아 살펴볼 수 있게 합니다. 'anim.rewind on' 과 같습니다." />
 		<entry source="Record every input event, frame by frame, to replay later for bug reproduction or QA. Replaces the current recording."
 		       text="버그 재현이나 QA 에 다시 재생할 수 있도록 모든 입력 이벤트를 프레임 단위로 기록합니다. 지금 기록을 바꿉니다." />
+		<entry source="Record every main-view scene draw. Pick a draw to stop there: later draws and passes are skipped, so the game view and the Render Targets panel show the frame up to that draw."
+		       text="주 시점의 씬 드로우를 모두 기록합니다. 드로우를 고르면 거기서 멈춥니다: 뒤 드로우와 패스는 건너뛰어 게임 뷰와 렌더 타깃 창이 그 드로우까지 그린 프레임을 보입니다." />
 		<entry source="Record input into a scenario file" text="입력을 시나리오 파일로 녹화합니다" />
 		<entry source="Record profile scopes per thread into a ring (8192 events per thread) - only while recording"
 		       text="스레드마다 프로파일 스코프를 링 버퍼(스레드당 이벤트 8192 개)에 기록합니다 - 녹화 중에만" />
 		<entry source="Record traces" text="추적 기록" />
 		<entry source="Record while hidden" text="숨겨져도 기록" />
+		<entry source="Recording the whole frame ({eventCount} draws)"
+		       text="프레임 전체를 기록하는 중(드로우 {eventCount})" />
 		<entry source="Records input while running to Saved/Automation/Recorded/recorded.scenario.xml. Press again to stop and write it"
 		       text="실행 중 입력을 Saved/Automation/Recorded/recorded.scenario.xml 로 녹화합니다. 한 번 더 누르면 멈추고 씁니다" />
 		<entry source="Recovered Work" text="복구한 작업" />
@@ -1699,6 +1734,7 @@
 		<entry source="Refresh Overrides" text="덮어쓴 값 새로 고침" />
 		<entry source="Refresh Source Control" text="소스 관리 새로 고침" />
 		<entry source="Refresh files" text="파일 새로 고침" />
+		<entry source="Refresh list" text="목록 새로 고침" />
 		<entry source="Refresh stats" text="통계 새로 고침" />
 		<entry source="Refresh the disk files and the content root list"
 		       text="디스크 파일 및 리소스 루트 목록을 새로고침합니다" />
@@ -1759,6 +1795,8 @@
 		<entry source="Removes the event from the edited copy; saving writes the library file"
 		       text="고치는 사본에서 이벤트를 지웁니다. 저장하면 라이브러리 파일에 씁니다" />
 		<entry source="Rename" text="이름 바꾸기" />
+		<entry source="Render Debugger" text="렌더 디버거" />
+		<entry source="Render Graph" text="렌더 그래프" />
 		<entry source="Render Targets" text="렌더 타깃" />
 		<entry source="RenderDoc" text="RenderDoc" />
 		<entry source="RenderDoc Capture" text="RenderDoc 캡처" />
@@ -2008,6 +2046,8 @@
 		<entry source="Section to play at the end; empty stops here."
 		       text="끝에서 재생할 섹션입니다. 비우면 여기서 멈춥니다." />
 		<entry source="Sections" text="섹션" />
+		<entry source="See this target as it was at the end of one of its writing passes: later scene draws are skipped (frame debugger). Fullscreen and compute passes still run. A draw picked in the Render Debugger panel shows here too."
+		       text="이 타깃을 쓰는 패스 하나의 끝 시점으로 봅니다. 뒤의 씬 드로우는 건너뜁니다(프레임 디버거). 전체 화면 · 컴퓨트 패스는 그대로 돕니다. 렌더 디버거 창에서 고른 드로우도 여기 보입니다." />
 		<entry source="Sel" text="선택" />
 		<entry source="Select All" text="모두 고르기" />
 		<entry source="Select All With" text="같은 것 모두 선택" />
@@ -2317,8 +2357,11 @@
 		<entry source="Test Runner" text="테스트 실행기" />
 		<entry source="Text" text="글" />
 		<entry source="Text scale" text="글자 크기" />
+		<entry source="Texture streaming" text="텍스처 스트리밍" />
 		<entry source="The Inspector reads a dedicated server through its debug channel. Start a Dedicated Server session, or attach by address"
 		       text="인스펙터는 전용 서버를 디버그 채널로 읽습니다. 전용 서버 세션을 시작하거나 주소로 붙으세요" />
+		<entry source="The Render Targets panel and the game view show the frame up to the stop draw."
+		       text="렌더 타깃 창과 게임 뷰가 멈춘 드로우까지 그린 프레임을 보입니다." />
 		<entry source="The accent color used for buttons, selection highlights, folders and active items."
 		       text="버튼, 선택 하이라이트, 폴더 및 활성 항목에 적용할 대표 액센트 색상" />
 		<entry source="The active scene declares no data layers. Add them to its World Settings."
@@ -2470,6 +2513,8 @@
 		       text="모든 바디를 동적으로 — 몸이 중력으로 쓰러져 가라앉습니다" />
 		<entry source="Turn every cell on this edge into a walkable warp to the target map."
 		       text="이 가장자리의 모든 칸을 대상 맵으로 가는, 걸을 수 있는 워프로 바꿉니다." />
+		<entry source="Turn on the frame debugger to list this frame's scene draws."
+		       text="프레임 디버거를 켜면 이 프레임의 씬 드로우가 나열됩니다." />
 		<entry source="Turn the device 90 degrees: width and height swap and the safe area insets follow the notch."
 		       text="기기를 90 도 돌립니다. 너비와 높이가 바뀌고 안전 여백이 노치를 따라 돕니다." />
 		<entry source="Turn this layer on when the scene opens. Saved with the scene."
@@ -2711,6 +2756,7 @@
 		<entry source="tile" text="타일" />
 		<entry source="translated" text="번역됨" />
 		<entry source="variables" text="변수" />
+		<entry source="whole frame" text="프레임 전체" />
 		<entry source="{alwaysLoadedIDCount, plural, one {# entity} other {# entities}}, {cellCount, plural, one {# cell} other {# cells}}"
 		       text="엔티티 {alwaysLoadedIDCount}개, 셀 {cellCount}개" />
 		<entry source="{alwaysLoadedIDCount} entities, {cellCount} cells"
@@ -2720,6 +2766,8 @@
 		       text="{asset} 은(는) 놓으면 열립니다 — 이 종류는 씬에 배치할 수 없습니다" />
 		<entry source="{backendName} - {sizeBasis} size" text="{backendName} - {sizeBasis} 크기" />
 		<entry source="{code} (pseudo)" text="{code} (의사 문화권)" />
+		<entry source="{columns} x {rows} tiles, {coveredCount} of {tileCount} covered, nearest depth {nearestDepth}"
+		       text="타일 {columns} x {rows}, {tileCount} 중 {coveredCount} 덮임, 가장 가까운 깊이 {nearestDepth}" />
 		<entry source="{componentCount, plural, one {# component is} other {# components are}} not on every selected object"
 		       text="컴포넌트 {componentCount}개는 선택한 모든 오브젝트에 있지 않습니다" />
 		<entry source="{componentCount} component(s) are not on every selected object"
@@ -2762,8 +2810,11 @@
 		<entry source="{objectCount, plural, one {# object} other {# objects}} selected"
 		       text="오브젝트 {objectCount}개 선택됨" />
 		<entry source="{objectCount} objects selected" text="오브젝트 {objectCount}개 선택됨" />
+		<entry source="{passCount} passes  {levelCount} levels  {resourceCount} resources  {transitionCount} transitions"
+		       text="패스 {passCount}  레벨 {levelCount}  자원 {resourceCount}  전이 {transitionCount}" />
 		<entry source="{passed} ({frameCount} frames){reason}{reason2}"
 		       text="{passed}({frameCount}프레임){reason}{reason2}" />
+		<entry source="{pass} #{draw}" text="{pass} #{draw}" />
 		<entry source="{path} is open - close it first" text="{path} 이(가) 열려 있습니다. 먼저 닫으십시오." />
 		<entry source="{path} is read-only - Check Out (lock) it in the Content Browser first"
 		       text="{path} 은(는) 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오." />
@@ -2786,6 +2837,8 @@
 		       text="{target} 빌드에 실패했습니다(종료 코드 {code}). Output Log 를 확인하십시오." />
 		<entry source="{target} compiled and reloaded in {seconds}s"
 		       text="{target} 을(를) {seconds}초 만에 컴파일하고 다시 불러왔습니다" />
+		<entry source="{textureCount} streaming textures, {belowWantedCount} below their wanted mip ({missingMipCount} mips), {uploadsWaiting} uploads waiting"
+		       text="스트리밍 텍스처 {textureCount}, 원하는 밉보다 거친 것 {belowWantedCount}(밉 {missingMipCount}), 업로드 대기 {uploadsWaiting}" />
 		<entry source="{tracksCount} tracks · {byteCount} KB · {latestTime} s of history"
 		       text="트랙 {tracksCount}개 · {byteCount} KB · 기록 {latestTime}초" />
 		<entry source="{voiceCount} ({virtualVoiceCount} virtual)" text="{voiceCount}(가상 {virtualVoiceCount})" />

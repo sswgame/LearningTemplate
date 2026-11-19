@@ -4,7 +4,11 @@
 
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
 
 namespace sw::editor
 {
@@ -19,6 +23,16 @@ namespace sw::editor
             }
         };
     } // namespace
+
+    RenderDebuggerSources RenderDebuggerViewModel::findEditorSources()
+    {
+        RenderDebuggerSources sources{};
+        sources._pRegistry                                 = editor::findSubsystem<RenderDebugRegistry>();
+        sources._pProfiler                                 = editor::findSubsystem<FrameProfiler>();
+        const FrameRendererSubsystem* const pFrameRenderer = editor::findSubsystem<FrameRendererSubsystem>();
+        sources._pOcclusion                                = pFrameRenderer != nullptr ? pFrameRenderer->getFrameRenderer().getOcclusionSnapshot() : nullptr;
+        return sources;
+    }
 
     const RenderDebuggerState& RenderDebuggerViewModel::gather( const RenderDebuggerSources& sources )
     {

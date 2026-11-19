@@ -21,6 +21,7 @@ namespace sw::editor
     public:
         /** @brief 패널 id 입니다(등록 · 조회 · `panel.focus`). */
         static constexpr const utf8* kPanelID        = "render_debugger";
+        static constexpr int32       kMenuOrder      = 910;    ///< 도구 메뉴 차례 — 렌더 타깃 창(900) 바로 뒤
         static constexpr float32     kInitialColumns = 120.0f; ///< 처음 창 폭(글자 칸) — 기록 목록과 바인딩 글이 나란히 들어간다
         static constexpr float32     kInitialRows    = 34.0f;  ///< 처음 창 높이(글자 줄)
         static constexpr int32       kNoStopEvent    = -1;     ///< `getStopEventIndex` 의 "멈춤 없음"

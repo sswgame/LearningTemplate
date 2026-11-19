@@ -85,6 +85,8 @@ namespace sw::editor
     class RenderDebuggerViewModel
     {
     public:
+        /** @brief 에디터가 든 원천(우편함 · 프로파일러 · 렌더러의 가림 사본)을 찾습니다. 창(View)은 모델 · 렌더러 헤더를 넣지 않으므로 여기서 찾는다. */
+        static RenderDebuggerSources findEditorSources();
         /**
          * @brief 원천에서 값을 맞추고 창이 그릴 값을 돌려줍니다(프레임마다 한 번). 명령은 이때 받은 우편함으로 간다.
          * @details 목록(기록 · 그래프 · 버퍼)은 공개 번호가 바뀐 프레임에만 다시 복사하므로 사본을 넘기지 않고 이 객체가 든 값을 읽게 한다 — 다음 `gather` 까지 유효하다.

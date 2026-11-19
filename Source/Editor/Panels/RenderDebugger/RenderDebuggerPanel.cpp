@@ -10,15 +10,11 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -92,12 +88,8 @@ namespace sw::editor
 
     void RenderDebuggerPanel::drawContent()
     {
-        RenderDebuggerSources sources{};
-        sources._pRegistry                                 = editor::findSubsystem<RenderDebugRegistry>();
-        sources._pProfiler                                 = editor::findSubsystem<FrameProfiler>();
-        const FrameRendererSubsystem* const pFrameRenderer = editor::findSubsystem<FrameRendererSubsystem>();
-        sources._pOcclusion                                = pFrameRenderer != nullptr ? pFrameRenderer->getFrameRenderer().getOcclusionSnapshot() : nullptr;
-        _pState                                            = &_viewModel.gather( sources );
+        const RenderDebuggerSources sources = RenderDebuggerViewModel::findEditorSources();
+        _pState                             = &_viewModel.gather( sources );
         if ( sources._pRegistry == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorRenderDebug", "NoRenderer" ) );
