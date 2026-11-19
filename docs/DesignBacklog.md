@@ -1204,6 +1204,36 @@ struct SW_API ReplicatedLayout
 6. 에디터: 응답 격자는 "Collision Responses" 창(`CollisionResponsePanel` — 프로필 × 채널 칸을 눌러 막음 → 겹침 → 무시, 아래에 프로필 쌍 결과 표, 문서 원문 단계로 되돌리기, 주석 · 자산 줄을 지키는 원문 편집 `CatalogXMLText`, 기본과 같은 값은 줄을 빼 적힌 줄은 늘 기본과 다른 값). 채널 · 프로필 더하기 · 지우기는 카탈로그 편집기다. 이름 칸은 `PROPERTY( Meta = "NameSource=CollisionProfile" )` · `"NameSource=CollisionChannel"` 메타로 인스펙터가 고르기 목록을 그린다(`InspectorNameSource` — 언리얼 `GetOptions` 자리, 목록에 없는 지금 값은 끝 항목으로 남겨 보인다).
 
 **확인.** 단위 `CollisionProfileTest.*`(응답 표 대칭 · 약한 쪽, 프로필 해석 · 트레이스 마스크, 나쁜 데이터 오류, 배포 설정이 옛 표와 같음, Jolt · Box2D 막음 · 겹침 · 무시, 트레이스 채널 광선 거르기) — 서버 단위에도 돈다. 시나리오 `game/empty/automation/collisionprofiles`(투사체가 트리거는 겹치며 지나가고 Pawn 에 막힌다, 감시 값 `Physics.TraceDistance` 로 Camera 채널이 Pawn 을 무시하고 Visibility 는 맞는다).
+### 스트리밍 월드 길찾기(설계 2026-11-20)
+
+**문제.** 내비 타일은 셀과 같은 원점 · 반경으로 오르내린다(`SceneNavigation::updateTileStreaming`). 그런데 경로 · 군중은 끼운 타일만 안다 — 목적지 쪽 타일이 아직 오르지 않았으면 `requestMoveTarget` 이 목적지를 못 찾아 `Failed` 이고(오픈월드에서 먼 마을로 가는 NPC 가 출발조차 못 한다), 서 있던 타일이 내렸다 다시 오르면 Detour 군중 에이전트는 `INVALID` 상태로 남아 스스로 되살아나지 않는다. Detour 는 오프 메시 링크의 끝을 시작 타일과 여덟 이웃에서만 찾아(`connectExtOffMeshLinks`) 그보다 긴 다리 · 문 링크는 조용히 이어지지 않는다.
+
+**대조.**
+- 언리얼: World Partition 은 내비 데이터를 셀 청크(`UNavigationDataChunk` · World Partitioned Navmesh)로 굽고 셀과 함께 올린다. 먼 경로는 Recast 클러스터 링크(`WITH_NAVMESH_CLUSTER_LINKS` — 타일 안 이어진 덩어리 + 덩어리 사이 링크)의 계층 경로(`FindHierarchicalPath`)다. 런타임 생성 모드 Static · Dynamic Modifiers Only · Dynamic 은 굽기 비용을 정하는 값이다. NavLink Proxy(Smart Link)는 타일 경계를 넘는 링크이고, Detour Crowd 는 경로 통로를 다가가며 고친다. Mass AI 는 먼 개체를 낮은 LOD 로 레인 위에서 시간만 진행한다.
+- 유니티 AI Navigation: NavMeshSurface 여러 개(각자 데이터) · NavMeshLink 로 잇고, 대형 월드는 구역마다 표면을 싣고 내린다. 계층 경로는 없다 — 게임이 경유지를 둔다.
+- Recast/Detour 1.6: 타일 단위 `addTile` · `removeTile` 이 이웃 경계 이음과 오프 메시 링크 끝을 다시 잇는다(이웃 한 칸까지).
+→ 우리 쿠킹본의 타일 구간이 이미 언리얼의 내비 데이터 청크다(셀보다 잘게 — 9.6 m 타일, 셀과 같은 원점 · 반경). 빠진 것은 계층 경로와 내려간 구역 위 이동이다.
+
+**우리 빈 곳(코드 확인).**
+- (가) 먼 경로 — 없었다. `NavMeshAssetEntry` 에 타일 바이트만 있고 타일 사이 연결 요약이 없다.
+- (나) 경계 이음 — 타일 경계 · 이웃 한 칸 링크는 Detour 가 잇고 끊는다(맞다). 두 칸 넘는 링크는 조용히 빠졌다. 내렸다 오른 타일 위 군중 에이전트는 되살아나지 않았다.
+- (다) 인스턴스 레벨 — 씬 인스턴스는 읽을 때 평평하게 펼친다(`SceneDocument::expandSceneInstances`) — 기하가 주인 씬 하나로 모여 한 번 굽는다. 합칠 내비 데이터가 따로 없다(언리얼 Level Instance 도 주인 월드의 내비 시스템이 굽는다). 인스턴스 안의 표면은 지금처럼 처음 것만 쓴다.
+- (라) 내려간 셀 위 NPC — 정할 것이 없었다(군중이 `INVALID`).
+- (마) 서버 — 내비게이션은 씬 서비스라 호스트를 가리지 않고 돈다. 서버의 원점은 관찰자(`MMOReplicator::feedStreamingSources`)라 관찰자에서 먼 NPC 는 (가) · (라) 와 같은 처지다.
+- (바) 군중 · 회피 — 이웃 찾기는 타일과 무관한 근접 격자라 경계를 넘어도 같다. 내려간 타일로 들어가면 (나) 의 되살림이 필요하다.
+- (사) 동적 장애물 · 다시 굽기 — 타일 단위 재베이크(`NavTileRebaker`, 동시 상한 `_maxConcurrentTileBakeCount`)와 장애물 캐시(`NavObstacleMode::TileCache`)가 언리얼 Dynamic Modifiers Only · Dynamic 자리다. 스트리밍은 입력 해시가 쿠킹과 다른 타일만 다시 굽는다. 바꿀 것 없다.
+
+**결정.**
+1. **대략 그래프(`NavClusterGraph`).** 노드는 타일 안에서 이어진 폴리곤 덩어리(클러스터 — 다리 위 · 아래처럼 겹친 층은 따로), 간선은 타일 경계 · 오프 메시 링크의 Detour 링크(방향 있음), 비용은 중심 사이 거리. 쿠킹이 모든 타일을 끼운 뒤 `INavMeshTileStore::collectClusterGraph` 로 짓고 쿠킹본 항목에 싣는다(형식 판 4). DDC 키는 쿠커 코드 지문(`Config/Dev/CookCodeInputs.json` 의 `Source/Engine/Navigation`)이 이미 덮는다 — 새 쿠킹 작업을 두지 않는다. 런타임 베이크(Dev · 스트리밍 안 하는 씬)는 모든 타일이 늘 끼워져 있어 그래프가 필요 없다.
+2. **계층 경로(`NavStreamRoute`).** 시작 · 목적지 클러스터 → A* → 시작부터 타일이 이어 오른 마지막 클러스터(앞선 자리). 다 올라 있으면 세밀 경로 하나, 아니면 앞선 타일의 다음 클러스터 쪽 가장자리 점을 군중의 중간 목표로 건다. 내비메시 판 번호가 바뀌거나(타일이 오르내림) 중간 목표에 닿으면 다시 계획한다. 동기 질의는 `SceneNavigation::findStreamingPath`(세밀 경로 + 대략 점, `Partial`). 영역 비용 · 막힌 링크는 대략 그래프가 보지 않는다 — 세밀 경로가 보고 다가가며 다시 계획한다.
+3. **내려간 구역 위 이동 = 가상 이동(정지가 아니다).** 서 있는 타일이 내려갔거나 앞선 가장자리에 닿았는데 그 너머가 내려가 있으면, 대략 점(클러스터 중심들 · 목적지)을 따라 최대 속도로 시간을 진행한다(충돌 · 회피 없음 — Mass 의 낮은 LOD 자리). 지나는 자리의 타일이 오르고 그 너머가 이어지면 군중으로 순간이동해 세밀 이동으로 돌아온다. 정지를 고르지 않은 까닭: 관찰자가 따라가지 않는 NPC(먼 마을로 가는 상인 · 서버의 관찰자 밖 NPC)가 영영 닿지 않는다. 오브젝트는 `Transform` 이면 자리, `CharacterController` 면 컨트롤러 자리를 옮긴다(내려간 셀에는 땅 충돌이 없다). `SteerOnly` 는 폰 이동이 자리를 정하므로 가장자리에서 기다린다. 셀 소속 재배정(내려간 셀의 NPC 를 지울지 · 옮길지)은 `w-cellstate` 의 몫이고, 내비 쪽은 에이전트가 살아 있는 동안의 이동만 정한다.
+4. **되살림.** 계획할 때 군중 에이전트가 내비메시 밖(`INVALID`)이면 지금 자리로 순간이동해 다시 붙인다.
+5. **긴 링크.** 끝이 이웃 타일 밖인 오프 메시 링크는 굽기에서 오류(`RecastNavMesh.OffMeshLinkSpansTiles`)로 멈추고 넣지 않는다 — Detour 가 이을 수 없는 모양을 조용히 넣지 않는다.
+6. **디버그.** `gv_navDebugDraw` 비트 32(대략 그래프 — 클러스터 색이 그 타일의 로드 단계, 에이전트의 중간 목표 · 대략 점), HUD 섹션 `navstream`(npc 아래 — 종류마다 타일 로드 · 클러스터 · 먼 경로 · 다시 계획 수, 대상 에이전트의 상태), 감시 값 `Nav.RouteReplanCount` · `Nav.StreamLoadedTiles` · `Nav.VirtualAgents`, 개발 명령 `nav.moveto`.
+
+**확인.** 단위 `NavClusterGraphTest`(덩어리 · 링크 간선 · A* · 왕복 · 깨진 바이트), `NavTileStreamingTest`(먼 목표 출발 → 오를 때마다 이어 도착 · 내려간 구역 가상 이동 · 되살림 · 관찰자 둘(서버 구성) · 계층 경로 질의), 시나리오 `game.wildwest.navstream`(prairie — 먼 셀 목표 · 다리 링크 · 군중 셋이 셀 경계를 넘음). 시나리오의 판정은 소스 콘텐츠(셀 없음)와 쿠킹본(`-cooked-content`, 셀 스트리밍) 모두에서 같게 적는다.
+
+**측정.** 계획은 이벤트(목적지 · 타일 오르내림 · 중간 목표 도착)에만 돈다 — 프레임마다 도는 비용은 가상 이동 에이전트의 점 진행뿐이다. `NavClusterGraphTest.RouteCostBench`(64 × 64 타일 격자 A*)로 계획 한 번의 비용을 잰다. 대략 그래프가 없는 내비메시(지금의 모든 씬)는 분기 하나 말고 바뀐 길이 없다.
 
 ## 도구 · 에디터 · 콘텐츠 파이프라인 설계(2026-11-17)
 
