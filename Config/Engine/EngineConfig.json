@@ -32,6 +32,11 @@
     "_characterMeshCache": {
         "_budgetMegabytes": 128
     },
+    "_fileServe": {
+        "_maxResponseHeaderBytes": 16384,
+        "_maxResponseBodyBytes": 1048576,
+        "_requestTimeoutMs": 30000
+    },
     "_render": {
         "_psoBuildBudgetMicroseconds": 2000,
         "_shadowCascadeSplitLambda": 0.75,

@@ -144,6 +144,28 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct FileServeConfig
+     * @brief 장치가 PC 의 팩 폴더를 받는 개발 전용 전송(`-fileserve=<주소>` — `FileServeContentSource` + 평문 HTTP 클라이언트 `PlainHTTPClient`)의 한도입니다.
+     * @details 응답은 PC 쪽 서버(`py -3 -m Scripts fileserve`)가 보내지만 믿지 않는다 — 머리말 · 본문 상한과 요청 시한이 넘치면 그 요청은 실패다(언리얼 `HttpMaxContentLength` · 요청 시한 자리).
+     *          본문 상한은 받는 구간(`FileServeContentSource::kChunkBytes`, 1 MiB) 이상이어야 한다 — 아니면 기동(`AndroidMain`)이 멈춘다. 배포 구성은 이 전송을 짓지 않는다.
+     */
+    REFLECT()
+    struct SW_API FileServeConfig
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 256 )
+        uint32 _maxResponseHeaderBytes{}; ///< 상태 줄 + 헤더(빈 줄까지)의 바이트 상한 — chunked 의 구간 머리 · 트레일러에도 같은 상한
+        PROPERTY( Min = 1 )
+        uint32 _maxResponseBodyBytes{}; ///< 본문 바이트 상한(Content-Length · chunked 합 · 닫힘까지 모두)
+        PROPERTY( Min = 1, Max = 600000, Units = ms )
+        uint32 _requestTimeoutMs{}; ///< 잇기부터 응답 끝까지의 시한(요청 하나, 10 분까지 — 기다림 함수의 int32 ms 안)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct TextureStreamingConfig
      * @brief 텍스처 밉 스트리밍의 정책 값입니다 — 렌더 스레드의 프레임당 제출 수, 위쪽 밉 풀 예산, 올리고 내리는 판단(`TextureStreamingPolicy`)의 값이 한 곳에 있다.
      * @details 언리얼 `r.Streaming.*`(PoolSize · MaxNumTexturesToStreamPerFrame) · 유니티 `QualitySettings.streamingMipmaps*` 자리다.
@@ -606,6 +628,9 @@ namespace sw
 
         PROPERTY()
         CharacterMeshCacheConfig _characterMeshCache{}; ///< 캐릭터 외형이 구운 · 합친 메시 캐시의 예산(게임 모듈이 보는 조각)
+
+        PROPERTY()
+        FileServeConfig _fileServe{}; ///< 개발 전용 장치 전송(Fileserve)의 응답 한도 · 시한
 
         PROPERTY()
         RenderConfig _render{}; ///< 렌더러 정책 값(PSO 예산 · …)

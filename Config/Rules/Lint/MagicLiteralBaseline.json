@@ -97,7 +97,7 @@
     "Source/Core/Spatial/SpatialHashGrid2D.h": {"minus-one": 2},
     "Source/Core/String/JSONStringUtil.cpp": {"hex": 3},
     "Source/Core/String/StringBuilder.h": {"integer": 3},
-    "Source/Core/String/StringUtil.cpp": {"minus-one": 4, "integer": 7, "hex": 47},
+    "Source/Core/String/StringUtil.cpp": {"minus-one": 4, "integer": 7, "hex": 33},
     "Source/Core/String/StringUtil.h": {"minus-one": 2, "integer": 4},
     "Source/Core/String/UTF8Util.h": {"hex": 10},
     "Source/Core/String/fixed_string.h": {"hex": 2},

@@ -1215,6 +1215,7 @@ public:
 2. PC 쪽 `Scripts/net/fileserve.py`: 기본 바인드 루프백(USB 는 `adb reverse`), 경로는 상대 · `..` · 역슬래시 · 드라이브 · NUL 없음 + 실제 경로가 루트 아래, 읽기만, 오류 본문은 짧은 글.
 3. **남은 몫 — 장치 전송.** App · DevTools 는 GameFramework(실제 HTTP 클라이언트 `BlockingHTTPClient`)를 링크하지 않고, 엔진은 일부러 네트워크 클라이언트를 싣지 않는다. 그런데 콘텐츠 소스는 엔진이 첫 팩을 읽기 전(`android_main` — 게임 모듈보다 앞)에 걸어야 한다.
    → 엔진 층에 개발 전용 평문 HTTP/1.1 GET 클라이언트(`PlatformSocketUtil` 위, TLS 없음, 응답 본문 상한, 시한)를 두고 배포 구성에서는 빼며, `AndroidMain` 이 `-fileserve=<주소>` 일 때 그것으로 `FileServeContentSource` 를 건다(거울 = 내부 저장소 `FileServe/`). GameFramework 의 HTTP 파서를 Engine 으로 내리는 길은 크기 L 이라 이 기능만으로는 하지 않는다.
+   → 됨(2026-11-20): `Engine/Net/Dev/PlainHTTPClient`(GET · `Connection: close` · Content-Length · chunked, 1xx · 리다이렉트 · 압축 없음, TCP 는 `PlatformSocketUtil::connectTCPSocket` 등), 한도 · 시한은 `EngineConfig::_fileServe`(구운 엔진 설정에서 읽는다 — 정적 구성은 디스크 Config 가 없다), 인자 `FILESERVE`(`CommandLineManager::findValueBeforeParse`). 남은 것은 실기기 측정(아래).
 
 **측정.** 재는 법: Android-Release 에서 팩 하나를 다시 구운 뒤 `adb reverse` + `-fileserve` 로 기동까지 걸린 시간 대 `android-apk` 다시 묶기 + 설치. 판정: 다시 받는 몫이 APK 길의 1/2 아래가 아니면 구간 크기 · 동시 받기를 본다.
 
