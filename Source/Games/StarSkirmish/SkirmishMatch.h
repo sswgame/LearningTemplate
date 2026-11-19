@@ -93,10 +93,14 @@ namespace sw
     /**
      * @class SkirmishMatch
      * @brief 64×64 맵의 1 대 1 한 판입니다. 0 번은 남서쪽, 1 번은 북동쪽(점 대칭)에서 시작합니다.
+     *        시계 · 끝 알림은 리플렉션 상태 칸(`StateIO::reflected`)이고, 월드 · 지갑 · AI 는 손 본문이 그 형식의 `serializeState` 로 싣는다.
      */
+    REFLECT()
     class SkirmishMatch
     {
     public:
+        REFLECT_BODY();
+
         static constexpr int32 kMapSize      = 64;
         static constexpr int32 kPlayerCount  = 2;
         static constexpr uint8 kHumanPlayer0 = 1u << 0; ///< 사람 깃발 - 0 번을 사람이 맡는다(옛 "사람 여부" 값 1 과 같아 세이브 바이트가 그대로다)
@@ -160,10 +164,13 @@ namespace sw
         vector<RTSEvent>      _listFrameEvent;
         vector<uint8>         _listCliff;
         SkirmishMatchSettings _settings;
-        float32               _statusTimer;
-        float32               _huntTimer;
-        uint8                 _arrAIActive[kPlayerCount];
-        uint8                 _humanMask; ///< 사람이 맡은 플레이어 깃발(`kHumanPlayer0` · `kHumanPlayer1`)
-        uint8                 _bReportedOver;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _statusTimer;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _huntTimer;
+        uint8   _arrAIActive[kPlayerCount];
+        uint8   _humanMask; ///< 사람이 맡은 플레이어 깃발(`kHumanPlayer0` · `kHumanPlayer1`)
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bReportedOver;
     };
 } // namespace sw
