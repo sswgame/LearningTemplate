@@ -38,7 +38,16 @@ namespace sw
         NetMessageWriter();
 
         /** @brief 비우고 종류 바이트를 씁니다. 본문은 돌려준 `BitWriter` 에 이어 씁니다. */
-        BitWriter&         begin( uint8 kind );
+        BitWriter& begin( uint8 kind );
+        /**
+         * @brief 비우고 표 @p TTable 의 메시지 @p TMessage 의 종류 바이트와 본문(고정 배치형, `NetMessageBodyDef`)을 씁니다.
+         * @return 범위 밖 값이 있으면 오류를 남기고 false 입니다 — 쓰다 만 바이트이므로 보내지 않는다.
+         */
+        template <typename TTable, typename TMessage>
+        [[nodiscard]] bool writeMessage( const typename TMessage::Body& body )
+        {
+            return TMessage::writeBody( body, begin( TTable::template getKindOf<TMessage>() ) );
+        }
         [[nodiscard]] bool send( INetPeers& peers, int32 connectionID, NetChannelKind channel ) const;
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
         int32 broadcast( INetPeers& peers, NetChannelKind channel, int32 exceptID = constant::invalid_index::kInt32 ) const;

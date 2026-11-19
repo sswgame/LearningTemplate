@@ -375,12 +375,11 @@ SW_TEST_CASE_F( TurnRelayTest, SeatsCannotBeStolen )
     thief._relay.join( 7 ); // 받는 쪽이 방 7 의 메시지를 보도록 - 이 입장은 RoomFull 로 끝난다
     poll();
     (void)pollAll( thief._relay );
-    BitWriter writer;
-    writer.writeBits( NetTurnRelayMessage::kJoin, 8 );
-    writer.writeVarUint( 7 );
-    writer.writeVarInt( -1 );
-    writer.writeUint32( relay( 0 ).getToken() );
-    writer.writeVarUint( 0 );
+    TurnJoinBody stolenJoin;
+    stolenJoin._roomID = 7;
+    stolenJoin._token  = relay( 0 ).getToken();
+    NetMessageWriter writer;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Join>( stolenJoin ) ) );
     SW_EXPECT_TRUE( _server.handleMessage( 3, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     poll();
     listEvent = pollAll( thief._relay );
@@ -473,12 +472,18 @@ SW_TEST_CASE_F( TurnRelayTest, OversizedActionsAreRefused )
     SW_EXPECT_TRUE( _listClient[0]->_peers._listSent.empty() );
     SW_EXPECT_EQUAL( relay( 0 ).submitAction( makeAction( 1 ) ), 0 );
 
+    // 상한 길이의 본문을 쓰면 본문 형식이 더 쓰지 못하게 막는다(쓰기 실패). 상한 본문 뒤에 바이트를 덧붙인 꾸민 메시지는 남는 비트라 손상이다.
+    TurnActionBody action;
+    action._roomID = 7;
+    action._action.assign( static_cast<size_t>( NetTurnRelayMessage::kMaxActionBytes ) + 1, uint8{ 0 } );
+    NetMessageWriter refusedWriter;
+    SW_EXPECT_LOG( "Net.MessageBodyOutOfRange" );
+    SW_EXPECT_FALSE( ( refusedWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Action>( action ) ) );
+    action._action.resize( static_cast<size_t>( NetTurnRelayMessage::kMaxActionBytes ) );
     BitWriter writer;
     writer.writeBits( NetTurnRelayMessage::kAction, 8 );
-    writer.writeVarUint( 7 );
-    writer.writeVarUint( 0 );
-    const vector<uint8> tooLong( static_cast<size_t>( NetTurnRelayMessage::kMaxActionBytes ) + 1, 0 );
-    writer.writeBlob( tooLong.data(), static_cast<int32>( tooLong.size() ) );
+    SW_REQUIRE_TRUE( NetTurnRelayMessage::Action::writeBody( action, writer ) );
+    writer.writeBits( 0xFFu, 8 );
     SW_EXPECT_TRUE( _server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
 }
 
@@ -528,12 +533,10 @@ SW_TEST_CASE( TurnRelayPolicyTest, BadConfigRefusesToStart )
     SW_EXPECT_FALSE( server.initialize( &peers, config ) );
     server.update();
 
-    BitWriter writer;
-    writer.writeBits( NetTurnRelayMessage::kJoin, 8 );
-    writer.writeVarUint( 7 );
-    writer.writeVarInt( -1 );
-    writer.writeUint32( 0 );
-    writer.writeVarUint( 0 );
+    TurnJoinBody join;
+    join._roomID = 7;
+    NetMessageWriter writer;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Join>( join ) ) );
     SW_EXPECT_TRUE( server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_TRUE( server.findRoom( 7 ) == nullptr );
     SW_EXPECT_TRUE( peers._listSent.empty() );
@@ -553,4 +556,30 @@ SW_TEST_CASE_F( TurnRelayTest, TruncatedMessagesAreMalformed )
     const uint8 arrShort[] = { NetTurnRelayMessage::kApplied, 7 };
     SW_EXPECT_TRUE( client._relay.handleMessage( 0, arrShort, 2, NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
     SW_EXPECT_TRUE( client._relay.getActions().empty() );
+}
+
+// 결함: 거절 이유 바이트를 범위 검사 없이 열거형으로 바꿨다 - 본문 형식이 등록 열거자 밖 값을 손상으로 거절한다.
+SW_TEST_CASE_F( TurnRelayTest, UnknownRejectReasonIsMalformed )
+{
+    Client& client = addClient();
+    client._relay.join( 7 );
+    BitWriter writer;
+    writer.writeBits( NetTurnRelayMessage::kRejected, 8 );
+    writer.writeVarUint( 7 );     // 방
+    writer.writeVarInt( 0 );      // 행동 번호
+    writer.writeBits( 0xFFu, 8 ); // 열거자 범위(9 개) 밖
+    SW_EXPECT_TRUE( client._relay.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
+    SW_EXPECT_TRUE( pollAll( client._relay ).empty() );
+}
+
+// 본문 판은 본문 형식의 스키마 해시다 - 형식이 다르면 표 판이 달라 라우터가 상대와 맞출 때 끊는다(`NetMessageRouterTest.DifferentMessageTableVersionsDisconnect`).
+SW_TEST_CASE( TurnRelayWireTest, BodyRevisionFollowsTheBodySchema )
+{
+    using JoinTable   = NetMessageTable<NetKitMessageRange::kTurnRelay, NetMessageBodyDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnJoinBody>>;
+    using JoinedTable = NetMessageTable<NetKitMessageRange::kTurnRelay, NetMessageBodyDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnJoinedBody>>;
+    SW_EXPECT_NOT_EQUAL( NetTurnRelayMessage::Join::getBodyRevision(), NetTurnRelayMessage::Joined::getBodyRevision() );
+    SW_EXPECT_NOT_EQUAL( JoinTable::computeWireVersion(), JoinedTable::computeWireVersion() );
+    SW_EXPECT_EQUAL( JoinTable::computeWireVersion(), JoinTable::computeWireVersion() ); // 같은 형식은 같은 판(결정적)
+    TurnRelayServer server;
+    SW_EXPECT_EQUAL( server.getWireVersion(), NetTurnRelayMessage::Table::computeWireVersion() );
 }
