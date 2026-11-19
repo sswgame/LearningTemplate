@@ -192,4 +192,22 @@ namespace sw
         const float3  gradientColor = float3::lerp( poleColor, _horizonColor, horizonWeight );
         return gradientColor * _intensity;
     }
+
+    bool SkyGradient::hasSameRadiance( const SkyGradient& other ) const
+    {
+        const SkyAtmosphere& mine   = _atmosphere;
+        const SkyAtmosphere& theirs = other._atmosphere;
+        const bool           bSky   = _mode == other._mode && _zenithColor == other._zenithColor && _horizonColor == other._horizonColor && _groundColor == other._groundColor &&
+                          _intensity == other._intensity && _horizonExponent == other._horizonExponent;
+        const bool bAtmosphere = mine._rayleighScale == theirs._rayleighScale && mine._mieScale == theirs._mieScale && mine._mieAnisotropy == theirs._mieAnisotropy &&
+                                 mine._sunIntensity == theirs._sunIntensity && mine._planetRadiusKm == theirs._planetRadiusKm && mine._atmosphereHeightKm == theirs._atmosphereHeightKm &&
+                                 mine._observerAltitudeKm == theirs._observerAltitudeKm && mine._sunDiscAngle == theirs._sunDiscAngle;
+        const bool bSun  = _toSunDirection == other._toSunDirection && _sunColor == other._sunColor;
+        bool       bHdri = _hdriTexture == other._hdriTexture && _hdriRotation == other._hdriRotation;
+        for ( uint32 index = 0; index < SH9Color::kCoefficientCount; ++index )
+        {
+            bHdri = bHdri && _hdriAmbient._arrCoefficient[index] == other._hdriAmbient._arrCoefficient[index];
+        }
+        return bSky && bAtmosphere && bSun && bHdri;
+    }
 } // namespace sw

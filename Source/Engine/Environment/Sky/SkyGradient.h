@@ -116,6 +116,7 @@ namespace sw
         hashed_string _hdriTexture{};                      ///< HDRI 모드의 등장방형 텍스처 경로
         float32       _hdriRotation{ 0.0f };               ///< HDRI 모드에서 하늘을 Y 축으로 돌리는 각(라디안)
         SH9Color      _hdriAmbient{};                      ///< HDRI 모드의 저주파 빛(원본의 SH9 투영, `Scripts/dev/make_sky_hdri_prefabs.py`). CPU 는 텍스처를 읽지 않는다
+        uint64        _sourceID{ 0 };                      ///< 이 값을 낸 `SkyComponent` 의 번호(컴포넌트가 아니면 0). 스카이 라이트가 "다른 하늘" 과 "같은 하늘의 값이 바뀜" 을 가린다
 
         /**
          * @brief 해(방향광)를 정합니다. @p lightTravelDirection 은 빛이 나아가는 방향(방향광의 `getLightDirection`)이고 해 쪽은 그 반대다. 길이가 0 이면 해가 없다(색 0).
@@ -124,5 +125,11 @@ namespace sw
 
         /** @brief 방향 @p direction(길이는 상관없다, 0 벡터는 지평선)에서 오는 하늘빛입니다. 구름과 해 원반은 넣지 않는다. */
         float3 evaluateRadiance( const float3& direction ) const;
+        /**
+         * @brief @p other 와 `evaluateRadiance` 가 모든 방향에서 같으면 true 입니다 — 구름(`_clouds`)과 출처(`_sourceID`)만 빼고 모든 값을 견준다.
+         * @details 스카이 라이트가 다시 거를지 정한다(`SkyLightCache`). 색 · 방향은 `float3::operator==` 의 허용 오차로 견준다 — 그 안의 흔들림은 같은 하늘이다.
+         *          하늘빛을 바꾸는 필드를 더하면 이 함수에도 더한다(SkyTest.SameRadianceComparesEveryRadianceField 가 필드마다 본다).
+         */
+        [[nodiscard]] bool hasSameRadiance( const SkyGradient& other ) const;
     };
 } // namespace sw

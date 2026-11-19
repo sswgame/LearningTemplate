@@ -195,6 +195,40 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct SkyLightConfig
+     * @brief 스카이 라이트(하늘을 거칠기 단계마다 걸러 프로브 밖 환경광으로 쓰는 것 — `SkyLightCache`)의 정책 값입니다.
+     * @details 언리얼 Sky Light 의 Cubemap Resolution · Real Time Capture, 유니티 Environment Reflections 의 Resolution, Godot Sky 의 Radiance Size · Process Mode 자리다.
+     *          거르기는 CPU 가 하늘이 바뀐 프레임에만 한다 — 비용은 한 변² × (단계 수 − 1) × 표본 수에 비례한다.
+     */
+    REFLECT()
+    struct SW_API SkyLightConfig
+    {
+        REFLECT_BODY();
+
+        /** @brief 옥타헤드럴 한 변 텍셀 수입니다(`ReflectionProbeAsset::kMinResolution` ~ `kMaxResolution`). 단계마다 같은 크기다. */
+        PROPERTY( Min = 4, Max = 256 )
+        uint32 _resolution{};
+
+        /** @brief 거칠기 단계 수입니다 — 단계 l 의 거칠기는 l / (단계 수 − 1) 이다(`ReflectionProbeAsset::kMinLevelCount` ~ `kMaxLevelCount`). */
+        PROPERTY( Min = 2, Max = 8 )
+        uint32 _levelCount{};
+
+        /** @brief 거친 단계의 텍셀 하나를 만드는 GGX 중요도 표본 수입니다(`ReflectionProbeAsset::filterRoughnessLevels`). */
+        PROPERTY( Min = 1 )
+        uint32 _filterSampleCount{};
+
+        /**
+         * @brief 같은 하늘의 값이 바뀔 때(시간대 · 날씨) 다시 거르기까지의 최소 프레임 수입니다. 처음 보는 하늘은 기다리지 않고 그 프레임에 거른다.
+         * @details 언리얼 Real Time Capture 가 캡처를 여러 프레임에 나눠 주기를 두는 자리다 — 해가 프레임마다 조금씩 움직여도 이 간격에 한 번만 거른다.
+         */
+        PROPERTY( Min = 1 )
+        uint32 _captureIntervalFrames{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct RenderConfig
      * @brief 렌더러 정책 값입니다(감사 RN-16 — C++ 상수에 흩어졌던 렌더 정책을 이 한 자리로 옮긴다. 언리얼 `r.*` 콘솔 변수의 바탕 층 · 유니티 SRP 에셋 자리).
      * @details 셰이더가 읽는 값은 쿠킹 define 한 경로로만 간다(`ShaderCompiler::appendEngineDefines` — 도구 지문에 섞여 값이 바뀌면 셰이더 캐시가 함께 낡는다).
@@ -249,6 +283,10 @@ namespace sw
         /** @brief 텍스처 밉 스트리밍 설정입니다(프레임당 제출 수 · 풀 예산 · 내리기까지의 유휴 프레임 — `TextureStreamingConfig`). 스트리밍 값은 이 칸 한 곳이다. */
         PROPERTY()
         TextureStreamingConfig _textureStreaming{};
+
+        /** @brief 스카이 라이트 설정입니다(거르기 크기 · 단계 수 · 표본 수 · 다시 거르는 간격 — `SkyLightConfig`). */
+        PROPERTY()
+        SkyLightConfig _skyLight{};
     };
 } // namespace sw
 

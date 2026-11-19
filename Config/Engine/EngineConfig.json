@@ -48,6 +48,12 @@
             "_idleFramesBeforeRelease": 300,
             "_minFramesBetweenChanges": 30,
             "_promoteBudgetMarginPercent": 10
+        },
+        "_skyLight": {
+            "_resolution": 32,
+            "_levelCount": 6,
+            "_filterSampleCount": 32,
+            "_captureIntervalFrames": 30
         }
     },
     "_bBackgroundGamepadInput": false,
