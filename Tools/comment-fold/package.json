@@ -1,0 +1,88 @@
+{
+  "name": "comment-fold",
+  "displayName": "Comment Fold",
+  "description": "Fold or unfold every comment in a C, C++ or HLSL file with one toggle: block comments, doc comments and runs of // lines. Strings and raw strings are never mistaken for comments, and code folding is left alone.",
+  "version": "1.0.0",
+  "publisher": "sw-engine",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "fold",
+    "comments",
+    "c++",
+    "hlsl",
+    "doxygen"
+  ],
+  "activationEvents": [
+    "onLanguage:c",
+    "onLanguage:cpp",
+    "onLanguage:hlsl"
+  ],
+  "main": "./Source/Extension.js",
+  "files": [
+    "Source"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "commentFold.toggle",
+        "title": "Toggle Comments",
+        "category": "Comment Fold",
+        "icon": "$(fold)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "commentFold.toggle",
+          "when": "editorLangId =~ /^(c|cpp|hlsl)$/",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "commentFold.toggle",
+          "when": "editorLangId =~ /^(c|cpp|hlsl)$/"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "commentFold.toggle",
+        "key": "ctrl+k ctrl+shift+/",
+        "mac": "cmd+k cmd+shift+/",
+        "when": "editorTextFocus && editorLangId =~ /^(c|cpp|hlsl)$/"
+      }
+    ],
+    "configuration": {
+      "title": "Comment Fold",
+      "properties": {
+        "commentFold.foldOnOpen": {
+          "type": "boolean",
+          "default": false,
+          "scope": "language-overridable",
+          "description": "Fold every comment when a C, C++ or HLSL file is opened for the first time in this window."
+        },
+        "commentFold.minimumLineCount": {
+          "type": "integer",
+          "default": 2,
+          "minimum": 2,
+          "scope": "language-overridable",
+          "description": "Fold only comments (a block comment or a run of // lines) that span at least this many lines."
+        },
+        "commentFold.excludeFileHeader": {
+          "type": "boolean",
+          "default": false,
+          "scope": "language-overridable",
+          "markdownDescription": "Keep the file header visible: comments before the first line of code (`#pragma once` does not count as code) and any comment with an `@file` or `\\file` tag."
+        }
+      }
+    }
+  }
+}
