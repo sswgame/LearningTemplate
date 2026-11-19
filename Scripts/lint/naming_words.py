@@ -14,6 +14,8 @@ Scripts/lint/naming_words.py
 - term — 금지 명사(`_bannedTerms`)는 모든 식별자(함수 · 형식 · 멤버 · 지역)의 **모든 단어**에서 본다. 표준 합성어(`WorkArea` — Win32 `SPI_GETWORKAREA`)는 `_keepTerms`.
 - predicate — `bool` 을 돌려주는 함수의 첫 단어가 3인칭 동사(끝이 s)면 `_predicateWords`(언리얼 `Is · Has · Can · Should · Uses · Needs · Requires · Supports …`)여야 한다.
 - lookup — 끝 단어가 `For` · `Of` 인 함수는 조회 동사(`_lookupWords` — get · find · compute …)로 시작해야 한다(`materialGroupFor` 는 "찾거나 만든다" 를 숨겼다).
+- kind — 값의 갈래를 고르는 열거형(`enum class`)은 끝이 `Kind` 다 — `…Type` 은 C++ · 리플렉션 형식을 뜻한다(NamingCpp). 프로토콜 · 외부 API 의 자기 용어(`HTTP2FrameType`)는 `_keep`.
+  낱말 표는 낱말 하나씩만 봐서 열거형 끝말 모양을 막지 못했다 — 2026-11-19 24 개를 전수 개명한 뒤 새로 들어오지 않게 둔다.
 - word — 모든 선언 이름(형식 · 열거자 · 별칭 · 함수 · 멤버 · 상수 · 변수 · 매크로)과 `Source` 의 파일 · 폴더 이름, 스크립트(`Scripts` · `.claude/hooks` ·
   `.claude/skills` · `cmake` 의 함수 · 클래스 · 상수 · CLI 명령 · 규칙 id · CMake 함수 · 옵션 · 파일 · 폴더 이름)의 **모든 낱말**이 낱말 표
   (`_words` 의 a 업계 · b 게임)에 있어야 한다. 앞 규칙들은 함수 첫 단어 · 형식 끝 단어만 허용 표로 봐서, 멤버 · 파일 이름 · 이름 가운데의 조어
@@ -49,7 +51,7 @@ from lint.lint_scope import LintScope, is_under, make_whole_scope, read_texts  #
 
 CONFIG_PATH = "Config/Rules/Lint/NamingWords.json"
 BASELINE_PATH = "Config/Rules/Lint/NamingBaseline.json"
-RATCHET_RULES = ("verb", "term", "predicate", "lookup", "word")
+RATCHET_RULES = ("verb", "term", "predicate", "lookup", "word", "kind")
 EXTENSIONS = (".h", ".cpp", ".inl")
 COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 STRING = re.compile(r'R"\((?:.|\n)*?\)"|"(?:[^"\\\n]|\\.)*"')
@@ -83,6 +85,7 @@ NOT_NAME = {"return", "else", "new", "delete", "throw", "case", "goto", "co_retu
             "public", "private", "protected", "const", "constexpr", "override", "final", "noexcept", "volatile", "default", "mutable", "static", "inline", "virtual",
             "explicit", "friend", "template", "typedef", "extern", "auto", "void", "defined", "this", "nullptr", "true", "false", "requires", "export", "import"}
 TYPE_DECLARATION = re.compile(r"\b(?:class|struct|union|enum(?:\s+class|\s+struct)?)\s+(?:(?:SW_\w+|alignas\s*\([^)]*\)|\[\[[^\]]*\]\])\s+)*([A-Za-z_]\w*)")
+ENUM_CLASS_DECLARATION = re.compile(r"\benum\s+(?:class|struct)\s+(?:(?:SW_\w+|\[\[[^\]]*\]\])\s+)*([A-Za-z_]\w*)")
 ENUM_BODY = re.compile(r"\benum\b[^;{()]*\{([^}]*)\}")
 ALIAS_DECLARATION = re.compile(r"\busing\s+([A-Za-z_]\w*)\s*=|\btypedef\b[^;{}]*?\b([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*;")
 MACRO_DECLARATION = re.compile(r"^[ \t]*#[ \t]*define[ \t]+([A-Za-z_]\w*)", re.M)
@@ -258,6 +261,10 @@ def classify_names(list_code: Iterable[tuple[str, str]], table: dict) -> tuple[l
             words = split_words(name, function=True)
             if len(words) > 1 and words[-1] in ("For", "Of") and words[0] not in lookup_words:
                 record("lookup", name, path, f"'{name}' 는 동사 없는 For · Of 게터다 — get · find · findOrAdd · compute 로 시작한다(_lookupWords)")
+        for match in ENUM_CLASS_DECLARATION.finditer(code):
+            name = match.group(1)
+            if name.endswith("Type"):
+                record("kind", name, path, f"열거형 '{name}' 의 끝이 Type 이다 — 값의 갈래는 …Kind(NamingCpp, 언리얼 E…Kind · 유니티 …Kind). 프로토콜 · 외부 API 의 자기 용어면 _keep 에 이유와 함께")
         for match in BOOL_FUNCTION.finditer(code):
             name = match.group(1)
             words = split_words(name, function=True)
@@ -403,6 +410,8 @@ def run_self_check() -> None:
     assert set(ratchet["term"]) == {"FooVerdict", "hasPendingWork", "_verdictCount"}, ratchet
     assert set(ratchet["predicate"]) == {"drawsBatch"}, ratchet
     assert set(ratchet["lookup"]) == {"materialGroupFor"}, ratchet
+    kind_problems, kind_ratchet = classify_names([("a.h", strip_code("enum class PacketType : uint8 { A }; enum class PacketKind { A }; enum OldType { B }; struct ValueType {};"))], table)
+    assert set(kind_ratchet["kind"]) == {"PacketType"}, kind_ratchet   # enum class 만 본다 — 구조체 · 옛 enum 은 다른 규칙 몫
     baseline = {"verb": ["drainEvents"], "term": ["FooVerdict", "hasPendingWork", "_verdictCount", "goneName"], "predicate": ["drawsBatch"], "lookup": []}
     ratchet_problems = compare_baseline(ratchet, baseline)
     assert any("materialGroupFor" in line for line in ratchet_problems), ratchet_problems   # 기준선에 없는 새 위반
