@@ -1587,6 +1587,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
   - 스카이 라이트 · 반사 프로브 거르기를 filtered importance sampling(원본 밉을 pdf 로 고름), HDRI 반사를 SH9 대신 거른 텍스처로(VQEngine, S → GPU 찍기 M).
   - TAA: YCoCg 분산 클리핑 · Catmull-Rom 히스토리 · 적응 블렌드 → 그 위에 TAAU(Adria, S → M).
   - 프로브 GI 빛샘: 거리 모먼트 + 체비쇼프 가시성 · 뒷면 가중(Adria DDGI, M — GI 골든 전부).
+    - 판단(2026-11-19, 했다): 모먼트는 텍스처 슬롯 대신 프로브 버퍼(t13) 안 SH9 뒤 옥타헤드럴 8×8 묶음(float4 하나에 텍셀 둘)으로 — 반사 프로브와 같은 이유(네 백엔드 같은 길, 바인딩 수 그대로). 광선마다 가장 가까운 텍셀에 기록 비율로 섞고(DDGI 의 텍셀마다 코사인 가중 적분은 스레드 하나 = 프로브 하나라 비싸 뺐다), 읽을 때 쌍선형. 가중 식은 shading_math.hlsli 하나를 C++ 테스트와 셰이더가 함께 읽고, 계수는 EngineConfig `_render._probeVisibility` → 쿠킹 define. 베이크 볼륨은 모먼트가 없어 뒷면 가중 · 바이어스만 받는다. 프로브 재배치(DDGI relocation)는 칸 안에 박힌 프로브를 모먼트로 가리는 것으로 대신한다.
   - 2 단계 HZB 가림(지난 HZB → 새 HZB 로 다시 시험) — SSR 계층 탐색 · 큰 물체 컬링도 같은 피라미드(Adria · VQEngine, L).
   - 자동 노출 히스토그램 + 백분위 컷(Adria, S~M), HDR 디스플레이 출력 `DisplayOutputDesc` 한 값에서 스왑체인 포맷 · 톤맵 변형(VQEngine, M~L), 볼류메트릭 구름 · 비 가림 맵(Adria).
 - 작업 시스템(측정 먼저 — 합류 대기 구간 · park 수 계기부터): 묶음 제출 `submitBatch`, `runParallel` 우선순위 레인, guided 청크, 후속 하나 이어 실행, 넘침 보조 큐, 단계 그래프 위상 순서 재사용(Taskflow).

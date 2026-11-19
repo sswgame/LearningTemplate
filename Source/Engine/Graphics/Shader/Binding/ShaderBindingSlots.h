@@ -117,6 +117,10 @@ namespace sw
          */
         inline constexpr uint32 kLightProbeBuffer      = SW_SLOT_LIGHT_PROBE_SRV;
         inline constexpr uint32 kLightProbeFloat4Count = SW_LIGHT_PROBE_FLOAT4_COUNT;
+        /// @brief 프로브 가시성(거리 모먼트) 옥타헤드럴 한 변 텍셀 수와 프로브 하나의 모먼트 원소 수(float4 하나에 텍셀 둘)입니다 — binding_slots.hlsli 8 절.
+        inline constexpr uint32 kProbeVisibilityResolution  = SW_PROBE_VISIBILITY_RESOLUTION;
+        inline constexpr uint32 kProbeVisibilityFloat4Count = SW_PROBE_VISIBILITY_FLOAT4_COUNT;
+        static_assert( kProbeVisibilityResolution * kProbeVisibilityResolution == kProbeVisibilityFloat4Count * 2u, "모먼트 텍셀 둘이 float4 하나다" );
         /**
          * @brief 스킨 칸 → 결과 시작 표(g_SwSkinResultOffsets, `uint` 배열)입니다. 칸마다 모프 풀 안 그 스킨 결과의 첫 원소(못 든 칸은 무효)입니다.
          * @details 인스턴스의 `GPUInstance::_skinSlot` 으로 읽는다(binding.hlsli `MorphPool::loadSkinResultOffset`). RT 의 모프 풀이 스킨 집합이 바뀐 프레임에만 올린다.

@@ -70,6 +70,13 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 프로브 버퍼(t13) 안 실시간 볼륨 하나의 자리입니다(`LightProbeElementBuilder::appendRealtimeVolume`). */
+    struct RealtimeProbeSlot
+    {
+        uint32 _probeBase{ 0 };      ///< 첫 프로브 번호(프로브 단위 — 볼륨 원소의 `_params.w`)
+        uint32 _visibilityBase{ 0 }; ///< 가시성 모먼트 묶음의 첫 원소(float4 단위 — 볼륨 원소의 `_extra.x`, binding_slots.hlsli 8 절)
+    };
+
     /**
      * @class LightProbeElementBuilder
      * @brief 프로브 버퍼(t13)에 올릴 원소(라이트 프로브 SH9 · 반사 프로브 텍셀 · 실시간 볼륨의 0 자리 · 스카이 라이트)를 모읍니다. 게임 스레드의 수집기가 프레임을 넘어 들고 있습니다.
@@ -89,8 +96,13 @@ namespace sw
          * @return 그 볼륨의 첫 프로브 번호(프로브 단위)
          */
         [[nodiscard]] uint32 appendBakedVolume( uint64 componentID, uint32 revision, const LightProbeGrid& grid );
-        /** @brief 실시간 볼륨 하나의 자리(0 으로 채운 프로브 @p probeCount 개)를 잡고 첫 프로브 번호(프로브 단위)를 돌려줍니다. 값은 GPU 의 갱신 컴퓨트가 쓴다. */
-        [[nodiscard]] uint32 appendRealtimeVolume( uint32 probeCount );
+        /**
+         * @brief 실시간 볼륨 하나의 자리(0 으로 채운 프로브 @p probeCount 개의 SH9 원소, 그 뒤에 가시성 모먼트 묶음)를 잡습니다. 값은 GPU 의 갱신 컴퓨트가 쓴다.
+         * @details 모먼트 묶음은 프로브 단위 번호가 어긋나지 않게 `kLightProbeFloat4Count` 의 배수로 올린다(`computeRealtimeElementCount`).
+         */
+        [[nodiscard]] RealtimeProbeSlot appendRealtimeVolume( uint32 probeCount );
+        /** @brief 실시간 볼륨 하나가 프로브 버퍼에서 차지하는 원소 수(float4)입니다 — SH9 원소와 모먼트 묶음(`kLightProbeFloat4Count` 의 배수로 올림)의 합. */
+        [[nodiscard]] static uint32 computeRealtimeElementCount( uint32 probeCount );
         /** @brief 반사 프로브 하나의 텍셀 자리를 잡고 첫 텍셀 번호(float4 단위)를 돌려줍니다. */
         [[nodiscard]] uint32 appendReflectionProbe( uint64 componentID, uint32 revision, const ReflectionProbeAsset& data );
         /**

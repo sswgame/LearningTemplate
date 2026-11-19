@@ -312,11 +312,11 @@ SW_TEST_CASE( RealtimeProbeTest, PlanLayoutAccumulatesOffsets )
     SW_EXPECT_EQUAL( 0u, layout._listVoxelWordOffset[0] );
     SW_EXPECT_EQUAL( 2u, layout._listVoxelWordOffset[1] );
     SW_EXPECT_EQUAL( 0u, layout._listHistoryOffset[0] );
-    SW_EXPECT_EQUAL( 18u * sw::SH9Color::kGPUFloat4Count, layout._listHistoryOffset[1] );
+    SW_EXPECT_EQUAL( 18u * sw::RealtimeProbeHistoryAllocator::kFloat4PerProbe, layout._listHistoryOffset[1] );
     SW_EXPECT_EQUAL( 23u, layout._totalProbes );
     SW_EXPECT_EQUAL( 18u, layout._totalVoxelWords );
     SW_EXPECT_EQUAL( history.getCapacity(), layout._totalHistoryElements );
-    SW_EXPECT_TRUE( layout._totalHistoryElements >= 23u * sw::SH9Color::kGPUFloat4Count );
+    SW_EXPECT_TRUE( layout._totalHistoryElements >= 23u * sw::RealtimeProbeHistoryAllocator::kFloat4PerProbe );
 }
 
 /**
@@ -390,14 +390,15 @@ SW_TEST_CASE( RealtimeProbeTest, ProjectSkyConstantRadiance )
 }
 
 /**
- * @brief [RealtimeProbeTest] 입력 행은 probe_update.hlsl 의 배치대로 머리 · 하늘 SH · 볼륨 일곱 행으로 짜인다
+ * @brief [RealtimeProbeTest] 입력 행은 probe_update.hlsl 의 배치대로 머리 · 하늘 SH · 볼륨 여덟 행으로 짜인다
  */
 SW_TEST_CASE( RealtimeProbeTest, BuildParamRowsFollowShaderLayout )
 {
     sw::RealtimeProbeRequest request{};
     request._volumeElement._colorIntensity = sw::float4{ 1.0f, 2.0f, 3.0f, 0.0f };
     request._volumeElement._directionType  = sw::float4{ 2.0f, 2.0f, 2.0f, static_cast<float32>( sw::shaderslot::kLightTypeProbeVolume ) };
-    request._volumeElement._params         = sw::float4{ 3.0f, 2.0f, 3.0f, 5.0f }; // 프로브 3 × 2 × 3, 첫 프로브 번호 5
+    request._volumeElement._params         = sw::float4{ 3.0f, 2.0f, 3.0f, 5.0f };   // 프로브 3 × 2 × 3, 첫 프로브 번호 5
+    request._volumeElement._extra          = sw::float4{ 161.0f, 1.0f, 0.0f, 0.0f }; // 가시성 모먼트의 첫 원소 161, 모먼트 있음
     request._probeCount                    = 18;
     request._rayCount                      = 64;
     request._updatePeriod                  = 8;
@@ -434,6 +435,7 @@ SW_TEST_CASE( RealtimeProbeTest, BuildParamRowsFollowShaderLayout )
     SW_EXPECT_EQUAL( 64u, sw::BitUtil::floatToBits( rows[first + 5]._w ) );                                // 광선 수
     SW_EXPECT_EQUAL( 8u, sw::BitUtil::floatToBits( rows[first + 6]._x ) );                                 // 갱신 주기
     SW_EXPECT_EQUAL( 3u, sw::BitUtil::floatToBits( rows[first + 6]._y ) );                                 // 쌓인 갱신 횟수
+    SW_EXPECT_EQUAL( 161u, sw::BitUtil::floatToBits( rows[first + 7]._x ) );                               // 가시성 모먼트의 첫 float4
 }
 
 /**

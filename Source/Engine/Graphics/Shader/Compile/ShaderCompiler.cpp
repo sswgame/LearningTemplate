@@ -778,7 +778,9 @@ namespace sw
 
     ShaderEnginePolicy ShaderEnginePolicy::capture()
     {
-        return ShaderEnginePolicy{ engine::getSubsystem<EngineConfig>()._render._taaHistoryWeight };
+        const RenderConfig&          render     = engine::getSubsystem<EngineConfig>()._render;
+        const ProbeVisibilityConfig& visibility = render._probeVisibility;
+        return ShaderEnginePolicy{ render._taaHistoryWeight, visibility._normalBias, visibility._viewBias, visibility._backfaceFloor, visibility._chebyshevExponent };
     }
 
     void ShaderCompiler::appendEngineDefines( vector<ShaderMacroDefine>& inoutList, const ShaderEnginePolicy& enginePolicy )
@@ -797,10 +799,25 @@ namespace sw
             inoutList.push_back( std::move( indexDefine ) );
         }
         // 렌더 정책(셰이더가 읽는 몫) — 설정 파일이 정본이고 셰이더는 기본값을 두지 않는다(없으면 #error). 도구 지문에 섞여 값이 바뀌면 셰이더 캐시가 함께 낡는다.
-        ShaderMacroDefine taaDefine;
-        taaDefine._name  = "SW_TAA_HISTORY_WEIGHT";
-        taaDefine._value = to_string( enginePolicy._taaHistoryWeight );
-        inoutList.push_back( std::move( taaDefine ) );
+        struct PolicyDefine
+        {
+            const utf8* _pName;
+            float32     _value;
+        };
+        const PolicyDefine arrPolicyDefine[] = {
+            {      "SW_TAA_HISTORY_WEIGHT",       enginePolicy._taaHistoryWeight},
+            {       "SW_PROBE_NORMAL_BIAS",        enginePolicy._probeNormalBias},
+            {         "SW_PROBE_VIEW_BIAS",          enginePolicy._probeViewBias},
+            {    "SW_PROBE_BACKFACE_FLOOR",     enginePolicy._probeBackfaceFloor},
+            {"SW_PROBE_CHEBYSHEV_EXPONENT", enginePolicy._probeChebyshevExponent},
+        };
+        for ( const PolicyDefine& policyDefine : arrPolicyDefine )
+        {
+            ShaderMacroDefine define;
+            define._name  = policyDefine._pName;
+            define._value = to_string( policyDefine._value );
+            inoutList.push_back( std::move( define ) );
+        }
     }
 
     void* ShaderCompiler::findDXCCreateInstance()
