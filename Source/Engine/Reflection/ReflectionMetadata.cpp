@@ -47,6 +47,7 @@ namespace sw
         , _defaultValue{}
         , _pApplyDefault{ nullptr }
         , _assetType{}
+        , _catalogKeyTag{}
         , _repNotify{}
         , _validate{}
         , _pReadMinRange{ nullptr }

@@ -269,7 +269,7 @@ namespace sw
             }
             return RequiredScope::Root;
         }
-        /** @brief 이름 · 경로 형식(hashed_string · TagID · DataPath · AssetID · AssetRef<…>)인지 봅니다 — 빈 값이 "없음" 인 형식이다. 글(`string`)은 빈 값도 값이라 넣지 않는다. */
+        /** @brief 이름 · 경로 형식(hashed_string · TagID · DataPath · AssetID · CatalogKey · AssetRef<…>)인지 봅니다 — 빈 값이 "없음" 인 형식이다. 글(`string`)은 빈 값도 값이라 넣지 않는다. */
         SW_API static bool isNameValueType( const hashed_string& typeName );
 
         /**

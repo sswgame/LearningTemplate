@@ -81,6 +81,8 @@ namespace sw
         PropertyDefaultApplyFunction _pApplyDefault;
         /** @brief 소프트 에셋의 타입 힌트입니다(`PROPERTY( AssetPath )`, `AssetType = "Texture"`). */
         string _assetType;
+        /** @brief `CatalogKey<T>` 칸의 항목 종류 이름 `T` 입니다(파서가 적는다). 참조 표(`DataCatalogReferenceRules`)의 `<CatalogKey tag>` 로 카탈로그를 찾는다. 아니면 빈 글이다. */
+        string _catalogKeyTag;
         /** @brief `RepNotify = fn` 에 적은 메서드 이름입니다. 받은 값으로 바꾼 뒤 이 메서드를 부르며, 호출은 `PropertyInfo::_pRepNotify` 가 맡습니다. */
         hashed_string _repNotify;
         /** @brief `Validate = fn` 에 적은 검증 함수 이름입니다. 결과 메시지와 문서에 씁니다. 호출은 `PropertyInfo::_pValidate` 가 맡습니다. */

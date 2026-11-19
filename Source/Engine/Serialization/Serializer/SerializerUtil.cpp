@@ -568,7 +568,7 @@ namespace sw
             name.remove_prefix( 4 );
         // 이름 · 경로 형식은 빈 글이 "없음" 이다. `string` 은 넣지 않는다 — 글 칸은 빈 값이 뜻 있는 값일 수 있다(명령 표의 "단축키 없음" 같은 고정 열).
         // 다른 데이터를 가리키는 이름은 hashed_string 으로 둔다(린트 required-name-fields 가 기본값을, 이 판정이 빈 값을 막는다).
-        static constexpr string_view kArrNameType[] = { "hashed_string", "TagID", "DataPath", "AssetID" };
+        static constexpr string_view kArrNameType[] = { "hashed_string", "TagID", "DataPath", "AssetID", "CatalogKey" };
         for ( const string_view nameType : kArrNameType )
         {
             if ( name == nameType )

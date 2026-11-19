@@ -19,6 +19,7 @@
 #include "Engine/Reflection/ReflectedAny.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/AssetRefBase.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
 
 #include <cmath>
@@ -593,6 +594,7 @@ namespace sw
 
         DataPath::registerSerializeHandler( context );
         AssetRefBase::registerSerializeHandler( context );
+        CatalogKeyBase::registerSerializeHandler( context );
         SerializeContextInternal::registerHandleTextHandlers( context );
 
         SerializeContextInternal::registerFloatVectorTextHandlers( context );

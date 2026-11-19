@@ -17,11 +17,21 @@
  *         <Reference owner="Quest/Stage" attribute="next" target="Stage" inEntry="true"/> <!-- 같은 퀘스트 안의 단계 -->
  *         <Unique owner="Ghost" attribute="id"/>                                    <!-- 한 파일 안에서 겹치면 오류 -->
  *       </Catalog>
+ *       <Catalog root="FighterCatalog">
+ *         <Reference owner="Fighter/Move" attribute="frames" defaultAttribute="id" target="Move" file="moves"/> <!-- 루트의 moves 가 가리키는 다른 파일 -->
+ *       </Catalog>
+ *       <CatalogKey tag="AbilitySetDef" catalog="AbilityCatalog" entry="AbilitySet"/> <!-- 항목 종류 → 카탈로그 루트 · 원소 -->
+ *       <Field owner="AbilityComponent" field="_abilitySetID" tag="AbilitySetDef"/>  <!-- `CatalogKey<AbilitySetDef>` 칸 -->
  *     </DataCatalogReferenceTable>
  * @endcode
+ *          `<CatalogKey>` · `<Field>` 는 카탈로그 밖(씬 · 프리팹의 컴포넌트 · 구조체 칸 `CatalogKey<Tag>`)에서 항목을 가리키는 칸이다. 쿠커는 쿠킹하는 팩들의
+ *          카탈로그 항목을 모으고(`DataCatalogKeyCheck`) 칸 값이 그 안에 있는지 대조해 없으면 쿠킹 실패다. 줄이 코드와 다르면
+ *          `DataCatalogReferencesTest.FieldTableMatchesReflection` 이 진다(쿠커는 게임 모듈의 리플렉션을 보지 못한다).
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -41,10 +51,35 @@ namespace sw
         string         _attribute;          ///< id 를 적은 속성
         string         _target;             ///< 가리키는 원소 이름(루트의 자식). 겹침 규칙(`<Unique>`)은 비어 있다
         string         _targetKey;          ///< 가리키는 원소의 id 속성(기본 `id`)
+        string         _defaultAttribute;   ///< `_attribute` 를 적지 않았으면 이 속성의 값을 id 로 본다(기술의 `frames` 가 없으면 자기 `id`). 비면 없음
+        string         _fileAttribute;      ///< 가리키는 원소를 이 파일이 아니라 루트의 이 속성이 적은 리소스(루트의 자식)에서 찾는다. 루트가 적지 않았으면 보지 않는다(필수는 읽는 코드가 본다)
         bool           _bNamed{ false };    ///< 값이 `id:수` 꼴이다(콜론 앞이 id) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bOptional{ false }; ///< 깨져도 경고만 한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bInEntry{ false };  ///< 가리키는 원소를 루트가 아니라 같은 항목(owner 경로의 첫 원소)의 자식에서 찾는다(퀘스트 안의 단계 · 트리 안의 스킬) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bUnique{ false };   ///< 겹침 규칙(`<Unique owner attribute>`) — owner 원소의 attribute 값이 한 파일 안에서 겹치면 오류다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+    };
+
+    /**
+     * @struct DataCatalogKeyTarget
+     * @brief 항목 종류 한 줄입니다(표의 `<CatalogKey tag catalog entry>`) — `CatalogKey<Tag>` 의 `Tag` 이름이 가리키는 카탈로그 루트와 항목 원소.
+     */
+    struct DataCatalogKeyTarget
+    {
+        string _tag;       ///< 항목 종류 이름(이름공간 없는 C++ 형식 이름 — 프로퍼티 메타 `_catalogKeyTag`)
+        string _catalog;   ///< 카탈로그 루트 원소 이름
+        string _entry;     ///< 항목 원소 이름(루트의 자식)
+        string _targetKey; ///< 항목의 id 속성(기본 `id`)
+    };
+
+    /**
+     * @struct DataCatalogKeyField
+     * @brief 카탈로그 키 칸 한 줄입니다(표의 `<Field owner field tag>`) — 씬 · 프리팹에서 원소 `owner` 의 속성 · 목록 원소 `field` 가 항목 종류 `tag` 의 id 다.
+     */
+    struct DataCatalogKeyField
+    {
+        string _owner; ///< 칸을 가진 리플렉션 형식 이름(씬 · 프리팹의 원소 이름 — 컴포넌트 · 구조체)
+        string _field; ///< 칸 이름(속성, 또는 `<item>` 을 품은 자식 원소)
+        string _tag;   ///< 항목 종류 이름(`<CatalogKey tag>`)
     };
 
     /**
@@ -80,12 +115,62 @@ namespace sw
 
         /** @brief 읽은 규칙입니다(표 순서). */
         const vector<DataCatalogReferenceRule>& getRules() const { return _listRule; }
+        /** @brief 항목 종류 줄입니다(표 순서). */
+        const vector<DataCatalogKeyTarget>& getKeyTargets() const { return _listKeyTarget; }
+        /** @brief 카탈로그 키 칸 줄입니다(표 순서). */
+        const vector<DataCatalogKeyField>& getFieldRows() const { return _listKeyField; }
+        /** @brief 항목 종류 @p tag 의 줄입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] const DataCatalogKeyTarget* findKeyTarget( string_view tag ) const;
+        /** @brief 형식 @p owner 의 칸 @p field 줄입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] const DataCatalogKeyField* findKeyField( string_view owner, string_view field ) const;
 
     private:
         /** @brief 겹침 규칙 하나를 봅니다. 겹친 값마다 알리고, 겹침이 있으면 false 입니다. */
         [[nodiscard]] static bool validateUnique( const XMLNode& root, const DataCatalogReferenceRule& rule, string_view sourceName );
 
     private:
-        vector<DataCatalogReferenceRule> _listRule; ///< 표의 줄(루트 · 줄 순서)
+        vector<DataCatalogReferenceRule> _listRule;      ///< 표의 줄(루트 · 줄 순서)
+        vector<DataCatalogKeyTarget>     _listKeyTarget; ///< 항목 종류 줄
+        vector<DataCatalogKeyField>      _listKeyField;  ///< 카탈로그 키 칸 줄
+    };
+
+    /**
+     * @class DataCatalogKeyCheck
+     * @brief 씬 · 프리팹의 카탈로그 키 칸(`<Field>`)이 쿠킹하는 팩들의 카탈로그 항목(`<CatalogKey>`)을 가리키는지 봅니다 — 쿠커가 모든 도메인의 데이터 글을 한 번씩 넘긴다.
+     * @details 문서마다 `addDocument` 로 넘기면 카탈로그 루트면 항목 id 를 모으고, 칸 주인 원소(어느 깊이든)면 칸 값을 모은다. 다 넘긴 뒤 `validate` 가 대조한다 —
+     *          글의 차례(씬이 카탈로그보다 먼저)와 팩 경계(게임 씬이 `common` 카탈로그를 가리킴)에 기대지 않는다. 카탈로그는 펼친(`_base`) 글을 넘긴다 — 물려받은 항목도 항목이다.
+     *          대조는 "그 종류의 어느 카탈로그 파일에든 있다" 이다(칸은 id 만 들고 어느 파일인지 모른다). 쓰는 쪽이 고른 한 벌에 없는 것은 시작할 때 형식 있는 조회
+     *          (`GameCatalog::require`)가 오류로 멈춘다.
+     */
+    class SW_API DataCatalogKeyCheck
+    {
+    public:
+        explicit DataCatalogKeyCheck( const DataCatalogReferenceRules& rules );
+
+        /** @brief 글 @p text 에 항목 종류의 카탈로그 루트나 칸 주인 원소(`<이름`)가 적혔으면 true 입니다 — 파일마다 파싱하지 않고 거르는 앞검사다(거짓 양성은 파싱이 거른다). */
+        [[nodiscard]] bool isMentioned( string_view text ) const;
+        /** @brief 문서 하나를 넘깁니다. 카탈로그 루트면 항목 id 를, 칸 주인 원소면 칸 값을 모은다. */
+        void addDocument( const XMLNode& root, string_view sourceName );
+        /** @brief 모은 칸 값마다 그 종류의 항목이 있는지 봅니다. 없으면 하나마다 `DataCatalogKey.UnknownEntry` 를 남기고 false 입니다. */
+        [[nodiscard]] bool validate() const;
+
+    private:
+        /** @brief 칸 값 하나입니다. */
+        struct KeyUse
+        {
+            string _tag;
+            string _id;
+            string _sourceName;
+            string _owner;
+            string _field;
+        };
+
+        /** @brief @p node 와 그 아래 원소를 모두 훑어 칸 주인 원소의 값을 모읍니다. */
+        void collectUses( const XMLNode& node, string_view sourceName );
+
+    private:
+        const DataCatalogReferenceRules&             _rules;
+        unordered_map<string, unordered_set<string>> _mapTagID; ///< 항목 종류 → 모은 항목 id
+        vector<KeyUse>                               _listUse;  ///< 모은 칸 값(넘긴 차례)
     };
 } // namespace sw

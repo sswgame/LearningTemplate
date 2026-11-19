@@ -155,6 +155,7 @@ namespace sw
         string                       _tooltip;
         string                       _defaultValue;
         string                       _assetType;
+        string                       _catalogKeyTag; ///< `CatalogKey<T>` 칸의 항목 종류 이름 `T`(`PropertyResolver::resolveCatalogKeyProperty`)
         string                       _repNotify;     ///< `RepNotify = fn` — 같은 타입의 메서드 이름(모양은 `validateMemberFunctions` 가 본다)
         string                       _validate;      ///< `Validate = fn` — 같은 타입의 `void fn( ValidationContext& )`
         string                       _editCondition; ///< `EditCondition = "…"` — 생성기가 컴파일된 판정(`PropertyMetadata::_pEditCondition`)으로 낸다
@@ -238,6 +239,7 @@ namespace sw
             , _tooltip{}
             , _defaultValue{}
             , _assetType{}
+            , _catalogKeyTag{}
             , _repNotify{}
             , _validate{}
             , _editCondition{}
