@@ -342,7 +342,6 @@ SW_TEST_CASE( ScavengerQuotaTest, DeadlineCycle )
  */
 SW_TEST_CASE( ScavengerQuotaTest, ReadStateChecksRange )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::ScavengerQuota quota;
     quota.initialize( ScavengerTestUtil::makeQuota( 100, 2, 5.0f ) );
     quota.addFulfilled( 30 );
@@ -419,7 +418,6 @@ SW_TEST_CASE( ScavengerCarryTest, SlotsAndTwoHanded )
  */
 SW_TEST_CASE( ScavengerCarryTest, SpeedAndState )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::ScavengerCarryDef settings;
     settings._slotCount      = 2;
     settings._speedPerWeight = 0.01f;
@@ -619,7 +617,6 @@ SW_TEST_CASE_F( ScavengerFacilityTest, StateRoundTripRebuildsGraph )
  */
 SW_TEST_CASE_F( ScavengerFacilityTest, ReadStateRefusesBrokenScrap )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::ScavengerFacility restored;
     restored.bindCatalog( &_catalog );
     const sw::ScavengerScrap good = ScavengerTestUtil::makeScrap( 4, 10, 5.0f, false );
@@ -954,7 +951,6 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, StateRoundTripsWhileLanded )
  */
 SW_TEST_CASE_F( ScavengerExpeditionTest, ReadStateRefusesBrokenBodiesAndTime )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::ScavengerScrap body = ScavengerTestUtil::makeScrap( 5, 0, 60.0f, true );
     body._bodyOf            = 1;
     SW_REQUIRE_TRUE( readFixture( body, 0.0f ) ); // 형식은 맞다

@@ -330,7 +330,6 @@ SW_TEST_CASE( AdventureTargetingTest, StateRoundTripResumesTheEvade )
  */
 SW_TEST_CASE( AdventureTargetingTest, ReadRejectsBrokenBytes )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::AdventureTargeting source;
     AdventureTargetingTestUtil::setUp( source );
     sw::Archive written;

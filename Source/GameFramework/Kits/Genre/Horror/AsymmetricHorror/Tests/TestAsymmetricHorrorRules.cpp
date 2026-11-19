@@ -337,7 +337,6 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesUnknownElement )
 SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesOutOfRangeSetting )
 {
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     AsymmetricHorrorRulesCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<AsymmetricHorrorRules><Killer id="a"/><Hook stages="0"/></AsymmetricHorrorRules>)", "AsymmetricHorrorRulesTest" ) );
     SW_EXPECT_EQUAL( AsymmetricHorrorHookDef{}._stages, catalog.getRules()._hook._stages );

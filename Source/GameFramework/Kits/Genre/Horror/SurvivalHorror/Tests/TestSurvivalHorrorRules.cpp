@@ -424,7 +424,6 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesUnknownElement )
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesOutOfRangeItem )
 {
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SurvivalHorrorCatalog catalog;
     SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Item id="a" w="9"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
 }
@@ -965,7 +964,6 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, ResetSequenceWritesSameBytesAsUntouched
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesCraftedBytes )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SurvivalFixtureSession good;
     good._listMonster  = { "zombie" };
     good._listDocument = { "diary" };

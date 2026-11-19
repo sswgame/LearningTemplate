@@ -259,7 +259,7 @@ namespace sw
         }
         reflectedProperties( type, pObject, true, 0 );
         if ( isOk() )
-            check( SerializerUtil::isWithinDeclaredRanges( type, ObjectAddress{ pObject } ) );
+            check( SerializerUtil::areValuesWithinDeclaredRanges( type, ObjectAddress{ pObject } ) ); // 손 io.check 처럼 로그 없이 거절한다
     }
 
     void StateIO::reflectedDerived( const TypeInfo& dynamicType, const hashed_string& staticFqn, void* pObject )

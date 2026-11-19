@@ -297,7 +297,6 @@ SW_TEST_CASE( AdventureVitalsTest, StateRoundTripKeepsEverything )
  */
 SW_TEST_CASE( AdventureVitalsTest, ReadRejectsValuesAboveTheirMax )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::AdventureVitals source;
     sw::Archive         written;
     source.writeState( written );

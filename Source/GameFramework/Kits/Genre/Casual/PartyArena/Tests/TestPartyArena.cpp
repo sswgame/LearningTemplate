@@ -679,7 +679,6 @@ SW_TEST_CASE_F( PartyArenaRulesTest, StateRoundTripContinuesIdentically )
  */
 SW_TEST_CASE_F( PartyArenaRulesTest, CraftedBytesAreRefused )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_REQUIRE_TRUE( open() );
     SW_REQUIRE_TRUE( readInFreshArena( writeBytes( _arena ) ) );
     const size_t head = kPartyFirstPlayer;

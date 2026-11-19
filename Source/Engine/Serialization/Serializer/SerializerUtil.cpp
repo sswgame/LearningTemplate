@@ -1162,6 +1162,11 @@ namespace sw
         return listRangeError.empty();
     }
 
+    bool SerializerUtil::areValuesWithinDeclaredRanges( const TypeInfo& typeInfo, const ObjectAddress instance )
+    {
+        return SerializerUtilInternal::isEveryValueWithinRange( typeInfo, instance );
+    }
+
     bool SerializerUtil::isWithinDeclaredRanges( const TypeInfo& typeInfo, const ObjectAddress instance )
     {
         if ( SerializerUtilInternal::isEveryValueWithinRange( typeInfo, instance ) )

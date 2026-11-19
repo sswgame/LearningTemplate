@@ -399,7 +399,6 @@ SW_TEST_CASE( CardGameReadStateTest, KlondikeRefusesImpossibleBoards )
  */
 SW_TEST_CASE( CardGameReadStateTest, UnoRefusesImpossibleTables )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::UnoSettings settings;
     settings._playerCount = 2;
     sw::UnoGame game;
@@ -536,7 +535,6 @@ SW_TEST_CASE( CardGameReadStateTest, HwatuCardMatchesTheDeck )
  */
 SW_TEST_CASE( CardGameReadStateTest, PokerRefusesImpossibleTables )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::PokerTable table;
     SW_REQUIRE_TRUE( table.initialize( sw::PokerSettings{}, { 100, 100 } ) );
     sw::GameRandom random( 41u );
@@ -638,7 +636,6 @@ SW_TEST_CASE( CardGameReadStateTest, PokerRefusesImpossibleTables )
  */
 SW_TEST_CASE( CardGameReadStateTest, DeckBattleRefusesImpossibleBattles )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::CardBattleCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCardBattleXML, "CardGameReadStateTest" ) );
     sw::CardBattleSettings settings;

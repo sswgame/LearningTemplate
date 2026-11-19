@@ -303,6 +303,10 @@ namespace sw
          */
         [[nodiscard]] SW_API static bool isWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance );
         /**
+         * @brief 로그 없이 범위만 봅니다 — 남이 보낸 상태 바이트(롤백 · 넷 · 세이브)의 읽기용. 거절은 읽기 실패로만 알린다(손 `io.check` 와 같은 계약 — 깨진 바이트로 오류 로그를 쏟게 하지 않는다).
+         */
+        [[nodiscard]] SW_API static bool areValuesWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance );
+        /**
          * @brief 위와 같되 소프트 읽기가 읽기 전 값으로 되돌린 칸(@p listRestored — 어느 깊이든)은 보지 않습니다. 세 형식(JSON · XML · 바이너리)의 소프트 읽기 끝이 모두 이것을 지난다.
          * @details 되돌린 칸은 파일 값이 아니라 읽기 전 값이고(바탕 층 형식의 새 객체면 0 — 범위 밖), 그 칸의 잘못은 orphan 이 이미 알렸다.
          *          보면 모르는 키 · 읽지 못한 값 하나가 범위 밖 오류 묶음으로 덧나 알려진다. 목록은 `PropertyReadRollback::getRestoredValues` 가 준다.

@@ -257,7 +257,6 @@ SW_TEST_CASE( ActionEnemyBrainTest, StateRoundTripResumesIdentically )
  */
 SW_TEST_CASE( ActionEnemyBrainTest, ReadRejectsBadBytesAndKeepsState )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrainXML, "ActionEnemyBrainTest" ) );
     sw::ActionEnemyBrain target;

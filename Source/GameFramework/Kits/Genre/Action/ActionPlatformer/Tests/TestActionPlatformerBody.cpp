@@ -514,7 +514,6 @@ SW_TEST_CASE( ActionPlatformerBodyTest, StateRoundTripResumesEveryMode )
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, ReadRejectsBrokenBytes )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::ActionPlatformerBody source;

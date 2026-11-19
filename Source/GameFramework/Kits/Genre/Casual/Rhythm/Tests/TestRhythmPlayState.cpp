@@ -159,7 +159,6 @@ SW_TEST_CASE_F( RhythmPlayStateTest, RefusesHoldingWhatWasNotPressed )
  */
 SW_TEST_CASE_F( RhythmPlayStateTest, RefusesCountsThatDoNotAddUp )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_REQUIRE_TRUE( RhythmFixture{}.readInto( _session ) );
 
     RhythmFixture gradeNegative;
@@ -213,7 +212,6 @@ SW_TEST_CASE_F( RhythmPlayStateTest, RefusesCountsThatDoNotAddUp )
  */
 SW_TEST_CASE_F( RhythmPlayStateTest, RefusesLifeStateAndRecordsOutOfRange )
 {
-    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_REQUIRE_TRUE( RhythmFixture{}.readInto( _session ) );
 
     RhythmFixture lifeOver;
