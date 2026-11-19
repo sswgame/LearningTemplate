@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b3530e45062f42a78e4def954451cd1d"?>
+<!--
+  시간 업스케일(TAAU) — 디퍼드 장면을 렌더 배율 1(품질 high)과 0.5(품질 low — RenderQuality.json 의 _temporalUpscaleRenderScale)로 찍는다.
+  0.5 이면 장면(G버퍼 · 깊이 · 속도 · 조명)을 출력의 반 크기로 그리고 TAA 가 출력 해상도로 키운다(첨부의 _resolutionSpace — 렌더 · 출력 두 공간).
+  판정: 두 장 모두 골든과 견주고, 업스케일한 장을 배율 1 골든과 넓은 허용 오차로 한 번 더 견준다 — 가운데 큰 영역이 같은 그림이어야 한다(가장자리 · 가는 선의 차이만 허용).
+  업스케일 경로가 깨지면(출력 공간 패스가 렌더 공간 크기로 그리거나 사각형 · 텍셀을 섞으면) 그림이 어긋나거나 한 귀퉁이만 남아 셋째 판정이 진다.
+  품질 low 는 그림자 칸 하한 · 컬링 슬롯 수도 바꾼다 — 이 장면(점광 그림자 없음)에서는 그림이 같아 업스케일만 남는다. 후처리 품질은 gv_postQuality 로 고정한다.
+  실행: ctest -R Scenario.game.empty (체인)
+-->
+<Scenario name="game.empty.temporalupscale" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/deferredtransparent.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Launch variable="gv_environmentAnimate" value="0"/>
+	<Launch variable="gv_renderQuality" value="high"/>
+	<Screenshot file="temporalupscale_native.ppm"/>
+	<ExpectImage file="temporalupscale_native.ppm" golden="temporalupscale_native"/>
+	<!-- 품질 low — 엔진 설정을 제자리에서 다시 읽어 렌더 배율 0.5 가 된다. 풀을 다시 만들어 TAA 기록이 새로 쌓이므로 렌더 정착까지 기다린다(사진의 기본 정착이 TAA 기록을 본다). -->
+	<Variable name="gv_renderQuality" value="low"/>
+	<WaitRenderStable/>
+	<Screenshot file="temporalupscale_half.ppm"/>
+	<ExpectImage file="temporalupscale_half.ppm" golden="temporalupscale_half"/>
+	<ExpectImage file="temporalupscale_half.ppm" golden="temporalupscale_native" region="0.1,0.1,0.9,0.9" tolerance="0.3" maxMeanDistance="0.05" maxRegionPixels="400"/>
+	<Variable name="gv_renderQuality" value="high"/>
+	<Pass/>
+</Scenario>
