@@ -46,6 +46,7 @@ struct LightProbe
     static float4 loadFromXML( uint elementIndex );
     static float4 load( uint probeIndex, uint element );
     static float3 evaluateSphericalHarmonics( uint probeIndex, float3 normal );
+    static float3 evaluateSphericalHarmonicsFrom( uint firstElement, float3 normal );
 };
 
 /** @brief 반사 프로브 텍셀 읽기. 원소 하나의 반사는 LightData::sampleReflectionProbe 다. */
@@ -53,6 +54,18 @@ struct ReflectionProbe
 {
     static float2 encodeOctahedral( float3 direction );
     static float3 sampleLevel( uint firstTexel, uint resolution, uint level, float2 uv );
+    static float3 sampleRoughness( uint firstTexel, uint resolution, uint levelCount, float2 uv, float roughness );
+};
+
+/**
+ * @brief 스카이 라이트 — 씬의 하늘을 거칠기 단계마다 거른 환경광(PassCB g_SkyLight, 배치는 binding_slots.hlsli 8 절). 반사 프로브 · 프로브 볼륨이 덮지 않는 곳의 환경광이다.
+ * @details 언리얼 Sky Light · 유니티 Environment Reflections / Lighting(Skybox) · Godot Sky 자리. 라이트 원소가 아니라 패스 상수라 라이트 루프 밖(물의 하늘 반사)에서도 읽는다.
+ */
+struct SkyLight
+{
+    static bool isEnabled();
+    static float3 sampleSpecular( float3 direction, float roughness );
+    static float3 sampleDiffuse( float3 normal );
 };
 
 /** @brief 조명 식 — 포워드와 디퍼드가 같은 함수를 부른다. */
@@ -399,14 +412,20 @@ static float4 LightProbe::load( uint probeIndex, uint element )
  */
 static float3 LightProbe::evaluateSphericalHarmonics( uint probeIndex, float3 normal )
 {
+    return LightProbe::evaluateSphericalHarmonicsFrom( probeIndex * SW_LIGHT_PROBE_FLOAT4_COUNT, normal );
+}
+
+/** @brief 원소 @p firstElement 부터의 SH9 원소 일곱을 노멀 @p normal 로 평가합니다 — 프로브 번호가 아니라 원소 번호를 받는다(스카이 라이트의 SH9 는 텍셀 뒤라 일곱의 배수 자리가 아니다). */
+static float3 LightProbe::evaluateSphericalHarmonicsFrom( uint firstElement, float3 normal )
+{
     const float4 linearInput    = float4( normal, 1.0f );
     const float4 quadraticInput = normal.xyzz * normal.yzzx;
     const float  squareInput    = normal.x * normal.x - normal.y * normal.y;
-    const float3 linearTerm     = float3( dot( LightProbe::load( probeIndex, 0u ), linearInput ), dot( LightProbe::load( probeIndex, 1u ), linearInput ),
-                                          dot( LightProbe::load( probeIndex, 2u ), linearInput ) );
-    const float3 quadraticTerm  = float3( dot( LightProbe::load( probeIndex, 3u ), quadraticInput ), dot( LightProbe::load( probeIndex, 4u ), quadraticInput ),
-                                          dot( LightProbe::load( probeIndex, 5u ), quadraticInput ) );
-    return max( linearTerm + quadraticTerm + LightProbe::load( probeIndex, 6u ).rgb * squareInput, 0.0f );
+    const float3 linearTerm     = float3( dot( LightProbe::loadFromXML( firstElement ), linearInput ), dot( LightProbe::loadFromXML( firstElement + 1u ), linearInput ),
+                                          dot( LightProbe::loadFromXML( firstElement + 2u ), linearInput ) );
+    const float3 quadraticTerm  = float3( dot( LightProbe::loadFromXML( firstElement + 3u ), quadraticInput ), dot( LightProbe::loadFromXML( firstElement + 4u ), quadraticInput ),
+                                          dot( LightProbe::loadFromXML( firstElement + 5u ), quadraticInput ) );
+    return max( linearTerm + quadraticTerm + LightProbe::loadFromXML( firstElement + 6u ).rgb * squareInput, 0.0f );
 }
 
 /**
@@ -481,6 +500,55 @@ static float3 ReflectionProbe::sampleLevel( uint firstTexel, uint resolution, ui
 }
 
 /**
+ * @brief 거칠기 @p roughness 에 맞는 두 단계를 @p uv 에서 읽어 섞습니다 — 단계 l 의 거칠기는 l / (단계 수 − 1) 이다(C++ `ReflectionProbeAsset::computeLevelRoughness`).
+ *        반사 프로브와 스카이 라이트가 같은 식을 쓴다. @p levelCount 는 2 이상이어야 한다(부르는 쪽이 본다).
+ */
+static float3 ReflectionProbe::sampleRoughness( uint firstTexel, uint resolution, uint levelCount, float2 uv, float roughness )
+{
+    const float levelPick = saturate( roughness ) * (float)( levelCount - 1u );
+    const uint  lowLevel  = min( (uint)levelPick, levelCount - 1u );
+    const uint  highLevel = min( lowLevel + 1u, levelCount - 1u );
+    return lerp( ReflectionProbe::sampleLevel( firstTexel, resolution, lowLevel, uv ), ReflectionProbe::sampleLevel( firstTexel, resolution, highLevel, uv ), levelPick - (float)lowLevel );
+}
+
+/** @brief 이 뷰에 스카이 라이트가 있는지입니다 — 씬에 하늘이 있어 거른 원소가 올라갔고(단계 수 2 이상) 프로브 버퍼가 걸렸다. */
+static bool SkyLight::isEnabled()
+{
+    return (uint)( g_SkyLight.y + 0.5f ) > 1u && g_SwLightProbesIndex != kInvalidIndex;
+}
+
+/**
+ * @brief 방향 @p direction(길이 1 — 반사 방향)에서 오는 하늘빛을 거칠기 @p roughness 에 맞게 거른 값입니다. 하늘은 무한히 멀어 시차 보정이 없다.
+ *        스카이 라이트가 없으면 0 이다 — 걸리지 않은 버퍼를 읽지 않도록 이 함수가 스스로 본다(부르는 쪽은 isEnabled 로 앰비언트 색과 고른다).
+ */
+static float3 SkyLight::sampleSpecular( float3 direction, float roughness )
+{
+    float3 radiance = float3( 0.0f, 0.0f, 0.0f );
+    SW_BRANCH if ( SkyLight::isEnabled() )
+    {
+        const uint resolution = (uint)( g_SkyLight.x + 0.5f );
+        const uint levelCount = (uint)( g_SkyLight.y + 0.5f );
+        const uint firstTexel = (uint)( g_SkyLight.z + 0.5f );
+        radiance              = ReflectionProbe::sampleRoughness( firstTexel, resolution, levelCount, ReflectionProbe::encodeOctahedral( direction ), roughness );
+    }
+    return radiance;
+}
+
+/** @brief 노멀 @p normal 인 면이 하늘에서 받는 확산 환경광(조도 / π — 앰비언트 색과 같은 단위)입니다. 스카이 라이트가 없으면 0 이다. */
+static float3 SkyLight::sampleDiffuse( float3 normal )
+{
+    float3 irradiance = float3( 0.0f, 0.0f, 0.0f );
+    SW_BRANCH if ( SkyLight::isEnabled() )
+    {
+        const uint resolution = (uint)( g_SkyLight.x + 0.5f );
+        const uint levelCount = (uint)( g_SkyLight.y + 0.5f );
+        const uint firstTexel = (uint)( g_SkyLight.z + 0.5f );
+        irradiance            = LightProbe::evaluateSphericalHarmonicsFrom( firstTexel + levelCount * resolution * resolution, normal );
+    }
+    return irradiance;
+}
+
+/**
  * @brief 반사 프로브 원소 하나(binding_slots.hlsli 8 절의 SW_LIGHT_TYPE_REFLECTION_PROBE 배치)에서 이 위치 · 반사 방향의 빛을 구합니다.
  * @return rgb = 거칠기에 맞게 거른 빛(두 단계 사이를 섞는다), a = 가중치 — 상자 안 깊이 들어가면 1, 경계 안쪽 섞는 폭에서 0 으로 떨어지고 상자 밖은 0.
  *         프로브 버퍼가 안 걸렸으면 0 이다. 텍셀은 단계마다 같은 크기라 거칠기 단계를 고르는 것은 번호 식 하나다.
@@ -507,11 +575,7 @@ float4 LightData::sampleReflectionProbe( float3 worldPosition, float3 reflectDir
         const float  hitDistance = min( farAxis.x, min( farAxis.y, farAxis.z ) );
         const float3 toHit       = worldPosition + reflectDirection * hitDistance - _directionType.xyz;
         const float2 uv          = ReflectionProbe::encodeOctahedral( normalize( toHit ) );
-        const float  levelPick   = saturate( roughness ) * (float)( levelCount - 1u );
-        const uint   lowLevel    = min( (uint)levelPick, levelCount - 1u );
-        const uint   highLevel   = min( lowLevel + 1u, levelCount - 1u );
-        radiance                 = lerp( ReflectionProbe::sampleLevel( firstTexel, resolution, lowLevel, uv ), ReflectionProbe::sampleLevel( firstTexel, resolution, highLevel, uv ),
-                                         levelPick - (float)lowLevel );
+        radiance                 = ReflectionProbe::sampleRoughness( firstTexel, resolution, levelCount, uv, roughness );
     }
     return float4( radiance, bUsable ? weight : 0.0f );
 }
@@ -639,7 +703,8 @@ float3 SurfacePBR::evaluateSpecular( float3 normal, float3 toView, float3 toLigh
 
 /**
  * @brief 고른 환경광 아래의 반사 비율(반구 적분)의 근사입니다 — 언리얼 모바일 `EnvBRDFApprox`(Karis 2014).
- * @details 환경 반사의 빛은 반사 프로브(IndirectLighting.md P4)가 덮는 곳은 그 프로브의 빛, 아니면 앰비언트 색 하나다. 이 비율을 곱해야 금속이 그늘에서 검게 죽지 않는다.
+ * @details 환경 반사의 빛은 반사 프로브(IndirectLighting.md P4)가 덮는 곳은 그 프로브의 빛, 아니면 스카이 라이트(거칠기로 거른 하늘), 하늘도 없으면 앰비언트 색 하나다
+ *          (SurfaceBRDF::shadeLights). 이 비율을 곱해야 금속이 그늘에서 검게 죽지 않는다.
  */
 float3 SurfacePBR::computeEnvironmentSpecular( float normalDotView )
 {
@@ -757,7 +822,10 @@ float SurfaceBRDF::getCoatReflectionRoughness()
  * @details 3D 라이트가 하나도 없으면 앰비언트만 남습니다. 키 라이트로 대신 비추지 않습니다. 3D 씬은 방향광이나 스카이를 데이터로 가집니다(결정 기록 5-12 D2-13).
  *          이 위치를 덮는 라이트 프로브 볼륨(커서가 도는 SW_LIGHT_TYPE_PROBE_VOLUME 원소)이 있으면 확산 앰비언트 대신 그 볼륨들의 SH 를 가중 평균해 쓴다
  *          (IndirectLighting.md P3). 볼륨이 없는 곳은 지금까지의 앰비언트 그대로다. 이 위치를 덮는 반사 프로브(SW_LIGHT_TYPE_REFLECTION_PROBE 원소)가 있으면
- *          반사 앰비언트를 그 프로브가 찍어 거른 빛으로 바꾼다(P4 — 거칠기로 단계를 고르고 반사 방향으로 읽는다). 프로브가 없는 곳은 앰비언트 색 그대로다.
+ *          반사 앰비언트를 그 프로브가 찍어 거른 빛으로 바꾼다(P4 — 거칠기로 단계를 고르고 반사 방향으로 읽는다). 프로브가 없는 곳은 앰비언트 그대로다.
+ *          앰비언트(프로브 밖의 환경광)는 씬에 하늘이 있으면 스카이 라이트다 — 확산은 하늘 SH9 의 조도 / π, 반사는 반사 방향 · 거칠기로 읽은 거른 하늘(SkyLight).
+ *          하늘이 없으면 키 라이트 색 × 앰비언트 세기 하나다. 이것은 폴백이 아니라 "하늘 없는 장면" 의 정의다(언리얼의 Sky Light 없는 레벨 · 유니티 Environment Lighting Source = Color).
+ *          우선순위: 반사 = 반사 프로브 → 스카이 라이트 → 앰비언트 색, 확산 = 프로브 볼륨 → 스카이 라이트 → 앰비언트 색.
  */
 float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
 {
@@ -771,14 +839,29 @@ float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
     const float3 coatEnvironmentSpecular = computeCoatEnvironmentSpecular();
     const float3 coatReflectDirection    = reflect( -_toView, _normal );
     const float3 totalSpecular           = environmentSpecular + coatEnvironmentSpecular;
-    float3       lit                     = ( diffuseColor + totalSpecular ) * ambient * _occlusion;
-    float3       probeSum                = float3( 0.0f, 0.0f, 0.0f );
-    float        probeWeight             = 0.0f;
-    float        skyVisibilitySum        = 0.0f;
-    float3       reflectionSum           = float3( 0.0f, 0.0f, 0.0f );
-    float        reflectionWeight        = 0.0f;
-    float3       coatReflectionSum       = float3( 0.0f, 0.0f, 0.0f );
-    float        coatReflectionWeight    = 0.0f;
+    // 프로브 밖의 환경광(확산 · 바탕층 반사 · 코트층 반사). 하늘이 없으면 셋 다 앰비언트 색이고 아래 식은 예전 그대로다 — 하늘 없는 장면에 연산을 더하지 않는다.
+    float3 diffuseAmbient  = ambient;
+    float3 specularAmbient = ambient;
+    float3 coatAmbient     = ambient;
+    float3 lit             = ( diffuseColor + totalSpecular ) * ambient * _occlusion;
+    SW_BRANCH if ( SkyLight::isEnabled() )
+    {
+        diffuseAmbient  = SkyLight::sampleDiffuse( _normal );
+        specularAmbient = SkyLight::sampleSpecular( reflectDirection, getReflectionRoughness() );
+        coatAmbient     = specularAmbient;
+        SW_BRANCH if ( bCoatLayer )
+        {
+            coatAmbient = SkyLight::sampleSpecular( coatReflectDirection, getCoatReflectionRoughness() );
+        }
+        lit = ( diffuseColor * diffuseAmbient + environmentSpecular * specularAmbient + coatEnvironmentSpecular * coatAmbient ) * _occlusion;
+    }
+    float3 probeSum             = float3( 0.0f, 0.0f, 0.0f );
+    float  probeWeight          = 0.0f;
+    float  skyVisibilitySum     = 0.0f;
+    float3 reflectionSum        = float3( 0.0f, 0.0f, 0.0f );
+    float  reflectionWeight     = 0.0f;
+    float3 coatReflectionSum    = float3( 0.0f, 0.0f, 0.0f );
+    float  coatReflectionWeight = 0.0f;
 
     LightCursor cursor = LightCursor::begin( worldPosition );
     LightData   light;
@@ -820,25 +903,25 @@ float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
         const float shadowTerm = light.computeShadow( worldPosition, _normal, shadow );
         lit += evaluateLight( toLight, normalDotLight ) * attenuation * light._colorIntensity.a * light._colorIntensity.rgb * shadowTerm;
     }
-    // 볼륨이 덮는 곳은 확산 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
+    // 볼륨이 덮는 곳은 확산 앰비언트(스카이 라이트 또는 앰비언트 색)를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
     // 하늘 가림(실시간 볼륨의 세기)은 반사 앰비언트만 가린다 — 확산은 프로브 SH 가 이미 복셀로 가렸다. 세기 0 이면 하늘 보임 1 이라 이전 그림과 같다.
     const float skyVisibility = probeWeight > 0.0f ? skyVisibilitySum / probeWeight : 1.0f;
     if ( probeWeight > 0.0f )
     {
-        lit += diffuseColor * ( probeSum / probeWeight - ambient ) * _occlusion;
-        lit -= totalSpecular * ambient * ( 1.0f - skyVisibility ) * _occlusion;
+        lit += diffuseColor * ( probeSum / probeWeight - diffuseAmbient ) * _occlusion;
+        lit -= ( environmentSpecular * specularAmbient + coatEnvironmentSpecular * coatAmbient ) * ( 1.0f - skyVisibility ) * _occlusion;
     }
     // 반사 프로브가 덮는 곳은 반사 앰비언트를 프로브의 빛으로 바꾼다(IndirectLighting.md P4). 겹친 프로브는 가중 평균이고, 가중치 합이 1 보다 작은 경계는
-    // 모자란 몫을 앰비언트로 채워 상자 밖과 이어진다. 덮지 않으면 아무 연산도 더하지 않는다.
+    // 모자란 몫을 앰비언트(스카이 라이트 또는 앰비언트 색)로 채워 상자 밖과 이어진다. 덮지 않으면 아무 연산도 더하지 않는다.
     if ( reflectionWeight > 0.0f )
     {
-        const float3 occludedAmbient = ambient * skyVisibility;
+        const float3 occludedAmbient = specularAmbient * skyVisibility;
         const float3 environment     = ( reflectionSum + occludedAmbient * max( 1.0f - reflectionWeight, 0.0f ) ) / max( reflectionWeight, 1.0f );
         lit += environmentSpecular * ( environment - occludedAmbient ) * _occlusion;
     }
     if ( coatReflectionWeight > 0.0f )
     {
-        const float3 occludedAmbient = ambient * skyVisibility;
+        const float3 occludedAmbient = coatAmbient * skyVisibility;
         const float3 environment     = ( coatReflectionSum + occludedAmbient * max( 1.0f - coatReflectionWeight, 0.0f ) ) / max( coatReflectionWeight, 1.0f );
         lit += coatEnvironmentSpecular * ( environment - occludedAmbient ) * _occlusion;
     }

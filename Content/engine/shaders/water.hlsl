@@ -1,5 +1,5 @@
 /**
- * water.hlsl — 물(WaterBodyComponent). 거스트너 파도로 정점을 옮기고, 깊이 색 · 프레넬 · 반사광 · 잔물결 · 물가 거품으로 칠한다.
+ * water.hlsl — 물(WaterBodyComponent). 거스트너 파도로 정점을 옮기고, 깊이 색 · 프레넬(하늘 반사 — 씬의 스카이 라이트, 하늘이 없으면 Sky Color) · 반사광 · 잔물결 · 물가 거품으로 칠한다.
  *
  * 머티리얼 셰이더 뼈대(material_shader.hlsli · material_shader_main.hlsli)의 사용자다. 이 파일은 월드 위치 오프셋(파도) · 사용자 보간 칸 · 표면 · 조명 훅만
  * 정의한다. 위치는 뼈대가 만든다 — 파도는 오프셋으로만 준다(물은 MATERIAL_VERTEX_DEFORM 을 가진다).
@@ -166,7 +166,14 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
     float       specular;
     computeWaterLighting( context, normal, toView, body, specular );
 
-    float3 color = lerp( body, context._user._skyColor, fresnel ) + specular * g_KeyLightColor.rgb;
+    // 비치는 하늘 — 씬에 하늘이 있으면 스카이 라이트를 반사 방향으로 읽는다(잔물결 · 빗방울 링이 노멀을 흔들면 비치는 하늘이 달라진다). 하늘이 없으면 머티리얼의 Sky Color 다
+    // (폴백이 아니라 하늘 없는 장면의 물이 비추는 색을 저작한 값이다 — 조명식의 앰비언트 색과 같은 자리).
+    float3 skyReflection = context._user._skyColor;
+    SW_BRANCH if ( SkyLight::isEnabled() )
+    {
+        skyReflection = SkyLight::sampleSpecular( reflect( -toView, normal ), kSurfaceRoughness );
+    }
+    float3 color = lerp( body, skyReflection, fresnel ) + specular * g_KeyLightColor.rgb;
     float  alpha = saturate( max( context._user._waterColor.a, fresnel ) + specular );
 
     // 물가 거품 — 얕을수록 희다. 잔물결 무늬로 끊어 띠가 아니라 거품처럼 보이게 한다.

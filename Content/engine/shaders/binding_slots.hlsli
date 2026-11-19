@@ -345,6 +345,11 @@
 //       params = (옥타헤드럴 한 변 텍셀 수, 거칠기 단계 수, g_SwLightProbes 의 첫 원소 번호, 0) — 수와 번호는 정확한 정수 실수(2^24 안)다.
 //       텍셀 순서는 단계 → 행 → 열(단계 l 의 (x, y) 는 첫 원소 + (l × 변 + y) × 변 + x). 단계 l 의 거칠기는 l / (단계 수 − 1) 이다.
 #define SW_LIGHT_TYPE_REFLECTION_PROBE 13
+// 스카이 라이트(하늘을 거칠기 단계마다 거른 환경광 — C++ SkyLightData)는 라이트 원소가 아니다: 씬에 하나이고 위치가 없어 PassCB g_SkyLight 가 자리를 싣는다
+// (언리얼 · 유니티도 뷰 유니폼이다 — 라이트 루프를 돌지 않는 셰이더(물 · 툰)도 읽는다). 원소는 같은 g_SwLightProbes(t13)에 붙는다:
+//       g_SkyLight = (옥타헤드럴 한 변 텍셀 수, 거칠기 단계 수 — 0 이면 스카이 라이트 없음, 첫 원소 번호, 0).
+//       첫 원소부터 텍셀(반사 프로브와 같은 차례 · 같은 거칠기 식), 그 뒤(첫 원소 + 단계 수 × 변 × 변)에 SH9 원소 SW_LIGHT_PROBE_FLOAT4_COUNT 개(확산).
+//       읽는 함수는 lighting.hlsli SkyLight 하나다. 쓰는 쪽은 C++ LightProbeElementBuilder::appendSkyLight.
 // 라이트 그리드가 경계 구로 클러스터에 넣는 타입의 비트(1 << 타입) — 점광 1 · 스폿 2 · 반사 프로브 13 · 프로브 볼륨 14. 생산자 둘(C++ LightGrid · light_grid.hlsl)이
 // 이 하나를 본다(타입을 더할 때 두 곳을 고치지 않는다). 값이 위 타입과 맞는지는 ShaderBindingSlots.h 가 확인한다.
 #define SW_LIGHT_GRID_LOCAL_TYPE_MASK 0x6006u
