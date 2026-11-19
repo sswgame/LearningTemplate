@@ -78,10 +78,13 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 캐릭터, 직업, 무기 숙련 중 하나의 레벨입니다. */
+    /** @brief 캐릭터, 직업, 무기 숙련 중 하나의 레벨입니다. 상태는 리플렉션 상태 칸이고(`StateIO::reflected`) 범위는 칸의 `PROPERTY( Min )` 입니다. */
+    REFLECT()
     class SW_GF_API LevelProgress
     {
     public:
+        REFLECT_BODY();
+
         /** @brief 경험치를 더하고 오른 레벨 수를 반환합니다. 최고 레벨이면 경험치는 0 에 머뭅니다. */
         int32 addXP( const ExperienceCurve& curve, int64 amount );
         /** @brief 레벨을 정합니다. 세이브와 치트에 씁니다. 경험치는 0 이 됩니다. */
@@ -94,14 +97,17 @@ namespace sw
         int64 getTotalXP() const { return _totalXP; }
 
         /**
-         * @brief xp, 총 xp, 레벨을 씁니다. 곡선은 호출하는 쪽이 줍니다.
-         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         * @brief xp, 총 xp, 레벨을 씁니다(리플렉션 상태 칸). 곡선은 호출하는 쪽이 줍니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌거나 범위 밖이면 false 를 반환하고 상태는 바뀌지 않습니다.
          */
         SW_DECLARE_STATE_IO();
 
     private:
-        int64 _xp{ 0 };      ///< 이 레벨 안에서 모은 경험치
+        PROPERTY( RuntimeState, Min = 0 )
+        int64 _xp{ 0 }; ///< 이 레벨 안에서 모은 경험치
+        PROPERTY( RuntimeState, Min = 0 )
         int64 _totalXP{ 0 }; ///< 누적한 전체 경험치
+        PROPERTY( RuntimeState, Min = 1 )
         int32 _level{ 1 };
     };
 } // namespace sw

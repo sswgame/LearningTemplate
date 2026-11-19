@@ -132,10 +132,8 @@ namespace sw
 
     void LevelProgress::serializeState( StateIO& io )
     {
-        io.value( _xp );
-        io.value( _totalXP );
-        io.value( _level );
-        io.check( 0 <= _xp && _xp <= _totalXP && 1 <= _level );
+        io.reflected( *this );
+        io.check( _xp <= _totalXP ); // 칸 사이 검사만 손으로 — 칸마다의 범위는 `PROPERTY( Min )` 이 지킨다
     }
 
 } // namespace sw
