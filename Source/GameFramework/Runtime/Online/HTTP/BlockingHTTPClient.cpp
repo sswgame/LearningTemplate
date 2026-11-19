@@ -95,6 +95,8 @@ namespace sw
                     response._error = clientResponse._failureText;
                 else if ( clientResponse.isSuccess() == false )
                     response._error = string( clientResponse.getBodyText() );
+                else
+                    response._body = clientResponse._bodyBytes;
                 return response;
             }
             // 응답은 반드시 한 번 온다 — 시한이 지나면 `update` 가 전송 실패로 끝낸다

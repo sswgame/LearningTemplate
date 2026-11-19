@@ -218,6 +218,11 @@ add_test(NAME Scripts.ApiDiff
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_api_diff.py")
 set_tests_properties(Scripts.ApiDiff PROPERTIES LABELS nogpu TIMEOUT 60)
 
+# fileserve — 루트 밖 경로(.. · 절대 · 역슬래시 · 링크)는 거절하고 stat · list · 구간 읽기가 장치 쪽이 기대하는 글을 낸다(루프백 임시 서버).
+add_test(NAME Scripts.FileServe
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/net/tests/test_fileserve.py")
+set_tests_properties(Scripts.FileServe PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 꾸미기 스키마 출시 대조(customization-release) — 추가만은 통과, 단계 없는 제거는 실패하고 --fix 가 적는다, 이름 · 종류 바꾸기는 명시 단계 없이 실패.
 add_test(NAME Scripts.CustomizationRelease
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_customization_release.py")

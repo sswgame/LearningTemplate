@@ -32,8 +32,9 @@ namespace sw
     /** @brief HTTP 응답입니다. `_status` 0 은 보내지 못함(연결 · 거절)입니다. */
     struct HTTPResponse
     {
-        string _error{};
-        int32  _status{ 0 };
+        vector<uint8> _body{}; ///< 응답 본문(내려받기 — Fileserve). 보내기만 하는 쪽(텔레메트리 · 크래시 보고)은 보지 않는다
+        string        _error{};
+        int32         _status{ 0 };
 
         bool isSuccess() const { return 200 <= _status && _status < 300; }
     };

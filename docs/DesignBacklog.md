@@ -1204,6 +1204,20 @@ public:
 
 **판정.** 배포 실행 파일에 `gv_saveRestoreBreakReplace` 글자 없음(`shipping-check`), `savetravel` 시나리오(결함 주입)와 로컬 온라인 실행(`-gv_onlineServerAddress`) 통과.
 
+### Fileserve(설계 2026-11-20)
+
+**문제.** Android 장치는 팩을 APK 안에서만 읽어(`BundledContentFileSource`) 다시 구울 때마다 APK 를 다시 묶고 설치한다.
+
+**대조.** ezEngine Fileserve 는 장치가 PC 의 데이터 폴더를 TCP 로 받아 장치 캐시에 둔다. 언리얼은 쿡한 데이터를 네트워크 파일 시스템(`FNetworkPlatformFile`) · Zen 스트리밍으로 받는다. 둘 다 자체 TCP 프로토콜이다. → 장치가 받아 거울에 두고 디스크로 읽는 꼴은 같게 하고, 프로토콜은 읽기 전용 HTTP GET 셋(`/stat` · `/list` · `/file` 구간)으로 한다 — PC 쪽이 표준 라이브러리 서버 하나로 끝나고(`py -3 -m Scripts fileserve`), 장치 쪽은 엔진의 `IHTTPClient` 계약만 본다.
+
+**결정.**
+1. 장치 쪽 `FileServeContentSource`(Engine/Net/FileServe): `IContentFileSource` 구현. 받은 파일은 앱 전용 폴더의 거울, 곁 도장(크기 + PC 수정 시각 ns)이 같으면 다시 받지 않는다. 1 MiB 구간(장치 HTTP 본문 상한)으로 받아 원자 교체. 서버 응답은 믿지 않는다(목록 이름의 구분자 · `..` 거절, 숫자 칸 검사).
+2. PC 쪽 `Scripts/net/fileserve.py`: 기본 바인드 루프백(USB 는 `adb reverse`), 경로는 상대 · `..` · 역슬래시 · 드라이브 · NUL 없음 + 실제 경로가 루트 아래, 읽기만, 오류 본문은 짧은 글.
+3. **남은 몫 — 장치 전송.** App · DevTools 는 GameFramework(실제 HTTP 클라이언트 `BlockingHTTPClient`)를 링크하지 않고, 엔진은 일부러 네트워크 클라이언트를 싣지 않는다. 그런데 콘텐츠 소스는 엔진이 첫 팩을 읽기 전(`android_main` — 게임 모듈보다 앞)에 걸어야 한다.
+   → 엔진 층에 개발 전용 평문 HTTP/1.1 GET 클라이언트(`PlatformSocketUtil` 위, TLS 없음, 응답 본문 상한, 시한)를 두고 배포 구성에서는 빼며, `AndroidMain` 이 `-fileserve=<주소>` 일 때 그것으로 `FileServeContentSource` 를 건다(거울 = 내부 저장소 `FileServe/`). GameFramework 의 HTTP 파서를 Engine 으로 내리는 길은 크기 L 이라 이 기능만으로는 하지 않는다.
+
+**측정.** 재는 법: Android-Release 에서 팩 하나를 다시 구운 뒤 `adb reverse` + `-fileserve` 로 기동까지 걸린 시간 대 `android-apk` 다시 묶기 + 설치. 판정: 다시 받는 몫이 APK 길의 1/2 아래가 아니면 구간 크기 · 동시 받기를 본다.
+
 ### 공유 DDC(설계 2026-11-17, NEXT 5 에셋 GUID 3 단계)
 
 **문제.** `DerivedDataCache`(`Engine/Asset/Cook/CookRecord.h:59`)는 로컬 폴더 하나(`Saved/DDC/<키 앞 두 글자>/<키>`)이고 키는 `uint64`(FNV-1a)다. 쿠킹(씬 · 팩 · 내비)만 쓴다. 임포트(텍스처 · 모델 · 하이트필드)는 폴더별 `import.stamp` 로 판정해 무시되는 산출물 폴더에 바로 쓴다 — 새 체크아웃 · 워크트리마다 전부 다시 임포트한다(`Import.*` 시한 3600 초).

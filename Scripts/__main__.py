@@ -61,6 +61,7 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("net-pair", "net.net_pair_run", "두 프로세스 온라인 접속 시나리오 — 서버 · 클라이언트로 로그인 → 게임 접속 티켓 → 암호화 UDP 접속(run · check)"),
     Subcommand("new-online-kit", "dev.new_online_kit:main_new_online_kit", "온라인 키트 뼈대(Runtime · Server 모듈, 서술자 · 클라이언트 · 서비스 · 조립 · 테스트)를 만들고 중앙 표(메서드 영역 · 서버 키트 이름)에 한 줄씩 더한다"),
     Subcommand("lockstep-pair", "net.lockstep_pair_run", "락스텝 2 인 대전 — StarSkirmish 호스트 · 클라이언트 두 프로세스가 명령만 나눠 같은 판을 비동기 없이 도는지 본다(run)"),
+    Subcommand("fileserve", "net.fileserve", "장치 대상으로 쿠킹한 팩 폴더를 읽기 전용 HTTP 로 내준다(개발 전용 — 장치는 App -fileserve=<주소>, 기본 127.0.0.1:1112 + adb reverse)"),
     Subcommand("telemetry-local", "net.telemetry_local_run", "텔레메트리 · 크래시 업로드 로컬 실행 — 루프백 HTTP 수신기와 게임 두 번으로 동의한 스풀 파일 · 보낼 줄의 크래시 묶음이 HTTP 로 오는지 본다(run)"),
     Subcommand("move-source", "dev.move_source:main_move", "소스 파일 · 폴더를 옮기고 include · CMake · 문서 참조를 고친다(Source 기준 old=new)"),
     Subcommand("move-asset", "dev.move_asset", "에셋 파일 · 폴더를 옮기고 경로 칸(Config/Dev/AssetReferenceFields.json)의 참조를 고친다(리소스 id old new)"),
