@@ -44,7 +44,7 @@ namespace sw
         void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
 
     private:
-        PROPERTY( Category = "Water", DisplayName = "Half Extents", Min = 0.01, Tooltip = "Half size of the water box; the surface is its top face", Units = m )
+        PROPERTY( Category = "Water", DisplayName = "Half Extents", Min = 0.01, Tooltip = "Half size of the water box; the surface is its top face", Units = m, Meta = "Shape=Box" )
         float3 _halfExtents;
         PROPERTY( Category = "Water", Min = 0.0, Tooltip = "Fluid density over body density: 1 neither floats nor sinks, larger floats higher" )
         float32 _buoyancy;

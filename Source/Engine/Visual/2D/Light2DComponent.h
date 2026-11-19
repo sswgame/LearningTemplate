@@ -71,9 +71,9 @@ namespace sw
         void writeGPULightKindProperties( GPULight& outLight ) const override;
 
     private:
-        PROPERTY( Category = "Light", DisplayName = "Inner Radius", Min = 0.0, Tooltip = "Full intensity inside this distance", Units = m )
+        PROPERTY( Category = "Light", DisplayName = "Inner Radius", Min = 0.0, Tooltip = "Full intensity inside this distance", Units = m, Meta = "Shape=Circle" )
         float32 _innerRadius;
-        PROPERTY( Category = "Light", DisplayName = "Outer Radius", Min = 0.01, Tooltip = "Distance at which the light reaches zero", Units = m )
+        PROPERTY( Category = "Light", DisplayName = "Outer Radius", Min = 0.01, Tooltip = "Distance at which the light reaches zero", Units = m, Meta = "Shape=Circle" )
         float32 _outerRadius;
         PROPERTY( Category = "Light", DisplayName = "Falloff Exponent", Min = 0.01, Tooltip = "1 fades linearly, larger values fade faster near the edge" )
         float32 _falloffExponent;

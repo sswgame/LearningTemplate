@@ -165,7 +165,7 @@ namespace sw
         void editCommand( TFunction&& function ) const;
 
     private:
-        PROPERTY( Category = "Character", Min = 0.01, Tooltip = "Capsule radius", Units = m )
+        PROPERTY( Category = "Character", Min = 0.01, Tooltip = "Capsule radius", Units = m, Meta = "Shape=Capsule, ShapeRange=_halfHeight, ShapeOrigin=Base, ShapeScale=Physics" )
         float32 _radius;
         PROPERTY( Category = "Character", Min = 0.0, Tooltip = "Half the cylinder part; height = 2 * (half height + radius)", Units = m )
         float32 _halfHeight;

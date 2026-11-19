@@ -51,5 +51,10 @@ namespace sw
         [[nodiscard]] static bool intersectTriangle( const Ray& ray, const float3& a, const float3& b, const float3& c, float32 maxDistance, RayTriangleHit& outHit );
         /** @brief 광선이 평면(y 가 @p height)과 만나는 앞쪽 거리를 구합니다. 바닥 클릭과 탄착에 씁니다. */
         [[nodiscard]] static bool intersectHorizontalPlane( const Ray& ray, float32 height, float32 maxDistance, float32& outDistance );
+        /**
+         * @brief 광선과 가장 가까워지는 축 위의 점의 매개변수 t 를 구합니다(축 위의 점 = @p axisOrigin + t × @p axisDirection, 방향은 단위 벡터). 나란하면 0 입니다.
+         * @details 에디터 손잡이(콜라이더 크기 · 선언형 모양)가 마우스 광선으로 축을 따라 끄는 값이다 — 언리얼 `FMath::SegmentDistToSegment` 로 기즈모 축을 끄는 자리.
+         */
+        [[nodiscard]] static float32 computeClosestAxisParameter( const Ray& ray, const float3& axisOrigin, const float3& axisDirection );
     };
 } // namespace sw

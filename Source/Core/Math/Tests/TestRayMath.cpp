@@ -229,3 +229,18 @@ SW_TEST_CASE( RayMathTest, TurnTowardAngleTakesShortWay )
 
     SW_EXPECT_NEAR( 0.5, sw::OrientationUtil::turnTowardAngle( 0.5f, 2.0f, -1.0f ), kTolerance );
 }
+
+/**
+ * @brief [RayMathTest] 축 매개변수: 축을 가로지르는 광선은 축 위 가장 가까운 점의 t, 축 뒤쪽은 음수, 나란한 광선은 0 이다. 결함이면 손잡이가 마우스와 다른 자리로 끌린다
+ */
+SW_TEST_CASE( RayMathTest, ClosestAxisParameter )
+{
+    const sw::float3 axisOrigin{ 1.0f, 2.0f, 3.0f };
+    const sw::float3 axisDirection{ 1.0f, 0.0f, 0.0f };
+    const sw::Ray    down = makeRay( sw::float3{ 6.0f, 10.0f, 3.0f }, sw::float3{ 0.0f, -1.0f, 0.0f } );
+    SW_EXPECT_NEAR( 5.0, sw::Ray::computeClosestAxisParameter( down, axisOrigin, axisDirection ), kTolerance );
+    const sw::Ray behind = makeRay( sw::float3{ -2.0f, 2.0f, 9.0f }, sw::float3{ 0.0f, 0.0f, -1.0f } );
+    SW_EXPECT_NEAR( -3.0, sw::Ray::computeClosestAxisParameter( behind, axisOrigin, axisDirection ), kTolerance );
+    const sw::Ray along = makeRay( sw::float3{ 0.0f, 0.0f, 0.0f }, axisDirection );
+    SW_EXPECT_NEAR( 0.0, sw::Ray::computeClosestAxisParameter( along, axisOrigin, axisDirection ), kTolerance );
+}

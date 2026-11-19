@@ -41,9 +41,9 @@ namespace sw
         AudioVolumeShape getShape() const { return _shape; }
 
     private:
-        PROPERTY( Category = "Ambience", DisplayName = "Half Extents", Tooltip = "Box half size", Units = m )
+        PROPERTY( Category = "Ambience", DisplayName = "Half Extents", Tooltip = "Box half size", Units = m, EditCondition = "_shape == Box", Meta = "Shape=Box, ShapeAxes=World" )
         float3 _halfExtents;
-        PROPERTY( Category = "Ambience", DisplayName = "Radius", Min = 0.0, Tooltip = "Sphere radius", Units = m )
+        PROPERTY( Category = "Ambience", DisplayName = "Radius", Min = 0.0, Tooltip = "Sphere radius", Units = m, EditCondition = "_shape == Sphere", Meta = "Shape=Sphere, ShapeAxes=World" )
         float32 _radius;
         PROPERTY( Category = "Ambience", DisplayName = "Shape", Tooltip = "Point, Box or Sphere" )
         AudioVolumeShape _shape;

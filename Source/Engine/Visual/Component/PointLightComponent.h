@@ -55,7 +55,7 @@ namespace sw
         void writeGPULightKindProperties( GPULight& outLight ) const override;
 
     private:
-        PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m, Validate = validateRadius )
+        PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m, Validate = validateRadius, Meta = "Shape=Sphere" )
         float32 _radius;
         PROPERTY( Category = "Shadow", DisplayName = "Shadow Shape", Tooltip = "Light source size for soft shadows and contact shadow length" )
         LightShadowSettings _shadowSettings;

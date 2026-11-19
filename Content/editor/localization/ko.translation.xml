@@ -1430,6 +1430,10 @@
 		<entry key="EdVisualizer.PhysicsShapesTip"
 		       text="RigidBody · RigidBody2D 의 충돌 셰이프를 와이어프레임으로 표시합니다(정적 회색 · 키네마틱 파랑 · 동적 초록 · 트리거 노랑)"
 		       sourceHash="4bb80b47185fe4a9" />
+		<entry key="EdVisualizer.PropertyShapesLabel" text="모양" sourceHash="de466a82b78b2eef" />
+		<entry key="EdVisualizer.PropertyShapesTip"
+		       text="선택한 오브젝트의 컴포넌트 프로퍼티가 선언한 모양(빛 반경 · 원뿔, 볼륨, 방향)을 표시하고 손잡이로 값을 고칩니다"
+		       sourceHash="a45aa4cdebd8d7e5" />
 		<entry key="EdVisualizer.RigTargetGizmoLabel" text="리그 대상" sourceHash="2918a4befa7e5aae" />
 		<entry key="EdVisualizer.RigTargetGizmoTip"
 		       text="리그 디버그 창에서 고른 리그 대상의 기즈모입니다. 끌기를 놓으면 대상 오프셋을 리그 에셋에 씁니다"

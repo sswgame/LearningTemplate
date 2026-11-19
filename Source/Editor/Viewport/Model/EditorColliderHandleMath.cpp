@@ -137,16 +137,4 @@ namespace sw::editor
         return resized;
     }
 
-    float32 EditorColliderHandleMath::computeClosestAxisParameter( const float3& rayOrigin, const float3& rayDirection, const float3& axisOrigin,
-                                                                   const float3& axisDirection )
-    {
-        const float3  offset      = rayOrigin - axisOrigin;
-        const float32 alignment   = rayDirection.dot( axisDirection );
-        const float32 denominator = 1.0f - alignment * alignment;
-        if ( denominator < 0.000001f )
-            return 0.0f;
-        const float32 alongRay  = rayDirection.dot( offset );
-        const float32 alongAxis = axisDirection.dot( offset );
-        return ( alongAxis - alignment * alongRay ) / denominator;
-    }
 } // namespace sw::editor

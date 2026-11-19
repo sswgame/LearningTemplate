@@ -342,7 +342,6 @@
     "Source/Editor/Viewport/EditorViewportOverlays.cpp": {"float": 13},
     "Source/Editor/Viewport/EditorViewportPicker.cpp": {"float": 2},
     "Source/Editor/Viewport/EditorViewportProjection.cpp": {"integer": 2},
-    "Source/Editor/Viewport/Model/EditorColliderHandleMath.cpp": {"float": 1},
     "Source/Editor/Viewport/Model/EditorViewportCameraScene.cpp": {"float": 3},
     "Source/Editor/Viewport/Model/EditorViewportRayPick.cpp": {"float": 2},
     "Source/Editor/Viewport/Model/TerrainBrush.cpp": {"minus-one": 2, "float": 1},
