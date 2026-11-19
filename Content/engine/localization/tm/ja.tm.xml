@@ -74,6 +74,7 @@
 		<entry source="CPU only (Recompute Normals)" text="CPU のみ (法線の再計算)" />
 		<entry source="CPU only:" text="CPU のみ:" />
 		<entry source="Camera Shake" text="カメラの揺れ" />
+		<entry source="Camera View" text="カメラ視点" />
 		<entry source="Cancel" text="キャンセル" />
 		<entry source="Capacity" text="定員" />
 		<entry source="Center" text="中心" />

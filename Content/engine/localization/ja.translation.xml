@@ -735,6 +735,7 @@
 		<entry key="settings.display.windowMode" text="ウィンドウモード" sourceHash="74e7a95114592520" />
 		<entry key="settings.display.windowMode.borderless" text="ボーダーレス" sourceHash="60c26ddb9c7ef1fa" />
 		<entry key="settings.display.windowMode.windowed" text="ウィンドウ" sourceHash="c73eba7da7d67b64" />
+		<entry key="settings.gameplay.cameraPreset" text="カメラ視点" sourceHash="66c7042fa9ddfce3" />
 		<entry key="settings.gameplay.cameraShake" text="カメラの揺れ" sourceHash="0d4412b117d8c5c4" />
 		<entry key="settings.gameplay.fieldOfView" text="視野角" sourceHash="cfc03af4e2ec2dd9" />
 		<entry key="settings.gameplay.headBob" text="頭の揺れ" sourceHash="6b009c84219aa0f8" />

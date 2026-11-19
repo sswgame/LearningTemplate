@@ -719,6 +719,7 @@
 		<entry key="settings.display.windowMode" text="창 모드" sourceHash="74e7a95114592520" />
 		<entry key="settings.display.windowMode.borderless" text="테두리 없음" sourceHash="60c26ddb9c7ef1fa" />
 		<entry key="settings.display.windowMode.windowed" text="창" sourceHash="c73eba7da7d67b64" />
+		<entry key="settings.gameplay.cameraPreset" text="카메라 시점" sourceHash="66c7042fa9ddfce3" />
 		<entry key="settings.gameplay.cameraShake" text="카메라 흔들림" sourceHash="0d4412b117d8c5c4" />
 		<entry key="settings.gameplay.fieldOfView" text="시야각" sourceHash="cfc03af4e2ec2dd9" />
 		<entry key="settings.gameplay.headBob" text="걸음 흔들림" sourceHash="6b009c84219aa0f8" />

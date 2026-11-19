@@ -2643,12 +2643,12 @@
 				<item>engine/settings/engine.settings.xml</item>
 			</origins>
 		</entry>
-		<entry key="settings.gameplay.cameraShake" source="Camera Shake" context="Options menu label" maxLength="32">
+		<entry key="settings.gameplay.cameraPreset" source="Camera View" context="Options menu label" maxLength="32">
 			<origins>
 				<item>engine/settings/engine.settings.xml</item>
 			</origins>
 		</entry>
-		<entry key="settings.gameplay.cameraPreset" source="Camera View" context="Options menu label" maxLength="32">
+		<entry key="settings.gameplay.cameraShake" source="Camera Shake" context="Options menu label" maxLength="32">
 			<origins>
 				<item>engine/settings/engine.settings.xml</item>
 			</origins>
