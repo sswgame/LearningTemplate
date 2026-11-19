@@ -519,6 +519,7 @@ SW_TEST_CASE( PackedValueSerializationTest, RadiansIsDegreesOutsideAndRadiansIns
     SW_EXPECT_TRUE( ( *pReader )( &angle, "180" ) );
     SW_EXPECT_NEAR( MathUtil::kPi, angle.radians(), 1e-6f );
     SW_EXPECT_EQUAL( string( "180" ), ( *pWriter )( &angle ) );
+    SW_EXPECT_LOG( "Serialization.PackedValueOutOfRange" ); // 도 범위(±1e6)를 넘는 글은 이유를 남기고 거절한다
     Test::expectTextRejected( context, "Radians", Radians::fromDegrees( 10.0f ), "1e9" );
     Test::expectTextRejected( context, "Radians", Radians::fromDegrees( 10.0f ), "ten" );
 
