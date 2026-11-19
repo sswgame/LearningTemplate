@@ -1,0 +1,15 @@
+{
+    "backend": "vk",
+    "platform": "windows",
+    "commit": "1160fefd7594e4a6119d78d58fecacf5c8b748c0-dirty",
+    "recordedUnixMs": 1795114969355,
+    "reason": "missing",
+    "width": 160,
+    "height": 90,
+    "previousDifference": null,
+    "limits": {
+        "maxDifferingFraction": 0.01,
+        "maxMeanDistance": 0.005,
+        "maxDeepRegionPixels": 16
+    }
+}
