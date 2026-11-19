@@ -182,3 +182,55 @@ SW_TEST_CASE( StateIOReflectedTest, HandBodyAddsValuesOutsideReflection )
     { out << int32{ 5 } << int32{ 6 }; }, restored ) ); // 손 값이 한도를 넘는다
     SW_EXPECT_EQUAL( 15, restored._handOnly );
 }
+
+/**
+ * @brief [StateIOReflectedTest] 내장 표의 State 역할 · Layout 으로 실리는 칸(실수 · 큰 정수 · 쿼터니언 · int2 시퀀스 · 오브젝트 핸들 · 이름 시퀀스)이 FATAL 없이 왕복한다
+ */
+SW_TEST_CASE( StateIOReflectedTest, BuiltinLayoutPropertiesRoundTrip )
+{
+    sw::StateIOReflectedTestBuiltins state;
+    state._clock    = 12.25;
+    state._ticket   = 0x1122334455667788ull;
+    state._facing   = sw::quaternion{ 0.0f, 0.6f, 0.0f, 0.8f };
+    state._listCell = {
+        sw::int2{-1,   2},
+        sw::int2{30, -40}
+    };
+    state._target  = sw::GameObjectHandle::make( 77 );
+    state._listTag = { sw::hashed_string( "Gate" ), sw::hashed_string( "Lever" ) };
+
+    sw::Archive written;
+    state.writeState( written );
+    sw::Archive                      reading( written.getData(), written.getSize() );
+    sw::StateIOReflectedTestBuiltins restored;
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_EQUAL( size_t{ 0 }, reading.getRemainingBytes() );
+    SW_EXPECT_EQUAL( 12.25, restored._clock );
+    SW_EXPECT_EQUAL( state._ticket, restored._ticket );
+    SW_EXPECT_EQUAL( 0.6f, restored._facing._y );
+    SW_EXPECT_EQUAL( 0.8f, restored._facing._w );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, restored._listCell.size() );
+    SW_EXPECT_EQUAL( 30, restored._listCell[1]._x );
+    SW_EXPECT_EQUAL( -40, restored._listCell[1]._y );
+    SW_EXPECT_TRUE( restored._target == sw::GameObjectHandle::make( 77 ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, restored._listTag.size() );
+    SW_EXPECT_TRUE( restored._listTag[1] == sw::hashed_string( "Lever" ) );
+}
+
+/**
+ * @brief [StateIOReflectedTest] int2 칸은 성분마다(int32 둘) 실려 손 함수 `StateIO::writeInt2` 와 같은 바이트다 — 이름 표에서 Layout 으로 옮겨도 옛 바이트를 그대로 읽는다
+ */
+SW_TEST_CASE( StateIOReflectedTest, Int2BytesMatchTheHandWriter )
+{
+    sw::StateIOReflectedTestCell state;
+    state._cell = sw::int2{ -7, 123456 };
+    sw::Archive written;
+    state.writeState( written );
+
+    sw::Archive expected;
+    sw::StateIO::writeInt2( expected, state._cell );
+    // 머리(판 · 배치 해시) 뒤의 본문이 손 함수의 바이트와 같다.
+    SW_REQUIRE_TRUE( written.getSize() == sizeof( sw::uint32 ) + sizeof( sw::uint64 ) + expected.getSize() );
+    const sw::uint8* pBody = static_cast<const sw::uint8*>( written.getData() ) + written.getSize() - expected.getSize();
+    SW_EXPECT_TRUE( std::memcmp( expected.getData(), pBody, expected.getSize() ) == 0 );
+}

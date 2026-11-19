@@ -11,6 +11,7 @@
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
 #include "Programs/ReflectionParser/AnnotationFields.h"
+#include "Programs/ReflectionParser/ContainerTypeMap.h"
 #include "Programs/ReflectionParser/EmitTemplateStore.h"
 #include "Programs/ReflectionParser/ParserConfig.h"
 #include "Programs/ReflectionParser/ParserDefines.h"
@@ -578,6 +579,24 @@ namespace sw
             emit.linef( "static constexpr const ::utf8* kAlias%#[] = { %# };", propIndex, aliases );
         }
         emitNestedContainerTree( emit, typeInfo, prop, propIndex );
+        emitContainerTableCheck( emit, typeInfo, prop );
+    }
+
+    void CodeGenerator::emitContainerTableCheck( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const
+    {
+        if ( prop._bIsContainer == SW_FALSE || prop._bIsAccessor == SW_TRUE )
+            return;
+        // 표(`ReflectBuiltins.xxx` CONTAINER 줄)의 종류 · 역할이 래퍼 형식과 같은지 컴파일이 본다 — 어긋나면 이 칸의 생성 코드가 멈춘다.
+        // 표 밖 컨테이너(`REFLECT_CONTAINER( Kind, Stem )`)는 역할 칸이 없어 종류만 본다.
+        const string             wrapperType = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._memberName );
+        const ContainerTypeRule* pRule       = _session._containerTypeMap.findByWrapperStem( prop._containerType );
+        if ( pRule != nullptr )
+            emit.linef( "static_assert( ::sw::ContainerWrapperOf<%#>::matchesTable( %#, %#, %# ), \"ReflectBuiltins.xxx: CONTAINER row '%#' (kind, State, Fixed) disagrees with sw::%#Wrapper\" );",
+                        wrapperType, toCppExpr( pRule->_kind ), pRule->_bState == SW_TRUE ? "true" : "false", pRule->_bFixed == SW_TRUE ? "true" : "false", pRule->_match,
+                        prop._containerType );
+        else
+            emit.linef( "static_assert( ::sw::ContainerWrapperOf<%#>::kKind == %#, \"REFLECT_CONTAINER kind disagrees with sw::%#Wrapper\" );", wrapperType,
+                        toCppExpr( prop._containerKind ), prop._containerType );
     }
 
     void CodeGenerator::emitPropertyDesc( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, const uint32 propIndex ) const

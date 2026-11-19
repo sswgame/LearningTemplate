@@ -7,12 +7,14 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/Tests/StateHashTestComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Scene/SceneObjectHash.h"
@@ -110,7 +112,7 @@ namespace
 {
     /**
      * @brief 리플렉션 값 하나를 다른 값으로 바꿉니다(구조체는 첫 칸, 시퀀스는 원소 하나 더). 바꿀 수 없는 형식이면 false 입니다.
-     * @details 테스트가 형식을 손으로 나열하는 대신 상태 해시가 접는 형식 표와 같은 범위를 바꾼다 — 바꿀 수 없으면 실패로 드러난다.
+     * @details 내장 타입은 표의 State 역할 · Layout 이 정하는 길로 바꾼다(상태 해시가 접는 길과 같은 칸) — 바꿀 수 없으면 실패로 드러난다.
      */
     bool changeStateValue( const TypeRegistry& registry, const PropertyInfo& prop, void* pObject, const hashed_string& typeName, void* pValue )
     {
@@ -127,27 +129,54 @@ namespace
             pSequence->addElementDefault( pValue );
             return true;
         }
-        const string_view name = typeName.c_str();
-        if ( name == "bool" )
+        // 내장 타입은 표(`ReflectBuiltins.xxx`)의 State 역할 · Layout 으로 바꾼다 — 상태 해시가 접는 길과 같은 칸이라 형식 이름을 따로 나열하지 않는다.
+        const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
+        if ( builtinIndex != ReflectBuiltinIndex::kNone )
         {
-            *static_cast<bool*>( pValue ) = *static_cast<bool*>( pValue ) == false;
-            return true;
-        }
-        const bool bFloat = name == "float32" || name == "float2" || name == "float3" || name == "float4" || name == "quaternion";
-        if ( bFloat )
-        {
-            *static_cast<float32*>( pValue ) += 1.0f;
-            return true;
-        }
-        if ( name == "float64" )
-        {
-            *static_cast<float64*>( pValue ) += 1.0;
-            return true;
-        }
-        if ( name == "string" )
-        {
-            *static_cast<string*>( pValue ) += "x";
-            return true;
+            const ReflectBuiltinTraits traits = ReflectBuiltinTraitTable::get( builtinIndex );
+            if ( traits.hasRole( ReflectBuiltinRole::State ) == false )
+                return false;
+            switch ( traits._layout )
+            {
+                case ReflectBuiltinLayout::Number:
+                {
+                    float64 number = 0.0;
+                    return ReflectedValueUtil::readNumber( builtinIndex, pValue, number ) && ReflectedValueUtil::writeNumber( builtinIndex, pValue, number + 1.0 );
+                }
+                case ReflectBuiltinLayout::Float32:
+                    *static_cast<float32*>( pValue ) += 1.0f; // 첫 성분
+                    return true;
+                case ReflectBuiltinLayout::Int32:
+                    *static_cast<int32*>( pValue ) += 1; // 첫 성분
+                    return true;
+                case ReflectBuiltinLayout::Angle: // State 가 아니다
+                    return false;
+                case ReflectBuiltinLayout::None:
+                    break;
+            }
+            switch ( builtinIndex ) // 손 처리기 — 목록은 `ReflectBuiltinTraitTable::hasStateHandHandler` 하나다
+            {
+                case ReflectBuiltinIndex::kbool:
+                    *static_cast<bool*>( pValue ) = *static_cast<bool*>( pValue ) == false;
+                    return true;
+                case ReflectBuiltinIndex::kstring:
+                    *static_cast<string*>( pValue ) += "x";
+                    return true;
+                case ReflectBuiltinIndex::khashed_string:
+                {
+                    hashed_string& label = *static_cast<hashed_string*>( pValue );
+                    label                = hashed_string( ( string( label.c_str() ) + "x" ).c_str() );
+                    return true;
+                }
+                case ReflectBuiltinIndex::kGameObjectHandle:
+                {
+                    GameObjectHandle& handle = *static_cast<GameObjectHandle*>( pValue );
+                    handle                   = GameObjectHandle::make( handle.objectID() + 1 );
+                    return true;
+                }
+                default:
+                    return false;
+            }
         }
         if ( const EnumInfo* pEnum = registry.findEnum( typeName ) )
         {
@@ -155,13 +184,8 @@ namespace
             return true;
         }
         const TypeInfo* pType = registry.findType( typeName );
-        if ( pType == nullptr )
+        if ( pType == nullptr || pType->isPrimitive() )
             return false;
-        if ( pType->isPrimitive() )
-        {
-            ++*static_cast<uint8*>( pValue ); // 남은 내장 스칼라는 정수다 — 낮은 바이트(리틀 엔디언)를 바꾼다
-            return true;
-        }
         const PropertyListView listInner = pType->getPropertiesWithBase();
         if ( listInner.begin() == listInner.end() )
             return false;
@@ -228,4 +252,60 @@ SW_TEST_CASE( StateHashTest, EveryStateFieldChangesTheHash )
     const uint64 before = foldComponentState( *pProbe );
     pProbe->_tuning += 1.0f;
     SW_EXPECT_EQUAL( foldComponentState( *pProbe ), before );
+}
+
+/**
+ * @brief [StateHashTest] 내장 표의 Layout 으로 접는 칸(int2 성분)과 손 처리기 칸(hashed_string · GameObjectHandle)이 FATAL 없이 접히고, 값이 같으면 같은 해시다
+ * @details hashed_string 상태 칸은 전에는 해시가 접지 못해 FATAL 이었다(상태 직렬화는 실었다) — 두 쪽이 같은 State 역할을 읽는다.
+ */
+SW_TEST_CASE( StateHashTest, LayoutAndHandHandlerPropertiesFold )
+{
+    GameObjectManager       manager;
+    GameObject*             pObject = manager.createGameObject( hashed_string( "StateHashProbe" ) );
+    StateHashTestComponent* pProbe  = static_cast<StateHashTestComponent*>( manager.addComponentByName( pObject, hashed_string( "sw::StateHashTestComponent" ) ) );
+    SW_REQUIRE_NOT_NULL( pProbe );
+    pProbe->_cell      = int2{ 3, -4 };
+    pProbe->_label     = hashed_string( "Gate" );
+    pProbe->_target    = GameObjectHandle::make( 9 );
+    const uint64 first = foldComponentState( *pProbe );
+    SW_EXPECT_EQUAL( foldComponentState( *pProbe ), first );
+
+    pProbe->_cell = int2{ -4, 3 }; // 성분 순서가 해시에 든다
+    SW_EXPECT_TRUE( foldComponentState( *pProbe ) != first );
+    pProbe->_cell = int2{ 3, -4 };
+    SW_EXPECT_EQUAL( foldComponentState( *pProbe ), first );
+}
+
+namespace
+{
+    /** @brief State 역할 줄이면 그 형식의 기본값 하나를 `changeStateValue` 로 바꿔 봅니다. State 가 아닌 줄은 형식을 건드리지 않는다(압축 타입은 이름만 선언돼 있다). */
+    template <typename T, bool bState>
+    bool canChangeStateRow( const TypeRegistry& registry, const hashed_string& typeName )
+    {
+        if constexpr ( bState )
+        {
+            T                  value{};
+            const PropertyInfo prop( hashed_string( "_value" ), typeName, 0 );
+            return changeStateValue( registry, prop, &value, typeName, &value );
+        }
+        else
+        {
+            (void)registry;
+            (void)typeName;
+            return true;
+        }
+    }
+} // namespace
+
+/**
+ * @brief [StateHashTest] 표의 State 역할 줄마다 값을 바꾸는 길이 있다 — 상태 칸에 쓸 수 있는 내장 형식이 늘면 테스트의 값 바꾸기도 표에서 따라온다
+ */
+SW_TEST_CASE( StateHashTest, EveryStateRowCanBeChanged )
+{
+    const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) SW_EXPECT_TRUE_MSG( ( canChangeStateRow<ReflectBuiltinCppTypeT<CppType>, ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon ).hasRole( ReflectBuiltinRole::State )>( registry, ReflectedValueUtil::getBuiltinTypeName( ReflectBuiltinIndex::k##Canon ) ) ), #Canon );
+#define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
+#undef SW_REFLECT_BUILTIN_TYPE
+#undef SW_REFLECT_BUILTIN_CONTAINER
 }

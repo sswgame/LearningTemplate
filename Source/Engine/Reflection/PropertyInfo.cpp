@@ -14,8 +14,10 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -111,6 +113,21 @@ namespace sw
         flat._keyTypeName     = _keyTypeName;
         flat._wrapper         = _containerWrapper;
         return flat;
+    }
+
+    bool PropertyInfo::isProcessLocal() const
+    {
+        const hashed_string& leafType = _bIsContainer == SW_TRUE ? _elementTypeName : _typeName;
+        return ReflectBuiltinTraitTable::get( ReflectedValueUtil::findBuiltinIndex( leafType ) ).hasRole( ReflectBuiltinRole::Local );
+    }
+
+    const ISequenceContainerWrapper* PropertyInfo::findStateSequence() const
+    {
+        if ( _bIsContainer == SW_FALSE || _containerWrapper == nullptr )
+            return nullptr;
+        const bool                       bNested   = _nestedContainer != nullptr && _nestedContainer->_elementNested != nullptr;
+        const ISequenceContainerWrapper* pSequence = bNested ? nullptr : _containerWrapper->asSequence();
+        return pSequence != nullptr && pSequence->allowsInPlaceElementWrite() ? pSequence : nullptr;
     }
 
     PropertyInfo::PropertyInfo( hashed_string name, hashed_string typeName, size_t offset,

@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -24,7 +25,7 @@ namespace sw
         float32 _weight = 1.0f;
     };
 
-    /** @brief 상태 칸의 형식(정수 · 실수 · 벡터 · 글 · 비트필드 · 구조체 · 시퀀스)을 하나씩 든 컴포넌트입니다. 상태가 아닌 칸(`_tuning`)은 해시에 들지 않는다. */
+    /** @brief 상태 칸의 형식(정수 · 실수 · 벡터 · 정수 좌표 · 글 · 이름 · 오브젝트 핸들 · 비트필드 · 구조체 · 시퀀스)을 하나씩 든 컴포넌트입니다. 상태가 아닌 칸(`_tuning`)은 해시에 들지 않는다. */
     REFLECT( HideInMenu )
     struct StateHashTestComponent : public Component
     {
@@ -41,6 +42,15 @@ namespace sw
 
         PROPERTY( RuntimeState )
         string _phase = "idle";
+
+        PROPERTY( RuntimeState )
+        int2 _cell{ 0, 0 }; ///< i32 Layout — 성분마다 접는다
+
+        PROPERTY( RuntimeState )
+        hashed_string _label{}; ///< 손 처리기 — 글자로 접는다
+
+        PROPERTY( RuntimeState )
+        GameObjectHandle _target; ///< 손 처리기 — objectID 로 접는다
 
         PROPERTY( RuntimeState )
         StateHashTestPart _part;

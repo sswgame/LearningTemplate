@@ -176,8 +176,10 @@ namespace sw
         if ( type.kind == CXType_ConstantArray )
         {
             const CXType elementType = clang_getArrayElementType( type );
-            markContainer( *node, ContainerKind::Sequence, string( annotation::kFixedArrayWrapperStem ) );
-            node->_typeName        = annotation::kFixedArrayTypeName;
+            // 표의 `array` 줄이 래퍼를 정한다 — 로더가 그 줄이 고정 시퀀스로 있는지 시작할 때 봤다.
+            const ContainerTypeRule& fixedArray = *session._containerTypeMap.findByMatch( annotation::kFixedArrayTypeName );
+            markContainer( *node, fixedArray._kind, fixedArray._type );
+            node->_typeName        = fixedArray._match;
             node->_elementTypeName = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( elementType ) ) );
             node->_elementNested   = makeContainerFromType( elementType, session );
             if ( node->_elementNested != nullptr && node->_elementNested->_bIsContainer == SW_FALSE )

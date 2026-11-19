@@ -3,11 +3,12 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
-#include "Core/Math/VectorMath.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/EnumInfo.h"
 #include "Engine/Reflection/ReflectVisit.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
@@ -26,62 +27,101 @@ namespace sw
             /** @brief 칸 배치 해시의 규칙 판입니다. 잎 인코딩(열거를 int64 로, 시퀀스 개수를 uint32 로 …)을 바꾸면 올려 모든 배치 해시를 바꾼다. */
             static constexpr uint32 kLayoutRuleVersion = 1;
 
-            /** @brief 잎 칸의 종류입니다. 이름으로 한 번 가른다. */
+            /**
+             * @brief 잎 칸의 종류입니다. 칸마다 한 번 가른다.
+             * @details 내장 타입은 `ReflectBuiltins.xxx` 의 State 역할 · Layout 이 정한다 — num 은 그 타입 그대로(`StateIO::value`), f32 · i32 는 성분마다,
+             *          none 은 아래 손 처리기(bool · string · hashed_string · GameObjectHandle)다. 바이트는 옛 이름 표 때와 같다(float 벡터 · int2 는 성분 순서 그대로).
+             */
             enum class LeafKind : uint8
             {
                 Unsupported,
                 Bool,
-                Int8,
-                Int16,
-                Int32,
-                Int64,
-                UInt8,
-                UInt16,
-                UInt32,
-                UInt64,
-                Float32,
-                Float64,
-                FloatVector, ///< float2 · float3 · float4 · quaternion — float32 를 `_size / 4` 개
-                Int2,        ///< 정수 좌표 — `StateIO::value( int2& )`
+                Number,   ///< num Layout — `kArrValueNumber` 의 그 타입 칸
+                Float32s, ///< f32 Layout — float32 를 성분 수만큼
+                Int32s,   ///< i32 Layout — int32 를 성분 수만큼
                 String,
                 Name,
+                ObjectHandle, ///< GameObjectHandle — objectID(uint64). 다시 만든 오브젝트는 같은 objectID 를 받는다(`GameObjectHandle`)
                 Enum,
                 Struct,
             };
 
+            using ValueNumberFn = void ( * )( StateIO& io, void* pValue );
+
+            template <typename T>
+            static void valueNumber( StateIO& io, void* pValue )
+            {
+                io.value( *static_cast<T*>( pValue ) );
+            }
+
+            /** @brief State 역할인 num 줄이면 그 타입의 칸 함수, 아니면 nullptr 입니다. 산술이 아닌 타입은 `valueNumber<T>` 를 인스턴스화하지 않는다. */
+            template <typename T, bool bNumber>
+            static constexpr ValueNumberFn pickValueNumber()
+            {
+                if constexpr ( bNumber )
+                    return &valueNumber<T>;
+                else
+                    return nullptr;
+            }
+
+            /** @brief State 역할인 num 줄이면 참입니다. */
+            static constexpr bool isStateNumber( const ReflectBuiltinIndex builtinIndex )
+            {
+                const ReflectBuiltinTraits traits = ReflectBuiltinTraitTable::get( builtinIndex );
+                return traits.hasRole( ReflectBuiltinRole::State ) && traits._layout == ReflectBuiltinLayout::Number;
+            }
+
+            /** @brief num 줄마다 칸 함수입니다. 순서는 `ReflectBuiltinIndex` 입니다. */
+            static ValueNumberFn findValueNumber( const ReflectBuiltinIndex builtinIndex )
+            {
+                static constexpr ValueNumberFn kArrValueNumber[] = {
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickValueNumber<ReflectBuiltinCppTypeT<CppType>, isStateNumber( ReflectBuiltinIndex::k##Canon )>(),
+#define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
+#undef SW_REFLECT_BUILTIN_TYPE
+#undef SW_REFLECT_BUILTIN_CONTAINER
+                };
+                return builtinIndex < ReflectBuiltinIndex::kCount ? kArrValueNumber[static_cast<size_t>( builtinIndex )] : nullptr;
+            }
+
+            static LeafKind classifyBuiltin( const ReflectBuiltinIndex builtinIndex )
+            {
+                const ReflectBuiltinTraits traits = ReflectBuiltinTraitTable::get( builtinIndex );
+                if ( traits.hasRole( ReflectBuiltinRole::State ) == false )
+                    return LeafKind::Unsupported;
+                switch ( traits._layout )
+                {
+                    case ReflectBuiltinLayout::Number:
+                        return LeafKind::Number;
+                    case ReflectBuiltinLayout::Float32:
+                        return LeafKind::Float32s;
+                    case ReflectBuiltinLayout::Int32:
+                        return LeafKind::Int32s;
+                    case ReflectBuiltinLayout::Angle: // State 가 아니다(`ReflectBuiltinTraitTable::isStateCarried`)
+                        return LeafKind::Unsupported;
+                    case ReflectBuiltinLayout::None:
+                        break;
+                }
+                switch ( builtinIndex ) // 손 처리기 — 목록은 `ReflectBuiltinTraitTable::hasStateHandHandler` 하나다
+                {
+                    case ReflectBuiltinIndex::kbool:
+                        return LeafKind::Bool;
+                    case ReflectBuiltinIndex::kstring:
+                        return LeafKind::String;
+                    case ReflectBuiltinIndex::khashed_string:
+                        return LeafKind::Name;
+                    case ReflectBuiltinIndex::kGameObjectHandle:
+                        return LeafKind::ObjectHandle;
+                    default:
+                        return LeafKind::Unsupported;
+                }
+            }
+
             static LeafKind classify( const TypeRegistry& registry, const hashed_string& typeName )
             {
-                struct NamedKind
-                {
-                    const utf8* _pName;
-                    LeafKind    _kind;
-                };
-                static constexpr NamedKind kArrNamedKind[] = {
-                    {         "bool",        LeafKind::Bool},
-                    {         "int8",        LeafKind::Int8},
-                    {        "int16",       LeafKind::Int16},
-                    {        "int32",       LeafKind::Int32},
-                    {        "int64",       LeafKind::Int64},
-                    {        "uint8",       LeafKind::UInt8},
-                    {       "uint16",      LeafKind::UInt16},
-                    {       "uint32",      LeafKind::UInt32},
-                    {       "uint64",      LeafKind::UInt64},
-                    {      "float32",     LeafKind::Float32},
-                    {      "float64",     LeafKind::Float64},
-                    {       "float2", LeafKind::FloatVector},
-                    {       "float3", LeafKind::FloatVector},
-                    {       "float4", LeafKind::FloatVector},
-                    {   "quaternion", LeafKind::FloatVector},
-                    {         "int2",        LeafKind::Int2},
-                    {       "string",      LeafKind::String},
-                    {"hashed_string",        LeafKind::Name},
-                };
-                const string_view name = typeName.c_str();
-                for ( const NamedKind& entry : kArrNamedKind )
-                {
-                    if ( name == entry._pName )
-                        return entry._kind;
-                }
+                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
+                if ( builtinIndex != ReflectBuiltinIndex::kNone )
+                    return classifyBuiltin( builtinIndex );
                 if ( registry.findEnum( typeName ) != nullptr )
                     return LeafKind::Enum;
                 const TypeInfo* pType = registry.findType( typeName );
@@ -90,13 +130,12 @@ namespace sw
                 return LeafKind::Unsupported;
             }
 
-            /** @brief 칸이 싣는 시퀀스 래퍼입니다. 시퀀스가 아니면 nullptr, 맵 · 중첩 컨테이너는 실을 수 없어 멈춘다. */
+            /** @brief 칸이 싣는 시퀀스 래퍼입니다. 컨테이너가 아니면 nullptr, State 역할 밖(맵 · 집합 · 중첩)은 실을 수 없어 멈춘다(`PropertyInfo::findStateSequence`). */
             static const ISequenceContainerWrapper* findSequence( const TypeInfo& owner, const PropertyInfo& prop )
             {
                 if ( prop._bIsContainer == SW_FALSE )
                     return nullptr;
-                const bool                       bNested   = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
-                const ISequenceContainerWrapper* pSequence = prop._containerWrapper != nullptr && bNested == false ? prop._containerWrapper->asSequence() : nullptr;
+                const ISequenceContainerWrapper* pSequence = prop.findStateSequence();
                 if ( pSequence == nullptr )
                     stopForUnsupportedField( owner, prop );
                 return pSequence;
@@ -104,7 +143,7 @@ namespace sw
 
             [[noreturn]] static void stopForUnsupportedField( const TypeInfo& owner, const PropertyInfo& prop )
             {
-                SW_FATAL( "state field '%#::%#' (%#) cannot be carried by StateIO::reflected - use a number, bool, enum, string, hashed_string, float vector, int2, reflected struct "
+                SW_FATAL( "state field '%#::%#' (%#) cannot be carried by StateIO::reflected - use a builtin with the State role (ReflectBuiltins.xxx), an enum, a reflected struct "
                           "or a sequence of those, or take the field out of RuntimeState and carry it with io.value in serializeState",
                           owner._fullyQualifiedName.c_str(), prop._name.c_str(), prop._typeName.c_str() );
             }
@@ -159,15 +198,26 @@ namespace sw
                 }
             }
 
-            static void valueFloatVector( StateIO& io, const TypeRegistry& registry, const hashed_string& typeName, void* pValue )
+            /** @brief f32 · i32 Layout 값 하나를 성분마다 싣습니다. 성분 수는 Layout 의 멤버 수다(`ReflectedValueUtil::getBuiltinComponentCount`). */
+            template <typename TElement>
+            static void valueComponents( StateIO& io, const hashed_string& typeName, void* pValue )
             {
-                const TypeInfo* pVector = registry.findType( typeName );
-                const size_t    count   = pVector != nullptr ? pVector->_size / sizeof( float32 ) : 0;
-                float32*        pFloat  = static_cast<float32*>( pValue );
-                for ( size_t index = 0; index < count; ++index )
+                const uint8 count      = ReflectedValueUtil::getBuiltinComponentCount( ReflectedValueUtil::findBuiltinIndex( typeName ) );
+                TElement*   pComponent = static_cast<TElement*>( pValue );
+                for ( uint8 index = 0; index < count; ++index )
                 {
-                    io.value( pFloat[index] );
+                    io.value( pComponent[index] );
                 }
+            }
+
+            /** @brief objectID 로 싣습니다. 읽으면 같은 objectID 의 핸들이다. */
+            static void valueObjectHandle( StateIO& io, void* pValue )
+            {
+                GameObjectHandle& handle   = *static_cast<GameObjectHandle*>( pValue );
+                uint64            objectID = handle.objectID();
+                io.value( objectID );
+                if ( io.isReading() )
+                    handle = GameObjectHandle::make( objectID );
             }
 
             static void valueEnum( StateIO& io, const EnumInfo& info, void* pValue )
@@ -296,47 +346,23 @@ namespace sw
                     *static_cast<bool*>( pValue ) = stored == SW_TRUE;
                     return;
                 }
-                case LeafKind::Int8:
-                    value( *static_cast<int8*>( pValue ) );
+                case LeafKind::Number:
+                    Internal::findValueNumber( ReflectedValueUtil::findBuiltinIndex( leafType ) )( *this, pValue );
                     return;
-                case LeafKind::Int16:
-                    value( *static_cast<int16*>( pValue ) );
+                case LeafKind::Float32s:
+                    Internal::valueComponents<float32>( *this, leafType, pValue );
                     return;
-                case LeafKind::Int32:
-                    value( *static_cast<int32*>( pValue ) );
-                    return;
-                case LeafKind::Int64:
-                    value( *static_cast<int64*>( pValue ) );
-                    return;
-                case LeafKind::UInt8:
-                    value( *static_cast<uint8*>( pValue ) );
-                    return;
-                case LeafKind::UInt16:
-                    value( *static_cast<uint16*>( pValue ) );
-                    return;
-                case LeafKind::UInt32:
-                    value( *static_cast<uint32*>( pValue ) );
-                    return;
-                case LeafKind::UInt64:
-                    value( *static_cast<uint64*>( pValue ) );
-                    return;
-                case LeafKind::Float32:
-                    value( *static_cast<float32*>( pValue ) );
-                    return;
-                case LeafKind::Float64:
-                    value( *static_cast<float64*>( pValue ) );
-                    return;
-                case LeafKind::Int2:
-                    value( *static_cast<int2*>( pValue ) );
-                    return;
-                case LeafKind::FloatVector:
-                    Internal::valueFloatVector( *this, registry, leafType, pValue );
+                case LeafKind::Int32s:
+                    Internal::valueComponents<int32>( *this, leafType, pValue );
                     return;
                 case LeafKind::String:
                     value( *static_cast<string*>( pValue ) );
                     return;
                 case LeafKind::Name:
                     value( *static_cast<hashed_string*>( pValue ) );
+                    return;
+                case LeafKind::ObjectHandle:
+                    Internal::valueObjectHandle( *this, pValue );
                     return;
                 case LeafKind::Enum:
                     Internal::valueEnum( *this, *registry.findEnum( leafType ), pValue );

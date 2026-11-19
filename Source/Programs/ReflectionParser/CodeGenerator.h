@@ -72,6 +72,8 @@ namespace sw
         bool emitTypeEditorMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const;
         /** @brief 중첩 컨테이너 트리를 단계마다 정적 `const` 객체(`s_nested<색인>_<단계>`)로 출력합니다. */
         void emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, uint32 propIndex ) const;
+        /** @brief 컨테이너 칸의 래퍼 형식이 표(`ReflectBuiltins.xxx` CONTAINER 줄)의 종류 · 역할과 같은지 보는 `static_assert` 를 출력합니다. */
+        void emitContainerTableCheck( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
         /** @brief 이벤트(멀티캐스트 델리게이트 PROPERTY) 목록을 출력합니다. */
         void emitEventList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const;
         /** @brief 메서드 목록을 출력합니다. */

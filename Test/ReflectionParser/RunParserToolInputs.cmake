@@ -5,6 +5,10 @@
 #   MODE=broken-config      설정 파일이 JSON 이 아니다.
 #   MODE=broken-templates   템플릿 폴더에서 템플릿 하나가 빠졌다.
 #   MODE=broken-spelling    철자 표의 첫 줄이 [scope] 절 밖의 바인딩이다.
+#   MODE=broken-builtins-interp   내장 표의 bool 줄에 Interp 역할을 단다 — 섞는 길이 없는 모양(none)이라 시작할 때 멈춰야 한다.
+#   MODE=broken-builtins-widget   내장 표의 TagID 줄 위젯을 Packed 로 바꾼다 — 글 처리기가 packed 가 아니다.
+#   MODE=broken-builtins-layout   내장 표의 int2 줄 Layout 을 모르는 철자(i64)로 바꾼다.
+#   MODE=broken-builtins-container  내장 표의 TArray 줄에서 State 를 뺀다 — 같은 래퍼(Vector)의 vector 줄과 역할이 다르다.
 #   깨진 입력은 0 이 아닌 종료여야 한다 — 기본값으로 이어 가면 빌드가 틀린 생성 코드로 지나간다(폴백 없음).
 # 입력: MODE · TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · GEN_CPP_SUFFIX
 foreach(required MODE TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG GEN_CPP_SUFFIX)
@@ -132,10 +136,45 @@ elseif(MODE STREQUAL "broken-spelling")
 	set(annotation_meta "${WORK_DIR}/broken.annotation.txt")
 	file(READ "${ANNOTATION_META}" meta_text)
 	file(WRITE "${annotation_meta}" "flag.NotInAScope = NotInAScope\n${meta_text}")
+elseif(MODE MATCHES "^broken-builtins-")
+	# 내장 표 한 줄만 바꾼 사본 — 바꿀 줄이 없으면 이 사례는 아무것도 증명하지 않으므로 멈춘다.
+	if(MODE STREQUAL "broken-builtins-interp")
+		set(builtins_from "SW_REFLECT_BUILTIN_TYPE( bool, bool, none, -, Checkbox, none, State, _ )")
+		set(builtins_to "SW_REFLECT_BUILTIN_TYPE( bool, bool, none, -, Checkbox, none, Interp|State, _ )")
+		set(expected_text "Interp needs num, f32 or angle")
+	elseif(MODE STREQUAL "broken-builtins-widget")
+		set(builtins_from "SW_REFLECT_BUILTIN_TYPE( TagID, sw::TagID, none, sw, Tag, none, None, _ )")
+		set(builtins_to "SW_REFLECT_BUILTIN_TYPE( TagID, sw::TagID, none, sw, Packed, none, None, _ )")
+		set(expected_text "the Packed widget needs packed")
+	elseif(MODE STREQUAL "broken-builtins-layout")
+		set(builtins_from "SW_REFLECT_BUILTIN_TYPE( int2, sw::int2, packed, sw, Packed, i32(_x,_y), State, _ )")
+		set(builtins_to "SW_REFLECT_BUILTIN_TYPE( int2, sw::int2, packed, sw, Packed, i64(_x,_y), State, _ )")
+		set(expected_text "use none, num, angle, f32(members) or i32(members)")
+	elseif(MODE STREQUAL "broken-builtins-container")
+		set(builtins_from "SW_REFLECT_BUILTIN_CONTAINER( TArray, Sequence, Vector, State )")
+		set(builtins_to "SW_REFLECT_BUILTIN_CONTAINER( TArray, Sequence, Vector, None )")
+		set(expected_text "one wrapper has one shape")
+	else()
+		message(FATAL_ERROR "RunParserToolInputs: unknown MODE '${MODE}'")
+	endif()
+	file(READ "${BUILTINS}" builtins_text)
+	string(FIND "${builtins_text}" "${builtins_from}" builtins_found)
+	if(builtins_found EQUAL -1)
+		message(FATAL_ERROR "${MODE}: '${builtins_from}' is not in ${BUILTINS} - update this case with the table")
+	endif()
+	string(REPLACE "${builtins_from}" "${builtins_to}" builtins_text "${builtins_text}")
+	set(BUILTINS "${WORK_DIR}/broken.ReflectBuiltins.xxx")
+	file(WRITE "${BUILTINS}" "${builtins_text}")
 else()
 	message(FATAL_ERROR "RunParserToolInputs: unknown MODE '${MODE}'")
 endif()
 sw_run_parser(exit_code output)
 if(exit_code EQUAL 0)
 	message(FATAL_ERROR "${MODE}: the parser accepted a broken tool input\n${output}")
+endif()
+if(DEFINED expected_text)
+	string(FIND "${output}" "${expected_text}" expected_found)
+	if(expected_found EQUAL -1)
+		message(FATAL_ERROR "${MODE}: the parser failed without saying '${expected_text}'\n${output}")
+	endif()
 endif()

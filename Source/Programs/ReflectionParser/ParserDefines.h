@@ -75,51 +75,12 @@ namespace sw
         /** @brief 검증 함수(`Validate = fn`)의 인자 타입 — 정규 이름(`sw::` 와 참조를 벗긴 것)입니다. */
         inline constexpr const utf8* kValidationContextTypeName = "ValidationContext";
 
-        /** @brief C 고정 배열(`T _arr[N]`)의 컨테이너 이름 · 래퍼 줄기입니다 — `std::array` 와 같은 `ArrayWrapper` 를 쓴다. */
-        inline constexpr const utf8* kFixedArrayTypeName    = "array";
-        inline constexpr const utf8* kFixedArrayWrapperStem = "Array";
-
-        /** @brief `PROPERTY( Interp )` 를 받는 정규 타입 이름입니다 — 시퀀서 값 트랙이 섞을 수 있는 것(`PropertyRoleUtil::isInterpolatable` 과 같은 목록). */
-        inline constexpr const utf8* kArrInterpTypeName[] = { "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32",
-                                                              "uint64", "float32", "float64", "float2", "float3", "float4", "quaternion", "Radians" };
+        /** @brief C 고정 배열(`T _arr[N]`)이 타는 `ReflectBuiltins.xxx` CONTAINER 줄의 이름입니다 — 래퍼 줄기 · 종류 · 역할은 그 줄이 정한다(`std::array` 와 같다). */
+        inline constexpr const utf8* kFixedArrayTypeName = "array";
     } // namespace annotation
-
-    /** @brief 고정 배치형 수학 타입의 성분 형식입니다 — 성분마다 그 형식의 코덱 칸(실수 · 정수 규칙)을 씁니다. */
-    enum class FixedMathElement : uint8
-    {
-        Float32,
-        Int32,
-    };
-
-    /** @brief 고정 배치형 코덱이 원소마다 성분 형식 규칙으로 쓰는 수학 타입 한 줄입니다. 정규 이름, 같은 형식의 멤버(선언 순서, 쉼표로 나눔), 성분 형식을 담습니다. */
-    struct FixedMathTypeDef
-    {
-        const utf8*      _pName;
-        const utf8*      _pMemberList;
-        FixedMathElement _element;
-    };
 
     namespace fixedlayout
     {
-        /**
-         * @brief 원소가 모두 같은 형식(float32 · int32)인 내장 수학 타입입니다(`ReflectBuiltins.xxx` 의 이름). 멤버 이름은 `Core/Math` 의 선언과 같아야 하고,
-         *        생성 코드가 그 이름으로 멤버를 읽으므로 어긋나면 컴파일이 멈춥니다.
-         * @details 핸들(`ComponentHandle` 등)처럼 모양이 같아도 뜻이 다른 타입이 섞이지 않도록 구조에서 추측하지 않고 목록으로 둡니다.
-         *          `int2` 는 리플렉션 표에서 `packed` 줄이지만 메모리는 int32 둘이라 여기서 먼저 잡혀 정수 칸 둘로 실린다(언리얼 `FIntPoint` 복제와 같은 꼴).
-         */
-        inline constexpr FixedMathTypeDef kArrMathType[] = {
-            {    "float2",                                                           "_x,_y", FixedMathElement::Float32},
-            {    "float3",                                                        "_x,_y,_z", FixedMathElement::Float32},
-            {    "float4",                                                     "_x,_y,_z,_w", FixedMathElement::Float32},
-            {"quaternion",                                                     "_x,_y,_z,_w", FixedMathElement::Float32},
-            {  "float4x4", "_11,_12,_13,_14,_21,_22,_23,_24,_31,_32,_33,_34,_41,_42,_43,_44", FixedMathElement::Float32},
-            {      "int2",                                                           "_x,_y",   FixedMathElement::Int32},
-        };
-        /**
-         * @brief 각 형식(`Core/Math/Radians.h`)의 정규 이름입니다. 리플렉션 표에서는 성분을 도로 내는 `packed` 줄이지만 메모리는 라디안 float32 하나라
-         *        코덱은 float32 칸으로 싣고, 도로 적힌 숫자 경계(`Min = 0, Max = 90`)는 데이터 읽기와 같은 변환(`Radians::fromDegrees`)으로 라디안 경계로 낸다.
-         */
-        inline constexpr const utf8* kAngleTypeName = "Radians";
         /** @brief 대상마다 정규 문자열을 모아 두는 진단 파일 이름입니다. 빌드는 읽지 않습니다. */
         inline constexpr const utf8* kSchemaListFile = "FixedSchemas.gen.txt";
     } // namespace fixedlayout
@@ -219,6 +180,20 @@ namespace sw
         inline constexpr const utf8* kSkipNamespace  = "-";
         inline constexpr const utf8* kSkipAlias      = "_";
         inline constexpr const utf8* kTextConvPacked = "packed"; ///< TYPE 줄의 세 번째 칸(글 처리기)이 압축 타입을 뜻하는 값
+        inline constexpr const utf8* kWidgetPacked   = "Packed"; ///< TYPE 줄의 Widget 칸 — 성분 실수로 편집한다(`PackedValueTraits` 가 있어야 하니 글 처리기도 packed 여야 한다)
+        // Layout 칸(여섯 번째)의 철자 — 엔진 `ReflectedValue.h` 의 `SW_BUILTIN_LAYOUT_KIND_*` 와 같다.
+        inline constexpr const utf8* kLayoutNone   = "none";
+        inline constexpr const utf8* kLayoutNumber = "num";
+        inline constexpr const utf8* kLayoutF32    = "f32";
+        inline constexpr const utf8* kLayoutI32    = "i32";
+        inline constexpr const utf8* kLayoutAngle  = "angle";
+        // Roles 칸의 철자 — `|` 로 잇는다(엔진 `ReflectBuiltinRole` 의 이름과 같다).
+        inline constexpr const utf8* kRoleNone      = "None";
+        inline constexpr const utf8* kRoleInterp    = "Interp";
+        inline constexpr const utf8* kRoleState     = "State";
+        inline constexpr const utf8* kRoleLocal     = "Local"; ///< TYPE 줄만 — 값이 이 프로세스에서만 뜻이 있다
+        inline constexpr const utf8* kRoleFixed     = "Fixed"; ///< CONTAINER 줄만 — 크기가 고정이다
+        inline constexpr utf8        kRoleSeparator = '|';
     } // namespace builtinmacro
 
     // ------------------------------------------------------------------------------

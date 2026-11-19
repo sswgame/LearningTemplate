@@ -1152,6 +1152,20 @@ struct SW_API ReplicatedLayout
 
 근본 원인은 "리플렉션 칸을 도는 일을 소비자마다 다시 썼다" 이다. 같은 모양 후보는 `ObjectStateSerializer` 의 상태 쓰기 · 읽기 짝과 `ComponentDefaults` 의 기본값 비교다 — RF-4 가 같이 옮긴다.
 
+### 리플렉션 내장 형식 한 곳 정본(설계 2026-11-20)
+
+**문제.** `int2` 를 내장 형식으로 넣을 때 `ReflectBuiltins.xxx` 한 줄 말고 손 표 8 곳을 채워야 했다 — 파서 고정 배치 수학 표 · 각 이름 · `Interp` 허용 목록, 에디터 `InspectorWidgetFor<T>`, `PropertyRoleUtil::findBlend`, `UIAnimatedProperty`, `StateIOReflected` 잎 종류 표, `Component::foldLeaf`. 빌드가 멈춘 것은 둘뿐이고 나머지는 런타임 FATAL 이거나 조용히 어긋났다(Interp 목록 셋이 달랐다, 상태 해시는 `hashed_string` 을, 상태 직렬화는 `GameObjectHandle` 을 못 실었다).
+
+**대조.** 언리얼은 UHT 가 `UPROPERTY` 의 C++ 형식에서 `FProperty` 종류(`FIntProperty` · `FStructProperty` …)를 정하고, 보간 · 저장 · 복제가 그 종류 하나를 본다. Godot `ClassDB` 도 `Variant::Type` 하나가 에디터 위젯 · 보간(`Animation::interpolate_variant`) · 직렬화를 가른다. 둘 다 "형식 한 곳 → 소비처가 파생" 이다.
+
+**결정.** xxx 줄에 `Widget` · `Layout`(`none | num | f32(멤버…) | i32(멤버…) | angle`) · `Roles`(`Interp` · `State`) 칸을 더하고 소비처는 칸에서 만든다. 엔진은 `ReflectBuiltinTraitTable`(모양 · 역할)과 `getBuiltinComponentCount`, `ReflectedValue.cpp` 가 Layout 을 C++ 선언과 컴파일 때 대조한다(멤버 형식 · `offsetof` · `sizeof`, i32 ↔ `PackedValueTraits::kIntegerComponents`). 파서는 로더가 `BuiltinTypeTraits` 를 세션 표로 만들고 시작할 때 철자 · Interp-모양 · Packed 위젯-글 처리기 짝을 검사한다. `RuntimeState` 칸이 State 없는 내장 형식 · 맵이면 생성 오류다(`DeclarationValidator::isRuntimeStateAllowed`). 손 처리기는 Layout 이 none 인 State 형식(bool · string · hashed_string · GameObjectHandle)만 남고, 빠지면 `static_assert`. UI 애니메이션의 성분 보간은 실수 num · f32(4 성분 이하) · angle 만 받고, 정수 칸은 예전처럼 끝에서 바뀐다(Discrete — float32 성분이 int64 · uint64 를 깨고 반올림 중간값은 뜻이 없다), 쿼터니언도 뺀다(회전은 slerp). 시퀀서 보간은 그 타입 그대로다. 죽은 `PROPERTY( Polymorphic )` 는 지웠다.
+
+**리뷰 뒤(이어서).** State 역할의 범위는 같은 프로세스의 롤백 · 리플레이 · 스냅샷이다. 핸들(GameObjectHandle · ComponentHandle · SlotHandle)은 Local 역할 — 생성 순서 id 라 세이브(`SerializePurpose::SaveGame`)가 쓰지 않고(`PropertyInfo::isProcessLocal`), `PROPERTY( SaveGame )` 은 생성 오류다(언리얼도 `FObjectPtr` 은 세이브에서 경로 · GUID 로 바꾼다). 손 처리기 목록은 `ReflectBuiltinTraitTable::hasStateHandHandler` 하나이고 State 줄마다 `isStateCarried` 를 컴파일이 본다. 래퍼 모양 답은 CRTP 기반이 가상 함수를 `final` 로 두고 정적 값을 돌려준다.
+
+**컨테이너(이어서).** CONTAINER 줄에 Roles(`State` · `Fixed`) 칸을 더했다. 래퍼가 `kInPlaceElementWrite` · `kFixedSize` 를 형식의 정적 값으로 들고 `ContainerWrapperOf<W>::matchesTable` 이 표와 대조한다 — 생성 코드가 컨테이너 칸마다 `static_assert` 를 낸다(언리얼 `FArrayProperty` · `FSetProperty` 가 형식에서 정해지는 것과 같은 자리). 집합 · 맵은 State 가 아니라 RuntimeState 로 쓸 수 없다(집합 읽기가 정렬 키를 제자리에서 고치고, unordered_set 해시는 실행마다 차례가 달랐다). 런타임 판정은 `PropertyInfo::findStateSequence` 하나다. xxx 의 "숫자 줄이 이어져 있다" 차례 규칙은 지웠다 — num 줄이 Number 갈래인지 컴파일이 본다.
+
+**확인.** 파서 픽스처 `RuntimeStateUnsupportedType`, 도구 입력 `ReflectionParser.ToolInputs.broken-builtins-{interp,widget,layout}`, 단위 `ReflectionPropertyRoleTest.InterpRoleRowsAreInterpolatable` · `BuiltinLayoutGivesComponentCountAndSize`, `StateIOReflectedTest.BuiltinLayoutPropertiesRoundTrip` · `Int2BytesMatchTheHandWriter`, `StateHashTest.LayoutAndHandHandlerPropertiesFold` · `EveryStateRowCanBeChanged`, `ReflectionPropertyRoleTest.StateSequenceIsTheOrderedFlatSequence`, `UIBindingValueKindTest.EveryRowKindComesFromItsOwnClass`, `UIAnimationPlayerTest.IntegerPropertiesStayDiscrete`, `ReflectionPropertyRoleTest.StateRowsHaveOneHandHandlerList` · `ProcessLocalHandlesAreNotSaved`, 픽스처 `SaveGameOnLocalHandle`, 도구 입력 `broken-builtins-container`.
+
 ## 도구 · 에디터 · 콘텐츠 파이프라인 설계(2026-11-17)
 
 미뤄 둔 항목을 작업자에게 바로 나눠 줄 수 있게 정했다. 절마다 문제(코드 자리) → 상용 대조 → 결정 · 기각 → 초안 → 이전 순서 → 측정이다(일과 사용자 결정 대기는 [NEXT](NEXT.md)). 새 린트 규칙은 없다 — 막을 것은 형식 · API · 로드 오류로 막는다.
