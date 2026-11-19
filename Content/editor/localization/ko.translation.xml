@@ -1077,6 +1077,7 @@
 		<entry key="EdText.Disconnect" text="연결 끊기" sourceHash="d2208cd1a767644b" />
 		<entry key="EdText.DonTSave" text="저장 안 함" sourceHash="068eeb44128dc402" />
 		<entry key="EdText.DownReceive" text="내려받기(받음)" sourceHash="b960fb9c111de291" />
+		<entry key="EdText.Easing" text="이징" sourceHash="ffa67d746f6f64c8" />
 		<entry key="EdText.EdgeWarpPresets" text="가장자리 이동 프리셋" sourceHash="1b16a4abd389f34a" />
 		<entry key="EdText.Edit" text="편집" sourceHash="64ef2a6c2dd1d3d1" />
 		<entry key="EdText.EditAKeySTimeValueAndInterpolation"
@@ -1381,6 +1382,7 @@
 		<entry key="EdVerb.Load" text="불러오기" sourceHash="4f20edb48a6287c9" />
 		<entry key="EdVerb.Move" text="옮기기" sourceHash="379c18aec5654894" />
 		<entry key="EdVerb.Play" text="재생" sourceHash="cd105819b5a10243" />
+		<entry key="EdVerb.PlayReverse" text="거꾸로 재생" sourceHash="9ee3fc838cdbfd31" />
 		<entry key="EdVerb.Redo" text="다시 실행" sourceHash="7417792bbe720149" />
 		<entry key="EdVerb.Refresh" text="새로 고침" sourceHash="7b7163270e57e8b4" />
 		<entry key="EdVerb.Reload" text="다시 읽기" sourceHash="d5b6130b4937488c" />
@@ -2992,6 +2994,7 @@
 		<entry key="EditorSequencer.PauseTip"
 		       text="현재 프레임에서 재생을 일시정지합니다."
 		       sourceHash="a04a2c2b6ef5a856" />
+		<entry key="EditorSequencer.PlayReverseTip" text="현재 프레임에서 시퀀스를 뷰포트에 거꾸로 재생합니다. 처음에 닿으면 끝에서 다시 돕니다." sourceHash="0ab52e24a49815be" />
 		<entry key="EditorSequencer.PlayTip"
 		       text="현재 프레임부터 뷰포트에서 시퀀스를 재생하고, 끝에 닿으면 처음부터 반복합니다."
 		       sourceHash="9cc849680d919b0b" />
@@ -3524,6 +3527,7 @@
 		<entry key="EditorTip.CameraOrthographic"
 		       text="원근 없는 평행 투영을 씁니다(2D · 아이소메트릭 시점). 켜져 있는 동안 FOV 는 무시됩니다."
 		       sourceHash="c6275efe2bb6b94c" />
+		<entry key="EditorTip.CurveKeyEasing" text="Eased 키가 다음 키까지 따르는 블렌드 곡선입니다(카메라 · UI 블렌드와 같은 곡선)." sourceHash="1f26a04b4b14c026" />
 		<entry key="EditorTip.CurveKeyInterpolation"
 		       text="이 키에서 다음 키까지 곡선이 움직이는 방식입니다. Constant 는 값을 유지하고, Linear 는 직선, Cubic 은 부드러운 스플라인입니다."
 		       sourceHash="515711ae2516e0e1" />

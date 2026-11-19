@@ -300,14 +300,19 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "SaveTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Play" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Play" ) ) )
-            {
-                syncPreviewPlayer();
-                _previewPlayer->playFromFrame( _currentFrame );
-            }
+                playPreview( 1.0f );
+            EditorSelfTestMarks::record( "sequencer.play" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PlayTip" ) );
+            // 거꾸로 재생 — 언리얼 Sequencer 의 Play Reverse 단추 자리(재생 단추 곁).
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "PlayReverse" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "PlayReverse" ) ) )
+                playPreview( -1.0f );
+            EditorSelfTestMarks::record( "sequencer.playReverse" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PlayReverseTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Pause" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Pause" ) ) )
                 _previewPlayer->pause();
+            EditorSelfTestMarks::record( "sequencer.pause" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PauseTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
@@ -317,6 +322,7 @@ namespace sw::editor
                 previewCurrentFrame();
                 releasePreview();
             }
+            EditorSelfTestMarks::record( "sequencer.stop" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "StopTip" ) );
             ImGui::SameLine();
             if ( getLoadedAssetPath().empty() )
@@ -1224,6 +1230,23 @@ namespace sw::editor
             return;
         }
         applyAsset( restored );
+    }
+
+    bool SequencerPanel::isPreviewPlaying() const
+    {
+        return _previewPlayer != nullptr && _previewPlayer->isPlaying() && _previewPlayer->isPaused() == false;
+    }
+
+    bool SequencerPanel::isPreviewReversed() const
+    {
+        return _previewPlayer != nullptr && _previewPlayer->isPlaying() && _previewPlayer->isReversed();
+    }
+
+    void SequencerPanel::playPreview( float32 playRate )
+    {
+        syncPreviewPlayer();
+        (void)_previewPlayer->setPlayRate( playRate ); // 단추가 주는 값(±1)이라 거절되지 않는다
+        _previewPlayer->playFromFrame( _currentFrame );
     }
 
     void SequencerPanel::syncPreviewPlayer()

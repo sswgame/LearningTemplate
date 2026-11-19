@@ -3388,6 +3388,11 @@ msgctxt "EdText.DownReceive"
 msgid "Down (receive)"
 msgstr "내려받기(받음)"
 
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
+msgctxt "EdText.Easing"
+msgid "Easing"
+msgstr "이징"
+
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EdText.EdgeWarpPresets"
 msgid "Edge Warp Presets"
@@ -4383,6 +4388,11 @@ msgstr "옮기기"
 msgctxt "EdVerb.Play"
 msgid "Play"
 msgstr "재생"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EdVerb.PlayReverse"
+msgid "Play Reverse"
+msgstr "거꾸로 재생"
 
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
 msgctxt "EdVerb.Redo"
@@ -8068,6 +8078,11 @@ msgid "Pause playback at the current frame."
 msgstr "현재 프레임에서 재생을 일시정지합니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.PlayReverseTip"
+msgid "Play the sequence backwards in the viewport from the current frame, looping at the start."
+msgstr "현재 프레임에서 시퀀스를 뷰포트에 거꾸로 재생합니다. 처음에 닿으면 끝에서 다시 돕니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.PlayTip"
 msgid "Play the sequence in the viewport from the current frame, looping at the end."
 msgstr "현재 프레임부터 뷰포트에서 시퀀스를 재생하고, 끝에 닿으면 처음부터 반복합니다."
@@ -9226,6 +9241,11 @@ msgstr "보이는 영역의 월드 높이입니다. 너비는 화면 비율을 �
 msgctxt "EditorTip.CameraOrthographic"
 msgid "Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on."
 msgstr "원근 없는 평행 투영을 씁니다(2D · 아이소메트릭 시점). 켜져 있는 동안 FOV 는 무시됩니다."
+
+#: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
+msgctxt "EditorTip.CurveKeyEasing"
+msgid "The blend curve an Eased key follows to the next key (the same curves as camera and UI blends)."
+msgstr "Eased 키가 다음 키까지 따르는 블렌드 곡선입니다(카메라 · UI 블렌드와 같은 곡선)."
 
 #: Source/Editor/Common/Widgets/EditorCurveEditorState.cpp
 msgctxt "EditorTip.CurveKeyInterpolation"
