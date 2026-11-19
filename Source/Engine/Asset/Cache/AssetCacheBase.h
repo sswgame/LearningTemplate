@@ -23,6 +23,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
 {
@@ -163,14 +164,18 @@ namespace sw
      *          인스턴스화되지도 링크되지도 않는다(템플릿이 아닌 캐시의 본문은 개발 전용 `<캐시>Reload.cpp` 다). 디바이스는 받지 않는다 — GPU 자원을 가진
      *          캐시(텍스처 · 머티리얼 · 메시)는 엔진이 붙인 디바이스(`bindDevice`, `SceneRHISubsystem` 이 RHI 를 세울 때 붙이고 내릴 때 뗀다)를 쓴다(언리얼 리임포트도
      *          RHI 를 인자로 받지 않는다). 예전에는 부르는 쪽(에디터)이 디바이스를 찾아 캐시 여덟의 인자로 관통시켰다.
+     *          결과(`ReloadResult`)를 돌려준다 — 예전에는 `void` 라 파싱이 실패해도 부르는 쪽이 성공으로 적었다. 실패면 캐시는 이전 판을 지킨다(Reloaded · NotTracked · Failed).
      */
-    using AssetCacheReloadFunction = void ( * )( AssetCacheBase& cache, const AssetID& assetID );
+    using AssetCacheReloadFunction = ReloadResult ( * )( AssetCacheBase& cache, const AssetID& assetID );
 
-    /** @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`). */
+    /**
+     * @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`).
+     * @details 멤버가 `ReloadResult` 를 돌려주지 않으면(예전 `void`) 이 `return` 이 컴파일되지 않는다 — 결과를 버리는 캐시를 등록할 수 없다.
+     */
     template <typename TCache>
-    void reloadAssetCache( AssetCacheBase& cache, const AssetID& assetID )
+    ReloadResult reloadAssetCache( AssetCacheBase& cache, const AssetID& assetID )
     {
-        static_cast<TCache&>( cache ).reload( assetID );
+        return static_cast<TCache&>( cache ).reload( assetID );
     }
 } // namespace sw
 

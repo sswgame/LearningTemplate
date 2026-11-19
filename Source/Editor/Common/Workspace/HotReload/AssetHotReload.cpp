@@ -700,6 +700,24 @@ namespace sw::editor
 
     ReloadResult AssetHotReload::reloadCaches( const AssetReloadRoute& route, const AssetID& assetID )
     {
+        const string_view  relativePath = assetID.view();
+        const utf8*        pReason      = "";
+        const ReloadResult result       = reloadCacheEntries( route, assetID, pReason );
+        if ( result == ReloadResult::Reloaded )
+        {
+            Scene*             pScene   = getActiveScene();
+            GameObjectManager* pObjects = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
+            if ( pObjects != nullptr )
+                (void)notifyAssetUsers( *pObjects, relativePath );
+        }
+        // 결과를 적는 한 곳 — 실패(캐시가 파일을 읽지 못해 이전 판으로 돈다)도 여기서 적는다. NotTracked 는 집계가 버린다.
+        if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )
+            pTracker->record( ReloadSource::Asset, relativePath, result, pReason );
+        return result;
+    }
+
+    ReloadResult AssetHotReload::reloadCacheEntries( const AssetReloadRoute& route, const AssetID& assetID, const utf8*& outReason )
+    {
         const string_view relativePath = assetID.view();
         if ( route._pCacheKindName == nullptr )
             return ReloadResult::NotTracked;
@@ -708,57 +726,58 @@ namespace sw::editor
         AssetManager* pResources = findSubsystem<AssetManager>();
         if ( pResources == nullptr )
             return ReloadResult::NotTracked;
+        const utf8* const kCacheFailedReason = "the asset cache could not read the file - the previous version runs";
         if ( route._pCacheKindName[0] == '\0' )
         {
             // 모듈이 로드한 캐시 — 이름 대신 그 경로를 가진 캐시가 다시 읽는다. 아무도 읽지 않은 파일이면 할 일이 없다(다음에 읽는 쪽이 새 내용을 읽는다).
-            if ( reloadInCachesHolding( *pResources, assetID ) == 0 )
-                return ReloadResult::NotTracked;
+            const ReloadResult result = reloadInCachesHolding( *pResources, assetID );
+            if ( result == ReloadResult::Failed )
+                outReason = kCacheFailedReason;
+            return result;
         }
-        else
+        AssetCacheBase* pCache = pResources->findAssetCache( route._pCacheKindName );
+        if ( pCache == nullptr )
         {
-            AssetCacheBase* pCache = pResources->findAssetCache( route._pCacheKindName );
-            if ( pCache == nullptr )
-            {
-                SW_LOG_ERROR_ID( "AssetHotReload.HotReloadNoAsset", "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );
-                if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )
-                    pTracker->record( ReloadSource::Asset, relativePath, ReloadResult::Failed, "no asset cache is registered for its kind" );
-                return ReloadResult::Failed;
-            }
-            const AssetCacheReloadFunction pReload = pResources->findReloadFunction( pCache );
-            if ( pReload == nullptr )
-            {
-                SW_LOG_ERROR_ID( "AssetHotReload.HotReloadAssetCache", "Hot reload: asset cache '%#' has no reload function (registered without SW_ASSET_CACHE_RELOAD_FUNCTION) - %# is not reloaded", route._pCacheKindName, relativePath );
-                if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )
-                    pTracker->record( ReloadSource::Asset, relativePath, ReloadResult::Failed, "its asset cache has no reload function" );
-                return ReloadResult::Failed;
-            }
-            SW_LOG_INFO_ID( "AssetHotReload.HotReloadingAsset", "Hot-Reloading asset: %#", relativePath );
-            pReload( *pCache, assetID );
+            SW_LOG_ERROR_ID( "AssetHotReload.HotReloadNoAsset", "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );
+            outReason = "no asset cache is registered for its kind";
+            return ReloadResult::Failed;
         }
-
-        Scene*             pScene   = getActiveScene();
-        GameObjectManager* pObjects = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
-        if ( pObjects != nullptr )
-            (void)notifyAssetUsers( *pObjects, relativePath );
-        if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )
-            pTracker->record( ReloadSource::Asset, relativePath, ReloadResult::Reloaded );
+        const AssetCacheReloadFunction pReload = pResources->findReloadFunction( pCache );
+        if ( pReload == nullptr )
+        {
+            SW_LOG_ERROR_ID( "AssetHotReload.HotReloadAssetCache", "Hot reload: asset cache '%#' has no reload function (registered without SW_ASSET_CACHE_RELOAD_FUNCTION) - %# is not reloaded", route._pCacheKindName, relativePath );
+            outReason = "its asset cache has no reload function";
+            return ReloadResult::Failed;
+        }
+        SW_LOG_INFO_ID( "AssetHotReload.HotReloadingAsset", "Hot-Reloading asset: %#", relativePath );
+        const ReloadResult result = pReload( *pCache, assetID );
+        if ( result == ReloadResult::Failed )
+        {
+            outReason = kCacheFailedReason;
+            return ReloadResult::Failed;
+        }
+        // 이름으로 맡은 캐시가 그 파일을 들고 있지 않거나 디바이스가 없어도(NotTracked) 예전처럼 사용자에게 알린다 — 다음에 읽는 쪽이 새 내용을 읽는다.
         return ReloadResult::Reloaded;
     }
 
-    uint32 AssetHotReload::reloadInCachesHolding( AssetManager& resources, const AssetID& assetID )
+    ReloadResult AssetHotReload::reloadInCachesHolding( AssetManager& resources, const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
-        uint32            reloadedCount{ 0 };
+        bool              bReloaded{ false };
+        bool              bFailed{ false };
         for ( AssetCacheBase* pCache : resources.getAllAssetCache() )
         {
             const AssetCacheReloadFunction pReload = resources.findReloadFunction( pCache );
             if ( pReload == nullptr || pCache->isCached( relativePath ) == false )
                 continue;
             SW_LOG_INFO_ID( "AssetHotReload.HotReloadingAsset2", "Hot-Reloading asset: %# (%#)", relativePath, pCache->getAssetKindName() );
-            pReload( *pCache, assetID );
-            ++reloadedCount;
+            const ReloadResult result = pReload( *pCache, assetID );
+            bReloaded                 = bReloaded || result == ReloadResult::Reloaded;
+            bFailed                   = bFailed || result == ReloadResult::Failed;
         }
-        return reloadedCount;
+        if ( bFailed )
+            return ReloadResult::Failed;
+        return bReloaded ? ReloadResult::Reloaded : ReloadResult::NotTracked;
     }
 
     uint32 AssetHotReload::notifyAssetUsers( GameObjectManager& objects, string_view relativePath )

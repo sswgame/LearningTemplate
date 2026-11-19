@@ -139,7 +139,7 @@ namespace sw
         /** @brief 지금 쥔 묶음입니다. 없으면 nullptr 이고 파일을 읽지 않습니다(감시 값 · 진단). */
         [[nodiscard]] shared_ptr<MaterialParameterCollection> findLive( const AssetID& assetID ) const;
         /** @brief 쥔 묶음이면 파일을 다시 읽어 제자리에서 값을 바꿉니다(핫 리로드). 읽지 못하면 오류를 남기고 지금 값을 그대로 씁니다. */
-        void reload( const AssetID& assetID );
+        [[nodiscard]] ReloadResult reload( const AssetID& assetID );
 
         const utf8* getAssetKindName() const override { return kAssetKindName; }
         /** @brief 그 경로의 묶음을 누가 쥐고 있으면 true 입니다. */

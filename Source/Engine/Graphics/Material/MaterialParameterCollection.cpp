@@ -186,9 +186,11 @@ namespace sw
         return true;
     }
 
-    void MaterialParameterCollectionCache::reload( const AssetID& assetID )
+    ReloadResult MaterialParameterCollectionCache::reload( const AssetID& assetID )
     {
-        (void)reloadLive( assetID ); // 읽지 못하면 읽기가 오류를 남겼다 — 지금 값을 그대로 쓴다
+        if ( findLive( assetID ) == nullptr )
+            return ReloadResult::NotTracked;
+        return reloadLive( assetID ) ? ReloadResult::Reloaded : ReloadResult::Failed; // 읽지 못하면 읽기가 오류를 남겼다 — 지금 값을 그대로 쓴다
     }
 
     bool MaterialParameterCollectionCache::isCached( string_view relativePath ) const

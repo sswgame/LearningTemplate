@@ -76,8 +76,11 @@ namespace sw
          *          줄에 넣지 않고 편집 중인 내용을 넣는다(초기화하면 파일 내용으로 덮인다).
          */
         Material* acquire( string_view relativePath );
-        /** @brief 경로의 Material 을 다시 로드합니다(붙은 디바이스가 없으면 하지 않는다). */
-        void reload( const AssetID& assetID );
+        /**
+         * @brief 경로의 Material 을 다시 로드합니다(붙은 디바이스가 없으면 올리지 않는다 — NotTracked).
+         * @details 파일을 먼저 빈 머티리얼에 읽어 본다 — 읽지 못하면 쥔 머티리얼을 건드리지 않고 Failed 다(이전 판으로 계속 그린다). 언리얼 리임포트도 실패하면 옛 에셋을 둔다.
+         */
+        [[nodiscard]] ReloadResult reload( const AssetID& assetID );
         /** @brief 다시 로드에 쓸 디바이스를 붙이거나(엔진이 RHI 를 세울 때) 뗍니다(nullptr, 내릴 때). */
         void bindDevice( IRHIDevice* pDevice );
         /** @brief 경로의 Material 참조를 하나 놓습니다. */

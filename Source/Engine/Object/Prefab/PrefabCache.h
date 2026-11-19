@@ -120,8 +120,9 @@ namespace sw
          *          고친 프리팹의 값이 퍼지고, 인스턴스가 덮어쓴 값은 그대로 남는다. 중첩 인스턴스를 가진 프리팹도 함께 버린다 — 고친 원본이 순환을
          *          만들었는지 다음 로드가 다시 본다(상위 프리팹은 원본을 경로로만 가지므로 버리지 않아도 고친 원본이 퍼진다).
          *          변형도 함께 버린다 — 읽을 때 부모를 합쳐 들고 있으므로 다음 로드가 다시 합쳐야 고친 부모가 퍼진다.
+         *          든 원본이 읽히지 않으면(깨진 XML) 아무것도 버리지 않고 Failed 다 — 다음 스폰도 이전 판으로 한다. 들고 있지 않은 경로는 NotTracked 다.
          */
-        void reload( const AssetID& assetID );
+        [[nodiscard]] ReloadResult reload( const AssetID& assetID );
         /**
          * @brief 프리팹 @p assetRelativePath 의 칸이 어디서 왔는지 변형 사슬을 따라 찾습니다. "이 칸이 어디서 왔나" 의 답이고 인스펙터 같은 도구가 묻습니다.
          * @param componentKey 컴포넌트 키(`이름#n`)입니다. 비면 오브젝트 자기 칸입니다.

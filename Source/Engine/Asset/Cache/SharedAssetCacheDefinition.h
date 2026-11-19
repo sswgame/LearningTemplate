@@ -146,9 +146,14 @@ namespace sw
     }
 
     template <typename AssetType>
-    void SharedAssetCache<AssetType>::reload( const AssetID& assetID )
+    ReloadResult SharedAssetCache<AssetType>::reload( const AssetID& assetID )
     {
-        (void)reloadIn( *_pTable, assetID.view() ); // 아무도 쥐지 않으면 다음 acquire 가 새로 읽고, 읽지 못하면 읽는 함수가 오류를 남기고 옛 내용을 지킨다
+        // 아무도 쥐지 않으면 다음 acquire 가 새로 읽는다. 읽지 못하면 읽는 함수가 오류를 남기고 옛 판을 지킨다(`SharedAssetTable::reloadShared` 는 새 판을 넣기 전에 멈춘다).
+        if ( isCached( assetID.view() ) == false )
+            return ReloadResult::NotTracked;
+        if ( reloadIn( *_pTable, assetID.view() ) )
+            return ReloadResult::Reloaded;
+        return isCached( assetID.view() ) ? ReloadResult::Failed : ReloadResult::NotTracked; // 읽는 사이 마지막 사용자가 놓았으면 실패가 아니다
     }
 
     template <typename AssetType>
