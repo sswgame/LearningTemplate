@@ -390,3 +390,27 @@ SW_TEST_CASE( HousingLayoutTest, PlotClaimsItsCellsOnTheSharedLand )
     SW_EXPECT_FALSE( neighbour._layout.hasClaimedLand() );
     SW_EXPECT_TRUE( land.getOwnerName( 5, 5 ).empty() );
 }
+
+/** @brief [HousingLayoutTest] 조준 광선은 그 층의 바닥 평면(층 × 층 높이)과 만나는 XZ 로 내려온다. 평면과 나란하거나 평면이 뒤에 있으면 false 이고 출력을 건드리지 않는다. */
+SW_TEST_CASE( HousingLayoutTest, RayProjectsOntoTheLevelFloor )
+{
+    HousingFixture rig; // 층 높이 3
+    const float3   origin{ 1.0f, 6.0f, 2.0f };
+    float2         position{ -1.0f, -1.0f };
+
+    // 아래로 45 도: 1 층 바닥(y 0)까지 6 내려가는 동안 x 로 6 간다(방향은 정규화하지 않아도 된다)
+    SW_REQUIRE_TRUE( rig._layout.projectRay( origin, float3{ 1.0f, -1.0f, 0.0f }, 0, position ) );
+    SW_EXPECT_NEAR( 7.0f, position._x, 1.0e-4f );
+    SW_EXPECT_NEAR( 2.0f, position._y, 1.0e-4f );
+
+    // 2 층 바닥(y 3)에서는 그 절반만 간다
+    SW_REQUIRE_TRUE( rig._layout.projectRay( origin, float3{ 1.0f, -1.0f, 0.0f }, 1, position ) );
+    SW_EXPECT_NEAR( 4.0f, position._x, 1.0e-4f );
+    SW_EXPECT_NEAR( 2.0f, position._y, 1.0e-4f );
+
+    position = float2{ -1.0f, -1.0f };
+    SW_EXPECT_FALSE( rig._layout.projectRay( origin, float3{ 1.0f, 0.0f, 0.0f }, 0, position ) ); // 바닥과 나란하다
+    SW_EXPECT_FALSE( rig._layout.projectRay( origin, float3{ 0.0f, 1.0f, 0.0f }, 0, position ) ); // 바닥이 뒤에 있다
+    SW_EXPECT_NEAR( -1.0f, position._x, 1.0e-4f );
+    SW_EXPECT_NEAR( -1.0f, position._y, 1.0e-4f );
+}

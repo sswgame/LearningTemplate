@@ -1766,7 +1766,8 @@
     "FriendListModel": "FriendList — 친구 목록 한 벌과 그 상태다(곁의 FriendListState · FriendEntry 와 한 벌). 끝말 Model 은 내용을 말하지 않는다(2026-11-19)",
     "FriendListModelTest": "FriendListTest — FriendListModel → FriendList 를 따른다(2026-11-19)",
     "FriendListModelInternal": "FriendListInternal — FriendListModel → FriendList 를 따른다(2026-11-19)",
-    "FriendListModelTestUtil": "FriendListTestUtil — FriendListModel → FriendList 를 따른다(2026-11-19)"
+    "FriendListModelTestUtil": "FriendListTestUtil — FriendListModel → FriendList 를 따른다(2026-11-19)",
+    "debugLogTileHd2d": "지웠다 — 부르는 곳이 없던 디버그 추적 한 줄(TileMap::getTileVisual · isWalkable · isEncounterTile · isPassThrough 를 한 줄로 찍기만 했다). 같은 값은 그 네 읽기로 본다(2026-11-19)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",

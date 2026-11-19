@@ -262,3 +262,14 @@ SW_TEST_CASE( VoxelMesherTest, MissingNeighborChunkReadsAsAir )
     VoxelMesher::fillChunkMesh( rig._world, 0, 0, mesh );
     SW_EXPECT_EQUAL( size_t( 6 * 6 ), mesh._listOpaqueVertex.size() ); // 위 · 아래 · 네 옆면(+X · +Z 는 내려간 이웃 쪽)
 }
+
+/** @brief [VoxelMesherTest] 면 밝기는 위 1, 앞뒤(Z) 0.85, 좌우(X) 0.75, 아래 0.6 이다 — 해가 없어도 블록 모서리가 보인다. 마주 보는 옆면은 같은 밝기다. */
+SW_TEST_CASE( VoxelMesherTest, FaceShadeDarkensSidesAndBottom )
+{
+    SW_EXPECT_NEAR( 1.0f, VoxelMesher::getFaceShade( VoxelFace::PositiveY ), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.6f, VoxelMesher::getFaceShade( VoxelFace::NegativeY ), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.85f, VoxelMesher::getFaceShade( VoxelFace::PositiveZ ), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.85f, VoxelMesher::getFaceShade( VoxelFace::NegativeZ ), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.75f, VoxelMesher::getFaceShade( VoxelFace::PositiveX ), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.75f, VoxelMesher::getFaceShade( VoxelFace::NegativeX ), 1.0e-6f );
+}

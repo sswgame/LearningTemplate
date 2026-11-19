@@ -595,3 +595,98 @@ SW_TEST_CASE( RTSWorldTest, CatalogWithoutRulesIsRefused )
     sw::RTSWorld world;
     SW_EXPECT_FALSE( world.initialize( nullptr, kMapSize, kMapSize ) );
 }
+
+/** @brief [RTSWorldTest] 공격 이동(A + 클릭): 싸울 수 있는 유닛은 `AttackMove` 명령을 받고 쉬프트 입력은 뒤에 붙는다. 건물과 없는 유닛은 거절한다. */
+SW_TEST_CASE( RTSWorldTest, AttackMoveOrdersFightersAndRefusesBuildings )
+{
+    sw::RTSCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
+    ScriptedMatch match;
+    SW_REQUIRE_TRUE( match.setUp( catalog ) );
+    const sw::RTSUnitID marine = match._arrArmy[0][0];
+    const sw::float3    first{ 20.0f, 0.0f, 12.0f };
+    const sw::float3    second{ 20.0f, 0.0f, 30.0f };
+
+    SW_REQUIRE_TRUE( match._world.issueAttackMove( marine, first ) == sw::RTSCommandResult::Ok );
+    SW_REQUIRE_TRUE( match._world.issueAttackMove( marine, second, true ) == sw::RTSCommandResult::Ok );
+    const sw::RTSUnit* pMarine = match._world.findUnit( marine );
+    SW_REQUIRE_NOT_NULL( pMarine );
+    SW_REQUIRE_EQUAL( size_t( 2 ), pMarine->_listOrder.size() );
+    SW_EXPECT_TRUE( pMarine->_listOrder.front()._type == sw::RTSOrderKind::AttackMove );
+    SW_EXPECT_NEAR( first._z, pMarine->_listOrder.front()._target._z, 0.001f );
+    SW_EXPECT_NEAR( second._z, pMarine->_listOrder.back()._target._z, 0.001f );
+
+    // 쉬프트 없이 내리면 앞의 명령을 지우고 그것 하나만 남는다
+    SW_REQUIRE_TRUE( match._world.issueAttackMove( marine, second ) == sw::RTSCommandResult::Ok );
+    SW_EXPECT_EQUAL( size_t( 1 ), pMarine->_listOrder.size() );
+
+    SW_EXPECT_TRUE( match._world.issueAttackMove( match._arrDepot[0], first ) == sw::RTSCommandResult::CannotDo ); // 건물은 움직이지 못한다
+    SW_EXPECT_TRUE( match._world.issueAttackMove( sw::RTSUnitID{}, first ) == sw::RTSCommandResult::InvalidUnit );
+}
+
+/** @brief [RTSWorldTest] 생산 취소는 대기열의 마지막 것을 빼고 그 비용을 돌려준다. 빈 대기열과 없는 건물은 false 다. */
+SW_TEST_CASE( RTSWorldTest, CancelTrainRefundsTheLastQueuedUnit )
+{
+    sw::RTSCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
+    ScriptedMatch match;
+    SW_REQUIRE_TRUE( match.setUp( catalog ) );
+    const sw::RTSUnitID     depot    = match._arrDepot[0];
+    const sw::hashed_string minerals = match._world.getSettings()._mineralCurrency;
+    const int64             before   = match._arrWallet[0].getBalance( minerals );
+
+    SW_REQUIRE_TRUE( match._world.train( depot, kWorker ) == sw::RTSCommandResult::Ok ); // 50
+    SW_REQUIRE_TRUE( match._world.train( depot, kMarine ) == sw::RTSCommandResult::Ok ); // 50
+    SW_EXPECT_EQUAL( before - 100, match._arrWallet[0].getBalance( minerals ) );
+
+    SW_REQUIRE_TRUE( match._world.cancelTrain( depot ) );
+    const sw::RTSUnit* pDepot = match._world.findUnit( depot );
+    SW_REQUIRE_NOT_NULL( pDepot );
+    SW_REQUIRE_EQUAL( size_t( 1 ), pDepot->_listProduction.size() );
+    SW_EXPECT_TRUE( pDepot->_listProduction.front() == kWorker ); // 마지막에 넣은 해병이 빠졌다
+    SW_EXPECT_EQUAL( before - 50, match._arrWallet[0].getBalance( minerals ) );
+
+    SW_REQUIRE_TRUE( match._world.cancelTrain( depot ) );
+    SW_EXPECT_TRUE( pDepot->_listProduction.empty() );
+    SW_EXPECT_EQUAL( before, match._arrWallet[0].getBalance( minerals ) );
+
+    SW_EXPECT_FALSE( match._world.cancelTrain( depot ) ); // 빈 대기열
+    SW_EXPECT_FALSE( match._world.cancelTrain( sw::RTSUnitID{} ) );
+    SW_EXPECT_EQUAL( before, match._arrWallet[0].getBalance( minerals ) ); // 거절은 돈을 건드리지 않는다
+}
+
+/** @brief [RTSWorldTest] 더블 클릭 선택은 사각형 안의 같은 종류인 내 유닛만 고른다. 남의 유닛을 누르면 그것 하나만 고르고 명령은 줄 수 없다. */
+SW_TEST_CASE( RTSWorldTest, SelectSameTypePicksOwnUnitsOfThatKindInTheRect )
+{
+    sw::RTSCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
+    ScriptedMatch match;
+    SW_REQUIRE_TRUE( match.setUp( catalog ) );
+    sw::RTSSelection selection;
+    selection.setPlayer( 0 );
+    const sw::float3 mapMin{ 0.0f, 0.0f, 0.0f };
+    const sw::float3 mapMax{ static_cast<float32>( kMapSize ), 0.0f, static_cast<float32>( kMapSize ) };
+
+    // 맵 전체: 내 해병 8 — 내 일꾼 · 건물과 상대 해병은 빠진다
+    selection.selectSameType( match._world, match._arrArmy[0][0], mapMin, mapMax );
+    SW_REQUIRE_EQUAL( size_t( 8 ), selection.getSelected().size() );
+    SW_EXPECT_EQUAL( match._arrArmy[0][0].packed(), selection.getPrimary().packed() ); // 누른 유닛이 맨 앞이다
+    for ( const sw::RTSUnitID unitID : selection.getSelected() )
+    {
+        const sw::RTSUnit* pUnit = match._world.findUnit( unitID );
+        SW_REQUIRE_NOT_NULL( pUnit );
+        SW_EXPECT_EQUAL( 0, pUnit->_owner );
+        SW_EXPECT_TRUE( pUnit->_pDef->_id == kMarine );
+    }
+    SW_EXPECT_TRUE( selection.isCommandable( match._world ) );
+
+    // 좁은 사각형: 앞줄(z 10.5)의 네 기만 — 모서리 순서는 상관없다
+    selection.selectSameType( match._world, match._arrArmy[0][0], sw::float3{ 10.0f, 0.0f, 10.9f }, sw::float3{ 6.0f, 0.0f, 10.0f } );
+    SW_EXPECT_EQUAL( size_t( 4 ), selection.getSelected().size() );
+
+    // 남의 유닛을 누르면 그것 하나만 고른다
+    selection.selectSameType( match._world, match._arrArmy[1][0], mapMin, mapMax );
+    SW_REQUIRE_EQUAL( size_t( 1 ), selection.getSelected().size() );
+    SW_EXPECT_TRUE( selection.isSelected( match._arrArmy[1][0] ) );
+    SW_EXPECT_FALSE( selection.isCommandable( match._world ) );
+}

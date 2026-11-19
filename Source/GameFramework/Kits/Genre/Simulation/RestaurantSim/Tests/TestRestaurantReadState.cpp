@@ -481,3 +481,15 @@ SW_TEST_CASE( RestaurantReadStateTestShop, ShopStateRefusesNegativePrices )
     SW_EXPECT_FALSE( readFixture( 1.0f, 1.0f, -1.0f, 0 ) );
     SW_EXPECT_FALSE( readFixture( 1.0f, 1.0f, 1.0f, -1 ) );
 }
+
+/** @brief [RestaurantReadStateTest] 조리 중인 주문 수는 요리사가 맡았고 아직 덜 된 주문만 센다. 메뉴에 올리고 내리는 것은 메뉴에 있는 요리만 된다. */
+SW_TEST_CASE_F( RestaurantReadStateTest, CountsCookingOrdersAndTogglesKnownDishes )
+{
+    SW_EXPECT_EQUAL( 0, _simulation.countCooking() ); // 빈 식당
+    SW_REQUIRE_TRUE( read( RestaurantFixture{} ) );
+    SW_EXPECT_EQUAL( 1, _simulation.countCooking() ); // 요리사가 맡은 주문 하나
+
+    SW_EXPECT_TRUE( _simulation.setDishOnMenu( "soup", false ) );
+    SW_EXPECT_TRUE( _simulation.setDishOnMenu( "soup", true ) );
+    SW_EXPECT_FALSE( _simulation.setDishOnMenu( "pizza", false ) ); // 메뉴에 없는 요리
+}
