@@ -1218,6 +1218,53 @@ public:
 
 **측정.** 재는 법: Android-Release 에서 팩 하나를 다시 구운 뒤 `adb reverse` + `-fileserve` 로 기동까지 걸린 시간 대 `android-apk` 다시 묶기 + 설치. 판정: 다시 받는 몫이 APK 길의 1/2 아래가 아니면 구간 크기 · 동시 받기를 본다.
 
+### HDR 디스플레이 출력(설계 2026-11-20)
+
+**문제.** 출력은 SDR 하나다 — 톤맵은 Reinhard(`tonemap.hlsl` 의 `x / (x + 1)`) 한 곡선, 백버퍼는 RGBA8 UNORM(`constant::render::kBackBufferFormat`, `RHIBackBufferFormat` 은 RGBA8 · BGRA8 둘), 색 공간은 Vulkan 이 sRGB 비선형만 고른다(`VulkanRHISwapChain.cpp`). HDR 모니터에서도 0 ~ 1 로 잘린 SDR 그림이다. UI(Canvas)는 Present 뒤에 같은 백버퍼에 Load 로 그린다(`RenderGraphPassDesc.h` Canvas 설명).
+
+**대조.** 언리얼은 `r.HDR.EnableHDROutput` · `r.HDR.Display.OutputDevice`(sRGB · ST2084(PQ) 1000/2000 nits · scRGB) · `r.HDR.Display.ColorGamut` 로 고르고, 스왑체인을 HDR10(R10G10B10A2 + BT.2020 PQ) 또는 scRGB(R16G16B16A16F + 선형 Rec.709)로 만들며, UI 는 따로 그려 마지막 패스에서 종이 흰색(`r.HDR.UI.Level`)으로 합성한다(`r.HDR.UI.CompositeMode`). Godot 4.5 는 Vulkan · D3D12 에서 HDR 출력(최대 휘도 · 기준 흰색 설정)을 들였다. 유니티는 `HDROutputSettings`(모니터 능력 묻기 · 종이 흰색 · 톤맵 곡선이 출력 휘도를 안다). → 셋 다 "출력 장치 하나를 고르는 값 + 능력 묻기 + 출력 끝 인코딩 + UI 따로 합성" 이다. 같은 꼴로 간다.
+
+**결정.**
+1. **값 하나.** `DisplayOutputDesc { DisplayOutputKind _kind; float32 _paperWhiteNits; float32 _maxLuminanceNits; }` — `DisplayOutputKind { SDR, HDR10, ScRGB }`. 기본은 EngineConfig `_render._displayOutput`(SDR — 배포 기본, 골든 그대로), 사람은 사용자 설정(옵션 메뉴 "HDR", 종이 흰색 · 최대 휘도)에서 고른다. 실행 중 바꾸면 스왑체인을 다시 만든다(창 크기 바뀜과 같은 길).
+2. **능력.** `RHICapabilities` 에 `_displayOutputSupport`(비트 — 백엔드 · 모니터가 받는 종류)와 모니터가 알린 최대 휘도. DX12 · DX11: `IDXGIOutput6::GetDesc1`(색 공간 · 최대 휘도) + `IDXGISwapChain3::CheckColorSpaceSupport`. Vulkan: `VK_EXT_swapchain_colorspace` 의 표면 포맷 목록(`VK_COLOR_SPACE_HDR10_ST2084_EXT` · `VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT`). GL · WebGPU · Android 는 SDR 만(능력 표가 정한 길 — 실패의 대체가 아니다). 고른 값이 능력 밖이면 정보 로그 한 줄 + SDR(`DisplayOutput::resolve( 요청, 능력 )` 순수 함수 하나 — 단위 테스트).
+3. **RHI.** `RHIFormat::R10G10B10A2_UNORM` 을 더하고(백엔드 포맷 표 넷), `RHISwapChainDesc` 에 `RHIColorSpace _colorSpace { SRGBNonLinear, HDR10ST2084, ExtendedSRGBLinear }`. 포맷은 색 공간에서 정한다(SDR → 지금 값, HDR10 → R10G10B10A2, scRGB → R16G16B16A16_FLOAT) — 둘을 따로 받지 않아 맞지 않는 짝을 만들 수 없다. DX: `SetColorSpace1` + `SetHDRMetaData`(HDR10). Vulkan: 맞는 표면 포맷 · `vkSetHdrMetadataEXT`(있으면).
+4. **톤맵 · 인코딩.** 곡선은 출력 휘도를 안다: SDR 은 지금 Reinhard 그대로(SDR 골든 불변), HDR 은 같은 곡선의 어깨를 `최대 휘도 / 종이 흰색` 으로 늘린 판. 인코딩은 출력 끝 한 곳: SDR 그대로, HDR10 은 Rec.709 → BT.2020 행렬 + PQ(ST 2084) OETF(nits = 값 × 종이 흰색), scRGB 는 선형 × (종이 흰색 / 80). 셰이더 퍼뮤테이션 `SW_DISPLAY_OUTPUT`(0 · 1 · 2) — Tonemap · 후처리 체인(Present) · FSR RCAS 출력 패스가 같은 `display_encode.hlsli` 를 쓴다(`present_output.hlsli` 처럼 출력 한 벌). CPU 거울 `ColorEncoding::encodePQ` · `decodePQ`(Core Math)로 단위 테스트(ST 2084 표 값: 100 nits → 0.5081, 1000 nits → 0.7518).
+5. **UI 합성.** HDR 이면 Present 는 백버퍼 대신 장면 출력 RT(R16G16B16A16F, 디스플레이 기준 선형)에, Canvas 는 따로 SDR UI RT(RGBA8, 미리 곱한 알파)에 그리고, 새 패스 `RenderPassKind::DisplayEncode` 가 둘을 섞으며(UI 는 종이 흰색) 인코딩해 백버퍼에 쓴다. SDR 은 이 패스가 없다(파이프라인 XML 이 출력 종류에 따라 고른다 — 그래프 · 골든 그대로). 화면 회전(`FrameScreenRotation`)은 Android 라 SDR 만이다.
+6. **확인.** 단위: `DisplayOutput::resolve`(능력 밖 → SDR + 로그), PQ 인코딩 표 값, 색 공간 → 포맷 짝. 시나리오: `engine/automation/render/hdroutput` — `-gv_displayOutput=HDR10` 을 HDR 이 없는 CI 에서 돌리면 SDR 로 떨어지는 로그 · 그림이 SDR 골든과 같다. HDR 모니터 있는 기계: 되읽은 백버퍼를 `decodePQ` 로 풀어 장면 RT 와 견주는 검사(`gpu.inspect` 한 픽셀 — 손 확인 대신 자동).
+7. **차례.** ① 값 · `resolve` · CPU 인코딩 함수 + 단위 → ② RHI 포맷 · 색 공간 · 능력(DX12 먼저, Vulkan, DX11) → ③ 셰이더 인코딩 · 퍼뮤테이션 → ④ UI 합성 패스와 파이프라인 XML → ⑤ 옵션 메뉴. ① 은 빌드 없이 쓸 수 있고 ②~④ 는 단계마다 네 백엔드 SDR 골든이 그대로인지 본다.
+
+**측정.** 없다(정확성). HDR 퍼뮤테이션이 SDR 프레임 시간을 바꾸지 않는지만 `bench.json` p50 으로 한 번.
+
+### 헤더 팬인 다이어트(설계 2026-11-20, 감사 8)
+
+**문제.** 공통 헤더 하나를 고치면 전체 재빌드(50 분대 — 4 절 "검증 시간")다. 숫자(`py -3 -m Scripts header-fanin`, 2026-11-20, TU 3685 · pch 가 끄는 헤더 65): 점수(헤더를 포함하는 TU 수 × 그 헤더가 pch 밖에서 끌어오는 헤더 수) 합 867 490. 위 넷은 오브젝트 · 리플렉션 핵심이다 —
+`GameObjectManager.inl`(317 TU × 40), `TypeRegistry.h`(524 × 23), `ReflectionTypes.h`(666 × 17), `GameObject.h`(594 × 19), `TypeInfo.h`(677 × 16), `Component.h`(703 × 15), `SceneComponent.h`(417 × 22), `GameObjectStore.h`(317 × 24). `ReflectionMacros.h` 는 2664 TU(72 %)지만 pch 밖 3 개라 싸다.
+
+**대조.** 언리얼은 IWYU 모드(`bEnforceIWYU`, 모듈마다 `CoreMinimal.h` 만 기본) · 전방 선언 · `*Fwd.h`(`UObject/ObjectMacros.h` 와 `ObjectPtr` 의 전방 선언 헤더)로 팬인을 줄이고, 크로미움은 `analyze_includes.py` 로 "추가 컴파일 크기" 를 잰다(위 점수와 같은 생각). → 재는 숫자 하나 + 전방 선언 헤더 + 템플릿 몸체 분리(이미 `GameObjectManager.inl` 이 한 꼴)다.
+
+**결정.**
+1. **숫자가 정본.** 커밋마다 `header-fanin --json` 전후를 견주고, 점수 합이 줄지 않는 변경은 하지 않는다(줄 수가 아니라 점수). 빌드 시간은 `build_time_report.py` 로 묶음 끝에 한 번.
+2. **전방 선언 헤더.** `Engine/Object/ObjectFwd.h`(Component · GameObject · GameObjectManager · SceneComponent · 핸들) · `Engine/Reflection/ReflectionFwd.h`(TypeInfo · PropertyInfo · EnumInfo · FunctionInfo · TypeRegistry) — 포인터 · 참조만 쓰는 헤더는 이것만 포함한다.
+3. **차례(점수 큰 순 · 헤더끼리 겹치지 않게).** ① `Component.h` — `TickContext.h` · `AnimationNotifyPhase.h` · `PhysicsHandle.h` 를 쓰는 함수 선언이 값을 받는지 보고 전방 선언으로. ② `GameObject.h` — `Component.h` 전체 대신 전방 선언(컴포넌트 목록은 포인터), `TickRegistry.h` · `ReflectionCast.h` 는 템플릿 몸체가 쓰는 자리만 `.inl` 로. ③ `TypeRegistry.h` — `TaskTypes.h` · `EngineMinimal.h` · `ReflectionCast.h` 를 cpp 로. ④ `ReflectionTypes.h` → `TypeInfo.h` 묶음은 리플렉션 생성 코드(`.gen.cpp`)가 읽으므로 생성기 템플릿과 함께. ⑤ `SceneComponent.h` · `GameObjectStore.h`.
+4. **막기(형식).** 다이어트한 헤더는 `Config/Rules/Lint` 의 헤더 포함 상한 표(헤더마다 pch 밖 포함 수 상한 — 지금 값)를 더해 늘면 진다 — 린트가 아니라 측정 숫자의 문턱이다(다시 늘어나는 것을 막는 형식이 C++17 에 없다).
+5. **확인.** 단계마다 Release · Shipping · ASan · 서버 증분 빌드(포함을 지우면 다른 TU 가 그 헤더를 간접으로 받던 것이 깨진다 — 컴파일러만 판정한다), clang `-Werror=undefined-func-template` 가 `.inl` 빠짐을 잡는다.
+
+**측정.** 재는 법: 단계 전후 `header-fanin` 점수 합과 위 넷의 점수, `Component.h` 를 한 줄 고친 뒤 증분 빌드 시간. 판정: 단계마다 점수 합 5 % 이상 · 그 헤더 점수 30 % 이상 줄지 않으면 되돌린다.
+
+### 렌더 그래프 접근 핸들 ② ~ ④ — 데이터 · 실행기 · 패스 몸통(설계 2026-11-20)
+
+①(19829a1506)은 그래프 안이다 — 접근 핸들 · `importResource` · 접근에서 전이 추론 · 테스트. 남은 것은 프레임 파이프라인이 그것을 쓰게 하는 일이다(손 전이 89 곳 — `FrameGraphExecutor` 16 · `VFXGPUSimulation` 13 · `FramePassExecutorPasses` 12 · `FramePassExecutorDraw` 10 · `FrameAutoExposure` 6 · `HZBOcclusion` 6 · 나머지).
+
+**결정.**
+1. **데이터(파이프라인 XML) — 새 문법은 최소.** `RenderGraphResourceDesc`(`_listResource` 원소 — 이미 외부 · 영속 자원 이름과 수명)에 `RenderGraphViewableKind _viewable`(기본 Buffer)을 더한다. 패스의 `_listInput` · `_listOutput` 은 그대로 두고 접근은 규칙으로 정한다: 첨부 이름 입력 = TextureSRV, 출력 = RenderTarget(깊이 첨부는 DepthRead · DepthWrite — `_depthAttachment` 와 읽기 여부), `_listResource` 버퍼 입력 = BufferSRV, 출력 = BufferUAV. 규칙 밖 접근(간접 인자 · 복사)만 패스의 `_listIndirectArgs` · `_listCopySource` · `_listCopyDest`(이름 목록)로 적는다. 로드 검증이 한 패스의 같은 이름 두 접근을 거절한다(①의 `Renderer.GraphDuplicateAccess` 와 같은 규칙).
+2. **실행기 — 버퍼 표.** `FrameBufferTable`(이름 → RHI 버퍼 핸들 · 처음 접근): 버퍼 주인(GPUScene 컬링 인자 · HZB · 라이트 그리드 · 입자)이 프레임 시작에 `registerBuffer( 이름, 핸들, 접근 )` 하고 그래프에 `importResource` 한다. 레벨 콜백(`FramePassExecutor::onGraphLevelPrologue`)이 텍스처 전이와 함께 버퍼 전이를 `transitionBuffers` 한 번으로, `_bUAVBarrier` 는 `uavBarrier` 로 낸다(①의 shortcut 주석 자리). 큐: 비동기 패스의 전이는 컴퓨트 리스트에(`_queue`).
+3. **패스 몸통 — 핸들로만.** `RenderGraphPassContext::getBuffer( RenderGraphBufferUAV )` · `getTexture( RenderGraphTextureSRV )` 가 선언한 접근에서만 RHI 핸들을 준다(선언 안 한 이름은 오류 로그 + 무효 핸들 — 손으로 묶을 길이 없다). 한 패스 안 연속 디스패치(HZB 밉 사슬 · VFX 방출기 · 컬링 → 정렬)는 `context.uavBarrier( RenderGraphBufferUAV )` — SRV 핸들로는 부를 수 없다.
+4. **④ 형식으로 막기.** 패스 몸통이 받는 명령 리스트를 전이 함수가 없는 면(`RenderPassCommandList` — 그리기 · 디스패치 · 바인딩만)으로 바꾸고 `transitionBuffer` · `prepareTexture*` 는 그래프 실행기 · 프레임 끝(스왑체인 · 되읽기)만 쓰는 `IRHICommandList` 에 남긴다 — 손 전이가 돌아오면 컴파일이 멈춘다.
+5. **차례(작은 것 → 큰 것, 단계마다 빌드 · 골든).** ② HZB(6 곳, `hzb` 골든과 가림 판정 시나리오) → VFX GPU 시뮬레이션(13) → 자동 노출(6) → `FrameGraphExecutor`(16) → `FramePassExecutorPasses` · `Draw`(22) → 나머지. ③ 뷰 패스. ④ 명령 리스트 면.
+6. **확인.** 단계마다: 네 백엔드 골든 그대로, DX12 · Vulkan 검증 층 오류 · 경고 없음(preflight 체인의 `-rhi-validation`), 프레임 전이 수(`RT.Graph.transitions` — 실행기가 센다)가 늘지 않음. 단위: `FrameBufferTable` 등록 · 중복 이름 거절, 선언 안 한 핸들 요청 거절.
+
+**측정.** 프레임 GPU 시간 · 전이 수가 이전 단계와 같거나 적다(늘면 그 단계에서 고친다 — 같은 상태 반복은 ①이 이미 걸러 낸다).
+
 ### 공유 DDC(설계 2026-11-17, NEXT 5 에셋 GUID 3 단계)
 
 **문제.** `DerivedDataCache`(`Engine/Asset/Cook/CookRecord.h:59`)는 로컬 폴더 하나(`Saved/DDC/<키 앞 두 글자>/<키>`)이고 키는 `uint64`(FNV-1a)다. 쿠킹(씬 · 팩 · 내비)만 쓴다. 임포트(텍스처 · 모델 · 하이트필드)는 폴더별 `import.stamp` 로 판정해 무시되는 산출물 폴더에 바로 쓴다 — 새 체크아웃 · 워크트리마다 전부 다시 임포트한다(`Import.*` 시한 3600 초).

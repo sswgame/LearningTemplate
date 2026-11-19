@@ -63,6 +63,7 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("lockstep-pair", "net.lockstep_pair_run", "락스텝 2 인 대전 — StarSkirmish 호스트 · 클라이언트 두 프로세스가 명령만 나눠 같은 판을 비동기 없이 도는지 본다(run)"),
     Subcommand("fileserve", "net.fileserve", "장치 대상으로 쿠킹한 팩 폴더를 읽기 전용 HTTP 로 내준다(개발 전용 — 장치는 App -fileserve=<주소>, 기본 127.0.0.1:1112 + adb reverse)"),
     Subcommand("telemetry-local", "net.telemetry_local_run", "텔레메트리 · 크래시 업로드 로컬 실행 — 루프백 HTTP 수신기와 게임 두 번으로 동의한 스풀 파일 · 보낼 줄의 크래시 묶음이 HTTP 로 오는지 본다(run)"),
+    Subcommand("header-fanin", "dev.header_fanin", "헤더 팬인 측정 — 헤더마다 포함하는 .cpp 수 × pch 밖에서 끌어오는 헤더 수(빌드 없이, 헤더 다이어트 전후 비교)"),
     Subcommand("move-source", "dev.move_source:main_move", "소스 파일 · 폴더를 옮기고 include · CMake · 문서 참조를 고친다(Source 기준 old=new)"),
     Subcommand("move-asset", "dev.move_asset", "에셋 파일 · 폴더를 옮기고 경로 칸(Config/Dev/AssetReferenceFields.json)의 참조를 고친다(리소스 id old new)"),
     Subcommand("asset-ids", "lint.asset_identity", "에셋 정체성(GUID — 우리 형식 글의 머리 <?asset guid?> · 원본 곁 .meta) 검사, --fix 로 없는 GUID 만들기 · 짝 잃은 .meta 다시 붙이기 · 복사본 새 GUID"),
