@@ -1152,6 +1152,16 @@ struct SW_API ReplicatedLayout
 
 근본 원인은 "리플렉션 칸을 도는 일을 소비자마다 다시 썼다" 이다. 같은 모양 후보는 `ObjectStateSerializer` 의 상태 쓰기 · 읽기 짝과 `ComponentDefaults` 의 기본값 비교다 — RF-4 가 같이 옮긴다.
 
+### 리플렉션 내장 형식 한 곳 정본(설계 2026-11-20)
+
+**문제.** `int2` 를 내장 형식으로 넣을 때 `ReflectBuiltins.xxx` 한 줄 말고 손 표 8 곳을 채워야 했다 — 파서 고정 배치 수학 표 · 각 이름 · `Interp` 허용 목록, 에디터 `InspectorWidgetFor<T>`, `PropertyRoleUtil::findBlend`, `UIAnimatedProperty`, `StateIOReflected` 잎 종류 표, `Component::foldLeaf`. 빌드가 멈춘 것은 둘뿐이고 나머지는 런타임 FATAL 이거나 조용히 어긋났다(Interp 목록 셋이 달랐다, 상태 해시는 `hashed_string` 을, 상태 직렬화는 `GameObjectHandle` 을 못 실었다).
+
+**대조.** 언리얼은 UHT 가 `UPROPERTY` 의 C++ 형식에서 `FProperty` 종류(`FIntProperty` · `FStructProperty` …)를 정하고, 보간 · 저장 · 복제가 그 종류 하나를 본다. Godot `ClassDB` 도 `Variant::Type` 하나가 에디터 위젯 · 보간(`Animation::interpolate_variant`) · 직렬화를 가른다. 둘 다 "형식 한 곳 → 소비처가 파생" 이다.
+
+**결정.** xxx 줄에 `Widget` · `Layout`(`none | num | f32(멤버…) | i32(멤버…) | angle`) · `Roles`(`Interp` · `State`) 칸을 더하고 소비처는 칸에서 만든다. 엔진은 `ReflectBuiltinTraitTable`(모양 · 역할)과 `getBuiltinComponentCount`, `ReflectedValue.cpp` 가 Layout 을 C++ 선언과 컴파일 때 대조한다(멤버 형식 · `offsetof` · `sizeof`, i32 ↔ `PackedValueTraits::kIntegerComponents`). 파서는 로더가 `BuiltinTypeTraits` 를 세션 표로 만들고 시작할 때 철자 · Interp-모양 · Packed 위젯-글 처리기 짝을 검사한다. `RuntimeState` 칸이 State 없는 내장 형식 · 맵이면 생성 오류다(`DeclarationValidator::isRuntimeStateAllowed`). 손 처리기는 Layout 이 none 인 State 형식(bool · string · hashed_string · GameObjectHandle)만 남고, 빠지면 `static_assert`. 쿼터니언은 UI 애니메이션의 성분 직선 보간에서 뺀다(회전은 slerp). 죽은 `PROPERTY( Polymorphic )` 는 지웠다.
+
+**확인.** 파서 픽스처 `RuntimeStateUnsupportedType`, 도구 입력 `ReflectionParser.ToolInputs.broken-builtins-{interp,widget,layout}`, 단위 `ReflectionPropertyRoleTest.InterpRoleRowsAreInterpolatable` · `BuiltinLayoutGivesComponentCountAndSize`, `StateIOReflectedTest.BuiltinLayoutPropertiesRoundTrip` · `Int2BytesMatchTheHandWriter`, `StateHashTest.LayoutAndHandHandlerPropertiesFold`.
+
 ## 도구 · 에디터 · 콘텐츠 파이프라인 설계(2026-11-17)
 
 미뤄 둔 항목을 작업자에게 바로 나눠 줄 수 있게 정했다. 절마다 문제(코드 자리) → 상용 대조 → 결정 · 기각 → 초안 → 이전 순서 → 측정이다(일과 사용자 결정 대기는 [NEXT](NEXT.md)). 새 린트 규칙은 없다 — 막을 것은 형식 · API · 로드 오류로 막는다.
