@@ -99,7 +99,7 @@ namespace sw
 
     void GPUMeshMorphPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
     {
-        update( pDevice, listMesh, vector<Mesh*>{}, vector<uint32>{}, vector<uint32>{} );
+        update( pDevice, listMesh, vector<Mesh*>{}, vector<AnimationSkinSlotKey>{}, vector<uint32>{} );
     }
 
     bool GPUMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<IdentityToken>& listBuiltContentID )
