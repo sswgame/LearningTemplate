@@ -1172,6 +1172,7 @@ struct SW_API ReplicatedLayout
 4. 경계 상황: 트리거 안에서 생성 → 다음 물리 스텝에 시작 한 번(백엔드가 겹친 채 추가된 바디의 접촉을 알린다). 파괴 · 비활성(바디를 놓는다 — `isSimulated`) · 로그아웃(폰 파괴) → 끝 한 번(`removeBodies`). 로그인(폰 생성) → 서버에서 시작 한 번 — 클라이언트는 이벤트를 복제받지 않고 자기 월드가 같은 계약으로 낸다(지금 넷 구조 그대로). 트리거 생성 · 파괴 · 켜고 끄기 · 모양 · 크기 · 이동 → 같은 규칙(바디 추가 · 제거 · 셰이프 교체). 순간 이동은 지나친 길에 이벤트를 내지 않는다(언리얼 `Teleport` · 유니티와 같다 — 2D 연속 콜라이더만 쓸기로 시작 + 끝). 트리거끼리는 `_bOtherTrigger` 가 참인 겹침으로 온다. 처리 안의 파괴 · 생성은 다음 프레임 이벤트가 되고 이번 목록은 사본을 돈다.
 5. 지역(`ZoneTracker`)은 이미 오브젝트 단위 · 이탈 먼저다. 두 벌을 한 추적기로 합치지 않는다 — 입력이 다르다(사건 수 세기 대 프레임 집합 차이) · 지역은 대상마다 모듈 기억을 든다. 계약만 같게 맞춘다: 꺼진 볼륨 · 표면은 안의 대상을 모두 내보내고(다시 켜면 다음 갱신에서 진입), 꺼지거나 파괴 대기인 물리 개체는 후보가 아니다(나간다).
 6. 스트리밍 셀이 내려가면 그 오브젝트는 파괴 길을 지나므로 파괴 규칙대로 남은 트리거에 끝이 간다(트리거가 내려가면 안의 대상에 끝). 스트리밍 코드는 바꾸지 않는다.
+7. 막는 접촉(`onCollisionBegin/End` · 접촉 유지)은 바디 쌍 단위로 둔다 — 겹침은 "안에 있다" 는 상태라 오브젝트 쌍으로 세지만, 접촉은 부딪힌 바디마다의 충격이다(파괴 조각마다 피해 `FractureComponentBase` · 같은 오브젝트 조각끼리의 밀어냄 거름이 `_selfBody` 를 본다). 언리얼 `OnComponentHit`(컴포넌트마다) · 유니티 `OnCollisionEnter`(콜라이더 쌍)와 같다. 접촉을 세는 소비자는 종류로 모은다(`ZoneContactComponent` 는 표면 종류마다 최대 충격 하나 — 몸이 여럿이어도 한 기록). 테스트 `TriggerOverlapContractTest.CollisionStaysPerBodyPair3D`.
 
 **확인.** 단위 `PhysicsOverlapTrackerTest.*`(물리 없음 — 여러 바디 한 번, 끝 먼저, 들고 남, 다시 짓기, 트리거 열쇠 분리, 유지), `TriggerOverlapContractTest.*`(Jolt · Box2D 씬 — 안에서 생성 · 파괴 · 비활성 · 트리거 끄고 켜기 · 순간 이동 · 몸 둘), `ZoneTest.*`(꺼진 볼륨 이탈 · 안에서 생성 첫 프레임 진입 · 파괴 이탈 기록) — 서버 단위(`Server --test`)에도 같은 케이스가 돈다. 시나리오 `triggercontract`(감시 값 `Physics.OverlapCount`).
 
@@ -1186,10 +1187,10 @@ struct SW_API ReplicatedLayout
 2. 응답 표(`CollisionLayers` — 프로필 쌍 32 × 32, 세 값): 두 프로필의 응답은 서로의 오브젝트 채널에 준 응답 중 약한 쪽(무시 < 겹침 < 막음), 물리가 꺼진 프로필은 모두 무시. 백엔드는 무시가 아닌 쌍만 짝짓는다. 겹침 쌍: Jolt 는 그 쌍의 접촉을 센서로 돌리고(`ContactSettings::mIsSensor`) 이벤트를 겹침으로 알린다 → 트리거 계약 추적기(`PhysicsOverlapTracker`)가 진입 · 이탈을 낸다. Box2D 는 막는 셰이프끼리 겹침이면 사용자 거름(`b2World_SetCustomFilterCallback`)이 접촉을 뺀다 — Box2D 는 막는 셰이프끼리 겹침 이벤트를 못 내므로(센서만) 2D 에서 겹침 이벤트는 한쪽이 트리거일 때만이다(유니티 2D 와 같다). 마스크에서 겹침 쌍을 빼지 않는다 — 트리거가 그 상대를 봐야 한다.
 3. 트리거 표시(`_bTrigger`)는 남긴다 — 바디 단위 "센서로 만든다" 이고, 응답은 쌍 단위 "막을지" 다. 트리거 프로필은 상대에 겹침을 준다(데이터).
 4. 질의: `PhysicsSettings::makeTraceLayerMask( 채널 )`(그 채널을 막는, 질의 켜진 프로필), `ScenePhysics::makeTraceFilter( 채널 )` → `PhysicsQueryFilter`. 모르는 채널 · 오브젝트 채널이면 오류 + nullopt(모두 맞는 필터로 대신하지 않는다). Jolt · Box2D 질의는 이미 레이어 마스크로 거르므로 그대로 내려간다. 전용 서버도 같은 설정 · 같은 코드다.
-5. 이전: 프로필 이름 · 차례를 옛 레이어(Default · Static · Character · Ragdoll · Debris · Trigger · Projectile)와 같게 두고, 응답을 옛 행렬 그대로 적었다(테스트가 옛 표와 견준다) — 이름으로 적은 씬 · 프리팹(`_layer`)은 그대로 같은 동작이다. 오브젝트 채널은 WorldStatic · WorldDynamic · Pawn · Ragdoll · Debris · Trigger · Projectile, 트레이스 채널은 Visibility(기본 막음) · Camera(기본 무시, 세상만 막음). 2D 콜라이더의 번호 칸 `_colliderType` 은 이름 칸 `_layer` 로 바꾸고 콘텐츠 20 파일을 옮겼다(모두 0 → Default). 인스펙터 표시 이름은 "Collision Profile".
+5. 이전: 프로필 이름 · 차례를 옛 레이어(Default · Static · Character · Ragdoll · Debris · Trigger · Projectile)와 같게 두고, 응답을 옛 행렬 그대로 적었다(테스트가 옛 표와 견준다) — 이름으로 적은 씬 · 프리팹(`_layer`)은 그대로 같은 동작이다. 일부러 바꾼 칸은 둘이다: Projectile 은 Pawn 에 막히고 Trigger 와 겹친다(옛 표는 무시 — Projectile 프로필을 쓰는 콘텐츠가 없다). 오브젝트 채널은 WorldStatic · WorldDynamic · Pawn · Ragdoll · Debris · Trigger · Projectile, 트레이스 채널은 Visibility(기본 막음) · Camera(기본 무시, 세상만 막음). 2D 콜라이더의 번호 칸 `_colliderType` 은 이름 칸 `_layer` 로 바꾸고 콘텐츠 20 파일을 옮겼다(모두 0 → Default). 인스펙터 표시 이름은 "Collision Profile".
 6. 에디터: 채널 · 프로필 · 응답은 물리 설정 에셋을 카탈로그 편집기(반사 그리드)로 고친다. 컴포넌트의 프로필 칸은 이름 입력 + 검증(`PhysicsNameValidation::validateLayer`)이다. 남은 몫: 응답 행렬 표 보기(채널 × 프로필 격자)와 인스펙터 프로필 고르기 목록 — 인스펙터 이름 칸에 "고를 이름의 출처" 메타가 없어 반사 그리드 쪽 장치가 먼저다(`taste-skill` 앱 화면 규칙으로).
 
-**확인.** 단위 `CollisionProfileTest.*`(응답 표 대칭 · 약한 쪽, 프로필 해석 · 트레이스 마스크, 나쁜 데이터 오류, 배포 설정이 옛 표와 같음, Jolt · Box2D 막음 · 겹침 · 무시, 트레이스 채널 광선 거르기) — 서버 단위에도 돈다.
+**확인.** 단위 `CollisionProfileTest.*`(응답 표 대칭 · 약한 쪽, 프로필 해석 · 트레이스 마스크, 나쁜 데이터 오류, 배포 설정이 옛 표와 같음, Jolt · Box2D 막음 · 겹침 · 무시, 트레이스 채널 광선 거르기) — 서버 단위에도 돈다. 시나리오 `game/empty/automation/collisionprofiles`(투사체가 트리거는 겹치며 지나가고 Pawn 에 막힌다, 감시 값 `Physics.TraceDistance` 로 Camera 채널이 Pawn 을 무시하고 Visibility 는 맞는다).
 
 ## 도구 · 에디터 · 콘텐츠 파이프라인 설계(2026-11-17)
 

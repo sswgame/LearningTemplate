@@ -268,3 +268,32 @@ SW_TEST_CASE( TriggerOverlapContractTest, SpawnToggleAndDestroy2D )
     Internal::run( manager, 3 );
     SW_EXPECT_EQUAL( 2u, pRecorder->_endCount );
 }
+
+/**
+ * @brief [TriggerOverlapContractTest] 막는 접촉은 바디 쌍마다다 — 몸이 둘인 오브젝트가 바닥에 떨어지면 바닥은 접촉 시작을 둘 받는다(충격 단위: 조각마다 피해 · 소리)
+ * @details 겹침(있음 · 없음)은 오브젝트 쌍으로 모으지만 접촉은 부딪힌 바디마다의 충격이라 모으지 않는다(언리얼 OnComponentHit · 유니티 콜라이더 쌍과 같다, DesignBacklog 트리거 계약 7).
+ */
+SW_TEST_CASE( TriggerOverlapContractTest, CollisionStaysPerBodyPair3D )
+{
+    using Internal = TestTriggerOverlapContractInternal;
+    GameObjectManager   manager;
+    GameObject*         pFloor = manager.createGameObject( hashed_string( "Floor" ) );
+    RigidBodyComponent* pBody  = pFloor->addComponent<RigidBodyComponent>();
+    PhysicsShapeDesc3D  box;
+    box._type        = PhysicsShapeType3D::Box;
+    box._halfExtents = float3{ 10.0f, 0.5f, 10.0f };
+    pBody->setShape( box );
+    pBody->setBodyType( PhysicsBodyType::Static );
+    pBody->setLocalPosition( float3{ 0.0f, -0.5f, 0.0f } );
+    OverlapRecorderTestComponent* pRecorder = pFloor->addComponent<OverlapRecorderTestComponent>();
+    GameObject*                   pCart     = manager.createGameObject( hashed_string( "Cart" ) );
+    RigidBodyComponent*           pFront    = Internal::addBody3D( *pCart, float3{ 1.0f, 0.5f, 0.0f } );
+    RigidBodyComponent*           pBack     = Internal::addBody3D( *pCart, float3{ -2.0f, 0.0f, 0.0f } ); // primary 에 붙는다 — 월드 x = -1
+    SW_REQUIRE_NOT_NULL( pRecorder );
+    pFront->setGravityFactor( 1.0f );
+    pBack->setGravityFactor( 1.0f );
+    manager.beginPlay();
+    Internal::run( manager, 60 );
+    SW_EXPECT_EQUAL( 2u, pRecorder->_collisionBeginCount );
+    SW_EXPECT_EQUAL( 0u, pRecorder->_beginCount );
+}

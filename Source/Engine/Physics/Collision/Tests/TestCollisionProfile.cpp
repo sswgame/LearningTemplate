@@ -178,7 +178,8 @@ SW_TEST_CASE( CollisionProfileTest, BadProfileIsLoadError )
 /**
  * @brief [CollisionProfileTest] 배포 설정(engine/physics/physicssettings.xml)의 프로필은 옛 레이어 표(막음 · 무시 대칭 행렬)를 그대로 낸다 — 레이어 이름 · 번호로 적은 씬이 같은 동작이다
  * @details 옛 표: Default 는 모두와, Static 은 Character · Ragdoll · Debris · Projectile 과, Character 는 Character · Trigger 와, Ragdoll 은 Ragdoll · Debris · Projectile 과,
- *          Debris 는 Debris 와 부딪혔다(대칭). Trigger 쌍은 이제 겹침이다(트리거 바디는 센서라 동작은 같다).
+ *          Debris 는 Debris 와 부딪혔다(대칭). Trigger 쌍은 이제 겹침이다(트리거 바디는 센서라 동작은 같다). 일부러 바꾼 칸 둘: Projectile 은 Pawn(Character)에 막히고
+ *          Trigger 와 겹친다(옛 표는 둘 다 무시 — Projectile 프로필을 쓰는 콘텐츠가 없어 옮긴 씬의 동작은 같다, 시나리오 collisionprofiles).
  */
 SW_TEST_CASE( CollisionProfileTest, ShippedSettingsKeepTheOldLayerTable )
 {
@@ -189,11 +190,11 @@ SW_TEST_CASE( CollisionProfileTest, ShippedSettingsKeepTheOldLayerTable )
     const uint8 arrOld[7][7] = {
         {1, 1, 1, 1, 1, 1, 1},
         {1, 0, 1, 1, 1, 0, 1},
-        {1, 1, 1, 0, 0, 1, 0},
+        {1, 1, 1, 0, 0, 1, 1},
         {1, 1, 0, 1, 1, 0, 1},
         {1, 1, 0, 1, 1, 0, 0},
-        {1, 0, 1, 0, 0, 0, 0},
-        {1, 1, 0, 1, 0, 0, 0},
+        {1, 0, 1, 0, 0, 0, 1},
+        {1, 1, 1, 1, 0, 1, 0},
     };
     for ( uint32 row = 0; row < 7; ++row )
     {
@@ -206,8 +207,12 @@ SW_TEST_CASE( CollisionProfileTest, ShippedSettingsKeepTheOldLayerTable )
             SW_EXPECT_EQUAL( arrOld[row][column] == 1, layers.shouldCollide( *layerA, layerB ) );
         }
     }
-    const uint8 trigger = settings.findLayerIndex( hashed_string( "Trigger" ) ).value_or( uint8{ 255 } );
+    const uint8 trigger    = settings.findLayerIndex( hashed_string( "Trigger" ) ).value_or( uint8{ 255 } );
+    const uint8 projectile = settings.findLayerIndex( hashed_string( "Projectile" ) ).value_or( uint8{ 255 } );
+    const uint8 character  = settings.findLayerIndex( hashed_string( "Character" ) ).value_or( uint8{ 255 } );
     SW_EXPECT_TRUE( layers.getResponse( 0, trigger ) == CollisionResponse::Overlap );
+    SW_EXPECT_TRUE( layers.getResponse( projectile, trigger ) == CollisionResponse::Overlap );
+    SW_EXPECT_TRUE( layers.getResponse( projectile, character ) == CollisionResponse::Block );
     const optional<uint32> cameraMask = settings.makeTraceLayerMask( hashed_string( "Camera" ) );
     SW_REQUIRE_TRUE( cameraMask.has_value() );
     SW_EXPECT_EQUAL( ( 1u << 0 ) | ( 1u << 1 ), *cameraMask ); // 카메라는 세상(Default · Static)만 본다 — 캐릭터 · 래그돌 · 파편은 무시

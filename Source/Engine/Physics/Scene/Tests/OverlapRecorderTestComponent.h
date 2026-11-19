@@ -22,6 +22,7 @@ namespace sw
 
         uint32        _beginCount{ 0 };
         uint32        _endCount{ 0 };
+        uint32        _collisionBeginCount{ 0 };      ///< 막는 접촉 시작 수(바디 쌍마다 — 충격 단위)
         vector<uint8> _listOrder{};                   ///< 'B' · 'E' 와 상대 오브젝트 id 의 낮은 바이트가 번갈아 든다
         bool          _bDestroyOtherOnBegin{ false }; ///< NOLINT(sw-bool-flag): 테스트 칸 — 비트필드는 기본값을 둘 수 없다
 
@@ -43,6 +44,12 @@ namespace sw
                 return;
             ++_endCount;
             record( 'E', overlap );
+        }
+
+        void onCollisionBegin( const CollisionInfo& collision ) override
+        {
+            Component::onCollisionBegin( collision );
+            ++_collisionBeginCount;
         }
 
     private:

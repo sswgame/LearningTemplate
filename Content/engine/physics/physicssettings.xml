@@ -49,6 +49,7 @@
 				<CollisionResponseDef _channel="WorldDynamic" _response="Block" />
 				<CollisionResponseDef _channel="Pawn" _response="Block" />
 				<CollisionResponseDef _channel="Trigger" _response="Overlap" />
+				<CollisionResponseDef _channel="Projectile" _response="Block" />
 			</_listResponse>
 		</CollisionProfileDef>
 		<CollisionProfileDef _name="Ragdoll" _objectChannel="Ragdoll">
@@ -73,6 +74,7 @@
 				<CollisionResponseDef _channel="WorldDynamic" _response="Overlap" />
 				<CollisionResponseDef _channel="Pawn" _response="Overlap" />
 				<CollisionResponseDef _channel="Visibility" _response="Ignore" />
+				<CollisionResponseDef _channel="Projectile" _response="Overlap" />
 			</_listResponse>
 		</CollisionProfileDef>
 		<CollisionProfileDef _name="Projectile" _objectChannel="Projectile">
@@ -80,6 +82,8 @@
 				<CollisionResponseDef _channel="WorldStatic" _response="Block" />
 				<CollisionResponseDef _channel="WorldDynamic" _response="Block" />
 				<CollisionResponseDef _channel="Ragdoll" _response="Block" />
+				<CollisionResponseDef _channel="Pawn" _response="Block" />
+				<CollisionResponseDef _channel="Trigger" _response="Overlap" />
 			</_listResponse>
 		</CollisionProfileDef>
 	</_listProfile>
