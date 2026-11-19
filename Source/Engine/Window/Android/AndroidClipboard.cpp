@@ -13,6 +13,7 @@
 #include "Engine/Window/PlatformClipboard.h"
 
 #if defined( SW_PLATFORM_ANDROID )
+    #include "Engine/Window/Android/AndroidJNIScope.h"
     #include "Engine/Window/Android/AndroidJNIString.h"
     #include "Engine/Window/Android/AndroidWindow.h"
 
@@ -23,60 +24,15 @@ namespace sw
 {
     namespace
     {
-        /** @brief JNI 한 번의 호출 범위입니다 — 스레드를 JVM 에 붙이고 로컬 참조 틀을 열며, 끝나면 예외를 지우고 뗀다(AndroidWindow 의 JNI 호출과 같은 규칙). */
-        class AndroidClipboardScope
+        struct AndroidClipboardInternal
         {
-        public:
-            AndroidClipboardScope()
-                : _pApp{ AndroidWindow::getApplication() }
-                , _pEnv{ nullptr }
-            {
-                if ( _pApp == nullptr || _pApp->activity == nullptr || _pApp->activity->vm->AttachCurrentThread( &_pEnv, nullptr ) != JNI_OK )
-                {
-                    _pEnv = nullptr;
-                    return;
-                }
-                constexpr jint kLocalReferenceCapacity = 16;
-                (void)_pEnv->PushLocalFrame( kLocalReferenceCapacity );
-            }
-            ~AndroidClipboardScope()
-            {
-                if ( _pEnv == nullptr )
-                    return;
-                if ( _pEnv->ExceptionCheck() )
-                    _pEnv->ExceptionClear();
-                (void)_pEnv->PopLocalFrame( nullptr );
-                _pApp->activity->vm->DetachCurrentThread();
-            }
-            AndroidClipboardScope( const AndroidClipboardScope& )            = delete;
-            AndroidClipboardScope& operator=( const AndroidClipboardScope& ) = delete;
-
-            JNIEnv* getEnv() const { return _pEnv; }
-            jobject getActivity() const { return _pApp->activity->clazz; }
-
-            /** @brief 마지막 JNI 호출이 예외를 던졌으면 지우고 true 입니다. */
-            bool takeException() const
-            {
-                if ( _pEnv->ExceptionCheck() == JNI_FALSE )
-                    return false;
-                _pEnv->ExceptionClear();
-                return true;
-            }
-
             /** @brief 액티비티의 `ClipboardManager` 입니다(`getSystemService( Context.CLIPBOARD_SERVICE )`). 없으면 nullptr 입니다. */
-            jobject findClipboardManager() const
+            static jobject findClipboardManager( const AndroidJNIScope& jni )
             {
-                const jclass    contextC   = _pEnv->FindClass( "android/content/Context" );
-                const jfieldID  serviceF   = contextC != nullptr ? _pEnv->GetStaticFieldID( contextC, "CLIPBOARD_SERVICE", "Ljava/lang/String;" ) : nullptr;
-                const jobject   serviceKey = serviceF != nullptr ? _pEnv->GetStaticObjectField( contextC, serviceF ) : nullptr;
-                const jmethodID getService = contextC != nullptr ? _pEnv->GetMethodID( contextC, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;" ) : nullptr;
-                const jobject   manager    = serviceKey != nullptr && getService != nullptr ? _pEnv->CallObjectMethod( getActivity(), getService, serviceKey ) : nullptr;
-                return takeException() ? nullptr : manager;
+                const jclass  contextC   = jni.findClass( "android/content/Context" );
+                const jobject serviceKey = jni.getStaticObjectField( contextC, jni.getStaticField( contextC, "CLIPBOARD_SERVICE", "Ljava/lang/String;" ) );
+                return jni.callObject( jni.getActivity(), jni.getMethod( contextC, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;" ), serviceKey );
             }
-
-        private:
-            android_app* _pApp;
-            JNIEnv*      _pEnv;
         };
     } // namespace
 
@@ -89,65 +45,42 @@ namespace sw
     bool PlatformClipboard::readText( string& outText )
     {
         outText.clear();
-        const AndroidClipboardScope scope;
-        JNIEnv* const               pEnv    = scope.getEnv();
-        const jobject               manager = pEnv != nullptr ? scope.findClipboardManager() : nullptr;
-        if ( manager == nullptr )
-            return false;
-        // 예외가 걸린 채 다음 JNI 호출을 하면 CheckJNI(디버그 APK)가 앱을 죽인다 — 호출마다 예외를 보고 멈춘다.
-        const jmethodID getClip = pEnv->GetMethodID( pEnv->GetObjectClass( manager ), "getPrimaryClip", "()Landroid/content/ClipData;" );
-        const jobject   clip    = scope.takeException() == false ? pEnv->CallObjectMethod( manager, getClip ) : nullptr;
-        if ( scope.takeException() || clip == nullptr )
+        // 호출마다 범위가 예외를 확인하고 빈 값을 낸다 — 예외 위에서 다음 JNI 를 부르지 않는다(CheckJNI).
+        const AndroidJNIScope jni;
+        const jobject         manager = AndroidClipboardInternal::findClipboardManager( jni );
+        const jobject         clip    = jni.callObject( manager, jni.getMethod( jni.getObjectClass( manager ), "getPrimaryClip", "()Landroid/content/ClipData;" ) );
+        if ( clip == nullptr )
             return false; // 클립보드가 비었거나 앱이 포커스를 갖지 않았다(Android 10+)
-        const jclass    clipC     = pEnv->GetObjectClass( clip );
-        const jmethodID getCount  = pEnv->GetMethodID( clipC, "getItemCount", "()I" );
-        const jint      itemCount = scope.takeException() == false ? pEnv->CallIntMethod( clip, getCount ) : 0;
-        if ( scope.takeException() || itemCount <= 0 )
+        const jclass         clipC     = jni.getObjectClass( clip );
+        const optional<jint> itemCount = jni.callInt( clip, jni.getMethod( clipC, "getItemCount", "()I" ) );
+        if ( itemCount.has_value() == false || *itemCount <= 0 )
             return false;
-        const jmethodID getItem = pEnv->GetMethodID( clipC, "getItemAt", "(I)Landroid/content/ClipData$Item;" );
-        const jobject   item    = scope.takeException() == false ? pEnv->CallObjectMethod( clip, getItem, 0 ) : nullptr;
-        if ( scope.takeException() || item == nullptr )
+        const jobject item         = jni.callObject( clip, jni.getMethod( clipC, "getItemAt", "(I)Landroid/content/ClipData$Item;" ), 0 );
+        const jobject textSequence = jni.callObject( item, jni.getMethod( jni.getObjectClass( item ), "coerceToText", "(Landroid/content/Context;)Ljava/lang/CharSequence;" ), jni.getActivity() );
+        const jobject text         = jni.callObject( textSequence, jni.getMethod( jni.getObjectClass( textSequence ), "toString", "()Ljava/lang/String;" ) );
+        if ( text == nullptr )
             return false;
-        const jmethodID coerceToText = pEnv->GetMethodID( pEnv->GetObjectClass( item ), "coerceToText", "(Landroid/content/Context;)Ljava/lang/CharSequence;" );
-        const jobject   textSequence = scope.takeException() == false ? pEnv->CallObjectMethod( item, coerceToText, scope.getActivity() ) : nullptr;
-        if ( scope.takeException() || textSequence == nullptr )
-            return false;
-        const jmethodID toString = pEnv->GetMethodID( pEnv->GetObjectClass( textSequence ), "toString", "()Ljava/lang/String;" );
-        const jobject   text     = scope.takeException() == false ? pEnv->CallObjectMethod( textSequence, toString ) : nullptr;
-        if ( scope.takeException() || text == nullptr )
-            return false;
-        outText = AndroidJNIString::toUTF8( pEnv, static_cast<jstring>( text ) );
-        return scope.takeException() == false;
+        outText = AndroidJNIString::toUTF8( jni.getEnv(), static_cast<jstring>( text ) );
+        return true;
     }
 
     bool PlatformClipboard::writeText( string_view text )
     {
-        const AndroidClipboardScope scope;
-        JNIEnv* const               pEnv    = scope.getEnv();
-        const jobject               manager = pEnv != nullptr ? scope.findClipboardManager() : nullptr;
+        const AndroidJNIScope jni;
+        const jobject         manager = AndroidClipboardInternal::findClipboardManager( jni );
         if ( manager == nullptr )
         {
             SW_LOG_WARNING_ID( "AndroidClipboard.NoManager", "Android: the activity's ClipboardManager is unavailable - the text was not copied" );
             return false;
         }
-        const jstring clipText = AndroidJNIString::toJava( pEnv, text );
-        if ( scope.takeException() || clipText == nullptr )
+        const jstring   clipText = jni.newString( text );
+        const jstring   label    = jni.newString( string_view{} );
+        const jclass    clipC    = jni.findClass( "android/content/ClipData" );
+        const jmethodID newPlain = jni.getStaticMethod( clipC, "newPlainText", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Landroid/content/ClipData;" );
+        const jobject   clip     = clipText != nullptr && label != nullptr ? jni.callStaticObject( clipC, newPlain, label, clipText ) : nullptr;
+        if ( clip == nullptr || jni.callVoid( manager, jni.getMethod( jni.getObjectClass( manager ), "setPrimaryClip", "(Landroid/content/ClipData;)V" ), clip ) == false )
         {
-            SW_LOG_WARNING_ID( "AndroidClipboard.WriteFailed", "Android: could not make a Java string of %# bytes for the clipboard text", text.size() );
-            return false;
-        }
-        const jclass    clipC = pEnv->FindClass( "android/content/ClipData" );
-        const jmethodID newPlain =
-            clipC != nullptr ? pEnv->GetStaticMethodID( clipC, "newPlainText", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Landroid/content/ClipData;" ) : nullptr;
-        const jstring   label   = AndroidJNIString::toJava( pEnv, string_view{} );
-        const jobject   clip    = scope.takeException() == false && newPlain != nullptr ? pEnv->CallStaticObjectMethod( clipC, newPlain, label, clipText ) : nullptr;
-        const jmethodID setClip = scope.takeException() == false && clip != nullptr ? pEnv->GetMethodID( pEnv->GetObjectClass( manager ), "setPrimaryClip", "(Landroid/content/ClipData;)V" ) : nullptr;
-        const bool      bReady  = scope.takeException() == false && setClip != nullptr;
-        if ( bReady )
-            pEnv->CallVoidMethod( manager, setClip, clip );
-        if ( bReady == false || scope.takeException() )
-        {
-            SW_LOG_WARNING_ID( "AndroidClipboard.WriteFailed", "Android: ClipboardManager.setPrimaryClip failed - the text was not copied" );
+            SW_LOG_WARNING_ID( "AndroidClipboard.WriteFailed", "Android: ClipboardManager.setPrimaryClip failed - the text (%# bytes) was not copied", text.size() );
             return false;
         }
         return true;

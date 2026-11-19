@@ -163,8 +163,16 @@ public final class SWInputView extends View {
             return true;
         }
 
+        /** 길이는 UTF-16 단위다 — 엔진의 지우기 키는 글자(코드 포인트) 하나씩이라 서로게이트 쌍 앞에서는 더 지울 수 있다(입력기는 대개 아래 코드 포인트 판을 먼저 쓴다). */
         @Override
         public boolean deleteSurroundingText(int beforeLength, int afterLength) {
+            mView.dispatchDeleteSurroundingText(beforeLength, afterLength);
+            return true;
+        }
+
+        /** 길이가 코드 포인트다(API 24) — 엔진의 지우기 키 하나와 정확히 맞는다. */
+        @Override
+        public boolean deleteSurroundingTextInCodePoints(int beforeLength, int afterLength) {
             mView.dispatchDeleteSurroundingText(beforeLength, afterLength);
             return true;
         }
