@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="05384884064ac3efb6a8a9f9c17399c4"?>
+<!--
+  에디터 시나리오 — 렌더 디버거 창(렌더링 런타임 디버그: DesignBacklog "렌더링 런타임 디버그(설계 2026-11-20)").
+  1) 프레임 디버거: 켜면 주 시점(게임 뷰) 씬 드로우를 기록한다(Editor.RenderDebuggerEvents). 다음을 세 번 누르면 멈춤 지점이 0 → 1 → 2 번 기록이다.
+     개발 명령 framedebug prev 가 같은 우편함을 움직이고(게임 중 오버레이 길) off 로 끈다.
+  2) 렌더 그래프: 탭을 열면 사본을 요청하고, 캔버스에 그린 노드 수가 패스 수와 같다(뷰 그래프 · 프레임 그래프).
+  3) 가림 · 스트리밍 탭이 열리고, 씬 뷰 보기 모드를 바꿨다 되돌려도 창이 그대로 돈다(보기 모드는 씬 뷰 설정 — 프레임 디버거는 주 시점만).
+  버퍼 탭(가림 판정이 있는 백엔드만)은 renderdebuggerbuffers 가 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/renderdebugger.scenario.xml -unattended
+-->
+<Scenario name="editor.renderdebugger" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<DevCommand line="layout.reset"/>
+	<ResizeWindow width="1600" height="900"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<EditorWaitStable/>
+	<!-- 메시가 여럿인 씬 — 기록할 씬 드로우가 패스마다 있다 -->
+	<DevCommand line="scene.open game/empty/maps/fogshowcase.scene.xml"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitStable/>
+	<!-- 프레임 디버거는 주 시점(게임 뷰)을 기록한다 — 게임 뷰를 앞에 두고 창을 연다(도구 창은 떠 있는 창으로 열린다) -->
+	<DevCommand line="panel.focus game_view"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus render_debugger"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.GameViewRequested" equals="1"/>
+	<Expect watch="Editor.RenderDebuggerTab" equals="0"/>
+	<!-- 1) 프레임 디버거 -->
+	<EditorClick mark="renderDebugger.enable"/>
+	<WaitUntil watch="Editor.RenderDebuggerEvents" atLeast="3" timeoutWallSeconds="10"/>
+	<Expect watch="Editor.RenderDebuggerStopEvent" equals="-1"/>
+	<EditorWaitStable/>
+	<EditorClick mark="renderDebugger.next"/>
+	<WaitUntil watch="Editor.RenderDebuggerStopEvent" equals="0" timeoutWallSeconds="10"/>
+	<EditorWaitStable/>
+	<EditorClick mark="renderDebugger.next"/>
+	<WaitUntil watch="Editor.RenderDebuggerStopEvent" equals="1" timeoutWallSeconds="10"/>
+	<EditorWaitStable/>
+	<EditorClick mark="renderDebugger.next"/>
+	<WaitUntil watch="Editor.RenderDebuggerStopEvent" equals="2" timeoutWallSeconds="10"/>
+	<!-- 멈춤 뒤 드로우도 기록에 남는다(건너뜀) — 기록 수는 줄지 않는다 -->
+	<Expect watch="Editor.RenderDebuggerEvents" atLeast="3"/>
+	<DevCommand line="framedebug prev"/>
+	<WaitUntil watch="Editor.RenderDebuggerStopEvent" equals="1" timeoutWallSeconds="10"/>
+	<DevCommand line="framedebug off"/>
+	<WaitUntil watch="Editor.RenderDebuggerStopEvent" equals="-1" timeoutWallSeconds="10"/>
+	<!-- 2) 렌더 그래프 -->
+	<EditorWaitStable/>
+	<EditorClick mark="renderDebugger.tab.graph"/>
+	<WaitUntil watch="Editor.RenderDebuggerTab" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.RenderDebuggerGraphPasses" atLeast="1" timeoutWallSeconds="10"/>
+	<Store watch="Editor.RenderDebuggerGraphPasses" as="passes"/>
+	<WaitUntil watch="Editor.RenderDebuggerGraphNodes" sameAs="passes" timeoutWallSeconds="10"/>
+	<EditorWaitStable/>
+	<EditorClick mark="renderDebugger.graph.frame"/>
+	<EditorWaitStable/>
+	<Store watch="Editor.RenderDebuggerGraphPasses" as="framePasses"/>
+	<WaitUntil watch="Editor.RenderDebuggerGraphNodes" sameAs="framePasses" timeoutWallSeconds="10"/>
+	<!-- 3) 가림 · 스트리밍, 보기 모드 전환 -->
+	<EditorWaitStable/>
+	<EditorClick mark="renderDebugger.tab.occlusion"/>
+	<WaitUntil watch="Editor.RenderDebuggerTab" equals="3" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus scene_view"/>
+	<EditorWaitStable/>
+	<EditorClick mark="viewport.viewMode"/>
+	<EditorWaitStable/>
+	<EditorClick mark="viewport.viewMode.wireframe"/>
+	<WaitUntil watch="Editor.SceneViewMode" equals="2" timeoutFrames="90"/>
+	<EditorClick mark="viewport.viewMode"/>
+	<EditorWaitStable/>
+	<EditorClick mark="viewport.viewMode.lit"/>
+	<WaitUntil watch="Editor.SceneViewMode" equals="0" timeoutFrames="90"/>
+	<DevCommand line="panel.focus render_debugger"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.RenderDebuggerTab" equals="3"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="renderdebugger/occlusion.png" maxMagentaFraction="0"/>
+	<EditorWaitStable/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

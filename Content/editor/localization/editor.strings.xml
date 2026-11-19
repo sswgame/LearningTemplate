@@ -3407,6 +3407,11 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdText.Easing" source="Easing">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdText.EdgeWarpPresets" source="Edge Warp Presets">
 			<origins>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
@@ -4441,6 +4446,11 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.PlayReverse" source="Play Reverse">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Redo" source="Redo">
@@ -8356,6 +8366,11 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.PlayReverseTip" source="Play the sequence backwards in the viewport from the current frame, looping at the start.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.PlayTip"
 		       source="Play the sequence in the viewport from the current frame, looping at the end.">
 			<origins>
@@ -9581,6 +9596,11 @@
 				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorTip.CurveKeyEasing" source="The blend curve an Eased key follows to the next key (the same curves as camera and UI blends).">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorTip.CurveKeyInterpolation"
 		       source="How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline.">
 			<origins>
@@ -10679,6 +10699,11 @@
 		<entry key="Rename" source="Rename" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Render Debugger" source="Render Debugger" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Render Targets" source="Render Targets" context="EditorPanelText._label">
