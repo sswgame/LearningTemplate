@@ -1302,6 +1302,8 @@ public:
 
 **측정.** 꺼진 상태의 비용은 드로우마다 원자 값 하나다 — 통합에서 `bench.json` p50 이 흔들림 안인지 한 번 본다.
 
+**구현에서 바꾼 것(2026-11-20).** ① 렌더 타깃 창의 "패스 경계 시점" 은 고른 타깃을 쓰는 패스 끝을 멈춤 지점(패스, 모든 드로우)으로 거는 콤보다(`RenderTargetViewModel::setStopAfterPass`) — 프레임 디버거와 같은 우편함이라 렌더 디버거 창에서 고른 드로우도 같은 줄에 보인다. 지금 풀의 첨부는 모두 밉 하나라 밉 고르기는 밉이 여럿인 타깃에만 보인다(HZB 밉은 구조 버퍼라 버퍼 탭의 행과 가림 탭의 16 px 타일 격자로 본다). ② 버퍼 칸 해석은 사람이 고르는 4 바이트 칸(float · uint · int · hex) × 등록 보폭이다 — 그래프 밖 버퍼의 원소 형식은 표에 없고(크기만), 그 버퍼를 읽는 컴퓨트 PSO 의 리플렉션(`ShaderBindingSlot::_listElementMember`)을 버퍼 이름에 잇는 표가 아직 없다. 드로우 바인딩 글에는 리플렉션 멤버가 그대로 나온다. ③ 텍스처 스트리밍은 텍스처마다의 표 대신 `TextureCache::updateStreaming` 이 이미 계산하던 요청 밉 · 올라온 밉을 합한 카운터 셋(`RT.TextureStreaming.textures` · `belowWanted` · `missingMips`)이다. ④ 삼각형 수는 GPU 컬링 전 상한(배치 인덱스 / 3 × 가시 칸)이다 — 간접 드로우의 실제 수는 GPU 에만 있다. ⑤ 드로우 기록은 `drawBatchGroup`(씬 메시 묶음)만이다 — 입자 · 전체 화면 · 컴퓨트는 기록하지도 자르지도 않는다.
+
 ### Android IME 조합(설계 2026-11-20, 감사 P-4)
 
 **문제.** Android 는 미확정(조합 중) 글을 받지 못한다. 앱은 NativeActivity 라 Java `InputConnection` 이 없고, 글은 키 이벤트의 `getUnicodeChar`(`AndroidWindow.cpp`)로만 들어온다 — 한글 · 일본어 · 중국어 입력기는 조합을 `InputConnection` 으로 보내므로 아무것도 오지 않는다. 받는 쪽은 이미 있다: `CallbackInputWindow::queueTextInput( WindowTextInputKind::Composition | Commit, 글 )`(웹이 쓰는 길).
