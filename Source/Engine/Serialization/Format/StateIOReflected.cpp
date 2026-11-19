@@ -191,19 +191,24 @@ namespace sw
         return FixedLayout::computeSchemaHash( StateIOReflectedInternal::kLayoutRuleVersion, canonical, {} );
     }
 
+    void StateIO::writeReflectedHeader( const TypeInfo& type, Archive& outArchive )
+    {
+        outArchive << type._metadata->getVersion();
+        outArchive << computeReflectedLayoutHash( type );
+    }
+
     void StateIO::reflectedObject( const TypeInfo& type, void* pObject )
     {
-        const uint32 version    = type._metadata->getVersion();
-        const uint64 layoutHash = computeReflectedLayoutHash( type );
         if ( isWriting() )
         {
-            *_pArchive << version;
-            *_pArchive << layoutHash;
+            writeReflectedHeader( type, *_pArchive );
             reflectedProperties( type, pObject, true, 0 );
             return;
         }
-        uint32 readVersion    = 0;
-        uint64 readLayoutHash = 0;
+        const uint32 version        = type._metadata->getVersion();
+        const uint64 layoutHash     = computeReflectedLayoutHash( type );
+        uint32       readVersion    = 0;
+        uint64       readLayoutHash = 0;
         *_pArchive >> readVersion;
         *_pArchive >> readLayoutHash;
         if ( check( _pArchive->isOk() ) == false )

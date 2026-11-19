@@ -388,6 +388,15 @@ namespace sw
         static void               writeName( Archive& outArchive, const hashed_string& name );
         [[nodiscard]] static bool readName( Archive& archive, hashed_string& outName );
 
+        /** @brief `reflected` 가 @p T 의 칸 앞에 놓는 머리(타입 판 + 칸 배치 해시)를 씁니다. 리플렉션 상태 칸을 든 형식의 바이트를 일부러 꾸미는 테스트가 씁니다. */
+        template <typename T>
+        static void writeReflectedHeader( Archive& outArchive )
+        {
+            writeReflectedHeader( requireReflectedType( typeFqn<T>() ), outArchive );
+        }
+        /** @brief 타입 정보로 머리를 씁니다. `reflected` 의 쓰기도 이것을 부른다 — 머리 모양이 한 곳에서 나온다. */
+        static void writeReflectedHeader( const TypeInfo& type, Archive& outArchive );
+
         /** @brief id 목록 하나(개수 + id 들)를 씁니다. `readIDList` 가 읽습니다. 64비트 id(묶은 id)는 `uint64` 목록 버전을 씁니다. */
         static void writeIDList( Archive& outArchive, const vector<uint32>& listID );
         /** @brief `writeIDList` 가 쓴 id 목록 하나를 읽습니다. 개수가 남은 바이트를 넘으면 false 입니다. */

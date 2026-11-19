@@ -759,7 +759,7 @@
     "Source/GameFramework/Kits/Genre/Horror/GhostHunt/GhostEncounter.cpp": {"float": 5, "integer": 1},
     "Source/GameFramework/Kits/Genre/Horror/GhostHunt/GhostMansion.cpp": {"minus-one": 1, "hex": 1},
     "Source/GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorEncounter.cpp": {"integer": 1, "hex": 1},
-    "Source/GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGBattle.cpp": {"float": 2, "integer": 19, "hex": 1},
+    "Source/GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGBattle.cpp": {"float": 2, "integer": 17, "hex": 1},
     "Source/GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h": {"integer": 2},
     "Source/GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.cpp": {"minus-one": 1, "integer": 1},
     "Source/GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.cpp": {"float": 6, "integer": 23, "hex": 2},

@@ -109,6 +109,8 @@ namespace
             sw::TurnOrder  order;
             sw::GameRandom random;
             random.setSeed( 3 );
+            // 리플렉션 상태 칸(선언 순서 — 열거는 int64) 뒤에 손 본문(턴 순서 · 난수)이다
+            sw::StateIO::writeReflectedHeader<sw::JRPGBattle>( written );
             written << static_cast<uint32>( 1 );
             sw::StateIO::writeName( written, _enemyID );
             written << static_cast<uint32>( _lockCount );
@@ -125,17 +127,21 @@ namespace
             {
                 sw::StateIO::writeName( written, _commandID );
                 written << static_cast<int32>( 0 );
-                written << _commandKind;
+                written << static_cast<int64>( _commandKind );
+            }
+            written << static_cast<uint32>( _commandCount );
+            for ( int32 command = 0; command < _commandCount; ++command )
+            {
                 written << _defending;
             }
-            order.writeState( written );
-            sw::StateIO::writeRandom( written, random );
             written << _rewardExp;
             written << _rewardGold;
             written << _comboPoints;
             written << _round;
             written << _fleeAttempts;
-            written << _result;
+            written << static_cast<int64>( _result );
+            order.writeState( written );
+            sw::StateIO::writeRandom( written, random );
         }
     };
 
