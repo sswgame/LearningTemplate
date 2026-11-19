@@ -371,27 +371,22 @@ namespace sw
 
     void UnoGame::serializeState( StateIO& io )
     {
+        io.reflected( *this ); // 차례 · 방향 · 쌓인 벌칙 · 우노 대상 · 이긴 사람 · 색 — 바닥은 칸의 `PROPERTY( Min · Max )`
         io.expect( static_cast<uint32>( _listHand.size() ) );
         if ( io.isOk() == false )
             return;
         for ( CardPile& hand : _listHand )
         {
-            io.value( hand );
+            io.value( hand ); // 리플렉션 밖 값 — 더미는 자기 `serializeState` 가 빈 카드 · 겹침을 본다, 난수
         }
         io.value( _drawPile );
         io.value( _discardPile );
         io.value( _random );
-        io.value( _currentPlayer );
-        io.value( _direction );
-        io.value( _pendingDraw );
-        io.value( _unoTarget );
-        io.value( _winner );
-        io.enumValue( _color, UnoColor::Wild );
         if ( io.isWriting() || io.isOk() == false )
             return;
         const int32 handCount = static_cast<int32>( _listHand.size() );
         // 쌓인 벌칙은 덱을 넘지 못한다 — 쌓는 동안에는 뽑지 않아 카드가 돌아오지 않는다. 터무니없는 값은 `_pendingDraw += amount` 를 넘친다.
-        if ( io.check( 0 <= _currentPlayer && _currentPlayer < handCount && ( _direction == 1 || _direction == -1 ) && -1 <= _unoTarget && _unoTarget < handCount && -1 <= _winner && _winner < handCount && 0 <= _pendingDraw && _pendingDraw <= UnoGameInternal::kDeckCardCount ) == false )
+        if ( io.check( _currentPlayer < handCount && _direction != 0 && _unoTarget < handCount && _winner < handCount && _pendingDraw <= UnoGameInternal::kDeckCardCount ) == false ) // 칸 사이 · 설정 상한
             return;
         // 이긴 사람은 손패를 다 낸 사람이다.
         io.check( _winner < 0 || _listHand[static_cast<size_t>( _winner )].isEmpty() );

@@ -26,6 +26,7 @@ namespace sw
     class Archive;
 
     /** @brief 색입니다. */
+    ENUM()
     enum class UnoColor : uint8
     {
         Red = 0,
@@ -119,9 +120,12 @@ namespace sw
      * @class UnoGame
      * @brief 우노 한 판을 진행합니다. 결과가 결정적입니다. 뽑을 더미가 떨어지면 버린 더미를 같은 난수로 섞습니다.
      */
+    REFLECT()
     class SW_KIT_API UnoGame
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CUNO" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -180,11 +184,17 @@ namespace sw
         CardPile              _discardPile;
         UnoSettings           _settings;
         GameRandom            _random;
-        int32                 _currentPlayer;
-        int32                 _direction;
-        int32                 _pendingDraw;
-        int32                 _unoTarget; ///< 우노를 외치지 않고 한 장을 남긴 사람이다(-1 이면 없다)
-        int32                 _winner;
-        UnoColor              _color;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _currentPlayer;
+        PROPERTY( RuntimeState, Min = -1, Max = 1 )
+        int32 _direction;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _pendingDraw;
+        PROPERTY( RuntimeState, Min = -1 )
+        int32 _unoTarget; ///< 우노를 외치지 않고 한 장을 남긴 사람이다(-1 이면 없다)
+        PROPERTY( RuntimeState, Min = -1 )
+        int32 _winner;
+        PROPERTY( RuntimeState )
+        UnoColor _color;
     };
 } // namespace sw

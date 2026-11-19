@@ -11,6 +11,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -21,13 +22,19 @@ namespace sw
     class Archive;
 
     /** @brief 카드 한 장입니다. 같은 덱 안에서 `_id` 는 하나뿐입니다. */
+    REFLECT()
     struct Card
     {
+        REFLECT_BODY();
+
         static constexpr uint16 kNoCard = 0xFFFFu; ///< "카드 없음" 을 나타내는 번호이다
 
+        PROPERTY()
         uint16 _id{ kNoCard };
-        uint8  _suit{ 0 }; ///< 트럼프는 무늬, 화투는 종류, 우노는 색이다
-        uint8  _rank{ 0 }; ///< 트럼프는 숫자(에이스 = 1, 킹 = 13), 화투는 월(1..12), 우노는 값이다
+        PROPERTY()
+        uint8 _suit{ 0 }; ///< 트럼프는 무늬, 화투는 종류, 우노는 색이다
+        PROPERTY()
+        uint8 _rank{ 0 }; ///< 트럼프는 숫자(에이스 = 1, 킹 = 13), 화투는 월(1..12), 우노는 값이다
 
         bool isValid() const { return _id != kNoCard; }
         bool operator==( const Card& other ) const { return _id == other._id && _suit == other._suit && _rank == other._rank; }
@@ -67,9 +74,12 @@ namespace sw
      * @class CardPile
      * @brief 카드 더미입니다. 덱, 버린 더미, 손패, 바닥이 모두 이 타입입니다. 맨 위(뽑는 쪽)는 목록의 끝입니다.
      */
+    REFLECT()
     class SW_KIT_API CardPile
     {
     public:
+        REFLECT_BODY();
+
         // 트럼프 덱 도우미입니다.
         /** @brief 52장(무늬 순, 숫자 순, 번호 0..51)과 조커 @p jokerCount 장(번호 52부터)을 @p outPile 에 채웁니다. 섞지는 않습니다. */
         static void makeStandardDeck( CardPile& outPile, int32 jokerCount = 0 );
@@ -139,6 +149,7 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
+        PROPERTY( RuntimeState )
         vector<Card> _listCard; ///< [0] 이 맨 아래이고 끝이 맨 위이다
     };
 } // namespace sw

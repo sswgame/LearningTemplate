@@ -465,6 +465,7 @@ namespace sw
 
     void MatgoGame::serializeState( StateIO& io )
     {
+        io.reflected( *this ); // 차례 · 이긴 사람 · 단계 — 바닥은 칸의 `PROPERTY( Min )`
         io.expect( static_cast<uint32>( _listPlayer.size() ) );
         if ( io.isOk() == false )
             return;
@@ -482,13 +483,10 @@ namespace sw
         }
         io.value( _floor );
         io.value( _drawPile );
-        io.value( _currentPlayer );
-        io.value( _winner );
-        io.enumValue( _phase, MatgoPhase::Finished );
         if ( io.isWriting() || io.isOk() == false )
             return;
         const int32 playerCount = static_cast<int32>( _listPlayer.size() );
-        io.check( 0 <= _currentPlayer && _currentPlayer < playerCount && -1 <= _winner && _winner < playerCount );
+        io.check( _currentPlayer < playerCount && _winner < playerCount ); // 상한은 사람 수가 정한다
 
         // 이긴 사람과 정산은 끝난 판에만 있고, 정산은 받은 쪽과 낸 쪽의 합이 0 이다(`finishGame`).
         int64 settlementSum = 0;
