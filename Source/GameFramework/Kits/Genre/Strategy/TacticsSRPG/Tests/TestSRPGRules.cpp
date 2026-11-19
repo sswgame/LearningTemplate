@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateIOTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/RunMap.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGBattlefield.h"
@@ -1393,15 +1394,17 @@ SW_TEST_CASE_F( SRPGRulesTest, CampaignState )
     SW_REQUIRE_EQUAL( size_t( 1 ), restored.getRoster().size() );
     SW_EXPECT_EQUAL( 2, restored.getRoster()[0]._pilotLevel.getLevel() );
 
-    const auto readFixture = [&restored, &campaign]( uint8 bInMission, uint8 bFailed )
+    // 깨진 바이트는 캠페인의 writeState 바이트 위에 덮어쓴다 — 바이트는 지도(제 본문) 뒤에 리플렉션 본문(머리 · 명단 · 시드 · 임무 중 · 실패)이고, 깃발 둘은 그 본문의 끝이다
+    const sw::vector<uint8> listSaved   = sw::StateIOTestUtil::computeStateBytes( campaign );
+    const size_t            reflectedAt = sw::StateIOTestUtil::computeStateBytes( campaign.getRunMap() ).size();
+    const size_t            inMissionAt = reflectedAt + sw::StateIOTestUtil::computeReflectedBytes( campaign ) - sizeof( uint8 ) * 2;
+    const auto              readFixture = [&]( uint8 bInMission, uint8 bFailed )
     {
-        sw::Archive fixture;
-        campaign.getRunMap().writeState( fixture );
-        fixture << static_cast<uint32>( 0 );
-        fixture << static_cast<uint32>( 5 );
-        fixture << bInMission;
-        fixture << bFailed;
-        sw::Archive readingFixture( fixture.getData(), fixture.getSize() );
+        sw::vector<uint8> listByte = listSaved;
+        // 자리가 바이트 밖이면 읽지 않고 false — 맞는 값이 읽히는 아래 검사가 그 경우를 드러낸다
+        if ( sw::StateIOTestUtil::overwrite( listByte, inMissionAt, bInMission ) == false || sw::StateIOTestUtil::overwrite( listByte, inMissionAt + sizeof( uint8 ), bFailed ) == false )
+            return false;
+        sw::Archive readingFixture( listByte.data(), listByte.size() );
         return restored.readState( readingFixture );
     };
     SW_EXPECT_FALSE( readFixture( 2, 0 ) );
