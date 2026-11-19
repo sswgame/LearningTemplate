@@ -11,6 +11,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/ReflectedStateUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
@@ -382,5 +383,16 @@ namespace sw
             if ( isOk() == false )
                 return;
         }
+    }
+
+    bool ReflectedStateUpgrade::writeFirstVersionHead( const hashed_string& typeFqn, Archive& outNewBody )
+    {
+        const TypeInfo* pType = engine::getSubsystem<TypeRegistry>().findType( typeFqn );
+        if ( pType == nullptr )
+            return false;
+        constexpr uint32 kFirstVersion = 1; // 손 본문은 리플렉션 판이 생기기 전이다
+        outNewBody << kFirstVersion;
+        outNewBody << StateIO::computeReflectedLayoutHash( *pType );
+        return true;
     }
 } // namespace sw

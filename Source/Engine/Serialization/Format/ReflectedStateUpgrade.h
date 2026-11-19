@@ -7,9 +7,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -19,7 +17,7 @@ namespace sw
      * @struct ReflectedStateUpgrade
      * @brief `reflected` 의 판 1 머리를 쓰는 단계 함수들입니다.
      */
-    struct ReflectedStateUpgrade
+    struct SW_API ReflectedStateUpgrade
     {
         /**
          * @brief @p T 의 `reflected` 판 1 머리(판 1 + 지금 칸 배치 해시)를 씁니다. 등록되지 않은 타입이면 false 입니다(올림이 멈추고 읽기가 실패한다).
@@ -28,14 +26,11 @@ namespace sw
         template <typename T>
         [[nodiscard]] static bool writeHead( Archive& outNewBody )
         {
-            const TypeInfo* pType = engine::getSubsystem<TypeRegistry>().findType( typeFqn<T>() );
-            if ( pType == nullptr )
-                return false;
-            constexpr uint32 kFirstVersion = 1; // 손 본문은 리플렉션 판이 생기기 전이다
-            outNewBody << kFirstVersion;
-            outNewBody << StateIO::computeReflectedLayoutHash( *pType );
-            return true;
+            return writeFirstVersionHead( typeFqn<T>(), outNewBody );
         }
+
+        /** @brief @p typeFqn 의 판 1 머리를 씁니다(타입 찾기는 cpp — 헤더가 엔진 서비스를 끌어오지 않게, 게임 모듈도 이 헤더를 쓴다). */
+        [[nodiscard]] static bool writeFirstVersionHead( const hashed_string& typeFqn, Archive& outNewBody );
 
         /**
          * @brief 손 본문이 칸을 선언 순서 · 같은 폭(수 · 이름 · uint32 개수의 목록)으로 싣던 형식의 단계입니다 — 옛 바이트 앞에 머리만 붙인다
