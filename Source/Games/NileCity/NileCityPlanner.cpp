@@ -81,9 +81,8 @@ namespace sw
 
     void NileCityPlanner::serializeState( StateIO& io )
     {
-        io.value( _nextStep );
-        io.value( _skippedCount );
-        io.check( 0 <= _nextStep && _nextStep <= static_cast<int32>( _listStep.size() ) && 0 <= _skippedCount );
+        io.reflected( *this );
+        io.check( _nextStep <= static_cast<int32>( _listStep.size() ) ); // 계획표와의 검사만 손으로 — 칸마다의 범위는 `PROPERTY( Min )` 이 지킨다
     }
 
     float32 NileCityPlanner::computeRiverCenter( const NileCityLayout& layout, int32 y )
