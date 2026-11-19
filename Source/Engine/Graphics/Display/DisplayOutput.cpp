@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Display/DisplayOutput.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
 
@@ -35,14 +36,30 @@ namespace sw
         return metadata;
     }
 
+    DisplayOutputKind DisplayOutputDesc::getKind( RHIColorSpace colorSpace )
+    {
+        switch ( colorSpace )
+        {
+            case RHIColorSpace::SRGBNonLinear:
+                return DisplayOutputKind::SDR;
+            case RHIColorSpace::HDR10ST2084:
+                return DisplayOutputKind::HDR10;
+            case RHIColorSpace::ExtendedSRGBLinear:
+                return DisplayOutputKind::ScRGB;
+        }
+        return DisplayOutputKind::SDR;
+    }
+
     DisplayOutputDesc DisplayOutputDesc::resolve( const DisplayOutputDesc& requested, const uint8 supportedMask )
     {
-        const uint8 bit = makeDisplayOutputBit( requested._kind );
-        if ( requested._kind == DisplayOutputKind::SDR || ( supportedMask & bit ) != 0 )
-            return requested;
-        SW_LOG_INFO_ID( "Display.OutputUnsupported", "Display output '%#' is not supported by this device or monitor - using SDR", getEnumName( requested._kind ) );
         DisplayOutputDesc resolved = requested;
-        resolved._kind             = DisplayOutputKind::SDR;
+        // 종이 흰색은 최대 휘도를 넘지 않는다 — 넘으면 톤 곡선 어깨가 1 아래로 내려가 장면이 SDR 보다 어두워진다(UI 합성 배율도 1 을 넘는다).
+        resolved._paperWhiteNits = MathUtil::min( requested._paperWhiteNits, requested._maxLuminanceNits );
+        const uint8 bit          = makeDisplayOutputBit( requested._kind );
+        if ( requested._kind == DisplayOutputKind::SDR || ( supportedMask & bit ) != 0 )
+            return resolved;
+        SW_LOG_INFO_ID( "Display.OutputUnsupported", "Display output '%#' is not supported by this device or monitor - using SDR", getEnumName( requested._kind ) );
+        resolved._kind = DisplayOutputKind::SDR;
         return resolved;
     }
 } // namespace sw

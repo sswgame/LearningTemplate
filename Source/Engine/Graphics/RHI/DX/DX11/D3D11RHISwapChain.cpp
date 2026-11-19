@@ -78,7 +78,8 @@ namespace sw
             SW_LOG_ERROR_ID( "D3D11.ResizeBuffersFailedHrX", "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
             return false;
         }
-        _displayOutputSupport = queryDXGIDisplayOutputSupport( _swapChain.Get() ); // 창을 다른 모니터로 끌어 크기가 바뀌었을 수 있다
+        _displayOutputSupport = queryDXGIDisplayOutputSupport( _swapChain.Get() );                     // 창을 다른 모니터로 끌어 크기가 바뀌었을 수 있다
+        _colorSpace           = reapplyDXGIColorSpace( makeBuffers(), _colorSpace, _displayMetadata ); // ResizeBuffers 가 HDR 메타데이터를 잃을 수 있다
         return true;
     }
 
@@ -86,23 +87,30 @@ namespace sw
     {
         if ( _swapChain == nullptr )
             return false;
-        // 포맷만 바꿔 다시 만든다(버퍼 수 0 = 그대로, 플래그는 생성 때와 같아야 한다 — `resize` 참고).
-        const RHIFormat format   = getSwapChainFormat( colorSpace, _sdrFormat );
-        const HRESULT   resizeHr = _swapChain->ResizeBuffers( 0, _width, _height, toDXGIFormat( format ), _swapChainFlags );
-        if ( FAILED( resizeHr ) )
-        {
-            SW_LOG_ERROR_ID( "D3D11.ColorSpaceResizeBuffersFailed", "ResizeBuffers to %# failed hr=0x%#", getRHIFormatName( format ), static_cast<uint32>( resizeHr ) );
-            return false;
-        }
-        if ( applyDXGIColorSpace( _swapChain.Get(), colorSpace, metadata ) == false )
-        {
-            // 버퍼 포맷과 기록한 색 공간이 어긋나지 않게 옛 포맷으로 되돌린다.
-            (void)isHrSuccess( _swapChain->ResizeBuffers( 0, _width, _height, toDXGIFormat( getFormat() ), _swapChainFlags ), "ResizeBuffers (color space revert)" );
-            return false;
-        }
-        _colorSpace           = colorSpace;
+        // 포맷만 바꿔 다시 만든다. 실패하면 옛 포맷 · 색 공간(못 하면 SDR)으로 되돌린 값이 온다 — 버퍼 포맷과 기록한 색 공간이 늘 짝이다.
+        const RHIColorSpace result   = changeDXGIColorSpace( makeBuffers(), _colorSpace, _displayMetadata, colorSpace, metadata );
+        const bool          bChanged = result == colorSpace;
+        if ( bChanged )
+            _displayMetadata = metadata;
+        _colorSpace           = result;
         _displayOutputSupport = queryDXGIDisplayOutputSupport( _swapChain.Get() );
-        return true;
+        return bChanged;
+    }
+
+    bool D3D11RHISwapChain::setDisplayMetadata( const RHIDisplayMetadata& metadata )
+    {
+        if ( _colorSpace != RHIColorSpace::HDR10ST2084 )
+        {
+            _displayMetadata = metadata;
+            return true;
+        }
+        if ( applyDXGIColorSpace( _swapChain.Get(), _colorSpace, metadata ) )
+        {
+            _displayMetadata = metadata;
+            return true;
+        }
+        (void)applyDXGIColorSpace( _swapChain.Get(), _colorSpace, _displayMetadata ); // 실패는 색 공간을 SDR 로 내렸다 — 버퍼는 HDR10 이라 옛 값으로 다시 알린다
+        return false;
     }
 
     void D3D11RHISwapChain::acquireNextImage( ID3D11Device* pDevice )

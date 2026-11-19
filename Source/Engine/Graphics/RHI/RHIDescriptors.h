@@ -261,12 +261,6 @@ namespace sw
         return RHIFormat::Unknown;
     }
 
-    /** @brief 색 공간 @p colorSpace 의 능력 비트입니다(`RHICapabilities::_displayOutputSupport`). `DisplayOutputKind` 의 비트와 같은 값이다. */
-    constexpr uint8 makeColorSpaceBit( RHIColorSpace colorSpace )
-    {
-        return static_cast<uint8>( 1u << static_cast<uint32>( colorSpace ) );
-    }
-
     /**
      * @struct RHIDisplayMetadata
      * @brief HDR10 스왑체인에 알리는 마스터링 정보입니다(DXGI `SetHDRMetaData` · Vulkan `vkSetHdrMetadataEXT`). 원색은 BT.2020 · 흰점 D65 로 백엔드가 채운다.

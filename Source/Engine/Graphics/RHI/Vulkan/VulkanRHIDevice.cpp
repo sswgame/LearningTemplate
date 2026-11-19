@@ -1730,24 +1730,44 @@ namespace sw
     {
         // 크기 바꿈과 같은 재생성 길(GPU 대기 · 옛 스왑체인 물려주기 · 포맷이 바뀌면 렌더 패스 다시 만들기)을 지금 탄다 — 부르는 쪽이 렌더 스레드를 세웠다.
         // shortcut: 다른 창(에디터 도구 창)은 주 창의 렌더 패스 포맷을 따르므로 HDR 인 동안 새로 열지 못한다(`createSwapChainInternal` 이 거절한다) — 도구 창을 SDR 렌더 패스로 따로 그릴 때 푼다.
-        _swapChain.setRequestedColorSpace( colorSpace, _bSwapChainColorSpace != SW_FALSE );
-        if ( recreateSwapChain() == false || _swapChain.getColorSpace() != colorSpace )
-            return false;
-        if ( colorSpace != RHIColorSpace::HDR10ST2084 || _pSetHDRMetadata == nullptr )
+        const RHIColorSpace      previous         = _swapChain.getColorSpace();
+        const bool               bColorSpaceExt   = _bSwapChainColorSpace != SW_FALSE;
+        const RHIDisplayMetadata previousMetadata = _displayMetadata;
+        _displayMetadata                          = metadata; // 재생성 끝(`applyHDRMetadata`)이 이 값을 알린다
+        _swapChain.setRequestedColorSpace( colorSpace, bColorSpaceExt );
+        const bool bRecreated = recreateSwapChain();
+        if ( bRecreated && _swapChain.getColorSpace() == colorSpace )
             return true;
+        // 요청을 지금 실제 색 공간(다시 만들지 못했으면 옛 값)으로 되돌린다 — 다음 재생성(창 크기 바뀜)이 실패한 요청을 다시 쓰지 않게.
+        _swapChain.setRequestedColorSpace( bRecreated ? _swapChain.getColorSpace() : previous, bColorSpaceExt );
+        _displayMetadata = previousMetadata;
+        return false;
+    }
+
+    bool VulkanRHIDevice::setDisplayMetadataInternal( const RHIDisplayMetadata& metadata )
+    {
+        _displayMetadata = metadata;
+        applyHDRMetadata();
+        return true;
+    }
+
+    void VulkanRHIDevice::applyHDRMetadata()
+    {
+        // 확장이 없으면 표시 엔진의 기본값이다(알릴 길이 없다 — 능력이 정한 길). 스왑체인을 다시 만들면 메타데이터가 사라지므로 재생성마다 부른다.
+        if ( _swapChain.getColorSpace() != RHIColorSpace::HDR10ST2084 || _pSetHDRMetadata == nullptr || _swapChain.isValid() == false )
+            return;
         VkHdrMetadataEXT hdrMetadata{};
         hdrMetadata.sType                     = VK_STRUCTURE_TYPE_HDR_METADATA_EXT;
         hdrMetadata.displayPrimaryRed         = VkXYColorEXT{ RHIDisplayMetadata::kRedPrimaryX, RHIDisplayMetadata::kRedPrimaryY };
         hdrMetadata.displayPrimaryGreen       = VkXYColorEXT{ RHIDisplayMetadata::kGreenPrimaryX, RHIDisplayMetadata::kGreenPrimaryY };
         hdrMetadata.displayPrimaryBlue        = VkXYColorEXT{ RHIDisplayMetadata::kBluePrimaryX, RHIDisplayMetadata::kBluePrimaryY };
         hdrMetadata.whitePoint                = VkXYColorEXT{ RHIDisplayMetadata::kWhitePointX, RHIDisplayMetadata::kWhitePointY };
-        hdrMetadata.maxLuminance              = metadata._maxLuminanceNits;
-        hdrMetadata.minLuminance              = metadata._minLuminanceNits;
-        hdrMetadata.maxContentLightLevel      = metadata._maxLuminanceNits;
-        hdrMetadata.maxFrameAverageLightLevel = metadata._maxFrameAverageNits;
+        hdrMetadata.maxLuminance              = _displayMetadata._maxLuminanceNits;
+        hdrMetadata.minLuminance              = _displayMetadata._minLuminanceNits;
+        hdrMetadata.maxContentLightLevel      = _displayMetadata._maxLuminanceNits;
+        hdrMetadata.maxFrameAverageLightLevel = _displayMetadata._maxFrameAverageNits;
         const VkSwapchainKHR arrSwapChain[]   = { _swapChain.getSwapChain() };
         reinterpret_cast<PFN_vkSetHdrMetadataEXT>( _pSetHDRMetadata )( _device, 1, arrSwapChain, &hdrMetadata );
-        return true;
     }
 
     IRHISwapChain* VulkanRHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )
@@ -1946,6 +1966,7 @@ namespace sw
         }
 
         _bSwapChainRecreateFailing = SW_FALSE;
+        applyHDRMetadata(); // 새 스왑체인은 HDR10 메타데이터가 없다
         return true;
     }
 

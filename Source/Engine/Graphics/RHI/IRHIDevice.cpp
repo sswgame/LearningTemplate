@@ -653,9 +653,17 @@ namespace sw
 
     bool IRHIDevice::setBackBufferColorSpace( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
     {
-        // HDR10 은 같은 색 공간이어도 마스터링 값(최대 휘도 · 종이 흰색)이 바뀌었을 수 있어 다시 알린다.
-        if ( colorSpace == getBackBufferColorSpace() && colorSpace != RHIColorSpace::HDR10ST2084 )
-            return true;
+        // 같은 색 공간이면 스왑체인을 다시 만들지 않는다 — HDR10 은 마스터링 값(최대 휘도 · 종이 흰색)만 다시 알린다(GPU 를 비울 까닭이 없다).
+        if ( colorSpace == getBackBufferColorSpace() )
+        {
+            if ( colorSpace != RHIColorSpace::HDR10ST2084 )
+                return true;
+            ScopedThreadRoleBorrow metadataBorrow{ _renderThread };
+            if ( setDisplayMetadataInternal( metadata ) )
+                return true;
+            SW_LOG_ERROR_ID( "RHI.DisplayMetadataFailed", "%# could not report the HDR10 mastering values - the previous values stay", getBackendName() );
+            return false;
+        }
         if ( ( getCapabilities()._displayOutputSupport & makeColorSpaceBit( colorSpace ) ) == 0 )
         {
             SW_LOG_ERROR_ID( "RHI.ColorSpaceUnsupported", "%# cannot present color space %# on this monitor - resolve the display output against the capabilities first",

@@ -267,17 +267,17 @@ namespace sw
             return requested;
         if ( _bDisplayOutputApplied != SW_FALSE && requested.isSameOutput( _displayRequest ) )
             return _appliedDisplayOutput;
-        IRHIDevice&             device   = _pRHI->getDevice();
-        const DisplayOutputDesc resolved = DisplayOutputDesc::resolve( requested, device.getCapabilities()._displayOutputSupport );
-        // 색 공간이 그대로인 SDR 은 할 일이 없다. HDR10 은 같은 색 공간이어도 마스터링 값(최대 휘도 · 종이 흰색)을 다시 알린다.
-        const bool bSwapChainChanges = resolved.getColorSpace() != device.getBackBufferColorSpace() || resolved._kind == DisplayOutputKind::HDR10;
-        if ( bSwapChainChanges )
-        {
-            // 렌더 스레드가 지난 프레임의 백버퍼를 쥐고 있을 수 있다 — 창 크기 바뀜과 같이 세운 뒤 바꾼다. 실패는 장치가 알렸고 색 공간은 그대로다(렌더러는 장치의 색 공간을 본다).
-            if ( _pRenderThread != nullptr )
-                _pRenderThread->waitIdle( RHIWaitIdleReason::DisplayOutput );
-            (void)device.setBackBufferColorSpace( resolved.getColorSpace(), resolved.makeDisplayMetadata() );
-        }
+        IRHIDevice& device = _pRHI->getDevice();
+        // SDR 요청에 SDR 장치면 스왑체인을 건드리지 않는다(기다릴 것도 능력을 물을 것도 없다).
+        const bool bTouchesSwapChain = requested._kind != DisplayOutputKind::SDR || device.getBackBufferColorSpace() != RHIColorSpace::SRGBNonLinear;
+        // 렌더 스레드를 먼저 세운다 — 능력(모니터 · 표면 포맷)은 렌더 스레드의 스왑체인 재생성이 고쳐 쓰므로 그 뒤에 읽는다(창 크기 바뀜과 같은 길).
+        if ( bTouchesSwapChain && _pRenderThread != nullptr )
+            _pRenderThread->waitIdle( RHIWaitIdleReason::DisplayOutput );
+        const uint8       supportedMask = bTouchesSwapChain ? device.getCapabilities()._displayOutputSupport : makeColorSpaceBit( RHIColorSpace::SRGBNonLinear );
+        DisplayOutputDesc resolved      = DisplayOutputDesc::resolve( requested, supportedMask );
+        // 같은 색 공간이면 장치가 HDR10 마스터링 값만 다시 알린다(스왑체인을 다시 만들지 않는다). 실패면 장치가 실제로 내는 색 공간을 따른다 — 렌더러 · 감시 값이 거짓 HDR 을 보지 않게.
+        if ( bTouchesSwapChain && device.setBackBufferColorSpace( resolved.getColorSpace(), resolved.makeDisplayMetadata() ) == false )
+            resolved._kind = DisplayOutputDesc::getKind( device.getBackBufferColorSpace() );
         _displayRequest        = requested;
         _appliedDisplayOutput  = resolved;
         _bDisplayOutputApplied = SW_TRUE;

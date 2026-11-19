@@ -72,6 +72,8 @@ namespace sw
          * @return 실패하면 false 이고 백버퍼가 비워진 채로 남습니다(부르는 쪽이 다시 만든다). 색 공간은 성공했을 때만 바뀐다.
          */
         [[nodiscard]] bool setColorSpace( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata );
+        /** @brief 색 공간은 그대로 두고 HDR10 마스터링 값만 다시 알립니다(버퍼를 놓지 않아도 된다). HDR10 이 아니면 값만 기억합니다. 실패하면 옛 값을 다시 알리고 false 입니다. */
+        [[nodiscard]] bool setDisplayMetadata( const RHIDisplayMetadata& metadata );
 
         /** @brief 다음에 그릴 백버퍼를 고릅니다 (DXGI 가 정해 준 현재 인덱스를 읽어옵니다). */
         void acquireNextImage();
@@ -127,6 +129,8 @@ namespace sw
         RHIFormat getSDRFormat() const { return _sdrFormat; }
         /** @brief 지금 화면에 내는 색 공간입니다. */
         RHIColorSpace getColorSpace() const { return _colorSpace; }
+        /** @brief `ResizeBuffers` 에 다시 넘길 서술입니다. */
+        DXGISwapChainBuffers makeBuffers() const { return DXGISwapChainBuffers{ _swapChain.Get(), _bufferCount, _width, _height, _swapChainFlags, _sdrFormat }; }
         /** @brief 창이 놓인 모니터가 받는 출력입니다(만들 때 · 크기 · 색 공간을 바꿀 때 묻는다 — `queryDXGIDisplayOutputSupport`). */
         const DXGIDisplayOutputSupport& getDisplayOutputSupport() const { return _displayOutputSupport; }
         uint32                          getWidth() const override { return _width; }
@@ -161,6 +165,8 @@ namespace sw
         RHIColorSpace _colorSpace;
         /// @brief 창이 놓인 모니터가 받는 출력입니다.
         DXGIDisplayOutputSupport _displayOutputSupport;
+        /// @brief 마지막으로 알린 HDR10 마스터링 값입니다 — `ResizeBuffers` 뒤에 다시 알린다.
+        RHIDisplayMetadata _displayMetadata;
         /// @brief 생성할 때 쓴 DXGI 플래그입니다. `ResizeBuffers` 가 같은 값을 다시 넘겨야 합니다.
         uint32 _swapChainFlags;
         /// @brief 티어링 허용으로 만들었는지입니다. Present 플래그와 짝입니다.

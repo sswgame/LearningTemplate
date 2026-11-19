@@ -125,6 +125,7 @@ namespace sw
         /** @brief 스왑체인 백버퍼를 새 크기로 다시 만듭니다. */
         void               resizeInternal( uint32 width, uint32 height ) override;
         [[nodiscard]] bool setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata ) override;
+        [[nodiscard]] bool setDisplayMetadataInternal( const RHIDisplayMetadata& metadata ) override { return _swapChain.setDisplayMetadata( metadata ); }
 
         [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
         void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;

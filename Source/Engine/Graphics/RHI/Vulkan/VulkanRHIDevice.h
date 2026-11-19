@@ -220,8 +220,11 @@ namespace sw
         uint32                    readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
 
         /** @brief 크기를 기록하고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
-        void                         resizeInternal( uint32 width, uint32 height ) override;
-        [[nodiscard]] bool           setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata ) override;
+        void               resizeInternal( uint32 width, uint32 height ) override;
+        [[nodiscard]] bool setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata ) override;
+        [[nodiscard]] bool setDisplayMetadataInternal( const RHIDisplayMetadata& metadata ) override;
+        /** @brief 주 스왑체인이 HDR10 이면 마지막 마스터링 값(`_displayMetadata`)을 `vkSetHdrMetadataEXT` 로 알립니다 — 색 공간을 바꿀 때와 스왑체인을 다시 만들 때마다. */
+        void                         applyHDRMetadata();
         [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
         void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
         void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
@@ -1068,6 +1071,7 @@ namespace sw
         void*                _pGetCheckpointData;    ///< `vkGetQueueCheckpointDataNV` 입니다. 위와 같다
         void*                _pCmdWriteBufferMarker; ///< `vkCmdWriteBufferMarkerAMD` 입니다. AMDBufferMarker 일 때만 읽는다
         void*                _pSetHDRMetadata;       ///< `vkSetHdrMetadataEXT` 입니다(VK_EXT_hdr_metadata 를 켠 장치만). 없으면 HDR10 마스터링 값을 알리지 않는다(표시 엔진의 기본값)
+        RHIDisplayMetadata   _displayMetadata{};     ///< 마지막으로 받은 HDR10 마스터링 값 — 스왑체인을 다시 만들 때마다 다시 알린다(`applyHDRMetadata`)
         /// @brief Vulkan 1.2 간접 개수 그리기 함수입니다. 링크하지 않고 장치에서 얻는다 — Android libvulkan 은 1.0 · 1.1 함수만 내보낸다. 얻지 못하면 `_bDrawIndirectCount` 를 끈다.
         void*                  _pCmdDrawIndirectCount;
         void*                  _pCmdDrawIndexedIndirectCount;

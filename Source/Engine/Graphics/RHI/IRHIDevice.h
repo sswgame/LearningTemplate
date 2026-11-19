@@ -182,6 +182,11 @@ namespace sw
          * @details 기본은 SDR 만 내는 백엔드(GL · WebGPU)의 길이다 — 능력이 SDR 비트뿐이라 여기 오는 요청은 늘 `SRGBNonLinear` 이고 할 일이 없다.
          */
         [[nodiscard]] virtual bool setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata );
+        /**
+         * @brief 색 공간은 그대로 두고 HDR10 마스터링 값만 다시 알리는 백엔드 훅입니다(옵션 메뉴의 휘도 슬라이더 — 스왑체인을 다시 만들지 않는다). 렌더 스레드 역할을 빌렸다.
+         * @details 기본은 알릴 것이 없는 백엔드(SDR 만)의 길이다.
+         */
+        [[nodiscard]] virtual bool setDisplayMetadataInternal( const RHIDisplayMetadata& /*metadata*/ ) { return true; }
 
         /**
          * @brief `setVSync` 가 값을 기록한 뒤 부릅니다. 동기화를 프레젠트 인자로 고르는 백엔드(DXGI, GL)는 할 일이 없습니다.
