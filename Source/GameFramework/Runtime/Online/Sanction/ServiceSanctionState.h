@@ -37,7 +37,7 @@ namespace sw
         PROPERTY( MaxCount = kMaxReasonCodeSize )
         string _reasonCode{}; ///< 표시용 사유 코드(로컬라이제이션 키). 가장 최근 것이다
         PROPERTY()
-        EnumArray<ServiceSanctionKind, int64> _arrUntilMs{}; ///< 0 = 없음. 텍스트 키는 열거자 이름(`EnumArrayWrapper`), 고정 배치형 와이어는 `int64[3]` 과 같다
+        EnumArray<ServiceSanctionKind, int64> _arrUntilMs{}; ///< 0 = 없음. 텍스트 키는 열거자 이름(`EnumArrayWrapper`), 고정 배치형 본문은 `int64[3]` 과 같다(스키마 해시는 칸 철자를 섞어 바뀐다 — 같은 빌드끼리의 바이트라 변환이 필요 없다)
         uint64                                _version{ 0 }; ///< 레코드 판(0 = 레코드 없음)
     };
 } // namespace sw

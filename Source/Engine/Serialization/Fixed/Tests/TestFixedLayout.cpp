@@ -242,7 +242,7 @@ SW_TEST_CASE( FixedLayoutTest, EnumBitsUseTheWholeUnderlyingWidth )
     SW_EXPECT_TRUE( FixedCodecUtil::readEnumBits<FixedLayoutSampleFlags>( reader ) == flags );
 }
 
-/** @brief [FixedLayoutTest] `EnumArray<E, int32>` 칸은 원소 수가 같은 `array<int32, N>` 과 같은 바이트를 쓰고, 읽으면 열거자 칸마다 같은 값이다 */
+/** @brief [FixedLayoutTest] `EnumArray<E, int32>` 칸은 원소 수가 같은 `array<int32, N>` 과 같은 본문 바이트를 쓰고, 읽으면 열거자 칸마다 같은 값이다 */
 SW_TEST_CASE( FixedLayoutTest, EnumArrayMatchesFixedArrayBytes )
 {
     FixedLayoutPlainArraySample plain;
@@ -256,7 +256,12 @@ SW_TEST_CASE( FixedLayoutTest, EnumArrayMatchesFixedArrayBytes )
     BitWriter enumWriter;
     SW_REQUIRE_TRUE( FixedLayout::write( plain, plainWriter ) );
     SW_REQUIRE_TRUE( FixedLayout::write( byMode, enumWriter ) );
-    SW_EXPECT_TRUE( plainWriter.getBytes() == enumWriter.getBytes() );
+    // 머리 64 비트는 스키마 해시다 — 정규 글에 타입 이름 · 칸 철자가 들어가 두 타입은 늘 다르다. 견주는 것은 그 뒤의 본문이다.
+    constexpr size_t    kSchemaHashBytes = 8;
+    const vector<uint8> plainBytes       = plainWriter.getBytes();
+    const vector<uint8> enumBytes        = enumWriter.getBytes();
+    SW_REQUIRE_TRUE( plainBytes.size() == enumBytes.size() && plainBytes.size() > kSchemaHashBytes );
+    SW_EXPECT_TRUE( std::equal( plainBytes.begin() + kSchemaHashBytes, plainBytes.end(), enumBytes.begin() + kSchemaHashBytes ) );
 
     const vector<uint8>        bytes = enumWriter.getBytes();
     FixedLayoutEnumArraySample read;
