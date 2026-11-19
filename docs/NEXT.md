@@ -100,9 +100,9 @@
 
 상용 대비 감사(2026-11-12, 기준 main `e480b07498` — 줄 번호의 기준. 원문은 `git show aa79565a0a:docs/CommercialGapAudit.md`, 마지막 판은 `f0e5340264^`). 순서: 결함 · 계약 줄을 먼저, 성능 줄은 측정이 문턱을 넘은 것만. 줄 앞은 감사 ID 와 옛 "다음 할 일" 번호 `[n]`(코드 주석 · DesignBacklog 제목이 가리킨다 — 다시 매기지 않는다). 온라인 줄은 `security-and-hardening`, 외부 API 주장은 기억 기준이라 context7 로 대조한다.
 
-- **P-4 [14] Android IME 조합** — Android 가 미확정 글을 못 받는다(웹 조합 · 소프트 키보드는 섰다). 상용: 유니티 `TouchScreenKeyboard`, Godot `virtual_keyboard_show`. 제안 GameTextInput. 확인: `WindowTextInputTest` Android 조합 케이스, `web-check` 의 `compositionend` 화면.
+- **P-4 [14] Android IME 조합(설계 DesignBacklog "Android IME 조합" — ①부터)** — Android 가 미확정 글을 못 받는다(웹 조합 · 소프트 키보드는 섰다). 상용: 유니티 `TouchScreenKeyboard`, Godot `virtual_keyboard_show`. 제안 GameTextInput. 확인: `WindowTextInputTest` Android 조합 케이스, `web-check` 의 `compositionend` 화면.
 - **O-12 [30] 원장 경로 부하 측정(통합 담당이 돌린다)** — PostgreSQL · RESP 를 띄우고 `SW_SHOOTER3D_DB_PASSWORD` · `SW_SHOOTER3D_CACHE_PASSWORD` 를 둔 뒤 빌드 `Bin` 에서 `OnlineLoadBot --scenario=<저장소>/Source/Programs/OnlineLoadBot/Scenarios/ledger_mix.json --load=<저장소>/Source/Programs/OnlineLoadBot/Scenarios/ledger_mix.load.xml --local-server=0 --online-config=<저장소>/Source/Programs/OnlineLoadBot/LoadBot.online.json --store-config=<저장소>/Config/Server/Online/Shooter3D.external.json --report=<빌드>/Testing/Logs/OnlineLoadBot.ledgerMix.json` — 보고서의 `_server._conflictRetryBasisPoints` · `_busyBasisPoints` · `_droppedArrivalCount` 를 이 줄에 적고, 종료 코드 5 면 원장 감사(재화 총량 보존)가 깨진 것이다.
-- **R-4 [31] 자원마다 전용 할당** — `MaterialRenderProxy.cpp:48` 인스턴스마다 상수 버퍼 · 커밋 자원 · `vkAllocateMemory`. 상용: 언리얼 `FD3D12FastConstantAllocator`, 유니티 SRP Batcher, Godot VMA. 제안 `RHIBufferSlice` + D3D12MA / VMA. 확인: 머티리얼 인스턴스 5000 의 버퍼 바이트 · Vulkan 할당 수.
+- **R-4 [31] 자원마다 전용 할당(설계 DesignBacklog "자원 구간 할당" — ①부터, VMA · D3D12MA 는 라이선스 확인 뒤)** — `MaterialRenderProxy.cpp:48` 인스턴스마다 상수 버퍼 · 커밋 자원 · `vkAllocateMemory`. 상용: 언리얼 `FD3D12FastConstantAllocator`, 유니티 SRP Batcher, Godot VMA. 제안 `RHIBufferSlice` + D3D12MA / VMA. 확인: 머티리얼 인스턴스 5000 의 버퍼 바이트 · Vulkan 할당 수.
 - **RN-6 [34] GPUScene 부분 수집 · 업로드(고정 칸 · 프리리스트 · 칸 순 버퍼 · 구성원 고치기)** — 1~4 단계 끝(`9af8af22b3` · `ee1b3d50d8` · 2 단계 칸 순 발행 · 3 단계 `patchBatchMembership` · 4 단계 머티리얼 대기 칸만 다시 보기). 잴 것: 측정 장치 커밋 `31f2492dc8` 과 4 단계 커밋에서 각각 `ctest -R Scenario.empty.load.instancechurn` 를 돌려 `GT.GPUScene.build.collect` · `GT.GPUScene.build.batches` · `RT.GPUScene.slotInstances` p50 을 견준다(`GT.GPUScene.build.patchEnter` 가 0 이 아니어야 구성원 고치기를 탔다). 남은 한계: 배치 사이 여유 칸이 없어 드나들면 차례 목록(uint32)을 O(N) 다시 쓴다(GPU 는 바뀐 구간만) · 새 키는 다시 나눈다(그리기 띠 · 차례 순서를 지키며 배치를 끼울 자리가 없다) — 측정이 문턱을 넘으면 배치 용량(유니티 GRD)부터.
 - **A-13 [36] 씬 스트리밍 — 측정만 남음, 측정 길이 깨져 있다(2026-11-19)**: 개발 구성 `--cook-all --cooked-dir=../Cooked --pack-dir=Packs --game=Empty -dx12` 뒤 `App -scenario=game/empty/automation/load/streamingcells.scenario.xml -unattended -cooked-content -dx12` 가 현지화 쿠킹본(`engine/localization/engine.en.locres`) · dx12 셰이더 바이너리가 팩에 없다며 기동에서 멈춘다(에디터 시나리오 쿠킹 제외 · 기본 에셋 셰이더 원본 판정은 고쳤다). 개발 구성의 쿠킹본 실행을 ctest 하나로 세우고(쿠킹 → `-cooked-content` 기동 → 시나리오 하나 — 배포 확인과 같은 쿠킹 순서: 텍스처 임포트 · 현지화 · 셰이더), 그 위에서 구간 `GT.Scene.service.SceneStreaming` 최대 프레임(셀 400 × 상자 2000, 짓기 예산 `_addToWorldBudgetMicroseconds` 2000 us)을 잰다. 소스 모드 값(평균 0 · 최대 14 us)은 쿠킹 셀을 스트리밍하지 않아 판정에 쓰지 않는다.
 - **A-24 [47]** 리플렉션 묶음 TU 가 헤더 하나에 전체를 다시 파싱 — 1 절 5-4 리플렉션.
@@ -128,7 +128,7 @@
 
 ## 사용자에게 받을 것
 
-영수증 · 푸시 · 외부 로그인의 실제 계정과 키(지금은 로컬 가짜 끝점 — `Config/Server/Online/Providers/`, `Scripts/net/online_local_run.py`). 새 의존성(인코더 라이브러리)의 라이선스. 공유 DDC 를 둘 자리(NAS · 클라우드 버킷)와 쓰기 권한 머신, 원본 전체를 Git LFS 로 넓히기(호스팅 용량 · 비용 — S1 `.gitattributes`)와 이력 다시 쓰기(`git lfs migrate`, 되돌리기 어렵다), 원본 별도 저장소, 밤새 도는 퍼징 · 여러 머신 샤드에 쓸 외부 CI 러너.
+영수증 · 푸시 · 외부 로그인의 실제 계정과 키(지금은 로컬 가짜 끝점 — `Config/Server/Online/Providers/`, `Scripts/net/online_local_run.py`). 새 의존성(인코더 라이브러리 · R-4 의 VMA · D3D12MA — 둘 다 MIT)의 라이선스. 공유 DDC 를 둘 자리(NAS · 클라우드 버킷)와 쓰기 권한 머신, 원본 전체를 Git LFS 로 넓히기(호스팅 용량 · 비용 — S1 `.gitattributes`)와 이력 다시 쓰기(`git lfs migrate`, 되돌리기 어렵다), 원본 별도 저장소, 밤새 도는 퍼징 · 여러 머신 샤드에 쓸 외부 CI 러너.
 
 ## 꼭 알아야 할 결정
 

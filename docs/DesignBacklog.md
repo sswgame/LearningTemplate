@@ -1265,6 +1265,35 @@ public:
 
 **측정.** 프레임 GPU 시간 · 전이 수가 이전 단계와 같거나 적다(늘면 그 단계에서 고친다 — 같은 상태 반복은 ①이 이미 걸러 낸다).
 
+### 자원 구간 할당(설계 2026-11-20, 감사 R-4)
+
+**문제.** 머티리얼 인스턴스마다 상수 버퍼 하나 · bindless 디스크립터 하나(`MaterialRenderProxy::sync`)이고, 버퍼마다 백엔드 할당이 따로다 — DX12 는 업로드 커밋 자원(256 B 정렬 × 비행 중 프레임 수, `D3D12RHIResourceFactory::createConstantBuffer`), Vulkan 은 자원마다 `vkAllocateMemory`(`VulkanRHIDevice::allocateDeviceMemory` 9 곳). 인스턴스 5000 이면 할당 수가 Vulkan `maxMemoryAllocationCount`(흔히 4096)에 닿는다 — 지금은 한도 가드(`RHIConfig::_allocationCountReserve`)가 오류로 거절할 뿐이다.
+
+**대조.** 언리얼은 상수를 `FD3D12FastConstantAllocator`(프레임 링) · 풀 할당기(`FD3D12PoolAllocator`)에서 구간으로 떼고, Vulkan 은 `FVulkanResourceHeap` 페이지에서 나눈다. 유니티 SRP Batcher 는 머티리얼 속성을 큰 영속 GPU 버퍼 하나에 두고 오프셋으로 읽는다. Godot 은 VMA. → 두 층이다: (가) 백엔드 메모리를 큰 덩이에서 나누기, (나) 작은 상수를 페이지 구간으로 모으기.
+
+**결정.**
+1. **(나) 먼저 — 셰이더 계약을 바꾸지 않는 구간.** `RHIBufferSlice { RHIBufferHandle _page; uint32 _offset; uint32 _size; }` 와 백엔드 무관한 `ConstantBufferPageAllocator`(페이지 = `createConstantBuffer( 64 KiB )`, 크기 등급 256 · 512 · 1024 · 2048 · 4096 B 의 빈 칸 목록, 등급 밖은 전용 버퍼). bindless 는 구간마다 디스크립터 하나(`registerBindlessBufferSRV( RHIBufferSlice )` — DX12 CBV/SRV 의 오프셋 · Vulkan 디스크립터의 offset · range · GL `glBindBufferRange` · WebGPU 바인딩 오프셋(256 B 정렬 — 등급이 이미 맞춘다)). 셰이더는 그대로 머티리얼 디스크립터 하나를 읽는다. 비행 중 프레임 복제는 페이지가 갖는다(지금 버퍼마다 하던 것 — 갱신은 그 프레임 칸에).
+2. **(가) 다음 — 백엔드 메모리.** Vulkan VMA · DX12 D3D12MA(둘 다 MIT, GPUOpen)로 자원 메모리를 덩이에서 나눈다(배치 텍스처 `RT.Frame.transientPlacements` 의 힙도 같은 할당기로). **새 의존성이라 라이선스 확인은 사용자 결정 줄**(NEXT "사용자에게 받을 것") — 확인 전에는 (나) 만으로 할당 수가 등급 수 × 페이지 수로 준다.
+3. **차례.** ① `RHIBufferSlice` · 페이지 할당기(CPU 쪽 빈 칸 목록은 백엔드 없이 단위 테스트 — 등급 고르기 · 해제 뒤 재사용 · 페이지 비면 반납) ② 백엔드 넷의 구간 디스크립터 ③ `MaterialRenderProxy` 가 구간을 쓴다(레이아웃이 커지면 등급을 옮긴다 — 지금의 "커지면 다시 만든다" 자리) ④ VMA · D3D12MA(확인 뒤).
+4. **확인.** 단위: 할당기. 시나리오: 머티리얼 골든 그대로(네 백엔드), Vulkan 검증 층 경고 없음. 측정 아래.
+
+**측정.** 재는 법: 머티리얼 인스턴스 5000 씬(`load/materialinstances` — 없으면 만든다)에서 상수 버퍼 바이트 · 백엔드 할당 수(Vulkan `RT.Vulkan.allocationCount`, DX12 커밋 자원 수) · 프레임 시간 p50, 전후. 판정: 할당 수가 1/10 아래로 줄고 프레임 시간이 흔들림 안이면 둔다.
+
+### Android IME 조합(설계 2026-11-20, 감사 P-4)
+
+**문제.** Android 는 미확정(조합 중) 글을 받지 못한다. 앱은 NativeActivity 라 Java `InputConnection` 이 없고, 글은 키 이벤트의 `getUnicodeChar`(`AndroidWindow.cpp`)로만 들어온다 — 한글 · 일본어 · 중국어 입력기는 조합을 `InputConnection` 으로 보내므로 아무것도 오지 않는다. 받는 쪽은 이미 있다: `CallbackInputWindow::queueTextInput( WindowTextInputKind::Composition | Commit, 글 )`(웹이 쓰는 길).
+
+**대조.** 언리얼 5.3+ 와 유니티 2023 은 GameActivity + GameTextInput(AGDK — 편집기 글 전체 · 선택 · 조합 구간을 JNI 로 넘긴다)을 쓴다. Godot 은 자체 Java 편집 뷰(`GodotEditText`)다. 둘 다 Java `InputConnection` 의 호출을 엔진의 조합 · 확정으로 옮긴다.
+
+**결정.**
+1. **옮기는 규칙은 C++ 한 곳.** `AndroidInputConnectionState`(Engine/Window/Android, 플랫폼 헤더 없는 순수 코드): `setComposingText( 글 )` → 조합(글), `finishComposingText()` → 조합 중이면 확정(그 글) + 조합(빈 글), `commitText( 글 )` → 조합(빈 글, 조합 중이었으면) + 확정(글), `deleteSurroundingText( 앞, 뒤 )` → 조합이 없을 때 백스페이스 · Delete 키 그 수만큼(조합 중이면 조합 글을 줄인다). 결과는 (종류, 글) · 키 목록이라 데스크톱 단위 테스트가 Android 없이 본다. 편집기 글은 엔진이 갖고(UI 글 칸) Java 쪽은 빈 편집기로 둔다 — `getTextBeforeCursor` 는 빈 글(언리얼 GameTextInput 도 매 확정 뒤 상태를 비운다).
+2. **Java 는 얇게.** `SWInputView`(View + `onCreateInputConnection` 이 `BaseInputConnection` 파생을 돌려준다)를 NativeActivity 의 내용 뷰 위에 둔다 — 호출마다 JNI 로 C++ 에 넘기고 C++ 는 ALooper 파이프로 게임 스레드에 옮겨 `queueTextInput` 한다(창 스레드 계약 그대로). 소프트 키보드는 `requestTextInput` 이 그 뷰에 포커스 + `InputMethodManager.showSoftInput`. GameActivity 로 바꾸기는 하지 않는다(액티비티 수명 · 글루 전체가 바뀐다 — 크기 L, 얻는 것은 이 기능 하나).
+3. **묶기.** `android-apk` 에 Java 컴파일 · d8(dex) 단계를 더한다(Tools/JDK 의 javac, Android 빌드 도구의 d8) — 지금 APK 는 dex 가 없다. 매니페스트의 `android:hasCode="true"`.
+4. **차례.** ① `AndroidInputConnectionState` + 단위 테스트(빌드 없이 쓸 수 있다) ② Java 뷰 · JNI · 파이프 ③ `android-apk` 의 dex 단계 ④ 실기기.
+5. **확인.** 단위: `WindowTextInputTest` 에 Android 조합 케이스(한글 "ㅎ" → "하" → "한" 조합 뒤 확정, 일본어 변환 확정, 조합 중 지우기). 실기기: 한국어 키보드로 UI 글 칸에 "한글" 입력, 조합 중 밑줄 표시.
+
+**측정.** 없다(정확성).
+
 ### 공유 DDC(설계 2026-11-17, NEXT 5 에셋 GUID 3 단계)
 
 **문제.** `DerivedDataCache`(`Engine/Asset/Cook/CookRecord.h:59`)는 로컬 폴더 하나(`Saved/DDC/<키 앞 두 글자>/<키>`)이고 키는 `uint64`(FNV-1a)다. 쿠킹(씬 · 팩 · 내비)만 쓴다. 임포트(텍스처 · 모델 · 하이트필드)는 폴더별 `import.stamp` 로 판정해 무시되는 산출물 폴더에 바로 쓴다 — 새 체크아웃 · 워크트리마다 전부 다시 임포트한다(`Import.*` 시한 3600 초).
