@@ -220,14 +220,16 @@ namespace sw
             const TextWidget*  pText = tree.findWidget<TextWidget>( Internal::makeSlotName( "Text", slot ) );
             if ( pBack == nullptr || pText == nullptr )
                 continue;
-            const TextLayoutResult& layout     = pText->getLastLayout();
-            const WidgetGeometry&   textBox    = pText->getGeometry();
-            const WidgetGeometry&   lineBox    = pBack->getGeometry();
-            const bool              bTextWider = layout._size._x > textBox._size._x + Internal::kOverflowSlack;
-            const bool              bOffScreen = lineBox._position._x < -Internal::kOverflowSlack || lineBox._position._x + lineBox._size._x > viewportWidth + Internal::kOverflowSlack;
-            report._bOverflow                  = report._bOverflow || layout._bTruncated == SW_TRUE || bTextWider || bOffScreen;
-            report._maxWrappedLineCount        = MathUtil::max( report._maxWrappedLineCount, static_cast<uint32>( layout._listLine.size() ) );
-            report._newestTextFontSize         = pText->getTextStyle()._fontSize;
+            const TextLayoutResult& layout  = pText->getLastLayout();
+            const WidgetGeometry&   textBox = pText->getGeometry();
+            const WidgetGeometry&   lineBox = pBack->getGeometry();
+            // 텍스트는 픽셀 맞춤 여유(물리 픽셀 하나)만큼 상자를 넘어 놓일 수 있다(TextWidget::computeSnapSlack) — 그만큼은 넘침이 아니다.
+            const float32 textSlack     = Internal::kOverflowSlack + TextWidget::computeSnapSlack( textBox._size._x, _pUI->getViewport()._uiScale );
+            const bool    bTextWider    = layout._size._x > textBox._size._x + textSlack;
+            const bool    bOffScreen    = lineBox._position._x < -Internal::kOverflowSlack || lineBox._position._x + lineBox._size._x > viewportWidth + Internal::kOverflowSlack;
+            report._bOverflow           = report._bOverflow || layout._bTruncated == SW_TRUE || bTextWider || bOffScreen;
+            report._maxWrappedLineCount = MathUtil::max( report._maxWrappedLineCount, static_cast<uint32>( layout._listLine.size() ) );
+            report._newestTextFontSize  = pText->getTextStyle()._fontSize;
         }
         return report;
     }

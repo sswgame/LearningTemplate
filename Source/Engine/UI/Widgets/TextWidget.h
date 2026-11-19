@@ -80,6 +80,11 @@ namespace sw
 
         /** @brief 마지막 칠하기의 배치 결과입니다(테스트와 커서 위치용). */
         const TextLayoutResult& getLastLayout() const { return _layoutCache; }
+        /**
+         * @brief 배치된 폭 @p width 에서 텍스트가 넘쳐도 되는 여유(UI 단위)입니다 — 픽셀 맞춤(UILayoutPass)이 양 끝을 반올림해 줄인 물리 픽셀 하나(1 / @p uiScale)다.
+         * @details 그리기의 배치가 이 여유를 더한 폭으로 줄을 나눈다. 넘침을 재는 쪽(자막 배치 보고)도 같은 값을 쓴다.
+         */
+        static float32 computeSnapSlack( float32 width, float32 uiScale ) { return width > 0.0f && uiScale > 0.0f ? 1.0f / uiScale : 0.0f; }
 
     protected:
         float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;

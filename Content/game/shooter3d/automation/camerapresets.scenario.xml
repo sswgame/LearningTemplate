@@ -13,15 +13,15 @@
 	<Variable name="gv_cameraFieldOfView" value="70"/>
 	<DevCommand line="camera.preset firstperson"/>
 	<WaitUntil watch="CameraDirector.BlendWeight" target="ViewCamera" equals="1" timeoutSeconds="2"/>
-	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" equals="firstperson"/>
+	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" is="firstperson"/>
 	<Expect watch="CameraDirector.FieldOfView" target="ViewCamera" near="75" tolerance="0.5"/>
 	<Expect watch="CameraDirector.TargetDistance" target="ViewCamera" atMost="0.05"/>
 
 	<!-- ① 순환 — 0.3 s 뒤는 블렌드 중간이다 -->
 	<Tap slot="Key.C" hold="1"/>
 	<AdvanceSimulation frames="18"/>
-	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" equals="thirdperson"/>
-	<Expect watch="CameraDirector.SelectedPreset" target="ViewCamera" equals="thirdperson"/>
+	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" is="thirdperson"/>
+	<Expect watch="CameraDirector.SelectedPreset" target="ViewCamera" is="thirdperson"/>
 	<Expect watch="CameraDirector.BlendWeight" target="ViewCamera" atLeast="0.1"/>
 	<Expect watch="CameraDirector.BlendWeight" target="ViewCamera" atMost="0.9"/>
 	<Expect watch="CameraDirector.FieldOfView" target="ViewCamera" atLeast="70.3"/>
@@ -37,31 +37,31 @@
 	<!-- ② 상황 Aim — 들어가기 0.15 s, 나오기 0.2 s -->
 	<Press slot="Mouse.Right"/>
 	<AdvanceSimulation frames="4"/>
-	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" equals="thirdperson_aim"/>
-	<Expect watch="CameraDirector.SelectedPreset" target="ViewCamera" equals="thirdperson"/>
+	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" is="thirdperson_aim"/>
+	<Expect watch="CameraDirector.SelectedPreset" target="ViewCamera" is="thirdperson"/>
 	<Expect watch="CameraDirector.FieldOfView" target="ViewCamera" atLeast="55.3"/>
 	<Expect watch="CameraDirector.FieldOfView" target="ViewCamera" atMost="69.7"/>
 	<WaitUntil watch="CameraDirector.BlendWeight" target="ViewCamera" equals="1" timeoutSeconds="2"/>
 	<Expect watch="CameraDirector.FieldOfView" target="ViewCamera" near="55" tolerance="0.5"/>
 	<Release slot="Mouse.Right"/>
 	<AdvanceSimulation frames="4"/>
-	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" equals="thirdperson"/>
+	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" is="thirdperson"/>
 	<Expect watch="CameraDirector.FieldOfView" target="ViewCamera" atLeast="55.3"/>
 	<Expect watch="CameraDirector.FieldOfView" target="ViewCamera" atMost="69.7"/>
 	<!-- 돌아가는 도중에 다시 조준 — 섞인 자리에서 이어 섞여 시야각이 끝 값으로 튀지 않는다 -->
 	<Press slot="Mouse.Right"/>
 	<AdvanceSimulation frames="2"/>
-	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" equals="thirdperson_aim"/>
+	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" is="thirdperson_aim"/>
 	<Expect watch="CameraDirector.FieldOfView" target="ViewCamera" atLeast="55.3"/>
 	<Expect watch="CameraDirector.FieldOfView" target="ViewCamera" atMost="69.7"/>
 	<Release slot="Mouse.Right"/>
-	<WaitUntil watch="CameraDirector.ActivePreset" target="ViewCamera" equals="thirdperson" timeoutSeconds="1"/>
+	<WaitUntil watch="CameraDirector.ActivePreset" target="ViewCamera" is="thirdperson" timeoutSeconds="1"/>
 	<WaitUntil watch="CameraDirector.BlendWeight" target="ViewCamera" equals="1" timeoutSeconds="2"/>
 	<Expect watch="CameraDirector.FieldOfView" target="ViewCamera" near="70" tolerance="0.5"/>
 
 	<!-- ③ 다시 기동 — 장면을 다시 열면 고른 시점에서 시작한다 -->
 	<LoadScene path="game/shooter3d/maps/arena.scene.xml" timeoutFrames="900"/>
-	<Expect watch="CameraDirector.SelectedPreset" target="ViewCamera" equals="thirdperson"/>
-	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" equals="thirdperson"/>
+	<Expect watch="CameraDirector.SelectedPreset" target="ViewCamera" is="thirdperson"/>
+	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" is="thirdperson"/>
 	<Pass/>
 </Scenario>
