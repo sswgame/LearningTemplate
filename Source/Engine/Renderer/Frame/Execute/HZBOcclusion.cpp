@@ -12,6 +12,7 @@
 
 #include "Engine/Renderer/Frame/Execute/HZBOcclusion.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"

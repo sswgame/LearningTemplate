@@ -79,6 +79,10 @@ namespace sw
          * @details 깊이 히스토리 텍스처에 장면 깊이를 옮긴 뒤 짓는다 — 그 텍스처는 프레임 처음 프레임 패스(입자 · HZB)가 다 읽었고 다음 프레임 처음에 다시 채운다.
          */
         [[nodiscard]] bool recordSceneDepthHZB( IRHICommandList& cmd, FrameViewTarget& view );
+        /** @brief 2 단계 가림을 이번 프레임에 쓸 수 있는지입니다 — 가림 판정 켬 · 설정 `_bTwoPhase` · 간접 멀티 드로우 능력(WebGPU 는 없다 — 웹 깃발). */
+        bool isTwoPhaseOcclusionEnabled() const;
+        /** @brief 이번 프레임에 2 단계 가림의 뒤 단계 컬링을 기록했는지입니다(감시 값 `Render.OcclusionLatePhase`). */
+        bool hasLatePhaseRun() const { return _bLatePhaseRan != 0; }
         /** @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지입니다 — 드로우가 가시 목록을 바인딩할지 정한다(돌지 않았는데 묶으면 갱신되지 않은 목록을 읽는다). */
         bool isGPUCullingActive() const { return _bGPUCullingActive != 0; }
         /** @brief 순번 테이블이 없는 뷰의 정렬 · 마커 · 안개 디스패치가 t2 에 묶는 자리표의 SRV 입니다. */
@@ -165,8 +169,6 @@ namespace sw
         bool recordCurrentDepthHZB( FrameViewTarget& view );
         /** @brief 뷰 @p view 를 그리는 카메라의 뷰-투영입니다(주 시점은 주 카메라, 추가 뷰는 자기 컬링 입력 — `rememberDepthHistoryViews` 와 같은 출처). */
         const float4x4& findViewProj( const FrameViewTarget& view ) const;
-        /** @brief 2 단계 가림을 이번 프레임에 쓸 수 있는지입니다 — 가림 판정 켬 · 설정 `_bTwoPhase` · 간접 멀티 드로우 능력(WebGPU 는 없다 — 웹 깃발). */
-        bool isTwoPhaseOcclusionEnabled() const;
         /**
          * @brief 컬링 슬롯 @p cullViewIndex 의 컬링 상수를 채웁니다(절두체 · 개수 · LOD · 가림). 앞 단계(`dispatchCullView`)와 뒤 단계(`recordLateOcclusion`)가 같은 식을 쓴다.
          * @param bResetLODState 전환 상태를 비울지입니다(뒤 단계는 앞 단계가 정한 값을 그대로 받는다 — 비우기 신호를 두 번 꺼내지 않는다).
@@ -192,6 +194,8 @@ namespace sw
         RHIStructuredBuffer _occludedOrders{};
         /// @brief 앞 단계가 이번 프레임에 차례를 적어 뒤 단계가 남았다(`recordLateOcclusion` 이 내린다).
         uint8 _bLatePhasePending{ 0 };
+        /// @brief 이번 프레임에 뒤 단계 컬링을 기록했다(`hasLatePhaseRun`).
+        uint8 _bLatePhaseRan{ 0 };
         /// @brief 앞 단계가 쓴 전환 상태 비우기 신호입니다(뒤 단계가 같은 값을 쓴다).
         uint8 _bLateLODReset{ 0 };
         /// @brief 앞 단계의 차례 수입니다(뒤 단계도 같은 수의 스레드를 돈다).

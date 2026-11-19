@@ -82,6 +82,7 @@ namespace sw
         _state._gpuMessages.updateControl( pInspector != nullptr ? pInspector->getSelection() : GPUMessageSelection{}, _state._settings._diagnostics._gpuMessageLogBudget );
         // HZB · 가림 타일 표시는 짓는 쪽(HZBBuild 패스 · 프리패스 뒤 · 반사 앞)이 다시 켠다. 패스가 없는 파이프라인에서 지난 프레임의 표시가 남아 컬링이 낡은 피라미드를 읽지 않게 비운다.
         _bLatePhasePending                         = 0;
+        _bLatePhaseRan                             = 0;
         _state._mainView._bOcclusionTilesThisFrame = SW_FALSE;
         _state._mainView._bHZBValid                = SW_FALSE;
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
@@ -965,6 +966,7 @@ namespace sw
         cmd.bindComputeUAV( _occludedOrders._uav, 3 );
         _state._gpuMessages.bindCompute( cmd );
         cmd.dispatchThreads( _lateInstanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
+        _bLatePhaseRan = 1;
 
         // 3) 그리는 쪽이 읽는 상태로 — 뒤 패스(G버퍼 · 포워드 불투명)가 더한 개수로 그린다.
         _bufferTransitions.add( cullView._indirectArgs._buffer, RHIBufferState::IndirectArgument );

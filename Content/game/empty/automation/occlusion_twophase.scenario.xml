@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6f001ea9a5974c23979f37c0dcb3b229"?>
+<!--
+  2 단계 HZB 가림(gpu_cull.hlsl · FrameGraphExecutor::recordLateOcclusion) — 디퍼드(깊이 프리패스가 있다)에서 가림 판정을 켜도 그림이 그대로다(가림은 보이는 것을 빼지 않는다).
+  ① 가림 판정을 켠 채 시작한다 — 2 단계를 쓸 수 있는 백엔드(컬링 · 간접 멀티 드로우: DX12 · Vulkan · GL)는 깊이 프리패스 뒤 뒤 단계가 돈다
+     (Render.OcclusionLatePhase = Render.OcclusionTwoPhase. DX11 · WebGPU 는 둘 다 0). 켜고 끄기 · 문턱은 Config/Engine/OcclusionCulling.json.
+  ② 켠 그림을 찍고, 끄고 찍는다. 두 그림이 같아야 한다 — 앞 단계(지난 HZB)가 뺀 것을 뒤 단계(이번 프리패스 깊이)가 돌려놓고, 판정이 보수적이다.
+  실행: ctest -R Scenario.game.empty.occlusion_twophase
+-->
+<Scenario name="game.empty.occlusion_twophase" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/postprocessvolume.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_occlusionCulling" value="true"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<!-- ① 뒤 단계는 2 단계를 쓸 수 있는 프레임에만 돈다 -->
+	<Store watch="Render.OcclusionTwoPhase" as="twoPhase"/>
+	<Expect watch="Render.OcclusionLatePhase" sameAs="twoPhase"/>
+	<Screenshot file="occlusion_on.ppm" stability="assets"/>
+	<!-- ② 끈 그림과 같다 -->
+	<Variable name="gv_occlusionCulling" value="false"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<Screenshot file="occlusion_off.ppm"/>
+	<Expect watch="Render.OcclusionLatePhase" equals="0"/>
+	<ExpectImagesDiffer first="occlusion_on.ppm" second="occlusion_off.ppm" region="0,0,1,1" minDiffering="0" maxDiffering="0.001"/>
+	<Pass/>
+</Scenario>
