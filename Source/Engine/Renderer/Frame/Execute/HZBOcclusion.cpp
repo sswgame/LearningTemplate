@@ -110,8 +110,8 @@ namespace sw
         if ( target._hzb.isValid() == false || target._occlusionTiles.isValid() == false )
             return;
         // 프레임 시작의 상태는 셰이더 읽기다(지난 프레임 컬링 · 반사가 읽었다) — 아니어도 첫 사용(짓기, UAV)이 달라 전이는 늘 나간다.
-        std::ignore = table.registerBuffer( getPyramidUAV()._name, viewSlot, target._hzb._buffer, RenderGraphAccess::ShaderRead );
-        std::ignore = table.registerBuffer( getTilesUAV()._name, viewSlot, target._occlusionTiles._buffer, RenderGraphAccess::ShaderRead );
+        std::ignore = table.registerBuffer( getPyramidUAV()._name, viewSlot, target._hzb, RenderGraphAccess::ShaderRead );
+        std::ignore = table.registerBuffer( getTilesUAV()._name, viewSlot, target._occlusionTiles, RenderGraphAccess::ShaderRead );
     }
 
     bool HZBOcclusion::record( const RenderGraphPassContext& graphContext, uint32 viewSlot, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight,

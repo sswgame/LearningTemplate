@@ -11,6 +11,14 @@ namespace sw
         return registerEntry( Entry{ name, slot, buffer, RenderGraphViewableKind::Buffer, initialAccess } );
     }
 
+    bool FrameBufferTable::registerBuffer( hashed_string name, uint32 slot, const RHIStructuredBuffer& buffer, RenderGraphAccess initialAccess )
+    {
+        Entry entry{ name, slot, buffer._buffer, RenderGraphViewableKind::Buffer, initialAccess };
+        entry._elementSize  = buffer._elementSize;
+        entry._elementCount = buffer._capacityElements;
+        return registerEntry( entry );
+    }
+
     bool FrameBufferTable::registerTexture( hashed_string name, uint32 slot, RHITextureHandle texture, RenderGraphAccess initialAccess )
     {
         return registerEntry( Entry{ name, slot, texture, RenderGraphViewableKind::Texture, initialAccess } );

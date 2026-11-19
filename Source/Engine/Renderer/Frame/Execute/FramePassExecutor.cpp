@@ -194,6 +194,7 @@ namespace sw
     void FramePassExecutor::releaseResources()
     {
         _frameGraphExecutor.releaseResources();
+        _bufferInspector.release();
         _nanCheckCommandList.reset();
         _frameEndCommandList.reset();
         _nanCheck.shutdown();
@@ -1027,6 +1028,11 @@ namespace sw
         }
         if ( bOk == false )
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.FrameGraphExecuteFailed", "Frame graph could not run - culling, light grid and skinning results are stale this frame" );
+#if !defined( SW_SHIPPING )
+        // 버퍼 보기: 그래프가 마지막으로 둔 접근에서 읽고 그 상태로 되돌린다(`RenderBufferInspector`).
+        if ( _state._pRenderDebug != nullptr )
+            _bufferInspector.service( *_pCmd, pDevice, _frameBufferTable, _frameGraphContext, &findGraphBufferState, *_state._pRenderDebug );
+#endif
         _frameGraphExecutor.endFrame( *_pCmd );
     }
 

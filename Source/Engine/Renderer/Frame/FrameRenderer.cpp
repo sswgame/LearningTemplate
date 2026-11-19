@@ -33,6 +33,7 @@
 #include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
@@ -355,7 +356,21 @@ namespace sw
         // 값 업로드와 바인딩은 드로우 직전에 ShaderParameterBinder 가 한다. 여기서는 시드만 채운다.
         _passExecutor.resetViewRecordState();
 
+#if !defined( SW_SHIPPING )
+        // 렌더링 런타임 디버그: 프레임 디버거 · 통계는 주 시점 씬 드로우를 센다(`FramePassExecutor::drawBatchGroup` 의 허용), 그래프 사본은 요청한 프레임에 컴파일 결과를 옮긴다.
+        RenderDebugRegistry* const pRenderDebug = _state._pRenderDebug;
+        if ( pRenderDebug != nullptr )
+        {
+            pRenderDebug->beginFrame( _state._graph.getExecutionOrder() );
+            if ( pRenderDebug->takeGraphCaptureRequest() )
+                pRenderDebug->publishGraphs( { RenderGraphSnapshot::build( _state._graph, "view" ), RenderGraphSnapshot::build( _state._frameGraph, "frame" ) } );
+        }
+#endif
         const bool bDrew = uploadSceneAndSubmit( pDevice, "executePacket" );
+#if !defined( SW_SHIPPING )
+        if ( pRenderDebug != nullptr )
+            pRenderDebug->endFrame();
+#endif
         // 건너뛴 프레임 뒤의 따라잡기 — GPU 입자가 다 따라잡았으면 이 패킷이 실은 건너뛴 번호까지 끝났다고 적는다(캡처 준비가 본다).
         if ( SimulationOnlyFrameQueue* const pSimulationOnly = engine::areEngineServicesBound() ? engine::findSubsystem<SimulationOnlyFrameQueue>() : nullptr )
             pSimulationOnly->reportDrawnFrame( packet._simulationOnlySerial, _state._particleRenderer.getPendingGPUStepCount() );

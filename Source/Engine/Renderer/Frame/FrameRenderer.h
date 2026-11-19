@@ -72,6 +72,7 @@ namespace sw
     class FrameProfiler;
     class MaterialCache;
     class MaterialInstance;
+    class RenderDebugRegistry;
     class RenderTargetRegistry;
     class Scene;
     class ShaderBindingLayout;
@@ -114,6 +115,7 @@ namespace sw
         RenderExtensionRegistry* _pExtensions{ nullptr };      ///< 모듈 렌더 확장(주 파이프라인에 붙는다)
         RenderTargetRegistry*    _pRenderTargets{ nullptr };   ///< 렌더 타깃 패널의 목록(주 시점의 첨부)
         MaterialCache*           _pPinnedMaterials{ nullptr }; ///< 고정 머티리얼의 PSO 미리 만들기 줄(줄은 하나 — 렌더러 하나만 꺼낸다)
+        RenderDebugRegistry*     _pRenderDebug{ nullptr };     ///< 렌더링 런타임 디버그 우편함(프레임 디버거 · 통계 · 그래프 사본 · 버퍼 보기 — 주 시점만)
     };
 
     /**
@@ -154,7 +156,11 @@ namespace sw
         [[nodiscard]] bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager, const RenderFrameSettings& settings, const RenderPipelineRequest& pipelineRequest,
                                        string_view pipelineXMLPath = {} );
         /** @brief 주 렌더러만 하는 일의 상대를 겁니다(`FrameRendererHost`). `initialize` 앞에 부릅니다(파이프라인 로드가 렌더 타깃을 공개한다). */
-        void bindHost( const FrameRendererHost& host ) { _host = host; }
+        void bindHost( const FrameRendererHost& host )
+        {
+            _host                = host;
+            _state._pRenderDebug = host._pRenderDebug;
+        }
         /**
          * @brief 화면 밖 씬(미리보기 · 캡처) 하나를 그리는 렌더러로 초기화합니다(`OffscreenSceneRenderers` 가 만든다).
          * @details @p mainRenderer 의 TaskManager 를 쓰고, @p pipelinePath 가 비면 그 파이프라인과 PSO 저장소를 함께 쓴다(같은 파이프라인이면 PSO 가 같다).

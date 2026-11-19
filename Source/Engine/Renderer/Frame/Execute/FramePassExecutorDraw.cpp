@@ -905,6 +905,21 @@ namespace sw
         registerMaterialBuffer( context, headBinding, batchPSO );
         if ( bindForDraw( context, batchPSO, headBinding._materialCb, headBinding._arrMaterialTexSRV ) == false )
             return false;
+#if !defined( SW_SHIPPING )
+        // 렌더링 런타임 디버그(주 시점만 — 렌더 타깃 창이 보는 풀): 프레임 디버거의 멈춤 지점 뒤 드로우는 내지 않고, 통계는 삼각형 상한(GPU 컬링 전)을 센다.
+        if ( RenderDebugRegistry* const pDebug = _state._pRenderDebug; pDebug != nullptr && pDebug->isRecording() && isRenderingExtraView() == false )
+        {
+            const uint32 headBatchIndex = argIndex - inoutState._batchOffset;
+            uint64       triangleCount  = 0;
+            for ( uint32 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
+            {
+                const GPUMeshBatch& batch = inoutState._batches[headBatchIndex + groupIndex];
+                triangleCount += static_cast<uint64>( batch._indexCount / 3u ) * batch._visibleCapacity;
+            }
+            if ( pDebug->allowDraw( context._passName, batchPSO, _psoManager.findLayout( batchPSO ), head._indexCount, groupCount, triangleCount ) == false )
+                return false;
+        }
+#endif
         context._pCmd->drawIndexedIndirect( inoutState._argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ), groupCount );
         return true;
     }

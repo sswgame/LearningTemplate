@@ -96,3 +96,23 @@ SW_TEST_CASE( FrameBufferTableTest, PassContextHandsOutOnlyDeclaredAccesses )
     context._pResourceTable = nullptr;
     SW_EXPECT_EQUAL( RHIBufferHandle{ 0 }, context.getBuffer( RenderGraphBufferUAV{ hzb } ) );
 }
+
+/**
+ * @brief [FrameBufferTableTest] 구조 버퍼 판은 크기(원소 바이트 · 용량)를 함께 적고, 핸들 판은 크기를 모른다(0)
+ * @details 결함이면 버퍼 보기(`RenderBufferInspector`)가 크기를 모르는 버퍼를 아무 길이로 복사해 남의 메모리 끝을 넘는다.
+ */
+SW_TEST_CASE( FrameBufferTableTest, StructuredRegistrationCarriesSize )
+{
+    FrameBufferTable    table;
+    RHIStructuredBuffer pyramid{};
+    pyramid._buffer           = RHIBufferHandle{ 31 };
+    pyramid._elementSize      = 8;
+    pyramid._capacityElements = 100;
+    SW_REQUIRE_TRUE( table.registerBuffer( hashed_string( "HZB" ), 0, pyramid, RenderGraphAccess::ShaderRead ) );
+    SW_REQUIRE_TRUE( table.registerBuffer( hashed_string( "Raw" ), 0, RHIBufferHandle{ 32 }, RenderGraphAccess::ShaderRead ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, table.getEntries().size() );
+    SW_EXPECT_EQUAL( 8u, table.getEntries()[0]._elementSize );
+    SW_EXPECT_EQUAL( 100u, table.getEntries()[0]._elementCount );
+    SW_EXPECT_EQUAL( 0u, table.getEntries()[1]._elementSize );
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 31 }, table.findBuffer( hashed_string( "HZB" ), 0 ) );
+}

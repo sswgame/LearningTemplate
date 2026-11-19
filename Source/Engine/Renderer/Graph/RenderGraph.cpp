@@ -1049,6 +1049,12 @@ namespace sw
         _listResourceLifetime.push_back( life );
     }
 
+    const RenderGraphNode* RenderGraph::findNode( hashed_string passName ) const
+    {
+        const auto it = _mapNameToIndex.find( passName );
+        return it != _mapNameToIndex.end() ? &_listNode[it->second] : nullptr;
+    }
+
     void RenderGraph::computeResourceLifetimes()
     {
         _listResourceLifetime.clear();
