@@ -105,7 +105,7 @@ namespace sw
             return;
         }
         const shared_ptr<const InteractionCatalog> pCatalog = SharedAssetCache<InteractionCatalog>::acquire( _catalogPath ).snapshot();
-        const SmartObjectDef*                      pDef     = pCatalog != nullptr ? pCatalog->findSmartObject( _smartObjectID ) : nullptr; // 슬롯은 정의를 베낀다 — 테이블을 쥐지 않는다
+        const SmartObjectDef*                      pDef     = pCatalog != nullptr ? pCatalog->findSmartObject( _smartObjectID.key() ) : nullptr; // 슬롯은 정의를 베낀다 — 테이블을 쥐지 않는다
         if ( pDef == nullptr )
         {
             SW_LOG_ERROR_ID( "SmartObjectComponent.SmartObjectNot", "Smart object '%#' is not in %#", _smartObjectID.c_str(), _catalogPath.c_str() );
@@ -163,7 +163,7 @@ namespace sw
 
     void SmartObjectComponent::setSmartObjectID( const hashed_string& id )
     {
-        _smartObjectID = id;
+        _smartObjectID = CatalogKey<SmartObjectDef>( id );
         resolveDefinition();
     }
 

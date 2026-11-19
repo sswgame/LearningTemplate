@@ -156,4 +156,14 @@
 	<Field owner="WesternDeedComponent" field="_zone" tag="WesternHitZoneDef"/>
 	<CatalogKey tag="VelmoraRegionDef" catalog="VelmoraRegionCatalog" entry="Region"/>
 	<Field owner="VelmoraGameModeComponent" field="_startRegion" tag="VelmoraRegionDef"/>
+	<CatalogKey tag="ScheduleNPCDef" catalog="Schedules" entry="NPC"/>
+	<Field owner="ScheduleNPCComponent" field="_npcID" tag="ScheduleNPCDef"/>
+	<CatalogKey tag="InteractionDef" catalog="Interactions" entry="Interaction"/>
+	<CatalogKey tag="SmartObjectDef" catalog="Interactions" entry="SmartObject"/>
+	<Field owner="InteractableComponent" field="_interactionID" tag="InteractionDef"/>
+	<Field owner="SmartObjectComponent" field="_smartObjectID" tag="SmartObjectDef"/>
+	<CatalogKey tag="QuestDef" catalog="QuestCatalog" entry="Quest"/>
+	<Field owner="QuestObjectiveMarkerComponent" field="_quest" tag="QuestDef"/>
+	<CatalogKey tag="AbilityEffectDef" catalog="AbilityCatalog" entry="AbilityEffect"/>
+	<Field owner="JumpEscapeReactionComponent" field="_effect" tag="AbilityEffectDef"/>
 </DataCatalogReferenceTable>

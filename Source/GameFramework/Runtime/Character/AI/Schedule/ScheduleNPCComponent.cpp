@@ -18,6 +18,6 @@ namespace sw
         const ScheduleNPCComponent* const pNPC = object.getComponent<ScheduleNPCComponent>();
         if ( pNPC == nullptr || pNPC->_npcID.empty() )
             return nullopt;
-        return schedule.findNPCIndex( pNPC->_npcID );
+        return schedule.findNPCIndex( pNPC->_npcID.key() );
     }
 } // namespace sw

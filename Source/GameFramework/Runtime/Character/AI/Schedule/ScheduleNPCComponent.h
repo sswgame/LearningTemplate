@@ -11,11 +11,13 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
+    struct ScheduleNPCDef;
     class GameObject;
     class ScheduleSystem;
 
@@ -32,14 +34,14 @@ namespace sw
         ScheduleNPCComponent();
         ~ScheduleNPCComponent() override = default;
 
-        const hashed_string& getNPCID() const { return _npcID; }
-        void                 setNPCID( const hashed_string& npcID ) { _npcID = npcID; }
+        const hashed_string& getNPCID() const { return _npcID.key(); }
+        void                 setNPCID( const hashed_string& npcID ) { _npcID = CatalogKey<ScheduleNPCDef>( npcID ); }
 
         /** @brief @p object 가 @p schedule 의 몇 번째 NPC 인지 이 컴포넌트로 찾습니다. 컴포넌트가 없거나 그 일정에 없는 id 면 비어 있습니다(이름으로 맞추지 않는다). */
         [[nodiscard]] static optional<int32> findNPCIndex( const ScheduleSystem& schedule, const GameObject& object );
 
     private:
         PROPERTY( Required, Category = "AI", DisplayName = "NPC ID", Tooltip = "NPC id in the schedule catalog" )
-        hashed_string _npcID;
+        CatalogKey<ScheduleNPCDef> _npcID;
     };
 } // namespace sw

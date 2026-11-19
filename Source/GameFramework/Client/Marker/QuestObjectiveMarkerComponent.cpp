@@ -31,7 +31,7 @@ namespace sw
 
     void QuestObjectiveMarkerComponent::configure( const hashed_string& quest, const hashed_string& kind, const hashed_string& target )
     {
-        _quest  = quest;
+        _quest  = CatalogKey<QuestDef>( quest );
         _kind   = kind;
         _target = target;
     }
@@ -43,7 +43,7 @@ namespace sw
 
     bool QuestObjectiveMarkerComponent::isObjectiveOpen( const QuestLog& log ) const
     {
-        return isConfigured() && log.isObjectiveOpen( _quest, _kind, _target );
+        return isConfigured() && log.isObjectiveOpen( _quest.key(), _kind, _target );
     }
 
     bool QuestObjectiveMarkerComponent::shouldShowMarker()
