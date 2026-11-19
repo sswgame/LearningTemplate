@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
@@ -585,10 +586,12 @@ SW_TEST_CASE( ActionRoomTest, ReadRejectsBrokenBytes )
     source.writeState( written );
     const size_t size = static_cast<size_t>( written.getSize() );
 
-    // 머리: 종류(1) 클리어(1) 쿨다운 셋(12) = 14, 종 수(4), 이름 길이(4) + "gunner"(6) = 28, 적 수(4) = 32.
+    // 리플렉션 머리 뒤 종류(열거는 int64, 8) 클리어(1), 손 본문의 쿨다운 셋(12), 종 수(4), 이름 길이(4) + "gunner"(6), 적 수(4).
     // 적: 위치(8) 체력(4) 사격(4) 종 인덱스(2) 생존(1). 탄은 공통 발사체의 바이트다: 다음 id(4) 수(4), 맨 끝 탄 한 줄(이름 "bolt" 4 글자 + 칸 자리는 `StateOffsetFromEnd`).
     using ProjectileAt           = sw::ProjectileSimulation::StateOffsetFromEnd;
-    constexpr size_t kActorAt    = 32;
+    const size_t     kindAt      = sw::StateIO::kReflectedHeaderBytes;
+    const size_t     clearedAt   = kindAt + sizeof( int64 );
+    const size_t     kActorAt    = clearedAt + 1 + 12 + 4 + 4 + 6 + 4;
     constexpr size_t kProjectile = ProjectileAt::kNameLength + 4;
     SW_REQUIRE_EQUAL( kActorAt + 19 + 4 + 4 + kProjectile, size );
 
@@ -603,8 +606,8 @@ SW_TEST_CASE( ActionRoomTest, ReadRejectsBrokenBytes )
     };
     const float32 nan      = std::numeric_limits<float32>::quiet_NaN();
     const float32 infinity = std::numeric_limits<float32>::infinity();
-    expectRejected( 0, static_cast<uint8>( 9 ) );                           // 종류
-    expectRejected( 1, static_cast<uint8>( 2 ) );                           // 클리어 표시
+    expectRejected( kindAt, static_cast<int64>( 9 ) );                      // 종류
+    expectRejected( clearedAt, static_cast<uint8>( 2 ) );                   // 클리어 표시
     expectRejected( kActorAt, nan );                                        // 위치
     expectRejected( kActorAt + 4, infinity );                               // 위치
     expectRejected( kActorAt + 8, nan );                                    // 체력

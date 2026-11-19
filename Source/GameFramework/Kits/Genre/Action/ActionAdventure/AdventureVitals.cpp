@@ -185,10 +185,9 @@ namespace sw
 
     void AdventureVitals::serializeState( StateIO& io )
     {
-        io.value( _heartCount );
-        io.value( _heartPieceCount );
-        io.flag( _bMagicUpgraded );
-        if ( io.check( 1 <= _heartCount && _heartCount <= _settings._maxHeartCount && 0 <= _heartPieceCount && _heartPieceCount < _settings._piecesPerHeart ) == false )
+        io.reflected( *this );
+        // 칸마다의 바닥은 `PROPERTY( Min · Max )` 가 지키고, 설정이 정하는 상한만 손으로 본다
+        if ( io.check( _heartCount <= _settings._maxHeartCount && _heartPieceCount < _settings._piecesPerHeart ) == false )
             return;
         if ( io.isReading() && io.check( resetHealth() ) == false ) // 체력 최대값은 하트 수가 정한다. 현재 값은 아래에서 읽는다
             return;

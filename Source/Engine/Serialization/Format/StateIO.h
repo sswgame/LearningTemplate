@@ -143,6 +143,8 @@ namespace sw
         {
             reflectedObject( requireReflectedType( typeFqn<T>() ), &inoutObject );
         }
+        /** @brief `reflected` 머리(타입 판 uint32 + 칸 배치 해시 uint64)의 바이트 수입니다. 바이트를 고쳐 읽는 테스트가 칸 자리를 셀 때 씁니다. */
+        static constexpr size_t kReflectedHeaderBytes = sizeof( uint32 ) + sizeof( uint64 );
         /** @brief `reflected` 가 싣는 칸 배치(이름 · 형식 · 순서, 구조체 칸은 안쪽까지)의 해시입니다. `FixedLayout::computeSchemaHash` 와 같은 FNV-1a 64 입니다. */
         [[nodiscard]] static uint64 computeReflectedLayoutHash( const TypeInfo& type );
 

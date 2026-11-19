@@ -90,10 +90,14 @@ namespace sw
      * @class AdventureVitals
      * @brief 플레이어 한 명의 하트, 마법, 스태미나입니다. 시간은 `updateStamina` 로만 흐릅니다(결정적).
      * @details 하트 그릇이 늘면 하트가 가득 찬다(젤다의 그릇 획득). 그 밖의 회복은 `heal` 로 한다.
+     *          상태는 리플렉션 상태 칸(하트 수 · 조각 · 두 배 마법)과 손 본문의 체력 · 마력 · 지구력(자기 `serializeState` 가 있는 형식)이다.
      */
+    REFLECT()
     class SW_KIT_API AdventureVitals
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag         = FourCCUtil::make( "AVIT" );
         static constexpr uint32 kStateVersion     = 1;
         static constexpr int32  kQuartersPerHeart = 4;
@@ -157,8 +161,11 @@ namespace sw
         HealthStateMachine      _health;
         ResourceGauge           _magic;
         ResourceGauge           _stamina;
-        int32                   _heartCount;
-        int32                   _heartPieceCount;
-        uint8                   _bMagicUpgraded;
+        PROPERTY( RuntimeState, Min = 1 )
+        int32 _heartCount;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _heartPieceCount;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bMagicUpgraded;
     };
 } // namespace sw

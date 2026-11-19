@@ -54,9 +54,12 @@ namespace sw
      * @class AdventureTargeting
      * @brief 플레이어 한 명의 주목 상태입니다. 매 틱 `update` 에 대상 후보, 이동 입력(x는 오른쪽, y는 앞, −1..1), 점프를 넘깁니다.
      */
+    REFLECT()
     class SW_KIT_API AdventureTargeting
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "ATGT" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -88,6 +91,7 @@ namespace sw
 
         /**
          * @brief 표적 선택 상태(표적, 숨은 시간), 표적 위치, 회피, 무적 남은 시간, 몸놀림 상태, 버튼 누름 여부를 씁니다. 설정은 `initialize` 에서 받은 것이라 싣지 않습니다.
+         *        표적 위치 · 상태 · 누름은 리플렉션 상태 칸이고, 표적 선택과 두 `Countdown` 은 손 본문이 싣습니다(리플렉션 형식이 아니다).
          *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
         SW_DECLARE_STATE_IO();
@@ -98,10 +102,13 @@ namespace sw
     private:
         AdventureTargetingSettings _settings;
         LockOnSelector             _selector;
-        float3                     _targetPosition;
-        Countdown                  _evade;
-        Countdown                  _invulnerable;
-        AdventureTargetingState    _state;
-        uint8                      _bHeld;
+        PROPERTY( RuntimeState )
+        float3    _targetPosition;
+        Countdown _evade;
+        Countdown _invulnerable;
+        PROPERTY( RuntimeState )
+        AdventureTargetingState _state;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bHeld;
     };
 } // namespace sw

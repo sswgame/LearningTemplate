@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureTargeting.h"
 
@@ -333,9 +334,13 @@ SW_TEST_CASE( AdventureTargetingTest, ReadRejectsBrokenBytes )
     AdventureTargetingTestUtil::setUp( source );
     sw::Archive written;
     source.writeState( written );
-    // 표적(8) 숨은 시간(4) 표적 위치(12) 회피(4) 무적(4) 상태(1) 눌림(1) = 34 바이트.
-    const size_t size = static_cast<size_t>( written.getSize() );
-    SW_REQUIRE_EQUAL( size_t( 34 ), size );
+    // 리플렉션 머리 뒤 표적 위치(12) 상태(열거는 int64, 8) 눌림(1), 다음이 손 본문의 표적(8) 숨은 시간(4) 회피(4) 무적(4)이다.
+    const size_t size       = static_cast<size_t>( written.getSize() );
+    const size_t positionAt = sw::StateIO::kReflectedHeaderBytes;
+    const size_t stateAt    = positionAt + sizeof( sw::float3 );
+    const size_t heldAt     = stateAt + sizeof( int64 );
+    const size_t selectorAt = heldAt + 1;
+    SW_REQUIRE_EQUAL( selectorAt + 20, size );
 
     sw::AdventureTargeting target;
     AdventureTargetingTestUtil::setUp( target );
@@ -349,14 +354,14 @@ SW_TEST_CASE( AdventureTargetingTest, ReadRejectsBrokenBytes )
         SW_EXPECT_FALSE( target.isHeld() );
     };
     const float32 nan = std::numeric_limits<float32>::quiet_NaN();
-    expectRejected( 8, -1.0f );
-    expectRejected( 12, nan );
-    expectRejected( 16, std::numeric_limits<float32>::infinity() );
-    expectRejected( 20, nan );
-    expectRejected( 24, nan );
-    expectRejected( 28, nan );
-    expectRejected( 32, static_cast<uint8>( 200 ) );
-    expectRejected( 33, static_cast<uint8>( 2 ) );
+    expectRejected( selectorAt + 8, -1.0f );
+    expectRejected( positionAt, nan );
+    expectRejected( positionAt + 4, std::numeric_limits<float32>::infinity() );
+    expectRejected( positionAt + 8, nan );
+    expectRejected( selectorAt + 12, nan );
+    expectRejected( selectorAt + 16, nan );
+    expectRejected( stateAt, static_cast<int64>( 200 ) );
+    expectRejected( heldAt, static_cast<uint8>( 2 ) );
 
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( target.readState( truncated ) );
