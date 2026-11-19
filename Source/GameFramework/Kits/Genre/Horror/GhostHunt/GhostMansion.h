@@ -107,9 +107,12 @@ namespace sw
      * @class GhostMansion
      * @brief 저택 한 채의 진행을 관리합니다. 지금 방의 싸움은 `getEncounter` 로 손전등과 청소기를 씁니다.
      */
+    REFLECT()
     class SW_KIT_API GhostMansion
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "GHMN" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -166,20 +169,23 @@ namespace sw
         void pushEvent( GhostMansionEventKind type, const hashed_string& id, const hashed_string& room = hashed_string{}, int32 count = 0 );
 
     private:
-        GhostEncounter                 _encounter;
-        GameRandom                     _random;
-        vector<HidingGhostRuntime>     _listBoo;            ///< 카탈로그의 부 순서를 따른다
-        vector<uint8>                  _listSearched;       ///< 카탈로그의 가구 순서를 따른다
+        GhostEncounter             _encounter;
+        GameRandom                 _random;
+        vector<HidingGhostRuntime> _listBoo;      ///< 카탈로그의 부 순서를 따른다
+        vector<uint8>              _listSearched; ///< 카탈로그의 가구 순서를 따른다
+        PROPERTY( RuntimeState )
         vector<hashed_string>          _listPendingKeyRoom; ///< 가방이 차서 아직 주지 못한 열쇠의 방이다
         EventBuffer<GhostMansionEvent> _eventBuffer;
         vector<GhostEvent>             _listGhostEvent; ///< 게임에 넘길 싸움 이벤트이다
-        hashed_string                  _currentRoom;
-        const GhostCatalog*            _pCatalog;
-        const LootCatalog*             _pLoot;
-        AreaGraph*                     _pAreaGraph;
-        GameFlags*                     _pFlags;
-        Inventory*                     _pInventory; ///< 플레이어 가방(열쇠)
-        Wallet*                        _pWallet;    ///< 빌린 지갑(동전이며 카탈로그 통화를 쓴다)
-        uint32                         _seed;
+        PROPERTY( RuntimeState )
+        hashed_string       _currentRoom;
+        const GhostCatalog* _pCatalog;
+        const LootCatalog*  _pLoot;
+        AreaGraph*          _pAreaGraph;
+        GameFlags*          _pFlags;
+        Inventory*          _pInventory; ///< 플레이어 가방(열쇠)
+        Wallet*             _pWallet;    ///< 빌린 지갑(동전이며 카탈로그 통화를 쓴다)
+        PROPERTY( RuntimeState )
+        uint32 _seed;
     };
 } // namespace sw

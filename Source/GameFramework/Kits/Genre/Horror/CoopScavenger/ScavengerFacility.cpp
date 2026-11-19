@@ -298,16 +298,9 @@ namespace sw
 
     void ScavengerFacility::serializeState( StateIO& io )
     {
-        io.value( _layoutMoonID );
-        io.value( _layoutSeed );
-        io.list( _listGroundScrap, kMinScrapBytes, [&]( ScavengerScrap& scrap )
-        { serializeScrap( io, scrap ); } );
-        io.list( _listUnlockedFlag );
-        io.value( _nextUid );
-        io.value( _roomCount );
-        io.value( _lockedDoorCount );
-        // 시드 0 은 난수의 고정점이라 만든 지도에는 없다.
-        if ( io.check( 1 <= _nextUid && 0 <= _roomCount && 0 <= _lockedDoorCount && ( _layoutMoonID.empty() || _layoutSeed != 0u ) ) == false || io.isWriting() )
+        io.reflected( *this );
+        // 시드 0 은 난수의 고정점이라 만든 지도에는 없다(칸 사이 검사).
+        if ( io.check( _layoutMoonID.empty() || _layoutSeed != 0u ) == false || io.isWriting() )
             return;
         for ( const ScavengerScrap& scrap : _listGroundScrap )
         {
@@ -327,20 +320,6 @@ namespace sw
                 _graph = std::move( built._graph );
             }
         }
-    }
-
-    void ScavengerFacility::serializeScrap( StateIO& io, ScavengerScrap& scrap )
-    {
-        io.value( scrap._scrapID );
-        io.value( scrap._areaID );
-        io.value( scrap._weight );
-        io.value( scrap._uid );
-        io.value( scrap._value );
-        io.value( scrap._bodyOf );
-        io.value( scrap._day );
-        io.flag( scrap._bTwoHanded );
-        // 무게가 NaN 이면 이동 속도가, 음수 가치면 매입액이 깨진다.
-        io.check( 0.0f <= scrap._weight && 0 <= scrap._value && -1 <= scrap._bodyOf );
     }
 
 } // namespace sw

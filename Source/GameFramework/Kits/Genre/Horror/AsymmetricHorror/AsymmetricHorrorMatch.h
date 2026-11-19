@@ -241,9 +241,12 @@ namespace sw
      * @details 무대(발전기, 갈고리, 판자, 창틀, 사물함, 탈출구, 해치 위치)는 `start` 전에 추가해야 한다.
      *          모든 행동 함수는 거리와 상태를 확인해 할 수 없으면 false 를 반환하고, 시간이 드는 일은 `update` 가 진행한다.
      */
+    REFLECT()
     class SW_KIT_API AsymmetricHorrorMatch
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "HMAT" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -393,34 +396,45 @@ namespace sw
         void               pushEvent( AsymmetricHorrorEvent::Kind kind, optional<int32> actor, optional<int32> target, float32 value, const float3& position );
 
     private:
-        AsymmetricHorrorMatchSettings       _settings;
-        AsymmetricHorrorKiller              _killer;
-        vector<AsymmetricHorrorSurvivor>    _listSurvivor;
-        vector<AsymmetricHorrorGenerator>   _listGenerator;
-        vector<AsymmetricHorrorGate>        _listGate;
-        vector<AsymmetricHorrorWindow>      _listWindow;
-        vector<float3>                      _listHook;
-        vector<float3>                      _listPallet;
-        vector<PalletState>                 _listPalletState;
-        vector<float3>                      _listLocker;
-        vector<int32>                       _listLockerOccupant;
-        EventBuffer<AsymmetricHorrorEvent>  _eventBuffer;
-        vector<InteractionEvent>            _listInteractionScratch;
-        MatchState                          _match;
-        FixedStepTimer                      _timer;
+        AsymmetricHorrorMatchSettings      _settings;
+        AsymmetricHorrorKiller             _killer;
+        vector<AsymmetricHorrorSurvivor>   _listSurvivor;
+        vector<AsymmetricHorrorGenerator>  _listGenerator;
+        vector<AsymmetricHorrorGate>       _listGate;
+        vector<AsymmetricHorrorWindow>     _listWindow;
+        vector<float3>                     _listHook;
+        vector<float3>                     _listPallet;
+        vector<PalletState>                _listPalletState;
+        vector<float3>                     _listLocker;
+        vector<int32>                      _listLockerOccupant;
+        EventBuffer<AsymmetricHorrorEvent> _eventBuffer;
+        vector<InteractionEvent>           _listInteractionScratch;
+        MatchState                         _match;
+        FixedStepTimer                     _timer;
+        PROPERTY( RuntimeState )
         float3                              _hatchPosition;
         const AsymmetricHorrorRulesCatalog* _pCatalog;
         Countdown                           _collapseRemaining;
-        int32                               _completedGeneratorCount;
-        int32                               _survivorTeam;
-        int32                               _killerTeam;
-        uint32                              _tick;
-        uint8                               _bStarted;
-        uint8                               _bGatesPowered;
-        uint8                               _bHatchPlaced;
-        uint8                               _bHatchOpen;
-        uint8                               _bHatchClosed;
-        uint8                               _bCollapseStarted;
-        uint8                               _bEndReported;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _completedGeneratorCount;
+        PROPERTY( RuntimeState )
+        int32 _survivorTeam;
+        PROPERTY( RuntimeState )
+        int32 _killerTeam;
+        PROPERTY( RuntimeState )
+        uint32 _tick;
+        uint8  _bStarted;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bGatesPowered;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bHatchPlaced;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bHatchOpen;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bHatchClosed;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bCollapseStarted;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bEndReported;
     };
 } // namespace sw

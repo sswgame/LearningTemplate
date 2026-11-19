@@ -53,8 +53,25 @@ namespace
             }
         }
 
+        /** @brief @p TState 의 정상 `writeState` 바이트에서 리플렉션 머리를 가져와 씁니다 — 손으로 짜면 머리가 달라 다른 이유로 거절되어 거짓 통과한다. */
+        template <typename TState>
+        static void writeHeader( sw::Archive& outArchive )
+        {
+            TState      blank;
+            sw::Archive blankBytes;
+            blank.writeState( blankBytes );
+            outArchive.writeBytes( blankBytes.getData(), sw::StateIO::kReflectedHeaderBytes );
+        }
+
+        static void writeAbilityBytes( sw::Archive& outArchive, const sw::vector<sw::hashed_string>& listName )
+        {
+            writeHeader<sw::MetroidvaniaAbilitySet>( outArchive );
+            writeNames( outArchive, listName );
+        }
+
         static void writeLoadoutBytes( sw::Archive& outArchive, const sw::vector<sw::hashed_string>& listOwned, const sw::vector<sw::hashed_string>& listEquipped, int32 notchCount )
         {
+            writeHeader<sw::MetroidvaniaTrinketLoadout>( outArchive );
             writeNames( outArchive, listOwned );
             writeNames( outArchive, listEquipped );
             outArchive << notchCount;
@@ -304,13 +321,20 @@ SW_TEST_CASE( MetroidvaniaAbilitySetTest, StateRoundTripAndRejection )
     const auto expectRejected = [&restored]( const sw::vector<sw::hashed_string>& listName )
     {
         sw::Archive bytes;
-        MetroidvaniaLoadoutTestUtil::writeNames( bytes, listName );
+        MetroidvaniaLoadoutTestUtil::writeAbilityBytes( bytes, listName );
         sw::Archive reading( bytes.getData(), bytes.getSize() );
         SW_EXPECT_FALSE( restored.readState( reading ) );
         SW_EXPECT_TRUE( restored.hasAbility( kWall ) );
     };
     expectRejected( { sw::hashed_string( "ghost" ) } );
     expectRejected( { kDash, kDash } );
+    // 대조: 같은 도우미로 짠 맞는 목록은 읽힌다(위 거절이 바이트 모양 탓이 아님을 본다).
+    sw::MetroidvaniaAbilitySet control;
+    control.initialize( catalog );
+    sw::Archive controlBytes;
+    MetroidvaniaLoadoutTestUtil::writeAbilityBytes( controlBytes, { kDash } );
+    sw::Archive controlReading( controlBytes.getData(), controlBytes.getSize() );
+    SW_EXPECT_TRUE( control.readState( controlReading ) );
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( restored.readState( truncated ) );
 
@@ -423,6 +447,7 @@ SW_TEST_CASE( MetroidvaniaTrinketLoadoutTest, StatsMergeFromEquippedCharms )
  */
 SW_TEST_CASE( MetroidvaniaTrinketLoadoutTest, StateRoundTripAndRejection )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kLoadoutXML, "MetroidvaniaTrinketLoadoutTest" ) );
     sw::MetroidvaniaTrinketLoadout original;
@@ -456,6 +481,13 @@ SW_TEST_CASE( MetroidvaniaTrinketLoadoutTest, StateRoundTripAndRejection )
     expectRejected( { kLight }, { kMid }, 3 );
     expectRejected( { kLight }, { kLight, kLight }, 3 );
     expectRejected( { kLight }, {}, -1 );
+    // 대조: 같은 도우미로 짠 맞는 판은 읽힌다.
+    sw::MetroidvaniaTrinketLoadout control;
+    control.initialize( &catalog );
+    sw::Archive controlBytes;
+    MetroidvaniaLoadoutTestUtil::writeLoadoutBytes( controlBytes, { kLight, kMid }, { kMid }, 3 );
+    sw::Archive controlReading( controlBytes.getData(), controlBytes.getSize() );
+    SW_EXPECT_TRUE( control.readState( controlReading ) );
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( restored.readState( truncated ) );
 

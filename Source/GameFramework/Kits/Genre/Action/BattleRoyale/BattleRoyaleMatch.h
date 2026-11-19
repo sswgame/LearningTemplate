@@ -14,6 +14,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/FixedStepTimer.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -106,9 +107,12 @@ namespace sw
      *          - 출혈사, 전멸, 기절 뒤 자기장 사망은 기절시킨 사람의 처치로 센다.
      *          시드가 같고 같은 순서로 호출하면 같은 판이 나온다.
      */
+    REFLECT()
     class SW_KIT_API BattleRoyaleMatch
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32  kStateTag     = FourCCUtil::make( "BRMT" );
         static constexpr uint32  kStateVersion = 1;
         static constexpr float32 kFixedStep    = 0.1f;
@@ -181,7 +185,9 @@ namespace sw
         const BattleRoyaleCatalog*     _pCatalog;
         const ItemCatalog*             _pItemCatalog;
         const LootCatalog*             _pLootCatalog;
-        float32                        _time;
-        int32                          _nextSupplyDrop; ///< 다음에 떨어질 보급 상자 시각의 인덱스
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _time;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _nextSupplyDrop; ///< 다음에 떨어질 보급 상자 시각의 인덱스
     };
 } // namespace sw

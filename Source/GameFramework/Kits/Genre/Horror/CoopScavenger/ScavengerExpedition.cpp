@@ -571,6 +571,7 @@ namespace sw
     {
         if ( io.check( _data._pCatalog != nullptr ) == false )
             return;
+        io.reflected( *this ); // 우주선 고철 · 시드 · 내린 시간 · 단계 · 해 질 녘 알림
         io.expect( static_cast<uint32>( _listCrew.size() ) );
         if ( io.isOk() == false )
             return;
@@ -582,16 +583,11 @@ namespace sw
             io.value( member._areaID );
             io.flag( member._bBodyRecovered );
         }
-        io.list( _listShipScrap, ScavengerFacility::kMinScrapBytes, [&]( ScavengerScrap& scrap )
-        { ScavengerFacility::serializeScrap( io, scrap ); } );
         io.reference( _pMoon, [this]( const hashed_string& moonID )
         { return _data._pCatalog->findMoon( moonID ); } );
-        io.enumValue( _phase, ScavengerPhase::GameOver );
-        io.flag( _bDuskAnnounced );
-        io.value( _seed );
-        io.value( _hoursOnMoon );
         io.value( _random );
-        if ( io.check( 0.0f <= _hoursOnMoon && ( _phase != ScavengerPhase::Landed || _pMoon != nullptr ) ) == false ) // NaN 이면 자정 비교가 늘 거짓이라 우주선이 뜨지 않는다
+        // 내린 시간이 NaN 이면 자정 비교가 늘 거짓이라 우주선이 뜨지 않는다 — 바닥 · NaN 은 칸이 거절하고, 내린 단계의 위성만 손으로 본다
+        if ( io.check( _phase != ScavengerPhase::Landed || _pMoon != nullptr ) == false )
             return;
         // 위협 감독은 내려 있는 동안만 테이블을 가진다(궤도와 회사에서는 비어 있다). 같은 테이블로 열고 나머지를 읽는다.
         if ( io.isReading() )

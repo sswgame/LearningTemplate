@@ -14,7 +14,8 @@
 #include "GameFramework/Kits/Genre/Casual/CardGame/Uno/UnoGame.h"
 
 // CardGameReadStateTest — 카드 게임 상태 바이트의 신뢰 경계: 더미의 빈 카드 · 겹친 번호, 더미 사이의 복제 카드, 덱에 없는 카드, 음수 · 범위 밖 값을 거절하고 상태를 그대로 둔다.
-// 꾸민 바이트는 `writeState` 의 형식을 그대로 손으로 적는다. 칸마다 맞는 값을 기본으로 두고 한 칸씩 망가뜨린다. 키트 GF_CardGame(nogpu).
+// 꾸민 바이트는 `writeState` 의 형식을 그대로 손으로 적는다(리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 다른 이유로 거절되어 거짓 통과한다).
+// 칸마다 맞는 값을 기본으로 두고 한 칸씩 망가뜨린다. 키트 GF_CardGame(nogpu).
 
 namespace
 {
@@ -38,6 +39,15 @@ namespace
                 pile.push( sw::HwatuDeck::makeCard( cardID / 4 + 1, cardID % 4 ) );
             }
             return pile;
+        }
+
+        /** @brief @p state 의 정상 `writeState` 바이트에서 리플렉션 머리(타입 판 + 칸 배치 해시)를 가져와 씁니다. */
+        template <typename TState>
+        static void writeHeader( sw::Archive& outArchive, const TState& state )
+        {
+            sw::Archive stateBytes;
+            state.writeState( stateBytes );
+            outArchive.writeBytes( stateBytes.getData(), sw::StateIO::kReflectedHeaderBytes );
         }
 
         template <typename TGame>
@@ -91,18 +101,19 @@ namespace
         bool readInto( sw::UnoGame& inoutGame ) const
         {
             sw::Archive written;
+            CardGameReadStateTestUtil::writeHeader( written, inoutGame );
+            written << _currentPlayer;
+            written << _direction;
+            written << _pendingDraw;
+            written << _unoTarget;
+            written << _winner;
+            written << static_cast<int64>( _color ); // 리플렉션 열거는 int64 로 놓인다
             written << static_cast<uint32>( 2 );
             _hand0.writeState( written );
             _hand1.writeState( written );
             _drawPile.writeState( written );
             _discardPile.writeState( written );
             sw::StateIO::writeRandom( written, sw::GameRandom( 9u ) );
-            written << _currentPlayer;
-            written << _direction;
-            written << _pendingDraw;
-            written << _unoTarget;
-            written << _winner;
-            written << _color;
             return CardGameReadStateTestUtil::readInto( inoutGame, written );
         }
     };
@@ -125,6 +136,10 @@ namespace
         bool readInto( sw::MatgoGame& inoutGame ) const
         {
             sw::Archive written;
+            CardGameReadStateTestUtil::writeHeader( written, inoutGame );
+            written << _currentPlayer;
+            written << _winner;
+            written << static_cast<int64>( _phase ); // 리플렉션 열거는 int64 로 놓인다
             written << static_cast<uint32>( 2 );
             _hand0.writeState( written );
             _captured0.writeState( written );
@@ -138,9 +153,6 @@ namespace
             written << _settlement1;
             _floor.writeState( written );
             _drawPile.writeState( written );
-            written << _currentPlayer;
-            written << _winner;
-            written << _phase;
             return CardGameReadStateTestUtil::readInto( inoutGame, written );
         }
     };
@@ -161,6 +173,7 @@ namespace
 
         static void writeSeat( sw::Archive& outArchive, const sw::PokerSeat& seat )
         {
+            outArchive << static_cast<uint32>( 2 ); // 고정 배열의 길이(리플렉션은 다른 길이를 거절한다)
             for ( const sw::Card& card : seat._arrHole )
             {
                 outArchive << card._id;
@@ -180,6 +193,7 @@ namespace
         bool readInto( sw::PokerTable& inoutTable ) const
         {
             sw::Archive written;
+            CardGameReadStateTestUtil::writeHeader( written, inoutTable );
             written << static_cast<uint32>( 2 );
             writeSeat( written, _seat0 );
             writeSeat( written, _seat1 );
@@ -193,13 +207,13 @@ namespace
                 }
                 written << pot._amount;
             }
-            _deck.writeState( written );
-            _board.writeState( written );
             written << _button;
             written << _currentSeat;
             written << _currentBet;
             written << _lastRaiseSize;
-            written << _street;
+            written << static_cast<int64>( _street ); // 리플렉션 열거는 int64 로 놓인다
+            _deck.writeState( written );
+            _board.writeState( written );
             return CardGameReadStateTestUtil::readInto( inoutTable, written );
         }
     };
@@ -232,6 +246,18 @@ namespace
         bool readInto( sw::CardBattle& inoutBattle ) const
         {
             sw::Archive written;
+            CardGameReadStateTestUtil::writeHeader( written, inoutBattle );
+            written << static_cast<uint32>( 1 ); // 적 의도(양, 종류 순 — 칸 선언 순서)
+            written << _intentAmount;
+            written << static_cast<int64>( sw::CardBattleEffectKind::Damage );
+            written << _enemyHP;
+            written << _enemyBlock;
+            written << _intentIndex;
+            written << _playerHP;
+            written << _playerBlock;
+            written << _energy;
+            written << _turn;
+            written << static_cast<int64>( _phase ); // 리플렉션 열거는 int64 로 놓인다
             written << static_cast<uint32>( 2 );
             sw::StateIO::writeName( written, "strike" );
             sw::StateIO::writeName( written, "strike" );
@@ -239,18 +265,7 @@ namespace
             _hand.writeState( written );
             sw::CardPile{}.writeState( written );
             sw::CardPile{}.writeState( written );
-            written << static_cast<uint32>( 1 );
-            written << static_cast<uint8>( sw::CardBattleEffectKind::Damage );
-            written << _intentAmount;
-            written << _enemyHP;
-            written << _enemyBlock;
-            written << _intentIndex;
             sw::StateIO::writeRandom( written, sw::GameRandom( 9u ) );
-            written << _playerHP;
-            written << _playerBlock;
-            written << _energy;
-            written << _turn;
-            written << _phase;
             return CardGameReadStateTestUtil::readInto( inoutBattle, written );
         }
     };
@@ -265,11 +280,23 @@ SW_TEST_CASE( CardGameReadStateTest, PileRefusesEmptyAndRepeatedCards )
     sw::CardPile   kept;
     kept.push( sw::Card{ 3, 0, 3 } );
 
+    // 리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 머리가 달라 다른 이유로 거절되어 거짓 통과한다.
+    const auto writeOneCard = [&kept]( sw::Archive& outArchive, uint16 cardID, const sw::Card& shape )
+    {
+        sw::Archive keptBytes;
+        kept.writeState( keptBytes );
+        outArchive.writeBytes( keptBytes.getData(), sw::StateIO::kReflectedHeaderBytes );
+        outArchive << static_cast<uint32>( 1 );
+        outArchive << cardID;
+        outArchive << shape._suit;
+        outArchive << shape._rank;
+    };
+    sw::Archive writtenValid; // 대조: 같은 모양의 맞는 카드는 읽힌다
+    writeOneCard( writtenValid, card._id, card );
+    sw::CardPile control;
+    SW_EXPECT_TRUE( CardGameReadStateTestUtil::readInto( control, writtenValid ) );
     sw::Archive writtenEmpty;
-    writtenEmpty << static_cast<uint32>( 1 );
-    writtenEmpty << sw::Card::kNoCard;
-    writtenEmpty << card._suit;
-    writtenEmpty << card._rank;
+    writeOneCard( writtenEmpty, sw::Card::kNoCard, card );
     SW_EXPECT_FALSE( CardGameReadStateTestUtil::readInto( kept, writtenEmpty ) );
 
     sw::CardPile repeated;
@@ -372,6 +399,7 @@ SW_TEST_CASE( CardGameReadStateTest, KlondikeRefusesImpossibleBoards )
  */
 SW_TEST_CASE( CardGameReadStateTest, UnoRefusesImpossibleTables )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::UnoSettings settings;
     settings._playerCount = 2;
     sw::UnoGame game;
@@ -508,6 +536,7 @@ SW_TEST_CASE( CardGameReadStateTest, HwatuCardMatchesTheDeck )
  */
 SW_TEST_CASE( CardGameReadStateTest, PokerRefusesImpossibleTables )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::PokerTable table;
     SW_REQUIRE_TRUE( table.initialize( sw::PokerSettings{}, { 100, 100 } ) );
     sw::GameRandom random( 41u );
@@ -609,6 +638,7 @@ SW_TEST_CASE( CardGameReadStateTest, PokerRefusesImpossibleTables )
  */
 SW_TEST_CASE( CardGameReadStateTest, DeckBattleRefusesImpossibleBattles )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::CardBattleCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCardBattleXML, "CardGameReadStateTest" ) );
     sw::CardBattleSettings settings;

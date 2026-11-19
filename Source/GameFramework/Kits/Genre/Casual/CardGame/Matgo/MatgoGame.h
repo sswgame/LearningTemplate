@@ -111,6 +111,7 @@ namespace sw
 namespace sw
 {
     /** @brief 판의 단계입니다. */
+    ENUM()
     enum class MatgoPhase : uint8
     {
         Play = 0,     ///< 차례인 사람이 패를 낸다
@@ -197,9 +198,12 @@ namespace sw
      * @class MatgoGame
      * @brief 맞고와 고스톱 한 판을 진행합니다. 같은 시드와 같은 행동이면 같은 판이 나오는 결정적 구현입니다.
      */
+    REFLECT()
     class SW_KIT_API MatgoGame
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CMTG" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -262,8 +266,11 @@ namespace sw
         CardPile                _floor;
         CardPile                _drawPile;
         MatgoSettings           _settings;
-        int32                   _currentPlayer;
-        int32                   _winner;
-        MatgoPhase              _phase;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _currentPlayer;
+        PROPERTY( RuntimeState, Min = -1 )
+        int32 _winner;
+        PROPERTY( RuntimeState )
+        MatgoPhase _phase;
     };
 } // namespace sw

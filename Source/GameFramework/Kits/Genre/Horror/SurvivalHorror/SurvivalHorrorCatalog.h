@@ -173,9 +173,14 @@ namespace sw
 namespace sw
 {
     /** @brief 단서 보드의 연결 하나입니다. 순서는 상관없습니다(`isSame`). */
+    REFLECT()
     struct SurvivalHorrorClueLink
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _first{};
+        PROPERTY()
         hashed_string _second{};
 
         bool isSame( const hashed_string& first, const hashed_string& second ) const

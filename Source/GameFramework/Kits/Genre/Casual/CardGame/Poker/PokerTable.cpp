@@ -516,58 +516,33 @@ namespace sw
 
     void PokerTable::serializeState( StateIO& io )
     {
-        io.expect( static_cast<uint32>( _listSeat.size() ) );
-        if ( io.isOk() == false )
+        const size_t savedSeatCount = _listSeat.size(); // 자리 수는 설정이 정한다 — 읽은 목록도 같은 수여야 한다
+        io.reflected( *this );                          // 자리 · 지난 팟 · 버튼 · 차례 · 베팅 · 스트리트 — 칸마다의 범위는 `PROPERTY( Min · Max )`
+        io.value( _deck );                              // 리플렉션 밖 값 — 더미는 자기 `serializeState` 가 빈 카드 · 겹침을 본다
+        io.value( _board );
+        if ( io.isWriting() || io.check( _listSeat.size() == savedSeatCount ) == false )
             return;
         const int32 seatCount = static_cast<int32>( _listSeat.size() );
         int64       chipTotal = 0;
-        for ( PokerSeat& seat : _listSeat )
+        for ( const PokerSeat& seat : _listSeat )
         {
-            for ( Card& card : seat._arrHole )
-            {
-                io.value( card._id );
-                io.value( card._suit );
-                io.value( card._rank );
-            }
-            io.value( seat._stack );
-            io.value( seat._committed );
-            io.value( seat._contributed );
-            io.value( seat._won );
-            io.value( seat._bInHand );
-            io.value( seat._bFolded );
-            io.value( seat._bAllIn );
-            io.value( seat._bActed );
-            if ( io.isReading() && io.check( PokerTableInternal::isSeatValid( seat ) ) == false )
+            if ( io.check( PokerTableInternal::isSeatValid( seat ) ) == false )
                 return;
             chipTotal += static_cast<int64>( seat._stack ) + seat._contributed + seat._won;
         }
         // 칩을 더하는 곳(`computePotTotal`, 레이즈 투)이 넘치지 않게 판 전체의 칩이 int32 안이어야 한다.
         io.check( chipTotal <= std::numeric_limits<int32>::max() );
-
-        // 팟마다 자리 수(4) + 금액(4). 팟은 낸 금액의 단계마다 하나라 자리 수를 넘지 않는다(`makePots`).
-        io.list( _listLastPot, 8, [&]( PokerPot& pot )
+        // 팟은 낸 금액의 단계마다 하나라 자리 수를 넘지 않는다(`makePots`). 겹친 자리는 이긴 수를 부풀려 몫을 나누어 준다. 팟은 판의 칩을 넘지 못한다.
+        for ( const PokerPot& pot : _listLastPot )
         {
-            io.list( pot._listEligibleSeat, 4, [&]( int32& seat )
+            for ( const int32 seat : pot._listEligibleSeat )
             {
-                io.value( seat );
                 io.check( 0 <= seat && seat < seatCount );
-            } );
-            io.value( pot._amount );
-            // 겹친 자리는 이긴 수를 부풀려 몫을 나누어 준다. 팟은 판의 칩을 넘지 못한다.
-            if ( io.isReading() )
-            {
-                io.check( static_cast<int64>( pot._listEligibleSeat.size() ) <= seatCount && 0 <= pot._amount && pot._amount <= chipTotal && VectorUtil::findDuplicate( pot._listEligibleSeat ) == nullptr );
             }
-        } );
+            io.check( static_cast<int64>( pot._listEligibleSeat.size() ) <= seatCount && pot._amount <= chipTotal && VectorUtil::findDuplicate( pot._listEligibleSeat ) == nullptr );
+        }
         io.check( static_cast<int64>( _listLastPot.size() ) <= seatCount );
-        io.value( _deck );
-        io.value( _board );
-        io.value( _button );
-        io.value( _currentSeat );
-        io.value( _currentBet );
-        io.value( _lastRaiseSize );
-        io.enumValue( _street, PokerStreet::HandOver );
-        if ( io.isWriting() || io.isOk() == false )
+        if ( io.isOk() == false )
             return;
         io.check( constant::invalid_index::kInt32 <= _button && _button < seatCount && constant::invalid_index::kInt32 <= _currentSeat && _currentSeat < seatCount );
         io.check( 0 <= _currentBet && _currentBet <= chipTotal && 0 <= _lastRaiseSize && static_cast<int64>( _currentBet ) + _lastRaiseSize <= std::numeric_limits<int32>::max() );

@@ -376,7 +376,8 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        io.value( _random );
+        io.reflected( *this ); // 섬광 충전 · 서지 게이지 · 흡입 대상 · 다음 번호 · 흡입 단계 — 바닥 · 서지 상한은 칸의 `PROPERTY( Min · Max )`
+        io.value( _random );   // 리플렉션 밖 값 — 난수와 정의 포인터 ↔ id 가 든 유령 목록
         // 유령마다 이름(4) + 위치, 도망 방향(24) + 체력, 시간, 번호(12) + 상태(1) 이상
         io.list( _listGhost, 41, [&]( GhostInstance& ghost )
         {
@@ -395,15 +396,11 @@ namespace sw
                 io.check( bHpValid && ghost._fleeDirection.getLengthSquared() <= 1.01f && ghost._id != 0 );
             }
         } );
-        io.value( _strobeCharge );
-        io.value( _surgeGauge );
-        io.value( _suctionTarget );
-        io.value( _nextGhostID );
-        io.value( _vacuumStage );
         if ( io.isWriting() || io.isOk() == false )
             return;
+        // 상한은 카탈로그가 정한다(칸 사이 검사)
         const int32 lastStage = static_cast<int32>( _pCatalog->getVacuum()._listStagePower.size() ) - 1;
-        io.check( 0 <= _vacuumStage && _vacuumStage <= MathUtil::max( 0, lastStage ) && 0.0f <= _strobeCharge && _strobeCharge <= _pCatalog->getFlashlight()._strobeChargeTime && 0.0f <= _surgeGauge && _surgeGauge <= 1.0f );
+        io.check( _vacuumStage <= MathUtil::max( 0, lastStage ) && _strobeCharge <= _pCatalog->getFlashlight()._strobeChargeTime );
         io.check( VectorUtil::findDuplicateBy<&GhostInstance::_id>( _listGhost ) == nullptr );
         // 흡입 대상은 흡입 중인 유령 하나이고, 흡입 중인 유령은 대상뿐이다(짝이 없으면 `update` 가 건너뛰어 영영 멈춘다). 다음 번호는 있는 번호와 겹치지 않는다.
         bool bTargetFound = _suctionTarget == 0;

@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -40,9 +41,12 @@ namespace sw
      * @class ActionEnemyBrain
      * @brief 적 하나의 패턴 진행 상태입니다. 정의는 빌려 씁니다.
      */
+    REFLECT()
     class SW_KIT_API ActionEnemyBrain
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "APEB" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -79,8 +83,11 @@ namespace sw
         const ActionPatternDef*        _pPattern;
         const ActionPlatformerCatalog* _pCatalog;   ///< `readState` 가 패턴을 찾는 카탈로그(빌려 온 것)
         optional<int32>                _stateIndex; ///< 패턴의 지금 상태(비면 상태가 없다). 상태는 id 로 저장한다(`serializeState`)
-        int32                          _stateFrame; ///< 지금 상태에서 지난 프레임(들어선 프레임이 0)
-        int32                          _facing;
-        uint8                          _bEntered; ///< 이번 프레임에 상태에 들어섰다(한 번만 쏘기 위한 표시)
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _stateFrame; ///< 지금 상태에서 지난 프레임(들어선 프레임이 0)
+        PROPERTY( RuntimeState, Min = -1, Max = 1 )
+        int32 _facing;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bEntered; ///< 이번 프레임에 상태에 들어섰다(한 번만 쏘기 위한 표시)
     };
 } // namespace sw

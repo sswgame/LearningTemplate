@@ -869,6 +869,7 @@ namespace sw
 
     void KartRace::serializeState( StateIO& io )
     {
+        io.reflected( *this ); // 경기 시간 · 최고 기록 · 첫 결승 · 들어온 수 — 바닥 · NaN 은 칸이 거절한다
         io.expect( static_cast<uint32>( _listRacer.size() ) );
         if ( io.isOk() == false )
             return;
@@ -916,14 +917,10 @@ namespace sw
         }
         io.value( _random );
         io.value( _timer );
-        io.value( _raceTime );
         io.value( _countdown );
-        io.value( _bestLapTime );
-        io.value( _firstFinishTime );
-        io.value( _finishedCount );
-        io.enumValue( _phase, MatchPhase::Ended );
-        // 실수의 NaN 은 아카이브 읽기가 거절한다(시한이 영영 끝나지 않는 값).
-        io.check( 0 <= _finishedCount && _finishedCount <= racerCount && 0.0f <= _raceTime && 0.0f <= _bestLapTime );
+        io.enumValue( _phase, MatchPhase::Ended ); // 공용 `MatchPhase` 는 리플렉션 열거가 아니다
+        // 실수의 NaN 은 아카이브 읽기가 거절한다(시한이 영영 끝나지 않는 값). 상한은 사람 수가 정한다.
+        io.check( _finishedCount <= racerCount );
         if ( io.isReading() )
         {
             _eventBuffer.clear();

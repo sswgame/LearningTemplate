@@ -165,18 +165,12 @@ namespace sw
 
     void ActionStageRun::serializeState( StateIO& io )
     {
+        io.reflected( *this ); // 상태 · 경과 · 목숨 · 체크포인트 · 맞은 수 · 죽은 수 — 바닥은 칸의 `PROPERTY( Min )`
         io.reference( _pStage, [this]( const hashed_string& id )
         { return _pCatalog != nullptr ? _pCatalog->findStage( id ) : nullptr; } );
-        io.enumValue( _state, ActionStageState::GameOver );
-        io.value( _elapsed );
-        io.value( _lives );
-        io.value( _checkpointIndex );
-        io.value( _hitCount );
-        io.value( _deathCount );
         const int32 checkpointCount = _pStage != nullptr ? static_cast<int32>( _pStage->_listCheckpoint.size() ) : 0;
         // 시작한 판은 스테이지가 있어야 한다. 없으면 다음 `reachCheckpoint` · `collectSecret` · `die` 가 빈 정의를 읽는다.
-        if ( io.check( 0.0f <= _elapsed && 0 <= _lives && -1 <= _checkpointIndex && _checkpointIndex < checkpointCount && 0 <= _hitCount && 0 <= _deathCount &&
-                       ( _state == ActionStageState::NotStarted || _pStage != nullptr ) ) == false )
+        if ( io.check( _checkpointIndex < checkpointCount && ( _state == ActionStageState::NotStarted || _pStage != nullptr ) ) == false )
             return;
         // 확정한 비밀, 지닌 비밀 순서로 읽는다. 비밀은 이 스테이지의 것이고 두 목록을 통틀어 한 번만 있어야 한다(겹치면 수집 점수가 1 을 넘는다).
         if ( io.isReading() )

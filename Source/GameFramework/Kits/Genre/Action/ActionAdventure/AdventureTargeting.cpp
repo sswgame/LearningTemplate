@@ -123,12 +123,10 @@ namespace sw
 
     void AdventureTargeting::serializeState( StateIO& io )
     {
-        io.value( _selector );
-        io.value( _targetPosition );
+        io.reflected( *this );
+        io.value( _selector ); // 리플렉션 밖 값 — 자기 `serializeState` 와 `Countdown` 코덱이 있다
         io.value( _evade );
         io.value( _invulnerable );
-        io.enumValue( _state, AdventureTargetingState::SideHopRight );
-        io.flag( _bHeld );
     }
 
 } // namespace sw

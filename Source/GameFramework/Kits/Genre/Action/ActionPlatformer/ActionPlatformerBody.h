@@ -14,6 +14,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -66,6 +67,7 @@ namespace sw
 namespace sw
 {
     /** @brief 이동 모드입니다. */
+    ENUM()
     enum class ActionMoveMode : uint8
     {
         Normal = 0, ///< 기반 몸 그대로 움직인다
@@ -107,9 +109,12 @@ namespace sw
      * @class ActionPlatformerBody
      * @brief 기반 몸 하나와 그 위의 이동 모드입니다.
      */
+    REFLECT()
     class SW_KIT_API ActionPlatformerBody
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "APBD" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -154,13 +159,19 @@ namespace sw
         PlatformerMotor2D  _motor;
         PlatformerSettings _motorSettings;
         ActionBodyDef      _settings;
-        float2             _position; ///< 갈고리와 드릴 모드의 위치
-        float2             _velocity; ///< 갈고리와 드릴 모드의 속도
-        float2             _anchor;
-        float32            _ropeLength;
-        Countdown          _drillSearchTimer;
-        uint32             _events;
-        ActionMoveMode     _mode;
-        uint8              _bInsideDirt;
+        PROPERTY( RuntimeState )
+        float2 _position; ///< 갈고리와 드릴 모드의 위치
+        PROPERTY( RuntimeState )
+        float2 _velocity; ///< 갈고리와 드릴 모드의 속도
+        PROPERTY( RuntimeState )
+        float2 _anchor;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32   _ropeLength;
+        Countdown _drillSearchTimer;
+        uint32    _events;
+        PROPERTY( RuntimeState )
+        ActionMoveMode _mode;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bInsideDirt;
     };
 } // namespace sw

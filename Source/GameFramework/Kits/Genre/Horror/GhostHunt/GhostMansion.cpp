@@ -361,7 +361,8 @@ namespace sw
 
     void GhostMansion::serializeState( StateIO& io )
     {
-        io.value( _encounter );
+        io.reflected( *this );  // 맡아 둔 열쇠의 방 · 지금 방 · 씨앗
+        io.value( _encounter ); // 리플렉션 밖 값 — 자기 `serializeState` 가 있는 싸움, 난수, 카탈로그 순서를 따르는 부 · 뒤진 가구
         io.value( _random );
         io.expect( static_cast<uint32>( _listBoo.size() ) );
         if ( io.isOk() == false )
@@ -388,22 +389,13 @@ namespace sw
         {
             io.flag( bSearched );
         }
-        io.value( _currentRoom );
         if ( io.isReading() )
         {
             io.check( isKnownRoom( _currentRoom ) );
-        }
-        io.value( _seed );
-        io.list( _listPendingKeyRoom, 4, [&]( hashed_string& roomID )
-        {
-            io.value( roomID );
-            if ( io.isReading() )
+            for ( const hashed_string& roomID : _listPendingKeyRoom )
             {
                 io.check( _pCatalog->findRoom( roomID ) != nullptr );
             }
-        } );
-        if ( io.isReading() )
-        {
             _eventBuffer.clear();
             _listGhostEvent.clear();
         }

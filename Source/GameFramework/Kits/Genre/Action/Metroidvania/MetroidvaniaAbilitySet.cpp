@@ -192,8 +192,15 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        io.nameList( _listAbility, [this]( const hashed_string& abilityID )
-        { return _pCatalog->findAbility( abilityID ) != nullptr && VectorUtil::contains( _listAbility, abilityID ) == false; } );
+        io.reflected( *this );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        // 얻은 능력은 카탈로그의 것이고 겹치지 않는다(카탈로그 대조는 리플렉션 밖)
+        for ( const hashed_string& abilityID : _listAbility )
+        {
+            io.check( _pCatalog->findAbility( abilityID ) != nullptr );
+        }
+        io.check( VectorUtil::findDuplicate( _listAbility ) == nullptr );
     }
 
 } // namespace sw

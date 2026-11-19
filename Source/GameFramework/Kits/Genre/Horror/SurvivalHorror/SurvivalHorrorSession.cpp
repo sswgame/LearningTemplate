@@ -528,7 +528,8 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        io.value( _sanity );
+        io.reflected( *this ); // 단서 연결 · 지금 구역 · 체력 · 저장 수 · 틀린 추리 수 · 손전등 · 환각
+        io.value( _sanity );   // 리플렉션 밖 값 — 게이지와 해시 집합 · 맵(리플렉션 시퀀스가 아니다)
         io.value( _battery );
         SurvivalHorrorSessionInternal::serializeSet( io, _uniqueSeenMonster );
         SurvivalHorrorSessionInternal::serializeSet( io, _uniqueReadDocument );
@@ -536,18 +537,6 @@ namespace sw
         SurvivalHorrorSessionInternal::serializeSet( io, _uniqueSolvedPuzzle );
         SurvivalHorrorSessionInternal::serializeMap( io, _mapDialAttempt );
         SurvivalHorrorSessionInternal::serializeMap( io, _mapSequenceProgress );
-        // 연결마다 이름 둘(8)
-        io.list( _listClueLink, 8, [&]( SurvivalHorrorClueLink& link )
-        {
-            io.value( link._first );
-            io.value( link._second );
-        } );
-        io.value( _currentArea );
-        io.value( _health );
-        io.value( _saveCount );
-        io.value( _wrongDeductionCount );
-        io.flag( _bFlashlightOn );
-        io.flag( _bHallucinating );
         if ( io.isReading() && io.isOk() )
         {
             io.check( isStateConsistent() );

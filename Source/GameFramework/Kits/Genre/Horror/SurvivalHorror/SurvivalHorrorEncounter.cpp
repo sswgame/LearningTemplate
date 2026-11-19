@@ -178,23 +178,10 @@ namespace sw
 
     void SurvivalHorrorEncounter::serializeState( StateIO& io )
     {
+        io.reflected( *this ); // 조사자 · 괴물 맷집 · 차례 수 · 전투 상태
         io.expect( _monster._id );
-        // 조사자마다 속도, 번호, 체력, 정신력, 의지, 힘(24) + 빠짐(1)
-        io.list( _listInvestigator, 25, [&]( SurvivalHorrorInvestigator& investigator )
-        {
-            io.value( investigator._speed );
-            io.value( investigator._actorID );
-            io.value( investigator._health );
-            io.value( investigator._sanity );
-            io.value( investigator._will );
-            io.value( investigator._strength );
-            io.flag( investigator._bDefeated );
-        } );
-        io.value( _turnOrder );
+        io.value( _turnOrder ); // 리플렉션 밖 값 — 자기 `serializeState` 가 있는 차례와 난수
         io.value( _random );
-        io.value( _monsterToughness );
-        io.value( _turnCount );
-        io.enumValue( _state, SurvivalHorrorEncounterState::Defeat );
         if ( io.isReading() && io.isOk() )
         {
             io.check( hasValidActorIDs( _listInvestigator ) && isStateConsistent() );

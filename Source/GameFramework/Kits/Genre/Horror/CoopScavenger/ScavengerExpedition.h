@@ -39,6 +39,7 @@ namespace sw
     class WorldClock;
 
     /** @brief 판의 단계입니다. */
+    ENUM()
     enum class ScavengerPhase : uint8
     {
         InOrbit = 0, ///< 궤도에 있다. 위성을 고르고 상점에서 산다
@@ -127,9 +128,12 @@ namespace sw
      *          - 날마다 이륙하면 할당량의 남은 날이 줄고, 마감 날(남은 날 0)의 이륙에서 판정한다. 못 채우면 게임 오버이다.
      *          시드가 같고 같은 순서로 호출하면 같은 시설, 날씨, 위협, 손실이 나온다.
      */
+    REFLECT()
     class SW_KIT_API ScavengerExpedition
     {
     public:
+        REFLECT_BODY();
+
         static constexpr const utf8* kShipAreaID    = "ship";
         static constexpr const utf8* kOutsideAreaID = "outside";
         static constexpr uint32      kStateTag      = FourCCUtil::make( "SCEX" );
@@ -214,6 +218,7 @@ namespace sw
 
     private:
         vector<ScavengerCrewMember> _listCrew;
+        PROPERTY( RuntimeState )
         vector<ScavengerScrap>      _listShipScrap;
         EventBuffer<ScavengerEvent> _eventBuffer;
         ScavengerExpeditionData     _data;
@@ -228,9 +233,13 @@ namespace sw
         WorldClock*                 _pClock;       ///< 빌린 시계이다. 떠나면 다음 날 도착 시각으로 넘긴다
         WeatherSystem*              _pWeather;     ///< 빌린 날씨이다. 내리면 그 위성의 날씨로 바꾼다
         const ScavengerMoonDef*     _pMoon;
-        uint32                      _seed;
-        float32                     _hoursOnMoon;
-        ScavengerPhase              _phase;
-        uint8                       _bDuskAnnounced;
+        PROPERTY( RuntimeState )
+        uint32 _seed;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _hoursOnMoon;
+        PROPERTY( RuntimeState )
+        ScavengerPhase _phase;
+        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        uint8 _bDuskAnnounced;
     };
 } // namespace sw

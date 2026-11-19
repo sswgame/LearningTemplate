@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerBody.h"
 
@@ -513,6 +514,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, StateRoundTripResumesEveryMode )
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, ReadRejectsBrokenBytes )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::ActionPlatformerBody source;
@@ -521,9 +523,13 @@ SW_TEST_CASE( ActionPlatformerBodyTest, ReadRejectsBrokenBytes )
     sw::Archive written;
     source.writeState( written );
 
-    // 끝에서: 위치(8) 속도(8) 밧줄 끝(8) 길이(4) 드릴 시간(4) 흙 안 표시(1) = 33 바이트. 맨 앞 1 바이트는 모드다.
-    const size_t size = static_cast<size_t>( written.getSize() );
-    SW_REQUIRE_TRUE( size > 34 );
+    // 리플렉션 머리 뒤 위치(8) 속도(8) 밧줄 끝(8) 길이(4) 모드(열거는 int64, 8) 흙 안 표시(1), 다음이 손 본문의 기반 몸과 드릴 시간이다.
+    const size_t size       = static_cast<size_t>( written.getSize() );
+    const size_t positionAt = sw::StateIO::kReflectedHeaderBytes;
+    const size_t ropeAt     = positionAt + 3 * sizeof( sw::float2 );
+    const size_t modeAt     = ropeAt + sizeof( float32 );
+    const size_t dirtAt     = modeAt + sizeof( int64 );
+    SW_REQUIRE_TRUE( size > dirtAt + 1 );
 
     sw::ActionPlatformerBody target;
     target.initialize( catalog );
@@ -537,18 +543,18 @@ SW_TEST_CASE( ActionPlatformerBodyTest, ReadRejectsBrokenBytes )
         SW_EXPECT_NEAR( 7.0f, target.getPosition()._x, kBodyTolerance );
     };
 
-    const uint8   badMode      = 9;
+    const int64   badMode      = 9;
     const uint8   badFlag      = 2;
     const float32 nan          = std::numeric_limits<float32>::quiet_NaN();
     const float32 infinity     = std::numeric_limits<float32>::infinity();
     const float32 negativeRope = -1.0f;
-    expectRejected( 0, &badMode, sizeof( badMode ) );
-    expectRejected( size - 1, &badFlag, sizeof( badFlag ) );
-    expectRejected( size - 33, &nan, sizeof( nan ) );           // 위치
-    expectRejected( size - 25, &infinity, sizeof( infinity ) ); // 속도
-    expectRejected( size - 17, &nan, sizeof( nan ) );           // 밧줄 끝
-    expectRejected( size - 9, &negativeRope, sizeof( negativeRope ) );
-    expectRejected( size - 9, &nan, sizeof( nan ) );
+    expectRejected( modeAt, &badMode, sizeof( badMode ) );
+    expectRejected( dirtAt, &badFlag, sizeof( badFlag ) );
+    expectRejected( positionAt, &nan, sizeof( nan ) );                                  // 위치
+    expectRejected( positionAt + sizeof( sw::float2 ), &infinity, sizeof( infinity ) ); // 속도
+    expectRejected( positionAt + 2 * sizeof( sw::float2 ), &nan, sizeof( nan ) );       // 밧줄 끝
+    expectRejected( ropeAt, &negativeRope, sizeof( negativeRope ) );
+    expectRejected( ropeAt, &nan, sizeof( nan ) );
 
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( target.readState( truncated ) );

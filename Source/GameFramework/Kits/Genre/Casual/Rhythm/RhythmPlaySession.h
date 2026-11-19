@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -65,6 +66,7 @@ namespace sw
 namespace sw
 {
     /** @brief 한 판의 상태입니다. */
+    ENUM()
     enum class RhythmPlayState : uint8
     {
         Playing = 0,
@@ -95,11 +97,17 @@ namespace sw
 namespace sw
 {
     /** @brief 입력 하나입니다. 기록해 두었다가 같은 순서로 다시 넣으면 같은 판이 됩니다(리플레이). */
+    REFLECT()
     struct RhythmInputRecord
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         float32 _time{ 0.0f };
-        int32   _lane{ 0 };
-        uint8   _bPress{ SW_TRUE };
+        PROPERTY( Min = 0 )
+        int32 _lane{ 0 }; ///< 상한(레인 수)은 채보가 정한다 — `RhythmPlaySession::serializeState` 가 본다
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bPress{ SW_TRUE };
     };
 } // namespace sw
 
@@ -116,9 +124,12 @@ namespace sw
      *          - 콤보는 Miss 와 `_bBreaksCombo` 창에서 끊긴다. 라이프가 0 이 되면 실패하고 더 판정하지 않는다.
      *          채보와 판정기는 빌려 쓰므로 판보다 오래 살아야 하고 바뀌지 않아야 한다. 같은 입력이면 같은 결과가 나온다(난수 없음).
      */
+    REFLECT()
     class SW_KIT_API RhythmPlaySession
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "RHYP" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -185,21 +196,31 @@ namespace sw
         void                   finishIfDone();
 
     private:
-        RhythmPlaySettings        _settings;
-        vector<LaneQueue>         _listLane;
-        vector<int32>             _listGradeCount; ///< 판정기의 창 순서(좁은 것부터)를 따른다
-        EventBuffer<RhythmEvent>  _eventBuffer;
+        RhythmPlaySettings       _settings;
+        vector<LaneQueue>        _listLane;
+        vector<int32>            _listGradeCount; ///< 판정기의 창 순서(좁은 것부터)를 따른다
+        EventBuffer<RhythmEvent> _eventBuffer;
+        PROPERTY( RuntimeState )
         vector<RhythmInputRecord> _listInputRecord;
         const RhythmChart*        _pChart;
         const TimingJudge*        _pJudge;
-        int64                     _score;
-        float64                   _accuracyWeightSum;
-        float32                   _life;
-        float32                   _now;
-        int32                     _combo;
-        int32                     _maxCombo;
-        int32                     _missCount;
-        int32                     _judgedCount;
-        RhythmPlayState           _state;
+        PROPERTY( RuntimeState )
+        int64 _score;
+        PROPERTY( RuntimeState, Min = 0 )
+        float64 _accuracyWeightSum;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _life;
+        PROPERTY( RuntimeState )
+        float32 _now;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _combo;
+        PROPERTY( RuntimeState )
+        int32 _maxCombo;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _missCount;
+        PROPERTY( RuntimeState )
+        int32 _judgedCount;
+        PROPERTY( RuntimeState )
+        RhythmPlayState _state;
     };
 } // namespace sw

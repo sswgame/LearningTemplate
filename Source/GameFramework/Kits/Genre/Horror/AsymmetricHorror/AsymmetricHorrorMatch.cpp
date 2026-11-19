@@ -1212,10 +1212,10 @@ namespace sw
                 return;
             *this = std::move( restored );
         }
-        uint8 bStarted = _bStarted;
+        // 리플렉션 상태 칸(해치 자리 · 완료 수 · 팀 · 걸음 수 · 깃발)은 새 판으로 덮은 뒤에 읽는다 — 앞에 읽으면 덮기가 지운다.
+        io.reflected( *this );
+        uint8 bStarted = _bStarted; // 판을 열지 정하는 값이라 끝까지 맞을 때만 옮긴다
         io.flag( bStarted );
-        io.flag( _bEndReported );
-        io.value( _tick );
         io.value( _timer );
         if ( io.isOk() == false )
             return;
@@ -1224,17 +1224,8 @@ namespace sw
             _match.initialize( bStarted == SW_TRUE ? makeMatchSettings() : MatchSettings{} );
         }
         io.value( _match );
-        io.value( _survivorTeam );
-        io.value( _killerTeam );
-        io.value( _completedGeneratorCount );
-        io.flag( _bGatesPowered );
-        io.flag( _bHatchPlaced );
-        io.flag( _bHatchOpen );
-        io.flag( _bHatchClosed );
-        io.flag( _bCollapseStarted );
-        io.value( _collapseRemaining );
-        io.value( _hatchPosition );
-        if ( io.check( 0 <= _completedGeneratorCount ) == false )
+        io.value( _collapseRemaining ); // 리플렉션 밖 값 — `Countdown` 은 늦음까지 싣는 손 코덱이 있다
+        if ( io.isOk() == false )
             return;
 
         // 무대: 위치를 먼저 싣고(읽는 쪽이 add... 로 다시 만든다) 그 위에 상태를 덮는다.

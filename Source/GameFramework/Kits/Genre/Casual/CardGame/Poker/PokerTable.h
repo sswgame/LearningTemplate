@@ -5,6 +5,7 @@
  *          받은 쪽에서 `applyAction` 으로 같은 순서대로 적용하면 모두 같은 판이 된다(덱은 같은 시드로 섞는다).
  */
 #pragma once
+#include "Core/Container/array.h"
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
@@ -25,6 +26,7 @@ namespace sw
     class Archive;
 
     /** @brief 스트리트입니다. */
+    ENUM()
     enum class PokerStreet : uint8
     {
         Preflop = 0,
@@ -62,16 +64,28 @@ namespace sw
 namespace sw
 {
     /** @brief 자리 하나입니다. */
+    REFLECT()
     struct PokerSeat
     {
-        Card  _arrHole[2]{};
-        int32 _stack{ 0 };       ///< 앞에 남은 칩
-        int32 _committed{ 0 };   ///< 이번 스트리트에 낸 칩
+        REFLECT_BODY();
+
+        PROPERTY()
+        array<Card, 2> _arrHole{};
+        PROPERTY( Min = 0 )
+        int32 _stack{ 0 }; ///< 앞에 남은 칩
+        PROPERTY( Min = 0 )
+        int32 _committed{ 0 }; ///< 이번 스트리트에 낸 칩
+        PROPERTY( Min = 0 )
         int32 _contributed{ 0 }; ///< 이번 판에 낸 칩 전부이다(팟 계산에 쓴다)
-        int32 _won{ 0 };         ///< 지난 판에 받은 칩
+        PROPERTY( Min = 0 )
+        int32 _won{ 0 }; ///< 지난 판에 받은 칩
+        PROPERTY( Min = 0, Max = 1 )
         uint8 _bInHand{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
         uint8 _bFolded{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
         uint8 _bAllIn{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
         uint8 _bActed{ SW_FALSE }; ///< 마지막 레이즈 뒤에 행동했는지 나타낸다
     };
 } // namespace sw
@@ -79,10 +93,15 @@ namespace sw
 namespace sw
 {
     /** @brief 팟 하나(메인 또는 사이드)입니다. */
+    REFLECT()
     struct SW_KIT_API PokerPot
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         vector<int32> _listEligibleSeat{}; ///< 이 팟을 가져갈 수 있는 자리이다(폴드하지 않았고 이만큼 냈다)
-        int32         _amount{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _amount{ 0 };
 
         /**
          * @brief 자리별로 낸 금액에서 메인 팟과 사이드 팟을 만듭니다. 폴드한 자리의 칩은 팟에 들어가지만 가져갈 수 없습니다.
@@ -128,9 +147,12 @@ namespace sw
      *          최소 레이즈는 "직전 레이즈 크기만큼 더"(처음에는 빅 블라인드)이다. 그보다 작은 올인은 받아 주되 최소 증액을 바꾸지 않는다
      *          (단순화: 이미 행동한 사람도 다시 레이즈할 수 있다). 카드를 태우지(burn) 않는다.
      */
+    REFLECT()
     class SW_KIT_API PokerTable
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CPKR" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -185,16 +207,23 @@ namespace sw
         void            finishUncontested( int32 winnerSeat );
 
     private:
-        vector<PokerSeat>       _listSeat;
+        PROPERTY( RuntimeState )
+        vector<PokerSeat> _listSeat;
+        PROPERTY( RuntimeState )
         vector<PokerPot>        _listLastPot;
         EventBuffer<PokerEvent> _eventBuffer;
         CardPile                _deck;
         CardPile                _board;
         PokerSettings           _settings;
-        int32                   _button;
-        int32                   _currentSeat;
-        int32                   _currentBet;
-        int32                   _lastRaiseSize;
-        PokerStreet             _street;
+        PROPERTY( RuntimeState, Min = -1 )
+        int32 _button;
+        PROPERTY( RuntimeState, Min = -1 )
+        int32 _currentSeat;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _currentBet;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _lastRaiseSize;
+        PROPERTY( RuntimeState )
+        PokerStreet _street;
     };
 } // namespace sw

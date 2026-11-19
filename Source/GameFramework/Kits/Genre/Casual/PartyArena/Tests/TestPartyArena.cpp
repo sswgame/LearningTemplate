@@ -30,7 +30,7 @@ namespace
     constexpr const utf8* kPartyShieldXML = R"(<PartyItems minInterval="0" maxInterval="1000" lifetime="0" height="0" maxActive="1"><Item id="shield" effect="Shield"/></PartyItems>)";
 
     // `writePlayer` 의 배치(사람 머리부터의 바이트). 꾸민 바이트를 쓰려고 적는다.
-    constexpr size_t kPartyFirstPlayer     = 4; ///< 사람 수(uint32) 뒤
+    constexpr size_t kPartyFirstPlayer     = StateIO::kReflectedHeaderBytes + sizeof( float32 ) + sizeof( uint32 ); ///< 리플렉션 머리 · 경기 시각 · 사람 수 뒤
     constexpr size_t kPartyFieldPosition   = 0;
     constexpr size_t kPartyFieldInputFlag  = 44;
     constexpr size_t kPartyFieldTaken      = 83;
@@ -679,6 +679,7 @@ SW_TEST_CASE_F( PartyArenaRulesTest, StateRoundTripContinuesIdentically )
  */
 SW_TEST_CASE_F( PartyArenaRulesTest, CraftedBytesAreRefused )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_REQUIRE_TRUE( open() );
     SW_REQUIRE_TRUE( readInFreshArena( writeBytes( _arena ) ) );
     const size_t head = kPartyFirstPlayer;
@@ -693,7 +694,7 @@ SW_TEST_CASE_F( PartyArenaRulesTest, CraftedBytesAreRefused )
     SW_EXPECT_FALSE( readPatched<float32>( head + kPartyFieldTaken, -1.0f ) );
     SW_EXPECT_FALSE( readPatched<float32>( head + kPartyFieldDealt, -1.0f ) );
     SW_EXPECT_FALSE( readPatched<float32>( head + kPartyFieldPosition, std::numeric_limits<float32>::quiet_NaN() ) );
-    SW_EXPECT_FALSE( readPatched<float32>( writeBytes( _arena ).size() - sizeof( float32 ), -1.0f ) ); // 끝의 시각
+    SW_EXPECT_FALSE( readPatched<float32>( StateIO::kReflectedHeaderBytes, -1.0f ) ); // 경기 시각(리플렉션 칸)
 }
 
 /**

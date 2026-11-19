@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -26,9 +27,12 @@ namespace sw
      * @class MetroidvaniaAbilitySet
      * @brief 캐릭터 하나가 얻은 능력과, 거기서 나온 몸 설정입니다.
      */
+    REFLECT()
     class SW_KIT_API MetroidvaniaAbilitySet
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "MABL" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -66,6 +70,7 @@ namespace sw
     private:
         const MetroidvaniaCatalog* _pCatalog;
         PlatformerSettings         _baseSettings;
-        vector<hashed_string>      _listAbility; ///< 얻은 순서
+        PROPERTY( RuntimeState )
+        vector<hashed_string> _listAbility; ///< 얻은 순서
     };
 } // namespace sw

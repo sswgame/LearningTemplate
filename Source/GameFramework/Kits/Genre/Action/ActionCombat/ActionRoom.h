@@ -13,6 +13,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Physics/Collision/CollisionLayers.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -29,6 +30,7 @@ namespace sw
     // 1) 룸 종류와 프레임 입출력(FacingDir 은 Utility/FacingDir.h)
     // ------------------------------------------------------------------------------
     /** @brief 액션 룸 전투 종류입니다. */
+    ENUM()
     enum class ActionRoomKind : uint8
     {
         None = 0,
@@ -150,9 +152,12 @@ namespace sw
      *          적의 탄은 단일 발사체 시뮬레이션(`ProjectileSimulation`)을 룸 평면(x, y, z = 0)에 묶어 돌리고, 플레이어 맞음(무적 · 한 프레임 한 번)만 룸이 본다.
      *          탄 수치는 사격 줄이 가리키는 탄 정의(게임 서비스 `ProjectileCatalog`)다. 몬스터 카탈로그와 같은 길(서비스)로 받고, 종을 처음 세울 때 그 종의 탄을 함께 풀어 둔다.
      */
+    REFLECT()
     class SW_KIT_API ActionRoom
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "AROM" );
         static constexpr uint32 kStateVersion = 4; ///< 4: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다), 3: 탄의 정의 이름이 탄 정의 id 다(2 는 비어 있었다)
 
@@ -209,6 +214,7 @@ namespace sw
 
         /**
          * @brief 종류, 클리어, 공격, 대시, 무적 남은 시간, 이번 싸움의 종 id를 씁니다(보스 최대 체력 같은 수치는 정의가 가지고 있습니다). 적(위치, 체력, 사격 시간, 종 인덱스, 생존)과 투사체도 씁니다.
+         *        종류 · 클리어는 리플렉션 상태 칸이고, 나머지(`Countdown`, 종 id 로 다시 찾는 정의, 적 목록, 투사체)는 손 본문이 싣습니다.
          *        위치 정보(`ActionRoomSite`)는 게임이 `setSite` 로 설정하는 값이고 충돌 레이어는 생성자에서 정하는 값이라 싣지 않습니다.
          *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 종 정의는 지금의 카탈로그 서비스에서 다시 찾습니다. 카탈로그에 없는 종이거나 체력이 그 종의 최대를 넘거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          *        상태를 바꿔도 룸 이벤트(게이트, 클리어)는 내지 않습니다.
@@ -276,9 +282,10 @@ namespace sw
         AABB playerAttackBox( float32 x, float32 y, FacingDir facing ) const;
 
     private:
-        ActionRoomSite               _site;
-        ActionRoomSettings           _settings;
-        ActionRoomLayout             _layout;
+        ActionRoomSite     _site;
+        ActionRoomSettings _settings;
+        ActionRoomLayout   _layout;
+        PROPERTY( RuntimeState )
         ActionRoomKind               _kind;
         CollisionLayers              _layers;
         vector<Actor>                _listActor;
@@ -288,7 +295,8 @@ namespace sw
         Countdown                    _attackCooldown;
         Countdown                    _dashCooldown;
         Countdown                    _invulnerable; ///< 피격 후 무적 시간
-        uint8                        _bCleared : 1;
-        [[maybe_unused]] uint8       _reserved : 7;
+        PROPERTY( RuntimeState )
+        uint8                  _bCleared : 1;
+        [[maybe_unused]] uint8 _reserved : 7;
     };
 } // namespace sw

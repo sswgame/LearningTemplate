@@ -15,6 +15,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -66,9 +67,12 @@ namespace sw
      * @class ActionCombatSimulation
      * @brief 플레이어 하나의 근접, 총, 패리와 화면 위의 투사체입니다.
      */
+    REFLECT()
     class SW_KIT_API ActionCombatSimulation
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32  kStateTag     = FourCCUtil::make( "APCR" );
         static constexpr uint32  kStateVersion = 3;            ///< 3: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
         static constexpr float32 kFrameTime    = 1.0f / 60.0f; ///< 한 프레임의 시간(탄과 총에 쓴다)
@@ -137,10 +141,14 @@ namespace sw
         WeaponState                    _gun;
         ProjectileSimulation           _projectiles;
         EventBuffer<ActionCombatEvent> _eventBuffer;
-        int32                          _comboIndex; ///< 지금 기술의 콤보 인덱스(−1이면 쉬는 중)
-        int32                          _attackBufferFrames;
-        int32                          _parryFrames;
-        int32                          _hitstopFrames;
-        uint8                          _bGunEquipped;
+        PROPERTY( RuntimeState, Min = -1 )
+        int32 _comboIndex; ///< 지금 기술의 콤보 인덱스(−1이면 쉬는 중)
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _attackBufferFrames;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _parryFrames;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _hitstopFrames;
+        uint8 _bGunEquipped;
     };
 } // namespace sw

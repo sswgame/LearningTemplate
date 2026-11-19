@@ -471,9 +471,8 @@ namespace sw
 
     void ActionRoom::serializeState( StateIO& io )
     {
-        io.enumValue( _kind, ActionRoomKind::Boss );
-        SW_STATE_BITFLAG( io, _bCleared );
-        io.value( _attackCooldown );
+        io.reflected( *this );
+        io.value( _attackCooldown ); // 리플렉션 밖 값 — `Countdown` 은 늦음까지 싣는 손 코덱이 있다
         io.value( _dashCooldown );
         io.value( _invulnerable );
 

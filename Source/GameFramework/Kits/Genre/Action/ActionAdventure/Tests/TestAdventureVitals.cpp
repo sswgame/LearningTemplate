@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureVitals.h"
 
@@ -296,17 +297,24 @@ SW_TEST_CASE( AdventureVitalsTest, StateRoundTripKeepsEverything )
  */
 SW_TEST_CASE( AdventureVitalsTest, ReadRejectsValuesAboveTheirMax )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::AdventureVitals source;
     sw::Archive         written;
     source.writeState( written );
     const size_t size = static_cast<size_t>( written.getSize() );
-    // 앞에서: 하트 수(4) 조각(4) 두 배 마법(1), 다음이 체력(첫 칸이 체력 값). 뒤에서: 게이지 하나는 리플렉션 머리(판 4 + 칸 배치 해시 8) 값(4) 보너스(4) 재생 배율(4) 경과(4) 잠김(1)
-    // 뒤에 손 본문의 벌칙(4) = 33 바이트로(`ResourceGauge::serializeState`) 마력, 지구력 순이다.
-    constexpr size_t kGaugeSize       = 33;
-    constexpr size_t kGaugeHeaderSize = 12;
-    SW_REQUIRE_TRUE( size > 9 + 2 * kGaugeSize );
-    const size_t magicAt   = size - 2 * kGaugeSize + kGaugeHeaderSize;
-    const size_t staminaAt = size - kGaugeSize + kGaugeHeaderSize;
+    // 자리는 부분 바이트의 길이에서 센다. 앞: 리플렉션 머리 뒤 하트 수(4) 조각(4) 두 배 마법(1), 다음이 체력(첫 칸이 체력 값). 뒤: 마력, 지구력 게이지 순이고
+    // 게이지는 리플렉션 머리 뒤 값(4) 보너스(4) 순이다.
+    sw::Archive magicBytes;
+    source.getMagic().writeState( magicBytes );
+    sw::Archive staminaBytes;
+    source.getStamina().writeState( staminaBytes );
+    const size_t header      = sw::StateIO::kReflectedHeaderBytes;
+    const size_t healthAt    = header + 9;
+    const size_t magicSize   = static_cast<size_t>( magicBytes.getSize() );
+    const size_t staminaSize = static_cast<size_t>( staminaBytes.getSize() );
+    SW_REQUIRE_TRUE( size > healthAt + magicSize + staminaSize );
+    const size_t magicAt   = size - magicSize - staminaSize + header;
+    const size_t staminaAt = size - staminaSize + header;
 
     sw::AdventureVitals target;
     SW_EXPECT_FALSE( target.applyDamage( 1 ) );
@@ -317,7 +325,7 @@ SW_TEST_CASE( AdventureVitalsTest, ReadRejectsValuesAboveTheirMax )
         SW_EXPECT_EQUAL( 3, target.getHeartCount() );
     };
     const float32 huge = 1.0e6f;
-    expectRejected( 9, huge );              // 체력 > 하트 × 4
+    expectRejected( healthAt, huge );       // 체력 > 하트 × 4
     expectRejected( magicAt, huge );        // 마력 > 최대
     expectRejected( staminaAt, huge );      // 지구력 > 최대
     expectRejected( magicAt + 4, 5.0f );    // 받지 않은 두 배 마법의 보너스
@@ -325,11 +333,11 @@ SW_TEST_CASE( AdventureVitalsTest, ReadRejectsValuesAboveTheirMax )
     expectRejected( staminaAt + 4, huge );  // 그릇 상한 초과
     expectRejected( staminaAt + 4, -1.0f ); // 음수 보너스
     expectRejected( staminaAt + 4, std::numeric_limits<float32>::quiet_NaN() );
-    expectRejected( 0, static_cast<int32>( 0 ) );  // 하트 수 0
-    expectRejected( 0, static_cast<int32>( 21 ) ); // 최대 초과
-    expectRejected( 4, static_cast<int32>( 4 ) );  // 조각 = 그릇 하나 분량
-    expectRejected( 4, static_cast<int32>( -1 ) );
-    expectRejected( 8, static_cast<uint8>( 2 ) );
+    expectRejected( header, static_cast<int32>( 0 ) );     // 하트 수 0
+    expectRejected( header, static_cast<int32>( 21 ) );    // 최대 초과
+    expectRejected( header + 4, static_cast<int32>( 4 ) ); // 조각 = 그릇 하나 분량
+    expectRejected( header + 4, static_cast<int32>( -1 ) );
+    expectRejected( header + 8, static_cast<uint8>( 2 ) );
 
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( target.readState( truncated ) );

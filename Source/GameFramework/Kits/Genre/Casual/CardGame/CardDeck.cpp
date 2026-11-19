@@ -86,13 +86,7 @@ namespace sw
 
     void CardPile::serializeState( StateIO& io )
     {
-        // 카드마다 번호(2) + 무늬(1) + 숫자(1)
-        io.list( _listCard, 4, [&]( Card& card )
-        {
-            io.value( card._id );
-            io.value( card._suit );
-            io.value( card._rank );
-        } );
+        io.reflected( *this ); // 카드 목록(리플렉션 상태 칸)
         if ( io.isReading() && io.isOk() )
         {
             // 더미에는 빈 카드가 들어가지 않는다. 겹친 번호는 `takeByID` 가 앞의 것만 찾아 뒤의 것이 남는다.

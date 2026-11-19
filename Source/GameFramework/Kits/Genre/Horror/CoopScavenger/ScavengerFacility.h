@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -25,16 +26,28 @@ namespace sw
     class ScavengerCatalog;
 
     /** @brief 주울 수 있는 것 하나(고철 또는 동료 시신)입니다. */
+    REFLECT()
     struct ScavengerScrap
     {
+        REFLECT_BODY();
+
+        // 범위는 칸의 `PROPERTY( Min · Max )` 다 — 무게가 NaN 이면 이동 속도가, 음수 가치면 매입액이 깨진다. 시신 번호가 사람 수 안인지는 사람을 아는 `ScavengerExpedition` 이 본다.
+        PROPERTY()
         hashed_string _scrapID{};
+        PROPERTY()
         hashed_string _areaID{}; ///< 놓인 방이다(들려 있으면 비어 있다)
-        float32       _weight{ 0.0f };
-        int32         _uid{ 0 };
-        int32         _value{ 0 };
-        int32         _bodyOf{ constant::invalid_index::kInt32 }; ///< 시신이면 그 사람의 번호이다
-        int32         _day{ constant::invalid_index::kInt32 };    ///< 우주선에 실은 날이다(전멸 손실과 기록에 쓴다)
-        uint8         _bTwoHanded{ SW_FALSE };
+        PROPERTY( Min = 0 )
+        float32 _weight{ 0.0f };
+        PROPERTY()
+        int32 _uid{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _value{ 0 };
+        PROPERTY( Min = -1 )
+        int32 _bodyOf{ constant::invalid_index::kInt32 }; ///< 시신이면 그 사람의 번호이다
+        PROPERTY()
+        int32 _day{ constant::invalid_index::kInt32 }; ///< 우주선에 실은 날이다(전멸 손실과 기록에 쓴다)
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bTwoHanded{ SW_FALSE };
 
         bool isBody() const { return _bodyOf >= 0; }
     };
@@ -50,12 +63,14 @@ namespace sw
      *          화재 출구가 바깥으로 난다. 고철은 위성의 목록에서 `spawnWeight` 로 고르고, 가치는 정의 범위 x 위성 배율 x 날씨 배율이다.
      *          같은 시드와 같은 위성이면 같은 지도와 같은 고철이 나온다.
      */
+    REFLECT()
     class SW_KIT_API ScavengerFacility
     {
     public:
-        static constexpr uint32 kStateTag      = FourCCUtil::make( "SCFC" );
-        static constexpr uint32 kStateVersion  = 1;
-        static constexpr uint32 kMinScrapBytes = 29; ///< 고철 하나가 차지하는 최소 바이트 수(이름 둘, 무게, 번호, 가치, 시신, 날, 양손)
+        REFLECT_BODY();
+
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "SCFC" );
+        static constexpr uint32 kStateVersion = 1;
 
         ScavengerFacility();
 
@@ -85,7 +100,7 @@ namespace sw
         int32 getLockedDoorCount() const { return _lockedDoorCount; }
 
         /**
-         * @brief 지도를 만든 위성 id 와 시드, 바닥 고철, 빌린 플래그에 둔 잠금 해제 목록, 다음 고유 번호, 방 수, 잠긴 문 수를 씁니다.
+         * @brief 지도를 만든 위성 id 와 시드, 바닥 고철, 빌린 플래그에 둔 잠금 해제 목록, 다음 고유 번호, 방 수, 잠긴 문 수를 씁니다(모두 리플렉션 상태 칸 — 범위는 칸의 `PROPERTY( Min )`).
          *        그래프는 위성과 시드로 다시 만들 수 있으므로 저장하지 않고, 빌린 플래그 자체도 저장하지 않습니다(주인이 저장합니다).
          *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 그래프는 빌린 카탈로그의 위성으로 다시 만듭니다. 데이터가 깨졌거나, 만든 지도가 있는데 카탈로그가 없거나 없는 위성이면 false 를 반환하고 상태는 그대로입니다.
          */
@@ -93,19 +108,23 @@ namespace sw
         /** @brief 지도를 다시 만들 카탈로그를 빌립니다. 새 객체에 `readState` 하기 전에 호출해야 합니다(`createLayout` 도 이 값을 설정합니다). */
         void bindCatalog( const ScavengerCatalog* pCatalog ) { _pCatalog = pCatalog; }
 
-        /** @brief 고철 하나를 놓습니다(운반 슬롯, 우주선, 바닥이 함께 씁니다). 무게 · 가치가 범위 밖이면 거절합니다. 시신 번호가 사람 수 안인지는 사람을 아는 `ScavengerExpedition` 이 봅니다. */
-        static void serializeScrap( StateIO& io, ScavengerScrap& scrap );
-
     private:
-        AreaGraph               _graph;
-        vector<ScavengerScrap>  _listGroundScrap;
-        vector<hashed_string>   _listUnlockedFlag; ///< 이 시설이 빌린 플래그에 둔 것이다(하루가 끝나면 이것만 지운다)
-        hashed_string           _layoutMoonID;     ///< 그래프를 만든 위성이다(비어 있으면 만든 적이 없다. `clear` 뒤에도 그래프와 함께 남는다)
-        GameFlags*              _pFlags;           ///< 빌린 플래그
-        const ScavengerCatalog* _pCatalog;         ///< 빌린 카탈로그이다(지도를 다시 만들 때 쓴다)
-        uint32                  _layoutSeed;       ///< 그래프를 만든 시드
-        int32                   _nextUid;
-        int32                   _roomCount;
-        int32                   _lockedDoorCount;
+        AreaGraph _graph;
+        PROPERTY( RuntimeState )
+        vector<ScavengerScrap> _listGroundScrap;
+        PROPERTY( RuntimeState )
+        vector<hashed_string> _listUnlockedFlag; ///< 이 시설이 빌린 플래그에 둔 것이다(하루가 끝나면 이것만 지운다)
+        PROPERTY( RuntimeState )
+        hashed_string           _layoutMoonID; ///< 그래프를 만든 위성이다(비어 있으면 만든 적이 없다. `clear` 뒤에도 그래프와 함께 남는다)
+        GameFlags*              _pFlags;       ///< 빌린 플래그
+        const ScavengerCatalog* _pCatalog;     ///< 빌린 카탈로그이다(지도를 다시 만들 때 쓴다)
+        PROPERTY( RuntimeState )
+        uint32 _layoutSeed; ///< 그래프를 만든 시드
+        PROPERTY( RuntimeState, Min = 1 )
+        int32 _nextUid;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _roomCount;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _lockedDoorCount;
     };
 } // namespace sw

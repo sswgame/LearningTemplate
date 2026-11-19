@@ -262,6 +262,7 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
+        io.reflected( *this ); // 적(의도 · 체력 · 방어) · 플레이어 체력 · 방어 · 기력 · 턴 · 단계 — 바닥은 칸의 `PROPERTY( Min )`
         // 카드마다 정의 id 이름(4) 이상
         io.list( _listDefIndex, 4, [&]( int32& defIndex )
         {
@@ -278,26 +279,10 @@ namespace sw
         io.value( _hand );
         io.value( _discardPile );
         io.value( _exhaustPile );
-        // 의도마다 종류(1) + 양(4)
-        io.list( _enemy._listIntent, 5, [&]( CardBattleEffect& intent )
-        {
-            io.enumValue( intent._kind, CardBattleEffectKind::Energy );
-            io.value( intent._amount );
-            io.check( 0 <= intent._amount ); // 음수 공격은 `endTurn` 의 빼기가 더하기로 뒤집혀 체력과 방어를 채운다
-        } );
-        io.value( _enemy._hp );
-        io.value( _enemy._block );
-        io.value( _enemy._intentIndex );
         io.value( _random );
-        io.value( _playerHP );
-        io.value( _playerBlock );
-        io.value( _energy );
-        io.value( _turn );
-        io.enumValue( _phase, CardBattlePhase::Lost );
         if ( io.isWriting() || io.isOk() == false )
             return;
-        io.check( 0 <= _enemy._hp && 0 <= _enemy._block && 0 <= _enemy._intentIndex );
-        io.check( 0 <= _playerHP && _playerHP <= _settings._playerHP && 0 <= _playerBlock && 0 <= _energy && 0 <= _turn );
+        io.check( _playerHP <= _settings._playerHP ); // 상한은 설정이 정한다
         // 끝난 판은 끝난 이유가 값에 남는다(이긴 적 없는데 이겼다고 적은 바이트를 받지 않는다).
         io.check( ( _phase != CardBattlePhase::Won || _enemy._hp == 0 ) && ( _phase != CardBattlePhase::Lost || _playerHP == 0 ) );
         io.check( _hand.getCount() <= _settings._handLimit && CardBattleInternal::arePilesExactlyDeck( { &_drawPile, &_hand, &_discardPile, &_exhaustPile }, _listDefIndex.size() ) );

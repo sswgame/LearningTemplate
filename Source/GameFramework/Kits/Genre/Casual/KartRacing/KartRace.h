@@ -26,6 +26,7 @@
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -164,11 +165,14 @@ namespace sw
      *     // 매 프레임: race.setInput( 0, input ); race.update( deltaTime ); race.pollEvents( listEvent );
      * @endcode
      */
+    REFLECT()
     class SW_KIT_API KartRace
     {
         friend class KartProjectileQuery;
 
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "KRAC" );
         static constexpr uint32 kStateVersion = 3; ///< 3: 꿰뚫은 대상이 상한 없는 목록이다(탄 한 줄 길이가 바뀌었다)
 
@@ -266,12 +270,16 @@ namespace sw
         const KartItemCatalog*     _pItemCatalog;
         const ProjectileCatalog*   _pProjectileCatalog;
         KartGhost*                 _pGhost;
-        float32                    _raceTime;
-        Countdown                  _countdown;
-        float32                    _bestLapTime;
-        float32                    _firstFinishTime; ///< 0 보다 작으면 아직 아무도 들어오지 않은 것이다
-        int32                      _ghostRacer;
-        int32                      _finishedCount;
-        MatchPhase                 _phase;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32   _raceTime;
+        Countdown _countdown;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _bestLapTime;
+        PROPERTY( RuntimeState )
+        float32 _firstFinishTime; ///< 0 보다 작으면 아직 아무도 들어오지 않은 것이다
+        int32   _ghostRacer;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32      _finishedCount;
+        MatchPhase _phase;
     };
 } // namespace sw

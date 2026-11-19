@@ -238,6 +238,7 @@ namespace sw
     {
         if ( io.check( _pChart != nullptr ) == false )
             return;
+        io.reflected( *this ); // 입력 기록 · 점수 · 정확도 합 · 라이프 · 시각 · 콤보 · 놓침 · 판정 수 · 상태 — 바닥은 칸의 `PROPERTY( Min )`
         // 같은 채보(노트 수와 레인 수)로 `initialize` 한 판이어야 한다. 레인 대기열은 채보에서 다시 만든 것을 쓴다.
         io.expect( static_cast<uint32>( _pChart != nullptr ? _pChart->getNotes().size() : 0 ) );
         io.expect( static_cast<uint32>( _listLane.size() ) );
@@ -267,29 +268,16 @@ namespace sw
             io.check( 0 <= gradeCount );
             gradeSum += gradeCount;
         }
-        // 입력마다 시각(4) + 레인(4) + 누름(1)
-        io.list( _listInputRecord, 9, [&]( RhythmInputRecord& record )
-        {
-            io.value( record._time );
-            io.value( record._lane );
-            io.flag( record._bPress );
-            io.check( 0 <= record._lane && static_cast<size_t>( record._lane ) < _listLane.size() );
-        } );
-        io.value( _score );
-        io.value( _accuracyWeightSum );
-        io.value( _life );
-        io.value( _now );
-        io.value( _combo );
-        io.value( _maxCombo );
-        io.value( _missCount );
-        io.value( _judgedCount );
-        io.enumValue( _state, RhythmPlayState::Failed );
-        if ( io.isWriting() || io.check( 0 <= _combo && _combo <= _maxCombo ) == false )
+        if ( io.isWriting() || io.check( _combo <= _maxCombo ) == false )
             return;
+        for ( const RhythmInputRecord& record : _listInputRecord )
+        {
+            io.check( static_cast<size_t>( record._lane ) < _listLane.size() ); // 레인 수는 채보가 정한다
+        }
         // 판정 하나는 창 하나나 놓침 하나에 들어가고, 머리를 지난 노트마다 판정이 있었다. 합이 맞지 않으면 판정 없이 지나간 노트나 공짜 점수이다.
-        io.check( 0 <= _missCount && _judgedCount <= _pChart->getJudgmentCount() && gradeSum + _missCount == _judgedCount && cursorSum <= _judgedCount && _maxCombo <= _judgedCount );
+        io.check( _judgedCount <= _pChart->getJudgmentCount() && gradeSum + _missCount == _judgedCount && cursorSum <= _judgedCount && _maxCombo <= _judgedCount );
         // 정확도 합은 판정마다 0..1 을 더한 값이고 라이프는 `applyJudgment` 가 0..최대로 자른다.
-        io.check( 0.0 <= _accuracyWeightSum && _accuracyWeightSum <= static_cast<float64>( _judgedCount ) && 0.0f <= _life && _life <= _settings._maxLife );
+        io.check( _accuracyWeightSum <= static_cast<float64>( _judgedCount ) && _life <= _settings._maxLife );
         // 끝난 판은 끝난 이유가 값에 남는다.
         io.check( ( _state != RhythmPlayState::Cleared || _judgedCount == _pChart->getJudgmentCount() ) && ( _state != RhythmPlayState::Failed || _life == 0.0f ) );
         // 깎는 창이 없으면 점수는 음수가 되지 못한다.

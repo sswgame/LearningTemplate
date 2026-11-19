@@ -109,14 +109,12 @@ namespace sw
 
     void ActionEnemyBrain::serializeState( StateIO& io )
     {
+        io.reflected( *this ); // 상태 프레임 · 방향 · 들어섬 — 범위는 칸의 `PROPERTY( Min · Max )`
         io.reference( _pPattern, [this]( const hashed_string& id )
         { return _pCatalog != nullptr ? _pCatalog->findPattern( id ) : nullptr; } );
         hashed_string stateID = io.isWriting() ? getStateID() : hashed_string{};
         io.value( stateID );
-        io.value( _stateFrame );
-        io.value( _facing );
-        io.flag( _bEntered );
-        io.check( 0 <= _stateFrame && ( _facing == -1 || _facing == 1 ) );
+        io.check( _facing != 0 ); // 방향은 −1 · 1 뿐이다(Min · Max 사이의 0 만 손으로)
         if ( io.isReading() )
         {
             _stateIndex = _pPattern != nullptr && stateID.empty() == false ? _pPattern->findStateIndex( stateID ) : optional<int32>{}; // 이름이 없으면 상태가 없다(getState 가 nullptr)

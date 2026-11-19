@@ -66,6 +66,16 @@ namespace
 
         void write( Archive& outArchive ) const
         {
+            // 리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 머리가 달라 다른 이유로 거절되어 거짓 통과한다.
+            const GhostEncounter blank;
+            Archive              blankBytes;
+            blank.writeState( blankBytes );
+            outArchive.writeBytes( blankBytes.getData(), StateIO::kReflectedHeaderBytes );
+            outArchive << _strobe;
+            outArchive << _surge;
+            outArchive << _suctionTarget;
+            outArchive << _nextID;
+            outArchive << _stage;
             const GameRandom random;
             StateIO::writeRandom( outArchive, random );
             const uint32 count = _bTwice == SW_TRUE ? 2u : 1u;
@@ -80,11 +90,6 @@ namespace
                 outArchive << _id;
                 outArchive << _state;
             }
-            outArchive << _strobe;
-            outArchive << _surge;
-            outArchive << _suctionTarget;
-            outArchive << _nextID;
-            outArchive << _stage;
         }
 
         [[nodiscard]] bool read( GhostEncounter& inoutEncounter ) const
@@ -210,6 +215,12 @@ namespace
         bool readFixture( const GhostFixtureBoo& boo, const hashed_string& currentRoom, uint32 booCount = 2u, uint32 searchedCount = 3u, uint8 searched = SW_FALSE )
         {
             Archive written;
+            Archive mansionBytes; // 리플렉션 머리는 정상 바이트에서 가져온다(손으로 짜면 거짓 통과한다)
+            _mansion.writeState( mansionBytes );
+            written.writeBytes( mansionBytes.getData(), StateIO::kReflectedHeaderBytes );
+            written << static_cast<uint32>( 0 ); // 맡아 둔 열쇠
+            StateIO::writeName( written, currentRoom );
+            written << static_cast<uint32>( 5 ); // 씨앗
             _mansion.getEncounter().writeState( written );
             const GameRandom random;
             StateIO::writeRandom( written, random );
@@ -228,9 +239,6 @@ namespace
             {
                 written << searched;
             }
-            StateIO::writeName( written, currentRoom );
-            written << static_cast<uint32>( 5 ); // 씨앗
-            written << static_cast<uint32>( 0 ); // 맡아 둔 열쇠
             Archive reading( written.getData(), written.getSize() );
             return _mansion.readState( reading );
         }
@@ -677,6 +685,7 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterStateRoundTrip )
  */
 SW_TEST_CASE_F( GhostHuntTest, EncounterReadRefusesCraftedBytes )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     GhostFixtureEncounter good;
     SW_REQUIRE_TRUE( good.read( _encounter ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 1, _encounter.countRemaining() );

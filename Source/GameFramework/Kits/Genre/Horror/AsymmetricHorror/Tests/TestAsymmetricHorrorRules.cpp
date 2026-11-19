@@ -74,10 +74,12 @@ namespace
     /** @brief 정상 상태 바이트입니다. 칸 하나를 바꿔 읽어 봅니다. */
     struct AsymmetricFixtureBytes
     {
-        // 살인마 칸의 뒤에서부터의 자리이다(점수가 비어 있을 때, 칸 전체 81 바이트 — 점수 `StatBlock` 은 리플렉션 머리 12 바이트 + 개수 4 바이트로 맨 앞이다).
-        static constexpr size_t kKillerBytes = 81;
+        // 살인마 칸은 점수(`StatBlock`, 길이는 그 writeState 로 잰다) 뒤 위치 · 앞 · 넘기 끝(36) 타이머 넷(16) 든 사람 · 부수는 판자 · 참가자(12) 넘기(1)이다.
+        static constexpr size_t kKillerBytesAfterScore = 65;
         vector<uint8>           _listByte{};
-        size_t                  _stageBase{ 0 }; ///< 판 다음의 완료 수 자리이다
+        size_t                  _completedAt{ 0 }; ///< 리플렉션 칸의 완료 수 자리이다(해치 자리 다음)
+        size_t                  _stageBase{ 0 };   ///< 무대(갈고리 수)가 시작하는 자리이다
+        size_t                  _killerBytes{ 0 };
 
         explicit AsymmetricFixtureBytes( const AsymmetricHorrorMatch& match )
         {
@@ -88,12 +90,21 @@ namespace
             StateIO::writeName( name, AsymmetricHorrorTestUtil::makeSettings()._killerID );
             Archive matchBytes;
             match.getMatch().writeState( matchBytes );
-            _stageBase = static_cast<size_t>( name.getSize() ) + 1 + 1 + 4 + 4 + static_cast<size_t>( matchBytes.getSize() ) + 4 + 4; // 살인마 id, 시작, 알림, 걸음, 시간, 판, 팀 둘
+            Archive scoreBytes;
+            match.getKiller()._score.writeState( scoreBytes );
+            _killerBytes = static_cast<size_t>( scoreBytes.getSize() ) + kKillerBytesAfterScore;
+            // 살인마 id, 리플렉션 머리, 해치 자리(12) 다음이 완료 수다. 그 뒤 팀 둘 · 걸음(12) 깃발 여섯(6), 손 본문의 시작(1) 시간(4) 판 · 붕괴 남은 시간(4) 다음이 무대다.
+            _completedAt = static_cast<size_t>( name.getSize() ) + StateIO::kReflectedHeaderBytes + sizeof( float3 );
+            _stageBase   = _completedAt + 4 + 12 + 6 + 1 + 4 + static_cast<size_t>( matchBytes.getSize() ) + 4;
         }
 
         size_t getSize() const { return _listByte.size(); }
+        /** @brief 깃발 여섯(전원 · 해치 놓임 · 열림 · 닫힘 · 붕괴 · 끝 알림) 중 @p index 번째 자리입니다. */
+        size_t flagAt( size_t index ) const { return _completedAt + 16 + index; }
+        /** @brief 붕괴 남은 시간의 자리입니다(무대 바로 앞). */
+        size_t collapseAt() const { return _stageBase - 4; }
         /** @brief 마지막 생존자의 칸 자리입니다. @p fromEnd 는 그 생존자 칸 끝에서 센 바이트입니다. */
-        size_t lastSurvivor( size_t fromEnd ) const { return getSize() - kKillerBytes - fromEnd; }
+        size_t lastSurvivor( size_t fromEnd ) const { return getSize() - _killerBytes - fromEnd; }
 
         template <typename TValue>
         TValue readAt( size_t offset ) const
@@ -1316,6 +1327,7 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesWrongHost )
  */
 SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesCraftedBytes )
 {
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_REQUIRE_TRUE( _match.addSurvivor( AsymmetricHorrorTestUtil::at( 90.0f, 0.0f ) ) == 0 );
     SW_REQUIRE_TRUE( _match.addSurvivor( AsymmetricHorrorTestUtil::at( 90.0f, 0.0f ) ) == 1 );
     SW_REQUIRE_TRUE( _match.addHook( float3{} ) == 0 );
@@ -1327,40 +1339,41 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesCraftedBytes )
     _match.start();
 
     const AsymmetricFixtureBytes fixture( _match );
-    const size_t                 size = fixture.getSize();
-    const size_t                 base = fixture._stageBase;
+    const size_t                 size      = fixture.getSize();
+    const size_t                 completed = fixture._completedAt;
+    const size_t                 stage     = fixture._stageBase;
 
     // 자리가 맞는지 정상 값으로 본다.
-    SW_REQUIRE_EQUAL( 0, fixture.readAt<int32>( base ) );
-    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( base + 25 ) );                 // 갈고리 수
-    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( base + 41 ) );                 // 판자 수
-    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( base + 58 ) );                 // 사물함 수
-    SW_REQUIRE_EQUAL( -1, fixture.readAt<int32>( base + 74 ) );                  // 사물함에 든 사람
-    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( base + 78 ) );                 // 창틀 수
-    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( base + 102 ) );                // 발전기 수
+    SW_REQUIRE_EQUAL( 0, fixture.readAt<int32>( completed ) );
+    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( stage ) );                     // 갈고리 수
+    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( stage + 16 ) );                // 판자 수
+    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( stage + 33 ) );                // 사물함 수
+    SW_REQUIRE_EQUAL( -1, fixture.readAt<int32>( stage + 49 ) );                 // 사물함에 든 사람
+    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( stage + 53 ) );                // 창틀 수
+    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( stage + 77 ) );                // 발전기 수
     SW_REQUIRE_EQUAL( -1, fixture.readAt<int32>( size - 13 ) );                  // 든 사람
     SW_REQUIRE_EQUAL( -1, fixture.readAt<int32>( size - 9 ) );                   // 부수는 판자
     SW_REQUIRE_EQUAL( 2, fixture.readAt<int32>( size - 5 ) );                    // 살인마 참가자
     SW_REQUIRE_EQUAL( 1, fixture.readAt<int32>( fixture.lastSurvivor( 9 ) ) );   // 생존자 참가자
     SW_REQUIRE_EQUAL( -1, fixture.readAt<int32>( fixture.lastSurvivor( 13 ) ) ); // 생존자 하던 일의 대상
     SW_REQUIRE_EQUAL( 0, fixture.readAt<int32>( fixture.lastSurvivor( 17 ) ) );  // 갈고리 단계
-    SW_EXPECT_TRUE( fixture.readPatched<int32>( _catalog, base, 0 ) );           // 형식은 맞다
+    SW_EXPECT_TRUE( fixture.readPatched<int32>( _catalog, completed, 0 ) );      // 형식은 맞다
 
     // 머리와 판.
-    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base, 1 ) ); // 완료 수가 끝난 발전기 수와 다르다
-    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base, -1 ) );
-    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, base + 4, 2 ) );       // 전원 깃발
-    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, base + 6, SW_TRUE ) ); // 놓지 않은 해치가 열렸다
-    SW_EXPECT_FALSE( fixture.readPatched<float32>( _catalog, base + 9, 5.0f ) );  // 시작하지 않은 붕괴가 돈다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, completed, 1 ) ); // 완료 수가 끝난 발전기 수와 다르다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, completed, -1 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.flagAt( 0 ), 2 ) );       // 전원 깃발
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.flagAt( 2 ), SW_TRUE ) ); // 놓지 않은 해치가 열렸다
+    SW_EXPECT_FALSE( fixture.readPatched<float32>( _catalog, fixture.collapseAt(), 5.0f ) ); // 시작하지 않은 붕괴가 돈다
 
     // 무대.
-    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, base + 57, 7 ) ); // 판자 상태
-    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base + 74, 5 ) ); // 없는 사람이 사물함에 있다
-    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base + 74, 0 ) ); // 숨지 않은 사람이 사물함에 있다
-    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base + 74, -2 ) );
-    SW_EXPECT_FALSE( fixture.readPatched<float32>( _catalog, base + 94, -1.0f ) ); // 막힌 시간
-    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base + 98, -1 ) );      // 추격 넘기 수
-    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base + 98, 2 ) );       // 막힘 수에 닿으면 0 으로 돌아간다
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, stage + 32, 7 ) ); // 판자 상태
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, stage + 49, 5 ) ); // 없는 사람이 사물함에 있다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, stage + 49, 0 ) ); // 숨지 않은 사람이 사물함에 있다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, stage + 49, -2 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<float32>( _catalog, stage + 69, -1.0f ) ); // 막힌 시간
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, stage + 73, -1 ) );      // 추격 넘기 수
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, stage + 73, 2 ) );       // 막힘 수에 닿으면 0 으로 돌아간다
 
     // 생존자(뒤에서부터 플래그 셋, 하던 일, 상태, 참가자, 대상, 갈고리 단계).
     SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.lastSurvivor( 1 ), 2 ) );

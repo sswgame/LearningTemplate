@@ -288,16 +288,13 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr && _pMoves != nullptr ) == false )
             return;
+        io.reflected( *this ); // 콤보 인덱스 · 버퍼 · 패리 · 히트스톱 — 바닥은 칸의 `PROPERTY( Min )`
         io.reference( _pCombo, [this]( const hashed_string& comboID )
         { return _pCatalog->findCombo( comboID ); } );
         _timeline.serializeState( io, _pMoves );
-        io.value( _comboIndex );
-        io.value( _attackBufferFrames );
-        io.value( _parryFrames );
-        io.value( _hitstopFrames );
         io.expect( _bGunEquipped );
         const int32 comboMoveCount = _pCombo != nullptr ? static_cast<int32>( _pCombo->_listMove.size() ) : 0;
-        if ( io.check( constant::invalid_index::kInt32 <= _comboIndex && _comboIndex < comboMoveCount && 0 <= _attackBufferFrames && 0 <= _parryFrames && 0 <= _hitstopFrames ) == false )
+        if ( io.check( _comboIndex < comboMoveCount ) == false ) // 칸 사이 검사 — 상한은 읽은 콤보가 정한다
             return;
         io.value( _gun );
         // 탄 수치 · id(다음 id 아래여야 새 탄과 겹치지 않는다)는 시뮬레이션이 보고, 편은 여기서 본다.

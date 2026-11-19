@@ -27,6 +27,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 효과의 종류입니다. */
+    ENUM()
     enum class CardBattleEffectKind : uint8
     {
         Damage = 0, ///< 상대의 방어를 먼저 깎고, 남은 만큼 체력을 깎는다
@@ -36,9 +37,14 @@ namespace sw
     };
 
     /** @brief 효과 하나입니다. */
+    REFLECT()
     struct CardBattleEffect
     {
-        int32                _amount{ 0 };
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0 )
+        int32 _amount{ 0 }; ///< 음수 공격은 `endTurn` 의 빼기가 더하기로 뒤집혀 체력과 방어를 채운다 — 읽기는 `Min` 이 거절한다
+        PROPERTY()
         CardBattleEffectKind _kind{ CardBattleEffectKind::Damage };
     };
 } // namespace sw
@@ -109,18 +115,26 @@ namespace sw
 namespace sw
 {
     /** @brief 적 하나입니다. 의도는 턴마다 차례대로 돌아갑니다. */
+    REFLECT()
     struct CardBattleEnemy
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         vector<CardBattleEffect> _listIntent{}; ///< Damage 는 공격, Block 은 방어이다(그 밖의 종류는 무시한다)
-        int32                    _hp{ 0 };
-        int32                    _block{ 0 };
-        int32                    _intentIndex{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _hp{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _block{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _intentIndex{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 전투 단계입니다. */
+    ENUM()
     enum class CardBattlePhase : uint8
     {
         PlayerTurn = 0,
@@ -132,9 +146,12 @@ namespace sw
      * @class CardBattle
      * @brief 한 전투를 진행합니다. 카드 한 장은 `Card` 이고 번호는 이 전투 안에서의 카드 index 입니다. 정의는 `getCardDef` 로 찾습니다. 시드를 쓰므로 결과가 결정적입니다.
      */
+    REFLECT()
     class SW_KIT_API CardBattle
     {
     public:
+        REFLECT_BODY();
+
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CDBT" );
         static constexpr uint32 kStateVersion = 1;
 
@@ -175,19 +192,25 @@ namespace sw
         void applyEffect( const CardBattleEffect& effect );
 
     private:
-        vector<int32>            _listDefIndex; ///< 카드 번호에서 카탈로그 index 로 가는 매핑이다
-        CardPile                 _drawPile;
-        CardPile                 _hand;
-        CardPile                 _discardPile;
-        CardPile                 _exhaustPile;
+        vector<int32> _listDefIndex; ///< 카드 번호에서 카탈로그 index 로 가는 매핑이다
+        CardPile      _drawPile;
+        CardPile      _hand;
+        CardPile      _discardPile;
+        CardPile      _exhaustPile;
+        PROPERTY( RuntimeState )
         CardBattleEnemy          _enemy;
         CardBattleSettings       _settings;
         GameRandom               _random;
         const CardBattleCatalog* _pCatalog;
-        int32                    _playerHP;
-        int32                    _playerBlock;
-        int32                    _energy;
-        int32                    _turn;
-        CardBattlePhase          _phase;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _playerHP;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _playerBlock;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _energy;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _turn;
+        PROPERTY( RuntimeState )
+        CardBattlePhase _phase;
     };
 } // namespace sw
