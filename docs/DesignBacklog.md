@@ -1514,6 +1514,35 @@ public:
 
 **측정이 먼저다.** 지난 Release 로그의 `[Scenario] … timeline:` 줄에서 shooter3d 의 고정 대기 ms 합과 체인 벽시계를 모은다(새로 재지 않는다). 판정: 고정 대기가 체인의 50 % 이상이면 V3 를 짓고, 그린 프레임 대비 안 그린 프레임 비용이 1/3 이하면 V4 로 간다. 아니면 닫고 `stage reset took` 과 기동을 본다.
 
+### 에디터 마우스 상호작용 공통 규칙(설계 2026-11-20)
+
+**전수(패널 62 · 공통 위젯).** 있던 공통 층: 끌기 형식 하나(`EditorDragPayload` `{종류, id}` · 받는 쪽 `EditorPayloadKindSet`), 맥락 메뉴 R1 ~ R9(`EditorInputGUI::drawContextMenu` — 명령 등록부, `beginItemContextMenu` — 행 메뉴), 단축키는 입력 맵(`editor.input.xml` 패널 레이어), 프로퍼티 행 메뉴(Reset · Copy · Paste · Copy Name)와 노란 되돌리기 단추, 에셋 칸 끌어 놓기 · 고르기 · Browse.
+
+| 패널 · 위젯 | 끌어 놓기 | 우클릭 | 휠클릭 | 그 밖 |
+| --- | --- | --- | --- | --- |
+| 인스펙터(프로퍼티 그리드) | 에셋 → 에셋 칸(받는 종류 검사는 놓은 뒤) · **오브젝트 → 참조 · 핸들 칸 없음** | 행: Reset · Copy · Paste(형식 검사 없음) · Copy Name, 컴포넌트 카드: 명령 메뉴. **에셋 칸의 찾기 · 참조 없음** | **없음** | **칸 위 Ctrl+C/V 없음** |
+| 계층 | 오브젝트 → 행(앞 · 뒤 · 안 표시) · 에셋 → 행 · 빈 곳 | 오브젝트 · 컴포넌트 · 빈 곳 명령 메뉴 | — | F2 · Ctrl+D · Del · Ctrl+C/V · Ctrl+A · 화살표, Ctrl/Shift 다중 선택. **누르는 순간 선택해 다른 패널로 끌면 그 패널 대상이 바뀐다** |
+| 콘텐츠 브라우저 | 에셋 → 폴더(이동 · 참조 고침 확인 창) · 폴더 트리 | 에셋 명령 메뉴 | — | 더블클릭 열기 · F2 · Ctrl+D · Del · Alt+←/→. **OS 파일 끌어 놓기 없음** |
+| 씬 뷰 | 에셋 → 캔버스(배치 고스트) | 오브젝트 · 빈 곳 명령 메뉴(R7) | 화면 이동 | F · W/E/R · 책갈피 |
+| 시퀀서 | 에셋 → 트랙(확장자 거르개 — **맞지 않아도 강조**) | — | — | (w-sequencer 갈래) |
+| 노드 그래프 6(머티리얼 · 애니 · 오디오 · 대화 · 행동 트리 · 기믹) | 핀 끌기 → 노드 검색 | 빈 곳: 노드 넣기 | — | Ctrl+C/V/D · Del(`EditorGraphEditCommand`). **에셋 → 노드 없음** |
+| UI 미리보기 | 위젯 타입 → 디자이너 | — | 화면 이동 | 더블클릭 |
+| VFX 미리보기 | 프리팹 에셋 → 미리보기(**확장자 맞지 않아도 강조**) | — | — | — |
+| 머티리얼 · 전역 변수 | — | — | **없음**(되돌리기 단추만) | — |
+| 콘솔 · 카탈로그 · 맵 점검 · 타일 맵 | — | 행 메뉴 | 타일 맵: 화면 이동 | 콘솔 Ctrl+C, 맵 점검 더블클릭 |
+| 나머지 40(설정 · 디버거 · 프로파일러 · 키트 확장 패널) | 다룰 끌 것 없음 | 표 행 메뉴 없음(읽기 전용 표) | — | — |
+
+**대조.** 언리얼: Details 행 우클릭 Copy · Paste · Reset to Default, 노란 화살표, 행 위 Ctrl+C/V, Content Browser · Outliner 끌기(놓을 수 없으면 금지 아이콘), 액터를 액터 칸에 끌어 놓기. 유니티: Inspector 우클릭 Reset · Copy/Paste(타입 있는 클립보드 — 맞지 않으면 회색), Hierarchy 에서 Inspector 칸으로 끌기(끌기가 시작되면 선택을 바꾸지 않는다), Project 창 OS 파일 끌기. Godot: Inspector 되돌리기 아이콘, 노드를 칸에 끌기. 휠클릭으로 기본값은 셋 다 없다 — 사용자 규칙이다.
+
+**규칙(정함).**
+- R10 휠클릭 = 기본값으로: 프로퍼티 칸(이름 · 값)에서 가운데 단추를 끌기 문턱 안에서 떼면 기본값으로 되돌린다. 기본값과 다른 칸에서만(되돌리기 단추가 보이는 칸 — 상용의 화살표 자리), 되돌리기는 한 단계(편집 구간 — 전 · 후가 같으면 버린다). 단추는 `EditorInputGUI::kResetToDefaultButton` 하나, 패널은 `EditorWidgets::beginResettableValue` · `endResettableValue` 로 감싼다. 마우스 몸짓은 입력 맵이 보지 못해(에디터 창 위 마우스는 ImGui 가 먹는다) 맥락 메뉴의 오른쪽 단추처럼 코드 상수다.
+- R11 끌어 놓기: 받는 쪽은 종류(`EditorPayloadKindSet`)로, 그다음 내용(확장자 · 에셋 종류 · 대상 타입)으로 **놓을 자리를 열기 전에** 거른다(`EditorInputGUI::peekPayload`) — 받지 않을 것은 강조하지 않는다. 받은 자리가 없으면 끄는 쪽 미리보기가 흐려지고 커서가 금지 모양이 된다(`beginDragSource` 한 곳). 놓기는 모델 명령 하나 = 되돌리기 한 단계.
+- R12 끌 수 있는 목록 행은 누를 때가 아니라 끌기 문턱 안에서 뗄 때 고른다(`wasItemClickedWithoutDrag`) — 다른 패널의 칸으로 끄는 동안 그 패널의 대상이 바뀌지 않는다(유니티 Hierarchy · 언리얼 Outliner).
+- R13 프로퍼티 칸: 행 메뉴의 Paste 는 클립보드 글이 그 칸 타입으로 읽힐 때만 켜진다(`PropertyGridViewModel::canPasteText`). 칸 위에서 Ctrl+C · Ctrl+V 는 행 메뉴와 같은 명령이다(입력 맵 `Editor.Panel.inspector`). 에셋 칸 메뉴에 Browse to Asset · Find References(명령 등록부 — `EditorCommandGUI::drawCommandMenuItem`).
+- 오브젝트 → 칸: 계층 행을 `SceneObjectReference` · 타입 핸들 칸에 놓으면 그 오브젝트(핸들은 그 오브젝트의 첫 대상 타입 컴포넌트)가 들어간다.
+
+**남은 몫.** OS 파일 → 콘텐츠 브라우저 임포트는 엔진 플랫폼 층(Win32 `WM_DROPFILES` · X11 XDND · Wayland `wl_data_device`)에 원시 입력 사건 종류를 더해야 한다 — 에디터만으로 닫히지 않는다. 에셋 → 노드 그래프(텍스처 → 샘플 노드)는 그래프가 "에셋 종류 → 노드 종류" 표를 등록하는 자리로(`EditorNodeGraph` 의 `drawAddNodePopup` 옆), 시퀀서 · 카메라 프리셋 · 충돌 프리셋 패널은 그 갈래가 위 공통 층을 붙인다.
+
 ## 시나리오 · 테스트 프레임워크 개편 판단(2026-11-17)
 
 통합 묶음 5(작업자 갈래 약 30 개를 빌드 없이 합침)에서 겪은 실패 열 가지가 형식 · 실행기 동작으로 다시 생기지 않게 하는 설계다. 코드 근거는 f615fb04f4 다. 할 일 줄은 [NEXT](NEXT.md) 5 절 ST-1 ~ ST-6 이다.
