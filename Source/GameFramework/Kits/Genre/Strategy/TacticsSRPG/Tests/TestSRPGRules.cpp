@@ -101,6 +101,11 @@ namespace
             sw::GameRandom random;
             random.setSeed( 3 );
             sw::Archive written;
+            // 리플렉션 상태 칸(턴, 차례 유닛, 국면 팀 — 열거는 int64) 뒤에 손 본문(크기, 지형, 유닛, 턴 순서, 난수)이다
+            sw::StateIO::writeReflectedHeader<sw::SRPGBattlefield>( written );
+            written << static_cast<int32>( 1 );
+            written << static_cast<int32>( -1 );
+            written << static_cast<int64>( 0 );
             written << static_cast<int32>( 1 );
             written << static_cast<int32>( 1 );
             sw::StateIO::writeName( written, "plain" );
@@ -123,9 +128,6 @@ namespace
             }
             order.writeState( written );
             sw::StateIO::writeRandom( written, random );
-            written << static_cast<int32>( 1 );
-            written << static_cast<int32>( -1 );
-            written << static_cast<uint8>( 0 );
             sw::Archive reading( written.getData(), written.getSize() );
             return _field.readState( reading );
         }
@@ -1232,11 +1234,12 @@ SW_TEST_CASE( SRPGRunMapTest, ReadStateChecksCells )
     const auto readFixture = [&restored]( int32 floor, int32 column, int32 cell, int32 current )
     {
         sw::Archive fixture;
+        sw::StateIO::writeReflectedHeader<sw::RunMap>( fixture ); // 노드(이어진 노드, 종류, 층, 열) · 칸 · 층 수 · 열 수 · 현재 위치 — 선언 순서다
         fixture << static_cast<uint32>( 1 );
+        fixture << static_cast<uint32>( 0 );
         sw::StateIO::writeName( fixture, "Battle" );
         fixture << floor;
         fixture << column;
-        fixture << static_cast<uint32>( 0 );
         fixture << static_cast<uint32>( 1 ); // 칸 하나
         fixture << cell;
         fixture << static_cast<int32>( 1 );
