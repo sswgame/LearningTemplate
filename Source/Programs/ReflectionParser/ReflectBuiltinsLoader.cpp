@@ -22,8 +22,15 @@ namespace sw
     {
         struct ReflectBuiltinsLoaderInternal
         {
-            /** @brief TYPE 줄의 칸 수 하한(정규 이름 · C++ 타입 · 글 처리기 · 네임스페이스)입니다. */
-            static constexpr size_t kMinTypeArgumentCount = 4;
+            /** @brief TYPE 줄의 칸 자리입니다(정규 이름 · C++ 타입 · 글 처리기 · 네임스페이스 · 위젯 · 모양 · 역할 · 별칭…). */
+            static constexpr size_t kTextConvColumn   = 2;
+            static constexpr size_t kNamespaceColumn  = 3;
+            static constexpr size_t kWidgetColumn     = 4;
+            static constexpr size_t kLayoutColumn     = 5;
+            static constexpr size_t kRolesColumn      = 6;
+            static constexpr size_t kFirstAliasColumn = 7;
+            /** @brief TYPE 줄의 칸 수 하한(별칭 앞 칸 모두)입니다. 별칭이 없으면 `_` 를 둔다. */
+            static constexpr size_t kMinTypeArgumentCount = kFirstAliasColumn + 1;
             /** @brief CONTAINER 줄의 칸 수 하한(매칭 이름 · 종류 · 래퍼)입니다. */
             static constexpr size_t kMinContainerArgumentCount = 3;
 
@@ -110,19 +117,121 @@ namespace sw
             /** @brief TYPE 줄의 네임스페이스 칸입니다. `-` 면 비어 있습니다. */
             static string_view getNamespace( const vector<string>& listArgument )
             {
-                return listArgument[3] == builtinmacro::kSkipNamespace ? string_view{} : string_view( listArgument[3] );
+                return listArgument[kNamespaceColumn] == builtinmacro::kSkipNamespace ? string_view{} : string_view( listArgument[kNamespaceColumn] );
             }
 
-            /** @brief TYPE 줄의 별칭들입니다(5번째 칸부터). `_` 는 빈 자리 표시라 뺍니다. */
+            /** @brief TYPE 줄의 별칭들입니다(역할 칸 다음부터). `_` 는 빈 자리 표시라 뺍니다. */
             static vector<string> getAliases( const vector<string>& listArgument )
             {
                 vector<string> listAlias;
-                for ( size_t argIndex = 4; argIndex < listArgument.size(); ++argIndex )
+                for ( size_t argIndex = kFirstAliasColumn; argIndex < listArgument.size(); ++argIndex )
                 {
                     if ( listArgument[argIndex] != builtinmacro::kSkipAlias )
                         listAlias.push_back( listArgument[argIndex] );
                 }
                 return listAlias;
+            }
+
+            /** @brief C++ 식별자 철자(영문자 · `_` 로 시작하고 영문자 · 숫자 · `_`)인지 봅니다. */
+            static bool isIdentifier( const string_view text )
+            {
+                if ( text.empty() || StringUtil::isDigitChar( text.front() ) )
+                    return false;
+                for ( const utf8 character : text )
+                {
+                    const bool bLetter = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || character == '_';
+                    if ( bLetter == false && StringUtil::isDigitChar( character ) == false )
+                        return false;
+                }
+                return true;
+            }
+
+            /** @brief Layout 칸(`none` · `num` · `angle` · `f32(멤버, …)` · `i32(멤버, …)`)을 읽습니다. 모르는 철자 · 빈 멤버 목록 · 식별자가 아닌 멤버는 false 입니다. */
+            [[nodiscard]] static bool parseLayout( const string_view text, BuiltinTypeTraits& outTraits )
+            {
+                if ( text == builtinmacro::kLayoutNone || text == builtinmacro::kLayoutNumber || text == builtinmacro::kLayoutAngle )
+                {
+                    outTraits._layout = text == builtinmacro::kLayoutNone   ? BuiltinLayoutKind::None
+                                      : text == builtinmacro::kLayoutNumber ? BuiltinLayoutKind::Number
+                                                                            : BuiltinLayoutKind::Angle;
+                    return true;
+                }
+                const size_t open  = text.find( '(' );
+                const bool   bCall = open != string_view::npos && text.back() == ')';
+                if ( bCall == false )
+                    return false;
+                const string_view head = StringUtil::trim( text.substr( 0, open ) );
+                if ( head == builtinmacro::kLayoutF32 )
+                    outTraits._layout = BuiltinLayoutKind::Float32;
+                else if ( head == builtinmacro::kLayoutI32 )
+                    outTraits._layout = BuiltinLayoutKind::Int32;
+                else
+                    return false;
+                const string_splitter members( text.substr( open + 1, text.size() - open - 2 ), { "," } );
+                for ( const string_view member : members.getSplitList() )
+                {
+                    const string_view name = StringUtil::trim( member );
+                    if ( isIdentifier( name ) == false )
+                        return false;
+                    outTraits._listMember.emplace_back( name );
+                }
+                return outTraits._listMember.empty() == false;
+            }
+
+            /** @brief Roles 칸(`None` 또는 `Interp` · `State` 를 `|` 로 이은 것)을 읽습니다. 모르는 이름 · 겹친 이름 · 다른 이름과 섞인 `None` 은 false 입니다. */
+            [[nodiscard]] static bool parseRoles( const string_view text, BuiltinTypeTraits& outTraits )
+            {
+                if ( text == builtinmacro::kRoleNone )
+                    return true;
+                const string_splitter roles( text, builtinmacro::kRoleSeparator );
+                for ( const string_view role : roles.getSplitList() )
+                {
+                    const string_view name = StringUtil::trim( role );
+                    if ( name == builtinmacro::kRoleInterp && outTraits._bInterp == SW_FALSE )
+                        outTraits._bInterp = SW_TRUE;
+                    else if ( name == builtinmacro::kRoleState && outTraits._bState == SW_FALSE )
+                        outTraits._bState = SW_TRUE;
+                    else
+                        return false;
+                }
+                return true;
+            }
+
+            /**
+             * @brief TYPE 줄의 위젯 · 모양 · 역할 칸을 읽고 서로 맞는지 봅니다. 어긋나면 그 줄을 알리고 false 입니다(파서가 시작할 때 멈춘다).
+             * @details Interp 는 섞는 길이 있는 모양(num · f32 · angle)에만, Widget=Packed 는 글 처리기 packed 에만(`PackedValueTraits` 가 있어야 성분으로 편집한다).
+             *          같은 규칙을 엔진이 컴파일 때도 본다(`ReflectedValue.cpp`) — 파서가 먼저 멈춰 생성 코드가 틀린 표로 나가지 않게 한다.
+             */
+            [[nodiscard]] static bool readTraits( const string_view absPath, const vector<string>& listArgument, BuiltinTypeTraits& outTraits )
+            {
+                const string& canonical = listArgument[0];
+                outTraits._bPacked      = listArgument[kTextConvColumn] == builtinmacro::kTextConvPacked ? SW_TRUE : SW_FALSE;
+                if ( parseLayout( listArgument[kLayoutColumn], outTraits ) == false )
+                {
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.BadLayout", "%#: '%#' has layout '%#' - use none, num, angle, f32(members) or i32(members)", absPath, canonical,
+                                     listArgument[kLayoutColumn] );
+                    return false;
+                }
+                if ( parseRoles( listArgument[kRolesColumn], outTraits ) == false )
+                {
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.BadRoles", "%#: '%#' has roles '%#' - use None, or Interp and State joined by |", absPath, canonical,
+                                     listArgument[kRolesColumn] );
+                    return false;
+                }
+                const bool bInterpLayout = outTraits._layout == BuiltinLayoutKind::Number || outTraits._layout == BuiltinLayoutKind::Float32 || outTraits._layout == BuiltinLayoutKind::Angle;
+                if ( outTraits._bInterp == SW_TRUE && bInterpLayout == false )
+                {
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.InterpNeedsLayout", "%#: '%#' has the Interp role but layout '%#' - Interp needs num, f32 or angle", absPath, canonical,
+                                     listArgument[kLayoutColumn] );
+                    return false;
+                }
+                if ( listArgument[kWidgetColumn] == builtinmacro::kWidgetPacked && outTraits._bPacked == SW_FALSE )
+                {
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.PackedWidgetNeedsPacked", "%#: '%#' uses the Packed widget but its text converter is '%#' - the Packed widget needs packed",
+                                     absPath, canonical, listArgument[kTextConvColumn] );
+                    return false;
+                }
+                return true;
             }
 
             static string makeQualifiedName( const string_view nameSpace, const string_view name )
@@ -182,10 +291,12 @@ namespace sw
             }
             else
             {
+                BuiltinTypeTraits traits;
+                if ( ReflectBuiltinsLoaderInternal::readTraits( absPath, listArgument, traits ) == false )
+                    return false;
                 outSession._typeNameMap.registerEntry( listArgument[0], string( ReflectBuiltinsLoaderInternal::getNamespace( listArgument ) ),
                                                        ReflectBuiltinsLoaderInternal::getAliases( listArgument ) );
-                if ( listArgument[2] == builtinmacro::kTextConvPacked )
-                    outSession._typeNameMap.markPacked( listArgument[0] );
+                outSession._typeNameMap.registerTraits( listArgument[0], traits );
                 ++typeCount;
             }
         }

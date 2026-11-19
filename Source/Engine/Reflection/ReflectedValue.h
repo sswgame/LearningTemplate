@@ -68,6 +68,68 @@ namespace sw
         kCount,
         kNone ///< 내장 타입이 아니다(열거형 · 구조체)
     };
+
+    /**
+     * @brief 내장 타입의 메모리 모양입니다(`ReflectBuiltins.xxx` 의 Layout 칸). 상태 직렬화 · 상태 해시 · UI 애니메이션이 타입 이름 목록 대신 이것으로 가른다.
+     * @details 멤버 이름 · 형식 · 오프셋은 `ReflectedValue.cpp` 가 컴파일 때 본다 — 어긋나면 Engine 빌드가 멈춘다.
+     */
+    enum class ReflectBuiltinLayout : uint8
+    {
+        None,    ///< 성분 규칙이 없다(핸들 · 글 · 압축 타입) — 쓰는 곳마다 손 처리기
+        Number,  ///< 산술 스칼라 하나
+        Float32, ///< float32 성분 여럿(선언 순서, 빈틈 없음)
+        Int32,   ///< int32 성분 여럿(선언 순서, 빈틈 없음)
+        Angle,   ///< 라디안 float32 하나(`Radians`)
+    };
+
+    /** @brief 내장 타입의 역할 비트입니다(`ReflectBuiltins.xxx` 의 Roles 칸). 표의 철자(`Interp|State`)를 그대로 식으로 읽도록 이름을 칸 철자와 같게 둔다. */
+    struct ReflectBuiltinRole
+    {
+        static constexpr uint8 None   = 0;
+        static constexpr uint8 Interp = 1u << 0; ///< 값 트랙 · UI 애니메이션이 섞는다(언리얼 `UPROPERTY( Interp )`)
+        static constexpr uint8 State  = 1u << 1; ///< `PROPERTY( RuntimeState )` 칸이 될 수 있다 — 상태 직렬화 · 상태 해시가 싣는다
+    };
+
+    /** @brief 내장 타입 한 줄의 모양 · 역할입니다. */
+    struct ReflectBuiltinTraits
+    {
+        ReflectBuiltinLayout _layout;
+        uint8                _roles;
+
+        constexpr bool hasRole( const uint8 role ) const { return ( _roles & role ) != 0; }
+    };
+
+// Layout 칸 철자 → 열거자. `f32(_x,_y)` 는 토큰 붙이기로 `SW_BUILTIN_LAYOUT_KIND_f32(_x,_y)` 가 되어 멤버를 버린다.
+#define SW_BUILTIN_LAYOUT_KIND_none       ReflectBuiltinLayout::None
+#define SW_BUILTIN_LAYOUT_KIND_num        ReflectBuiltinLayout::Number
+#define SW_BUILTIN_LAYOUT_KIND_f32( ... ) ReflectBuiltinLayout::Float32
+#define SW_BUILTIN_LAYOUT_KIND_i32( ... ) ReflectBuiltinLayout::Int32
+#define SW_BUILTIN_LAYOUT_KIND_angle      ReflectBuiltinLayout::Angle
+
+    /** @brief 내장 타입 줄마다의 모양 · 역할 표입니다. 순서는 `ReflectBuiltinIndex` 입니다. 역할 이름(`Interp` · `State`)을 기반에서 물려받아 칸 철자를 그대로 식으로 읽는다. */
+    struct ReflectBuiltinTraitTable : ReflectBuiltinRole
+    {
+        static constexpr ReflectBuiltinTraits kArrTraits[] = {
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, Widget, Layout, Roles, ... ) { SW_BUILTIN_LAYOUT_KIND_##Layout, static_cast<uint8>( Roles ) },
+#define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
+#undef SW_REFLECT_BUILTIN_TYPE
+#undef SW_REFLECT_BUILTIN_CONTAINER
+        };
+        static_assert( sizeof( kArrTraits ) / sizeof( kArrTraits[0] ) == static_cast<size_t>( ReflectBuiltinIndex::kCount ), "kArrTraits must have one row per ReflectBuiltins.xxx type" );
+
+        /** @brief @p builtinIndex 의 모양 · 역할입니다. 표 밖(`kNone`)이면 모양 None · 역할 없음입니다. */
+        static constexpr ReflectBuiltinTraits get( const ReflectBuiltinIndex builtinIndex )
+        {
+            return builtinIndex < ReflectBuiltinIndex::kCount ? kArrTraits[static_cast<size_t>( builtinIndex )] : ReflectBuiltinTraits{ ReflectBuiltinLayout::None, None };
+        }
+    };
+
+#undef SW_BUILTIN_LAYOUT_KIND_none
+#undef SW_BUILTIN_LAYOUT_KIND_num
+#undef SW_BUILTIN_LAYOUT_KIND_f32
+#undef SW_BUILTIN_LAYOUT_KIND_i32
+#undef SW_BUILTIN_LAYOUT_KIND_angle
 } // namespace sw
 
 namespace sw
@@ -114,6 +176,11 @@ namespace sw
         static ReflectBuiltinClass getBuiltinClass( ReflectBuiltinIndex builtinIndex );
         /** @brief 타입 이름의 갈래입니다. 내장 타입이 아니면(열거형 · 구조체) Other 입니다 — Other 는 "그 밖" 갈래라 폴백이 아니다. */
         static ReflectBuiltinClass getBuiltinClass( const hashed_string& typeName );
+        /**
+         * @brief 내장 타입 자리의 성분 수입니다 — Layout 이 f32 · i32 면 멤버 수, num · angle 이면 1, none 이거나 표 밖이면 0 입니다.
+         * @details 멤버 수가 타입 크기와 맞는지는 `ReflectedValue.cpp` 가 컴파일 때 본다.
+         */
+        static uint8 getBuiltinComponentCount( ReflectBuiltinIndex builtinIndex );
         /** @brief 내장 타입 자리의 정규 이름(`int32` · `string` · `float3` …)입니다. */
         static const hashed_string& getBuiltinTypeName( ReflectBuiltinIndex builtinIndex );
         /**

@@ -11,6 +11,7 @@
 #include "Programs/ReflectionParser/CursorReader.h"
 #include "Programs/ReflectionParser/ParserConfig.h"
 #include "Programs/ReflectionParser/ParserDefines.h"
+#include "Programs/ReflectionParser/TypeNameMap.h"
 
 namespace sw
 {
@@ -325,21 +326,40 @@ namespace sw
         return isIdentifier( name ) && ( isIdentifier( value ) || StringUtil::parseInt64( value, number ) );
     }
 
-    bool DeclarationValidator::isInterpAllowed( const ParsedPropertyInfo& prop, const string_view owner )
+    bool DeclarationValidator::isInterpAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, const string_view owner )
     {
         if ( prop._bInterp == SW_FALSE )
             return true;
-        bool bKnownType = false;
-        for ( const utf8* pTypeName : annotation::kArrInterpTypeName )
-        {
-            if ( prop._typeName == pTypeName )
-                bKnownType = true;
-        }
-        const bool bAnimatableProperty = bKnownType && prop._bIsContainer == SW_FALSE && prop._bIsBitField == SW_FALSE;
+        const BuiltinTypeTraits* pTraits             = typeNameMap.findTraits( prop._typeName );
+        const bool               bAnimatableProperty = pTraits != nullptr && pTraits->_bInterp == SW_TRUE && prop._bIsContainer == SW_FALSE && prop._bIsBitField == SW_FALSE;
         if ( bAnimatableProperty )
             return true;
-        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYInterpOnly", "ERROR: PROPERTY( Interp ) on '%#' (%#) - only a single number, float2/3/4 or quaternion can be animated by a value track.",
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYInterpOnly",
+                         "ERROR: PROPERTY( Interp ) on '%#' (%#) - only a single value of a builtin with the Interp role (ReflectBuiltins.xxx: numbers, float2/3/4, quaternion, Radians) "
+                         "can be animated by a value track.",
                          owner, prop._typeName );
+        return false;
+    }
+
+    bool DeclarationValidator::isRuntimeStateAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, const string_view owner )
+    {
+        if ( prop._bRuntimeState == SW_FALSE || prop._bIsBitField == SW_TRUE )
+            return true;
+        if ( prop._bIsContainer == SW_TRUE && prop._containerKind != ContainerKind::Sequence )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRuntimeStateContainer",
+                             "ERROR: PROPERTY( RuntimeState ) on '%#' (%#) - state fields carry a single value or a sequence; take the map out of RuntimeState and carry it in serializeState.",
+                             owner, prop._typeName );
+            return false;
+        }
+        const string&            leafType = prop._bIsContainer == SW_TRUE ? prop._elementTypeName : prop._typeName;
+        const BuiltinTypeTraits* pTraits  = typeNameMap.findTraits( leafType );
+        if ( pTraits == nullptr || pTraits->_bState == SW_TRUE ) // 내장 타입이 아니면 열거 · 반사 구조체다 — 실행 중 판정(`StateIO::reflected`)이 맡는다
+            return true;
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRuntimeStateType",
+                         "ERROR: PROPERTY( RuntimeState ) on '%#' (%#) - '%#' has no State role in ReflectBuiltins.xxx, so state serialization and the state hash cannot carry it; "
+                         "use a builtin with the State role, an enum, a reflected struct or a sequence of those.",
+                         owner, prop._typeName, leafType );
         return false;
     }
 

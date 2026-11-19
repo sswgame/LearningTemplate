@@ -18,6 +18,96 @@
 #include "Engine/Reflection/ReflectBuiltinClass.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
+#include <cstddef>
+
+// -----------------------------------------------------------------------------
+// `ReflectBuiltins.xxx` 의 Layout 칸을 C++ 선언과 대조한다 — 멤버 이름 오타 · 형식 · 순서 · 빈틈 · 성분 표시가 어긋나면 Engine 컴파일이 멈춘다.
+// 파서는 같은 칸의 멤버 이름으로 고정 배치형 코덱의 `offsetof` 를 내므로, 여기서 맞으면 생성 코드도 맞는다(UHT 가 `UScriptStruct` 의 멤버를 컴파일러에 맡기는 것과 같은 자리).
+// -----------------------------------------------------------------------------
+#define SW_BUILTIN_PP_EXPAND( x )                                                                                 x
+#define SW_BUILTIN_PP_CONCAT_IMPL( a, b )                                                                         a##b
+#define SW_BUILTIN_PP_CONCAT( a, b )                                                                              SW_BUILTIN_PP_CONCAT_IMPL( a, b )
+#define SW_BUILTIN_PP_COUNT_IMPL( _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, N, ... ) N
+#define SW_BUILTIN_PP_COUNT( ... )                                                                                SW_BUILTIN_PP_EXPAND( SW_BUILTIN_PP_COUNT_IMPL( __VA_ARGS__, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 ) )
+
+// 멤버 하나 — 형식이 성분 형식이고 오프셋이 (자리 × 성분 크기)다. `T` 는 부르는 쪽 구조체의 별칭이다.
+#define SW_BUILTIN_MEMBER_CHECK( Elem, Index, Member )                                                                                 \
+    static_assert( std::is_same_v<decltype( T::Member ), Elem>, "ReflectBuiltins.xxx Layout: member '" #Member "' has another type" ); \
+    static_assert( offsetof( T, Member ) == ( Index ) * sizeof( Elem ), "ReflectBuiltins.xxx Layout: member '" #Member "' is not at its declared slot" );
+#define SW_BUILTIN_MEMBER_CHECK_1( E, I, M )       SW_BUILTIN_MEMBER_CHECK( E, I, M )
+#define SW_BUILTIN_MEMBER_CHECK_2( E, I, M, ... )  SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_1( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_3( E, I, M, ... )  SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_2( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_4( E, I, M, ... )  SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_3( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_5( E, I, M, ... )  SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_4( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_6( E, I, M, ... )  SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_5( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_7( E, I, M, ... )  SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_6( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_8( E, I, M, ... )  SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_7( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_9( E, I, M, ... )  SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_8( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_10( E, I, M, ... ) SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_9( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_11( E, I, M, ... ) SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_10( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_12( E, I, M, ... ) SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_11( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_13( E, I, M, ... ) SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_12( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_14( E, I, M, ... ) SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_13( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_15( E, I, M, ... ) SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_14( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBER_CHECK_16( E, I, M, ... ) SW_BUILTIN_MEMBER_CHECK( E, I, M ) SW_BUILTIN_PP_EXPAND( SW_BUILTIN_MEMBER_CHECK_15( E, I + 1, __VA_ARGS__ ) )
+#define SW_BUILTIN_MEMBERS_CHECK( Elem, ... )                                                                                                                \
+    static_assert( sizeof( T ) == SW_BUILTIN_PP_COUNT( __VA_ARGS__ ) * sizeof( Elem ), "ReflectBuiltins.xxx Layout: member count does not cover the type" ); \
+    SW_BUILTIN_PP_EXPAND( SW_BUILTIN_PP_CONCAT( SW_BUILTIN_MEMBER_CHECK_, SW_BUILTIN_PP_COUNT( __VA_ARGS__ ) )( Elem, 0, __VA_ARGS__ ) )                     \
+    static_assert( sw::ReflectBuiltinLayoutCheck::matchesPackedTraits<T, std::is_same_v<Elem, int32>, SW_BUILTIN_PP_COUNT( __VA_ARGS__ )>(),                 \
+                   "ReflectBuiltins.xxx Layout: PackedValueTraits component count or kIntegerComponents disagrees with the layout" );
+
+// Layout 칸마다 — 구조체 `BuiltinLayoutCheck_<정규 이름>` 안에서 펼친다(`T` 가 그 타입이다).
+#define SW_BUILTIN_LAYOUT_CHECK_none
+#define SW_BUILTIN_LAYOUT_CHECK_num        static_assert( std::is_arithmetic_v<T>, "ReflectBuiltins.xxx Layout: num must be an arithmetic scalar" );
+#define SW_BUILTIN_LAYOUT_CHECK_f32( ... ) SW_BUILTIN_MEMBERS_CHECK( float32, __VA_ARGS__ )
+#define SW_BUILTIN_LAYOUT_CHECK_i32( ... ) SW_BUILTIN_MEMBERS_CHECK( int32, __VA_ARGS__ )
+#define SW_BUILTIN_LAYOUT_CHECK_angle      static_assert( std::is_same_v<T, Radians> && sizeof( T ) == sizeof( float32 ), "ReflectBuiltins.xxx Layout: angle is Radians (one float32)" );
+
+// Layout 칸마다 성분 수 — `ReflectedValueUtil::getBuiltinComponentCount`.
+#define SW_BUILTIN_LAYOUT_COUNT_none       0
+#define SW_BUILTIN_LAYOUT_COUNT_num        1
+#define SW_BUILTIN_LAYOUT_COUNT_f32( ... ) SW_BUILTIN_PP_COUNT( __VA_ARGS__ )
+#define SW_BUILTIN_LAYOUT_COUNT_i32( ... ) SW_BUILTIN_PP_COUNT( __VA_ARGS__ )
+#define SW_BUILTIN_LAYOUT_COUNT_angle      1
+
+namespace sw
+{
+    /** @brief Layout 칸 대조의 도우미입니다. 압축 타입이면 `PackedValueTraits` 의 성분 수 · 정수 표시가 Layout 과 같아야 한다(i32 ↔ `kIntegerComponents`). */
+    struct ReflectBuiltinLayoutCheck
+    {
+        template <typename T, bool bInteger, uint32 kCount>
+        static constexpr bool matchesPackedTraits()
+        {
+            if constexpr ( kIsPackedValue<T> )
+                return PackedValueTraits<T>::kComponentCount == kCount && HasIntegerPackedComponents<T>::value == bInteger;
+            else
+                return true;
+        }
+    };
+
+    namespace
+    {
+        // 역할과 모양의 짝 — Interp 는 섞는 길이 있는 모양(num · f32 · angle)에만. 파서도 시작할 때 같은 규칙으로 멈춘다.
+        constexpr bool isInterpLayout( const ReflectBuiltinLayout layout )
+        {
+            return layout == ReflectBuiltinLayout::Number || layout == ReflectBuiltinLayout::Float32 || layout == ReflectBuiltinLayout::Angle;
+        }
+
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, Widget, Layout, ... )                                                                                     \
+    struct BuiltinLayoutCheck_##Canon                                                                                                                                    \
+    {                                                                                                                                                                    \
+        using T = ReflectBuiltinCppTypeT<CppType>;                                                                                                                       \
+        SW_BUILTIN_LAYOUT_CHECK_##Layout static_assert( ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon ).hasRole( ReflectBuiltinRole::Interp ) == false || \
+                                                            isInterpLayout( ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon )._layout ),                    \
+                                                        "ReflectBuiltins.xxx: Interp needs a num, f32 or angle layout" );                                                \
+    };
+#define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
+#undef SW_REFLECT_BUILTIN_TYPE
+#undef SW_REFLECT_BUILTIN_CONTAINER
+    } // namespace
+} // namespace sw
+
 namespace sw
 {
     namespace
@@ -432,14 +522,15 @@ namespace sw
                 ReadIntegerFn       _pReadInteger;
                 WriteNumberFn       _pWriteNumber;
                 ReflectBuiltinClass _class;
+                uint8               _componentCount; ///< `ReflectedValueUtil::getBuiltinComponentCount`
             };
 
             static constexpr BuiltinRow kArrBuiltinRow[] = {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... )                                                                                           \
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, Widget, Layout, ... )                                                             \
     { &ReflectSourceValue::readBuiltin<ReflectBuiltinCppTypeT<CppType>>, &ReflectSourceValue::convertToBuiltin<ReflectBuiltinCppTypeT<CppType>>, \
       &formatBuiltin<ReflectBuiltinCppTypeT<CppType>>, &readNumberAs<ReflectBuiltinCppTypeT<CppType>>,                                           \
       &readIntegerAs<ReflectBuiltinCppTypeT<CppType>>, &writeNumberAs<ReflectBuiltinCppTypeT<CppType>>,                                          \
-      getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>() },
+      getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>(), static_cast<uint8>( SW_BUILTIN_LAYOUT_COUNT_##Layout ) },
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
@@ -506,6 +597,12 @@ namespace sw
     {
         const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findRow( builtinIndex );
         return pRow != nullptr ? pRow->_class : ReflectBuiltinClass::Other;
+    }
+
+    uint8 ReflectedValueUtil::getBuiltinComponentCount( const ReflectBuiltinIndex builtinIndex )
+    {
+        const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findRow( builtinIndex );
+        return pRow != nullptr ? pRow->_componentCount : 0;
     }
 
     ReflectBuiltinClass ReflectedValueUtil::getBuiltinClass( const hashed_string& typeName )
@@ -651,3 +748,38 @@ namespace sw
         return string( text );
     }
 } // namespace sw
+
+// 통합 빌드(unity)에서 다음 TU 로 새지 않게 Layout 칸 도우미를 거둔다.
+#undef SW_BUILTIN_LAYOUT_COUNT_none
+#undef SW_BUILTIN_LAYOUT_COUNT_num
+#undef SW_BUILTIN_LAYOUT_COUNT_f32
+#undef SW_BUILTIN_LAYOUT_COUNT_i32
+#undef SW_BUILTIN_LAYOUT_COUNT_angle
+#undef SW_BUILTIN_LAYOUT_CHECK_none
+#undef SW_BUILTIN_LAYOUT_CHECK_num
+#undef SW_BUILTIN_LAYOUT_CHECK_f32
+#undef SW_BUILTIN_LAYOUT_CHECK_i32
+#undef SW_BUILTIN_LAYOUT_CHECK_angle
+#undef SW_BUILTIN_MEMBERS_CHECK
+#undef SW_BUILTIN_MEMBER_CHECK
+#undef SW_BUILTIN_MEMBER_CHECK_1
+#undef SW_BUILTIN_MEMBER_CHECK_2
+#undef SW_BUILTIN_MEMBER_CHECK_3
+#undef SW_BUILTIN_MEMBER_CHECK_4
+#undef SW_BUILTIN_MEMBER_CHECK_5
+#undef SW_BUILTIN_MEMBER_CHECK_6
+#undef SW_BUILTIN_MEMBER_CHECK_7
+#undef SW_BUILTIN_MEMBER_CHECK_8
+#undef SW_BUILTIN_MEMBER_CHECK_9
+#undef SW_BUILTIN_MEMBER_CHECK_10
+#undef SW_BUILTIN_MEMBER_CHECK_11
+#undef SW_BUILTIN_MEMBER_CHECK_12
+#undef SW_BUILTIN_MEMBER_CHECK_13
+#undef SW_BUILTIN_MEMBER_CHECK_14
+#undef SW_BUILTIN_MEMBER_CHECK_15
+#undef SW_BUILTIN_MEMBER_CHECK_16
+#undef SW_BUILTIN_PP_COUNT
+#undef SW_BUILTIN_PP_COUNT_IMPL
+#undef SW_BUILTIN_PP_CONCAT
+#undef SW_BUILTIN_PP_CONCAT_IMPL
+#undef SW_BUILTIN_PP_EXPAND

@@ -12,6 +12,7 @@
 
 namespace sw
 {
+    class TypeNameMap;
     struct ParserConfig;
 
     /** @brief 수집한 선언이 뜻이 맞는지 봅니다 — 어긋나면 그 헤더의 이름으로 알리고 false 입니다. */
@@ -53,8 +54,14 @@ namespace sw
          */
         [[nodiscard]] static bool applyDisplayMeta( ParsedPropertyInfo& prop, CXType fieldType, string_view owner );
 
-        /** @brief `Interp` 는 시퀀서가 섞을 수 있는 타입에만 — 컨테이너 · 비트필드 · 그 밖의 타입은 그 헤더를 멈춥니다. */
-        static bool isInterpAllowed( const ParsedPropertyInfo& prop, string_view owner );
+        /** @brief `Interp` 는 `ReflectBuiltins.xxx` 에서 Interp 역할인 내장 타입 값 하나에만 — 컨테이너 · 비트필드 · 그 밖의 타입은 그 헤더를 멈춥니다. */
+        static bool isInterpAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, string_view owner );
+
+        /**
+         * @brief `RuntimeState` 칸의 형식이 상태 직렬화 · 상태 해시가 실을 수 있는 것인지 봅니다 — 내장 타입은 State 역할이 있어야 하고, 컨테이너는 시퀀스만입니다.
+         * @details 실행 중에야 FATAL 로 드러나던 것(`StateIO::reflected` · `Component::foldStateHash`)을 생성 단계에서 멈춘다. 열거 · 반사 구조체는 여기서 통과한다.
+         */
+        static bool isRuntimeStateAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, string_view owner );
 
         /**
          * @brief 서버 버스 본문 타입(`kBusVersion`)이 모듈 내보내기 매크로를 달았는지 봅니다. 아니면 알리고 false 입니다.

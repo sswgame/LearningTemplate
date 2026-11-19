@@ -134,13 +134,17 @@ namespace sw
      */
     struct ParsedFixedType
     {
-        string                      _typeName;           ///< 정규 타입 이름입니다. 수학 타입 표를 찾고 진단에 씁니다
+        string                      _typeName;           ///< 정규 타입 이름입니다. 생성 코드의 타입 철자와 진단에 씁니다
         string                      _reason;             ///< Ineligible 이면 이유입니다(영문, 로그와 생성 주석에 그대로 나갑니다)
         string                      _fullyQualifiedName; ///< Reflect 의 FQN
         shared_ptr<ParsedFixedType> _element;            ///< Vector · FixedArray 의 원소
         shared_ptr<ParsedFixedEnum> _enum;               ///< Enum 의 열거자
         FixedValueKind              _kind;
-        uint8                       _bPacked; ///< 압축 타입(`ReflectBuiltins.xxx` 의 `packed` 줄)입니다. 고정 배치형 인코딩 표에 없어 생성 오류로 알립니다
+        vector<string>              _listMathMember;   ///< Math 의 성분 멤버(선언 순서) — `ReflectBuiltins.xxx` 의 Layout 칸 `f32(…)` · `i32(…)`
+        uint8                       _bPacked      : 1; ///< 압축 타입(`ReflectBuiltins.xxx` 의 `packed` 줄)입니다. 고정 배치형 인코딩 표에 없어 생성 오류로 알립니다
+        uint8                       _bIntegerMath : 1; ///< Math 의 성분이 int32 다(Layout `i32`)
+        uint8                       _bAngle       : 1; ///< 라디안 float32 하나(Layout `angle`) — 도로 적힌 숫자 경계를 라디안으로 바꾼다
+        [[maybe_unused]] uint8      _reserved     : 5;
 
         ParsedFixedType() noexcept
             : _typeName{}
@@ -149,7 +153,11 @@ namespace sw
             , _element{ nullptr }
             , _enum{ nullptr }
             , _kind{ FixedValueKind::Ineligible }
+            , _listMathMember{}
             , _bPacked{ SW_FALSE }
+            , _bIntegerMath{ SW_FALSE }
+            , _bAngle{ SW_FALSE }
+            , _reserved{ 0 }
         {
         }
     };

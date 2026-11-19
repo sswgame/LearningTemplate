@@ -18,62 +18,71 @@ namespace sw
     {
         struct UIAnimatedPropertyInternal
         {
-            /** @brief 실수 필드의 성분 수입니다. 실수 필드가 아니면 0 입니다. */
-            static uint8 findComponentCount( ReflectBuiltinIndex builtinIndex )
+            /** @brief 성분 칸 수입니다(`UIAnimatedValue::_arrComponent`). */
+            static constexpr uint8 kMaxComponentCount = 4;
+
+            /**
+             * @brief 성분으로 섞는 필드의 성분 수입니다. 아니면 0 입니다(글로 바꿔 끝에 갈아 끼운다).
+             * @details `ReflectBuiltins.xxx` 의 Interp 역할과 Layout 이 정한다 — num · angle 은 1, f32 는 멤버 수(4 이하). 쿼터니언은 성분 직선 보간이 회전 보간이 아니라 뺀다
+             *          (시퀀서는 slerp 로 섞는다, `PropertyRoleUtil`).
+             */
+            static uint8 findComponentCount( const ReflectBuiltinIndex builtinIndex )
             {
-                if ( builtinIndex == ReflectBuiltinIndex::kfloat32 || builtinIndex == ReflectBuiltinIndex::kfloat64 || builtinIndex == ReflectBuiltinIndex::kRadians )
-                    return 1;
-                if ( builtinIndex == ReflectBuiltinIndex::kfloat2 )
-                    return 2;
-                if ( builtinIndex == ReflectBuiltinIndex::kfloat3 )
-                    return 3;
-                if ( builtinIndex == ReflectBuiltinIndex::kfloat4 )
-                    return 4;
+                const ReflectBuiltinTraits traits = ReflectBuiltinTraitTable::get( builtinIndex );
+                if ( traits.hasRole( ReflectBuiltinRole::Interp ) == false || builtinIndex == ReflectBuiltinIndex::kquaternion )
+                    return 0;
+                switch ( traits._layout )
+                {
+                    case ReflectBuiltinLayout::Number:
+                    case ReflectBuiltinLayout::Angle:
+                        return 1;
+                    case ReflectBuiltinLayout::Float32:
+                    {
+                        const uint8 count = ReflectedValueUtil::getBuiltinComponentCount( builtinIndex );
+                        return count <= kMaxComponentCount ? count : 0;
+                    }
+                    case ReflectBuiltinLayout::None:
+                    case ReflectBuiltinLayout::Int32:
+                        break;
+                }
                 return 0;
             }
 
-            /** @brief 내장 실수 타입 값 @p pValue 를 성분으로 읽습니다. */
-            static void readComponents( ReflectBuiltinIndex builtinIndex, const void* pValue, float32 ( &outArrComponent )[4] )
+            /** @brief 성분으로 섞는 내장 타입 값 @p pValue 를 성분으로 읽습니다(`findComponentCount` 가 0 이 아닌 타입). */
+            static void readComponents( const ReflectBuiltinIndex builtinIndex, const void* pValue, float32 ( &outArrComponent )[kMaxComponentCount] )
             {
-                if ( builtinIndex == ReflectBuiltinIndex::kfloat32 )
+                switch ( ReflectBuiltinTraitTable::get( builtinIndex )._layout )
                 {
-                    outArrComponent[0] = *static_cast<const float32*>( pValue );
-                }
-                else if ( builtinIndex == ReflectBuiltinIndex::kfloat64 )
-                {
-                    outArrComponent[0] = static_cast<float32>( *static_cast<const float64*>( pValue ) );
-                }
-                else if ( builtinIndex == ReflectBuiltinIndex::kRadians )
-                {
-                    outArrComponent[0] = static_cast<const Radians*>( pValue )->radians(); // 성분은 라디안으로 섞는다(키 글은 도로 읽힌다)
-                }
-                else if ( builtinIndex == ReflectBuiltinIndex::kfloat2 )
-                {
-                    const float2& value = *static_cast<const float2*>( pValue );
-                    outArrComponent[0]  = value._x;
-                    outArrComponent[1]  = value._y;
-                }
-                else if ( builtinIndex == ReflectBuiltinIndex::kfloat3 )
-                {
-                    const float3& value = *static_cast<const float3*>( pValue );
-                    outArrComponent[0]  = value._x;
-                    outArrComponent[1]  = value._y;
-                    outArrComponent[2]  = value._z;
-                }
-                else if ( builtinIndex == ReflectBuiltinIndex::kfloat4 )
-                {
-                    const float4& value = *static_cast<const float4*>( pValue );
-                    outArrComponent[0]  = value._x;
-                    outArrComponent[1]  = value._y;
-                    outArrComponent[2]  = value._z;
-                    outArrComponent[3]  = value._w;
+                    case ReflectBuiltinLayout::Number:
+                    {
+                        float64 number = 0.0;
+                        if ( ReflectedValueUtil::readNumber( builtinIndex, pValue, number ) )
+                            outArrComponent[0] = static_cast<float32>( number );
+                        return;
+                    }
+                    case ReflectBuiltinLayout::Angle:
+                        outArrComponent[0] = static_cast<const Radians*>( pValue )->radians(); // 성분은 라디안으로 섞는다(키 글은 도로 읽힌다)
+                        return;
+                    case ReflectBuiltinLayout::Float32:
+                    {
+                        const float32* pComponent = static_cast<const float32*>( pValue ); // f32 Layout 은 빈틈 없는 float32 성분이다(`ReflectedValue.cpp` 가 컴파일 때 본다)
+                        const uint8    count      = findComponentCount( builtinIndex );
+                        for ( uint8 index = 0; index < count; ++index )
+                        {
+                            outArrComponent[index] = pComponent[index];
+                        }
+                        return;
+                    }
+                    case ReflectBuiltinLayout::None:
+                    case ReflectBuiltinLayout::Int32:
+                        return;
                 }
             }
 
-            /** @brief 성분을 내장 실수 타입 값 @p pValue 에 씁니다. 바뀌었으면 true 입니다. */
-            [[nodiscard]] static bool writeComponents( ReflectBuiltinIndex builtinIndex, void* pValue, const float32 ( &arrComponent )[4] )
+            /** @brief 성분을 내장 타입 값 @p pValue 에 씁니다. 바뀌었으면 true 입니다. 정수는 가장 가까운 정수로 담는다(`ReflectedValueUtil::writeNumber`). */
+            [[nodiscard]] static bool writeComponents( const ReflectBuiltinIndex builtinIndex, void* pValue, const float32 ( &arrComponent )[kMaxComponentCount] )
             {
-                float32 arrCurrent[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
+                float32 arrCurrent[kMaxComponentCount]{ 0.0f, 0.0f, 0.0f, 0.0f };
                 readComponents( builtinIndex, pValue, arrCurrent );
                 const uint8 count = findComponentCount( builtinIndex );
                 bool        bSame = true;
@@ -83,19 +92,27 @@ namespace sw
                 }
                 if ( bSame )
                     return false;
-                if ( builtinIndex == ReflectBuiltinIndex::kfloat32 )
-                    *static_cast<float32*>( pValue ) = arrComponent[0];
-                else if ( builtinIndex == ReflectBuiltinIndex::kfloat64 )
-                    *static_cast<float64*>( pValue ) = static_cast<float64>( arrComponent[0] );
-                else if ( builtinIndex == ReflectBuiltinIndex::kRadians )
-                    *static_cast<Radians*>( pValue ) = Radians::fromRadians( arrComponent[0] );
-                else if ( builtinIndex == ReflectBuiltinIndex::kfloat2 )
-                    *static_cast<float2*>( pValue ) = float2{ arrComponent[0], arrComponent[1] };
-                else if ( builtinIndex == ReflectBuiltinIndex::kfloat3 )
-                    *static_cast<float3*>( pValue ) = float3{ arrComponent[0], arrComponent[1], arrComponent[2] };
-                else if ( builtinIndex == ReflectBuiltinIndex::kfloat4 )
-                    *static_cast<float4*>( pValue ) = float4{ arrComponent[0], arrComponent[1], arrComponent[2], arrComponent[3] };
-                return true;
+                switch ( ReflectBuiltinTraitTable::get( builtinIndex )._layout )
+                {
+                    case ReflectBuiltinLayout::Number:
+                        return ReflectedValueUtil::writeNumber( builtinIndex, pValue, static_cast<float64>( arrComponent[0] ) );
+                    case ReflectBuiltinLayout::Angle:
+                        *static_cast<Radians*>( pValue ) = Radians::fromRadians( arrComponent[0] );
+                        return true;
+                    case ReflectBuiltinLayout::Float32:
+                    {
+                        float32* pComponent = static_cast<float32*>( pValue );
+                        for ( uint8 index = 0; index < count; ++index )
+                        {
+                            pComponent[index] = arrComponent[index];
+                        }
+                        return true;
+                    }
+                    case ReflectBuiltinLayout::None:
+                    case ReflectBuiltinLayout::Int32:
+                        break;
+                }
+                return false;
             }
         };
     } // namespace
