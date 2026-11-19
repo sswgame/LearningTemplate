@@ -1750,3 +1750,23 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 **남는 위험.** (1) 바닥 광선은 바디 자리에서 아래 한 줄이다 — 비탈 · 가장자리에 걸친 큰 바디는 받쳐 줄 것을 못 보고 쥘 수 있다(사례가 나오면 셰이프 스윕으로). (2) 복제 번호가 없는 서버 스폰(게임이 번호를 매기지 않은 NPC)은 관찰자 반경 밖에서 셀과 함께 내린다 — 늘 있어야 하면 `_bAlwaysLoaded` 를 켜거나 복제 번호를 매긴다. (3) 상태 스냅숏의 컴포넌트 상태 섹션(`ComponentStateStore` — PROPERTY 밖 상태)은 셀 오브젝트의 것을 되돌려 줄 곳이 복원 순간에 없다 — 셀 안에 PROPERTY 밖 상태를 가진 컴포넌트(지형 편집)는 아직 세이브를 넘지 못한다. (4) 쿠킹본 판이 9 → 10 이라 다시 쿠킹하기 전의 쿠킹본은 읽지 않는다(기존 규칙 — 오류로 알린다).
 
 **확인.** 단위(`SceneStreamingTest`): 걸어 나간 오브젝트가 올라 있는 셀로 옮겨 살아남음 · 내려간 셀로 합쳐져 그 셀과 함께 다시 오름, 런타임 스폰이 자리 셀에 들어 함께 내리고 오름, 바닥 셀이 없으면 쥐고 오르면 풂, 런타임 칸이 내렸다 올려도 남음, 세이브 섹션 왕복(내려간 셀의 바뀐 상태 · 올라 있는 셀). `StreamingFloorHoldTest`: 내려간 셀 위 동적 바디는 쥐여 그 높이, 오르면 풀려 떨어짐. 시나리오 `game.wildwest.cellstate`(prairie 를 물려받은 무대, 16 m 셀 · 32 m 반경): NPC 가 A→B 로 간 뒤 A 를 내려도 하나 · 기믹(문 자리 · 상자 발동 수 — `RuntimeState`)이 내렸다 올라도 남음 · 세이브 · 로드 뒤 복원 · 바닥 셀이 내려간 동안 물체 높이 그대로.
+
+### 멀티플레이 스트리밍 소스 · 관련성(설계 2026-11-20)
+
+> 질문: 스트리밍 월드에서 서버는 어느 셀을 올리고, 관련성은 셀과 어떻게 맞물리며, 클라이언트는 아직 오르지 않은 셀의 복제 엔티티를 어떻게 다루는가?
+> 결론: 서버 셀 = 관찰자 소스(위치 · 반경 · 우선순위) 반경의 합집합, 관련성 격자 = 스트리밍 격자. 클라이언트는 셀이 다 오를 때까지 복제 엔티티를 보류하고, 셀에 놓인 엔티티는 쿠킹 파일 id 로 맞춰 스폰하지 않는다. 클라이언트가 셀 상태를 서버에 알리지 않는다.
+
+**대조.**
+- 언리얼 Replication Graph: Spatial2D 노드(격자 칸마다 액터 목록 — 연결은 둘레 칸만 모은다) · AlwaysRelevant 노드(전역 목록) · 연결별 노드(AlwaysRelevant_ForConnection — 자기 폰 · 파티). 우리: 칸 = `NetInterestGrid`(칸 = `StreamingCellGrid` 셀), 전역 = `_setAlwaysRelevant`, 연결별 = `IInterestPolicy::isAlwaysRelevant( connection, … )` — 이미 있다.
+- 언리얼 World Partition 서버 스트리밍: 플레이어 컨트롤러마다 스트리밍 소스(`FWorldPartitionStreamingSource` — 위치 · 모양 반경 · `EStreamingSourcePriority` 0 이 가장 먼저), 서버는 모든 소스의 합집합을 올린다. 우리: `StreamingSource{ 위치, 로딩 반경, 우선순위 }`, 우선순위는 언리얼과 같은 다섯 단계 · 같은 차례(Highest · High · Normal · Low · Lowest). 읽기 차례는 덮는 소스 중 가장 급한 우선순위 → 가까운 거리, 내리기는 모든 소스에서 (그 소스 반경 + 여유) 밖.
+- 정적 액터 NetGUID: 맵에서 읽은 액터(bNetStartup)는 경로 이름으로 서버 · 클라이언트가 같은 객체를 가리킨다 — 클라이언트는 새로 스폰하지 않고 이미 읽은 액터에 묶고, 관련성으로 채널이 닫혀도 지우지 않는다. 못 풀면 스폰하지 않고 경고한다. 우리: `MMOEntity::_staticID` = 쿠킹된 씬의 엔티티 파일 id(같은 쿠킹본이라 양쪽이 같다).
+- 레벨을 아직 안 올린 클라이언트: 언리얼은 클라이언트가 `ServerUpdateLevelVisibility` 로 보이는 레벨을 알리고, 서버는 그 레벨의 액터 복제를 미룬다(액터가 레벨 객체에 속해 레벨 없이 스폰할 수 없기 때문).
+
+**결정.**
+1. 소스(`Engine/Scene/StreamingCellGrid.h` 의 `StreamingSource` · `StreamingSourcePriority`): `SceneStreamingSubsystem::setExternalSources( span<const StreamingSource> )` 는 위치가 유한하지 않거나 반경이 유한한 0 이상이 아니면 오류로 거절한다. 위치만 받는 입구는 두지 않는다(부를 때의 반경을 박아 두면 월드가 바뀌어도 낡은 반경이 남는다) — 카메라 원점만 격자 로딩 반경 · Normal 이다. 셀 번호는 ±2^30 에서 포화하고, 범위 셀 수가 받은 셀 수보다 많은 큰 반경은 받은 셀을 훑는다(믿을 수 없는 좌표 · 반경이 서버를 멈추지 않게). `getActiveSources` 가 소스를 돌려주고 내비 타일 스트리밍도 소스 반경을 쓴다 — 셀과 타일이 다른 반경으로 오르지 않게.
+2. 서버 관찰자: `MMOReplicator::setObserver` 의 소스 반경은 격자 로딩 반경, 우선순위 Normal. `setObserverStreaming( 연결, 반경, 우선순위 )` 로 바꾸되 반경 < 나가는 반경이거나 Config 상한(`MMOReplicatorConfig::_maxStreamingRadius`, 0 이면 바꾸지 못함)을 넘으면 거절한다 — 보이는 엔티티가 서버에 오르지 않은 셀에 있을 수 없다(`initialize` 의 같은 규칙을 관찰자마다). 서버의 오른 셀 = 관찰자 반경의 합집합.
+3. 클라이언트 보류(`MMOClientView` + `INetClientWorld`, 씬 구현 `MMOSceneClientWorld`): 새로 보임의 자리 셀이 다 오르지 않았거나(`SceneStreamingSubsystem::isCellStreamingCompleted` — 그 좌표의 문서 조각(`_bFromDocument`) 가운데 켜진 레이어 조각이 모두 Loaded · Failed, 조각 없는 셀 · 옮겨 온 오브젝트용 조각만 있는 셀은 끝난 것 — 물리의 `isFloorMissing` 과 같은 질의 하나) 정적 엔티티의 셀 오브젝트가 아직 없으면 보류한다. 보류 중 갱신은 틱 규칙대로 들고, 사라짐이면 사건 없이 버린다. `update( 초 )` 가 다 오른 것을 놓고, 제한 시간(`MMOClientViewConfig::_cellHoldTimeoutSeconds` — 기본값 없음, 0 이면 `setWorld` 가 거절)이 지나면 경고한 뒤 동적은 놓고(영원히 숨기지 않는다 — 서버 나가는 반경이 클라이언트 로딩 반경보다 큰 설정 결함의 신호) 정적은 경고만 하고 사라짐이 올 때까지 보류한다(중복 스폰보다 안 보임이 낫다, 언리얼과 같다). 보류 · 보임은 한 표의 단계(`ClientEntity::_state`)라 한 id 가 둘에 동시에 있을 수 없고, 이미 아는 id 의 새로 보임은 상태만 새로 한다. 한 셀 오브젝트에 두 번째 묶기는 받지 않는다. 월드를 주지 않은 보기(LanternVale — 스트리밍 씬이 아니다)는 동적을 지금처럼 곧바로 놓고, 월드를 떼면(`detachWorld`) 보류한 동적이 보인다.
+4. 정적 엔티티 사건은 `Bound` · `Unbound`(셀 오브젝트 id 를 싣는다)로 `Entered` · `Left` 와 종류부터 다르다 — 게임이 `Entered` 에만 스폰하면 정적 엔티티를 스폰할 길이 없다(형식으로 막음). 월드 없이 정적 id 가 오면 오류를 남기고 월드가 걸리거나 사라짐이 올 때까지 보류한다.
+5. 클라이언트 → 서버 셀 상태 보고는 두지 않는다. 우리 엔티티는 셀 오브젝트에 속하지 않아 셀 없이도 상태를 들 수 있고(보류), 보고를 두면 서버가 믿을 수 없는 입력(가짜 "안 올랐음" 으로 복제를 피하기 · 셀 목록 폭주)을 검증해야 하는 공격면만 생긴다. 대가: 보류 중에도 갱신 대역폭이 든다 — 보류는 텔레포트 직후 몇 틱이다.
+
+**남은 위험.** 우선순위는 읽기 차례만 정한다(언리얼처럼 소스마다 목표 상태 Loaded · Activated 를 두지 않는다). 부모(붙은 오브젝트)를 기다리는 보류는 없다 — MMO 엔티티에 부모 칸이 없다. 두 프로세스 짝 시나리오는 스트리밍 씬을 쓰는 게임이 생길 때(LanternVale 은 격자만) — 그때까지 같은 경로를 루프백 끝단 두 클라이언트 · 서버 · 클라이언트 씬 셋으로 단위 테스트가 돈다(`NetMMOStreamingTest`).

@@ -98,7 +98,11 @@ namespace
             return pScene != nullptr ? pScene->getLocalPosition() : float3{};
         }
 
-        static void setSource( SceneStreamingSubsystem& streaming, const float3& source ) { streaming.setExternalSources( span<const float3>( &source, 1 ) ); }
+        static void setSource( SceneStreamingSubsystem& streaming, const float3& position )
+        {
+            const StreamingSource source{ position, streaming.getLoadingRadius(), StreamingSourcePriority::Normal };
+            SW_EXPECT_TRUE( streaming.setExternalSources( span<const StreamingSource>( &source, 1 ) ) );
+        }
 
         /** @brief 이름이 @p pName 인(번호 붙은 겹침 포함) 살아 있는 오브젝트 수입니다 — 같은 엔티티가 두 번 서면 2 다. */
         static uint32 countNamed( GameObjectManager& objects, const utf8* pName )
@@ -382,11 +386,11 @@ SW_TEST_CASE( SceneStreamingTest, MovedObjectFollowsTheCellOfItsPosition )
     SW_EXPECT_EQUAL( 0u, Util::countNamed( objects, "Crate3" ) );
 
     // 두 셀을 함께 올린다 — 옮긴 둘은 새 자리에 하나씩만 선다.
-    const float3 arrSource[] = {
-        float3{ 5.0f, 0.0f, 5.0f},
-        float3{15.0f, 0.0f, 5.0f}
+    const StreamingSource arrSource[] = {
+        StreamingSource{ float3{ 5.0f, 0.0f, 5.0f }, streaming.getLoadingRadius(), StreamingSourcePriority::Normal},
+        StreamingSource{float3{ 15.0f, 0.0f, 5.0f }, streaming.getLoadingRadius(), StreamingSourcePriority::Normal}
     };
-    streaming.setExternalSources( span<const float3>( arrSource, 2 ) );
+    SW_REQUIRE_TRUE( streaming.setExternalSources( span<const StreamingSource>( arrSource, 2 ) ) );
     streaming.update( 0.0f );
     SW_REQUIRE_TRUE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) && streaming.isCellLoaded( StreamingCellCoord{ 1, 0 } ) );
     SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Crate1" ) );
@@ -542,11 +546,11 @@ SW_TEST_CASE( SceneStreamingTest, SaveStateRestoresCellsOverAClearedManager )
     SW_EXPECT_EQUAL( 0u, streaming.getLoadedCellCount() );
     streaming.applySaveState( std::move( state ) );
 
-    const float3 arrSource[] = {
-        float3{ 5.0f, 0.0f, 5.0f},
-        float3{15.0f, 0.0f, 5.0f}
+    const StreamingSource arrSource[] = {
+        StreamingSource{ float3{ 5.0f, 0.0f, 5.0f }, streaming.getLoadingRadius(), StreamingSourcePriority::Normal},
+        StreamingSource{float3{ 15.0f, 0.0f, 5.0f }, streaming.getLoadingRadius(), StreamingSourcePriority::Normal}
     };
-    streaming.setExternalSources( span<const float3>( arrSource, 2 ) );
+    SW_REQUIRE_TRUE( streaming.setExternalSources( span<const StreamingSource>( arrSource, 2 ) ) );
     streaming.update( 0.0f );
     SW_REQUIRE_TRUE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) && streaming.isCellLoaded( StreamingCellCoord{ 1, 0 } ) );
     SW_EXPECT_EQUAL( 3.0f, Util::findPosition( scene, 1 )._x ); // 내려가 있던 셀의 떠 둔 상태

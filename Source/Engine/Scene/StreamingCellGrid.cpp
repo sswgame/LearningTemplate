@@ -7,6 +7,26 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct StreamingCellGridInternal
+        {
+            /** @brief 셀 번호의 한계(±2^30). int32 끝보다 안쪽이라 범위를 도는 `++x` 가 넘치지 않는다. */
+            static constexpr int32   kMaxCellIndex      = 1 << 30;
+            static constexpr float32 kMaxCellIndexFloat = static_cast<float32>( kMaxCellIndex );
+
+            /** @brief 셀 단위 좌표(내림한 값)를 셀 번호로 포화 변환합니다 — 범위 밖 float → int32 변환은 정의되지 않은 동작이다. NaN 은 아래 끝으로 간다. */
+            static int32 toCellIndex( float32 cellUnits )
+            {
+                if ( ( cellUnits > -kMaxCellIndexFloat ) == false )
+                    return -kMaxCellIndex;
+                if ( ( cellUnits < kMaxCellIndexFloat ) == false )
+                    return kMaxCellIndex;
+                return static_cast<int32>( cellUnits );
+            }
+        };
+    } // namespace
+
     bool StreamingCellGrid::tryCreate( const StreamingCellGridDef& def, StreamingCellGrid& outGrid )
     {
         // 기본값으로 메우지 않는다 — 셀 크기가 없는 월드는 데이터가 빠진 것이다.
@@ -27,8 +47,8 @@ namespace sw
     StreamingCellCoord StreamingCellGrid::computeCell( const float3& position ) const
     {
         StreamingCellCoord cell{};
-        cell._x = static_cast<int32>( std::floor( position._x / _def._cellSize ) );
-        cell._z = static_cast<int32>( std::floor( position._z / _def._cellSize ) );
+        cell._x = StreamingCellGridInternal::toCellIndex( std::floor( position._x / _def._cellSize ) );
+        cell._z = StreamingCellGridInternal::toCellIndex( std::floor( position._z / _def._cellSize ) );
         return cell;
     }
 
@@ -45,12 +65,17 @@ namespace sw
 
     void StreamingCellGrid::computeCellsInRange( const float3& origin, vector<StreamingCellCoord>& outListCell ) const
     {
+        computeCellsInRadius( origin, _def._loadingRadius, outListCell );
+    }
+
+    void StreamingCellGrid::computeCellsInRadius( const float3& origin, const float32 radius, vector<StreamingCellCoord>& outListCell ) const
+    {
         outListCell.clear();
-        const float3             minCorner{ origin._x - _def._loadingRadius, origin._y, origin._z - _def._loadingRadius };
-        const float3             maxCorner{ origin._x + _def._loadingRadius, origin._y, origin._z + _def._loadingRadius };
+        const float3             minCorner{ origin._x - radius, origin._y, origin._z - radius };
+        const float3             maxCorner{ origin._x + radius, origin._y, origin._z + radius };
         const StreamingCellCoord minCell       = computeCell( minCorner );
         const StreamingCellCoord maxCell       = computeCell( maxCorner );
-        const float32            radiusSquared = _def._loadingRadius * _def._loadingRadius;
+        const float32            radiusSquared = radius * radius;
         for ( int32 z = minCell._z; z <= maxCell._z; ++z )
         {
             for ( int32 x = minCell._x; x <= maxCell._x; ++x )

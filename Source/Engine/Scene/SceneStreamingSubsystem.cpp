@@ -116,11 +116,12 @@ namespace sw
             }
             listSeenIndex.push_back( cellIndex );
         }
-        _listSourceCell    = listCell;
-        _maxFileCellFileID = maxFileCellFileID;
-        _settings          = settings;
-        _contentPath       = contentPath;
-        _pScene            = &scene;
+        _listSourceCell              = listCell;
+        _maxFileCellFileID           = maxFileCellFileID;
+        _settings                    = settings;
+        _contentPath                 = contentPath;
+        _pScene                      = &scene;
+        _cameraSource._loadingRadius = settings._cellGrid._loadingRadius;
         resetCells();
         SW_LOG_INFO_ID( "SceneStreaming.SceneStreamsCellsCell", "Scene '%#' streams %# cells (cell %# m, radius %# m)", scene.getName(), static_cast<uint32>( _listCell.size() ),
                         _settings._cellGrid._cellSize, _settings._cellGrid._loadingRadius );
@@ -213,14 +214,32 @@ namespace sw
 
     void SceneStreamingSubsystem::setCameraSource( const float3& position )
     {
-        _cameraSource     = position;
-        _bCameraSourceSet = SW_TRUE;
+        _cameraSource._position      = position;
+        _cameraSource._loadingRadius = _settings._cellGrid._loadingRadius;
+        _bCameraSourceSet            = SW_TRUE;
     }
 
-    void SceneStreamingSubsystem::setExternalSources( span<const float3> listSource )
+    bool SceneStreamingSubsystem::setExternalSources( span<const StreamingSource> listSource )
     {
+        for ( const StreamingSource& source : listSource )
+        {
+            // NaN · 무한 반경은 모든 셀을 덮거나 아무 셀도 덮지 않는다 — 맞춰 넣지 않고 거절한다.
+            if ( MathUtil::isFinite( source._loadingRadius ) == false || source._loadingRadius < 0.0f )
+            {
+                SW_LOG_ERROR_ID( "SceneStreaming.SourceRadiusInvalid", "Scene streaming: refused sources - a source radius must be finite and not negative (got %#)", source._loadingRadius );
+                return false;
+            }
+            // NaN 위치는 어느 셀과도 거리를 잴 수 없다(비교가 모두 거짓 — 내리기 · 정렬이 뒤틀린다).
+            if ( MathUtil::isFinite( source._position._x ) == false || MathUtil::isFinite( source._position._z ) == false )
+            {
+                SW_LOG_ERROR_ID( "SceneStreaming.SourcePositionInvalid", "Scene streaming: refused sources - a source position must be finite (got %#, %#)", source._position._x,
+                                 source._position._z );
+                return false;
+            }
+        }
         _listExternalSource.assign( listSource.begin(), listSource.end() );
         _bExternalSources = SW_TRUE;
+        return true;
     }
 
     void SceneStreamingSubsystem::clearExternalSources()
@@ -290,6 +309,22 @@ namespace sw
         return false;
     }
 
+    bool SceneStreamingSubsystem::isCellStreamingCompleted( const StreamingCellCoord& cell ) const
+    {
+        const auto indexIt = _pScene != nullptr ? _mapCellIndex.find( makeCellKey( cell ) ) : _mapCellIndex.end();
+        if ( indexIt == _mapCellIndex.end() )
+            return true; // 스트리밍하지 않거나 엔티티가 없는 셀이다 — 기다릴 것이 없다
+        for ( const uint32 slotIndex : indexIt->second )
+        {
+            // 문서(쿠킹본)의 조각만 기다린다 — 바닥이 될 정적 바디가 있을 수 있다. 옮겨 온 오브젝트를 받으려 만든 조각(런타임 스폰 · 걸어 온 NPC)은 바닥이 아니다.
+            const CellSlot& slot     = getSlot( slotIndex );
+            const bool      bPending = slot._state != CellState::Loaded && slot._state != CellState::Failed;
+            if ( slot._bFromDocument && bPending && areSlotLayersActive( slot ) )
+                return false;
+        }
+        return true;
+    }
+
     void SceneStreamingSubsystem::update( float32 deltaTime )
     {
         (void)deltaTime;
@@ -297,15 +332,13 @@ namespace sw
             return;
         const bool bFinishEachFrame = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
 
-        // 1. 모든 원점에서 로딩 반경 + 여유보다 멀거나 레이어가 꺼진 셀을 되돌린다(읽기 취소 · 상태를 떠 두고 내리기). 내리기 전에 소속을 지금 자리로 다시 정한다(파일 머리말의 셀 경계).
-        const float32 unloadRadius        = getUnloadRadius();
-        const float32 unloadRadiusSquared = unloadRadius * unloadRadius;
+        // 1. 모든 원점에서 (그 원점 반경 + 여유)보다 멀거나 레이어가 꺼진 셀을 되돌린다(읽기 취소 · 상태를 떠 두고 내리기). 내리기 전에 소속을 지금 자리로 다시 정한다(파일 머리말의 셀 경계).
         _listScratchUnload.clear();
         for ( uint32 slotIndex = 0; slotIndex < static_cast<uint32>( _listCell.size() ); ++slotIndex )
         {
             const CellSlot& slot    = getSlot( slotIndex );
             const bool      bActive = slot._state != CellState::Unloaded && slot._state != CellState::Failed;
-            if ( bActive && ( computeNearestSourceDistanceSquared( slot._cell ) > unloadRadiusSquared || areSlotLayersActive( slot ) == false ) )
+            if ( bActive && ( isCellWithinSources( slot._cell, _settings._unloadMargin ) == false || areSlotLayersActive( slot ) == false ) )
                 _listScratchUnload.push_back( slotIndex );
         }
         if ( _listScratchUnload.empty() == false )
@@ -316,11 +349,30 @@ namespace sw
                 unloadCell( getSlot( slotIndex ), true );
             }
         }
-        // 2. 원점마다 로딩 반경 안의 셀(합집합) 중 아직 지어지지 않은 것을 모은다.
+
+        // 2. 원점마다 그 반경 안의 셀(합집합) 중 아직 지어지지 않은 것을 모은다.
+        //    범위 셀 수가 받은 셀 수보다 많으면(큰 반경) 받은 셀을 훑는다 — 한 원점의 일이 반경이 아니라 받은 셀 수에 묶인다.
         _listScratchLoad.clear();
-        for ( const float3& source : getActiveSources() )
+        const auto collectSlot = [this]( uint32 slotIndex )
         {
-            _grid.computeCellsInRange( source, _listScratchCell );
+            const CellSlot& slot    = getSlot( slotIndex );
+            const bool      bStable = slot._state == CellState::Loaded || slot._state == CellState::Failed || areSlotLayersActive( slot ) == false; // 이미 올라 있거나 짓지 못한 셀이거나 레이어가 꺼졌다
+            if ( bStable == false )
+                _listScratchLoad.push_back( slotIndex ); // 원점 반경이 겹치면 같은 셀이 여럿 들어온다 — 아래에서 한 번에 거른다
+        };
+        for ( const StreamingSource& source : getActiveSources() )
+        {
+            const float32 cellsAcross = 2.0f * source._loadingRadius / _grid.getCellSize() + 1.0f;
+            if ( cellsAcross * cellsAcross > static_cast<float32>( _listCell.size() ) )
+            {
+                for ( uint32 slotIndex = 0; slotIndex < static_cast<uint32>( _listCell.size() ); ++slotIndex )
+                {
+                    if ( isCellInSource( getSlot( slotIndex )._cell, source ) )
+                        collectSlot( slotIndex );
+                }
+                continue;
+            }
+            _grid.computeCellsInRadius( source._position, source._loadingRadius, _listScratchCell );
             for ( const StreamingCellCoord& cell : _listScratchCell )
             {
                 const auto indexIt = _mapCellIndex.find( makeCellKey( cell ) );
@@ -328,22 +380,28 @@ namespace sw
                     continue; // 엔티티가 없는 셀이다
                 for ( const uint32 slotIndex : indexIt->second )
                 {
-                    const CellSlot& slot    = getSlot( slotIndex );
-                    const bool      bStable = slot._state == CellState::Loaded || slot._state == CellState::Failed || areSlotLayersActive( slot ) == false; // 이미 올라 있거나 짓지 못한 셀이거나 레이어가 꺼졌다
-                    if ( bStable )
-                        continue;
-                    _listScratchLoad.push_back( slotIndex ); // 원점 반경이 겹치면 같은 셀이 여럿 들어온다 — 아래에서 한 번에 거른다
+                    collectSlot( slotIndex );
                 }
             }
         }
         VectorUtil::sortUnique( _listScratchLoad ); // 모양이 `contains` + `push_back` 이면 셀 수의 제곱이 든다
-        // 가까운 셀부터. 같은 거리는 셀 순서(z, x, 레이어 조각)로 — 결정적이다.
-        VectorUtil::sort( _listScratchLoad, [this]( uint32 lhs, uint32 rhs )
+        // 덮는 원점의 우선순위가 급한 셀부터, 같으면 가까운 셀부터. 같은 거리는 셀 순서(z, x, 레이어 조각)로 — 결정적이다. 키는 셀마다 한 번 잰다(비교마다 원점을 훑지 않게).
+        _listScratchLoadKey.clear();
+        for ( const uint32 slotIndex : _listScratchLoad )
         {
-            const float32 lhsDistance = computeNearestSourceDistanceSquared( getSlot( lhs )._cell );
-            const float32 rhsDistance = computeNearestSourceDistanceSquared( getSlot( rhs )._cell );
-            return lhsDistance != rhsDistance ? lhsDistance < rhsDistance : lhs < rhs;
+            const StreamingCellCoord& cell = getSlot( slotIndex )._cell;
+            _listScratchLoadKey.push_back( LoadOrderKey{ computeCellPriority( cell ), computeNearestSourceDistanceSquared( cell ), slotIndex } );
+        }
+        VectorUtil::sort( _listScratchLoadKey, []( const LoadOrderKey& lhs, const LoadOrderKey& rhs )
+        {
+            if ( lhs._priority != rhs._priority )
+                return lhs._priority < rhs._priority;
+            return lhs._distanceSquared != rhs._distanceSquared ? lhs._distanceSquared < rhs._distanceSquared : lhs._slotIndex < rhs._slotIndex;
         } );
+        for ( size_t index = 0; index < _listScratchLoadKey.size(); ++index )
+        {
+            _listScratchLoad[index] = _listScratchLoadKey[index]._slotIndex;
+        }
 
         // 3. 내용이 없는 셀의 읽기를 프레임당 `_maxCellLoadsPerFrame` 개까지 건다. 내용을 든 셀(메모리 문서 · 떠 둔 상태)은 읽지 않고 짓기로 간다.
         uint32 requestCount = 0;
@@ -410,29 +468,50 @@ namespace sw
         return ( static_cast<uint64>( static_cast<uint32>( cell._x ) ) << 32 ) | static_cast<uint64>( static_cast<uint32>( cell._z ) );
     }
 
-    span<const float3> SceneStreamingSubsystem::getActiveSources() const
+    span<const StreamingSource> SceneStreamingSubsystem::getActiveSources() const
     {
         if ( _bExternalSources )
-            return span<const float3>( _listExternalSource.data(), _listExternalSource.size() );
+            return span<const StreamingSource>( _listExternalSource.data(), _listExternalSource.size() );
         if ( _bCameraSourceSet )
-            return span<const float3>( &_cameraSource, 1 );
+            return span<const StreamingSource>( &_cameraSource, 1 );
         return {};
     }
 
     float32 SceneStreamingSubsystem::computeNearestSourceDistanceSquared( const StreamingCellCoord& cell ) const
     {
         float32 nearest = MathUtil::kMaxFloat;
-        for ( const float3& source : getActiveSources() )
+        for ( const StreamingSource& source : getActiveSources() )
         {
-            nearest = MathUtil::min( nearest, _grid.computeCellDistanceSquared( cell, source ) );
+            nearest = MathUtil::min( nearest, _grid.computeCellDistanceSquared( cell, source._position ) );
         }
         return nearest;
     }
 
-    bool SceneStreamingSubsystem::isWithinUnloadRadius( const StreamingCellCoord& cell ) const
+    bool SceneStreamingSubsystem::isCellInSource( const StreamingCellCoord& cell, const StreamingSource& source ) const
     {
-        const float32 unloadRadius = getUnloadRadius();
-        return computeNearestSourceDistanceSquared( cell ) <= unloadRadius * unloadRadius;
+        return _grid.computeCellDistanceSquared( cell, source._position ) <= source._loadingRadius * source._loadingRadius;
+    }
+
+    StreamingSourcePriority SceneStreamingSubsystem::computeCellPriority( const StreamingCellCoord& cell ) const
+    {
+        StreamingSourcePriority priority = StreamingSourcePriority::Lowest;
+        for ( const StreamingSource& source : getActiveSources() )
+        {
+            if ( isCellInSource( cell, source ) && source._priority < priority )
+                priority = source._priority;
+        }
+        return priority;
+    }
+
+    bool SceneStreamingSubsystem::isCellWithinSources( const StreamingCellCoord& cell, const float32 margin ) const
+    {
+        for ( const StreamingSource& source : getActiveSources() )
+        {
+            const float32 radius = source._loadingRadius + margin;
+            if ( _grid.computeCellDistanceSquared( cell, source._position ) <= radius * radius )
+                return true;
+        }
+        return false;
     }
 
     bool SceneStreamingSubsystem::areSlotLayersActive( const CellSlot& slot ) const
@@ -500,7 +579,7 @@ namespace sw
             // 보일지 말지는 복제기의 관심 영역(관찰자 반경)이 정한다(언리얼도 복제 액터의 존재는 서버가, 클라이언트 관련성은 Replication Graph 가 정한다).
             const bool bReplicated = ( netObjects.findID( *pObject ) & NetObjectTable::kSpawnedBit ) != 0;
             const bool bResident   = pObject->isAlwaysLoaded() || _pScene->findEntityDataLayers( objectID ) != nullptr || bReplicated;
-            if ( bStreamSpawns && bResident == false && isWithinUnloadRadius( cell ) == false )
+            if ( bStreamSpawns && bResident == false && isCellWithinSources( cell, _settings._unloadMargin ) == false )
                 listMove.push_back( MoveCandidate{ objectID, kNoSlot, cell } );
         } );
         for ( const MoveCandidate& candidate : listMove )
@@ -537,7 +616,7 @@ namespace sw
 
         const uint32 toIndex  = findOrAddSlot( cell, listDataLayer );
         CellSlot&    to       = getSlot( toIndex );
-        const bool   bInRange = isWithinUnloadRadius( cell ) && areSlotLayersActive( to );
+        const bool   bInRange = isCellWithinSources( cell, _settings._unloadMargin ) && areSlotLayersActive( to );
         // 반경 안의 빈 조각(옮겨 온 것을 받으려 만든 것) — 올라 있는 조각으로 두고 오브젝트를 살려 받는다(사라졌다 나타나지 않게).
         const bool bEmptyAddedSlot = to._bFromDocument == false && to._state == CellState::Unloaded && to._listNode.empty() && to._listArrivedNode.empty() && to._listObjectID.empty();
         if ( bEmptyAddedSlot && bInRange )
@@ -596,22 +675,8 @@ namespace sw
 
     bool SceneStreamingSubsystem::isFloorMissing( const float3& position ) const
     {
-        return _pScene != nullptr && isFloorMissing( _grid.computeCell( position ) );
-    }
-
-    bool SceneStreamingSubsystem::isFloorMissing( const StreamingCellCoord& cell ) const
-    {
-        const auto indexIt = _mapCellIndex.find( makeCellKey( cell ) );
-        if ( indexIt == _mapCellIndex.end() )
-            return false;
-        for ( const uint32 slotIndex : indexIt->second )
-        {
-            const CellSlot& slot     = getSlot( slotIndex );
-            const bool      bPending = slot._state != CellState::Loaded && slot._state != CellState::Failed;
-            if ( slot._bFromDocument && bPending && areSlotLayersActive( slot ) )
-                return true;
-        }
-        return false;
+        // 셀 상태 질의는 하나다(`isCellStreamingCompleted`) — 물리의 바닥 쥐기와 클라이언트 복제 보류가 같은 판정을 본다.
+        return _pScene != nullptr && isCellStreamingCompleted( _grid.computeCell( position ) ) == false;
     }
 
     void SceneStreamingSubsystem::requestCellContent( CellSlot& slot )

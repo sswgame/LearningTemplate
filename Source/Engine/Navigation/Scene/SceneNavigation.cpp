@@ -779,11 +779,10 @@ namespace sw
         const SceneStreamingSubsystem& streaming = _pManager->getSubsystem<SceneStreamingSubsystem>();
         if ( streaming.isStreaming() == false )
             return;
-        const span<const float3> listSource          = streaming.getActiveSources();
-        const float32            loadRadiusSquared   = streaming.getLoadingRadius() * streaming.getLoadingRadius();
-        const float32            unloadRadiusSquared = streaming.getUnloadRadius() * streaming.getUnloadRadius();
-        const bool               bFinishEachFrame    = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
-        const float32            cellSize            = streaming.getGrid().getCellSize();
+        const span<const StreamingSource> listSource       = streaming.getActiveSources();
+        const float32                     unloadMargin     = streaming.getUnloadMargin();
+        const bool                        bFinishEachFrame = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
+        const float32                     cellSize         = streaming.getGrid().getCellSize();
 
         // 셀이 오르내렸으면 그 구역의 입력이 바뀌었다 — 기하를 다시 모으고 닿은 타일의 입력 해시를 다시 잰다(언리얼 내비 타일 무효화).
         vector<StreamingCellCoord> listChangedCell;
@@ -870,17 +869,21 @@ namespace sw
 
             for ( NavStreamTile& tile : runtime._listStreamTile )
             {
-                // 타일의 XZ 사각형과 가장 가까운 원점 사이 거리 — 셀과 같은 재기(`StreamingCellGrid::computeCellDistanceSquared`)다.
-                const AABB tileBounds      = grid.computeTileBounds( tile._tileX, tile._tileZ, 0.0f, 0.0f );
-                float32    distanceSquared = MathUtil::kMaxFloat;
-                for ( const float3& source : listSource )
+                // 타일의 XZ 사각형과 원점 사이 거리를 원점마다 그 반경과 잰다 — 셀과 같은 재기(`StreamingCellGrid::computeCellDistanceSquared` · 원점 반경)다.
+                const AABB tileBounds = grid.computeTileBounds( tile._tileX, tile._tileZ, 0.0f, 0.0f );
+                bool       bInLoad    = false;
+                bool       bInKeep    = false; // 어느 원점이든 (반경 + 여유) 안이면 내리지 않는다
+                for ( const StreamingSource& source : listSource )
                 {
-                    const float32 dx = MathUtil::max( MathUtil::max( tileBounds._min._x - source._x, 0.0f ), source._x - tileBounds._max._x );
-                    const float32 dz = MathUtil::max( MathUtil::max( tileBounds._min._z - source._z, 0.0f ), source._z - tileBounds._max._z );
-                    distanceSquared  = MathUtil::min( distanceSquared, dx * dx + dz * dz );
+                    const float32 dx              = MathUtil::max( MathUtil::max( tileBounds._min._x - source._position._x, 0.0f ), source._position._x - tileBounds._max._x );
+                    const float32 dz              = MathUtil::max( MathUtil::max( tileBounds._min._z - source._position._z, 0.0f ), source._position._z - tileBounds._max._z );
+                    const float32 distanceSquared = dx * dx + dz * dz;
+                    const float32 keepRadius      = source._loadingRadius + unloadMargin;
+                    bInLoad                       = bInLoad || distanceSquared <= source._loadingRadius * source._loadingRadius;
+                    bInKeep                       = bInKeep || distanceSquared <= keepRadius * keepRadius;
                 }
                 const int2 tileCoord{ tile._tileX, tile._tileZ };
-                if ( distanceSquared > unloadRadiusSquared )
+                if ( bInKeep == false )
                 {
                     if ( tile._state == NavStreamTile::State::Loading || tile._state == NavStreamTile::State::Loaded )
                     {
@@ -899,7 +902,7 @@ namespace sw
                     continue;
                 }
                 const AABB region = runtime._pNavMesh->computeTileBakeRegion( tile._tileX, tile._tileZ );
-                if ( tile._state == NavStreamTile::State::Unloaded && distanceSquared <= loadRadiusSquared )
+                if ( tile._state == NavStreamTile::State::Unloaded && bInLoad )
                 {
                     resolveTileInput( tile, region );
                 }
