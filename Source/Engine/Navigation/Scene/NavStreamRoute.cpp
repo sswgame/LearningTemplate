@@ -117,7 +117,7 @@ namespace sw
         return true;
     }
 
-    float3 NavStreamRoute::computeFrontierTarget( const NavMeshRuntime& runtime, const NavRoutePlan& route, const float3& end )
+    float3 NavStreamRoute::computeFrontierTarget( const NavMeshRuntime& runtime, const NavRoutePlan& route, const float3& end, const float3& searchExtent, const NavQueryFilter& filter )
     {
         using Internal = NavStreamRouteInternal;
         if ( route.isLoadedToGoal() )
@@ -140,9 +140,32 @@ namespace sw
             exit = MathUtil::min( exit, ( bounds._min._z + Internal::kFrontierInset - frontier._center._z ) / delta._z );
         const float3 wanted = frontier._center + delta * MathUtil::clamp( exit, 0.0f, 1.0f );
         NavLocation  location{};
-        if ( runtime._pNavMesh->findNearestPoint( wanted, runtime._searchExtent * Internal::kSnapExtentScale, runtime._filter, location ) )
+        if ( runtime._pNavMesh->findNearestPoint( wanted, searchExtent * Internal::kSnapExtentScale, filter, location ) )
             return location._position;
         return frontier._center;
+    }
+
+    NavPathStatus NavStreamRoute::findPath( const NavMeshRuntime& runtime, const float3& start, const float3& end, const float3& searchExtent, const NavQueryFilter& filter, NavPath& outPath )
+    {
+        outPath._listCoarsePoint.clear();
+        NavRoutePlan route;
+        if ( plan( runtime, start, end, route ) == false || route.isLoadedToGoal() )
+            return runtime._pNavMesh->findPath( start, end, searchExtent, filter, outPath );
+        if ( route._bStartLoaded == false )
+        {
+            // 시작 타일이 내려가 있다 — 세밀 경로 없이 대략 점만 낸다(가상 이동의 길).
+            outPath = NavPath{};
+            outPath._listPoint.push_back( start );
+            outPath._status = NavPathStatus::Partial;
+            collectCoarsePoints( runtime, route, 1, end, outPath._listCoarsePoint );
+            return outPath._status;
+        }
+        const float3 target = computeFrontierTarget( runtime, route, end, searchExtent, filter );
+        if ( runtime._pNavMesh->findPath( start, target, searchExtent, filter, outPath ) == NavPathStatus::Failed )
+            return NavPathStatus::Failed;
+        outPath._status = NavPathStatus::Partial;
+        collectCoarsePoints( runtime, route, route._frontier + 1, end, outPath._listCoarsePoint );
+        return outPath._status;
     }
 
     void NavStreamRoute::collectCoarsePoints( const NavMeshRuntime& runtime, const NavRoutePlan& route, uint32 firstIndex, const float3& end, vector<float3>& outListPoint )
@@ -213,7 +236,7 @@ namespace sw
         if ( agent._bVirtualMove == SW_TRUE || ( crowd.findAgentState( agent._crowdAgentID, state ) && state._bOnNavMesh == false ) )
             crowd.teleportAgent( agent._crowdAgentID, currentPosition );
         agent._bVirtualMove = SW_FALSE;
-        const float3 target = computeFrontierTarget( runtime, route, end );
+        const float3 target = computeFrontierTarget( runtime, route, end, runtime._searchExtent, runtime._filter );
         if ( route._frontier == 0 && float3::getHorizontalDistance( currentPosition, target ) <= Internal::computeArrivalRadius( agent ) )
         {
             // 앞선 가장자리에 닿았는데 그 너머가 아직 내려가 있다.

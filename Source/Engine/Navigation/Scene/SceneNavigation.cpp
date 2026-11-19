@@ -667,33 +667,15 @@ namespace sw
         return pRuntime->_pNavMesh->findPath( start, end, pRuntime->_searchExtent, filter, outPath );
     }
 
-    NavPathStatus SceneNavigation::findStreamingPath( const hashed_string& agentType, const float3& start, const float3& end, NavPath& outPath, vector<float3>& outListCoarsePoint ) const
+    NavPathStatus SceneNavigation::findStreamingPath( const hashed_string& agentType, const float3& start, const float3& end, NavPath& outPath ) const
     {
-        outListCoarsePoint.clear();
         const NavMeshRuntime* pRuntime = findRuntime( agentType );
         if ( pRuntime == nullptr )
         {
             outPath = NavPath{};
             return NavPathStatus::Failed;
         }
-        NavRoutePlan route;
-        if ( NavStreamRoute::plan( *pRuntime, start, end, route ) == false || route.isLoadedToGoal() )
-            return pRuntime->_pNavMesh->findPath( start, end, pRuntime->_searchExtent, pRuntime->_filter, outPath );
-        if ( route._bStartLoaded == false )
-        {
-            // 시작 타일이 내려가 있다 — 세밀 경로 없이 대략 점만 낸다(가상 이동의 길).
-            outPath = NavPath{};
-            outPath._listPoint.push_back( start );
-            outPath._status = NavPathStatus::Partial;
-            NavStreamRoute::collectCoarsePoints( *pRuntime, route, 1, end, outListCoarsePoint );
-            return outPath._status;
-        }
-        const float3 target = NavStreamRoute::computeFrontierTarget( *pRuntime, route, end );
-        if ( pRuntime->_pNavMesh->findPath( start, target, pRuntime->_searchExtent, pRuntime->_filter, outPath ) == NavPathStatus::Failed )
-            return NavPathStatus::Failed;
-        outPath._status = NavPathStatus::Partial;
-        NavStreamRoute::collectCoarsePoints( *pRuntime, route, route._frontier + 1, end, outListCoarsePoint );
-        return outPath._status;
+        return NavStreamRoute::findPath( *pRuntime, start, end, pRuntime->_searchExtent, pRuntime->_filter, outPath );
     }
 
     void SceneNavigation::collectStreamStats( vector<NavStreamStats>& outListStats ) const
@@ -1204,7 +1186,9 @@ namespace sw
                     return false;
                 }
                 // 동기 질의를 남긴다 — 감시 값은 읽는 자리에서 값을 내야 하고 단계 하나에 질의 하나다(대상 수에 비례하지 않는다).
-                if ( navigation.findPath( agentType, pFrom->getWorldPosition(), pTo->getWorldPosition(), outPath ) != NavPathStatus::Complete )
+                // 비동기 요청과 같은 계층 경로다 — 스트리밍 씬에서 오르지 않은 타일 너머 끝도 대략 그래프가 이으면 끝까지 가는 길이다.
+                (void)navigation.findStreamingPath( agentType, pFrom->getWorldPosition(), pTo->getWorldPosition(), outPath );
+                if ( outPath.isEndReachable() == false )
                 {
                     outValue.setText( "no complete path" );
                     return false;
@@ -1218,7 +1202,7 @@ namespace sw
                 NavPath path;
                 if ( findQueryPath( query, outValue, path ) == false )
                     return false;
-                outValue.setNumber( static_cast<float64>( path.computeLength() ) );
+                outValue.setNumber( static_cast<float64>( path.computeRouteLength() ) );
                 return true;
             }
 
@@ -1336,13 +1320,13 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( navAgentStatus, "Nav.AgentStatus", "Move status of the target's navmesh agent: Idle, Moving, Arrived or Failed", &SceneNavigationWatchesInternal::readAgentStatus, true, false );
     SW_AUTOMATION_QUERY_WATCH( navAreaCost, "Nav.AreaCost", "Path cost multiplier of a navigation area for an agent type (key = <agent type>:<area>; empty agent = default); -1 when the area is closed to it",
                                &SceneNavigationWatchesInternal::readAreaCost, false, true );
-    SW_AUTOMATION_QUERY_WATCH( navPathLength, "Nav.PathLength", "Length (m) of the complete navmesh path from the target to the object named by key; absent without one",
+    SW_AUTOMATION_QUERY_WATCH( navPathLength, "Nav.PathLength", "Length (m) of the navmesh path from the target to the object named by key (coarse points past streamed-out tiles included); absent without one reaching it",
                                &SceneNavigationWatchesInternal::readPathLength, true, true );
     SW_AUTOMATION_WATCH( navRouteReplanCount, "Nav.RouteReplanCount", "Long routes over streamed-out tiles planned so far (intermediate targets and virtual moves, all agent types)",
                          &SceneNavigationWatchesInternal::readRouteReplanCount );
     SW_AUTOMATION_WATCH( navStreamLoadedTiles, "Nav.StreamLoadedTiles", "Cooked navmesh tiles (navigation data chunks) streamed in around the streaming sources", &SceneNavigationWatchesInternal::readStreamLoadedTiles );
     SW_AUTOMATION_WATCH( navVirtualAgents, "Nav.VirtualAgents", "Navmesh agents moving virtually over streamed-out tiles along the coarse cluster graph", &SceneNavigationWatchesInternal::readVirtualAgents );
-    SW_AUTOMATION_QUERY_WATCH( navPathLinkCount, "Nav.PathLinkCount", "Off-mesh links the navmesh path from the target to the object named by key crosses",
+    SW_AUTOMATION_QUERY_WATCH( navPathLinkCount, "Nav.PathLinkCount", "Off-mesh links the fine part of the navmesh path from the target to the object named by key crosses (links past streamed-out tiles are not counted)",
                                &SceneNavigationWatchesInternal::readPathLinkCount, true, true );
 } // namespace sw
 

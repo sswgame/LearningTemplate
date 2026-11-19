@@ -352,9 +352,11 @@ SW_TEST_CASE( NavTileStreamingTest, StreamingPathReachesPastStreamedOutTiles )
     const float3 end{ 90.0f, 0.5f, 0.0f };
     NavPath      direct;
     SW_EXPECT_TRUE( navigation.findPath( agentName, start, end, direct ) == NavPathStatus::Failed ); // 목적지 타일이 없다
-    NavPath        path;
-    vector<float3> listCoarse;
-    SW_REQUIRE_TRUE( navigation.findStreamingPath( agentName, start, end, path, listCoarse ) == NavPathStatus::Partial );
+    NavPath path;
+    SW_REQUIRE_TRUE( navigation.findStreamingPath( agentName, start, end, path ) == NavPathStatus::Partial );
+    SW_EXPECT_TRUE( path.isEndReachable() );
+    SW_EXPECT_TRUE( path.computeRouteLength() > 88.0f );
+    const vector<float3>& listCoarse = path._listCoarsePoint;
     SW_REQUIRE_TRUE( path._listPoint.empty() == false );
     SW_EXPECT_TRUE( path._listPoint.back()._x < 14.2f ); // 오른 타일(0 · 1) 안에서 끝난다
     SW_REQUIRE_TRUE( listCoarse.size() >= 2u );
@@ -456,4 +458,37 @@ SW_TEST_CASE( NavTileStreamingTest, AgentOnReloadedTileMovesAgain )
     }
     SW_EXPECT_TRUE( pAgent->getMoveStatus() == NavMoveStatus::Arrived );
     SW_EXPECT_TRUE( pAgent->isOnNavMesh() );
+}
+
+/** @brief [NavTileStreamingTest] 비동기 경로 요청도 같은 계층 경로다 — 오르지 않은 타일 너머 끝을 `Failed` 로 끝내지 않고 `Partial` 과 대략 점(마지막은 끝)으로 낸다 */
+SW_TEST_CASE( NavTileStreamingTest, AsyncPathReachesPastStreamedOutTiles )
+{
+    NavStripWorld world;
+    SW_REQUIRE_TRUE( world.prepare() );
+    SceneNavigation&    navigation = world.getNavigation();
+    const hashed_string agentName  = world._settings._listAgentType[0]._name;
+    Util::setSource( world.getStreaming(), float3{ 0.0f, 0.0f, 0.0f } );
+    Util::step( navigation );
+
+    const float3     start{ 0.0f, 0.5f, 0.0f };
+    const float3     end{ 90.0f, 0.5f, 0.0f };
+    NavPathTicket    ticket = navigation.requestPath( agentName, start, end );
+    NavPath          path;
+    PathRequestState state = PathRequestState::Pending;
+    for ( uint32 frame = 0; frame < 4 && state == PathRequestState::Pending; ++frame )
+    {
+        Util::step( navigation ); // 넘기고 → 다음 갱신이 수확한다
+        state = navigation.takePathResult( ticket, path );
+    }
+    SW_REQUIRE_TRUE( state == PathRequestState::Ready );
+    SW_EXPECT_TRUE( path._status == NavPathStatus::Partial );
+    SW_EXPECT_TRUE( path.isEndReachable() );
+    SW_REQUIRE_TRUE( path._listCoarsePoint.empty() == false );
+    SW_EXPECT_NEAR( end._x, path._listCoarsePoint.back()._x, 1.0e-4f );
+
+    // 동기 질의와 같은 함수다 — 같은 점을 낸다.
+    NavPath direct;
+    (void)navigation.findStreamingPath( agentName, start, end, direct );
+    SW_EXPECT_EQUAL( direct._listPoint.size(), path._listPoint.size() );
+    SW_EXPECT_EQUAL( direct._listCoarsePoint.size(), path._listCoarsePoint.size() );
 }

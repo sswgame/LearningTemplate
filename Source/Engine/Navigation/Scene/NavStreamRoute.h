@@ -18,6 +18,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Navigation/NavigationTypes.h"
+
 namespace sw
 {
     struct NavMeshRuntime;
@@ -46,8 +48,15 @@ namespace sw
         static bool isPositionLoaded( const NavMeshRuntime& runtime, const float3& position );
         /** @brief @p start 에서 @p end 까지의 클러스터 열과 앞선 자리를 정합니다. 두 끝의 클러스터가 없거나 이어지지 않으면 false 입니다. */
         [[nodiscard]] static bool plan( const NavMeshRuntime& runtime, const float3& start, const float3& end, NavRoutePlan& outPlan );
-        /** @brief 앞선 클러스터에서 다음 클러스터 쪽 타일 가장자리의 내비메시 위 점입니다(목적지까지 이어졌으면 @p end). */
-        static float3 computeFrontierTarget( const NavMeshRuntime& runtime, const NavRoutePlan& route, const float3& end );
+        /** @brief 앞선 클러스터에서 다음 클러스터 쪽 타일 가장자리의 내비메시 위 점입니다(목적지까지 이어졌으면 @p end). 붙이기는 @p searchExtent · @p filter 로 한다(워커는 요청의 사본을 넘긴다 — 종류의 거름은 게임 스레드가 바꾼다). */
+        static float3 computeFrontierTarget( const NavMeshRuntime& runtime, const NavRoutePlan& route, const float3& end, const float3& searchExtent, const NavQueryFilter& filter );
+        /**
+         * @brief 계층 경로 — 동기 질의(`SceneNavigation::findStreamingPath` · 경로 감시 값)와 비동기 요청(`NavPathSolver`)이 함께 지나는 하나뿐인 길입니다.
+         * @details 목적지까지 타일이 이어 올라 있거나 대략 그래프가 없으면 세밀 경로 그대로다. 아니면 @p outPath 는 앞선 타일 가장자리까지의 세밀 경로이고
+         *          그 너머는 `NavPath::_listCoarsePoint` 이며 결과는 `Partial` 이다(시작 타일이 내려가 있으면 세밀 경로는 시작 한 점). 질의만 하므로 워커에서 불러도 된다 —
+         *          타일 교체 · 스트리밍 단계는 질의를 수확한 뒤(쓰기 증표)에만 바뀐다. @p searchExtent · @p filter 는 세밀 경로의 것이다(요청자의 거름 사본).
+         */
+        static NavPathStatus findPath( const NavMeshRuntime& runtime, const float3& start, const float3& end, const float3& searchExtent, const NavQueryFilter& filter, NavPath& outPath );
         /** @brief 앞선 자리 너머의 대략 점(클러스터 중심들 · 마지막은 @p end)을 @p outListPoint 에 채웁니다. @p firstIndex 부터입니다. */
         static void collectCoarsePoints( const NavMeshRuntime& runtime, const NavRoutePlan& route, uint32 firstIndex, const float3& end, vector<float3>& outListPoint );
 
