@@ -309,7 +309,8 @@ namespace sw
     {
         const GameObjectManager* pManager = getObjectManager();
         const GameObject*        pObject  = pManager != nullptr && findUnitView( object ) != nullptr ? pManager->resolveGameObject( object ) : nullptr;
-        const MeshComponent*     pMesh    = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
+        // 유닛 틱(병렬)에서도 불린다 — 트랜스폼은 남 읽기 길로 찾는다(`kTickReadSafe`).
+        const MeshComponent* pMesh = pObject != nullptr ? pObject->getTickSafeComponent<MeshComponent>() : nullptr;
         if ( pMesh == nullptr )
             return false;
         outPosition = pMesh->getWorldPosition();
@@ -334,13 +335,11 @@ namespace sw
         return findOn<PawnComponent>( _playerObject );
     }
 
-    const AbilityComponent* ArenaGameModeComponent::findNearestHostile( const AbilityComponent& from, float32 maxRange ) const
+    GameObjectHandle ArenaGameModeComponent::findNearestHostile( const AbilityComponent& from, float32 maxRange ) const
     {
-        const GameObject*        pFromOwner = from.getOwner();
-        const GameObjectManager* pManager   = getObjectManager();
-        const ArenaUnitView*     pNearest   = pFromOwner != nullptr ? findNearestHostileView( pFromOwner->getHandle(), maxRange ) : nullptr;
-        const GameObject*        pTarget    = pNearest != nullptr && pManager != nullptr ? pManager->resolveGameObject( pNearest->_object ) : nullptr;
-        return pTarget != nullptr ? pTarget->getComponent<AbilityComponent>() : nullptr;
+        const GameObject*    pFromOwner = from.getOwner();
+        const ArenaUnitView* pNearest   = pFromOwner != nullptr ? findNearestHostileView( pFromOwner->getHandle(), maxRange ) : nullptr;
+        return pNearest != nullptr ? pNearest->_object : GameObjectHandle{};
     }
 
     void ArenaGameModeComponent::launchProjectile( const AbilityComponent& from, const float3& facing, const hashed_string& projectileID, const AbilityEffectSpec& spec,

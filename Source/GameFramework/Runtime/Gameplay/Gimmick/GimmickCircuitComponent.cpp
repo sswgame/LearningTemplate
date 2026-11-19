@@ -330,6 +330,7 @@ namespace sw
         _listNodeTag.assign( static_cast<size_t>( _circuit.getNodeCount() ), TagContainer{} );
         _listPulsePort.assign( static_cast<size_t>( _circuit.getNodeCount() ), hashed_string{} );
         _listRestPose.resize( static_cast<size_t>( _circuit.getNodeCount() ) );
+        _listPlateWeight.assign( static_cast<size_t>( _circuit.getNodeCount() ), 0.0f );
         if ( pManager == nullptr )
             return;
         for ( int32 node = 0; node < _circuit.getNodeCount(); ++node )
@@ -383,6 +384,7 @@ namespace sw
                     pose._intensity = pLight->getIntensity();
             }
         }
+        refreshPlateWeights( *pManager );
     }
 
     float32 GimmickCircuitComponent::computeProximity( const GameObjectManager& manager, int32 node, const GameObject& target )
@@ -454,7 +456,8 @@ namespace sw
             const GameObject* pTarget = resolveTarget( manager, node );
             if ( pTarget == nullptr )
                 continue;
-            const GimmickSensorComponent* pSensor = pTarget->getComponent<GimmickSensorComponent>();
+            // 센서는 남의 오브젝트지만 틱 중에 읽어도 되는 형식이다(`GimmickSensorComponent::kTickReadSafe`).
+            const GimmickSensorComponent* pSensor = pTarget->getTickSafeComponent<GimmickSensorComponent>();
             switch ( binding )
             {
                 case Binding::Volume:
@@ -465,8 +468,8 @@ namespace sw
                 }
                 case Binding::PressurePlate:
                 {
-                    if ( pSensor != nullptr )
-                        _circuit.setSensorValue( node, pSensor->computeOccupantWeight() );
+                    if ( pSensor != nullptr && static_cast<size_t>( node ) < _listPlateWeight.size() )
+                        _circuit.setSensorValue( node, _listPlateWeight[static_cast<size_t>( node )] );
                     break;
                 }
                 case Binding::Damage:
@@ -502,6 +505,19 @@ namespace sw
                     break;
                 }
             }
+        }
+    }
+
+    void GimmickCircuitComponent::refreshPlateWeights( const GameObjectManager& manager )
+    {
+        _listPlateWeight.resize( _listBinding.size(), 0.0f );
+        for ( size_t node = 0; node < _listBinding.size(); ++node )
+        {
+            if ( _listBinding[node] != Binding::PressurePlate )
+                continue;
+            const GameObject*             pTarget = resolveTarget( manager, static_cast<int32>( node ) );
+            const GimmickSensorComponent* pSensor = pTarget != nullptr ? pTarget->getComponent<GimmickSensorComponent>() : nullptr;
+            _listPlateWeight[node]                = pSensor != nullptr ? pSensor->computeOccupantWeight() : 0.0f;
         }
     }
 
@@ -657,6 +673,7 @@ namespace sw
             return;
         if ( _listBinding.size() != static_cast<size_t>( _circuit.getNodeCount() ) )
             bindNodes();
+        refreshPlateWeights( *pManager );
         pullSensors( *pManager, true );
         _circuit.step();
         applyActuators( *pManager );
@@ -668,6 +685,12 @@ namespace sw
         Component::onTick( context );
         if ( _circuit.isBuilt() == false )
             return;
+        // 압력판 무게 사본은 스텝이 없는 틱에도 매 틱 뒤에 받는다 — 스텝 간격이 프레임보다 길어도 사본이 한 프레임 넘게 묵지 않는다.
+        if ( std::find( _listBinding.begin(), _listBinding.end(), Binding::PressurePlate ) != _listBinding.end() )
+        {
+            context.deferPostTickOnComponent( *this, []( GimmickCircuitComponent& self, GameObjectManager& sceneManager )
+            { self.refreshPlateWeights( sceneManager ); } );
+        }
         const int32 stepCount = _circuit.consumeTime( context.getDeltaTime() );
         if ( stepCount <= 0 )
             return;

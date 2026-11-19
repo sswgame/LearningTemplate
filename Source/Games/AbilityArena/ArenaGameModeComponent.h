@@ -98,8 +98,11 @@ namespace sw
         [[nodiscard]] bool findUnitPosition( GameObjectHandle object, float3& outPosition ) const;
         /** @brief @p from 과 적대 관계이고 살아 있는 가장 가까운 유닛의 현재 위치를 반환합니다. 없으면 false 입니다(틱 밖에서 부릅니다). */
         [[nodiscard]] bool findNearestHostilePosition( GameObjectHandle from, float3& outPosition ) const;
-        /** @brief @p from 과 적대 관계이고 살아 있는 가장 가까운 유닛의 어빌리티 시스템을 반환합니다(어빌리티가 대상을 찾을 때 씁니다). */
-        const AbilityComponent* findNearestHostile( const AbilityComponent& from, float32 maxRange ) const;
+        /**
+         * @brief @p from 과 적대 관계이고 살아 있는 가장 가까운 유닛 오브젝트입니다(어빌리티가 대상을 찾을 때 씁니다). 없으면 무효 핸들입니다.
+         * @details 컴포넌트가 아니라 핸들이다 — 어빌리티는 유닛 틱(병렬) 안에서 돌고, 대상은 같은 그룹에서 틱하는 남이다. 이펙트는 핸들로 건다.
+         */
+        GameObjectHandle findNearestHostile( const AbilityComponent& from, float32 maxRange ) const;
         /**
          * @brief @p from 이 @p facing 방향으로 탄 @p projectileID(`ProjectileCatalog`)를 쏩니다. 맞은 적대 유닛에 @p spec(있으면 @p extraSpec 도)을 적용합니다.
          * @details 어느 스레드에서 불러도 된다. 투사체는 틱이 끝난 뒤(게임 스레드) 시뮬레이션에 넣고 모습을 스폰한다. 스펙은 쏜 순간 만든 것이라 쏜 쪽이 그 사이 쓰러져도 남는다.

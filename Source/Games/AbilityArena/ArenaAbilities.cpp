@@ -4,6 +4,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -37,14 +38,17 @@ namespace sw
         }
         if ( pGameMode != nullptr )
         {
-            const AbilityComponent* pTarget = pGameMode->findNearestHostile( *pAbilitySystem, *range );
-            AbilityEffectSpec       spec    = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
-            if ( pTarget != nullptr && spec.isValid() )
+            // 대상은 같은 그룹에서 틱하는 남이라 컴포넌트를 찾지 않고 핸들로 받는다 — 자리는 트랜스폼(틱 중 읽어도 되는 값)만 읽는다.
+            const GameObjectHandle   target   = pGameMode->findNearestHostile( *pAbilitySystem, *range );
+            const GameObject*        pOwner   = pAbilitySystem->getOwner();
+            const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+            AbilityEffectSpec        spec     = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
+            if ( target.isValid() && pManager != nullptr && spec.isValid() )
             {
                 spec.setSetByCallerMagnitude( "Damage", *damage );
                 // 맞힌 자리 — 휘두른 쪽에서 대상 쪽으로. 이 일격으로 쓰러지면 치명 신호가 그 방향을 쓴다.
-                const GameObject*     pSelfObject   = pAbilitySystem->getOwner();
-                const GameObject*     pTargetObject = pTarget->getOwner();
+                const GameObject*     pSelfObject   = pOwner;
+                const GameObject*     pTargetObject = pManager->resolveGameObject( target );
                 const SceneComponent* pFrom         = pSelfObject != nullptr ? pSelfObject->getPrimarySceneComponent() : nullptr;
                 const SceneComponent* pTo           = pTargetObject != nullptr ? pTargetObject->getPrimarySceneComponent() : nullptr;
                 if ( pFrom != nullptr && pTo != nullptr )
@@ -56,7 +60,7 @@ namespace sw
                     hit._damage         = *damage;
                     spec.setHit( hit );
                 }
-                (void)applyEffectSpecToTarget( spec, pTarget ); // 무적(BlockedTag)이면 걸리지 않는다
+                applyEffectSpecToTarget( spec, target ); // 무적(BlockedTag)이면 걸리지 않는다
             }
         }
         endAbility();

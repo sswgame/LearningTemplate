@@ -133,6 +133,23 @@ namespace sw
         return ActiveEffectHandle{};
     }
 
+    void AbilityComponent::applyGameplayEffectSpecToTarget( const AbilityEffectSpec& spec, GameObjectHandle target )
+    {
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr || target.isValid() == false || spec.isValid() == false )
+            return;
+        pManager->executeOrDeferPostTickOnScene( [target, spec]( GameObjectManager& sceneManager )
+        {
+            GameObject*       pTargetObject = sceneManager.resolveGameObject( target );
+            AbilityComponent* pResolved     = pTargetObject != nullptr ? pTargetObject->getComponent<AbilityComponent>() : nullptr;
+            if ( pResolved != nullptr )
+                (void)pResolved->applyGameplayEffectSpecToSelf( spec );
+            else
+                SW_LOG_TRACE_ID( "AbilityComponent.EffectTargetMissing", "effect target %# has no AbilityComponent (gone or a plain object) - not applied", target.objectID() );
+        } );
+    }
+
     ActiveEffectHandle AbilityComponent::applyGameplayEffectToSelf( const hashed_string& effectID, int32 level )
     {
         const AbilityEffectSpec spec = makeOutgoingSpecByID( effectID, level );

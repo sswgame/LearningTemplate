@@ -171,6 +171,12 @@ namespace sw
         return _pAbilitySystem->applyGameplayEffectSpecToTarget( spec, pTarget );
     }
 
+    void Ability::applyEffectSpecToTarget( const AbilityEffectSpec& spec, GameObjectHandle target )
+    {
+        if ( _pAbilitySystem != nullptr )
+            _pAbilitySystem->applyGameplayEffectSpecToTarget( spec, target );
+    }
+
     AbilityTask* Ability::addTask( unique_ptr<AbilityTask> pTask )
     {
         const bool bCannotAddTask = pTask == nullptr || isActive() == false || _bEnding == SW_TRUE;
@@ -330,11 +336,11 @@ namespace sw
             const GameObjectManager* pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;
             const bool               bTargetIsSelf = pOwner != nullptr && ( pTriggerEvent->_target.isValid() == false || pTriggerEvent->_target == pOwner->getHandle() );
             const GameObjectHandle   targetHandle  = bTargetIsSelf ? pTriggerEvent->_instigator : pTriggerEvent->_target;
-            const GameObject*        pTargetObject = pManager != nullptr ? pManager->resolveGameObject( targetHandle ) : nullptr;
-            const AbilityComponent*  pTarget       = pTargetObject != nullptr ? pTargetObject->getComponent<AbilityComponent>() : nullptr;
-            if ( pTarget != nullptr )
-                (void)applyEffectSpecToTarget( makeOutgoingSpec( targetEffect ), pTarget ); // 이펙트 핸들은 쓰지 않는다. 막히면 걸리지 않을 뿐이다
-            else                                                                            // 상대가 이미 사라졌거나(죽은 공격자) 어빌리티 시스템이 없는 것(함정)은 게임 중 흔한 일이다 — 언리얼 GAS 도 조용히 넘긴다
+            // 상대는 남의 오브젝트라 틱 안에서 컴포넌트를 찾지 않고 핸들로 넘긴다 — 찾기 · 적용은 틱 밖이면 바로, 틱 중이면 틱 뒤다.
+            // 상대가 이미 사라졌거나(죽은 공격자) 어빌리티 시스템이 없는 것(함정)은 게임 중 흔한 일이다 — 언리얼 GAS 도 조용히 넘긴다.
+            if ( pManager != nullptr && targetHandle.isValid() )
+                applyEffectSpecToTarget( makeOutgoingSpec( targetEffect ), targetHandle );
+            else
                 SW_LOG_TRACE_ID( "Ability.ApplyEffectsTriggerEventNo", "ApplyEffects '%#': the trigger event has no target with an AbilityComponent", getConfig()._id.c_str() );
         }
         endAbility();
