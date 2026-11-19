@@ -172,3 +172,50 @@ SW_TEST_CASE( SceneStreamingSourcesTest, CellStreamingCompletedSkipsEmptyCells )
     SW_EXPECT_FALSE( streaming.isCellStreamingCompleted( StreamingCellCoord{ 3, 0 } ) );  // 조각이 있고 원점 밖이다
     SW_EXPECT_TRUE( streaming.isCellStreamingCompleted( StreamingCellCoord{ 40, 40 } ) ); // 조각이 없다 — 기다릴 것이 없다
 }
+
+/**
+ * @brief [SceneStreamingSourcesTest] 거대 · NaN 좌표와 거대 반경이 정의된 동작으로 묶인다 — 셀 번호는 ±2^30 에서 포화하고, NaN 위치 원점은 거절되며,
+ *        거대 반경은 받은 셀만 훑어 모두 올리고 거대 위치는 아무 셀도 올리지 않는다
+ */
+SW_TEST_CASE( SceneStreamingSourcesTest, HugeOrNaNCoordinatesStayBounded )
+{
+    SW_EXPECT_LOG( "SceneStreaming.SourcePositionInvalid" );
+    constexpr int32      kSaturatedCell = 1 << 30; // `StreamingCellGrid::computeCell` 의 포화 한계
+    constexpr float32    kHuge          = 1.0e30f;
+    StreamingCellGridDef def;
+    def._cellSize      = Internal::kCellSize;
+    def._loadingRadius = 6.0f;
+    StreamingCellGrid grid;
+    SW_REQUIRE_TRUE( StreamingCellGrid::tryCreate( def, grid ) );
+    const StreamingCellCoord hugeCell = grid.computeCell( float3{ kHuge, 0.0f, -kHuge } );
+    SW_EXPECT_EQUAL( kSaturatedCell, hugeCell._x );
+    SW_EXPECT_EQUAL( -kSaturatedCell, hugeCell._z );
+    SW_EXPECT_EQUAL( -kSaturatedCell, grid.computeCell( float3{ std::numeric_limits<float32>::quiet_NaN(), 0.0f, 0.0f } )._x );
+
+    Scene scene{ "Bounded" };
+    SW_REQUIRE_TRUE( scene.instantiate( Internal::makeDocument( Internal::kWholeBudgetMicroseconds ) ) );
+    SceneStreamingSubsystem& streaming = scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
+    const StreamingSource    nanSource{
+        float3{ std::numeric_limits<float32>::quiet_NaN(), 0.0f, 5.0f },
+        6.0f, StreamingSourcePriority::Normal
+    };
+    SW_EXPECT_FALSE( streaming.setExternalSources( span<const StreamingSource>( &nanSource, 1 ) ) );
+
+    // 거대 반경: 범위 셀은 수천억 개지만 받은 셀 여섯만 훑는다.
+    const StreamingSource wideSource{
+        float3{ 5.0f, 0.0f, 5.0f },
+        kHuge, StreamingSourcePriority::Normal
+    };
+    SW_REQUIRE_TRUE( streaming.setExternalSources( span<const StreamingSource>( &wideSource, 1 ) ) );
+    streaming.update( 0.0f );
+    SW_EXPECT_EQUAL( ( 1u << Internal::kCellCount ) - 1u, Internal::collectLoadedMask( streaming ) );
+
+    // 거대 위치: 포화한 셀 하나만 보고 아무 셀도 덮지 않는다 — 올라 있던 셀은 모두 내린다.
+    const StreamingSource farSource{
+        float3{ kHuge, 0.0f, kHuge },
+        6.0f, StreamingSourcePriority::Normal
+    };
+    SW_REQUIRE_TRUE( streaming.setExternalSources( span<const StreamingSource>( &farSource, 1 ) ) );
+    streaming.update( 0.0f );
+    SW_EXPECT_EQUAL( 0u, Internal::collectLoadedMask( streaming ) );
+}

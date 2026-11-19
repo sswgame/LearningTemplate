@@ -441,8 +441,11 @@ namespace
                     }
                     if ( _arrClientStreams[index] )
                     {
-                        getStreaming( *_arrClientScene[index] ).setExternalSources( span<const float3>( &_arrAvatar[index], 1 ) ); // 클라이언트 원점 = 자기 아바타(카메라 자리)
-                        getStreaming( *_arrClientScene[index] ).update( 0.0f );
+                        // 클라이언트 원점 = 자기 아바타(카메라 자리, 격자 로딩 반경)
+                        SceneStreamingSubsystem& clientStreaming = getStreaming( *_arrClientScene[index] );
+                        const StreamingSource    clientSource{ _arrAvatar[index], clientStreaming.getLoadingRadius(), StreamingSourcePriority::Normal };
+                        SW_EXPECT_TRUE( clientStreaming.setExternalSources( span<const StreamingSource>( &clientSource, 1 ) ) );
+                        clientStreaming.update( 0.0f );
                     }
                     _arrView[index].update( NetMMOStreamingTestInternal::kTickSeconds );
                     _arrView[index].pollEvents( _arrListEvent[index] );

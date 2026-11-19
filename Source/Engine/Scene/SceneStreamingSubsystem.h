@@ -26,7 +26,7 @@
  * `setExternalSources` 로 프레임마다 넣는다 — 한 번 넣으면 카메라 자리는 쓰지 않는다(`clearExternalSources` 로 되돌린다). 원점이 없으면 아무 셀도 원하지 않는다.
  * MMO 서버는 복제기가 관찰자 자리를 넣는다(`MMOReplicator::feedStreamingSources`). 복제기의 관심 영역 격자도 이 격자(`getGrid`)다.
  * 원점마다 반경 · 우선순위가 있다(`StreamingSource`, 언리얼 World Partition 스트리밍 소스). 올리는 셀은 원점 반경의 합집합이고, 읽기 차례는 셀을 덮는 원점 중
- * 가장 급한 우선순위 → 가까운 거리, 내리기는 모든 원점에서 (그 원점 반경 + 여유) 밖이다. 카메라 원점과 위치만 받는 입구는 월드 설정의 로딩 반경 · `Normal` 이다.
+ * 가장 급한 우선순위 → 가까운 거리, 내리기는 모든 원점에서 (그 원점 반경 + 여유) 밖이다. 카메라 원점은 월드 설정의 로딩 반경 · `Normal` 이다(바깥 원점은 반경을 늘 함께 준다).
  *
  * [셀 내용]
  * 쿠킹본에서 읽은 셀은 색인(좌표 · 레이어 · 내용 구간)만 들고(`SceneDocument::StreamingCell::hasFileContent`), 지은 뒤에는 읽은 엔티티를 버린다 — 다시 올리면 다시 읽는다.
@@ -89,11 +89,10 @@ namespace sw
 
         /** @brief 이번 프레임의 카메라 원점입니다. 바깥 원점(`setExternalSources`)을 쓰는 동안에는 무시합니다. */
         void setCameraSource( const float3& position );
-        /** @brief 원점 목록을 바깥(게임 · 서버)이 정합니다. 부른 뒤로는 카메라 원점을 쓰지 않습니다. 빈 목록이면 아무 셀도 원하지 않습니다. 반경은 부를 때의 로딩 반경, 우선순위는 `Normal` 입니다. */
-        void setExternalSources( span<const float3> listSource );
         /**
-         * @brief 반경 · 우선순위가 원점마다 다른 원점 목록을 바깥이 정합니다(서버 — 접속자마다). 올리는 셀은 원점 반경의 합집합입니다.
-         * @return 반경이 유한한 0 이상이 아닌 원점이 있으면 오류를 남기고 false 이며 지난 원점을 그대로 둡니다(값을 맞춰 넣지 않는다).
+         * @brief 원점 목록(반경 · 우선순위가 원점마다 다르다)을 바깥(게임 · 서버 — 접속자마다)이 정합니다. 부른 뒤로는 카메라 원점을 쓰지 않습니다. 빈 목록이면 아무 셀도 원하지 않습니다.
+         * @details 올리는 셀은 원점 반경의 합집합이다. 반경이 커도 한 프레임의 일은 받은 셀 수를 넘지 않는다(`update` 가 범위 셀과 받은 셀 중 적은 쪽을 훑는다).
+         * @return 위치(X · Z)나 반경이 유한하지 않거나 반경이 음수인 원점이 있으면 오류를 남기고 false 이며 지난 원점을 그대로 둡니다(값을 맞춰 넣지 않는다).
          */
         [[nodiscard]] bool setExternalSources( span<const StreamingSource> listSource );
         /** @brief 바깥 원점을 버리고 카메라 원점으로 돌아갑니다. */
@@ -126,8 +125,6 @@ namespace sw
         uint64 getChangeSerial() const { return _changeSerial; }
         /** @brief 번호 @p serial 뒤에 오르내린 셀의 좌표를 @p outListCell 에 채웁니다(비우고 채운다, 조각마다 한 번 — 같은 좌표가 겹칠 수 있다). */
         void collectCellsChangedSince( uint64 serial, vector<StreamingCellCoord>& outListCell ) const;
-        /** @brief 모든 원점에서 이 거리보다 멀면 내립니다(로딩 반경 + 여유 — 경계에서 번갈지 않게). */
-        float32 getUnloadRadius() const { return _settings._cellGrid._loadingRadius + _settings._unloadMargin; }
         /** @brief 원점마다 (그 원점 반경 + 이 여유)보다 멀면 내립니다(`StreamingSource::_loadingRadius` 가 원점마다 다를 때). */
         float32 getUnloadMargin() const { return _settings._unloadMargin; }
 
@@ -163,10 +160,20 @@ namespace sw
             bool                                   _bContentHeld{ SW_FALSE }; ///< `_listNode` 를 짓고 나서도 든다(메모리 문서의 셀 · 떠 둔 상태) — 아니면 지은 뒤 버리고 다시 올릴 때 다시 읽는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
+        /** @brief 올릴 셀의 정렬 키 — 덮는 원점의 가장 급한 우선순위, 가장 가까운 원점 거리 제곱, 셀 인덱스(결정적 끝 비교)입니다. */
+        struct LoadOrderKey
+        {
+            StreamingSourcePriority _priority{ StreamingSourcePriority::Lowest };
+            float32                 _distanceSquared{ 0.0f };
+            uint32                  _slotIndex{ 0 };
+        };
+
         /** @brief 셀 좌표의 표 키입니다. */
         static uint64 makeCellKey( const StreamingCellCoord& cell );
         /** @brief 원점들 중 가장 가까운 것까지 셀 @p cell 의 거리 제곱입니다. 원점이 없으면 가장 큰 값입니다. */
         float32 computeNearestSourceDistanceSquared( const StreamingCellCoord& cell ) const;
+        /** @brief 셀 @p cell 이 원점 @p source 의 반경 안이면 true 입니다. */
+        bool isCellInSource( const StreamingCellCoord& cell, const StreamingSource& source ) const;
         /** @brief 셀 @p cell 을 반경으로 덮는 원점 가운데 가장 급한 우선순위입니다. 덮는 원점이 없으면 `Lowest` 입니다. */
         StreamingSourcePriority computeCellPriority( const StreamingCellCoord& cell ) const;
         /** @brief 어느 원점이든 (그 원점 반경 + @p margin) 안에 셀 @p cell 이 닿으면 true 입니다. */
@@ -201,5 +208,6 @@ namespace sw
         uint64                                _changeSerial;         ///< 셀이 오르내린 번호(`getChangeSerial`). 월드를 바꿔도 되돌리지 않는다 — 보는 쪽의 마지막 번호가 늘 지금 이하다
         vector<StreamingCellCoord>            _listScratchCell;      ///< 갱신 중 범위 안 셀(프레임마다 다시 쓴다)
         vector<uint32>                        _listScratchLoad;      ///< 갱신 중 범위 안의 올릴 셀 인덱스(가까운 순)
+        vector<LoadOrderKey>                  _listScratchLoadKey;   ///< 갱신 중 올릴 셀의 정렬 키(셀마다 한 번 잰다)
     };
 } // namespace sw

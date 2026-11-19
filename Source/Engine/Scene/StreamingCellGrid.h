@@ -126,7 +126,7 @@ namespace sw
          */
         [[nodiscard]] static bool tryCreate( const StreamingCellGridDef& def, StreamingCellGrid& outGrid );
 
-        /** @brief 위치가 든 셀을 반환합니다. 셀 경계는 아래쪽(작은 좌표)에 속합니다. */
+        /** @brief 위치가 든 셀을 반환합니다. 셀 경계는 아래쪽(작은 좌표)에 속합니다. 셀 번호는 ±2^30 에서 포화합니다(망에서 온 거대 · NaN 좌표도 정의된 셀이 된다). */
         StreamingCellCoord computeCell( const float3& position ) const;
         /** @brief 셀의 XZ 사각형과 점 사이의 최단 거리 제곱을 반환합니다(셀 안이면 0). */
         float32 computeCellDistanceSquared( const StreamingCellCoord& cell, const float3& position ) const;
@@ -135,7 +135,10 @@ namespace sw
          * @param outListCell 비우고 채웁니다.
          */
         void computeCellsInRange( const float3& origin, vector<StreamingCellCoord>& outListCell ) const;
-        /** @brief 원점 둘레에서 반경 @p radius 안에 닿는 셀을 모두 채웁니다(소스마다 반경이 다를 때). 순서 · 비우기는 `computeCellsInRange` 와 같습니다. */
+        /**
+         * @brief 원점 둘레에서 반경 @p radius 안에 닿는 셀을 모두 채웁니다(소스마다 반경이 다를 때). 순서 · 비우기는 `computeCellsInRange` 와 같습니다.
+         * @warning 셀 수는 (2 × 반경 / 셀 크기)² 이다 — 믿을 수 없는 반경으로 부르지 않는다. 스트리밍은 셀 수가 받은 셀보다 많으면 받은 셀을 훑는다(`SceneStreamingSubsystem::update`).
+         */
         void computeCellsInRadius( const float3& origin, float32 radius, vector<StreamingCellCoord>& outListCell ) const;
 
         /**

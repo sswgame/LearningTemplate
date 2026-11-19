@@ -44,16 +44,27 @@ namespace sw
                 const float32                  cellSize  = grid.getCellSize();
                 const int32                    reach     = static_cast<int32>( grid.getLoadingRadius() / cellSize ) + kExtraCellCount;
                 const StreamingCellCoord       center    = grid.computeCell( origin );
-                const float32                  radiusSq  = grid.getLoadingRadius() * grid.getLoadingRadius();
-                const float4                   kLoaded( 0.2f, 0.9f, 0.3f, 1.0f );
-                const float4                   kInRange( 0.95f, 0.85f, 0.2f, 1.0f );
-                const float4                   kOutside( 0.5f, 0.5f, 0.5f, 0.6f );
+                // 스트리밍 중이면 실제 원점(원점마다 반경)으로, 셀을 받지 않은 씬(에디터 XML)은 카메라 원점(격자 로딩 반경)으로 범위를 칠한다 — 카메라 원점의 정의가 그 반경이다.
+                const StreamingSource             cameraSource{ origin, grid.getLoadingRadius(), StreamingSourcePriority::Normal };
+                const span<const StreamingSource> listSource = streaming.isStreaming() ? streaming.getActiveSources() : span<const StreamingSource>( &cameraSource, 1 );
+                const auto                        isInRange  = [&grid, &listSource]( const StreamingCellCoord& cell )
+                {
+                    for ( const StreamingSource& source : listSource )
+                    {
+                        if ( grid.computeCellDistanceSquared( cell, source._position ) <= source._loadingRadius * source._loadingRadius )
+                            return true;
+                    }
+                    return false;
+                };
+                const float4 kLoaded( 0.2f, 0.9f, 0.3f, 1.0f );
+                const float4 kInRange( 0.95f, 0.85f, 0.2f, 1.0f );
+                const float4 kOutside( 0.5f, 0.5f, 0.5f, 0.6f );
                 for ( int32 z = center._z - reach; z <= center._z + reach; ++z )
                 {
                     for ( int32 x = center._x - reach; x <= center._x + reach; ++x )
                     {
                         const StreamingCellCoord cell{ x, z };
-                        const bool               bInRange = grid.computeCellDistanceSquared( cell, origin ) <= radiusSq;
+                        const bool               bInRange = isInRange( cell );
                         const float4&            color    = streaming.isCellLoaded( cell ) ? kLoaded : ( bInRange ? kInRange : kOutside );
                         const float32            minX     = static_cast<float32>( x ) * cellSize;
                         const float32            minZ     = static_cast<float32>( z ) * cellSize;

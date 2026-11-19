@@ -141,16 +141,6 @@ namespace sw
         _bCameraSourceSet            = SW_TRUE;
     }
 
-    void SceneStreamingSubsystem::setExternalSources( span<const float3> listSource )
-    {
-        _listExternalSource.clear();
-        for ( const float3& position : listSource )
-        {
-            _listExternalSource.push_back( StreamingSource{ position, _settings._cellGrid._loadingRadius, StreamingSourcePriority::Normal } );
-        }
-        _bExternalSources = SW_TRUE;
-    }
-
     bool SceneStreamingSubsystem::setExternalSources( span<const StreamingSource> listSource )
     {
         for ( const StreamingSource& source : listSource )
@@ -159,6 +149,13 @@ namespace sw
             if ( MathUtil::isFinite( source._loadingRadius ) == false || source._loadingRadius < 0.0f )
             {
                 SW_LOG_ERROR_ID( "SceneStreaming.SourceRadiusInvalid", "Scene streaming: refused sources - a source radius must be finite and not negative (got %#)", source._loadingRadius );
+                return false;
+            }
+            // NaN 위치는 어느 셀과도 거리를 잴 수 없다(비교가 모두 거짓 — 내리기 · 정렬이 뒤틀린다).
+            if ( MathUtil::isFinite( source._position._x ) == false || MathUtil::isFinite( source._position._z ) == false )
+            {
+                SW_LOG_ERROR_ID( "SceneStreaming.SourcePositionInvalid", "Scene streaming: refused sources - a source position must be finite (got %#, %#)", source._position._x,
+                                 source._position._z );
                 return false;
             }
         }
@@ -237,9 +234,27 @@ namespace sw
         }
 
         // 2. 원점마다 그 반경 안의 셀(합집합) 중 아직 지어지지 않은 것을 모은다.
+        //    범위 셀 수가 받은 셀 수보다 많으면(큰 반경) 받은 셀을 훑는다 — 한 원점의 일이 반경이 아니라 받은 셀 수에 묶인다.
         _listScratchLoad.clear();
+        const auto collectSlot = [this]( uint32 slotIndex )
+        {
+            const CellSlot& slot    = _listCell[slotIndex];
+            const bool      bStable = slot._state == CellState::Loaded || slot._state == CellState::Failed || areSlotLayersActive( slot ) == false; // 이미 올라 있거나 짓지 못한 셀이거나 레이어가 꺼졌다
+            if ( bStable == false )
+                _listScratchLoad.push_back( slotIndex ); // 원점 반경이 겹치면 같은 셀이 여럿 들어온다 — 아래에서 한 번에 거른다
+        };
         for ( const StreamingSource& source : getActiveSources() )
         {
+            const float32 cellsAcross = 2.0f * source._loadingRadius / _grid.getCellSize() + 1.0f;
+            if ( cellsAcross * cellsAcross > static_cast<float32>( _listCell.size() ) )
+            {
+                for ( uint32 slotIndex = 0; slotIndex < static_cast<uint32>( _listCell.size() ); ++slotIndex )
+                {
+                    if ( isCellInSource( _listCell[slotIndex]._cell, source ) )
+                        collectSlot( slotIndex );
+                }
+                continue;
+            }
             _grid.computeCellsInRadius( source._position, source._loadingRadius, _listScratchCell );
             for ( const StreamingCellCoord& cell : _listScratchCell )
             {
@@ -248,26 +263,28 @@ namespace sw
                     continue; // 엔티티가 없는 셀이다
                 for ( const uint32 slotIndex : indexIt->second )
                 {
-                    const CellSlot& slot    = _listCell[slotIndex];
-                    const bool      bStable = slot._state == CellState::Loaded || slot._state == CellState::Failed || areSlotLayersActive( slot ) == false; // 이미 올라 있거나 짓지 못한 셀이거나 레이어가 꺼졌다
-                    if ( bStable )
-                        continue;
-                    _listScratchLoad.push_back( slotIndex ); // 원점 반경이 겹치면 같은 셀이 여럿 들어온다 — 아래에서 한 번에 거른다
+                    collectSlot( slotIndex );
                 }
             }
         }
         VectorUtil::sortUnique( _listScratchLoad ); // 모양이 `contains` + `push_back` 이면 셀 수의 제곱이 든다
-        // 덮는 원점의 우선순위가 급한 셀부터, 같으면 가까운 셀부터. 같은 거리는 셀 순서(z, x, 레이어 조각)로 — 결정적이다.
-        VectorUtil::sort( _listScratchLoad, [this]( uint32 lhs, uint32 rhs )
+        // 덮는 원점의 우선순위가 급한 셀부터, 같으면 가까운 셀부터. 같은 거리는 셀 순서(z, x, 레이어 조각)로 — 결정적이다. 키는 셀마다 한 번 잰다(비교마다 원점을 훑지 않게).
+        _listScratchLoadKey.clear();
+        for ( const uint32 slotIndex : _listScratchLoad )
         {
-            const StreamingSourcePriority lhsPriority = computeCellPriority( _listCell[lhs]._cell );
-            const StreamingSourcePriority rhsPriority = computeCellPriority( _listCell[rhs]._cell );
-            if ( lhsPriority != rhsPriority )
-                return lhsPriority < rhsPriority;
-            const float32 lhsDistance = computeNearestSourceDistanceSquared( _listCell[lhs]._cell );
-            const float32 rhsDistance = computeNearestSourceDistanceSquared( _listCell[rhs]._cell );
-            return lhsDistance != rhsDistance ? lhsDistance < rhsDistance : lhs < rhs;
+            const StreamingCellCoord& cell = _listCell[slotIndex]._cell;
+            _listScratchLoadKey.push_back( LoadOrderKey{ computeCellPriority( cell ), computeNearestSourceDistanceSquared( cell ), slotIndex } );
+        }
+        VectorUtil::sort( _listScratchLoadKey, []( const LoadOrderKey& lhs, const LoadOrderKey& rhs )
+        {
+            if ( lhs._priority != rhs._priority )
+                return lhs._priority < rhs._priority;
+            return lhs._distanceSquared != rhs._distanceSquared ? lhs._distanceSquared < rhs._distanceSquared : lhs._slotIndex < rhs._slotIndex;
         } );
+        for ( size_t index = 0; index < _listScratchLoadKey.size(); ++index )
+        {
+            _listScratchLoad[index] = _listScratchLoadKey[index]._slotIndex;
+        }
 
         // 3. 내용이 없는 셀의 읽기를 프레임당 `_maxCellLoadsPerFrame` 개까지 건다. 내용을 든 셀(메모리 문서 · 떠 둔 상태)은 읽지 않고 짓기로 간다.
         uint32 requestCount = 0;
@@ -353,13 +370,17 @@ namespace sw
         return nearest;
     }
 
+    bool SceneStreamingSubsystem::isCellInSource( const StreamingCellCoord& cell, const StreamingSource& source ) const
+    {
+        return _grid.computeCellDistanceSquared( cell, source._position ) <= source._loadingRadius * source._loadingRadius;
+    }
+
     StreamingSourcePriority SceneStreamingSubsystem::computeCellPriority( const StreamingCellCoord& cell ) const
     {
         StreamingSourcePriority priority = StreamingSourcePriority::Lowest;
         for ( const StreamingSource& source : getActiveSources() )
         {
-            const bool bCovers = _grid.computeCellDistanceSquared( cell, source._position ) <= source._loadingRadius * source._loadingRadius;
-            if ( bCovers && source._priority < priority )
+            if ( isCellInSource( cell, source ) && source._priority < priority )
                 priority = source._priority;
         }
         return priority;

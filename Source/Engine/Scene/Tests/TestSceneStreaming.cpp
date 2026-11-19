@@ -95,7 +95,11 @@ namespace
             return pScene != nullptr ? pScene->getLocalPosition() : float3{};
         }
 
-        static void setSource( SceneStreamingSubsystem& streaming, const float3& source ) { streaming.setExternalSources( span<const float3>( &source, 1 ) ); }
+        static void setSource( SceneStreamingSubsystem& streaming, const float3& position )
+        {
+            const StreamingSource source{ position, streaming.getLoadingRadius(), StreamingSourcePriority::Normal };
+            SW_EXPECT_TRUE( streaming.setExternalSources( span<const StreamingSource>( &source, 1 ) ) );
+        }
     };
     using Util = SceneStreamingTestUtil;
 
