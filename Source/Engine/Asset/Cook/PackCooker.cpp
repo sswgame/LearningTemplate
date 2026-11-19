@@ -201,6 +201,52 @@ namespace sw
             }
 
             /**
+             * @brief 씬 · 프리팹 · 설정의 카탈로그 키 칸(`CatalogKey<Tag>`, 표의 `<Field>`)이 굽는 모든 도메인의 카탈로그 항목을 가리키는지 봅니다. 없는 항목이 하나라도 있으면 false 입니다.
+             * @details 팩 작업은 도메인 · 몫마다 따로 돌아 한 팩만 보면 다른 팩(`common`)의 카탈로그를 볼 수 없다 — 모든 도메인을 한 번에 보는 고르기 작업 안에서 한다.
+             *          카탈로그는 펼친 글로 본다(물려받은 항목 · 다른 팩 부모의 항목도 항목이다). 표에 칸 줄이 없으면 읽지 않는다.
+             */
+            [[nodiscard]] static bool validateCatalogKeys( const PackCookParams& params, const vector<PackDomainCandidates>& listCandidates )
+            {
+                DataCatalogReferenceRules references;
+                if ( references.loadFromAsset() == false )
+                    return false;
+                if ( references.getFieldRows().empty() )
+                    return true;
+                DataCatalogKeyCheck       check( references );
+                DataInheritanceDiskSource source{ params._resourceRoot, engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
+                bool                      bRead = true;
+                for ( const PackDomainCandidates& candidates : listCandidates )
+                {
+                    for ( const PackCandidateFile& file : candidates._listFile )
+                    {
+                        if ( StringUtil::endsWith( file._assetID, ".xml", true ) == false )
+                            continue;
+                        string text;
+                        if ( AssetIO::readTextFile( file._absolutePath, text ) == false || check.isMentioned( text ) == false )
+                            continue;
+                        // 쿠킹본을 따로 만드는 종류(씬 · 프리팹)는 펼치지 않는다 — 그 쿠커가 펼치고, 칸 값은 원문에 적힌 그대로다.
+                        string flatText;
+                        bool   bComposed = false;
+                        if ( AssetCookPath::isCookableSource( file._assetID ) == false &&
+                             ResourceComposer::compose( text, file._absolutePath, ResourceContext::forPackCook( source ), flatText, bComposed ) == false )
+                        {
+                            SW_LOG_ERROR_ID( "PackCooker.CatalogKeyFlattenFailed", "Pack cook: could not flatten '%#' to check catalog keys", file._absolutePath );
+                            bRead = false;
+                            continue;
+                        }
+                        XMLDocument doc;
+                        if ( doc.parse( bComposed ? string_view{ flatText } : string_view{ text }, file._absolutePath ) && doc.getRoot().isValid() )
+                            check.addDocument( doc.getRoot(), file._assetID );
+                    }
+                }
+                const bool bValid = check.validate();
+                if ( bValid == false )
+                    SW_LOG_ERROR_ID( "PackCooker.PackCookBrokenCatalogKey", "Pack cook: catalog key fields name entries that no cooked catalog has (rules in %#) - no pack is written",
+                                     DataCatalogReferenceRules::kTableAssetID );
+                return bRead && bValid;
+            }
+
+            /**
              * @brief 굽는 모든 도메인을 한 번에 보고 담을 파일을 고릅니다(`PackReachResult`). 빠진 참조가 있으면 오류를 남기고 false 입니다.
              * @details 작업 범위 하나(`PackReach`) 안에서 읽는다 — 쿠킹 세션은 작업 밖 읽기를 막는다. 그 범위의 입력은 기록하지 않는다: 고른 결과는 팩마다 설정 해시로 들어가고
              *          담긴 파일은 팩 작업이 다시 읽어 그 작업의 입력이 된다(`computeSelectionHash`).
@@ -259,6 +305,8 @@ namespace sw
                     SW_LOG_ERROR_ID( "PackCooker.PackReachFailed", "Pack cook: following references from the cook roots failed (reasons above) - no pack is written" );
                     return false;
                 }
+                if ( validateCatalogKeys( params, listCandidates ) == false )
+                    return false;
                 vector<PackDomainSources> listSources;
                 for ( const PackDomainCandidates& candidates : listCandidates )
                 {

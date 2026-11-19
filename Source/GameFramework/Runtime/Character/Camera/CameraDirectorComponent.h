@@ -17,6 +17,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Presentation/IUILayerVisibility.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Camera/CameraBlend.h"
@@ -184,7 +185,7 @@ namespace sw
         PROPERTY( Category = "Camera", DisplayName = "Presets", Tooltip = "Camera preset XML (<CameraPresetCatalog>)" )
         AssetRef<CameraPresetCatalog> _catalogPath;
         PROPERTY( Category = "Camera", DisplayName = "Initial Preset", Tooltip = "Preset active at begin play; empty uses the first preset" )
-        hashed_string _initialPreset;
+        CatalogKey<CameraPresetDef> _initialPreset;
         PROPERTY( Category = "Camera", DisplayName = "Target", Tooltip = "Object the presets follow (focus = its world position, yaw / pitch = its facing)" )
         GameObjectHandle _target;
         PROPERTY( Category = "Camera", DisplayName = "Group Targets", Tooltip = "Objects framed together (group framing); empty follows Target" )

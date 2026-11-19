@@ -16,6 +16,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerBody.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerCatalog.h"
@@ -70,7 +71,7 @@ namespace sw
         PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Action platformer catalog XML (stages, grading, body settings)" )
         AssetRef<ActionPlatformerCatalog> _catalogPath;
         PROPERTY( Category = "Data", DisplayName = "Stage", Tooltip = "Stage id in the catalog" )
-        hashed_string _stageID;
+        CatalogKey<ActionStageDef> _stageID;
         PROPERTY( Category = "Stage", DisplayName = "Terrain Rows", Tooltip = "Terrain text rows, top first ('#' wall, '-' one-way, 'D' dirt, 'O' grapple point, anything else empty)" )
         vector<string> _listTerrainRow;
         PROPERTY( Category = "Stage", DisplayName = "Checkpoint X", Tooltip = "World X of each stage checkpoint, in the stage's checkpoint order", Units = m )

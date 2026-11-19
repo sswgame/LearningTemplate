@@ -12,11 +12,13 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
+    struct AbilityEffectDef;
     class GameObjectManager;
 
     /**
@@ -44,7 +46,7 @@ namespace sw
 
     private:
         PROPERTY( Required, Category = "Reaction", DisplayName = "Effect", Tooltip = "Stacking effect id whose stacks a jump removes" )
-        hashed_string _effect;
+        CatalogKey<AbilityEffectDef> _effect;
         PROPERTY( Category = "Reaction", DisplayName = "Stacks Per Jump", Min = 1, Tooltip = "Stacks removed by each jump" )
         int32 _stacksPerJump;
         PROPERTY( Required, Category = "Reaction", DisplayName = "Blocked Tag", Tooltip = "While the object has this tag, jumping does not help (engulfed)" )

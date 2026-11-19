@@ -22,6 +22,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/SchedulePathing.h"
@@ -34,6 +35,7 @@
 
 namespace sw
 {
+    struct CharacterAppearanceDef;
     class Archive;
     class GameObjectManager;
 
@@ -76,7 +78,7 @@ namespace sw
         PROPERTY( Category = "Prefabs", DisplayName = "Villager Prefab", Tooltip = "Body spawned for each schedule NPC (needs a FarmVillagerComponent)" )
         AssetRef<PrefabAsset> _villagerPrefab;
         PROPERTY( Category = "Prefabs", DisplayName = "Villager Presets", Tooltip = "Appearance preset per NPC (cycled by NPC index, seeded by it); empty keeps the prefab's preset" )
-        vector<hashed_string> _listVillagerPreset;
+        vector<CatalogKey<CharacterAppearanceDef>> _listVillagerPreset;
         PROPERTY( Category = "Navigation", DisplayName = "Nav Origin", Tooltip = "World corner of cell (0, 0) of the village nav grid", Units = m )
         float3 _navOrigin;
         PROPERTY( Category = "Navigation", DisplayName = "Nav Width", Tooltip = "Cells along X (required)", Min = 0 )

@@ -354,11 +354,11 @@ namespace sw
     bool VoxelPlayerComponent::applyBlockNames( const VoxelBlockCatalog& catalog )
     {
         bool bKnown = true;
-        if ( const optional<VoxelBlockIndex> water = VoxelPlayerComponentInternal::findBlockOrReport( catalog, _waterBlock, bKnown ) )
+        if ( const optional<VoxelBlockIndex> water = VoxelPlayerComponentInternal::findBlockOrReport( catalog, _waterBlock.key(), bKnown ) )
             _body.setWaterBlock( *water );
-        for ( const hashed_string& blockID : _listStartBlock )
+        for ( const CatalogKey<VoxelBlockDef>& blockID : _listStartBlock )
         {
-            if ( const optional<VoxelBlockIndex> index = VoxelPlayerComponentInternal::findBlockOrReport( catalog, blockID, bKnown ) )
+            if ( const optional<VoxelBlockIndex> index = VoxelPlayerComponentInternal::findBlockOrReport( catalog, blockID.key(), bKnown ) )
                 (void)_hotbar.addBlock( *index, 64 ); // 핫바 슬롯보다 많으면 넘친 블록은 버립니다. 슬롯 수는 핫바가 정합니다.
         }
         return bKnown;

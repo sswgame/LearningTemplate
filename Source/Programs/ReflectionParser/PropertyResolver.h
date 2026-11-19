@@ -32,6 +32,13 @@ namespace sw
         [[nodiscard]] static bool resolveAssetRefProperty( ParsedPropertyInfo& prop, const string& owner );
 
         /**
+         * @brief PROPERTY 에 카탈로그 키(`CatalogKey<T>`)가 있으면 내장 형식 `CatalogKey` 로 정규화하고 항목 종류 `T` 를 `_catalogKeyTag` 에 싣습니다. 쓸 수 없는 모양이면 오류를 남기고 false 입니다.
+         * @details 값은 id 하나라(`CatalogKeyBase`) 처리기 하나가 모든 `T` 를 읽는다. 항목 종류는 인스펙터의 항목 고르기와 참조 표 대조 테스트가 본다. 받는 모양은 값 하나와 한 겹 시퀀스다
+         *          (쿠커가 표의 칸 줄로 값을 찾는 모양 — 속성 하나 또는 `<item>` 목록).
+         */
+        [[nodiscard]] static bool resolveCatalogKeyProperty( ParsedPropertyInfo& prop, const string& owner );
+
+        /**
          * @brief FUNCTION 인자에 타입 핸들(`TComponentHandle<T>`)이 있으면 내장 `ComponentHandle` 로 정규화하고 대상 `T` 를 싣습니다. 쓸 수 없는 모양이면 오류를 남기고 false 입니다.
          * @details 호출 쪽(인스펙터의 선택기 · 콘솔)은 타입 없는 핸들을 넘기고, 생성한 호출 썽크가 `ComponentHandleArgument::cast` 로 대상 타입을 확인해 바꾼다.
          *          확인에는 그 씬의 매니저가 들어서 **컴포넌트의 비정적 메서드**만 받는다(생성자 · 정적 함수 · 컴포넌트가 아닌 타입은 생성 오류다).

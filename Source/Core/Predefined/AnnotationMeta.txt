@@ -85,6 +85,8 @@ string.DisplayName = DisplayName
 string.Tooltip = Tooltip
 string.DefaultValue = Default, DefaultValue
 string.AssetType = AssetType
+# 카탈로그 키 칸의 항목 종류입니다. 파서가 `CatalogKey<T>` 칸에 스스로 적는다(손으로 적지 않는다)
+string.CatalogKeyTag = CatalogKeyTag
 string.Meta = Meta, meta, CustomMeta
 # 허용 범위입니다. 숫자 하나, 또는 따옴표 안에 쉼표로 나눈 숫자 · 앞선 필드 이름 목록("-_halfSize, 0, -_halfSize")을 적습니다. 수학 타입은 원소마다 적습니다.
 # 고정 배치형(롤백 · 넷) 코덱은 이 범위를 와이어 범위로 씁니다. 정수는 범위 비트 수로 쓰고, 범위 밖 값은 쓰기 실패입니다.

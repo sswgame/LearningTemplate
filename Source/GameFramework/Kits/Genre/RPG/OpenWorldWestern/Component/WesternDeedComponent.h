@@ -10,12 +10,15 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternOutlaw.h"
 
 namespace sw
 {
+    struct WesternHuntWeaponDef;
+    struct WesternHitZoneDef;
     class GameObject;
     class GameObjectManager;
 
@@ -82,9 +85,9 @@ namespace sw
         PROPERTY( Category = "Deed", DisplayName = "Id", Tooltip = "Crime, honor action, animal, food or clothing id in the western catalog (by kind)" )
         hashed_string _id;
         PROPERTY( Category = "Hunt", DisplayName = "Weapon", Tooltip = "Hunt: <HuntWeapon id> of the killing shot" )
-        hashed_string _weapon;
+        CatalogKey<WesternHuntWeaponDef> _weapon;
         PROPERTY( Category = "Hunt", DisplayName = "Hit Zone", Tooltip = "Hunt: <HitZone id> of the killing shot" )
-        hashed_string _zone;
+        CatalogKey<WesternHitZoneDef> _zone;
         PROPERTY( Category = "Hunt", DisplayName = "Hit Count", Min = 1, Tooltip = "Hunt: shots that hit; more than one lowers the pelt" )
         int32 _hitCount;
         PROPERTY( Category = "Deed", DisplayName = "Reach", Min = 0.1, Units = m )

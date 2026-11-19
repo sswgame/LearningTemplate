@@ -11,12 +11,14 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 
 namespace sw
 {
     class HousingPlotComponent;
+    struct HousingPartDef;
 
     /** @struct MeadowBuildStep @brief 지을 부품 하나 — 부품 id 와 날 변환(부지 기준 XZ · 층 · 요)입니다. 스냅은 부지가 한다(씬 데이터). */
     REFLECT()
@@ -24,7 +26,7 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY( Required, Tooltip = "Part id in the plot's housing part catalog" )
-        hashed_string _partID{};
+        CatalogKey<HousingPartDef> _partID{};
         PROPERTY( Tooltip = "Raw plot-local XZ (m); the plot snaps it" )
         float2 _position{ 0.0f, 0.0f };
         PROPERTY( Min = 0 )

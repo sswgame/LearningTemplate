@@ -154,7 +154,7 @@ namespace sw
     {
         // 가운데에서 시작해 나선으로 찾은, 물이 아닌 첫 땅입니다.
         // 게임이 시작되었다면 카탈로그와 블록 이름은 startGame 이 이미 확인했습니다.
-        const VoxelBlockIndex water   = _world.getCatalog()->findBlockIndex( _waterBlock ).value(); // startGame 이 확인했다 — 없으면 멈춘다
+        const VoxelBlockIndex water   = _world.getCatalog()->findBlockIndex( _waterBlock.key() ).value(); // startGame 이 확인했다 — 없으면 멈춘다
         const int32           centerX = _world.getSizeX() / 2;
         const int32           centerZ = _world.getSizeZ() / 2;
         for ( int32 radius = 0; radius < _world.getSizeX() / 2; ++radius )
@@ -206,9 +206,9 @@ namespace sw
             return false;
         }
         bool bBlocksKnown = true;
-        for ( const hashed_string* pBlockID : { &_waterBlock, &_stoneBlock, &_grassBlock, &_snowBlock, &_coalOreBlock, &_ironOreBlock } )
+        for ( const CatalogKey<VoxelBlockDef>* pBlockID : { &_waterBlock, &_stoneBlock, &_grassBlock, &_snowBlock, &_coalOreBlock, &_ironOreBlock } )
         {
-            if ( pCatalog->findBlockIndex( *pBlockID ).has_value() )
+            if ( pCatalog->findBlockIndex( pBlockID->key() ).has_value() )
                 continue;
             SW_LOG_ERROR_ID( "VoxelGameMode.DirectorBlockNotBlock", "[Voxel] the game mode's block '%#' is not in the block catalog - the world cannot start", pBlockID->c_str() );
             bBlocksKnown = false;
@@ -220,13 +220,13 @@ namespace sw
         // 광석 · 눈도 지형 생성기가 같은 씨앗으로 놓는다(감사 K-8). 깊을수록 철이다.
         VoxelTerrainSettings settings;
         settings._seed         = static_cast<uint32>( _terrainSeed );
-        settings._stoneBlock   = _stoneBlock;
-        settings._grassBlock   = _grassBlock;
-        settings._snowBlock    = _snowBlock;
+        settings._stoneBlock   = _stoneBlock.key();
+        settings._grassBlock   = _grassBlock.key();
+        settings._snowBlock    = _snowBlock.key();
         settings._snowHeight   = _snowHeight;
         settings._listOreLayer = {
-            VoxelOreLayer{_coalOreBlock, _coalOreChance, kVoxelChunkHeight},
-            VoxelOreLayer{_ironOreBlock, _ironOreChance, _ironOreMaxHeight}
+            VoxelOreLayer{_coalOreBlock.key(), _coalOreChance, kVoxelChunkHeight},
+            VoxelOreLayer{_ironOreBlock.key(), _ironOreChance, _ironOreMaxHeight}
         };
         // 지형은 청크를 올릴 때 생성한다(생성 훅). 처음에는 스폰 자리를 찾는 월드 가운데 둘레를 한 번에 올린다 — 몸을 놓기 전이다.
         _world.setChunkGenerator( VoxelTerrainSettings::makeChunkGenerator( settings ) );

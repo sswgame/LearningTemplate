@@ -17,6 +17,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGBattlefield.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCatalog.h"
@@ -95,19 +96,19 @@ namespace sw
         PROPERTY( Category = "Field", DisplayName = "Height", Min = 1 )
         int32 _height;
         PROPERTY( Category = "Field", DisplayName = "Terrain", Tooltip = "Terrain id every cell starts with" )
-        hashed_string _defaultTerrain;
+        CatalogKey<SRPGTerrainDef> _defaultTerrain;
         PROPERTY( Category = "Field", DisplayName = "Seed" )
         uint32 _seed;
         PROPERTY( Category = "Units", DisplayName = "Player Units", Tooltip = "Unit ids (catalog) of the player team, one per cell" )
-        vector<hashed_string> _listPlayerUnit;
+        vector<CatalogKey<SRPGUnitDef>> _listPlayerUnit;
         PROPERTY( Category = "Units", DisplayName = "Player Cells", Tooltip = "Cells (whole numbers) of the player units" )
         vector<float2> _listPlayerCell;
         PROPERTY( Category = "Units", DisplayName = "Enemy Units", Tooltip = "Unit ids (catalog) of the enemy team, one per cell" )
-        vector<hashed_string> _listEnemyUnit;
+        vector<CatalogKey<SRPGUnitDef>> _listEnemyUnit;
         PROPERTY( Category = "Units", DisplayName = "Enemy Cells", Tooltip = "Cells (whole numbers) of the enemy units" )
         vector<float2> _listEnemyCell;
         PROPERTY( Category = "Units", DisplayName = "Pilot", Tooltip = "Pilot id (catalog) every unit flies with" )
-        hashed_string _pilot;
+        CatalogKey<SRPGPilotDef> _pilot;
 
         SharedAssetRef<SRPGCatalog> _pCatalog;
         SRPGBattlefield             _field;

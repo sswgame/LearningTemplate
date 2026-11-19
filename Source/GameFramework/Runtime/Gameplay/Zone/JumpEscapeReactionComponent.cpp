@@ -49,7 +49,7 @@ namespace sw
         const bool bBlocked  = _blockedTag.isValid() && pAbility->getOwnedTagCounts().hasMatchingTag( _blockedTag );
         if ( bJumped == false || bBlocked )
             return;
-        const ActiveEffectHandle handle = pAbility->findActiveEffectByID( _effect );
+        const ActiveEffectHandle handle = pAbility->findActiveEffectByID( _effect.key() );
         if ( handle.isValid() && pAbility->removeActiveEffect( handle, _stacksPerJump ) )
             ++_escapeCount;
     }

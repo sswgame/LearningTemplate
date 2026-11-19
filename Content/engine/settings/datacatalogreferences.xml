@@ -8,6 +8,13 @@
   targetKey 는 가리키는 원소의 id 속성(기본 id)입니다. 깨진 필수 참조는 로드 · 쿠킹 실패입니다. optional="true" 는 이 파일 밖에서 채워질 수 있는 연결에만 둡니다(경고만).
   inEntry="true" 면 target 을 루트가 아니라 같은 항목(owner 의 첫 원소)의 자식에서 찾습니다(퀘스트 안의 단계).
   <Unique owner attribute> 는 owner 원소의 attribute 값이 한 파일 안에서 겹치면 오류인 줄입니다(코드가 같은 id 를 교체로 받는 카탈로그의 파일 오타를 막는다).
+  file="X" 면 target 을 이 파일이 아니라 루트의 X 속성이 적은 리소스(그 루트의 자식)에서 찾습니다. 루트가 X 를 적지 않았으면 그 줄은 보지 않습니다(필수인지는 읽는 코드가 안다).
+  defaultAttribute="Y" 면 attribute 를 적지 않은 원소는 Y 의 값을 id 로 봅니다(기술의 frames 가 없으면 자기 id).
+
+  카탈로그 밖의 칸(씬 · 프리팹의 컴포넌트 · 구조체 칸 `CatalogKey<Tag>`):
+  <CatalogKey tag catalog entry [targetKey]> 는 항목 종류 Tag(C++ 형식 이름)가 가리키는 카탈로그 루트와 항목 원소, <Field owner field tag> 는 원소 owner 의 칸 field 가
+  그 종류의 id 라는 줄입니다. 팩 쿠커는 굽는 모든 도메인의 카탈로그 항목(펼친 글)을 모아 칸 값마다 대조하고, 없으면 팩을 쓰지 않습니다. 인스펙터는 같은 줄로 항목 콤보를 채웁니다.
+  칸을 더하거나 바꾸면 줄도 고칩니다 — 다르면 DataCatalogReferencesTest.FieldTableMatchesReflection 이 집니다(쿠커는 게임 모듈의 리플렉션을 보지 못한다).
 -->
 <DataCatalogReferenceTable>
 	<Catalog root="AbilityCatalog">
@@ -88,8 +95,88 @@
 		<Reference owner="Building" attribute="trains" target="Unit"/>
 		<Reference owner="Site" attribute="garrison" target="Unit" named="true"/>
 	</Catalog>
+	<!-- 적 패턴의 시작 · 이어지는 상태는 같은 패턴 안의 상태다. 한 패턴 안의 같은 상태 id 는 읽는 코드(ActionPlatformerCatalog::loadPattern)가 본다 — 패턴마다 이름 공간이 따로라 <Unique> 로 적을 수 없다. -->
+	<Catalog root="ActionPlatformer">
+		<Reference owner="Pattern" attribute="start" target="State" inEntry="true"/>
+		<Reference owner="Pattern/State" attribute="next" target="State" inEntry="true"/>
+		<Reference owner="Pattern/State" attribute="onNear" target="State" inEntry="true"/>
+		<Reference owner="Pattern/State" attribute="onHit" target="State" inEntry="true"/>
+	</Catalog>
+	<!-- 격투 캐릭터의 기술은 루트 moves 가 가리키는 기술 카탈로그(MoveCatalog)의 프레임 데이터다 — frames 를 적지 않으면 자기 id. -->
+	<Catalog root="FighterCatalog">
+		<Reference owner="Fighter/Move" attribute="frames" defaultAttribute="id" target="Move" file="moves"/>
+	</Catalog>
 	<Catalog root="SRPGCatalog">
 		<Reference owner="Unit" attribute="weapons" target="Weapon"/>
 		<Reference owner="Unit" attribute="developsTo" target="Unit" named="true"/>
 	</Catalog>
+	<!-- 카탈로그 키 칸(CatalogKey<Tag>) — 항목 종류 줄, 그 아래 그 종류를 쓰는 칸 줄. -->
+	<CatalogKey tag="AbilitySetDef" catalog="AbilityCatalog" entry="AbilitySet"/>
+	<Field owner="AbilityComponent" field="_abilitySetID" tag="AbilitySetDef"/>
+	<Field owner="ArenaGameModeComponent" field="_playerAbilitySet" tag="AbilitySetDef"/>
+	<Field owner="ArenaGameModeComponent" field="_gruntAbilitySet" tag="AbilitySetDef"/>
+	<Field owner="ArenaGameModeComponent" field="_casterAbilitySet" tag="AbilitySetDef"/>
+	<CatalogKey tag="ActionStageDef" catalog="ActionPlatformer" entry="Stage"/>
+	<Field owner="ActionPlatformerDemoComponent" field="_stageID" tag="ActionStageDef"/>
+	<CatalogKey tag="SRPGTerrainDef" catalog="SRPGCatalog" entry="Terrain"/>
+	<CatalogKey tag="SRPGUnitDef" catalog="SRPGCatalog" entry="Unit"/>
+	<CatalogKey tag="SRPGPilotDef" catalog="SRPGCatalog" entry="Pilot"/>
+	<Field owner="TacticsSRPGDemoComponent" field="_defaultTerrain" tag="SRPGTerrainDef"/>
+	<Field owner="TacticsSRPGDemoComponent" field="_listPlayerUnit" tag="SRPGUnitDef"/>
+	<Field owner="TacticsSRPGDemoComponent" field="_listEnemyUnit" tag="SRPGUnitDef"/>
+	<Field owner="TacticsSRPGDemoComponent" field="_pilot" tag="SRPGPilotDef"/>
+	<CatalogKey tag="WeaponDef" catalog="WeaponCatalog" entry="Weapon"/>
+	<Field owner="ShooterPlayerComponent" field="_listWeaponID" tag="WeaponDef"/>
+	<CatalogKey tag="RTSUnitDef" catalog="RTSCatalog" entry="Unit"/>
+	<Field owner="FrontierSkirmishGameModeComponent" field="_workerUnit" tag="RTSUnitDef"/>
+	<Field owner="FrontierSkirmishGameModeComponent" field="_soldierUnit" tag="RTSUnitDef"/>
+	<Field owner="FrontierSkirmishGameModeComponent" field="_barracksUnit" tag="RTSUnitDef"/>
+	<Field owner="SkirmishGameModeComponent" field="_listBuildUnitID" tag="RTSUnitDef"/>
+	<Field owner="SkirmishGameModeComponent" field="_workerUnitID" tag="RTSUnitDef"/>
+	<Field owner="SkirmishGameModeComponent" field="_depotUnitID" tag="RTSUnitDef"/>
+	<Field owner="SkirmishGameModeComponent" field="_supplyUnitID" tag="RTSUnitDef"/>
+	<Field owner="SkirmishGameModeComponent" field="_productionUnitID" tag="RTSUnitDef"/>
+	<Field owner="SkirmishGameModeComponent" field="_armyUnitID" tag="RTSUnitDef"/>
+	<CatalogKey tag="CityBuildingDef" catalog="CityCatalog" entry="Building"/>
+	<Field owner="FrontierCityGameModeComponent" field="_landmarkBuilding" tag="CityBuildingDef"/>
+	<CatalogKey tag="CameraPresetDef" catalog="CameraPresetCatalog" entry="Preset"/>
+	<Field owner="CameraDirectorComponent" field="_initialPreset" tag="CameraPresetDef"/>
+	<Field owner="SkirmishGameModeComponent" field="_watchCameraPreset" tag="CameraPresetDef"/>
+	<CatalogKey tag="CropDef" catalog="CropCatalog" entry="Crop"/>
+	<Field owner="FarmCropModel" field="_cropID" tag="CropDef"/>
+	<CatalogKey tag="HousingPartDef" catalog="HousingPartCatalog" entry="Part"/>
+	<Field owner="MeadowBuildStep" field="_partID" tag="HousingPartDef"/>
+	<CatalogKey tag="WesternRegionDef" catalog="WesternCatalog" entry="Region"/>
+	<CatalogKey tag="WesternHorseDef" catalog="WesternCatalog" entry="Horse"/>
+	<CatalogKey tag="WesternHuntWeaponDef" catalog="WesternCatalog" entry="HuntWeapon"/>
+	<CatalogKey tag="WesternHitZoneDef" catalog="WesternCatalog" entry="HitZone"/>
+	<Field owner="WildWestGameModeComponent" field="_regionID" tag="WesternRegionDef"/>
+	<Field owner="WesternHorseComponent" field="_breed" tag="WesternHorseDef"/>
+	<Field owner="WesternDeedComponent" field="_weapon" tag="WesternHuntWeaponDef"/>
+	<Field owner="WesternDeedComponent" field="_zone" tag="WesternHitZoneDef"/>
+	<CatalogKey tag="VelmoraRegionDef" catalog="VelmoraRegionCatalog" entry="Region"/>
+	<Field owner="VelmoraGameModeComponent" field="_startRegion" tag="VelmoraRegionDef"/>
+	<CatalogKey tag="ScheduleNPCDef" catalog="Schedules" entry="NPC"/>
+	<Field owner="ScheduleNPCComponent" field="_npcID" tag="ScheduleNPCDef"/>
+	<CatalogKey tag="InteractionDef" catalog="Interactions" entry="Interaction"/>
+	<CatalogKey tag="SmartObjectDef" catalog="Interactions" entry="SmartObject"/>
+	<Field owner="InteractableComponent" field="_interactionID" tag="InteractionDef"/>
+	<Field owner="SmartObjectComponent" field="_smartObjectID" tag="SmartObjectDef"/>
+	<CatalogKey tag="QuestDef" catalog="QuestCatalog" entry="Quest"/>
+	<Field owner="QuestObjectiveMarkerComponent" field="_quest" tag="QuestDef"/>
+	<CatalogKey tag="AbilityEffectDef" catalog="AbilityCatalog" entry="AbilityEffect"/>
+	<Field owner="JumpEscapeReactionComponent" field="_effect" tag="AbilityEffectDef"/>
+	<CatalogKey tag="WeatherDef" catalog="WeatherCatalog" entry="Weather"/>
+	<Field owner="WeatherDirectorComponent" field="_startWeather" tag="WeatherDef"/>
+	<CatalogKey tag="VoxelBlockDef" catalog="VoxelBlockCatalog" entry="Block"/>
+	<Field owner="VoxelGameModeComponent" field="_waterBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelGameModeComponent" field="_stoneBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelGameModeComponent" field="_grassBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelGameModeComponent" field="_snowBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelGameModeComponent" field="_coalOreBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelGameModeComponent" field="_ironOreBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelPlayerComponent" field="_waterBlock" tag="VoxelBlockDef"/>
+	<Field owner="VoxelPlayerComponent" field="_listStartBlock" tag="VoxelBlockDef"/>
+	<CatalogKey tag="CharacterAppearanceDef" catalog="CharacterAppearanceCatalog" entry="CharacterAppearance"/>
+	<Field owner="FarmVillageGameModeComponent" field="_listVillagerPreset" tag="CharacterAppearanceDef"/>
 </DataCatalogReferenceTable>

@@ -160,9 +160,9 @@ namespace sw
             return false;
         }
         bool bSetsKnown = true;
-        for ( const hashed_string* pSetID : { &_playerAbilitySet, &_gruntAbilitySet, &_casterAbilitySet } )
+        for ( const CatalogKey<AbilitySetDef>* pSetID : { &_playerAbilitySet, &_gruntAbilitySet, &_casterAbilitySet } )
         {
-            if ( pCatalog->findAbilitySet( *pSetID ) != nullptr )
+            if ( pCatalog->findAbilitySet( pSetID->key() ) != nullptr )
                 continue;
             SW_LOG_ERROR_ID( "ArenaGameMode.DirectorAbilitySetNot", "[Arena] the game mode's ability set '%#' is not in the ability catalog - the arena cannot start", pSetID->c_str() );
             bSetsKnown = false;
@@ -183,13 +183,13 @@ namespace sw
         switch ( kind )
         {
             case ArenaUnitKind::Player:
-                return _playerAbilitySet;
+                return _playerAbilitySet.key();
             case ArenaUnitKind::Grunt:
-                return _gruntAbilitySet;
+                return _gruntAbilitySet.key();
             case ArenaUnitKind::Caster:
-                return _casterAbilitySet;
+                return _casterAbilitySet.key();
         }
-        return _playerAbilitySet; // 열거자는 셋뿐이다(covered-switch) — 닿지 않는다
+        return _playerAbilitySet.key(); // 열거자는 셋뿐이다(covered-switch) — 닿지 않는다
     }
 
     void ArenaGameModeComponent::onGameStarted()

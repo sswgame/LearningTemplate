@@ -102,7 +102,7 @@ namespace sw
             return;
         }
         _pCatalog = SharedAssetCache<InteractionCatalog>::acquire( _catalogPath ).snapshot();
-        _pDef     = _pCatalog != nullptr ? _pCatalog->findInteraction( _interactionID ) : nullptr;
+        _pDef     = _pCatalog != nullptr ? _pCatalog->findInteraction( _interactionID.key() ) : nullptr;
         if ( _pDef == nullptr )
             SW_LOG_ERROR_ID( "InteractableComponent.InteractionNot", "Interaction '%#' is not in %#", _interactionID.c_str(), _catalogPath.c_str() );
     }
@@ -201,7 +201,7 @@ namespace sw
 
     void InteractableComponent::setInteractionID( const hashed_string& id )
     {
-        _interactionID = id;
+        _interactionID = CatalogKey<InteractionDef>( id );
         resolveDefinition();
     }
 

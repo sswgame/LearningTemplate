@@ -7,12 +7,14 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Client/Marker/ObjectiveMarkerComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
+    struct QuestDef;
     class QuestLog;
 
     /**
@@ -52,7 +54,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Quest", DisplayName = "Quest", Tooltip = "Quest id in the quest catalog" )
-        hashed_string _quest;
+        CatalogKey<QuestDef> _quest;
         PROPERTY( Category = "Quest", DisplayName = "Kind", Tooltip = "Objective kind as notified to the quest log (Kill, Collect, Talk, Reach)" )
         hashed_string _kind;
         PROPERTY( Category = "Quest", DisplayName = "Target", Tooltip = "Objective target as notified to the quest log (wolf, elder, gate)" )

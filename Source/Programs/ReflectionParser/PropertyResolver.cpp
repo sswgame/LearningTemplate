@@ -128,6 +128,39 @@ namespace sw
         return true;
     }
 
+    bool PropertyResolver::resolveCatalogKeyProperty( ParsedPropertyInfo& prop, const string& owner )
+    {
+        if ( prop._typeName.find( "CatalogKey<" ) == string::npos )
+            return true;
+        string     target;
+        const bool bSingleValue = prop._bIsContainer == SW_FALSE && tryReadTemplateTarget( prop._typeName, "CatalogKey<", target );
+        const bool bSequence    = prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._containerType != "Set" && prop._containerType != "UnorderedSet" &&
+                               ( prop._containerTree == nullptr || prop._containerTree->_elementNested == nullptr ) && tryReadTemplateTarget( prop._elementTypeName, "CatalogKey<", target );
+        if ( bSingleValue == false && bSequence == false )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYHoldsCatalogKey", "ERROR: PROPERTY() '%#' holds a catalog key (%#) in a shape the cook cannot check. Use one CatalogKey<T>, or a vector of CatalogKey<T>.",
+                             owner, prop._typeName );
+            return false;
+        }
+        const string kCanonical = "CatalogKey";
+        if ( bSingleValue )
+        {
+            prop._typeName = kCanonical;
+        }
+        else
+        {
+            const string typedSpelling = prop._elementTypeName;
+            replaceAllText( prop._typeName, typedSpelling, kCanonical );
+            prop._elementTypeName = kCanonical;
+            if ( prop._containerTree != nullptr )
+                prop._containerTree->_elementTypeName = kCanonical;
+        }
+        // 표의 `<CatalogKey tag>` 는 이름공간 없는 형식 이름이다.
+        const string_view kNamespace = "sw::";
+        prop._catalogKeyTag          = StringUtil::startsWith( target, kNamespace ) ? target.substr( kNamespace.size() ) : target;
+        return true;
+    }
+
     bool PropertyResolver::resolveComponentHandleParameters( ParsedFunctionInfo& method, bool bComponentOwner, const string& owner )
     {
         for ( ParsedParameterInfo& parameter : method._listParameter )

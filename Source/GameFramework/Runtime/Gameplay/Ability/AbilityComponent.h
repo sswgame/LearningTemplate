@@ -18,6 +18,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Health/HealthSourceComponent.h"
@@ -36,6 +37,7 @@ namespace sw
     class StateIO;
 
     class AbilityCatalog;
+    struct AbilitySetDef;
     class AbilityClassRegistry;
     class Ability;
 
@@ -142,8 +144,8 @@ namespace sw
         const AbilityClassRegistry* findClassRegistry() const;
 
         /** @brief 플레이를 시작할 때 줄 어빌리티 세트의 id 입니다(카탈로그의 `<AbilitySet id="...">`). */
-        void                 setAbilitySetID( const hashed_string& setID ) { _abilitySetID = setID; }
-        const hashed_string& getAbilitySetID() const { return _abilitySetID; }
+        void                             setAbilitySetID( const CatalogKey<AbilitySetDef>& setID ) { _abilitySetID = setID; }
+        const CatalogKey<AbilitySetDef>& getAbilitySetID() const { return _abilitySetID; }
         /**
          * @brief 카탈로그의 어빌리티 세트 하나를 지금 줍니다. 어트리뷰트 세트와 기본값, 어빌리티(입력 번호 포함), 시작 이펙트, 태그가 들어 있습니다.
          * @return 세트를 찾아 줬으면 true. 카탈로그나 세트가 없으면 경고를 남기고 false 입니다.
@@ -513,7 +515,7 @@ namespace sw
 
         // ---- 저장되는 설정 ----
         PROPERTY( Category = "Ability System", DisplayName = "Ability Set", Tooltip = "Ability set id in the AbilityCatalog, granted on begin play" )
-        hashed_string _abilitySetID;
+        CatalogKey<AbilitySetDef> _abilitySetID;
         PROPERTY( Category = "Ability System", DisplayName = "Health Attribute", Tooltip = "Attribute that drives the health bar and damage numbers" )
         hashed_string _healthAttribute;
         PROPERTY( Category = "Ability System", DisplayName = "Max Health Attribute", Tooltip = "Attribute used as the health bar maximum" )

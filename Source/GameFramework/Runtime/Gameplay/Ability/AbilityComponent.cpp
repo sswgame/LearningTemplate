@@ -102,8 +102,8 @@ namespace sw
     {
         Component::onBeginPlay();
         if ( _abilitySetID.empty() == false )
-            (void)grantAbilitySet( _abilitySetID ); // 실패는 안에서 알린다
-        (void)applyPendingState();                  // 세트가 어트리뷰트 · 시작 이펙트를 만든 뒤에 덮는다. 없으면 새 판이다
+            (void)grantAbilitySet( _abilitySetID.key() ); // 실패는 안에서 알린다
+        (void)applyPendingState();                        // 세트가 어트리뷰트 · 시작 이펙트를 만든 뒤에 덮는다. 없으면 새 판이다
         notifyHealthChanged( true );
     }
 
@@ -143,7 +143,7 @@ namespace sw
         _effectLogCount             = 0;
         _blockedHealthDecreaseCount = 0;
         if ( hasBegunPlay() && _abilitySetID.empty() == false )
-            (void)grantAbilitySet( _abilitySetID ); // 실패는 안에서 알린다 — `onBeginPlay` 와 같다
+            (void)grantAbilitySet( _abilitySetID.key() ); // 실패는 안에서 알린다 — `onBeginPlay` 와 같다
         return SpawnStateReset::Reset;
     }
 

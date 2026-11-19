@@ -12,6 +12,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Serialization/Serializer/CatalogKey.h"
+
 namespace sw
 {
     /**
@@ -65,6 +67,21 @@ namespace sw
         {
             const optional<int32> index = findIndex( id );
             return index.has_value() ? &_listDef[static_cast<size_t>( *index )] : nullptr;
+        }
+
+        /** @brief 카탈로그 키 칸(`CatalogKey<TDef>`)의 정의입니다. 없으면 nullptr 입니다. 다른 카탈로그의 키는 컴파일되지 않는다. */
+        const TDef* find( const CatalogKey<TDef>& key ) const { return find( key.key() ); }
+
+        /**
+         * @brief 반드시 있어야 하는 카탈로그 키의 정의입니다 — 시작할 때 칸을 푸는 쪽이 부른다. 비었거나 없으면 오류(`NotFound`, 상세는 id)입니다.
+         * @details 쿠커는 "그 종류의 어느 카탈로그에든 있다" 만 본다(`DataCatalogKeyCheck`). 쓰는 쪽이 고른 이 한 벌에 없는 키는 여기서 멈춘다 — 다른 항목으로 대신하지 않는다.
+         */
+        [[nodiscard]] expected<const TDef*> require( const CatalogKey<TDef>& key ) const
+        {
+            const TDef* pDef = key.empty() ? nullptr : find( key.key() );
+            if ( pDef == nullptr )
+                return unexpected( Error{ ErrorKind::NotFound, "the catalog key names no entry in this catalog", key.c_str() } );
+            return pDef;
         }
 
         /** @brief id 의 인덱스입니다. 없으면 비어 있습니다. */

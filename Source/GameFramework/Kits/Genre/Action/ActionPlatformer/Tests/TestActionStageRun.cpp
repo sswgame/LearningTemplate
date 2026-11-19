@@ -415,14 +415,11 @@ SW_TEST_CASE( ActionPlatformerCatalogTest, DuplicateNamesAreRejected )
 }
 
 /**
- * @brief [ActionPlatformerCatalogTest] 빈 콤보, 상태 없는 패턴, 모르는 시작 상태 · 이어지는 상태, 모르는 원소는 오류를 남기고 넣지 않는다
+ * @brief [ActionPlatformerCatalogTest] 빈 콤보, 모르는 원소는 오류를 남기고 그 원소만 넣지 않는다
  */
 SW_TEST_CASE( ActionPlatformerCatalogTest, BrokenElementsAreSkipped )
 {
     SW_EXPECT_LOG( "ActionPlatformerCatalog.ComboIdNeedsMoves" );
-    SW_EXPECT_LOG( "ActionPlatformerCatalog.PatternIdNoState" );
-    SW_EXPECT_LOG( "ActionPlatformerCatalog.PatternIdStartsUnknown" );
-    SW_EXPECT_LOG( "ActionPlatformerCatalog.PatternStateGoesUnknown" );
     SW_EXPECT_LOG( "Xml.UnknownElement" );
 
     sw::ActionPlatformerCatalog catalog;
@@ -430,18 +427,39 @@ SW_TEST_CASE( ActionPlatformerCatalogTest, BrokenElementsAreSkipped )
   <Motor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Grading><Grade id="S" min="90"/></Grading>
   <Combo id="empty"/>
-  <Pattern id="noState" start="a"/>
-  <Pattern id="badStart" start="ghost"><State id="a"/></Pattern>
-  <Pattern id="badNext" start="a"><State id="a" next="ghost"/></Pattern>
-  <Pattern id="badNear" start="a"><State id="a" onNear="ghost"/></Pattern>
-  <Pattern id="badHit" start="a"><State id="a" onHit="ghost"/></Pattern>
+  <Pattern id="fine" start="a"><State id="a"/></Pattern>
   <Mystery/>
 </ActionPlatformer>)",
                                               "broken" ) );
     SW_EXPECT_TRUE( catalog.findCombo( sw::hashed_string( "empty" ) ) == nullptr );
-    const utf8* const arrPattern[] = { "noState", "badStart", "badNext", "badNear", "badHit" };
-    for ( const utf8* const pPattern : arrPattern )
-    {
-        SW_EXPECT_TRUE( catalog.findPattern( sw::hashed_string( pPattern ) ) == nullptr );
-    }
+    SW_EXPECT_TRUE( catalog.findPattern( sw::hashed_string( "fine" ) ) != nullptr );
+}
+
+/**
+ * @brief [ActionPlatformerCatalogTest] 상태 없는 패턴, 모르는 시작 상태 · 이어지는 상태(다음 · 가까이 · 맞음)는 참조 표가 하나마다 알리고 카탈로그 전체를 읽지 않는다(쿠킹도 같은 표로 실패한다)
+ * @details 예전에는 그 패턴만 버리고 읽기가 성공해 쿠킹을 통과했다. 다른 패턴의 같은 이름 상태는 이어질 곳이 아니다(같은 패턴 안).
+ */
+SW_TEST_CASE( ActionPlatformerCatalogTest, DanglingTransitionsFailTheLoad )
+{
+    SW_EXPECT_LOG( "ActionPlatformerCatalog.PatternIdNoState" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+
+    sw::ActionPlatformerCatalog catalog;
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<ActionPlatformer>
+  <Motor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
+  <Grading><Grade id="S" min="90"/></Grading>
+  <Pattern id="noState" start="a"/>
+  <Pattern id="other" start="ghost"><State id="ghost"/></Pattern>
+  <Pattern id="badStart" start="ghost"><State id="a"/></Pattern>
+  <Pattern id="badNext" start="a"><State id="a" next="ghost"/></Pattern>
+  <Pattern id="badNear" start="a"><State id="a" onNear="ghost"/></Pattern>
+  <Pattern id="badHit" start="a"><State id="a" onHit="ghost"/></Pattern>
+  <Pattern id="badBoth" start="a"><State id="a" next="a" onHit="nowhere"/></Pattern>
+</ActionPlatformer>)",
+                                              "dangling" ) );
 }

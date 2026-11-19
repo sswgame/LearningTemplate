@@ -138,6 +138,8 @@ namespace sw
      * @details 기술의 프레임 데이터는 기반 `MoveCatalog` 에서 같은 id 로 복사해 온다(`frames="다른id"` 로 다른 id 를 지정할 수 있다).
      *          파일에서 읽는 길은 공유 캐시 하나다(`SharedAssetCache<FighterCatalog>::acquire`) — 경로만으로 나눠 주므로 기반은 루트의 `moves`(기술 카탈로그 경로)가 정하고,
      *          로더가 그 카탈로그를 공유 캐시에서 받는다(호출하는 쪽이 문맥을 넘기지 않는다). 테스트 · 에디터 미리 보기는 `loadFromXMLText` 에 기반을 넘긴다.
+     *          파일의 기술(`frames`, 없으면 자기 id)이 `moves` 의 기술 카탈로그에 있는지는 참조 표(`datacatalogreferences.xml` 의 `FighterCatalog` 줄 — `file="moves"`)가 보고,
+     *          없으면 카탈로그 읽기와 팩 쿠킹이 실패한다. 표가 볼 파일이 없는 글 읽기(넘긴 기술 카탈로그)는 아래처럼 그 기술만 버린다.
      *          프레임 데이터가 없거나 커맨드 · 자세 · 풀기 버튼을 읽지 못하면 오류를 남기고 그 기술만 버린다. 캐릭터의 칸 · 횡이동 · 점프 커맨드가 틀리거나 id 가 겹치면 캐릭터를 넣지 않는다.
      *          `stance` 가 있으면 시작 자세는 `Stance` 다. `breakButtons` 는 커맨드 표기("1" 또는 "1+2")로 쓴다.
      */

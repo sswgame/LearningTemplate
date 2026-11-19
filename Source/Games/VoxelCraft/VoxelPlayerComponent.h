@@ -15,6 +15,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelBody.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelHotbar.h"
@@ -24,6 +25,7 @@
 
 namespace sw
 {
+    struct VoxelBlockDef;
     class Archive;
     class FirstPersonCameraComponent;
     class PawnComponent;
@@ -133,9 +135,9 @@ namespace sw
         vector<hashed_string> _listSlotButton;
         // ---- 블록 이름입니다. 블록 카탈로그(data/blocks.xml)의 id 입니다 ----
         PROPERTY( Category = "Blocks", DisplayName = "Water Block", Tooltip = "Block the body swims in" )
-        hashed_string _waterBlock;
+        CatalogKey<VoxelBlockDef> _waterBlock;
         PROPERTY( Category = "Blocks", DisplayName = "Start Blocks", Tooltip = "Blocks in the first hotbar (64 each)" )
-        vector<hashed_string> _listStartBlock;
+        vector<CatalogKey<VoxelBlockDef>> _listStartBlock;
 
         VoxelBody              _body;
         VoxelHotbar            _hotbar;

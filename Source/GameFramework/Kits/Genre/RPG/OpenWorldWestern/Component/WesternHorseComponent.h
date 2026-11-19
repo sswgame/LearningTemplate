@@ -13,12 +13,14 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternHorse.h"
 
 namespace sw
 {
+    struct WesternHorseDef;
     class Archive;
 
     /**
@@ -65,7 +67,7 @@ namespace sw
         PROPERTY( Category = "Horse", DisplayName = "Game Mode", Tooltip = "Object with the western game mode whose catalog has this breed" )
         GameObjectHandle _gameMode;
         PROPERTY( Category = "Horse", DisplayName = "Breed", Tooltip = "<Horse id> in the western catalog" )
-        hashed_string _breed;
+        CatalogKey<WesternHorseDef> _breed;
         PROPERTY( Category = "Horse", DisplayName = "Seed", Min = 0, Tooltip = "Random seed for fear reactions" )
         int32 _seed;
         PROPERTY( Category = "Horse", DisplayName = "Game Hours Per Second", Min = 0.0, Tooltip = "Game time that passes per real second (core drain, brush cooldown)" )

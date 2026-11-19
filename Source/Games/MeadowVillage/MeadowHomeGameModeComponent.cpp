@@ -86,7 +86,7 @@ namespace sw
         const MeadowBuildStep& step = _listStep[static_cast<size_t>( _nextStep )];
         ++_nextStep;
         HousingCandidate candidate;
-        candidate._partID                    = step._partID;
+        candidate._partID                    = step._partID.key();
         candidate._transform._position       = step._position;
         candidate._transform._level          = step._level;
         candidate._transform._yaw            = step._yaw.radians();

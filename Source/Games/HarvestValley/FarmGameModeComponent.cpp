@@ -303,7 +303,7 @@ namespace sw
     {
         for ( const FarmCropModel& model : _listCropModel )
         {
-            if ( model._cropID == cropID )
+            if ( model._cropID.key() == cropID )
                 return model._readyModel.empty() ? nullptr : &model._readyModel.path();
         }
         return nullptr;
@@ -314,7 +314,7 @@ namespace sw
         const vector<AssetRef<MeshAssetFormat>>* pList = &_listDefaultGrowingModel;
         for ( const FarmCropModel& model : _listCropModel )
         {
-            if ( model._cropID == cropID && model._listGrowingModel.empty() == false )
+            if ( model._cropID.key() == cropID && model._listGrowingModel.empty() == false )
                 pList = &model._listGrowingModel;
         }
         // 첫 모델이 0 · 1 단계, 그다음부터 한 단계에 하나, 모자라면 마지막을 쓴다.
@@ -351,7 +351,7 @@ namespace sw
         }
         for ( const FarmCropModel& model : _listCropModel )
         {
-            if ( _pCropCatalog->findCrop( model._cropID ) == nullptr )
+            if ( _pCropCatalog->findCrop( model._cropID.key() ) == nullptr )
             {
                 SW_LOG_ERROR_ID( "FarmGameMode.DirectorCropModelsNames", "[Farm] the game mode's Crop Models names crop '%#', which %# does not have - the farm cannot start", model._cropID.c_str(), _cropDataPath.c_str() );
                 return false;

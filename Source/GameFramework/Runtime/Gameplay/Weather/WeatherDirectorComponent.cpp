@@ -47,8 +47,8 @@ namespace sw
         }
         if ( pState == nullptr || pState->isFreshGame() == false || _startWeather.empty() )
             return; // 열지 못한 까닭은 판 상태가 남겼다. 복원한 판은 날씨도 복원했다
-        pState->getWeather().forceWeather( _startWeather, 0.0f, true );
-        if ( pState->getWeather().getCurrent() != _startWeather )
+        pState->getWeather().forceWeather( _startWeather.key(), 0.0f, true );
+        if ( pState->getWeather().getCurrent() != _startWeather.key() )
             SW_LOG_ERROR_ID( "WeatherDirector.StartWeatherUnknown", "'%#': start weather '%#' is not in '%#'", pOwnerName, _startWeather.c_str(), _weatherDataPath.path().c_str() );
     }
 

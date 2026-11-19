@@ -24,12 +24,14 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 
 namespace sw
 {
+    struct VoxelBlockDef;
     class GameObjectManager;
 
     /**
@@ -117,17 +119,17 @@ namespace sw
         float32 _statusLogInterval;
         // ---- 블록 이름 · 지형 규칙(광석 확률 · 높이)입니다. 씬 데이터가 정본이고 C++ 기본값이 없다(필수 칸 — 빠지면 씬 로드 실패, 감사 K-4). 블록 id 는 게임을 시작할 때 모두 있는지 확인합니다 ----
         PROPERTY( Required, Category = "Blocks", DisplayName = "Water", Tooltip = "Spawn spots on this block are skipped" )
-        hashed_string _waterBlock;
+        CatalogKey<VoxelBlockDef> _waterBlock;
         PROPERTY( Required, Category = "Blocks", DisplayName = "Stone", Tooltip = "Ore replaces this block underground" )
-        hashed_string _stoneBlock;
+        CatalogKey<VoxelBlockDef> _stoneBlock;
         PROPERTY( Required, Category = "Blocks", DisplayName = "Grass", Tooltip = "High peaks of this block get a snow cap" )
-        hashed_string _grassBlock;
+        CatalogKey<VoxelBlockDef> _grassBlock;
         PROPERTY( Required, Category = "Blocks", DisplayName = "Snow" )
-        hashed_string _snowBlock;
+        CatalogKey<VoxelBlockDef> _snowBlock;
         PROPERTY( Required, Category = "Blocks", DisplayName = "Coal Ore" )
-        hashed_string _coalOreBlock;
+        CatalogKey<VoxelBlockDef> _coalOreBlock;
         PROPERTY( Required, Category = "Blocks", DisplayName = "Iron Ore" )
-        hashed_string _ironOreBlock;
+        CatalogKey<VoxelBlockDef> _ironOreBlock;
         PROPERTY( Required, Category = "World", DisplayName = "Snow Height", Tooltip = "Grass tops at or above this height get a snow cap", Min = 0 )
         int32 _snowHeight;
         PROPERTY( Required, Category = "World", DisplayName = "Coal Ore Chance", Tooltip = "Chance that an underground stone block becomes coal", Min = 0.0, Max = 1.0 )

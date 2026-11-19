@@ -267,7 +267,8 @@ namespace sw
             return;
         }
         ContainerTreeBuilder::fillContainerDetails( prop, fieldType, session );
-        if ( PropertyResolver::resolveComponentHandleProperty( prop, owner ) == false || PropertyResolver::resolveAssetRefProperty( prop, owner ) == false )
+        if ( PropertyResolver::resolveComponentHandleProperty( prop, owner ) == false || PropertyResolver::resolveAssetRefProperty( prop, owner ) == false ||
+             PropertyResolver::resolveCatalogKeyProperty( prop, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;
@@ -318,7 +319,8 @@ namespace sw
             _bHasError = SW_TRUE;
             return;
         }
-        if ( PropertyResolver::resolveComponentHandleProperty( prop, owner ) == false || PropertyResolver::resolveAssetRefProperty( prop, owner ) == false )
+        if ( PropertyResolver::resolveComponentHandleProperty( prop, owner ) == false || PropertyResolver::resolveAssetRefProperty( prop, owner ) == false ||
+             PropertyResolver::resolveCatalogKeyProperty( prop, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;

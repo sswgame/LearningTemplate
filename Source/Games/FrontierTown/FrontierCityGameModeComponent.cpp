@@ -124,9 +124,9 @@ namespace sw
     void FrontierCityGameModeComponent::layOutTown()
     {
         _bLaidOut                    = SW_TRUE;
-        const CityPlaceResult result = _city.placeBuilding( hashed_string( _landmarkBuilding ), _landmarkX, _landmarkY );
+        const CityPlaceResult result = _city.placeBuilding( _landmarkBuilding.key(), _landmarkX, _landmarkY );
         if ( result != CityPlaceResult::Ok )
-            SW_LOG_ERROR_ID( "Frontier.LandmarkRefused", "[Frontier] landmark '%#' at (%#, %#) was refused (%#) - check the scene layout and city.xml", _landmarkBuilding, _landmarkX, _landmarkY,
+            SW_LOG_ERROR_ID( "Frontier.LandmarkRefused", "[Frontier] landmark '%#' at (%#, %#) was refused (%#) - check the scene layout and city.xml", _landmarkBuilding.c_str(), _landmarkX, _landmarkY,
                              static_cast<int32>( result ) );
         const int32 roadCount = _city.placeRoadLine( int2{ _roadFromX, _roadFromY }, int2{ _roadToX, _roadToY } );
         if ( roadCount == 0 )

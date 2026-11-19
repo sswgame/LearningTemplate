@@ -24,6 +24,7 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
@@ -52,7 +53,7 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY( Tooltip = "Crop catalog id" )
-        hashed_string _cropID{};
+        CatalogKey<CropDef> _cropID{};
         PROPERTY( Tooltip = "Model of the ready crop; empty keeps the growing model tinted with the crop colour" )
         AssetRef<MeshAssetFormat> _readyModel{};
         PROPERTY( Tooltip = "Growing models by stage: the first for stages 0 and 1, then one per stage, the last repeats; empty uses the default growing models" )

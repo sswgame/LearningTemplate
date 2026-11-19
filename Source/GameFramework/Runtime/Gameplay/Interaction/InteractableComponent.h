@@ -17,6 +17,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionCatalog.h"
@@ -126,7 +127,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Interaction", DisplayName = "Interaction", Tooltip = "Interaction kind id in the catalog" )
-        hashed_string _interactionID;
+        CatalogKey<InteractionDef> _interactionID;
         PROPERTY( Category = "Interaction", DisplayName = "Catalog", Tooltip = "Interaction table (required)" )
         AssetRef<InteractionCatalog> _catalogPath;
         PROPERTY( Category = "Interaction", DisplayName = "Last Interactor", Tooltip = "Who completed it last (runtime)" )

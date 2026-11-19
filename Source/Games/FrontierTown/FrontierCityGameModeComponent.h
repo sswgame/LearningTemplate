@@ -12,6 +12,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
@@ -72,7 +73,7 @@ namespace sw
         PROPERTY( Category = "Economy", DisplayName = "Starting Minerals", Tooltip = "RTS money a fresh game starts with (the same shared wallet)", Min = 0 )
         int32 _startingMinerals;
         PROPERTY( Required, Category = "Layout", DisplayName = "Landmark Building", Tooltip = "City catalog id of the building laid out on the first tick" )
-        string _landmarkBuilding;
+        CatalogKey<CityBuildingDef> _landmarkBuilding;
         PROPERTY( Category = "Layout", DisplayName = "Landmark X", Min = 0 )
         int32 _landmarkX;
         PROPERTY( Category = "Layout", DisplayName = "Landmark Y", Min = 0 )

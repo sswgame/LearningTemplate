@@ -951,6 +951,28 @@ SW_TEST_CASE( FightingTest, CatalogDropsOnlyTheBrokenMoves )
 }
 
 /**
+ * @brief [FightingTest] 파일이 가리키는 기술 카탈로그(루트 `moves`)에 없는 기술은 참조 표가 알리고 캐릭터 카탈로그 전체를 읽지 않는다(쿠킹도 같은 표로 실패한다)
+ * @details 표 줄은 `frames`, 적지 않았으면 기술 자기 id 를 그 파일의 `<Move>` 와 대조한다. 넘긴 기술 카탈로그(글 읽기)에 있어도 파일에 없으면 실패다 — 예전에는 그 기술만 버리고 통과했다.
+ */
+SW_TEST_CASE( FightingTest, CatalogFailsWhenTheMovesFileLacksAMove )
+{
+    MoveCatalog moves;
+    SW_REQUIRE_TRUE( moves.loadFromXMLText( kFightingMoveXML, "FightingTest" ) );
+    FighterCatalog clean;
+    SW_EXPECT_TRUE( clean.loadFromXMLText( R"(<FighterCatalog moves="game/empty/data/kitdemo/demo.moves.xml">
+  <Fighter id="kaz" name="Kaz" sidestep="u" sidestepDown="d,n" jump="u/f"><Move id="low" command="3"/><Move id="lowAgain" frames="low" command="2"/></Fighter>
+</FighterCatalog>)",
+                                           moves, "FightingTest" ) );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    FighterCatalog broken;
+    SW_EXPECT_FALSE( broken.loadFromXMLText( R"(<FighterCatalog moves="game/empty/data/kitdemo/demo.moves.xml">
+  <Fighter id="kaz" name="Kaz" sidestep="u" sidestepDown="d,n" jump="u/f"><Move id="jab" command="1"/><Move id="jabby" frames="jab2" command="2"/></Fighter>
+</FighterCatalog>)",
+                                             moves, "FightingTest" ) );
+}
+
+/**
  * @brief [FightingTest] 커맨드가 빠진 캐릭터 · 범위 밖 칸의 캐릭터는 넣지 않고, 기술 없는 캐릭터는 경고만 남긴다
  */
 SW_TEST_CASE( FightingTest, CatalogRefusesBrokenFighters )

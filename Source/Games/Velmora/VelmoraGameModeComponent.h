@@ -11,6 +11,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureVitals.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
@@ -110,7 +111,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Start", DisplayName = "Start Region", Tooltip = "Region id (regions.xml) a new game starts in, at its respawn point" )
-        hashed_string _startRegion;
+        CatalogKey<VelmoraRegionDef> _startRegion;
         PROPERTY( Category = "Player", DisplayName = "Move Speed", Min = 0.0, Units = "m/s" )
         float32 _moveSpeed;
         PROPERTY( Category = "Player", DisplayName = "Use Radius", Tooltip = "How near a beacon or camp Velmora.Use reaches", Min = 0.1, Units = m )
