@@ -652,6 +652,7 @@ namespace sw
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO, options._scenarioPath );
         (void)commandLine.getArgument( CommandLineArgument::LOG_FILE, options._logFilePath );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, options._reportPath );
+        (void)commandLine.getArgument( CommandLineArgument::SHADER_REQUEST_LOG, options._shaderRequestLogPath );
         options._executablePath          = FileUtil::getExecutablePath();
         options._listPassThroughArgument = AutomationPerBackend::filterPassThroughArguments( commandLine.getOriginalArguments() );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, options._splitOffset );

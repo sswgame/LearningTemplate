@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
@@ -67,6 +68,8 @@ namespace sw
         , _mapLoading{}
         , _mutexCache{}
         , _enginePolicy{}
+        , _requestLog{}
+        , _requestLogPath{}
         , _configReloadedSubscription{}
         , _memoryHitCount{ 0 }
         , _providerLoadCount{ 0 }
@@ -102,6 +105,9 @@ namespace sw
             _enginePolicy = policy;
         }
         _configReloadedSubscription = pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &ShaderCache::onConfigReloaded, this ) );
+        // 요청 기록은 명시 인자로만 켠다(묶음 검증의 시나리오 체인 — Test/Scenario/CMakeLists.txt). 다음 검증이 시간을 재기 전에 이 목록만 컴파일해 DDC 를 데운다(`ShaderRequestLog`).
+        _requestLogPath.clear();
+        (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SHADER_REQUEST_LOG, _requestLogPath ); // 없으면 기록하지 않는다
         return true;
     }
 
@@ -145,6 +151,7 @@ namespace sw
     {
         _configReloadedSubscription.reset();
         waitForLoadsInFlight();
+        writeRequestLog();
         clearCache();
         // 리플렉션 매니페스트도 셰이더 층이 종료될 때 같이 비운다(백엔드 교체로 다시 서면 새 백엔드의 매니페스트를 읽는다). 소멸자에서도 불리므로 서비스 칸을 거치지 않는다.
         _reflectionManifests.clear();
@@ -317,7 +324,24 @@ namespace sw
         entry._result            = result;
 
         ScopedLock<mutex> lock{ _mutexCache };
+        if ( _requestLogPath.empty() == false )
+            (void)_requestLog.add( desc ); // 이미 적은 요청이면 할 일이 없다
         _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
+    }
+
+    void ShaderCache::writeRequestLog()
+    {
+        string text;
+        {
+            ScopedLock<mutex> lock{ _mutexCache };
+            // 공급자까지 간 요청이 없는 프로세스(백엔드별 부모 — 창 · GPU 가 없다)는 쓰지 않는다. 파일은 이 실행의 기록이라 덮는다(앞 실행의 낡은 요청이 쌓이지 않는다).
+            if ( _requestLogPath.empty() || _requestLog.size() == 0 )
+                return;
+            text        = _requestLog.makeText();
+            _requestLog = ShaderRequestLog{};
+        }
+        if ( FileUtil::ensureParentDirectoryExists( _requestLogPath ) == false || FileUtil::writeTextFile( _requestLogPath, text ) == false )
+            SW_LOG_WARNING_ID( "ShaderCache.RequestLogNotWritten", "Could not write the shader request log '%#' - the next warm-up compiles nothing for this run", _requestLogPath );
     }
 } // namespace sw
 

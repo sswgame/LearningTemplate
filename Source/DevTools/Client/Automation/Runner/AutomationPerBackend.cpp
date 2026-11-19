@@ -361,7 +361,7 @@ namespace sw
     {
         using Internal                                   = AutomationPerBackendInternal;
         static constexpr CommandLineArgument kArrOwned[] = { CommandLineArgument::SCENARIO, CommandLineArgument::SCENARIO_BACKENDS, CommandLineArgument::SCENARIO_BACKEND_SPLIT, CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, CommandLineArgument::SCENARIO_BACKEND_SLOTS, CommandLineArgument::SCENARIO_REPORT,
-                                                             CommandLineArgument::LOG_FILE };
+                                                             CommandLineArgument::LOG_FILE, CommandLineArgument::SHADER_REQUEST_LOG };
         vector<string>                       listArgument;
         for ( const string& argument : listOriginalArgument )
         {
@@ -541,6 +541,12 @@ namespace sw
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE_COLUMNS ), Internal::kTileColumnCount );
                 listArgument.push_back( string( textBuilder.view() ) );
+            }
+            if ( options._shaderRequestLogPath.empty() == false )
+            {
+                StringBuilder<constant::buffer::kMax256> requestLogArgument;
+                requestLogArgument.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::SHADER_REQUEST_LOG ), insertBackendSuffix( options._shaderRequestLogPath, backend ) );
+                listArgument.push_back( string( requestLogArgument.view() ) );
             }
             listArgument.insert( listArgument.end(), options._listPassThroughArgument.begin(), options._listPassThroughArgument.end() );
 

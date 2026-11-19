@@ -342,6 +342,13 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR SW_ENABLE_SANITIZER)
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(ShaderCache.RebuildFromEmpty PROPERTIES LABELS nogpu TIMEOUT 3600)
 	set(SW_CPU_HEAVY_TEST ShaderCache.RebuildFromEmpty)
+	# 요청 기록만 컴파일하는 데우기(`Shader/RunShaderWarm.cmake`) — 같은 요청의 둘째 컴파일이 DDC 에 맞는지 본다. 셰이더 하나라 몇 초다. 묶음 검증 cpu 단계의 shader warm 이 이 길이다.
+	add_test(NAME ShaderCache.WarmFromRequestLog
+		COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DDDC_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderWarm/DDC"
+			"-DREQUEST_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderWarm/Requests" "-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs"
+			-P "${CMAKE_CURRENT_SOURCE_DIR}/Shader/RunShaderWarm.cmake"
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(ShaderCache.WarmFromRequestLog PROPERTIES LABELS nogpu TIMEOUT 300)
 endif()
 
 # 리플렉션 파서 — Engine 을 링크하지 못해 단위 테스트 틀에 들어가지 못한다. 사례 헤더 하나마다 실제 실행 파일을 돌려 산출물 · 오류를 대조한다(`ReflectionParser/RunParserFixture.cmake`, 왜 이 모양인지 거기 적었다).
