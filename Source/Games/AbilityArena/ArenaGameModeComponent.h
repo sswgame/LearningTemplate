@@ -29,6 +29,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
@@ -41,6 +42,7 @@
 namespace sw
 {
     class AbilityComponent;
+    struct AbilitySetDef;
     class Archive;
     class GameObject;
     class GameObjectManager;
@@ -225,11 +227,11 @@ namespace sw
 
     private:
         PROPERTY( Category = "Abilities", DisplayName = "Player Ability Set", Tooltip = "Ability set id in abilities.xml granted to the player" )
-        hashed_string _playerAbilitySet;
+        CatalogKey<AbilitySetDef> _playerAbilitySet;
         PROPERTY( Category = "Abilities", DisplayName = "Grunt Ability Set" )
-        hashed_string _gruntAbilitySet;
+        CatalogKey<AbilitySetDef> _gruntAbilitySet;
         PROPERTY( Category = "Abilities", DisplayName = "Caster Ability Set" )
-        hashed_string _casterAbilitySet;
+        CatalogKey<AbilitySetDef> _casterAbilitySet;
         PROPERTY( Category = "Prefabs" )
         AssetRef<PrefabAsset> _playerPrefab;
         PROPERTY( Category = "Prefabs" )

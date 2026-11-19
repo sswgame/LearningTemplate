@@ -110,4 +110,10 @@
 		<Reference owner="Unit" attribute="weapons" target="Weapon"/>
 		<Reference owner="Unit" attribute="developsTo" target="Unit" named="true"/>
 	</Catalog>
+	<!-- 카탈로그 키 칸(CatalogKey<Tag>) — 항목 종류 줄, 그 아래 그 종류를 쓰는 칸 줄. -->
+	<CatalogKey tag="AbilitySetDef" catalog="AbilityCatalog" entry="AbilitySet"/>
+	<Field owner="AbilityComponent" field="_abilitySetID" tag="AbilitySetDef"/>
+	<Field owner="ArenaGameModeComponent" field="_playerAbilitySet" tag="AbilitySetDef"/>
+	<Field owner="ArenaGameModeComponent" field="_gruntAbilitySet" tag="AbilitySetDef"/>
+	<Field owner="ArenaGameModeComponent" field="_casterAbilitySet" tag="AbilitySetDef"/>
 </DataCatalogReferenceTable>

@@ -17,7 +17,7 @@
 			               _bVisible="true" />
 			<AbilityComponent _componentName="AbilityComponent"
 			                        _bActive="true"
-			                        _abilitySetID="None"
+			                        _abilitySetID=""
 			                        _healthAttribute="Health"
 			                        _maxHealthAttribute="MaxHealth"
 			                        _damageNumberOffset="0,0.6,0"

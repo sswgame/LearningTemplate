@@ -112,19 +112,22 @@ namespace sw
                 return bValid;
             }
 
-            /** @brief 칸 주인 원소 @p owner 의 칸 @p field 값(속성 하나, 또는 같은 이름 자식 원소의 `<item>` 글)을 @p visit 에 넘깁니다. 빈 값은 적지 않은 것이다. */
+            /** @brief 칸 값 글이 빈 키인지 봅니다 — 키는 `hashed_string` 이라 "None" 철자(대소문자 무시)도 빈 이름으로 읽힌다(쌓인 데이터). */
+            static bool isEmptyKeyText( string_view value ) { return value.empty() || StringUtil::equals( value, "None", true ); }
+
+            /** @brief 칸 주인 원소 @p owner 의 칸 @p field 값(속성 하나, 또는 같은 이름 자식 원소의 `<item>` 글)을 @p visit 에 넘깁니다. 빈 키는 적지 않은 것이다. */
             template <typename TVisit>
             static void visitFieldValues( const XMLNode& owner, const string& field, const TVisit& visit )
             {
                 const string_view attributeValue = StringUtil::trim( owner.getAttributeText( field.c_str() ) );
-                if ( attributeValue.empty() == false )
+                if ( isEmptyKeyText( attributeValue ) == false )
                     visit( attributeValue );
                 for ( XMLNode list = owner.findChild( field.c_str() ); list.isValid(); list = list.findNextSibling( field.c_str() ) )
                 {
                     for ( XMLNode item = list.findChild( kListItemElement ); item.isValid(); item = item.findNextSibling( kListItemElement ) )
                     {
                         const string_view value = StringUtil::trim( string_view( item.getText() ) );
-                        if ( value.empty() == false )
+                        if ( isEmptyKeyText( value ) == false )
                             visit( value );
                     }
                 }

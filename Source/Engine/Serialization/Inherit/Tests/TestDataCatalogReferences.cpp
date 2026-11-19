@@ -237,14 +237,14 @@ SW_TEST_CASE( DataCatalogReferencesTest, KeyValuesFindInheritedAndOtherPackEntri
     SW_EXPECT_TRUE( otherPack.validate() );
 }
 
-/** @brief [DataCatalogReferencesTest] 어느 카탈로그에도 없는 항목을 가리키는 칸 값은 값 하나 · 목록 원소 어디에 있든 하나마다 알리고 false 다(쿠킹 실패) */
+/** @brief [DataCatalogReferencesTest] 어느 카탈로그에도 없는 항목을 가리키는 칸 값은 값 하나 · 목록 원소 어디에 있든 하나마다 알리고 false 다(쿠킹 실패). "None" 은 빈 키다 */
 SW_TEST_CASE( DataCatalogReferencesTest, BrokenKeyValuesFail )
 {
     DataCatalogReferenceRules rules;
     SW_REQUIRE_TRUE( rules.loadFromXMLText( kKeyTable, "table" ) );
     DataCatalogKeyCheck check( rules );
     addDataText( check, R"(<ItemCatalog><Item id="my_extra"/></ItemCatalog>)", "game/test/data/items.xml" );
-    addDataText( check, R"(<Prefab><GameObject><LootComponent _item="nope"><_listItem><item>my_extra</item><item>gone</item></_listItem></LootComponent></GameObject></Prefab>)",
+    addDataText( check, R"(<Prefab><GameObject><LootComponent _item="nope"><_listItem><item>my_extra</item><item>None</item><item>gone</item></_listItem></LootComponent></GameObject></Prefab>)",
                  "game/test/prefabs/loot.prefab.xml" );
     SW_EXPECT_LOG( "DataCatalogKey.UnknownEntry" );
     SW_EXPECT_LOG( "DataCatalogKey.UnknownEntry" );
