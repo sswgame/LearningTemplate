@@ -987,6 +987,8 @@ SW_TEST_CASE_F( MonsterHuntContractTest, HaggleReadStateChecksRange )
     SW_EXPECT_FALSE( readFixtureHaggle( restored, "griffin", 0.0f, 100, 0, 2 ) );
     SW_EXPECT_FALSE( readFixtureHaggle( restored, "nothing", 0.0f, 100, 0, 0 ) );
     SW_EXPECT_EQUAL( 125, restored.getOffer() );
+    SW_EXPECT_TRUE( readFixtureHaggle( restored, "griffin", 0.0f, 110, 0, 0 ) ); // 같은 꾸밈의 맞는 값은 읽힌다 — 위 거절이 바이트 모양 탓이 아니다
+    SW_EXPECT_EQUAL( 110, restored.getOffer() );
 }
 
 /**
