@@ -215,7 +215,7 @@ namespace sw
         IRHIDevice*              _pDevice;
         FrameRenderer*           _pFrameRenderer;
         OffscreenSceneRenderers* _pOffscreenRenderers;
-        vector<uint32>           _listPendingRetiredSceneKey; ///< 받은 패킷이 알린 사라진 미리보기 씬 키 — 내릴 수 있는 프레임까지 모은다(알림은 한 번뿐이라 그리지 않은 패킷에서 잃으면 렌더러가 남는다)
+        RenderFramePacketDeltas  _pendingDeltas; ///< 받은 패킷들의 차분을 통째로 옮겨 쌓은 것 — 쓰는 쪽이 쓸 수 있는 프레임에 꺼낸다(그리지 않은 패킷의 차분도 잃지 않는다)
         /// @brief 패킷을 실행하는 스레드의 역할입니다(전용 워커면 그 스레드, 인라인이면 부른 스레드). 훅은 이 역할 아래에 있고 세터는 렌더 스레드를 비운 뒤 빌린다.
         ThreadRole                             _packetThread;
         PresentHookDelegate _prepareHook       SW_GUARDED_BY( _packetThread );

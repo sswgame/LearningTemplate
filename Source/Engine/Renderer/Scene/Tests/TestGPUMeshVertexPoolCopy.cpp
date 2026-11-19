@@ -195,3 +195,33 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, PartlyPlacedMeshesRefillFromTheirProxyO
         mesh->getRenderData().releaseRHI( &device );
     }
 }
+
+/**
+ * @brief [GPUMeshVertexPoolCopyTest] 같은 주소의 새 내용(지워진 자리의 새 메시 · setGeometry)은 캐시 적중이 아니다 — 풀이 새 내용을 다시 채운다
+ * @details 풀의 키는 주소가 아니라 내용 토큰(`Mesh::getContentID`)이다. 같은 객체에 새 기하를 주면 주소는 같고 토큰만 바뀐다 — 지워진 메시 자리에 새 메시가 온 것과 같은 모양이다.
+ *          변이: 키를 주소로 두고 토큰 비교를 빠뜨리면 둘째 update 가 바뀐 것이 없다고 보고(false) 스테이징 갱신이 늘지 않는다.
+ */
+SW_TEST_CASE( GPUMeshVertexPoolCopyTest, NewContentAtSameAddressIsNotACacheHit )
+{
+    FakeBufferFactory   factory;
+    test::FakeRHIDevice device;
+    device._pResourceFactory    = &factory;
+    const shared_ptr<Mesh> mesh = makeTriangle();
+
+    GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() } ) );
+    SW_EXPECT_EQUAL( 1u, factory._structuredUpdateCount );
+    SW_EXPECT_FALSE( pool.update( &device, vector<Mesh*>{ mesh.get() } ) ); // 같은 내용 — 올릴 것이 없다
+
+    const Mesh* const pAddress = mesh.get();
+    vector<RHIVertex> listVertex( 3 );
+    listVertex[1]._arrPosition[0] = 2.0f;
+    listVertex[2]._arrPosition[1] = 2.0f;
+    SW_REQUIRE_TRUE( mesh->setGeometry( std::move( listVertex ), vector<uint32>{ 0, 1, 2 } ) );
+    SW_REQUIRE_TRUE( mesh.get() == pAddress );
+    SW_EXPECT_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() } ) );
+    SW_EXPECT_EQUAL( 2u, factory._structuredUpdateCount ); // 새 내용을 다시 올렸다
+    SW_EXPECT_TRUE( pool.getPlacementOf( mesh.get() )._baseVertex != GPUMeshVertexPool::kInvalidBase );
+    SW_EXPECT_EQUAL( 3u, pool.getVertexCount() ); // 옛 내용의 구간은 돌려받았다
+    pool.release( &device );
+}

@@ -562,7 +562,9 @@ namespace sw
 
     const RHIStructuredBuffer* FramePSOManager::findMaterialFallback( const ShaderBindingLayout* pLayout ) const
     {
-        const auto it = _mapLayoutMaterialFallback.find( pLayout );
+        if ( pLayout == nullptr )
+            return nullptr;
+        const auto it = _mapLayoutMaterialFallback.find( pLayout->getIdentity() );
         return ( it != _mapLayoutMaterialFallback.end() ) ? &_listMaterialFallback[it->second]._buffer : nullptr;
     }
 
@@ -599,7 +601,7 @@ namespace sw
         {
             const RHIPipelineStateHandle     pso     = registered._pso;
             const ShaderBindingLayout* const pLayout = registered._pLayout;
-            if ( pLayout == nullptr || _mapLayoutMaterialFallback.find( pLayout ) != _mapLayoutMaterialFallback.end() )
+            if ( pLayout == nullptr || _mapLayoutMaterialFallback.find( pLayout->getIdentity() ) != _mapLayoutMaterialFallback.end() )
                 continue;
             const ShaderBindingSlot* pSlot = pLayout->find( passConstantNames()._swMaterials );
             if ( pSlot == nullptr )
@@ -636,7 +638,7 @@ namespace sw
                 fallback._bytes            = std::move( bytes );
                 fallback._buffer           = buffer;
             }
-            _mapLayoutMaterialFallback.insert_or_assign( pLayout, fallbackIndex );
+            _mapLayoutMaterialFallback.insert_or_assign( pLayout->getIdentity(), fallbackIndex );
         }
     }
 

@@ -257,6 +257,8 @@ namespace sw
         uint32 getSkinSlot() const override;
         /** @brief 이 유닛 자신의 스킨 칸입니다(묶음 · VAT 와 무관하게 만들 때 받은 번호). 팔레트를 싣는 쪽이 씁니다. */
         uint32 getOwnSkinSlot() const { return _skinSlot.get(); }
+        /** @brief 자기 칸의 정체성(번호 + 세대)입니다. 팔레트가 싣는다 — 같은 프레임에 놓고 다시 받은 번호를 스킨 결과의 지난 벌이 옛 주인과 가른다. */
+        AnimationSkinSlotKey getOwnSkinSlotKey() const { return _skinSlot.getKey(); }
         /** @brief 묶음, 사본, VAT 를 정합니다(게임 스레드, `AnimationSystem` 이 시간 단계 뒤에 부릅니다). */
         void updateCrowdMembership( AnimationCrowd& crowd );
         /** @brief 이 유닛의 포즈를 읽는 유닛(리더, 부착 의존)이 있는지 정합니다(`AnimationSystem` 이 성분을 만들 때 부릅니다). */

@@ -18,16 +18,21 @@ namespace sw
         if ( registry._listFree.empty() )
         {
             _slot = registry._nextSlot++;
-            return;
+            registry._listGeneration.push_back( 0 );
         }
-        _slot = registry._listFree.back();
-        registry._listFree.pop_back();
+        else
+        {
+            _slot = registry._listFree.back();
+            registry._listFree.pop_back();
+        }
+        _generation = registry._listGeneration[_slot];
     }
 
     AnimationSkinSlot::~AnimationSkinSlot()
     {
         AnimationSkinSlotRegistry& registry = engine::getSubsystem<AnimationSkinSlotRegistry>();
         ScopedLock<SpinLock>       lock{ registry._spinLock };
+        ++registry._listGeneration[_slot]; // 다음 주인은 새 세대다
         registry._listFree.push_back( _slot );
     }
 

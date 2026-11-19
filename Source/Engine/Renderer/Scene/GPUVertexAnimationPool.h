@@ -39,7 +39,7 @@ namespace sw
         GPUVertexAnimationPool& operator=( const GPUVertexAnimationPool& ) = delete;
 
         /**
-         * @brief VAT 가 걸린 메시 목록으로 풀을 맞춥니다. 목록(포인터와 내용 번호)이 그대로면 아무것도 하지 않습니다.
+         * @brief VAT 가 걸린 메시 목록으로 풀을 맞춥니다. 목록(메시마다 내용 토큰)이 그대로면 아무것도 하지 않습니다.
          * @param listMesh 소유하지 않는 포인터들입니다. 스냅샷 배치가 소유권을 보관하는 동안만 유효합니다. VAT 가 없는 메시는 건너뜁니다.
          */
         void rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
@@ -67,17 +67,15 @@ namespace sw
             uint32 _wordCount{ 0 };
             uint32 _refCount{ 0 };
         };
-        /// @brief 메시 하나가 어느 테이블을 어느 내용 토큰으로 올렸는지입니다(토큰이 달라지면 새 테이블로 본다).
+        /// @brief 메시 내용 하나가 어느 테이블을 올렸는지입니다(키가 내용 토큰 — 토큰이 달라지면 새 기록이다).
         struct MeshRecord
         {
             const MeshVertexAnimation* _pAnimation{ nullptr };
-            IdentityToken              _contentID{}; ///< 들고 있어 지운 메시의 주소가 새 메시와 같아 보이지 않는다
         };
 
         /// @brief 이번 목록에서 VAT 가 있는 메시 하나입니다.
         struct Wanted
         {
-            const Mesh*                _pMesh{ nullptr };
             const MeshVertexAnimation* _pAnimation{ nullptr };
             IdentityToken              _contentID{};
         };
@@ -95,14 +93,15 @@ namespace sw
         [[nodiscard]] bool resetStorage( IRHIDevice* pDevice, uint32 capacity );
 
     private:
-        RHIStructuredBuffer                              _table;
-        SpanAllocator                                    _allocator;
+        RHIStructuredBuffer _table;
+        SpanAllocator       _allocator;
+        /// @brief 테이블 → 구간입니다. 주소 키지만 남은 항목은 살아 있는 기록(그 메시가 테이블을 든다)이 가리키는 것뿐이다 — 아무도 가리키지 않는 항목은 재구성이 새 테이블을 두기 전에 지운다.
         unordered_map<const MeshVertexAnimation*, Entry> _mapEntry;
-        unordered_map<const Mesh*, MeshRecord>           _mapRecord;
-        unordered_map<const Mesh*, uint32>               _mapBase;
-        vector<const Mesh*>                              _listBuilt;
-        vector<IdentityToken>                            _listBuiltContentID;
-        uint64                                           _rebuildSerial{ 0 };
-        uint32                                           _wordCount{ 0 }; ///< 버퍼가 담는 단어 수(구간 할당기 용량)입니다. 셰이더 범위 검사 값이다
+        /// @brief 메시 내용 토큰 → 기록 · 머리 단어 번호입니다. 키가 토큰을 들어 지운 메시의 주소가 새 메시의 키로 다시 쓰이지 않는다.
+        unordered_map<IdentityToken, MeshRecord> _mapRecord;
+        unordered_map<IdentityToken, uint32>     _mapBase;
+        vector<IdentityToken>                    _listBuiltContentID;
+        uint64                                   _rebuildSerial{ 0 };
+        uint32                                   _wordCount{ 0 }; ///< 버퍼가 담는 단어 수(구간 할당기 용량)입니다. 셰이더 범위 검사 값이다
     };
 } // namespace sw

@@ -58,6 +58,7 @@ namespace sw
 {
     struct FogSettings;
     struct RenderFramePacket;
+    struct RenderFramePacketDeltas;
     struct RenderPassKindInfo;
     struct SkyGradient;
 
@@ -248,8 +249,8 @@ namespace sw
          *          그 목록을 그린다. 아틀라스 업로드는 한 번만 반영하고 반영한 뒤에는 비운다.
          */
         void setCanvasFrame( CanvasFrameData& inoutFrame );
-        /** @brief 패킷의 글리프 아틀라스 업로드를 캔버스 거울에 옮깁니다. 그리지 않을 패킷도 받은 즉시 부릅니다(`CanvasRenderer::acceptAtlasUploads`). */
-        void acceptCanvasAtlasUploads( CanvasFrameData& inoutFrame ) { _state._canvasRenderer.acceptAtlasUploads( inoutFrame ); }
+        /** @brief 받은 차분의 글리프 아틀라스 업로드를 캔버스 거울에 옮기고 비웁니다. 그리지 않을 패킷의 것도 받은 즉시 부릅니다(`CanvasRenderer::acceptAtlasUploads`). */
+        void acceptCanvasAtlasUploads( RenderFramePacketDeltas& inoutDeltas );
 
         /**
          * @brief 화면에 나간 첨부의 이름입니다. Present 패스가 입력으로 받는 첨부이며, 없으면 빈 문자열입니다.

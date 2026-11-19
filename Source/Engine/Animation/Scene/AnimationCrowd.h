@@ -184,6 +184,7 @@ namespace sw
         const shared_ptr<Mesh>& getMesh() const { return _mesh; }
         /** @brief 이 묶음의 스킨 칸입니다 — 멤버가 몇이든 결과 구간 하나 · 팔레트 하나다. */
         uint32                  getSkinSlot() const { return _skinSlot.get(); }
+        AnimationSkinSlotKey    getSkinSlotKey() const { return _skinSlot.getKey(); }
         const Pose&             getLocalPose() const { return _localPose; }
         const vector<float4x4>& getModelSpaceTransforms() const { return _listModelSpace; }
         const vector<float4x4>& getSkinPalette() const { return _listSkinPalette; }

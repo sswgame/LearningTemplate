@@ -162,7 +162,7 @@ namespace sw
         : _pDevice{ nullptr }
         , _pFrameRenderer{ nullptr }
         , _pOffscreenRenderers{ nullptr }
-        , _listPendingRetiredSceneKey{}
+        , _pendingDeltas{}
         , _packetThread{}
         , _prepareHook{}
         , _presentHook{}
@@ -487,13 +487,11 @@ namespace sw
     void RenderThread::executePacket( RenderFramePacket& packet )
     {
         _packetThread.assumeHeld();
-        // 글리프 아틀라스 업로드는 차분이다 — 이 패킷을 그리지 않고 끝내는 길(시점 없음 · 컨텍스트 실패 · 그래프 준비 전)보다 먼저 거울에 옮긴다.
-        // 그러지 않으면 그 묶음의 글자가 영영 빈칸으로 남는다(첫 프레임에 만든 글리프가 HUD 에서 빠졌다).
+        // 차분은 첫 줄에서 통째로 옮긴다 — 이 패킷을 그리지 않고 끝내는 길(시점 없음 · 컨텍스트 실패 · 그래프 준비 전)이 있어도 잃지 않는다(`RenderFramePacketDeltas`).
+        // 글리프 업로드는 곧바로 거울에 옮기고(첫 프레임에 만든 글리프가 HUD 에서 빠졌던 결함), 사라진 씬 키는 렌더러를 내릴 수 있는 프레임(`drawScenePreviews`)이 꺼낸다.
+        _pendingDeltas.appendFrom( packet._deltas );
         if ( _pFrameRenderer != nullptr )
-            _pFrameRenderer->acceptCanvasAtlasUploads( packet._canvas );
-        // 사라진 미리보기 씬의 알림도 한 번뿐이다 — 받은 즉시 모으고, 렌더러를 내릴 수 있는 프레임(`drawScenePreviews`)에 내린다. 씬 키는 다시 쓰지 않는다.
-        _listPendingRetiredSceneKey.insert( _listPendingRetiredSceneKey.end(), packet._listRetiredSceneKey.begin(), packet._listRetiredSceneKey.end() );
-        packet._listRetiredSceneKey.clear();
+            _pFrameRenderer->acceptCanvasAtlasUploads( _pendingDeltas );
         // 훅에 넘길 디바이스가 아예 없으면 할 수 있는 일이 없다.
         if ( _pDevice == nullptr )
             return;
@@ -818,11 +816,11 @@ namespace sw
                 // 실패는 렌더러가 로그로 남기고 타깃은 클리어 색으로 남는다 — 기다려도 나아지지 않으니 남은 일로 세지 않는다
                 arrPending[pendingCount++] = ScenePendingJob{ preview._sceneKey, pRenderer != nullptr ? pRenderer->getLastPendingPSOBatchCount() : 0u };
             }
-            for ( const uint32 sceneKey : _listPendingRetiredSceneKey )
+            for ( const uint32 sceneKey : _pendingDeltas._listRetiredSceneKey )
             {
                 _pOffscreenRenderers->retire( sceneKey );
             }
-            _listPendingRetiredSceneKey.clear();
+            _pendingDeltas._listRetiredSceneKey.clear();
         }
         ScopedLock<mutex> lock{ _scenePendingMutex };
         _arrScenePending   = arrPending;

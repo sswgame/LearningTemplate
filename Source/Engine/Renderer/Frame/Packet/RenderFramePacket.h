@@ -19,6 +19,48 @@
 
 namespace sw
 {
+    /**
+     * @struct RenderFramePacketDeltas
+     * @brief 패킷의 일회성 차분 · 알림입니다(지난 패킷 뒤에 생긴 것 — 다음 패킷이 다시 싣지 않는다).
+     * @details 패킷은 그리지 않고 끝날 수 있다(시점 없음 · 컨텍스트 실패 · 그래프 준비 전 · 시뮬레이션 전용). 그래서 렌더 스레드가 받는 즉시 이 묶음을 **통째로** 옮겨
+     *          자기 대기 묶음(`RenderThread::_pendingDeltas`)에 쌓고, 쓰는 쪽은 그 대기 묶음에서 꺼낸다 — 칸마다 패킷 머리에서 손으로 받던 규칙을 형식이 대신한다.
+     *          새 차분은 여기에 칸을 더한다. `appendFrom` · `clear` 가 칸을 빠뜨리면 아래 크기 검사가 컴파일에서 멈춘다. 언리얼 `ENQUEUE_RENDER_COMMAND` 가
+     *          차분을 버릴 수 없는 명령으로 보내는 것과 같은 자리다.
+     */
+    struct RenderFramePacketDeltas
+    {
+        /// @brief 지난 패킷 뒤 바뀐 글리프 아틀라스 구간입니다(`GlyphAtlas::takeUploads` 한 번이 묶음 하나 — 이어 붙여도 묶음 번호 순서가 남는다).
+        vector<GlyphAtlasUpload> _listAtlasUpload;
+        /// @brief 업로드를 낸 아틀라스입니다. 렌더러 거울이 묶음을 놓쳤을 때 `GlyphAtlas::requestFullUpload`(원자 표시) 하나만 부른다 — 다른 멤버는 렌더 스레드에서 읽지 않는다.
+        GlyphAtlas* _pAtlasSource{ nullptr };
+        /**
+         * @brief 지난 패킷 뒤에 사라진 미리보기 씬의 키입니다. 렌더 스레드가 그 씬의 렌더러를 내린다(`OffscreenSceneRenderers::retire`).
+         * @details 렌더러의 수명은 씬의 수명이다 — 창을 가리거나 닫아 이번 프레임에 그리지 않을 뿐인 씬의 렌더러(파이프라인 · 그래프 · 트랜지언트)는 남긴다(언리얼 `FScene`).
+         */
+        vector<uint32> _listRetiredSceneKey;
+
+        /** @brief @p inoutSource 의 칸을 모두 뒤에 이어 붙이고 @p inoutSource 를 비웁니다(저장소는 남긴다). */
+        void appendFrom( RenderFramePacketDeltas& inoutSource )
+        {
+            _listAtlasUpload.insert( _listAtlasUpload.end(), std::make_move_iterator( inoutSource._listAtlasUpload.begin() ),
+                                     std::make_move_iterator( inoutSource._listAtlasUpload.end() ) );
+            if ( inoutSource._pAtlasSource != nullptr )
+                _pAtlasSource = inoutSource._pAtlasSource;
+            _listRetiredSceneKey.insert( _listRetiredSceneKey.end(), inoutSource._listRetiredSceneKey.begin(), inoutSource._listRetiredSceneKey.end() );
+            inoutSource.clear();
+        }
+        /** @brief 비웁니다(용량은 남깁니다). */
+        void clear()
+        {
+            _listAtlasUpload.clear();
+            _pAtlasSource = nullptr;
+            _listRetiredSceneKey.clear();
+        }
+    };
+    // 칸을 더하면 이 합도 바꾼다 — 그 전에 `appendFrom` · `clear` 에 그 칸을 더했는지 본다(빠뜨리면 그리지 않은 패킷에서 차분이 사라진다).
+    static_assert( sizeof( RenderFramePacketDeltas ) == sizeof( vector<GlyphAtlasUpload> ) + sizeof( GlyphAtlas* ) + sizeof( vector<uint32> ),
+                   "RenderFramePacketDeltas 에 칸을 더했으면 appendFrom · clear 에도 더한다" );
+
     /// @brief 게임 스레드 → 렌더 스레드로 넘기는 한 프레임 스냅샷입니다.
     struct RenderFramePacket
     {
@@ -72,7 +114,7 @@ namespace sw
         /** @brief 이번 프레임의 추가 뷰(CCTV, 백미러, 분할 화면, PiP)입니다. 쉬는 뷰도 실립니다(`RenderViewRequest::_bRender`). */
         vector<RenderViewRequest> _listView;
         /**
-         * @brief 화면 2D(UI, 월드 글자) 그리기 목록과 글리프 아틀라스 업로드입니다. 렌더 스레드가 위젯을 볼 수 없으므로 이것만 넘어갑니다.
+         * @brief 화면 2D(UI, 월드 글자) 그리기 목록입니다. 렌더 스레드가 위젯을 볼 수 없으므로 이것만 넘어갑니다. 글리프 아틀라스 업로드는 차분이라 `_deltas` 에 있다.
          * @details 렌더러가 자기 것과 바꿔치기로 받습니다(`FrameRenderer::executePacket`). 저장소가 돌아 다음 프레임에 다시 쓰입니다.
          */
         CanvasFrameData _canvas;
@@ -87,11 +129,8 @@ namespace sw
          */
         vector<unique_ptr<RenderFramePacket>> _listScenePreview;
         uint32                                _scenePreviewCount;
-        /**
-         * @brief 지난 패킷 뒤에 사라진 미리보기 씬의 키입니다. 렌더 스레드가 그 씬의 렌더러를 내린다(`OffscreenSceneRenderers::retire`).
-         * @details 렌더러의 수명은 씬의 수명이다 — 창을 가리거나 닫아 이번 프레임에 그리지 않을 뿐인 씬의 렌더러(파이프라인 · 그래프 · 트랜지언트)는 남긴다(언리얼 `FScene`).
-         */
-        vector<uint32> _listRetiredSceneKey;
+        /** @brief 일회성 차분 · 알림입니다. 렌더 스레드가 받는 즉시 통째로 옮긴다(`RenderFramePacketDeltas`). 미리보기 패킷의 것은 늘 비어 있다. */
+        RenderFramePacketDeltas _deltas;
         /** @brief 이 패킷이 그리는 씬의 키입니다. 0(`kInvalidSceneKey`)이면 활성 씬(주 패킷), 아니면 미리보기 씬입니다. */
         uint32           _sceneKey;
         RHITextureHandle _outputRenderTarget; ///< 주 출력의 오프스크린 RT(에디터 게임 뷰, 씬 뷰만 보일 때는 씬 뷰). 0 = 백버퍼 경로
@@ -140,7 +179,7 @@ namespace sw
             , _screenshotPath{}
             , _listScenePreview{}
             , _scenePreviewCount{ 0 }
-            , _listRetiredSceneKey{}
+            , _deltas{}
             , _sceneKey{ 0 }
             , _outputRenderTarget{ 0 }
             , _viewportWidth{ 0 }
@@ -200,7 +239,7 @@ namespace sw
             _mainView = RenderViewSettings{};
             _screenshotPath.clear();
             _scenePreviewCount = 0;
-            _listRetiredSceneKey.clear();
+            _deltas.clear();
             _sceneKey             = 0;
             _outputRenderTarget   = 0;
             _viewportWidth        = 0;

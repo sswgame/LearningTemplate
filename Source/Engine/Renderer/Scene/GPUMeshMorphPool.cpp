@@ -68,7 +68,9 @@ namespace sw
     {
         // 결과 구간은 디스패치가 채울 때만 내준다. 버퍼를 못 만들어 디스패치되지 않는 구간을 내주면 정점 셰이더가 비어 있는 결과를 읽는다 —
         // kInvalidBase 를 받은 배치는 그리지 않는다(GPUMeshBatchBinding::_bDeformRefused). 레스트 포즈로 대신 그리지 않는다.
-        const auto morphIt = _mapMorphEntry.find( pMesh );
+        if ( pMesh == nullptr )
+            return kInvalidBase;
+        const auto morphIt = _mapMorphEntry.find( pMesh->getContentID() );
         if ( morphIt != _mapMorphEntry.end() && morphIt->second._base != kInvalidBase )
             return isDispatchable() ? morphIt->second._base : kInvalidBase;
         return kInvalidBase;
@@ -100,16 +102,15 @@ namespace sw
         update( pDevice, listMesh, vector<Mesh*>{}, vector<uint32>{}, vector<uint32>{} );
     }
 
-    bool GPUMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<IdentityToken>& listBuiltContentID )
+    bool GPUMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<IdentityToken>& listBuiltContentID )
     {
-        // 포인터와 **내용 번호**를 함께 본다(GPUMeshVertexPool::update 와 같은 이유 — 지워진 자리에 새 메시가 생기거나 정점을 바꾼 메시).
-        if ( listBuilt.size() != listMesh.size() )
+        // 주소가 아니라 내용 토큰을 본다 — 지워진 자리의 새 메시 · 정점을 바꾼 메시는 토큰이 다르다(토큰은 살아 있는 메시 하나의 것이다).
+        if ( listBuiltContentID.size() != listMesh.size() )
             return false;
         for ( size_t index = 0; index < listMesh.size(); ++index )
         {
-            const Mesh* pMesh           = listMesh[index];
-            const bool  bStaleBuiltMesh = listBuilt[index] != pMesh || pMesh == nullptr || listBuiltContentID[index] != pMesh->getContentID();
-            if ( bStaleBuiltMesh )
+            const Mesh* pMesh = listMesh[index];
+            if ( pMesh == nullptr || listBuiltContentID[index] != pMesh->getContentID() )
                 return false;
         }
         return true;
@@ -402,7 +403,7 @@ namespace sw
         flushSkinSourceUpload( pDevice );
     }
 
-    void GPUMeshMorphPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot,
+    void GPUMeshMorphPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh, const vector<AnimationSkinSlotKey>& listSkinSlot,
                                    const vector<uint32>& listSkinLOD )
     {
         if ( pDevice == nullptr )
@@ -417,14 +418,13 @@ namespace sw
         // 모프 구간은 바뀐 메시만 올린다. 레스트 포즈 · 스킨 가중치는 변하지 않으므로 **한 번만** 올린다 — 매 프레임 올리면 이 클래스가 없애려던
         // 바로 그 비용(정점 재업로드)을 다시 치르게 된다.
         const bool bMorphChanged = updateMorphMeshes( pDevice, listMorphMesh );
-        const bool bSameSkin     = isSameList( listSkinMesh, _listBuiltSkin, _listBuiltSkinContentID ) && listSkinSlot == _listBuiltSkinSlot && listSkinLOD == _listBuiltSkinLOD;
+        const bool bSameSkin     = isSameList( listSkinMesh, _listBuiltSkinContentID ) && listSkinSlot == _listBuiltSkinSlot && listSkinLOD == _listBuiltSkinLOD;
         if ( bMorphChanged == false && bSameSkin )
             return;
 
-        _listBuiltSkin.assign( listSkinMesh.begin(), listSkinMesh.end() );
         _listBuiltSkinSlot  = listSkinSlot;
         _listBuiltSkinLOD   = listSkinLOD;
-        _bSkinLayoutChanged = SW_TRUE; // 결과 자리가 바뀐다 — 지난 벌은 이 배치의 지난 프레임이 아니다
+        _bSkinLayoutChanged = SW_TRUE; // 결과 자리나 칸의 주인(세대)이 바뀐다 — 지난 벌은 이 배치의 지난 프레임이 아니다
         _listBuiltSkinContentID.clear();
         for ( const Mesh* pMesh : listSkinMesh )
         {
@@ -448,7 +448,8 @@ namespace sw
         ensureDeformBuffers( pDevice );
     }
 
-    void GPUMeshMorphPool::rebuildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot, const vector<uint32>& listSkinLOD )
+    void GPUMeshMorphPool::rebuildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh, const vector<AnimationSkinSlotKey>& listSkinSlot,
+                                                    const vector<uint32>& listSkinLOD )
     {
         // 스킨 원본(바뀐 때만 올린다)과 인스턴스 — 인스턴스는 칸마다 하나이고 결과 구간 · 원본 구간 · 팔레트 시작을 표에 한 줄씩 갖는다.
         rebuildSkinSources( pDevice, listSkinMesh );
@@ -462,8 +463,8 @@ namespace sw
         for ( size_t skinIndex = 0; skinIndex < listSkinMesh.size(); ++skinIndex )
         {
             Mesh* const  pMesh     = listSkinMesh[skinIndex];
-            const uint32 skinSlot  = listSkinSlot[skinIndex];
-            const auto   morphIt   = ( pMesh != nullptr ) ? _mapMorphEntry.find( pMesh ) : _mapMorphEntry.end();
+            const uint32 skinSlot  = listSkinSlot[skinIndex]._slot;
+            const auto   morphIt   = ( pMesh != nullptr ) ? _mapMorphEntry.find( pMesh->getContentID() ) : _mapMorphEntry.end();
             const bool   bInMorph  = morphIt != _mapMorphEntry.end() && morphIt->second._base != kInvalidBase;
             const bool   bSeenSlot = skinSlot < _listSkinResultOffset.size() && _listSkinResultOffset[skinSlot]._resultStart != kInvalidBase;
             const bool   bSkipMesh = pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0 || bInMorph || bSeenSlot || skinSlot == kInvalidBase;
@@ -560,7 +561,7 @@ namespace sw
     bool GPUMeshMorphPool::updateMorphMeshes( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh )
     {
         const uint64 retireStamp   = _updateCount + constant::render::kMaxFrameCountInFlight;
-        const bool   bMarkedChange = markListedMorphMeshes( listMorphMesh, retireStamp );
+        const bool   bMarkedChange = markListedMorphMeshes( listMorphMesh );
         const bool   bChanged      = sweepUnlistedMorphMeshes( retireStamp ) || bMarkedChange;
         if ( _mapMorphEntry.empty() )
         {
@@ -587,9 +588,9 @@ namespace sw
         return true;
     }
 
-    bool GPUMeshMorphPool::markListedMorphMeshes( const vector<Mesh*>& listMorphMesh, uint64 retireStamp )
+    bool GPUMeshMorphPool::markListedMorphMeshes( const vector<Mesh*>& listMorphMesh )
     {
-        // 1) 표시: 처음 보거나 내용이 바뀐 메시는 새 구간이 필요하다.
+        // 1) 표시: 처음 보는 내용 토큰은 새 구간이 필요하다 — 지워진 자리의 새 메시 · setVertices 는 새 토큰이라 여기로 오고 옛 토큰의 항목은 쓸기가 돌려준다.
         bool bChanged = false;
         _listScratchAdded.clear();
         _listScratchRetry.clear();
@@ -598,12 +599,11 @@ namespace sw
             if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
                 continue;
             const IdentityToken& contentID = pMesh->getContentID();
-            const uint32         count     = pMesh->getVertexCount();
-            const auto           it        = _mapMorphEntry.find( pMesh );
+            const auto           it        = _mapMorphEntry.find( contentID );
             if ( it == _mapMorphEntry.end() )
             {
-                _mapMorphEntry.emplace( pMesh, MorphEntry{ contentID, _updateCount, kInvalidBase, count, kInvalidBase } );
-                _listScratchAdded.push_back( pMesh );
+                _mapMorphEntry.emplace( contentID, MorphEntry{ pMesh, _updateCount, kInvalidBase, pMesh->getVertexCount(), kInvalidBase } );
+                _listScratchAdded.push_back( contentID );
                 bChanged = true;
                 continue;
             }
@@ -611,35 +611,26 @@ namespace sw
             if ( entry._seenStamp == _updateCount )
                 continue; // 같은 메시가 목록에 또 있다
             entry._seenStamp = _updateCount;
-            if ( entry._contentID == contentID )
-            {
-                if ( entry._base == kInvalidBase )
-                    _listScratchRetry.push_back( pMesh ); // 예산 때문에 못 들어간 메시
-                continue;
-            }
-            // 포인터는 같고 내용이 다르다(지워진 자리에 새 메시, 또는 setVertices) — 옛 구간과 칸을 돌려주고 새로 받는다.
-            releaseMorphEntry( entry, retireStamp );
-            entry._contentID = contentID;
-            entry._count     = count;
-            _listScratchAdded.push_back( pMesh );
-            bChanged = true;
+            entry._pMesh     = pMesh;
+            if ( entry._base == kInvalidBase )
+                _listScratchRetry.push_back( contentID ); // 예산 때문에 못 들어간 메시
         }
         return bChanged;
     }
 
     bool GPUMeshMorphPool::sweepUnlistedMorphMeshes( uint64 retireStamp )
     {
-        // 2) 쓸기: 이번 목록에 없는 메시의 구간과 칸을 돌려준다. 포인터는 따라가지 않는다.
+        // 2) 쓸기: 이번 목록에 없는 메시의 구간과 칸을 돌려준다. 메시는 따라가지 않는다.
         _listScratchRemoved.clear();
-        for ( const auto& [pMesh, entry] : _mapMorphEntry )
+        for ( const auto& [contentID, entry] : _mapMorphEntry )
         {
             if ( entry._seenStamp != _updateCount )
-                _listScratchRemoved.push_back( pMesh );
+                _listScratchRemoved.push_back( contentID );
         }
-        for ( const Mesh* pMesh : _listScratchRemoved )
+        for ( const IdentityToken& contentID : _listScratchRemoved )
         {
-            releaseMorphEntry( _mapMorphEntry.find( pMesh )->second, retireStamp );
-            _mapMorphEntry.erase( pMesh );
+            releaseMorphEntry( _mapMorphEntry.find( contentID )->second, retireStamp );
+            _mapMorphEntry.erase( contentID );
         }
         return _listScratchRemoved.empty() == false;
     }
@@ -648,10 +639,11 @@ namespace sw
     {
         _listScratchRest.clear();
         _listScratchRegion.clear();
-        for ( const Mesh* pMesh : _listScratchAdded )
+        for ( const IdentityToken& contentID : _listScratchAdded )
         {
-            MorphEntry&  entry = _mapMorphEntry.find( pMesh )->second;
-            const uint32 base  = _morphAllocator.allocate( entry._count );
+            MorphEntry&       entry = _mapMorphEntry.find( contentID )->second;
+            const Mesh* const pMesh = entry._pMesh;
+            const uint32      base  = _morphAllocator.allocate( entry._count );
             if ( base == SpanAllocator::kInvalidOffset )
                 return false;
             entry._base = base;
@@ -675,7 +667,7 @@ namespace sw
     {
         // 새 레스트 버퍼는 아무 프레임도 읽지 않는다 — 대기 중인 반납까지 버리고 살아 있는 메시를 앞에서부터 잇는다. 칸 번호는 그대로 둔다.
         uint32 liveCount = 0;
-        for ( const auto& [pMesh, entry] : _mapMorphEntry )
+        for ( const auto& [contentID, entry] : _mapMorphEntry )
         {
             liveCount += entry._count;
         }
@@ -690,9 +682,10 @@ namespace sw
         // 빈 자리는 0(노멀 w = 0 → 칸 없음)으로 둔다. 컴퓨트는 빈 자리도 돌지만 그 결과는 아무도 읽지 않는다.
         _listScratchRest.assign( capacity, GPUMorphVertex{} );
         bool bWarnedFull = false;
-        for ( auto& [pMesh, entry] : _mapMorphEntry )
+        for ( auto& [contentID, entry] : _mapMorphEntry )
         {
-            entry._base = _morphAllocator.allocate( entry._count );
+            const Mesh* const pMesh = entry._pMesh;
+            entry._base             = _morphAllocator.allocate( entry._count );
             if ( entry._base == SpanAllocator::kInvalidOffset )
             {
                 // 상한 초과는 오류다. 이 메시는 풀에 넣지 않는다 — `getBaseOf` 가 kInvalidBase 를 반환하고 그 배치는 그리지 않는다(레스트 포즈로 대신 그리지 않는다).
@@ -783,7 +776,7 @@ namespace sw
             _listScratchDeformProgram[slot]._x = static_cast<float32>( _listScratchDeformProgram.size() );
             // y = 이 메시 구간의 풀 안 시작 정점 - 컴퓨트의 정점 번호는 풀 전체 번호라, 메시별 표(정점 UV 등)를 읽는 프로그램이 메시 안 번호를 구하는 데 쓴다.
             // 구간이 바뀌는 때(`updateMorphMeshes` 의 집합 변경)는 세대 표를 비워 이 표가 다시 올라간다. 정확한 정수(2^24 미만)라 float 로 싣는다.
-            const auto entryIt = _mapMorphEntry.find( pMesh );
+            const auto entryIt = _mapMorphEntry.find( pMesh->getContentID() );
             if ( entryIt != _mapMorphEntry.end() && entryIt->second._base != kInvalidBase )
                 _listScratchDeformProgram[slot]._y = static_cast<float32>( entryIt->second._base );
             _listScratchDeformProgram.insert( _listScratchDeformProgram.end(), program->begin(), program->end() );
@@ -802,7 +795,7 @@ namespace sw
         _listScratchPaletteIndex.assign( _listSkinResultOffset.size(), kInvalidBase );
         for ( uint32 paletteIndex = 0; paletteIndex < static_cast<uint32>( listPalette.size() ); ++paletteIndex )
         {
-            const uint32 skinSlot = listPalette[paletteIndex]._skinSlot;
+            const uint32 skinSlot = listPalette[paletteIndex]._skinSlot._slot;
             if ( skinSlot < _listScratchPaletteIndex.size() )
                 _listScratchPaletteIndex[skinSlot] = paletteIndex;
         }
@@ -876,7 +869,6 @@ namespace sw
         _mapMorphEntry.clear();
         _morphAllocator.reset( 0 );
         _listSkinResultOffset.clear();
-        _listBuiltSkin.clear();
         _listBuiltSkinSlot.clear();
         _listBuiltSkinLOD.clear();
         _listBuiltSkinContentID.clear();

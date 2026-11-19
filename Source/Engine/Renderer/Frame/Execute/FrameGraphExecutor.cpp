@@ -327,8 +327,9 @@ namespace sw
         }
         for ( const GPUSkinPalette& palette : _state._gpuScene.getSkinPalettes() )
         {
-            const bool bDrawn = palette._skinSlot < deform._listScratchDrawnSkinSlot.size() && deform._listScratchDrawnSkinSlot[palette._skinSlot] == SW_TRUE;
-            const bool bSkin  = palette._mesh != nullptr && palette._mesh->hasSkin() && palette._mesh->findVertexAnimation() == nullptr;
+            const uint32 skinSlot = palette._skinSlot._slot;
+            const bool   bDrawn   = skinSlot < deform._listScratchDrawnSkinSlot.size() && deform._listScratchDrawnSkinSlot[skinSlot] == SW_TRUE;
+            const bool   bSkin    = palette._mesh != nullptr && palette._mesh->hasSkin() && palette._mesh->findVertexAnimation() == nullptr;
             if ( bDrawn == false || bSkin == false )
                 continue;
             deform._listScratchSkinMesh.push_back( palette._mesh.get() );

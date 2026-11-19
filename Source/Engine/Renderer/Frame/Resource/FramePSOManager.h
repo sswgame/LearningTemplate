@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/IdentityToken.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
@@ -257,8 +258,8 @@ namespace sw
         /// @brief `warmPinnedMaterialPSOs` 가 줄에서 꺼낸 미리 만들기 값입니다(게임 스레드가 머티리얼에서 읽었다). 프레임마다 비운다(저장소만 재사용한다).
         vector<MaterialPSOWarmEntry> _listPSOWarmEntryScratch;
         vector<MaterialFallback>     _listMaterialFallback;
-        /// @brief 바인딩 레이아웃 → `_listMaterialFallback` 순번입니다. 레이아웃은 저장소가 소유하며 PSO 마다 하나입니다.
-        unordered_map<const ShaderBindingLayout*, uint32> _mapLayoutMaterialFallback;
+        /// @brief 바인딩 레이아웃 정체성(`ShaderBindingLayout::getIdentity`) → `_listMaterialFallback` 순번입니다. 주소가 아니라 정체성이라 핫 리로드가 같은 자리에 다시 지은 레이아웃은 옛 폴백을 집지 않는다.
+        unordered_map<IdentityToken, uint32> _mapLayoutMaterialFallback;
         /// @brief 이번 프레임 입자 PSO 의 변형 키입니다(`ensureParticlePSO` 가 기록 전에 정한다). 입자가 없거나 투명 패스가 없으면 0 입니다.
         uint64 _particlePSOKey{ 0 };
     };

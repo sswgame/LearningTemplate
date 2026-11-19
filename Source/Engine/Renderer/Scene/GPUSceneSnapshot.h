@@ -13,6 +13,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -293,8 +294,8 @@ namespace sw
      */
     struct GPUSkinPalette
     {
-        shared_ptr<Mesh> _mesh{};                                       ///< 스키닝할 메시(원본 — 칸마다 사본을 두지 않는다). RT 의 모프 풀이 원본 데이터 · 정점 수를 읽는다
-        uint32           _skinSlot{ constant::invalid_index::kUint32 }; ///< 이 팔레트의 스킨 칸(인스턴스의 `GPUInstance::_skinSlot` 과 같은 번호)
+        shared_ptr<Mesh>     _mesh{};     ///< 스키닝할 메시(원본 — 칸마다 사본을 두지 않는다). RT 의 모프 풀이 원본 데이터 · 정점 수를 읽는다
+        AnimationSkinSlotKey _skinSlot{}; ///< 이 팔레트의 스킨 칸(번호는 인스턴스의 `GPUInstance::_skinSlot` 과 같다, 세대는 같은 번호의 새 주인을 가른다)
         /// @brief 변형할 LOD 단계(`MeshComponent::getLODIndex` — 그 칸이 그리는 단계 하나만 스키닝한다, 언리얼 스킨 캐시와 같다). 무효면 모든 단계(멤버마다 단계가 다른 군중 묶음)입니다.
         uint32 _lodIndex{ constant::invalid_index::kUint32 };
         uint32 _firstRow{ 0 };
@@ -474,6 +475,12 @@ namespace sw
         float32 _lodCrossfadeSeconds{ 0.0f };
         /// @brief 마지막 populateFromScene 이 내용을 바꿨는지 나타냅니다. RT 는 0이면 인스턴스 재업로드를 생략합니다.
         uint8 _bCPUDirty{ SW_TRUE };
+        /**
+         * @brief 빌더가 내보낸 차례(`GPUSceneBuilder::exportCPUSnapshot` 마다 1 씩, 처음이 1)입니다. 0 이면 빌더가 내보내지 않은 빈 스냅샷입니다.
+         * @details 내용 바뀜(`_bCPUDirty`) · 바뀐 칸(`_bAllInstancesDirty` · `_listDirtyInstanceRange`)은 **지난 스냅샷 기준의 차분**이다. 받는 쪽은 번호가 이어지지 않으면
+         *          (그리지 않고 끝난 패킷의 스냅샷을 받지 못했다) 차분을 믿지 않고 전체로 맞춘다(`GPUScene::applyCPUSnapshot` — 글리프 아틀라스 묶음 번호와 같은 길).
+         */
+        uint64 _exportSerial{ 0 };
         /**
          * @brief 이 스냅샷의 인스턴스에 있는 강조 방식의 비트입니다(`1 << InstanceHighlightStyle`). 빌더가 인스턴스를 다시 채울 때마다 구한다.
          * @details 강조 패스는 불투명 배치를 모두 다시 그리고 정점 셰이더가 강조 아닌 인스턴스를 버린다 — 강조된 것이 없어도 씬의 모든 정점(스키닝 포함)을 두 번 더 돌았다

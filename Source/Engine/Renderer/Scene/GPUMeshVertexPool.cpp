@@ -105,7 +105,9 @@ namespace sw
 
     GPUMeshVertexPool::Placement GPUMeshVertexPool::getPlacementOf( const Mesh* pMesh ) const
     {
-        const auto it = _mapEntry.find( pMesh );
+        if ( pMesh == nullptr )
+            return Placement{};
+        const auto it = _mapEntry.find( pMesh->getContentID() );
         if ( it == _mapEntry.end() || it->second._base == kInvalidBase )
             return Placement{};
         return Placement{ it->second._base, it->second._indexBase };
@@ -123,7 +125,7 @@ namespace sw
         _indexAllocator.retireDeferred( _updateCount );
         const uint64 retireStamp = _updateCount + constant::render::kMaxFrameCountInFlight;
 
-        const bool bMarkedChange = markListedMeshes( listMesh, retireStamp );
+        const bool bMarkedChange = markListedMeshes( listMesh );
         const bool bChanged      = sweepUnlistedMeshes( retireStamp ) || bMarkedChange;
         if ( _mapEntry.empty() )
         {
@@ -155,9 +157,10 @@ namespace sw
         inoutEntry._indexBase = kInvalidBase;
     }
 
-    bool GPUMeshVertexPool::markListedMeshes( const vector<Mesh*>& listMesh, uint64 retireStamp )
+    bool GPUMeshVertexPool::markListedMeshes( const vector<Mesh*>& listMesh )
     {
-        // 1) 표시: 이번 목록의 메시를 본다. 처음 보거나 내용이 바뀐 메시는 새 구간이 필요하다.
+        // 1) 표시: 이번 목록의 메시를 본다. 처음 보는 내용 토큰은 새 구간이 필요하다 — 지워진 자리의 새 메시 · setGeometry 는 새 토큰이라 여기로 오고,
+        //    옛 토큰의 항목은 쓸기가 돌려준다(키가 주소가 아니라 비교할 것이 없다).
         bool bChanged = false;
         _listScratchAdded.clear();
         _listScratchRetry.clear();
@@ -165,14 +168,13 @@ namespace sw
         {
             if ( pMesh == nullptr || pMesh->getIndices().empty() || pMesh->getVertexFormat() != _format )
                 continue; // 다른 형식은 그 형식의 풀이 담는다
-            const IdentityToken& contentID   = pMesh->getContentID();
-            const uint32         vertexCount = pMesh->getDrawVertexCount(); // LOD 0 뒤에 낮은 단계까지(배치는 단계의 범위로 그린다)
-            const uint32         indexCount  = pMesh->getDrawIndexCount();
-            const auto           it          = _mapEntry.find( pMesh );
+            const IdentityToken& contentID = pMesh->getContentID();
+            const auto           it        = _mapEntry.find( contentID );
             if ( it == _mapEntry.end() )
             {
-                _mapEntry.emplace( pMesh, Entry{ contentID, _updateCount, kInvalidBase, vertexCount, kInvalidBase, indexCount } );
-                _listScratchAdded.push_back( pMesh );
+                // 정점 수는 LOD 0 뒤에 낮은 단계까지다(배치는 단계의 범위로 그린다).
+                _mapEntry.emplace( contentID, Entry{ pMesh, _updateCount, kInvalidBase, pMesh->getDrawVertexCount(), kInvalidBase, pMesh->getDrawIndexCount() } );
+                _listScratchAdded.push_back( contentID );
                 bChanged = true;
                 continue;
             }
@@ -180,36 +182,26 @@ namespace sw
             if ( entry._seenStamp == _updateCount )
                 continue; // 같은 메시가 목록에 또 있다(배치 여럿)
             entry._seenStamp = _updateCount;
-            if ( entry._contentID == contentID )
-            {
-                if ( entry._base == kInvalidBase )
-                    _listScratchRetry.push_back( pMesh ); // 예산 때문에 못 들어간 메시
-                continue;
-            }
-            // 포인터는 같고 내용이 다르다(지워진 자리에 새 메시, 또는 setGeometry) — 옛 구간을 돌려주고 새 구간을 받는다.
-            retireEntry( entry, retireStamp );
-            entry._contentID  = contentID;
-            entry._count      = vertexCount;
-            entry._indexCount = indexCount;
-            _listScratchAdded.push_back( pMesh );
-            bChanged = true;
+            entry._pMesh     = pMesh;
+            if ( entry._base == kInvalidBase )
+                _listScratchRetry.push_back( contentID ); // 예산 때문에 못 들어간 메시
         }
         return bChanged;
     }
 
     bool GPUMeshVertexPool::sweepUnlistedMeshes( uint64 retireStamp )
     {
-        // 2) 쓸기: 이번 목록에 없는 메시의 구간을 돌려준다. 포인터는 따라가지 않는다(이미 지워졌을 수 있다).
+        // 2) 쓸기: 이번 목록에 없는 메시의 구간을 돌려준다. 메시는 따라가지 않는다(이미 지워졌을 수 있다).
         _listScratchRemoved.clear();
-        for ( const auto& [pMesh, entry] : _mapEntry )
+        for ( const auto& [contentID, entry] : _mapEntry )
         {
             if ( entry._seenStamp != _updateCount )
-                _listScratchRemoved.push_back( pMesh );
+                _listScratchRemoved.push_back( contentID );
         }
-        for ( const Mesh* pMesh : _listScratchRemoved )
+        for ( const IdentityToken& contentID : _listScratchRemoved )
         {
-            retireEntry( _mapEntry.find( pMesh )->second, retireStamp );
-            _mapEntry.erase( pMesh );
+            retireEntry( _mapEntry.find( contentID )->second, retireStamp );
+            _mapEntry.erase( contentID );
         }
         return _listScratchRemoved.empty() == false;
     }
@@ -219,18 +211,18 @@ namespace sw
         _listScratchIndex.clear();
         _listScratchRegion.clear();
         _listScratchIndexRegion.clear();
-        for ( const Mesh* pMesh : _listScratchAdded )
+        for ( const IdentityToken& contentID : _listScratchAdded )
         {
-            Entry&       entry     = _mapEntry.find( pMesh )->second;
+            Entry&       entry     = _mapEntry.find( contentID )->second;
             const uint32 base      = _allocator.allocate( entry._count );
             const uint32 indexBase = base != SpanAllocator::kInvalidOffset ? _indexAllocator.allocate( entry._indexCount ) : SpanAllocator::kInvalidOffset;
             if ( indexBase == SpanAllocator::kInvalidOffset )
             {
                 // 이미 받은 구간들은 repack 이 처음부터 다시 나눈다. 이번에 자리만 받고 아직 채우지 않은 메시는 옛 풀에 내용이 없다 — 자리를 지워
                 // repack 이 옛 풀(남이 쓰던 빈 구간)에서 복사하지 않고 원본에서 채우게 한다.
-                for ( const Mesh* pAdded : _listScratchAdded )
+                for ( const IdentityToken& addedID : _listScratchAdded )
                 {
-                    Entry& added     = _mapEntry.find( pAdded )->second;
+                    Entry& added     = _mapEntry.find( addedID )->second;
                     added._base      = kInvalidBase;
                     added._indexBase = kInvalidBase;
                 }
@@ -241,13 +233,13 @@ namespace sw
             _liveVertexCount += entry._count;
             _listScratchIndexRegion.push_back( RHIBufferCopyRegion{ static_cast<uint32>( _listScratchIndex.size() * sizeof( uint32 ) ), indexBase * static_cast<uint32>( sizeof( uint32 ) ),
                                                                     entry._indexCount * static_cast<uint32>( sizeof( uint32 ) ) } );
-            appendDrawIndices( *pMesh );
+            appendDrawIndices( *entry._pMesh );
         }
         // 정점은 GPU 원본(렌더 프록시)에서 복사로 채운다 — 프레임 업로드 단계가 기록한다(R-15). 인덱스는 CPU 인덱스에서 그대로 올린다(업로드 힙 인덱스 버퍼).
-        for ( size_t meshIndex = 0; meshIndex < _listScratchAdded.size(); ++meshIndex )
+        for ( const IdentityToken& contentID : _listScratchAdded )
         {
-            const Entry& entry = _mapEntry.find( _listScratchAdded[meshIndex] )->second;
-            if ( queueMeshFill( *pDevice, *_listScratchAdded[meshIndex], entry._base, _allocator.getCapacity() ) == false )
+            const Entry& entry = _mapEntry.find( contentID )->second;
+            if ( queueMeshFill( *pDevice, *entry._pMesh, entry._base, _allocator.getCapacity() ) == false )
                 SW_LOG_ERROR_ONCE_ID( "GPUMeshVertexPool.NoVertexSource", "A pooled mesh has neither a render proxy vertex buffer nor CPU vertices - its pool span stays empty" );
         }
         if ( _listScratchIndexRegion.empty() == false )
@@ -261,7 +253,7 @@ namespace sw
         // 새 버퍼는 아무 프레임도 읽지 않는다 — 대기 중인 반납까지 버리고 살아 있는 메시를 앞에서부터 잇는다.
         uint32 liveCount      = 0;
         uint32 liveIndexCount = 0;
-        for ( const auto& [pMesh, entry] : _mapEntry )
+        for ( const auto& [contentID, entry] : _mapEntry )
         {
             liveCount += entry._count;
             liveIndexCount += entry._indexCount;
@@ -275,11 +267,11 @@ namespace sw
         const RHIBufferHandle              oldVertexBuffer   = _vertexBuffer;
         const uint32                       oldCapacity       = _allocator.getCapacity();
         const uint32                       oldAttributeStart = RHIMeshVertexStreams::computeAttributeOffset( oldCapacity );
-        unordered_map<const Mesh*, uint32> mapOldBase;
-        for ( const auto& [pMesh, entry] : _mapEntry )
+        unordered_map<const Mesh*, uint32> mapOldBase; // 이 호출 안에서만 — 맵의 메시는 모두 이번 update 에서 본 것이라 살아 있다
+        for ( const auto& [contentID, entry] : _mapEntry )
         {
             if ( oldVertexBuffer != 0 && entry._base != kInvalidBase )
-                mapOldBase[pMesh] = entry._base;
+                mapOldBase[entry._pMesh] = entry._base;
         }
         if ( oldVertexBuffer != 0 )
             _listRetiredBuffer.push_back( oldVertexBuffer );
@@ -295,7 +287,7 @@ namespace sw
         if ( _vertexBuffer == 0 )
         {
             SW_LOG_ERROR_ID( "GPUMeshVertexPool.FailedCreateVertexPool", "Failed to create the vertex pool buffers (%# vertices, %# indices) - the batches are drawn with their own buffers.", capacity, indexCapacity );
-            for ( auto& [pMesh, entry] : _mapEntry )
+            for ( auto& [contentID, entry] : _mapEntry )
             {
                 entry._base      = kInvalidBase;
                 entry._indexBase = kInvalidBase;
@@ -311,10 +303,11 @@ namespace sw
         const uint32 attributeStride = constant::render::getMeshAttributeStride( _format );
         const uint32 newAttribute    = RHIMeshVertexStreams::computeAttributeOffset( capacity );
         bool         bWarnedFull     = false;
-        for ( auto& [pMesh, entry] : _mapEntry )
+        for ( auto& [contentID, entry] : _mapEntry )
         {
-            entry._base      = _allocator.allocate( entry._count );
-            entry._indexBase = entry._base != SpanAllocator::kInvalidOffset ? _indexAllocator.allocate( entry._indexCount ) : SpanAllocator::kInvalidOffset;
+            const Mesh* const pMesh = entry._pMesh;
+            entry._base             = _allocator.allocate( entry._count );
+            entry._indexBase        = entry._base != SpanAllocator::kInvalidOffset ? _indexAllocator.allocate( entry._indexCount ) : SpanAllocator::kInvalidOffset;
             if ( entry._indexBase == SpanAllocator::kInvalidOffset )
             {
                 if ( entry._base != SpanAllocator::kInvalidOffset )
@@ -355,7 +348,7 @@ namespace sw
             _listRetiredBuffer.push_back( _vertexBuffer ); // 쌓인 복사가 읽거나 쓴다 — 기록한 뒤 놓는다
             _vertexBuffer = 0;
             // 항목은 남긴다 — 내용이 같으면 집합이 바뀐 프레임에만 다시 시도한다(매 프레임 다시 만들며 오류를 쌓지 않는다).
-            for ( auto& [pMesh, entry] : _mapEntry )
+            for ( auto& [contentID, entry] : _mapEntry )
             {
                 entry._base      = kInvalidBase;
                 entry._indexBase = kInvalidBase;

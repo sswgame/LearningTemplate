@@ -50,7 +50,6 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "GPUVertexAnimationPool.CouldNotCreateVertex", "Could not create the vertex animation table (%# words) - meshes with vertex animation are not drawn", capacity );
             _allocator.reset( 0 );
-            _listBuilt.clear();
             _listBuiltContentID.clear();
             _wordCount = 0;
             return false;
@@ -69,7 +68,7 @@ namespace sw
             if ( shared != _mapEntry.end() )
             {
                 ++shared->second._refCount;
-                _mapRecord[wanted._pMesh] = MeshRecord{ wanted._pAnimation, wanted._contentID };
+                _mapRecord[wanted._contentID] = MeshRecord{ wanted._pAnimation };
                 continue;
             }
             const size_t needed = shaderslot::kVertexAnimationHeaderWords + wanted._pAnimation->_listFrameVertex.size() * shaderslot::kVertexAnimationWordsPerElement;
@@ -83,7 +82,7 @@ namespace sw
             if ( base == SpanAllocator::kInvalidOffset )
                 return false;
             _mapEntry.emplace( wanted._pAnimation, Entry{ base, static_cast<uint32>( needed ), 1u } );
-            _mapRecord[wanted._pMesh] = MeshRecord{ wanted._pAnimation, wanted._contentID };
+            _mapRecord[wanted._contentID] = MeshRecord{ wanted._pAnimation };
             uploadEntry( pDevice, *wanted._pAnimation, base );
         }
         return true;
@@ -104,16 +103,15 @@ namespace sw
     {
         if ( pDevice == nullptr )
             return;
-        // 테이블은 베이크하고 나면 변하지 않는다. 목록(포인터와 내용 번호)이 같으면 아무것도 하지 않는다.
-        bool bSame = _listBuilt.size() == listMesh.size();
+        // 테이블은 베이크하고 나면 변하지 않는다. 목록(메시마다 내용 토큰 — 주소가 아니다)이 같으면 아무것도 하지 않는다.
+        bool bSame = _listBuiltContentID.size() == listMesh.size();
         for ( size_t index = 0; bSame && index < listMesh.size(); ++index )
         {
-            bSame = _listBuilt[index] == listMesh[index] && listMesh[index] != nullptr && _listBuiltContentID[index] == listMesh[index]->getContentID();
+            bSame = listMesh[index] != nullptr && _listBuiltContentID[index] == listMesh[index]->getContentID();
         }
         if ( bSame )
             return;
 
-        _listBuilt.assign( listMesh.begin(), listMesh.end() );
         _listBuiltContentID.clear();
         vector<Wanted> listWanted;
         for ( const Mesh* pMesh : listMesh )
@@ -123,7 +121,7 @@ namespace sw
             const MeshVertexAnimation* pAnimation = ( pMesh != nullptr ) ? pMesh->findVertexAnimation() : nullptr;
             if ( pAnimation == nullptr || pAnimation->isEmpty() )
                 continue;
-            listWanted.push_back( Wanted{ pMesh, pAnimation, contentID } );
+            listWanted.push_back( Wanted{ pAnimation, contentID } );
         }
 
         // 반납한 구간은 재구성 몇 번 뒤에야 다시 내준다(앞 프레임이 아직 읽는 구간을 덮어쓰지 않는다).
@@ -132,18 +130,17 @@ namespace sw
             _allocator.retireDeferred( _rebuildSerial - kRetireLag );
 
         // 1) 내용이 그대로인 메시의 기록은 남기고, 아무 메시도 쓰지 않게 된 테이블의 구간은 돌려받는다.
-        unordered_map<const Mesh*, MeshRecord>            mapKeptRecord;
+        unordered_map<IdentityToken, MeshRecord>          mapKeptRecord;
         unordered_map<const MeshVertexAnimation*, uint32> mapKeptRef;
         vector<size_t>                                    listPending;
         for ( size_t index = 0; index < listWanted.size(); ++index )
         {
             const Wanted& wanted = listWanted[index];
-            const auto    record = _mapRecord.find( wanted._pMesh );
-            const bool    bKept  = record != _mapRecord.end() && record->second._pAnimation == wanted._pAnimation && record->second._contentID == wanted._contentID &&
-                               _mapEntry.find( wanted._pAnimation ) != _mapEntry.end();
+            const auto    record = _mapRecord.find( wanted._contentID );
+            const bool    bKept  = record != _mapRecord.end() && record->second._pAnimation == wanted._pAnimation && _mapEntry.find( wanted._pAnimation ) != _mapEntry.end();
             if ( bKept )
             {
-                mapKeptRecord.emplace( wanted._pMesh, record->second );
+                mapKeptRecord.emplace( wanted._contentID, record->second );
                 ++mapKeptRef[wanted._pAnimation];
             }
             else
@@ -200,7 +197,9 @@ namespace sw
 
     uint32 GPUVertexAnimationPool::getBaseOf( const Mesh* pMesh ) const
     {
-        const auto it = _mapBase.find( pMesh );
+        if ( pMesh == nullptr )
+            return kInvalidBase;
+        const auto it = _mapBase.find( pMesh->getContentID() );
         return ( it != _mapBase.end() ) ? it->second : kInvalidBase;
     }
 
@@ -211,7 +210,6 @@ namespace sw
         _mapEntry.clear();
         _mapRecord.clear();
         _mapBase.clear();
-        _listBuilt.clear();
         _listBuiltContentID.clear();
         _wordCount = 0;
     }
