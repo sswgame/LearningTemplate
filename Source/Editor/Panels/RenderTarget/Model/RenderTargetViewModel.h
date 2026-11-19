@@ -17,6 +17,7 @@
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 
 namespace sw::editor
@@ -34,6 +35,7 @@ namespace sw::editor
         float4                   _probedPixel{};            ///< 마지막으로 읽은 픽셀 값
         int2                     _probedTexel{};            ///< 마지막으로 읽은 픽셀 좌표
         uint32                   _mip{ 0 };                 ///< 읽어 보는 밉(고른 타깃의 밉 수 안)
+        FrameDebuggerSettings    _frameDebugger{};          ///< 프레임 디버거의 멈춤 지점(렌더 디버거 창과 같은 우편함 — 이 그림이 그 지점까지 그린 것인지)
         uint8                    _bHasSnapshot{ SW_FALSE }; ///< 고른 타깃의 CPU 스냅샷이 있다
         uint8                    _bAutoRefresh{ SW_FALSE }; ///< 일정 간격으로 스냅샷을 다시 읽는다
         uint8                    _bProbedPixel{ SW_FALSE }; ///< `_probedPixel` 이 유효하다
@@ -75,6 +77,11 @@ namespace sw::editor
         void setExposure( float32 exposure );
         /** @brief 읽어 볼 밉을 정합니다. 고른 타깃의 밉 수 밖이면 마지막 밉이다. 바뀌면 다시 읽는다. */
         void setMip( uint32 mip );
+        /**
+         * @brief 이 그림을 패스 @p passName 의 끝까지 그린 시점으로 봅니다(프레임 디버거의 멈춤 지점 = 그 패스의 마지막 드로우 — 뒤 패스의 씬 드로우를 건너뛴다). 빈 이름이면 전체 프레임으로 되돌린다.
+         * @details 유니티 Frame Debugger 의 이벤트 고르기를 패스 경계로 한 것이다. 멈춤은 씬 드로우만 자른다 — 전체 화면 · 컴퓨트 패스는 그대로 돈다.
+         */
+        void setStopAfterPass( const string& passName );
         /** @brief 깊이를 거리로 되돌려 볼지 정합니다. */
         void setLinearizeDepth( bool bLinearize );
         /** @brief 깊이 회색 범위를 화면 값에 맞출지 정합니다. */

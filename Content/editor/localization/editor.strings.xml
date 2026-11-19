@@ -3407,11 +3407,6 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdText.Easing" source="Easing">
-			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdText.EdgeWarpPresets" source="Edge Warp Presets">
 			<origins>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
@@ -4446,11 +4441,6 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdVerb.PlayReverse" source="Play Reverse">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Redo" source="Redo">
@@ -7672,6 +7662,156 @@
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorRenderDebug.BufferNotRead" source="Not read yet, or the buffer size is unknown (registered without a size).">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.BuffersTab" source="Buffers">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.Capture" source="Capture">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.CaptureTip" source="Copy the compiled render graphs (view and frame) on the next frame: passes by level, resources, transitions and GPU time per pass.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.DrawSummary" source="PSO {pso}  {indexCount} indices  {groupCount} batches  up to {triangleCount} triangles">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.Enable" source="Frame debugger">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.EnableTip" source="Record every main-view scene draw. Pick a draw to stop there: later draws and passes are skipped, so the game view and the Render Targets panel show the frame up to that draw.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.FrameDebuggerHint" source="Turn on the frame debugger to list this frame&#x27;s scene draws.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.FrameDebuggerTab" source="Frame Debugger">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.GraphSummary" source="{passCount} passes  {levelCount} levels  {resourceCount} resources  {transitionCount} transitions">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.Next" source="Next">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.NoBindings" source="No binding layout for this PSO.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.NoBuffers" source="No frame graph buffers listed yet. Press Refresh list.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.NoGraph" source="No render graph captured yet. Press Capture.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.NoOcclusion" source="No occlusion tiles. Occlusion culling is off (-gv_occlusionCulling) or this backend has no GPU culling.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.NoRenderer" source="No renderer debug data in this process.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.OcclusionHeader" source="Occlusion tiles">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.OcclusionSummary" source="{columns} x {rows} tiles, {coveredCount} of {tileCount} covered, nearest depth {nearestDepth}">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.OcclusionTab" source="Occlusion and Streaming">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.Previous" source="Previous">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.ReadBuffer" source="Read">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.ReadingBuffer" source="Reading the buffer...">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.RefreshList" source="Refresh list">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.RenderGraphTab" source="Render Graph">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.SizeUnknown" source="size unknown">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.StopAt" source="Draw {event} of {eventCount}: {pass} #{draw}">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.StreamingHeader" source="Texture streaming">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.StreamingSummary" source="{textureCount} streaming textures, {belowWantedCount} below their wanted mip ({missingMipCount} mips), {uploadsWaiting} uploads waiting">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.TargetsHint" source="The Render Targets panel and the game view show the frame up to the stop draw.">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderDebug.WholeFrame" source="Recording the whole frame ({eventCount} draws)">
+			<origins>
+				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorRenderTarget.AutoRangeTip"
 		       source="Stretch the depth values present in the image to the full black-to-white range.">
 			<origins>
@@ -7711,6 +7851,16 @@
 			</origins>
 		</entry>
 		<entry key="EditorRenderTarget.FormatNotReadable" source="This format cannot be read back.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.FrameUpTo" source="Frame up to">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.FrameUpToTip" source="See this target as it was at the end of one of its writing passes: later scene draws are skipped (frame debugger). Fullscreen and compute passes still run. A draw picked in the Render Debugger panel shows here too.">
 			<origins>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
@@ -7779,6 +7929,16 @@
 			</origins>
 		</entry>
 		<entry key="EditorRenderTarget.SearchHint" source="Search render targets...">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.StopDraw" source="{pass} #{draw}">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.WholeFrame" source="whole frame">
 			<origins>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
@@ -8362,11 +8522,6 @@
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.PauseTip" source="Pause playback at the current frame.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.PlayReverseTip" source="Play the sequence backwards in the viewport from the current frame, looping at the start.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -9594,11 +9749,6 @@
 		       source="Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on.">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorTip.CurveKeyEasing" source="The blend curve an Eased key follows to the next key (the same curves as camera and UI blends).">
-			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTip.CurveKeyInterpolation"

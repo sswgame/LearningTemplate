@@ -25,9 +25,10 @@ namespace sw::editor
     namespace
     {
         /// @brief 목록 열의 너비입니다. 이름이 길어도(GBufferAlbedo) 잘리지 않을 만큼 잡습니다.
-        constexpr float32 kListColumns     = 29.0f; ///< 목록 폭(글자 칸 수)
-        constexpr float32 kMipColumns      = 16.0f; ///< 밉 슬라이더 폭(글자 칸 수)
-        constexpr float32 kExposureColumns = 18.0f; ///< 노출 슬라이더 폭(글자 칸 수)
+        constexpr float32 kListColumns      = 29.0f; ///< 목록 폭(글자 칸 수)
+        constexpr float32 kMipColumns       = 16.0f; ///< 밉 슬라이더 폭(글자 칸 수)
+        constexpr float32 kExposureColumns  = 18.0f; ///< 노출 슬라이더 폭(글자 칸 수)
+        constexpr float32 kStopComboColumns = 30.0f; ///< 멈춤 지점 콤보 폭(글자 칸 수) — 패스 이름이 들어간다
 
         /** @brief 고른 타깃을 이름으로 찾습니다. 없으면 nullptr 입니다. */
         const RenderTargetInfo* findByName( const vector<RenderTargetInfo>& listTarget, const string& name )
@@ -197,6 +198,34 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "ExposureTip" ) );
     }
 
+    void RenderTargetPanel::drawFrameTimeControls( const RenderTargetInfo& selected )
+    {
+        // 패스 경계 고르기(프레임 디버거와 같은 우편함): 이 타깃을 쓰는 패스 가운데 하나의 끝까지 그린 그림으로 본다. 렌더 디버거 창에서 드로우 하나까지 고른 지점도 여기 보인다.
+        const FrameDebuggerSettings& stop      = _viewState._frameDebugger;
+        const bool                   bStopped  = stop._bEnabled != SW_FALSE && stop._stopPass.empty() == false;
+        string                       stopLabel = SW_LOCKEY( "EditorRenderTarget", "WholeFrame" );
+        if ( bStopped )
+            stopLabel = stop._stopDraw == MathUtil::kMaxUInt32 ? stop._stopPass : SW_LOCKEYFORMAT( "EditorRenderTarget", "StopDraw", TextArgumentList().addText( "pass", stop._stopPass.c_str() ).addInteger( "draw", static_cast<int64>( stop._stopDraw ) ) );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EditorRenderTarget", "FrameUpTo" ) );
+        EditorChrome::setNextItemWidthColumns( kStopComboColumns );
+        if ( ImGui::BeginCombo( "##FrameUpTo", stopLabel.c_str() ) )
+        {
+            if ( ImGui::Selectable( SW_LOCKEY( "EditorRenderTarget", "WholeFrame" ), bStopped == false ) )
+                _viewModel.setStopAfterPass( string{} );
+            for ( const string& producer : selected._listProducer )
+            {
+                // 깊이로 붙인 패스는 이름 끝에 " (depth)" 가 있다 — 멈춤은 패스 이름으로 듣는다.
+                const size_t suffix   = producer.find( " (" );
+                const string passName = suffix == string::npos ? producer : producer.substr( 0, suffix );
+                if ( ImGui::Selectable( producer.c_str(), bStopped && stop._stopPass == passName ) )
+                    _viewModel.setStopAfterPass( passName );
+            }
+            ImGui::EndCombo();
+        }
+        EditorSelfTestMarks::record( "renderTargets.frameUpTo" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "FrameUpToTip" ) );
+    }
+
     void RenderTargetPanel::probeHoveredPixel( const float2& imageMin, const float2& imageSize )
     {
         if ( ImGui::IsItemHovered() == false || hasSnapshot() == false )
@@ -272,6 +301,8 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorRenderTarget", "Lifetime",
                                                         TextArgumentList().addInteger( "firstPass", static_cast<int64>( *pSelected->_firstPass ) ).addInteger( "lastPass", static_cast<int64>( *pSelected->_lastPass ) ) )
                                            .c_str() );
+
+        drawFrameTimeControls( *pSelected );
 
         const bool bDepth     = pSelected->_bDepth != SW_FALSE;
         const bool bDecodable = RenderTargetReadback::isDecodableFormat( pSelected->_format, bDepth );

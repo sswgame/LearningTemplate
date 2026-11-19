@@ -84,17 +84,19 @@ namespace sw::editor
             outState._listTarget = _listTarget;
             outState._listSerial = _listSerial;
         }
-        outState._selectedName       = _selectedName;
-        outState._viewSettings       = _viewSettings;
-        outState._pLiveTextureID     = _pPreviewTextureID;
-        outState._pSnapshotTextureID = _pSnapshotTextureID;
-        outState._snapshotDepthRange = _snapshotDepthRange;
-        outState._probedPixel        = _probedPixel;
-        outState._probedTexel        = _probedTexel;
-        outState._mip                = _mip;
-        outState._bHasSnapshot       = hasSnapshot() ? SW_TRUE : SW_FALSE;
-        outState._bAutoRefresh       = _bAutoRefresh;
-        outState._bProbedPixel       = _bProbedPixel;
+        outState._selectedName                  = _selectedName;
+        outState._viewSettings                  = _viewSettings;
+        outState._pLiveTextureID                = _pPreviewTextureID;
+        outState._pSnapshotTextureID            = _pSnapshotTextureID;
+        outState._snapshotDepthRange            = _snapshotDepthRange;
+        outState._probedPixel                   = _probedPixel;
+        outState._probedTexel                   = _probedTexel;
+        outState._mip                           = _mip;
+        const RenderDebugRegistry* const pDebug = editor::findSubsystem<RenderDebugRegistry>();
+        outState._frameDebugger                 = pDebug != nullptr ? pDebug->getFrameDebugger() : FrameDebuggerSettings{};
+        outState._bHasSnapshot                  = hasSnapshot() ? SW_TRUE : SW_FALSE;
+        outState._bAutoRefresh                  = _bAutoRefresh;
+        outState._bProbedPixel                  = _bProbedPixel;
     }
 
     void RenderTargetViewModel::shutdown()
@@ -137,6 +139,20 @@ namespace sw::editor
         const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
         const uint32            mipCount  = pSelected != nullptr ? MathUtil::max( pSelected->_mipCount, 1u ) : 1u;
         _mip                              = MathUtil::min( mip, mipCount - 1u );
+    }
+
+    void RenderTargetViewModel::setStopAfterPass( const string& passName )
+    {
+        RenderDebugRegistry* const pDebug = editor::findSubsystem<RenderDebugRegistry>();
+        if ( pDebug == nullptr )
+            return;
+        FrameDebuggerSettings settings{};
+        settings._stopPass = passName;
+        settings._stopDraw = MathUtil::kMaxUInt32; // 그 패스의 드로우는 모두 — 패스 끝이 경계다
+        settings._bEnabled = passName.empty() ? SW_FALSE : SW_TRUE;
+        pDebug->setFrameDebugger( settings );
+        // 그림이 바뀐다 — 스냅샷을 다시 읽는다(멈춤은 다음 프레임부터 듣는다).
+        _bRefreshRequested = SW_TRUE;
     }
 
     void RenderTargetViewModel::setLinearizeDepth( bool bLinearize )
