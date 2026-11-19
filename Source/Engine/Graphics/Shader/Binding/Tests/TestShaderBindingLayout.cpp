@@ -409,3 +409,24 @@ SW_TEST_CASE( ShaderBindingLayoutTest, ResourceBindOpsCoverReadResources )
     SW_EXPECT_EQUAL( 7u, listOp[1]._registerIndex );
     SW_EXPECT_EQUAL( ShaderBindingKind::Texture, listOp[1]._kind );
 }
+
+/**
+ * @brief [ShaderBindingLayoutTest] 같은 자리에 다시 지은 레이아웃(핫 리로드가 캐시 항목을 새로 채운 것)은 정체성이 달라 레이아웃 키 표에서 옛 값을 집지 않는다
+ * @details 변이: 표의 키가 주소(`const ShaderBindingLayout*`)면 다시 지은 레이아웃이 옛 폴백에 적중해 마지막 단언이 진다(`FramePSOManager::_mapLayoutMaterialFallback`).
+ */
+SW_TEST_CASE( ShaderBindingLayoutTest, RebuiltLayoutAtSameAddressIsNewIdentity )
+{
+    using Util                                    = ShaderBindingLayoutTestUtil;
+    ShaderBindingLayout                  layout   = ShaderBindingLayout::make( Util::StageList{} );
+    const ShaderBindingLayout* const     pAddress = &layout;
+    unordered_map<IdentityToken, uint32> mapByLayout;
+    mapByLayout.emplace( layout.getIdentity(), 7u );
+
+    const ShaderBindingLayout copy = layout; // 사본은 같은 내용이라 정체성을 나눠 든다
+    SW_EXPECT_TRUE( copy.getIdentity() == layout.getIdentity() );
+
+    layout = ShaderBindingLayout::make( Util::StageList{} );
+    SW_REQUIRE_TRUE( &layout == pAddress ); // 같은 주소
+    SW_EXPECT_TRUE( layout.getIdentity().isValid() );
+    SW_EXPECT_TRUE( mapByLayout.find( layout.getIdentity() ) == mapByLayout.end() );
+}

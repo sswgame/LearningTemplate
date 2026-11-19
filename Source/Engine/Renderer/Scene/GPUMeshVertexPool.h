@@ -72,8 +72,8 @@ namespace sw
 
         /**
          * @brief 이번 프레임의 메시 집합에 풀을 맞춥니다. 프레임마다 **한 번** 부릅니다(돌려받은 구간의 대기 번호가 이 호출 수입니다).
-         * @details 순서가 아니라 **집합**을 봅니다. 배치 정렬이 바뀌어도 메시가 같으면 아무것도 올리지 않습니다. 포인터와 내용 번호
-         *          (`Mesh::getContentID`)를 함께 봐서, 지워진 자리에 새 메시가 생기거나 정점이 바뀐 메시는 나간 메시 + 들어온 메시로 다룹니다.
+         * @details 순서가 아니라 **집합**을 봅니다. 배치 정렬이 바뀌어도 메시가 같으면 아무것도 올리지 않습니다. 항목의 키가 주소가 아니라
+         *          내용 토큰(`Mesh::getContentID`)이라, 지워진 자리에 새 메시가 생기거나 정점이 바뀐 메시는 저절로 나간 메시 + 들어온 메시입니다.
          *          예산(`kMaxPoolVertices` · `kMaxPoolIndices`)을 넘는 메시는 들어가지 못하고 `kInvalidBase` 를 받습니다.
          * @param listMesh 소유하지 않는 포인터들. 스냅샷 배치가 소유권을 보관하는 동안에만 유효합니다.
          * @return 어느 메시의 시작 오프셋이라도 바뀌었으면(들어옴, 나감, 다시 채움) true 입니다. 배치 테이블을 다시 올려야 합니다.
@@ -112,12 +112,12 @@ namespace sw
         /** @brief 풀에 든 메시 하나의 기록입니다. */
         struct Entry
         {
-            IdentityToken _contentID{};               ///< 올린 내용의 토큰(들고 있어 지운 메시의 주소가 새 메시와 같아 보이지 않는다)
-            uint64        _seenStamp{ 0 };            ///< 이 메시를 마지막으로 본 `update` 의 번호
-            uint32        _base{ kInvalidBase };      ///< 정점 구간 시작. 못 들어갔으면 kInvalidBase(인덱스 구간도 없다)
-            uint32        _count{ 0 };                ///< 정점 수(`Mesh::getDrawVertexCount`)
-            uint32        _indexBase{ kInvalidBase }; ///< 인덱스 구간 시작
-            uint32        _indexCount{ 0 };           ///< 인덱스 수(`Mesh::getDrawIndexCount`)
+            const Mesh* _pMesh{ nullptr };          ///< 이번 `update` 에서 본 메시(그 호출 동안만 따라간다 — 쓸기가 못 본 항목을 지운다)
+            uint64      _seenStamp{ 0 };            ///< 이 메시를 마지막으로 본 `update` 의 번호
+            uint32      _base{ kInvalidBase };      ///< 정점 구간 시작. 못 들어갔으면 kInvalidBase(인덱스 구간도 없다)
+            uint32      _count{ 0 };                ///< 정점 수(`Mesh::getDrawVertexCount`)
+            uint32      _indexBase{ kInvalidBase }; ///< 인덱스 구간 시작
+            uint32      _indexCount{ 0 };           ///< 인덱스 수(`Mesh::getDrawIndexCount`)
         };
 
         /// @brief 풀 상한(정점 수)입니다. 4M 정점 × 44 바이트(Packed — 위치 12 + 속성 32) = 176MB 로, 이 저장소의 씬에는 넉넉합니다.
@@ -134,8 +134,8 @@ namespace sw
         void repack( IRHIDevice* pDevice );
         /** @brief 메시의 그릴 인덱스 흐름(LOD 0 뒤에 낮은 단계, `Mesh::getDrawIndexCount`)을 올릴 목록 끝에 붙입니다. */
         void appendDrawIndices( const Mesh& mesh );
-        /** @brief 이번 목록의 메시를 표시합니다. 처음 보거나 내용이 바뀐 메시는 들어올 목록에, 예산 때문에 못 들어간 메시는 다시 시도할 목록에 넣습니다. 바뀐 것이 있으면 true 입니다. */
-        [[nodiscard]] bool markListedMeshes( const vector<Mesh*>& listMesh, uint64 retireStamp );
+        /** @brief 이번 목록의 메시를 표시합니다. 처음 보는 내용 토큰은 들어올 목록에, 예산 때문에 못 들어간 메시는 다시 시도할 목록에 넣습니다. 바뀐 것이 있으면 true 입니다. */
+        [[nodiscard]] bool markListedMeshes( const vector<Mesh*>& listMesh );
         /** @brief 이번 목록에 없는 메시의 구간을 늦게 돌려주고 항목을 지웁니다(포인터는 따라가지 않는다). 지운 것이 있으면 true 입니다. */
         [[nodiscard]] bool sweepUnlistedMeshes( uint64 retireStamp );
         /** @brief 들어온 메시에 구간을 주고 그 정점만 한 번에 올립니다. 자리가 없는 메시가 있으면 false 이고, 부르는 쪽이 다시 채운다(`repack`). */
@@ -165,13 +165,13 @@ namespace sw
         SpanAllocator       _indexAllocator;
         RHIBufferHandle     _vertexBuffer;
         RHIBufferHandle     _indexBuffer;
-        /// @brief 메시 → 기록입니다. 지난 프레임에 본 메시들입니다(포인터는 키로만 쓰며 따라가지 않습니다 — 이미 죽었을 수 있습니다).
-        unordered_map<const Mesh*, Entry> _mapEntry;
-        /// @brief 이번 `update` 에 새로 구간이 필요한 메시입니다(살아 있는 포인터). 프레임마다 할당하지 않습니다.
-        vector<const Mesh*> _listScratchAdded;
+        /// @brief 메시 내용 토큰 → 기록입니다. 키가 토큰을 들어 지운 메시의 주소가 새 메시의 키로 다시 쓰이지 않는다(언리얼 `FObjectKey`, Godot `RID` 의 세대와 같은 자리).
+        unordered_map<IdentityToken, Entry> _mapEntry;
+        /// @brief 이번 `update` 에 새로 구간이 필요한 메시입니다. 프레임마다 할당하지 않습니다.
+        vector<IdentityToken> _listScratchAdded;
         /// @brief 예산 때문에 못 들어간 채 남은 메시(집합이 바뀐 프레임에만 다시 시도)와 이번에 나간 메시입니다.
-        vector<const Mesh*> _listScratchRetry;
-        vector<const Mesh*> _listScratchRemoved;
+        vector<IdentityToken> _listScratchRetry;
+        vector<IdentityToken> _listScratchRemoved;
         /// @brief 올릴 정점 · 인덱스와 조각입니다. 프레임마다 할당하지 않습니다.
         vector<uint8>               _listScratchByte; ///< 올릴 정점 — GPU 스트림 모양([위치 구간][속성 구간])
         vector<uint32>              _listScratchIndex;

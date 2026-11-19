@@ -7,6 +7,7 @@
 #include "Core/Container/pair.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"
@@ -107,6 +108,11 @@ namespace sw
         const vector<ShaderBindingSlot>& getSlots() const { return _listSlot; }
         /** @brief 슬롯이 하나도 없으면 true 입니다(컴파일이나 리플렉션 실패 등). */
         bool isEmpty() const { return _listSlot.empty(); }
+        /**
+         * @brief 이 레이아웃 한 벌의 정체성입니다. 레이아웃을 키로 쓰는 표는 주소 대신 이것을 든다(`FramePSOManager::_mapLayoutMaterialFallback`).
+         * @details 핫 리로드가 지운 레이아웃 자리(캐시 항목)에 다시 지은 레이아웃은 주소가 같아도 정체성이 다르다 — 옛 stride 로 만든 값을 집지 않는다.
+         */
+        const IdentityToken& getIdentity() const { return _identity; }
 
         // ------------------------------------------------------------------------------
         // 드로우 경로용 사전 계산: computeBindPlan() 이 한 번만 채웁니다
@@ -133,5 +139,6 @@ namespace sw
         uint64                       _engineCbLayoutHash{ 0 };
         vector<ShaderEngineCbMember> _listEngineCbMember;
         vector<ShaderResourceBindOp> _listResourceBindOp;
+        IdentityToken                _identity{ IdentityToken::make() }; ///< 만들 때 한 번 받는다(사본은 같은 내용이라 나눠 든다)
     };
 } // namespace sw

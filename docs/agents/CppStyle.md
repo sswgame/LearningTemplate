@@ -97,7 +97,7 @@ Each object has one owning thread; review a change by its ownership map (object 
 
 The 2026-11-12 engine audit (open items in [NEXT](../NEXT.md) section 7) kept finding the same six shapes. Do not fix one symptom at a time — change the type or API so the shape cannot be written.
 
-1. **Identity from a number, sequence or path string without a generation.** Component `name#index`, ids that restart at 1 on every launch, 32-bit name hashes. Use a stable id with a generation (or a GUID for assets).
+1. **Identity from a number, sequence or path string without a generation.** Component `name#index`, ids that restart at 1 on every launch, 32-bit name hashes. Use a stable id with a generation (or a GUID for assets). A cache keyed by an object's address (raw pointer map key) is the same shape — key it by the object's `IdentityToken` (`Mesh::getContentID`, `ShaderBindingLayout::getIdentity`), which the key holds so the address cannot come back as another object.
 2. **One fact known in two places.** Writer and reader versions, a count on the CPU with the list on the GPU, a cache record next to a server memory table. Keep one owner; the other side reads it.
 3. **Failure or truncation not returned as a value, or dropped by the caller.** Triangulation failure, a match roster publish. Return `sw::expected` / `[[nodiscard]]` (see [Errors](Errors.md)).
 4. **Platform windows with optional hooks that still compile when left out.** Focus, text input, sleep, lifetime subscriptions. Make the hook pure virtual.
