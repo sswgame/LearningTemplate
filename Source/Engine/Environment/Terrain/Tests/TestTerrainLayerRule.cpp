@@ -49,7 +49,8 @@ SW_TEST_CASE( TerrainLayerRuleTest, CoverageMultipliesStrengthAndBands )
 
     TerrainLayerRule snow{};
     snow._strength      = 0.5f;
-    snow._slopeRange    = float2{ 0.0f * kDeg, 40.0f * kDeg };
+    snow._slopeMin      = Radians::fromDegrees( 0.0f );
+    snow._slopeMax      = Radians::fromDegrees( 40.0f );
     snow._slopeFade     = Radians::fromRadians( 10.0f * kDeg );
     snow._altitudeRange = float2{ 20.0f, 100000.0f };
     snow._altitudeFade  = 4.0f;
@@ -132,8 +133,9 @@ SW_TEST_CASE( TerrainLayerRuleTest, HeightfieldWorldQueryAppliesRules )
     SW_REQUIRE_TRUE( field.initialize( data, float3{ 0.0f, 0.0f, 0.0f }, float2{ 2.0f, 2.0f }, 0.0f, 30.0f ) );
 
     TerrainLayerRule rock{};
-    rock._strength   = 1.0f;
-    rock._slopeRange = float2{ 40.0f * kDeg, 90.0f * kDeg };
+    rock._strength = 1.0f;
+    rock._slopeMin = Radians::fromDegrees( 40.0f );
+    rock._slopeMax = Radians::fromDegrees( 90.0f );
     TerrainLayerRule snow{};
     snow._strength      = 0.5f;
     snow._altitudeRange = float2{ 20.0f, 100000.0f };

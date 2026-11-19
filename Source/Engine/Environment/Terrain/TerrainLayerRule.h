@@ -32,8 +32,10 @@ namespace sw
 
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "How strongly the rule overrides the painted weights (0 = off)" )
         float32 _strength{ 0.0f };
-        PROPERTY( Units = rad, Tooltip = "Slope band from horizontal (min, max)" )
-        float2 _slopeRange{ 0.0f, MathUtil::kHalfPi };
+        PROPERTY( Min = 0.0, Tooltip = "Lower end of the slope band, from horizontal" )
+        Radians _slopeMin{};
+        PROPERTY( Min = 0.0, Tooltip = "Upper end of the slope band, from horizontal" )
+        Radians _slopeMax{ Radians::fromRadians( MathUtil::kHalfPi ) };
         PROPERTY( Min = 0.0, Tooltip = "Width of the soft edge at both ends of the slope band" )
         Radians _slopeFade{ Radians::fromDegrees( 6.0f ) };
         PROPERTY( Units = m, Tooltip = "World height band (min, max)" )

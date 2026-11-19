@@ -8,7 +8,7 @@ namespace sw
 {
     float32 TerrainLayerRule::computeCoverage( float32 slopeRadians, float32 altitude ) const
     {
-        const float32 slope  = computeBand( slopeRadians, _slopeRange._x, _slopeRange._y, _slopeFade.radians() );
+        const float32 slope  = computeBand( slopeRadians, _slopeMin.radians(), _slopeMax.radians(), _slopeFade.radians() );
         const float32 height = computeBand( altitude, _altitudeRange._x, _altitudeRange._y, _altitudeFade );
         return MathUtil::saturate( _strength ) * slope * height;
     }

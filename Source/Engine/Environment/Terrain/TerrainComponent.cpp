@@ -795,7 +795,7 @@ namespace sw
             const TerrainLayer&     layer   = bListed ? _listLayer[layerIndex] : defaultLayer;
             const TerrainLayerRule& rule    = layer._rule;
             _material.setVector( Internal::getLayerColorName( layerIndex ), layer._color );
-            _material.setVector( Internal::getLayerRuleName( layerIndex ), float4{ rule._slopeRange._x, rule._slopeRange._y, rule._altitudeRange._x, rule._altitudeRange._y } );
+            _material.setVector( Internal::getLayerRuleName( layerIndex ), float4{ rule._slopeMin.radians(), rule._slopeMax.radians(), rule._altitudeRange._x, rule._altitudeRange._y } );
             _material.setVector( Internal::getLayerParamsName( layerIndex ), float4{ rule._slopeFade.radians(), rule._altitudeFade, rule._strength, layer._sparkle } );
             arrDetail[layerIndex]    = bListed ? layer._detailStrength : 0.0f;
             arrTriplanar[layerIndex] = layer._bTriplanar ? 1.0f : 0.0f;
