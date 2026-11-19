@@ -422,6 +422,8 @@ namespace sw
                 return false;
             if ( bSeated == false )
                 continue;
+            if ( customer._seat < 0 || static_cast<size_t>( customer._seat ) >= listSeatTaken.size() )
+                return false; // 읽기 쪽 io.check 는 실패만 표시하고 이 검사까지 온다 — 깨진 자리 번호로 표를 넘어 읽지 않는다
             uint8& bTaken = listSeatTaken[static_cast<size_t>( customer._seat )];
             if ( bTaken != SW_FALSE )
                 return false; // 앉은 손님 둘이 한 자리에 있으면 그 자리가 비어도 빈 줄 모른다
@@ -446,6 +448,8 @@ namespace sw
                 return false;
             if ( order._cook < 0 )
                 continue;
+            if ( static_cast<size_t>( order._cook ) >= _listStaff.size() )
+                return false; // 자리 번호와 같이 — 이 검사는 읽기 쪽 io.check 결과에 기대지 않고 스스로 범위를 막는다
             const StaffMember& cook = _listStaff[static_cast<size_t>( order._cook )];
             if ( cook._bHired == SW_FALSE || cook._role != StaffRole::Cook )
                 return false;
