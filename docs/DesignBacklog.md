@@ -239,6 +239,35 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 
 잔상은 품질 단계별 상한을 둔다. 분신은 게임플레이에서 필요할 때 별도 캐릭터 프리팹 · 애니메이션 인스턴스로 — 포즈 재생형인지 AI · 전투 가능한 독립 개체인지 먼저 가른다. 임의 그래프 · 모듈 시스템을 먼저 들이지 않는다.
 
+### 체크포인트 · 리스폰 공통 키트(설계 2026-11-20)
+
+**문제.** 사망 → 부활이 장르 키트마다 따로다. 공통 체력(`HealthStateMachine`)은 사망 · 기절 · 동료 부활 · `respawn` · 무적까지만 있고, 그 뒤(어디서 · 언제 · 무엇을 잃고)는 키트마다 다시 쓴다.
+
+| 사본 | 체크포인트 켜기 | 저장하는 것 | 부활 자리 | 대기 | 무적 | 벌칙 |
+|---|---|---|---|---|---|---|
+| `ActionStageRun`(플랫포머) | 게임이 지나감을 알림(`reachCheckpoint`), 목록 순서 앞으로만 | 체크포인트 순번(int) | 마지막 체크포인트, 없으면 시작점(게임이 자리를 앎) | 없음 | 없음 | 목숨 1 · 확정 안 된 수집품 되돌림 |
+| `MetroidvaniaDeathRestState`(소울류) | 쉬는 지점 상호작용(`rest`), 다시 쓸 수 있음 | 되살아날 지점 id | 마지막 쉰 지점 | 없음 | 없음 | 통화를 그 자리 시체로 떨굼(두 번째 죽음에 잃음) · 일반 적 리셋 |
+| `ConquestWorld`(횡스크롤 정복) | — | 부활 타이머(Countdown) | 본진 거점(없으면 생길 때까지 기다림) | `commanderRespawn` 초 | 없음 | 없음 |
+| `MechArenaWorld`(결정성) | — | `MatchState` 부활 타이머 | 조종사 고정 출격 자리 | `MatchState` | `respawnInvulnerable` | 팀 코스트 게이지(`MatchState`) |
+| `TrampolineArena`(파티) | — | `MatchState` 부활 타이머 | 판 둘레 고정 자리 | `MatchState` | 자체 Countdown | 자기 낙하 감점 |
+| `KartRace` · `KartTrack` | 바퀴 판정 관문 | 지난 관문 수 | (부활 아님) | — | — | — |
+| 게임 `ArenaGameModeComponent`(AbilityArena) | — | 플레이어 부활 타이머 | 고정 | 초 | — | — |
+
+**대조.** 언리얼: `AGameModeBase::RestartPlayer` → `FindPlayerStart` → `ChoosePlayerStart`(`APlayerStart` · 태그) — 자리 고르기와 스폰이 게임 모드 한 곳이고 서버에서만 돈다. Lyra 는 `ULyraPlayerSpawningManagerComponent`(자리 고르기 · 막힌 자리 거름)와 사망 어빌리티 → 리스폰 타이머로 나누고, 다운 · 부활은 GAS 어빌리티다(기억에 의존). 유니티 · Godot 은 엔진 기능이 없고 흔한 꼴이 "체크포인트 관리자 + 코루틴 대기 + 마지막 체크포인트 변환" 이다. 장르 관례: 소울류 화톳불(쉬면 적 리셋 · 죽으면 소지 재화를 그 자리에 떨굼), 플랫포머(앞으로만 가는 체크포인트 · 목숨), 슈터(팀 거점 · 스폰 고르기 · 스폰 보호 무적), MMO(제자리 부활 — 아이템 · 비용 · 횟수, 마을 부활, 경험치 · 내구도 벌칙, 파티원 부활), 배틀로얄(기절 → 동료 부활 시간).
+
+**결정.**
+1. **키트 `GF_Respawn`(`Kits/Feature/Gameplay/Respawn`, 클라이언트 · 서버 공용 한 벌).** 서버 판정이 클라이언트와 같은 순수 로직이라 Runtime/Server 로 가르지 않는다(하우징 서버 권위 배치와 같은 꼴).
+   - `CheckpointState` — 켠 체크포인트 목록(id · 자리 · 요 · 순번)과 지금 부활 지점. 켜기 입구는 `activate( 정의, 자리, 요 )` 하나이고, 정의(`CheckpointDef`)가 다시 쓸 수 있는지(화톳불)를, 상태 규칙이 앞으로만(플랫포머)을 정한다. 반사 구조체라 주인의 상태 칸(`PROPERTY( RuntimeState )`)으로 세이브 · 스냅숏에 실린다 — 새 세이브 형식을 만들지 않는다. 트리거 진입 · 상호작용 · 스크립트는 모두 이 입구를 부른다(트리거 계약은 `w-trigger` 통합 뒤 잇는다).
+   - `RespawnRules` — 정책 목록(차례로 시도: `LastCheckpoint` · `InPlace` · `NearestSpawnPoint` · `TeamBase` · `PlayerChoice`, 항목마다 횟수 · 비용 · 안전 반경 · 고르기 시한), 대기 초, 무적 초, 벌칙(통화 비율 · 고정, 경험치 · 내구도 비율). XML `<Respawn delay invulnerable …><Policy kind …/></Respawn>` 을 장르 카탈로그가 품는다. 정책이 없으면 시작 거절(폴백 없음).
+   - `RespawnFlow` — 캐릭터 하나의 사망 → 대기 → 위치 고르기 → 위치 준비(스트리밍 셀) → 스폰(체력 `respawn`) → 무적 → 벌칙. 세계 질의는 `IRespawnWorld`(안전 지점 찾기 — 내비 메시 · 충돌 질의는 게임이 구현, 위치 준비 — 셀 쪽은 `w-cellstate`) 하나다. 정책이 모두 자리를 못 내면 다음 걸음에 다시 본다(정복의 "본진이 생길 때까지").
+   - **동료 부활은 정책이 아니다** — 기절(`HealthSettings::_bDownedEnabled`) · 부활 진행은 `HealthStateMachine` 이 이미 갖고, 흐름은 죽음(`Dead`)에서만 시작한다.
+   - 키트에 넣지 않는 것(장르 규칙으로 남김): 목숨(플랫포머), 시체 · 적 리셋(소울류), 팀 코스트 게이지(`MatchState`).
+2. **멀티플레이는 서버가 정한다.** 클라이언트는 `RespawnRemoteTarget::requestRespawn( 정책 종류, 지점 id 해시 )` 만 보낸다(반사 함수 `FUNCTION( Server, Reliable, Validate, MaxCallsPerSecond )`). 자리 · 비용 · 잔액은 받지 않는다 — 제자리 부활 자리는 서버가 아는 죽은 자리에서 서버의 세계 질의로, 비용은 서버 지갑으로, 횟수는 서버 상태로 판정한다. 열거 밖 값은 검증 짝이 거짓(조작 — 연결을 끊는다), 규칙 거절(살아 있음 · 고르기 단계 아님 · 허용 안 된 정책 · 모르는 지점 · 돈 부족 · 횟수 끝 · 안전 지점 없음)은 결과 값으로 돌려준다. 흐름 상태는 `serializeState` 로 복제 · 세이브에 실린다.
+3. **옮김.** `ActionStageRun` · `MetroidvaniaDeathRestState` 는 체크포인트를 `CheckpointState` 로(앞으로만 · 다시 쓰기는 데이터), `ConquestWorld` 지휘관은 `RespawnFlow`(`TeamBase`, 대기 = `commanderRespawn`)로 옮긴다. `MechArenaWorld` 는 결정성 키트라 비트 동일을 지키려 옮기지 않고, `TrampolineArena` 는 대기 · 비용이 이미 공통 `MatchState` 이고 자리가 판 고정이라 옮길 몫이 무적 타이머 하나라 두며, 카트 관문은 부활이 아니다. 아레나형 게임은 `MatchState` 가 "언제 · 돈" 을, `RespawnFlow` 가 "어디" 를 맡는다(흐름 대기 0).
+4. **차례.** ① 키트 + 단위 · 서버 단위 테스트 ② 장르 키트 옮김(바뀐 상태 바이트는 해당 테스트의 손 바이트를 같이 고침) ③ Empty 플랫포머 시연이 흐름을 쓰고 시나리오.
+
+**확인.** 단위: 정책 고르기 · 제자리 안전 지점 · 체크포인트 저장 왕복 · 대기 · 무적 · 벌칙. 서버 단위: 서버 결정 · 잘못된 요청 거절. 옮긴 키트 테스트 그대로(바이트 모양이 바뀐 손 바이트만 고침). 시나리오 `game.empty.kitdemo_respawn`: 체크포인트 → 사망 → 그 체크포인트, 제자리, 낭떠러지 제자리 → 안전 지점, 세이브 · 로드 뒤 체크포인트 유지.
+
 ## 통합 담당 판단(2026-11-08)
 
 코드 규칙(구조로 푼다 · 폴백 없음 · 미사용은 쓰게 · 대기를 쌓지 않음)에 맞춰 정했다. 상용 엔진과 비교해 지금 정할 수 있는 것은 정했고 측정이 필요한 것은 측정을 일감으로 넣었다.
