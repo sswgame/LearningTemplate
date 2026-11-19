@@ -4,7 +4,7 @@
   장르 키트 시연 — 유령 사냥 싸움 하나(maps/kit_ghosthunt). 유령 goob(체력 40, 동전 10)을 손전등으로 기절시키고, 단계 0 흡입(10, 정렬 배율 2)으로 서지 게이지를 채워 서지(50)로 잡는다.
 -->
 <GhostHunt currency="Souls">
-	<Flashlight range="8" angle="28.64789" strobeRange="10" strobeAngle="40.10704" strobeCharge="1"/>
+	<Flashlight range="8" angle="28.64789" strobeRange="10" strobeAngle="40.107045" strobeCharge="1"/>
 	<Vacuum range="4" stages="10 20" alignThreshold="0.7" alignBonus="2" surgeFill="1" surgeDamage="50" dragSpeed="2" dragReduction="0.5"/>
 	<Ghost id="goob" hp="40" hideTime="1" appearTime="1" attackTime="1" attackDamage="8" stunTime="3" pull="1" fleeInterval="1" coins="10"/>
 </GhostHunt>

@@ -33,7 +33,7 @@ namespace sw
     }
 
     CameraComponent::CameraComponent()
-        : _fovY{ kDefaultFOVY }
+        : _fovY{ Radians::fromRadians( kDefaultFOVY ) }
         , _nearZ{ kDefaultNearZ }
         , _farZ{ kDefaultFarZ }
         , _orthoHeight{ kDefaultOrthoHeight }
@@ -123,9 +123,9 @@ namespace sw
 
     void CameraComponent::setFieldOfViewY( float32 fovRadians )
     {
-        if ( _fovY == fovRadians )
+        if ( _fovY == Radians::fromRadians( fovRadians ) )
             return;
-        _fovY = fovRadians;
+        _fovY = Radians::fromRadians( fovRadians );
         recordSelectionInputChanged();
     }
 
@@ -227,7 +227,7 @@ namespace sw
         }
         else
         {
-            const float32 fov = _fovY > 1e-4f ? _fovY : 0.70f;
+            const float32 fov = _fovY.radians() > 1e-4f ? _fovY.radians() : kDefaultFOVY;
             // 시야 거리 사용자 설정(graphics.viewDistance)은 원근 카메라의 먼 평면을 늘이고 줄인다 — 절두체 컬링이 같은 평면으로 자른다. 직교(2D · 위에서 보기)는 데이터 그대로다.
             const float32 viewFarZ = MathUtil::max( farZ * static_cast<float32>( gv_viewDistanceScale ), nearZ + 1e-3f );
             projection             = float4x4::makePerspectiveFieldOfView( fov, aspect, nearZ, viewFarZ );

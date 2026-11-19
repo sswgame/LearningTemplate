@@ -13,7 +13,7 @@
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _fovY="0.7"
+					                 _fovY="40.107045"
 					                 _nearZ="0.1"
 					                 _farZ="100"
 					                 _orthoHeight="12"
@@ -109,7 +109,7 @@
 					                                _maxSlopeAngle="0.7853982"
 					                                _gravityScale="1"
 					                                _layer="Character" />
-					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton>
 							<item>Jump</item>
 						</_listButton>

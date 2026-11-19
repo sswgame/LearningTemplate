@@ -17,7 +17,7 @@
 					                 _attachOwner="None"
 					                 _attachOwnerID="0"
 					                 _attachComponent="None"
-					                 _fovY="0.7"
+					                 _fovY="40.107045"
 					                 _nearZ="0.1"
 					                 _farZ="120"
 					                 _orthoHeight="18"
@@ -85,7 +85,7 @@
 					                 _attachOwner="None"
 					                 _attachOwnerID="0"
 					                 _attachComponent="None"
-					                 _fovY="0.7"
+					                 _fovY="40.107045"
 					                 _nearZ="0.1"
 					                 _farZ="120"
 					                 _orthoHeight="18"
@@ -245,7 +245,7 @@
 					               _upAction="None"
 					               _inputLayer="None"
 					               _aiControllerPrefab=""
-					               _maxPitch="1.4"
+					               _maxPitch="80.21409"
 					               _autoPossess="Player0"
 					               _bLockMouse="false">
 						<_listButton>
@@ -346,7 +346,7 @@
 					               _upAction="None"
 					               _inputLayer="None"
 					               _aiControllerPrefab=""
-					               _maxPitch="1.4"
+					               _maxPitch="80.21409"
 					               _autoPossess="None"
 					               _bLockMouse="false">
 						<_listButton>
@@ -455,7 +455,7 @@
 					               _upAction="None"
 					               _inputLayer="None"
 					               _aiControllerPrefab=""
-					               _maxPitch="1.4"
+					               _maxPitch="80.21409"
 					               _autoPossess="None"
 					               _bLockMouse="false">
 						<_listButton>
@@ -1246,7 +1246,7 @@
 					                 _attachOwner="None"
 					                 _attachOwnerID="0"
 					                 _attachComponent="None"
-					                 _fovY="0.8"
+					                 _fovY="45.836624"
 					                 _nearZ="0.1"
 					                 _farZ="120"
 					                 _orthoHeight="18"
@@ -1267,7 +1267,7 @@
 					                 _attachOwner="None"
 					                 _attachOwnerID="0"
 					                 _attachComponent="None"
-					                 _fovY="0.8"
+					                 _fovY="45.836624"
 					                 _nearZ="0.1"
 					                 _farZ="120"
 					                 _orthoHeight="18"

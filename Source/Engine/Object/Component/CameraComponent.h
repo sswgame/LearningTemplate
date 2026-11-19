@@ -6,6 +6,7 @@
 #include "Core/Container/EnumArray.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/View/CameraDepthOfFieldValues.h"
@@ -138,7 +139,7 @@ namespace sw
         /** @brief 수직 시야각(라디안)을 설정합니다. */
         void setFieldOfViewY( float32 fovRadians );
         /** @brief 수직 시야각(라디안)을 반환합니다. */
-        float32 getFieldOfViewY() const { return _fovY; }
+        float32 getFieldOfViewY() const { return _fovY.radians(); }
 
         /** @brief 근평면을 설정합니다. */
         void setNearPlane( float32 nearZ ) { _nearZ = nearZ; }
@@ -241,8 +242,8 @@ namespace sw
         void recordSelectionInputChanged() const;
 
     private:
-        PROPERTY( Category = "Projection", DisplayName = "Field Of View", Tooltip = "Vertical FOV (radians)", Min = 0.1, Max = 3.14, Units = rad )
-        float32 _fovY;
+        PROPERTY( Category = "Projection", DisplayName = "Field Of View", Tooltip = "Vertical FOV", Min = 5.7, Max = 179.9 )
+        Radians _fovY;
         PROPERTY( Category = "Clipping", DisplayName = "Near Plane", Tooltip = "Near clipping distance", Min = 0.01, Max = 1000.0, Units = m )
         float32 _nearZ;
         PROPERTY( Category = "Clipping", DisplayName = "Far Plane", Tooltip = "Far clipping distance", Min = 1.0, Max = 100000.0, Units = m )

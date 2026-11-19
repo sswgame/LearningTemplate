@@ -100,7 +100,7 @@
 					</_listKey>
 				</_sailEfficiency>
 			</BoatComponent>
-			<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+			<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 				<_listButton>
 					<item>Interact</item>
 				</_listButton>

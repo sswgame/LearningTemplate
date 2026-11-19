@@ -44,7 +44,7 @@ namespace sw
         , _inputLayer{}
         , _triggerLookButton{}
         , _aiControllerPrefab{}
-        , _maxPitch{ 1.4f }
+        , _maxPitch{ Radians::fromRadians( 1.4f ) }
         , _autoPossess{ PawnAutoPossess::None }
         , _bLockMouse{ false }
         , _intent{}
@@ -175,6 +175,6 @@ namespace sw
         }
         const float2 offset   = consumeControlRotationOffset();
         _intent._controlYaw   = MathUtil::wrapAngle( _intent._controlYaw + offset._x );
-        _intent._controlPitch = MathUtil::clamp( _intent._controlPitch + offset._y, -_maxPitch, _maxPitch );
+        _intent._controlPitch = MathUtil::clamp( _intent._controlPitch + offset._y, -_maxPitch.radians(), _maxPitch.radians() );
     }
 } // namespace sw

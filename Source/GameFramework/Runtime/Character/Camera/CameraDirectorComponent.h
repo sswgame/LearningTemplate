@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
@@ -220,9 +221,9 @@ namespace sw
         bool _bReadInput;
         PROPERTY( Category = "Camera", DisplayName = "Override Blend", Tooltip = "Blend into and out of a view override (ride camera)" )
         BlendCurveDef _overrideBlend;
-        PROPERTY( Category = "Sequencer", DisplayName = "Field Of View Override", Min = 0.0, Max = 3.14,
-                  Tooltip = "Vertical field of view a sequencer value track keys on top of the preset; 0 keeps the preset's", Units = rad )
-        float32 _fieldOfViewOverride;
+        PROPERTY( Category = "Sequencer", DisplayName = "Field Of View Override", Min = 0.0, Max = 179.9,
+                  Tooltip = "Vertical field of view a sequencer value track keys on top of the preset; 0 keeps the preset's" )
+        Radians _fieldOfViewOverride;
         PROPERTY( Category = "Sequencer", DisplayName = "Focus Distance Override", Min = 0.0,
                   Tooltip = "Focus distance a sequencer value track keys on top of the preset; 0 keeps the preset's", Units = m )
         float32 _focusDistanceOverride;

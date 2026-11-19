@@ -12,7 +12,7 @@
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _fovY="0.7"
+					                 _fovY="40.107045"
 					                 _nearZ="0.1"
 					                 _farZ="300"
 					                 _orthoHeight="10"
@@ -136,7 +136,7 @@
 					                         _engineMaxTorque="500"
 					                         _engineMaxRpm="6000"
 					                         _drive="Rear" />
-					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton>
 							<item>HandBrake</item>
 						</_listButton>
@@ -164,7 +164,7 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton>
 							<item>Drift</item>
 							<item>Boost</item>

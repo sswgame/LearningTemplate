@@ -16,7 +16,7 @@
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _fovY="0.7"
+					                 _fovY="40.107045"
 					                 _nearZ="0.1"
 					                 _farZ="400"
 					                 _orthoHeight="10"
@@ -177,7 +177,7 @@
 					               _boundsRadius="1"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
@@ -209,7 +209,7 @@
 					               _boundsRadius="1"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>

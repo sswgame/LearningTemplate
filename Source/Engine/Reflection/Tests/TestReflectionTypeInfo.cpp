@@ -1407,8 +1407,8 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DescribeTypeShowsTheRegisteredLayout )
     const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     const sw::string camera = registry.describeType( sw::hashed_string( "CameraComponent" ) );
-    for ( const utf8* pExpected : { "TYPE sw::CameraComponent", "parents:", "sw::SceneComponent", "[sw::CameraComponent]", "PROPERTY _fovY : float32",
-                                    "@offset", "Min=0.1", "Max=3.14" } )
+    for ( const utf8* pExpected : { "TYPE sw::CameraComponent", "parents:", "sw::SceneComponent", "[sw::CameraComponent]", "PROPERTY _fovY : Radians",
+                                    "@offset", "Min=5.7", "Max=179.9" } )
     {
         SW_EXPECT_TRUE_MSG( camera.find( pExpected ) != sw::string::npos, ( sw::string( "missing: " ) + pExpected + "\n" + camera ).c_str() );
     }

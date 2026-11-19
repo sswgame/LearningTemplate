@@ -35,7 +35,7 @@
 					                 _attachOwner="None"
 					                 _attachOwnerID="0"
 					                 _attachComponent="None"
-					                 _fovY="1.3089969"
+					                 _fovY="75"
 					                 _nearZ="0.05"
 					                 _farZ="220"
 					                 _orthoHeight="10"
@@ -49,7 +49,7 @@
 					               _upAction="None"
 					               _inputLayer="None"
 					               _aiControllerPrefab=""
-					               _maxPitch="1.4835298"
+					               _maxPitch="85"
 					               _autoPossess="Player0"
 					               _bLockMouse="true">
 						<_listButton>
@@ -73,10 +73,10 @@
 					</PawnComponent>
 					<FirstPersonCameraComponent _componentName="FirstPersonCameraComponent"
 					                            _bActive="true"
-					                            _yaw="0.6"
-					                            _pitch="-0.2"
-					                            _maxPitch="1.4835298"
-					                            _fieldOfViewY="1.3089969"
+					                            _yaw="34.37747"
+					                            _pitch="-11.459156"
+					                            _maxPitch="85"
+					                            _fieldOfViewY="75"
 					                            _nearPlane="0.05"
 					                            _farPlane="220"
 					                            _viewModelName="None"

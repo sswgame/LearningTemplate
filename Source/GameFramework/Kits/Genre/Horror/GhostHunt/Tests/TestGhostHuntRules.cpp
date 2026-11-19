@@ -26,7 +26,7 @@ using namespace sw;
 namespace
 {
     constexpr const utf8* kGhostHuntXML = R"(<GhostHunt currency="Souls">
-  <Flashlight range="8" angle="28.64789" strobeRange="10" strobeAngle="40.10704" strobeCharge="1"/>
+  <Flashlight range="8" angle="28.64789" strobeRange="10" strobeAngle="40.107045" strobeCharge="1"/>
   <Vacuum range="4" stages="10 20" alignThreshold="0.7" alignBonus="2" surgeFill="1" surgeDamage="50" dragSpeed="2" dragReduction="0.5"/>
   <Ghost id="goob" hp="40" hideTime="1" appearTime="1" attackTime="1" attackDamage="8" stunTime="3" pull="1" fleeInterval="1" coins="10"/>
   <Ghost id="shy" hp="40" hideTime="1" appearTime="1" attackTime="1" stunTime="3" strobeOnly="true" coins="0"/>

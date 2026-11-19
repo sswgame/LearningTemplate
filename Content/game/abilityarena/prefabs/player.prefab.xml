@@ -52,7 +52,7 @@
 			               _upAction="None"
 			               _inputLayer="None"
 			               _aiControllerPrefab=""
-			               _maxPitch="1.4"
+			               _maxPitch="80.21409"
 			               _autoPossess="Player0">
 				<_listButton>
 					<item>Arena.Melee</item>

@@ -535,7 +535,7 @@
     "Source/Engine/Net/GameNetSession.h": {"hex": 4},
     "Source/Engine/Net/HTTPClient.h": {"integer": 2},
     "Source/Engine/Net/NetMessageChannel.cpp": {"integer": 1},
-    "Source/Engine/Object/Component/CameraComponent.cpp": {"float": 12},
+    "Source/Engine/Object/Component/CameraComponent.cpp": {"float": 11},
     "Source/Engine/Object/Component/Component.cpp": {"integer": 1},
     "Source/Engine/Object/Component/Component.h": {"integer": 4},
     "Source/Engine/Object/Component/ComponentStableKey.cpp": {"integer": 1},

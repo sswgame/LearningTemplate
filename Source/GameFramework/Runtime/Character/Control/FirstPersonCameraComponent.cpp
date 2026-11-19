@@ -28,15 +28,15 @@ namespace sw
     }
 
     FirstPersonCameraComponent::FirstPersonCameraComponent()
-        : _yaw{ 0.0f }
-        , _pitch{ 0.0f }
-        , _maxPitch{ 85.0f * MathUtil::kDegreeToRadian }
-        , _fieldOfViewY{ 75.0f * MathUtil::kDegreeToRadian }
+        : _yaw{}
+        , _pitch{}
+        , _maxPitch{ Radians::fromDegrees( 85.0f ) }
+        , _fieldOfViewY{ Radians::fromDegrees( 75.0f ) }
         , _nearPlane{ 0.05f }
         , _farPlane{ 120.0f }
         , _viewModelName{}
         , _viewModelOffset{ 0.0f, 0.0f, 0.0f }
-        , _viewModelYawOffset{ 0.0f }
+        , _viewModelYawOffset{}
         , _headBob{}
         , _look{}
         , _eyePosition{ 0.0f, 0.0f, 0.0f }
@@ -51,10 +51,10 @@ namespace sw
         Component::onBeginPlay();
         // 조종 회전(조종 시스템 단계 — 틱 앞)을 몸을 움직이는 컴포넌트(같은 오브젝트, 뒤 그룹)가 같은 프레임에 쓴다.
         setTickGroup( TickGroup::PrePhysics );
-        if ( _look.setMaxPitch( _maxPitch ) == false )
-            SW_LOG_ERROR_ID( "FirstPersonCameraComponent.FirstPersonCameraMaxPitchOutside", "FirstPersonCamera: the Max Pitch %# is outside [0, pi/2] - the pitch limit stays at its default", _maxPitch );
+        if ( _look.setMaxPitch( _maxPitch.radians() ) == false )
+            SW_LOG_ERROR_ID( "FirstPersonCameraComponent.FirstPersonCameraMaxPitchOutside", "FirstPersonCamera: the Max Pitch %# is outside [0, pi/2] - the pitch limit stays at its default", _maxPitch.radians() );
         // 시작 시점은 폰의 조종 회전으로도 넘긴다 — 조종자가 쥐면 이 값에서 이어 간다.
-        setAngles( _yaw, _pitch );
+        setAngles( _yaw.radians(), _pitch.radians() );
         // 눈은 카메라가 놓인 자리에서 시작한다 — 몸을 움직이는 컴포넌트가 첫 틱에 넣는다.
         GameObject*            pOwner  = getOwner();
         const CameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
@@ -108,7 +108,7 @@ namespace sw
     {
         _viewModelName      = componentName;
         _viewModelOffset    = offset;
-        _viewModelYawOffset = yawOffset;
+        _viewModelYawOffset = Radians::fromRadians( yawOffset );
         applyToCamera();
     }
 
@@ -143,7 +143,7 @@ namespace sw
         if ( pViewModel->getParent() != pCamera )
             (void)pViewModel->attachToComponent( pCamera, AttachRule::KeepRelative ); // 붙일 수 없는 부모면 false — 뷰모델은 제자리에 남는다
         pViewModel->setLocalPosition( _viewModelOffset );
-        pViewModel->setLocalRotation( float3{ 0.0f, _viewModelYawOffset, 0.0f } );
+        pViewModel->setLocalRotation( float3{ 0.0f, _viewModelYawOffset.radians(), 0.0f } );
     }
 
     PawnComponent* FirstPersonCameraComponent::findPawn() const

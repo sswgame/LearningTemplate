@@ -11,7 +11,7 @@
 		<entity id="1" name="Camera">
 			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="2,16,-44" _localRotation="0.3,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="300" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localPosition="2,16,-44" _localRotation="0.3,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="300" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -106,7 +106,7 @@
 				<_listComponent>
 					<SceneComponent _localPosition="-5,11.2,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 					<MeshComponent _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.7" />
-					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
@@ -118,7 +118,7 @@
 				<_listComponent>
 					<SceneComponent _localPosition="8,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
-					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
@@ -131,7 +131,7 @@
 				<_listComponent>
 					<SceneComponent _localPosition="-12,0.97,25" _localRotation="0,3.14159265,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
-					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
@@ -144,7 +144,7 @@
 				<_listComponent>
 					<SceneComponent _localPosition="16,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" />
-					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
@@ -158,7 +158,7 @@
 				<_listComponent>
 					<SceneComponent _localPosition="17,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 					<MeshComponent _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.7" />
-					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>

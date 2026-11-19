@@ -109,7 +109,7 @@ namespace sw
         , _photoHiddenUILayers{ EnumUtil::setFlag( EnumUtil::setFlag( UILayerMask::HUD, UILayerMask::GameMenu ), UILayerMask::Overlay ) }
         , _bReadInput{ true }
         , _overrideBlend{}
-        , _fieldOfViewOverride{ 0.0f }
+        , _fieldOfViewOverride{}
         , _focusDistanceOverride{ 0.0f }
         , _exposureOffset{ 0.0f }
         , _overrideDef{}
@@ -186,9 +186,9 @@ namespace sw
         _overrideDef._view._mode         = CameraPresetMode::Fixed;
         _overrideDef._view._aim          = CameraAimMode::Angles;
         _overrideDef._view._offset       = position;
-        _overrideDef._view._pitch        = euler._x;
-        _overrideDef._view._yaw          = euler._y;
-        _overrideDef._lens._fieldOfViewY = fieldOfViewY;
+        _overrideDef._view._pitch        = Radians::fromRadians( euler._x );
+        _overrideDef._view._yaw          = Radians::fromRadians( euler._y );
+        _overrideDef._lens._fieldOfViewY = Radians::fromRadians( fieldOfViewY );
         _overrideDef._lens._nearPlane    = CameraDirectorComponentInternal::kOverrideNearPlane;
         SW_ASSERT( farPlane >= CameraDirectorComponentInternal::kOverrideNearPlane * 2.0f ); // 호출부 속성(`Far Plane`)의 범위가 지킨다. 올려 맞추지 않는다
         _overrideDef._lens._farPlane      = farPlane;
@@ -430,7 +430,7 @@ namespace sw
             const float2 panInput = inputMap.getVector2D( _panAction );
             input._pan            = float2{ panInput._y, panInput._x };
         }
-        if ( inputDef._rotateStep != 0.0f && inputMap.wasActionTriggered( _rotateAction ) )
+        if ( inputDef._rotateStep != Radians{} && inputMap.wasActionTriggered( _rotateAction ) )
         {
             const float32 rotateInput = inputMap.getAxis1D( _rotateAction );
             input._rotateSteps += rotateInput > 0.0f ? 1 : ( rotateInput < 0.0f ? -1 : 0 );
@@ -446,7 +446,7 @@ namespace sw
             inputDef._lookSensitivity > 0.0f && inputDef._bLookWhileHeld ? &_lookHoldAction : nullptr,
             inputDef._zoomStep > 0.0f ? &_zoomAction : nullptr,
             inputDef._panSpeed > 0.0f ? &_panAction : nullptr,
-            inputDef._rotateStep != 0.0f ? &_rotateAction : nullptr,
+            inputDef._rotateStep != Radians{} ? &_rotateAction : nullptr,
         };
         for ( const hashed_string* pAction : arrNeededAction )
         {
@@ -517,8 +517,8 @@ namespace sw
         // 시퀀서 값 트랙(프로퍼티 트랙 `CameraDirectorComponent._fieldOfViewOverride` 등)이 키로 모는 값을 프리셋 포즈 위에 적용한다.
         // 시퀀서는 PostUpdate 틱에서 쓰고 이 계산은 틱 뒤라 같은 프레임에 보인다.
         CameraPose pose = _director.getPose();
-        if ( _fieldOfViewOverride > 0.0f )
-            pose._fieldOfViewY = _fieldOfViewOverride;
+        if ( _fieldOfViewOverride > Radians{} )
+            pose._fieldOfViewY = _fieldOfViewOverride.radians();
         if ( _focusDistanceOverride > 0.0f )
             pose._depthOfField._focusDistance = _focusDistanceOverride;
         pose._postProcess._exposureCompensation += _exposureOffset;
