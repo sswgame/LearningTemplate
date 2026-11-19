@@ -3,6 +3,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -325,7 +327,11 @@ SW_TEST_CASE( ScavengerQuotaTest, ReadStateChecksRange )
 
     const auto readFixture = [&restored]( int32 quotaValue, int32 fulfilled, int32 daysLeft, int32 cycle, uint8 bGameOver )
     {
-        sw::Archive fixture;
+        // 리플렉션 상태 머리(타입 판 + 칸 배치 해시) 뒤에 칸이 선언 순서로 놓인다(`StateIO::reflected`)
+        const sw::TypeInfo& type = *sw::ScavengerQuota::StaticType();
+        sw::Archive         fixture;
+        fixture << type._metadata->getVersion();
+        fixture << sw::StateIO::computeReflectedLayoutHash( type );
         fixture << quotaValue;
         fixture << fulfilled;
         fixture << daysLeft;
@@ -334,6 +340,7 @@ SW_TEST_CASE( ScavengerQuotaTest, ReadStateChecksRange )
         sw::Archive readingFixture( fixture.getData(), fixture.getSize() );
         return restored.readState( readingFixture );
     };
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" ); // 칸마다의 범위는 `PROPERTY( Min · Max )` 가 지키고 그 줄을 남긴다
     SW_EXPECT_FALSE( readFixture( -1, 0, 0, 0, 0 ) );
     SW_EXPECT_FALSE( readFixture( 0, 0, 0, 0, 0 ) );
     SW_EXPECT_FALSE( readFixture( 10, -1, 0, 0, 0 ) );

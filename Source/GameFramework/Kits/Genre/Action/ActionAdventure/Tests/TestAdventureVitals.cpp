@@ -300,10 +300,13 @@ SW_TEST_CASE( AdventureVitalsTest, ReadRejectsValuesAboveTheirMax )
     sw::Archive         written;
     source.writeState( written );
     const size_t size = static_cast<size_t>( written.getSize() );
-    // 앞에서: 하트 수(4) 조각(4) 두 배 마법(1), 다음이 체력(첫 칸이 체력 값). 뒤에서: 게이지 하나는 값(4) 보너스(4) 재생 배율(4) 경과(4) 벌칙(4) 잠김(1) = 21 바이트로 마력, 지구력 순이다.
-    SW_REQUIRE_TRUE( size > 9 + 42 );
-    const size_t magicAt   = size - 42;
-    const size_t staminaAt = size - 21;
+    // 앞에서: 하트 수(4) 조각(4) 두 배 마법(1), 다음이 체력(첫 칸이 체력 값). 뒤에서: 게이지 하나는 리플렉션 머리(판 4 + 칸 배치 해시 8) 값(4) 보너스(4) 재생 배율(4) 경과(4) 잠김(1)
+    // 뒤에 손 본문의 벌칙(4) = 33 바이트로(`ResourceGauge::serializeState`) 마력, 지구력 순이다.
+    constexpr size_t kGaugeSize       = 33;
+    constexpr size_t kGaugeHeaderSize = 12;
+    SW_REQUIRE_TRUE( size > 9 + 2 * kGaugeSize );
+    const size_t magicAt   = size - 2 * kGaugeSize + kGaugeHeaderSize;
+    const size_t staminaAt = size - kGaugeSize + kGaugeHeaderSize;
 
     sw::AdventureVitals target;
     SW_EXPECT_FALSE( target.applyDamage( 1 ) );
