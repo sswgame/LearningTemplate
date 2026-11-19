@@ -53,7 +53,7 @@ namespace sw
          *          실수부 · 허수부 · 스케일(xyz) 세 행이다 — 행렬을 `스케일 * 회전 * 이동` 으로 나눠 싣고, 셰이더가 스케일을 따로 섞어 회전 앞에 곱한다.
          *          모프 가중치는 [0, 1] 로 제한해 싣는다.
          */
-        void appendPalette( GPUSceneSnapshot& inoutSnapshot, vector<float4>& inoutListRow, vector<float32>& inoutListWeight, const shared_ptr<Mesh>& mesh, uint32 skinSlot,
+        void appendPalette( GPUSceneSnapshot& inoutSnapshot, vector<float4>& inoutListRow, vector<float32>& inoutListWeight, const shared_ptr<Mesh>& mesh, AnimationSkinSlotKey skinSlot,
                             uint32 lodIndex, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight, SkinningMethod method )
         {
             GPUSkinPalette entry{};
@@ -124,14 +124,14 @@ namespace sw
             const uint32 skinSlot = pSkeletalMesh->getSkinSlot();
             if ( skinSlot == AnimationSkinSlot::kNone || skinSlot != pSkeletalMesh->getOwnSkinSlot() )
                 continue;
-            appendPalette( inoutSnapshot, *listRow, *listWeight, pSkeletalMesh->getMesh(), skinSlot, pSkeletalMesh->getLODIndex(), pSkeletalMesh->getSkinPalette(), &pSkeletalMesh->getMorphWeights(),
+            appendPalette( inoutSnapshot, *listRow, *listWeight, pSkeletalMesh->getMesh(), pSkeletalMesh->getOwnSkinSlotKey(), pSkeletalMesh->getLODIndex(), pSkeletalMesh->getSkinPalette(), &pSkeletalMesh->getMorphWeights(),
                            pSkeletalMesh->getSkinningMethod() );
         }
         // 군중 묶음은 묶음 하나가 메시 하나, 결과 구간 하나, 팔레트 하나다(멤버가 몇이든). 가리키는 유닛이 있는 묶음만 그려진다.
         for ( const unique_ptr<AnimationCrowdBucket>& bucket : animation.getCrowd().getBuckets() )
         {
             if ( bucket->getReferenceCount() > 0 && bucket->getMesh() != nullptr )
-                appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh(), bucket->getSkinSlot(), constant::invalid_index::kUint32, bucket->getSkinPalette(), nullptr,
+                appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh(), bucket->getSkinSlotKey(), constant::invalid_index::kUint32, bucket->getSkinPalette(), nullptr,
                                bucket->getSkinningMethod() ); // 멤버마다 단계가 다르다 — 모든 단계. 방식은 열쇠라 멤버가 같다
         }
         _paletteRowCountHint               = listRow->size();

@@ -59,6 +59,7 @@
 #include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
@@ -172,11 +173,13 @@ namespace sw
          *        (돌려받은 모프 구간의 대기 번호가 이 호출 수입니다).
          * @details 세 가지를 따로 본다. 모프 집합이 바뀌면 들어온 모프 메시의 레스트만, 스킨 원본(스킨 데이터 번호) 집합이 바뀌면 원본 레스트와 가중치를,
          *          스킨 인스턴스 목록이 바뀌면 인스턴스 테이블만 다시 올린다. 결과 버퍼는 컴퓨트가 프레임마다 채우므로 배치가 바뀌어도 올릴 것이 없다.
-         *          스킨 인스턴스는 **칸**(@p listSkinSlot — `AnimationSkinSlot`, @p listSkinMesh 와 같은 순서)마다 하나다. 결과 시작은 칸 → 시작 표(`getSkinResultOffsetBuffer`)로 정점 셰이더에 간다 —
+         *          스킨 인스턴스는 **칸**(@p listSkinSlot — `AnimationSkinSlotKey`, @p listSkinMesh 와 같은 순서)마다 하나다. 지난 벌은 번호와 세대가 모두 같을 때만 믿는다 —
+         *          같은 프레임에 놓고 다시 받은 번호(같은 메시 · 같은 단계)는 세대가 달라 새 주인이 옛 주인의 지난 결과를 모션 벡터로 읽지 않는다. 결과 시작은 칸 → 시작 표(`getSkinResultOffsetBuffer`)로 정점 셰이더에 간다 —
          *          같은 메시를 그리는 캐릭터들이 메시 사본 없이 저마다의 결과를 읽는다. 칸마다 그리는 LOD 단계 하나만 변형한다(@p listSkinLOD, 무효면 모든 단계) —
          *          표의 시작은 그 단계 첫 정점만큼 앞당긴 값이라(부호 없는 덧셈으로 감긴다) 정점 셰이더의 정점 흐름 번호를 그대로 더한다. 낮은 단계는 모프를 걸지 않는다.
          */
-        void update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot, const vector<uint32>& listSkinLOD );
+        void update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh, const vector<AnimationSkinSlotKey>& listSkinSlot,
+                     const vector<uint32>& listSkinLOD );
         /**
          * @brief 모프 메시의 변형 프로그램(`Mesh::setGPUDeformProgram`)을 프로그램 버퍼에 맞춥니다. 어느 메시의 프로그램 번호도 그대로면 아무것도 하지 않습니다.
          * @details 버퍼 = [모프 메시 칸마다 float4 하나(x = 그 메시 프로그램의 시작 원소, 없으면 -1)][프로그램들]. 레스트 노멀의 w 가 칸 번호 + 1 이라
@@ -299,7 +302,7 @@ namespace sw
         /** @brief 스킨 원본 구간을 더 큰 새 버퍼로 다시 채웁니다. 살아 있는 원본을 앞에서부터 다시 잇습니다. */
         void repackSkinSources( IRHIDevice* pDevice );
         /** @brief 스킨 원본을 맞추고 스킨 메시마다 인스턴스 행(결과 구간 · 원본 구간 · 팔레트 시작)과 `_listSkinResultOffset` 를 다시 만듭니다. `_vertexCount` 를 정합니다. */
-        void rebuildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot, const vector<uint32>& listSkinLOD );
+        void rebuildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh, const vector<AnimationSkinSlotKey>& listSkinSlot, const vector<uint32>& listSkinLOD );
         /** @brief 결과 버퍼 · 스킨 인스턴스 표 · 팔레트 버퍼의 용량을 맞추고 못 만든 것을 오류로 남깁니다. */
         void ensureDeformBuffers( IRHIDevice* pDevice );
         /** @brief 모프 메시 집합을 맞춥니다. 들어온 메시의 레스트만 올립니다. @return 어느 모프 메시의 구간이라도 바뀌었으면 true 입니다. */
@@ -346,9 +349,9 @@ namespace sw
         /// @brief 스킨 칸 → 결과 시작 · 단계 첫 정점입니다. 칸 번호가 자리이고 결과가 없는 칸은 시작이 `kInvalidBase` 다. `_skinResultOffsets` 에 그대로 올린다. 모프 메시는 `_mapMorphEntry` 에 있습니다.
         vector<GPUSkinResultOffset> _listSkinResultOffset;
         /// @brief 지난 update 의 스킨 메시 · 칸 목록과 내용 번호입니다(받은 그대로이며 풀에 들어가지 못한 것도 포함합니다).
-        vector<uint32>        _listBuiltSkinSlot;
-        vector<uint32>        _listBuiltSkinLOD;
-        vector<IdentityToken> _listBuiltSkinContentID;
+        vector<AnimationSkinSlotKey> _listBuiltSkinSlot;
+        vector<uint32>               _listBuiltSkinLOD;
+        vector<IdentityToken>        _listBuiltSkinContentID;
         /// @brief 결과 구간을 받은 스킨 인스턴스(풀 순서)의 메시 · 칸과 그 테이블 줄입니다.
         vector<const Mesh*>        _listSkinMesh;
         vector<uint32>             _listSkinSlot;

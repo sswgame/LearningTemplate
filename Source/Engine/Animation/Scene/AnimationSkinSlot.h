@@ -5,6 +5,8 @@
  *          (언리얼이 스켈레탈 메시 렌더 데이터 한 벌을 나누고 컴포넌트마다 `FSkeletalMeshObjectGPUSkin` 을 두는 것과 같다). 번호는 프로세스 하나에서 겹치지 않는다 —
  *          씬(매니저)마다 따로 주면 두 씬의 칸이 한 스냅숏에서 겹친다. 놓은 번호는 다음에 다시 준다(표가 칸 수만큼이라 번호를 촘촘히 쓴다).
  *          한 프레임의 스냅숏은 인스턴스 · 팔레트가 같은 프레임의 칸을 실으므로 놓은 번호를 곧바로 다시 주어도 RT 가 섞어 읽지 않는다.
+ *          다만 프레임을 건너 이어지는 것(스킨 결과의 지난 벌 — 모션 벡터)은 번호만으로는 새 주인을 옛 주인과 가르지 못한다 — 칸마다 세대를 두고
+ *          번호 + 세대(`AnimationSkinSlotKey`)로 짝을 짓는다(Godot `RID`, 언리얼 `FPrimitiveComponentId` 를 다시 쓸 때의 일련번호와 같은 자리).
  */
 #pragma once
 #include "Core/Concurrency/SpinLock.h"
@@ -18,15 +20,29 @@
 namespace sw
 {
     /**
+     * @struct AnimationSkinSlotKey
+     * @brief 스킨 칸의 정체성(번호 + 세대)입니다. 놓은 번호를 다시 주면 세대가 올라 같은 번호의 새 주인이 옛 주인과 다르게 보인다.
+     */
+    struct AnimationSkinSlotKey
+    {
+        uint32 _slot{ constant::invalid_index::kUint32 }; ///< 칸 번호(`GPUInstance::_skinSlot` 과 같은 번호 — 표의 자리다)
+        uint32 _generation{ 0 };                          ///< 이 번호를 몇 번째 주인이 쓰는지
+
+        bool operator==( const AnimationSkinSlotKey& other ) const { return _slot == other._slot && _generation == other._generation; }
+        bool operator!=( const AnimationSkinSlotKey& other ) const { return ( *this == other ) == false; }
+    };
+
+    /**
      * @class AnimationSkinSlotRegistry
      * @brief 칸 번호 목록입니다(엔진 서비스 범위가 소유한다 — 컴포넌트 기본값 객체보다 오래 산다). 놓은 번호를 먼저 다시 준다.
      */
     class SW_API AnimationSkinSlotRegistry final : public ISubsystem
     {
     public:
-        SpinLock                 _spinLock;
-        vector<uint32> _listFree SW_GUARDED_BY( _spinLock ){};
-        uint32 _nextSlot         SW_GUARDED_BY( _spinLock ){ 0 };
+        SpinLock                       _spinLock;
+        vector<uint32> _listFree       SW_GUARDED_BY( _spinLock ){};
+        vector<uint32> _listGeneration SW_GUARDED_BY( _spinLock ){}; ///< 칸 번호 → 세대(놓을 때 올린다)
+        uint32 _nextSlot               SW_GUARDED_BY( _spinLock ){ 0 };
 
         static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
         static constexpr const utf8* kSubsystemName      = "AnimationSkinSlotRegistry";
@@ -55,8 +71,11 @@ namespace sw
 
         /** @brief 칸 번호입니다. */
         uint32 get() const { return _slot; }
+        /** @brief 칸의 정체성(번호 + 세대)입니다. 프레임을 건너 칸을 기억하는 쪽(스킨 결과의 지난 벌)이 이것을 비교한다. */
+        AnimationSkinSlotKey getKey() const { return AnimationSkinSlotKey{ _slot, _generation }; }
 
     private:
         uint32 _slot;
+        uint32 _generation;
     };
 } // namespace sw

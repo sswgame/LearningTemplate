@@ -13,6 +13,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -293,8 +294,8 @@ namespace sw
      */
     struct GPUSkinPalette
     {
-        shared_ptr<Mesh> _mesh{};                                       ///< 스키닝할 메시(원본 — 칸마다 사본을 두지 않는다). RT 의 모프 풀이 원본 데이터 · 정점 수를 읽는다
-        uint32           _skinSlot{ constant::invalid_index::kUint32 }; ///< 이 팔레트의 스킨 칸(인스턴스의 `GPUInstance::_skinSlot` 과 같은 번호)
+        shared_ptr<Mesh>     _mesh{};     ///< 스키닝할 메시(원본 — 칸마다 사본을 두지 않는다). RT 의 모프 풀이 원본 데이터 · 정점 수를 읽는다
+        AnimationSkinSlotKey _skinSlot{}; ///< 이 팔레트의 스킨 칸(번호는 인스턴스의 `GPUInstance::_skinSlot` 과 같다, 세대는 같은 번호의 새 주인을 가른다)
         /// @brief 변형할 LOD 단계(`MeshComponent::getLODIndex` — 그 칸이 그리는 단계 하나만 스키닝한다, 언리얼 스킨 캐시와 같다). 무효면 모든 단계(멤버마다 단계가 다른 군중 묶음)입니다.
         uint32 _lodIndex{ constant::invalid_index::kUint32 };
         uint32 _firstRow{ 0 };

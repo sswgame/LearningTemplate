@@ -403,7 +403,7 @@ namespace sw
         flushSkinSourceUpload( pDevice );
     }
 
-    void GPUMeshMorphPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot,
+    void GPUMeshMorphPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh, const vector<AnimationSkinSlotKey>& listSkinSlot,
                                    const vector<uint32>& listSkinLOD )
     {
         if ( pDevice == nullptr )
@@ -424,7 +424,7 @@ namespace sw
 
         _listBuiltSkinSlot  = listSkinSlot;
         _listBuiltSkinLOD   = listSkinLOD;
-        _bSkinLayoutChanged = SW_TRUE; // 결과 자리가 바뀐다 — 지난 벌은 이 배치의 지난 프레임이 아니다
+        _bSkinLayoutChanged = SW_TRUE; // 결과 자리나 칸의 주인(세대)이 바뀐다 — 지난 벌은 이 배치의 지난 프레임이 아니다
         _listBuiltSkinContentID.clear();
         for ( const Mesh* pMesh : listSkinMesh )
         {
@@ -448,7 +448,8 @@ namespace sw
         ensureDeformBuffers( pDevice );
     }
 
-    void GPUMeshMorphPool::rebuildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot, const vector<uint32>& listSkinLOD )
+    void GPUMeshMorphPool::rebuildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh, const vector<AnimationSkinSlotKey>& listSkinSlot,
+                                                    const vector<uint32>& listSkinLOD )
     {
         // 스킨 원본(바뀐 때만 올린다)과 인스턴스 — 인스턴스는 칸마다 하나이고 결과 구간 · 원본 구간 · 팔레트 시작을 표에 한 줄씩 갖는다.
         rebuildSkinSources( pDevice, listSkinMesh );
@@ -462,7 +463,7 @@ namespace sw
         for ( size_t skinIndex = 0; skinIndex < listSkinMesh.size(); ++skinIndex )
         {
             Mesh* const  pMesh     = listSkinMesh[skinIndex];
-            const uint32 skinSlot  = listSkinSlot[skinIndex];
+            const uint32 skinSlot  = listSkinSlot[skinIndex]._slot;
             const auto   morphIt   = ( pMesh != nullptr ) ? _mapMorphEntry.find( pMesh->getContentID() ) : _mapMorphEntry.end();
             const bool   bInMorph  = morphIt != _mapMorphEntry.end() && morphIt->second._base != kInvalidBase;
             const bool   bSeenSlot = skinSlot < _listSkinResultOffset.size() && _listSkinResultOffset[skinSlot]._resultStart != kInvalidBase;
@@ -794,7 +795,7 @@ namespace sw
         _listScratchPaletteIndex.assign( _listSkinResultOffset.size(), kInvalidBase );
         for ( uint32 paletteIndex = 0; paletteIndex < static_cast<uint32>( listPalette.size() ); ++paletteIndex )
         {
-            const uint32 skinSlot = listPalette[paletteIndex]._skinSlot;
+            const uint32 skinSlot = listPalette[paletteIndex]._skinSlot._slot;
             if ( skinSlot < _listScratchPaletteIndex.size() )
                 _listScratchPaletteIndex[skinSlot] = paletteIndex;
         }
