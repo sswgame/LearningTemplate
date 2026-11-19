@@ -207,6 +207,17 @@ namespace sw
         return _pState->_sharedTable.countLive();
     }
 
+    void MeshCache::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
+    {
+        _pState->_sharedTable.forEachLive( [&outListEntry]( const string& key, const Mesh& mesh, uint32 referenceCount )
+        {
+            // 그리는 흐름(LOD 0 + 낮은 단계)의 정점 · 인덱스가 GPU 버퍼이고, CPU 사본은 LOD 0 이다(물리 · 내비 · 피킹이 읽는다).
+            const uint64 gpuBytes = static_cast<uint64>( mesh.getDrawVertexCount() ) * sizeof( RHIVertex ) + static_cast<uint64>( mesh.getDrawIndexCount() ) * sizeof( uint32 );
+            const uint64 cpuBytes = sizeof( Mesh ) + static_cast<uint64>( mesh.getVertexCount() ) * sizeof( RHIVertex ) + static_cast<uint64>( mesh.getIndexCount() ) * sizeof( uint32 );
+            outListEntry.push_back( AssetMemoryEntry{ key, cpuBytes, gpuBytes, referenceCount } );
+        } );
+    }
+
     AssetPin MeshCache::pinAsset( string_view relativePath )
     {
         if ( MeshAssetFormat::isMeshAssetPath( relativePath ) == false )

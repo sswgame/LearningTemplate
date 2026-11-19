@@ -218,6 +218,17 @@ namespace sw
         return _mapCache.size();
     }
 
+    void PrefabCache::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
+    {
+        // shortcut: 객체 크기만 센다 — 프리팹 안 노드 표는 메모리 태그(Scene) 줄에 있다.
+        ScopedSharedLock<shared_mutex> readLock{ _mapCacheMutex };
+        for ( const auto& [key, pAsset] : _mapCache )
+        {
+            const auto useCount = pAsset.use_count(); // 표가 쥔 하나를 뺀다
+            outListEntry.push_back( AssetMemoryEntry{ key, sizeof( PrefabAsset ), 0, static_cast<uint32>( useCount > 1 ? useCount - 1 : 0 ) } );
+        }
+    }
+
     void PrefabCache::clear()
     {
         UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };

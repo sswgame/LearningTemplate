@@ -648,8 +648,8 @@ namespace sw
         [[nodiscard]] bool createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief READBACK 힙 버퍼를 만들어 영속 매핑합니다(복사 도착지 상태로 만든다). */
         [[nodiscard]] bool createMappedReadbackBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
-        /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 `kind` 항목에 할당 크기를 올리는 유일한 지점입니다. */
-        RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, RHIMemoryKind kind );
+        /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기에 서술 @p desc 의 항목 · 모양과 할당 크기를 올리는 유일한 지점입니다. */
+        RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, const RHITextureDesc& desc );
     #if defined( SW_DO_CHECKS )
         /**
          * @brief 리소스에 `SW <종류> <핸들> (<폭>x<높이> fmt <포맷>)` 이름을 붙입니다. DRED 페이지 폴트 출력이 폴트 주소의 할당을 이 이름으로 보여 줍니다.

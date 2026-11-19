@@ -201,6 +201,18 @@ namespace sw
         return _impl->_mapEntry.size();
     }
 
+    void MaterialCache::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
+    {
+        if ( _impl == nullptr )
+            return;
+        // shortcut: 객체 크기만 센다 — 상수 버퍼 · 텍스처는 그것을 쥔 GPU 자원 표와 텍스처 캐시 줄에 있다.
+        ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
+        for ( const auto& [key, entry] : _impl->_mapEntry )
+        {
+            outListEntry.push_back( AssetMemoryEntry{ key, sizeof( Material ), 0, entry._refCount } );
+        }
+    }
+
     void MaterialCache::requestInitialize( string_view relativePath )
     {
         if ( relativePath.empty() || _impl == nullptr )

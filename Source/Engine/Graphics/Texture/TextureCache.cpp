@@ -28,6 +28,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
@@ -1433,6 +1434,28 @@ namespace sw
             return 0;
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.size();
+    }
+
+    void TextureCache::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
+    {
+        if ( _impl == nullptr )
+            return;
+        ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
+        for ( const auto& [key, entry] : _impl->_mapEntry )
+        {
+            const Texture2D* pTexture = entry._texture.get();
+            if ( pTexture == nullptr )
+                continue;
+            // GPU 몫은 서술로 계산한 논리 크기다 — 드라이버 할당 크기는 GPU 자원 표가 핸들로 보인다.
+            RHITextureDesc desc{};
+            desc._width           = pTexture->getWidth();
+            desc._height          = pTexture->getHeight();
+            desc._format          = pTexture->getFormat();
+            desc._mipLevels       = pTexture->getMipCount() > 0 ? pTexture->getMipCount() : 1u;
+            const uint64 gpuBytes = pTexture->getHandle() != 0 ? RHIMemoryTracker::computeTextureLogicalBytes( desc ) : 0;
+            const uint64 cpuBytes = sizeof( Texture2D ) + pTexture->getCPUBytes().size();
+            outListEntry.push_back( AssetMemoryEntry{ key, cpuBytes, gpuBytes, entry._refCount } );
+        }
     }
 
     /**

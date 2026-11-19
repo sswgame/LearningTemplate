@@ -594,6 +594,7 @@ namespace sw
         const D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_texture == nullptr || pName == nullptr )
             return;
+        _pDevice->getMemoryTracker().setLabel( RHIMemoryKey::makeTexture( texture ), pName ); // 메모리 스냅숏 · RT 목록이 같은 이름을 보인다
         // WKPDID_D3DDebugObjectName(d3dcommon.h, dxguid.lib — sw_graphics_dx11_libs 가 링크한다). 그래픽스 디버거 · 디버그 레이어 메시지가 이 이름을 보인다.
         const string_view name = pName;
         pRecord->_texture->SetPrivateData( WKPDID_D3DDebugObjectName, static_cast<UINT>( name.size() ), name.data() );

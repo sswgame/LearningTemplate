@@ -467,7 +467,7 @@ namespace sw
         return true;
     }
 
-    RHITextureHandle D3D12RHIDevice::storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, RHIMemoryKind kind )
+    RHITextureHandle D3D12RHIDevice::storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, const RHITextureDesc& desc )
     {
         if ( texture == nullptr )
             return 0;
@@ -478,7 +478,7 @@ namespace sw
         TextureRecord record{};
         record._resource              = std::move( texture );
         const RHITextureHandle handle = _gpuTextures.insert( std::move( record ) );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), kind, bytes );
+        getMemoryTracker().recordTexture( handle, desc, bytes );
     #if defined( SW_DO_CHECKS )
         nameResourceForDiagnostics( pNamed, L"Texture", handle );
     #endif

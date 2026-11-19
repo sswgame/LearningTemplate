@@ -145,6 +145,12 @@ namespace sw
         /** @brief 그 경로의 묶음을 누가 쥐고 있으면 true 입니다. */
         bool   isCached( string_view relativePath ) const override;
         size_t getCachedCount() const override { return _table.countLive(); }
+        /** @brief 쥔 묶음마다 경로 · 객체 크기 · 쥔 쪽 수 한 줄입니다. */
+        void collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const override
+        {
+            _table.forEachLive( [&outListEntry]( const string& key, const MaterialParameterCollection& /*collection*/, uint32 referenceCount )
+            { outListEntry.push_back( AssetMemoryEntry{ key, sizeof( MaterialParameterCollection ), 0, referenceCount } ); } );
+        }
         /** @brief 표를 비웁니다. 쥔 쪽의 묶음은 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
         void clear() override;
         /** @brief 쥔 묶음이면 합성 문맥이 바뀐 파일을 다시 읽어 제자리에서 바꿉니다. 바꿨으면 true 입니다. */
