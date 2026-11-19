@@ -155,6 +155,31 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct NetMessageDelivery
+     * @brief 표 메시지 하나를 처리기의 `receive` 오버로드로 넘깁니다. 표 처리기(`NetTableHandler`)와 역할마다 마스크를 고르는 처리기(엔진 세션)가 함께 쓴다.
+     * @details 본문 형식이 있는 메시지(`NetMessageHasBody`)는 본문을 다 읽은 뒤에만 넘긴다 — 처리기가 넘침 · 범위 검사를 빠뜨릴 자리가 없다.
+     *          잘림 · 남는 비트 · 범위 밖 값 · 등록 밖 열거자는 처리기를 부르지 않고 Malformed 다.
+     */
+    struct NetMessageDelivery
+    {
+        template <typename TMessage, typename THandler>
+        static NetHandleResult deliver( THandler& handler, const NetMessageContext& context, BitReader& body )
+        {
+            if constexpr ( NetMessageHasBody<TMessage>::value )
+            {
+                typename TMessage::Body value{};
+                if ( TMessage::readBody( body, value ) == false )
+                    return NetHandleResult::Malformed;
+                return handler.receive( TMessage{}, context, static_cast<const typename TMessage::Body&>( value ) );
+            }
+            else
+            {
+                return handler.receive( TMessage{}, context, body );
+            }
+        }
+    };
+
+    /**
      * @class NetTableHandler
      * @brief 표 @p TTable 의 메시지 @p TReceived 들을 받는 처리기의 기반입니다. 영역 · 마스크 · 디스패치를 표가 맡습니다.
      * @details 파생은 받는 메시지마다 `NetHandleResult receive( TMessage, const NetMessageContext&, BitReader& )` 를 둡니다(public). 빠지면 컴파일되지 않는다.
@@ -186,22 +211,10 @@ namespace sw
             template <typename TMessage>
             NetHandleResult visit()
             {
-                if constexpr ( ( std::is_same_v<TMessage, TReceived> || ... ) == false )
-                {
-                    return NetHandleResult::Handled; // 받지 않는 메시지이다(마스크 밖이라 오지 않는다)
-                }
-                else if constexpr ( NetMessageHasBody<TMessage>::value )
-                {
-                    // 본문을 다 읽은 뒤에만 처리기에 넘긴다 — 처리기가 넘침 · 범위 검사를 빠뜨릴 자리가 없다.
-                    typename TMessage::Body body{};
-                    if ( TMessage::readBody( _body, body ) == false )
-                        return NetHandleResult::Malformed;
-                    return _handler.receive( TMessage{}, _context, static_cast<const typename TMessage::Body&>( body ) );
-                }
+                if constexpr ( ( std::is_same_v<TMessage, TReceived> || ... ) )
+                    return NetMessageDelivery::deliver<TMessage>( _handler, _context, _body );
                 else
-                {
-                    return _handler.receive( TMessage{}, _context, _body );
-                }
+                    return NetHandleResult::Handled; // 받지 않는 메시지이다(마스크 밖이라 오지 않는다)
             }
         };
     };

@@ -46,6 +46,7 @@
  * @warning 리로드로 다시 선 키트는 이미 붙은 연결의 `Connected` 사건을 받지 못한다 — 처리기를 단 뒤 `getPeers().collectConnected` 로 받는다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
@@ -63,6 +64,7 @@
 
 #include "Engine/EngineFrameHooks.h"
 #include "Engine/Net/GameConnectSecurity.h"
+#include "Engine/Net/NetMessageBody.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -128,7 +130,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 서버가 클라이언트에 알리는 끊김 사유입니다(`GameNetSession::sendShutdownNotice`). 값은 와이어 형식이라 바꾸면 `NetWireVersion::kCore` 를 올린다. */
+    /** @brief 서버가 클라이언트에 알리는 끊김 사유입니다(`GameNetSession::sendShutdownNotice`). 선 형식이라 등록 열거자 밖 값은 본문 읽기가 거절한다. */
+    ENUM()
     enum class GameShutdownReason : uint8
     {
         ServerRestart = 0, ///< 오케스트레이터의 종료 신호(재배포 · 스케일 인) — 곧 다시 뜬다. 클라이언트는 다시 접속을 시도해도 된다
@@ -136,11 +139,41 @@ namespace sw
         ServerStopped      ///< 운영자가 내렸다(콘솔 · 관리 채널)
     };
 
-    /** @brief 서버 종료 통지입니다. @p _graceSeconds 는 서버가 남은 접속을 기다려 주는 최대 시간으로 0 이면 바로 내려간다. */
+    /** @brief 서버 종료 통지입니다. @p _graceSeconds 는 서버가 남은 접속을 기다려 주는 최대 시간으로 0 이면 바로 내려간다. 메시지 본문(`GameNetSessionMessage::ShutdownNotice`)이기도 하다. */
+    REFLECT()
     struct GameShutdownNotice
     {
+        REFLECT_BODY();
+        PROPERTY()
         GameShutdownReason _reason{ GameShutdownReason::ServerRestart };
-        uint32             _graceSeconds{ 0 };
+        PROPERTY()
+        uint32 _graceSeconds{ 0 };
+    };
+
+    /** @brief 엔진 세션 선 형식의 상한입니다. 본문 형식(`PROPERTY( MaxCount )`)과 메시지 표가 함께 쓴다. */
+    struct GameNetSessionLimit
+    {
+        static constexpr int32 kMaxDigestIDBytes = 512; ///< `GameNetSessionMessage::kMaxDigestIDBytes`
+    };
+
+    /** @brief 서버 틱(서버 → 모두) 본문입니다 — 방금 끝낸 서버 틱 번호. */
+    REFLECT()
+    struct GameServerTickBody
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint64 _tick{ 0 };
+    };
+
+    /** @brief 합성 해시 한 줄(클라이언트 → 서버) 본문입니다 — 리소스 id 와 합성 결과 해시(`ResourceComposition::hashText`). */
+    REFLECT()
+    struct GameResourceDigestBody
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = GameNetSessionLimit::kMaxDigestIDBytes )
+        string _assetID{};
+        PROPERTY()
+        uint64 _hash{ 0 };
     };
 
     class INetTransport;
@@ -156,14 +189,14 @@ namespace sw
      */
     struct GameNetSessionMessage
     {
-        using ServerTick     = NetMessageDef<0x00, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced>; ///< 서버 → 모두. 방금 끝낸 서버 틱 번호(varuint)
-        using ShutdownNotice = NetMessageDef<0x01, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered>;     ///< 서버 → 모두. 서버가 내려가기 시작한다 — 사유(1 바이트 `GameShutdownReason`) + 기다려 주는 시간(varuint 초)
+        using ServerTick     = NetMessageBodyDef<0x00, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced, GameServerTickBody>; ///< 서버 → 모두. 방금 끝낸 서버 틱 번호
+        using ShutdownNotice = NetMessageBodyDef<0x01, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, GameShutdownNotice>;     ///< 서버 → 모두. 서버가 내려가기 시작한다 — 사유 + 기다려 주는 시간(초)
         /**
          * @brief 클라이언트 → 서버(신뢰 순서). 로드 축 조건 · 덮어쓰기 층에 기댄 합성 한 줄씩 — 리소스 id(blob) + 합성 결과 해시(varuint, `ResourceComposition::hashText`). 접속하자마자 모두 보내고, 붙은 뒤 새로 읽거나 바뀐 합성을 그때마다 보낸다.
          * @details 서버가 같은 리소스를 다르게 합성했고 유예(`gv_netResourceDigestGraceSeconds`)가 지나도 다르면(품질 축이 시뮬레이션 값을 건드렸다 · 다른 모드 층) 그 연결을 끊는다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트가 거짓을 보낼 수 있다).
          */
-        using ResourceDigest                     = NetMessageDef<0x02, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered>;
-        static constexpr int32 kMaxDigestIDBytes = 512; ///< `kResourceDigest` 의 리소스 id 길이 상한(넘는 id 는 보내지 않고 오류를 남긴다)
+        using ResourceDigest                     = NetMessageBodyDef<0x02, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, GameResourceDigestBody>;
+        static constexpr int32 kMaxDigestIDBytes = GameNetSessionLimit::kMaxDigestIDBytes; ///< `kResourceDigest` 의 리소스 id 길이 상한(넘는 id 는 보내지 않고 오류를 남긴다)
         /**
          * @brief `net.traffic` 부하 메시지입니다. 처리기가 없어 받는 쪽 라우터가 버린다.
          * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Empty)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
@@ -421,7 +454,7 @@ namespace sw
                 template <typename TMessage>
                 NetHandleResult visit()
                 {
-                    return _session.receive( TMessage{}, _context, _body );
+                    return NetMessageDelivery::deliver<TMessage>( _session, _context, _body );
                 }
             };
 
@@ -434,9 +467,9 @@ namespace sw
         /** @brief 프레임 끝 훅입니다(`makeClientHostFrameHooks`). 종료 코드를 정하지 않습니다. */
         EngineFrameExit onClientHostFrameEnd( const EngineFrameContext& context );
         // 엔진 영역 메시지(`EngineMessageHandler::handleNetMessage` 가 표로 나눈다). 부하 메시지(`Traffic`)는 받는 처리기가 없다
-        NetHandleResult receive( GameNetSessionMessage::ServerTick, const NetMessageContext& context, BitReader& body );
-        NetHandleResult receive( GameNetSessionMessage::ShutdownNotice, const NetMessageContext& context, BitReader& body );
-        NetHandleResult receive( GameNetSessionMessage::ResourceDigest, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( GameNetSessionMessage::ServerTick, const NetMessageContext& context, const GameServerTickBody& body );
+        NetHandleResult receive( GameNetSessionMessage::ShutdownNotice, const NetMessageContext& context, const GameShutdownNotice& body );
+        NetHandleResult receive( GameNetSessionMessage::ResourceDigest, const NetMessageContext& context, const GameResourceDigestBody& body );
         NetHandleResult receive( GameNetSessionMessage::Traffic, const NetMessageContext& context, BitReader& body );
         /** @brief 지난번 뒤에 바뀐 로드 축 조건 · 층 합성(`ResourceComposition::collectTagDependentChanges`)을 한 줄씩 서버에 보냅니다(클라이언트). 접속 때는 번호를 0 으로 돌려 모두 보낸다. */
         void sendResourceDigest( int32 connectionID );
