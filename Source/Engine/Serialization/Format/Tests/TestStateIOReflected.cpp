@@ -230,7 +230,7 @@ SW_TEST_CASE( StateIOReflectedTest, Int2BytesMatchTheHandWriter )
     sw::Archive expected;
     sw::StateIO::writeInt2( expected, state._cell );
     // 머리(판 · 배치 해시) 뒤의 본문이 손 함수의 바이트와 같다.
-    SW_REQUIRE_TRUE( written.getSize() == sizeof( sw::uint32 ) + sizeof( sw::uint64 ) + expected.getSize() );
-    const sw::uint8* pBody = static_cast<const sw::uint8*>( written.getData() ) + written.getSize() - expected.getSize();
+    SW_REQUIRE_TRUE( written.getSize() == sizeof( uint32 ) + sizeof( uint64 ) + expected.getSize() );
+    const uint8* pBody = static_cast<const uint8*>( written.getData() ) + written.getSize() - expected.getSize();
     SW_EXPECT_TRUE( std::memcmp( expected.getData(), pBody, expected.getSize() ) == 0 );
 }

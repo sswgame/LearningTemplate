@@ -304,7 +304,7 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, BuiltinLayoutGivesComponentCountAndSiz
         const sw::ReflectBuiltinIndex  builtinIndex = static_cast<sw::ReflectBuiltinIndex>( index );
         const sw::ReflectBuiltinTraits traits       = sw::ReflectBuiltinTraitTable::get( builtinIndex );
         const sw::hashed_string&       typeName     = sw::ReflectedValueUtil::getBuiltinTypeName( builtinIndex );
-        const sw::uint8                count        = sw::ReflectedValueUtil::getBuiltinComponentCount( builtinIndex );
+        const uint8                    count        = sw::ReflectedValueUtil::getBuiltinComponentCount( builtinIndex );
         switch ( traits._layout )
         {
             case sw::ReflectBuiltinLayout::Float32:
@@ -312,7 +312,7 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, BuiltinLayoutGivesComponentCountAndSiz
             {
                 const sw::TypeInfo* pType = registry.findType( typeName );
                 SW_REQUIRE_TRUE_MSG( pType != nullptr, typeName.c_str() );
-                SW_EXPECT_TRUE_MSG( count > 0 && pType->_size == static_cast<size_t>( count ) * sizeof( sw::float32 ), typeName.c_str() );
+                SW_EXPECT_TRUE_MSG( count > 0 && pType->_size == static_cast<size_t>( count ) * sizeof( float32 ), typeName.c_str() );
                 break;
             }
             case sw::ReflectBuiltinLayout::Number:
@@ -324,19 +324,19 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, BuiltinLayoutGivesComponentCountAndSiz
                 break;
         }
     }
-    SW_EXPECT_EQUAL( static_cast<sw::uint8>( 2 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kint2 ) );
+    SW_EXPECT_EQUAL( static_cast<uint8>( 2 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kint2 ) );
     SW_EXPECT_TRUE( sw::ReflectBuiltinTraitTable::get( sw::ReflectBuiltinIndex::kint2 )._layout == sw::ReflectBuiltinLayout::Int32 );
-    SW_EXPECT_EQUAL( static_cast<sw::uint8>( 16 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kfloat4x4 ) );
-    SW_EXPECT_EQUAL( static_cast<sw::uint8>( 0 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kNone ) );
+    SW_EXPECT_EQUAL( static_cast<uint8>( 16 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kfloat4x4 ) );
+    SW_EXPECT_EQUAL( static_cast<uint8>( 0 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kNone ) );
 }
 
 namespace
 {
     // 래퍼 형식이 정하는 모양 — 표(`ReflectBuiltins.xxx` CONTAINER 줄)의 종류 · State · Fixed 와 생성 코드가 이 값으로 대조한다.
-    using VectorWrapperT = sw::VectorWrapper<sw::vector<sw::int32>>;
-    using SetWrapperT    = sw::SetWrapper<sw::set<sw::int32>>;
-    using ArrayWrapperT  = sw::ArrayWrapper<sw::int32[4]>;
-    using MapWrapperT    = sw::MapWrapper<sw::map<sw::int32, sw::int32>>;
+    using VectorWrapperT = sw::VectorWrapper<sw::vector<int32>>;
+    using SetWrapperT    = sw::SetWrapper<sw::set<int32>>;
+    using ArrayWrapperT  = sw::ArrayWrapper<int32[4]>;
+    using MapWrapperT    = sw::MapWrapper<sw::map<int32, int32>>;
     static_assert( sw::ContainerWrapperOf<VectorWrapperT>::matchesTable( sw::ContainerKind::Sequence, true, false ) );
     static_assert( sw::ContainerWrapperOf<SetWrapperT>::matchesTable( sw::ContainerKind::Sequence, false, false ) );
     static_assert( sw::ContainerWrapperOf<ArrayWrapperT>::matchesTable( sw::ContainerKind::Sequence, true, true ) );

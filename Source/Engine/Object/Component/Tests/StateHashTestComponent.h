@@ -50,7 +50,7 @@ namespace sw
         hashed_string _label{}; ///< 손 처리기 — 글자로 접는다
 
         PROPERTY( RuntimeState )
-        GameObjectHandle _target; ///< 손 처리기 — objectID 로 접는다
+        GameObjectHandle _targetObject; ///< 손 처리기 — objectID 로 접는다
 
         PROPERTY( RuntimeState )
         StateHashTestPart _part;

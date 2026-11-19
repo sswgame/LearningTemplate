@@ -264,10 +264,10 @@ SW_TEST_CASE( StateHashTest, LayoutAndHandHandlerPropertiesFold )
     GameObject*             pObject = manager.createGameObject( hashed_string( "StateHashProbe" ) );
     StateHashTestComponent* pProbe  = static_cast<StateHashTestComponent*>( manager.addComponentByName( pObject, hashed_string( "sw::StateHashTestComponent" ) ) );
     SW_REQUIRE_NOT_NULL( pProbe );
-    pProbe->_cell      = int2{ 3, -4 };
-    pProbe->_label     = hashed_string( "Gate" );
-    pProbe->_target    = GameObjectHandle::make( 9 );
-    const uint64 first = foldComponentState( *pProbe );
+    pProbe->_cell         = int2{ 3, -4 };
+    pProbe->_label        = hashed_string( "Gate" );
+    pProbe->_targetObject = GameObjectHandle::make( 9 );
+    const uint64 first    = foldComponentState( *pProbe );
     SW_EXPECT_EQUAL( foldComponentState( *pProbe ), first );
 
     pProbe->_cell = int2{ -4, 3 }; // 성분 순서가 해시에 든다
