@@ -12,6 +12,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/NetSendThrottleSettings.h"
+#include "Engine/Config/OcclusionCullingConfig.h"
 #include "Engine/Config/RenderScaleAdjusterConfig.h"
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Content/Pack/PackConfig.h"
@@ -145,6 +146,7 @@ namespace
             {                    "Config/Engine/MemoryBudget.json",                                                                                     "",                             &loadMemoryBudget},
             {                      "Config/Engine/PackConfig.json",                                                                                     "",                &loadBaseLayer<sw::PackConfig>},
             {                     "Config/Engine/RenderScale.json",                                                                                     "", &loadBaseLayer<sw::RenderScaleAdjusterConfig>},
+            {                "Config/Engine/OcclusionCulling.json",                                                                                     "",    &loadBaseLayer<sw::OcclusionCullingConfig>},
             {                 "Config/Engine/NetSendThrottle.json",                                                                                     "",   &loadBaseLayer<sw::NetSendThrottleSettings>},
             {                   "Config/Engine/RenderQuality.json",                                                                                     "",                            &loadRenderQuality},
             {                    "Config/Engine/CookContract.json",                                      "Scripts/generate/configure_files.py (configure)",                                       nullptr},
