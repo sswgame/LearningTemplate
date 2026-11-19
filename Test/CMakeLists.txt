@@ -351,6 +351,19 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR SW_ENABLE_SANITIZER)
 	set_tests_properties(ShaderCache.WarmFromRequestLog PROPERTIES LABELS nogpu TIMEOUT 300)
 endif()
 
+# 쿠킹본 실행 — 개발 구성의 `--cook-all` → `-cooked-content` 기동 → 셀 스트리밍 시나리오(`Pack/RunCookedContent.cmake`). 어떤 테스트도 이 길을 돌지 않아 낡았다
+# (상대 `--cooked-dir` 의 스테이징이 팩에서 빠졌다 — 감사 A-13). 배포 쿠킹(shipping-check)은 절대 경로 · 배포 구성이라 이 길을 지나지 않는다.
+# Release 하나 · 게임 하나(Empty) · 백엔드 하나(DX12 — Windows)다: 셰이더 굽기가 길어 구성 · 백엔드를 늘릴 일이 아니다. 시나리오가 그림을 그려 hostgpu 다.
+# 굽기는 CPU 를 다 써서 Release 의 CPU 무거운 항목(`SW_CPU_HEAVY_TEST`)이다 — 시간 판정이 있는 시나리오는 이것 뒤에 돈다.
+if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT SW_ENABLE_SANITIZER AND WIN32)
+	add_test(NAME Pack.CookedContent
+		COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DBIN_DIR=${CMAKE_BINARY_DIR}/Bin" "-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs" -DSKIP_CODE=${SW_EXIT_CODE_Skipped}
+			-P "${CMAKE_CURRENT_SOURCE_DIR}/Pack/RunCookedContent.cmake"
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(Pack.CookedContent PROPERTIES LABELS hostgpu TIMEOUT 3600 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
+	set(SW_CPU_HEAVY_TEST Pack.CookedContent)
+endif()
+
 # 리플렉션 파서 — Engine 을 링크하지 못해 단위 테스트 틀에 들어가지 못한다. 사례 헤더 하나마다 실제 실행 파일을 돌려 산출물 · 오류를 대조한다(`ReflectionParser/RunParserFixture.cmake`, 왜 이 모양인지 거기 적었다).
 if(TARGET ReflectionParser)
 	# 빌드와 같은 대상 인자(`--target-arg`)를 넘긴다 — 파서는 대상 매크로를 추측하지 않는다(교차 빌드). 목록 구분자 ';' 는 -D 에서 갈라지므로 '|' 로 잇는다.

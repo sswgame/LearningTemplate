@@ -927,6 +927,8 @@ AsyncReadHandle    readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offs
 
 근본 원인은 "팩 하나를 한 벡터로 다룬다" 이다. 같은 모양 후보는 DDC 저장(`DerivedDataCache::store` 가 출력 통째)과 `PackPatchBuilder` 의 앞 빌드 팩 읽기다 — PK-3 작업자가 통째 읽는 자리를 세어 보고에 적는다.
 
+쿠킹본 실행(감사 A-13, 2026-11-19 판단): 개발 `--cook-all` 과 배포 CookAssets 는 이미 한 쿠킹 순서(셰이더 · 번역 표 굽기 → 팩)였고, 개발에서 팩에 셰이더 · `.locres` 가 빠진 것은 상대 `--cooked-dir=../Cooked` 의 `..` 가 명령줄에서 풀리지 않아 포함 판정(`tryMakePathUnderRoot`)이 스테이징을 모두 밖으로 보고 조용히 넘긴 탓이다 — 언리얼 `FPaths::ConvertRelativePathToFull` 처럼 받는 자리(`AbsolutePath::tryResolve`)에서 `.` · `..` 를 풀고, 팩 목록의 넘김은 오류로 바꿨다. 이 길은 `Pack.CookedContent`(Release · Empty · DX12)가 묶음마다 돈다.
+
 ### 출하 할당기와 컨테이너 복잡도(설계 2026-11-17, 감사 C-6 · C-9 · 다음 할 일 20)
 
 감사의 순서대로 **벤치가 먼저**다. 벤치 숫자가 문턱을 넘은 것만 고치고, 넘지 않으면 값을 S8 에 적고 닫는다.
