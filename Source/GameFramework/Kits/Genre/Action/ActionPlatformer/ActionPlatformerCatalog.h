@@ -193,7 +193,7 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Required )
-        hashed_string                 _start{}; ///< 상태 목록에 있는 id 여야 한다
+        hashed_string                 _start{}; ///< 상태 목록에 있는 id 여야 한다(참조 표가 본다)
         vector<ActionPatternStateDef> _listState{};
 
         /** @brief 상태 인덱스를 반환합니다. 없으면 −1 입니다. */
@@ -212,6 +212,7 @@ namespace sw
      *        <Pattern id="gunner" start="patrol"><State id="patrol" frames="90" next="aim" onNear="aim" near="5" moveX="1"/>
      *        <State id="aim" frames="20" next="shoot"/><State id="shoot" frames="1" next="patrol" fire="true" fireSpeed="9"/></Pattern></ActionPlatformer>`
      * @details `<Grading>` 과 등급 하나 이상, 몸의 움직임 규칙 `<Motor runSpeed="7" .../>`(모든 칸 필수, 감사 K-4)는 반드시 적는다(없으면 읽기 실패다). 스키마를 어긴 원소는 넣지 않고 오류로 남긴다.
+     *          패턴의 시작 · 이어지는 상태 이름은 참조 표(`datacatalogreferences.xml` 의 `ActionPlatformer` 줄 — 같은 패턴 안)가 보고, 틀리면 읽기와 쿠킹이 실패한다.
      */
     class SW_KIT_API ActionPlatformerCatalog : public XMLCatalog<ActionPlatformerCatalog>
     {

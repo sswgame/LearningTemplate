@@ -148,11 +148,6 @@ namespace sw
             SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternIdNoState", "%#: <Pattern id=\"%#\"> has no <State>", sourceName, pattern._id.c_str() );
             bValid = false;
         }
-        if ( pattern._start.empty() == false && pattern.findStateIndex( pattern._start ).has_value() == false )
-        {
-            SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternIdStartsUnknown", "%#: <Pattern id=\"%#\"> starts at an unknown state '%#'", sourceName, pattern._id.c_str(), pattern._start.c_str() );
-            bValid = false;
-        }
         // 같은 id 의 상태는 뒤의 것에 영영 가지 못한다.
         vector<hashed_string> listStateID;
         for ( const ActionPatternStateDef& state : pattern._listState )
@@ -165,19 +160,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternDuplicateState", "%#: <Pattern id=\"%#\"> has two states named '%#'", sourceName, pattern._id.c_str(), pDuplicateState->c_str() );
             bValid = false;
         }
-        // 이어지는 상태 이름이 틀리면 그 패턴을 넣지 않는다(테스트와 에디터가 바로 볼 수 있다).
-        for ( const ActionPatternStateDef& state : pattern._listState )
-        {
-            const hashed_string arrTarget[] = { state._next, state._onNear, state._onHit };
-            for ( const hashed_string& target : arrTarget )
-            {
-                if ( target.empty() == false && pattern.findStateIndex( target ).has_value() == false )
-                {
-                    SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternStateGoesUnknown", "%#: pattern '%#' state '%#' goes to an unknown state '%#'", sourceName, pattern._id.c_str(), state._id.c_str(), target.c_str() );
-                    bValid = false;
-                }
-            }
-        }
+        // 시작 · 이어지는 상태 이름은 참조 표(`datacatalogreferences.xml` 의 `ActionPlatformer` — 같은 패턴 안, inEntry)가 본다. 틀리면 카탈로그 읽기와 쿠킹이 실패한다.
         if ( bValid == false )
             return false;
         (void)_patternCatalog.add( pattern );
