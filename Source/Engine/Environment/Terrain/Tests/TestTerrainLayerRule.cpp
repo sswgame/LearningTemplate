@@ -50,7 +50,7 @@ SW_TEST_CASE( TerrainLayerRuleTest, CoverageMultipliesStrengthAndBands )
     TerrainLayerRule snow{};
     snow._strength      = 0.5f;
     snow._slopeRange    = float2{ 0.0f * kDeg, 40.0f * kDeg };
-    snow._slopeFade     = 10.0f * kDeg;
+    snow._slopeFade     = Radians::fromRadians( 10.0f * kDeg );
     snow._altitudeRange = float2{ 20.0f, 100000.0f };
     snow._altitudeFade  = 4.0f;
     SW_EXPECT_TRUE( snow.isActive() );

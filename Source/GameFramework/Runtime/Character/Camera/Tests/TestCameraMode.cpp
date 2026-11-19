@@ -94,8 +94,8 @@ SW_TEST_CASE( CameraModeTest, GroupTargetWrapsAllPoints )
 SW_TEST_CASE( CameraModeTest, OrbitStandsBackAlongItsViewAndLooksAtTheFocus )
 {
     CameraPresetDef def = CameraModeTestUtil::makePreset( CameraPresetMode::Orbit );
-    def._view._yaw      = 0.5f;
-    def._view._pitch    = 0.4f;
+    def._view._yaw      = Radians::fromRadians( 0.5f );
+    def._view._pitch    = Radians::fromRadians( 0.4f );
     const float3     focus{ 1.0f, 2.0f, 3.0f };
     const CameraPose pose    = evaluatePreset( def, CameraModeTestUtil::makeTarget( focus ) );
     const float3     forward = CameraModeTestUtil::computeForward( pose );
@@ -125,10 +125,10 @@ SW_TEST_CASE( CameraModeTest, LookInputNeedsTheHeldButtonWhenThePresetAsks )
 SW_TEST_CASE( CameraModeTest, LookPitchStopsAtTheConfinerWithoutPilingUp )
 {
     CameraPresetDef def         = CameraModeTestUtil::makePreset( CameraPresetMode::Orbit );
-    def._view._pitch            = 0.2f;
+    def._view._pitch            = Radians::fromRadians( 0.2f );
     def._input._lookSensitivity = 0.01f;
-    def._confiner._pitchMin     = -0.5f;
-    def._confiner._pitchMax     = 0.5f;
+    def._confiner._pitchMin     = Radians::fromRadians( -0.5f );
+    def._confiner._pitchMax     = Radians::fromRadians( 0.5f );
     CameraModeState state;
     CameraModeInput input;
     input._lookDelta = float2{ 0.0f, 1000.0f };
@@ -179,7 +179,7 @@ SW_TEST_CASE( CameraModeTest, PanFollowsTheShownYawAndTheOrthoZoom )
 {
     CameraPresetDef def  = CameraModeTestUtil::makePreset( CameraPresetMode::Orbit );
     def._input._panSpeed = 2.0f;
-    def._view._yaw       = MathUtil::kHalfPi; // +X 를 본다
+    def._view._yaw       = Radians::fromRadians( MathUtil::kHalfPi ); // +X 를 본다
     CameraModeState state;
     CameraModeInput input;
     input._pan = float2{ 1.0f, 0.0f };
@@ -211,7 +211,7 @@ SW_TEST_CASE( CameraModeTest, PanFollowsTheShownYawAndTheOrthoZoom )
 SW_TEST_CASE( CameraModeTest, RotateStepIsShownOverTime )
 {
     CameraPresetDef def    = CameraModeTestUtil::makePreset( CameraPresetMode::Orbit );
-    def._input._rotateStep = 1.0f;
+    def._input._rotateStep = Radians::fromRadians( 1.0f );
     def._input._rotateTime = 0.1f;
     CameraModeState state;
     CameraModeInput input;
@@ -277,7 +277,7 @@ SW_TEST_CASE( CameraModeTest, GroupFitBacksOffButNeverCloses )
     SW_EXPECT_NEAR( evaluatePreset( def, target )._position.getLength(), 10.0f, CameraModeTestUtil::kNear );
 
     target._groupRadius  = 20.0f;
-    const float32 fitted = 20.0f / MathUtil::sin( def._lens._fieldOfViewY * 0.5f );
+    const float32 fitted = 20.0f / MathUtil::sin( def._lens._fieldOfViewY.radians() * 0.5f );
     SW_EXPECT_NEAR( evaluatePreset( def, target )._position.getLength(), fitted, 0.01f );
 
     def._lens._orthoHeight = 10.0f;
@@ -303,7 +303,7 @@ SW_TEST_CASE( CameraModeTest, FixedCameraAimsByItsAimMode )
 {
     CameraPresetDef def       = CameraModeTestUtil::makePreset( CameraPresetMode::Fixed );
     def._view._offset         = float3{ 0.0f, 5.0f, 0.0f };
-    def._view._yaw            = 1.0f;
+    def._view._yaw            = Radians::fromRadians( 1.0f );
     const CameraTarget target = CameraModeTestUtil::makeTarget( float3{ 0.0f, 5.0f, 10.0f } );
 
     def._view._aim    = CameraAimMode::Angles;
@@ -402,7 +402,7 @@ SW_TEST_CASE( CameraModeTest, DollyWithoutARailStandsAtItsOffset )
 SW_TEST_CASE( CameraModeTest, SweepSwingsOverItsPeriod )
 {
     CameraPresetDef def      = CameraModeTestUtil::makePreset( CameraPresetMode::Fixed );
-    def._sweep._yawAmplitude = 0.5f;
+    def._sweep._yawAmplitude = Radians::fromRadians( 0.5f );
     def._sweep._period       = 4.0f;
     CameraModeState state;
     const float3    quarter = CameraModeTestUtil::computeForward( evaluateCameraMode( def, CameraTarget{}, 1.0f, state, nullptr ) ); // 주기의 1/4
@@ -427,7 +427,7 @@ SW_TEST_CASE( CameraModeTest, FramingHoldsInTheDeadZoneAndNeverLeavesTheSoftZone
     SW_EXPECT_TRUE( state._bAimValid == SW_TRUE );
     SW_EXPECT_NEAR( state._aimYaw, 0.0f, CameraModeTestUtil::kNear ); // 첫 평가는 곧바로 맞춘다
 
-    const float32 tanHalf = MathUtil::tan( def._lens._fieldOfViewY * 0.5f );
+    const float32 tanHalf = MathUtil::tan( def._lens._fieldOfViewY.radians() * 0.5f );
     target._focus         = float3{ 10.0f * 0.1f * tanHalf, 0.0f, 10.0f }; // 데드존 안
     (void)evaluateCameraMode( def, target, 0.016f, state, nullptr );
     SW_EXPECT_NEAR( state._aimYaw, 0.0f, CameraModeTestUtil::kNear );
@@ -506,7 +506,7 @@ SW_TEST_CASE( CameraModeTest, LensValuesReachThePose )
     def._lens._focusDistance = 7.0f;
     def._lens._aperture      = 2.8f;
     def._lens._lensShift     = float2{ 0.1f, 0.2f };
-    def._lens._dutch         = MathUtil::kHalfPi;
+    def._lens._dutch         = Radians::fromRadians( MathUtil::kHalfPi );
     const CameraPose pose    = evaluatePreset( def, CameraTarget{} );
     SW_EXPECT_NEAR( pose._fieldOfViewY, 2.0f * MathUtil::atan2( 12.0f, 24.0f ), CameraModeTestUtil::kNear );
     SW_EXPECT_EQUAL( pose._depthOfField._focusDistance, 7.0f );

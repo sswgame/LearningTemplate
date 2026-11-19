@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
@@ -101,8 +102,8 @@ namespace sw
         void recordTilt( float32 roll, float32 pitch, float32 deltaTime );
 
     private:
-        PROPERTY( Category = "Rudder", DisplayName = "Max Rudder Angle", Min = 0.0, Max = 1.5, Units = rad, Tooltip = "Rudder angle at full helm" )
-        float32 _maxRudderAngle;
+        PROPERTY( Category = "Rudder", DisplayName = "Max Rudder Angle", Min = 0.0, Max = 85.9, Tooltip = "Rudder angle at full helm" )
+        Radians _maxRudderAngle;
         PROPERTY( Category = "Rudder", DisplayName = "Rudder Force", Min = 0.0, Meta = "Units=N*s/m", Tooltip = "Side force at the rudder per m/s of forward speed through the water at a 90 degree rudder" )
         float32 _rudderForce;
         PROPERTY( Category = "Rudder", DisplayName = "Rudder Position", Units = m, Tooltip = "Where the rudder pushes, body local (the stern: negative z)" )

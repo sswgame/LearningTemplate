@@ -7,6 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -84,14 +85,14 @@ namespace sw
         MeshComponent* findViewModel() const;
 
     private:
-        PROPERTY( Category = "Look", DisplayName = "Yaw", Tooltip = "Starting yaw from +Z towards +X", Units = rad )
-        float32 _yaw;
-        PROPERTY( Category = "Look", DisplayName = "Pitch", Tooltip = "Starting pitch, up is positive", Units = rad )
-        float32 _pitch;
-        PROPERTY( Category = "Look", DisplayName = "Max Pitch", Tooltip = "Pitch limit up and down (keep it equal to the pawn's Max Pitch)", Min = 0.0, Max = 1.5707963, Units = rad )
-        float32 _maxPitch;
-        PROPERTY( Category = "Lens", DisplayName = "Field Of View", Tooltip = "Vertical field of view", Min = 0.1, Max = 3.0, Units = rad )
-        float32 _fieldOfViewY;
+        PROPERTY( Category = "Look", DisplayName = "Yaw", Tooltip = "Starting yaw from +Z towards +X" )
+        Radians _yaw;
+        PROPERTY( Category = "Look", DisplayName = "Pitch", Tooltip = "Starting pitch, up is positive" )
+        Radians _pitch;
+        PROPERTY( Category = "Look", DisplayName = "Max Pitch", Tooltip = "Pitch limit up and down (keep it equal to the pawn's Max Pitch)", Min = 0.0, Max = 90.0 )
+        Radians _maxPitch;
+        PROPERTY( Category = "Lens", DisplayName = "Field Of View", Tooltip = "Vertical field of view", Min = 5.7, Max = 171.9 )
+        Radians _fieldOfViewY;
         PROPERTY( Category = "Lens", DisplayName = "Near Plane", Min = 0.001, Units = m )
         float32 _nearPlane;
         PROPERTY( Category = "Lens", DisplayName = "Far Plane", Min = 0.01, Units = m )
@@ -100,8 +101,8 @@ namespace sw
         hashed_string _viewModelName;
         PROPERTY( Category = "View Model", DisplayName = "Offset", Tooltip = "Right, up and forward of the eye", Units = m )
         float3 _viewModelOffset;
-        PROPERTY( Category = "View Model", DisplayName = "Yaw Offset", Tooltip = "Turns the model so its front faces the view (pi when the muzzle is -Z)", Units = rad )
-        float32 _viewModelYawOffset;
+        PROPERTY( Category = "View Model", DisplayName = "Yaw Offset", Tooltip = "Turns the model so its front faces the view (180 when the muzzle is -Z)" )
+        Radians _viewModelYawOffset;
         PROPERTY( Category = "Head Bob", DisplayName = "Head Bob", Tooltip = "Walking bob of the view; zero amplitude turns it off" )
         CameraHeadBobDef _headBob;
 

@@ -39,56 +39,56 @@
 			<_listShape>
 				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.386,0.648,0.274" _localPosition="-0.035,0.414,-0.029" />
 			</_listShape>
-			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="28.64789" _swingLimitPlane="28.64789" _twistMin="-11.459156" _twistMax="11.459156" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="Leg2.L" _mass="1.97" _material="Metal">
 			<_listShape>
 				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.163,0.56,0.23" _localPosition="0,0.376,0.048" />
 			</_listShape>
-			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="28.64789" _swingLimitPlane="28.64789" _twistMin="-11.459156" _twistMax="11.459156" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="Leg3.L" _mass="2.29" _material="Metal">
 			<_listShape>
 				<PhysicsShapeDesc3D _type="Capsule" _radius="0.267" _halfHeight="0.256" _localPosition="0,0.404,0.002" />
 			</_listShape>
-			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="28.64789" _swingLimitPlane="28.64789" _twistMin="-11.459156" _twistMax="11.459156" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="Leg4.L" _mass="2.51" _material="Metal">
 			<_listShape>
 				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.267,0.303,0.33" _localPosition="0,0.184,-0.211" />
 			</_listShape>
-			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="28.64789" _swingLimitPlane="28.64789" _twistMin="-11.459156" _twistMax="11.459156" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="Leg1.R" _mass="6.46" _material="Metal">
 			<_listShape>
 				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.386,0.648,0.274" _localPosition="0.035,0.414,-0.029" />
 			</_listShape>
-			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="28.64789" _swingLimitPlane="28.64789" _twistMin="-11.459156" _twistMax="11.459156" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="Leg2.R" _mass="1.97" _material="Metal">
 			<_listShape>
 				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.163,0.56,0.23" _localPosition="0,0.376,0.048" />
 			</_listShape>
-			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="28.64789" _swingLimitPlane="28.64789" _twistMin="-11.459156" _twistMax="11.459156" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="Leg3.R" _mass="2.29" _material="Metal">
 			<_listShape>
 				<PhysicsShapeDesc3D _type="Capsule" _radius="0.267" _halfHeight="0.256" _localPosition="0,0.404,0.002" />
 			</_listShape>
-			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="28.64789" _swingLimitPlane="28.64789" _twistMin="-11.459156" _twistMax="11.459156" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="Leg4.R" _mass="2.51" _material="Metal">
 			<_listShape>
 				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.267,0.303,0.33" _localPosition="0,0.184,-0.211" />
 			</_listShape>
-			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="28.64789" _swingLimitPlane="28.64789" _twistMin="-11.459156" _twistMax="11.459156" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 	</_listBody>

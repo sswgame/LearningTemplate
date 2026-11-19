@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
@@ -116,10 +117,10 @@ namespace sw
         float32 _reachDistance;
         PROPERTY( Category = "Player", DisplayName = "Place Interval", Tooltip = "Seconds between placements while the button is held", Min = 0.0, Units = s )
         float32 _placeInterval;
-        PROPERTY( Category = "Player", DisplayName = "Start Yaw", Units = rad )
-        float32 _startYaw;
-        PROPERTY( Category = "Player", DisplayName = "Start Pitch", Units = rad )
-        float32 _startPitch;
+        PROPERTY( Category = "Player", DisplayName = "Start Yaw" )
+        Radians _startYaw;
+        PROPERTY( Category = "Player", DisplayName = "Start Pitch" )
+        Radians _startPitch;
         // ---- 폰 의도 이름입니다. 같은 오브젝트의 PawnComponent 스키마(_listButton, _listAnalog)에 있어야 합니다 ----
         PROPERTY( Category = "Intent", DisplayName = "Jump Button" )
         hashed_string _jumpButton;

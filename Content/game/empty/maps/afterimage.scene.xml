@@ -9,7 +9,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="1.5,1.6,-6" _localRotation="0.12,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.8" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localPosition="1.5,1.6,-6" _localRotation="0.12,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="45.836624" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>

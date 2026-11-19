@@ -145,8 +145,8 @@ namespace sw
     VoxelPlayerComponent::VoxelPlayerComponent()
         : _reachDistance{ 6.0f }
         , _placeInterval{ 0.25f }
-        , _startYaw{ 0.6f }
-        , _startPitch{ -0.2f }
+        , _startYaw{ Radians::fromRadians( 0.6f ) }
+        , _startPitch{ Radians::fromRadians( -0.2f ) }
         , _jumpButton{}
         , _sprintButton{}
         , _breakButton{}
@@ -212,7 +212,7 @@ namespace sw
                 pPawn->setAutoPossess( PawnAutoPossess::None );
         }
         if ( pCamera != nullptr )
-            pCamera->setAngles( _startYaw, _startPitch );
+            pCamera->setAngles( _startYaw.radians(), _startPitch.radians() );
         if ( pGameMode != nullptr && pGameMode->isStarted() )
             initializeBody( *pGameMode );
         if ( _pendingStateBytes.empty() == false )

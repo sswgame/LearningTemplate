@@ -18,7 +18,7 @@ namespace sw
         : PhysicsComponent{ PhysicsComponentPhase::Character }
         , _radius{ 0.3f }
         , _halfHeight{ 0.4f }
-        , _maxSlopeAngle{ MathUtil::kHalfPi * 0.5f }
+        , _maxSlopeAngle{ Radians::fromRadians( MathUtil::kHalfPi * 0.5f ) }
         , _gravityScale{ 1.0f }
         , _layer{ "Character" }
         , _character{}
@@ -80,7 +80,7 @@ namespace sw
 
     void CharacterController2DComponent::setMaxSlopeAngle( float32 angle )
     {
-        _maxSlopeAngle = angle;
+        _maxSlopeAngle = Radians::fromRadians( angle );
         requestRebuild();
     }
 
@@ -137,7 +137,7 @@ namespace sw
             desc._userData      = getOwner()->getObjectID();
             desc._radius        = capsule._radius;
             desc._halfHeight    = capsule._halfHeight;
-            desc._maxSlopeAngle = _maxSlopeAngle;
+            desc._maxSlopeAngle = _maxSlopeAngle.radians();
             desc._layer         = physics.resolveLayer( _layer );
             _character          = pScene->createCharacter( desc );
             markShapeScale( _worldScale );

@@ -14,6 +14,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetRef.h"
@@ -157,8 +158,8 @@ namespace sw
         float32 _modelScale;
         PROPERTY( Category = "Ride Camera", DisplayName = "Eye Height", Min = 0.0, Units = m )
         float32 _rideEyeHeight;
-        PROPERTY( Category = "Ride Camera", DisplayName = "Field Of View", Min = 0.1, Units = rad )
-        float32 _rideFieldOfView;
+        PROPERTY( Category = "Ride Camera", DisplayName = "Field Of View", Min = 5.7 )
+        Radians _rideFieldOfView;
         PROPERTY( Category = "Ride Camera", DisplayName = "Far Plane", Min = 1.0, Units = m )
         float32 _rideFarPlane;
         PROPERTY( Category = "Coaster", DisplayName = "Rail Spacing", Tooltip = "Distance between rail pieces along the track", Min = 0.1, Units = m )

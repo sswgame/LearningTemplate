@@ -7,6 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
@@ -52,8 +53,8 @@ namespace sw
         float32 _smoothingTime{ 0.12f };
         PROPERTY( Min = 0.0, Tooltip = "Rider lean per m/s2 of seat acceleration (rad per m/s2); the rider leans against the acceleration" )
         float32 _leanPerAcceleration{ 0.025f };
-        PROPERTY( Min = 0.0, Units = rad, Tooltip = "Largest rider lean" )
-        float32 _maxLean{ 0.35f };
+        PROPERTY( Min = 0.0, Tooltip = "Largest rider lean" )
+        Radians _maxLean{ Radians::fromRadians( 0.35f ) };
         PROPERTY( Tooltip = "Animator float on the rider set to the forward lean (-1 back .. 1 forward); empty = none" )
         hashed_string _leanForwardParameter;
         PROPERTY( Tooltip = "Animator float on the rider set to the side lean (-1 left .. 1 right); empty = none" )

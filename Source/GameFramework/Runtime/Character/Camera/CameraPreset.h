@@ -15,6 +15,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -91,10 +92,10 @@ namespace sw
         float3 _offset{};
         PROPERTY( Tooltip = "World point a Fixed camera looks at when Aim is Point", Units = m )
         float3 _lookAt{};
-        PROPERTY( Tooltip = "Downward viewing angle", Units = rad )
-        float32 _pitch{ 0.0f };
-        PROPERTY( Tooltip = "Angle from +Z towards +X (Follow / FirstPerson / ThirdPerson: added to the target's yaw)", Units = rad )
-        float32 _yaw{ 0.0f };
+        PROPERTY( Tooltip = "Downward viewing angle" )
+        Radians _pitch{};
+        PROPERTY( Tooltip = "Angle from +Z towards +X (Follow / FirstPerson / ThirdPerson: added to the target's yaw)" )
+        Radians _yaw{};
         PROPERTY( Min = 0.0, Tooltip = "Distance from the pivot to the camera", Units = m )
         float32 _distance{ 10.0f };
         PROPERTY()
@@ -118,8 +119,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Min = 0.1, Max = 3.14, Tooltip = "Vertical field of view", Units = rad )
-        float32 _fieldOfViewY{ 0.70f };
+        PROPERTY( Min = 5.7, Max = 179.9, Tooltip = "Vertical field of view" )
+        Radians _fieldOfViewY{ Radians::fromRadians( 0.70f ) };
         PROPERTY( Min = 0.1, Tooltip = "Visible height of the orthographic view", Units = m )
         float32 _orthoHeight{ 10.0f };
         PROPERTY( Min = 0.01, Units = m )
@@ -138,8 +139,8 @@ namespace sw
         float32 _aperture{ 0.0f };
         PROPERTY( Tooltip = "Projection centre shift as a fraction of the screen (shift lens); +x moves the view right, +y up" )
         float2 _lensShift{};
-        PROPERTY( Tooltip = "Roll of the view (Dutch angle)", Units = rad )
-        float32 _dutch{ 0.0f };
+        PROPERTY( Tooltip = "Roll of the view (Dutch angle)" )
+        Radians _dutch{};
 
         /** @brief 초점 길이가 있으면 센서 높이로 구한 수직 시야각, 없으면 `_fieldOfViewY` 입니다. */
         float32 computeFieldOfViewY() const;
@@ -182,8 +183,8 @@ namespace sw
         float32 _zoomStep{ 0.0f };
         PROPERTY( Min = 0.0, Tooltip = "Focus pan speed with WASD / arrows; 0 ignores them", Units = "m/s" )
         float32 _panSpeed{ 0.0f };
-        PROPERTY( Tooltip = "Yaw change per Q/E press; 0 ignores them", Units = rad )
-        float32 _rotateStep{ 0.0f };
+        PROPERTY( Tooltip = "Yaw change per Q/E press; 0 ignores them" )
+        Radians _rotateStep{};
         PROPERTY( Min = 0.0, Tooltip = "Time constant the shown yaw follows a Q/E step with", Units = s )
         float32 _rotateTime{ 0.15f };
         PROPERTY( Tooltip = "Mouse turns the view only while the right button is held (orbit drag)" )
@@ -202,10 +203,10 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Lowest pitch (up is negative)", Units = rad )
-        float32 _pitchMin{ -MathUtil::kHalfPi };
-        PROPERTY( Tooltip = "Highest pitch (down is positive)", Units = rad )
-        float32 _pitchMax{ MathUtil::kHalfPi };
+        PROPERTY( Tooltip = "Lowest pitch (up is negative)" )
+        Radians _pitchMin{ Radians::fromRadians( -MathUtil::kHalfPi ) };
+        PROPERTY( Tooltip = "Highest pitch (down is positive)" )
+        Radians _pitchMax{ Radians::fromRadians( MathUtil::kHalfPi ) };
         PROPERTY( Min = 0.0, Tooltip = "Closest distance / smallest ortho height; 0 has no limit", Units = m )
         float32 _zoomMin{ 0.0f };
         PROPERTY( Min = 0.0, Tooltip = "Farthest distance / largest ortho height; 0 has no limit", Units = m )
@@ -340,8 +341,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Min = 0.0, Tooltip = "Half the sweep angle", Units = rad )
-        float32 _yawAmplitude{ 0.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Half the sweep angle" )
+        Radians _yawAmplitude{};
         PROPERTY( Min = 0.01, Tooltip = "Time of one full sweep there and back", Units = s )
         float32 _period{ 8.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Start phase as a fraction of the period" )

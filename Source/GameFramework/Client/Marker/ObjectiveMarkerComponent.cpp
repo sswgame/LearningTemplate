@@ -69,7 +69,7 @@ namespace sw
         Widget& arrow = *pPanel->getChild( Internal::kArrowIndex );
         arrow.setVisibility( placement._bClamped == SW_TRUE ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Hidden );
         WidgetRenderTransform transform = arrow.getRenderTransform();
-        transform._angle                = placement._edgeAngle;
+        transform._angle                = Radians::fromRadians( placement._edgeAngle );
         transform._pivot                = float2{ 0.5f, 0.5f };
         arrow.setRenderTransform( transform );
         // 거리 — 1 m 단위가 바뀔 때만 글을 쓴다(글 배치는 비싸다).

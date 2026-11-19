@@ -84,7 +84,7 @@
 					<BuoyancyPontoon _localPosition="-0.7,-0.1,-2.2" _radius="0.45" />
 				</_listPontoon>
 			</BuoyancyComponent>
-			<BoatComponent _maxRudderAngle="0.6"
+			<BoatComponent _maxRudderAngle="34.37747"
 			               _rudderForce="150"
 			               _rudderPosition="0,-0.3,-2.8"
 			               _engineThrust="0"
@@ -100,7 +100,7 @@
 					</_listKey>
 				</_sailEfficiency>
 			</BoatComponent>
-			<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+			<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
 				<_listButton>
 					<item>Interact</item>
 				</_listButton>

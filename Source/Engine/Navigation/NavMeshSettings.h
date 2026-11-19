@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
@@ -31,7 +32,7 @@ namespace sw
     /**
      * @brief 에이전트 종류 하나입니다. 이 몸이 걸을 내비메시를 베이크하는 값입니다.
      * @code
-     *     <NavAgentTypeDef _name="Humanoid" _radius="0.4" _height="1.9" _maxClimb="0.45" _maxSlope="0.785398" _cellSize="0.2" _cellHeight="0.1" _tileSize="48" />
+     *     <NavAgentTypeDef _name="Humanoid" _radius="0.4" _height="1.9" _maxClimb="0.45" _maxSlope="44.999991" _cellSize="0.2" _cellHeight="0.1" _tileSize="48" />
      * @endcode
      */
     REFLECT()
@@ -47,8 +48,8 @@ namespace sw
         float32 _height{ 2.0f };
         PROPERTY( Min = 0.0, Tooltip = "Highest step the body walks up", Units = m )
         float32 _maxClimb{ 0.4f };
-        PROPERTY( Min = 0.0, Max = 1.553343, Tooltip = "Steepest walkable slope", Units = rad )
-        float32 _maxSlope{ MathUtil::kHalfPi * 0.5f };
+        PROPERTY( Min = 0.0, Max = 89.0, Tooltip = "Steepest walkable slope" )
+        Radians _maxSlope{ Radians::fromRadians( MathUtil::kHalfPi * 0.5f ) };
         PROPERTY( Min = 0.01, Tooltip = "Voxel size on XZ (smaller is more exact and slower to bake)", Units = m )
         float32 _cellSize{ 0.2f };
         PROPERTY( Min = 0.01, Tooltip = "Voxel size on Y", Units = m )

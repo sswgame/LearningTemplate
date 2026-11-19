@@ -231,9 +231,9 @@ namespace sw
     TurretComponent::TurretComponent()
         : _targetTags{}
         , _range{ 15.0f }
-        , _viewAngle{ 0.0f }
+        , _viewAngle{}
         , _turnSpeed{ MathUtil::kPi }
-        , _aimTolerance{ 5.0f * MathUtil::kDegreeToRadian }
+        , _aimTolerance{ Radians::fromDegrees( 5.0f ) }
         , _fireInterval{ 0.5f }
         , _damage{ 10.0f }
         , _projectileSpeed{ 0.0f }
@@ -351,7 +351,7 @@ namespace sw
             candidate._position    = pOther->getWorldPosition();
             candidate._objectID    = pObject->getObjectID();
             candidate._maxDistance = _range;
-            candidate._maxAngle    = _viewAngle;
+            candidate._maxAngle    = _viewAngle.radians();
             listCandidate.push_back( candidate );
         }
         const WorldLineOfSightQuery lineOfSight{ *pManager };
@@ -380,7 +380,7 @@ namespace sw
         rotation._y += MathUtil::clamp( delta, -maxTurn, maxTurn );
         pScene->setLocalRotation( rotation );
 
-        const bool bAimed = MathUtil::abs( delta ) <= _aimTolerance + maxTurn;
+        const bool bAimed = MathUtil::abs( delta ) <= _aimTolerance.radians() + maxTurn;
         if ( bAimed == false || bCanHit == false || _cooldownSteps > 0 )
             return;
         _cooldownSteps            = GenreGimmickUtil::toSteps( _fireInterval, 1 );

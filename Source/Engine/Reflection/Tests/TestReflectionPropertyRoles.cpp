@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -237,6 +238,21 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, InterpBlendsNumbersVectorsAndRotations
     sw::vector<const sw::PropertyInfo*> listInterp;
     sw::PropertyRoleUtil::collectInterpProperties( *pType, listInterp );
     SW_EXPECT_EQUAL( static_cast<size_t>( 4 ), listInterp.size() );
+}
+
+/**
+ * @brief [ReflectionPropertyRoleTest] 각(`Radians`) 칸도 섞는다 — 라디안 값을 감지 않고 직선으로 잇는다(float32 각 칸이던 때와 같은 값)
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, InterpBlendsRadians )
+{
+    const sw::PropertyInfo angleProp( sw::hashed_string( "_angle" ), sw::hashed_string( "Radians" ), 0 ); // 오프셋 0 — 인스턴스 주소가 곧 값 주소다
+    SW_EXPECT_TRUE( sw::PropertyRoleUtil::isInterpolatable( angleProp ) );
+
+    const sw::Radians from = sw::Radians::fromDegrees( 40.0f );
+    const sw::Radians to   = sw::Radians::fromDegrees( 80.0f );
+    sw::Radians       out{};
+    SW_REQUIRE_TRUE( sw::PropertyRoleUtil::applyInterpolated( angleProp, sw::MutableObjectAddress{ &out }, sw::ValueAddress{ &from }, sw::ValueAddress{ &to }, 0.5f ) );
+    SW_EXPECT_NEAR( sw::Radians::fromDegrees( 60.0f ).radians(), out.radians(), 1e-6f );
 }
 
 /**

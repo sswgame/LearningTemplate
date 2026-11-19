@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Asset/AssetRef.h"
@@ -77,11 +78,10 @@ namespace sw
         float32 _outerRadius;
         PROPERTY( Category = "Light", DisplayName = "Falloff Exponent", Min = 0.01, Tooltip = "1 fades linearly, larger values fade faster near the edge" )
         float32 _falloffExponent;
-        PROPERTY( Category = "Light", DisplayName = "Inner Angle", Min = 0.0, Max = 6.2831853, Tooltip = "Full intensity inside this cone angle", Units = rad )
-        float32 _innerAngle;
-        PROPERTY( Category = "Light", DisplayName = "Outer Angle", Min = 0.0, Max = 6.2831853, Tooltip = "Cone angle where the light reaches zero; a full turn is a point light",
-                  Units = rad )
-        float32 _outerAngle;
+        PROPERTY( Category = "Light", DisplayName = "Inner Angle", Min = 0.0, Max = 360.0, Tooltip = "Full intensity inside this cone angle" )
+        Radians _innerAngle;
+        PROPERTY( Category = "Light", DisplayName = "Outer Angle", Min = 0.0, Max = 360.0, Tooltip = "Cone angle where the light reaches zero; a full turn is a point light" )
+        Radians _outerAngle;
         PROPERTY( Category = "Light", DisplayName = "Normal Map Height", Min = 0.0, Tooltip = "How far in front of the sprite plane the light sits for normal maps",
                   Units = m )
         float32 _normalMapHeight;

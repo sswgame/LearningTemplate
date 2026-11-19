@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
 
@@ -156,12 +157,12 @@ namespace sw
         TagContainer _targetTags;
         PROPERTY( Category = "Turret", DisplayName = "Range", Min = 0.0, Units = m )
         float32 _range;
-        PROPERTY( Category = "Turret", DisplayName = "View Angle", Min = 0.0, Tooltip = "Half angle it can see, 0 sees all around", Units = rad )
-        float32 _viewAngle;
+        PROPERTY( Category = "Turret", DisplayName = "View Angle", Min = 0.0, Tooltip = "Half angle it can see, 0 sees all around" )
+        Radians _viewAngle;
         PROPERTY( Category = "Turret", DisplayName = "Turn Speed", Min = 0.0, Units = "rad/s" )
         float32 _turnSpeed;
-        PROPERTY( Category = "Turret", DisplayName = "Aim Tolerance", Min = 0.0, Units = rad )
-        float32 _aimTolerance;
+        PROPERTY( Category = "Turret", DisplayName = "Aim Tolerance", Min = 0.0 )
+        Radians _aimTolerance;
         PROPERTY( Category = "Turret", DisplayName = "Fire Interval", Min = 0.01, Units = s )
         float32 _fireInterval;
         PROPERTY( Category = "Turret", DisplayName = "Damage", Min = 0.0 )

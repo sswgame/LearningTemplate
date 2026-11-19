@@ -60,9 +60,9 @@ namespace sw
         CameraPresetDef def;
         def._view._mode         = CameraPresetMode::Orbit;
         def._view._distance     = length;
-        def._view._pitch        = MathUtil::asin( MathUtil::clamp( _offset._y / length, -1.0f, 1.0f ) );
-        def._view._yaw          = MathUtil::atan2( -_offset._x, -_offset._z );
-        def._lens._fieldOfViewY = pCamera->getFieldOfViewY();
+        def._view._pitch        = Radians::fromRadians( MathUtil::asin( MathUtil::clamp( _offset._y / length, -1.0f, 1.0f ) ) );
+        def._view._yaw          = Radians::fromRadians( MathUtil::atan2( -_offset._x, -_offset._z ) );
+        def._lens._fieldOfViewY = Radians::fromRadians( pCamera->getFieldOfViewY() );
         def._lens._nearPlane    = pCamera->getNearPlane();
         def._lens._farPlane     = MathUtil::max( pCamera->getFarPlane(), _minFarPlane );
         CameraTarget target;

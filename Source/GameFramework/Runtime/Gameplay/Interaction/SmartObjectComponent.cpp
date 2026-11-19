@@ -261,7 +261,7 @@ namespace sw
         const float4x4 world = pScene->getWorldMatrix();
         outPosition          = float3::transform( pSlot->_offset, world );
         const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
-        outYaw               = MathUtil::atan2( forward._x, forward._z ) + pSlot->_yaw;
+        outYaw               = MathUtil::atan2( forward._x, forward._z ) + pSlot->_yaw.radians();
         return true;
     }
 } // namespace sw

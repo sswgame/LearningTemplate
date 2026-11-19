@@ -172,7 +172,7 @@ namespace sw
                 if ( pSpinner != nullptr )
                 {
                     WidgetRenderTransform transform = pSpinner->getRenderTransform();
-                    transform._angle                = _spinnerAngle;
+                    transform._angle                = Radians::fromRadians( _spinnerAngle );
                     pSpinner->setRenderTransform( transform );
                 }
             }

@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetRef.h"
@@ -169,8 +170,8 @@ namespace sw
         float32 _riverCenterX;
         PROPERTY( Category = "Map", DisplayName = "River Meander", Tooltip = "How far the river swings east and west (tiles)", Min = 0.0 )
         float32 _riverMeander;
-        PROPERTY( Category = "Map", DisplayName = "River Meander Rate", Tooltip = "Phase of the river's swing per tile north to south", Units = rad )
-        float32 _riverMeanderRate;
+        PROPERTY( Category = "Map", DisplayName = "River Meander Rate", Tooltip = "Phase of the river's swing per tile north to south" )
+        Radians _riverMeanderRate;
         PROPERTY( Category = "Map", DisplayName = "River Half Width", Tooltip = "Half the river's width (tiles)", Min = 0.0 )
         float32 _riverHalfWidth;
         PROPERTY( Category = "Map", DisplayName = "East Floodplain Width", Tooltip = "Floodplain east of the river, where the farms and the city stand (tiles)", Min = 0.0 )
@@ -179,8 +180,8 @@ namespace sw
         float32 _westFloodWidth;
         PROPERTY( Category = "Map", DisplayName = "Desert Dune Height", Tooltip = "How far the east desert's edge waves (tiles)", Min = 0.0 )
         float32 _desertDuneHeight;
-        PROPERTY( Category = "Map", DisplayName = "Desert Dune Rate", Tooltip = "Phase of the desert edge's wave per tile north to south", Units = rad )
-        float32 _desertDuneRate;
+        PROPERTY( Category = "Map", DisplayName = "Desert Dune Rate", Tooltip = "Phase of the desert edge's wave per tile north to south" )
+        Radians _desertDuneRate;
         PROPERTY( Category = "Map", DisplayName = "Desert Start X", Tooltip = "Tile x where the east desert begins", Min = 0 )
         int32 _desertStartX;
         PROPERTY( Category = "Map", DisplayName = "Rock Ridge X", Tooltip = "Tile x from which the east rock ridge runs", Min = 0 )

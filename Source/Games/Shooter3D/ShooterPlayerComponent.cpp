@@ -301,7 +301,7 @@ namespace sw
         , _meleeImpulse{ 40.0f }
         , _meleeReach{ 2.2f }
         , _meleeRadius{ 0.15f }
-        , _meleeArc{ 1.4f }
+        , _meleeArc{ Radians::fromRadians( 1.4f ) }
         , _meleeDuration{ 0.25f }
         , _hitEffectLifetime{ 0.12f }
         , _tracerLifetime{ 0.07f }
@@ -910,7 +910,7 @@ namespace sw
         }
         // 칼날은 눈에서 시선 앞으로 뻗은 선이고, 창 동안 요로 호를 그린다. 시선은 서버 · 클라이언트가 같은 의도에서 온다.
         const float32 fraction = MathUtil::min( _meleeElapsed / _meleeDuration, 1.0f );
-        const float32 yaw      = pCamera->getLook().getYaw() + ( fraction - 0.5f ) * _meleeArc;
+        const float32 yaw      = pCamera->getLook().getYaw() + ( fraction - 0.5f ) * _meleeArc.radians();
         const float3  forward  = OrientationUtil::computeLookDirection( yaw, pCamera->getLook().getPitch() );
         const float3  eye      = getEyePosition();
         MeleeHit::makeBlade( eye + forward * ( _meleeReach * 0.25f ), eye + forward * _meleeReach, Internal::kMeleeBladeSamples, _listMeleeCurrent );

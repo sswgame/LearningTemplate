@@ -312,3 +312,31 @@ SW_TEST_CASE( UIAnimationPlayerTest, BadTracksAreSkipped )
     rig.player().update( 0.5f );
     SW_EXPECT_NEAR( 0.5f, rig.opacity(), kTolerance );
 }
+
+/** @brief [UIAnimationPlayerTest] 각 칸(`_renderTransform._angle`, Radians): 키 글은 도로 읽고 라디안으로 섞는다 — 0 도에서 90 도의 가운데는 45 도다 */
+SW_TEST_CASE( UIAnimationPlayerTest, RadiansTrackBlendsDegreeKeys )
+{
+    const ScopedMotion motion( false );
+    AnimationRig       rig;
+    UIAnimation        animation;
+    animation._name = "spin";
+    UIAnimationTrack track;
+    track._widget   = "leaf";
+    track._property = "_renderTransform._angle";
+    UIAnimationKey first;
+    first._time  = 0.0f;
+    first._value = "0";
+    UIAnimationKey second;
+    second._time   = 1.0f;
+    second._value  = "90";
+    second._curve  = BlendCurve::Linear;
+    track._listKey = { first, second };
+    animation._listTrack.push_back( track );
+    rig.player().setAnimations( { animation } );
+
+    SW_REQUIRE_TRUE( rig.player().play( "spin" ) );
+    rig.player().update( 0.5f );
+    SW_EXPECT_NEAR( Radians::fromDegrees( 45.0f ).radians(), rig._pLeaf->getRenderTransform()._angle.radians(), kTolerance );
+    rig.player().update( 1.0f );
+    SW_EXPECT_NEAR( Radians::fromDegrees( 90.0f ).radians(), rig._pLeaf->getRenderTransform()._angle.radians(), kTolerance );
+}

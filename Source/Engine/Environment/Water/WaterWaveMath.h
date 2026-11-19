@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -20,8 +21,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Units = rad, Tooltip = "Travel direction, from +x towards +z" )
-        float32 _direction{ 0.0f };
+        PROPERTY( Tooltip = "Travel direction, from +x towards +z" )
+        Radians _direction{};
         PROPERTY( Min = 0.01, Units = m )
         float32 _wavelength{ 8.0f };
         PROPERTY( Min = 0.0, Units = m )
@@ -30,7 +31,7 @@ namespace sw
         float32 _steepness{ 0.5f };
 
         /** @brief 머티리얼 값(방향, 파장, 진폭, 가파름)입니다. */
-        float4 toVector() const { return float4{ _direction, _wavelength, _amplitude, _steepness }; }
+        float4 toVector() const { return float4{ _direction.radians(), _wavelength, _amplitude, _steepness }; }
     };
 } // namespace sw
 

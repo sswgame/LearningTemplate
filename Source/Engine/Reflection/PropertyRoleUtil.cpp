@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectedValue.h"
@@ -40,6 +41,8 @@ namespace sw
                 }
                 else if constexpr ( std::is_same_v<T, quaternion> )
                     out = quaternion::slerp( from, to, alpha );
+                else if constexpr ( std::is_same_v<T, Radians> )
+                    out = from + ( to - from ) * alpha; // 감지 않는 직선 보간이다 — float32 각 칸이던 때와 같은 값(키가 정한 경로를 따른다)
                 else
                     out = T::lerp( from, to, alpha );
                 return true;
@@ -82,6 +85,8 @@ namespace sw
                         return &blend<float4>;
                     case ReflectBuiltinIndex::kquaternion:
                         return &blend<quaternion>;
+                    case ReflectBuiltinIndex::kRadians:
+                        return &blend<Radians>;
                     default:
                         return nullptr;
                 }

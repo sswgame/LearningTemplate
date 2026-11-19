@@ -14,7 +14,7 @@
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _fovY="0.7"
+					                 _fovY="40.107045"
 					                 _nearZ="0.1"
 					                 _farZ="100"
 					                 _orthoHeight="10"
@@ -52,8 +52,8 @@
 					                       _innerRadius="2"
 					                       _outerRadius="4"
 					                       _falloffExponent="1"
-					                       _innerAngle="6.2831853"
-					                       _outerAngle="6.2831853"
+					                       _innerAngle="360"
+					                       _outerAngle="360"
 					                       _normalMapHeight="1"
 					                       _bCastShadows="false"
 					                       _cookieTexturePath="engine/textures/particles/kenney_particle/window_01.dds" />
@@ -73,8 +73,8 @@
 					                       _innerRadius="2"
 					                       _outerRadius="4"
 					                       _falloffExponent="1"
-					                       _innerAngle="6.2831853"
-					                       _outerAngle="6.2831853"
+					                       _innerAngle="360"
+					                       _outerAngle="360"
 					                       _normalMapHeight="1"
 					                       _bCastShadows="false" />
 				</_listComponent>

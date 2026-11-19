@@ -11,7 +11,7 @@
 namespace sw
 {
     WindComponent::WindComponent()
-        : _direction{ 0.6f }
+        : _direction{ Radians::fromRadians( 0.6f ) }
         , _strength{ 0.35f }
         , _gustStrength{ 0.25f }
         , _gustFrequency{ 0.25f }
@@ -23,7 +23,7 @@ namespace sw
     WindSettings WindComponent::makeSettings() const
     {
         WindSettings settings;
-        settings._direction     = float2{ MathUtil::cos( _direction ), MathUtil::sin( _direction ) };
+        settings._direction     = float2{ MathUtil::cos( _direction.radians() ), MathUtil::sin( _direction.radians() ) };
         settings._strength      = _strength;
         settings._gustStrength  = _gustStrength;
         settings._gustFrequency = _gustFrequency;

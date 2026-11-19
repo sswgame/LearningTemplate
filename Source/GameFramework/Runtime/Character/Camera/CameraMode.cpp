@@ -65,7 +65,7 @@ namespace sw
 
             static float32 computeAtan( float32 value ) { return MathUtil::atan2( value, 1.0f ); }
 
-            static float32 clampPitch( const CameraConfinerDef& confiner, float32 pitch ) { return MathUtil::clamp( pitch, confiner._pitchMin, confiner._pitchMax ); }
+            static float32 clampPitch( const CameraConfinerDef& confiner, float32 pitch ) { return MathUtil::clamp( pitch, confiner._pitchMin.radians(), confiner._pitchMax.radians() ); }
 
             static float32 clampZoom( const CameraConfinerDef& confiner, float32 zoom )
             {
@@ -169,8 +169,8 @@ namespace sw
         {
             inoutState._yawOffset = MathUtil::wrapAngle( inoutState._yawOffset + input._lookDelta._x * inputDef._lookSensitivity );
             // 1인칭 · 3인칭은 대상의 피치에 더하므로 여기서는 오프셋만 자르고, 합은 평가가 다시 자른다.
-            const float32 pitch     = CameraModeInternal::clampPitch( confiner, def._view._pitch + inoutState._pitchOffset + input._lookDelta._y * inputDef._lookSensitivity );
-            inoutState._pitchOffset = pitch - def._view._pitch;
+            const float32 pitch     = CameraModeInternal::clampPitch( confiner, def._view._pitch.radians() + inoutState._pitchOffset + input._lookDelta._y * inputDef._lookSensitivity );
+            inoutState._pitchOffset = pitch - def._view._pitch.radians();
         }
 
         if ( inputDef._zoomStep > 0.0f && input._zoomNotches != 0.0f )
@@ -183,7 +183,7 @@ namespace sw
         {
             // 지금 보이는 요 기준이다 — 화면 위쪽이 앞이다. 직교는 확대할수록 느리게(화면에서 보이는 빠르기가 같다).
             // XY 평면(2D)은 화면 위가 +Y, 오른쪽이 +X 다.
-            const float32 yaw     = def._view._yaw + inoutState._yawOffset + inoutState._rotateYawShown;
+            const float32 yaw     = def._view._yaw.radians() + inoutState._yawOffset + inoutState._rotateYawShown;
             const bool    bPlanar = def._view._mode == CameraPresetMode::FollowXY;
             const float3  forward = bPlanar ? float3{ 0.0f, 1.0f, 0.0f } : float3{ MathUtil::sin( yaw ), 0.0f, MathUtil::cos( yaw ) };
             const float3  right   = bPlanar ? float3{ 1.0f, 0.0f, 0.0f } : float3{ forward._z, 0.0f, -forward._x };
@@ -192,8 +192,8 @@ namespace sw
             inoutState._panOffset = inoutState._panOffset + ( forward * input._pan._x + right * input._pan._y ) * ( inputDef._panSpeed * scale * MathUtil::max( 0.0f, deltaTime ) );
         }
 
-        if ( inputDef._rotateStep != 0.0f && input._rotateSteps != 0 )
-            inoutState._rotateYaw += static_cast<float32>( input._rotateSteps ) * inputDef._rotateStep;
+        if ( inputDef._rotateStep != Radians{} && input._rotateSteps != 0 )
+            inoutState._rotateYaw += static_cast<float32>( input._rotateSteps ) * inputDef._rotateStep.radians();
     }
 
     float32 CameraModeInternal::applyZoom( const CameraPresetDef& def, const CameraTarget& target, const CameraModeState& state, CameraPose& inoutPose )
@@ -394,15 +394,15 @@ namespace sw
         pose._bOrthographic = isOrthographic( def ) ? SW_TRUE : SW_FALSE;
 
         const float32 distance = applyZoom( def, target, inoutState, pose );
-        const float32 sweep    = def._sweep._yawAmplitude > 0.0f
-                                   ? def._sweep._yawAmplitude * MathUtil::sin( MathUtil::kTwoPi * ( inoutState._time / def._sweep._period + def._sweep._phase ) )
+        const float32 sweep    = def._sweep._yawAmplitude > Radians{}
+                                   ? def._sweep._yawAmplitude.radians() * MathUtil::sin( MathUtil::kTwoPi * ( inoutState._time / def._sweep._period + def._sweep._phase ) )
                                    : 0.0f;
         const float32 inputYaw = inoutState._yawOffset + inoutState._rotateYawShown + sweep;
 
         CameraRig rig;
         rig._focus      = computeLookAheadFocus( framing, target, elapsed, inoutState );
-        rig._yaw        = view._yaw + inputYaw;
-        rig._pitch      = view._pitch + inoutState._pitchOffset;
+        rig._yaw        = view._yaw.radians() + inputYaw;
+        rig._pitch      = view._pitch.radians() + inoutState._pitchOffset;
         rig._pivot      = rig._focus + view._offset + inoutState._panOffset;
         rig._hoverPoint = rig._pivot;
         if ( placeByMode( def, target, inputYaw, inoutState, rig, pose ) )
@@ -441,8 +441,8 @@ namespace sw
         pose._lensShift                   = lens._lensShift;
         pose._postProcess                 = def._postProcess;
         // 더치는 모든 모드의 시점 위에 마지막으로 — 카메라 앞축으로 화면을 기울인다.
-        if ( lens._dutch != 0.0f )
-            pose._rotation = pose._rotation * quaternion::makeFromYawPitchRoll( 0.0f, 0.0f, lens._dutch );
+        if ( lens._dutch != Radians{} )
+            pose._rotation = pose._rotation * quaternion::makeFromYawPitchRoll( 0.0f, 0.0f, lens._dutch.radians() );
         return pose;
     }
 

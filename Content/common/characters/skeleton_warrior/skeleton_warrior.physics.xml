@@ -19,10 +19,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.35"
-			        _swingLimitPlane="0.35"
-			        _twistMin="-0.3"
-			        _twistMax="0.3" />
+			        _swingLimitNormal="20.053522"
+			        _swingLimitPlane="20.053522"
+			        _twistMin="-17.188735"
+			        _twistMax="17.188735" />
 			<_hitZone _name="Torso" _damageMultiplier="1.0" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="chest" _mass="12" _material="Flesh">
@@ -32,10 +32,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.3"
-			        _swingLimitPlane="0.3"
-			        _twistMin="-0.3"
-			        _twistMax="0.3" />
+			        _swingLimitNormal="17.188735"
+			        _swingLimitPlane="17.188735"
+			        _twistMin="-17.188735"
+			        _twistMax="17.188735" />
 			<_hitZone _name="Torso" _damageMultiplier="1.0" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="head" _mass="6" _material="Flesh">
@@ -45,10 +45,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.5"
-			        _swingLimitPlane="0.5"
-			        _twistMin="-0.5"
-			        _twistMax="0.5" />
+			        _swingLimitNormal="28.64789"
+			        _swingLimitPlane="28.64789"
+			        _twistMin="-28.64789"
+			        _twistMax="28.64789" />
 			<_hitZone _name="Head" _damageMultiplier="2.0" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="upperarm.l" _mass="2.5" _material="Flesh">
@@ -58,10 +58,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="1.0"
-			        _swingLimitPlane="1.0"
-			        _twistMin="-0.6"
-			        _twistMax="0.6" />
+			        _swingLimitNormal="57.29578"
+			        _swingLimitPlane="57.29578"
+			        _twistMin="-34.37747"
+			        _twistMax="34.37747" />
 			<_hitZone _name="Arm" _damageMultiplier="0.6" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="lowerarm.l" _mass="2" _material="Flesh">
@@ -71,10 +71,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.9"
-			        _swingLimitPlane="0.9"
-			        _twistMin="-0.3"
-			        _twistMax="0.3" />
+			        _swingLimitNormal="51.5662"
+			        _swingLimitPlane="51.5662"
+			        _twistMin="-17.188735"
+			        _twistMax="17.188735" />
 			<_hitZone _name="Arm" _damageMultiplier="0.6" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="wrist.l" _mass="1" _material="Flesh">
@@ -84,10 +84,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.6"
-			        _swingLimitPlane="0.6"
-			        _twistMin="-0.3"
-			        _twistMax="0.3" />
+			        _swingLimitNormal="34.37747"
+			        _swingLimitPlane="34.37747"
+			        _twistMin="-17.188735"
+			        _twistMax="17.188735" />
 			<_hitZone _name="Arm" _damageMultiplier="0.5" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="upperleg.l" _mass="6" _material="Flesh">
@@ -97,10 +97,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.8"
-			        _swingLimitPlane="0.6"
-			        _twistMin="-0.3"
-			        _twistMax="0.3" />
+			        _swingLimitNormal="45.836624"
+			        _swingLimitPlane="34.37747"
+			        _twistMin="-17.188735"
+			        _twistMax="17.188735" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="lowerleg.l" _mass="4" _material="Flesh">
@@ -110,10 +110,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.8"
-			        _swingLimitPlane="0.3"
-			        _twistMin="-0.1"
-			        _twistMax="0.1" />
+			        _swingLimitNormal="45.836624"
+			        _swingLimitPlane="17.188735"
+			        _twistMin="-5.729578"
+			        _twistMax="5.729578" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="foot.l" _mass="1.5" _material="Flesh">
@@ -123,10 +123,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.4"
-			        _swingLimitPlane="0.4"
-			        _twistMin="-0.2"
-			        _twistMax="0.2" />
+			        _swingLimitNormal="22.918312"
+			        _swingLimitPlane="22.918312"
+			        _twistMin="-11.459156"
+			        _twistMax="11.459156" />
 			<_hitZone _name="Leg" _damageMultiplier="0.5" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="upperarm.r" _mass="2.5" _material="Flesh">
@@ -136,10 +136,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="1.0"
-			        _swingLimitPlane="1.0"
-			        _twistMin="-0.6"
-			        _twistMax="0.6" />
+			        _swingLimitNormal="57.29578"
+			        _swingLimitPlane="57.29578"
+			        _twistMin="-34.37747"
+			        _twistMax="34.37747" />
 			<_hitZone _name="Arm" _damageMultiplier="0.6" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="lowerarm.r" _mass="2" _material="Flesh">
@@ -149,10 +149,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.9"
-			        _swingLimitPlane="0.9"
-			        _twistMin="-0.3"
-			        _twistMax="0.3" />
+			        _swingLimitNormal="51.5662"
+			        _swingLimitPlane="51.5662"
+			        _twistMin="-17.188735"
+			        _twistMax="17.188735" />
 			<_hitZone _name="Arm" _damageMultiplier="0.6" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="wrist.r" _mass="1" _material="Flesh">
@@ -162,10 +162,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.6"
-			        _swingLimitPlane="0.6"
-			        _twistMin="-0.3"
-			        _twistMax="0.3" />
+			        _swingLimitNormal="34.37747"
+			        _swingLimitPlane="34.37747"
+			        _twistMin="-17.188735"
+			        _twistMax="17.188735" />
 			<_hitZone _name="Arm" _damageMultiplier="0.5" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="upperleg.r" _mass="6" _material="Flesh">
@@ -175,10 +175,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.8"
-			        _swingLimitPlane="0.6"
-			        _twistMin="-0.3"
-			        _twistMax="0.3" />
+			        _swingLimitNormal="45.836624"
+			        _swingLimitPlane="34.37747"
+			        _twistMin="-17.188735"
+			        _twistMax="17.188735" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="lowerleg.r" _mass="4" _material="Flesh">
@@ -188,10 +188,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.8"
-			        _swingLimitPlane="0.3"
-			        _twistMin="-0.1"
-			        _twistMax="0.1" />
+			        _swingLimitNormal="45.836624"
+			        _swingLimitPlane="17.188735"
+			        _twistMin="-5.729578"
+			        _twistMax="5.729578" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="foot.r" _mass="1.5" _material="Flesh">
@@ -201,10 +201,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.4"
-			        _swingLimitPlane="0.4"
-			        _twistMin="-0.2"
-			        _twistMax="0.2" />
+			        _swingLimitNormal="22.918312"
+			        _swingLimitPlane="22.918312"
+			        _twistMin="-11.459156"
+			        _twistMax="11.459156" />
 			<_hitZone _name="Leg" _damageMultiplier="0.5" />
 		</PhysicsAssetBodyDef>
 	</_listBody>

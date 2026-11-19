@@ -5,7 +5,7 @@
  * @details 메타 문법은 기존 커스텀 메타(`Meta = "Key=Value, Key2=Value2"`)를 그대로 쓴다 — 파서 · 런타임 메타데이터는 바뀌지 않는다.
  *          - `PROPERTY( …, Meta = "Shape=Sphere" ) float32 _radius;`
  *          - `PROPERTY( …, Meta = "Shape=Box" ) float3 _halfExtents;`
- *          - `PROPERTY( …, Meta = "Shape=Cone, ShapeRange=_radius" ) float32 _outerConeAngle;`(반각 rad, 길이는 같은 타입의 float32 프로퍼티)
+ *          - `PROPERTY( …, Meta = "Shape=Cone, ShapeRange=_radius" ) Radians _outerConeAngle;`(반각 — 각 형식, 길이는 같은 타입의 float32 프로퍼티)
  *          - `PROPERTY( …, Meta = "Shape=Arrow" ) float3 _localDirection;`
  *          - `PROPERTY( …, Meta = "Shape=Circle" ) float32 _outerRadius;`(로컬 XY 평면 — 2D)
  *          - `PROPERTY( …, Meta = "Shape=Capsule, ShapeRange=_halfHeight, ShapeOrigin=Base" ) float32 _radius;`(축 로컬 +Y, `Base` 면 바닥이 원점)

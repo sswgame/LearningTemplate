@@ -97,7 +97,7 @@ namespace sw
         , _forbiddenTags{}
         , _alignmentMarker{}
         , _maxDistance{ 2.0f }
-        , _maxAngle{ 0.0f }
+        , _maxAngle{}
         , _cooldown{ 0.0f }
         , _highlight{ InteractionHighlight::Outline }
         , _highlightColor{ 1.0f, 0.85f, 0.3f }
@@ -118,7 +118,7 @@ namespace sw
     bool InteractionCatalog::readInteraction( const XMLNode& node, InteractionDef& outDef, string_view sourceName ) const
     {
         using Internal = InteractionCatalogInternal;
-        // 적지 않은 칸은 InteractionDef 의 초기값이다. 각은 라디안이다. 범위 밖 값은 자르지 않고 오류다(PROPERTY 가 본다).
+        // 적지 않은 칸은 InteractionDef 의 초기값이다. 각은 도로 적는다(`Radians`). 범위 밖 값은 자르지 않고 오류다(PROPERTY 가 본다).
         bool bValid = XMLFields::readProperties( node, outDef, sourceName, { "requiredTags", "forbiddenTags" }, &Internal::isStepField );
         Internal::readTags( node.getAttributeText( "requiredTags" ), outDef._requiredTags );
         Internal::readTags( node.getAttributeText( "forbiddenTags" ), outDef._forbiddenTags );
@@ -159,7 +159,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            SmartObjectSlotDef slot; // 각은 라디안(±2π)이다 — PROPERTY 가 본다
+            SmartObjectSlotDef slot; // 각은 도(±360)로 적는다 — PROPERTY 가 본다
             bValid = XMLFields::readProperties( slotNode, slot, sourceName, { "tags" } ) && bValid;
             Internal::readTags( slotNode.getAttributeText( "tags" ), slot._tags );
             outDef._listSlot.push_back( slot );

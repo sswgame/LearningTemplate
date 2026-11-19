@@ -15,7 +15,7 @@
 					                 _attachOwner="None"
 					                 _attachOwnerID="0"
 					                 _attachComponent="None"
-					                 _fovY="0.7"
+					                 _fovY="40.107045"
 					                 _nearZ="0.1"
 					                 _farZ="80"
 					                 _orthoHeight="15"
@@ -63,10 +63,10 @@
 					                  _nightEndHour="5"
 					                  _horizonIntensity="0.25"
 					                  _noonIntensity="1.5"
-					                  _horizonPitch="0.25"
-					                  _noonPitch="1.35"
-					                  _morningYaw="-1.2"
-					                  _eveningYaw="1.2" />
+					                  _horizonPitch="14.323945"
+					                  _noonPitch="77.349304"
+					                  _morningYaw="-68.75494"
+					                  _eveningYaw="68.75494" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -777,7 +777,7 @@
 					               _upAction="None"
 					               _inputLayer="None"
 					               _aiControllerPrefab=""
-					               _maxPitch="1.4"
+					               _maxPitch="80.21409"
 					               _autoPossess="Player0">
 						<_listButton>
 							<item>Farm.Tool1</item>

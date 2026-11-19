@@ -251,7 +251,7 @@ SW_TEST_CASE( VehicleSeatTest, RideFeelLeansAgainstTheAcceleration )
 {
     RideFeelSettings feel;
     feel._leanPerAcceleration = 0.02f;
-    feel._maxLean             = 0.3f;
+    feel._maxLean             = sw::Radians::fromRadians( 0.3f );
     const float2 braking      = feel.computeLean( float3{ 0.0f, 0.0f, -10.0f } );
     SW_EXPECT_NEAR( 0.2f, braking._x, 1e-5f ); // 앞으로 숙인다
     SW_EXPECT_NEAR( 0.0f, braking._y, 1e-5f );

@@ -289,7 +289,7 @@ namespace sw
         outKey._time        = clipSeconds;
         outKey._position._x = MathUtil::lerp( pBefore->_position._x, pAfter->_position._x, alpha );
         outKey._position._y = MathUtil::lerp( pBefore->_position._y, pAfter->_position._y, alpha );
-        outKey._angle       = MathUtil::lerp( pBefore->_angle, pAfter->_angle, alpha );
+        outKey._angle       = Radians::fromRadians( MathUtil::lerp( pBefore->_angle.radians(), pAfter->_angle.radians(), alpha ) );
         return true;
     }
 } // namespace sw

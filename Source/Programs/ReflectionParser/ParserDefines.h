@@ -81,7 +81,7 @@ namespace sw
 
         /** @brief `PROPERTY( Interp )` 를 받는 정규 타입 이름입니다 — 시퀀서 값 트랙이 섞을 수 있는 것(`PropertyRoleUtil::isInterpolatable` 과 같은 목록). */
         inline constexpr const utf8* kArrInterpTypeName[] = { "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32",
-                                                              "uint64", "float32", "float64", "float2", "float3", "float4", "quaternion" };
+                                                              "uint64", "float32", "float64", "float2", "float3", "float4", "quaternion", "Radians" };
     } // namespace annotation
 
     /** @brief 고정 배치형 코덱이 원소마다 실수 규칙으로 쓰는 수학 타입 한 줄입니다. 정규 이름과 float32 멤버(선언 순서, 쉼표로 나눔)를 담습니다. */

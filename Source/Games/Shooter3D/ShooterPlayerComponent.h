@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/Ray.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
@@ -265,8 +266,8 @@ namespace sw
         float32 _meleeReach;
         PROPERTY( Category = "Melee", DisplayName = "Melee Radius", Tooltip = "Blade thickness", Min = 0.0, Units = m )
         float32 _meleeRadius;
-        PROPERTY( Category = "Melee", DisplayName = "Melee Arc", Tooltip = "Yaw the blade sweeps across the look direction", Min = 0.0, Units = rad )
-        float32 _meleeArc;
+        PROPERTY( Category = "Melee", DisplayName = "Melee Arc", Tooltip = "Yaw the blade sweeps across the look direction", Min = 0.0 )
+        Radians _meleeArc;
         PROPERTY( Category = "Melee", DisplayName = "Melee Duration", Tooltip = "Seconds of one swing", Min = 0.001, Units = s )
         float32 _meleeDuration;
         PROPERTY( Category = "Effects", DisplayName = "Hit Effect Lifetime", Tooltip = "Seconds a hit or muzzle flash sphere stays", Min = 0.0, Units = s )

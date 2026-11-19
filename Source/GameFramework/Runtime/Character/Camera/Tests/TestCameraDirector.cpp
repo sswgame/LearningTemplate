@@ -45,13 +45,13 @@ namespace CameraDirectorTestUtil
     constexpr const utf8* kCatalogXML = R"(<CameraPresetCatalog>
     <DefaultBlend curve="SmoothStep" duration="0.5"/>
     <Preset id="orbit">
-        <View mode="Orbit" pitch="0.43633" yaw="0" distance="12" offset="0,1.5,0"/>
-        <Lens fieldOfViewY="0.7854" nearPlane="0.1" farPlane="500"/>
+        <View mode="Orbit" pitch="24.999867" yaw="0" distance="12" offset="0,1.5,0"/>
+        <Lens fieldOfViewY="45.000104" nearPlane="0.1" farPlane="500"/>
         <Damping positionTime="0.2" orientationTime="0.1"/>
     </Preset>
     <Preset id="follow">
-        <View mode="Follow" pitch="0.2618" yaw="0" distance="6" offset="0,1.6,0"/>
-        <Lens fieldOfViewY="1.0472" nearPlane="0.1" farPlane="500"/>
+        <View mode="Follow" pitch="15.000035" yaw="0" distance="6" offset="0,1.6,0"/>
+        <Lens fieldOfViewY="60.00014" nearPlane="0.1" farPlane="500"/>
         <Damping positionTime="0.25" orientationTime="0.15"/>
     </Preset>
 </CameraPresetCatalog>)";
@@ -113,11 +113,11 @@ SW_TEST_CASE( CameraCollisionProbeTest, MissingLayersIsAnError )
     CameraPresetCatalog catalog;
     (void)catalog.loadFromXMLText( R"(<CameraPresetCatalog>
     <Preset id="bare">
-        <View mode="Orbit" pitch="0.4" yaw="0" distance="8" offset="0,1,0"/>
+        <View mode="Orbit" pitch="22.918312" yaw="0" distance="8" offset="0,1,0"/>
         <Collision radius="0.25" minDistance="0.4" recoverTime="0.3"/>
     </Preset>
     <Preset id="layered">
-        <View mode="Orbit" pitch="0.4" yaw="0" distance="8" offset="0,1,0"/>
+        <View mode="Orbit" pitch="22.918312" yaw="0" distance="8" offset="0,1,0"/>
         <Collision radius="0.25" minDistance="0.4" recoverTime="0.3" layers="Default,Static"/>
     </Preset>
 </CameraPresetCatalog>)",

@@ -74,7 +74,7 @@ namespace sw
                 }
                 if ( outConfiner._pitchMax < outConfiner._pitchMin )
                 {
-                    SW_LOG_ERROR_ID( "CameraPreset.ConfinerPitchMaxBelowPitchMin", "%#: <Confiner> pitchMax %# is below pitchMin %#", sourceName, outConfiner._pitchMax, outConfiner._pitchMin );
+                    SW_LOG_ERROR_ID( "CameraPreset.ConfinerPitchMaxBelowPitchMin", "%#: <Confiner> pitchMax %# is below pitchMin %#", sourceName, outConfiner._pitchMax.degrees(), outConfiner._pitchMin.degrees() );
                     bValid = false;
                 }
                 return bValid;
@@ -201,7 +201,7 @@ namespace sw
     float32 CameraLensDef::computeFieldOfViewY() const
     {
         if ( _focalLength <= 0.0f )
-            return _fieldOfViewY;
+            return _fieldOfViewY.radians();
         // 핀홀 렌즈 — 센서 높이의 절반을 초점 길이로 나눈 각의 두 배다.
         return 2.0f * MathUtil::atan2( _sensorSize._y * 0.5f, _focalLength );
     }

@@ -120,7 +120,7 @@ namespace sw
                 rcConfig config{};
                 config.cs                     = agent._cellSize;
                 config.ch                     = agent._cellHeight;
-                config.walkableSlopeAngle     = MathUtil::toDegree( agent._maxSlope );
+                config.walkableSlopeAngle     = agent._maxSlope.degrees();
                 config.walkableHeight         = static_cast<int32>( MathUtil::ceil( agent._height / config.ch ) );
                 config.walkableClimb          = static_cast<int32>( MathUtil::floor( agent._maxClimb / config.ch ) );
                 config.walkableRadius         = static_cast<int32>( MathUtil::ceil( agent._radius / config.cs ) );

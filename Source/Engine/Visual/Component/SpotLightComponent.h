@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Visual/Component/LightComponent.h"
@@ -39,12 +40,12 @@ namespace sw
         void setRadius( float32 radius );
 
         /** @brief 안쪽 원뿔 반각(라디안)입니다. 이 안은 감쇠가 없습니다. */
-        float32 getInnerConeAngle() const { return _innerConeAngle; }
+        float32 getInnerConeAngle() const { return _innerConeAngle.radians(); }
         /** @brief 안쪽 원뿔 반각을 설정합니다. 바깥 각을 넘으면 바깥 각으로 잘립니다. */
         void setInnerConeAngle( float32 radians );
 
         /** @brief 바깥 원뿔 반각(라디안)입니다. 이 밖은 완전히 어둡습니다. */
-        float32 getOuterConeAngle() const { return _outerConeAngle; }
+        float32 getOuterConeAngle() const { return _outerConeAngle.radians(); }
         /** @brief 바깥 원뿔 반각을 설정합니다. */
         void setOuterConeAngle( float32 radians );
 
@@ -68,10 +69,10 @@ namespace sw
     private:
         PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m )
         float32 _radius;
-        PROPERTY( Category = "Cone", DisplayName = "Inner Cone Angle", Min = 0.0, Tooltip = "Half angle with no falloff", Units = rad, Meta = "Shape=Cone, ShapeRange=_radius" )
-        float32 _innerConeAngle;
-        PROPERTY( Category = "Cone", DisplayName = "Outer Cone Angle", Min = 0.0, Tooltip = "Half angle where the light reaches zero", Units = rad, Meta = "Shape=Cone, ShapeRange=_radius" )
-        float32 _outerConeAngle;
+        PROPERTY( Category = "Cone", DisplayName = "Inner Cone Angle", Min = 0.0, Tooltip = "Half angle with no falloff", Meta = "Shape=Cone, ShapeRange=_radius" )
+        Radians _innerConeAngle;
+        PROPERTY( Category = "Cone", DisplayName = "Outer Cone Angle", Min = 0.0, Tooltip = "Half angle where the light reaches zero", Meta = "Shape=Cone, ShapeRange=_radius" )
+        Radians _outerConeAngle;
         PROPERTY( Category = "Shadow", DisplayName = "Shadow Shape", Tooltip = "Light source size for soft shadows and contact shadow length" )
         LightShadowSettings _shadowSettings;
         PROPERTY( Category = "Shadow", DisplayName = "Cast Shadow", Tooltip = "Render this light into one cell of the shadow atlas" )

@@ -87,7 +87,7 @@ namespace sw
         , _carCount{ 4 }
         , _modelScale{ 2.0f }
         , _rideEyeHeight{ 1.6f }
-        , _rideFieldOfView{ 85.0f * MathUtil::kDegreeToRadian }
+        , _rideFieldOfView{ Radians::fromDegrees( 85.0f ) }
         , _rideFarPlane{ 600.0f }
         , _railSpacing{ 2.0f }
         , _supportSpacing{ 8.0f }
@@ -644,7 +644,7 @@ namespace sw
         // 맨 앞 차량에 탄 시점이다. 롤까지 따라간다(루프에서 하늘이 아래로 온다).
         const CoasterTrackFrame frame = _listCoaster[static_cast<size_t>( _ridingCoaster )]->_train.getFrame();
         pRig->setViewOverride( frame._position + frame._up * _rideEyeHeight,
-                               OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up ), _rideFieldOfView,
+                               OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up ), _rideFieldOfView.radians(),
                                _rideFarPlane );
     }
 

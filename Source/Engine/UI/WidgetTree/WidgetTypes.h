@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/IdentityToken.h"
 
@@ -177,8 +178,8 @@ namespace sw
         float2 _scale{ 1.0f, 1.0f };
         PROPERTY( DisplayName = "Shear" )
         float2 _shear{};
-        PROPERTY( DisplayName = "Angle", Units = rad )
-        float32 _angle{ 0.0f }; ///< 회전입니다(라디안, 피벗 둘레). 엔진의 각도는 모두 라디안입니다.
+        PROPERTY( DisplayName = "Angle" )
+        Radians _angle{}; ///< 피벗 둘레 회전입니다.
         PROPERTY( DisplayName = "Pivot", Tooltip = "Pivot in the widget's own rect (0..1)" )
         float2 _pivot{ 0.5f, 0.5f };
 

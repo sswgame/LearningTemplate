@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
@@ -88,8 +89,8 @@ namespace sw
         float32 _time{ 0.0f };
         PROPERTY( Tooltip = "Local position (x, y) of the sprite at this key" )
         float2 _position{ 0.0f, 0.0f };
-        PROPERTY( Units = rad, Tooltip = "Rotation about Z at this key" )
-        float32 _angle{ 0.0f };
+        PROPERTY( Tooltip = "Rotation about Z at this key" )
+        Radians _angle{};
     };
 } // namespace sw
 

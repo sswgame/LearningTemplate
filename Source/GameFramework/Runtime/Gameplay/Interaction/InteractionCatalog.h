@@ -5,7 +5,7 @@
  * @details XML 형식은 다음과 같다(`Content/common/data/interactions/default.interactions.xml`).
  * @code
  *     <Interactions>
- *       <Interaction id="Open" prompt="ui.interact.open" mode="Press" maxDistance="2" maxAngle="1.2217" lineOfSight="true" cooldown="0.5"
+ *       <Interaction id="Open" prompt="ui.interact.open" mode="Press" maxDistance="2" maxAngle="69.99825" lineOfSight="true" cooldown="0.5"
  *                    requiredTags="" forbiddenTags="State.Stunned" alignment="Front" highlight="Outline" authority="Server"/>
  *       <Interaction id="Revive" prompt="ui.interact.revive" mode="Hold" duration="3" maxParticipants="2"/>
  *       <Interaction id="Craft" maxDistance="1.5">
@@ -14,7 +14,7 @@
  *       </Interaction>
  *       <Interaction id="Takedown" mode="Press" pairedAnimation="anim/takedown_front.pairedanim.xml;anim/takedown_back.pairedanim.xml"
  *                    interactorRole="Attacker" interactableRole="Victim"/>
- *       <SmartObject id="Bench"><Slot id="Left" offset="-0.5 0 0" yaw="3.1416" tags="Activity.Sit"/></SmartObject>
+ *       <SmartObject id="Bench"><Slot id="Left" offset="-0.5 0 0" yaw="180.00041" tags="Activity.Sit"/></SmartObject>
  *     </Interactions>
  * @endcode
  *          단계가 없으면 `<Interaction>` 의 mode, prompt, duration, presses, decay 가 한 단계가 된다. 각도는 라디안으로 적는다(`maxAngle` 은 [0, π], `yaw` 는 [−2π, 2π]). 깨진 숫자와 범위 밖 값은 오류다(자르지 않는다).
@@ -28,6 +28,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -118,8 +119,8 @@ namespace sw
         hashed_string _alignmentMarker; ///< 하는 쪽이 맞춰 설 마커 이름. 모션 워핑에 쓰며 소켓과 마커 에셋의 이름이다
         PROPERTY( Min = 0.0, Units = m )
         float32 _maxDistance;
-        PROPERTY( Min = 0.0, Max = 3.1416, Units = rad )
-        float32 _maxAngle; ///< 시선과 대상 사이의 허용 각(라디안). 0 이면 검사하지 않는다
+        PROPERTY( Min = 0.0, Max = 180.0 )
+        Radians _maxAngle; ///< 시선과 대상 사이의 허용 각(데이터는 도). 0 이면 검사하지 않는다
         PROPERTY( Min = 0.0, Units = s )
         float32 _cooldown;
         PROPERTY()
@@ -157,8 +158,8 @@ namespace sw
         TagContainer  _tags{}; ///< 슬롯이 하는 일(Activity.Sit, Cover.Low)
         PROPERTY( Units = m )
         float3 _offset{}; ///< 오브젝트 로컬 위치
-        PROPERTY( Min = -6.2832, Max = 6.2832, Units = rad )
-        float32 _yaw{ 0.0f }; ///< 오브젝트 로컬 방향(라디안)
+        PROPERTY( Min = -360.0, Max = 360.0 )
+        Radians _yaw{}; ///< 오브젝트 로컬 방향(데이터는 도)
     };
 } // namespace sw
 

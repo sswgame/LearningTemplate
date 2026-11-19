@@ -88,7 +88,7 @@ namespace sw::editor
 
     void EditorViewportAssetPlacement::updateDragYaw()
     {
-        const float32 step = getPreferences<EditorViewportPreferences>()._placementRotateStep;
+        const float32 step = getPreferences<EditorViewportPreferences>()._placementRotateStep.radians();
         if ( EditorInputGUI::wasActionTriggered( "viewport.placementRotate" ) )
             _stats._yaw = EditorPlacementDrag::stepYaw( _stats._yaw, step, 1 );
         if ( EditorInputGUI::wasActionTriggered( "viewport.placementRotateBack" ) )

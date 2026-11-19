@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"
@@ -143,7 +144,7 @@ namespace sw
         void    setHalfHeight( float32 halfHeight );
         float32 getStepHeight() const { return _stepHeight; }
         void    setStepHeight( float32 stepHeight );
-        float32 getMaxSlopeAngle() const { return _maxSlopeAngle; }
+        float32 getMaxSlopeAngle() const { return _maxSlopeAngle.radians(); }
         void    setMaxSlopeAngle( float32 angle );
 
     protected:
@@ -171,8 +172,8 @@ namespace sw
         float32 _halfHeight;
         PROPERTY( Category = "Character", Min = 0.0, Tooltip = "Highest step the character walks up", Units = m )
         float32 _stepHeight;
-        PROPERTY( Category = "Character", Min = 0.0, Max = 1.57, Tooltip = "Steepest walkable floor", Units = rad )
-        float32 _maxSlopeAngle;
+        PROPERTY( Category = "Character", Min = 0.0, Max = 89.95, Tooltip = "Steepest walkable floor" )
+        Radians _maxSlopeAngle;
         PROPERTY( Category = "Character", Tooltip = "Multiplier on scene gravity (0 floats)" )
         float32 _gravityScale;
         PROPERTY( Category = "Character", Min = 0.0, Tooltip = "Mass used to push dynamic bodies", Units = kg )

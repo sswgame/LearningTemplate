@@ -21,9 +21,9 @@ namespace
 
         static void makeWaves( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] )
         {
-            outArrWave[0] = GerstnerWave{ 0.3f, 12.0f, 0.35f, 0.8f }.toVector();
-            outArrWave[1] = GerstnerWave{ 2.1f, 5.0f, 0.12f, 0.6f }.toVector();
-            outArrWave[2] = GerstnerWave{ -1.0f, 2.5f, 0.05f, 0.5f }.toVector();
+            outArrWave[0] = GerstnerWave{ Radians::fromRadians( 0.3f ), 12.0f, 0.35f, 0.8f }.toVector();
+            outArrWave[1] = GerstnerWave{ Radians::fromRadians( 2.1f ), 5.0f, 0.12f, 0.6f }.toVector();
+            outArrWave[2] = GerstnerWave{ Radians::fromRadians( -1.0f ), 2.5f, 0.05f, 0.5f }.toVector();
             outArrWave[3] = float4{ 0.0f, 1.0f, 0.0f, 0.0f }; // 빈 칸
         }
     };
@@ -43,7 +43,7 @@ SW_TEST_CASE( WaterTest, SingleSineWaveMatchesClosedForm )
     SW_EXPECT_NEAR( 0.0f, still.getLength(), 1.0e-7f );
     SW_EXPECT_NEAR( 1.0f, WaterWaveMath::computeNormal( float2{ 3.0f, 4.0f }, 2.0f, WaterTestUtil::kGravity, arrWave )._y, 1.0e-7f );
 
-    arrWave[0]                 = GerstnerWave{ 0.0f, 10.0f, 0.5f, 0.0f }.toVector();
+    arrWave[0]                 = GerstnerWave{ Radians::fromRadians( 0.0f ), 10.0f, 0.5f, 0.0f }.toVector();
     const float32 waveNumber   = 6.28318530718f / 10.0f;
     const float32 angularSpeed = MathUtil::sqrt( WaterTestUtil::kGravity * waveNumber );
     for ( uint32 probe = 0; probe < 16; ++probe )
@@ -116,7 +116,7 @@ SW_TEST_CASE( WaterTest, LakeQueriesAndUnderwater )
     pWater->setLocalPosition( float3{ 10.0f, 3.0f, -5.0f } );
     pWater->setSize( float2{ 20.0f, 10.0f } );
     pWater->setWaves( {
-        GerstnerWave{ 0.4f, 8.0f, 0.2f, 0.5f }
+        GerstnerWave{ Radians::fromRadians( 0.4f ), 8.0f, 0.2f, 0.5f }
     } );
     pWater->setMaterialPath( "" );
     pWater->rebuildSurface();
@@ -229,7 +229,7 @@ SW_TEST_CASE( WaterTest, WaveAmplitudeScaleReachesShaderValuesAndQueries )
     SW_REQUIRE_NOT_NULL( pWater );
     pWater->setSize( float2{ 40.0f, 40.0f } );
     pWater->setWaves( {
-        GerstnerWave{ 0.3f, 10.0f, 0.2f, 0.4f }
+        GerstnerWave{ Radians::fromRadians( 0.3f ), 10.0f, 0.2f, 0.4f }
     } );
     pWater->setMaterialPath( "" );
     pWater->rebuildSurface();
@@ -245,7 +245,7 @@ SW_TEST_CASE( WaterTest, WaveAmplitudeScaleReachesShaderValuesAndQueries )
     {
         wave = float4{ 0.0f, 1.0f, 0.0f, 0.0f };
     }
-    arrExpected[0] = GerstnerWave{ 0.3f, 10.0f, 0.6f, 0.4f }.toVector();
+    arrExpected[0] = GerstnerWave{ Radians::fromRadians( 0.3f ), 10.0f, 0.6f, 0.4f }.toVector();
     float32 height{ 0.0f };
     SW_REQUIRE_TRUE( pWater->computeSurfaceHeight( 3.0f, -2.0f, height ) );
     SW_EXPECT_NEAR( WaterWaveMath::computeSurfaceHeight( float2{ 3.0f, -2.0f }, 0.7f, WaterTestUtil::kGravity, arrExpected ), height, 1.0e-5f );

@@ -10,7 +10,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,3,-6" _localRotation="0.3,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.8" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localPosition="0,3,-6" _localRotation="0.3,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="45.836624" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -44,7 +44,7 @@
 					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="true" _bPlayOnBegin="true" />
 					<PairedAnimationComponent _pairedAnimationPath="game/empty/data/anim/cheer_warp.pairedanim.xml" _role="Partner" _bStartOnPlay="false" />
 					<MotionWarpingComponent />
-					<LocomotionWarpingComponent _bStrideWarping="true" _speedCurve="Speed" _minPlayRate="0.5" _maxPlayRate="2" _bOrientationWarping="false" _maxOrientationAngle="0.8">
+					<LocomotionWarpingComponent _bStrideWarping="true" _speedCurve="Speed" _minPlayRate="0.5" _maxPlayRate="2" _bOrientationWarping="false" _maxOrientationAngle="45.836624">
 						<_listOrientationBone />
 					</LocomotionWarpingComponent>
 				</_listComponent>

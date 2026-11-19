@@ -16,8 +16,8 @@ namespace sw
         , _normalAxis{ 1.0f, 0.0f, 0.0f }
         , _minLimit{ 0.0f }
         , _maxLimit{ 0.0f }
-        , _swingLimitNormal{ 0.5f }
-        , _swingLimitPlane{ 0.5f }
+        , _swingLimitNormal{ Radians::fromRadians( 0.5f ) }
+        , _swingLimitPlane{ Radians::fromRadians( 0.5f ) }
         , _motorMode{ PhysicsMotorMode::Off }
         , _motorTarget{ 0.0f }
         , _motorMaxForce{ 0.0f }
@@ -62,8 +62,8 @@ namespace sw
 
     void JointComponent::setSwingLimits( float32 swingLimitNormal, float32 swingLimitPlane )
     {
-        _swingLimitNormal = swingLimitNormal;
-        _swingLimitPlane  = swingLimitPlane;
+        _swingLimitNormal = Radians::fromRadians( swingLimitNormal );
+        _swingLimitPlane  = Radians::fromRadians( swingLimitPlane );
         requestRebuild();
     }
 
@@ -133,8 +133,8 @@ namespace sw
         desc._motor                   = PhysicsJointMotor{ _motorTarget, _motorMaxForce, _motorMode };
         desc._minLimit                = _minLimit;
         desc._maxLimit                = _maxLimit;
-        desc._swingLimitNormal        = _swingLimitNormal;
-        desc._swingLimitPlane         = _swingLimitPlane;
+        desc._swingLimitNormal        = _swingLimitNormal.radians();
+        desc._swingLimitPlane         = _swingLimitPlane.radians();
         desc._type                    = _jointType;
         desc._bLimitsEnabled          = _bLimitsEnabled;
         desc._bCollideConnectedBodies = _bCollideConnectedBodies;

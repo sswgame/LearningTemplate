@@ -104,7 +104,7 @@
 			               _upAction="None"
 			               _inputLayer="None"
 			               _aiControllerPrefab="game/shooter3d/prefabs/enemy_ai.prefab.xml"
-			               _maxPitch="1.4"
+			               _maxPitch="80.21409"
 			               _autoPossess="AI"
 			               _bLockMouse="false">
 				<_listButton>

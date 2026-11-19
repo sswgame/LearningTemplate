@@ -10,6 +10,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
@@ -98,7 +99,7 @@ namespace sw
         const hashed_string& getTriggerLookButton() const { return _triggerLookButton; }
         void                 setTriggerLookButton( const hashed_string& button ) { _triggerLookButton = button; }
         void                 setInputLayer( const hashed_string& layer ) { _inputLayer = layer; }
-        float32              getMaxPitch() const { return _maxPitch; }
+        float32              getMaxPitch() const { return _maxPitch.radians(); }
         PawnAutoPossess      getAutoPossess() const { return _autoPossess; }
         void                 setAutoPossess( PawnAutoPossess autoPossess ) { _autoPossess = autoPossess; }
         /** @brief 플레이어가 쥔 동안 커서를 창 가운데에 잠그고 숨기기를 바라는지 나타냅니다(1인칭). 플레이어 조종자가 걸고, 잠금 토글 액션(Esc)이 풀고 다시 겁니다. */
@@ -139,8 +140,8 @@ namespace sw
         hashed_string _triggerLookButton;
         PROPERTY( Category = "Control", DisplayName = "AI Controller Prefab", Tooltip = "Spawned to possess this pawn when Auto Possess is AI (empty: a plain AI controller)" )
         AssetRef<PrefabAsset> _aiControllerPrefab;
-        PROPERTY( Category = "Control", DisplayName = "Max Pitch", Min = 0.0, Max = 1.5707963, Tooltip = "Largest look up or down angle of the control rotation", Units = rad )
-        float32 _maxPitch;
+        PROPERTY( Category = "Control", DisplayName = "Max Pitch", Min = 0.0, Max = 90.0, Tooltip = "Largest look up or down angle of the control rotation" )
+        Radians _maxPitch;
         PROPERTY( Category = "Control", DisplayName = "Auto Possess", Tooltip = "Who takes this pawn when play starts without a controller" )
         PawnAutoPossess _autoPossess;
         PROPERTY( Category = "Control", DisplayName = "Lock Mouse", Tooltip = "Lock and hide the cursor while a player possesses this pawn (first person); the player's mouse lock action toggles it" )

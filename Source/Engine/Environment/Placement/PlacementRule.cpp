@@ -132,7 +132,7 @@ namespace sw
                     return;
 
                 const float32 slope = PlacementScatter::computeSlope( sample._normal );
-                if ( slope < rule._slopeMin || rule._slopeMax < slope )
+                if ( slope < rule._slopeMin.radians() || rule._slopeMax.radians() < slope )
                     return;
                 if ( sample._height < rule._heightMin || rule._heightMax < sample._height )
                     return;
@@ -320,7 +320,7 @@ namespace sw
             instance._height        = candidate._height + rule._heightOffset;
             instance._normal        = candidate._normal;
             instance._scale         = scaleMin + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kStreamScale ) ) * ( scaleMax - scaleMin );
-            instance._yaw           = rule._yawMin + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kStreamYaw ) ) * ( rule._yawMax - rule._yawMin );
+            instance._yaw           = rule._yawMin.radians() + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kStreamYaw ) ) * ( rule._yawMax - rule._yawMin ).radians();
             instance._alignToNormal = MathUtil::saturate( rule._alignToNormal );
             instance._hash          = hashCandidate( rule._seed, candidateIndex, 0xA5A5A5A5u );
             instance._entryIndex    = *entryIndex;

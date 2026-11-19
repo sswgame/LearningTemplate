@@ -10,7 +10,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,20,-30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localPosition="0,20,-30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
 					<CameraManagerComponent _viewTarget="2" _localPlayerIndex="0" />
 				</_listComponent>
 			</GameObject>
@@ -18,21 +18,21 @@
 		<entity id="2" name="GameplayView">
 			<GameObject _schemaVersion="0" _name="GameplayView" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,5,-12" _localRotation="0.4,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+					<CameraComponent _localPosition="0,5,-12" _localRotation="0.4,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="CutA">
 			<GameObject _schemaVersion="0" _name="CutA" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="-3,1.5,-5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+					<CameraComponent _localPosition="-3,1.5,-5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="CutB">
 			<GameObject _schemaVersion="0" _name="CutB" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="3,1.5,-5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+					<CameraComponent _localPosition="3,1.5,-5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>

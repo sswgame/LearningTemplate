@@ -452,7 +452,7 @@ namespace sw
             return;
         const float3 localPosition = pSprite->getLocalPosition();
         float3       localRotation = pSprite->getLocalRotation();
-        localRotation._z           = key._angle;
+        localRotation._z           = key._angle.radians();
         pSprite->setLocalPosition( float3{ key._position._x, key._position._y, localPosition._z } );
         pSprite->setLocalRotation( localRotation );
     }
