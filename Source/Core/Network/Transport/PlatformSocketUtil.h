@@ -1,6 +1,6 @@
 /**
  * @file PlatformSocketUtil.h
- * @brief UDP 소켓 원시 연산 — 이름만 다른 플랫폼 함수(WSAStartup · closesocket · ioctlsocket ↔ close · fcntl)를 이 한 곳에서 가립니다.
+ * @brief UDP · TCP 소켓 원시 연산 — 이름만 다른 플랫폼 함수(WSAStartup · closesocket · ioctlsocket ↔ close · fcntl)를 이 한 곳에서 가립니다.
  * @details Core README 의 규칙("함수 이름만 다르면 *Util 한 곳")을 따릅니다. 소켓 핸들은 `uint64` 로 들고 다닙니다(Windows SOCKET 은 포인터 크기).
  */
 #pragma once
@@ -83,5 +83,19 @@ namespace sw
          *          언리얼 `ISocketSubsystem::GetAddressInfo` 의 블로킹 버전에 해당하고, `localhost` 같은 이름도 hosts 파일을 거쳐 이 경로로 해석합니다.
          */
         [[nodiscard]] static bool resolveAddress( string_view hostAndPort, uint16 defaultPort, NetAddress& outAddress );
+
+        /**
+         * @brief @p to 에 TCP 로 잇고 논블로킹 소켓을 돌려줍니다. @p timeoutMilli 안에 잇지 못하면(거절 · 시한) `kInvalidSocket` 입니다.
+         * @details 막는 호출이다(논블로킹 connect + 쓰기 가능 기다림 + `SO_ERROR`). 개발 도구의 짧은 요청(`PlainHTTPClient`)용이고, 서버 · 게임 연결은 스트림 전송(`IStreamTransport`)을 쓴다.
+         */
+        static uint64 connectTCPSocket( const NetAddress& to, int32 timeoutMilli );
+        /** @brief `sendStream` 의 오류 반환값입니다. */
+        static constexpr int32 kStreamSendFailed = -1;
+        /** @brief 이은 TCP 소켓에 보냅니다. 보낸 바이트 수, 지금 못 보내면 0, 오류면 `kStreamSendFailed` 입니다. */
+        static int32 sendStream( uint64 socketHandle, const uint8* pData, int32 size );
+        /** @brief 이은 TCP 소켓에서 받습니다. `Received` 에 @p outSize 0 은 저쪽이 닫았다는 뜻입니다. */
+        static SocketReceiveResult receiveStream( uint64 socketHandle, uint8* pBuffer, int32 bufferSize, int32& outSize );
+        /** @brief 보낼 자리가 생기거나 @p timeoutMilli 가 지날 때까지 잠듭니다. 보낼 수 있으면(오류 · 끊김 포함 — 다음 호출이 알린다) true 입니다. */
+        static bool waitWritable( uint64 socketHandle, int32 timeoutMilli );
     };
 } // namespace sw

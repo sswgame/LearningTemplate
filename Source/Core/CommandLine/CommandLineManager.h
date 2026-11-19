@@ -152,6 +152,12 @@ namespace sw
          * @details 서비스 호스트처럼 기동 전에 갈라야 하는 쪽이 글자를 따로 비교하지 않게 한다(`"--service"` 한 철자만 받던 결함).
          */
         [[nodiscard]] static bool isFlagGivenBeforeParse( int32 argc, utf8* pPpArgv[], CommandLineArgument argument );
+        /**
+         * @brief 엔진이 서기 전 값 인자 @p argument 의 값(`-key=값`)을 찾습니다 — `isFlagGivenBeforeParse` 와 같은 철자 규칙이다.
+         * @details 엔진보다 앞에서 갈라야 하는 플랫폼 진입점(`AndroidMain` 의 `-fileserve` — 첫 팩을 읽기 전에 콘텐츠 소스를 건다)이 쓴다.
+         * @return 적혔으면 true 이고 @p outValue 가 값이다(값 없이 적었으면 빈 글 — 그 판단은 부른 쪽이 한다. `parse` 도 같은 줄을 오류로 모은다).
+         */
+        [[nodiscard]] static bool findValueBeforeParse( int32 argc, utf8* pPpArgv[], CommandLineArgument argument, string& outValue );
 
         /** @brief `parse` 가 거절한 인자의 이유(한 줄씩)입니다. 비어 있지 않으면 기동을 멈춘다(`CommandLineSubsystem`). */
         [[nodiscard]] const vector<string>& getParseErrors() const { return _listParseError; }

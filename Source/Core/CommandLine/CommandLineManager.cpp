@@ -117,6 +117,26 @@ namespace sw
         return false;
     }
 
+    bool CommandLineManager::findValueBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument, string& outValue )
+    {
+        const string_view spelling = getCommandLineArgumentSpelling( argument );
+        for ( int32 argIndex = 1; argIndex < argc && pPpArgv != nullptr; ++argIndex )
+        {
+            if ( pPpArgv[argIndex] == nullptr )
+                continue;
+            const string_view line = StringUtil::trim( string_view{ pPpArgv[argIndex] } );
+            if ( getArgumentName( line ) != spelling )
+                continue;
+            string_view key;
+            string_view value;
+            outValue.clear();
+            if ( StringUtil::trySplitKeyValue( line, key, value ) )
+                outValue.assign( value.data(), value.size() );
+            return true;
+        }
+        return false;
+    }
+
     string_view CommandLineManager::getArgumentName( string_view argumentLine )
     {
         string_view name = StringUtil::trim( argumentLine );

@@ -308,6 +308,92 @@ namespace sw
 #endif
     }
 
+    uint64 PlatformSocketUtil::connectTCPSocket( const NetAddress& to, int32 timeoutMilli )
+    {
+        if ( initialize() == false )
+            return kInvalidSocket;
+        const PlatformSocketUtilInternal::NativeSocket native = socket( NativeSocketAddress::toNativeFamily( to._family ), SOCK_STREAM, IPPROTO_TCP );
+        if ( native == PlatformSocketUtilInternal::kNativeInvalid )
+            return kInvalidSocket;
+        const uint64 handle = static_cast<uint64>( native );
+#if defined( SW_PLATFORM_WINDOWS )
+        u_long     nonBlocking = 1;
+        const bool bOk         = ioctlsocket( native, static_cast<int32>( FIONBIO ), &nonBlocking ) == 0;
+        const auto isPending   = []()
+        { return WSAGetLastError() == WSAEWOULDBLOCK; };
+#elif defined( SW_PLATFORM_POSIX )
+        const int32 flags     = fcntl( native, F_GETFL, 0 );
+        const bool  bOk       = flags >= 0 && fcntl( native, F_SETFL, flags | O_NONBLOCK ) == 0;
+        const auto  isPending = []()
+        { return errno == EINPROGRESS; };
+#else
+    #error "Unsupported platform"
+#endif
+        const NativeSocketAddress remote = NativeSocketAddress::toNative( to );
+        if ( bOk == false )
+        {
+            closeSocket( handle );
+            return kInvalidSocket;
+        }
+        if ( connect( native, remote.get(), static_cast<PlatformSocketUtilInternal::SocketLength>( remote._length ) ) != 0 )
+        {
+            int32                                    socketError = 0;
+            PlatformSocketUtilInternal::SocketLength errorLength = sizeof( socketError );
+            const bool                               bConnected  = isPending() && waitWritable( handle, timeoutMilli ) &&
+                                    getsockopt( native, SOL_SOCKET, SO_ERROR, reinterpret_cast<utf8*>( &socketError ), &errorLength ) == 0 && socketError == 0;
+            if ( bConnected == false )
+            {
+                closeSocket( handle );
+                return kInvalidSocket;
+            }
+        }
+        return handle;
+    }
+
+    int32 PlatformSocketUtil::sendStream( uint64 socketHandle, const uint8* pData, int32 size )
+    {
+#if defined( SW_PLATFORM_WINDOWS )
+        constexpr int32 kSendFlags = 0;
+#elif defined( SW_PLATFORM_POSIX )
+        constexpr int32 kSendFlags = MSG_NOSIGNAL; // 저쪽이 닫은 소켓에 쓰면 SIGPIPE 로 프로세스가 죽는다 — 오류로 받는다
+#else
+    #error "Unsupported platform"
+#endif
+        const auto sent = send( PlatformSocketUtilInternal::toNative( socketHandle ), reinterpret_cast<const utf8*>( pData ), size, kSendFlags );
+        if ( sent < 0 )
+            return PlatformSocketUtilInternal::isWouldBlock() ? 0 : kStreamSendFailed;
+        return static_cast<int32>( sent );
+    }
+
+    SocketReceiveResult PlatformSocketUtil::receiveStream( uint64 socketHandle, uint8* pBuffer, int32 bufferSize, int32& outSize )
+    {
+        outSize             = 0;
+        const auto received = recv( PlatformSocketUtilInternal::toNative( socketHandle ), reinterpret_cast<utf8*>( pBuffer ), bufferSize, 0 );
+        if ( received < 0 )
+            return PlatformSocketUtilInternal::isWouldBlock() ? SocketReceiveResult::WouldBlock : SocketReceiveResult::Error;
+        outSize = static_cast<int32>( received );
+        return SocketReceiveResult::Received;
+    }
+
+    bool PlatformSocketUtil::waitWritable( uint64 socketHandle, int32 timeoutMilli )
+    {
+        if ( socketHandle == kInvalidSocket )
+            return false;
+#if defined( SW_PLATFORM_WINDOWS )
+        WSAPOLLFD pollEntry{};
+        pollEntry.fd     = PlatformSocketUtilInternal::toNative( socketHandle );
+        pollEntry.events = POLLWRNORM;
+        return WSAPoll( &pollEntry, 1, timeoutMilli ) > 0 && ( pollEntry.revents & ( POLLWRNORM | POLLERR | POLLHUP ) ) != 0;
+#elif defined( SW_PLATFORM_POSIX )
+        pollfd pollEntry{};
+        pollEntry.fd     = PlatformSocketUtilInternal::toNative( socketHandle );
+        pollEntry.events = POLLOUT;
+        return poll( &pollEntry, 1, timeoutMilli ) > 0 && ( pollEntry.revents & ( POLLOUT | POLLERR | POLLHUP ) ) != 0;
+#else
+    #error "Unsupported platform"
+#endif
+    }
+
     bool PlatformSocketUtil::resolveAddress( string_view hostAndPort, uint16 defaultPort, NetAddress& outAddress )
     {
         if ( NetAddress::parse( hostAndPort, defaultPort, outAddress ) )
