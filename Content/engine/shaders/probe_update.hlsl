@@ -309,6 +309,7 @@ float3 computeDirectLight( VoxelGrid grid, uint lightCount, float3 position, flo
 
 /**
  * @brief 광선 하나의 거리 @p distance 를 방향 @p direction 의 모먼트 텍셀(기록 @p momentAt 부터)에 비율 @p blend 로 섞습니다. 아직 모르는 텍셀(거리² 0)은 이 값으로 바로 채운다.
+ *        @p distance 가 0 이면 텍셀을 그대로 둔다(`ShadingMath::computeProbeMomentDistance` 가 칸 안 광선에 준 값).
  */
 void accumulateMoment( uint momentAt, float3 direction, float distance, float blend )
 {
@@ -320,7 +321,8 @@ void accumulateMoment( uint momentAt, float3 direction, float distance, float bl
     const bool   bOdd       = ( texel & 1u ) != 0u;
     const float2 previous   = bOdd ? stored.zw : stored.xy;
     const float2 fresh      = float2( distance, distance * distance );
-    const float2 mixed      = previous.y > 0.0f ? lerp( previous, fresh, blend ) : fresh;
+    const float2 known      = previous.y > 0.0f ? lerp( previous, fresh, blend ) : fresh;
+    const float2 mixed      = distance > 0.0f ? known : previous; // 거리 0(칸 안에서 떠난 광선)은 적지 않는다 — 분기 대신 값 선택(GL, shading_math.hlsli 체비쇼프 주석)
     g_ProbeHistoryRW[at]    = bOdd ? float4( stored.xy, mixed ) : float4( mixed, stored.zw );
 }
 
@@ -436,8 +438,7 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
             const bool bHit = traceVoxelRay( grid, position, direction, kFarDistance, hitDistance, hitNormal );
             // 닿은 거리는 칸 하나 너머까지 늘리고, 칸 안에서 떠난 광선(거리 0)은 적지 않는다 — ShadingMath::computeProbeMomentDistance.
             const float momentDistance = bHit ? ShadingMath::computeProbeMomentDistance( hitDistance, grid._cellSize, momentMaxDistance ) : momentMaxDistance;
-            if ( momentDistance > 0.0f )
-                accumulateMoment( momentAt, direction, momentDistance, blend );
+            accumulateMoment( momentAt, direction, momentDistance, blend );
             if ( bHit )
             {
                 const float3 surface = position + direction * hitDistance + hitNormal * ( grid._cellSize * kSurfaceOffset );

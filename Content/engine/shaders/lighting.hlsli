@@ -525,9 +525,10 @@ float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal, float3
             const float3 fromProbe     = biased - probePosition;
             const float  distance      = length( fromProbe );
             float2       moments       = float2( 0.0f, 0.0f );
-            SW_BRANCH if ( bHasMoments && distance > 1e-4f )
+            // 조건 하나의 분기다 — `a && b` 분기를 NVIDIA GL 이 잘못 컴파일한다(위 그림자 칸 분기와 같은 까닭). 거리 0 근처는 방향이 아무래도 d ≤ 평균이라 보인다.
+            SW_BRANCH if ( bHasMoments )
             {
-                moments = LightProbe::sampleVisibilityMoments( momentBase + probeLocal * SW_PROBE_VISIBILITY_FLOAT4_COUNT, fromProbe / distance );
+                moments = LightProbe::sampleVisibilityMoments( momentBase + probeLocal * SW_PROBE_VISIBILITY_FLOAT4_COUNT, fromProbe / max( distance, 1e-4f ) );
             }
             const float normalDotToProbe = dot( normal, toProbe * rsqrt( max( dot( toProbe, toProbe ), 1e-8f ) ) );
             const float visibility       = ShadingMath::computeProbeVisibilityWeight( normalDotToProbe, distance, moments.x, moments.y, kProbeBackfaceFloor, kProbeChebyshevExponent );
