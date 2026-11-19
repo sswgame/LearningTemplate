@@ -1152,6 +1152,39 @@ struct SW_API ReplicatedLayout
 
 근본 원인은 "리플렉션 칸을 도는 일을 소비자마다 다시 썼다" 이다. 같은 모양 후보는 `ObjectStateSerializer` 의 상태 쓰기 · 읽기 짝과 `ComponentDefaults` 의 기본값 비교다 — RF-4 가 같이 옮긴다.
 
+### 런타임 UI 공통 장치(설계 2026-11-20)
+
+**문제.** 런타임 UI 는 화면 스택(`UISystem` — 레이어 · 모달 · 포커스 기억 · `UI.Back` · 게임 정지 요청), 방향 이웃(`WidgetNavigation` · `UINavigationSolver`), 장치별 글리프(`UIActionGlyphSource`), 일시정지 · 옵션 메뉴, 안전 영역 · 글자 배율 · 의사 현지화를 이미 갖췄다. 빠진 것은 공통 확인 대화 상자(설정 전용 창뿐), 메인 메뉴와 "시작" 명령(`requestEntranceScene` 을 부르는 곳이 없었다), 수량 창, 칸 메뉴 액션, 그리고 이 흐름을 값으로 보는 시나리오였다.
+
+**대조.** 언리얼 CommonUI: 활성화 가능 위젯 스택 · 입력 라우팅 · `UCommonGameDialog`(Lyra `ULyraConfirmationScreen`) · 액션 바(보조 액션). 유니티 UI Toolkit · Godot Control: 포커스 이웃(`focus_neighbor_*`) · `ConfirmationDialog` · `SpinBox`. 우리 스택은 CommonUI 와 같은 자리라 새 스택을 만들지 않고 화면 종류만 더한다.
+
+**결정.**
+1. 엔진 화면 셋: `ConfirmDialogScreen`(답은 한 번 — 중복 누름 · 닫기 애니메이션 중 누름 버림, 뒤로 가기 = 취소), `QuantityDialogScreen`(슬라이더 1 ~ 최대), `MainMenuScreen`(시작 · 옵션 · 끝내기 — 끝내기는 확인 대화 상자 뒤). 문서는 엔진 기본 에셋 필수 칸(`_uiConfirmDialog` · `_uiQuantityDialog` · `_uiMainMenu`) — 코드에 경로가 없다.
+2. 게임 흐름의 일은 전역 명령 표(`StartGame` · `QuitGame` · `ReturnToTitle`)로 — 화면은 흐름을 모른다. 메인 메뉴는 타이틀 씬의 `TitleMenuComponent` 가 연다.
+3. 보조 액션 `UI.ContextMenu`(패드 X · 메뉴 키) — 탭 액션처럼 위젯 다음 화면(`onUnhandledAction`)이 받는다. 마우스 오른쪽 · 길게 누르기(입력 맵 hold 문턱)는 위젯이 직접 받는다.
+4. 시나리오 감시 값: `UI.FocusedWidget` · `UI.FocusedText` · `UI.FocusedComposition` · `UI.ActionGlyph` · `Input.GlyphStyle` · `UI.TextOverflowCount`(글 위젯의 원하는 크기 > 배치 크기) · `Time.Paused`, IME 조합은 `<Text composition="true">`.
+
+**확인.** 단위 `ConfirmDialogTest` · `GameFlowTest`. 시나리오 `game.empty.frontend` · `pausemenu` · `textinput` · `inventory` · `shopoffline`.
+
+**남은 것.** 화면 전환 애니메이션은 문서 애니메이션(`Open` · `Close`)으로 화면마다 둔다(스택 공통 전환은 두지 않는다 — CommonUI 도 위젯마다 전환을 단다).
+
+### 상점 흐름(설계 2026-11-20)
+
+**문제.** 오프라인 가게 규칙(`ShopManager` · `Wallet` · `Inventory`)과 온라인 경제 키트(서버 구매 · 영수증)는 있었지만 게임 쪽 상점 화면 · 구매 흐름이 없었고, 클라이언트는 서버 답을 대조 없이 받았다.
+
+**대조.** 상용 상점: 목록 → 상세 → 구매 확인 → 결과(성공 · 잔액 부족 · 서버 오류) → 재화 표시 갱신. 언리얼 Lyra 에는 상점이 없다. 유니티 Gaming Services Economy 클라이언트: 가상 구매 목록 → `MakeVirtualPurchaseAsync` → 결과 · 잔액 갱신, 서버가 정본.
+
+**결정.**
+1. 화면 하나 · 공급자 형식 하나(합성): `ShopScreen` 은 `IShopPurchaseProvider`(목록 · 잔액 · 갱신 번호 · 대기 여부 · 비동기 구매, 답은 정확히 한 번)만 안다. 오프라인 `LocalShopPurchaseProvider`(가게 · 지갑 · 캐릭터 가방), 온라인 `EconomyShopPurchaseProvider`(경제 키트).
+2. 합계는 `ShopOffer::computeTotal` 한 곳(수량 범위 · 음수 단가 · int64 곱 넘침). 온라인은 화면이 넘긴 줄 대신 카탈로그 정의로 다시 셈한다.
+3. 서버 답 대조: 바뀐 잔액이 이 상품 자산만 · 원장 범위 안 · 값 × 수와 지급 × 수만큼 움직였는지. 어긋나면 `Unverified` + `GetWallet` 스냅샷으로 다시 맞춘다. 실패해도 클라이언트는 재화를 되돌리지 않는다.
+4. 중복 누름은 두 겹: 화면(`_bBusy`) · 공급자(`Busy`). 재시도는 같은 멱등 키만 — 영수증 id 가 그 키다.
+5. 인벤토리 화면과 같은 가방: 산 것은 캐릭터 가방(`CharacterEquipmentComponent`)에 들고, 칸 · 무게가 모자라면 가게가 `NoRoom` 으로 거절한다. 가방 · 장비 조작은 `InventoryCommand` 하나(서버가 받은 요청을 같은 `validate` 로 거른다 — 복제 수량 · 음수 · 범위 밖 거절).
+
+**확인.** 단위 `ShopPurchaseTest` · `EconomyShopProviderTest`(UnitTests.OnlineKits) · `InventoryCommandTest`. 시나리오 `game.empty.shopoffline`(사기 · 잔액 부족 · 무게 가득 · 세이브 왕복) · `game.shooter3d.onlineshop`(성공 · 서버 한도 거절 · 잔액 부족 · 서버 오류).
+
+**남은 것.** 인벤토리 명령의 네트워크 전송(클라이언트 요청 → 서버 적용 → 복제)은 인벤토리 복제 키트가 생길 때 — 요청 모양과 검사는 이미 `InventoryCommand` 다. 결제 상품(`<Product>`)은 `StorePurchaseFlow` 길이라 이 화면에 싣지 않는다.
+
 ## 도구 · 에디터 · 콘텐츠 파이프라인 설계(2026-11-17)
 
 미뤄 둔 항목을 작업자에게 바로 나눠 줄 수 있게 정했다. 절마다 문제(코드 자리) → 상용 대조 → 결정 · 기각 → 초안 → 이전 순서 → 측정이다(일과 사용자 결정 대기는 [NEXT](NEXT.md)). 새 린트 규칙은 없다 — 막을 것은 형식 · API · 로드 오류로 막는다.
