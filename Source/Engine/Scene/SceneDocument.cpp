@@ -806,6 +806,13 @@ namespace sw
         return true;
     }
 
+    void SceneDocument::writeStreamingCellContent( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes )
+    {
+        Archive arch;
+        SceneDocumentInternal::writeEntities( arch, listNode );
+        outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
+    }
+
     size_t SceneDocument::computeTotalEntityCount() const
     {
         size_t count = _listSceneObjectNode.size();

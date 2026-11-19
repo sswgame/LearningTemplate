@@ -79,9 +79,10 @@ namespace sw
         /** @brief 셀 짓기(`continueCellBuild`)가 지은 오브젝트를 자식(중첩 프리팹 부품)까지 지우고 파일 id · 프리팹 기록을 뺍니다. */
         void unloadCell( const vector<uint64>& listObjectID );
         /**
-         * @brief 셀 짓기(`continueCellBuild`)가 지은 오브젝트의 지금 상태를 셀 엔티티로 씁니다(비우고 채웁니다). 스트리밍이 셀을 내리기 전에 불러 다시 올릴 때 이것으로 짓는다(셀 상태 보존).
-         * @details 저장과 같은 길이다(`serializeToDocument` 의 엔티티 쓰기) — 프리팹 엔티티는 원형과 다른 것만(`PrefabOverrides` 델타), 그 밖은 저장 대상 프로퍼티 전체(`SerializePurpose::Authoring`)를 적고
-         *          파일 id · 레이어 · 인스턴스 앵커를 그대로 둔다. 상태는 이미 평평한 파일 id 라 id 범위는 0 이다. 플레이 중 지운 오브젝트는 적지 않아 다시 올려도 없다(언리얼 레벨 스트리밍의 상태 보존 · 세이브 델타와 같은 생각).
+         * @brief 오브젝트(@p listObjectID — 셀 짓기가 지은 것 · 셀로 옮겨 온 것)의 지금 상태를 셀 엔티티로 씁니다(비우고 채웁니다). 스트리밍이 셀을 내리기 전 · 세이브에 실을 때 부르고, 다시 올릴 때 이것으로 짓는다(셀 상태 보존).
+         * @details 저장과 같은 길이다(`serializeToDocument` 의 엔티티 쓰기) — 프리팹 엔티티는 원형과 다른 것만(`PrefabOverrides` 델타), 그 밖은 전체 상태를 적되 목적은 `SerializePurpose::Snapshot` 이다
+         *          (런타임 칸까지 — 엔티티의 `_statePurpose` 가 그 목적으로 읽게 한다). 파일 id · 레이어 · 인스턴스 앵커를 그대로 둔다(파일 id 가 없는 런타임 스폰은 0). 상태는 이미 평평한 파일 id 라
+         *          id 범위는 0 이다. 플레이 중 지운 오브젝트는 적지 않아 다시 올려도 없다(언리얼 레벨 스트리밍의 상태 보존 · 세이브 델타와 같은 생각).
          */
         void captureCellNodes( const vector<uint64>& listObjectID, vector<SceneDocument::SceneObjectNode>& outListNode ) const;
         /** @brief 데이터 레이어 묶음의 엔티티를 이 씬에 더해 짓습니다(`SceneDataLayerSubsystem` 이 부릅니다). 셀과 같은 길이고, 프리팹을 찾지 못한 엔티티는 보관합니다(저장이 다시 쓴다). 내릴 때는 `unloadCell` 입니다. */
@@ -112,6 +113,17 @@ namespace sw
         [[nodiscard]] uint64 getOrAssignFileID( uint64 objectID ) const;
         /** @brief 오브젝트에 이미 준 파일 id 입니다. 주지 않았으면 0 입니다(`getOrAssignFileID` 와 달리 새로 주지 않는다 — 참조가 있는지 묻는 쪽이 씁니다). */
         [[nodiscard]] uint64 findFileID( uint64 objectID ) const;
+        /** @brief 세이브 복원이 다시 만든 오브젝트 하나의 파일 id 입니다(`rebindRestoredFileIDs`). */
+        struct SavedFileID
+        {
+            uint64 _objectID{ 0 }; ///< 다시 만든(이 실행의) 오브젝트 id
+            uint64 _fileID{ 0 };
+        };
+        /**
+         * @brief 세이브 복원이 매니저를 비우고 오브젝트를 다시 만든 뒤 부릅니다(`GameStateSnapshot::readEnvelope`). 사라진 오브젝트의 기록(파일 id · 프리팹 · 인스턴스 · 레이어)을 버리고 @p listFileID 의 파일 id 를 다시 붙입니다.
+         * @details 다른 실행의 세이브는 오브젝트가 새 id 를 받는다 — 다시 붙이지 않으면 스트리밍 셀이 늘 올라 있는 오브젝트를 파일 id 로 찾지 못한다(셀의 참조가 빈다).
+         */
+        void rebindRestoredFileIDs( const vector<SavedFileID>& listFileID );
         /** @brief 파일 id 의 살아 있는 오브젝트 id 입니다. 이 씬에 없으면(지운 오브젝트 · 내려간 스트리밍 셀) 0 입니다. */
         [[nodiscard]] uint64 findObjectIDByFileID( uint64 fileID ) const;
 

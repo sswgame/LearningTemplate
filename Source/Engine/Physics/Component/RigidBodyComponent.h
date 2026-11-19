@@ -142,6 +142,8 @@ namespace sw
     protected:
         /** @brief 동적 바디면 선속도 · 각속도를 0 으로 줍니다(정적 · 키네마틱은 트랜스폼이 운동이다). */
         void resetMotion() override;
+        /** @brief 동적 바디만 바닥 없이 떨어진다. */
+        bool needsStreamingFloor() const override { return _bodyType == PhysicsBodyType::Dynamic; }
         void beginPhysicsFrame( ScenePhysics& physics ) override;
         void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
         void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;

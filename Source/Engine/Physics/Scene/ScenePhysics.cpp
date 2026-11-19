@@ -23,6 +23,7 @@
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Scene/SceneStreamingSubsystem.h"
 
 namespace sw
 {
@@ -104,6 +105,7 @@ namespace sw
         , _bFrameHookListStale{ SW_TRUE }
         , _bHookBatchEnabled{ SW_TRUE }
         , _bFrameEventsPending{ SW_FALSE }
+        , _bStreamingHolds{ SW_FALSE }
     {
     }
 
@@ -119,7 +121,25 @@ namespace sw
             return;
         SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
         SW_MEMORY_SCOPE( Physics );
+        updateStreamingHolds();
         step( deltaTime );
+    }
+
+    void ScenePhysics::updateStreamingHolds()
+    {
+        const SceneStreamingSubsystem& streaming  = _manager.getSubsystem<SceneStreamingSubsystem>();
+        const bool                     bStreaming = streaming.isStreaming();
+        if ( bStreaming == false && _bStreamingHolds == false )
+            return;
+        // shortcut: 바디 · 캐릭터 단계를 프레임마다 모두 본다(셀 표 찾기 하나씩) — 수만 개가 되면 씬 공간 색인(`PhysicsComponent::getBodySpatialLayer`)으로 내려간 셀의 칸만 본다.
+        for ( const PhysicsComponentPhase phase : { PhysicsComponentPhase::Body, PhysicsComponentPhase::Character } )
+        {
+            for ( PhysicsComponent* pComponent : _arrListComponent[static_cast<uint32>( phase )] )
+            {
+                pComponent->_bStreamingHeld = bStreaming && pComponent->needsStreamingFloor() && streaming.isFloorMissing( pComponent->getWorldPosition() );
+            }
+        }
+        _bStreamingHolds = bStreaming ? SW_TRUE : SW_FALSE;
     }
 
     void ScenePhysics::onSceneCleared()

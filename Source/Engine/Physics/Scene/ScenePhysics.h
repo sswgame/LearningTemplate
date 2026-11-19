@@ -283,6 +283,11 @@ namespace sw
         void readMovedBodies( const vector<uint32>& listPoseSlot, const IPhysicsBodyScene<TDimension>& scene, PoseReadBuffer<TDimension>& buffer );
         /** @brief `queuePoseWrite` 로 모은 쓰기를 적용합니다(그 머리말의 순서). */
         void applyPoseWrites();
+        /**
+         * @brief 바닥(스트리밍 셀)이 없는 자리의 동적 바디 · 캐릭터를 쥐고, 셀이 오른 자리의 것을 풉니다(`PhysicsComponent::isStreamingHeld`, `SceneStreamingSubsystem::isFloorMissing`).
+         * @details 스트리밍은 물리보다 아래 층이라 물리가 묻는다. 셀을 스트리밍하지 않는 씬은 쥔 것이 없으면 아무것도 하지 않는다.
+         */
+        void updateStreamingHolds();
         /** @brief `queueCharacterMove` 로 모은 이동을 3D 씬에 한 번에 넘기고 비웁니다(스텝마다 `prePhysicsStep` 뒤). */
         void flushCharacterMoves( float32 fixedDeltaTime );
 
@@ -368,6 +373,7 @@ namespace sw
         uint8                                                             _bFrameHookListStale : 1; ///< 훅 구간을 다시 지어야 한다(등록 · 해제 · `setHookBatchEnabled`)
         uint8                                                             _bHookBatchEnabled   : 1; ///< 훅을 타입별 일괄 함수로 부른다(`setHookBatchEnabled`)
         uint8                                                             _bFrameEventsPending : 1; ///< 마지막 `step` 의 이벤트를 아직 나눠 주지 않았다(`deliverFrameEvents`)
+        uint8                                                             _bStreamingHolds     : 1; ///< 스트리밍이 바닥 없는 바디를 쥐고 있을 수 있다(`updateStreamingHolds` — 스트리밍이 끝나면 한 번 모두 푼다)
     };
 
     /**

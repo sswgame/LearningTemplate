@@ -19,6 +19,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/SceneSettings.h"
+#include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 namespace sw
 {
@@ -123,6 +124,12 @@ namespace sw
             string _instancePartPath;
             /** @brief **저작 칸.** 맨 위 앵커의 `<Part>` 가 이 멤버에 적은 것입니다. 안 올린 레이어의 멤버는 살아 있는 값이 없어 저장이 이것을 그대로 다시 적습니다. */
             string _instanceTopOverrideXML;
+            /**
+             * @brief **런타임 칸.** 글 · 바이너리 상태를 읽을 목적입니다. 씬 파일 · 쿠킹본에서 읽은 엔티티는 `Authoring` 이고 파일에는 쓰지 않습니다.
+             * @details 스트리밍이 셀을 내릴 때 떠 둔 엔티티(`Scene::captureCellNodes`)는 `Snapshot` 이다 — 런타임 칸(`RuntimeState`)까지 실려 있어 저작 목적으로 읽으면 로드 오류다.
+             *          세이브에 실을 때는 스트리밍이 엔티티마다 따로 적는다(`SceneStreamingSubsystem::writeSaveState`).
+             */
+            SerializePurpose _statePurpose{ SerializePurpose::Authoring };
         };
 
         /**
@@ -188,6 +195,8 @@ namespace sw
          * @return 구간이 엔티티 목록으로 읽히지 않으면(잘림 · 손상) 오류를 남기고 false 입니다. @p sourcePath 는 로그용입니다.
          */
         [[nodiscard]] SW_API static bool readStreamingCellContent( const uint8* pData, uint64 size, vector<SceneObjectNode>& outListNode, string_view sourcePath );
+        /** @brief 엔티티 목록을 셀 내용 형식으로 씁니다(`readStreamingCellContent` 의 짝 — 비우고 채운다). 읽을 목적(`_statePurpose`)은 쓰지 않습니다. */
+        SW_API static void writeStreamingCellContent( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );
         /** @brief 셀까지 메모리에 든 엔티티 수입니다(색인만 읽은 셀의 엔티티는 세지 않는다). */
         SW_API size_t computeTotalEntityCount() const;
 

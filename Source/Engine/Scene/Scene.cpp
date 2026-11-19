@@ -222,7 +222,7 @@ namespace sw
              */
             static void applyEntityState( GameObject* pGo, const SceneDocument::SceneObjectNode& entity, const string& prefabInstanceState, ObjectStateBatch& batch )
             {
-                ObjectLoadContext context{ SerializePurpose::Authoring };
+                ObjectLoadContext context{ entity._statePurpose }; // 파일의 엔티티는 저작, 스트리밍이 떠 둔 엔티티는 스냅숏(런타임 칸이 실렸다)
                 context._pBatch  = &batch;
                 context._savedID = entity._fileID;
                 if ( entity._embeddedStateBytes.empty() == false )
@@ -749,7 +749,8 @@ namespace sw
             }
             SceneInternal::collectInstancePartOverrides( *_objectManager, pAssetManager->getAssetCache<PrefabCache>(), mapCellPrefab, inputs._mapPartOverride );
         }
-        ObjectSaveOptions saveOptions{ SerializePurpose::Authoring };
+        // 런타임 칸(`RuntimeState` — 볼륨 발동 수 · AI 블랙보드)까지 뜬다 — 저작 목적이면 내렸다 올린 셀이 처음 상태로 돌아간다. 파생 칸(`Transient`)은 뜨지 않는다.
+        ObjectSaveOptions saveOptions{ SerializePurpose::Snapshot };
         saveOptions._pSavedIDMap = &_mapObjectIDToFileID;
 
         outListNode.reserve( listObjectID.size() );
@@ -759,6 +760,7 @@ namespace sw
             if ( pGo == nullptr || pGo->isPendingDestroy() )
                 continue; // 플레이 중 지웠다 — 다시 올려도 없다
             SceneDocument::SceneObjectNode node{};
+            node._statePurpose = SerializePurpose::Snapshot;
             if ( SceneInternal::writeEntityNode( pGo, _mapPrefabSource, inputs, saveOptions, node ) == false )
                 continue;
             const auto layerIt = _mapObjectDataLayer.find( objectID );
@@ -1242,6 +1244,36 @@ namespace sw
             }
         }
         return nextFileID;
+    }
+
+    void Scene::rebindRestoredFileIDs( const vector<SavedFileID>& listFileID )
+    {
+        if ( _objectManager == nullptr )
+            return;
+        // 매니저를 비우고 다시 만든 오브젝트다 — 사라진 id 의 기록은 버린다(남기면 `findObjectIDByFileID` 가 같은 파일 id 의 옛 오브젝트를 먼저 찾는다).
+        const auto dropGone = [this]( auto& mapByObjectID )
+        {
+            vector<uint64> listGone;
+            for ( const auto& entry : mapByObjectID )
+            {
+                if ( _objectManager->findGameObjectByID( entry.first ) == nullptr )
+                    listGone.push_back( entry.first );
+            }
+            for ( const uint64 objectID : listGone )
+            {
+                mapByObjectID.erase( objectID );
+            }
+        };
+        dropGone( _mapObjectIDToFileID );
+        dropGone( _mapPrefabSource );
+        dropGone( _mapSceneInstancePath );
+        dropGone( _mapInstanceMember );
+        dropGone( _mapObjectDataLayer );
+        for ( const SavedFileID& entry : listFileID )
+        {
+            if ( entry._fileID != 0 && _objectManager->findGameObjectByID( entry._objectID ) != nullptr )
+                _mapObjectIDToFileID[entry._objectID] = entry._fileID;
+        }
     }
 
     uint64 Scene::findObjectIDByFileID( uint64 fileID ) const
