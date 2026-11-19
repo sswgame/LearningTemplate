@@ -7,6 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -33,9 +34,12 @@ namespace sw
      * @brief 핫바 전체입니다. 블록을 넣으면 같은 블록이 든 슬롯부터 64개까지 채우고, 남으면 앞쪽 빈 슬롯에 넣습니다. 놓을 때는 고른 슬롯에서 하나씩 꺼냅니다.
      * @details 카탈로그는 빌려 쓴다(`VoxelWorld` 와 같다). 세이브에 블록을 id 로 적고 읽을 때 번호로 되돌리는 데 쓴다.
      */
+    REFLECT()
     class SW_KIT_API VoxelHotbar
     {
     public:
+        REFLECT_BODY();
+
         static constexpr int32  kSlotCount    = 9;
         static constexpr int32  kMaxStack     = 64;
         static constexpr uint32 kStateTag     = FourCCUtil::make( "VXHB" );
@@ -67,6 +71,7 @@ namespace sw
     private:
         VoxelHotbarSlot          _arrSlot[kSlotCount];
         const VoxelBlockCatalog* _pCatalog;
-        int32                    _selectedIndex;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _selectedIndex; ///< 위 끝(칸 수)은 열린 경계라 손 본문이 본다
     };
 } // namespace sw
