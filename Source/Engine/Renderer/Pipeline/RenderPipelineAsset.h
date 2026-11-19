@@ -122,6 +122,11 @@ namespace sw
          *        준비 단계부터 하지 않는다 — 채우는 패스가 없는 버퍼를 읽게 두지 않는다.
          */
         bool hasFramePass( RenderPassKind type ) const;
+        /**
+         * @brief 프레임 패스 @p pass 의 접근 목록입니다(`RenderGraph::addPass` 의 접근 판). 규칙: 입력 = 읽기(SRV), 출력 = 버퍼면 UAV · 텍스처(`_viewable`)면 렌더 타깃,
+         *        `_listIndirectArgs` · `_listCopySource` · `_listCopyDest` = 간접 인자 · 복사 원본 · 복사 대상. 한 이름이 두 번 오지 않음은 로드 검증이 보증한다.
+         */
+        vector<RenderGraphResourceAccess> buildFramePassAccesses( const RenderGraphPassDesc& pass ) const;
 
     private:
         /** @brief `_listRenderPassRef` 의 첨부 · 자원 · 프레임 패스를 이 파이프라인 목록 앞에 합칩니다. 렌더 패스 파일을 읽지 못하면 오류를 남기고 false 입니다. */
