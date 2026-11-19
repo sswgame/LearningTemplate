@@ -2263,6 +2263,11 @@
 				<item>engine/ui/loading.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Main Menu" source="Main Menu" context="TextWidget._text">
+			<origins>
+				<item>engine/ui/mainmenu.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Notification.ClipboardWriteFailed" source="Could not copy to the clipboard.">
 			<origins>
 				<item>Source/Engine/UI/Widgets/TextInputWidget.cpp</item>
@@ -2285,6 +2290,7 @@
 		</entry>
 		<entry key="Options" source="Options" context="TextWidget._text">
 			<origins>
+				<item>engine/ui/mainmenu.ui.xml</item>
 				<item>engine/ui/options.ui.xml</item>
 				<item>engine/ui/pause.ui.xml</item>
 			</origins>
@@ -2303,6 +2309,7 @@
 		</entry>
 		<entry key="Quit Game" source="Quit Game" context="TextWidget._text">
 			<origins>
+				<item>engine/ui/mainmenu.ui.xml</item>
 				<item>engine/ui/pause.ui.xml</item>
 			</origins>
 		</entry>
@@ -2344,9 +2351,34 @@
 				<item>engine/ui/options.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Start Game" source="Start Game" context="TextWidget._text">
+			<origins>
+				<item>engine/ui/mainmenu.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Swap" source="Swap" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/key_rebind.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="UIMenu.Cancel" source="Cancel">
+			<origins>
+				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="UIMenu.QuitAccept" source="Quit">
+			<origins>
+				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="UIMenu.QuitMessage" source="Quit the game?">
+			<origins>
+				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="UIMenu.QuitTitle" source="Quit Game">
+			<origins>
+				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
 			</origins>
 		</entry>
 		<entry key="You have changes that are not applied."

@@ -457,11 +457,10 @@ namespace sw
 
         [[nodiscard]] static expected<void> prepareText( AutomationStepContext& context, const AutomationStep& step )
         {
-            AutomationRunner&             runner = asRunner( context );
-            const expected<const string*> value  = step.requireAttribute( "value" );
-            if ( value.has_value() == false )
-                return unexpected( value.error() );
-            runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTextInput( **value ) );
+            AutomationRunner&              runner = asRunner( context );
+            const AutomationTextStepParams params = step.readValidatedProperties<AutomationTextStepParams>();
+            // 조합 글은 한 조각으로 넣는다(시나리오의 조합은 음절 몇 개라 칸을 넘지 않는다 — 넘으면 페이로드가 글자 경계에서 자른다).
+            runner._inputScript.addEvent( step._frameIndex, params._bComposition ? RawInputEvent::makeTextComposition( params._value, false ) : RawInputEvent::makeTextInput( params._value ) );
             return {};
         }
 

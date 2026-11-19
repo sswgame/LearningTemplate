@@ -27,6 +27,8 @@
                      _uiOptionsRowString="engine/ui/parts/setting_string.ui.xml"
                      _uiSettingsConfirm="engine/ui/confirm_countdown.ui.xml"
                      _uiSettingsUnsaved="engine/ui/confirm_unsaved.ui.xml"
+                     _uiConfirmDialog="engine/ui/confirm.ui.xml"
+                     _uiMainMenu="engine/ui/mainmenu.ui.xml"
                      _uiKeyRebind="engine/ui/key_rebind.ui.xml"
                      _uiNotifications="engine/ui/notifications.ui.xml"
                      _uiNotificationEntry="engine/ui/parts/notification.ui.xml"
