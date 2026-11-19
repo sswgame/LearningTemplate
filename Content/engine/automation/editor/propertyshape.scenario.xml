@@ -16,12 +16,21 @@
 	<Expect watch="Editor.PropertyShapeHandleCount" equals="0"/>
 	<DevCommand line="component.add PointLightComponent"/>
 	<WaitUntil watch="Editor.PropertyShapeHandleCount" equals="6" timeoutFrames="60"/>
-	<Store watch="Editor.PropertyShapeNumber" as="radiusBefore"/>
+	<!-- 기본 반경 6 은 기본 카메라에서 ±X · +Y 손잡이가 뷰포트 밖이다(+X 는 인스펙터 밑) — 손잡이가 화면 안에 오도록 반경을 1 로 둔다 -->
+	<EditorClick mark="inspector.property.PointLightComponent._radius" mods="ctrl"/>
 	<EditorWaitStable/>
-	<EditorDrag mark="propertyshape.handle._radius.x+" dx="60" dy="0"/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitStable/>
+	<EditorText value="1"/>
+	<EditorWaitStable/>
+	<EditorKey key="Enter"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.PropertyShapeNumber" equals="1"/>
+	<Store watch="Editor.PropertyShapeNumber" as="radiusBefore"/>
+	<Expect watch="Editor.UndoCount" atLeast="1"/>
+	<EditorDrag mark="propertyshape.handle._radius.x+" dx="40" dy="0"/>
 	<WaitUntil watch="Editor.PropertyShapeCommitCount" equals="1" timeoutFrames="150"/>
 	<Expect watch="Editor.PropertyShapeNumber" differsFrom="radiusBefore"/>
-	<Expect watch="Editor.UndoCount" atLeast="1"/>
 	<EditorWaitStable/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.PropertyShapeNumber" sameAs="radiusBefore" timeoutFrames="60"/>
