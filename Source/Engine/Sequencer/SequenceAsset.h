@@ -307,7 +307,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Track name" )
+        PROPERTY( Meta = "NotLocalizable", Tooltip = "Track name (editor label)" )
         string _name;
         /** @brief 프로퍼티 트랙의 `<컴포넌트 타입>.<프로퍼티>` 입니다(트랜스폼 · 렌즈 트랙은 비어 있다). 리그 슬롯 트랙은 슬롯 이름입니다. */
         PROPERTY( Tooltip = "Property track: <component type>.<property>; rig slot track: slot name; transform and lens tracks: empty" )
