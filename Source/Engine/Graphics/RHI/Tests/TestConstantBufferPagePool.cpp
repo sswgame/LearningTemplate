@@ -164,6 +164,9 @@ SW_TEST_CASE( ConstantBufferPagePoolTest, FailuresReturnTheSlot )
     test::FakeRHIDevice device;
     device._pResourceFactory     = &factory;
     ConstantBufferPagePool& pool = device.getConstantBufferPagePool();
+    // 실패를 일부러 넣는다 — 페이지 만들기 실패 · 구간 등록 실패가 오류 한 줄씩 남긴다.
+    SW_EXPECT_LOG( "ConstantBufferPagePool.CouldNotCreatePage" );
+    SW_EXPECT_LOG( "ConstantBufferPagePool.CouldNotRegisterSlice" );
 
     ConstantBufferPoolSlice slice;
     factory._bFailPage = true;
