@@ -55,46 +55,6 @@ namespace sw::editor
         };
     } // namespace
 
-    bool EditorColliderHandleDragTracker::step( bool bAvailable, bool bMouseDown, const Ray* pRay, vector<EditorColliderHandleCommand>& outListCommand )
-    {
-        if ( _bDragging == false )
-            return bAvailable;
-        const bool bEnd = bAvailable == false || bMouseDown == false;
-        if ( bEnd )
-        {
-            EditorColliderHandleCommand command{};
-            command._kind    = EditorColliderHandleCommandKind::End;
-            command._object  = _object;
-            command._bCommit = bAvailable; // 놓았으면 남기고, 대상이 사라졌거나 편집이 막혔으면 버린다
-            outListCommand.push_back( command );
-            _bDragging = false;
-            _object    = GameObjectHandle{};
-            return false;
-        }
-        if ( pRay != nullptr )
-        {
-            EditorColliderHandleCommand command{};
-            command._kind   = EditorColliderHandleCommandKind::Drag;
-            command._object = _object;
-            command._handle = _active;
-            command._ray    = *pRay;
-            outListCommand.push_back( command );
-        }
-        return true;
-    }
-
-    void EditorColliderHandleDragTracker::press( GameObjectHandle object, const ColliderHandle& handle, vector<EditorColliderHandleCommand>& outListCommand )
-    {
-        EditorColliderHandleCommand command{};
-        command._kind   = EditorColliderHandleCommandKind::Capture;
-        command._object = object;
-        command._handle = handle;
-        outListCommand.push_back( command );
-        _object    = object;
-        _active    = handle;
-        _bDragging = true;
-    }
-
     EditorColliderHandleEdit::EditorColliderHandleEdit()
         : _pBefore{}
         , _object{}
@@ -175,7 +135,7 @@ namespace sw::editor
         if ( handle._shapeIndex >= listShape.size() )
             return;
         // 축은 중심에서 손잡이 쪽을 향하므로 레이가 가리키는 점의 거리가 곧 새 가장자리까지의 거리다.
-        const float32             distance = EditorColliderHandleMath::computeClosestAxisParameter( command._ray._origin, command._ray._direction, handle._center, handle._direction );
+        const float32             distance = Ray::computeClosestAxisParameter( command._ray, handle._center, handle._direction );
         const PhysicsShapeDesc3D& current  = listShape[handle._shapeIndex];
         const PhysicsShapeDesc3D  resized  = EditorColliderHandleMath::applyDrag( current, handle, distance, scale );
         if ( EditorColliderHandleEditInternal::isSameSize( resized, current ) )

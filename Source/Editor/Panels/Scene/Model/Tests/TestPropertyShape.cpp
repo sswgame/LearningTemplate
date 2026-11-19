@@ -1,4 +1,5 @@
-// 선언형 모양(`Meta = "Shape=…"`) — 메타 읽기(PropertyShapeDecl), 모양 선 · 손잡이 계산(PropertyShapeValue · PropertyShapeHandle), 명령 순서, 편집 요청으로 쓰기.
+// 선언형 모양(`Meta = "Shape=…"`) — 메타 읽기(PropertyShapeDecl), 모양 선 · 손잡이 계산(PropertyShapeValue · PropertyShapeHandle), 편집 요청으로 쓰기.
+// 명령 순서(공통 `EditorHandleDragTracker`)는 TestEditorColliderHandleDragTracker 가 본다.
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
@@ -8,8 +9,10 @@
 #include "Editor/Panels/Scene/Model/PropertyShapeEdit.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
+#include "Engine/Audio/Component/AudioReverbZoneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -114,7 +117,7 @@ SW_TEST_CASE( PropertyShapeTest, ConeHandlesEditAngleAndRange )
     using Internal           = PropertyShapeTestInternal;
     PropertyShapeValue value = Internal::makeValue( PropertyShapeKind::Cone );
     value._number            = 0.5f;
-    value._coneLength        = 4.0f;
+    value._range             = 4.0f;
     sw::vector<PropertyShapeHandle> listHandle;
     value.collectHandles( 3, sw::hashed_string( "_outerConeAngle" ), sw::hashed_string( "_radius" ), listHandle );
     SW_REQUIRE_EQUAL( size_t{ 5 }, listHandle.size() );
@@ -168,7 +171,7 @@ SW_TEST_CASE( PropertyShapeTest, LineCountsPerShape )
     {
         PropertyShapeValue value = Internal::makeValue( kind );
         value._number            = 0.4f;
-        value._coneLength        = 2.0f;
+        value._range             = 2.0f;
         value._vector            = sw::float3{ 1.0f, 1.0f, 1.0f };
         sw::editor::EditorVisualizerDrawList drawList;
         value.addLines( prototype, drawList );
@@ -179,6 +182,8 @@ SW_TEST_CASE( PropertyShapeTest, LineCountsPerShape )
     SW_EXPECT_EQUAL( size_t{ 12 }, countLines( PropertyShapeKind::Box ) );
     SW_EXPECT_EQUAL( circle + 4, countLines( PropertyShapeKind::Cone ) );
     SW_EXPECT_EQUAL( size_t{ 5 }, countLines( PropertyShapeKind::Arrow ) );
+    SW_EXPECT_EQUAL( circle, countLines( PropertyShapeKind::Circle ) );
+    SW_EXPECT_EQUAL( circle * 2 + 4 + circle * 2, countLines( PropertyShapeKind::Capsule ) ); // 끝 원 둘 · 옆선 넷 · 반원 넷(반원 하나가 원의 절반)
 }
 
 /**
@@ -258,38 +263,78 @@ SW_TEST_CASE( PropertyShapeTest, ApplyDragWritesThroughThePropertyEditRequest )
 }
 
 /**
- * @brief [PropertyShapeTest] 손잡이 명령 순서 — 누름은 잡기, 끄는 동안 레이마다 끌기, 놓으면 커밋하는 놓기, 대상이 사라지면 커밋 없는 놓기. 결함이면 끊긴 끌기가 되돌리기를 남긴다
+ * @brief [PropertyShapeTest] 원은 로컬 XY 평면의 손잡이 넷이다(Z 쪽은 없다). 결함이면 2D 빛 반경에 화면 밖(깊이) 손잡이가 선다
  */
-SW_TEST_CASE( PropertyShapeTest, DragTrackerSendsCaptureDragEnd )
+SW_TEST_CASE( PropertyShapeTest, CircleHandlesStayInTheLocalPlane )
 {
-    using sw::editor::PropertyShapeHandleCommand;
-    using sw::editor::PropertyShapeHandleCommandKind;
-    sw::editor::PropertyShapeHandleDragTracker tracker;
-    sw::vector<PropertyShapeHandleCommand>     listCommand;
-    PropertyShapeHandle                        handle{};
-    handle._componentID = 9;
-    tracker.press( sw::GameObjectHandle::make( 4 ), handle, listCommand );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, listCommand.size() );
-    SW_EXPECT_TRUE( listCommand[0]._kind == PropertyShapeHandleCommandKind::Capture );
-    SW_EXPECT_TRUE( tracker.isDragging() );
+    using Internal           = PropertyShapeTestInternal;
+    PropertyShapeValue value = Internal::makeValue( PropertyShapeKind::Circle );
+    value._number            = 3.0f;
+    sw::vector<PropertyShapeHandle> listHandle;
+    value.collectHandles( 2, sw::hashed_string( "_outerRadius" ), sw::hashed_string{}, listHandle );
+    SW_REQUIRE_EQUAL( size_t{ 4 }, listHandle.size() );
+    for ( const PropertyShapeHandle& handle : listHandle )
+    {
+        SW_EXPECT_TRUE( handle._axis < 2 );
+        SW_EXPECT_NEAR( 3.0f, handle._position._z, Internal::kTolerance );
+    }
+}
 
-    listCommand.clear();
-    const sw::Ray ray{};
-    SW_EXPECT_TRUE( tracker.step( true, true, &ray, listCommand ) );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, listCommand.size() );
-    SW_EXPECT_TRUE( listCommand[0]._kind == PropertyShapeHandleCommandKind::Drag );
-    SW_EXPECT_EQUAL( uint64{ 9 }, listCommand[0]._handle._componentID );
+/**
+ * @brief [PropertyShapeTest] 바닥 원점 캡슐: 반지름 손잡이 넷은 가운데(바닥 + 반 높이 + 반지름) 둘레, 높이 손잡이 하나는 꼭대기이고 끈 거리에서 반지름 둘을 빼 반으로 나눈 값이 새 반 높이다.
+ *        결함이면 캐릭터 캡슐의 손잡이가 발밑에 뜨거나 높이가 두 배로 바뀐다
+ */
+SW_TEST_CASE( PropertyShapeTest, BaseCapsuleHandlesAndHeightDrag )
+{
+    using Internal           = PropertyShapeTestInternal;
+    PropertyShapeValue value = Internal::makeValue( PropertyShapeKind::Capsule );
+    value._number            = 0.5f;
+    value._range             = 1.0f;
+    value._bBaseOrigin       = 1;
+    sw::vector<PropertyShapeHandle> listHandle;
+    value.collectHandles( 6, sw::hashed_string( "_radius" ), sw::hashed_string( "_halfHeight" ), listHandle );
+    SW_REQUIRE_EQUAL( size_t{ 5 }, listHandle.size() );
+    const PropertyShapeHandle* pPlusX = Internal::findHandle( listHandle, PropertyShapeHandleKind::Radius, 0, 1.0f );
+    SW_REQUIRE_NOT_NULL( pPlusX );
+    SW_EXPECT_NEAR( 3.5f, pPlusX->_position._y, Internal::kTolerance ); // 바닥 y 2 + 1 + 0.5
+    SW_EXPECT_NEAR( 1.5f, pPlusX->_position._x, Internal::kTolerance );
 
-    listCommand.clear();
-    SW_EXPECT_FALSE( tracker.step( true, false, &ray, listCommand ) );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, listCommand.size() );
-    SW_EXPECT_TRUE( listCommand[0]._kind == PropertyShapeHandleCommandKind::End );
-    SW_EXPECT_TRUE( listCommand[0]._bCommit );
+    const PropertyShapeHandle* pTop = Internal::findHandle( listHandle, PropertyShapeHandleKind::CapsuleHeight, 1, 1.0f );
+    SW_REQUIRE_NOT_NULL( pTop );
+    SW_EXPECT_TRUE( pTop->_property == sw::hashed_string( "_halfHeight" ) );
+    SW_EXPECT_NEAR( 5.0f, pTop->_position._y, Internal::kTolerance ); // 바닥 y 2 + 2 × 1.5
+    SW_EXPECT_NULL( Internal::findHandle( listHandle, PropertyShapeHandleKind::CapsuleHeight, 1, -1.0f ) );
+    // 바닥에서 위로 4 m 를 옆(+Z)에서 본다 — (4 - 2 × 0.5) ÷ 2 = 1.5.
+    const sw::Ray side = Internal::makeRay( sw::float3{ 1.0f, 6.0f, 10.0f }, sw::float3{ 1.0f, 6.0f, 3.0f } );
+    SW_EXPECT_NEAR( 1.5f, pTop->computeDraggedNumber( side ), Internal::kTolerance );
+    // 반지름 둘보다 낮게 끌면 원기둥이 없는 구다 — 반 높이 0.
+    const sw::Ray low = Internal::makeRay( sw::float3{ 1.0f, 2.5f, 10.0f }, sw::float3{ 1.0f, 2.5f, 3.0f } );
+    SW_EXPECT_NEAR( 0.0f, pTop->computeDraggedNumber( low ), Internal::kTolerance );
+}
 
-    listCommand.clear();
-    tracker.press( sw::GameObjectHandle::make( 4 ), handle, listCommand );
-    listCommand.clear();
-    SW_EXPECT_FALSE( tracker.step( false, true, nullptr, listCommand ) );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, listCommand.size() );
-    SW_EXPECT_FALSE( listCommand[0]._bCommit );
+/**
+ * @brief [PropertyShapeTest] 선언 선택지 — 캐릭터 캡슐은 바닥 원점(`ShapeOrigin=Base`), 오디오 존은 월드 축(`ShapeAxes=World`)이다. 결함이면 캡슐이 발밑을 가운데로 그리거나 존이 돌아간다
+ */
+SW_TEST_CASE( PropertyShapeTest, DeclarationOptionsAreRead )
+{
+    const sw::TypeInfo* pCharacterType = sw::findStaticType<sw::CharacterControllerComponent>();
+    const sw::TypeInfo* pReverbType    = sw::findStaticType<sw::AudioReverbZoneComponent>();
+    SW_REQUIRE_NOT_NULL( pCharacterType );
+    SW_REQUIRE_NOT_NULL( pReverbType );
+
+    sw::vector<sw::editor::PropertyShapeDecl> listDecl;
+    SW_REQUIRE_TRUE( sw::editor::PropertyShapeDecl::collect( *pCharacterType, listDecl ).has_value() );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listDecl.size() );
+    SW_EXPECT_TRUE( listDecl[0]._kind == PropertyShapeKind::Capsule );
+    SW_EXPECT_EQUAL( uint8{ 1 }, listDecl[0]._bBaseOrigin );
+    SW_REQUIRE_NOT_NULL( listDecl[0]._pRangeProperty );
+    SW_EXPECT_TRUE( listDecl[0]._pRangeProperty->_name == sw::hashed_string( "_halfHeight" ) );
+
+    listDecl.clear();
+    SW_REQUIRE_TRUE( sw::editor::PropertyShapeDecl::collect( *pReverbType, listDecl ).has_value() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listDecl.size() ); // 상자 · 구 — 어느 쪽을 그릴지는 EditCondition(_shape)이 고른다
+    for ( const sw::editor::PropertyShapeDecl& decl : listDecl )
+    {
+        SW_EXPECT_EQUAL( uint8{ 1 }, decl._bWorldAxes );
+    }
 }

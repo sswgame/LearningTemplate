@@ -7,6 +7,9 @@
  *          - `PROPERTY( …, Meta = "Shape=Box" ) float3 _halfExtents;`
  *          - `PROPERTY( …, Meta = "Shape=Cone, ShapeRange=_radius" ) float32 _outerConeAngle;`(반각 rad, 길이는 같은 타입의 float32 프로퍼티)
  *          - `PROPERTY( …, Meta = "Shape=Arrow" ) float3 _localDirection;`
+ *          - `PROPERTY( …, Meta = "Shape=Circle" ) float32 _outerRadius;`(로컬 XY 평면 — 2D)
+ *          - `PROPERTY( …, Meta = "Shape=Capsule, ShapeRange=_halfHeight, ShapeOrigin=Base" ) float32 _radius;`(축 로컬 +Y, `Base` 면 바닥이 원점)
+ *          - `ShapeAxes=World` 는 회전을 보지 않는다(축 정렬 부피 — 오디오 존). 프로퍼티의 `EditCondition` 이 거짓이면 그 모양을 그리지 않는다(모양 열거로 갈리는 부피).
  *          틀은 컴포넌트(씬 컴포넌트가 아니면 오브젝트의 주 씬 컴포넌트)의 월드 위치 · 회전이다. 콜라이더 손잡이(`EditorColliderHandleEdit`)와 같은 모양이고,
  *          쓰기는 인스펙터와 같은 편집 요청 길을 지나 허용 범위(`Min` · `Max`)와 알림(`onPropertyChanged`)이 같다. ImGui 를 모릅니다.
  *          층: 편집 요청이 인스펙터 Model(Panels 층)에 있어 이 기능도 Panels 층(씬 뷰 패널 곁)에 둔다 — 시각화 등록은 층을 가리지 않는다.
@@ -21,6 +24,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Panels/Scene/Model/PropertyShape.h"
+#include "Editor/Viewport/Model/EditorHandleDrag.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
@@ -46,16 +50,19 @@ namespace sw::editor
     struct SW_EDITOR_API PropertyShapeDecl
     {
         const PropertyInfo* _pProperty{ nullptr };      ///< 값 프로퍼티(반지름 · 반 크기 · 반각 · 방향)
-        const PropertyInfo* _pRangeProperty{ nullptr }; ///< `Cone` 의 길이 프로퍼티(`ShapeRange=`). 다른 모양은 nullptr
+        const PropertyInfo* _pRangeProperty{ nullptr }; ///< 둘째 값 프로퍼티(`ShapeRange=` — 원뿔 길이 · 캡슐 반 높이). 다른 모양은 nullptr
         PropertyShapeKind   _kind{ PropertyShapeKind::Sphere };
+        uint8               _bWorldAxes{ 0 };  ///< `ShapeAxes=World` — 틀이 원점만 따르고 축은 월드 축이다
+        uint8               _bBaseOrigin{ 0 }; ///< `ShapeOrigin=Base` — 캡슐 바닥이 원점이다
 
         /**
          * @brief 타입 @p type(상속 포함)의 모양 선언을 @p outListDecl 뒤에 붙입니다(비우지 않는다).
-         * @return 선언이 틀리면(모르는 모양 · 값 형식이 맞지 않음 · 원뿔에 `ShapeRange` 가 없거나 그 프로퍼티가 float32 가 아님) 그 오류입니다 — 앞에서 읽은 선언은 남는다.
+         * @return 선언이 틀리면(모르는 모양 · 값 형식이 맞지 않음 · 원뿔 · 캡슐에 `ShapeRange` 가 없거나 float32 가 아님 · 다른 모양의 `ShapeRange` ·
+         *         모르는 `ShapeAxes` · `ShapeOrigin` 값 · 캡슐 밖의 `ShapeOrigin`) 그 오류입니다 — 앞에서 읽은 선언은 남는다.
          *         폴백으로 그리지 않는다: 틀린 선언은 그 타입의 모양 전부를 막고 오류를 남긴다.
          */
         static expected<void> collect( const TypeInfo& type, vector<PropertyShapeDecl>& outListDecl );
-        /** @brief 인스턴스 @p pInstance 의 지금 값으로 틀 @p frame 위의 모양 값을 만듭니다. */
+        /** @brief 인스턴스 @p pInstance 의 지금 값으로 틀 @p frame(컴포넌트의 월드 자세 — `ShapeAxes=World` 면 축을 월드 축으로 바꾼다) 위의 모양 값을 만듭니다. */
         PropertyShapeValue makeValue( const void* pInstance, const PropertyShapeFrame& frame ) const;
     };
 
@@ -67,47 +74,10 @@ namespace sw::editor
         bool                        _bAvailable{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 대상이 하나이고 편집이 허용된다
     };
 
-    /** @brief 손잡이 도구가 보내는 명령의 종류입니다. */
-    enum class PropertyShapeHandleCommandKind : uint8
-    {
-        Capture, ///< 손잡이를 눌렀다 — 대상의 시작 전 스냅샷을 찍는다(되돌리기의 "전")
-        Drag,    ///< 끄는 중이다 — 마우스 레이가 가리키는 자리로 프로퍼티를 고친다
-        End,     ///< 놓았거나(`_bCommit`) 끊겼다 — 바뀌었고 편집이 허용되면 되돌리기를 남기고 닫는다
-    };
-
-    /** @brief 손잡이 명령 하나입니다(값만 든다). */
-    struct PropertyShapeHandleCommand
-    {
-        PropertyShapeHandle            _handle{};
-        Ray                            _ray{};
-        GameObjectHandle               _object{};
-        PropertyShapeHandleCommandKind _kind{ PropertyShapeHandleCommandKind::End };
-        bool                           _bCommit{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 놓기(End)가 되돌리기를 남긴다(끊긴 끌기는 버린다)
-    };
-
-    /**
-     * @class PropertyShapeHandleDragTracker
-     * @brief 손잡이 도구가 내는 명령의 순서(잡기 → 끌기들 → 놓기)를 정합니다. 마우스 상태만 받아 ImGui · 씬 없이 테스트한다.
-     */
-    class SW_EDITOR_API PropertyShapeHandleDragTracker
-    {
-    public:
-        /**
-         * @brief 끄는 중의 한 프레임입니다. 대상이 없어졌으면(@p bAvailable false) 커밋 없이, 단추를 놓았으면 커밋으로 닫는다. 아니면 @p pRay 가 있을 때 끌기를 낸다.
-         * @return 끌기가 이어지면 true, 이 프레임에 닫았으면 false 입니다(끄지 않는 중이면 @p bAvailable).
-         */
-        bool step( bool bAvailable, bool bMouseDown, const Ray* pRay, vector<PropertyShapeHandleCommand>& outListCommand );
-        /** @brief 손잡이 @p handle 을 눌렀습니다 — 잡기 명령을 내고 끌기를 시작한다. */
-        void                       press( GameObjectHandle object, const PropertyShapeHandle& handle, vector<PropertyShapeHandleCommand>& outListCommand );
-        bool                       isDragging() const { return _bDragging != 0; }
-        GameObjectHandle           getObject() const { return _object; }
-        const PropertyShapeHandle& getActive() const { return _active; }
-
-    private:
-        PropertyShapeHandle _active{};
-        GameObjectHandle    _object{};
-        uint8               _bDragging{ 0 }; ///< 끄는 중이다
-    };
+    /** @brief 모양 손잡이 명령 · 순서 — 콜라이더 손잡이와 같은 공통 틀(`EditorHandleDrag.h`)에 손잡이 값 `PropertyShapeHandle` 을 넣은 것이다. */
+    using PropertyShapeHandleCommandKind = EditorHandleDragCommandKind;
+    using PropertyShapeHandleCommand     = EditorHandleDragCommand<PropertyShapeHandle>;
+    using PropertyShapeHandleDragTracker = EditorHandleDragTracker<PropertyShapeHandle>;
 
     /**
      * @class PropertyShapeHandleEdit

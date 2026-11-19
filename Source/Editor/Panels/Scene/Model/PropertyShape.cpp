@@ -12,10 +12,14 @@ namespace sw::editor
     {
         struct PropertyShapeInternal
         {
-            /** @brief 나란한 레이와 축을 가르는 문턱(1 - cos² 의 아래)입니다. */
+            /** @brief 화살표 방향이 틀 Y 와 나란하다고 보는 문턱(1 - |cos|)입니다. */
             static constexpr float32 kParallelLimit = 1.0e-6f;
             /** @brief 화살촉 폭 ÷ 화살촉 길이입니다. */
             static constexpr float32 kArrowHeadWidthRatio = 0.4f;
+            /** @brief 캡슐 끝 반원 하나를 긋는 선분 수입니다. */
+            static constexpr uint32 kArcSegmentCount = PropertyShapeValue::kCircleSegmentCount / 2;
+            /** @brief 바닥 원점 캡슐의 높이 손잡이 거리 ÷ (반 높이 + 반지름)입니다 — 바닥에서 꼭대기까지. */
+            static constexpr float32 kBaseHeightSpan = 2.0f;
 
             /** @brief 틀의 두 축 @p axisA · @p axisB 가 놓는 평면에 중심 @p center, 반지름 @p radius 의 원을 긋습니다. */
             static void addCircle( const float3& center, const float3& axisA, const float3& axisB, float32 radius, const EditorVisualizerLine& prototype,
@@ -28,6 +32,20 @@ namespace sw::editor
                     arrPoint[index]     = center + axisA * ( MathUtil::cos( angle ) * radius ) + axisB * ( MathUtil::sin( angle ) * radius );
                 }
                 outDrawList.addLoop( arrPoint, PropertyShapeValue::kCircleSegmentCount, prototype );
+            }
+
+            /** @brief @p axisA 에서 @p axisB 쪽을 지나 -@p axisA 까지의 반원(열린 꺾은선)을 긋습니다. */
+            static void addHalfCircle( const float3& center, const float3& axisA, const float3& axisB, float32 radius, const EditorVisualizerLine& prototype,
+                                       EditorVisualizerDrawList& outDrawList )
+            {
+                float3 previous = center + axisA * radius;
+                for ( uint32 index = 1; index <= kArcSegmentCount; ++index )
+                {
+                    const float32 angle   = MathUtil::kPi * static_cast<float32>( index ) / static_cast<float32>( kArcSegmentCount );
+                    const float3  current = center + axisA * ( MathUtil::cos( angle ) * radius ) + axisB * ( MathUtil::sin( angle ) * radius );
+                    addSegment( previous, current, prototype, outDrawList );
+                    previous = current;
+                }
             }
 
             static void addSegment( const float3& from, const float3& to, const EditorVisualizerLine& prototype, EditorVisualizerDrawList& outDrawList )
@@ -48,7 +66,8 @@ namespace sw::editor
                 PropertyShapeHandle handle{};
                 handle._frame       = value._frame;
                 handle._vector      = value._vector;
-                handle._coneLength  = value._coneLength;
+                handle._number      = value._number;
+                handle._range       = value._range;
                 handle._componentID = componentID;
                 handle._property    = property;
                 handle._kind        = kind;
@@ -58,6 +77,16 @@ namespace sw::editor
                 handle._direction   = direction;
                 handle._position    = center + direction * distance;
                 return handle;
+            }
+
+            /** @brief 중심 @p center 에서 틀 축 @p axis 의 양 · 음 쪽으로 거리 @p distance 의 손잡이 둘을 붙입니다. */
+            static void addAxisPair( const PropertyShapeValue& value, uint64 componentID, const hashed_string& property, PropertyShapeHandleKind kind, uint32 axis,
+                                     const float3& center, float32 distance, vector<PropertyShapeHandle>& outListHandle )
+            {
+                for ( const float32 sign : { 1.0f, -1.0f } )
+                {
+                    outListHandle.push_back( makeHandle( value, componentID, property, kind, axis, sign, center, value._frame.getAxis( axis ) * sign, distance ) );
+                }
             }
         };
     } // namespace
@@ -82,23 +111,13 @@ namespace sw::editor
         return _componentID == other._componentID && _property == other._property && _kind == other._kind && _axis == other._axis && _sign == other._sign;
     }
 
-    float32 PropertyShapeHandle::computeAxisParameter( const Ray& ray ) const
-    {
-        const float3  offset      = ray._origin - _center;
-        const float32 alignment   = ray._direction.dot( _direction );
-        const float32 denominator = 1.0f - alignment * alignment;
-        if ( denominator < PropertyShapeInternal::kParallelLimit )
-            return 0.0f;
-        const float32 alongRay  = ray._direction.dot( offset );
-        const float32 alongAxis = _direction.dot( offset );
-        return ( alongAxis - alignment * alongRay ) / denominator;
-    }
-
     float32 PropertyShapeHandle::computeDraggedNumber( const Ray& ray ) const
     {
-        const float32 distance = computeAxisParameter( ray );
+        const float32 distance = Ray::computeClosestAxisParameter( ray, _center, _direction );
         if ( _kind == PropertyShapeHandleKind::ConeAngle )
-            return PropertyShapeInternal::clampConeAngle( MathUtil::atan2( MathUtil::max( distance, 0.0f ), _coneLength ) );
+            return PropertyShapeInternal::clampConeAngle( MathUtil::atan2( MathUtil::max( distance, 0.0f ), _range ) );
+        if ( _kind == PropertyShapeHandleKind::CapsuleHeight )
+            return MathUtil::max( ( distance - _heightSpan * _number ) / _heightSpan, 0.0f ); // 꼭대기는 반구 끝 — 반지름을 빼면 원기둥 반 높이
         return MathUtil::max( distance, PropertyShapeValue::kMinExtent );
     }
 
@@ -107,7 +126,7 @@ namespace sw::editor
         float3 result = _vector;
         if ( _kind == PropertyShapeHandleKind::BoxExtent )
         {
-            result.data()[_axis] = MathUtil::max( computeAxisParameter( ray ), PropertyShapeValue::kMinExtent );
+            result.data()[_axis] = MathUtil::max( Ray::computeClosestAxisParameter( ray, _center, _direction ), PropertyShapeValue::kMinExtent );
             return result;
         }
         // 화살표: 잡은 끝을 지나 레이에 수직인 평면 위로 끈다(레이에서 잡은 끝에 가장 가까운 점) — 원점에서 그 점 쪽이 새 방향이다.
@@ -125,6 +144,11 @@ namespace sw::editor
         return _frame.toWorldVector( _vector ).normalizeOr( _frame._axisZ, MathUtil::kEpsilon );
     }
 
+    float3 PropertyShapeValue::computeCapsuleCenter() const
+    {
+        return _bBaseOrigin != 0 ? _frame._origin + _frame._axisY * ( _range + _number ) : _frame._origin;
+    }
+
     void PropertyShapeValue::addLines( const EditorVisualizerLine& prototype, EditorVisualizerDrawList& outDrawList ) const
     {
         using Internal       = PropertyShapeInternal;
@@ -138,6 +162,9 @@ namespace sw::editor
                 Internal::addCircle( origin, axisX, axisY, _number, prototype, outDrawList );
                 Internal::addCircle( origin, axisY, axisZ, _number, prototype, outDrawList );
                 Internal::addCircle( origin, axisZ, axisX, _number, prototype, outDrawList );
+                break;
+            case PropertyShapeKind::Circle:
+                Internal::addCircle( origin, axisX, axisY, _number, prototype, outDrawList );
                 break;
             case PropertyShapeKind::Box:
             {
@@ -163,8 +190,8 @@ namespace sw::editor
             case PropertyShapeKind::Cone:
             {
                 const float32 angle     = Internal::clampConeAngle( _number );
-                const float3  rimCenter = origin + axisZ * _coneLength;
-                const float32 rimRadius = _coneLength * MathUtil::tan( angle );
+                const float3  rimCenter = origin + axisZ * _range;
+                const float32 rimRadius = _range * MathUtil::tan( angle );
                 Internal::addCircle( rimCenter, axisX, axisY, rimRadius, prototype, outDrawList );
                 for ( uint32 axis = 0; axis < 2; ++axis )
                 {
@@ -174,12 +201,29 @@ namespace sw::editor
                 }
                 break;
             }
+            case PropertyShapeKind::Capsule:
+            {
+                const float3 center = computeCapsuleCenter();
+                const float3 top    = center + axisY * _range;
+                const float3 bottom = center - axisY * _range;
+                Internal::addCircle( top, axisZ, axisX, _number, prototype, outDrawList );
+                Internal::addCircle( bottom, axisZ, axisX, _number, prototype, outDrawList );
+                for ( const uint32 axis : { 0u, 2u } )
+                {
+                    const float3& side = _frame.getAxis( axis );
+                    Internal::addSegment( bottom + side * _number, top + side * _number, prototype, outDrawList );
+                    Internal::addSegment( bottom - side * _number, top - side * _number, prototype, outDrawList );
+                    Internal::addHalfCircle( top, side, axisY, _number, prototype, outDrawList );
+                    Internal::addHalfCircle( bottom, side, -axisY, _number, prototype, outDrawList );
+                }
+                break;
+            }
             case PropertyShapeKind::Arrow:
             {
                 const float3 direction = computeArrowDirection();
                 const float3 tip       = origin + direction * kArrowLength;
                 Internal::addSegment( origin, tip, prototype, outDrawList );
-                // 화살촉 옆 두 축은 방향에 수직인 두 축 — 방향이 틀 Y 와 나란하면 틀 X 로 짓는다.
+                // 화살촉 옆 두 축은 방향에 수직 — 방향이 틀 Y 와 나란하면 틀 X 로 짓는다.
                 const float3  reference = MathUtil::abs( direction.dot( axisY ) ) > 1.0f - Internal::kParallelLimit ? axisX : axisY;
                 const float3  headSideA = direction.cross( reference ).normalizeOr( axisX, MathUtil::kEpsilon );
                 const float3  headSideB = direction.cross( headSideA ).normalizeOr( axisY, MathUtil::kEpsilon );
@@ -202,35 +246,54 @@ namespace sw::editor
         switch ( _kind )
         {
             case PropertyShapeKind::Sphere:
-            case PropertyShapeKind::Box:
-            {
-                const PropertyShapeHandleKind kind = _kind == PropertyShapeKind::Sphere ? PropertyShapeHandleKind::Radius : PropertyShapeHandleKind::BoxExtent;
                 for ( uint32 axis = 0; axis < 3; ++axis )
                 {
-                    const float32 distance = _kind == PropertyShapeKind::Sphere ? _number : _vector.data()[axis];
-                    for ( const float32 sign : { 1.0f, -1.0f } )
-                    {
-                        outListHandle.push_back( Internal::makeHandle( *this, componentID, property, kind, axis, sign, origin, _frame.getAxis( axis ) * sign, distance ) );
-                    }
+                    Internal::addAxisPair( *this, componentID, property, PropertyShapeHandleKind::Radius, axis, origin, _number, outListHandle );
                 }
                 break;
-            }
+            case PropertyShapeKind::Circle:
+                for ( uint32 axis = 0; axis < 2; ++axis )
+                {
+                    Internal::addAxisPair( *this, componentID, property, PropertyShapeHandleKind::Radius, axis, origin, _number, outListHandle );
+                }
+                break;
+            case PropertyShapeKind::Box:
+                for ( uint32 axis = 0; axis < 3; ++axis )
+                {
+                    Internal::addAxisPair( *this, componentID, property, PropertyShapeHandleKind::BoxExtent, axis, origin, _vector.data()[axis], outListHandle );
+                }
+                break;
             case PropertyShapeKind::Cone:
             {
-                if ( _coneLength >= kMinExtent )
+                if ( _range >= kMinExtent )
                 {
-                    const float3  rimCenter = origin + _frame._axisZ * _coneLength;
-                    const float32 rimRadius = _coneLength * MathUtil::tan( Internal::clampConeAngle( _number ) );
+                    const float3  rimCenter = origin + _frame._axisZ * _range;
+                    const float32 rimRadius = _range * MathUtil::tan( Internal::clampConeAngle( _number ) );
                     for ( uint32 axis = 0; axis < 2; ++axis )
                     {
-                        for ( const float32 sign : { 1.0f, -1.0f } )
-                        {
-                            outListHandle.push_back( Internal::makeHandle( *this, componentID, property, PropertyShapeHandleKind::ConeAngle, axis, sign, rimCenter,
-                                                                           _frame.getAxis( axis ) * sign, rimRadius ) );
-                        }
+                        Internal::addAxisPair( *this, componentID, property, PropertyShapeHandleKind::ConeAngle, axis, rimCenter, rimRadius, outListHandle );
                     }
                 }
-                outListHandle.push_back( Internal::makeHandle( *this, componentID, rangeProperty, PropertyShapeHandleKind::ConeRange, 2, 1.0f, origin, _frame._axisZ, _coneLength ) );
+                outListHandle.push_back( Internal::makeHandle( *this, componentID, rangeProperty, PropertyShapeHandleKind::ConeRange, 2, 1.0f, origin, _frame._axisZ, _range ) );
+                break;
+            }
+            case PropertyShapeKind::Capsule:
+            {
+                const float3 center = computeCapsuleCenter();
+                Internal::addAxisPair( *this, componentID, property, PropertyShapeHandleKind::Radius, 0, center, _number, outListHandle );
+                Internal::addAxisPair( *this, componentID, property, PropertyShapeHandleKind::Radius, 2, center, _number, outListHandle );
+                if ( _bBaseOrigin != 0 )
+                {
+                    // 바닥이 원점에 붙어 있다 — 꼭대기 손잡이 하나, 거리는 바닥에서 꼭대기까지.
+                    PropertyShapeHandle height = Internal::makeHandle( *this, componentID, rangeProperty, PropertyShapeHandleKind::CapsuleHeight, 1, 1.0f, origin, _frame._axisY,
+                                                                       Internal::kBaseHeightSpan * ( _range + _number ) );
+                    height._heightSpan         = Internal::kBaseHeightSpan;
+                    outListHandle.push_back( height );
+                }
+                else
+                {
+                    Internal::addAxisPair( *this, componentID, rangeProperty, PropertyShapeHandleKind::CapsuleHeight, 1, center, _range + _number, outListHandle );
+                }
                 break;
             }
             case PropertyShapeKind::Arrow:

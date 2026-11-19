@@ -37,11 +37,5 @@ namespace sw::editor
          * @details 거리는 `kMinExtent` 로 아래를 막는다. 캡슐의 반 높이는 거리에서 (월드) 반지름을 뺀 값이고 0 아래로 내려가지 않는다. 배율이 0 인 축은 바꾸지 않는다.
          */
         static PhysicsShapeDesc3D applyDrag( const PhysicsShapeDesc3D& shape, const ColliderHandle& handle, float32 outwardDistance, const float3& bodyScale );
-
-        /**
-         * @brief 레이와 가장 가까워지는 축 위의 점의 매개변수를 구합니다(축 위의 점 = @p axisOrigin + t × @p axisDirection, 둘 다 단위 벡터).
-         * @return 레이와 축이 나란하면 0 입니다.
-         */
-        static float32 computeClosestAxisParameter( const float3& rayOrigin, const float3& rayDirection, const float3& axisOrigin, const float3& axisDirection );
     };
 } // namespace sw::editor

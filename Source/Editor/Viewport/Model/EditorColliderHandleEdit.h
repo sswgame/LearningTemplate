@@ -11,6 +11,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Viewport/Model/EditorColliderHandle.h"
+#include "Editor/Viewport/Model/EditorHandleDrag.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
@@ -29,47 +30,10 @@ namespace sw::editor
         bool                   _bAvailable{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 강체가 있고 편집이 허용되며 배율이 0 이 아니다
     };
 
-    /** @brief 손잡이 도구가 보내는 명령의 종류입니다. */
-    enum class EditorColliderHandleCommandKind : uint8
-    {
-        Capture, ///< 손잡이를 눌렀다 — 대상의 시작 전 스냅샷을 찍는다(되돌리기의 "전")
-        Drag,    ///< 끄는 중이다 — 마우스 레이가 가리키는 축 위의 점을 새 가장자리로 셰이프 크기를 고친다
-        End,     ///< 놓았거나(`_bCommit`) 끊겼다 — 바뀌었고 편집이 허용되면 되돌리기(`Resize Collider`)를 남기고 닫는다
-    };
-
-    /** @brief 손잡이 명령 하나입니다(값만 든다). */
-    struct EditorColliderHandleCommand
-    {
-        EditorColliderHandleCommandKind _kind{ EditorColliderHandleCommandKind::End };
-        GameObjectHandle                _object{};
-        ColliderHandle                  _handle{};
-        Ray                             _ray{};
-        bool                            _bCommit{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 놓기(End)가 되돌리기를 남긴다(끊긴 끌기는 버린다)
-    };
-
-    /**
-     * @class EditorColliderHandleDragTracker
-     * @brief 손잡이 도구가 내는 명령의 순서(잡기 → 끌기들 → 놓기)를 정합니다. 마우스 상태만 받아 ImGui · 씬 없이 테스트한다.
-     */
-    class SW_EDITOR_API EditorColliderHandleDragTracker
-    {
-    public:
-        /**
-         * @brief 끄는 중의 한 프레임입니다. 대상이 없어졌으면(@p bAvailable false) 커밋 없이, 단추를 놓았으면 커밋으로 닫는다. 아니면 @p pRay 가 있을 때 끌기를 낸다.
-         * @return 끌기가 이어지면 true, 이 프레임에 닫았으면 false 입니다(끄지 않는 중이면 @p bAvailable).
-         */
-        bool step( bool bAvailable, bool bMouseDown, const Ray* pRay, vector<EditorColliderHandleCommand>& outListCommand );
-        /** @brief 손잡이 @p handle 을 눌렀습니다 — 잡기 명령을 내고 끌기를 시작한다. */
-        void                  press( GameObjectHandle object, const ColliderHandle& handle, vector<EditorColliderHandleCommand>& outListCommand );
-        bool                  isDragging() const { return _bDragging; }
-        GameObjectHandle      getObject() const { return _object; }
-        const ColliderHandle& getActive() const { return _active; }
-
-    private:
-        GameObjectHandle _object{};
-        ColliderHandle   _active{};
-        bool             _bDragging{ false }; ///< NOLINT(sw-bool-flag): 끄는 중이다
-    };
+    /** @brief 콜라이더 손잡이 명령 · 순서 — 공통 틀(`EditorHandleDrag.h`)에 손잡이 값 `ColliderHandle` 을 넣은 것이다. */
+    using EditorColliderHandleCommandKind = EditorHandleDragCommandKind;
+    using EditorColliderHandleCommand     = EditorHandleDragCommand<ColliderHandle>;
+    using EditorColliderHandleDragTracker = EditorHandleDragTracker<ColliderHandle>;
 
     /**
      * @class EditorColliderHandleEdit

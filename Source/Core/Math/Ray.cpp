@@ -15,6 +15,8 @@ namespace sw
             static constexpr float32 kBarycentricSlack = 1.0e-5f;
             /** @brief 이보다 작은 행렬식은 광선이 삼각형 면과 나란한 것으로 봅니다. */
             static constexpr float32 kParallelDeterminant = 1.0e-12f;
+            /** @brief 이보다 작은 1 - cos² 는 광선이 축과 나란한 것으로 봅니다. */
+            static constexpr float32 kParallelAxis = 1.0e-6f;
         };
     } // namespace
 
@@ -171,5 +173,17 @@ namespace sw
             return false;
         outDistance = distance;
         return true;
+    }
+
+    float32 Ray::computeClosestAxisParameter( const Ray& ray, const float3& axisOrigin, const float3& axisDirection )
+    {
+        const float3  offset      = ray._origin - axisOrigin;
+        const float32 alignment   = ray._direction.dot( axisDirection );
+        const float32 denominator = 1.0f - alignment * alignment;
+        if ( denominator < RayInternal::kParallelAxis )
+            return 0.0f;
+        const float32 alongRay  = ray._direction.dot( offset );
+        const float32 alongAxis = axisDirection.dot( offset );
+        return ( alongAxis - alignment * alongRay ) / denominator;
     }
 } // namespace sw

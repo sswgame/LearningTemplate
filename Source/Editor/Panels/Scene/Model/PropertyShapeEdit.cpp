@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Undo/ObjectSnapshot.h"
+#include "Editor/Panels/Inspector/Model/PropertyEditConditionExpr.h"
 #include "Editor/Panels/Inspector/Model/PropertyEditRequest.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
@@ -50,10 +51,14 @@ namespace sw::editor
                     return PropertyShapeKind::Cone;
                 if ( text == "Arrow" )
                     return PropertyShapeKind::Arrow;
+                if ( text == "Circle" )
+                    return PropertyShapeKind::Circle;
+                if ( text == "Capsule" )
+                    return PropertyShapeKind::Capsule;
                 return nullopt;
             }
 
-            /** @brief 모양 @p kind 가 받는 값 형식이면 true 입니다(구 · 원뿔은 float32, 상자 · 화살표는 float3). */
+            /** @brief 모양 @p kind 가 받는 값 형식이면 true 입니다(상자 · 화살표는 float3, 나머지는 float32). */
             static bool isValueTypeAccepted( PropertyShapeKind kind, const PropertyInfo& prop )
             {
                 static const hashed_string s_float32( "float32" );
@@ -98,6 +103,9 @@ namespace sw::editor
                         return;
                     for ( const PropertyShapeDecl& decl : listDecl )
                     {
+                        // 조건이 거짓인 프로퍼티(모양 열거가 다른 쪽을 고른 부피)는 인스펙터가 막는 것처럼 그리지도 끌지도 않는다.
+                        if ( PropertyEditConditionExpr::getEditState( *decl._pProperty, ObjectAddress{ pComponent } ) != PropertyEditState::Enabled )
+                            continue;
                         visit( *pComponent, decl, decl.makeValue( pComponent, *frame ) );
                     }
                 } );
@@ -114,7 +122,7 @@ namespace sw::editor
                 bool                      bFound = false;
                 forEachShape( *pObject, PropertyShapeHandleSession::get(), listDecl, [&]( const Component& /*component*/, const PropertyShapeDecl& /*decl*/, const PropertyShapeValue& value )
                 {
-                    const bool bNumber = value._kind == PropertyShapeKind::Sphere || value._kind == PropertyShapeKind::Cone;
+                    const bool bNumber = value._kind != PropertyShapeKind::Box && value._kind != PropertyShapeKind::Arrow;
                     if ( bFound || bNumber == false )
                         return;
                     outValue = static_cast<float64>( value._number );
@@ -142,6 +150,8 @@ namespace sw::editor
         using Internal = PropertyShapeEditInternal;
         static const hashed_string s_shapeKey( "Shape" );
         static const hashed_string s_rangeKey( "ShapeRange" );
+        static const hashed_string s_axesKey( "ShapeAxes" );
+        static const hashed_string s_originKey( "ShapeOrigin" );
         for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
         {
             const string* pShape = prop.findCustomMeta( s_shapeKey );
@@ -149,23 +159,36 @@ namespace sw::editor
                 continue;
             const optional<PropertyShapeKind> kind = Internal::findKind( *pShape );
             if ( kind.has_value() == false )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "unknown Shape (Sphere, Box, Cone, Arrow)", prop._name.view() } );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "unknown Shape (Sphere, Box, Cone, Arrow, Circle, Capsule)", prop._name.view() } );
             if ( Internal::isValueTypeAccepted( *kind, prop ) == false )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "Shape value type mismatch (Sphere/Cone: float32, Box/Arrow: float3)", prop._name.view() } );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "Shape value type mismatch (Box/Arrow: float3, the others: float32)", prop._name.view() } );
             PropertyShapeDecl decl{};
             decl._pProperty      = &prop;
             decl._kind           = *kind;
+            const bool    bRange = *kind == PropertyShapeKind::Cone || *kind == PropertyShapeKind::Capsule;
             const string* pRange = prop.findCustomMeta( s_rangeKey );
-            if ( *kind == PropertyShapeKind::Cone )
+            if ( bRange )
             {
                 const PropertyInfo* pRangeProp = pRange != nullptr ? type.findPropertyInHierarchy( hashed_string{ pRange->c_str() } ) : nullptr;
                 if ( pRangeProp == nullptr || Internal::isValueTypeAccepted( PropertyShapeKind::Sphere, *pRangeProp ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "Shape=Cone needs ShapeRange=<float32 property of the same type>", prop._name.view() } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "Shape=Cone/Capsule needs ShapeRange=<float32 property of the same type>", prop._name.view() } );
                 decl._pRangeProperty = pRangeProp;
             }
             else if ( pRange != nullptr )
             {
-                return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeRange is only for Shape=Cone", prop._name.view() } );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeRange is only for Shape=Cone/Capsule", prop._name.view() } );
+            }
+            if ( const string* pAxes = prop.findCustomMeta( s_axesKey ); pAxes != nullptr )
+            {
+                if ( *pAxes != "World" && *pAxes != "Local" )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeAxes is World or Local", prop._name.view() } );
+                decl._bWorldAxes = *pAxes == "World" ? 1 : 0;
+            }
+            if ( const string* pOrigin = prop.findCustomMeta( s_originKey ); pOrigin != nullptr )
+            {
+                if ( *kind != PropertyShapeKind::Capsule || ( *pOrigin != "Base" && *pOrigin != "Center" ) )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "ShapeOrigin is Base or Center, only for Shape=Capsule", prop._name.view() } );
+                decl._bBaseOrigin = *pOrigin == "Base" ? 1 : 0;
             }
             outListDecl.push_back( decl );
         }
@@ -175,8 +198,15 @@ namespace sw::editor
     PropertyShapeValue PropertyShapeDecl::makeValue( const void* pInstance, const PropertyShapeFrame& frame ) const
     {
         PropertyShapeValue value{};
-        value._frame = frame;
-        value._kind  = _kind;
+        value._frame       = frame;
+        value._kind        = _kind;
+        value._bBaseOrigin = _bBaseOrigin;
+        if ( _bWorldAxes != 0 )
+        {
+            value._frame._axisX = float3::UnitX;
+            value._frame._axisY = float3::UnitY;
+            value._frame._axisZ = float3::UnitZ;
+        }
         if ( _kind == PropertyShapeKind::Box || _kind == PropertyShapeKind::Arrow )
         {
             const float3* pVector = _pProperty->getValuePtr<float3>( pInstance );
@@ -189,50 +219,10 @@ namespace sw::editor
         }
         if ( _pRangeProperty != nullptr )
         {
-            const float32* pLength = _pRangeProperty->getValuePtr<float32>( pInstance );
-            value._coneLength      = pLength != nullptr ? *pLength : 0.0f;
+            const float32* pRange = _pRangeProperty->getValuePtr<float32>( pInstance );
+            value._range          = pRange != nullptr ? *pRange : 0.0f;
         }
         return value;
-    }
-
-    bool PropertyShapeHandleDragTracker::step( bool bAvailable, bool bMouseDown, const Ray* pRay, vector<PropertyShapeHandleCommand>& outListCommand )
-    {
-        if ( _bDragging == 0 )
-            return bAvailable;
-        const bool bEnd = bAvailable == false || bMouseDown == false;
-        if ( bEnd )
-        {
-            PropertyShapeHandleCommand command{};
-            command._kind    = PropertyShapeHandleCommandKind::End;
-            command._object  = _object;
-            command._bCommit = bAvailable; // 놓았으면 남기고, 대상이 사라졌거나 편집이 막혔으면 버린다
-            outListCommand.push_back( command );
-            _bDragging = 0;
-            _object    = GameObjectHandle{};
-            return false;
-        }
-        if ( pRay != nullptr )
-        {
-            PropertyShapeHandleCommand command{};
-            command._kind   = PropertyShapeHandleCommandKind::Drag;
-            command._object = _object;
-            command._handle = _active;
-            command._ray    = *pRay;
-            outListCommand.push_back( command );
-        }
-        return true;
-    }
-
-    void PropertyShapeHandleDragTracker::press( GameObjectHandle object, const PropertyShapeHandle& handle, vector<PropertyShapeHandleCommand>& outListCommand )
-    {
-        PropertyShapeHandleCommand command{};
-        command._kind   = PropertyShapeHandleCommandKind::Capture;
-        command._object = object;
-        command._handle = handle;
-        outListCommand.push_back( command );
-        _object    = object;
-        _active    = handle;
-        _bDragging = 1;
     }
 
     PropertyShapeHandleEdit::PropertyShapeHandleEdit()
