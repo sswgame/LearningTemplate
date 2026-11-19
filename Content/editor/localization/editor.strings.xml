@@ -7690,6 +7690,16 @@
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorRenderTarget.ExposureLabel" source="Exposure">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.ExposureTip" source="Multiplies color by 2^EV before the preview clips it to 0..1. Lower it to see HDR values above 1, raise it to see dark values. Not applied to alpha or depth.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorRenderTarget.FormatNotReadable" source="This format cannot be read back.">
 			<origins>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
@@ -7707,6 +7717,11 @@
 		</entry>
 		<entry key="EditorRenderTarget.LinearizeTip"
 		       source="Convert stored depth back to view distance using Near/Far. Perspective depth crowds near 1, so the raw image looks almost white.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.MipLabel" source="Mip">
 			<origins>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>

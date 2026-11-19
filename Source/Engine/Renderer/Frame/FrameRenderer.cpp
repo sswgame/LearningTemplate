@@ -70,6 +70,7 @@ namespace sw
         , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture, _screenRotation, _displayEncode }
         , _host{}
         , _statusMessage{}
+        , _publishedDisplaySceneTarget{ 0 }
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
@@ -974,6 +975,12 @@ namespace sw
         // HDR 출력의 두 RT 도 화면 크기다(SDR 은 놓기만 한다). 호스트 타깃(에디터 게임 뷰)이면 장면은 그 타깃에 가고 UI RT 에는 렌더 스레드 UI 만 쓴다.
         const bool bOwnsScreen = _bOffscreenRenderer == SW_FALSE;
         _displayEncode.prepare( bOwnsScreen ? screenWidth : 0u, bOwnsScreen ? screenHeight : 0u, _state._settings._displayOutput );
+        // HDR 출력의 두 RT 는 풀과 따로 서고 놓인다(출력 장치를 바꾸면 풀은 그대로다) — 목록이 그 RT 를 잃지도 죽은 핸들을 들지도 않게 바뀔 때 다시 싣는다.
+        if ( _displayEncode.getSceneTarget() != _publishedDisplaySceneTarget )
+        {
+            _publishedDisplaySceneTarget = _displayEncode.getSceneTarget();
+            publishRenderTargets();
+        }
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -1100,6 +1107,25 @@ namespace sw
                 }
             }
         }
+
+        // HDR 출력의 장면 출력 RT(디스플레이 기준 선형 [0,1] 신호)와 SDR UI RT 도 싣는다 — 인코딩 앞의 두 그림이라 HDR 이 깨질 때 먼저 보는 곳이다.
+        // 패스가 아니라 그래프 밖 출력(`FrameDisplayEncode`)이 쓰고 읽어 생산자 · 소비자 대신 그 이름을 적는다.
+        const auto appendDisplayTarget = [&]( const utf8* pName, RHITextureHandle texture, RHIFormat format )
+        {
+            if ( texture == 0 )
+                return;
+            RenderTargetInfo info{};
+            info._name    = pName;
+            info._texture = texture;
+            info._width   = _displayEncode.getWidth();
+            info._height  = _displayEncode.getHeight();
+            info._format  = format;
+            info._listProducer.push_back( "DisplayEncode" );
+            info._listConsumer.push_back( "DisplayEncode" );
+            listTarget.push_back( std::move( info ) );
+        };
+        appendDisplayTarget( "DisplaySceneTarget", _displayEncode.getSceneTarget(), FrameDisplayEncode::getSceneFormat() );
+        appendDisplayTarget( "DisplayUITarget", _displayEncode.getUITarget(), constant::render::kBackBufferFormat );
 
         // 이름순으로 정렬해 둔다. 해시맵 순서는 실행마다 달라서, 정렬하지 않으면 목록이 프레임마다
         // 흔들리는 것처럼 보이고 "어디 있었더라" 를 매번 다시 찾게 된다.

@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -52,6 +53,7 @@ namespace sw::editor
         , _snapshotDepthRange{ 0.0f, 1.0f }
         , _probedPixel{}
         , _probedTexel{}
+        , _mip{ 0 }
         , _pendingReadbackSerial{ 0 }
         , _autoRefreshCountdown{ 0 }
         , _bRefreshRequested{ SW_FALSE }
@@ -68,6 +70,8 @@ namespace sw::editor
     {
         refreshTargetsIfStale();
         commitSelection();
+        if ( const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName ); pSelected != nullptr && _mip >= pSelected->_mipCount )
+            _mip = 0;
         // 고른 타깃이 바뀌면 읽어 둔 픽셀 값은 다른 이미지의 것이다.
         if ( _snapshot._texture != 0 && hasSnapshot() == false )
             _bProbedPixel = SW_FALSE;
@@ -87,6 +91,7 @@ namespace sw::editor
         outState._snapshotDepthRange = _snapshotDepthRange;
         outState._probedPixel        = _probedPixel;
         outState._probedTexel        = _probedTexel;
+        outState._mip                = _mip;
         outState._bHasSnapshot       = hasSnapshot() ? SW_TRUE : SW_FALSE;
         outState._bAutoRefresh       = _bAutoRefresh;
         outState._bProbedPixel       = _bProbedPixel;
@@ -119,6 +124,19 @@ namespace sw::editor
             return;
         _viewSettings._channel = channel;
         _bSnapshotImageDirty   = SW_TRUE;
+    }
+
+    void RenderTargetViewModel::setExposure( float32 exposure )
+    {
+        _viewSettings.setExposure( exposure );
+        _bSnapshotImageDirty = SW_TRUE;
+    }
+
+    void RenderTargetViewModel::setMip( uint32 mip )
+    {
+        const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
+        const uint32            mipCount  = pSelected != nullptr ? MathUtil::max( pSelected->_mipCount, 1u ) : 1u;
+        _mip                              = MathUtil::min( mip, mipCount - 1u );
     }
 
     void RenderTargetViewModel::setLinearizeDepth( bool bLinearize )
@@ -229,7 +247,7 @@ namespace sw::editor
     bool RenderTargetViewModel::hasSnapshot() const
     {
         const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
-        return pSelected != nullptr && _snapshot._bSucceeded != SW_FALSE && _snapshot._texture == pSelected->_texture;
+        return pSelected != nullptr && _snapshot._bSucceeded != SW_FALSE && _snapshot._texture == pSelected->_texture && _snapshot._mip == _mip;
     }
 
     void RenderTargetViewModel::releaseSnapshotTexture()
@@ -307,12 +325,12 @@ namespace sw::editor
         if ( _pendingReadbackSerial != 0 && registry.getReadbackSerial() == _pendingReadbackSerial )
         {
             _pendingReadbackSerial = 0;
-            if ( registry.copyReadback( _snapshot ) && _snapshot._texture == pSelected->_texture )
+            if ( registry.copyReadback( _snapshot ) && _snapshot._texture == pSelected->_texture && _snapshot._mip == _mip )
                 _bSnapshotImageDirty = SW_TRUE;
         }
 
         // 다시 읽을 때: 고른 타깃의 스냅샷이 없을 때, 다시 읽기 요청, 자동 간격.
-        bool bWantReadback = ( _snapshot._texture != pSelected->_texture ) || ( _bRefreshRequested != SW_FALSE );
+        bool bWantReadback = ( _snapshot._texture != pSelected->_texture ) || ( _snapshot._mip != _mip ) || ( _bRefreshRequested != SW_FALSE );
         if ( _bAutoRefresh != SW_FALSE )
         {
             if ( _autoRefreshCountdown == 0 )
@@ -327,7 +345,7 @@ namespace sw::editor
         }
         if ( bWantReadback && _pendingReadbackSerial == 0 )
         {
-            _pendingReadbackSerial = registry.requestReadback( pSelected->_texture );
+            _pendingReadbackSerial = registry.requestReadback( pSelected->_texture, _mip );
             _bRefreshRequested     = SW_FALSE;
         }
 

@@ -536,6 +536,7 @@ namespace sw
         FramePassExecutor _passExecutor;
         FrameRendererHost _host; ///< 주 렌더러만 하는 일의 상대(`bindHost`). 화면 밖 렌더러는 비어 있다
         string            _statusMessage;
+        RHITextureHandle  _publishedDisplaySceneTarget; ///< 렌더 타깃 목록에 마지막으로 실은 HDR 장면 출력 RT — 바뀌면 목록을 다시 공개한다(그 RT 는 풀과 따로 만든다)
 
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
         FrameRendererStatus _status;

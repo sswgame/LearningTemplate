@@ -959,12 +959,14 @@ namespace sw
         if ( _pPendingTargetRead == nullptr )
         {
             RHITextureHandle texture = 0;
+            uint32           mip     = 0;
             uint32           serial  = 0;
-            if ( pRegistry->takeReadbackRequest( texture, serial ) == false )
+            if ( pRegistry->takeReadbackRequest( texture, mip, serial ) == false )
                 return;
             _pPendingTargetRead                     = make_unique<PendingRenderTargetRead>();
             _pPendingTargetRead->_pFactory          = &factory;
             _pPendingTargetRead->_readback._texture = texture;
+            _pPendingTargetRead->_readback._mip     = mip;
             _pPendingTargetRead->_readback._serial  = serial;
         }
 
@@ -988,7 +990,7 @@ namespace sw
                 publishFailure();
                 return;
             }
-            const RHITransferSubmit submit = factory.submitTextureReadback( pending._readback._texture, 0, 0, pending._readback._layout );
+            const RHITransferSubmit submit = factory.submitTextureReadback( pending._readback._texture, pending._readback._mip, 0, pending._readback._layout );
             if ( submit._result == RHISubmitResult::Busy )
                 return; // 스테이징이 찼다 — 같은 요청을 다음 프레임에 다시 낸다
             if ( submit.isAccepted() == false )

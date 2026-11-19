@@ -43,6 +43,7 @@ namespace sw
         uint32           _width{ 0 };
         uint32           _height{ 0 };
         RHIFormat        _format{ RHIFormat::R8G8B8A8_UNORM };
+        uint32           _mipCount{ 1 }; ///< 밉 수(렌더 타깃 창이 밉을 골라 읽는다 — 1 이면 고르기가 없다)
         /** @brief 이 첨부에 쓰는 패스(파이프라인 순서, 깊이로 붙인 패스는 `이름 (depth)`)입니다. 그래픽 문제의 원인을 거슬러 찾는다. */
         vector<string> _listProducer;
         /** @brief 이 첨부를 읽는 패스(파이프라인 순서)입니다. */
@@ -63,9 +64,10 @@ namespace sw
      */
     struct SW_API RenderTargetReadback
     {
-        vector<uint8>     _byte;                   ///< 첫 밉과 첫 면의 픽셀(행 사이에 빈틈이 없습니다)
+        vector<uint8>     _byte;                   ///< `_mip` 밉 첫 면의 픽셀(행 사이에 빈틈이 없습니다)
         RHITextureMipSpan _layout{};               ///< 크기와 행 바이트
         RHITextureHandle  _texture{ 0 };           ///< 읽은 텍스처
+        uint32            _mip{ 0 };               ///< 읽은 밉
         uint32            _serial{ 0 };            ///< 요청 번호(`requestReadback` 이 돌려준 값)
         uint8             _bSucceeded{ SW_FALSE }; ///< 읽기에 성공했으면 1
 
@@ -128,12 +130,12 @@ namespace sw
         // CPU 읽기: UI 가 요청하고 렌더 스레드가 프레임 끝(endFrame 뒤)에 읽어 둔다
         // ------------------------------------------------------------------------------
         /**
-         * @brief @p texture 를 CPU 로 읽어 달라고 요청합니다(UI 스레드). 아직 처리하지 않은 요청은 이 요청으로 바뀝니다.
+         * @brief @p texture 의 밉 @p mip 을 CPU 로 읽어 달라고 요청합니다(UI 스레드). 아직 처리하지 않은 요청은 이 요청으로 바뀝니다.
          * @return 요청 번호입니다. 결과의 `_serial` 이 이 값이면 그 요청의 결과입니다.
          */
-        uint32 requestReadback( RHITextureHandle texture );
+        uint32 requestReadback( RHITextureHandle texture, uint32 mip );
         /** @brief 처리할 요청을 꺼냅니다(렌더 스레드). 없으면 false 입니다. */
-        [[nodiscard]] bool takeReadbackRequest( RHITextureHandle& outTexture, uint32& outSerial );
+        [[nodiscard]] bool takeReadbackRequest( RHITextureHandle& outTexture, uint32& outMip, uint32& outSerial );
         /** @brief 읽은 결과를 저장합니다(렌더 스레드). 이전 결과는 버립니다. */
         void publishReadback( RenderTargetReadback readback );
         /** @brief 마지막 결과의 번호입니다. 0 이면 아직 결과가 없습니다. */
@@ -149,6 +151,7 @@ namespace sw
         mutable mutex                            _readbackMutex;
         RenderTargetReadback _readback           SW_GUARDED_BY( _readbackMutex );      ///< 마지막 결과(`_readbackMutex`)
         RHITextureHandle _pendingReadbackTexture SW_GUARDED_BY( _readbackMutex ){ 0 }; ///< 처리할 요청(0 이면 없음, `_readbackMutex`)
+        uint32 _pendingReadbackMip               SW_GUARDED_BY( _readbackMutex ){ 0 }; ///< 그 요청의 밉(`_readbackMutex`)
         uint32 _pendingReadbackSerial            SW_GUARDED_BY( _readbackMutex ){ 0 }; ///< 그 요청의 번호(`_readbackMutex`)
         uint32 _lastRequestSerial                SW_GUARDED_BY( _readbackMutex ){ 0 }; ///< 마지막으로 낸 요청 번호(`_readbackMutex`)
         atomic<uint32>                           _readbackSerial{ 0 };                 ///< 마지막 결과의 번호
