@@ -79,3 +79,36 @@ SW_TEST_CASE( InputMapChordTest, ShiftAloneDoesNotBlockOtherKeys )
     scene.press( Key::W, true );
     SW_EXPECT_TRUE( scene._map.wasActionPressed( move ) );
 }
+
+/**
+ * @brief [InputMapChordTest] 액션 상태 덤프는 맵의 액션을 모두 내고, 칸마다 값은 그 액션을 따로 물은 답(`isActionDown` · `getActionPhase`)과 같다
+ * @details 디버그 HUD · 에디터의 입력 뷰어가 프레임마다 한 번에 읽는 입구다. 레이어를 적지 않은 바인딩은 기본 레이어로 나온다.
+ */
+SW_TEST_CASE( InputMapChordTest, DebugActionStatesMatchThePerActionQueries )
+{
+    ChordScene               scene;
+    vector<DebugActionState> listState;
+    scene.press( Key::Z, false );
+    SW_REQUIRE_TRUE( scene._map.isActionDown( scene._forward ) );
+
+    scene._map.getDebugActionStates( listState );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listState.size() );
+    uint32 downCount = 0;
+    for ( const DebugActionState& state : listState )
+    {
+        SW_EXPECT_TRUE( state._action == scene._forward || state._action == scene._back );
+        SW_EXPECT_TRUE( state._layer == scene._map.getDefaultLayerName() );
+        SW_EXPECT_TRUE( ( state._bDown != 0 ) == scene._map.isActionDown( state._action ) );
+        SW_EXPECT_TRUE( state._phase == scene._map.getActionPhase( state._action ) );
+        downCount += state._bDown;
+    }
+    SW_EXPECT_EQUAL( 1u, downCount ); // 맨 Z 만 눌렸다
+
+    scene.releaseAll();
+    scene._map.getDebugActionStates( listState ); // 다시 부르면 앞 내용을 비우고 채운다
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listState.size() );
+    for ( const DebugActionState& state : listState )
+    {
+        SW_EXPECT_TRUE( state._bDown == 0 );
+    }
+}

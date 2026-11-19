@@ -74,3 +74,25 @@ SW_TEST_CASE( PlatformInputTest, AndroidGamepadKeyCodesMapToButtons )
     SW_EXPECT_TRUE( mapAndroidGamepad( AndroidKeyCode::kDPadDown ) == GamepadButton::DPadDown );
     SW_EXPECT_TRUE( mapAndroidGamepad( AndroidKeyCode::kButtonL2 ) == GamepadButton::Count );
 }
+
+/**
+ * @brief [PlatformInputTest] 스캔코드는 자판 배열과 상관없이 물리 자리의 키가 된다 — 확장 깃발이 같은 번호를 오른쪽 Ctrl · 숫자패드 Enter · 방향키로 가르고, 모르는 번호는 Unknown 이다
+ * @details AZERTY 에서 W 자리(0x11)의 글자는 Z 지만 이동 키는 자리로 묶는다(유니티 Input System 의 물리 키 · Godot `physical_keycode`).
+ */
+SW_TEST_CASE( PlatformInputTest, ScanCodesMapToPhysicalKeys )
+{
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0x11 ) == Key::W );
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0x1E ) == Key::A );
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0x39 ) == Key::Space );
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0x2A ) == Key::LeftShift );
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0x36 ) == Key::RightShift );
+
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0x1C, false ) == Key::Enter );
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0x1C, true ) == Key::NumpadEnter );
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0x1D, false ) == Key::LeftControl );
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0x1D, true ) == Key::RightControl );
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0x48, true ) == Key::Up );
+
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0x11, true ) == Key::W ); // 확장 표에 없는 번호는 기본 표로 간다
+    SW_EXPECT_TRUE( InputKeyTable::mapScanCodeToKey( 0xFF ) == Key::Unknown );
+}
