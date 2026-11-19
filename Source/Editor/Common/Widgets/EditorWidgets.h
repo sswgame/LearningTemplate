@@ -316,8 +316,29 @@ namespace sw::editor
          * @brief 현재 아이템을 애셋 드롭 타깃으로 만들고, 애셋이 놓였으면 그 상대 경로를 @p outPath 에 담고 true 입니다.
          */
         [[nodiscard]] static bool acceptAssetDrop( string& outPath );
-        /** @brief `acceptAssetDrop` 에 @p pExpectedExt 거르개(`drawAssetSlot` 과 같은 규칙)를 더합니다. 맞지 않는 애셋은 받지 않습니다. 글 칸에 끌어 놓기를 붙일 때 씁니다. */
+        /**
+         * @brief `acceptAssetDrop` 에 @p pExpectedExt 거르개(`drawAssetSlot` 과 같은 규칙)를 더합니다. 맞지 않는 애셋은 받지 않습니다. 글 칸에 끌어 놓기를 붙일 때 씁니다.
+         * @details 거르개는 놓을 자리를 열기 전에 본다(R11) — 맞지 않는 애셋은 강조하지 않고 끄는 쪽이 금지 표시를 한다.
+         */
         [[nodiscard]] static bool acceptAssetDrop( string& outPath, const utf8* pExpectedExt );
+        /**
+         * @brief 애셋 끌기가 진행 중이면 그 상대 경로를 @p outPath 에 담고 true 입니다(놓을 자리를 열지 않는다).
+         * @details 받는 쪽이 모델의 종류 검사(`AssetRef<T>` 의 대상 종류 등)로 거른 뒤에만 `acceptAssetDrop` 을 부르게 하는 입구다(R11).
+         */
+        [[nodiscard]] static bool peekAssetDrag( string& outPath );
+        /** @brief 현재 아이템을 씬 오브젝트(`EditorPayloadKind::GameObject` — 계층 행) 드롭 타깃으로 만들고, 놓였으면 그 오브젝트 id 를 @p outObjectID 에 담고 true 입니다. */
+        [[nodiscard]] static bool acceptObjectDrop( uint64& outObjectID );
+
+        /**
+         * @brief 기본값으로 되돌릴 수 있는 값 칸 묶음을 엽니다(R10 — 휠클릭 = 기본값). 짝은 `endResetToDefaultGroup` 입니다.
+         * @details 칸이 위젯 여럿(벡터 축 · 단추 달린 경로 칸)이어도 묶음 하나가 휠클릭 자리다. 안에서 펼친 트리 노드를 열어 둔 채 닫지 않는다(묶음이 들여쓰기를 되돌린다).
+         */
+        static void beginResetToDefaultGroup();
+        /**
+         * @brief `beginResetToDefaultGroup` 의 묶음을 닫고, @p bDiffersFromDefault 이고 묶음 위에서 휠클릭(`EditorInputGUI::wasItemResetRequested`)했으면 true 입니다.
+         * @details 기본값과 같은 칸은 아무 일도 하지 않는다(되돌리기 단추가 보이는 칸과 같은 조건 — 언리얼의 노란 화살표 자리). true 면 부른 쪽이 그 칸의 되돌리기 명령을 부른다.
+         */
+        [[nodiscard]] static bool endResetToDefaultGroup( bool bDiffersFromDefault );
         /**
          * @brief 화면 사각형 [@p minPos, @p maxPos] 를 애셋 드롭 타깃으로 만들고, 애셋이 그 위로 끌려 와 있으면(놓기 전 포함) 경로를 받아 true 입니다.
          *        놓였으면 @p outbDelivered 가 true 입니다. @p pTargetID 는 창 안에서 타깃을 가리는 이름입니다.

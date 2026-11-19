@@ -886,7 +886,38 @@ namespace sw::editor
 
     bool EditorWidgets::acceptAssetDrop( string& outPath, const utf8* pExpectedExt )
     {
-        return acceptAssetDrop( outPath ) && ( StringUtil::isNullOrEmpty( pExpectedExt ) || EditorAssetFilter::matches( outPath, pExpectedExt ) );
+        // 놓을 자리를 열기 전에 거른다 — 맞지 않는 애셋을 강조했다가 놓을 때 버리면 놓은 사람은 왜 안 됐는지 모른다(R11).
+        string draggedPath;
+        if ( StringUtil::isNullOrEmpty( pExpectedExt ) == false && peekAssetDrag( draggedPath ) && EditorAssetFilter::matches( draggedPath, pExpectedExt ) == false )
+            return false;
+        return acceptAssetDrop( outPath );
+    }
+
+    bool EditorWidgets::peekAssetDrag( string& outPath )
+    {
+        EditorDragPayload payload{};
+        return EditorInputGUI::peekPayload( EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload ) &&
+               EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, payload._id, outPath );
+    }
+
+    bool EditorWidgets::acceptObjectDrop( uint64& outObjectID )
+    {
+        EditorDragPayload payload{};
+        if ( EditorInputGUI::acceptDrop( EditorPayloadKindSet{ EditorPayloadKind::GameObject }, payload ) == false )
+            return false;
+        outObjectID = payload._id;
+        return true;
+    }
+
+    void EditorWidgets::beginResetToDefaultGroup()
+    {
+        ImGui::BeginGroup();
+    }
+
+    bool EditorWidgets::endResetToDefaultGroup( bool bDiffersFromDefault )
+    {
+        ImGui::EndGroup();
+        return bDiffersFromDefault && EditorInputGUI::wasItemResetRequested();
     }
 
     bool EditorWidgets::previewAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath, bool& outbDelivered )

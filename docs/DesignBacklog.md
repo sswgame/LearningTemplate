@@ -1535,7 +1535,7 @@ public:
 **대조.** 언리얼: Details 행 우클릭 Copy · Paste · Reset to Default, 노란 화살표, 행 위 Ctrl+C/V, Content Browser · Outliner 끌기(놓을 수 없으면 금지 아이콘), 액터를 액터 칸에 끌어 놓기. 유니티: Inspector 우클릭 Reset · Copy/Paste(타입 있는 클립보드 — 맞지 않으면 회색), Hierarchy 에서 Inspector 칸으로 끌기(끌기가 시작되면 선택을 바꾸지 않는다), Project 창 OS 파일 끌기. Godot: Inspector 되돌리기 아이콘, 노드를 칸에 끌기. 휠클릭으로 기본값은 셋 다 없다 — 사용자 규칙이다.
 
 **규칙(정함).**
-- R10 휠클릭 = 기본값으로: 프로퍼티 칸(이름 · 값)에서 가운데 단추를 끌기 문턱 안에서 떼면 기본값으로 되돌린다. 기본값과 다른 칸에서만(되돌리기 단추가 보이는 칸 — 상용의 화살표 자리), 되돌리기는 한 단계(편집 구간 — 전 · 후가 같으면 버린다). 단추는 `EditorInputGUI::kResetToDefaultButton` 하나, 패널은 `EditorWidgets::beginResettableValue` · `endResettableValue` 로 감싼다. 마우스 몸짓은 입력 맵이 보지 못해(에디터 창 위 마우스는 ImGui 가 먹는다) 맥락 메뉴의 오른쪽 단추처럼 코드 상수다.
+- R10 휠클릭 = 기본값으로: 프로퍼티 칸(이름 · 값)에서 가운데 단추를 끌기 문턱 안에서 떼면 기본값으로 되돌린다. 기본값과 다른 칸에서만(되돌리기 단추가 보이는 칸 — 상용의 화살표 자리), 되돌리기는 한 단계(편집 구간 — 전 · 후가 같으면 버린다). 단추는 `EditorInputGUI::kResetToDefaultButton` 하나, 패널은 `EditorWidgets::beginResetToDefaultGroup` · `endResetToDefaultGroup` 로 감싼다. 마우스 몸짓은 입력 맵이 보지 못해(에디터 창 위 마우스는 ImGui 가 먹는다) 맥락 메뉴의 오른쪽 단추처럼 코드 상수다.
 - R11 끌어 놓기: 받는 쪽은 종류(`EditorPayloadKindSet`)로, 그다음 내용(확장자 · 에셋 종류 · 대상 타입)으로 **놓을 자리를 열기 전에** 거른다(`EditorInputGUI::peekPayload`) — 받지 않을 것은 강조하지 않는다. 받은 자리가 없으면 끄는 쪽 미리보기가 흐려지고 커서가 금지 모양이 된다(`beginDragSource` 한 곳). 놓기는 모델 명령 하나 = 되돌리기 한 단계.
 - R12 끌 수 있는 목록 행은 누를 때가 아니라 끌기 문턱 안에서 뗄 때 고른다(`wasItemClickedWithoutDrag`) — 다른 패널의 칸으로 끄는 동안 그 패널의 대상이 바뀌지 않는다(유니티 Hierarchy · 언리얼 Outliner).
 - R13 프로퍼티 칸: 행 메뉴의 Paste 는 클립보드 글이 그 칸 타입으로 읽힐 때만 켜진다(`PropertyGridViewModel::canPasteText`). 칸 위에서 Ctrl+C · Ctrl+V 는 행 메뉴와 같은 명령이다(입력 맵 `Editor.Panel.inspector`). 에셋 칸 메뉴에 Browse to Asset · Find References(명령 등록부 — `EditorCommandGUI::drawCommandMenuItem`).
