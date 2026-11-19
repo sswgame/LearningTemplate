@@ -13,6 +13,7 @@
 		<layer name="Editor.Global" priority="0" enabled="1" blockLower="0" alwaysOn="1"/>
 		<layer name="Editor.Panel.hierarchy" priority="10" enabled="0" blockLower="0"/>
 		<layer name="Editor.Panel.content_browser" priority="10" enabled="0" blockLower="0"/>
+		<layer name="Editor.Panel.inspector" priority="10" enabled="0" blockLower="0"/>
 		<layer name="Editor.Panel.scene_view" priority="10" enabled="0" blockLower="0"/>
 		<layer name="Editor.Panel.console" priority="10" enabled="0" blockLower="0"/>
 		<layer name="Editor.Panel.tile_map" priority="10" enabled="0" blockLower="0"/>
@@ -118,6 +119,16 @@
 		</action>
 		<action name="contentBrowser.navigateForward" trigger="Pressed">
 			<bind source="Key" modifier="Alt" code="Right"/>
+		</action>
+	</layer>
+
+	<!-- Inspector: copy / paste the value of the property field under the mouse (the row menu's Copy Value / Paste Value; read by EditorPropertyGrid). -->
+	<layer name="Editor.Panel.inspector">
+		<action name="property.copyValue" trigger="Pressed">
+			<bind source="Key" modifier="Ctrl" code="C"/>
+		</action>
+		<action name="property.pasteValue" trigger="Pressed">
+			<bind source="Key" modifier="Ctrl" code="V"/>
 		</action>
 	</layer>
 

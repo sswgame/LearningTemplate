@@ -2,15 +2,18 @@
 
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorCompactControls.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
@@ -24,6 +27,7 @@
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Serialization/Serializer/AssetRefBase.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -439,6 +443,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( row._tooltip.c_str() );
         // 시나리오가 행 메뉴를 오른쪽 클릭으로 열 수 있게 이름 글에 레이블을 남긴다(`inspector.label.<타입>.<프로퍼티>`).
         EditorPropertyGridInternal::recordMark( "inspector.label", row._markName );
+        handleRowPointer( row, canResetRow( row ) && EditorInputGUI::wasItemResetRequested(), ImGui::IsItemHovered() );
 
         drawPropertyRowMenu( row );
 
@@ -480,21 +485,97 @@ namespace sw::editor
             _pendingEdit      = PendingRowEdit::ResetToDefault;
             _pendingEditRowID = row._rowID;
         }
-        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyValue" ) ) )
-            ImGui::SetClipboardText( _model.formatPropertyText( row._rowID ).c_str() );
-        // 타입 핸들은 선택기만이 입력 길이다. 글로 붙이면 대상 타입을 확인하지 않은 값이 들어간다.
-        const utf8* pClipboard    = ImGui::GetClipboardText();
-        const bool  bPasteAllowed = pClipboard != nullptr && row._bPasteAllowed != SW_FALSE;
-        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "PasteValue" ), nullptr, false, bPasteAllowed ) )
-        {
-            _pendingEdit      = PendingRowEdit::PasteText;
-            _pendingEditRowID = row._rowID;
-            _pendingEditText  = pClipboard;
-        }
+        const string copyShortcut = findShortcutLabel( kActionCopyValue );
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyValue" ), copyShortcut.empty() ? nullptr : copyShortcut.c_str() ) )
+            copyRowValue( row );
+        EditorSelfTestMarks::record( "inspector.menu.copyValue" );
+        // 타입 핸들은 선택기만이 입력 길이다. 그 밖은 클립보드 글이 그 칸 타입으로 읽힐 때만 켠다(R13 — 눌러도 아무 일 없는 항목을 켜 두지 않는다).
+        const utf8*  pClipboard    = ImGui::GetClipboardText();
+        const bool   bPasteAllowed = isPasteAllowed( row, pClipboard );
+        const string pasteShortcut = findShortcutLabel( kActionPasteValue );
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "PasteValue" ), pasteShortcut.empty() ? nullptr : pasteShortcut.c_str(), false, bPasteAllowed ) )
+            requestPaste( row, pClipboard );
         EditorSelfTestMarks::record( "inspector.menu.pasteValue" );
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyPropertyName" ) ) )
             ImGui::SetClipboardText( row._propName.c_str() );
+        drawAssetRowMenuItems( row );
         ImGui::EndPopup();
+    }
+
+    void EditorPropertyGrid::drawAssetRowMenuItems( const PropertyValueRow& row )
+    {
+        // 에셋 칸은 콘텐츠 브라우저의 에셋 명령을 빌린다(R13 — 언리얼 Details 의 Browse to Asset · 참조 찾기). 대상 id 는 콘텐츠 브라우저와 같이 절대 경로의 페이로드 id 다.
+        const bool bAssetRow = row._bAssetPath != SW_FALSE || row._typeName == hashed_string( AssetRefBase::kTypeName );
+        if ( bAssetRow == false )
+            return;
+        const string           assetPath = row._kind == PropertyRowKind::Text ? row._valueText : _model.formatPropertyText( row._rowID );
+        optional<AbsolutePath> fileAbs;
+        if ( assetPath.empty() == false )
+            fileAbs = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( assetPath ).str() );
+        EditorCommandTarget target{};
+        target._kind = EditorCommandTargetKind::Asset;
+        if ( fileAbs.has_value() )
+        {
+            target._hoveredID = EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, fileAbs->str() );
+            target._listSelectedID.push_back( target._hoveredID );
+        }
+        ImGui::Separator();
+        (void)EditorInputGUI::drawCommandMenuItem( "asset.browseTo", target );       // 눌렀는지는 쓰지 않는다 — 다음 프레임에 돈다
+        (void)EditorInputGUI::drawCommandMenuItem( "asset.findReferences", target ); // 위와 같다
+    }
+
+    bool EditorPropertyGrid::canResetRow( const PropertyValueRow& row )
+    {
+        // 기본값과 다른 칸만 — 되돌리기 단추가 보이는 칸과 같은 조건(R10).
+        return row._bModified != SW_FALSE && row._bCanReset != SW_FALSE;
+    }
+
+    bool EditorPropertyGrid::isPasteAllowed( const PropertyValueRow& row, const utf8* pClipboard ) const
+    {
+        return pClipboard != nullptr && row._bPasteAllowed != SW_FALSE && _model.canPasteText( row._rowID, string_view{ pClipboard } );
+    }
+
+    void EditorPropertyGrid::copyRowValue( const PropertyValueRow& row ) const
+    {
+        ImGui::SetClipboardText( _model.formatPropertyText( row._rowID ).c_str() );
+    }
+
+    void EditorPropertyGrid::requestPaste( const PropertyValueRow& row, const utf8* pClipboard )
+    {
+        // 붙여넣기는 값을 통째로 바꾼다(컨테이너면 원소 자리도) — 이 행의 자식을 다 그린 뒤에 부른다.
+        _pendingEdit      = PendingRowEdit::PasteText;
+        _pendingEditRowID = row._rowID;
+        _pendingEditText  = pClipboard;
+    }
+
+    void EditorPropertyGrid::handleRowPointer( const PropertyValueRow& row, bool bResetRequested, bool bHovered )
+    {
+        // 휠클릭 = 기본값으로(R10). 값을 통째로 바꾼다 — 이 행의 자식을 다 그린 뒤에 부른다.
+        if ( bResetRequested )
+        {
+            _pendingEdit      = PendingRowEdit::ResetToDefault;
+            _pendingEditRowID = row._rowID;
+        }
+        // 칸 위의 Ctrl+C · Ctrl+V 는 행 메뉴의 Copy · Paste 다(R13 — 언리얼 Details 의 행 위 복사 · 붙여넣기). 키는 입력 맵이 판정하고 범위는 인스펙터 레이어다.
+        if ( bHovered == false )
+            return;
+        if ( EditorInputGUI::wasActionTriggered( kActionCopyValue ) )
+            copyRowValue( row );
+        if ( EditorInputGUI::wasActionTriggered( kActionPasteValue ) )
+        {
+            const utf8* pClipboard = ImGui::GetClipboardText();
+            if ( isPasteAllowed( row, pClipboard ) )
+                requestPaste( row, pClipboard );
+        }
+    }
+
+    string EditorPropertyGrid::findShortcutLabel( string_view action )
+    {
+        string                    label;
+        const EditorInputActions* pInputActions = EditorInputActions::findInEditorContext();
+        if ( pInputActions != nullptr )
+            pInputActions->getShortcuts().formatShortcutLabel( action, label );
+        return label;
     }
 
     void EditorPropertyGrid::openRowScope( const PropertyValueRow& row )
@@ -553,7 +634,18 @@ namespace sw::editor
         ImGui::BeginDisabled( row._bDisabled != SW_FALSE );
         // 되돌리기 구간은 행 단위다 — 행을 그리는 사이 활성 위젯이 그려졌으면 그 행의 구간이 이어진다(위젯 여럿인 행도 하나다).
         const bool bActiveDrawnBefore = InspectorPropertyUndo::isActiveItemDrawn();
-        const bool bTreeOpen          = drawRowWidget( row );
+        // 노드 머리는 펼치면 들여쓰기를 연 채 자식 행으로 이어져 묶음으로 감싸지 않는다 — 그 행의 휠클릭 자리는 이름 칸이다.
+        const bool bNodeRow = row._kind == PropertyRowKind::Sequence || row._kind == PropertyRowKind::KeyedSequence || row._kind == PropertyRowKind::Map ||
+                              row._kind == PropertyRowKind::Struct;
+        if ( bNodeRow == false )
+            EditorWidgets::beginResetToDefaultGroup();
+        const bool bTreeOpen = drawRowWidget( row );
+        if ( bNodeRow == false )
+        {
+            bool       bHovered        = false;
+            const bool bResetRequested = EditorWidgets::endResetToDefaultGroup( canResetRow( row ), bHovered );
+            handleRowPointer( row, bResetRequested, bHovered );
+        }
         InspectorPropertyUndo::trackRow( _model, row._rowID, bActiveDrawnBefore );
         _listOpenScope.push_back( OpenRowScope{ row._rowID, row._depth, static_cast<uint8>( bTreeOpen ? 1 : 0 ) } );
     }

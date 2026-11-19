@@ -1017,22 +1017,72 @@ namespace sw::editor
 
     bool PropertyGridViewModel::setAssetPath( uint32 rowID, string_view path )
     {
+        // 받는 종류가 아니면(없는 행 포함) 쓰지 않는다 — `AssetRef<T>` 는 대상 종류(언리얼 `TSoftObjectPtr<T>`), 경로 칸은 `FileFilter`.
+        const bool bAccepted = canAcceptAssetPath( rowID, path );
+        if ( bAccepted )
+            setPropertyText( rowID, path, "Set Asset" );
+        return bAccepted;
+    }
+
+    bool PropertyGridViewModel::canAcceptAssetPath( uint32 rowID, string_view path ) const
+    {
         const RowBinding* pBinding = findValueBinding( rowID );
         if ( pBinding == nullptr )
             return false;
         const PropertyInfo& prop = *pBinding->_pProp;
-        // 받는 종류가 아니면 쓰지 않는다 — `AssetRef<T>` 는 대상 종류(언리얼 `TSoftObjectPtr<T>`), 경로 칸은 `FileFilter`.
-        bool bAccepted = false;
         if ( prop._typeName == hashed_string( AssetRefBase::kTypeName ) )
         {
             const AssetRefBase* pRef = prop.getValuePtr<AssetRefBase>( pBinding->_instance.get() );
-            bAccepted                = pRef != nullptr && AssetRefBase::isPathOfTarget( path, pRef->getTargetType() );
+            return pRef != nullptr && AssetRefBase::isPathOfTarget( path, pRef->getTargetType() );
         }
-        else
-            bAccepted = InspectorPropertyLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, path );
-        if ( bAccepted )
-            setPropertyText( rowID, path, "Set Asset" );
-        return bAccepted;
+        return InspectorPropertyLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, path );
+    }
+
+    bool PropertyGridViewModel::canPasteText( uint32 rowID, string_view text ) const
+    {
+        const RowBinding* pBinding = findValueBinding( rowID );
+        if ( pBinding == nullptr || text.empty() )
+            return false;
+        const PropertyInfo& prop = *pBinding->_pProp;
+        // 타입 핸들은 선택기만이 입력 길이다(행의 `_bPasteAllowed` 와 같은 판정).
+        if ( prop._handleTargetTypeName.empty() == false )
+            return false;
+        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
+        if ( prop._containerWrapper == nullptr && getTypeRegistry().findEnum( prop._typeName ) != nullptr )
+        {
+            // 열거형은 크기가 8 바이트를 넘지 않는다 — 빈 사본에 읽어 본다.
+            uint64 scratch = 0;
+            return SerializerUtil::parseTextValue( MutableValueAddress{ &scratch }, prop._typeName, text, context );
+        }
+        const InspectorBuiltinValue* pBuiltin = prop._containerWrapper == nullptr ? InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() ) : nullptr;
+        if ( pBuiltin == nullptr )
+            return true; // 적용이 거른다 — 읽지 못하면 값은 그대로다(`SerializerUtil::applyPropertyText`)
+        if ( pBuiltin->_widget == InspectorValueWidget::Text || pBuiltin->_widget == InspectorValueWidget::Name )
+            return true; // 글 칸은 어떤 글이든 받는다
+        // 그 C++ 타입의 기본값 사본에 읽어 본다. 사본은 이 함수의 지역 값이라 그 저장 공간에 써도 된다.
+        TaskValue scratch = pBuiltin->_pMakeDefault();
+        void*     pValue  = const_cast<void*>( pBuiltin->_pFindTaskValue( scratch ) );
+        return pValue != nullptr && SerializerUtil::parseTextValue( MutableValueAddress{ pValue }, prop._typeName, text, context );
+    }
+
+    bool PropertyGridViewModel::findObjectComponent( const hashed_string& targetTypeName, uint64 objectID, ComponentHandle& outHandle ) const
+    {
+        const TypeInfo*          pTargetType = InspectorComponentChoice::findTargetType( getTypeRegistry(), targetTypeName );
+        const GameObjectManager* pManager    = findEditOwnerManager();
+        const GameObject*        pObject     = ( pTargetType != nullptr && pManager != nullptr ) ? pManager->findGameObjectByID( objectID ) : nullptr;
+        if ( pObject == nullptr )
+            return false;
+        // `forEachComponentOfType<Component>` 은 기반 타입이라 거르지 않는다 — 선택기(`InspectorComponentChoice::computeHandleState`)와 같은 파생 판정을 쓴다.
+        bool bFound = false;
+        pObject->forEachComponent( [pTargetType, &bFound, &outHandle]( const Component* pComponent )
+        {
+            const TypeInfo* pType = pComponent->findCachedTypeInfo();
+            if ( bFound || pType == nullptr || pType->isDerivedFrom( pTargetType ) == false )
+                return;
+            outHandle = pComponent->getHandle();
+            bFound    = true;
+        } );
+        return bFound;
     }
 
     void PropertyGridViewModel::resetToDefault( uint32 rowID )

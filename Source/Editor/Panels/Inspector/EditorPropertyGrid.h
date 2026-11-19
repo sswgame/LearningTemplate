@@ -35,6 +35,11 @@ namespace sw::editor
     class SW_EDITOR_API EditorPropertyGrid
     {
     public:
+        /** @brief 칸 위 Ctrl+C 의 입력 맵 액션입니다(`editor.input.xml` 의 `Editor.Panel.inspector` — 행 메뉴의 Copy Value 와 같다). */
+        static constexpr string_view kActionCopyValue = "property.copyValue";
+        /** @brief 칸 위 Ctrl+V 의 입력 맵 액션입니다(행 메뉴의 Paste Value 와 같다 — 형식 검사를 지난 글만 붙인다). */
+        static constexpr string_view kActionPasteValue = "property.pasteValue";
+
         EditorPropertyGrid();
         EditorPropertyGrid( const EditorPropertyGrid& )            = delete;
         EditorPropertyGrid& operator=( const EditorPropertyGrid& ) = delete;
@@ -118,8 +123,25 @@ namespace sw::editor
         void endTable();
         /** @brief 깊이 0 행의 이름 칸(혼합 표시 · 즐겨찾기 별 · 이름 · 행 메뉴 · 되돌리기 단추)을 그립니다. */
         void drawRowNameColumn( const PropertyValueRow& row );
-        /** @brief 이름 글을 오른쪽 클릭하면 열리는 행 메뉴(즐겨찾기 · 기본값 · 복사 · 붙여넣기)입니다. */
+        /** @brief 이름 글을 오른쪽 클릭하면 열리는 행 메뉴(즐겨찾기 · 기본값 · 복사 · 붙여넣기 · 에셋 칸의 찾기 · 참조)입니다. */
         void drawPropertyRowMenu( const PropertyValueRow& row );
+        /** @brief 에셋 칸 행 메뉴의 Browse to Asset · Find References(콘텐츠 브라우저의 에셋 명령)입니다. 에셋 칸이 아니면 아무것도 그리지 않습니다. */
+        void drawAssetRowMenuItems( const PropertyValueRow& row );
+        /** @brief 행이 기본값과 다르고 기본값이 있으면 true 입니다 — 되돌리기 단추 · 휠클릭(R10)의 조건입니다. */
+        static bool canResetRow( const PropertyValueRow& row );
+        /** @brief 클립보드 글 @p pClipboard 를 행에 붙일 수 있으면 true 입니다(타입 핸들이 아니고 그 칸 타입으로 읽힌다 — R13). */
+        [[nodiscard]] bool isPasteAllowed( const PropertyValueRow& row, const utf8* pClipboard ) const;
+        /** @brief 행의 값 글을 클립보드에 씁니다(Copy Value · 칸 위 Ctrl+C). */
+        void copyRowValue( const PropertyValueRow& row ) const;
+        /** @brief 클립보드 글 붙이기를 행을 다 그린 뒤로 미룹니다(Paste Value · 칸 위 Ctrl+V). */
+        void requestPaste( const PropertyValueRow& row, const utf8* pClipboard );
+        /**
+         * @brief 방금 그린 이름 글 · 값 묶음 위의 포인터 · 키입니다. @p bResetRequested 면 기본값 되돌리기를 미루고(R10),
+         *        @p bHovered(그 위에 포인터가 있다)이고 Ctrl+C · Ctrl+V 액션이 발화했으면 복사 · 붙여넣기입니다(R13).
+         */
+        void handleRowPointer( const PropertyValueRow& row, bool bResetRequested, bool bHovered );
+        /** @brief 입력 맵 액션 @p action 의 단축키 글(메뉴 오른쪽)입니다. 묶인 키가 없으면 빈 글입니다. */
+        static string findShortcutLabel( string_view action );
         /** @brief 행 하나의 범위를 열고(ImGui id · 막기) 자식 행 앞머리와 값 위젯을 그립니다. 노드가 펴져 있으면 범위가 자식 행까지 이어진다. */
         void openRowScope( const PropertyValueRow& row );
         /** @brief 범위 하나를 닫습니다 — 컨테이너의 "추가" 입력란, `TreePop`, 막기 끝, 깊이 0 행의 값 표식. */

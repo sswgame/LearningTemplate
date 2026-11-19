@@ -142,4 +142,36 @@ namespace sw::editor
             }
         }
     }
+
+    bool SceneObjectReferencePickerState::canReferenceObject( uint64 objectID )
+    {
+        for ( const unique_ptr<Scene>& scene : editor::getSubsystem<SceneManager>().getLoadedScenes() )
+        {
+            // 경로가 없는 씬(저장한 적 없음)의 오브젝트는 참조를 만들 수 없다(`gatherScenes` 와 같은 판정).
+            if ( scene != nullptr && scene->getObjectManager() != nullptr && scene->getSourcePath().empty() == false &&
+                 scene->getObjectManager()->findGameObjectByID( objectID ) != nullptr )
+                return true;
+        }
+        return false;
+    }
+
+    bool SceneObjectReferencePickerState::makeObjectValueText( const PropertyGridViewModel& model, uint32 rowID, uint64 objectID, string& outValueText )
+    {
+        using Internal = SceneObjectReferencePickerStateInternal;
+        MutableObjectAddress instance{ nullptr };
+        const PropertyInfo*  pProp = nullptr;
+        if ( model.findRowValue( rowID, instance, pProp ) == false )
+            return false;
+        for ( const unique_ptr<Scene>& scene : editor::getSubsystem<SceneManager>().getLoadedScenes() )
+        {
+            if ( scene == nullptr || scene->getObjectManager() == nullptr || scene->getSourcePath().empty() || scene->getObjectManager()->findGameObjectByID( objectID ) == nullptr )
+                continue;
+            SceneObjectReference candidate{};
+            if ( SceneObjectReference::makeReference( *scene, objectID, candidate ) == false )
+                return false;
+            outValueText = Internal::formatValue( candidate, *pProp );
+            return true;
+        }
+        return false;
+    }
 } // namespace sw::editor

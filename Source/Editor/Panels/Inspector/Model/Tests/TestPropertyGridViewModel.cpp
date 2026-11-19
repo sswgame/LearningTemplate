@@ -168,3 +168,58 @@ SW_TEST_CASE( PropertyGridViewModelTest, OffscreenRowsCarryHeightOnly )
     SW_EXPECT_EQUAL( 256u, output._renderTextureWidth );
     model.endTarget();
 }
+
+/**
+ * @brief [PropertyGridViewModelTest] 붙여넣기 형식 검사 — 그 칸 타입으로 읽히는 글만 붙일 수 있고(R13), 읽히지 않는 글을 붙이면 값 · 알림이 그대로다
+ */
+SW_TEST_CASE( PropertyGridViewModelTest, PasteTextIsCheckedAgainstTheFieldType )
+{
+    using Internal = PropertyGridViewModelTestInternal;
+    sw::CameraRenderOutput output{};
+
+    uint32                               editCount = 0;
+    sw::editor::PropertyGridViewModel    model;
+    sw::editor::EditorPropertyGridTarget target{};
+    target._pInstance = &output;
+    target._pType     = sw::editor::PropertyGridViewModel::getTypeRegistry().findType<sw::CameraRenderOutput>();
+    SW_REQUIRE_NOT_NULL( target._pType );
+    target._onEdited = SW_DELEGATE_LAMBDA( sw::Delegate<void( const sw::PropertyInfo& )>, [&editCount]( const sw::PropertyInfo& )
+    { ++editCount; } );
+    SW_REQUIRE_TRUE( model.beginTarget( target ) );
+
+    sw::editor::PropertyGridGatherParams params{};
+    params._window._bSkipOffscreen = SW_FALSE;
+    sw::editor::PropertyGridViewState state;
+    model.gather( params, state );
+    const sw::editor::PropertyValueRow* pWidth   = Internal::findRow( state, "_renderTextureWidth" );
+    const sw::editor::PropertyValueRow* pShadows = Internal::findRow( state, "_bShadows" );
+    SW_REQUIRE_NOT_NULL( pWidth );
+    SW_REQUIRE_NOT_NULL( pShadows );
+
+    // 수 칸: 수 글만, 빈 글은 붙이지 않는다.
+    SW_EXPECT_TRUE( model.canPasteText( pWidth->_rowID, "512" ) );
+    SW_EXPECT_FALSE( model.canPasteText( pWidth->_rowID, "abc" ) );
+    SW_EXPECT_FALSE( model.canPasteText( pWidth->_rowID, "" ) );
+    // 체크 칸: true · false 만.
+    SW_EXPECT_TRUE( model.canPasteText( pShadows->_rowID, "false" ) );
+    SW_EXPECT_FALSE( model.canPasteText( pShadows->_rowID, "maybe" ) );
+    // 검사는 값을 바꾸지 않는다.
+    SW_EXPECT_EQUAL( 256u, output._renderTextureWidth );
+    SW_EXPECT_EQUAL( 0u, editCount );
+
+    // 검사를 지나지 않은 글을 적용 길에 넣어도 값 · 알림은 그대로다(적용이 한 번 더 거른다).
+    SW_EXPECT_LOG( "EditorPropertyGrid.CouldNotApplied" );
+    model.setPropertyText( pWidth->_rowID, "abc", "Paste Value" );
+    SW_EXPECT_EQUAL( 256u, output._renderTextureWidth );
+    SW_EXPECT_EQUAL( 0u, editCount );
+
+    // 읽히는 글은 한 번 쓰고 한 번 알린다(Copy → Paste 한 길).
+    model.setPropertyText( pWidth->_rowID, "512", "Paste Value" );
+    SW_EXPECT_EQUAL( 512u, output._renderTextureWidth );
+    SW_EXPECT_EQUAL( 1u, editCount );
+    model.gather( params, state );
+    pWidth = Internal::findRow( state, "_renderTextureWidth" );
+    SW_REQUIRE_NOT_NULL( pWidth );
+    SW_EXPECT_TRUE( model.formatPropertyText( pWidth->_rowID ) == "512" );
+    model.endTarget();
+}

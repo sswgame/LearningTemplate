@@ -428,7 +428,8 @@ namespace sw::editor
 
         // 행 뒤의 것(클릭 · 이름 칸 · 맥락 메뉴 · 끌기)은 방금 그린 트리 노드를 본다. 열린 노드가 넣은 깊이 위에 행 id 를 얹고 바로 닫는다.
         ImGui::PushID( static_cast<int32>( entry._id ) );
-        if ( EditorInputGUI::wasItemClicked() )
+        // 고르기는 뗄 때다(R12) — 누를 때 고르면 이 행을 인스펙터 칸으로 끄는 동안 인스펙터가 이 오브젝트로 넘어가 놓을 칸이 사라진다.
+        if ( EditorInputGUI::wasItemClickedWithoutDrag() )
         {
             const uint8 modifierMask = EditorInputGUI::getModifierMask();
             viewModel.clickRow( entry._id, ( modifierMask & ModifierKey::Ctrl ) != 0, ( modifierMask & ModifierKey::Shift ) != 0 );

@@ -139,7 +139,10 @@ namespace sw::editor
                 drawInput( "##assetInput" );
                 const ImGuiLastItemData inputItem = ImGui::GetCurrentContext()->LastItemData;
 
-                if ( EditorWidgets::acceptAssetDrop( outDroppedPath ) )
+                // 받는 종류(모델의 `canAcceptAssetPath`)가 아니면 놓을 자리를 열지 않는다 — 강조하지 않고 끄는 쪽이 금지 표시를 한다(R11).
+                string     draggedPath;
+                const bool bRefused = EditorWidgets::peekAssetDrag( draggedPath ) && model.canAcceptAssetPath( row._rowID, draggedPath ) == false;
+                if ( bRefused == false && EditorWidgets::acceptAssetDrop( outDroppedPath ) )
                     action = AssetFieldAction::Dropped;
 
                 // 선택 팝업이다(언리얼의 에셋 피커, 유니티의 Object Picker). 그 칸이 받는 종류만 모델이 모아 주고(`collectAssetEntries`), 여기서는 검색으로 거른다.
@@ -589,7 +592,8 @@ namespace sw::editor
 
                 ComponentHandle picked{};
                 // 고른 것은 모델 명령 한 번(통지 · 되돌리기)이다. Selectable 은 위젯의 활성 ~ 해제가 아니라 되돌리기 추적을 부르지 않는다.
-                if ( drawPicker( _pLabel, row._valueText, row._handleState, *pValue, model, row._handleTargetTypeName, _listChoice, picked ) )
+                const bool bPicked = drawPicker( _pLabel, row._valueText, row._handleState, *pValue, model, row._handleTargetTypeName, _listChoice, picked );
+                if ( bPicked || acceptObjectDrop( row, model, *pValue, picked ) )
                 {
                     // `picked` 는 값 자체라 값 주소 쪽 변환(`formatValueText`)으로 쓴다. 객체 주소 쪽(`formatPropertyText`)은 오프셋을 한 번 더 더한다.
                     const string undoLabel = InspectorPropertyLayout::makeUndoLabel( row._label.c_str() );
@@ -597,6 +601,24 @@ namespace sw::editor
                                            undoLabel.c_str() );
                 }
                 showTooltipIfHovered( row );
+                return true;
+            }
+
+            /**
+             * @brief 계층 행(`GameObject` 페이로드)을 칸에 놓았으면 그 오브젝트의 첫 대상 타입 컴포넌트 핸들을 @p outPicked 에 담고 true 입니다(언리얼 액터 칸 · 유니티 컴포넌트 칸).
+             * @details 대상 타입 컴포넌트가 없는 오브젝트는 놓을 자리를 열지 않는다(R11). 지금 값과 같으면 false 입니다. 직전 항목(선택기 콤보)이 놓을 자리다.
+             */
+            static bool acceptObjectDrop( const PropertyValueRow& row, const PropertyGridViewModel& model, ComponentHandle current, ComponentHandle& outPicked )
+            {
+                EditorDragPayload dragged{};
+                ComponentHandle   handle{};
+                uint64            droppedObjectID{ 0 };
+                if ( EditorInputGUI::peekPayload( EditorPayloadKindSet{ EditorPayloadKind::GameObject }, dragged ) == false ||
+                     model.findObjectComponent( row._handleTargetTypeName, dragged._id, handle ) == false || EditorWidgets::acceptObjectDrop( droppedObjectID ) == false )
+                    return false;
+                if ( handle == current )
+                    return false;
+                outPicked = handle;
                 return true;
             }
 

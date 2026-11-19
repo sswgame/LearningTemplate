@@ -914,10 +914,15 @@ namespace sw::editor
         ImGui::BeginGroup();
     }
 
-    bool EditorWidgets::endResetToDefaultGroup( bool bDiffersFromDefault )
+    bool EditorWidgets::endResetToDefaultGroup( bool bDiffersFromDefault, bool& outbHovered )
     {
+        ImGuiContext&           context   = *ImGui::GetCurrentContext();
+        const ImGuiLastItemData innerItem = context.LastItemData;
         ImGui::EndGroup();
-        return bDiffersFromDefault && EditorInputGUI::wasItemResetRequested();
+        outbHovered                = ImGui::IsItemHovered();
+        const bool bResetRequested = bDiffersFromDefault && EditorInputGUI::wasItemResetRequested();
+        context.LastItemData       = innerItem;
+        return bResetRequested;
     }
 
     bool EditorWidgets::previewAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath, bool& outbDelivered )

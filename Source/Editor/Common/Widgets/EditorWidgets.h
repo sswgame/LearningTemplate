@@ -336,9 +336,11 @@ namespace sw::editor
         static void beginResetToDefaultGroup();
         /**
          * @brief `beginResetToDefaultGroup` 의 묶음을 닫고, @p bDiffersFromDefault 이고 묶음 위에서 휠클릭(`EditorInputGUI::wasItemResetRequested`)했으면 true 입니다.
+         *        묶음 위에 포인터가 있으면 @p outbHovered 가 true 입니다(칸 위 단축키 — Ctrl+C · Ctrl+V).
          * @details 기본값과 같은 칸은 아무 일도 하지 않는다(되돌리기 단추가 보이는 칸과 같은 조건 — 언리얼의 노란 화살표 자리). true 면 부른 쪽이 그 칸의 되돌리기 명령을 부른다.
+         *          돌아온 뒤의 "마지막 항목" 은 묶음 안의 마지막 위젯이다 — 뒤의 표식 · 툴팁이 묶음이 아니라 예전 자리(벡터의 마지막 축 · 경로 칸의 입력란)에 붙는다.
          */
-        [[nodiscard]] static bool endResetToDefaultGroup( bool bDiffersFromDefault );
+        [[nodiscard]] static bool endResetToDefaultGroup( bool bDiffersFromDefault, bool& outbHovered );
         /**
          * @brief 화면 사각형 [@p minPos, @p maxPos] 를 애셋 드롭 타깃으로 만들고, 애셋이 그 위로 끌려 와 있으면(놓기 전 포함) 경로를 받아 true 입니다.
          *        놓였으면 @p outbDelivered 가 true 입니다. @p pTargetID 는 창 안에서 타깃을 가리는 이름입니다.

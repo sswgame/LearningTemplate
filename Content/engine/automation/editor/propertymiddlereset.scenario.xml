@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e03622eb48c5c51bb4cac6ccc2763f02"?>
+<!--
+  에디터 시나리오 — 휠클릭 = 기본값으로(EditorUI R10). GameCamera 의 _priority 는 기본(0)과 같을 때 휠클릭해도 아무 일이 없고(되돌리기 없음),
+  4 로 바꾼 뒤 값 칸(inspector.property.CameraComponent._priority)을 휠클릭하면 0 으로 돌아오며 되돌리기 한 단계가 쌓인다. Undo 한 번에 4 로 돌아온다.
+  이름 칸(inspector.label.CameraComponent._priority)의 휠클릭도 같다. 기본값과 다른지는 감시 값 Editor.SelectedPropertyModified(되돌리기 단추와 같은 판정)로 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/propertymiddlereset.scenario.xml -unattended
+-->
+<Scenario name="editor.propertymiddlereset" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<EditorClick mark="hierarchy.row.GameCamera"/>
+	<Variable name="gv_editorWatchProperty" value="CameraComponent._priority"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.SelectedPropertyModified" equals="0"/>
+	<Store watch="Editor.UndoIndex" as="undoBefore"/>
+	<!-- ① 기본값과 같은 칸: 휠클릭해도 값 · 되돌리기가 그대로다 -->
+	<EditorClick mark="inspector.property.CameraComponent._priority" button="2"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.SelectedProperty" equals="0"/>
+	<Expect watch="Editor.UndoIndex" sameAs="undoBefore"/>
+	<!-- ② 4 로 바꾼다 -->
+	<EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitStable/>
+	<EditorText value="4"/>
+	<EditorWaitStable/>
+	<EditorKey key="Enter"/>
+	<WaitUntil watch="Editor.SelectedProperty" equals="4" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.SelectedPropertyModified" equals="1"/>
+	<Store watch="Editor.UndoIndex" as="undoEdited"/>
+	<!-- ③ 값 칸 휠클릭: 기본값으로, 되돌리기 한 단계 -->
+	<EditorClick mark="inspector.property.CameraComponent._priority" button="2"/>
+	<WaitUntil watch="Editor.SelectedProperty" equals="0" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.SelectedPropertyModified" equals="0"/>
+	<Expect watch="Editor.UndoIndex" differsFrom="undoEdited"/>
+	<DevCommand line="editor edit.undo"/>
+	<WaitUntil watch="Editor.SelectedProperty" equals="4" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.UndoIndex" sameAs="undoEdited"/>
+	<!-- ④ 이름 칸 휠클릭도 같다 -->
+	<EditorClick mark="inspector.label.CameraComponent._priority" button="2"/>
+	<WaitUntil watch="Editor.SelectedProperty" equals="0" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.UndoIndex" differsFrom="undoEdited"/>
+	<!-- 씬을 처음으로 돌린다 -->
+	<DevCommand line="editor edit.undo"/>
+	<WaitUntil watch="Editor.SelectedProperty" equals="4" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<DevCommand line="editor edit.undo"/>
+	<WaitUntil watch="Editor.SelectedProperty" equals="0" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.UndoIndex" sameAs="undoBefore"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

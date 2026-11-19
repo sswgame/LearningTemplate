@@ -222,6 +222,20 @@ namespace sw::editor
 
             static void copyAbsolutePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( findTargetPath( target ).c_str() ); }
 
+            /** @brief 대상 에셋의 폴더를 열고 그 에셋을 고릅니다(언리얼 Browse to Asset — 인스펙터 에셋 칸의 행 메뉴가 부른다). */
+            static void selectInContentBrowser( const EditorCommandTarget& target )
+            {
+                const string        path    = findTargetPath( target );
+                EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( path.empty() || pPanels == nullptr || pPanels->setPanelOpen<ContentBrowserPanel>( true ) == false )
+                    return;
+                ContentBrowserPanel* pPanel = findWritablePanel();
+                if ( pPanel == nullptr )
+                    return;
+                pPanel->openFolder( FileUtil::getDirectoryPart( path ) );
+                pPanel->selectAssetPath( path );
+            }
+
             static void findReferences( const EditorCommandTarget& target )
             {
                 ContentBrowserPanel* pPanel = findWritablePanel();
@@ -337,6 +351,7 @@ namespace sw::editor
     SW_EDITOR_CONTEXT_COMMAND( AssetShowInExplorer, "asset.showInExplorer", &ContentBrowserPanelInternal::showInExplorer, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetCopyRelativePath, "asset.copyRelativePath", &ContentBrowserPanelInternal::copyRelativePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetCopyAbsolutePath, "asset.copyAbsolutePath", &ContentBrowserPanelInternal::copyAbsolutePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetBrowseTo, "asset.browseTo", &ContentBrowserPanelInternal::selectInContentBrowser, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetFindReferences, "asset.findReferences", &ContentBrowserPanelInternal::findReferences, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetShowDependencies, "asset.showDependencies", &ContentBrowserPanelInternal::showDependencies, &ContentBrowserPanelInternal::hasTextAssetTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetLock, "asset.lock", &ContentBrowserPanelInternal::lockAsset, &ContentBrowserPanelInternal::canLock, NoScene, nullptr );
