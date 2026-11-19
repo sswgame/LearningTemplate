@@ -531,7 +531,9 @@ SW_TEST_CASE( RespawnFlowTest, DownedAllyReviveDoesNotStartTheFlow )
     notifyOnDeath();
     SW_EXPECT_FALSE( flow.isDead() );
 
+    health.update( settings._invulnerableAfterRevive + 0.1f ); // 부활 직후 무적이 풀린 뒤에 맞는다
     (void)health.applyDamage( 1000.0f );
+    SW_REQUIRE_TRUE( health.isDowned() );
     health.update( 1000.0f ); // 출혈사
     SW_REQUIRE_TRUE( health.isDead() );
     notifyOnDeath();

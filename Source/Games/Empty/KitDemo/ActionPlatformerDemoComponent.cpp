@@ -37,28 +37,29 @@ namespace sw
             static constexpr float32 kTileSize = 1.0f;
 
             /** @brief 활성 씬의 플랫포머 시연입니다. 없으면 nullptr 입니다(개발 명령이 그 까닭으로 답한다). */
-            [[nodiscard]] static ActionPlatformerDemoComponent* findDemo()
+            [[nodiscard]] static ActionPlatformerDemoComponent* findDemo( SceneIterationKey key )
             {
                 const SceneManager* const      pScenes  = game::findSubsystem<SceneManager>();
                 const Scene* const             pScene   = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
                 GameObjectManager* const       pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
                 ActionPlatformerDemoComponent* pDemo    = nullptr;
+                // 감시 값(KitDemo.Platformer.*)과 같은 길 — 타입 버킷 순회다. 컴포넌트 등록부(getAll)는 이 씬에서 시연을 돌려주지 않았다(통합 확인).
                 if ( pManager != nullptr )
                 {
-                    for ( ActionPlatformerDemoComponent* pFound : pManager->getComponentRegistry().getAll<ActionPlatformerDemoComponent>() )
+                    pManager->forEachComponentOfType<ActionPlatformerDemoComponent>( key, [&pDemo]( ActionPlatformerDemoComponent* pFound )
                     {
                         if ( pDemo == nullptr )
                             pDemo = pFound;
-                    }
+                    } );
                 }
                 return pDemo;
             }
 
-            static bool runKill( const vector<string>& listArgument, string& outReply )
+            static bool runKill( SceneIterationKey key, const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() == false )
                     return false;
-                ActionPlatformerDemoComponent* const pDemo = findDemo();
+                ActionPlatformerDemoComponent* const pDemo = findDemo( key );
                 if ( pDemo == nullptr )
                     outReply = "kitdemo.platformer.kill: no action platformer demo in the active scene";
                 else if ( pDemo->killPlayer() )
@@ -70,8 +71,8 @@ namespace sw
         };
     } // namespace
 
-    SW_DEV_COMMAND( KitDemoPlatformerKill, "kitdemo.platformer.kill", "kitdemo.platformer.kill", "Kill the action platformer demo player where it stands (one life, then the stage's respawn rules)",
-                    &ActionPlatformerDemoComponentInternal::runKill );
+    SW_DEV_SCENE_COMMAND( KitDemoPlatformerKill, "kitdemo.platformer.kill", "kitdemo.platformer.kill", "Kill the action platformer demo player where it stands (one life, then the stage's respawn rules)",
+                          &ActionPlatformerDemoComponentInternal::runKill );
 
     SW_AUTOMATION_GETTER_WATCH( kitDemoPlatformerState, "KitDemo.Platformer.State", "Action platformer demo run state (0 not started, 1 playing, 2 cleared, 3 game over)",
                                 ActionPlatformerDemoComponent, &ActionPlatformerDemoComponent::getRunState );
