@@ -257,6 +257,19 @@ namespace sw
                 target._bHasMaxCount = SW_TRUE;
             }
 
+            /** @brief 타입의 저장 판입니다(`REFLECT( Version = 3 )`). 꼴(1 이상의 32 비트 정수 또는 상수 이름)은 `AnnotationApply` 가 이미 봤습니다. 이름이면 이름만 남깁니다. */
+            static void applyTypeVersion( ParsedTypeInfo& target, const string_view value )
+            {
+                const string_view trimmed = StringUtil::trim( value );
+                uint64            parsed  = 0;
+                if ( StringUtil::parseUint64( trimmed, parsed ) == false )
+                {
+                    target._versionName = string( trimmed );
+                    return;
+                }
+                target._version = static_cast<uint32>( parsed );
+            }
+
             /** @brief 슬라이더 아래 경계입니다(허용 범위 `Min` 과 따로). */
             static void applyUIMinRange( ParsedPropertyInfo& target, const string_view value )
             {

@@ -20,7 +20,11 @@ namespace sw
                 /** @brief 중복 검사 이름(`<자리>:<종류>:<판>`)입니다. */
                 static string makeStepName( FormatUpgradeDomain domain, string_view kind, uint32 fromVersion )
             {
-                string name = domain == FormatUpgradeDomain::AssetXML ? "AssetXML:" : ( domain == FormatUpgradeDomain::SaveBytes ? "SaveBytes:" : "StateBytes:" );
+                string name = domain == FormatUpgradeDomain::AssetXML  ? "AssetXML:"
+                            : domain == FormatUpgradeDomain::SaveBytes ? "SaveBytes:"
+                            : domain == FormatUpgradeDomain::StateBytes
+                                ? "StateBytes:"
+                                : "ReflectedType:";
                 name += kind;
                 name += ':';
                 name += sw::to_string( fromVersion );

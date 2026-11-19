@@ -24,6 +24,12 @@ namespace sw
         /** @brief 에디터 메타데이터(`ReflectionEditorMetadata.h`)입니다. 타입을 등록할 때 `TypeRegistry` 가 붙이고, 없으면(배포 · 적은 것 없음) nullptr 입니다. 읽기는 `getEditor` 로. */
         const TypeEditorMetadata* _pEditor;
         /**
+         * @brief `REFLECT( Version = N )` 의 저장 판입니다. 0 이면 적지 않은 것이고 판은 1 이다 — 읽기는 `getVersion` 으로.
+         * @details 판은 타입 한 곳에 둔다(ezEngine 의 타입 판 · 언리얼 `FCustomVersion` 자리). 이 타입을 싣는 그릇(상태 바이트 · 서비스 레코드)은 그릇마다 판을 따로 두지 않고
+         *          이 값을 머리에 싣고, 옛 판은 이 타입에 등록한 패치 사슬(`SW_TYPE_VERSION_PATCH`)이 올린다.
+         */
+        uint32 _version;
+        /**
          * @brief 이 타입이 **직접 선언한** 재정의입니다(생성기가 선언에서 모은다 — 손 등록 매크로가 빠뜨리는 타입이 없게). 기반에서 물려받은 것은 세지 않는다.
          * @details `onTick` 은 일괄 등록(`TickBatchOf`)을, `onSubTick` 은 서브틱 일괄(5-3 1b)을, `serializeState` 는 상태 해시 · 롤백 대상(W-R4)을 정한다.
          */
@@ -33,6 +39,9 @@ namespace sw
         [[maybe_unused]] uint8 _reservedTraits           : 5;
 
         TypeMetadata() noexcept;
+
+        /** @brief 타입의 저장 판입니다. `REFLECT( Version )` 를 적지 않았으면 1 입니다. */
+        uint32 getVersion() const noexcept { return _version != 0 ? _version : 1u; }
 
         /** @brief 에디터 메타데이터입니다. 붙지 않았으면 기본값(`TypeEditorMetadata::getDefault`)입니다. */
         const TypeEditorMetadata& getEditor() const noexcept;

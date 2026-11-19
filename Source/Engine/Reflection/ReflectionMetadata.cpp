@@ -30,6 +30,7 @@ namespace sw
 {
     TypeMetadata::TypeMetadata() noexcept
         : _pEditor{ nullptr }
+        , _version{ 0 }
         , _bOverridesTick{ SW_FALSE }
         , _bOverridesSubTick{ SW_FALSE }
         , _bOverridesSerializeState{ SW_FALSE }

@@ -44,6 +44,7 @@ REGISTER_ANNOTATION_FIELD_FN( Reflect, RemovedField, _listRemovedField, appendRe
 REGISTER_ANNOTATION_FIELD_FN( Reflect, RemovedType, _listRemovedType, appendRemovedType, Manual )
 REGISTER_ANNOTATION_FIELD( Reflect, Validate, _validate, Manual )
 REGISTER_ANNOTATION_FIELD( Reflect, TickMode, _tickMode, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Reflect, Version, _version, applyTypeVersion, Manual )
 
 // ── ENUM ─────────────────────────────────────────────────────────
 REGISTER_ANNOTATION_FIELD_FN( Enum, Meta, _listCustomMeta, appendCustomMeta, Display )
