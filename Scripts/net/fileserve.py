@@ -30,6 +30,8 @@ DEFAULT_BIND = "127.0.0.1"
 MAX_CHUNK_BYTES = 1024 * 1024          # 장치 HTTP 클라이언트의 응답 본문 상한(`HTTPConstant::kDefaultMaxBodyBytes`)과 같다
 MAX_LIST_ENTRIES = 100_000
 MAX_PATH_CHARS = 1024
+# Windows 가 어느 폴더에서나 장치로 여는 이름(확장자가 붙어도) — 파이썬 판마다 realpath 가 다르게 다뤄 이름으로 거절한다.
+_WINDOWS_DEVICE_NAMES = frozenset({"CON", "PRN", "AUX", "NUL", *(f"COM{n}" for n in range(1, 10)), *(f"LPT{n}" for n in range(1, 10))})
 
 
 class FileServeError(Exception):
@@ -46,12 +48,17 @@ def resolve_request_path(root: Path, relative: str) -> Path:
     if len(relative) > MAX_PATH_CHARS or "\x00" in relative or "\\" in relative or ":" in relative or relative.startswith("/"):
         raise FileServeError(400, "bad path")
     parts = [part for part in relative.split("/") if part != ""]
-    if any(part in (".", "..") for part in parts):
+    if any(part in (".", "..") or part.split(".")[0].upper() in _WINDOWS_DEVICE_NAMES for part in parts):
         raise FileServeError(400, "bad path")
     real_root = os.path.realpath(root)
     candidate = os.path.realpath(os.path.join(real_root, *parts)) if parts else real_root
     # 심볼릭 링크를 따른 뒤에도 루트 아래여야 한다 — 링크로 루트 밖을 가리키면 없는 것이다.
-    if os.path.commonpath([real_root, candidate]) != real_root:
+    # Windows 예약 이름(NUL · CON)은 realpath 가 장치 경로(\\.\NUL)로 바꿔 commonpath 가 ValueError 를 낸다 — 없는 것으로 본다.
+    try:
+        inside = os.path.commonpath([real_root, candidate]) == real_root
+    except ValueError:
+        inside = False
+    if inside is False:
         raise FileServeError(404, "not found")
     return Path(candidate)
 
@@ -94,7 +101,7 @@ def read_range(root: Path, relative: str, offset: int, size: int) -> bytes:
 
 def _read_int(query: dict[str, list[str]], name: str) -> int:
     values = query.get(name, [])
-    if len(values) != 1 or values[0].isdigit() is False:
+    if len(values) != 1 or values[0].isdecimal() is False or values[0].isascii() is False:
         raise FileServeError(400, f"bad {name}")
     return int(values[0])
 
@@ -126,6 +133,8 @@ def make_handler(root: Path) -> type[BaseHTTPRequestHandler]:
                 self._send(error.status, error.text.encode("utf-8"), "text/plain; charset=utf-8")
             except OSError:
                 self._send(500, b"read failed", "text/plain; charset=utf-8")
+            except ValueError:
+                self._send(400, b"bad request", "text/plain; charset=utf-8")
 
         def _send(self, status: int, body: bytes, content_type: str) -> None:
             self.send_response(status)

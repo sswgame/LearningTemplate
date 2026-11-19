@@ -30,6 +30,8 @@ namespace sw
     public:
         /** @brief 한 번에 받는 구간의 끝입니다 — 장치 HTTP 클라이언트의 응답 본문 상한(1 MiB)과 서버의 `MAX_CHUNK_BYTES` 와 같다. */
         static constexpr uint64 kChunkBytes = uint64{ 1024 } * 1024;
+        /** @brief 서버가 알린 파일 크기의 상한입니다 — 그 위는 없는 파일로 보고 받지 않는다(거울 디스크를 채우지 않게). 가장 큰 쿠킹 팩은 1.3 GB 다. */
+        static constexpr uint64 kMaxFileBytes = uint64{ 8 } * 1024 * 1024 * 1024;
         /** @brief 거울 파일 곁 도장의 확장자입니다. */
         static constexpr const utf8* kStampExtension = ".fsstamp";
 

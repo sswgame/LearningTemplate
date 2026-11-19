@@ -147,7 +147,7 @@ namespace sw
             resize( count );
         }
 
-        template <class InputIt, typename = std::enable_if_t<std::is_integral_v<InputIt> == false>>
+        template <class InputIt, typename = std::enable_if_t<kIsInputIterator<InputIt>>>
         deque( InputIt first, InputIt last, const Allocator& alloc = Allocator() )
             : _allocator{ alloc }
         {
@@ -222,7 +222,7 @@ namespace sw
             assignFill( count, valueCopy );
         }
 
-        template <class InputIt, typename = std::enable_if_t<std::is_integral_v<InputIt> == false>>
+        template <class InputIt, typename = std::enable_if_t<kIsInputIterator<InputIt>>>
         void assign( InputIt first, InputIt last )
         {
             deque gathered( first, last, _allocator ); // 범위가 이 deque 안일 수 있어 먼저 뜬다
@@ -425,7 +425,7 @@ namespace sw
             { return valueCopy; } );
         }
 
-        template <class InputIt, typename = std::enable_if_t<std::is_integral_v<InputIt> == false>>
+        template <class InputIt, typename = std::enable_if_t<kIsInputIterator<InputIt>>>
         iterator insert( const_iterator pos, InputIt first, InputIt last )
         {
             // 범위가 이 deque 안일 수 있고 입력 반복자는 개수를 모른다 — 연속 버퍼로 먼저 뜬다(가운데 범위 삽입은 드물다).

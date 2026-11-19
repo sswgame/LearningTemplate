@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -497,6 +498,8 @@ namespace sw
         void issueBarriers( IRHICommandList* pCmdList );
         /** @brief compile() 끝에서 리소스 수명을 채우고, 쓰이지 않는 자원과 쓰인 적 없는 자원을 로그로 알립니다. */
         void computeResourceLifetimes();
+        /** @brief 같은 레벨에서 한 자원을 다른 읽기 접근으로 읽는 패스가 있으면 오류를 남기고 false 입니다(레벨 배리어는 자원마다 하나다). */
+        [[nodiscard]] bool validateLevelReadAccesses() const;
         /** @brief compile() 끝에서 큐 계획(`_listQueueStep` · 끝 조인 · 묶음 수)을 채웁니다. @p mapAdjacency 는 생산자 → 소비자 간선입니다. */
         void computeQueuePlan( const unordered_map<size_t, vector<size_t>>& mapAdjacency );
         /** @brief 병렬 기록 전에 모든 레벨의 패스 커맨드 리스트를 마련합니다(디바이스가 바뀌면 지난 것을 놓는다). 하나라도 못 만들면 false 이고 아무것도 내지 않습니다. */

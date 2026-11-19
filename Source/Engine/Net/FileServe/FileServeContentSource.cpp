@@ -71,6 +71,14 @@ namespace sw
             return false;
         if ( outRelative.empty() == false && outRelative.front() == '/' )
             outRelative.erase( 0, 1 );
+        // 엔진이 만든 경로에도 서버 목록에서 온 이름이 섞인다 — 성분마다 거울 폴더 한 칸이어야 한다(`..` 로 거울 밖에 쓰지 않는다).
+        if ( outRelative.empty() )
+            return true;
+        for ( const string_view component : StringUtil::split( outRelative, "/" ) )
+        {
+            if ( FileServeContentSourceInternal::isPlainFileName( component ) == false )
+                return false;
+        }
         return true;
     }
 
@@ -109,7 +117,7 @@ namespace sw
             if ( listToken.size() == 1 && listToken[0] == "folder" )
                 stat._kind = RemoteKind::Folder;
             else if ( listToken.size() == 3 && listToken[0] == "file" && StringUtil::parseUint64( listToken[1], stat._sizeBytes ) &&
-                      StringUtil::parseUint64( listToken[2], stat._modifiedNanos ) )
+                      StringUtil::parseUint64( listToken[2], stat._modifiedNanos ) && stat._sizeBytes <= kMaxFileBytes )
                 stat._kind = RemoteKind::File;
             else
                 SW_LOG_WARNING_ID( "FileServe.BadStat", "Fileserve answered '%#' for '%#' - treated as missing", FileServeContentSourceInternal::toText( body ), relative );
@@ -171,6 +179,9 @@ namespace sw
             if ( downloadFile( relative, stat._sizeBytes, mirrorPath ) == false || FileUtil::writeTextFile( stampPath, stampText ) == false )
             {
                 SW_LOG_WARNING_ID( "FileServe.DownloadFailed", "Fileserve could not mirror '%#' to '%#' - treated as missing", relative, mirrorPath );
+                // PC 에서 받는 사이 다시 구웠을 수 있다(구간이 416) — 다음 열기가 상태를 다시 묻게 기억을 지운다.
+                ScopedLock<mutex> lock{ _mutex };
+                _mapRemoteStat.erase( relative );
                 return false;
             }
         }

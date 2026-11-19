@@ -34,7 +34,7 @@ class FileServeTest(unittest.TestCase):
         self._temp.cleanup()
 
     def test_paths_outside_the_root_are_refused(self) -> None:
-        for bad in ("../secret.txt", "sub/../../secret.txt", "/etc/passwd", "C:/Windows", "sub\\..\\..\\secret.txt", "a\x00b", "./a.pack"):
+        for bad in ("../secret.txt", "sub/../../secret.txt", "/etc/passwd", "C:/Windows", "sub\\..\\..\\secret.txt", "a\x00b", "./a.pack", "NUL", "CON/x"):
             with self.subTest(bad=bad):
                 with self.assertRaises(FileServeError):
                     resolve_request_path(self.root, bad)
@@ -77,6 +77,9 @@ class FileServeTest(unittest.TestCase):
             with self.assertRaises(urllib.error.HTTPError) as caught:
                 urllib.request.urlopen(f"{base}/stat?path=missing.pack", timeout=5)
             self.assertEqual(404, caught.exception.code)
+            with self.assertRaises(urllib.error.HTTPError) as caught:
+                urllib.request.urlopen(f"{base}/file?path=a.pack&offset=%C2%B2&size=1", timeout=5)   # '²' 는 isdigit 이지만 정수가 아니다
+            self.assertEqual(400, caught.exception.code)
         finally:
             server.shutdown()
             server.server_close()

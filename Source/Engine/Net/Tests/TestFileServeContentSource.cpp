@@ -166,7 +166,9 @@ SW_TEST_CASE( FileServeContentSourceTest, RefusesPathsOutsideTheMountAndEscaping
     const FileServeContentSource source{ client, FakeFileServeClient::kBase, mount, test::makeScratchPath( "FileServe/Mirror" ) };
 
     SW_EXPECT_FALSE( source.isFile( test::makeScratchPath( "Elsewhere/a.pack" ) ) );
-    SW_EXPECT_FALSE( source.open( mount + "x/a.pack" ).isValid() ); // `<root>x` 는 다른 폴더다
+    SW_EXPECT_FALSE( source.open( mount + "x/a.pack" ).isValid() );        // `<root>x` 는 다른 폴더다
+    SW_EXPECT_FALSE( source.open( mount + "/../escape.pack" ).isValid() ); // `..` 성분은 거울 밖이다
+    SW_EXPECT_FALSE( source.isFile( mount + "/sub/../a.pack" ) );
     SW_EXPECT_EQUAL( 0u, client._requestCount );
 
     vector<string> listPath;

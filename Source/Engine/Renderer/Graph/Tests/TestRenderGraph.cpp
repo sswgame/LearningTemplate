@@ -638,32 +638,51 @@ SW_TEST_CASE( RenderGraphTest, ChainedUnorderedAccessGetsUAVBarrier )
 }
 
 /**
- * @brief [RenderGraphTest] 들인 자원(`importResource`)은 처음 접근에서 시작한다 — 같은 접근으로 읽으면 전이가 없고, 끝 접근을 내보낸다(언리얼 RegisterExternalBuffer · 추출).
+ * @brief [RenderGraphTest] 들인 자원(`importResource`)은 처음 접근에서 시작한다 — 같은 접근으로 읽으면 전이가 없고, 다른 접근이면 그 첫 사용에서 전이 하나, 끝 접근을 내보낸다(언리얼 RegisterExternalBuffer · 추출).
  *        결함이면 그래프 밖 버퍼가 프레임마다 첫 사용에서 쓸데없는 전이를 받거나, 다음 사용자가 끝 상태를 모른다
  */
 SW_TEST_CASE( RenderGraphTest, ImportedResourceStartsInItsInitialAccess )
 {
     RenderGraph         graph;
     const hashed_string grid( "LightGrid" );
+    const hashed_string args( "CullArgs" );
     graph.importResource( grid, RenderGraphViewableKind::Buffer, RenderGraphAccess::ShaderRead );
+    graph.importResource( args, RenderGraphViewableKind::Buffer, RenderGraphAccess::ShaderRead );
     SW_EXPECT_TRUE( graph.getResourceKind( grid ) == RenderGraphResourceKind::External );
-    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Lighting" ), { RenderGraphBufferSRV{ grid }, RenderGraphRenderTarget{ hashed_string( "Color" ) } } ) );
-    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Rebuild" ), { RenderGraphBufferUAV{ grid } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Lighting" ), { RenderGraphBufferSRV{ grid }, RenderGraphIndirectArgs{ args } } ) );
     SW_REQUIRE_TRUE( graph.compile() );
 
     vector<RenderGraphBarrier> listBarrier;
     collectIssuedBarriers( graph, listBarrier );
     RenderGraphExecutionContext context;
     SW_REQUIRE_TRUE( graph.execute( context ) );
-    const vector<RenderGraphBarrier> listGrid = findBarriersFor( listBarrier, grid );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, listGrid.size() ); // 읽기는 이미 그 상태 — 다시 쓰는 UAV 하나만
-    SW_EXPECT_TRUE( listGrid[0]._access == RenderGraphAccess::UnorderedAccess );
-    SW_EXPECT_TRUE( context.findAccess( grid ) == RenderGraphAccess::UnorderedAccess );
+    SW_EXPECT_EQUAL( size_t{ 0 }, findBarriersFor( listBarrier, grid ).size() ); // 이미 그 접근
+    const vector<RenderGraphBarrier> listArgs = findBarriersFor( listBarrier, args );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listArgs.size() );
+    SW_EXPECT_TRUE( listArgs[0]._before == RenderGraphResourceState::Read );
+    SW_EXPECT_TRUE( listArgs[0]._access == RenderGraphAccess::IndirectArgs );
+    SW_EXPECT_TRUE( context.findAccess( grid ) == RenderGraphAccess::ShaderRead );
+    SW_EXPECT_TRUE( context.findAccess( args ) == RenderGraphAccess::IndirectArgs );
 
     // 다음 프레임도 들인 접근에서 다시 시작한다.
     listBarrier.clear();
     SW_REQUIRE_TRUE( graph.execute( context ) );
-    SW_EXPECT_EQUAL( size_t{ 1 }, findBarriersFor( listBarrier, grid ).size() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, findBarriersFor( listBarrier, args ).size() );
+}
+
+/**
+ * @brief [RenderGraphTest] 같은 레벨의 두 패스가 한 자원을 다른 읽기(셰이더 읽기 · 간접 인자)로 읽으면 컴파일이 거절한다 — 레벨 배리어는 자원마다 하나다.
+ *        결함이면 앞 접근만 GPU 에 나가고 추적은 뒤 접근을 믿어 DX12 · Vulkan 검증 층이 상태 불일치를 낸다
+ */
+SW_TEST_CASE( RenderGraphTest, MixedReadAccessInOneLevelIsRefused )
+{
+    RenderGraph         graph;
+    const hashed_string args( "DrawArgs" );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Fill" ), { RenderGraphBufferUAV{ args } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Inspect" ), { RenderGraphBufferSRV{ args } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Draw" ), { RenderGraphIndirectArgs{ args } } ) );
+    SW_EXPECT_LOG( "Renderer.GraphMixedReadAccess" );
+    SW_EXPECT_FALSE( graph.compile() );
 }
 
 /**

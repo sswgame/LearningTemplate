@@ -401,11 +401,47 @@ namespace sw
         {
             _mapNameToIndex[_listNode[nodeIndex]._name] = nodeIndex;
         }
+        if ( validateLevelReadAccesses() == false )
+        {
+            _listCompiledExecutionOrder.clear();
+            _listCompiledLevel.clear();
+            return false;
+        }
 
         // 수명은 실행 순서가 정해진 **뒤에야** 의미가 있다. "몇 번째 패스에서 처음 또는 마지막으로 쓰이나" 이기 때문이다.
         computeResourceLifetimes();
         computeQueuePlan( graph._adjacency );
 
+        return true;
+    }
+
+    bool RenderGraph::validateLevelReadAccesses() const
+    {
+        // 한 레벨의 배리어는 자원마다 하나다(`requestBarrier`). 같은 레벨의 두 패스가 한 자원을 다른 읽기(셰이더 읽기 · 간접 인자 · 복사 원본)로 읽으면
+        // 앞 접근만 GPU 에 나가고 추적은 뒤 접근을 믿는다 — 읽기 상태를 합치는 묶음(언리얼 ERHIAccess 비트 합)이 생길 때까지 컴파일을 멈춘다.
+        unordered_map<hashed_string, RenderGraphAccess> mapLevelRead;
+        for ( const vector<hashed_string>& listLevelPass : _listCompiledLevel )
+        {
+            mapLevelRead.clear();
+            for ( const hashed_string& passName : listLevelPass )
+            {
+                const auto indexIt = _mapNameToIndex.find( passName );
+                if ( indexIt == _mapNameToIndex.end() )
+                    continue;
+                for ( const RenderGraphResourceAccess& access : _listNode[indexIt->second]._listAccess )
+                {
+                    if ( isRenderGraphWriteAccess( access._access ) )
+                        continue;
+                    const auto [readIt, bInserted] = mapLevelRead.emplace( access._resource, access._access );
+                    if ( bInserted == false && readIt->second != access._access )
+                    {
+                        SW_LOG_ERROR_ID( "Renderer.GraphMixedReadAccess", "Render graph: '%#' is read two different ways in one level (pass '%#') - the level can carry one read state per resource",
+                                         access._resource.c_str(), passName.c_str() );
+                        return false;
+                    }
+                }
+            }
+        }
         return true;
     }
 

@@ -24,6 +24,23 @@ namespace sw
         static_assert( std::is_same_v<std::remove_cv_t<T>, bool> == false, "sw::vector<bool> is not allowed. Use DynamicBitset (bits) or vector<uint8> (addressable flags)." );
         using type = void;
     };
+
+    /**
+     * @brief @p T 가 입력 반복자(`std::iterator_traits<T>::iterator_category` 가 `std::input_iterator_tag` 로 바뀐다)면 참입니다 — 반복자 쌍을 받는 생성자 · `assign` · `insert` 의 제약.
+     * @details `std::vector` 와 같은 조건이다(LegacyInputIterator). 예전 제약은 "정수가 아님" 하나라 같은 형식 둘의 중괄호 목록 `{ a, b }` 가 아무 `vector<U>` 로도
+     *          (a, b) 반복자 쌍으로 바뀌어 `vector<A>` · `vector<B>` 오버로드 쌍이 모호했다(RenderGraph::addPass). C++17 의 `iterator_traits` 는 반복자가 아닌 형식에 비어 있다.
+     */
+    template <typename T, typename = void>
+    struct IsInputIterator : std::false_type
+    {
+    };
+    template <typename T>
+    struct IsInputIterator<T, std::void_t<typename std::iterator_traits<T>::iterator_category>>
+        : std::is_convertible<typename std::iterator_traits<T>::iterator_category, std::input_iterator_tag>
+    {
+    };
+    template <typename T>
+    inline constexpr bool kIsInputIterator = IsInputIterator<T>::value;
 } // namespace sw
 
 namespace sw
@@ -70,11 +87,11 @@ namespace sw
         using const_iterator         = const T*;
         using reverse_iterator       = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-        template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
+        template <class InputIt, typename std::enable_if_t<kIsInputIterator<InputIt>, int32> = 0>
         vector( InputIt first, InputIt last, const Allocator& alloc = Allocator() );
-        template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
+        template <class InputIt, typename std::enable_if_t<kIsInputIterator<InputIt>, int32> = 0>
         void assign( InputIt first, InputIt last );
-        template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
+        template <class InputIt, typename std::enable_if_t<kIsInputIterator<InputIt>, int32> = 0>
         iterator insert( const_iterator pos, InputIt first, InputIt last );
 
         // ------------------------------------------------------------------------------
@@ -411,7 +428,7 @@ namespace sw
     }
 
     template <typename T, typename Allocator>
-    template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32>>
+    template <class InputIt, typename std::enable_if_t<kIsInputIterator<InputIt>, int32>>
     inline vector<T, Allocator>::vector( InputIt first, InputIt last, const Allocator& alloc )
         : Allocator( alloc )
     {
@@ -600,7 +617,7 @@ namespace sw
     }
 
     template <typename T, typename Allocator>
-    template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32>>
+    template <class InputIt, typename std::enable_if_t<kIsInputIterator<InputIt>, int32>>
     inline void vector<T, Allocator>::assign( InputIt first, InputIt last )
     {
         SW_SCOPED_RACE_WRITE();
@@ -979,7 +996,7 @@ namespace sw
     }
 
     template <typename T, typename Allocator>
-    template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32>>
+    template <class InputIt, typename std::enable_if_t<kIsInputIterator<InputIt>, int32>>
     inline typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const_iterator pos, InputIt first, InputIt last )
     {
         using Category      = typename std::iterator_traits<InputIt>::iterator_category;
