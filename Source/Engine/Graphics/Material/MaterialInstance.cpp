@@ -232,12 +232,12 @@ namespace sw
         return doc.saveCompleteToFile( absPath.str() );
     }
 
-    MaterialRenderBinding MaterialInstance::getRenderBinding()
+    MaterialRenderBinding MaterialInstance::getRenderBinding( const MaterialRenderInputs& inputs )
     {
         if ( _pParentMaterial == nullptr )
             return MaterialRenderBinding{};
         // 부모를 직접 그리지 않아도 부모의 레이아웃 · 텍스처 SRV 를 맞춘다 — 그래야 아래 세대 비교가 부모의 새 바이트를 본다.
-        _pParentMaterial->syncRenderState();
+        _pParentMaterial->syncRenderState( inputs );
         // 텍스처는 부모가 빌린 디바이스로 요청한다. 부모가 아직 초기화 전이면 디바이스가 없어 덮어쓴 텍스처를 미룬다(그동안 부모 텍스처가 보인다).
         IRHIDevice* pDevice = _pParentMaterial->getRHIDevice();
         // 텍스처 덮어쓰기의 새 SRV(다시 올림 · 비동기 로드 끝)는 텍스처 캐시의 세대가 알린다 — 장면 스냅샷도 그 세대를 함께 본다.

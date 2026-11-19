@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "ModuleAPI/ABI/ModuleABI.h"
 #include "ModuleAPI/ABI/ModuleHandles.h"
 
 namespace sw
@@ -34,19 +35,39 @@ namespace sw
     // 1) GameAPI — C ABI 함수 테이블
     //    IGame 구현은 SWGame 안에 두고, App 은 이 포인터만 부른다
     // ------------------------------------------------------------------------------
+    /**
+     * @brief `GameAPI` 표의 항목 목록입니다 — `X( 반환형, 이름, ( 매개변수 ) )`. 구조체 멤버와 스탬프(`kGameModuleABIStamp`)가 둘 다 여기서 나옵니다.
+     * @details 항목을 더하거나 순서 · 시그니처를 바꾸면 스탬프가 저절로 바뀌어 옛 모듈 DLL 은 로드 때 거부됩니다(`ModuleABI.h`).
+     *          줄 연결 매크로 안이라 설명은 블록 주석으로 씁니다(줄 주석은 다음 줄을 삼킨다).
+     */
+#define SW_GAME_API_ENTRIES( X )                                                                    \
+    /** 게임 인스턴스를 생성합니다. */                                                              \
+    X( GameHandle, create, () )                                                                     \
+    /** 게임 인스턴스를 파괴합니다. */                                                              \
+    X( void, destroy, ( GameHandle game ) )                                                         \
+    /** 윈도우로 게임을 초기화합니다(디바이스는 받지 않는다 — 엔진이 붙인다). */                    \
+    X( bool, initialize, ( GameHandle game, WindowHandle window ) )                                 \
+    /** 게임을 종료합니다. */                                                                       \
+    X( void, shutdown, ( GameHandle game ) )                                                        \
+    /** 프레임 업데이트를 수행합니다. */                                                            \
+    X( void, update, ( GameHandle game, float32 deltaTime ) )                                       \
+    /** 고정 프레임 업데이트를 수행합니다. */                                                       \
+    X( void, fixedUpdate, ( GameHandle game, float32 fixedDeltaTime ) )                             \
+    /** 호스트 서비스 범위를 게임 모듈에 주입하거나 nullptr 로 해제합니다. */                       \
+    X( void, bindService, ( const ISubsystemLocator* pService ) )                                   \
+    /** 게임 상태를 한 번 직렬화해 pSink 가 준 버퍼에 씁니다. 구현이 지원하는 범위만 복원됩니다. */ \
+    X( bool, serializeState, ( GameHandle game, const StateBufferSink* pSink ) )                    \
+    /** 버퍼에서 게임 상태를 복원합니다. */                                                         \
+    X( bool, deserializeState, ( GameHandle game, const void* pInBuffer, uint32 size ) )
+
     /** @brief SWGame 이 exportGameAPI 로 채우고 App 이 부르는 함수 포인터 테이블입니다. */
     struct GameAPI
     {
-        GameHandle ( *create )(){ nullptr };                                                          /**< @brief 게임 인스턴스를 생성합니다. */
-        void ( *destroy )( GameHandle game ){ nullptr };                                              /**< @brief 게임 인스턴스를 파괴합니다. */
-        bool ( *initialize )( GameHandle game, WindowHandle window ){ nullptr };                      /**< @brief 윈도우로 게임을 초기화합니다(디바이스는 받지 않는다 — 엔진이 붙인다). */
-        void ( *shutdown )( GameHandle game ){ nullptr };                                             /**< @brief 게임을 종료합니다. */
-        void ( *update )( GameHandle game, float32 deltaTime ){ nullptr };                            /**< @brief 프레임 업데이트를 수행합니다. */
-        void ( *fixedUpdate )( GameHandle game, float32 fixedDeltaTime ){ nullptr };                  /**< @brief 고정 프레임 업데이트를 수행합니다. */
-        void ( *bindService )( const ISubsystemLocator* pService ){ nullptr };                        /**< @brief 호스트 서비스 범위를 게임 모듈에 주입하거나 nullptr 로 해제합니다. */
-        bool ( *serializeState )( GameHandle game, const StateBufferSink* pSink ){ nullptr };         /**< @brief 게임 상태를 한 번 직렬화해 @p pSink 가 준 버퍼에 씁니다. 구현이 지원하는 범위만 복원됩니다. */
-        bool ( *deserializeState )( GameHandle game, const void* pInBuffer, uint32 size ){ nullptr }; /**< @brief 버퍼에서 게임 상태를 복원합니다. */
+        SW_GAME_API_ENTRIES( SW_MODULE_ABI_ENTRY_MEMBER )
     };
+
+    /** @brief `GameAPI` 표의 스탬프입니다. 게임 모듈이 내보내고(`getGameModuleABIStamp`) 호스트가 로드 전에 자기 것과 대조합니다. */
+    inline constexpr uint64 kGameModuleABIStamp = ModuleABIUtil::computeStamp( SW_GAME_API_ENTRIES( SW_MODULE_ABI_ENTRY_TEXT ) );
 
     /** @brief SWGame 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportGameAPI). */
     using PFN_ExportGameAPI = bool ( * )( GameAPI* pOutAPI );
@@ -57,10 +78,8 @@ extern "C"
     // ------------------------------------------------------------------------------
     // 2) export — SWGame 이 채우는 진입점
     // ------------------------------------------------------------------------------
-    /** @brief 이 모듈이 빌드된 표 버전입니다. 호스트가 로드 전에 자기 것과 대조합니다. */
-    SW_MODULE_API uint32 getGameModuleABIVersion();
-    /** @brief 이 모듈이 빌드된 표 지문입니다. 버전과 함께 대조합니다. */
-    SW_MODULE_API const utf8* getGameModuleABIStamp();
+    /** @brief 이 모듈이 빌드된 표 스탬프(`sw::kGameModuleABIStamp`)입니다. 호스트가 로드 전에 자기 것과 대조합니다. */
+    SW_MODULE_API uint64 getGameModuleABIStamp();
 
     /** @brief SWGame API 테이블을 내보냅니다. */
     SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutAPI );

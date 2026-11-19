@@ -243,7 +243,7 @@ namespace sw
             _mapOwnerToElement.erase( it );
     }
 
-    bool GPUMaterialRegistry::refreshElement( GPUSceneSnapshot& inoutSnapshot, const ElementRef& ref ) const
+    bool GPUMaterialRegistry::refreshElement( GPUSceneSnapshot& inoutSnapshot, const ElementRef& ref, const MaterialRenderInputs& inputs ) const
     {
         if ( ref._group >= _listMaterialGroupState.size() || ref._group >= inoutSnapshot.getMaterialGroups().size() )
             return false;
@@ -253,7 +253,7 @@ namespace sw
         const MaterialElementOwner& owner = state._listEntryOwner[ref._index];
         if ( owner._material == nullptr )
             return false; // 회수된 칸이다
-        MaterialRenderBinding        binding = ( owner._instance != nullptr ) ? owner._instance->getRenderBinding() : owner._material->getRenderBinding();
+        MaterialRenderBinding        binding = ( owner._instance != nullptr ) ? owner._instance->getRenderBinding( inputs ) : owner._material->getRenderBinding( inputs );
         const MaterialRenderBinding& current = inoutSnapshot.getMaterialGroups()[ref._group]._listEntry[ref._index]._binding;
         if ( binding._proxy == current._proxy && binding._data == current._data )
             return false;
@@ -289,7 +289,7 @@ namespace sw
             for ( const ElementRef& ref : _listNewElement )
             {
                 ++visitCount;
-                changeCount += refreshElement( inoutSnapshot, ref ) ? 1u : 0u;
+                changeCount += refreshElement( inoutSnapshot, ref, inputs ) ? 1u : 0u;
             }
             for ( const void* pOwner : _listChangedOwnerScratch )
             {
@@ -299,7 +299,7 @@ namespace sw
                 for ( const ElementRef& ref : it->second )
                 {
                     ++visitCount;
-                    changeCount += refreshElement( inoutSnapshot, ref ) ? 1u : 0u;
+                    changeCount += refreshElement( inoutSnapshot, ref, inputs ) ? 1u : 0u;
                 }
             }
         }
@@ -312,7 +312,7 @@ namespace sw
                 for ( uint32 index = 0; index < entryCount; ++index )
                 {
                     ++visitCount;
-                    changeCount += refreshElement( inoutSnapshot, ElementRef{ groupIndex, index } ) ? 1u : 0u;
+                    changeCount += refreshElement( inoutSnapshot, ElementRef{ groupIndex, index }, inputs ) ? 1u : 0u;
                 }
             }
         }

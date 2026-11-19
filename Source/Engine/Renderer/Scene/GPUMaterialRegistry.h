@@ -93,7 +93,7 @@ namespace sw
         /** @brief (셰이더 경로 해시, define 해시)의 퍼뮤테이션 해시입니다. 머티리얼에서 묻는 길과 미리 만들기 값의 길이 같은 식을 쓴다. */
         static uint64 combinePermutationHash( uint64 shaderPathHash, uint64 defineHash, bool bAppearanceDither );
         /** @brief 원소 하나의 (프록시, 사본)을 지금 값으로 맞춥니다. 사본이 바뀐 원소만 그룹 목록을 고친다(공유 중이면 그때 베낀다). @return 고쳤으면 true. */
-        bool refreshElement( GPUSceneSnapshot& inoutSnapshot, const ElementRef& ref ) const;
+        bool refreshElement( GPUSceneSnapshot& inoutSnapshot, const ElementRef& ref, const MaterialRenderInputs& inputs ) const;
         /** @brief 주인 @p pOwner(머티리얼 · 인스턴스) → 원소 목록에서 @p ref 를 뺍니다. */
         void unlinkOwner( const void* pOwner, const ElementRef& ref );
 

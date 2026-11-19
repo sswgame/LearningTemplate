@@ -53,17 +53,6 @@ namespace sw
         void setViewport( const RHIViewport& viewport ) override;
         void setScissorRect( const RHIScissorRect& rect ) override;
 
-        /**
-         * @brief 드로우 직전에 그래픽스 파이프라인을 **실제로 바인딩합니다**. 바인딩할 수 없으면 false 입니다(드로우하지 말 것).
-         *
-         * @details DX11 은 `setPipelineState` 가 **핸들만 기록**하고, VS/PS/InputLayout, 정점 버퍼, 토폴로지는
-         *          드로우 시점에 바인딩합니다. 그래서 드로우 진입점(`draw`, `drawInstanced`, `drawIndirect`,
-         *          `drawIndexedIndirect`)마다 이것을 불러야 합니다. 주의: 한 진입점이라도 빠뜨리면 그 경로의
-         *          드로우가 **셰이더도 정점 버퍼도 없이 나가** 화면에 클리어 색만 남습니다. 새 진입점도 이것을 불러야 합니다.
-         */
-        [[nodiscard]] bool bindGraphicsPipelineForDraw();
-        /** @brief 건 인덱스 버퍼를 겁니다. 걸지 않았거나 부서졌으면 알리고 false 이며 부르는 쪽은 드로우를 버립니다(네 백엔드가 같다 — `RHIBufferBinding::bindForDraw`). */
-        [[nodiscard]] bool bindIndexBufferForDraw();
         /** @brief 디스패치 직전에 `setComputePipelineState` 로 건 컴퓨트 PSO 가 등록된 레코드인지 봅니다. 아니면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
         void                     requireComputePipelineForDispatch() const;
         void                     drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
@@ -89,6 +78,19 @@ namespace sw
         void                     uavBarrierNative( RHIBufferHandle buffer ) override;
 
     private:
+        /**
+         * @brief 드로우 본문의 한 길입니다. 그래픽스 파이프라인(@p bIndexed 면 인덱스 버퍼도)을 걸고, 걸었을 때만 @p issue( ID3D11DeviceContext& ) 로 드로우를 냅니다.
+         * @details DX11 은 `setPipelineState` 가 **핸들만 기록**하고, VS/PS/InputLayout, 정점 버퍼, 토폴로지는 드로우 시점에 바인딩합니다.
+         *          예전에는 드로우 진입점마다 바인딩을 손으로 불렀고, 한 곳이라도 빠뜨리면 그 경로의 드로우가 셰이더도 정점 버퍼도 없이 나가
+         *          클리어 색만 남았다. 이제 바인딩 함수는 이 템플릿만 부르고 진입점은 본문만 넘깁니다(언리얼 D3D11 RHI 의 `CommitGraphicsResourceTables` 단일 경로).
+         *          템플릿 · 인라인이라 드로우마다 간접 호출 · 할당이 늘지 않습니다.
+         */
+        template <bool bIndexed, typename TIssue>
+        void drawWith( TIssue&& issue );
+        /** @brief 드로우 직전에 그래픽스 파이프라인을 **실제로 바인딩합니다**. 바인딩할 수 없으면 false 입니다(드로우하지 말 것). `drawWith` 만 부릅니다. */
+        [[nodiscard]] bool bindGraphicsPipelineForDraw();
+        /** @brief 건 인덱스 버퍼를 겁니다. 걸지 않았거나 부서졌으면 알리고 false 이며 드로우를 버립니다(네 백엔드가 같다 — `RHIBufferBinding::bindForDraw`). `drawWith` 만 부릅니다. */
+        [[nodiscard]] bool bindIndexBufferForDraw();
         /** @brief beginEventMarker 와 endEventMarker 용 어노테이션 인터페이스를 처음 한 번만 QueryInterface 해 캐시합니다. */
         ID3DUserDefinedAnnotation* getAnnotation();
         /** @brief bindless 인덱스가 가리키는 구조 버퍼의 SRV 를 반환합니다. 범위 밖이거나 미등록이면 nullptr 입니다. 그래픽스와 컴퓨트 바인딩이 같은 조회를 씁니다. */

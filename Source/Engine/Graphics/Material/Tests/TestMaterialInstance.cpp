@@ -67,16 +67,16 @@ SW_TEST_CASE( MaterialInstanceTest, SameValueKeepsRenderCopy )
     const hashed_string valueName( "_roughness" );
     instance->setVectorParameter( colorName, float4{ 0.25f, 0.5f, 0.75f, 1.0f } );
     instance->setScalarParameter( valueName, 0.125f );
-    const MaterialRenderBinding first = instance->getRenderBinding();
+    const MaterialRenderBinding first = instance->getRenderBinding( MaterialRenderInputs::capture() );
     SW_REQUIRE_TRUE( first._data != nullptr );
 
     instance->setVectorParameter( colorName, float4{ 0.25f, 0.5f, 0.75f, 1.0f } );
     instance->setScalarParameter( valueName, 0.125f );
-    const MaterialRenderBinding unchanged = instance->getRenderBinding();
+    const MaterialRenderBinding unchanged = instance->getRenderBinding( MaterialRenderInputs::capture() );
     SW_EXPECT_TRUE( first._data == unchanged._data );
 
     instance->setScalarParameter( valueName, 0.5f );
-    const MaterialRenderBinding changed = instance->getRenderBinding();
+    const MaterialRenderBinding changed = instance->getRenderBinding( MaterialRenderInputs::capture() );
     SW_EXPECT_TRUE( unchanged._data != changed._data );
     const MaterialProperty* pRoughness = material->findProperty( valueName );
     SW_REQUIRE_TRUE( pRoughness != nullptr );
@@ -107,7 +107,7 @@ SW_TEST_CASE( MaterialInstanceTest, FloatOverridesKeepTextForm )
     // 모양이 다른 값은 패킹 때 알리고 버린다.
     instance->setScalarParameter( hashed_string( "_color" ), 0.5f );
     SW_EXPECT_LOG( "Material.ParameterShapeMismatch" );
-    (void)instance->getRenderBinding();
+    (void)instance->getRenderBinding( MaterialRenderInputs::capture() );
     SW_EXPECT_FALSE( instance->isParameterOverridden( hashed_string( "_color" ) ) );
 }
 

@@ -50,6 +50,7 @@ namespace sw
     void PostProcessMaterialSet::resolve( RenderViewSettings& inoutSettings )
     {
         inoutSettings._listPostProcessMaterial.clear();
+        const MaterialRenderInputs inputs = MaterialRenderInputs::capture(); // 사본을 맞출 머티리얼 밖 입력 — 이번 해석의 모든 머티리얼이 같은 값을 본다
         for ( const PostProcessBlendable& blendable : inoutSettings._postProcess._listBlendable )
         {
             if ( blendable.isActive() == false )
@@ -71,7 +72,7 @@ namespace sw
                 continue;
             }
             PostProcessMaterialDraw draw;
-            draw._binding      = material.getRenderBinding();
+            draw._binding      = material.getRenderBinding( inputs );
             draw._shaderPath   = material.getShaderPath();
             draw._materialPath = pEntry->_path;
             draw._weight       = blendable._weight;

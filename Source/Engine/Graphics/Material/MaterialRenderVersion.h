@@ -44,7 +44,9 @@ namespace sw
      * @brief 머티리얼 사본(`Material::getRenderBinding` · `MaterialInstance::getRenderBinding`)을 정하는 입력 전부의 번호입니다.
      * @details 둘이 모두 같으면 어느 머티리얼도 지난번과 다른 사본을 내지 않는다: 머티리얼 · 인스턴스 · 묶음의 값(`MaterialCache::getRenderValueGeneration`),
      *          셰이더 레이아웃(`ShaderReflectionLibrary::getCacheGeneration`). 텍스처 SRV 는 입력이 아니다 — 업로드 · 핫 리로드가 같은 번호를 다시 묶는다(R-6).
-     *          사본이 새 입력을 읽는 길을 더하면 여기에도 더한다 — 빠뜨리면 장면 스냅샷이 사본 맞추기를 건너뛰어 그 변화가 화면에 오르지 않는다.
+     *          사본을 만드는 길(`getRenderBinding` → `syncRenderState` → `ensureShaderLayout`)은 이 값을 인자로 받아 머티리얼 밖 입력을 **여기서만** 읽는다 —
+     *          장면 빌더가 건너뛸지 비교한 값과 사본이 맞춘 값이 같은 한 벌이다. 예전에는 사본 쪽이 셰이더 리플렉션 세대를 따로 읽어, 새 입력을 읽는 길을
+     *          더하고 여기에 더하지 않으면 장면 스냅샷이 사본 맞추기를 건너뛰었다(손으로 맞추던 목록). 새 입력은 이 구조체에 칸을 더해야 사본 쪽이 읽을 수 있다.
      */
     struct SW_API MaterialRenderInputs
     {

@@ -34,7 +34,7 @@ namespace sw
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
         struct EditorModuleManagerInternal
         {
-            static constexpr ModuleAPISymbols kEditorSymbols{ "getEditorModuleABIVersion", "getEditorModuleABIStamp", "exportEditorAPI", "Editor" };
+            static constexpr ModuleAPISymbols kEditorSymbols{ kEditorModuleABIStamp, "getEditorModuleABIStamp", "exportEditorAPI", "Editor" };
         };
     } // namespace
 } // namespace sw

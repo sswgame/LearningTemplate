@@ -26,7 +26,6 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
-#include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Reflection/EnumName.h"
@@ -160,7 +159,7 @@ namespace sw
         }
 
         // 셰이더 레이아웃도 여기(게임 스레드)서 맞춘다. 결과(레거시 MaterialCB 는 stride 0)는 사본(`getRenderBinding`)이 실어 간다.
-        (void)ensureShaderLayout( pRHI->getBackendType() );
+        (void)ensureShaderLayout( pRHI->getBackendType(), MaterialRenderInputs::capture() );
 
         SW_LOG_INFO_ID( "Material.InitializedBytes", "Initialized '%#' (%# bytes, element stride %#)", _desc._name.c_str(), _data._bytes.size(), _elementStride );
         loadScope.setBytes( _data._bytes.size() );
@@ -339,13 +338,13 @@ namespace sw
         setInitState( MaterialInitState::NotRequested );
     }
 
-    void Material::syncRenderState()
+    void Material::syncRenderState( const MaterialRenderInputs& inputs )
     {
         // 레이아웃을 셰이더에 맞춘다 — 다시 로드(`loadFromXML`, 에디터 미리보기)는 XML 순서로 다시 쌓고, 셰이더 리플렉션 캐시가 비면(핫 리로드)
         // 맞춘 값이 낡는다. 맞춰져 있으면 비교만 한다. 디바이스가 없는(초기화 전) 머티리얼은 그리지 않으므로(`MaterialInitState`) 맞출 백엔드가 없다.
         if ( _pRHIDevice != nullptr )
-            (void)ensureShaderLayout( _pRHIDevice->getBackendType() ); // 실패 오류는 맞추는 쪽이 남겼고, 바이트가 비어 렌더 스레드가 건너뛴다
-        syncParameterCollections();                                    // 묶음의 값이 바뀌었으면 프로퍼티를 다시 패킹한다(묶은 칸이 없으면 빈 순회)
+            (void)ensureShaderLayout( _pRHIDevice->getBackendType(), inputs ); // 실패 오류는 맞추는 쪽이 남겼고, 바이트가 비어 렌더 스레드가 건너뛴다
+        syncParameterCollections();                                            // 묶음의 값이 바뀌었으면 프로퍼티를 다시 패킹한다(묶은 칸이 없으면 빈 순회)
     }
 
     void Material::rebuildCollectionBindings()
@@ -399,9 +398,9 @@ namespace sw
         }
     }
 
-    MaterialRenderBinding Material::getRenderBinding()
+    MaterialRenderBinding Material::getRenderBinding( const MaterialRenderInputs& inputs )
     {
-        syncRenderState();
+        syncRenderState( inputs );
         if ( _renderData == nullptr || _renderDataGeneration != _bufferGeneration.get() )
         {
             shared_ptr<MaterialRenderData> data = sw::make_shared<MaterialRenderData>();
@@ -418,7 +417,7 @@ namespace sw
         return MaterialRenderBinding{ _renderProxy, _renderData };
     }
 
-    bool Material::ensureShaderLayout( RHIBackend backend )
+    bool Material::ensureShaderLayout( RHIBackend backend, const MaterialRenderInputs& inputs )
     {
         // 머티리얼 바이트의 기준은 .material 의 프로퍼티 순서가 아니라 **셰이더의 MaterialData 원소 레이아웃**이다(언리얼도
         // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 로드 경로에서도 맞춰야 한다 — XML 순서로 패킹하면 stride 가 0 이고,
@@ -428,11 +427,11 @@ namespace sw
         // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 올라간다.
         if ( _desc._shaderPath.empty() )
             return false;
-        if ( isShaderLayoutSynced( backend ) )
+        if ( isShaderLayoutSynced( backend, inputs ) )
             return _elementStride != 0;
         _bShaderLayoutSynced         = SW_TRUE;
         _shaderLayoutBackend         = backend;
-        _shaderLayoutCacheGeneration = ShaderReflectionLibrary::getCacheGeneration();
+        _shaderLayoutCacheGeneration = inputs._shaderReflectionGeneration;
 
         ShaderReflectionData reflection{};
         if ( reflectMaterialSchema( _desc._shaderPath, RHI::getShaderTargetFormat( backend ), reflection ) == false )
@@ -469,10 +468,9 @@ namespace sw
         return true;
     }
 
-    bool Material::isShaderLayoutSynced( RHIBackend backend ) const
+    bool Material::isShaderLayoutSynced( RHIBackend backend, const MaterialRenderInputs& inputs ) const
     {
-        return _bShaderLayoutSynced != SW_FALSE && _shaderLayoutBackend == backend &&
-               _shaderLayoutCacheGeneration == ShaderReflectionLibrary::getCacheGeneration();
+        return _bShaderLayoutSynced != SW_FALSE && _shaderLayoutBackend == backend && _shaderLayoutCacheGeneration == inputs._shaderReflectionGeneration;
     }
 
     bool Material::hasMaterialSchema( const ShaderReflectionData& reflectionData )

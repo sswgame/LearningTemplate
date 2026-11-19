@@ -118,14 +118,15 @@ namespace sw
         /**
          * @brief 렌더 스레드에 건널 (프록시, 지금 값의 불변 사본)입니다(게임 스레드). 값(바이트, stride, 텍스처 슬롯)이 바뀐 뒤 처음 부를 때만 사본을 새로 만든다.
          * @details 장면 빌더가 프레임마다 배치 · 원소에 싣는다(`GPUMaterialRegistry::refreshMaterialBindings`). 사본은 불변이라 렌더 스레드가 잠금 없이 읽는다.
+         *          머티리얼 밖 입력은 @p inputs 에서만 읽는다(`MaterialRenderInputs` — 장면 빌더가 건너뛸지 비교한 같은 값).
          */
-        MaterialRenderBinding getRenderBinding();
+        MaterialRenderBinding getRenderBinding( const MaterialRenderInputs& inputs );
         /**
          * @brief 그리기 전 동기화입니다 — 레이아웃을 셰이더에 맞추고(`ensureShaderLayout`) 묶음 값을 다시 패킹한다. 텍스처 번호는 받을 일이 없다(R-6 — 캐시가 같은 번호를 다시 묶는다).
          * @details 이 머티리얼을 직접 그리는 `getRenderBinding` 과, 부모 바이트를 복사하는 `MaterialInstance::getRenderBinding` 이 함께 부른다. 예전에는 직접 그릴 때만 불러,
          *          인스턴스로만 그리는 머티리얼(색만 바꾼 식생 구간)은 로드 중 텍스처(회색) 번호를 끝까지 쥐었다. 바뀐 것이 없으면 비교만 해 매 프레임 불러도 싸다.
          */
-        void syncRenderState();
+        void syncRenderState( const MaterialRenderInputs& inputs );
         /** @brief 텍스처를 빌린 디바이스입니다(초기화 전이면 nullptr). 인스턴스가 덮어쓴 텍스처를 같은 디바이스로 요청한다. */
         IRHIDevice* getRHIDevice() const { return _pRHIDevice; }
 
@@ -156,16 +157,17 @@ namespace sw
          * @brief @p backend 의 셰이더 리플렉션(g_SwMaterials 원소 레이아웃)으로 프로퍼티 오프셋과 원소 stride 를 맞춥니다.
          * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않는다. 게임 스레드만 부른다 — 초기화(`initialize`)와 렌더 사본을 만들기 직전
          *          (`getRenderBinding`, 다시 로드 · 셰이더 핫 리로드 뒤). 렌더 스레드는 맞춘 결과를 사본(`MaterialRenderData`)으로만 받는다.
+         *          셰이더 리플렉션 세대는 @p inputs 에서 읽는다(`MaterialRenderInputs`).
          * @return 원소 stride 를 얻었고 동기화가 성공했으면(`syncPropertiesFromReflection`) true 입니다.
          */
-        [[nodiscard]] bool ensureShaderLayout( RHIBackend backend );
+        [[nodiscard]] bool ensureShaderLayout( RHIBackend backend, const MaterialRenderInputs& inputs );
         /**
          * @brief 프로퍼티 오프셋과 stride 가 지금 이 백엔드의 셰이더 레이아웃에 맞춰져 있는지 나타냅니다.
          * @details 다시 로드하면(`loadFromXML`, 에셋 핫 리로드, 에디터 미리보기) XML 순서로 다시 쌓이므로 풀리고, 셰이더 리플렉션 캐시가
          *          비워지면(다시 쿠킹, 라이브 셰이더 편집) 낡은 값이 된다. 마지막으로 맞춘 백엔드와 다른 백엔드로 물어도 false 다.
          *          리플렉션을 얻지 못한 시도도 "맞춰 봤다" 로 기록한다. 매 프레임 같은 오류를 내지 않기 위해서다.
          */
-        bool isShaderLayoutSynced( RHIBackend backend ) const;
+        bool isShaderLayoutSynced( RHIBackend backend, const MaterialRenderInputs& inputs ) const;
         /** @brief 프로퍼티를 패킹 CB 에 다시 씁니다. */
         bool rebuildPackedBuffer();
         /**

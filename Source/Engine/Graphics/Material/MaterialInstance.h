@@ -78,7 +78,7 @@ namespace sw
          * @brief 렌더 스레드에 건널 (프록시, 부모 바이트에 덮어쓰기를 더한 불변 사본)입니다(게임 스레드). 덮어쓰기 · 부모 값 · 텍스처가 바뀐 뒤 처음 부를 때만 사본을 새로 만든다.
          * @details 덮어쓴 텍스처의 요청 · 반환도 여기서 맞춘다(`syncTextureOverrides`). 부모가 없으면 빈 쌍이고, 부모 바이트가 비면(레이아웃 오류) 사본의 바이트도 비어 렌더 스레드가 건너뛴다.
          */
-        MaterialRenderBinding getRenderBinding();
+        MaterialRenderBinding getRenderBinding( const MaterialRenderInputs& inputs );
         /** @brief 오버라이드를 모두 지웁니다. */
         void clearOverrides();
         /** @brief 키워드를 켭니다. */

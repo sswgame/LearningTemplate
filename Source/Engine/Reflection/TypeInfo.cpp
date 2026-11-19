@@ -130,20 +130,14 @@ namespace sw
         , _listEvent{}
         , _listRemovedField{}
         , _metadata{}
-        , _inheritedProperties{}
-        , _mapNameToProperty{}
-        , _mapNameToMethod{}
-        , _parentLink{}
-        , _parentMissGeneration{ 0 }
+        , _derived{}
         , _typeID{ 0 }
         , _contentGeneration{ 0 }
         , _bAbstract{ SW_FALSE }
         , _bStatic{ SW_FALSE }
         , _bPrimitive{ SW_FALSE }
-        , _bIsCacheBuilt{ SW_FALSE }
         , _reservedFlags{ 0 }
-        , _derivedFlags{ 0 }
-        , _reservedPadding{ 0, 0 }
+        , _reservedPadding{ 0, 0, 0 }
     {
     }
 
@@ -163,34 +157,34 @@ namespace sw
 
     void TypeInfo::clearInheritedProperties()
     {
-        _inheritedProperties.withdraw();
-        _derivedFlags.store( 0, std::memory_order_release );
+        _derived._inheritedProperties.withdraw();
+        _derived._derivedFlags.store( 0, std::memory_order_release );
     }
 
     void TypeInfo::rebuildDerivedCaches()
     {
         // 자기 이름 맵 — 자기 선언만 본다. 자기 내용이 바뀐 때(대입 · 첫 등록)만 짓는다: 자손을 다시 잇는 일은 자기 선언을 바꾸지 않으니
         // 잠금 없이 읽는 맵을 제자리에서 비우고 채우지 않는다.
-        if ( _bIsCacheBuilt == SW_FALSE )
+        if ( _derived._bIsCacheBuilt == SW_FALSE )
         {
-            _mapNameToProperty.clear();
-            _mapNameToMethod.clear();
-            _mapNameToProperty.reserve( _listProperty.size() * 2 );
-            _mapNameToMethod.reserve( _listMethod.size() );
+            _derived._mapNameToProperty.clear();
+            _derived._mapNameToMethod.clear();
+            _derived._mapNameToProperty.reserve( _listProperty.size() * 2 );
+            _derived._mapNameToMethod.reserve( _listMethod.size() );
             for ( const PropertyInfo& propertyInfo : _listProperty )
             {
-                _mapNameToProperty[propertyInfo._name] = &propertyInfo;
+                _derived._mapNameToProperty[propertyInfo._name] = &propertyInfo;
                 for ( const hashed_string& alias : propertyInfo._listAlias )
                 {
                     if ( alias.empty() == false )
-                        _mapNameToProperty[alias] = &propertyInfo;
+                        _derived._mapNameToProperty[alias] = &propertyInfo;
                 }
             }
             for ( const FunctionInfo& method : _listMethod )
             {
-                _mapNameToMethod[method._hashName] = &method;
+                _derived._mapNameToMethod[method._hashName] = &method;
             }
-            _bIsCacheBuilt = SW_TRUE;
+            _derived._bIsCacheBuilt = SW_TRUE;
         }
 
         // 부모가 없으면 `getPropertiesWithBase` 는 자기 목록을 본다 — 판을 짓지 않는다.
@@ -228,17 +222,13 @@ namespace sw
                     pSnapshot->_mapNameToProperty[alias] = pProp;
             }
         }
-        _inheritedProperties.publish( std::move( pSnapshot ) );
+        _derived._inheritedProperties.publish( std::move( pSnapshot ) );
     }
 
     void TypeInfo::invalidateDerivedCaches()
     {
-        clearInheritedProperties();
-        _mapNameToProperty.clear();
-        _mapNameToMethod.clear();
-        clearParentType();
-        clearAncestorDisplay();
-        _bIsCacheBuilt = SW_FALSE;
+        _derived = {};
+        clearAncestorDisplay(); // 조상 테이블은 캐스트가 맨 앞 주소로 읽는 `_castHeader` 에 있어 묶음 밖이다
     }
 
     TypeInfo& TypeInfo::operator=( const TypeInfo& other )
@@ -300,7 +290,6 @@ namespace sw
         other._size            = 0;
         other._destroyInstance = nullptr;
         other._addComponent    = nullptr;
-        other._bIsCacheBuilt   = SW_FALSE;
         other.invalidateDerivedCaches(); // 옮겨 간 목록을 가리키던 맵을 남기지 않는다
 
         return *this;
@@ -308,21 +297,21 @@ namespace sw
 
     bool TypeInfo::hasSaveGameProperty() const
     {
-        const uint8 flags = _derivedFlags.load( std::memory_order_acquire );
+        const uint8 flags = _derived._derivedFlags.load( std::memory_order_acquire );
         SW_ASSERT( ( flags & kDerivedFlagsBuilt ) != 0 && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
         return ( flags & kDerivedHasSaveGameProperty ) != 0;
     }
 
     bool TypeInfo::usesPODCopyFastPath() const
     {
-        const uint8 flags = _derivedFlags.load( std::memory_order_acquire );
+        const uint8 flags = _derived._derivedFlags.load( std::memory_order_acquire );
         SW_ASSERT( ( flags & kDerivedFlagsBuilt ) != 0 && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
         return ( flags & kDerivedPODFastPath ) != 0;
     }
 
     bool TypeInfo::hasValidator() const
     {
-        const uint8 flags = _derivedFlags.load( std::memory_order_acquire );
+        const uint8 flags = _derived._derivedFlags.load( std::memory_order_acquire );
         SW_ASSERT( ( flags & kDerivedFlagsBuilt ) != 0 && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
         return ( flags & kDerivedHasValidator ) != 0;
     }
@@ -383,7 +372,7 @@ namespace sw
         }
         const bool   bValidator = ReflectionValidation::computeHasValidator( *this, resolver );
         const uint32 flags      = kDerivedFlagsBuilt | ( bPOD ? kDerivedPODFastPath : 0u ) | ( bSaveGame ? kDerivedHasSaveGameProperty : 0u ) | ( bValidator ? kDerivedHasValidator : 0u );
-        _derivedFlags.store( static_cast<uint8>( flags ), std::memory_order_release ); // 한 번에 바꾼다 — 읽기는 옛 판정이나 새 판정 하나를 본다
+        _derived._derivedFlags.store( static_cast<uint8>( flags ), std::memory_order_release ); // 한 번에 바꾼다 — 읽기는 옛 판정이나 새 판정 하나를 본다
     }
 
     PropertyListView TypeInfo::getPropertiesWithBase() const
@@ -406,7 +395,7 @@ namespace sw
 
     const TypeInheritedPropertySlot::Snapshot& TypeInfo::loadInheritedProperties() const
     {
-        const TypeInheritedPropertySlot::Snapshot* const pSnapshot = _inheritedProperties.load();
+        const TypeInheritedPropertySlot::Snapshot* const pSnapshot = _derived._inheritedProperties.load();
         if ( pSnapshot == nullptr )
             SW_FATAL( "TypeInfo %# has a parent but its inherited property list was not built - only TypeRegistry-owned types (rebuildDerivedCaches) can list inherited properties",
                       _fullyQualifiedName.c_str() );
@@ -415,7 +404,7 @@ namespace sw
 
     const TypeInfo* TypeInfo::getParentType() const
     {
-        const TypeInfo* pParent = _parentLink._pType.load( std::memory_order_acquire );
+        const TypeInfo* pParent = _derived._parentLink._pType.load( std::memory_order_acquire );
         // 레지스트리에 든 타입은 쓰기 쪽이 독점 잠금 안에서 링크를 바꿔 둔다(`TypeRegistry::relinkAffectedLocked`) — 비어 있으면 부모가 미등록이다.
         // 잠그지 않는다: 쓰기가 잠금을 쥔 채 사슬을 걷고(조상 표), 읽기가 세대마다 잠그면 별칭을 쉬지 않고 거는 쓰기와 잠금을 다툰다.
         if ( pParent != nullptr || _parentFQN.empty() || isRegistryOwned() )
@@ -424,16 +413,16 @@ namespace sw
         // 찾지 못한 이름은 세대가 같은 동안 다시 찾지 않는다. 등록되지 않는 기반(`Component`)을 부모로 둔 타입은 모두
         // 여기로 오므로 그때마다 레지스트리를 잠그고 찾지 않는다. 등록이나 해제가 세대를 올리면 한 번 더 찾는다.
         const uint32 generation = TypeRegistry::getGeneration();
-        if ( _parentMissGeneration.load( std::memory_order_acquire ) == generation )
+        if ( _derived._parentMissGeneration.load( std::memory_order_acquire ) == generation )
             return nullptr;
 
         pParent = engine::getSubsystem<TypeRegistry>().findType( _parentFQN );
         if ( pParent == this )
             pParent = nullptr;
         if ( pParent != nullptr )
-            _parentLink._pType.store( pParent, std::memory_order_relaxed );
+            _derived._parentLink._pType.store( pParent, std::memory_order_relaxed );
         else
-            _parentMissGeneration.store( generation, std::memory_order_release );
+            _derived._parentMissGeneration.store( generation, std::memory_order_release );
         return pParent;
     }
 
@@ -496,13 +485,13 @@ namespace sw
         _listMethod.clear();
         _listEvent.clear();
         clearInheritedProperties();
-        _mapNameToProperty.clear();
-        _mapNameToMethod.clear();
-        _metadata        = {};
-        _destroyInstance = nullptr;
-        _addComponent    = nullptr;
-        _bIsCacheBuilt   = SW_FALSE;
-        _inheritedProperties.publish( make_unique<TypeInheritedPropertySlot::Snapshot>() ); // 묘비는 빈 목록이 답이다 — 든 포인터로 물어도 멈추지 않는다
+        _derived._mapNameToProperty.clear();
+        _derived._mapNameToMethod.clear();
+        _metadata               = {};
+        _destroyInstance        = nullptr;
+        _addComponent           = nullptr;
+        _derived._bIsCacheBuilt = SW_FALSE;
+        _derived._inheritedProperties.publish( make_unique<TypeInheritedPropertySlot::Snapshot>() ); // 묘비는 빈 목록이 답이다 — 든 포인터로 물어도 멈추지 않는다
         _pValidate   = nullptr;
         _pFixedCodec = nullptr;
     }
