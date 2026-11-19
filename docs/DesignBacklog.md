@@ -1568,3 +1568,27 @@ ST-1 · ST-5 는 파일이 겹치지 않아 함께 맡길 수 있다. ST-2 · ST
 - scratch 마운트: 리소스 뿌리에 id 를 직접 붙여 디스크 경로를 만드는 에디터 코드가 있으면 사본을 찾지 못한다 — ST-5 의 첫 일은 그 자리를 `AssetPaths` 로 모으는 것이다.
 - 같은 모양이 남은 곳: `EngineConfig` 의 다른 개발 전용 칸. 모듈 섀도 복사본은 실행 뿌리 아래 `ModuleShadow/<pid>` 로 옮겼다(`ShadowCopyName` — 이름으로 거두는 코드 없음).
 - 시나리오 산출물 `{out}`(`Saved/Automation/<시나리오>/<pid>`)과 체인 보고 `…/per-backend-<pid>` 는 실행 뿌리로 옮기지 않는다: 사람과 도구(`scenario_bisect.py` · `linux_scenarios.py` · `test_history.py ingest`)가 시나리오 이름으로 찾는 자리이고, 보존이 시나리오마다 최근 3 개(`SavedRetention` 의 `Automation` 규칙 `_bPerChild`)라 실행 전체 최근 3 개인 `Runs` 보다 오래 남는다(실행 뿌리를 쓰는 단독 실행마다 `Runs` 에 폴더가 생겨 체인 산출물이 금방 밀린다). pid 꼬리는 자리 잡기(`reserveUniquePath` — 겹치면 번호를 붙인다)일 뿐 형제 거두기가 없어 ST-5 가 없앤 결함 모양이 아니다. 언리얼도 자동화 보고는 `Saved/Automation/Reports` 에 실행과 따로 둔다.
+
+## 외부 엔진 · 라이브러리 검토(2026-11-19)
+
+ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, v4 는 C++20) · magic_enum(MIT) · GameServer(사용자 저장소, 라이선스 없음) · XMachinaServer(라이선스 없음 — 설계만)를 읽고 우리 것과 견줬다. 코드 이식은 없다 — 모양만 옮긴다. 의존 추가(taskflow · magic_enum · FidelityFX SDK)는 들이지 않는다(C++20 요구 · 런타임 레지스트리와 이름 출처가 둘 · 템플릿 비용).
+우리가 이미 앞선 것: 틱 배치 계약, 렌더 그래프 바이트 별칭 · 레벨 병렬 기록 · 비동기 컴퓨트, 데이터 구동 파이프라인 · 쿠킹, 열거자 개명 리다이렉트, 작업 시스템 깨우기 · 대기 중 돕기 · 결정적 리듀스, 서버 프레이밍 상한 · 송신 물금 · 인증 · 도배 제한 · SQL 재연결.
+
+옮길 것(가치 순, 크기 S/M/L, 측정 조건은 끝 괄호):
+- 형식으로 막는 결함 모양
+  - 병렬 본문 출력 칸 `runParallelInto<T>( span<T>, body( i, T& ) )` · 결정적 `runParallelReduce`(Taskflow transform · 감사 4번, S).
+  - 메시지 방향 강제 — 라우터가 역할별 마스크로 반대 방향 종류를 `Malformed`(XMachina, S).
+  - 게임 넷 메시지 본문을 REFLECT 고정 배치로, 본문 판은 스키마 해시(GameServer PacketGenerator, M — NetMessageDef 37 곳).
+  - 열거형: 등록기를 항목 표 하나로(생성 바이트 약 0.7 MB↓), 플래그 글은 단일 비트 이름만, 끝 열거자 `Count` 자동 센티널, Core `EnumArray<E,T>` · `makeEnumTable`(개수 모자람을 컴파일 오류로), 열거자 단위 데이터 철자(magic_enum, S~M).
+  - 렌더 그래프 접근 종류를 핸들 형식에 — 손 전이 81 곳 제거(Adria, L, HZB 뒤).
+  - 컴포넌트 → 카탈로그 id 를 `CatalogKey<Tag>` 형식으로, 쿠킹이 대조(ezEngine, M).
+  - 타입별 판 + 패치 `REFLECT( Version = N )` — 그릇마다가 아니라 타입 한 곳(ezEngine GraphPatch, M).
+- 화질
+  - 스카이 라이트 · 반사 프로브 거르기를 filtered importance sampling(원본 밉을 pdf 로 고름), HDRI 반사를 SH9 대신 거른 텍스처로(VQEngine, S → GPU 찍기 M).
+  - TAA: YCoCg 분산 클리핑 · Catmull-Rom 히스토리 · 적응 블렌드 → 그 위에 TAAU(Adria, S → M).
+  - 프로브 GI 빛샘: 거리 모먼트 + 체비쇼프 가시성 · 뒷면 가중(Adria DDGI, M — GI 골든 전부).
+  - 2 단계 HZB 가림(지난 HZB → 새 HZB 로 다시 시험) — SSR 계층 탐색 · 큰 물체 컬링도 같은 피라미드(Adria · VQEngine, L).
+  - 자동 노출 히스토그램 + 백분위 컷(Adria, S~M), HDR 디스플레이 출력 `DisplayOutputDesc` 한 값에서 스왑체인 포맷 · 톤맵 변형(VQEngine, M~L), 볼류메트릭 구름 · 비 가림 맵(Adria).
+- 작업 시스템(측정 먼저 — 합류 대기 구간 · park 수 계기부터): 묶음 제출 `submitBatch`, `runParallel` 우선순위 레인, guided 청크, 후속 하나 이어 실행, 넘침 보조 큐, 단계 그래프 위상 순서 재사용(Taskflow).
+- 도구: 엔진 안 MCP 서버(루프백, 자동화 단계 하나 = 도구 하나, 스키마는 TParams 리플렉션 — security-and-hardening 먼저), 선언형 조작기 · 시각화 속성(PROPERTY Shape), Fileserve(장치가 PC 콘텐츠를 TCP 로 — 개발 전용)(ezEngine).
+- 측정 뒤에만: DX12 PipelineLibrary(차가운 시작 PSO 합), 깊이 전용 배치 키(그림자 드로우 수), 서버 MMO 관찰자 거리 기반 틱 주기 · 컴포넌트 TickInterval 버킷(XMachina · ezEngine), 서버 쿠킹의 축약 애니메이션 클립, 온라인 프로토콜 퍼저 타깃 ⑦(퍼징 1 단계 뒤).
