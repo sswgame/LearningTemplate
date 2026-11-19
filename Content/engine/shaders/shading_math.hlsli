@@ -279,14 +279,16 @@ namespace sw::shadermath
 
     SW_SHADING_MATH_DEFINITION float ShadingMath::computeProbeChebyshevWeight( float distance, float meanDistance, float meanSquaredDistance, float exponent )
     {
-        // 거리²의 평균이 0 이면 그 방향으로 아직 광선이 닿지 않았다(베이크 볼륨 · 갓 생긴 기록) — 모르므로 가리지 않는다.
-        if ( meanSquaredDistance <= 0.0f || distance <= meanDistance )
-            return 1.0f;
         // 단측 체비쇼프 상한 P(d ≥ t) ≤ σ² / (σ² + (t − μ)²) — 프로브가 그 방향에서 본 표면보다 멀면(벽 너머) 0 에 가깝다.
         const float variance   = abs( meanSquaredDistance - meanDistance * meanDistance );
-        const float excess     = distance - meanDistance;
+        const float excess     = max( distance - meanDistance, 0.0f );
         const float visibility = variance / max( variance + excess * excess, kShadingMathEpsilon );
-        return pow( max( visibility, 0.0f ), exponent );
+        const float occluded   = pow( max( visibility, 0.0f ), exponent );
+        // 고르기는 early-return · `||` 분기가 아니라 값 선택 둘이다 — GL 드라이버가 early-return(OpSwitch) · `a || b` 분기 모양을 잘못 컴파일한다
+        // (binding.hlsli MorphPool::computeElement · lighting.hlsli 그림자 칸 분기. 이 식이 그 모양일 때 realtimegi_extras 가 GL 에서만 발광을 잃었다).
+        // 표면보다 가까우면 보이고, 거리²의 평균이 0 이면 그 방향으로 아직 광선이 닿지 않았다(베이크 볼륨 · 갓 생긴 기록 · 칸 안 프로브) — 모르므로 가리지 않는다.
+        const float inFront = distance <= meanDistance ? 1.0f : occluded;
+        return meanSquaredDistance > 0.0f ? inFront : 1.0f;
     }
 
     SW_SHADING_MATH_DEFINITION float ShadingMath::computeProbeVisibilityWeight( float normalDotToProbe, float distance, float meanDistance, float meanSquaredDistance, float backfaceFloor,
@@ -301,11 +303,9 @@ namespace sw::shadermath
     {
         // 거리 0 은 광선이 처음부터 켜진 칸 안(또는 그 면 위)에서 떠났다는 뜻이다 — 프로브가 바닥 · 발광 물체 같은 복셀에 박혀 있다. 그 방향은 모르는 것으로 둔다
         // (적으면 박힌 프로브가 모든 표면에서 가려져, 박힌 칸의 빛 — 발광 큐브 안 프로브가 나르던 발광 — 이 사라진다).
-        if ( hitDistance <= 0.0f )
-            return 0.0f;
         // 복셀 광선은 칸의 들어가는 면에서 멈추고 실제 표면은 그 칸 안 어딘가다 — 한 칸 너머까지를 표면으로 친다. 그러지 않으면 칸 크기만큼 들뜬 바닥이
-        // 바로 위 바닥 점을 "벽 너머" 로 가린다(칸 0.5 m, 바이어스 0.1 m). 한 칸보다 두꺼운 벽 뒤는 그대로 가려진다.
-        return min( hitDistance + cellSize, maxDistance );
+        // 바로 위 바닥 점을 "벽 너머" 로 가린다(칸 0.5 m, 바이어스 0.1 m). 한 칸보다 두꺼운 벽 뒤는 그대로 가려진다. 고르기는 값 선택이다(GL — 위 체비쇼프 주석).
+        return hitDistance > 0.0f ? min( hitDistance + cellSize, maxDistance ) : 0.0f;
     }
 
 #if defined( __cplusplus )
