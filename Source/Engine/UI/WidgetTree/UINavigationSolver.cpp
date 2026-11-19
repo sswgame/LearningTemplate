@@ -289,4 +289,41 @@ namespace sw
         UINavigationSolverInternal::collectFocusable( scope, listCandidate );
         return listCandidate.empty() ? kInvalidWidgetID : listCandidate[0]->getID();
     }
+
+    WidgetID UINavigationSolver::findRestoreFocus( const WidgetTree& tree, WidgetID stored, WidgetID preferred )
+    {
+        const Widget* pStored = stored != kInvalidWidgetID ? tree.findWidgetByID( stored ) : nullptr;
+        if ( pStored != nullptr && canReceiveFocus( *pStored ) )
+            return stored;
+        // (1) 같은 컨테이너의 가까운 켜진 이웃, 없으면 한 단계 위로.
+        for ( const Widget* pNode = pStored; pNode != nullptr && pNode->getParent() != nullptr; pNode = pNode->getParent() )
+        {
+            const span<const unique_ptr<Widget>> listSibling = pNode->getParent()->getChildren();
+            const int32                          count       = static_cast<int32>( listSibling.size() );
+            int32                                self        = count; // 못 찾으면 형제 수 — 아래 고리가 돌지 않는다
+            for ( int32 index = 0; index < count; ++index )
+            {
+                self = listSibling[static_cast<size_t>( index )].get() == pNode ? index : self;
+            }
+            for ( int32 distance = 1; self < count && distance < count; ++distance )
+            {
+                const int32 arrIndex[] = { self + distance, self - distance }; // 뒤 형제 먼저(목록에서 지운 줄의 다음 줄)
+                for ( const int32 index : arrIndex )
+                {
+                    if ( index < 0 || index >= count )
+                        continue;
+                    const WidgetID found  = findFirstFocusable( *listSibling[static_cast<size_t>( index )] );
+                    const Widget*  pFound = found != kInvalidWidgetID ? tree.findWidgetByID( found ) : nullptr;
+                    if ( pFound != nullptr && canReceiveFocus( *pFound ) )
+                        return found;
+                }
+            }
+        }
+        // (2) 화면의 처음 포커스 위젯 — 문서의 기본 포커스, 없거나 꺼졌으면 문서 순서의 첫 위젯.
+        const Widget* pPreferred = preferred != kInvalidWidgetID ? tree.findWidgetByID( preferred ) : nullptr;
+        if ( pPreferred != nullptr && canReceiveFocus( *pPreferred ) )
+            return preferred;
+        // (3) 없으면 무효 번호 — 화면 자체.
+        return tree.getRoot() != nullptr ? findFirstFocusable( *tree.getRoot() ) : kInvalidWidgetID;
+    }
 } // namespace sw

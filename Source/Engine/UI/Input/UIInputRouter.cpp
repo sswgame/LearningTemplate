@@ -631,12 +631,11 @@ namespace sw
     void UIInputRouter::restoreFocus( UIScreen& screen )
     {
         WidgetTree& tree = screen.getTree();
-        if ( screen._lastFocused != kInvalidWidgetID && _focus.setFocus( tree, screen._lastFocused ) )
-            return;
-        if ( _inputMode != UIInputMode::Navigation || tree.getRoot() == nullptr )
+        // 기억한 위젯이 없으면 포인터 방식은 포커스를 세우지 않는다(마우스 사용자에게 테두리를 보이지 않는다). 있었으면 방식과 무관하게 돌려준다 — 꺼졌으면 대체로.
+        if ( screen._lastFocused == kInvalidWidgetID && ( _inputMode != UIInputMode::Navigation || tree.getRoot() == nullptr ) )
             return;
         const Widget*  pDefault = screen.getDesc()._defaultFocus.empty() ? nullptr : tree.findWidgetByName( screen.getDesc()._defaultFocus );
-        const WidgetID target   = pDefault != nullptr ? pDefault->getID() : UINavigationSolver::findFirstFocusable( *tree.getRoot() );
+        const WidgetID target   = UINavigationSolver::findRestoreFocus( tree, screen._lastFocused, pDefault != nullptr ? pDefault->getID() : kInvalidWidgetID );
         if ( target != kInvalidWidgetID )
             (void)_focus.setFocus( tree, target );
     }

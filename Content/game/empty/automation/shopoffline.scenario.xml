@@ -27,7 +27,7 @@
 	<WaitUntil watch="UI.FocusedWidget" is="Offer0" timeoutFrames="10"/>
 	<Tap slot="Gamepad.A" hold="1"/>
 	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
-	<Expect watch="Shop.Busy" equals="0"/> <!-- 감시 값은 맨 위의 상점 화면을 읽는다 — 확인 창 아래의 상점 -->
+	<Expect watch="Shop.Busy" equals="1"/> <!-- 확인 창 아래의 상점은 줄을 끄고 고르기를 버린다(감시 값은 맨 위의 상점 화면을 읽는다) -->
 	<WaitUntil watch="UI.FocusedWidget" is="Accept" timeoutFrames="10"/>
 	<Tap slot="Gamepad.A" hold="1"/>
 	<WaitUntil watch="Shop.PurchaseCount" equals="1" timeoutFrames="30"/>

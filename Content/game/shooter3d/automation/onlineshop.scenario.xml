@@ -44,9 +44,11 @@
 	<ExpectLog id="ShopScreen.PurchaseFinished" count="1"/>
 	<ExpectLog id="EconomyShop.PurchaseReplyMismatch" count="0"/>
 
-	<!-- ⑵ gem_starter 두 번 — 두 번째는 서버의 계정당 한도. 확인 창이 닫히면 덮였던 줄로 포커스가 돌아온다(구매 중에도 줄은 켜져 있다) -->
-	<WaitUntil watch="UI.FocusedWidget" is="Offer0" timeoutFrames="10"/>
-	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<!-- ⑵ gem_starter 두 번 — 두 번째는 서버의 계정당 한도. 답을 기다리는 동안 줄이 꺼져 있어, 확인 창이 닫히면 포커스는 가까운 켜진 위젯(닫기 단추)으로 간다(UINavigationSolver::findRestoreFocus) -->
+	<WaitUntil watch="UI.FocusedWidget" is="Close" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer2" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
 	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
 	<Tap slot="Gamepad.A" hold="1"/>
 	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
@@ -55,6 +57,10 @@
 	<Expect watch="Shop.LastStatus" is="Succeeded"/>
 	<Expect watch="Shooter3D.OnlineGold" equals="100"/>
 	<Expect watch="Shooter3D.OnlineGem" equals="3"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Close" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer2" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
 	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
 	<Tap slot="Gamepad.A" hold="1"/>
 	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
@@ -65,8 +71,8 @@
 	<Expect watch="Shooter3D.OnlineGem" equals="3"/>
 
 	<!-- ⑶ 잔액 부족 — gem_bundle 500 > 100: 확인 창 없이 알린다 -->
-	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
-	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Close" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
 	<WaitUntil watch="UI.FocusedWidget" is="Offer2" timeoutFrames="10"/>
 	<Tap slot="Gamepad.A" hold="1"/>
 	<AdvanceSimulation frames="10"/> <!-- 확인 창이 뜨지 않는다(일어나지 않음 — 시간이 내용) -->
