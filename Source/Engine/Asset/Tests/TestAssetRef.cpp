@@ -243,3 +243,14 @@ SW_TEST_CASE( AssetRefTest, PathTextFindsItsGUIDSoTheNextSaveWritesTheGUID )
 
     (void)AssetRegistry::install( std::move( previous ) );
 }
+
+/**
+ * @brief [AssetRefTest] 파서가 모은 칸 형식 이름("AssetRef")은 이름 형식이다 — 빈 글을 적은 필수 참조(`PROPERTY( Required )` 의 `_prefab=""`)를 필수 판정이 놓치지 않는다
+ * @details 예전 판정은 "AssetRef<" 철자만 봐, 실제 칸 형식 이름(`AssetRefBase::kTypeName`)이면 적힌 빈 글을 값으로 보고 통과시켰다.
+ */
+SW_TEST_CASE( AssetRefTest, EmptyRequiredReferenceIsMissing )
+{
+    const PropertyInfo& prop = XTestUtil::getReference();
+    SW_REQUIRE_TRUE( prop._typeName == hashed_string( AssetRefBase::kTypeName ) );
+    SW_EXPECT_TRUE( SerializerUtil::isNameValueType( prop._typeName ) );
+}
