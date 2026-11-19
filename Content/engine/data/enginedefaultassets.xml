@@ -29,6 +29,7 @@
                      _uiSettingsUnsaved="engine/ui/confirm_unsaved.ui.xml"
                      _uiConfirmDialog="engine/ui/confirm.ui.xml"
                      _uiMainMenu="engine/ui/mainmenu.ui.xml"
+                     _uiQuantityDialog="engine/ui/quantity.ui.xml"
                      _uiKeyRebind="engine/ui/key_rebind.ui.xml"
                      _uiNotifications="engine/ui/notifications.ui.xml"
                      _uiNotificationEntry="engine/ui/parts/notification.ui.xml"

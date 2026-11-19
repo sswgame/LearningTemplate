@@ -294,6 +294,10 @@ namespace sw
             ButtonWidget&    button = static_cast<ButtonWidget&>( row );
             const ShopOffer& offer  = _listOffer[itemIndex];
             button.setEnabled( bEnabled && offer._stock != 0 );
+            // 줄 이름은 상품 순번이다(`Offer0` …) — 가상 목록이 줄을 다시 써도 포커스 · 시나리오가 상품으로 가리킨다.
+            StringBuilder<constant::buffer::kMax32> nameBuilder;
+            nameBuilder.appendFormat( "Offer%#", itemIndex );
+            button.setName( hashed_string( nameBuilder.view() ) );
             static_cast<TextWidget*>( button.getChild( 0 ) )->setText( makeRowText( offer ) );
         } ) );
         pOffers->setItemCount( static_cast<uint32>( _listOffer.size() ) );

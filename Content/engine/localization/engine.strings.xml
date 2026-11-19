@@ -13,12 +13,15 @@
 		</entry>
 		<entry key="Cancel" source="Cancel" context="TextWidget._text">
 			<origins>
+				<item>common/ui/inventory/inventory.ui.xml</item>
 				<item>engine/ui/confirm_unsaved.ui.xml</item>
 				<item>engine/ui/key_rebind.ui.xml</item>
+				<item>engine/ui/quantity.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Close" source="Close" context="TextWidget._text">
 			<origins>
+				<item>common/ui/inventory/inventory.ui.xml</item>
 				<item>common/ui/shop/shop.ui.xml</item>
 				<item>engine/ui/debughud.ui.xml</item>
 				<item>engine/ui/options.ui.xml</item>
@@ -42,6 +45,11 @@
 		<entry key="Discard" source="Discard" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/confirm_unsaved.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Drop" source="Drop" context="TextWidget._text">
+			<origins>
+				<item>common/ui/inventory/inventory.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityCatalog.Abilities" source="Abilities">
@@ -2249,6 +2257,71 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
+		<entry key="Equip" source="Equip" context="TextWidget._text">
+			<origins>
+				<item>common/ui/inventory/inventory.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Filter" source="Filter" context="TextWidget._text">
+			<origins>
+				<item>common/ui/inventory/inventory.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Inventory" source="Inventory" context="TextWidget._text">
+			<origins>
+				<item>common/ui/inventory/inventory.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.Done" source="Done.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.DropTitle" source="Drop how many?">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.EmptySlot" source="The slot is empty.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.InvalidCount" source="That amount is not possible.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.InvalidSlot" source="That slot cannot take it.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.NoRoom" source="Your bag is full.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.NotUsable" source="This cannot be used.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.Picked" source="Choose where to put it.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.Refused" source="You cannot equip this there.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.SplitTitle" source="Split how many?">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Keep" source="Keep" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/confirm_countdown.ui.xml</item>
@@ -2282,6 +2355,11 @@
 		<entry key="Notification.RestartRequired" source="Some changes take effect after a restart.">
 			<origins>
 				<item>Source/Engine/UI/Menu/OptionsMenuScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="OK" source="OK" context="TextWidget._text">
+			<origins>
+				<item>engine/ui/quantity.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Opacity" source="Opacity" context="TextWidget._text">
@@ -2427,6 +2505,16 @@
 				<item>engine/ui/options.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Sort" source="Sort" context="TextWidget._text">
+			<origins>
+				<item>common/ui/inventory/inventory.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Split" source="Split" context="TextWidget._text">
+			<origins>
+				<item>common/ui/inventory/inventory.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Start Game" source="Start Game" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/mainmenu.ui.xml</item>
@@ -2455,6 +2543,11 @@
 		<entry key="UIMenu.QuitTitle" source="Quit Game">
 			<origins>
 				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Use" source="Use" context="TextWidget._text">
+			<origins>
+				<item>common/ui/inventory/inventory.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="You have changes that are not applied."

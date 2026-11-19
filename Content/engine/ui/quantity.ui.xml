@@ -1,0 +1,34 @@
+<?asset guid="4c3ced86df99046f4f46c63ae2b2ddb8"?>
+<UIDocument _schemaVersion="1">
+	<!-- 수량 대화 상자(`QuantityDialogScreen`). 슬라이더 `Amount` 의 범위는 연 쪽이 정한다(1 ~ 최대). 단추 명령은 `Accept` · `Cancel`, 뒤로 가기는 취소다. -->
+	<UIScreenDef _layer="Modal" _bModal="true" _defaultFocus="Amount" />
+	<SafeZonePanel>
+		<CanvasPanel>
+			<BorderPanel _name="Window" _styleClass="window">
+				<_slot _anchorMin="0.5,0.5"
+				       _anchorMax="0.5,0.5"
+				       _offsetMax="0,0"
+				       _bAutoSize="true"
+				       _growHorizontal="Both"
+				       _growVertical="Both" />
+				<BoxPanel _spacing="16" _orientation="Vertical">
+					<TextWidget _name="Title" _styleClass="title" _text="{bind:_title}" />
+					<BoxPanel _spacing="12">
+						<SliderWidget _name="Amount" _accessibleName="Amount">
+							<_slot _widthOverride="240" />
+						</SliderWidget>
+						<TextWidget _name="Count" _text="{bind:_count}" />
+					</BoxPanel>
+					<BoxPanel _name="Buttons" _spacing="8">
+						<ButtonWidget _name="Accept" _command="Accept">
+							<TextWidget _text="OK" />
+						</ButtonWidget>
+						<ButtonWidget _name="Cancel" _command="Cancel">
+							<TextWidget _text="Cancel" />
+						</ButtonWidget>
+					</BoxPanel>
+				</BoxPanel>
+			</BorderPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>
