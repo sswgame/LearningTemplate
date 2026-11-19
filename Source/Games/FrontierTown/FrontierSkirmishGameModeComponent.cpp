@@ -102,9 +102,9 @@ namespace sw
         // 유닛 id 는 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 카탈로그에 없으면 조용히 건너뛰지 않고 판을 열지 않는다.
         const RTSCatalog* pCatalog    = game::findSubsystem<const RTSCatalog>();
         bool              bUnitsKnown = true;
-        for ( const string* pUnitID : { &_workerUnit, &_soldierUnit, &_barracksUnit } )
+        for ( const CatalogKey<RTSUnitDef>* pUnitID : { &_workerUnit, &_soldierUnit, &_barracksUnit } )
         {
-            if ( pCatalog != nullptr && pCatalog->find( hashed_string( *pUnitID ) ) != nullptr )
+            if ( pCatalog != nullptr && pCatalog->find( pUnitID->key() ) != nullptr )
                 continue;
             SW_LOG_ERROR_ID( "FrontierSkirmish.SkirmishUnitEmptyNot", "[Frontier] the skirmish unit '%#' is empty or not in the RTS unit catalog - the skirmish cannot start", pUnitID->c_str() );
             bUnitsKnown = false;
@@ -113,8 +113,8 @@ namespace sw
             return false;
         if ( pState->isFreshGame() )
         {
-            _worker  = _world.spawnUnit( hashed_string( _workerUnit ), 0, _workerStart );
-            _soldier = _world.spawnUnit( hashed_string( _soldierUnit ), 0, _patrolA );
+            _worker  = _world.spawnUnit( _workerUnit.key(), 0, _workerStart );
+            _soldier = _world.spawnUnit( _soldierUnit.key(), 0, _patrolA );
         }
         _tickCount   = 0;
         _bPatrolToB  = SW_TRUE;
@@ -125,9 +125,9 @@ namespace sw
     void FrontierSkirmishGameModeComponent::issueOpeningOrders()
     {
         // 도시가 첫 틱에 땅을 칠한 뒤다 — 병영 자리가 도시 땅이면 RTS 가 거절한다(Occupied 계열). 그러면 씬 배치를 고친다.
-        const RTSCommandResult buildResult = _world.issueBuild( _worker, hashed_string( _barracksUnit ), int2{ _barracksX, _barracksY } );
+        const RTSCommandResult buildResult = _world.issueBuild( _worker, _barracksUnit.key(), int2{ _barracksX, _barracksY } );
         if ( buildResult != RTSCommandResult::Ok )
-            SW_LOG_ERROR_ID( "FrontierSkirmish.WorkerCannotBuildCheck", "[Frontier] the worker cannot build '%#' at (%#, %#) (%#) - check the scene layout", _barracksUnit, _barracksX, _barracksY, static_cast<int32>( buildResult ) );
+            SW_LOG_ERROR_ID( "FrontierSkirmish.WorkerCannotBuildCheck", "[Frontier] the worker cannot build '%#' at (%#, %#) (%#) - check the scene layout", _barracksUnit.c_str(), _barracksX, _barracksY, static_cast<int32>( buildResult ) );
         const RTSCommandResult moveResult = _world.issueMove( _soldier, _patrolB );
         if ( moveResult != RTSCommandResult::Ok )
             SW_LOG_ERROR_ID( "FrontierSkirmish.SoldierCannotStartPatrol", "[Frontier] the soldier cannot start its patrol (%#)", static_cast<int32>( moveResult ) );

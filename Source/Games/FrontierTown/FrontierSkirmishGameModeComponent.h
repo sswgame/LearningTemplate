@@ -12,6 +12,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
@@ -65,11 +66,11 @@ namespace sw
         PROPERTY( Category = "Prefabs", Tooltip = "One unit view (a cube)" )
         AssetRef<PrefabAsset> _unitPrefab;
         PROPERTY( Category = "Units", DisplayName = "Worker", Tooltip = "RTS catalog id of the starting worker" )
-        string _workerUnit;
+        CatalogKey<RTSUnitDef> _workerUnit;
         PROPERTY( Category = "Units", DisplayName = "Soldier", Tooltip = "RTS catalog id of the patrolling soldier" )
-        string _soldierUnit;
+        CatalogKey<RTSUnitDef> _soldierUnit;
         PROPERTY( Category = "Units", DisplayName = "Barracks", Tooltip = "RTS catalog id of the building the worker builds" )
-        string _barracksUnit;
+        CatalogKey<RTSUnitDef> _barracksUnit;
         PROPERTY( Category = "Layout", DisplayName = "Barracks X", Min = 0 )
         int32 _barracksX;
         PROPERTY( Category = "Layout", DisplayName = "Barracks Y", Min = 0 )

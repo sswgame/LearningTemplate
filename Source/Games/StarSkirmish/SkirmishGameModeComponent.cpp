@@ -351,7 +351,7 @@ namespace sw
             if ( _bHuman == SW_FALSE )
             {
                 pRig->setFocusPoint( _watchFocus );
-                pRig->startWithPreset( _watchCameraPreset );
+                pRig->startWithPreset( _watchCameraPreset.key() );
             }
         }
         // 2 인 대전의 클라이언트(1 번, 북동)는 씬의 카메라 초점(0 번 본진)이 아니라 자기 본진에서 시작한다.
@@ -487,11 +487,11 @@ namespace sw
         matchSettings._arrivedRadius         = _arrivedRadius;
         matchSettings._startMinerals         = _startMinerals;
         matchSettings._statusIntervalSeconds = _statusLogInterval;
-        matchSettings._workerID              = _workerUnitID;
-        matchSettings._depotID               = _depotUnitID;
-        matchSettings._supplyID              = _supplyUnitID;
-        matchSettings._productionID          = _productionUnitID;
-        matchSettings._armyUnitID            = _armyUnitID;
+        matchSettings._workerID              = _workerUnitID.key();
+        matchSettings._depotID               = _depotUnitID.key();
+        matchSettings._supplyID              = _supplyUnitID.key();
+        matchSettings._productionID          = _productionUnitID.key();
+        matchSettings._armyUnitID            = _armyUnitID.key();
         matchSettings._rushAI                = _rushAI;
         matchSettings._macroAI               = _macroAI;
         matchSettings._opponentAI            = _opponentAI;
@@ -661,7 +661,7 @@ namespace sw
             for ( size_t buildIndex = 0; bPointValid && buildIndex < _listBuildAction.size(); ++buildIndex )
             {
                 if ( inputMap.wasActionTriggered( _listBuildAction[buildIndex] ) )
-                    orderBuild( _listBuildUnitID[buildIndex], point );
+                    orderBuild( _listBuildUnitID[buildIndex].key(), point );
             }
         }
 
@@ -783,7 +783,7 @@ namespace sw
         static constexpr const utf8* kOwner = "SkirmishGameModeComponent";
         bool                         bValid = true;
         // AI 와 건설 단축키가 쓰는 유닛 id 는 유닛 카탈로그에 있어야 한다.
-        for ( const hashed_string* pUnitID : { &_workerUnitID, &_depotUnitID, &_supplyUnitID, &_productionUnitID, &_armyUnitID } )
+        for ( const CatalogKey<RTSUnitDef>* pUnitID : { &_workerUnitID, &_depotUnitID, &_supplyUnitID, &_productionUnitID, &_armyUnitID } )
         {
             if ( _pCatalog->find( *pUnitID ) != nullptr )
                 continue;
@@ -811,7 +811,7 @@ namespace sw
                              static_cast<uint32>( _listBuildUnitID.size() ) );
             bValid = false;
         }
-        for ( const hashed_string& unitID : _listBuildUnitID )
+        for ( const CatalogKey<RTSUnitDef>& unitID : _listBuildUnitID )
         {
             if ( _pCatalog->find( unitID ) != nullptr )
                 continue;

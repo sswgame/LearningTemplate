@@ -282,7 +282,7 @@ namespace sw
 
     void CameraDirectorComponent::startWithPreset( const hashed_string& id )
     {
-        _initialPreset = id;
+        _initialPreset = CatalogKey<CameraPresetDef>( id ); // 코드가 고른 프리셋(게임 모드의 시작 시점)
         if ( hasBegunPlay() == false )
             return;
         BlendCurveDef cut;
@@ -336,7 +336,7 @@ namespace sw
 
     hashed_string CameraDirectorComponent::resolveStartPreset() const
     {
-        return _initialPreset.empty() ? _pCatalog->getAll().front()._id : _initialPreset;
+        return _initialPreset.empty() ? _pCatalog->getAll().front()._id : _initialPreset.key();
     }
 
     void CameraDirectorComponent::onTick( TickContext& context )

@@ -24,6 +24,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSelection.h"
@@ -43,6 +44,7 @@ namespace sw
 {
     class Archive;
     class CameraDirectorComponent;
+    struct CameraPresetDef;
     class GameObject;
     class GameObjectManager;
     class InputManager;
@@ -163,7 +165,7 @@ namespace sw
         PROPERTY( Category = "Scene", DisplayName = "Watch Focus", Tooltip = "Camera focus when both players are AI (the whole map); the height is the Watch Camera Preset", Units = m )
         float3 _watchFocus;
         PROPERTY( Category = "Scene", DisplayName = "Watch Camera Preset", Tooltip = "Camera preset id (camera rig catalog) the match starts with when both players are AI; required" )
-        hashed_string _watchCameraPreset;
+        CatalogKey<CameraPresetDef> _watchCameraPreset;
         PROPERTY( Category = "Rules", DisplayName = "Hunt Interval", Tooltip = "Seconds between sending idle army at the enemy start to the nearest enemy building", Min = 0.1 )
         float32 _huntIntervalSeconds;
         PROPERTY( Category = "Rules", DisplayName = "Arrived Radius", Tooltip = "Army within this distance of the enemy start counts as arrived", Min = 0.0, Units = m )
@@ -212,18 +214,18 @@ namespace sw
         PROPERTY( Category = "Input Actions", DisplayName = "Build Actions", Tooltip = "Build hotkey actions; Build Units holds the building each one places" )
         vector<hashed_string> _listBuildAction;
         PROPERTY( Category = "Input Actions", DisplayName = "Build Units", Tooltip = "Unit catalog id placed by the build action at the same index" )
-        vector<hashed_string> _listBuildUnitID;
+        vector<CatalogKey<RTSUnitDef>> _listBuildUnitID;
         // ---- AI 가 쓰는 유닛 — 유닛 카탈로그(data/units.xml)의 id 다 ----
         PROPERTY( Category = "AI Units", DisplayName = "Worker" )
-        hashed_string _workerUnitID;
+        CatalogKey<RTSUnitDef> _workerUnitID;
         PROPERTY( Category = "AI Units", DisplayName = "Depot", Tooltip = "Resource drop-off building" )
-        hashed_string _depotUnitID;
+        CatalogKey<RTSUnitDef> _depotUnitID;
         PROPERTY( Category = "AI Units", DisplayName = "Supply", Tooltip = "Supply building" )
-        hashed_string _supplyUnitID;
+        CatalogKey<RTSUnitDef> _supplyUnitID;
         PROPERTY( Category = "AI Units", DisplayName = "Production", Tooltip = "Building that trains the army unit" )
-        hashed_string _productionUnitID;
+        CatalogKey<RTSUnitDef> _productionUnitID;
         PROPERTY( Category = "AI Units", DisplayName = "Army", Tooltip = "Unit the AI trains and attacks with" )
-        hashed_string _armyUnitID;
+        CatalogKey<RTSUnitDef> _armyUnitID;
         // ---- 컴퓨터 상대의 성향 — 셋 다 씬 데이터에 적는다(적지 않으면 판을 열지 않는다) ----
         PROPERTY( Category = "AI Styles", DisplayName = "Rush AI", Tooltip = "Player 0 when both players are AI: few workers, early small attacks" )
         SkirmishAIStyle _rushAI;
