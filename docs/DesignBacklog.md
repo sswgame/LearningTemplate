@@ -1585,6 +1585,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
   - 타입별 판 + 패치 `REFLECT( Version = N )` — 그릇마다가 아니라 타입 한 곳(ezEngine GraphPatch, M).
 - 화질
   - 스카이 라이트 · 반사 프로브 거르기를 filtered importance sampling(원본 밉을 pdf 로 고름), HDRI 반사를 SH9 대신 거른 텍스처로(VQEngine, S → GPU 찍기 M).
+    - 됨(2026-11-19): 두 곳이 `ReflectionProbeAsset::filterRoughnessLevels( OctahedralRadianceMap, 표본 수 )` 하나를 쓴다 — 원본은 옥타헤드럴 상자 밉 사슬(밉 수는 Config `_skyLight._filterMipCount` · `_reflectionProbeFilterMipCount`). 밉 치우침은 GPU Gems 의 +1 대신 −1(쌍선형이 텍셀 둘을 덮는다 — 기준 적분과 견준 numpy 원형: +1 은 거친 단계 평균 오차 10 ~ 35 %, −1 은 1 ~ 5 %). HDRI 는 GPU 찍기 대신 스크립트가 원본을 128² `.radiancemap` 으로 접고(CPU 는 BC6H 를 읽지 않는다) 스카이 라이트가 회전 · 세기를 곱해 거른다 — 확산은 같은 원본의 SH9 투영. GPU 찍기(구름 · 해 원반 포함)는 하늘이 프레임마다 바뀌는 장면이 생길 때(M).
   - TAA: YCoCg 분산 클리핑 · Catmull-Rom 히스토리 · 적응 블렌드 → 그 위에 TAAU(Adria, S → M).
   - 프로브 GI 빛샘: 거리 모먼트 + 체비쇼프 가시성 · 뒷면 가중(Adria DDGI, M — GI 골든 전부).
   - 2 단계 HZB 가림(지난 HZB → 새 HZB 로 다시 시험) — SSR 계층 탐색 · 큰 물체 컬링도 같은 피라미드(Adria · VQEngine, L).

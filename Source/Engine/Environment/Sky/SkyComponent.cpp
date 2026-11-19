@@ -22,6 +22,7 @@ namespace sw
         , _mode{ SkyMode::Gradient }
         , _hdriTexture{}
         , _hdriRotation{ 0.0f }
+        , _hdriRadianceMap{}
         , _listHdriAmbient{}
         , _rayleighScale{ 1.0f }
         , _mieScale{ 1.0f }
@@ -55,7 +56,8 @@ namespace sw
         gradient._hdriRotation    = _hdriRotation;
         if ( _mode == SkyMode::Hdri )
         {
-            gradient._hdriTexture = hashed_string( _hdriTexture.c_str() );
+            gradient._hdriTexture     = hashed_string( _hdriTexture.c_str() );
+            gradient._hdriRadianceMap = hashed_string( _hdriRadianceMap.c_str() );
             // 칸 수가 틀리면 간접 조명을 지어내지 않는다 — 계수는 0 이고 하늘 그림만 나온다.
             if ( _listHdriAmbient.size() == SH9Color::kCoefficientCount )
                 Memory::copy( gradient._hdriAmbient._arrCoefficient, _listHdriAmbient.data(), sizeof( gradient._hdriAmbient._arrCoefficient ) );

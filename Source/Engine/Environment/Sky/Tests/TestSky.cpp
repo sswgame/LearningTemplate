@@ -223,7 +223,7 @@ SW_TEST_CASE( SkyTest, HdriEvaluatesAmbientWithRotation )
     SW_EXPECT_TRUE( backBefore >= 0.0f );
 }
 
-/** @brief [SkyTest] 컴포넌트는 HDRI 모드에서만 텍스처 경로와 계수를 값으로 넘긴다 */
+/** @brief [SkyTest] 컴포넌트는 HDRI 모드에서만 텍스처 · 원본 경로와 계수를 값으로 넘긴다 */
 SW_TEST_CASE( SkyTest, ComponentPassesHdriOnlyInHdriMode )
 {
     GameObjectManager manager;
@@ -232,12 +232,15 @@ SW_TEST_CASE( SkyTest, ComponentPassesHdriOnlyInHdriMode )
     SkyComponent* pSky = pObject->addComponent<SkyComponent>();
     SW_REQUIRE_NOT_NULL( pSky );
     pSky->setHdriTexture( "engine/textures/sky/moonless_golf.dds" );
+    pSky->setHdriRadianceMap( "engine/prefabs/sky/moonless_golf.radiancemap" );
     pSky->setHdriAmbient( SH9Color::makeConstant( float3{ 1.0f, 1.0f, 1.0f } ) );
     SW_EXPECT_TRUE( pSky->makeGradient()._hdriTexture.empty() );
+    SW_EXPECT_TRUE( pSky->makeGradient()._hdriRadianceMap.empty() );
 
     pSky->setMode( SkyMode::Hdri );
     const SkyGradient gradient = pSky->makeGradient();
     SW_EXPECT_TRUE( gradient._hdriTexture == hashed_string( "engine/textures/sky/moonless_golf.dds" ) );
+    SW_EXPECT_TRUE( gradient._hdriRadianceMap == hashed_string( "engine/prefabs/sky/moonless_golf.radiancemap" ) );
     SW_EXPECT_NEAR( 1.0f, gradient.evaluateRadiance( float3{ 0.0f, 1.0f, 0.0f } )._x, 1.0e-4f );
 }
 
@@ -291,6 +294,8 @@ SW_TEST_CASE( SkyTest, SameRadianceComparesEveryRadianceField )
     { sky._hdriTexture = hashed_string( "engine/textures/sky/moonless_golf.dds" ); },
         []( SkyGradient& sky )
     { sky._hdriRotation += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._hdriRadianceMap = hashed_string( "engine/prefabs/sky/moonless_golf.radiancemap" ); },
         []( SkyGradient& sky )
     { sky._hdriAmbient._arrCoefficient[SH9Color::kCoefficientCount - 1u] += 0.1f; },
     };

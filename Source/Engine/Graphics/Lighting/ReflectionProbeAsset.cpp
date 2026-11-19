@@ -21,6 +21,20 @@ namespace sw
             static constexpr size_t kTexelBytes = sizeof( float32 ) * 3;
             /// @brief 거칠기 0 근처의 GGX α 하한 — 셰이더 lighting.hlsli 의 kMinRoughness 와 같은 뜻(0.045² 근처에서 표본이 한 점에 모인다).
             static constexpr float32 kMinRoughness = 0.045f;
+            /// @brief 원본 밉 파일의 머리말 바이트 수 — 매직 · 버전 · 한 변 텍셀 수.
+            static constexpr size_t kRadianceMapHeaderBytes = sizeof( uint32 ) * 3;
+            /**
+             * @brief filtered importance sampling 의 밉 치우침입니다. 쌍선형 샘플은 밉 텍셀 둘 너비를 덮으므로 텍셀 너비가 표본 간격의 반인 밉(−1)이면 표본 사이가 메워진다.
+             * @details GPU Gems 3 20.4 는 큐브맵 하드웨어 필터에 +1 을 쓴다. 옥타헤드럴 상자 밉에서 기준 적분과 견주면 +1 은 거친 단계를 너무 흐린다(64² 원본 · 표본 32 ·
+             *          거칠기 1/3 ~ 1 의 평균 오차: +1 은 10 ~ 35 %, −1 은 1 ~ 5 % — ReflectionProbeAssetTest.FilteredImportanceSamplingMatchesTheReference).
+             */
+            static constexpr float32 kFilterLODBias = -1.0f;
+            /// @brief 구 전체의 입체각(sr) — 옥타헤드럴 텍셀의 평균 입체각은 이것 / 텍셀 수다.
+            static constexpr float32 kSphereSolidAngle = 4.0f * MathUtil::kPi;
+            /// @brief N = V 일 때 반사 방향의 pdf 는 하프 벡터 분포 D 의 이만큼이다 — pdf(L) = D · N·H / (4 · V·H), N·H = V·H.
+            static constexpr float32 kReflectedDensityScale = 0.25f;
+            /// @brief 밉 텍셀 하나가 위 밉 텍셀 넷(2×2)의 평균이다.
+            static constexpr float32 kMipBoxWeight = 0.25f;
 
             /** @brief 한 축에서 상자 안의 점이 방향을 따라 상자 벽을 나가기까지의 거리입니다(시차 보정). 셰이더 lighting.hlsli 와 같은 식이다. */
             [[nodiscard]] static float32 computeAxisExit( float32 position, float32 direction, float32 center, float32 halfExtent )
@@ -98,14 +112,18 @@ namespace sw
                 return static_cast<float32>( bits ) * 2.3283064365386963e-10f; // 2^-32
             }
 
-            /** @brief 단계 0 을 GGX 로 걸러 방향 @p normal 의 텍셀 하나를 만듭니다(N = V = R). */
-            static float3 prefilterTexel( const ReflectionProbeAsset& data, const float3& normal, float32 roughness, uint32 sampleCount )
+            /** @brief 원본 @p source 를 GGX 로 걸러 방향 @p normal 의 텍셀 하나를 만듭니다(N = V = R). 표본마다 pdf 로 원본 밉을 고른다(filtered importance sampling). */
+            static float3 prefilterTexel( const OctahedralRadianceMap& source, const float3& normal, float32 roughness, uint32 sampleCount )
             {
                 const float32 clampedRoughness = MathUtil::max( roughness, kMinRoughness );
                 const float32 alpha            = clampedRoughness * clampedRoughness;
+                const float32 alphaSquared     = alpha * alpha;
                 const float3  up               = MathUtil::abs( normal._y ) < 0.999f ? float3{ 0.0f, 1.0f, 0.0f } : float3{ 1.0f, 0.0f, 0.0f };
                 const float3  tangent          = up.cross( normal ).normalize();
                 const float3  bitangent        = normal.cross( tangent );
+                // 옥타헤드럴 텍셀의 평균 입체각 — 밉 고르기의 기준이다(텍셀마다 입체각이 다른 것은 무시한다, 큐브맵 거르기도 면 가운데 텍셀로 셈한다).
+                const float32 sourceResolution = static_cast<float32>( source.getResolution() );
+                const float32 texelSolidAngle  = kSphereSolidAngle / ( sourceResolution * sourceResolution );
                 float3        sum{};
                 float32       weight = 0.0f;
                 for ( uint32 sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
@@ -113,25 +131,33 @@ namespace sw
                     const float32 firstUnit      = ( static_cast<float32>( sampleIndex ) + 0.5f ) / static_cast<float32>( sampleCount );
                     const float32 secondUnit     = computeRadicalInverse( sampleIndex );
                     const float32 phi            = MathUtil::kTwoPi * firstUnit;
-                    const float32 cosTheta       = MathUtil::sqrt( ( 1.0f - secondUnit ) / ( 1.0f + ( alpha * alpha - 1.0f ) * secondUnit ) );
+                    const float32 cosTheta       = MathUtil::sqrt( ( 1.0f - secondUnit ) / ( 1.0f + ( alphaSquared - 1.0f ) * secondUnit ) );
                     const float32 sinTheta       = MathUtil::sqrt( MathUtil::max( 1.0f - cosTheta * cosTheta, 0.0f ) );
                     const float3  halfway        = tangent * ( sinTheta * MathUtil::cos( phi ) ) + bitangent * ( sinTheta * MathUtil::sin( phi ) ) + normal * cosTheta;
                     const float3  toLight        = halfway * ( 2.0f * normal.dot( halfway ) ) - normal;
                     const float32 normalDotLight = normal.dot( toLight );
                     if ( normalDotLight <= 0.0f )
                         continue;
-                    sum += data.sampleLevel( 0, toLight.normalize() ) * normalDotLight;
+                    // N = V 라 pdf(L) = D(H) · N·H / (4 · V·H) = D(H) / 4 이다. 표본 하나가 맡는 입체각이 원본 텍셀 몇 개를 덮는지로 밉을 고른다.
+                    const float32 denominator        = cosTheta * cosTheta * ( alphaSquared - 1.0f ) + 1.0f;
+                    const float32 distribution       = alphaSquared / ( MathUtil::kPi * denominator * denominator );
+                    const float32 probabilityDensity = distribution * kReflectedDensityScale;
+                    const float32 sampleSolidAngle   = 1.0f / ( static_cast<float32>( sampleCount ) * probabilityDensity );
+                    // 텍셀 한 변(입체각의 제곱근)이 표본 간격과 같은 밉이다.
+                    const float32 lod = MathUtil::max( MathUtil::log2( MathUtil::sqrt( sampleSolidAngle / texelSolidAngle ) ) + kFilterLODBias, 0.0f );
+                    sum += source.sample( toLight.normalize(), lod ) * normalDotLight;
                     weight += normalDotLight;
                 }
-                return weight > 0.0f ? sum / weight : data.sampleLevel( 0, normal );
+                return weight > 0.0f ? sum / weight : source.sample( normal, 0.0f );
             }
 
-            /** @brief 거르기의 병렬 일 하나입니다 — 항목 하나가 단계 1 부터의 텍셀 행 하나다(행마다 쓰는 텍셀이 겹치지 않고 단계 0 은 읽기만 한다). */
+            /** @brief 거르기의 병렬 일 하나입니다 — 항목 하나가 단계 1 부터의 텍셀 행 하나다(행마다 쓰는 텍셀이 겹치지 않고 원본은 읽기만 한다). */
             struct FilterJob
             {
-                const ReflectionProbeAsset* _pData{ nullptr };
-                float3*                     _pTexel{ nullptr }; ///< 쓸 텍셀 — 분배 전에 한 번 받는다(행마다 겹치지 않는 칸에 쓴다, 벡터의 쓰기 검사를 작업자마다 열면 경합으로 잡힌다)
-                uint32                      _sampleCount{ 0 };
+                const ReflectionProbeAsset*  _pData{ nullptr };
+                const OctahedralRadianceMap* _pSource{ nullptr };
+                float3*                      _pTexel{ nullptr }; ///< 쓸 텍셀 — 분배 전에 한 번 받는다(행마다 겹치지 않는 칸에 쓴다, 벡터의 쓰기 검사를 작업자마다 열면 경합으로 잡힌다)
+                uint32                       _sampleCount{ 0 };
 
                 void run( uint32 start, uint32 end )
                 {
@@ -143,7 +169,7 @@ namespace sw
                         const float32 roughness = _pData->computeLevelRoughness( level );
                         for ( uint32 x = 0; x < resolution; ++x )
                         {
-                            _pTexel[_pData->computeTexelIndex( level, x, y )] = prefilterTexel( *_pData, _pData->computeTexelDirection( x, y ), roughness, _sampleCount );
+                            _pTexel[_pData->computeTexelIndex( level, x, y )] = prefilterTexel( *_pSource, _pData->computeTexelDirection( x, y ), roughness, _sampleCount );
                         }
                     }
                 }
@@ -190,24 +216,48 @@ namespace sw
 
     float3 ReflectionProbeAsset::computeTexelDirection( uint32 x, uint32 y ) const
     {
-        const float32 texelSize = 1.0f / static_cast<float32>( _resolution );
-        return decodeOctahedral( float2{ ( static_cast<float32>( x ) + 0.5f ) * texelSize, ( static_cast<float32>( y ) + 0.5f ) * texelSize } );
+        return OctahedralRadianceMap::computeTexelDirection( _resolution, x, y );
     }
 
-    expected<void> ReflectionProbeAsset::filterRoughnessLevels( uint32 sampleCount )
+    expected<void> ReflectionProbeAsset::filterRoughnessLevels( const OctahedralRadianceMap& source, uint32 sampleCount )
     {
         using Internal = ReflectionProbeAssetInternal;
         if ( sampleCount == 0 )
             return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe filter needs at least one sample" } );
+        if ( source._listMip.empty() )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "reflection probe filter source is empty" } );
         if ( expected<void> valid = validate(); valid.has_value() == false )
             return valid;
+        // 단계 0 — 원본이 이 데이터보다 크면 한 변이 맞는 밉을 읽는다(텍셀 하나가 원본 텍셀 여럿의 평균이 된다).
+        const float32 baseLOD = MathUtil::max( MathUtil::log2( static_cast<float32>( source.getResolution() ) / static_cast<float32>( _resolution ) ), 0.0f );
+        for ( uint32 y = 0; y < _resolution; ++y )
+        {
+            for ( uint32 x = 0; x < _resolution; ++x )
+            {
+                _listTexel[computeTexelIndex( 0, x, y )] = source.sample( computeTexelDirection( x, y ), baseLOD );
+            }
+        }
         Internal::FilterJob job{};
         job._pData       = this;
+        job._pSource     = &source;
         job._pTexel      = _listTexel.data();
         job._sampleCount = sampleCount;
         // 행 하나가 텍셀 `_resolution` 개 × 표본 `sampleCount` 개라 디스패치 비용보다 크다 — 행이 둘이면 나눈다.
         engine::runParallel( ( _levelCount - 1u ) * _resolution, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Internal::FilterJob::run, &job ) );
         return {};
+    }
+
+    expected<void> ReflectionProbeAsset::filterRoughnessLevels( uint32 sampleCount, uint32 mipCount )
+    {
+        if ( expected<void> valid = validate(); valid.has_value() == false )
+            return valid;
+        OctahedralRadianceMap source;
+        const size_t          baseTexelCount = static_cast<size_t>( _resolution ) * _resolution;
+        if ( expected<void> assigned = source.assignBase( _resolution, vector<float3>( _listTexel.begin(), _listTexel.begin() + baseTexelCount ) ); assigned.has_value() == false )
+            return assigned;
+        if ( expected<void> built = source.buildMips( mipCount ); built.has_value() == false )
+            return built;
+        return filterRoughnessLevels( source, sampleCount );
     }
 
     float3 ReflectionProbeAsset::sampleLevel( uint32 level, const float3& direction ) const
@@ -331,7 +381,7 @@ namespace sw
 namespace sw
 {
     expected<void> ReflectionProbeAsset::makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount, uint32 sampleCount,
-                                                        ReflectionProbeAsset& outData )
+                                                        uint32 mipCount, ReflectionProbeAsset& outData )
     {
         using Internal = ReflectionProbeAssetInternal;
         outData.clear();
@@ -355,7 +405,136 @@ namespace sw
                 outData._listTexel[outData.computeTexelIndex( 0, x, y )] = Internal::sampleFaces( pArrFace, capturePosition, outData.computeTexelDirection( x, y ) );
             }
         }
-        // 단계 1 부터 — 단계 0 을 그 단계의 거칠기로 거른다.
-        return outData.filterRoughnessLevels( sampleCount );
+        // 단계 1 부터 — 단계 0 의 밉 사슬을 그 단계의 거칠기로 거른다.
+        return outData.filterRoughnessLevels( sampleCount, mipCount );
+    }
+} // namespace sw
+
+namespace sw
+{
+    expected<void> OctahedralRadianceMap::assignBase( uint32 resolution, vector<float3>&& listTexel )
+    {
+        clear();
+        if ( resolution < kMinResolution || kMaxResolution < resolution )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map resolution is out of range" } );
+        if ( listTexel.size() != static_cast<size_t>( resolution ) * resolution )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map texels do not match its resolution" } );
+        Mip base;
+        base._resolution = resolution;
+        base._listTexel  = std::move( listTexel );
+        _listMip.push_back( std::move( base ) );
+        return {};
+    }
+
+    expected<void> OctahedralRadianceMap::buildMips( uint32 mipCount )
+    {
+        if ( _listMip.empty() )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map has no base mip" } );
+        if ( mipCount == 0 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map needs at least one mip" } );
+        _listMip.resize( 1 );
+        // shortcut: 상자 평균은 텍셀마다 다른 입체각을 무시한다(옥타헤드럴은 큐브보다 고르다), 귀퉁이 번짐이 보이면 입체각 가중 평균으로 바꾼다.
+        while ( getMipCount() < mipCount )
+        {
+            const Mip&   parent        = _listMip.back();
+            const uint32 parentSize    = parent._resolution;
+            const bool   bCannotShrink = parentSize < 2u || ( parentSize & 1u ) != 0u;
+            if ( bCannotShrink )
+                break;
+            Mip child;
+            child._resolution = parentSize / 2u;
+            child._listTexel.resize( static_cast<size_t>( child._resolution ) * child._resolution );
+            for ( uint32 y = 0; y < child._resolution; ++y )
+            {
+                for ( uint32 x = 0; x < child._resolution; ++x )
+                {
+                    const size_t top                                                   = static_cast<size_t>( y * 2u ) * parentSize + x * 2u;
+                    const size_t low                                                   = top + parentSize;
+                    child._listTexel[static_cast<size_t>( y ) * child._resolution + x] = ( parent._listTexel[top] + parent._listTexel[top + 1u] + parent._listTexel[low] + parent._listTexel[low + 1u] ) * ReflectionProbeAssetInternal::kMipBoxWeight;
+                }
+            }
+            _listMip.push_back( std::move( child ) );
+        }
+        return {};
+    }
+
+    float3 OctahedralRadianceMap::sample( const float3& direction, float32 lod ) const
+    {
+        if ( _listMip.empty() )
+            return float3{};
+        const float32 lastMip   = static_cast<float32>( _listMip.size() - 1u );
+        const float32 clamped   = MathUtil::clamp( lod, 0.0f, lastMip );
+        const uint32  lowerMip  = static_cast<uint32>( MathUtil::floor( clamped ) );
+        const uint32  upperMip  = MathUtil::min( lowerMip + 1u, getMipCount() - 1u );
+        const float32 blend     = clamped - static_cast<float32>( lowerMip );
+        const float2  uv        = ReflectionProbeAsset::encodeOctahedral( direction );
+        const auto    sampleMip = [&]( uint32 mipIndex )
+        {
+            const Mip&    mip  = _listMip[mipIndex];
+            const float32 size = static_cast<float32>( mip._resolution );
+            return ReflectionProbeAssetInternal::sampleBilinear( mip._listTexel, 0, mip._resolution, uv._x * size - 0.5f, uv._y * size - 0.5f );
+        };
+        const float3 lower = sampleMip( lowerMip );
+        return blend > 0.0f ? lower * ( 1.0f - blend ) + sampleMip( upperMip ) * blend : lower;
+    }
+
+    float3 OctahedralRadianceMap::computeTexelDirection( uint32 resolution, uint32 x, uint32 y )
+    {
+        const float32 texelSize = 1.0f / static_cast<float32>( resolution );
+        return ReflectionProbeAsset::decodeOctahedral( float2{ ( static_cast<float32>( x ) + 0.5f ) * texelSize, ( static_cast<float32>( y ) + 0.5f ) * texelSize } );
+    }
+
+    void OctahedralRadianceMap::makeBytes( vector<uint8>& outBytes ) const
+    {
+        using Internal = ReflectionProbeAssetInternal;
+        outBytes.clear();
+        const size_t texelCount = _listMip.empty() ? 0u : _listMip[0]._listTexel.size();
+        outBytes.reserve( Internal::kRadianceMapHeaderBytes + Internal::kTexelBytes * texelCount );
+        ByteWriter writer{ outBytes };
+        writer.writeUint32( kMagic );
+        writer.writeUint32( kVersion );
+        writer.writeUint32( getResolution() );
+        for ( size_t texelIndex = 0; texelIndex < texelCount; ++texelIndex )
+        {
+            const float3& texel = _listMip[0]._listTexel[texelIndex];
+            writer.writeFloat32( texel._x );
+            writer.writeFloat32( texel._y );
+            writer.writeFloat32( texel._z );
+        }
+    }
+
+    expected<void> OctahedralRadianceMap::readFromBytes( const uint8* pData, size_t size )
+    {
+        using Internal = ReflectionProbeAssetInternal;
+        clear();
+        if ( pData == nullptr || size < Internal::kRadianceMapHeaderBytes )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map file is shorter than its header" } );
+        ByteReader reader{ pData, size };
+        if ( reader.readUint32() != kMagic )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map file magic is not SWRM" } );
+        if ( reader.readUint32() != kVersion )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map file version differs - run Scripts/dev/make_sky_hdri_prefabs.py again" } );
+        const uint32   resolution   = reader.readUint32();
+        const bool     bSizeInRange = kMinResolution <= resolution && resolution <= kMaxResolution;
+        const uint64   texelCount   = static_cast<uint64>( resolution ) * resolution; // 범위 안이라 넘치지 않는다
+        vector<float3> listTexel;
+        const bool     bRead = bSizeInRange && reader.readList( listTexel, texelCount, Internal::kTexelBytes, [&]( float3& texel )
+            {
+            texel._x = reader.readFloat32();
+            texel._y = reader.readFloat32();
+            texel._z = reader.readFloat32();
+        } );
+        if ( bRead == false || reader.isFullyRead() == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map file length does not match its resolution, or it holds a non-finite value" } );
+        return assignBase( resolution, std::move( listTexel ) );
+    }
+
+    expected<void> OctahedralRadianceMap::loadFromAsset( const AssetID& assetID )
+    {
+        clear();
+        vector<uint8> bytes;
+        if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "radiance map file could not be read", assetID.view() } );
+        return readFromBytes( bytes.data(), bytes.size() );
     }
 } // namespace sw

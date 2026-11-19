@@ -1,9 +1,9 @@
 <?asset guid="0b130d11116dfdab3aef5b41fcae87bd"?>
-<!-- Scripts/dev/make_sky_hdri_prefabs.py 가 지었다 — 손으로 고치지 않는다. 그림은 텍스처, 간접 조명은 원본을 투영한 SH9 계수다. -->
+<!-- Scripts/dev/make_sky_hdri_prefabs.py 가 지었다 — 손으로 고치지 않는다. 그림은 텍스처, 간접 조명은 원본을 투영한 SH9 계수, 반사는 곁의 .radiancemap 을 거른 것이다. -->
 <Prefab formatVersion="1" name="Sky_moonless_golf">
 	<GameObject _schemaVersion="0" _name="Sky_moonless_golf" _bActive="true">
 		<_listComponent>
-			<SkyComponent _intensity="1" _mode="Hdri" _hdriTexture="engine/textures/sky/moonless_golf.dds" _hdriRotation="0">
+			<SkyComponent _intensity="1" _mode="Hdri" _hdriTexture="engine/textures/sky/moonless_golf.dds" _hdriRotation="0" _hdriRadianceMap="engine/prefabs/sky/moonless_golf.radiancemap">
 				<_listHdriAmbient>
 					<item>0.681568</item>
 					<item>0.583370</item>

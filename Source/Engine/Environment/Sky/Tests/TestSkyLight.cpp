@@ -22,6 +22,7 @@ namespace
             config._resolution            = 16;
             config._levelCount            = 4;
             config._filterSampleCount     = 32;
+            config._filterMipCount        = 5;
             config._captureIntervalFrames = kIntervalFrames;
             return config;
         }
@@ -54,7 +55,7 @@ SW_TEST_CASE( SkyLightTest, UniformSkyGivesTheSameLightEverywhere )
     sky._intensity    = 2.0f;
 
     SkyLightData data;
-    SW_REQUIRE_TRUE( SkyLightData::make( sky, Util::makeConfig(), data ) );
+    SW_REQUIRE_TRUE( SkyLightData::make( sky, nullptr, Util::makeConfig(), data ) );
     SW_EXPECT_TRUE( data._reflection.validate() );
     SW_EXPECT_EQUAL( 16u, data._reflection._resolution );
     SW_EXPECT_EQUAL( 4u, data._reflection._levelCount );
@@ -86,7 +87,7 @@ SW_TEST_CASE( SkyLightTest, GradientSkyIsFilteredByRoughnessAndProjectedToAmbien
 {
     const SkyGradient sky = Util::makeSky( 1.0f, 1 );
     SkyLightData      data;
-    SW_REQUIRE_TRUE( SkyLightData::make( sky, Util::makeConfig(), data ) );
+    SW_REQUIRE_TRUE( SkyLightData::make( sky, nullptr, Util::makeConfig(), data ) );
 
     const float3 up{ 0.0f, 1.0f, 0.0f };
     const float3 down{ 0.0f, -1.0f, 0.0f };
@@ -117,12 +118,17 @@ SW_TEST_CASE( SkyLightTest, OutOfRangeConfigIsRejected )
     SkyLightData      data;
     SkyLightConfig    config = Util::makeConfig();
     config._resolution       = ReflectionProbeAsset::kMaxResolution + 1u;
-    SW_EXPECT_FALSE( SkyLightData::make( sky, config, data ) );
+    SW_EXPECT_FALSE( SkyLightData::make( sky, nullptr, config, data ) );
+    SW_EXPECT_TRUE( data._reflection._listTexel.empty() );
+
+    config                 = Util::makeConfig();
+    config._filterMipCount = 0;
+    SW_EXPECT_FALSE( SkyLightData::make( sky, nullptr, config, data ) );
     SW_EXPECT_TRUE( data._reflection._listTexel.empty() );
 
     config                    = Util::makeConfig();
     config._filterSampleCount = 0;
-    SW_EXPECT_FALSE( SkyLightData::make( sky, config, data ) );
+    SW_EXPECT_FALSE( SkyLightData::make( sky, nullptr, config, data ) );
     SW_EXPECT_TRUE( data._reflection._listTexel.empty() );
 
     SkyLightCache cache;
@@ -202,4 +208,57 @@ SW_TEST_CASE( SkyLightTest, ADifferentSkyOrConfigIsCapturedAtOnce )
     SW_REQUIRE_NOT_NULL( pSmall );
     SW_EXPECT_EQUAL( 3u, cache.getRevision() );
     SW_EXPECT_EQUAL( 8u, pSmall->_reflection._resolution );
+
+    config._filterMipCount = 1;
+    SW_REQUIRE_NOT_NULL( cache.update( &night, config ) );
+    SW_EXPECT_EQUAL( 4u, cache.getRevision() );
+}
+
+/** @brief [SkyLightTest] HDRI 하늘의 반사는 SH9 가 아니라 원본(`.radiancemap`)을 거른 것이다 — 회전 · 세기를 따르고, 원본이 없으면 까닭과 함께 거절한다 */
+SW_TEST_CASE( SkyLightTest, HdriSkyFiltersTheRadianceMap )
+{
+    // 원본 한 변 32(거른 데이터 16 보다 크다) — +Z 쪽만 밝고 나머지는 어둡다. SH9 는 일부러 한 색으로 둬서 반사가 SH9 를 읽지 않음을 가린다.
+    const uint32   sourceResolution = 32;
+    vector<float3> listTexel;
+    for ( uint32 y = 0; y < sourceResolution; ++y )
+    {
+        for ( uint32 x = 0; x < sourceResolution; ++x )
+        {
+            const float3 direction = OctahedralRadianceMap::computeTexelDirection( sourceResolution, x, y );
+            listTexel.push_back( direction._z > 0.5f ? float3{ 4.0f, 4.0f, 4.0f } : float3{ 0.1f, 0.1f, 0.1f } );
+        }
+    }
+    OctahedralRadianceMap radiance;
+    SW_REQUIRE_TRUE( radiance.assignBase( sourceResolution, std::move( listTexel ) ) );
+
+    SkyGradient sky;
+    sky._mode        = SkyMode::Hdri;
+    sky._intensity   = 2.0f;
+    sky._hdriAmbient = SH9Color::makeConstant( float3{ 1.0f, 1.0f, 1.0f } );
+    SkyLightData data;
+    SW_EXPECT_FALSE( SkyLightData::make( sky, nullptr, Util::makeConfig(), data ) );
+    SW_EXPECT_TRUE( data._reflection._listTexel.empty() );
+    SW_REQUIRE_TRUE( SkyLightData::make( sky, &radiance, Util::makeConfig(), data ) );
+
+    const float3 front{ 0.0f, 0.0f, 1.0f };
+    const float3 back{ 0.0f, 0.0f, -1.0f };
+    // 매끈한 단계는 원본 × 세기(앞 8 · 뒤 0.2), 거친 단계는 앞이 어두워지고 뒤가 밝아진다.
+    SW_EXPECT_NEAR( 8.0f, data._reflection.sampleLevel( 0, front )._x, 0.05f );
+    SW_EXPECT_NEAR( 0.2f, data._reflection.sampleLevel( 0, back )._x, 0.05f );
+    const uint32 roughLevel = data._reflection._levelCount - 1u;
+    SW_EXPECT_TRUE( data._reflection.sampleLevel( roughLevel, front )._x < 8.0f );
+    SW_EXPECT_TRUE( data._reflection.sampleLevel( roughLevel, back )._x > 0.2f );
+    // 확산도 원본에서 투영한다 — 앞을 보는 면이 뒤보다 밝다(SH9 계수 한 색이면 같았을 것이다).
+    SW_EXPECT_TRUE( Util::evaluateDiffuse( data, front ) > Util::evaluateDiffuse( data, back ) * 2.0f );
+
+    // 반 바퀴 돌리면 밝은 쪽이 뒤로 간다.
+    sky._hdriRotation = MathUtil::kPi;
+    SW_REQUIRE_TRUE( SkyLightData::make( sky, &radiance, Util::makeConfig(), data ) );
+    SW_EXPECT_NEAR( 8.0f, data._reflection.sampleLevel( 0, back )._x, 0.05f );
+    SW_EXPECT_NEAR( 0.2f, data._reflection.sampleLevel( 0, front )._x, 0.05f );
+
+    // 원본 경로가 없는 HDRI 하늘 — 캐시는 SH9 로 메우지 않고 오류를 남기며 스카이 라이트가 없다.
+    SkyLightCache cache;
+    SW_EXPECT_LOG( "SkyLight.FilterFailed" );
+    SW_EXPECT_NULL( cache.update( &sky, Util::makeConfig() ) );
 }
