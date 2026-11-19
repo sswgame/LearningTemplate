@@ -129,8 +129,9 @@ namespace sw
             /** @brief 거르기의 병렬 일 하나입니다 — 항목 하나가 단계 1 부터의 텍셀 행 하나다(행마다 쓰는 텍셀이 겹치지 않고 단계 0 은 읽기만 한다). */
             struct FilterJob
             {
-                ReflectionProbeAsset* _pData{ nullptr };
-                uint32                _sampleCount{ 0 };
+                const ReflectionProbeAsset* _pData{ nullptr };
+                float3*                     _pTexel{ nullptr }; ///< 쓸 텍셀 — 분배 전에 한 번 받는다(행마다 겹치지 않는 칸에 쓴다, 벡터의 쓰기 검사를 작업자마다 열면 경합으로 잡힌다)
+                uint32                      _sampleCount{ 0 };
 
                 void run( uint32 start, uint32 end )
                 {
@@ -142,7 +143,7 @@ namespace sw
                         const float32 roughness = _pData->computeLevelRoughness( level );
                         for ( uint32 x = 0; x < resolution; ++x )
                         {
-                            _pData->_listTexel[_pData->computeTexelIndex( level, x, y )] = prefilterTexel( *_pData, _pData->computeTexelDirection( x, y ), roughness, _sampleCount );
+                            _pTexel[_pData->computeTexelIndex( level, x, y )] = prefilterTexel( *_pData, _pData->computeTexelDirection( x, y ), roughness, _sampleCount );
                         }
                     }
                 }
@@ -202,6 +203,7 @@ namespace sw
             return valid;
         Internal::FilterJob job{};
         job._pData       = this;
+        job._pTexel      = _listTexel.data();
         job._sampleCount = sampleCount;
         // 행 하나가 텍셀 `_resolution` 개 × 표본 `sampleCount` 개라 디스패치 비용보다 크다 — 행이 둘이면 나눈다.
         engine::runParallel( ( _levelCount - 1u ) * _resolution, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Internal::FilterJob::run, &job ) );
