@@ -51,6 +51,70 @@ namespace sw
         }
 
         /**
+         * @brief 항목 하나가 출력 칸 하나를 쓰는 병렬 for 입니다 — 본문은 `body( uint32 index, T& slot )` 이고 @p output 의 제 칸만 받습니다(`TaskManager::runParallelInto`).
+         * @details 출력이 항목마다 한 칸이면 `runParallel` 에 `.data()` 포인터를 손으로 넘기지 말고 이쪽을 쓰십시오. 본문이 출력 컨테이너를 잡지 못하므로 경합 감지기에
+         *          걸리는 "벡터를 람다로 잡기" 가 생기지 않습니다. 원소 타입을 적어 부르면(`runParallelInto<float32>( list, … )`) 컨테이너가 span 으로 바뀝니다.
+         *          서비스가 연결되지 않은 곳에서는 현재 스레드가 한 번에 돕니다.
+         */
+        template <typename T, typename Body>
+        void runParallelInto( span<T> output, uint32 serialThreshold, const Body& body )
+        {
+            using Job = TaskManager::ParallelIntoJob<T, Body>;
+            SW_ASSERT( output.size() == static_cast<uint32>( output.size() ) );
+            const Job job{ output.data(), &body };
+            runParallel( static_cast<uint32>( output.size() ), serialThreshold, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /** @brief `runParallelInto` 와 같되 나눌지를 측정한 비용으로 정합니다(`runParallelByCost`). 항목당 비용을 모르면(대부분의 시스템) 이쪽입니다. */
+        template <typename T, typename Body>
+        void runParallelIntoByCost( span<T> output, const Body& body )
+        {
+            using Job = TaskManager::ParallelIntoJob<T, Body>;
+            SW_ASSERT( output.size() == static_cast<uint32>( output.size() ) );
+            const Job job{ output.data(), &body };
+            runParallelByCost( static_cast<uint32>( output.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /**
+         * @brief 출력 칸이 여럿인 병렬 for 입니다 — 본문은 `body( start, end, span<T0>, span<T1>, … )` 이고 각 출력의 [start, end) 조각만 받습니다(`TaskManager::runParallelRangeInto`).
+         * @details 항목 하나가 칸 여럿을 쓰거나 구간째 일괄 처리하는 곳에 씁니다. 출력은 길이가 @p count 이거나 비어야 합니다(빈 것은 없는 스트림). 서비스가 연결되지 않은 곳에서는 현재 스레드가 한 번에 돕니다.
+         */
+        template <typename Body, typename... Ts>
+        void runParallelRangeInto( uint32 count, uint32 serialThreshold, const Body& body, span<Ts>... outputs )
+        {
+            using Job = TaskManager::ParallelRangeIntoJob<Body, Ts...>;
+            SW_ASSERT( Job::hasItemCount( count, outputs... ) );
+            const Job job{ std::tuple<span<Ts>...>{ outputs... }, &body };
+            runParallel( count, serialThreshold, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /** @brief `runParallelRangeInto` 와 같되 나눌지를 측정한 비용으로 정합니다(`runParallelByCost`). */
+        template <typename Body, typename... Ts>
+        void runParallelRangeIntoByCost( uint32 count, const Body& body, span<Ts>... outputs )
+        {
+            using Job = TaskManager::ParallelRangeIntoJob<Body, Ts...>;
+            SW_ASSERT( Job::hasItemCount( count, outputs... ) );
+            const Job job{ std::tuple<span<Ts>...>{ outputs... }, &body };
+            runParallelByCost( count, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /**
+         * @brief 결정적 병렬 리듀스입니다 —블록마다 `body( index, T& partial )` 로 번호 순서로 접고, 부분값을 블록 순서로 `combine` 합니다(`TaskManager::runParallelReduce`).
+         * @details 워커 수 · 스케줄 · 서비스 유무와 무관하게 같은 비트입니다. 원자 더하기나 스크래치 슬롯별 합처럼 도착 순서에 달린 합 대신 이쪽을 쓰십시오.
+         */
+        template <typename T, typename Body, typename Combine>
+        [[nodiscard]] T runParallelReduce( uint32 count, uint32 blockSize, const T& identity, const Body& body, const Combine& combine )
+        {
+            using Job = TaskManager::ParallelReduceJob<T, Body>;
+            SW_ASSERT( blockSize > 0 );
+            if ( count == 0 )
+                return identity;
+            vector<T> listPartial( Job::computeBlockCount( count, blockSize ), identity );
+            runParallelIntoByCost<T>( listPartial, Job{ count, blockSize, &body } );
+            return Job::combineInOrder( listPartial, combine );
+        }
+
+        /**
          * @brief 병렬 본문이 스레드마다 하나씩 쓰는 스크래치 슬롯의 수입니다. 워커마다 하나, 기다리면서 돕는 워커 아닌 스레드
          *        몫 몇 개입니다.
          * @details 잡마다 스크래치를 만들면 프레임당 청크 수만큼 할당합니다. 슬롯 배열을 이 크기로 한 번 잡아 두고, 본문이

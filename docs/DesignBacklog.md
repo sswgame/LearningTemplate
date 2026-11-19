@@ -1578,6 +1578,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 옮길 것(가치 순, 크기 S/M/L, 측정 조건은 끝 괄호):
 - 형식으로 막는 결함 모양
   - 병렬 본문 출력 칸 `runParallelInto<T>( span<T>, body( i, T& ) )` · 결정적 `runParallelReduce`(Taskflow transform · 감사 4번, S).
+    - 됨(2026-11-19): TaskManager · `engine::` 에 Into(임계 · ByCost) · Reduce(고정 블록 번호 순 접기 → 블록 순 합치기 — 워커 수 무관 같은 비트). 칸 하나 = 항목 하나인 호출부 14 곳을 옮겼다. 칸이 여럿이거나 구간째 일괄 처리하는 본문은 `runParallelRangeInto( count, threshold, body( start, end, span<T0>… ), span<T0>… )`(출력마다 제 구간 조각, 빈 출력 = 없는 스트림)로 옮겼다(GPUSceneBuilder 수집, 메시 모디파이어 변환 · 변형, 물리 포즈 묶음 읽기). 같은 길이 span 을 묶는 칸별 본문 대신 구간 본문을 고른 까닭: 백엔드 묶음 호출 · SoA 스트림은 구간이 일의 모양이고, 칸별 본문은 그 안의 루프로 쓰면 된다. 남은 손 포인터는 형식으로 담을 수 없는 모양이라 둔다 — 셰이더 쿠킹 사슬 · GPUSceneBuilder 트랜스폼 복사(칸 표를 거친 흩뿌리기, 단사는 실행 데이터), GPUSceneBuilder 갱신(청크 칸 + 칸 없는 투명 꼬리 블록 하나 — 칸 수와 항목 수가 다르다), PathModifierUtil 정합(덩어리별 표시).
   - 메시지 방향 강제 — 라우터가 역할별 마스크로 반대 방향 종류를 `Malformed`(XMachina, S).
   - 게임 넷 메시지 본문을 REFLECT 고정 배치로, 본문 판은 스키마 해시(GameServer PacketGenerator, M — NetMessageDef 37 곳).
   - 열거형: 등록기를 항목 표 하나로(생성 바이트 약 0.7 MB↓), 플래그 글은 단일 비트 이름만, 끝 열거자 `Count` 자동 센티널, Core `EnumArray<E,T>` · `makeEnumTable`(개수 모자람을 컴파일 오류로), 열거자 단위 데이터 철자(magic_enum, S~M).
@@ -1593,4 +1594,6 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
   - 자동 노출 히스토그램 + 백분위 컷(Adria, S~M), HDR 디스플레이 출력 `DisplayOutputDesc` 한 값에서 스왑체인 포맷 · 톤맵 변형(VQEngine, M~L), 볼류메트릭 구름 · 비 가림 맵(Adria).
 - 작업 시스템(측정 먼저 — 합류 대기 구간 · park 수 계기부터): 묶음 제출 `submitBatch`, `runParallel` 우선순위 레인, guided 청크, 후속 하나 이어 실행, 넘침 보조 큐, 단계 그래프 위상 순서 재사용(Taskflow).
 - 도구: 엔진 안 MCP 서버는 들이지 않는다(사용자 결정 2026-11-19 — 지금 필요 없다), 선언형 조작기 · 시각화 속성(PROPERTY Shape), Fileserve(장치가 PC 콘텐츠를 TCP 로 — 개발 전용)(ezEngine).
+- 작업 시스템(측정 먼저 — 계기는 됨: Tracy `Wait runParallel` 구간, 카운터 `Task.Join.waits` · `Task.Join.waitMicros` · `Task.Join.parks` · `Task.Idle.parks`, 아래는 그 수를 본 뒤): 묶음 제출 `submitBatch`, `runParallel` 우선순위 레인, guided 청크, 후속 하나 이어 실행, 넘침 보조 큐, 단계 그래프 위상 순서 재사용(Taskflow).
+- 도구: 엔진 안 MCP 서버(루프백, 자동화 단계 하나 = 도구 하나, 스키마는 TParams 리플렉션 — security-and-hardening 먼저), 선언형 조작기 · 시각화 속성(PROPERTY Shape), Fileserve(장치가 PC 콘텐츠를 TCP 로 — 개발 전용)(ezEngine).
 - 측정 뒤에만: DX12 PipelineLibrary(차가운 시작 PSO 합), 깊이 전용 배치 키(그림자 드로우 수), 서버 MMO 관찰자 거리 기반 틱 주기 · 컴포넌트 TickInterval 버킷(XMachina · ezEngine), 서버 쿠킹의 축약 애니메이션 클립, 온라인 프로토콜 퍼저 타깃 ⑦(퍼징 1 단계 뒤).

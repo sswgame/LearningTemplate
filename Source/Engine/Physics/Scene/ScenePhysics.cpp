@@ -527,24 +527,23 @@ namespace sw
             return;
         buffer._listState.resize( count );
 
-        // 구간마다 백엔드 한 번(잠그지 않는 일괄 읽기) + 강체 칸 쓰기다 — 워커는 컨테이너를 만지지 않고 포인터만 받고, 컴포넌트를 거치지 않는다.
+        // 구간마다 백엔드 한 번(잠그지 않는 일괄 읽기) + 강체 칸 쓰기다 — 워커는 컨테이너를 만지지 않고, 입력은 const 포인터로 읽고, 상태 출력은
+        // `runParallelRangeInto` 가 건넨 제 구간 조각에만 쓴다. 컴포넌트를 거치지 않는다.
         struct PoseReadJob
         {
             const IPhysicsBodyScene<TDimension>* _pScene{ nullptr };
             const Store*                         _pStore{ nullptr };
             const PhysicsBodyHandle*             _pBody{ nullptr };
             const uint32*                        _pPoseSlot{ nullptr };
-            PhysicsBodyState<TDimension>*        _pState{ nullptr };
             uint64                               _stepCount{ 0 };
 
-            void readRange( uint32 start, uint32 end )
+            void operator()( uint32 start, uint32 end, span<PhysicsBodyState<TDimension>> outListState ) const
             {
-                const size_t rangeCount = static_cast<size_t>( end - start );
-                _pScene->readBodyStates( span<const PhysicsBodyHandle>{ _pBody + start, rangeCount }, span<PhysicsBodyState<TDimension>>{ _pState + start, rangeCount } );
+                _pScene->readBodyStates( span<const PhysicsBodyHandle>{ _pBody + start, static_cast<size_t>( end - start ) }, outListState );
                 for ( uint32 index = start; index < end; ++index )
                 {
                     const uint32 poseSlot = _pPoseSlot[index];
-                    _pStore->findPage( poseSlot )->applySteppedPose( poseSlot & Page::kSlotMask, _pState[index], _stepCount );
+                    _pStore->findPage( poseSlot )->applySteppedPose( poseSlot & Page::kSlotMask, outListState[index - start], _stepCount );
                 }
             }
         };
@@ -553,9 +552,8 @@ namespace sw
         job._pStore    = &store;
         job._pBody     = buffer._listBody.data();
         job._pPoseSlot = buffer._listPoseSlot.data();
-        job._pState    = buffer._listState.data();
         job._stepCount = _stepCount;
-        engine::runParallelByCost( count, SW_DELEGATE_METHOD( ParallelBlockDelegate, &PoseReadJob::readRange, &job ) );
+        engine::runParallelRangeIntoByCost( count, job, span<PhysicsBodyState<TDimension>>( buffer._listState ) );
     }
 
     void ScenePhysics::queuePoseWrite( PhysicsComponent& writer, const float3& position, const quaternion& rotation, const float3& scale )

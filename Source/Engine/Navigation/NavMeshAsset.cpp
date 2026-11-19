@@ -35,23 +35,26 @@ namespace sw
             /** @brief 항목 하나의 최소 바이트입니다(종류 이름 길이 · 두 해시 · 경계 · 타일 수). */
             static constexpr size_t kMinEntryBytes = sizeof( uint32 ) + sizeof( uint64 ) * 2 + sizeof( AABB ) + sizeof( uint32 );
             /** @brief 타일 베이크 한 덩어리입니다. 워커는 자기 구간의 슬롯만 씁니다. */
+            /** @brief 타일 하나의 굽기 결과 칸입니다(`BakeJob` 이 타일마다 하나 쓴다). */
+            struct TileBake
+            {
+                NavTileData _tile;
+                uint8       _bSucceeded{ SW_FALSE };
+            };
+
             struct BakeJob
             {
                 const INavMeshTileStore*       _pNavMesh{ nullptr };
                 const NavMeshGeometry*         _pGeometry{ nullptr };
                 const vector<NavConvexVolume>* _pExtraVolume{ nullptr };
-                NavTileData*                   _pTile{ nullptr };
-                uint8*                         _pSucceeded{ nullptr };
                 int32                          _tileCountX{ 0 };
 
-                void run( uint32 start, uint32 end )
+                /** @brief 타일 @p tileIndex 를 구워 제 칸 @p outBake 에 씁니다(`runParallelInto` 본문 — 타일 저장소 · 지오메트리는 읽기만 한다). */
+                void operator()( uint32 tileIndex, TileBake& outBake ) const
                 {
-                    for ( uint32 tileIndex = start; tileIndex < end; ++tileIndex )
-                    {
-                        const int32 tileX      = static_cast<int32>( tileIndex ) % _tileCountX;
-                        const int32 tileZ      = static_cast<int32>( tileIndex ) / _tileCountX;
-                        _pSucceeded[tileIndex] = _pNavMesh->bakeTile( *_pGeometry, _pExtraVolume, tileX, tileZ, _pTile[tileIndex] ) ? SW_TRUE : SW_FALSE;
-                    }
+                    const int32 tileX   = static_cast<int32>( tileIndex ) % _tileCountX;
+                    const int32 tileZ   = static_cast<int32>( tileIndex ) / _tileCountX;
+                    outBake._bSucceeded = _pNavMesh->bakeTile( *_pGeometry, _pExtraVolume, tileX, tileZ, outBake._tile ) ? SW_TRUE : SW_FALSE;
                 }
             };
         };
@@ -295,29 +298,26 @@ namespace sw
         // 색인 셀은 타일보다 잘게 나눈다. 타일 하나가 몇 셀만 훑게 된다.
         geometry.rebuildSpatialIndex( MathUtil::max( 1.0f, grid._tileWorldSize * 0.25f ) );
 
-        vector<NavTileData>           listTile( tileCount );
-        vector<uint8>                 listSucceeded( tileCount, SW_FALSE );
-        NavMeshAssetInternal::BakeJob job{};
+        vector<NavMeshAssetInternal::TileBake> listBake( tileCount );
+        NavMeshAssetInternal::BakeJob          job{};
         job._pNavMesh     = &navMesh;
         job._pGeometry    = &geometry;
         job._pExtraVolume = pExtraVolume;
-        job._pTile        = listTile.data();
-        job._pSucceeded   = listSucceeded.data();
         job._tileCountX   = MathUtil::max( 1, grid._tileCountX );
-        engine::runParallel( tileCount, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &NavMeshAssetInternal::BakeJob::run, &job ) );
+        engine::runParallelInto<NavMeshAssetInternal::TileBake>( listBake, 2, job );
 
         uint32 failedCount = 0;
         uint32 filledCount = 0;
-        for ( uint32 tileIndex = 0; tileIndex < tileCount; ++tileIndex )
+        for ( const NavMeshAssetInternal::TileBake& bake : listBake )
         {
-            if ( listSucceeded[tileIndex] == SW_FALSE )
+            if ( bake._bSucceeded == SW_FALSE )
             {
                 ++failedCount;
                 continue;
             }
-            if ( listTile[tileIndex]._bytes.empty() )
+            if ( bake._tile._bytes.empty() )
                 continue;
-            if ( navMesh.replaceTile( listTile[tileIndex] ) )
+            if ( navMesh.replaceTile( bake._tile ) )
                 ++filledCount;
             else
                 ++failedCount;

@@ -52,15 +52,12 @@ namespace sw
             struct CompileJob
             {
                 const vector<ShaderCompileDesc>* _pListDesc{ nullptr };
-                uint8*                           _pFailed{ nullptr }; ///< 요청마다 진 컴파일이면 1
 
-                void runRange( uint32 start, uint32 end )
+                /** @brief 요청 @p index 를 컴파일하고, 지면 제 칸 @p outFailed 에 1 을 씁니다(`runParallelInto` 본문). */
+                void operator()( uint32 index, uint8& outFailed ) const
                 {
-                    for ( uint32 index = start; index < end; ++index )
-                    {
-                        const ShaderCompileResult result = ShaderCompiler::compileHLSL( ( *_pListDesc )[index] );
-                        _pFailed[index]                  = result._bSuccess ? 0 : 1;
-                    }
+                    const ShaderCompileResult result = ShaderCompiler::compileHLSL( ( *_pListDesc )[index] );
+                    outFailed                        = result._bSuccess ? 0 : 1;
                 }
             };
         };
@@ -235,11 +232,9 @@ namespace sw
             desc._enginePolicy = enginePolicy;
         }
 
-        vector<uint8>        listFailed( listDesc.size(), 0 );
-        Internal::CompileJob job{};
-        job._pListDesc = &listDesc;
-        job._pFailed   = listFailed.data();
-        engine::runParallel( static_cast<uint32>( listDesc.size() ), 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Internal::CompileJob::runRange, &job ) );
+        vector<uint8>              listFailed( listDesc.size(), 0 );
+        const Internal::CompileJob job{ &listDesc };
+        engine::runParallelInto<uint8>( listFailed, 1, job );
         for ( const uint8 bFailed : listFailed )
         {
             summary._failedCount += bFailed;

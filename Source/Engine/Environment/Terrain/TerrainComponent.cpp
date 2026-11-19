@@ -120,32 +120,35 @@ namespace sw
              * @details 탄젠트도 여기서 구한다(`Mesh::computeTangents` — 정점만 읽고 쓴다). 예전에는 게임 스레드의 `Mesh::setVertices` 가 청크마다 구해, 지형 전체(청크 64,
              *          정점 39 만)를 세우는 데 Debug 에서 3.5 초(부하가 걸리면 7 초)가 들었다 — 씬 열기 · 플레이 · 멈춤 · 백엔드 교체마다 세운다.
              */
+            /** @brief 청크 하나의 메시 결과 칸입니다(`ChunkVertexJob` 이 청크마다 하나 쓴다). */
+            struct ChunkMeshBuild
+            {
+                vector<RHIVertex> _listVertex; ///< 합친 정점(삼각형 목록으로 만든 뒤 합친다)
+                vector<uint32>    _listIndex;  ///< 합친 정점 안의 인덱스
+            };
+
             struct ChunkVertexJob
             {
                 const TerrainHeightfield* _pHeightfield{ nullptr };
                 const TerrainChunkLayout* _pLayout{ nullptr };
                 const ChunkMeshRequest*   _pRequest{ nullptr };
-                vector<RHIVertex>*        _pListVertex{ nullptr };      ///< 청크마다 고유 정점(삼각형 목록으로 만든 뒤 합친다)
-                vector<uint32>*           _pListIndex{ nullptr };       ///< 청크마다 인덱스
                 float32                   _geomorphLODDistance{ 0.0f }; ///< 0 보다 크면 정점에 지오모프 값을 쓴다(`TerrainMeshBuilder::applyGeomorph`)
 
-                void run( uint32 start, uint32 end )
+                /** @brief 요청 @p index 의 청크 메시를 지어 제 칸 @p outBuild 에 씁니다(`runParallelInto` 본문 — 높이장 · 배치는 읽기만 한다). */
+                void operator()( uint32 index, ChunkMeshBuild& outBuild ) const
                 {
-                    for ( uint32 index = start; index < end; ++index )
-                    {
-                        const ChunkMeshRequest& request = _pRequest[index];
-                        const uint32            chunkX  = request._chunkIndex % _pLayout->_chunkCountX;
-                        const uint32            chunkZ  = request._chunkIndex / _pLayout->_chunkCountX;
-                        TerrainMeshBuilder::makeChunkVertices( *_pHeightfield, *_pLayout, chunkX, chunkZ, request._lod, request._arrNeighborLOD, _pListVertex[index] );
-                        // 지오모프 정점은 색 · 탄젠트 칸에 섞기 값을 담는다 - 탄젠트를 구하면 지운다.
-                        if ( _geomorphLODDistance > 0.0f )
-                            TerrainMeshBuilder::applyGeomorph( *_pHeightfield, *_pLayout, chunkX, chunkZ, request._lod, _geomorphLODDistance, _pListVertex[index] );
-                        else
-                            Mesh::computeTangents( _pListVertex[index] );
-                        // 격자 정점은 이웃 삼각형 여섯이 나눠 쓴다 — 비트까지 같은 정점을 합친다(지오모프 값도 정점 칸이라 같이 본다). 정점 셰이더 · 업로드가 약 1/6 이다.
-                        const vector<RHIVertex> listTriangleVertex = std::move( _pListVertex[index] );
-                        Mesh::weldTriangleList( listTriangleVertex, _pListVertex[index], _pListIndex[index] );
-                    }
+                    const ChunkMeshRequest& request = _pRequest[index];
+                    const uint32            chunkX  = request._chunkIndex % _pLayout->_chunkCountX;
+                    const uint32            chunkZ  = request._chunkIndex / _pLayout->_chunkCountX;
+                    vector<RHIVertex>       listTriangleVertex;
+                    TerrainMeshBuilder::makeChunkVertices( *_pHeightfield, *_pLayout, chunkX, chunkZ, request._lod, request._arrNeighborLOD, listTriangleVertex );
+                    // 지오모프 정점은 색 · 탄젠트 칸에 섞기 값을 담는다 - 탄젠트를 구하면 지운다.
+                    if ( _geomorphLODDistance > 0.0f )
+                        TerrainMeshBuilder::applyGeomorph( *_pHeightfield, *_pLayout, chunkX, chunkZ, request._lod, _geomorphLODDistance, listTriangleVertex );
+                    else
+                        Mesh::computeTangents( listTriangleVertex );
+                    // 격자 정점은 이웃 삼각형 여섯이 나눠 쓴다 — 비트까지 같은 정점을 합친다(지오모프 값도 정점 칸이라 같이 본다). 정점 셰이더 · 업로드가 약 1/6 이다.
+                    Mesh::weldTriangleList( listTriangleVertex, outBuild._listVertex, outBuild._listIndex );
                 }
             };
         };
@@ -905,8 +908,7 @@ namespace sw
             return;
         _chunkMeshBuildCount += rebuildCount;
         vector<Internal::ChunkMeshRequest> listRequest( rebuildCount );
-        vector<vector<RHIVertex>>          listChunkVertex( rebuildCount );
-        vector<vector<uint32>>             listChunkTriangleIndex( rebuildCount );
+        vector<Internal::ChunkMeshBuild>   listBuild( rebuildCount );
         for ( uint32 index = 0; index < rebuildCount; ++index )
         {
             const Chunk&                chunk   = _listChunk[listBuildChunk[index]];
@@ -922,22 +924,20 @@ namespace sw
         job._pHeightfield        = &_heightfield;
         job._pLayout             = &_layout;
         job._pRequest            = listRequest.data();
-        job._pListVertex         = listChunkVertex.data();
-        job._pListIndex          = listChunkTriangleIndex.data();
         job._geomorphLODDistance = _bGeomorph == SW_TRUE ? _lodDistance : 0.0f;
-        engine::runParallel( rebuildCount, Internal::kParallelChunkMeshCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Internal::ChunkVertexJob::run, &job ) );
+        engine::runParallelInto<Internal::ChunkMeshBuild>( listBuild, Internal::kParallelChunkMeshCount, job );
 
         // 메시 생성과 배치 교체는 레지스트리 더티 표시를 건드리므로 이 스레드에서 한다.
         for ( uint32 index = 0; index < rebuildCount; ++index )
         {
             Chunk& chunk          = _listChunk[listBuildChunk[index]];
-            chunk._vertexCount    = static_cast<uint32>( listChunkVertex[index].size() );
+            chunk._vertexCount    = static_cast<uint32>( listBuild[index]._listVertex.size() );
             chunk._bMeshStale     = false;
             shared_ptr<Mesh> mesh = Mesh::create();
             // 지오모프는 색 · 탄젠트 칸에 단위 벡터가 아닌 값(델타 · 청크 경계 · 지면 높이)을 싣는다 — 노멀 · 탄젠트를 줄이는 기본 형식에 넣지 않는다(언리얼 랜드스케이프 전용 vertex factory 자리).
             mesh->setVertexFormat( RHIMeshVertexFormat::HighPrecision );
             // 탄젠트(또는 지오모프 값)와 인덱스는 워커가 채웠다 — 번호는 합친 정점 안이다.
-            (void)mesh->setGeometryWithTangents( std::move( listChunkVertex[index] ), std::move( listChunkTriangleIndex[index] ) );
+            (void)mesh->setGeometryWithTangents( std::move( listBuild[index]._listVertex ), std::move( listBuild[index]._listIndex ) );
             // 가장 오래 쓰지 않은 칸을 버리고 앞에 넣는다.
             std::rotate( chunk._arrCachedMesh, chunk._arrCachedMesh + kChunkMeshCacheCount - 1, chunk._arrCachedMesh + kChunkMeshCacheCount );
             chunk._arrCachedMesh[0] = ChunkMeshCacheEntry{ mesh, Internal::makeChunkMeshKey( chunk._lod, chunk._arrNeighborLOD ), chunk._vertexCount };

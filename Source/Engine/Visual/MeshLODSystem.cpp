@@ -140,17 +140,12 @@ namespace sw
         if ( _manager.hasDirtySceneTransforms() )
             _manager.flushSceneTransforms();
         _listPickedLOD.resize( count );
-        uint32* const arrPicked = _listPickedLOD.data();
-        auto          pickRange = [this, &listPrimitive, arrPicked, forcedLOD, bGPUPicks]( uint32 start, uint32 end )
-        {
-            for ( uint32 index = start; index < end; ++index )
-                arrPicked[index] = pickLOD( static_cast<const MeshComponent&>( *listPrimitive[index] ), forcedLOD, bGPUPicks );
-        };
-        engine::runParallelByCost( count, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, pickRange ) );
+        engine::runParallelIntoByCost<uint32>( _listPickedLOD, [this, &listPrimitive, forcedLOD, bGPUPicks]( uint32 index, uint32& outPicked )
+        { outPicked = pickLOD( static_cast<const MeshComponent&>( *listPrimitive[index] ), forcedLOD, bGPUPicks ); } );
         for ( uint32 index = 0; index < count; ++index )
         {
-            if ( arrPicked[index] != kKeepLOD )
-                static_cast<MeshComponent&>( *listPrimitive[index] ).setLODIndex( arrPicked[index] );
+            if ( _listPickedLOD[index] != kKeepLOD )
+                static_cast<MeshComponent&>( *listPrimitive[index] ).setLODIndex( _listPickedLOD[index] );
         }
     }
 

@@ -1767,3 +1767,145 @@ SW_TEST_CASE( TaskManagerTest, SubmitWithoutWakePastQueueCapacityFinishes )
     SW_EXPECT_EQUAL( kTaskCount, ranCount.load() );
     manager.shutdown();
 }
+
+/**
+ * @brief `runParallelInto` 는 항목마다 제 칸 하나를 건넨다 — 모든 칸이 한 번씩, 자기 번호로 채워진다(고정 임계 · 비용 측정 둘 다)
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelIntoFillsEverySlotWithItsOwnIndex )
+{
+    sw::TaskManager manager;
+    SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );
+    constexpr uint32   kCount = 4096;
+    sw::vector<uint32> listFixed( kCount, 0u );
+    sw::vector<uint32> listByCost( kCount, 0u );
+    auto               fill = []( uint32 index, uint32& outSlot )
+    { outSlot += index * 3u + 1u; };
+    manager.runParallelInto<uint32>( listFixed, 1, fill );
+    manager.runParallelIntoByCost<uint32>( listByCost, fill );
+    uint32 wrongCount = 0;
+    for ( uint32 index = 0; index < kCount; ++index )
+    {
+        if ( listFixed[index] != index * 3u + 1u || listByCost[index] != index * 3u + 1u )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+    manager.shutdown();
+}
+
+/**
+ * @brief `runParallelReduce` 는 워커 수와 무관하게 같은 비트를 돌려준다 — 블록을 번호 순서로 접고 블록 순서로 합친 직렬 계산과 부동소수 합이 정확히 같다
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelReduceMatchesTheSerialBlockOrderBitForBit )
+{
+    constexpr uint32 kCount     = 20000;
+    constexpr uint32 kBlockSize = 64;
+    auto             addItem    = []( uint32 index, float32& inoutPartial )
+    { inoutPartial += 1.0f / static_cast<float32>( index + 1u ); };
+    auto combine = []( float32 left, float32 right )
+    { return left + right; };
+
+    float32 expected = 0.0f;
+    for ( uint32 start = 0; start < kCount; start += kBlockSize )
+    {
+        float32 partial = 0.0f;
+        for ( uint32 index = start; index < sw::MathUtil::min( kCount, start + kBlockSize ); ++index )
+        {
+            addItem( index, partial );
+        }
+        expected = ( start == 0 ) ? partial : combine( expected, partial );
+    }
+
+    for ( uint32 workerCount = 1; workerCount <= kWorkerCount; workerCount += 3 )
+    {
+        sw::TaskManager manager;
+        SW_REQUIRE_TRUE( manager.initialize( workerCount ) );
+        for ( uint32 round = 0; round < 4; ++round )
+        {
+            const float32 actual = manager.runParallelReduce( kCount, kBlockSize, 0.0f, addItem, combine );
+            SW_EXPECT_TRUE( actual == expected );
+        }
+        SW_EXPECT_TRUE( manager.runParallelReduce( 0u, kBlockSize, 7.0f, addItem, combine ) == 7.0f ); // 빈 범위는 항등원
+        manager.shutdown();
+    }
+}
+
+/**
+ * @brief 호출 스레드가 제 청크를 끝내고 워커의 청크를 기다리면 합류 대기 계기에 한 번 남고, `takeWaitStats` 는 읽은 몫을 0 으로 되돌린다
+ */
+SW_TEST_CASE( TaskManagerTest, JoinWaitIsCountedAndTakeResetsTheStats )
+{
+    sw::TaskManager manager;
+    SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );
+    (void)manager.takeWaitStats();
+
+    sw::atomic<int32>     workerChunkCount{ 0 };
+    const std::thread::id callerID = std::this_thread::get_id();
+    manager.runParallel( 64, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&workerChunkCount, callerID]( uint32, uint32 )
+    {
+        if ( std::this_thread::get_id() != callerID )
+        {
+            // 워커 청크는 늦게 끝난다 — 호출 스레드가 제 몫을 다 돌고 이 청크를 기다리게 한다.
+            if ( workerChunkCount.fetch_add( 1, std::memory_order_acq_rel ) == 0 )
+                sw::ThreadUtil::sleepForMilliseconds( 5 );
+            return;
+        }
+        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
+        while ( workerChunkCount.load( std::memory_order_acquire ) == 0 && deadline.isExpired() == false )
+        {
+            sw::ThreadUtil::yield();
+        }
+    } ) );
+
+    const sw::TaskManager::WaitStats stats = manager.takeWaitStats();
+    SW_EXPECT_TRUE( workerChunkCount.load() > 0 );
+    SW_EXPECT_EQUAL( uint64{ 1 }, stats._joinWaitCount );
+    SW_EXPECT_TRUE( stats._joinWaitNanos > 0 );
+    SW_EXPECT_EQUAL( uint64{ 0 }, manager.takeWaitStats()._joinWaitCount );
+    manager.shutdown();
+}
+
+/**
+ * @brief `runParallelRangeInto` 는 구간마다 출력 여럿의 같은 구간 조각을 건넨다 — 모든 칸이 한 번씩 자기 번호로 채워지고, 빈 출력은 빈 조각으로 온다(고정 임계 · 비용 측정 둘 다)
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelRangeIntoHandsEachRangeItsOwnSlices )
+{
+    sw::TaskManager manager;
+    SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );
+    constexpr uint32  kCount = 5000;
+    sw::atomic<int32> nonEmptyAbsentCount{ 0 };
+    sw::atomic<int32> wrongSliceCount{ 0 };
+    auto              fill = [&nonEmptyAbsentCount, &wrongSliceCount]( uint32 start, uint32 end, sw::span<uint32> outIndex, sw::span<float32> outHalf, sw::span<uint8> outAbsent )
+    {
+        if ( outAbsent.empty() == false )
+            nonEmptyAbsentCount.fetch_add( 1, std::memory_order_relaxed );
+        if ( outIndex.size() != end - start || outHalf.size() != end - start )
+        {
+            wrongSliceCount.fetch_add( 1, std::memory_order_relaxed );
+            return;
+        }
+        for ( uint32 index = start; index < end; ++index )
+        {
+            outIndex[index - start] += index + 1u;
+            outHalf[index - start] += static_cast<float32>( index ) * 0.5f;
+        }
+    };
+    for ( uint32 round = 0; round < 2; ++round )
+    {
+        sw::vector<uint32>  listIndex( kCount, 0u );
+        sw::vector<float32> listHalf( kCount, 0.0f );
+        if ( round == 0 )
+            manager.runParallelRangeInto( kCount, 1, fill, sw::span<uint32>( listIndex ), sw::span<float32>( listHalf ), sw::span<uint8>{} );
+        else
+            manager.runParallelRangeIntoByCost( kCount, fill, sw::span<uint32>( listIndex ), sw::span<float32>( listHalf ), sw::span<uint8>{} );
+        uint32 wrongCount = 0;
+        for ( uint32 index = 0; index < kCount; ++index )
+        {
+            if ( listIndex[index] != index + 1u || listHalf[index] != static_cast<float32>( index ) * 0.5f )
+                ++wrongCount;
+        }
+        SW_EXPECT_EQUAL( 0u, wrongCount );
+    }
+    SW_EXPECT_EQUAL( 0, nonEmptyAbsentCount.load() );
+    SW_EXPECT_EQUAL( 0, wrongSliceCount.load() );
+    manager.shutdown();
+}

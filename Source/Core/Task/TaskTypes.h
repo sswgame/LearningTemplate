@@ -333,6 +333,7 @@ namespace sw
     {
         Execute,   ///< 태스크 본문 실행(이름 = 태스크 이름)
         WaitStage, ///< 스테이지를 기다림(이름 = 스테이지 이름)
+        WaitJoin,  ///< `runParallel` 계열의 호출 스레드가 남의 청크를 기다림(이름 = "runParallel")
     };
 
     /** @brief 열린 구간 하나입니다. 연 쪽이 준 값을 닫을 때 그대로 돌려줍니다. */

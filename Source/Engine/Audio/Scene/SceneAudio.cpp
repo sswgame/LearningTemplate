@@ -332,26 +332,20 @@ namespace sw
         const uint32 count = static_cast<uint32>( _listEmitterSnapshot.size() );
         _listEmitterMotion.resize( count );
         AudioEmitterComponent* const* const arrEmitter = _listEmitterSnapshot.data();
-        EmitterMotion* const                arrMotion  = _listEmitterMotion.data();
         const float3                        listener   = _primaryListenerPosition;
-        auto                                moveRange  = [arrEmitter, arrMotion, listener, deltaSeconds, bListenerMoved]( uint32 start, uint32 end )
+        engine::runParallelIntoByCost<EmitterMotion>( _listEmitterMotion, [arrEmitter, listener, deltaSeconds, bListenerMoved]( uint32 index, EmitterMotion& outMotion )
         {
-            for ( uint32 index = start; index < end; ++index )
-            {
-                AudioEmitterComponent& emitter  = *arrEmitter[index];
-                const uint32           version  = emitter.getWorldTransformVersion();
-                const bool             bUnmoved = emitter._bHasLastAudioPosition && bListenerMoved == false && version == emitter._seenTransformVersion;
-                EmitterMotion&         motion   = arrMotion[index];
-                motion._position                = bUnmoved ? emitter._lastAudioPosition : emitter.computeAudioPosition( listener );
-                motion._velocity                = bUnmoved ? float3{} : SceneAudioInternal::computeVelocity( motion._position, emitter._lastAudioPosition, emitter._bHasLastAudioPosition, deltaSeconds );
-                emitter._lastAudioPosition      = motion._position;
-                emitter._seenTransformVersion   = version;
-                emitter._bHasLastAudioPosition  = true;
-            }
-        };
-        engine::runParallelByCost( count, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, moveRange ) );
+            AudioEmitterComponent& emitter  = *arrEmitter[index];
+            const uint32           version  = emitter.getWorldTransformVersion();
+            const bool             bUnmoved = emitter._bHasLastAudioPosition && bListenerMoved == false && version == emitter._seenTransformVersion;
+            outMotion._position             = bUnmoved ? emitter._lastAudioPosition : emitter.computeAudioPosition( listener );
+            outMotion._velocity             = bUnmoved ? float3{} : SceneAudioInternal::computeVelocity( outMotion._position, emitter._lastAudioPosition, emitter._bHasLastAudioPosition, deltaSeconds );
+            emitter._lastAudioPosition      = outMotion._position;
+            emitter._seenTransformVersion   = version;
+            emitter._bHasLastAudioPosition  = true;
+        } );
         for ( uint32 index = 0; index < count; ++index )
-            audioEngine.setEmitter( arrEmitter[index]->getEmitterID(), arrMotion[index]._position, arrMotion[index]._velocity );
+            audioEngine.setEmitter( arrEmitter[index]->getEmitterID(), _listEmitterMotion[index]._position, _listEmitterMotion[index]._velocity );
     }
 
     void SceneAudio::updateOcclusion( AudioEngine& audioEngine, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D )

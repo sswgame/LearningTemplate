@@ -59,25 +59,16 @@ namespace sw
     };
 
     /**
-     * @brief 블록들의 압축 · CRC 를 돕니다. 블록 `i` 는 `_pSlot[i]` 에만 씁니다.
+     * @brief 블록들의 압축 · CRC 를 돕니다(`runParallelInto` 본문). 블록 `i` 는 건네받은 제 칸에만 씁니다.
      * @details 코덱은 `open` 에서 한 번 찾는다 — 병렬 구간은 레지스트리를 만지지 않는다. 코덱의 `compress` 는 호출마다 지역 상태를 쓰는 구현이라
      *          한 인스턴스를 여러 스레드가 불러도 된다(`ICompressionCodec` 머리말).
      */
     struct PackStreamWriter::CompressJob
     {
-        BlockSlot* _pSlot{ nullptr };
-        int32      _compressionLevel{ 0 };
+        int32 _compressionLevel{ 0 };
 
-        /** @brief 블록 [start, end) 를 돕니다. */
-        void run( uint32 start, uint32 end )
-        {
-            for ( uint32 index = start; index < end; ++index )
-            {
-                compressOne( _pSlot[index] );
-            }
-        }
-
-        void compressOne( BlockSlot& inoutSlot ) const
+        /** @brief 블록 하나의 CRC 를 구하고 압축해 그 칸에 담습니다. */
+        void operator()( uint32, BlockSlot& inoutSlot ) const
         {
             const Stopwatch stopwatch;
             inoutSlot._crc32          = HashUtil::computeCRC32( inoutSlot._pSource, inoutSlot._rawSize );
@@ -285,12 +276,11 @@ namespace sw
 
         // 2. 압축 · CRC 는 블록마다 독립이라 병렬이다. 작은 창은 나누지 않는다 — 서비스가 없거나 워커가 없으면 `runParallel` 이 이 스레드에서 차례로 돈다.
         CompressJob job;
-        job._pSlot                = listSlot.data();
         job._compressionLevel     = _desc._compressionLevel;
         const uint32    slotCount = static_cast<uint32>( listSlot.size() );
         const uint32    threshold = _pendingBytes >= PackWriterInternal::kMinParallelBytes ? PackWriterInternal::kMinParallelBlockCount : slotCount + 1;
         const Stopwatch compressWatch;
-        engine::runParallel( slotCount, threshold, SW_DELEGATE_METHOD( ParallelBlockDelegate, &CompressJob::run, &job ) );
+        engine::runParallelInto<BlockSlot>( listSlot, threshold, job );
         _stats._compressWallNanos += compressWatch.getElapsedNanoseconds();
 
         // 3. 받은 순서(경로 해시 순)로 쓴다. 블록 칸은 항목 순서 그대로 이어져 있다.

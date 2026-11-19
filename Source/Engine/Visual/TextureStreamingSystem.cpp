@@ -49,26 +49,21 @@ namespace sw
         const vector<ScenePrimitive*>& listPrimitive = _manager.getPrimitiveRegistry().getAll(); // 메시 계열만 든다(`ScenePrimitive.h` 의 불변식)
         const uint32                   count         = static_cast<uint32>( listPrimitive.size() );
         _listMeshScreenSize.resize( count );
-        float32* const arrScreenSize = _listMeshScreenSize.data();
-        auto           measureRange  = [&lodSystem, &listPrimitive, arrScreenSize]( uint32 start, uint32 end )
+        engine::runParallelIntoByCost<float32>( _listMeshScreenSize, [&lodSystem, &listPrimitive]( uint32 index, float32& outScreenSize )
         {
-            for ( uint32 index = start; index < end; ++index )
+            // 화면 크기 × UV 밀도 / 반지름 — 화면에서 UV 한 단위가 덮는 픽셀의 대리값이다(배율은 밀도 · 반지름에 같이 들어 지워진다). 같은 화면 크기라도
+            // UV 를 촘촘히 펼친 메시가 위쪽 밉을 먼저 받는다(언리얼 텍스처 스트리밍의 UV density). UV 가 없는 메시는 0 이라 알리지 않는다.
+            // 빈 칸(지운 프리미티브 — 레지스트리는 칸을 옮기지 않고 비워 둔다)은 0 이라 알리지 않는다.
+            if ( listPrimitive[index] == nullptr )
             {
-                // 화면 크기 × UV 밀도 / 반지름 — 화면에서 UV 한 단위가 덮는 픽셀의 대리값이다(배율은 밀도 · 반지름에 같이 들어 지워진다). 같은 화면 크기라도
-                // UV 를 촘촘히 펼친 메시가 위쪽 밉을 먼저 받는다(언리얼 텍스처 스트리밍의 UV density). UV 가 없는 메시는 0 이라 알리지 않는다.
-                // 빈 칸(지운 프리미티브 — 레지스트리는 칸을 옮기지 않고 비워 둔다)은 0 이라 알리지 않는다.
-                if ( listPrimitive[index] == nullptr )
-                {
-                    arrScreenSize[index] = 0.0f;
-                    continue;
-                }
-                const MeshComponent& mesh    = static_cast<const MeshComponent&>( *listPrimitive[index] );
-                const Mesh* const    pMesh   = mesh.getMesh().get();
-                const float32        density = pMesh != nullptr ? pMesh->getUVDensity() / MathUtil::max( pMesh->getBoundingRadius(), MathUtil::kEpsilon ) : 0.0f;
-                arrScreenSize[index]         = lodSystem.computeScreenSize( mesh ) * density;
+                outScreenSize = 0.0f;
+                return;
             }
-        };
-        engine::runParallelByCost( count, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, measureRange ) );
+            const MeshComponent& mesh    = static_cast<const MeshComponent&>( *listPrimitive[index] );
+            const Mesh* const    pMesh   = mesh.getMesh().get();
+            const float32        density = pMesh != nullptr ? pMesh->getUVDensity() / MathUtil::max( pMesh->getBoundingRadius(), MathUtil::kEpsilon ) : 0.0f;
+            outScreenSize                = lodSystem.computeScreenSize( mesh ) * density;
+        } );
         // 메시 패스는 머티리얼별 최댓값만 구한다. 글 만들기 · 경로 정규화 · 잠금은 머티리얼마다 한 번이다.
         _mapMaterialScreenSize.clear();
         for ( uint32 index = 0; index < count; ++index )

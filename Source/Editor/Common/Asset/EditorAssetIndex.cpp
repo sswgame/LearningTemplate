@@ -170,25 +170,21 @@ namespace sw::editor
             {
                 string_view          _resourceRoot;
                 const string* const* _ppDisplayPath{ nullptr };
-                FileRead*            _pArrRead{ nullptr };
                 StopToken            _stopToken{};
 
-                void run( uint32 start, uint32 end )
+                /** @brief 파일 @p index 의 시각 · 글을 읽어 제 칸 @p outRead 에 씁니다(`runParallelInto` 본문). */
+                void operator()( uint32 index, FileRead& outRead ) const
                 {
-                    for ( uint32 index = start; index < end; ++index )
-                    {
-                        if ( _stopToken.isStopRequested() )
-                            return; // 결과는 불완전하니 부른 쪽이 신호를 다시 읽고 버린다
-                        const string& displayPath = *_ppDisplayPath[index];
-                        const string  absPath     = makeDiskPath( _resourceRoot, displayPath );
-                        FileRead&     read        = _pArrRead[index];
-                        (void)FileUtil::getFileStamp( absPath, read._fileStamp ); // 목록 뒤에 사라진 파일은 시각이 비어 다음 바뀜에서 다시 읽는다
-                        // 목록을 모은 뒤 지워진 파일(에디터가 옮기는 중)은 읽지 않는다 — readTextFile 은 없는 파일을 오류로 남긴다.
-                        if ( EditorAssetIndex::isTextAsset( displayPath ) )
-                            read._bText = FileUtil::readOptionalTextFile( absPath, read._text ) == OptionalFileRead::Read ? SW_TRUE : SW_FALSE;
-                        else
-                            read._bMeta = readMetaText( absPath, read._metaText ) ? SW_TRUE : SW_FALSE;
-                    }
+                    if ( _stopToken.isStopRequested() )
+                        return; // 결과는 불완전하니 부른 쪽이 신호를 다시 읽고 버린다
+                    const string& displayPath = *_ppDisplayPath[index];
+                    const string  absPath     = makeDiskPath( _resourceRoot, displayPath );
+                    (void)FileUtil::getFileStamp( absPath, outRead._fileStamp ); // 목록 뒤에 사라진 파일은 시각이 비어 다음 바뀜에서 다시 읽는다
+                    // 목록을 모은 뒤 지워진 파일(에디터가 옮기는 중)은 읽지 않는다 — readTextFile 은 없는 파일을 오류로 남긴다.
+                    if ( EditorAssetIndex::isTextAsset( displayPath ) )
+                        outRead._bText = FileUtil::readOptionalTextFile( absPath, outRead._text ) == OptionalFileRead::Read ? SW_TRUE : SW_FALSE;
+                    else
+                        outRead._bMeta = readMetaText( absPath, outRead._metaText ) ? SW_TRUE : SW_FALSE;
                 }
             };
         };
@@ -373,17 +369,16 @@ namespace sw::editor
         EditorAssetIndexInternal::ScanJob          job{};
         job._resourceRoot  = resourceRoot;
         job._ppDisplayPath = listPointer.data();
-        job._pArrRead      = listRead.data();
         job._stopToken     = stopToken;
         if ( pTaskManager != nullptr )
         {
             // 호출 스레드가 워커여도 된다: `runParallel` 은 호출 스레드가 첫 청크부터 직접 돌고, 합류를 기다리는 동안 다른 일을 돕는다.
-            pTaskManager->runParallel( fileCount, EditorAssetIndexInternal::kSerialFileThreshold,
-                                       SW_DELEGATE_METHOD( ParallelBlockDelegate, &EditorAssetIndexInternal::ScanJob::run, &job ) );
+            pTaskManager->runParallelInto<EditorAssetIndexInternal::FileRead>( listRead, EditorAssetIndexInternal::kSerialFileThreshold, job );
         }
         else
         {
-            job.run( 0, fileCount );
+            for ( uint32 fileIndex = 0; fileIndex < fileCount; ++fileIndex )
+                job( fileIndex, listRead[fileIndex] );
         }
 
         outData._mapEntry.reserve( fileCount );

@@ -166,6 +166,182 @@ namespace sw
         void runParallelByCostWithClock( uint32 count, const ParallelBlockDelegate& body, NanosecondClock pClock );
 
         /**
+         * @struct ParallelIntoJob
+         * @brief `runParallelInto` 의 본문 어댑터입니다. 출력 칸의 시작 포인터를 **호출 스레드에서** 한 번 집고, 구간의 항목마다 `body( index, slot )` 을 부릅니다.
+         */
+        template <typename T, typename Body>
+        struct ParallelIntoJob
+        {
+            T*          _pOutput{ nullptr }; ///< 출력 칸의 시작(호출 스레드가 span 에서 집었다)
+            const Body* _pBody{ nullptr };   ///< 항목 하나를 처리하는 본문 — `( uint32 index, T& slot )`
+
+            /** @brief [start, end) 의 항목마다 본문에 제 칸을 건넵니다. */
+            void runRange( uint32 start, uint32 end ) const
+            {
+                for ( uint32 index = start; index < end; ++index )
+                {
+                    ( *_pBody )( index, _pOutput[index] );
+                }
+            }
+        };
+
+        /**
+         * @struct ParallelReduceJob
+         * @brief `runParallelReduce` 의 블록 본문입니다. 블록 하나의 항목을 **번호 순서로** 그 블록의 부분값 칸에 접습니다.
+         * @details 블록 경계는 항목 수와 블록 크기로만 정해진다(워커 수 · 도착 순서와 무관) — 그래서 부분값과 그 합치기 순서가 직렬과 같다.
+         */
+        template <typename T, typename Body>
+        struct ParallelReduceJob
+        {
+            uint32      _count{ 0 };       ///< 전체 항목 수
+            uint32      _blockSize{ 1 };   ///< 블록 하나의 항목 수
+            const Body* _pBody{ nullptr }; ///< 항목 하나를 부분값에 접는 본문 — `( uint32 index, T& partial )`
+
+            /** @brief 블록 @p blockIndex 의 항목을 순서대로 @p outPartial 에 접습니다. */
+            void operator()( uint32 blockIndex, T& outPartial ) const
+            {
+                const uint32 start = blockIndex * _blockSize;
+                const uint32 end   = ( _count - start < _blockSize ) ? _count : start + _blockSize;
+                for ( uint32 index = start; index < end; ++index )
+                {
+                    ( *_pBody )( index, outPartial );
+                }
+            }
+
+            /** @brief @p count 항목을 @p blockSize 씩 자른 블록 수입니다. */
+            static uint32 computeBlockCount( uint32 count, uint32 blockSize ) { return count / blockSize + ( count % blockSize != 0 ? 1u : 0u ); } // 올림 — `count + blockSize - 1` 은 큰 수에서 넘친다
+
+            /** @brief 부분값을 **블록 순서로** 합칩니다. 첫 블록부터 왼쪽으로 접는다 — 부동소수 합도 실행마다 같은 비트다. */
+            template <typename Combine>
+            static T combineInOrder( vector<T>& inoutListPartial, const Combine& combine )
+            {
+                T result = std::move( inoutListPartial[0] );
+                for ( size_t blockIndex = 1; blockIndex < inoutListPartial.size(); ++blockIndex )
+                {
+                    result = combine( std::move( result ), std::move( inoutListPartial[blockIndex] ) );
+                }
+                return result;
+            }
+        };
+
+        /**
+         * @brief 항목 하나가 출력 칸 하나를 쓰는 포크-조인 병렬 for 입니다(Taskflow `for_each_index` + 결과 배열, 언리얼 `ParallelFor` 의 결과 배열 모양).
+         * @details 본문은 `body( uint32 index, T& slot )` 이고 @p output 의 **제 칸만** 받습니다. 칸을 형식으로 건네므로 본문이 출력 컨테이너를 잡을 일이 없다 —
+         *          벡터를 람다로 잡으면 다른 칸이라도 컨테이너 쓰기 접근이라 경합 감지기에 걸리고(반사 프로브 거르기), 호출부마다 `.data()` 포인터를 손으로 받던 모양이
+         *          여기 한 곳으로 모인다. 공유 쓰기는 끝난 뒤 호출 스레드가 목록 순서로 한다. 나누기 규칙은 `runParallel`. 엔진 코드는 `engine::runParallelInto`.
+         *          원소 타입을 적어 부르면(`runParallelInto<float32>( list, … )`) 컨테이너가 span 으로 바뀐다.
+         */
+        template <typename T, typename Body>
+        void runParallelInto( span<T> output, uint32 serialThreshold, const Body& body )
+        {
+            using Job = ParallelIntoJob<T, Body>;
+            SW_ASSERT( output.size() == static_cast<uint32>( output.size() ) );
+            const Job job{ output.data(), &body };
+            runParallel( static_cast<uint32>( output.size() ), serialThreshold, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /** @brief `runParallelInto` 와 같되 나눌지를 측정한 비용으로 정합니다(`runParallelByCost`). 항목당 비용을 모르면 이쪽입니다. */
+        template <typename T, typename Body>
+        void runParallelIntoByCost( span<T> output, const Body& body )
+        {
+            using Job = ParallelIntoJob<T, Body>;
+            SW_ASSERT( output.size() == static_cast<uint32>( output.size() ) );
+            const Job job{ output.data(), &body };
+            runParallelByCost( static_cast<uint32>( output.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /**
+         * @struct ParallelRangeIntoJob
+         * @brief `runParallelRangeInto` 의 본문 어댑터입니다. 구간 [start, end) 마다 출력 span 들을 그 구간으로 잘라 `body( start, end, span<T0>, span<T1>, … )` 에 건넵니다.
+         * @details 빈 출력은 "그 스트림이 없다" 는 뜻이라 빈 채로 건넵니다(법선 · UV 처럼 고를 수 있는 SoA 스트림).
+         */
+        template <typename Body, typename... Ts>
+        struct ParallelRangeIntoJob
+        {
+            std::tuple<span<Ts>...> _outputs;          ///< 항목 수와 같은 길이이거나 빈 출력들(호출 스레드가 만들었다)
+            const Body*             _pBody{ nullptr }; ///< 구간 하나를 처리하는 본문 — `( uint32 start, uint32 end, span<Ts>... )`
+
+            /** @brief 출력마다 [start, end) 를 잘라 본문을 부릅니다. */
+            void runRange( uint32 start, uint32 end ) const
+            {
+                std::apply( [this, start, end]( const span<Ts>&... outputs )
+                { ( *_pBody )( start, end, sliceOutput( outputs, start, end )... ); }, _outputs );
+            }
+
+            /** @brief @p output 의 [start, end) 입니다. 빈 출력은 빈 채로 둡니다. */
+            template <typename T>
+            static span<T> sliceOutput( const span<T>& output, uint32 start, uint32 end )
+            {
+                return output.empty() ? output : output.subspan( start, end - start );
+            }
+
+            /** @brief 출력이 모두 @p count 길이이거나 비었는지입니다. 길이가 다른 출력을 자르면 남의 칸을 쓴다 — 부르는 쪽 잘못이라 단언으로 멈춘다. */
+            static bool hasItemCount( uint32 count, const span<Ts>&... outputs ) { return ( ( outputs.empty() || outputs.size() == count ) && ... ); }
+        };
+
+        /**
+         * @brief 출력 칸이 여럿인 포크-조인 병렬 for 입니다 — 본문은 `body( start, end, span<T0> out0, span<T1> out1, … )` 이고 각 출력의 [start, end) **조각만** 받습니다.
+         * @details 항목 하나가 칸 여럿을 쓰거나(후보 + 표시), 구간째 일괄 처리하는 백엔드 호출(바디 상태 묶음 읽기)이나 SoA 스트림(위치 · 법선)처럼 구간이 일의 모양인 곳에 씁니다.
+         *          출력 시작 포인터를 호출부마다 손으로 받던 모양을 형식으로 막는다 — 본문은 제 구간 밖의 칸을 볼 수 없다. 출력은 길이가 @p count 이거나 비어야 하고(빈 것은
+         *          "없는 스트림"), 원소 타입은 span 으로 넘겨 정해진다(`vector_reference<float3>( list )`). 읽기 입력은 지금처럼 const 포인터로 잡습니다. 나누기 규칙은 `runParallel`.
+         */
+        template <typename Body, typename... Ts>
+        void runParallelRangeInto( uint32 count, uint32 serialThreshold, const Body& body, span<Ts>... outputs )
+        {
+            using Job = ParallelRangeIntoJob<Body, Ts...>;
+            SW_ASSERT( Job::hasItemCount( count, outputs... ) );
+            const Job job{ std::tuple<span<Ts>...>{ outputs... }, &body };
+            runParallel( count, serialThreshold, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /** @brief `runParallelRangeInto` 와 같되 나눌지를 측정한 비용으로 정합니다(`runParallelByCost`). */
+        template <typename Body, typename... Ts>
+        void runParallelRangeIntoByCost( uint32 count, const Body& body, span<Ts>... outputs )
+        {
+            using Job = ParallelRangeIntoJob<Body, Ts...>;
+            SW_ASSERT( Job::hasItemCount( count, outputs... ) );
+            const Job job{ std::tuple<span<Ts>...>{ outputs... }, &body };
+            runParallelByCost( count, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Job::runRange, &job ) );
+        }
+
+        /**
+         * @brief 결정적 병렬 리듀스입니다(Taskflow `reduce` · `transform_reduce`). [0, count) 를 @p blockSize 씩 블록으로 자르고, 블록마다 @p identity 에서 시작해
+         *        `body( index, T& partial )` 로 항목을 번호 순서로 접은 뒤, 부분값을 블록 순서로 `combine( T, T )` 해 돌려줍니다.
+         * @details 블록 경계가 항목 수와 블록 크기로만 정해지므로 워커 수 · 스케줄과 무관하게 결과가 같다(부동소수 합도 같은 비트 — 원자 더하기나 스레드별 칸은
+         *          도착 순서 · 스레드 수에 따라 합 순서가 바뀐다). 직렬로 돌아도 같은 블록 · 같은 순서다. 블록은 비용을 재어 나눈다(`runParallelIntoByCost`).
+         *          부분값 칸은 블록 수만큼 한 번 잡는다 — 블록 크기는 항목 수가 아니라 블록 하나가 디스패치 비용보다 커지게 고른다.
+         */
+        template <typename T, typename Body, typename Combine>
+        [[nodiscard]] T runParallelReduce( uint32 count, uint32 blockSize, const T& identity, const Body& body, const Combine& combine )
+        {
+            using Job = ParallelReduceJob<T, Body>;
+            SW_ASSERT( blockSize > 0 );
+            if ( count == 0 )
+                return identity;
+            vector<T> listPartial( Job::computeBlockCount( count, blockSize ), identity );
+            runParallelIntoByCost<T>( listPartial, Job{ count, blockSize, &body } );
+            return Job::combineInOrder( listPartial, combine );
+        }
+
+        /**
+         * @struct WaitStats
+         * @brief 작업 시스템의 대기 계기입니다(측정 먼저 — 묶음 제출 · 우선순위 레인을 정하기 전의 근거). `takeWaitStats` 가 지난번 이후의 몫을 돌려줍니다.
+         */
+        struct WaitStats
+        {
+            uint64 _joinWaitCount{ 0 }; ///< `runParallel` 계열에서 호출 스레드가 제 청크를 다 돌고도 남의 청크를 기다린 횟수
+            uint64 _joinWaitNanos{ 0 }; ///< 그 합류 대기 구간의 합(ns, 기다리며 도운 시간 포함)
+            uint64 _joinParkCount{ 0 }; ///< 합류 · 스테이지 대기 중 스핀으로 못 끝나 잠든(futex) 횟수
+            uint64 _idleParkCount{ 0 }; ///< 할 일이 없어 워커가 잠든 횟수
+        };
+
+        /**
+         * @brief 지난 호출 이후 쌓인 대기 계기를 돌려주고 0 으로 되돌립니다. 읽는 쪽은 하나입니다(엔진 프레임 끝 — `Task.*` 카운터).
+         * @details 칸마다 exchange 라 그 사이에 더해진 몫은 다음 호출로 넘어간다(버리지 않는다).
+         */
+        [[nodiscard]] WaitStats takeWaitStats();
+
+        /**
          * @brief 스테이지를 만듭니다. 풀에서 꺼내므로 프레임이 안정된 상태에서는 힙을 건드리지 않습니다.
          * @details 이름으로 찾는 스테이지는 두지 않습니다. 스테이지를 나눠 쓰려면 핸들을 복사해 건네십시오.
          */
@@ -505,6 +681,11 @@ namespace sw
         WaiterSlot _arrHelperWaiter[kMaxHelperThreadCount];
 
         alignas( 64 ) atomic<uint32> _activeTaskCount; ///< 지금 실행 중이거나 대기 중인 활성 태스크의 총 수
+        /// 대기 계기(`WaitStats`)의 칸 — 잠드는 길(futex 앞)과 합류 대기 끝에서만 relaxed 로 더한다. 태스크마다 쓰는 `_activeTaskCount` 와 같은 줄에 두어 새로 오가는 캐시 줄을 만들지 않는다.
+        atomic<uint64> _joinWaitCount{ 0 };
+        atomic<uint64> _joinWaitNanos{ 0 };
+        atomic<uint64> _joinParkCount{ 0 };
+        atomic<uint64> _idleParkCount{ 0 };
         /**
          * @brief `clear()` 가 활성 수를 0 으로 놓을 때마다 올리는 세대입니다. 노드는 만들 때의 값을 적어 둡니다(`TaskNode::_clearEpoch`).
          * @details 그 전에 만든 노드가 나중에 버려져도 이미 0 으로 놓은 수를 한 번 더 내리지 않게 가립니다(내리면 0xFFFFFFFF 로 돌아 `waitAll` 이 멈춘다).
