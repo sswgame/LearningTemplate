@@ -2691,7 +2691,7 @@
 		<entry key="EditorProfiler.UnloadTrace"
 		       text="불러온 트레이스를 타임라인에서 뺍니다"
 		       sourceHash="87280b27fd6b0d50" />
-		<entry key="EditorRenderDebug.BufferNotRead" text="아직 읽지 않았거나 버퍼 크기를 모릅니다(크기 없이 등록됨)." sourceHash="2e6a30a7c2b9504c" />
+		<entry key="EditorRenderDebug.BufferNotRead" text="버퍼를 읽지 못했습니다. 읽기를 눌러 다시 시도합니다." sourceHash="9139b427563cebc5" />
 		<entry key="EditorRenderDebug.BuffersTab" text="버퍼" sourceHash="7d30a9bcfe5ab1b8" />
 		<entry key="EditorRenderDebug.Capture" text="캡처" sourceHash="1a5230a71d9285c1" />
 		<entry key="EditorRenderDebug.CaptureTip" text="다음 프레임에 컴파일한 렌더 그래프(뷰 · 프레임)를 복사합니다: 레벨별 패스, 자원, 전이, 패스마다 GPU 시간." sourceHash="a1f27c2e58ec5c16" />
@@ -2715,7 +2715,6 @@
 		<entry key="EditorRenderDebug.ReadingBuffer" text="버퍼를 읽는 중..." sourceHash="463de26980138068" />
 		<entry key="EditorRenderDebug.RefreshList" text="목록 새로 고침" sourceHash="92c563806699b3c4" />
 		<entry key="EditorRenderDebug.RenderGraphTab" text="렌더 그래프" sourceHash="f63f73de8681a3e5" />
-		<entry key="EditorRenderDebug.SizeUnknown" text="크기 모름" sourceHash="2903de27dfcfd156" />
 		<entry key="EditorRenderDebug.StopAt" text="드로우 {event} / {eventCount}: {pass} #{draw}" sourceHash="f2d483ef565cf585" />
 		<entry key="EditorRenderDebug.StreamingHeader" text="텍스처 스트리밍" sourceHash="2f3f4de1d7ab06b4" />
 		<entry key="EditorRenderDebug.StreamingSummary" text="스트리밍 텍스처 {textureCount}, 원하는 밉보다 거친 것 {belowWantedCount}(밉 {missingMipCount}), 업로드 대기 {uploadsWaiting}" sourceHash="bc0ebd0406b31e09" />

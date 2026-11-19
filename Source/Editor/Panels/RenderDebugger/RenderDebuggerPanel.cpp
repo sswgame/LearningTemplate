@@ -353,10 +353,7 @@ namespace sw::editor
                 _viewModel.selectBuffer( index );
             EditorSelfTestMarks::recordFormat( "renderDebugger.buffer.%#", index );
             ImGui::SameLine();
-            if ( entry._elementSize > 0 )
-                ImGui::TextDisabled( "[%u]  %u x %u B", entry._slot, entry._elementCount, entry._elementSize );
-            else
-                ImGui::TextDisabled( "[%u]  %s", entry._slot, SW_LOCKEY( "EditorRenderDebug", "SizeUnknown" ) );
+            ImGui::TextDisabled( "[%u]  %u x %u B", entry._slot, entry._elementCount, entry._elementSize );
             ImGui::PopID();
         }
         ImGui::EndChild();

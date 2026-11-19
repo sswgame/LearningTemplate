@@ -6,13 +6,14 @@
 
 namespace sw
 {
-    bool FrameBufferTable::registerBuffer( hashed_string name, uint32 slot, RHIBufferHandle buffer, RenderGraphAccess initialAccess )
-    {
-        return registerEntry( Entry{ name, slot, buffer, RenderGraphViewableKind::Buffer, initialAccess } );
-    }
-
     bool FrameBufferTable::registerBuffer( hashed_string name, uint32 slot, const RHIStructuredBuffer& buffer, RenderGraphAccess initialAccess )
     {
+        // 크기 없는 버퍼는 받지 않는다 — 버퍼 보기(`RenderBufferInspector`)가 읽을 길이를 모르는 등록이 생기지 않게.
+        if ( buffer._buffer != 0 && ( buffer._elementSize == 0 || buffer._capacityElements == 0 ) )
+        {
+            SW_LOG_ERROR_ID( "FrameBufferTable.SizeMissing", "Frame resource '%#' slot %# was registered without an element size or capacity - the registration is ignored", name.c_str(), slot );
+            return false;
+        }
         Entry entry{ name, slot, buffer._buffer, RenderGraphViewableKind::Buffer, initialAccess };
         entry._elementSize  = buffer._elementSize;
         entry._elementCount = buffer._capacityElements;

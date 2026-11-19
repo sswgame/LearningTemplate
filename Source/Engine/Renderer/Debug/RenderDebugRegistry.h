@@ -56,12 +56,12 @@ namespace sw
         uint64 _serial{ 0 };        ///< 공개 번호(0 이면 아직 없다)
     };
 
-    /** @brief 그래프 밖 버퍼 하나입니다(`FrameBufferTable` 등록 — 크기를 아는 것만 읽을 수 있다). */
+    /** @brief 그래프 밖 버퍼 하나입니다(`FrameBufferTable` 등록 — 늘 크기가 있다). */
     struct RenderBufferEntry
     {
         string _name;
         uint32 _slot{ 0 };         ///< 뷰 칸(주 시점 0)
-        uint32 _elementSize{ 0 };  ///< 원소 바이트(0 이면 크기를 모른다 — 읽지 않는다)
+        uint32 _elementSize{ 0 };  ///< 원소 바이트(표는 크기 있는 등록만 받는다)
         uint32 _elementCount{ 0 }; ///< 원소 수
     };
 

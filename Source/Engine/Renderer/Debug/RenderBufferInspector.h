@@ -3,7 +3,7 @@
  * @brief 그래프 밖 버퍼(`FrameBufferTable` 등록분)를 CPU 로 읽어 `RenderDebugRegistry` 에 공개하는 렌더 쪽 조각입니다 — 에디터 버퍼 보기 · 개발 명령이 요청한다.
  * @details 프레임 그래프를 다 기록한 뒤(`FramePassExecutor::recordFrameGraph`) 부른다 — 그때 버퍼는 그래프가 마지막으로 둔 접근이라 복사 뒤 그 상태로 되돌린다.
  *          읽기는 `AsyncBufferReadback` 이라 기다리지 않고 몇 프레임 뒤에 도착한다. 읽기 버퍼는 장치의 것이라 렌더러가 갖고(`release` — 장치보다 먼저) 우편함은 값만 든다.
- *          크기를 모르는 등록(핸들만 — `FrameBufferTable::registerBuffer` 의 핸들 판)은 읽지 않고 빈 결과를 공개한다(남의 버퍼 끝을 넘어 복사하지 않는다).
+ *          표는 크기 있는 등록만 받으므로(`FrameBufferTable::registerBuffer` — 구조 버퍼 판뿐) 복사 길이는 늘 등록 크기다(남의 버퍼 끝을 넘지 않는다).
  */
 #pragma once
 #include "Core/Foundation/Expected.h"

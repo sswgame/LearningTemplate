@@ -7662,7 +7662,7 @@
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorRenderDebug.BufferNotRead" source="Not read yet, or the buffer size is unknown (registered without a size).">
+		<entry key="EditorRenderDebug.BufferNotRead" source="Could not read the buffer. Press Read to try again.">
 			<origins>
 				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
 			</origins>
@@ -7778,11 +7778,6 @@
 			</origins>
 		</entry>
 		<entry key="EditorRenderDebug.RenderGraphTab" source="Render Graph">
-			<origins>
-				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorRenderDebug.SizeUnknown" source="size unknown">
 			<origins>
 				<item>Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp</item>
 			</origins>

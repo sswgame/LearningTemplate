@@ -7424,8 +7424,8 @@ msgstr "불러온 트레이스를 타임라인에서 뺍니다"
 
 #: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
 msgctxt "EditorRenderDebug.BufferNotRead"
-msgid "Not read yet, or the buffer size is unknown (registered without a size)."
-msgstr "아직 읽지 않았거나 버퍼 크기를 모릅니다(크기 없이 등록됨)."
+msgid "Could not read the buffer. Press Read to try again."
+msgstr "버퍼를 읽지 못했습니다. 읽기를 눌러 다시 시도합니다."
 
 #: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
 msgctxt "EditorRenderDebug.BuffersTab"
@@ -7541,11 +7541,6 @@ msgstr "목록 새로 고침"
 msgctxt "EditorRenderDebug.RenderGraphTab"
 msgid "Render Graph"
 msgstr "렌더 그래프"
-
-#: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
-msgctxt "EditorRenderDebug.SizeUnknown"
-msgid "size unknown"
-msgstr "크기 모름"
 
 #: Source/Editor/Panels/RenderDebugger/RenderDebuggerPanel.cpp
 msgctxt "EditorRenderDebug.StopAt"

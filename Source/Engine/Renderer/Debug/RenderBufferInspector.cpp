@@ -39,7 +39,7 @@ namespace sw
         uint32 serial = 0;
         if ( registry.takeBufferReadRequest( name, slot, serial ) == false )
             return;
-        // 실패(없는 이름 · 크기를 모름 · 읽기 버퍼를 못 만듦 · 고리가 참)는 빈 결과로 알린다 — 창이 "읽지 못함" 을 보이고 다시 요청할 수 있다.
+        // 실패(없는 이름 · 읽기 버퍼를 못 만듦 · 고리가 참)는 빈 결과로 알린다 — 창이 "읽지 못함" 을 보이고 다시 요청할 수 있다.
         RenderBufferContent failure{
             RenderBufferEntry{ name, slot, 0, 0 },
             {},
@@ -54,7 +54,7 @@ namespace sw
             failure._entry                            = RenderBufferEntry{ name, slot, entry._elementSize, entry._elementCount };
             const RenderGraphAccess        lastAccess = context.findAccess( entry._name ).value_or( entry._initialAccess );
             const optional<RHIBufferState> stateAfter = findState( lastAccess );
-            const bool                     bReadable  = entry._elementSize > 0 && entry._elementCount > 0 && stateAfter.has_value() &&
+            const bool                     bReadable  = stateAfter.has_value() &&
                                    _readback.initialize( pDevice, entry._elementSize, entry._elementCount );
             if ( bReadable && _readback.request( cmd, static_cast<RHIBufferHandle>( entry._handle ), *stateAfter, ++_tag ) )
             {
