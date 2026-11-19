@@ -20,7 +20,7 @@ namespace sw
 {
     BoatComponent::BoatComponent()
         : PhysicsComponent{ PhysicsComponentPhase::Joint }
-        , _maxRudderAngle{ 0.6f }
+        , _maxRudderAngle{ Radians::fromRadians( 0.6f ) }
         , _rudderForce{ 150.0f }
         , _rudderPosition{ 0.0f, -0.3f, -2.8f }
         , _engineThrust{ 0.0f }
@@ -57,7 +57,7 @@ namespace sw
 
     void BoatComponent::setRudder( float32 maxAngle, float32 force, const float3& localPosition )
     {
-        _maxRudderAngle = maxAngle;
+        _maxRudderAngle = Radians::fromRadians( maxAngle );
         _rudderForce    = force;
         _rudderPosition = localPosition;
     }
@@ -183,7 +183,7 @@ namespace sw
         pScene->addImpulse( body, ( drag + forward * thrust ) * fixedDeltaTime );
 
         // 키: 선미를 옆으로 민다. 위 축 회전 저항이 선회를 멈춘다.
-        const float32 rudderForce = computeRudderForce( _rudderForce, forwardSpeed, _input._rudder * _maxRudderAngle ) * submergedRatio;
+        const float32 rudderForce = computeRudderForce( _rudderForce, forwardSpeed, _input._rudder * _maxRudderAngle.radians() ) * submergedRatio;
         const float3  rudderPoint = bodyPosition + float3::transform( _rudderPosition, bodyRotation );
         pScene->addImpulseAtPoint( body, right * ( -rudderForce * fixedDeltaTime ), rudderPoint );
         pScene->addTorque( body, float3{ 0.0f, -_yawDrag * angularVelocity._y * submergedRatio, 0.0f } );

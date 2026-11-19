@@ -6,6 +6,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/PhysicsTypes.h"
@@ -94,8 +95,8 @@ namespace sw
         float32 _suspensionFrequency;
         PROPERTY( Category = "Suspension", DisplayName = "Damping", Min = 0.0, Tooltip = "Damping ratio" )
         float32 _suspensionDamping;
-        PROPERTY( Category = "Steering", DisplayName = "Max Steer Angle", Min = 0.0, Max = 1.5, Units = rad )
-        float32 _maxSteerAngle;
+        PROPERTY( Category = "Steering", DisplayName = "Max Steer Angle", Min = 0.0, Max = 85.9 )
+        Radians _maxSteerAngle;
         PROPERTY( Category = "Brakes", DisplayName = "Max Brake Torque", Min = 0.0, Units = "N*m" )
         float32 _maxBrakeTorque;
         PROPERTY( Category = "Brakes", DisplayName = "Max Hand Brake Torque", Min = 0.0, Tooltip = "Rear wheels only", Units = "N*m" )

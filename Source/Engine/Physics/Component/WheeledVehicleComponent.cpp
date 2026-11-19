@@ -22,7 +22,7 @@ namespace sw
         , _suspensionMaxLength{ 0.35f }
         , _suspensionFrequency{ 1.5f }
         , _suspensionDamping{ 0.5f }
-        , _maxSteerAngle{ 0.52f }
+        , _maxSteerAngle{ Radians::fromRadians( 0.52f ) }
         , _maxBrakeTorque{ 1500.0f }
         , _maxHandBrakeTorque{ 4000.0f }
         , _engineMaxTorque{ 500.0f }
@@ -87,7 +87,7 @@ namespace sw
                 wheel._suspensionMaxLength = _suspensionMaxLength;
                 wheel._suspensionFrequency = _suspensionFrequency;
                 wheel._suspensionDamping   = _suspensionDamping;
-                wheel._maxSteerAngle       = axleIndex == 0 ? _maxSteerAngle : 0.0f;
+                wheel._maxSteerAngle       = axleIndex == 0 ? _maxSteerAngle.radians() : 0.0f;
                 wheel._maxBrakeTorque      = _maxBrakeTorque;
                 wheel._maxHandBrakeTorque  = axleIndex == 0 ? 0.0f : _maxHandBrakeTorque;
                 desc._listWheel.push_back( wheel );

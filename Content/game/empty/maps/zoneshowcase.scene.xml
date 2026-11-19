@@ -398,7 +398,7 @@
 		<entity id="35" name="Walker">
 			<GameObject _schemaVersion="0" _name="Walker" _bActive="true">
 				<_listComponent>
-					<CharacterControllerComponent _localPosition="0,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
+					<CharacterControllerComponent _localPosition="0,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
 					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
 					<AbilityComponent _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
@@ -422,7 +422,7 @@
 		<entity id="36" name="Villager">
 			<GameObject _schemaVersion="0" _name="Villager" _bActive="true">
 				<_listComponent>
-					<CharacterControllerComponent _localPosition="4,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
+					<CharacterControllerComponent _localPosition="4,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
 					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
 					<AbilityComponent _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
@@ -442,7 +442,7 @@
 		<entity id="37" name="Victim">
 			<GameObject _schemaVersion="0" _name="Victim" _bActive="true">
 				<_listComponent>
-					<CharacterControllerComponent _localPosition="8,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
+					<CharacterControllerComponent _localPosition="8,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
 					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
 					<AbilityComponent _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
@@ -461,7 +461,7 @@
 		<entity id="38" name="Spirit">
 			<GameObject _schemaVersion="0" _name="Spirit" _bActive="true">
 				<_listComponent>
-					<CharacterControllerComponent _localPosition="12,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
+					<CharacterControllerComponent _localPosition="12,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" />
 					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" />
 					<AbilityComponent _abilitySetID="FireSpirit" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />

@@ -49,8 +49,8 @@ namespace sw
     float2 RideFeelSettings::computeLean( const float3& localAcceleration ) const
     {
         // 가속도를 거슬러 기운다: 앞 가속(+z)이면 뒤로(숙임 −), 오른쪽 가속(+x)이면 왼쪽(+).
-        const float32 forward = MathUtil::clamp( -_leanPerAcceleration * localAcceleration._z, -_maxLean, _maxLean );
-        const float32 side    = MathUtil::clamp( _leanPerAcceleration * localAcceleration._x, -_maxLean, _maxLean );
+        const float32 forward = MathUtil::clamp( -_leanPerAcceleration * localAcceleration._z, -_maxLean.radians(), _maxLean.radians() );
+        const float32 side    = MathUtil::clamp( _leanPerAcceleration * localAcceleration._x, -_maxLean.radians(), _maxLean.radians() );
         return float2{ forward, side };
     }
 
@@ -181,12 +181,12 @@ namespace sw
         if ( pBinding != nullptr && pBinding->getState() == SocketBindingState::Bound )
             pBinding->updateSocketTransform( float4x4::makeRotationZ( _riderLean._y ) * float4x4::makeRotationX( _riderLean._x ) * _seatInVehicle );
         SkeletalAnimatorComponent* pAnimator = pRider->getComponent<SkeletalAnimatorComponent>();
-        if ( pAnimator == nullptr || _rideFeel._maxLean <= 0.0f )
+        if ( pAnimator == nullptr || _rideFeel._maxLean <= Radians{} )
             return;
         if ( _rideFeel._leanForwardParameter.empty() == false )
-            pAnimator->getParameters().setFloat( _rideFeel._leanForwardParameter, _riderLean._x / _rideFeel._maxLean );
+            pAnimator->getParameters().setFloat( _rideFeel._leanForwardParameter, _riderLean._x / _rideFeel._maxLean.radians() );
         if ( _rideFeel._leanSideParameter.empty() == false )
-            pAnimator->getParameters().setFloat( _rideFeel._leanSideParameter, -_riderLean._y / _rideFeel._maxLean );
+            pAnimator->getParameters().setFloat( _rideFeel._leanSideParameter, -_riderLean._y / _rideFeel._maxLean.radians() );
     }
 
     void VehicleSeatComponent::applyRideFeedback()

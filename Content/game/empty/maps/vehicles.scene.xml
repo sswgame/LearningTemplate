@@ -130,7 +130,7 @@
 					                         _suspensionMaxLength="0.35"
 					                         _suspensionFrequency="1.5"
 					                         _suspensionDamping="0.5"
-					                         _maxSteerAngle="0.52"
+					                         _maxSteerAngle="29.793804"
 					                         _maxBrakeTorque="1500"
 					                         _maxHandBrakeTorque="4000"
 					                         _engineMaxTorque="500"

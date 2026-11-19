@@ -19,10 +19,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.4"
-			        _swingLimitPlane="0.4"
-			        _twistMin="-0.3"
-			        _twistMax="0.3" />
+			        _swingLimitNormal="22.918312"
+			        _swingLimitPlane="22.918312"
+			        _twistMin="-17.188735"
+			        _twistMax="17.188735" />
 			<_hitZone _name="Torso" _damageMultiplier="1" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="head" _mass="5" _material="Flesh">
@@ -32,10 +32,10 @@
 			<_joint _type="Cone"
 			        _twistAxis="0,1,0"
 			        _normalAxis="1,0,0"
-			        _swingLimitNormal="0.6"
-			        _swingLimitPlane="0.6"
-			        _twistMin="-0.5"
-			        _twistMax="0.5" />
+			        _swingLimitNormal="34.37747"
+			        _swingLimitPlane="34.37747"
+			        _twistMin="-28.64789"
+			        _twistMax="28.64789" />
 			<_hitZone _name="Head" _damageMultiplier="2.5" />
 		</PhysicsAssetBodyDef>
 	</_listBody>

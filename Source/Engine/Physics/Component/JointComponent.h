@@ -6,6 +6,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/PhysicsTypes.h"
@@ -64,10 +65,10 @@ namespace sw
         float32 _minLimit;
         PROPERTY( Category = "Joint", Tooltip = "Upper limit" )
         float32 _maxLimit;
-        PROPERTY( Category = "Joint", Min = 0.0, Tooltip = "Cone: swing half angle around the normal axis", Units = rad )
-        float32 _swingLimitNormal;
-        PROPERTY( Category = "Joint", Min = 0.0, Tooltip = "Cone: swing half angle around the third axis", Units = rad )
-        float32 _swingLimitPlane;
+        PROPERTY( Category = "Joint", Min = 0.0, Tooltip = "Cone: swing half angle around the normal axis" )
+        Radians _swingLimitNormal;
+        PROPERTY( Category = "Joint", Min = 0.0, Tooltip = "Cone: swing half angle around the third axis" )
+        Radians _swingLimitPlane;
         PROPERTY( Category = "Motor", Tooltip = "Off, Velocity or Position" )
         PhysicsMotorMode _motorMode;
         PROPERTY( Category = "Motor", Tooltip = "Target velocity or position" )

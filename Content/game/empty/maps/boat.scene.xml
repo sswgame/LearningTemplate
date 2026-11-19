@@ -163,7 +163,7 @@
 					                              _radius="0.3"
 					                              _halfHeight="0.6"
 					                              _stepHeight="0.3"
-					                              _maxSlopeAngle="0.7853982"
+					                              _maxSlopeAngle="45"
 					                              _gravityScale="1"
 					                              _mass="70"
 					                              _layer="Character" />
@@ -195,7 +195,7 @@
 					                              _radius="0.3"
 					                              _halfHeight="0.6"
 					                              _stepHeight="0.3"
-					                              _maxSlopeAngle="0.7853982"
+					                              _maxSlopeAngle="45"
 					                              _gravityScale="1"
 					                              _mass="70"
 					                              _layer="Character" />

@@ -144,10 +144,10 @@ namespace sw
             desc._anchorB                    = position;
             desc._axis                       = float3::transform( joint._twistAxis, rotation ).normalize();
             desc._normalAxis                 = float3::transform( joint._normalAxis, rotation ).normalize();
-            desc._minLimit                   = joint._twistMin;
-            desc._maxLimit                   = joint._twistMax;
-            desc._swingLimitNormal           = joint._swingLimitNormal;
-            desc._swingLimitPlane            = joint._swingLimitPlane;
+            desc._minLimit                   = joint._twistMin.radians();
+            desc._maxLimit                   = joint._twistMax.radians();
+            desc._swingLimitNormal           = joint._swingLimitNormal.radians();
+            desc._swingLimitPlane            = joint._swingLimitPlane.radians();
             desc._type                       = joint._type;
             desc._bLimitsEnabled             = true;
             desc._bCollideConnectedBodies    = asset._bCollideJointedBodies;

@@ -106,7 +106,7 @@
 					                                _attachComponent="None"
 					                                _radius="0.3"
 					                                _halfHeight="0.4"
-					                                _maxSlopeAngle="0.7853982"
+					                                _maxSlopeAngle="45"
 					                                _gravityScale="1"
 					                                _layer="Character" />
 					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">

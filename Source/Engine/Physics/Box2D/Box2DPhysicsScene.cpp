@@ -165,7 +165,7 @@ namespace sw
             static bool makeProxy( const PhysicsShapeDesc2D& shape, const float2& position, float32 rotation, b2ShapeProxy& outProxy )
             {
                 const b2Transform body{ Box2DUtil::toBox2D( position ), b2MakeRot( rotation ) };
-                const b2Transform local{ Box2DUtil::toBox2D( shape._localPosition ), b2MakeRot( shape._localAngle ) };
+                const b2Transform local{ Box2DUtil::toBox2D( shape._localPosition ), b2MakeRot( shape._localAngle.radians() ) };
                 const b2Transform world = b2MulTransforms( body, local );
                 switch ( shape._type )
                 {
@@ -473,7 +473,7 @@ namespace sw
     bool Box2DPhysicsScene::attachChain( BodyRecord& record, const PhysicsShapeDesc2D& shape, const PhysicsMaterialDef& material, PhysicsBodyHandle handle )
     {
         const b2Vec2 center    = Box2DUtil::toBox2D( shape._localPosition );
-        const b2Rot  rotation  = b2MakeRot( shape._localAngle );
+        const b2Rot  rotation  = b2MakeRot( shape._localAngle.radians() );
         void* const  pUserData = Box2DUtil::toUserData( handle );
         if ( shape._listPoint.size() < 4 )
         {
@@ -526,7 +526,7 @@ namespace sw
             return false;
         const PhysicsMaterialDef& material  = *pMaterial;
         const b2Vec2              center    = Box2DUtil::toBox2D( shape._localPosition );
-        const b2Rot               rotation  = b2MakeRot( shape._localAngle );
+        const b2Rot               rotation  = b2MakeRot( shape._localAngle.radians() );
         void* const               pUserData = Box2DUtil::toUserData( handle );
 
         if ( shape._type == PhysicsShapeType2D::Chain )

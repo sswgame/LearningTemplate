@@ -11,7 +11,7 @@
  *         <_listBody>
  *             <PhysicsAssetBodyDef _bone="spine" _mass="20" _material="Flesh">
  *                 <_listShape><PhysicsShapeDesc3D _type="Capsule" _radius="0.15" _halfHeight="0.1" _localPosition="0,0.2,0" /></_listShape>
- *                 <_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.3" _twistMax="0.3" />
+ *                 <_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="28.64789" _swingLimitPlane="28.64789" _twistMin="-17.188735" _twistMax="17.188735" />
  *                 <_hitZone _name="Torso" _damageMultiplier="1" />
  *             </PhysicsAssetBodyDef>
  *         </_listBody>
@@ -27,6 +27,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
 
@@ -53,14 +54,14 @@ namespace sw
         float3 _twistAxis{ 0.0f, 1.0f, 0.0f };
         PROPERTY( Tooltip = "Reference axis perpendicular to the twist axis, in bone space" )
         float3 _normalAxis{ 1.0f, 0.0f, 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Cone swing half angle around the normal axis", Units = rad )
-        float32 _swingLimitNormal{ 0.5f };
-        PROPERTY( Min = 0.0, Tooltip = "Cone swing half angle around the third axis", Units = rad )
-        float32 _swingLimitPlane{ 0.5f };
-        PROPERTY( Tooltip = "Twist (Cone) / angle (Hinge) lower limit", Units = rad )
-        float32 _twistMin{ -0.3f };
-        PROPERTY( Tooltip = "Twist (Cone) / angle (Hinge) upper limit", Units = rad )
-        float32 _twistMax{ 0.3f };
+        PROPERTY( Min = 0.0, Tooltip = "Cone swing half angle around the normal axis" )
+        Radians _swingLimitNormal{ Radians::fromRadians( 0.5f ) };
+        PROPERTY( Min = 0.0, Tooltip = "Cone swing half angle around the third axis" )
+        Radians _swingLimitPlane{ Radians::fromRadians( 0.5f ) };
+        PROPERTY( Tooltip = "Twist (Cone) / angle (Hinge) lower limit" )
+        Radians _twistMin{ Radians::fromRadians( -0.3f ) };
+        PROPERTY( Tooltip = "Twist (Cone) / angle (Hinge) upper limit" )
+        Radians _twistMax{ Radians::fromRadians( 0.3f ) };
     };
 } // namespace sw
 

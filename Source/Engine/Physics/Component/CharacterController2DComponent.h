@@ -6,6 +6,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"
@@ -69,7 +70,7 @@ namespace sw
         void               setRadius( float32 radius );
         float32            getHalfHeight() const { return _halfHeight; }
         void               setHalfHeight( float32 halfHeight );
-        float32            getMaxSlopeAngle() const { return _maxSlopeAngle; }
+        float32            getMaxSlopeAngle() const { return _maxSlopeAngle.radians(); }
         void               setMaxSlopeAngle( float32 angle );
 
     protected:
@@ -90,8 +91,8 @@ namespace sw
         float32 _radius;
         PROPERTY( Category = "Character", Min = 0.0, Tooltip = "Half the cylinder part; height = 2 * (half height + radius)", Units = m )
         float32 _halfHeight;
-        PROPERTY( Category = "Character", Min = 0.0, Max = 1.57, Tooltip = "Steepest walkable floor", Units = rad )
-        float32 _maxSlopeAngle;
+        PROPERTY( Category = "Character", Min = 0.0, Max = 89.95, Tooltip = "Steepest walkable floor" )
+        Radians _maxSlopeAngle;
         PROPERTY( Category = "Character", Tooltip = "Multiplier on scene gravity (0 floats)" )
         float32 _gravityScale;
         PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )

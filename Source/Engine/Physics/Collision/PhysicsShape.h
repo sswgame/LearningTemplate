@@ -10,6 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
@@ -96,8 +97,8 @@ namespace sw
         float32 _halfHeight{ 0.5f };
         PROPERTY( Tooltip = "Offset from the body origin", Units = m )
         float2 _localPosition{};
-        PROPERTY( Tooltip = "Rotation relative to the body", Units = rad )
-        float32 _localAngle{ 0.0f };
+        PROPERTY( Tooltip = "Rotation relative to the body" )
+        Radians _localAngle{};
         PROPERTY( Tooltip = "Polygon / chain points (body local)" )
         vector<float2> _listPoint;
         PROPERTY( Tooltip = "Physics material name (empty: the body's material)" )

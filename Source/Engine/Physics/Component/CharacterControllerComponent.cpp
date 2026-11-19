@@ -56,7 +56,7 @@ namespace sw
         , _radius{ 0.3f }
         , _halfHeight{ 0.6f }
         , _stepHeight{ 0.3f }
-        , _maxSlopeAngle{ MathUtil::kHalfPi * 0.5f }
+        , _maxSlopeAngle{ Radians::fromRadians( MathUtil::kHalfPi * 0.5f ) }
         , _gravityScale{ 1.0f }
         , _mass{ 70.0f }
         , _layer{ "Character" }
@@ -256,7 +256,7 @@ namespace sw
 
     void CharacterControllerComponent::setMaxSlopeAngle( float32 angle )
     {
-        _maxSlopeAngle = angle;
+        _maxSlopeAngle = Radians::fromRadians( angle );
         requestRebuild();
     }
 
@@ -325,7 +325,7 @@ namespace sw
             desc._userData      = getOwner()->getObjectID();
             desc._radius        = capsule._radius;
             desc._halfHeight    = capsule._halfHeight;
-            desc._maxSlopeAngle = _maxSlopeAngle;
+            desc._maxSlopeAngle = _maxSlopeAngle.radians();
             desc._stepHeight    = _stepHeight;
             desc._mass          = _mass;
             desc._layer         = physics.resolveLayer( _layer );
