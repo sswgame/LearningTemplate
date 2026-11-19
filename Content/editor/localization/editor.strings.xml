@@ -4681,6 +4681,17 @@
 				<item>Source/Editor/Viewport/EditorColliderHandleTool.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdVisualizer.PropertyShapesLabel" source="Shapes">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PropertyShapeTool.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.PropertyShapesTip"
+		       source="Shows the shapes that component properties declare (light radius and cone, volumes, directions) on the selected objects, with handles that edit the values">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PropertyShapeTool.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdVisualizer.RigTargetGizmoLabel" source="Rig Target">
 			<origins>
 				<item>Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp</item>

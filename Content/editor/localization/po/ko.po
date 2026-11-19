@@ -4618,6 +4618,16 @@ msgctxt "EdVisualizer.PhysicsShapesTip"
 msgid "Shows RigidBody and RigidBody2D collision shapes as wireframe (static grey, kinematic blue, dynamic green, trigger yellow)"
 msgstr "RigidBody · RigidBody2D 의 충돌 셰이프를 와이어프레임으로 표시합니다(정적 회색 · 키네마틱 파랑 · 동적 초록 · 트리거 노랑)"
 
+#: Source/Editor/Panels/Scene/PropertyShapeTool.cpp
+msgctxt "EdVisualizer.PropertyShapesLabel"
+msgid "Shapes"
+msgstr "모양"
+
+#: Source/Editor/Panels/Scene/PropertyShapeTool.cpp
+msgctxt "EdVisualizer.PropertyShapesTip"
+msgid "Shows the shapes that component properties declare (light radius and cone, volumes, directions) on the selected objects, with handles that edit the values"
+msgstr "선택한 오브젝트의 컴포넌트 프로퍼티가 선언한 모양(빛 반경 · 원뿔, 볼륨, 방향)을 표시하고 손잡이로 값을 고칩니다"
+
 #: Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp
 msgctxt "EdVisualizer.RigTargetGizmoLabel"
 msgid "Rig Target"
