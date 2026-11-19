@@ -128,8 +128,8 @@
 	<WaitUntil watch="Material.CollectionValue" target="engine/materials/weather.matparams.xml" key="Rain.x" equals="1" timeoutFrames="10"/>
 	<Screenshot file="rain_rings_again.ppm" stability="assets"/>
 	<Variable name="gv_timeScale" value="1"/>
-	<ExpectImagesDiffer first="rain_rings_on.ppm" second="rain_rings_off.ppm" region="0,0.5,1,1" minDiffering="0.002"/>
-	<ExpectImagesDiffer first="rain_rings_on.ppm" second="rain_rings_again.ppm" region="0,0.5,1,1" minDiffering="0" maxDiffering="0.0005"/>
+	<ExpectImagesDiffer first="rain_rings_on.ppm" second="rain_rings_off.ppm" region="0.25,0.7,0.66,1" minDiffering="0.002" fullResolution="true"/> <!-- 링은 화소 단위 무늬라 골든 크기로 줄이면 평균이 지운다. 영역은 웅덩이 자리(링이 생기는 곳) — 멈춘 시간의 두 장이 0 % 라 잡음 바닥이 0 이다 -->
+	<ExpectImagesDiffer first="rain_rings_on.ppm" second="rain_rings_again.ppm" region="0.25,0.7,0.66,1" minDiffering="0" maxDiffering="0.0005" fullResolution="true"/>
 
 	<ExpectImage file="dirt_footprints.ppm" golden="dirt_footprints"/>
 	<ExpectImage file="rain_rings_on.ppm" golden="rain_rings_on"/>

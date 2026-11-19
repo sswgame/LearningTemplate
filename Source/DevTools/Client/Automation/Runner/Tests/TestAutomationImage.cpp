@@ -208,7 +208,7 @@ SW_TEST_CASE( AutomationImageMetricTest, ReduceSmallRegionKeepsPixels )
     AutomationImageRegion region;
     region._x0                              = 0.5f;
     region._y0                              = 0.5f;
-    const expected<AutomationImage> reduced = AutomationImage::reduce( image, region );
+    const expected<AutomationImage> reduced = AutomationImage::reduce( image, region, AutomationImage::kGoldenMaxWidth );
     SW_REQUIRE_TRUE( reduced.has_value() );
     SW_REQUIRE_EQUAL( 2u, reduced->_width );
     SW_REQUIRE_EQUAL( 1u, reduced->_height );
@@ -234,7 +234,7 @@ SW_TEST_CASE( AutomationImageMetricTest, ReduceWideRegionAverages )
         }
     }
 
-    const expected<AutomationImage> reduced = AutomationImage::reduce( image, AutomationImageRegion{} );
+    const expected<AutomationImage> reduced = AutomationImage::reduce( image, AutomationImageRegion{}, AutomationImage::kGoldenMaxWidth );
     SW_REQUIRE_TRUE( reduced.has_value() );
     SW_REQUIRE_EQUAL( AutomationImage::kGoldenMaxWidth, reduced->_width );
     SW_REQUIRE_EQUAL( 2u, reduced->_height );
@@ -246,11 +246,35 @@ SW_TEST_CASE( AutomationImageMetricTest, ReduceWideRegionAverages )
 SW_TEST_CASE( AutomationImageMetricTest, ReduceKeepsAtLeastOneRow )
 {
     const AutomationImage           image   = Util::makeImage( 1000, 1, 50 );
-    const expected<AutomationImage> reduced = AutomationImage::reduce( image, AutomationImageRegion{} );
+    const expected<AutomationImage> reduced = AutomationImage::reduce( image, AutomationImageRegion{}, AutomationImage::kGoldenMaxWidth );
     SW_REQUIRE_TRUE( reduced.has_value() );
     SW_EXPECT_EQUAL( AutomationImage::kGoldenMaxWidth, reduced->_width );
     SW_EXPECT_EQUAL( 1u, reduced->_height );
     SW_EXPECT_EQUAL( 50u, static_cast<uint32>( reduced->_listRGB[0] ) );
+}
+
+/** @brief [AutomationImageMetricTest] 화소마다 번갈아 밝기가 다른 무늬(빗방울 링 같은 고주파)는 골든 크기로 줄이면 평균이 같아 사라지고, 원본 폭으로는 남는다(`fullResolution`) */
+SW_TEST_CASE( AutomationImageMetricTest, FullResolutionKeepsHighFrequencyDetail )
+{
+    AutomationImage flat    = Util::makeImage( 640, 4, 100 );
+    AutomationImage pattern = Util::makeImage( 640, 4, 100 );
+    for ( uint32 y = 0; y < 4; ++y )
+    {
+        for ( uint32 x = 0; x < 640; ++x )
+        {
+            Util::getPixel( pattern, x, y )[0] = ( x % 2u ) == 0u ? 80 : 120; // 평균은 100 그대로
+        }
+    }
+    const expected<AutomationImage> flatReduced    = AutomationImage::reduce( flat, AutomationImageRegion{}, AutomationImage::kGoldenMaxWidth );
+    const expected<AutomationImage> patternReduced = AutomationImage::reduce( pattern, AutomationImageRegion{}, AutomationImage::kGoldenMaxWidth );
+    SW_REQUIRE_TRUE( flatReduced.has_value() && patternReduced.has_value() );
+    SW_EXPECT_TRUE( flatReduced->_listRGB == patternReduced->_listRGB );
+
+    const expected<AutomationImage> flatFull    = AutomationImage::reduce( flat, AutomationImageRegion{}, flat._width );
+    const expected<AutomationImage> patternFull = AutomationImage::reduce( pattern, AutomationImageRegion{}, pattern._width );
+    SW_REQUIRE_TRUE( flatFull.has_value() && patternFull.has_value() );
+    SW_EXPECT_EQUAL( 640u, patternFull->_width );
+    SW_EXPECT_FALSE( flatFull->_listRGB == patternFull->_listRGB );
 }
 
 /** @brief [AutomationImageMetricTest] 화소 하나도 덮지 않는 영역과 빈 그림은 이유와 함께 거절한다 */
@@ -260,11 +284,11 @@ SW_TEST_CASE( AutomationImageMetricTest, ReduceRejectsEmptyCoverage )
     AutomationImageRegion tiny;
     tiny._x1                                    = 0.02f;
     tiny._y1                                    = 0.02f;
-    const expected<AutomationImage> tinyReduced = AutomationImage::reduce( image, tiny );
+    const expected<AutomationImage> tinyReduced = AutomationImage::reduce( image, tiny, AutomationImage::kGoldenMaxWidth );
     SW_REQUIRE_FALSE( tinyReduced.has_value() );
     SW_EXPECT_TRUE( tinyReduced.error().detail() == "10x10" );
 
-    const expected<AutomationImage> emptyReduced = AutomationImage::reduce( AutomationImage{}, AutomationImageRegion{} );
+    const expected<AutomationImage> emptyReduced = AutomationImage::reduce( AutomationImage{}, AutomationImageRegion{}, AutomationImage::kGoldenMaxWidth );
     SW_REQUIRE_FALSE( emptyReduced.has_value() );
     SW_EXPECT_TRUE( emptyReduced.error().detail() == "0x0" );
 }

@@ -122,7 +122,7 @@ namespace sw
         outBytes.insert( outBytes.end(), image._listRGB.begin(), image._listRGB.end() );
     }
 
-    expected<AutomationImage> AutomationImage::reduce( const AutomationImage& image, const AutomationImageRegion& region )
+    expected<AutomationImage> AutomationImage::reduce( const AutomationImage& image, const AutomationImageRegion& region, uint32 maxWidth )
     {
         const uint32 x0 = static_cast<uint32>( region._x0 * static_cast<float32>( image._width ) );
         const uint32 y0 = static_cast<uint32>( region._y0 * static_cast<float32>( image._height ) );
@@ -136,7 +136,7 @@ namespace sw
         }
         const uint32    sourceWidth  = x1 - x0;
         const uint32    sourceHeight = y1 - y0;
-        const uint32    width        = MathUtil::min( sourceWidth, kGoldenMaxWidth );
+        const uint32    width        = MathUtil::min( sourceWidth, MathUtil::max( 1u, maxWidth ) );
         const uint32    height       = MathUtil::max( 1u, static_cast<uint32>( static_cast<uint64>( sourceHeight ) * width / sourceWidth ) );
         AutomationImage reduced;
         reduced._width  = width;

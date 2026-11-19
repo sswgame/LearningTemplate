@@ -40,8 +40,11 @@ namespace sw
         static void encodePpm( const AutomationImage& image, vector<uint8>& outBytes );
         /** @brief `x0,y0,x1,y1`(0..1, x0<x1, y0<y1)을 읽습니다. */
         [[nodiscard]] static bool tryParseRegion( string_view text, AutomationImageRegion& outRegion );
-        /** @brief @p region 을 가로 `kGoldenMaxWidth` 이하로 상자 평균해 줄입니다. 영역이 화소 하나도 덮지 않으면 그 그림 크기가 대상인 오류입니다. */
-        [[nodiscard]] static expected<AutomationImage> reduce( const AutomationImage& image, const AutomationImageRegion& region );
+        /**
+         * @brief @p region 을 가로 @p maxWidth 이하로 상자 평균해 줄입니다(골든은 `kGoldenMaxWidth`). 영역이 화소 하나도 덮지 않으면 그 그림 크기가 대상인 오류입니다.
+         * @details 같은 실행의 두 장을 견주는 음성 대조가 고주파 무늬(빗방울 링 · 잔물결)를 볼 때는 줄이지 않는다(`maxWidth` = 영역 폭) — 상자 평균이 무늬를 지운다.
+         */
+        [[nodiscard]] static expected<AutomationImage> reduce( const AutomationImage& image, const AutomationImageRegion& region, uint32 maxWidth );
         /**
          * @brief 같은 크기의 두 그림을 @p measure 의 문턱으로 비교합니다. 크기가 다르면 두 크기가 대상인 오류입니다(영역 · 창 크기가 바뀌었다 — 골든을 다시 떠야 한다).
          * @details 두 축을 함께 잰다 — 넓고 얕은 차이(다른 화소 비율 · 평균 거리)와 좁고 깊은 차이(깊은 화소가 4 이웃으로 이어진 가장 큰 덩어리의 화소 수).

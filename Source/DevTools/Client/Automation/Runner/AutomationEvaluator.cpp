@@ -419,7 +419,7 @@ namespace sw
         }
         const auto loadReduced = [&]( const string& file )
         { return AutomationImage::loadPpm( context.resolveOutputPath( file ) ).and_then( [&]( const AutomationImage& image )
-          { return AutomationImage::reduce( image, region ); } ); };
+          { return AutomationImage::reduce( image, region, params._bFullResolution ? image._width : AutomationImage::kGoldenMaxWidth ); } ); };
         const expected<AutomationImage>           reducedFirst  = loadReduced( params._first );
         const expected<AutomationImage>           reducedSecond = reducedFirst.has_value() ? loadReduced( params._second ) : reducedFirst;
         const expected<AutomationImageDifference> compared =
@@ -500,7 +500,7 @@ namespace sw
         const string                                   file      = step.readValidatedProperties<AutomationExpectImageParams>()._file;
         const expected<AutomationImage>                loaded =
             AutomationImage::loadPpm( context.resolveOutputPath( file ) ).and_then( [&]( const AutomationImage& image )
-        { return AutomationImage::reduce( image, args._region ); } );
+        { return AutomationImage::reduce( image, args._region, AutomationImage::kGoldenMaxWidth ); } );
         if ( loaded.has_value() == false )
         {
             context.recordFailure( step, "could not read the image: " + AutomationStep::describeReason( loaded.error() ) );

@@ -273,6 +273,8 @@ namespace sw
         float32 _minDiffering{ 0.01f }; ///< 다른 화소의 비율 하한(영역을 줄인 뒤)
         PROPERTY( Min = 0, Max = 1 )
         float32 _maxDiffering{ 1.0f }; ///< 다른 화소의 비율 상한 — 골든 없이 "값을 바꿔도 그림이 깨지지 않는다"(본 LOD 켬 · 끔)를 같은 실행의 두 장으로 단언한다(`minDiffering="0"`)
+        PROPERTY( Name = "fullResolution" )
+        bool _bFullResolution{ false }; ///< 줄이지 않고 원본 화소로 견준다 — 고주파 무늬(빗방울 링 · 잔물결)는 골든 크기 상자 평균이 지운다. 같은 실행의 두 장이라 실행 간 잡음이 없다
     };
 
     /** @brief `CloseWindow` 의 인자입니다. */
