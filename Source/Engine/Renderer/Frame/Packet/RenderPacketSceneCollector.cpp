@@ -102,15 +102,19 @@ namespace sw
         // null 로 두므로 렌더 스레드에서 씬을 조회할 수 없다.
         const RenderPacketKeyLights lights = writeKeyLight( packet, activeScene );
 
-        // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 앰비언트의 출처이고, 목록이 비면
-        // 그 씬은 앰비언트만 받는다(키라이트로 대신 비추지 않는다). 그림자를 켠 점광 · 스폿은 번호 · 정체를 따로 받아 아래에서 아틀라스 칸을 준다.
-        collectSceneLights( &activeScene, packet._listLight, &_listShadowLight, &_lightProbeElement, &packet._listLightCookie, &packet._listRealtimeProbe );
-        packet._pLightProbe = _lightProbeElement.getElements();
-        collectLensFlares( packet, activeScene );
-        collectDecals( packet, activeScene );
         // 하늘도 씬이 갖는다. 없으면 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색).
         const GameObjectManager* pActiveObjects = activeScene.getObjectManager();
         packet._bHasSky                         = ( pActiveObjects != nullptr && pActiveObjects->findServiceSky( packet._sky ) ) ? SW_TRUE : SW_FALSE;
+        // 스카이 라이트 — 하늘을 거칠기 단계마다 거른 환경광이다. 하늘이 바뀐 프레임에만 다시 거르고(`SkyLightCache`), 하늘이 없으면 없다(그 씬의 환경광은 앰비언트 색이다).
+        const SkyLightData* const pSkyLight = _skyLight.update( packet._bHasSky != SW_FALSE ? &packet._sky : nullptr, engine::getSubsystem<EngineConfig>()._render._skyLight );
+
+        // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 앰비언트의 출처이고, 목록이 비면
+        // 그 씬은 환경광만 받는다(키라이트로 대신 비추지 않는다). 그림자를 켠 점광 · 스폿은 번호 · 정체를 따로 받아 아래에서 아틀라스 칸을 준다.
+        collectSceneLights( &activeScene, packet._listLight, &_listShadowLight, &_lightProbeElement, &packet._listLightCookie, &packet._listRealtimeProbe, pSkyLight );
+        packet._pLightProbe = _lightProbeElement.getElements();
+        packet._skyLight    = _lightProbeElement.getSkyLight();
+        collectLensFlares( packet, activeScene );
+        collectDecals( packet, activeScene );
         // 표면 변형 층도 씬이 갖는다 — 없으면 빈 값이라 셰이더가 정점을 옮기지 않는다.
         if ( pActiveObjects == nullptr || pActiveObjects->findServiceSurfaceDeform( packet._surfaceDeform ) == false )
             packet._surfaceDeform = SurfaceDeformBinding{};

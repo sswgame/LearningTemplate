@@ -311,6 +311,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_SkyCloudShape;
     float4 g_SkyCloudWind;
     float4 g_SkyCloudColor;
+    // 스카이 라이트(lighting.hlsli SkyLight, C++ SkyLightData) — 하늘을 거칠기 단계마다 거른 환경광이 g_SwLightProbes(t13)에서 차지한 자리:
+    // (옥타헤드럴 한 변 텍셀 수, 거칠기 단계 수, 첫 원소 번호, 0). 씬에 하늘이 없으면 모두 0 이고 환경광은 앰비언트 색이다. 배치는 binding_slots.hlsli 8 절.
+    float4 g_SkyLight;
     // 높이 · 거리 지수 안개(안개 패스 fog.hlsl, C++ FogSettings) — (안개 색 rgb, 밀도) · (높이 감쇠, 기준 높이, 시작 거리, 최대 불투명도) · (방향광 산란 색 × 세기 rgb, 지수) ·
     // (볼륨 안개 켬 1, 볼륨 거리, 산란 배율, 이방성). 씬에 안개가 없으면 안개 패스가 돌지 않는다. 볼륨 켬은 주 시점에서 컴퓨트가 돈 프레임만 1 이다(FramePassExecutor::executeFogPass).
     float4 g_FogColorDensity;

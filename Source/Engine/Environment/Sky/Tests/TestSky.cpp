@@ -240,3 +240,79 @@ SW_TEST_CASE( SkyTest, ComponentPassesHdriOnlyInHdriMode )
     SW_EXPECT_TRUE( gradient._hdriTexture == hashed_string( "engine/textures/sky/moonless_golf.dds" ) );
     SW_EXPECT_NEAR( 1.0f, gradient.evaluateRadiance( float3{ 0.0f, 1.0f, 0.0f } )._x, 1.0e-4f );
 }
+
+/** @brief [SkyTest] 하늘빛을 정하는 값은 하나만 달라도 다른 하늘이고, 구름과 출처만 다르면 같은 하늘이다 — 스카이 라이트가 다시 거를지 이것으로 정한다 */
+SW_TEST_CASE( SkyTest, SameRadianceComparesEveryRadianceField )
+{
+    const SkyGradient base = AtmosphereTestUtil::makeAtmosphere( float3{ 0.0f, 1.0f, 0.0f }, 0.3f );
+    SW_EXPECT_TRUE( base.hasSameRadiance( base ) );
+
+    SkyGradient same       = base;
+    same._clouds._bEnabled = SW_TRUE;
+    same._clouds._coverage = 0.9f;
+    same._sourceID         = 77;
+    SW_EXPECT_TRUE( base.hasSameRadiance( same ) );
+
+    using Change             = void ( * )( SkyGradient& );
+    const Change arrChange[] = {
+        []( SkyGradient& sky )
+    { sky._zenithColor._x += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._horizonColor._y += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._groundColor._z += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._intensity += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._horizonExponent += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._mode = SkyMode::Gradient; },
+        []( SkyGradient& sky )
+    { sky._atmosphere._rayleighScale += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._atmosphere._mieScale += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._atmosphere._mieAnisotropy += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._atmosphere._sunIntensity += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._atmosphere._planetRadiusKm += 1.0f; },
+        []( SkyGradient& sky )
+    { sky._atmosphere._atmosphereHeightKm += 1.0f; },
+        []( SkyGradient& sky )
+    { sky._atmosphere._observerAltitudeKm += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._atmosphere._sunDiscAngle += 0.01f; },
+        []( SkyGradient& sky )
+    { sky.setSun( float3{ -1.0f, -1.0f, 0.0f }, sky._sunColor ); },
+        []( SkyGradient& sky )
+    { sky._sunColor._x += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._hdriTexture = hashed_string( "engine/textures/sky/moonless_golf.dds" ); },
+        []( SkyGradient& sky )
+    { sky._hdriRotation += 0.1f; },
+        []( SkyGradient& sky )
+    { sky._hdriAmbient._arrCoefficient[SH9Color::kCoefficientCount - 1u] += 0.1f; },
+    };
+    uint32 missedChangeCount = 0;
+    for ( const Change change : arrChange )
+    {
+        SkyGradient changed = base;
+        change( changed );
+        missedChangeCount += base.hasSameRadiance( changed ) ? 1u : 0u;
+    }
+    SW_EXPECT_EQUAL( 0u, missedChangeCount );
+}
+
+/** @brief [SkyTest] 찾은 하늘은 그 컴포넌트의 번호를 출처로 싣는다 — 하늘을 갈아 끼우면 출처가 달라진다 */
+SW_TEST_CASE( SkyTest, FindSkyCarriesTheComponentAsSource )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Sky" ) );
+    SkyComponent*     pSky    = pObject != nullptr ? pObject->addComponent<SkyComponent>() : nullptr;
+    SW_REQUIRE_NOT_NULL( pSky );
+    SkyGradient gradient;
+    SW_REQUIRE_TRUE( SkyComponent::findSky( manager, gradient ) );
+    SW_EXPECT_EQUAL( pSky->getComponentID(), gradient._sourceID );
+    SW_EXPECT_TRUE( gradient._sourceID != 0 );
+}

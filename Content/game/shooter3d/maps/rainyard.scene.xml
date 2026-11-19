@@ -6,6 +6,8 @@
 	     걷는 이(Walker — 스켈레톤 전사, 제자리 걷기 Walking_A, 발 알림 FootL · FootR)는 무대 밖 돌 바닥(16, -18)에서 시작하고 시나리오가 object.place 로 옮긴다.
 	     플레이어 몸(prefabs/player_body.prefab.xml)도 발 닿음 감지로 발걸음을 낸다(common/characters/ubc/ubc_body.notifies.xml).
 	     날씨는 Weather 엔티티의 판 상태가 rainyard.weather.xml 로 열고, 카탈로그의 머티리얼 바인딩대로 판 상태가 지면 머티리얼 묶음에 쓴다(비: 젖음 · 웅덩이 · 빗방울 링).
+	     하늘(Sky)은 흐린 날의 그러데이션이다 — 스카이 라이트가 이것을 걸러 젖은 땅과 웅덩이에 비춘다(하늘이 없으면 환경 반사가 앰비언트 색 하나라 빗방울 링이 보이지 않는다).
+	     천정보다 지평선이 밝아 비스듬히 보는 젖은 면이 밝게 비치고, 링이 노멀을 흔들면 비치는 높이가 달라져 무늬가 드러난다. 구름 층은 두지 않는다(시간에 흐르는 무늬가 사진에 섞인다).
 	     적은 나오지 않는다(게임 모드의 스폰 표만 rainyard.spawns.xml — 예산 0). 길을 막는 엄폐물 Cover_10 (0, 1, -12) 은 뺀다(Cover_6 (4, 0.6, -4) 은 패드 옆이라 둔다). -->
 	<entities>
 		<entity id="37" _op="Remove" />
@@ -121,6 +123,13 @@
 				<_listComponent>
 					<SessionStateComponent />
 					<WeatherDirectorComponent _weatherDataPath="game/shooter3d/data/rainyard.weather.xml" _startWeather="clear" _seed="7" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="306" name="Sky">
+			<GameObject _schemaVersion="0" _name="Sky" _bActive="true">
+				<_listComponent>
+					<SkyComponent _zenithColor="0.42,0.45,0.5" _horizonColor="0.78,0.8,0.82" _groundColor="0.16,0.15,0.14" _intensity="1" _horizonExponent="2" _mode="Gradient" />
 				</_listComponent>
 			</GameObject>
 		</entity>

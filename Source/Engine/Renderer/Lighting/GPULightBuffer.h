@@ -37,6 +37,7 @@ namespace sw
     class Scene;
     struct LightProbeGrid;
     struct ReflectionProbeAsset;
+    struct SkyLightData;
 
     /** @brief 쿠키(빛 텍스처)를 쓰는 빛 하나입니다 — 라이트 목록의 원소 번호와 텍스처 경로입니다. 렌더러가 칸을 나눠 그 원소의 `_extra.w` 에 적습니다(`Light2DCookieAtlas`). */
     struct GPULightCookie
@@ -71,7 +72,7 @@ namespace sw
 {
     /**
      * @class LightProbeElementBuilder
-     * @brief 프로브 버퍼(t13)에 올릴 원소(라이트 프로브 SH9 · 반사 프로브 텍셀 · 실시간 볼륨의 0 자리)를 모읍니다. 게임 스레드의 수집기가 프레임을 넘어 들고 있습니다.
+     * @brief 프로브 버퍼(t13)에 올릴 원소(라이트 프로브 SH9 · 반사 프로브 텍셀 · 실시간 볼륨의 0 자리 · 스카이 라이트)를 모읍니다. 게임 스레드의 수집기가 프레임을 넘어 들고 있습니다.
      * @details 원소는 불변 공유 값(`getElements`)으로 렌더 스레드에 간다. 원소의 내용은 (컴포넌트 번호, 데이터 번호)의 차례와 실시간 볼륨의 프로브 수로 정해지므로
      *          그 열쇠가 지난 프레임과 같으면 펼치지 않고 지난 묶음을 그대로 준다 — 렌더 스레드는 같은 묶음이면 다시 올리지 않는다(`GPULightBuffer::uploadProbeElements`).
      *          예전에는 바뀐 것이 없어도 프레임마다 펼치고(게임 스레드) · 베끼고(렌더 스레드) · 올렸다(상한이면 프로브 하나에 프레임당 8.4 MB).
@@ -92,17 +93,28 @@ namespace sw
         [[nodiscard]] uint32 appendRealtimeVolume( uint32 probeCount );
         /** @brief 반사 프로브 하나의 텍셀 자리를 잡고 첫 텍셀 번호(float4 단위)를 돌려줍니다. */
         [[nodiscard]] uint32 appendReflectionProbe( uint64 componentID, uint32 revision, const ReflectionProbeAsset& data );
+        /**
+         * @brief 스카이 라이트의 자리를 잡습니다 — 거칠기 단계의 옥타헤드럴 텍셀(반사 프로브와 같은 차례) 뒤에 SH9 원소 `kLightProbeFloat4Count` 개가 붙는다.
+         * @details 스카이 라이트는 라이트 목록의 원소가 아니다(씬에 하나, 위치가 없다) — 자리는 `getSkyLight` 가 패스 상수 모양으로 준다. 열쇠는 `SkyLightData::_revision` 이다.
+         */
+        void appendSkyLight( const SkyLightData& data );
         /** @brief 이번 수집을 끝냅니다. 열쇠가 지난번과 다를 때만 원소를 펼쳐 새 묶음을 만든다. 잡은 자리가 없으면 묶음은 nullptr 입니다. */
         void finish();
         /** @brief 마지막 `finish` 의 원소 묶음입니다(자리가 없었으면 nullptr). 같은 내용이면 같은 포인터다. */
         const shared_ptr<const vector<float4>>& getElements() const { return _pElements; }
+        /**
+         * @brief 이번 수집의 스카이 라이트 자리입니다(PassCB `g_SkyLight`, binding_slots.hlsli 8 절) — (옥타헤드럴 한 변 텍셀 수, 거칠기 단계 수, 프로브 버퍼의 첫 원소 번호, 0).
+         *        스카이 라이트가 없으면 모두 0 이다(단계 수 0 — 셰이더가 읽지 않는다).
+         */
+        const float4& getSkyLight() const { return _skyLight; }
 
     private:
-        /** @brief 펼칠 원본 하나입니다 — 셋 중 하나만 쓴다. 원본은 수집(게임 스레드) 안에서만 산다. */
+        /** @brief 펼칠 원본 하나입니다 — 넷 중 하나만 쓴다. 원본은 수집(게임 스레드) 안에서만 산다. */
         struct Source
         {
             const LightProbeGrid*       _pGrid{ nullptr };
             const ReflectionProbeAsset* _pReflection{ nullptr };
+            const SkyLightData*         _pSkyLight{ nullptr };
             uint32                      _realtimeProbeCount{ 0 };
         };
         /** @brief 원본 목록을 펼쳐 새 묶음을 만듭니다. */
@@ -113,6 +125,7 @@ namespace sw
         vector<uint64>                   _listKey;                  ///< `_pElements` 를 만든 열쇠
         vector<Source>                   _listSourceScratch;        ///< 이번 수집의 원본(차례대로)
         uint32                           _elementCountScratch{ 0 }; ///< 이번 수집에서 잡은 원소 수(float4)
+        float4                           _skyLight{};               ///< 이번 수집의 스카이 라이트 자리(`getSkyLight`)
         shared_ptr<const vector<float4>> _pElements;                ///< 마지막으로 만든 묶음
     };
 } // namespace sw
@@ -136,10 +149,12 @@ namespace sw
      *                       그 빛은 쿠키 없이 그려진다 — 아틀라스를 만들지 않는 경로(라이트 프로브 베이크)만 넘긴다.
      * @param pOutListRealtimeProbe 비지 않으면 실시간 갱신 볼륨(`LightProbeVolumeComponent::isRealtime`)마다 볼륨 원소(자리는 0 으로 채운 프로브 원소)를 넣고 갱신 요청을 지우고 채웁니다.
      *                              nullptr 이면 실시간 볼륨은 모으지 않습니다(갱신을 돌릴 수 없는 경로 — 미리보기와 베이크).
+     * @param pSkyLight 비지 않으면 그 스카이 라이트(`SkyLightCache::update` 가 준 것)의 텍셀 · SH9 를 @p pOutProbeElement 묶음 끝에 붙입니다. 라이트 원소는 넣지 않는다 —
+     *                  자리는 `LightProbeElementBuilder::getSkyLight` 다. @p pOutProbeElement 가 nullptr 이면 쓰지 않습니다.
      */
     SW_API void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<LocalShadowLight>* pOutListShadowLight = nullptr,
                                     LightProbeElementBuilder* pOutProbeElement = nullptr, vector<GPULightCookie>* pOutListCookie = nullptr,
-                                    vector<RealtimeProbeRequest>* pOutListRealtimeProbe = nullptr );
+                                    vector<RealtimeProbeRequest>* pOutListRealtimeProbe = nullptr, const SkyLightData* pSkyLight = nullptr );
 
     /**
      * @class GPULightBuffer
@@ -196,7 +211,8 @@ namespace sw
          * @param producer CPU 면 여기서 만들어 그리드 버퍼(t12)로 올리고, GPU 면 뷰 정보만 올리고 그리드 버퍼(UAV)를 잡습니다 — 채우기는 `FramePassExecutor::dispatchLightGrid`.
          *                 None 이면 그리드 없이 올립니다.
          * @param requestedGPULightSlotCount GPU 방출기들이 요청한 파티클 라이트 슬롯의 합. 생산자가 GPU 가 아니면 오류를 한 번 남기고 0 으로 받는다(`selectGPULightSlotCount`).
-         * @details 용량은 `ensureCapacity` 가 필요할 때만 다시 잡습니다. 그리드를 만들지 못한 뷰(투영이 깨졌다)와 GPU 그리드 버퍼를 만들지 못한 프레임은
+         * @details 프로브 버퍼(t13)는 라이트가 하나도 없어도 올린다 — 스카이 라이트는 라이트 원소 없이 그 버퍼만 쓴다(빛이 없는 하늘 장면).
+         *          용량은 `ensureCapacity` 가 필요할 때만 다시 잡습니다. 그리드를 만들지 못한 뷰(투영이 깨졌다)와 GPU 그리드 버퍼를 만들지 못한 프레임은
          *          오류를 한 번 남기고 그리드 없이 그립니다(셰이더는 목록 전체를 돈다 — 그림은 같고 비용만 다르다).
          *          GPU 구간이 있으면 라이트 버퍼는 UAV 가 있는 기본 힙 버퍼이고, 구간은 **죽은 라이트**(점광, 반경 0 — 그리드에 들지 않는다)로 채워 올린다.
          *          컴퓨트가 쓰지 못한 슬롯(건너뛴 방출기)이 지난 프레임의 낡은 라이트로 남지 않게 한다.
@@ -225,7 +241,7 @@ namespace sw
         const RHIStructuredBuffer* findGridBuffer() const;
         /** @brief 셰이더에 걸 수 있는 상태인지 확인합니다. */
         bool isBindable() const { return _count > 0 && _buffer._buffer != 0 && _buffer._srv != kInvalidDescriptorIndex; }
-        /** @brief 라이트 프로브 SH9 버퍼(t13)입니다. 이번 프레임에 쓸 프로브가 없으면 nullptr 입니다(볼륨 원소도 목록에 없다). */
+        /** @brief 라이트 프로브 SH9 · 반사 프로브 · 스카이 라이트 버퍼(t13)입니다. 이번 프레임에 올린 원소가 없으면 nullptr 입니다(볼륨 원소도 목록에 없고 스카이 라이트도 없다). */
         const RHIStructuredBuffer* findProbeBuffer() const;
         /** @brief 프로브 갱신 컴퓨트가 프로브 버퍼를 쓰는 UAV 입니다. 이번 프레임에 쓸 수 없으면(실시간 볼륨이 없다 · 버퍼가 없다 · 백엔드가 UAV 를 거절했다) `kInvalidDescriptorIndex` 입니다. */
         RHIDescriptorIndex getProbeUAV() const { return ( _bProbeWritable == SW_TRUE && _probeElementCount > 0 ) ? _probeBuffer._uav : kInvalidDescriptorIndex; }

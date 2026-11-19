@@ -523,16 +523,17 @@ namespace sw
         const bool                 bGridReady  = pGridBuffer != nullptr && pGridBuffer->_buffer != 0 && pGridBuffer->_srv != kInvalidDescriptorIndex;
         const uint32               gridBase    = bGridReady ? _state._lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : constant::invalid_index::kUint32;
         context._passValues.setUint( passConstantNames()._swLightGridBase, gridBase );
+        // 라이트 프로브 SH9 · 반사 프로브 · 스카이 라이트(t13) — 올린 원소가 있는 프레임에만 있다. 셰이더는 g_SwLightProbesIndex 로 걸렸는지 본다.
+        // 라이트 버퍼와 따로 건다: 스카이 라이트는 라이트가 하나도 없는 장면에도 있다.
+        const RHIStructuredBuffer* pProbeBuffer = _state._lightBuffer.findProbeBuffer();
+        if ( pProbeBuffer != nullptr )
+            context._resourceRegistry.registerBuffer( passConstantNames()._swLightProbes, pProbeBuffer->_buffer, pProbeBuffer->_srv );
         if ( _state._lightBuffer.isBindable() == false )
             return;
         const RHIStructuredBuffer& buffer = _state._lightBuffer.getBuffer();
         context._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer._buffer, buffer._srv );
         if ( bGridReady )
             context._resourceRegistry.registerBuffer( passConstantNames()._swLightGrid, pGridBuffer->_buffer, pGridBuffer->_srv );
-        // 라이트 프로브 SH9(t13) — 볼륨 원소가 라이트 목록에 있는 프레임에만 있다. 셰이더는 g_SwLightProbesIndex 로 걸렸는지 본다.
-        const RHIStructuredBuffer* pProbeBuffer = _state._lightBuffer.findProbeBuffer();
-        if ( pProbeBuffer != nullptr )
-            context._resourceRegistry.registerBuffer( passConstantNames()._swLightProbes, pProbeBuffer->_buffer, pProbeBuffer->_srv );
     }
 
     void FramePassExecutor::registerMaterialBuffer( FramePassContext& context, const GPUMeshBatchBinding& binding, RHIPipelineStateHandle pso )

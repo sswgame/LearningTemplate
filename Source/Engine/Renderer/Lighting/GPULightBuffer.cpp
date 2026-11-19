@@ -8,6 +8,7 @@
 #include "Core/Math/Frustum.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Environment/Sky/SkyLight.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -172,6 +173,7 @@ namespace sw
         _listKeyScratch.clear();
         _listSourceScratch.clear();
         _elementCountScratch = 0;
+        _skyLight            = float4{};
     }
 
     uint32 LightProbeElementBuilder::appendBakedVolume( uint64 componentID, uint32 revision, const LightProbeGrid& grid )
@@ -179,7 +181,7 @@ namespace sw
         const uint32 probeBase = _elementCountScratch / shaderslot::kLightProbeFloat4Count;
         _listKeyScratch.push_back( componentID );
         _listKeyScratch.push_back( revision );
-        _listSourceScratch.push_back( Source{ &grid, nullptr, 0 } );
+        _listSourceScratch.push_back( Source{ &grid, nullptr, nullptr, 0 } );
         _elementCountScratch += static_cast<uint32>( grid._listProbe.size() ) * SH9Color::kGPUFloat4Count;
         return probeBase;
     }
@@ -190,7 +192,7 @@ namespace sw
         // 0 자리의 내용은 수만 정한다. 컴포넌트 번호 0 은 쓰이지 않는 번호라 베이크 원본과 섞이지 않는다.
         _listKeyScratch.push_back( 0 );
         _listKeyScratch.push_back( probeCount );
-        _listSourceScratch.push_back( Source{ nullptr, nullptr, probeCount } );
+        _listSourceScratch.push_back( Source{ nullptr, nullptr, nullptr, probeCount } );
         _elementCountScratch += probeCount * shaderslot::kLightProbeFloat4Count;
         return probeBase;
     }
@@ -200,9 +202,21 @@ namespace sw
         const uint32 firstTexel = _elementCountScratch;
         _listKeyScratch.push_back( componentID );
         _listKeyScratch.push_back( revision );
-        _listSourceScratch.push_back( Source{ nullptr, &data, 0 } );
+        _listSourceScratch.push_back( Source{ nullptr, &data, nullptr, 0 } );
         _elementCountScratch += static_cast<uint32>( data._listTexel.size() );
         return firstTexel;
+    }
+
+    void LightProbeElementBuilder::appendSkyLight( const SkyLightData& data )
+    {
+        const ReflectionProbeAsset& reflection = data._reflection;
+        _skyLight                              = float4{ static_cast<float32>( reflection._resolution ), static_cast<float32>( reflection._levelCount ), static_cast<float32>( _elementCountScratch ), 0.0f };
+        // 컴포넌트 번호가 될 수 없는 값이 스카이 라이트의 열쇠다 — 다른 원본과 섞이지 않는다.
+        const uint64 skyLightKey = constant::invalid_index::kUint64;
+        _listKeyScratch.push_back( skyLightKey );
+        _listKeyScratch.push_back( data._revision );
+        _listSourceScratch.push_back( Source{ nullptr, nullptr, &data, 0 } );
+        _elementCountScratch += static_cast<uint32>( reflection._listTexel.size() ) + SH9Color::kGPUFloat4Count;
     }
 
     void LightProbeElementBuilder::finish()
@@ -242,6 +256,17 @@ namespace sw
                     pElements->push_back( float4{ texel._x, texel._y, texel._z, 0.0f } );
                 }
             }
+            else if ( source._pSkyLight != nullptr )
+            {
+                // 텍셀(반사 프로브와 같은 차례) 뒤에 SH9 원소 — 셰이더 SkyLight 가 첫 원소 + 한 변² × 단계 수에서 SH9 를 읽는다.
+                for ( const float3& texel : source._pSkyLight->_reflection._listTexel )
+                {
+                    pElements->push_back( float4{ texel._x, texel._y, texel._z, 0.0f } );
+                }
+                float4 arrElement[SH9Color::kGPUFloat4Count];
+                source._pSkyLight->_ambient.makeGPUElement( arrElement );
+                pElements->insert( pElements->end(), arrElement, arrElement + SH9Color::kGPUFloat4Count );
+            }
             else
             {
                 pElements->resize( pElements->size() + static_cast<size_t>( source._realtimeProbeCount ) * shaderslot::kLightProbeFloat4Count, float4{} );
@@ -251,7 +276,7 @@ namespace sw
     }
 
     void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<LocalShadowLight>* pOutListShadowLight, LightProbeElementBuilder* pOutProbeElement,
-                             vector<GPULightCookie>* pOutListCookie, vector<RealtimeProbeRequest>* pOutListRealtimeProbe )
+                             vector<GPULightCookie>* pOutListCookie, vector<RealtimeProbeRequest>* pOutListRealtimeProbe, const SkyLightData* pSkyLight )
     {
         outList.clear();
         if ( pOutListRealtimeProbe != nullptr )
@@ -327,6 +352,9 @@ namespace sw
                 if ( pData != nullptr )
                     outList.push_back( GPULightBufferInternal::makeReflectionProbeElement( *pProbe, *pData, *pOutProbeElement ) );
             }
+            // 스카이 라이트는 묶음 끝에 붙는다 — 라이트 원소가 아니라서 목록 · 그리드 · 상한 고르기에 들지 않는다.
+            if ( pSkyLight != nullptr )
+                pOutProbeElement->appendSkyLight( *pSkyLight );
             pOutProbeElement->finish();
         }
 
@@ -365,17 +393,19 @@ namespace sw
         const uint32 cpuCount = limitCPULightCount( listGridViewProj );
         _cpuCount             = cpuCount;
         _count                = cpuCount + _gpuLightCount;
-        if ( pDevice == nullptr || _count == 0 )
+        if ( pDevice == nullptr )
+            return;
+        // 프로브 버퍼는 라이트 수와 무관하게 올린다 — 스카이 라이트는 라이트 원소 없이 이 버퍼만 쓴다(빛이 하나도 없는 하늘 장면도 하늘빛을 받는다).
+        uploadProbeElements( pDevice );
+        if ( _count == 0 )
         {
             // 버퍼는 그대로 둔다. 라이트가 잠깐 0 이 되는 프레임마다 만들고 지우면 그것이 비용이다.
-            // 셰이더는 g_SwLightCount 가 0 이면 라이트를 돌지 않는다(앰비언트만).
+            // 셰이더는 g_SwLightCount 가 0 이면 라이트를 돌지 않는다(환경광만).
             return;
         }
 
         if ( uploadLightList( pDevice, cpuCount ) == false )
             return;
-
-        uploadProbeElements( pDevice );
 
         if ( listGridViewProj.empty() )
             return;
