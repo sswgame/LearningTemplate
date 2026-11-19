@@ -20,6 +20,9 @@
 #include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Console/DebugOverlayState.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -31,6 +34,8 @@
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Renderer/Debug/RenderDebugRegistry.h"
+#include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -146,6 +151,20 @@ namespace sw
                 const GameObjectManager* pManager = findActiveObjectManager();
                 writer.addLineFormat( "instances", "%#", pManager != nullptr ? pManager->getPrimitiveRegistry().getLiveSlotCount() : 0u );
                 writer.addLineFormat( "UI quads", "%#", profiler.getLastFrameCount( s_quadSlot ) );
+                // 렌더링 런타임 디버그 줄(언리얼 `stat rhi` · Godot Monitors 의 프리미티브 · VRAM): 삼각형은 주 시점 씬 드로우의 상한(GPU 컬링 전), 전이는 그래프가 낸 수.
+                static const uint32 s_transitionSlot = profiler.registerScope( "RT.Graph.transitions" );
+                writer.addLineFormat( "graph transitions", "%#", profiler.getLastFrameCount( s_transitionSlot ) );
+                if ( RenderDebugRegistry* const pDebug = engine::findSubsystem<RenderDebugRegistry>() )
+                {
+                    pDebug->requestStats(); // 보이는 동안만 렌더러가 센다
+                    const RenderFrameStats stats = pDebug->getStats();
+                    if ( stats._serial != 0 )
+                        writer.addLineFormat( "triangles", "<= %# (%# draws)", stats._triangleCount, stats._drawCount );
+                }
+                const RHISubsystem* const pRHISubsystem = engine::findSubsystem<RHISubsystem>();
+                const RHI* const          pRHI          = pRHISubsystem != nullptr ? pRHISubsystem->findRHI() : nullptr;
+                if ( pRHI != nullptr && pRHI->hasDevice() )
+                    writer.addLineFormat( "GPU memory", "%.1f MB", static_cast<float64>( pRHI->getDevice().getMemoryTracker().getTrackedBytes() ) / static_cast<float64>( constant::memory::kBytesPerMegabyte ) );
             }
 
             static void writeMemory( DebugHUDSectionWriter& writer )

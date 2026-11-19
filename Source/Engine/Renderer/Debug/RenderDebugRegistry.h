@@ -144,6 +144,13 @@ namespace sw
          * @details 멈춤 패스 앞의 패스는 모두 그리고, 멈춤 패스는 그 번호까지, 뒤의 패스는 그리지 않는다. 그래프에 없는 패스(@p passOrder 없음)는 그린다.
          */
         static bool isPastStop( optional<uint32> passOrder, uint32 drawIndex, uint32 stopOrder, uint32 stopDraw );
+        /**
+         * @brief 기록 @p listEvent 안에서 멈춤 지점을 @p delta 만큼(앞 +, 뒤 -) 옮긴 설정을 돌려줍니다 — 창의 다음 · 이전 단추와 `framedebug next|prev` 가 같은 규칙을 쓴다.
+         * @details 지금 지점이 기록에 없으면(처음 · 전체 프레임) 앞으로는 첫 드로우, 뒤로는 마지막 드로우다. 끝을 넘지 않는다. 기록이 비면 @p current 그대로다.
+         */
+        static FrameDebuggerSettings stepStop( const vector<FrameDebugDrawEvent>& listEvent, const FrameDebuggerSettings& current, int32 delta );
+        /** @brief 기록에서 멈춤 지점의 번호입니다. 없으면 nullopt 입니다. */
+        static optional<uint32> findStopEvent( const vector<FrameDebugDrawEvent>& listEvent, const FrameDebuggerSettings& settings );
         /** @brief PSO 바인딩 레이아웃을 한 줄씩 글로 옮깁니다(`FrameDebugDrawEvent::_listBinding`). */
         static void describeBindings( const ShaderBindingLayout& layout, vector<string>& outList );
 

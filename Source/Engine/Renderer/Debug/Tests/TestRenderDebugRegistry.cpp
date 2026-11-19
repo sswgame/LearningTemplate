@@ -115,3 +115,31 @@ SW_TEST_CASE( RenderDebugRegistryTest, BufferReadRequestIsReplaced )
     SW_EXPECT_EQUAL( serial, registry.getBufferContentSerial() );
     SW_EXPECT_EQUAL( size_t{ 8 }, content._byte.size() );
 }
+
+/**
+ * @brief [RenderDebugRegistryTest] 다음 · 이전 단계는 기록 안에서 패스를 건너 옮기고 끝을 넘지 않는다 — 기록에 없는 지점에서는 앞은 처음, 뒤는 끝이다
+ */
+SW_TEST_CASE( RenderDebugRegistryTest, StepMovesAcrossPassesAndClamps )
+{
+    vector<FrameDebugDrawEvent> listEvent( 3 );
+    listEvent[0]._passName  = "DepthPrepass";
+    listEvent[0]._drawIndex = 0;
+    listEvent[1]._passName  = "GBuffer";
+    listEvent[1]._drawIndex = 0;
+    listEvent[2]._passName  = "GBuffer";
+    listEvent[2]._drawIndex = 1;
+
+    FrameDebuggerSettings settings{};
+    settings = RenderDebugRegistry::stepStop( listEvent, settings, 1 ); // 기록에 없는 지점 → 처음
+    SW_EXPECT_EQUAL( string( "DepthPrepass" ), settings._stopPass );
+    SW_EXPECT_TRUE( settings._bEnabled != SW_FALSE );
+    settings = RenderDebugRegistry::stepStop( listEvent, settings, 1 );
+    SW_EXPECT_EQUAL( string( "GBuffer" ), settings._stopPass );
+    SW_EXPECT_EQUAL( 0u, settings._stopDraw );
+    settings = RenderDebugRegistry::stepStop( listEvent, settings, 5 ); // 끝에 붙는다
+    SW_EXPECT_EQUAL( 1u, settings._stopDraw );
+    settings = RenderDebugRegistry::stepStop( listEvent, settings, -1 );
+    SW_EXPECT_EQUAL( 0u, settings._stopDraw );
+    SW_REQUIRE_TRUE( RenderDebugRegistry::findStopEvent( listEvent, settings ).has_value() );
+    SW_EXPECT_EQUAL( 1u, *RenderDebugRegistry::findStopEvent( listEvent, settings ) );
+}

@@ -203,6 +203,34 @@ namespace sw
             _drawEventSerial.fetch_add( 1, std::memory_order_release );
     }
 
+    optional<uint32> RenderDebugRegistry::findStopEvent( const vector<FrameDebugDrawEvent>& listEvent, const FrameDebuggerSettings& settings )
+    {
+        for ( uint32 index = 0; index < static_cast<uint32>( listEvent.size() ); ++index )
+        {
+            if ( listEvent[index]._passName == settings._stopPass && listEvent[index]._drawIndex == settings._stopDraw )
+                return index;
+        }
+        return nullopt;
+    }
+
+    FrameDebuggerSettings RenderDebugRegistry::stepStop( const vector<FrameDebugDrawEvent>& listEvent, const FrameDebuggerSettings& current, int32 delta )
+    {
+        if ( listEvent.empty() )
+            return current;
+        const int32            lastIndex = static_cast<int32>( listEvent.size() ) - 1;
+        const optional<uint32> found     = findStopEvent( listEvent, current );
+        int32                  index     = 0;
+        if ( found.has_value() )
+            index = MathUtil::clamp( static_cast<int32>( *found ) + delta, 0, lastIndex );
+        else
+            index = delta >= 0 ? 0 : lastIndex;
+        FrameDebuggerSettings next = current;
+        next._stopPass             = listEvent[static_cast<size_t>( index )]._passName;
+        next._stopDraw             = listEvent[static_cast<size_t>( index )]._drawIndex;
+        next._bEnabled             = SW_TRUE;
+        return next;
+    }
+
     void RenderDebugRegistry::describeBindings( const ShaderBindingLayout& layout, vector<string>& outList )
     {
         for ( const ShaderBindingSlot& slot : layout.getSlots() )
