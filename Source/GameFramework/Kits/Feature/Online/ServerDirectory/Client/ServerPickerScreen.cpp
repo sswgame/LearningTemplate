@@ -73,7 +73,7 @@ namespace sw
 
     ServerPickerScreen::~ServerPickerScreen() = default;
 
-    UIScreenHandle ServerPickerScreen::open( UISystem& ui, string_view documentPath, ServerListModel& model, string_view kind, const ServerPickedDelegate& onPicked )
+    UIScreenHandle ServerPickerScreen::open( UISystem& ui, string_view documentPath, ServerList& model, string_view kind, const ServerPickedDelegate& onPicked )
     {
         const UIScreenHandle handle  = ui.openScreen<ServerPickerScreen>( documentPath );
         UIScreen*            pScreen = ui.findScreen( handle );

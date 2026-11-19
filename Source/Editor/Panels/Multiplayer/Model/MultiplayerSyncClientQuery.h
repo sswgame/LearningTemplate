@@ -1,5 +1,5 @@
 /**
- * @file MultiplayerSyncModel.h
+ * @file MultiplayerSyncClientQuery.h
  * @brief Sync 탭이 클라이언트 프로세스의 답을 기다리는 상태입니다 — 이력 · 오브젝트 해시 질의, 답 모으기, 시한, 모인 뒤 비교(ImGui 없음).
  * @details 클라이언트는 디버그 채널이 없어 표준 입력으로 묻고 로그 한 줄로 답한다. 답은 프레임을 건너 오므로 물을 때의 답 수를 기억해 "늘면 새 답" 으로 본다.
  */
@@ -14,14 +14,14 @@
 
 namespace sw::editor
 {
-    /** @class MultiplayerSyncModel @brief 파일 머리말을 참고하세요. 세션과 비교는 부를 때마다 받습니다(비교는 창을 닫아도 남는 에디터 상태이고, 세션은 에디터 범위의 것입니다). */
-    class MultiplayerSyncModel
+    /** @class MultiplayerSyncClientQuery @brief 파일 머리말을 참고하세요. 세션과 비교는 부를 때마다 받습니다(비교는 창을 닫아도 남는 에디터 상태이고, 세션은 에디터 범위의 것입니다). */
+    class MultiplayerSyncClientQuery
     {
     public:
         /** @brief 클라이언트에게 묻는 최근 틱 수입니다. 답은 로그 한 줄이라 한 줄 상한에 드는 수까지만 묻는다(더 많이 물으면 클라이언트가 오류로 답한다). */
         static constexpr int32 kClientHistoryTicks = static_cast<int32>( StateHashHistory::kMaxReportLineSamples );
 
-        MultiplayerSyncModel();
+        MultiplayerSyncClientQuery();
 
         /** @brief 칸 @p sourceIndex 에 담을 이력을 프로세스 @p processIndex 에 묻습니다. 묻지 못하면(프로세스가 끝남) 경고를 남기고 false 입니다. */
         bool requestClientHistory( IEditorNetPlayProcesses& processes, const EditorStateHashCompare& compare, int32 sourceIndex, int32 processIndex );

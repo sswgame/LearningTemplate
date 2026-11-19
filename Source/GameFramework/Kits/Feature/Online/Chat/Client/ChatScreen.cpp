@@ -38,7 +38,7 @@ namespace sw
 
     ChatScreen::~ChatScreen() = default;
 
-    UIScreenHandle ChatScreen::open( UISystem& ui, string_view documentPath, ChatLogModel& model, string_view channelID )
+    UIScreenHandle ChatScreen::open( UISystem& ui, string_view documentPath, ChatLog& model, string_view channelID )
     {
         const UIScreenHandle handle  = ui.openScreen<ChatScreen>( documentPath );
         UIScreen*            pScreen = ui.findScreen( handle );

@@ -12,7 +12,7 @@
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/NetPlay/EditorStateHashCompare.h"
 #include "Editor/Panels/Multiplayer/Model/MultiplayerSessionViewModel.h"
-#include "Editor/Panels/Multiplayer/Model/MultiplayerSyncModel.h"
+#include "Editor/Panels/Multiplayer/Model/MultiplayerSyncClientQuery.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -237,7 +237,7 @@ namespace sw::editor
 namespace sw::editor
 {
     MultiplayerSyncViewModel::MultiplayerSyncViewModel()
-        : _pModel{ make_unique<MultiplayerSyncModel>() }
+        : _pClientQuery{ make_unique<MultiplayerSyncClientQuery>() }
     {
     }
 
@@ -245,8 +245,8 @@ namespace sw::editor
 
     void MultiplayerSyncViewModel::poll()
     {
-        _pModel->poll( MultiplayerSessionViewModel::getSession().getNetPlayProcesses(), MultiplayerSyncViewModelInternal::getCompare(),
-                       MultiplayerSyncViewModelInternal::getReplyTimeoutMilliseconds() );
+        _pClientQuery->poll( MultiplayerSessionViewModel::getSession().getNetPlayProcesses(), MultiplayerSyncViewModelInternal::getCompare(),
+                             MultiplayerSyncViewModelInternal::getReplyTimeoutMilliseconds() );
     }
 
     void MultiplayerSyncViewModel::gather( MultiplayerSyncViewState& outState ) const
@@ -276,13 +276,13 @@ namespace sw::editor
             row._bRunning                                 = status._bRunning ? SW_TRUE : SW_FALSE;
             for ( int32 sourceIndex = 0; sourceIndex < kSourceCount; ++sourceIndex )
             {
-                row._arrWaiting[sourceIndex] = _pModel->isWaitingForHistory( sourceIndex, processIndex ) ? SW_TRUE : SW_FALSE;
+                row._arrWaiting[sourceIndex] = _pClientQuery->isWaitingForHistory( sourceIndex, processIndex ) ? SW_TRUE : SW_FALSE;
             }
         }
         outState._listDifferingObject = compare.getDifferingObjects();
         outState._hashChannel         = compare.getHashChannel();
         outState._comparisonText      = compare.isComparisonCurrent() ? MultiplayerSyncViewModelInternal::describeComparison( compare.getComparison() ) : string{};
-        outState._error               = _pModel->getError();
+        outState._error               = _pClientQuery->getError();
         outState._objectTick          = compare.getObjectTick();
         outState._bObjectComparison   = compare.hasObjectComparison() ? SW_TRUE : SW_FALSE;
     }
@@ -291,9 +291,9 @@ namespace sw::editor
     {
         EditorStateHashCompare& compare = MultiplayerSyncViewModelInternal::getCompare();
         if ( compare.setHashChannel( channelName ) == false )
-            _pModel->setError( compare.getLastError() );
+            _pClientQuery->setError( compare.getLastError() );
         else
-            _pModel->clearError();
+            _pClientQuery->clearError();
     }
 
     void MultiplayerSyncViewModel::loadSessionServer( int32 sourceIndex )
@@ -305,8 +305,8 @@ namespace sw::editor
 
     void MultiplayerSyncViewModel::requestClientHistory( int32 sourceIndex, int32 processIndex )
     {
-        (void)_pModel->requestClientHistory( MultiplayerSessionViewModel::getSession().getNetPlayProcesses(), MultiplayerSyncViewModelInternal::getCompare(), sourceIndex,
-                                             processIndex ); // 실패는 모델이 알린다
+        (void)_pClientQuery->requestClientHistory( MultiplayerSessionViewModel::getSession().getNetPlayProcesses(), MultiplayerSyncViewModelInternal::getCompare(), sourceIndex,
+                                                   processIndex ); // 실패는 모델이 알린다
     }
 
     void MultiplayerSyncViewModel::loadFromChannel( int32 sourceIndex, string_view address, string_view token )
@@ -347,14 +347,14 @@ namespace sw::editor
 
     void MultiplayerSyncViewModel::startObjectCompare()
     {
-        _pModel->startObjectCompare( MultiplayerSessionViewModel::getSession().getNetPlayProcesses(), MultiplayerSyncViewModelInternal::getCompare(),
-                                     MultiplayerSyncViewModelInternal::getReplyTimeoutMilliseconds() );
+        _pClientQuery->startObjectCompare( MultiplayerSessionViewModel::getSession().getNetPlayProcesses(), MultiplayerSyncViewModelInternal::getCompare(),
+                                           MultiplayerSyncViewModelInternal::getReplyTimeoutMilliseconds() );
     }
 
     void MultiplayerSyncViewModel::startReplayServer( const string& intentPath )
     {
         if ( MultiplayerSessionViewModel::getSession().startReplayServer( intentPath ) == false )
-            _pModel->setError( "The replay server could not start - see the Output Log" );
+            _pClientQuery->setError( "The replay server could not start - see the Output Log" );
     }
 
     void MultiplayerSyncViewModel::stepServer( int32 tickCount )
@@ -362,6 +362,6 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax32> command;
         formatstring( command.data(), command.capacity(), "step %#", tickCount );
         if ( MultiplayerSessionViewModel::getSession().sendServerCommand( command.view() ) == false )
-            _pModel->setError( "The server did not take the step command" );
+            _pClientQuery->setError( "The server did not take the step command" );
     }
 } // namespace sw::editor

@@ -5,7 +5,7 @@
  *          - I/O 스레드 없이 `updateAll` 로 돈다(결정적). 서버 여럿은 같은 데이터(`MemoryServiceDatabase` · `MemoryEphemeralDatabase` · `LocalServerBusHub`)를 나눠 쓴다.
  *          - 클라이언트는 공유 엔드포인트 모드(`OnlineServiceClient::initializeOnSharedEndpoint`) — 연결이 열리면 붙는다. `connect` 뒤 `updateAll` 한 번이면 Hello 까지 끝난다.
  *          - 내리는 순서는 실제 서버와 같다: 저장소 → 호스트 → 남은 저장소 완료 → 캐시.
- *          스위트 파일이 아니다 — 서비스 틀 테스트(`ServiceClientCallTableTest`)와 키트 끝단 테스트(`ServerListModelTest` — 키트 DLL)가 include 한다.
+ *          스위트 파일이 아니다 — 서비스 틀 테스트(`ServiceClientCallTableTest`)와 키트 끝단 테스트(`ServerListTest` — 키트 DLL)가 include 한다.
  *          키트 서비스의 서버 쪽은 테스트가 가짜(`IOnlineServerService`)로 올려도 된다 — 키트의 프로토콜 항목만 같으면 클라이언트 창구를 그대로 지난다.
  */
 #pragma once

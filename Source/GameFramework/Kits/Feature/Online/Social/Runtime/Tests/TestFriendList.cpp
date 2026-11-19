@@ -1,16 +1,16 @@
-// FriendListModelTest — 친구 목록 모델: 관계 응답이 친구 줄 · 받은 신청 수를 만들고, 접속 상태 응답이 접속 중인 친구를 앞으로(같은 쪽은 계정 순) 모으며
+// FriendListTest — 친구 목록 모델: 관계 응답이 친구 줄 · 받은 신청 수를 만들고, 접속 상태 응답이 접속 중인 친구를 앞으로(같은 쪽은 계정 순) 모으며
 // 접속 상태 알림이 다시 정렬한다. 오류 응답은 낡은 목록을 지우고 Failed 다. 클라이언트 없이 응답 길로 값을 넣는다(nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Social/Runtime/FriendListModel.h"
+#include "GameFramework/Kits/Feature/Online/Social/Runtime/FriendList.h"
 
 using namespace sw;
 
 namespace
 {
-    struct FriendListModelTestUtil
+    struct FriendListTestUtil
     {
         static SocialLink makeLink( AccountID otherID, SocialLinkState state )
         {
@@ -28,13 +28,13 @@ namespace
             return presence;
         }
     };
-    using Util = FriendListModelTestUtil;
+    using Util = FriendListTestUtil;
 } // namespace
 
-/** @brief [FriendListModelTest] 관계 응답은 친구 줄과 받은 신청 수를 만들고, 접속 상태 응답 뒤 접속 중인 친구가 앞(같은 쪽은 계정 순)이며 Loaded 다 */
-SW_TEST_CASE( FriendListModelTest, LinksThenPresenceSortsOnlineFirst )
+/** @brief [FriendListTest] 관계 응답은 친구 줄과 받은 신청 수를 만들고, 접속 상태 응답 뒤 접속 중인 친구가 앞(같은 쪽은 계정 순)이며 Loaded 다 */
+SW_TEST_CASE( FriendListTest, LinksThenPresenceSortsOnlineFirst )
 {
-    FriendListModel  model;
+    FriendList       model;
     SocialLinksReply links;
     links._listLink = { Util::makeLink( 30, SocialLinkState::Friend ), Util::makeLink( 10, SocialLinkState::Friend ), Util::makeLink( 20, SocialLinkState::Incoming ),
                         Util::makeLink( 40, SocialLinkState::Friend ), Util::makeLink( 50, SocialLinkState::Blocked ) };
@@ -62,10 +62,10 @@ SW_TEST_CASE( FriendListModelTest, LinksThenPresenceSortsOnlineFirst )
     SW_EXPECT_EQUAL( AccountID( 10 ), model.getEntries()[1]._accountID );
 }
 
-/** @brief [FriendListModelTest] 오류 응답은 낡은 목록과 받은 신청 수를 지우고 Failed 다(낡은 것을 새것처럼 보이지 않는다) */
-SW_TEST_CASE( FriendListModelTest, ErrorReplyClearsTheList )
+/** @brief [FriendListTest] 오류 응답은 낡은 목록과 받은 신청 수를 지우고 Failed 다(낡은 것을 새것처럼 보이지 않는다) */
+SW_TEST_CASE( FriendListTest, ErrorReplyClearsTheList )
 {
-    FriendListModel  model;
+    FriendList       model;
     SocialLinksReply links;
     links._listLink = { Util::makeLink( 10, SocialLinkState::Friend ), Util::makeLink( 20, SocialLinkState::Incoming ) };
     model.applyLinks( links );
@@ -80,19 +80,19 @@ SW_TEST_CASE( FriendListModelTest, ErrorReplyClearsTheList )
 }
 
 /**
- * @brief [FriendListModelTest] 클라이언트 없이 관계 응답이 오면(응답이 오는 사이 뗐다) 접속 상태를 묻지 못하고 Failed 다
+ * @brief [FriendListTest] 클라이언트 없이 관계 응답이 오면(응답이 오는 사이 뗐다) 접속 상태를 묻지 못하고 Failed 다
  * @details 예전에는 빈 클라이언트 포인터로 접속 상태를 물어 죽었다. 클라이언트가 없으면 묻기(`refresh`)도 Failed 로 끝난다.
  */
-SW_TEST_CASE( FriendListModelTest, ReplyWithoutAClientFails )
+SW_TEST_CASE( FriendListTest, ReplyWithoutAClientFails )
 {
-    FriendListModel                model;
+    FriendList                     model;
     OnlineResult<SocialLinksReply> links;
     links._reply._listLink = { Util::makeLink( 10, SocialLinkState::Friend ) };
     model.onLinksReply( links );
     SW_EXPECT_TRUE( model.getState() == FriendListState::Failed );
     SW_EXPECT_EQUAL( OnlineError::kUnavailable, model.getErrorCode() );
 
-    FriendListModel idle;
+    FriendList idle;
     SW_EXPECT_FALSE( idle.refresh() );
     SW_EXPECT_TRUE( idle.getState() == FriendListState::Failed );
 }

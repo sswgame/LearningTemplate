@@ -1,8 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/NetSimPlayModel.h"
-
-#include "Core/Math/MathUtil.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/NetSimStepPacer.h"
 
 namespace sw::editor
 {
@@ -28,11 +26,5 @@ namespace sw::editor
         if ( _accumulatedSeconds >= tickInterval )
             _accumulatedSeconds = 0.0;
         return stepCount;
-    }
-
-    float2 NetSimWorldLayout::computeViewSize( float2 available, int32 worldCount, float32 itemSpacingX, float32 lineHeight, float32 minHeight )
-    {
-        const int32 columnCount = MathUtil::max( 1, worldCount );
-        return float2{ MathUtil::max( 1.0f, available._x / static_cast<float32>( columnCount ) - itemSpacingX ), MathUtil::max( minHeight, available._y - lineHeight * 2.0f ) };
     }
 } // namespace sw::editor

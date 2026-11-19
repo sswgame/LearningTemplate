@@ -1,7 +1,7 @@
 /**
  * @file MultiplayerSyncViewModel.h
  * @brief Multiplayer 창 Sync 탭의 ViewModel — 상태 해시 이력 두 칸(A · B)과 비교 결과 · 클라이언트 원천을 모으고(`gather`), 읽기 · 저장 · 비교 · 되감기 명령을 받습니다. ImGui 를 모릅니다.
- * @details 계산은 `EditorStateHashCompare`(에디터 범위 상태 저장소가 소유 — 창을 닫아도 남는다), 클라이언트 답 기다리기는 `MultiplayerSyncModel` 이 한다(서버 디버깅 S7).
+ * @details 계산은 `EditorStateHashCompare`(에디터 범위 상태 저장소가 소유 — 창을 닫아도 남는다), 클라이언트 답 기다리기는 `MultiplayerSyncClientQuery` 이 한다(서버 디버깅 S7).
  *          읽기는 누를 때만 한다(채널 요청은 답을 기다린다). 비교 기록 · 파일 · 서버 진행이지 씬 문서가 아니라 되돌리기에 남지 않는다.
  *          감시 값(`Editor.NetPlaySync*`) · 개발 명령 `netplay.sync` · 환경설정 섹션 `EditorSyncPreferences` 도 이 .cpp 에 있다.
  */
@@ -14,7 +14,7 @@
 
 namespace sw::editor
 {
-    class MultiplayerSyncModel;
+    class MultiplayerSyncClientQuery;
     struct MultiplayerSyncViewState;
 
     /**
@@ -60,7 +60,7 @@ namespace sw::editor
         void stepServer( int32 tickCount );
 
     private:
-        unique_ptr<MultiplayerSyncModel> _pModel; ///< 클라이언트 답 기다리기 · 질의 오류
+        unique_ptr<MultiplayerSyncClientQuery> _pClientQuery; ///< 클라이언트 답 기다리기 · 질의 오류
     };
 
     /** @brief 비교할 이력 한 칸의 값입니다. */

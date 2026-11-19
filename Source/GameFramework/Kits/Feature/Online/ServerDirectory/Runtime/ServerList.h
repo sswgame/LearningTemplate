@@ -1,5 +1,5 @@
 /**
- * @file ServerListModel.h
+ * @file ServerList.h
  * @brief 서버 고르기 화면이 읽는 서버 목록 상태입니다. 서버 목록 요청(`ServerDirectoryMethod::ListServers`)의 응답을 받아 목록과 상태(`Loading` · `Loaded` · `Failed`)를 보관합니다.
  * @details 화면(`ServerPickerScreen`)은 요청을 직접 보내지 않고 이 객체를 읽는다 — 응답 델리게이트가 화면 수명에 묶이지 않게 한다. 이 객체는 클라이언트와 함께(또는 먼저 요청이 끝난 뒤) 소멸해야 한다
  *          (`ServerDirectoryClient` 의 다른 사용처와 같은 규칙). 목록이 바뀔 때마다 `getRevision` 이 올라가 화면이 다시 그릴지 판단한다.
@@ -25,15 +25,15 @@ namespace sw
     };
 
     /**
-     * @class ServerListModel
+     * @class ServerList
      * @brief 서버 목록 한 벌과 그 상태입니다.
      */
-    class SW_KIT_API ServerListModel
+    class SW_KIT_API ServerList
     {
     public:
-        ServerListModel();
-        ServerListModel( const ServerListModel& )            = delete; // 응답 델리게이트가 this 를 가리킨다
-        ServerListModel& operator=( const ServerListModel& ) = delete;
+        ServerList();
+        ServerList( const ServerList& )            = delete; // 응답 델리게이트가 this 를 가리킨다
+        ServerList& operator=( const ServerList& ) = delete;
 
         /** @brief 클라이언트를 빌려 씁니다(`ServerDirectoryClient` 가 서비스 클라이언트에 등록·초기화된 것). */
         void initialize( ServerDirectoryClient* pClient ) { _pClient = pClient; }

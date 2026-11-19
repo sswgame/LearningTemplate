@@ -41,7 +41,7 @@ namespace sw
     /**
      * @brief 채팅 결과입니다. 업무 결과(`ChatResult`) 또는 공통 범주(`OnlineError`)입니다.
      * @details 빈 글 · 상한 초과 · 잘못된 UTF-8 · 규칙 밖 채널 id 는 `kInvalidRequest`, 저장소 · 캐시 · 전송 장애는 `kUnavailable`, 로그인 없음은 `kUnauthenticated` 이다.
-     *          서버 로직 · 클라이언트 모델(`ChatLogModel`)이 같은 형식을 쓴다.
+     *          서버 로직 · 클라이언트 모델(`ChatLog`)이 같은 형식을 쓴다.
      */
     using ChatServiceResult = OnlineServiceResult<ChatResult>;
 

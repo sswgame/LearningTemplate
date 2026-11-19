@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerListModel.h"
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerList.h"
 
 namespace sw
 {
-    ServerListModel::ServerListModel()
+    ServerList::ServerList()
         : _listEntry{}
         , _pClient{ nullptr }
         , _revision{ 0 }
@@ -13,7 +13,7 @@ namespace sw
     {
     }
 
-    bool ServerListModel::refresh( string_view kind )
+    bool ServerList::refresh( string_view kind )
     {
         if ( _state == ServerListState::Loading )
             return false;
@@ -31,11 +31,11 @@ namespace sw
         // 범위 밖 종류는 보내지 않고 이 호출 안에서 바로 onServerList(kInvalidRequest)로 끝난다.
         ServerListRequest request;
         request._kind = string( kind );
-        (void)_pClient->call<ServerDirectoryMethod::ListServers>( request, OnlineReplyDelegate<ServerDirectoryMethod::ListServers>::create<&ServerListModel::onServerList>( this ) );
+        (void)_pClient->call<ServerDirectoryMethod::ListServers>( request, OnlineReplyDelegate<ServerDirectoryMethod::ListServers>::create<&ServerList::onServerList>( this ) );
         return _state != ServerListState::Failed;
     }
 
-    void ServerListModel::onServerList( const OnlineResult<ServerListReply>& result )
+    void ServerList::onServerList( const OnlineResult<ServerListReply>& result )
     {
         _errorCode = result._errorCode;
         if ( result._errorCode == OnlineError::kOk )

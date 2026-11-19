@@ -78,7 +78,7 @@ namespace sw
 
     FriendListScreen::~FriendListScreen() = default;
 
-    UIScreenHandle FriendListScreen::open( UISystem& ui, string_view documentPath, FriendListModel& model )
+    UIScreenHandle FriendListScreen::open( UISystem& ui, string_view documentPath, FriendList& model )
     {
         const UIScreenHandle handle  = ui.openScreen<FriendListScreen>( documentPath );
         UIScreen*            pScreen = ui.findScreen( handle );

@@ -16,7 +16,7 @@
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolSession.h"
-#include "GameFramework/Kits/Feature/Online/Admin/Editor/Model/AdminToolModel.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/Model/AdminToolUtil.h"
 
 #include <imgui.h>
 
@@ -155,7 +155,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Lookup" ) ) )
         {
             AccountID accountID = kInvalidAccountID;
-            if ( AdminToolModel::parseAccountID( _accountText, accountID ) )
+            if ( AdminToolUtil::parseAccountID( _accountText, accountID ) )
                 session.requestLookup( accountID );
             else
                 SW_LOG_WARNING_ID( "AdminToolPanel.AdminToolAccountId", "Admin tool: account id must be a non-zero hex number" );
@@ -169,7 +169,7 @@ namespace sw::editor
         }
 
         const AdminReply& lookup = session.getLookup();
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "Id", TextArgumentList().addText( "displayName", lookup._identity._displayName.c_str() ).addText( "accountID", AdminToolModel::formatAccountID( lookup._identity._accountID ).c_str() ).addText( "presence", lookup._bOnline == SW_TRUE ? "online" : "offline" ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "Id", TextArgumentList().addText( "displayName", lookup._identity._displayName.c_str() ).addText( "accountID", AdminToolUtil::formatAccountID( lookup._identity._accountID ).c_str() ).addText( "presence", lookup._bOnline == SW_TRUE ? "online" : "offline" ) ).c_str() );
 
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp;
         if ( ImGui::BeginTable( "##AdminBalance", 2, kTableFlags ) )
@@ -183,14 +183,14 @@ namespace sw::editor
                 ImGui::TableSetColumnIndex( 0 );
                 ImGui::TextUnformatted( balance._assetID.c_str() );
                 ImGui::TableSetColumnIndex( 1 );
-                ImGui::TextUnformatted( AdminToolModel::formatBalance( balance ).c_str() );
+                ImGui::TextUnformatted( AdminToolUtil::formatBalance( balance ).c_str() );
             }
             ImGui::EndTable();
         }
 
         for ( int32 kindIndex = 0; kindIndex < static_cast<int32>( ServiceSanctionKind::Count ); ++kindIndex )
         {
-            const string state = AdminToolModel::formatSanction( lookup._sanction._arrUntilMs[kindIndex], WallClock::nowUnixMilliseconds().count() );
+            const string state = AdminToolUtil::formatSanction( lookup._sanction._arrUntilMs[kindIndex], WallClock::nowUnixMilliseconds().count() );
             ImGui::Text( "%s: %s", getEnumName( static_cast<ServiceSanctionKind>( kindIndex ) ), state.c_str() );
             if ( kindIndex + 1 < static_cast<int32>( ServiceSanctionKind::Count ) )
                 ImGui::SameLine();
@@ -214,9 +214,9 @@ namespace sw::editor
         ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "RefundRevokeMayLeaveADebt" ), &_bRefund );
 
         AccountID  accountID     = kInvalidAccountID;
-        const bool bAccountValid = AdminToolModel::parseAccountID( _accountText, accountID );
+        const bool bAccountValid = AdminToolUtil::parseAccountID( _accountText, accountID );
         // 칸은 크기다 - 음수를 그대로 두면 Grant 가 회수하고 Revoke 가 지급했다.
-        ImGui::BeginDisabled( bAccountValid == false || AdminToolModel::isAdjustAmountValid( _amount ) == false );
+        ImGui::BeginDisabled( bAccountValid == false || AdminToolUtil::isAdjustAmountValid( _amount ) == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Grant" ) ) )
             session.requestAdjust( accountID, _assetText, _amount, false, _memoText );
         EditorSelfTestMarks::record( "admin.grant" );
@@ -252,10 +252,10 @@ namespace sw::editor
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "ReasonCode" ), "Reason code" ), _reasonText, 160.0f * EditorThemeUtil::getDPIScale() );
 
         AccountID  accountID     = kInvalidAccountID;
-        const bool bAccountValid = AdminToolModel::parseAccountID( _accountText, accountID );
+        const bool bAccountValid = AdminToolUtil::parseAccountID( _accountText, accountID );
         ImGui::BeginDisabled( bAccountValid == false );
         // 기간 0 은 해제의 뜻이다 - 거는 단추가 해제를 보내지 않게 한다.
-        ImGui::BeginDisabled( AdminToolModel::isSanctionDurationValid( _sanctionSeconds ) == false );
+        ImGui::BeginDisabled( AdminToolUtil::isSanctionDurationValid( _sanctionSeconds ) == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ApplySanction" ) ) )
             session.requestSanction( accountID, _sanctionKind, _sanctionSeconds, _reasonText, _memoText );
         ImGui::EndDisabled();
@@ -294,7 +294,7 @@ namespace sw::editor
         {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
-            ImGui::TextUnformatted( AdminToolModel::formatClock( entry._timeMs ).c_str() );
+            ImGui::TextUnformatted( AdminToolUtil::formatClock( entry._timeMs ).c_str() );
             ImGui::TableSetColumnIndex( 1 );
             ImGui::TextUnformatted( entry._action.c_str() );
             ImGui::TableSetColumnIndex( 2 );
@@ -339,11 +339,11 @@ namespace sw::editor
             ImGui::PushID( report._reportKey.c_str() );
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
-            ImGui::TextUnformatted( AdminToolModel::formatClock( report._createdMs ).c_str() );
+            ImGui::TextUnformatted( AdminToolUtil::formatClock( report._createdMs ).c_str() );
             ImGui::TableSetColumnIndex( 1 );
             ImGui::TextUnformatted( report._reason.c_str() );
             ImGui::TableSetColumnIndex( 2 );
-            ImGui::TextUnformatted( AdminToolModel::formatAccountID( report._targetID ).c_str() );
+            ImGui::TextUnformatted( AdminToolUtil::formatAccountID( report._targetID ).c_str() );
             ImGui::TableSetColumnIndex( 3 );
             ImGui::TextUnformatted( report._listLine.empty() ? "" : report._listLine.back()._text.c_str() ); // 마지막 줄이 신고 대상이다
             ImGui::TableSetColumnIndex( 4 );
