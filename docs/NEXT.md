@@ -8,9 +8,10 @@
 
 ## 0. 다음 순서
 
-1. **다음 묶음(앞 묶음 12 갈래는 2026-11-19 b65745c996 으로 Windows 검증 · push 끝, Linux 는 아직 — 사용자가 시킬 때):** 헤더 팬인 다이어트(감사 8 — 다른 갈래와 헤더가 겹쳐 혼자 마지막), 렌더 그래프 접근 종류 핸들(HZB 뒤), HDR 디스플레이 출력, Fileserve, int2 리플렉션 잎, TerrainLayerRule 단위 섞임, NavMeshObstacle 모양, A-13 측정(`Pack.CookedContent` 쿠킹 실행), 5 절 남은 설계 일. 진행: 둘 · 셋씩 병합 → 합칠 때마다 Release · Shipping · Release-ASan · Shipping-Server 증분 빌드 + 그 갈래 테스트 · 시나리오(dx12, 그림이 바뀌면 네 백엔드 골든) → `preflight --no-linux` → push → 워크트리 지움.
-   - 작업자 몫: `GameObjectManager.inl` 머리말의 "포함을 잊으면 링크에서 멈춘다" 를 맞춘다 — clang 은 `-Werror=undefined-func-template`(`sw_require_template_definitions`)로 컴파일에서 멈추고 MSVC 만 링크에서 멈춘다. 그 뒤 에셋 GUID 2 · 3 단계(5 절).
-2. **감사 열린 항목(7 절):** 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 작업자에게는 NEXT 를 고치지 말게 하고 통합 커밋이 줄을 지운다 — 커밋 메시지는 `감사 <ID>` 꼴(옛 백로그 번호와 겹친다).
+1. **빌드 없이 커밋한 묶음을 검증 · push(2026-11-20, 사용자 지시 "남은 일을 다 한 뒤 한 번에 빌드"):** b65745c996 뒤 커밋 8 개 — 확장 테스트 러너(실패 이유 출력), graphify Stop 훅(낡은 잠금), DDC 정리 규칙(`DerivedDataCacheTest.EvictsUnusedThenOldestOverLimit`), GameObjectManager.inl 머리말, TerrainLayerRule `_slopeMin` · `_slopeMax`(terrainlayers 씬 — 같은 각이라 골든 그대로여야 한다), int2 리플렉션 잎(`PackedValueSerializationTest.Int2KeepsExactIntegersAndRejectsFractions` · StateIOReflectedTest · Tactics 데모 커서 · 칸 목록), NavMeshObstacle 모양(`PropertyShapeTest.CylinderHandlesWriteRadiusToXAndHalfHeightToY` · `NavObstacleShapeFollowsSelectorCenterAndYaw`). Release 빌드 폴더와 Saved(DDC · 쿠킹 기록)를 비워 첫 빌드 · 쿠킹은 처음부터다. 빌드 → 바뀐 테스트(dx12) → `preflight --no-linux` → push. 그 뒤 같은 쿠킹으로 **A-13 측정**(`Pack.CookedContent` 쿠킹 실행, 8 절 A-13 줄).
+2. **다음 묶음(크기 L 넷 — 새 세션에서):** 렌더 그래프 접근 종류 핸들(DesignBacklog "렌더 그래프 접근 핸들" 이전 차례 ① → ④), HDR 디스플레이 출력, Fileserve, 헤더 팬인 다이어트(감사 8 — 다른 갈래와 헤더가 겹쳐 혼자 마지막), 그 뒤 에셋 GUID 2 · 3 단계(5 절) · 5 절 남은 설계 일. 진행: 둘 · 셋씩 병합 → 합칠 때마다 Release · Shipping · Release-ASan · Shipping-Server 증분 빌드 + 그 갈래 테스트 · 시나리오(dx12, 그림이 바뀌면 네 백엔드 골든) → `preflight --no-linux` → push → 워크트리 지움.
+   - int2 를 아직 손 본문에 싣는 키트 칸: NileCity `_cursorTile`, PixelTown `_tile` · `_stepFromTile` — 리플렉션 상태 칸으로 옮긴다(Tactics 데모와 같은 꼴).
+3. **감사 열린 항목(7 절):** 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 작업자에게는 NEXT 를 고치지 말게 하고 통합 커밋이 줄을 지운다 — 커밋 메시지는 `감사 <ID>` 꼴(옛 백로그 번호와 겹친다).
 
 ## 1. 통합 빌드에서 함께 볼 것 (빌드 없이 넘어온 묶음)
 
