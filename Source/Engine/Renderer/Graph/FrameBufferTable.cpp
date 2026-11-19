@@ -1,0 +1,56 @@
+#include "pch.h"
+
+#include "Engine/Renderer/Graph/FrameBufferTable.h"
+
+#include "Core/Log/Logger.h"
+
+namespace sw
+{
+    bool FrameBufferTable::registerBuffer( hashed_string name, uint32 slot, RHIBufferHandle buffer, RenderGraphAccess initialAccess )
+    {
+        return registerEntry( Entry{ name, slot, buffer, RenderGraphViewableKind::Buffer, initialAccess } );
+    }
+
+    bool FrameBufferTable::registerTexture( hashed_string name, uint32 slot, RHITextureHandle texture, RenderGraphAccess initialAccess )
+    {
+        return registerEntry( Entry{ name, slot, texture, RenderGraphViewableKind::Texture, initialAccess } );
+    }
+
+    bool FrameBufferTable::registerEntry( const Entry& entry )
+    {
+        if ( entry._handle == 0 )
+        {
+            SW_LOG_ERROR_ID( "FrameBufferTable.InvalidHandle", "Frame resource '%#' slot %# was registered without a handle - its passes get no transitions", entry._name.c_str(), entry._slot );
+            return false;
+        }
+        for ( const Entry& existing : _listEntry )
+        {
+            if ( existing._name != entry._name )
+                continue;
+            if ( existing._slot == entry._slot )
+            {
+                SW_LOG_ERROR_ID( "FrameBufferTable.DuplicateName", "Frame resource '%#' slot %# is registered twice - the second registration is ignored", entry._name.c_str(), entry._slot );
+                return false;
+            }
+            // 그래프는 이름마다 상태 하나를 든다 — 칸마다 다른 처음 상태 · 종류면 한 전이로 모두를 옮길 수 없다.
+            if ( existing._initialAccess != entry._initialAccess || existing._viewable != entry._viewable )
+            {
+                SW_LOG_ERROR_ID( "FrameBufferTable.SlotMismatch", "Frame resource '%#' slot %# differs from slot %# in kind or initial access - the registration is ignored", entry._name.c_str(),
+                                 entry._slot, existing._slot );
+                return false;
+            }
+        }
+        _listEntry.push_back( entry );
+        return true;
+    }
+
+    uint64 FrameBufferTable::findHandle( hashed_string name, uint32 slot, RenderGraphViewableKind viewable ) const
+    {
+        for ( const Entry& entry : _listEntry )
+        {
+            if ( entry._name == name && entry._slot == slot && entry._viewable == viewable )
+                return entry._handle;
+        }
+        return 0;
+    }
+} // namespace sw

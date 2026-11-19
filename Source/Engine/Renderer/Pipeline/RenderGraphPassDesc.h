@@ -411,6 +411,7 @@ namespace sw
      * @details 첨부가 아닌 자원 — 서브시스템이 가진 버퍼(인스턴스 · 라이트 · 컬링 결과)와 프레임을 넘는 히스토리(깊이 히스토리 · 가림 타일 · 입자 상태 · 프로브) — 의 이름이다.
      *          프레임 패스가 이 이름으로 읽기 · 쓰기를 선언하면 그래프가 순서를 정한다. 그래프는 버퍼를 만들지 않는다(주인은 서브시스템이다 — 언리얼 RDG 의 외부 버퍼 등록과 같다).
      *          `_kind` 는 Persistent 또는 External 이다(Transient 는 첨부의 몫이라 검증이 막는다).
+     *          `_viewable` 은 버퍼(기본) · 텍스처다 — 패스의 입력 · 출력이 그것과 함께 접근을 정한다(`RenderPipelineAsset::buildFramePassAccesses`, 언리얼 RDG 의 버퍼 · 텍스처 등록이 나뉜 것과 같다).
      */
     REFLECT()
     struct RenderGraphResourceDesc
@@ -421,6 +422,9 @@ namespace sw
 
         PROPERTY()
         RenderGraphResourceKind _kind{ RenderGraphResourceKind::External };
+
+        PROPERTY()
+        RenderGraphViewableKind _viewable{ RenderGraphViewableKind::Buffer };
     };
 
     /** @brief 첨부 나눗수의 상한입니다 — 모션 블러 타일(16² 픽셀, motion_blur_tile_max.hlsl kMotionBlurTileSize)이 가장 큰 쓰임이다. */
@@ -454,6 +458,19 @@ namespace sw
 
         PROPERTY( SkipIfEmpty )
         vector<string> _listOutput;
+
+        /**
+         * @brief 입력 · 출력 규칙(버퍼 입력 = SRV, 출력 = UAV — `RenderPipelineAsset::buildFramePassAccesses`) 밖의 접근입니다. 프레임 패스만 적는다(검증) — 이름은 `_listResource` 의 버퍼다.
+         * @details 간접 인자(그리기 · 디스패치가 읽는 인자 버퍼), 복사 원본, 복사 대상. 한 이름은 한 패스에서 한 접근이다(입출력과 겹치면 로드 오류 — 언리얼 RDG 패스 파라미터의 접근 하나).
+         */
+        PROPERTY( SkipIfEmpty )
+        vector<string> _listIndirectArgs;
+
+        PROPERTY( SkipIfEmpty )
+        vector<string> _listCopySource;
+
+        PROPERTY( SkipIfEmpty )
+        vector<string> _listCopyDest;
 
         /**
          * @brief 이 패스가 바인딩할 뎁스 첨부 이름입니다. **비어 있으면 뎁스 없이 엽니다.**

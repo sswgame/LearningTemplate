@@ -19,6 +19,7 @@
 #include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/Debug/GPUNanCheck.h"
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
+#include "Engine/Graphics/RHI/RHIBufferTransitionBatch.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
@@ -30,6 +31,7 @@
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
+#include "Engine/Renderer/Graph/FrameBufferTable.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Scene/GPUMeshBatchBinding.h"
@@ -217,7 +219,8 @@ namespace sw
         void recordFrameGraph( IRHIDevice* pDevice );
         /**
          * @brief 레벨을 기록하기 **직전에** 그 레벨이 만질 자원의 배리어를 미리 발행합니다. 직렬 경로에서는 패스마다 발행합니다.
-         * @details 자원 이름으로 실제 텍스처를 찾아 읽기 · 렌더 타깃 전이를 한 묶음(`IRHICommandList::transitionTextures`)으로
+         * @details 등록한 프레임 자원(`FrameBufferTable` — 이름의 모든 뷰 칸)의 버퍼 전이는 `transitionBuffers` 한 번, UAV → UAV 는 UAV 배리어로 낸다. 뷰 그래프와 프레임 그래프가 이 콜백 하나를 쓴다.
+         *          자원 이름으로 실제 텍스처를 찾아 읽기 · 렌더 타깃 전이를 한 묶음(`IRHICommandList::transitionTextures`)으로
          *          레벨 첫 패스 리스트의 앞머리에 기록한다(직렬 경로에서는
          *          그 패스의 리스트). 같은 레벨의 다른 리스트는 큐 순서상 그 뒤에 실행되므로 GPU 타임라인에서도 배리어가 앞선다.
          *
@@ -532,6 +535,12 @@ namespace sw
         unordered_map<hashed_string, uint32> _mapFramePassNameToIndex;
         /// @brief 프레임 그래프 실행 상태입니다(뷰 그래프와 따로 — 자원 이름이 다르고 프레임에 한 번 돈다).
         RenderGraphExecutionContext _frameGraphContext;
+        /// @brief 프레임 그래프 자원(이름 · 뷰 칸) → RHI 핸들입니다. `recordFrameGraph` 가 프레임마다 비우고 주인이 다시 등록한다(`FrameGraphExecutor::beginFrame`).
+        FrameBufferTable _frameBufferTable;
+        /// @brief 레벨 콜백이 모은 버퍼 전이입니다(`transitionBuffers` 한 번). 레벨 콜백은 한 스레드에서만 돈다 — 용량을 프레임 사이에 다시 쓴다.
+        RHIBufferTransitionBatch _levelBufferTransitions;
+        /// @brief 이번 프레임에 레벨 콜백이 낸 전이 · UAV 배리어 수입니다(지표 `RT.Graph.transitions` — 그래프로 옮긴 단계가 이 수를 늘리지 않아야 한다).
+        uint32 _graphTransitionCount{ 0 };
         /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 `FrameRenderState::_mainView` 입니다. 바꾸는 곳은 `renderExtraView` 하나다.
         FrameViewTarget* _pActiveView;
         /// @brief 프레임 그래프 리스트와 그것을 만든 디바이스입니다. `_pCmd` 는 프리패스를 기록하는 동안만 그 리스트를 가리킨다.

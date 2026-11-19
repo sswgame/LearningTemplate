@@ -1265,6 +1265,8 @@ public:
 
 **측정.** 프레임 GPU 시간 · 전이 수가 이전 단계와 같거나 적다(늘면 그 단계에서 고친다 — 같은 상태 반복은 ①이 이미 걸러 낸다).
 
+**② 첫 단계에서 정한 것(2026-11-20).** 표는 이름 하나에 **뷰 칸**(`registerBuffer( 이름, 칸, 핸들, 처음 접근 )` — 주 시점 0, 추가 뷰 번호 + 1)을 둔다 — 프레임 패스 하나가 모든 뷰를 돌아 HZB 가 뷰마다 버퍼다(언리얼은 뷰마다 RDG 자원). 주인은 이번 프레임에 쓰는 칸만 등록한다(가림 판정 기본 끔 — 등록하면 쓰지 않는 버퍼에 전이가 난다). HZB 는 프레임 패스 `HZBBuild` 만 옮겼고, 뷰 그래프 안의 두 짓기(2 단계 가림 · 반사 앞)는 `HZBOcclusion::recordInViewPass` 에 손 전이로 남아 ③에서 지운다. 텍스처 UAV → UAV 배리어는 만드는 접근이 없어(뷰 패스는 첨부, 프레임 텍스처 출력은 렌더 타깃) RHI 에 더하지 않았다. 뷰 · 확장 패스의 깊이 첨부는 `DepthWrite` 로 나눴다(RHI 상태는 형식이 고른다 — 깊이 읽기 전용 바인딩 `DepthRead` 는 D3D11 읽기 전용 DSV 확인 뒤).
+
 ### 자원 구간 할당(설계 2026-11-20, 감사 R-4)
 
 **문제.** 머티리얼 인스턴스마다 상수 버퍼 하나 · bindless 디스크립터 하나(`MaterialRenderProxy::sync`)이고, 버퍼마다 백엔드 할당이 따로다 — DX12 는 업로드 커밋 자원(256 B 정렬 × 비행 중 프레임 수, `D3D12RHIResourceFactory::createConstantBuffer`), Vulkan 은 자원마다 `vkAllocateMemory`(`VulkanRHIDevice::allocateDeviceMemory` 9 곳). 인스턴스 5000 이면 할당 수가 Vulkan `maxMemoryAllocationCount`(흔히 4096)에 닿는다 — 지금은 한도 가드(`RHIConfig::_allocationCountReserve`)가 오류로 거절할 뿐이다.
