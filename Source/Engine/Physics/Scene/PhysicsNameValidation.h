@@ -6,6 +6,7 @@
  *          표는 초기화된 `PhysicsSystem` 의 설정, 없으면(도구 · 서비스 없는 테스트) `PhysicsSystem::kSettingsPath` 를 한 번 읽은 것이다. 한 번 읽은 표는 프로세스가 끝날 때까지 그대로다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Name/hashed_string.h"
 
@@ -23,5 +24,9 @@ namespace sw
         static void validateLayer( ValidationContext& context, const utf8* pFieldName, const hashed_string& name );
         /** @brief 물리 재질 이름(`PhysicsMaterialDef`)인지 봅니다. */
         static void validateMaterial( ValidationContext& context, const utf8* pFieldName, const hashed_string& name );
+        /** @brief 충돌 프로필 이름을 표 차례로 @p outListName 에 담습니다(먼저 비운다) — 에디터의 고르기 목록(`Meta = "NameSource=CollisionProfile"`). */
+        static void collectProfileNames( vector<hashed_string>& outListName );
+        /** @brief 충돌 채널 이름(오브젝트 · 트레이스)을 표 차례로 @p outListName 에 담습니다(먼저 비운다, `Meta = "NameSource=CollisionChannel"`). */
+        static void collectChannelNames( vector<hashed_string>& outListName );
     };
 } // namespace sw

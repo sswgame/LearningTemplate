@@ -84,7 +84,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Channel name" )
+        PROPERTY( Tooltip = "Channel name", Meta = "NameSource=CollisionChannel" )
         hashed_string _channel{};
         PROPERTY( Tooltip = "Block stops, Overlap reports without stopping, Ignore sees nothing" )
         CollisionResponse _response{ CollisionResponse::Block };
@@ -105,7 +105,7 @@ namespace sw
 
         PROPERTY( Tooltip = "Profile name the bodies and colliders pick" )
         hashed_string _name{};
-        PROPERTY( Tooltip = "Object channel of the bodies with this profile" )
+        PROPERTY( Tooltip = "Object channel of the bodies with this profile", Meta = "NameSource=CollisionChannel" )
         hashed_string _objectChannel{};
         PROPERTY( Tooltip = "Responses to channels; channels not named use their default response" )
         vector<CollisionResponseDef> _listResponse;
@@ -192,7 +192,7 @@ namespace sw
          * @brief 발 · 손 IK 의 땅 광선이 맞는 층입니다(걸을 수 있는 세계). 비거나 모르는 이름이면 `validate` 가 오류다.
          * @details 캐릭터 · 래그돌 · 파편 · 투사체를 빼야 지나가는 몸 · 떨어진 덩어리에 발이 올라타지 않는다(언리얼 발 IK 트레이스 채널 · 유니티 Foot IK 레이어 마스크).
          */
-        PROPERTY( Tooltip = "Layers foot and hand IK ground traces hit (the walkable world - not characters, ragdolls, debris or projectiles)" )
+        PROPERTY( Tooltip = "Profiles foot and hand IK ground traces hit (the walkable world - not characters, ragdolls, debris or projectiles)", Meta = "NameSource=CollisionProfile" )
         vector<hashed_string> _listGroundQueryLayer;
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 파일이 없거나 모르는 이름이거나 이름이 겹쳐서 실패하면 오류를 남기고 false 를 반환합니다. */

@@ -87,7 +87,7 @@ namespace sw
         void validateMaterial( ValidationContext& context ) const;
 
     private:
-        PROPERTY( Category = "Collision", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer )
+        PROPERTY( Category = "Collision", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
         hashed_string _layer;
         PROPERTY( Category = "Collision", Tooltip = "Physics material name (empty: the first material)", Validate = validateMaterial )
         hashed_string _material;

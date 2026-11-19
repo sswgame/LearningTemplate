@@ -16,6 +16,7 @@
 		<EditorPanelText _title="Changes" _label="Changes" />
 		<EditorPanelText _title="Character Editor" _label="Character Editor" />
 		<EditorPanelText _title="Clip Preview" _label="Clip Preview" />
+		<EditorPanelText _title="Collision Responses" _label="Collision Responses" />
 		<EditorPanelText _title="Command Palette" _label="Command Palette" />
 		<EditorPanelText _title="Content Browser" _label="Content Browser" />
 		<EditorPanelText _title="Cutscene Debugger" _label="Cutscene Debugger" />

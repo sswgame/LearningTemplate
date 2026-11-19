@@ -166,7 +166,7 @@ namespace sw
         float32 _vertexRadius;
         PROPERTY( Category = "Simulation", Min = 1, Max = 32, Tooltip = "Constraint solver iterations per step" )
         uint32 _iterationCount;
-        PROPERTY( Category = "Simulation", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer )
+        PROPERTY( Category = "Simulation", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
         hashed_string _layer;
         PROPERTY( Category = "LOD", Tooltip = "Highest animation LOD grade of the ancestor skeletal mesh that still simulates the cloth (-1: every grade). Above it the cloth shows its rest grid" )
         int32 _maxLOD;

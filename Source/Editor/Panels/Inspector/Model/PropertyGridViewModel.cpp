@@ -798,6 +798,8 @@ namespace sw::editor
         {
             row._bAssetPath = ( prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false ) ? SW_TRUE : SW_FALSE;
             row._bMultiline = prop._metadata->getEditor()._bMultiline != SW_FALSE ? SW_TRUE : SW_FALSE;
+            if ( const string* pNameSource = prop.findCustomMeta( hashed_string( "NameSource" ) ); pNameSource != nullptr && builtin._widget == InspectorValueWidget::Name )
+                row._nameSource = hashed_string( pNameSource->c_str() );
         }
 
         // 대상 타입이 있는 핸들(`TComponentHandle<T>`)은 선택기만 그린다 — 쓰는 값은 열거한 컴포넌트의 `getHandle()` 뿐이다.

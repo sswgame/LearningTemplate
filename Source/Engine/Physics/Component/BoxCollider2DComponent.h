@@ -141,7 +141,7 @@ namespace sw
         float2 _offsetPos;
         PROPERTY( Category = "Collider", DisplayName = "Offset Scale", Tooltip = "Collider box size" )
         float2 _offsetScale;
-        PROPERTY( Category = "Collider", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer )
+        PROPERTY( Category = "Collider", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
         hashed_string _layer;
         PROPERTY( Category = "Collider", DisplayName = "Continuous", Tooltip = "Sweep the box from its last physics frame so a fast mover cannot pass through a thin collider" )
         bool _bContinuous;
