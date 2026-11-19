@@ -169,16 +169,14 @@ namespace sw
 
     void IngredientStock::serializeState( StateIO& io )
     {
-        // 배치마다 이름(4) + 원가(8) + 개수, 남은 날(8)
-        io.list( _listBatch, 20, [&]( IngredientBatch& batch )
+        io.reflected( *this ); // 원가 · 개수 · 남은 날의 아래 경계는 `PROPERTY( Min )` 이 지킨다
+        if ( io.isWriting() )
+            return;
+        for ( const IngredientBatch& batch : _listBatch )
         {
-            io.value( batch._itemID );
-            io.value( batch._unitCost );
-            io.value( batch._count );
-            io.value( batch._daysLeft );
             // 남은 날은 -1(상하지 않는다)이거나 양수이다. `advanceDay` 가 0 을 하루 줄이면 -1 이 되어 상하지 않는 배치로 바뀐다.
-            io.check( batch._itemID.empty() == false && 0 <= batch._unitCost && 0 <= batch._count && ( batch._daysLeft == -1 || batch._daysLeft > 0 ) );
-        } );
+            io.check( batch._itemID.empty() == false && batch._daysLeft != 0 );
+        }
     }
 
 } // namespace sw

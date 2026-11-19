@@ -24,7 +24,7 @@ namespace
   <Customer id="student" patience="30"/>
 </RestaurantCatalog>)";
 
-    /** @brief 스테이션 한 줄입니다(`RestaurantSimulation::StationSlot` 은 비공개라 형식만 맞춥니다). */
+    /** @brief 스테이션 한 줄입니다(`RestaurantSimulation::StationSlot` 의 칸 순서와 같다). */
     struct FixtureStation
     {
         sw::hashed_string _name{};
@@ -88,15 +88,19 @@ namespace
 
         void write( sw::Archive& outArchive, const sw::ShopManager& market ) const
         {
+            // 리플렉션 상태 칸(머리 + 선언 순서 — 열거는 int64, 안쪽 구조체는 머리 없이 칸만) 뒤에 손 본문(메뉴, 재고, 조리, 시장, 걸음 타이머, 난수, 도착 누적)이다
+            sw::StateIO::writeReflectedHeader<sw::RestaurantSimulation>( outArchive );
             outArchive << static_cast<uint32>( _listStaff.size() );
             for ( const sw::StaffMember& staff : _listStaff )
             {
                 sw::StateIO::writeName( outArchive, staff._name );
-                staff._level.writeState( outArchive );
+                outArchive << staff._level.getXP();
+                outArchive << staff._level.getTotalXP();
+                outArchive << staff._level.getLevel();
                 outArchive << staff._busyMinutes;
                 outArchive << staff._dailyWage;
                 outArchive << staff._taskCustomer;
-                outArchive << static_cast<uint8>( staff._role );
+                outArchive << static_cast<int64>( staff._role );
                 outArchive << staff._bHired;
             }
             outArchive << static_cast<uint32>( _listCustomer.size() );
@@ -111,7 +115,7 @@ namespace
                 outArchive << customer._id;
                 outArchive << customer._seat;
                 outArchive << customer._quality;
-                outArchive << static_cast<uint8>( customer._state );
+                outArchive << static_cast<int64>( customer._state );
                 outArchive << customer._bServing;
                 outArchive << customer._bCheckingOut;
             }
@@ -126,13 +130,6 @@ namespace
                 outArchive << order._quality;
                 outArchive << order._bReady;
             }
-            outArchive << static_cast<uint32>( _listMenu.size() );
-            for ( const sw::MenuEntry& entry : _listMenu )
-            {
-                sw::StateIO::writeName( outArchive, entry._dishID );
-                outArchive << entry._price;
-                outArchive << entry._bOnMenu;
-            }
             outArchive << static_cast<uint32>( _listStation.size() );
             for ( const FixtureStation& station : _listStation )
             {
@@ -144,6 +141,33 @@ namespace
             {
                 outArchive << satisfaction;
             }
+            outArchive << _today._revenue;
+            outArchive << _today._tips;
+            outArchive << _today._ingredientCost;
+            outArchive << _today._wages;
+            outArchive << _today._spoilageCost;
+            outArchive << _today._profit;
+            outArchive << _today._rating;
+            outArchive << _today._arrivals;
+            outArchive << _today._served;
+            outArchive << _today._walkouts;
+            outArchive << _today._noChoice;
+            outArchive << _today._unservedAtClose;
+            sw::StateIO::writeName( outArchive, "rain" );
+            outArchive << _minutes;
+            outArchive << _pendingSpoilageCost;
+            outArchive << _nextCustomerID;
+            outArchive << static_cast<uint8>( SW_TRUE );
+
+            outArchive << static_cast<uint32>( _listMenu.size() );
+            for ( const sw::MenuEntry& entry : _listMenu )
+            {
+                sw::StateIO::writeName( outArchive, entry._dishID );
+                outArchive << entry._price;
+                outArchive << entry._bOnMenu;
+            }
+            // 재고(`IngredientStock`): 리플렉션 머리 + 배치 칸
+            sw::StateIO::writeReflectedHeader<sw::IngredientStock>( outArchive );
             outArchive << static_cast<uint32>( _listBatch.size() );
             for ( const FixtureBatch& batch : _listBatch )
             {
@@ -157,26 +181,9 @@ namespace
             outArchive << static_cast<uint32>( 0 );
             outArchive << static_cast<uint32>( 0 );
             market.writeState( outArchive );
-            outArchive << _today._revenue;
-            outArchive << _today._tips;
-            outArchive << _today._ingredientCost;
-            outArchive << _today._wages;
-            outArchive << _today._spoilageCost;
-            outArchive << _today._profit;
-            outArchive << _today._rating;
-            outArchive << _today._arrivals;
-            outArchive << _today._served;
-            outArchive << _today._walkouts;
-            outArchive << _today._noChoice;
-            outArchive << _today._unservedAtClose;
             sw::StateIO::writeStepTimer( outArchive, sw::FixedStepTimer( sw::RestaurantSimulation::kStepMinutes, 24.0f * 60.0f ) );
             sw::StateIO::writeRandom( outArchive, sw::GameRandom( 9u ) );
-            sw::StateIO::writeName( outArchive, "rain" );
-            outArchive << _minutes;
             sw::StateIO::writeRateAccumulator( outArchive, sw::RateAccumulator{} );
-            outArchive << _pendingSpoilageCost;
-            outArchive << _nextCustomerID;
-            outArchive << static_cast<uint8>( SW_TRUE );
         }
     };
 
