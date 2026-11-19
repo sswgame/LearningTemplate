@@ -2,8 +2,8 @@
 <?asset guid="b2013488ab024c299757ccbb6ed9db62"?>
 <!--
   컷 카메라 무빙(키 트랙 · 이징) — data/cinematic.seq.xml 의 키 트랙이 CutA 를 30 → 50 프레임 동안 X -3 → -1 로 옮기고(Transform) 세로 화각을 0.7 → 0.3 rad 로 좁힌다(CameraLens).
-  두 트랙의 첫 키는 Eased(SmoothStep, BlendCurve 표)라 중간 프레임 값이 직선 보간이 아니라 이징 값이다 — 35 프레임(진행 0.25)은 X -2.6875 · 화각 0.6375(직선이면 -2.5 · 0.6),
-  40 프레임(0.5)은 직선과 같은 -2 · 0.5 다. 0.25 배속(시퀀스 한 프레임이 틱 여덟)으로 틀어 그 프레임에 머무는 동안 값을 본다. 역재생으로 같은 프레임에 닿아도 같은 값이다(시간 → 값).
+  두 트랙의 첫 키는 Eased(SmoothStep, BlendCurve 표)라 중간 프레임 값이 직선 보간이 아니라 이징 값이다 — 35 프레임(진행 0.25)은 X -2.6875 · 화각 0.6375 rad(직선이면 -2.5 · 0.6),
+  40 프레임(0.5)은 직선과 같은 -2 · 0.5 rad 다. 칸 _fovY 는 도로 읽힌다(36.526° · 28.648°, 허용 0.06° ≈ 0.001 rad). 0.25 배속(시퀀스 한 프레임이 틱 여덟)으로 틀어 그 프레임에 머무는 동안 값을 본다. 역재생으로 같은 프레임에 닿아도 같은 값이다(시간 → 값).
   실행: App -scenario=game/empty/automation/cinematiccamera.scenario.xml -unattended (체인: ctest -R Scenario.empty)
 -->
 <Scenario name="game.empty.cinematiccamera" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -15,16 +15,16 @@
 	<PlaySequence object="Director" rate="0.25"/>
 	<WaitUntil watch="Sequence.Frame" target="Director" equals="35" timeoutFrames="400"/>
 	<Expect watch="Object.X" target="CutA" near="-2.6875" tolerance="0.001"/>
-	<Expect watch="Object.Property" target="CutA" key="CameraComponent._fovY" near="0.6375" tolerance="0.001"/>
+	<Expect watch="Object.Property" target="CutA" key="CameraComponent._fovY" near="36.526" tolerance="0.06"/>
 	<WaitUntil watch="Sequence.Frame" target="Director" equals="40" timeoutFrames="60"/>
 	<Expect watch="Object.X" target="CutA" near="-2" tolerance="0.001"/>
-	<Expect watch="Object.Property" target="CutA" key="CameraComponent._fovY" near="0.5" tolerance="0.001"/>
+	<Expect watch="Object.Property" target="CutA" key="CameraComponent._fovY" near="28.648" tolerance="0.06"/>
 
 	<!-- 역재생: 범위 30..40 의 끝(40)에서 거꾸로 35 에 와도 같은 값이다 -->
 	<PlaySequence object="Director" rate="-0.25" rangeStart="30" rangeEnd="40"/>
 	<WaitUntil watch="Sequence.Frame" target="Director" equals="35" timeoutFrames="80"/>
 	<Expect watch="Sequence.Reversed" target="Director" equals="1"/>
 	<Expect watch="Object.X" target="CutA" near="-2.6875" tolerance="0.001"/>
-	<Expect watch="Object.Property" target="CutA" key="CameraComponent._fovY" near="0.6375" tolerance="0.001"/>
+	<Expect watch="Object.Property" target="CutA" key="CameraComponent._fovY" near="36.526" tolerance="0.06"/>
 	<Pass/>
 </Scenario>

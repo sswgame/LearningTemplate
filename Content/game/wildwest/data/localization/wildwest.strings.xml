@@ -1,0 +1,24 @@
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="ArrivalCutA" source="ArrivalCutA" context="SequenceBinding._name">
+			<origins>
+				<item>game/wildwest/data/arrival.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="ArrivalCutB" source="ArrivalCutB" context="SequenceBinding._name">
+			<origins>
+				<item>game/wildwest/data/arrival.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Stamina" source="Stamina" context="TextWidget._text">
+			<origins>
+				<item>game/wildwest/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Welcome to Dry Gulch." source="Welcome to Dry Gulch." context="SequenceTrackItem._text">
+			<origins>
+				<item>game/wildwest/data/arrival.seq.xml</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

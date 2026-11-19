@@ -149,9 +149,9 @@ namespace sw
         , _bSkippable{ SW_FALSE }
         , _bAllowFastForward{ SW_FALSE }
         , _bInputLayerPushed{ SW_FALSE }
+        , _bInputLayerStacked{ SW_FALSE }
         , _bHUDHidden{ SW_FALSE }
         , _bFastForwardHeld{ SW_FALSE }
-        , _reserved{ 0 }
         , _player{}
         , _pendingStep{}
         , _state{}
@@ -335,9 +335,16 @@ namespace sw
                 return;
             }
         }
-        // 막기는 레이어로 가른다 — Blocked 면 아래 레이어(이동 · 시선 · 게임 동작)를 막고, 컷씬 레이어의 건너뛰기 · 빨리감기는 남는다. 일시정지 · 메뉴는 UI 맵이라 막히지 않는다.
-        pInputMap->pushLayer( layerName, _playerMovement == SequencePlayerMovement::Blocked );
+        // 컷씬 레이어는 늘 켜지는 덧층(alwaysOn — cutscene.input.xml)이라 켜기만 하면 건너뛰기 · 빨리감기가 듣는다. 레이어 스택은 문맥 바꾸기라(스택에 무엇이 있으면 스택 밖 레이어가 꺼진다)
+        // 막지 않는 재생(Free · Confined)이 스택에 올리면 게임 이동 레이어까지 꺼져 플레이어가 서 버렸다. 막기(Blocked)만 스택에 올려 아래 레이어(이동 · 시선 · 게임 동작)를 막는다.
+        // 일시정지 · 메뉴는 UI 맵이라 막히지 않는다. 언리얼 Enhanced Input 의 매핑 문맥 더하기(우선순위 덧층)와 같은 자리다.
+        pInputMap->setLayerEnabled( layerName, true );
         _bInputLayerPushed = SW_TRUE;
+        if ( _playerMovement == SequencePlayerMovement::Blocked )
+        {
+            pInputMap->pushLayer( layerName, true );
+            _bInputLayerStacked = SW_TRUE;
+        }
     }
 
     void SequencePlayerComponent::releaseCutsceneOptions()
@@ -351,10 +358,14 @@ namespace sw
         }
         if ( _bInputLayerPushed == SW_TRUE )
         {
-            InputMap* pInputMap = findPlayerInputMap();
+            InputMap*           pInputMap = findPlayerInputMap();
+            const hashed_string layerName( SequencePlayerComponentInternal::kCutsceneLayer );
+            if ( pInputMap != nullptr && _bInputLayerStacked == SW_TRUE )
+                pInputMap->popLayer( layerName );
             if ( pInputMap != nullptr )
-                pInputMap->popLayer( hashed_string( SequencePlayerComponentInternal::kCutsceneLayer ) );
-            _bInputLayerPushed = SW_FALSE;
+                pInputMap->setLayerEnabled( layerName, false );
+            _bInputLayerPushed  = SW_FALSE;
+            _bInputLayerStacked = SW_FALSE;
         }
         if ( _bFastForwardHeld == SW_TRUE )
         {

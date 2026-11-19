@@ -591,6 +591,8 @@ SW_TEST_CASE( SequencePlaybackTest, ReverseCameraCutsComeInReverseOrder )
 /** @brief [SequencePlaybackTest] 구간은 상태다 — 한 갱신에 통째로 지나친 구간은 들어가지 않고, 역방향으로 들어가면 한 번 들어가 한 번 나간다 */
 SW_TEST_CASE( SequencePlaybackTest, SpansFollowTheCurrentFrame )
 {
+    // 소리 이벤트 "Beat" 는 등록되지 않았다 — 구간이 들어갈 때 오디오 엔진이 모르는 이벤트 오류를 한 번 낸다(이 케이스는 구간 상태만 본다).
+    SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" );
     GameObjectManager manager;
     SequenceAsset     asset;
     asset._frameMax = 10;
