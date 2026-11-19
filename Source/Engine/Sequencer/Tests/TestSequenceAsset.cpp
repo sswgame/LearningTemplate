@@ -289,3 +289,60 @@ SW_TEST_CASE( SequencerTest, BindingViewPrefersSpawnedObjects )
     SW_EXPECT_FALSE( view.findHandle( kSequenceNoBinding ).isValid() );
     SW_EXPECT_FALSE( view.findHandle( 99 ).isValid() );
 }
+
+/**
+ * @brief [SequencerTest] 이징 칸은 저장 왕복을 지난다 — 키의 Eased 보간 · 이징 곡선, 구간 섞임 길이 · 곡선. 칸이 없는 옛 키는 기본값(이징 Linear)으로 읽힌다.
+ */
+SW_TEST_CASE( SequencerTest, EasingSurvivesTheSaveRoundTrip )
+{
+    SequenceAsset asset;
+    asset._frameMax            = 60;
+    asset._whenFinished        = SequenceFinishPolicy::KeepState;
+    const uint32      cameraID = asset.addBinding( "Cam" );
+    SequenceTrackItem cut{};
+    cut._kind          = SequenceItemKind::CameraCut;
+    cut._binding       = cameraID;
+    cut._start         = 10;
+    cut._end           = 40;
+    cut._easeInFrames  = 6;
+    cut._easeOutFrames = 3;
+    cut._easeInCurve   = BlendCurve::EaseOut;
+    cut._easeOutCurve  = BlendCurve::Linear;
+    asset._listItem.push_back( cut );
+    SequenceKeyTrack lens{};
+    lens._kind    = SequenceTrackKind::CameraLens;
+    lens._binding = cameraID;
+    lens.fitChannelsToKind();
+    (void)lens.setChannelKey( 0, 10.0f, 0.7f );
+    (void)lens.setChannelKey( 0, 40.0f, 0.3f );
+    lens._listChannel[0]._listKey[0]._interpolation = CurveInterpolation::Eased;
+    lens._listChannel[0]._listKey[0]._easing        = BlendCurve::SmoothStep;
+    asset._listTrack.push_back( lens );
+
+    SequenceAsset loaded;
+    SW_REQUIRE_TRUE( loaded.loadFromXMLText( asset.toXML() ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), loaded._listItem.size() );
+    SW_EXPECT_EQUAL( 6, loaded._listItem[0]._easeInFrames );
+    SW_EXPECT_EQUAL( 3, loaded._listItem[0]._easeOutFrames );
+    SW_EXPECT_TRUE( loaded._listItem[0]._easeInCurve == BlendCurve::EaseOut );
+    SW_EXPECT_TRUE( loaded._listItem[0]._easeOutCurve == BlendCurve::Linear );
+    SW_REQUIRE_EQUAL( size_t( 1 ), loaded._listTrack.size() );
+    const FloatCurveKey& key = loaded._listTrack[0]._listChannel[0]._listKey[0];
+    SW_EXPECT_TRUE( key._interpolation == CurveInterpolation::Eased );
+    SW_EXPECT_TRUE( key._easing == BlendCurve::SmoothStep );
+    SW_EXPECT_NEAR( 0.5f, *loaded._listTrack[0].evaluateChannel( 0, 25.0f ), 1e-4f ); // 스무스스텝 가운데
+
+    // 이징 칸이 생기기 전의 키(칸 없음)는 기본값으로 읽힌다 — 데이터 업그레이드가 필요 없다
+    const string  oldKey = R"(<SequenceAsset _frameMin="0" _frameMax="10" _nextBindingID="2" _whenFinished="KeepState">
+	<_listBinding><SequenceBinding _id="1" _name="Mover" /></_listBinding>
+	<_listItem />
+	<_listTrack>
+		<SequenceKeyTrack _name="Move" _propertyPath="" _binding="1" _kind="RigSlot">
+			<_listChannel><FloatCurve><_listKey><FloatCurveKey _time="0" _value="1" _arriveTangent="0" _leaveTangent="0" _interpolation="Linear" _bAutoTangent="true" /></_listKey></FloatCurve></_listChannel>
+		</SequenceKeyTrack>
+	</_listTrack>
+</SequenceAsset>)";
+    SequenceAsset oldAsset;
+    SW_REQUIRE_TRUE( oldAsset.loadFromXMLText( oldKey ) );
+    SW_EXPECT_TRUE( oldAsset._listTrack[0]._listChannel[0]._listKey[0]._easing == BlendCurve::Linear );
+}
