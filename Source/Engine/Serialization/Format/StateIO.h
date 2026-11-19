@@ -142,7 +142,8 @@ namespace sw
         template <typename T>
         void reflected( T& inoutObject )
         {
-            reflectedObject( requireReflectedType( typeFqn<T>() ), &inoutObject );
+            const TypeInfo& type = requireReflectedType( typeFqn<T>() );
+            reflectedObject( type, &inoutObject, findReflectedLayoutHash( type ) );
         }
         /**
          * @brief `reflected` 와 같되 칸 목록을 @p dynamicType(@p inoutObject 의 실제 형식 — 기반 참조로 받은 컴포넌트)에서 읽습니다.
@@ -422,10 +423,16 @@ namespace sw
         [[nodiscard]] static bool readRateAccumulator( Archive& archive, RateAccumulator& outAccumulator );
 
     private:
+        /**
+         * @brief @p type 의 칸 배치 해시를 타입마다 한 번 셈해 둔 값입니다 — 롤백 · 스냅숏 프레임 경로가 호출마다 칸 배치 글을 짜지 않게 한다.
+         * @details 타입 표 세대(`TypeRegistry::getGeneration`)가 오르면(핫 리로드 · 모듈 해제) 다시 센다. 캐시는 스레드마다라 잠그지 않는다(롤백 워커가 함께 부른다).
+         *          캐시를 머리의 템플릿에 두지 않는다 — DLL 로 내보낸 클래스의 인라인 함수는 thread_local 정적 지역을 가질 수 없다(MSVC C2492).
+         */
+        [[nodiscard]] static uint64 findReflectedLayoutHash( const TypeInfo& type );
         /** @brief 이름이 @p fqn 인 등록된 타입입니다. 없으면(리플렉션 생성이 빠짐) 프로세스를 멈춥니다 — 대체 형식으로 읽지 않는다. */
         static const TypeInfo& requireReflectedType( const hashed_string& fqn );
-        /** @brief `reflected` 의 본문입니다(머리 + 칸). */
-        void reflectedObject( const TypeInfo& type, void* pObject );
+        /** @brief `reflected` 의 본문입니다(머리 + 칸). @p layoutHash 는 부르는 쪽이 셈해 둔 `computeReflectedLayoutHash( type )` 입니다(`findReflectedLayoutHash`). */
+        void reflectedObject( const TypeInfo& type, void* pObject, uint64 layoutHash );
         /** @brief `reflectedAs` 의 본문입니다. @p dynamicType 이 @p staticFqn 이거나 그 파생인지 본 뒤 `reflectedObject` 로 넘깁니다. */
         void reflectedDerived( const TypeInfo& dynamicType, const hashed_string& staticFqn, void* pObject );
         /** @brief 칸만(머리 없이) 씁니다 · 읽습니다. @p bStateRoleOnly 면 `RuntimeState` 칸만(최상위), 아니면 Transient 가 아닌 칸 전부(안쪽 구조체)입니다. */
