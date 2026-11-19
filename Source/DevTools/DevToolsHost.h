@@ -69,6 +69,8 @@ namespace sw
         void            onFrameBegin( const EngineFrameContext& context );
         void            onAfterSceneTick( const EngineFrameContext& context );
         EngineFrameExit onFrameEnd( const EngineFrameContext& context );
+        /** @brief 루프가 끝났습니다 — `-memory-export` 스냅숏을 씁니다(`MemoryExportSubsystem::exportOnLoopEnd`). 종료 코드는 정하지 않는다. */
+        EngineFrameExit onWindowClosed( const EngineFrameContext& context );
 
     public:
     private:

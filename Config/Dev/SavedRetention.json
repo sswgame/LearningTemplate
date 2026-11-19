@@ -7,6 +7,7 @@
         { "_folder": "Screenshots", "_keepCount": 50, "_bPerChild": false, "_listSkipChild": [] },
         { "_folder": "Traces", "_keepCount": 20, "_bPerChild": false, "_listSkipChild": [] },
         { "_folder": "BugReports", "_keepCount": 20, "_bPerChild": false, "_listSkipChild": [] },
+        { "_folder": "MemorySnapshots", "_keepCount": 20, "_bPerChild": false, "_listSkipChild": [] },
         { "_folder": "CrashReports", "_keepCount": 20, "_bPerChild": false, "_listSkipChild": [] },
         { "_folder": "Test", "_keepCount": 10, "_bPerChild": false, "_listSkipChild": [] }
     ]
