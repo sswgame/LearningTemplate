@@ -60,8 +60,8 @@ namespace sw
         , _innerRadius{ 0.0f }
         , _outerRadius{ 4.0f }
         , _falloffExponent{ 1.0f }
-        , _innerAngle{ 2.0f * MathUtil::kPi }
-        , _outerAngle{ 2.0f * MathUtil::kPi }
+        , _innerAngle{ Radians::fromRadians( 2.0f * MathUtil::kPi ) }
+        , _outerAngle{ Radians::fromRadians( 2.0f * MathUtil::kPi ) }
         , _normalMapHeight{ 1.0f }
         , _bCastShadows{ true }
         , _shadowSoftness{ 0.0f }
@@ -93,8 +93,8 @@ namespace sw
 
     void PointLight2DComponent::setConeAngles( float32 innerAngle, float32 outerAngle )
     {
-        _outerAngle = MathUtil::clamp( outerAngle, 0.0f, 2.0f * MathUtil::kPi );
-        _innerAngle = MathUtil::clamp( innerAngle, 0.0f, _outerAngle );
+        _outerAngle = Radians::fromRadians( MathUtil::clamp( outerAngle, 0.0f, 2.0f * MathUtil::kPi ) );
+        _innerAngle = Radians::fromRadians( MathUtil::clamp( innerAngle, 0.0f, _outerAngle.radians() ) );
     }
 
     void PointLight2DComponent::writeGPULightKindProperties( GPULight& outLight ) const
@@ -109,8 +109,8 @@ namespace sw
         // 칸의 뜻은 lighting_2d.hlsli 머리 주석의 표 — z 는 2D 거리에 쓰이지 않아 노멀 맵 높이를 싣는다.
         outLight._positionRadius = float4{ position._x, position._y, MathUtil::max( _normalMapHeight, 1e-3f ), _outerRadius };
         outLight._directionType  = float4{ direction2D._x, direction2D._y, _innerRadius, outLight._directionType._w };
-        outLight._params         = float4{ _bCastShadows ? 1.0f : 0.0f, Internal::computeHalfAngleCos( _outerAngle ),
-                                   Internal::computeHalfAngleCos( _innerAngle ), MathUtil::max( _falloffExponent, 1e-3f ) };
+        outLight._params         = float4{ _bCastShadows ? 1.0f : 0.0f, Internal::computeHalfAngleCos( _outerAngle.radians() ),
+                                   Internal::computeHalfAngleCos( _innerAngle.radians() ), MathUtil::max( _falloffExponent, 1e-3f ) };
         outLight._extra          = Internal::makeExtra( _shadowSoftness, _blendStyle, 0 );
     }
 

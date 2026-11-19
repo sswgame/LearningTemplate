@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Radians.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
@@ -100,13 +101,22 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 모양 @p kind 가 받는 값 형식이면 true 입니다(상자 · 화살표는 float3, 나머지는 float32). */
+            /** @brief 각 형식(`Radians`)의 정규 이름입니다. 원뿔의 반각이 이 형식이다. */
+            static const hashed_string& getAngleTypeName()
+            {
+                static const hashed_string s_radians( "Radians" );
+                return s_radians;
+            }
+
+            /** @brief 모양 @p kind 가 받는 값 형식이면 true 입니다(상자 · 화살표는 float3, 원뿔은 Radians, 나머지는 float32). */
             static bool isValueTypeAccepted( PropertyShapeKind kind, const PropertyInfo& prop )
             {
                 static const hashed_string s_float32( "float32" );
                 static const hashed_string s_float3( "float3" );
                 if ( prop._bIsContainer == SW_TRUE || prop._bIsBitField == SW_TRUE )
                     return false;
+                if ( kind == PropertyShapeKind::Cone )
+                    return prop._typeName == getAngleTypeName();
                 const bool bVector = kind == PropertyShapeKind::Box || kind == PropertyShapeKind::Arrow;
                 return prop._typeName == ( bVector ? s_float3 : s_float32 );
             }
@@ -208,7 +218,7 @@ namespace sw::editor
             if ( kind.has_value() == false )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "unknown Shape (Sphere, Box, Cone, Arrow, Circle, Capsule)", prop._name.view() } );
             if ( Internal::isValueTypeAccepted( *kind, prop ) == false )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "Shape value type mismatch (Box/Arrow: float3, the others: float32)", prop._name.view() } );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "Shape value type mismatch (Box/Arrow: float3, Cone: Radians, the others: float32)", prop._name.view() } );
             PropertyShapeDecl decl{};
             decl._pProperty      = &prop;
             decl._kind           = *kind;
@@ -266,6 +276,11 @@ namespace sw::editor
         {
             const float3* pVector = _pProperty->getValuePtr<float3>( pInstance );
             value._vector         = pVector != nullptr ? *pVector : float3{};
+        }
+        else if ( _kind == PropertyShapeKind::Cone )
+        {
+            const Radians* pAngle = _pProperty->getValuePtr<Radians>( pInstance );
+            value._number         = pAngle != nullptr ? pAngle->radians() : 0.0f;
         }
         else
         {
@@ -334,6 +349,16 @@ namespace sw::editor
             request._value      = TaskValue{ dragged };
             const float3 before = *pCurrent;
             bChanged            = request.applyTo( MutableObjectAddress{ &component }, *pType, registry ) && *pProp->getValuePtr<float3>( &component ) != before;
+        }
+        else if ( pProp->_typeName == PropertyShapeEditInternal::getAngleTypeName() )
+        {
+            const Radians* pCurrent = pProp->getValuePtr<Radians>( &component );
+            if ( pCurrent == nullptr )
+                return false;
+            const Radians before = *pCurrent;
+            request._kind        = PropertyEditKind::SetNumber; // 각의 숫자는 도다(`PackedValueTraits<Radians>`) — 끈 라디안을 도로 넘겨 범위도 도로 자른다
+            request._number      = static_cast<float64>( handle.computeDraggedNumber( ray ) ) * Radians::kDegreesPerRadian;
+            bChanged             = request.applyTo( MutableObjectAddress{ &component }, *pType, registry ) && *pProp->getValuePtr<Radians>( &component ) != before;
         }
         else
         {

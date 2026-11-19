@@ -33,8 +33,8 @@ namespace sw
     SpotLightComponent::SpotLightComponent()
         : LightComponent( shaderslot::kLightTypeSpot, SpotLightComponentInternal::kDefaultColor, SpotLightComponentInternal::kDefaultIntensity )
         , _radius{ SpotLightComponentInternal::kDefaultRadius }
-        , _innerConeAngle{ SpotLightComponentInternal::kDefaultInnerCone }
-        , _outerConeAngle{ SpotLightComponentInternal::kDefaultOuterCone }
+        , _innerConeAngle{ Radians::fromRadians( SpotLightComponentInternal::kDefaultInnerCone ) }
+        , _outerConeAngle{ Radians::fromRadians( SpotLightComponentInternal::kDefaultOuterCone ) }
         , _shadowSettings{}
         , _bCastShadow{ SW_FALSE }
         , _reservedSpotLight{ 0 }
@@ -65,13 +65,13 @@ namespace sw
     void SpotLightComponent::setInnerConeAngle( float32 radians )
     {
         // 안쪽이 바깥쪽보다 크면 감쇠 분모가 음수가 되어 원뿔이 뒤집힌다. 여기서 자른다.
-        _innerConeAngle = MathUtil::clamp( radians, 0.0f, _outerConeAngle );
+        _innerConeAngle = Radians::fromRadians( MathUtil::clamp( radians, 0.0f, _outerConeAngle.radians() ) );
         onPropertyChanged( hashed_string( "_innerConeAngle" ) );
     }
 
     void SpotLightComponent::setOuterConeAngle( float32 radians )
     {
-        _outerConeAngle = MathUtil::clamp( radians, 0.0f, SpotLightComponentInternal::kMaxConeAngle );
+        _outerConeAngle = Radians::fromRadians( MathUtil::clamp( radians, 0.0f, SpotLightComponentInternal::kMaxConeAngle ) );
         if ( _innerConeAngle > _outerConeAngle )
             _innerConeAngle = _outerConeAngle;
         onPropertyChanged( hashed_string( "_outerConeAngle" ) );
@@ -91,8 +91,8 @@ namespace sw
         outLight._directionType._y = direction._y;
         outLight._directionType._z = direction._z;
         // 원뿔은 **코사인으로** 보낸다. 셰이더가 픽셀마다 acos 를 하지 않게 하려는 것이다.
-        outLight._params._y = MathUtil::cos( _outerConeAngle );
-        outLight._params._z = MathUtil::cos( _innerConeAngle );
+        outLight._params._y = MathUtil::cos( _outerConeAngle.radians() );
+        outLight._params._z = MathUtil::cos( _innerConeAngle.radians() );
         _shadowSettings.writeGPULightProperties( outLight );
     }
 } // namespace sw

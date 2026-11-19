@@ -126,8 +126,8 @@
 					                       _innerRadius="0.5"
 					                       _outerRadius="9"
 					                       _falloffExponent="1.2"
-					                       _innerAngle="6.2831853"
-					                       _outerAngle="6.2831853"
+					                       _innerAngle="360"
+					                       _outerAngle="360"
 					                       _normalMapHeight="1.5"
 					                       _bCastShadows="true" />
 				</_listComponent>
@@ -146,8 +146,8 @@
 					                       _innerRadius="0"
 					                       _outerRadius="9"
 					                       _falloffExponent="1"
-					                       _innerAngle="0.5235988"
-					                       _outerAngle="0.9599311"
+					                       _innerAngle="30"
+					                       _outerAngle="55"
 					                       _normalMapHeight="2"
 					                       _bCastShadows="true" />
 				</_listComponent>
