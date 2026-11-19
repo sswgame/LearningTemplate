@@ -24,7 +24,7 @@ namespace sw
 
     void CanvasGlyphAtlasTexture::applyUploads( vector<GlyphAtlasUpload>& inoutListUpload, GlyphAtlas* pSource )
     {
-        // 한 목록에 묶음 하나다(`GlyphAtlas::takeUploads` 한 번). 번호가 이어지거나 전체 묶음이면 받는다.
+        // 목록은 이어진 묶음들이다(`GlyphAtlas::takeUploads` 한 번이 묶음 하나). 첫 묶음 번호가 이어지거나 전체 묶음이면 받는다.
         if ( inoutListUpload.empty() == false )
         {
             const GlyphAtlasUpload& first       = inoutListUpload.front();
@@ -36,7 +36,7 @@ namespace sw
                 {
                     applyUpload( upload );
                 }
-                _appliedSequence     = first._sequence;
+                _appliedSequence     = inoutListUpload.back()._sequence; // 렌더 스레드 대기 묶음은 이어진 묶음 여럿일 수 있다(`RenderFramePacketDeltas`)
                 _bAwaitingFullUpload = SW_FALSE;
             }
             else

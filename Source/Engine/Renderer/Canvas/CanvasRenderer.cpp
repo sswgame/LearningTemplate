@@ -45,9 +45,9 @@ namespace sw
 
     CanvasRenderer::~CanvasRenderer() = default;
 
-    void CanvasRenderer::acceptAtlasUploads( CanvasFrameData& inoutFrame )
+    void CanvasRenderer::acceptAtlasUploads( vector<GlyphAtlasUpload>& inoutListUpload, GlyphAtlas* pSource )
     {
-        _atlas.applyUploads( inoutFrame._listAtlasUpload, inoutFrame._pAtlasSource );
+        _atlas.applyUploads( inoutListUpload, pSource );
     }
 
     void CanvasRenderer::prepareFrame( IRHIDevice& device, CanvasFrameData& inoutFrame, const RenderPSOCache& psoCache )
@@ -56,9 +56,7 @@ namespace sw
         _markers.prepare( device, inoutFrame );
         SW_PROFILE_SCOPE( "RT.Canvas.Upload" );
 
-        // 1) 아틀라스 업로드를 거울에 옮긴다(소비한 업로드는 비운다 — 같은 프레임 묶음을 다시 그려도 두 번 올리지 않게). 패킷 경로는 받을 때 이미 옮겨 비어 있다.
-        acceptAtlasUploads( inoutFrame );
-        // 2) 페이지 텍스처 — 없으면 만들고 바뀐 구간을 올린다(GPU 완료를 기다리지 않는다).
+        // 페이지 텍스처 — 없으면 만들고 거울의 바뀐 구간을 올린다(GPU 완료를 기다리지 않는다). 아틀라스 업로드는 렌더 스레드가 패킷 차분을 받을 때 이미 거울에 옮겼다.
         _atlas.uploadPages( device );
         // 경로 그림 — 게임 스레드는 디바이스가 없어 경로만 실었다. 머티리얼 텍스처와 같은 캐시에서 빌린다(기록 전이라 만들 수 있다).
         _textures.acquirePathTextures( inoutFrame.getMainOutput() );

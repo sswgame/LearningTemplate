@@ -697,6 +697,13 @@ namespace sw
     {
         // 바꿔치기다. 지난 스냅샷의 저장소가 패킷 자리로 돌아가 다음 프레임에 재사용된다(GPUScene.h 참고).
         std::swap( _snapshot, snapshot );
+        // 차분(내용 바뀜 · 바뀐 칸)은 지난 스냅샷 기준이다 — 번호가 건너뛰었으면(받지 못한 스냅샷이 있다) 전체로 맞춘다. 칸 사본은 비교만 하므로 같은 칸은 올리지 않는다.
+        if ( _snapshot._exportSerial != _appliedExportSerial + 1u )
+        {
+            _snapshot._bCPUDirty          = SW_TRUE;
+            _snapshot._bAllInstancesDirty = SW_TRUE;
+        }
+        _appliedExportSerial = _snapshot._exportSerial;
         resetBatchBindings();
         // 뷰 패스 고르기가 이번 프레임 값을 보도록 업로드 전에 정한다(업로드는 고르기 뒤에 돈다). CPU 내용이 그대로면 지난 값이 맞다.
         if ( _snapshot._bCPUDirty != SW_FALSE )

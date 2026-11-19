@@ -357,6 +357,11 @@ namespace sw
         return bDrew;
     }
 
+    void FrameRenderer::acceptCanvasAtlasUploads( RenderFramePacketDeltas& inoutDeltas )
+    {
+        _state._canvasRenderer.acceptAtlasUploads( inoutDeltas._listAtlasUpload, inoutDeltas._pAtlasSource );
+    }
+
     void FrameRenderer::executePacketWithoutDrawing( IRHIDevice* pDevice, RenderFramePacket& packet )
     {
         // 그리지 않고 진행하는 프레임(`SimulationOnlyFrameQueue`) — 다음 패킷이 이어 쓸 상태만 받는다. 기록 · 제출하지 않는다.

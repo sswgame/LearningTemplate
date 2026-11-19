@@ -476,6 +476,12 @@ namespace sw
         /// @brief 마지막 populateFromScene 이 내용을 바꿨는지 나타냅니다. RT 는 0이면 인스턴스 재업로드를 생략합니다.
         uint8 _bCPUDirty{ SW_TRUE };
         /**
+         * @brief 빌더가 내보낸 차례(`GPUSceneBuilder::exportCPUSnapshot` 마다 1 씩, 처음이 1)입니다. 0 이면 빌더가 내보내지 않은 빈 스냅샷입니다.
+         * @details 내용 바뀜(`_bCPUDirty`) · 바뀐 칸(`_bAllInstancesDirty` · `_listDirtyInstanceRange`)은 **지난 스냅샷 기준의 차분**이다. 받는 쪽은 번호가 이어지지 않으면
+         *          (그리지 않고 끝난 패킷의 스냅샷을 받지 못했다) 차분을 믿지 않고 전체로 맞춘다(`GPUScene::applyCPUSnapshot` — 글리프 아틀라스 묶음 번호와 같은 길).
+         */
+        uint64 _exportSerial{ 0 };
+        /**
          * @brief 이 스냅샷의 인스턴스에 있는 강조 방식의 비트입니다(`1 << InstanceHighlightStyle`). 빌더가 인스턴스를 다시 채울 때마다 구한다.
          * @details 강조 패스는 불투명 배치를 모두 다시 그리고 정점 셰이더가 강조 아닌 인스턴스를 버린다 — 강조된 것이 없어도 씬의 모든 정점(스키닝 포함)을 두 번 더 돌았다
          *          (기사 200 명 부하에서 2.6 ms). 그 방식의 인스턴스가 없으면 패스가 그리지 않는다(`FramePassExecutor::executeHighlightPass`).

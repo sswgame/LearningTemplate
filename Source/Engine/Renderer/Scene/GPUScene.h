@@ -432,6 +432,8 @@ namespace sw
         vector<uint32> _listScratchIdentityOrder;
         /// @brief 차례 목록을 다시 올려야 하면 1 입니다(목록이 바뀌었다).
         uint8 _bInstanceOrderUploadPending{ SW_TRUE };
+        /// @brief 마지막으로 받은 스냅샷의 내보낸 차례(`GPUSceneSnapshot::_exportSerial`)입니다. 다음 스냅샷이 이 + 1 이 아니면 그 차분을 믿지 않는다.
+        uint64 _appliedExportSerial{ 0 };
 
         RHIStructuredBuffer _instances;
         /**

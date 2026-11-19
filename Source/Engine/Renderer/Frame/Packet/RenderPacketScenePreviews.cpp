@@ -55,7 +55,7 @@ namespace sw
     void RenderPacketScenePreviews::populate( RenderFramePacket& packet, const FrameViewports& views, const SceneManager& sceneManager, GPUUploadQueue* pUploadQueue )
     {
         packet._scenePreviewCount = 0;
-        packet._listRetiredSceneKey.clear();
+        packet._deltas._listRetiredSceneKey.clear();
         if ( _pDevice == nullptr )
             return; // 기동 단계가 디바이스를 주기 전이다(`initialize`)
 
@@ -94,7 +94,7 @@ namespace sw
             ScenePreviewEntry& entry = _listEntry[index - 1];
             if ( sceneManager.findPreviewScene( entry._sceneKey ) != nullptr )
                 continue;
-            packet._listRetiredSceneKey.push_back( entry._sceneKey );
+            packet._deltas._listRetiredSceneKey.push_back( entry._sceneKey );
             entry._collector->shutdown();
             _listEntry.erase( _listEntry.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
