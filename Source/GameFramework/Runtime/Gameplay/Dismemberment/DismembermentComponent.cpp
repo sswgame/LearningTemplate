@@ -276,8 +276,6 @@ namespace sw
     DismembermentComponent::DismembermentComponent()
         : _regionTablePath{}
         , _listSeverableRegion{}
-        , _pieceLayer{ "Debris" }
-        , _pieceMaterial{ "Flesh" }
         , _bloodChannel{}
         , _pieceMass{ 4.0f }
         , _pRegionTable{}

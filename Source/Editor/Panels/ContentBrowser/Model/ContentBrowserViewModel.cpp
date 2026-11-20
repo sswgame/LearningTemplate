@@ -241,11 +241,11 @@ namespace sw::editor
 
         // 처음이거나 지금 폴더가 숨긴 게임 팩 안에 있으면 첫 루트로 이동한다. 루트가 아닌 다른 도메인(자동화 사본 `scratch/` - `content.open` 이 연다)은 그대로 둔다 -
         // 예전에는 "어느 루트 아래도 아니면" 이동해, 루트를 다시 만드는 순간(시나리오 단계 초기화 뒤) 연 사본 폴더에서 쫓겨났다.
-        const string selectedFolder       = FileUtil::makeComparableDiskPath( _selectedFolderAbs );
-        const string gamePacksFolder      = EditorPaths::findContentFolder( constant::path::kGamePack );
-        const bool   bSelectedIsUnderRoot = VectorUtil::containsIf( _listRoot, [&]( const ContentBrowserRoot& root )
-          { return FileUtil::startsWithPathComponent( selectedFolder, FileUtil::makeComparableDiskPath( root._absolutePath ) ); } );
-        const bool   bInHiddenGamePack =
+        const ComparableDiskPath selectedFolder       = FileUtil::makeComparableDiskPath( _selectedFolderAbs );
+        const string             gamePacksFolder      = EditorPaths::findContentFolder( constant::path::kGamePack );
+        const bool               bSelectedIsUnderRoot = VectorUtil::containsIf( _listRoot, [&]( const ContentBrowserRoot& root )
+                      { return FileUtil::startsWithPathComponent( selectedFolder, FileUtil::makeComparableDiskPath( root._absolutePath ) ); } );
+        const bool               bInHiddenGamePack =
             bSelectedIsUnderRoot == false && gamePacksFolder.empty() == false && FileUtil::startsWithPathComponent( selectedFolder, FileUtil::makeComparableDiskPath( gamePacksFolder ) );
         if ( ( selectedFolder.empty() || bInHiddenGamePack ) && _listRoot.empty() == false )
             openFolder( _listRoot.front()._absolutePath );

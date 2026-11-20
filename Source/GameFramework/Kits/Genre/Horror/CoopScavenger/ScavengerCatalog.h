@@ -199,9 +199,9 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Name = "terminalShop" )
+        PROPERTY( DefaultName, Name = "terminalShop" )
         hashed_string _terminalShopID{ "terminal" }; ///< 터미널 상점 id
-        PROPERTY()
+        PROPERTY( DefaultName )
         hashed_string _currency{ "Credits" };
         PROPERTY( Min = 1.0 )
         float32 _crewHealth{ 100.0f };

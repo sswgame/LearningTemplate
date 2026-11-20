@@ -635,7 +635,7 @@ namespace sw
         const bool   bSizeKnown = bSameSize || ( bResized && isResolutionUsable( resolution ) );
         const bool   bFits      = io.isOk() && bSizeKnown && static_cast<uint64>( sampleCount ) == static_cast<uint64>( resolution ) * resolution &&
                            archive.hasBytesAvailable( static_cast<uint64>( sampleCount ) * sizeof( float32 ) );
-        vector<float32> listHeight( bFits ? sampleCount : 0u ); // NOLINT(sw-unchecked-count): 위 bFits 가 남은 바이트로 걸렀다
+        vector<float32> listHeight( bFits ? sampleCount : 0u ); // 위 bFits 가 남은 바이트로 걸렀다
         if ( bFits )
             archive.readFiniteFloats( listHeight.data(), sampleCount ); // NaN 높이는 물리 · 렌더 어디서도 걸러지지 않는다
         const bool bRead    = bFits && io.isOk();

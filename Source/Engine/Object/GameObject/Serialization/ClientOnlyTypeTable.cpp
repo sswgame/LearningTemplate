@@ -19,7 +19,7 @@ namespace sw
             static unordered_set<string> load()
             {
                 unordered_set<string> setName;
-                const string          path = FileUtil::joinPath( ProcessRoots::get()._project.str(), ClientOnlyTypeTable::kTableFile );
+                const string          path = FileUtil::joinPath( ProcessRoots::get()._binary.str(), ClientOnlyTypeTable::kTableFile );
                 JSONDocument          document;
                 if ( document.loadFromFile( path ) == false )
                 {

@@ -193,6 +193,11 @@ add_test(NAME Scripts.AssetReferenceFieldList
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_asset_reference_field_list.py")
 set_tests_properties(Scripts.AssetReferenceFieldList PROPERTIES LABELS nogpu TIMEOUT 120)
 
+# 클라이언트 전용 형식 이름 표 생성 — 리플렉션 형식만 뽑고 같은 글이면 다시 쓰지 않는다(서버 구성 빌드가 Bin/ClientOnlyTypes.json 을 쓴다, Source/Server/CMakeLists.txt).
+add_test(NAME Scripts.ClientOnlyTypes
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_client_only_types.py")
+set_tests_properties(Scripts.ClientOnlyTypes PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 에셋 GUID 2 단계 전수 이전 도구 — AssetRef<T> 칸의 경로 글만 GUID 참조로 바꾸고 경로 글 칸 · 임포트 산출물 · 색인에 없는 경로는 바꾸지 않는다.
 add_test(NAME Scripts.MigrateAssetRefs
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_asset_refs.py")

@@ -11,6 +11,8 @@
 #include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
+#include <type_traits>
+
 #if defined( SW_PLATFORM_LINUX )
     #include <sys/stat.h>
     #include <unistd.h>
@@ -26,6 +28,21 @@ namespace
     {
         return sw::unexpected( sw::Error{ sw::ErrorKind::Unsupported, "test gate refuses every write", path } );
     }
+
+    // 경로 구간 판정은 접은 형식만 받는다 — 범용 글(`toLower` 결과 · 키에서 꺼낸 `str()`)이 들어가면 컴파일 오류여야 한다(리눅스에서 대소문자만 다른 바깥 폴더를 안으로 봤다).
+    template <typename TPath, typename TComponent, typename = void>
+    struct IsComponentCheckCallable : std::false_type
+    {
+    };
+    template <typename TPath, typename TComponent>
+    struct IsComponentCheckCallable<TPath, TComponent, std::void_t<decltype( sw::FileUtil::startsWithPathComponent( std::declval<TPath>(), std::declval<TComponent>() ) )>> : std::true_type
+    {
+    };
+    static_assert( IsComponentCheckCallable<sw::string, sw::string_view>::value == false, "a plain string must not reach the path component check" );
+    static_assert( IsComponentCheckCallable<sw::ComparableDiskPath, sw::string>::value == false, "a disk path compares only with a disk path folded the same way" );
+    static_assert( IsComponentCheckCallable<sw::PathKey, sw::ComparableDiskPath>::value == false, "a resource key and a disk path do not mix" );
+    static_assert( IsComponentCheckCallable<sw::ComparableDiskPath, sw::ComparableDiskPath>::value, "disk paths folded by the OS rule compare" );
+    static_assert( IsComponentCheckCallable<sw::PathKey, sw::string_view>::value, "a resource key compares with an id component" );
 } // namespace
 
 /**
@@ -127,6 +144,11 @@ SW_TEST_CASE( FileTest, PathContainmentFollowsTheOSCaseRule )
     SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathUnderRoot( root, otherCased.view() ) );
     SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathAtOrUnderRoot( root, otherCased.view() ) );
     SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::startsWithPathComponent( sw::FileUtil::makeComparableDiskPath( otherCased.view() ), sw::FileUtil::makeComparableDiskPath( root ) ) );
+
+    // 리소스 id 는 늘 소문자로 접은 키라 대소문자와 무관하게 구간을 가른다. 구간 경계 — `scratchpad` 는 `scratch` 아래가 아니다
+    SW_EXPECT_TRUE( sw::FileUtil::startsWithPathComponent( sw::FileUtil::normalizePath( "Scratch\\Copy/A.xml" ), "scratch" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::startsWithPathComponent( sw::FileUtil::normalizePath( "scratchpad/a.xml" ), "scratch" ) );
+    SW_EXPECT_EQUAL( sw::string( "copy/a.xml" ), sw::FileUtil::suffixAfterPathComponent( sw::FileUtil::normalizePath( "Scratch/Copy/A.xml" ), "scratch" ) );
 
     sw::string relative;
     sw::formatstring( path.data(), path.capacity(), "%#/Sub/A.txt", root );
@@ -625,7 +647,7 @@ SW_TEST_CASE( FileTest, DirectoryVisitorReportsEntriesAndStops )
     bool   bAllUnderRoot = true;
     SW_EXPECT_TRUE( sw::FileUtil::forEachDirectoryEntry( root, true, [&]( const sw::DirectoryEntry& entry )
     {
-        bAllUnderRoot = bAllUnderRoot && sw::FileUtil::startsWithPathComponent( entry._path, root ) && entry._path.find( '\\' ) == sw::string_view::npos;
+        bAllUnderRoot = bAllUnderRoot && sw::FileUtil::isPathAtOrUnderRoot( root, entry._path ) && entry._path.find( '\\' ) == sw::string_view::npos;
         if ( entry._bDirectory )
             ++directoryCount;
         else

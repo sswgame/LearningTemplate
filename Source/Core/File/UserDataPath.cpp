@@ -1,14 +1,15 @@
 #include "pch.h"
 
-#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
-    #include "Core/Foundation/PlatformOSHeaders.h"
-#endif
 #include "Core/File/UserDataPath.h"
 
-#include "Core/String/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringUtil.h"
+
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+    #include "Core/Foundation/PlatformOSHeaders.h"
+#endif
 
 namespace sw
 {

@@ -7,9 +7,9 @@
 
 #include "Editor/Common/Backend/EditorUICapture.h"
 
+#include <imgui.h>
 #include <algorithm>
 #include <cstring>
-#include <imgui.h>
 #include <imgui_internal.h>
 
 namespace sw::editor

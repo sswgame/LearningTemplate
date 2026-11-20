@@ -5,8 +5,8 @@
  *          (호스트 순서와 무관), 이 두 타입은 위치와 범위를 맡습니다. 비트 단위로 줄여 쓰는 패킷은 `BitStream.h` 입니다.
  *          읽기가 남은 바이트를 넘으면 0 을 돌려주고 `hasOverflowed` 가 참이 됩니다(`BitReader` 와 같은 규칙) — 깨진 파일을 받아도 버퍼 밖을 읽지 않으며,
  *          부르는 쪽은 필드를 모두 읽은 뒤 한 번 확인합니다. `read*( T& )` 꼴(가변 정수 · 길이 붙은 글 · POD)은 바로 bool 로도 답한다(넘침 표시도 함께 남긴다).
- *          **파일이 적은 개수는 이 타입의 목록 읽기(`readList` · `readCountedList` · `readPodList`)로만 할당한다.** 남은 바이트로 먼저 거르고 곱셈 대신 나눗셈으로 재므로, 위조된 개수 하나가
- *          수십 기가 할당이나 넘친 곱셈으로 "길이가 맞아" 보이는 파일이 되지 못한다(린트 `Scripts/lint/byte_read_shape.py` 가 다른 길을 막는다). 언리얼 `FArchive::IsError` 처럼 끈적한 실패이고,
+ *          **파일이 적은 개수는 이 타입의 개수 읽기(`readCount`)와 목록 읽기(`readList` · `readCountedList` · `readPodList`)로만 할당한다.** 남은 바이트로 먼저 거르고 곱셈 대신 나눗셈으로 재므로, 위조된 개수 하나가
+ *          수십 기가 할당이나 넘친 곱셈으로 "길이가 맞아" 보이는 파일이 되지 못한다. 바이트 순서 읽기(`LittleEndianUtil::read*`)는 이 타입만 부른다(비공개 + friend). 언리얼 `FArchive::IsError` 처럼 끈적한 실패이고,
  *          원소 최소 크기로 미리 재는 것은 언리얼 `TArray` 직렬화의 `Ar.IsLoading()` 음수 · 상한 검사를 형식 쪽으로 옮긴 것이다(기억에 따른 비교).
  *          `readFloat32` 는 유한한 값만 받는다 — NaN 은 모든 비교를 빠져나가 깨진 파일이 값으로 번진다(`Archive::operator>>` · `BitReader::readFiniteFloat` 와 같은 규칙).
  *          POD 통째 쓰기(`writePod` · `readPod`)는 호스트 바이트를 그대로 옮긴다 — 지원 플랫폼이 모두 리틀 엔디언이라 정수 쓰기와 같은 바이트다(아래 static_assert).
@@ -147,6 +147,7 @@ namespace sw
             const uint8* pBytes = consume( 2 );
             return pBytes != nullptr ? LittleEndianUtil::readUint16( pBytes ) : uint16{ 0 };
         }
+        [[nodiscard]] int16  readInt16() { return static_cast<int16>( readUint16() ); }
         [[nodiscard]] uint32 readUint32()
         {
             const uint8* pBytes = consume( 4 );
@@ -240,6 +241,18 @@ namespace sw
         [[nodiscard]] bool canHold( uint64 declaredCount, size_t minElementBytes )
         {
             return markOverflowUnless( hasOverflowed() == false && canHoldCount( declaredCount, minElementBytes, getRemainingByteCount() ) );
+        }
+        /**
+         * @brief 원소 개수(uint32)를 읽습니다. 원소 하나가 파일에서 적어도 @p minElementBytes 바이트이므로 남은 바이트로 담을 수 없는 개수면 넘침으로 표시하고 false 입니다.
+         * @details 파일이 적은 개수로 맵 · 글 묶음처럼 목록 읽기가 맞지 않는 자리를 채울 때의 입구다(`Archive::readCount` 와 한 계산). 할당은 이 답을 본 뒤에만 한다.
+         */
+        [[nodiscard]] bool readCount( size_t minElementBytes, uint32& outCount )
+        {
+            const uint32 declaredCount = readUint32();
+            if ( canHold( declaredCount, minElementBytes ) == false )
+                return false;
+            outCount = declaredCount;
+            return true;
         }
         /**
          * @brief 파일이 적은 개수만큼 목록을 읽습니다. 개수를 남은 바이트로 먼저 거른 뒤에 자리를 잡고, 원소마다 @p readElement 를 부릅니다.

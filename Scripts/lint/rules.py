@@ -80,8 +80,6 @@ class Rule:
 
 
 RULES: tuple[Rule, ...] = (
-    # --- 형식(고치는 것은 `format` 하나 — include 순서 + clang-format) -------------------------------------------------------------------------
-    Rule("include-order", "형식", "include 순서 · 묶음", "include 줄의 순서는 컴파일러가 보지 않는다", "lint.include_order:check_include_order_scope"),
     # --- 경계(빌드 게이트가 닿지 않는 자리) ------------------------------------------------------------------------------------
     Rule("layer-includes", "경계", "아래 층 파일이 위 층 헤더를 include(Core · Engine · GameFramework · Editor 층 표)", "빌드의 #error 껍데기가 막지만 그 부분을 컴파일할 때(Debug 빌드)에야 드러나고, 아무도 include 하지 않는 헤더는 보지 않는다 — 같은 표로 커밋 때 먼저 본다", "lint.layer_includes:check_layer_includes", inputs=LAYER_TABLES),
     Rule("layer-cycles", "경계", "같은 엔진 층의 폴더끼리 서로 include(층 안 순환)", "같은 층은 한 부분이라 #error 껍데기가 없다 — 폴더마다 부분을 나누면 층 번호가 폴더 순서를 흉내 낼 뿐이다", "lint.layer_cycles:check_layer_cycles", exceptions="Config/Rules/Layers/EngineLayers.toml [sameTierCycle]", inputs=LAYER_TABLES),
@@ -91,11 +89,8 @@ RULES: tuple[Rule, ...] = (
     Rule("platform-chains", "경계", "빠진 플랫폼을 컴파일 오류로 내지 않는 #if 사슬", "전처리 갈래는 형식이 막지 못한다", "lint.platform_chains:check_platform_chains", tables=("",)),
     # --- 모양(공통 틀이 있는데 손으로 다시 적은 것) ----------------------------------------------------------------------------
     Rule("cpp-shape", "모양", "선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 기반 하나", "합법 C++ 의 배치 규칙이다", "lint.cpp_shape:check_cpp_shape", tables=("",)),
-    Rule("byte-read", "모양", "파일에서 읽은 개수를 믿고 할당 · LittleEndianUtil 직접 읽기", "vector::resize 는 어떤 수든 받는다", "lint.byte_read_shape:check_byte_read_shape", exceptions="Config/Rules/Lint/ByteReadRawFiles.json"),
     Rule("common-shapes", "모양", "공통 기반을 두고 손으로 적은 모양(열거 이름 표 · id 를 버리는 입구 · 손으로 짝지은 writeState · readState( Archive& ) · 프레임 함수 안의 리터럴 hashed_string …)", "칸 이름 · switch 글자 · 부른 함수는 형식이 말하지 못한다", "lint.common_shapes:check_common_shapes", tables=("",)),
     Rule("mutable-statics", "모양", "주인 객체 밖의 가변 정적 저장소(감춘 싱글턴)", "함수 정적 · 이름공간 범위 변수는 합법 C++ 이다", "lint.mutable_statics:check_mutable_statics", tables=("",)),
-    Rule("disk-path-case", "모양", "경로 포함 · 같음 판정(isPathAtOrUnderRoot · startsWithPathComponent …)에 키로 꺼낸 접은 글(normalizePath(…).str() 을 담은 지역 변수) · toLower 의 글을 넘김", "normalizePath 의 결과(PathKey)는 형식이 막지만, 키 · id 로 꺼낸 str() 과 범용 toLower 는 string 이라 출처를 잃는다", "lint.disk_path_case:check_disk_path_case", exceptions="Config/Rules/Lint/DiskPathCase.json"),
-    Rule("required-name-fields", "모양", "이름 · 경로 PROPERTY 칸(뼈 · 소켓 · 액션 · 태그 …)의 C++ 문자열 기본값 — 데이터가 안 적으면 맞지 않는 이름이 조용히 쓰인다(Required 또는 예외)", "리터럴 초기값은 합법 C++ 이고, 그 값이 형식뿐인 빈 값인지 데이터가 덮을 기본값인지 형식이 말하지 못한다(이름 전용 형식은 생성기 설계 W-R3 와 겹친다)", "lint.required_name_fields:check_required_name_fields", exceptions="Config/Rules/Lint/RequiredNameFieldExceptions.json"),
     # --- 이름 -------------------------------------------------------------------------------------------------------------
     Rule("naming-words", "이름", "표에 없는 낱말(모든 이름 · 파일 · 폴더의 모든 낱말) · 금지 동사 · 금지 명사 · 금지 이름 · 약어 표기(모두 대문자)", "업계 용어인지는 형식이 말하지 못한다", "lint.naming_words:check_naming_words", tables=("", "Baseline", "BannedNames")),
     # --- 셰이더 -----------------------------------------------------------------------------------------------------------
@@ -103,7 +98,6 @@ RULES: tuple[Rule, ...] = (
     Rule("shader-branch-shape", "셰이더", "`if ( a && b ) … else if ( a )` 사슬(NVIDIA GL 오컴파일)", "분기 모양은 형식이 아니다", "lint.shader_branch_shape:check_shader_branch_shape"),
     # --- 참조 · 생성물 ----------------------------------------------------------------------------------------------------
     Rule("feature-refs", "참조", "참조 0 인 컴포넌트 · 감시 값 · 개발 명령, 정의 없는 기대 로그 id", "쓰는 곳 · 내는 곳이 있는지는 형식이 말하지 못한다", "lint.feature_references:check_feature_references", tables=("",)),
-    Rule("client-only-types", "참조", "클라이언트 전용 형식 이름 표(Config/Engine/ClientOnlyTypes.generated.json)가 소스와 어긋남", "서버가 런타임에 읽는 생성 표다 — 고치는 것은 `py -3 -m Scripts client-only-types`", "generate.client_only_types:check_client_only_types", inputs=("Config/Engine/ClientOnlyTypes.generated.json", "cmake/Modules/Build/BuildLayout.cmake")),
     Rule("asset-refs", "참조", "끊어진 에셋 경로 · 옮긴 에셋의 옛 id(지우거나 옮긴 에셋을 가리키던 다른 파일도)", "에셋은 글 경로로 가리킨다 — 있는지는 형식이 말하지 못한다(고치는 것은 `py -3 -m Scripts move-asset`)", "lint.asset_references:check_asset_references", inputs=("Config/Dev/AssetReferenceFields.json", "Config/Dev/AssetReferenceFields.generated.json")),
     Rule("asset-ids", "참조", "에셋 정체성 결함 — 머리 `<?asset guid?>` 없음 · 깨짐, 짝 없는 .meta · .meta 없는 원본, GUID 겹침, HEAD 경로의 GUID 바뀜", "정체성은 파일 글(머리 · 곁 .meta)이라 형식이 말하지 못한다(고치는 것은 `py -3 -m Scripts asset-ids --fix`)", "lint.asset_identity:check_asset_identity", inputs=("Config/Dev/AssetIdentity.json",)),
     # --- 래칫(늘지 않게만, 줄이면 `--accept`) -----------------------------------------------------------------------------

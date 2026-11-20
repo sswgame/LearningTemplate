@@ -11,9 +11,9 @@
 #include "Core/Foundation/PlatformOSHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/String/StringUtil.h"
     #include "Core/File/PlatformFileSystem.h"
     #include "Core/File/PlatformFileUtil.h"
+    #include "Core/String/StringUtil.h"
 
 namespace sw
 {

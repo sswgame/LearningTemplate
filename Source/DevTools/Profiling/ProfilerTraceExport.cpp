@@ -14,11 +14,11 @@
 
 #if !defined( SW_SHIPPING )
 
+    #include "Core/Encoding/HexUtil.h"
     #include "Core/File/FileUtil.h"
     #include "Core/File/ProcessRoots.h"
     #include "Core/Memory/Memory.h"
     #include "Core/Process/Process.h"
-    #include "Core/Encoding/HexUtil.h"
     #include "Core/Time/MonotonicClock.h"
     #include "Core/Time/WallClock.h"
 

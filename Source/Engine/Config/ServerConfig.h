@@ -71,7 +71,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 받는 주소(`0.0.0.0` 모두 · `127.0.0.1` 이 기계만)입니다. */
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _listenAddress{ "0.0.0.0" };
         /**
          * @brief 게임(UDP) 포트입니다. 전용 서버의 게임 인스턴스가 늘 이 포트를 엽니다(`GameNetSession::makeServerParams`, 받는 주소는 `_listenAddress`).
@@ -109,7 +109,7 @@ namespace sw
         PROPERTY( Min = 0, Max = 65535 )
         int32 _adminServicePort{ 0 };
         /** @brief GM 포트가 받을 주소입니다. 기본 `127.0.0.1` 은 이 기계만 받습니다. GM 도구가 다른 기계면 사설 주소를 준다 — 루프백 · 사설 밖(0.0.0.0 · 공용)은 기동이 거절한다(`NetAddress::isLoopbackOrPrivate`). */
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _adminListenAddress{ "127.0.0.1" };
         /**
          * @brief 운영 HTTP 엔드포인트(`/metrics`, `/healthz`, `/readyz`. 평문이고 인증 없음) 포트입니다. 0 이면 열지 않습니다.
@@ -118,13 +118,13 @@ namespace sw
         PROPERTY( Min = 0, Max = 65535 )
         int32 _opsPort{ 0 };
         /** @brief 운영 엔드포인트가 받을 주소입니다. 기본 `127.0.0.1` 은 이 기계만 받습니다. 스크레이퍼가 다른 기계면 사설 주소를 준다(공용 인터페이스에 열지 말 것). */
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _opsListenAddress{ "127.0.0.1" };
         /**
          * @brief 운영 엔드포인트의 Bearer 토큰을 담은 환경 변수 이름입니다(토큰 자체는 설정 파일에 쓰지 않는다).
          * @details 변수가 있으면 요청마다 `Authorization: Bearer` 를 요구한다. 루프백 · 사설 주소가 아닌 바인드(0.0.0.0 · 공용 주소)는 변수가 없으면 서버가 기동하지 못한다.
          */
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _opsTokenEnvironment{ "SW_OPS_TOKEN" };
         /**
          * @brief 관리 채널(서버 운영 O4 — 점검 모드 · 상태 · 정상 종료를 재시작 없이 부르는 텍스트 TCP 채널) 포트입니다. 0 이면 끔(기본 — Shipping 도 같다).
@@ -135,7 +135,7 @@ namespace sw
         PROPERTY( Min = 0, Max = 65535 )
         int32 _adminChannelPort{ 0 };
         /** @brief 관리 채널 토큰을 담은 환경 변수 이름입니다(토큰 자체는 설정 파일에 쓰지 않는다). */
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _adminChannelTokenEnvironment{ "SW_ADMIN_CHANNEL_TOKEN" };
         /** @brief 서버 틱 수(초당)입니다. 한 틱이 게임 고정 스텝 하나입니다. */
         PROPERTY( Min = 1, Max = 240 )
@@ -174,7 +174,7 @@ namespace sw
          * @details 서버에는 "보낼까요?" 를 물을 사람이 없어 `ask` 는 받지 않는다(기동 오류). 모르는 값도 오류다 — 보내지 않는 쪽으로 조용히 바꾸지 않는다.
          *          언리얼 서버의 `-NoCrashReport` · 유니티 Cloud Diagnostics 의 서버 켜기 칸과 같은 자리이며 기본은 끔이다(운영자가 동의한 서버만 보낸다).
          */
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _crashReportConsent{ "local" };
         /**
          * @brief 틱 사용률(틱 본문 시간 ÷ 틱 주기)이 이 값(퍼센트)을 넘으면 경고합니다(서버 운영 O5). 0 이면 끔.

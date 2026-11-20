@@ -72,6 +72,9 @@ flag.Transient = Transient, transient, NonSerialized, nonSerialized
 flag.SkipIfEmpty = SkipIfEmpty, skipIfEmpty
 # 데이터 파일이 이 칸을 반드시 적어야 한다(빠지면 로드 오류 — 초기값은 형식일 뿐 기본값이 아니다)
 flag.Required = Required, required
+# 이름 · 경로 칸(parser_config 의 parsing.name_field_types)의 C++ 문자열 기본값이 엔진이 정한 기본값이다(엔진 표의 이름 · 자기 값 · 쓰는 게임 데이터가 없는 킷의 규칙) — 헤더 초기값에 둔다.
+# 이것도 Required 도 없는 이름 · 경로 칸의 문자열 기본값은 파서 오류다(데이터가 안 적으면 맞지 않는 이름이 조용히 쓰인다). 헤더 초기값이 없는 칸에 달아도 파서 오류
+flag.DefaultName = DefaultName
 # 이 칸이 목록 원소의 열쇠다 — 부모를 가리키는 데이터(`_base`)가 목록을 이 칸의 값으로 합친다(DataInheritance)
 flag.InheritKey = InheritKey, inheritKey
 # 부모가 없는 원소만 이 칸을 반드시 적는다 — 부모를 가리키는 칸(InheritParent)이 적힌 원소는 부모의 값을 물려받는다

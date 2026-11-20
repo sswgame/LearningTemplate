@@ -115,8 +115,8 @@ namespace sw
         float32 _pixelsPerUnit;
         PROPERTY( Category = "Pixel Perfect", DisplayName = "Reference Resolution", Tooltip = "Resolution the art is authored for (pixels)", Min = 1.0 )
         float2 _referenceResolution;
-        PROPERTY( Category = "Pixel Perfect", DisplayName = "Bar Sorting Layer", Tooltip = "Sorting layer of the letterbox bars (render2d.xml)", Validate = validateBarSortingLayer )
-        hashed_string _barSortingLayer;
+        PROPERTY( DefaultName, Category = "Pixel Perfect", DisplayName = "Bar Sorting Layer", Tooltip = "Sorting layer of the letterbox bars (render2d.xml)", Validate = validateBarSortingLayer )
+        hashed_string _barSortingLayer{ "Overlay" };
         PROPERTY( Category = "Pixel Perfect", DisplayName = "Crop X", Tooltip = "Cover the area outside the reference width with bars (pillarbox)" )
         bool _bCropX;
         PROPERTY( Category = "Pixel Perfect", DisplayName = "Crop Y", Tooltip = "Cover the area outside the reference height with bars (letterbox)" )

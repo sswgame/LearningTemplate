@@ -28,8 +28,8 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
 
-#include <algorithm>
 #include <imgui.h>
+#include <algorithm>
 
 namespace sw::editor
 {

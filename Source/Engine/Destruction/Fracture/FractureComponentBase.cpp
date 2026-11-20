@@ -583,9 +583,6 @@ namespace sw
         : PhysicsComponent( PhysicsComponentPhase::Body )
         , _profilePath{}
         , _interiorMaterialPath{}
-        , _staticLayer{ "Static" }
-        , _chunkLayer{ "Default" }
-        , _debrisLayer{ "Debris" }
         , _listAnchorVolume{}
         , _seed{ 1 }
         , _anchorTolerance{ 0.05f }

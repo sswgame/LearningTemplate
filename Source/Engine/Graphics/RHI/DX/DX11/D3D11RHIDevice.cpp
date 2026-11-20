@@ -18,16 +18,16 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Engine/Graphics/RHI/DX/DXGITearing.h"
-    #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
-    #include <thread>
-
-    #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineDefaultAssets.h"
+    #include "Engine/Foundation/EnginePlatformHeaders.h"
+    #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
     #include "Engine/Graphics/RHI/DX/DXGIAdapter.h"
     #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
     #include "Engine/Graphics/RHI/DX/DXGIMemoryBudget.h"
+    #include "Engine/Graphics/RHI/DX/DXGITearing.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+
+    #include <thread>
 
 namespace sw
 {

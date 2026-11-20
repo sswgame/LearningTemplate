@@ -193,8 +193,8 @@ namespace sw
          * @brief 정렬 레이어 이름입니다. 투명 큐는 레이어, 레이어 안 순서, 깊이 순으로 그립니다(유니티의 Sorting Layer, Godot 의 CanvasLayer).
          * @details 같은 Z 의 월드 UI 와 스프라이트처럼 깊이가 같은 것의 앞뒤를 데이터로 정한다. 이름은 `render2d.xml` 의 테이블에 있어야 한다.
          */
-        PROPERTY( Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml; earlier layers draw first", Validate = validateSortingLayer )
-        hashed_string _sortingLayer;
+        PROPERTY( DefaultName, Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml; earlier layers draw first", Validate = validateSortingLayer )
+        hashed_string _sortingLayer{ "Default" };
         PROPERTY( Category = "Rendering", DisplayName = "Draw Mode", Tooltip = "Simple stretches the quad; Sliced keeps the corners; Tiled repeats the middle" )
         SpriteDrawMode _drawMode;
         PROPERTY( Category = "Rendering", DisplayName = "Size", Tooltip = "Local width and height used when the draw mode slices or repeats the sprite", Min = 0.0, Units = m )

@@ -258,7 +258,7 @@ namespace sw
             struct HeaderRoot
             {
                 /// @brief 실제 경로(`makeCanonicalPath`)의 비교용 글(`makeComparableDiskPath` — 대소문자는 OS 규칙)인 루트 폴더입니다(`<도메인>/shaders`).
-                string _comparableDir;
+                ComparableDiskPath _comparableDir;
                 /// @brief 키 앞에 붙는 도메인 이름입니다. 자기 도메인이면 비어 있다(자기 키에는 ':' 가 없다).
                 string _domain;
             };
@@ -274,14 +274,14 @@ namespace sw
                 string ownCanonical;
                 if ( FileUtil::makeCanonicalPath( shadersDir, ownCanonical ) == false )
                     return false;
-                const string ownComparable = FileUtil::makeComparableDiskPath( ownCanonical );
+                const ComparableDiskPath ownComparable = FileUtil::makeComparableDiskPath( ownCanonical );
                 outListRoot.push_back( HeaderRoot{ ownComparable, string{} } );
                 for ( const ShaderIncludeRootDomain& rootDomain : resolver.getRootDomains() )
                 {
                     string canonical;
                     if ( FileUtil::makeCanonicalPath( rootDomain._shadersFolder.str(), canonical ) == false )
                         return false;
-                    const string comparableDir = FileUtil::makeComparableDiskPath( canonical );
+                    const ComparableDiskPath comparableDir = FileUtil::makeComparableDiskPath( canonical );
                     if ( comparableDir != ownComparable )
                         outListRoot.push_back( HeaderRoot{ comparableDir, rootDomain._domain } );
                 }
@@ -299,8 +299,8 @@ namespace sw
                 string resolved;
                 if ( FileUtil::makeCanonicalPath( absHeader, resolved ) == false )
                     return string{};
-                const string canonical  = FileUtil::normalizeSeparators( resolved );     // 구분자를 맞춘다 — 키는 OS 가 달라도 같은 글이어야 한다
-                const string comparable = FileUtil::makeComparableDiskPath( canonical ); // 길이는 `canonical` 과 같다(대소문자만 접는다)
+                const string             canonical  = FileUtil::normalizeSeparators( resolved );     // 구분자를 맞춘다 — 키는 OS 가 달라도 같은 글이어야 한다
+                const ComparableDiskPath comparable = FileUtil::makeComparableDiskPath( canonical ); // 길이는 `canonical` 과 같다(대소문자만 접는다)
                 for ( const HeaderRoot& root : listRoot )
                 {
                     const bool bInside = FileUtil::startsWithPathComponent( comparable, root._comparableDir ) && root._comparableDir.size() < comparable.size();
@@ -571,7 +571,7 @@ namespace sw
                     resolved += "/";
                     resolved += listTail[index - 1];
                 }
-                const string comparable = FileUtil::makeComparableDiskPath( resolved ); // 길이는 `resolved` 와 같다(대소문자만 접는다)
+                const ComparableDiskPath comparable = FileUtil::makeComparableDiskPath( resolved ); // 길이는 `resolved` 와 같다(대소문자만 접는다)
                 for ( const HeaderRoot& root : listRoot )
                 {
                     const bool bInside = FileUtil::startsWithPathComponent( comparable, root._comparableDir ) && root._comparableDir.size() < comparable.size();

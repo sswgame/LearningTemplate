@@ -249,7 +249,14 @@ namespace sw
         /** @brief 공개 멤버입니다. 다른 타입의 코덱이 이 필드를 직접 읽고 쓸 수 있는지(중첩 타입 펼치기) 정합니다. */
         uint8 _bPublic : 1;
         /** @brief 플레이 중에만 의미가 있는 상태입니다(PROPERTY(RuntimeState)). 저작 저장(`SerializePurpose::Authoring`)이 쓰지 않습니다. */
-        uint8                   _bRuntimeState : 1;
+        uint8 _bRuntimeState : 1;
+        /** @brief 이름 · 경로 칸의 C++ 문자열 기본값이 의도한 엔진 기본값입니다(PROPERTY(DefaultName)). 기본값이 없는 칸에 달면 파서 오류입니다. */
+        uint8 _bDefaultName : 1;
+        /**
+         * @brief 이름 · 경로 칸(`parsing.name_field_types`)인데 헤더 초기값에 비어 있지 않은 문자열 리터럴이 있습니다. 선언에서 온 사실이다(애노테이션 줄이 아니다).
+         * @details 데이터가 그 칸을 적지 않으면 그 이름이 조용히 쓰인다 — `Required` · `Transient` · `DefaultName` 이 없으면 `validatePropertyFlags` 가 멈춘다.
+         */
+        uint8                   _bHasNameLiteralDefault : 1;
         [[maybe_unused]] uint16 _padding;
 
         ParsedPropertyInfo() noexcept
@@ -314,6 +321,8 @@ namespace sw
             , _bHasMaxCount{ SW_FALSE }
             , _bPublic{ SW_FALSE }
             , _bRuntimeState{ SW_FALSE }
+            , _bDefaultName{ SW_FALSE }
+            , _bHasNameLiteralDefault{ SW_FALSE }
             , _padding{ 0 }
         {
         }

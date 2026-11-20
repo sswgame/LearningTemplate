@@ -235,7 +235,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY()
+        PROPERTY( DefaultName )
         hashed_string _currency{ "geo" };
     };
 } // namespace sw

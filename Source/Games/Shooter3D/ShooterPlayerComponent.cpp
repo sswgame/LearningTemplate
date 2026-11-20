@@ -297,7 +297,6 @@ namespace sw
         , _regenDelay{ 4.0f }
         , _regenPerSecond{ 6.0f }
         , _downTime{ 2.5f }
-        , _hitboxLayer{ "Ragdoll" }
         , _shotImpulse{ 30.0f }
         , _meleeDamage{ 25.0f }
         , _meleeImpulse{ 40.0f }

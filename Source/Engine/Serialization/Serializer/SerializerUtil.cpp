@@ -6,7 +6,7 @@
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -137,9 +137,12 @@ namespace sw
             /** @brief uint32 하나를 읽고 오프셋을 그만큼 옮깁니다. */
             [[nodiscard]] static bool readUint32( const uint8* pData, size_t dataSize, size_t& inoutOffset, uint32& outValue )
             {
-                if ( inoutOffset + sizeof( uint32 ) > dataSize )
+                if ( inoutOffset > dataSize )
                     return false;
-                outValue = LittleEndianUtil::readUint32( pData + inoutOffset );
+                ByteReader reader( pData + inoutOffset, dataSize - inoutOffset );
+                outValue = reader.readUint32();
+                if ( reader.hasOverflowed() )
+                    return false;
                 inoutOffset += sizeof( uint32 );
                 return true;
             }
@@ -147,9 +150,12 @@ namespace sw
             /** @brief int64 하나를 읽고 오프셋을 그만큼 옮깁니다. */
             [[nodiscard]] static bool readInt64( const uint8* pData, size_t dataSize, size_t& inoutOffset, int64& outValue )
             {
-                if ( inoutOffset + sizeof( int64 ) > dataSize )
+                if ( inoutOffset > dataSize )
                     return false;
-                outValue = LittleEndianUtil::readInt64( pData + inoutOffset );
+                ByteReader reader( pData + inoutOffset, dataSize - inoutOffset );
+                outValue = reader.readInt64();
+                if ( reader.hasOverflowed() )
+                    return false;
                 inoutOffset += sizeof( int64 );
                 return true;
             }
@@ -567,7 +573,7 @@ namespace sw
         if ( StringUtil::startsWith( name, "sw::" ) )
             name.remove_prefix( 4 );
         // 이름 · 경로 형식은 빈 글이 "없음" 이다. `string` 은 넣지 않는다 — 글 칸은 빈 값이 뜻 있는 값일 수 있다(명령 표의 "단축키 없음" 같은 고정 열).
-        // 다른 데이터를 가리키는 이름은 hashed_string 으로 둔다(린트 required-name-fields 가 기본값을, 이 판정이 빈 값을 막는다).
+        // 다른 데이터를 가리키는 이름은 hashed_string 으로 둔다(리플렉션 파서가 기본값을(`PROPERTY( Required )` · `DefaultName`), 이 판정이 빈 값을 막는다).
         static constexpr string_view kArrNameType[] = { "hashed_string", "TagID", "DataPath", "AssetID", "CatalogKey", "AssetRef" };
         for ( const string_view nameType : kArrNameType )
         {

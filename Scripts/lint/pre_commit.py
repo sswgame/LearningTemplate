@@ -15,7 +15,7 @@ Scripts/lint/pre_commit.py
 여러 규칙이 함께 쓰는 도우미만 바뀌었으면 그것을 쓰는 규칙의 자체 검사를 돈다(`Rule.listInputs`). `--all` 은 모든 규칙의 자체 검사도 돈다.
 이 모양은 시간이 아니라 연 파일 수로 지킨다(`check_read_bound` — 린트 코드가 바뀐 커밋과 `--all` 이 돈다): 파일 하나를 스테이지하면 모든 규칙을 통틀어
 그 파일을 한 번만 연다. 규칙은 파일 글을 `lint_scope.read_text` · `read_texts` 나 `index_cache` 로만 얻는다.
-**통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다. 고치는 것은 `py -3 -m Scripts format` 하나다(include 순서 + clang-format).
+**통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다. 고치는 것은 `py -3 -m Scripts format` 하나다(clang-format — include 순서 포함).
 """
 
 from __future__ import annotations
@@ -246,34 +246,6 @@ def _check_merge_scope(git: Callable[..., None]) -> list[str]:
     return [] if (scope.list_file, scope.list_removed) == (("c.txt",), ()) else [f"병합 범위가 손으로 푼 c.txt 하나가 아니다: {scope.list_file} · 지움 {scope.list_removed}"]
 
 
-def check_fix_command(project_root: Path) -> list[str]:
-    """include-order 위반 안내가 시키는 명령(`include_order.FIX_COMMAND`)을 `Scripts/__main__.py` 의 하위 명령 표로 풀어 그대로 부르고, 파일의 include 가
-    실제로 고쳐졌는지 본다 — 안내가 아무것도 하지 않는 명령(진입점 없는 `format.py`)이나 clang-format 만 도는 명령을 가리키던 것을 막는다."""
-    import importlib.util
-    from lint.include_order import fix_text, FIX_COMMAND
-    list_token = FIX_COMMAND.split()
-    if list_token[:4] != ["py", "-3", "-m", "Scripts"] or list_token[-1] != "--files":
-        return [f"안내 명령 '{FIX_COMMAND}' 이 `py -3 -m Scripts <하위 명령> … --files` 꼴이 아니다"]
-    spec = importlib.util.spec_from_file_location("ScriptsEntry", Path(__file__).resolve().parents[1] / "__main__.py")
-    entry = sys.modules.setdefault("ScriptsEntry", importlib.util.module_from_spec(spec))   # dataclass 가 모듈을 sys.modules 에서 찾는다
-    spec.loader.exec_module(entry)
-    command = entry._SUBCOMMAND_BY_NAME.get(list_token[4])
-    if command is None:
-        return [f"안내 명령의 하위 명령 '{list_token[4]}' 가 Scripts/__main__.py 표에 없다"]
-    folder = project_root / "Saved" / "Lint" / "FixCommandProbe"
-    folder.mkdir(parents=True, exist_ok=True)
-    probe = folder / "Probe.cpp"
-    probe.write_text('#include "pch.h"\n#include "Core/Foundation/Types.h"\n#include <vector>\n#include <algorithm>\n\nint x;\n', encoding="utf-8", newline="\n")
-    relative = probe.relative_to(project_root).as_posix()
-    try:
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            command.run([*list_token[5:], relative])
-        fixed = not fix_text(probe.read_text(encoding="utf-8"), relative)[1]
-    finally:
-        probe.unlink(missing_ok=True)
-    return [] if fixed else [f"안내 명령 '{FIX_COMMAND} <파일>' 이 include 순서를 고치지 않는다"]
-
-
 def check_fact_store() -> list[str]:
     """사실 저장소(`index_cache.open_facts`) — 임시 폴더에서 짓고, 한 파일 고치기 · 지우기 · 더하기 뒤 요약이 처음부터 접은 것과 같은지, 물은 사실이 맞는지,
     조각을 망가뜨리면 다시 지어 같은 답을 내는지 본다."""
@@ -354,15 +326,17 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
 
     # 린트 코드(규칙 · 도우미 · 이 파일 · 하위 명령 표) · 린트 표 폴더가 바뀌면 커밋 훅의 모양(스테이지 비례 읽기 · 병합 범위)과 안내가 시키는 고치는 명령, 린트 표마다 읽는 규칙이 하나인지를 다시 본다 — 시간을 재지 않고 연 파일을 센다.
     if scope.whole_repo or scope.touches(roots=("Scripts/lint/", "Scripts/__main__.py", "Config/Rules/Lint/", *sorted({path for rule in RULES for path in rule.list_inputs() if path.startswith("Scripts/")}))):
-        list_shape = (check_read_bound(project_root) + check_merge_scope() + check_fix_command(project_root) + check_rule_row_diff() + check_fact_store()
+        list_shape = (check_read_bound(project_root) + check_merge_scope() + check_rule_row_diff() + check_fact_store()
                       + find_orphan_tables(project_root))
         if list_shape:
             has_errors = True
-            print(f"[lint-shape] FAIL — 커밋 훅 · 고치는 명령의 모양 {len(list_shape)}건")
+            print(f"[lint-shape] FAIL — 커밋 훅의 모양 {len(list_shape)}건")
             for line in list_shape:
                 print(f"  - {line}")
 
-    list_format =[project_root / path for path in select_format_files(scope)]
+    # 포맷 설정(include 순서 포함)이 바뀌면 바뀌지 않은 파일의 판정도 바뀐다 — 전체를 본다.
+    format_scope = make_whole_scope(project_root) if scope.touches(files=(".clang-format",)) else scope
+    list_format = [project_root / path for path in select_format_files(format_scope)]
     if list_format and run_clang_format_batch(list_format, check_only=True, cwd=project_root) != 0:
         has_errors = True
         print("[format] FAIL — 'py -3 -m Scripts format' 으로 고친 뒤 다시 git add 한다.")

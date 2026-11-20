@@ -58,7 +58,7 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         string _modeID{}; ///< `[0-9a-z_]` 형식이며 32바이트 이하이다. 버스 주제와 캐시 키에 들어간다
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _serverKind{ "game" }; ///< 전용 서버 종류이다. 기반 계층의 서버 선택에 쓴다
         PROPERTY()
         int64 _regionRelaxMs{ 30000 }; ///< 앵커나 후보가 이만큼 기다렸으면 지역을 따지지 않는다

@@ -16,7 +16,6 @@
     #include "Engine/Window/NativeWindowEvent.h"
 
     #include <imgui.h>
-
     #include <cfloat>
 
 namespace sw::editor

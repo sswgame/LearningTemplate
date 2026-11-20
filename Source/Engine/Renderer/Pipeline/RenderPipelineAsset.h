@@ -26,7 +26,7 @@ namespace sw
         string _name;
 
         /** @brief 셰이딩 방식입니다. Forward / Deferred / Custom. 패스 구성과 맞아야 합니다(Deferred 는 GBuffer · Lighting 패스가 있고, Forward 는 GBuffer 패스가 없다 — 검증). */
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _shadingModel = "Forward";
 
         /** @brief 그래프가 쓰는 임시 어태치먼트와 논리 어태치먼트입니다. */

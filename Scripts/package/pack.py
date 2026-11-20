@@ -13,7 +13,7 @@
 | `Client` | `Ninja-Shipping` | `App.exe` | 없음 |
 | `Server` | `Ninja-Shipping-Server` | `Server.exe` | `CookContract.json` 의 `target_excluded_asset_kinds`(텍스처 · 셰이더 바이너리 · 오디오) |
 
-스테이징은 빌드 폴더 `Bin` 의 맨 위 DLL(쿠킹 전용 셰이더 컴파일러는 뺀다)과 그 타깃의 실행 파일, `THIRD_PARTY_NOTICES.txt`, 그리고 `Packs/` 가운데 공용 팩과 그 게임의 팩만 베낀다
+스테이징은 빌드 폴더 `Bin` 의 맨 위 DLL(쿠킹 전용 셰이더 컴파일러는 뺀다)과 그 타깃의 실행 파일, `THIRD_PARTY_NOTICES.txt`, 서버면 `ClientOnlyTypes.json`, 그리고 `Packs/` 가운데 공용 팩과 그 게임의 팩만 베낀다
 (`Bin/Packs` 에는 모든 게임의 팩이 구워져 있다 — 이름은 `list_pack_name_of_game` 이 게임 프리셋의 `_packRoot` 로 정한다). 쿠킹은 그 타깃의 실행 파일이
 `--cook-all` 로 한다(엔진의 `PackCooker`, 팩 파일 이름 규칙 `PackCooker::makePackFileName`). 이름이 어긋나면 스테이징이 빠진 팩을 알리고 멈춘다.
 Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테스트 · 부하 봇)은 들이지 않는다. 서버는 `Config/Server/<게임>.json` 을 함께 둔다
@@ -69,6 +69,8 @@ def is_chunk_manifest(path: Path) -> bool:
     name = path.name.lower()
     return name.startswith(CHUNK_MANIFEST_PREFIX) and name.endswith(CHUNK_MANIFEST_SUFFIX) and len(name) > len(CHUNK_MANIFEST_PREFIX) + len(CHUNK_MANIFEST_SUFFIX)
 NOTICE_FILE_NAME = "THIRD_PARTY_NOTICES.txt"
+#: 서버 구성 빌드가 실행 파일 옆에 쓰는 클라이언트 전용 형식 이름 표(`ClientOnlyTypeTable::kTableFile`, `Scripts/generate/client_only_types.py`) — 서버 패키지에 반드시 든다.
+CLIENT_ONLY_TYPE_TABLE = "ClientOnlyTypes.json"
 #: 모드 설치 폴더(실행 파일 옆)와 배포 형태의 파일 — `ModSession` · `ModManifest::kFileName` · `ModPackBuilder::kPackFileName` 과 같은 이름.
 MOD_FOLDER_NAME = "Mods"
 MOD_EXPORT_FOLDER = Path("Saved") / "ModPacks"
@@ -143,6 +145,9 @@ def select_staged_entries(bin_dir: Path, target: str) -> list[Path]:
     notice = bin_dir / NOTICE_FILE_NAME
     if notice.exists():
         list_entry.append(notice)
+    client_only_table = bin_dir / CLIENT_ONLY_TYPE_TABLE
+    if target == "Server" and client_only_table.is_file():
+        list_entry.append(client_only_table)
     return list_entry
 
 
@@ -273,6 +278,9 @@ def verify_package(request: PackageRequest, staging_dir: Path) -> None:
     list_source_mod = [path.parent.name for path in (staging_dir / MOD_FOLDER_NAME).glob("*/content") if path.is_dir()]
     if list_source_mod:
         raise PackageError(f"source mods leaked into the package (a shipping game reads only content.pack): {', '.join(list_source_mod)}")
+    # 표가 없는 서버는 씬의 클라이언트 전용 컴포넌트마다 모르는 형식 오류를 낸다 — 서버 구성 빌드(Source/Server/CMakeLists.txt)가 쓴다.
+    if request.target == "Server" and (staging_dir / CLIENT_ONLY_TYPE_TABLE).is_file() is False:
+        raise PackageError(f"{CLIENT_ONLY_TYPE_TABLE} is missing from the server package - build the Server target type (it writes Bin/{CLIENT_ONLY_TYPE_TABLE})")
     other_target = "Client" if request.target == "Server" else "Server"
     if (staging_dir / MAP_TARGET_EXECUTABLE[other_target]).exists():
         raise PackageError(f"{MAP_TARGET_EXECUTABLE[other_target]} leaked into the {request.target} package")
