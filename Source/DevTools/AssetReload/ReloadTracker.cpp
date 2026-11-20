@@ -40,7 +40,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 감시 값 `DevTools.ReloadStaleCount` — 마지막 리로드가 실패해 이전 값으로 도는 경로 수입니다. */
+            /** @brief 감시 값 `Reload.StaleCount` — 마지막 리로드가 실패해 이전 값으로 도는 경로 수입니다. */
             [[nodiscard]] static bool readStaleCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const ReloadTracker* const pTracker = engine::findSubsystem<ReloadTracker>();
@@ -49,6 +49,40 @@ namespace sw
                 outValue = static_cast<float64>( pTracker->countStale() );
                 return true;
             }
+
+            /** @brief 감시 값 `Reload.FailedCount` — 이 실행의 리로드 실패 수(모든 길)입니다. */
+            [[nodiscard]] static bool readFailedCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ReloadTracker* const pTracker = engine::findSubsystem<ReloadTracker>();
+                if ( pTracker == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pTracker->getFailedCount() );
+                return true;
+            }
+
+            /** @brief 감시 값 `Reload.Count.<길>` — 그 길에서 적은 결과 수(성공 · 실패)입니다. */
+            template <ReloadSource kSource>
+            [[nodiscard]] static bool readAttemptCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ReloadTracker* const pTracker = engine::findSubsystem<ReloadTracker>();
+                if ( pTracker == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pTracker->getAttemptCount( kSource ) );
+                return true;
+            }
+
+            /** @brief 감시 값 `Reload.LastMs.<길>` — 그 길의 마지막 리로드에 걸린 시간(ms)입니다. */
+            template <ReloadSource kSource>
+            [[nodiscard]] static bool readLastElapsedMs( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ReloadTracker* const pTracker = engine::findSubsystem<ReloadTracker>();
+                if ( pTracker == nullptr )
+                    return false;
+                outValue = pTracker->getLastElapsedMs( kSource );
+                return true;
+            }
+
+            static uint32 toIndex( ReloadSource source ) { return static_cast<uint32>( source ); }
 
             /** @brief `reload.status [stale|clear]` — 리로드 결과 표(Output Log · 게임 콘솔이 같다). */
             static bool runStatus( const vector<string>& listArgument, string& outReply )
@@ -80,6 +114,9 @@ namespace sw
         : _mutex{}
         , _listEntry{}
         , _nextSequence{ 1 }
+        , _arrAttemptCount{}
+        , _arrLastElapsedMs{}
+        , _failedCount{ 0 }
     {
     }
 
@@ -119,6 +156,7 @@ namespace sw
         pEntry->_lastRequestSequence = sequence;
         pEntry->_lastResult          = result;
         ++pEntry->_attemptCount;
+        ++_arrAttemptCount[ReloadTrackerInternal::toIndex( source )];
         if ( result == ReloadResult::Reloaded )
         {
             pEntry->_appliedSequence = sequence;
@@ -127,8 +165,44 @@ namespace sw
         else
         {
             ++pEntry->_failureCount;
+            ++_failedCount;
             pEntry->_reason = string( ReloadTrackerInternal::takeFirstLine( reason ) );
         }
+    }
+
+    bool ReloadTracker::isStale( ReloadSource source, string_view path ) const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        for ( const ReloadTrackerEntry& entry : _listEntry )
+        {
+            if ( entry._source == source && entry._path == path )
+                return entry.isStale();
+        }
+        return false;
+    }
+
+    void ReloadTracker::recordElapsed( ReloadSource source, float64 elapsedMs )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        _arrLastElapsedMs[ReloadTrackerInternal::toIndex( source )] = elapsedMs;
+    }
+
+    uint32 ReloadTracker::getAttemptCount( ReloadSource source ) const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _arrAttemptCount[ReloadTrackerInternal::toIndex( source )];
+    }
+
+    uint32 ReloadTracker::getFailedCount() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _failedCount;
+    }
+
+    float64 ReloadTracker::getLastElapsedMs( ReloadSource source ) const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _arrLastElapsedMs[ReloadTrackerInternal::toIndex( source )];
     }
 
     vector<ReloadTrackerEntry> ReloadTracker::copyEntries() const
@@ -190,6 +264,8 @@ namespace sw
                 return "Asset";
             case ReloadSource::Shader:
                 return "Shader";
+            case ReloadSource::Module:
+                return "Module";
         }
         return "?";
     }
@@ -198,12 +274,30 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         _listEntry.clear();
+        for ( uint32 index = 0; index < kReloadSourceCount; ++index )
+        {
+            _arrAttemptCount[index]  = 0;
+            _arrLastElapsedMs[index] = 0.0;
+        }
+        _failedCount = 0;
     }
 
     SW_AUTOMATION_WATCH( devToolsReloadAssetCount, "DevTools.ReloadAssetCount", "Asset paths whose reload result the reload tracker holds (reload.status)",
                          &ReloadTrackerInternal::readAssetCount );
-    SW_AUTOMATION_WATCH( devToolsReloadStaleCount, "DevTools.ReloadStaleCount", "Paths whose last config / asset / shader reload failed (they run on the previous values)",
-                         &ReloadTrackerInternal::readStaleCount );
+    // 결과 수 · 낡은 수는 바깥 일(파일 감시 · 빌드 프로세스 · 셰이더 컴파일러)을 따른다 — 벽시계 감시 값이라 `<WaitUntil … timeoutWallSeconds>` 로 기다린다. 활동 수는 없다(결과 하나가 곧 끝이다).
+    SW_AUTOMATION_WALL_WATCH( reloadStaleCount, "Reload.StaleCount", "Paths whose last config / asset / shader / module reload failed (they run on the previous values)",
+                              &ReloadTrackerInternal::readStaleCount, nullptr );
+    SW_AUTOMATION_WALL_WATCH( reloadFailedCount, "Reload.FailedCount", "Reload failures recorded in this run (config, asset, shader and module together)", &ReloadTrackerInternal::readFailedCount, nullptr );
+    SW_AUTOMATION_WALL_WATCH( reloadCountConfig, "Reload.Count.Config", "Config file reload results recorded in this run (reloaded or failed)",
+                              &ReloadTrackerInternal::readAttemptCount<ReloadSource::Config>, nullptr );
+    SW_AUTOMATION_WALL_WATCH( reloadCountAsset, "Reload.Count.Asset", "Asset reload results recorded in this run (reloaded or failed)", &ReloadTrackerInternal::readAttemptCount<ReloadSource::Asset>, nullptr );
+    SW_AUTOMATION_WALL_WATCH( reloadCountShader, "Reload.Count.Shader", "Shader reload results recorded in this run (reloaded or failed)", &ReloadTrackerInternal::readAttemptCount<ReloadSource::Shader>, nullptr );
+    SW_AUTOMATION_WALL_WATCH( reloadCountModule, "Reload.Count.Module", "Module reload results recorded in this run (swapped or failed builds and cascades)",
+                              &ReloadTrackerInternal::readAttemptCount<ReloadSource::Module>, nullptr );
+    SW_AUTOMATION_WATCH( reloadLastMsConfig, "Reload.LastMs.Config", "Milliseconds the last config file reload took", &ReloadTrackerInternal::readLastElapsedMs<ReloadSource::Config> );
+    SW_AUTOMATION_WATCH( reloadLastMsAsset, "Reload.LastMs.Asset", "Milliseconds the last asset reload took", &ReloadTrackerInternal::readLastElapsedMs<ReloadSource::Asset> );
+    SW_AUTOMATION_WATCH( reloadLastMsShader, "Reload.LastMs.Shader", "Milliseconds the last shader recompile pass took", &ReloadTrackerInternal::readLastElapsedMs<ReloadSource::Shader> );
+    SW_AUTOMATION_WATCH( reloadLastMsModule, "Reload.LastMs.Module", "Milliseconds the last module reload cascade took", &ReloadTrackerInternal::readLastElapsedMs<ReloadSource::Module> );
     SW_DEV_COMMAND( ReloadStatus, "reload.status", "reload.status [stale|clear]",
                     "List the last config / asset / shader reload result per file (STALE = the last reload failed and the previous values run)",
                     &ReloadTrackerInternal::runStatus );

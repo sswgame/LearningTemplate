@@ -182,6 +182,7 @@ namespace sw
     // 로그 리스너 해제는 `_evaluator` 가 가진 `AutomationLogCapture` 의 소멸자가 맡는다.
     AutomationRunner::~AutomationRunner()
     {
+        (void)restoreFilesNow(); // 끝맺지 못하고 사라지는 실행(행 감시 · 강제 종료 길)도 맡긴 파일을 되돌린다 — 못 쓴 파일은 쓰기가 오류로 남겼다
         releaseWriteFilter();
         releaseStartPause();
     }
@@ -360,6 +361,31 @@ namespace sw
     const string* AutomationRunner::findStoredText( string_view name ) const
     {
         return _storedText.find( name );
+    }
+
+    void AutomationRunner::restoreFileAtEnd( string absolutePath, string originalText )
+    {
+        for ( const std::pair<string, string>& entry : _listFileRestore )
+        {
+            if ( FileUtil::isSameDiskPath( entry.first, absolutePath ) )
+                return; // 처음 맡긴 글이 원본이다 — 두 번째 덮어쓰기 전의 글은 이미 바뀐 글이다
+        }
+        _listFileRestore.emplace_back( std::move( absolutePath ), std::move( originalText ) );
+    }
+
+    bool AutomationRunner::restoreFilesNow()
+    {
+        bool bAllWritten = true;
+        for ( auto it = _listFileRestore.rbegin(); it != _listFileRestore.rend(); ++it )
+        {
+            if ( FileUtil::writeTextFile( it->first, it->second ) == false )
+            {
+                SW_LOG_ERROR_ID( "Automation.RestoreFileFailed", "[Scenario] could not restore %# - restore it by hand (git checkout or rebuild)", it->first.c_str() );
+                bAllWritten = false;
+            }
+        }
+        _listFileRestore.clear();
+        return bAllWritten;
     }
 
     GameObjectManager* AutomationRunner::findActiveObjectManager() const
@@ -1153,6 +1179,7 @@ namespace sw
         _bEnded              = SW_TRUE;
         _run._wallEndSeconds = MonotonicClock::nowSeconds();
         _run.clearHeldStepState(); // 붙잡힌 채 끝난 단계의 상태(요청한 씬 로드 …)를 이 실행과 함께 걷는다
+        (void)restoreFilesNow();   // 쓰기 게이트를 놓기 전에 — 되돌리는 쓰기도 같은 규칙을 받는다. 못 쓴 파일은 오류로 남는다
         releaseWriteFilter();
         _hangWatchdog.stop(); // 정상 끝맺음이 보고를 쓴다 — 감시가 같은 보고를 덮거나 프로세스를 끝내지 못하게 먼저 내린다
         if ( pInput != nullptr && pInput->getVirtualInput() == &_inputScript )

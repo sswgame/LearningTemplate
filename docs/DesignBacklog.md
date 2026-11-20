@@ -1729,6 +1729,20 @@ public:
 
 **측정이 먼저다.** 지난 Release 로그의 `[Scenario] … timeline:` 줄에서 shooter3d 의 고정 대기 ms 합과 체인 벽시계를 모은다(새로 재지 않는다). 판정: 고정 대기가 체인의 50 % 이상이면 V3 를 짓고, 그린 프레임 대비 안 그린 프레임 비용이 1/3 이하면 V4 로 간다. 아니면 닫고 `stage reset took` 과 기동을 본다.
 
+### 플레이 중 리로드 확인 장치(설계 2026-11-20)
+
+**문제.** 리로드 다섯 길(게임 모듈 · 에디터 모듈 · 에셋 · 설정 · 셰이더)을 플레이 중에 일으키고 결과를 판정할 장치가 없었다. 에셋 캐시 리로드 함수가 `void` 라 깨진 파일도 `Reloaded` 로 적혔고(`reload.status` 가 OK), 머티리얼 · 텍스처 · 프리팹은 새 파일을 읽기 전에 옛 판을 놓아 깨진 저장이 마젠타 · 체커 · 스폰 실패로 번졌다.
+
+**대조.** 언리얼 리임포트는 실패하면 옛 에셋을 둔다. Live Coding 은 빌드가 지면 옛 이미지로 돈다. 자동화는 정리 단계(`AddCleanup`)로 바꾼 파일을 되돌린다. 유니티 Test Framework 도 `TearDown` 에서 되돌린다. → 같은 계약: 실패면 이전 판, 결과는 한 형식, 바꾼 파일은 실행기의 끝 한 곳에서 되돌린다.
+
+**결정.**
+1. 형식: `AssetCacheReloadFunction` 이 `ReloadResult` 를 돌려주고 `reloadAssetCache<T>` 가 멤버 결과를 `return` 한다 — `void` 를 돌려주는 캐시는 등록이 컴파일되지 않는다. 결과를 적는 곳은 `AssetHotReload::reloadCaches` 한 곳이다.
+2. 집계: `ReloadTracker` 에 길 `Module` 과 길마다 결과 수 · 실패 수 · 마지막 시간(감시 값 `Reload.Count.<길>` · `Reload.FailedCount` · `Reload.StaleCount` · `Reload.LastMs.<길>`). 모듈 결과는 `LiveReloadManager`(빌드 실패 · 연쇄 교체)가 적는다.
+3. 단계: `<RebuildModule name variant>`(빌드 트리의 판 머리를 덮고 `ModuleCompiler` 로 다시 짓기 — 추적 소스는 고치지 않는다, 판 표 `Config/Dev/ModuleRebuildVariants.json`), `<OverwriteConfig configFile from>`(쓰기 게이트가 연 `Config/Editor` 만), `<RestoreOverwrites/>`. 바꾼 파일은 `AutomationStepContext::restoreFileAtEnd` 에 맡기고 실행기가 `endRun` · 소멸자에서 되돌린다. 셰이더 · 에셋은 `<Scratch>` 사본을 `asset.overwriteScratch` 로 덮는다(원본은 게이트가 막는다).
+4. 시나리오: `game/empty/automation/desktop/editor/playreload`(편집기 · 혼자 · RUN_SERIAL — 빌드 트리 · 모듈 DLL · `Config/Editor` 를 바꾸므로 백엔드 넷 체인에 넣지 않는다), `shaderreload`(재컴파일기가 Debug 클라이언트만이라 `<SkipUnless Shader.LiveRecompile>`). 허브 게임(Playground)으로 옮겨도 같은 단계 · 감시 값을 쓴다.
+
+**남은 위험.** 메시는 임포트 산출물이라 추적 사본이 없어 시나리오 무대에 없다. 다른 갈래가 새로 더한 캐시의 `reload` 는 통합 때 `ReloadResult` 로 맞춰야 컴파일된다.
+
 ## 시나리오 · 테스트 프레임워크 개편 판단(2026-11-17)
 
 통합 묶음 5(작업자 갈래 약 30 개를 빌드 없이 합침)에서 겪은 실패 열 가지가 형식 · 실행기 동작으로 다시 생기지 않게 하는 설계다. 코드 근거는 f615fb04f4 다. 할 일 줄은 [NEXT](NEXT.md) 5 절 ST-1 ~ ST-6 이다.

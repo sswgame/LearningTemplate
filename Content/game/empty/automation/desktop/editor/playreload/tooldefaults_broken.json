@@ -1,0 +1,3 @@
+[
+    "playreload: a JSON array where Config/Editor/editortooldefaults.json needs an object - the config reload fails (Config.NotJSONObject) and keeps the previous values"
+]

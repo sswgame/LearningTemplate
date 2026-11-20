@@ -213,8 +213,9 @@ namespace sw
          * @details 캐시에 없으면 아무 일도 하지 않습니다. 아무도 안 쓰는 것을 업로드할 이유가 없습니다.
          *          `Texture2D` 객체는 **그대로 두고** 내용만 교체합니다. 머티리얼이 포인터를
          *          빌려 가 있으므로 객체를 바꾸면 빌린 쪽이 해제된 것을 가리킵니다.
+         *          파일을 GPU 자원을 놓기 전에 읽는다 — 읽지 못하면(깨진 DDS · 반쯤 쓰인 파일) 옛 텍스처를 그대로 두고 Failed 입니다.
          */
-        void reload( const AssetID& assetID );
+        [[nodiscard]] ReloadResult reload( const AssetID& assetID );
         /**
          * @brief 이미 가진 텍스처를 **참조 수를 바꾸지 않고** 찾습니다. 없거나 처음 업로드하는 중이면 nullptr 입니다.
          * @warning 빌린 포인터입니다. 누군가 `acquire` 로 참조를 잡고 있는 동안만 유효하고, 마지막 `release` 나 `clear` 뒤에는 해제된 객체입니다.

@@ -1,10 +1,11 @@
 /**
  * @file ReloadTracker.h
- * @brief 설정 · 에셋 · 셰이더 리로드의 결과를 한 곳에 모읍니다(읽기 전용 집계 — 리로드 주인과 오류 처리는 그대로).
+ * @brief 설정 · 에셋 · 셰이더 · 모듈 리로드의 결과와 걸린 시간을 한 곳에 모읍니다(읽기 전용 집계 — 리로드 주인과 오류 처리는 그대로).
  * @details 세 리로드는 감시 · 갱신 길이 다르고(설정 `ConfigReloadSubsystem`, 셰이더 `ShaderRecompiler`, 에셋 에디터 `AssetHotReload`), 실패하면 이전 값을 지킨 채
  *          로그 한 줄만 남겼다 — "이 파일은 지금 낡은 값으로 돈다" 를 어디서도 물을 수 없었다. 각 주인이 결과를 여기에 적고, 개발 명령 `reload.status` 가 보여 준다.
  *          언리얼은 Live Coding · 설정 리로드 · 셰이더 재컴파일이 각자 로그를 쓰고 모으는 뷰가 없다 — Godot 의 "Reimport" 독도 에셋만이다. 그래서 모으는 쪽을 둔다.
- *          고정 용량: 경로마다 마지막 상태 한 줄(`kMaxPathCount`, 넘으면 가장 오래된 경로를 밀어낸다).
+ *          고정 용량: 경로마다 마지막 상태 한 줄(`kMaxPathCount`, 넘으면 가장 오래된 경로를 밀어낸다). 길마다 적은 수 · 실패 수 · 마지막 리로드 시간(ms)은 밀어내지 않는 칸이다 —
+ *          플레이 중 리로드 시나리오가 감시 값 `Reload.Count.<길>` · `Reload.FailedCount` · `Reload.LastMs.<길>` 로 본다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -25,7 +26,10 @@ namespace sw
         Config, ///< `ConfigReloadSubsystem`(호스트 설정 · 등록된 설정 처리기)
         Asset,  ///< 에디터 `AssetHotReload`(에셋 캐시 · 원본 임포트)
         Shader, ///< `ShaderRecompiler`(셰이더 재컴파일)
+        Module, ///< `LiveReloadManager`(모듈 빌드 · 교체)
     };
+    /** @brief 리로드 길 수입니다(`ReloadSource` 의 칸 수 — 길마다 세는 배열의 크기). */
+    constexpr uint32 kReloadSourceCount = 4;
 
     /**
      * @struct ReloadTrackerEntry
@@ -77,6 +81,17 @@ namespace sw
         [[nodiscard]] vector<ReloadTrackerEntry> copyEntries() const;
         /** @brief 지금 이전 값으로 돌고 있는(마지막 시도가 실패한) 경로 수입니다. */
         [[nodiscard]] uint32 countStale() const;
+        /** @brief 그 길의 그 경로가 지금 이전 값으로 돌고 있으면 true 입니다(바이트가 같아 적지 않는 성공도 낡음을 풀어야 하는 셰이더가 묻는다). */
+        [[nodiscard]] bool isStale( ReloadSource source, string_view path ) const;
+
+        /** @brief 리로드 한 번(설정 파일 하나 · 에셋 하나 · 셰이더 묶음 하나 · 모듈 연쇄 하나)에 걸린 시간을 적습니다. 감시 값 `Reload.LastMs.<길>` 이 읽는다. */
+        void recordElapsed( ReloadSource source, float64 elapsedMs );
+        /** @brief 그 길에서 적은 결과 수입니다(Reloaded · Failed — 밀어낸 경로도 센다). */
+        [[nodiscard]] uint32 getAttemptCount( ReloadSource source ) const;
+        /** @brief 모든 길의 실패 수입니다(밀어낸 경로도 센다). */
+        [[nodiscard]] uint32 getFailedCount() const;
+        /** @brief 그 길의 마지막 리로드 시간(ms)입니다. 적은 적이 없으면 0 입니다. */
+        [[nodiscard]] float64 getLastElapsedMs( ReloadSource source ) const;
 
         /**
          * @brief 사람이 읽는 표를 씁니다(`reload.status`). @p bStaleOnly 면 낡은 경로만입니다.
@@ -84,7 +99,7 @@ namespace sw
          */
         [[nodiscard]] string formatReport( bool bStaleOnly ) const;
 
-        /** @brief 리로드 길 이름(`Config` · `Asset` · `Shader`)입니다. */
+        /** @brief 리로드 길 이름(`Config` · `Asset` · `Shader` · `Module`)입니다. */
         static const utf8* getSourceName( ReloadSource source );
         /** @brief 이 집계를 비웁니다(테스트 · `reload.status clear`). */
         void clear();
@@ -93,5 +108,8 @@ namespace sw
         mutable mutex                         _mutex;
         vector<ReloadTrackerEntry> _listEntry SW_GUARDED_BY( _mutex );
         uint64 _nextSequence                  SW_GUARDED_BY( _mutex );
+        uint32                                _arrAttemptCount[kReloadSourceCount] SW_GUARDED_BY( _mutex );
+        float64                               _arrLastElapsedMs[kReloadSourceCount] SW_GUARDED_BY( _mutex );
+        uint32 _failedCount                   SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

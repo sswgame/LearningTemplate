@@ -120,8 +120,8 @@ namespace sw
         const utf8* getAssetKindName() const override;
         /** @brief 그 경로의 에셋을 누가 쥐고 있는지 반환합니다. */
         bool isCached( string_view relativePath ) const override;
-        /** @brief 사용 중이면 다시 읽습니다(`reloadShared`). */
-        void reload( const AssetID& assetID );
+        /** @brief 사용 중이면 다시 읽습니다(`reloadShared`). 아무도 쥐지 않으면 NotTracked, 읽지 못하면 이전 판을 지키고 Failed 입니다. */
+        [[nodiscard]] ReloadResult reload( const AssetID& assetID );
         /** @brief 쥔 경로면 다시 읽습니다(합성 문맥이 바뀌었다 — `AssetCacheBase::reloadComposed`). */
         bool reloadComposed( string_view relativePath ) override;
         /** @brief 다시 읽기 정리가 남긴 옛 판을 프레임 경계에서 놓습니다(`SharedAssetTable::collectRetired`). */

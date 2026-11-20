@@ -162,9 +162,14 @@ namespace sw::editor
 
         /**
          * @brief @p resources 의 레지스트리에서 그 경로를 가진 캐시(`AssetCacheBase::isCached`)마다 `reload` 를 호출합니다. 이름을 모르는 모듈 캐시를 처리하는 경로입니다.
-         * @return 다시 읽게 한 캐시 수입니다.
+         * @return 하나라도 실패하면 Failed, 하나라도 다시 읽었으면 Reloaded, 그 경로를 든 캐시가 없으면 NotTracked 입니다.
          */
-        static uint32 reloadInCachesHolding( AssetManager& resources, const AssetID& assetID );
+        [[nodiscard]] static ReloadResult reloadInCachesHolding( AssetManager& resources, const AssetID& assetID );
+        /**
+         * @brief `reloadCaches` 의 본문 — 캐시를 다시 읽기만 하고 적지 않습니다. 결과를 집계(`ReloadTracker`)에 적는 곳은 `reloadCaches` 한 곳이다.
+         * @param outReason 실패면 까닭 한 줄(정적 글)을 받습니다.
+         */
+        [[nodiscard]] static ReloadResult reloadCacheEntries( const AssetReloadRoute& route, const AssetID& assetID, const utf8*& outReason );
 
         /**
          * @brief @p objects 에서 그 에셋을 쓰는 컴포넌트를 찾아, 인스펙터에서 그 프로퍼티를 고쳤을 때처럼 `onPropertyChanged` 를 호출합니다. 언리얼의 PostEditChange 에 해당합니다.

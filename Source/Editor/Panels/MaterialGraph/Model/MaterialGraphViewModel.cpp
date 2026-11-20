@@ -348,7 +348,7 @@ namespace sw::editor
         if ( _previewPath == previewPaths._materialPath )
         {
             if ( writtenCount > 0 )
-                editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( AssetID{ _previewPath } );
+                (void)editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( AssetID{ _previewPath } ); // 실패는 캐시가 오류로 남기고 미리보기는 이전 판을 그린다
             return;
         }
         _previewPath = previewPaths._materialPath;

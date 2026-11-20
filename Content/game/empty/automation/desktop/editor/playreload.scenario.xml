@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="71f8905a06954f85a901a573937da295"?>
+<!--
+  플레이 중 리로드 — 키트가 살아 있는 사본 씬(playreload/ : 확인용 컴포넌트 값 42 · 생존 공포 키트 시연의 체력 75 · 정신력 70 · 가방 · 머티리얼과 텍스처를 쓰는 상자 · 프리팹 인스턴스)을
+  플레이 인 에디터로 돌리는 동안 길마다 리로드를 일으키고, 상태가 그대로인지(상태 해시 · 감시 값)와 실패가 이전 판으로 계속 도는지(실패 수 · 낡은 수 · 오류 id · 화면 불변) 본다.
+  ② 에디터 모듈 리로드(PIE 중) ① 게임 모듈 다시 짓기 + 교체(판 머리 probe-next — 판 숫자 100 → 101) ③ 에셋 덮어쓰기(머티리얼 · 텍스처 · 프리팹 · 카탈로그)
+  ④ 설정 덮어쓰기(Config/Editor 의 편집기 도구 기본값 — 바꾸지 않은 저장) — 그 다음 실패 길: 컴파일 오류 모듈(probe-broken) · 깨진 카탈로그 · 틀린 설정 JSON.
+  끝에 판 머리를 되돌리고 지금 소스로 다시 지어 빌드 산출물을 원래 판(100)으로 돌린다. 바꾼 파일(판 머리 · 설정)은 실행기가 시나리오 끝에 늘 되돌린다(통과 · 실패 · 시한 모두).
+  메시는 임포트 산출물(.mesh)이라 추적 사본이 없어 이 무대에 넣지 않았다 — 메시 캐시도 같은 결과 형식(ReloadResult)을 돌려준다.
+  ⑤ 셰이더는 Debug 클라이언트만 재컴파일기를 세워 따로 둔다(shaderreload.scenario.xml).
+  프로세스 밖 상태(빌드 트리 · 다시 지은 모듈 DLL · Config/Editor)를 바꾸므로 백엔드 넷이 함께 도는 체인에 넣지 못한다 — desktop/editor/ 는 CTest 가 편집기를 켜고 하나씩 혼자(RUN_SERIAL) 돌린다.
+  실행: App -EnableEditor -scenario=game/empty/automation/desktop/editor/playreload.scenario.xml -unattended (ctest -R Scenario.empty.desktop.editor.playreload)
+-->
+<Scenario name="game.empty.playreload" fixedDelta="0.0166667" timeoutFrames="9000" startAfter="Immediately" input="exclusive">
+	<Scratch from="game/empty/automation/desktop/editor/playreload" as="scratch/playreload"/>
+	<EditorWaitStable/>
+	<DevCommand line="scene.open scratch/playreload/playreload.scene.xml"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitStable/>
+	<DevCommand line="play"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="KitDemo.SurvivalHorror.State" equals="1" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<Expect watch="HotReload.TestVersion" equals="100"/>
+	<Expect watch="HotReload.TestKept" equals="42"/>
+	<Expect watch="KitDemo.SurvivalHorror.Health" equals="75"/>
+	<Expect watch="KitDemo.SurvivalHorror.Sanity" equals="70"/>
+	<RecordStateHash key="playing"/>
+
+	<!-- ② PIE 중 에디터 모듈 리로드 — 플레이는 이어지고 게임 상태는 그대로다 -->
+	<DevCommand line="module.reload EditorModule"/>
+	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="120"/>
+	<EditorWaitStable/>
+	<Expect watch="Module.GraphBroken" equals="0"/>
+	<Expect watch="Module.BindingsOk" equals="1"/>
+	<Expect watch="Editor.PlayState" equals="1"/>
+	<ExpectStateHash key="playing"/>
+
+	<!-- ① 게임 모듈 다시 짓기 + 교체 — 바뀐 코드(판 101)가 돌고 위치 · 체력 · 가방 · 진행이 그대로다 -->
+	<Store watch="Reload.Count.Module" as="moduleBefore"/>
+	<RebuildModule name="SWGame" variant="probe-next"/>
+	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="600"/>
+	<EditorWaitStable/>
+	<Expect watch="Module.GraphBroken" equals="0"/>
+	<Expect watch="Module.BindingsOk" equals="1"/>
+	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="HotReload.TestVersion" equals="101"/>
+	<Expect watch="HotReload.TestKept" equals="42"/>
+	<Expect watch="KitDemo.SurvivalHorror.State" equals="1"/>
+	<Expect watch="KitDemo.SurvivalHorror.Health" equals="75"/>
+	<Expect watch="KitDemo.SurvivalHorror.Sanity" equals="70"/>
+	<ExpectStateHash key="playing"/>
+	<Expect watch="Reload.Count.Module" differsFrom="moduleBefore"/>
+	<Expect watch="Reload.LastMs.Module" atLeast="0.001"/>
+	<ExpectLog id="ModuleCompiler.CompilationSucceededTarget" contains="SWGame" count="2"/> <!-- probe-next 와 끝의 되돌린 다시 짓기 -->
+
+	<!-- ③ 에셋 덮어쓰기 — 사본 파일을 바깥 편집기의 저장처럼 덮으면 감시가 알리고 캐시가 다시 읽는다 -->
+	<Store watch="Reload.Count.Asset" as="assetBefore"/>
+	<DevCommand line="asset.overwriteScratch scratch/playreload/probe_edited.material scratch/playreload/probe.material"/>
+	<WaitUntil watch="Reload.Count.Asset" increaseFrom="assetBefore" increaseBy="1" timeoutWallSeconds="30"/>
+	<Store watch="Reload.Count.Asset" as="assetAfterMaterial"/>
+	<DevCommand line="asset.overwriteScratch scratch/playreload/probe_edited.dds scratch/playreload/probe.dds"/>
+	<WaitUntil watch="Reload.Count.Asset" increaseFrom="assetAfterMaterial" increaseBy="1" timeoutWallSeconds="30"/>
+	<Store watch="Reload.Count.Asset" as="assetAfterTexture"/>
+	<DevCommand line="asset.overwriteScratch scratch/playreload/probe_edited.prefab.xml scratch/playreload/probe.prefab.xml"/>
+	<WaitUntil watch="Reload.Count.Asset" increaseFrom="assetAfterTexture" increaseBy="1" timeoutWallSeconds="30"/>
+	<EditorWaitStable/>
+	<Expect watch="Reload.StaleCount" equals="0"/>
+	<Expect watch="Reload.LastMs.Asset" atLeast="0.001"/>
+	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="KitDemo.SurvivalHorror.Health" equals="75"/>
+
+	<!-- ④ 설정 덮어쓰기 — 바꾸지 않은 저장을 감시가 다시 읽는다(성공) -->
+	<Store watch="Reload.Count.Config" as="configBefore"/>
+	<OverwriteConfig configFile="Editor/editortooldefaults.json"/>
+	<WaitUntil watch="Reload.Count.Config" increaseFrom="configBefore" increaseBy="1" timeoutWallSeconds="30"/>
+	<EditorWaitStable/>
+	<Expect watch="Reload.StaleCount" equals="0"/>
+	<Expect watch="Reload.LastMs.Config" atLeast="0.001"/>
+	<ExpectLog id="EditorToolDefaultsReload.EditorToolDefaultsReloaded" atLeast="1"/>
+
+	<!-- 실패 길 — 길마다 하나. 앞뒤 사진이 같아야 한다(이전 판으로 계속 그린다) -->
+	<Screenshot file="before_failures.ppm"/>
+	<Store watch="Reload.FailedCount" as="failedBefore"/>
+
+	<!-- 컴파일 오류 모듈: 빌드가 지고 교체가 없다 — 판 101 이 그대로 돈다 -->
+	<RebuildModule name="SWGame" variant="probe-broken"/>
+	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="600"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Reload.FailedCount" increaseFrom="failedBefore" increaseBy="1" timeoutWallSeconds="30"/>
+	<Store watch="Reload.FailedCount" as="failedAfterModule"/>
+	<Expect watch="Module.GraphBroken" equals="0"/>
+	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="HotReload.TestVersion" equals="101"/>
+	<ExpectStateHash key="playing"/>
+	<ExpectLog id="ModuleCompiler.CompilationFailedExitCode" contains="SWGame" count="1"/>
+	<ExpectLog id="ModuleCompiler.CompilerError" atLeast="1"/>
+
+	<!-- 깨진 카탈로그: 공유 캐시가 다시 읽기에 지고 이전 판을 지킨다 -->
+	<DevCommand line="asset.overwriteScratch scratch/playreload/demo_broken.horror.xml scratch/playreload/demo.horror.xml"/>
+	<WaitUntil watch="Reload.FailedCount" increaseFrom="failedAfterModule" increaseBy="1" timeoutWallSeconds="30"/>
+	<Store watch="Reload.FailedCount" as="failedAfterCatalog"/>
+	<EditorWaitStable/>
+	<Expect watch="KitDemo.SurvivalHorror.Health" equals="75"/>
+	<Expect watch="KitDemo.SurvivalHorror.Sanity" equals="70"/>
+	<ExpectLog id="Xml.MissingRoot" count="1"/>
+
+	<!-- 틀린 설정 JSON: 설정 리로드가 지고 이전 값으로 돈다 -->
+	<OverwriteConfig configFile="Editor/editortooldefaults.json" from="game/empty/automation/desktop/editor/playreload/tooldefaults_broken.json"/>
+	<WaitUntil watch="Reload.FailedCount" increaseFrom="failedAfterCatalog" increaseBy="1" timeoutWallSeconds="30"/>
+	<EditorWaitStable/>
+	<ExpectLog id="Config.NotJSONObject" count="1"/>
+	<ExpectLog id="ConfigReload.ConfigReloadKeptPrevious" count="1"/>
+	<!-- 낡은 길 셋(모듈 · 카탈로그 · 설정)이 집계에 STALE 로 남는다 -->
+	<Expect watch="Reload.StaleCount" equals="3"/>
+	<Screenshot file="after_failures.ppm"/>
+	<ExpectImagesDiffer first="before_failures.ppm" second="after_failures.ppm" minDiffering="0" maxDiffering="0.01"/>
+	<DevCommand line="reload.status stale"/>
+
+	<!-- 되돌리기 — 카탈로그 · 설정 · 판 머리를 원본으로 돌리고, 지금 소스로 다시 지어 판 100 으로 갈아 끼운다. 낡은 수가 0 으로 풀린다 -->
+	<Store watch="Reload.Count.Asset" as="assetBeforeFix"/>
+	<DevCommand line="asset.overwriteScratch scratch/playreload/demo_good.horror.xml scratch/playreload/demo.horror.xml"/>
+	<WaitUntil watch="Reload.Count.Asset" increaseFrom="assetBeforeFix" increaseBy="1" timeoutWallSeconds="30"/>
+	<Store watch="Reload.Count.Config" as="configBeforeRestore"/>
+	<RestoreOverwrites/>
+	<WaitUntil watch="Reload.Count.Config" increaseFrom="configBeforeRestore" increaseBy="1" timeoutWallSeconds="30"/>
+	<RebuildModule name="SWGame"/>
+	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="600"/>
+	<EditorWaitStable/>
+	<Expect watch="Module.GraphBroken" equals="0"/>
+	<Expect watch="HotReload.TestVersion" equals="100"/>
+	<Expect watch="HotReload.TestKept" equals="42"/>
+	<ExpectStateHash key="playing"/>
+	<Expect watch="Reload.StaleCount" equals="0"/>
+
+	<DevCommand line="stop"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<Pass/>
+</Scenario>

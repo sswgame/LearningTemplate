@@ -41,11 +41,13 @@ namespace sw
                 return pAudio != nullptr && pAudio->isDataFile( relativePath );
             }
 
-            /** @brief 그 파일을 다시 읽어 바꿉니다(`IAudioService::reloadDataFile`). 실패하면 지금 것을 그대로 씁니다. */
-            void reload( const AssetID& assetID )
+            /** @brief 그 파일을 다시 읽어 바꿉니다(`IAudioService::reloadDataFile`). 실패하면 서비스가 오류로 남기고 지금 것을 그대로 씁니다. */
+            [[nodiscard]] ReloadResult reload( const AssetID& assetID )
             {
-                if ( IAudioService* pAudio = engine::findSubsystem<IAudioService>() )
-                    (void)pAudio->reloadDataFile( assetID ); // 실패는 서비스가 오류로 남기고 지금 것을 유지한다
+                IAudioService* const pAudio = engine::findSubsystem<IAudioService>();
+                if ( pAudio == nullptr || pAudio->isDataFile( assetID.view() ) == false )
+                    return ReloadResult::NotTracked;
+                return pAudio->reloadDataFile( assetID ) ? ReloadResult::Reloaded : ReloadResult::Failed;
             }
 
             /** @brief 서비스가 들고 있는 데이터 파일 수의 하한(믹서 그래프가 파일이면 1)입니다. */

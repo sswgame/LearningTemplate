@@ -11,7 +11,9 @@
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/MonotonicClock.h"
 
+#include "DevTools/AssetReload/ReloadTracker.h"
 #include "DevTools/FileWatch/IFileWatcher.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleCallGuard.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"
@@ -345,6 +347,9 @@ namespace sw
         {
             if ( event._bSucceeded == false )
             {
+                // 빌드 실패도 모듈 리로드 실패다 — 옛 이미지로 계속 돈다(집계가 낡음으로 보인다). 이 프로세스가 시작한 빌드만 여기에 온다.
+                if ( ReloadTracker* const pTracker = engine::areEngineServicesBound() ? engine::findSubsystem<ReloadTracker>() : nullptr )
+                    pTracker->record( ReloadSource::Module, event._targetName, ReloadResult::Failed, "the module build failed - the previous image runs" );
                 // 실패한 빌드가 다시 쓴 모듈은 반쯤 완성된 집합일 수 있으므로 로드하지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 로드된다.
                 for ( auto& [name, pContext] : _mapModule )
                 {
@@ -1037,14 +1042,29 @@ namespace sw
 
     void LiveReloadManager::reloadCascade( const vector<string>& listSubgraphName )
     {
+        const float64 startSeconds    = MonotonicClock::nowSeconds();
+        const uint32  completedBefore = _completedReloadCount;
+        if ( runCascade( listSubgraphName ) == false )
+            return;
+        ReloadTracker* const pTracker = engine::areEngineServicesBound() ? engine::findSubsystem<ReloadTracker>() : nullptr;
+        if ( pTracker == nullptr )
+            return;
+        const bool bSucceeded = _completedReloadCount > completedBefore;
+        for ( const string& moduleName : listSubgraphName )
+            pTracker->record( ReloadSource::Module, moduleName, bSucceeded ? ReloadResult::Reloaded : ReloadResult::Failed, "the module swap failed - see the LiveReloadManager log" );
+        pTracker->recordElapsed( ReloadSource::Module, ( MonotonicClock::nowSeconds() - startSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
+    }
+
+    bool LiveReloadManager::runCascade( const vector<string>& listSubgraphName )
+    {
         vector<string> listOrder;
         if ( _dependencyGraph.sortByDependency( listSubgraphName, listOrder ) == false )
         {
             markGraphBroken( "dependency cycle" );
-            return;
+            return true;
         }
         if ( listOrder.empty() )
-            return;
+            return false;
 
         SW_LOG_TRACE_ID( "LiveReloadManager.CascadeReloadCount", "Cascade reload count=%#", static_cast<uint32>( listOrder.size() ) );
 
@@ -1052,7 +1072,7 @@ namespace sw
         if ( prepareCascade( listOrder, listPrepared ) == false )
         {
             abortPrepared( listPrepared, 0 );
-            return;
+            return true;
         }
 
         // 배치 직전 콜백의 거절은 적용 전 실패다. 아무것도 언로드하지 않았으니 새 라이브러리만 버리고 옛 라이브러리로 계속 돈다.
@@ -1063,21 +1083,22 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.CascadeReloadRefusedBefore", "Cascade reload refused before the first commit — keeping the previous modules" );
             abortPrepared( listPrepared, 0 );
-            return;
+            return true;
         }
 
         _deferredUnloadQueue.beginBatch();
         if ( commitCascade( listPrepared ) == false )
-            return;
+            return true;
 
         // 새 라이브러리가 모두 로드됐다. 의존 모듈이 옛 라이브러리에 바인딩돼 있으면, 옛 라이브러리를 언로드한 지금 거기로 점프하는 코드가 죽는다. 여기서 막는다.
         if ( verifyModuleBindings() == false )
         {
             markGraphBroken( "a module is bound to a stale dependency image after the cascade" );
-            return;
+            return true;
         }
         if ( _bReloadGraphBroken == SW_FALSE ) // 리로드 직후 콜백의 결함도 그래프를 막는다 — 그런 리로드는 성공으로 세지 않는다
             ++_completedReloadCount;
+        return true;
     }
 
     LiveReloadManager::ModuleRecord::ModuleRecord() noexcept

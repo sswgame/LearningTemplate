@@ -66,7 +66,7 @@ namespace sw
         const utf8* getAssetKindName() const override { return _pAssetKindName; }
         bool        isCached( string_view relativePath ) const override;
         /** @brief 에셋(엔진 판과 변형)을 다시 읽어 파싱합니다(에디터 핫 리로드 · 태그 다시 읽기). 하나라도 되면 바꾸고 알림을 한 번 부릅니다. 디바이스는 쓰지 않습니다. */
-        void reload( const AssetID& assetID );
+        [[nodiscard]] ReloadResult reload( const AssetID& assetID );
         /** @brief 리소스 태그 · 층이 바뀌어 다시 읽습니다(`AssetManager` 의 합성 다시 읽기 — 배포 구성에도 있다). 들고 있지 않으면 false 입니다. */
         bool   reloadComposed( string_view relativePath ) override;
         size_t getCachedCount() const override { return _mapKeyToEntry.size(); }

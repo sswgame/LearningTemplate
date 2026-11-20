@@ -274,11 +274,13 @@ namespace sw
         _pState->_pBoundDevice.store( pDevice, std::memory_order_release );
     }
 
-    void MeshCache::reload( const AssetID& assetID )
+    ReloadResult MeshCache::reload( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
-        (void)reloadShared( relativePath ); // 사용 중인 메시가 없으면 다시 읽을 것이 없다. 다음에 읽는 쪽이 새 내용을 읽는다
-        invalidateDerivedCaches();          // 메시에서 기하를 만든 위 층 캐시(물리 셰이프)를 비운다. 이미 만든 바디는 이전 기하 그대로다
+        // 사용 중인 메시가 없으면 다시 읽을 것이 없다. 다음에 읽는 쪽이 새 내용을 읽는다. 읽지 못하면 `reloadShared` 가 오류를 남기고 이전 정점을 지킨다.
+        const ReloadResult result = isCached( relativePath ) == false ? ReloadResult::NotTracked : ( reloadShared( relativePath ) ? ReloadResult::Reloaded : ReloadResult::Failed );
+        invalidateDerivedCaches(); // 메시에서 기하를 만든 위 층 캐시(물리 셰이프)를 비운다. 이미 만든 바디는 이전 기하 그대로다
+        return result;
     }
 } // namespace sw
 

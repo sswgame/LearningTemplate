@@ -185,7 +185,7 @@ SW_TEST_CASE( PrefabVariantTest, ReloadOfBaseReachesCachedVariant )
     const string edited = "<Prefab formatVersion=\"0\" name=\"Base\"><GameObject _schemaVersion=\"0\" _name=\"Base\" _bActive=\"true\"><_listComponent>"
                           "<SceneComponent _componentName=\"Root\" _bActive=\"true\" _localScale=\"5,5,5\" _localPosition=\"1,2,3\" /></_listComponent></GameObject></Prefab>";
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.prefab.xml" ), edited ) );
-    cache.reload( baseID );
+    SW_EXPECT_TRUE( cache.reload( baseID ) != ReloadResult::Failed ); // 부모가 캐시에 없을 수도 있다(변형이 합쳐 읽었다) — 실패만 아니면 된다
 
     const shared_ptr<const PrefabAsset> pChild = cache.loadPrefab( childID.view() );
     SW_REQUIRE_TRUE( pChild != nullptr );
