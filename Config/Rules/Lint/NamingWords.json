@@ -97,6 +97,7 @@
     "should"
   ],
   "_bannedNames": {
+    "trimTrailingSeparators": "FileUtil::trimTrailingSlashes — 끝 구분자 규칙이 둘(드라이브 루트 `C:/` 를 하나는 남기고 하나는 망쳤다)이던 것을 하나로 모았다(2026-11-20)",
     "_bPolymorphic": "지움 — PROPERTY( Polymorphic ) 는 파싱 · 저장 · 덤프만 하고 읽는 곳이 없던 잔재다. 다형 값은 형식(ReflectedAny · InstancedStruct)이 말한다(2026-11-20)",
     "OcclusionTiles": "HZBOcclusion(클래스) · RenderPassKind::HZBBuild(패스 종류) — 타일 한 단이 HZB 피라미드(최소 · 최대 깊이 밉 사슬)가 됐다(2026-11-19)",
     "OcclusionTilesInternal": "HZBOcclusionInternal(2026-11-19)",
