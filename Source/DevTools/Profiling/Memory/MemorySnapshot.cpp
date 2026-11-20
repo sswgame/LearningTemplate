@@ -4,10 +4,13 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/String/EnumNameTable.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/WallClock.h"
+
+#include "DevTools/Profiling/Memory/MemoryDiffStatus.h"
+
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -322,11 +325,7 @@ namespace sw
 
     const utf8* getMemoryDiffStatusName( MemoryDiffStatus status )
     {
-        // DevTools 는 리플렉션 코드젠을 하지 않는 모듈이라 ENUM() 대신 순서 이름 표를 쓴다.
-        static constexpr const utf8*                     kArrName[] = { "New", "Grown", "Shrunk", "Gone", "Same" };
-        static constexpr EnumNameTable<MemoryDiffStatus> kTable{ kArrName };
-        static_assert( kTable.getCount() == static_cast<size_t>( MemoryDiffStatus::Same ) + 1, "MemoryDiffStatus 열거자와 이름 표의 칸 수가 같아야 한다" );
-        return kTable.toString( status );
+        return getEnumName( status );
     }
 
     void MemoryRow::collectKeyText( const MemorySheetSchema& schema, vector<string>& outListKeyText ) const

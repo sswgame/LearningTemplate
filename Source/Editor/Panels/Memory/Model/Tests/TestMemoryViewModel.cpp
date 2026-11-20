@@ -6,6 +6,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "DevTools/Profiling/Memory/MemoryDiffStatus.h"
+
 #include "Editor/Panels/Memory/Model/MemoryViewModel.h"
 
 using namespace sw;

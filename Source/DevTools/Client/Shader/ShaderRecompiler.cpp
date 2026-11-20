@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "DevTools/AssetReload/ReloadSource.h"
 #include "DevTools/AssetReload/ReloadTracker.h"
 #include "DevTools/Client/Shader/LiveShaderSubsystem.h"
 

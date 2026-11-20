@@ -20,14 +20,8 @@
 
 namespace sw
 {
-    /** @enum ReloadSource @brief 결과를 적은 리로드 길입니다. */
-    enum class ReloadSource : uint8
-    {
-        Config, ///< `ConfigReloadSubsystem`(호스트 설정 · 등록된 설정 처리기)
-        Asset,  ///< 에디터 `AssetHotReload`(에셋 캐시 · 원본 임포트)
-        Shader, ///< `ShaderRecompiler`(셰이더 재컴파일)
-        Module, ///< `LiveReloadManager`(모듈 빌드 · 교체)
-    };
+    /** @brief 결과를 적은 리로드 길입니다. 정의(열거자 · 이름)는 `ReloadSource.h` — 열거자를 쓰는 단위만 그것을 넣는다. */
+    enum class ReloadSource : uint8;
     /** @brief 리로드 길 수입니다(`ReloadSource` 의 칸 수 — 길마다 세는 배열의 크기). */
     constexpr uint32 kReloadSourceCount = 4;
 
@@ -43,7 +37,7 @@ namespace sw
         uint64       _appliedSequence{ 0 };     ///< 마지막으로 성공한 차례(0 이면 이 실행에서 한 번도 성공하지 않았다 — 처음 읽은 값으로 돈다)
         uint32       _attemptCount{ 0 };        ///< 적은 횟수
         uint32       _failureCount{ 0 };        ///< 실패 횟수
-        ReloadSource _source{ ReloadSource::Config };
+        ReloadSource _source{};                 ///< 0 은 `Config` 다 — 적을 때 늘 채운다
         ReloadResult _lastResult{ ReloadResult::NotTracked };
 
         /** @brief 마지막 시도가 실패해 이전 값으로 돌고 있으면 true 입니다. */

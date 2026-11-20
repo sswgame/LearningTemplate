@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "DevTools/Profiling/Memory/MemoryDiffStatus.h"
 #include "DevTools/Profiling/Memory/MemorySnapshot.h"
 #include "DevTools/Profiling/Memory/MemorySnapshotExport.h"
 #include "DevTools/Profiling/Memory/MemorySnapshotSources.h"

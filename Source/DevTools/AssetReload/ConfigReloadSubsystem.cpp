@@ -8,6 +8,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/AssetReload/FileWatchDispatcher.h"
+#include "DevTools/AssetReload/ReloadSource.h"
 #include "DevTools/AssetReload/ReloadTracker.h"
 
 #include "Engine/Config/ConfigManager.h"

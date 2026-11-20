@@ -4,6 +4,8 @@
 
 #include "Core/Log/Logger.h"
 
+#include "DevTools/Profiling/Memory/MemoryDiffStatus.h"
+
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
