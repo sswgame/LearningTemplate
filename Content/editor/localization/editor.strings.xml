@@ -6878,7 +6878,8 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInspector.CallFailedArgumentMismatch" source="an argument cannot be converted to its parameter type">
+		<entry key="EditorInspector.CallFailedArgumentMismatch"
+		       source="an argument cannot be converted to its parameter type">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
@@ -6888,7 +6889,8 @@
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInspector.CallFailedNotBound" source="the function is no longer on this type (was the module reloaded?)">
+		<entry key="EditorInspector.CallFailedNotBound"
+		       source="the function is no longer on this type (was the module reloaded?)">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>

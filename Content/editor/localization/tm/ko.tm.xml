@@ -293,6 +293,8 @@
 		<entry source="CPU Scopes" text="CPU 구간" />
 		<entry source="CPU {cpu}   GPU {gpu}   ({source})" text="CPU {cpu}   GPU {gpu}   ({source})" />
 		<entry source="Call Tree" text="호출 트리" />
+		<entry source="Calls run on every selected object as one undo step."
+		       text="선택한 오브젝트 모두에 부르고, 되돌리기는 한 단계입니다." />
 		<entry source="Cam" text="카메라" />
 		<entry source="Camera" text="카메라" />
 		<entry source="Camera Bookmarks (Ctrl+1~9)" text="카메라 책갈피(Ctrl+1~9)" />
@@ -971,6 +973,8 @@
 		<entry source="Last error: {error}" text="마지막 오류: {error}" />
 		<entry source="Last merged trace:" text="마지막으로 합친 추적:" />
 		<entry source="Last result: {lastInvokeResult}" text="마지막 결과: {lastInvokeResult}" />
+		<entry source="Last result: {lastInvokeResult} ({targetCount} objects)"
+		       text="마지막 결과: {lastInvokeResult}(오브젝트 {targetCount} 개)" />
 		<entry source="Latency (ms)" text="지연(ms)" />
 		<entry source="Later" text="뒤로" />
 		<entry source="Latest" text="최신" />
@@ -1551,6 +1555,8 @@
 		<entry source="Pickable in the viewport - click to lock"
 		       text="뷰포트에서 고를 수 있습니다 - 클릭하면 잠급니다" />
 		<entry source="Pin to favorites" text="즐겨찾기에 고정" />
+		<entry source="Pin to the top of the function list (saved)"
+		       text="함수 목록 맨 위에 고정합니다(저장됨)" />
 		<entry source="Pinned / Favorites" text="고정 · 즐겨찾기" />
 		<entry source="Pitch" text="피치" />
 		<entry source="Pixel ({probedTexelX}, {probedTexelY}): depth {probedPixelX}"
@@ -2591,6 +2597,7 @@
 		<entry source="Unload" text="내리기" />
 		<entry source="Unparent" text="부모에서 떼기" />
 		<entry source="Unpin from favorites" text="즐겨찾기 고정 해제" />
+		<entry source="Unpin from the top of the function list" text="함수 목록 맨 위 고정을 풉니다" />
 		<entry source="Unsaved changes" text="* 저장하지 않은 변경" />
 		<entry source="Unsaved scene edits are not in the new window"
 		       text="저장하지 않은 씬 편집은 새 창에 없습니다" />
@@ -2762,6 +2769,9 @@
 		<entry source="Zoom out" text="축소" />
 		<entry source="[Nested] {prefabIndex}" text="[중첩] {prefabIndex}" />
 		<entry source="[Unknown {type}]" text="[알 수 없음 {type}]" />
+		<entry source="an argument cannot be converted to its parameter type"
+		       text="인자를 그 인자 형식으로 바꿀 수 없습니다" />
+		<entry source="an argument without a default value is missing" text="기본값이 없는 인자가 빠졌습니다" />
 		<entry source="cell {cellSize} m, radius {loadingRadius} m, margin {unloadMargin} m, {maxCellLoadsPerFrame} per frame"
 		       text="셀 {cellSize} m, 반경 {loadingRadius} m, 여유 {unloadMargin} m, 프레임당 {maxCellLoadsPerFrame}" />
 		<entry source="client arguments (e.g. -vk)" text="클라이언트 인자 (예: -vk)" />
@@ -2781,6 +2791,7 @@
 		<entry source="lines" text="줄" />
 		<entry source="loop" text="반복" />
 		<entry source="missing" text="없음" />
+		<entry source="more arguments than the function takes" text="인자가 함수가 받는 것보다 많습니다" />
 		<entry source="name" text="이름" />
 		<entry source="needs review (translation memory suggestion or fuzzy import)"
 		       text="검토 필요(번역 메모리 제안 또는 퍼지 가져오기)" />
@@ -2796,6 +2807,9 @@
 		       text="오래됨 - 이 번역 뒤에 원문이 바뀌었습니다" />
 		<entry source="streaming: {loadedCellCount} of {cellCount} cells loaded"
 		       text="스트리밍: 셀 {cellCount}개 중 {loadedCellCount}개 로드됨" />
+		<entry source="the function is no longer on this type (was the module reloaded?)"
+		       text="이 타입에 그 함수가 더는 없습니다(모듈을 다시 올렸나요?)" />
+		<entry source="there is no instance to call it on" text="부를 인스턴스가 없습니다" />
 		<entry source="tile" text="타일" />
 		<entry source="translated" text="번역됨" />
 		<entry source="variables" text="변수" />
@@ -2845,6 +2859,8 @@
 		       text="{label} - 틱 {sampleCount}개, {tick} .. {tick2}" />
 		<entry source="{label} - {sampleCount} tick(s), {tick} .. {tick2}"
 		       text="{label} - 틱 {sampleCount}개, {tick} .. {tick2}" />
+		<entry source="{method} failed on {failureCount} of {targetCount}: {reason}"
+		       text="{method} 호출이 {targetCount} 개 중 {failureCount} 개에서 실패했습니다: {reason}" />
 		<entry source="{name}  {additive}{looping}  max {maxParticles}  {texturePath}"
 		       text="{name}  {additive}{looping}  최대 {maxParticles}  {texturePath}" />
 		<entry source="{name}  {blend, select, additive {Additive} other {Alpha}}{looping, select, yes {  looping} other {}}  max {maxParticles}  {texturePath}"
