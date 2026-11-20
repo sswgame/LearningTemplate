@@ -11,10 +11,19 @@
 
 using namespace sw;
 
+namespace sw
+{
+    /** @brief 규칙 파일 스키마는 서브시스템의 private 중첩 형식이다 — 테스트만 이 창구로 이름을 본다. */
+    struct SavedRetentionTestAccess
+    {
+        using Settings = SavedRetentionSubsystem::RetentionSettings;
+    };
+} // namespace sw
+
 /** @brief [SavedRetentionSettingsTest] 저장소의 규칙 파일이 읽히고, 쓴 글을 다시 읽어 쓰면 같은 바이트다 */
 SW_TEST_CASE( SavedRetentionSettingsTest, ProjectFileReadsAndRoundTrips )
 {
-    using Settings = SavedRetentionSubsystem::RetentionSettings;
+    using Settings = SavedRetentionTestAccess::Settings;
     string text;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Dev/SavedRetention.json" ), text ) );
     Settings settings;
@@ -36,7 +45,7 @@ SW_TEST_CASE( SavedRetentionSettingsTest, ProjectFileReadsAndRoundTrips )
 /** @brief [SavedRetentionSettingsTest] 필수 칸이 빠지면 기본값으로 읽지 않고 실패한다(기본값으로 지우지 않는다) */
 SW_TEST_CASE( SavedRetentionSettingsTest, MissingRequiredFieldFails )
 {
-    using Settings = SavedRetentionSubsystem::RetentionSettings;
+    using Settings = SavedRetentionTestAccess::Settings;
     Settings settings;
     SW_EXPECT_LOG( "Serialization.RequiredMissing" );
     SW_EXPECT_FALSE( JSONSerializer::deserialize( &settings, *Settings::StaticType(),

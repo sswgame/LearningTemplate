@@ -18,11 +18,25 @@
 
 namespace sw
 {
+    class StopToken;
+
     /** @class SavedRetentionSubsystem @brief `Saved` 의 오래된 실행 산출물을 지우는 서브시스템입니다. */
+    REFLECT()
     class SW_DEVTOOLS_API SavedRetentionSubsystem final : public ISubsystem
     {
     public:
-        // 규칙 파일(`Config/Dev/SavedRetention.json`)의 스키마다 — 키는 칸 이름 그대로(`JSONSerializer`). 리플렉션 등록기가 이름으로 닿아야 해서 public 이다(private 중첩 형식은 생성 코드의 이름공간 범위 등록 변수가 접근하지 못한다).
+        REFLECT_BODY();
+
+        static constexpr const utf8* kSubsystemName = "SavedRetention";
+
+        SubsystemInitResult initializeSubsystem() override;
+        void                shutdownSubsystem() override;
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+    private:
+        friend struct SavedRetentionTestAccess;
+
+        // 규칙 파일(`Config/Dev/SavedRetention.json`)의 스키마다 — 키는 칸 이름 그대로(`JSONSerializer`). 이 클래스만 쓰므로 private 중첩이다(등록기는 위 `REFLECT_BODY()` friend 로 닿는다).
         // 짧은 이름은 레지스트리 전역에서 하나여야 해서 `Retention` 을 붙인다.
         /** @brief 폴더 하나의 보존 규칙입니다. `_bPerChild` 면 그 아래 폴더마다(시나리오마다) 따로 센다. */
         REFLECT()
@@ -53,13 +67,11 @@ namespace sw
             vector<RetentionRule> _listRule;
         };
 
-        static constexpr const utf8* kSubsystemName = "SavedRetention";
+        /** @brief 규칙 파일을 읽습니다. 없거나 칸이 빠졌거나 틀리면 오류를 남기고 false 입니다(기본값으로 지우지 않는다). */
+        [[nodiscard]] static bool readSettings( RetentionSettings& outSettings );
+        /** @brief 규칙대로 오래된 산출물을 버릴 자리로 옮기고 그 자리를 비웁니다(일꾼 스레드 본문). */
+        static void run( const StopToken& stopToken );
 
-        SubsystemInitResult initializeSubsystem() override;
-        void                shutdownSubsystem() override;
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-
-    private:
         thread _worker; ///< 지우는 스레드 — 종료가 멈추라 하고 합류한다
     };
 } // namespace sw
