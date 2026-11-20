@@ -195,6 +195,7 @@ namespace sw
 
         /** @brief 이번 프레임이 Signal 할 펜스 값(`_fenceValue`)을 기준으로 해제 큐에 넣습니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief `ID3D12Device5::RemoveDevice` 로 장치를 제거합니다. 이후 펜스는 끝난 값(UINT64_MAX)을 돌려주고 호출은 DXGI_ERROR_DEVICE_REMOVED 로 실패한다. */
         bool debugRemoveDevice() override;
@@ -598,8 +599,9 @@ namespace sw
         void collectTimestampsForSlot();
         /**
          * @brief 이전 프레임이 끝날 때까지 기다립니다.
+         * @return 펜스가 지난 것을 확인했으면 true — 제거된 장치 · Signal 실패 · 대기 실패는 false(해제 큐 통지를 `Abandoned` 로 보낼지 가른다).
          */
-        void waitForPreviousFrame();
+        bool waitForPreviousFrame();
         /**
          * @brief 링 슬롯이 GPU 에서 풀릴 때까지 기다린 뒤 다음 슬롯으로 진행합니다.
          */

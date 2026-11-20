@@ -209,6 +209,7 @@ namespace sw
 
         /** @brief 기록 중인 프레임의 시리얼(`_frameFenceRing.getRecordingSerial()`)로 해제 큐에 넣습니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /**
          * @brief 장치를 잃은 상태로 둡니다(개발 명령 `rhi.removeDevice`). Vulkan 에는 장치를 제거하는 API 가 없어, 큐 호출이 `VK_ERROR_DEVICE_LOST` 를 처음 돌려준

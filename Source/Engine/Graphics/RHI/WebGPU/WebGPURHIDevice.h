@@ -296,6 +296,7 @@ namespace sw
         void               applyVSyncInternal() override;
 
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다 — 손실 콜백이 따로 들던 비트필드는 다른 스레드가 쓰는 경쟁이라 없앴다). */
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }

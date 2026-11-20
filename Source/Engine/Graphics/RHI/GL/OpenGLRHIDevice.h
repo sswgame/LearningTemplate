@@ -165,6 +165,7 @@ namespace sw
 
         /** @brief 지금 기록 중인 프레임을 GPU 가 지난 뒤에 부릅니다. GL 은 프레임 끝마다 내는 펜스(`_arrFrameDoneSync`)로 확인합니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief 장치 손실 흉내입니다. GL 은 문맥을 일부러 잃을 API 가 없어 DX11 처럼 첫 손실을 본 뒤의 상태(전송 거절 · 대기 멈춤)만 만든다 — GPU 는 살아 있다. */
         bool debugRemoveDevice() override;

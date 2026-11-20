@@ -1162,7 +1162,7 @@ namespace sw
             releaseOnlineBlocksDeferred( _frameStreamState );
         }
 
-        waitForPreviousFrame();
+        (void)waitForPreviousFrame(); // 잃은 장치여도 백 버퍼는 놓는다
         swapChain.releaseBackBuffers();
     }
 
@@ -1186,18 +1186,27 @@ namespace sw
     {
         // 다른 스레드가 렌더 스레드를 `waitIdle` 로 세운 채 부른다(`Engine::onMainWindowResize`) — 그동안 프레임 진행 상태는 이 스레드가 빌려 만진다.
         ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
-        waitForPreviousFrame();
+        const bool             bIdle = waitForPreviousFrame();
         // 프레임 안에서 낸 비동기 컴퓨트 일은 프레임 펜스가 덮지만, 프레임 도중에 세웠으면 아직 돌 수 있다 — 이벤트 없이(null) 끝날 때까지 기다린다.
         if ( _computeFence != nullptr && _computeFence->GetCompletedValue() < _computeFenceValue )
             requireHr( _computeFence->SetEventOnCompletion( _computeFenceValue, nullptr ), "ID3D12Fence::SetEventOnCompletion (compute idle)" );
         // 전송은 같은 큐에서 프레임 펜스보다 먼저 끝났다 — 워터마크를 올려야 전송을 기다리던 텍스처 해제가 `_releaseQueue` 로 넘어와 아래 비우기에 든다.
         retireCompletedTransfers();
-        _releaseQueue.flushAll();
+        // 기다림을 확인했을 때만 통지가 `Completed` 다 — 제거된 장치는 끝났는지 모른다.
+        if ( bIdle )
+            _releaseQueue.releaseAllCompleted();
+        else
+            _releaseQueue.abandonAll();
     }
 
     void D3D12RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
         _releaseQueue.enqueueGPURelease( releaseDelegate, _fenceValue );
+    }
+
+    void D3D12RHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
+    {
+        _releaseQueue.enqueueCompletion( completionDelegate, _fenceValue );
     }
 
     unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList()
@@ -1461,13 +1470,13 @@ namespace sw
         return _transferSerials.isLost() || isDeviceRemoved();
     }
 
-    void D3D12RHIDevice::waitForPreviousFrame()
+    bool D3D12RHIDevice::waitForPreviousFrame()
     {
         if ( _commandQueue == nullptr || _fence == nullptr )
-            return;
+            return false;
 
         if ( isDeviceRemoved() )
-            return;
+            return false;
 
         // 업로드 내보내기와 Signal · 올리기를 한 락 안에서 한다(`_fenceValue` 의 설명). 기다리는 것은 락 밖에서다.
         UINT64  fenceToWait{ 0 };
@@ -1485,14 +1494,16 @@ namespace sw
             SW_LOG_ERROR_ID( "D3D12.FenceSignalFailedHr", "Fence Signal failed hr=0x%# (DeviceRemoved=0x%#)",
                              static_cast<uint32>( signalHr ),
                              static_cast<uint32>( _device ? _device->GetDeviceRemovedReason() : S_OK ) );
-            return;
+            return false;
         }
 
         if ( waitForFenceValue( fenceToWait ) == false )
-            return;
+            return false;
 
-        if ( isDeviceRemoved() == false )
-            _swapChain.acquireNextImage();
+        if ( isDeviceRemoved() )
+            return false;
+        _swapChain.acquireNextImage();
+        return true;
     }
 
     void D3D12RHIDevice::waitForRingSlot()
@@ -2272,8 +2283,8 @@ namespace sw
         _transferFenceQueue.retireAll( [this]( D3D12TransferJob& job )
         { recycleTransferJob( std::move( job ) ); } );
         // 전송을 기다리던 해제를 프레임 해제 큐로 넘기고 바로 비운다 — 네이티브 디바이스가 사라진 뒤의 소멸자에 맡기지 않는다(종료 3 · 4단계가 넣은 해제는 부를 단계가 없다).
-        _transferReleaseQueue.flushAll();
-        _releaseQueue.flushAll();
+        _transferReleaseQueue.abandonAll();
+        _releaseQueue.abandonAll();
         {
             ScopedLock<mutex> jobLock{ _transferJobMutex };
             _listFreeTransferJob.clear();

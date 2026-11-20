@@ -449,7 +449,7 @@ namespace sw
             }
             // 해제 큐를 버퍼 표를 비우기 전에 한 번 비운다 — 업로드 배치 · 버퍼 해제 대리자가 표를 해석하므로, 표가 빈 뒤에 돌면 해석 실패 길이 생긴다.
             // GPU 는 종료 2 단계(waitIdle)에서 쉬었다. 아래 텍스처 정리가 새로 거는 프레임버퍼 해제는 뒤의 flushAll 이 놓는다.
-            _releaseQueue.flushAll();
+            _releaseQueue.abandonAll();
             shutdownUploads();
 
             _gpuBuffers.forEach( [this]( VulkanBufferRecord& record )
@@ -497,7 +497,7 @@ namespace sw
             _gpuTextures.clear();
             // 오프스크린 프레임버퍼는 해제 큐로 놓인다(`enqueueFramebufferRelease`). GPU 는 2 단계에서 이미 쉬고 있으니 디바이스가 살아 있는 지금 부른다 —
             // 남기면 해제 큐의 소멸자가 부순 VkDevice 로 vkDestroyFramebuffer 를 부른다(`IRHIDevice::shutdown` 이 단언한다).
-            _releaseQueue.flushAll();
+            _releaseQueue.abandonAll();
             _bufferRegistry.clear(); // 빈 목록도 함께 — 남기면 다음 장치가 표 밖 번호를 낸다
             _uavRegistry.clear();
             for ( uint32 index = 0; index < kBindlessBufferCapacity; ++index )
@@ -2277,14 +2277,23 @@ namespace sw
                 { recycleTransferJob( job ); } );
             }
         }
-        // 전송을 기다리던 해제가 먼저 프레임 해제 큐로 넘어가야 아래에서 함께 놓인다.
-        _transferReleaseQueue.flushAll();
-        _releaseQueue.flushAll();
+        // 전송을 기다리던 해제가 먼저 프레임 해제 큐로 넘어가야 아래에서 함께 놓인다(전송 큐에는 통지가 없다).
+        _transferReleaseQueue.releaseAllCompleted();
+        // 큐가 빈 것을 확인했을 때만 통지가 `Completed` 다 — 잃은 장치는 끝났는지 모른다.
+        if ( _device && isDeviceLost() == false )
+            _releaseQueue.releaseAllCompleted();
+        else
+            _releaseQueue.abandonAll();
     }
 
     void VulkanRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
         _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
+    }
+
+    void VulkanRHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
+    {
+        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     uint32 VulkanRHIDevice::getTimestampSlotCount() const
@@ -3301,7 +3310,7 @@ namespace sw
         // GPU 는 종료 2단계(waitIdle)에서 쉬었다. 잃은 장치면 끝나지 않은 작업이 남아 있을 수 있지만 더 기다리지 않는다(isDeviceLost 설명).
         _transferFenceQueue.retireAll( [this]( VulkanTransferJob& job )
         { recycleTransferJob( job ); } );
-        _transferReleaseQueue.flushAll();
+        _transferReleaseQueue.abandonAll();
         {
             ScopedLock<mutex> jobLock{ _transferJobMutex };
             for ( const VulkanTransferJob& job : _listFreeTransferJob )

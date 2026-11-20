@@ -290,7 +290,7 @@ namespace sw
          * @brief 버퍼 앞쪽 @p sizeBytes 를 읽기 버퍼(`IRHIResourceFactory::createReadbackBuffer`)로 복사합니다. GPU 가 끝낸 뒤 CPU 가 읽는 비동기 되읽기의 기록 쪽입니다.
          * @param source    복사할 버퍼. 부르기 전에 `transitionBuffer( source, RHIBufferState::CopySource )` 로 옮겨 둔다(DX12 · Vulkan 은 상태가 맞아야 한다).
          * @param readback  `createReadbackBuffer` 가 만든 버퍼. 원본보다 작지 않아야 한다.
-         * @details 복사는 이 리스트의 GPU 순서에 들어간다. 끝났는지는 `IRHIDevice::enqueueGPURelease` 콜백이 알려 주고, 그 콜백 안에서 `readReadbackBuffer` 로 읽는다.
+         * @details 복사는 이 리스트의 GPU 순서에 들어간다. 끝났는지는 `IRHIDevice::notifyFrameCompletion` 통지(`Completed`)가 알려 주고, 그 통지 안에서 `readReadbackBuffer` 로 읽는다.
          *          렌더 패스 밖에서 불러야 한다(Vulkan 은 열린 패스를 닫는다).
          */
         virtual void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) = 0;

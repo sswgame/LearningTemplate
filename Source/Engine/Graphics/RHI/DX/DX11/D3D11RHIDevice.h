@@ -210,6 +210,7 @@ namespace sw
 
         /** @brief 지금 기록 중인 프레임을 GPU 가 지난 뒤에 부릅니다. D3D11 은 펜스 대신 프레임 끝마다 내는 이벤트 쿼리(`_arrFrameDoneQuery`)로 확인합니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
 
         /** @brief 백엔드 종류(DirectX11)를 반환합니다. */

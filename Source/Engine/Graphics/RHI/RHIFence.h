@@ -1,6 +1,6 @@
 /**
  * @file RHIFence.h
- * @brief "이 자원은 펜스 값 N 이 끝나면 다시 쓴다" 를 형식으로 적는 렌더러 쪽 펜스입니다. `IRHIDevice::enqueueGPURelease`(GPU 완료 계약) 위에 섭니다.
+ * @brief "이 자원은 펜스 값 N 이 끝나면 다시 쓴다" 를 형식으로 적는 렌더러 쪽 펜스입니다. `IRHIDevice::notifyFrameCompletion`(GPU 완료 통지) 위에 섭니다.
  * @details 렌더러의 구간 풀(`GPUMeshVertexPool` · `GPUMeshMorphPool` · `GPUVertexAnimationPool`)은 돌려받은 구간을 GPU 가 그 구간을 읽던 프레임을 끝낸 뒤에만
  *          다시 내준다. 예전에는 "호출 수 + 인플라이트 프레임 수" 로 짐작했다 — 그 짐작은 호출이 프레임마다 정확히 한 번이고 앞서가기 상한이 상수와 같아야만 맞았다.
  *          여기서는 `signal` 이 낸 펜스 값을 키로 두고(`SpanAllocator::freeDeferred`), 디바이스가 그 프레임의 GPU 작업을 끝냈다고 알려 준 값(`getCompletedValue`)까지만
@@ -26,7 +26,7 @@ namespace sw
      * @class RHIFence
      * @brief 펜스 값(1 부터)을 내고, GPU 가 끝낸 값을 원자적으로 기억합니다.
      * @details 완료 값은 공유 칸에 둔다 — 디바이스 해제 큐에 맡긴 콜백이 풀보다 오래 살 수 있고(종료 · 장치 교체) 풀이 이동해도 콜백이 같은 칸을 가리킨다.
-     *          `signal` 은 `enqueueGPURelease` 와 같이 렌더 스레드(프레임을 기록하는 스레드)에서만 부른다. 완료 값은 어느 스레드에서 읽어도 된다.
+     *          `signal` 은 `notifyFrameCompletion` 과 같이 렌더 스레드(프레임을 기록하는 스레드)에서만 부른다. 완료 값은 어느 스레드에서 읽어도 된다.
      */
     class SW_API RHIFence
     {
@@ -50,7 +50,7 @@ namespace sw
         uint64 getLastSignalValue() const { return _lastSignalValue; }
 
     private:
-        shared_ptr<atomic<uint64>> _pCompletedValue; ///< 해제 콜백이 올린다(fetch_max) — 콜백은 백엔드가 완료를 확인하는 스레드에서 불린다
+        shared_ptr<atomic<uint64>> _pCompletedValue; ///< 완료 통지(`Completed`)가 올린다(fetch_max) — 콜백은 백엔드가 완료를 확인하는 스레드에서 불린다
         uint64                     _lastSignalValue{ 0 };
     };
 } // namespace sw

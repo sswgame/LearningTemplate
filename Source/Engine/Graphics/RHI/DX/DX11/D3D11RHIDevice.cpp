@@ -1136,6 +1136,7 @@ namespace sw
 
     void D3D11RHIDevice::waitIdleInternal()
     {
+        bool bIdle{ false };
         if ( _immediateContext.isValid() )
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
@@ -1144,14 +1145,19 @@ namespace sw
             // 기다리는 동안 다른 스레드의 즉시 컨텍스트 호출도 멈춘다 — 쿼리 뒤에 새 전송이 끼면 아래 `retireAll` 이 끝나지 않은 전송을 끝났다고 본다.
             context->End( _idleQuery.Get() );
             context->Flush();
-            if ( waitForEventQuery( context, _idleQuery.Get(), D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds ) == false )
+            bIdle = waitForEventQuery( context, _idleQuery.Get(), D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
+            if ( bIdle == false )
                 SW_LOG_ERROR_ID( "D3D11.WaitIdleGPUDidNot", "waitIdle: the GPU did not finish within %# ms", D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
             _frameFenceRing.markAllCompleted(); // GPU 가 쉰다 — 낸 프레임이 모두 끝났다
             // 낸 전송도 모두 끝났다. 쿼리를 풀로 돌려주고 워터마크를 올린다(업로드 스테이징은 항목과 함께 놓인다).
             _transferQueue.retireAll( [this]( TransferFence& probe )
             { _listFreeTransferQuery.push_back( std::move( probe._query ) ); } );
         }
-        _releaseQueue.flushAll();
+        // 기다림을 확인했을 때만 통지가 `Completed` 다 — 시간 초과 · 잃은 장치는 끝났는지 모른다.
+        if ( bIdle && isDeviceLost() == false )
+            _releaseQueue.releaseAllCompleted();
+        else
+            _releaseQueue.abandonAll();
     }
 
     void D3D11RHIDevice::retireFrameOnGPU()
@@ -1232,6 +1238,11 @@ namespace sw
     void D3D11RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
         _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
+    }
+
+    void D3D11RHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
+    {
+        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList()

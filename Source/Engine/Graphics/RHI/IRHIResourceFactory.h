@@ -164,14 +164,14 @@ namespace sw
 
         /**
          * @brief GPU 에서 CPU 로 되읽을 읽기 전용 버퍼(@p elementSize x @p elementCount 바이트)를 만듭니다. 만들지 못하면 0 입니다.
-         * @details 비동기 되읽기의 도착지다 — `IRHICommandList::copyBufferToReadback` 이 채우고, 그 프레임이 끝난 뒤(`IRHIDevice::enqueueGPURelease` 콜백) `readReadbackBuffer` 로 읽는다.
+         * @details 비동기 되읽기의 도착지다 — `IRHICommandList::copyBufferToReadback` 이 채우고, 그 프레임이 끝난 뒤(`IRHIDevice::notifyFrameCompletion` 의 `Completed`) `readReadbackBuffer` 로 읽는다.
          *          원본이 구조화 버퍼면 같은 원소 크기로 만든다(DX11 은 구조화 버퍼끼리만 복사한다). 지우는 것은 `destroyBuffer` 다.
          */
         [[nodiscard]] virtual RHIBufferHandle createReadbackBuffer( uint32 elementSize, uint32 elementCount ) = 0;
 
         /**
          * @brief 읽기 버퍼의 앞쪽 @p sizeBytes 를 @p pDestination 에 복사합니다. 끝난 작업을 기다리지 않습니다(DX11 은 드라이버의 사용 추적을 맞추려 짧게 기다리는 Map 이다).
-         * @details **복사를 기록한 프레임의 GPU 작업이 끝난 뒤에만** 부른다 — `IRHIDevice::enqueueGPURelease` 콜백 안이 그 자리다. 콜백은 완료를 확인하는 스레드에서 불리므로
+         * @details **복사를 기록한 프레임의 GPU 작업이 끝난 뒤에만** 부른다 — `IRHIDevice::notifyFrameCompletion` 의 `Completed` 통지 안이 그 자리다. 콜백은 완료를 확인하는 스레드에서 불리므로
          *          이 함수는 어느 스레드에서 불러도 안전하다(DX11 은 즉시 컨텍스트를 잠그고 GL 은 컨텍스트를 빌린다). 끝나기 전에 부르면 결과가 정해져 있지 않다(DX11 은 GPU 가 끝나기를 기다리고, DX12 · Vulkan 은 이전 내용이거나 0, GL 은 드라이버가 암묵적으로 기다린다).
          * @return 핸들이 읽기 버퍼가 아니거나 크기가 버퍼를 넘거나 내용을 가져오지 못하면 false 입니다(이유는 로그). 읽기 버퍼가 아닌 핸들은 네 백엔드가 같이 거절한다
          *         (DX11 스테이징 버퍼, DX12 읽기 힙, Vulkan 복사 도착지 전용 버퍼, GL `GL_STREAM_READ` 만 읽기 버퍼로 본다).

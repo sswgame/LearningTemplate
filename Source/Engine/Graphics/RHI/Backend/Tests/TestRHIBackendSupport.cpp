@@ -28,9 +28,9 @@
 using namespace sw;
 
 /**
- * @brief [RHIReleaseQueueTest] `flushAll` 은 펜스와 무관하게 남은 해제를 모두 부른다
+ * @brief [RHIReleaseQueueTest] `abandonAll` 은 펜스와 무관하게 남은 해제를 모두 부른다
  */
-SW_TEST_CASE( RHIReleaseQueueTest, FlushAll )
+SW_TEST_CASE( RHIReleaseQueueTest, AbandonAllReleasesEverything )
 {
     RHIReleaseQueue            queue;
     int32                      releaseCount{ 0 };
@@ -41,9 +41,61 @@ SW_TEST_CASE( RHIReleaseQueueTest, FlushAll )
     queue.enqueueGPURelease( releaseDel, 9 );
     SW_EXPECT_EQUAL( 2u, queue.getPendingReleaseCount() );
 
-    queue.flushAll();
+    queue.abandonAll();
     SW_EXPECT_EQUAL( 2, releaseCount );
     SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
+}
+
+/**
+ * @brief [RHIReleaseQueueTest] 통지는 펜스가 지나면 `Completed`, 그 전에 버리면 `Abandoned` 를 받고, 해제는 어느 쪽이든 놓인다
+ * @details 변이: 통지와 해제를 한 채널로 되돌리거나 `abandonAll` 이 `Completed` 를 보내면 둘째 묶음이 진다(끝나지 않은 일을 끝났다고 알린다).
+ */
+SW_TEST_CASE( RHIReleaseQueueTest, CompletionIsAbandonedWhenFlushedWithoutWaiting )
+{
+    RHIReleaseQueue            queue;
+    vector<RHIFrameCompletion> listResult;
+    int32                      releaseCount{ 0 };
+    RHIFrameCompletionDelegate completionDel = SW_DELEGATE_LAMBDA( RHIFrameCompletionDelegate, [&listResult]( RHIFrameCompletion result )
+    { listResult.push_back( result ); } );
+    RHIResourceReleaseDelegate releaseDel    = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [&releaseCount]()
+       { ++releaseCount; } );
+
+    queue.enqueueCompletion( completionDel, 3 );
+    queue.enqueueCompletion( completionDel, 5 );
+    queue.enqueueGPURelease( releaseDel, 5 );
+    SW_EXPECT_EQUAL( 3u, queue.getPendingReleaseCount() );
+
+    queue.releaseCompleted( 3 );
+    SW_REQUIRE_EQUAL( listResult.size(), static_cast<size_t>( 1 ) );
+    SW_EXPECT_TRUE( listResult[0] == RHIFrameCompletion::Completed );
+    SW_EXPECT_EQUAL( 0, releaseCount );
+
+    queue.abandonAll();
+    SW_REQUIRE_EQUAL( listResult.size(), static_cast<size_t>( 2 ) );
+    SW_EXPECT_TRUE( listResult[1] == RHIFrameCompletion::Abandoned );
+    SW_EXPECT_EQUAL( 1, releaseCount );
+    SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
+}
+
+/**
+ * @brief [RHIReleaseQueueTest] 대기를 확인한 비우기(`releaseAllCompleted`)는 남은 통지를 `Completed` 로, 같은 펜스의 통지를 해제보다 먼저 부른다
+ * @details 변이: 해제를 먼저 부르면 같은 프레임에 놓인 되읽기 버퍼를 놓은 뒤에 읽는다 — 순서 단언이 진다.
+ */
+SW_TEST_CASE( RHIReleaseQueueTest, ReleaseAllCompletedNotifiesBeforeReleasing )
+{
+    RHIReleaseQueue queue;
+    vector<int32>   listOrder;
+    queue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [&listOrder]()
+    { listOrder.push_back( 2 ); } ),
+                             9 );
+    queue.enqueueCompletion( SW_DELEGATE_LAMBDA( RHIFrameCompletionDelegate, [&listOrder]( RHIFrameCompletion result )
+    { listOrder.push_back( result == RHIFrameCompletion::Completed ? 1 : -1 ); } ),
+                             9 );
+
+    queue.releaseAllCompleted();
+    SW_REQUIRE_EQUAL( listOrder.size(), static_cast<size_t>( 2 ) );
+    SW_EXPECT_EQUAL( 1, listOrder[0] );
+    SW_EXPECT_EQUAL( 2, listOrder[1] );
 }
 
 /**

@@ -124,6 +124,7 @@ namespace sw::test
         void*                              _pNativeDevice{ nullptr };                                                  /**< `getNativeDevice` 가 돌려줄 값 */
         mutable uint32                     _nativeHandleQueryCount{ 0 };                                               /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
         vector<RHIResourceReleaseDelegate> _listGPURelease;                                                            /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */
+        vector<RHIFrameCompletionDelegate> _listFrameCompletion;                                                       /**< `notifyFrameCompletion` 으로 받은 통지(받은 순서) */
         uint32                             _pendingReleaseCount{ 0 };                                                  /**< `getPendingReleaseCount` 가 답할 값 — 종료 단언 테스트가 정한다 */
         vector<RHIDescriptorIndex>         _listLiveTextureIndex;                                                      /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
         vector<RHIDescriptorIndex>         _listLiveBufferIndex;                                                       /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
@@ -206,6 +207,7 @@ namespace sw::test
 
         /** @brief 부르지 않고 쌓기만 합니다. 테스트가 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 `_listGPURelease` 를 부릅니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override { _listGPURelease.push_back( releaseDelegate ); }
+        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override { _listFrameCompletion.push_back( completionDelegate ); }
         uint32 getPendingReleaseCount() const override { return _pendingReleaseCount; }
         /** @brief 손실 표시만 세운다(실제 백엔드의 `debugRemoveDevice` 와 같은 상태 — 전송 거절 · `isDeviceLost`). */
         bool debugRemoveDevice() override
@@ -324,9 +326,11 @@ namespace sw::test
     public:
         RHIBufferHandle _nextBuffer{ 1 };
         uint32          _gpuVertexBufferCount{ 0 };
-        uint32          _structuredUpdateCount{ 0 };      /**< `updateStructuredBufferRegions` 호출 수(한 조각 갱신 · 만들 때의 초기 내용도 이 길이다) */
-        uint32          _structuredCreateCount{ 0 };      /**< `createStructuredBuffer` 호출 수 */
-        uint32          _lastStructuredElementCount{ 0 }; /**< 마지막으로 만든 구조 버퍼의 원소 수 */
+        uint32          _structuredUpdateCount{ 0 };                                                                  /**< `updateStructuredBufferRegions` 호출 수(한 조각 갱신 · 만들 때의 초기 내용도 이 길이다) */
+        uint32          _structuredCreateCount{ 0 };                                                                  /**< `createStructuredBuffer` 호출 수 */
+        uint32          _lastStructuredElementCount{ 0 };                                                             /**< 마지막으로 만든 구조 버퍼의 원소 수 */
+        uint32          _readbackReadCount{ 0 };                                                                      /**< `readReadbackBuffer` 호출 수 */
+        bool            _bReadbackReadable{ true }; /**< `readReadbackBuffer` 가 돌려줄 값(내용은 건드리지 않는다) */ ///< NOLINT(sw-bool-flag): 테스트가 바꾸는 답
 
         RHIBufferHandle createVertexBuffer( const void*, uint32 ) override { return _nextBuffer++; }
         RHIBufferHandle createGPUVertexBuffer( uint32 ) override
@@ -360,8 +364,12 @@ namespace sw::test
             _lastStructuredElementCount = elementCount;
             return _nextBuffer++;
         }
-        RHIBufferHandle    createReadbackBuffer( uint32, uint32 ) override { return 0; }
-        [[nodiscard]] bool readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
+        RHIBufferHandle    createReadbackBuffer( uint32, uint32 ) override { return _nextBuffer++; }
+        [[nodiscard]] bool readReadbackBuffer( RHIBufferHandle, uint32, void* ) override
+        {
+            ++_readbackReadCount;
+            return _bReadbackReadable;
+        }
         RHITextureHandle   createTexture2D( const RHITextureDesc& ) override { return 0; }
         void               destroyTexture( RHITextureHandle ) override {}
         RHIFormat          getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }

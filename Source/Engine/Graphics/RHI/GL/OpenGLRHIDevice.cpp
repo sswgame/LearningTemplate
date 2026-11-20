@@ -1179,7 +1179,11 @@ namespace sw
                 pSync = nullptr;
             } );
         }
-        _releaseQueue.flushAll();
+        // glFinish 는 잃은 문맥에서도 돌아온다 — 잃었으면 끝났는지 모른다.
+        if ( isDeviceLost() )
+            _releaseQueue.abandonAll();
+        else
+            _releaseQueue.releaseAllCompleted();
     }
 
     bool OpenGLRHIDevice::debugRemoveDevice()
@@ -1384,6 +1388,11 @@ namespace sw
     void OpenGLRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
         _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
+    }
+
+    void OpenGLRHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
+    {
+        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList()
