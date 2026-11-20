@@ -90,16 +90,14 @@ esac
 
 # 검증한 것이 커밋 SHA 그 자체여야 한다 — 추적 파일의 고친 것 · 무시되지 않은 새 파일이 있으면 SHA 가 아닌 트리를 검증한다. 끝에는 HEAD 가 그대로이고
 # 트리가 여전히 깨끗한지 본다(빌드 · 테스트가 커밋되는 파일을 고치면 — 예: 리플렉션 생성의 AssetReferenceFields.generated.json — 거기서 진다).
-list_tree_changes() { sw_git status --porcelain --untracked-files=normal | tr -d '
-'; }
+list_tree_changes() { sw_git status --porcelain --untracked-files=normal | tr -d '\r'; }
 TREE_CHANGES=$(list_tree_changes)
 if [ -n "$TREE_CHANGES" ]; then
   if [ $DRY -eq 1 ]; then
     echo "[dry] 작업 트리가 깨끗하지 않다 — 실제 실행은 여기서 멈춘다"
   else
     echo "작업 트리가 깨끗하지 않다 — 커밋한 뒤 돌린다(검증한 SHA 와 트리가 달라진다):"
-    printf '%s
-' "$TREE_CHANGES" | head -20
+    printf '%s\n' "$TREE_CHANGES" | head -20
     exit 2
   fi
 fi
@@ -284,8 +282,7 @@ check_tree_at_end() {
   NOW=$(sw_git rev-parse HEAD)
   [ "$NOW" = "$SHA" ] || windows_failed "HEAD 가 검증 중에 바뀌었다 $SHA -> $NOW"
   CHANGES=$(list_tree_changes)
-  [ -z "$CHANGES" ] || { printf '%s
-' "$CHANGES" | head -20; windows_failed "검증 중에 추적 파일이 바뀌었다(빌드 · 테스트가 소스 트리를 고쳤다)"; }
+  [ -z "$CHANGES" ] || { printf '%s\n' "$CHANGES" | head -20; windows_failed "검증 중에 추적 파일이 바뀌었다(빌드 · 테스트가 소스 트리를 고쳤다)"; }
 }
 
 [ $DRY -eq 1 ] || mkdir -p build
