@@ -620,6 +620,7 @@
 		       sourceHash="438e02af5e338cbb" />
 		<entry key="EdFormat.Budget" text="예산: {budgetBuf}" sourceHash="f10128f4ae13948e" />
 		<entry key="EdFormat.BuiltS" text="{sW_EDITORICON}  빌드됨({lastDurationSec}초)" sourceHash="9bc796538c48e0c1" />
+		<entry key="EdFormat.CallFailed" text="{method} 호출이 {targetCount} 개 중 {failureCount} 개에서 실패했습니다: {reason}" sourceHash="a110705e428a5fd0" />
 		<entry key="EdFormat.CellMRadiusM"
 		       text="셀 {cellSize} m, 반경 {loadingRadius} m, 여유 {unloadMargin} m, 프레임당 {maxCellLoadsPerFrame}"
 		       sourceHash="2d17573e065de4bb" />
@@ -2301,6 +2302,11 @@
 		<entry key="EditorInspector.ApplyToPrefab"
 		       text="현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다"
 		       sourceHash="eea047cb60eefcdf" />
+		<entry key="EditorInspector.CallFailedArgumentMismatch" text="인자를 그 인자 형식으로 바꿀 수 없습니다" sourceHash="6cf767c7af8f47d3" />
+		<entry key="EditorInspector.CallFailedMissingArgument" text="기본값이 없는 인자가 빠졌습니다" sourceHash="64a4514ee5bf8332" />
+		<entry key="EditorInspector.CallFailedNotBound" text="이 타입에 그 함수가 더는 없습니다(모듈을 다시 올렸나요?)" sourceHash="de51beacf585cf21" />
+		<entry key="EditorInspector.CallFailedNullInstance" text="부를 인스턴스가 없습니다" sourceHash="eb8a86c3c8778404" />
+		<entry key="EditorInspector.CallFailedTooManyArguments" text="인자가 함수가 받는 것보다 많습니다" sourceHash="7971e56aa98b613c" />
 		<entry key="EditorInspector.ClearAssetReference"
 		       text="이 에셋 참조를 비웁니다."
 		       sourceHash="f17ea5903678d603" />

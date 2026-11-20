@@ -21,6 +21,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Panels/Inspector/Model/InspectorEditRecorder.h"
+#include "Editor/Panels/Inspector/Model/InspectorInvokeResult.h"
 #include "Editor/Panels/Inspector/Model/InspectorLayoutCache.h"
 #include "Editor/Panels/Inspector/Model/PropertyEditRequest.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
@@ -36,7 +37,6 @@ namespace sw
 
     class Component;
     class ComponentHandle;
-    class TaskArgs;
     class GameObject;
     class GameObjectManager;
     class TypeRegistry;
@@ -214,14 +214,15 @@ namespace sw::editor
         /** @brief 원소가 곧 키인 시퀀스 행 @p rowID 에 글 @p text 의 원소를 더합니다. */
         void addKeyedElement( uint32 rowID, string_view text );
         /**
-         * @brief 묶은 대상의 FUNCTION @p method 를 호출하고 반환값 글을 `getLastInvokeResult` 에 둡니다. 인자 없는 Run 단추와 Invoke 단추가 같은 길을 씁니다.
+         * @brief 묶은 대상의 FUNCTION @p method 를 인자 @p listArg 로 부르고 결과(갈래 · 반환값 글)를 `getLastInvokeResult` 에 둡니다. 인자 없는 Run 단추와 Invoke 단추가 같은 길을 씁니다.
+         *        부르기는 이름으로 그때 다시 찾는다(`ReflectionInvoke::callByName`) — 모듈을 다시 올려 함수가 사라졌으면 `NotBound`, 인자를 못 바꾸면 `ArgumentMismatch` 다.
          * @details 주인 오브젝트가 있으면 호출을 오브젝트 편집 하나로 감싼다 — 바뀐 것이 있으면 되돌리기 한 단계와 씬 dirty, 없으면 아무것도 남기지 않는다.
          *          Play 중에는 기록 없이 호출한다(`InspectorObjectEdit::applyObjectEdit` 와 같은 규칙). 씬 대상의 호출은 게임 단계가 한다(쓰기 명령과 같은 줄 — 결과 글은
          *          같은 프레임의 게임 단계 뒤에 오른다). 씬 밖 대상은 바로 부른다.
          */
-        void invokeMethod( const FunctionInfo& method, const TaskArgs& args );
-        /** @brief 마지막으로 부른 메서드의 반환값 글입니다. 부른 적이 없으면 빈 글입니다. */
-        const utf8* getLastInvokeResult() const { return _pLastInvokeResult->c_str(); }
+        void invokeMethod( const FunctionInfo& method, const vector<ReflectedValue>& listArg );
+        /** @brief 마지막으로 부른 메서드의 결과입니다. 부른 적이 없으면 메서드 이름이 비어 있습니다. */
+        const InspectorInvokeResult& getLastInvokeResult() const { return *_pLastInvokeResult; }
         /** @brief 묶은 대상의 이벤트 @p event 에 받는 쪽이 걸려 있으면 true 입니다. */
         [[nodiscard]] bool isEventBound( const EventInfo& event ) const;
         /** @brief 묶은 대상의 이벤트 @p event 를 인자 없이 방송합니다. 씬 대상은 게임 단계가 이벤트 이름으로 다시 찾아 방송한다. */
@@ -366,6 +367,6 @@ namespace sw::editor
         uint64                                _targetObjectID;     ///< 묶은 씬 대상의 오브젝트 id(쓰기 요청이 대상을 다시 찾는 값)
         uint64                                _targetComponentID;  ///< 묶은 씬 대상의 컴포넌트 id. 0 이면 오브젝트 자신
         EditorPropertyGridScope               _targetScope;        ///< 묶은 씬 대상의 범위. 씬 밖 대상이면 None
-        shared_ptr<string>                    _pLastInvokeResult;  ///< 마지막으로 부른 메서드의 반환값 글 — 게임 단계의 호출이 쓰는 결과 칸이라 요청과 함께 나눠 든다(그리드가 먼저 사라져도 칸은 산다)
+        shared_ptr<InspectorInvokeResult>     _pLastInvokeResult;  ///< 마지막으로 부른 메서드의 결과 — 게임 단계의 호출이 쓰는 결과 칸이라 요청과 함께 나눠 든다(그리드가 먼저 사라져도 칸은 산다)
     };
 } // namespace sw::editor

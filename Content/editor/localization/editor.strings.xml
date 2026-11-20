@@ -1878,6 +1878,11 @@
 				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.CallFailed" source="{method} failed on {failureCount} of {targetCount}: {reason}">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.CellMRadiusM"
 		       source="cell {cellSize} m, radius {loadingRadius} m, margin {unloadMargin} m, {maxCellLoadsPerFrame} per frame">
 			<origins>
@@ -6855,6 +6860,31 @@
 		<entry key="EditorInspector.ApplyToPrefab" source="Save this object's changes to the source prefab file">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.CallFailedArgumentMismatch" source="an argument cannot be converted to its parameter type">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.CallFailedMissingArgument" source="an argument without a default value is missing">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.CallFailedNotBound" source="the function is no longer on this type (was the module reloaded?)">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.CallFailedNullInstance" source="there is no instance to call it on">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.CallFailedTooManyArguments" source="more arguments than the function takes">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.ClearAssetReference" source="Clear asset reference">

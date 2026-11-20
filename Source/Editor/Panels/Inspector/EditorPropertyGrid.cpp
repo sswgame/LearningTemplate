@@ -849,9 +849,7 @@ namespace sw::editor
             return;
         }
 
-        const utf8* pLastInvokeResult = _model.getLastInvokeResult();
-        if ( StringUtil::isNullOrEmpty( pLastInvokeResult ) == false )
-            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "LastResult", TextArgumentList().addText( "lastInvokeResult", pLastInvokeResult ) ).c_str() );
+        drawLastInvokeResult();
 
         for ( const FunctionInfo& method : pTypeInfo->_listMethod )
         {
@@ -860,6 +858,45 @@ namespace sw::editor
             ++_methodRowCount;
             drawTypeMethod( pTypeInfo, method );
         }
+    }
+
+    void EditorPropertyGrid::drawLastInvokeResult()
+    {
+        const InspectorInvokeResult& result = _model.getLastInvokeResult();
+        if ( result._methodName.empty() || result._targetCount == 0 )
+            return;
+        if ( result.hasFailure() == false )
+        {
+            // 반환값이 없으면(void) 빈 값 표시는 회색 대시다(앱 화면 규칙: 없는 값은 대시).
+            const string_view returnText = result._returnText.empty() ? string_view( "-" ) : string_view( result._returnText );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "LastResult", TextArgumentList().addText( "lastInvokeResult", returnText ) ).c_str() );
+            return;
+        }
+        // 실패는 그 블록 안의 한 문장이고 신호색은 작은 아이콘에만 둔다(앱 화면 규칙: 오류 상태). 글은 본문 색 — 흐린 글이면 지나친다.
+        const utf8* pReason = SW_LOCKEY( "EditorInspector", "CallFailedNotBound" );
+        switch ( result._firstFailure )
+        {
+            case ReflectCallResult::NullInstance:
+                pReason = SW_LOCKEY( "EditorInspector", "CallFailedNullInstance" );
+                break;
+            case ReflectCallResult::TooManyArguments:
+                pReason = SW_LOCKEY( "EditorInspector", "CallFailedTooManyArguments" );
+                break;
+            case ReflectCallResult::MissingArgument:
+                pReason = SW_LOCKEY( "EditorInspector", "CallFailedMissingArgument" );
+                break;
+            case ReflectCallResult::ArgumentMismatch:
+                pReason = SW_LOCKEY( "EditorInspector", "CallFailedArgumentMismatch" );
+                break;
+            case ReflectCallResult::Ok:
+            case ReflectCallResult::NotBound:
+                break;
+        }
+        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", SW_EDITOR_ICON( "Error" ) );
+        ImGui::SameLine();
+        ImGui::TextWrapped( "%s", SW_LOCKEYFORMAT( "EdFormat", "CallFailed", TextArgumentList().addText( "method", result._methodName ).addInteger( "failureCount", static_cast<int64>( result._failureCount ) ).addInteger( "targetCount", static_cast<int64>( result._targetCount ) ).addText( "reason", pReason ) )
+                                      .c_str() );
+        EditorSelfTestMarks::record( "inspector.method.callFailed" );
     }
 
     bool EditorPropertyGrid::isMethodListed( const FunctionInfo& method ) const
@@ -889,7 +926,7 @@ namespace sw::editor
             formatstring( buttonLabel.data(), buttonLabel.capacity(), "Run %#", pLabelName );
             if ( ImGui::Button( buttonLabel.c_str(), ImVec2{ -FLT_MIN, 0.0f } ) )
             {
-                _model.invokeMethod( method, TaskArgs{} );
+                _model.invokeMethod( method, {} );
             }
             EditorSelfTestMarks::recordFormat( "inspector.method.run.%#", method._name.c_str() );
             EditorWidgets::drawTooltip( bNetRole ? SW_LOCKEY( "EditorInspector", "NetRoleMethodRunsLocally" ) : method._metadata->getEditor()._tooltip.c_str() );

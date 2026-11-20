@@ -1,6 +1,6 @@
 /**
  * @file InspectorBuiltinValue.h
- * @brief 내장 값 타입(`ReflectBuiltins.xxx`)마다 인스펙터 위젯 종류와 CallInEditor 인자, 반환 처리를 정하는 테이블입니다.
+ * @brief 내장 값 타입(`ReflectBuiltins.xxx`)마다 인스펙터 위젯 종류와 CallInEditor 인자를 정하는 테이블입니다.
  * @details ImGui 에 의존하지 않으므로 테스트를 붙일 수 있다. 테이블의 항목은 `ReflectBuiltins.xxx` 를 include 해서 만들므로, 내장 타입이
  *          하나 늘어나면 그 줄의 Widget 칸으로 `InspectorWidgetFor` 특수화가 만들어진다. 그리는 쪽은 `InspectorPropertyManager.cpp` 이다.
  */
@@ -105,7 +105,7 @@ namespace sw::editor
         InspectorValueWidget _widget; ///< 프로퍼티와 인자를 그리는 위젯 종류
         uint8                _index;  ///< 테이블 안의 인덱스
 
-        // 내장 값 타입 테이블을 읽어 CallInEditor 의 인자 판정, 인자 묶기, 반환 형식화를 한 테이블로 처리합니다.
+        // 내장 값 타입 테이블을 읽어 CallInEditor 의 인자 판정과 인자 묶기를 한 테이블로 처리합니다.
         /** @brief 인스펙터가 CallInEditor 인자 입력란을 그리는 최대 개수입니다. 넘는 메서드는 호출할 수 없습니다. */
         static constexpr uint32 kMaxMethodArgCount = 8;
         /** @brief 테이블의 항목 수입니다. `ReflectBuiltins.xxx` 의 내장 타입 수와 같습니다. 테이블을 따라 만드는 다른 배열이 static_assert 로 맞춥니다. */
@@ -127,13 +127,11 @@ namespace sw::editor
          * @return 모든 인자를 인스펙터가 채울 수 있으면 true 입니다. 인자가 `kMaxMethodArgCount` 를 넘거나 내장 타입이 아닌 인자가 있으면 false 입니다.
          */
         [[nodiscard]] static bool prepareMethodArgs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot );
-        /** @brief 인자 입력란들을 호출 인자로 묶습니다. 각 값은 인자의 C++ 타입 그대로 들어갑니다. */
-        static TaskArgs makeMethodArgs( const vector<InspectorMethodArgSlot>& listSlot );
         /**
-         * @brief 메서드 반환값을 문자열로 만듭니다.
-         * @return 형식화했으면 true 입니다. 내장 타입이 아닌 반환은 "(unsupported return: …)" 를 쓰고 false 를 반환합니다.
+         * @brief 인자 입력란들을 호출 인자(`ReflectedValue` — 칸의 정규 타입 이름 + 값)로 묶습니다. `ReflectionInvoke::call` 이 인자 자리마다 바꿔 넣고,
+         *        바꿀 수 없으면 `ArgumentMismatch` 로 부르지 않습니다(호출기에 C++ 타입이 다른 값을 넘기는 길이 없다).
          */
-        static bool formatMethodResult( const TaskValue& value, string_view returnType, utf8* pOutBuf, uint32 capacity );
+        static vector<ReflectedValue> makeMethodArgs( const vector<InspectorMethodArgSlot>& listSlot );
     };
 } // namespace sw::editor
 

@@ -308,12 +308,6 @@ namespace sw
             return EnumUtil::hasFlag( flags, contains );
         }
 
-        // ------------------------------------------------------------------------------
-        // 6) 리플렉션 호출
-        // ------------------------------------------------------------------------------
-        /** @brief 등록된 메서드를 인자 목록으로 호출합니다. */
-        TaskValue invokeMethod( void* pInstance, const hashed_string& classFqn, const hashed_string& methodName, const TaskArgs& args = {} ) const;
-
     private:
         /** @brief 타입 해시 표 항목의 종류입니다. 같은 이름이 종류가 다른 대상을 가리키면(클래스와 enum, 지운 이름의 재사용) 조용한 승자 없이 충돌이다. */
         enum class WireTypeKind : uint8

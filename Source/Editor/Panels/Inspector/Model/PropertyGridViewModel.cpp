@@ -108,14 +108,6 @@ namespace sw::editor
                 return outTarget._pType != nullptr;
             }
 
-            /** @brief 메서드 반환값 @p result 의 글을 @p outText 에 둡니다(`InspectorBuiltinValue::formatMethodResult`). */
-            static void formatInvokeResult( const TaskValue& result, string_view returnTypeName, string& outText )
-            {
-                fixed_string<constant::buffer::kMax256> text;
-                (void)InspectorBuiltinValue::formatMethodResult( result, returnTypeName, text.data(), text.capacity() );
-                outText = text.c_str();
-            }
-
             /**
              * @brief 씬 대상 편집 하나를 적용합니다(게임 단계) — 대상을 id 로 다시 찾고, 경로를 풀어 쓰고, 모델의 쓰기 길대로 알린다(깊이 0 프로퍼티로).
              * @details 다중 선택은 깊이 0 프로퍼티를 통째로 나머지에 입힌다(예전 `copyPropertyToOthers` 와 같은 단위 — 되돌리기 구간도 그 단위다). 그 사이 사라진 대상은 건너뛴다.
@@ -164,22 +156,32 @@ namespace sw::editor
 
             /**
              * @brief 씬 대상의 FUNCTION 호출 하나를 게임 단계에 넘깁니다. 호출은 오브젝트 편집 하나로 감싼다(바뀐 것이 있으면 되돌리기 한 단계 — 플레이 중에는 기록 없이,
-             *        `InspectorObjectEdit::applyObjectEdit`). 반환값 글은 @p pResult 칸(그리드가 가진 결과 칸 — 다음 UI 프레임이 읽는다)에 둔다. 람다는 id · 이름 · 인자 값만 붙잡는다.
+             *        `InspectorObjectEdit::applyObjectEdit`). 선언으로 고르지 않는다 — 모든 호출이 기록 대상이라 "선언을 빠뜨린 변경 호출" 이 없다(언리얼 CallInEditor 의
+             *        `FScopedTransaction` 과 같다). 결과는 @p pResult 칸(그리드가 가진 결과 칸 — 다음 UI 프레임이 읽는다)에 둔다. 람다는 id · 이름 · 인자 값만 붙잡는다.
              */
-            static void requestInvoke( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const hashed_string& methodName, const string& returnTypeName,
-                                       const string& label, const TaskArgs& args, const shared_ptr<string>& pResult )
+            static void requestInvoke( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const hashed_string& methodName, const string& label,
+                                       const vector<ReflectedValue>& listArg, const shared_ptr<InspectorInvokeResult>& pResult )
             {
                 EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create(
-                    [scope, objectID, componentID, methodName, returnTypeName, label, args, pResult]( EditorTransaction& transaction )
+                    [scope, objectID, componentID, methodName, label, listArg, pResult]( EditorTransaction& transaction )
                 {
+                    pResult->begin( methodName.c_str() );
                     SceneTarget target;
                     if ( resolveSceneTarget( scope, objectID, componentID, target ) == false )
                         return;
-                    TaskValue result{};
-                    InspectorObjectEdit::applyObjectEdit( transaction, target._pObject, label, [&target, &methodName, &args, &result]()
-                    { result = PropertyGridViewModel::getTypeRegistry().invokeMethod( target._pInstance, target._pType->_fullyQualifiedName, methodName, args ); } );
-                    formatInvokeResult( result, returnTypeName, *pResult );
+                    invokeOn( transaction, target._pObject, *target._pType, target._pInstance, methodName, label, listArg, *pResult );
                 } ) );
+            }
+
+            /** @brief 대상 하나에 이름으로 부르고(`ReflectionInvoke::callByName` — 없는 함수 · 틀린 인자는 결과 갈래로 온다) 결과를 더합니다. */
+            static void invokeOn( EditorTransaction& transaction, GameObject* pObject, const TypeInfo& type, void* pInstance, const hashed_string& methodName,
+                                  const string& label, const vector<ReflectedValue>& listArg, InspectorInvokeResult& outResult )
+            {
+                ReflectCallResult result = ReflectCallResult::NotBound;
+                ReflectedValue    returnValue;
+                InspectorObjectEdit::applyObjectEdit( transaction, pObject, label, [&]()
+                { result = ReflectionInvoke::callByName( type, pInstance, methodName, listArg, &returnValue ); } );
+                outResult.record( result, returnValue );
             }
 
             /** @brief 씬 대상의 이벤트 방송 하나를 게임 단계에 넘깁니다(기록하지 않는다 — 받는 쪽이 할 일이다). 이벤트는 이름으로 그때 다시 찾는다. */
@@ -303,7 +305,7 @@ namespace sw::editor
         , _targetObjectID{ 0 }
         , _targetComponentID{ 0 }
         , _targetScope{ EditorPropertyGridScope::None }
-        , _pLastInvokeResult{ make_shared<string>() }
+        , _pLastInvokeResult{ make_shared<InspectorInvokeResult>() }
     {
     }
 
@@ -1295,21 +1297,23 @@ namespace sw::editor
         } ) );
     }
 
-    void PropertyGridViewModel::invokeMethod( const FunctionInfo& method, const TaskArgs& args )
+    void PropertyGridViewModel::invokeMethod( const FunctionInfo& method, const vector<ReflectedValue>& listArg )
     {
         if ( _pInstance == nullptr || _pType == nullptr )
             return;
         if ( _pObject == nullptr )
         {
             // 씬 밖 대상(환경설정 구조체 등) — 주인 패널이 수명을 들고 되돌리기 대상이 없다. 지금 부른다.
-            const TaskValue result = getTypeRegistry().invokeMethod( _pInstance, _pType->_fullyQualifiedName, method._hashName, args );
-            PropertyGridViewModelInternal::formatInvokeResult( result, method._returnTypeName, *_pLastInvokeResult );
+            _pLastInvokeResult->begin( method._name );
+            ReflectedValue          returnValue;
+            const ReflectCallResult result = ReflectionInvoke::callByName( *_pType, _pInstance, method._hashName, listArg, &returnValue );
+            _pLastInvokeResult->record( result, returnValue );
             return;
         }
-        // 씬 대상 — UI 프레임은 씬을 바꾸는 호출을 하지 않는다. 게임 단계가 부르고 결과 칸에 글을 둔다.
+        // 씬 대상 — UI 프레임은 씬을 바꾸는 호출을 하지 않는다. 게임 단계가 부르고 결과 칸에 둔다.
         StringBuilder<constant::buffer::kMax256> textBuilder;
         textBuilder.appendFormat( "Call %#", method._name.c_str() );
-        PropertyGridViewModelInternal::requestInvoke( _targetScope, _targetObjectID, _targetComponentID, method._hashName, method._returnTypeName, string{ textBuilder.view() }, args,
+        PropertyGridViewModelInternal::requestInvoke( _targetScope, _targetObjectID, _targetComponentID, method._hashName, string{ textBuilder.view() }, listArg,
                                                       _pLastInvokeResult );
     }
 

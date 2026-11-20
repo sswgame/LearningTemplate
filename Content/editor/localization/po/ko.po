@@ -1893,6 +1893,11 @@ msgctxt "EdFormat.BuiltS"
 msgid "{sW_EDITORICON}  Built ({lastDurationSec}s)"
 msgstr "{sW_EDITORICON}  빌드됨({lastDurationSec}초)"
 
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdFormat.CallFailed"
+msgid "{method} failed on {failureCount} of {targetCount}: {reason}"
+msgstr "{method} 호출이 {targetCount} 개 중 {failureCount} 개에서 실패했습니다: {reason}"
+
 #: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
 msgctxt "EdFormat.CellMRadiusM"
 msgid "cell {cellSize} m, radius {loadingRadius} m, margin {unloadMargin} m, {maxCellLoadsPerFrame} per frame"
@@ -6673,6 +6678,31 @@ msgstr "씬을 저장합니다. 인스턴스 멤버의 변경은 앵커에 차�
 msgctxt "EditorInspector.ApplyToPrefab"
 msgid "Save this object's changes to the source prefab file"
 msgstr "현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.CallFailedArgumentMismatch"
+msgid "an argument cannot be converted to its parameter type"
+msgstr "인자를 그 인자 형식으로 바꿀 수 없습니다"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.CallFailedMissingArgument"
+msgid "an argument without a default value is missing"
+msgstr "기본값이 없는 인자가 빠졌습니다"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.CallFailedNotBound"
+msgid "the function is no longer on this type (was the module reloaded?)"
+msgstr "이 타입에 그 함수가 더는 없습니다(모듈을 다시 올렸나요?)"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.CallFailedNullInstance"
+msgid "there is no instance to call it on"
+msgstr "부를 인스턴스가 없습니다"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.CallFailedTooManyArguments"
+msgid "more arguments than the function takes"
+msgstr "인자가 함수가 받는 것보다 많습니다"
 
 #: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
 msgctxt "EditorInspector.ClearAssetReference"

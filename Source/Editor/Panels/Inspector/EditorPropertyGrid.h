@@ -165,6 +165,8 @@ namespace sw::editor
          * @details 기본 목록은 `CallInEditor` 만이다(언리얼 Details 의 CallInEditor 단추와 같다). 나머지는 보기 옵션의 진단 보기(`_bShowAllMethods`)에서만 그린다.
          */
         void drawTypeMethod( const TypeInfo* pTypeInfo, const FunctionInfo& method );
+        /** @brief 마지막 호출의 결과 한 줄을 그립니다 — 성공이면 반환값(없으면 대시), 실패면 오류 아이콘 · 첫 실패 갈래 · 실패 수/대상 수입니다. */
+        void drawLastInvokeResult();
         /** @brief 이 메서드를 목록에 그리면 true 입니다 — `CallInEditor` 이거나 진단 보기가 켜져 있을 때입니다. */
         [[nodiscard]] bool isMethodListed( const FunctionInfo& method ) const;
         /** @brief 메서드의 인자 입력란을 인자 슬롯마다 그립니다. */
