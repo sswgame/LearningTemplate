@@ -3,11 +3,30 @@
  * @brief 셰이더 바이트코드 리플렉션 데이터입니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
+
 #include "Engine/EngineMinimal.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     enum class ShaderTargetFormat : uint8;
+
+    /**
+     * @brief 바인딩 하나가 가리키는 리소스 종류입니다. 리플렉터(DX · SPIR-V · WebGPU)가 바로 이 열거로 내고, 바인딩 레이아웃 · 계약 검사가 그대로 읽는다.
+     * @details 예전에는 리플렉터가 글자("Texture", "StorageBuffer", "UAV")로 내고 읽는 쪽이 글자를 비교해 다시 분류했다 — 철자 하나가 틀리면 조용히 `Unknown` 이었다.
+     */
+    ENUM()
+    enum class ShaderBindingKind : uint8
+    {
+        ConstantBuffer,
+        Texture,
+        Sampler,
+        StructuredBuffer,
+        RwStructuredBuffer,
+        RwTexture,
+        Unknown
+    };
 
     /**
      * @brief 셰이더 코드가 CB 멤버를 실제로 읽는지입니다(DXC · FXC 리플렉션의 `D3D_SVF_USED`).
@@ -50,11 +69,11 @@ namespace sw
     /// @brief 텍스처, 샘플러, UAV 바인딩 슬롯입니다.
     struct ShaderReflectedBinding
     {
-        string _name;
-        string _type;
-        uint32 _registerSpace{ 0 }; ///< DX12 register space / Vulkan descriptor set
-        uint32 _bindPoint{ 0 };
-        uint32 _bindCount{ 0 };
+        string            _name;
+        ShaderBindingKind _kind{ ShaderBindingKind::Unknown };
+        uint32            _registerSpace{ 0 }; ///< DX12 register space / Vulkan descriptor set
+        uint32            _bindPoint{ 0 };
+        uint32            _bindCount{ 0 };
     };
 } // namespace sw
 
@@ -91,10 +110,10 @@ namespace sw
          */
         vector<ShaderBufferInfo> _listStructuredElement;
 
-        // DXC · SPIR-V 리플렉션으로 ShaderReflectionData 를 채웁니다.
         /**
-         * @brief 바이트코드에서 리플렉션 데이터를 뽑습니다.
+         * @brief 바이트코드에서 리플렉션 데이터를 뽑습니다(DXC · FXC · SPIR-V · WebGPU 꾸러미).
+         * @return 빈 바이트코드 · 읽을 수 없는 형식 · 이 플랫폼에 없는 리플렉터는 오류입니다 — 빈 결과로 물러나지 않는다(빈 레이아웃으로 PSO 가 서면 슬롯이 조용히 빠진다).
          */
-        static ShaderReflectionData reflect( const vector<uint8>& bytecode, ShaderTargetFormat targetFormat );
+        [[nodiscard]] static expected<ShaderReflectionData> reflect( const vector<uint8>& bytecode, ShaderTargetFormat targetFormat );
     };
 } // namespace sw

@@ -174,10 +174,20 @@ namespace sw
                     const bool      bOutputRead = FileUtil::exists( task._outPath ) && FileUtil::readFile( task._outPath, bytecode ); // 컴파일이 실패하면 출력이 없다 - 아래 분기가 그 오류를 센다
                     if ( bOutputRead && bytecode.empty() == false )
                     {
-                        outResult._reflection = ShaderReflectionData::reflect( bytecode, task._format );
-                        // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.
-                        outResult._violationCount = ShaderBindingValidatorIssue::validate( outResult._reflection, task._format, task._outPath );
-                        outResult._bReflected     = true;
+                        expected<ShaderReflectionData> reflected = ShaderReflectionData::reflect( bytecode, task._format );
+                        if ( reflected.has_value() )
+                        {
+                            outResult._reflection = std::move( *reflected );
+                            // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.
+                            outResult._violationCount = ShaderBindingValidatorIssue::validate( outResult._reflection, task._format, task._outPath );
+                            outResult._bReflected     = true;
+                        }
+                        else
+                        {
+                            // 리플렉션이 빠진 바이너리는 런타임이 빈 레이아웃으로 읽는다 — 읽지 못한 것으로 세어 쿠킹을 실패시킨다.
+                            SW_LOG_ERROR_ID( "ShaderCooker.ReflectionFailed", "Shader reflection failed for %#: %# (%#)", task._outPath, reflected.error().message(), reflected.error().detail() );
+                            outResult._bUnreadable = true;
+                        }
                     }
                     else if ( outResult._bCompileFailed == false )
                     {

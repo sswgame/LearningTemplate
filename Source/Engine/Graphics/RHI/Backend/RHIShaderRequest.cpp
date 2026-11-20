@@ -141,8 +141,14 @@ namespace sw
     uint32 RHIShaderRequest::computeConsumedVertexAttributeMask( const vector<uint8>& vertexBytecode, ShaderTargetFormat targetFormat )
     {
         static_assert( constant::render::kVertexAttributeCount <= 32u, "정점 속성 마스크가 uint32 를 넘는다" );
-        const ShaderReflectionData reflection = ShaderReflectionData::reflect( vertexBytecode, targetFormat );
-        uint32                     mask{ 0 };
+        const expected<ShaderReflectionData> reflected = ShaderReflectionData::reflect( vertexBytecode, targetFormat );
+        if ( reflected.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "RHI.VertexReflectionFailed", "Vertex shader reflection failed: %# (%#)", reflected.error().message(), reflected.error().detail() );
+            return 0;
+        }
+        const ShaderReflectionData& reflection = *reflected;
+        uint32                      mask{ 0 };
         for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
         {
             for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )

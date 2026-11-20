@@ -11,26 +11,6 @@ namespace sw
 {
     namespace
     {
-        /** @brief 리플렉션 문자열 타입 라벨을 ShaderBindingKind 로 바꿉니다. */
-        ShaderBindingKind shaderBindingKindFromTypeLabel( string_view typeLabel )
-        {
-            if ( typeLabel == "Texture" || typeLabel == "TextureOrSampler" )
-                return ShaderBindingKind::Texture;
-            if ( typeLabel == "Sampler" )
-                return ShaderBindingKind::Sampler;
-            if ( typeLabel == "ConstantBuffer" )
-                return ShaderBindingKind::ConstantBuffer;
-            const bool bStructuredBufferLabel = typeLabel == "StructuredBuffer" || typeLabel == "StorageBuffer" || typeLabel == "ByteAddressBuffer";
-            if ( bStructuredBufferLabel )
-                return ShaderBindingKind::StructuredBuffer;
-            const bool bRwStructuredBufferLabel = typeLabel == "UAV" || typeLabel == "RWStructuredBuffer" || typeLabel == "RWByteAddressBuffer";
-            if ( bRwStructuredBufferLabel )
-                return ShaderBindingKind::RwStructuredBuffer;
-            if ( typeLabel == "RWTexture" )
-                return ShaderBindingKind::RwTexture;
-            return ShaderBindingKind::Unknown;
-        }
-
         /** @brief `g_ShadowMap` 과 `g_ShadowMapIndex`, `ShadowMap` 을 `"ShadowMap"`(레지스트리 조회 키)으로 모읍니다. */
         string_view canonicalResourceView( string_view identifier, bool bStripIndexSuffix )
         {
@@ -114,7 +94,7 @@ namespace sw
             {
                 for ( const ShaderReflectedBinding& res : reflection._listResource )
                 {
-                    const ShaderBindingKind kind = shaderBindingKindFromTypeLabel( static_cast<string_view>( res._type ) );
+                    const ShaderBindingKind kind = res._kind;
                     if ( kind == ShaderBindingKind::Unknown )
                         continue;
                     // CB 는 위에서 이미 멤버 정보까지 등록했으므로 가시성만 갱신한다.
@@ -150,11 +130,6 @@ namespace sw
             }
         }
     } // namespace
-
-    ShaderBindingKind ShaderBindingLayout::kindFromTypeLabel( string_view typeLabel )
-    {
-        return shaderBindingKindFromTypeLabel( typeLabel );
-    }
 
     ShaderBindingLayout ShaderBindingLayout::make( const vector<pair<ShaderStage, const ShaderReflectionData*>>& listStageReflection )
     {

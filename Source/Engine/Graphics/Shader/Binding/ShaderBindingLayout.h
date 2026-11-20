@@ -17,19 +17,6 @@
 
 namespace sw
 {
-    /// @brief 슬롯이 가리키는 리소스 종류입니다.
-    ENUM()
-    enum class ShaderBindingKind : uint8
-    {
-        ConstantBuffer,
-        Texture,
-        Sampler,
-        StructuredBuffer,
-        RwStructuredBuffer,
-        RwTexture,
-        Unknown
-    };
-
     /// @brief 합쳐진 바인딩 슬롯 하나입니다(이름, 레지스터, 가시성, CB 멤버).
     struct ShaderBindingSlot
     {
@@ -98,9 +85,6 @@ namespace sw
     public:
         /** @brief 스테이지별 리플렉션 데이터를 합쳐 레이아웃을 만듭니다. */
         static ShaderBindingLayout make( const vector<pair<ShaderStage, const ShaderReflectionData*>>& listStageReflection );
-
-        /// @brief 리플렉션 문자열 타입 라벨("Texture", "StorageBuffer", …)을 ShaderBindingKind 로 바꿉니다. 계약 검증기도 같은 분류를 씁니다.
-        static ShaderBindingKind kindFromTypeLabel( string_view typeLabel );
 
         /** @brief 이름으로 슬롯을 찾습니다(없으면 nullptr). */
         const ShaderBindingSlot* find( hashed_string name ) const;

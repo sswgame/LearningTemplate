@@ -26,16 +26,16 @@ namespace sw
                 return binding;
             }
 
-            /** @brief WebGPU 꾸러미 안의 SPIR-V 를 읽고 번호를 레지스터로 되돌립니다. 꾸러미가 아니면 경고를 남기고 빈 결과입니다. */
-            static ShaderReflectionData reflectWebGPU( const vector<uint8>& bytecode )
+            /** @brief WebGPU 꾸러미 안의 SPIR-V 를 읽고 번호를 레지스터로 되돌립니다. 꾸러미가 아니면 오류입니다. */
+            static expected<ShaderReflectionData> reflectWebGPU( const vector<uint8>& bytecode )
             {
                 vector_reference<const uint8> spirv;
                 if ( WebGPUShaderContainer::findSpirv( bytecode, spirv ) == false )
-                {
-                    SW_LOG_WARNING_ID( "ShaderReflection.NotWebGPUContainer", "Reflect: the WGSL_WebGPU bytecode is not a WebGPU shader container" );
-                    return {};
-                }
-                ShaderReflectionData data = ShaderReflectionUtil::reflectSPIRV( vector<uint8>( spirv.begin(), spirv.end() ) );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the WGSL_WebGPU bytecode is not a WebGPU shader container" } );
+                expected<ShaderReflectionData> reflected = ShaderReflectionUtil::reflectSPIRV( vector<uint8>( spirv.begin(), spirv.end() ) );
+                if ( reflected.has_value() == false )
+                    return reflected;
+                ShaderReflectionData& data = *reflected;
                 for ( ShaderBufferInfo& buffer : data._listConstantBuffer )
                 {
                     buffer._bindPoint = toRegister( buffer._bindPoint );
@@ -44,22 +44,19 @@ namespace sw
                 {
                     // SPIR-V 는 읽기 · 쓰기 구조버퍼를 모두 StorageBuffer 로 보고한다 — WebGPU 는 띠(t · u)가 따로라 번호로 정확히 가른다. 번호를 레지스터로 되돌리면
                     // 띠가 사라져 읽기 t4(인스턴스)와 쓰기 u4(메시지 링)가 같은 4 가 되므로, 되돌리기 전에 종류 이름을 정한다.
-                    if ( resource._type == "StorageBuffer" )
-                        resource._type = resource._bindPoint >= shaderslot::wgpu::kUShift ? "RWStructuredBuffer" : "StructuredBuffer";
+                    if ( resource._kind == ShaderBindingKind::StructuredBuffer )
+                        resource._kind = resource._bindPoint >= shaderslot::wgpu::kUShift ? ShaderBindingKind::RwStructuredBuffer : ShaderBindingKind::StructuredBuffer;
                     resource._bindPoint = toRegister( resource._bindPoint );
                 }
-                return data;
+                return reflected;
             }
         };
     } // namespace
 
-    ShaderReflectionData ShaderReflectionData::reflect( const vector<uint8>& bytecode, ShaderTargetFormat targetFormat )
+    expected<ShaderReflectionData> ShaderReflectionData::reflect( const vector<uint8>& bytecode, ShaderTargetFormat targetFormat )
     {
         if ( bytecode.empty() )
-        {
-            SW_LOG_WARNING_ID( "ShaderReflection.ReflectCalledEmptyBytecode", "Reflect called with empty bytecode." );
-            return {};
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "reflect called with empty bytecode" } );
 
         switch ( targetFormat )
         {
@@ -68,7 +65,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
                 return ShaderReflectionUtil::reflectDx( bytecode, targetFormat );
 #elif defined( SW_PLATFORM_POSIX )
-                return {};
+                return unexpected( Error{ ErrorKind::Unsupported, "DX bytecode reflection needs Windows (D3DReflect · DXC reflection)" } );
 #else
     #error "Unsupported platform"
 #endif
@@ -80,6 +77,6 @@ namespace sw
             case ShaderTargetFormat::Count:
                 break;
         }
-        return {};
+        return unexpected( Error{ ErrorKind::InvalidArgument, "reflect called with an unknown shader target format" } );
     }
 } // namespace sw
