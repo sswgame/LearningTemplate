@@ -207,17 +207,17 @@ namespace sw
             text += '[';
             NetAddressTextInternal::appendIpv6( _arrByte, text );
             text += "]:";
-            text += std::to_string( _port ).c_str();
+            StringUtil::appendNumber( text, _port );
             return text;
         }
         for ( int32 index = 0; index < kIpv4ByteCount; ++index )
         {
             if ( index > 0 )
                 text += '.';
-            text += std::to_string( _arrByte[index] ).c_str();
+            StringUtil::appendNumber( text, _arrByte[index] );
         }
         text += ':';
-        text += std::to_string( _port ).c_str();
+        StringUtil::appendNumber( text, _port );
         return text;
     }
 

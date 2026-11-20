@@ -342,7 +342,7 @@ namespace sw
             ___tracy_gpu_context_name_data nameData{};
             nameData.context = static_cast<uint8_t>( context );
             nameData.name    = pName;
-            nameData.len     = static_cast<uint16_t>( std::strlen( pName ) );
+            nameData.len     = static_cast<uint16_t>( StringUtil::strlen( pName ) );
             TracyProfilerBackendInternal::getClientAPI()._pfnGPUContextName( nameData );
         }
         return context;

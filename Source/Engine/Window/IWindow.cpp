@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Window/NativeWindowEvent.h"
@@ -271,7 +272,7 @@ namespace sw
     {
         if ( StringUtil::isNullOrEmpty( pTitle ) )
             return;
-        if ( std::strcmp( pTitle, _arrTitle ) == 0 )
+        if ( StringUtil::equals( pTitle, _arrTitle ) )
             return;
         if ( storeTitle( pTitle ) == false )
             return; // 오류는 storeTitle 이 남겼다 — 지금 제목이 그대로다
@@ -281,7 +282,7 @@ namespace sw
     bool IWindow::storeTitle( const utf8* pTitle )
     {
         const utf8* const pSource = pTitle != nullptr ? pTitle : "";
-        const size_t      length  = std::strlen( pSource );
+        const size_t      length  = StringUtil::strlen( pSource );
         if ( length >= kTitleCapacity )
         {
             SW_LOG_ERROR_ID( "Window.WindowTitleBytesMust", "Window title is %# bytes - it must be shorter than %# bytes (IWindow::kTitleCapacity)", length, kTitleCapacity );

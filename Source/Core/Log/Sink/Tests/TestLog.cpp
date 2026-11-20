@@ -86,7 +86,7 @@ namespace
             uint32 count = 0;
             for ( const sw::LogEntry& entry : _listEntry )
             {
-                if ( entry._pID != nullptr && std::strcmp( entry._pID, pID ) == 0 )
+                if ( entry._pID != nullptr && StringUtil::equals( entry._pID, pID ) )
                     ++count;
             }
             return count;
@@ -780,7 +780,7 @@ SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
         uint32           limitWarningCount = 0;
         sw::Subscription subscription      = logger.registerLogWrittenListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&limitWarningCount]( const sw::LogEntry& entry )
              {
-            if ( entry._pID != nullptr && std::strcmp( entry._pID, "Log.OutputRejected" ) == 0 )
+            if ( entry._pID != nullptr && StringUtil::equals( entry._pID, "Log.OutputRejected" ) )
                 ++limitWarningCount;
         } ) );
 

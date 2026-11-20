@@ -249,7 +249,7 @@ namespace sw
                 return false;
             buffer.resize( buffer.size() * 2 );
         }
-        buffer.resize( std::strlen( buffer.c_str() ) );
+        buffer.resize( StringUtil::strlen( buffer.c_str() ) );
         outResult = std::move( buffer );
         return true;
     }

@@ -4,6 +4,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
 #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
@@ -313,29 +314,29 @@ namespace sw
             static void onRegistryGlobal( void* pData, wl_registry* pRegistry, uint32 name, const utf8* pInterface, uint32 version )
             {
                 State& state = *static_cast<State*>( pData );
-                if ( std::strcmp( pInterface, wl_compositor_interface.name ) == 0 )
+                if ( StringUtil::equals( pInterface, wl_compositor_interface.name ) )
                     state._pCompositor = static_cast<wl_compositor*>( wl_registry_bind( pRegistry, name, &wl_compositor_interface, version < kCompositorVersion ? version : kCompositorVersion ) );
-                else if ( std::strcmp( pInterface, wl_subcompositor_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, wl_subcompositor_interface.name ) )
                     state._pSubcompositor = static_cast<wl_subcompositor*>( wl_registry_bind( pRegistry, name, &wl_subcompositor_interface, kSubcompositorVersion ) );
-                else if ( std::strcmp( pInterface, wl_shm_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, wl_shm_interface.name ) )
                     state._pShm = static_cast<wl_shm*>( wl_registry_bind( pRegistry, name, &wl_shm_interface, kShmVersion ) );
-                else if ( std::strcmp( pInterface, xdg_wm_base_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, xdg_wm_base_interface.name ) )
                     state._pWmBase = static_cast<xdg_wm_base*>( wl_registry_bind( pRegistry, name, &xdg_wm_base_interface, kWmBaseVersion ) );
-                else if ( std::strcmp( pInterface, wl_seat_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, wl_seat_interface.name ) )
                     state._pSeat = static_cast<wl_seat*>( wl_registry_bind( pRegistry, name, &wl_seat_interface, version < kSeatVersion ? version : kSeatVersion ) );
-                else if ( std::strcmp( pInterface, wl_data_device_manager_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, wl_data_device_manager_interface.name ) )
                     state._pDataDeviceManager = static_cast<wl_data_device_manager*>( wl_registry_bind( pRegistry, name, &wl_data_device_manager_interface, kDataDeviceManagerVersion ) );
-                else if ( std::strcmp( pInterface, wp_fractional_scale_manager_v1_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, wp_fractional_scale_manager_v1_interface.name ) )
                     state._pFractionalScaleManager = static_cast<wp_fractional_scale_manager_v1*>( wl_registry_bind( pRegistry, name, &wp_fractional_scale_manager_v1_interface, kFractionalScaleVersion ) );
-                else if ( std::strcmp( pInterface, wp_cursor_shape_manager_v1_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, wp_cursor_shape_manager_v1_interface.name ) )
                     state._pCursorShapeManager = static_cast<wp_cursor_shape_manager_v1*>( wl_registry_bind( pRegistry, name, &wp_cursor_shape_manager_v1_interface, kCursorShapeVersion ) );
-                else if ( std::strcmp( pInterface, zwp_pointer_constraints_v1_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, zwp_pointer_constraints_v1_interface.name ) )
                     state._pPointerConstraints = static_cast<zwp_pointer_constraints_v1*>( wl_registry_bind( pRegistry, name, &zwp_pointer_constraints_v1_interface, kPointerConstraintsVersion ) );
-                else if ( std::strcmp( pInterface, zwp_relative_pointer_manager_v1_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, zwp_relative_pointer_manager_v1_interface.name ) )
                     state._pRelativePointerManager = static_cast<zwp_relative_pointer_manager_v1*>( wl_registry_bind( pRegistry, name, &zwp_relative_pointer_manager_v1_interface, kRelativePointerVersion ) );
-                else if ( std::strcmp( pInterface, zwp_text_input_manager_v3_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, zwp_text_input_manager_v3_interface.name ) )
                     state._pTextInputManager = static_cast<zwp_text_input_manager_v3*>( wl_registry_bind( pRegistry, name, &zwp_text_input_manager_v3_interface, kTextInputVersion ) );
-                else if ( std::strcmp( pInterface, wl_output_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, wl_output_interface.name ) )
                 {
                     WaylandOutput output;
                     output._registryName = name;
@@ -411,11 +412,11 @@ namespace sw
                 State& state = *static_cast<State*>( pData );
                 if ( pOffer != state._pIntroducedOffer )
                     return; // 낡은 제안의 형식이다 — 버려진 뒤에는 오지 않지만 순서가 뒤집힌 알림을 믿지 않는다
-                if ( std::strcmp( pMime, kMimeUTF8 ) == 0 )
+                if ( StringUtil::equals( pMime, kMimeUTF8 ) )
                     state._bIntroducedHasUTF8 = true;
-                else if ( std::strcmp( pMime, kMimePlain ) == 0 )
+                else if ( StringUtil::equals( pMime, kMimePlain ) )
                     state._bIntroducedHasPlain = true;
-                else if ( std::strcmp( pMime, kMimeURIList ) == 0 )
+                else if ( StringUtil::equals( pMime, kMimeURIList ) )
                     state._bIntroducedHasURIList = true;
             }
 
@@ -553,7 +554,7 @@ namespace sw
             static void onDataSourceSend( void* pData, wl_data_source* pSource, const utf8* pMime, int32 fd )
             {
                 State&     state      = *static_cast<State*>( pData );
-                const bool bKnownMime = std::strcmp( pMime, kMimeUTF8 ) == 0 || std::strcmp( pMime, kMimePlain ) == 0;
+                const bool bKnownMime = StringUtil::equals( pMime, kMimeUTF8 ) || StringUtil::equals( pMime, kMimePlain );
                 if ( pSource != state._pDataSource || bKnownMime == false )
                 {
                     close( fd );
