@@ -11,6 +11,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/ThreadTestAccess.h"
 
@@ -333,14 +334,10 @@ SW_TEST_CASE( ScopedLockTest, PairHoldsBoth )
 // 쥔 잠금 수는 Debug 만 센다. 로거가 0 을 단언하는 잎 잠금 규칙의 근거다.
 SW_TEST_CASE( MutexTest, HeldLockDepthFollowsEveryKindOfLock )
 {
-    mutex        plain;
-    shared_mutex shared;
-#if defined( SW_DO_CHECKS )
-    constexpr uint32 kOne = 1;
-#else
-    constexpr uint32 kOne = 0;
-#endif
-    const uint32 base = mutex::getHeldLockDepth();
+    mutex            plain;
+    shared_mutex     shared;
+    constexpr uint32 kOne = build::kDoChecks ? 1u : 0u;
+    const uint32     base = mutex::getHeldLockDepth();
     {
         ScopedLock<mutex> guard{ plain };
         SW_EXPECT_EQUAL( base + kOne, mutex::getHeldLockDepth() );

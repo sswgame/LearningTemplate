@@ -11,6 +11,7 @@
  *          - 명시 태그: 스코프 밖에서 용도가 정해진 버퍼는 `Memory::allocate( size, tag )` 로 그 자리에서 태그를 줍니다.
  */
 #pragma once
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
@@ -61,9 +62,5 @@ namespace sw
     inline constexpr uint32 kMemoryTagCount = static_cast<uint32>( MemoryTag::MaxTags );
 
     /** @brief 태그 스코프가 일하는 구성인지입니다. 아니면 `ScopedMemoryTag` 와 `SW_MEMORY_SCOPE` 는 아무 일도 하지 않습니다. */
-#if !defined( SW_SHIPPING )
-    inline constexpr bool kMemoryTagScopesEnabled = true;
-#else
-    inline constexpr bool kMemoryTagScopesEnabled = false;
-#endif
+    inline constexpr bool kMemoryTagScopesEnabled = !build::kShipping;
 } // namespace sw

@@ -8,6 +8,7 @@
  *          (`SW_ASSERT` 는 로그를 남기지 않는다).
  */
 #pragma once
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -20,11 +21,7 @@ namespace sw::test
     class ScopedAssertCapture
     {
     public:
-#if defined( SW_DO_CHECKS )
-        static constexpr bool kAssertsAreActive = true;
-#else
-        static constexpr bool kAssertsAreActive = false;
-#endif
+        static constexpr bool kAssertsAreActive = build::kDoChecks;
 
         ScopedAssertCapture()
 #if defined( SW_DO_CHECKS )
