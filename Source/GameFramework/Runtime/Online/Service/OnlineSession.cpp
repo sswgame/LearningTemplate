@@ -78,7 +78,14 @@ namespace sw
                     return true;
                 }
                 const expected<void> connected = pSession->connect();
-                outReply                       = connected.has_value() ? "online: connecting" : "online: " + string( connected.error().message() ) + " (" + string( connected.error().detail() ) + ")";
+                if ( connected.has_value() )
+                {
+                    outReply = "online: connecting";
+                    return true;
+                }
+                StringBuilder<constant::buffer::kMax512> reply;
+                reply.appendFormat( "online: %# (%#)", connected.error().message(), connected.error().detail() );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -122,7 +129,9 @@ namespace sw
                 if ( const expected<void> started = pSession->startLocalServer( listArgument[0] ); started.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "OnlineSession.LocalServerFailed", "The local online server did not start: %# (%#)", started.error().message(), started.error().detail() );
-                    outReply = "online: " + string( started.error().message() ) + " (" + string( started.error().detail() ) + ")";
+                    StringBuilder<constant::buffer::kMax512> reply;
+                    reply.appendFormat( "online: %# (%#)", started.error().message(), started.error().detail() );
+                    outReply = string( reply.view() );
                     return true;
                 }
                 outReply = "online: local server up";

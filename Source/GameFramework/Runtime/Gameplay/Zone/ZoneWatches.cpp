@@ -108,14 +108,14 @@ namespace sw
                 forEachZone( *query._pManager, *pTarget, [&listName]( const hashed_string& source, const ZoneSample& /*sample*/ )
                 { listName.push_back( source.c_str() ); } );
                 VectorUtil::sort( listName );
-                string joined;
+                StringBuilder<constant::buffer::kMax512> joined;
                 for ( const string& name : listName )
                 {
-                    if ( joined.empty() == false )
-                        joined += ',';
-                    joined += name;
+                    if ( joined.size() > 0 )
+                        joined.append( ',' );
+                    joined.append( name );
                 }
-                outValue.setText( joined.empty() ? string( "None" ) : joined );
+                outValue.setText( joined.size() == 0 ? string_view( "None" ) : joined.view() );
                 return true;
             }
 
@@ -138,12 +138,14 @@ namespace sw
                 const ZoneVolumeComponent* pVolume = findVolume( query, outValue );
                 if ( pVolume == nullptr )
                     return false;
-                string joined;
+                StringBuilder<constant::buffer::kMax512> joined;
                 for ( const ZoneCompiledModule& module : pVolume->getCompiledProfile().getModules() )
                 {
-                    joined += joined.empty() ? string( module._name.c_str() ) : "," + string( module._name.c_str() );
+                    if ( joined.size() > 0 )
+                        joined.append( ',' );
+                    joined.append( module._name.c_str() );
                 }
-                outValue.setText( joined );
+                outValue.setText( joined.view() );
                 return true;
             }
 

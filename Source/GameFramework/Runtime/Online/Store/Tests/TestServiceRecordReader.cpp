@@ -18,7 +18,9 @@ namespace
         ServiceTransaction transaction;
         for ( int32 index = 0; index < count; ++index )
         {
-            transaction.put( kTable, "row/" + to_string( 1000 + index ), vector<uint8>{ 1 } );
+            StringBuilder<constant::buffer::kMax32> key;
+            key.appendFormat( "row/%#", 1000 + index );
+            transaction.put( kTable, string( key.view() ), vector<uint8>{ 1 } );
         }
         SW_REQUIRE_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
     }

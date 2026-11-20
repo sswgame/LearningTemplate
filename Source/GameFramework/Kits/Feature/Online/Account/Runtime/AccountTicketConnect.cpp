@@ -84,7 +84,9 @@ namespace sw
                 AccountTicketConnector& connector = game::getSubsystem<AccountTicketConnector>();
                 if ( const expected<void> acquired = connector.acquire( std::move( request ), credentials ); acquired.has_value() == false )
                 {
-                    outReply = "ticketconnect: " + string( acquired.error().message() ) + " (" + string( acquired.error().detail() ) + ")";
+                    StringBuilder<constant::buffer::kMax256> reply;
+                    reply.appendFormat( "ticketconnect: %# (%#)", acquired.error().message(), acquired.error().detail() );
+                    outReply = string( reply.view() );
                     return true;
                 }
                 GameNetSessionParams params;
@@ -98,7 +100,9 @@ namespace sw
                 SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
                 if ( pSceneManager != nullptr )
                     pSceneManager->setNetLink( pSession->makeNetLink() );
-                outReply = "ticketconnect: connecting to " + listArgument[4] + " with the account ticket";
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "ticketconnect: connecting to %# with the account ticket", listArgument[4] );
+                outReply = string( reply.view() );
                 return true;
             }
         };

@@ -39,11 +39,14 @@ namespace
         /** @brief 평지 하나와 코스터 하나의 배치입니다. @p pEntryFee 가 입장료입니다. */
         static string makeLayout( const utf8* pEntryFee )
         {
-            return string( "<ParkLayout gateX=\"20\" gateZ=\"-40\" startingCash=\"14000\" entryFee=\"" ) + pEntryFee + "\">" + kParkRules +
-                   "<FlatRide id=\"cups\" name=\"Spinning Cups\" excitement=\"2\" intensity=\"1\" nausea=\"1\" cycleTime=\"40\" capacity=\"16\" price=\"3\" runningCost=\"3\" cost=\"2000\" "
-                   "x=\"45\" z=\"0\" entranceX=\"45\" entranceZ=\"-10\" shape=\"Cylinder\" sizeX=\"6\" sizeY=\"2\" sizeZ=\"6\" color=\"1,1,1,1\"/>"
-                   "<Coaster layout=\"family\" x=\"90\" z=\"0\" heading=\"0\" color=\"0.3,0.75,0.4,1\" capacity=\"16\" loadTime=\"15\" cost=\"4000\"/>"
-                   "</ParkLayout>";
+            StringBuilder<constant::buffer::kMax4096> text;
+            text.appendFormat( "<ParkLayout gateX=\"20\" gateZ=\"-40\" startingCash=\"14000\" entryFee=\"%#\">%#"
+                               "<FlatRide id=\"cups\" name=\"Spinning Cups\" excitement=\"2\" intensity=\"1\" nausea=\"1\" cycleTime=\"40\" capacity=\"16\" price=\"3\" runningCost=\"3\" cost=\"2000\" "
+                               "x=\"45\" z=\"0\" entranceX=\"45\" entranceZ=\"-10\" shape=\"Cylinder\" sizeX=\"6\" sizeY=\"2\" sizeZ=\"6\" color=\"1,1,1,1\"/>"
+                               "<Coaster layout=\"family\" x=\"90\" z=\"0\" heading=\"0\" color=\"0.3,0.75,0.4,1\" capacity=\"16\" loadTime=\"15\" cost=\"4000\"/>"
+                               "</ParkLayout>",
+                               pEntryFee, kParkRules );
+            return string( text.view() );
         }
     };
     using Util = ParkLayoutTestUtil;

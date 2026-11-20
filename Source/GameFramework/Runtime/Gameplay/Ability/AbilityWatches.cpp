@@ -32,7 +32,9 @@ namespace sw
                 const optional<float32> value = pAbility->getAttributeValue( hashed_string( query._key ) );
                 if ( value.has_value() == false )
                 {
-                    outValue.setText( string( "the target has no attribute '" ) + string( query._key ) + "'" );
+                    fixed_string<constant::buffer::kMax256> text;
+                    formatstring( text.data(), text.capacity(), "the target has no attribute '%#'", query._key );
+                    outValue.setText( text.view() );
                     return false;
                 }
                 outValue.setNumber( static_cast<float64>( *value ) );

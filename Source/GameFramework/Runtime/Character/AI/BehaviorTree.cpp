@@ -170,14 +170,11 @@ namespace sw
     expected<int32> BehaviorTree::addBlackboardCondition( optional<int32> parent, const hashed_string& key, BlackboardCompare compare, float32 value, BehaviorAbortMode abortMode )
     {
         // 코드로 짓는 트리도 같은 식이다. 있는지 묻기와 값 비교는 다른 조건이다(없는 키는 어떤 비교도 참이 아니다).
-        const bool bPresence = compare == BlackboardCompare::IsSet || compare == BlackboardCompare::IsNotSet;
-        string     text      = bPresence ? "hasBlackboard(" : "blackboard(";
-        text += key.c_str();
-        text += ")";
-        if ( compare == BlackboardCompare::IsNotSet )
-            text = "!" + text;
+        const bool                               bPresence = compare == BlackboardCompare::IsSet || compare == BlackboardCompare::IsNotSet;
+        StringBuilder<constant::buffer::kMax128> text;
+        text.appendFormat( "%#%#(%#)", compare == BlackboardCompare::IsNotSet ? "!" : "", bPresence ? "hasBlackboard" : "blackboard", key.c_str() );
         ConditionExpr condition;
-        if ( ConditionExpr::compile( text, "BehaviorTree", condition ) == false )
+        if ( ConditionExpr::compile( text.view(), "BehaviorTree", condition ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the blackboard condition does not compile" } );
         switch ( compare )
         {

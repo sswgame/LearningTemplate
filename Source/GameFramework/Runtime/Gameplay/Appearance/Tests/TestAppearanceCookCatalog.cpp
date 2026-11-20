@@ -31,11 +31,15 @@ SW_TEST_CASE( AppearanceCookTest, CookEntryCatalogsMatchTheRuntimeFiles )
     SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", "appearance", appearanceFolder ) );
     for ( const sw::PackEntryCatalog& entry : config._cookRules._listEntryCatalog )
     {
-        const sw::string      entryPath = sw::FileUtil::joinPath( "common", entry._path );
-        const sw::string      prefix    = appearanceFolder + "/";
-        const bool            bItems    = entryPath == itemPath;
-        const bool            bFolder   = sw::StringUtil::startsWith( entryPath, prefix );
-        const sw::string_view file      = bFolder ? sw::string_view( entryPath ).substr( prefix.size() ) : sw::string_view{};
-        SW_EXPECT_TRUE_MSG( bItems || ( bFolder && sw::AppearanceDatabase::isDataFile( file ) ), "_listEntryCatalog row '" + entry._kind + "' (" + entry._path + ") is no file the runtime reads" );
+        const sw::string                                 entryPath = sw::FileUtil::joinPath( "common", entry._path );
+        sw::StringBuilder<sw::constant::buffer::kMax256> prefixBuilder;
+        prefixBuilder.appendFormat( "%#/", appearanceFolder );
+        const sw::string_view                           prefix  = prefixBuilder.view();
+        const bool                                      bItems  = entryPath == itemPath;
+        const bool                                      bFolder = sw::StringUtil::startsWith( entryPath, prefix );
+        const sw::string_view                           file    = bFolder ? sw::string_view( entryPath ).substr( prefix.size() ) : sw::string_view{};
+        sw::fixed_string<sw::constant::buffer::kMax512> message;
+        sw::formatstring( message.data(), message.capacity(), "_listEntryCatalog row '%#' (%#) is no file the runtime reads", entry._kind, entry._path );
+        SW_EXPECT_TRUE_MSG( bItems || ( bFolder && sw::AppearanceDatabase::isDataFile( file ) ), message.view() );
     }
 }

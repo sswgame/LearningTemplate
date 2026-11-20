@@ -94,14 +94,10 @@ namespace sw::editor
 
     void BonePoseEditModel::recordUndo( const hashed_string& bone, string_view fieldName )
     {
-        string key;
+        StringBuilder<constant::buffer::kMax128> key;
         if ( fieldName.empty() == false )
-        {
-            key = string( fieldName );
-            key += ":";
-            key += bone.c_str();
-        }
-        _state.record( _override, key );
+            key.appendFormat( "%#:%#", fieldName, bone.c_str() );
+        _state.record( _override, key.view() );
     }
 
     expected<bool> BonePoseEditModel::setTranslation( const hashed_string& bone, const float3& translation, bool bContinuous )

@@ -55,16 +55,18 @@ namespace
         /** @brief 설치 폴더에 매니페스트를 씁니다(덮어쓰기는 기본 리소스 하나). */
         static bool writeManifest( const string& installFolder, string_view id )
         {
-            const string text = R"(<Mod id=")" + string{ id } + R"(" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Override path=")" + string{ kBasePath } +
-                                R"("/></Mod>)";
-            return writeText( FileUtil::joinPath( FileUtil::joinPath( installFolder, id ), ModManifest::kFileName ), text );
+            StringBuilder<constant::buffer::kMax512> text;
+            text.appendFormat( R"(<Mod id="%#" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Override path="%#"/></Mod>)", id, kBasePath );
+            return writeText( FileUtil::joinPath( FileUtil::joinPath( installFolder, id ), ModManifest::kFileName ), text.view() );
         }
 
         /** @brief 소스 모드 하나(새 리소스 하나 + 기본 리소스 덮어쓰기)를 씁니다. */
         static bool writeSourceMod( const string& installFolder, string_view id )
         {
-            const string content = FileUtil::joinPath( FileUtil::joinPath( installFolder, id ), ModPackBuilder::kSourceFolderName );
-            return writeManifest( installFolder, id ) && writeText( FileUtil::joinPath( content, "mods/" + string{ id } + "/data/lamp.txt" ), "lamp" ) &&
+            const string                             content = FileUtil::joinPath( FileUtil::joinPath( installFolder, id ), ModPackBuilder::kSourceFolderName );
+            StringBuilder<constant::buffer::kMax256> dataFilePath;
+            dataFilePath.appendFormat( "mods/%#/data/lamp.txt", id );
+            return writeManifest( installFolder, id ) && writeText( FileUtil::joinPath( content, dataFilePath.view() ), "lamp" ) &&
                    writeText( FileUtil::joinPath( content, kBasePath ), "modded" );
         }
 
@@ -234,14 +236,17 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     const string              basePath = "testproject/data/quests.xml";
     SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/quests.xml" ),
                                           R"(<QuestCatalog><Quest id="base_quest"><Stage id="done" complete="true"/></Quest></QuestCatalog>)" ) );
-    const string            root          = test::makeScratchPath( "ModRoot" );
-    const ModSessionRequest request       = Internal::makeRequest( root, { "tide" } );
-    const string            modDir        = FileUtil::joinPath( request._installFolder, "tide" );
-    const string            content       = FileUtil::joinPath( modDir, ModPackBuilder::kSourceFolderName );
-    const string            layerFile     = FileUtil::joinPath( content, ModManifest::makeLayerRoot( "tide" ) + "/" + basePath );
-    const vector<string>    listLayerBase = engine::getSubsystem<ResourceComposition>().getLayers();
-    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( modDir, ModManifest::kFileName ),
-                                          R"(<Mod id="tide" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Layer path=")" + basePath + R"("/></Mod>)" ) );
+    const string                             root    = test::makeScratchPath( "ModRoot" );
+    const ModSessionRequest                  request = Internal::makeRequest( root, { "tide" } );
+    const string                             modDir  = FileUtil::joinPath( request._installFolder, "tide" );
+    const string                             content = FileUtil::joinPath( modDir, ModPackBuilder::kSourceFolderName );
+    StringBuilder<constant::buffer::kMax256> layerRelative;
+    layerRelative.appendFormat( "%#/%#", ModManifest::makeLayerRoot( "tide" ), basePath );
+    const string                             layerFile     = FileUtil::joinPath( content, layerRelative.view() );
+    const vector<string>                     listLayerBase = engine::getSubsystem<ResourceComposition>().getLayers();
+    StringBuilder<constant::buffer::kMax512> manifestText;
+    manifestText.appendFormat( R"(<Mod id="tide" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Layer path="%#"/></Mod>)", basePath );
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( modDir, ModManifest::kFileName ), manifestText.view() ) );
     SW_REQUIRE_TRUE( Internal::writeText( layerFile, R"(<QuestCatalog><Quest id="tide_quest"><Stage id="done" complete="true"/></Quest></QuestCatalog>)" ) );
 
     AssetManager& assets = engine::getSubsystem<AssetManager>();
@@ -260,7 +265,9 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
 
     // 밝히지 않은 층 파일.
-    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( content, ModManifest::makeLayerRoot( "tide" ) + "/testproject/data/welcome.xml" ), "sneaky" ) );
+    StringBuilder<constant::buffer::kMax256> sneakyRelative;
+    sneakyRelative.appendFormat( "%#/testproject/data/welcome.xml", ModManifest::makeLayerRoot( "tide" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( content, sneakyRelative.view() ), "sneaky" ) );
     SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
     ModSession sneaky( assets );
     SW_EXPECT_LOG( "ModSession.UndeclaredLayer" );

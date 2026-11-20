@@ -399,15 +399,15 @@ namespace sw
             parts._pHealthRegistry->setCheck( *parts._healthCheckIndex, HealthState::Ok, "" );
         vector<string> listKitName;
         collectKitNames( listKitName );
-        string kitText;
+        StringBuilder<constant::buffer::kMax512> kitText;
         for ( const string& name : listKitName )
         {
-            if ( kitText.empty() == false )
-                kitText += ", ";
-            kitText += name;
+            if ( kitText.size() > 0 )
+                kitText.append( ", " );
+            kitText.append( name );
         }
         SW_LOG_INFO_ID( "OnlineServerRuntime.OnlineServicesListeningPort", "Online services listening on port %# (admin port %#, server %#, kits: %#)", parts._host.getListenPort(), parts._host.getAdminListenPort(),
-                        parts._context._serverID, kitText.empty() ? "none" : kitText.c_str() );
+                        parts._context._serverID, kitText.size() == 0 ? "none" : kitText.c_str() );
         return {};
     }
 
@@ -524,14 +524,15 @@ namespace sw
             }
             if ( bFound == false )
             {
-                string known;
+                StringBuilder<constant::buffer::kMax512> known;
                 for ( const OnlineServerKitFactory* pFactory : listFactory )
                 {
-                    known += known.empty() ? "" : ", ";
-                    known += pFactory->_pName;
+                    if ( known.size() > 0 )
+                        known.append( ", " );
+                    known.append( pFactory->_pName );
                 }
                 Error error{ ErrorKind::NotFound, "the online kit is not in this build", entry._name };
-                error.appendDetail( " (registered: " ).appendDetail( known.empty() ? string_view( "none" ) : string_view( known ) ).appendDetail( ")" );
+                error.appendDetail( " (registered: " ).appendDetail( known.size() == 0 ? string_view( "none" ) : known.view() ).appendDetail( ")" );
                 return unexpected( error );
             }
         }

@@ -196,7 +196,9 @@ namespace
         {
             LedgerTransferRequest request;
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), string( assetID ), amount } );
-            request._journalKey = "test/grant/" + string( assetID ) + "/" + to_string( accountID ) + "/" + to_string( amount );
+            StringBuilder<constant::buffer::kMax128> journalKey;
+            journalKey.appendFormat( "test/grant/%#/%#/%#", assetID, accountID, amount );
+            request._journalKey = string( journalKey.view() );
             request._reason     = "test.grant";
             LedgerTransferResult result;
             SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );
@@ -849,8 +851,10 @@ SW_TEST_CASE( GuildServiceTest, AccountDeletionHandsOverTheGuild )
     SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_member", kMaster, 1 ) );
     SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_depositor", kMaster, 1 ) );
     SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_storage_grant", kMaster, 1 ) );
-    vector<LedgerBalance> listShare;
-    SW_REQUIRE_TRUE( Ledger::listBalances( rig._database, LedgerHolder::makeEscrow( "guild", ServiceKeyUtil::makeHex64( guildID ) + "." + ServiceKeyUtil::makeHex64( kMaster ) ), listShare ) ==
+    vector<LedgerBalance>                   listShare;
+    StringBuilder<constant::buffer::kMax64> shareToken;
+    shareToken.appendFormat( "%#.%#", ServiceKeyUtil::makeHex64( guildID ), ServiceKeyUtil::makeHex64( kMaster ) );
+    SW_REQUIRE_TRUE( Ledger::listBalances( rig._database, LedgerHolder::makeEscrow( "guild", shareToken.view() ), listShare ) ==
                      ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( listShare.empty() ); // 돌려줄 계정이 없다 — 소각이다
     const GuildCompletion got = rig.run( GuildOperation::Get, kOfficer );
@@ -1067,11 +1071,14 @@ SW_TEST_CASE( GuildServiceTest, StoragePagesReachEveryItem )
     constexpr int32 kCommonCount = 291;
     for ( int32 index = 0; index < kCommonCount; ++index )
     {
-        string assetID = to_string( index );
-        assetID        = "item.a" + string( 3 - assetID.size(), '0' ) + assetID;
+        StringBuilder<constant::buffer::kMax64> assetIDBuilder;
+        assetIDBuilder.appendFormat( "item.a%03d", index );
+        const string          assetID( assetIDBuilder.view() );
         LedgerTransferRequest request;
         request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeEscrow( "guild", ServiceKeyUtil::makeHex64( guildID ) ), assetID, 1 + index } );
-        request._journalKey = "test/storage/" + assetID;
+        StringBuilder<constant::buffer::kMax64> journalKey;
+        journalKey.appendFormat( "test/storage/%#", assetID );
+        request._journalKey = string( journalKey.view() );
         request._reason     = "test.grant";
         LedgerTransferResult result;
         SW_REQUIRE_TRUE( Ledger::executeTransfer( rig._database, request, result ) == LedgerResult::Ok );
@@ -1081,8 +1088,9 @@ SW_TEST_CASE( GuildServiceTest, StoragePagesReachEveryItem )
         for ( const string_view assetID : { "gem.blue", "gem.green", "gem.red" } )
         {
             rig.grant( depositorID, 5, assetID );
-            const string journalKey = "test/share/" + to_string( depositorID ) + "/" + string( assetID );
-            SW_REQUIRE_TRUE( rig.transfer( GuildOperation::Deposit, depositorID, 5, journalKey, assetID )._result == SocialResult::Ok );
+            fixed_string<constant::buffer::kMax64> journalKey;
+            formatstring( journalKey.data(), journalKey.capacity(), "test/share/%#/%#", depositorID, assetID );
+            SW_REQUIRE_TRUE( rig.transfer( GuildOperation::Deposit, depositorID, 5, journalKey.view(), assetID )._result == SocialResult::Ok );
         }
     }
 
@@ -1129,10 +1137,14 @@ SW_TEST_CASE( GuildServiceTest, StoragePageSizeIsCappedByTheServer )
     const uint64 guildID = rig.makeGuild();
     for ( int32 index = 0; index < GuildLimit::kMaxStoragePage + 10; ++index )
     {
-        const string          assetID = "item.b" + to_string( 100 + index );
+        StringBuilder<constant::buffer::kMax64> assetIDBuilder;
+        assetIDBuilder.appendFormat( "item.b%#", 100 + index );
+        const string          assetID( assetIDBuilder.view() );
         LedgerTransferRequest request;
         request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeEscrow( "guild", ServiceKeyUtil::makeHex64( guildID ) ), assetID, 1 } );
-        request._journalKey = "test/storage/" + assetID;
+        StringBuilder<constant::buffer::kMax64> journalKey;
+        journalKey.appendFormat( "test/storage/%#", assetID );
+        request._journalKey = string( journalKey.view() );
         request._reason     = "test.grant";
         LedgerTransferResult result;
         SW_REQUIRE_TRUE( Ledger::executeTransfer( rig._database, request, result ) == LedgerResult::Ok );
@@ -1169,7 +1181,12 @@ namespace
             return writer.getBytes();
         }
 
-        static string makePairKey( uint64 first, uint64 second ) { return ServiceKeyUtil::makeHex64( first ) + "/" + ServiceKeyUtil::makeHex64( second ); }
+        static string makePairKey( uint64 first, uint64 second )
+        {
+            StringBuilder<constant::buffer::kMax64> key;
+            key.appendFormat( "%#/%#", ServiceKeyUtil::makeHex64( first ), ServiceKeyUtil::makeHex64( second ) );
+            return string( key.view() );
+        }
 
         static void put( MemoryServiceDatabase& database, const utf8* pTable, const string& key, const vector<uint8>& bytes )
         {
@@ -1228,11 +1245,15 @@ SW_TEST_CASE( GuildServiceTest, LeavingErasesEveryGrantPastOnePage )
     const uint64 guildID = rig.makeGuild();
     rig.grant( kMember, 10, "cur.gem" );
     SW_REQUIRE_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 10, "test/grant.dep", "cur.gem" )._result == SocialResult::Ok );
-    const string    prefix      = GuildRawRecord::makePairKey( guildID, kMember ) + "/";
+    StringBuilder<constant::buffer::kMax128> prefixBuilder;
+    prefixBuilder.appendFormat( "%#/", GuildRawRecord::makePairKey( guildID, kMember ) );
+    const string    prefix( prefixBuilder.view() );
     constexpr int32 kGrantCount = GuildLimit::kMaxStorageGrant + 8;
     for ( int32 index = 0; index < kGrantCount; ++index )
     {
-        const string key = prefix + ServiceKeyUtil::makeHex64( kOfficer ) + "/cur.g" + to_string( 100 + index );
+        StringBuilder<constant::buffer::kMax128> keyBuilder;
+        keyBuilder.appendFormat( "%#%#/cur.g%#", prefix, ServiceKeyUtil::makeHex64( kOfficer ), 100 + index );
+        const string key( keyBuilder.view() );
         GuildRawRecord::put( rig._database, "social_guild_storage_grant", key, GuildRawRecord::encode( { 1 } ) );
     }
 
@@ -1255,8 +1276,9 @@ SW_TEST_CASE( GuildServiceTest, AccountDeletionBurnsEveryShareRecordPastOnePage 
         GuildRawRecord::put( rig._database, "social_guild_depositor", GuildRawRecord::makePairKey( guildID, depositorID ), vector<uint8>{ 1 } );
     }
     // 마지막 기록의 몫에 잔액을 둔다 — 한 쪽 밖이다
-    string token = ServiceKeyUtil::makeHex64( guildID ) + ".";
-    ServiceKeyUtil::appendHex64( token, kLastDepositor );
+    StringBuilder<constant::buffer::kMax64> tokenBuilder;
+    tokenBuilder.appendFormat( "%#.%#", ServiceKeyUtil::makeHex64( guildID ), ServiceKeyUtil::makeHex64( kLastDepositor ) );
+    const string          token( tokenBuilder.view() );
     LedgerTransferRequest request;
     request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeEscrow( "guild", token ), "cur.gem", 7 } );
     request._journalKey = "test/share.last";

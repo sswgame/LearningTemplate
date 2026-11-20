@@ -18,7 +18,11 @@ namespace
     template <typename T>
     sw::string describeError( const sw::expected<T>& result )
     {
-        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+        if ( result.has_value() )
+            return sw::string{};
+        sw::StringBuilder<sw::constant::buffer::kMax512> text;
+        text.appendFormat( "%# %#", result.error().message(), result.error().detail() );
+        return sw::string( text.view() );
     }
 } // namespace
 
@@ -33,11 +37,14 @@ namespace
     {
         test::ScopedScratchDomain _domain{};
         string                    _diskFolder{};
-        string                    _folderID{ string( test::ScopedScratchDomain::kDomain ) + "/sql" };
+        string                    _folderID{};
 
         MigrationFolderFixture()
             : _diskFolder{ _domain.makeDiskFolder( "sql" ) }
         {
+            StringBuilder<constant::buffer::kMax128> folderID;
+            folderID.appendFormat( "%#/sql", test::ScopedScratchDomain::kDomain );
+            _folderID = string( folderID.view() );
         }
 
         void write( string_view fileName, string_view text ) { SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( _diskFolder, fileName ), text ) ); }
@@ -45,13 +52,14 @@ namespace
         /** @brief `<Migration _name="…" />` 를 이름마다 적은 목록 파일을 씁니다. */
         void writeList( std::initializer_list<const utf8*> listName )
         {
-            string text = "<SQLMigrationList>";
+            StringBuilder<constant::buffer::kMax1024> text;
+            text.append( "<SQLMigrationList>" );
             for ( const utf8* pName : listName )
             {
-                text += string( "<Migration _name=\"" ) + pName + "\" _compatibility=\"Backward\" />";
+                text.appendFormat( "<Migration _name=\"%#\" _compatibility=\"Backward\" />", pName );
             }
-            text += "</SQLMigrationList>";
-            write( SQLMigrationRunner::kListFileName, text );
+            text.append( "</SQLMigrationList>" );
+            write( SQLMigrationRunner::kListFileName, text.view() );
         }
 
         expected<void> load( string_view driverName, vector<SQLMigration>& outListMigration ) const

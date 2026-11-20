@@ -138,7 +138,9 @@ namespace sw
             // 읽었는데 풀리지 않는다 — 0 바이트 · 쓰레기(전원이 나간 쓰기) · 다른 PC · 다른 사용자의 파일이다. 오류로 멈추면 그 사용자는 파일을 지울 때까지
             // 저장도 읽기도 못 한다. 지우지 않고 옆에 남긴 뒤 새 키를 만든다 — 다른 사용자의 파일이었으면 되돌려 놓아 옛 슬롯을 다시 푼다(유니티 PlayerPrefs 가 깨진 파일을 비우는 자리보다 보수적).
             // 앞서 남긴 것도 지우지 않는다(번호를 붙인 새 이름). 새 키는 아래 쓰기가 원래 이름에 바꿔 끼운다.
-            outSetAsidePath       = FileUtil::reserveUniquePath( _keyFilePath + kUnreadableKeySuffix, "", false );
+            StringBuilder<constant::buffer::kMax512> setAsideBase;
+            setAsideBase.appendFormat( "%#%#", _keyFilePath, kUnreadableKeySuffix );
+            outSetAsidePath       = FileUtil::reserveUniquePath( setAsideBase.view(), "", false );
             const bool bKeptAside = outSetAsidePath.empty() == false && ( bytes.empty() || FileUtil::writeFileDurable( outSetAsidePath, bytes.data(), bytes.size() ) );
             Memory::wipe( bytes.data(), bytes.size() ); // 다른 사용자의 키 파일일 수 있다
             if ( bKeptAside == false )

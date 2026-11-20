@@ -188,7 +188,9 @@ namespace
     {
         LedgerTransferRequest grant;
         grant._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( senderID ), "gold", amount } );
-        grant._journalKey = string( "test/grant." ) + string( idempotencyKey );
+        StringBuilder<constant::buffer::kMax128> journalKey;
+        journalKey.appendFormat( "test/grant.%#", idempotencyKey );
+        grant._journalKey = string( journalKey.view() );
         grant._reason     = "test.grant";
         grant._timeMs     = kNowMs;
         LedgerTransferResult grantResult;
@@ -272,11 +274,15 @@ SW_TEST_CASE( MailboxStoreLogicTest, ClaimAllReachesPastTheFirstPage )
     const FixedCapPolicy  policy{ 0 };
     for ( int32 index = 0; index < 3; ++index )
     {
-        (void)sendReward( database, "old.reward." + to_string( index ), "gold", 10, 0, kNowMs - 100000 + index );
+        fixed_string<constant::buffer::kMax32> key;
+        formatstring( key.data(), key.capacity(), "old.reward.%#", index );
+        (void)sendReward( database, key.view(), "gold", 10, 0, kNowMs - 100000 + index );
     }
     for ( int32 index = 0; index < 60; ++index )
     {
-        (void)sendReward( database, "notice." + to_string( index ), "gold", 0, 0, kNowMs + index ); // 첨부 없는 최근 알림
+        fixed_string<constant::buffer::kMax32> key;
+        formatstring( key.data(), key.capacity(), "notice.%#", index );
+        (void)sendReward( database, key.view(), "gold", 0, 0, kNowMs + index ); // 첨부 없는 최근 알림
     }
     MailboxClaimReply reply;
     SW_EXPECT_TRUE( MailboxStoreLogic::claimAll( database, kRecipient, kNowMs + 1000, kClaimedMs, &policy, reply ) == MailboxResult::Ok );
@@ -343,9 +349,11 @@ SW_TEST_CASE( MailboxStoreLogicTest, CampaignEndedBetweenReadAndCommitIsNotPaid 
     SW_REQUIRE_TRUE( ServiceMailCampaign::stageCreate( makeCampaign( kNowMs + 100000 ), create ) );
     SW_REQUIRE_TRUE( database.commit( create ) == ServiceStoreResult::Ok );
 
-    CampaignEndingConnection connection( database );
-    MailboxClaimInput        input;
-    input._mailKey            = string( MailboxProtocol::kCampaignPrefix ) + ServiceKeyUtil::makeHex64( kCampaignID );
+    CampaignEndingConnection                 connection( database );
+    MailboxClaimInput                        input;
+    StringBuilder<constant::buffer::kMax128> mailKey;
+    mailKey.appendFormat( "%#%#", MailboxProtocol::kCampaignPrefix, ServiceKeyUtil::makeHex64( kCampaignID ) );
+    input._mailKey            = string( mailKey.view() );
     input._accountID          = kRecipient;
     input._nowMs              = kNowMs + 1000; // 끼운 일이 끝 시각을 kNowMs + 500 으로 당긴다
     input._claimedRetentionMs = kClaimedMs;

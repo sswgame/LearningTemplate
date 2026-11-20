@@ -175,9 +175,10 @@ namespace
             SW_EXPECT_LOG( "LocalDeviceKeyProvider.UnreadableKeyReplaced" );
             SW_REQUIRE_TRUE( keyProvider.getSealKey( arrKey ) ); // 예전에는 IOError 로 멈춰 사용자가 파일을 지울 때까지 저장 · 읽기가 막혔다
         }
-        const string setAsidePath = keyPath + LocalDeviceKeyProvider::kUnreadableKeySuffix;
-        string       keptBytes;
-        SW_REQUIRE_TRUE( FileUtil::readTextFile( setAsidePath, keptBytes ) );
+        StringBuilder<constant::buffer::kMax512> setAsidePath;
+        setAsidePath.appendFormat( "%#%#", keyPath, LocalDeviceKeyProvider::kUnreadableKeySuffix );
+        string keptBytes;
+        SW_REQUIRE_TRUE( FileUtil::readTextFile( setAsidePath.view(), keptBytes ) );
         SW_EXPECT_TRUE( keptBytes == keyBytes ); // 지우지 않는다 — 다른 사용자의 파일이었으면 되돌려 놓을 수 있다
 
         uint8                  arrReloadedKey[ILocalStoreKeyProvider::kKeySize]{};
@@ -211,9 +212,10 @@ SW_TEST_CASE( LocalStoreFileTest, CorruptSlotFallsBackToThePreviousGeneration )
     SW_REQUIRE_TRUE( Contract::write( fixture.getStore(), "save/slot0", Contract::makeText( "second" ) ) == LocalStoreResult::Ok );
     fixture._store.reset(); // 쓰기를 마친 뒤 파일을 직접 고친다
 
-    const string slotPath     = fixture._directStorage.makeSlotPath( "save/slot0" );
-    const string previousPath = slotPath + FileLocalSlotStorage::kPreviousGenerationSuffix;
-    SW_REQUIRE_TRUE( FileUtil::isRegularFile( previousPath ) );
+    const string                             slotPath = fixture._directStorage.makeSlotPath( "save/slot0" );
+    StringBuilder<constant::buffer::kMax512> previousPath;
+    previousPath.appendFormat( "%#%#", slotPath, FileLocalSlotStorage::kPreviousGenerationSuffix );
+    SW_REQUIRE_TRUE( FileUtil::isRegularFile( previousPath.view() ) );
     const uint8 arrGarbage[4] = { 0xDE, 0xAD, 0xBE, 0xEF };
     SW_REQUIRE_TRUE( FileUtil::writeFile( slotPath, arrGarbage, sizeof( arrGarbage ) ) );
 
@@ -226,11 +228,11 @@ SW_TEST_CASE( LocalStoreFileTest, CorruptSlotFallsBackToThePreviousGeneration )
     }
 
     fixture._store.reset();
-    SW_REQUIRE_TRUE( FileUtil::writeFile( previousPath, arrGarbage, sizeof( arrGarbage ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( previousPath.view(), arrGarbage, sizeof( arrGarbage ) ) );
     fixture.restart();
     SW_EXPECT_TRUE( Contract::read( fixture.getStore(), "save/slot0" )._result == LocalStoreResult::Corrupt );
 
     fixture._store.reset();
     SW_REQUIRE_TRUE( fixture._directStorage.eraseSlot( "save/slot0" ) == LocalStoreResult::Ok );
-    SW_EXPECT_FALSE( FileUtil::exists( previousPath ) ); // 지우기는 직전 세대도 지운다
+    SW_EXPECT_FALSE( FileUtil::exists( previousPath.view() ) ); // 지우기는 직전 세대도 지운다
 }

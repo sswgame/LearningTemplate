@@ -565,9 +565,10 @@ namespace sw::editor
         }
         if ( _document.canAttachThumbnail() == false )
             return; // 까닭은 상태 줄에 남았다
-        const string presetName  = string{ _document.getPaths()._presetName.c_str() };
-        const string requestName = "charactereditor.thumbnail." + presetName;
-        const uint32 ticket      = getPreviewViewport().requestImagePNGBytes( requestName );
+        const string                             presetName = string{ _document.getPaths()._presetName.c_str() };
+        StringBuilder<constant::buffer::kMax128> requestName;
+        requestName.appendFormat( "charactereditor.thumbnail.%#", presetName );
+        const uint32 ticket = getPreviewViewport().requestImagePNGBytes( requestName.view() );
         if ( ticket == 0 )
         {
             _document.setStatus( "The thumbnail needs the Preview tab drawn at least once" );

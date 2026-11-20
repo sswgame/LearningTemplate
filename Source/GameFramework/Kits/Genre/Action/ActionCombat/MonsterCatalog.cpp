@@ -54,7 +54,9 @@ namespace sw
         MonsterDef monsterDef;
         bool       bValid = XMLFields::readProperties( node, monsterDef, sourceName );
         // 하위 원소의 오류 줄에 어느 몬스터인지 적는다(하위 원소에는 id 가 없다).
-        const string where = string( sourceName ) + " <Monster id=\"" + monsterDef._id + "\">";
+        StringBuilder<constant::buffer::kMax512> whereBuilder;
+        whereBuilder.appendFormat( "%# <Monster id=\"%#\">", sourceName, monsterDef._id );
+        const string_view where = whereBuilder.view();
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
             const string_view name = child.getName() != nullptr ? string_view( child.getName() ) : string_view{};

@@ -373,8 +373,9 @@ namespace sw::editor
     {
         bool bPicked = false;
         _model.collectIDs( kind, _listScratchID );
-        const string preview( current.empty() ? string_view( SW_LOCKEY( "EdAbilityCatalog", "NoneChoice" ) ) : current );
-        const string comboID = string( "##" ) + pID; // 이름표는 줄 앞(`drawPropertyRowLabel`)이 이미 그렸다
+        const string                            preview( current.empty() ? string_view( SW_LOCKEY( "EdAbilityCatalog", "NoneChoice" ) ) : current );
+        fixed_string<constant::buffer::kMax128> comboID;
+        formatstring( comboID.data(), comboID.capacity(), "##%#", pID ); // 이름표는 줄 앞(`drawPropertyRowLabel`)이 이미 그렸다
         EditorChrome::setNextItemWidthColumns( 24.0f );
         if ( EditorWidgets::beginCombo( comboID.c_str(), preview.c_str() ) )
         {
@@ -387,7 +388,7 @@ namespace sw::editor
                     bPicked = true;
                 }
                 if ( index == 0 )
-                    EditorSelfTestMarks::record( ( string( pID ) + ".first" ).c_str() );
+                    EditorSelfTestMarks::recordFormat( "%#.first", pID );
             }
             ImGui::EndCombo();
         }

@@ -82,55 +82,56 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
     { listType.push_back( &typeInfo ); } );
     SW_REQUIRE_TRUE( listType.size() > 50 );
 
-    constexpr float32 kMaxRadian = sw::MathUtil::kPi * 2.0f + 0.01f;
-    sw::string        offenders;
-    uint32            unitCount{ 0 };
-    uint32            angleCount{ 0 };
-    uint32            ratioCount{ 0 };
-    uint32            radiansCount{ 0 };
+    constexpr float32                                 kMaxRadian = sw::MathUtil::kPi * 2.0f + 0.01f;
+    sw::StringBuilder<sw::constant::buffer::kMax4096> offenders;
+    uint32                                            unitCount{ 0 };
+    uint32                                            angleCount{ 0 };
+    uint32                                            ratioCount{ 0 };
+    uint32                                            radiansCount{ 0 };
     for ( const sw::TypeInfo* pType : listType )
     {
         for ( const sw::PropertyInfo& prop : pType->_listProperty )
         {
-            const sw::ReflectUnit* pUnits = sw::ReflectUnit::findUnit( prop._metadata->_unit );
-            const sw::string       units  = ( pUnits != nullptr ) ? sw::string{ pUnits->_pName } : sw::string{};
-            const sw::string       where  = sw::string( pType->_fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + " (Units=" + units + "): ";
-            const bool             bMax   = prop._metadata->_bHasMaxRange != SW_FALSE;
-            const float32          maxAt  = prop._metadata->_maxRange;
+            const sw::ReflectUnit*                          pUnits = sw::ReflectUnit::findUnit( prop._metadata->_unit );
+            const sw::string                                units  = ( pUnits != nullptr ) ? sw::string{ pUnits->_pName } : sw::string{};
+            sw::fixed_string<sw::constant::buffer::kMax512> where;
+            sw::formatstring( where.data(), where.capacity(), "%#::%# (Units=%#): ", pType->_fullyQualifiedName.c_str(), prop._name.c_str(), units );
+            const bool    bMax  = prop._metadata->_bHasMaxRange != SW_FALSE;
+            const float32 maxAt = prop._metadata->_maxRange;
             if ( pUnits != nullptr )
                 ++unitCount;
             // 파일 스키마(`…Fields` — 원소 하나의 칸, `XMLFields::readProperties`)의 칸은 파일 글 그대로의 단위다. 손으로 쓰는 데이터는 각을 도로 적고
             // 읽은 뒤 라디안으로 옮긴다(`SocketSet` 의 오일러 회전 · `SkinLayerValueParams`). 그 칸은 `Units = deg` 로 파일 단위를 밝힌다(스칼라 각은 `Radians` 칸이 낫다) — 라디안 규칙은 엔진이 쥐는 값의 타입에 건다.
             const bool bFileSchema = sw::StringUtil::endsWith( pType->_name.view(), "Params" );
             if ( units == "deg" && bFileSchema == false )
-                offenders += where + "angles are stored in radians — write Units=rad\n";
+                offenders.appendFormat( "%#angles are stored in radians — write Units=rad\n", where.c_str() );
             if ( prop._typeName == sw::hashed_string( "Radians" ) )
             {
                 ++radiansCount;
                 if ( pUnits != nullptr )
-                    offenders += where + "a Radians property names its unit by type — remove Units\n";
+                    offenders.appendFormat( "%#a Radians property names its unit by type — remove Units\n", where.c_str() );
             }
             if ( isAngleName( prop._name ) && isFloatType( prop._typeName ) )
             {
                 ++angleCount;
                 if ( units != "rad" && ( bFileSchema == false || units != "deg" ) )
-                    offenders += where + "an angle property must say Units=rad\n";
+                    offenders.appendFormat( "%#an angle property must say Units=rad\n", where.c_str() );
             }
             if ( units == "percent" && ( bMax == false || maxAt <= 1.0f ) )
-                offenders += where + "a 0..1 value is a ratio — write Units=ratio (percent means 0..100)\n";
+                offenders.appendFormat( "%#a 0..1 value is a ratio — write Units=ratio (percent means 0..100)\n", where.c_str() );
             if ( units == "ratio" )
             {
                 ++ratioCount;
                 if ( bMax && maxAt > 1.0f )
-                    offenders += where + "a ratio is 0..1 but Max is above 1\n";
+                    offenders.appendFormat( "%#a ratio is 0..1 but Max is above 1\n", where.c_str() );
             }
             const bool bRadianMaxTooLarge = units == "rad" && bMax && maxAt > kMaxRadian;
             if ( bRadianMaxTooLarge )
-                offenders += where + "Max is above 2*pi — the range looks like degrees\n";
+                offenders.appendFormat( "%#Max is above 2*pi — the range looks like degrees\n", where.c_str() );
             for ( const ConflictingUnitWord& conflict : kArrConflictingUnitWord )
             {
                 if ( units == conflict._pUnits && sw::StringUtil::stristr( prop._metadata->getEditor()._tooltip.c_str(), conflict._pWord ) != nullptr )
-                    offenders += where + "the tooltip says '" + conflict._pWord + "' — tooltip and Units must name the same unit\n";
+                    offenders.appendFormat( "%#the tooltip says '%#' — tooltip and Units must name the same unit\n", where.c_str(), conflict._pWord );
             }
         }
     }
@@ -139,5 +140,5 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
     SW_EXPECT_TRUE( radiansCount >= 8 );
     SW_EXPECT_TRUE( angleCount >= 4 );
     SW_EXPECT_TRUE( ratioCount >= 3 );
-    SW_EXPECT_TRUE_MSG( offenders.empty(), offenders.c_str() );
+    SW_EXPECT_TRUE_MSG( offenders.size() == 0, offenders.c_str() );
 }

@@ -104,7 +104,12 @@ namespace
             SW_REQUIRE_TRUE( _server.initialize( StreamTransportFactory::createPlatformTransport(), transportSettings, serverSettings, HTTPRequestFunction::create<&FakeStoreEndpoint::onRequest>( this ) ) );
         }
 
-        string makeBaseURL() { return "https://localhost:" + to_string( static_cast<int32>( _server.getListenPort() ) ); }
+        string makeBaseURL()
+        {
+            StringBuilder<constant::buffer::kMax64> url;
+            url.appendFormat( "https://localhost:%#", static_cast<int32>( _server.getListenPort() ) );
+            return string( url.view() );
+        }
 
         void onRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse )
         {
@@ -119,13 +124,17 @@ namespace
             {
                 const HTTPHeader* const pKey = request.findQuery( "key" );
                 _listSteamKey.push_back( pKey != nullptr ? pKey->_value : string() );
-                body = string( R"({"response":{"result":"OK","params":{"orderid":")" ) + kSteamOrder + R"(","status":"Succeeded","time":"2023-11-14T22:13:20Z","items":[{"itemid":"100","qty":1}]}}})";
+                StringBuilder<constant::buffer::kMax256> bodyBuilder;
+                bodyBuilder.appendFormat( R"({"response":{"result":"OK","params":{"orderid":"%#","status":"Succeeded","time":"2023-11-14T22:13:20Z","items":[{"itemid":"100","qty":1}]}}})", kSteamOrder );
+                body = string( bodyBuilder.view() );
             }
             else if ( request._path.find( "/inApps/v1/transactions/" ) != string::npos )
             {
                 const HTTPHeader* const pAuthorization = request.findHeader( "Authorization" );
                 _listAppleAuthorization.push_back( pAuthorization != nullptr ? pAuthorization->_value : string() );
-                body = R"({"signedTransactionInfo":")" + _appleTransaction + R"("})";
+                StringBuilder<constant::buffer::kMax4096> bodyBuilder;
+                bodyBuilder.appendFormat( R"({"signedTransactionInfo":"%#"})", _appleTransaction );
+                body = string( bodyBuilder.view() );
             }
             else if ( request._path.find( "voidedpurchases" ) != string::npos )
             {
@@ -164,7 +173,9 @@ namespace
             string                googleKey;
             NetPublicKey          publicKey;
             SW_REQUIRE_TRUE( security.createSigningKeyPair( NetSignatureAlgorithm::RsaPkcs1SHA256, googleKey, publicKey ) );
-            _googleAccountJSON = R"({"project_id":"proj","client_email":"a@b","private_key":")" + test::escapeJSONText( googleKey ) + R"("})";
+            StringBuilder<constant::buffer::kMax4096> accountJSON;
+            accountJSON.appendFormat( R"({"project_id":"proj","client_email":"a@b","private_key":"%#"})", test::escapeJSONText( googleKey ) );
+            _googleAccountJSON = string( accountJSON.view() );
             SW_REQUIRE_TRUE( security.createSigningKeyPair( NetSignatureAlgorithm::EcdsaP256Sha256, _appleSigningKey, publicKey ) );
             SW_REQUIRE_TRUE( security.createTestCertificateChain( 1, AppleReceiptSettings::kLeafOid, AppleReceiptSettings::kIntermediateOid, _listChainPem, _appleLeafKey ) );
             SW_REQUIRE_EQUAL( size_t( 3 ), _listChainPem.size() );
@@ -177,16 +188,21 @@ namespace
         /** @brief 애플이 주는 것과 같은 서명 거래(JWS)를 실제 키와 사슬로 만듭니다. */
         string makeAppleTransaction() const
         {
-            string header = R"({"alg":"ES256","x5c":[")" + ReceiptEndpointTestUtil::extractPemBody( _listChainPem[0] ) + R"(",")" + ReceiptEndpointTestUtil::extractPemBody( _listChainPem[1] ) + R"(",")" +
-                            ReceiptEndpointTestUtil::extractPemBody( _listChainPem[2] ) + R"("]})";
+            StringBuilder<constant::buffer::kMax4096> header;
+            header.appendFormat( R"({"alg":"ES256","x5c":["%#","%#","%#"]})", ReceiptEndpointTestUtil::extractPemBody( _listChainPem[0] ), ReceiptEndpointTestUtil::extractPemBody( _listChainPem[1] ),
+                                 ReceiptEndpointTestUtil::extractPemBody( _listChainPem[2] ) );
             StringBuilder<constant::buffer::kMax256> payloadBuilder;
             payloadBuilder.appendFormat( R"({"transactionId":"%#","productId":"gem100","bundleId":"%#","environment":"Production","appAccountToken":"tok","purchaseDate":1700000000000})", kAppleOrder, kBundle );
-            string        payload{ payloadBuilder.view() };
-            const string  signingInput = ReceiptEndpointTestUtil::encodeURL( header ) + "." + ReceiptEndpointTestUtil::encodeURL( payload );
+            string                                    payload{ payloadBuilder.view() };
+            StringBuilder<constant::buffer::kMax8192> signingInputBuilder;
+            signingInputBuilder.appendFormat( "%#.%#", ReceiptEndpointTestUtil::encodeURL( header.view() ), ReceiptEndpointTestUtil::encodeURL( payload ) );
+            const string  signingInput( signingInputBuilder.view() );
             vector<uint8> signature;
             SW_EXPECT_TRUE( game::getSubsystem<INetSecurityProvider>().signData( NetSignatureAlgorithm::EcdsaP256Sha256, _appleLeafKey, reinterpret_cast<const uint8*>( signingInput.data() ),
                                                                                  static_cast<int32>( signingInput.size() ), signature ) );
-            return signingInput + "." + Base64Util::encodeURL( signature.data(), signature.size() );
+            StringBuilder<constant::buffer::kMax8192> compact;
+            compact.appendFormat( "%#.%#", signingInput, Base64Util::encodeURL( signature.data(), signature.size() ) );
+            return string( compact.view() );
         }
 
         string writeProvidersFile( const string& baseURL ) const
@@ -334,7 +350,9 @@ SW_TEST_CASE_F( ReceiptEndToEndTest, MissingSecretStopsAssembly )
     _secrets._steamEnv.reset();
     const auto failed1 = assemble();
     SW_REQUIRE_FALSE( failed1.has_value() );
-    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    StringBuilder<constant::buffer::kMax512> error1Builder;
+    error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );
+    const sw::string error1( error1Builder.view() );
     SW_EXPECT_TRUE( error1.find( kSteamEnv ) != string::npos );
     SW_EXPECT_EQUAL( 0, _providers.getProviderCount() );
 }
@@ -352,7 +370,9 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
     string                googleKey;
     NetPublicKey          publicKey;
     SW_REQUIRE_TRUE( security.createSigningKeyPair( NetSignatureAlgorithm::RsaPkcs1SHA256, googleKey, publicKey ) );
-    const test::ScopedEnvironmentVariable    googleEnv{ kGoogleEnv, R"({"project_id":"proj","client_email":"a@b","private_key":")" + test::escapeJSONText( googleKey ) + R"("})" };
+    StringBuilder<constant::buffer::kMax4096> googleAccountJSON;
+    googleAccountJSON.appendFormat( R"({"project_id":"proj","client_email":"a@b","private_key":"%#"})", test::escapeJSONText( googleKey ) );
+    const test::ScopedEnvironmentVariable    googleEnv{ kGoogleEnv, googleAccountJSON.view() };
     const string                             baseURL = endpoint.makeBaseURL();
     StringBuilder<constant::buffer::kMax256> textBuilder;
     textBuilder.appendFormat( R"({"providers":[{"kind":"google","packageName":"%#","serviceAccountEnvironment":"%#","baseUrl":"%#","tokenUrl":"%#/token","buyerBinding":"accountToken"}]})", kBundle, kGoogleEnv, baseURL, baseURL );
@@ -376,7 +396,9 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
         test::OnlineRuntimeFixture noTrust;
         const auto                 failed1 = noTrust.fromConfig( kServerJSON, makeOnlineJSON( "" ), ReceiptEndpointTestUtil::getNowMs() );
         SW_REQUIRE_FALSE( failed1.has_value() );
-        const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+        StringBuilder<constant::buffer::kMax512> error1Builder;
+        error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );
+        const sw::string error1( error1Builder.view() );
         SW_EXPECT_TRUE( error1.find( "receiptTrustFile" ) != string::npos );
     }
 

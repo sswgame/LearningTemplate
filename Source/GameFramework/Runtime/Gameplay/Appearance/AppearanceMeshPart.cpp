@@ -345,7 +345,9 @@ namespace sw
     {
         if ( part._owner.empty() )
             return part._partName;
-        return hashed_string( ( string( part._owner.c_str() ) + "." + part._partName.c_str() ).c_str() );
+        StringBuilder<constant::buffer::kMax256> name;
+        name.appendFormat( "%#.%#", part._owner.c_str(), part._partName.c_str() );
+        return hashed_string( name.view() );
     }
 
     MeshMergePart AppearanceMeshPart::makeMergePart( const ResolvedPart& part, const Mesh& mesh, bool bBody )
@@ -353,7 +355,10 @@ namespace sw
         MeshMergePart merge{ makeSectionName( part ), part._material, &mesh };
         for ( const AppearanceSectionDef& section : part._listSection ) // 변형 · 규칙을 반영한 구간 머티리얼 — 병합해도 구간마다 머티리얼이 남는다
         {
-            const hashed_string name = bBody ? section._name : hashed_string( ( string( merge._name.c_str() ) + "/" + section._name.c_str() ).c_str() );
+            StringBuilder<constant::buffer::kMax256> mergedName;
+            if ( bBody == false )
+                mergedName.appendFormat( "%#/%#", merge._name.c_str(), section._name.c_str() );
+            const hashed_string name = bBody ? section._name : hashed_string( mergedName.view() );
             merge._listSection.push_back( MeshMergeSectionPick{ section._name, name, section._material.key() } );
         }
         return merge;

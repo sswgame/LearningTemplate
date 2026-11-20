@@ -31,12 +31,16 @@ namespace sw
 {
     hashed_string SurfaceParameterNames::makeChannel( const hashed_string& channel )
     {
-        return hashed_string( ( string( "_surface" ) + channel.c_str() ).c_str() );
+        StringBuilder<constant::buffer::kMax128> name;
+        name.appendFormat( "_surface%#", channel.c_str() );
+        return hashed_string( name.view() );
     }
 
     hashed_string SurfaceParameterNames::makeMask( const hashed_string& channel )
     {
-        return hashed_string( ( string( "_surface" ) + channel.c_str() + "Mask" ).c_str() );
+        StringBuilder<constant::buffer::kMax128> name;
+        name.appendFormat( "_surface%#Mask", channel.c_str() );
+        return hashed_string( name.view() );
     }
 
     hashed_string SurfaceParameterNames::makeRegion( uint32 region, uint32 chunk )

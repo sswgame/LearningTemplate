@@ -113,7 +113,9 @@ namespace sw
 
             static string makeSeasonResultKey( string_view boardID, uint32 seasonID, AccountID accountID )
             {
-                return string( boardID ) + "/" + makeSeasonHex( seasonID ) + "/" + ServiceKeyUtil::makeHex64( accountID );
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%#/%#/%#", boardID, makeSeasonHex( seasonID ), ServiceKeyUtil::makeHex64( accountID ) );
+                return string( key.view() );
             }
 
             /** @brief 시즌 보드의 시즌 목록 규칙을 검사합니다. id 는 1 이상이고 유일해야 하며, 시작이 끝보다 앞서야 합니다. 보상 구간은 1 ≤ from ≤ to 이고 자산, 수량, 우편 제목이 있어야 합니다. */
@@ -173,9 +175,24 @@ namespace sw
                 return s_table;
             }
 
-            static string makeScorePrefix( string_view boardID, uint64 periodID ) { return string( boardID ) + "/" + ServiceKeyUtil::makeHex64( periodID ) + "/"; }
-            static string makeNameKey( AccountID accountID ) { return string( "lb/name/" ) + ServiceKeyUtil::makeHex64( accountID ); }
-            static string makeReadyKey( const string& rankKey ) { return rankKey + "/ready"; }
+            static string makeScorePrefix( string_view boardID, uint64 periodID )
+            {
+                StringBuilder<constant::buffer::kMax128> prefix;
+                prefix.appendFormat( "%#/%#/", boardID, ServiceKeyUtil::makeHex64( periodID ) );
+                return string( prefix.view() );
+            }
+            static string makeNameKey( AccountID accountID )
+            {
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "lb/name/%#", ServiceKeyUtil::makeHex64( accountID ) );
+                return string( key.view() );
+            }
+            static string makeReadyKey( const string& rankKey )
+            {
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%#/ready", rankKey );
+                return string( key.view() );
+            }
             /** @brief 캐시 순위의 멤버입니다. 캐시가 같은 점수를 멤버 역순으로 세우므로 보수를 써서 계정 id 오름차순이 되게 합니다. */
             static string             makeRankMember( AccountID accountID ) { return ServiceKeyUtil::makeHex64( ~accountID ); }
             [[nodiscard]] static bool parseRankMember( string_view member, AccountID& outAccountID )
@@ -496,10 +513,15 @@ namespace sw
             static bool readAccountPage( IServiceStoreConnection& connection, const hashed_string& table, AccountID accountID, string_view cursor, int32 maxCount, string& outNextCursor,
                                          Decode&& decode )
             {
-                vector<ServiceRecord>   listRecord;
-                const string            prefix    = ServiceKeyUtil::makeHex64( accountID ) + "/";
-                const string            cursorKey = cursor.empty() ? string() : prefix + string( cursor );
-                const ServiceRecordPage page      = ServiceRecordReader::readPage( connection, table, prefix, cursorKey, maxCount, false, listRecord );
+                vector<ServiceRecord>                    listRecord;
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+                const string                             prefix( prefixBuilder.view() );
+                StringBuilder<constant::buffer::kMax128> cursorBuilder;
+                if ( cursor.empty() == false )
+                    cursorBuilder.appendFormat( "%#%#", prefix, cursor );
+                const string            cursorKey( cursorBuilder.view() );
+                const ServiceRecordPage page = ServiceRecordReader::readPage( connection, table, prefix, cursorKey, maxCount, false, listRecord );
                 if ( page.isOk() == false )
                     return false;
                 for ( const ServiceRecord& record : listRecord )
@@ -538,10 +560,12 @@ namespace sw
             static LeaderboardRead<vector<LeaderboardStat>> readAllStats( IServiceStoreConnection& connection, AccountID accountID )
             {
                 LeaderboardRead<vector<LeaderboardStat>> read;
-                const string                             prefix  = ServiceKeyUtil::makeHex64( accountID ) + "/";
-                bool                                     bDecode = true;
-                const ServiceStoreResult                 listed  = ServiceRecordReader::visitAll( connection, LeaderboardServiceInternal::getStatTable(), prefix, LeaderboardLimit::kMaxStatCount, [&]( const ServiceRecord& record )
-                                 {
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+                const string             prefix( prefixBuilder.view() );
+                bool                     bDecode = true;
+                const ServiceStoreResult listed  = ServiceRecordReader::visitAll( connection, LeaderboardServiceInternal::getStatTable(), prefix, LeaderboardLimit::kMaxStatCount, [&]( const ServiceRecord& record )
+                 {
                     LeaderboardStat stat;
                     stat._name = record._key.substr( prefix.size() );
                     bDecode    = LeaderboardServiceInternal::decodeScore( record._bytes, stat._value );
@@ -561,8 +585,10 @@ namespace sw
             /** @brief 업적 하나를 "없어야 함" 조건으로 쓰고 보상 우편을 같은 트랜잭션에 넣습니다. 이미 있으면 아무것도 하지 않고 false 입니다. */
             static bool unlockAchievement( IServiceStoreConnection& connection, const OnlineAchievementDef& definition, AccountID accountID, UnixMilliseconds nowMs )
             {
-                using Internal    = LeaderboardServiceInternal;
-                const string  key = ServiceKeyUtil::makeHex64( accountID ) + "/" + definition._achievementID;
+                using Internal = LeaderboardServiceInternal;
+                StringBuilder<constant::buffer::kMax128> keyBuilder;
+                keyBuilder.appendFormat( "%#/%#", ServiceKeyUtil::makeHex64( accountID ), definition._achievementID );
+                const string  key( keyBuilder.view() );
                 ServiceRecord existing;
                 if ( connection.readRecord( Internal::getAchievementTable(), key, existing ) != ServiceStoreResult::NotFound )
                     return false; // 이미 달성했거나 저장소가 실패했다. 다음 통계 변화 때 다시 확인한다
@@ -570,9 +596,11 @@ namespace sw
                 transaction.put( Internal::getAchievementTable(), key, Internal::encodeScore( nowMs.count(), nowMs.count(), string_view{} ), ServiceRecord::kAbsentVersion ); // 값은 달성 시각이다
                 if ( definition._rewardAssetID.empty() == false )
                 {
-                    const string       idempotencyKey = string( "ach." ) + ServiceKeyUtil::makeHex64( accountID ) + "." + definition._achievementID;
-                    const LedgerResult staged         = Internal::stageRewardMail( connection, transaction, accountID, definition._rewardAssetID, definition._rewardAmount,
-                                                                                   definition._mailTitleKey, Internal::kAchievementSender, idempotencyKey, nowMs );
+                    StringBuilder<constant::buffer::kMax128> keyBuilder;
+                    keyBuilder.appendFormat( "ach.%#.%#", ServiceKeyUtil::makeHex64( accountID ), definition._achievementID );
+                    const string       idempotencyKey( keyBuilder.view() );
+                    const LedgerResult staged = Internal::stageRewardMail( connection, transaction, accountID, definition._rewardAssetID, definition._rewardAmount,
+                                                                           definition._mailTitleKey, Internal::kAchievementSender, idempotencyKey, nowMs );
                     if ( staged != LedgerResult::Ok )
                         return false; // 우편 규칙이나 저장소 때문에 실패했으므로 업적도 쓰지 않는다. 다음에 다시 시도한다
                 }
@@ -608,7 +636,9 @@ namespace sw
                 LeaderboardRead<vector<AchievementProgress>> read;
                 vector<ServiceRecord>                        listStatRecord;
                 vector<ServiceRecord>                        listAchievementRecord;
-                const string                                 prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
+                StringBuilder<constant::buffer::kMax128>     prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+                const string prefix( prefixBuilder.view() );
                 // 끝까지 읽는다 — 통계는 쓰기에 계정당 상한이 없어 한 쪽만 읽으면 뒤의 통계를 쓰는 업적의 진행률이 0 으로 보인다
                 const auto collectInto = [&]( const hashed_string& table, int32 pageSize, vector<ServiceRecord>& outList )
                 {
@@ -657,8 +687,10 @@ namespace sw
                 LeaderboardRead<vector<LeaderboardEntry>> read;
                 for ( const AccountID accountID : listAccountID )
                 {
-                    ServiceRecord            record;
-                    const ServiceStoreResult readResult = connection.readRecord( LeaderboardServiceInternal::getScoreTable(), prefix + ServiceKeyUtil::makeHex64( accountID ), record );
+                    ServiceRecord                            record;
+                    StringBuilder<constant::buffer::kMax128> keyBuilder;
+                    keyBuilder.appendFormat( "%#%#", prefix, ServiceKeyUtil::makeHex64( accountID ) );
+                    const ServiceStoreResult readResult = connection.readRecord( LeaderboardServiceInternal::getScoreTable(), string( keyBuilder.view() ), record );
                     if ( readResult == ServiceStoreResult::NotFound )
                         continue; // 이 기간에 점수가 없다
                     LeaderboardEntry entry;
@@ -769,7 +801,9 @@ namespace sw
                 const LeaderboardRewardTier* pTier = findTier( season, rank );
                 if ( pTier == nullptr )
                     return true;
-                const string idempotencyKey = string( "lb." ) + board._boardID + "." + Internal::makeSeasonHex( season._seasonID ) + "." + ServiceKeyUtil::makeHex64( row._accountID );
+                StringBuilder<constant::buffer::kMax128> keyBuilder;
+                keyBuilder.appendFormat( "lb.%#.%#.%#", board._boardID, Internal::makeSeasonHex( season._seasonID ), ServiceKeyUtil::makeHex64( row._accountID ) );
+                const string idempotencyKey( keyBuilder.view() );
                 return Internal::stageRewardMail( connection, inoutTransaction, row._accountID, pTier->_assetID, pTier->_amount, pTier->_mailTitleKey, Internal::kSeasonSender,
                                                   idempotencyKey, nowMs ) == LedgerResult::Ok;
             }
@@ -884,7 +918,9 @@ namespace sw
 
     string LeaderboardService::makeSettlementJobID( string_view boardID, uint32 seasonID )
     {
-        return string( LeaderboardServiceInternal::kSettlementJobPrefix ) + string( boardID ) + "." + LeaderboardServiceInternal::makeSeasonHex( seasonID );
+        StringBuilder<constant::buffer::kMax128> jobID;
+        jobID.appendFormat( "%#%#.%#", LeaderboardServiceInternal::kSettlementJobPrefix, boardID, LeaderboardServiceInternal::makeSeasonHex( seasonID ) );
+        return string( jobID.view() );
     }
 
     const LeaderboardDef* LeaderboardService::findBoard( string_view boardID ) const
@@ -895,11 +931,14 @@ namespace sw
 
     ServiceStoreResult LeaderboardService::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const
     {
-        using Internal          = LeaderboardServiceInternal;
-        const string accountHex = ServiceKeyUtil::makeHex64( accountID );
-        if ( const ServiceStoreResult stats = ServiceStoreUtil::erasePrefix( connection, Internal::getStatTable(), accountHex + "/" ); stats != ServiceStoreResult::Ok )
+        using Internal                                      = LeaderboardServiceInternal;
+        const string                             accountHex = ServiceKeyUtil::makeHex64( accountID );
+        StringBuilder<constant::buffer::kMax128> accountPrefixBuilder;
+        accountPrefixBuilder.appendFormat( "%#/", accountHex );
+        const string accountPrefix( accountPrefixBuilder.view() );
+        if ( const ServiceStoreResult stats = ServiceStoreUtil::erasePrefix( connection, Internal::getStatTable(), accountPrefix ); stats != ServiceStoreResult::Ok )
             return stats;
-        if ( const ServiceStoreResult achievements = ServiceStoreUtil::erasePrefix( connection, Internal::getAchievementTable(), accountHex + "/" ); achievements != ServiceStoreResult::Ok )
+        if ( const ServiceStoreResult achievements = ServiceStoreUtil::erasePrefix( connection, Internal::getAchievementTable(), accountPrefix ); achievements != ServiceStoreResult::Ok )
             return achievements;
         // 점수 · 시즌 결과는 키가 보드 · 기간 앞이라 접두어로 찾지 못한다. 남아 있을 수 있는 기간마다 키를 만들어 지운다(없는 키 지우기는 할 일이 없다).
         ServiceTransaction transaction;
@@ -913,7 +952,9 @@ namespace sw
         };
         auto eraseScore = [&]( const LeaderboardDef& board, uint64 periodID ) -> ServiceStoreResult
         {
-            const string key = Internal::makeScorePrefix( board._boardID, periodID ) + accountHex;
+            StringBuilder<constant::buffer::kMax128> keyBuilder;
+            keyBuilder.appendFormat( "%#%#", Internal::makeScorePrefix( board._boardID, periodID ), accountHex );
+            const string key( keyBuilder.view() );
             transaction.erase( Internal::getScoreTable(), key );
             if ( const int64 expiryBaseMs = Internal::computeScoreExpiryBaseMs( board, periodID ); expiryBaseMs > 0 )
                 transaction.erase( Internal::getScoreExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiryBaseMs, key ) );
@@ -996,7 +1037,9 @@ namespace sw
 
     string LeaderboardService::makeRankKey( string_view boardID, uint64 periodID )
     {
-        return string( "lb/" ) + string( boardID ) + "/" + ServiceKeyUtil::makeHex64( periodID );
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "lb/%#/%#", boardID, ServiceKeyUtil::makeHex64( periodID ) );
+        return string( key.view() );
     }
 
     void LeaderboardService::submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, const NetIdempotencyKey& idempotencyKey,
@@ -1022,8 +1065,10 @@ namespace sw
             return;
         }
         LeaderboardWriteInput input;
-        input._table          = LeaderboardServiceInternal::getScoreTable();
-        input._key            = LeaderboardServiceInternal::makeScorePrefix( pBoard->_boardID, periodID ) + ServiceKeyUtil::makeHex64( accountID );
+        input._table = LeaderboardServiceInternal::getScoreTable();
+        StringBuilder<constant::buffer::kMax128> keyBuilder;
+        keyBuilder.appendFormat( "%#%#", LeaderboardServiceInternal::makeScorePrefix( pBoard->_boardID, periodID ), ServiceKeyUtil::makeHex64( accountID ) );
+        input._key            = string( keyBuilder.view() );
         input._displayName    = string( displayName );
         input._value          = score;
         input._nowMs          = nowMs;
@@ -1083,8 +1128,10 @@ namespace sw
             return;
         }
         LeaderboardWriteInput input;
-        input._table          = LeaderboardServiceInternal::getStatTable();
-        input._key            = ServiceKeyUtil::makeHex64( accountID ) + "/" + string( statName );
+        input._table = LeaderboardServiceInternal::getStatTable();
+        StringBuilder<constant::buffer::kMax128> keyBuilder;
+        keyBuilder.appendFormat( "%#/%#", ServiceKeyUtil::makeHex64( accountID ), statName );
+        input._key            = string( keyBuilder.view() );
         input._displayName    = string( displayName );
         input._value          = value;
         input._nowMs          = nowMs;

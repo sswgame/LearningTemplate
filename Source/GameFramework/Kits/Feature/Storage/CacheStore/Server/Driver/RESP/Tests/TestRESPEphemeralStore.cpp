@@ -14,7 +14,11 @@ namespace
     template <typename T>
     sw::string describeError( const sw::expected<T>& result )
     {
-        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+        if ( result.has_value() )
+            return sw::string{};
+        sw::StringBuilder<sw::constant::buffer::kMax512> text;
+        text.appendFormat( "%# %#", result.error().message(), result.error().detail() );
+        return sw::string( text.view() );
     }
 } // namespace
 
@@ -164,26 +168,28 @@ namespace
 
         [[nodiscard]] static string join( const vector<string>& listArgument )
         {
-            string text;
+            StringBuilder<constant::buffer::kMax256> text;
             for ( const string& argument : listArgument )
             {
-                text += text.empty() ? "" : " ";
-                text += argument;
+                if ( text.size() > 0 )
+                    text.append( ' ' );
+                text.append( argument );
             }
-            return text;
+            return string( text.view() );
         }
 
         /** @brief 받은 명령들을 ` | ` 로 이은 글을 돌려주고 비웁니다. */
         [[nodiscard]] string takeCommands()
         {
-            string text;
+            StringBuilder<constant::buffer::kMax256> text;
             for ( const vector<string>& command : _server._listCommand )
             {
-                text += text.empty() ? "" : " | ";
-                text += join( command );
+                if ( text.size() > 0 )
+                    text.append( " | " );
+                text.append( join( command ) );
             }
             _server._listCommand.clear();
-            return text;
+            return string( text.view() );
         }
 
         [[nodiscard]] static vector<uint8> bytes( string_view text ) { return vector<uint8>( text.begin(), text.end() ); }

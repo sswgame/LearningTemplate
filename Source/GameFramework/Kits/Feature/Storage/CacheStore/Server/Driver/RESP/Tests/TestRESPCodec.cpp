@@ -131,42 +131,56 @@ SW_TEST_CASE( RESPCodecTest, MalformedFramesFailAndStayFailed )
 // 상한: 벌크 · 배열 · 중첩. 큰 배열 머리는 바이트가 오기 전에 메모리를 잡지 않고 기다린다.
 SW_TEST_CASE( RESPCodecTest, LimitsAreEnforced )
 {
-    RESPValue value;
-    SW_EXPECT_TRUE( Util::parseOne( "$" + to_string( RESPParser::kMaxBulkSize + 1 ) + "\r\n", value ) == RESPParseResult::Error );
-    SW_EXPECT_TRUE( Util::parseOne( "$" + to_string( RESPParser::kMaxBulkSize ) + "\r\n", value ) == RESPParseResult::NeedMore );
-    SW_EXPECT_TRUE( Util::parseOne( "*" + to_string( RESPParser::kMaxArrayCount + 1 ) + "\r\n", value ) == RESPParseResult::Error );
-    SW_EXPECT_TRUE( Util::parseOne( "*" + to_string( RESPParser::kMaxArrayCount ) + "\r\n", value ) == RESPParseResult::NeedMore );
+    RESPValue                              value;
+    fixed_string<constant::buffer::kMax32> header;
+    formatstring( header.data(), header.capacity(), "$%#\r\n", RESPParser::kMaxBulkSize + 1 );
+    SW_EXPECT_TRUE( Util::parseOne( header.view(), value ) == RESPParseResult::Error );
+    formatstring( header.data(), header.capacity(), "$%#\r\n", RESPParser::kMaxBulkSize );
+    SW_EXPECT_TRUE( Util::parseOne( header.view(), value ) == RESPParseResult::NeedMore );
+    formatstring( header.data(), header.capacity(), "*%#\r\n", RESPParser::kMaxArrayCount + 1 );
+    SW_EXPECT_TRUE( Util::parseOne( header.view(), value ) == RESPParseResult::Error );
+    formatstring( header.data(), header.capacity(), "*%#\r\n", RESPParser::kMaxArrayCount );
+    SW_EXPECT_TRUE( Util::parseOne( header.view(), value ) == RESPParseResult::NeedMore );
 
-    string nested;
+    StringBuilder<constant::buffer::kMax256> nested;
     for ( int32 depth = 0; depth <= RESPParser::kMaxNestedDepth; ++depth )
     {
-        nested += "*1\r\n";
+        nested.append( "*1\r\n" );
     }
-    SW_EXPECT_TRUE( Util::parseOne( nested + ":1\r\n", value ) == RESPParseResult::Error );
+    nested.append( ":1\r\n" );
+    SW_EXPECT_TRUE( Util::parseOne( nested.view(), value ) == RESPParseResult::Error );
 }
 
 // 결함: 줄 상한이 줄 끝을 아직 못 봤을 때만 적용돼, 같은 바이트가 조각으로 오면 오류이고 한 번에 오면 통과했다.
 SW_TEST_CASE( RESPCodecTest, LineLimitDoesNotDependOnChunking )
 {
-    const string longLine = "+" + string( static_cast<size_t>( RESPParser::kMaxLineSize ) + 1, 'a' );
-    RESPValue    value;
-    SW_EXPECT_TRUE( Util::parseOne( longLine + "\r\n", value ) == RESPParseResult::Error );
+    StringBuilder<constant::buffer::kMax256> longLine;
+    longLine.append( '+' );
+    longLine.append( string( static_cast<size_t>( RESPParser::kMaxLineSize ) + 1, 'a' ) );
+    StringBuilder<constant::buffer::kMax256> terminated;
+    terminated.appendFormat( "%#\r\n", longLine.view() );
+    RESPValue value;
+    SW_EXPECT_TRUE( Util::parseOne( terminated.view(), value ) == RESPParseResult::Error );
 
     RESPParser chunked;
-    Util::append( chunked, longLine );
+    Util::append( chunked, longLine.view() );
     SW_EXPECT_TRUE( chunked.next( value ) == RESPParseResult::Error );
 
-    const string fitting = "+" + string( static_cast<size_t>( RESPParser::kMaxLineSize ) - 1, 'a' ) + "\r\n";
-    SW_EXPECT_TRUE( Util::parseOne( fitting, value ) == RESPParseResult::Complete );
+    StringBuilder<constant::buffer::kMax256> fitting;
+    fitting.append( '+' );
+    fitting.append( string( static_cast<size_t>( RESPParser::kMaxLineSize ) - 1, 'a' ) );
+    fitting.append( "\r\n" );
+    SW_EXPECT_TRUE( Util::parseOne( fitting.view(), value ) == RESPParseResult::Complete );
 }
 
 // 읽은 앞부분은 버퍼에서 당겨 지운다 - 값이 이어져도 그대로 읽힌다.
 SW_TEST_CASE( RESPCodecTest, BufferCompactionKeepsTheRest )
 {
-    RESPParser   parser;
-    RESPValue    value;
-    const string big = "$5000\r\n" + string( 5000, 'x' ) + "\r\n";
-    Util::append( parser, big + "+partial" );
+    RESPParser                                parser;
+    RESPValue                                 value;
+    StringBuilder<constant::buffer::kMax8192> big;
+    big.appendFormat( "$5000\r\n%#\r\n+partial", string( 5000, 'x' ) );
+    Util::append( parser, big.view() );
     SW_REQUIRE_TRUE( parser.next( value ) == RESPParseResult::Complete );
     SW_EXPECT_TRUE( parser.next( value ) == RESPParseResult::NeedMore );
     Util::append( parser, "\r\n" );

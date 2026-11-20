@@ -254,7 +254,9 @@ namespace
         {
             LedgerTransferRequest request;
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), string( assetID ), amount } );
-            request._journalKey = "test/grant/" + to_string( accountID ) + "/" + string( assetID );
+            StringBuilder<constant::buffer::kMax128> journalKey;
+            journalKey.appendFormat( "test/grant/%#/%#", accountID, assetID );
+            request._journalKey = string( journalKey.view() );
             request._reason     = "test.grant";
             LedgerTransferResult serviceResult;
             SW_EXPECT_TRUE( Ledger::executeTransfer( _pRig->_database, request, serviceResult ) == LedgerResult::Ok );
@@ -463,9 +465,11 @@ SW_TEST_CASE( TradeServerTest, CraftedValuesAreRefused )
     tooMany._tradeID = tradeID;
     for ( int32 index = 0; index <= TradeConstant::kMaxLegsPerSide; ++index )
     {
-        TradeLeg& leg = tooMany._listLeg.emplace_back();
-        leg._assetID  = "cur.c" + to_string( index );
-        leg._amount   = 1;
+        TradeLeg&                               leg = tooMany._listLeg.emplace_back();
+        StringBuilder<constant::buffer::kMax64> assetID;
+        assetID.appendFormat( "cur.c%#", index );
+        leg._assetID = string( assetID.view() );
+        leg._amount  = 1;
     }
     SW_EXPECT_TRUE( rig.call( kAliceSlot, TradeMethod::SetOffer::kID, tooMany )._result == TradeResult::TooManyLegs );
 

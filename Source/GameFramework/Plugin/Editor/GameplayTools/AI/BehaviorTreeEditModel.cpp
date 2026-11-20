@@ -281,7 +281,11 @@ namespace sw::editor
                 if ( pAction->_task.empty() )
                     outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Pick a task" } );
                 else if ( ActionRegistry::find( pAction->_task ) == nullptr )
-                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, string{ "No action named '" } + pAction->_task + "' is registered - the game would not load this tree" } );
+                {
+                    StringBuilder<constant::buffer::kMax256> message;
+                    message.appendFormat( "No action named '%#' is registered - the game would not load this tree", pAction->_task );
+                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, string( message.view() ) } );
+                }
             }
             if ( const BehaviorConditionParams* pCondition = node._params.find<BehaviorConditionParams>(); pCondition != nullptr )
                 addConditionIssue( pCondition->_test );

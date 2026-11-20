@@ -28,13 +28,17 @@ namespace sw
         const bool bFileKind = rule._suffix.empty() == false && rule._suffix.front() == '/';
         if ( bFileKind )
         {
-            outPath = pack + string( rule._suffix );
+            StringBuilder<constant::buffer::kMax512> path;
+            path.appendFormat( "%#%#", pack, rule._suffix );
+            outPath = string( path.view() );
             return {};
         }
         const bool bFolderKind = rule._contains.empty() == false && rule._contains.front() == '/';
         if ( bFolderKind )
         {
-            outPath = pack + FileUtil::trimTrailingSlashes( rule._contains );
+            StringBuilder<constant::buffer::kMax512> path;
+            path.appendFormat( "%#%#", pack, FileUtil::trimTrailingSlashes( rule._contains ) );
+            outPath = string( path.view() );
             return {};
         }
         return unexpected( Error{ ErrorKind::Unsupported, "the data kind has no in-pack path rule (a '/...' suffix or a '/.../' folder)", kindLabel } );
@@ -68,7 +72,9 @@ namespace sw
             error.appendDetail( ", " ).appendDetail( fromSuffix ).appendDetail( ", " ).appendDetail( fromKind );
             return unexpected( error );
         }
-        outPath = string( assetID.substr( 0, assetID.size() - fromSuffix.size() ) ) + string( toSuffix );
+        StringBuilder<constant::buffer::kMax512> path;
+        path.appendFormat( "%#%#", assetID.substr( 0, assetID.size() - fromSuffix.size() ), toSuffix );
+        outPath = string( path.view() );
         return {};
     }
 } // namespace sw

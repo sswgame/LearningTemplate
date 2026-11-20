@@ -103,8 +103,10 @@ namespace sw::editor
         _packDataMessage.clear();
         if ( const expected<void> path = GamePackDataUtil::tryMakeKindPath( packRoot, CharacterEditorPackData::kDataKind, _packDataPath ); path.has_value() == false )
         {
-            _packDataState   = PackDataState::Invalid;
-            _packDataMessage = "Character editor data has no path: " + string( path.error().message() ) + " (" + string( path.error().detail() ) + ")";
+            _packDataState = PackDataState::Invalid;
+            StringBuilder<constant::buffer::kMax512> message;
+            message.appendFormat( "Character editor data has no path: %# (%#)", path.error().message(), path.error().detail() );
+            _packDataMessage = string( message.view() );
             return;
         }
         if ( AssetIO::hasAsset( AssetID{ _packDataPath } ) == false )
@@ -115,8 +117,10 @@ namespace sw::editor
         CharacterEditorPackData data;
         if ( data.loadFromAsset( AssetID{ _packDataPath } ) == false )
         {
-            _packDataState   = PackDataState::Invalid;
-            _packDataMessage = _packDataPath + " could not be read (see log)";
+            _packDataState = PackDataState::Invalid;
+            StringBuilder<constant::buffer::kMax512> message;
+            message.appendFormat( "%# could not be read (see log)", _packDataPath );
+            _packDataMessage = string( message.view() );
             return;
         }
         _paths._socketPath       = data._socketPath;
@@ -161,12 +165,16 @@ namespace sw::editor
         const auto readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._socketPath.c_str() ) );
         if ( readPath.has_value() == false )
         {
-            _status = "Socket file '" + string{ _paths._socketPath.c_str() } + "' has no file on disk to load";
+            StringBuilder<constant::buffer::kMax512> status;
+            status.appendFormat( "Socket file '%#' has no file on disk to load", _paths._socketPath.c_str() );
+            _status = string( status.view() );
             return false;
         }
         if ( _sockets.loadFromFile( readPath->str() ) == false )
         {
-            _status = "Socket file '" + readPath->str() + "' could not be loaded (see log)";
+            StringBuilder<constant::buffer::kMax512> status;
+            status.appendFormat( "Socket file '%#' could not be loaded (see log)", readPath->str() );
+            _status = string( status.view() );
             return false;
         }
         _status.clear();
@@ -199,7 +207,9 @@ namespace sw::editor
         const auto diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
         if ( diskPath.has_value() == false )
         {
-            _status = string( "Body data file '" ) + string( assetPath ) + "' has no disk path";
+            StringBuilder<constant::buffer::kMax512> status;
+            status.appendFormat( "Body data file '%#' has no disk path", assetPath );
+            _status = string( status.view() );
             return;
         }
         if ( model.isDirty() || ( model.isOpen() && StringUtil::equals( model.getDiskPath(), diskPath->c_str() ) ) )
@@ -386,7 +396,9 @@ namespace sw::editor
         }
         if ( _database.loadFromFolder( string_view( _paths._appearanceFolder.c_str() ), _pItems.get() ) == false )
         {
-            _status = "Appearance data has errors - " + _database.getReport().joined();
+            StringBuilder<constant::buffer::kMax1024> status;
+            status.appendFormat( "Appearance data has errors - %#", _database.getReport().joined() );
+            _status = string( status.view() );
             return;
         }
         _status.clear();
@@ -540,22 +552,32 @@ namespace sw::editor
         } );
         if ( made.has_value() == false )
         {
-            _status = "Data preset could not be made - " + string( made.error().message() ) + ( made.error().detail().empty() ? string() : " (" + string( made.error().detail() ) + ")" );
+            StringBuilder<constant::buffer::kMax512> status;
+            status.appendFormat( "Data preset could not be made - %#", made.error().message() );
+            if ( made.error().detail().empty() == false )
+                status.appendFormat( " (%#)", made.error().detail() );
+            _status = string( status.view() );
             return false;
         }
-        const string assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), string( presetID.c_str() ) + AppearanceDatabase::kPresetExtension );
+        StringBuilder<constant::buffer::kMax256> presetFile;
+        presetFile.appendFormat( "%#%#", presetID.c_str(), AppearanceDatabase::kPresetExtension );
+        const string assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), presetFile.view() );
         const auto   writePath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
         const bool   bWritten  = writePath.has_value() && FileUtil::ensureParentDirectoryExists( writePath->str() ) && doc.saveCompleteToFile( writePath->str() );
         if ( bWritten == false )
         {
-            _status = "Data preset could not be written to " + assetID;
+            StringBuilder<constant::buffer::kMax512> status;
+            status.appendFormat( "Data preset could not be written to %#", assetID );
+            _status = string( status.view() );
             return false;
         }
         // 이 창의 데이터와 실행 중인 게임의 데이터에 올린다 — 씬의 컴포넌트는 게임 서비스(`AppearanceDatabase`)에서 프리셋을 푼다.
         // 쓰기는 디스크 경로, 읽기는 리소스 id 다(리소스 입구는 OS 경로를 받지 않는다).
         if ( _database.loadPresetFile( AssetID{ assetID } ) == false )
         {
-            _status = "Exported preset has errors - " + _database.getReport().joined();
+            StringBuilder<constant::buffer::kMax1024> status;
+            status.appendFormat( "Exported preset has errors - %#", _database.getReport().joined() );
+            _status = string( status.view() );
             return false;
         }
         AppearanceDatabase* pGameData = game::findSubsystem<AppearanceDatabase>();
@@ -563,7 +585,9 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "CharacterEditorViewModel.ExportedAppearancePresetGame", "Exported appearance preset '%#' - this game has no AppearanceDatabase service, so scenes use it after the game loads it", presetID.c_str() );
         else if ( pGameData->loadPresetFile( AssetID{ assetID } ) == false )
         {
-            _status = "The game's appearance data rejected the preset - " + pGameData->getReport().joined();
+            StringBuilder<constant::buffer::kMax1024> status;
+            status.appendFormat( "The game's appearance data rejected the preset - %#", pGameData->getReport().joined() );
+            _status = string( status.view() );
             return false;
         }
         _status.clear();

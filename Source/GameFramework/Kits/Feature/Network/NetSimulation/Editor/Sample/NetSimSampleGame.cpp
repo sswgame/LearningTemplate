@@ -53,7 +53,12 @@ namespace sw
                 return kArrColor[( entityID + kPaletteCount - 1 ) % kPaletteCount];
             }
 
-            static string makeAvatarName( uint32 entityID ) { return string( NetSimSampleGame::kAvatarNamePrefix ) + to_string( entityID ); }
+            static string makeAvatarName( uint32 entityID )
+            {
+                StringBuilder<constant::buffer::kMax64> name;
+                name.appendFormat( "%#%#", NetSimSampleGame::kAvatarNamePrefix, entityID );
+                return string( name.view() );
+            }
 
             /** @brief 키보드 이동 액션의 이름입니다(`NetSimSampleGame::readKeyboardMove` 가 입력 맵에 묶는다). */
             static const hashed_string& getMoveAction()

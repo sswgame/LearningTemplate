@@ -131,7 +131,11 @@ SW_TEST_CASE( TradeStateMachineTest, OfferRulesRejectBadLegs )
 {
     vector<TradeLeg> listTooMany;
     for ( int32 index = 0; index <= TradeConstant::kMaxLegsPerSide; ++index )
-        listTooMany.push_back( makeLeg( "item.gem" + to_string( index ), 1 ) );
+    {
+        StringBuilder<constant::buffer::kMax64> assetID;
+        assetID.appendFormat( "item.gem%#", index );
+        listTooMany.push_back( makeLeg( string( assetID.view() ), 1 ) );
+    }
     SW_EXPECT_TRUE( TradeStateMachine::validateOffer( listTooMany, getPolicy() ) == TradeResult::TooManyLegs );
     SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( "cur.gold", 0 ) }, getPolicy() ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( "cur.gold", LedgerConstant::kMaxAmount + 1 ) }, getPolicy() ).hasError( OnlineError::kInvalidRequest ) );

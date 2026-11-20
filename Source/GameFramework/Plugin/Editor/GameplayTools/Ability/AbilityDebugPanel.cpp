@@ -78,8 +78,7 @@ namespace sw::editor
             if ( ImGui::Selectable( candidate._name.c_str(), candidate._bCurrent != SW_FALSE ) )
                 _viewModel.pickTarget( candidate._handle );
             ImGui::PopID();
-            const string mark = string( "abilityDebug.candidate." ) + candidate._name;
-            EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 대상을 고른다(펼칠 때만 그려진다)
+            EditorSelfTestMarks::recordFormat( "abilityDebug.candidate.%#", candidate._name ); // 시나리오가 대상을 고른다(펼칠 때만 그려진다)
         }
         ImGui::EndCombo();
     }

@@ -24,7 +24,11 @@ namespace
     template <typename T>
     sw::string describeError( const sw::expected<T>& result )
     {
-        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+        if ( result.has_value() )
+            return sw::string{};
+        sw::StringBuilder<sw::constant::buffer::kMax512> text;
+        text.appendFormat( "%# %#", result.error().message(), result.error().detail() );
+        return sw::string( text.view() );
     }
 } // namespace
 
@@ -120,10 +124,12 @@ namespace
             SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "0001_fake.sql" ), "CREATE FAKE" ) );
             _driver.addRows( test::FakeSQLDriver::kNextCommitVersion, { vector<SQLValue>{ SQLValue::makeInt64( 77 ) } }, 1 );
             SQLConnectionPoolConfig settings;
-            settings._connection         = "fake";
-            settings._secret             = "not logged";
-            settings._workerCount        = 1;
-            const expected<void> started = _store.initialize( test::FakeSQLDriver::kName, settings, string( test::ScopedScratchDomain::kDomain ) + "/sql", UnixMilliseconds{ 1 } );
+            settings._connection  = "fake";
+            settings._secret      = "not logged";
+            settings._workerCount = 1;
+            StringBuilder<constant::buffer::kMax128> migrationFolder;
+            migrationFolder.appendFormat( "%#/sql", test::ScopedScratchDomain::kDomain );
+            const expected<void> started = _store.initialize( test::FakeSQLDriver::kName, settings, migrationFolder.view(), UnixMilliseconds{ 1 } );
             SW_EXPECT_TRUE_MSG( started.has_value(), describeError( started ) );
             _driver.clearLog();
         }
@@ -282,12 +288,12 @@ namespace
             const ServiceStoreResult                 result = ServiceRecordReader::readPage( connection, table, prefix, cursor, maxCount, bDescending, listRecord )._result;
             StringBuilder<constant::buffer::kMax256> lineBuilder;
             lineBuilder.appendFormat( "%#: %#", step, static_cast<int32>( result ) );
-            string line{ lineBuilder.view() };
             for ( const ServiceRecord& record : listRecord )
             {
-                line += " " + record._key + "=" + string( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() );
+                lineBuilder.appendFormat( " %#=", record._key );
+                lineBuilder.append( string_view( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() ) );
             }
-            inoutListLine.push_back( line );
+            inoutListLine.push_back( string( lineBuilder.view() ) );
         }
     };
 } // namespace
@@ -749,9 +755,11 @@ SW_TEST_CASE( SQLServiceStoreTest, FailedMigrationStopsTheStartup )
     SQLConnectionPoolConfig settings;
     settings._connection  = "fake";
     settings._workerCount = 2;
-    SQLServiceStore store;
-    string          error;
-    error = describeError( store.initialize( test::FakeSQLDriver::kName, settings, string( test::ScopedScratchDomain::kDomain ) + "/sql", UnixMilliseconds{ 1 } ) );
+    SQLServiceStore                          store;
+    string                                   error;
+    StringBuilder<constant::buffer::kMax128> migrationFolder;
+    migrationFolder.appendFormat( "%#/sql", test::ScopedScratchDomain::kDomain );
+    error = describeError( store.initialize( test::FakeSQLDriver::kName, settings, migrationFolder.view(), UnixMilliseconds{ 1 } ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
     SW_EXPECT_EQUAL( 1, driver.getOpenCount() ); // 마이그레이션 연결 하나뿐이다 — 워커가 없다

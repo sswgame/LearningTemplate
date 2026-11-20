@@ -199,11 +199,12 @@ SW_TEST_CASE( LedgerTest, DeletedAccountIsBurnedAndStaysBalanced )
     constexpr int32           kAssetCount = 20;
     for ( int32 assetIndex = 0; assetIndex < kAssetCount; ++assetIndex )
     {
-        sw::string assetID = "a";
-        assetID.push_back( static_cast<utf8>( '0' + assetIndex / 10 ) );
-        assetID.push_back( static_cast<utf8>( '0' + assetIndex % 10 ) );
-        sw::string journalKey = "test/grant.";
-        journalKey += assetID;
+        sw::StringBuilder<sw::constant::buffer::kMax16> assetIDBuilder;
+        assetIDBuilder.appendFormat( "a%02d", assetIndex );
+        const sw::string                                assetID( assetIDBuilder.view() );
+        sw::StringBuilder<sw::constant::buffer::kMax32> journalKeyBuilder;
+        journalKeyBuilder.appendFormat( "test/grant.%#", assetID );
+        const sw::string          journalKey( journalKeyBuilder.view() );
         sw::LedgerTransferRequest grant = makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 10, journalKey );
         grant._listPosting[0]._assetID  = assetID;
         SW_REQUIRE_TRUE( move( database, grant, result ) == sw::LedgerResult::Ok );

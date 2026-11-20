@@ -57,13 +57,9 @@ namespace sw
                 const CameraManagerComponent*            pCameraManager = CameraManagerComponent::findForPlayer( *pManager, pCinematic->getLocalPlayerIndex() );
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "Cut camera: %#", pCut != nullptr ? pCut->getName().c_str() : "none" );
-                outText = string( textBuilder.view() );
                 if ( pCameraManager != nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax256> textPart;
-                    textPart.appendFormat( "\nPlayer camera blend: %# (weight %#)", pCameraManager->isBlending() ? "blending" : "settled", pCameraManager->getBlendWeight() );
-                    outText += textPart.c_str();
-                }
+                    textBuilder.appendFormat( "\nPlayer camera blend: %# (weight %#)", pCameraManager->isBlending() ? "blending" : "settled", pCameraManager->getBlendWeight() );
+                outText = string( textBuilder.view() );
                 return true;
             }
         };

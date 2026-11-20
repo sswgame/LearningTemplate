@@ -71,7 +71,9 @@ namespace sw
                 const StatDef* const pDef   = pSubsystem->findCatalog()->findStat( statID );
                 if ( pDef == nullptr )
                 {
-                    outReply = "stats: no stat '" + listArgument[0] + "' in the stat catalog";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "stats: no stat '%#' in the stat catalog", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 PlayerStats& stats    = pSubsystem->getStats();

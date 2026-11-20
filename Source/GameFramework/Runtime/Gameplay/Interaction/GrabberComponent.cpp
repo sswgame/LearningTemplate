@@ -206,7 +206,11 @@ namespace sw
                 GameObject*       pObject  = engine::findActiveObject( hashed_string( name ) );
                 GrabberComponent* pGrabber = pObject != nullptr ? pObject->getComponent<GrabberComponent>() : nullptr;
                 if ( pGrabber == nullptr )
-                    outReply = "no object named '" + name + "' with a GrabberComponent in the active scene";
+                {
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no object named '%#' with a GrabberComponent in the active scene", name );
+                    outReply = string( replyBuilder.view() );
+                }
                 return pGrabber;
             }
 
@@ -220,7 +224,11 @@ namespace sw
                 if ( pGrabber == nullptr || pTarget == nullptr )
                 {
                     if ( pTarget == nullptr )
-                        outReply = "no object named '" + listArgument[1] + "' in the active scene";
+                    {
+                        StringBuilder<constant::buffer::kMax256> replyBuilder;
+                        replyBuilder.appendFormat( "no object named '%#' in the active scene", listArgument[1] );
+                        outReply = string( replyBuilder.view() );
+                    }
                     return false;
                 }
                 if ( pGrabber->grab( *pTarget ) == false )
@@ -228,7 +236,9 @@ namespace sw
                     outReply = "could not grab (already holding, the holder itself, or no scene component)";
                     return false;
                 }
-                outReply = "holding " + listArgument[1];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "holding %#", listArgument[1] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

@@ -42,19 +42,17 @@ namespace sw
     uint64 OnlineProtocolEntry::computeNameOrderHash( const vector<string>& listMethodName, const vector<string>& listPushName )
     {
         // 이름 사이와 두 목록 사이에 구분자를 두어 ("ab", "c") 와 ("a", "bc"), 메서드 끝과 알림 처음이 섞이지 않게 한다
-        string canonical;
+        StringBuilder<constant::buffer::kMax2048> canonical;
         for ( const string& name : listMethodName )
         {
-            canonical += name;
-            canonical += ',';
+            canonical.appendFormat( "%#,", name );
         }
-        canonical += ';';
+        canonical.append( ';' );
         for ( const string& name : listPushName )
         {
-            canonical += name;
-            canonical += ',';
+            canonical.appendFormat( "%#,", name );
         }
-        return FixedLayout::computeSchemaHash( FixedLayout::kVersion, canonical, {} );
+        return FixedLayout::computeSchemaHash( FixedLayout::kVersion, canonical.view(), {} );
     }
 
     vector<string> OnlineProtocolEntry::collectEnumNames( const hashed_string& enumFqn, const int32 count )

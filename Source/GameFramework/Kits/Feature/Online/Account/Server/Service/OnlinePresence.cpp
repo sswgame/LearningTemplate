@@ -154,13 +154,17 @@ namespace sw
 
     string OnlinePresence::makeAccountKey( AccountID accountID )
     {
-        return string( OnlinePresenceInternal::kAccountKeyPrefix ) + ServiceKeyUtil::makeHex64( accountID );
+        StringBuilder<constant::buffer::kMax64> key;
+        key.appendFormat( "%#%#", OnlinePresenceInternal::kAccountKeyPrefix, ServiceKeyUtil::makeHex64( accountID ) );
+        return string( key.view() );
     }
 
     string OnlinePresence::makeNameKey( string_view displayName )
     {
         // 이름은 키 규칙(`[0-9a-z_.:/-]`) 밖의 글자를 가질 수 있다. 그래서 대소문자를 무시한 해시로 기록하고, 값에 포함된 이름으로 다시 비교한다.
-        return string( OnlinePresenceInternal::kNameKeyPrefix ) + ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( displayName.data(), displayName.size() ) );
+        StringBuilder<constant::buffer::kMax64> key;
+        key.appendFormat( "%#%#", OnlinePresenceInternal::kNameKeyPrefix, ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( displayName.data(), displayName.size() ) ) );
+        return string( key.view() );
     }
 
     uint64 OnlinePresence::deferNotFound( const AccountPresenceDelegate& onFound, uint64 ownerID )

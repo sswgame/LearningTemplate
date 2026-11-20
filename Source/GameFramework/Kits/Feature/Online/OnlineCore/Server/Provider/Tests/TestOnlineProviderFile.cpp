@@ -27,7 +27,11 @@ namespace
     /** @brief 실패의 문장과 대상을 이은 글입니다(성공이면 빈 글). */
     sw::string describe( const sw::expected<void>& result )
     {
-        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+        if ( result.has_value() )
+            return sw::string{};
+        sw::StringBuilder<sw::constant::buffer::kMax512> text;
+        text.appendFormat( "%# %#", result.error().message(), result.error().detail() );
+        return sw::string( text.view() );
     }
 
     /** @brief 케이스 폴더에 @p text 를 담은 파일을 쓰고 그 절대 경로를 돌려줍니다. */

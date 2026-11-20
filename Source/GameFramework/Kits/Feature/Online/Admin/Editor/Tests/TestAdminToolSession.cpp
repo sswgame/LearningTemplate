@@ -208,7 +208,9 @@ SW_TEST_CASE( AdminToolSessionTest, FailedConnectionCanBeRetried )
     AdminToolSession session;
     const auto       failed1 = session.connectLive( "nohost", "editor" );
     SW_REQUIRE_FALSE( failed1.has_value() );
-    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    StringBuilder<constant::buffer::kMax512> error1Builder;
+    error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );
+    const sw::string error1( error1Builder.view() );
     SW_EXPECT_TRUE( error1.empty() == false );
     SW_EXPECT_TRUE( session.getConnection().getState() == AdminToolConnectionState::Failed );
     SW_EXPECT_TRUE( session.getConnection().canOpen() );
@@ -226,7 +228,9 @@ SW_TEST_CASE( AdminToolSessionTest, LoginNeedsAHandlerAndCredentials )
     AdminToolSession session;
     const auto       failed1 = session.connectWithLogin( "nohost", "editor", "gm", "pw" );
     SW_REQUIRE_FALSE( failed1.has_value() );
-    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    StringBuilder<constant::buffer::kMax512> error1Builder;
+    error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );
+    const sw::string error1( error1Builder.view() );
     SW_EXPECT_TRUE( error1.find( "login handler" ) != string::npos );
     SW_EXPECT_FALSE( session.hasCredentialsHandler() );
 

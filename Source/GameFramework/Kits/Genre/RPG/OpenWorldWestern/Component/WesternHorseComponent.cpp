@@ -215,9 +215,17 @@ namespace sw
                 if ( found.has_value() == false )
                     context.recordFailure( step, AutomationTarget::describe( found.error() ) );
                 else if ( pHorse == nullptr )
-                    context.recordFailure( step, "object '" + horseName + "' has no Western Horse" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "object '%#' has no Western Horse", horseName );
+                    context.recordFailure( step, message.view() );
+                }
                 else if ( pHorse->feed( hashed_string{ foodID.c_str() } ) == false )
-                    context.recordFailure( step, "'" + horseName + "' did not take '" + foodID + "' (horse not opened or food not in the western catalog)" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "'%#' did not take '%#' (horse not opened or food not in the western catalog)", horseName, foodID );
+                    context.recordFailure( step, message.view() );
+                }
                 return true;
             }
         };

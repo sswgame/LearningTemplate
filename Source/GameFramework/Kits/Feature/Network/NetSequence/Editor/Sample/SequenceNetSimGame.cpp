@@ -29,7 +29,9 @@ namespace sw
 
         string makeControllerName( int32 playerNumber )
         {
-            return string( "Controller" ) + to_string( playerNumber );
+            StringBuilder<constant::buffer::kMax32> name;
+            name.appendFormat( "Controller%#", playerNumber );
+            return string( name.view() );
         }
 
         void addDirector( GameObjectManager& manager, const utf8* name, int32 frameCount )
@@ -141,7 +143,9 @@ namespace sw
                 }
                 for ( int32 playerNumber = 1; playerNumber <= SequenceNetSimGame::kMaxPlayerCount; ++playerNumber )
                 {
-                    if ( key != string( "PlayerSeen" ) + to_string( playerNumber ) )
+                    fixed_string<constant::buffer::kMax32> seenKey;
+                    formatstring( seenKey.data(), seenKey.capacity(), "PlayerSeen%#", playerNumber );
+                    if ( key != seenKey.view() )
                         continue;
                     const PlayerStateComponent* pState = SequenceNetSimGame::findPlayerState( *_pWorld, playerNumber );
                     if ( pState == nullptr )
@@ -172,7 +176,9 @@ namespace sw
 
     string SequenceNetSimGame::makePawnName( int32 playerNumber )
     {
-        return string( "Pawn" ) + to_string( playerNumber );
+        StringBuilder<constant::buffer::kMax32> name;
+        name.appendFormat( "Pawn%#", playerNumber );
+        return string( name.view() );
     }
 
     unique_ptr<INetSimSession> SequenceNetSimGame::createSession( NetSimWorld& world )

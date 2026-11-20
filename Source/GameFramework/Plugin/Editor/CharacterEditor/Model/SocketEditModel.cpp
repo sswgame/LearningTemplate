@@ -374,14 +374,10 @@ namespace sw::editor
         expected<SocketDef> socket = copySocket( name );
         if ( socket.has_value() == false )
             return socket;
-        string coalesceKey;
+        StringBuilder<constant::buffer::kMax128> coalesceKey;
         if ( bContinuous )
-        {
-            coalesceKey = string( name.view() );
-            coalesceKey += ":";
-            coalesceKey += fieldName;
-        }
-        recordUndo( coalesceKey );
+            coalesceKey.appendFormat( "%#:%#", name.view(), fieldName );
+        recordUndo( coalesceKey.view() );
         socket->_fieldMask |= fieldBit;
         return socket;
     }

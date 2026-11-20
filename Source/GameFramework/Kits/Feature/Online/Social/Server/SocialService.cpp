@@ -51,8 +51,11 @@ namespace sw
             /** @brief 줄 키 `<주인>/<상대>` 의 역색인 키 `<상대>/<주인>` 입니다. */
             static string makeReverseKey( const string& key )
             {
-                const size_t width = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
-                return key.substr( width + 1 ) + "/" + key.substr( 0, width );
+                const size_t                             width = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                const string_view                        keyView( key );
+                StringBuilder<constant::buffer::kMax128> reverseKey;
+                reverseKey.appendFormat( "%#/%#", keyView.substr( width + 1 ), keyView.substr( 0, width ) );
+                return string( reverseKey.view() );
             }
 
             static string makeLinkKey( AccountID ownerID, AccountID otherID )
@@ -63,7 +66,12 @@ namespace sw
                 return key;
             }
 
-            static string makePresenceKey( AccountID accountID ) { return string( "social/rp/" ) + ServiceKeyUtil::makeHex64( accountID ); }
+            static string makePresenceKey( AccountID accountID )
+            {
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "social/rp/%#", ServiceKeyUtil::makeHex64( accountID ) );
+                return string( key.view() );
+            }
 
             static vector<uint8> encodeLink( SocialLinkState state, int64 sinceMs )
             {
@@ -341,10 +349,12 @@ namespace sw
         {
             static ServiceStoreRead<vector<SocialLink>> readLinks( IServiceStoreConnection& connection, AccountID accountID )
             {
-                ServiceStoreRead<vector<SocialLink>> read;
-                vector<ServiceRecord>                listRecord;
-                const string                         prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
-                read._result                                = ServiceRecordReader::readPage( connection, SocialServiceInternal::getLinkTable(), prefix, "", SocialLimit::kMaxLinkPage, false, listRecord )._result;
+                ServiceStoreRead<vector<SocialLink>>     read;
+                vector<ServiceRecord>                    listRecord;
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+                const string prefix( prefixBuilder.view() );
+                read._result = ServiceRecordReader::readPage( connection, SocialServiceInternal::getLinkTable(), prefix, "", SocialLimit::kMaxLinkPage, false, listRecord )._result;
                 if ( read._result != ServiceStoreResult::Ok )
                     return read;
                 for ( const ServiceRecord& record : listRecord )
@@ -414,9 +424,11 @@ namespace sw
 
     ServiceStoreResult SocialService::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 /*nowMs*/ )
     {
-        using Internal         = SocialServiceInternal;
-        const string    prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
-        constexpr int32 kPage  = 64;
+        using Internal = SocialServiceInternal;
+        StringBuilder<constant::buffer::kMax128> prefixBuilder;
+        prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+        const string    prefix( prefixBuilder.view() );
+        constexpr int32 kPage = 64;
         // 내 줄과 상대 쪽 짝 줄
         while ( true )
         {

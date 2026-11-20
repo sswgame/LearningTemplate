@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"
 
@@ -36,14 +37,13 @@ namespace sw::test
          */
         static string withBaseTTL( string_view onlineJSON )
         {
-            constexpr string_view kBaseTTLJSON = R"( "_auditRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
+            constexpr string_view                     kBaseTTLJSON = R"( "_auditRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_ledgerRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_closedReportTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_mailSentTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 }, "_scheduleRunTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 }, "_ttlSweepMinuteOfDay": 300, "_ttlBackfillRolloutHours": 0, "_maxPendingCallsPerService": 100000, "_listTrustedProxy": [], "_seatReservationSeconds": 30,)";
-            string                text{ onlineJSON.substr( 0, 1 ) };
-            text += kBaseTTLJSON;
-            text += onlineJSON.substr( 1 );
-            return text;
+            StringBuilder<constant::buffer::kMax2048> text;
+            text.appendFormat( "%#%#%#", onlineJSON.substr( 0, 1 ), kBaseTTLJSON, onlineJSON.substr( 1 ) );
+            return string( text.view() );
         }
 
         /** @brief @p serverJSON(`ServerConfig`)과 @p onlineJSON(`OnlineServerConfig`)으로 조립을 세웁니다. 실패하면 그 까닭입니다. */

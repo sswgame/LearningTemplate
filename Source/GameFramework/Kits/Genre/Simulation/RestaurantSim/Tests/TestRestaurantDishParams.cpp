@@ -17,8 +17,10 @@ namespace
 // 수 목록 칸도 속성 하나에 낱말을 잇는다.
 SW_TEST_CASE( XMLFieldsNumberListTest, ReadsEveryToken )
 {
-    XMLDocument document;
-    SW_REQUIRE_TRUE( document.parse( string( kDishHead ) + "quality=\"3, 1;2\"/>" ) );
+    XMLDocument                              document;
+    StringBuilder<constant::buffer::kMax256> text;
+    text.appendFormat( "%#quality=\"3, 1;2\"/>", kDishHead );
+    SW_REQUIRE_TRUE( document.parse( text.view() ) );
     DishDef dish;
     SW_REQUIRE_TRUE( XMLFields::readProperties( document.getRoot(), dish, "test" ) );
     SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( dish._listQualityLevel.size() ) );
@@ -31,8 +33,10 @@ SW_TEST_CASE( XMLFieldsNumberListTest, RejectsAnElementOutOfRange )
 {
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
-    XMLDocument document;
-    SW_REQUIRE_TRUE( document.parse( string( kDishHead ) + "quality=\"1, 0\"/>" ) );
+    XMLDocument                              document;
+    StringBuilder<constant::buffer::kMax256> text;
+    text.appendFormat( "%#quality=\"1, 0\"/>", kDishHead );
+    SW_REQUIRE_TRUE( document.parse( text.view() ) );
     DishDef dish;
     SW_EXPECT_FALSE( XMLFields::readProperties( document.getRoot(), dish, "test" ) );
 }
@@ -41,8 +45,10 @@ SW_TEST_CASE( XMLFieldsNumberListTest, RejectsAnElementOutOfRange )
 SW_TEST_CASE( XMLFieldsNumberListTest, RejectsAnUnreadableToken )
 {
     SW_EXPECT_LOG( "XMLFields.ValueUnreadable" );
-    XMLDocument document;
-    SW_REQUIRE_TRUE( document.parse( string( kDishHead ) + "quality=\"1, x\"/>" ) );
+    XMLDocument                              document;
+    StringBuilder<constant::buffer::kMax256> text;
+    text.appendFormat( "%#quality=\"1, x\"/>", kDishHead );
+    SW_REQUIRE_TRUE( document.parse( text.view() ) );
     DishDef dish;
     SW_EXPECT_FALSE( XMLFields::readProperties( document.getRoot(), dish, "test" ) );
 }

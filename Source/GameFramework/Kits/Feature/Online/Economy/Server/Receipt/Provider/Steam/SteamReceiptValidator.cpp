@@ -41,17 +41,6 @@ namespace sw
                 return era * 146097 + dayOfEra - 719468;
             }
 
-            /** @brief 숫자를 앞에 0 을 채워 @p width 자리로 만듭니다. */
-            static string padZero( int64 value, int32 width )
-            {
-                string text = to_string( value );
-                while ( static_cast<int32>( text.size() ) < width )
-                {
-                    text = "0" + text;
-                }
-                return text;
-            }
-
             static void civilFromDays( int64 days, int64& outYear, int64& outMonth, int64& outDay )
             {
                 days += 719468;
@@ -149,23 +138,26 @@ namespace sw
         int64       month    = 0;
         int64       day      = 0;
         Internal::civilFromDays( days, year, month, day );
-        return Internal::padZero( year, 4 ) + "-" + Internal::padZero( month, 2 ) + "-" + Internal::padZero( day, 2 ) + "T" + Internal::padZero( secOfDay / 3600, 2 ) + ":" +
-               Internal::padZero( secOfDay / 60 % 60, 2 ) + ":" + Internal::padZero( secOfDay % 60, 2 );
+        StringBuilder<constant::buffer::kMax64> text;
+        text.appendFormat( "%04d-%02d-%02dT%02d:%02d:%02d", year, month, day, secOfDay / 3600, secOfDay / 60 % 60, secOfDay % 60 );
+        return string( text.view() );
     }
 
     string SteamReceiptValidator::makeQueryURL( string_view orderID ) const
     {
-        const utf8* pInterface = _settings._bSandbox == SW_TRUE ? "ISteamMicroTxnSandbox" : "ISteamMicroTxn";
-        return _settings._baseURL + "/" + pInterface + "/QueryTxn/v3/?key=" + _settings._key + "&appid=" + _settings._appID + "&orderid=" + string( orderID );
+        const utf8*                              pInterface = _settings._bSandbox == SW_TRUE ? "ISteamMicroTxnSandbox" : "ISteamMicroTxn";
+        StringBuilder<constant::buffer::kMax512> url;
+        url.appendFormat( "%#/%#/QueryTxn/v3/?key=%#&appid=%#&orderid=%#", _settings._baseURL, pInterface, _settings._key, _settings._appID, orderID );
+        return string( url.view() );
     }
 
     string SteamReceiptValidator::makeReportURL( int64 sinceUnixMs ) const
     {
         const utf8*                              pInterface = _settings._bSandbox == SW_TRUE ? "ISteamMicroTxnSandbox" : "ISteamMicroTxn";
-        StringBuilder<constant::buffer::kMax256> textBuilder;
-        textBuilder.appendFormat( "&maxresults=%#", kReportMaxResults );
-        return _settings._baseURL + "/" + pInterface + "/GetReport/v4/?key=" + _settings._key + "&appid=" + _settings._appID + "&type=STANDARD&time=" + formatTime( sinceUnixMs ) +
-               string( textBuilder.view() );
+        StringBuilder<constant::buffer::kMax512> url;
+        url.appendFormat( "%#/%#/GetReport/v4/?key=%#&appid=%#&type=STANDARD&time=%#&maxresults=%#", _settings._baseURL, pInterface, _settings._key, _settings._appID,
+                          formatTime( sinceUnixMs ), kReportMaxResults );
+        return string( url.view() );
     }
 
     expected<void> SteamReceiptValidator::readPayload( string_view payload, ReceiptQuery& outQuery ) const
@@ -189,13 +181,18 @@ namespace sw
     {
         if ( readText( root, "response.result" ) != "OK" )
         {
-            outInfo._status      = ReceiptStatus::Invalid;
-            outInfo._failureText = "steam answered " + readText( root, "response.error.errordesc" );
+            outInfo._status = ReceiptStatus::Invalid;
+            StringBuilder<constant::buffer::kMax256> failureText;
+            failureText.appendFormat( "steam answered %#", readText( root, "response.error.errordesc" ) );
+            outInfo._failureText = string( failureText.view() );
             return;
         }
-        const string status    = readText( root, "response.params.status" );
-        outInfo._status        = mapOrderStatus( status );
-        outInfo._failureText   = outInfo._status == ReceiptStatus::Valid ? string() : "steam order status " + status;
+        const string status = readText( root, "response.params.status" );
+        outInfo._status     = mapOrderStatus( status );
+        StringBuilder<constant::buffer::kMax128> failureText;
+        if ( outInfo._status != ReceiptStatus::Valid )
+            failureText.appendFormat( "steam order status %#", status );
+        outInfo._failureText   = string( failureText.view() );
         outInfo._transactionID = readText( root, "response.params.orderid" );
         outInfo._storeBuyerID  = readText( root, "response.params.steamid" );
         outInfo._bSandbox      = _settings._bSandbox;

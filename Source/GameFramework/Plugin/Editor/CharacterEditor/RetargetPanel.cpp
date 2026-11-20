@@ -64,7 +64,7 @@ namespace sw::editor
             {
                 const bool bOpen = ImGui::CollapsingHeader( EditorThemeUtil::makeStableLabel( pLabel, pStableID ), ImGuiTreeNodeFlags_DefaultOpen );
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::record( ( string( "retarget.section." ) + pStableID ).c_str() );
+                    EditorSelfTestMarks::recordFormat( "retarget.section.%#", pStableID );
                 return bOpen;
             }
 
@@ -190,7 +190,9 @@ namespace sw::editor
         _inspectionError               = inspected.has_value() ? string{} : EditorWidgets::makeStatusText( inspected.error() );
         if ( inspected.has_value() == false )
         {
-            _status = "Not saved: " + _inspectionError;
+            StringBuilder<constant::buffer::kMax512> status;
+            status.appendFormat( "Not saved: %#", _inspectionError );
+            _status = string( status.view() );
             return false;
         }
         const auto writePath = getDocumentDiskPath();                                                  // 읽은 그 자리

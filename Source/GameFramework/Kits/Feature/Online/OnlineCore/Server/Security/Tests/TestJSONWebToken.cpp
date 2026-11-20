@@ -96,10 +96,14 @@ SW_TEST_CASE( JSONWebTokenTest, RejectsCraftedOrStaleTokens )
     SW_EXPECT_FALSE( verifyIDToken( provider, valid, other._publicKey ).has_value() );
 
     // 본문을 다른 토큰의 본문으로 바꿔 끼운다(서명은 그대로) — 서명이 본문을 덮지 않으면 통과한다.
-    const sw::string otherBody = sign( provider, key, makePayload( kIssuer, kAudience, kNowMs / 1000 + 7200 ) );
-    const size_t     firstDot  = valid.find( '.' );
-    const size_t     lastDot   = valid.rfind( '.' );
-    const sw::string swapped   = valid.substr( 0, firstDot ) + otherBody.substr( otherBody.find( '.' ), otherBody.rfind( '.' ) - otherBody.find( '.' ) ) + valid.substr( lastDot );
+    const sw::string                                  otherBody = sign( provider, key, makePayload( kIssuer, kAudience, kNowMs / 1000 + 7200 ) );
+    const size_t                                      firstDot  = valid.find( '.' );
+    const size_t                                      lastDot   = valid.rfind( '.' );
+    const sw::string_view                             validView( valid );
+    const sw::string_view                             otherView( otherBody );
+    sw::StringBuilder<sw::constant::buffer::kMax2048> swappedBuilder;
+    swappedBuilder.appendFormat( "%#%#%#", validView.substr( 0, firstDot ), otherView.substr( otherView.find( '.' ), otherView.rfind( '.' ) - otherView.find( '.' ) ), validView.substr( lastDot ) );
+    const sw::string swapped( swappedBuilder.view() );
     SW_EXPECT_FALSE( verifyIDToken( provider, swapped, key._publicKey ).has_value() );
 
     SW_EXPECT_FALSE( verifyIDToken( provider, sign( provider, key, makePayload( "https://evil.test", kAudience, kNowMs / 1000 + 3600 ) ), key._publicKey ).has_value() );

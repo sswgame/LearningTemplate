@@ -103,7 +103,9 @@ namespace sw
             /** @brief 거래의 지급 분개 키입니다. 환불 표시의 키이기도 하다. */
             [[nodiscard]] static bool makeRedeemKey( string_view storeName, string_view transactionID, string& outKey )
             {
-                return LedgerJournalKey::makeFromToken( string( kReceiptScopePrefix ) + string( storeName ), transactionID, outKey );
+                StringBuilder<constant::buffer::kMax64> scope;
+                scope.appendFormat( "%#%#", kReceiptScopePrefix, storeName );
+                return LedgerJournalKey::makeFromToken( scope.view(), transactionID, outKey );
             }
 
             /**
@@ -269,10 +271,9 @@ namespace sw
 
             static string makePurchaseCountKey( uint64 accountID, string_view offerID )
             {
-                string key = ServiceKeyUtil::makeHex64( accountID );
-                key.push_back( '/' );
-                key += offerID;
-                return key;
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%#/%#", ServiceKeyUtil::makeHex64( accountID ), offerID );
+                return string( key.view() );
             }
 
             /** @brief 가격 항목을 붙입니다. 가상 화폐이면 재원 잔액을 순서대로 씁니다. 모자라거나 재원에 빚이 있으면 InsufficientFunds 입니다. */
@@ -679,8 +680,10 @@ namespace sw
             }
             if ( found != ServiceStoreResult::Ok )
                 return EconomyServiceResult::fail( OnlineError::kUnavailable );
-            LedgerTransferRequest request;
-            if ( LedgerJournalKey::makeFromToken( string( Internal::kRefundScopePrefix ) + notification._storeName, notification._transactionID, request._journalKey ) == false )
+            LedgerTransferRequest                   request;
+            StringBuilder<constant::buffer::kMax64> scope;
+            scope.appendFormat( "%#%#", Internal::kRefundScopePrefix, notification._storeName );
+            if ( LedgerJournalKey::makeFromToken( scope.view(), notification._transactionID, request._journalKey ) == false )
                 return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
             request._reason     = "refund.revoke";
             request._memo       = redeem._memo;
@@ -757,8 +760,10 @@ namespace sw
                 return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kUnavailable ) );
             if ( input._nowMs - redeem._timeMs > input._windowMs )
                 return Internal::finish( outReply, EconomyResult::WithdrawalExpired );
-            LedgerTransferRequest request;
-            if ( LedgerJournalKey::makeFromToken( string( Internal::kWithdrawScopePrefix ) + input._storeName, input._transactionID, request._journalKey ) == false )
+            LedgerTransferRequest                   request;
+            StringBuilder<constant::buffer::kMax64> scope;
+            scope.appendFormat( "%#%#", Internal::kWithdrawScopePrefix, input._storeName );
+            if ( LedgerJournalKey::makeFromToken( scope.view(), input._transactionID, request._journalKey ) == false )
                 return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kInvalidRequest ) );
             request._reason    = "iap.withdraw";
             request._memo      = redeem._memo;
@@ -802,7 +807,9 @@ namespace sw
 
     ServiceStoreResult EconomyStoreLogic::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 /*nowMs*/ )
     {
-        return ServiceStoreUtil::erasePrefix( connection, getPurchaseCountTable(), ServiceKeyUtil::makeHex64( accountID ) + "/" );
+        StringBuilder<constant::buffer::kMax32> prefix;
+        prefix.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+        return ServiceStoreUtil::erasePrefix( connection, getPurchaseCountTable(), prefix.view() );
     }
 
     EconomyServiceResult EconomyStoreLogic::readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyWalletReply& outReply )

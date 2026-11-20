@@ -68,7 +68,9 @@ namespace sw
                 CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
                 if ( pAppearance == nullptr || pAppearance->hasSurfaceState() == false )
                 {
-                    outReply = "surface.set: no object named '" + listArgument[0] + "' with a CharacterAppearanceComponent surface state in the active scene";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "surface.set: no object named '%#' with a CharacterAppearanceComponent surface state in the active scene", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 CharacterSurfaceState& state   = pAppearance->getSurfaceState();
@@ -80,7 +82,9 @@ namespace sw
                 }
                 if ( bSet == false )
                 {
-                    outReply = "surface.set: unknown surface channel '" + listArgument[1] + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "surface.set: unknown surface channel '%#'", listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax256> reply;

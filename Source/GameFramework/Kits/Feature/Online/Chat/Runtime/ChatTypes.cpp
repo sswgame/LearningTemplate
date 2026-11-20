@@ -62,12 +62,10 @@ namespace sw
 
     string ChatChannelID::makeWhisper( AccountID first, AccountID second )
     {
-        const AccountID low  = first < second ? first : second;
-        const AccountID high = first < second ? second : first;
-        string          channelID( "whisper." );
-        ServiceKeyUtil::appendHex64( channelID, low );
-        channelID += '.';
-        ServiceKeyUtil::appendHex64( channelID, high );
-        return channelID;
+        const AccountID                         low  = first < second ? first : second;
+        const AccountID                         high = first < second ? second : first;
+        StringBuilder<constant::buffer::kMax64> channelID;
+        channelID.appendFormat( "whisper.%#.%#", ServiceKeyUtil::makeHex64( low ), ServiceKeyUtil::makeHex64( high ) );
+        return string( channelID.view() );
     }
 } // namespace sw

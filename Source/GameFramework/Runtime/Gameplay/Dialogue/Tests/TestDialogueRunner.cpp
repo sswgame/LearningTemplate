@@ -98,11 +98,15 @@ namespace
 
         void onLine( const string& speaker, const string& text )
         {
-            _listLine.push_back( speaker + ":" + text );
+            StringBuilder<constant::buffer::kMax256> line;
+            line.appendFormat( "%#:%#", speaker, text );
+            _listLine.push_back( string( line.view() ) );
             if ( _bAdvanceOnLine == SW_TRUE )
             {
                 (void)_pRunner->advance();
-                _listLine.push_back( "after:" + text ); // 받은 글은 그대로여야 한다
+                StringBuilder<constant::buffer::kMax256> afterLine;
+                afterLine.appendFormat( "after:%#", text ); // 받은 글은 그대로여야 한다
+                _listLine.push_back( string( afterLine.view() ) );
             }
         }
 

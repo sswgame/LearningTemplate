@@ -11,6 +11,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
@@ -98,11 +99,13 @@ namespace sw
                 {
                     if ( ++lineCount > maxLines )
                     {
-                        writer.addLine( "...", to_string( static_cast<uint64>( listKey.size() ) ) + " keys" );
+                        writer.addLineFormat( "...", "%# keys", static_cast<uint64>( listKey.size() ) );
                         break;
                     }
-                    const BlackboardValue* pValue = pController->getBlackboard().findValue( key );
-                    writer.addLine( string( "bb " ) + key.c_str(), pValue != nullptr ? pValue->formatText() : string( "-" ) );
+                    const BlackboardValue*                  pValue = pController->getBlackboard().findValue( key );
+                    fixed_string<constant::buffer::kMax128> label;
+                    formatstring( label.data(), label.capacity(), "bb %#", key.c_str() );
+                    writer.addLine( label.view(), pValue != nullptr ? pValue->formatText() : string( "-" ) );
                 }
             }
 

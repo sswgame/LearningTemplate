@@ -279,8 +279,10 @@ namespace sw
                     continue;
                 if ( claimed != ServiceStoreResult::NotFound )
                     return MailboxServiceResult::fail( OnlineError::kUnavailable );
-                MailView& view       = outReply._listMail.emplace_back();
-                view._mailKey        = string( MailboxProtocol::kCampaignPrefix ) + ServiceKeyUtil::makeHex64( campaign._campaignID );
+                MailView&                                view = outReply._listMail.emplace_back();
+                StringBuilder<constant::buffer::kMax128> mailKey;
+                mailKey.appendFormat( "%#%#", MailboxProtocol::kCampaignPrefix, ServiceKeyUtil::makeHex64( campaign._campaignID ) );
+                view._mailKey        = string( mailKey.view() );
                 view._titleKey       = campaign._titleKey;
                 view._body           = campaign._body;
                 view._senderName     = campaign._senderName;
@@ -498,8 +500,10 @@ namespace sw
 
     ServiceStoreResult MailboxStoreLogic::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs )
     {
-        using Internal      = MailboxStoreLogicInternal;
-        const string prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
+        using Internal = MailboxStoreLogicInternal;
+        StringBuilder<constant::buffer::kMax128> prefixBuilder;
+        prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+        const string prefix( prefixBuilder.view() );
         while ( true )
         {
             vector<ServiceRecord>    listMail;

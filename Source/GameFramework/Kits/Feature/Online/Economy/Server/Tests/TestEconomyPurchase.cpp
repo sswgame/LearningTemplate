@@ -45,7 +45,9 @@ namespace
     {
         LedgerTransferRequest request;
         request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( kBuyer ), string( assetID ), amount } );
-        request._journalKey = "test/grant/" + string( assetID ) + "/" + to_string( amount );
+        StringBuilder<constant::buffer::kMax128> journalKey;
+        journalKey.appendFormat( "test/grant/%#/%#", assetID, amount );
+        request._journalKey = string( journalKey.view() );
         request._reason     = "test.grant";
         LedgerTransferResult result;
         SW_EXPECT_TRUE( Ledger::executeTransfer( database, request, result ) == LedgerResult::Ok );

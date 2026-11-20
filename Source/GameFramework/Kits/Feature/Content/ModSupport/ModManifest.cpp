@@ -55,7 +55,9 @@ namespace sw
                                      sourceName, path );
                     return false;
                 }
-                if ( StringUtil::startsWith( path, string( ModManifest::kModDomainRoot ) + "/" ) )
+                fixed_string<constant::buffer::kMax16> modRoot;
+                formatstring( modRoot.data(), modRoot.capacity(), "%#/", ModManifest::kModDomainRoot );
+                if ( StringUtil::startsWith( path, modRoot.view() ) )
                 {
                     SW_LOG_ERROR_ID( "ModManifest.OverridesModContent", "Mod manifest '%#': override '%#' is under '%#/' - a mod overrides base game resources, not another mod's",
                                      sourceName, path, ModManifest::kModDomainRoot );

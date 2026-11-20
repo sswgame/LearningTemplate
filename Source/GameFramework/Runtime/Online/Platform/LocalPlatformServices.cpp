@@ -96,14 +96,13 @@ namespace sw
     {
         if ( _bAchievementsDirty == SW_TRUE )
         {
-            string text;
+            StringBuilder<constant::buffer::kMax1024> text;
             for ( const string& achievementID : _listUnlocked )
             {
-                text += achievementID;
-                text += '\n';
+                text.appendFormat( "%#\n", achievementID );
             }
             const string path   = FileUtil::joinPath( _folder, kAchievementsFileName );
-            const bool   bSaved = FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFileDurable( path, text );
+            const bool   bSaved = FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFileDurable( path, text.view() );
             if ( bSaved == false )
                 SW_LOG_WARNING_ID( "LocalPlatformServices.AchievementsNotSaved", "Local platform: '%#' could not be written - tried again on the next update", path.c_str() );
             _bAchievementsDirty = bSaved ? SW_FALSE : SW_TRUE;
@@ -131,16 +130,13 @@ namespace sw
 
     bool LocalPlatformServices::writeKeyValueFile( const utf8* pFileName, const map<string, string>& mapValue ) const
     {
-        string text;
+        StringBuilder<constant::buffer::kMax1024> text;
         for ( const auto& [key, value] : mapValue )
         {
-            text += key;
-            text += '=';
-            text += value;
-            text += '\n';
+            text.appendFormat( "%#=%#\n", key, value );
         }
         const string path   = FileUtil::joinPath( _folder, pFileName );
-        const bool   bSaved = FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFileDurable( path, text );
+        const bool   bSaved = FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFileDurable( path, text.view() );
         if ( bSaved == false )
             SW_LOG_WARNING_ID( "LocalPlatformServices.FileNotSaved", "Local platform: '%#' could not be written - tried again on the next update", path.c_str() );
         return bSaved;
