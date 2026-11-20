@@ -442,14 +442,14 @@ namespace sw
         listTargetFile.reserve( listPending.size() );
         listUnsaved.reserve( listPending.size() + 1 );
         listUnsaved.push_back( ParserUnsavedFile{ &batchPath, &batchSource } );
+        StringBuilder<constant::buffer::kMax8192> batchSourceText;
         for ( const PendingInput& pending : listPending )
         {
-            batchSource += "#include \"";
-            batchSource += *pending._pInputFile;
-            batchSource += "\"\n";
+            batchSourceText.appendFormat( "#include \"%#\"\n", *pending._pInputFile );
             listTargetFile.push_back( *pending._pInputFile );
             listUnsaved.push_back( ParserUnsavedFile{ pending._pInputFile, &pending._content } );
         }
+        batchSource = string( batchSourceText.view() );
 
         // clang 오류는 여기서 알리지 않는다 — 헤더마다 다시 파싱할 때 그 헤더의 오류로 나온다.
         ParserContext context( _pSession->_config );
@@ -680,18 +680,18 @@ namespace sw
         VectorUtil::sortUnique( listDependency );
 
         // 목표는 이 단계의 모든 산출물(CMake 의 OUTPUT 과 같은 목록), 의존은 스탬프들의 합. 경로는 절대 · 슬래시.
-        string text;
+        StringBuilder<constant::buffer::kMax8192> text;
         for ( const string& target : listTarget )
         {
-            text += ReflectionPipelineInternal::escapeDepfilePath( target ) + " ";
+            text.appendFormat( "%# ", ReflectionPipelineInternal::escapeDepfilePath( target ) );
         }
-        text += ":";
+        text.append( ':' );
         for ( const string& dependency : listDependency )
         {
-            text += " \\\n  " + ReflectionPipelineInternal::escapeDepfilePath( dependency );
+            text.appendFormat( " \\\n  %#", ReflectionPipelineInternal::escapeDepfilePath( dependency ) );
         }
-        text += "\n";
-        if ( GeneratedFileUtil::writeIfChanged( _pOptions->_depfilePath, text ) == false )
+        text.append( '\n' );
+        if ( GeneratedFileUtil::writeIfChanged( _pOptions->_depfilePath, text.view() ) == false )
         {
             SW_LOG_ERROR_ID( "ReflectionPipeline.FailedWriteDepfile", "Failed to write depfile %#", _pOptions->_depfilePath );
             return false;
@@ -705,7 +705,7 @@ namespace sw
      */
     bool ReflectionPipeline::writeFixedSchemaList() const
     {
-        string text;
+        StringBuilder<constant::buffer::kMax8192> text;
         for ( const string& inputFile : _pOptions->_listInputFile )
         {
             const string   stampPath = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath;
@@ -718,11 +718,11 @@ namespace sw
             }
             for ( const string& schemaLine : stamp._listFixedSchema )
             {
-                text += schemaLine;
-                text += '\n';
+                text.append( schemaLine );
+                text.append( '\n' );
             }
         }
-        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, fixedlayout::kSchemaListFile ), text );
+        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, fixedlayout::kSchemaListFile ), text.view() );
     }
 
     bool ReflectionPipeline::writeReflectedTypesList() const
@@ -753,13 +753,13 @@ namespace sw
         VectorUtil::sortUnique( listLine );
         if ( ReflectionPipelineInternal::validateLeafNameCollision( listLine, _pOptions->_moduleName ) == false )
             return false;
-        string text;
+        StringBuilder<constant::buffer::kMax8192> text;
         for ( const string& line : listLine )
         {
-            text += line;
-            text += "\n";
+            text.append( line );
+            text.append( '\n' );
         }
-        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileReflectedTypesList ), text );
+        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileReflectedTypesList ), text.view() );
     }
 
     bool ReflectionPipeline::writeAssetFieldList() const
@@ -777,13 +777,13 @@ namespace sw
             listLine.insert( listLine.end(), stamp._listAssetField.begin(), stamp._listAssetField.end() );
         }
         VectorUtil::sortUnique( listLine );
-        string text;
+        StringBuilder<constant::buffer::kMax8192> text;
         for ( const string& line : listLine )
         {
-            text += line;
-            text += "\n";
+            text.append( line );
+            text.append( '\n' );
         }
-        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileAssetReferenceFieldsList ), text );
+        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileAssetReferenceFieldsList ), text.view() );
     }
 
     void ReflectionPipeline::logEmitBytes() const
@@ -796,16 +796,14 @@ namespace sw
         if ( total == 0 )
             return;
         // 한 줄에 구역마다 `이름=바이트(백분율)` — 표로 바꿀 후보는 합계의 25 % 를 넘는 구역이다(docs/DesignBacklog.md W-R3 (a)). 이번 실행이 다시 만든 헤더만 센다.
-        string text;
+        StringBuilder<constant::buffer::kMax1024> text;
         for ( size_t section = 0; section < _arrEmitBytes.size(); ++section )
         {
-            const uint64                             bytes = _arrEmitBytes[section].load( std::memory_order_relaxed );
-            StringBuilder<constant::buffer::kMax128> item;
-            item.appendFormat( " %#=%#(%#", CodeEmitByteReport::toString( static_cast<CodeEmitSection>( section ) ), bytes, bytes * ReflectionPipelineInternal::kPercentScale / total );
-            item.append( "%)" );
-            text += item.view();
+            const uint64 bytes = _arrEmitBytes[section].load( std::memory_order_relaxed );
+            text.appendFormat( " %#=%#(%#", CodeEmitByteReport::toString( static_cast<CodeEmitSection>( section ) ), bytes, bytes * ReflectionPipelineInternal::kPercentScale / total );
+            text.append( "%)" );
         }
-        SW_LOG_INFO_ID( "ReflectionParser.EmitBytes", "Generated .gen.cpp bytes by emitter (headers generated in this run, total %#):%#", total, text );
+        SW_LOG_INFO_ID( "ReflectionParser.EmitBytes", "Generated .gen.cpp bytes by emitter (headers generated in this run, total %#):%#", total, text.view() );
     }
 
     bool ReflectionPipeline::writeFlagOpsUmbrella() const

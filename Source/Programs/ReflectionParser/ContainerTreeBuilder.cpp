@@ -2,6 +2,8 @@
 
 #include "Programs/ReflectionParser/ContainerTreeBuilder.h"
 
+#include "Core/String/StringBuilder.h"
+
 #include "Programs/ReflectionParser/AnnotationApply.h"
 #include "Programs/ReflectionParser/AnnotationLookup.h"
 #include "Programs/ReflectionParser/ContainerTypeMap.h"
@@ -109,12 +111,17 @@ namespace sw
         if ( bArgChanged == false )
             return bChanged;
 
-        string rebuilt = outSpelling.substr( 0, outSpelling.find( '<' ) ) + "<";
+        StringBuilder<constant::buffer::kMax256> rebuilt;
+        rebuilt.append( string_view( outSpelling ).substr( 0, outSpelling.find( '<' ) ) );
+        rebuilt.append( '<' );
         for ( size_t argIndex = 0; argIndex < listArgSpelling.size(); ++argIndex )
         {
-            rebuilt += ( argIndex == 0 ? "" : ", " ) + listArgSpelling[argIndex];
+            if ( argIndex > 0 )
+                rebuilt.append( ", " );
+            rebuilt.append( listArgSpelling[argIndex] );
         }
-        outSpelling = rebuilt + ">";
+        rebuilt.append( '>' );
+        outSpelling = string( rebuilt.view() );
         return true;
     }
 

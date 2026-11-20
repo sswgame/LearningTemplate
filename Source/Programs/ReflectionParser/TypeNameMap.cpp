@@ -125,7 +125,11 @@ namespace sw
         // 1) std::__cxx11:: 인라인 네임스페이스 제거 (Linux Clang libstdc++ 대응)
         constexpr string_view kCxx11Prefix = "std::__cxx11::";
         if ( StringUtil::startsWith( result, kCxx11Prefix ) )
-            result = "std::" + result.substr( kCxx11Prefix.size() );
+        {
+            StringBuilder<constant::buffer::kMax256> stripped;
+            stripped.appendFormat( "std::%#", string_view( result ).substr( kCxx11Prefix.size() ) );
+            result = string( stripped.view() );
+        }
 
         // 2) 템플릿 타입(예: map<K, V>, vector<T>)이면 재귀적으로 정규화
         const size_t openAngle             = result.find( '<' );
@@ -139,15 +143,17 @@ namespace sw
             const string         normStem = normalize( stem );
             const vector<string> listArg  = ParserUtil::splitCommaRespectingAngles( inner );
 
-            result = normStem + "<";
+            StringBuilder<constant::buffer::kMax256> rebuilt;
+            rebuilt.append( normStem );
+            rebuilt.append( '<' );
             for ( size_t index = 0; index < listArg.size(); ++index )
             {
                 if ( index > 0 )
-                    result += ", ";
-                result += normalize( listArg[index] );
+                    rebuilt.append( ", " );
+                rebuilt.append( normalize( listArg[index] ) );
             }
-            result += ">";
-            return result;
+            rebuilt.append( '>' );
+            return string( rebuilt.view() );
         }
 
         // 3) 사전(ReflectBuiltins 등)에서 직접 일치 확인

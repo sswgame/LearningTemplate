@@ -143,7 +143,9 @@ namespace sw
         paths._cppPath            = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenCpp );
         paths._headerPath         = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenHeader );
         paths._editorMetadataPath = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenMetaCpp );
-        paths._stampPath          = paths._cppPath + sw::config::kExtReflectionStamp;
+        StringBuilder<constant::buffer::kMax1024> stampPath;
+        stampPath.appendFormat( "%#%#", paths._cppPath, sw::config::kExtReflectionStamp );
+        paths._stampPath = string( stampPath.view() );
         return paths;
     }
 
@@ -166,41 +168,28 @@ namespace sw
 
     bool GeneratedFileUtil::writeStamp( const string& stampPath, const GeneratedStamp& stamp )
     {
-        StringBuilder<constant::buffer::kMax256> stampTextBuilder;
-        stampTextBuilder.appendFormat( "%#\n%# %#\n%# %#\n", stamp._sourcePath, string( GeneratedFilesInternal::kStampInputTimeKey ), stamp._inputWriteTime,
-                                       string( GeneratedFilesInternal::kStampArgsKey ), stamp._argsHash );
-        string stampText{ stampTextBuilder.view() };
+        StringBuilder<constant::buffer::kMax4096> stampText;
+        stampText.appendFormat( "%#\n%# %#\n%# %#\n", stamp._sourcePath, GeneratedFilesInternal::kStampInputTimeKey, stamp._inputWriteTime, GeneratedFilesInternal::kStampArgsKey,
+                                stamp._argsHash );
         if ( stamp._bHasBitFlagEnum )
-        {
-            StringBuilder<constant::buffer::kMax256> stampTextPart2;
-            stampTextPart2.appendFormat( "%#\n", string( GeneratedFilesInternal::kStampBitFlagLine ) );
-            stampText += stampTextPart2.c_str();
-        }
+            stampText.appendFormat( "%#\n", GeneratedFilesInternal::kStampBitFlagLine );
         for ( const string& typeFqn : stamp._listTypeFqn )
         {
-            StringBuilder<constant::buffer::kMax256> stampTextPart;
-            stampTextPart.appendFormat( "%# %#\n", string( GeneratedFilesInternal::kStampTypeKey ), typeFqn );
-            stampText += stampTextPart.c_str();
+            stampText.appendFormat( "%# %#\n", GeneratedFilesInternal::kStampTypeKey, typeFqn );
         }
         for ( const string& schemaLine : stamp._listFixedSchema )
         {
-            StringBuilder<constant::buffer::kMax256> stampTextPart;
-            stampTextPart.appendFormat( "%# %#\n", string( GeneratedFilesInternal::kStampFixedSchemaKey ), schemaLine );
-            stampText += stampTextPart.c_str();
+            stampText.appendFormat( "%# %#\n", GeneratedFilesInternal::kStampFixedSchemaKey, schemaLine );
         }
         for ( const string& assetField : stamp._listAssetField )
         {
-            StringBuilder<constant::buffer::kMax256> stampTextPart;
-            stampTextPart.appendFormat( "%# %#\n", string( GeneratedFilesInternal::kStampAssetFieldKey ), assetField );
-            stampText += stampTextPart.c_str();
+            stampText.appendFormat( "%# %#\n", GeneratedFilesInternal::kStampAssetFieldKey, assetField );
         }
         for ( const StampDependency& dependency : stamp._listDependency )
         {
-            StringBuilder<constant::buffer::kMax256> stampTextPart;
-            stampTextPart.appendFormat( "%# %# %#\n", string( GeneratedFilesInternal::kStampDependencyKey ), dependency._writeTime, dependency._path );
-            stampText += stampTextPart.c_str();
+            stampText.appendFormat( "%# %# %#\n", GeneratedFilesInternal::kStampDependencyKey, dependency._writeTime, dependency._path );
         }
-        if ( FileUtil::writeTextFile( stampPath, stampText ) == false )
+        if ( FileUtil::writeTextFile( stampPath, stampText.view() ) == false )
         {
             SW_LOG_ERROR_ID( "GeneratedFiles.FailedWrite", "Failed to write %#", stampPath );
             return false;

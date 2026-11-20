@@ -603,16 +603,16 @@ namespace sw
 
     string AnnotationFields::makeEventFieldList()
     {
-        string text;
+        StringBuilder<constant::buffer::kMax256> text;
         for ( const AnnotationField<ParsedPropertyInfo>& field : kPropertyScope )
         {
             if ( field._emit != AnnotationEmit::Display )
                 continue;
-            text.append( field._id.data(), field._id.size() );
-            text += ", ";
+            text.append( string_view( field._id.data(), field._id.size() ) );
+            text.append( ", " );
         }
-        text += "Name";
-        return text;
+        text.append( "Name" );
+        return string( text.view() );
     }
 
     bool AnnotationFields::validateBindings( const AnnotationMeta& meta )
