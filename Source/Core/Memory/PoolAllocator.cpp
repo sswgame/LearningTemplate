@@ -135,7 +135,7 @@ namespace sw
         while ( pCurr != nullptr )
         {
             Chunk* pNext = pCurr->_pNext;
-            sw::Memory::freeAligned( pCurr );
+            sw::Memory::free( pCurr );
             pCurr = pNext;
         }
 

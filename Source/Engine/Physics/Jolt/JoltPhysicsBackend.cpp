@@ -44,7 +44,6 @@ namespace sw
             }
             static void  free( void* pBlock ) { Memory::free( pBlock ); }
             static void* allocateAligned( size_t size, size_t alignment ) { return Memory::allocateAligned( size, alignment ); }
-            static void  freeAligned( void* pBlock ) { Memory::freeAligned( pBlock ); }
 
             /** @brief Jolt 의 printf 형식 추적 줄을 엔진 로그로 옮깁니다. 형식 특성을 달아 두어, 형식 문자열이 인자에서 온다는 것을 컴파일러가 압니다. */
 #if SW_COMPILER_CLANG || SW_COMPILER_GCC
@@ -125,7 +124,7 @@ namespace sw
         JPH::Reallocate      = &JoltPhysicsBackendInternal::reallocate;
         JPH::Free            = &JoltPhysicsBackendInternal::free;
         JPH::AlignedAllocate = &JoltPhysicsBackendInternal::allocateAligned;
-        JPH::AlignedFree     = &JoltPhysicsBackendInternal::freeAligned;
+        JPH::AlignedFree     = &JoltPhysicsBackendInternal::free; // 정렬 블록도 해제 길은 하나다(`Memory::free`)
         JPH::Trace           = &JoltPhysicsBackendInternal::trace;
         JPH_IF_ENABLE_ASSERTS( JPH::AssertFailed = &JoltPhysicsBackendInternal::assertFailed; )
 

@@ -100,7 +100,7 @@ namespace sw
             }
 
             /**
-             * @brief 헤더를 확인하고 프로파일러에 해제를 알린 뒤 매직을 지웁니다(이중 해제 방지). `free` · `freeAligned` 가 함께 씁니다.
+             * @brief 헤더를 확인하고 프로파일러에 해제를 알린 뒤 매직을 지웁니다(이중 해제 방지). 보통 · 정렬 블록 모두 `free` 가 씁니다.
              * @return OS 에 돌려줄 원래 할당 주소입니다. 헤더가 손상됐거나 엔진이 할당한 블록이 아니면 nullptr 이고, 그때는 해제하지 않습니다.
              */
             static void* releaseAllocHeader( void* pUserPtr )
@@ -164,27 +164,6 @@ namespace sw
         const uintptr_t rawAddr  = reinterpret_cast<uintptr_t>( pRawPtr );
         const uintptr_t userAddr = MathUtil::align( rawAddr + sizeof( AllocHeader ), static_cast<uintptr_t>( align ) );
         return MemoryInternal::writeAllocHeader( reinterpret_cast<void*>( userAddr ), pRawPtr, size, tag );
-#endif // SW_SHIPPING
-    }
-
-    /**
-     * @brief 정렬 할당한 메모리 블록을 해제합니다.
-     */
-    void Memory::freeAligned( void* pPtr )
-    {
-        if ( pPtr == nullptr )
-            return;
-
-#if defined( SW_SHIPPING )
-        MemoryBackend::freeAligned( pPtr );
-#else  // SW_SHIPPING
-        void* pRawPtr = MemoryInternal::releaseAllocHeader( pPtr );
-        if ( pRawPtr == nullptr )
-        {
-            MemoryInternal::reportForeignFree( pPtr );
-            return;
-        }
-        MemoryBackend::freeAligned( pRawPtr );
 #endif // SW_SHIPPING
     }
 

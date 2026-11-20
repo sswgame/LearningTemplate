@@ -1780,6 +1780,7 @@
     "NAMING_PATH": "common.rename_scope.BANNED_NAMES_PATH — 이름 이력 표 경로는 한 곳(Scripts 감사, 2026-11-21)",
     "NAMING_WORDS_PATH": "common.rename_scope.BANNED_NAMES_PATH — _bannedNames 는 NamingWordsBannedNames.json 으로 옮겼다(Scripts 감사, 2026-11-21)",
     "unregisterAllocationObserver": "Memory::registerAllocationObserver 가 돌려준 AllocationObserverRegistration 토큰의 reset — 관찰자 칸은 ObserverSlot(2026-11-21)",
-    "unregisterAllocationTracker": "Memory::registerAllocationTracker 가 돌려준 AllocationTrackerRegistration 토큰의 reset — 기록기 칸은 ObserverSlot(2026-11-21)"
+    "unregisterAllocationTracker": "Memory::registerAllocationTracker 가 돌려준 AllocationTrackerRegistration 토큰의 reset — 기록기 칸은 ObserverSlot(2026-11-21)",
+    "freeAligned": "Memory::free — 해제 길은 하나(CRT 는 Windows 에서 모든 블록을 정렬 힙에서 잡는다, 2026-11-21)"
   }
 }
