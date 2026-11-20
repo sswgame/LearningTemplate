@@ -4,7 +4,6 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/ByteStream.h"
-#include "Core/Serialization/LittleEndianUtil.h"
 
 namespace sw
 {
@@ -17,12 +16,13 @@ namespace sw
             /** @brief 표본 하나의 트랙 하나가 차지하는 float 수입니다. */
             static constexpr uint32 kFloatPerTransform = 10;
 
-            /** @brief 표본 하나의 트랙 하나(리틀 엔디언 float 10 개)를 읽습니다. 범위는 부르는 쪽이 전체 길이로 먼저 확인했다. */
+            /** @brief 표본 하나의 트랙 하나(리틀 엔디언 float 10 개)를 읽습니다. 범위는 부르는 쪽이 전체 길이로 먼저 확인했다. 유한하지 않은 값은 0 이다(`ByteReader::readFloat32`). */
             static BoneTransform readTransform( const uint8* pData )
             {
-                float32 arrValue[kFloatPerTransform]{};
-                for ( uint32 valueIndex = 0; valueIndex < kFloatPerTransform; ++valueIndex )
-                    arrValue[valueIndex] = LittleEndianUtil::readFloat32( pData + valueIndex * sizeof( float32 ) );
+                ByteReader reader( pData, kFloatPerTransform * sizeof( float32 ) );
+                float32    arrValue[kFloatPerTransform]{};
+                for ( float32& value : arrValue )
+                    value = reader.readFloat32();
                 BoneTransform transform{};
                 transform._translation = float3{ arrValue[0], arrValue[1], arrValue[2] };
                 transform._rotation    = quaternion{ arrValue[3], arrValue[4], arrValue[5], arrValue[6] };
@@ -83,7 +83,7 @@ namespace sw
         if ( header.hasOverflowed() || sampleCount == 0 || bodySize % transformSize != 0 || bodySize / transformSize != static_cast<uint64>( sampleCount ) * trackCount )
             return false;
 
-        outPose.resize( trackCount ); // NOLINT(sw-unchecked-count): 위에서 본문 크기로 샘플 수 × 트랙 수를 맞췄다
+        outPose.resize( trackCount ); // 위에서 본문 크기로 샘플 수 × 트랙 수를 맞췄다
         if ( pTrackMask != nullptr )
             outPose.setToIdentity();
         const float32 frame        = MathUtil::clamp( time * sampleRate, 0.0f, static_cast<float32>( sampleCount - 1 ) );

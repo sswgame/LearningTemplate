@@ -11,7 +11,7 @@
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Process/Process.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
 
 #include <chrono>
@@ -876,10 +876,11 @@ namespace sw
 
     void NetEndpoint::handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size )
     {
-        const uint32 headerID        = size > NetEndpointInternal::kHeaderSize ? LittleEndianUtil::readUint32( pData ) : 0u;
+        ByteReader   header( pData, size > 0 ? static_cast<size_t>( size ) : 0 ); // 머리가 모자라면 0 을 읽고, 아래 길이 검사가 먼저 거절한다
+        const uint32 headerID        = header.readUint32();
+        const uint32 checksum        = header.readUint32();
         const bool   bRejectedPacket = size <= NetEndpointInternal::kHeaderSize || ( headerID != _protocolID && headerID != NetProtocol::kHandshakeID ) ||
-                                     LittleEndianUtil::readUint32( pData + 4 ) !=
-                                         computePacketChecksum( headerID, pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
+                                     checksum != computePacketChecksum( headerID, pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
         if ( bRejectedPacket )
         {
             ++_rejectedPacketCount; // 다른 버전, 다른 게임, 깨진 패킷.
@@ -1134,7 +1135,8 @@ namespace sw
     void NetEndpoint::queueSealedPacket( float64 nowSeconds, PacketKind type, const optional<int32> slotIndex, const uint8* pBody, int32 bodySize )
     {
         // 본문 형식은 [종류와 0][연결 값 4바이트][패킷 번호 8바이트][AEAD + 태그]다. 바이트 정렬이므로 BitReader 를 거치지 않는다.
-        const uint32     token  = bodySize >= 5 ? LittleEndianUtil::readUint32( pBody + 1 ) : 0u;
+        ByteReader       body( pBody, bodySize > 0 ? static_cast<size_t>( bodySize ) : 0 );
+        const uint32     token  = body.skipBytes( 1 ) ? body.readUint32() : 0u; // 모자라면 0 — 아래 연결 토큰과 맞지 않아 버린다
         NetEndpointSlot* pSlot  = slotIndex.has_value() ? &_slotTable.get( *slotIndex ) : nullptr;
         const bool       bReady = pSlot != nullptr && pSlot->_state == NetConnectionState::Connected && pSlot->_security != nullptr &&
                             pSlot->_security->_bKeysReady == SW_TRUE && token == static_cast<uint32>( pSlot->getConnectionToken() );

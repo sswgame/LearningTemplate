@@ -5,7 +5,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
@@ -89,16 +89,21 @@ namespace sw
             return false;
         if ( SecureUtil::equalsConstantTime( arrTag, pToken + NetGameTicket::kBodySize, NetGameTicket::kTagSize ) == false )
             return false;
-        const int64 expiresAtMs = static_cast<int64>( LittleEndianUtil::readUint64( pToken + 16 ) );
+        // 본문은 계정 id · 세션 id · 만료 시각 · 서버 해시(각 uint64)다. 길이는 위에서 kTokenSize 로 맞췄다.
+        ByteReader   body( pToken, static_cast<size_t>( tokenSize ) );
+        const uint64 accountID   = body.readUint64();
+        const uint64 sessionID   = body.readUint64();
+        const int64  expiresAtMs = body.readInt64();
+        const uint64 serverHash  = body.readUint64();
         if ( nowMs >= expiresAtMs )
             return false;
-        if ( LittleEndianUtil::readUint64( pToken + 24 ) != LoginTicketAuthorityInternal::computeServerHash( serverID ) )
+        if ( serverHash != LoginTicketAuthorityInternal::computeServerHash( serverID ) )
             return false;
         NetGameTicketClaim claim;
         if ( computeSecret( pToken, claim._arrSecret ) == false )
             return false;
-        claim._accountID   = LittleEndianUtil::readUint64( pToken + 0 );
-        claim._sessionID   = LittleEndianUtil::readUint64( pToken + 8 );
+        claim._accountID   = accountID;
+        claim._sessionID   = sessionID;
         claim._expiresAtMs = expiresAtMs;
         outClaim           = claim;
         return true;

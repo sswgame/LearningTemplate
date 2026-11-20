@@ -11,7 +11,7 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/UUID/UUID.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
@@ -28,7 +28,8 @@ namespace sw
                 if ( tokenSeed != 0 )
                     return SipHashKey{ HashUtil::mix64( tokenSeed ), HashUtil::mix64( ~tokenSeed ) };
                 const UUID uuid = UUID::generate();
-                return SipHashKey{ LittleEndianUtil::readUint64( uuid._arrBytes ), LittleEndianUtil::readUint64( uuid._arrBytes + 8 ) };
+                ByteReader reader( uuid._arrBytes, sizeof( uuid._arrBytes ) );
+                return SipHashKey{ reader.readUint64(), reader.readUint64() }; // 중괄호 초기화는 왼쪽부터 평가한다
             }
 
             /** @brief @p token 이 맞는 차지된 자리를 반환합니다. 토큰이 0 이거나 맞는 자리가 없으면 비어 있습니다. */

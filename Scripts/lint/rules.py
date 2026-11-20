@@ -74,7 +74,6 @@ RULES: tuple[Rule, ...] = (
     Rule("platform-chains", "경계", "빠진 플랫폼을 컴파일 오류로 내지 않는 #if 사슬", "전처리 갈래는 형식이 막지 못한다", "lint.platform_chains:check_platform_chains", exceptions="Config/Rules/Lint/PlatformChains.json"),
     # --- 모양(공통 틀이 있는데 손으로 다시 적은 것) ----------------------------------------------------------------------------
     Rule("cpp-shape", "모양", "선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 기반 하나", "합법 C++ 의 배치 규칙이다", "lint.cpp_shape:check_cpp_shape", exceptions="Config/Rules/Lint/CppShapeExceptions.json"),
-    Rule("byte-read", "모양", "파일에서 읽은 개수를 믿고 할당 · LittleEndianUtil 직접 읽기", "vector::resize 는 어떤 수든 받는다", "lint.byte_read_shape:check_byte_read_shape", exceptions="Config/Rules/Lint/ByteReadRawFiles.json"),
     Rule("common-shapes", "모양", "공통 기반을 두고 손으로 적은 모양(열거 이름 표 · id 를 버리는 입구 · 손으로 짝지은 writeState · readState( Archive& ) · 프레임 함수 안의 리터럴 hashed_string …)", "칸 이름 · switch 글자 · 부른 함수는 형식이 말하지 못한다", "lint.common_shapes:check_common_shapes", exceptions="Config/Rules/Lint/CommonShapeExceptions.json"),
     Rule("mutable-statics", "모양", "주인 객체 밖의 가변 정적 저장소(감춘 싱글턴)", "함수 정적 · 이름공간 범위 변수는 합법 C++ 이다", "lint.mutable_statics:check_mutable_statics", exceptions="Config/Rules/Lint/MutableStaticExceptions.json"),
     Rule("disk-path-case", "모양", "경로 포함 · 같음 판정(isPathAtOrUnderRoot · startsWithPathComponent …)에 키로 꺼낸 접은 글(normalizePath(…).str() 을 담은 지역 변수) · toLower 의 글을 넘김", "normalizePath 의 결과(PathKey)는 형식이 막지만, 키 · id 로 꺼낸 str() 과 범용 toLower 는 string 이라 출처를 잃는다", "lint.disk_path_case:check_disk_path_case", exceptions="Config/Rules/Lint/DiskPathCase.json"),

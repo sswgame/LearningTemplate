@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Audio/AudioVorbisDecoder.h"
 
@@ -44,28 +44,31 @@ namespace sw
         while ( offset + 8 <= byteCount )
         {
             const uint8* pChunkID  = pBytes + offset;
-            const uint32 chunkSize = LittleEndianUtil::readUint32( pBytes + offset + 4 );
+            const uint32 chunkSize = ByteReader( pBytes + offset + 4, 4 ).readUint32(); // 위 조건이 머리 8 바이트를 맞췄다
             offset += 8;
             if ( chunkSize > byteCount - offset )
                 break;
 
             if ( Memory::compare( pChunkID, "fmt ", 4 ) == 0 && chunkSize >= 16 )
             {
-                const uint8* pFmt  = pBytes + offset;
-                baseFormatTag      = LittleEndianUtil::readUint16( pFmt + 0 );
-                pcm._channelCount  = LittleEndianUtil::readUint16( pFmt + 2 );
-                pcm._sampleRate    = LittleEndianUtil::readUint32( pFmt + 4 );
-                pcm._bitsPerSample = LittleEndianUtil::readUint16( pFmt + 14 );
+                // 형식 태그 · 채널 수 · 표본율 · 초당 바이트 · 블록 정렬 · 표본 비트(16 바이트), 확장형이면 그 뒤에 크기 · 유효 비트 · 채널 마스크 · 하위 형식이다.
+                const uint8* pFmt = pBytes + offset;
+                ByteReader   fmt( pFmt, chunkSize );
+                baseFormatTag      = fmt.readUint16();
+                pcm._channelCount  = fmt.readUint16();
+                pcm._sampleRate    = fmt.readUint32();
+                pcm._bitsPerSample = ByteReader( pFmt + 14, chunkSize - 14 ).readUint16();
                 // 확장형이면 유효 비트, 채널 마스크, 하위 형식 GUID 가 뒤에 온다. 하위 형식이 PCM 이나 IEEE float 일 때만 받는다.
                 if ( baseFormatTag == Internal::kWaveFormatExtensible )
                 {
                     baseFormatTag = 0;
                     if ( chunkSize >= 40 && Memory::compare( pFmt + 28, Internal::kArrSubFormatTail, sizeof( Internal::kArrSubFormatTail ) ) == 0 )
                     {
-                        pcm._bExtensible        = SW_TRUE;
-                        pcm._validBitsPerSample = LittleEndianUtil::readUint16( pFmt + 18 );
-                        pcm._channelMask        = LittleEndianUtil::readUint32( pFmt + 20 );
-                        baseFormatTag           = static_cast<uint16>( LittleEndianUtil::readUint32( pFmt + 24 ) );
+                        pcm._bExtensible = SW_TRUE;
+                        ByteReader extension( pFmt + 18, chunkSize - 18 );
+                        pcm._validBitsPerSample = extension.readUint16();
+                        pcm._channelMask        = extension.readUint32();
+                        baseFormatTag           = static_cast<uint16>( extension.readUint32() );
                     }
                 }
                 bHaveFmt = true;

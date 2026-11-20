@@ -60,7 +60,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Audio/AudioDownmix.h"
 #include "Engine/Audio/AudioStream.h"
@@ -123,27 +123,18 @@ namespace sw
                 const bool   bInvalidCommentHeader = size < 7 + 4 + 4 || packetBytes[0] != 3 || Memory::compare( packetBytes.data() + 1, "vorbis", 6 ) != 0;
                 if ( bInvalidCommentHeader )
                     return false;
-                size_t       offset       = 7;
-                const uint32 vendorLength = LittleEndianUtil::readUint32( packetBytes.data() + offset );
-                offset += 4;
-                if ( vendorLength > size - offset )
+                // 판매자 글(길이 uint32 + 바이트), 주석 수(uint32), 주석 글들 — `ByteReader::readStringView` 와 같은 꼴이다. 주석 하나는 적어도 길이 4 바이트다.
+                ByteReader  reader( packetBytes.data() + 7, size - 7 );
+                string_view text;
+                if ( reader.readStringView( text ) == false )
                     return false;
-                offset += vendorLength;
-                if ( offset + 4 > size )
-                    return false;
-                const uint32 commentCount = LittleEndianUtil::readUint32( packetBytes.data() + offset );
-                offset += 4;
-                if ( commentCount > ( size - offset ) / 4 )
+                const uint32 commentCount = reader.readUint32();
+                if ( reader.canHold( commentCount, sizeof( uint32 ) ) == false )
                     return false;
                 for ( uint32 commentIndex = 0; commentIndex < commentCount; ++commentIndex )
                 {
-                    if ( offset + 4 > size )
+                    if ( reader.readStringView( text ) == false )
                         return false;
-                    const uint32 commentLength = LittleEndianUtil::readUint32( packetBytes.data() + offset );
-                    offset += 4;
-                    if ( commentLength > size - offset )
-                        return false;
-                    offset += commentLength;
                 }
                 return true;
             }

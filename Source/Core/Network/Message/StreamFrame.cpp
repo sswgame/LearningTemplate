@@ -2,7 +2,7 @@
 
 #include "Core/Network/Message/StreamFrame.h"
 
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 
 namespace sw
 {
@@ -30,7 +30,7 @@ namespace sw
         if ( available < 4 )
             return StreamFrameDecodeResult::NeedMore;
         const uint8* pHeader = _bytes.data() + _readOffset;
-        const uint32 length  = LittleEndianUtil::readUint32( pHeader );
+        const uint32 length  = ByteReader( pHeader, static_cast<size_t>( available ) ).readUint32();
         // 길이는 종류 · 깃발 2 바이트 + 몸 — 몸이 오기 전에 상한을 본다.
         if ( length < 2 || static_cast<uint64>( length ) - 2 > static_cast<uint64>( _maxBodySize ) )
             return StreamFrameDecodeResult::Malformed;

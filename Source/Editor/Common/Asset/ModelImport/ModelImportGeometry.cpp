@@ -12,7 +12,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
@@ -41,15 +41,22 @@ namespace sw::editor
             /** @brief JSON 자리를 찾습니다. GLB 인데 첫 청크가 JSON 이 아니거나 범위를 벗어나면 false 입니다(고치지 않고 cgltf 가 알리게 한다). */
             [[nodiscard]] static bool findJSONSpan( const vector<uint8>& bytes, GltfJSONSpan& outSpan )
             {
-                outSpan._bGlb       = bytes.size() >= ModelImportGeometry::kGlbHeaderSize + ModelImportGeometry::kGlbChunkHeaderSize && LittleEndianUtil::readUint32( bytes.data() ) == ModelImportGeometry::kGlbMagic;
+                // GLB 머리(마법 수 · 판 · 길이) 뒤 첫 청크 머리(길이 · 종류)다. 모자란 파일은 0 을 읽어 GLB 가 아니다.
+                ByteReader   reader( bytes.data(), bytes.size() );
+                const uint32 magic  = reader.readUint32();
+                outSpan._bGlb       = bytes.size() >= ModelImportGeometry::kGlbHeaderSize + ModelImportGeometry::kGlbChunkHeaderSize && magic == ModelImportGeometry::kGlbMagic;
                 outSpan._jsonOffset = 0;
                 outSpan._jsonSize   = bytes.size();
                 if ( outSpan._bGlb == false )
                     return true;
-                if ( LittleEndianUtil::readUint32( bytes.data() + ModelImportGeometry::kGlbHeaderSize + 4 ) != ModelImportGeometry::kGlbJSONChunkType )
+                if ( reader.skipBytes( ModelImportGeometry::kGlbHeaderSize - sizeof( uint32 ) ) == false )
+                    return false;
+                const uint32 jsonSize  = reader.readUint32();
+                const uint32 chunkType = reader.readUint32();
+                if ( chunkType != ModelImportGeometry::kGlbJSONChunkType )
                     return false;
                 outSpan._jsonOffset = ModelImportGeometry::kGlbHeaderSize + ModelImportGeometry::kGlbChunkHeaderSize;
-                outSpan._jsonSize   = LittleEndianUtil::readUint32( bytes.data() + ModelImportGeometry::kGlbHeaderSize );
+                outSpan._jsonSize   = jsonSize;
                 return outSpan._jsonOffset + outSpan._jsonSize <= bytes.size();
             }
 
@@ -133,8 +140,10 @@ namespace sw::editor
                 const size_t tailOffset     = span._jsonOffset + span._jsonSize;
                 const size_t totalSize      = span._jsonOffset + paddedJSONSize + ( bytes.size() - tailOffset );
                 rewrittenBytes.reserve( totalSize );
+                ByteReader   header( bytes.data(), bytes.size() );
+                const uint32 version = header.skipBytes( sizeof( uint32 ) ) ? header.readUint32() : 0u; // GLB 머리의 판 — 길이는 findJSONSpan 이 맞췄다
                 LittleEndianUtil::appendUint32( rewrittenBytes, ModelImportGeometry::kGlbMagic );
-                LittleEndianUtil::appendUint32( rewrittenBytes, LittleEndianUtil::readUint32( bytes.data() + 4 ) );
+                LittleEndianUtil::appendUint32( rewrittenBytes, version );
                 LittleEndianUtil::appendUint32( rewrittenBytes, static_cast<uint32>( totalSize ) );
                 LittleEndianUtil::appendUint32( rewrittenBytes, static_cast<uint32>( paddedJSONSize ) );
                 LittleEndianUtil::appendUint32( rewrittenBytes, ModelImportGeometry::kGlbJSONChunkType );

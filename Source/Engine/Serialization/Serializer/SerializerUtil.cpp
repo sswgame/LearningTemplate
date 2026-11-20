@@ -6,7 +6,7 @@
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -137,9 +137,12 @@ namespace sw
             /** @brief uint32 하나를 읽고 오프셋을 그만큼 옮깁니다. */
             [[nodiscard]] static bool readUint32( const uint8* pData, size_t dataSize, size_t& inoutOffset, uint32& outValue )
             {
-                if ( inoutOffset + sizeof( uint32 ) > dataSize )
+                if ( inoutOffset > dataSize )
                     return false;
-                outValue = LittleEndianUtil::readUint32( pData + inoutOffset );
+                ByteReader reader( pData + inoutOffset, dataSize - inoutOffset );
+                outValue = reader.readUint32();
+                if ( reader.hasOverflowed() )
+                    return false;
                 inoutOffset += sizeof( uint32 );
                 return true;
             }
@@ -147,9 +150,12 @@ namespace sw
             /** @brief int64 하나를 읽고 오프셋을 그만큼 옮깁니다. */
             [[nodiscard]] static bool readInt64( const uint8* pData, size_t dataSize, size_t& inoutOffset, int64& outValue )
             {
-                if ( inoutOffset + sizeof( int64 ) > dataSize )
+                if ( inoutOffset > dataSize )
                     return false;
-                outValue = LittleEndianUtil::readInt64( pData + inoutOffset );
+                ByteReader reader( pData + inoutOffset, dataSize - inoutOffset );
+                outValue = reader.readInt64();
+                if ( reader.hasOverflowed() )
+                    return false;
                 inoutOffset += sizeof( int64 );
                 return true;
             }
