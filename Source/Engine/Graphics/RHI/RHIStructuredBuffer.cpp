@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -10,6 +11,19 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct RHIStructuredBufferInternal
+        {
+            /** @brief 다음 세대 번호입니다(1 부터, 스레드 안전 — 렌더 스레드와 로딩 스레드가 함께 만든다). */
+            static uint64 takeNextGeneration()
+            {
+                static atomic<uint64> s_nextGeneration{ 1 };
+                return s_nextGeneration.fetch_add( 1, std::memory_order_relaxed );
+            }
+        };
+    } // namespace
+
     bool RHIStructuredBuffer::ensureCapacity( IRHIDevice* pDevice, uint32 elementSize, uint32 elementCount, RHIBufferUsage usage,
                                               bool bNeedsSRV, bool bNeedsUAV, const void* pInitialData )
     {
@@ -58,7 +72,7 @@ namespace sw
             _uav = pDevice->getResourceFactory()->registerBindlessBufferUAV( _buffer );
         _capacityElements = capacityCount;
         _elementSize      = elementSize;
-        ++_creationCount;
+        _generation       = RHIStructuredBufferInternal::takeNextGeneration();
         if ( bExactSize == false )
             upload( pDevice, pInitialData, elementSize * elementCount );
         return true;

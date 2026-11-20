@@ -306,10 +306,10 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "RT.GPUScene.instanceBuffer" );
             // 칸 순 버퍼다 — 원소 번호가 GPUScene 칸이다. 새로 만든 버퍼에는 아직 아무것도 없으므로 전체를 올린다(핸들이 바뀌었으면 다시 만들어진 것이다).
-            const uint32 creationBefore = _instances._creationCount; // 다시 만들었는지는 핸들이 아니라 생성 횟수로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
+            const uint64 generationBefore = _instances._generation; // 다시 만들었는지는 핸들이 아니라 세대 번호로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
             if ( _instances.ensureCapacity( pDevice, kStride, slotCount, kInstanceUsage, true, true, listSlot.data() ) )
             {
-                if ( _instances._creationCount != creationBefore )
+                if ( _instances._generation != generationBefore )
                     _slotBuffer.markFullUpload();
                 if ( _slotBuffer.collectRuns( kMaxInstanceScatterRunCount, _listScratchSlotRun ) )
                 {
@@ -371,19 +371,19 @@ namespace sw
             pListOrder = &_listScratchIdentityOrder;
         }
         SW_ASSERT( pListOrder->size() == orderCount ); // 빌더가 차례(인스턴스)마다 칸 하나를 싣는다
-        constexpr RHIBufferUsage kOrderUsage    = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-        const uint32             creationBefore = _instanceOrder._creationCount; // 다시 만들었는지는 핸들이 아니라 생성 횟수로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
+        constexpr RHIBufferUsage kOrderUsage      = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+        const uint64             generationBefore = _instanceOrder._generation; // 다시 만들었는지는 핸들이 아니라 세대 번호로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
         if ( _instanceOrder.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), orderCount, kOrderUsage, true, false, pListOrder->data() ) == false )
         {
             if ( orderCount > 0 )
                 SW_LOG_ERROR_ONCE_ID( "GPUScene.FailedCreateInstanceOrder", "Failed to create the instance order buffer (%# entries) - scene meshes are not drawn", orderCount );
             return;
         }
-        if ( _instanceOrder._creationCount == creationBefore && _bInstanceOrderUploadPending == SW_FALSE )
+        if ( _instanceOrder._generation == generationBefore && _bInstanceOrderUploadPending == SW_FALSE )
             return;
         // 같은 버퍼에 지난 목록이 올라가 있으면 바뀐 구간만 올린다 — 배치에 인스턴스 몇이 드나든 빌드는 그 배치 뒤의 차례만 밀린다.
         const vector<uint32>* pUploaded = _pUploadedInstanceOrder.get();
-        if ( _instanceOrder._creationCount == creationBefore && pUploaded != nullptr && pUploaded != pListOrder )
+        if ( _instanceOrder._generation == generationBefore && pUploaded != nullptr && pUploaded != pListOrder )
         {
             constexpr uint32 kOrderMergeGap = 64u; // 원소 64 개(256 바이트) 이하 사이는 붙인다 — 조각마다 복사 명령이 하나 더 나간다
             RHIStructuredBuffer::collectChangedRegions( pUploaded->data(), static_cast<uint32>( pUploaded->size() ), pListOrder->data(), orderCount,
@@ -408,12 +408,12 @@ namespace sw
         constexpr RHIBufferUsage kLODStateUsage = RHIBufferUsage::Structured | RHIBufferUsage::UnorderedAccess;
         for ( GPUCullViewResources& view : _listCullView )
         {
-            const uint32 creationBefore = view._lodState._creationCount; // 다시 만들었는지는 핸들이 아니라 생성 횟수로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
-            const bool   bEnsured       = view._lodState.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), stateCount, kLODStateUsage, false, true, nullptr );
+            const uint64 generationBefore = view._lodState._generation; // 다시 만들었는지는 핸들이 아니라 세대 번호로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
+            const bool   bEnsured         = view._lodState.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), stateCount, kLODStateUsage, false, true, nullptr );
             if ( bEnsured == false && stateCount > 0 )
                 SW_LOG_ERROR_ONCE_ID( "GPUScene.FailedCreateLODState", "Failed to create the LOD state buffer (%# instances) of a cull view - its LOD levels switch without a crossfade", stateCount );
             // 새 버퍼의 내용은 정해져 있지 않다 — 다음 컬링이 비운다.
-            if ( view._lodState._creationCount != creationBefore )
+            if ( view._lodState._generation != generationBefore )
                 view._bLODStateUndefined = SW_TRUE;
         }
     }
@@ -452,10 +452,10 @@ namespace sw
         SW_PROFILE_SCOPE( "RT.GPUScene.motionHistory" );
         // shortcut: 움직이는 프레임마다 인스턴스 수만큼 열쇠를 찾고 버퍼 전체(인스턴스당 64 바이트)를 올린다 — 인스턴스가 수만을 넘어 이 구간이 측정에 드러나면 바뀐 구간만 올린다.
         // 칸 순이다 — 정점 셰이더가 칸 번호로 지난 행렬을 읽는다(binding.hlsli `InstanceData::loadPreviousWorld`). 구멍은 열쇠가 0 이라 기록이 없다.
-        _bObjectMotion                           = _motionHistory.update( _slotBuffer.getSlots(), _listScratchPrevWorld ) ? SW_TRUE : SW_FALSE;
-        constexpr RHIBufferUsage kPrevWorldUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-        const uint32             count           = static_cast<uint32>( _listScratchPrevWorld.size() );
-        const uint32             creationBefore  = _prevInstanceWorlds._creationCount; // 생성 횟수로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
+        _bObjectMotion                            = _motionHistory.update( _slotBuffer.getSlots(), _listScratchPrevWorld ) ? SW_TRUE : SW_FALSE;
+        constexpr RHIBufferUsage kPrevWorldUsage  = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+        const uint32             count            = static_cast<uint32>( _listScratchPrevWorld.size() );
+        const uint64             generationBefore = _prevInstanceWorlds._generation; // 세대 번호로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
         if ( _prevInstanceWorlds.ensureCapacity( pDevice, static_cast<uint32>( sizeof( float4x4 ) ), count, kPrevWorldUsage, true, false, _listScratchPrevWorld.data() ) == false )
         {
             if ( count > 0 )
@@ -463,7 +463,7 @@ namespace sw
             _listUploadedPrevWorld.clear();
             return;
         }
-        const bool bSameAsUploaded = _prevInstanceWorlds._creationCount == creationBefore && _listUploadedPrevWorld.size() == _listScratchPrevWorld.size() &&
+        const bool bSameAsUploaded = _prevInstanceWorlds._generation == generationBefore && _listUploadedPrevWorld.size() == _listScratchPrevWorld.size() &&
                                      Memory::compare( _listUploadedPrevWorld.data(), _listScratchPrevWorld.data(), _listScratchPrevWorld.size() * sizeof( float4x4 ) ) == 0;
         if ( bSameAsUploaded )
             return;

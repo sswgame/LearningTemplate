@@ -305,8 +305,8 @@ namespace sw
         vector<GPULight>                 _listUploadScratch;                       ///< CPU 라이트 · GPU 구간(죽은 라이트) · 그림자 타일을 이어 붙여 한 번에 업로드하는 임시 버퍼(프레임마다 다시 쓴다)
         vector<GPULight>                 _listUploadedLight;                       ///< 라이트 버퍼에 지난번에 올린 내용(바뀐 구간만 올리려고 견준다 — `_listUploadScratch` 와 바꿔 쓴다)
         vector<RHIBufferCopyRegion>      _listScratchRegion;                       ///< 바뀐 구간 조각(라이트 · 프로브가 프레임마다 다시 쓴다)
-        uint32                           _uploadedProbeBufferCreation{ 0 };        ///< `_pUploadedProbeElements` 를 올린 프로브 버퍼의 생성 횟수
-        uint32                           _uploadedLightBufferCreation{ 0 };        ///< `_listUploadedLight` 를 올린 버퍼의 생성 횟수(`RHIStructuredBuffer::_creationCount` — 다시 만들어졌으면 통째로 올린다)
+        uint64                           _uploadedProbeBufferGeneration{ 0 };      ///< `_pUploadedProbeElements` 를 올린 프로브 버퍼의 세대 번호
+        uint64                           _uploadedLightBufferGeneration{ 0 };      ///< `_listUploadedLight` 를 올린 버퍼의 세대 번호(`RHIStructuredBuffer::_generation` — 다시 만들어졌으면 통째로 올린다)
         uint32                           _uploadedCPUCount{ 0 };                   ///< `_listUploadedLight` 의 CPU 라이트 수(구간 배치가 바뀌면 통째로 올린다)
         uint32                           _uploadedGPULightCount{ 0 };              ///< `_listUploadedLight` 의 GPU 구간 슬롯 수
         vector<LightGrid>                _listGrid;                                ///< 뷰마다의 라이트 그리드(CPU 생산자, 저장소를 프레임마다 다시 쓴다)
