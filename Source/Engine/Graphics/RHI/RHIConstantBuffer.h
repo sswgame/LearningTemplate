@@ -16,7 +16,6 @@
  */
 #pragma once
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {

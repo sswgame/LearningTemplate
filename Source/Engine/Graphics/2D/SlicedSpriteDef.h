@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 
 namespace sw
 {

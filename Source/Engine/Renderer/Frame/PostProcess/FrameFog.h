@@ -12,7 +12,6 @@
 
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

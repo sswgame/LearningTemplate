@@ -17,7 +17,6 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {

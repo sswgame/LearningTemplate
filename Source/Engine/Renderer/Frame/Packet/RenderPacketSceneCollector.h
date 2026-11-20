@@ -15,7 +15,6 @@
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Environment/Sky/SkyLight.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Lighting/LensFlareSpriteBuffer.h"

@@ -26,6 +26,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"

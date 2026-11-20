@@ -13,8 +13,10 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIEnums.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
+#include "Engine/Graphics/RenderState/RenderState.h"
 
 namespace sw
 {

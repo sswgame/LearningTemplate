@@ -20,7 +20,6 @@
 
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 

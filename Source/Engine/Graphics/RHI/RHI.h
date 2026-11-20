@@ -10,7 +10,6 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {

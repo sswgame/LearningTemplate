@@ -11,7 +11,6 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 
 namespace sw

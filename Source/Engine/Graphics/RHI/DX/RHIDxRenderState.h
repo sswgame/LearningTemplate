@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RenderState/RenderStateEnums.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

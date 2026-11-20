@@ -21,7 +21,6 @@
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHIBufferTransitionBatch.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Debug/RenderBufferInspector.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/Execute/FrameGraphExecutor.h"

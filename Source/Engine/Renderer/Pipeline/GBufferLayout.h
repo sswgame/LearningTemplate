@@ -15,7 +15,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 
 #include "shading_model_ids.hlsli"

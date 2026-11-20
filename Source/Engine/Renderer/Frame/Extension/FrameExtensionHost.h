@@ -14,7 +14,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 

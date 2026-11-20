@@ -16,7 +16,6 @@
 #include "Engine/Environment/Surface/SurfaceDeformBinding.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Debug/GPUMessage.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
