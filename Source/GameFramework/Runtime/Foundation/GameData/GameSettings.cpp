@@ -9,6 +9,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
@@ -108,6 +109,31 @@ namespace sw
             {
                 SW_LOG_ERROR_ID( "GameSettings.GameSettingsUnknownElementGame", "GameSettings %#: unknown element <%#> - game data goes in the game's own catalogs (there is no free-form key-value section)", sourceName, pName );
                 bOk = false;
+                continue;
+            }
+            // 목록 칸은 리플렉션 XML 의 목록 모양(`<칸><item>값</item>…</칸>`)이다 — 값마다 원소 하나를 더해 그 형식의 글 읽기로 채운다.
+            if ( pFound->_bIsContainer == SW_TRUE )
+            {
+                const ISequenceContainerWrapper* const pSequence = pFound->_containerWrapper != nullptr ? pFound->_containerWrapper->asSequence() : nullptr;
+                void* const                            pList     = pFound->getRawPtr( this );
+                if ( pSequence == nullptr || pList == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "GameSettings.GameSettingsListNotSequence", "GameSettings %#: <%#> is a container that is not a list - only list fields can be written in gamesettings", sourceName, pName );
+                    bOk = false;
+                    continue;
+                }
+                pSequence->clear( pList );
+                for ( XMLNode item = child.findChild( "item" ); item.isValid(); item = item.findNextSibling( "item" ) )
+                {
+                    const utf8* const pItemText = item.getText() != nullptr ? item.getText() : "";
+                    pSequence->addElementDefault( pList );
+                    void* const pElement = pSequence->getElement( pList, pSequence->getSize( pList ) - 1 );
+                    if ( SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, pFound->_elementTypeName, pItemText, context ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "GameSettings.GameSettingsCannotRead", "GameSettings %#: <%#><item>%#</item></%#> cannot be read as %#", sourceName, pName, pItemText, pName, pFound->_elementTypeName.c_str() );
+                        bOk = false;
+                    }
+                }
                 continue;
             }
             const utf8* const pText = child.getText() != nullptr ? child.getText() : "";
