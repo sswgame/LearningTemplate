@@ -18,6 +18,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetTable.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
 {

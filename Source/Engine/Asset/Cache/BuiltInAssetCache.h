@@ -14,6 +14,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/DevOnly.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -23,6 +24,16 @@
 
 namespace sw
 {
+    /**
+     * @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`).
+     * @details 멤버가 `ReloadResult` 를 돌려주지 않으면(예전 `void`) 이 `return` 이 컴파일되지 않는다 — 결과를 버리는 캐시를 등록할 수 없다.
+     */
+    template <typename TCache>
+    ReloadResult reloadAssetCache( AssetCacheBase& cache, const AssetID& assetID )
+    {
+        return static_cast<TCache&>( cache ).reload( assetID );
+    }
+
     /** @brief 캐시를 하나 만듭니다. */
     using CreateAssetCacheFunction = unique_ptr<AssetCacheBase> ( * )();
 
@@ -67,6 +78,12 @@ namespace sw
         return make_unique<TCache>();
     }
 } // namespace sw
+
+/**
+ * @brief 캐시 형식 @p Type 의 리로드 함수(`AssetCacheReloadFunction`)입니다. 배포 빌드는 리로드가 없다 — `nullptr` 이고 리로드 본문을 참조하지 않는다.
+ * @details 빌드 스위치는 `SW_DEV_ONLY_FUNCTION` 한 곳이다(캐시마다 `#if` 를 두지 않는다).
+ */
+#define SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) ( static_cast<::sw::AssetCacheReloadFunction>( SW_DEV_ONLY_FUNCTION( &::sw::reloadAssetCache<Type> ) ) )
 
 /**
  * @brief 캐시 @p Type 을 내장 캐시로 등록합니다(캐시의 .cpp, 파일 범위, `namespace sw` 안). 매니저마다 하나씩 만듭니다.

@@ -3,6 +3,7 @@
 #include "Engine/UI/Document/UIDocumentCache.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/UI/Document/UIDocument.h"

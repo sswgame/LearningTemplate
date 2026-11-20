@@ -37,7 +37,6 @@
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
-#include "Engine/Content/AssetID.h"
 
 namespace sw
 {
