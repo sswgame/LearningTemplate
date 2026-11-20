@@ -11,6 +11,7 @@
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw

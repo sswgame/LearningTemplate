@@ -3,6 +3,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/Radians.h"
 #include "Core/Time/Countdown.h"

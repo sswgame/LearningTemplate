@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/World/Overworld/PlayerLocomotion.h"
 
+#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 

@@ -6,11 +6,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Math/DeterministicRandom.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include <type_traits>
@@ -19,6 +17,7 @@
 namespace sw
 {
     struct Countdown;
+    struct DeterministicRandom32;
     struct FixedStepTimer;
     struct int2;
     struct Radians;
@@ -26,6 +25,10 @@ namespace sw
     struct TypeInfo;
 
     class StateIO;
+
+    // 리플렉션 칸(`reflected` · `reflectedAs` · `writeReflectedHeader<T>`)을 부르는 TU 만 몸체(TypeFqn.h)를 읽는다 — 상태 칸만 쓰는 TU(470 여)는 이름 파서를 끌지 않는다.
+    template <typename E>
+    hashed_string typeFqn();
 
     namespace StateIOInternal
     {
