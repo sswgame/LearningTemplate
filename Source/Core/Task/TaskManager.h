@@ -504,8 +504,12 @@ namespace sw
         static constexpr uint32 kMaxHelperThreadCount = 8;
 
     private:
-        /** @brief 전역 · 지역 큐가 가득 찼을 때 한 번 기다립니다 — 잠든 워커를 깨워 비우게 한 뒤 양보한다(`submitWithoutWake` 묶음이 용량을 넘어도 돈다). */
-        void waitForQueueSpace();
+        /**
+         * @brief @p fullQueue 가 가득 찼을 때 한 걸음 자리를 냅니다. 워커면 그 큐의 가장 오래된 항목 하나를 그 자리에서 실행하고, 아니면 잠든 워커를 깨운 뒤 양보합니다.
+         * @details 워커가 깨우고 양보만 하면 워커가 하나(웹 · 저사양)이거나 모든 워커가 넣는 중일 때 아무도 꺼내지 않아 끝나지 않는다(TBB · UE Tasks 도 넣는 워커가 일을 돕는다).
+         */
+        template <uint32 Capacity>
+        void waitForQueueSpace( ConcurrentQueue<uintptr_t, Capacity>& fullQueue );
         // --- 수명 · 정리 ---
         /** @brief 워커 스레드의 메인 루프입니다. 큐 소비 · 훔치기 · 세대 스핀 · 자기 워드에서 잠들기를 합니다. */
         void workerLoop( uint32 workerID );

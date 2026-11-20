@@ -2,6 +2,7 @@
 // 케이스마다 지역 매니저를 세운다(엔진의 매니저는 건드리지 않는다). `waitAll` 은 기한이 없다 — 멈추는 결함은 케이스 시한(`kDefaultCaseTimeoutSeconds`)이 이름과 함께 끊는다.
 #include "pch.h"
 
+#include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
@@ -1907,5 +1908,97 @@ SW_TEST_CASE( TaskManagerTest, RunParallelRangeIntoHandsEachRangeItsOwnSlices )
     }
     SW_EXPECT_EQUAL( 0, nonEmptyAbsentCount.load() );
     SW_EXPECT_EQUAL( 0, wrongSliceCount.load() );
+    manager.shutdown();
+}
+
+namespace
+{
+    /** @brief 큐 용량을 넘겨 넣는 탐침의 상태입니다. 자식은 넣은 차례 번호를 들고 돌며, 우선순위 큐(High · Low)는 FIFO 라 그 차례대로 돌아야 한다. */
+    struct QueueOverflowProbe
+    {
+        // 용량(High 1024 · Low 1024 · 워커 데크 4096 + Normal 전역 4096, `TaskManager.h`)을 넉넉히 넘긴다.
+        static constexpr int32 kHighCount   = 1024 * 2 + 16;
+        static constexpr int32 kLowCount    = 1024 * 2 + 16;
+        static constexpr int32 kNormalCount = 4096 * 2 + 64;
+        static constexpr int32 kTotalCount  = kHighCount + kLowCount + kNormalCount;
+
+        sw::atomic<int32>  _highNext{ 0 };
+        sw::atomic<int32>  _lowNext{ 0 };
+        sw::atomic<int32>  _highOutOfOrderCount{ 0 };
+        sw::atomic<int32>  _lowOutOfOrderCount{ 0 };
+        sw::atomic<int32>  _normalRanCount{ 0 };
+        sw::atomic<int32>  _doneCount{ 0 };
+        sw::atomic<uint32> _allDoneWord{ 0 }; ///< 마지막 자식이 1 로 세우고 깨운다(메인은 태스크를 돕지 않는 Futex 로 기다린다)
+
+        void finishOne()
+        {
+            if ( _doneCount.fetch_add( 1, std::memory_order_acq_rel ) + 1 != kTotalCount )
+                return;
+            _allDoneWord.store( 1, std::memory_order_release );
+            sw::Futex::wakeAll( _allDoneWord );
+        }
+    };
+} // namespace
+
+/**
+ * @brief 워커가 하나뿐일 때 워커 안에서 큐 용량을 넘겨 넣어도 끝나고, 모두 한 번씩 · 우선순위 큐는 넣은 차례대로 돈다
+ * @details 고치기 전에는 가득 찬 큐에서 넣는 쪽이 잠든 워커를 깨우고 양보만 했다 — 넣는 쪽이 유일한 워커라 아무도 꺼내지 않아 끝나지 않았다
+ *          (High · Low 는 워커가 넣어도 전역 큐로 가고, Normal 은 데크와 전역 큐가 모두 찼을 때). 메인은 태스크를 돕지 않는 Futex 로 기다린다 —
+ *          `waitAll` 로 기다리면 메인이 큐를 비워 결함이 가려진다. 끝나지 않으면 케이스 시한이 이름과 함께 끊는다.
+ */
+SW_TEST_CASE( TaskManagerTest, WorkerSubmittingPastQueueCapacityRunsAQueuedItemInsteadOfSpinning )
+{
+    sw::TaskManager manager;
+    SW_REQUIRE_TRUE( manager.initialize( 1 ) );
+
+    QueueOverflowProbe  probe;
+    QueueOverflowProbe* pProbe   = &probe;
+    sw::TaskHandle      producer = manager.emplaceTask( "QueueOverflowProducer", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, pProbe]()
+         {
+        for ( int32 index = 0; index < QueueOverflowProbe::kHighCount; ++index )
+        {
+            sw::TaskHandle high = manager.emplaceTask( "OverflowHigh", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [pProbe, index]()
+                 {
+                if ( pProbe->_highNext.fetch_add( 1, std::memory_order_relaxed ) != index )
+                    pProbe->_highOutOfOrderCount.fetch_add( 1, std::memory_order_relaxed );
+                pProbe->finishOne();
+            } ) );
+            high.setPriority( sw::TaskPriority::High );
+            high.submit();
+        }
+        for ( int32 index = 0; index < QueueOverflowProbe::kLowCount; ++index )
+        {
+            sw::TaskHandle low = manager.emplaceTask( "OverflowLow", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [pProbe, index]()
+                 {
+                if ( pProbe->_lowNext.fetch_add( 1, std::memory_order_relaxed ) != index )
+                    pProbe->_lowOutOfOrderCount.fetch_add( 1, std::memory_order_relaxed );
+                pProbe->finishOne();
+            } ) );
+            low.setPriority( sw::TaskPriority::Low );
+            low.submit();
+        }
+        for ( int32 index = 0; index < QueueOverflowProbe::kNormalCount; ++index )
+        {
+            sw::TaskHandle normal = manager.emplaceTask( "OverflowNormal", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [pProbe]()
+                 {
+                pProbe->_normalRanCount.fetch_add( 1, std::memory_order_relaxed );
+                pProbe->finishOne();
+            } ) );
+            normal.submit();
+        }
+    } ) );
+    producer.submit();
+
+    while ( probe._allDoneWord.load( std::memory_order_acquire ) == 0 )
+    {
+        sw::Futex::wait( probe._allDoneWord, 0 );
+    }
+    manager.waitAll( "TaskManagerTest" );
+    SW_EXPECT_EQUAL( 0u, manager.getActiveTaskCount() );
+    SW_EXPECT_EQUAL( QueueOverflowProbe::kHighCount, probe._highNext.load() );
+    SW_EXPECT_EQUAL( QueueOverflowProbe::kLowCount, probe._lowNext.load() );
+    SW_EXPECT_EQUAL( QueueOverflowProbe::kNormalCount, probe._normalRanCount.load() );
+    SW_EXPECT_EQUAL( 0, probe._highOutOfOrderCount.load() );
+    SW_EXPECT_EQUAL( 0, probe._lowOutOfOrderCount.load() );
     manager.shutdown();
 }
