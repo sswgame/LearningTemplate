@@ -3,6 +3,8 @@
     "_folders": {},
     "_components": {},
     "_watches": {
+        "Scene.ComponentTickMs": "측정 장치 — 틱 주기 등급을 들일지 허브 부하 시나리오에서 판정할 때 읽는다(문턱 10%, DesignBacklog Engine 발전 방향 ⑤, 판정은 측정 뒤)",
+        "Scene.ComponentTickShare": "측정 장치 — 틱 주기 등급을 들일지 허브 부하 시나리오에서 판정할 때 읽는다(문턱 10%, DesignBacklog Engine 발전 방향 ⑤, 판정은 측정 뒤)",
         "Audio.OutputUnderruns": "측정 장치 — 오디오 실시간 스레드의 최악 값(문턱 0)을 허브 부하 시나리오에서 판정할 때 읽는다(DesignBacklog Engine 발전 방향 ①, 판정은 측정 뒤)",
         "Audio.RealtimeAllocations": "측정 장치 — 오디오 실시간 스레드의 최악 값(문턱 0)을 허브 부하 시나리오에서 판정할 때 읽는다(DesignBacklog Engine 발전 방향 ①, 판정은 측정 뒤)",
         "Audio.RealtimeLocks": "측정 장치 — 오디오 실시간 스레드의 최악 값(문턱 0)을 허브 부하 시나리오에서 판정할 때 읽는다(DesignBacklog Engine 발전 방향 ①, 판정은 측정 뒤)",
