@@ -2,7 +2,7 @@
 꾸미기 스키마 출시 대조 — 콘텐츠의 꾸미기 스키마(`<CustomizationSchemaCatalog>`)를 마지막 출시 스냅숏(`Config/Build/Release/CustomizationSchemas.json`)과 견준다.
 
 패치가 꾸미기 스키마를 바꿔도 옛 세이브 · 공유 코드가 자연스럽게 새 스키마로 올라가게, 런타임의 판 올림 단계(`<Migration toVersion>`)가 빠진 콘텐츠는
-쿠킹에서 멈춘다(CookAssets 가 `check --fix` 를 먼저 돈다). 그래서 런타임에는 "단계가 빠진 패치" 가 있을 수 없다.
+쿠킹에서 멈춘다(CookAssets 가 `check` 를 먼저 돈다 — 빌드는 소스를 고치지 않고, 고치기는 `--fix` 명령). 그래서 런타임에는 "단계가 빠진 패치" 가 있을 수 없다.
 
 | 바뀜 | 처리 |
 | --- | --- |
