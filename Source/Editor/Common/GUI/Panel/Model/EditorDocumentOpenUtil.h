@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
-#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 
 namespace sw::editor
 {

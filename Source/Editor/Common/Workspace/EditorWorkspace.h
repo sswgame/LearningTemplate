@@ -16,7 +16,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 #include "Editor/Common/Workspace/EditorPanelOpenRequest.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"

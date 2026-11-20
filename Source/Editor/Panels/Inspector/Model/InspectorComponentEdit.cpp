@@ -6,7 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"

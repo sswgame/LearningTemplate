@@ -3,7 +3,7 @@
 #include "Editor/Common/GUI/Model/EditorMenuBarViewModel.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
-#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"

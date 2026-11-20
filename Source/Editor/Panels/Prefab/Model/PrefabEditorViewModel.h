@@ -13,7 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 
 namespace sw
 {

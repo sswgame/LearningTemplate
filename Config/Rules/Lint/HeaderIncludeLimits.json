@@ -15,6 +15,7 @@
         { "_header": "Engine/Physics/Collision/PhysicsShape.h", "_limit": 18, "_reason": "메시 형식은 전방 선언 — AssetRef<MeshAssetFormat> 칸을 만드는 생성자를 PhysicsShape.cpp 에 둔다(MeshAssetFormat.h 사슬 다섯 개를 뺐다)" },
         { "_header": "Engine/Physics/Scene/ScenePhysics.h", "_limit": 53, "_reason": "물리 씬은 unique_ptr 로만 든다 — IPhysicsScene.h 대신 IPhysicsSceneFwd.h 와 쓰는 면(바디 · 캐릭터)만" },
         { "_header": "GameFramework/Runtime/Gameplay/Inventory/Wallet.h", "_limit": 16, "_reason": "지갑만 쓰는 TU 가 가게 카탈로그 · 인벤토리 · 조건식을 끌어오지 않게 Shop.h 에서 나눴다" },
+        { "_header": "Editor/Common/GUI/Panel/IEditorPanel.h", "_limit": 12, "_reason": "문서 종류는 값만 — 종류 등록 표(EditorAssetType.h) 대신 EditorAssetTypeID.h" },
         { "_header": "Engine/Renderer/Frame/FrameRendererUtil.h", "_limit": 49, "_reason": "리플렉션 레지스트리를 쓰지 않는다 — TypeRegistry.h 포함을 지웠다" }
     ]
 }
