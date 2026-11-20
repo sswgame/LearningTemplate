@@ -2,6 +2,7 @@
 
 #include "Core/Name/hashed_string.h"
 #include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Reflection/ReflectValueBinding.h"
@@ -572,4 +573,27 @@ SW_TEST_CASE( SerializerUtilTest, NameHashLookupTriesExpectedIndexFirst )
     SW_EXPECT_TRUE( SerializerUtil::findPropertyIndexByNameHash( listProp, countHash, static_cast<uint32>( listProp.size() ) + 3 ) == scanned );
     const uint32 unknownHash = static_cast<uint32>( hashed_string::computeHash( string_view{ "_notAField" } ) );
     SW_EXPECT_FALSE( SerializerUtil::findPropertyIndexByNameHash( listProp, unknownHash, 0 ).has_value() );
+}
+
+/** @brief [SerializerUtilTest] 텍스트 길도 묶음을 쓴다 — 묶음으로 쓴 글이 이름으로 쓴 글과 같고, 묶음으로 다시 읽힌다(JSON · XML 이 같은 길을 탄다) */
+SW_TEST_CASE( SerializerUtilTest, TextPathUsesValueBinding )
+{
+    const PropertyInfo& mode  = getSampleProperty( "_mode" );
+    const PropertyInfo& count = getSampleProperty( "_count" );
+    SW_REQUIRE_TRUE( mode.findValueBinding() != nullptr && count.findValueBinding() != nullptr );
+
+    const SerializerSampleMode                fast = SerializerSampleMode::Fast;
+    StringBuilder<constant::buffer::kMax8192> byName;
+    StringBuilder<constant::buffer::kMax8192> byBinding;
+    SerializerUtil::valueToText( byName, ValueAddress{ &fast }, mode._typeName, getContext() );
+    SerializerUtil::valueToText( byBinding, ValueAddress{ &fast }, mode._typeName, mode.findValueBinding(), getContext() );
+    SW_EXPECT_TRUE( byName.view() == byBinding.view() );
+
+    SerializerSampleMode read = SerializerSampleMode::Off;
+    SW_EXPECT_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &read }, mode._typeName, mode.findValueBinding(), byBinding.view(), getContext() ) );
+    SW_EXPECT_TRUE( read == SerializerSampleMode::Fast );
+
+    int32 number = 0;
+    SW_EXPECT_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &number }, count._typeName, count.findValueBinding(), "42", getContext() ) );
+    SW_EXPECT_EQUAL( 42, number );
 }

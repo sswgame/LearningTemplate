@@ -120,6 +120,34 @@ namespace sw
          * @return 바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입이면(`hasBinaryValueCodec` 이 거짓) 아무 바이트도 쓰지 않고 false 입니다.
          *         예전에는 0 바이트 하나를 쓰고 성공해, 세이브는 써지고 로드에서 값이 빠졌습니다. 구조체 안의 값이 실패해도 false 입니다.
          */
+        /**
+         * @brief 값 하나를 쓰고 읽을 처리기 · 형식입니다(바이너리 · 텍스트 · JSON · XML 이 함께 쓴다). 묶음(`ReflectValueBinding`)이 있으면 이름 조회 없이, 없으면 이름으로 찾는다.
+         * @details 순서는 어느 형식이나 같다 — 처리기, 열거형, 구조체, 텍스트 처리기. 이름으로 찾는 길은 열거형 · 구조체를 처리기가 없을 때만(그때) 찾는다.
+         *          `findValueCodecs` 로만 만든다(내장형 칸은 그것이 채운다).
+         */
+        struct SW_API ValueCodecs
+        {
+            hashed_string       _typeName{};       ///< 값의 형식 이름
+            hashed_string       _handlerName{};    ///< 내장형이 아닐 때 처리기를 찾을 이름(별칭이면 형식의 정규 이름)
+            const EnumInfo*     _pEnum{ nullptr }; ///< 묶음의 사실(이름으로 찾는 길이면 `findEnum` 이 그때 찾는다)
+            const TypeInfo*     _pType{ nullptr }; ///< 묶음의 사실(이름으로 찾는 길이면 `findStructType` 이 그때 찾는다)
+            ReflectBuiltinIndex _builtinIndex;     ///< 내장형이면 처리기는 문맥의 색인 배열에서 고른다(아니면 kNone)
+            bool                _bByName{ false }; ///< 묶음 없이 이름으로 찾는 길. NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
+
+            const SerializeContext::BinaryWriteFn* findBinaryWriter( const SerializeContext& context ) const;
+            const SerializeContext::BinaryReadFn*  findBinaryReader( const SerializeContext& context ) const;
+            const SerializeContext::TextWriteFn*   findTextWriter( const SerializeContext& context ) const;
+            const SerializeContext::TextReadFn*    findTextReader( const SerializeContext& context ) const;
+            /** @brief 처리기 이름입니다 — 내장형이면 정규 이름(`string` · `bool` …), 아니면 `_handlerName`. 형식 갈래(글 · 불리언)를 이름 없이 묻는 곳이 쓴다. */
+            const hashed_string& getHandlerName() const;
+            /** @brief 열거형 정보입니다. 이름으로 찾는 길이면 지금 레지스트리에서 찾습니다. */
+            const EnumInfo* findEnum( const SerializeContext& context ) const;
+            /** @brief 구조체(원시 형식이 아닌) 정보입니다. 아니면 nullptr 입니다. */
+            const TypeInfo* findStructType( const SerializeContext& context ) const;
+        };
+        /** @brief @p typeName 값의 처리기 · 형식을 고릅니다. @p pBinding 은 그 이름에 묶은 사실이고 없으면(nullptr) 이름으로 찾습니다. */
+        SW_API static ValueCodecs findValueCodecs( const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context );
+
         /** @brief 값 하나를 바이너리로 씁니다. @p pBinding 은 @p typeName 에 묶은 사실(프로퍼티 · 컨테이너 원소 · 키)이고 nullptr 이면 이름으로 찾습니다. */
         [[nodiscard]] SW_API static bool serializeValueBinary( ValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding, vector<uint8>& listBuffer,
                                                                const SerializeContext& context );
@@ -167,9 +195,15 @@ namespace sw
         /** @brief 값을 텍스트로 씁니다(중첩 타입은 중첩 문자열). 바깥 따옴표는 붙이지 않습니다. XML, JSON, SchemaMigrate 가 함께 쓰는 기본 조각입니다. @p value 는 값 하나 자체의 주소입니다. */
         static void valueToText( StringBuilder<constant::buffer::kMax8192>& ss, ValueAddress value, const hashed_string& typeName,
                                  const SerializeContext& context );
+        /** @brief `valueToText` 의 묶음 판입니다. @p pBinding 은 @p typeName 에 묶은 사실이고 nullptr 이면 이름으로 찾습니다. */
+        SW_API static void valueToText( StringBuilder<constant::buffer::kMax8192>& ss, ValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding,
+                                        const SerializeContext& context );
 
         /** @brief 텍스트 토큰을 값 하나 자체(객체 주소가 아니다)에 읽어 씁니다. 값 주소 쪽 텍스트 쓰기이며, 짝은 `formatValueText` 입니다. */
         [[nodiscard]] SW_API static bool parseTextValue( MutableValueAddress value, const hashed_string& typeName, string_view valStr,
+                                                         const SerializeContext& context );
+        /** @brief `parseTextValue` 의 묶음 판입니다. */
+        [[nodiscard]] SW_API static bool parseTextValue( MutableValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding, string_view valStr,
                                                          const SerializeContext& context );
 
         /**

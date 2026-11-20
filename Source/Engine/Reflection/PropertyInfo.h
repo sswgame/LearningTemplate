@@ -30,6 +30,16 @@ namespace sw
         /** @brief 프로퍼티 맨 바깥 단계의 원소 · 키 이름에 묶은 사실입니다(`PropertyInfo::getContainerShape` 가 채운다). 그 이름의 값에만 쓴다 — 안쪽 단계는 비어 이름으로 찾는다. */
         const ReflectValueBinding* _pElementBinding = nullptr;
         const ReflectValueBinding* _pKeyBinding     = nullptr;
+
+        /** @brief @p typeName 값에 쓸 묶음입니다 — 원소 · 키 이름과 같을 때만(묶음은 이름의 사실이라 같은 이름이면 어느 깊이에나 맞는다). 아니면 nullptr 이고 이름으로 찾는다. */
+        const ReflectValueBinding* findBinding( const hashed_string& typeName ) const noexcept
+        {
+            if ( _pElementBinding != nullptr && typeName == _elementTypeName )
+                return _pElementBinding;
+            if ( _pKeyBinding != nullptr && typeName == _keyTypeName )
+                return _pKeyBinding;
+            return nullptr;
+        }
     };
 } // namespace sw
 
