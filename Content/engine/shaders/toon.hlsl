@@ -20,7 +20,7 @@
  *
  *          머티리얼 define: `MATERIAL_OUTLINE`(외곽선 패스에 들어간다) · `MATERIAL_ALPHA_CUTOFF`(알파 컷오프) · `MATERIAL_TWO_SIDED`(양면 —
  *          컬링을 끄는 것은 PSO 변형이 하고, 셰이더는 뒷면의 노멀을 뒤집는다) · `MATERIAL_BLEND_TRANSLUCENT`(반투명, 머티리얼 alphaMode="Blend" 와 짝).
- *          `MATERIAL_FORWARD_ONLY` 는 늘 있어야 한다 — G버퍼 퍼뮤테이션은 `#error` 로 쿠킹에서 멈춘다.
+ *          표면 모델은 Toon 이다(`surfaceModel="Toon"` — 모델이 `MATERIAL_FORWARD_ONLY` 를 낸다). G버퍼 퍼뮤테이션은 뼈대의 `#error` 로 쿠킹에서 멈춘다.
  *
  *          UV 애니메이션(MToon uvAnimation*)은 PassCB `g_SwMaterialTime` 으로 픽셀에서 UV 를 스크롤 · 회전한다(computeAnimatedUv).
  */
@@ -71,11 +71,8 @@ SW_MATERIAL_BEGIN
 }
 SW_MATERIAL_END
 
-// 포워드 전용이다 — 계단 · 림 · 맷캡은 G버퍼로 나타낼 수 없다. 머티리얼에 MATERIAL_FORWARD_ONLY 가 있으면 디퍼드의 G버퍼 패스가 이 배치를 빼고
-// ForwardOnlyOpaque 패스가 포워드로 그린다. 그 define 을 빠뜨린 머티리얼이 G버퍼에서 조용히 램버트로 칠해지지 않게 쿠킹에서 멈춘다.
-#if defined( SW_PASS_GBUFFER )
-    #error "toon.hlsl is forward-only: the material must list MATERIAL_FORWARD_ONLY in _alwaysDefines (deferred draws it in ForwardOnlyOpaque)"
-#endif
+// 포워드 전용이다 — 계단 · 림 · 맷캡은 G버퍼로 나타낼 수 없다. 표면 모델 Toon(`surfaceModel="Toon"`)이 MATERIAL_FORWARD_ONLY 를 내 디퍼드의 G버퍼 패스가 이 배치를 빼고
+// ForwardOnlyOpaque 패스가 포워드로 그린다. 셰이딩 훅 없는 조명 훅의 G버퍼 변형은 뼈대(material_shader.hlsli)가 쿠킹에서 멈춘다 — 램버트로 조용히 칠하지 않는다.
 
 // 훅 선택(material_shader.hlsli). 조명은 툰 식이라 직접 정의한다. 외곽선 퍼뮤테이션은 머티리얼을 정점에서만 읽고(GL 이 구조버퍼를 두 단계에서 읽으면 링크를 거절한다)
 // 픽셀이 쓸 값을 사용자 보간 칸으로 넘긴다. 노멀 맵의 탄젠트는 색을 내는 퍼뮤테이션(깊이 · 외곽선이 아닌 것)만 월드로 옮긴다.

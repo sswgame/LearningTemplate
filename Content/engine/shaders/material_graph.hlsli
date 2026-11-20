@@ -4,17 +4,14 @@
  * 조명은 pbr_lit 과 같은 코드다(기본 PBR — material_shader_main.hlsli 의 `computeSelectedLighting`). 그래프가 적는 것은 표면 값뿐이고 패스 · 깊이 · 순열은 뼈대가 정한다.
  * 스위치: SW_MATERIAL_GRAPH_EMISSIVE — 자체 발광을 쓴다. 디퍼드에서는 G버퍼 패스가 장면 색에 미리 적는다(G버퍼 명세 판 3 — 포워드 전용이 아니다).
  *         SW_MATERIAL_GRAPH_HAIR — 출력 노드의 셰이딩 모델이 Hair 다(hair_shading.hlsli — Marschner 근사). 컴파일러가 칸 `_hairShift` · `_hairScatter` · `_hairStrandAxis`
- *         를 덧붙이고 MATERIAL_FORWARD_ONLY 를 적는다. 거칠기 핀이 세로 거칠기, 기본색 핀이 흡수 색이고 금속도는 쓰지 않는다. 가닥 방향은 정점 탄젠트(축 0) · 바이탄젠트(축 1)다.
+ *         를 덧붙이고 표면 모델 Hair 를 적는다(모델이 MATERIAL_FORWARD_ONLY 를 낸다). 거칠기 핀이 세로 거칠기, 기본색 핀이 흡수 색이고 금속도는 쓰지 않는다. 가닥 방향은 정점 탄젠트(축 0) · 바이탄젠트(축 1)다.
  */
 
 #ifndef SW_ENGINE_MATERIALGRAPH_HLSLI
 #define SW_ENGINE_MATERIALGRAPH_HLSLI
 
 #if defined( SW_MATERIAL_GRAPH_HAIR )
-    #if defined( SW_PASS_GBUFFER )
-        #error "a Hair shading model graph is forward-only: the generated material must list MATERIAL_FORWARD_ONLY"
-    #endif
-    #define SW_MATERIAL_CUSTOM_LIGHTING
+    #define SW_MATERIAL_CUSTOM_LIGHTING // G버퍼 변형은 뼈대(material_shader.hlsli)가 멈춘다 — 셰이딩 훅이 없다
 #else
     #define SW_MATERIAL_DEFAULT_LIGHTING
     #define SW_MATERIAL_RIM_LIGHT
