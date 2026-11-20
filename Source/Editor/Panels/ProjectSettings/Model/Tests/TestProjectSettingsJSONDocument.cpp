@@ -188,7 +188,7 @@ SW_TEST_CASE( ProjectSettingsEntryTest, OtherGamePresetsAreTyped )
     vector<ProjectSettingsEntry> listTyped( 1 );
     listTyped[0]._page         = "GameConfig";
     listTyped[0]._typeName     = "GameConfig";
-    listTyped[0]._relativePath = "Config/Game/Empty.json";
+    listTyped[0]._relativePath = "Config/Game/Playground.json";
     listTyped[0]._absolutePath = FileUtil::normalizeSeparators( FileUtil::joinPath( projectRoot, listTyped[0]._relativePath ) );
     ProjectSettingsEntry::addOtherGamePresets( projectRoot, listTyped );
     SW_EXPECT_EQUAL( listTyped[0]._gameName, string( "Empty" ) );

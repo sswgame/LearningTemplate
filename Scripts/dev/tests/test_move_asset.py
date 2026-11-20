@@ -62,7 +62,7 @@ class MoveAssetPackRenameTest(unittest.TestCase):
         self.assertTrue(is_pack_string_file("Source/Engine/Content/Pack/Tests/TestPack.cpp"))
         self.assertTrue(is_pack_string_file("Scripts/net/net_pair_run.py"))
         self.assertTrue(is_pack_string_file("Test/Scenario/CMakeLists.txt"))
-        self.assertTrue(is_pack_string_file("Config/Game/Empty.json"))
+        self.assertTrue(is_pack_string_file("Config/Game/Playground.json"))
         self.assertFalse(is_pack_string_file("Content/game/oldpack/redirects.xml"))
         self.assertFalse(is_pack_string_file("docs/NEXT.md"))
 

@@ -10,6 +10,6 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/charactermove_load.scene.xml"/>
 	<Load durationSeconds="15"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<WaitUntil watch="EmptyLoad.CrowdCharacters" atLeast="500" timeoutFrames="120"/>
-	<Expect watch="EmptyLoad.CrowdCharacters" atLeast="500"/>
+	<WaitUntil watch="PlaygroundLoad.CrowdCharacters" atLeast="500" timeoutFrames="120"/>
+	<Expect watch="PlaygroundLoad.CrowdCharacters" atLeast="500"/>
 </Scenario>

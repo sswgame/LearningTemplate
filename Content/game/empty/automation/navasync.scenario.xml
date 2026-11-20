@@ -11,15 +11,15 @@
 <Scenario name="game.empty.navasync" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/navasync.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<WaitUntil watch="EmptyNav.TestPathLength" target="Prober" atLeast="6" timeoutSeconds="5"/>
+	<WaitUntil watch="PlaygroundNav.TestPathLength" target="Prober" atLeast="6" timeoutSeconds="5"/>
 	<Expect watch="Nav.PathLength" target="Start" key="Goal" atLeast="6"/>
 
 	<WaitUntil watch="Nav.AgentStatus" target="Prober" is="Arrived" timeoutSeconds="15"/>
 
 	<DevCommand line="object.place Barrier 20 0.5 -2"/>
-	<WaitUntil watch="EmptyNav.TestPathLength" target="Prober" atMost="5.3" timeoutSeconds="5"/>
+	<WaitUntil watch="PlaygroundNav.TestPathLength" target="Prober" atMost="5.3" timeoutSeconds="5"/>
 
-	<Expect watch="EmptyNav.TestResultCount" target="Prober" atLeast="10"/>
-	<Expect watch="EmptyNav.TestCancelLeaks" target="Prober" equals="0"/>
+	<Expect watch="PlaygroundNav.TestResultCount" target="Prober" atLeast="10"/>
+	<Expect watch="PlaygroundNav.TestCancelLeaks" target="Prober" equals="0"/>
 	<Pass/>
 </Scenario>

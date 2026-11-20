@@ -111,7 +111,7 @@ SW_TEST_CASE( OnlineServerConfigTest, ResolveFileHandlesEmptyAndRelativePaths )
  */
 SW_TEST_CASE( OnlineServerConfigTest, ConfigPathReplacesJSONExtension )
 {
-    SW_EXPECT_EQUAL( sw::string( "Config/Server/Empty.online.json" ), sw::OnlineServerConfig::makeConfigPath( "Config/Server/Empty.json" ) );
+    SW_EXPECT_EQUAL( sw::string( "Config/Server/Empty.online.json" ), sw::OnlineServerConfig::makeConfigPath( "Config/Server/Playground.json" ) );
     SW_EXPECT_EQUAL( sw::string( "Config/Server/Empty.online.json" ), sw::OnlineServerConfig::makeConfigPath( "Config/Server/Empty" ) );
     SW_EXPECT_EQUAL( sw::string( "a.b.online.json" ), sw::OnlineServerConfig::makeConfigPath( "a.b.json" ) );
 }

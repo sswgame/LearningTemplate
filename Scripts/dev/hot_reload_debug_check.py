@@ -17,8 +17,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import app_arguments  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-PROBE_H = REPO / 'Source/Games/Empty/HotReloadTestComponent.h'
-PROBE_CPP = REPO / 'Source/Games/Empty/HotReloadTestComponent.cpp'
+PROBE_H = REPO / 'Source/Games/Playground/HotReloadTestComponent.h'
+PROBE_CPP = REPO / 'Source/Games/Playground/HotReloadTestComponent.cpp'
 FUNCTION = 'sw::HotReloadTestComponent::computeVersion'
 
 # lldb 안에서 도는 쪽(lldb 의 Python — 임베드 3.10). 결과는 JSON 한 줄로 낸다.
