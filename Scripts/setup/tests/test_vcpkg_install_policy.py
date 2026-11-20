@@ -2,11 +2,12 @@
 vcpkg 설치 보호 검사 — 사용자가 끈 설치와 소스 트리 밖 설치 폴더는 읽기 전용이고, 소스 트리 안 설치 폴더만 설치할 수 있다
 (cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake 를 `cmake -P` 로 부른다).
 
-실행: python -X utf8 Scripts/setup/tests/test_vcpkg_install_policy.py <cmake 실행 파일> (CTest `Scripts.VcpkgInstallPolicy`).
+실행: SW_CMAKE_COMMAND=<cmake 실행 파일> python -X utf8 Scripts/setup/tests/test_vcpkg_install_policy.py (CTest `Scripts.VcpkgInstallPolicy` 가 환경 변수를 준다).
 """
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,7 @@ import unittest
 from pathlib import Path
 
 POLICY_FILE = Path(__file__).resolve().parents[3] / "cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake"
+CMAKE_ENVIRONMENT = "SW_CMAKE_COMMAND"  # Test/CMakeLists.txt 가 스크립트 테스트 모두에 ${CMAKE_COMMAND} 를 준다
 CMAKE = ""
 
 
@@ -68,7 +70,7 @@ class VcpkgInstallPolicyTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        sys.exit("usage: test_vcpkg_install_policy.py <cmake executable>")
-    CMAKE = sys.argv.pop(1)
+    CMAKE = os.environ.get(CMAKE_ENVIRONMENT, "")
+    if not CMAKE:
+        sys.exit(f"{CMAKE_ENVIRONMENT} 가 없다 — cmake 실행 파일 경로를 준다")
     unittest.main()

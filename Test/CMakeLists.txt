@@ -187,101 +187,24 @@ add_test(NAME Pack.MakePatch
 	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 set_tests_properties(Pack.MakePatch PROPERTIES LABELS nogpu TIMEOUT 300)
 
-# 생성 표 동시 갱신 — 빌드 폴더 여럿이 저장소의 참조 칸 표(`Config/Dev/AssetReferenceFields.generated.json`)를 함께 고쳐도 주인 줄을 잃지 않는다(잠금 + 원자 교체).
-# 표의 사본을 임시 폴더에 두고 자식 프로세스 열둘이 서로 다른 주인을 동시에 갈아 끼운다.
-add_test(NAME Scripts.AssetReferenceFieldList
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_asset_reference_field_list.py")
-set_tests_properties(Scripts.AssetReferenceFieldList PROPERTIES LABELS nogpu TIMEOUT 120)
-
-# 에셋 GUID 2 단계 전수 이전 도구 — AssetRef<T> 칸의 경로 글만 GUID 참조로 바꾸고 경로 글 칸 · 임포트 산출물 · 색인에 없는 경로는 바꾸지 않는다.
-add_test(NAME Scripts.MigrateAssetRefs
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_asset_refs.py")
-set_tests_properties(Scripts.MigrateAssetRefs PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 에셋 옮기기 도구 — 팩 이름 바꾸기가 골든 이름 · 시나리오 이름 · 문자열 경로 접두를 함께 바꾸고, 도메인 뿌리 옮기기는 접두 리다이렉트 한 줄을 쓴다.
-add_test(NAME Scripts.MoveAsset
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_move_asset.py")
-set_tests_properties(Scripts.MoveAsset PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 감사 A-2 전수 이전 도구 — 씬 · 프리팹 컴포넌트에 C++ ComponentStableKey::resolveLocalIDs 와 같은 지역 id 를 적는다.
-add_test(NAME Scripts.MigrateComponentIds
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_component_ids.py")
-set_tests_properties(Scripts.MigrateComponentIds PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 감사 A-2 둘째 전수 이전 — 다른 프리팹을 가리키는 옛 순번 키(중첩 노드 인덱스 · Part 경로 · 덮어쓰기 key/after · 노드 attach)를 지역 id 키로 바꾼다.
-add_test(NAME Scripts.MigratePrefabLinks
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_prefab_links.py")
-set_tests_properties(Scripts.MigratePrefabLinks PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 엔진 층 표 — 포괄 키가 없는 자동화 뿌리(`Engine/Automation`)에 더한 파일은 configure 오류다(기능의 감시 값은 주인 폴더에서 등록), 가장 긴 키가 이긴다.
-add_test(NAME Scripts.ModuleLayers
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_module_layers.py")
-set_tests_properties(Scripts.ModuleLayers PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 통합 검토 목록(api-diff) — 새 함수 · 멤버 · 등록 이름 · Config 키를 모으고, 두 갈래가 각자 더한 같은 이름을 겹침으로 낸다.
-add_test(NAME Scripts.ApiDiff
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_api_diff.py")
-set_tests_properties(Scripts.ApiDiff PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# fileserve — 루트 밖 경로(.. · 절대 · 역슬래시 · 링크)는 거절하고 stat · list · 구간 읽기가 장치 쪽이 기대하는 글을 낸다(루프백 임시 서버).
-add_test(NAME Scripts.FileServe
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/net/tests/test_fileserve.py")
-set_tests_properties(Scripts.FileServe PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 꾸미기 스키마 출시 대조(customization-release) — 추가만은 통과, 단계 없는 제거는 실패하고 --fix 가 적는다, 이름 · 종류 바꾸기는 명시 단계 없이 실패.
-add_test(NAME Scripts.CustomizationRelease
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_customization_release.py")
-set_tests_properties(Scripts.CustomizationRelease PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 진 단계 다시 돌기(scenario_bisect --rerun-failed)가 고르는 백엔드 보고 폴더 — 여러 체인에 든 단계를 실은 다른 체인의 나중 실행을 고르지 않는다.
-add_test(NAME Scripts.ScenarioBisect
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_scenario_bisect.py")
-set_tests_properties(Scripts.ScenarioBisect PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 기능 참조 린트(feature-refs)의 낡은 기대 로그 id — 기대 · 허용이 가리키는 id 를 내는 코드가 없으면 위반, 도우미 · #define 을 거친 id 는 정의로 친다.
-add_test(NAME Scripts.FeatureReferences
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/lint/tests/test_feature_references.py")
-set_tests_properties(Scripts.FeatureReferences PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 커밋 메시지 양식(commit-msg 훅) — 첫 줄 요약 + 본문 원인 → 조치 → 결과 세 단락, 병합 · 되돌리기는 예외.
-add_test(NAME Scripts.CommitMessage
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/lint/tests/test_commit_message.py")
-set_tests_properties(Scripts.CommitMessage PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# clang-tidy 바뀐 파일 모드의 TU 고르기 — 짝 .cpp 가 없는 헤더는 그 헤더를 (헤더를 거쳐서라도) 포함하는 TU 로 돈다.
-add_test(NAME Scripts.ClangTidySelect
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/lint/tests/test_clang_tidy.py")
-set_tests_properties(Scripts.ClangTidySelect PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 커밋 훅 읽기 한도가 세는 git 블롭 읽기(`cat-file --batch` · `show`) — 인덱스 블롭은 파일을 연 것과 같고, `--batch-check` 는 내용을 읽지 않는다.
-add_test(NAME Scripts.PreCommitBlobReads
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/lint/tests/test_pre_commit_blob_reads.py")
-set_tests_properties(Scripts.PreCommitBlobReads PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 빌드 지문 생성기(ABI 스탬프 · 쿠커 코드 지문)의 파일 지문 캐시 — 캐시가 있든 없든 같은 지문, 바뀐 파일만 다시 읽기, 지운 파일 줄 정리.
-add_test(NAME Scripts.FileDigestCache
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_file_digest_cache.py")
-set_tests_properties(Scripts.FileDigestCache PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 배포 패키지의 모드 스테이징 — 묶은 모드만 담고, 형식이 틀린 id · 묶지 않은 모드는 실패다(Scripts/package/pack.py --mods).
-add_test(NAME Scripts.PackMods
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/tests/test_pack_mods.py")
-set_tests_properties(Scripts.PackMods PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# Android APK 패키징 값 — 매니페스트 틀이 다 채워지고, 게임 덮기 · 프리셋 최소 API 를 읽고, 틀린 값은 멈춘다(Scripts/package/android_apk.py, 도구는 부르지 않는다).
-add_test(NAME Scripts.AndroidApk
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/tests/test_android_apk.py")
-set_tests_properties(Scripts.AndroidApk PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# 웹 패키징 — 빌드 산출물이 없으면 멈추고, 페이지가 캔버스 → 로더 → App.js 순서이고, 로컬 서버가 교차 출처 격리 헤더를 준다(Scripts/package/web_package.py, file_packager 는 부르지 않는다).
-add_test(NAME Scripts.WebPackage
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/tests/test_web_package.py")
-set_tests_properties(Scripts.WebPackage PROPERTIES LABELS nogpu TIMEOUT 60)
-
-# vcpkg 설치 보호 — 사용자가 끈 설치 · 소스 트리 밖 설치 폴더는 읽기 전용이다(cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake).
-add_test(NAME Scripts.VcpkgInstallPolicy
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/setup/tests/test_vcpkg_install_policy.py" "${CMAKE_COMMAND}")
-set_tests_properties(Scripts.VcpkgInstallPolicy PROPERTIES LABELS nogpu TIMEOUT 60)
+# 스크립트 자체 테스트 — `Scripts/<폴더>/tests/test_*.py` 를 모두 돈다. 손으로 한 줄씩 등록하면 빠뜨린다(test_cook_code_fingerprint ·
+# test_shipping_host_defaults 가 빠져 있었다). 무엇을 보는지는 각 파일 머리말에 있다.
+# 이름은 `Scripts.<줄기의 낙타 이름>`(test_move_asset.py → Scripts.MoveAsset). cmake 를 부르는 테스트(vcpkg 설치 보호)는 SW_CMAKE_COMMAND 로 받는다.
+file(GLOB list_script_test CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/*/tests/test_*.py")
+foreach(script_test IN LISTS list_script_test)
+	get_filename_component(script_test_stem "${script_test}" NAME_WE)
+	string(REGEX REPLACE "^test_" "" script_test_stem "${script_test_stem}")
+	string(REPLACE "_" ";" list_script_test_word "${script_test_stem}")
+	set(script_test_name "")
+	foreach(script_test_word IN LISTS list_script_test_word)
+		string(SUBSTRING "${script_test_word}" 0 1 script_test_head)
+		string(SUBSTRING "${script_test_word}" 1 -1 script_test_tail)
+		string(TOUPPER "${script_test_head}" script_test_head)
+		string(APPEND script_test_name "${script_test_head}${script_test_tail}")
+	endforeach()
+	add_test(NAME Scripts.${script_test_name} COMMAND "${Python3_EXECUTABLE}" -X utf8 "${script_test}")
+	set_tests_properties(Scripts.${script_test_name} PROPERTIES LABELS nogpu TIMEOUT 120 ENVIRONMENT "SW_CMAKE_COMMAND=${CMAKE_COMMAND}")
+endforeach()
 
 # 온라인 부하 봇의 짧은 시나리오 — 같은 프로세스 서버(`--local-server=0`, OS 가 고른 포트라 나란히 돌아도 다투지 않는다)에 봇 여덟이 붙어
 # 로그인 · 채팅 · 순위와 원장 경로(영수증 · 구매 · 우편 · 점수 · 길드 창고 · 거래)를 한 번씩 돈다. 오류율 · 보고서 쓰기 실패 · 끝의 원장 감사 불균형(5)이 종료 코드다

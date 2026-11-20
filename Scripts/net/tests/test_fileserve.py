@@ -1,7 +1,7 @@
 """
 fileserve 회귀 검사 — 루트 밖 경로(`..` · 절대 · 역슬래시 · 드라이브 · 링크)는 거절하고, stat · list · 구간 읽기가 장치 쪽(`FileServeContentSource`)이 기대하는 글을 낸다.
 
-실행: python -X utf8 Scripts/net/tests/test_fileserve.py (CTest `Scripts.FileServe`). 루프백에 임시 서버를 띄운다.
+실행: python -X utf8 Scripts/net/tests/test_fileserve.py (CTest `Scripts.Fileserve`). 루프백에 임시 서버를 띄운다.
 """
 
 from __future__ import annotations
