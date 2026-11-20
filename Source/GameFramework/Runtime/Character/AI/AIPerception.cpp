@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
 
 namespace sw
@@ -12,7 +13,16 @@ namespace sw
     AIPerception::AIPerception()
         : _settings{}
         , _listTarget{}
+        , _listCandidate{}
+        , _listQueryKey{}
     {
+    }
+
+    void AIPerception::sense( const GameObjectManager& manager, uint8 ownTeam, const float3& eyePosition, const float3& forward, const NavGrid* pGrid, float32 deltaTime )
+    {
+        const float32 range = MathUtil::max( _settings._sightRange, _settings._loseSightRange );
+        AIStimulusSourceComponent::gatherStimuli( manager, ownTeam, eyePosition, range, _listCandidate, _listQueryKey );
+        sense( eyePosition, forward, _listCandidate, pGrid, deltaTime );
     }
 
     bool AIPerception::canSee( const float3& eyePosition, const float3& forward, const float3& target, const NavGrid* pGrid, bool bAlreadySeen ) const

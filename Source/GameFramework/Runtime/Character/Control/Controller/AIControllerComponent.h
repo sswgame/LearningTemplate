@@ -89,6 +89,9 @@ namespace sw
          */
         void                 setStateName( const hashed_string& stateName ) { _stateName = stateName; }
         const hashed_string& getStateName() const { return _stateName; }
+        /** @brief 판단(감각 + 트리)을 도는 조종 프레임 간격입니다. 1 이면 매 프레임, N 이면 N 프레임에 한 번 그 사이 시간을 모아 돕니다. */
+        uint32 getThinkInterval() const { return _thinkInterval; }
+        void   setThinkInterval( uint32 interval ) { _thinkInterval = interval; }
         /** @brief 이 조종자의 블랙보드입니다(언리얼 `AAIController` 의 Blackboard 컴포넌트). 행동 트리 · 판단이 쓰고 감시 값 `AI.Blackboard` 가 읽습니다. */
         Blackboard&       getBlackboard() { return _blackboard; }
         const Blackboard& getBlackboard() const { return _blackboard; }
@@ -125,9 +128,12 @@ namespace sw
         float32 _arriveDistance;
         PROPERTY( Category = "AI", DisplayName = "Behavior Tree", Tooltip = "Behavior tree (.bt.xml) that decides every think; its leaves are the ai.* actions and its conditions read the blackboard the controller fills" )
         AssetRef<BehaviorTreeAsset> _behaviorTree;
+        PROPERTY( Category = "AI", DisplayName = "Think Interval", Min = 1, Tooltip = "Control frames between thinks (senses + behavior tree); the frames in between are summed into the next think. Use 1 where the match must be deterministic" )
+        uint32 _thinkInterval;
 
         SharedAssetRef<BehaviorTreeAsset> _pBehaviorTree; ///< 읽은 트리(공유 캐시의 한 벌). 실행기가 그 트리를 가리킨다
         BehaviorTreeRunner                _runner;
+        ControlFrameInterval              _thinkSchedule; ///< 판단 차례와 그 사이 모은 시간
         Blackboard                        _blackboard;
         hashed_string                     _stateName; ///< 판단의 지금 상태(`setStateName`)
         ControlIntent                     _pending;   ///< 이번 틱에 쌓인 버튼 발동 · 아날로그
