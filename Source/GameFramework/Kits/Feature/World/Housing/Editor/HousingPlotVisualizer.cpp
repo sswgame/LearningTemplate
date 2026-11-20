@@ -15,6 +15,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Kits/Feature/World/Housing/Component/HousingPlotComponent.h"
 

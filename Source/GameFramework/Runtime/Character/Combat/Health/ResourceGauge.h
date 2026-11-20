@@ -13,6 +13,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"

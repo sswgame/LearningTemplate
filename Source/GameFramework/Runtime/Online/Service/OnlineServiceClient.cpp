@@ -73,6 +73,11 @@ namespace sw
         }
     }
 
+    uint16 IOnlineClientService::getMethodRange() const
+    {
+        return getProtocol().getMethodRange();
+    }
+
     bool OnlineServiceClient::registerClientService( IOnlineClientService* pService )
     {
         SW_ASSERT( pService != nullptr && _bInitialized == SW_FALSE );

@@ -31,10 +31,10 @@
 
 namespace sw
 {
-    struct EngineServiceBindResult; // 묶기 결과는 호스트(엔진 시작)만 읽는다 — 서비스를 얻기만 하는 TU 가 등록 표 헤더(EngineSubsystemRegistration.h)를 읽지 않게 앞 선언한다
-
     namespace engine
     {
+        struct EngineServiceBindResult; // 묶기 결과는 호스트(엔진 시작)만 읽는다 — 서비스를 얻기만 하는 TU 가 등록 표 헤더(EngineSubsystemRegistration.h)를 읽지 않게 앞 선언한다
+
         // ------------------------------------------------------------------------------
         // 1) 바인딩 — 호스트가 범위를 세운 뒤 묶고, 그 범위를 내리기 전에 끊는다
         // ------------------------------------------------------------------------------

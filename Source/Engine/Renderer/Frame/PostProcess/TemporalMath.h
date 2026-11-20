@@ -5,4 +5,6 @@
  *          `sw::shadermath` 에 같은 이름으로 있다(ShadingMath.h — 더 쓰려면 거기에 한 줄을 더한다, 빠뜨리면 C++ 컴파일이 멈추므로 조용히 갈라지지 않는다).
  */
 #pragma once
+#include "Engine/Graphics/Lighting/ShadingMath.h"
+
 #include "temporal_math.hlsli"

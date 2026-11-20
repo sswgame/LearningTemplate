@@ -91,7 +91,7 @@ namespace sw
 
         /** @brief 이 키트의 프로토콜 항목입니다. 영역은 여기서 나오고, 항목은 온라인 스키마 해시에 섞입니다. */
         virtual const OnlineProtocolEntry& getProtocol() const = 0;
-        uint16                             getMethodRange() const { return getProtocol().getMethodRange(); }
+        uint16                             getMethodRange() const;
         virtual void                       onServicePush( uint16 kind, BitReader& body ) = 0;
         /** @brief Hello 가 끝났을 때(처음 연결과 다시 연결) 불립니다. 계정 키트는 여기서 재접속 요청을 보냅니다. */
         virtual void onClientReady( OnlineServiceClient& client ) { (void)client; }
