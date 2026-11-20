@@ -48,7 +48,7 @@ namespace sw::editor
             static constexpr size_t kMaxCacheBytes = constant::memory::kBytesPerGigabyte / 2;
 
             /** @brief 경로 키로 디코드한 이미지를 담는 캐시입니다. 표본기 인스턴스가 잠금과 함께 소유한다(`MeshModifierTextureSampler::State`). */
-            using TextureCache = unordered_map<string, std::shared_ptr<DecodedTexture>>;
+            using TextureCache = unordered_map<string, shared_ptr<DecodedTexture>>;
 
             static int64 getNowMilliseconds() { return MonotonicClock::nowMicroseconds() / constant::time::kMicrosecondsPerMillisecond; }
 
@@ -63,10 +63,10 @@ namespace sw::editor
             }
 
             /** @brief 파일을 읽어 float4 텍셀로 디코드합니다. 실패해도 경로 · 시각이 든 (무효) 항목을 돌려줘 같은 실패를 정점마다 되풀이하지 않습니다. */
-            static std::shared_ptr<DecodedTexture> decodeFile( const AssetPaths& assetPaths, string_view assetPath )
+            static shared_ptr<DecodedTexture> decodeFile( const AssetPaths& assetPaths, string_view assetPath )
             {
-                std::shared_ptr<DecodedTexture> pTexture = std::make_shared<DecodedTexture>();
-                pTexture->_resolvedPath                  = resolvePath( assetPaths, assetPath );
+                shared_ptr<DecodedTexture> pTexture = make_shared<DecodedTexture>();
+                pTexture->_resolvedPath             = resolvePath( assetPaths, assetPath );
                 pTexture->_lastCheckMilliseconds.store( getNowMilliseconds(), std::memory_order_relaxed );
 
                 vector<uint8> bytes;
@@ -106,9 +106,9 @@ namespace sw::editor
             }
 
             /** @brief 캐시에서 찾고, 없거나 낡았으면 단일 잠금 아래에서 한 번만 디코드합니다. */
-            static std::shared_ptr<DecodedTexture> acquire( const AssetPaths& assetPaths, shared_mutex& mutex, TextureCache& cache, string_view assetPath )
+            static shared_ptr<DecodedTexture> acquire( const AssetPaths& assetPaths, shared_mutex& mutex, TextureCache& cache, string_view assetPath )
             {
-                std::shared_ptr<DecodedTexture> pTexture;
+                shared_ptr<DecodedTexture> pTexture;
                 {
                     ScopedSharedLock<shared_mutex> lock{ mutex };
                     auto                           iter = cache.find( assetPath );
@@ -251,7 +251,7 @@ namespace sw::editor
         bool bSampled = false;
         if ( assetPath.empty() == false )
         {
-            const std::shared_ptr<DecodedTexture> pTexture = MeshModifierTextureSamplerInternal::acquire( _pState->_assetPaths, _pState->_mutex, _pState->_cache, assetPath );
+            const shared_ptr<DecodedTexture> pTexture = MeshModifierTextureSamplerInternal::acquire( _pState->_assetPaths, _pState->_mutex, _pState->_cache, assetPath );
             if ( pTexture != nullptr && pTexture->isValid() )
             {
                 outRGBA  = MeshModifierTextureSamplerInternal::sampleBilinear( *pTexture, uv );

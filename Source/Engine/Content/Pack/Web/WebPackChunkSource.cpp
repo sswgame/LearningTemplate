@@ -29,8 +29,11 @@ namespace sw
 
             void fetch( const string& packFileName, const string& localPath, PackChunkFetchDoneDelegate onDone ) override
             {
-                WebPackChunkRequest* const pRequest = new WebPackChunkRequest{ string( kRemoteFolder ) + packFileName, localPath, std::move( onDone ) };
-                emscripten_fetch_attr_t    attributes;
+                // 소유는 콜백(finish)이 userData 로 돌려받는다 — 받기가 끝날 때까지 맨 포인터로 넘긴다.
+                WebPackChunkRequest* const pRequest = make_unique<WebPackChunkRequest>.createWith( [&]( void* pMem )
+                { return sw_placement_new( pMem ) WebPackChunkRequest{ string( kRemoteFolder ) + packFileName, localPath, std::move( onDone ) }; } )
+                                                          .release();
+                emscripten_fetch_attr_t attributes;
                 emscripten_fetch_attr_init( &attributes );
                 std::strcpy( attributes.requestMethod, "GET" );
                 attributes.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
@@ -43,10 +46,9 @@ namespace sw
         private:
             static void finish( emscripten_fetch_t* pFetch, bool bOk )
             {
-                WebPackChunkRequest* const pRequest = static_cast<WebPackChunkRequest*>( pFetch->userData );
+                const unique_ptr<WebPackChunkRequest> pRequest( static_cast<WebPackChunkRequest*>( pFetch->userData ) );
                 emscripten_fetch_close( pFetch );
                 pRequest->_onDone( bOk );
-                delete pRequest;
             }
 
             static void onSuccess( emscripten_fetch_t* pFetch )

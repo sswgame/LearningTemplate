@@ -18,7 +18,9 @@ namespace sw
             SW_LOG_ERROR_ID( "SteamPlatformServices.SteamSDKInitializationFailed", "Steam SDK initialization failed: %# (%#)", initialized.error().message(), initialized.error().detail() );
             return unexpected( initialized.error() );
         }
-        return unique_ptr<SteamPlatformServices>( new SteamPlatformServices( std::move( pBridge ) ) );
+        // 생성자가 private 라 createWith 의 람다(이 멤버 함수 문맥)에서 만든다 — 맨 new 는 sw default_delete(Memory::free)와 힙이 어긋난다.
+        return make_unique<SteamPlatformServices>.createWith( [&pBridge]( void* pMem )
+        { return sw_placement_new( pMem ) SteamPlatformServices( std::move( pBridge ) ); } );
     }
 
     SteamPlatformServices::SteamPlatformServices( unique_ptr<ISteamAPIBridge> pBridge )

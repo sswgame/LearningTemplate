@@ -82,13 +82,13 @@ SW_TEST_CASE( RHIRenderResourceTest, DestroyWhileNotifiedFromAnotherThreadAssert
     };
 
     NotifyLatch               latch;
-    LatchedResource* const    pResource = new LatchedResource( &latch );
+    LatchedResource* const    pResource = make_unique<LatchedResource>( &latch ).release(); // 다른 스레드가 sw_delete 로 지운다
     test::ScopedAssertCapture assertCapture;
     std::thread               destroyThread( [&latch, pResource]()
     {
         while ( latch._stage.load() != 1 )
             ThreadUtil::yield();
-        delete pResource;
+        sw_delete( pResource );
         latch._stage.store( 2 );
     } );
     test::FakeRHIDevice       device;
