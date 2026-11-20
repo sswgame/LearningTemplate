@@ -47,13 +47,12 @@ namespace sw
     bool WindComponent::findWind( const GameObjectManager& manager, WindSettings& outSettings )
     {
         outSettings = WindSettings{};
-        for ( const WindComponent* pWind : manager.getComponentRegistry().getAll<WindComponent>() )
-        {
-            if ( pWind->isPendingDestroy() || pWind->isActive() == false )
-                continue;
-            outSettings = pWind->makeSettings();
-            return true;
-        }
-        return false;
+        // 바람은 씬에 하나다(씬 전체의 풀 · 천 바람) — 켜진 것이 둘이면 오류로 쓰지 않는다(등록 순서로 고르지 않는다).
+        const WindComponent* pWind = manager.getComponentRegistry().findUnique<WindComponent>( []( const WindComponent& wind )
+        { return wind.isPendingDestroy() == false && wind.isActive(); } );
+        if ( pWind == nullptr )
+            return false;
+        outSettings = pWind->makeSettings();
+        return true;
     }
 } // namespace sw

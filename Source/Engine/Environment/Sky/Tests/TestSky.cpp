@@ -321,3 +321,22 @@ SW_TEST_CASE( SkyTest, FindSkyCarriesTheComponentAsSource )
     SW_EXPECT_EQUAL( pSky->getComponentID(), gradient._sourceID );
     SW_EXPECT_TRUE( gradient._sourceID != 0 );
 }
+
+/** @brief [SkyTest] 하늘은 씬에 하나다 — 켜진 하늘이 둘이면 오류로 찾지 않는다(등록 순서로 첫 것을 고르지 않는다) */
+SW_TEST_CASE( SkyTest, SecondActiveSkyIsAnError )
+{
+    SW_EXPECT_LOG( "ComponentRegistry.DuplicateUnique" );
+    GameObjectManager manager;
+    SkyComponent*     pFirst  = manager.createGameObject( hashed_string( "SkyA" ) )->addComponent<SkyComponent>();
+    SkyComponent*     pSecond = manager.createGameObject( hashed_string( "SkyB" ) )->addComponent<SkyComponent>();
+    SW_REQUIRE_NOT_NULL( pFirst );
+    SW_REQUIRE_NOT_NULL( pSecond );
+    pSecond->setActive( false );
+    SkyGradient gradient;
+    SW_REQUIRE_TRUE( SkyComponent::findSky( manager, gradient ) );
+    SW_EXPECT_EQUAL( pFirst->getComponentID(), gradient._sourceID );
+
+    pSecond->setActive( true );
+    SW_EXPECT_FALSE( SkyComponent::findSky( manager, gradient ) );
+    SW_EXPECT_NEAR( 0.0f, gradient._intensity, 1.0e-6f );
+}

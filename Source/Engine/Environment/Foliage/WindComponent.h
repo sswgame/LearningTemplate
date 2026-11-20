@@ -50,7 +50,7 @@ namespace sw
         void         setStrength( float32 strength ) { _strength = strength; }
         void         setSpeed( float32 speed ) { _speed = speed; }
 
-        /** @brief @p manager 의 첫 바람입니다. 없으면 기본값을 채우고 false 입니다. 병렬 틱 안에서 불러도 됩니다(읽기만 합니다). */
+        /** @brief @p manager 의 켜진 바람(씬에 하나)입니다. 없거나 둘 이상이면(오류) 기본값을 채우고 false 입니다. 병렬 틱 안에서 불러도 됩니다(읽기만 합니다). */
         [[nodiscard]] static bool findWind( const GameObjectManager& manager, WindSettings& outSettings );
 
     private:

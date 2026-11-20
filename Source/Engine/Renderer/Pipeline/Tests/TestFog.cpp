@@ -203,3 +203,22 @@ SW_TEST_CASE( FogTest, MainVolumeStateIsPublished )
     SW_EXPECT_TRUE( FrameFog::getLastMainVolumeState() == FogVolumeState::MissingPipeline );
     FrameFog::publishMainVolumeState( previous );
 }
+
+/** @brief [FogTest] 안개 컴포넌트는 씬에 하나다 — 켜진 것이 둘이면 오류로 쓰지 않는다(등록 순서로 첫 것을 고르지 않는다) */
+SW_TEST_CASE( FogTest, SecondActiveFogIsAnError )
+{
+    SW_EXPECT_LOG( "ComponentRegistry.DuplicateUnique" );
+    GameObjectManager manager;
+    FogComponent*     pFirst  = manager.createGameObject( hashed_string( "FogA" ) )->addComponent<FogComponent>();
+    FogComponent*     pSecond = manager.createGameObject( hashed_string( "FogB" ) )->addComponent<FogComponent>();
+    SW_REQUIRE_NOT_NULL( pFirst );
+    SW_REQUIRE_NOT_NULL( pSecond );
+    pFirst->setDensity( 0.07f );
+    pSecond->setActive( false );
+    FogSettings settings;
+    SW_REQUIRE_TRUE( FogComponent::findFog( manager, float3{ 0.0f, 5.0f, 0.0f }, settings ) );
+    SW_EXPECT_NEAR( 0.07f, settings._density, 1.0e-6f );
+
+    pSecond->setActive( true );
+    SW_EXPECT_FALSE( FogComponent::findFog( manager, float3{ 0.0f, 5.0f, 0.0f }, settings ) );
+}

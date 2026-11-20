@@ -53,7 +53,7 @@ namespace sw
         void        setHdriRadianceMap( string_view path ) { _hdriRadianceMap = string( path ); }
         void        setHdriAmbient( const SH9Color& ambient ) { _listHdriAmbient.assign( ambient._arrCoefficient, ambient._arrCoefficient + SH9Color::kCoefficientCount ); }
 
-        /** @brief @p manager 의 첫 활성 하늘입니다. 없으면 @p outGradient 를 비우고(세기 0) false 입니다. 읽기만 합니다. */
+        /** @brief @p manager 의 켜진 하늘(씬에 하나)입니다. 없거나 둘 이상이면(오류) @p outGradient 를 비우고(세기 0) false 입니다. 읽기만 합니다. */
         [[nodiscard]] static bool findSky( const GameObjectManager& manager, SkyGradient& outGradient );
 
     private:
