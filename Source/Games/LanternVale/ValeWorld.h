@@ -116,30 +116,33 @@ namespace sw
 
     /**
      * @brief 계정 하나의 영속 진행입니다. 서버가 쓰고 읽는다(`ValeProfileStore`) — 클라이언트는 받은 값을 보여 줄 뿐이다.
-     * @details 바이트는 손으로 쓰는 판 있는 형식이다(`kFormatVersion`). 칸을 바꾸면 판을 올리고 옛 판 읽기를 둔다 — 지금은 판 1 하나다.
+     * @details 바이트는 판(`kFormatVersion`, 가변 정수) 뒤에 칸 선언(`Replicated` · 범위)이 곧 바이트다(`ReplicatedLayout`) — 예전에는 쓰기 · 읽기 짝을 손으로 맞추고
+     *          범위(음수 · 레벨 0)를 읽기에서 따로 봤다. 저장 레코드라 스키마 해시가 핸드셰이크를 지나지 않는다 — 칸을 바꾸면 판을 올리고 옛 판 읽기를 둔다
+     *          (판 1 손 배치 레코드는 `ValeProfileStore::decodeRecord` 가 읽는다).
      */
     REFLECT()
     struct ValeProfile
     {
         REFLECT_BODY();
 
-        static constexpr uint32 kFormatVersion = 1;
+        static constexpr uint32 kFormatVersion = 2; ///< 판 2: 칸 선언으로 쓴다(1: 손 배치)
 
-        PROPERTY( SaveGame )
+        PROPERTY( SaveGame, Replicated, Min = 1 )
         int32 _level{ 1 };
-        PROPERTY( SaveGame )
+        PROPERTY( SaveGame, Replicated, Min = 0 )
         int32 _experience{ 0 };
-        PROPERTY( SaveGame )
+        PROPERTY( SaveGame, Replicated, Min = 0 )
         int32 _coins{ 0 };
-        PROPERTY( SaveGame )
+        PROPERTY( SaveGame, Replicated, Min = 0 )
         int32 _herbCount{ 0 };
-        PROPERTY( SaveGame )
+        PROPERTY( SaveGame, Replicated, Min = 0 )
         int32 _defeatCount{ 0 };
-        PROPERTY( SaveGame )
-        float3 _position{};
+        PROPERTY( SaveGame, Replicated, Min = -100000, Max = 100000 )
+        float3 _position{}; ///< 범위는 NaN · 무한대를 거절하는 경계다
 
-        void write( BitWriter& writer ) const;
-        /** @brief 읽습니다. 깨졌거나 값이 범위 밖(음수 · 레벨 0)이면 false 이고 그때 값은 쓰지 않습니다. */
+        /** @brief 판과 칸을 씁니다. 칸이 선언 범위 밖이면 false 이고 @p writer 에 쓰다 만 비트가 남습니다. */
+        [[nodiscard]] bool write( BitWriter& writer ) const;
+        /** @brief 읽습니다. 판이 다르거나 깨졌거나 값이 선언 범위 밖(음수 · 레벨 0)이면 false 이고 그때 값은 쓰지 않습니다. */
         [[nodiscard]] bool read( BitReader& reader );
     };
 } // namespace sw
