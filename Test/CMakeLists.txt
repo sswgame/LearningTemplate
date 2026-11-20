@@ -198,6 +198,11 @@ add_test(NAME Scripts.MigrateAssetRefs
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_asset_refs.py")
 set_tests_properties(Scripts.MigrateAssetRefs PROPERTIES LABELS nogpu TIMEOUT 60)
 
+# 에셋 옮기기 도구 — 팩 이름 바꾸기가 골든 이름 · 시나리오 이름 · 문자열 경로 접두를 함께 바꾸고, 도메인 뿌리 옮기기는 접두 리다이렉트 한 줄을 쓴다.
+add_test(NAME Scripts.MoveAsset
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_move_asset.py")
+set_tests_properties(Scripts.MoveAsset PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 감사 A-2 전수 이전 도구 — 씬 · 프리팹 컴포넌트에 C++ ComponentStableKey::resolveLocalIDs 와 같은 지역 id 를 적는다.
 add_test(NAME Scripts.MigrateComponentIds
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_component_ids.py")
