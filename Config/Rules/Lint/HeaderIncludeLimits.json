@@ -9,6 +9,7 @@
         { "_header": "Engine/Reflection/EnumName.h", "_limit": 14, "_reason": "열거 이름은 EnumInfo 만 본다 — TypeRegistry.h 대신 EnumInfo.h · TypeFqn.h · TypeLookupCache.h 를 포함한다" },
         { "_header": "Engine/Serialization/Fixed/FixedLayout.h", "_limit": 17, "_reason": "타입은 이름 캐시(TypeLookupCache)로 찾고 TypeInfo 는 참조로만 든다 — TypeRegistry.h 대신 ReflectionFwd.h 를 포함한다" },
         { "_header": "Engine/Reflection/ReflectionInvoke.h", "_limit": 10, "_reason": "TypeInfo · FunctionInfo · EventInfo 를 참조로만 받는다 — ReflectionTypes.h 대신 ReflectionFwd.h" },
-        { "_header": "Engine/Reflection/ReflectionMetadata.h", "_limit": 18, "_reason": "메타데이터 칸은 함수 포인터 별칭만 쓴다 — ReflectionTypes.h 대신 ReflectionMetadataBox.h" }
+        { "_header": "Engine/Reflection/ReflectionMetadata.h", "_limit": 18, "_reason": "메타데이터 칸은 함수 포인터 별칭만 쓴다 — ReflectionTypes.h 대신 ReflectionMetadataBox.h" },
+        { "_header": "Engine/Object/Component/SceneComponent.h", "_limit": 12, "_reason": "인라인 접근자는 트랜스폼 페이지만 본다 — 저장소(SceneTransformStorage.h) 대신 SceneTransformPage.h" }
     ]
 }
