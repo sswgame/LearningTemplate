@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3f6c1e0b9a7d4e28b5c4a1d2e8f07b63"?>
+<!--
+  첫 진입이 미니게임일 때 나가기 — 돌아올 자리가 없으므로 gamesettings 입구 씬(시작 맵 — 마을 maps/hub)으로 간다(docs/DesignBacklog.md "게임 기능 · 미니게임").
+  실행 전역 변수 gv_firstMinigame 로 바로 들어가는 장르 키트 시나리오들이 나갈 때 기대는 길이다.
+  실행: App -scenario=game/playground/automation/minigamefirst.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.minigamefirst" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="smoketest"/>
+	<WaitUntil watch="Minigame.Active" is="smoketest" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/editortest.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<ExpectLog id="DevCommand.Reply" contains="minigame.leave: leaving" atLeast="1"/>
+	<Expect watch="Minigame.Active" is="none"/> <!-- 나가기는 맵을 요청하기 전에 끈다 -->
+	<AdvanceSimulation frames="2"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/> <!-- 입구 씬이 섰다 -->
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.RestoreCount" equals="0"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

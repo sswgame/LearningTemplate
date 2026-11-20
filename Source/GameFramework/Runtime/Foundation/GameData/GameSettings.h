@@ -5,8 +5,10 @@
 #pragma once
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Content/AssetID.h"
@@ -112,8 +114,8 @@ namespace sw
         PROPERTY()
         DataPath _statCatalog; ///< 플레이어 통계 · 업적 정의(`*.stats.xml`, `StatCatalog`). 적으면 `PlayerStatsSubsystem` 이 통계 → 업적 → 플랫폼 서비스를 잇는다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 통계 없음
 
-        PROPERTY()
-        string _hubExperience; ///< 허브 Experience 이름(`<팩>/experiences/<이름>.experience.xml`). 적으면 `ExperienceManager` 가 `onInitialize` 뒤 첫 씬 전에 켜 인스턴스 내내 미니게임 아래 바탕으로 둔다(언리얼 Lyra 기본 Experience 자리). 켜지 못하면 게임 초기화가 실패한다. 적지 않으면 허브 없음
+        PROPERTY( Name = "gameFeatures" )
+        vector<hashed_string> _listGameFeature{}; ///< 게임 범위에 켤 게임 기능 이름(`SW_GAME_FEATURE`, 적은 순서). 게임 인스턴스가 `onInitialize` 뒤 첫 씬 전에 켜 인스턴스 내내 둔다(언리얼 Game Features 의 늘 켜진 기능). 켜지 못하면 게임 초기화가 실패한다. 그 기능이 읽는 카탈로그는 이 파일의 데이터 항목에 경로가 있으면 선언된 것이다
 
         PROPERTY()
         DataPath _autosaveSettings; ///< 자동 저장 정책(`<팩>/data/autosave.xml`). 적으면 `GameInstance` 가 `AutosaveManager` 를 세워 게임 범위에 건다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 자동 저장 없음
@@ -163,7 +165,7 @@ namespace sw
         string resolve( string_view packRelative ) const;
         /**
          * @brief 필수 데이터 종류 @p kindLabel 의 경로를 @p outPath 에 만듭니다 — 팩은 gamesettings 의 `<RequiredData kind pack>` 이 적은 팩(공용 `common` 등), 없으면 이 게임 팩입니다.
-         * @details 게임 인스턴스의 필수 데이터(`GameInstance::loadRequiredData`)와 Experience 의 카탈로그(`ExperienceScope::loadCatalog`)가 같은 규칙을 쓴다. 파일이 있는지는 보지 않는다.
+         * @details 게임 인스턴스의 필수 데이터(`GameInstance::loadRequiredData`)와 게임 기능의 카탈로그(`GameFeatureScope::loadCatalog`)가 같은 규칙을 쓴다. 파일이 있는지는 보지 않는다.
          * @return 종류가 등록되지 않았거나 팩에 경로 규칙이 없으면 그 이유입니다(`GamePackDataUtil::tryMakeKindPath`).
          */
         [[nodiscard]] expected<void> makeRequiredDataPath( string_view kindLabel, string& outPath ) const;

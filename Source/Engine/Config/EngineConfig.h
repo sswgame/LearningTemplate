@@ -194,6 +194,26 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct MinigameConfig
+     * @brief 미니게임 흐름(`MinigameFlow`)의 정책 값입니다 — 미니게임 안에서 또 미니게임으로 들어가는 쌓기의 깊이 한도.
+     * @details `EngineConfig` 는 호스트 전용 서비스라 게임 모듈(GameFramework)이 못 본다 — 이 조각만 게임에 보이는 서비스로 따로 건다(`CharacterMeshCacheConfig` 와 같은 길).
+     *          칸마다 덮인 씬의 스냅숏을 쥐므로 깊이가 메모리를 정한다. 언리얼 · 유니티에는 미니게임 스택이 없고 게임마다 정한다(용과 같이의 가게 안 오락기 · 마리오 파티의 연속은 2 단).
+     */
+    REFLECT()
+    struct SW_API MinigameConfig
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 1 )
+        uint32 _stackDepthLimit{}; ///< 쌓을 수 있는 미니게임 칸 수. 0 이면(키가 없다) 진입이 오류로 진다 — 기본값으로 메우지 않는다
+
+        SW_SERVICE_SLOT_CONST( MinigameConfig, Required );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct FileServeConfig
      * @brief 장치가 PC 의 팩 폴더를 받는 개발 전용 전송(`-fileserve=<주소>` — `FileServeContentSource` + 평문 HTTP 클라이언트 `PlainHTTPClient`)의 한도입니다.
      * @details 응답은 PC 쪽 서버(`py -3 -m Scripts fileserve`)가 보내지만 믿지 않는다 — 머리말 · 본문 상한과 요청 시한이 넘치면 그 요청은 실패다(언리얼 `HttpMaxContentLength` · 요청 시한 자리).
@@ -684,6 +704,9 @@ namespace sw
 
         PROPERTY()
         CharacterMeshCacheConfig _characterMeshCache{}; ///< 캐릭터 외형이 구운 · 합친 메시 캐시의 예산(게임 모듈이 보는 조각)
+
+        PROPERTY()
+        MinigameConfig _minigame{}; ///< 미니게임 흐름의 정책 값 — 쌓기 깊이 한도(게임 모듈이 보는 조각)
 
         PROPERTY()
         FileServeConfig _fileServe{}; ///< 개발 전용 장치 전송(Fileserve)의 응답 한도 · 시한

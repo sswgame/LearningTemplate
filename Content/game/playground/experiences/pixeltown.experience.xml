@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<?asset guid="4cd8fd015eb4467d92b5519712d5c771"?>
-<!--
-  타일 걸음 마을 미니게임(오락실 RPG) — Overworld 키트. 옛 게임 PixelTown 을 허브의 미니게임으로 흡수했다. 키트는 범위에 걸 서비스가 없다 — 맵의 OverworldGameModeComponent 가
-  씬의 타일 레이어 · 대화 러너로 판을 돌린다. 말 걸기(Interact)는 팩 입력 묶음(data/gamesettings.xml 의 pixeltown/data/town.input.xml)이 Space · E 로 묶는다.
-  시나리오 automation/pixeltown_talk · pixeltown_slice 가 실행 전역 변수 gv_firstExperience 로 들어간다.
--->
-<Experience name="pixeltown" map="game/playground/pixeltown/maps/town.scene.xml" entry="SceneSwitch" kits="Overworld"/>

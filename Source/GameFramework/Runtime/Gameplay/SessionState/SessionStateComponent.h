@@ -108,11 +108,12 @@ namespace sw
         /**
          * @brief 판 상태를 엽니다. 첫 호출만 설정을 쓰고, 보관하고 있던 복원 바이트가 있으면 그것으로 복원합니다.
          * @return 새 판, 복원, 이미 열림, 거절 중 하나입니다. 복원하려던 바이트를 읽지 못했으면 경고를 남기고 새 판(`Fresh`)으로 엽니다.
-         *         설정이 범위 밖이면 오류를 남기고 `Refused` 이며, 열리지 않은 채로 남습니다.
+         *         설정이 범위 밖이거나 같은 씬에 이미 열린 판 상태가 있으면 오류를 남기고 `Refused` 이며, 열리지 않은 채로 남습니다.
+         * @details 월드 상태(시계 · 날씨 · 지갑)는 씬에 하나다 — 하위 레벨 미니게임이 바탕 씬에 둘째 판 상태를 열면 어느 시계 · 날씨를 읽을지가 등록 순서에 달린다(`findOpen`).
          */
         [[nodiscard]] SessionStateInitResult initialize( const SessionStateSettings& settings );
 
-        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다 — 판 상태를 찾는 틱(날씨 파도 · 표면 노출 · 지역)이 씬을 훑지 않는다(`collectOpen`). */
+        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다 — 판 상태를 찾는 틱(날씨 파도 · 표면 노출 · 지역)이 씬을 훑지 않는다(`findOpen`). */
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 레지스트리에서 내립니다. */
         void onUnregister( GameObjectManager& manager ) override;
@@ -173,12 +174,10 @@ namespace sw
         /** @brief `openOnOwner` 의 결과를 보지 않는 버전입니다. 시작값은 `isFreshGame` 으로 봅니다. */
         [[nodiscard]] static SessionStateComponent* openOnOwner( const Component& component, const SessionStateSettings& settings );
         /**
-         * @brief 씬 @p pManager 에서 열린 판 상태를 등록 순서로 @p outListState 에 모읍니다. 자동화 단계 · 감시 값 · 지역이 읽는다.
-         * @details 씬을 훑지 않고 컴포넌트 레지스트리를 읽는다 — 잠금 없는 읽기라 병렬 틱에서도 부를 수 있고, 순서가 등록 순서로 정해진다.
+         * @brief 씬 @p pManager 의 열린 판 상태(씬에 하나 — `initialize` 가 둘째를 거절한다)입니다. 없으면 nullptr 입니다. 자동화 단계 · 감시 값 · 지역 · 날씨가 읽는다.
+         * @details 씬을 훑지 않고 컴포넌트 레지스트리를 읽는다 — 잠금 없는 읽기라 병렬 틱에서도 부를 수 있고, 틱마다 불려도 할당하지 않는다.
          */
-        static void collectOpen( const GameObjectManager* pManager, vector<SessionStateComponent*>& outListState );
-        /** @brief 씬 @p pManager 의 첫 열린 판 상태(등록 순서)입니다. 없으면 nullptr 입니다. 틱마다 불려도 씬을 훑거나 할당하지 않습니다. */
-        [[nodiscard]] static const SessionStateComponent* findFirstOpen( const GameObjectManager* pManager );
+        [[nodiscard]] static SessionStateComponent* findOpen( const GameObjectManager* pManager );
 
     private:
         /** @brief 보관하고 있던 복원 바이트를 적용합니다. 구조가 깨졌으면 경고를 남기고 false 를 반환합니다. */

@@ -228,9 +228,9 @@ namespace sw
         void popLayer( const hashed_string& layer );
         /** @brief 지금 LIFO 스택 맨 위 레이어 이름을 반환합니다. */
         string_view getCurrentTopLayer() const;
-        /** @brief LIFO 레이어 스택의 이름들입니다(아래부터). Experience 해제 검사가 켜기 전후를 견준다. */
+        /** @brief LIFO 레이어 스택의 이름들입니다(아래부터). 게임 기능 범위의 해제 검사가 켜기 전후를 견준다. */
         void collectLayerStack( vector<hashed_string>& outListLayer ) const;
-        /** @brief 켜진 레이어 이름들입니다(등록 순서, 항상 켜짐 포함). Experience 해제 검사가 "스택에는 없는데 켜진 레이어"를 찾는다. */
+        /** @brief 켜진 레이어 이름들입니다(등록 순서, 항상 켜짐 포함). 게임 기능 범위의 해제 검사가 "스택에는 없는데 켜진 레이어"를 찾는다. */
         void collectEnabledLayers( vector<hashed_string>& outListLayer ) const;
         void enableOnlyLayer( const hashed_string& layer );
 

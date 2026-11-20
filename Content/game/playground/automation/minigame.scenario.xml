@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ad695c56d01545c481cd8e55cbb24594"?>
+<!--
+  미니게임 진입 · 나가기(개발 명령 minigame.enter · minigame.leave) — 읽기 · 검사 · 켜기 · 맵 요청을 한 번 지나고, 나가면 들어갈 때의 씬(돌아올 자리)을 다시 열어 복원한다
+  (docs/DesignBacklog.md "게임 기능 · 미니게임"). 무대: 첫 씬 maps/fogshowcase 에서 minigames/smoketest(맵 editortest, 게임 기능 없음)로 들어간다.
+  실행: App -scenario=game/playground/automation/minigame.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.minigame" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/fogshowcase.scene.xml"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<DevCommand line="minigame.enter smoketest"/>
+	<ExpectLog id="DevCommand.Reply" contains="minigame.enter: entering 'smoketest'" atLeast="1"/>
+	<WaitUntil watch="Minigame.Active" is="smoketest" timeoutWallSeconds="60"/> <!-- 맵 로드(워커)가 끝났다 -->
+	<ExpectActiveScene path="game/playground/maps/editortest.scene.xml"/>
+	<ExpectLog id="MinigameFlow.Activated" contains="'smoketest' is active (0 features)" count="1"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<ExpectLog id="DevCommand.Reply" contains="minigame.leave: leaving" atLeast="1"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/fogshowcase.scene.xml"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<ExpectLog id="MinigameFlow.Restored" count="1"/>
+	<Pass/>
+</Scenario>

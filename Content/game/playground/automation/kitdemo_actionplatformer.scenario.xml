@@ -8,7 +8,7 @@
   실행: ctest -R Scenario.game.playground.kitdemo_actionplatformer
 -->
 <Scenario name="game.playground.kitdemo_actionplatformer" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Launch variable="gv_firstExperience" value="kitdemo_actionplatformer"/>
+	<Launch variable="gv_firstMinigame" value="kitdemo_actionplatformer"/>
 	<WaitUntil watch="KitDemo.Platformer.State" equals="1" timeoutFrames="120"/>
 	<!-- 바닥에 내려앉는다(몸 가운데 y = 1 + 0.45) -->
 	<WaitUntil watch="KitDemo.Platformer.PlayerY" near="1.45" tolerance="0.05" timeoutFrames="60"/>

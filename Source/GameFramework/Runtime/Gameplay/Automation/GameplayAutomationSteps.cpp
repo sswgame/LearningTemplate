@@ -47,27 +47,23 @@ namespace sw
             }
 
             /**
-             * @brief 활성 씬의 판 상태마다 시계를 감는다. 지나간 시 · 날 경계는 알림으로 남아 다음 틱의 디렉터 · 일정이 받는다(잠 · 빨리 감기와 같은 길).
+             * @brief 활성 씬의 판 상태(씬에 하나)의 시계를 감는다. 지나간 시 · 날 경계는 알림으로 남아 다음 틱의 디렉터 · 일정이 받는다(잠 · 빨리 감기와 같은 길).
              * @details 씬 틱 뒤에 돌므로 같은 프레임의 틱은 감기 전 시각을 봤다. 감시 값은 감은 시각을 바로 보지만 몸(일정을 따르는 오브젝트)은 다음 틱에 옮겨진다.
              */
             static bool runAdvanceGameTime( AutomationStepContext& runner, const AutomationStep& step )
             {
-                GameObjectManager*             pManager = runner.findActiveObjectManager();
-                uint32                         count    = 0;
-                const AdvanceGameTimeParams    params   = step.readValidatedProperties<AdvanceGameTimeParams>();
-                vector<SessionStateComponent*> listState;
-                SessionStateComponent::collectOpen( pManager, listState );
-                for ( SessionStateComponent* pState : listState )
+                const AdvanceGameTimeParams  params = step.readValidatedProperties<AdvanceGameTimeParams>();
+                SessionStateComponent* const pState = SessionStateComponent::findOpen( runner.findActiveObjectManager() ); // 씬에 하나다
+                if ( pState == nullptr )
                 {
-                    WorldClock& clock = pState->getClock();
-                    if ( params._toHour >= 0.0f )
-                        clock.advanceToHour( params._toHour );
-                    else
-                        clock.advanceMinutes( params._hours >= 0.0f ? params._hours * static_cast<float32>( constant::time::kSecondsPerHour / constant::time::kSecondsPerMinute ) : params._minutes );
-                    ++count;
-                }
-                if ( count == 0 )
                     runner.recordFailure( step, "the active scene has no open SessionStateComponent (game clock)" );
+                    return true;
+                }
+                WorldClock& clock = pState->getClock();
+                if ( params._toHour >= 0.0f )
+                    clock.advanceToHour( params._toHour );
+                else
+                    clock.advanceMinutes( params._hours >= 0.0f ? params._hours * static_cast<float32>( constant::time::kSecondsPerHour / constant::time::kSecondsPerMinute ) : params._minutes );
                 return true;
             }
 

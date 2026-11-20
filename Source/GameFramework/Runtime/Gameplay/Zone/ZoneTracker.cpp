@@ -201,9 +201,8 @@ namespace sw
         GameObject* const pOccupant = manager.resolveGameObject( occupancy._target );
         if ( pOccupant == nullptr || pOccupant->isPendingDestroy() )
             return;
-        vector<SessionStateComponent*> listSession;
-        SessionStateComponent::collectOpen( &manager, listSession );
-        GameFlags* const pFlags = listSession.empty() ? nullptr : &listSession.front()->getFlags();
+        SessionStateComponent* const pSession = SessionStateComponent::findOpen( &manager );
+        GameFlags* const             pFlags   = pSession != nullptr ? &pSession->getFlags() : nullptr;
 
         const vector<ZoneCompiledModule>& listModule = profile.getModules();
         vector<GameObject*>               listTarget;

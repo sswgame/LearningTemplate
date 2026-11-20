@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<?asset guid="00572bcfedee4f2eabd3c77f1b4c2542"?>
-<!--
-  장르 키트 시연 미니게임 — ClassicJRPG 키트. 키트는 범위에 걸 서비스가 없다 — 맵의 시연 컴포넌트(GameModeComponent 파생)가 판을 돌린다.
-  시나리오 automation/kit_classicjrpg.scenario.xml 이 실행 전역 변수 gv_firstExperience 로 들어간다.
--->
-<Experience name="kit_classicjrpg" map="game/playground/maps/kit_classicjrpg.scene.xml" entry="SceneSwitch" kits="ClassicJRPG"/>

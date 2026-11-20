@@ -6,7 +6,7 @@
   실행: ctest -R Scenario.playground
 -->
 <Scenario name="game.playground.kit_asymmetrichorror" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Launch variable="gv_firstExperience" value="kit_asymmetrichorror"/>
+	<Launch variable="gv_firstMinigame" value="kit_asymmetrichorror"/>
 	<WaitUntil watch="KitDemo.AsymmetricHorror.State" equals="1" timeoutFrames="120"/>
 	<Expect watch="KitDemo.AsymmetricHorror.Generators" equals="2"/>
 	<Expect watch="KitDemo.AsymmetricHorror.Escaped" equals="1"/>

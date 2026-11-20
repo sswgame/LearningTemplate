@@ -7,7 +7,7 @@
   실행: ctest -R Scenario.playground
 -->
 <Scenario name="game.playground.kit_monstercollector" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Launch variable="gv_firstExperience" value="kit_monstercollector"/>
+	<Launch variable="gv_firstMinigame" value="kit_monstercollector"/>
 	<WaitUntil watch="KitDemo.MonsterCollector.State" equals="1" timeoutFrames="120"/>
 	<Expect watch="KitDemo.MonsterCollector.WonExp" equals="500"/>
 	<Expect watch="KitDemo.MonsterCollector.Captured" equals="1"/>

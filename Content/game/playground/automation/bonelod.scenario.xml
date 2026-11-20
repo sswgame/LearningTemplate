@@ -9,6 +9,7 @@
   실행: App -scenario=game/playground/automation/bonelod.scenario.xml -unattended (체인: ctest -R Scenario.game.playground.bonelod)
 -->
 <Scenario name="game.playground.bonelod" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/editortest.scene.xml"/> <!-- 그림 · 배치의 무대(팩 시작 맵은 마을이다) -->
 	<Launch variable="gv_stressTestCharacters" value="40"/>
 	<Launch variable="gv_stressTestCharacterColumns" value="8"/>
 	<Launch variable="gv_stressTestCharacterPrefab" value="common/prefabs/quaternius/townsfolk_merged.prefab.xml"/>

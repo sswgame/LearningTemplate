@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<?asset guid="1d265fa1386949848034b8a14484af53"?>
-<!--
-  장르 키트 시연 미니게임 — TacticsSRPG 키트. 키트는 범위에 걸 서비스가 없다 — 맵의 시연 컴포넌트(GameModeComponent 파생)가 판을 돌린다.
-  시나리오 automation/kitdemo_tactics.scenario.xml 이 실행 전역 변수 gv_firstExperience 로 들어간다.
--->
-<Experience name="kitdemo_tactics" map="game/playground/maps/kitdemo_tactics.scene.xml" entry="SceneSwitch" kits="TacticsSRPG"/>

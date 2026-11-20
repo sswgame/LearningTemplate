@@ -7,6 +7,7 @@
   실행: ctest -R Scenario.game.playground.riglod (Shipping 은 벤치 변수가 없어 건너뛴다)
 -->
 <Scenario name="game.playground.riglod" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/editortest.scene.xml"/> <!-- 그림 · 배치의 무대(팩 시작 맵은 마을이다) -->
 	<Launch variable="gv_stressTestRig" value="1"/>
 	<Launch variable="gv_stressTestRigView" value="2"/>
 	<AdvanceSimulation frames="90"/> <!-- 멈추기 전 90 프레임(결정적 자세가 사진 내용) -->

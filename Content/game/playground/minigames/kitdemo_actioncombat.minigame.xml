@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="51353f719c94494d8f847854d6bd6b5a"?>
+<!--
+  장르 키트 시연 미니게임 — ActionCombat 키트. 액션 룸이 적 수치를 찾는 몬스터 정의(data/monsters.xml)를 게임 기능 ActionCombat 가 미니게임 범위에 건다.
+  시나리오 automation/kitdemo_actioncombat.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="kitdemo_actioncombat" map="game/playground/maps/kitdemo_actioncombat.scene.xml" entry="SceneSwitch" features="ActionCombat" catalogs="MonsterCatalog"/>

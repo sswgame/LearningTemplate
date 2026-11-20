@@ -299,7 +299,7 @@ namespace sw
         float32      luminance = 0.0f;
         const uint64 ownerID   = getOwner()->getObjectID();
         // 날씨: 판 상태의 날씨 값(`_skyLightValue` — 맑음 1, 흐림 · 비 · 안개는 낮다)이 직사광을 줄인다. 날씨가 없는 씬은 맑은 하늘이다.
-        const SessionStateComponent* pSession = _skyLightValue.empty() ? nullptr : SessionStateComponent::findFirstOpen( &manager );
+        const SessionStateComponent* pSession = _skyLightValue.empty() ? nullptr : SessionStateComponent::findOpen( &manager );
         const float32                skyLight = pSession != nullptr ? MathUtil::saturate( pSession->getWeather().computeValue( _skyLightValue ) ) : 1.0f;
         for ( LightComponent* pLight : manager.getComponentRegistry().getAll<LightComponent>( LightComponent::getRegistryIndex( LightKind::Directional ) ) )
         {

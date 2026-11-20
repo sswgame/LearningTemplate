@@ -216,7 +216,7 @@ namespace sw
     /**
      * @brief 규칙의 수치입니다. 확률은 %, 보정은 %p 입니다.
      * @details 규칙 자산이다 — SRPG 카탈로그의 `<Rules …/>` 한 줄이 모든 칸을 적는다(`Required`, 없으면 카탈로그 로드가 실패한다). 전장은 카탈로그에서만 받으므로
-     *          게임이 C++ 기본값으로 전장을 열 길이 없다(감사 K-4, Lyra `ExperienceDefinition` · 유니티 `ScriptableObject` 와 같은 자리).
+     *          게임이 C++ 기본값으로 전장을 열 길이 없다(감사 K-4, Lyra `ULyraExperienceDefinition` · 유니티 `ScriptableObject` 와 같은 자리).
      */
     REFLECT()
     struct SW_KIT_API SRPGSettings
