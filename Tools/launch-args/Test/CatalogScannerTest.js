@@ -125,7 +125,7 @@ test('the SW profile on this repository: every macro call under Source is in the
     assert.equal(findVariable('gv_rhiImmediateSubmit').valueKind, ValueKind.Boolean, 'a call split over several lines is read');
     assert.equal(findVariable('gv_profileFrames').tag, 'test');
     assert.equal(findVariable('gv_tracyViewerPath').valueKind, ValueKind.String, 'sw::GlobalString maps through the profile type_map');
-    assert.equal(findVariable('gv_stressTestMeshes').variantName, 'Empty');
+    assert.equal(findVariable('gv_stressTestMeshes').variantName, 'Playground');
 
     assert.deepEqual(catalog.listTag.map((tagInfo) => tagInfo.tag), ['', 'test'], 'tags in profile macro order');
     assert.equal(catalog.listTag[0].label, '일반');

@@ -151,8 +151,8 @@ test('computeGlobalVariableNote applies variant folders and profile rules', () =
     });
     const editorOnly = catalog.listGlobalVariable.find((variable) => variable.name === 'gv_editorOnly');
     const gameOnly = catalog.listGlobalVariable.find((variable) => variable.name === 'gv_gameOnly');
-    const devContext = { bKnown: true, mapCacheValue: { SHIP: 'OFF', SW_ACTIVE_GAME: 'Empty' } };
-    const shipContext = { bKnown: true, mapCacheValue: { SHIP: 'ON', SW_ACTIVE_GAME: 'Empty' } };
+    const devContext = { bKnown: true, mapCacheValue: { SHIP: 'OFF', SW_ACTIVE_GAME: 'Playground' } };
+    const shipContext = { bKnown: true, mapCacheValue: { SHIP: 'ON', SW_ACTIVE_GAME: 'Playground' } };
     const unknownContext = { bKnown: false, mapCacheValue: {} };
     const emptySelection = LaunchArgumentUtil.makeEmptySelection();
     const editorSelection = LaunchArgumentUtil.makeEmptySelection();
