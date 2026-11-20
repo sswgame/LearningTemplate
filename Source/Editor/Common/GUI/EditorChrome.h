@@ -7,7 +7,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/Theme/EditorTextExtent.h"
 

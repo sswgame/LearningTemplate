@@ -14,7 +14,6 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Config/EditorIconName.h"
-#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 
