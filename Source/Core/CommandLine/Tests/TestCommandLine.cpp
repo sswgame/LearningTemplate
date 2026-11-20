@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 namespace
@@ -577,4 +578,87 @@ SW_TEST_CASE( CommandLineTest, StageGlobalVariablesCountAsProvided )
 
     cmdManager.setStageGlobalVariables( {} );
     SW_EXPECT_FALSE( cmdManager.isGlobalVariableProvided( "gv_displayOutput" ) );
+}
+
+/**
+ * @brief 쓰는 구성 칸(`ArgumentList.xxx` 줄의 둘째 칸)이 열거값마다 읽힌다 — 표 크기가 열거 수와 같고, 대표 줄의 칸이 적은 값이다.
+ */
+SW_TEST_CASE( CommandLineTest, UsageColumnIsReadPerArgument )
+{
+    SW_EXPECT_EQUAL( static_cast<size_t>( sw::CommandLineArgument::Count ), sizeof( sw::kArrCommandLineArgumentUsage ) / sizeof( sw::kArrCommandLineArgumentUsage[0] ) );
+    SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::LOG_FILE ) == sw::CommandLineArgumentUsage::All );
+    SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::COOK_ALL ) == sw::CommandLineArgumentUsage::All ); // 배포 App · Server 가 스스로 굽는다
+    SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::ENABLE_EDITOR ) == sw::CommandLineArgumentUsage::Dev );
+    SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::TEST ) == sw::CommandLineArgumentUsage::Test );
+    SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::SCENARIO ) == sw::CommandLineArgumentUsage::Test );
+    SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::SERVER_CONFIG ) == sw::CommandLineArgumentUsage::Server );
+    SW_EXPECT_TRUE( sw::getCommandLineArgumentUsage( sw::CommandLineArgument::FILESERVE ) == sw::CommandLineArgumentUsage::AndroidDev );
+}
+
+/**
+ * @brief 정책 판정 — 배포는 Dev · Test 를, 클라이언트 전용 타깃은 Server 를, Android 가 아닌 개발 구성은 AndroidDev 를 받지 않는다.
+ */
+SW_TEST_CASE( CommandLineTest, BuildPolicyAcceptsOnlyItsUsages )
+{
+    sw::CommandLineBuildPolicy shipping{};
+    shipping._bShipping       = SW_TRUE;
+    shipping._bWithServerCode = SW_TRUE;
+    SW_EXPECT_TRUE( shipping.isUsageAccepted( sw::CommandLineArgumentUsage::All ) );
+    SW_EXPECT_TRUE( shipping.isUsageAccepted( sw::CommandLineArgumentUsage::Server ) );
+    SW_EXPECT_FALSE( shipping.isUsageAccepted( sw::CommandLineArgumentUsage::Dev ) );
+    SW_EXPECT_FALSE( shipping.isUsageAccepted( sw::CommandLineArgumentUsage::Test ) );
+
+    sw::CommandLineBuildPolicy androidShipping = shipping;
+    androidShipping._bAndroid                  = SW_TRUE;
+    SW_EXPECT_FALSE( androidShipping.isUsageAccepted( sw::CommandLineArgumentUsage::AndroidDev ) );
+
+    sw::CommandLineBuildPolicy desktopClient{};
+    SW_EXPECT_TRUE( desktopClient.isUsageAccepted( sw::CommandLineArgumentUsage::Dev ) );
+    SW_EXPECT_TRUE( desktopClient.isUsageAccepted( sw::CommandLineArgumentUsage::Test ) );
+    SW_EXPECT_FALSE( desktopClient.isUsageAccepted( sw::CommandLineArgumentUsage::Server ) );
+    SW_EXPECT_FALSE( desktopClient.isUsageAccepted( sw::CommandLineArgumentUsage::AndroidDev ) );
+
+    sw::CommandLineBuildPolicy androidDev = desktopClient;
+    androidDev._bAndroid                  = SW_TRUE;
+    SW_EXPECT_TRUE( androidDev.isUsageAccepted( sw::CommandLineArgumentUsage::AndroidDev ) );
+
+    // 이 테스트를 돌리는 빌드는 배포가 아니다(배포는 테스트를 짓지 않는다).
+    SW_EXPECT_TRUE( sw::CommandLineBuildPolicy::current().isUsageAccepted( sw::CommandLineArgumentUsage::Test ) );
+}
+
+/**
+ * @brief 배포 정책의 표는 Dev · Test 철자를 등록하지 않는다 — 주면 모르는 인자로 거절되고(기동이 멈춘다), 열거값은 남아 "주지 않음" 으로 읽힌다. 도움말에도 없다.
+ * @details 예전에는 배포가 `-test` 를 받아 아무 일도 하지 않고 넘어갔다(테스트 작업이 배포에서 접혀 있었다).
+ */
+SW_TEST_CASE( CommandLineTest, ShippingPolicyRejectsDevArguments )
+{
+    sw::CommandLineBuildPolicy shipping = sw::CommandLineBuildPolicy::current();
+    shipping._bShipping                 = SW_TRUE;
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize( shipping );
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "-test" ),
+        const_cast<utf8*>( "-EnableEditor" ),
+        const_cast<utf8*>( "-scenario=a.scenario.xml" ),
+        const_cast<utf8*>( "-unattended" ),
+        const_cast<utf8*>( "-log-file=App.log" ),
+    };
+    cmdManager.parse( 6, argv, makeCommandLineTestBaseDirectory() );
+
+    SW_EXPECT_EQUAL( size_t( 3 ), cmdManager.getParseErrors().size() );
+    for ( const sw::string& error : cmdManager.getParseErrors() )
+    {
+        SW_EXPECT_TRUE_MSG( sw::StringUtil::startsWith( error, "No argument matches" ), "Dev · Test 인자가 모르는 인자가 아닌 다른 이유로 거절됐다" );
+    }
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::UNATTENDED ) );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::LOG_FILE ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::TEST ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::SCENARIO ) );
+
+    const sw::string usage = cmdManager.makeUsageText();
+    SW_EXPECT_TRUE( sw::StringUtil::contains( usage, "-unattended" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::contains( usage, "-EnableEditor" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::contains( usage, "-scenario" ) );
 }

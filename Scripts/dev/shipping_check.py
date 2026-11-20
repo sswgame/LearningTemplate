@@ -10,7 +10,7 @@ Scripts/dev/shipping_check.py
 | 프리셋 | 띄우는 것 | 통과 |
 | --- | --- | --- |
 | `Ninja-Shipping` | `App -unattended` 를 `APP_RUN_SECONDS` 동안 돌린 뒤 창을 닫는다(WM_CLOSE) | 그동안 살아 있고 0 으로 끝난다 |
-| `Ninja-Shipping` | `App -unattended -scenario=<아무 경로>` | 0 이 아닌 코드로 곧 끝나고, 로그에 자동화 없음 오류가 있다(배포 구성은 실행기를 짓지 않는다) |
+| `Ninja-Shipping` | `App -unattended` + 배포가 받지 않는 인자 전부(`ArgumentList.xxx` 의 쓰는 구성 Dev · Test · AndroidDev — `-test` · `-scenario=x` · `-EnableEditor` …) | 0 이 아닌 코드로 곧 끝나고, 표준 오류에 그 인자마다 모르는 인자 오류가 있다(배포 구성은 그 철자를 등록하지 않는다) |
 | `Ninja-Shipping-Client` | 클라이언트 전용 `App`(Server 폴더를 짓지 않는다)을 같은 길로 띄우고 닫는다 | 그동안 살아 있고 0 으로 끝난다 |
 | `Ninja-Shipping-Server` | `Server` 를 `SERVER_RUN_SECONDS` 동안 돌린 뒤 종료 신호(Windows Ctrl+Break · POSIX SIGTERM) | 그동안 살아 있고 0 으로 끝난다 |
 
@@ -50,8 +50,8 @@ APP_RUN_SECONDS = 8.0
 EXIT_TIMEOUT_SECONDS = 60.0
 #: 배포 서버를 살려 두는 시간(초) — 기동 · 몇 틱이 지나기에 넉넉하다. 그 뒤 종료 신호를 보낸다.
 SERVER_RUN_SECONDS = 6.0
-#: 배포 구성이 `-scenario` 를 받았을 때 남기는 오류(`App::startAutomation` — 실행기의 자기 등록 `IAutomationRuntime` 이 없을 때).
-NO_AUTOMATION_ERROR = "Shipping has no automation runner"
+#: 등록되지 않은 철자를 받았을 때 명령줄이 남기는 오류(`CommandLineManager::parseArgumentLine` — 뒤에 받은 키 `-name` 이 붙는다).
+UNKNOWN_ARGUMENT_ERROR = "No argument matches"
 LOG_LINE_PATTERN = re.compile(r"\[(Error|Warning)\]")
 #: 테스트용 전역 변수 정의(`SW_TEST_GLOBAL_VARIABLE( 형, gv_이름, …)`) — 배포 실행 파일에 이 이름이 남으면 안 된다.
 TEST_VARIABLE_PATTERN = re.compile(r"SW_TEST_GLOBAL_VARIABLE\(\s*[^,]+?,\s*(gv_\w+)")
@@ -172,18 +172,24 @@ def run_server(project_root: Path) -> SmokeResult:
     return SmokeResult("Server", log_path, exit_code == 0, f"exit code {exit_code}")
 
 
-def run_no_automation_scenario(project_root: Path) -> SmokeResult:
-    """배포 App 이 `-scenario` 를 기동 오류로 거절하는지 본다 — 배포 구성은 자동화 실행기를 짓지 않는다."""
+def run_dev_arguments_rejected(project_root: Path) -> SmokeResult:
+    """배포 App 이 개발 · 테스트 인자(쓰는 구성 Dev · Test · AndroidDev) 철자를 모두 모르는 인자로 거절해 기동을 멈추는지 본다 — 조용히 받아 무시하지 않는다."""
     preset = "Ninja-Shipping"
-    log_path = make_log_path(project_root, preset, "Scenario")
+    log_path = make_log_path(project_root, preset, "DevArguments")
     executable = find_bin_dir(project_root, preset) / f"App{EXECUTABLE_SUFFIX}"
     if executable.is_file() is False:
-        return SmokeResult("NoAutomation", log_path, False, f"{executable} is missing")
-    result = run_process([executable, app_arguments.flag("unattended"), app_arguments.option("scenario", "Test/Scenario/none.xml"), app_arguments.option("log-file", log_path)], cwd=project_root,
-                        timeout_seconds=EXIT_TIMEOUT_SECONDS)
-    logged = log_path.is_file() and NO_AUTOMATION_ERROR in log_path.read_text(encoding="utf-8", errors="replace")
-    passed = result.launched and not result.timed_out and result.return_code != 0 and logged
-    return SmokeResult("NoAutomation", log_path, passed, f"exit code {result.return_code}, startup error logged: {logged}", [NO_AUTOMATION_ERROR])
+        return SmokeResult("DevArguments", log_path, False, f"{executable} is missing")
+    list_rejected = app_arguments.read_shipping_rejected_arguments()
+    result = run_process([executable, app_arguments.flag("unattended"), app_arguments.option("log-file", log_path), *list_rejected], cwd=project_root,
+                         timeout_seconds=EXIT_TIMEOUT_SECONDS)
+    # 명령줄 오류는 로거보다 먼저라 표준 오류로 간다 — 그 글을 이 실행의 로그로 남겨 아래 줄 모음이 읽게 한다.
+    log_path.write_text(result.stderr + result.stdout, encoding="utf-8")
+    list_accepted = [argument for argument in list_rejected if f"{UNKNOWN_ARGUMENT_ERROR} {argument.split('=', 1)[0]} (" not in result.stderr]
+    passed = result.launched and not result.timed_out and result.return_code != 0 and not list_accepted
+    reason = f"exit code {result.return_code}, {len(list_rejected) - len(list_accepted)}/{len(list_rejected)} rejected"
+    if list_accepted:
+        reason += f", accepted: {' '.join(list_accepted[:20])}"
+    return SmokeResult("DevArguments", log_path, passed, reason, [UNKNOWN_ARGUMENT_ERROR])
 
 
 def collect_test_variable_names(project_root: Path) -> list[str]:
@@ -238,7 +244,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     project_root = get_project_root()
 
-    list_run = ((run_app, "Ninja-Shipping"), (run_client_app, "Ninja-Shipping-Client"), (run_server, "Ninja-Shipping-Server"), (run_no_automation_scenario, "Ninja-Shipping"))
+    list_run = ((run_app, "Ninja-Shipping"), (run_client_app, "Ninja-Shipping-Client"), (run_server, "Ninja-Shipping-Server"), (run_dev_arguments_rejected, "Ninja-Shipping"))
     if args.skip_build is False:
         list_failed_build = [preset for preset in dict.fromkeys(preset for _, preset in list_run) if build_preset(project_root, preset) is False]
         if list_failed_build:
