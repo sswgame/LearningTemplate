@@ -15,16 +15,13 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
-import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from common import app_arguments
 from common.exit_code import ExitCode
-from common.host_platform import executable_name
-from common.paths import get_project_root
+from common.process_group import ProcessGroup, read_log, report
 
 _HASH_LINE = re.compile(r"\[DestructionHash\]\s+side=(?P<side>server|client)\s+id=(?P<id>\d+)\s+events=(?P<events>\d+)\s+hash=(?P<hash>[0-9a-fA-F]+)\s+name=(?P<name>.*)$")
 _SCENE = "game/playground/maps/destructionnet.scene.xml"
@@ -92,61 +89,28 @@ def compare_logs(server_text: str, client_text: str) -> CompareResult:
     return result
 
 
-def _read_log(path: Path) -> str:
-    return path.read_text(encoding="utf-8", errors="replace")
-
-
-def _print_result(result: CompareResult) -> int:
-    for problem in result.problems:
-        print(f"[destruction-net] FAIL: {problem}")
-    if result.ok:
-        print(f"[destruction-net] OK: {result.matched} (id, events) pairs matched between server and client")
-        return int(ExitCode.PASSED)
-    return int(ExitCode.VIOLATION)
+def _print_result(result: CompareResult, logs: list[Path]) -> int:
+    return report("destruction-net", result.problems, logs, f"{result.matched} (id, events) pairs matched between server and client")
 
 
 def _run_pair(argument: argparse.Namespace) -> int:
-    root = get_project_root()
-    bin_dir = root / "build" / argument.preset / "Bin"
-    server_exe = bin_dir / executable_name("Server")
-    client_exe = bin_dir / executable_name("App")
-    for exe in (server_exe, client_exe):
-        if not exe.exists():
-            print(f"[destruction-net] FAIL: {exe} does not exist - build the '{argument.preset}' preset first")
-            return int(ExitCode.VIOLATION)
-    out_dir = root / "Saved" / "DestructionNetPair"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    server_log = out_dir / "server.log"
-    client_log = out_dir / "client.log"
-    port = _PORT
-    server_args = [str(server_exe), app_arguments.option("game", _GAME), app_arguments.variable("gv_firstScene", _SCENE), app_arguments.variable("gv_netListenPort", port),
-                  app_arguments.variable("gv_serverExitAfterTicks", _SERVER_TICKS)]
-    client_args = [str(client_exe), app_arguments.option("game", _GAME), app_arguments.variable("gv_firstScene", _SCENE), app_arguments.variable("gv_netConnectAddress", f"127.0.0.1:{port}")]
-    print(f"[destruction-net] server: {' '.join(server_args)}")
-    print(f"[destruction-net] client: {' '.join(client_args)}")
-    with server_log.open("wb") as server_out, client_log.open("wb") as client_out:
-        server = subprocess.Popen(server_args, cwd=str(bin_dir), stdout=server_out, stderr=subprocess.STDOUT)
+    with ProcessGroup("destruction-net", argument.preset, "DestructionNetPair") as group:
+        list_exe = group.require("Server", "App")
+        if list_exe is None:
+            return int(ExitCode.CHECK_INVALID)
+        server_exe, client_exe = list_exe
+        scene = app_arguments.variable("gv_firstScene", _SCENE)
+        server = group.start("server", [server_exe, app_arguments.option("game", _GAME), scene, app_arguments.variable("gv_netListenPort", _PORT),
+                                        app_arguments.variable("gv_serverExitAfterTicks", _SERVER_TICKS)], stdin=False)
         time.sleep(_CLIENT_DELAY_SECONDS)  # 서버가 먼저 서야 한다(클라이언트는 시간 초과면 다시 시도하지만, 첫 연결을 빨리 잡는다)
-        client = subprocess.Popen(client_args, cwd=str(bin_dir), stdout=client_out, stderr=subprocess.STDOUT)
-        try:
-            server.wait(timeout=_TIMEOUT_SECONDS)  # 서버는 틱 상한에 스스로 끝난다
-        except subprocess.TimeoutExpired:
-            print(f"[destruction-net] FAIL: the server did not finish within {_TIMEOUT_SECONDS} s")
-            server.kill()
-            client.kill()
-            return int(ExitCode.VIOLATION)
-        # 클라이언트는 자동 종료 인자가 없어 서버가 끝난 뒤 닫는다.
-        client.terminate()
-        try:
-            client.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            client.kill()
-    if server.returncode != 0:
-        print(f"[destruction-net] FAIL: the server exited with code {server.returncode} (log: {server_log})")
-        return int(ExitCode.VIOLATION)
-    result = compare_logs(_read_log(server_log), _read_log(client_log))
-    print(f"[destruction-net] logs: {server_log} {client_log}")
-    return _print_result(result)
+        client = group.start("client", [client_exe, app_arguments.option("game", _GAME), scene, app_arguments.variable("gv_netConnectAddress", f"127.0.0.1:{_PORT}")],
+                             stdin=False)
+        if not server.wait(_TIMEOUT_SECONDS):  # 서버는 틱 상한에 스스로 끝난다
+            return group.fail(f"the server did not finish within {_TIMEOUT_SECONDS} s")
+        client.stop(quit_line=False, timeout_seconds=10)  # 클라이언트는 자동 종료 인자가 없어 서버가 끝난 뒤 닫는다
+    if server.return_code != 0:
+        return group.fail(f"the server exited with code {server.return_code} (log: {server.log})")
+    return _print_result(compare_logs(server.text(), client.text()), [server.log, client.log])
 
 
 def main(list_argument: list[str]) -> int:
@@ -159,5 +123,6 @@ def main(list_argument: list[str]) -> int:
     compare_parser.add_argument("client_log")
     argument = parser.parse_args(list_argument)
     if argument.mode == "compare":
-        return _print_result(compare_logs(_read_log(Path(argument.server_log)), _read_log(Path(argument.client_log))))
+        server_log, client_log = Path(argument.server_log), Path(argument.client_log)
+        return _print_result(compare_logs(read_log(server_log), read_log(client_log)), [server_log, client_log])
     return _run_pair(argument)

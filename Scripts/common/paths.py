@@ -28,6 +28,16 @@ def get_project_root() -> Path:
     return start_dir.parent
 
 
+def get_build_dir(preset: str, project_root: Path | None = None) -> Path:
+    """빌드 프리셋의 빌드 폴더 — CMakePresets.json 의 `binaryDir`(`${sourceDir}/build/${presetName}`)와 같은 자리."""
+    return (project_root or get_project_root()) / "build" / preset
+
+
+def get_bin_dir(preset: str, project_root: Path | None = None) -> Path:
+    """빌드 프리셋의 실행 파일 폴더(`build/<프리셋>/Bin`)."""
+    return get_build_dir(preset, project_root) / "Bin"
+
+
 def normalize_path(path_string: PathLike) -> str:
     """
     경로 문자열을 정규화하여 POSIX 스타일(슬래시 사용) 문자열로 반환합니다.
