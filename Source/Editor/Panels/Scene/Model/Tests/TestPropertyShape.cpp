@@ -12,7 +12,7 @@
 #include "Engine/Audio/Component/AudioReverbZoneComponent.h"
 #include "Engine/Navigation/Component/NavMeshObstacleComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeInfo.h"

@@ -13,7 +13,8 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Kits/Feature/World/Housing/Component/HousingPlotComponent.h"
 

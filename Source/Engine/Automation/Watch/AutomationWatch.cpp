@@ -9,7 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw
 {

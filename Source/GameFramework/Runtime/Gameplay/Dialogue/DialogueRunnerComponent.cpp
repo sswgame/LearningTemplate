@@ -10,7 +10,7 @@
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Presentation/ISubtitleSink.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"

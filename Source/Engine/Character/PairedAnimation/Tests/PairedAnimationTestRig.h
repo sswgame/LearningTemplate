@@ -17,7 +17,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw::test
 {

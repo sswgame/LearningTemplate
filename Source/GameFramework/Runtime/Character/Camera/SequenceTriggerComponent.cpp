@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
