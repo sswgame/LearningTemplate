@@ -128,6 +128,9 @@ SW_REGISTER_ARGUMENT( CHECK_CONFIG, Server, false, false, "check-config" )
 // Shipping 은 구운 게임 하나라 보지 않는다(`GameSelection`)
 SW_REGISTER_ARGUMENT( GAME, All, "", false, "game" )
 
+// 이 Experience(`<팩>/experiences/<이름>.experience.xml`)로 들어간다(Dev 만) — 첫 씬(`-gv_firstScene`)보다 위다. Shipping 은 보지 않는다(`GameSelection::getLaunchExperience`)
+SW_REGISTER_ARGUMENT( EXPERIENCE, "", false, "experience" )
+
 // 전용 서버를 Windows 서비스(SCM)로 돈다(`Server --service`). SCM 이 띄운 프로세스만 된다.
 SW_REGISTER_ARGUMENT( SERVICE, Server, false, false, "service" )
 

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Client/Flow/GameInstanceClient.h"
 
+#include "Core/Log/Logger.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -9,6 +10,7 @@
 #include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
+#include "GameFramework/Runtime/Foundation/Framework/Experience/ExperienceScope.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -40,6 +42,28 @@ namespace sw
                 if ( game::findSubsystem<UISystem>() == nullptr )
                     return;
                 GameSessionCommands::bind( flow, game::getSubsystem<UIGlobalCommandRegistry>() );
+            }
+
+            bool openExperienceUI( ExperienceScope& scope ) override
+            {
+                const ExperienceDefinition& definition = scope.getDefinition();
+                UISystem* const             pUI        = game::findSubsystem<UISystem>();
+                if ( pUI == nullptr || definition._listUI.empty() ) // 창이 없는 클라이언트 호스트(헤드리스)에는 열 화면이 없다
+                    return true;
+                for ( const string& document : definition._listUI )
+                {
+                    const UIScreenHandle handle = pUI->openScreen( document );
+                    if ( handle == kInvalidUIScreenHandle )
+                    {
+                        SW_LOG_ERROR_ID( "GameInstanceClient.ExperienceUINotOpened", "Experience '%#': UI document '%#' could not be opened (see the messages above)", definition._name.c_str(),
+                                         document.c_str() );
+                        return false;
+                    }
+                    // UI 서비스는 엔진 수명이라 Experience 보다 오래 산다. 이미 닫힌 화면을 닫는 것은 할 일이 없다.
+                    scope.addCleanup( Delegate<void()>::create( [pUI, handle]()
+                    { pUI->closeScreen( handle ); } ) );
+                }
+                return true;
             }
         };
 

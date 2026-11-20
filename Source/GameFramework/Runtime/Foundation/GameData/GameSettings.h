@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 
 #include "Engine/Config/PackEngineSettings.h"
@@ -157,6 +158,12 @@ namespace sw
 
         /** @brief packRoot 아래 상대 경로를 Resource 상대 경로로 만듭니다. */
         string resolve( string_view packRelative ) const;
+        /**
+         * @brief 필수 데이터 종류 @p kindLabel 의 경로를 @p outPath 에 만듭니다 — 팩은 gamesettings 의 `<RequiredData kind pack>` 이 적은 팩(공용 `common` 등), 없으면 이 게임 팩입니다.
+         * @details 게임 인스턴스의 필수 데이터(`GameInstance::loadRequiredData`)와 Experience 의 카탈로그(`ExperienceScope::loadCatalog`)가 같은 규칙을 쓴다. 파일이 있는지는 보지 않는다.
+         * @return 종류가 등록되지 않았거나 팩에 경로 규칙이 없으면 그 이유입니다(`GamePackDataUtil::tryMakeKindPath`).
+         */
+        [[nodiscard]] expected<void> makeRequiredDataPath( string_view kindLabel, string& outPath ) const;
 
         /** @brief `{packRoot}/data/gamesettings.xml` 을 읽습니다. 그 경로를 컴포넌트 기본값 경로로 거는 일은 게임 인스턴스가 서비스(`ComponentDefaults::setPath`)에 한다. */
         [[nodiscard]] bool load( string_view gameSettingsFileName = PackEngineSettings::kPackRelativePath );
