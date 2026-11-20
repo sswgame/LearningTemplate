@@ -90,7 +90,9 @@ namespace
     {
         static string makePoolProfile( string_view poolXML )
         {
-            return string( "<AIDirector startPhase=\"A\"><Phase id=\"A\"><Exit to=\"B\" minTime=\"1000\"/></Phase><Phase id=\"B\"/>" ) + string( poolXML ) + "</AIDirector>";
+            StringBuilder<constant::buffer::kMax1024> text;
+            text.appendFormat( "<AIDirector startPhase=\"A\"><Phase id=\"A\"><Exit to=\"B\" minTime=\"1000\"/></Phase><Phase id=\"B\"/>%#</AIDirector>", poolXML );
+            return string( text.view() );
         }
     };
 } // namespace

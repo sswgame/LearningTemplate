@@ -9,6 +9,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Registry/RegistrationList.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -320,7 +321,9 @@ namespace sw
         {
             for ( const string& rejectedLine : listRejected )
                 SW_LOG_ERROR_ID( "AutomationSession.RejectedRegistration", "[Scenario] %#", rejectedLine.c_str() );
-            _pRunner->finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, "a static registration was rejected at startup: " + listRejected.front(), {} ) );
+            StringBuilder<constant::buffer::kMax256> reason;
+            reason.appendFormat( "a static registration was rejected at startup: %#", listRejected.front() );
+            _pRunner->finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, reason.view(), {} ) );
         }
         // 대기 정책을 읽지 못했으면 단계를 돌리지 않는다 — 정지 시한 · 반복 실패 한도 · 정착 조건의 문턱에 기본값이 없다.
         if ( _runPolicyError.empty() == false && _pRunner->isActive() )

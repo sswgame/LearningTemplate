@@ -9,8 +9,8 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include <Psapi.h>
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
-    #include "Core/String/StringUtil.h"
     #include "Core/File/FileUtil.h"
+    #include "Core/String/StringUtil.h"
 
     #include <sys/resource.h>
 #elif defined( SW_PLATFORM_WEB )

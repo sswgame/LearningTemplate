@@ -82,7 +82,9 @@ namespace
         static string makeCurveXML( const utf8* pTag )
         {
             // 키를 일부러 뒤집어 적는다 — 읽기가 정렬한다.
-            return string( "<" ) + pTag + "><_listKey><FloatCurveKey _time=\"1\" _value=\"0\"/><FloatCurveKey _time=\"0\" _value=\"1\"/></_listKey></" + pTag + ">";
+            StringBuilder<constant::buffer::kMax256> xml;
+            xml.appendFormat( "<%#><_listKey><FloatCurveKey _time=\"1\" _value=\"0\"/><FloatCurveKey _time=\"0\" _value=\"1\"/></_listKey></%#>", pTag, pTag );
+            return string( xml.view() );
         }
 
         /** @brief 방출기 하나의 효과 문서입니다. @p attributes 를 방출기 원소에 그대로 넣습니다. */
@@ -134,7 +136,9 @@ SW_TEST_CASE( VFXEffectDefTest, VariantMergesEmittersByName )
     string parent = "<VFXEffectDef><_listEmitter>";
     for ( const utf8* pName : { "Sparks", "Smoke" } )
     {
-        string       one   = Util::makeEffectXML( string( "_name=\"" ) + pName + "\" _texturePath=\"game/vfx/spark.dds\" _maxParticles=\"64\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" );
+        StringBuilder<constant::buffer::kMax256> attributes;
+        attributes.appendFormat( "_name=\"%#\" _texturePath=\"game/vfx/spark.dds\" _maxParticles=\"64\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"", pName );
+        string       one   = Util::makeEffectXML( attributes.view() );
         const size_t first = one.find( "<VFXEmitterDef " );
         const size_t last  = one.find( "</VFXEmitterDef>" ) + string_view( "</VFXEmitterDef>" ).size();
         parent += one.substr( first, last - first );
@@ -521,8 +525,10 @@ SW_TEST_CASE( VFXEffectDefTest, UnknownAttributeLeavesAnEmptyEffect )
     SW_EXPECT_LOG( "Serialization.OrphanValue" );
     const string goodPath = test::makeScratchPath( "good.vfx.xml" );
     SW_REQUIRE_TRUE( Util::writeScratchFile( goodPath, Util::makeEffectXML( Util::kValidAttributes ) ) );
-    const string badPath = test::makeScratchPath( "bad.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( badPath, Util::makeEffectXML( string( Util::kValidAttributes ) + " _notAField=\"1\"" ) ) );
+    const string                             badPath = test::makeScratchPath( "bad.vfx.xml" );
+    StringBuilder<constant::buffer::kMax512> badAttributes;
+    badAttributes.appendFormat( "%# _notAField=\"1\"", Util::kValidAttributes );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( badPath, Util::makeEffectXML( badAttributes.view() ) ) );
 
     VFXEffectDef effect;
     SW_REQUIRE_TRUE( effect.loadFromDiskFile( goodPath ) );

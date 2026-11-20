@@ -47,7 +47,12 @@ namespace
     {
         vector<string> _listEntry;
 
-        void add( const utf8* pName, const utf8* pWhat ) { _listEntry.push_back( string( pName ) + ":" + pWhat ); }
+        void add( const utf8* pName, const utf8* pWhat )
+        {
+            StringBuilder<constant::buffer::kMax128> entry;
+            entry.appendFormat( "%#:%#", pName, pWhat );
+            _listEntry.push_back( string( entry.view() ) );
+        }
 
         /** @brief 지금까지의 기록을 쉼표로 이어 돌려주고 비웁니다. */
         string take()
@@ -55,7 +60,8 @@ namespace
             string joined;
             for ( const string& entry : _listEntry )
             {
-                joined += joined.empty() ? string{} : string( "," );
+                if ( joined.empty() == false )
+                    joined += ',';
                 joined += entry;
             }
             _listEntry.clear();

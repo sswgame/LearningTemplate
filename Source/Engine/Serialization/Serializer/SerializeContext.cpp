@@ -201,7 +201,11 @@ namespace sw
             {
                 const string& text = *static_cast<const string*>( pPtr );
                 if ( stripQuotes( text ).size() != text.size() )
-                    return "\"" + text + "\"";
+                {
+                    StringBuilder<constant::buffer::kMax256> quoted;
+                    quoted.appendFormat( "\"%#\"", text );
+                    return string( quoted.view() );
+                }
                 return string( text.c_str() );
             }
 

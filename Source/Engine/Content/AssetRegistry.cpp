@@ -101,7 +101,11 @@ namespace sw
         {
             const expected<void> checked = AssetRegistryInternal::validateLayer( layer );
             if ( checked.has_value() == false )
-                return unexpected( Error{ checked.error().kind(), checked.error().message().data(), layer._sourceName + ": " + string( checked.error().detail() ) } );
+            {
+                fixed_string<constant::buffer::kMax512> detail;
+                formatstring( detail.data(), detail.capacity(), "%#: %#", layer._sourceName, checked.error().detail() );
+                return unexpected( Error{ checked.error().kind(), checked.error().message().data(), detail } );
+            }
             for ( const AssetRegistryEntry& entry : layer._listEntry )
             {
                 registry.put( entry._guid, entry._assetID );
@@ -179,7 +183,9 @@ namespace sw
 
     string AssetRegistry::makeReferenceText( const AssetGUID& guid )
     {
-        return string( kReferencePrefix ) + guid.toString();
+        StringBuilder<constant::buffer::kMax64> builder;
+        builder.appendFormat( "%#%#", kReferencePrefix, guid.toString() );
+        return string( builder.view() );
     }
 
     bool AssetRegistry::isReferenceText( string_view text )

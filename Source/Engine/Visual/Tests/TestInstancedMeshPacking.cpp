@@ -22,29 +22,41 @@ namespace
     {
         static string makeMesh( const utf8* pID, const utf8* pName, const utf8* pPosition, const utf8* pStatic, const utf8* pAttach = "_attachOwner=\"None\" _attachComponent=\"None\"" )
         {
-            return string( "<entity id=\"" ) + pID + "\" name=\"" + pName + "\"><GameObject _schemaVersion=\"0\" _name=\"" + pName +
-                   "\" _bActive=\"true\"><_listComponent><MeshComponent _localID=\"1\" _localPosition=\"" + pPosition + "\" _localRotation=\"0,0,0\" _localScale=\"1,1,1\" " + pAttach +
-                   " _meshID=\"Cube\" _bStatic=\"" + pStatic + "\" /></_listComponent></GameObject></entity>";
+            StringBuilder<constant::buffer::kMax1024> builder;
+            builder.appendFormat( "<entity id=\"%#\" name=\"%#\"><GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"><_listComponent><MeshComponent _localID=\"1\" _localPosition=\"%#\" _localRotation=\"0,0,0\" "
+                                  "_localScale=\"1,1,1\" %# _meshID=\"Cube\" _bStatic=\"%#\" /></_listComponent></GameObject></entity>",
+                                  pID, pName, pName, pPosition, pAttach, pStatic );
+            return string( builder.view() );
         }
 
-        static string makeScene( const utf8* pName, const utf8* pPacking, const string& entities )
+        /** @brief 엔티티 글 @p listEntity 를 차례로 담은 씬입니다. */
+        static string makeScene( const utf8* pName, const utf8* pPacking, std::initializer_list<string_view> listEntity )
         {
-            return string( "<Scene formatVersion=\"3\" name=\"" ) + pName +
-                   "\"><SceneSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\" _addToWorldBudgetMicroseconds=\"0\" " + pPacking +
-                   "><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\" /></SceneSettings><entities>" + entities + "</entities></Scene>";
+            StringBuilder<constant::buffer::kMax4096> builder;
+            builder.appendFormat( "<Scene formatVersion=\"3\" name=\"%#\"><SceneSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\" _addToWorldBudgetMicroseconds=\"0\" %#><_cellGrid "
+                                  "_cellSize=\"0\" _loadingRadius=\"0\" /></SceneSettings><entities>",
+                                  pName, pPacking );
+            for ( const string_view entity : listEntity )
+            {
+                builder.append( entity );
+            }
+            builder.append( "</entities></Scene>" );
+            return string( builder.view() );
         }
 
         /** @brief 묶는 내부 씬 — 정적 Rock1 · Rock2(묶인다), 움직이는 Lamp, 정적이지만 Lid 가 붙은 Base(가리켜진다)와 Lid(부모가 앵커가 아니다). */
         static void writeScenes( const test::ScopedScratchDomain& domain )
         {
             const string inner = makeScene( "Props", "_packing=\"StaticMeshes\"",
-                                            makeMesh( "1", "Rock1", "1,0,0", "true" ) + makeMesh( "2", "Rock2", "2,0,0", "true" ) + makeMesh( "3", "Lamp", "3,0,0", "false" ) +
-                                                makeMesh( "4", "Base", "4,0,0", "true" ) +
-                                                makeMesh( "5", "Lid", "0,1,0", "true", "_attachOwner=\"Base\" _attachOwnerID=\"4\" _attachComponent=\"#0000000000000001\"" ) );
+                                            { makeMesh( "1", "Rock1", "1,0,0", "true" ), makeMesh( "2", "Rock2", "2,0,0", "true" ), makeMesh( "3", "Lamp", "3,0,0", "false" ),
+                                              makeMesh( "4", "Base", "4,0,0", "true" ),
+                                              makeMesh( "5", "Lid", "0,1,0", "true", "_attachOwner=\"Base\" _attachOwnerID=\"4\" _attachComponent=\"#0000000000000001\"" ) } );
             SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "props.scene.xml" ), inner ) );
-            const string anchor = string( "<entity id=\"1\" name=\"Village\" scene=\"" ) + test::ScopedScratchDomain::makeID( "props.scene.xml" ).str() +
-                                  "\"><GameObject _schemaVersion=\"0\" _name=\"Village\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"10,0,0\" /></_listComponent></GameObject></entity>";
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "outer.scene.xml" ), makeScene( "Outer", "", anchor ) ) );
+            StringBuilder<constant::buffer::kMax1024> anchor;
+            anchor.appendFormat( "<entity id=\"1\" name=\"Village\" scene=\"%#\"><GameObject _schemaVersion=\"0\" _name=\"Village\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"10,0,0\" "
+                                 "/></_listComponent></GameObject></entity>",
+                                 test::ScopedScratchDomain::makeID( "props.scene.xml" ).str() );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "outer.scene.xml" ), makeScene( "Outer", "", { anchor.view() } ) ) );
         }
 
         static bool hasNode( const SceneDocument& doc, string_view name )

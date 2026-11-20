@@ -47,7 +47,9 @@ namespace sw
                 return false;
             if ( pAI->getBehaviorTreeRunner() == nullptr )
             {
-                outValue.setText( "'" + string( query._target ) + "' runs no behavior tree" );
+                fixed_string<constant::buffer::kMax128> text;
+                formatstring( text.data(), text.capacity(), "'%#' runs no behavior tree", query._target );
+                outValue.setText( text.view() );
                 return false;
             }
             const utf8* pLeaf = pAI->getBehaviorTreeRunner()->getActiveLeafName();
@@ -97,7 +99,9 @@ namespace sw
             const SceneComponent* pScene = pPawn != nullptr ? pPawn->getOwner()->getPrimarySceneComponent() : nullptr;
             if ( pScene == nullptr )
             {
-                outValue.setText( "'" + string( query._target ) + "' controls no pawn" );
+                fixed_string<constant::buffer::kMax128> text;
+                formatstring( text.data(), text.capacity(), "'%#' controls no pawn", query._target );
+                outValue.setText( text.view() );
                 return false;
             }
             outValue.setNumber( pAI->hasDestination() ? static_cast<float64>( float3::getDistance( pScene->getWorldPosition(), pAI->getDestination() ) ) : 0.0 );
@@ -113,7 +117,9 @@ namespace sw
             const BlackboardValue* pValue = pAI->getBlackboard().findValue( hashed_string( query._key ) );
             if ( pValue == nullptr || pValue->_type == BlackboardValueKind::None )
             {
-                outValue.setText( "blackboard key '" + string( query._key ) + "' is not set" );
+                fixed_string<constant::buffer::kMax128> text;
+                formatstring( text.data(), text.capacity(), "blackboard key '%#' is not set", query._key );
+                outValue.setText( text.view() );
                 return false;
             }
             outValue.setNumber( pValue->_type == BlackboardValueKind::Vector ? static_cast<float64>( pValue->_vector.getLength() ) : static_cast<float64>( pValue->computeNumeric() ) );

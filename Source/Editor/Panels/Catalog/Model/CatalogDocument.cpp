@@ -3,6 +3,9 @@
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
@@ -195,7 +198,11 @@ namespace sw::editor
 
     void CatalogDocument::setError( const Error& error )
     {
-        _error = error.detail().empty() ? string( error.message() ) : string( error.detail() ) + ": " + string( error.message() );
+        StringBuilder<constant::buffer::kMax512> errorBuilder;
+        if ( error.detail().empty() == false )
+            errorBuilder.appendFormat( "%#: ", error.detail() );
+        errorBuilder.append( error.message() );
+        _error = string( errorBuilder.view() );
     }
 
     void CatalogDocument::rebuildFromText()
@@ -403,7 +410,9 @@ namespace sw::editor
                 _error = "the duplicated row was not found after the original";
                 return false;
             }
-            const string     copiedValue = Internal::makeUniqueValue( *this, *pGroup, attribute._name, attribute._value + "_copy" );
+            fixed_string<constant::buffer::kMax256> copyBase;
+            formatstring( copyBase.data(), copyBase.capacity(), "%#_copy", attribute._value );
+            const string     copiedValue = Internal::makeUniqueValue( *this, *pGroup, attribute._name, copyBase );
             expected<string> editedAgain = CatalogXMLText::setAttributeValue( edited, draft.getElement( *copyIndex ), attribute._name, copiedValue );
             if ( editedAgain.has_value() == false )
             {
@@ -431,8 +440,10 @@ namespace sw::editor
             _error = "only a table row can have a variant";
             return false;
         }
+        fixed_string<constant::buffer::kMax256> variantBase;
+        formatstring( variantBase.data(), variantBase.capacity(), "%#_variant", id );
         const vector<CatalogXMLNewAttribute> listAttribute{
-            CatalogXMLNewAttribute{ key, CatalogDocumentInternal::makeUniqueValue( *this, *pGroup, key, id + "_variant" ) },
+            CatalogXMLNewAttribute{ key, CatalogDocumentInternal::makeUniqueValue( *this, *pGroup, key, variantBase ) },
             CatalogXMLNewAttribute{ DataInheritance::kBaseAttribute, id }
         };
         return addChild( _parsed.getRootIndex(), row._name, listAttribute );

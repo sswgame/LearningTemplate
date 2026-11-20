@@ -1369,12 +1369,16 @@ namespace sw
     {
         if ( pass._pso == 0 || context._pCmd == nullptr )
         {
-            FrameExtensionHost::logFailureOnce( string( "nodraw:" ) + string( pass._graphName.view() ), "pass has no program - nothing is drawn", pass._graphName.view() );
+            StringBuilder<constant::buffer::kMax256> failureKey;
+            failureKey.appendFormat( "nodraw:%#", pass._graphName.view() );
+            FrameExtensionHost::logFailureOnce( failureKey.view(), "pass has no program - nothing is drawn", pass._graphName.view() );
             return false;
         }
         if ( listConstant.size() > kExtensionMaxConstantCount )
         {
-            FrameExtensionHost::logFailureOnce( string( "constants:" ) + string( pass._graphName.view() ), "pass has too many constants - nothing is drawn", pass._graphName.view() );
+            StringBuilder<constant::buffer::kMax256> failureKey;
+            failureKey.appendFormat( "constants:%#", pass._graphName.view() );
+            FrameExtensionHost::logFailureOnce( failureKey.view(), "pass has too many constants - nothing is drawn", pass._graphName.view() );
             return false;
         }
         for ( const ExtensionPassRead& read : pass._params._listRead )
@@ -1399,12 +1403,16 @@ namespace sw
     {
         if ( pass._pso == 0 || context._pCmd == nullptr )
         {
-            FrameExtensionHost::logFailureOnce( string( "nodraw:" ) + string( pass._graphName.view() ), "pass has no program - nothing is drawn", pass._graphName.view() );
+            StringBuilder<constant::buffer::kMax256> failureKey;
+            failureKey.appendFormat( "nodraw:%#", pass._graphName.view() );
+            FrameExtensionHost::logFailureOnce( failureKey.view(), "pass has no program - nothing is drawn", pass._graphName.view() );
             return false;
         }
         if ( listConstant.size() > kExtensionMaxConstantCount )
         {
-            FrameExtensionHost::logFailureOnce( string( "constants:" ) + string( pass._graphName.view() ), "pass has too many constants - nothing is drawn", pass._graphName.view() );
+            StringBuilder<constant::buffer::kMax256> failureKey;
+            failureKey.appendFormat( "constants:%#", pass._graphName.view() );
+            FrameExtensionHost::logFailureOnce( failureKey.view(), "pass has too many constants - nothing is drawn", pass._graphName.view() );
             return false;
         }
         if ( _extensionHost.getDrawElements().empty() )

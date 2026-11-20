@@ -82,10 +82,9 @@ namespace sw
             }
             case LedgerHolderKind::Escrow:
             {
-                key = "esc/";
-                key += _escrowDomain;
-                key.push_back( '/' );
-                key += _escrowToken;
+                StringBuilder<constant::buffer::kMax128> escrowKey;
+                escrowKey.appendFormat( "esc/%#/%#", _escrowDomain, _escrowToken );
+                key = string( escrowKey.view() );
                 break;
             }
             case LedgerHolderKind::Mint:

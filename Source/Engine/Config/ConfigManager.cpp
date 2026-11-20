@@ -38,7 +38,11 @@ namespace sw
         {
             for ( const string& key : fileObject.getMemberNames() )
             {
-                const string    path       = prefix.empty() ? key : string( prefix + "." + key );
+                StringBuilder<constant::buffer::kMax256> pathBuilder;
+                if ( prefix.empty() == false )
+                    pathBuilder.appendFormat( "%#.", prefix );
+                pathBuilder.append( key );
+                const string    path( pathBuilder.view() );
                 const JSONValue fileValue  = fileObject.get( key );
                 const JSONValue leftValue  = left.get( key );
                 const JSONValue rightValue = right.get( key );
@@ -296,12 +300,13 @@ namespace sw
             SW_LOG_ERROR_ID( "Config.RenderQualityMissing", "Render quality tier '%#' was chosen but the tier table %# is missing", qualityTier.c_str(), resolvedQualityPath.c_str() );
         if ( tiersRead != OptionalFileRead::Read )
             return OptionalFileRead::Failed;
-        const string qualityLabel = string( resolvedQualityPath + "[" + qualityTier + "]" );
-        const string base         = std::move( outJSON );
+        StringBuilder<constant::buffer::kMax512> qualityLabel;
+        qualityLabel.appendFormat( "%#[%#]", resolvedQualityPath, qualityTier );
+        const string base = std::move( outJSON );
         if ( applyQualityTier( base, tiersJSON, qualityTier, qualityLabel.c_str(), outJSON ) == false )
             return OptionalFileRead::Failed;
         outLabel += " + ";
-        outLabel += qualityLabel;
+        outLabel += qualityLabel.view();
         return OptionalFileRead::Read;
     }
 

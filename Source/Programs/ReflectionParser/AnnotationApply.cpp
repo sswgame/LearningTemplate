@@ -3,6 +3,7 @@
 #include "Programs/ReflectionParser/AnnotationApply.h"
 
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
@@ -249,7 +250,9 @@ namespace sw
             }
             if ( bBare == false && AnnotationApplyInternal::isUnquotedValueSplit( token, eqPos ) )
             {
-                outListUnknownToken.push_back( token + "  (value has spaces - quote it)" );
+                StringBuilder<constant::buffer::kMax256> entry;
+                entry.appendFormat( "%#  (value has spaces - quote it)", token );
+                outListUnknownToken.emplace_back( entry.view() );
                 continue;
             }
 
@@ -269,17 +272,23 @@ namespace sw
             float32 number{ 0.0f };
             if ( pField->_value == AnnotationValue::Float && StringUtil::parseFloat( value, number ) == false )
             {
-                outListUnknownToken.push_back( token + "  (value is not a number)" );
+                StringBuilder<constant::buffer::kMax256> entry;
+                entry.appendFormat( "%#  (value is not a number)", token );
+                outListUnknownToken.emplace_back( entry.view() );
                 continue;
             }
             if ( pField->_value == AnnotationValue::Range && AnnotationApplyInternal::isRangeExpression( value ) == false )
             {
-                outListUnknownToken.push_back( token + "  (value is not a number or a list of numbers and field names)" );
+                StringBuilder<constant::buffer::kMax256> entry;
+                entry.appendFormat( "%#  (value is not a number or a list of numbers and field names)", token );
+                outListUnknownToken.emplace_back( entry.view() );
                 continue;
             }
             if ( pField->_value == AnnotationValue::Count && AnnotationApplyInternal::isCountValue( value ) == false )
             {
-                outListUnknownToken.push_back( token + "  (value is not a whole number of at least 1 or an integer constant name)" );
+                StringBuilder<constant::buffer::kMax256> entry;
+                entry.appendFormat( "%#  (value is not a whole number of at least 1 or an integer constant name)", token );
+                outListUnknownToken.emplace_back( entry.view() );
                 continue;
             }
             pField->_pApply( target, value );

@@ -24,7 +24,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.git import run_git_or_raise  # noqa: E402
-from common.rename_scope import NAMING_WORDS_PATH  # noqa: E402
+from common.rename_scope import BANNED_NAMES_PATH  # noqa: E402
 from dev import rename_symbol  # noqa: E402
 
 
@@ -38,7 +38,7 @@ class RenameSymbolTest(unittest.TestCase):
     def setUp(self) -> None:
         self._folder = tempfile.TemporaryDirectory()
         self.root = Path(self._folder.name)
-        self.write(NAMING_WORDS_PATH, json.dumps({"_bannedNames": {}}, indent=2) + "\n")
+        self.write(BANNED_NAMES_PATH, json.dumps({"_bannedNames": {}}, indent=2) + "\n")
         self.write("Source/Engine/OldWidgetPanel.h", 'struct OldWidgetPanel {};\nconst char* kName = "OldWidgetPanel";\n')
         self.write("Source/Engine/Tests/TestOldWidgetPanel.cpp", '#include "Engine/OldWidgetPanel.h"\nOldWidgetPanel g_panel;\n')
         self.write("docs/Note.md", "`OldWidgetPanel` 를 쓴다.\n옛 이름 `OldWidgetPanel` <!-- keep-old-name -->\n")
@@ -61,7 +61,7 @@ class RenameSymbolTest(unittest.TestCase):
         path.write_text(json.dumps(list_pair), encoding="utf-8")
         return str(path)
 
-    # ── rename-symbol 쪽 규칙 ──
+    # ── 한 쌍 도구에서 온 규칙 ──
 
     def test_strings_are_skipped_by_default(self) -> None:
         self.assertEqual(run_rename(self.root, ["OldWidgetPanel=NewWidgetPanel"]), 0)
@@ -87,7 +87,7 @@ class RenameSymbolTest(unittest.TestCase):
         self.assertEqual(run_rename(self.root, ["OldWidgetPanel=NewWidgetPanel"]), 0)
         self.assertEqual(self.read("docs/Note.md"), "`NewWidgetPanel` 를 쓴다.\n옛 이름 `OldWidgetPanel` <!-- keep-old-name -->\n")
 
-    # ── rename_identifier 쪽 규칙 ──
+    # ── 쌍 표 도구에서 온 규칙 ──
 
     def test_short_or_common_names_are_refused(self) -> None:
         self.write("Source/Engine/Short.cpp", "int reads = 0;\n")
@@ -97,7 +97,7 @@ class RenameSymbolTest(unittest.TestCase):
 
     def test_old_name_is_banned_with_reason(self) -> None:
         self.assertEqual(run_rename(self.root, ["--pairs", self.write_pairs([{"old": "OldWidgetPanel", "new": "NewWidgetPanel", "why": "패널 이름"}])]), 0)
-        banned = json.loads(self.read(NAMING_WORDS_PATH))["_bannedNames"]
+        banned = json.loads(self.read(BANNED_NAMES_PATH))["_bannedNames"]
         self.assertIn("OldWidgetPanel", banned)
         self.assertIn("NewWidgetPanel", banned["OldWidgetPanel"])
         self.assertIn("패널 이름", banned["OldWidgetPanel"])

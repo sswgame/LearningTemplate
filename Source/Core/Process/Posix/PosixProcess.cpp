@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
@@ -173,7 +174,9 @@ namespace sw
             }
             for ( const ProcessEnvironmentEntry& entry : listEntry )
             {
-                inoutImage._listEnvironmentText.push_back( entry._name + "=" + entry._value );
+                StringBuilder<constant::buffer::kMax1024> textBuilder;
+                textBuilder.appendFormat( "%#=%#", entry._name, entry._value );
+                inoutImage._listEnvironmentText.push_back( string( textBuilder.view() ) );
             }
             inoutImage._listEnvironmentPointer.clear();
             for ( const string& line : inoutImage._listEnvironmentText )
@@ -226,11 +229,12 @@ namespace sw
                     size_t begin = 0;
                     while ( begin <= searchPath.size() && outImage._path.empty() )
                     {
-                        const size_t end       = MathUtil::min( searchPath.find( ':', begin ), searchPath.size() );
-                        const string directory = end == begin ? string( "." ) : searchPath.substr( begin, end - begin ); // 빈 칸은 현재 폴더(POSIX)
-                        const string candidate = directory + "/" + command._executable;
+                        const size_t                              end       = MathUtil::min( searchPath.find( ':', begin ), searchPath.size() );
+                        const string                              directory = end == begin ? string( "." ) : searchPath.substr( begin, end - begin ); // 빈 칸은 현재 폴더(POSIX)
+                        StringBuilder<constant::buffer::kMax1024> candidate;
+                        candidate.appendFormat( "%#/%#", directory, command._executable );
                         if ( access( candidate.c_str(), X_OK ) == 0 )
-                            outImage._path = candidate;
+                            outImage._path = string( candidate.view() );
                         begin = end + 1;
                     }
                 }

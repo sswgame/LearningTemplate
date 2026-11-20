@@ -4,6 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
@@ -53,8 +54,10 @@ namespace sw
             /** @brief 보내는 쪽 · 받는 쪽 조건을 한 줄로 씁니다(`net.emulation` 의 답). */
             static string describeEmulation( const NetEmulationTransport& emulation )
             {
-                return "net emulation up [" + emulation.getDefaultConditions().makeOverrideText() + "] down [" + emulation.getIncomingConditions().makeOverrideText() + "]" +
-                       ( emulation.isInOutage() ? " (outage)" : "" );
+                StringBuilder<constant::buffer::kMax512> text;
+                text.appendFormat( "net emulation up [%#] down [%#]%#", emulation.getDefaultConditions().makeOverrideText(), emulation.getIncomingConditions().makeOverrideText(),
+                                   emulation.isInOutage() ? " (outage)" : "" );
+                return string( text.view() );
             }
 
             /**
@@ -101,7 +104,9 @@ namespace sw
                     {
                         pTool->find( *pSession, shardIndex )->startOutage( static_cast<float64>( seconds ) );
                     }
-                    outReply = "net emulation spike " + listArgument[1] + " s";
+                    StringBuilder<constant::buffer::kMax128> reply;
+                    reply.appendFormat( "net emulation spike %# s", listArgument[1] );
+                    outReply = string( reply.view() );
                     return true;
                 }
                 const bool bUp   = verb == "up" || verb == "both";
@@ -117,25 +122,28 @@ namespace sw
                     const DataPath&         presetPath = engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets;
                     if ( presetTable.loadFromAsset( AssetID{ presetPath.get() } ) == false )
                     {
-                        outReply = string( "net emulation presets could not be read (" ) + presetPath.get() + ")";
+                        StringBuilder<constant::buffer::kMax1024> reply;
+                        reply.appendFormat( "net emulation presets could not be read (%#)", presetPath.get() );
+                        outReply = string( reply.view() );
                         return true;
                     }
                     if ( presetTable.tryGetConditions( listArgument[1], preset ) == false )
                     {
-                        outReply = "unknown preset '" + listArgument[1] + "' (" + presetTable.makePresetNames() + ")";
+                        StringBuilder<constant::buffer::kMax512> reply;
+                        reply.appendFormat( "unknown preset '%#' (%#)", listArgument[1], presetTable.makePresetNames() );
+                        outReply = string( reply.view() );
                         return true;
                     }
                     overrideStart = 2;
                 }
-                string overrideText;
+                StringBuilder<constant::buffer::kMax256> overrideText;
                 for ( size_t index = overrideStart; index < listArgument.size(); ++index )
                 {
-                    overrideText += listArgument[index];
-                    overrideText += ' ';
+                    overrideText.appendFormat( "%# ", listArgument[index] );
                 }
                 // 방향마다 시작점(프리셋 또는 지금 조건)에 같은 덮어쓰기를 얹는다. 하나라도 틀리면 아무것도 바꾸지 않는다.
-                const expected<NetEmulationConditions> upConditions   = NetEmulationConditions::parseOverrides( overrideText, bPreset ? preset : pEmulation->getDefaultConditions() );
-                const expected<NetEmulationConditions> downConditions = NetEmulationConditions::parseOverrides( overrideText, bPreset ? preset : pEmulation->getIncomingConditions() );
+                const expected<NetEmulationConditions> upConditions   = NetEmulationConditions::parseOverrides( overrideText.view(), bPreset ? preset : pEmulation->getDefaultConditions() );
+                const expected<NetEmulationConditions> downConditions = NetEmulationConditions::parseOverrides( overrideText.view(), bPreset ? preset : pEmulation->getIncomingConditions() );
                 if ( upConditions.has_value() == false || downConditions.has_value() == false )
                 {
                     const Error&                             error = upConditions.has_value() ? downConditions.error() : upConditions.error();

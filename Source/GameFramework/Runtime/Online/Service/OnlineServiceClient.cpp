@@ -6,7 +6,7 @@
 #include "Core/Log/LogContext.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/IStreamTransport.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
@@ -482,11 +482,12 @@ namespace sw
             return;
         }
         const bool   bApplicationError = response._status == NetRequestStatus::ApplicationError && response._bodySize >= 2;
-        const uint16 errorCode         = bApplicationError ? LittleEndianUtil::readUint16( response._pBody ) : OnlineError::kOk;
-        const bool   bMismatch         = errorCode == OnlineError::kVersionMismatch && response._bodySize == 2 + OnlineProtocolConstant::kSchemaHashSize;
+        ByteReader   body( response._pBody, response._bodySize > 0 ? static_cast<size_t>( response._bodySize ) : 0 );
+        const uint16 errorCode = bApplicationError ? body.readUint16() : OnlineError::kOk;
+        const bool   bMismatch = errorCode == OnlineError::kVersionMismatch && response._bodySize == 2 + OnlineProtocolConstant::kSchemaHashSize;
         if ( bMismatch )
         {
-            const uint64 serverHash = LittleEndianUtil::readUint64( response._pBody + 2 );
+            const uint64 serverHash = body.readUint64(); // 오류 코드 2 바이트 뒤다(길이는 위에서 맞췄다)
             SW_LOG_WARNING_ID( "OnlineClient.SchemaMismatch", "Online schema hash %# differs from the server's %# - an update is required", _schemaHash, serverHash );
             stopAfterHello( OnlineClientState::VersionMismatch, OnlineError::kVersionMismatch );
             return;
@@ -517,7 +518,7 @@ namespace sw
     {
         if ( response._status != NetRequestStatus::ApplicationError || response._bodySize < 2 || inoutCall._retryCount >= _settings._retryPolicy._maxRetryCount )
             return false;
-        const uint16 errorCode   = LittleEndianUtil::readUint16( response._pBody );
+        const uint16 errorCode   = ByteReader( response._pBody, static_cast<size_t>( response._bodySize ) ).readUint16();
         const bool   bNotApplied = errorCode == OnlineError::kBusy || errorCode == OnlineError::kRateLimited;
         const bool   bKeyed      = errorCode == OnlineError::kUnavailable && inoutCall._options._idempotencyKey.isValid(); // 적용됐는지 모르므로 멱등 키가 있어야 같은 결과를 받는다
         if ( bNotApplied == false && bKeyed == false )
@@ -562,7 +563,7 @@ namespace sw
         answer._bodySize  = response._bodySize;
         if ( response._status == NetRequestStatus::ApplicationError && response._bodySize >= 2 )
         {
-            answer._errorCode = LittleEndianUtil::readUint16( response._pBody );
+            answer._errorCode = ByteReader( response._pBody, static_cast<size_t>( response._bodySize ) ).readUint16();
             answer._pBody     = response._pBody + 2;
             answer._bodySize  = response._bodySize - 2;
         }
@@ -577,7 +578,7 @@ namespace sw
     {
         if ( bodySize < 2 )
             return;
-        const uint16 kind  = LittleEndianUtil::readUint16( pBody );
+        const uint16 kind  = ByteReader( pBody, static_cast<size_t>( bodySize ) ).readUint16();
         const uint16 range = OnlineMethodRange::getRangeBase( kind );
         for ( IOnlineClientService* pService : _listService )
         {

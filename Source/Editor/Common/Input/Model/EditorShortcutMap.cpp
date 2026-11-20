@@ -6,6 +6,9 @@
 
 #include "Editor/Common/Input/Model/EditorShortcutMap.h"
 
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
+
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
@@ -96,7 +99,9 @@ namespace sw::editor
         hashed_string focusedLayer{};
         if ( panelID.empty() == false )
         {
-            const hashed_string layer( ( string( kPanelLayerPrefix ) + string( panelID ) ).c_str() );
+            fixed_string<constant::buffer::kMax256> layerName;
+            formatstring( layerName.data(), layerName.capacity(), "%#%#", kPanelLayerPrefix, panelID );
+            const hashed_string layer( layerName.c_str() );
             if ( _map.hasLayer( layer ) )
                 focusedLayer = layer;
         }

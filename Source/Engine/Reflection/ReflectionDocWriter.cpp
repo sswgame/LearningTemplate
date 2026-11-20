@@ -22,6 +22,8 @@ namespace sw
     {
         struct ReflectionDocWriterInternal
         {
+            using MarkdownBuilder = StringBuilder<constant::buffer::kMax4096>;
+
             /** @brief 표 칸에 넣을 글 — `|` 와 줄바꿈이 표를 깨지 않게 바꿉니다. */
             static string escapeCell( const string_view text )
             {
@@ -56,18 +58,18 @@ namespace sw
                 return anchor;
             }
 
-            static void appendParameterList( string& out, const vector<FunctionParameterInfo>& listParameter )
+            static void appendParameterList( MarkdownBuilder& out, const vector<FunctionParameterInfo>& listParameter )
             {
                 for ( size_t paramIndex = 0; paramIndex < listParameter.size(); ++paramIndex )
                 {
                     const FunctionParameterInfo& parameter = listParameter[paramIndex];
                     if ( paramIndex > 0 )
-                        out += ", ";
-                    out += parameter._typeName;
+                        out.append( ", " );
+                    out.append( parameter._typeName );
                     if ( parameter._name.empty() == false )
-                        out += " " + parameter._name;
+                        out.appendFormat( " %#", parameter._name );
                     if ( parameter.hasDefaultValue() )
-                        out += " = " + parameter._defaultValue;
+                        out.appendFormat( " = %#", parameter._defaultValue );
                 }
             }
 
@@ -77,6 +79,14 @@ namespace sw
                 if ( text.empty() == false )
                     text += ", ";
                 text += item;
+            }
+
+            /** @brief 쉼표로 이은 목록에 `이름=값` 항목 하나를 붙입니다(문서 글이라 잘리지 않게 StringBuilder). */
+            static void appendFlag( string& text, const string_view format, const string_view value )
+            {
+                StringBuilder<constant::buffer::kMax256> flag;
+                flag.appendFormat( format, value );
+                appendFlag( text, flag.view() );
             }
 
             /** @brief 프로퍼티의 플래그 · 역할 · 표시 메타를 한 칸에 씁니다. */
@@ -89,7 +99,12 @@ namespace sw
                 if ( meta._bTransient == SW_TRUE )
                     appendFlag( text, "Transient" );
                 if ( meta._bReplicated == SW_TRUE )
-                    appendFlag( text, meta._repNotify.empty() ? string( "Replicated" ) : string( "RepNotify=" ) + meta._repNotify.c_str() );
+                {
+                    if ( meta._repNotify.empty() )
+                        appendFlag( text, "Replicated" );
+                    else
+                        appendFlag( text, "RepNotify=%#", meta._repNotify.c_str() );
+                }
                 if ( meta._bSaveGame == SW_TRUE )
                     appendFlag( text, "SaveGame" );
                 if ( meta._bRuntimeState == SW_TRUE )
@@ -97,18 +112,23 @@ namespace sw
                 if ( meta._bInterp == SW_TRUE )
                     appendFlag( text, "Interp" );
                 if ( meta._validate.empty() == false )
-                    appendFlag( text, string( "Validate=" ) + meta._validate.c_str() );
+                    appendFlag( text, "Validate=%#", meta._validate.c_str() );
                 if ( meta._bAssetPath == SW_TRUE )
-                    appendFlag( text, meta._assetType.empty() ? string( "Asset" ) : "Asset=" + meta._assetType );
+                {
+                    if ( meta._assetType.empty() )
+                        appendFlag( text, "Asset" );
+                    else
+                        appendFlag( text, "Asset=%#", meta._assetType );
+                }
                 if ( prop._bIsContainer == SW_TRUE )
                     appendFlag( text, toString( prop._containerKind ) );
                 const PropertyEditorMetadata& editor = meta.getEditor(); // 에디터 메타데이터가 붙지 않은 구성(배포)은 기본값이라 빈 칸이다
                 if ( editor._editCondition.empty() == false )
-                    appendFlag( text, "EditCondition=`" + editor._editCondition + "`" );
+                    appendFlag( text, "EditCondition=`%#`", editor._editCondition );
                 if ( const ReflectUnit* pUnit = ReflectUnit::findUnit( meta._unit ) )
-                    appendFlag( text, string( "Units=" ) + pUnit->_pName );
+                    appendFlag( text, "Units=%#", pUnit->_pName );
                 else if ( const string* pUnits = editor.findCustomMeta( hashed_string( "Units" ) ) )
-                    appendFlag( text, "Units=" + *pUnits );
+                    appendFlag( text, "Units=%#", *pUnits );
                 return text;
             }
 
@@ -116,10 +136,17 @@ namespace sw
             {
                 if ( meta._bHasMinRange == SW_FALSE && meta._bHasMaxRange == SW_FALSE )
                     return string();
-                string text = meta._bHasMinRange == SW_TRUE ? to_string( meta._minRange ) : string( "-" );
-                text += " ~ ";
-                text += meta._bHasMaxRange == SW_TRUE ? to_string( meta._maxRange ) : string( "-" );
-                return text;
+                StringBuilder<constant::buffer::kMax64> text;
+                if ( meta._bHasMinRange == SW_TRUE )
+                    text.appendFormat( "%#", meta._minRange );
+                else
+                    text.append( '-' );
+                text.append( " ~ " );
+                if ( meta._bHasMaxRange == SW_TRUE )
+                    text.appendFormat( "%#", meta._maxRange );
+                else
+                    text.append( '-' );
+                return string( text.view() );
             }
         };
     } // namespace
@@ -129,29 +156,32 @@ namespace sw
 {
     string ReflectionDocWriter::makeModuleFileName( const hashed_string& moduleName )
     {
-        return ( moduleName.empty() ? string( "Unknown" ) : string( moduleName.c_str() ) ) + ".md";
+        StringBuilder<constant::buffer::kMax128> fileName;
+        fileName.appendFormat( "%#.md", moduleName.empty() ? "Unknown" : moduleName.c_str() );
+        return string( fileName.view() );
     }
 
     string ReflectionDocWriter::makeTypeMarkdown( const TypeInfo& type )
     {
-        string out = "## " + string( type._fullyQualifiedName.c_str() ) + "\n\n";
+        ReflectionDocWriterInternal::MarkdownBuilder out;
+        out.appendFormat( "## %#\n\n", type._fullyQualifiedName.c_str() );
         if ( type._parentFQN.empty() == false )
-            out += "- 부모: `" + string( type._parentFQN.c_str() ) + "`\n";
+            out.appendFormat( "- 부모: `%#`\n", type._parentFQN.c_str() );
         if ( type._bAbstract == SW_TRUE )
-            out += "- Abstract\n";
+            out.append( "- Abstract\n" );
         if ( type._addComponent != nullptr )
-            out += "- 컴포넌트(이름으로 만들 수 있다)\n";
+            out.append( "- 컴포넌트(이름으로 만들 수 있다)\n" );
         const TypeEditorMetadata& typeEditor = type._metadata->getEditor();
         if ( typeEditor._category.empty() == false )
-            out += "- 분류: " + typeEditor._category + "\n";
+            out.appendFormat( "- 분류: %#\n", typeEditor._category );
         if ( typeEditor._tooltip.empty() == false )
-            out += "- 설명: " + ReflectionDocWriterInternal::escapeCell( typeEditor._tooltip ) + "\n";
+            out.appendFormat( "- 설명: %#\n", ReflectionDocWriterInternal::escapeCell( typeEditor._tooltip ) );
         if ( type._pValidate != nullptr )
-            out += "- 타입 검증 함수가 있다\n";
+            out.append( "- 타입 검증 함수가 있다\n" );
 
         if ( type._listProperty.empty() == false )
         {
-            out += "\n| 프로퍼티 | 타입 | 기본값 | 범위 | 플래그 | 설명 |\n|---|---|---|---|---|---|\n";
+            out.append( "\n| 프로퍼티 | 타입 | 기본값 | 범위 | 플래그 | 설명 |\n|---|---|---|---|---|---|\n" );
             // 타입마다 절이 따로라 선언한 칸만 적는다(기반 칸은 기반 타입의 절) — 걷기 한 곳(`ReflectPropertyVisitor`)의 선언 칸 걷기다.
             ReflectVisitOptions options;
             options._bWithBase = SW_FALSE;
@@ -160,9 +190,9 @@ namespace sw
             {
                 const PropertyInfo& prop    = field._property;
                 const string&       tooltip = prop._metadata->getEditor()._tooltip;
-                out += "| `" + string( prop._name.c_str() ) + "` | `" + ReflectionDocWriterInternal::escapeCell( prop._typeName.view() ) + "` | " +
-                       ReflectionDocWriterInternal::escapeCell( prop._metadata->_defaultValue ) + " | " + ReflectionDocWriterInternal::makeRange( *prop._metadata ) +
-                       " | " + ReflectionDocWriterInternal::makePropertyFlags( prop ) + " | " + ReflectionDocWriterInternal::escapeCell( tooltip ) + " |\n";
+                out.appendFormat( "| `%#` | `%#` | %# | %# | %# | %# |\n", prop._name.c_str(), ReflectionDocWriterInternal::escapeCell( prop._typeName.view() ),
+                                  ReflectionDocWriterInternal::escapeCell( prop._metadata->_defaultValue ), ReflectionDocWriterInternal::makeRange( *prop._metadata ),
+                                  ReflectionDocWriterInternal::makePropertyFlags( prop ), ReflectionDocWriterInternal::escapeCell( tooltip ) );
                 return ReflectVisitFlow::Continue;
             } );
         }
@@ -174,34 +204,35 @@ namespace sw
                 continue;
             if ( bFunctionHeader == false )
             {
-                out += "\n**함수**\n\n";
+                out.append( "\n**함수**\n\n" );
                 bFunctionHeader = true;
             }
-            out += "- `" + ( function._returnTypeName.empty() ? string( "void" ) : function._returnTypeName ) + " " + function._name + "(";
+            out.appendFormat( "- `%# %#(", function._returnTypeName.empty() ? string_view( "void" ) : string_view( function._returnTypeName ), function._name );
             ReflectionDocWriterInternal::appendParameterList( out, function._listParameter );
-            out += ")`";
+            out.append( ")`" );
             if ( function._metadata->_netRole != FunctionNetRole::Local )
-                out += string( " — " ) + toString( function._metadata->_netRole );
-            out += "\n";
+                out.appendFormat( " — %#", toString( function._metadata->_netRole ) );
+            out.append( '\n' );
         }
 
         if ( type._listEvent.empty() == false )
         {
-            out += "\n**이벤트**\n\n";
+            out.append( "\n**이벤트**\n\n" );
             for ( const EventInfo& event : type._listEvent )
             {
-                out += "- `" + string( event._name.c_str() ) + "(";
+                out.appendFormat( "- `%#(", event._name.c_str() );
                 ReflectionDocWriterInternal::appendParameterList( out, event._listParameter );
-                out += ")`\n";
+                out.append( ")`\n" );
             }
         }
-        out += "\n";
-        return out;
+        out.append( '\n' );
+        return string( out.view() );
     }
 
     string ReflectionDocWriter::makeEnumMarkdown( const EnumInfo& info )
     {
-        string                             out = "## " + string( info._fullyQualifiedName.c_str() ) + ( info._bIsBitFlag == SW_TRUE ? " (Flags)" : "" ) + "\n\n| 이름 | 값 |\n|---|---|\n";
+        ReflectionDocWriterInternal::MarkdownBuilder out;
+        out.appendFormat( "## %#%#\n\n| 이름 | 값 |\n|---|---|\n", info._fullyQualifiedName.c_str(), info._bIsBitFlag == SW_TRUE ? " (Flags)" : "" );
         vector<pair<int64, hashed_string>> listEntry;
         for ( const auto& [value, name] : info._mapValueToName )
         {
@@ -211,12 +242,10 @@ namespace sw
         { return lhs.first < rhs.first || ( lhs.first == rhs.first && lhs.second.lexicalLess( rhs.second ) ); } );
         for ( const auto& [value, name] : listEntry )
         {
-            StringBuilder<constant::buffer::kMax256> outPart;
-            outPart.appendFormat( "| `%#` | %# |\n", name, value );
-            out += outPart.c_str();
+            out.appendFormat( "| `%#` | %# |\n", name, value );
         }
-        out += "\n";
-        return out;
+        out.append( '\n' );
+        return string( out.view() );
     }
 
     uint32 ReflectionDocWriter::writeMarkdown( const TypeRegistry& registry, const string_view outputDir )
@@ -253,40 +282,43 @@ namespace sw
         }
         VectorUtil::sort( listModule, HashedStringLexicalLess{} );
 
-        string index     = "# 리플렉션 API\n\n`App --write-reflection-docs` 가 등록된 타입에서 만든 문서입니다(손으로 고치지 않습니다).\n\n| 모듈 | 타입 | 열거형 |\n|---|---|---|\n";
+        ReflectionDocWriterInternal::MarkdownBuilder index;
+        index.append( "# 리플렉션 API\n\n`App --write-reflection-docs` 가 등록된 타입에서 만든 문서입니다(손으로 고치지 않습니다).\n\n| 모듈 | 타입 | 열거형 |\n|---|---|---|\n" );
         uint32 fileCount = 0;
         for ( const hashed_string& moduleName : listModule )
         {
-            const string fileName  = makeModuleFileName( moduleName );
-            string       page      = "# " + string( moduleName.empty() ? "Unknown" : moduleName.c_str() ) + "\n\n[목록으로](index.md)\n\n";
-            uint32       typeCount = 0;
-            uint32       enumCount = 0;
+            const string                                 fileName   = makeModuleFileName( moduleName );
+            const utf8*                                  pShownName = moduleName.empty() ? "Unknown" : moduleName.c_str();
+            ReflectionDocWriterInternal::MarkdownBuilder page;
+            page.appendFormat( "# %#\n\n[목록으로](index.md)\n\n", pShownName );
+            uint32 typeCount = 0;
+            uint32 enumCount = 0;
             for ( const TypeInfo* pType : listType )
             {
                 if ( pType->_moduleName != moduleName )
                     continue;
-                page += makeTypeMarkdown( *pType );
+                page.append( makeTypeMarkdown( *pType ) );
                 ++typeCount;
             }
             for ( const EnumInfo* pEnum : listEnum )
             {
                 if ( pEnum->_moduleName != moduleName )
                     continue;
-                page += makeEnumMarkdown( *pEnum );
+                page.append( makeEnumMarkdown( *pEnum ) );
                 ++enumCount;
             }
-            if ( FileUtil::writeTextFile( FileUtil::joinPath( outputDir, fileName ), page ) == false )
+            if ( FileUtil::writeTextFile( FileUtil::joinPath( outputDir, fileName ), page.view() ) == false )
                 continue;
             ++fileCount;
-            index += "| [" + string( moduleName.empty() ? "Unknown" : moduleName.c_str() ) + "](" + fileName + ") | " + to_string( typeCount ) + " | " + to_string( enumCount ) + " |\n";
+            index.appendFormat( "| [%#](%#) | %# | %# |\n", pShownName, fileName, typeCount, enumCount );
         }
-        index += "\n## 타입\n\n";
+        index.append( "\n## 타입\n\n" );
         for ( const TypeInfo* pType : listType )
         {
-            index += "- [`" + string( pType->_fullyQualifiedName.c_str() ) + "`](" + makeModuleFileName( pType->_moduleName ) + "#" +
-                     ReflectionDocWriterInternal::makeAnchor( pType->_fullyQualifiedName.view() ) + ")\n";
+            index.appendFormat( "- [`%#`](%#", pType->_fullyQualifiedName.c_str(), makeModuleFileName( pType->_moduleName ) );
+            index.appendFormat( "#%#)\n", ReflectionDocWriterInternal::makeAnchor( pType->_fullyQualifiedName.view() ) );
         }
-        if ( FileUtil::writeTextFile( FileUtil::joinPath( outputDir, "index.md" ), index ) )
+        if ( FileUtil::writeTextFile( FileUtil::joinPath( outputDir, "index.md" ), index.view() ) )
             ++fileCount;
         SW_LOG_INFO_ID( "ReflectionDocWriter.WroteReflectionDocsFiles", "Wrote reflection docs: %# files, %# types, %# enums -> %#", fileCount, static_cast<uint32>( listType.size() ),
                         static_cast<uint32>( listEnum.size() ), outputDir );

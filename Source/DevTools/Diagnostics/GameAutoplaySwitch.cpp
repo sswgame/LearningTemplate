@@ -7,6 +7,7 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -39,7 +40,9 @@ namespace sw
                         return false;
                     (void)GameAutoplay::setOn( bOn ); // 위에서 등록을 확인했다
                 }
-                outReply = string( pActive->_pGameName ) + " autoplay " + ( GameAutoplay::isOn() ? "on" : "off" ) + " (" + pActive->_pVariableName + ")";
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "%# autoplay %# (%#)", pActive->_pGameName, GameAutoplay::isOn() ? "on" : "off", pActive->_pVariableName );
+                outReply = string( reply.view() );
                 return true;
             }
         };

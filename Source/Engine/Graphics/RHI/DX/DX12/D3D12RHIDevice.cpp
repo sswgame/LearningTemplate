@@ -18,16 +18,16 @@
 #include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
-    #include "Engine/Foundation/EngineServices.h"
-    #include "Engine/Profiling/FrameProfiler.h"
-    #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-    #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineDefaultAssets.h"
+    #include "Engine/Foundation/EnginePlatformHeaders.h"
+    #include "Engine/Foundation/EngineServices.h"
+    #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
     #include "Engine/Graphics/RHI/DX/DXGIAdapter.h"
     #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
     #include "Engine/Graphics/RHI/DX/DXGIMemoryBudget.h"
+    #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+    #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {

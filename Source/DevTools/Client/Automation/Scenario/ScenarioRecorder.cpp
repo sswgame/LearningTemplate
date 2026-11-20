@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -624,7 +625,9 @@ namespace sw
         if ( isAllowedOutputPath( outputPath ) == false )
             return {};
         // `Saved/` 를 도메인 이름으로 바꾼다. 나머지는 표기 그대로 둔다(리눅스는 대소문자를 가린다 — `AssetPaths::findLooseFile` 이 원래 표기로 다시 찾는다).
-        const size_t firstSlash = outputPath.find( '/' );
-        return string( kSavedDomain ) + string( outputPath.substr( firstSlash ) );
+        const size_t                              firstSlash = outputPath.find( '/' );
+        StringBuilder<constant::buffer::kMax1024> replayID;
+        replayID.appendFormat( "%#%#", kSavedDomain, outputPath.substr( firstSlash ) );
+        return string( replayID.view() );
     }
 } // namespace sw

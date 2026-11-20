@@ -8,13 +8,13 @@
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/Recast/RecastAreaUtil.h"
 
+#include <cstring>
 #include <recastnavigation/DetourAlloc.h>
 #include <recastnavigation/DetourNavMesh.h>
 #include <recastnavigation/DetourNavMeshBuilder.h>
 #include <recastnavigation/DetourTileCache.h>
 #include <recastnavigation/DetourTileCacheBuilder.h>
 #include <recastnavigation/Recast.h>
-#include <cstring>
 
 namespace sw
 {

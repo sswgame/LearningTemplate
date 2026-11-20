@@ -850,8 +850,10 @@ namespace sw
                 continue;
 
             // 출력은 `<cookedDir>/<소스 루트 기준 상대 경로>` 의 쿠킹본 이름이다 — 런타임 `loadPrefab` 과 같은 규칙 하나(`AssetCookPath`).
-            const string outputID   = AssetCookPath::toCookedPath( normalized.substr( root.size() + 1 ) );
-            const string outputPath = out + outputID;
+            const string                             outputID = AssetCookPath::toCookedPath( normalized.substr( root.size() + 1 ) );
+            StringBuilder<constant::buffer::kMax512> outputPathBuilder;
+            outputPathBuilder.appendFormat( "%#%#", out, outputID );
+            const string outputPath = string( outputPathBuilder.view() );
             const string outputKey  = StringUtil::toLower( outputPath.c_str() );
             if ( uniqueSetWrittenKey.contains( outputKey ) )
             {

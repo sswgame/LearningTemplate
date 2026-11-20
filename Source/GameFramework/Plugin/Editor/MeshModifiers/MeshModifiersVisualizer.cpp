@@ -23,8 +23,8 @@
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Model/MeshModifierHandleEdit.h"
 
-#include <cmath>
 #include <imgui.h>
+#include <cmath>
 
 namespace sw::editor
 {
@@ -155,7 +155,8 @@ namespace sw::editor
                         continue;
                     if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, handle._origin + handle._direction * 0.9f, args._canvasPos, args._canvasSize, screen ) == false )
                         continue;
-                    const string key = string( "meshmodifiers.handle.move." ) + to_string( handle._axis );
+                    fixed_string<constant::buffer::kMax64> key;
+                    formatstring( key.data(), key.capacity(), "meshmodifiers.handle.move.%#", handle._axis );
                     EditorSelfTestMarks::recordRect( key.c_str(), float2{ screen.x - kMarkHalfSize, screen.y - kMarkHalfSize }, float2{ screen.x + kMarkHalfSize, screen.y + kMarkHalfSize } );
                 }
             }

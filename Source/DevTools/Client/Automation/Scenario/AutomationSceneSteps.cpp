@@ -12,6 +12,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -69,8 +70,9 @@ namespace sw
                 const bool bLoaded = pPending->_future.isReady() && pPending->_future.get() != nullptr &&
                                      engine::getSubsystem<SceneManager>().getActiveScene() == pPending->_future.get();
                 // Run 이면 실행기가 상태를 지운다 — 그 뒤로 pPending 을 읽지 않는다.
-                const AutomationStepHold hold = context.holdUntilReady( step, input, bLoaded, params._timeoutFrames,
-                                                                        "the scene '" + params._path + ( pPending->_future.isReady() ? "' to become active" : "' to load" ) );
+                StringBuilder<constant::buffer::kMax1024> waitingFor;
+                waitingFor.appendFormat( "the scene '%#%#", params._path, pPending->_future.isReady() ? "' to become active" : "' to load" );
+                const AutomationStepHold hold = context.holdUntilReady( step, input, bLoaded, params._timeoutFrames, waitingFor.view() );
                 if ( hold == AutomationStepHold::Run && bLoaded == false )
                     context.recordFailure( step, "the scene did not become active in time (or failed to load - see the log)" );
                 return hold;
@@ -83,7 +85,11 @@ namespace sw
                 if ( pScene == nullptr )
                     context.recordFailure( step, "there is no active scene" );
                 else if ( pScene->getSourcePath() != params._path )
-                    context.recordFailure( step, "the active scene came from '" + pScene->getSourcePath() + "', not '" + params._path + "'" );
+                {
+                    StringBuilder<constant::buffer::kMax1024> text;
+                    text.appendFormat( "the active scene came from '%#', not '%#'", pScene->getSourcePath(), params._path );
+                    context.recordFailure( step, text.view() );
+                }
                 return true;
             }
 
@@ -169,11 +175,12 @@ namespace sw
 
             static AutomationStepHold holdWaitSequence( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
             {
-                const AutomationSequenceStepParams params    = step.readValidatedProperties<AutomationSequenceStepParams>();
-                SequencePlayerComponent*           pSequence = findSequence( context, step );
-                const bool                         bDone     = pSequence == nullptr || pSequence->isPlaying() == false;
-                const AutomationStepHold           hold      = context.holdUntilReady( step, input, bDone, params._timeoutFrames,
-                                                                                       "the sequence on '" + params._object + "' to finish playing" );
+                const AutomationSequenceStepParams       params    = step.readValidatedProperties<AutomationSequenceStepParams>();
+                SequencePlayerComponent*                 pSequence = findSequence( context, step );
+                const bool                               bDone     = pSequence == nullptr || pSequence->isPlaying() == false;
+                StringBuilder<constant::buffer::kMax256> waitingFor;
+                waitingFor.appendFormat( "the sequence on '%#' to finish playing", params._object );
+                const AutomationStepHold hold = context.holdUntilReady( step, input, bDone, params._timeoutFrames, waitingFor.view() );
                 if ( hold == AutomationStepHold::Run && ( pSequence == nullptr || bDone == false ) )
                     context.recordFailure( step, pSequence == nullptr ? "no object with that name and a SequencePlayerComponent in the active scene"
                                                                       : "the sequence was still playing when the wait timed out" );

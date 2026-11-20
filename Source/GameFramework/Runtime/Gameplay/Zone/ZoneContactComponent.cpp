@@ -171,9 +171,11 @@ namespace sw
             if ( pZone->_kind == kind )
                 return *pZone;
         }
-        unique_ptr<SurfaceZone> pZone                     = make_unique<SurfaceZone>();
-        pZone->_kind                                      = kind;
-        pZone->_sourceName                                = hashed_string( string( "surface:" ) + kind.c_str() );
+        unique_ptr<SurfaceZone> pZone = make_unique<SurfaceZone>();
+        pZone->_kind                  = kind;
+        StringBuilder<constant::buffer::kMax256> zoneSourceName;
+        zoneSourceName.appendFormat( "surface:%#", kind.c_str() );
+        pZone->_sourceName                                = hashed_string( zoneSourceName.view() );
         const SurfaceKindDef*                    pKind    = table.findKind( kind );
         const string                             path     = pKind != nullptr ? pKind->_zoneProfile.path() : string{};
         shared_ptr<const ZoneProfile>            pProfile = path.empty() ? nullptr : SharedAssetCache<ZoneProfile>::acquire( path ).snapshot();

@@ -54,7 +54,9 @@ namespace
             SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&ProviderHTTPFixture::onRequest>( this ) ) );
             SW_EXPECT_TRUE( _client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             SW_EXPECT_TRUE( _appleClient.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
-            _baseURL  = "http://127.0.0.1:" + to_string( static_cast<int32>( _server.getListenPort() ) );
+            StringBuilder<constant::buffer::kMax64> baseURL;
+            baseURL.appendFormat( "http://127.0.0.1:%#", static_cast<int32>( _server.getListenPort() ) );
+            _baseURL  = string( baseURL.view() );
             _jwksBody = makeJWKS( "kid-1" );
         }
 
@@ -135,7 +137,9 @@ namespace
             key._algorithm = NetSignatureAlgorithm::RsaPkcs1SHA256;
             key._modulus   = { 0xC1, 0x02, 0x03, 0x04 };
             key._exponent  = { 0x01, 0x00, 0x01 };
-            return "{\"keys\":[" + JWKSKeyCache::writeJwk( key, keyID ) + "]}";
+            StringBuilder<constant::buffer::kMax2048> jwks;
+            jwks.appendFormat( "{\"keys\":[%#]}", JWKSKeyCache::writeJwk( key, keyID ) );
+            return string( jwks.view() );
         }
     };
 
@@ -187,10 +191,12 @@ namespace
         static PlatformLoginProviderConfig makeOidcSettings( const ProviderHTTPFixture& rig )
         {
             PlatformLoginProviderConfig settings;
-            settings._name            = "oidc_test";
-            settings._kind            = PlatformLoginProviderKind::Oidc;
-            settings._issuer          = kIssuer;
-            settings._jwksURL         = rig._baseURL + "/jwks";
+            settings._name   = "oidc_test";
+            settings._kind   = PlatformLoginProviderKind::Oidc;
+            settings._issuer = kIssuer;
+            StringBuilder<constant::buffer::kMax128> jwksURL;
+            jwksURL.appendFormat( "%#/jwks", rig._baseURL );
+            settings._jwksURL         = string( jwksURL.view() );
             settings._listClientID    = { kClientID };
             settings._displayNamePath = "name";
             return settings;
@@ -252,21 +258,31 @@ SW_TEST_CASE( OidcLoginProviderTest, RejectsClaimsThatDoNotMatch )
     OidcLoginProvider provider( settings, &rig._security, &rig._client );
 
     TokenClaims withNonce;
-    withNonce._nonce   = "n-1";
-    const string token = TestUtil::makeIDToken( rig._security, withNonce );
-    SW_EXPECT_TRUE( rig.verify( provider, token + "|n-1" ).isVerified() );
-    SW_EXPECT_TRUE( rig.verify( provider, token + "|n-2" )._bRejected == SW_TRUE );
+    withNonce._nonce                                = "n-1";
+    const string                              token = TestUtil::makeIDToken( rig._security, withNonce );
+    StringBuilder<constant::buffer::kMax2048> ticket1;
+    ticket1.appendFormat( "%#|n-1", token );
+    SW_EXPECT_TRUE( rig.verify( provider, ticket1.view() ).isVerified() );
+    StringBuilder<constant::buffer::kMax2048> ticket2;
+    ticket2.appendFormat( "%#|n-2", token );
+    SW_EXPECT_TRUE( rig.verify( provider, ticket2.view() )._bRejected == SW_TRUE );
     SW_EXPECT_TRUE( rig.verify( provider, token )._bRejected == SW_TRUE ); // 티켓에 nonce 가 없다
 
     TokenClaims otherIssuer = withNonce;
     otherIssuer._issuer     = "https://evil.test";
-    SW_EXPECT_TRUE( rig.verify( provider, TestUtil::makeIDToken( rig._security, otherIssuer ) + "|n-1" )._bRejected == SW_TRUE );
+    StringBuilder<constant::buffer::kMax2048> otherIssuerTicket;
+    otherIssuerTicket.appendFormat( "%#|n-1", TestUtil::makeIDToken( rig._security, otherIssuer ) );
+    SW_EXPECT_TRUE( rig.verify( provider, otherIssuerTicket.view() )._bRejected == SW_TRUE );
     TokenClaims otherAudience = withNonce;
     otherAudience._audience   = "other-client";
-    SW_EXPECT_TRUE( rig.verify( provider, TestUtil::makeIDToken( rig._security, otherAudience ) + "|n-1" )._bRejected == SW_TRUE );
+    StringBuilder<constant::buffer::kMax2048> otherAudienceTicket;
+    otherAudienceTicket.appendFormat( "%#|n-1", TestUtil::makeIDToken( rig._security, otherAudience ) );
+    SW_EXPECT_TRUE( rig.verify( provider, otherAudienceTicket.view() )._bRejected == SW_TRUE );
     TokenClaims expired   = withNonce;
     expired._expiresAtSec = kNowMs / 1000 - 3600;
-    SW_EXPECT_TRUE( rig.verify( provider, TestUtil::makeIDToken( rig._security, expired ) + "|n-1" )._bRejected == SW_TRUE );
+    StringBuilder<constant::buffer::kMax2048> expiredTicket;
+    expiredTicket.appendFormat( "%#|n-1", TestUtil::makeIDToken( rig._security, expired ) );
+    SW_EXPECT_TRUE( rig.verify( provider, expiredTicket.view() )._bRejected == SW_TRUE );
     const PlatformLoginVerification malformed = rig.verify( provider, "not-a-token|n-1" );
     SW_EXPECT_TRUE( malformed._bRejected == SW_TRUE );
     SW_EXPECT_TRUE( malformed._subject.empty() );
@@ -300,9 +316,11 @@ SW_TEST_CASE( ProfileAPILoginProviderTest, ReadsSubjectFromTheProfile )
 {
     ProviderHTTPFixture         rig;
     PlatformLoginProviderConfig settings;
-    settings._name            = "profile_test";
-    settings._kind            = PlatformLoginProviderKind::AccessTokenProfile;
-    settings._profileURL      = rig._baseURL + "/v1/nid/me";
+    settings._name = "profile_test";
+    settings._kind = PlatformLoginProviderKind::AccessTokenProfile;
+    StringBuilder<constant::buffer::kMax128> profileURL;
+    profileURL.appendFormat( "%#/v1/nid/me", rig._baseURL );
+    settings._profileURL      = string( profileURL.view() );
     settings._subjectPath     = "response.id";
     settings._displayNamePath = "response.nickname";
     ProfileAPILoginProvider provider( settings, &rig._client );
@@ -324,9 +342,11 @@ SW_TEST_CASE( ProfileAPILoginProviderTest, MapsStatusAndBodyToRejectedOrUnavaila
 {
     ProviderHTTPFixture         rig;
     PlatformLoginProviderConfig settings;
-    settings._name        = "profile_test";
-    settings._kind        = PlatformLoginProviderKind::AccessTokenProfile;
-    settings._profileURL  = rig._baseURL + "/me";
+    settings._name = "profile_test";
+    settings._kind = PlatformLoginProviderKind::AccessTokenProfile;
+    StringBuilder<constant::buffer::kMax128> profileURL;
+    profileURL.appendFormat( "%#/me", rig._baseURL );
+    settings._profileURL  = string( profileURL.view() );
     settings._subjectPath = "response.id";
     ProfileAPILoginProvider provider( settings, &rig._client );
 
@@ -351,9 +371,11 @@ SW_TEST_CASE( ProfileAPILoginProviderTest, TicketQuerySendsKeyAndTicketAndReadsT
 {
     ProviderHTTPFixture         rig;
     PlatformLoginProviderConfig settings;
-    settings._name          = "steam";
-    settings._kind          = PlatformLoginProviderKind::TicketQuery;
-    settings._profileURL    = rig._baseURL + "/ISteamUserAuth/AuthenticateUserTicket/v1/?appid=480";
+    settings._name = "steam";
+    settings._kind = PlatformLoginProviderKind::TicketQuery;
+    StringBuilder<constant::buffer::kMax128> profileURL;
+    profileURL.appendFormat( "%#/ISteamUserAuth/AuthenticateUserTicket/v1/?appid=480", rig._baseURL );
+    settings._profileURL    = string( profileURL.view() );
     settings._ticketParam   = "ticket";
     settings._keyParam      = "key";
     settings._identityParam = "identity";
@@ -361,8 +383,10 @@ SW_TEST_CASE( ProfileAPILoginProviderTest, TicketQuerySendsKeyAndTicketAndReadsT
     settings._resultPath    = "response.params.result";
     settings._resultValue   = "OK";
     settings._subjectPath   = "response.params.steamid";
-    ProfileAPILoginProvider provider( settings, &rig._client, "SECRETKEY" );
-    SW_EXPECT_EQUAL( rig._baseURL + "/ISteamUserAuth/AuthenticateUserTicket/v1/?appid=480&key=SECRETKEY&ticket=AB12&identity=swlogin", provider.makeRequestURL( "AB12" ) );
+    ProfileAPILoginProvider                  provider( settings, &rig._client, "SECRETKEY" );
+    StringBuilder<constant::buffer::kMax256> expectedURL;
+    expectedURL.appendFormat( "%#/ISteamUserAuth/AuthenticateUserTicket/v1/?appid=480&key=SECRETKEY&ticket=AB12&identity=swlogin", rig._baseURL );
+    SW_EXPECT_EQUAL( string( expectedURL.view() ), provider.makeRequestURL( "AB12" ) );
 
     rig._profileBody                             = R"({"response":{"params":{"result":"OK","steamid":"76561197960287930"}}})";
     const PlatformLoginVerification verification = rig.verify( provider, "AB12" );
@@ -400,9 +424,11 @@ SW_TEST_CASE( ProfileAPILoginProviderTest, TicketQueryUnsafeTicketAndMissingKeyA
 
     ProviderHTTPFixture         rig;
     PlatformLoginProviderConfig settings;
-    settings._name          = "steam";
-    settings._kind          = PlatformLoginProviderKind::TicketQuery;
-    settings._profileURL    = rig._baseURL + "/verify";
+    settings._name = "steam";
+    settings._kind = PlatformLoginProviderKind::TicketQuery;
+    StringBuilder<constant::buffer::kMax128> profileURL;
+    profileURL.appendFormat( "%#/verify", rig._baseURL );
+    settings._profileURL    = string( profileURL.view() );
     settings._ticketParam   = "ticket";
     settings._keyParam      = "key";
     settings._identityParam = "identity";
@@ -435,9 +461,13 @@ namespace
             settings._listClientID               = { "com.example.game", "com.example.web" };
             settings._teamID                     = "TEAM123";
             settings._signingKeyID               = "KEY456";
-            settings._tokenURL                   = _http._baseURL + "/auth/token";
-            settings._revokeURL                  = _http._baseURL + "/auth/revoke";
-            _pProvider                           = make_unique<AppleLoginProvider>( settings, "fake-p8-pem", &_http._security, &_http._client, &_http._appleClient );
+            StringBuilder<constant::buffer::kMax128> tokenURL;
+            tokenURL.appendFormat( "%#/auth/token", _http._baseURL );
+            StringBuilder<constant::buffer::kMax128> revokeURL;
+            revokeURL.appendFormat( "%#/auth/revoke", _http._baseURL );
+            settings._tokenURL  = string( tokenURL.view() );
+            settings._revokeURL = string( revokeURL.view() );
+            _pProvider          = make_unique<AppleLoginProvider>( settings, "fake-p8-pem", &_http._security, &_http._client, &_http._appleClient );
         }
 
         string makeIDToken( string_view nonce = {} )
@@ -529,8 +559,10 @@ SW_TEST_CASE( AppleLoginProviderTest, ClientSecretCarriesTheDocumentedClaims )
 SW_TEST_CASE( AppleLoginProviderTest, ExchangesTheCodeForALinkSecret )
 {
     AppleFixture rig;
-    rig._http._tokenBody                         = R"({"access_token":"A","token_type":"Bearer","expires_in":3600,"refresh_token":"R-1","id_token":"I"})";
-    const PlatformLoginVerification verification = rig._http.verify( *rig._pProvider, rig.makeIDToken() + "||code-9" );
+    rig._http._tokenBody = R"({"access_token":"A","token_type":"Bearer","expires_in":3600,"refresh_token":"R-1","id_token":"I"})";
+    StringBuilder<constant::buffer::kMax2048> ticket;
+    ticket.appendFormat( "%#||code-9", rig.makeIDToken() );
+    const PlatformLoginVerification verification = rig._http.verify( *rig._pProvider, ticket.view() );
     SW_EXPECT_TRUE( verification.isVerified() );
     SW_EXPECT_EQUAL( string( "player-7" ), verification._subject );
     SW_EXPECT_EQUAL( string( "R-1" ), verification._linkSecret );
@@ -552,7 +584,9 @@ SW_TEST_CASE( AppleLoginProviderTest, ExchangeFailureStillLogsIn )
     rig._http._tokenStatus = 400;
     rig._http._tokenBody   = R"({"error":"invalid_grant"})";
     SW_EXPECT_LOG( "AppleLoginProvider.LoginProviderCouldNot" );
-    const PlatformLoginVerification failedExchange = rig._http.verify( *rig._pProvider, rig.makeIDToken( "n" ) + "|n|code-1" );
+    StringBuilder<constant::buffer::kMax2048> failedTicket;
+    failedTicket.appendFormat( "%#|n|code-1", rig.makeIDToken( "n" ) );
+    const PlatformLoginVerification failedExchange = rig._http.verify( *rig._pProvider, failedTicket.view() );
     SW_EXPECT_TRUE( failedExchange.isVerified() );
     SW_EXPECT_TRUE( failedExchange._linkSecret.empty() );
 

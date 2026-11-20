@@ -37,8 +37,10 @@ namespace
                 }
                 const uint32 firstIndex = static_cast<uint32>( listIndex.size() );
                 listIndex.insert( listIndex.end(), { first, first + 1u, first + 2u, first, first + 2u, first + 3u } );
-                MeshSection section;
-                section._name       = hashed_string( ( string( "s" ) + static_cast<char>( '0' + quad ) ).c_str() );
+                MeshSection                            section;
+                fixed_string<constant::buffer::kMax16> sectionName;
+                formatstring( sectionName.data(), sectionName.capacity(), "s%#", static_cast<utf8>( '0' + quad ) );
+                section._name       = hashed_string( sectionName.view() );
                 section._firstIndex = firstIndex;
                 section._indexCount = 6u;
                 listSection.push_back( section );

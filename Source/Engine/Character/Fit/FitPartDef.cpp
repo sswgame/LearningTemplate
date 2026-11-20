@@ -136,7 +136,9 @@ namespace sw
                 if ( ring._bone.empty() || pBones->findBone( ring._bone ).has_value() )
                     continue;
                 bValid = false;
-                outIssues.add( "FitPart.RingBoneUnknown", string( "ring names unknown bone '" ) + ring._bone.c_str() + "'" );
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "ring names unknown bone '%#'", ring._bone.c_str() );
+                outIssues.add( "FitPart.RingBoneUnknown", string( builder.view() ) );
             }
         }
         if ( pGeometry != nullptr )
@@ -148,12 +150,9 @@ namespace sw
                     if ( delta._vertex < pGeometry->getVertexCount() )
                         continue;
                     bValid = false;
-                    utf8         arrNumber[constant::buffer::kMax16]{};
-                    const uint32 numberLength = StringUtil::formatNumber( arrNumber, constant::buffer::kMax16, delta._vertex );
-                    string       message( "corrective delta names vertex " );
-                    message += string_view( arrNumber, numberLength );
-                    message += " beyond the mesh";
-                    outIssues.add( "FitPart.CorrectiveVertexOutOfRange", std::move( message ) );
+                    StringBuilder<constant::buffer::kMax64> message;
+                    message.appendFormat( "corrective delta names vertex %# beyond the mesh", delta._vertex );
+                    outIssues.add( "FitPart.CorrectiveVertexOutOfRange", string( message.view() ) );
                 }
             }
         }

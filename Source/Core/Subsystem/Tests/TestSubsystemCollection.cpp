@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemCollection.h"
 #include "Core/Testing/TestFramework.h"
@@ -52,20 +53,29 @@ namespace
             , _host{ host }
         {
         }
-        ~RecordingSubsystemT() override { _recorder._listEvent.push_back( string( "D:" ) + _pName ); }
+        ~RecordingSubsystemT() override { recordEvent( 'D' ); }
 
         SubsystemInitResult initializeSubsystem() override
         {
-            _recorder._listEvent.push_back( string( "I:" ) + _pName );
+            recordEvent( 'I' );
             _recorder._listInitializeMemoryTag.push_back( Memory::getCurrentMemoryTag() );
             return _recorder._failName == _pName ? _recorder._failResult : SubsystemInitResult::Succeeded;
         }
-        void stopSubsystem() override { _recorder._listEvent.push_back( string( "P:" ) + _pName ); }
-        void shutdownSubsystem() override { _recorder._listEvent.push_back( string( "S:" ) + _pName ); }
+        void stopSubsystem() override { recordEvent( 'P' ); }
+        void shutdownSubsystem() override { recordEvent( 'S' ); }
 
         const utf8*             getSubsystemName() const override { return _pName; }
         span<const utf8* const> getSubsystemDependencies() const override { return _listDependency; }
         SubsystemHostMask       getSubsystemHost() const override { return _host; }
+
+    private:
+        /** @brief `<단계>:<이름>` 한 줄을 기록에 더합니다. */
+        void recordEvent( utf8 phase )
+        {
+            StringBuilder<constant::buffer::kMax64> eventBuilder;
+            eventBuilder.appendFormat( "%#:%#", phase, _pName );
+            _recorder._listEvent.push_back( string( eventBuilder.view() ) );
+        }
 
     private:
         SubsystemRecorder&  _recorder;

@@ -115,7 +115,7 @@ Checks: >
 # -misc/cppcoreguidelines-non-private-member-variables-in-classes  6104+198
 #                                                       (규약) 리플렉션 데이터 형식(REFLECT 필드)과 POD 설명자는 공개 필드가 본질이다.
 # -readability-braces-around-statements           4744  (규약) 한 줄 if 는 중괄호를 뺀다(docs/agents/CppStyle.md "Braces").
-# -misc-include-cleaner                           4720  (린트) include 는 저장소 린트(IncludeOrder · LayerIncludes · Includes.md 의 층)가 본다.
+# -misc-include-cleaner                           4720  (린트) include 는 clang-format(IncludeCategories) · 저장소 린트(LayerIncludes · Includes.md 의 층)가 본다.
 #                                                       이 검사는 PCH · 강제 포함 헤더를 모르고 "직접 포함" 을 요구해 층 규칙과 어긋난다.
 # -readability-redundant-member-init              3383  (규약) 필드는 생성자 초기화 목록에서 모두 적는다(CppStyle — `_value{}` 도 의도다).
 # -readability/cppcoreguidelines-magic-numbers    2567  (린트) 매직 리터럴은 MagicLiterals 린트가 정책 값만 골라 본다. 수학 · 그래픽스 상수까지 짚는다.

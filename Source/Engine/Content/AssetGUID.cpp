@@ -171,20 +171,21 @@ namespace sw
 
     string AssetGUIDHeader::write( string_view xmlText, const AssetGUID& guid )
     {
-        const AssetGUIDInternal::HeadSpan span    = AssetGUIDInternal::findHead( xmlText );
-        const string_view                 newLine = xmlText.find( "\r\n" ) != string_view::npos ? string_view{ "\r\n" } : string_view{ "\n" };
-        string                            header  = string( AssetGUIDInternal::kOpening ) + " guid=\"" + guid.toString() + "\"?>";
-        string                            out;
-        out.reserve( xmlText.size() + header.size() + newLine.size() );
+        const AssetGUIDInternal::HeadSpan        span    = AssetGUIDInternal::findHead( xmlText );
+        const string_view                        newLine = xmlText.find( "\r\n" ) != string_view::npos ? string_view{ "\r\n" } : string_view{ "\n" };
+        StringBuilder<constant::buffer::kMax128> header;
+        header.appendFormat( "%# guid=\"%#\"?>", AssetGUIDInternal::kOpening, guid.toString() );
+        string out;
+        out.reserve( xmlText.size() + header.view().size() + newLine.size() );
         if ( span._headerBegin != string_view::npos )
         {
             out.append( xmlText.substr( 0, span._headerBegin ) );
-            out.append( header );
+            out.append( header.view() );
             out.append( xmlText.substr( span._headerEnd ) );
             return out;
         }
         out.append( xmlText.substr( 0, span._insertAt ) );
-        out.append( header );
+        out.append( header.view() );
         out.append( newLine );
         out.append( xmlText.substr( span._insertAt ) );
         return out;

@@ -34,7 +34,7 @@ One result type: "absent" is a failure with exactly one reason, so it is the sam
 - **No fallback through `value_or`** for a required value ([Constants](Constants.md)); `value_or` is for lookups where absent is normal.
 - **Wrong-side access stops the process.** `value()` on an error and `error()` on a value call `SW_LOW_LEVEL_FATAL`; `*` / `->` assert in Debug.
 - **`unexpected` name collision:** MSVC `<eh.h>` declares a global `unexpected()`. Inside `namespace sw` write `unexpected( … )`; in a file with only `using namespace sw;` (tests) write `sw::unexpected( … )`.
-- **Enforced:** `py -3 -m Scripts lint result-types` (commit hook) keeps Core at 0 and the rest at the empty baseline `Config/Rules/Lint/ResultTypeBaseline.json`; per-file exemptions with a reason go in its `_coreExemptions`.
+- **Enforced:** `py -3 -m Scripts lint result-types` (commit hook) keeps Core at 0 and the rest at the empty baseline `Config/Rules/Lint/ResultTypesBaseline.json`; per-file exemptions with a reason go in `_coreExemptions` of `Config/Rules/Lint/ResultTypes.json`.
 
 ### Compared with the engines
 

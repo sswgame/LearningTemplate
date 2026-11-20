@@ -37,11 +37,15 @@ namespace sw
                 CharacterControllerComponent* pController = pObject != nullptr ? pObject->getComponent<CharacterControllerComponent>() : nullptr;
                 if ( pController == nullptr )
                 {
-                    outReply = "character.jump: no object named '" + listArgument[0] + "' with a CharacterControllerComponent in the active scene";
+                    StringBuilder<constant::buffer::kMax256> reply;
+                    reply.appendFormat( "character.jump: no object named '%#' with a CharacterControllerComponent in the active scene", listArgument[0] );
+                    outReply.assign( reply.view() );
                     return true;
                 }
                 pController->jump( speed );
-                outReply = "character.jump " + listArgument[0];
+                StringBuilder<constant::buffer::kMax128> reply;
+                reply.appendFormat( "character.jump %#", listArgument[0] );
+                outReply.assign( reply.view() );
                 return true;
             }
         };
@@ -60,7 +64,6 @@ namespace sw
         , _maxSlopeAngle{ Radians::fromRadians( MathUtil::kHalfPi * 0.5f ) }
         , _gravityScale{ 1.0f }
         , _mass{ 70.0f }
-        , _layer{ "Character" }
         , _bInnerBody{ true }
         , _character{}
         , _state{}

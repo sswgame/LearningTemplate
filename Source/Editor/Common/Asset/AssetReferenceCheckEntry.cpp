@@ -13,6 +13,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -100,7 +101,9 @@ namespace sw::editor
                     string text;
                     if ( FileUtil::readTextFile( filePath, text ) == false )
                         return -1; // 이유는 FileUtil 이 남겼다
-                    problemCount += validateFile( params, assets, "Content/" + assetID, text, AssetReferenceFields::getSyntaxOf( assetID ) );
+                    StringBuilder<constant::buffer::kMax256> labelBuilder;
+                    labelBuilder.appendFormat( "Content/%#", assetID );
+                    problemCount += validateFile( params, assets, labelBuilder.view(), text, AssetReferenceFields::getSyntaxOf( assetID ) );
                     ++scannedCount;
                 }
                 for ( const string& cmakeFile : params.getCMakeFiles() )

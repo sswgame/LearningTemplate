@@ -163,7 +163,8 @@ namespace sw
                 {
                     StringBuilder<constant::buffer::kMax128> header;
                     header.appendFormat( "[... %# earlier bytes dropped ...]\n", static_cast<uint64>( log.size() - maxBytes ) );
-                    log = string( header.c_str() ) + log.substr( log.size() - static_cast<size_t>( maxBytes ) );
+                    log.erase( 0, log.size() - static_cast<size_t>( maxBytes ) );
+                    log.insert( 0, header.c_str(), header.size() );
                 }
                 return log;
             }
@@ -284,8 +285,10 @@ namespace sw
 
     bool CrashReportService::createBundle( string_view sessionID, const string& contextPath )
     {
-        using Internal            = CrashReportServiceInternal;
-        const string bundleFolder = FileUtil::joinPath( _reportsFolder, string( kBundlePrefix ) + string( sessionID ) );
+        using Internal = CrashReportServiceInternal;
+        StringBuilder<constant::buffer::kMax128> bundleName;
+        bundleName.appendFormat( "%#%#", kBundlePrefix, sessionID );
+        const string bundleFolder = FileUtil::joinPath( _reportsFolder, bundleName.view() );
         if ( FileUtil::isDirectory( bundleFolder ) || FileUtil::ensureDirectoryExists( bundleFolder ) == false )
             return false;
 
@@ -454,8 +457,10 @@ namespace sw
 
     bool CrashReportService::decide( string_view sessionID, bool bSend )
     {
-        using Internal            = CrashReportServiceInternal;
-        const string bundleFolder = FileUtil::joinPath( _reportsFolder, string( kBundlePrefix ) + string( sessionID ) );
+        using Internal = CrashReportServiceInternal;
+        StringBuilder<constant::buffer::kMax128> bundleName;
+        bundleName.appendFormat( "%#%#", kBundlePrefix, sessionID );
+        const string bundleFolder = FileUtil::joinPath( _reportsFolder, bundleName.view() );
         JSONDocument manifest;
         if ( Internal::loadManifest( bundleFolder, manifest ) == false || Internal::getState( manifest ) != CrashReportState::AwaitingDecision )
             return false;
@@ -479,9 +484,11 @@ namespace sw
     {
         if ( _reporterExecutable.empty() || countPendingUploads() == 0 )
             return false;
-        const optional<AbsolutePath> executable = AbsolutePath::tryMake( _reporterExecutable );
-        const ProcessCommand         command    = executable.has_value() ? ProcessCommand::at( *executable, { string( kReporterArgument ) + "=" + _reportsFolder } ) : ProcessCommand{};
-        const bool                   bLaunched  = Process::launchDetached( command ).has_value();
+        const optional<AbsolutePath>             executable = AbsolutePath::tryMake( _reporterExecutable );
+        StringBuilder<constant::buffer::kMax512> reporterArgument;
+        reporterArgument.appendFormat( "%#=%#", kReporterArgument, _reportsFolder );
+        const ProcessCommand command   = executable.has_value() ? ProcessCommand::at( *executable, { string( reporterArgument.view() ) } ) : ProcessCommand{};
+        const bool           bLaunched = Process::launchDetached( command ).has_value();
         SW_LOG_INFO_ID( "CrashReport.CrashReportReporterProcess", "Crash report: %# the reporter process for '%#'", bLaunched ? "launched" : "could not launch", _reportsFolder.c_str() );
         return bLaunched;
     }

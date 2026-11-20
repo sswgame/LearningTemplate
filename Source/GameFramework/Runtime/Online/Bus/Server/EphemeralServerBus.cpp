@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Online/Bus/Server/EphemeralServerBus.h"
 
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
@@ -20,9 +20,9 @@ namespace sw
 
             static string makeChannel( string_view topic )
             {
-                string channel{ kChannelPrefix };
-                channel += topic;
-                return channel;
+                StringBuilder<constant::buffer::kMax128> channel;
+                channel.appendFormat( "%#%#", kChannelPrefix, topic );
+                return string( channel.view() );
             }
         };
     } // namespace
@@ -128,8 +128,11 @@ namespace sw
             ++_droppedCount;
             return;
         }
+        // 봉투: 판(1 바이트) 뒤 uint64 둘 — 길이는 위에서 kEnvelopeSize 로 맞췄다.
+        ByteReader    envelope( message._bytes.data() + 1, EphemeralServerBusInternal::kEnvelopeSize - 1 );
+        const uint64  first  = envelope.readUint64();
+        const uint64  second = envelope.readUint64();
         vector<uint8> bodyBytes( message._bytes.begin() + static_cast<ptrdiff_t>( EphemeralServerBusInternal::kEnvelopeSize ), message._bytes.end() );
-        _messageBuffer.push( ServerBusMessage( std::move( bodyBytes ), string( message._channel.substr( prefix.size() ) ), LittleEndianUtil::readUint64( message._bytes.data() + 1 ),
-                                               LittleEndianUtil::readUint64( message._bytes.data() + 9 ) ) );
+        _messageBuffer.push( ServerBusMessage( std::move( bodyBytes ), string( message._channel.substr( prefix.size() ) ), first, second ) );
     }
 } // namespace sw

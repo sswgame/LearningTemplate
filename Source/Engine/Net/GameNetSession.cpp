@@ -198,13 +198,11 @@ namespace sw
                     outReply = "net session: none (start with -gv_netListenPort=<port> or -gv_netConnectAddress=<host:port>)";
                     return true;
                 }
-                outReply = string( "net session: " ) + getEnumName( pSession->getRole() ) + ", connected " + to_string( pSession->getConnectedCount() );
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "net session: %#, connected %#", getEnumName( pSession->getRole() ), pSession->getConnectedCount() );
                 if ( pSession->getRole() == GameNetRole::Server )
-                {
-                    StringBuilder<constant::buffer::kMax256> replyPart;
-                    replyPart.appendFormat( ", port %#, shards %#", pSession->getListenPort(), pSession->getShardCount() );
-                    outReply += replyPart.c_str();
-                }
+                    reply.appendFormat( ", port %#, shards %#", pSession->getListenPort(), pSession->getShardCount() );
+                outReply.assign( reply.view() );
                 return true;
             }
         };

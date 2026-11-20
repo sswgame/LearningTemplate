@@ -206,11 +206,13 @@ SW_TEST_CASE( AudioDataVariantTest, MusicVariantMergesSegmentsByName )
             <AudioMusicSegmentDef _name="Combat" _bars="4"><_listLayer><AudioMusicLayerDef _path="combat.ogg" /></_listLayer></AudioMusicSegmentDef>
         </_listSegment>
     </AudioMusicDef>)" ) );
-    const string  baseID = test::ScopedScratchDomain::makeID( "base.music.xml" ).str();
-    AudioMusicDef music;
-    SW_REQUIRE_TRUE( music.loadFromXMLText( "<AudioMusicDef _base=\"" + baseID + "\" _tempo=\"90\"><_listSegment><AudioMusicSegmentDef _name=\"Combat\" _bars=\"2\" />"
-                                                                                 "<AudioMusicSegmentDef _name=\"Boss\"><_listLayer><AudioMusicLayerDef _path=\"boss.ogg\" /></_listLayer></AudioMusicSegmentDef></_listSegment></AudioMusicDef>",
-                                            "child.music.xml" ) );
+    const string                             baseID = test::ScopedScratchDomain::makeID( "base.music.xml" ).str();
+    AudioMusicDef                            music;
+    StringBuilder<constant::buffer::kMax512> childXML;
+    childXML.appendFormat( "<AudioMusicDef _base=\"%#\" _tempo=\"90\"><_listSegment><AudioMusicSegmentDef _name=\"Combat\" _bars=\"2\" />"
+                           "<AudioMusicSegmentDef _name=\"Boss\"><_listLayer><AudioMusicLayerDef _path=\"boss.ogg\" /></_listLayer></AudioMusicSegmentDef></_listSegment></AudioMusicDef>",
+                           baseID );
+    SW_REQUIRE_TRUE( music.loadFromXMLText( childXML.view(), "child.music.xml" ) );
     SW_EXPECT_NEAR( 90.0f, music._tempo, 0.0f );
     SW_EXPECT_TRUE( music._bus == hashed_string( "music" ) );
     SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( music._listSegment.size() ) );
@@ -232,9 +234,11 @@ SW_TEST_CASE( AudioDataVariantTest, GraphVariantSavesOnlyItsDifference )
     const test::ScopedScratchDomain domain;
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.audiograph.xml" ),
                                               R"(<AudioGraphDef _output="Osc" _durationSeconds="1"><_listNode><AudioGraphNodeDef _name="Osc" _type="Sine" /></_listNode></AudioGraphDef>)" ) );
-    const string  baseID = test::ScopedScratchDomain::makeID( "base.audiograph.xml" ).str();
-    AudioGraphDef graph;
-    SW_REQUIRE_TRUE( graph.loadFromXMLText( "<AudioGraphDef _base=\"" + baseID + "\" _durationSeconds=\"2\" />", "child.audiograph.xml" ) );
+    const string                             baseID = test::ScopedScratchDomain::makeID( "base.audiograph.xml" ).str();
+    AudioGraphDef                            graph;
+    StringBuilder<constant::buffer::kMax256> childXML;
+    childXML.appendFormat( "<AudioGraphDef _base=\"%#\" _durationSeconds=\"2\" />", baseID );
+    SW_REQUIRE_TRUE( graph.loadFromXMLText( childXML.view(), "child.audiograph.xml" ) );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( graph._listNode.size() ) );
     SW_EXPECT_EQUAL( baseID, graph._baseID );
     graph._durationSeconds = 3.0f;

@@ -7,6 +7,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
@@ -135,7 +136,10 @@ namespace sw
                 Wallet&             wallet   = pState->getWallet();
                 wallet.add( currency, amount );
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "cheat.money balance %#%#", wallet.getBalance( currency ), ( listArgument.size() == 2 ? " " + listArgument[1] : string( " (default currency)" ) ) );
+                if ( listArgument.size() == 2 )
+                    replyBuilder.appendFormat( "cheat.money balance %# %#", wallet.getBalance( currency ), listArgument[1] );
+                else
+                    replyBuilder.appendFormat( "cheat.money balance %# (default currency)", wallet.getBalance( currency ) );
                 outReply = string( replyBuilder.view() );
                 return true;
             }
@@ -153,7 +157,12 @@ namespace sw
                 WeatherSystem&      weather   = pState->getWeather();
                 const hashed_string weatherID = hashed_string( listArgument[0] );
                 weather.forceWeather( weatherID, duration, true );
-                outReply = weather.getCurrent() == weatherID ? "cheat.weather " + listArgument[0] : "cheat.weather: the session state has no weather '" + listArgument[0] + "' (no weather catalog or unknown id)";
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                if ( weather.getCurrent() == weatherID )
+                    replyBuilder.appendFormat( "cheat.weather %#", listArgument[0] );
+                else
+                    replyBuilder.appendFormat( "cheat.weather: the session state has no weather '%#' (no weather catalog or unknown id)", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };
@@ -456,7 +465,7 @@ namespace sw
     {
         uint32     lineCount = 0;
         uint32     skipped   = 0;
-        const auto add       = [&]( const string& label, const string& value )
+        const auto add       = [&]( string_view label, string_view value )
         {
             if ( lineCount >= maxLines )
             {
@@ -470,20 +479,33 @@ namespace sw
         _flags.fillEntries( listFlag );
         for ( const GameFlagEntry& flag : listFlag )
         {
-            add( string( "flag " ) + flag._name.c_str(), to_string( flag._value ) );
+            fixed_string<constant::buffer::kMax256> label;
+            formatstring( label.data(), label.capacity(), "flag %#", flag._name.c_str() );
+            fixed_string<constant::buffer::kMax32> value;
+            formatstring( value.data(), value.capacity(), "%#", flag._value );
+            add( label.view(), value.view() );
         }
         for ( const WalletBalance& balance : _wallet.getBalances() )
         {
-            add( string( "wallet " ) + balance._currency.c_str(), to_string( balance._amount ) );
+            fixed_string<constant::buffer::kMax256> label;
+            formatstring( label.data(), label.capacity(), "wallet %#", balance._currency.c_str() );
+            fixed_string<constant::buffer::kMax32> value;
+            formatstring( value.data(), value.capacity(), "%#", balance._amount );
+            add( label.view(), value.view() );
         }
         for ( int32 slot = 0; slot < _inventory.getSlotCount(); ++slot )
         {
             const InventorySlot& content = _inventory.getSlot( slot );
-            if ( content.isEmpty() == false )
-                add( "slot " + to_string( slot ), string( content._itemID.c_str() ) + " x" + to_string( content._count ) );
+            if ( content.isEmpty() )
+                continue;
+            fixed_string<constant::buffer::kMax32> label;
+            formatstring( label.data(), label.capacity(), "slot %#", slot );
+            fixed_string<constant::buffer::kMax256> value;
+            formatstring( value.data(), value.capacity(), "%# x%#", content._itemID.c_str(), content._count );
+            add( label.view(), value.view() );
         }
         if ( skipped > 0 )
-            writer.addLine( "...", to_string( skipped ) + " more" );
+            writer.addLineFormat( "...", "%# more", skipped );
     }
 } // namespace sw
 

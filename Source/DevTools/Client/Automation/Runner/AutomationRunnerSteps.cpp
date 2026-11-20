@@ -6,6 +6,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
@@ -482,7 +484,11 @@ namespace sw
             AutomationRunner&              runner = asRunner( context );
             const AutomationVariableParams params = step.readValidatedProperties<AutomationVariableParams>();
             if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( params._name, params._value ) == false )
-                runner.recordFailure( step, "could not set " + params._name + " to '" + params._value + "'" );
+            {
+                StringBuilder<constant::buffer::kMax256> text;
+                text.appendFormat( "could not set %# to '%#'", params._name, params._value );
+                runner.recordFailure( step, text.view() );
+            }
             return true;
         }
 
@@ -495,15 +501,23 @@ namespace sw
             const GlobalVariableInfo*            pInfo  = engine::getSubsystem<GlobalVariableManager>().findVariable( name );
             if ( pInfo == nullptr )
             {
-                runner.recordFailure( step, name + " is no longer registered" ); // 검사 뒤에 모듈이 언로드됐다(핫 리로드)
+                // 검사 뒤에 모듈이 언로드됐다(핫 리로드)
+                StringBuilder<constant::buffer::kMax256> text;
+                text.appendFormat( "%# is no longer registered", name );
+                runner.recordFailure( step, text.view() );
                 return true;
             }
             const expected<bool> matched = AutomationRunnerStepsInternal::evaluateExpectVariable( step, *pInfo );
             if ( matched.has_value() == false ) // 변수가 다른 타입으로 다시 등록됐다(핫 리로드)
                 runner.recordFailure( step, AutomationStep::describeReason( matched.error() ) );
             else if ( *matched == false )
-                runner.recordFailure( step, name + " is '" + pInfo->getValueAsString() + "', expected '" + value + "'" +
-                                                ( step.findAttribute( "tolerance" ) != nullptr ? " (tolerance " + *step.findAttribute( "tolerance" ) + ")" : string() ) );
+            {
+                StringBuilder<constant::buffer::kMax256> text;
+                text.appendFormat( "%# is '%#', expected '%#'", name, pInfo->getValueAsString(), value );
+                if ( const string* pTolerance = step.findAttribute( "tolerance" ); pTolerance != nullptr )
+                    text.appendFormat( " (tolerance %#)", *pTolerance );
+                runner.recordFailure( step, text.view() );
+            }
             return true;
         }
 
@@ -612,13 +626,18 @@ namespace sw
          */
         static AutomationStepHold holdPass( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
-            AutomationRunner&        runner   = asRunner( context );
-            const utf8*              pBlocker = runner._run.hasPendingScreenshot() ? "Screenshot" : AutomationStepRegistry::findFinishBlocker()._pName;
-            const AutomationStepHold hold     = runner.holdUntilReady( step, input, pBlocker == nullptr, AutomationTimeLimits::kMaxFinishWaitFrames,
-                                                                       string( "background work to finish before <Pass/> (" ) + ( pBlocker != nullptr ? pBlocker : "none" ) + ")" );
-            runner._run._bFinishWaiting       = hold == AutomationStepHold::Hold;
+            AutomationRunner&                       runner   = asRunner( context );
+            const utf8*                             pBlocker = runner._run.hasPendingScreenshot() ? "Screenshot" : AutomationStepRegistry::findFinishBlocker()._pName;
+            fixed_string<constant::buffer::kMax256> waitingFor;
+            formatstring( waitingFor.data(), waitingFor.capacity(), "background work to finish before <Pass/> (%#)", pBlocker != nullptr ? pBlocker : "none" );
+            const AutomationStepHold hold = runner.holdUntilReady( step, input, pBlocker == nullptr, AutomationTimeLimits::kMaxFinishWaitFrames, waitingFor.view() );
+            runner._run._bFinishWaiting   = hold == AutomationStepHold::Hold;
             if ( hold == AutomationStepHold::Run && pBlocker != nullptr )
-                runner._evaluator.addFailure( step, string( "background work did not finish before the scenario ended (" ) + pBlocker + ")", AutomationFailureKind::WaitTimeout );
+            {
+                fixed_string<constant::buffer::kMax256> failure;
+                formatstring( failure.data(), failure.capacity(), "background work did not finish before the scenario ended (%#)", pBlocker );
+                runner._evaluator.addFailure( step, failure.view(), AutomationFailureKind::WaitTimeout );
+            }
             return hold;
         }
 
@@ -648,9 +667,10 @@ namespace sw
             string               message;
             if ( runner._evaluator.readWatchValue( context, step, value, message ) == false || value._bText )
             {
-                const string reason = "<SkipUnless> could not read a number: " + message;
-                runner.recordFailure( step, reason );
-                runner.finish( AutomationRunResult::failed( AutomationFailureKind::Assertion, reason, step.describe() ) );
+                StringBuilder<constant::buffer::kMax256> reason;
+                reason.appendFormat( "<SkipUnless> could not read a number: %#", message );
+                runner.recordFailure( step, reason.view() );
+                runner.finish( AutomationRunResult::failed( AutomationFailureKind::Assertion, reason.view(), step.describe() ) );
                 return true;
             }
             if ( value._number == 0.0 )
@@ -695,8 +715,10 @@ namespace sw
                 runner._run._stabilityPresentedFrames = presentedFrames;
                 (void)runner._run._stabilityStallClock.advance( pendingJobCount == 0 ? condition._pName : nullptr, condition._progress );
             }
-            const string conditionName = condition.isWaiting() ? string( condition._pName ) : string( "Assets.Pending" );
-            const string repeatKey     = string( step._kind ) + " " + conditionName;
+            const string                             conditionName = condition.isWaiting() ? string( condition._pName ) : string( "Assets.Pending" );
+            StringBuilder<constant::buffer::kMax256> repeatKeyBuilder;
+            repeatKeyBuilder.appendFormat( "%# %#", step._kind, conditionName );
+            const string_view repeatKey = repeatKeyBuilder.view();
             if ( runner._run._stabilityStallClock.getUnchangedCount() >= pPolicy->_stallFrames )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
@@ -714,7 +736,9 @@ namespace sw
             const AutomationStepHold hold       = runner.holdUntilReadyWithin( step, input, false, AutomationTimeLimits::kMaxRenderStableWallSeconds, waitingFor );
             if ( hold == AutomationStepHold::Hold )
                 return hold;
-            runner.giveUpWait( step, AutomationFailureKind::WaitTimeout, "the render did not settle within its wall-clock limit - waited for " + waitingFor, repeatKey );
+            StringBuilder<constant::buffer::kMax256> reason;
+            reason.appendFormat( "the render did not settle within its wall-clock limit - waited for %#", waitingFor );
+            runner.giveUpWait( step, AutomationFailureKind::WaitTimeout, reason.view(), repeatKey );
             return AutomationStepHold::Skip;
         }
 
@@ -768,18 +792,25 @@ namespace sw
             const bool                       bReady = run._assetStableFrameCount > AutomationRunnerStepsInternal::kAssetStabilityTrailFrames;
             const AutomationWaitingCondition cover  = AutomationStepRegistry::findCaptureBlocker();
             // 덮개 · 에셋 일의 시한은 렌더 정착이 선 뒤부터 센다(정착을 기다린 프레임은 그 대기의 몫이다).
-            const uint32             firstFrame = run._stableHoldFrame == AutomationStepTimeline::kNotStable ? 0u : run._stableHoldFrame + 1u;
-            const AutomationStepHold hold       = runner.holdUntilReady( step, input, bReady, firstFrame + AutomationTimeLimits::kMaxAssetStabilityFrames,
-                                                                         string( "the screen to settle before the screenshot (" ) +
-                                                                             ( cover.isWaiting() ? string( "covered by " ) + cover._pName : string( bStable ? "trailing frames" : "assets pending" ) ) +
-                                                                             ")" );
+            const uint32                            firstFrame = run._stableHoldFrame == AutomationStepTimeline::kNotStable ? 0u : run._stableHoldFrame + 1u;
+            fixed_string<constant::buffer::kMax256> waitingFor;
+            if ( cover.isWaiting() )
+                formatstring( waitingFor.data(), waitingFor.capacity(), "the screen to settle before the screenshot (covered by %#)", cover._pName );
+            else
+                formatstring( waitingFor.data(), waitingFor.capacity(), "the screen to settle before the screenshot (%#)", bStable ? "trailing frames" : "assets pending" );
+            const AutomationStepHold hold = runner.holdUntilReady( step, input, bReady, firstFrame + AutomationTimeLimits::kMaxAssetStabilityFrames, waitingFor.view() );
             if ( hold == AutomationStepHold::Hold )
                 return hold;
             if ( bReady == false )
             {
-                const string reason = cover.isWaiting() ? string( "the screen did not settle before the screenshot was due (still covered by " ) + cover._pName + ")"
-                                                        : string( "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" );
-                runner.giveUpWait( step, AutomationFailureKind::WaitTimeout, reason, string( step._kind ) + " " + ( cover.isWaiting() ? string( cover._pName ) : string( "Assets.Pending" ) ) );
+                fixed_string<constant::buffer::kMax256> reason;
+                if ( cover.isWaiting() )
+                    formatstring( reason.data(), reason.capacity(), "the screen did not settle before the screenshot was due (still covered by %#)", cover._pName );
+                else
+                    formatstring( reason.data(), reason.capacity(), "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" );
+                StringBuilder<constant::buffer::kMax256> repeatKey;
+                repeatKey.appendFormat( "%# %#", step._kind, cover.isWaiting() ? cover._pName : "Assets.Pending" );
+                runner.giveUpWait( step, AutomationFailureKind::WaitTimeout, reason.view(), repeatKey.view() );
                 return AutomationStepHold::Skip;
             }
             run.clearScreenshotStability();

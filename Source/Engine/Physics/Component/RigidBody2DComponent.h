@@ -138,8 +138,8 @@ namespace sw
         PhysicsBodyType _bodyType;
         PROPERTY( Category = "Body", Tooltip = "Collision shapes; more than one makes a compound body" )
         vector<PhysicsShapeDesc2D> _listShape;
-        PROPERTY( Category = "Body", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
-        hashed_string _layer;
+        PROPERTY( DefaultName, Category = "Body", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
+        hashed_string _layer{ "Default" };
         PROPERTY( Category = "Body", Tooltip = "Physics material name (empty: the first material)", Validate = validateMaterial )
         hashed_string _material;
         PROPERTY( Category = "Body", Tooltip = "Hit zone of this body for weapon traces (name and damage multiplier); empty name is no zone" )

@@ -170,7 +170,12 @@ namespace
         static constexpr engine::EngineSubsystemStage kServices = engine::EngineSubsystemStage::Services;
 
         /** @brief 오류를 `문장 (대상)` 글로 잇습니다(문장 · 대상 어느 쪽의 낱말이든 찾게). */
-        static string describe( const Error& error ) { return string( error.message().data(), error.message().size() ) + " (" + string( error.detail().data(), error.detail().size() ) + ")"; }
+        static string describe( const Error& error )
+        {
+            StringBuilder<constant::buffer::kMax512> text;
+            text.appendFormat( "%# (%#)", error.message(), error.detail() );
+            return string( text.view() );
+        }
 
         /** @brief 순서대로 놓인 공장의 이름을 공백으로 잇습니다. */
         static string joinNames( const vector<const engine::EngineSubsystemRecord*>& listRecord )

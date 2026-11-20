@@ -7,6 +7,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -102,8 +104,10 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "GlobalVariablesPanel.PresetNameHasPathCharacter", "Preset name '%#' must not contain a path character", string( presetName ).c_str() );
             return false;
         }
-        const string name{ presetName };
-        const string presetPath = FileUtil::joinPath( EditorGlobalVariableCommands::getPresetFolderPath(), name + string{ GlobalVariablesViewModelInternal::kPresetSuffix } );
+        const string                            name{ presetName };
+        fixed_string<constant::buffer::kMax256> fileName;
+        formatstring( fileName.data(), fileName.capacity(), "%#%#", name, GlobalVariablesViewModelInternal::kPresetSuffix );
+        const string presetPath = FileUtil::joinPath( EditorGlobalVariableCommands::getPresetFolderPath(), fileName );
         // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다. 세션의 dirty 는 건드리지 않는다.
         if ( EditorGlobalVariableCommands::savePreset( presetPath, name.c_str() ) == false )
         {

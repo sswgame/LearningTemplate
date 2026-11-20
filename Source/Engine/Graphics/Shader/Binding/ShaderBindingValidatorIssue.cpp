@@ -359,8 +359,10 @@ namespace sw
             // DX11 은 정적 세트로 읽고, GL 은 결합 샘플러라 리플렉션에 샘플러 이름이 따로 나오지 않는다(binding.hlsli).
             for ( uint32 slotIndex = 0; slotIndex < shaderslot::kEngineTextureCount; ++slotIndex )
             {
-                const uint32 reg = shaderslot::kEngineTexture0 + slotIndex;
-                addReserved( list, string( shaderslot::resname::kEngineTexture ) + to_string( slotIndex ), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(),
+                const uint32                            reg = shaderslot::kEngineTexture0 + slotIndex;
+                StringBuilder<constant::buffer::kMax64> nameBuilder;
+                nameBuilder.appendFormat( "%#%#", shaderslot::resname::kEngineTexture, slotIndex );
+                addReserved( list, string( nameBuilder.view() ), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(),
                              slotAt( 0, reg ) );
             }
             for ( uint32 slotIndex = 0; slotIndex < shaderslot::kMaterialTextureCount; ++slotIndex )
@@ -368,12 +370,16 @@ namespace sw
                 const uint32 reg = shaderslot::kMaterialTexture0 + slotIndex;
                 // 짝 샘플러 이름은 계약에 없다 — 셰이더가 머티리얼 칸을 짝 샘플러 없이 선언하고(binding.hlsli `SW_DECLARE_TEXTURE2D`),
                 // DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 유닛에 건 머티리얼 샘플러 객체로 읽는다(OpenGLRHIDeviceInit).
-                addReserved( list, string( shaderslot::resname::kMaterialTexture ) + to_string( slotIndex ), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(), slotAt( 0, reg ) );
+                StringBuilder<constant::buffer::kMax64> nameBuilder;
+                nameBuilder.appendFormat( "%#%#", shaderslot::resname::kMaterialTexture, slotIndex );
+                addReserved( list, string( nameBuilder.view() ), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(), slotAt( 0, reg ) );
             }
             // 컴퓨트 RW 텍스처 슬롯 u5..u7: 에뮬 백엔드만. GL 은 이미지 유닛(SSBO 와 다른 이름공간).
             for ( uint32 slotIndex = 0; slotIndex < shaderslot::kComputeTextureUAVSlotCount; ++slotIndex )
             {
-                addReserved( list, string( shaderslot::resname::kRwTextureSlot ) + to_string( slotIndex ), ShaderBindingKind::RwTexture, slotAt( 0, shaderslot::kComputeTextureUAV0 + slotIndex ), none(), none(),
+                StringBuilder<constant::buffer::kMax64> nameBuilder;
+                nameBuilder.appendFormat( "%#%#", shaderslot::resname::kRwTextureSlot, slotIndex );
+                addReserved( list, string( nameBuilder.view() ), ShaderBindingKind::RwTexture, slotAt( 0, shaderslot::kComputeTextureUAV0 + slotIndex ), none(), none(),
                              slotAt( 0, shaderslot::gl::kImageUnit0 + slotIndex ) );
             }
             // 네이티브 bindless 텍스처 배열: DX12 t0 space1 / Vulkan set 1 binding 0. RW 배열은 DX12 u0 space1 / Vulkan set 1 binding 3. 에뮬에는 없다.
@@ -387,7 +393,9 @@ namespace sw
                          none(), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkSamplerBinding ), none() );
             for ( uint32 samplerIndex = 0; samplerIndex < shaderslot::kStaticSamplerArrayCount; ++samplerIndex )
             {
-                addReserved( list, string( shaderslot::resname::kSamplerSlot ) + to_string( samplerIndex ), ShaderBindingKind::Sampler, slotAt( 0, shaderslot::dx11::kStaticSampler0 + samplerIndex ),
+                StringBuilder<constant::buffer::kMax64> nameBuilder;
+                nameBuilder.appendFormat( "%#%#", shaderslot::resname::kSamplerSlot, samplerIndex );
+                addReserved( list, string( nameBuilder.view() ), ShaderBindingKind::Sampler, slotAt( 0, shaderslot::dx11::kStaticSampler0 + samplerIndex ),
                              at( 0, samplerIndex ), none(), none() );
             }
             addReserved( list, shaderslot::resname::kShadowSampler, ShaderBindingKind::Sampler, none(),
@@ -438,19 +446,26 @@ namespace sw
                         continue;
 
                     if ( Internal::kindMatches( pReserved->_kind, reflected._kind, _targetFormat ) == false )
-                        report( reflected._name, string( "종류가 계약과 다릅니다 — 기대 " ) + getEnumName( pReserved->_kind ) + ", 리플렉션 " + getEnumName( reflected._kind ) );
+                    {
+                        StringBuilder<constant::buffer::kMax256> textBuilder;
+                        textBuilder.appendFormat( "종류가 계약과 다릅니다 — 기대 %#, 리플렉션 %#", getEnumName( pReserved->_kind ), getEnumName( reflected._kind ) );
+                        report( reflected._name, string( textBuilder.view() ) );
+                    }
 
                     const ShaderReservedLocation& expected = _bVulkan ? pReserved->_vulkan : ( _bOpenGl ? pReserved->_opengl : ( _bDx12 ? pReserved->_dx12 : pReserved->_dx11 ) );
                     if ( expected._bDeclared == false )
                     {
-                        report( reflected._name, string( "이 백엔드 계약에는 없는 예약 리소스가 선언돼 있습니다 (리플렉션 " ) +
-                                                     Internal::formatLocation( pLocationFormat, reflected._space, reflected._bindPoint ) + ")" );
+                        StringBuilder<constant::buffer::kMax256> textBuilder;
+                        textBuilder.appendFormat( "이 백엔드 계약에는 없는 예약 리소스가 선언돼 있습니다 (리플렉션 %#)", Internal::formatLocation( pLocationFormat, reflected._space, reflected._bindPoint ) );
+                        report( reflected._name, string( textBuilder.view() ) );
                         continue;
                     }
                     if ( reflected._bindPoint != expected._bind || reflected._space != expected._space )
                     {
-                        report( reflected._name, string( "위치가 계약과 다릅니다 — 기대 " ) + Internal::formatLocation( pLocationFormat, expected._space, expected._bind ) +
-                                                     ", 리플렉션 " + Internal::formatLocation( pLocationFormat, reflected._space, reflected._bindPoint ) );
+                        StringBuilder<constant::buffer::kMax256> textBuilder;
+                        textBuilder.appendFormat( "위치가 계약과 다릅니다 — 기대 %#, 리플렉션 %#", Internal::formatLocation( pLocationFormat, expected._space, expected._bind ),
+                                                  Internal::formatLocation( pLocationFormat, reflected._space, reflected._bindPoint ) );
+                        report( reflected._name, string( textBuilder.view() ) );
                     }
                 }
             }
@@ -534,14 +549,14 @@ namespace sw
                     if ( rangeClass == Internal::RegisterClass::Other )
                     {
                         StringBuilder<constant::buffer::kMax256> textBuilder;
-                        textBuilder.appendFormat( "%#..)", vk::kUShift );
-                        report( reflected._name, string( "세트 0 의 슬롯 범위 밖 binding " ) + to_string( reflected._bindPoint ) + " 입니다 (b 0.., t " + to_string( vk::kTShift ) + ".., u " +
-                                                     string( textBuilder.view() ) );
+                        textBuilder.appendFormat( "세트 0 의 슬롯 범위 밖 binding %# 입니다 (b 0.., t %#.., u %#..)", reflected._bindPoint, vk::kTShift, vk::kUShift );
+                        report( reflected._name, string( textBuilder.view() ) );
                     }
                     else if ( Internal::vulkanRangeAcceptsKind( rangeClass, reflected._kind ) == false )
                     {
-                        report( reflected._name, string( "binding " ) + to_string( reflected._bindPoint ) + " 은 " + Internal::registerClassLetter( rangeClass ) + " 범위인데 리소스 종류가 " +
-                                                     getEnumName( reflected._kind ) + " 입니다" );
+                        StringBuilder<constant::buffer::kMax256> textBuilder;
+                        textBuilder.appendFormat( "binding %# 은 %# 범위인데 리소스 종류가 %# 입니다", reflected._bindPoint, Internal::registerClassLetter( rangeClass ), getEnumName( reflected._kind ) );
+                        report( reflected._name, string( textBuilder.view() ) );
                     }
                 }
                 else if ( reflected._space == bindless::kVkTextureSet )
@@ -595,7 +610,11 @@ namespace sw
                         where = string( whereBuilder.view() );
                     }
                     if ( bCollide )
-                        report( reflectedA._name, string( "'" ) + reflectedB._name + "' 와 같은 자리를 차지합니다 (" + where + ")" );
+                    {
+                        StringBuilder<constant::buffer::kMax256> textBuilder;
+                        textBuilder.appendFormat( "'%#' 와 같은 자리를 차지합니다 (%#)", reflectedB._name, where );
+                        report( reflectedA._name, string( textBuilder.view() ) );
+                    }
                 }
             }
 
@@ -612,9 +631,8 @@ namespace sw
                     if ( _bOpenGl && reflectedA._space != 0 )
                     {
                         StringBuilder<constant::buffer::kMax256> textBuilder;
-                        textBuilder.appendFormat( "%# 하나로 취급됩니다", reflectedA._bindPoint );
-                        report( reflectedA._name, string( "OpenGL 은 descriptor set 을 무시하는데 set " ) + to_string( reflectedA._space ) + " 로 선언돼 있습니다 — binding " +
-                                                      string( textBuilder.view() ) );
+                        textBuilder.appendFormat( "OpenGL 은 descriptor set 을 무시하는데 set %# 로 선언돼 있습니다 — binding %# 하나로 취급됩니다", reflectedA._space, reflectedA._bindPoint );
+                        report( reflectedA._name, string( textBuilder.view() ) );
                     }
                     validateMessageSlot( reflectedA );
                     validateCollisionsAfter( listReflected, indexA );
@@ -736,7 +754,9 @@ namespace sw
                             break;
                         }
                     }
-                    const string label = input._semantic + to_string( input._semanticIndex );
+                    StringBuilder<constant::buffer::kMax64> labelBuilder;
+                    labelBuilder.appendFormat( "%#%#", input._semantic, input._semanticIndex );
+                    const string label( labelBuilder.view() );
                     if ( pAttribute == nullptr || input._semanticIndex != 0 )
                     {
                         report( label, "정점 레이아웃 표(constant::render::getMeshVertexAttributes)에 없는 정점 입력입니다 — 정점을 받는 셰이더는 VertexInput 을 쓸 것" );
@@ -745,9 +765,9 @@ namespace sw
                     if ( ( _bVulkan || _bOpenGl ) && input._location != pAttribute->_location )
                     {
                         StringBuilder<constant::buffer::kMax256> textBuilder;
-                        textBuilder.appendFormat( "%# (Vulkan·GL 은 선언 순서로 location 을 매긴다 — VertexInput 을 쓸 것)", input._location );
-                        report( label, string( "location 이 정점 레이아웃 표와 다릅니다 — 기대 " ) + to_string( pAttribute->_location ) + ", 리플렉션 " +
-                                           string( textBuilder.view() ) );
+                        textBuilder.appendFormat( "location 이 정점 레이아웃 표와 다릅니다 — 기대 %#, 리플렉션 %# (Vulkan·GL 은 선언 순서로 location 을 매긴다 — VertexInput 을 쓸 것)", pAttribute->_location,
+                                                  input._location );
+                        report( label, string( textBuilder.view() ) );
                     }
                 }
             }

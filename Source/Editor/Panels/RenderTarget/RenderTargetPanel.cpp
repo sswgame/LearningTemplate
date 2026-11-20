@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -288,12 +289,12 @@ namespace sw::editor
         // 생산자 · 소비자 · 수명(파이프라인 순서의 패스 번호) — 이 그림을 누가 쓰고 누가 읽는지로 그래픽 문제를 거슬러 찾는다.
         const auto joinPasses = []( const vector<string>& listPass ) -> string
         {
-            string joined;
+            StringBuilder<constant::buffer::kMax512> joined;
             for ( const string& pass : listPass )
             {
-                joined += ( joined.empty() ? "" : ", " ) + pass;
+                joined.appendFormat( "%#%#", joined.size() == 0 ? "" : ", ", pass );
             }
-            return joined.empty() ? string( "-" ) : joined;
+            return joined.size() == 0 ? string( "-" ) : string( joined.view() );
         };
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorRenderTarget", "Producers", TextArgumentList().addText( "passes", joinPasses( pSelected->_listProducer ) ) ).c_str() );
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorRenderTarget", "Consumers", TextArgumentList().addText( "passes", joinPasses( pSelected->_listConsumer ) ) ).c_str() );

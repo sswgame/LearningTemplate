@@ -83,18 +83,15 @@ namespace sw
 
     string SlotCatalog::makeEquipmentLayout() const
     {
-        string layout;
+        StringBuilder<constant::buffer::kMax1024> layout;
         for ( const AppearanceSlotDef& slot : _listSlot )
         {
-            if ( layout.empty() == false )
-                layout += ",";
-            layout += slot._name.c_str();
+            if ( layout.size() > 0 )
+                layout.append( ',' );
+            layout.append( slot._name.c_str() );
             if ( slot._accept != slot._name )
-            {
-                layout += ":";
-                layout += slot._accept.c_str();
-            }
+                layout.appendFormat( ":%#", slot._accept.c_str() );
         }
-        return layout;
+        return string( layout.view() );
     }
 } // namespace sw

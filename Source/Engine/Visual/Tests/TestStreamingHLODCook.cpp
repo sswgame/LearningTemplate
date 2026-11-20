@@ -23,10 +23,11 @@ namespace
         static string makeMesh( const utf8* pID, const utf8* pName, const utf8* pMesh, const utf8* pPosition, const utf8* pScale, const utf8* pStatic, const utf8* pVisible = "true",
                                 const utf8* pObjectFlags = "" )
         {
-            return string( "<entity id=\"" ) + pID + "\" name=\"" + pName + "\"><GameObject _schemaVersion=\"0\" _name=\"" + pName + "\" _bActive=\"true\"" + pObjectFlags +
-                   "><_listComponent><MeshComponent _localPosition=\"" + pPosition + "\" _localRotation=\"0,0,0\" _localScale=\"" + pScale +
-                   "\" _attachOwner=\"None\" _attachComponent=\"None\" _meshID=\"" + pMesh + "\" _bStatic=\"" + pStatic + "\" _bVisible=\"" + pVisible +
-                   "\" /></_listComponent></GameObject></entity>";
+            StringBuilder<constant::buffer::kMax1024> builder;
+            builder.appendFormat( "<entity id=\"%#\" name=\"%#\"><GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"%#><_listComponent><MeshComponent _localPosition=\"%#\" _localRotation=\"0,0,0\" "
+                                  "_localScale=\"%#\" _attachOwner=\"None\" _attachComponent=\"None\" _meshID=\"%#\" _bStatic=\"%#\" _bVisible=\"%#\" /></_listComponent></GameObject></entity>",
+                                  pID, pName, pName, pObjectFlags, pPosition, pScale, pMesh, pStatic, pVisible );
+            return string( builder.view() );
         }
 
         /**
@@ -35,14 +36,18 @@ namespace
          */
         static void writeScene( const test::ScopedScratchDomain& domain )
         {
-            const string entities = makeMesh( "1", "Rock1", "Cube", "2,0,2", "1,1,1", "true" ) + makeMesh( "2", "Rock2", "Cube", "5,0,5", "1,1,1", "true" ) +
-                                    makeMesh( "3", "Lamp", "Cube", "15,0,5", "1,1,1", "false" ) + makeMesh( "4", "Ghost", "Cube", "16,0,5", "1,1,1", "true", "false" ) +
-                                    makeMesh( "5", "Barrel", "Sphere", "25,0,5", "2,2,2", "true" ) +
-                                    makeMesh( "6", "Ground", "Cube", "1,0,1", "1,1,1", "true", "true", " _bAlwaysLoaded=\"true\"" );
-            const string scene = string( "<Scene formatVersion=\"3\" name=\"HLODCook\"><SceneSettings _bStreaming=\"true\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"8\" "
-                                         "_addToWorldBudgetMicroseconds=\"2000\"><_cellGrid _cellSize=\"10\" _loadingRadius=\"10\" /></SceneSettings><entities>" ) +
-                                 entities + "</entities></Scene>";
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "hlod.scene.xml" ), scene ) );
+            StringBuilder<constant::buffer::kMax4096> scene;
+            scene.append( "<Scene formatVersion=\"3\" name=\"HLODCook\"><SceneSettings _bStreaming=\"true\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"8\" "
+                          "_addToWorldBudgetMicroseconds=\"2000\"><_cellGrid _cellSize=\"10\" _loadingRadius=\"10\" /></SceneSettings><entities>" );
+            for ( const string& entity : { makeMesh( "1", "Rock1", "Cube", "2,0,2", "1,1,1", "true" ), makeMesh( "2", "Rock2", "Cube", "5,0,5", "1,1,1", "true" ),
+                                           makeMesh( "3", "Lamp", "Cube", "15,0,5", "1,1,1", "false" ), makeMesh( "4", "Ghost", "Cube", "16,0,5", "1,1,1", "true", "false" ),
+                                           makeMesh( "5", "Barrel", "Sphere", "25,0,5", "2,2,2", "true" ),
+                                           makeMesh( "6", "Ground", "Cube", "1,0,1", "1,1,1", "true", "true", " _bAlwaysLoaded=\"true\"" ) } )
+            {
+                scene.append( entity );
+            }
+            scene.append( "</entities></Scene>" );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "hlod.scene.xml" ), scene.view() ) );
         }
 
         static const SceneDocument::StreamingCell* findCell( const SceneDocument& doc, int32 x )

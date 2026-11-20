@@ -6,10 +6,10 @@
 
 #if !defined( SW_SHIPPING )
 
-    #include "Core/Hash/HashUtil.h"
-    #include "Core/Foundation/StdHeaders.h"
-    #include "Core/Concurrency/atomic.h"
     #include "Core/Algorithm/CompareUtil.h"
+    #include "Core/Concurrency/atomic.h"
+    #include "Core/Foundation/StdHeaders.h"
+    #include "Core/Hash/HashUtil.h"
     #include "Core/Time/MonotonicClock.h"
 
 namespace sw

@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -33,12 +34,13 @@ namespace sw::editor
                     outReply = "the duration must be a positive number of seconds";
                     return false;
                 }
-                string message = listArgument[1];
+                StringBuilder<constant::buffer::kMax512> message;
+                message.append( listArgument[1] );
                 for ( size_t index = 2; index < listArgument.size(); ++index )
                 {
-                    message += " " + listArgument[index];
+                    message.appendFormat( " %#", listArgument[index] );
                 }
-                pContext->getSubsystem<EditorNotificationManager>().push( "notify.push", message, NotificationKind::Info, durationSec );
+                pContext->getSubsystem<EditorNotificationManager>().push( "notify.push", message.view(), NotificationKind::Info, durationSec );
                 outReply = "pushed";
                 return true;
             }

@@ -43,31 +43,25 @@ namespace sw::editor
             /** @brief @p name 이 스켈레톤에 있는지 보고, 없으면 까닭을 한 줄 남깁니다. */
             static void validateBone( const Skeleton& skeleton, const hashed_string& name, string_view where, const utf8* pSide, vector<string>& outListProblem )
             {
-                string line{ where };
+                StringBuilder<constant::buffer::kMax256> line;
                 if ( name.empty() )
                 {
-                    line += ": no ";
-                    line += pSide;
-                    line += " bone is set";
-                    outListProblem.push_back( std::move( line ) );
+                    line.appendFormat( "%#: no %# bone is set", where, pSide );
+                    outListProblem.push_back( string( line.view() ) );
                     return;
                 }
                 if ( skeleton.findBoneIndex( name ).has_value() )
                     return;
-                line += ": the ";
-                line += pSide;
-                line += " skeleton has no bone '";
-                line += name.c_str();
-                line += "'";
-                outListProblem.push_back( std::move( line ) );
+                line.appendFormat( "%#: the %# skeleton has no bone '%#'", where, pSide, name.c_str() );
+                outListProblem.push_back( string( line.view() ) );
             }
 
-            static string makeChainLabel( const RetargetChain& chain )
+            /** @brief 사슬 문제 한 줄(`Chain '<이름>': <내용>`)을 목록에 더합니다. */
+            static void addChainLine( const RetargetChain& chain, const utf8* pText, vector<string>& outList )
             {
-                string label = "Chain '";
-                label += chain._name.c_str();
-                label += "'";
-                return label;
+                StringBuilder<constant::buffer::kMax256> line;
+                line.appendFormat( "Chain '%#': %#", chain._name.c_str(), pText );
+                outList.push_back( string( line.view() ) );
             }
 
             /** @brief 런타임 묶기가 거절할 이름을 모두 모읍니다(리타기터는 첫 하나에서 멈추고 로그만 남긴다). */
@@ -79,18 +73,19 @@ namespace sw::editor
                 validateBone( target, profile.getTargetPelvis(), "Pelvis", "target", outListProblem );
                 for ( const RetargetChain& chain : profile.getChains() )
                 {
-                    const string label = makeChainLabel( chain );
+                    fixed_string<constant::buffer::kMax128> label;
+                    formatstring( label.data(), label.capacity(), "Chain '%#'", chain._name.c_str() );
                     if ( chain._listSourceBone.empty() )
-                        outListProblem.push_back( label + ": no source bones" );
+                        addChainLine( chain, "no source bones", outListProblem );
                     if ( chain._listTargetBone.empty() )
-                        outListProblem.push_back( label + ": no target bones" );
+                        addChainLine( chain, "no target bones", outListProblem );
                     for ( const hashed_string& name : chain._listSourceBone )
                     {
-                        validateBone( source, name, label, "source", outListProblem );
+                        validateBone( source, name, label.view(), "source", outListProblem );
                     }
                     for ( const hashed_string& name : chain._listTargetBone )
                     {
-                        validateBone( target, name, label, "target", outListProblem );
+                        validateBone( target, name, label.view(), "target", outListProblem );
                     }
                 }
                 for ( const RetargetBonePair& pair : profile.getBonePairs() )
@@ -138,10 +133,9 @@ namespace sw::editor
                     inoutListClaimed.push_back( name );
                     return;
                 }
-                string line = "Target bone '";
-                line += name.c_str();
-                line += "' is mapped more than once - the first mapping wins";
-                outListWarning.push_back( std::move( line ) );
+                StringBuilder<constant::buffer::kMax256> line;
+                line.appendFormat( "Target bone '%#' is mapped more than once - the first mapping wins", name.c_str() );
+                outListWarning.push_back( string( line.view() ) );
             }
 
             /** @brief 이름이 다 맞은 프로필에서 묶이지만 뜻대로 돌지 않을 곳을 모읍니다. */
@@ -152,13 +146,12 @@ namespace sw::editor
                 claimTarget( profile.getTargetPelvis(), listClaimed, outListWarning );
                 for ( const RetargetChain& chain : profile.getChains() )
                 {
-                    const string label = makeChainLabel( chain );
                     if ( isRootToEnd( source, chain._listSourceBone ) == false )
-                        outListWarning.push_back( label + ": the source bones do not run from root to end" );
+                        addChainLine( chain, "the source bones do not run from root to end", outListWarning );
                     if ( isRootToEnd( target, chain._listTargetBone ) == false )
-                        outListWarning.push_back( label + ": the target bones do not run from root to end" );
+                        addChainLine( chain, "the target bones do not run from root to end", outListWarning );
                     if ( chain._bIKGoal == SW_TRUE && chain._listTargetBone.size() < 2 )
-                        outListWarning.push_back( label + ": an IK goal needs at least two target bones - it is ignored" );
+                        addChainLine( chain, "an IK goal needs at least two target bones - it is ignored", outListWarning );
                     for ( const hashed_string& name : chain._listTargetBone )
                     {
                         claimTarget( name, listClaimed, outListWarning );

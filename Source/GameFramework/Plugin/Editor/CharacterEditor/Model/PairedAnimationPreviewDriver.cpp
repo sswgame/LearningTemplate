@@ -123,7 +123,9 @@ namespace sw::editor
         slot._spawnedPath      = prefabPath; // 실패해도 같은 경로로 매 프레임 다시 놓지 않는다(경로를 고치면 다시 한다)
         if ( pSpawned == nullptr )
         {
-            inoutStatus = string( "Prefab '" ) + prefabPath + "' could not be spawned - see the log";
+            StringBuilder<constant::buffer::kMax512> status;
+            status.appendFormat( "Prefab '%#' could not be spawned - see the log", prefabPath );
+            inoutStatus = string( status.view() );
             return;
         }
         slot._object                            = pSpawned->getHandle();
@@ -133,14 +135,18 @@ namespace sw::editor
         const PairedAnimationRoleDef& role      = model.getContent()._listRole[roleIndex];
         if ( pAnimator == nullptr )
         {
-            inoutStatus = string( "Prefab '" ) + prefabPath + "' has no skeletal animator on its root - the role cannot play";
+            StringBuilder<constant::buffer::kMax512> status;
+            status.appendFormat( "Prefab '%#' has no skeletal animator on its root - the role cannot play", prefabPath );
+            inoutStatus = string( status.view() );
             return;
         }
         pAnimator->setPlayRate( 0.0f ); // 창이 시각을 정한다
         const AnimationClip* pClip = pAnimator->preloadClip( role._clip ) ? pAnimator->findClip( role._clip ) : nullptr;
         if ( pClip == nullptr )
         {
-            inoutStatus = string( "Role clip '" ) + role._clip.c_str() + "' is not in the prefab's clip folder";
+            StringBuilder<constant::buffer::kMax256> status;
+            status.appendFormat( "Role clip '%#' is not in the prefab's clip folder", role._clip.c_str() );
+            inoutStatus = string( status.view() );
             return;
         }
         slot._clipSeconds = pClip->getDuration();

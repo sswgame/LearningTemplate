@@ -199,7 +199,9 @@ namespace sw
             XTestInputInjector& injector = *pInjector;
             if ( const expected<void> opened = injector.open(); opened.has_value() == false )
             {
-                outReply = "XTest unavailable: " + string( opened.error().message().data(), opened.error().message().size() );
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "XTest unavailable: %#", opened.error().message() );
+                outReply.assign( reply.view() );
                 return true;
             }
 

@@ -49,7 +49,9 @@ namespace sw
             PackAlwaysCookRule scoped = gameRule;
             for ( string& pattern : scoped._listPattern )
             {
-                pattern = root + "/" + pattern;
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "%#/%#", root, pattern );
+                pattern = string( builder.view() );
             }
             PackConfigInternal::mergeScoped( _listAlwaysCook, std::move( scoped ), root, []( const PackAlwaysCookRule& rule ) -> const string&
             { return rule._name; } );

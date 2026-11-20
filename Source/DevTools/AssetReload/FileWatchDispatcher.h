@@ -11,6 +11,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/PathKey.h"
 
 #include "DevTools/DevToolsAPI.h"
 #include "DevTools/FileWatch/IFileWatcher.h"
@@ -72,11 +73,11 @@ namespace sw
             uint64 _id{ 0 }; ///< 이 감시를 소유하는 구독의 번호
             string _pathPrefix;
             /**
-             * @brief `_pathPrefix` 를 `normalizePath` 한 값입니다. 등록할 때 한 번만 만듭니다.
+             * @brief `_pathPrefix` 를 이 OS 의 비교 규칙으로 접은 값입니다(`makeComparableDiskPath`). 등록할 때 한 번만 만듭니다.
              * @details 접두사는 감시가 등록된 뒤로 바뀌지 않는다. `matchesWatch` 가 이벤트마다 다시 만들면 이벤트 E 개와
              *          감시 W 개에 대해 E x W 번의 정규화가 모두 같은 값을 다시 구한다.
              */
-            string                 _normalizedPrefix;
+            ComparableDiskPath     _normalizedPrefix;
             vector<string>         _listExtension;
             FileWatchMatchDelegate _onMatch;
         };
@@ -87,7 +88,7 @@ namespace sw
          *        다시 만들지 않기 위해서입니다.
          */
         bool matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent,
-                           string_view normalizedFullPath ) const;
+                           const ComparableDiskPath& normalizedFullPath ) const;
         /**
          * @brief 파일 이름이 빈 리스캔 신호를 실제 변경 파일 목록으로 펼칩니다.
          * @param sinceTimestamp 이 시각(파일 시계, 초) 이후에 mtime 이 바뀐 파일만 냅니다. 직전에 큐를 비운 시각입니다.

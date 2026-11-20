@@ -5,7 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -183,17 +183,13 @@ namespace sw
             {
                 fixed_string<constant::buffer::kMax64> history;
                 formatstring( history.data(), history.capacity(), "%# s", static_cast<float32>( rewind.getLatestTime() - rewind.getEarliestTime() ) );
-                string line = string( "rewind " ) + ( AnimationRewindRecorder::isRecordingRequested() ? "on" : "off" ) + ", window " +
-                              to_string( AnimationRewindRecorder::getRequestedWindowSeconds() ) + " s, " + to_string( static_cast<uint32>( rewind.getTracks().size() ) ) +
-                              " tracks, " + to_string( rewind.getByteCount() / 1024u ) + " KB, history " +
-                              history.c_str();
+                StringBuilder<constant::buffer::kMax256> line;
+                line.appendFormat( "rewind %#, window %# s, %# tracks, %# KB, history %#", AnimationRewindRecorder::isRecordingRequested() ? "on" : "off",
+                                   to_string( AnimationRewindRecorder::getRequestedWindowSeconds() ), static_cast<uint32>( rewind.getTracks().size() ),
+                                   rewind.getByteCount() / 1024u, history.c_str() );
                 if ( rewind.isScrubbing() )
-                {
-                    StringBuilder<constant::buffer::kMax256> linePart;
-                    linePart.appendFormat( ", scrubbing %# s ago", static_cast<float32>( rewind.getLatestTime() - rewind.getScrubTime() ) );
-                    line += linePart.c_str();
-                }
-                return line;
+                    line.appendFormat( ", scrubbing %# s ago", static_cast<float32>( rewind.getLatestTime() - rewind.getScrubTime() ) );
+                return string( line.view() );
             }
 
             static bool runAnimationRewind( const vector<string>& listArgument, string& outReply )
@@ -209,8 +205,10 @@ namespace sw
                 }
                 const AnimationSystem*         pSystem = findActiveAnimationSystem();
                 const AnimationRewindRecorder* pRewind = pSystem != nullptr ? AnimationRewindRecorder::find( *pSystem ) : nullptr;
-                outReply                               = pRewind != nullptr ? describeRewind( *pRewind )
-                                                                            : string( "rewind " ) + ( AnimationRewindRecorder::isRecordingRequested() ? "on" : "off" ) + " (no active scene)";
+                if ( pRewind != nullptr )
+                    outReply = describeRewind( *pRewind );
+                else
+                    outReply = AnimationRewindRecorder::isRecordingRequested() ? "rewind on (no active scene)" : "rewind off (no active scene)";
                 return true;
             }
 
@@ -579,22 +577,23 @@ namespace sw
         const uint32 boneBytes = AnimationRewindInternal::kRotationTranslationBytes + ( bScaled ? AnimationRewindInternal::kScaleBytes : 0u );
         if ( frame._poseByte.size() < static_cast<size_t>( boneBytes ) * frame._boneCount )
             return;
-        const uint8* pByte = frame._poseByte.data();
-        for ( uint32 boneIndex = 0; boneIndex < frame._boneCount; ++boneIndex, pByte += boneBytes )
+        // 길이는 위에서 맞췄다 — 뼈마다 적은 순서대로 읽는다(중괄호 초기화는 왼쪽부터 평가한다).
+        ByteReader reader( frame._poseByte.data(), frame._poseByte.size() );
+        for ( uint32 boneIndex = 0; boneIndex < frame._boneCount; ++boneIndex )
         {
             BoneTransform transform{};
-            transform._rotation = quaternion{ AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte ), 1.0f ),
-                                              AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 2 ), 1.0f ),
-                                              AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 4 ), 1.0f ),
-                                              AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 6 ), 1.0f ) }
+            transform._rotation = quaternion{ AnimationRewindInternal::dequantize( reader.readInt16(), 1.0f ),
+                                              AnimationRewindInternal::dequantize( reader.readInt16(), 1.0f ),
+                                              AnimationRewindInternal::dequantize( reader.readInt16(), 1.0f ),
+                                              AnimationRewindInternal::dequantize( reader.readInt16(), 1.0f ) }
                                       .normalize();
-            transform._translation = float3{ AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 8 ), frame._translationRange ),
-                                             AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 10 ), frame._translationRange ),
-                                             AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 12 ), frame._translationRange ) };
+            transform._translation = float3{ AnimationRewindInternal::dequantize( reader.readInt16(), frame._translationRange ),
+                                             AnimationRewindInternal::dequantize( reader.readInt16(), frame._translationRange ),
+                                             AnimationRewindInternal::dequantize( reader.readInt16(), frame._translationRange ) };
             if ( bScaled )
-                transform._scale = float3{ AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 14 ), frame._scaleRange ),
-                                           AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 16 ), frame._scaleRange ),
-                                           AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 18 ), frame._scaleRange ) };
+                transform._scale = float3{ AnimationRewindInternal::dequantize( reader.readInt16(), frame._scaleRange ),
+                                           AnimationRewindInternal::dequantize( reader.readInt16(), frame._scaleRange ),
+                                           AnimationRewindInternal::dequantize( reader.readInt16(), frame._scaleRange ) };
             outPose.setBoneTransform( boneIndex, transform );
         }
     }

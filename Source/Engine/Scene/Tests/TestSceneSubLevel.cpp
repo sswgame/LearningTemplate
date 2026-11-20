@@ -23,19 +23,29 @@ namespace
 
         static string makeEntity( const utf8* pID, const utf8* pName, const utf8* pPosition, const utf8* pAttach = "" )
         {
-            return string( "<entity id=\"" ) + pID + "\" name=\"" + pName + "\"><GameObject _schemaVersion=\"0\" _name=\"" + pName +
-                   "\" _bActive=\"true\"><_listComponent><SceneComponent _localID=\"1\" _localPosition=\"" + pPosition + "\" " + pAttach + " /></_listComponent></GameObject></entity>";
+            StringBuilder<constant::buffer::kMax1024> builder;
+            builder.appendFormat( "<entity id=\"%#\" name=\"%#\"><GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"><_listComponent><SceneComponent _localID=\"1\" _localPosition=\"%#\" %# /></_listComponent></GameObject></entity>",
+                                  pID, pName, pName, pPosition, pAttach );
+            return string( builder.view() );
         }
 
-        static string makeScene( const utf8* pName, const string& entities )
+        /** @brief 엔티티 글 @p listEntity 를 차례로 담은 씬입니다. */
+        static string makeScene( const utf8* pName, std::initializer_list<string_view> listEntity )
         {
-            return string( "<Scene formatVersion=\"3\" name=\"" ) + pName + "\">" + kSettings + "<entities>" + entities + "</entities></Scene>";
+            StringBuilder<constant::buffer::kMax4096> builder;
+            builder.appendFormat( "<Scene formatVersion=\"3\" name=\"%#\">%#<entities>", pName, kSettings );
+            for ( const string_view entity : listEntity )
+            {
+                builder.append( entity );
+            }
+            builder.append( "</entities></Scene>" );
+            return string( builder.view() );
         }
 
         /** @brief 하위 레벨로 넣을 씬 — Box(파일 id 1)와 Box 에 붙은 Lid(2). 바깥 씬의 엔티티 1 과 id 가 같다. */
         static string makeShopScene()
         {
-            return makeScene( "Shop", makeEntity( "1", "Box", "0,1,0" ) + makeEntity( "2", "Lid", "0,2,0", "_attachOwner=\"Box\" _attachOwnerID=\"1\" _attachComponent=\"#0000000000000001\"" ) );
+            return makeScene( "Shop", { makeEntity( "1", "Box", "0,1,0" ), makeEntity( "2", "Lid", "0,2,0", "_attachOwner=\"Box\" _attachOwnerID=\"1\" _attachComponent=\"#0000000000000001\"" ) } );
         }
 
         /** @brief 바깥 씬 — 엔티티 1 하나(Ground). */

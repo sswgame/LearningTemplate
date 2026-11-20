@@ -810,8 +810,10 @@ namespace sw
         {
             X509V3_CTX extensionContext{}; // db 는 0(X509V3_set_ctx_nodb 와 같다)
             X509V3_set_ctx( &extensionContext, pCertificate, pCertificate, nullptr, nullptr, 0 );
-            const string                 alternativeName = "DNS:" + name + ",DNS:localhost,IP:127.0.0.1";
-            const Internal::ExtensionRow arrExtension[]  = {
+            StringBuilder<constant::buffer::kMax512> alternativeNameBuilder;
+            alternativeNameBuilder.appendFormat( "DNS:%#,DNS:localhost,IP:127.0.0.1", name );
+            const string                 alternativeName( alternativeNameBuilder.view() );
+            const Internal::ExtensionRow arrExtension[] = {
                 { NID_subject_alt_name,     alternativeName.c_str()},
                 {NID_basic_constraints,         "critical,CA:FALSE"},
                 {        NID_key_usage, "critical,digitalSignature"},

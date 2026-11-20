@@ -5,7 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Network/Transport/IStreamTransport.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
@@ -679,7 +679,7 @@ namespace sw
     {
         // 몸: [스키마 해시 u64 리틀 엔디언][게임 빌드 blob][플랫폼 u8]. 해시는 다른 어떤 바이트보다 먼저 비교한다.
         const int32 hashSize    = OnlineProtocolConstant::kSchemaHashSize;
-        const bool  bHashEquals = context._bodySize >= hashSize && LittleEndianUtil::readUint64( context._pBody ) == _schemaHash;
+        const bool  bHashEquals = context._bodySize >= hashSize && ByteReader( context._pBody, static_cast<size_t>( context._bodySize ) ).readUint64() == _schemaHash;
         if ( bHashEquals == false )
         {
             respondVersionMismatch( context._token );

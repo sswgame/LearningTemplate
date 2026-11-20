@@ -97,10 +97,9 @@ namespace sw::editor
 
     string GimmickGraphEditModel::makePortReference( const GimmickGraphNode& node, string_view port ) const
     {
-        string text = node._id.c_str();
-        text += ".";
-        text.append( port.data(), port.size() );
-        return text;
+        StringBuilder<constant::buffer::kMax128> text;
+        text.appendFormat( "%#.%#", node._id.c_str(), port );
+        return string( text.view() );
     }
 
     void GimmickGraphEditModel::exportTo( vector<GimmickNodeDesc>& outListNode, vector<GameObjectHandle>& outListTarget, vector<GimmickWireDesc>& outListWire,
@@ -463,16 +462,12 @@ namespace sw::editor
 
     string GimmickGraphEditModel::formatParams( const vector<string>& listName, const vector<string>& listValue )
     {
-        string result;
+        StringBuilder<constant::buffer::kMax512> result;
         for ( size_t index = 0; index < listName.size() && index < listValue.size(); ++index )
         {
-            if ( index > 0 )
-                result += "; ";
-            result += listName[index];
-            result += "=";
-            result += listValue[index];
+            result.appendFormat( "%#%#=%#", index > 0 ? "; " : "", listName[index], listValue[index] );
         }
-        return result;
+        return string( result.view() );
     }
 
     void GimmickGraphEditModel::exportDef( GimmickCircuitDef& outDef, vector<string>& outListError ) const
@@ -497,7 +492,9 @@ namespace sw::editor
                 string_view value;
                 if ( StringUtil::trySplitKeyValue( pair, name, value ) == false )
                 {
-                    outListError.push_back( string( "node '" ) + node._id.c_str() + "' has a parameter without name=value: '" + string( pair ) + "'" );
+                    StringBuilder<constant::buffer::kMax256> message;
+                    message.appendFormat( "node '%#' has a parameter without name=value: '%#'", node._id.c_str(), pair );
+                    outListError.push_back( string( message.view() ) );
                     continue;
                 }
                 nodeDef.setParam( hashed_string( name ), value );
@@ -526,8 +523,9 @@ namespace sw::editor
             issue._message = error;
             for ( const GimmickGraphNode& node : _listNode )
             {
-                const string quoted = string( "'" ) + node._id.c_str() + "'";
-                if ( error.find( quoted ) != string::npos )
+                fixed_string<constant::buffer::kMax128> quoted;
+                formatstring( quoted.data(), quoted.capacity(), "'%#'", node._id.c_str() );
+                if ( error.find( quoted.view() ) != string::npos )
                 {
                     issue._nodeGraphID = node._graphID;
                     break;
@@ -537,8 +535,10 @@ namespace sw::editor
         }
         for ( const GimmickWireDesc& orphan : _listOrphanWire )
         {
-            GimmickGraphIssue issue;
-            issue._message = string( "wire '" ) + orphan._from + "' -> '" + orphan._to + "' points at a node that does not exist";
+            GimmickGraphIssue                        issue;
+            StringBuilder<constant::buffer::kMax256> message;
+            message.appendFormat( "wire '%#' -> '%#' points at a node that does not exist", orphan._from, orphan._to );
+            issue._message = string( message.view() );
             outListIssue.push_back( std::move( issue ) );
         }
     }

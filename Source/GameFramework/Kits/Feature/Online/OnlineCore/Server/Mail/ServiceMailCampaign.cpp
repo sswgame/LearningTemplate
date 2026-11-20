@@ -36,8 +36,8 @@ namespace sw
                 if ( read == ServiceStoreResult::Ok && ServiceMailCampaign::readEndTimeMs( campaignRecord, endMs ) == false )
                     return false; // 읽지 못하는 캠페인의 표식은 남긴다
                 if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
-                    return false; // 저장소 문제면 줄을 만들지 않는다 - 다음 판이 아니라 이 레코드만 건너뛴다
-                outIndexKey = ServiceTTLRule::makeTTLIndexKey( endMs, campaignKey + "/" );
+                    return false;                                                                                          // 저장소 문제면 줄을 만들지 않는다 - 다음 판이 아니라 이 레코드만 건너뛴다
+                outIndexKey = ServiceTTLRule::makeTTLIndexKey( endMs, string_view( record._key ).substr( 0, slash + 1 ) ); // `<캠페인 id>/` 접두어
                 return true;
             }
         };
@@ -122,7 +122,9 @@ namespace sw
         inoutTransaction.put( getCampaignTable(), campaignKey, encode( campaign ), ServiceRecord::kAbsentVersion );
         // 끝난 캠페인은 받을 수 없다 - 레코드와 계정마다의 수령 표식(접두어 `<id>/` 묶음)을 끝난 뒤 TTL 쓸기가 지운다. 표식이 수십만이어도 줄은 하나다
         inoutTransaction.put( getCampaignExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, campaignKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
-        inoutTransaction.put( getClaimExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, campaignKey + "/" ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+        StringBuilder<constant::buffer::kMax128> claimPrefix;
+        claimPrefix.appendFormat( "%#/", campaignKey );
+        inoutTransaction.put( getClaimExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, claimPrefix.view() ), vector<uint8>{}, ServiceRecord::kAnyVersion );
         return true;
     }
 

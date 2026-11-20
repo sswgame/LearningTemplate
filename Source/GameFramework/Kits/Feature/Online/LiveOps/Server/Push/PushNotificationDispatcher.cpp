@@ -36,7 +36,9 @@ namespace sw
 
             static string makeOwnerKey( string_view providerID, string_view token )
             {
-                return string( providerID ) + "." + ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( token.data(), token.size(), false ) );
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%#.%#", providerID, ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( token.data(), token.size(), false ) ) );
+                return string( key.view() );
             }
 
             /** @brief 역색인이 @p deviceKey 를 가리키면 지우기를 @p inoutTransaction 에 붙입니다. 다른 계정으로 옮겨 갔으면 그대로 둔다. */
@@ -245,7 +247,9 @@ namespace sw
 
     string PushNotificationDispatcher::makeAccountPrefix( AccountID accountID )
     {
-        return ServiceKeyUtil::makeHex64( accountID ) + "/";
+        StringBuilder<constant::buffer::kMax128> prefix;
+        prefix.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+        return string( prefix.view() );
     }
 
     ServiceStoreResult PushNotificationDispatcher::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 /*nowMs*/ )
@@ -277,7 +281,9 @@ namespace sw
     string PushNotificationDispatcher::makeDeviceKey( AccountID accountID, string_view providerID, string_view token )
     {
         // 토큰은 키 규칙 밖의 글자를 가질 수 있다. 그래서 키에는 해시만 쓰고 토큰은 값에 둔다
-        return makeAccountPrefix( accountID ) + string( providerID ) + "." + ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( token.data(), token.size(), false ) );
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "%#%#.%#", makeAccountPrefix( accountID ), providerID, ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( token.data(), token.size(), false ) ) );
+        return string( key.view() );
     }
 
     IPushNotificationProvider* PushNotificationDispatcher::findProvider( string_view providerID ) const

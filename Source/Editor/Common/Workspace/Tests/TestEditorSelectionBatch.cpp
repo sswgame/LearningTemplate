@@ -5,6 +5,7 @@
 #include "pch.h"
 
 #include "Core/Container/unordered_map.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -147,7 +148,9 @@ SW_TEST_CASE( EditorSelectionTest, SelectAssetsKeepsIndexInSync )
     sw::vector<sw::string> listPath;
     for ( size_t index = 0; index < 64; ++index )
     {
-        listPath.push_back( "Assets/Probe" + sw::to_string( static_cast<uint64>( index ) ) + ".xml" );
+        sw::StringBuilder<sw::constant::buffer::kMax64> pathText;
+        pathText.appendFormat( "Assets/Probe%#.xml", static_cast<uint64>( index ) );
+        listPath.push_back( sw::string( pathText.view() ) );
     }
     uint32 notifyCount             = 0;
     selection.onSelectionChanged() = sw::Delegate<void()>( [&notifyCount]()

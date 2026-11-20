@@ -168,8 +168,10 @@ namespace
                     return true;
                 case ReflectBuiltinIndex::khashed_string:
                 {
-                    hashed_string& label = *static_cast<hashed_string*>( pValue );
-                    label                = hashed_string( ( string( label.c_str() ) + "x" ).c_str() );
+                    hashed_string&                          label = *static_cast<hashed_string*>( pValue );
+                    fixed_string<constant::buffer::kMax256> text;
+                    formatstring( text.data(), text.capacity(), "%#x", label.c_str() );
+                    label = hashed_string( text.c_str() );
                     return true;
                 }
                 case ReflectBuiltinIndex::kGameObjectHandle:

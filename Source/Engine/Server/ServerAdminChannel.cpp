@@ -99,9 +99,10 @@ namespace sw
         }
         if ( name == "status" )
         {
-            const ServerAdminStatus status = _status();
-            outReply                       = "tick " + to_string( status._tickCount ) + " connections " + to_string( status._connectionCount ) + " maintenance " + ( _bMaintenance ? "on" : "off" ) + " draining " +
-                       ( status._bDraining ? "yes" : "no" );
+            const ServerAdminStatus                  status = _status();
+            StringBuilder<constant::buffer::kMax256> reply;
+            reply.appendFormat( "tick %# connections %# maintenance %# draining %#", status._tickCount, status._connectionCount, _bMaintenance ? "on" : "off", status._bDraining ? "yes" : "no" );
+            outReply.assign( reply.view() );
             return true;
         }
         if ( name == "maintenance" )

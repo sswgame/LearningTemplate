@@ -10,6 +10,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -41,7 +42,12 @@ namespace sw
             static constexpr string_view kArrStateVariable[] = { "gv_editorStateDir", "gv_userSettingsFile" };
 
             /** @brief @p path 의 마디 가운데 `..` 가 있으면 true 입니다. */
-            static bool hasParentSegment( string_view path ) { return ( "/" + FileUtil::normalizeSeparators( path ) + "/" ).find( "/../" ) != string::npos; }
+            static bool hasParentSegment( string_view path )
+            {
+                StringBuilder<constant::buffer::kMax1024> wrapped;
+                wrapped.appendFormat( "/%#/", FileUtil::normalizeSeparators( path ) );
+                return wrapped.view().find( "/../" ) != string_view::npos;
+            }
 
             /**
              * @brief 상태 자리 변수 @p name 의 값(절대 경로)입니다. 주지 않았으면 빈 글. 상대 경로를 풀 수 없으면 오류입니다.
@@ -139,8 +145,12 @@ namespace sw
         for ( const string& folder : listPersonFolder )
         {
             if ( FileUtil::isPathAtOrUnderRoot( folder, path ) )
+            {
+                StringBuilder<constant::buffer::kMax1024> detail;
+                detail.appendFormat( "%#=%#", name, path );
                 return unexpected( Error{ ErrorKind::Unsupported, "an automated run may not point a state variable at the person's folder (pass -gv_automationAllowOutsideUserData=true on purpose)",
-                                          string( name ) + "=" + string( path ) } );
+                                          detail.view() } );
+            }
         }
         return {};
     }

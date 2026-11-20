@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
@@ -39,7 +40,12 @@ namespace sw::test
         /** @brief 도메인 폴더 아래 @p relativePath 의 디스크 경로입니다. */
         [[nodiscard]] string makeDiskPath( string_view relativePath ) const { return FileUtil::joinPath( _folder, relativePath ); }
         /** @brief 도메인 폴더 아래 @p relativePath 의 리소스 id 입니다. */
-        [[nodiscard]] static string makeID( string_view relativePath ) { return string( kDomain ) + "/" + string( relativePath ); }
+        [[nodiscard]] static string makeID( string_view relativePath )
+        {
+            StringBuilder<constant::buffer::kMax256> idBuilder;
+            idBuilder.appendFormat( "%#/%#", kDomain, relativePath );
+            return string( idBuilder.view() );
+        }
 
     private:
         string _folder;

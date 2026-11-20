@@ -79,33 +79,25 @@ namespace sw
         static constexpr size_t kStepKindKeep  = 4;
         const auto              toMilliseconds = []( float64 seconds )
         { return static_cast<uint32>( seconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ) + 0.5 ); };
-        string line;
+        StringBuilder<constant::buffer::kMax512> line;
         for ( uint32 kindIndex = 0; kindIndex < kFrameKindCount; ++kindIndex )
         {
-            const AutomationTimelineSlice&           slice = _arrSlice[kindIndex];
-            StringBuilder<constant::buffer::kMax256> linePart;
-            linePart.appendFormat( "%#%# %#ms/%#f", line.empty() ? "" : ", ", getKindKey( static_cast<AutomationFrameKind>( kindIndex ) ), toMilliseconds( slice._seconds ),
-                                   slice._frameCount );
-            line += linePart.c_str();
+            const AutomationTimelineSlice& slice = _arrSlice[kindIndex];
+            line.appendFormat( "%#%# %#ms/%#f", line.size() == 0 ? "" : ", ", getKindKey( static_cast<AutomationFrameKind>( kindIndex ) ), toMilliseconds( slice._seconds ),
+                               slice._frameCount );
         }
         vector<AutomationStepKindCost> listCost = _listStepKindCost;
         VectorUtil::sort( listCost, []( const AutomationStepKindCost& left, const AutomationStepKindCost& right )
         { return left._seconds > right._seconds; } );
-        line += "; steps";
+        line.append( "; steps" );
         for ( size_t index = 0; index < listCost.size() && index < kStepKindKeep; ++index )
-        {
-            StringBuilder<constant::buffer::kMax256> linePart2;
-            linePart2.appendFormat( " %# %#ms/%#f", listCost[index]._stepKind, toMilliseconds( listCost[index]._seconds ), listCost[index]._frameCount );
-            line += linePart2.c_str();
-        }
+            line.appendFormat( " %# %#ms/%#f", listCost[index]._stepKind, toMilliseconds( listCost[index]._seconds ), listCost[index]._frameCount );
         if ( _listSlowestWait.empty() == false )
         {
-            const AutomationSlowWait&                wait = _listSlowestWait.front();
-            StringBuilder<constant::buffer::kMax256> linePart;
-            linePart.appendFormat( "; longest wait %#ms/%#f before %# #%#", toMilliseconds( wait._seconds ), wait._waitedFrameCount, wait._stepKind, wait._stepNumber );
-            line += linePart.c_str();
+            const AutomationSlowWait& wait = _listSlowestWait.front();
+            line.appendFormat( "; longest wait %#ms/%#f before %# #%#", toMilliseconds( wait._seconds ), wait._waitedFrameCount, wait._stepKind, wait._stepNumber );
         }
-        return line;
+        return string( line.view() );
     }
 
     const utf8* AutomationTimeline::getKindKey( AutomationFrameKind kind )

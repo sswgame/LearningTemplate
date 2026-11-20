@@ -5,7 +5,9 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/EngineChildProcess.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestRunner.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
@@ -50,7 +52,11 @@ namespace sw::editor
                 if ( renderer.getDevice() == nullptr )
                     return string{}; // 장치가 아직 없으면 플래그를 모른다
                 const utf8* pFlag = RHIBackendInfoTable::findCommandLineName( renderer.getDevice()->getBackendType() );
-                return pFlag != nullptr ? string( " -" ) + pFlag : string{};
+                if ( pFlag == nullptr )
+                    return string{};
+                StringBuilder<constant::buffer::kMax32> flagBuilder;
+                flagBuilder.appendFormat( " -%#", pFlag );
+                return string( flagBuilder.view() );
             }
         };
 
@@ -161,8 +167,9 @@ namespace sw::editor
                 {
                     const string& id = _selfTests.getCases()[index];
                     // 묶음 아래 줄은 뒷이름만 — 묶음 이름을 되풀이하면("theme" 아래 "theme.palette") 줄이 길고 훑기 어렵다(uiaudit 30). 전체 이름은 툴팁과 ID 에 남는다.
-                    const string label     = string( EditorTestSelection::findLeafName( id ) ) + "##" + id;
-                    bool         bSelected = _selfTests.isSelected( id );
+                    fixed_string<constant::buffer::kMax256> label;
+                    formatstring( label.data(), label.capacity(), "%###%#", EditorTestSelection::findLeafName( id ), id );
+                    bool bSelected = _selfTests.isSelected( id );
                     if ( ImGui::Checkbox( label.c_str(), &bSelected ) )
                         _selfTests.setSelected( id, bSelected );
                     EditorWidgets::drawTooltip( id.c_str() );
@@ -242,7 +249,9 @@ namespace sw::editor
             if ( _pJob->request( command, TestRunnerPanelInternal::getBinDirectory() ) )
             {
                 _externalRunKind = ExternalRunKind::UnitTestRun;
-                _externalTitle   = "App -test -test-filter=" + filter;
+                StringBuilder<constant::buffer::kMax256> titleBuilder;
+                titleBuilder.appendFormat( "App -test -test-filter=%#", filter );
+                _externalTitle = string( titleBuilder.view() );
             }
         }
         ImGui::EndDisabled();

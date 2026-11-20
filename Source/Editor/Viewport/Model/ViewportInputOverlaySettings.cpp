@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/Container/EnumArray.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
@@ -41,7 +42,11 @@ namespace sw::editor
         for ( const hashed_string& action : inputMap.getActionNames() )
         {
             if ( inputMap.isActionDown( action ) )
-                outState._listActiveAction.push_back( InputGlyphResolver::findActionGlyph( inputMap, sw::hashed_string( action.view() ) ) + " " + string( action.c_str() ) );
+            {
+                StringBuilder<constant::buffer::kMax256> actionLabel;
+                actionLabel.appendFormat( "%# %#", InputGlyphResolver::findActionGlyph( inputMap, sw::hashed_string( action.view() ) ), action.c_str() );
+                outState._listActiveAction.push_back( string( actionLabel.view() ) );
+            }
         }
     }
 } // namespace sw::editor

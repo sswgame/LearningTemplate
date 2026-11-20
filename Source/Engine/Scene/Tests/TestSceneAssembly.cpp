@@ -26,20 +26,30 @@ namespace
         /** @brief 씬 컴포넌트 하나를 가진 엔티티입니다. */
         static string makeEntity( const utf8* pID, const utf8* pName, const utf8* pPosition, const utf8* pExtraAttributes = "", const utf8* pExtraChildren = "", const utf8* pAttach = "" )
         {
-            string text = string( "<entity id=\"" ) + pID + "\" name=\"" + pName + "\" " + pExtraAttributes + ">" + pExtraChildren;
-            text += string( "<GameObject _schemaVersion=\"0\" _name=\"" ) + pName + "\" _bActive=\"true\"><_listComponent><SceneComponent _localID=\"1\" _localPosition=\"" + pPosition + "\" " + pAttach + " /></_listComponent></GameObject></entity>";
-            return text;
+            StringBuilder<constant::buffer::kMax1024> builder;
+            builder.appendFormat( "<entity id=\"%#\" name=\"%#\" %#>%#", pID, pName, pExtraAttributes, pExtraChildren );
+            builder.appendFormat( "<GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"><_listComponent><SceneComponent _localID=\"1\" _localPosition=\"%#\" %# /></_listComponent></GameObject></entity>", pName,
+                                  pPosition, pAttach );
+            return string( builder.view() );
         }
 
-        static string makeScene( const utf8* pName, const string& entities, const utf8* pLayers = "", const utf8* pRootExtra = "" )
+        /** @brief 엔티티 글 @p listEntity 를 차례로 담은 씬입니다. */
+        static string makeScene( const utf8* pName, std::initializer_list<string_view> listEntity, const utf8* pLayers = "", const utf8* pRootExtra = "" )
         {
-            return string( "<Scene formatVersion=\"2\" name=\"" ) + pName + "\" " + pRootExtra + ">" + kSettings + pLayers + "</SceneSettings><entities>" + entities + "</entities></Scene>";
+            StringBuilder<constant::buffer::kMax4096> builder;
+            builder.appendFormat( "<Scene formatVersion=\"2\" name=\"%#\" %#>%#%#</SceneSettings><entities>", pName, pRootExtra, kSettings, pLayers );
+            for ( const string_view entity : listEntity )
+            {
+                builder.append( entity );
+            }
+            builder.append( "</entities></Scene>" );
+            return string( builder.view() );
         }
 
         /** @brief 부모(1) 와 부모에 붙은 자식(2) 을 가진 내부 씬입니다. */
         static string makeInnerScene()
         {
-            return makeScene( "Inner", makeEntity( "1", "Box", "0,1,0" ) + makeEntity( "2", "Lid", "0,2,0", "", "", "_attachOwner=\"Box\" _attachOwnerID=\"1\" _attachComponent=\"#0000000000000001\"" ) );
+            return makeScene( "Inner", { makeEntity( "1", "Box", "0,1,0" ), makeEntity( "2", "Lid", "0,2,0", "", "", "_attachOwner=\"Box\" _attachOwnerID=\"1\" _attachComponent=\"#0000000000000001\"" ) } );
         }
 
         static void write( const test::ScopedScratchDomain& domain, const utf8* pFile, const string& text )
@@ -47,7 +57,12 @@ namespace
             SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( pFile ), text ) );
         }
 
-        static string instanceAttribute( const utf8* pFile ) { return "scene=\"" + test::ScopedScratchDomain::makeID( pFile ).str() + "\""; }
+        static string instanceAttribute( const utf8* pFile )
+        {
+            StringBuilder<constant::buffer::kMax512> builder;
+            builder.appendFormat( "scene=\"%#\"", test::ScopedScratchDomain::makeID( pFile ).str() );
+            return string( builder.view() );
+        }
 
         static const SceneDocument::SceneObjectNode* findNode( const SceneDocument& doc, string_view name )
         {
@@ -75,7 +90,7 @@ SW_TEST_CASE( SceneAssemblyTest, InstancesDoNotShareIdsAndLinkInsideThemselves )
     const test::ScopedScratchDomain domain;
     Util::write( domain, "inner.scene.xml", Util::makeInnerScene() );
     const string attribute = Util::instanceAttribute( "inner.scene.xml" );
-    Util::write( domain, "outer.scene.xml", Util::makeScene( "Outer", Util::makeEntity( "1", "Left", "-5,0,0", attribute.c_str() ) + Util::makeEntity( "2", "Right", "5,0,0", attribute.c_str() ) ) );
+    Util::write( domain, "outer.scene.xml", Util::makeScene( "Outer", { Util::makeEntity( "1", "Left", "-5,0,0", attribute.c_str() ), Util::makeEntity( "2", "Right", "5,0,0", attribute.c_str() ) } ) );
 
     SceneDocument doc{};
     SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) );
@@ -110,8 +125,8 @@ SW_TEST_CASE( SceneAssemblyTest, PartOverridesApplyAndSaveAsDifference )
     Util::write( domain, "inner.scene.xml", Util::makeInnerScene() );
     const string attribute = Util::instanceAttribute( "inner.scene.xml" );
     Util::write( domain, "outer.scene.xml",
-                 Util::makeScene( "Outer", Util::makeEntity( "1", "House", "0,0,0", attribute.c_str(),
-                                                             "<PrefabOverrides><Part path=\"1\"><PrefabOverrides><Override key=\"#0000000000000001\"><SceneComponent _localPosition=\"7,7,7\" /></Override></PrefabOverrides></Part></PrefabOverrides>" ) ) );
+                 Util::makeScene( "Outer", { Util::makeEntity( "1", "House", "0,0,0", attribute.c_str(),
+                                                               "<PrefabOverrides><Part path=\"1\"><PrefabOverrides><Override key=\"#0000000000000001\"><SceneComponent _localPosition=\"7,7,7\" /></Override></PrefabOverrides></Part></PrefabOverrides>" ) } ) );
 
     SceneDocument doc{};
     SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) );
@@ -146,8 +161,8 @@ SW_TEST_CASE( SceneAssemblyTest, SelfInclusionIsAnError )
     const test::ScopedScratchDomain domain;
     const string                    attributeA = Util::instanceAttribute( "a.scene.xml" );
     const string                    attributeB = Util::instanceAttribute( "b.scene.xml" );
-    Util::write( domain, "a.scene.xml", Util::makeScene( "A", Util::makeEntity( "1", "ToB", "0,0,0", attributeB.c_str() ) ) );
-    Util::write( domain, "b.scene.xml", Util::makeScene( "B", Util::makeEntity( "1", "ToA", "0,0,0", attributeA.c_str() ) ) );
+    Util::write( domain, "a.scene.xml", Util::makeScene( "A", { Util::makeEntity( "1", "ToB", "0,0,0", attributeB.c_str() ) } ) );
+    Util::write( domain, "b.scene.xml", Util::makeScene( "B", { Util::makeEntity( "1", "ToA", "0,0,0", attributeA.c_str() ) } ) );
     SW_EXPECT_LOG( "SceneDocument.InstanceCycle" );
     SW_EXPECT_LOG( "SceneDocument.InstanceNotLoaded" );
     SceneDocument doc{};
@@ -159,8 +174,9 @@ SW_TEST_CASE( SceneAssemblyTest, AnchorWithoutStateIsAnError )
 {
     const test::ScopedScratchDomain domain;
     Util::write( domain, "inner.scene.xml", Util::makeInnerScene() );
-    const string text = "<entity id=\"1\" name=\"Bare\" " + Util::instanceAttribute( "inner.scene.xml" ) + " />";
-    Util::write( domain, "outer.scene.xml", Util::makeScene( "Outer", text ) );
+    StringBuilder<constant::buffer::kMax512> text;
+    text.appendFormat( "<entity id=\"1\" name=\"Bare\" %# />", Util::instanceAttribute( "inner.scene.xml" ) );
+    Util::write( domain, "outer.scene.xml", Util::makeScene( "Outer", { text.view() } ) );
     SW_EXPECT_LOG( "SceneDocument.InstanceAnchorShape" );
     SceneDocument doc{};
     SW_EXPECT_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) == false );
@@ -170,10 +186,11 @@ SW_TEST_CASE( SceneAssemblyTest, AnchorWithoutStateIsAnError )
 SW_TEST_CASE( SceneAssemblyTest, BaseSceneMergesAndSavesAsDelta )
 {
     const test::ScopedScratchDomain domain;
-    Util::write( domain, "base.scene.xml", Util::makeScene( "Base", Util::makeEntity( "1", "Keep", "1,0,0" ) + Util::makeEntity( "2", "Gone", "2,0,0" ) + Util::makeEntity( "3", "Move", "3,0,0" ) ) );
-    const string baseAttribute = "_base=\"" + test::ScopedScratchDomain::makeID( "base.scene.xml" ).str() + "\"";
-    Util::write( domain, "child.scene.xml",
-                 string( "<Scene " ) + baseAttribute + " name=\"Child\"><entities><entity id=\"2\" _op=\"Remove\" />" + Util::makeEntity( "3", "Move", "9,0,0" ) + Util::makeEntity( "4", "New", "4,0,0" ) + "</entities></Scene>" );
+    Util::write( domain, "base.scene.xml", Util::makeScene( "Base", { Util::makeEntity( "1", "Keep", "1,0,0" ), Util::makeEntity( "2", "Gone", "2,0,0" ), Util::makeEntity( "3", "Move", "3,0,0" ) } ) );
+    StringBuilder<constant::buffer::kMax2048> childScene;
+    childScene.appendFormat( "<Scene _base=\"%#\" name=\"Child\"><entities><entity id=\"2\" _op=\"Remove\" />%#%#</entities></Scene>", test::ScopedScratchDomain::makeID( "base.scene.xml" ).str(),
+                             Util::makeEntity( "3", "Move", "9,0,0" ), Util::makeEntity( "4", "New", "4,0,0" ) );
+    Util::write( domain, "child.scene.xml", string( childScene.view() ) );
 
     SceneDocument doc{};
     SW_REQUIRE_TRUE( doc.loadXML( test::ScopedScratchDomain::makeID( "child.scene.xml" ) ) );
@@ -215,7 +232,7 @@ SW_TEST_CASE( SceneAssemblyTest, DataLayerLoadsOnlyWhenActive )
 {
     const test::ScopedScratchDomain domain;
     Util::write( domain, "layer.scene.xml",
-                 Util::makeScene( "Layered", Util::makeEntity( "1", "Always", "0,0,0" ) + Util::makeEntity( "2", "Snow", "1,0,0", "layers=\"Winter\"" ) + Util::makeEntity( "3", "NightSnow", "2,0,0", "layers=\"Winter,Night\"" ),
+                 Util::makeScene( "Layered", { Util::makeEntity( "1", "Always", "0,0,0" ), Util::makeEntity( "2", "Snow", "1,0,0", "layers=\"Winter\"" ), Util::makeEntity( "3", "NightSnow", "2,0,0", "layers=\"Winter,Night\"" ) },
                                   "<_listDataLayer><SceneDataLayerDef _name=\"Winter\" _bInitiallyActive=\"false\" /><SceneDataLayerDef _name=\"Night\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
     SceneDocument doc{};
     SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "layer.scene.xml" ) ) );
@@ -248,12 +265,12 @@ SW_TEST_CASE( SceneAssemblyTest, DataLayerLoadsOnlyWhenActive )
 SW_TEST_CASE( SceneAssemblyTest, UndeclaredLayerIsAnError )
 {
     const test::ScopedScratchDomain domain;
-    Util::write( domain, "bad.scene.xml", Util::makeScene( "Bad", Util::makeEntity( "1", "Snow", "0,0,0", "layers=\"Winter\"" ) ) );
+    Util::write( domain, "bad.scene.xml", Util::makeScene( "Bad", { Util::makeEntity( "1", "Snow", "0,0,0", "layers=\"Winter\"" ) } ) );
     SW_EXPECT_LOG( "SceneDocument.DataLayerNotDeclared" );
     SceneDocument doc{};
     SW_EXPECT_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "bad.scene.xml" ) ) == false );
 
-    Util::write( domain, "good.scene.xml", Util::makeScene( "Good", Util::makeEntity( "1", "Plain", "0,0,0" ) ) );
+    Util::write( domain, "good.scene.xml", Util::makeScene( "Good", { Util::makeEntity( "1", "Plain", "0,0,0" ) } ) );
     SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "good.scene.xml" ) ) );
     Scene scene{ "Good" };
     SW_REQUIRE_TRUE( scene.instantiate( doc ) );
@@ -266,8 +283,10 @@ SW_TEST_CASE( SceneAssemblyTest, BinaryKeepsExpandedResult )
 {
     const test::ScopedScratchDomain domain;
     Util::write( domain, "inner.scene.xml", Util::makeInnerScene() );
-    const string attribute = Util::instanceAttribute( "inner.scene.xml" ) + " layers=\"Winter\"";
-    Util::write( domain, "outer.scene.xml", Util::makeScene( "Outer", Util::makeEntity( "1", "House", "0,0,0", attribute.c_str() ), "<_listDataLayer><SceneDataLayerDef _name=\"Winter\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
+    StringBuilder<constant::buffer::kMax512> attributeBuilder;
+    attributeBuilder.appendFormat( "%# layers=\"Winter\"", Util::instanceAttribute( "inner.scene.xml" ) );
+    const string attribute( attributeBuilder.view() );
+    Util::write( domain, "outer.scene.xml", Util::makeScene( "Outer", { Util::makeEntity( "1", "House", "0,0,0", attribute.c_str() ) }, "<_listDataLayer><SceneDataLayerDef _name=\"Winter\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
     SceneDocument doc{};
     SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) );
     doc.stripAuthoringInstanceData();
@@ -319,7 +338,7 @@ SW_TEST_CASE( SceneAssemblyTest, DataLayerKeepsStateWhenTurnedOffAndOn )
 {
     const test::ScopedScratchDomain domain;
     Util::write( domain, "layerstate.scene.xml",
-                 Util::makeScene( "LayerState", Util::makeEntity( "1", "Always", "0,0,0" ) + Util::makeEntity( "2", "Snow", "1,0,0", "layers=\"Winter\"" ),
+                 Util::makeScene( "LayerState", { Util::makeEntity( "1", "Always", "0,0,0" ), Util::makeEntity( "2", "Snow", "1,0,0", "layers=\"Winter\"" ) },
                                   "<_listDataLayer><SceneDataLayerDef _name=\"Winter\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
     SceneDocument doc{};
     SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "layerstate.scene.xml" ) ) );
@@ -363,7 +382,7 @@ SW_TEST_CASE( SceneAssemblyTest, DataLayerSaveStateRestoresOverAClearedManager )
 {
     const test::ScopedScratchDomain domain;
     Util::write( domain, "layersave.scene.xml",
-                 Util::makeScene( "LayerSave", Util::makeEntity( "1", "Always", "0,0,0" ) + Util::makeEntity( "2", "Snow", "1,0,0", "layers=\"Winter\"" ),
+                 Util::makeScene( "LayerSave", { Util::makeEntity( "1", "Always", "0,0,0" ), Util::makeEntity( "2", "Snow", "1,0,0", "layers=\"Winter\"" ) },
                                   "<_listDataLayer><SceneDataLayerDef _name=\"Winter\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
     SceneDocument doc{};
     SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "layersave.scene.xml" ) ) );

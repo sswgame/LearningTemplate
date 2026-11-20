@@ -41,26 +41,36 @@ namespace sw
                         continue;
                     if ( ++lineCount > GameplayDebugTarget::kMaxLines / 2 )
                         break;
-                    string value = pEffect->_duration > 0.0f ? to_string( pEffect->_remainingTime ) + "s" : string( "infinite" );
-                    value += " x" + to_string( pEffect->_stackCount ) + " from " + formatSource( pEffect->_spec._context._sourceName );
+                    StringBuilder<constant::buffer::kMax256> value;
+                    if ( pEffect->_duration > 0.0f )
+                        value.appendFormat( "%#s", pEffect->_remainingTime );
+                    else
+                        value.append( "infinite" );
+                    value.appendFormat( " x%# from %#", pEffect->_stackCount, formatSource( pEffect->_spec._context._sourceName ) );
                     if ( pEffect->_bInhibited == SW_TRUE )
-                        value += " (inhibited)";
-                    writer.addLine( string( "effect " ) + pEffect->_spec._pDef->_id.c_str(), value );
+                        value.append( " (inhibited)" );
+                    fixed_string<constant::buffer::kMax128> label;
+                    formatstring( label.data(), label.capacity(), "effect %#", pEffect->_spec._pDef->_id.c_str() );
+                    writer.addLine( label.view(), value.view() );
                 }
-                string tags;
+                StringBuilder<constant::buffer::kMax512> tags;
                 for ( const TagID& tag : pAbility->getOwnedTagCounts().getTags().getTags() )
                 {
                     const utf8* pName = tag.getString();
-                    if ( tags.empty() == false )
-                        tags += ", ";
-                    tags += pName != nullptr ? pName : "?";
+                    if ( tags.size() > 0 )
+                        tags.append( ", " );
+                    tags.append( pName != nullptr ? pName : "?" );
                 }
-                writer.addLine( "tags", tags.empty() ? string( "-" ) : tags );
+                writer.addLine( "tags", tags.size() == 0 ? string_view( "-" ) : tags.view() );
                 vector<AbilityEffectLogEntry> listLog;
                 pAbility->collectEffectLog( listLog );
                 for ( auto it = listLog.rbegin(); it != listLog.rend() && ++lineCount <= GameplayDebugTarget::kMaxLines; ++it )
                 {
-                    writer.addLine( "t " + to_string( it->_time ), string( getEnumName( it->_kind ) ) + " " + it->_effectID.c_str() + " from " + formatSource( it->_sourceName ) );
+                    fixed_string<constant::buffer::kMax32> label;
+                    formatstring( label.data(), label.capacity(), "t %#", it->_time );
+                    fixed_string<constant::buffer::kMax256> value;
+                    formatstring( value.data(), value.capacity(), "%# %# from %#", getEnumName( it->_kind ), it->_effectID.c_str(), formatSource( it->_sourceName ) );
+                    writer.addLine( label.view(), value.view() );
                 }
             }
         };
@@ -83,12 +93,19 @@ namespace sw
                 AbilityEffectSpec spec = pAbility->makeOutgoingSpecByID( hashed_string( listArgument[0] ) );
                 if ( spec.isValid() == false )
                 {
-                    outReply = "ability.apply: no effect '" + listArgument[0] + "' in the catalog";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "ability.apply: no effect '%#' in the catalog", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                spec._context._sourceName       = hashed_string( "devcommand" );
-                const ActiveEffectHandle handle = pAbility->applyGameplayEffectSpecToSelf( spec );
-                outReply                        = handle.isValid() ? "ability.apply -> applied " + listArgument[0] : "ability.apply -> rejected " + listArgument[0] + " (see hud.print ability)";
+                spec._context._sourceName                       = hashed_string( "devcommand" );
+                const ActiveEffectHandle                 handle = pAbility->applyGameplayEffectSpecToSelf( spec );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                if ( handle.isValid() )
+                    replyBuilder.appendFormat( "ability.apply -> applied %#", listArgument[0] );
+                else
+                    replyBuilder.appendFormat( "ability.apply -> rejected %# (see hud.print ability)", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

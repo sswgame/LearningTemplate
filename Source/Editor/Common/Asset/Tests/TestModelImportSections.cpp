@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
@@ -29,19 +30,20 @@ namespace
         const float32 arrPosition[18]{ 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1 };
         if ( FileUtil::writeFile( FileUtil::joinPath( modelFolder, "pair.bin" ), reinterpret_cast<const uint8*>( arrPosition ), sizeof( arrPosition ) ) == false )
             return false;
-        const string texture = bTextured ? R"(, "pbrMetallicRoughness": { "baseColorTexture": { "index": 0 }, "metallicFactor": 0 })" : "";
-        const string json    = string( R"({ "asset": { "version": "2.0" }, "scene": 0, "scenes": [ { "nodes": [ 0 ] } ], "nodes": [ { "mesh": 0 } ],
+        const string                              texture = bTextured ? R"(, "pbrMetallicRoughness": { "baseColorTexture": { "index": 0 }, "metallicFactor": 0 })" : "";
+        StringBuilder<constant::buffer::kMax2048> json;
+        json.appendFormat( R"({ "asset": { "version": "2.0" }, "scene": 0, "scenes": [ { "nodes": [ 0 ] } ], "nodes": [ { "mesh": 0 } ],
             "buffers": [ { "uri": "pair.bin", "byteLength": 72 } ],
             "bufferViews": [ { "buffer": 0, "byteOffset": 0, "byteLength": 36 }, { "buffer": 0, "byteOffset": 36, "byteLength": 36 } ],
             "accessors": [ { "bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [ 0, 0, 0 ], "max": [ 1, 0, 1 ] },
                            { "bufferView": 1, "componentType": 5126, "count": 3, "type": "VEC3", "min": [ 0, 0, 0 ], "max": [ 1, 0, 1 ] } ],
             "images": [ { "uri": "../textures_raw/pair/wood.png", "mimeType": "image/png" } ],
             "textures": [ { "source": 0 } ],
-            "materials": [ { "name": "Wood", "alphaMode": "MASK", "alphaCutoff": 0.3, "doubleSided": true)" ) +
-                            texture + R"( }, { "name": "Stone", "pbrMetallicRoughness": { "baseColorFactor": [ 0.5, 0.5, 0.5, 1 ] } } ],
-            "meshes": [ { "primitives": [ { "attributes": { "POSITION": 0 }, "material": 0 }, { "attributes": { "POSITION": 1 }, "material": 1 } ] } ] })";
+            "materials": [ { "name": "Wood", "alphaMode": "MASK", "alphaCutoff": 0.3, "doubleSided": true%# }, { "name": "Stone", "pbrMetallicRoughness": { "baseColorFactor": [ 0.5, 0.5, 0.5, 1 ] } } ],
+            "meshes": [ { "primitives": [ { "attributes": { "POSITION": 0 }, "material": 0 }, { "attributes": { "POSITION": 1 }, "material": 1 } ] } ] })",
+                           texture );
         outSourcePath = FileUtil::joinPath( modelFolder, "pair.gltf" );
-        return FileUtil::writeTextFile( outSourcePath, json );
+        return FileUtil::writeTextFile( outSourcePath, json.view() );
     }
 } // namespace
 

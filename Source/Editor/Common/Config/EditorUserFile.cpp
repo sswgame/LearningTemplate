@@ -3,13 +3,16 @@
 #include "Editor/Common/Config/EditorUserFile.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw::editor
 {
     bool EditorUserFile::quarantineCorruptFile( string_view filePath, string_view reason )
     {
-        const string source( filePath );
-        const string destination = source + kCorruptSuffix;
+        const string                             source( filePath );
+        StringBuilder<constant::buffer::kMax512> destinationBuilder;
+        destinationBuilder.appendFormat( "%#%#", source, kCorruptSuffix );
+        const string destination( destinationBuilder.view() );
         if ( FileUtil::copyFile( source, destination ) == false || FileUtil::removeFile( source ) == false )
         {
             SW_LOG_ERROR_ID( "EditorUserFile.UserFileBrokenCould", "User file %# is broken (%#) and could not be moved to %# - it is left in place", source, string( reason ), destination );

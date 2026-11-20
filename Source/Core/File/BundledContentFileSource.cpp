@@ -3,6 +3,7 @@
 #include "Core/File/BundledContentFileSource.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw
 {
@@ -66,7 +67,9 @@ namespace sw
         const string folderKey = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folder ) );
         for ( const string& fileName : listFileName )
         {
-            outListPath.push_back( folderKey + "/" + fileName );
+            StringBuilder<constant::buffer::kMax1024> pathBuilder;
+            pathBuilder.appendFormat( "%#/%#", folderKey, fileName );
+            outListPath.push_back( string( pathBuilder.view() ) );
         }
         return true;
     }

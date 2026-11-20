@@ -12,8 +12,8 @@
 #include "Engine/Window/IWindow.h"
 
 #include <objbase.h> // WIN32_LEAN_AND_MEAN 이면 `interface` 매크로가 없다 — UIAutomation.h 가 쓴다
-#include <oleauto.h>
 #include <UIAutomation.h>
+#include <oleauto.h>
 
 namespace sw
 {

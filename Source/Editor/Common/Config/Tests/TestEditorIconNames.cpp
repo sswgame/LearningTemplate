@@ -5,7 +5,10 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
@@ -82,14 +85,26 @@ SW_TEST_CASE( EditorIconNames, EveryNameCodeAndDataUseIsInTheTable )
     const unordered_set<string> setSourceName = scanSourceIconNames();
     SW_REQUIRE_TRUE( setSourceName.size() > 50 ); // 소스를 못 훑었으면 아래가 아무것도 증명하지 못한다
     for ( const string& name : setSourceName )
-        SW_EXPECT_TRUE_MSG( hasIcon( table, name ), ( "code names icon '" + name + "' which the icon table does not have" ).c_str() );
+    {
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "code names icon '%#' which the icon table does not have", name );
+        SW_EXPECT_TRUE_MSG( hasIcon( table, name ), message.c_str() );
+    }
 
     EditorComponentIconTable componentTable;
     SW_REQUIRE_TRUE( componentTable.loadFromAsset( AssetID{ EditorPaths::kComponentIconTable } ) );
     for ( const string* pName : { &componentTable._defaultIcon, &componentTable._objectIcon } )
-        SW_EXPECT_TRUE_MSG( hasIcon( table, *pName ), ( "component icon table names '" + *pName + "'" ).c_str() );
+    {
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "component icon table names '%#'", *pName );
+        SW_EXPECT_TRUE_MSG( hasIcon( table, *pName ), message.c_str() );
+    }
     for ( const EditorComponentCategoryIcon& row : componentTable._listCategory )
-        SW_EXPECT_TRUE_MSG( hasIcon( table, row._icon ), ( "category '" + row._category + "' names icon '" + row._icon + "'" ).c_str() );
+    {
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "category '%#' names icon '%#'", row._category, row._icon );
+        SW_EXPECT_TRUE_MSG( hasIcon( table, row._icon ), message.c_str() );
+    }
 
     uint32 metaCount{ 0 };
     editor::getSubsystem<TypeRegistry>().forEachType(
@@ -99,27 +114,33 @@ SW_TEST_CASE( EditorIconNames, EveryNameCodeAndDataUseIsInTheTable )
         if ( pIcon == nullptr )
             return;
         ++metaCount;
-        SW_EXPECT_TRUE_MSG( hasIcon( table, *pIcon ), ( string( type._name.c_str() ) + " has Meta Icon=" + *pIcon + " which the icon table does not have" ).c_str() );
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "%# has Meta Icon=%# which the icon table does not have", type._name.c_str(), *pIcon );
+        SW_EXPECT_TRUE_MSG( hasIcon( table, *pIcon ), message.c_str() );
     } );
     SW_EXPECT_TRUE( metaCount > 5 );
 }
 
 SW_TEST_CASE( EditorIconNames, BrokenTablesAreNotRead )
 {
-    const auto makeTable = []( string_view rows )
-    { return "<EditorIconGlyphTable><_listIcon>" + string( rows ) + "</_listIcon></EditorIconGlyphTable>"; };
+    const auto makeTable = []( string_view firstRow, string_view secondRow )
+    {
+        StringBuilder<constant::buffer::kMax512> tableText;
+        tableText.appendFormat( "<EditorIconGlyphTable><_listIcon>%#%#</_listIcon></EditorIconGlyphTable>", firstRow, secondRow );
+        return string( tableText.view() );
+    };
     const string missingRow = R"(<EditorIconGlyph _name="Missing" _codepoint="U+E060" />)";
 
     EditorIconGlyphTable table;
     SW_EXPECT_LOG( "EditorIcon.Duplicate" );
-    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="U+E060" />)" ), "duplicate" ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( missingRow, R"(<EditorIconGlyph _name="Save" _codepoint="U+E060" />)" ), "duplicate" ) );
     SW_EXPECT_FALSE( hasIcon( table, "Missing" ) ); // 실패한 읽기는 아무것도 남기지 않는다
     SW_EXPECT_LOG( "EditorIcon.NoMissingIcon" );
-    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)" ), "nomissing" ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)", "" ), "nomissing" ) );
     SW_EXPECT_LOG( "EditorIcon.BadRow" );
-    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="E003" />)" ), "badcode" ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( missingRow, R"(<EditorIconGlyph _name="Save" _codepoint="E003" />)" ), "badcode" ) );
 
-    SW_REQUIRE_TRUE( table.loadFromXMLText( makeTable( missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)" ), "good" ) );
+    SW_REQUIRE_TRUE( table.loadFromXMLText( makeTable( missingRow, R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)" ), "good" ) );
     const vector<uint16> listExpected{ 0xE003, 0xE003, 0xE060, 0xE060, 0 };
     SW_EXPECT_TRUE( table.getGlyphRanges() == listExpected );
     uint16 codepoint{ 0 };

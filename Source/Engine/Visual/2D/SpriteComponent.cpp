@@ -31,7 +31,6 @@ namespace sw
         , _clipFrame{ 0 }
         , _uvRect{ 0.0f, 0.0f, 1.0f, 1.0f }
         , _tint{ 1.0f, 1.0f, 1.0f, 1.0f }
-        , _sortingLayer{ "Default" }
         , _drawMode{ SpriteDrawMode::Simple }
         , _size{ 1.0f, 1.0f }
         , _sliceBorder{ 0.0f, 0.0f, 0.0f, 0.0f }

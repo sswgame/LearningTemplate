@@ -383,8 +383,13 @@ namespace sw::editor
                 settings._shellDistance = rule._animationShellDistance;
                 for ( cgltf_size animationIndex = 0; animationIndex < data.animations_count; ++animationIndex )
                 {
-                    const cgltf_animation& animation = data.animations[animationIndex];
-                    const string           clipName  = animation.name != nullptr ? string( animation.name ) : "clip" + to_string( static_cast<uint64>( animationIndex ) );
+                    const cgltf_animation&                   animation = data.animations[animationIndex];
+                    StringBuilder<constant::buffer::kMax256> clipNameBuilder;
+                    if ( animation.name != nullptr )
+                        clipNameBuilder.append( animation.name );
+                    else
+                        clipNameBuilder.appendFormat( "clip%#", static_cast<uint64>( animationIndex ) );
+                    const string clipName( clipNameBuilder.view() );
                     if ( rule._listClipName.empty() == false )
                     {
                         const optional<size_t> requestedIndex = VectorUtil::findIndex( rule._listClipName, clipName );
@@ -622,7 +627,9 @@ namespace sw::editor
             {
                 for ( const ModelImportAttachment& attachment : result._listAttachment )
                 {
-                    const string                 partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kPartFolder ), attachment._fileStem + string( MeshAssetFormat::kExtension ) );
+                    StringBuilder<constant::buffer::kMax256> partNameBuilder;
+                    partNameBuilder.appendFormat( "%#%#", attachment._fileStem, MeshAssetFormat::kExtension );
+                    const string                 partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kPartFolder ), partNameBuilder.view() );
                     const optional<AbsolutePath> partFile = FileUtil::requireAbsolutePath( partPath );
                     if ( partFile.has_value() == false || MeshAssetFormat::saveToFile( *partFile, attachment._mesh ) == false )
                     {
@@ -646,17 +653,20 @@ namespace sw::editor
              */
             [[nodiscard]] static bool writeSharedSkeleton( const AssetPaths& assetPaths, const Skeleton& skeleton, string_view outputPath, string& outSharedPath )
             {
-                const string normalized = FileUtil::normalizeSeparators( outputPath );
-                const string marker     = "/" + string( ModelImportUtil::kImportedModelFolder ) + "/";
-                const size_t folderEnd  = normalized.rfind( marker );
+                const string                            normalized = FileUtil::normalizeSeparators( outputPath );
+                StringBuilder<constant::buffer::kMax64> marker;
+                marker.appendFormat( "/%#/", ModelImportUtil::kImportedModelFolder );
+                const size_t folderEnd = normalized.rfind( marker.view() );
                 if ( folderEnd == string::npos )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.ImportedMeshOutsideModels", "Imported mesh '%#' is not under a '%#' folder - the shared skeleton has no place", outputPath, ModelImportUtil::kImportedModelFolder );
                     return false;
                 }
-                const string body           = skeleton.toXML();
-                const uint64 hash           = HashUtil::appendBytes64( HashUtil::kFNVOffset64, body.data(), body.size() );
-                outSharedPath               = normalized.substr( 0, folderEnd + marker.size() ) + string( ModelImportUtil::kSharedSkeletonFolder ) + "/skeleton_" + to_string( hash ) + string( Skeleton::kExtension );
+                const string                             body = skeleton.toXML();
+                const uint64                             hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, body.data(), body.size() );
+                StringBuilder<constant::buffer::kMax256> sharedPathBuilder;
+                sharedPathBuilder.appendFormat( "%#%#/skeleton_%#%#", string_view( normalized ).substr( 0, folderEnd + marker.size() ), ModelImportUtil::kSharedSkeletonFolder, hash, Skeleton::kExtension );
+                outSharedPath               = string( sharedPathBuilder.view() );
                 const optional<string> text = ImportedAssetStore::makeTextWithIdentity( assetPaths, outSharedPath, body );
                 if ( text.has_value() == false )
                     return false;
@@ -696,7 +706,9 @@ namespace sw::editor
                     imported._clip.makeBytes( bytes );
                     const string key = ImportedAssetStore::makeKey( bytes.data(), bytes.size(), settingsText );
                     // 이름을 앞에 붙인다 - 키만으로는 Quick Open · 브라우저 · 로그에서 어떤 클립인지 알 수 없다(언리얼 · 유니티도 에셋을 이름으로 찾는다). 이름까지 같아야 한 벌이다.
-                    const string clipPath = ImportedAssetStore::makeStorePath( domain, ModelImportUtil::kClipFolder, imported._fileStem + "_" + key, AnimationClip::kExtension );
+                    StringBuilder<constant::buffer::kMax256> clipKeyBuilder;
+                    clipKeyBuilder.appendFormat( "%#_%#", imported._fileStem, key );
+                    const string clipPath = ImportedAssetStore::makeStorePath( domain, ModelImportUtil::kClipFolder, clipKeyBuilder.view(), AnimationClip::kExtension );
                     if ( ImportedAssetStore::writeIfAbsent( clipPath, bytes.data(), bytes.size() ) == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAnimationClip", "Failed to write animation clip %#", clipPath.c_str() );
@@ -709,7 +721,9 @@ namespace sw::editor
                                     imported._clip.getDuration(), imported._stats._rawByteCount, imported._stats._compressedByteCount, imported._stats.computeRatio(),
                                     imported._stats._maxError * 1000.0f );
                 }
-                const string setPath = FileUtil::joinPath( sideFolder, string( stem ) + string( AnimationSet::kExtension ) );
+                StringBuilder<constant::buffer::kMax256> setNameBuilder;
+                setNameBuilder.appendFormat( "%#%#", stem, AnimationSet::kExtension );
+                const string setPath = FileUtil::joinPath( sideFolder, setNameBuilder.view() );
                 if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, setPath, animationSet.saveToString() ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAnimationSet", "Failed to write animation set %#", setPath.c_str() );
@@ -919,8 +933,10 @@ namespace sw::editor
         string sharedSkeletonPath;
         if ( Internal::writeSharedSkeleton( assetPaths, result._skeleton, outputPath, sharedSkeletonPath ) == false )
             return false;
-        skeletonFileData._base    = assetPaths.toAssetID( sharedSkeletonPath );
-        const string skeletonPath = FileUtil::joinPath( sideFolder, stem + string( Skeleton::kExtension ) );
+        skeletonFileData._base = assetPaths.toAssetID( sharedSkeletonPath );
+        StringBuilder<constant::buffer::kMax256> skeletonNameBuilder;
+        skeletonNameBuilder.appendFormat( "%#%#", stem, Skeleton::kExtension );
+        const string skeletonPath = FileUtil::joinPath( sideFolder, skeletonNameBuilder.view() );
         if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, skeletonPath, skeletonFileData.toXML() ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", skeletonPath.c_str() );
@@ -981,14 +997,20 @@ namespace sw::editor
         const ModelRawImporter           importer{ assetPaths, config };
         const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
         if ( derivedDataCache.has_value() == false )
-            return AssetImportSummary::makeFailed( "DDC config: " + string( derivedDataCache.error().message() ) + " (" + string( derivedDataCache.error().detail() ) + ")" );
+        {
+            StringBuilder<constant::buffer::kMax512> problemBuilder;
+            problemBuilder.appendFormat( "DDC config: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
+            return AssetImportSummary::makeFailed( string( problemBuilder.view() ) );
+        }
         AssetImportSummary summary =
             AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>(), *derivedDataCache ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
         if ( mode == AssetImportMode::ImportStale )
             (void)ImportedAssetStore::removeUnreferenced( resourceRoot, summary._listProblem ); // 원본을 고치면 옛 키의 공유 파일이 남는다 — 전체를 다 본 지금 지운다(범위 임포트는 다른 원본의 참조를 몰라 하지 않는다)
         for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( config.getRules(), AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer ) ) )
         {
-            summary._listProblem.push_back( "ModelImportConfig: rule " + rule + " matches no model source - its patterns are dead (a moved folder?)" );
+            StringBuilder<constant::buffer::kMax512> problemBuilder;
+            problemBuilder.appendFormat( "ModelImportConfig: rule %# matches no model source - its patterns are dead (a moved folder?)", rule );
+            summary._listProblem.push_back( string( problemBuilder.view() ) );
         }
         bakeRetargetedClips( assetPaths, resourceRoot, mode, summary ); // 구울 원본 클립이 위에서 막 가져온 공유 파일이다
         return summary;
@@ -1018,19 +1040,29 @@ namespace sw::editor
                 const optional<AbsolutePath> outFile = assetPaths.toDiskPath( entry._clipPath );
                 if ( outFile.has_value() == false )
                 {
-                    inoutSummary._listProblem.push_back( "retarget bake: '" + entry._clipPath + "' has no disk place" );
+                    StringBuilder<constant::buffer::kMax512> problemBuilder;
+                    problemBuilder.appendFormat( "retarget bake: '%#' has no disk place", entry._clipPath );
+                    inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                     continue;
                 }
                 if ( mode == AssetImportMode::CheckOnly )
                 {
                     if ( FileUtil::exists( outFile->str() ) == false )
-                        inoutSummary._listProblem.push_back( "retarget bake: '" + entry._clipPath + "' is not baked - run App --import-models" );
+                    {
+                        StringBuilder<constant::buffer::kMax512> problemBuilder;
+                        problemBuilder.appendFormat( "retarget bake: '%#' is not baked - run App --import-models", entry._clipPath );
+                        inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
+                    }
                     continue;
                 }
                 const bool bBaked = FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( outFile->str() ) ) &&
                                     PoseRetargeter::bakeClipFile( AssetID{ entry._retargetProfile }, AssetID{ entry._retargetSourceClip }, outFile->str() );
                 if ( bBaked == false )
-                    inoutSummary._listProblem.push_back( "retarget bake: '" + entry._retargetSourceClip + "' could not be baked with '" + entry._retargetProfile + "'" );
+                {
+                    StringBuilder<constant::buffer::kMax512> problemBuilder;
+                    problemBuilder.appendFormat( "retarget bake: '%#' could not be baked with '%#'", entry._retargetSourceClip, entry._retargetProfile );
+                    inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
+                }
             }
         }
     }
@@ -1048,7 +1080,9 @@ namespace sw::editor
 
     string ModelImporter::makeClipDataPath( string_view sourcePath )
     {
-        return FileUtil::removeExtension( sourcePath ) + string( ModelImportUtil::kClipDataSuffix );
+        StringBuilder<constant::buffer::kMax256> pathBuilder;
+        pathBuilder.appendFormat( "%#%#", FileUtil::removeExtension( sourcePath ), ModelImportUtil::kClipDataSuffix );
+        return string( pathBuilder.view() );
     }
 
     uint64 ModelImporter::computeSourceHash( string_view sourcePath, const ModelImportRule& rule )

@@ -111,8 +111,10 @@ SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, CheckPatch )
     SW_EXPECT_EQUAL( string( "hi" ), Util::read( packs, "game/made.txt" ) );
     SW_EXPECT_FALSE( packs.hasFile( "game/gone.txt" ) );
 
-    string recordText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( outFolder, string( Util::kNewBuild ) + string( PackBuildRecord::kExtension ) ), recordText ) );
+    string                                  recordText;
+    fixed_string<constant::buffer::kMax128> recordFileName;
+    formatstring( recordFileName.data(), recordFileName.capacity(), "%#%#", Util::kNewBuild, PackBuildRecord::kExtension );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( outFolder, recordFileName ), recordText ) );
     PackBuildRecord record;
     SW_REQUIRE_TRUE( PackBuildRecord::parse( recordText, "record", record ) );
     SW_EXPECT_EQUAL( string( Util::kNewBuild ), record._build );

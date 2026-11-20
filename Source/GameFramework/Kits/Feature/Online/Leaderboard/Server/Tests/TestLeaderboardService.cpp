@@ -987,7 +987,9 @@ SW_TEST_CASE( LeaderboardServiceTest, ProgressReadsStatsPastOnePage )
     rig.addAchievement( "late_kills", "zz_kills", 100 );
     for ( int32 index = 0; index < LeaderboardLimit::kMaxStatCount + 44; ++index )
     {
-        (void)rig.stat( 1, "s" + to_string( 1000 + index ), 1, LeaderboardUpdate::Latest );
+        fixed_string<constant::buffer::kMax16> statName;
+        formatstring( statName.data(), statName.capacity(), "s%#", 1000 + index );
+        (void)rig.stat( 1, statName.view(), 1, LeaderboardUpdate::Latest );
     }
     (void)rig.stat( 1, "zz_kills", 42, LeaderboardUpdate::Latest ); // 키 순서로 맨 뒤다
 
@@ -1008,7 +1010,9 @@ SW_TEST_CASE( LeaderboardServiceTest, StatsPageWithACursorToTheEnd )
     constexpr int32     kStatCount = 300;
     for ( int32 index = 0; index < kStatCount; ++index )
     {
-        (void)rig.stat( 1, "s" + to_string( 1000 + index ), index, LeaderboardUpdate::Latest );
+        fixed_string<constant::buffer::kMax16> statName;
+        formatstring( statName.data(), statName.capacity(), "s%#", 1000 + index );
+        (void)rig.stat( 1, statName.view(), index, LeaderboardUpdate::Latest );
     }
 
     vector<LeaderboardStat> listAll;
@@ -1029,7 +1033,9 @@ SW_TEST_CASE( LeaderboardServiceTest, StatsPageWithACursorToTheEnd )
     SW_REQUIRE_EQUAL( size_t( kStatCount ), listAll.size() );
     for ( int32 index = 0; index < kStatCount; ++index )
     {
-        SW_EXPECT_EQUAL( "s" + to_string( 1000 + index ), listAll[static_cast<size_t>( index )]._name );
+        fixed_string<constant::buffer::kMax16> statName;
+        formatstring( statName.data(), statName.capacity(), "s%#", 1000 + index );
+        SW_EXPECT_EQUAL( string( statName.view() ), listAll[static_cast<size_t>( index )]._name );
         SW_EXPECT_EQUAL( int64( index ), listAll[static_cast<size_t>( index )]._value );
     }
 

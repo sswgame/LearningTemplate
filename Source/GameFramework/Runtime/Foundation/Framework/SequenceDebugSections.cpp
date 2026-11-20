@@ -57,8 +57,12 @@ namespace sw
                     if ( pPlayer->findBoundObject( binding._id ) == nullptr && asset.findSpawnItem( binding._id ) == nullptr )
                         ++unboundCount;
                 }
-                writer.addLine( "bindings", to_string( static_cast<uint64>( asset._listBinding.size() ) ) + ( unboundCount > 0 ? ", " + to_string( unboundCount ) + " unbound" : string{} ),
-                                unboundCount > 0 ? DebugHUDLineStyle::Warning : DebugHUDLineStyle::Neutral );
+                fixed_string<constant::buffer::kMax64> bindings;
+                if ( unboundCount > 0 )
+                    formatstring( bindings.data(), bindings.capacity(), "%#, %# unbound", static_cast<uint64>( asset._listBinding.size() ), unboundCount );
+                else
+                    formatstring( bindings.data(), bindings.capacity(), "%#", static_cast<uint64>( asset._listBinding.size() ) );
+                writer.addLine( "bindings", bindings.view(), unboundCount > 0 ? DebugHUDLineStyle::Warning : DebugHUDLineStyle::Neutral );
 
                 // 키트의 해석 — 그 키트 모듈이 올라와 있을 때만 제공자가 목록에 있다(창과 같은 등록표).
                 vector<const SequenceDiagnosticRegistration*> listProvider;

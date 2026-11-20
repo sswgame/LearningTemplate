@@ -342,7 +342,9 @@ namespace sw
             }
             if ( const expected<void> valid = ResourceTagsInternal::isValidValue( *pAxis, tag.substr( string_view( pAxis->_pName ).size() + 1 ) ); valid.has_value() == false )
             {
-                error = string( valid.error().message().data(), valid.error().message().size() ) + " '" + string( valid.error().detail().data(), valid.error().detail().size() ) + "'";
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "%# '%#'", valid.error().message(), valid.error().detail() );
+                error = string( errorBuilder.view() );
                 return;
             }
             if ( pAxis->_timing == ResourceTagTiming::Load )

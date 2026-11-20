@@ -5,7 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -320,7 +320,7 @@ namespace sw
                 case StreamFrameKind::Pong:
                 {
                     if ( frame._bodySize == StreamMessageEndpointInternal::kPingBodySize )
-                        connection._roundTripNanoseconds.store( MonotonicClock::nowNanoseconds() - LittleEndianUtil::readInt64( frame._pBody ), std::memory_order_relaxed );
+                        connection._roundTripNanoseconds.store( MonotonicClock::nowNanoseconds() - ByteReader( frame._pBody, static_cast<size_t>( frame._bodySize ) ).readInt64(), std::memory_order_relaxed );
                     break;
                 }
                 case StreamFrameKind::Message:

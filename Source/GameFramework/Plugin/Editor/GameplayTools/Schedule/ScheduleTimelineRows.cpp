@@ -39,16 +39,16 @@ namespace sw::editor
         const optional<int32> activeIndex = findSegmentAt( listSegment, previewMinute );
         for ( int32 segmentIndex = 0; segmentIndex < static_cast<int32>( listSegment.size() ); ++segmentIndex )
         {
-            const ScheduleSegment& segment = listSegment[static_cast<size_t>( segmentIndex )];
-            ScheduleTimelineRow    row;
-            row._time = formatClock( segment._startMinute );
-            row._time += "-";
-            row._time += formatClock( segment._endMinute );
+            const ScheduleSegment&                  segment = listSegment[static_cast<size_t>( segmentIndex )];
+            ScheduleTimelineRow                     row;
+            StringBuilder<constant::buffer::kMax32> time;
+            time.appendFormat( "%#-%#", formatClock( segment._startMinute ), formatClock( segment._endMinute ) );
+            row._time = string( time.view() );
             if ( segment._travelMinutes > 0 )
             {
-                row._travel = formatClock( segment._departMinute );
-                row._travel += " -> ";
-                row._travel += formatClock( segment.getArriveMinute() );
+                StringBuilder<constant::buffer::kMax32> travel;
+                travel.appendFormat( "%# -> %#", formatClock( segment._departMinute ), formatClock( segment.getArriveMinute() ) );
+                row._travel = string( travel.view() );
             }
             if ( segment._target._area.empty() == false )
             {

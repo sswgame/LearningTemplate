@@ -70,7 +70,11 @@ namespace sw
                 GameObject*                     pObject = engine::findActiveObject( hashed_string( objectName ) );
                 CharacterBodyDynamicsComponent* pFound  = pObject != nullptr ? pObject->getComponent<CharacterBodyDynamicsComponent>() : nullptr;
                 if ( pFound == nullptr )
-                    outReply = "no object named '" + objectName + "' with a CharacterBodyDynamicsComponent in the active scene";
+                {
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no object named '%#' with a CharacterBodyDynamicsComponent in the active scene", objectName );
+                    outReply = string( replyBuilder.view() );
+                }
                 return pFound;
             }
 
@@ -133,8 +137,7 @@ namespace sw
 namespace sw
 {
     CharacterBodyDynamicsComponent::CharacterBodyDynamicsComponent()
-        : _eyeSocket{ "Eyes" }
-        , _hitImpulseScale{ 0.02f }
+        : _hitImpulseScale{ 0.02f }
         , _sunTraceDistance{ 50.0f }
         , _skyLightValue{}
         , _wipeEvent{}

@@ -2,6 +2,9 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h"
@@ -28,7 +31,8 @@ namespace
             , _model{}
         {
             SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( _folder ) );
-            const string excludeHere = string( R"(, "_listExcludedPlatform": [ ")" ) + build::kPlatformName + "\" ]";
+            fixed_string<constant::buffer::kMax128> excludeHere;
+            formatstring( excludeHere.data(), excludeHere.capacity(), R"(, "_listExcludedPlatform": [ "%#" ])", build::kPlatformName );
             writeManifest( config::kTargetGameModule, "Game", "" );
             writeManifest( "GF_Base", "Kit", "" );
             writeManifest( "GF_Child", "Kit", R"(, "_listDependency": [ { "_name": "GF_Base" } ])" );
@@ -40,13 +44,17 @@ namespace
 
         static string makeManifestText( const utf8* pName, const utf8* pKind, const utf8* pExtra )
         {
-            return string( "{ \"_name\": \"" ) + pName + "\", \"_version\": \"1.0.0\", \"_kind\": \"" + pKind + "\"," +
-                   " \"_listConfiguration\": [ \"Dev\" ], \"_listTarget\": [ \"Client\", \"Server\" ]" + pExtra + " }";
+            StringBuilder<constant::buffer::kMax512> textBuilder;
+            textBuilder.appendFormat( "{ \"_name\": \"%#\", \"_version\": \"1.0.0\", \"_kind\": \"%#\", \"_listConfiguration\": [ \"Dev\" ], \"_listTarget\": [ \"Client\", \"Server\" ]%# }",
+                                      pName, pKind, pExtra );
+            return string( textBuilder.view() );
         }
 
         void writeManifest( const utf8* pName, const utf8* pKind, const utf8* pExtra ) const
         {
-            const string path = FileUtil::joinPath( _folder, string( pName ) + ModuleCatalog::kManifestExtension );
+            fixed_string<constant::buffer::kMax256> fileName;
+            formatstring( fileName.data(), fileName.capacity(), "%#%#", pName, ModuleCatalog::kManifestExtension );
+            const string path = FileUtil::joinPath( _folder, fileName );
             SW_EXPECT_TRUE( FileUtil::writeTextFile( path, makeManifestText( pName, pKind, pExtra ) ) );
         }
     };

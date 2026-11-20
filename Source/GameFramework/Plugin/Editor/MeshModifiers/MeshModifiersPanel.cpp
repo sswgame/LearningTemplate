@@ -65,30 +65,22 @@ namespace sw::editor
             /** @brief 단위가 있으면 "%.3f deg" 처럼 값 서식 뒤에 붙입니다. 단위 글의 '%' 는 쓰지 않습니다(영문 단위 이름만). */
             static string makeFormat( const utf8* pBaseFormat, const utf8* pUnit )
             {
-                string format( pBaseFormat );
+                StringBuilder<constant::buffer::kMax64> format;
+                format.append( pBaseFormat );
                 if ( pUnit != nullptr && pUnit[0] != '\0' )
-                {
-                    format += " ";
-                    format += string_view( pUnit );
-                }
-                return format;
+                    format.appendFormat( " %#", pUnit );
+                return string( format.view() );
             }
 
             /** @brief 자동화가 켜졌을 때만 `<접두>.<꼬리>` 키를 만들어 직전 위젯을 기록합니다(키 글 만드는 비용을 평소에는 내지 않는다). */
             static void recordMark( const utf8* pPrefix, string_view tail )
             {
-                if ( EditorSelfTestMarks::isEnabled() == false )
-                    return;
-                string key( pPrefix );
-                key += ".";
-                key += tail;
-                EditorSelfTestMarks::record( key.c_str() );
+                EditorSelfTestMarks::recordFormat( "%#.%#", pPrefix, tail );
             }
 
             static void recordMark( const utf8* pPrefix, size_t index )
             {
-                if ( EditorSelfTestMarks::isEnabled() )
-                    recordMark( pPrefix, string_view( to_string( static_cast<uint32>( index ) ) ) );
+                EditorSelfTestMarks::recordFormat( "%#.%#", pPrefix, static_cast<uint32>( index ) );
             }
 
             /** @brief 직전 항목에 마우스가 있으면 툴팁을 보입니다. */
@@ -489,13 +481,13 @@ namespace sw::editor
                 ++end;
             }
             const bool bCategoryOpen = ImGui::BeginMenu( listRegistration[index]->_pCategory );
-            MeshModifiersPanelInternal::recordMark( pMarkPrefix, string( "category." ) + string( category ) ); // BeginMenu 는 마지막 항목을 메뉴 머리로 되돌려 둔다
+            EditorSelfTestMarks::recordFormat( "%#.category.%#", pMarkPrefix, category ); // BeginMenu 는 마지막 항목을 메뉴 머리로 되돌려 둔다
             if ( bCategoryOpen )
             {
                 for ( size_t item = index; item < end; ++item )
                 {
                     const bool bClicked = ImGui::MenuItem( listRegistration[item]->_pDisplayName );
-                    MeshModifiersPanelInternal::recordMark( pMarkPrefix, string( "item." ) + listRegistration[item]->_pID );
+                    EditorSelfTestMarks::recordFormat( "%#.item.%#", pMarkPrefix, listRegistration[item]->_pID );
                     drawRegistrationTooltip( *listRegistration[item] );
                     if ( bClicked == false )
                         continue;
@@ -1027,9 +1019,10 @@ namespace sw::editor
             ImGui::Text( "#%d", static_cast<int32>( item ) );
             ImGui::SameLine();
             MeshModifiersPanelInternal::drawItemButtons( item, action );
-            const string current = value._listText[item];
-            string       picked  = current;
-            const string markKey = string( "meshmodifiers.referenceList." ) + to_string( static_cast<uint32>( item ) );
+            const string                           current = value._listText[item];
+            string                                 picked  = current;
+            fixed_string<constant::buffer::kMax64> markKey;
+            formatstring( markKey.data(), markKey.capacity(), "meshmodifiers.referenceList.%#", static_cast<uint32>( item ) );
             if ( MeshModifiersPanelInternal::drawReferencePicker( session, def, "##Item", current, picked, markKey.c_str() ) && string_view( picked ) != string_view( current ) )
             {
                 value._listText[item] = picked;

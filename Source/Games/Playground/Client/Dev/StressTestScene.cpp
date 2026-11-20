@@ -62,7 +62,7 @@ namespace sw
     namespace
     {
         /** @brief 배치 값과 튜닝 값의 원본입니다(`StressTestSceneSettings`). 코드에는 기본값이 없습니다. */
-        constexpr const utf8* kBenchSettingsPath = "game/playground/data/benchscene.xml";
+        constexpr const utf8* kBenchSettingsPath = "game/playground/automation/benchscene.xml";
         /** @brief 스트레스가 보관할 머티리얼 인스턴스 상한입니다. 넘으면 새로 붙이는 대신 제거합니다. */
         constexpr size_t kChurnInstanceCap = 512;
         /** @brief 래그돌 군중이 쓰러진 수를 로그로 남기는 프레임 간격입니다. 소수로 정했으므로 `-gv_stressTestRagdollPeriod` 의 배수와 겹치지 않아, 같은 상태만 기록되는 일이 없습니다. */
@@ -2190,5 +2190,5 @@ namespace sw
     }
 
     /** @brief 벤치 장면 설정(`StressTestSceneSettings`)의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_ASSET_TYPE( StressTestSceneSettings, AssetTypeDef::makeDataFile( "benchscene", AssetPathRule{ "game/", {}, "/data/benchscene.xml" }, AssetTypeLoader::with<StressTestSceneSettings, &loadBenchSceneSettings>( MemoryTag::Game ) ) );
+    SW_ASSET_TYPE( StressTestSceneSettings, AssetTypeDef::makeDataFile( "benchscene", AssetPathRule{ "game/", {}, "/automation/benchscene.xml" }, AssetTypeLoader::with<StressTestSceneSettings, &loadBenchSceneSettings>( MemoryTag::Game ) ) );
 } // namespace sw

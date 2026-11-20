@@ -13,6 +13,8 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
@@ -34,14 +36,12 @@ namespace sw
                 return string( "the reflection type is not registered in this process (no engine type registry), so the ranges cannot be checked" );
             vector<string> listError;
             SerializerUtil::collectRangeErrors( *pType, ObjectAddress{ &config }, string(), listError );
-            string joined;
+            StringBuilder<constant::buffer::kMax1024> joined;
             for ( const string& rangeError : listError )
             {
-                if ( joined.empty() == false )
-                    joined += "; ";
-                joined += rangeError;
+                joined.appendFormat( "%#%#", joined.size() == 0 ? "" : "; ", rangeError );
             }
-            return joined;
+            return string( joined.view() );
         }
     };
 } // namespace sw

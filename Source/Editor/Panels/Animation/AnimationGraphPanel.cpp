@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -26,8 +27,8 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
 
-#include <algorithm>
 #include <imgui.h>
+#include <algorithm>
 #include <imgui-node-editor/imgui_node_editor.h>
 
 namespace ed = ax::NodeEditor;
@@ -282,9 +283,11 @@ namespace sw::editor
             if ( EditorSelfTestMarks::isEnabled() )
             {
                 // 캔버스 안의 위젯 좌표는 캔버스 좌표다 — 화면 좌표로 바꿔 적는다(시나리오가 노드를 누르고 Ctrl 로 둘째를 고른다).
-                const ImVec2 nameMin = ed::CanvasToScreen( ImGui::GetItemRectMin() );
-                const ImVec2 nameMax = ed::CanvasToScreen( ImGui::GetItemRectMax() );
-                EditorSelfTestMarks::recordRect( ( "animationGraph.node." + node._name ).c_str(), float2{ nameMin.x, nameMin.y }, float2{ nameMax.x, nameMax.y } );
+                const ImVec2                            nameMin = ed::CanvasToScreen( ImGui::GetItemRectMin() );
+                const ImVec2                            nameMax = ed::CanvasToScreen( ImGui::GetItemRectMax() );
+                fixed_string<constant::buffer::kMax256> nodeMark;
+                formatstring( nodeMark.data(), nodeMark.capacity(), "animationGraph.node.%#", node._name );
+                EditorSelfTestMarks::recordRect( nodeMark.c_str(), float2{ nameMin.x, nameMin.y }, float2{ nameMax.x, nameMax.y } );
             }
             bool bLinkedIn  = false;
             bool bLinkedOut = false;
@@ -752,8 +755,10 @@ namespace sw::editor
             if ( ImGui::SmallButton( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeAddSection" ) ) )
             {
                 // 새 섹션은 마지막 섹션 뒤 시작이다(차례 계약). 이름은 번호로 유일하게.
-                AnimationMontageSection added{};
-                added._name         = hashed_string( ( string( "Section" ) + to_string( edited._listSection.size() + 1u ).c_str() ).c_str() );
+                AnimationMontageSection                added{};
+                fixed_string<constant::buffer::kMax32> sectionName;
+                formatstring( sectionName.data(), sectionName.capacity(), "Section%#", edited._listSection.size() + 1u );
+                added._name         = hashed_string( sectionName.view() );
                 added._startSeconds = edited._listSection.back()._startSeconds + AnimationGraphPanelInternal::kNewSectionGap;
                 edited._listSection.push_back( added );
                 bEdited = true;

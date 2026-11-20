@@ -65,10 +65,12 @@ namespace
         static SceneDocument::SceneObjectNode makeNode( uint64 fileID, const utf8* pName, const utf8* pPosition )
         {
             SceneDocument::SceneObjectNode node{};
-            node._fileID      = fileID;
-            node._name        = pName;
-            node._embeddedXML = string( "<GameObject _schemaVersion=\"0\" _name=\"" ) + pName + "\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"" + pPosition +
-                                "\" /></_listComponent></GameObject>";
+            node._fileID = fileID;
+            node._name   = pName;
+            StringBuilder<constant::buffer::kMax256> xml;
+            xml.appendFormat( "<GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"%#\" /></_listComponent></GameObject>", pName,
+                              pPosition );
+            node._embeddedXML = string( xml.view() );
             return node;
         }
 

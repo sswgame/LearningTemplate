@@ -3,6 +3,7 @@
 #include "Games/Velmora/VelmoraRegionCatalog.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -86,7 +87,9 @@ namespace sw
         const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
         if ( pID == nullptr )
             return false;
-        const string where = string( sourceName ) + " <Region id=\"" + pID + "\">";
+        StringBuilder<constant::buffer::kMax1024> whereBuilder;
+        whereBuilder.appendFormat( "%# <Region id=\"%#\">", sourceName, pID );
+        const string where( whereBuilder.view() );
         // 속성은 리플렉션 칸이다 — 빠진 경계 · 일어설 자리는 XMLFields.RequiredFieldMissing, 깨진 `x,z` 는 XMLFields.ValueUnreadable 로 이름과 함께 알린다.
         VelmoraRegionAttributeDef attribute;
         bool                      bValid = XMLFields::readProperties( node, attribute, where );

@@ -52,17 +52,21 @@ namespace sw::editor
                 {
                     vector<string> listName;
                     EditorThemeUtil::listThemes( listName );
-                    outReply = "unknown theme '" + listArgument[0] + "' (";
+                    StringBuilder<constant::buffer::kMax512> replyBuilder;
+                    replyBuilder.appendFormat( "unknown theme '%#' (", listArgument[0] );
                     for ( size_t nameIndex = 0; nameIndex < listName.size(); ++nameIndex )
                     {
                         if ( nameIndex > 0 )
-                            outReply += ", ";
-                        outReply += listName[nameIndex];
+                            replyBuilder.append( ", " );
+                        replyBuilder.append( listName[nameIndex] );
                     }
-                    outReply += ")";
+                    replyBuilder.append( ')' );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "theme " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "theme %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -73,7 +77,9 @@ namespace sw::editor
                 const bool        bSaveLayoutFailed = listArgument.size() != 1 || pDock == nullptr || pDock->saveNamedLayout( listArgument[0] ) == false;
                 if ( bSaveLayoutFailed )
                     return false;
-                outReply = "saved layout " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "saved layout %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -84,7 +90,9 @@ namespace sw::editor
                 const bool        bLoadLayoutFailed = listArgument.size() != 1 || pDock == nullptr || pDock->requestLoadNamedLayout( listArgument[0] ) == false;
                 if ( bLoadLayoutFailed )
                     return false;
-                outReply = "loading layout " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "loading layout %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -96,7 +104,9 @@ namespace sw::editor
                 if ( pPanel == nullptr )
                     return false;
                 pContext->getSubsystem<EditorWorkspace>().requestOpenPanelByID( listArgument[0] );
-                outReply = string{ "focusing " } + pPanel->getPanelTitle();
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "focusing %#", pPanel->getPanelTitle() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -107,7 +117,9 @@ namespace sw::editor
                 if ( pPanel == nullptr )
                     return false;
                 pContext->getSubsystem<EditorWorkspace>().requestFloatPanelByID( listArgument[0] );
-                outReply = string{ "floating " } + pPanel->getPanelTitle();
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "floating %#", pPanel->getPanelTitle() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -118,7 +130,11 @@ namespace sw::editor
                 IEditorPanel*         pPanel    = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
                 IEditorDocumentPanel* pDocument = pPanel != nullptr ? pPanel->asDocumentPanel() : nullptr;
                 if ( pDocument == nullptr )
-                    outReply = "no document panel '" + ( listArgument.empty() ? string{} : listArgument[0] ) + "'";
+                {
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no document panel '%#'", listArgument.empty() ? string_view{} : string_view{ listArgument[0] } );
+                    outReply = string( replyBuilder.view() );
+                }
                 return pDocument;
             }
 
@@ -133,10 +149,14 @@ namespace sw::editor
                     return false;
                 if ( pDocument->saveDocumentAndClearDirty() == false )
                 {
-                    outReply = "could not save the document of '" + listArgument[0] + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not save the document of '%#'", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "saved the document of " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "saved the document of %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -147,7 +167,9 @@ namespace sw::editor
                 if ( pDocument == nullptr )
                     return false;
                 pDocument->reloadDocument();
-                outReply = "reloaded the document of " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "reloaded the document of %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -160,10 +182,14 @@ namespace sw::editor
                 const expected<void> roundTrip = pDocument->validateUndoRoundTrip();
                 if ( roundTrip.has_value() == false )
                 {
-                    outReply = listArgument[0] + ": " + string{ roundTrip.error().message() } + " (" + string{ roundTrip.error().detail() } + ")";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "%#: %# (%#)", listArgument[0], roundTrip.error().message(), roundTrip.error().detail() );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "undo restores the document of " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "undo restores the document of %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -181,7 +207,9 @@ namespace sw::editor
                 pDocument->collectFilesToSave( listPath );
                 if ( listPath.empty() )
                 {
-                    outReply = "'" + listArgument[0] + "' has no file to save - open or edit its document first";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' has no file to save - open or edit its document first", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 if ( const expected<void> locked = EditorSaveFileLock::lock( listPath ); locked.has_value() == false )
@@ -203,10 +231,14 @@ namespace sw::editor
                     return false;
                 if ( pDocument->saveDocumentAndClearDirty() )
                 {
-                    outReply = "the document of '" + listArgument[0] + "' was saved over locked files";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "the document of '%#' was saved over locked files", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "the save of " + listArgument[0] + " was refused";
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "the save of %# was refused", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -217,7 +249,9 @@ namespace sw::editor
                     return false;
                 if ( const optional<string> changedPath = EditorSaveFileLock::unlock(); changedPath.has_value() )
                 {
-                    outReply = "'" + *changedPath + "' changed while it was locked";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' changed while it was locked", *changedPath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 outReply = "unlocked and unchanged";
@@ -230,8 +264,10 @@ namespace sw::editor
                 const bool     bClosePanelFailed = listArgument.size() != 1 || pContext == nullptr || pContext->getSubsystem<EditorPanelManager>().setPanelOpen( listArgument[0], false ) == false;
                 if ( bClosePanelFailed )
                     return false;
-                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] );
-                outReply                   = ( pPanel != nullptr && pPanel->isOpen() ? "waiting for the close confirmation of " : "closed " ) + listArgument[0];
+                const IEditorPanel*                      pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%#%#", ( pPanel != nullptr && pPanel->isOpen() ? "waiting for the close confirmation of " : "closed " ), listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

@@ -72,7 +72,9 @@ namespace sw
 
     string FixedCodecEmitState::makeEnumValueTableName( const ParsedFixedEnum& enumInfo )
     {
-        return "s_arrFixedEnum_" + CodeGenerator::sanitizeIdentifier( enumInfo._fullyQualifiedName );
+        StringBuilder<constant::buffer::kMax256> b;
+        b.appendFormat( "s_arrFixedEnum_%#", CodeGenerator::sanitizeIdentifier( enumInfo._fullyQualifiedName ) );
+        return string( b.view() );
     }
 
     void FixedCodecEmitState::reportError( const ParsedPropertyInfo& prop, const string_view message )
@@ -84,8 +86,11 @@ namespace sw
 
     void FixedCodecEmitState::markIneligible( const ParsedPropertyInfo& prop, const string_view reason )
     {
-        if ( _reason.empty() )
-            _reason = "field '" + prop._memberName + "': " + string( reason );
+        if ( _reason.empty() == false )
+            return;
+        StringBuilder<constant::buffer::kMax512> b;
+        b.appendFormat( "field '%#': %#", prop._memberName, reason );
+        _reason = string( b.view() );
     }
 
     uint32 FixedCodecEmitState::addDependency( const string& fieldName, const string& fqn )

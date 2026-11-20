@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/TypeInfo.h"
@@ -153,9 +154,9 @@ namespace sw
         const utf8* getPrefix() const { return _pPrefix; }
         string      makeTopic( string_view suffix ) const
         {
-            string topic( _pPrefix );
-            topic += suffix;
-            return topic;
+            StringBuilder<constant::buffer::kMax128> topic;
+            topic.appendFormat( "%#%#", _pPrefix, suffix );
+            return string( topic.view() );
         }
 
         /** @brief @p topic 이 이 가족의 주제(접두사 + 빈 아닌 접미사)이면 true 입니다. */

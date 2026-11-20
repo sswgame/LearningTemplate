@@ -19,14 +19,12 @@ namespace sw::editor
 
     string RetargetProfileEdit::joinNames( const vector<hashed_string>& listName )
     {
-        string text;
+        StringBuilder<constant::buffer::kMax512> text;
         for ( const hashed_string& name : listName )
         {
-            if ( text.empty() == false )
-                text += ", ";
-            text += name.c_str();
+            text.appendFormat( "%#%#", text.size() == 0 ? "" : ", ", name.c_str() );
         }
-        return text;
+        return string( text.view() );
     }
 
     bool RetargetProfileEdit::canAddChain( const vector<RetargetChain>& listChain, const hashed_string& name )

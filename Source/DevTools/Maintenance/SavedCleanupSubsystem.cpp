@@ -8,6 +8,8 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -99,9 +101,11 @@ namespace sw
         RetentionSettings settings;
         if ( readSettings( settings ) == false )
             return;
-        const string saved       = ProcessRoots::get()._saved.str();
-        const string trashRoot   = FileUtil::joinPath( saved, settings._trashFolder );
-        const string trash       = FileUtil::joinPath( trashRoot, to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) );
+        const string                           saved     = ProcessRoots::get()._saved.str();
+        const string                           trashRoot = FileUtil::joinPath( saved, settings._trashFolder );
+        fixed_string<constant::buffer::kMax64> trashName;
+        formatstring( trashName.data(), trashName.capacity(), "%#-%#", Process::getCurrentProcessID(), MonotonicClock::nowNanoseconds() );
+        const string trash       = FileUtil::joinPath( trashRoot, trashName.view() );
         const int64  nowTicks    = FileUtil::getCurrentFileWriteTime();
         const int64  minAgeTicks = settings._minAgeSeconds * FileUtil::kFileTimeTicksPerSecond;
         uint32       moved       = 0;
@@ -126,8 +130,9 @@ namespace sw
         // 버릴 자리를 통째로 지운다 — 앞 실행이 덜 지운 것도 함께. 종료가 멈추라 하면 그만두고 다음 기동이 잇는다.
         // 나란히 뜬 다른 프로세스(넷 플레이의 서버 · 클라이언트, ctest 의 백엔드 넷)도 같은 자리를 비운다 — 둘이 한 더미를 함께 지우면 한쪽이 "비어 있지 않음" 으로 진다.
         // 그래서 이름을 바꿔 차지한 더미만 지운다(같은 더미를 두 프로세스가 바꾸면 하나만 이긴다). 남이 차지한 더미는 오래된 것(그 프로세스가 지우다 죽었다)만 다시 차지한다.
-        const string claimPrefix = string( SavedCleanupSubsystemInternal::kClaimPrefix ) + to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) + "-";
-        uint32       claimCount  = 0;
+        fixed_string<constant::buffer::kMax64> claimPrefix;
+        formatstring( claimPrefix.data(), claimPrefix.capacity(), "%#%#-%#-", SavedCleanupSubsystemInternal::kClaimPrefix, Process::getCurrentProcessID(), MonotonicClock::nowNanoseconds() );
+        uint32 claimCount = 0;
         for ( const SavedCleanupSubsystemInternal::Entry& pile : SavedCleanupSubsystemInternal::listNewestFirst( trashRoot ) )
         {
             if ( stopToken.isStopRequested() )
@@ -135,7 +140,9 @@ namespace sw
             const bool bClaimedRecently = StringUtil::startsWith( FileUtil::getFileNamePart( pile._path ), SavedCleanupSubsystemInternal::kClaimPrefix ) && nowTicks - pile._writeTicks < minAgeTicks;
             if ( bClaimedRecently )
                 continue;
-            const string claimedPath = FileUtil::joinPath( trashRoot, claimPrefix + to_string( claimCount++ ) );
+            fixed_string<constant::buffer::kMax128> claimedName;
+            formatstring( claimedName.data(), claimedName.capacity(), "%#%#", claimPrefix.view(), claimCount++ );
+            const string claimedPath = FileUtil::joinPath( trashRoot, claimedName.view() );
             if ( FileUtil::renamePath( pile._path, claimedPath ) == false )
                 continue; // 다른 프로세스가 먼저 차지했다(또는 아직 채우는 중이다) — 그쪽이 지운다
             (void)FileUtil::removeDirectory( claimedPath );

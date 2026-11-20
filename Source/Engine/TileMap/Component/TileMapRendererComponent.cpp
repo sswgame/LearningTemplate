@@ -27,7 +27,6 @@ namespace sw
     TileMapRendererComponent::TileMapRendererComponent()
         : _tileMapPath{}
         , _materialPath{}
-        , _sortingLayer{ "Default" }
         , _orderInLayer{ 0 }
         , _colliderLayer{ 0 }
         , _colliderMaterial{}

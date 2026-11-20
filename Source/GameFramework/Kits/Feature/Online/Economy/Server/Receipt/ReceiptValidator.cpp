@@ -17,8 +17,9 @@ namespace sw
             {
                 if ( storeName.empty() || storeName.find( '.' ) != string_view::npos )
                     return false;
-                const string scope = string( kScopePrefix ) + string( storeName );
-                return LedgerUtil::isValidReasonCode( scope );
+                StringBuilder<constant::buffer::kMax64> scope;
+                scope.appendFormat( "%#%#", kScopePrefix, storeName );
+                return LedgerUtil::isValidReasonCode( scope.view() );
             }
         };
     } // namespace

@@ -1,17 +1,17 @@
 {
     "_comment": "Scripts/lint/common_shapes.py 의 예외. 규칙마다 '자리' → 까닭이다.",
-    "enumNameSwitch": {
+    "_enumNameSwitch": {
         "Source/Engine/Serialization/Fixed/FixedLayout.cpp|FixedReadResult": "리플렉션 생성 코드(ReflectGenerated.h)가 이 헤더를 끌어 ENUM() 을 달 수 없는 아래 층이다",
         "Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.cpp|?": "바깥 표준 철자(VkResult 상수)다",
         "Source/Engine/Animation/Rig/RigConstraintNodes.cpp|Mode": ".cpp 안 열거라 리플렉션이 보지 못한다. 글은 노드 종류 이름이다"
     },
-    "firstComponent": {
+    "_firstComponent": {
         "Source/Engine/Automation/Watch/AutomationComponentWatch.h": "기반 자신이다"
     },
-    "oneLineValidator": {
+    "_oneLineValidator": {
         "Source/Engine/Automation/Scenario/AutomationScenario.h": "기반 자신이다(AutomationStep::validateProperties)"
     },
-    "makeDelta": {
+    "_makeDelta": {
         "Source/Engine/Serialization/Inherit/DataInheritance.cpp": "기반 자신이다",
         "Source/Engine/Serialization/Inherit/ResourceComposer.cpp": "기반 자신이다",
         "Source/Engine/Serialization/Inherit/DataCatalogInheritance.cpp": "감싼 카탈로그 글의 차이를 만드는 아래 함수다(makeFileDelta)",
@@ -19,7 +19,7 @@
         "Source/Engine/Audio/AudioEvent.cpp": "문서 안 프리셋 항목 하나의 차이다. 파일 저장은 saveDelta 를 탄다",
         "Source/Editor/Common/Asset/ModelImport/ModelImportMaterial.cpp": "임포트가 견본과의 차이 글을 만들어 넘긴다 — 쓰기는 임포트 절차가 한다"
     },
-    "assetEntrance": {
+    "_assetEntrance": {
         "Source/Engine/Localization/CultureInfo.cpp|CultureTable::loadFromAsset": "문화권 표는 locale 축 값을 정하는 쪽이다 — 그 표가 덮어쓰기 층 · 다시 읽기 기록에 들면 축이 자기를 다시 읽는 순환이 된다",
         "Source/Engine/Serialization/Inherit/AssetRedirect.cpp|AssetRedirect::loadFromSearchDomains": "리다이렉트 표 자신이다 — 리소스 입구가 찾기 전에 푸는 표라 층 · 교체 · 다시 읽기 문맥으로 읽으면 순환이다(경로 교체 표와 같은 까닭)",
         "Source/Engine/Serialization/Inherit/ResourceRemap.cpp|ResourceRemap::loadFromAsset": "경로 교체 표 자신이다 — 리소스 입구가 찾기 전에 쓰는 표라 그 표를 층 · 교체로 읽으면 순환이다(사슬은 오류인 것과 같은 까닭)",
@@ -31,7 +31,7 @@
         "Source/Editor/Panels/MaterialGraph/Model/MaterialGraphViewModel.cpp|MaterialGraphViewModel::load": "에디터가 고칠 원본을 읽는다 — 층 · 합치기를 거치면 층의 값이 원본 저장에 구워진다(ResourceComposer 의 SaveWouldBake 와 같은 까닭). 부모는 findBasePath 로 따로 든다",
         "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLMigrationRunner.cpp|SQLMigrationRunner::loadMigrations": "SQL 이주 글이다 — XML 합치기 · 층의 형식이 아니고, 이주는 서버 저장소 스키마라 팩 층으로 바뀌면 안 된다"
     },
-    "engineChildCommand": {
+    "_engineChildCommand": {
         "Source/Core/Process/Process.cpp": "ProcessCommand::at 의 정의 자신이다",
         "Source/Core/Process/EngineChildProcess.cpp": "입구 자신이다(실행 파일 · 인자 · 자동화 인자를 함께 쥔다)",
         "Source/Core/Testing/TestRunner.cpp": "테스트 자식 역할(runChild)은 늘 -test · -unattended 로 뜬다 — Core 의 테스트 실행기라 부모 명령줄 서비스를 쥐지 않는다",
@@ -41,7 +41,7 @@
         "Source/Editor/Panels/Console/Model/EditorSourceLocation.cpp": "엔진이 아닌 도구(사람이 고른 소스 편집기)다",
         "Source/Editor/Common/Commands/Diagnostics/EditorTracyLauncher.cpp": "엔진이 아닌 도구(Tracy 프로파일러)다"
     },
-    "editorContentScan": {
+    "_editorContentScan": {
         "Source/Editor/Common/Asset/EditorContentScan.cpp|folder": "입구 자신이다(훑은 뒤 남의 시나리오 사본을 뺀다)",
         "Source/Editor/Common/Commands/EditorBackgroundIO.cpp|input._folder": "프리셋 폴더 하나(인스펙터 · 전역 변수 프리셋, 재귀 아님)를 훑는 일반 잡이다 — 트리를 걷지 않는다. 리소스 트리를 훑는 곳은 EditorContentScan 을 쓴다",
         "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|EditorAutosaveCommandsInternal::getFolder()": "자동 저장 칸(Saved 아래)이다 — 리소스 트리 밖",
@@ -62,7 +62,7 @@
         "Source/Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.cpp|configFolder": "프로젝트 설정 창이 표 페이지로 여는 `Config/` 다 — 리소스 트리(Content) 밖이라 다른 프로세스의 시나리오 사본이 없다",
         "Source/Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.cpp|FileUtil::joinPath( projectRoot": "게임별 프리셋 폴더(`Config/Game` · `Config/Server`)다 — 리소스 트리(Content) 밖이라 다른 프로세스의 시나리오 사본이 없다"
     },
-    "nameHashKey": {
+    "_nameHashKey": {
         "Source/Engine/Reflection/TypeRegistry.cpp": "기반 자신이다 — 해시 표는 NameHashIndex(find 로 종류 · 지운 이름을 먼저 본다)이고, tryFindNameHashClash 는 열거자 해시 충돌을 찾는 검사 표다",
         "Source/Engine/Serialization/Format/BinarySerializer.cpp": "LogOnce 키(경고를 필드마다 한 번)다 — 겹치면 경고 한 줄이 빠질 뿐 데이터는 바뀌지 않는다",
         "Source/Engine/Serialization/Serializer/SerializerUtil.cpp": "LogOnce 키(모르는 열거자 경고를 한 번)다 — 겹쳐도 데이터는 바뀌지 않는다",
@@ -71,11 +71,13 @@
         "Source/GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.cpp": "저장 상태의 노드 id 해시다 — 만들기(populateNodes)가 NameHashIndex 로 같은 해시의 두 id 를 거절해 회로 안에서는 하나로 정해진다",
         "Source/Editor/Panels/Inspector/Model/PropertyGridViewModel.cpp": "인스펙터 행 높이 기억 키다 — 겹치면 한 행의 높이 추정이 섞일 뿐 데이터는 바뀌지 않는다"
     },
-    "frameIntern": {
+    "_frameIntern": {
         "Source/Games/NileCity/NileGameModeComponent.cpp|updateInput": "게임 스레드 입력, 프레임당 키 수가 상수이고 워커 경합이 없다",
         "Source/Games/Shooter3D/ShooterEnemyComponent.cpp|updateAnimator": "공격을 시작하는 순간에만 지난다",
         "Source/Games/Shooter3D/ShooterGameModeComponent.cpp|updateEnemies": "적이 죽는 순간에만 지난다",
         "Source/Games/ThemeParkTycoon/ParkGameModeComponent.cpp|updateInput": "게임 스레드 입력, 프레임당 키 수가 상수이고 워커 경합이 없다",
         "Source/Engine/Navigation/Scene/NavDebugView.cpp|updateSolidView": "디버그 보기를 처음 켤 때 한 번 오브젝트를 만든다"
-    }
+    },
+    "_savedText": {},
+    "_statePair": {}
 }

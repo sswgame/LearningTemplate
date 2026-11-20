@@ -234,7 +234,7 @@ namespace sw
 
         PROPERTY( Required )
         string _file{};
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _stability{ "render" };
     };
 

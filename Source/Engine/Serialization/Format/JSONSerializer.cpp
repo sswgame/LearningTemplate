@@ -541,7 +541,11 @@ namespace sw
         {
             if ( prop._bIsBitField == SW_TRUE )
                 continue;
-            const string    path  = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+            StringBuilder<constant::buffer::kMax256> pathBuilder;
+            if ( prefix.empty() == false )
+                pathBuilder.appendFormat( "%#.", prefix );
+            pathBuilder.append( prop._name.c_str() );
+            const string    path  = string( pathBuilder.view() );
             const JSONValue value = object.get( prop._name.c_str() );
             // 판정은 XML 과 한 함수다(`SerializerUtil::isRequiredValueMissing`) — 빈 이름 글도 빠진 것이다.
             const string      valueText = value.isValid() && value.isString() ? value.asString() : string{};

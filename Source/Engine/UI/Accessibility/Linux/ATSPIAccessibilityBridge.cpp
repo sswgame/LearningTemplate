@@ -19,8 +19,8 @@
     #include "Engine/UI/UISystem.h"
     #include "Engine/Window/IWindow.h"
 
-    #include <dbus/dbus.h>
     #include <X11/Xlib.h>
+    #include <dbus/dbus.h>
 
     #include "Core/Foundation/X11MacroUndef.h"
 
@@ -67,8 +67,10 @@ namespace sw
             /** @brief `/org/a11y/atspi/accessible/n<화면>_<위젯 키>` 에서 화면 번호와 위젯 토큰 키(`WidgetID::getKey`)를 읽습니다. 모양이 다르면 false. */
             [[nodiscard]] bool parseNodePath( const utf8* pPath, uint32& outScreen, uint64& outWidgetKey )
             {
-                const string prefix = string( kPathPrefix ) + "/n";
-                const string path( pPath );
+                StringBuilder<constant::buffer::kMax64> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/n", kPathPrefix );
+                const string_view prefix = prefixBuilder.view();
+                const string      path( pPath );
                 if ( path.size() <= prefix.size() || path.compare( 0, prefix.size(), prefix ) != 0 )
                     return false;
                 uint64 arrNumber[2]{ 0, 0 };

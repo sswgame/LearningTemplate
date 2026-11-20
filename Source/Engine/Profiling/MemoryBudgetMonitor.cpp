@@ -125,7 +125,8 @@ namespace sw
                 continue;
             if ( _arrTagCounterSlot[tagIndex] == FrameProfiler::kInvalidSlot )
             {
-                const string scopeName       = string( "Mem." ) + MemoryProfiler::getMemoryTagName( tag ) + "KB";
+                fixed_string<constant::buffer::kMax64> scopeName;
+                formatstring( scopeName.data(), scopeName.capacity(), "Mem.%#KB", MemoryProfiler::getMemoryTagName( tag ) );
                 _arrTagCounterSlot[tagIndex] = frameProfiler.registerScope( scopeName.c_str() );
             }
             frameProfiler.addCount( _arrTagCounterSlot[tagIndex], profiler.getStats( tag )._currentAllocatedBytes / 1024 );

@@ -55,16 +55,16 @@ namespace
             }
             if ( endpoint == "/list" )
             {
-                string text;
+                StringBuilder<constant::buffer::kMax256> text;
                 for ( const auto& [name, file] : _mapFile )
                 {
-                    text += name + "\n";
+                    text.appendFormat( "%#\n", name );
                 }
                 for ( const string& name : _listExtraName )
                 {
-                    text += name + "\n";
+                    text.appendFormat( "%#\n", name );
                 }
-                setBody( response, text );
+                setBody( response, text.view() );
                 return response;
             }
             const auto it     = _mapFile.find( path );
@@ -122,11 +122,13 @@ namespace
 SW_TEST_CASE( FileServeContentSourceTest, MirrorsInChunksAndReusesFreshStamp )
 {
     FakeFileServeClient client;
-    const vector<uint8> pattern  = makePattern( FileServeContentSource::kChunkBytes * 2 + FileServeContentSource::kChunkBytes / 2 );
-    client._mapFile["game.pack"] = FakeFileServeClient::File{ pattern, 7 };
-    const string mountRoot       = test::makeScratchPath( "FileServe/Packs" );
-    const string mirrorRoot      = test::makeScratchPath( "FileServe/Mirror" );
-    const string packPath        = mountRoot + "/game.pack";
+    const vector<uint8> pattern                         = makePattern( FileServeContentSource::kChunkBytes * 2 + FileServeContentSource::kChunkBytes / 2 );
+    client._mapFile["game.pack"]                        = FakeFileServeClient::File{ pattern, 7 };
+    const string                             mountRoot  = test::makeScratchPath( "FileServe/Packs" );
+    const string                             mirrorRoot = test::makeScratchPath( "FileServe/Mirror" );
+    StringBuilder<constant::buffer::kMax512> packPathBuilder;
+    packPathBuilder.appendFormat( "%#/game.pack", mountRoot );
+    const string packPath( packPathBuilder.view() );
 
     {
         const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot, mirrorRoot };
@@ -166,15 +168,23 @@ SW_TEST_CASE( FileServeContentSourceTest, RefusesPathsOutsideTheMountAndEscaping
     const FileServeContentSource source{ client, FakeFileServeClient::kBase, mount, test::makeScratchPath( "FileServe/Mirror" ) };
 
     SW_EXPECT_FALSE( source.isFile( test::makeScratchPath( "Elsewhere/a.pack" ) ) );
-    SW_EXPECT_FALSE( source.open( mount + "x/a.pack" ).isValid() );        // `<root>x` 는 다른 폴더다
-    SW_EXPECT_FALSE( source.open( mount + "/../escape.pack" ).isValid() ); // `..` 성분은 거울 밖이다
-    SW_EXPECT_FALSE( source.isFile( mount + "/sub/../a.pack" ) );
+    StringBuilder<constant::buffer::kMax512> outsidePath;
+    outsidePath.appendFormat( "%#x/a.pack", mount );
+    SW_EXPECT_FALSE( source.open( outsidePath.view() ).isValid() ); // `<root>x` 는 다른 폴더다
+    outsidePath.clear();
+    outsidePath.appendFormat( "%#/../escape.pack", mount );
+    SW_EXPECT_FALSE( source.open( outsidePath.view() ).isValid() ); // `..` 성분은 거울 밖이다
+    outsidePath.clear();
+    outsidePath.appendFormat( "%#/sub/../a.pack", mount );
+    SW_EXPECT_FALSE( source.isFile( outsidePath.view() ) );
     SW_EXPECT_EQUAL( 0u, client._requestCount );
 
     vector<string> listPath;
     SW_REQUIRE_TRUE( source.collectFiles( mount, listPath ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listPath.size() );
-    SW_EXPECT_TRUE( listPath[0] == FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( mount ) ) + "/a.pack" );
+    StringBuilder<constant::buffer::kMax512> expectedPath;
+    expectedPath.appendFormat( "%#/a.pack", FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( mount ) ) );
+    SW_EXPECT_TRUE( string_view( listPath[0] ) == expectedPath.view() );
 
     client._listExtraName.push_back( "../escape.pack" );
     listPath.clear();

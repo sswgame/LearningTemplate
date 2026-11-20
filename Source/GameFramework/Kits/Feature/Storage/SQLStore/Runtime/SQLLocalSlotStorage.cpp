@@ -98,7 +98,10 @@ namespace sw
     LocalStoreResult SQLLocalSlotStorage::listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo )
     {
         // 접두어는 슬롯 규칙에 맞는 글자뿐이므로 LIKE 의 와일드카드(% _)를 피해 범위로 조회한다: [접두어, 접두어 + 0x7F).
-        const string   upperBound  = groupPrefix + static_cast<utf8>( 0x7F );
+        StringBuilder<constant::buffer::kMax128> upperBoundBuilder;
+        upperBoundBuilder.append( groupPrefix );
+        upperBoundBuilder.append( static_cast<utf8>( 0x7F ) );
+        const string   upperBound( upperBoundBuilder.view() );
         const SQLValue arrParam[2] = { SQLValue::makeText( groupPrefix ), SQLValue::makeText( upperBound ) };
         SQLRowSet      rowSet;
         if ( _connection->execute( "SELECT slot, length( bytes ), written_at_ms FROM sw_local_slot WHERE slot >= ? AND slot < ? ORDER BY slot", arrParam, 2, &rowSet ) !=

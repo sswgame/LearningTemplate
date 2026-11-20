@@ -448,6 +448,8 @@ SW_TEST_CASE( MailboxServiceTest, ServerAssembledFromConfigServesTheClient )
     test::OnlineRuntimeFixture unnamed;
     const auto                 failed1 = unnamed.fromConfig( kServerJSON, test::OnlineRuntimeFixture::withBaseTTL( R"({ "_listKit": [ { "_name": "mailbox", "_settings": { "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 } } } ] })" ), kNowMs );
     SW_REQUIRE_FALSE( failed1.has_value() );
-    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    StringBuilder<constant::buffer::kMax512> error1Builder;
+    error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );
+    const sw::string error1( error1Builder.view() );
     SW_EXPECT_TRUE( error1.find( "_storeName" ) != string::npos );
 }

@@ -19,22 +19,18 @@ namespace sw
     {
         struct ComponentStableKeyInternal
         {
-            static constexpr const utf8* kHexDigits              = "0123456789abcdef";
-            static constexpr size_t      kHexLength              = 16;
-            static constexpr int32       kHexBase                = 16;
-            static constexpr uint32      kNibbleBits             = 4;
-            static constexpr uint64      kNibbleMask             = 0xF;
-            static constexpr size_t      kOccurrenceDigitReserve = 12; ///< `#` 와 순번 숫자 자리
+            static constexpr const utf8* kHexDigits  = "0123456789abcdef";
+            static constexpr size_t      kHexLength  = 16;
+            static constexpr int32       kHexBase    = 16;
+            static constexpr uint32      kNibbleBits = 4;
+            static constexpr uint64      kNibbleMask = 0xF;
 
             /** @brief id 를 적지 않은 컴포넌트의 id 를 섞을 글(`이름#순번`)입니다. */
             static string makeOccurrenceText( string_view baseName, int32 occurrence )
             {
-                string key;
-                key.reserve( baseName.size() + kOccurrenceDigitReserve );
-                key.append( baseName.data(), baseName.size() );
-                key += '#';
-                key += to_string( occurrence );
-                return key;
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%##%#", baseName, occurrence );
+                return string( key.view() );
             }
 
             /** @brief 오브젝트의 컴포넌트를 목록 칸으로 옮깁니다(오브젝트 순서). @p outIndex 는 @p pTarget 의 자리입니다(없으면 그대로). */

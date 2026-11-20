@@ -17,23 +17,6 @@ namespace sw
         struct ModSetDigestInternal
         {
             static constexpr size_t kHashTextLength = 16; ///< 해시 글(16 진수 16 자리)
-
-            /** @brief @p value 의 16 진수 16 자리(소문자)입니다. */
-            static string formatHash( uint64 value )
-            {
-                static constexpr const utf8* kDigits = "0123456789abcdef";
-                string                       text( kHashTextLength, '0' );
-                for ( size_t index = 0; index < kHashTextLength; ++index )
-                {
-                    text[kHashTextLength - 1 - index] = kDigits[( value >> ( index * 4 ) ) & 0xFu];
-                }
-                return text;
-            }
-
-            static string formatEntry( const ModDigestEntry& entry )
-            {
-                return entry._id + "@" + entry._version.toString() + "#" + formatHash( entry._contentHash );
-            }
         };
     } // namespace
 } // namespace sw
@@ -128,14 +111,13 @@ namespace sw
 
     string ModSetDigest::toText() const
     {
-        string text;
+        StringBuilder<constant::buffer::kMax1024> text;
         for ( const ModDigestEntry& entry : _listEntry )
         {
-            if ( text.empty() == false )
-                text += ';';
-            text += ModSetDigestInternal::formatEntry( entry );
+            // 해시는 16 진수 16 자리(소문자)다.
+            text.appendFormat( "%#%#@%##%016llx", text.size() == 0 ? "" : ";", entry._id, entry._version.toString(), static_cast<unsigned long long>( entry._contentHash ) );
         }
-        return text;
+        return string( text.view() );
     }
 
     bool ModSetDigest::parseText( string_view text, ModSetDigest& outDigest )

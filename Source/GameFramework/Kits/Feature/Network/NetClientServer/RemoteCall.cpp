@@ -164,10 +164,9 @@ namespace sw
     {
         if ( function._name.empty() )
             return nullptr;
-        string validatorName = "validate";
-        validatorName += StringUtil::toUpperChar( function._name[0] );
-        validatorName += function._name.c_str() + 1;
-        return RemoteCallInternal::findFunction( type, validatorName );
+        StringBuilder<constant::buffer::kMax128> validatorName;
+        validatorName.appendFormat( "validate%#%#", StringUtil::toUpperChar( function._name[0] ), function._name.c_str() + 1 );
+        return RemoteCallInternal::findFunction( type, validatorName.view() );
     }
 
     bool RemoteCallTargets::validateRemoteCallContract( const TypeInfo& type, FunctionNetRole role )

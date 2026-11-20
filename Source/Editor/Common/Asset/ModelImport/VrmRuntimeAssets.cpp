@@ -90,7 +90,11 @@ namespace sw::editor
                     if ( current._listBone.size() >= 2 )
                         inoutListChain.push_back( current );
                     else if ( current._listBone.empty() == false )
-                        addIgnored( pOutListIgnored, "springBone chain of one bone '" + current._listBone.front() + "'" );
+                    {
+                        StringBuilder<constant::buffer::kMax256> ignoredBuilder;
+                        ignoredBuilder.appendFormat( "springBone chain of one bone '%#'", current._listBone.front() );
+                        addIgnored( pOutListIgnored, string( ignoredBuilder.view() ) );
+                    }
                     current._listBone.clear();
                 };
                 int32 lastBone = -1;
@@ -99,7 +103,9 @@ namespace sw::editor
                     const optional<uint32> foundBone = skeleton.findBoneIndex( hashed_string( joint._bone ) );
                     if ( foundBone.has_value() == false )
                     {
-                        addIgnored( pOutListIgnored, "springBone joint '" + joint._bone + "' (not a skeleton bone)" );
+                        StringBuilder<constant::buffer::kMax256> ignoredBuilder;
+                        ignoredBuilder.appendFormat( "springBone joint '%#' (not a skeleton bone)", joint._bone );
+                        addIgnored( pOutListIgnored, string( ignoredBuilder.view() ) );
                         continue;
                     }
                     const int32 bone   = static_cast<int32>( *foundBone ); // 부모 번호(int32, 루트 -1)와 견준다
@@ -140,9 +146,17 @@ namespace sw::editor
             const bool bOverrides = expression._overrideBlink != VrmExpressionOverride::None || expression._overrideLookAt != VrmExpressionOverride::None ||
                                     expression._overrideMouth != VrmExpressionOverride::None;
             if ( bOverrides )
-                Internal::addIgnored( pOutListIgnored, "expression '" + expression._name + "' override (blink, lookAt, mouth)" );
+            {
+                StringBuilder<constant::buffer::kMax256> ignoredBuilder;
+                ignoredBuilder.appendFormat( "expression '%#' override (blink, lookAt, mouth)", expression._name );
+                Internal::addIgnored( pOutListIgnored, string( ignoredBuilder.view() ) );
+            }
             if ( expression._bBinary != SW_FALSE )
-                Internal::addIgnored( pOutListIgnored, "expression '" + expression._name + "' isBinary" );
+            {
+                StringBuilder<constant::buffer::kMax256> ignoredBuilder;
+                ignoredBuilder.appendFormat( "expression '%#' isBinary", expression._name );
+                Internal::addIgnored( pOutListIgnored, string( ignoredBuilder.view() ) );
+            }
         }
 
         // 비즘 — 무음 하나와 VRM 입 모양 셋. 립싱크 표의 이름이다.
@@ -166,7 +180,11 @@ namespace sw::editor
             {
                 VectorUtil::addUnique( listBlinkTarget, bind._morphTarget );
                 if ( MathUtil::abs( bind._weight - 1.0f ) > MathUtil::kLooseEpsilon )
-                    Internal::addIgnored( pOutListIgnored, "expression '" + string( name ) + "' weights (blink targets are weight 1)" );
+                {
+                    StringBuilder<constant::buffer::kMax256> ignoredBuilder;
+                    ignoredBuilder.appendFormat( "expression '%#' weights (blink targets are weight 1)", name );
+                    Internal::addIgnored( pOutListIgnored, string( ignoredBuilder.view() ) );
+                }
             }
         };
         collectBlink( "blink" );
@@ -220,12 +238,18 @@ namespace sw::editor
             previousSpring          = chain._springIndex;
 
             if ( spring._centerBone.empty() == false )
-                Internal::addIgnored( pOutListIgnored, "springBone '" + spring._name + "' center" );
+            {
+                StringBuilder<constant::buffer::kMax256> ignoredBuilder;
+                ignoredBuilder.appendFormat( "springBone '%#' center", spring._name );
+                Internal::addIgnored( pOutListIgnored, string( ignoredBuilder.view() ) );
+            }
 
             const XMLNode node = nodes.appendChild( "item" );
             node.appendAttribute( "type", "SpringChain" );
             StringBuilder<constant::buffer::kMax256> textBuilder;
-            textBuilder.appendFormat( "Spring%#%#", chain._springIndex, ( partIndex > 0 ? "_" + to_string( partIndex ) : string{} ) );
+            textBuilder.appendFormat( "Spring%#", chain._springIndex );
+            if ( partIndex > 0 )
+                textBuilder.appendFormat( "_%#", partIndex );
             node.appendAttribute( "name", textBuilder.view() );
             // VRM(three-vrm VRMSpringBoneJoint.update) 의 한 프레임: 다음 끝 = 끝 + (끝 − 이전 끝) × (1 − dragForce) + 뼈 방향 × stiffness × dt + gravityDir × gravityPower × dt,
             // 그 뒤 길이를 맞추고 충돌체(hitRadius + 반지름)에서 밀어낸다. 리그 사슬의 고정 스텝과 항마다 같다 — 감쇠 = dragForce, axis_pull = stiffness(m/s),
@@ -268,7 +292,9 @@ namespace sw::editor
                 const VrmSpringCollider& collider = def._listCollider[colliderIndex];
                 if ( skeleton.findBoneIndex( hashed_string( collider._bone ) ).has_value() == false )
                 {
-                    Internal::addIgnored( pOutListIgnored, "springBone collider on '" + collider._bone + "' (not a skeleton bone)" );
+                    StringBuilder<constant::buffer::kMax256> ignoredBuilder;
+                    ignoredBuilder.appendFormat( "springBone collider on '%#' (not a skeleton bone)", collider._bone );
+                    Internal::addIgnored( pOutListIgnored, string( ignoredBuilder.view() ) );
                     continue;
                 }
                 const XMLNode entry = colliders.appendChild( "item" );

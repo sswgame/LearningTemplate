@@ -139,12 +139,13 @@ namespace sw
 
     string GameActionCall::formatText( const ActionEntry& entry, const InstancedStruct& params )
     {
-        const InstancedStruct defaults( *entry._pParamsOps );
-        const string          arguments = InstancedStructText::write( params.getInstance(), defaults.getInstance(), *params.getType() );
-        string                text( entry._pName );
+        const InstancedStruct                    defaults( *entry._pParamsOps );
+        const string                             arguments = InstancedStructText::write( params.getInstance(), defaults.getInstance(), *params.getType() );
+        StringBuilder<constant::buffer::kMax256> text;
+        text.append( entry._pName );
         if ( arguments.empty() == false )
-            text += "(" + arguments + ")";
-        return text;
+            text.appendFormat( "(%#)", arguments );
+        return string( text.view() );
     }
 
     expected<void> GameActionCall::tryCompileText( string_view text, GameActionCall& outCall )
@@ -247,12 +248,15 @@ namespace sw
                 uint32 lineCount = 0;
                 for ( auto it = listEntry.rbegin(); it != listEntry.rend() && lineCount < kSectionLines; ++it, ++lineCount )
                 {
-                    string value = string( it->_arrName ) + " " + getEnumName( it->_result );
+                    StringBuilder<constant::buffer::kMax128> value;
+                    value.appendFormat( "%# %#", it->_arrName, getEnumName( it->_result ) );
                     if ( it->_bAborted == SW_TRUE )
-                        value += " (aborted)";
+                        value.append( " (aborted)" );
                     else if ( it->_bJustStarted == SW_TRUE )
-                        value += " (started)";
-                    writer.addLine( "#" + to_string( it->_sequence ), value );
+                        value.append( " (started)" );
+                    fixed_string<constant::buffer::kMax32> label;
+                    formatstring( label.data(), label.capacity(), "#%#", it->_sequence );
+                    writer.addLine( label, value.view() );
                 }
             }
         };

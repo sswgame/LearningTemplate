@@ -2,6 +2,8 @@
 
 #include "Core/String/MarkupToken.h"
 
+#include "Core/String/StringBuilder.h"
+
 namespace sw
 {
     namespace
@@ -107,7 +109,11 @@ namespace sw
             if ( token._kind == MarkupTokenKind::OpenTag )
                 outListTag.emplace_back( token._name );
             else if ( token._kind == MarkupTokenKind::CloseTag )
-                outListTag.push_back( "/" + string( token._name ) );
+            {
+                StringBuilder<constant::buffer::kMax64> closeTag;
+                closeTag.appendFormat( "/%#", token._name );
+                outListTag.push_back( string( closeTag.view() ) );
+            }
         }
     }
 

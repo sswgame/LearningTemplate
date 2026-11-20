@@ -66,12 +66,14 @@ SW_TEST_CASE( AnimationSetTest, BaseAndBorrowedClipsFlattenIntoOneTable )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "other.animset.xml" ), other.saveToString() ) );
     const string otherID = test::ScopedScratchDomain::makeID( "other.animset.xml" ).str();
 
-    const string text = "<AnimationSet formatVersion=\"0\" _base=\"" + base + "\">" +                                    //
-                        "<clip name=\"walk\" path=\"common/models/_shared/clips/dddd.animclip\" />" +                    // 차이
-                        "<clip name=\"farm_harvest\" set=\"" + otherID + "\" />" +                                       // 같은 이름을 빌린다
-                        "<clip name=\"harvest\" set=\"" + otherID + "\" source=\"farm_harvest\" />" + "</AnimationSet>"; // 다른 이름으로 빌린다
+    StringBuilder<constant::buffer::kMax512> text;
+    text.appendFormat( "<AnimationSet formatVersion=\"0\" _base=\"%#\">"                              //
+                       "<clip name=\"walk\" path=\"common/models/_shared/clips/dddd.animclip\" />"    // 차이
+                       "<clip name=\"farm_harvest\" set=\"%#\" />"                                    // 같은 이름을 빌린다
+                       "<clip name=\"harvest\" set=\"%#\" source=\"farm_harvest\" /></AnimationSet>", // 다른 이름으로 빌린다
+                       base, otherID, otherID );
     AnimationSet animationSet;
-    SW_REQUIRE_TRUE( animationSet.loadFromXMLText( text, "<test>" ) );
+    SW_REQUIRE_TRUE( animationSet.loadFromXMLText( text.view(), "<test>" ) );
     SW_EXPECT_EQUAL( string( "common/models/_shared/clips/aaaa.animclip" ), AnimationSetTestUtil::findPath( animationSet, "idle" ) ); // 바탕 그대로
     SW_EXPECT_EQUAL( string( "common/models/_shared/clips/dddd.animclip" ), AnimationSetTestUtil::findPath( animationSet, "walk" ) );
     SW_EXPECT_EQUAL( string( "common/models/_shared/clips/cccc.animclip" ), AnimationSetTestUtil::findPath( animationSet, "farm_harvest" ) );
@@ -98,7 +100,9 @@ SW_TEST_CASE( AnimationSetTest, RejectsBrokenLines )
     const test::ScopedScratchDomain domain;
     const string                    base = AnimationSetTestUtil::writeBaseSet( domain, "base.animset.xml" );
     SW_EXPECT_LOG( "AnimationSet.ClipNotInSet" );
-    SW_EXPECT_FALSE( animationSet.loadFromXMLText( "<AnimationSet formatVersion=\"0\"><clip name=\"run\" set=\"" + base + "\"/></AnimationSet>", "<test>" ) );
+    StringBuilder<constant::buffer::kMax256> xml;
+    xml.appendFormat( "<AnimationSet formatVersion=\"0\"><clip name=\"run\" set=\"%#\"/></AnimationSet>", base );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( xml.view(), "<test>" ) );
 }
 
 /**
@@ -113,14 +117,18 @@ SW_TEST_CASE( AnimationSetTest, ChildRemovesAndReplacesBaseLines )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "other.animset.xml" ), other.saveToString() ) );
     const string otherID = test::ScopedScratchDomain::makeID( "other.animset.xml" ).str();
 
-    const string text = "<AnimationSet formatVersion=\"0\" _base=\"" + base + "\">" + "<clip name=\"idle\" _op=\"Remove\" />" + "<clip name=\"walk\" _op=\"Replace\" set=\"" + otherID + "\" source=\"sprint\" />" + "</AnimationSet>";
+    StringBuilder<constant::buffer::kMax512> text;
+    text.appendFormat( "<AnimationSet formatVersion=\"0\" _base=\"%#\"><clip name=\"idle\" _op=\"Remove\" /><clip name=\"walk\" _op=\"Replace\" set=\"%#\" source=\"sprint\" /></AnimationSet>", base,
+                       otherID );
     AnimationSet animationSet;
-    SW_REQUIRE_TRUE( animationSet.loadFromXMLText( text, "<test>" ) );
+    SW_REQUIRE_TRUE( animationSet.loadFromXMLText( text.view(), "<test>" ) );
     SW_EXPECT_TRUE( animationSet.findClipPath( hashed_string( "idle" ) ) == nullptr );
     SW_EXPECT_EQUAL( string( "common/models/_shared/clips/cccc.animclip" ), AnimationSetTestUtil::findPath( animationSet, "walk" ) );
 
     SW_EXPECT_LOG( "AnimationSet.ClipNeedsOneSource" );
-    SW_EXPECT_FALSE( animationSet.loadFromXMLText( "<AnimationSet formatVersion=\"0\" _base=\"" + base + "\"><clip name=\"walk\" set=\"" + otherID + "\" source=\"sprint\" /></AnimationSet>", "<test>" ) );
+    StringBuilder<constant::buffer::kMax256> xml;
+    xml.appendFormat( "<AnimationSet formatVersion=\"0\" _base=\"%#\"><clip name=\"walk\" set=\"%#\" source=\"sprint\" /></AnimationSet>", base, otherID );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( xml.view(), "<test>" ) );
 }
 
 /**
@@ -128,14 +136,18 @@ SW_TEST_CASE( AnimationSetTest, ChildRemovesAndReplacesBaseLines )
  */
 SW_TEST_CASE( AnimationSetTest, LoopsStopWithAnError )
 {
-    const test::ScopedScratchDomain domain;
-    const string                    self = test::ScopedScratchDomain::makeID( "loop.animset.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "loop.animset.xml" ), "<AnimationSet formatVersion=\"0\" _base=\"" + self + "\"/>" ) );
+    const test::ScopedScratchDomain          domain;
+    const string                             self = test::ScopedScratchDomain::makeID( "loop.animset.xml" ).str();
+    StringBuilder<constant::buffer::kMax256> xml;
+    xml.appendFormat( "<AnimationSet formatVersion=\"0\" _base=\"%#\"/>", self );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "loop.animset.xml" ), xml.view() ) );
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
     SW_EXPECT_TRUE( SharedAssetCache<AnimationSet>::acquire( test::ScopedScratchDomain::makeID( "loop.animset.xml" ).view() ).snapshot() == nullptr );
 
-    const string selfSet = test::ScopedScratchDomain::makeID( "setloop.animset.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "setloop.animset.xml" ), "<AnimationSet formatVersion=\"0\"><clip name=\"a\" set=\"" + selfSet + "\"/></AnimationSet>" ) );
+    const string                             selfSet = test::ScopedScratchDomain::makeID( "setloop.animset.xml" ).str();
+    StringBuilder<constant::buffer::kMax256> setXML;
+    setXML.appendFormat( "<AnimationSet formatVersion=\"0\"><clip name=\"a\" set=\"%#\"/></AnimationSet>", selfSet );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "setloop.animset.xml" ), setXML.view() ) );
     SW_EXPECT_LOG( "AnimationSet.ChainTooDeep" );
     SW_EXPECT_TRUE( SharedAssetCache<AnimationSet>::acquire( test::ScopedScratchDomain::makeID( "setloop.animset.xml" ).view() ).snapshot() == nullptr );
 }

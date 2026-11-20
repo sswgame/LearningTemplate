@@ -4,6 +4,8 @@
 
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -88,7 +90,14 @@ namespace sw::editor
             {
                 if ( listArgument.size() != 1 || SourceControlChangesViewModel::findSourceControl() == nullptr )
                     return false;
-                outReply = getSourceControl().requestHistory( listArgument[0] ) ? "reading history of " + listArgument[0] : string( "source control does not track changes (no git)" );
+                if ( getSourceControl().requestHistory( listArgument[0] ) )
+                {
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "reading history of %#", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
+                }
+                else
+                    outReply = "source control does not track changes (no git)";
                 return true;
             }
 

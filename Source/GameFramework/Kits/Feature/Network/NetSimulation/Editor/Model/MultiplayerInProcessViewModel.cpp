@@ -62,7 +62,11 @@ namespace sw::editor
         if ( const expected<void> started = session.start( settings ); started.has_value() )
             (void)session.setInputFocus( 1 ); // 첫 클라이언트가 입력을 받으며 시작한다
         else
-            _lastError = string( started.error().message() ) + " (" + string( started.error().detail() ) + ")";
+        {
+            StringBuilder<constant::buffer::kMax512> error;
+            error.appendFormat( "%# (%#)", started.error().message(), started.error().detail() );
+            _lastError = string( error.view() );
+        }
     }
 
     void MultiplayerInProcessViewModel::stop()

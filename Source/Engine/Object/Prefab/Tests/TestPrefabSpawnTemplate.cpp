@@ -43,11 +43,13 @@ namespace
         }
 
         /** @brief 루트 위치가 @p pPosition 인 프리팹 글입니다. @p nested 를 주면 루트에 붙는 중첩 인스턴스 원소를 더합니다. */
-        static string makePrefab( const utf8* pName, const utf8* pPosition, const string& nested = {} )
+        static string makePrefab( const utf8* pName, const utf8* pPosition, string_view nested = {} )
         {
-            return string( "<Prefab formatVersion=\"0\" name=\"" ) + pName + "\"><GameObject _schemaVersion=\"0\" _name=\"" + pName +
-                   "\" _bActive=\"true\"><_listComponent><SceneComponent _componentName=\"Root\" _localID=\"1\" _bActive=\"true\" _localPosition=\"" + pPosition +
-                   "\" /></_listComponent></GameObject>" + nested + "</Prefab>";
+            StringBuilder<constant::buffer::kMax1024> builder;
+            builder.appendFormat( "<Prefab formatVersion=\"0\" name=\"%#\"><GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"><_listComponent>"
+                                  "<SceneComponent _componentName=\"Root\" _localID=\"1\" _bActive=\"true\" _localPosition=\"%#\" /></_listComponent></GameObject>%#</Prefab>",
+                                  pName, pName, pPosition, nested );
+            return string( builder.view() );
         }
 
         /** @brief 오브젝트 상태 글(`<GameObject …>`)을 프리팹 파일 글로 감쌉니다. */
@@ -55,7 +57,9 @@ namespace
         {
             const size_t bodyStart = stateXML.find( "<GameObject" );
             SW_EXPECT_TRUE( bodyStart != string::npos );
-            return string( "<Prefab formatVersion=\"0\" name=\"" ) + pName + "\">" + stateXML.substr( bodyStart ) + "</Prefab>";
+            StringBuilder<constant::buffer::kMax4096> builder;
+            builder.appendFormat( "<Prefab formatVersion=\"0\" name=\"%#\">%#</Prefab>", pName, string_view( stateXML ).substr( bodyStart ) );
+            return string( builder.view() );
         }
     };
     using Util = PrefabSpawnTemplateTestUtil;
@@ -139,12 +143,21 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, MissingComponentAndHandleSurviveTemplate 
     HandleHolderTestComponent* pHolder = pAuthor->addComponent<HandleHolderTestComponent>();
     SW_REQUIRE_NOT_NULL( pTarget );
     SW_REQUIRE_NOT_NULL( pHolder );
-    pHolder->_target      = TComponentHandle<HandleTargetTestComponent>{ pTarget };
-    const string saved    = Util::saveState( pAuthor );
-    const string key      = "0:" + ComponentStableKey::makeKey( pTarget );
-    const string typeName = HandleTargetTestComponent::StaticType()->_name.c_str();
-    const string goneName = typeName + "Gone";
-    const string gone     = StringUtil::replace( StringUtil::replace( saved, "<" + typeName, "<" + goneName ), "</" + typeName + ">", "</" + goneName + ">" );
+    pHolder->_target                               = TComponentHandle<HandleTargetTestComponent>{ pTarget };
+    const string                             saved = Util::saveState( pAuthor );
+    StringBuilder<constant::buffer::kMax128> keyBuilder;
+    keyBuilder.appendFormat( "0:%#", ComponentStableKey::makeKey( pTarget ) );
+    const string                             key      = string( keyBuilder.view() );
+    const string                             typeName = HandleTargetTestComponent::StaticType()->_name.c_str();
+    StringBuilder<constant::buffer::kMax128> typeOpen;
+    typeOpen.appendFormat( "<%#", typeName );
+    StringBuilder<constant::buffer::kMax128> typeClose;
+    typeClose.appendFormat( "</%#>", typeName );
+    StringBuilder<constant::buffer::kMax128> goneOpen;
+    goneOpen.appendFormat( "<%#Gone", typeName );
+    StringBuilder<constant::buffer::kMax128> goneClose;
+    goneClose.appendFormat( "</%#Gone>", typeName );
+    const string gone = StringUtil::replace( StringUtil::replace( saved, typeOpen.view(), goneOpen.view() ), typeClose.view(), goneClose.view() );
     SW_REQUIRE_TRUE( gone.find( key ) != string::npos );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "holder.prefab.xml" ), Util::wrapAsPrefab( gone, "Holder" ) ) );
 
@@ -160,7 +173,7 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, MissingComponentAndHandleSurviveTemplate 
 
     const string resaved = Util::saveState( pSpawned );
     SW_EXPECT_TRUE( resaved.find( key ) != string::npos );
-    SW_EXPECT_TRUE( resaved.find( "<" + goneName ) != string::npos );
+    SW_EXPECT_TRUE( resaved.find( goneOpen.c_str() ) != string::npos );
 }
 
 /** @brief [PrefabSpawnTemplateTest] 씬 밖 매니저(`TransientTag`)는 컴포넌트 훅을 부르지 않는다 — 같은 컴포넌트가 보통 매니저에서는 등록된다 */
@@ -215,8 +228,9 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, CookedFlattenedNodeSpawnsFromTemplate )
     const string                    wheelID = test::ScopedScratchDomain::makeID( "wheel.prefab.xml" ).str();
     const string                    cartID  = test::ScopedScratchDomain::makeID( "cart.prefab.xml" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "wheel.prefab.xml" ), Util::makePrefab( "Wheel", "4,5,6" ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.prefab.xml" ),
-                                              Util::makePrefab( "Cart", "1,2,3", "<PrefabInstance name=\"Wheel\" prefab=\"" + wheelID + "\" localID=\"#0000000000000001\" />" ) ) );
+    StringBuilder<constant::buffer::kMax256> wheelNode;
+    wheelNode.appendFormat( "<PrefabInstance name=\"Wheel\" prefab=\"%#\" localID=\"#0000000000000001\" />", wheelID );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.prefab.xml" ), Util::makePrefab( "Cart", "1,2,3", wheelNode.view() ) ) );
 
     // 쿠커의 길: 펼쳐서 이진으로 쓴다(`PrefabCache::cookAllPrefabs`).
     PrefabAsset source;
@@ -259,19 +273,26 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, CookedFlattenedNodeSpawnsFromTemplate )
  */
 SW_TEST_CASE( PrefabSpawnTemplateTest, PartOverrideFollowsNodeWhenAnEarlierNodeIsRemoved )
 {
-    const test::ScopedScratchDomain domain;
-    const string                    wheelID    = test::ScopedScratchDomain::makeID( "wheel.prefab.xml" ).str();
-    const string                    cartID     = test::ScopedScratchDomain::makeID( "cart.prefab.xml" ).str();
-    const string                    depotID    = test::ScopedScratchDomain::makeID( "depot.prefab.xml" ).str();
-    const string                    wheelA     = "<PrefabInstance name=\"WheelA\" prefab=\"" + wheelID + "\" localID=\"#000000000000000a\" />";
-    const string                    wheelB     = "<PrefabInstance name=\"WheelB\" prefab=\"" + wheelID + "\" localID=\"#000000000000000b\" />";
-    const auto                      writeDepot = [&]( const string& partPath )
+    const test::ScopedScratchDomain          domain;
+    const string                             wheelID = test::ScopedScratchDomain::makeID( "wheel.prefab.xml" ).str();
+    const string                             cartID  = test::ScopedScratchDomain::makeID( "cart.prefab.xml" ).str();
+    const string                             depotID = test::ScopedScratchDomain::makeID( "depot.prefab.xml" ).str();
+    StringBuilder<constant::buffer::kMax256> wheelA;
+    wheelA.appendFormat( "<PrefabInstance name=\"WheelA\" prefab=\"%#\" localID=\"#000000000000000a\" />", wheelID );
+    StringBuilder<constant::buffer::kMax256> wheelB;
+    wheelB.appendFormat( "<PrefabInstance name=\"WheelB\" prefab=\"%#\" localID=\"#000000000000000b\" />", wheelID );
+    const auto writeDepot = [&]( string_view partPath )
     {
-        const string overrides = "<PrefabOverrides><Part path=\"" + partPath + "\"><PrefabOverrides><Override key=\"#0000000000000001\"><SceneComponent _localPosition=\"7,7,7\" /></Override></PrefabOverrides></Part></PrefabOverrides>";
-        return FileUtil::writeTextFile( domain.makeDiskPath( "depot.prefab.xml" ), Util::makePrefab( "Depot", "0,0,0", "<PrefabInstance name=\"Cart\" prefab=\"" + cartID + "\" localID=\"#00000000000000c0\">" + overrides + "</PrefabInstance>" ) );
+        StringBuilder<constant::buffer::kMax512> cartNode;
+        cartNode.appendFormat( "<PrefabInstance name=\"Cart\" prefab=\"%#\" localID=\"#00000000000000c0\"><PrefabOverrides><Part path=\"%#\"><PrefabOverrides><Override key=\"#0000000000000001\"><SceneComponent _localPosition=\"7,7,7\" />"
+                               "</Override></PrefabOverrides></Part></PrefabOverrides></PrefabInstance>",
+                               cartID, partPath );
+        return FileUtil::writeTextFile( domain.makeDiskPath( "depot.prefab.xml" ), Util::makePrefab( "Depot", "0,0,0", cartNode.view() ) );
     };
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "wheel.prefab.xml" ), Util::makePrefab( "Wheel", "4,5,6" ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.prefab.xml" ), Util::makePrefab( "Cart", "1,2,3", wheelA + wheelB ) ) );
+    StringBuilder<constant::buffer::kMax512> wheels;
+    wheels.appendFormat( "%#%#", wheelA.view(), wheelB.view() );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.prefab.xml" ), Util::makePrefab( "Cart", "1,2,3", wheels.view() ) ) );
 
     // 옛 인덱스 경로 `1` 은 오류로 남기고 어느 부품에도 얹지 않는다.
     SW_REQUIRE_TRUE( writeDepot( "1" ) );
@@ -287,7 +308,7 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, PartOverrideFollowsNodeWhenAnEarlierNodeI
 
     // id 경로로 적고, 원본에서 앞 노드(WheelA)를 지운다 — 덮어쓰기는 WheelB 를 따라간다.
     SW_REQUIRE_TRUE( writeDepot( "#000000000000000b" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.prefab.xml" ), Util::makePrefab( "Cart", "1,2,3", wheelB ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.prefab.xml" ), Util::makePrefab( "Cart", "1,2,3", wheelB.view() ) ) );
     PrefabCache       cache;
     GameObjectManager manager;
     SW_REQUIRE_NOT_NULL( cache.spawn( &manager, depotID ) );

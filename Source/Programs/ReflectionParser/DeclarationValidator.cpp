@@ -101,6 +101,23 @@ namespace sw
                                  owner, type._fullyQualifiedName );
                 bValid = false;
             }
+            // 이름 · 경로 칸의 C++ 문자열 기본값은 데이터가 그 칸을 안 적을 때 조용히 쓰인다(발 뼈 `foot.l` 이 실제 스켈레톤의 `foot_l` 과 어긋나 측정이 늘 0 이었다).
+            // 데이터마다 다른 값이면 Required 로 데이터에 적고, 엔진이 정한 기본값이면 DefaultName 으로 그 뜻을 선언에 적는다.
+            const bool bNameDefaultUndeclared = prop._bHasNameLiteralDefault == SW_TRUE && prop._bRequired == SW_FALSE && prop._bTransient == SW_FALSE && prop._bDefaultName == SW_FALSE;
+            if ( bNameDefaultUndeclared )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYNameDefaultUndeclared", "ERROR: PROPERTY() on '%#' - a name/path field with a C++ string default is used silently when data omits it. Remove the "
+                                                                                  "default and write PROPERTY( Required ) with the value in the data, or mark an engine default with PROPERTY( DefaultName ).",
+                                 owner );
+                bValid = false;
+            }
+            if ( prop._bDefaultName == SW_TRUE && prop._bHasNameLiteralDefault == SW_FALSE )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYDefaultNameWithoutDefault", "ERROR: PROPERTY( DefaultName ) on '%#' - the field is not a name/path field with a C++ string default in the header. "
+                                                                                      "Put the default in the header initializer, or remove DefaultName.",
+                                 owner );
+                bValid = false;
+            }
             if ( prop._bRequired == SW_TRUE && prop._bRequiredAtRoot == SW_TRUE )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRequiredTwice", "ERROR: PROPERTY( Required, RequiredAtRoot ) on '%#' - Required already covers every element. Keep one.", owner );

@@ -47,8 +47,14 @@ namespace sw
             {
                 GameObjectManager* pManager = runner.findActiveObjectManager();
                 GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( objectName ) ) : nullptr;
-                if ( pObject == nullptr )
-                    runner.recordFailure( step, pManager == nullptr ? string( "there is no active scene" ) : "no object named '" + objectName + "'" );
+                if ( pObject == nullptr && pManager == nullptr )
+                    runner.recordFailure( step, "there is no active scene" );
+                else if ( pObject == nullptr )
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "no object named '%#'", objectName );
+                    runner.recordFailure( step, message.view() );
+                }
                 return pObject;
             }
 
@@ -80,7 +86,9 @@ namespace sw
                 PawnComponent* pPawn = pObject->getComponent<PawnComponent>();
                 if ( pPawn == nullptr )
                 {
-                    runner.recordFailure( step, "object '" + params._pawn + "' has no pawn" );
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "object '%#' has no pawn", params._pawn );
+                    runner.recordFailure( step, message.view() );
                     return true;
                 }
                 ControlIntent                     intent{};
@@ -102,7 +110,11 @@ namespace sw
                         continue;
                     const optional<int32> buttonIndex = pPawn->findButton( hashed_string( buttonName ) );
                     if ( buttonIndex.has_value() == false )
-                        runner.recordFailure( step, "pawn '" + params._pawn + "' has no button '" + string( buttonName ) + "'" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "pawn '%#' has no button '%#'", params._pawn, buttonName );
+                        runner.recordFailure( step, message.view() );
+                    }
                     else
                         intent.setButton( buttonIndex, true, false );
                 }
@@ -127,7 +139,9 @@ namespace sw
                 ControllerComponent* pController = pObject->getComponent<ControllerComponent>();
                 if ( pController == nullptr )
                 {
-                    runner.recordFailure( step, "object '" + params._controller + "' has no controller" );
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "object '%#' has no controller", params._controller );
+                    runner.recordFailure( step, message.view() );
                     return true;
                 }
                 if ( params._pawn.empty() )
@@ -140,7 +154,11 @@ namespace sw
                 if ( pPawn == nullptr )
                 {
                     if ( pPawnObject != nullptr )
-                        runner.recordFailure( step, "object '" + params._pawn + "' has no pawn" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "object '%#' has no pawn", params._pawn );
+                        runner.recordFailure( step, message.view() );
+                    }
                     return true;
                 }
                 pController->possess( *pPawn );

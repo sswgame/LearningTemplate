@@ -7,7 +7,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringUtil.h"
 
 #include <cstring>
@@ -73,7 +73,7 @@ namespace sw
                     Memory::wipe( outSealKey, sizeof( outSealKey ) ); // 첫 유도만 된 봉인 키를 남기지 않는다
                     return LocalStoreResult::IOError;
                 }
-                outKeyID = LittleEndianUtil::readUint64( arrKeyID );
+                outKeyID = ByteReader( arrKeyID, sizeof( arrKeyID ) ).readUint64();
                 return LocalStoreResult::Ok;
             }
 
@@ -205,12 +205,14 @@ namespace sw
         if ( pEnvelopeBytes[5] > static_cast<uint8>( LocalStoreSeal::Encrypted ) )
             return LocalStoreResult::Corrupt; // 모르는 봉인
         Internal::Header header;
-        header._seal          = static_cast<LocalStoreSeal>( pEnvelopeBytes[5] );
-        header._codec         = pEnvelopeBytes[6];
-        header._formatVersion = LittleEndianUtil::readUint32( pEnvelopeBytes + 8 );
-        header._originalSize  = LittleEndianUtil::readUint64( pEnvelopeBytes + 12 );
-        header._bodySize      = LittleEndianUtil::readUint64( pEnvelopeBytes + 20 );
-        header._keyID         = LittleEndianUtil::readUint64( pEnvelopeBytes + 28 );
+        header._seal  = static_cast<LocalStoreSeal>( pEnvelopeBytes[5] );
+        header._codec = pEnvelopeBytes[6];
+        // 머리 8 바이트(마법 수 · 판 · 봉인 · 코덱 · 예비) 뒤 형식 판 · 원래 크기 · 본문 크기 · 키 id 다. 길이는 위에서 kHeaderSize 로 맞췄다.
+        ByteReader headerReader( pEnvelopeBytes + 8, kHeaderSize - 8 );
+        header._formatVersion = headerReader.readUint32();
+        header._originalSize  = headerReader.readUint64();
+        header._bodySize      = headerReader.readUint64();
+        header._keyID         = headerReader.readUint64();
         const bool bSizesSane = header._originalSize <= static_cast<uint64>( ILocalStore::kMaxSlotSize ) && header._bodySize <= envelopeByteCount;
         if ( bSizesSane == false )
             return LocalStoreResult::Corrupt;
@@ -223,7 +225,7 @@ namespace sw
             {
                 if ( envelopeByteCount != kHeaderSize + bodySize + Internal::kCRCSize )
                     return LocalStoreResult::Corrupt;
-                const uint32 storedCRC = LittleEndianUtil::readUint32( pEnvelopeBytes + kHeaderSize + bodySize );
+                const uint32 storedCRC = ByteReader( pEnvelopeBytes + kHeaderSize + bodySize, Internal::kCRCSize ).readUint32();
                 if ( HashUtil::computeCRC32( pEnvelopeBytes, kHeaderSize + bodySize ) != storedCRC )
                     return LocalStoreResult::Corrupt;
                 pBody = pEnvelopeBytes + kHeaderSize;

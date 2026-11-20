@@ -222,7 +222,8 @@ SW_TEST_CASE( RHIMemoryTrackerTest, ReportPrintsUsedKindsAndUnknownDriverValues 
     string joined;
     for ( const string& line : listLine )
     {
-        joined += line + "\n";
+        joined += line;
+        joined += '\n';
     }
     const string_view text{ joined.c_str(), joined.size() };
     SW_EXPECT_TRUE_MSG( text.find( "GPU memory by kind (live, FakeBackend · allocation size)  3.0 MB in 1 resources  + 1 of unknown size" ) != string_view::npos, joined.c_str() );

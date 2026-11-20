@@ -114,10 +114,9 @@ namespace sw
             {
                 if ( material.empty() )
                     return asset;
-                string key{ asset.view() };
-                key += '#';
-                key += material.view();
-                return hashed_string( string_view( key ) );
+                StringBuilder<constant::buffer::kMax512> key;
+                key.append( asset.view() ).append( '#' ).append( material.view() );
+                return hashed_string( key.view() );
             }
 
             /** @brief 합친 메시에서 부품이 든 구간의 이름입니다 — 주인(슬롯)과 부품 이름을 이어 차림 안에서 겹치지 않게 한다(몸은 주인이 비어 부품 이름 그대로). */

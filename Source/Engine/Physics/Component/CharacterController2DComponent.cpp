@@ -21,7 +21,6 @@ namespace sw
         , _halfHeight{ 0.4f }
         , _maxSlopeAngle{ Radians::fromRadians( MathUtil::kHalfPi * 0.5f ) }
         , _gravityScale{ 1.0f }
-        , _layer{ "Character" }
         , _character{}
         , _state{}
         , _pCommandPage{ nullptr }

@@ -4,6 +4,8 @@
 
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Programs/ReflectionParser/FixedCodecBoundResolver.h"
 #include "Programs/ReflectionParser/ParserDefines.h"
@@ -45,33 +47,33 @@ namespace sw
         return {};
     }
 
-    void FixedCodecValueEmitter::appendEnumCanonical( string& out, const ParsedFixedEnum& enumInfo )
+    void FixedCodecValueEmitter::appendEnumCanonical( FixedCanonicalBuilder& out, const ParsedFixedEnum& enumInfo )
     {
-        out += "enum{" + enumInfo._fullyQualifiedName + ";" + enumInfo._underlyingTypeName + ";";
-        out += enumInfo._bIsBitFlag == SW_TRUE ? "flags" : "plain";
+        out.appendFormat( "enum{%#;%#;", enumInfo._fullyQualifiedName, enumInfo._underlyingTypeName );
+        out.append( enumInfo._bIsBitFlag == SW_TRUE ? "flags" : "plain" );
         if ( enumInfo._countEnumerator.empty() == false )
-            out += ";count=" + enumInfo._countEnumerator;
+            out.appendFormat( ";count=%#", enumInfo._countEnumerator );
         for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
         {
-            out += ";" + enumerator._name + "=" + FixedCodecEmitState::formatInteger( enumerator._value );
+            out.appendFormat( ";%#=%#", enumerator._name, static_cast<int64>( enumerator._value ) );
         }
-        out += "}";
+        out.append( '}' );
     }
 
-    void FixedCodecValueEmitter::appendFieldHead( string& out, const ParsedPropertyInfo& prop )
+    void FixedCodecValueEmitter::appendFieldHead( FixedCanonicalBuilder& out, const ParsedPropertyInfo& prop )
     {
-        out += "F=" + prop._memberName + ":" + prop._typeName;
+        out.appendFormat( "F=%#:%#", prop._memberName, prop._typeName );
         if ( prop._bIsBitField == SW_TRUE )
-            out += ":bit";
+            out.append( ":bit" );
         if ( prop._minRangeExpr._text.empty() == false )
-            out += ":min=" + prop._minRangeExpr._text;
+            out.appendFormat( ":min=%#", prop._minRangeExpr._text );
         if ( prop._maxRangeExpr._text.empty() == false )
-            out += ":max=" + prop._maxRangeExpr._text;
+            out.appendFormat( ":max=%#", prop._maxRangeExpr._text );
         if ( prop._bHasStep == SW_TRUE )
-            out += ":step=" + FixedCodecEmitState::formatFloat( static_cast<float64>( prop._step ) );
+            out.appendFormat( ":step=%#", FixedCodecEmitState::formatFloat( static_cast<float64>( prop._step ) ) );
         if ( prop._bHasMaxCount == SW_TRUE )
-            out += ":maxcount=" + FixedCodecEmitState::formatInteger( static_cast<int64>( prop._maxCount ) );
-        out += ":";
+            out.appendFormat( ":maxcount=%#", static_cast<int64>( prop._maxCount ) );
+        out.append( ':' );
     }
 
     FixedCodecNode FixedCodecValueEmitter::makeInteger( const FixedCodecSite& site, const FixedCodecBound& minBound, const FixedCodecBound& maxBound )
@@ -126,7 +128,9 @@ namespace sw
 
     bool FixedCodecValueEmitter::emitEnum( FixedCodecEmitState& state, const FixedCodecSite& site, const ParsedFixedEnum& enumInfo, vector<FixedCodecNode>& outListNode )
     {
-        const string                              enumType = "::" + enumInfo._fullyQualifiedName;
+        StringBuilder<constant::buffer::kMax256> enumTypeText;
+        enumTypeText.appendFormat( "::%#", enumInfo._fullyQualifiedName );
+        const string_view                         enumType = enumTypeText.view();
         StringBuilder<constant::buffer::kMax8192> call;
         if ( enumInfo._bIsBitFlag == SW_TRUE )
         {
@@ -162,7 +166,9 @@ namespace sw
         if ( width > static_cast<uint64>( std::numeric_limits<uint32>::max() ) )
         {
             // 범위 비트는 32 비트까지입니다. 넘는 열거형을 실행 중 쓰기 실패로 두지 않고 생성에서 멈춥니다.
-            state.reportError( *site._pProp, "enum '" + enumInfo._fullyQualifiedName + "' spans more than 32 bits of values" );
+            fixed_string<constant::buffer::kMax512> message;
+            formatstring( message.data(), message.capacity(), "enum '%#' spans more than 32 bits of values", enumInfo._fullyQualifiedName );
+            state.reportError( *site._pProp, message.view() );
             return false;
         }
         state.addEnum( enumInfo );
@@ -192,12 +198,14 @@ namespace sw
         FixedCodecSite child = parent;
         child._ownerFqn.clear();
         child._offsetExpr = "0";
-        child._typeExpr   = "::sw::FixedElementType< " + parent._typeExpr + " >";
-        child._bBitField  = SW_FALSE;
+        StringBuilder<constant::buffer::kMax1024> typeExpr;
+        typeExpr.appendFormat( "::sw::FixedElementType< %# >", parent._typeExpr );
+        child._typeExpr  = string( typeExpr.view() );
+        child._bBitField = SW_FALSE;
         return child;
     }
 
-    void FixedCodecValueEmitter::emitContainer( FixedCodecEmitState& state, const FixedCodecSite& site, const ParsedFixedType& type, string& outCanonical, vector<FixedCodecNode>& outListNode )
+    void FixedCodecValueEmitter::emitContainer( FixedCodecEmitState& state, const FixedCodecSite& site, const ParsedFixedType& type, FixedCanonicalBuilder& outCanonical, vector<FixedCodecNode>& outListNode )
     {
         const bool                                bVector = type._kind == FixedValueKind::Vector;
         StringBuilder<constant::buffer::kMax2048> call;
@@ -210,9 +218,9 @@ namespace sw
             call.appendFormat( "::sw::FixedFieldDesc::makeFixedArray( %#, &::sw::FixedArrayOpsOf< %# >::kInstance", site._offsetExpr, site._typeExpr );
         }
         FixedCodecNode node( string( call.view() ), FixedCodecNode::ChildArgs::Element );
-        outCanonical += bVector ? "vec<" : "arr<";
+        outCanonical.append( bVector ? "vec<" : "arr<" );
         emitValue( state, makeElementSite( site ), *type._element, outCanonical, node._listChild );
-        outCanonical += ">";
+        outCanonical.append( '>' );
         outListNode.push_back( std::move( node ) );
     }
 
@@ -243,18 +251,20 @@ namespace sw
         return true;
     }
 
-    void FixedCodecValueEmitter::emitReflect( FixedCodecEmitState& state, const FixedCodecSite& site, const ParsedFixedType& type, string& outCanonical, vector<FixedCodecNode>& outListNode )
+    void FixedCodecValueEmitter::emitReflect( FixedCodecEmitState& state, const FixedCodecSite& site, const ParsedFixedType& type, FixedCanonicalBuilder& outCanonical, vector<FixedCodecNode>& outListNode )
     {
         const string&         fqn     = type._fullyQualifiedName;
         const ParsedTypeInfo* pNested = findHeaderType( state, fqn );
         if ( canInline( state, pNested ) )
         {
-            FixedCodecNode node( "::sw::FixedFieldDesc::makeInline( " + site._offsetExpr, FixedCodecNode::ChildArgs::Group );
-            outCanonical += "inline{T=" + fqn + "|";
+            StringBuilder<constant::buffer::kMax512> call;
+            call.appendFormat( "::sw::FixedFieldDesc::makeInline( %#", site._offsetExpr );
+            FixedCodecNode node( string( call.view() ), FixedCodecNode::ChildArgs::Group );
+            outCanonical.appendFormat( "inline{T=%#|", fqn );
             state._listInlineFqn.push_back( fqn );
             emitProperties( state, *pNested, outCanonical, node._listChild );
             state._listInlineFqn.pop_back();
-            outCanonical += "}";
+            outCanonical.append( '}' );
             outListNode.push_back( std::move( node ) );
             // 펼친 타입이 혼자서는 풀지 못하던 바깥 범위 이름을 여기서 풀었습니다. 그 타입의 "바깥 이름" 오류는 사라집니다.
             if ( state._bError == SW_FALSE )
@@ -262,7 +272,7 @@ namespace sw
             return;
         }
 
-        outCanonical += "ref{" + fqn + "}";
+        outCanonical.appendFormat( "ref{%#}", fqn );
         const bool                               bSelf = fqn == state._pRoot->_fullyQualifiedName;
         StringBuilder<constant::buffer::kMax512> call;
         if ( bSelf )
@@ -272,7 +282,7 @@ namespace sw
         outListNode.emplace_back( string( call.view() ), FixedCodecNode::ChildArgs::None );
     }
 
-    void FixedCodecValueEmitter::emitValue( FixedCodecEmitState& state, const FixedCodecSite& site, const ParsedFixedType& type, string& outCanonical, vector<FixedCodecNode>& outListNode )
+    void FixedCodecValueEmitter::emitValue( FixedCodecEmitState& state, const FixedCodecSite& site, const ParsedFixedType& type, FixedCanonicalBuilder& outCanonical, vector<FixedCodecNode>& outListNode )
     {
         switch ( type._kind )
         {
@@ -282,33 +292,39 @@ namespace sw
             }
             case FixedValueKind::Bool:
             {
-                outCanonical += "bool";
+                outCanonical.append( "bool" );
                 outListNode.push_back( makeBool( site ) );
                 break;
             }
             case FixedValueKind::Integer:
             {
-                outCanonical += "int";
+                outCanonical.append( "int" );
                 outListNode.push_back( makeInteger( site, FixedCodecBoundResolver::pickBound( site._listMin, 0 ), FixedCodecBoundResolver::pickBound( site._listMax, 0 ) ) );
                 break;
             }
             case FixedValueKind::Float32:
             case FixedValueKind::Float64:
             {
-                outCanonical += type._kind == FixedValueKind::Float32 ? "f32" : "f64";
+                outCanonical.append( type._kind == FixedValueKind::Float32 ? "f32" : "f64" );
                 outListNode.push_back( makeFloat( site, type._kind, FixedCodecBoundResolver::pickBound( site._listMin, 0 ), FixedCodecBoundResolver::pickBound( site._listMax, 0 ) ) );
                 break;
             }
             case FixedValueKind::Math:
             {
                 const vector<string>& listMember = type._listMathMember;
-                outCanonical += "math(" + type._typeName + ")";
-                FixedCodecNode node( "::sw::FixedFieldDesc::makeMath( " + site._offsetExpr, FixedCodecNode::ChildArgs::Group );
+                outCanonical.appendFormat( "math(%#)", type._typeName );
+                StringBuilder<constant::buffer::kMax512> call;
+                call.appendFormat( "::sw::FixedFieldDesc::makeMath( %#", site._offsetExpr );
+                FixedCodecNode node( string( call.view() ), FixedCodecNode::ChildArgs::Group );
                 for ( size_t memberIndex = 0; memberIndex < listMember.size(); ++memberIndex )
                 {
-                    FixedCodecSite child            = makeElementSite( site );
-                    child._offsetExpr               = "offsetof( ::sw::" + type._typeName + ", " + listMember[memberIndex] + " )";
-                    child._typeExpr                 = "decltype( ::sw::" + type._typeName + "::" + listMember[memberIndex] + " )";
+                    FixedCodecSite                           child = makeElementSite( site );
+                    StringBuilder<constant::buffer::kMax256> expr;
+                    expr.appendFormat( "offsetof( ::sw::%#, %# )", type._typeName, listMember[memberIndex] );
+                    child._offsetExpr = string( expr.view() );
+                    expr.clear();
+                    expr.appendFormat( "decltype( ::sw::%#::%# )", type._typeName, listMember[memberIndex] );
+                    child._typeExpr                 = string( expr.view() );
                     const FixedCodecBound& minBound = FixedCodecBoundResolver::pickBound( site._listMin, memberIndex );
                     const FixedCodecBound& maxBound = FixedCodecBoundResolver::pickBound( site._listMax, memberIndex );
                     if ( type._bIntegerMath == SW_TRUE )
@@ -330,7 +346,7 @@ namespace sw
             {
                 const bool                               bString = type._kind == FixedValueKind::String;
                 StringBuilder<constant::buffer::kMax512> call;
-                outCanonical += bString ? "str" : "bits";
+                outCanonical.append( bString ? "str" : "bits" );
                 call.appendFormat( "::sw::FixedFieldDesc::%#( %#, %#u", bString ? "makeString" : "makeBitset", site._offsetExpr, site._pProp->_maxCount );
                 outListNode.emplace_back( string( call.view() ), FixedCodecNode::ChildArgs::None );
                 break;
@@ -359,7 +375,7 @@ namespace sw
         return false;
     }
 
-    void FixedCodecValueEmitter::emitProperty( FixedCodecEmitState& state, const ParsedTypeInfo& owner, const ParsedPropertyInfo& prop, string& outCanonical, vector<FixedCodecNode>& outListNode )
+    void FixedCodecValueEmitter::emitProperty( FixedCodecEmitState& state, const ParsedTypeInfo& owner, const ParsedPropertyInfo& prop, FixedCanonicalBuilder& outCanonical, vector<FixedCodecNode>& outListNode )
     {
         if ( prop._bTransient == SW_TRUE )
             return;
@@ -396,13 +412,16 @@ namespace sw
         if ( prop._bHasMaxCount == SW_TRUE && variable == 0 )
             state.reportError( prop, "MaxCount applies to string, vector and DynamicBitset fields only" );
 
-        const string   ownerType = "::" + owner._fullyQualifiedName;
-        FixedCodecSite site;
-        site._pProp      = &prop;
-        site._ownerFqn   = owner._fullyQualifiedName;
-        site._offsetExpr = "offsetof( " + ownerType + ", " + prop._memberName + " )";
-        site._typeExpr   = "decltype( " + ownerType + "::" + prop._memberName + " )";
-        site._bBitField  = prop._bIsBitField;
+        FixedCodecSite                           site;
+        StringBuilder<constant::buffer::kMax512> expr;
+        site._pProp    = &prop;
+        site._ownerFqn = owner._fullyQualifiedName;
+        expr.appendFormat( "offsetof( ::%#, %# )", owner._fullyQualifiedName, prop._memberName );
+        site._offsetExpr = string( expr.view() );
+        expr.clear();
+        expr.appendFormat( "decltype( ::%#::%# )", owner._fullyQualifiedName, prop._memberName );
+        site._typeExpr  = string( expr.view() );
+        site._bBitField = prop._bIsBitField;
         site._listMin.emplace_back();
         site._listMax.emplace_back();
         if ( bNumeric )
@@ -415,7 +434,10 @@ namespace sw
             const bool bMaxCountMismatch = site._listMax.size() != 1 && site._listMax.size() != elementCount;
             if ( bMinCountMismatch || bMaxCountMismatch )
             {
-                state.reportError( prop, "Min/Max list has " + FixedCodecEmitState::formatInteger( static_cast<int64>( site._listMin.size() ) ) + "/" + FixedCodecEmitState::formatInteger( static_cast<int64>( site._listMax.size() ) ) + " terms but the value has " + FixedCodecEmitState::formatInteger( static_cast<int64>( elementCount ) ) + " elements" );
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "Min/Max list has %#/%# terms but the value has %# elements", static_cast<int64>( site._listMin.size() ),
+                              static_cast<int64>( site._listMax.size() ), static_cast<int64>( elementCount ) );
+                state.reportError( prop, message.view() );
                 return;
             }
             // 각의 숫자 경계는 도로 적혀 있고 메모리는 라디안이다 — 데이터 글 `180` 이 담기는 것과 같은 식으로 바꿔야 경계 값이 경계 안에 든다.
@@ -426,8 +448,11 @@ namespace sw
                 {
                     for ( FixedCodecBound& bound : *pListBound )
                     {
-                        if ( bound._bPresent == SW_TRUE && bound._bLiteral == SW_TRUE )
-                            bound._text = "::sw::Radians::fromDegrees( static_cast<float32>( " + bound._text + " ) ).radians()";
+                        if ( bound._bPresent == SW_FALSE || bound._bLiteral == SW_FALSE )
+                            continue;
+                        StringBuilder<constant::buffer::kMax256> radians;
+                        radians.appendFormat( "::sw::Radians::fromDegrees( static_cast<float32>( %# ) ).radians()", bound._text );
+                        bound._text = string( radians.view() );
                     }
                 }
             }
@@ -437,7 +462,10 @@ namespace sw
         // 코덱 없이 등록되면 넷 · 롤백에서야 드러나므로 여기서 멈춘다. 코덱에 실으려면 Layout 칸(`ReflectBuiltins.xxx`)이 성분 규칙을 갖거나 새 인코딩 종류를 더한다.
         if ( leaf._bPacked == SW_TRUE )
         {
-            state.reportError( prop, "packed type '" + leaf._typeName + "' is not in the fixed layout encoding table - mark the field Transient or add a packed encoding to the generator" );
+            fixed_string<constant::buffer::kMax512> message;
+            formatstring( message.data(), message.capacity(),
+                          "packed type '%#' is not in the fixed layout encoding table - mark the field Transient or add a packed encoding to the generator", leaf._typeName );
+            state.reportError( prop, message.view() );
             return;
         }
 
@@ -466,10 +494,10 @@ namespace sw
 
         appendFieldHead( outCanonical, prop );
         emitValue( state, site, type, outCanonical, outListNode );
-        outCanonical += "|";
+        outCanonical.append( '|' );
     }
 
-    void FixedCodecValueEmitter::emitProperties( FixedCodecEmitState& state, const ParsedTypeInfo& type, string& outCanonical, vector<FixedCodecNode>& outListNode )
+    void FixedCodecValueEmitter::emitProperties( FixedCodecEmitState& state, const ParsedTypeInfo& type, FixedCanonicalBuilder& outCanonical, vector<FixedCodecNode>& outListNode )
     {
         state._listScope.push_back( FixedCodecScopeFrame{ &type, 0 } );
         for ( size_t index = 0; index < type._listProperty.size(); ++index )

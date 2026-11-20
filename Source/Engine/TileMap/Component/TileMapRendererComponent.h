@@ -156,8 +156,8 @@ namespace sw
         AssetRef<TileMapXMLData> _tileMapPath;
         PROPERTY( Category = "Tile Map", DisplayName = "Material", Tooltip = "Sprite material for the tiles (point filter or lit). Empty uses the engine default tile map material" )
         AssetRef<Material> _materialPath; ///< 비면 엔진 기본 에셋 표의 `_tileMapMaterial` 이다
-        PROPERTY( Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml", Validate = validateSortingLayer )
-        hashed_string _sortingLayer;
+        PROPERTY( DefaultName, Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml", Validate = validateSortingLayer )
+        hashed_string _sortingLayer{ "Default" };
         PROPERTY( Category = "Sorting", DisplayName = "Order In Layer", Tooltip = "Draw order inside the sorting layer", Min = -32767.0, Max = 32767.0 )
         int32 _orderInLayer;
         PROPERTY( Category = "Physics", DisplayName = "Collider Layer", Tooltip = "Collision layer of the merged solid rectangles" )

@@ -3,7 +3,9 @@
  * @brief 테마파크 테스트가 쓰는 공원 규칙 줄(`<Rules>`)과 그 값의 설정입니다. 게임 데이터(`game/themepark/data/rides.xml`)와 같은 값이다.
  */
 #pragma once
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringBuilder.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
@@ -19,12 +21,14 @@ namespace sw
     {
         static ThemeParkSettings make()
         {
-            ParkLayout           layout;
-            CoasterLayoutCatalog layouts;
-            const string         text = string( "<ParkLayout gateX=\"0\" gateZ=\"0\" startingCash=\"1000\" entryFee=\"0\">" ) + kParkRules +
-                                "<FlatRide id=\"cups\" name=\"Cups\" excitement=\"2\" intensity=\"1\" nausea=\"1\" cycleTime=\"40\" capacity=\"16\" price=\"3\" runningCost=\"3\" cost=\"2000\" "
-                                "x=\"45\" z=\"0\" entranceX=\"45\" entranceZ=\"-10\" shape=\"Cylinder\" sizeX=\"6\" sizeY=\"2\" sizeZ=\"6\" color=\"1,1,1,1\"/></ParkLayout>";
-            const bool bLoaded = layout.loadFromXMLText( text, layouts, "ThemeParkTestRules" );
+            ParkLayout                                layout;
+            CoasterLayoutCatalog                      layouts;
+            StringBuilder<constant::buffer::kMax4096> text;
+            text.appendFormat( "<ParkLayout gateX=\"0\" gateZ=\"0\" startingCash=\"1000\" entryFee=\"0\">%#"
+                               "<FlatRide id=\"cups\" name=\"Cups\" excitement=\"2\" intensity=\"1\" nausea=\"1\" cycleTime=\"40\" capacity=\"16\" price=\"3\" runningCost=\"3\" cost=\"2000\" "
+                               "x=\"45\" z=\"0\" entranceX=\"45\" entranceZ=\"-10\" shape=\"Cylinder\" sizeX=\"6\" sizeY=\"2\" sizeZ=\"6\" color=\"1,1,1,1\"/></ParkLayout>",
+                               kParkRules );
+            const bool bLoaded = layout.loadFromXMLText( text.view(), layouts, "ThemeParkTestRules" );
             SW_ASSERT( bLoaded );
             (void)bLoaded;
             return layout.getRules();

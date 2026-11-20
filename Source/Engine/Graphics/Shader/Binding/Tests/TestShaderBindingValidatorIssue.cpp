@@ -630,7 +630,8 @@ SW_TEST_CASE( ShaderBindingValidatorTest, StageTextureUnitLimit )
     ShaderReflectionData     atLimit;
     for ( uint32 unit = 0; unit < *glLimit; ++unit )
     {
-        const string name = "g_TestTex" + to_string( unit );
+        fixed_string<constant::buffer::kMax32> name;
+        formatstring( name.data(), name.capacity(), "g_TestTex%#", unit );
         Util::addResource( atLimit, name.c_str(), "Texture", 0, 100 + unit );
     }
     Util::addResource( atLimit, "g_TestTex0Sampler", "Sampler", 0, 100 );                    // 결합 샘플러 — 텍스처와 같은 단위

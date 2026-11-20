@@ -76,7 +76,11 @@ namespace sw
                 void add( const string& relativePath )
                 {
                     if ( _count < kDroppedShaderNameCount )
-                        _names += ( _count == 0 ? "" : ", " ) + relativePath;
+                    {
+                        if ( _count != 0 )
+                            _names += ", ";
+                        _names += relativePath;
+                    }
                     ++_count;
                 }
             };
@@ -266,10 +270,11 @@ namespace sw
                     return false;
                 }
 
-                PackReachFiles               files;
-                PackDiskReachSource          source;
-                vector<PackDomainCandidates> listCandidates;
-                const string                 gamePrefix = string( constant::path::kGamePack ) + "/";
+                PackReachFiles                         files;
+                PackDiskReachSource                    source;
+                vector<PackDomainCandidates>           listCandidates;
+                fixed_string<constant::buffer::kMax64> gamePrefix;
+                formatstring( gamePrefix.data(), gamePrefix.capacity(), "%#/", constant::path::kGamePack );
                 for ( const string& domain : listDomain )
                 {
                     const string   domainDir = FileUtil::joinPath( params._resourceRoot, domain );
@@ -381,10 +386,12 @@ namespace sw
             /** @brief `<폴더 id>/<첫 . 앞 줄기>` 입니다 — 산출물과 그 원본이 같은 키다(`PackStagedSelection` 과 같은 규칙). */
             static string makeStemKey( string_view assetID )
             {
-                const size_t      slash    = assetID.rfind( '/' );
-                const string_view fileName = slash == string_view::npos ? assetID : assetID.substr( slash + 1 );
-                const string_view folder   = slash == string_view::npos ? string_view{} : assetID.substr( 0, slash );
-                return string( folder ) + "/" + string( fileName.substr( 0, fileName.find( '.' ) ) );
+                const size_t                             slash    = assetID.rfind( '/' );
+                const string_view                        fileName = slash == string_view::npos ? assetID : assetID.substr( slash + 1 );
+                const string_view                        folder   = slash == string_view::npos ? string_view{} : assetID.substr( 0, slash );
+                StringBuilder<constant::buffer::kMax512> builder;
+                builder.appendFormat( "%#/%#", folder, fileName.substr( 0, fileName.find( '.' ) ) );
+                return string( builder.view() );
             }
 
             /** @brief 항목 하나의 씬 청크입니다 — 원본은 계획의 것, 스테이징 산출물은 같은 줄기 원본의 것. 없으면 빈 글(기본 청크)입니다. */
@@ -407,13 +414,14 @@ namespace sw
             /** @brief 도메인 팩 작업의 설정 해시입니다 — 쿠킹 설정 해시에 그 도메인에서 고른 파일 목록(정렬)을 섞는다. 다른 팩의 참조가 바뀌어 고른 것이 달라지면 다시 굽는다. */
             static uint64 computeSelectionHash( uint64 settingsHash, const string& domain, const PackSelection& selection )
             {
-                const string   prefix = FileUtil::normalizePath( domain ).str() + "/";
+                StringBuilder<constant::buffer::kMax256> prefix;
+                prefix.appendFormat( "%#/", FileUtil::normalizePath( domain ).str() );
                 vector<string> listID;
                 for ( const unordered_set<string>* pSet : { &selection._setIncluded, &selection._setReferencedExcluded } )
                 {
                     for ( const string& assetID : *pSet )
                     {
-                        if ( StringUtil::startsWith( assetID, prefix ) )
+                        if ( StringUtil::startsWith( assetID, prefix.view() ) )
                             listID.push_back( assetID );
                     }
                 }
@@ -494,7 +502,9 @@ namespace sw
                         SW_LOG_ERROR_ID( "PackCooker.GamePackFolderDoes", "Game pack folder '%#' does not exist under %#", params._gamePackFolder, gameRoot );
                         return false;
                     }
-                    outListDomain.push_back( string( constant::path::kGamePack ) + "/" + params._gamePackFolder );
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "%#/%#", constant::path::kGamePack, params._gamePackFolder );
+                    outListDomain.push_back( string( builder.view() ) );
                     return true;
                 }
                 // 게임 폴더가 없으면 공용 팩만 베이크한다. 도중에 멈춘 목록이면 빠진 게임 팩을 모른 채 넘어가므로 실패다.
@@ -882,8 +892,10 @@ namespace sw
                 vector<string> listPackFile;
                 if ( FileUtil::collectFiles( packOutputDir, ".pack", listPackFile, false ) == false )
                     return false;
-                const string baseName = PackCooker::makePackFileName( domain );
-                const string prefix   = baseName.substr( 0, baseName.size() - string_view( ".pack" ).size() ) + ".";
+                const string                             baseName = PackCooker::makePackFileName( domain );
+                StringBuilder<constant::buffer::kMax256> prefixBuilder;
+                prefixBuilder.appendFormat( "%#.", string_view( baseName ).substr( 0, baseName.size() - string_view( ".pack" ).size() ) );
+                const string prefix( prefixBuilder.view() );
                 bool         bAllGone = true;
                 for ( const string& packPath : listPackFile )
                 {
@@ -1208,17 +1220,19 @@ namespace sw
             return false;
         for ( const string& domain : listDomain )
         {
-            const string      chunkPrefix = PackChunkManifest::makeDomainStem( domain ) + ".";
-            const string      scenePrefix = FileUtil::normalizePath( domain ).str() + "/";
+            StringBuilder<constant::buffer::kMax256> chunkPrefix;
+            chunkPrefix.appendFormat( "%#.", PackChunkManifest::makeDomainStem( domain ) );
+            StringBuilder<constant::buffer::kMax256> scenePrefix;
+            scenePrefix.appendFormat( "%#/", FileUtil::normalizePath( domain ).str() );
             PackChunkManifest domainManifest;
             for ( const PackChunkFiles& files : manifest._listChunk )
             {
-                if ( StringUtil::startsWith( files._name, chunkPrefix ) )
+                if ( StringUtil::startsWith( files._name, chunkPrefix.view() ) )
                     domainManifest._listChunk.push_back( files );
             }
             for ( const PackSceneEntry& entry : manifest._listScene )
             {
-                if ( StringUtil::startsWith( entry._sceneID, scenePrefix ) )
+                if ( StringUtil::startsWith( entry._sceneID, scenePrefix.view() ) )
                     domainManifest._listScene.push_back( entry );
             }
             // 미룬 청크가 없는 도메인도 쓴다 — 지난 쿠킹의 목록이 남아 이번에 쓰지 않은 팩을 가리키지 않게.
@@ -1255,7 +1269,9 @@ namespace sw
         CookJobDesc desc;
         desc._cookerName      = "Pack";
         desc._codeFingerprint = CookCodeFingerprint::find( "Pack" );
-        desc._target          = params._buildTarget + "-" + params._shaderFolder;
+        StringBuilder<constant::buffer::kMax128> targetBuilder;
+        targetBuilder.appendFormat( "%#-%#", params._buildTarget, params._shaderFolder );
+        desc._target = string( targetBuilder.view() );
 
         // 엔진 규칙 뒤에 굽는 게임들의 규칙을 합친 사본이 이 쿠킹의 설정이다(언리얼 DefaultGame.ini 의 쿠킹 설정이 엔진 기본을 덮는 자리). 작업 범위 안에서 읽는다.
         PackConfig config = engineConfig;
@@ -1339,22 +1355,31 @@ namespace sw
                 continue;
             }
 
-            vector<string> listWrittenName;
+            vector<string>                           listWrittenName;
+            StringBuilder<constant::buffer::kMax256> chunkKey;
             for ( const PackCookerInternal::PackItem& item : listing._listItem )
             {
                 for ( const PackPart& part : *split )
                 {
                     // 미룬 청크는 도메인마다 따로 적는다(`<도메인 줄기>.<청크>`) — 목록 파일이 도메인 단위라 한 게임만 구워도 다른 도메인의 목록이 남는다.
                     if ( part.contains( item._pathHash ) )
-                        mapPlacedChunk.emplace( PackCookerInternal::makeAssetID( domain, item._relativePath ),
-                                                setStartupChunk.contains( part._chunk ) ? string{} : PackChunkManifest::makeDomainStem( domain ) + "." + part._chunk );
+                    {
+                        chunkKey.clear();
+                        if ( setStartupChunk.contains( part._chunk ) == false )
+                            chunkKey.appendFormat( "%#.%#", PackChunkManifest::makeDomainStem( domain ), part._chunk );
+                        mapPlacedChunk.emplace( PackCookerInternal::makeAssetID( domain, item._relativePath ), string( chunkKey.view() ) );
+                    }
                 }
             }
             for ( const PackPart& part : *split )
             {
                 const string packName = makePackFileName( domain, part._chunk, part._number );
                 if ( setStartupChunk.contains( part._chunk ) == false )
-                    mapChunkPack[PackChunkManifest::makeDomainStem( domain ) + "." + part._chunk].push_back( packName );
+                {
+                    chunkKey.clear();
+                    chunkKey.appendFormat( "%#.%#", PackChunkManifest::makeDomainStem( domain ), part._chunk );
+                    mapChunkPack[string( chunkKey.view() )].push_back( packName );
+                }
                 const string outputPath = FileUtil::joinPath( params._packOutputDir, packName );
                 listWrittenName.push_back( packName );
                 // 기록은 타깃 · 백엔드마다 따로 둔다 — 같은 팩 이름을 다른 설정으로 번갈아 베이크해도 서로의 기록을 덮지 않는다.

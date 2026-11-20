@@ -171,6 +171,8 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey Required{};
         /** @brief flag.Required — 단독 토큰 `required` 또는 `required = true`. 같은 필드의 철자: Required, required. 데이터 파일이 이 칸을 반드시 적어야 한다(빠지면 로드 오류 — 초기값은 형식일 뿐 기본값이 아니다) */
         static constexpr AnnotationKey required{};
+        /** @brief flag.DefaultName — 단독 토큰 `DefaultName`. 이름 · 경로 칸의 C++ 문자열 기본값이 엔진이 정한 기본값이다(없으면 그 기본값은 파서 오류) */
+        static constexpr AnnotationKey DefaultName{};
         /** @brief flag.InheritKey — 단독 토큰 `InheritKey` 또는 `InheritKey = true`. 같은 필드의 철자: InheritKey, inheritKey. 이 칸이 목록 원소의 열쇠다(DataInheritance) */
         static constexpr AnnotationKey InheritKey{};
         /** @brief flag.InheritKey — 단독 토큰 `inheritKey` 또는 `inheritKey = true`. 같은 필드의 철자: InheritKey, inheritKey. 이 칸이 목록 원소의 열쇠다(DataInheritance) */

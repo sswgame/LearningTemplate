@@ -7,6 +7,8 @@
 #include "Core/Math/XorShift32.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -128,13 +130,17 @@ namespace sw
             int32 player = -1;
             if ( pGameMode == nullptr || StringUtil::parseInt( query._key, player ) == false )
             {
-                outValue.setText( pGameMode == nullptr ? string( "no skirmish game mode" ) : "key must be a player index, got '" + string( query._key ) + "'" );
+                fixed_string<constant::buffer::kMax256> text;
+                formatstring( text.data(), text.capacity(), "key must be a player index, got '%#'", query._key );
+                outValue.setText( pGameMode == nullptr ? string_view( "no skirmish game mode" ) : text.view() );
                 return false;
             }
             const RTSCommanderAI* pAI = pGameMode->getMatch().findAI( player );
             if ( pAI == nullptr )
             {
-                outValue.setText( "player " + string( query._key ) + " is not played by the AI" );
+                fixed_string<constant::buffer::kMax256> text;
+                formatstring( text.data(), text.capacity(), "player %# is not played by the AI", query._key );
+                outValue.setText( text.view() );
                 return false;
             }
             const utf8* pTask = pAI->getActiveTaskName();

@@ -56,7 +56,9 @@ namespace sw
 
     string MatchQueueService::makeLeaseKey( string_view modeID )
     {
-        return "mm/lease/" + string( modeID );
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "mm/lease/%#", modeID );
+        return string( key.view() );
     }
 
     string MatchQueueService::makeQueueTopic( string_view modeID )
@@ -86,12 +88,16 @@ namespace sw
 
     string MatchQueueService::makeMatchRecordKey( uint64 serverID, string_view recordName )
     {
-        return "mm/match/" + ServiceKeyUtil::makeHex64( serverID ) + "/" + string( recordName );
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "mm/match/%#/%#", ServiceKeyUtil::makeHex64( serverID ), recordName );
+        return string( key.view() );
     }
 
     string MatchQueueService::makeMatchListKey( uint64 serverID )
     {
-        return "mm/matches/" + ServiceKeyUtil::makeHex64( serverID );
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "mm/matches/%#", ServiceKeyUtil::makeHex64( serverID ) );
+        return string( key.view() );
     }
 
     void MatchQueueService::storeMatchRecord( PendingPlacement placement )
@@ -635,8 +641,10 @@ namespace sw
             assignment._listTeammate.push_back( member._accountID ); // 경기 중인 팀원은 게임 서버가 알려 준다
         }
         PendingPlacement placement;
-        placement._match      = std::move( joined );                                                                                             // 게임 서버의 배정 주제로 가면 같은 경기 id 에 더해진다
-        placement._recordName = ServiceKeyUtil::makeHex64( request._matchID ) + "." + ServiceKeyUtil::makeHex64( backfilled._ticket._ticketID ); // 경기의 첫 명단 기록은 그대로 두고 더한 사람만 따로 남긴다
+        placement._match = std::move( joined );              // 게임 서버의 배정 주제로 가면 같은 경기 id 에 더해진다
+        StringBuilder<constant::buffer::kMax128> recordName; // 경기의 첫 명단 기록은 그대로 두고 더한 사람만 따로 남긴다
+        recordName.appendFormat( "%#.%#", ServiceKeyUtil::makeHex64( request._matchID ), ServiceKeyUtil::makeHex64( backfilled._ticket._ticketID ) );
+        placement._recordName = string( recordName.view() );
         placement._serverID   = request._serverID;
         placement._expiresMs  = nowMs.count();
         placement._listDelivery.push_back( PendingDelivery{ std::move( assignment ), backfilled._ticket._originServerID, kInvalidAccountID } );

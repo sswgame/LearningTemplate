@@ -64,8 +64,9 @@ SW_TEST_CASE( ShaderCookCoverageTest, EveryEngineShaderFieldIsCooked )
         {
             bCooked = bCooked || request._shaderPath == normPath;
         }
-        const string message = string( name ) + " (" + normPath + ") is not in the shader cook requests";
-        SW_EXPECT_TRUE_MSG( bCooked, message.c_str() );
+        fixed_string<constant::buffer::kMax512> message;
+        formatstring( message.data(), message.capacity(), "%# (%#) is not in the shader cook requests", name, normPath );
+        SW_EXPECT_TRUE_MSG( bCooked, message );
     }
     SW_EXPECT_TRUE( shaderFieldCount > 10u );
 }

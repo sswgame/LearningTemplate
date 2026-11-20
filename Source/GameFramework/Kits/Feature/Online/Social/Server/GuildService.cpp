@@ -150,8 +150,11 @@ namespace sw
             /** @brief 신청 키 `<길드>/<계정>` 의 역색인 키 `<계정>/<길드>` 입니다. */
             static string makeApplicationReverseKey( const string& applicationKey )
             {
-                const size_t width = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
-                return applicationKey.substr( width + 1 ) + "/" + applicationKey.substr( 0, width );
+                const size_t                             width = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                const string_view                        key( applicationKey );
+                StringBuilder<constant::buffer::kMax128> reverseKey;
+                reverseKey.appendFormat( "%#/%#", key.substr( width + 1 ), key.substr( 0, width ) );
+                return string( reverseKey.view() );
             }
 
             static const hashed_string& getDepositorTable()
@@ -477,7 +480,9 @@ namespace sw
                     return fail( SocialResult::GuildClosed );
                 if ( info._memberCount >= GuildLimit::kMaxMember )
                     return fail( SocialResult::GuildFull );
-                const string prefix = guildKey + "/";
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", guildKey );
+                const string prefix( prefixBuilder.view() );
                 // 한 번에 지우는 죽은 신청 수 — 역색인까지 두 쓰기라 트랜잭션 상한에 맞춘다. 남은 것은 TTL 쓸기와 다음 신청이 지운다
                 constexpr int32    kMaxDeadErase = ( ServiceTransaction::kMaxWriteCount - 4 ) / 2;
                 const string       selfKey       = Internal::makePairKey( _request._guildID, _request._accountID );
@@ -732,7 +737,9 @@ namespace sw
                     return ServiceStoreResult::Unavailable;
                 if ( listBalance.empty() == false )
                     return fail( SocialResult::StorageNotEmpty );
-                const string prefix = ServiceKeyUtil::makeHex64( guildID ) + "/";
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( guildID ) );
+                const string prefix( prefixBuilder.view() );
                 string       cursor;
                 while ( true ) // 맡긴 사람 기록을 끝까지 쪽으로 넘긴다 — 뒤를 못 보고 해산하면 그 몫이 주인 없이 남는다
                 {
@@ -774,10 +781,12 @@ namespace sw
              */
             ServiceStoreResult stageReceivedGrantRemoval( IServiceStoreConnection& connection, uint64 guildID, AccountID granteeID, ServiceTransaction& inoutTransaction )
             {
-                using Internal          = GuildServiceInternal;
-                constexpr size_t kWidth = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
-                const string     prefix = ServiceKeyUtil::makeHex64( guildID ) + "/";
-                string           cursor;
+                using Internal                                  = GuildServiceInternal;
+                constexpr size_t                         kWidth = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( guildID ) );
+                const string prefix( prefixBuilder.view() );
+                string       cursor;
                 while ( true )
                 {
                     vector<ServiceRecord> listGrantRecord;
@@ -837,7 +846,9 @@ namespace sw
                         return failLedger( staged );
                 }
                 inoutTransaction.erase( Internal::getDepositorTable(), depositorKey, depositorRecord._version );
-                return stageGrantErase( connection, depositorKey + "/", inoutTransaction );
+                StringBuilder<constant::buffer::kMax128> grantPrefix;
+                grantPrefix.appendFormat( "%#/", depositorKey );
+                return stageGrantErase( connection, string( grantPrefix.view() ), inoutTransaction );
             }
 
             /** @brief 키가 @p prefix 로 시작하는 꺼내기 허용을 끝까지 읽어 모두 지우는 쓰기를 붙입니다. 한 쪽만 지우면 남은 허용이 다시 들어온 멤버에게 살아난다. */
@@ -872,7 +883,9 @@ namespace sw
                                                                                           : Internal::makeDepositorHolder( guildID, cursor._depositorID );
                 if ( appendStoragePage( connection, firstHolder, cursor._depositorID, cursor._assetID, maxCount ) != ServiceStoreResult::Ok )
                     return ServiceStoreResult::Unavailable;
-                const string prefix    = ServiceKeyUtil::makeHex64( guildID ) + "/";
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( guildID ) );
+                const string prefix( prefixBuilder.view() );
                 string       recordKey = cursor._depositorID == kInvalidAccountID ? string() : Internal::makePairKey( guildID, cursor._depositorID );
                 while ( static_cast<int32>( _serviceResult._listStorage.size() ) < maxCount )
                 {
@@ -925,7 +938,9 @@ namespace sw
                 using Internal = GuildServiceInternal;
                 if ( _request._operation == GuildOperation::ListApplications )
                 {
-                    const string prefix = ServiceKeyUtil::makeHex64( guildID ) + "/";
+                    StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                    prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( guildID ) );
+                    const string prefix( prefixBuilder.view() );
                     // 죽은 신청을 건너뛰며 끝까지 읽는다 — 한 쪽만 읽으면 죽은 신청이 앞을 채워 살아 있는 신청이 빠진다(살아 있는 수는 신청이 상한으로 막는다)
                     const ServiceStoreResult listed =
                         ServiceRecordReader::visitAll( connection, Internal::getApplicationTable(), prefix, Internal::kApplicationPageSize, [&]( const ServiceRecord& record )
@@ -1203,8 +1218,10 @@ namespace sw
                     return fail( SocialResult::NotFound );
                 if ( bExists == false )
                 {
-                    vector<ServiceRecord> listGrantRecord;
-                    const string          prefix = Internal::makePairKey( guildID, _request._accountID ) + "/";
+                    vector<ServiceRecord>                    listGrantRecord;
+                    StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                    prefixBuilder.appendFormat( "%#/", Internal::makePairKey( guildID, _request._accountID ) );
+                    const string prefix( prefixBuilder.view() );
                     if ( ServiceRecordReader::readPage( connection, Internal::getGrantTable(), prefix, "", GuildLimit::kMaxStorageGrant, false, listGrantRecord )._result != ServiceStoreResult::Ok )
                         return ServiceStoreResult::Unavailable;
                     if ( listGrantRecord.size() >= static_cast<size_t>( GuildLimit::kMaxStorageGrant ) )
@@ -1237,8 +1254,10 @@ namespace sw
                                    bApplication;
                 if ( bSkip )
                     return;
-                vector<ServiceRecord> listRecord;
-                const string          prefix = ServiceKeyUtil::makeHex64( _serviceResult._guildID ) + "/";
+                vector<ServiceRecord>                    listRecord;
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( _serviceResult._guildID ) );
+                const string prefix( prefixBuilder.view() );
                 if ( ServiceRecordReader::readPage( connection, GuildServiceInternal::getMemberTable(), prefix, "", GuildLimit::kMaxMember, false, listRecord )._result != ServiceStoreResult::Ok )
                     return; // 알림만 빠지며 클라이언트가 다시 조회한다
                 for ( const ServiceRecord& record : listRecord )
@@ -1301,8 +1320,10 @@ namespace sw
                         return ServiceStoreResult::Unavailable;
                     if ( listBalance.empty() )
                         return ServiceStoreResult::Ok;
-                    LedgerTransferRequest request;
-                    request._journalKey = journalPrefix + listBalance.front()._assetID;
+                    LedgerTransferRequest                    request;
+                    StringBuilder<constant::buffer::kMax128> journalKey;
+                    journalKey.appendFormat( "%#%#", journalPrefix, listBalance.front()._assetID );
+                    request._journalKey = string( journalKey.view() );
                     request._reason     = "account.delete";
                     request._timeMs     = nowMs;
                     request._actorKind  = LedgerActorKind::System;
@@ -1325,11 +1346,13 @@ namespace sw
             /** @brief 길드 @p guildID 의 허용 중 @p accountID 가 주거나(@p bAll 이면 모두) 받은 것을 지웁니다. */
             static ServiceStoreResult eraseGrants( IServiceStoreConnection& connection, uint64 guildID, AccountID accountID, bool bAll )
             {
-                using Internal          = GuildServiceInternal;
-                constexpr size_t kWidth = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
-                const string     prefix = ServiceKeyUtil::makeHex64( guildID ) + "/";
-                const string     self   = ServiceKeyUtil::makeHex64( accountID );
-                string           cursor;
+                using Internal                                  = GuildServiceInternal;
+                constexpr size_t                         kWidth = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( guildID ) );
+                const string prefix( prefixBuilder.view() );
+                const string self = ServiceKeyUtil::makeHex64( accountID );
+                string       cursor;
                 while ( true )
                 {
                     vector<ServiceRecord> listGrant;
@@ -1363,13 +1386,11 @@ namespace sw
             /** @brief 맡긴 사람 @p depositorID 의 몫을 소각하고 맡긴 사람 기록을 지웁니다. */
             static ServiceStoreResult burnShare( IServiceStoreConnection& connection, uint64 guildID, AccountID depositorID, AccountID deletedID, int64 nowMs )
             {
-                using Internal       = GuildServiceInternal;
-                string journalPrefix = LedgerJournalKey::makeAccountScope( deletedID );
-                journalPrefix += "/guild.share.";
-                journalPrefix += ServiceKeyUtil::makeHex64( guildID );
-                journalPrefix += ".";
-                journalPrefix += ServiceKeyUtil::makeHex64( depositorID );
-                journalPrefix += ".";
+                using Internal = GuildServiceInternal;
+                StringBuilder<constant::buffer::kMax128> journalPrefixBuilder;
+                journalPrefixBuilder.appendFormat( "%#/guild.share.%#.%#.", LedgerJournalKey::makeAccountScope( deletedID ), ServiceKeyUtil::makeHex64( guildID ),
+                                                   ServiceKeyUtil::makeHex64( depositorID ) );
+                const string journalPrefix( journalPrefixBuilder.view() );
                 if ( const ServiceStoreResult burned = burnEscrow( connection, Internal::makeDepositorHolder( guildID, depositorID ), journalPrefix, nowMs ); burned != ServiceStoreResult::Ok )
                     return burned;
                 ServiceTransaction transaction;
@@ -1405,8 +1426,11 @@ namespace sw
             /** @brief 길드 @p guildID 에서 지운 계정 @p accountID 를 뺍니다. 몫을 소각하고, 길드장이면 넘기거나 해산합니다. */
             static ServiceStoreResult eraseMembership( IServiceStoreConnection& connection, uint64 guildID, AccountID accountID, const ServiceRecord& selfGuildRecord, int64 nowMs )
             {
-                using Internal                     = GuildServiceInternal;
-                const string             guildKey  = ServiceKeyUtil::makeHex64( guildID );
+                using Internal                                    = GuildServiceInternal;
+                const string                             guildKey = ServiceKeyUtil::makeHex64( guildID );
+                StringBuilder<constant::buffer::kMax128> guildPrefixBuilder;
+                guildPrefixBuilder.appendFormat( "%#/", guildKey );
+                const string             guildPrefix( guildPrefixBuilder.view() );
                 const string             memberKey = Internal::makePairKey( guildID, accountID );
                 ServiceRecord            guildRecord;
                 ServiceRecord            memberRecord;
@@ -1432,16 +1456,15 @@ namespace sw
                 if ( bMaster && info._memberCount <= 1 )
                 {
                     // 혼자 남은 길드장이다 — 공용 창고 · 남은 몫을 소각하고 길드를 해산한다(돌려줄 사람이 없다)
-                    string storagePrefix = LedgerJournalKey::makeAccountScope( accountID );
-                    storagePrefix += "/guild.storage.";
-                    storagePrefix += guildKey;
-                    storagePrefix += ".";
+                    StringBuilder<constant::buffer::kMax128> storagePrefixBuilder;
+                    storagePrefixBuilder.appendFormat( "%#/guild.storage.%#.", LedgerJournalKey::makeAccountScope( accountID ), guildKey );
+                    const string storagePrefix( storagePrefixBuilder.view() );
                     if ( const ServiceStoreResult storage = burnEscrow( connection, Internal::makeStorageHolder( guildID ), storagePrefix, nowMs ); storage != ServiceStoreResult::Ok )
                         return storage;
                     // 맡긴 몫을 끝까지 태운다 — 한 쪽만 보면 뒤의 몫이 해산한 길드에 남는다
                     ServiceStoreResult       burned = ServiceStoreResult::Ok;
                     const ServiceStoreResult listed =
-                        ServiceRecordReader::visitAll( connection, Internal::getDepositorTable(), guildKey + "/", GuildLimit::kMaxMember, [&]( const ServiceRecord& record )
+                        ServiceRecordReader::visitAll( connection, Internal::getDepositorTable(), guildPrefix, GuildLimit::kMaxMember, [&]( const ServiceRecord& record )
                     {
                         AccountID depositorID = kInvalidAccountID;
                         if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( guildKey.size() + 1 ), depositorID ) == false )
@@ -1462,12 +1485,12 @@ namespace sw
                 if ( bMaster )
                 {
                     vector<ServiceRecord> listMemberRecord;
-                    if ( ServiceRecordReader::readPage( connection, Internal::getMemberTable(), guildKey + "/", "", GuildLimit::kMaxMember, false, listMemberRecord )._result != ServiceStoreResult::Ok )
+                    if ( ServiceRecordReader::readPage( connection, Internal::getMemberTable(), guildPrefix, "", GuildLimit::kMaxMember, false, listMemberRecord )._result != ServiceStoreResult::Ok )
                         return ServiceStoreResult::Unavailable;
                     AccountID   successorID = kInvalidAccountID;
                     GuildMember successor;
                     uint64      successorVersion = 0;
-                    if ( chooseSuccessor( listMemberRecord, guildKey + "/", accountID, successorID, successor, successorVersion ) )
+                    if ( chooseSuccessor( listMemberRecord, guildPrefix, accountID, successorID, successor, successorVersion ) )
                     {
                         transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildID, successorID ), Internal::encodeMember( GuildRole::Master, successor._joinedMs ),
                                          successorVersion );
@@ -1483,9 +1506,11 @@ namespace sw
 
     ServiceStoreResult GuildService::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs )
     {
-        using Internal         = GuildServiceInternal;
-        const string    prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
-        constexpr int32 kPage  = 32;
+        using Internal = GuildServiceInternal;
+        StringBuilder<constant::buffer::kMax128> prefixBuilder;
+        prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+        const string    prefix( prefixBuilder.view() );
+        constexpr int32 kPage = 32;
         // 받은 초대(`<나>/<길드>`)와 그 만료 색인
         while ( true )
         {

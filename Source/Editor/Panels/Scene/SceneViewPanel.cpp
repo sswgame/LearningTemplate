@@ -4,6 +4,7 @@
 
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
@@ -154,7 +155,9 @@ namespace sw::editor
                                                pOverlays->setBarVisible( listArgument[0], bVisible ) == false;
                 if ( bSetOverlayFailed )
                     return false;
-                outReply = "overlay " + listArgument[0] + ( bVisible ? " shown" : " hidden" );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "overlay %#%#", listArgument[0], ( bVisible ? " shown" : " hidden" ) );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

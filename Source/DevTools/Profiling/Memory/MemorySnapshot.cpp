@@ -81,26 +81,26 @@ namespace sw
             static constexpr string_view kTextMagic = "swmem 1";
 
             /** @brief 글 칸을 전송 글로 씁니다 — 탭 · 줄바꿈 · 역슬래시만 바꾼다. */
-            static void appendEscaped( string& outText, string_view value )
+            static void appendEscaped( StringBuilder<constant::buffer::kMax4096>& outText, string_view value )
             {
                 for ( const utf8 character : value )
                 {
                     switch ( character )
                     {
                         case '\\':
-                            outText += "\\\\";
+                            outText.append( "\\\\" );
                             break;
                         case '\t':
-                            outText += "\\t";
+                            outText.append( "\\t" );
                             break;
                         case '\n':
-                            outText += "\\n";
+                            outText.append( "\\n" );
                             break;
                         case '\r':
-                            outText += "\\r";
+                            outText.append( "\\r" );
                             break;
                         default:
-                            outText += character;
+                            outText.append( character );
                             break;
                     }
                 }
@@ -194,13 +194,13 @@ namespace sw
                     if ( row._listCell.size() != schema._columnCount )
                         continue;
                     row.collectKeyText( schema, listKeyText );
-                    string key;
+                    StringBuilder<constant::buffer::kMax512> key;
                     for ( const string& keyText : listKeyText )
                     {
-                        key += keyText;
-                        key += '\x1f'; // 키 글에 나올 수 없는 단위 구분자 — 두 칸을 이은 글이 다른 두 칸과 겹치지 않게
+                        key.append( keyText );
+                        key.append( '\x1f' ); // 키 글에 나올 수 없는 단위 구분자 — 두 칸을 이은 글이 다른 두 칸과 겹치지 않게
                     }
-                    KeyedValue& value = outMapKeyToValue[key];
+                    KeyedValue& value = outMapKeyToValue[string( key.view() )];
                     if ( value._listKeyText.empty() )
                         value._listKeyText = listKeyText;
                     value._value += row._listCell[schema._sizeColumn]._value;
@@ -231,44 +231,35 @@ namespace sw
 
     string MemorySnapshot::writeText() const
     {
-        string text{ MemorySnapshotInternal::kTextMagic };
-        text += '\n';
-        text += "label\t";
+        StringBuilder<constant::buffer::kMax4096> text;
+        text.appendFormat( "%#\nlabel\t", MemorySnapshotInternal::kTextMagic );
         MemorySnapshotInternal::appendEscaped( text, _label );
-        text += "\nsource\t";
+        text.append( "\nsource\t" );
         MemorySnapshotInternal::appendEscaped( text, _source );
-        text += "\ngpu\t";
+        text.append( "\ngpu\t" );
         MemorySnapshotInternal::appendEscaped( text, _gpuDescription );
-        text += "\ncpu\t";
-        StringUtil::appendNumber( text, _cpuLiveBytes );
-        text += "\ngpubytes\t";
-        StringUtil::appendNumber( text, _gpuLiveBytes );
-        text += '\n';
+        text.appendFormat( "\ncpu\t%#\ngpubytes\t%#\n", _cpuLiveBytes, _gpuLiveBytes );
         for ( uint32 sheetIndex = 0; sheetIndex < kMemorySheetCount; ++sheetIndex )
         {
             const MemorySheetSchema& schema = MemorySnapshotInternal::kArrSchema[sheetIndex];
             const MemorySheet&       sheet  = _arrSheet[sheetIndex];
-            text += "sheet\t";
-            text += schema._pName;
-            text += '\t';
-            StringUtil::appendNumber( text, static_cast<uint64>( sheet._listRow.size() ) );
-            text += '\n';
+            text.appendFormat( "sheet\t%#\t%#\n", schema._pName, static_cast<uint64>( sheet._listRow.size() ) );
             for ( const MemoryRow& row : sheet._listRow )
             {
                 for ( uint32 column = 0; column < schema._columnCount; ++column )
                 {
                     if ( column > 0 )
-                        text += '\t';
+                        text.append( '\t' );
                     const MemoryCell* pCell = column < row._listCell.size() ? &row._listCell[column] : nullptr;
                     if ( schema._pColumn[column]._kind == MemoryColumnKind::Text )
                         MemorySnapshotInternal::appendEscaped( text, pCell != nullptr ? string_view{ pCell->_text } : string_view{} );
                     else
-                        StringUtil::appendNumber( text, pCell != nullptr ? pCell->_value : 0ull );
+                        text.appendFormat( "%#", pCell != nullptr ? pCell->_value : 0ull );
                 }
-                text += '\n';
+                text.append( '\n' );
             }
         }
-        return text;
+        return string( text.view() );
     }
 
     bool MemorySnapshot::readText( string_view text, MemorySnapshot& outSnapshot )

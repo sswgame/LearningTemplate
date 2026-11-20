@@ -4,7 +4,7 @@
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
@@ -543,7 +543,7 @@ SW_TEST_CASE( OnlineServiceHostTest, RequestsBeforeHelloAreRefusedAndSchemaHashI
     SW_EXPECT_TRUE( raw._lastResponse._status == NetRequestStatus::ApplicationError );
     SW_EXPECT_EQUAL( OnlineError::kVersionMismatch, raw.getErrorCode() );
     SW_REQUIRE_EQUAL( raw._lastBodyBytes.size(), size_t( 2 + OnlineProtocolConstant::kSchemaHashSize ) );
-    SW_EXPECT_EQUAL( schemaHash, LittleEndianUtil::readUint64( raw._lastBodyBytes.data() + 2 ) );
+    SW_EXPECT_EQUAL( schemaHash, ByteReader( raw._lastBodyBytes.data() + 2, raw._lastBodyBytes.size() - 2 ).readUint64() );
     for ( int32 index = 0; index < 6; ++index )
     {
         raw.poll();
@@ -578,7 +578,7 @@ SW_TEST_CASE( OnlineServiceHostTest, HelloRefusalsReadOnlyTheFixedHashFieldFirst
     SW_REQUIRE_TRUE( shortHello._bAnswered );
     SW_EXPECT_EQUAL( OnlineError::kVersionMismatch, shortHello.getErrorCode() );
     SW_REQUIRE_EQUAL( shortHello._lastBodyBytes.size(), size_t( 2 + OnlineProtocolConstant::kSchemaHashSize ) );
-    SW_EXPECT_EQUAL( schemaHash, LittleEndianUtil::readUint64( shortHello._lastBodyBytes.data() + 2 ) );
+    SW_EXPECT_EQUAL( schemaHash, ByteReader( shortHello._lastBodyBytes.data() + 2, shortHello._lastBodyBytes.size() - 2 ).readUint64() );
 
     // 해시가 다르고 뒤(게임 빌드, 플랫폼)가 없다. 뒤를 읽기 전에 해시로 거절된다
     vector<uint8> wrongHashBytes;

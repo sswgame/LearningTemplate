@@ -9,37 +9,18 @@
 
 namespace sw
 {
+    class ByteReader;
+
     /**
      * @struct LittleEndianUtil
      * @brief 리틀 엔디언 정수 하나를 바이트 포인터에서 읽고(`read*`), 그 위치에 쓰고(`write*`), 벡터 끝에 덧붙이는(`append*`) static 도우미입니다.
-     * @details 범위 검사는 하지 않습니다 — 호출부가 남은 바이트 수를 먼저 확인합니다. 정렬되지 않은 주소도 됩니다(바이트 단위로 읽습니다).
-     *          부호 있는 값은 같은 비트의 부호 없는 값으로 읽고 씁니다.
+     * @details 범위 검사는 하지 않습니다. 정렬되지 않은 주소도 됩니다(바이트 단위로 읽습니다). 부호 있는 값은 같은 비트의 부호 없는 값으로 읽고 씁니다.
+     *          **읽기는 비공개이고 `ByteReader` 만 부른다(friend).** 바깥이 포인터 · 오프셋으로 제 커서를 굴리면 남은 바이트 검사를 빠뜨려 버퍼 밖을 읽는다 —
+     *          읽는 쪽은 모두 범위를 보는 `ByteReader` 를 지난다(언리얼 `FMemoryReader` 가 `FArchive` 로만 읽게 하는 자리). 쓰기 · 덧붙이기는 버퍼를 쥔 쪽이 크기를 정하므로 공개다.
      */
     struct LittleEndianUtil
     {
-        [[nodiscard]] static constexpr uint16 readUint16( const uint8* pData ) noexcept
-        {
-            return static_cast<uint16>( static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) );
-        }
-
-        [[nodiscard]] static constexpr uint32 readUint32( const uint8* pData ) noexcept
-        {
-            return static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
-                   ( static_cast<uint32>( pData[3] ) << 24 );
-        }
-
-        [[nodiscard]] static constexpr uint64 readUint64( const uint8* pData ) noexcept
-        {
-            return static_cast<uint64>( readUint32( pData ) ) | ( static_cast<uint64>( readUint32( pData + 4 ) ) << 32 );
-        }
-
-        [[nodiscard]] static constexpr int16 readInt16( const uint8* pData ) noexcept { return static_cast<int16>( readUint16( pData ) ); }
-
-        [[nodiscard]] static constexpr int64 readInt64( const uint8* pData ) noexcept { return static_cast<int64>( readUint64( pData ) ); }
-
-        /** @brief IEEE 754 비트를 리틀 엔디언 uint32 로 읽습니다(NaN 비트도 그대로). */
-        [[nodiscard]] static constexpr float32 readFloat32( const uint8* pData ) noexcept { return BitUtil::bitsToFloat( readUint32( pData ) ); }
-
+    public:
         static constexpr void writeUint16( uint8* pOut, const uint16 value ) noexcept
         {
             pOut[0] = static_cast<uint8>( value & 0xFFu );
@@ -91,5 +72,31 @@ namespace sw
         static void appendInt64( vector<uint8>& inoutBytes, const int64 value ) { appendUint64( inoutBytes, static_cast<uint64>( value ) ); }
 
         static void appendFloat32( vector<uint8>& inoutBytes, const float32 value ) { appendUint32( inoutBytes, BitUtil::floatToBits( value ) ); }
+
+    private:
+        friend class ByteReader;
+
+        [[nodiscard]] static constexpr uint16 readUint16( const uint8* pData ) noexcept
+        {
+            return static_cast<uint16>( static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) );
+        }
+
+        [[nodiscard]] static constexpr uint32 readUint32( const uint8* pData ) noexcept
+        {
+            return static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
+                   ( static_cast<uint32>( pData[3] ) << 24 );
+        }
+
+        [[nodiscard]] static constexpr uint64 readUint64( const uint8* pData ) noexcept
+        {
+            return static_cast<uint64>( readUint32( pData ) ) | ( static_cast<uint64>( readUint32( pData + 4 ) ) << 32 );
+        }
+
+        [[nodiscard]] static constexpr int16 readInt16( const uint8* pData ) noexcept { return static_cast<int16>( readUint16( pData ) ); }
+
+        [[nodiscard]] static constexpr int64 readInt64( const uint8* pData ) noexcept { return static_cast<int64>( readUint64( pData ) ); }
+
+        /** @brief IEEE 754 비트를 리틀 엔디언 uint32 로 읽습니다(NaN 비트도 그대로). */
+        [[nodiscard]] static constexpr float32 readFloat32( const uint8* pData ) noexcept { return BitUtil::bitsToFloat( readUint32( pData ) ); }
     };
 } // namespace sw

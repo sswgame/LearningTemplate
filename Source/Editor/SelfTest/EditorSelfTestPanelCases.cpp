@@ -3,6 +3,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
@@ -530,21 +532,22 @@ namespace sw::editor
                     if ( stepIndex + 1 - probe._openStep < kStabilityStepCount )
                         return EditorSelfTestStep::Continue;
 
-                    const float32      dpiScale  = EditorThemeUtil::getDPIScale();
-                    const float32      minWidth  = MathUtil::min( kMinUsableWidth * dpiScale, pViewport->WorkSize.x * kViewportRatio );
-                    const float32      minHeight = MathUtil::min( kMinUsableHeight * dpiScale, pViewport->WorkSize.y * kViewportRatio );
-                    const ImGuiWindow* pWindow   = ImGui::FindWindowByName( EditorPanelText::makeWindowID( pPanel->getPanelTitle() ).c_str() );
-                    string             what{ pPanelID };
-                    if ( context.expect( pWindow != nullptr, ( what + ": the tool window was not created" ).c_str() ) )
+                    const float32                           dpiScale  = EditorThemeUtil::getDPIScale();
+                    const float32                           minWidth  = MathUtil::min( kMinUsableWidth * dpiScale, pViewport->WorkSize.x * kViewportRatio );
+                    const float32                           minHeight = MathUtil::min( kMinUsableHeight * dpiScale, pViewport->WorkSize.y * kViewportRatio );
+                    const ImGuiWindow*                      pWindow   = ImGui::FindWindowByName( EditorPanelText::makeWindowID( pPanel->getPanelTitle() ).c_str() );
+                    fixed_string<constant::buffer::kMax256> what;
+                    formatstring( what.data(), what.capacity(), "%#: the tool window was not created", pPanelID );
+                    if ( context.expect( pWindow != nullptr, what.c_str() ) )
                     {
-                        const string sizeText = " (" + to_string( static_cast<int32>( pWindow->Size.x ) ) + "x" + to_string( static_cast<int32>( pWindow->Size.y ) ) + " < " +
-                                                to_string( static_cast<int32>( minWidth ) ) + "x" + to_string( static_cast<int32>( minHeight ) ) +
-                                                ( pWindow->DockIsActive ? ", docked)" : ")" );
-                        (void)context.expect( pWindow->Size.x >= minWidth && pWindow->Size.y >= minHeight, ( what + ": the tool window opened too small" + sizeText ).c_str() );
+                        formatstring( what.data(), what.capacity(), "%#: the tool window opened too small (%#x%# < %#x%#%#", pPanelID, static_cast<int32>( pWindow->Size.x ),
+                                      static_cast<int32>( pWindow->Size.y ), static_cast<int32>( minWidth ), static_cast<int32>( minHeight ), pWindow->DockIsActive ? ", docked)" : ")" );
+                        (void)context.expect( pWindow->Size.x >= minWidth && pWindow->Size.y >= minHeight, what.c_str() );
                         const bool bInsideViewport = pViewport->Pos.x - kEdgeTolerancePx <= pWindow->Pos.x && pViewport->Pos.y - kEdgeTolerancePx <= pWindow->Pos.y &&
                                                      pWindow->Pos.x + pWindow->Size.x <= pViewport->Pos.x + pViewport->Size.x + kEdgeTolerancePx &&
                                                      pWindow->Pos.y + pWindow->Size.y <= pViewport->Pos.y + pViewport->Size.y + kEdgeTolerancePx;
-                        (void)context.expect( bInsideViewport, ( what + ": the tool window does not fit in the main viewport" ).c_str() );
+                        formatstring( what.data(), what.capacity(), "%#: the tool window does not fit in the main viewport", pPanelID );
+                        (void)context.expect( bInsideViewport, what.c_str() );
                     }
                     (void)panelManager.setPanelOpen( pPanelID, probe._bWasOpen == SW_TRUE );
                     ++probe._panelIndex;

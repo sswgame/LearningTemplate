@@ -364,7 +364,8 @@ namespace sw::editor
     {
         const string_view newline      = CatalogXMLTextInternal::detectNewline( text );
         const string      parentIndent = CatalogXMLTextInternal::readLineIndent( text, parent._begin );
-        string            indent       = parentIndent + "\t";
+        string            indent       = parentIndent;
+        indent += '\t';
         if ( parent._listChild.empty() == false )
             indent = CatalogXMLTextInternal::readLineIndent( text, listElement[static_cast<size_t>( parent._listChild.back() )]._begin );
         const string child{ childText };

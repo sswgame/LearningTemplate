@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -45,7 +46,9 @@ namespace sw
                 if ( AbsolutePath::isStrictAbsolute( path ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the path is not absolute - a scenario writes under {out} or a <Scratch> folder" } );
                 // `..` 는 풀지 않은 글로 사본 폴더를 벗어난다(`scratch/../engine/…`) — 포함 판정은 글 연산이라 받지 않는다.
-                if ( ( "/" + FileUtil::normalizeSeparators( path ) + "/" ).find( "/../" ) != string::npos )
+                StringBuilder<constant::buffer::kMax1024> wrapped;
+                wrapped.appendFormat( "/%#/", FileUtil::normalizeSeparators( path ) );
+                if ( wrapped.view().find( "/../" ) != string_view::npos )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the path has a '..' segment - a scenario writes to a resolved path", path } );
                 // 포함 판정은 OS 대소문자 규칙이다(`isPathAtOrUnderRoot`). 사본(작업 도메인)은 실행 뿌리 아래라 리소스 루트 밖이다 — 아래 "루트 밖은 연다" 가 연다.
                 const string& projectRoot = ProcessRoots::get()._project.str();
@@ -66,7 +69,7 @@ namespace sw
 
                 if ( FileUtil::isPathUnderRoot( rootPath, path ) == false )
                     return {};
-                const string target = FileUtil::makeComparableDiskPath( path );
+                const string target = FileUtil::makeComparableDiskPath( path ).str(); // 폴더 이름 판정용 글(OS 규칙으로 접었다)
                 // 골든 기록 실행(`-scenario-update-golden` · `-scenario-record-missing-golden`)만 시나리오 옆 `golden/`(자동화 폴더 아래 어느 깊이든 — `engine/automation/editor/golden/`)에 쓴다.
                 // 그 실행이 하는 일이 바로 그것이고, 쓴 파일은 보고에 남아 리뷰한다. 무엇을 덮을지는 판정(`AutomationGoldenUtil::decide`)이 가른다. 폴더 이름은 판정이 쓰는 것과 같은 상수다.
                 bool bUpdateGolden        = false;

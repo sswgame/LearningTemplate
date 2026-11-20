@@ -33,7 +33,6 @@ namespace sw
         : PhysicsComponent{ PhysicsComponentPhase::Body }
         , _bodyType{ PhysicsBodyType::Dynamic }
         , _listShape{ PhysicsShapeDesc2D{} }
-        , _layer{ "Default" }
         , _material{}
         , _hitZone{}
         , _mass{ 0.0f }

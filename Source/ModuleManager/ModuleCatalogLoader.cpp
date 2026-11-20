@@ -8,6 +8,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/GameSelection.h"
@@ -156,7 +157,11 @@ namespace sw
         for ( size_t index = 0; index < manifestCount; ++index )
         {
             if ( listRemoved[index] == SW_TRUE )
-                outListRemoved.push_back( ModuleInactiveEntry{ inoutListManifest[index]._name, "not used by " + gameName } );
+            {
+                StringBuilder<constant::buffer::kMax128> reason;
+                reason.appendFormat( "not used by %#", gameName );
+                outListRemoved.push_back( ModuleInactiveEntry{ inoutListManifest[index]._name, string( reason.view() ) } );
+            }
             else
                 listKept.push_back( std::move( inoutListManifest[index] ) );
         }
@@ -186,7 +191,9 @@ namespace sw
         string                 movedDirectory;
         if ( ModuleLibraryUtil::getModuleSubdirectory( movedModule, movedDirectory ) && projectIndex.has_value() )
         {
-            const string selectedPath = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), movedModule + ModuleCatalog::kManifestExtension );
+            StringBuilder<constant::buffer::kMax256> manifestName;
+            manifestName.appendFormat( "%#%#", movedModule, ModuleCatalog::kManifestExtension );
+            const string selectedPath = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), manifestName.view() );
             bool         bFound       = false;
             for ( ModuleManifest& project : listGamePackProject )
             {

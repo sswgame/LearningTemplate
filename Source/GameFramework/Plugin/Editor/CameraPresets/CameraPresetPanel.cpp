@@ -98,12 +98,13 @@ namespace sw::editor
             const CameraPresetCatalog& catalog = _model.getCatalog();
             for ( size_t index = 0; index < catalog.getCount(); ++index )
             {
-                const CameraPresetDef& preset    = catalog.getAt( index );
-                const bool             bSelected = static_cast<int32>( index ) == _model.getSelectedIndex();
-                const string           label     = string( preset._id.c_str() ) + "  [" + getEnumName( preset._view._mode ) + "]";
+                const CameraPresetDef&                  preset    = catalog.getAt( index );
+                const bool                              bSelected = static_cast<int32>( index ) == _model.getSelectedIndex();
+                fixed_string<constant::buffer::kMax128> label;
+                formatstring( label.data(), label.capacity(), "%#  [%#]", preset._id.c_str(), getEnumName( preset._view._mode ) );
                 if ( ImGui::Selectable( label.c_str(), bSelected ) )
                     _model.selectPreset( index );
-                EditorSelfTestMarks::record( ( string( "camerapreset.row." ) + preset._id.c_str() ).c_str() ); // 시나리오가 행을 고른다(editor/camerapresets)
+                EditorSelfTestMarks::recordFormat( "camerapreset.row.%#", preset._id.c_str() ); // 시나리오가 행을 고른다(editor/camerapresets)
             }
             ImGui::EndListBox();
         }

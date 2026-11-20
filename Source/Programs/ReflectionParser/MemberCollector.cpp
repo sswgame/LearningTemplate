@@ -3,6 +3,7 @@
 #include "Programs/ReflectionParser/MemberCollector.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Programs/ReflectionParser/AnnotationApply.h"
@@ -266,6 +267,13 @@ namespace sw
             _bHasError = SW_TRUE;
             return;
         }
+        // 이름 · 경로 칸의 C++ 문자열 기본값 — 데이터가 그 칸을 안 적으면 맞지 않는 이름이 조용히 쓰인다(판정은 `validatePropertyFlags`). 테스트 형식은 기본값 자체를 시험하므로 보지 않는다.
+        CXFile declarationFile = nullptr;
+        clang_getExpansionLocation( clang_getCursorLocation( cursor ), &declarationFile, nullptr, nullptr, nullptr );
+        const bool bNameCheckSkipped = declarationFile != nullptr && session._config.isNameFieldCheckSkipped( CursorReader::takeString( clang_getFileName( declarationFile ) ) );
+        if ( bNameCheckSkipped == false && SourceTokens::hasStringLiteralDefault( cursor, prop._memberName ) &&
+             session._config.isNameFieldType( SourceTokens::readFieldTypeText( cursor, prop._memberName ) ) )
+            prop._bHasNameLiteralDefault = SW_TRUE;
         ContainerTreeBuilder::fillContainerDetails( prop, fieldType, session );
         if ( PropertyResolver::resolveComponentHandleProperty( prop, owner ) == false || PropertyResolver::resolveAssetRefProperty( prop, owner ) == false ||
              PropertyResolver::resolveCatalogKeyProperty( prop, owner ) == false )
@@ -562,8 +570,10 @@ namespace sw
                 return true;
         }
 
-        const string cacheKey = ( listBaseType.empty() ? string() : listBaseType.front() ) + "|" + fqn;
-        const auto   cacheIt  = s_mapFqnToDerives.find( cacheKey );
+        StringBuilder<constant::buffer::kMax512> cacheKeyText;
+        cacheKeyText.appendFormat( "%#|%#", listBaseType.empty() ? string_view() : string_view( listBaseType.front() ), fqn );
+        const string cacheKey( cacheKeyText.view() );
+        const auto   cacheIt = s_mapFqnToDerives.find( cacheKey );
         if ( cacheIt != s_mapFqnToDerives.end() )
             return cacheIt->second;
 

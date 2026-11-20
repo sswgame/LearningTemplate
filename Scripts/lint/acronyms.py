@@ -3,31 +3,25 @@
 """
 Scripts/lint/acronyms.py
 
-약어 표기 검사 — 식별자 · 파일 · 폴더 이름의 낱말이 약어 목록(`Config/Rules/Lint/Acronyms.json` `_acronyms`)의 약어를 첫 글자만 대문자로 쓰면(`Json` · `Id` · `FourCc`) 막는다.
+약어 표기 검사 — 식별자 · 파일 · 폴더 이름의 낱말이 약어 목록(`Config/Rules/Lint/NamingWords.json` 의 `_acronyms`)의 약어를 첫 글자만 대문자로 쓰면(`Json` · `Id` · `FourCc`) 막는다.
 규칙은 `docs/agents/NamingCpp.md` Acronyms: 약어는 어디서나 모두 대문자, 소문자로 시작하는 첫 낱말일 때만 모두 소문자(`jsonText`). `gv_` 이름 · 주석 · 문자열은 보지 않는다.
 
 **왜 린트인가.** 약어 일괄 변경(1dafbae0c9) 뒤 도구를 지워 새 어긋남(`FourCcUtil` · `HpackDecoder` · `kDxgiFormat…`)이 다시 쌓였다(FolderMoves 11 절) — 이름은 형식이 막지 못한다.
-바깥 이름(서드파티 · OS API 를 그대로 쓰는 자리)과 데이터 철자(직렬화 키)는 `_keep` 에 이름 하나씩 까닭과 함께 둔다.
+바깥 이름(서드파티 · OS API 를 그대로 쓰는 자리)과 데이터 철자(직렬화 키)는 `_acronymKeep` 에 이름 하나씩 까닭과 함께 둔다.
 
-`py -3 -m Scripts lint acronyms [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 스테이지된 파일에 돌린다.
+규칙 id 는 따로 없다 — `naming-words` 가 이 판정을 부른다(같은 이름 검사가 표 둘 · 규칙 둘이던 것을 낱말 표 하나로 합쳤다).
 """
 
 from __future__ import annotations
 
-import argparse
-import json
 import re
 import sys
 from pathlib import Path
-from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-from common.exit_code import ExitCode  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from lint.lint_scope import LintScope, make_whole_scope, read_text  # noqa: E402
+from lint.lint_scope import LintScope, read_text  # noqa: E402
 
-CONFIG_PATH = "Config/Rules/Lint/Acronyms.json"
 EXTENSIONS = (".h", ".cpp", ".inl")
 LITERAL_OR_COMMENT = re.compile(r'//[^\n]*|/\*.*?\*/|(?:u8|[uUL])?R"(?P<delim>[^()\\\s]{0,16})\(.*?\)(?P=delim)"|(?:u8|[uUL])?"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])+\'', re.S)
 IDENTIFIER = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
@@ -48,17 +42,14 @@ def find_bad_words(name: str, acronyms: set[str]) -> list[str]:
     return list_bad
 
 
-def read_table(project_root: Path) -> tuple[set[str], dict[str, str]]:
-    table = json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))
-    return {item.upper() for item in table["_acronyms"]}, table.get("_keep", {})
-
-
 def list_source_files(scope: LintScope) -> list[str]:
     return scope.select(("Source",), EXTENSIONS)
 
 
-def check_acronyms(project_root: Path, scope: LintScope) -> list[str]:
-    acronyms, keep = read_table(project_root)
+def find_acronym_problems(project_root: Path, scope: LintScope, table: dict) -> list[str]:
+    """naming-words 규칙의 약어 판정 — 낱말 표(`table`)의 `_acronyms`(약어) · `_acronymKeep`(바깥 이름 · 데이터 철자 → 까닭)으로 본다."""
+    acronyms = {item.upper() for item in table["_acronyms"]}
+    keep = table["_acronymKeep"]
     list_problem: list[str] = []
     seen: set[str] = set()
     list_file = list_source_files(scope)
@@ -80,11 +71,11 @@ def check_acronyms(project_root: Path, scope: LintScope) -> list[str]:
             list_bad = find_bad_words(name, acronyms)
             if list_bad:
                 seen.add(name)
-                list_problem.append(f"{relative}: '{name}' 의 약어는 모두 대문자({', '.join(list_bad)}) — 바깥 이름 · 데이터 철자면 {CONFIG_PATH} 의 _keep 에 까닭과 함께")
+                list_problem.append(f"{relative}: '{name}' 의 약어는 모두 대문자({', '.join(list_bad)}) — 바깥 이름 · 데이터 철자면 Config/Rules/Lint/NamingWords.json 의 _acronymKeep 에 까닭과 함께")
     return list_problem
 
 
-def run_self_check() -> int:
+def check_find_bad_words() -> None:
     acronyms = {"ID", "JSON", "UV", "PSO", "UI"}
     assert find_bad_words("AssetId", acronyms) == ["Id"]
     assert find_bad_words("jsonText", acronyms) == []
@@ -95,22 +86,3 @@ def run_self_check() -> int:
     assert find_bad_words("_pUiSystem", acronyms) == ["Ui"]
     assert find_bad_words("gv_editorUiScale", acronyms) == []
     assert find_bad_words("kArrUv2", acronyms) == ["Uv2"]
-    print("[Acronyms] self-check OK")
-    return ExitCode.PASSED
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="약어 표기 검사(식별자 · 파일 · 폴더 — Config/Rules/Lint/Acronyms.json)")
-    parser.add_argument("--self-check", action="store_true")
-    args = parser.parse_args(argv)
-    if args.self_check:
-        return run_self_check()
-    list_problem = check_acronyms(get_project_root(), make_whole_scope(get_project_root()))
-    for problem in list_problem:
-        print(f"  - {problem}")
-    print(f"[Acronyms] {'OK' if not list_problem else f'FAIL {len(list_problem)}건'}")
-    return ExitCode.PASSED if not list_problem else ExitCode.VIOLATION
-
-
-if __name__ == "__main__":
-    sys.exit(main())

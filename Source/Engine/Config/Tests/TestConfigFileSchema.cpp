@@ -46,7 +46,9 @@ namespace
                 return false;
             for ( const sw::string& key : listEchoKey )
             {
-                SW_EXPECT_TRUE_MSG( false, absolutePath + ": '" + key + "' restates the default - write only values that differ" );
+                sw::fixed_string<sw::constant::buffer::kMax512> message;
+                sw::formatstring( message.data(), message.capacity(), "%#: '%#' restates the default - write only values that differ", absolutePath, key );
+                SW_EXPECT_TRUE_MSG( false, message );
             }
             return true;
         }
@@ -61,7 +63,11 @@ namespace
         {
             for ( const sw::string& key : shape.getMemberNames() )
             {
-                const sw::string    path      = prefix.empty() ? key : sw::string( prefix + "." + key );
+                sw::StringBuilder<sw::constant::buffer::kMax256> pathBuilder;
+                if ( prefix.empty() == false )
+                    pathBuilder.appendFormat( "%#.", prefix );
+                pathBuilder.append( key );
+                const sw::string    path( pathBuilder.view() );
                 const sw::JSONValue fileValue = file.get( key );
                 if ( fileValue.isValid() == false )
                 {
@@ -102,7 +108,9 @@ namespace
             collectMissingKeys( shapeDocument.getRoot(), fileDocument.getRoot(), sw::string(), listMissingKey );
             for ( const sw::string& key : listMissingKey )
             {
-                SW_EXPECT_TRUE_MSG( false, absolutePath + ": '" + key + "' is missing - this file is the base layer, the header has only the shape" );
+                sw::fixed_string<sw::constant::buffer::kMax512> message;
+                sw::formatstring( message.data(), message.capacity(), "%#: '%#' is missing - this file is the base layer, the header has only the shape", absolutePath, key );
+                SW_EXPECT_TRUE_MSG( false, message );
             }
             return listMissingKey.empty();
         }
@@ -133,9 +141,11 @@ namespace
             bool             bAllRead   = tiers.getRoot().getMemberNames().empty() == false;
             for ( const sw::string& tier : tiers.getRoot().getMemberNames() )
             {
-                sw::ConfigManager manager;
-                const bool        bRead = manager.loadHostConfig<sw::EngineConfig>( sw::ConfigSource::disk( enginePath ).withRenderQuality( absolutePath, tier ) ) != nullptr;
-                SW_EXPECT_TRUE_MSG( bRead, absolutePath + ": tier '" + tier + "' does not load over the engine config" );
+                sw::ConfigManager                               manager;
+                const bool                                      bRead = manager.loadHostConfig<sw::EngineConfig>( sw::ConfigSource::disk( enginePath ).withRenderQuality( absolutePath, tier ) ) != nullptr;
+                sw::fixed_string<sw::constant::buffer::kMax512> message;
+                sw::formatstring( message.data(), message.capacity(), "%#: tier '%#' does not load over the engine config", absolutePath, tier );
+                SW_EXPECT_TRUE_MSG( bRead, message );
                 bAllRead = bAllRead && bRead;
             }
             return bAllRead;
@@ -151,7 +161,6 @@ namespace
             {                 "Config/Engine/NetSendThrottle.json",                                                                                     "",   &loadBaseLayer<sw::NetSendThrottleSettings>},
             {                   "Config/Engine/RenderQuality.json",                                                                                     "",                            &loadRenderQuality},
             {                    "Config/Engine/CookContract.json",                                      "Scripts/generate/configure_files.py (configure)",                                       nullptr},
-            {       "Config/Engine/ClientOnlyTypes.generated.json",           "Scripts/generate/client_only_types.py (py -3 -m Scripts client-only-types)",                                       nullptr},
             {                "Config/Engine/ProcessExitCodes.json",                                   "Scripts/generate/process_exit_codes.py (configure)",                                       nullptr},
             {                                       "Config/Game/",                                                                                     "",                   &loadStrict<sw::GameConfig>},
             {                "Config/Server/chat_banned_words.txt",                                               "chat word filter (word list, not keys)",                                       nullptr},
@@ -202,14 +211,20 @@ SW_TEST_CASE( ConfigFileSchemaTest, EveryConfigFileLoadsStrictly )
         {
             relative.erase( 0, 1 );
         }
-        const ConfigFileSchemaInternal::ConfigKind* pKind = ConfigFileSchemaInternal::findKind( relative );
-        SW_EXPECT_TRUE_MSG( pKind != nullptr, "the config file is not in the kind table: " + relative );
+        const ConfigFileSchemaInternal::ConfigKind*     pKind = ConfigFileSchemaInternal::findKind( relative );
+        sw::fixed_string<sw::constant::buffer::kMax512> kindMessage;
+        sw::formatstring( kindMessage.data(), kindMessage.capacity(), "the config file is not in the kind table: %#", relative );
+        SW_EXPECT_TRUE_MSG( pKind != nullptr, kindMessage );
         if ( pKind == nullptr || pKind->_pLoad == nullptr )
             continue;
 
-        SW_EXPECT_TRUE_MSG( pKind->_pLoad( filePath ), relative + " could not be read strictly (the reason is in the log above)" );
+        sw::fixed_string<sw::constant::buffer::kMax512> loadMessage;
+        sw::formatstring( loadMessage.data(), loadMessage.capacity(), "%# could not be read strictly (the reason is in the log above)", relative );
+        SW_EXPECT_TRUE_MSG( pKind->_pLoad( filePath ), loadMessage );
         ++loadedCount;
     }
     // 엔진 설정 + 메모리 예산 + 팩 설정 + 게임 프리셋 — 경로를 못 찾아 0 이면 이 테스트는 아무것도 보지 않은 것이다.
-    SW_EXPECT_TRUE_MSG( loadedCount >= 10u, "only " + sw::to_string( loadedCount ) + " config files were read" );
+    sw::fixed_string<sw::constant::buffer::kMax128> countMessage;
+    sw::formatstring( countMessage.data(), countMessage.capacity(), "only %# config files were read", loadedCount );
+    SW_EXPECT_TRUE_MSG( loadedCount >= 10u, countMessage );
 }

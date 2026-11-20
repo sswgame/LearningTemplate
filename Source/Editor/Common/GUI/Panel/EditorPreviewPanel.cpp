@@ -4,6 +4,8 @@
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -71,7 +73,8 @@ namespace sw::editor
     {
         if ( _viewport.isInitialized() == false || size._x <= 1.0f || size._y <= 1.0f )
             return;
-        const string  scope  = string{ getDocumentKind().getID() } + ".preview";
+        fixed_string<constant::buffer::kMax128> scope;
+        formatstring( scope.data(), scope.capacity(), "%#.preview", getDocumentKind().getID() );
         const float32 margin = ImGui::GetStyle().ItemSpacing.x;
         ImGui::SetCursorScreenPos( ImVec2{ origin._x + margin, origin._y + margin } );
         ImGui::PushStyleColor( ImGuiCol_ChildBg, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "PanelBg" ) ) );

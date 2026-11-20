@@ -5,11 +5,10 @@
 #include "Core/Foundation/BuildInfo.h"
 
 #if defined( SW_PLATFORM_LINUX )
+    #include "Core/Foundation/X11Headers.h"
     #include "Core/Log/Logger.h"
 
     #include "Engine/Graphics/RHI/GL/OpenGLRHIUtil.h"
-
-    #include "Core/Foundation/X11Headers.h"
 
     #define GLX_GLXEXT_LEGACY
     #include <GL/glx.h>

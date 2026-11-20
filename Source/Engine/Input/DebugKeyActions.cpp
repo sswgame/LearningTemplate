@@ -51,7 +51,9 @@ namespace sw
                 InputSlot slot{};
                 if ( InputSlot::tryParse( listArgument[1], slot ) == false )
                 {
-                    outReply = "unknown slot '" + listArgument[1] + "' (e.g. Key.F2, Gamepad.Back)";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "unknown slot '%#' (e.g. Key.F2, Gamepad.Back)", listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 int32 bindIndex = 0;
@@ -67,8 +69,10 @@ namespace sw
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                const bool bSaved = pDebugKeys->getUserBindingsPath().empty() || pDebugKeys->saveUserBindings();
-                outReply          = listArgument[0] + "[" + to_string( bindIndex ) + "] = " + InputSlot::toText( slot ) + ( bSaved ? "" : " (not saved - see the log)" );
+                const bool                               bSaved = pDebugKeys->getUserBindingsPath().empty() || pDebugKeys->saveUserBindings();
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%#[%#] = %#%#", listArgument[0], bindIndex, InputSlot::toText( slot ), bSaved ? "" : " (not saved - see the log)" );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -86,12 +90,20 @@ namespace sw
                 }
                 else if ( map.resetActionToDefault( hashed_string( listArgument[0].c_str() ) ) == false )
                 {
-                    outReply = "unknown action '" + listArgument[0] + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "unknown action '%#'", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                const bool bSaved = pDebugKeys->getUserBindingsPath().empty() || pDebugKeys->saveUserBindings();
-                outReply          = listArgument.empty() ? "debug keys are back to the defaults" : listArgument[0] + " is back to its default";
-                outReply += bSaved ? "" : " (the user file could not be updated - see the log)";
+                const bool                               bSaved = pDebugKeys->getUserBindingsPath().empty() || pDebugKeys->saveUserBindings();
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                if ( listArgument.empty() )
+                    replyBuilder.append( "debug keys are back to the defaults" );
+                else
+                    replyBuilder.appendFormat( "%# is back to its default", listArgument[0] );
+                if ( bSaved == false )
+                    replyBuilder.append( " (the user file could not be updated - see the log)" );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

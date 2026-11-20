@@ -55,9 +55,12 @@ SW_TEST_CASE( ViewRectConstantsTest, PassBufferDeclaresViewRectConstants )
     string textureText;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( projectRoot, "Content/engine/shaders/binding_texture.hlsli" ), textureText ) );
 
-    const PassConstantNames& names = passConstantNames();
-    SW_EXPECT_TRUE( bindingText.find( string( "float4 " ) + names._viewRectScale.c_str() + ";" ) != string::npos );
-    SW_EXPECT_TRUE( bindingText.find( string( "float4 " ) + names._viewRectSize.c_str() + ";" ) != string::npos );
+    const PassConstantNames&                names = passConstantNames();
+    fixed_string<constant::buffer::kMax128> declaration;
+    formatstring( declaration.data(), declaration.capacity(), "float4 %#;", names._viewRectScale.c_str() );
+    SW_EXPECT_TRUE( bindingText.find( declaration.c_str() ) != string::npos );
+    formatstring( declaration.data(), declaration.capacity(), "float4 %#;", names._viewRectSize.c_str() );
+    SW_EXPECT_TRUE( bindingText.find( declaration.c_str() ) != string::npos );
     SW_EXPECT_TRUE( textureText.find( "static float2 PassTexture::toViewRectUV( float2 uv )" ) != string::npos );
     SW_EXPECT_TRUE( textureText.find( "static float4 PassTexture::sampleAlbedoPrevious( float2 uv )" ) != string::npos );
 }

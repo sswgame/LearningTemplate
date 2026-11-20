@@ -974,7 +974,9 @@ namespace sw
 
         MaterialPermutation::appendSurfaceModelDefines( _desc._surfaceModel, outListDefine );
         MaterialPermutation::appendQualityDefines( permutationDesc._quality, outListDefine );
-        MaterialPermutation::appendUniqueDefine( outListDefine, string( "SHADER_LOD=" ) + to_string( permutationDesc._shaderLOD ) );
+        StringBuilder<constant::buffer::kMax64> lodDefine;
+        lodDefine.appendFormat( "SHADER_LOD=%#", permutationDesc._shaderLOD );
+        MaterialPermutation::appendUniqueDefine( outListDefine, lodDefine.view() );
         MaterialPermutation::appendUsageDefines( permutationDesc._usage, outListDefine );
 
         // 칸이 내는 define — 쿠커도 이 목록을 읽는다.

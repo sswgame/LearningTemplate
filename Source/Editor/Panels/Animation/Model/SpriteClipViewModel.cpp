@@ -76,7 +76,9 @@ namespace sw::editor
     {
         if ( SpriteClipViewModelInternal::isImagePath( path ) == false )
             return string{ path };
-        return FileUtil::removeExtension( path ) + string{ SpriteClipAsset::kExtension };
+        StringBuilder<constant::buffer::kMax256> pathBuilder;
+        pathBuilder.appendFormat( "%#%#", FileUtil::removeExtension( path ), SpriteClipAsset::kExtension );
+        return string( pathBuilder.view() );
     }
 
     SpriteClipAsset SpriteClipViewModel::makeNewClip( string_view atlasPath )

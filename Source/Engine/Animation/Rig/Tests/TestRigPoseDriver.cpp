@@ -45,12 +45,13 @@ namespace
         /** @brief @p pThreshold 를 "weight_threshold" 로 적은 포즈 구동을 읽어 묶습니다. */
         [[nodiscard]] bool load( const utf8* pThreshold )
         {
-            const string xml = string( R"(<RigAsset><nodes><item type="PoseDriver" name="Elbow" driver="elbow" radius_degrees="45" weight_threshold=")" ) + pThreshold +
-                               R"("><poses><item name="Rest" rotation="0,0,0" />)"
-                               R"(<item name="Bent" rotation="90,0,0"><morphs><item morph="Bulge" weight="1" /></morphs><bones><item bone="muscle" translation="0,0.1,0" /></bones></item>)"
-                               R"(</poses></item></nodes></RigAsset>)";
+            StringBuilder<constant::buffer::kMax512> xml;
+            xml.appendFormat( R"(<RigAsset><nodes><item type="PoseDriver" name="Elbow" driver="elbow" radius_degrees="45" weight_threshold="%#"><poses><item name="Rest" rotation="0,0,0" />)"
+                              R"(<item name="Bent" rotation="90,0,0"><morphs><item morph="Bulge" weight="1" /></morphs><bones><item bone="muscle" translation="0,0.1,0" /></bones></item>)"
+                              R"(</poses></item></nodes></RigAsset>)",
+                              pThreshold );
             shared_ptr<RigAsset> asset = make_shared<RigAsset>();
-            if ( asset->loadFromXMLText( xml, "test.rig.xml" ) == false )
+            if ( asset->loadFromXMLText( xml.view(), "test.rig.xml" ) == false )
                 return false;
             return _instance.initialize( asset, _skeleton, nullptr, "test" );
         }

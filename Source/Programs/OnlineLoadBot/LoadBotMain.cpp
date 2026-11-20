@@ -22,6 +22,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
@@ -90,13 +91,13 @@ namespace sw
                 commandLine.parse( argc, argv, *baseDirectory );
                 if ( commandLine.getParseErrors().empty() == false )
                 {
-                    string usage;
+                    StringBuilder<constant::buffer::kMax1024> usage;
                     for ( const string& error : commandLine.getParseErrors() )
                     {
-                        usage += error + "\n";
+                        usage.appendFormat( "%#\n", error );
                     }
-                    usage += "usage:\n" + commandLine.makeUsageText();
-                    return unexpected( std::move( usage ) );
+                    usage.appendFormat( "usage:\n%#", commandLine.makeUsageText() );
+                    return unexpected( string( usage.view() ) );
                 }
 
                 LoadBotOptions options;

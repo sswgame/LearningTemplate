@@ -5,6 +5,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -78,8 +79,9 @@ namespace sw::editor
         {
             const UserSettingCategoryDef& category = listCategory[categoryIndex];
             // 이름은 게임 옵션 메뉴와 같은 데이터(스키마의 `text` 현지화 키)다 — 예전에는 id(`display`)를 그대로 보였다. id 는 탭 ID 로 남는다.
-            const string tabLabel = string( getCategoryLabel( category ) ) + "###" + category._id.c_str();
-            const bool   bTabOpen = ImGui::BeginTabItem( tabLabel.c_str() );
+            fixed_string<constant::buffer::kMax256> tabLabel;
+            formatstring( tabLabel.data(), tabLabel.capacity(), "%####%#", getCategoryLabel( category ), category._id.c_str() );
+            const bool bTabOpen = ImGui::BeginTabItem( tabLabel.c_str() );
             EditorSelfTestMarks::recordFormat( "userSettings.tab.%#", category._id.c_str() );
             if ( bTabOpen == false )
                 continue;

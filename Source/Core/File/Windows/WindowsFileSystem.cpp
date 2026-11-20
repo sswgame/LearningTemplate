@@ -11,9 +11,9 @@
 #include "Core/Foundation/PlatformOSHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/String/StringUtil.h"
     #include "Core/File/PlatformFileSystem.h"
     #include "Core/File/PlatformFileUtil.h"
+    #include "Core/String/StringUtil.h"
 
 namespace sw
 {
@@ -52,7 +52,10 @@ namespace sw
                 const std::wstring_view wide{ pWidePath };
                 wstring                 plain;
                 if ( wide.substr( 0, 8 ) == L"\\\\?\\UNC\\" )
-                    plain = L"\\\\" + wstring( wide.substr( 8 ) );
+                {
+                    plain = L"\\\\";
+                    plain.append( wide.substr( 8 ) );
+                }
                 else if ( wide.substr( 0, 4 ) == L"\\\\?\\" )
                     plain = wstring( wide.substr( 4 ) );
                 else

@@ -445,7 +445,9 @@ namespace sw
         outDef._type = typeName;
         for ( uint32 inputIndex = 0; inputIndex < pType->_inputCount; ++inputIndex )
         {
-            outDef._listInput.push_back( hashed_string( ( string( "Input" ) + to_string( inputIndex + 1u ).c_str() ).c_str() ) );
+            fixed_string<constant::buffer::kMax32> inputName;
+            formatstring( inputName.data(), inputName.capacity(), "Input%#", inputIndex + 1u );
+            outDef._listInput.push_back( hashed_string( inputName.view() ) );
         }
         if ( pType->_fillDefault != nullptr )
             pType->_fillDefault( outDef );

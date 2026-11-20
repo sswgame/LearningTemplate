@@ -9,6 +9,8 @@
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
 #include "Core/Time/MonotonicClock.h"
@@ -421,7 +423,9 @@ SW_TEST_CASE( ProcessTest, MissingPathExecutableFailsToLaunch )
 {
     SW_EXPECT_LOG( "Process.LaunchFailed" );
     SW_EXPECT_LOG( "Process.LaunchDetachedFailed" );
-    const sw::optional<sw::AbsolutePath> missing = sw::AbsolutePath::tryMake( sw::ProcessRoots::get()._project.str() + "/sw_no_such_dir_7f3a/sw_no_such_program" );
+    sw::fixed_string<sw::constant::buffer::kMax1024> missingPath;
+    sw::formatstring( missingPath.data(), missingPath.capacity(), "%#/sw_no_such_dir_7f3a/sw_no_such_program", sw::ProcessRoots::get()._project.str() );
+    const sw::optional<sw::AbsolutePath> missing = sw::AbsolutePath::tryMake( missingPath.view() );
     SW_REQUIRE_TRUE( missing.has_value() );
     sw::Process process;
     SW_EXPECT_FALSE( process.launch( sw::ProcessCommand::at( *missing, { "x" } ) ) );

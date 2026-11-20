@@ -5,7 +5,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
@@ -70,7 +73,8 @@ namespace sw
                         continue; // 빈 칸 · `.` · 상대 경로는 작업 폴더 기준이다 — 뒤지지 않는다
                     if ( directory.back() != L'\\' && directory.back() != L'/' )
                         directory.push_back( L'\\' );
-                    wstring     fullPath   = directory + candidate;
+                    wstring fullPath = std::move( directory );
+                    fullPath += candidate;
                     const DWORD attributes = GetFileAttributesW( fullPath.c_str() );
                     if ( attributes != INVALID_FILE_ATTRIBUTES && ( attributes & FILE_ATTRIBUTE_DIRECTORY ) == 0 )
                         return fullPath;
@@ -141,7 +145,9 @@ namespace sw
                         if ( bSameName == false )
                             listKept.push_back( line );
                     }
-                    listKept.push_back( StringUtil::utf8ToUTF16( ( entry._name + "=" + entry._value ).c_str() ) );
+                    StringBuilder<constant::buffer::kMax1024> textBuilder;
+                    textBuilder.appendFormat( "%#=%#", entry._name, entry._value );
+                    listKept.push_back( StringUtil::utf8ToUTF16( textBuilder.c_str() ) );
                     listLine = std::move( listKept );
                 }
                 VectorUtil::sort( listLine, []( const wstring& left, const wstring& right )
@@ -575,7 +581,11 @@ namespace sw
         const DWORD             dumpError = bWritten != FALSE ? ERROR_SUCCESS : GetLastError();
         CloseHandle( hFile );
         if ( bWritten == FALSE )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "MiniDumpWriteDump failed on the child process", path + " (error " + to_string( static_cast<uint32>( dumpError ) ) + ")" } );
+        {
+            fixed_string<constant::buffer::kMax1024> detail;
+            formatstring( detail.data(), detail.capacity(), "%# (error %#)", path, static_cast<uint32>( dumpError ) );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "MiniDumpWriteDump failed on the child process", detail.view() } );
+        }
         return path;
     }
 

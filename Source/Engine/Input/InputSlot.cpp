@@ -82,29 +82,31 @@ namespace sw
         {
             case InputDeviceKind::Keyboard:
             {
-                return string( InputSlotInternal::kKeyPrefix ) + "." + KeyCodeUtil::toName( static_cast<Key>( slot._controlIndex ) );
+                StringBuilder<constant::buffer::kMax64> builder;
+                builder.appendFormat( "%#.%#", InputSlotInternal::kKeyPrefix, KeyCodeUtil::toName( static_cast<Key>( slot._controlIndex ) ) );
+                return string( builder.view() );
             }
             case InputDeviceKind::Mouse:
             {
-                return string( InputSlotInternal::kMousePrefix ) + "." + MouseButtonUtil::toName( static_cast<MouseButton>( slot._controlIndex ) );
+                StringBuilder<constant::buffer::kMax64> builder;
+                builder.appendFormat( "%#.%#", InputSlotInternal::kMousePrefix, MouseButtonUtil::toName( static_cast<MouseButton>( slot._controlIndex ) ) );
+                return string( builder.view() );
             }
             case InputDeviceKind::Gamepad:
             {
-                string text( InputSlotInternal::kGamepadPrefix );
+                StringBuilder<constant::buffer::kMax64> builder;
+                builder.append( InputSlotInternal::kGamepadPrefix );
                 if ( slot._deviceIndex != 0 )
-                {
-                    utf8 arrDigit[constant::buffer::kMax16]{};
-                    StringUtil::formatNumber( arrDigit, constant::buffer::kMax16, static_cast<uint32>( slot._deviceIndex ) );
-                    text += arrDigit;
-                }
+                    builder.appendFormat( "%#", static_cast<uint32>( slot._deviceIndex ) );
                 const utf8* pName = GamepadButtonUtil::toName( static_cast<GamepadButton>( slot._controlIndex ) );
-                return text + "." + ( pName != nullptr ? pName : "" );
+                builder.appendFormat( ".%#", pName != nullptr ? pName : "" );
+                return string( builder.view() );
             }
             case InputDeviceKind::Touch:
             {
-                utf8 arrDigit[constant::buffer::kMax16]{};
-                StringUtil::formatNumber( arrDigit, constant::buffer::kMax16, static_cast<uint32>( slot._controlIndex ) );
-                return string( InputSlotInternal::kTouchPrefix ) + "." + arrDigit;
+                StringBuilder<constant::buffer::kMax64> builder;
+                builder.appendFormat( "%#.%#", InputSlotInternal::kTouchPrefix, static_cast<uint32>( slot._controlIndex ) );
+                return string( builder.view() );
             }
             case InputDeviceKind::Custom:
             case InputDeviceKind::Count:

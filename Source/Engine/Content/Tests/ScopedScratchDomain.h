@@ -9,6 +9,10 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/AssetID.h"
@@ -33,7 +37,11 @@ namespace sw::test
         {
             _bMounted = FileUtil::ensureDirectoryExists( _folder ) && engine::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder );
             if ( _bMounted == false )
-                reportFailure( __FILE__, __LINE__, "could not mount the scratch domain at " + _folder );
+            {
+                fixed_string<constant::buffer::kMax512> text;
+                formatstring( text.data(), text.capacity(), "could not mount the scratch domain at %#", _folder );
+                reportFailure( __FILE__, __LINE__, text );
+            }
         }
         ~ScopedScratchDomain()
         {
@@ -52,11 +60,20 @@ namespace sw::test
         {
             const string folder = makeDiskPath( relativePath );
             if ( FileUtil::ensureDirectoryExists( folder ) == false )
-                reportFailure( __FILE__, __LINE__, "could not create " + folder );
+            {
+                fixed_string<constant::buffer::kMax512> text;
+                formatstring( text.data(), text.capacity(), "could not create %#", folder );
+                reportFailure( __FILE__, __LINE__, text );
+            }
             return folder;
         }
         /** @brief 도메인 폴더 아래 @p relativePath 의 리소스 id(`testproject/<relativePath>`)입니다. */
-        [[nodiscard]] static AssetID makeID( string_view relativePath ) { return AssetID{ string( kDomain ) + "/" + string( relativePath ) }; }
+        [[nodiscard]] static AssetID makeID( string_view relativePath )
+        {
+            StringBuilder<constant::buffer::kMax256> builder;
+            builder.appendFormat( "%#/%#", kDomain, relativePath );
+            return AssetID{ builder.view() };
+        }
         /** @brief 도메인 폴더 아래 디스크 경로 @p diskPath 의 리소스 id 입니다(밖이면 빈 id). */
         [[nodiscard]] static AssetID toID( string_view diskPath ) { return AssetID{ toIDText( diskPath ) }; }
         /** @brief `toID` 의 글입니다(경로 글을 받는 컴포넌트 칸 — 클립 폴더 · 그래프 경로 — 에 넣는다). 밖이면 케이스 실패이고 빈 글입니다. */
@@ -64,7 +81,11 @@ namespace sw::test
         {
             string id = engine::getSubsystem<AssetPaths>().toAssetID( diskPath );
             if ( id.empty() )
-                reportFailure( __FILE__, __LINE__, "not under a mounted domain: " + string( diskPath ) );
+            {
+                fixed_string<constant::buffer::kMax512> text;
+                formatstring( text.data(), text.capacity(), "not under a mounted domain: %#", diskPath );
+                reportFailure( __FILE__, __LINE__, text );
+            }
             return id;
         }
 

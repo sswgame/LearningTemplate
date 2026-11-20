@@ -32,11 +32,9 @@ namespace sw
 
             static string makeSentKey( uint64 recipientAccountID, string_view idempotencyKey )
             {
-                string key;
-                ServiceKeyUtil::appendHex64( key, recipientAccountID );
-                key.push_back( '/' );
-                key += idempotencyKey;
-                return key;
+                StringBuilder<constant::buffer::kMax128> key; // 계정은 `ServiceKeyUtil::appendHex64` 와 같은 소문자 16 진 16자다
+                key.appendFormat( "%016llx/%#", static_cast<unsigned long long>( recipientAccountID ), idempotencyKey );
+                return string( key.view() );
             }
 
             static string makeMailToken( string_view mailKey )

@@ -13,7 +13,7 @@
 - 새 이름이 코드에 이미 있으면 겹친 파일을 알리고 멈춘다(`--force`, 쌍 표는 `"allowExisting": true`). `--reapply` 는 병합 뒤 다시 돌리기라 겹침을 보지 않는다.
 - 리플렉션 프로퍼티(`PROPERTY` 가 붙은 `_` 멤버)는 데이터의 직렬화 이름(`_bFooBar` → `fooBar`)도 함께 바꾸고, 그 이름을 다른 멤버도 쓰거나 흔한 낱말이면 멈춘다
   (`--force`, 쌍 표는 데이터를 손으로 옮긴 뒤 `"serializedName": false`).
-- 옛 이름을 `_bannedNames`(`rename_scope.NAMING_WORDS_PATH`)에 올려 다른 갈래 · 붙여 넣은 코드가 되살리지 못하게 하고 이름 기준선을 줄인다(`--no-ban`, 쌍 표는 `"ban": false`).
+- 옛 이름을 `_bannedNames`(`rename_scope.BANNED_NAMES_PATH`)에 올려 다른 갈래 · 붙여 넣은 코드가 되살리지 못하게 하고 이름 기준선을 줄인다(`--no-ban`, 쌍 표는 `"ban": false`).
 - 형식 이름과 같은 줄기의 소스 파일(`Old.h` · `TestOld.cpp`)은 `git mv` 로 옮긴다 — include 경로는 같은 치환이 따라간다.
 쌍 표: `[{"old": …, "new": …, "why": …}, …]`. `"scope": "cmake"` 면 CMake 파일(`*.cmake` · `CMakeLists.txt`)만 바꾼다(CMake 지역 변수 — 낙타 · 밑줄 꼴만 받는다).
 """
@@ -36,7 +36,7 @@ from common.exit_code import ExitCode
 from common.git import run_git_or_raise
 from common.paths import get_project_root
 from common.rename_scope import (
-    KEEP_OLD_NAME_MARKER, NAMING_WORDS_PATH, check_rewrite_unmarked_lines, check_serialized_rename, collect_reflected_properties, dump_naming_table, is_rename_table,
+    BANNED_NAMES_PATH, KEEP_OLD_NAME_MARKER, check_rewrite_unmarked_lines, check_serialized_rename, collect_reflected_properties, dump_naming_table, is_rename_table,
     plan_serialized_rename, replace_serialized_name, rewrite_rename_target,
 )
 from dev.move_source import C_LIKE_SUFFIX, CPP_SUFFIX, TEXT_SUFFIX, list_tracked_text, read_text, write_text
@@ -258,7 +258,7 @@ def rename_all(root: Path, list_pair: Sequence[dict], options: argparse.Namespac
             print(f"    파일 {path.relative_to(root).as_posix()} → {target.name}")
         if pair.get("ban", True) is False or options.no_ban:
             continue
-        naming_path = root / NAMING_WORDS_PATH
+        naming_path = root / BANNED_NAMES_PATH
         table = json.loads(naming_path.read_text(encoding="utf-8"))
         table["_bannedNames"][old] = f"{new} — {pair.get('why', '')}({stamp})"
         naming_path.write_text(dump_naming_table(table), encoding="utf-8", newline="\n")

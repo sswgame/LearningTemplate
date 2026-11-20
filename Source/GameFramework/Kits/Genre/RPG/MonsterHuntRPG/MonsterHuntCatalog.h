@@ -141,7 +141,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY()
+        PROPERTY( DefaultName )
         hashed_string _intensityStat{ "signIntensity" }; ///< 표식 위력(%)을 읽는 능력치 이름
         PROPERTY( Min = 1.0 )
         float32 _stamina{ 100.0f };

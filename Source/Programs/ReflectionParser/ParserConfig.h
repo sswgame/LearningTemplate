@@ -33,6 +33,10 @@ namespace sw
         /** @brief 물리 훅(`beginPhysicsFrame` …)을 가진 기반 타입입니다. 그 파생마다 `SW_REGISTER_PHYSICS_HOOKS` 를 냅니다(`parsing.physics_hook_base_types`). */
         vector<string> _listPhysicsHookBaseType;
         vector<string> _listTypeStripPrefix;
+        /** @brief 이름 · 경로 칸의 타입(소스에 적은 글에서 const · mutable · std:: · sw:: 를 뗀 것)입니다. 이 칸의 C++ 문자열 기본값은 Required 이거나 DefaultName 이어야 한다. */
+        vector<string> _listNameFieldType;
+        vector<string> _listNameFieldTypePrefix; ///< 머리로 견주는 이름 · 경로 칸 타입(`AssetRef<`)
+        vector<string> _listNameFieldSkipFolder; ///< 이름 · 경로 칸 기본값을 보지 않는 폴더 이름(테스트 형식은 기본값 자체를 시험한다)
         /**
          * @brief 실제로 읽은 설정 파일들입니다.
          * @details **설정도 산출물의 입력입니다.** 코드젠 표식 · 금지 타입 메시지가 여기서 오므로 증분 판정이 이 파일들의
@@ -64,5 +68,10 @@ namespace sw
          * @param listIncludePath 추가 include 경로 목록
          */
         vector<string> makeArgs( const vector<string>& listIncludePath ) const;
+
+        /** @brief 소스에 적은 타입 글 @p typeText 가 이름 · 경로 칸 타입인지 봅니다(`_listNameFieldType` · `_listNameFieldTypePrefix`). */
+        [[nodiscard]] bool isNameFieldType( string_view typeText ) const;
+        /** @brief 헤더 경로 @p headerPath 가 이름 · 경로 칸 기본값을 보지 않는 폴더(`_listNameFieldSkipFolder`) 아래인지 봅니다. */
+        [[nodiscard]] bool isNameFieldCheckSkipped( string_view headerPath ) const;
     };
 } // namespace sw

@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -333,7 +334,9 @@ namespace sw::editor
             string holder;
             if ( SceneObjectReference::findReferenceTo( sceneManager, editor::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
                 continue;
-            result._rejectReason = string{ "'" } + pChild->getName().c_str() + "' is referenced by " + holder + " - a scene object reference cannot follow an object the prefab respawns; clear the reference first";
+            StringBuilder<constant::buffer::kMax512> reasonBuilder;
+            reasonBuilder.appendFormat( "'%#' is referenced by %# - a scene object reference cannot follow an object the prefab respawns; clear the reference first", pChild->getName().c_str(), holder );
+            result._rejectReason = string( reasonBuilder.view() );
             SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabCreationRefused2", "Prefab creation from '%#' refused: %#", pRoot->getName().c_str(), result._rejectReason.c_str() );
             return result;
         }

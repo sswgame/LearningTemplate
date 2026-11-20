@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
@@ -55,27 +56,16 @@ namespace sw
 
     hashed_string ShaderBindingLayoutCache::makeCacheKey( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat ) const
     {
-        string combined;
-        combined.reserve( 128 );
-        combined += "vs:";
-        combined += desc._vertexShaderPath;
-        combined += "|ps:";
-        combined += desc._pixelShaderPath;
-        combined += "|cs:";
-        combined += desc._computeShaderPath;
-        combined += "|hs:";
-        combined += desc._hullEntryPoint;
-        combined += "|ds:";
-        combined += desc._domainEntryPoint;
-        combined += "|fmt:";
-        combined += to_string( static_cast<uint32>( targetFormat ) );
+        StringBuilder<constant::buffer::kMax256> combined;
+        combined.appendFormat( "vs:%#|ps:%#|cs:%#|hs:%#|ds:%#|fmt:%#", desc._vertexShaderPath, desc._pixelShaderPath, desc._computeShaderPath, desc._hullEntryPoint,
+                               desc._domainEntryPoint, static_cast<uint32>( targetFormat ) );
 
         vector<string> listSortedDefine = desc._listShaderDefine;
         VectorUtil::sort( listSortedDefine );
         for ( const string& define : listSortedDefine )
         {
-            combined += "|";
-            combined += define;
+            combined.append( '|' );
+            combined.append( define );
         }
         return hashed_string( combined.c_str() );
     }

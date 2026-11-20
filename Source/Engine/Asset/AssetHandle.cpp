@@ -227,12 +227,13 @@ namespace sw
 
     void AssetLoadOperation::finishFailed( const Error& error )
     {
-        const string_view message = error.message();
-        const string_view detail  = error.detail();
-        string            text( message.data(), message.size() );
+        const string_view                        message = error.message();
+        const string_view                        detail  = error.detail();
+        StringBuilder<constant::buffer::kMax512> builder;
+        builder.append( message );
         if ( detail.empty() == false )
-            text += " (" + string( detail.data(), detail.size() ) + ")";
-        finish( false, std::move( text ) );
+            builder.appendFormat( " (%#)", detail );
+        finish( false, string( builder.view() ) );
     }
 } // namespace sw
 

@@ -11,6 +11,8 @@
 #include "Core/String/MarkupToken.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Config/EditorPaths.h"
@@ -39,7 +41,9 @@ namespace sw
             /** @brief 읽기 오류를 보고서 · 로그의 글(`문장: 대상`)로 짓습니다. */
             [[nodiscard]] static string describe( const Error& error )
             {
-                return string( error.message() ) + ": " + string( error.detail() );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#: %#", error.message(), error.detail() );
+                return string( textBuilder.view() );
             }
 
             /**
@@ -94,10 +98,14 @@ namespace sw
             static void validateTranslation( const string& culture, const string& key, const SourceTextEntry& source, const TranslationEntry& translation,
                                              TextGatherReport& inoutReport )
             {
-                const string location = culture + ":" + key;
+                StringBuilder<constant::buffer::kMax256> locationBuilder;
+                locationBuilder.appendFormat( "%#:%#", culture, key );
+                const string location( locationBuilder.view() );
                 if ( const expected<void> valid = TextFormatter::validatePattern( translation._text ); valid.has_value() == false )
                 {
-                    inoutReport._listIssue.push_back( { location, "translation is not a valid message pattern: " + string( valid.error().detail() ), true } );
+                    StringBuilder<constant::buffer::kMax256> messageBuilder;
+                    messageBuilder.appendFormat( "translation is not a valid message pattern: %#", valid.error().detail() );
+                    inoutReport._listIssue.push_back( { location, string( messageBuilder.view() ), true } );
                     return;
                 }
                 vector<string> listSourceName;
@@ -120,8 +128,9 @@ namespace sw
             /** @brief 번역 메모리 경로(`<프로젝트 폴더>/tm/<culture>.tm.xml`)입니다. */
             static string makeMemoryPath( string_view projectPath, string_view culture )
             {
-                return LocalizationProject::makeSiblingPath( projectPath, string( TranslationMemory::kFolderName ) + "/" + CultureTable::normalizeCode( culture ) +
-                                                                              TranslationMemory::kExtension );
+                StringBuilder<constant::buffer::kMax256> fileNameBuilder;
+                fileNameBuilder.appendFormat( "%#/%#%#", TranslationMemory::kFolderName, CultureTable::normalizeCode( culture ), TranslationMemory::kExtension );
+                return LocalizationProject::makeSiblingPath( projectPath, fileNameBuilder.view() );
             }
 
             /** @brief 번역 메모리를 읽습니다. 없으면 빈 메모리입니다. 읽지 못하면 문제로 알리고 false 를 반환합니다. */
@@ -290,7 +299,11 @@ namespace sw
                     entry._context             = key;
                     entry._source              = pSource->_source;
                     if ( pSource->_context.empty() == false )
-                        entry._listExtractedComment.push_back( "Context: " + pSource->_context );
+                    {
+                        StringBuilder<constant::buffer::kMax256> commentBuilder;
+                        commentBuilder.appendFormat( "Context: %#", pSource->_context );
+                        entry._listExtractedComment.push_back( string( commentBuilder.view() ) );
+                    }
                     if ( pSource->_comment.empty() == false )
                         entry._listExtractedComment.push_back( pSource->_comment );
                     if ( pSource->_maxLength != 0 )
@@ -525,7 +538,9 @@ namespace sw
             XMLDocument document;
             if ( document.parse( fileText, origin ) == false )
             {
-                gatherer.addIssue( origin, "XML cannot be parsed: " + document.getLastError(), true );
+                fixed_string<constant::buffer::kMax512> issueText;
+                formatstring( issueText.data(), issueText.capacity(), "XML cannot be parsed: %#", document.getLastError() );
+                gatherer.addIssue( origin, issueText, true );
                 return;
             }
             LocalizationToolsInternal::applyAssetRule( rule, document.getRoot(), gatherer, origin, 0 );
@@ -597,27 +612,26 @@ namespace sw
                         report._listAdded.size(), report._listChanged.size(), report._listRemoved.size(), report._unchangedCount,
                         result._bOutOfDate ? " (OUT OF DATE)" : ( result._bWritten ? " (written)" : "" ) );
         // 줄을 모아 한 번에 쓴다. 정보 로그가 빠지는 배포 구성에서도 같은 코드를 쓴다.
-        string details;
+        StringBuilder<constant::buffer::kMax1024> details;
         for ( const string& key : report._listAdded )
         {
-            details.append( "\n  + " ).append( key );
+            details.appendFormat( "\n  + %#", key );
         }
         for ( const string& key : report._listChanged )
         {
-            details.append( "\n  ~ " ).append( key );
+            details.appendFormat( "\n  ~ %#", key );
         }
         for ( const string& key : report._listRemoved )
         {
-            details.append( "\n  - " ).append( key );
+            details.appendFormat( "\n  - %#", key );
         }
         for ( const LocalizationCultureReport& culture : result._listCulture )
         {
-            details.append( "\n  " ).append( culture._culture ).append( ": " ).append( to_string( culture._currentCount ) ).append( " current, " );
-            details.append( to_string( culture._staleCount ) ).append( " stale, " ).append( to_string( culture._reviewCount ) ).append( " review, " );
-            details.append( to_string( culture._missingCount ) ).append( " missing, " ).append( to_string( culture._orphanCount ) ).append( " orphan removed, " );
-            details.append( to_string( culture._prefilledExact ) ).append( " exact + " ).append( to_string( culture._prefilledFuzzy ) ).append( " fuzzy from translation memory" );
+            details.appendFormat( "\n  %#: %# current, %# stale, %# review, %# missing, %# orphan removed, %# exact + %# fuzzy from translation memory", culture._culture,
+                                  culture._currentCount, culture._staleCount, culture._reviewCount, culture._missingCount, culture._orphanCount, culture._prefilledExact,
+                                  culture._prefilledFuzzy );
         }
-        if ( details.empty() == false )
+        if ( details.size() > 0 )
             SW_LOG_INFO_ID( "LocalizationTools.GatherTextDone", "[GatherText] %#%#", result._projectName.c_str(), details.c_str() );
         for ( const TextGatherIssue& issue : report._listIssue )
         {
@@ -697,8 +711,10 @@ namespace sw
         {
             LocalizationExchangeResult& result = outListResult.emplace_back();
             result._culture                    = culture;
-            result._path                       = LocalizationProject::makeSiblingPath( absolute, string( PortableObjectFile::kFolderName ) + "/" + culture + PortableObjectFile::kExtension );
-            const string     translationPath   = LocalizationProject::makeTranslationPath( absolute, culture );
+            StringBuilder<constant::buffer::kMax256> fileNameBuilder;
+            fileNameBuilder.appendFormat( "%#/%#%#", PortableObjectFile::kFolderName, culture, PortableObjectFile::kExtension );
+            result._path                     = LocalizationProject::makeSiblingPath( absolute, fileNameBuilder.view() );
+            const string     translationPath = LocalizationProject::makeTranslationPath( absolute, culture );
             TranslationTable translation;
             translation.setCulture( culture );
             if ( const expected<void> read = FileUtil::exists( translationPath ) ? translation.loadFromFile( translationPath ) : expected<void>{}; read.has_value() == false )

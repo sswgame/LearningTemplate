@@ -3,6 +3,8 @@
 #include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
 
 #include "Core/Math/Half.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/Commands/Scene/ReflectionProbeBaker.h"
@@ -321,7 +323,9 @@ namespace sw::editor
         const string assetPath = pProbe->getOwner() != nullptr ? makeSceneBakeAssetPath( sceneAssetID, pProbe->getOwner()->getName().view(), ReflectionProbeAsset::kExtension ) : string{};
         if ( assetPath.empty() )
         {
-            reportFailure( "no bake output for scene '" + sceneAssetID + "' - it must be a .scene.xml resource and the probe needs a named owner" );
+            StringBuilder<constant::buffer::kMax512> failureBuilder;
+            failureBuilder.appendFormat( "no bake output for scene '%#' - it must be a .scene.xml resource and the probe needs a named owner", sceneAssetID );
+            reportFailure( string( failureBuilder.view() ) );
             return;
         }
         optional<AbsolutePath> dataPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );

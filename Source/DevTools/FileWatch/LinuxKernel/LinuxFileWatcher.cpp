@@ -13,6 +13,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 namespace sw
 {
@@ -157,7 +159,9 @@ namespace sw
             {
                 if ( errno == EINTR )
                     continue;
-                reportWatchLost( string( "select failed: " ) + strerror( errno ) );
+                fixed_string<constant::buffer::kMax256> reason;
+                formatstring( reason.data(), reason.capacity(), "select failed: %#", strerror( errno ) );
+                reportWatchLost( reason.view() );
                 _bIsWatching = false;
                 return;
             }
@@ -189,7 +193,9 @@ namespace sw
                     return true;
                 if ( errno == EINTR )
                     continue;
-                reportWatchLost( string( "inotify read failed: " ) + strerror( errno ) );
+                fixed_string<constant::buffer::kMax256> reason;
+                formatstring( reason.data(), reason.capacity(), "inotify read failed: %#", strerror( errno ) );
+                reportWatchLost( reason.view() );
                 return false;
             }
             if ( bytesRead == 0 )

@@ -82,9 +82,11 @@ namespace sw
                         return true;
                     }
                 }
-                const UserSettingsApplyResult applied = pSettings->applyPending();
-                outReply                              = "settings: applied " + to_string( applied._appliedCount ) + ", failed " + to_string( applied._failedCount ) + ", confirm " +
-                           ( applied._bAwaitingConfirm ? "pending" : "not needed" );
+                const UserSettingsApplyResult            applied = pSettings->applyPending();
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "settings: applied %#, failed %#, confirm %#", applied._appliedCount, applied._failedCount,
+                                           applied._bAwaitingConfirm ? "pending" : "not needed" );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -282,14 +284,19 @@ namespace sw
         const UserSettingsFileReadResult result = FileUtil::readTextFile( filePath, text ) ? loadUserJSON( text, filePath ) : UserSettingsFileReadResult::Unreadable;
         if ( result == UserSettingsFileReadResult::Read )
             return true;
-        const bool   bNewer      = result == UserSettingsFileReadResult::NewerThanBuild;
-        const string asidePath   = string( filePath ) + ( bNewer ? ".newer" : ".corrupt" );
-        const bool   bMovedAside = FileUtil::copyFile( filePath, asidePath ) && FileUtil::removeFile( filePath );
-        const string movedText   = bMovedAside ? "moved to '" + asidePath + "'" : string( "could not be moved aside" );
-        if ( bNewer )
-            SW_LOG_WARNING_ID( "UserSettings.FileNewerThanBuild", "User settings '%#' were written by a newer build - %# and starting from defaults", filePath, movedText );
+        const bool                               bNewer = result == UserSettingsFileReadResult::NewerThanBuild;
+        StringBuilder<constant::buffer::kMax512> asidePath;
+        asidePath.appendFormat( "%#%#", filePath, bNewer ? ".newer" : ".corrupt" );
+        const bool                               bMovedAside = FileUtil::copyFile( filePath, asidePath.view() ) && FileUtil::removeFile( filePath );
+        StringBuilder<constant::buffer::kMax512> movedText;
+        if ( bMovedAside )
+            movedText.appendFormat( "moved to '%#'", asidePath.view() );
         else
-            SW_LOG_ERROR_ID( "UserSettings.FileUnreadable", "User settings '%#' could not be read - %# and starting from a fresh file", filePath, movedText );
+            movedText.append( "could not be moved aside" );
+        if ( bNewer )
+            SW_LOG_WARNING_ID( "UserSettings.FileNewerThanBuild", "User settings '%#' were written by a newer build - %# and starting from defaults", filePath, movedText.view() );
+        else
+            SW_LOG_ERROR_ID( "UserSettings.FileUnreadable", "User settings '%#' could not be read - %# and starting from a fresh file", filePath, movedText.view() );
         return false;
     }
 

@@ -131,7 +131,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, TransparentWithoutBlendWarns )
 /** @brief [RenderPipelineAssetTest] 렌더 패스의 첨부가 파이프라인 첨부 앞에 합쳐져 패스가 그 첨부를 쓴다 */
 SW_TEST_CASE( RenderPipelineAssetTest, RenderPassAttachmentsAreMerged )
 {
-    const string        xml = RenderPipelineTestUtil::makeXML( string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState, "",
+    StringBuilder<constant::buffer::kMax256> passAttributes;
+    passAttributes.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#", RenderPipelineTestUtil::kOpaqueState );
+    const string        xml = RenderPipelineTestUtil::makeXML( passAttributes.view(), "",
                                                                "<_listRenderPassRef><item>engine/renderpass/defaultrenderpass.xml</item></_listRenderPassRef>", "" );
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, xml ) );
@@ -151,7 +153,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, BadRenderPassRefFails )
     SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentNameDuplicated" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
-    const string        passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState;
+    StringBuilder<constant::buffer::kMax256> passAttributesBuilder;
+    passAttributesBuilder.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#", RenderPipelineTestUtil::kOpaqueState );
+    const string_view   passAttributes = passAttributesBuilder.view();
     RenderPipelineAsset missing;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( missing, RenderPipelineTestUtil::makeXML( passAttributes, "", "<_listRenderPassRef><item>engine/renderpass/nothing.xml</item></_listRenderPassRef>" ) ) );
     RenderPipelineAsset duplicated; // 기본 첨부에 SceneDepth 가 있고 렌더 패스에도 있다
@@ -164,7 +168,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, AttachmentNamesDifferingOnlyInCaseAreDupl
     SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentNameDuplicated" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
-    const string        passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState;
+    StringBuilder<constant::buffer::kMax256> passAttributesBuilder;
+    passAttributesBuilder.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#", RenderPipelineTestUtil::kOpaqueState );
+    const string_view   passAttributes = passAttributesBuilder.view();
     const string        attachments    = "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
                                          "<RenderPassAttachment _name=\"scenedepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>";
     RenderPipelineAsset asset;
@@ -178,7 +184,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShadingModelMatchesPasses )
     SW_EXPECT_LOG( "RenderPipelineAsset.ShadingModelPassMismatch" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
-    const string        passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _vertexEntryPoint=\"MyVS\" " ) + RenderPipelineTestUtil::kOpaqueState;
+    StringBuilder<constant::buffer::kMax256> passAttributesBuilder;
+    passAttributesBuilder.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _vertexEntryPoint=\"MyVS\" %#", RenderPipelineTestUtil::kOpaqueState );
+    const string_view   passAttributes = passAttributesBuilder.view();
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes, "_shadingModel=\"Forward\"" ) ) );
     SW_EXPECT_EQUAL( string( "MyVS" ), asset.getGraphPass()[0]._vertexEntryPoint );
@@ -254,8 +262,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputePassRejectsBadDeclarations )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::withShader(), "<item>B</item>", "<item>B</item>" ) ) );
     const string blended = "_shaderPath=\"game/playground/shaders/compute_channelswap.hlsl\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _blendPreset=\"Transparent\"";
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( blended, "", "<item>B</item>" ) ) );
-    const string passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _computeEntryPoint=\"CSMain\" " ) + RenderPipelineTestUtil::kOpaqueState;
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes ) ) );
+    StringBuilder<constant::buffer::kMax256> passAttributes;
+    passAttributes.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _computeEntryPoint=\"CSMain\" %#", RenderPipelineTestUtil::kOpaqueState );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes.view() ) ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 선택 스테이지: 패스 칸의 진입점을 그대로 가진다. 헐은 도메인과 함께 적고, 머티리얼 셰이더로 그리는 패스 · 컴퓨트 패스에는 쓸 수 없다 */
@@ -279,10 +288,13 @@ SW_TEST_CASE( RenderPipelineAssetTest, OptionalStagesFollowTheRules )
     }
     SW_EXPECT_TRUE( bFoundHull );
 
-    RenderPipelineAsset asset;
-    const string        opaque = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState;
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( opaque + " _hullEntryPoint=\"HSMain\"" ) ) ); // 도메인이 없고 머티리얼 패스다
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( opaque + " _geometryEntryPoint=\"GSMain\"" ) ) );
+    RenderPipelineAsset                      asset;
+    StringBuilder<constant::buffer::kMax256> hullPass;
+    hullPass.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %# _hullEntryPoint=\"HSMain\"", RenderPipelineTestUtil::kOpaqueState );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( hullPass.view() ) ) ); // 도메인이 없고 머티리얼 패스다
+    StringBuilder<constant::buffer::kMax256> geometryPass;
+    geometryPass.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %# _geometryEntryPoint=\"GSMain\"", RenderPipelineTestUtil::kOpaqueState );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( geometryPass.view() ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, ComputePassTestUtil::makeXML( ComputePassTestUtil::withShader( "_geometryEntryPoint=\"GSMain\"" ), "", "<item>B</item>" ) ) );
 }
 
@@ -387,9 +399,13 @@ SW_TEST_CASE( RenderPipelineAssetTest, MistypedEnumsAreLoadErrors )
 {
     SW_EXPECT_LOG( "Serialization.UnknownEnumerator" );
     SW_EXPECT_LOG( "Serialization.OrphanValue" );
-    RenderPipelineAsset asset;
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( string( "_type=\"ForwardOpaqe\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState ) ) );
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState, "", "",
+    RenderPipelineAsset                      asset;
+    StringBuilder<constant::buffer::kMax256> unknownTypePass;
+    unknownTypePass.appendFormat( "_type=\"ForwardOpaqe\" _depthAttachment=\"SceneDepth\" %#", RenderPipelineTestUtil::kOpaqueState );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( unknownTypePass.view() ) ) );
+    StringBuilder<constant::buffer::kMax256> opaquePass;
+    opaquePass.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#", RenderPipelineTestUtil::kOpaqueState );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( opaquePass.view(), "", "",
                                                                                            "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM\"/>" ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"true\" _cullMode=\"Back\" _depthCompare=\"Lesser\"" ) );
 }
@@ -412,16 +428,22 @@ SW_TEST_CASE( RenderPipelineAssetTest, BlendDeclarationsFollowTheRules )
 
     const auto makeWithTargets = []( string_view passExtra, string_view targets )
     {
-        string            xml     = RenderPipelineTestUtil::makeXML( string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + string( passExtra ) );
-        const utf8* const pMarker = "<_listPermutation/>";
-        xml.insert( xml.find( pMarker ), string( "<_listBlendTarget>" ) + string( targets ) + "</_listBlendTarget>" );
+        StringBuilder<constant::buffer::kMax256> passAttributes;
+        passAttributes.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#", passExtra );
+        string                                   xml     = RenderPipelineTestUtil::makeXML( passAttributes.view() );
+        const utf8* const                        pMarker = "<_listPermutation/>";
+        StringBuilder<constant::buffer::kMax512> blendTargets;
+        blendTargets.appendFormat( "<_listBlendTarget>%#</_listBlendTarget>", targets );
+        xml.insert( xml.find( pMarker ), blendTargets.c_str(), blendTargets.size() );
         return xml;
     };
     constexpr string_view kTarget = "<BlendTargetState _bEnableBlend=\"true\" _srcColor=\"One\" _dstColor=\"One\" _colorWriteMask=\"RGB\"/>";
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, makeWithTargets( "", kTarget ) ) );
     SW_EXPECT_TRUE( asset.getGraphPass()[0]._resolvedRenderState._arrBlendTarget[2]._colorWriteMask == ColorWriteMask::RGB ); // 하나면 모든 타깃이다
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, makeWithTargets( "_blendPreset=\"Opaque\"", kTarget ) ) );
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, makeWithTargets( "", string( kTarget ) + string( kTarget ) ) ) ); // 컬러 출력은 하나다
+    StringBuilder<constant::buffer::kMax256> twoTargets;
+    twoTargets.appendFormat( "%#%#", kTarget, kTarget );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, makeWithTargets( "", twoTargets.view() ) ) ); // 컬러 출력은 하나다
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, makeWithTargets( "", "<BlendTargetState _bEnableBlend=\"true\" _srcAlpha=\"SrcColor\"/>" ) ) );
 }
 
@@ -447,8 +469,10 @@ SW_TEST_CASE( RenderPipelineAssetTest, DiscardedAttachmentCannotBeRead )
     SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentDiscardedButUsed" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
-    using Util                         = RenderPipelineTestUtil;
-    const string        passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + Util::kOpaqueState;
+    using Util = RenderPipelineTestUtil;
+    StringBuilder<constant::buffer::kMax256> passAttributesBuilder;
+    passAttributesBuilder.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#", Util::kOpaqueState );
+    const string_view   passAttributes = passAttributesBuilder.view();
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( Util::load( asset, Util::makeXML( passAttributes, "", "", "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"0.5\" _clearStencil=\"3\" _storeOp=\"DontCare\"/>" ) ) );
     const RHIAttachmentOps ops = asset.getDesc()._listAttachment[1].getOps();
@@ -457,8 +481,10 @@ SW_TEST_CASE( RenderPipelineAssetTest, DiscardedAttachmentCannotBeRead )
     SW_EXPECT_TRUE( ops._storeOp == RHIRenderPassStoreOp::DontCare );
 
     // 같은 첨부를 여는 패스가 둘이면 뒤 패스가 정의되지 않은 값을 읽는다.
-    string xml = Util::makeXML( passAttributes, "", "", "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _storeOp=\"DontCare\"/>" );
-    xml.insert( xml.find( "</_listPass>" ), string( "<RenderGraphPassDesc _name=\"Second\" " ) + passAttributes + "><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>" );
+    string                                   xml = Util::makeXML( passAttributes, "", "", "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _storeOp=\"DontCare\"/>" );
+    StringBuilder<constant::buffer::kMax512> secondPass;
+    secondPass.appendFormat( "<RenderGraphPassDesc _name=\"Second\" %#><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>", passAttributes );
+    xml.insert( xml.find( "</_listPass>" ), secondPass.c_str(), secondPass.size() );
     SW_EXPECT_FALSE( Util::load( asset, xml ) );
 }
 
@@ -667,15 +693,23 @@ SW_TEST_CASE( RenderPipelineAssetTest, PostProcessMaterialPassesNameOneLocation 
     const string        tonemap = Util::makePass( "Tonemap", "Tonemap", "", "HDRPost", "LDR" );
     RenderPipelineAsset asset;
     // 톤맵 앞 자리 하나 — 읽힌다.
-    SW_EXPECT_TRUE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::makePass( "Before", "PostProcessMaterial", "_blendableLocation=\"BeforeTonemap\"", "HDR", "HDRPost" ) + tonemap ) ) );
+    const string                              before = Util::makePass( "Before", "PostProcessMaterial", "_blendableLocation=\"BeforeTonemap\"", "HDR", "HDRPost" );
+    StringBuilder<constant::buffer::kMax1024> passes;
+    passes.appendFormat( "%#%#", before, tonemap );
+    SW_EXPECT_TRUE( RenderPipelineTestUtil::load( asset, Util::makeXML( passes.view() ) ) );
     // 자리를 적지 않았다.
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::makePass( "Before", "PostProcessMaterial", "", "HDR", "HDRPost" ) + tonemap ) ) );
+    passes.clear();
+    passes.appendFormat( "%#%#", Util::makePass( "Before", "PostProcessMaterial", "", "HDR", "HDRPost" ), tonemap );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( passes.view() ) ) );
     // 같은 자리 둘.
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::makePass( "Before", "PostProcessMaterial", "_blendableLocation=\"BeforeTonemap\"", "HDR", "HDRPost" ) + tonemap +
-                                                                         Util::makePass( "Again", "PostProcessMaterial", "_blendableLocation=\"BeforeTonemap\"", "HDR", "HDRAgain" ) ) ) );
+    passes.clear();
+    passes.appendFormat( "%#%#%#", before, tonemap, Util::makePass( "Again", "PostProcessMaterial", "_blendableLocation=\"BeforeTonemap\"", "HDR", "HDRAgain" ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( passes.view() ) ) );
     // 톤맵 대신 자리가 톤맵보다 앞이다 — 덮을 출력이 아직 없다.
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::makePass( "Replace", "PostProcessMaterial", "_blendableLocation=\"ReplacingTonemap\"", "HDRPost", "LDR" ) +
-                                                                         Util::makePass( "Tone", "Tonemap", "", "HDR", "HDRPost" ) ) ) );
+    passes.clear();
+    passes.appendFormat( "%#%#", Util::makePass( "Replace", "PostProcessMaterial", "_blendableLocation=\"ReplacingTonemap\"", "HDRPost", "LDR" ),
+                         Util::makePass( "Tone", "Tonemap", "", "HDR", "HDRPost" ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( passes.view() ) ) );
 
     RenderPipelineAsset deferred;
     SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
@@ -746,8 +780,9 @@ namespace
             extra += "</_listResource><_listFramePass>";
             extra.append( framePasses );
             extra += "</_listFramePass>";
-            const string passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState;
-            return RenderPipelineTestUtil::makeXML( passAttributes, "", extra );
+            StringBuilder<constant::buffer::kMax256> passAttributes;
+            passAttributes.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#", RenderPipelineTestUtil::kOpaqueState );
+            return RenderPipelineTestUtil::makeXML( passAttributes.view(), "", extra );
         }
 
         static constexpr const utf8* kResources = "<RenderGraphResourceDesc _name=\"InstanceBuffer\" _kind=\"External\"/>"
@@ -799,8 +834,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, FrameGraphRejectsWhatTheExecutorCannotRun
     // 셰이더는 표의 것이다 — 적으면 실행이 읽지 않는 칸이다.
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"MeshSkin\" _type=\"MeshSkin\" _shaderPath=\"engine/shaders/mesh_skin.hlsl\"/>" ) ) );
     // 같은 종류를 둘 — 컬링은 한 번에 모든 뷰를 돈다.
-    string twoCulls = string( Util::kCullPass ) + "<RenderGraphPassDesc _name=\"GPUCull2\" _type=\"GPUCull\"/>";
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, twoCulls ) ) );
+    StringBuilder<constant::buffer::kMax512> twoCulls;
+    twoCulls.appendFormat( "%#<RenderGraphPassDesc _name=\"GPUCull2\" _type=\"GPUCull\"/>", Util::kCullPass );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, twoCulls.view() ) ) );
     // 자원은 Transient 일 수 없다(첨부의 몫).
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( "<RenderGraphResourceDesc _name=\"Scratch\" _kind=\"Transient\"/>", "" ) ) );
     // 자원 이름이 첨부와 겹친다.
@@ -826,8 +862,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, QueueAttributeIsForFrameComputePasses )
     // 깊이 히스토리는 풀스크린 드로우다 — 컴퓨트 큐는 렌더 타깃을 모른다.
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"DepthHistory\" _type=\"DepthHistory\" _queue=\"AsyncCompute\"/>" ) ) );
     // 뷰 패스는 뷰마다 다시 돌아 포크 · 조인 자리가 없다.
-    const string viewAsync = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _queue=\"AsyncCompute\" " ) + RenderPipelineTestUtil::kOpaqueState;
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( viewAsync ) ) );
+    StringBuilder<constant::buffer::kMax256> viewAsync;
+    viewAsync.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _queue=\"AsyncCompute\" %#", RenderPipelineTestUtil::kOpaqueState );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( viewAsync.view() ) ) );
 }
 
 /**
@@ -836,14 +873,17 @@ SW_TEST_CASE( RenderPipelineAssetTest, QueueAttributeIsForFrameComputePasses )
  */
 SW_TEST_CASE( RenderPipelineAssetTest, FramePassAccessesFollowTheRules )
 {
-    RenderPipelineAsset asset;
-    const string        resources = string( FrameGraphTestUtil::kResources ) + "<RenderGraphResourceDesc _name=\"DepthHistory\" _kind=\"Persistent\" _viewable=\"Texture\"/>"
-                                                                               "<RenderGraphResourceDesc _name=\"CullArgs\" _kind=\"External\"/>"
-                                                                               "<RenderGraphResourceDesc _name=\"Readback\" _kind=\"External\"/>";
-    const string        passes    = "<RenderGraphPassDesc _name=\"DepthHistory\" _type=\"DepthHistory\"><_listOutput><item>DepthHistory</item></_listOutput></RenderGraphPassDesc>"
-                                    "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listInput><item>InstanceBuffer</item><item>DepthHistory</item></_listInput>"
-                                    "<_listOutput><item>CullResults</item></_listOutput><_listIndirectArgs><item>CullArgs</item></_listIndirectArgs>"
-                                    "<_listCopySource><item>HZB</item></_listCopySource><_listCopyDest><item>Readback</item></_listCopyDest></RenderGraphPassDesc>";
+    RenderPipelineAsset                      asset;
+    StringBuilder<constant::buffer::kMax512> resourcesBuilder;
+    resourcesBuilder.appendFormat( "%#<RenderGraphResourceDesc _name=\"DepthHistory\" _kind=\"Persistent\" _viewable=\"Texture\"/>"
+                                   "<RenderGraphResourceDesc _name=\"CullArgs\" _kind=\"External\"/>"
+                                   "<RenderGraphResourceDesc _name=\"Readback\" _kind=\"External\"/>",
+                                   FrameGraphTestUtil::kResources );
+    const string_view resources = resourcesBuilder.view();
+    const string      passes    = "<RenderGraphPassDesc _name=\"DepthHistory\" _type=\"DepthHistory\"><_listOutput><item>DepthHistory</item></_listOutput></RenderGraphPassDesc>"
+                                  "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listInput><item>InstanceBuffer</item><item>DepthHistory</item></_listInput>"
+                                  "<_listOutput><item>CullResults</item></_listOutput><_listIndirectArgs><item>CullArgs</item></_listIndirectArgs>"
+                                  "<_listCopySource><item>HZB</item></_listCopySource><_listCopyDest><item>Readback</item></_listCopyDest></RenderGraphPassDesc>";
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, FrameGraphTestUtil::makeXML( resources, passes ) ) );
     SW_EXPECT_TRUE( asset.getResources()[0]._viewable == RenderGraphViewableKind::Buffer ); // 기본은 버퍼
 
@@ -891,15 +931,17 @@ SW_TEST_CASE( RenderPipelineAssetTest, FramePassRejectsTwoAccessesOfOneName )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listOutput><item>CullResults</item></_listOutput>"
                                                                                            "<_listCopySource><item>CullResults</item></_listCopySource></RenderGraphPassDesc>" ) ) );
     // 간접 인자는 버퍼다.
-    const string textureResource = string( Util::kResources ) + "<RenderGraphResourceDesc _name=\"DepthHistory\" _kind=\"Persistent\" _viewable=\"Texture\"/>";
+    StringBuilder<constant::buffer::kMax512> textureResource;
+    textureResource.appendFormat( "%#<RenderGraphResourceDesc _name=\"DepthHistory\" _kind=\"Persistent\" _viewable=\"Texture\"/>", Util::kResources );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load(
-        asset, Util::makeXML( textureResource, "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listIndirectArgs><item>DepthHistory</item></_listIndirectArgs></RenderGraphPassDesc>" ) ) );
+        asset, Util::makeXML( textureResource.view(), "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listIndirectArgs><item>DepthHistory</item></_listIndirectArgs></RenderGraphPassDesc>" ) ) );
     // 규칙 밖 목록도 선언한 자원이다.
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load(
         asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listCopyDest><item>Nowhere</item></_listCopyDest></RenderGraphPassDesc>" ) ) );
     // 뷰 패스는 첨부만 읽고 쓴다.
-    const string viewList = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState + "><_listCopySource><item>SceneColor</item></_listCopySource";
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( viewList ) ) );
+    StringBuilder<constant::buffer::kMax256> viewList;
+    viewList.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#><_listCopySource><item>SceneColor</item></_listCopySource", RenderPipelineTestUtil::kOpaqueState );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( viewList.view() ) ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 엔진 파이프라인은 모두 프레임 패스 한 벌(framecomputerenderpass.xml)을 합쳐 컬링 · 그리드 · 스킨을 선언한다 */
@@ -944,9 +986,10 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputeImplementationIsATableChoice )
     SW_EXPECT_FALSE( VectorUtil::contains( pixel._listDefine, string( kPassComputeImplementationDefine ) ) );
 
     // 컴퓨트 구현이 없는 종류에 적으면 실행이 읽지 않는 칸이다.
-    RenderPipelineAsset asset;
-    const string        opaqueCompute = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _implementation=\"Compute\" " ) + RenderPipelineTestUtil::kOpaqueState;
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( opaqueCompute ) ) );
+    RenderPipelineAsset                      asset;
+    StringBuilder<constant::buffer::kMax256> opaqueCompute;
+    opaqueCompute.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _implementation=\"Compute\" %#", RenderPipelineTestUtil::kOpaqueState );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( opaqueCompute.view() ) ) );
 }
 
 /**

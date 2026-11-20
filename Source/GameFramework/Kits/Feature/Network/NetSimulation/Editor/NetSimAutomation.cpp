@@ -148,16 +148,19 @@ namespace sw::editor
                     return false;
                 EditorNetSimSettings settings;
                 settings._clientCount = clientCount;
-                settings._gameName    = listArgument[1];
+                StringBuilder<constant::buffer::kMax256> gameName;
+                gameName.append( listArgument[1] );
                 for ( size_t index = 2; index < listArgument.size(); ++index )
                 {
-                    settings._gameName += " ";
-                    settings._gameName += listArgument[index];
+                    gameName.appendFormat( " %#", listArgument[index] );
                 }
+                settings._gameName           = string( gameName.view() );
                 EditorNetSimSession& session = editor::getSubsystem<EditorNetSimSession>();
                 if ( const expected<void> started = session.start( settings ); started.has_value() == false )
                 {
-                    outReply = "netsim.start: " + string( started.error().message() ) + " (" + string( started.error().detail() ) + ")";
+                    StringBuilder<constant::buffer::kMax512> errorBuilder;
+                    errorBuilder.appendFormat( "netsim.start: %# (%#)", started.error().message(), started.error().detail() );
+                    outReply = string( errorBuilder.view() );
                     return true;
                 }
                 (void)session.setInputFocus( 1 );
@@ -181,7 +184,9 @@ namespace sw::editor
                 const expected<int32> client = pSession->addClient();
                 if ( client.has_value() == false )
                 {
-                    outReply = "netsim.addclient: " + string( client.error().message() ) + " (" + string( client.error().detail() ) + ")";
+                    StringBuilder<constant::buffer::kMax512> errorBuilder;
+                    errorBuilder.appendFormat( "netsim.addclient: %# (%#)", client.error().message(), client.error().detail() );
+                    outReply = string( errorBuilder.view() );
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;

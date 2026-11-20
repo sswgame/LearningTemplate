@@ -113,8 +113,12 @@ namespace sw
                         outWritten = 0;
                         return;
                     }
-                    const bool bDDS = ImageFileWriter::writeDDSRGBA8( _pBase[index] + ".dds", rgbaBytes, capture._width, capture._height );
-                    const bool bPNG = ImageFileWriter::writePNGRGBA8( _pBase[index] + ".png", rgbaBytes, capture._width, capture._height );
+                    StringBuilder<constant::buffer::kMax512> path;
+                    path.appendFormat( "%#.dds", _pBase[index] );
+                    const bool bDDS = ImageFileWriter::writeDDSRGBA8( path.view(), rgbaBytes, capture._width, capture._height );
+                    path.clear();
+                    path.appendFormat( "%#.png", _pBase[index] );
+                    const bool bPNG = ImageFileWriter::writePNGRGBA8( path.view(), rgbaBytes, capture._width, capture._height );
                     outWritten      = bDDS && bPNG ? 1 : 0;
                 }
             };
@@ -262,7 +266,9 @@ namespace sw
             listBase.reserve( listPath.size() );
             for ( const string& path : listPath )
             {
-                listBase.push_back( directory + "/" + string( makeFileStem( path ) ) + ".portrait" );
+                StringBuilder<constant::buffer::kMax512> base;
+                base.appendFormat( "%#/%#.portrait", directory, makeFileStem( path ) );
+                listBase.emplace_back( base.view() );
             }
             vector<uint8>                          listWritten( listCapture.size(), 0 ); // 장마다 제 칸(워커가 쓴다) - 아래 직렬 단계가 정해진 차례로 모은다
             const PortraitStudioInternal::WriteJob job{ listCapture.data(), listBase.data() };

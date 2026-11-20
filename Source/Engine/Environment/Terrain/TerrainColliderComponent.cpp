@@ -93,7 +93,6 @@ namespace sw
 {
     TerrainColliderComponent::TerrainColliderComponent()
         : PhysicsComponent{ PhysicsComponentPhase::Body }
-        , _layer{ "Default" }
         , _material{}
         , _listBody{}
         , _listBuiltGeneration{}

@@ -24,6 +24,7 @@
     #include "Core/File/FileUtil.h"
     #include "Core/Module/ModuleLibraryUtil.h"
     #include "Core/Path/AbsolutePath.h"
+
     #include "ModuleManager/ILiveReloadManager.h"
 #endif
 

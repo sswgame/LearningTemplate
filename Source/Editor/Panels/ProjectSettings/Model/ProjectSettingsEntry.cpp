@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
@@ -66,9 +67,11 @@ namespace sw::editor
                 if ( FileUtil::isSameDiskPath( absolutePath, active._absolutePath ) )
                     continue;
                 ProjectSettingsEntry entry{};
-                entry._gameName     = FileUtil::removeExtension( FileUtil::getFileNamePart( absolutePath ) );
-                entry._typeName     = active._typeName;
-                entry._page         = active._typeName + "/" + entry._gameName;
+                entry._gameName = FileUtil::removeExtension( FileUtil::getFileNamePart( absolutePath ) );
+                entry._typeName = active._typeName;
+                StringBuilder<constant::buffer::kMax256> pageBuilder;
+                pageBuilder.appendFormat( "%#/%#", active._typeName, entry._gameName );
+                entry._page         = string( pageBuilder.view() );
                 entry._relativePath = FileUtil::joinPath( presetFolder, FileUtil::getFileNamePart( absolutePath ) );
                 entry._absolutePath = FileUtil::normalizeSeparators( absolutePath );
                 inoutListEntry.push_back( std::move( entry ) );

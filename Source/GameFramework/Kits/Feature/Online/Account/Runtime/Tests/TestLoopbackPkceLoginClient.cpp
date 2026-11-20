@@ -83,11 +83,13 @@ namespace
             PkceLoginProviderConfig settings;
             settings._provider         = "google";
             settings._authorizationURL = "https://accounts.example/o/oauth2/v2/auth?prompt=select_account";
-            settings._tokenURL         = "http://127.0.0.1:" + to_string( static_cast<int32>( _tokenServer.getListenPort() ) ) + "/token";
-            settings._clientID         = "desktop-client";
-            settings._scope            = "openid profile";
-            settings._timeoutMs        = 5000;
-            settings._bUseIDToken      = bUseIDToken ? SW_TRUE : SW_FALSE;
+            StringBuilder<constant::buffer::kMax64> tokenURL;
+            tokenURL.appendFormat( "http://127.0.0.1:%#/token", static_cast<int32>( _tokenServer.getListenPort() ) );
+            settings._tokenURL    = string( tokenURL.view() );
+            settings._clientID    = "desktop-client";
+            settings._scope       = "openid profile";
+            settings._timeoutMs   = 5000;
+            settings._bUseIDToken = bUseIDToken ? SW_TRUE : SW_FALSE;
             SW_EXPECT_TRUE( _login.initialize( _network.createTransport(), _network.createTransport(), transportSettings, &_security, &_browser, { settings } ) );
         }
 
@@ -112,8 +114,10 @@ namespace
         /** @brief 브라우저가 리다이렉트 주소를 연 것처럼 보냅니다. @p query 는 `code=…&state=…` 꼴입니다. */
         void redirect( string_view query )
         {
-            HTTPClientRequest request;
-            request._url = "http://127.0.0.1:" + to_string( static_cast<int32>( _login.getRedirectPort() ) ) + "/callback?" + string( query );
+            HTTPClientRequest                        request;
+            StringBuilder<constant::buffer::kMax256> url;
+            url.appendFormat( "http://127.0.0.1:%#/callback?%#", static_cast<int32>( _login.getRedirectPort() ), query );
+            request._url = string( url.view() );
             (void)_redirectSender.submitRequest( request );
             poll();
         }
@@ -142,7 +146,9 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, OpensTheAuthorizationURL )
     SW_EXPECT_EQUAL( string( "select_account" ), PkceTestUtil::find( listQuery, "prompt" ) );
     SW_EXPECT_EQUAL( string( "code" ), PkceTestUtil::find( listQuery, "response_type" ) );
     SW_EXPECT_EQUAL( string( "desktop-client" ), PkceTestUtil::find( listQuery, "client_id" ) );
-    SW_EXPECT_EQUAL( "http://127.0.0.1:" + to_string( static_cast<int32>( rig._login.getRedirectPort() ) ) + "/callback", PkceTestUtil::find( listQuery, "redirect_uri" ) );
+    StringBuilder<constant::buffer::kMax64> redirectURI;
+    redirectURI.appendFormat( "http://127.0.0.1:%#/callback", static_cast<int32>( rig._login.getRedirectPort() ) );
+    SW_EXPECT_EQUAL( string( redirectURI.view() ), PkceTestUtil::find( listQuery, "redirect_uri" ) );
     SW_EXPECT_EQUAL( string( "openid profile" ), PkceTestUtil::find( listQuery, "scope" ) );
     SW_EXPECT_EQUAL( string( "S256" ), PkceTestUtil::find( listQuery, "code_challenge_method" ) );
     SW_EXPECT_FALSE( PkceTestUtil::find( listQuery, "state" ).empty() );
@@ -164,8 +170,10 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, ExchangesTheCodeWithTheVerifier )
     PkceFixture  rig;
     const uint64 requestID = rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._browser._listURL.size() );
-    const vector<HTTPHeader> listQuery = PkceTestUtil::readQuery( rig._browser._listURL[0] );
-    rig.redirect( "code=AUTH-CODE&state=" + PkceTestUtil::find( listQuery, "state" ) );
+    const vector<HTTPHeader>                listQuery = PkceTestUtil::readQuery( rig._browser._listURL[0] );
+    fixed_string<constant::buffer::kMax256> query;
+    formatstring( query.data(), query.capacity(), "code=AUTH-CODE&state=%#", PkceTestUtil::find( listQuery, "state" ) );
+    rig.redirect( query.c_str() );
 
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._listRedirectResponse.size() );
     SW_EXPECT_EQUAL( HTTPConstant::kStatusOk, rig._listRedirectResponse[0]._statusCode ); // 브라우저에 "끝났다" 쪽이 뜬다
@@ -195,8 +203,10 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, ExchangesTheCodeWithTheVerifier )
     SW_EXPECT_EQUAL( requestID, listResult[0]._requestID );
     SW_EXPECT_TRUE( listResult[0]._bSucceeded == SW_TRUE );
     SW_EXPECT_EQUAL( string( "google" ), listResult[0]._provider );
-    const string ticket( reinterpret_cast<const utf8*>( listResult[0]._ticket.data() ), listResult[0]._ticket.size() );
-    SW_EXPECT_EQUAL( "ID-TOKEN|" + PkceTestUtil::find( listQuery, "nonce" ), ticket );
+    const string                             ticket( reinterpret_cast<const utf8*>( listResult[0]._ticket.data() ), listResult[0]._ticket.size() );
+    StringBuilder<constant::buffer::kMax256> expectedTicket;
+    expectedTicket.appendFormat( "ID-TOKEN|%#", PkceTestUtil::find( listQuery, "nonce" ) );
+    SW_EXPECT_EQUAL( string( expectedTicket.view() ), ticket );
 }
 
 /** @brief [LoopbackPkceLoginClientTest] 프로필 API 방식이면 티켓은 access_token 그대로이다 */
@@ -204,7 +214,9 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, AccessTokenModeUsesTheAccessToken )
 {
     PkceFixture rig( false );
     (void)rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );
-    rig.redirect( "code=C&state=" + rig.getAuthorizationState() );
+    fixed_string<constant::buffer::kMax256> query;
+    formatstring( query.data(), query.capacity(), "code=C&state=%#", rig.getAuthorizationState() );
+    rig.redirect( query.c_str() );
     const vector<PlatformLoginClientResult> listResult = rig.takeResults();
     SW_REQUIRE_EQUAL( size_t( 1 ), listResult.size() );
     SW_EXPECT_TRUE( listResult[0]._bSucceeded == SW_TRUE );
@@ -222,15 +234,19 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, CraftedStateIsIgnoredAndDenialCancels
     SW_EXPECT_TRUE( rig._listTokenRequest.empty() );
     SW_EXPECT_TRUE( rig.takeResults().empty() );
 
-    HTTPClientRequest other;
-    other._url = "http://127.0.0.1:" + to_string( static_cast<int32>( rig._login.getRedirectPort() ) ) + "/favicon.ico";
+    HTTPClientRequest                       other;
+    StringBuilder<constant::buffer::kMax64> otherURL;
+    otherURL.appendFormat( "http://127.0.0.1:%#/favicon.ico", static_cast<int32>( rig._login.getRedirectPort() ) );
+    other._url = string( otherURL.view() );
     (void)rig._redirectSender.submitRequest( other );
     rig.poll();
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._listRedirectResponse.size() );
     SW_EXPECT_EQUAL( HTTPConstant::kStatusNotFound, rig._listRedirectResponse[1]._statusCode );
 
     SW_EXPECT_LOG( "LoopbackPkceLoginClient.ExternalSignDidNot" );
-    rig.redirect( "error=access_denied&state=" + rig.getAuthorizationState() );
+    fixed_string<constant::buffer::kMax256> query;
+    formatstring( query.data(), query.capacity(), "error=access_denied&state=%#", rig.getAuthorizationState() );
+    rig.redirect( query.c_str() );
     const vector<PlatformLoginClientResult> listResult = rig.takeResults();
     SW_REQUIRE_EQUAL( size_t( 1 ), listResult.size() );
     SW_EXPECT_TRUE( listResult[0]._bSucceeded == SW_FALSE );
@@ -247,7 +263,9 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, FailuresEndTheLoginOnce )
         rig._tokenStatus = 400;
         rig._tokenBody   = R"({"error":"invalid_grant"})";
         (void)rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );
-        rig.redirect( "code=C&state=" + rig.getAuthorizationState() );
+        fixed_string<constant::buffer::kMax256> query;
+        formatstring( query.data(), query.capacity(), "code=C&state=%#", rig.getAuthorizationState() );
+        rig.redirect( query.c_str() );
         const vector<PlatformLoginClientResult> listResult = rig.takeResults();
         SW_REQUIRE_EQUAL( size_t( 1 ), listResult.size() );
         SW_EXPECT_TRUE( listResult[0]._bSucceeded == SW_FALSE && listResult[0]._bCancelled == SW_FALSE );

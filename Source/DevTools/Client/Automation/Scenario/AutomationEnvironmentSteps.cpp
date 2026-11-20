@@ -8,6 +8,7 @@
 
 #include "DevTools/Client/Automation/Scenario/AutomationEnvironmentSteps.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -61,7 +62,9 @@ namespace sw
                 string               reply;
                 if ( DevCommandRegistry::run( *pCommand, listArgument, reply ) == false )
                 {
-                    runner.recordFailure( step, "dev command failed: " + ( reply.empty() ? string( pCommand->_pUsage ) : reply ) );
+                    StringBuilder<constant::buffer::kMax256> text;
+                    text.appendFormat( "dev command failed: %#", reply.empty() ? string_view{ pCommand->_pUsage } : string_view{ reply } );
+                    runner.recordFailure( step, text.view() );
                     return true;
                 }
                 SW_LOG_INFO_ID( "DevCommand.Reply", "%# -> %#", step.describe(), reply );
@@ -79,7 +82,9 @@ namespace sw
                 IWindow* pWindow = MainWindowSubsystem::findMainWindow();
                 if ( pWindow != nullptr && pWindow->canMinimize() == false )
                 {
-                    runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": this desktop cannot minimize windows (no window manager)" );
+                    StringBuilder<constant::buffer::kMax256> reason;
+                    reason.appendFormat( "%#: this desktop cannot minimize windows (no window manager)", step.describe() );
+                    runner.endScenario( AutomationStepEnd::Skip, reason.view() );
                     return true;
                 }
                 if ( pWindow == nullptr || pWindow->setMinimized( bMinimized ) == false )

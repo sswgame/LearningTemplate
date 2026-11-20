@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
@@ -372,7 +373,9 @@ namespace sw::editor
             string key = "new";
             for ( uint64 suffix = 2; isTaken( key ); ++suffix )
             {
-                key = "new_" + to_string( suffix );
+                StringBuilder<constant::buffer::kMax32> keyBuilder;
+                keyBuilder.appendFormat( "new_%#", suffix );
+                key = string( keyBuilder.view() );
             }
             const optional<int32> ownerIndex = draft.ensure( ownerPath );
             if ( ownerIndex.has_value() == false || draft.appendChild( *ownerIndex, name, {

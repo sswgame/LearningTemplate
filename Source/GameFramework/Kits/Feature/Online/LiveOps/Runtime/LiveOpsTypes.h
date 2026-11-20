@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -192,7 +193,12 @@ namespace sw
         static constexpr const utf8* kTopicPrefix    = "liveops.";
         static constexpr int64       kStartGraceMs   = 600000; ///< 열린 지 이만큼 안에 처음 본 이벤트만 시작으로 알린다(서버가 다시 떠서 옛 이벤트를 다시 알리지 않는다)
 
-        static string makeRegionTopic( string_view region ) { return string( kTopicPrefix ) + string( region ); }
+        static string makeRegionTopic( string_view region )
+        {
+            StringBuilder<constant::buffer::kMax128> topic;
+            topic.appendFormat( "%#%#", kTopicPrefix, region );
+            return string( topic.view() );
+        }
     };
 } // namespace sw
 

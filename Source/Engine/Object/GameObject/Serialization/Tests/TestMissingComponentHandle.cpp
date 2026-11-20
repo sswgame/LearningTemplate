@@ -62,14 +62,23 @@ SW_TEST_CASE( ObjectStateSerializerTest, HandleToMissingComponentSurvivesSaveRou
     fileOptions._bOmitExternalParent  = SW_TRUE; // 파일 형태(`{저장 id, 키}`)로 적는다
     const expected<string> savedState = ObjectStateSerializer::saveToXMLString( pObject, fileOptions );
     SW_REQUIRE_TRUE( savedState.has_value() );
-    const string saved = *savedState;
-    const string key   = "0:" + ComponentStableKey::makeKey( pObject->getComponent<HandleTargetTestComponent>() );
+    const string                             saved = *savedState;
+    StringBuilder<constant::buffer::kMax128> keyBuilder;
+    keyBuilder.appendFormat( "0:%#", ComponentStableKey::makeKey( pObject->getComponent<HandleTargetTestComponent>() ) );
+    const string key = string( keyBuilder.view() );
     SW_REQUIRE_TRUE( saved.find( key ) != string::npos );
 
     // 대상 타입을 모르는 것으로 만든다(모듈이 안 뜬 것과 같다) — 원소 태그 이름만 바꾸고 핸들 글은 그대로 둔다.
-    const string typeName = HandleTargetTestComponent::StaticType()->_name.c_str();
-    const string goneName = typeName + "Gone";
-    const string gone     = StringUtil::replace( StringUtil::replace( saved, "<" + typeName, "<" + goneName ), "</" + typeName + ">", "</" + goneName + ">" );
+    const string                             typeName = HandleTargetTestComponent::StaticType()->_name.c_str();
+    StringBuilder<constant::buffer::kMax128> typeOpen;
+    typeOpen.appendFormat( "<%#", typeName );
+    StringBuilder<constant::buffer::kMax128> typeClose;
+    typeClose.appendFormat( "</%#>", typeName );
+    StringBuilder<constant::buffer::kMax128> goneOpen;
+    goneOpen.appendFormat( "<%#Gone", typeName );
+    StringBuilder<constant::buffer::kMax128> goneClose;
+    goneClose.appendFormat( "</%#Gone>", typeName );
+    const string gone = StringUtil::replace( StringUtil::replace( saved, typeOpen.view(), goneOpen.view() ), typeClose.view(), goneClose.view() );
     SW_REQUIRE_TRUE( ObjectStateSerializer::loadFromXMLString( pObject, gone, ObjectLoadContext{ SerializePurpose::Authoring } ) );
     SW_REQUIRE_NOT_NULL( pObject->getComponent<MissingComponent>() );
     HandleHolderTestComponent* pHolder = pObject->getComponent<HandleHolderTestComponent>();
@@ -81,10 +90,10 @@ SW_TEST_CASE( ObjectStateSerializerTest, HandleToMissingComponentSurvivesSaveRou
     SW_REQUIRE_TRUE( resavedState.has_value() );
     const string resaved = *resavedState;
     SW_EXPECT_TRUE( resaved.find( key ) != string::npos );
-    SW_EXPECT_TRUE( resaved.find( "<" + goneName ) != string::npos );
+    SW_EXPECT_TRUE( resaved.find( goneOpen.c_str() ) != string::npos );
 
     // 타입이 돌아오면 다시 저장한 글이 원래 컴포넌트를 찾는다.
-    const string restored = StringUtil::replace( StringUtil::replace( resaved, "<" + goneName, "<" + typeName ), "</" + goneName + ">", "</" + typeName + ">" );
+    const string restored = StringUtil::replace( StringUtil::replace( resaved, goneOpen.view(), typeOpen.view() ), goneClose.view(), typeClose.view() );
     SW_REQUIRE_TRUE( ObjectStateSerializer::loadFromXMLString( pObject, restored, ObjectLoadContext{ SerializePurpose::Authoring } ) );
     pHolder = pObject->getComponent<HandleHolderTestComponent>();
     SW_REQUIRE_NOT_NULL( pHolder );
@@ -147,11 +156,15 @@ SW_TEST_CASE( ObjectStateSerializerTest, SavedHandleSurvivesSiblingInsertion )
     const string saved = *savedState;
 
     // 같은 타입의 컴포넌트를 맨 앞에 끼운다(디자이너가 나중에 더했다 — 지역 id 는 아직 없다).
-    const string typeName = HandleTargetTestComponent::StaticType()->_name.c_str();
-    const size_t first    = saved.find( "<" + typeName );
+    const string                             typeName = HandleTargetTestComponent::StaticType()->_name.c_str();
+    StringBuilder<constant::buffer::kMax128> typeOpen;
+    typeOpen.appendFormat( "<%#", typeName );
+    const size_t first = saved.find( typeOpen.c_str() );
     SW_REQUIRE_TRUE( first != string::npos );
+    StringBuilder<constant::buffer::kMax128> emptyElement;
+    emptyElement.appendFormat( "<%#/>", typeName );
     string inserted = saved;
-    inserted.insert( first, "<" + typeName + "/>" );
+    inserted.insert( first, emptyElement.c_str(), emptyElement.size() );
 
     GameObject* pLoaded = manager.createGameObject( hashed_string( "Loaded" ) );
     SW_REQUIRE_NOT_NULL( pLoaded );

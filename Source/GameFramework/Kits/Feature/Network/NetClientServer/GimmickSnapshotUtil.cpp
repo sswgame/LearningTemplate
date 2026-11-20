@@ -5,7 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 
@@ -80,7 +80,7 @@ namespace sw
                 continue;
             GimmickChunk chunk;
             chunk._pEntity  = &entity;
-            chunk._ownerKey = LittleEndianUtil::readUint64( entity._buffer.data() );
+            chunk._ownerKey = ByteReader( entity._buffer.data(), entity._buffer.size() ).readUint64();
             chunk._index    = entity._buffer[8];
             chunk._count    = entity._buffer[9];
             listChunk.push_back( chunk );

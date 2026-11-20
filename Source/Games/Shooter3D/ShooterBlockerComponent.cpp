@@ -14,7 +14,6 @@ namespace sw
 {
     ShooterBlockerComponent::ShooterBlockerComponent()
         : _halfSize{ 0.5f, 0.5f, 0.5f }
-        , _bodyLayer{ "Static" }
     {
     }
 

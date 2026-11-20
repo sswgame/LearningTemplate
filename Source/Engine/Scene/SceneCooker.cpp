@@ -143,18 +143,22 @@ namespace sw
                 } );
                 registry.forEachEnum( [&listTypeText]( const EnumInfo& info )
                 {
-                    vector<string> listEntry;
+                    vector<string>                           listEntry;
+                    StringBuilder<constant::buffer::kMax256> entryBuilder;
                     for ( const auto& [name, value] : info._mapNameToValue )
                     {
-                        listEntry.push_back( string( name.toString() ) + "=" + sw::to_string( value ) );
+                        entryBuilder.clear();
+                        entryBuilder.appendFormat( "%#=%#", name.toString(), value );
+                        listEntry.push_back( string( entryBuilder.view() ) );
                     }
                     VectorUtil::sort( listEntry );
-                    string text = "enum " + string( info._fullyQualifiedName.view() );
+                    StringBuilder<constant::buffer::kMax1024> textBuilder;
+                    textBuilder.appendFormat( "enum %#", info._fullyQualifiedName.view() );
                     for ( const string& entry : listEntry )
                     {
-                        text.append( "|" ).append( entry );
+                        textBuilder.append( '|' ).append( entry );
                     }
-                    listTypeText.push_back( std::move( text ) );
+                    listTypeText.push_back( string( textBuilder.view() ) );
                 } );
                 VectorUtil::sort( listTypeText );
                 string canonical;
@@ -319,13 +323,15 @@ namespace sw
                         continue;
                     }
                     // 셀 키 → 목록 인덱스 — 엔티티마다 셀 목록을 훑지 않는다(엔티티 수 × 셀 수).
-                    string cellKey = sw::to_string( static_cast<int64>( record._cell._z ) ) + "," + sw::to_string( static_cast<int64>( record._cell._x ) );
+                    StringBuilder<constant::buffer::kMax256> cellKeyBuilder;
+                    cellKeyBuilder.appendFormat( "%#,%#", static_cast<int64>( record._cell._z ), static_cast<int64>( record._cell._x ) );
                     for ( const string& layer : entity._listDataLayer )
                     {
-                        cellKey.append( "|" ).append( layer );
+                        cellKeyBuilder.append( '|' ).append( layer );
                     }
-                    const auto found     = mapCellIndex.find( cellKey );
-                    size_t     cellIndex = 0;
+                    const string cellKey( cellKeyBuilder.view() );
+                    const auto   found     = mapCellIndex.find( cellKey );
+                    size_t       cellIndex = 0;
                     if ( found == mapCellIndex.end() )
                     {
                         cellIndex = listCell.size();
@@ -492,12 +498,14 @@ namespace sw
                     if ( listGroup.empty() )
                         continue;
 
-                    SceneDocument::SceneObjectNode proxy{};
-                    proxy._name = "HLOD_" + sw::to_string( static_cast<int64>( cell._cell._x ) ) + "_" + sw::to_string( static_cast<int64>( cell._cell._z ) );
+                    SceneDocument::SceneObjectNode           proxy{};
+                    StringBuilder<constant::buffer::kMax256> proxyName;
+                    proxyName.appendFormat( "HLOD_%#_%#", static_cast<int64>( cell._cell._x ), static_cast<int64>( cell._cell._z ) );
                     for ( const string& layer : cell._listDataLayer )
                     {
-                        proxy._name.append( "_" ).append( layer );
+                        proxyName.append( '_' ).append( layer );
                     }
+                    proxy._name          = string( proxyName.view() );
                     proxy._fileID        = nextFileID++;
                     proxy._listDataLayer = cell._listDataLayer;
 
@@ -1040,14 +1048,22 @@ namespace sw
         for ( size_t groupIndex = 0; groupIndex < listGroup.size(); ++groupIndex )
         {
             const PackGroup& group = listGroup[groupIndex];
-            string           anchorPrefix;
+            string_view      anchorName;
+            bool             bHasAnchor = false;
             for ( const SceneDocument::SceneObjectNode& anchor : inoutDoc._listSceneObjectNode )
             {
                 if ( group._ownerFileID != 0 && anchor._fileID == group._ownerFileID )
-                    anchorPrefix = anchor._name + "/";
+                {
+                    anchorName = anchor._name;
+                    bHasAnchor = true;
+                }
             }
+            StringBuilder<constant::buffer::kMax256> nodeName;
+            if ( bHasAnchor )
+                nodeName.appendFormat( "%#/", anchorName );
+            nodeName.appendFormat( "Packed%#", static_cast<uint64>( groupIndex ) );
             SceneDocument::SceneObjectNode node{};
-            node._name                 = anchorPrefix + "Packed" + sw::to_string( static_cast<uint64>( groupIndex ) );
+            node._name                 = string( nodeName.view() );
             node._fileID               = group._ownerFileID != 0 ? ( SceneDocument::computeInstanceIDScope( group._ownerFileID ) ^ ( kPackedInnerIDBase + groupIndex ) ) : nextTopFileID++;
             node._instanceAnchorFileID = group._ownerFileID;
             node._listDataLayer        = group._listDataLayer;

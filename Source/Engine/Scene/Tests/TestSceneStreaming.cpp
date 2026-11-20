@@ -34,13 +34,14 @@ namespace
         static constexpr uint32 kEntitiesPerCell         = 2;
 
         /** @brief 씬 컴포넌트 하나를 가진 엔티티입니다. */
-        static SceneDocument::SceneObjectNode makeNode( uint64 fileID, const string& name, const string& position )
+        static SceneDocument::SceneObjectNode makeNode( uint64 fileID, string_view name, string_view position )
         {
             SceneDocument::SceneObjectNode node{};
-            node._fileID      = fileID;
-            node._name        = name;
-            node._embeddedXML = "<GameObject _schemaVersion=\"0\" _name=\"" + name + "\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"" + position +
-                                "\" /></_listComponent></GameObject>";
+            node._fileID = fileID;
+            node._name   = string( name );
+            StringBuilder<constant::buffer::kMax512> xml;
+            xml.appendFormat( "<GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"%#\" /></_listComponent></GameObject>", name, position );
+            node._embeddedXML = string( xml.view() );
             return node;
         }
 
@@ -66,9 +67,12 @@ namespace
                 cell._cell = StreamingCellCoord{ x, 0 };
                 for ( uint32 entityIndex = 0; entityIndex < entitiesPerCell; ++entityIndex )
                 {
-                    const int32  offset   = entityIndex == 0 ? 2 : ( entityIndex == 1 ? 8 : 3 + static_cast<int32>( entityIndex % 5 ) );
-                    const string position = sw::to_string( static_cast<int64>( x * 10 + offset ) ) + ",0,5";
-                    cell._listSceneObjectNode.push_back( makeNode( fileID, "Crate" + sw::to_string( static_cast<int64>( fileID ) ), position ) );
+                    const int32                            offset = entityIndex == 0 ? 2 : ( entityIndex == 1 ? 8 : 3 + static_cast<int32>( entityIndex % 5 ) );
+                    fixed_string<constant::buffer::kMax32> position;
+                    formatstring( position.data(), position.capacity(), "%#,0,5", static_cast<int64>( x * 10 + offset ) );
+                    fixed_string<constant::buffer::kMax32> name;
+                    formatstring( name.data(), name.capacity(), "Crate%#", static_cast<int64>( fileID ) );
+                    cell._listSceneObjectNode.push_back( makeNode( fileID, name, position ) );
                     fileID += 1;
                 }
                 doc._listStreamingCell.push_back( std::move( cell ) );

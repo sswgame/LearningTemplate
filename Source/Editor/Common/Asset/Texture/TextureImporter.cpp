@@ -483,8 +483,11 @@ namespace sw::editor
             TextureVariantRawImporter( const TextureImportConfig& config, TaskManager* pTaskManager, const TextureFormatFamily& family )
                 : TextureRawImporter{ config, pTaskManager }
                 , _family{ family }
-                , _stampFileName{ "import" + family._suffix + ".stamp" }
+                , _stampFileName{}
             {
+                StringBuilder<constant::buffer::kMax64> nameBuilder;
+                nameBuilder.appendFormat( "import%#.stamp", family._suffix );
+                _stampFileName = string( nameBuilder.view() );
             }
 
             string_view getStampHeader() const override { return "SWTEXVARIANT 1"; }
@@ -598,7 +601,11 @@ namespace sw::editor
         const TextureVariantRawImporter  importer{ config, pTaskManager, family };
         const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
         if ( derivedDataCache.has_value() == false )
-            return AssetImportSummary::makeFailed( "DDC config: " + string( derivedDataCache.error().message() ) + " (" + string( derivedDataCache.error().detail() ) + ")" );
+        {
+            StringBuilder<constant::buffer::kMax512> problemBuilder;
+            problemBuilder.appendFormat( "DDC config: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
+            return AssetImportSummary::makeFailed( string( problemBuilder.view() ) );
+        }
         return AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
     }
 
@@ -729,7 +736,11 @@ namespace sw::editor
         const TextureRawImporter         importer{ config, pTaskManager };
         const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
         if ( derivedDataCache.has_value() == false )
-            return AssetImportSummary::makeFailed( "DDC config: " + string( derivedDataCache.error().message() ) + " (" + string( derivedDataCache.error().detail() ) + ")" );
+        {
+            StringBuilder<constant::buffer::kMax512> problemBuilder;
+            problemBuilder.appendFormat( "DDC config: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
+            return AssetImportSummary::makeFailed( string( problemBuilder.view() ) );
+        }
         AssetImportSummary summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
         // 공유 원본이 쓰는 규칙은 패턴에 맞는 파일이 없어도(모델 옆 자리로 골랐다) 살아 있다.
         const vector<string> listSourcePath = AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer );
@@ -748,7 +759,9 @@ namespace sw::editor
         }
         for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( listCheckedRule, listSourcePath ) )
         {
-            summary._listProblem.push_back( "TextureImportConfig: rule " + rule + " matches no texture source - its patterns are dead (a moved folder?)" );
+            StringBuilder<constant::buffer::kMax512> problemBuilder;
+            problemBuilder.appendFormat( "TextureImportConfig: rule %# matches no texture source - its patterns are dead (a moved folder?)", rule );
+            summary._listProblem.push_back( string( problemBuilder.view() ) );
         }
         return summary;
     }

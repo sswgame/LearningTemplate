@@ -671,7 +671,9 @@ namespace sw
         const string_view source = sourceName.empty() ? string_view{ "<memory>" } : sourceName;
         if ( xmlText.empty() )
         {
-            _lastError = string( source ) + ": empty document";
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: empty document", source );
+            _lastError = string( error.view() );
             return false;
         }
 
@@ -695,7 +697,9 @@ namespace sw
 
         if ( _impl->doc.first_child().empty() )
         {
-            _lastError = string( source ) + ": no element";
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: no element", source );
+            _lastError = string( error.view() );
             return false;
         }
 
@@ -722,7 +726,9 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( absPath, text ) == false )
         {
-            _lastError = string( absPath ) + ": cannot read the file (or it was read during cooking outside a cook job)";
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: cannot read the file (or it was read during cooking outside a cook job)", absPath );
+            _lastError = string( error.view() );
             return false;
         }
         return parse( text, absPath );
@@ -733,7 +739,9 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( absPath, text ) == false )
         {
-            _lastError = string( absPath ) + ": cannot read the file (or it was read during cooking outside a cook job)";
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: cannot read the file (or it was read during cooking outside a cook job)", absPath );
+            _lastError = string( error.view() );
             return false;
         }
         return parseData( text, absPath );
@@ -757,7 +765,9 @@ namespace sw
         string absPath;
         if ( AssetIO::readTextAsset( assetID, text, &absPath ) == false )
         {
-            _lastError          = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: not found (no file at that path and no resource by that name)", relativePath );
+            _lastError          = string( error.view() );
             _bLastErrorNotFound = SW_TRUE;
             return false;
         }
@@ -786,7 +796,9 @@ namespace sw
         if ( ResourceComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
         {
             clear();
-            _lastError          = string( sourceName ) + ": its catalog inheritance could not be flattened (the log says why)";
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: its catalog inheritance could not be flattened (the log says why)", sourceName );
+            _lastError          = string( error.view() );
             _bLastErrorNotFound = SW_FALSE;
             return false;
         }

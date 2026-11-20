@@ -391,7 +391,11 @@ namespace sw
                 GameObject*     pObject   = engine::findActiveObject( hashed_string( listArgument[0] ) );
                 SceneComponent* pRootNode = pObject != nullptr ? pObject->getComponent<SceneComponent>() : nullptr;
                 if ( pRootNode == nullptr )
-                    outReply = "no object named '" + listArgument[0] + "' with a transform in the active scene";
+                {
+                    StringBuilder<constant::buffer::kMax256> reply;
+                    reply.appendFormat( "no object named '%#' with a transform in the active scene", listArgument[0] );
+                    outReply = string( reply.view() );
+                }
                 return pRootNode;
             }
 
@@ -402,7 +406,9 @@ namespace sw
                 if ( pRootNode == nullptr )
                     return false;
                 pRootNode->teleportTo( position );
-                outReply = "teleported " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "teleported %#", listArgument[0] );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -414,7 +420,9 @@ namespace sw
                 if ( pRootNode == nullptr )
                     return false;
                 pRootNode->setWorldPosition( position );
-                outReply = "moved " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "moved %#", listArgument[0] );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -433,22 +441,27 @@ namespace sw
                 {
                     vector<string> listActive;
                     layers.collectActiveLayers( listActive );
-                    outReply = "active data layers:";
+                    StringBuilder<constant::buffer::kMax512> reply;
+                    reply.append( "active data layers:" );
                     for ( const string& layer : listActive )
                     {
-                        outReply += " " + layer;
+                        reply.appendFormat( " %#", layer );
                     }
+                    outReply = string( reply.view() );
                     return true;
                 }
                 const bool bOn = listArgument.size() == 2 && listArgument[1] == "on";
                 if ( listArgument.size() != 2 || ( bOn == false && listArgument[1] != "off" ) )
                     return false;
+                StringBuilder<constant::buffer::kMax256> reply;
                 if ( layers.setLayerActive( listArgument[0], bOn ) == false )
                 {
-                    outReply = "the active scene does not declare data layer '" + listArgument[0] + "'";
+                    reply.appendFormat( "the active scene does not declare data layer '%#'", listArgument[0] );
+                    outReply = string( reply.view() );
                     return false;
                 }
-                outReply = "data layer " + listArgument[0] + " " + listArgument[1];
+                reply.appendFormat( "data layer %# %#", listArgument[0], listArgument[1] );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -470,23 +483,28 @@ namespace sw
                     static constexpr const utf8* kArrStateName[] = { "queued", "building", "loaded", "failed", "removing" };
                     vector<string>               listName;
                     subLevels.collectSubLevelNames( listName );
-                    outReply = "sub-levels:";
+                    StringBuilder<constant::buffer::kMax512> reply;
+                    reply.append( "sub-levels:" );
                     for ( const string& name : listName )
                     {
                         SubLevelState state{ SubLevelState::Queued };
                         (void)subLevels.findSubLevelState( name, state ); // 방금 모은 이름이다
-                        outReply += " " + name + "(" + kArrStateName[static_cast<uint32>( state )] + ")";
+                        reply.appendFormat( " %#(%#)", name, kArrStateName[static_cast<uint32>( state )] );
                     }
+                    outReply = string( reply.view() );
                     return true;
                 }
+                StringBuilder<constant::buffer::kMax256> reply;
                 if ( listArgument[0] == "remove" && listArgument.size() == 2 )
                 {
                     if ( subLevels.removeSubLevel( listArgument[1] ) == false )
                     {
-                        outReply = "no sub-level named '" + listArgument[1] + "'";
+                        reply.appendFormat( "no sub-level named '%#'", listArgument[1] );
+                        outReply = string( reply.view() );
                         return false;
                     }
-                    outReply = "removing sub-level " + listArgument[1];
+                    reply.appendFormat( "removing sub-level %#", listArgument[1] );
+                    outReply = string( reply.view() );
                     return true;
                 }
                 SceneSubLevelSubsystem::Placement placement{};
@@ -499,10 +517,12 @@ namespace sw
                 placement._rotation._y = yawDegrees * MathUtil::kDegreeToRadian;
                 if ( subLevels.addSubLevel( *pScene, listArgument[1], listArgument[2], placement ) == false )
                 {
-                    outReply = "sub-level '" + listArgument[1] + "' was not added (see the log)";
+                    reply.appendFormat( "sub-level '%#' was not added (see the log)", listArgument[1] );
+                    outReply = string( reply.view() );
                     return false;
                 }
-                outReply = "adding sub-level " + listArgument[1];
+                reply.appendFormat( "adding sub-level %#", listArgument[1] );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -540,14 +560,17 @@ namespace sw
             {
                 if ( listArgument.size() != 2 || listArgument[1].empty() )
                     return false;
-                GameObject* pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                GameObject*                              pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                StringBuilder<constant::buffer::kMax256> reply;
                 if ( pObject == nullptr )
                 {
-                    outReply = "no object named '" + listArgument[0] + "' in the active scene";
+                    reply.appendFormat( "no object named '%#' in the active scene", listArgument[0] );
+                    outReply = string( reply.view() );
                     return false;
                 }
                 pObject->addTag( TagID::request( listArgument[1] ) );
-                outReply = "tagged " + listArgument[0] + " with " + listArgument[1];
+                reply.appendFormat( "tagged %# with %#", listArgument[0], listArgument[1] );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -585,16 +608,15 @@ namespace sw
                     outReply = "the active scene could not be split into cells - see the log";
                     return false;
                 }
+                StringBuilder<constant::buffer::kMax256> textBuilder;
                 if ( preview._listViolation.empty() == false )
                 {
-                    outReply = "the cook would fail - " + to_string( static_cast<uint32>( preview._listViolation.size() ) ) +
-                               " cross-cell references (see the log or the Streaming Cells window)";
+                    textBuilder.appendFormat( "the cook would fail - %# cross-cell references (see the log or the Streaming Cells window)", static_cast<uint32>( preview._listViolation.size() ) );
+                    outReply = string( textBuilder.view() );
                     return false;
                 }
-                StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "%# entities always loaded", static_cast<uint32>( preview._listAlwaysLoadedID.size() ) );
-                outReply = to_string( static_cast<uint32>( preview._listCell.size() ) ) + " cells, " +
-                           string( textBuilder.view() );
+                textBuilder.appendFormat( "%# cells, %# entities always loaded", static_cast<uint32>( preview._listCell.size() ), static_cast<uint32>( preview._listAlwaysLoadedID.size() ) );
+                outReply = string( textBuilder.view() );
                 return true;
             }
 
@@ -1283,12 +1305,14 @@ namespace sw
                 continue;
 
             // 멤버 이름의 앞머리(맨 위 앵커 이름)를 떼고, 앵커에 붙은 것은 적지 않는다 — 둘 다 내부 씬의 상태에 없는 것이다.
-            const GameObject* pTopAnchor = _objectManager->findGameObjectByID( topAnchorIt->second );
-            const string      namePrefix = pTopAnchor != nullptr ? string{ pTopAnchor->getName().view() } + "/" : string{};
+            const GameObject*                        pTopAnchor = _objectManager->findGameObjectByID( topAnchorIt->second );
+            StringBuilder<constant::buffer::kMax256> namePrefix;
+            if ( pTopAnchor != nullptr )
+                namePrefix.appendFormat( "%#/", pTopAnchor->getName().view() );
             makeScopedMap( mapSavedID, member._idScope, mapScopedID );
             ObjectSaveOptions options{ SerializePurpose::Authoring };
             options._pSavedIDMap           = &mapScopedID;
-            options._attachOwnerNamePrefix = namePrefix;
+            options._attachOwnerNamePrefix = namePrefix.view();
             const auto anchorIt            = mapObjectIDByFileID.find( member._anchorFileID );
             if ( anchorIt != mapObjectIDByFileID.end() )
                 options._omitAttachToObjectID = anchorIt->second;

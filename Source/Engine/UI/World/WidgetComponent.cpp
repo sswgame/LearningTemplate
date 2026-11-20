@@ -560,7 +560,9 @@ namespace sw
         if ( pManager == nullptr || _worldQuad.isValid() )
             return;
         // 스프라이트 사각형(양면, 단위 크기)에 렌더 텍스처를 읽는 머티리얼 인스턴스를 붙인다. 캔버스는 프리멀티플라이로 그리므로 셰이더가 직선 알파로 되돌린다.
-        GameObject*    pQuad = pManager->createGameObject( hashed_string( string( pOwner->getName().c_str() ) + "_WidgetQuad" ) );
+        StringBuilder<constant::buffer::kMax256> quadName;
+        quadName.appendFormat( "%#_WidgetQuad", pOwner->getName().c_str() );
+        GameObject*    pQuad = pManager->createGameObject( hashed_string( quadName.c_str() ) );
         MeshComponent* pMesh = pQuad != nullptr ? pQuad->addComponent<MeshComponent>() : nullptr;
         if ( pMesh == nullptr )
             return;

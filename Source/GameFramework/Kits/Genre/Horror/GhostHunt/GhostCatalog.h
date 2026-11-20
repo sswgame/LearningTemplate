@@ -192,7 +192,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY()
+        PROPERTY( DefaultName )
         hashed_string _currency{ "Coins" }; ///< 잡은 유령의 동전을 넣는 지갑 통화
     };
 } // namespace sw

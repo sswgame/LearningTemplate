@@ -7,6 +7,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
@@ -214,7 +215,10 @@ namespace sw::editor
             const TypeInfo* pType = pWidget->getTypeInfo();
             row._label            = pType != nullptr ? string( pType->_name.c_str() ) : string( "Widget" );
             if ( pWidget->getName().empty() == false )
-                row._label += string( " #" ) + pWidget->getName().c_str();
+            {
+                row._label += " #";
+                row._label += pWidget->getName().c_str();
+            }
             outListRow.push_back( row );
         }
     }
@@ -293,8 +297,9 @@ namespace sw::editor
 
     string UIPreviewLogic::makeTargetPath( const UIViewport& viewport )
     {
-        return "rendertarget/editor_ui_preview_" + to_string( static_cast<uint32>( viewport._physicalSize._x ) ) + "x" +
-               to_string( static_cast<uint32>( viewport._physicalSize._y ) );
+        StringBuilder<constant::buffer::kMax64> pathBuilder;
+        pathBuilder.appendFormat( "rendertarget/editor_ui_preview_%#x%#", static_cast<uint32>( viewport._physicalSize._x ), static_cast<uint32>( viewport._physicalSize._y ) );
+        return string( pathBuilder.view() );
     }
 
     bool UIPreviewLogic::isPseudoLanguage( string_view code )

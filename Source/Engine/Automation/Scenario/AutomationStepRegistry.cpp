@@ -134,7 +134,7 @@ namespace sw
 
     string AutomationStepRegistry::describeActiveBlockers()
     {
-        string text;
+        StringBuilder<constant::buffer::kMax256> text;
         for ( const AutomationBlocker* pBlocker : AutomationStepRegistryInternal::getBlockers().getItems() )
         {
             if ( pBlocker->_scope == AutomationBlockScope::RenderStable )
@@ -142,11 +142,11 @@ namespace sw
             const AutomationReadiness readiness = pBlocker->_pReadiness();
             if ( readiness.isWaiting() == false )
                 continue;
-            if ( text.empty() == false )
-                text += ", ";
-            text += string( pBlocker->_pName ) + " (" + readiness.getWhat() + ", progress " + to_string( readiness.getProgress() ) + ")";
+            if ( text.size() != 0 )
+                text.append( ", " );
+            text.appendFormat( "%# (%#, progress %#)", pBlocker->_pName, readiness.getWhat(), readiness.getProgress() );
         }
-        return text.empty() ? string( "none" ) : text;
+        return text.size() == 0 ? string( "none" ) : string( text.view() );
     }
 
     expected<void> AutomationStepRegistry::configureConditions( const JSONValue& conditions )

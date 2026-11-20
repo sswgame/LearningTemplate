@@ -85,8 +85,8 @@
 
 #include <imgui.h>
 #include <ImGuizmo.h>
-#include <implot.h>
 #include <imgui_internal.h>
+#include <implot.h>
 
 // EditorRedrawUtil — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
 namespace sw::editor

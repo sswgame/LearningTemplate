@@ -6,6 +6,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 
@@ -46,12 +48,16 @@ namespace sw::editor
 
     string EditorLayoutStore::makeImguiINIPath( string_view folder, string_view name )
     {
-        return FileUtil::joinPath( folder, string( name ) + kImguiSuffix );
+        fixed_string<constant::buffer::kMax256> fileName;
+        formatstring( fileName.data(), fileName.capacity(), "%#%#", name, kImguiSuffix );
+        return FileUtil::joinPath( folder, fileName );
     }
 
     string EditorLayoutStore::makeVisibilityPath( string_view folder, string_view name )
     {
-        return FileUtil::joinPath( folder, string( name ) + kVisibilitySuffix );
+        fixed_string<constant::buffer::kMax256> fileName;
+        formatstring( fileName.data(), fileName.capacity(), "%#%#", name, kVisibilitySuffix );
+        return FileUtil::joinPath( folder, fileName );
     }
 
     void EditorLayoutStore::collectNames( string_view folder, vector<string>& outListName )

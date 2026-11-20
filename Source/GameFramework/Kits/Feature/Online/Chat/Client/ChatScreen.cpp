@@ -206,9 +206,14 @@ namespace sw
         {
             if ( listLine[index]._channelID != _channelID )
                 continue;
-            unique_ptr<TextWidget> row = make_unique<TextWidget>();
-            row->setName( hashed_string( string{ Internal::kRowPrefix } + to_string( static_cast<uint64>( rowIndex ) ) ) );
-            row->setText( "[" + listLine[index]._senderName + "] " + listLine[index]._text );
+            unique_ptr<TextWidget>                 row = make_unique<TextWidget>();
+            fixed_string<constant::buffer::kMax64> rowName;
+            formatstring( rowName.data(), rowName.capacity(), "%#%#", Internal::kRowPrefix, static_cast<uint64>( rowIndex ) );
+            row->setName( hashed_string( rowName.view() ) );
+            // 보낸 이름(32 바이트)과 본문(ChatLimit::kMaxTextSize = 512 바이트)이 다 들어가는 크기다.
+            fixed_string<constant::buffer::kMax1024> rowText;
+            formatstring( rowText.data(), rowText.capacity(), "[%#] %#", listLine[index]._senderName, listLine[index]._text );
+            row->setText( rowText.view() );
             (void)pLines->addChild( std::move( row ) );
             ++rowIndex;
         }

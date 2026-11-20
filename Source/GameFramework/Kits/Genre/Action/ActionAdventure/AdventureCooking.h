@@ -73,11 +73,11 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY()
+        PROPERTY( DefaultName )
         hashed_string _station{ "CookingPot" }; ///< 레시피의 작업대
-        PROPERTY( Name = "generic" )
+        PROPERTY( DefaultName, Name = "generic" )
         hashed_string _genericDish{ "simmeredDish" }; ///< 레시피가 없을 때의 요리
-        PROPERTY( Name = "dubious" )
+        PROPERTY( DefaultName, Name = "dubious" )
         hashed_string _dubiousDish{ "dubiousFood" }; ///< 서로 다른 효과가 섞였을 때의 요리
         PROPERTY( Min = 0.0 )
         float32 _heartScale{ 2.0f };

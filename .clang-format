@@ -22,7 +22,7 @@ IndentWidth: 4
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
 PointerAlignment: Left
-SortIncludes: Never
+SortIncludes: CaseSensitive
 SortUsingDeclarations: false
 SpaceAfterCStyleCast: false
 SpaceBeforeAssignmentOperators: true
@@ -47,5 +47,50 @@ AllowAllParametersOfDeclarationOnNextLine : false
 LambdaBodyIndentation : OuterScope
 BreakConstructorInitializers : BeforeComma
 BreakAfterAttributes  : Leave
-IncludeBlocks : Preserve
 InsertNewlineAtEOF : true
+# include 순서 — 옛 린트(include_order.py)를 clang-format 이 대신한다(크로미움 · LLVM 도 IncludeCategories 로 둔다).
+# 묶음(사이에 빈 줄 한 줄): "pch.h" → 짝 헤더(.cpp 만, 줄기 같음) → 프로젝트 "…" 를 맨 앞 폴더마다(App · Core · … · Server, 맨 이름, sw/ 생성물)
+# → 시스템 · 외부 <…>. 묶음 안은 대소문자 구분 글자 순이고 같은 줄은 지운다. 빈 줄은 묶음을 끊지 않고 #if · #define · 주석 줄이 끊는다.
+# <…> 는 글자 순이므로, 다른 헤더가 기대는 헤더(Windows · WinSock2 · objbase · ft2build · imgui · Jolt/Jolt)만 SortPriority 로 묶음 맨 앞에 둔다.
+# X11MacroUndef.h 는 X11 헤더가 퍼뜨린 매크로를 지우므로 <…> 뒤 묶음이다. 새 Source 맨 앞 폴더는 여기 한 줄 더한다(빠지면 "…" 끝 묶음에 모인다).
+IncludeBlocks : Regroup
+IncludeIsMainRegex : '$'
+IncludeIsMainSourceRegex : ''
+IncludeCategories :
+  - Regex : '^"pch\.h"$'
+    Priority : -1
+  - Regex : '^"Core/Foundation/X11MacroUndef\.h"$'
+    Priority : 30
+  - Regex : '^"App/'
+    Priority : 1
+  - Regex : '^"Core/'
+    Priority : 2
+  - Regex : '^"DevTools/'
+    Priority : 3
+  - Regex : '^"Editor/'
+    Priority : 4
+  - Regex : '^"Engine/'
+    Priority : 5
+  - Regex : '^"GameFramework/'
+    Priority : 6
+  - Regex : '^"Games/'
+    Priority : 7
+  - Regex : '^"ModuleAPI/'
+    Priority : 8
+  - Regex : '^"ModuleManager/'
+    Priority : 9
+  - Regex : '^"Programs/'
+    Priority : 10
+  - Regex : '^"Server/'
+    Priority : 11
+  - Regex : '^"[^/]*"$'
+    Priority : 12
+  - Regex : '^"sw/'
+    Priority : 13
+  - Regex : '^"'
+    Priority : 14
+  - Regex : '^<(Windows|WinSock2|objbase|ft2build|imgui|Jolt/Jolt)\.h>$'
+    Priority : 20
+    SortPriority : 19
+  - Regex : '^<'
+    Priority : 20

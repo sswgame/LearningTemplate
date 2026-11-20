@@ -5,6 +5,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Process/StandardOutput.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
@@ -59,7 +60,9 @@ SW_TEST_CHILD_ROLE( TestFrameworkTest, ChildEchoesOrHangs, ._timeoutSeconds = 60
     SW_REQUIRE_FALSE( argument.empty() );
     if ( argument == "hang" )
         MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 600 * constant::time::kNanosecondsPerSecond );
-    SW_EXPECT_TRUE( StandardOutput::write( "SW_CHILD_ECHO:" + argument + "\n" ) );
+    StringBuilder<constant::buffer::kMax256> output;
+    output.appendFormat( "SW_CHILD_ECHO:%#\n", argument );
+    SW_EXPECT_TRUE( StandardOutput::write( output.view() ) );
 }
 
 /**

@@ -95,12 +95,18 @@ namespace sw
 
     string ServiceAuditLog::makeAccountActor( uint64 accountID )
     {
-        return "acct." + ServiceKeyUtil::makeHex64( accountID );
+        StringBuilder<constant::buffer::kMax64> actor;
+        actor.appendFormat( "acct.%#", ServiceKeyUtil::makeHex64( accountID ) );
+        return string( actor.view() );
     }
 
     string ServiceAuditLog::makeOperatorActor( uint64 operatorID )
     {
-        return operatorID == 0 ? string( kSystemActor ) : "gm." + ServiceKeyUtil::makeHex64( operatorID );
+        if ( operatorID == 0 )
+            return string( kSystemActor );
+        StringBuilder<constant::buffer::kMax64> actor;
+        actor.appendFormat( "gm.%#", ServiceKeyUtil::makeHex64( operatorID ) );
+        return string( actor.view() );
     }
 
     string ServiceAuditLog::makeKey( const ServiceAuditEntry& entry, uint64 uniqueHigh, uint64 uniqueLow )

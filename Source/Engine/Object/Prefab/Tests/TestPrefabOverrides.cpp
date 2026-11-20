@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/Component/ComponentStableKey.h"
@@ -209,9 +210,10 @@ SW_TEST_CASE( PrefabOverridesTest, OverrideOfAGoneComponentIsWarnedAndDropped )
 SW_TEST_CASE( PrefabOverridesTest, OverrideOfAnotherTypeIsDropped )
 {
     SW_EXPECT_LOG( "Prefab.OverrideComponentDropped" );
-    const string overrides = "<PrefabOverrides><Override key=\"" + Util::keyOfBase( 0 ) + "\"><LightComponent _mesh=\"x\"/></Override></PrefabOverrides>";
-    XMLDocument  doc;
-    Util::build( doc, overrides );
+    StringBuilder<constant::buffer::kMax256> overrides;
+    overrides.appendFormat( "<PrefabOverrides><Override key=\"%#\"><LightComponent _mesh=\"x\"/></Override></PrefabOverrides>", Util::keyOfBase( 0 ) );
+    XMLDocument doc;
+    Util::build( doc, overrides.view() );
     SW_EXPECT_TRUE( string_view( Util::findComponent( doc, 0 ).findAttribute( "_mesh" ) ) == "body.mesh" );
 }
 

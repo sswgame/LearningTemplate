@@ -19,16 +19,18 @@ namespace
     {
         static string makeBase( const utf8* pPosition )
         {
-            string text = "<Prefab formatVersion=\"0\" name=\"Base\"><GameObject _schemaVersion=\"0\" _name=\"Base\" _bActive=\"true\"><_listComponent>"
-                          "<SceneComponent _componentName=\"Root\" _localID=\"1\" _bActive=\"true\" _localScale=\"2,2,2\" _localPosition=\"";
-            text += pPosition;
-            text += "\" /></_listComponent></GameObject></Prefab>";
-            return text;
+            StringBuilder<constant::buffer::kMax512> builder;
+            builder.appendFormat( "<Prefab formatVersion=\"0\" name=\"Base\"><GameObject _schemaVersion=\"0\" _name=\"Base\" _bActive=\"true\"><_listComponent>"
+                                  "<SceneComponent _componentName=\"Root\" _localID=\"1\" _bActive=\"true\" _localScale=\"2,2,2\" _localPosition=\"%#\" /></_listComponent></GameObject></Prefab>",
+                                  pPosition );
+            return string( builder.view() );
         }
 
-        static string makeVariant( const string& baseID, const utf8* pOverrides )
+        static string makeVariant( const string& baseID, string_view overrides )
         {
-            return "<Prefab formatVersion=\"0\" _base=\"" + baseID + "\" name=\"Child\">" + pOverrides + "</Prefab>";
+            StringBuilder<constant::buffer::kMax512> builder;
+            builder.appendFormat( "<Prefab formatVersion=\"0\" _base=\"%#\" name=\"Child\">%#</Prefab>", baseID, overrides );
+            return string( builder.view() );
         }
 
         static constexpr const utf8* kMoveRoot = "<PrefabOverrides><Override key=\"#0000000000000001\"><SceneComponent _localPosition=\"9,9,9\" /></Override></PrefabOverrides>";
@@ -214,11 +216,14 @@ SW_TEST_CASE( PrefabVariantTest, NestedInstancesAreInherited )
     const string                    partID = test::ScopedScratchDomain::makeID( "part.prefab.xml" ).str();
     const string                    baseID = test::ScopedScratchDomain::makeID( "nestedbase.prefab.xml" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "part.prefab.xml" ), Util::makeBase( "0,0,0" ) ) );
-    string baseText = Util::makeBase( "1,2,3" );
-    baseText.insert( baseText.rfind( "</Prefab>" ), "<PrefabInstance name=\"Inherited\" prefab=\"" + partID + "\" localID=\"#0000000000000001\" />" );
+    string                                   baseText = Util::makeBase( "1,2,3" );
+    StringBuilder<constant::buffer::kMax256> inheritedNode;
+    inheritedNode.appendFormat( "<PrefabInstance name=\"Inherited\" prefab=\"%#\" localID=\"#0000000000000001\" />", partID );
+    baseText.insert( baseText.rfind( "</Prefab>" ), inheritedNode.c_str(), inheritedNode.size() );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "nestedbase.prefab.xml" ), baseText ) );
-    const string ownNode = "<PrefabInstance name=\"Own\" prefab=\"" + partID + "\" localID=\"#0000000000000002\" />";
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "child.prefab.xml" ), Util::makeVariant( baseID, ownNode.c_str() ) ) );
+    StringBuilder<constant::buffer::kMax256> ownNode;
+    ownNode.appendFormat( "<PrefabInstance name=\"Own\" prefab=\"%#\" localID=\"#0000000000000002\" />", partID );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "child.prefab.xml" ), Util::makeVariant( baseID, ownNode.view() ) ) );
 
     PrefabAsset asset;
     SW_REQUIRE_TRUE( asset.loadFromDiskFile( domain.makeDiskPath( "child.prefab.xml" ) ) );

@@ -6,6 +6,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
@@ -397,7 +398,9 @@ namespace sw::editor
             if ( ImGui::IsWindowAppearing() )
                 ImGui::SetKeyboardFocusHere();
             EditorChrome::setNextItemWidthColumns( 29.0f );
-            const bool bSubmitted = EditorWidgets::drawHintField( "##commentTitle", _renameText, SW_LOCKEY( "EdCommon", "GraphCommentHint" ), ( _markScope + ".comment.title" ).c_str(), true )._bSubmitted;
+            fixed_string<constant::buffer::kMax256> titleMark;
+            formatstring( titleMark.data(), titleMark.capacity(), "%#.comment.title", _markScope );
+            const bool bSubmitted = EditorWidgets::drawHintField( "##commentTitle", _renameText, SW_LOCKEY( "EdCommon", "GraphCommentHint" ), titleMark.c_str(), true )._bSubmitted;
             if ( bSubmitted || ImGui::IsItemDeactivatedAfterEdit() )
             {
                 for ( GraphCommentBox& comment : listComment )
@@ -758,7 +761,9 @@ namespace sw::editor
             if ( ImGui::IsWindowAppearing() )
                 ImGui::SetKeyboardFocusHere();
             EditorChrome::setNextItemWidthColumns( 29.0f );
-            const bool     bEnter = EditorWidgets::drawHintField( "##addNodeSearch", _addNodeFilter, SW_LOCKEY( "EdCommon", "SearchNodesHint" ), ( _markScope + ".addNode.search" ).c_str(), true )._bSubmitted;
+            fixed_string<constant::buffer::kMax256> searchMark;
+            formatstring( searchMark.data(), searchMark.capacity(), "%#.addNode.search", _markScope );
+            const bool     bEnter = EditorWidgets::drawHintField( "##addNodeSearch", _addNodeFilter, SW_LOCKEY( "EdCommon", "SearchNodesHint" ), searchMark.c_str(), true )._bSubmitted;
             vector<uint32> listIndex;
             EditorNodeGraphRules::filterNodeKinds( listKind, _addNodeFilter.c_str(), listIndex );
             const utf8* pLastCategory = nullptr;

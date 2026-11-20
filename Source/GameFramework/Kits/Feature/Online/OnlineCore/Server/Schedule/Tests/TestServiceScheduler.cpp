@@ -439,10 +439,14 @@ SW_TEST_CASE( ServiceTTLTest, IndexGroupExpiresPrefix )
     TTLFixture rig;
     for ( int32 index = 0; index < 100; ++index )
     {
-        rig.put( "ch/" + ServiceKeyUtil::makeHex64( static_cast<uint64>( index ) ), kNowMs - 5000 + index );
+        fixed_string<constant::buffer::kMax32> key;
+        formatstring( key.data(), key.capacity(), "ch/%#", ServiceKeyUtil::makeHex64( static_cast<uint64>( index ) ) );
+        rig.put( key.view(), kNowMs - 5000 + index );
     }
-    rig.put( "ch/" + ServiceKeyUtil::makeHex64( 1000 ), kNowMs - 10 ); // 기간 안이다
-    rig.put( "other/a", kNowMs - 5000 );                               // 다른 묶음이다
+    fixed_string<constant::buffer::kMax32> inWindowKey;
+    formatstring( inWindowKey.data(), inWindowKey.capacity(), "ch/%#", ServiceKeyUtil::makeHex64( 1000 ) );
+    rig.put( inWindowKey.view(), kNowMs - 10 ); // 기간 안이다
+    rig.put( "other/a", kNowMs - 5000 );        // 다른 묶음이다
     rig.putIndex( kNowMs - 2000, "ch/" );
 
     ServiceTTLRule        rule = rig.makeIndexRule();
@@ -459,7 +463,9 @@ SW_TEST_CASE( ServiceTTLTest, IndexGroupResumesAfterLimit )
     TTLFixture rig;
     for ( int32 index = 0; index < 100; ++index )
     {
-        rig.put( "ch/" + ServiceKeyUtil::makeHex64( static_cast<uint64>( index ) ), kNowMs - 5000 );
+        fixed_string<constant::buffer::kMax32> key;
+        formatstring( key.data(), key.capacity(), "ch/%#", ServiceKeyUtil::makeHex64( static_cast<uint64>( index ) ) );
+        rig.put( key.view(), kNowMs - 5000 );
     }
     rig.putIndex( kNowMs - 2000, "ch/" );
     ServiceTTLRule        rule = rig.makeIndexRule();

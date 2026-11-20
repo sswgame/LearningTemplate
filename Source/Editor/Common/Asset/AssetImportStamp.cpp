@@ -102,17 +102,13 @@ namespace sw::editor
             /** @brief 스탬프 본문입니다. 줄은 경로 순이라 같은 테이블은 같은 바이트입니다. */
             static string makeStampText( string_view header, const map<string, StampEntry>& mapEntry )
             {
-                string text = string( header ) + "\n";
+                StringBuilder<constant::buffer::kMax4096> text;
+                text.appendFormat( "%#\n", header );
                 for ( const auto& [relativePath, entry] : mapEntry )
                 {
-                    text += formatHash( entry._sourceHash );
-                    text += ' ';
-                    text += formatHash( entry._importedHash );
-                    text += ' ';
-                    text += relativePath;
-                    text += '\n';
+                    text.appendFormat( "%# %# %#\n", formatHash( entry._sourceHash ), formatHash( entry._importedHash ), relativePath );
                 }
-                return text;
+                return string( text.view() );
             }
 
             /** @brief 원본 하나가 스탬프와 어긋난 이유입니다. 맞으면 빈 문자열입니다. */
@@ -120,14 +116,21 @@ namespace sw::editor
             {
                 if ( current._sourceHash == 0 )
                     return "원본을 읽지 못했습니다";
+                StringBuilder<constant::buffer::kMax256> reasonBuilder;
                 if ( current._importedHash == 0 )
-                    return string( importedLabel ) + " 가 없습니다";
+                {
+                    reasonBuilder.appendFormat( "%# 가 없습니다", importedLabel );
+                    return string( reasonBuilder.view() );
+                }
                 if ( pStamped == nullptr )
                     return "스탬프에 없습니다 (임포트된 적이 없습니다)";
                 if ( pStamped->_sourceHash != current._sourceHash )
                     return "원본이나 규칙이 바뀌었는데 다시 임포트하지 않았습니다";
                 if ( pStamped->_importedHash != current._importedHash )
-                    return string( importedLabel ) + " 가 임포트된 결과와 다릅니다 (손으로 바꿨습니다)";
+                {
+                    reasonBuilder.appendFormat( "%# 가 임포트된 결과와 다릅니다 (손으로 바꿨습니다)", importedLabel );
+                    return string( reasonBuilder.view() );
+                }
                 return {};
             }
 
@@ -147,7 +150,11 @@ namespace sw::editor
                         return;
                 }
                 if ( FileUtil::writeTextFile( stampPath, stampText ) == false )
-                    inoutSummary._listProblem.push_back( "스탬프를 쓰지 못했습니다: " + stampPath );
+                {
+                    StringBuilder<constant::buffer::kMax512> problemBuilder;
+                    problemBuilder.appendFormat( "스탬프를 쓰지 못했습니다: %#", stampPath );
+                    inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
+                }
             }
 
             /** @brief 원본 파일 하나의 입력입니다. 준비 단계(직렬)가 채우고, 병렬 구간에서는 읽기만 합니다. */
@@ -277,7 +284,9 @@ namespace sw::editor
                 const string base = makeCacheNameBase( importer, file );
                 for ( const Entry& entry : listEntry )
                 {
-                    const string path   = base + entry._name;
+                    StringBuilder<constant::buffer::kMax256> pathBuilder;
+                    pathBuilder.appendFormat( "%#%#", base, entry._name );
+                    const string path( pathBuilder.view() );
                     const uint8* pBytes = payload.data() + entry._offset;
                     const bool   bWritten =
                         isSharedStorePath( path ) ? ImportedAssetStore::writeIfAbsent( path, pBytes, entry._size )
@@ -341,7 +350,9 @@ namespace sw::editor
                     const utf8* const pUnsupportedReason = _pImporter->findUnsupportedReason( file._sourcePath );
                     if ( pUnsupportedReason != nullptr )
                     {
-                        outResult._problem = file._assetPath + ": " + pUnsupportedReason;
+                        StringBuilder<constant::buffer::kMax512> problemBuilder;
+                        problemBuilder.appendFormat( "%#: %#", file._assetPath, pUnsupportedReason );
+                        outResult._problem = string( problemBuilder.view() );
                         return;
                     }
 
@@ -360,7 +371,9 @@ namespace sw::editor
 
                     if ( _mode == AssetImportMode::CheckOnly )
                     {
-                        outResult._problem = file._assetPath + ": " + reason;
+                        StringBuilder<constant::buffer::kMax512> problemBuilder;
+                        problemBuilder.appendFormat( "%#: %#", file._assetPath, reason );
+                        outResult._problem = string( problemBuilder.view() );
                         return;
                     }
 
@@ -371,7 +384,9 @@ namespace sw::editor
                         const uint64 codeFingerprint = _pImporter->findCodeFingerprint();
                         if ( codeFingerprint == 0 )
                         {
-                            outResult._problem = file._assetPath + ": 임포터 코드 지문이 없습니다 - Config/Dev/CookCodeInputs.json 에 임포터를 적습니다";
+                            StringBuilder<constant::buffer::kMax512> problemBuilder;
+                            problemBuilder.appendFormat( "%#: 임포터 코드 지문이 없습니다 - Config/Dev/CookCodeInputs.json 에 임포터를 적습니다", file._assetPath );
+                            outResult._problem = string( problemBuilder.view() );
                             return;
                         }
                         cacheKeyDescription = makeCacheKeyDescription( *_pImporter, file, current._sourceHash, codeFingerprint );
@@ -381,7 +396,9 @@ namespace sw::editor
                     {
                         if ( _pImporter->importSource( file._sourcePath, file._importedPath, file._assetPath ) == false )
                         {
-                            outResult._problem = file._assetPath + ": 임포트하지 못했습니다";
+                            StringBuilder<constant::buffer::kMax512> problemBuilder;
+                            problemBuilder.appendFormat( "%#: 임포트하지 못했습니다", file._assetPath );
+                            outResult._problem = string( problemBuilder.view() );
                             return;
                         }
                         if ( cacheKeyDescription.empty() == false )
@@ -602,7 +619,9 @@ namespace sw::editor
                         continue; // 원본은 있다 — 위에서 어긋남 · 실패로 이미 보고했다
                     if ( mode == AssetImportMode::CheckOnly )
                     {
-                        inoutSummary._listProblem.push_back( sourcePath.substr( rootDir.size() + 1 ) + ": 원본이 없는데 스탬프에 남아 있습니다" );
+                        StringBuilder<constant::buffer::kMax512> problemBuilder;
+                        problemBuilder.appendFormat( "%#: 원본이 없는데 스탬프에 남아 있습니다", string_view( sourcePath ).substr( rootDir.size() + 1 ) );
+                        inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                         continue;
                     }
                     if ( bLiveAncestorBuilt == false )
@@ -636,11 +655,19 @@ namespace sw::editor
                 if ( footprint.empty() )
                     return;
                 if ( FileUtil::removeFile( importedPath ) == false )
-                    inoutSummary._listProblem.push_back( importedPath + ": 원본이 사라진 결과를 지우지 못했습니다" );
+                {
+                    StringBuilder<constant::buffer::kMax512> problemBuilder;
+                    problemBuilder.appendFormat( "%#: 원본이 사라진 결과를 지우지 못했습니다", importedPath );
+                    inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
+                }
                 const string sideFolder = FileUtil::removeExtension( importedPath );
                 const bool   bShared    = uniqueLiveAncestor.contains( footprint );
                 if ( bShared == false && FileUtil::isDirectory( sideFolder ) && FileUtil::removeDirectory( sideFolder ) == false )
-                    inoutSummary._listProblem.push_back( sideFolder + ": 원본이 사라진 결과의 옆 폴더를 지우지 못했습니다" );
+                {
+                    StringBuilder<constant::buffer::kMax512> problemBuilder;
+                    problemBuilder.appendFormat( "%#: 원본이 사라진 결과의 옆 폴더를 지우지 못했습니다", sideFolder );
+                    inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
+                }
                 SW_LOG_INFO_ID( "AssetImportStamp.RemovedOrphanedResult", "Removed '%#' - its source is gone", importedPath );
             }
 
@@ -668,7 +695,9 @@ namespace sw::editor
                 // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 임포트하지 않는다(EditorContentScan 이 뺀다)
                 if ( rootDir.empty() || EditorContentScan::collectFolders( rootDir, listFolder, true ) == false )
                 {
-                    summary._listProblem.push_back( "리소스 루트를 훑지 못했습니다: " + rootDir );
+                    StringBuilder<constant::buffer::kMax512> problemBuilder;
+                    problemBuilder.appendFormat( "리소스 루트를 훑지 못했습니다: %#", rootDir );
+                    summary._listProblem.push_back( string( problemBuilder.view() ) );
                     return summary;
                 }
 

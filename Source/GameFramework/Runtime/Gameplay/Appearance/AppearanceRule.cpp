@@ -98,53 +98,40 @@ namespace sw
                     AppearanceXMLUtil::readNameList( node, pBodyShape != nullptr ? "bodyShape" : "bodyType", outCondition._listName );
                 }
                 // 속성은 공통 어휘의 줄임말이다.
-                string text = outCondition._bNegate == SW_TRUE ? "!" : "";
+                StringBuilder<constant::buffer::kMax256> text;
+                if ( outCondition._bNegate == SW_TRUE )
+                    text.append( '!' );
                 switch ( outCondition._kind )
                 {
                     case AppearanceRuleConditionKind::TargetTag:
-                    {
-                        StringBuilder<constant::buffer::kMax256> textPart4;
-                        textPart4.appendFormat( "targetTag(%#, %#)", outCondition._target.c_str(), params._tag.c_str() );
-                        text += textPart4.c_str();
-                    }
-                    break;
+                        text.appendFormat( "targetTag(%#, %#)", outCondition._target.c_str(), params._tag.c_str() );
+                        break;
                     case AppearanceRuleConditionKind::AnyTag:
-                    {
-                        StringBuilder<constant::buffer::kMax256> textPart3;
-                        textPart3.appendFormat( "anyTag(%#)", params._tag.c_str() );
-                        text += textPart3.c_str();
-                    }
-                    break;
+                        text.appendFormat( "anyTag(%#)", params._tag.c_str() );
+                        break;
                     case AppearanceRuleConditionKind::CharacterTag:
-                    {
-                        StringBuilder<constant::buffer::kMax256> textPart2;
-                        textPart2.appendFormat( "tag(%#)", params._characterTag.c_str() );
-                        text += textPart2.c_str();
-                    }
-                    break;
+                        text.appendFormat( "tag(%#)", params._characterTag.c_str() );
+                        break;
                     case AppearanceRuleConditionKind::Occupied:
-                    {
-                        StringBuilder<constant::buffer::kMax256> textPart;
-                        textPart.appendFormat( "occupied(%#)", outCondition._target.c_str() );
-                        text += textPart.c_str();
-                    }
-                    break;
+                        text.appendFormat( "occupied(%#)", outCondition._target.c_str() );
+                        break;
                     case AppearanceRuleConditionKind::BodyShape:
                     case AppearanceRuleConditionKind::BodyType:
                     {
-                        text += outCondition._kind == AppearanceRuleConditionKind::BodyShape ? "bodyShape(" : "bodyType(";
+                        text.append( outCondition._kind == AppearanceRuleConditionKind::BodyShape ? "bodyShape(" : "bodyType(" );
                         for ( size_t nameIndex = 0; nameIndex < outCondition._listName.size(); ++nameIndex )
                         {
-                            text += nameIndex == 0 ? "" : ", ";
-                            text += outCondition._listName[nameIndex].c_str();
+                            if ( nameIndex > 0 )
+                                text.append( ", " );
+                            text.append( outCondition._listName[nameIndex].c_str() );
                         }
-                        text += ")";
+                        text.append( ')' );
                         break;
                     }
                 }
                 if ( outCondition._kind == AppearanceRuleConditionKind::Occupied && outCondition._target.empty() )
                     return false; // 빈 슬롯 이름은 위에서 알렸다
-                if ( ConditionExpr::compile( text, sourceName, outCondition._expr ) == false )
+                if ( ConditionExpr::compile( text.view(), sourceName, outCondition._expr ) == false )
                 {
                     report.addErrorWithID( "Appearance.RuleConditionInvalid", "%#: rule '%#' <When> could not be read", sourceName, ruleID.c_str() );
                     return false;

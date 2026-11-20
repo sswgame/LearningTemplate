@@ -30,16 +30,25 @@ namespace
         /** @brief 지난 실행 @p sessionID 가 남겼을 파일(컨텍스트 · 덤프 · 빵부스러기 · 그 세션의 로그)을 놓습니다. */
         void placeCrash( string_view sessionID ) const
         {
-            const string session( sessionID );
-            (void)FileUtil::writeTextFile( FileUtil::joinPath( _crashFolder, "crash_" + session + ".txt" ), "reason : boom\nBuildID : b1\n" );
-            (void)FileUtil::writeTextFile( FileUtil::joinPath( _crashFolder, "crash_" + session + ".dmp" ), "dump" );
-            (void)FileUtil::writeTextFile( FileUtil::joinPath( _crashFolder, "crash_" + session + ".breadcrumbs.txt" ), "one\ntwo\n" );
-            (void)FileUtil::writeTextFile( FileUtil::joinPath( _crashFolder, "App_" + session + ".txt" ), "session log" );
+            StringBuilder<constant::buffer::kMax128> fileName;
+            fileName.appendFormat( "crash_%#.txt", sessionID );
+            (void)FileUtil::writeTextFile( FileUtil::joinPath( _crashFolder, fileName.view() ), "reason : boom\nBuildID : b1\n" );
+            fileName.clear();
+            fileName.appendFormat( "crash_%#.dmp", sessionID );
+            (void)FileUtil::writeTextFile( FileUtil::joinPath( _crashFolder, fileName.view() ), "dump" );
+            fileName.clear();
+            fileName.appendFormat( "crash_%#.breadcrumbs.txt", sessionID );
+            (void)FileUtil::writeTextFile( FileUtil::joinPath( _crashFolder, fileName.view() ), "one\ntwo\n" );
+            fileName.clear();
+            fileName.appendFormat( "App_%#.txt", sessionID );
+            (void)FileUtil::writeTextFile( FileUtil::joinPath( _crashFolder, fileName.view() ), "session log" );
         }
 
         [[nodiscard]] string makeBundleFile( string_view sessionID, string_view fileName ) const
         {
-            return FileUtil::joinPath( FileUtil::joinPath( _reportsFolder, "crash_" + string( sessionID ) ), fileName );
+            StringBuilder<constant::buffer::kMax128> bundleName;
+            bundleName.appendFormat( "crash_%#", sessionID );
+            return FileUtil::joinPath( FileUtil::joinPath( _reportsFolder, bundleName.view() ), fileName );
         }
 
         /** @brief 묶음 하나뿐일 때 그 요약입니다. */
@@ -179,7 +188,9 @@ SW_TEST_CASE_F( CrashReportServiceTest, ReportCapRemovesTheExtraBundles )
     const uint32 count = CrashReportService::kMaxReports + 2;
     for ( uint32 index = 0; index < count; ++index )
     {
-        placeCrash( "s" + to_string( index ) );
+        fixed_string<constant::buffer::kMax32> sessionID;
+        formatstring( sessionID.data(), sessionID.capacity(), "s%#", index );
+        placeCrash( sessionID );
     }
 
     SW_EXPECT_EQUAL( _service.collectNewCrashes(), count );

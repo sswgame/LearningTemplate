@@ -7,6 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
@@ -163,7 +164,9 @@ namespace sw
                 const DebugHUDSectionRegistration* pRegistration = engine::getSubsystem<DebugHUDRegistry>().findSection( listArgument[0] );
                 if ( pRegistration == nullptr || pRegistration->isUserSection() == false )
                 {
-                    outReply = "unknown section '" + listArgument[0] + "' - sections: ";
+                    StringBuilder<constant::buffer::kMax256> reply;
+                    reply.appendFormat( "unknown section '%#' - sections: ", listArgument[0] );
+                    outReply = string( reply.view() );
                     appendSectionList( outReply );
                     return false;
                 }
@@ -173,7 +176,9 @@ namespace sw
                 (void)hud.setSectionShown( pRegistration->_pName, bShown ); // 방금 레지스트리에서 찾은 이름이다
                 if ( bShown )
                     hud.setShown( true ); // 섹션을 켜면 HUD 도 보인다(언리얼 `stat fps` 와 같다)
-                outReply = string( "debug HUD section " ) + pRegistration->_pName + ( bShown ? " on" : " off" );
+                fixed_string<constant::buffer::kMax128> reply;
+                formatstring( reply.data(), reply.capacity(), "debug HUD section %# %#", pRegistration->_pName, bShown ? "on" : "off" );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -209,7 +214,9 @@ namespace sw
                     if ( listArgument.size() < 2 || DebugHUD::tryParseCorner( listArgument[1], corner ) == false )
                         return false;
                     pHUD->setCorner( corner );
-                    outReply = string( "debug HUD corner " ) + DebugHUD::getCornerName( corner );
+                    fixed_string<constant::buffer::kMax64> reply;
+                    formatstring( reply.data(), reply.capacity(), "debug HUD corner %#", DebugHUD::getCornerName( corner ) );
+                    outReply = string( reply.view() );
                     return true;
                 }
                 if ( StringUtil::equals( word, "opacity", true ) )
@@ -218,7 +225,9 @@ namespace sw
                     if ( listArgument.size() < 2 || StringUtil::parseFloat( listArgument[1], opacity ) == false )
                         return false;
                     pHUD->setOpacity( opacity );
-                    outReply = "debug HUD opacity " + DebugHUDInternal::makeFloatText( DebugHUD::getOpacity() );
+                    fixed_string<constant::buffer::kMax64> reply;
+                    formatstring( reply.data(), reply.capacity(), "debug HUD opacity %#", DebugHUDInternal::makeFloatText( DebugHUD::getOpacity() ) );
+                    outReply = string( reply.view() );
                     return true;
                 }
                 return runSectionCommand( *pHUD, listArgument, outReply );
@@ -639,10 +648,9 @@ namespace sw
                     checkBox->setName( hashed_string( DebugHUDInternal::makeSectionWidgetName( pRegistration->_pName ) ) );
                     const bool bShown = DebugHUD::isSectionShown( *pRegistration );
                     checkBox->setChecked( bShown );
-                    string label( pRegistration->_pName );
-                    label += "  -  ";
-                    label += pRegistration->_pTitle;
-                    (void)checkBox->addChild( DebugHUDInternal::makeText( label, DebugHUDInternal::kLineFontSize + 2.0f, DebugHUDInternal::kValueColor ) );
+                    fixed_string<constant::buffer::kMax256> label;
+                    formatstring( label.data(), label.capacity(), "%#  -  %#", pRegistration->_pName, pRegistration->_pTitle );
+                    (void)checkBox->addChild( DebugHUDInternal::makeText( label.view(), DebugHUDInternal::kLineFontSize + 2.0f, DebugHUDInternal::kValueColor ) );
                     _listSectionName.push_back( string( pRegistration->_pName ) );
                     _listCheckBox.push_back( checkBox->getID() );
                     _listLastChecked.push_back( bShown ? SW_TRUE : SW_FALSE );

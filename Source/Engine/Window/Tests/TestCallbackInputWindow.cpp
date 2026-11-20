@@ -84,8 +84,10 @@ SW_TEST_CASE( CallbackInputWindowTest, TextInputKeepsOrderWithKeys )
             listReceived.emplace_back( reinterpret_cast<const PlatformInputEvent*>( event._lParam )->_kind == PlatformInputKind::KeyDown ? "down" : "up" );
         if ( event._message == NativeWindowEvent::kMessageTextInput && event._lParam != 0 )
         {
-            const WindowTextInputEvent& text = *reinterpret_cast<const WindowTextInputEvent*>( event._lParam );
-            listReceived.push_back( string( text._kind == WindowTextInputKind::Commit ? "commit:" : "composition:" ) + string( text._text ) );
+            const WindowTextInputEvent&              text = *reinterpret_cast<const WindowTextInputEvent*>( event._lParam );
+            StringBuilder<constant::buffer::kMax256> received;
+            received.appendFormat( "%#%#", text._kind == WindowTextInputKind::Commit ? "commit:" : "composition:", text._text );
+            listReceived.emplace_back( received.view() );
         }
         return true;
     } ) );
@@ -104,7 +106,9 @@ SW_TEST_CASE( CallbackInputWindowTest, TextInputKeepsOrderWithKeys )
     SW_EXPECT_TRUE( listReceived[0] == "commit:x" );
     SW_EXPECT_TRUE( listReceived[1] == "down" );
     SW_EXPECT_TRUE( listReceived[2] == "composition:\xED\x95\x9C" );
-    SW_EXPECT_TRUE( string_view( listReceived[3] ) == string_view( "commit:" + longCommit ) );
+    StringBuilder<constant::buffer::kMax256> expectedCommit;
+    expectedCommit.appendFormat( "commit:%#", longCommit );
+    SW_EXPECT_TRUE( string_view( listReceived[3] ) == expectedCommit.view() );
     SW_EXPECT_TRUE( listReceived[4] == "up" );
     SW_EXPECT_TRUE( listReceived[5] == "composition:" );
 

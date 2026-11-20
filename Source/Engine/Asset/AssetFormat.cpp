@@ -68,9 +68,10 @@ namespace sw
 
     bool AssetCookPath::isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
     {
-        if ( activePackRoot.empty() || FileUtil::startsWithPathComponent( relativePath, constant::path::kGamePack ) == false )
+        const PathKey key = FileUtil::normalizePath( relativePath ); // 리소스 id 구간 판정 — 팩 뿌리(`game/<팩>`)는 늘 소문자다
+        if ( activePackRoot.empty() || FileUtil::startsWithPathComponent( key, constant::path::kGamePack ) == false )
             return false;
-        return FileUtil::startsWithPathComponent( relativePath, activePackRoot ) == false;
+        return FileUtil::startsWithPathComponent( key, activePackRoot ) == false;
     }
 
     string AssetCookPath::toSourcePath( string_view path, const AssetTypeDef& type )
@@ -83,17 +84,23 @@ namespace sw
             return string( path );
 
         // 같은 종류의 쿠킹하지 않는 이름(쿠킹본 · 확장자 없는 이름)은 그 접미사를 원본으로 바꾼다.
-        const AssetSuffixMatch match       = AssetTypeRegistry::findSuffix( path );
-        const bool             bSameType   = match.isMatched() && match._pType->_name == type._name;
-        const bool             bCookedName = bSameType && ( match._pSuffix->_role == AssetSuffixRole::Cooked || match._pSuffix->_role == AssetSuffixRole::CookedAlias );
+        const AssetSuffixMatch                   match       = AssetTypeRegistry::findSuffix( path );
+        const bool                               bSameType   = match.isMatched() && match._pType->_name == type._name;
+        const bool                               bCookedName = bSameType && ( match._pSuffix->_role == AssetSuffixRole::Cooked || match._pSuffix->_role == AssetSuffixRole::CookedAlias );
+        StringBuilder<constant::buffer::kMax512> builder;
         if ( bCookedName )
-            return string( path.substr( 0, path.size() - match._pSuffix->_text.size() ) ) + string( canonical );
+        {
+            builder.appendFormat( "%#%#", path.substr( 0, path.size() - match._pSuffix->_text.size() ), canonical );
+            return string( builder.view() );
+        }
 
         // 끝의 확장자가 원본의 마지막 확장자(`.xml`)와 같으면 그 자리에 넣는다 — `level.xml` → `level.scene.xml`.
         const string_view lastExtension = canonical.substr( canonical.rfind( '.' ) );
         if ( StringUtil::endsWith( path, lastExtension, true ) )
-            return string( path.substr( 0, path.size() - lastExtension.size() ) ) + string( canonical );
-        return string( path ) + string( canonical );
+            builder.appendFormat( "%#%#", path.substr( 0, path.size() - lastExtension.size() ), canonical );
+        else
+            builder.appendFormat( "%#%#", path, canonical );
+        return string( builder.view() );
     }
 
     AssetFormatVersion AssetXMLFormat::readXMLVersion( XMLNode root )

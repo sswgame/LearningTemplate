@@ -45,15 +45,18 @@ namespace sw
 
     void SceneSubLevelSubsystem::makeMemberNodes( const SceneDocument& doc, string_view name, const uint64 anchorFileID, vector<SceneDocument::SceneObjectNode>& outListNode )
     {
-        outListNode        = doc._listSceneObjectNode;
-        const uint64 scope = SceneDocument::computeInstanceIDScope( anchorFileID );
+        outListNode                                    = doc._listSceneObjectNode;
+        const uint64                             scope = SceneDocument::computeInstanceIDScope( anchorFileID );
+        StringBuilder<constant::buffer::kMax256> memberName;
         for ( SceneDocument::SceneObjectNode& member : outListNode )
         {
             member._instanceAnchorFileID = member._instanceAnchorFileID == 0 ? anchorFileID : ( member._instanceAnchorFileID ^ scope );
             member._fileID ^= scope;
             member._idScope ^= scope;            // 글 상태의 참조(내부 id → 평평한 id)
             member._cookedStateIDScope ^= scope; // 쿠킹된 바이너리 상태의 참조(쿠킹본 안에서 이미 평평한 id → 이 하위 레벨의 id)
-            member._name = string{ name } + SceneSubLevelInternal::kNameSeparator + member._name;
+            memberName.clear();
+            memberName.appendFormat( "%#%#%#", name, SceneSubLevelInternal::kNameSeparator, member._name );
+            member._name = string( memberName.view() );
         }
     }
 

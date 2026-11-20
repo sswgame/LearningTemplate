@@ -40,10 +40,20 @@ namespace sw::editor
             static constexpr uint32 kSplatImporterVersion = 2;
 
             /** @brief 원본 옆의 구멍 마스크 경로(`x.png` → `x_holes.png`)입니다. */
-            static string makeHolePath( string_view sourcePath ) { return FileUtil::removeExtension( sourcePath ) + string( kHoleSuffix ) + ".png"; }
+            static string makeHolePath( string_view sourcePath )
+            {
+                StringBuilder<constant::buffer::kMax256> pathBuilder;
+                pathBuilder.appendFormat( "%#%#.png", FileUtil::removeExtension( sourcePath ), kHoleSuffix );
+                return string( pathBuilder.view() );
+            }
 
             /** @brief 스플랫 원본 옆의 레이어 4..7 파일 경로(`x_splat.png` → `x_splat1.png`)입니다. */
-            static string makeHighSplatPath( string_view sourcePath ) { return FileUtil::removeExtension( sourcePath ) + "1.png"; }
+            static string makeHighSplatPath( string_view sourcePath )
+            {
+                StringBuilder<constant::buffer::kMax256> pathBuilder;
+                pathBuilder.appendFormat( "%#1.png", FileUtil::removeExtension( sourcePath ) );
+                return string( pathBuilder.view() );
+            }
 
             /**
              * @brief 바뀐 파일(리소스 루트 기준)이 영향을 주는 원본의 경로 후보를 반환합니다. 곁 파일은 그것을 쓰는 원본으로 옮기고(원본 해시에 들어간다), 그 밖에는 그 파일 자신입니다.
@@ -55,13 +65,19 @@ namespace sw::editor
                 vector<string> listSource;
                 if ( StringUtil::endsWith( stem, kHoleSuffix, true ) )
                 {
-                    const string base = stem.substr( 0, stem.size() - kHoleSuffix.size() );
-                    listSource.push_back( base + ".png" );
-                    listSource.push_back( base + ".r16" );
+                    const string_view                        base = string_view( stem ).substr( 0, stem.size() - kHoleSuffix.size() );
+                    StringBuilder<constant::buffer::kMax256> pathBuilder;
+                    pathBuilder.appendFormat( "%#.png", base );
+                    listSource.push_back( string( pathBuilder.view() ) );
+                    pathBuilder.clear();
+                    pathBuilder.appendFormat( "%#.r16", base );
+                    listSource.push_back( string( pathBuilder.view() ) );
                 }
                 else if ( StringUtil::endsWith( stem, kSplatHighSuffix, true ) )
                 {
-                    listSource.push_back( stem.substr( 0, stem.size() - 1 ) + ".png" ); // `x_splat1` → `x_splat`
+                    StringBuilder<constant::buffer::kMax256> pathBuilder;
+                    pathBuilder.appendFormat( "%#.png", string_view( stem ).substr( 0, stem.size() - 1 ) ); // `x_splat1` → `x_splat`
+                    listSource.push_back( string( pathBuilder.view() ) );
                 }
                 else
                 {
@@ -228,9 +244,10 @@ namespace sw::editor
         if ( isSourceLayerWeights( rawPath ) == false )
             return {};
         // `x_splat.png` 의 결과는 높이장과 같은 이름 `x.layerweights` 다. 접미사를 제거하고 같은 경로로 바꾼다.
-        const string stem = FileUtil::removeExtension( rawPath );
-        const string name = stem.substr( 0, stem.size() - Internal::kSplatSuffix.size() ) + ".png";
-        return AssetImportStampUtil::makeImportedPath( name, Internal::kRawFolder, Internal::kImportedFolder, LayerWeightsAsset::kExtension );
+        const string                             stem = FileUtil::removeExtension( rawPath );
+        StringBuilder<constant::buffer::kMax256> nameBuilder;
+        nameBuilder.appendFormat( "%#.png", string_view( stem ).substr( 0, stem.size() - Internal::kSplatSuffix.size() ) );
+        return AssetImportStampUtil::makeImportedPath( nameBuilder.view(), Internal::kRawFolder, Internal::kImportedFolder, LayerWeightsAsset::kExtension );
     }
 
     bool HeightfieldImporter::readLayerWeights( string_view sourcePath, LayerWeightsAsset& outData )
@@ -403,7 +420,11 @@ namespace sw::editor
         const HeightfieldRawImporter     importer;
         const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
         if ( derivedDataCache.has_value() == false )
-            return AssetImportSummary::makeFailed( "DDC config: " + string( derivedDataCache.error().message() ) + " (" + string( derivedDataCache.error().detail() ) + ")" );
+        {
+            StringBuilder<constant::buffer::kMax512> problemBuilder;
+            problemBuilder.appendFormat( "DDC config: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
+            return AssetImportSummary::makeFailed( string( problemBuilder.view() ) );
+        }
         return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>(), *derivedDataCache ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
     }
 } // namespace sw::editor

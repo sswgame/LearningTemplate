@@ -46,7 +46,11 @@ namespace
             sw::string               text;
             const sw::expected<void> formatted = sw::TextFormatter::format( pattern, arguments, pCulture != nullptr ? *pCulture : empty, text );
             if ( formatted.has_value() == false )
-                text = "<error: " + sw::string( formatted.error().detail() ) + ">";
+            {
+                sw::StringBuilder<sw::constant::buffer::kMax256> builder;
+                builder.appendFormat( "<error: %#>", formatted.error().detail() );
+                text = sw::string( builder.view() );
+            }
             return text;
         }
 
@@ -235,16 +239,19 @@ SW_TEST_CASE( CultureDataTest, PluralSampleTextKeepsVisibleDigits )
  */
 SW_TEST_CASE( CultureDataTest, NewLanguageIsOneDataSheet )
 {
-    sw::CultureTable         table;
-    const sw::expected<void> loaded = table.loadFromXMLText( R"XML(<CultureTable>
+    sw::CultureTable                                table;
+    const sw::expected<void>                        loaded = table.loadFromXMLText( R"XML(<CultureTable>
   <numberingSystems><numberingSystem id="deva" digits="०१२३४५६७८९" /></numberingSystems>
   <currencies><currency code="INR" symbol="₹" digits="2" /></currencies>
   <cultures>
     <culture code="hi" digits="deva" nativeName="हिन्दी" currencyCode="INR" currencyPattern="¤#"><pluralRules one="i = 0 or n = 1 @integer 0, 1 @decimal 0.0~1.0, 0.00~0.04" other="@integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 1.1~2.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" /></culture>
   </cultures>
 </CultureTable>)XML",
-                                                             "hi.cultures.xml" );
-    SW_REQUIRE_TRUE_MSG( loaded.has_value(), loaded.has_value() ? sw::string{} : sw::string( loaded.error().message() ) + " (" + sw::string( loaded.error().detail() ) + ")" );
+                                                                                    "hi.cultures.xml" );
+    sw::fixed_string<sw::constant::buffer::kMax512> loadError;
+    if ( loaded.has_value() == false )
+        sw::formatstring( loadError.data(), loadError.capacity(), "%# (%#)", loaded.error().message(), loaded.error().detail() );
+    SW_REQUIRE_TRUE_MSG( loaded.has_value(), loadError );
     const sw::CultureInfo* pHindi = table.findCulture( "hi" );
     SW_REQUIRE_NOT_NULL( pHindi );
     SW_EXPECT_EQUAL( sw::string( "१,२३४" ), pHindi->formatInteger( 1234 ) );
@@ -262,23 +269,31 @@ SW_TEST_CASE( CultureDataTest, MalformedDataIsALoadError )
         sw::CultureTable         table;
         const sw::expected<void> loaded = table.loadFromXMLText( xml, "bad.cultures.xml" );
         SW_EXPECT_FALSE( loaded );
-        const sw::string error = loaded.has_value() ? sw::string{} : sw::string( loaded.error().message() ) + " (" + sw::string( loaded.error().detail() ) + ")";
-        SW_EXPECT_TRUE_MSG( error.find( sw::string( expectedWord ) ) != sw::string::npos, error.c_str() );
+        sw::fixed_string<sw::constant::buffer::kMax512> error;
+        if ( loaded.has_value() == false )
+            sw::formatstring( error.data(), error.capacity(), "%# (%#)", loaded.error().message(), loaded.error().detail() );
+        SW_EXPECT_TRUE_MSG( error.view().find( expectedWord ) != sw::string_view::npos, error.c_str() );
         SW_EXPECT_EQUAL( size_t( 0 ), table.getCultureCount() );
     };
-    constexpr const utf8* kLatin = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
-    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = = 1" /></culture></cultures></CultureTable>)", "one rule" );
-    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules several="n = 1 @integer 1" /></culture></cultures></CultureTable>)", "unknown plural category" );
-    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules other="n = 1 @integer 1" /></culture></cultures></CultureTable>)", "samples only" );
-    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules one="w = 0 @integer 0" /></culture></cultures></CultureTable>)", "operand" );
+    static constexpr const utf8* kLatin       = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
+    const auto                   rejectsLatin = [&rejects]( sw::string_view cultures, sw::string_view expectedWord )
+    {
+        sw::StringBuilder<sw::constant::buffer::kMax512> xml;
+        xml.appendFormat( "<CultureTable>%#%#</CultureTable>", kLatin, cultures );
+        rejects( xml.view(), expectedWord );
+    };
+    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = = 1" /></culture></cultures>)", "one rule" );
+    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules several="n = 1 @integer 1" /></culture></cultures>)", "unknown plural category" );
+    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules other="n = 1 @integer 1" /></culture></cultures>)", "samples only" );
+    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules one="w = 0 @integer 0" /></culture></cultures>)", "operand" );
     // CLDR 글은 보기째 붙여 넣는다 — 보기 없는 규칙, other 를 뺀 규칙, 보기와 어긋나게 고친 규칙(pl few 의 12..14 를 지운 것)은 읽기 오류다.
-    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = 1 and v = 0" other="@integer 0" /></culture></cultures></CultureTable>)", "samples" );
-    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = 1 and v = 0 @integer 1" /></culture></cultures></CultureTable>)", "other samples" );
-    rejects( sw::string( "<CultureTable>" ) + kLatin +
-                 R"(<cultures><culture code="xx" digits="latn"><pluralRules few="v = 0 and i % 10 = 2..4 @integer 2~4, 22~24" many="v = 0 and i % 100 = 12..14 @integer 12~14" other="@decimal 0.0~1.5" /></culture></cultures></CultureTable>)",
-             "does not match" );
-    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn" /></cultures></CultureTable>)", "pluralRules" );
-    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="thai"><pluralRules /></culture></cultures></CultureTable>)", "thai" );
+    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = 1 and v = 0" other="@integer 0" /></culture></cultures>)", "samples" );
+    rejectsLatin( R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = 1 and v = 0 @integer 1" /></culture></cultures>)", "other samples" );
+    rejectsLatin(
+        R"(<cultures><culture code="xx" digits="latn"><pluralRules few="v = 0 and i % 10 = 2..4 @integer 2~4, 22~24" many="v = 0 and i % 100 = 12..14 @integer 12~14" other="@decimal 0.0~1.5" /></culture></cultures>)",
+        "does not match" );
+    rejectsLatin( R"(<cultures><culture code="xx" digits="latn" /></cultures>)", "pluralRules" );
+    rejectsLatin( R"(<cultures><culture code="xx" digits="thai"><pluralRules /></culture></cultures>)", "thai" );
     rejects( R"(<CultureTable><numberingSystems><numberingSystem id="short" digits="012" /></numberingSystems><cultures /></CultureTable>)", "10 digits" );
     rejects( R"(<CultureTable><currencies><currency code="KRW" symbol="₩" /></currencies><cultures /></CultureTable>)", "currency" );
     rejects( R"(<CultureTable><calendars /><cultures /></CultureTable>)", "calendars" );
@@ -324,15 +339,20 @@ SW_TEST_CASE( TimeZoneTest, TableRejectsBadRowsAndUnknownNamesAreNotFound )
     const sw::string&                   folder     = domain.getFolder();
     const auto                          writeTable = [&folder]( const utf8* pFileName, sw::string_view rows ) -> sw::AssetID
     {
-        const sw::string path = folder + "/" + pFileName;
-        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( path, "<TimeZoneTable><_listZone>" + sw::string( rows ) + "</_listZone></TimeZoneTable>" ) );
-        return sw::test::ScopedScratchDomain::toID( path );
+        sw::StringBuilder<sw::constant::buffer::kMax512> path;
+        path.appendFormat( "%#/%#", folder, pFileName );
+        sw::StringBuilder<sw::constant::buffer::kMax1024> text;
+        text.appendFormat( "<TimeZoneTable><_listZone>%#</_listZone></TimeZoneTable>", rows );
+        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( path.view(), text.view() ) );
+        return sw::test::ScopedScratchDomain::toID( path.view() );
     };
     const sw::string utcRow = R"(<TimeZoneInfo _name="UTC" _standardOffsetMinutes="0" _daylightRule="None" />)";
 
     sw::TimeZoneTable table;
     SW_EXPECT_LOG( "TimeZoneTable.DuplicateName" );
-    SW_EXPECT_FALSE( table.loadFromAsset( writeTable( "duplicate.xml", utcRow + utcRow ) ) );
+    sw::StringBuilder<sw::constant::buffer::kMax256> duplicateRows;
+    duplicateRows.appendFormat( "%#%#", utcRow, utcRow );
+    SW_EXPECT_FALSE( table.loadFromAsset( writeTable( "duplicate.xml", duplicateRows.view() ) ) );
     SW_EXPECT_NULL( table.findZone( "UTC" ) );
     SW_EXPECT_LOG( "TimeZoneTable.MissingUTC" );
     SW_EXPECT_FALSE( table.loadFromAsset( writeTable( "noutc.xml", R"(<TimeZoneInfo _name="Asia/Seoul" _standardOffsetMinutes="540" _daylightRule="None" />)" ) ) );
@@ -491,8 +511,10 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
     const sw::string                    folder  = domain.getFolder();
     const sw::string                    project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
     LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
-    const sw::string staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
-    LocalizationTestUtil::writeTranslation( folder, "ko", "\"ui.start\": { \"text\": \"시작\" }, \"ui.quit\": { \"text\": \"종료\", \"sourceHash\": \"" + staleHash + "\" }" );
+    const sw::string                                 staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
+    sw::StringBuilder<sw::constant::buffer::kMax256> koEntries;
+    koEntries.appendFormat( "\"ui.start\": { \"text\": \"시작\" }, \"ui.quit\": { \"text\": \"종료\", \"sourceHash\": \"%#\" }", staleHash );
+    LocalizationTestUtil::writeTranslation( folder, "ko", koEntries.view() );
 
     sw::LocalizationManager cooker;
     SW_REQUIRE_TRUE( cooker.mountProject( sw::test::ScopedScratchDomain::toID( project ), sw::LocalizationScope::Game ) );
@@ -587,8 +609,10 @@ SW_TEST_CASE( LocalizationBinaryTableTest, CookedProjectReadsOnlyTheLookupChain 
     const sw::string                    folder  = domain.getFolder();
     const sw::string                    project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko", "ja" ])", R"("stagedCultures": [ "ko" ])" );
     LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
-    const sw::string staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
-    LocalizationTestUtil::writeTranslation( folder, "ko", "\"ui.start\": { \"text\": \"시작\" }, \"ui.quit\": { \"text\": \"종료\", \"sourceHash\": \"" + staleHash + "\" }" );
+    const sw::string                                 staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
+    sw::StringBuilder<sw::constant::buffer::kMax256> koEntries;
+    koEntries.appendFormat( "\"ui.start\": { \"text\": \"시작\" }, \"ui.quit\": { \"text\": \"종료\", \"sourceHash\": \"%#\" }", staleHash );
+    LocalizationTestUtil::writeTranslation( folder, "ko", koEntries.view() );
     LocalizationTestUtil::writeTranslation( folder, "ja", R"("ui.start": { "text": "開始" })" );
 
     // 쿠커와 같은 길: 원문 + 출시 문화권만 굽는다(ja 는 번역 중이라 굽지 않는다).
@@ -719,9 +743,12 @@ namespace
  */
 SW_TEST_CASE( CultureInfoTest, ChildOverridesOnlyWhatItWrites )
 {
-    sw::CultureTable         table;
-    const sw::expected<void> loaded = table.loadFromXMLText( kInheritanceTableXML, "inherit.cultures.xml" );
-    SW_REQUIRE_TRUE_MSG( loaded.has_value(), loaded.has_value() ? sw::string{} : sw::string( loaded.error().message() ) + " (" + sw::string( loaded.error().detail() ) + ")" );
+    sw::CultureTable                                table;
+    const sw::expected<void>                        loaded = table.loadFromXMLText( kInheritanceTableXML, "inherit.cultures.xml" );
+    sw::fixed_string<sw::constant::buffer::kMax512> loadError;
+    if ( loaded.has_value() == false )
+        sw::formatstring( loadError.data(), loadError.capacity(), "%# (%#)", loaded.error().message(), loaded.error().detail() );
+    SW_REQUIRE_TRUE_MSG( loaded.has_value(), loadError );
     const sw::CultureInfo* pRoot  = table.findCulture( "xx" );
     const sw::CultureInfo* pChild = table.findCulture( "xx_yy" );
     SW_REQUIRE_NOT_NULL( pRoot );
@@ -745,13 +772,15 @@ SW_TEST_CASE( CultureInfoTest, ChildOverridesOnlyWhatItWrites )
  */
 SW_TEST_CASE( CultureInfoTest, RootWithoutPluralRulesIsAnError )
 {
-    constexpr const utf8*    kLatin = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
+    constexpr const utf8*                            kLatin = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
+    sw::StringBuilder<sw::constant::buffer::kMax256> rootXML;
+    rootXML.appendFormat( R"(<CultureTable>%#<cultures><culture code="xx" digits="latn" /></cultures></CultureTable>)", kLatin );
     sw::CultureTable         rootTable;
-    const sw::expected<void> rootLoaded =
-        rootTable.loadFromXMLText( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn" /></cultures></CultureTable>)", "root.cultures.xml" );
+    const sw::expected<void> rootLoaded = rootTable.loadFromXMLText( rootXML.view(), "root.cultures.xml" );
     SW_REQUIRE_FALSE( rootLoaded.has_value() );
-    const sw::string error = sw::string( rootLoaded.error().message() ) + " (" + sw::string( rootLoaded.error().detail() ) + ")";
-    SW_EXPECT_TRUE_MSG( error.find( "pluralRules" ) != sw::string::npos, error.c_str() );
+    sw::fixed_string<sw::constant::buffer::kMax512> error;
+    sw::formatstring( error.data(), error.capacity(), "%# (%#)", rootLoaded.error().message(), rootLoaded.error().detail() );
+    SW_EXPECT_TRUE_MSG( error.view().find( "pluralRules" ) != sw::string_view::npos, error.c_str() );
     SW_EXPECT_EQUAL( size_t( 0 ), rootTable.getCultureCount() );
 
     sw::CultureTable childTable;
@@ -764,11 +793,13 @@ SW_TEST_CASE( CultureInfoTest, RootWithoutPluralRulesIsAnError )
  */
 SW_TEST_CASE( CultureInfoTest, ParentCycleIsAnError )
 {
-    constexpr const utf8* kLatin  = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
-    const auto            rejects = []( const sw::string& cultures )
+    static constexpr const utf8* kLatin  = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
+    const auto                   rejects = []( sw::string_view cultures )
     {
+        sw::StringBuilder<sw::constant::buffer::kMax512> xml;
+        xml.appendFormat( "<CultureTable>%#<cultures>%#</cultures></CultureTable>", kLatin, cultures );
         sw::CultureTable         table;
-        const sw::expected<void> loaded = table.loadFromXMLText( sw::string( "<CultureTable>" ) + kLatin + "<cultures>" + cultures + "</cultures></CultureTable>", "cycle.cultures.xml" );
+        const sw::expected<void> loaded = table.loadFromXMLText( xml.view(), "cycle.cultures.xml" );
         SW_EXPECT_FALSE( loaded );
         SW_EXPECT_EQUAL( size_t( 0 ), table.getCultureCount() );
     };
@@ -787,7 +818,7 @@ SW_TEST_CASE( CultureInfoTest, ParentCycleIsAnError )
  */
 SW_TEST_CASE( CultureInfoTest, BaseChainReadsTheReflectedElements )
 {
-    constexpr const utf8*    kVersion1 = R"XML(<CultureTable formatVersion="1">
+    constexpr const utf8*                           kVersion1 = R"XML(<CultureTable formatVersion="1">
   <numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>
   <CultureInfo _code="xx" _nativeName="Root" _numberingSystem="latn" _decimalSeparator="," _groupSeparator="." _percentPattern="# %" _currencyCode="EUR" _currencyPattern="# ¤">
     <_pluralRules><entry key="one">i = 1 and v = 0 @integer 1</entry><entry key="other">@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry></_pluralRules>
@@ -798,9 +829,12 @@ SW_TEST_CASE( CultureInfoTest, BaseChainReadsTheReflectedElements )
     <_datePatterns _long="y MMMM d" />
   </CultureInfo>
 </CultureTable>)XML";
-    sw::CultureTable         table;
-    const sw::expected<void> loaded = table.loadFromXMLText( kVersion1, "version1.cultures.xml" );
-    SW_REQUIRE_TRUE_MSG( loaded.has_value(), loaded.has_value() ? sw::string{} : sw::string( loaded.error().message() ) + " (" + sw::string( loaded.error().detail() ) + ")" );
+    sw::CultureTable                                table;
+    const sw::expected<void>                        loaded = table.loadFromXMLText( kVersion1, "version1.cultures.xml" );
+    sw::fixed_string<sw::constant::buffer::kMax512> loadError;
+    if ( loaded.has_value() == false )
+        sw::formatstring( loadError.data(), loadError.capacity(), "%# (%#)", loaded.error().message(), loaded.error().detail() );
+    SW_REQUIRE_TRUE_MSG( loaded.has_value(), loadError );
     const sw::CultureInfo* pChild = table.findCulture( "xx_yy" );
     SW_REQUIRE_NOT_NULL( pChild );
     SW_EXPECT_EQUAL( sw::string( "," ), pChild->_decimalSeparator );
@@ -828,36 +862,37 @@ SW_TEST_CASE( CultureInfoTest, FormatsMatchTheHandParserForEveryShippedCulture )
     when._hour   = 14;
     when._minute = 5;
     when._second = 9;
-    sw::string text;
+    sw::StringBuilder<sw::constant::buffer::kMax8192> text;
     for ( const sw::string& code : listCode )
     {
         const sw::CultureInfo* pCulture = table.findCulture( code );
         SW_REQUIRE_NOT_NULL( pCulture );
-        text += code + "\n";
-        text += "  integer  " + pCulture->formatInteger( -1234567 ) + "\n";
-        text += "  decimal  " + pCulture->formatDecimal( 1234.5, 1, 2 ) + "\n";
-        text += "  percent  " + pCulture->formatPercent( 0.256 ) + "\n";
-        text += "  currency " + pCulture->formatCurrency( 1234.5, {} ) + " | " + pCulture->formatCurrency( 99.0, "USD" ) + "\n";
+        text.appendFormat( "%#\n", code );
+        text.appendFormat( "  integer  %#\n", pCulture->formatInteger( -1234567 ) );
+        text.appendFormat( "  decimal  %#\n", pCulture->formatDecimal( 1234.5, 1, 2 ) );
+        text.appendFormat( "  percent  %#\n", pCulture->formatPercent( 0.256 ) );
+        text.appendFormat( "  currency %# | %#\n", pCulture->formatCurrency( 1234.5, {} ), pCulture->formatCurrency( 99.0, "USD" ) );
         for ( const utf8* pStyle : { "short", "medium", "long" } )
         {
-            text += sw::string( "  date." ) + pStyle + " " + pCulture->formatDateTime( when, pCulture->findDatePattern( pStyle ) ) + "\n";
+            text.appendFormat( "  date.%# %#\n", pStyle, pCulture->formatDateTime( when, pCulture->findDatePattern( pStyle ) ) );
         }
         for ( const utf8* pStyle : { "short", "medium" } )
         {
-            text += sw::string( "  time." ) + pStyle + " " + pCulture->formatDateTime( when, pCulture->findTimePattern( pStyle ) ) + "\n";
+            text.appendFormat( "  time.%# %#\n", pStyle, pCulture->formatDateTime( when, pCulture->findTimePattern( pStyle ) ) );
         }
-        text += "  plural  ";
+        text.append( "  plural  " );
         for ( const int64 count : { 0, 1, 2, 3, 5, 11, 21, 101 } )
         {
-            text += sw::string( sw::CultureInfo::getPluralKeyword( pCulture->selectPlural( sw::PluralOperands::makeInteger( count ) ) ) ) + " ";
+            text.appendFormat( "%# ", sw::CultureInfo::getPluralKeyword( pCulture->selectPlural( sw::PluralOperands::makeInteger( count ) ) ) );
         }
-        text += sw::string( sw::CultureInfo::getPluralKeyword( pCulture->selectPlural( sw::PluralOperands::makeDecimal( 1.5, 1 ) ) ) ) + "\n";
-        text += "  ordinal ";
+        text.appendFormat( "%#\n", sw::CultureInfo::getPluralKeyword( pCulture->selectPlural( sw::PluralOperands::makeDecimal( 1.5, 1 ) ) ) );
+        text.append( "  ordinal " );
         for ( const int64 count : { 1, 2, 3, 4, 11, 21, 22, 23 } )
         {
-            text += sw::string( sw::CultureInfo::getPluralKeyword( pCulture->selectOrdinal( sw::PluralOperands::makeInteger( count ) ) ) ) + " ";
+            text.appendFormat( "%# ", sw::CultureInfo::getPluralKeyword( pCulture->selectOrdinal( sw::PluralOperands::makeInteger( count ) ) ) );
         }
-        text += "\n  fonts   " + sw::string( pCulture->_listFont.empty() ? "-" : pCulture->_listFont.front() ) + " rtl=" + ( pCulture->_bRightToLeft == SW_TRUE ? "1" : "0" ) + "\n";
+        const sw::string_view font = pCulture->_listFont.empty() ? sw::string_view( "-" ) : sw::string_view( pCulture->_listFont.front() );
+        text.appendFormat( "\n  fonts   %# rtl=%#\n", font, pCulture->_bRightToLeft == SW_TRUE ? "1" : "0" );
     }
-    SW_EXPECT_SNAPSHOT( "formats", text );
+    SW_EXPECT_SNAPSHOT( "formats", text.view() );
 }

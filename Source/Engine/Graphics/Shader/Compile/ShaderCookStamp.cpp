@@ -258,7 +258,7 @@ namespace sw
             struct HeaderRoot
             {
                 /// @brief 실제 경로(`makeCanonicalPath`)의 비교용 글(`makeComparableDiskPath` — 대소문자는 OS 규칙)인 루트 폴더입니다(`<도메인>/shaders`).
-                string _comparableDir;
+                ComparableDiskPath _comparableDir;
                 /// @brief 키 앞에 붙는 도메인 이름입니다. 자기 도메인이면 비어 있다(자기 키에는 ':' 가 없다).
                 string _domain;
             };
@@ -274,14 +274,14 @@ namespace sw
                 string ownCanonical;
                 if ( FileUtil::makeCanonicalPath( shadersDir, ownCanonical ) == false )
                     return false;
-                const string ownComparable = FileUtil::makeComparableDiskPath( ownCanonical );
+                const ComparableDiskPath ownComparable = FileUtil::makeComparableDiskPath( ownCanonical );
                 outListRoot.push_back( HeaderRoot{ ownComparable, string{} } );
                 for ( const ShaderIncludeRootDomain& rootDomain : resolver.getRootDomains() )
                 {
                     string canonical;
                     if ( FileUtil::makeCanonicalPath( rootDomain._shadersFolder.str(), canonical ) == false )
                         return false;
-                    const string comparableDir = FileUtil::makeComparableDiskPath( canonical );
+                    const ComparableDiskPath comparableDir = FileUtil::makeComparableDiskPath( canonical );
                     if ( comparableDir != ownComparable )
                         outListRoot.push_back( HeaderRoot{ comparableDir, rootDomain._domain } );
                 }
@@ -299,8 +299,8 @@ namespace sw
                 string resolved;
                 if ( FileUtil::makeCanonicalPath( absHeader, resolved ) == false )
                     return string{};
-                const string canonical  = FileUtil::normalizeSeparators( resolved );     // 구분자를 맞춘다 — 키는 OS 가 달라도 같은 글이어야 한다
-                const string comparable = FileUtil::makeComparableDiskPath( canonical ); // 길이는 `canonical` 과 같다(대소문자만 접는다)
+                const string             canonical  = FileUtil::normalizeSeparators( resolved );     // 구분자를 맞춘다 — 키는 OS 가 달라도 같은 글이어야 한다
+                const ComparableDiskPath comparable = FileUtil::makeComparableDiskPath( canonical ); // 길이는 `canonical` 과 같다(대소문자만 접는다)
                 for ( const HeaderRoot& root : listRoot )
                 {
                     const bool bInside = FileUtil::startsWithPathComponent( comparable, root._comparableDir ) && root._comparableDir.size() < comparable.size();
@@ -448,7 +448,9 @@ namespace sw
                         SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp3", "Failed to write the cook stamp: the shader path contains the dependency separator character: %#", source._absPath.c_str() );
                         return false;
                     }
-                    listLine.push_back( formatHex64( hash ) + " " + source._key );
+                    StringBuilder<constant::buffer::kMax256> lineBuilder;
+                    lineBuilder.appendFormat( "%# %#", formatHex64( hash ), source._key );
+                    listLine.push_back( string( lineBuilder.view() ) );
 
                     const auto includedIter = mapIncludedFile.find( source._absPath );
                     if ( includedIter == mapIncludedFile.end() )
@@ -464,14 +466,15 @@ namespace sw
                             SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp4", "Failed to write the cook stamp: the include dependency '%#' of '%#' is not under a shader include root or cannot be read", header.c_str(), source._absPath.c_str() );
                             return false;
                         }
-                        string dependencyLine = formatHex64( headerHash ) + " " + source._key;
-                        dependencyLine += kDependencySeparator;
-                        dependencyLine += headerKey;
-                        listLine.push_back( std::move( dependencyLine ) );
+                        StringBuilder<constant::buffer::kMax256> dependencyLine;
+                        dependencyLine.appendFormat( "%# %#%#%#", formatHex64( headerHash ), source._key, kDependencySeparator, headerKey );
+                        listLine.push_back( string( dependencyLine.view() ) );
                     }
                 }
 
-                listLine.push_back( formatHex64( computeToolchainFingerprint( cookStampCache.getEnginePolicy() ) ) + " " + string( kToolchainKey ) );
+                StringBuilder<constant::buffer::kMax64> toolchainLine;
+                toolchainLine.appendFormat( "%# %#", formatHex64( computeToolchainFingerprint( cookStampCache.getEnginePolicy() ) ), kToolchainKey );
+                listLine.push_back( string( toolchainLine.view() ) );
 
                 VectorUtil::sortUnique( listLine ); // 같은 헤더를 다른 이름으로 열었어도 한 줄이다
 
@@ -568,14 +571,18 @@ namespace sw
                     resolved += "/";
                     resolved += listTail[index - 1];
                 }
-                const string comparable = FileUtil::makeComparableDiskPath( resolved ); // 길이는 `resolved` 와 같다(대소문자만 접는다)
+                const ComparableDiskPath comparable = FileUtil::makeComparableDiskPath( resolved ); // 길이는 `resolved` 와 같다(대소문자만 접는다)
                 for ( const HeaderRoot& root : listRoot )
                 {
                     const bool bInside = FileUtil::startsWithPathComponent( comparable, root._comparableDir ) && root._comparableDir.size() < comparable.size();
                     if ( bInside == false )
                         continue;
                     const string relative{ resolved.substr( root._comparableDir.size() + 1 ) };
-                    return root._domain.empty() ? relative : string{ root._domain + ":" + relative };
+                    if ( root._domain.empty() )
+                        return relative;
+                    StringBuilder<constant::buffer::kMax256> keyBuilder;
+                    keyBuilder.appendFormat( "%#:%#", root._domain, relative );
+                    return string( keyBuilder.view() );
                 }
                 return string{};
             }
@@ -718,7 +725,9 @@ namespace sw
                 if ( listSource.empty() )
                     return;
 
-                const string label = domain + "/shaders";
+                StringBuilder<constant::buffer::kMax256> labelBuilder;
+                labelBuilder.appendFormat( "%#/shaders", domain );
+                const string label( labelBuilder.view() );
                 // 쿠킹본은 소스 트리가 아니라 쿠킹 스테이징의 같은 상대 자리에 있다 — 쿠커 출력(`ShaderCookDriver`) · 런타임 읽기와 같은 규칙(`ShaderBinaryLocation`) 하나다.
                 const string binDir = FileUtil::joinPath( cookedDir, ShaderBinaryLocation::makeForDomain( domain, format )._binDirectory );
                 if ( FileUtil::isDirectory( binDir ) == false )

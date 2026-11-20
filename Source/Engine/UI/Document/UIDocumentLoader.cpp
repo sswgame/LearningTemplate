@@ -64,8 +64,9 @@ namespace sw
                     {
                         if ( isBindingValue( attribute.getValue() ) )
                         {
-                            inoutNode._listBinding.push_back(
-                                UIBindingDef{ path + "." + attribute.getName(), string( attribute.getValue() ), kInvalidWidgetID, findLine( source ) } );
+                            StringBuilder<constant::buffer::kMax256> propertyPath;
+                            propertyPath.appendFormat( "%#.%#", path, attribute.getName() );
+                            inoutNode._listBinding.push_back( UIBindingDef{ string( propertyPath.view() ), string( attribute.getValue() ), kInvalidWidgetID, findLine( source ) } );
                             continue;
                         }
                         destination.appendAttribute( attribute.getName(), attribute.getValue() );
@@ -75,7 +76,9 @@ namespace sw
                         destination.setValue( pText );
                     for ( XMLNode child = source.findChild(); child.isValid(); child = child.findNextSibling() )
                     {
-                        copyPropertyElement( child, destination, path + "." + child.getName(), inoutNode );
+                        StringBuilder<constant::buffer::kMax256> childPath;
+                        childPath.appendFormat( "%#.%#", path, child.getName() );
+                        copyPropertyElement( child, destination, string( childPath.view() ), inoutNode );
                     }
                 }
 
@@ -85,7 +88,11 @@ namespace sw
                     const utf8*     pTag  = element.getName();
                     const TypeInfo* pType = findWidgetType( pTag );
                     if ( pType == nullptr )
-                        return fail( element, string( "'" ) + pTag + "' is not a widget type" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "'%#' is not a widget type", pTag );
+                        return fail( element, message );
+                    }
 
                     UIDocumentNode node{};
                     node._typeName   = pType->_name;
@@ -98,7 +105,11 @@ namespace sw
                     {
                         const utf8* pName = attribute.getName();
                         if ( isKnownProperty( *pType, pName ) == false )
-                            return fail( element, string( "'" ) + pTag + "' has unknown attribute '" + pName + "'" );
+                        {
+                            fixed_string<constant::buffer::kMax256> message;
+                            formatstring( message.data(), message.capacity(), "'%#' has unknown attribute '%#'", pTag, pName );
+                            return fail( element, message );
+                        }
                         if ( isBindingValue( attribute.getValue() ) )
                         {
                             node._listBinding.push_back( UIBindingDef{ string( pName ), string( attribute.getValue() ), kInvalidWidgetID, node._sourceLine } );
@@ -117,23 +128,39 @@ namespace sw
                             continue;
                         }
                         if ( isKnownProperty( *pType, pChildName ) == false )
-                            return fail( child, string( "'" ) + pTag + "' has unknown element <" + pChildName + ">" );
+                        {
+                            fixed_string<constant::buffer::kMax256> message;
+                            formatstring( message.data(), message.capacity(), "'%#' has unknown element <%#>", pTag, pChildName );
+                            return fail( child, message );
+                        }
                         copyPropertyElement( child, propertyRoot, string( pChildName ), node );
                     }
 
                     if ( pType->isDerivedFrom( UserWidget::StaticType() ) )
                     {
                         if ( listChildWidget.empty() == false )
-                            return fail( listChildWidget.front(), string( "'" ) + pTag + "' cannot have child widgets - its content is the _document" );
+                        {
+                            fixed_string<constant::buffer::kMax256> message;
+                            formatstring( message.data(), message.capacity(), "'%#' cannot have child widgets - its content is the _document", pTag );
+                            return fail( listChildWidget.front(), message );
+                        }
                         const utf8* pFragment = element.findAttribute( kFragmentProperty );
                         if ( StringUtil::isNullOrEmpty( pFragment ) || isBindingValue( pFragment ) )
-                            return fail( element, string( "'" ) + pTag + "' needs a _document path" );
+                        {
+                            fixed_string<constant::buffer::kMax256> message;
+                            formatstring( message.data(), message.capacity(), "'%#' needs a _document path", pTag );
+                            return fail( element, message );
+                        }
                         node._fragment               = normalizeDocumentPath( pFragment );
                         vector<string>& listFragment = _pAsset->_listFragment;
                         VectorUtil::addUnique( listFragment, node._fragment );
                     }
                     else if ( listChildWidget.empty() == false && pType->isDerivedFrom( PanelWidget::StaticType() ) == false )
-                        return fail( listChildWidget.front(), string( "'" ) + pTag + "' cannot have children - it is not a panel" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "'%#' cannot have children - it is not a panel", pTag );
+                        return fail( listChildWidget.front(), message );
+                    }
 
                     node._propertyXML = propertyDocument.saveToString();
                     outIndex          = static_cast<uint32>( _pAsset->_listNode.size() );
@@ -162,7 +189,11 @@ namespace sw
                     for ( XMLNode item = element.findChild(); item.isValid(); item = item.findNextSibling() )
                     {
                         if ( StringUtil::equals( item.getName(), kItemElement ) == false )
-                            return fail( item, string( "_listStyleSheet has unknown element <" ) + item.getName() + ">" );
+                        {
+                            fixed_string<constant::buffer::kMax256> message;
+                            formatstring( message.data(), message.capacity(), "_listStyleSheet has unknown element <%#>", item.getName() );
+                            return fail( item, message );
+                        }
                         const utf8* pPath = item.getText();
                         if ( StringUtil::isNullOrEmpty( pPath ) )
                             return fail( item, "_listStyleSheet has an empty item" );
@@ -174,10 +205,11 @@ namespace sw
                 /** @brief 애니메이션 목록(`<UIAnimation>` 요소들)을 읽습니다. 모르는 필드, 읽지 못한 값, 이름 없음, 겹친 이름은 오류입니다. */
                 [[nodiscard]] expected<void> parseAnimationList( const XMLNode& element ) const
                 {
-                    UIAnimationList           list{};
-                    vector<SchemaOrphanValue> listOrphan;
-                    const string              text   = string( "<UIAnimationList>" ) + element.toString() + "</UIAnimationList>";
-                    const SoftReadResult      result = XMLSerializer::deserializeSoft( &list, *UIAnimationList::StaticType(), text, &listOrphan );
+                    UIAnimationList                           list{};
+                    vector<SchemaOrphanValue>                 listOrphan;
+                    StringBuilder<constant::buffer::kMax4096> text;
+                    text.appendFormat( "<UIAnimationList>%#</UIAnimationList>", element.toString() );
+                    const SoftReadResult result = XMLSerializer::deserializeSoft( &list, *UIAnimationList::StaticType(), text.view(), &listOrphan );
                     if ( expected<void> accepted = acceptSoftRead( element, "_listAnimation", result, listOrphan ); accepted.has_value() == false )
                         return accepted;
                     vector<UIAnimation>& listAnimation = _pAsset->_listAnimation;
@@ -188,7 +220,11 @@ namespace sw
                         for ( const UIAnimation& other : listAnimation )
                         {
                             if ( other._name == animation._name )
-                                return fail( element, string( "_listAnimation has two animations named '" ) + animation._name.c_str() + "'" );
+                            {
+                                fixed_string<constant::buffer::kMax256> message;
+                                formatstring( message.data(), message.capacity(), "_listAnimation has two animations named '%#'", animation._name.c_str() );
+                                return fail( element, message );
+                            }
                         }
                         listAnimation.push_back( std::move( animation ) );
                     }
@@ -229,26 +265,34 @@ namespace sw
                     const bool            bNotWidgetTypeName = pType == nullptr || pType->isAlive() == false || pType->isDerivedFrom( Widget::StaticType() ) == false;
                     if ( bNotWidgetTypeName )
                     {
-                        widget = failInstantiate( document, node, string( "'" ) + node._typeName.c_str() + "' is not a widget type" );
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "'%#' is not a widget type", node._typeName.c_str() );
+                        widget = failInstantiate( document, node, message );
                         return widget;
                     }
 
                     widget = UIDocumentLoader::createWidget( *pType );
                     if ( widget == nullptr )
                     {
-                        widget = failInstantiate( document, node, string( "'" ) + node._typeName.c_str() + "' cannot be created (abstract or no default constructor)" );
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "'%#' cannot be created (abstract or no default constructor)", node._typeName.c_str() );
+                        widget = failInstantiate( document, node, message );
                         return widget;
                     }
                     const TypeInfo* pDynamicType = widget->getTypeInfo();
                     if ( pDynamicType == nullptr || pDynamicType->_name != pType->_name )
                     {
-                        widget = failInstantiate( document, node, string( "'" ) + node._typeName.c_str() + "' does not override getTypeInfo()" );
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "'%#' does not override getTypeInfo()", node._typeName.c_str() );
+                        widget = failInstantiate( document, node, message );
                         return widget;
                     }
 
-                    vector<SchemaOrphanValue> listOrphan;
-                    const SoftReadResult      result  = XMLSerializer::deserializeSoft( widget.get(), *pType, node._propertyXML, &listOrphan );
-                    const string              problem = describeSoftReadProblem( string( "'" ) + node._typeName.c_str() + "'", result, listOrphan );
+                    vector<SchemaOrphanValue>               listOrphan;
+                    const SoftReadResult                    result = XMLSerializer::deserializeSoft( widget.get(), *pType, node._propertyXML, &listOrphan );
+                    fixed_string<constant::buffer::kMax256> what;
+                    formatstring( what.data(), what.capacity(), "'%#'", node._typeName.c_str() );
+                    const string problem = describeSoftReadProblem( what, result, listOrphan );
                     if ( problem.empty() == false )
                     {
                         widget = failInstantiate( document, node, problem );
@@ -256,7 +300,11 @@ namespace sw
                     }
 
                     if ( namePrefix.empty() == false && widget->getName().empty() == false )
-                        widget->setName( hashed_string( namePrefix + "." + widget->getName().c_str() ) );
+                    {
+                        StringBuilder<constant::buffer::kMax256> name;
+                        name.appendFormat( "%#.%#", namePrefix, widget->getName().c_str() );
+                        widget->setName( hashed_string( name.c_str() ) );
+                    }
                     for ( const UIBindingDef& binding : node._listBinding )
                     {
                         UIBindingDef instanceBinding = binding;
@@ -277,19 +325,22 @@ namespace sw
                         const bool      bTooDeep   = listStack.size() >= kMaxFragmentDepth;
                         if ( bRecursive || bTooDeep )
                         {
-                            string chain;
+                            StringBuilder<constant::buffer::kMax256> chain;
+                            chain.append( bRecursive ? "fragment includes itself: " : "fragments nest too deep: " );
                             for ( const string& path : listStack )
                             {
-                                chain += path + " -> ";
+                                chain.appendFormat( "%# -> ", path );
                             }
-                            chain += node._fragment;
-                            widget = failInstantiate( document, node, ( bRecursive ? "fragment includes itself: " : "fragments nest too deep: " ) + chain );
+                            chain.append( node._fragment );
+                            widget = failInstantiate( document, node, chain.view() );
                             return widget;
                         }
                         const expected<shared_ptr<const UIDocumentAsset>> loaded = _pCache->acquire( node._fragment, *_pTagOverride );
                         if ( loaded.has_value() == false )
                         {
-                            widget = failInstantiate( document, node, "fragment '" + node._fragment + "' is not loaded: " + string( loaded.error().message().data(), loaded.error().message().size() ) + ": " + string( loaded.error().detail().data(), loaded.error().detail().size() ) );
+                            fixed_string<constant::buffer::kMax256> message;
+                            formatstring( message.data(), message.capacity(), "fragment '%#' is not loaded: %#: %#", node._fragment, loaded.error().message(), loaded.error().detail() );
+                            widget = failInstantiate( document, node, message );
                             return widget;
                         }
                         const shared_ptr<const UIDocumentAsset>& fragment = *loaded;
@@ -355,7 +406,10 @@ namespace sw
             {
                 string description = orphan.getDisplayName();
                 if ( orphan._text.empty() == false )
-                    description += "' = '" + orphan._text;
+                {
+                    description += "' = '";
+                    description += orphan._text;
+                }
                 return description;
             }
 
@@ -365,18 +419,30 @@ namespace sw
              */
             static string describeSoftReadProblem( const string_view what, const SoftReadResult result, const vector<SchemaOrphanValue>& listOrphan )
             {
+                StringBuilder<constant::buffer::kMax512> problem;
                 if ( result == SoftReadResult::NotParsed )
-                    return string( what ) + " cannot be read";
-                string problem;
+                {
+                    problem.appendFormat( "%# cannot be read", what );
+                    return string( problem.view() );
+                }
                 for ( const SchemaOrphanValue& orphan : listOrphan )
                 {
-                    problem += problem.empty() ? string( what ) + " has unknown or unreadable '" : string( ", '" );
-                    problem += describeOrphan( orphan ) + "'";
+                    if ( problem.size() == 0 )
+                        problem.appendFormat( "%# has unknown or unreadable '", what );
+                    else
+                        problem.append( ", '" );
+                    problem.appendFormat( "%#'", describeOrphan( orphan ) );
                 }
                 // 읽지 못한 칸 · 범위 밖 값은 읽기 공통 끝이 칸마다 로그로 알렸다.
                 if ( result == SoftReadResult::Rejected )
-                    problem += ( problem.empty() ? string( what ) + " has" : string( "; and" ) ) + " a field that cannot be read or is outside its PROPERTY( Min, Max )";
-                return problem;
+                {
+                    if ( problem.size() == 0 )
+                        problem.appendFormat( "%# has", what );
+                    else
+                        problem.append( "; and" );
+                    problem.append( " a field that cannot be read or is outside its PROPERTY( Min, Max )" );
+                }
+                return string( problem.view() );
             }
         };
     } // namespace
@@ -410,7 +476,11 @@ namespace sw
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey ) == false )
-                return context.fail( root, string( "UIDocument has unknown attribute '" ) + attribute.getName() + "'" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "UIDocument has unknown attribute '%#'", attribute.getName() );
+                return context.fail( root, message );
+            }
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UIDocumentAsset::kVersion ) )
             {
@@ -450,7 +520,11 @@ namespace sw
                 continue;
             }
             if ( Internal::findWidgetType( pName ) == nullptr )
-                return context.fail( child, string( "UIDocument has unknown element <" ) + pName + "> (not a widget type)" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "UIDocument has unknown element <%#> (not a widget type)", pName );
+                return context.fail( child, message );
+            }
             if ( bRootWidget )
                 return context.fail( child, "UIDocument has more than one root widget" );
             bRootWidget = true;
