@@ -1,6 +1,6 @@
 /**
  * @file App/EditorModuleManager.h
- * @brief App 전용 모듈 호스트입니다. 공통 `GameModuleManager`(게임 모듈) 위에 에디터 인스턴스, 에디터 리로드, 에디터 UI · Present 훅, RHI 교체 뒤 재초기화를 구현합니다.
+ * @brief App 전용 모듈 호스트입니다. 공통 `GameModuleManager`(게임 모듈) 위에 에디터 인스턴스, 에디터 리로드, 에디터 UI · Present 훅, 장치 교체 뒤 에디터 재생성(`recreateHostModule`)을 구현합니다.
  *        인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 `EditorModuleManager.cpp` 의 개발 전용 구역 에 있습니다.
  * @note 의존은 이쪽에서 `GameModuleManager` 로 한 방향입니다. 전용 서버(`Server`)는 이 클래스를 링크하지 않습니다.
  * @note 개발 전용 함수(에디터 모듈 등록 · 개발 도구 서비스 `EditorModuleManager.cpp` 의 개발 전용 구역, 헤드리스 작업 `EditorModuleManager.cpp` 의 개발 전용 구역)는 배포가 짓지 않는다 —
@@ -20,7 +20,6 @@ namespace sw
     struct NativeWindowEvent;
 
     class CameraComponent;
-    class Engine;
     class IRHIDevice;
 
     /**
@@ -110,14 +109,6 @@ namespace sw
 
         /** @brief 에디터 DLL 에서 API 테이블을 받아 바인딩합니다. ABI 버전이나 스탬프가 다르면 실패합니다. */
         [[nodiscard]] bool bindEditorAPI( void* pLibraryModule );
-        /**
-         * @brief 예약된 장치 교체 · 다시 만들기를 적용합니다 — 모듈을 내리고(상태를 맡긴다) → 엔진이 장치를 다시 만들고(`Engine::applyPendingBackendChange`) → 모듈을 다시 세운다.
-         * @details 이 순서를 아는 곳은 여기 하나다. 개발 구성의 백엔드 교체(`RHIBackendSwitcher`)와, 배포도 쓰는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)이 같은 길로 온다
-         *          (언리얼 · 유니티도 장치 상실 · 어댑터 변경을 한 재생성 경로로 모은다). 프레임 경계에서만 부른다. 장치가 없어지면 false 이고 모듈을 다시 세우지 않는다.
-         */
-        [[nodiscard]] bool applyPendingBackendChange( Engine& engine );
-        /** @brief RHI 핫스왑 뒤 게임, 에디터 순서(기동과 같다)로 다시 초기화합니다. 실패하면 false 를 반환합니다. */
-        [[nodiscard]] bool reinitializeAfterRHISwap( void* pEditorModule, void* pGameModule );
 
     private:
         /** @brief 에디터를 켤 때 EditorModule 다음에 로드할 확장 모듈(종류 EditorExtension) 하나입니다. */
@@ -143,6 +134,8 @@ namespace sw
          */
         [[nodiscard]] bool onBeforeSuspendModules( FlushReason reason ) override;
         void               suspendHostModule( bool bReleaseAPITable ) override;
+        /** @brief 장치를 다시 만든 뒤 에디터를 다시 만듭니다(에디터를 켜지 않았으면 할 일이 없다). 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
+        [[nodiscard]] bool recreateHostModule() override;
         /**
          * @brief 에디터의 "렌더 대기" 표시를 버립니다.
          * @details 그 표시는 렌더 스레드의 postPresent 만 풀 수 있는데, 그 스레드는 방금 일을 끝내고 쉬고 있다. 알려 주지 않으면 다음 updateUI 나
@@ -172,8 +165,6 @@ namespace sw
         void destroyEditorInstance( bool bReleaseAPITable );
         /** @brief 이미 바인딩한 API 테이블로 에디터 인스턴스를 만들고 초기화합니다. 디바이스가 없으면 만들지 않습니다. */
         [[nodiscard]] bool createEditorInstance();
-        /** @brief RHI 교체 뒤 에디터를 다시 만듭니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
-        [[nodiscard]] bool recreateEditorInstance( void* pEditorModule );
 
         /**
          * @brief `initialize` 의 끝 — 에디터를 켰으면 에디터 모듈과 확장 모듈(의존과 함께)을 리로드 그래프에 등록합니다. 확장 하나가 실패해도 에디터는 뜹니다(그 확장만 없습니다).

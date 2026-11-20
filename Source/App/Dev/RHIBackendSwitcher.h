@@ -17,7 +17,6 @@ namespace sw
 
     struct GlobalVariableInfo;
 
-    class EditorModuleManager;
     class Engine;
 
     /**
@@ -39,21 +38,16 @@ namespace sw
         RHIBackendSwitcher& operator=( const RHIBackendSwitcher& ) = delete;
 
         /**
-         * @brief 협력 객체를 연결하고 gv_rhiBackend 변경 훅을 설치합니다.
+         * @brief 협력 객체를 연결하고 gv_rhiBackend 변경 훅을 설치합니다. 교체의 적용(모듈 내리기 → 장치 → 모듈 세우기)은 모듈 관리자가 한다(`GameModuleManager::applyPendingDeviceChange`).
          * @param pEngine RHI 를 소유한 루프
-         * @param pGameModuleManager 교체 전후로 내리고 다시 세울 모듈 호스트
-         * @param bEnableEditor 에디터 모드면, 에디터를 지원하지 않는 백엔드 요청을 되돌립니다.
          */
-        void initialize( Engine* pEngine, EditorModuleManager* pGameModuleManager, bool bEnableEditor );
+        void initialize( Engine* pEngine );
         /**
          * @brief 변경 훅을 떼어 냅니다.
          * @details GlobalVariableManager 는 Engine 가 소유합니다. 그 종료보다 먼저 불러야 이미 사라진 this 를 가리키는 훅이
          *          남지 않습니다.
          */
         void shutdown();
-
-        /** @brief 예약된 교체가 있으면 적용합니다. 프레임 경계에서만 부릅니다. */
-        void applyIfPending();
 
         // --- 자동화 창구(시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` — `RHIBackendSwitcher.cpp`) -------------------------------------------------
         /** @brief 지금 확정된(디바이스가 실제로 쓰는) 백엔드입니다. RHI 가 없으면 false 입니다. */
@@ -67,8 +61,6 @@ namespace sw
         [[nodiscard]] bool findStartBackend( RHIBackend& outBackend ) const;
         /** @brief 요청했지만 아직 적용하지 않은 교체가 있으면 true 입니다. */
         bool isSwapPending() const;
-        /** @brief 이 프로세스에서 교체에 실패한 횟수입니다(실패하면 이전 백엔드로 복구한다). */
-        uint32 getFailedSwapCount() const { return _failedSwapCount; }
 #if SW_WITH_DYNAMIC_MODULES
         /**
          * @brief 백엔드 교체를 요청합니다 — 메뉴 · 콘솔과 같은 길(`gv_rhiBackend` 의 `setValueAsInt` → 변경 콜백)이며, 적용은 이 프레임 끝의 `applyIfPending` 입니다.
@@ -98,24 +90,19 @@ namespace sw
     private:
         /** @brief gv_rhiBackend 변경 이벤트 훅입니다. 동적 모듈 구성은 교체를 예약하고, 정적 모듈 구성은 오류를 남기고 값을 지금 백엔드로 되돌린다(콘솔 · 메뉴가 조용히 무시되지 않게). */
         void onBackendVariableChanged( const GlobalVariableInfo* pInfo );
-        /** @brief 모듈을 내리고 디바이스를 다시 만든 뒤 모듈을 세웁니다. 실패하면 false. */
-        [[nodiscard]] bool applyPendingChange();
 
     private:
-        Engine*              _pEngine;            // 소유하지 않는다
-        EditorModuleManager* _pGameModuleManager; // 소유하지 않는다
+        Engine* _pEngine; // 소유하지 않는다
 
-        uint32 _failedSwapCount;
         /// @brief `removeDeviceAfterDriverWaitForTest` 가 건 대기(0 = 요청 없음)입니다. 개발 명령이 쓰고 렌더 스레드가 비운다(배포는 늘 0).
         atomic<uint32> _pendingDeviceLossWaitMilliseconds;
         /** @brief 시나리오가 시작할 때의 백엔드입니다(`recordStartBackend`). `_bStartBackendRecorded` 가 참일 때만 뜻이 있다. */
         RHIBackend _startBackend;
 
-        uint8 _bEnableEditor : 1;
         /** @brief gv_rhiBackend 를 되돌리는 대입이 변경 콜백을 재귀 호출하지 않게 막습니다. */
         uint8 _bHandlingChange : 1;
         /** @brief `recordStartBackend` 가 성공한 적이 있으면 참입니다. */
         uint8                  _bStartBackendRecorded : 1;
-        [[maybe_unused]] uint8 _reserved              : 5;
+        [[maybe_unused]] uint8 _reserved              : 6;
     };
 } // namespace sw

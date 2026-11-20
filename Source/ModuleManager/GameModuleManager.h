@@ -3,7 +3,7 @@
  * @brief 게임 모듈의 수명 주기를 관리합니다. 라이브러리 로드, 게임 API 바인딩, 게임 업데이트, 게임 쪽 핫 리로드를 맡으며 App 과 Server 가 함께 씁니다.
  *
  * @note 호스트와 모듈 사이 계약(ModuleAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
- *       재초기화는 App 전용 `EditorModuleManager`(Source/App)가 이 클래스 위에 구현합니다. 의존은 그쪽에서 여기로 한 방향입니다.
+ *       재초기화의 호스트 몫은 App 전용 `EditorModuleManager`(Source/App)가 이 클래스 위에 구현합니다(장치 교체의 순서는 이 클래스 — `applyPendingDeviceChange`). 의존은 그쪽에서 여기로 한 방향입니다.
  * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 배포는 정적 링크)에 따라 다른 함수는 `GameModuleManager.cpp` 의 `SW_WITH_DYNAMIC_MODULES` 구역 한 파일이
  *       `SW_WITH_DYNAMIC_MODULES` 로 가른다. 나머지는 `GameModuleManager.cpp` 하나다.
  */
@@ -29,6 +29,7 @@ namespace sw
 
     class IEngineRenderDriver;
     class IWindow;
+    class QuitRequest;
     class ILiveReloadManager;
     class ModuleCatalog;
     class RHI;
@@ -95,7 +96,7 @@ namespace sw
      * @details
      *   실행 파일이 unique_ptr 로 소유합니다. 전용 서버는 이 클래스를 그대로(`initializeDedicatedServer`), App 은 파생 클래스 `EditorModuleManager` 를 씁니다.
      *   - 핫 리로드 때 onBefore/onAfter 콜백이 자동으로 불립니다.
-     *   - 모듈을 언로드하는 경로는 `suspendModules` 하나입니다. 호스트 모듈(에디터)이 끼어드는 지점은 아래 보호 가상 함수 다섯 개입니다.
+     *   - 모듈을 언로드하는 경로는 `suspendModules` 하나입니다. 호스트 모듈(에디터)이 끼어드는 지점은 아래 보호 가상 함수들입니다.
      *
      *   파생 클래스는 소멸자에서 `shutdown()` 을 먼저 부릅니다. 이 클래스의 소멸자 안에서는 가상 함수가 파생 클래스 쪽으로 가지 않기 때문입니다.
      */
@@ -224,6 +225,15 @@ namespace sw
         /** @brief 게임 API 테이블을 바인딩합니다. 배포 구성은 정적 `exportGameAPI` 를, 개발 구성은 DLL 심볼을 씁니다. */
         [[nodiscard]] bool bindGameAPI( void* pLibraryModule );
 
+        // 5) 장치 교체 · 다시 만들기
+        /**
+         * @brief 예약된 장치 교체 · 다시 만들기를 적용합니다 — 게임 · 호스트 모듈 인스턴스를 내리고(API 표는 둔다) → 렌더러가 장치를 다시 만들고 → 기동과 같은 순서(게임, 호스트 모듈)로 다시 세운다.
+         * @details 순서는 `DeviceChangeSequence` 하나가 안다. 개발 구성의 백엔드 교체와 배포도 쓰는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)이 같은 길이다.
+         *          호스트(App)가 프레임 경계에서 부른다. 쓸 장치가 없거나 모듈을 다시 세우지 못하면 @p quitRequest 에 종료를 건다. 렌더러가 없는 호스트(전용 서버)는 할 일이 없다.
+         * @return 예약이 없거나 요청대로 섰으면 true 입니다(`DeviceChangeSequence::apply`).
+         */
+        [[nodiscard]] bool applyPendingDeviceChange( QuitRequest& quitRequest );
+
     protected:
         /**
          * @brief 콜백을 등록하고 게임 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했습니다). App 과 서버 기동의 공통 본체입니다.
@@ -232,8 +242,6 @@ namespace sw
          * @param pRenderDriver 렌더러 창구(워커 비우기용, 없으면 nullptr)
          */
         [[nodiscard]] bool initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver );
-        /** @brief RHI 교체 뒤 게임을 다시 만듭니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
-        [[nodiscard]] bool recreateGameInstance( void* pGameModule );
         /**
          * @brief 호스트 서비스 범위를 새로 채워 모듈의 @p bindService 에 넘기고 @p inoutServices 를 그것으로 바꿉니다. @p bindService 가 비었으면(API 표가 없다) 아무것도 하지 않습니다.
          * @details 새 범위를 넘긴 **뒤에** 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게. 게임 · 에디터 모듈이 같은 길을 쓴다(@p bGameModule 은 `fillModuleServiceScope` 와 같다).
@@ -271,6 +279,11 @@ namespace sw
         }
         /** @brief `ModuleScope::Editor` 와 `Both` 를 종료할 때 게임보다 먼저 불립니다(에디터 인스턴스 파괴). */
         virtual void suspendHostModule( bool bReleaseAPITable ) { (void)bReleaseAPITable; }
+        /**
+         * @brief 장치를 다시 만든 뒤 게임 다음에 불립니다(`applyPendingDeviceChange` — `suspendHostModule( false )` 의 짝). 호스트 모듈 인스턴스를 같은 API 표로 다시 세운다.
+         * @return 호스트 모듈이 없거나 다시 섰으면 true 입니다. false 면 장치 교체가 종료를 요청한다.
+         */
+        [[nodiscard]] virtual bool recreateHostModule() { return true; }
         /** @brief 렌더 워커와 태스크를 비우기 **앞에서** 불립니다. 호스트 모듈(에디터)의 백그라운드 일에 종료 신호를 올린다(`FlushReason::Shutdown` 일 때만 뜻이 있다). */
         virtual void onBeforeFlushWorkers( FlushReason reason ) { (void)reason; }
         /** @brief 렌더 워커와 GPU 를 비운 직후, 태스크를 기다리기 전에 불립니다(에디터의 렌더 대기 표시를 버립니다). */
@@ -289,6 +302,8 @@ namespace sw
         [[nodiscard]] bool exportGameAPITable( void* pLibraryModule );
         /** @brief 호스트가 모듈에 넘기는 서비스 테이블을 채웁니다. @p bGameModule 이면 게임에 허용된 것(GameVisible)만 채웁니다. */
         void fillModuleServiceScope( SubsystemScope& outScope, bool bGameModule ) const;
+        /** @brief 장치를 다시 만든 뒤 게임을 다시 만듭니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
+        [[nodiscard]] bool recreateGameInstance();
         /** @brief 호스트 서비스 범위를 다시 만들어 게임 모듈에 넘깁니다(게임에 허용된 것만 겁니다). */
         void rebindGameService() { rebindModuleService( _gameAPI.bindService, _gameServices, true ); }
         /** @brief 게임 인스턴스를 shutdown, destroy 하고 핸들을 비웁니다. @p bReleaseAPITable 은 `suspendModules` 와 같습니다. */

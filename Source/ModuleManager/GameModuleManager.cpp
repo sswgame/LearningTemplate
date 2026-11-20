@@ -25,6 +25,7 @@
 #include "ModuleAPI/Service/IModuleStateStore.h"
 #include "ModuleAPI/Service/IServerKitLocator.h"
 
+#include "ModuleManager/DeviceChangeSequence.h"
 #include "ModuleManager/ILiveReloadManager.h"
 #include "ModuleManager/ModuleInstanceUtil.h"
 
@@ -415,11 +416,30 @@ namespace sw
         }
     }
 
-    bool GameModuleManager::recreateGameInstance( void* pGameModule )
+    bool GameModuleManager::applyPendingDeviceChange( QuitRequest& quitRequest )
     {
+        if ( _pRenderDriver == nullptr )
+            return true; // 렌더러가 없는 호스트(전용 서버)는 장치가 없다
+        DeviceChangeSequence sequence;
+        // API 표는 놓지 않는다. 모듈을 언로드하지 않고 같은 표로 다시 만든다(편집기는 리로드와 같은 길로 상태를 맡겼다 되찾는다 — `IModuleStateStore`).
+        sequence._suspendModules  = SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
+         { suspendModules( ModuleScope::Both, false, FlushReason::BackendSwap ); } );
+        sequence._recreateModules = SW_DELEGATE_LAMBDA( Delegate<bool()>, [this]()
+        {
+            // 기동과 같은 순서다. 게임이 먼저 스폰되고 호스트 모듈(에디터)이 그 타입과 서비스를 본다. 하나가 실패해도 다른 하나는 세운다(끝내기 전 로그가 둘 다 남는다).
+            const bool bGameRecreated = recreateGameInstance();
+            const bool bHostRecreated = recreateHostModule();
+            return bGameRecreated && bHostRecreated;
+        } );
+        return sequence.apply( *_pRenderDriver, quitRequest );
+    }
+
+    bool GameModuleManager::recreateGameInstance()
+    {
+        // 테이블이 비었으면(앞 바인딩 실패) 리로드 경로가 모듈 핸들로 다시 바인딩한다. 핸들은 모듈 수명을 아는 이 클래스가 찾는다(배포는 정적 링크라 nullptr).
         if ( _gameAPI.create == nullptr || _gameAPI.initialize == nullptr )
         {
-            onAfterGameReload( pGameModule );
+            onAfterGameReload( getLoadedModuleHandle( sw::config::kTargetGameModule ) );
             return _game != nullptr;
         }
 

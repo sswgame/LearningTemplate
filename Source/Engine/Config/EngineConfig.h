@@ -604,7 +604,7 @@ namespace sw
      * @brief 렌더 장치를 잃었을 때(TDR · 드라이버 재시작 · 개발 명령 `rhi.removeDevice`) 엔진이 할 일입니다. `EngineRenderDriver` 가 프레임마다 `IRHIDevice::isDeviceLost` 를 보고 고른다.
      * @details 언리얼은 `GetDeviceRemovedReason` → DRED 덤프 → 크래시 리포트 뒤 종료하고 Godot 4 도 치명 오류로 끝낸다(기본값 `Quit`).
      *          유니티는 D3D11 장치를 잃으면 장치를 다시 만들고 자원을 다시 올린다 — 그 자리가 `Recreate` 다. 다시 만드는 길은 백엔드 교체와 같은 하나
-     *          (모듈 내리기 → `RHI::recreateDevice` → 자원 다시 올리기 → 모듈 세우기, App 의 `EditorModuleManager::applyPendingBackendChange` — 개발 · 배포 공통)이고,
+     *          (모듈 내리기 → `RHI::recreateDevice` → 자원 다시 올리기 → 모듈 세우기, `GameModuleManager::applyPendingDeviceChange` — 개발 · 배포 공통)이고,
      *          다시 만들기가 어려운 백엔드(`RHI::canRecreateAfterDeviceLost` — OpenGL 은 컨텍스트 · 창 픽셀 포맷, WebGPU 는 브라우저 장치)는 `Quit` 로 답한다.
      */
     ENUM()

@@ -32,7 +32,7 @@ SW_TEST_CASE( EngineRenderDriverTest, LostDeviceQuitsWithDeviceLostCode )
 
 /**
  * @brief [EngineRenderDriverTest] `Recreate` 정책은 다시 만들 수 있는 백엔드(DX11 · DX12 · Vulkan)에서만 다시 만들고, OpenGL · WebGPU 는 끝낸다(감사 R-2)
- * @details 다시 만드는 길은 개발 · 배포 공통이라(`EditorModuleManager::applyPendingBackendChange`) 판정은 백엔드만 본다.
+ * @details 다시 만드는 길은 개발 · 배포 공통이라(`GameModuleManager::applyPendingDeviceChange`) 판정은 백엔드만 본다.
  */
 SW_TEST_CASE( EngineRenderDriverTest, RecreatePolicyQuitsOnBackendsThatCannotRecreate )
 {

@@ -23,6 +23,7 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
@@ -349,7 +350,7 @@ namespace sw
                     return true;
                 else
                 {
-                    _pBackendSwitcher->initialize( &_launch.getEngine(), getModuleManager(), bEnableEditor );
+                    _pBackendSwitcher->initialize( &_launch.getEngine() );
                     // 시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` 가 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾는다(엔진 범위 → 호스트 범위).
                     return _launch.getHostScope().bind( _pBackendSwitcher.get() );
                 }
@@ -622,15 +623,11 @@ namespace sw
         _launch.getEngine().update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
         getModuleManager()->endEditorFrame();
 
-        // 프레임 경계의 장치 교체 · 다시 만들기 — 개발 구성은 교체기(메뉴 · 콘솔 교체 + 실패 집계)를 거치고, 배포는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)만 예약한다.
+        // 프레임 경계의 장치 교체 · 다시 만들기 — 개발 구성의 백엔드 교체(`gv_rhiBackend`)와 배포도 쓰는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)이 같은 길이다.
         // 창 모달 루프 안의 프레임은 건너뛴다 — 교체가 창을 다시 만들면 아직 그 창에서 도는 모달 루프의 HWND 가 사라진다. 예약은 남아 루프가 끝난 뒤 첫 프레임이 한다.
+        // 실패는 반환값으로 따로 다루지 않는다 — 장치나 모듈 인스턴스가 없으면 모듈 관리자가 종료(DeviceLost)를 이미 요청했고, 되돌린 교체는 렌더러가 센다(`RHI.SwapFailedCount`).
         if ( _pWindow->isInModalLoopUpdate() == false )
-        {
-            if constexpr ( build::kShipping == false )
-                _pBackendSwitcher->applyIfPending();
-            else if ( const RHI* pRHI = _launch.getEngine().getRHI(); pRHI != nullptr && pRHI->hasPendingBackendChange() )
-                (void)getModuleManager()->applyPendingBackendChange( _launch.getEngine() ); // 실패하면 렌더 드라이버가 종료(DeviceLost)를 이미 요청했다
-        }
+            (void)getModuleManager()->applyPendingDeviceChange( engine::getSubsystem<QuitRequest>() );
 
         _launch.getEngine().endFrame();
         onStartupFrameEnded();

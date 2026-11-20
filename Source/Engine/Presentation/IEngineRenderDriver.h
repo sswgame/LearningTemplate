@@ -24,6 +24,17 @@ namespace sw
     enum class RHIWaitIdleReason : uint8;
 
     /**
+     * @brief 예약된 장치 교체 · 다시 만들기(`IEngineRenderDriver::applyPendingBackendChange`)의 결과입니다. 장치를 쓸 수 있는지가 결과 안에 있다 — 부르는 쪽이 RHI 를 다시 묻지 않는다.
+     * @details 모듈 관리자(`GameModuleManager::applyPendingDeviceChange`)가 이것으로 모듈을 다시 세울지, 끝낼지를 가른다.
+     */
+    enum class BackendChangeResult : uint8
+    {
+        Applied,  ///< 요청한 장치가 섰고 장면을 다시 묶었다(예약이 없었어도 이것이다)
+        Restored, ///< 요청한 백엔드로 장치를 만들지 못해 앞 백엔드로 되돌렸다 — 장치는 서 있고 장면도 다시 묶었다
+        Failed,   ///< 쓸 장치가 없다(되돌리지도 못했거나, 새 장치에 장면을 다시 묶지 못했다) — 모듈을 다시 세우지 않고 끝낸다
+    };
+
+    /**
      * @class IEngineRenderDriver
      * @brief 프레임 제출 · 백엔드 교체 · 창 크기 · 캡처 준비를 렌더러에 맡기는 인터페이스입니다. 게임 스레드에서만 부릅니다.
      */
@@ -54,8 +65,10 @@ namespace sw
         /** @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다. */
         virtual void submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, FrameDrawMode drawMode ) = 0;
 
-        /** @brief 대기 중인 RHI 핫스왑을 수행합니다. 요청이 없으면 true, 교체에 실패하면(되돌렸어도) false 입니다. */
-        [[nodiscard]] virtual bool applyPendingBackendChange() = 0;
+        /** @brief 장치 교체 · 다시 만들기가 예약돼 있으면 true 입니다(`gv_rhiBackend` 변경 · 장치 분실의 `Recreate`). 프레임 경계에서 묻는다. */
+        [[nodiscard]] virtual bool hasPendingBackendChange() const = 0;
+        /** @brief 예약된 장치 교체 · 다시 만들기를 수행합니다. 모듈 인스턴스는 부르는 쪽이 이미 내렸다(`GameModuleManager::applyPendingDeviceChange`). */
+        [[nodiscard]] virtual BackendChangeResult applyPendingBackendChange() = 0;
 
         /**
          * @brief 렌더러의 뷰 대상(풀 · TAA · 노출 · 깊이 기록 · 지터 순번)을 모두 버립니다 — 다음 프레임은 새 프로세스처럼 기록 없이 그린다(`FrameRenderer::discardViewTargets`).
@@ -75,5 +88,7 @@ namespace sw
         virtual void overrideDeviceLostPolicy( RHIDeviceLostPolicy policy ) = 0;
         /** @brief 잃은 장치를 다시 만들어 장면을 다시 묶은 횟수입니다(`RHIDeviceLostPolicy::Recreate`). 감시 값 `Render.DeviceRecreateCount`. */
         [[nodiscard]] virtual uint32 getDeviceRecreateCount() const = 0;
+        /** @brief 요청한 백엔드로 장치를 만들지 못한 교체 횟수입니다(되돌렸든 못 했든 — `BackendChangeResult::Applied` 가 아닌 것). 감시 값 `RHI.SwapFailedCount`. */
+        [[nodiscard]] virtual uint32 getFailedBackendChangeCount() const = 0;
     };
 } // namespace sw

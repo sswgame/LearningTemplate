@@ -2,8 +2,6 @@
 
 #include "App/Dev/RHIBackendSwitcher.h"
 
-#include "App/EditorModuleManager.h"
-
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
@@ -164,10 +162,10 @@ namespace sw
 
             [[nodiscard]] static bool readFailedSwapCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
-                if ( pSwitcher == nullptr )
+                const IEngineRenderDriver* pRenderDriver = engine::findSubsystem<IEngineRenderDriver>();
+                if ( pRenderDriver == nullptr )
                     return false;
-                outValue = static_cast<float64>( pSwitcher->getFailedSwapCount() );
+                outValue = static_cast<float64>( pRenderDriver->getFailedBackendChangeCount() );
                 return true;
             }
 
@@ -187,11 +185,8 @@ namespace sw
 {
     RHIBackendSwitcher::RHIBackendSwitcher()
         : _pEngine{ nullptr }
-        , _pGameModuleManager{ nullptr }
-        , _failedSwapCount{ 0 }
         , _pendingDeviceLossWaitMilliseconds{ 0 }
         , _startBackend{}
-        , _bEnableEditor{ SW_FALSE }
         , _bHandlingChange{ SW_FALSE }
         , _bStartBackendRecorded{ SW_FALSE }
         , _reserved{ 0 }
@@ -249,11 +244,9 @@ namespace sw
     }
 #endif
 
-    void RHIBackendSwitcher::initialize( Engine* pEngine, EditorModuleManager* pGameModuleManager, bool bEnableEditor )
+    void RHIBackendSwitcher::initialize( Engine* pEngine )
     {
-        _pEngine            = pEngine;
-        _pGameModuleManager = pGameModuleManager;
-        _bEnableEditor      = bEnableEditor ? SW_TRUE : SW_FALSE;
+        _pEngine = pEngine;
 
         // 시나리오가 장치 분실 정책을 고르는 입구(`<Launch variable="gv_deviceLostPolicy" value="2"/>`) — 설정 파일을 고치지 않고 Recreate 길을 끝까지 본다.
         IEngineRenderDriver* const pRenderDriver = pEngine != nullptr ? pEngine->getRenderDriver() : nullptr;
@@ -279,30 +272,7 @@ namespace sw
         if ( pBackendVariable != nullptr )
             pBackendVariable->_onValueChanged = {};
 
-        _pEngine            = nullptr;
-        _pGameModuleManager = nullptr;
-    }
-
-    void RHIBackendSwitcher::applyIfPending()
-    {
-        if ( _pEngine == nullptr )
-            return;
-
-        const RHI* pRHI = _pEngine->getRHI();
-        if ( pRHI == nullptr || pRHI->hasPendingBackendChange() == false )
-            return;
-
-        if ( applyPendingChange() == false )
-        {
-            SW_LOG_ERROR_ID( "App.BackendSoftRecreateFailed", "Backend soft-recreate failed." );
-            ++_failedSwapCount;
-            // 값만 되돌린다. 변경 콜백(onBackendVariableChanged)은 GlobalVariableInfo 의 setValueAsInt/setValueFromString
-            // (콘솔 · 에디터 패널) 경로에서만 불린다. 그래서 되돌림이 재시도 루프가 될 일은 없다. 심볼이 아니라 매니저가 든 주소로
-            // 쓰므로 App 이 Engine.dll 의 변수를 import 할 필요가 없다.
-            GlobalVariableInfo* pBackendVariable = findRHIBackendSwitcherVariable();
-            if ( pBackendVariable != nullptr )
-                *static_cast<RHIBackend*>( pBackendVariable->_pData ) = pRHI->getCommittedBackend();
-        }
+        _pEngine = nullptr;
     }
 
     void RHIBackendSwitcher::onBackendVariableChanged( const GlobalVariableInfo* pInfo )
@@ -333,14 +303,6 @@ namespace sw
 #endif
 
         _bHandlingChange = SW_FALSE;
-    }
-
-    bool RHIBackendSwitcher::applyPendingChange()
-    {
-        if ( _pEngine == nullptr || _pGameModuleManager == nullptr )
-            return false;
-        // 순서(모듈 내리기 → 장치 → 모듈 세우기)는 배포도 쓰는 모듈 호스트 하나가 안다 — 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)이 같은 길이다.
-        return _pGameModuleManager->applyPendingBackendChange( *_pEngine );
     }
 
     SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice [driverWaitMs]",

@@ -83,6 +83,7 @@ namespace sw
         , _deviceLostPolicy{ RHIDeviceLostPolicy::None }
         , _deviceLostPolicyOverride{ RHIDeviceLostPolicy::None }
         , _deviceRecreateCount{ 0 }
+        , _failedBackendChangeCount{ 0 }
         , _bDeviceLostHandled{ SW_FALSE }
         , _bDisplayOutputApplied{ SW_FALSE }
         , _displayRequest{}
@@ -213,7 +214,7 @@ namespace sw
     {
         if ( device.isDeviceLost() == false )
             return {};
-        // 다시 만드는 길(모듈 내리기 → 장치 → 모듈 세우기)은 호스트의 모듈 관리자 하나다(`EditorModuleManager::applyPendingBackendChange`, 개발 · 배포 공통).
+        // 다시 만드는 길(모듈 내리기 → 장치 → 모듈 세우기)은 호스트의 모듈 관리자 하나다(`GameModuleManager::applyPendingDeviceChange`, 개발 · 배포 공통).
         if ( policy == RHIDeviceLostPolicy::Recreate && RHI::canRecreateAfterDeviceLost( backend ) )
             return RHIDeviceLostPolicy::Recreate;
         return RHIDeviceLostPolicy::Quit; // `None` 이면 기동이 이미 InitializationFailed 로 끝내기를 요청했다(`onStartupFinished`) — 처음 요청의 코드가 이긴다
@@ -378,16 +379,21 @@ namespace sw
         }
     }
 
-    bool EngineRenderDriver::applyPendingBackendChange()
+    bool EngineRenderDriver::hasPendingBackendChange() const
+    {
+        return _pRHI != nullptr && _pRHI->hasPendingBackendChange();
+    }
+
+    BackendChangeResult EngineRenderDriver::applyPendingBackendChange()
     {
         if ( _pRHI == nullptr )
-            return false;
+            return BackendChangeResult::Failed;
 
         const bool       bRecreateLost = _pRHI->isDeviceRecreatePending(); // 잃은 장치를 같은 백엔드로 다시 만든다(`RHIDeviceLostPolicy::Recreate`)
         const RHIBackend requested     = _pRHI->consumePendingBackendChange();
         const RHIBackend previous      = _pRHI->getCommittedBackend();
         if ( requested == previous && bRecreateLost == false )
-            return true;
+            return BackendChangeResult::Applied;
 
         SW_LOG_INFO_ID( "Engine.SoftRecreatingRHI", "Soft-recreating RHI: %# → %#",
                         RHI::getBackendTypeName( previous ),
@@ -412,17 +418,16 @@ namespace sw
             SW_LOG_ERROR_ID( "Engine.RecreateDeviceFailedRestoringPrevious", "recreateDevice failed; restoring previous backend %#",
                              RHI::getBackendTypeName( previous ) );
             gv_rhiBackend = previous;
+            ++_failedBackendChangeCount;
+            // 장치 없이 돌지 않는다 — 끝내는 일은 결과를 받은 모듈 관리자가 한다(`GameModuleManager::applyPendingDeviceChange`).
             if ( _pRHI->recreateDevice( previous ) == false )
             {
                 SW_LOG_ERROR_ID( "Engine.FailedRestorePreviousRHI", "Failed to restore previous RHI backend — device is gone." );
-                if ( bRecreateLost )
-                    engine::getSubsystem<QuitRequest>().request( ProcessExitCode::DeviceLost ); // 잃은 장치를 되살리지 못했다 — 장치 없이 돌지 않는다
-                return false;
+                return BackendChangeResult::Failed;
             }
-            _bDeviceLostHandled    = SW_FALSE;      // 되돌린 장치는 새 장치다
-            _bDisplayOutputApplied = SW_FALSE;      // 되돌린 장치도 SDR 스왑체인으로 선다
-            (void)rebindSceneAfterDeviceRecreate(); // 되돌린 장치에 장면을 다시 묶는다 — 이 경로는 이미 실패로 답한다
-            return false;
+            _bDeviceLostHandled    = SW_FALSE; // 되돌린 장치는 새 장치다
+            _bDisplayOutputApplied = SW_FALSE; // 되돌린 장치도 SDR 스왑체인으로 선다
+            return rebindSceneAfterDeviceRecreate() ? BackendChangeResult::Restored : BackendChangeResult::Failed;
         }
 
         _bDeviceLostHandled               = SW_FALSE; // 새 장치다 — 다시 잃으면 정책을 다시 묻는다
@@ -431,9 +436,8 @@ namespace sw
         string       rebindTiming;
         if ( rebindSceneAfterDeviceRecreate( &rebindTiming ) == false )
         {
-            if ( bRecreateLost )
-                engine::getSubsystem<QuitRequest>().request( ProcessExitCode::DeviceLost ); // 다시 만든 장치에 장면을 묶지 못했다 — 검은 화면으로 돌지 않는다
-            return false;
+            ++_failedBackendChangeCount;
+            return BackendChangeResult::Failed; // 다시 만든 장치에 장면을 묶지 못했다 — 검은 화면으로 돌지 않는다(모듈 관리자가 끝낸다)
         }
         if ( bRecreateLost )
         {
@@ -446,7 +450,7 @@ namespace sw
         SW_LOG_INFO_ID( "Engine.ActiveBackendNowMerge", "Active backend is now %# (merge batches across materials %#, native bindless sampling %#)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ),
                         _pPacketBuilder->isMergeBatchesAcrossMaterials() ? 1 : 0,
                         _pRHI->getDevice().supportsNativeBindlessSampling() ? 1 : 0 );
-        return true;
+        return BackendChangeResult::Applied;
     }
 } // namespace sw
 
