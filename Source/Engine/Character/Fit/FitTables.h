@@ -139,7 +139,7 @@ namespace sw
             { ".fit.xml", AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `CharacterDataCache.cpp` 의 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType{ "FitTables", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "FitTables", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief XML 텍스트에서 읽습니다(기존 내용은 비웁니다). 연산 이름과 인자는 @p operators 에 대조합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const FitOperatorRegistry& operators );

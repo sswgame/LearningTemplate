@@ -56,7 +56,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "SourceStringTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "SourceStringTable", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
@@ -159,7 +159,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "TranslationTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "TranslationTable", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
@@ -239,7 +239,7 @@ namespace sw
         vector<string>                _listAssetRoot;
         vector<LocalizationAssetRule> _listAssetRule;
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "LocalizationProject", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "LocalizationProject", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );

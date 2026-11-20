@@ -130,7 +130,7 @@ namespace sw
 
     constexpr bool isReflectUnitTableOrdered() noexcept
     {
-        for ( size_t index = 0; index < std::size( kArrReflectUnit ); ++index )
+        for ( size_t index = 0; index < SW_COUNT_OF( kArrReflectUnit ); ++index )
         {
             if ( static_cast<size_t>( kArrReflectUnit[index]._kind ) != index + 1 )
                 return false;

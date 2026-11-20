@@ -44,7 +44,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `VertexAnimationCookList.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "VertexAnimationCookList", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "VertexAnimationCookList", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 굽는 메시입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). 경로 글 칸이었을 때는 다른 칸의 `AssetRef<MeshAssetFormat>` `mesh` 와 이름이 같아 GUID 이전 도구가 칸 꼴을 가르지 못했다. */
         PROPERTY( Name = "mesh", Required )

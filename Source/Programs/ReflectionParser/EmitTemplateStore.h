@@ -44,7 +44,7 @@ namespace sw
         "BuiltinFileFooter",
         "EditorMetadataFileHeader",
     };
-    static_assert( std::size( kArrEmitTemplateName ) == static_cast<size_t>( EmitTemplate::Count ), "kArrEmitTemplateName must list every EmitTemplate" );
+    static_assert( SW_COUNT_OF( kArrEmitTemplateName ) == static_cast<size_t>( EmitTemplate::Count ), "kArrEmitTemplateName must list every EmitTemplate" );
 
     // ------------------------------------------------------------------------------
     // 2) emit — *.tpl 골격 로드·$VAR 확장

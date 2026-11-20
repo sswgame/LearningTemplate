@@ -709,7 +709,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, DecalPassWritesTheDBuffer )
 
     const RenderPassKind arrBasePass[] = { RenderPassKind::GBuffer, RenderPassKind::ForwardOpaque };
     const string_view    arrPath[]     = { "engine/pipeline/deferredpipeline.xml", "engine/pipeline/forwardprepasspipeline.xml" };
-    for ( size_t pipelineIndex = 0; pipelineIndex < std::size( arrPath ); ++pipelineIndex )
+    for ( size_t pipelineIndex = 0; pipelineIndex < SW_COUNT_OF( arrPath ); ++pipelineIndex )
     {
         RenderPipelineAsset engine;
         SW_REQUIRE_TRUE( engine.loadFromXMLFile( AssetID{ arrPath[pipelineIndex] } ) );

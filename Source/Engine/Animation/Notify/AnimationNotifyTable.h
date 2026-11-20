@@ -125,7 +125,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `AnimationNotifyTable.cpp` 의 공유 캐시 줄). 타입 있는 참조 `AssetRef<AnimationNotifyTable>` 가 접미사로 가른다. */
-        static constexpr AssetTypeDef kAssetType{ "AnimationNotifyTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "AnimationNotifyTable", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief XML 텍스트에서 읽습니다(지금 내용을 비우고). 처리기는 @p registry 에서 이름으로 찾습니다. 오류가 있으면 모두 로그로 내고 false 입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const AnimationNotifyHandlerRegistry& registry );

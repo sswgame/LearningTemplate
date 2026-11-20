@@ -76,7 +76,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `AnimationSet.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "AnimationSet", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "AnimationSet", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
         /** @brief `set` 사슬의 최대 길이입니다. 넘으면 순환으로 보고 오류입니다(`_base` 사슬은 `DataInheritance` 가 본다). */
         static constexpr uint32 kMaxChainDepth = 8;
 

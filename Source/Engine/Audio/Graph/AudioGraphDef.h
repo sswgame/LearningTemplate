@@ -130,7 +130,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 소리 그래프 에셋 종류입니다(등록은 `AudioGraphDef.cpp` 의 `SW_ASSET_TYPE`). 소리 파일과 같이 전용 서버 패키지가 빼는 묶음 `Audio` 다 — 서버는 그래프를 읽지 않는다. */
-        static constexpr AssetTypeDef kAssetType{ "AudioGraph", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, "Audio" };
+        static constexpr AssetTypeDef kAssetType{ "AudioGraph", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, "Audio" };
         /** @brief 노드 수의 상한입니다. */
         static constexpr uint32 kMaxNodeCount = 32;
         /** @brief 길이의 상한(초)입니다. 프레임 수가 32 비트에 들어가야 한다. */

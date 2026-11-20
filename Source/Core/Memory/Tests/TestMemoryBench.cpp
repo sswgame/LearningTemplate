@@ -136,7 +136,7 @@ SW_TEST_CASE( MemoryBenchTest, AllocateFreeCost, ._tags = "bench", ._disabledRea
     static constexpr FreeShape   kArrShape[]       = { FreeShape::SameThread, FreeShape::OtherThread, FreeShape::LiveRandom };
     static constexpr const utf8* kArrShapeName[]   = { "same-thread", "other-thread", "live-random" };
     uint32                       measuredCount     = 0;
-    for ( size_t shapeIndex = 0; shapeIndex < std::size( kArrShape ); ++shapeIndex )
+    for ( size_t shapeIndex = 0; shapeIndex < SW_COUNT_OF( kArrShape ); ++shapeIndex )
     {
         for ( const size_t size : kArrSize )
         {
@@ -149,5 +149,5 @@ SW_TEST_CASE( MemoryBenchTest, AllocateFreeCost, ._tags = "bench", ._disabledRea
             }
         }
     }
-    SW_EXPECT_EQUAL( measuredCount, static_cast<uint32>( std::size( kArrShape ) * std::size( kArrSize ) * std::size( kArrThreadCount ) ) );
+    SW_EXPECT_EQUAL( measuredCount, static_cast<uint32>( SW_COUNT_OF( kArrShape ) * SW_COUNT_OF( kArrSize ) * SW_COUNT_OF( kArrThreadCount ) ) );
 }

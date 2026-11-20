@@ -39,7 +39,7 @@ namespace sw
             /** @brief 표의 줄 순서가 RHIBackend 열거값과 같은지입니다(줄 순서로 값을 읽는 쪽이 있다). */
             static constexpr bool isTableInEnumOrder()
             {
-                for ( uint32 rowIndex = 0; rowIndex < std::size( kArrBackendArgument ); ++rowIndex )
+                for ( uint32 rowIndex = 0; rowIndex < SW_COUNT_OF( kArrBackendArgument ); ++rowIndex )
                 {
                     if ( static_cast<uint32>( kArrBackendArgument[rowIndex]._backend ) != rowIndex )
                         return false;
@@ -64,7 +64,7 @@ namespace sw
         };
 
         static_assert( RHIInternal::isTableInEnumOrder(), "Config/Engine/CookContract.json rhi_backends must follow RHIBackend values" );
-        static_assert( std::size( RHIInternal::kArrBackendArgument ) == std::size( RHIBackendInfoTable::kArrInfo ),
+        static_assert( SW_COUNT_OF( RHIInternal::kArrBackendArgument ) == SW_COUNT_OF( RHIBackendInfoTable::kArrInfo ),
                        "RHIBackendInfoTable needs one row per Config/Engine/CookContract.json rhi_backends row" );
 #define SW_RHI_BACKEND_INFO_CHECK( Backend, ShaderFolder, ShaderTarget, ... ) \
     static_assert( RHIInternal::matchesBackendInfo( RHIBackend::Backend, #Backend, ShaderTargetFormat::ShaderTarget ), "RHIBackendInfoTable row " #Backend " differs from Config/Engine/CookContract.json" );

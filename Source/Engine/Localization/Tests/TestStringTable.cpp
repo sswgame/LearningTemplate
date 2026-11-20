@@ -32,12 +32,12 @@ SW_TEST_CASE( StringTableTest, RuntimeLanguageSwitchingOnSameUIKeys )
     const utf8* pFirstStart = nullptr;
     for ( const auto& arrText : arrLanguage )
     {
-        for ( size_t keyIndex = 0; keyIndex < std::size( arrKey ); ++keyIndex )
+        for ( size_t keyIndex = 0; keyIndex < SW_COUNT_OF( arrKey ); ++keyIndex )
         {
             stringTable.setString( arrKey[keyIndex], sw::string( arrText[keyIndex] ) );
         }
-        SW_EXPECT_EQUAL( std::size( arrKey ), stringTable.size() );
-        for ( size_t keyIndex = 0; keyIndex < std::size( arrKey ); ++keyIndex )
+        SW_EXPECT_EQUAL( SW_COUNT_OF( arrKey ), stringTable.size() );
+        for ( size_t keyIndex = 0; keyIndex < SW_COUNT_OF( arrKey ); ++keyIndex )
         {
             const utf8* pFound = stringTable.findString( arrKey[keyIndex] );
             SW_REQUIRE_NOT_NULL( pFound );

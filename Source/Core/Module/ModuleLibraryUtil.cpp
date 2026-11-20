@@ -158,13 +158,13 @@ namespace sw
         entry                     = ModuleSubdirectory{};
         if ( binRelativeDirectory.empty() )
             return;
-        if ( baseName.size() >= std::size( entry._arrBaseName ) || binRelativeDirectory.size() >= std::size( entry._arrDirectory ) )
+        if ( baseName.size() >= SW_COUNT_OF( entry._arrBaseName ) || binRelativeDirectory.size() >= SW_COUNT_OF( entry._arrDirectory ) )
         {
             SW_LOG_ERROR_ID( "ModuleLibraryUtil.ModuleSubdirectoryTooLong", "Module subdirectory for %# is too long - the module stays in %#", string{ baseName }.c_str(), kModuleFolder );
             return;
         }
-        StringUtil::strncpy( entry._arrBaseName, string{ baseName }.c_str(), static_cast<uint32>( std::size( entry._arrBaseName ) ) );
-        StringUtil::strncpy( entry._arrDirectory, string{ binRelativeDirectory }.c_str(), static_cast<uint32>( std::size( entry._arrDirectory ) ) );
+        StringUtil::strncpy( entry._arrBaseName, string{ baseName }.c_str(), static_cast<uint32>( SW_COUNT_OF( entry._arrBaseName ) ) );
+        StringUtil::strncpy( entry._arrDirectory, string{ binRelativeDirectory }.c_str(), static_cast<uint32>( SW_COUNT_OF( entry._arrDirectory ) ) );
     }
 
     bool ModuleLibraryUtil::getModuleSubdirectory( string& outBaseName, string& outBinRelativeDirectory )

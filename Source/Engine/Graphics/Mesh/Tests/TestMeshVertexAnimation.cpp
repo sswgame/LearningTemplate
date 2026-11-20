@@ -133,7 +133,7 @@ SW_TEST_CASE( MeshVertexAnimationTest, NormalRoundTripsThroughOctahedral )
         float3{1.0f,  1.0f,  1.0f},
         float3{1.0f, -1.0f, -1.0f}
     };
-    const uint32        directionCount = static_cast<uint32>( std::size( arrDirection ) );
+    const uint32        directionCount = static_cast<uint32>( SW_COUNT_OF( arrDirection ) );
     MeshVertexAnimation animation;
     animation._frameCount  = 1;
     animation._vertexCount = directionCount;

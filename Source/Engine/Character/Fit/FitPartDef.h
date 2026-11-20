@@ -124,7 +124,7 @@ namespace sw
             { ".partfit.xml", AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `CharacterDataCache.cpp` 의 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType{ "FitPartDef", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "FitPartDef", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief XML 텍스트에서 읽습니다. 모르는 속성 · 원소와 빠진 값은 오류입니다. 겹 · 프로필 · 영역 이름은 피팅 표와 만나는 곳에서 `validateNames` 로 대조합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );

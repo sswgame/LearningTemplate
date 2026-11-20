@@ -43,7 +43,7 @@ namespace sw
                 SW_RHI_BACKEND_TABLE( SW_SHADER_COOKER_BACKEND_ROW )
 #undef SW_SHADER_COOKER_BACKEND_ROW
             };
-            static_assert( std::size( kArrBackendFolder ) == static_cast<size_t>( ShaderTargetFormat::Count ),
+            static_assert( SW_COUNT_OF( kArrBackendFolder ) == static_cast<size_t>( ShaderTargetFormat::Count ),
                            "Config/Engine/CookContract.json needs one rhi_backends row per ShaderTargetFormat" );
 
             static string getStemLower( string_view filePath )
@@ -56,7 +56,7 @@ namespace sw
             /** @brief 모든 형식이 표에 한 번씩 있는지 - 수만 맞고 한 형식이 두 번이면 다른 형식의 폴더를 찾지 못한다. */
             static constexpr bool isEveryFormatCovered()
             {
-                for ( size_t formatIndex = 0; formatIndex < std::size( kArrBackendFolder ); ++formatIndex )
+                for ( size_t formatIndex = 0; formatIndex < SW_COUNT_OF( kArrBackendFolder ); ++formatIndex )
                 {
                     size_t matchCount = 0;
                     for ( const BackendFolder& row : kArrBackendFolder )

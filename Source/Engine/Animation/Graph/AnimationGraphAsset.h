@@ -271,7 +271,7 @@ namespace sw
         vector<GraphCommentBox>        _listComment;  /**< 그래프 에디터의 주석 상자입니다(XML "comments", 선택 — 실행에는 쓰지 않는다). */
         string                         _baseID;       /**< 부모 그래프의 리소스 id 입니다(XML "_base"). 목록은 펼친 값이고, 저장이 부모와 다른 칸만 쓴다. */
         /** @brief 이 에셋 종류입니다(등록은 `AnimationGraphAsset.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "AnimationGraphAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "AnimationGraphAsset", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 빈 그래프를 만듭니다. */
         AnimationGraphAsset() = default;

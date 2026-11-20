@@ -327,7 +327,7 @@ namespace sw
         // 표 순서로 모은다 — 적은 순서와 무관하게 보고 · 종료 코드의 "첫 실패" 가 늘 같다.
         // `all` 은 이 플랫폼의 검증 백엔드다(`RHIAvailability::getScenarioBackends` — 쿠킹 표 `scenario_backends`, 리눅스는 vk · gl). 이름을 적은 백엔드는 그대로 띄운다 — 못 돌면 자식이 건너뜀(77)으로 끝난다.
         const bool bAll = listName.size() == 1 && listName[0] == "all";
-        for ( size_t index = 0; index < std::size( Internal::kArrBackendName ); ++index )
+        for ( size_t index = 0; index < SW_COUNT_OF( Internal::kArrBackendName ); ++index )
         {
             const utf8* const            pName        = Internal::kArrBackendName[index];
             const span<const RHIBackend> listScenario = RHIAvailability::getScenarioBackends();

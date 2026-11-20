@@ -69,7 +69,7 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
                 };
-                static_assert( std::size( kArrBlend ) == static_cast<size_t>( ReflectBuiltinIndex::kCount ), "kArrBlend must have one row per ReflectBuiltins.xxx type" );
+                static_assert( SW_COUNT_OF( kArrBlend ) == static_cast<size_t>( ReflectBuiltinIndex::kCount ), "kArrBlend must have one row per ReflectBuiltins.xxx type" );
                 if ( prop._bIsContainer == SW_TRUE || prop._bIsBitField == SW_TRUE )
                     return nullptr;
                 const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( prop._typeName );

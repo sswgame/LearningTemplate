@@ -183,7 +183,7 @@ namespace sw
         const vector<pair<string, string>>* const arrList[]    = { &enumInfo._listValueAlias, &enumInfo._listRemovedEnumerator };
         const utf8* const                         arrKeyName[] = { "ValueAlias", "Removed" };
         vector<string_view>                       listSeenOld{};
-        for ( size_t listIndex = 0; listIndex < std::size( arrList ); ++listIndex )
+        for ( size_t listIndex = 0; listIndex < SW_COUNT_OF( arrList ); ++listIndex )
         {
             for ( const auto& [oldName, targetName] : *arrList[listIndex] )
             {

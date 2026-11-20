@@ -109,7 +109,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `BehaviorTreeAsset.cpp` 의 공유 캐시 줄). 타입 있는 참조 `AssetRef<BehaviorTreeAsset>` 가 접미사로 가른다. */
-        static constexpr AssetTypeDef kAssetType{ kDataKind, kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ kDataKind, kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         BehaviorTreeAsset();
 

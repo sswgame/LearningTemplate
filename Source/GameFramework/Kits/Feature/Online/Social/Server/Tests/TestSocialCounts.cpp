@@ -89,7 +89,7 @@ SW_TEST_CASE( SocialLinkRulesTest, LimitsStopTheWrite )
         decide( Op::Block, State::None, State::None, fullBlocked, {} ),
     };
     const SocialResult listExpected[] = { SocialResult::PendingLimit, SocialResult::PendingLimit, SocialResult::FriendLimit, SocialResult::FriendLimit, SocialResult::BlockLimit };
-    for ( size_t index = 0; index < std::size( listDecision ); ++index )
+    for ( size_t index = 0; index < SW_COUNT_OF( listDecision ); ++index )
     {
         SW_EXPECT_TRUE( listDecision[index]._result == listExpected[index] );
         SW_EXPECT_TRUE( listDecision[index]._bWrite == SW_FALSE );

@@ -354,7 +354,7 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
             };
-            static constexpr size_t kBuiltinTypeCount = std::size( kArrBuiltinTypeName );
+            static constexpr size_t kBuiltinTypeCount = SW_COUNT_OF( kArrBuiltinTypeName );
 
             /**
              * @brief 기본 타입 이름 표입니다(`ReflectBuiltins.xxx` 순서).
@@ -541,7 +541,7 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
             };
-            static_assert( std::size( kArrBuiltinRow ) == static_cast<size_t>( ReflectBuiltinIndex::kCount ), "kArrBuiltinRow must have one row per ReflectBuiltins.xxx type" );
+            static_assert( SW_COUNT_OF( kArrBuiltinRow ) == static_cast<size_t>( ReflectBuiltinIndex::kCount ), "kArrBuiltinRow must have one row per ReflectBuiltins.xxx type" );
 
             /** @brief @p builtinIndex 의 줄입니다. 표 밖(`kNone`)이면 nullptr 입니다 — 열거형을 표 번호로 바꾸는 곳은 여기 하나다. */
             [[nodiscard]] static const BuiltinRow* findRow( const ReflectBuiltinIndex builtinIndex )

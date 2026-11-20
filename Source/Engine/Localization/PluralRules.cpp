@@ -348,7 +348,7 @@ namespace sw
     expected<void> PluralRuleSet::compileRule( string_view keyword, string_view ruleText )
     {
         using Internal = PluralRulesInternal;
-        for ( size_t index = 0; index < std::size( Internal::kArrKeyword ); ++index )
+        for ( size_t index = 0; index < SW_COUNT_OF( Internal::kArrKeyword ); ++index )
         {
             if ( keyword != Internal::kArrKeyword[index] )
                 continue;
@@ -384,13 +384,13 @@ namespace sw
     size_t PluralRuleSet::countSamples( PluralCategory category ) const
     {
         const size_t index = static_cast<size_t>( category );
-        return index < std::size( _arrSample ) ? _arrSample[index].size() : 0;
+        return index < SW_COUNT_OF( _arrSample ) ? _arrSample[index].size() : 0;
     }
 
     expected<void> PluralRuleSet::verifySamples() const
     {
         using Internal = PluralRulesInternal;
-        for ( size_t index = 0; index < std::size( _arrSample ); ++index )
+        for ( size_t index = 0; index < SW_COUNT_OF( _arrSample ); ++index )
         {
             for ( const PluralOperands& sample : _arrSample[index] )
             {
@@ -418,7 +418,7 @@ namespace sw
 
     PluralCategory PluralRuleSet::select( const PluralOperands& operands ) const
     {
-        for ( size_t index = 0; index < std::size( _arrRule ); ++index )
+        for ( size_t index = 0; index < SW_COUNT_OF( _arrRule ); ++index )
         {
             for ( const AndCondition& condition : _arrRule[index] )
             {

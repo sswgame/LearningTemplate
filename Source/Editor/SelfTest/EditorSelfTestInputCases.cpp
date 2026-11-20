@@ -379,7 +379,7 @@ namespace sw::editor
                 if ( context.getStepIndex() == 0 )
                     return EditorSelfTestStep::Continue; // 레이블이 생기도록 한 번 그린다
                 HitTestState& probe = context.getTestState<HitTestState>();
-                if ( probe._caseIndex >= std::size( kArrCase ) )
+                if ( probe._caseIndex >= SW_COUNT_OF( kArrCase ) )
                 {
                     EditorSelfTestInput::moveMouseAway();
                     return EditorSelfTestStep::Done;

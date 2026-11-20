@@ -138,7 +138,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `CharacterDataCache.cpp` 의 공유 캐시 줄). 타입 있는 참조 `AssetRef<PhysicsAsset>` 가 접미사로 가른다. */
-        static constexpr AssetTypeDef kAssetType{ "PhysicsAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "PhysicsAsset", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         PROPERTY( Tooltip = "Collision layer of bodies that do not name one" )
         hashed_string _defaultLayer{ "Ragdoll" };

@@ -24,7 +24,7 @@ namespace sw
             {     ".prefab", AssetSuffixRole::CookedAlias},
         };
         /** @brief 프리팹 에셋 종류입니다(등록은 `PrefabAsset.cpp` 의 `SW_ASSET_TYPE`, 캐시 등록은 `PrefabCache.cpp`). 판 0. */
-        static constexpr AssetTypeDef kAssetType{ "Prefab", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), ".prefab.bin", 1, {} };
+        static constexpr AssetTypeDef kAssetType{ "Prefab", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), ".prefab.bin", 1, {} };
     };
 
     /** @brief `PrefabAsset` 이 완전하지 않은 곳에서도 칸의 종류를 안다. */

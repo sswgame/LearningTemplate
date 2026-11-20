@@ -483,7 +483,7 @@ namespace sw
             RHIBufferTransition{view._deferredTileArgs._buffer, RHIBufferState::UnorderedAccess},
             RHIBufferTransition{view._deferredTileList._buffer, RHIBufferState::UnorderedAccess}
         };
-        cmd.transitionBuffers( arrToWrite, static_cast<uint32>( std::size( arrToWrite ) ) );
+        cmd.transitionBuffers( arrToWrite, static_cast<uint32>( SW_COUNT_OF( arrToWrite ) ) );
         cmd.setComputePipelineState( classify );
         // g_DeferredTileArgsRW(u0) / g_DeferredTileListRW(u1) — deferred_tile_classify.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeUAV( view._deferredTileArgs._uav, 0 );
@@ -499,7 +499,7 @@ namespace sw
             RHIBufferTransition{view._deferredTileArgs._buffer, RHIBufferState::IndirectArgument},
             RHIBufferTransition{view._deferredTileList._buffer,   RHIBufferState::ShaderResource}
         };
-        cmd.transitionBuffers( arrToRead, static_cast<uint32>( std::size( arrToRead ) ) );
+        cmd.transitionBuffers( arrToRead, static_cast<uint32>( SW_COUNT_OF( arrToRead ) ) );
 
         // 2) 종류마다 간접 그리기 — 인스턴스 하나가 타일 하나(정점 여섯). 타일 목록은 패스 전용 구조버퍼 칸(t11)에 PSO · 공통 바인딩 뒤에 건다(렌즈 플레어와 같다).
         if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )

@@ -73,12 +73,12 @@ namespace sw
 
             const string name  = FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) );
             size_t       index = 0;
-            while ( index < std::size( kArrEmitTemplateName ) && name != kArrEmitTemplateName[index] )
+            while ( index < SW_COUNT_OF( kArrEmitTemplateName ) && name != kArrEmitTemplateName[index] )
             {
                 ++index;
             }
             // 모르는 이름은 철자가 틀린 골격이다 - 쓰이지 않고 남아 고친 줄 알게 한다.
-            if ( index == std::size( kArrEmitTemplateName ) )
+            if ( index == SW_COUNT_OF( kArrEmitTemplateName ) )
             {
                 SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplateNotKnown", "Emit template '%#' is not a known template (EmitTemplate) - rename or remove it", filePath );
                 return false;
@@ -88,7 +88,7 @@ namespace sw
         }
 
         bool bAllLoaded = true;
-        for ( size_t index = 0; index < std::size( kArrEmitTemplateName ); ++index )
+        for ( size_t index = 0; index < SW_COUNT_OF( kArrEmitTemplateName ); ++index )
         {
             if ( arrLoaded[index] )
                 continue;

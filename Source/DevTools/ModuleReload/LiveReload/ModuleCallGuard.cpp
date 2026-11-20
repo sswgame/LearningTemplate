@@ -58,7 +58,7 @@ namespace sw
             }
 #elif defined( SW_PLATFORM_LINUX )
             static constexpr int32  kArrFaultSignal[] = { SIGSEGV, SIGBUS, SIGFPE, SIGILL };
-            static constexpr uint32 kFaultSignalCount = static_cast<uint32>( std::size( kArrFaultSignal ) );
+            static constexpr uint32 kFaultSignalCount = static_cast<uint32>( SW_COUNT_OF( kArrFaultSignal ) );
 
             static inline struct sigaction                   _s_arrPreviousAction[kFaultSignalCount]{}; ///< 설치 전의 처리기(크래시 처리기). 바깥 호출이 채운다
             static inline int32                              _s_installDepth{ 0 };                      ///< 겹친 호출 깊이. 0 → 1 에서 설치, 1 → 0 에서 해제

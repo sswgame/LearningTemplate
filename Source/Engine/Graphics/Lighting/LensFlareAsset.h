@@ -68,7 +68,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `LensFlareAsset.cpp` 의 공유 캐시 줄 — 파일을 고치면 다시 읽고, `SharedAssetRef` 로 쥔 수집기가 새 판을 본다). */
-        static constexpr AssetTypeDef kAssetType{ "LensFlareAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "LensFlareAsset", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 원소 목록입니다(비면 읽기 오류). */
         PROPERTY()

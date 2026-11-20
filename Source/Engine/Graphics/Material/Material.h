@@ -86,7 +86,7 @@ namespace sw
             friend class Material;
         };
         /** @brief 머티리얼 에셋 종류입니다(등록은 `MaterialCache.cpp` 의 `SW_ASSET_TYPE`). 판 0. */
-        static constexpr AssetTypeDef kAssetType{ "Material", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "Material", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
         /** @brief create() 전용 생성자입니다. 키 없이는 만들 수 없습니다. */
         explicit Material( CreateKey );
         /** @brief 빈 머티리얼을 Engine.dll 안에서 shared_ptr 로 만듭니다. Material 을 얻는 유일한 방법입니다. */

@@ -1110,8 +1110,8 @@ namespace sw
                 {
                     if ( pass._type != RenderPassKind::Decal )
                         continue;
-                    bool bShape = pass._listResolvedColorOutput.size() == std::size( arrExpected );
-                    for ( size_t index = 0; bShape && index < std::size( arrExpected ); ++index )
+                    bool bShape = pass._listResolvedColorOutput.size() == SW_COUNT_OF( arrExpected );
+                    for ( size_t index = 0; bShape && index < SW_COUNT_OF( arrExpected ); ++index )
                     {
                         bShape = static_cast<RenderPassInputRole>( pass._listResolvedColorOutput[index]._role ) == arrExpected[index];
                     }
