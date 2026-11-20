@@ -8,6 +8,7 @@
  *          `std::mutex` · `std::shared_mutex` 를 직접 쓰면 셋이 모두 꺼지므로 직접 쓰지 않는다.
  */
 #pragma once
+#include "Core/Concurrency/ObserverSlot.h"
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/ThreadSafety.h"
 #include "Core/Concurrency/atomic.h"
@@ -24,7 +25,7 @@ namespace sw
     //    mutex · thread 는 이 인터페이스만 안다. 검출기는 컨테이너 · 호출 스택을 쓰므로 위층(Diagnostics)에 있다
     // ------------------------------------------------------------------------------
     /**
-     * @brief 대기 사건을 받는 인터페이스입니다 — `mutex` 의 잠금과 `thread` 의 합류(스레드가 자기 합류 키를 잡고 있다가 끝날 때 놓는다). `mutex::registerLockObserver` 로 겁니다.
+     * @brief 대기 사건을 받는 인터페이스입니다 — `mutex` 의 잠금과 `thread` 의 합류(스레드가 자기 합류 키를 잡고 있다가 끝날 때 놓는다). `mutex::bindLockObserver` 로 겁니다(돌려받은 토큰이 사라지면 뗀다).
      * @details `mutex` 는 잠금 추적을 켠 실행(`mutex::enableLockTracking`)에서만 부르고, `thread` 는 늘 부른다(시작 · 끝 · 합류는 드물다). 검사 구성에서는
      *          재진입 가드(`MutexReentryGuard`) 안에서 불리므로 구현이 자기 `mutex` 를 잡아도 다시 불리지 않습니다. 키 `pLock` 은 주소로만 쓴다.
      */
@@ -79,13 +80,18 @@ namespace sw
         /** @brief 잡고 있는 락을 풉니다. */
         void unlock() SW_RELEASE_LOCK();
 
+        /** @brief 잠금 관찰자 등록 토큰입니다. 토큰이 사라지면 관찰자를 뗍니다. */
+        using LockObserverRegistration = ObserverSlot<ILockObserver>::Registration;
+        /** @brief 걸린 잠금 관찰자를 잠깐 떼어 두는 범위입니다(테스트가 엔진 검출기를 비우고 자기 관찰자를 걸 때). */
+        using LockObserverSuspension = ObserverSlot<ILockObserver>::Suspension;
+
         /**
-         * @brief 잠금 관찰자를 겁니다. 이미 다른 관찰자가 걸려 있으면 아무것도 하지 않습니다.
-         * @param pObserver 뗄 때까지 살아 있어야 합니다.
+         * @brief 잠금 관찰자를 겁니다. 관찰자는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다(예전에는 말없이 무시했다).
+         * @param pObserver 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
          */
-        static void registerLockObserver( ILockObserver* pObserver );
-        /** @brief @p pObserver 가 걸린 관찰자이면 뗍니다. */
-        static void unregisterLockObserver( ILockObserver* pObserver );
+        [[nodiscard]] static LockObserverRegistration bindLockObserver( ILockObserver* pObserver );
+        /** @brief 걸린 관찰자를 범위 동안 떼어 둡니다 — 테스트만 쓴다. 범위가 끝날 때 칸이 비어 있어야 되돌린다. */
+        [[nodiscard]] static LockObserverSuspension suspendLockObserver();
         /** @brief 걸린 잠금 관찰자입니다. 없으면 nullptr 입니다. */
         static ILockObserver* getLockObserver();
 

@@ -81,6 +81,39 @@ namespace sw
             T*            _pObserver{ nullptr };
         };
 
+        /**
+         * @class Suspension
+         * @brief 걸린 관찰자를 잠깐 떼어 두었다가 소멸할 때 되돌리는 범위입니다 — 테스트가 호스트(엔진)의 등록을 비우고 자기 관찰자를 걸 때만 씁니다.
+         * @details 호스트의 토큰은 그대로 두고 칸만 비운다. 소멸 때 칸이 비어 있어야 한다 — 그 사이 건 등록을 먼저 풀지 않았으면 단언한다(되돌릴 자리를 덮지 않는다).
+         */
+        class [[nodiscard]] Suspension final
+        {
+        public:
+            explicit Suspension( ObserverSlot& slot ) noexcept
+                : _pSlot{ &slot }
+                , _pSuspended{ slot._pObserver.exchange( nullptr, std::memory_order_acq_rel ) }
+            {
+            }
+            ~Suspension()
+            {
+                if ( _pSuspended == nullptr )
+                    return;
+                T*         pExpected = nullptr;
+                const bool bRestored = _pSlot->_pObserver.compare_exchange_strong( pExpected, _pSuspended, std::memory_order_acq_rel, std::memory_order_relaxed );
+                SW_LOW_LEVEL_ASSERT( bRestored, "ObserverSlot suspension ended while another observer is bound - release it before the suspension ends" );
+            }
+
+            Suspension( const Suspension& )            = delete;
+            Suspension& operator=( const Suspension& ) = delete;
+
+            /** @brief 떼어 둔 관찰자입니다. 칸이 비어 있었으면 nullptr 입니다. */
+            [[nodiscard]] T* getSuspended() const noexcept { return _pSuspended; }
+
+        private:
+            ObserverSlot* _pSlot;
+            T*            _pSuspended;
+        };
+
         constexpr ObserverSlot() noexcept = default;
         ~ObserverSlot()                   = default;
 

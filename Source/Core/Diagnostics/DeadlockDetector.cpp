@@ -31,7 +31,7 @@ namespace sw
 
         CallStackCapture::initialize();
 
-        mutex::registerLockObserver( this );
+        _lockObserverRegistration = mutex::bindLockObserver( this );
     }
 
     /**
@@ -42,7 +42,7 @@ namespace sw
         if ( _bInitialized.exchange( false ) == false )
             return;
 
-        mutex::unregisterLockObserver( this );
+        _lockObserverRegistration.reset();
         {
             // 꺼진 탐지기는 표를 쥘 까닭이 없다 — 저장소까지 놓는다(케이스 밖에 사는 테스트 탐지기의 표가 종료 누수 보고에 찍혔다).
             ScopedLock<mutex> lock{ _mutex };

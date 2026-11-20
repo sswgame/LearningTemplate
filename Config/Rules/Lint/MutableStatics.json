@@ -8,7 +8,7 @@
         "Source/Core/Concurrency/DataRaceDetector.cpp|s_pReportFunction": "데이터 경쟁 검출 바닥 — 검사는 Core 아래 층의 모든 감시 칸에서 문맥 없이 불린다. 걸린 보고 함수 칸 하나(원자)다.",
         "Source/Core/Concurrency/Futex.cpp|s_arrBucket": "주소로 고르는 대기 버킷 표 — 리눅스 커널 futex 해시처럼 프로세스의 모든 대기 주소가 한 표를 나눈다(주인 객체가 없다: 아무 원자 변수나 기다린다).",
         "Source/Core/Concurrency/ShardedCounter.cpp|s_nextThreadShard": "스레드 번호 공간 — 스레드마다 한 칸을 고르는 ShardedCounter 의 스레드 번호다. 스레드는 프로세스의 것이라 주인 범위가 없다(thread_local 칸이 이 번호를 받는다).",
-        "Source/Core/Concurrency/mutex.cpp|s_pLockObserver": "잠금 바닥 — sw::mutex 는 Core 아래 층의 모든 잠금에서 문맥 없이 불린다. 개발 도구가 거는 관찰자 칸 하나(원자 포인터)다.",
+        "Source/Core/Concurrency/mutex.cpp|s_lockObserverSlot": "잠금 바닥 — sw::mutex 는 Core 아래 층의 모든 잠금에서 문맥 없이 불린다. 개발 도구가 거는 관찰자 칸 하나(ObserverSlot)다.",
         "Source/Core/Delegate/Delegate.cpp|s_nextHandleID": "델리게이트 핸들 번호 공간 — 델리게이트는 Core 아래 층에서 어디서나 만들어지고 핸들은 서로 다른 델리게이트 사이에서도 겹치지 않아야 한다(잘못 푼 핸들을 가린다). 상수 초기화 원자 번호다.",
         "Source/Core/Diagnostics/CacheStats.cpp|s_registry": "캐시 통계 칸 배열 — 캐시 핸들이 쥔 포인터가 엔진을 다시 세워도 살아 있어야 하는 정적 저장소다(소멸자가 하는 일이 없어 정적 소멸 뒤 기록도 안전). Core 아래 층이라 범위에 둘 수 없다.",
         "Source/Core/Diagnostics/CrashHandler.cpp|s_mutex": "크래시 처리 — 보고를 한 번에 하나로 묶는 잠금(죽는 스레드가 여럿일 수 있다). OS 콜백이 문맥 없이 부른다.",
