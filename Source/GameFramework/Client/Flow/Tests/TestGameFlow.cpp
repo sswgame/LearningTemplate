@@ -58,7 +58,7 @@ SW_TEST_CASE( GameFlowTest, LoadingScreenWithoutUISystem )
     SW_EXPECT_TRUE( controller.getCurrentTip().empty() );
 }
 
-/** @brief [GameFlowTest] 타이틀 씬이 없는 게임은 타이틀 요청이 false 이고 "타이틀로" 명령을 걸지 않는다 */
+/** @brief [GameFlowTest] 타이틀 씬이 없는 게임은 타이틀 요청이 false 이고 "타이틀로" 명령을 걸지 않는다("시작" 은 건다) */
 SW_TEST_CASE( GameFlowTest, GameWithoutTitleScene )
 {
     GameSettings            settings;
@@ -71,5 +71,8 @@ SW_TEST_CASE( GameFlowTest, GameWithoutTitleScene )
     UIGlobalCommandRegistry commands;
     GameSessionCommands::bind( flow, commands );
     SW_EXPECT_FALSE( commands.hasCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ) ) );
+    // "시작" 은 타이틀 씬과 무관하게 걸리고(메인 메뉴), 거두면 함께 빠진다.
+    SW_EXPECT_TRUE( commands.hasCommand( hashed_string( UIGlobalCommandRegistry::kStartGame ) ) );
     flow.unregisterSessionCommands();
+    SW_EXPECT_FALSE( commands.hasCommand( hashed_string( UIGlobalCommandRegistry::kStartGame ) ) );
 }

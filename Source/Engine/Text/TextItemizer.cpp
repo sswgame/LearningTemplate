@@ -42,6 +42,13 @@ namespace sw
         return bFormatControl || bSeparatorEmbed || bVariationSelector || codepoint == 0xFEFFu;
     }
 
+    bool TextItemizer::isLineTerminator( uint32 codepoint )
+    {
+        constexpr uint32 kLineFeed       = 0x0Au;
+        constexpr uint32 kCarriageReturn = 0x0Du;
+        return codepoint == kLineFeed || codepoint == kCarriageReturn;
+    }
+
     bool TextItemizer::isZeroWidth( uint32 codepoint )
     {
         const bool bCombiningMark = 0x0300u <= codepoint && codepoint <= 0x036Fu;

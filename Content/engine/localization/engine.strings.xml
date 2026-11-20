@@ -5,6 +5,11 @@
 				<item>engine/ui/key_rebind.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Amount" source="Amount" context="SliderWidget._accessibleName">
+			<origins>
+				<item>engine/ui/quantity.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Apply" source="Apply" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/confirm_unsaved.ui.xml</item>
@@ -15,6 +20,7 @@
 			<origins>
 				<item>engine/ui/confirm_unsaved.ui.xml</item>
 				<item>engine/ui/key_rebind.ui.xml</item>
+				<item>engine/ui/quantity.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Close" source="Close" context="TextWidget._text">
@@ -2248,6 +2254,56 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
+		<entry key="Inventory.Done" source="Done.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.DropTitle" source="Drop how many?">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.EmptySlot" source="The slot is empty.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.InvalidCount" source="That amount is not possible.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.InvalidSlot" source="That slot cannot take it.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.NoRoom" source="Your bag is full.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.NotUsable" source="This cannot be used.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.Picked" source="Choose where to put it.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.Refused" source="You cannot equip this there.">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Inventory.SplitTitle" source="Split how many?">
+			<origins>
+				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Keep" source="Keep" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/confirm_countdown.ui.xml</item>
@@ -2261,6 +2317,11 @@
 		<entry key="Loading" source="Loading" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/loading.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Main Menu" source="Main Menu" context="TextWidget._text">
+			<origins>
+				<item>engine/ui/mainmenu.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Notification.ClipboardWriteFailed" source="Could not copy to the clipboard.">
@@ -2278,6 +2339,11 @@
 				<item>Source/Engine/UI/Menu/OptionsMenuScreen.cpp</item>
 			</origins>
 		</entry>
+		<entry key="OK" source="OK" context="TextWidget._text">
+			<origins>
+				<item>engine/ui/quantity.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Opacity" source="Opacity" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/debughud.ui.xml</item>
@@ -2285,6 +2351,7 @@
 		</entry>
 		<entry key="Options" source="Options" context="TextWidget._text">
 			<origins>
+				<item>engine/ui/mainmenu.ui.xml</item>
 				<item>engine/ui/options.ui.xml</item>
 				<item>engine/ui/pause.ui.xml</item>
 			</origins>
@@ -2303,6 +2370,7 @@
 		</entry>
 		<entry key="Quit Game" source="Quit Game" context="TextWidget._text">
 			<origins>
+				<item>engine/ui/mainmenu.ui.xml</item>
 				<item>engine/ui/pause.ui.xml</item>
 			</origins>
 		</entry>
@@ -2332,6 +2400,76 @@
 				<item>engine/ui/debughud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Shop.Bought" source="Bought.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.Busy" source="A purchase is still in progress.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.ConfirmAccept" source="Buy">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.ConfirmCancel" source="Cancel">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.ConfirmMessage" source="Buy {item} for {price} {currency}?">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.ConfirmTitle" source="Confirm Purchase">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.LimitReached" source="You cannot buy this any more.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.NoRoom" source="Your bag is full.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.NotEnoughMoney" source="Not enough money.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.OutOfStock" source="Sold out.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.Purchasing" source="Purchasing...">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.Rejected" source="This cannot be bought now.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.ServerError" source="Could not reach the store. The wallet shows what the server holds.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Shop.Unverified" source="The purchase reply did not match; your wallet was refreshed.">
+			<origins>
+				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Show HUD (Ctrl+F3)" source="Show HUD (Ctrl+F3)" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/debughud.ui.xml</item>
@@ -2344,9 +2482,34 @@
 				<item>engine/ui/options.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Start Game" source="Start Game" context="TextWidget._text">
+			<origins>
+				<item>engine/ui/mainmenu.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Swap" source="Swap" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/key_rebind.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="UIMenu.Cancel" source="Cancel">
+			<origins>
+				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="UIMenu.QuitAccept" source="Quit">
+			<origins>
+				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="UIMenu.QuitMessage" source="Quit the game?">
+			<origins>
+				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="UIMenu.QuitTitle" source="Quit Game">
+			<origins>
+				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
 			</origins>
 		</entry>
 		<entry key="You have changes that are not applied."
