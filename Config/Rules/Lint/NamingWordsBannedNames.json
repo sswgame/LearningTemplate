@@ -1788,6 +1788,9 @@
     "_bUseDefaultValue": "명령줄 표의 죽은 칸 삭제(2026-11-21)",
     "addRecorder": "ProfilerTimeline::isAnyTimelineRecording — 흐름 링이 진단을 읽는다(Network 맨 위 티어, 2026-11-21)",
     "removeRecorder": "ProfilerTimeline::isAnyTimelineRecording — 흐름 링이 진단을 읽는다(2026-11-21)",
-    "_recorderCount": "ProfilerTimeline 의 s_recordingTimelineCount(2026-11-21)"
+    "_recorderCount": "ProfilerTimeline 의 s_recordingTimelineCount(2026-11-21)",
+    "waitForQueueSpace": "OverflowConcurrentQueue::enqueue — 링이 차면 넘침 목록이 받아 넣는 쪽이 기다리지 않는다(2026-11-21)",
+    "kMaxQueueFullRunDepth": "삭제 — 가득 찬 큐 앞의 그 자리 실행이 없어졌다(OverflowConcurrentQueue, 2026-11-21)",
+    "_queueFullRunDepth": "삭제 — 가득 찬 큐 앞의 그 자리 실행이 없어졌다(2026-11-21)"
   }
 }
