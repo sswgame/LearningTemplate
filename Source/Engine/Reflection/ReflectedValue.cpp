@@ -148,7 +148,7 @@ namespace sw
                 const T& value = *static_cast<const T*>( pValue );
                 if constexpr ( std::is_same_v<T, bool> )
                     out.setNumber( value ? 1.0 : 0.0, true, value ? 1 : 0 );
-                else if constexpr ( std::is_same_v<T, atomic<bool>> )
+                else if constexpr ( std::is_same_v<T, reflected_atomic<bool>> )
                 {
                     const bool bValue = value.load( std::memory_order_relaxed );
                     out.setNumber( bValue ? 1.0 : 0.0, true, bValue ? 1 : 0 );
@@ -188,7 +188,7 @@ namespace sw
             template <typename T>
             [[nodiscard]] static bool convertToBuiltin( const ReflectSourceValue& source, TaskValue& outValue )
             {
-                if constexpr ( std::is_same_v<T, bool> || std::is_same_v<T, atomic<bool>> )
+                if constexpr ( std::is_same_v<T, bool> || std::is_same_v<T, reflected_atomic<bool>> )
                 {
                     bool bValue = false;
                     if ( source._bNumber )
@@ -380,7 +380,7 @@ namespace sw
                 fixed_string<constant::buffer::kMax512> buf;
                 if constexpr ( std::is_same_v<T, bool> )
                     return value ? "true" : "false";
-                else if constexpr ( std::is_same_v<T, atomic<bool>> )
+                else if constexpr ( std::is_same_v<T, reflected_atomic<bool>> )
                     return value.load( std::memory_order_relaxed ) ? "true" : "false";
                 else if constexpr ( std::is_arithmetic_v<T> )
                     formatstring( buf.data(), buf.capacity(), "%#", value );

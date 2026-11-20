@@ -536,7 +536,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 그 밖의 내장 타입 — 사본을 고쳐 바뀌면 `setRowValue` 로 돌려준다
         // ------------------------------------------------------------------------------
-        /** @brief bool 과 atomic<bool> 의 체크박스입니다. 정수 비트필드와 같은 체크박스를 씁니다. */
+        /** @brief bool 과 reflected_atomic<bool> 의 체크박스입니다. 정수 비트필드와 같은 체크박스를 씁니다. */
         template <typename T>
         class CheckboxProperty : public BuiltinPropertyBase
         {
@@ -557,7 +557,7 @@ namespace sw::editor
                 T          edited   = *pValue;
                 const bool bChanged = drawValueWidget( kValueWidgetID, edited );
                 showTooltipIfHovered( row );
-                // atomic<bool> 을 되돌리기에서 빼는 일은 모델이 한다(`PropertyGridViewModel::ensureEditSpan`).
+                // reflected_atomic<bool> 을 되돌리기에서 빼는 일은 모델이 한다(`PropertyGridViewModel::ensureEditSpan`).
                 if ( bChanged )
                     model.setRowValue( row._rowID, TaskValue{ std::move( edited ) } );
                 return true;

@@ -503,3 +503,27 @@ SW_TEST_CASE( ThreadTest, ThereIsAtLeastOneUsableProcessor )
 {
     SW_EXPECT_TRUE( thread::getUsableProcessorCount() >= 1u );
 }
+
+// sw::atomic 은 복사되지 않고(다른 스레드가 쓰는 칸을 말없이 찢어 옮기지 않게) 이동만 된다. 리플렉션 칸용 reflected_atomic 만 복사된다.
+static_assert( !std::is_copy_constructible_v<sw::atomic<int32>> && !std::is_copy_assignable_v<sw::atomic<int32>>, "sw::atomic must not be copyable" );
+static_assert( std::is_nothrow_move_constructible_v<sw::atomic<int32>>, "sw::atomic stays movable for owner-only relocation" );
+static_assert( std::is_copy_constructible_v<sw::reflected_atomic<bool>> && std::is_copy_assignable_v<sw::reflected_atomic<bool>>, "reflected_atomic is the copyable one" );
+
+/**
+ * @brief [AtomicTest] reflected_atomic 의 복사 · 대입은 저장된 값을 옮기고, 이동한 sw::atomic 은 값을 가진다
+ */
+SW_TEST_CASE( AtomicTest, ReflectedAtomicCopiesValueAndAtomicMoves )
+{
+    sw::reflected_atomic<bool> source{ true };
+    sw::reflected_atomic<bool> copied{ source };
+    SW_EXPECT_TRUE( copied.load() );
+    sw::reflected_atomic<bool> assigned{ false };
+    assigned = source;
+    SW_EXPECT_TRUE( assigned.load() );
+    source = false;
+    SW_EXPECT_TRUE( copied.load() ); // 사본은 원본과 따로 산다
+
+    sw::atomic<int32> original{ 7 };
+    sw::atomic<int32> moved{ std::move( original ) };
+    SW_EXPECT_EQUAL( 7, moved.load() );
+}

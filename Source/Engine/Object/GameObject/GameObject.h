@@ -511,11 +511,11 @@ namespace sw
         hashed_string      _name;          ///< 오브젝트 이름
         GameObjectManager* _pOwnerManager; ///< 소유 매니저(`GameObjectManager::createGameObject` 가 설정합니다)
         PROPERTY()
-        atomic<bool> _bActive;              ///< 자기 활성 비트
-        atomic<bool> _bIsActiveInHierarchy; ///< 계층을 반영한 활성 비트
-        atomic<bool> _bIsPendingDestroy;    ///< 삭제 예정(묘비) 표시
-        atomic<bool> _bRenderHidden;        ///< `setRenderHidden` — 저장하지 않는다
-        uint32       _managerIndex;         ///< 저장소(`GameObjectStore`)의 `_listGameObject` 안 인덱스다. 플래그 뒤의 패딩 공간을 쓰며, 끝에 두면 객체 크기가 8 B 늘어난다
+        reflected_atomic<bool> _bActive;              ///< 자기 활성 비트(리플렉션 칸이라 복사되는 원자 값)
+        atomic<bool>           _bIsActiveInHierarchy; ///< 계층을 반영한 활성 비트
+        atomic<bool>           _bIsPendingDestroy;    ///< 삭제 예정(묘비) 표시
+        atomic<bool>           _bRenderHidden;        ///< `setRenderHidden` — 저장하지 않는다
+        uint32                 _managerIndex;         ///< 저장소(`GameObjectStore`)의 `_listGameObject` 안 인덱스다. 플래그 뒤의 패딩 공간을 쓰며, 끝에 두면 객체 크기가 8 B 늘어난다
         /// @brief 이 액터가 소유한 컴포넌트입니다(= `ComponentList`, 인라인 슬롯 4개). 별칭으로 적으면 리플렉션 파서가 컨테이너로 인식하지 못합니다.
         PROPERTY()
         vector<Component*, InlineAllocator<Component*, 4>> _listComponent;

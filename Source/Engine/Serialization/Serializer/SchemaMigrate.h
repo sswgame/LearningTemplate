@@ -81,7 +81,7 @@ namespace sw
     /**
      * @brief 임시 스크래치 버퍼를 만듭니다.
      * @details `$ctor` 가 있으면 객체 전체를 placement new 로 만들고 `_destroyInstance` 로 짝을 맞춰 파괴한다.
-     *          없으면 0 으로 채운 버퍼에서 멤버별로 만든다. 컨테이너, string, hashed_string, atomic<bool>, TagID 와
+     *          없으면 0 으로 채운 버퍼에서 멤버별로 만든다. 컨테이너, string, hashed_string, reflected_atomic<bool>, TagID 와
      *          `$ctor` 가 있는 중첩 REFLECT 타입만 생성하고 파괴하며, 나머지는 0 인 채로 둔다.
      */
     SW_API void* createScratchInstance( const TypeInfo& typeInfo, vector<uint8>& listStorage );
