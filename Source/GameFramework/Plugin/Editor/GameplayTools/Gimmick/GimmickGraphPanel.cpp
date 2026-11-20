@@ -145,7 +145,7 @@ namespace sw::editor
         {
             if ( node._bPlaced == false )
                 continue;
-            const ImVec2 position = ed::GetNodePosition( toNodeID( node._graphID ) );
+            const ImVec2 position = ed::GetNodePosition( EditorNodeGraphID::toNodeID( node._graphID ) );
             if ( EditorSessionPolicy::hasNodeMoved( node._position._x, node._position._y, position.x, position.y ) )
                 node._position = float2{ position.x, position.y };
         }
@@ -246,7 +246,7 @@ namespace sw::editor
             drawNode( node );
             if ( node._bPlaced == false )
             {
-                ed::SetNodePosition( toNodeID( node._graphID ), ImVec2{ node._position._x, node._position._y } );
+                ed::SetNodePosition( EditorNodeGraphID::toNodeID( node._graphID ), ImVec2{ node._position._x, node._position._y } );
                 node._bPlaced = true;
             }
         }
@@ -262,8 +262,8 @@ namespace sw::editor
             if ( outPort.has_value() == false || inPort.has_value() == false )
                 continue;
             const ImVec4 color = wire._bInvert ? EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ) : ImVec4{ 1.0f, 1.0f, 1.0f, 1.0f };
-            ed::Link( toLinkID( wire._graphID ), toPinID( GimmickGraphPanelInternal::makeOutputPin( wire._fromNode, static_cast<int32>( *outPort ) ) ),
-                      toPinID( GimmickGraphPanelInternal::makeInputPin( wire._toNode, static_cast<int32>( *inPort ) ) ), color, wire._bInvert ? 3.0f : 1.0f );
+            ed::Link( EditorNodeGraphID::toLinkID( wire._graphID ), EditorNodeGraphID::toPinID( GimmickGraphPanelInternal::makeOutputPin( wire._fromNode, static_cast<int32>( *outPort ) ) ),
+                      EditorNodeGraphID::toPinID( GimmickGraphPanelInternal::makeInputPin( wire._toNode, static_cast<int32>( *inPort ) ) ), color, wire._bInvert ? 3.0f : 1.0f );
         }
 
         vector<EditorGraphNodeIssue> listNodeIssue;

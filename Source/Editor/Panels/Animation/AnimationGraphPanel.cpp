@@ -273,7 +273,7 @@ namespace sw::editor
     {
         for ( GraphNode& node : _graph._listNode )
         {
-            const ed::NodeId nodeID = toNodeID( node._id );
+            const ed::NodeId nodeID = EditorNodeGraphID::toNodeID( node._id );
             _nodeGraph.beginNode( node._id );
             if ( _preview.isCurrentState( node._name ) )
                 ImGui::TextColored( EditorColorUtil::toImVec4( AnimationGraphPanelInternal::kCurrentStateText ), "%s", node._name.c_str() );
@@ -319,12 +319,12 @@ namespace sw::editor
             // 조건이 있는 전이는 굵게 · 다른 색으로(조건 없는 "끝나면 다음" 과 구별).
             const bool   bConditioned = link._op != AnimationConditionOp::None;
             const ImVec4 color        = EditorColorUtil::toImVec4( bConditioned ? AnimationGraphPanelInternal::kConditionedLink : AnimationGraphPanelInternal::kPlainLink );
-            ed::Link( toLinkID( link._id ), toPinID( AnimationGraphPanelInternal::pinOut( link._fromNode ) ), toPinID( AnimationGraphPanelInternal::pinIn( link._toNode ) ), color,
+            ed::Link( EditorNodeGraphID::toLinkID( link._id ), EditorNodeGraphID::toPinID( AnimationGraphPanelInternal::pinOut( link._fromNode ) ), EditorNodeGraphID::toPinID( AnimationGraphPanelInternal::pinIn( link._toNode ) ), color,
                       bConditioned ? 2.5f : 1.5f );
         }
         // 미리보기가 전이를 탔으면 그 링크에 흐름을 보인다(플레이 중 현재 전이 강조).
         if ( const int32 flowLinkID = _preview.takeFlowLinkID(); flowLinkID != 0 )
-            ed::Flow( toLinkID( flowLinkID ) );
+            ed::Flow( EditorNodeGraphID::toLinkID( flowLinkID ) );
     }
 
     void AnimationGraphPanel::drawNodeContextMenu()
@@ -442,7 +442,7 @@ namespace sw::editor
         {
             for ( GraphNode& node : data._listNode )
             {
-                const ImVec2 pos  = ed::GetNodePosition( toNodeID( node._id ) );
+                const ImVec2 pos  = ed::GetNodePosition( EditorNodeGraphID::toNodeID( node._id ) );
                 node._position._x = pos.x;
                 node._position._y = pos.y;
             }

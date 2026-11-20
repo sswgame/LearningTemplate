@@ -342,7 +342,7 @@ namespace sw::editor
                     const IgnoredFloat* pIgnored = findIgnoredFloat( key );
                     if ( pIgnored == nullptr )
                         return unexpected( Error{ ErrorKind::InvalidArgument, "unknown float property", key } );
-                    if ( pIgnored->_bAlwaysSilent == false && MathUtil::abs( *number - pIgnored->_neutral ) > 1e-4f )
+                    if ( pIgnored->_bAlwaysSilent == false && MathUtil::abs( *number - pIgnored->_neutral ) > MathUtil::kLooseEpsilon )
                         appendIgnored( pOutListIgnored, key );
                 }
                 return {};

@@ -163,7 +163,7 @@ namespace sw::editor
 
         const bool bPlaceNow = _nodeGraph.needsContentFit() || _model.isPlacingNode( nodeIndex );
         if ( bPlaceNow )
-            ed::SetNodePosition( toNodeID( nodeID ), ImVec2( node._editorPosition._x, node._editorPosition._y ) );
+            ed::SetNodePosition( EditorNodeGraphID::toNodeID( nodeID ), ImVec2( node._editorPosition._x, node._editorPosition._y ) );
     }
 
     void AudioGraphPanel::handleEditCommands()
@@ -260,8 +260,8 @@ namespace sw::editor
                 const optional<uint32> fromIndex = graph.findNodeIndex( listInput[inputSlot] );
                 if ( fromIndex.has_value() == false )
                     continue; // 없는 노드를 가리키는 입력 — 검사가 저장을 막고 그리드에서 고친다
-                ed::Link( toLinkID( AudioGraphEditUtil::makeLinkID( readerIndex, inputSlot ) ), toPinID( AudioGraphEditUtil::makeOutputPinID( *fromIndex ) ),
-                          toPinID( AudioGraphEditUtil::makeInputPinID( readerIndex ) ) );
+                ed::Link( EditorNodeGraphID::toLinkID( AudioGraphEditUtil::makeLinkID( readerIndex, inputSlot ) ), EditorNodeGraphID::toPinID( AudioGraphEditUtil::makeOutputPinID( *fromIndex ) ),
+                          EditorNodeGraphID::toPinID( AudioGraphEditUtil::makeInputPinID( readerIndex ) ) );
             }
         }
 

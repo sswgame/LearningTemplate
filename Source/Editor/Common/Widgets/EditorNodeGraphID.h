@@ -23,12 +23,19 @@ namespace ax::NodeEditor
 
 namespace sw::editor
 {
-    /** @brief 노드 id 를 캔버스가 쓰는 형식으로 감쌉니다. */
-    SW_EDITOR_API ax::NodeEditor::NodeId toNodeID( int32 id );
+    /**
+     * @struct EditorNodeGraphID
+     * @brief 그래프 패널의 정수 id 를 캔버스(imgui-node-editor) id 형식으로 감싸는 static 함수 묶음입니다.
+     */
+    struct SW_EDITOR_API EditorNodeGraphID
+    {
+        /** @brief 노드 id 를 캔버스가 쓰는 형식으로 감쌉니다. */
+        [[nodiscard]] static ax::NodeEditor::NodeId toNodeID( int32 id );
 
-    /** @brief 핀 id 를 캔버스가 쓰는 형식으로 감쌉니다. */
-    SW_EDITOR_API ax::NodeEditor::PinId toPinID( int32 id );
+        /** @brief 핀 id 를 캔버스가 쓰는 형식으로 감쌉니다. */
+        [[nodiscard]] static ax::NodeEditor::PinId toPinID( int32 id );
 
-    /** @brief 링크 id 를 캔버스가 쓰는 형식으로 감쌉니다. */
-    SW_EDITOR_API ax::NodeEditor::LinkId toLinkID( int32 id );
+        /** @brief 링크 id 를 캔버스가 쓰는 형식으로 감쌉니다. */
+        [[nodiscard]] static ax::NodeEditor::LinkId toLinkID( int32 id );
+    };
 } // namespace sw::editor

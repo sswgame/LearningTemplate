@@ -281,7 +281,7 @@ namespace sw::editor
     {
         _currentNodeID = nodeID;
         _listFrameNode.push_back( nodeID );
-        ed::BeginNode( toNodeID( nodeID ) );
+        ed::BeginNode( EditorNodeGraphID::toNodeID( nodeID ) );
     }
 
     void EditorNodeGraph::endNode()
@@ -293,7 +293,7 @@ namespace sw::editor
     void EditorNodeGraph::beginPin( int32 pinID, bool bInput )
     {
         _listFramePin.push_back( FramePin{ pinID, _currentNodeID } );
-        ed::BeginPin( toPinID( pinID ), bInput ? ed::PinKind::Input : ed::PinKind::Output );
+        ed::BeginPin( EditorNodeGraphID::toPinID( pinID ), bInput ? ed::PinKind::Input : ed::PinKind::Output );
     }
 
     void EditorNodeGraph::endPin()
@@ -322,8 +322,8 @@ namespace sw::editor
         }
         if ( _pendingFocusNodeID.has_value() )
         {
-            const ImVec2 position = ed::GetNodePosition( toNodeID( *_pendingFocusNodeID ) );
-            const ImVec2 size     = ed::GetNodeSize( toNodeID( *_pendingFocusNodeID ) );
+            const ImVec2 position = ed::GetNodePosition( EditorNodeGraphID::toNodeID( *_pendingFocusNodeID ) );
+            const ImVec2 size     = ed::GetNodeSize( EditorNodeGraphID::toNodeID( *_pendingFocusNodeID ) );
             ed::NavigateToRect( position, ImVec2{ position.x + size.x, position.y + size.y }, false, EditorNodeGraphInternal::kNavigateSeconds );
             _pendingFocusNodeID.reset();
         }
@@ -334,8 +334,8 @@ namespace sw::editor
         {
             if ( VectorUtil::contains( _listSelectedNode, rect._nodeID ) == false )
                 continue;
-            const ImVec2        position = ed::GetNodePosition( toNodeID( rect._nodeID ) );
-            const ImVec2        size     = ed::GetNodeSize( toNodeID( rect._nodeID ) );
+            const ImVec2        position = ed::GetNodePosition( EditorNodeGraphID::toNodeID( rect._nodeID ) );
+            const ImVec2        size     = ed::GetNodeSize( EditorNodeGraphID::toNodeID( rect._nodeID ) );
             EditorGraphNodeRect current{};
             current._nodeID   = rect._nodeID;
             current._position = float2{ position.x, position.y };
@@ -348,7 +348,7 @@ namespace sw::editor
             // 패널은 다음 프레임에 캔버스 위치를 읽어 자기 데이터에 싣고 편집으로 남긴다(끌어 옮긴 것과 같은 길).
             for ( const EditorGraphNodeRect& rect : listRect )
             {
-                ed::SetNodePosition( toNodeID( rect._nodeID ), ImVec2{ rect._position._x, rect._position._y } );
+                ed::SetNodePosition( EditorNodeGraphID::toNodeID( rect._nodeID ), ImVec2{ rect._position._x, rect._position._y } );
             }
             alignedCount = static_cast<uint32>( listRect.size() );
         }
@@ -507,14 +507,14 @@ namespace sw::editor
 
     void EditorNodeGraph::requestNodeDeletion( const int32 nodeID )
     {
-        ed::DeleteNode( toNodeID( nodeID ) );
+        ed::DeleteNode( EditorNodeGraphID::toNodeID( nodeID ) );
     }
 
     bool EditorNodeGraph::findDrawnNodePosition( const int32 nodeID, float2& outPosition ) const
     {
         if ( VectorUtil::contains( _listFrameNode, nodeID ) == false )
             return false;
-        const ImVec2 position = ed::GetNodePosition( toNodeID( nodeID ) );
+        const ImVec2 position = ed::GetNodePosition( EditorNodeGraphID::toNodeID( nodeID ) );
         outPosition           = float2{ position.x, position.y };
         return true;
     }
