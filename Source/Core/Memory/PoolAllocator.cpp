@@ -10,7 +10,7 @@ namespace sw
         : _blockSize{ roundBlockSize( blockSize ) }
         , _pChunkList{ nullptr }
         , _pFreeList{ nullptr }
-        , _mutex{}
+        , _spinLock{}
         , _blocksPerChunk{ blocksPerChunk }
         , _bThreadSafe{ bThreadSafe }
     {
@@ -59,7 +59,7 @@ namespace sw
     {
         // 잠금 해제를 잊을 곳을 없앤다 — 일찍 반환하는 곳마다 unlock 을 손으로 적으면 하나만 빠져도 데드락이다.
         // 잠글지 말지는 `_bThreadSafe` 가 정한다.
-        UniqueLock<mutex> lock{ _mutex, std::defer_lock };
+        UniqueLock<SpinLock> lock{ _spinLock, std::defer_lock };
         if ( _bThreadSafe )
             lock.lock();
 
@@ -84,7 +84,7 @@ namespace sw
             return;
 
         // 잠금 해제를 잊을 곳을 없앤다(allocate 와 같다).
-        UniqueLock<mutex> lock{ _mutex, std::defer_lock };
+        UniqueLock<SpinLock> lock{ _spinLock, std::defer_lock };
         if ( _bThreadSafe )
             lock.lock();
 
@@ -127,7 +127,7 @@ namespace sw
     void PoolAllocator::clear()
     {
         // 잠금 해제를 잊을 곳을 없앤다(allocate 와 같다).
-        UniqueLock<mutex> lock{ _mutex, std::defer_lock };
+        UniqueLock<SpinLock> lock{ _spinLock, std::defer_lock };
         if ( _bThreadSafe )
             lock.lock();
 

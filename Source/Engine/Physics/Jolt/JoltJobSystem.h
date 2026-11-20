@@ -14,8 +14,8 @@
  *          그 실행이 끝나기를 기다린다(슬롯별 들어감 · 나옴 수, 나옴은 release).
  */
 #pragma once
+#include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/deque.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -68,9 +68,9 @@ namespace sw
     private:
         ExecutorSlot                _arrExecutorSlot[kMaxExecutorSlotCount];
         JPH::FixedSizeFreeList<Job> _jobs;
-        deque<Job*> _listQueuedJob  SW_GUARDED_BY( _queueMutex );
-        mutable mutex               _queueMutex;
-        TaskManager*                _pTaskManager; ///< 엔진 서비스가 묶여 있지 않으면 nullptr 이다(잡을 그 자리에서 실행한다)
+        deque<Job*> _listQueuedJob  SW_GUARDED_BY( _queueSpinLock );
+        SpinLock                    _queueSpinLock; ///< 넣기 · 꺼내기가 포인터 하나이고 장벽 대기가 빈 큐를 돌며 두드린다 — 스핀(Jolt `JobSystemThreadPool` 도 락프리 큐, 교착 검출 밖)
+        TaskManager*                _pTaskManager;  ///< 엔진 서비스가 묶여 있지 않으면 nullptr 이다(잡을 그 자리에서 실행한다)
         /** @brief 이 잡 시스템이 낸 엔진 태스크 전부입니다. 소멸이 `waitStage` 로 기다린다(따로 센 수를 양보하며 돌지 않는다 — 태스크 매니저의 대기 · 진단을 쓴다). */
         TaskStageHandle _jobTaskStage;
         uint32          _maxConcurrency;

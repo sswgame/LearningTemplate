@@ -16,15 +16,15 @@
  *          - 대기열은 먼저 넣은 순서(FIFO)다. 솔버의 0 번 태스크는 나머지보다 먼저 들어가므로 먼저 꺼내지고, 0 번은 다른 태스크 없이도 모든 블록을
  *            끝낼 수 있어(블록은 원자적으로 가져간다) 기다리는 태스크가 스레드를 차지해도 진행한다.
  *
- *          **잠금 순서.** `_mutex` 는 잎 잠금이다. 대기열을 고치는 동안만 쥐고, 쥔 채로 Box2D 콜백 · 할당 · 다른 잠금을 부르지 않는다. 씬과 엔진의 어떤
+ *          **잠금 순서.** `_spinLock` 은 잎 잠금이다. 대기열을 고치는 동안만 쥐고, 쥔 채로 Box2D 콜백 · 할당 · 다른 잠금을 부르지 않는다. 씬과 엔진의 어떤
  *          잠금도 이 잠금 안에서 잡히지 않는다.
  *
  *          **결정성.** Box2D v3 는 워커 수와 관계없이 같은 결과를 낸다(일을 나누는 단위가 스레드가 아니라 고정 블록이고, 결과를 쓰는 자리가 블록마다
- *          정해져 있다). `PhysicsScene2DTest.StepIsDeterministicAcrossWorkerCounts` 가 1 과 4 의 결과를 비트까지 비교한다.
+ *          정해져 있다). `Box2DWorkerCountTest.StepIsDeterministicAcrossWorkerCounts` 가 1 과 4 의 결과를 비트까지 비교한다.
  */
 #pragma once
+#include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -83,10 +83,10 @@ namespace sw
         ThreadRole                         _stepThread;                  ///< 스텝 스레드(월드를 가진 쪽) 역할 — 잠금이 아니라 분석용 능력이다
         vector<unique_ptr<Task>> _listTask SW_GUARDED_BY( _stepThread ); ///< 만든 태스크 전부(소유)
         vector<Task*> _listFreeTask        SW_GUARDED_BY( _stepThread ); ///< 다시 쓸 태스크
-        vector<Range> _listRange           SW_GUARDED_BY( _mutex );      ///< 대기열.
-        mutex                              _mutex;
-        atomic<uint32>                     _wakeWord;               ///< 넣을 때마다 올리는 세대 — 워커가 이 워드에서 잠든다(`Futex`).
-        uint32 _nextRangeIndex             SW_GUARDED_BY( _mutex ); ///< `_listRange` 에서 다음에 꺼낼 칸.
+        vector<Range> _listRange           SW_GUARDED_BY( _spinLock );   ///< 대기열.
+        SpinLock                           _spinLock;                    ///< 꺼내기가 몇 명령이고 일꾼이 빈 대기열을 돌며 두드린다 — 독점 잠금 대신 스핀(언리얼 `FSpinLock` 자리, 교착 검출 밖)
+        atomic<uint32>                     _wakeWord;                    ///< 넣을 때마다 올리는 세대 — 워커가 이 워드에서 잠든다(`Futex`).
+        uint32 _nextRangeIndex             SW_GUARDED_BY( _spinLock );   ///< `_listRange` 에서 다음에 꺼낼 칸.
         uint32                             _workerCount;
     };
 } // namespace sw

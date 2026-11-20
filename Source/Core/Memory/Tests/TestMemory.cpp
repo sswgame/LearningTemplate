@@ -185,7 +185,7 @@ SW_TEST_CASE( MemoryTest, PoolAllocatorHandsOutSixteenByteAlignedBlocks )
 
 /**
  * @brief [MemoryTest] 스레드 안전 풀은 여러 스레드가 동시에 할당·해제해도 블록을 겹쳐 주지 않는다
- * @details 잠금은 `unique_lock{ mutex, defer_lock }` 이다 — 이른 반환마다 unlock 을 손으로 적으면 하나만 빠져도
+ * @details 잠금은 `UniqueLock{ SpinLock, defer_lock }` 이다 — 이른 반환마다 unlock 을 손으로 적으면 하나만 빠져도
  *          데드락이다. 그 잠금이 상호 배제를 지키는지 본다.
  */
 SW_TEST_CASE( MemoryTest, ThreadSafePoolNeverHandsOutTheSameBlockTwice )
@@ -231,6 +231,72 @@ SW_TEST_CASE( MemoryTest, ThreadSafePoolNeverHandsOutTheSameBlockTwice )
             ++duplicateCount;
     }
     SW_EXPECT_TRUE_MSG( duplicateCount == 0, "풀이 같은 블록을 두 번 내줬다" );
+}
+
+/**
+ * @brief [MemoryTest] 스레드 안전 풀에 여러 스레드가 할당과 반납을 섞어 넣어도 자유 목록이 깨지지 않는다
+ * @details 자유 목록 잠금이 스핀(`SpinLock`)이다 — 넣기(반납)와 빼기(할당)가 겹치는 모양을 두드린다. 목록이 깨지면 같은 블록을 두 번 주거나
+ *          (Debug) 반납 검사가 단언한다. 끝에 모두 반납한 뒤 한 번에 다시 받은 블록이 서로 다르면 목록이 온전하다.
+ */
+SW_TEST_CASE( MemoryTest, ThreadSafePoolSurvivesInterleavedAllocateAndFree )
+{
+    sw::PoolAllocator pool{ 32, 16, true };
+
+    constexpr uint32        kThreadCount = 4;
+    constexpr uint32        kRoundCount  = 2000;
+    constexpr uint32        kHeldCount   = 8;
+    sw::vector<std::thread> listWorker;
+    sw::atomic<uint32>      failureCount{ 0 };
+
+    for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        listWorker.emplace_back( [&pool, &failureCount, threadIndex]()
+        {
+            void* arrHeld[kHeldCount] = {};
+            for ( uint32 round = 0; round < kRoundCount; ++round )
+            {
+                const uint32 slot = round % kHeldCount;
+                if ( arrHeld[slot] != nullptr )
+                {
+                    // 받은 동안 다른 스레드가 같은 블록을 받았으면 써 둔 표시가 바뀐다.
+                    if ( *static_cast<uint32*>( arrHeld[slot] ) != threadIndex )
+                        failureCount.fetch_add( 1, std::memory_order_relaxed );
+                    pool.free( arrHeld[slot] );
+                }
+                arrHeld[slot] = pool.allocate();
+                if ( arrHeld[slot] == nullptr )
+                {
+                    failureCount.fetch_add( 1, std::memory_order_relaxed );
+                    continue;
+                }
+                *static_cast<uint32*>( arrHeld[slot] ) = threadIndex;
+            }
+            for ( void* pBlock : arrHeld )
+            {
+                pool.free( pBlock );
+            }
+        } );
+    }
+    for ( std::thread& worker : listWorker )
+    {
+        worker.join();
+    }
+    SW_EXPECT_EQUAL( 0u, failureCount.load() );
+
+    // 모두 반납했다 — 다시 받는 블록끼리 겹치지 않아야 한다.
+    sw::vector<void*> listAll;
+    for ( uint32 index = 0; index < kThreadCount * kHeldCount; ++index )
+    {
+        listAll.push_back( pool.allocate() );
+    }
+    sw::VectorUtil::sort( listAll );
+    uint32 duplicateCount = 0;
+    for ( size_t index = 1; index < listAll.size(); ++index )
+    {
+        if ( listAll[index] == listAll[index - 1] )
+            ++duplicateCount;
+    }
+    SW_EXPECT_TRUE_MSG( duplicateCount == 0, "섞어 넣은 뒤 자유 목록이 같은 블록을 두 번 내줬다" );
 }
 
 /**

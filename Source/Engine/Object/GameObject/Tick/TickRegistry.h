@@ -42,8 +42,8 @@
  * `PrimitiveRegistry`, `SceneTransformHierarchy` 와 같은 구조입니다. 기능은 별도 타입이 가지고, 매니저는 순서만 정합니다.
  */
 #pragma once
+#include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
@@ -217,7 +217,7 @@ namespace sw
     /**
      * @class TickRegistry
      * @brief 그룹마다의 "틱할 것이 있는 오브젝트" 목록, 멤버십 더티 표시, 오브젝트 항목 재구축, 선행 조건 스테이지를 맡습니다.
-     * @note 락 순서: 이 클래스의 락(`_dirtyMutex`)은 가장 안쪽입니다. `markObjectDirty` 는 워커에서 불려도 됩니다(원자 플래그와 짧은 잠금을 씁니다).
+     * @note 락 순서: 이 클래스의 락(`_dirtyLock`)은 가장 안쪽입니다. `markObjectDirty` 는 워커에서 불려도 됩니다(원자 플래그와 짧은 잠금을 씁니다).
      */
     class SW_API TickRegistry
     {
@@ -359,9 +359,9 @@ namespace sw
         unordered_map<const TypeInfo*, TickTypeDispatch> _mapTypeDispatch;               ///< 타입 → 모드 · 함수 기억(`resolveTypeDispatch`)
         uint8                                            _bBatchPathEnabled;             ///< 일괄 경로를 쓰는지(`setBatchPathEnabled`)
         uint32                                           _batchGeneration;               ///< 마지막으로 본 `TickBatchRegistry::getGeneration`(표가 없으면 0) — 바뀌면 모두 다시 훑는다
-        vector<uint64> _listDirtyObjectID                SW_GUARDED_BY( _dirtyMutex );   ///< 다시 훑을 오브젝트 id 다. 사라졌으면 해석 결과가 비어 건너뛴다
+        vector<uint64> _listDirtyObjectID                SW_GUARDED_BY( _dirtyLock );    ///< 다시 훑을 오브젝트 id 다. 사라졌으면 해석 결과가 비어 건너뛴다
         vector<uint64>                                   _listProcessingObjectID;        ///< `refresh` 가 위 목록과 바꿔 쓰는 버퍼(할당 재사용)
-        mutex                                            _dirtyMutex;                    ///< `_listDirtyObjectID` 의 잠금이다. 워커에서 표시할 수 있다
+        SpinLock                                         _dirtyLock;                     ///< `_listDirtyObjectID` 의 잠금이다. 워커에서 표시할 수 있다 — 넣기 하나뿐이라 스핀(`NavTileRebaker::_dirtyLock` 과 같은 모양)
         atomic<uint8>                                    _bAllDirty;                     ///< 전부 다시 훑을지 여부
         uint32                                           _prerequisiteCount;             ///< 등록된 서브틱 선행 조건의 총수
         uint32                                           _stageItemCount;                ///< 스테이지가 도는 항목 수

@@ -31,7 +31,7 @@ namespace sw
         , _listTask{}
         , _listFreeTask{}
         , _listRange{}
-        , _mutex{}
+        , _spinLock{}
         , _wakeWord{ 0 }
         , _nextRangeIndex{ 0 }
         , _workerCount{ workerCount < 2 ? 2u : workerCount }
@@ -98,8 +98,8 @@ namespace sw
         pRecord->_pContext        = pTaskContext;
         pRecord->_remainingRangeCount.store( static_cast<uint32>( rangeCount ), std::memory_order_relaxed );
         {
-            ScopedLock<mutex> lock{ _mutex };
-            int32             startIndex = 0;
+            ScopedLock<SpinLock> lock{ _spinLock };
+            int32                startIndex = 0;
             for ( int32 rangeIndex = 0; rangeIndex < rangeCount; ++rangeIndex )
             {
                 const int32 endIndex = startIndex + itemsPerRange + ( rangeIndex < remainder ? 1 : 0 );
@@ -134,7 +134,7 @@ namespace sw
     {
         Range range;
         {
-            ScopedLock<mutex> lock{ _mutex };
+            ScopedLock<SpinLock> lock{ _spinLock };
             if ( _nextRangeIndex >= _listRange.size() )
                 return false;
             range = _listRange[_nextRangeIndex];

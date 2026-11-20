@@ -33,7 +33,7 @@ namespace sw
         , _arrExecutorSlot{}
         , _jobs{}
         , _listQueuedJob{}
-        , _queueMutex{}
+        , _queueSpinLock{}
         , _pTaskManager{ nullptr }
         , _jobTaskStage{}
         , _maxConcurrency{ 1 }
@@ -91,7 +91,7 @@ namespace sw
         // 큐가 참조 하나를 가진다. 태스크가 실행한 뒤에 해제한다.
         pJob->AddRef();
         {
-            ScopedLock<mutex> lock{ _queueMutex };
+            ScopedLock<SpinLock> lock{ _queueSpinLock };
             _listQueuedJob.push_back( pJob );
         }
         if ( _pTaskManager == nullptr )
@@ -175,7 +175,7 @@ namespace sw
 
     JPH::JobSystem::Job* JoltJobSystem::popQueuedJob()
     {
-        ScopedLock<mutex> lock{ _queueMutex };
+        ScopedLock<SpinLock> lock{ _queueSpinLock };
         if ( _listQueuedJob.empty() )
             return nullptr;
         Job* pJob = _listQueuedJob.front();
