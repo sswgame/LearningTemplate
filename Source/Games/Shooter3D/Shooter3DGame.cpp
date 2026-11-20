@@ -9,6 +9,7 @@
 #include "pch.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"

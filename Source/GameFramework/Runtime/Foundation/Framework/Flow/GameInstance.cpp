@@ -17,6 +17,7 @@
 #include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Net/GameNetSession.h"
+#include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
