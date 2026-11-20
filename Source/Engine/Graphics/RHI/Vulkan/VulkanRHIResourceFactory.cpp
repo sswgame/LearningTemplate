@@ -847,7 +847,7 @@ namespace sw
 
         // 소스 복사는 전송 락 밖에서 한다(계약 1: 반환 전에 소스를 복사한다).
         VkBufferImageCopy arrRegion[constant::render::kMaxTextureMipCount]{};
-        uint64            ringOffset = span._offsetBytes;
+        uint64            ringOffset = span.getOffsetBytes();
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             const RHITextureMipSpan& mipSpan = arrMip[mip];
@@ -923,7 +923,7 @@ namespace sw
         const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, usedBytes + copyAlignment, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "submitTextureRegionUpload", span );
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
-        const uint64 ringOffset = alignUpToMultiple( span._offsetBytes, copyAlignment );
+        const uint64 ringOffset = alignUpToMultiple( span.getOffsetBytes(), copyAlignment );
         Memory::copy( ring.getSpanMappedBase( span ) + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
 
         ScopedLock<mutex> transferLock{ _pDevice->_transferMutex };
@@ -993,7 +993,7 @@ namespace sw
         VulkanRHIDevice::VulkanStagingRing& ring = _pDevice->_readbackRing;
         outBytes.resize( pending._sizeBytes );
         Memory::copy( outBytes.data(), ring.getSpanMappedBase( pending._span ) + pending._dataOffsetBytes, pending._sizeBytes );
-        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, pending._span );
+        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( pending._span ) );
         if ( pending._depth24TexelCount != 0 )
             convertRHIDepth24ToFloat( outBytes.data(), pending._depth24TexelCount );
         return true;
@@ -1007,7 +1007,7 @@ namespace sw
         if ( _pDevice->_readbackTable.take( ticket._serial, pending ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // 끝나지 않은 복사는 아직 이 구간에 쓴다. 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(다음 되읽기가 같은 자리를 받지 않는다).
-        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, pending._span, _pDevice->_transferSerials, ticket._serial );
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, std::move( pending._span ), _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat VulkanRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -1087,7 +1087,7 @@ namespace sw
         const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, outLayout._sizeBytes + copyAlignment, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "submitTextureReadback", span );
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
-        const uint64 ringOffset = alignUpToMultiple( span._offsetBytes, copyAlignment );
+        const uint64 ringOffset = alignUpToMultiple( span.getOffsetBytes(), copyAlignment );
 
         ScopedLock<mutex> transferLock{ _pDevice->_transferMutex };
         VkImageLayout     layoutAfter{ VK_IMAGE_LAYOUT_UNDEFINED }; // 기록이 정하고 레코드 갱신이 읽는다
@@ -1158,11 +1158,11 @@ namespace sw
             pRecord->_lastReadbackSerial.store( serial );
 
             VulkanRHIDevice::VulkanPendingReadback pending{};
-            pending._span              = span;
+            pending._span              = std::move( span );
             pending._dataOffsetBytes   = ringOffset;
             pending._sizeBytes         = outLayout._sizeBytes;
             pending._depth24TexelCount = ( bDepth && static_cast<VkFormat>( pRecord->_format ) == VK_FORMAT_D24_UNORM_S8_UINT ) ? outLayout._width * outLayout._height : 0u;
-            _pDevice->_readbackTable.add( serial, pending );
+            _pDevice->_readbackTable.add( serial, std::move( pending ) );
         } );
     }
 

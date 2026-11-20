@@ -524,7 +524,7 @@ namespace sw
         ScopedOpenGLContext contextScope( _pDevice );
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
-            _pDevice->_stagingRing.free( staging );
+            _pDevice->_stagingRing.free( std::move( staging ) );
             SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadGLContextCould", "submitTextureUpload: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
@@ -540,7 +540,7 @@ namespace sw
                 for ( uint32 mip = 0; mip < mipCount; ++mip )
                 {
                     const RHITextureMipSpan& span    = arrMip[mip];
-                    const void*              pPixels = ScopedStagingUnpack::toPixelOffset( staging._offsetBytes + span._offsetBytes );
+                    const void*              pPixels = ScopedStagingUnpack::toPixelOffset( staging.getOffsetBytes() + span._offsetBytes );
                     if ( bCompressed )
                     {
                         glCompressedTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLsizei>( span._width ),
@@ -560,7 +560,7 @@ namespace sw
                 for ( uint32 mip = 0; mip < mipCount; ++mip )
                 {
                     const RHITextureMipSpan& span    = arrMip[mip];
-                    const void*              pPixels = ScopedStagingUnpack::toPixelOffset( staging._offsetBytes + span._offsetBytes );
+                    const void*              pPixels = ScopedStagingUnpack::toPixelOffset( staging.getOffsetBytes() + span._offsetBytes );
                     if ( bCompressed )
                     {
                         glCompressedTextureSubImage3D( pRecord->_texture, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLint>( desc._arraySlice ),
@@ -577,7 +577,7 @@ namespace sw
         }
         // 펜스가 링 구간의 회수 시점이다 — 워터마크가 이 시리얼을 지나면 구간이 돌아온다.
         const uint64 serial = _pDevice->endTransfer();
-        _pDevice->_stagingRing.markSubmitted( staging, serial );
+        _pDevice->_stagingRing.markSubmitted( std::move( staging ), serial );
         pRecord->_uploadSerials.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
@@ -607,7 +607,7 @@ namespace sw
         ScopedOpenGLContext contextScope( _pDevice );
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
-            _pDevice->_stagingRing.free( staging );
+            _pDevice->_stagingRing.free( std::move( staging ) );
             SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureRegionUploadGLContextCould", "submitTextureRegionUpload: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
@@ -615,7 +615,7 @@ namespace sw
         const GLenum glType   = toGlType( pRecord->_format );
         {
             const ScopedStagingUnpack unpack( _pDevice->getStagingBuffer( staging ) );
-            const void*               pPixels = ScopedStagingUnpack::toPixelOffset( staging._offsetBytes );
+            const void*               pPixels = ScopedStagingUnpack::toPixelOffset( staging.getOffsetBytes() );
             if ( pRecord->_target == GL_TEXTURE_2D )
             {
                 glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
@@ -632,7 +632,7 @@ namespace sw
             }
         }
         const uint64 serial = _pDevice->endTransfer();
-        _pDevice->_stagingRing.markSubmitted( staging, serial );
+        _pDevice->_stagingRing.markSubmitted( std::move( staging ), serial );
         pRecord->_uploadSerials.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
@@ -662,9 +662,9 @@ namespace sw
             return false;
         }
         // 펜스가 지났으므로 GPU 가 구간에 쓴 바이트가 COHERENT 매핑에 보인다. 복사는 컨텍스트 밖에서 하고, 다 읽은 구간을 링에 돌려준다.
-        outBytes.resize( static_cast<size_t>( span._sizeBytes ) );
-        Memory::copy( outBytes.data(), _pDevice->getReadbackBytes( span ), static_cast<size_t>( span._sizeBytes ) );
-        RHITextureTransferDriver::releaseTakenReadback( _pDevice->_readbackRing, span );
+        outBytes.resize( static_cast<size_t>( span.getSizeBytes() ) );
+        Memory::copy( outBytes.data(), _pDevice->getReadbackBytes( span ), static_cast<size_t>( span.getSizeBytes() ) );
+        RHITextureTransferDriver::releaseTakenReadback( _pDevice->_readbackRing, std::move( span ) );
         return true;
     }
 
@@ -676,7 +676,7 @@ namespace sw
         if ( _pDevice->_readbackTable.take( ticket._serial, span ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // Pending 이면 GPU 가 아직 구간에 쓰는 중이다 — 구간은 이 티켓의 펜스가 지난 뒤에 돌아온다(Vulkan · DX12 와 같은 꼬리).
-        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing, span, _pDevice->_transferSerials, ticket._serial );
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing, std::move( span ), _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat OpenGLRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -720,7 +720,7 @@ namespace sw
         ScopedOpenGLContext contextScope( _pDevice );
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
-            _pDevice->_readbackRing.free( readback );
+            _pDevice->_readbackRing.free( std::move( readback ) );
             SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureReadbackGLContextCould", "submitTextureReadback: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
@@ -728,8 +728,8 @@ namespace sw
         // 바이트는 펜스가 지난 뒤 takeTextureReadback 이 컨텍스트 밖에서 복사한다. 2D 도 DSA 3D 창(z = 0)으로 읽어 텍스처 바인딩을 건드리지 않는다.
         {
             const ScopedStagingPack pack( _pDevice->getReadbackBuffer( readback ) );
-            void*                   pPixels     = ScopedStagingPack::toPixelOffset( readback._offsetBytes );
-            const GLsizei           bufferBytes = static_cast<GLsizei>( readback._sizeBytes );
+            void*                   pPixels     = ScopedStagingPack::toPixelOffset( readback.getOffsetBytes() );
+            const GLsizei           bufferBytes = static_cast<GLsizei>( readback.getSizeBytes() );
             if ( RHIFormatUtil::isBlockCompressed( pRecord->_format ) )
             {
                 glGetCompressedTextureSubImage( pRecord->_texture, static_cast<GLint>( mip ), 0, 0, static_cast<GLint>( arraySlice ),
@@ -742,7 +742,7 @@ namespace sw
             }
         }
         const uint64 serial = _pDevice->endTransfer();
-        _pDevice->_readbackTable.add( serial, readback );
+        _pDevice->_readbackTable.add( serial, std::move( readback ) );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 

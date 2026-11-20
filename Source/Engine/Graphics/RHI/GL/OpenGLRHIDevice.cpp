@@ -732,6 +732,8 @@ namespace sw
     {
         if ( _readbackRingBuffer == 0 )
             return;
+        // 가져가지 않은 읽기의 구간을 링보다 먼저 놓는다 — 표가 할당기보다 앞에 선언돼 소멸자 차례로는 할당기가 먼저 사라진다.
+        _readbackTable.clear();
         deleteSoloBuffer( _readbackSolo );
         GLuint name = _readbackRingBuffer;
         glDeleteBuffers( 1, &name );
@@ -1255,47 +1257,48 @@ namespace sw
         rSolo = OpenGLSoloTransferBuffer{};
     }
 
-    RHISubmitResult OpenGLRHIDevice::attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, const RHIStagingSpan& span, uint32 mapFlags,
+    RHISubmitResult OpenGLRHIDevice::attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, RHIStagingSpan& span, uint32 mapFlags,
                                                        const utf8* pCaller )
     {
         // 버퍼를 만드는 동안만 컨텍스트를 빌린다. 바이트 복사(업로드)는 돌아간 뒤 컨텍스트 밖에서 한다.
         ScopedOpenGLContext contextScope( this );
+        const uint64        sizeBytes = span.getSizeBytes();
         if ( isGraphicsContextCurrent() == false )
         {
-            ring.free( span );
-            SW_LOG_ERROR_ID( "OpenGL.GLContextCouldNot", "%#: the GL context could not be acquired to create a %#-byte single transfer buffer; submit again later", pCaller, span._sizeBytes );
+            ring.free( std::move( span ) );
+            SW_LOG_ERROR_ID( "OpenGL.GLContextCouldNot", "%#: the GL context could not be acquired to create a %#-byte single transfer buffer; submit again later", pCaller, sizeBytes );
             return RHISubmitResult::Busy;
         }
         deleteSoloBuffer( rSolo ); // 할당기가 이미 돌려받았지만 아직 지우지 못한 앞 단독 버퍼
-        rSolo._pMapped = createPersistentRingBuffer( span._sizeBytes, mapFlags, rSolo._buffer );
+        rSolo._pMapped = createPersistentRingBuffer( sizeBytes, mapFlags, rSolo._buffer );
         if ( rSolo._pMapped == nullptr )
         {
-            ring.free( span );
-            SW_LOG_ERROR_ID( "OpenGL.ByteSingleTransferBuffer", "%#: a %#-byte single transfer buffer could not be created or mapped; the transfer is rejected", pCaller, span._sizeBytes );
+            ring.free( std::move( span ) );
+            SW_LOG_ERROR_ID( "OpenGL.ByteSingleTransferBuffer", "%#: a %#-byte single transfer buffer could not be created or mapped; the transfer is rejected", pCaller, sizeBytes );
             return RHISubmitResult::Rejected;
         }
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( &rSolo ), RHIMemoryKind::Staging, span._sizeBytes );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( &rSolo ), RHIMemoryKind::Staging, sizeBytes );
         return RHISubmitResult::Accepted;
     }
 
     uint8* OpenGLRHIDevice::getStagingBytes( const RHIStagingSpan& span ) const
     {
-        return span._bSolo != SW_FALSE ? _stagingSolo._pMapped : _pStagingRingMapped + span._offsetBytes;
+        return span.isSolo() ? _stagingSolo._pMapped : _pStagingRingMapped + span.getOffsetBytes();
     }
 
     uint32 OpenGLRHIDevice::getStagingBuffer( const RHIStagingSpan& span ) const
     {
-        return span._bSolo != SW_FALSE ? _stagingSolo._buffer : _stagingRingBuffer;
+        return span.isSolo() ? _stagingSolo._buffer : _stagingRingBuffer;
     }
 
     const uint8* OpenGLRHIDevice::getReadbackBytes( const RHIStagingSpan& span ) const
     {
-        return span._bSolo != SW_FALSE ? _readbackSolo._pMapped : _pReadbackRingMapped + span._offsetBytes;
+        return span.isSolo() ? _readbackSolo._pMapped : _pReadbackRingMapped + span.getOffsetBytes();
     }
 
     uint32 OpenGLRHIDevice::getReadbackBuffer( const RHIStagingSpan& span ) const
     {
-        return span._bSolo != SW_FALSE ? _readbackSolo._buffer : _readbackRingBuffer;
+        return span.isSolo() ? _readbackSolo._buffer : _readbackRingBuffer;
     }
 
     bool OpenGLRHIDevice::tryRetireFinishedTransfers()
@@ -1326,7 +1329,7 @@ namespace sw
         // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다 — 장치를 잃었으면(펜스 확인이 GL_WAIT_FAILED) 링이 다시 비지 않으므로 Full 도 Rejected 다(계약 2).
         // Busy 는 앞선 전송이 끝나면 비므로 호출자가 다시 제출한다.
         const RHISubmitResult submitResult = RHIStagingRingUtil::completeAllocation( _stagingRing, _transferSerials, result, sizeBytes, "GL", pCaller, outSpan );
-        if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
+        if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
             return submitResult;
         return attachSoloBuffer( _stagingRing, _stagingSolo, outSpan, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, pCaller );
     }
@@ -1345,7 +1348,7 @@ namespace sw
         // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 업로드 쪽과 같은 한 곳이다 — 잃은 장치의 Full 은 Rejected 다. Busy 는 앞선 되읽기를 가져가거나 버리면 비므로 호출자가 다시 제출한다(계약 2).
         const utf8* const     pCaller      = "submitTextureReadback";
         const RHISubmitResult submitResult = RHIStagingRingUtil::completeAllocation( _readbackRing, _transferSerials, result, sizeBytes, "GL", pCaller, outSpan );
-        if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
+        if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
             return submitResult;
         return attachSoloBuffer( _readbackRing, _readbackSolo, outSpan, GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, pCaller );
     }

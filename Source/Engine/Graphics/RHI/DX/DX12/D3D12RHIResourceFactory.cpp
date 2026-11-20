@@ -410,7 +410,7 @@ namespace sw
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
         // 링 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset). 구간 시작이 배치 오프셋 정렬(512)의 배수라 서브리소스 오프셋도 규칙을 지킨다.
-        _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, span._offsetBytes, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, span.getOffsetBytes(), arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
         // 소스를 스테이징으로 복사한다(계약 1). 이 뒤로 호출자는 버퍼를 재사용해도 된다. 큐 락 밖의 일이다.
         uint8* const pRingBase = ring.getSpanMappedBase( span );
@@ -485,7 +485,7 @@ namespace sw
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
 
-        uint8*       pDstBase = ring.getSpanMappedBase( span ) + span._offsetBytes;
+        uint8*       pDstBase = ring.getSpanMappedBase( span ) + span.getOffsetBytes();
         const uint8* pSrcBase = static_cast<const uint8*>( desc._pData );
         for ( uint32 row = 0; row < desc._height; ++row )
         {
@@ -510,7 +510,7 @@ namespace sw
             D3D12_TEXTURE_COPY_LOCATION src{};
             src.pResource                          = ring.getSpanResource( span );
             src.Type                               = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-            src.PlacedFootprint.Offset             = span._offsetBytes;
+            src.PlacedFootprint.Offset             = span.getOffsetBytes();
             src.PlacedFootprint.Footprint.Format   = resourceDesc.Format;
             src.PlacedFootprint.Footprint.Width    = desc._width;
             src.PlacedFootprint.Footprint.Height   = desc._height;
@@ -567,7 +567,7 @@ namespace sw
         if ( pBuffer == nullptr || isHrSuccess( pBuffer->Map( 0, &readRange, &pMapped ), "Map" ) == false || pMapped == nullptr )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.TakeTextureReadbackFailedMapReadback", "takeTextureReadback: failed to map the readback buffer of ticket %#", ticket._serial );
-            RHITextureTransferDriver::releaseTakenReadback( ring._allocator, record._span );
+            RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( record._span ) );
             return false;
         }
         outBytes.assign( record._layout._sizeBytes, 0 );
@@ -579,7 +579,7 @@ namespace sw
         }
         D3D12_RANGE noWrite{ 0, 0 };
         pBuffer->Unmap( 0, &noWrite );
-        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, record._span );
+        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( record._span ) );
         if ( record._bDepth != SW_FALSE )
             convertRHIDepth24ToFloat( outBytes.data(), record._layout._width * record._layout._height );
         return true;
@@ -593,7 +593,7 @@ namespace sw
         if ( _pDevice->_readbackTable.take( ticket._serial, record ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // 복사가 아직 GPU 에서 도는 중이면 구간에 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(Vulkan 과 같은 꼬리).
-        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, record._span, _pDevice->_transferSerials, ticket._serial );
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, std::move( record._span ), _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat D3D12RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -654,7 +654,7 @@ namespace sw
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
         // 링 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset).
-        _pDevice->_device->GetCopyableFootprints( &resourceDesc, subresource, 1, span._offsetBytes, &footprint, &rowCount, &rowSize, &totalBytes );
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, subresource, 1, span.getOffsetBytes(), &footprint, &rowCount, &rowSize, &totalBytes );
 
         // 구간에는 시리얼을 붙이지 않는다 — 가져가거나 버릴 때까지 결과가 링에 남아야 한다(`runReadbackJob`).
         return RHITextureTransferDriver::runReadbackJob<D3D12RHIDevice::D3D12TransferJob>(
@@ -688,7 +688,7 @@ namespace sw
             _pDevice->recordTextureTransfer( texture, serial );
 
             D3D12RHIDevice::TextureReadbackRecord record;
-            record._span      = span;
+            record._span      = std::move( span );
             record._footprint = footprint;
             record._layout    = outLayout;
             record._rowCount  = rowCount;

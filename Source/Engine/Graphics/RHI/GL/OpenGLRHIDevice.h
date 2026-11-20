@@ -260,7 +260,7 @@ namespace sw
         /// @brief 업로드 · 되읽기 링 구간 시작의 정렬입니다. PBO 오프셋은 픽셀 성분(최대 float 4 바이트)과 BC 블록(16 바이트)의 배수면 되지만, CPU 복사가 캐시 줄 경계에서 시작하도록 넉넉히 둔다.
         static constexpr uint64 kTransferRingAlignmentBytes = 256;
 
-        /// @brief 링보다 큰 전송 한 장(단독 구간, `RHIStagingSpan::_bSolo`)이 쓰는 일회성 영속 매핑 버퍼입니다. 링마다 하나다 — 할당기가 단독 구간을 한 번에 하나만 내준다.
+        /// @brief 링보다 큰 전송 한 장(단독 구간, `RHIStagingSpan::isSolo`)이 쓰는 일회성 영속 매핑 버퍼입니다. 링마다 하나다 — 할당기가 단독 구간을 한 번에 하나만 내준다.
         struct OpenGLSoloTransferBuffer
         {
             uint8* _pMapped{ nullptr }; ///< 영속 매핑 주소. 버퍼가 없으면 nullptr
@@ -469,7 +469,7 @@ namespace sw
          * @details 앞선 단독 구간의 버퍼가 아직 남아 있으면(할당기는 이미 돌려받았다) 먼저 지운다. 만든 버퍼는 메모리 추적기의 Staging 에 올린다.
          * @return 붙였으면 `Accepted`. 컨텍스트를 얻지 못하면 `Busy`, 버퍼를 만들지 못하면 `Rejected` 이고 두 경우 모두 구간을 할당기에 돌려준다.
          */
-        [[nodiscard]] RHISubmitResult attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, const RHIStagingSpan& span, uint32 mapFlags,
+        [[nodiscard]] RHISubmitResult attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, RHIStagingSpan& span, uint32 mapFlags,
                                                         const utf8* pCaller );
         /** @brief 단독 버퍼를 지우고 메모리 추적기에서 내립니다. 컨텍스트를 쥔 채 부릅니다. 버퍼가 없으면 아무것도 하지 않습니다. */
         void deleteSoloBuffer( OpenGLSoloTransferBuffer& rSolo );

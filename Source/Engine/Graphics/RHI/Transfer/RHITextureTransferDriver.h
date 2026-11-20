@@ -27,7 +27,7 @@ namespace sw
          * @details 열기 · 제출이 실패하면 구간을 돌려주고 `Rejected` 다. 큐 제출 잠금이 필요한 백엔드(Vulkan `_transferMutex`)는 부르기 전에 잡아 둔다.
          */
         template <typename TJob, typename TRing, typename FnBegin, typename FnRecord, typename FnSubmit, typename FnCommit>
-        static RHITransferSubmit runJob( TRing& ring, const RHIStagingSpan& span, RHITransferSerials& serials, FnBegin&& fnBegin, FnRecord&& fnRecord, FnSubmit&& fnSubmit,
+        static RHITransferSubmit runJob( TRing& ring, RHIStagingSpan& span, RHITransferSerials& serials, FnBegin&& fnBegin, FnRecord&& fnRecord, FnSubmit&& fnSubmit,
                                          FnCommit&& fnCommit )
         {
             return run<TJob>( ring, span, serials, true, fnBegin, fnRecord, fnSubmit, fnCommit );
@@ -35,10 +35,10 @@ namespace sw
 
         /**
          * @brief 되읽기: `runJob` 과 같은 순서지만 구간에 시리얼을 붙이지 않습니다 — 결과가 가져갈 때까지 구간에 남아야 한다.
-         *        @p fnCommit( serial ) 이 보관표에 구간을 적는다. 구간은 `releaseTakenReadback` · `releaseDiscardedReadback` 가 돌려준다.
+         *        @p fnCommit( serial ) 이 보관표에 구간을 옮긴다(`std::move`). 구간은 `releaseTakenReadback` · `releaseDiscardedReadback` 가 돌려준다.
          */
         template <typename TJob, typename TRing, typename FnBegin, typename FnRecord, typename FnSubmit, typename FnCommit>
-        static RHITransferSubmit runReadbackJob( TRing& ring, const RHIStagingSpan& span, RHITransferSerials& serials, FnBegin&& fnBegin, FnRecord&& fnRecord,
+        static RHITransferSubmit runReadbackJob( TRing& ring, RHIStagingSpan& span, RHITransferSerials& serials, FnBegin&& fnBegin, FnRecord&& fnRecord,
                                                  FnSubmit&& fnSubmit, FnCommit&& fnCommit )
         {
             return run<TJob>( ring, span, serials, false, fnBegin, fnRecord, fnSubmit, fnCommit );
@@ -49,38 +49,38 @@ namespace sw
          * @details 링 구간으로 받는 세 백엔드(Vulkan · DX12 · GL)가 같이 쓴다. DX11 은 D3D11 이 텍스처를 버퍼로 복사하지 못해 되읽기마다 스테이징 텍스처이고
          *          COM 참조가 GPU 가 끝날 때까지 붙든다. WebGPU 는 되읽기마다 버퍼이고 버릴 때 매핑 콜백이 놓는다 — 둘 다 "끝나기 전에 다시 쓰지 않는다" 를 자원 수명이 지킨다.
          */
-        static void releaseTakenReadback( RHIStagingAllocator& allocator, const RHIStagingSpan& span ) { allocator.free( span ); }
+        static void releaseTakenReadback( RHIStagingAllocator& allocator, RHIStagingSpan&& span ) { allocator.free( std::move( span ) ); }
 
         /** @brief 버린 되읽기의 구간을 돌려줍니다. 복사가 아직 돌면 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(다음 되읽기가 같은 자리를 받지 않는다). */
-        static void releaseDiscardedReadback( RHIStagingAllocator& allocator, const RHIStagingSpan& span, const RHITransferSerials& serials, uint64 serial )
+        static void releaseDiscardedReadback( RHIStagingAllocator& allocator, RHIStagingSpan&& span, const RHITransferSerials& serials, uint64 serial )
         {
             if ( serials.isComplete( serial ) )
-                allocator.free( span );
+                allocator.free( std::move( span ) );
             else
-                allocator.markSubmitted( span, serial );
+                allocator.markSubmitted( std::move( span ), serial );
         }
 
     private:
         template <typename TJob, typename TRing, typename FnBegin, typename FnRecord, typename FnSubmit, typename FnCommit>
-        static RHITransferSubmit run( TRing& ring, const RHIStagingSpan& span, RHITransferSerials& serials, bool bReleaseSpanAtSerial, FnBegin& fnBegin, FnRecord& fnRecord,
+        static RHITransferSubmit run( TRing& ring, RHIStagingSpan& span, RHITransferSerials& serials, bool bReleaseSpanAtSerial, FnBegin& fnBegin, FnRecord& fnRecord,
                                       FnSubmit& fnSubmit, FnCommit& fnCommit )
         {
             TJob job{};
             if ( fnBegin( job ) == false )
             {
-                ring._allocator.free( span );
+                ring._allocator.free( std::move( span ) );
                 return RHITransferSubmit::rejected();
             }
             fnRecord( job );
             const uint64 serial = fnSubmit( job );
             if ( serial == 0 )
             {
-                ring._allocator.free( span );
+                ring._allocator.free( std::move( span ) );
                 return RHITransferSubmit::rejected();
             }
             if ( bReleaseSpanAtSerial )
-                ring._allocator.markSubmitted( span, serial );
-            fnCommit( serial );
+                ring._allocator.markSubmitted( std::move( span ), serial );
+            fnCommit( serial ); // 되읽기는 여기서 구간을 보관표로 옮긴다 — 이 뒤로 @p span 을 만지지 않는다
             return serials.makeAccepted( serial );
         }
     };
