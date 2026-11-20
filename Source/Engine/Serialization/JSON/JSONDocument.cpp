@@ -351,25 +351,91 @@ namespace sw
 
     // 정수 읽기는 **부호 없는 쪽을 먼저 본다**(`JSONMemberReader::parse`). nlohmann 의 `is_number_integer()` 는 부호 있는 정수와 부호 없는 정수
     // 둘 다에 참이라, 순서가 뒤집히면 큰 부호 없는 값이 음수로 돌아온다.
-#define SW_JSON_MEMBER_READER( Type )                                                                                                    \
-    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, Type& outValue ) const                                             \
-    {                                                                                                                                    \
-        const JSONValue member = get( key );                                                                                             \
-        return static_cast<JSONValueRead>( JSONMemberReader::read( JSONDocumentInternal::asJSON( member._pValue ), key, outValue ) );    \
-    }                                                                                                                                    \
-    JSONValue::JSONValueRead JSONValue::parseSelf( Type& outValue ) const                                                                \
-    {                                                                                                                                    \
-        return static_cast<JSONValueRead>( JSONMemberReader::read( JSONDocumentInternal::asJSON( _pValue ), string_view{}, outValue ) ); \
+    template <typename T>
+    JSONValue::JSONValueRead JSONValue::readNode( string_view key, T& outValue ) const
+    {
+        return static_cast<JSONValueRead>( JSONMemberReader::read( JSONDocumentInternal::asJSON( _pValue ), key, outValue ) );
     }
-    SW_JSON_MEMBER_READER( int32 )
-    SW_JSON_MEMBER_READER( uint32 )
-    SW_JSON_MEMBER_READER( int64 )
-    SW_JSON_MEMBER_READER( uint64 )
-    SW_JSON_MEMBER_READER( float32 )
-    SW_JSON_MEMBER_READER( float64 )
-    SW_JSON_MEMBER_READER( bool )
-    SW_JSON_MEMBER_READER( string )
-#undef SW_JSON_MEMBER_READER
+
+    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, int32& outValue ) const
+    {
+        return get( key ).readNode( key, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, uint32& outValue ) const
+    {
+        return get( key ).readNode( key, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, int64& outValue ) const
+    {
+        return get( key ).readNode( key, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, uint64& outValue ) const
+    {
+        return get( key ).readNode( key, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, float32& outValue ) const
+    {
+        return get( key ).readNode( key, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, float64& outValue ) const
+    {
+        return get( key ).readNode( key, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, bool& outValue ) const
+    {
+        return get( key ).readNode( key, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, string& outValue ) const
+    {
+        return get( key ).readNode( key, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseSelf( int32& outValue ) const
+    {
+        return readNode( string_view{}, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseSelf( uint32& outValue ) const
+    {
+        return readNode( string_view{}, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseSelf( int64& outValue ) const
+    {
+        return readNode( string_view{}, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseSelf( uint64& outValue ) const
+    {
+        return readNode( string_view{}, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseSelf( float32& outValue ) const
+    {
+        return readNode( string_view{}, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseSelf( float64& outValue ) const
+    {
+        return readNode( string_view{}, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseSelf( bool& outValue ) const
+    {
+        return readNode( string_view{}, outValue );
+    }
+
+    JSONValue::JSONValueRead JSONValue::parseSelf( string& outValue ) const
+    {
+        return readNode( string_view{}, outValue );
+    }
 
     void JSONValue::reportMissing( string_view key ) const
     {

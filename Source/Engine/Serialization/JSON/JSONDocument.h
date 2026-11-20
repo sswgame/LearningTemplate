@@ -214,6 +214,9 @@ namespace sw
         JSONValueRead parseSelf( float64& outValue ) const;
         JSONValueRead parseSelf( bool& outValue ) const;
         JSONValueRead parseSelf( string& outValue ) const;
+        /** @brief 이 노드를 @p outValue 형식으로 읽습니다(`parseMember` · `parseSelf` 의 몸통). @p key 는 오류 글에만 씁니다(자기 자신이면 빈 글). */
+        template <typename T>
+        JSONValueRead readNode( string_view key, T& outValue ) const;
         /** @brief 필수 멤버가 없다고 오류로 남깁니다. */
         void reportMissing( string_view key ) const;
         /** @brief 내부 JSON 노드 포인터로 핸들을 만듭니다. */
