@@ -135,7 +135,7 @@ namespace sw
     /** @brief {name} 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝은 서술자가 정합니다. */
     struct {name}Method : OnlineMethodTable<{name}MethodName, OnlineMethodRange::k{name}, {name}PushName>
     {{
-        using Echo = Method<MethodName::Echo, {name}EchoRequest, {name}EchoReply>;
+        using Echo = Method<MethodName::Echo, {name}EchoRequest, {name}EchoReply, OnlineMethodFlag::ReadOnly>; // 호출 종류를 꼭 하나 적는다(읽기 · 키 필수 · 본래 멱등)
     }};
 
     /** @brief {name} 키트의 프로토콜 표, 메시지 목록, 등록 항목입니다. */

@@ -267,21 +267,21 @@ namespace sw
     /** @brief Account 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct AccountMethod : OnlineMethodTable<AccountMethodName, OnlineMethodRange::kAccount, AccountPushName>
     {
-        using Register        = Method<MethodName::Register, AccountCredentialRequest, AccountGrantReply, OnlineMethodFlag::Anonymous>;    ///< 이름 · 비밀번호
-        using Login           = Method<MethodName::Login, AccountLoginRequest, AccountGrantReply, OnlineMethodFlag::Anonymous>;            ///< 이름, 비밀번호, 클라이언트 정보를 받는다
-        using GuestLogin      = Method<MethodName::GuestLogin, AccountGuestLoginRequest, AccountGrantReply, OnlineMethodFlag::Anonymous>;  ///< 장치 비밀 32바이트와 클라이언트 정보를 받는다
-        using PlatformLogin   = Method<MethodName::PlatformLogin, AccountPlatformRequest, AccountGrantReply, OnlineMethodFlag::Anonymous>; ///< 제공자, 티켓, 클라이언트 정보를 받는다
-        using Resume          = Method<MethodName::Resume, AccountResumeRequest, AccountGrantReply, OnlineMethodFlag::Anonymous>;          ///< 토큰과 클라이언트 정보를 받는다
-        using Logout          = Method<MethodName::Logout, OnlineNoBody, AccountGrantReply>;
-        using LinkCredential  = Method<MethodName::LinkCredential, AccountCredentialRequest, AccountGrantReply>;   ///< 이름과 비밀번호를 받는다
-        using LinkPlatform    = Method<MethodName::LinkPlatform, AccountPlatformRequest, AccountGrantReply>;       ///< 제공자와 티켓을 받는다
-        using IssueGameTicket = Method<MethodName::IssueGameTicket, AccountGameTicketRequest, AccountTicketReply>; ///< 서버 id 문자열을 받아 티켓 64바이트, 비밀 32바이트, 시한을 돌려준다
-        using UnlinkPlatform  = Method<MethodName::UnlinkPlatform, AccountProviderRequest, AccountGrantReply>;
-        using ListLinks       = Method<MethodName::ListLinks, OnlineNoBody, AccountLinkReply>;
-        using RequestDeletion = Method<MethodName::RequestDeletion, OnlineNoBody, AccountGrantReply>;
-        using CancelDeletion  = Method<MethodName::CancelDeletion, OnlineNoBody, AccountGrantReply>;
-        using IssueLoginNonce = Method<MethodName::IssueLoginNonce, OnlineNoBody, AccountNonceReply, OnlineMethodFlag::Anonymous>; ///< 외부 로그인 전에 받는 한 번 쓰는 nonce
-        using Revoked         = Push<PushName::Revoked, AccountRevokedPush>;                                                       ///< 이유와 사유 코드를 보내며, 보낸 뒤 서버가 연결을 닫는다
+        using Register        = Method<MethodName::Register, AccountCredentialRequest, AccountGrantReply, OnlineMethodFlag::RequiresIdempotencyKey | OnlineMethodFlag::Anonymous>; ///< 이름 · 비밀번호
+        using Login           = Method<MethodName::Login, AccountLoginRequest, AccountGrantReply, OnlineMethodFlag::IdempotentIssue | OnlineMethodFlag::Anonymous>;                ///< 이름, 비밀번호, 클라이언트 정보를 받는다
+        using GuestLogin      = Method<MethodName::GuestLogin, AccountGuestLoginRequest, AccountGrantReply, OnlineMethodFlag::IdempotentIssue | OnlineMethodFlag::Anonymous>;      ///< 장치 비밀 32바이트와 클라이언트 정보를 받는다
+        using PlatformLogin   = Method<MethodName::PlatformLogin, AccountPlatformRequest, AccountGrantReply, OnlineMethodFlag::IdempotentIssue | OnlineMethodFlag::Anonymous>;     ///< 제공자, 티켓, 클라이언트 정보를 받는다
+        using Resume          = Method<MethodName::Resume, AccountResumeRequest, AccountGrantReply, OnlineMethodFlag::IdempotentIssue | OnlineMethodFlag::Anonymous>;              ///< 토큰과 클라이언트 정보를 받는다
+        using Logout          = Method<MethodName::Logout, OnlineNoBody, AccountGrantReply, OnlineMethodFlag::IdempotentRemove>;
+        using LinkCredential  = Method<MethodName::LinkCredential, AccountCredentialRequest, AccountGrantReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 이름과 비밀번호를 받는다
+        using LinkPlatform    = Method<MethodName::LinkPlatform, AccountPlatformRequest, AccountGrantReply, OnlineMethodFlag::RequiresIdempotencyKey>;     ///< 제공자와 티켓을 받는다
+        using IssueGameTicket = Method<MethodName::IssueGameTicket, AccountGameTicketRequest, AccountTicketReply, OnlineMethodFlag::IdempotentIssue>;      ///< 서버 id 문자열을 받아 티켓 64바이트, 비밀 32바이트, 시한을 돌려준다
+        using UnlinkPlatform  = Method<MethodName::UnlinkPlatform, AccountProviderRequest, AccountGrantReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using ListLinks       = Method<MethodName::ListLinks, OnlineNoBody, AccountLinkReply, OnlineMethodFlag::ReadOnly>;
+        using RequestDeletion = Method<MethodName::RequestDeletion, OnlineNoBody, AccountGrantReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using CancelDeletion  = Method<MethodName::CancelDeletion, OnlineNoBody, AccountGrantReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using IssueLoginNonce = Method<MethodName::IssueLoginNonce, OnlineNoBody, AccountNonceReply, OnlineMethodFlag::IdempotentIssue | OnlineMethodFlag::Anonymous>; ///< 외부 로그인 전에 받는 한 번 쓰는 nonce
+        using Revoked         = Push<PushName::Revoked, AccountRevokedPush>;                                                                                           ///< 이유와 사유 코드를 보내며, 보낸 뒤 서버가 연결을 닫는다
     };
 } // namespace sw
 

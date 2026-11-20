@@ -199,13 +199,13 @@ namespace sw
     /** @brief Chat 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct ChatMethod : OnlineMethodTable<ChatMethodName, OnlineMethodRange::kChat, ChatPushName>
     {
-        using Join    = Method<MethodName::Join, ChatChannelRequest, ChatResultReply>;
-        using Leave   = Method<MethodName::Leave, ChatChannelRequest, ChatResultReply>;
-        using Send    = Method<MethodName::Send, ChatSendRequest, ChatSendReply>;          ///< 거른 메시지(되울림)를 돌려준다
-        using Whisper = Method<MethodName::Whisper, ChatWhisperRequest, ChatSendReply>;    ///< 거른 메시지를 돌려준다
-        using History = Method<MethodName::History, ChatHistoryRequest, ChatHistoryReply>; ///< 채널 id(귓속말은 기록 키), 커서, 개수를 받아 최근 메시지부터 목록과 다음 커서를 돌려준다
-        using Report  = Method<MethodName::Report, ChatReportRequest, ChatResultReply>;    ///< 메시지와 그 앞 기록을 스냅숏으로 신고 테이블에 남긴다
-        using Message = Push<PushName::Message, ChatMessage>;                              ///< 메시지 하나이다. 채널 메시지나 귓속말이다
+        using Join    = Method<MethodName::Join, ChatChannelRequest, ChatResultReply, OnlineMethodFlag::IdempotentSet>;
+        using Leave   = Method<MethodName::Leave, ChatChannelRequest, ChatResultReply, OnlineMethodFlag::IdempotentRemove>;
+        using Send    = Method<MethodName::Send, ChatSendRequest, ChatSendReply, OnlineMethodFlag::RequiresIdempotencyKey>;       ///< 거른 메시지(되울림)를 돌려준다
+        using Whisper = Method<MethodName::Whisper, ChatWhisperRequest, ChatSendReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 거른 메시지를 돌려준다
+        using History = Method<MethodName::History, ChatHistoryRequest, ChatHistoryReply, OnlineMethodFlag::ReadOnly>;            ///< 채널 id(귓속말은 기록 키), 커서, 개수를 받아 최근 메시지부터 목록과 다음 커서를 돌려준다
+        using Report  = Method<MethodName::Report, ChatReportRequest, ChatResultReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 메시지와 그 앞 기록을 스냅숏으로 신고 테이블에 남긴다
+        using Message = Push<PushName::Message, ChatMessage>;                                                                     ///< 메시지 하나이다. 채널 메시지나 귓속말이다
     };
 } // namespace sw
 

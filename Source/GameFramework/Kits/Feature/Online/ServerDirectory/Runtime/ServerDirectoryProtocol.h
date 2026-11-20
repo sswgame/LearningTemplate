@@ -77,10 +77,10 @@ namespace sw
     /** @brief ServerDirectory 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct ServerDirectoryMethod : OnlineMethodTable<ServerDirectoryMethodName, OnlineMethodRange::kServerDirectory, ServerDirectoryPushName>
     {
-        using GetStatus    = Method<MethodName::GetStatus, OnlineNoBody, ServerDirectoryStatus, OnlineMethodFlag::Anonymous>;  ///< 상태를 돌려준다. 서버 고르기 · 점검 안내 화면이 로그인 전에 쓴다
-        using AssignServer = Method<MethodName::AssignServer, ServerAssignmentRequest, ServerAssignment>;                      ///< 배정을 돌려준다. 점검 허용 목록이 계정을 보므로 로그인한 뒤에 쓴다
-        using ListServers  = Method<MethodName::ListServers, ServerListRequest, ServerListReply, OnlineMethodFlag::Anonymous>; ///< 종류를 받아 목록을 돌려준다. 서버 고르기 화면이 쓴다
-        using Status       = Push<PushName::Status, ServerDirectoryStatus>;                                                    ///< 보이는 상태가 바뀌었다는 알림이다
+        using GetStatus    = Method<MethodName::GetStatus, OnlineNoBody, ServerDirectoryStatus, OnlineMethodFlag::ReadOnly | OnlineMethodFlag::Anonymous>;  ///< 상태를 돌려준다. 서버 고르기 · 점검 안내 화면이 로그인 전에 쓴다
+        using AssignServer = Method<MethodName::AssignServer, ServerAssignmentRequest, ServerAssignment, OnlineMethodFlag::RequiresIdempotencyKey>;         ///< 배정을 돌려준다. 점검 허용 목록이 계정을 보므로 로그인한 뒤에 쓴다
+        using ListServers  = Method<MethodName::ListServers, ServerListRequest, ServerListReply, OnlineMethodFlag::ReadOnly | OnlineMethodFlag::Anonymous>; ///< 종류를 받아 목록을 돌려준다. 서버 고르기 화면이 쓴다
+        using Status       = Push<PushName::Status, ServerDirectoryStatus>;                                                                                 ///< 보이는 상태가 바뀌었다는 알림이다
     };
 } // namespace sw
 

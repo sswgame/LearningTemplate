@@ -94,10 +94,10 @@ namespace sw
     /** @brief LiveOps 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct LiveOpsMethod : OnlineMethodTable<LiveOpsMethodName, OnlineMethodRange::kLiveOps, LiveOpsPushName>
     {
-        using GetLiveState     = Method<MethodName::GetLiveState, LiveOpsStateRequest, LiveOpsStateReply>;       ///< 이 계정에 열린 이벤트 목록을 돌려준다. 출시 비율이 계정을 보므로 로그인한 뒤에 쓴다
-        using RegisterDevice   = Method<MethodName::RegisterDevice, PushDeviceRegistration, LiveOpsDeviceReply>; ///< 로그인한 뒤에 쓰며 같은 토큰은 덮어쓴다
-        using UnregisterDevice = Method<MethodName::UnregisterDevice, LiveOpsDeviceKey, LiveOpsDeviceReply>;     ///< 로그아웃이나 알림 끄기에서 쓴다
-        using LiveState        = Push<PushName::LiveState, OnlineNoBody>;                                        ///< 열린 이벤트 목록이 바뀌었으니 다시 받으라는 알림이다
+        using GetLiveState     = Method<MethodName::GetLiveState, LiveOpsStateRequest, LiveOpsStateReply, OnlineMethodFlag::ReadOnly>;            ///< 이 계정에 열린 이벤트 목록을 돌려준다. 출시 비율이 계정을 보므로 로그인한 뒤에 쓴다
+        using RegisterDevice   = Method<MethodName::RegisterDevice, PushDeviceRegistration, LiveOpsDeviceReply, OnlineMethodFlag::IdempotentSet>; ///< 로그인한 뒤에 쓰며 같은 토큰은 덮어쓴다
+        using UnregisterDevice = Method<MethodName::UnregisterDevice, LiveOpsDeviceKey, LiveOpsDeviceReply, OnlineMethodFlag::IdempotentRemove>;  ///< 로그아웃이나 알림 끄기에서 쓴다
+        using LiveState        = Push<PushName::LiveState, OnlineNoBody>;                                                                         ///< 열린 이벤트 목록이 바뀌었으니 다시 받으라는 알림이다
     };
 } // namespace sw
 
