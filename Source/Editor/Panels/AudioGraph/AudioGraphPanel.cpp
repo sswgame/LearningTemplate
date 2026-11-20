@@ -292,8 +292,9 @@ namespace sw::editor
             const uint32 movedNodeCount = static_cast<uint32>( graph._listNode.size() );
             for ( uint32 nodeIndex = 0; nodeIndex < movedNodeCount; ++nodeIndex )
             {
-                const ImVec2 position = ed::GetNodePosition( toNodeID( AudioGraphEditUtil::makeNodeID( nodeIndex ) ) );
-                _model.recordNodePosition( nodeIndex, float2{ position.x, position.y } );
+                float2 position{};
+                if ( _nodeGraph.findDrawnNodePosition( AudioGraphEditUtil::makeNodeID( nodeIndex ), position ) )
+                    _model.recordNodePosition( nodeIndex, position );
             }
             if ( _nodeGraph.syncCommentLayout( _model.editGraph()._listComment ) )
                 _model.markCommentsEdited( EditorGraphCommentEdit::Move );

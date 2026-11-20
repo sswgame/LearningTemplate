@@ -49,6 +49,9 @@ namespace sw::editor
 
         struct EditorNodeGraphInternal
         {
+            /** @brief 노드를 놓을 캔버스 위치입니다 — 노드 편집기는 노드 위치를 정수로 내려 든다. 내리지 않은 위치를 데이터에 실으면 다음 프레임에 편집기 위치와 달라 "옮기기" 편집이 하나 더 쌓였다(되돌리기가 추가 대신 그것을 되돌렸다). */
+            static float2 toNodePosition( const ImVec2& canvasPoint ) { return float2{ MathUtil::floor( canvasPoint.x ), MathUtil::floor( canvasPoint.y ) }; }
+
             /// @brief 맞춤 · 미니맵 이동의 보기 움직임 시간(초) — 라이브러리 기본 스크롤 시간과 같은 결로 짧게 둔다.
             static constexpr float32 kNavigateSeconds = 0.2f;
             /// @brief 핀에서 고른 노드가 나타나기를 기다리는 프레임 — 패널은 고른 프레임에 노드를 넣고 다음 프레임에 그린다. 넣지 못했으면(한도) 요청을 버린다.
@@ -208,8 +211,7 @@ namespace sw::editor
             }
         }
         ed::EndShortcut();
-        const ImVec2 canvasMouse = ImGui::GetMousePos(); // 캔버스 안이라 캔버스 좌표다
-        outPastePosition         = float2{ canvasMouse.x, canvasMouse.y };
+        outPastePosition = EditorNodeGraphInternal::toNodePosition( ImGui::GetMousePos() ); // 캔버스 안이라 캔버스 좌표다
         return command;
     }
 
@@ -508,6 +510,15 @@ namespace sw::editor
         ed::DeleteNode( toNodeID( nodeID ) );
     }
 
+    bool EditorNodeGraph::findDrawnNodePosition( const int32 nodeID, float2& outPosition ) const
+    {
+        if ( VectorUtil::contains( _listFrameNode, nodeID ) == false )
+            return false;
+        const ImVec2 position = ed::GetNodePosition( toNodeID( nodeID ) );
+        outPosition           = float2{ position.x, position.y };
+        return true;
+    }
+
     bool EditorNodeGraph::findSelectedNode( int32& outNodeID ) const
     {
         ed::NodeId arrSelected[1];
@@ -729,7 +740,7 @@ namespace sw::editor
         ed::Suspend();
         if ( ed::ShowBackgroundContextMenu() )
         {
-            _addNodePosition = float2{ canvasMouse.x, canvasMouse.y };
+            _addNodePosition = EditorNodeGraphInternal::toNodePosition( canvasMouse );
             _pinDragSource   = 0; // 빈 곳에서 연 검색은 이을 핀이 없다
             _addNodeFilter.clear();
             EditorInputGUI::openPopup( "AddGraphNode" );
@@ -818,7 +829,7 @@ namespace sw::editor
         if ( kindID.has_value() == false )
             return false;
         outKindID         = *kindID;
-        outCanvasPosition = float2{ canvasMouse.x, canvasMouse.y };
+        outCanvasPosition = EditorNodeGraphInternal::toNodePosition( canvasMouse );
         return true;
     }
 
@@ -857,7 +868,7 @@ namespace sw::editor
             if ( bDroppedOnEmpty && ed::AcceptNewItem() )
             {
                 const ImVec2 canvasMouse = ImGui::GetMousePos();
-                _addNodePosition         = float2{ canvasMouse.x, canvasMouse.y };
+                _addNodePosition         = EditorNodeGraphInternal::toNodePosition( canvasMouse );
                 _pinDragSource           = static_cast<int32>( pinDropped.Get() );
                 _bOpenAddFromPin         = SW_TRUE;
             }

@@ -109,6 +109,12 @@ namespace sw::editor
         void requestNodeDeletion( int32 nodeID );
         /** @brief 고른 첫 노드의 id 입니다(주석 상자일 수 있다). 고른 노드가 없으면 false 입니다. */
         [[nodiscard]] bool findSelectedNode( int32& outNodeID ) const;
+        /**
+         * @brief 이번 프레임에 그린 노드 @p nodeID 의 캔버스 위치를 @p outPosition 에 씁니다. 아직 그리지 않은 노드(이 프레임에 더한 노드)면 false 입니다.
+         * @details 노드 편집기는 모르는 노드의 위치로 FLT_MAX 를 돌려준다 — 그 값을 데이터에 실으면 노드가 무한 먼 곳으로 가고 되돌리기 뒤 보기 배율이 무너져
+         *          편집기의 격자 그리기가 끝나지 않았다. 패널이 끌어 옮긴 위치를 데이터에 실을 때는 이 조회만 쓴다.
+         */
+        [[nodiscard]] bool findDrawnNodePosition( int32 nodeID, float2& outPosition ) const;
         /** @brief 상자 id 가 @p listCommentID 에 든 주석을 지웁니다(안의 노드는 남는다 — 언리얼 Comment 지우기와 같다). 지웠으면 true 입니다. */
         static bool removeComments( vector<GraphCommentBox>& listComment, const vector<int32>& listCommentID );
         /** @brief 보기 막대의 주석 단추가 낸 요청이면 새 상자를 @p listComment 에 더하고 true 입니다(id 는 가장 큰 id + 1). */
