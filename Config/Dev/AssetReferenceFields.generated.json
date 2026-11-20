@@ -1027,6 +1027,127 @@
       "listPathTextField": []
     },
     {
+      "owner": "game:FrontierTown",
+      "listField": [
+        "_tilePrefab",
+        "_unitPrefab",
+        "tilePrefab",
+        "unitPrefab"
+      ],
+      "listAssetRefField": [
+        "_tilePrefab",
+        "_unitPrefab",
+        "tilePrefab",
+        "unitPrefab"
+      ],
+      "listPathTextField": []
+    },
+    {
+      "owner": "game:HarvestValley",
+      "listField": [
+        "_autoFarmerPrefab",
+        "_cropDataPath",
+        "_cropPrefab",
+        "_listDefaultGrowingModel",
+        "_listGrowingModel",
+        "_readyModel",
+        "_scheduleDataPath",
+        "_soilPrefab",
+        "_villagerPrefab",
+        "_weatherPath",
+        "autoFarmerPrefab",
+        "cropDataPath",
+        "cropPrefab",
+        "listDefaultGrowingModel",
+        "listGrowingModel",
+        "readyModel",
+        "scheduleDataPath",
+        "soilPrefab",
+        "villagerPrefab",
+        "weatherPath"
+      ],
+      "listAssetRefField": [
+        "_autoFarmerPrefab",
+        "_cropDataPath",
+        "_cropPrefab",
+        "_listDefaultGrowingModel",
+        "_listGrowingModel",
+        "_readyModel",
+        "_scheduleDataPath",
+        "_soilPrefab",
+        "_villagerPrefab",
+        "_weatherPath",
+        "autoFarmerPrefab",
+        "cropDataPath",
+        "cropPrefab",
+        "listDefaultGrowingModel",
+        "listGrowingModel",
+        "readyModel",
+        "scheduleDataPath",
+        "soilPrefab",
+        "villagerPrefab",
+        "weatherPath"
+      ],
+      "listPathTextField": []
+    },
+    {
+      "owner": "game:MeadowVillage",
+      "listField": [
+        "_prefab",
+        "_tilePrefab",
+        "prefab",
+        "tilePrefab"
+      ],
+      "listAssetRefField": [
+        "_prefab",
+        "_tilePrefab",
+        "prefab",
+        "tilePrefab"
+      ],
+      "listPathTextField": []
+    },
+    {
+      "owner": "game:NileCity",
+      "listField": [
+        "_autoPlanPath",
+        "_blockBuildingPrefab",
+        "_buildingViewPath",
+        "_cityDataPath",
+        "_groundPrefab",
+        "_modelBuildingPrefab",
+        "_roadPrefab",
+        "_walkerPrefab",
+        "autoPlanPath",
+        "blockBuildingPrefab",
+        "buildingViewPath",
+        "cityDataPath",
+        "groundPrefab",
+        "modelBuildingPrefab",
+        "roadPrefab",
+        "walkerPrefab"
+      ],
+      "listAssetRefField": [
+        "_blockBuildingPrefab",
+        "_buildingViewPath",
+        "_cityDataPath",
+        "_groundPrefab",
+        "_modelBuildingPrefab",
+        "_roadPrefab",
+        "_walkerPrefab",
+        "blockBuildingPrefab",
+        "buildingViewPath",
+        "cityDataPath",
+        "groundPrefab",
+        "modelBuildingPrefab",
+        "roadPrefab",
+        "walkerPrefab"
+      ],
+      "listPathTextField": [
+        "_autoPlanPath",
+        "autoPlanPath"
+      ]
+    },
+    {
       "owner": "game:Playground",
       "listField": [
         "_catalog",
@@ -1173,127 +1294,6 @@
         "shopsPath"
       ],
       "listPathTextField": []
-    },
-    {
-      "owner": "game:FrontierTown",
-      "listField": [
-        "_tilePrefab",
-        "_unitPrefab",
-        "tilePrefab",
-        "unitPrefab"
-      ],
-      "listAssetRefField": [
-        "_tilePrefab",
-        "_unitPrefab",
-        "tilePrefab",
-        "unitPrefab"
-      ],
-      "listPathTextField": []
-    },
-    {
-      "owner": "game:HarvestValley",
-      "listField": [
-        "_autoFarmerPrefab",
-        "_cropDataPath",
-        "_cropPrefab",
-        "_listDefaultGrowingModel",
-        "_listGrowingModel",
-        "_readyModel",
-        "_scheduleDataPath",
-        "_soilPrefab",
-        "_villagerPrefab",
-        "_weatherPath",
-        "autoFarmerPrefab",
-        "cropDataPath",
-        "cropPrefab",
-        "listDefaultGrowingModel",
-        "listGrowingModel",
-        "readyModel",
-        "scheduleDataPath",
-        "soilPrefab",
-        "villagerPrefab",
-        "weatherPath"
-      ],
-      "listAssetRefField": [
-        "_autoFarmerPrefab",
-        "_cropDataPath",
-        "_cropPrefab",
-        "_listDefaultGrowingModel",
-        "_listGrowingModel",
-        "_readyModel",
-        "_scheduleDataPath",
-        "_soilPrefab",
-        "_villagerPrefab",
-        "_weatherPath",
-        "autoFarmerPrefab",
-        "cropDataPath",
-        "cropPrefab",
-        "listDefaultGrowingModel",
-        "listGrowingModel",
-        "readyModel",
-        "scheduleDataPath",
-        "soilPrefab",
-        "villagerPrefab",
-        "weatherPath"
-      ],
-      "listPathTextField": []
-    },
-    {
-      "owner": "game:MeadowVillage",
-      "listField": [
-        "_prefab",
-        "_tilePrefab",
-        "prefab",
-        "tilePrefab"
-      ],
-      "listAssetRefField": [
-        "_prefab",
-        "_tilePrefab",
-        "prefab",
-        "tilePrefab"
-      ],
-      "listPathTextField": []
-    },
-    {
-      "owner": "game:NileCity",
-      "listField": [
-        "_autoPlanPath",
-        "_blockBuildingPrefab",
-        "_buildingViewPath",
-        "_cityDataPath",
-        "_groundPrefab",
-        "_modelBuildingPrefab",
-        "_roadPrefab",
-        "_walkerPrefab",
-        "autoPlanPath",
-        "blockBuildingPrefab",
-        "buildingViewPath",
-        "cityDataPath",
-        "groundPrefab",
-        "modelBuildingPrefab",
-        "roadPrefab",
-        "walkerPrefab"
-      ],
-      "listAssetRefField": [
-        "_blockBuildingPrefab",
-        "_buildingViewPath",
-        "_cityDataPath",
-        "_groundPrefab",
-        "_modelBuildingPrefab",
-        "_roadPrefab",
-        "_walkerPrefab",
-        "blockBuildingPrefab",
-        "buildingViewPath",
-        "cityDataPath",
-        "groundPrefab",
-        "modelBuildingPrefab",
-        "roadPrefab",
-        "walkerPrefab"
-      ],
-      "listPathTextField": [
-        "_autoPlanPath",
-        "autoPlanPath"
-      ]
     },
     {
       "owner": "game:Shooter3D",
