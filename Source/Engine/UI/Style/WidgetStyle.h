@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -98,9 +99,9 @@ namespace sw
      */
     struct SW_API UIStyleFieldTable
     {
-        static constexpr uint32 kAffectsLayout  = SW_BIT( 0 ); ///< 바뀌면 원하는 크기가 바뀝니다(여백, 글꼴, 크기).
-        static constexpr uint32 kAffectsSubtree = SW_BIT( 1 ); ///< 자손 그림에 반영됩니다(불투명도). 자손까지 다시 칠합니다.
-        static constexpr uint32 kInherited      = SW_BIT( 2 ); ///< 부모의 계산된 값을 물려받습니다(텍스트 필드).
+        static constexpr uint32 kAffectsLayout  = BitUtil::bit( 0 ); ///< 바뀌면 원하는 크기가 바뀝니다(여백, 글꼴, 크기).
+        static constexpr uint32 kAffectsSubtree = BitUtil::bit( 1 ); ///< 자손 그림에 반영됩니다(불투명도). 자손까지 다시 칠합니다.
+        static constexpr uint32 kInherited      = BitUtil::bit( 2 ); ///< 부모의 계산된 값을 물려받습니다(텍스트 필드).
 
         /** @brief 필드 하나의 플래그(`kAffectsLayout` · `kAffectsSubtree` · `kInherited`)입니다. */
         static uint32 getFlags( UIStyleField field );

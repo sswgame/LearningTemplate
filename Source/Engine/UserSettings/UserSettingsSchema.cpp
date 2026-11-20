@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/EnumNameTable.h"
 #include "Core/String/StringUtil.h"
@@ -35,11 +36,11 @@ namespace sw
             /** @brief 키 바인딩 설정이 대상을 적지 않았을 때 쓰는 핸들러입니다(입력 맵 리바인딩). */
             static constexpr utf8 kKeyBindingHandler[] = "input.keyBinding";
 
-            static constexpr uint32 kBooleanVariable = SW_BIT( static_cast<uint32>( GlobalVariableType::Boolean ) );
-            static constexpr uint32 kInt32Variable   = SW_BIT( static_cast<uint32>( GlobalVariableType::Int32 ) );
-            static constexpr uint32 kFloatVariable   = SW_BIT( static_cast<uint32>( GlobalVariableType::Float ) );
-            static constexpr uint32 kStringVariable  = SW_BIT( static_cast<uint32>( GlobalVariableType::String ) );
-            static constexpr uint32 kEnumVariable    = SW_BIT( static_cast<uint32>( GlobalVariableType::Enum ) );
+            static constexpr uint32 kBooleanVariable = BitUtil::bit( static_cast<uint32>( GlobalVariableType::Boolean ) );
+            static constexpr uint32 kInt32Variable   = BitUtil::bit( static_cast<uint32>( GlobalVariableType::Int32 ) );
+            static constexpr uint32 kFloatVariable   = BitUtil::bit( static_cast<uint32>( GlobalVariableType::Float ) );
+            static constexpr uint32 kStringVariable  = BitUtil::bit( static_cast<uint32>( GlobalVariableType::String ) );
+            static constexpr uint32 kEnumVariable    = BitUtil::bit( static_cast<uint32>( GlobalVariableType::Enum ) );
 
             /** @brief 설정 종류의 성질 표입니다. 열거자 순서대로 한 줄씩 둡니다 — 아래 static_assert 가 순서와 줄 수를 지킵니다. */
             static constexpr UserSettingKindTraits kArrTypeTraits[] = {
@@ -168,7 +169,7 @@ namespace sw
             /** @brief 표 순서가 열거자 순서와 같은지 봅니다(`getTypeTraits` 가 열거자 값으로 줄을 고른다). */
             static constexpr bool isTypeTraitsInEnumOrder()
             {
-                for ( size_t index = 0; index < std::size( kArrTypeTraits ); ++index )
+                for ( size_t index = 0; index < SW_COUNT_OF( kArrTypeTraits ); ++index )
                 {
                     if ( static_cast<size_t>( kArrTypeTraits[index]._type ) != index )
                         return false;
@@ -311,7 +312,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "UserSettingsSchema.SettingTargetsUnknownGlobal", "setting '%#' targets an unknown global variable '%#'", pID, def._targetName.c_str() );
                     return false;
                 }
-                if ( ( UserSettingsSchema::getTypeTraits( def._type )._globalVariableTypeMask & SW_BIT( static_cast<uint32>( pVariable->_type ) ) ) == 0 )
+                if ( ( UserSettingsSchema::getTypeTraits( def._type )._globalVariableTypeMask & BitUtil::bit( static_cast<uint32>( pVariable->_type ) ) ) == 0 )
                 {
                     SW_LOG_ERROR_ID( "UserSettingsSchema.SettingCannotDriveGlobal", "setting '%#' cannot drive global variable '%#' (type mismatch)", pID, def._targetName.c_str() );
                     return false;
@@ -511,7 +512,7 @@ namespace sw
         };
 
         static_assert( UserSettingsSchemaInternal::isTypeTraitsInEnumOrder(), "kArrTypeTraits rows must follow UserSettingKind order" );
-        static_assert( std::size( UserSettingsSchemaInternal::kArrTypeTraits ) == static_cast<size_t>( UserSettingKind::String ) + 1,
+        static_assert( SW_COUNT_OF( UserSettingsSchemaInternal::kArrTypeTraits ) == static_cast<size_t>( UserSettingKind::String ) + 1,
                        "kArrTypeTraits needs one row per UserSettingKind" );
     } // namespace
 } // namespace sw

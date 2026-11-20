@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorColor.h"
@@ -24,11 +25,11 @@ namespace sw::editor
     enum class EditorPanelFlags : uint8
     {
         None            = 0,
-        NoCollapse      = SW_BIT( 0 ),
-        MenuBar         = SW_BIT( 1 ),
-        NoScrollbar     = SW_BIT( 2 ),
-        NoPadding       = SW_BIT( 3 ),
-        UnsavedDocument = SW_BIT( 4 )
+        NoCollapse      = BitUtil::bit( 0 ),
+        MenuBar         = BitUtil::bit( 1 ),
+        NoScrollbar     = BitUtil::bit( 2 ),
+        NoPadding       = BitUtil::bit( 3 ),
+        UnsavedDocument = BitUtil::bit( 4 )
     };
 
     // ------------------------------------------------------------------------------
@@ -44,12 +45,12 @@ namespace sw::editor
     enum class EditorSectionFlags : uint8
     {
         None                = 0,
-        Border              = SW_BIT( 0 ),
-        ResizeX             = SW_BIT( 1 ),
-        HorizontalScrollbar = SW_BIT( 2 ),
-        NoScrollbar         = SW_BIT( 3 ),
-        NoScrollWithMouse   = SW_BIT( 4 ),
-        FillRemaining       = SW_BIT( 5 ) ///< Child 높이를 아래쪽 한 줄만 남기고 채운다
+        Border              = BitUtil::bit( 0 ),
+        ResizeX             = BitUtil::bit( 1 ),
+        HorizontalScrollbar = BitUtil::bit( 2 ),
+        NoScrollbar         = BitUtil::bit( 3 ),
+        NoScrollWithMouse   = BitUtil::bit( 4 ),
+        FillRemaining       = BitUtil::bit( 5 ) ///< Child 높이를 아래쪽 한 줄만 남기고 채운다
     };
 
     /** @brief 섹션을 여는 설정입니다. */
@@ -71,9 +72,9 @@ namespace sw::editor
     enum class EditorFloatingBarFlags : uint8
     {
         None                    = 0,
-        AutoResize              = SW_BIT( 0 ),
-        NoMove                  = SW_BIT( 1 ),
-        PassThroughWhenDisabled = SW_BIT( 2 )
+        AutoResize              = BitUtil::bit( 0 ),
+        NoMove                  = BitUtil::bit( 1 ),
+        PassThroughWhenDisabled = BitUtil::bit( 2 )
     };
 
     /** @brief 플로팅 바를 여는 설정입니다. */
@@ -100,15 +101,15 @@ namespace sw::editor
     enum class EditorOverlayFlags : uint16
     {
         None               = 0,
-        NoTitleBar         = SW_BIT( 0 ),
-        NoResize           = SW_BIT( 1 ),
-        NoMove             = SW_BIT( 2 ),
-        NoInputs           = SW_BIT( 3 ),
-        NoNav              = SW_BIT( 4 ),
-        AutoResize         = SW_BIT( 5 ),
-        NoFocusOnAppearing = SW_BIT( 6 ),
-        NoSavedSettings    = SW_BIT( 7 ),
-        NoDecoration       = SW_BIT( 8 )
+        NoTitleBar         = BitUtil::bit( 0 ),
+        NoResize           = BitUtil::bit( 1 ),
+        NoMove             = BitUtil::bit( 2 ),
+        NoInputs           = BitUtil::bit( 3 ),
+        NoNav              = BitUtil::bit( 4 ),
+        AutoResize         = BitUtil::bit( 5 ),
+        NoFocusOnAppearing = BitUtil::bit( 6 ),
+        NoSavedSettings    = BitUtil::bit( 7 ),
+        NoDecoration       = BitUtil::bit( 8 )
     };
 
     /** @brief 오버레이를 여는 설정입니다. */

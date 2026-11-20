@@ -7,6 +7,7 @@
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -33,12 +34,12 @@ namespace sw
     enum class UILayerMask : uint8
     {
         None     = 0,
-        HUD      = SW_BIT( 0 ),
-        GameMenu = SW_BIT( 1 ),
-        Menu     = SW_BIT( 2 ),
-        Modal    = SW_BIT( 3 ),
-        Overlay  = SW_BIT( 4 ),
-        Loading  = SW_BIT( 5 )
+        HUD      = BitUtil::bit( 0 ),
+        GameMenu = BitUtil::bit( 1 ),
+        Menu     = BitUtil::bit( 2 ),
+        Modal    = BitUtil::bit( 3 ),
+        Overlay  = BitUtil::bit( 4 ),
+        Loading  = BitUtil::bit( 5 )
     };
 
     /** @brief 레이어 개수입니다(`UILayer` 의 마지막 열거자 + 1). */

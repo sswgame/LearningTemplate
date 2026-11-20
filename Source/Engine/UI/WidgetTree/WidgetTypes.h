@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/IdentityToken.h"
@@ -68,14 +69,14 @@ namespace sw
     struct WidgetDirty
     {
         static constexpr uint32 kNone        = 0;
-        static constexpr uint32 kLayout      = SW_BIT( 0 ); ///< 원하는 크기가 바뀔 수 있습니다. 부모 방향으로 레이아웃 경계까지 올라갑니다.
-        static constexpr uint32 kChildLayout = SW_BIT( 1 ); ///< 자식 중 하나가 kLayout 입니다. 이 위젯은 자기 원하는 크기를 다시 측정해야 하는지 자식에게 묻습니다.
-        static constexpr uint32 kArrange     = SW_BIT( 2 ); ///< 크기는 같고 자식 위치만 다시 배치합니다(정렬, 스크롤 오프셋).
-        static constexpr uint32 kPaint       = SW_BIT( 3 ); ///< 자기 그림만 다시 그립니다(색, 글자 색, 이미지 변경). 레이아웃은 그대로입니다.
-        static constexpr uint32 kStyle       = SW_BIT( 4 ); ///< 계산된 스타일을 다시 구합니다(상태나 클래스 변경). 결과에 따라 kLayout 또는 kPaint 로 번집니다.
-        static constexpr uint32 kTransform   = SW_BIT( 5 ); ///< 렌더 변환과 불투명도만 바뀝니다. 레이아웃을 건드리지 않습니다(애니메이션의 값싼 경로).
-        static constexpr uint32 kVisibility  = SW_BIT( 6 ); ///< 보임이 바뀌었습니다. 보수적으로 레이아웃과 그리기를 모두 다시 합니다.
-        static constexpr uint32 kLayoutRoot  = SW_BIT( 7 ); ///< (트리가 붙입니다) 다시 측정할 루트 목록에 이미 올라 있습니다. 같은 루트를 두 번 적지 않기 위한 표시입니다.
+        static constexpr uint32 kLayout      = BitUtil::bit( 0 ); ///< 원하는 크기가 바뀔 수 있습니다. 부모 방향으로 레이아웃 경계까지 올라갑니다.
+        static constexpr uint32 kChildLayout = BitUtil::bit( 1 ); ///< 자식 중 하나가 kLayout 입니다. 이 위젯은 자기 원하는 크기를 다시 측정해야 하는지 자식에게 묻습니다.
+        static constexpr uint32 kArrange     = BitUtil::bit( 2 ); ///< 크기는 같고 자식 위치만 다시 배치합니다(정렬, 스크롤 오프셋).
+        static constexpr uint32 kPaint       = BitUtil::bit( 3 ); ///< 자기 그림만 다시 그립니다(색, 글자 색, 이미지 변경). 레이아웃은 그대로입니다.
+        static constexpr uint32 kStyle       = BitUtil::bit( 4 ); ///< 계산된 스타일을 다시 구합니다(상태나 클래스 변경). 결과에 따라 kLayout 또는 kPaint 로 번집니다.
+        static constexpr uint32 kTransform   = BitUtil::bit( 5 ); ///< 렌더 변환과 불투명도만 바뀝니다. 레이아웃을 건드리지 않습니다(애니메이션의 값싼 경로).
+        static constexpr uint32 kVisibility  = BitUtil::bit( 6 ); ///< 보임이 바뀌었습니다. 보수적으로 레이아웃과 그리기를 모두 다시 합니다.
+        static constexpr uint32 kLayoutRoot  = BitUtil::bit( 7 ); ///< (트리가 붙입니다) 다시 측정할 루트 목록에 이미 올라 있습니다. 같은 루트를 두 번 적지 않기 위한 표시입니다.
     };
 } // namespace sw
 
@@ -88,13 +89,13 @@ namespace sw
     struct UIStyleState
     {
         static constexpr uint32 kNone         = 0;
-        static constexpr uint32 kHover        = SW_BIT( 0 ); ///< 포인터가 이 위젯(또는 자손) 위에 있습니다.
-        static constexpr uint32 kPressed      = SW_BIT( 1 ); ///< 누른 상태입니다(버튼).
-        static constexpr uint32 kFocus        = SW_BIT( 2 ); ///< 포커스를 가지고 있습니다.
-        static constexpr uint32 kFocusVisible = SW_BIT( 3 ); ///< 포커스를 가지고 있고 입력 방식이 탐색입니다(포커스 테두리가 보이는 경우).
-        static constexpr uint32 kDisabled     = SW_BIT( 4 ); ///< 자기나 조상이 꺼져 있습니다.
-        static constexpr uint32 kChecked      = SW_BIT( 5 ); ///< 체크 상자가 켜져 있습니다.
-        static constexpr uint32 kSelected     = SW_BIT( 6 ); ///< 선택한 항목입니다(목록, 콤보 선택지).
+        static constexpr uint32 kHover        = BitUtil::bit( 0 ); ///< 포인터가 이 위젯(또는 자손) 위에 있습니다.
+        static constexpr uint32 kPressed      = BitUtil::bit( 1 ); ///< 누른 상태입니다(버튼).
+        static constexpr uint32 kFocus        = BitUtil::bit( 2 ); ///< 포커스를 가지고 있습니다.
+        static constexpr uint32 kFocusVisible = BitUtil::bit( 3 ); ///< 포커스를 가지고 있고 입력 방식이 탐색입니다(포커스 테두리가 보이는 경우).
+        static constexpr uint32 kDisabled     = BitUtil::bit( 4 ); ///< 자기나 조상이 꺼져 있습니다.
+        static constexpr uint32 kChecked      = BitUtil::bit( 5 ); ///< 체크 상자가 켜져 있습니다.
+        static constexpr uint32 kSelected     = BitUtil::bit( 6 ); ///< 선택한 항목입니다(목록, 콤보 선택지).
     };
 } // namespace sw
 

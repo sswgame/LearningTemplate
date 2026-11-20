@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/EnumArray.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/EngineMinimal.h"
@@ -38,14 +39,14 @@ namespace sw
     enum class ShaderStageFlag : uint8
     {
         None          = 0,
-        Vertex        = SW_BIT( 0 ),
-        Pixel         = SW_BIT( 1 ),
-        Compute       = SW_BIT( 2 ),
-        Geometry      = SW_BIT( 3 ),
-        Hull          = SW_BIT( 4 ),
-        Domain        = SW_BIT( 5 ),
-        Mesh          = SW_BIT( 6 ),
-        Amplification = SW_BIT( 7 ),
+        Vertex        = BitUtil::bit( 0 ),
+        Pixel         = BitUtil::bit( 1 ),
+        Compute       = BitUtil::bit( 2 ),
+        Geometry      = BitUtil::bit( 3 ),
+        Hull          = BitUtil::bit( 4 ),
+        Domain        = BitUtil::bit( 5 ),
+        Mesh          = BitUtil::bit( 6 ),
+        Amplification = BitUtil::bit( 7 ),
 
         AllGraphics = Vertex | Pixel | Geometry | Hull | Domain | Mesh | Amplification,
         All         = AllGraphics | Compute
@@ -54,7 +55,7 @@ namespace sw
     constexpr ShaderStageFlag toShaderStageFlag( ShaderStage stage ) noexcept
     {
         return ( stage < ShaderStage::Count )
-                 ? static_cast<ShaderStageFlag>( SW_BIT( static_cast<uint8>( stage ) ) )
+                 ? static_cast<ShaderStageFlag>( BitUtil::bit( static_cast<uint8>( stage ) ) )
                  : ShaderStageFlag::None;
     }
 

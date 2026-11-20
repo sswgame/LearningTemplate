@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -58,14 +59,14 @@ namespace sw
             enum class Flags : uint8
             {
                 None             = 0,
-                Precision        = SW_BIT( 0 ),
-                Width            = SW_BIT( 1 ),
-                ShowSign         = SW_BIT( 2 ),
-                LeftAlign        = SW_BIT( 3 ),
-                ZeroPad          = SW_BIT( 4 ),
-                ShowBoolAsString = SW_BIT( 5 ),
-                FloatGeneral     = SW_BIT( 6 ), ///< `%g`: 고정 · 지수 중 짧은 쪽, 자릿수는 유효 숫자
-                FloatScientific  = SW_BIT( 7 ), ///< `%e`: 지수 표기
+                Precision        = BitUtil::bit( 0 ),
+                Width            = BitUtil::bit( 1 ),
+                ShowSign         = BitUtil::bit( 2 ),
+                LeftAlign        = BitUtil::bit( 3 ),
+                ZeroPad          = BitUtil::bit( 4 ),
+                ShowBoolAsString = BitUtil::bit( 5 ),
+                FloatGeneral     = BitUtil::bit( 6 ), ///< `%g`: 고정 · 지수 중 짧은 쪽, 자릿수는 유효 숫자
+                FloatScientific  = BitUtil::bit( 7 ), ///< `%e`: 지수 표기
             };
 
             uint8 _precision = 6;

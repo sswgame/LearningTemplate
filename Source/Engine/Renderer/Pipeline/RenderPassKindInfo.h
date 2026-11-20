@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -156,110 +157,110 @@ namespace sw
      */
     struct RenderPassTraitFlag
     {
-        static constexpr uint32 kDepthTest  = SW_BIT( 0 ); ///< PSO 기본값으로 깊이 테스트를 쓴다(XML 로 끌 수는 있어도 켤 수는 없다).
-        static constexpr uint32 kDepthWrite = SW_BIT( 1 ); ///< PSO 기본값으로 깊이 쓰기를 한다.
+        static constexpr uint32 kDepthTest  = BitUtil::bit( 0 ); ///< PSO 기본값으로 깊이 테스트를 쓴다(XML 로 끌 수는 있어도 켤 수는 없다).
+        static constexpr uint32 kDepthWrite = BitUtil::bit( 1 ); ///< PSO 기본값으로 깊이 쓰기를 한다.
         // 비트 2 · 13 은 비워 둔다 — 블렌드는 깃발이 아니라 `RenderPassKindInfo::_blend` 칸 하나다(프리멀티플라이인데 블렌드가 꺼진 줄을 적을 수 없다).
-        static constexpr uint32 kDepthOnly             = SW_BIT( 3 );  ///< 깊이만 쓴다. 출력 선언이 없을 때 컬러 RT 수가 0이 되는 근거다.
-        static constexpr uint32 kDrawsSceneMeshes      = SW_BIT( 4 );  ///< 씬 메시(GPUScene 배치)를 그린다. 머티리얼 변형 PSO 를 만들 대상이다.
-        static constexpr uint32 kDrawsTransparentBatch = SW_BIT( 5 );  ///< 씬 메시 중 반투명 배치 목록을 그린다(아니면 불투명 목록을 그린다).
-        static constexpr uint32 kUsesMaterialShader    = SW_BIT( 6 );  ///< 머티리얼이 선언한 `.hlsl` 로 교체한다(아니면 패스 셰이더에 define 만 적용한다).
-        static constexpr uint32 kAppliesViewMode       = SW_BIT( 7 );  ///< 뷰 모드(Unlit, Wireframe)를 받는다.
-        static constexpr uint32 kGenericFullscreen     = SW_BIT( 8 );  ///< 선언한 입력을 역할로 바인딩하고 첫 출력에 풀스크린 삼각형 하나를 그린다.
-        static constexpr uint32 kCompute               = SW_BIT( 9 );  ///< 컴퓨트 PSO 다(`CSMain`).
-        static constexpr uint32 kRequiresGPUCulling    = SW_BIT( 10 ); ///< 컴퓨트 PSO 를 `_bGPUCulling` 일 때만 만든다(아니면 `_bCompute`).
-        static constexpr uint32 kHasInputContract      = SW_BIT( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다.
-        static constexpr uint32 kCullFront             = SW_BIT( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다.
+        static constexpr uint32 kDepthOnly             = BitUtil::bit( 3 );  ///< 깊이만 쓴다. 출력 선언이 없을 때 컬러 RT 수가 0이 되는 근거다.
+        static constexpr uint32 kDrawsSceneMeshes      = BitUtil::bit( 4 );  ///< 씬 메시(GPUScene 배치)를 그린다. 머티리얼 변형 PSO 를 만들 대상이다.
+        static constexpr uint32 kDrawsTransparentBatch = BitUtil::bit( 5 );  ///< 씬 메시 중 반투명 배치 목록을 그린다(아니면 불투명 목록을 그린다).
+        static constexpr uint32 kUsesMaterialShader    = BitUtil::bit( 6 );  ///< 머티리얼이 선언한 `.hlsl` 로 교체한다(아니면 패스 셰이더에 define 만 적용한다).
+        static constexpr uint32 kAppliesViewMode       = BitUtil::bit( 7 );  ///< 뷰 모드(Unlit, Wireframe)를 받는다.
+        static constexpr uint32 kGenericFullscreen     = BitUtil::bit( 8 );  ///< 선언한 입력을 역할로 바인딩하고 첫 출력에 풀스크린 삼각형 하나를 그린다.
+        static constexpr uint32 kCompute               = BitUtil::bit( 9 );  ///< 컴퓨트 PSO 다(`CSMain`).
+        static constexpr uint32 kRequiresGPUCulling    = BitUtil::bit( 10 ); ///< 컴퓨트 PSO 를 `_bGPUCulling` 일 때만 만든다(아니면 `_bCompute`).
+        static constexpr uint32 kHasInputContract      = BitUtil::bit( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다.
+        static constexpr uint32 kCullFront             = BitUtil::bit( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다.
         /**
          * @brief 후처리를 끈 뷰(CCTV, 표면 값 보기)와 품질(`_minPostQuality`)로 꺼지는 효과 패스다(SSAO, 블룸, 외곽선, 피사계 심도, 모션 블러)와 TAA 다. TAA 말고는 `kGenericFullscreen` 에만 붙는다.
          * @details 꺼진 패스는 기록하지 않는다 — 어떻게 빠지는지는 `kBypassesToSource`(출력이 원본을 가리킨다) 또는 `kOmittedWhenOff`(출력이 없다) 가 정하고, 둘 중 하나가 꼭 붙는다.
          *          조명과 톤맵은 효과가 아니라 이미지를 만드는 단계라 이 비트가 없다.
          */
-        static constexpr uint32 kSkipsWithoutPostProcess = SW_BIT( 14 );
+        static constexpr uint32 kSkipsWithoutPostProcess = BitUtil::bit( 14 );
         /**
          * @brief 파이프라인이 선언한 컬러 출력에 그린다 — 선언이 없으면 로드가 실패한다(`RenderPipelineAsset::validate` 3-1).
          * @details 실행은 이름(SceneColor · TAAColor 등)으로 타깃을 짐작하지 않는다. 짐작하던 길은 없는 첨부의 핸들 0(백버퍼)을 열었다.
          *          `kGenericFullscreen` 패스도 같은 규칙이다(표의 `makeInfo` 가 함께 붙인다).
          */
-        static constexpr uint32 kDrawsDeclaredColor = SW_BIT( 15 );
+        static constexpr uint32 kDrawsDeclaredColor = BitUtil::bit( 15 );
         /**
          * @brief 패스 셰이더가 파이프라인 XML 의 패스 퍼뮤테이션(데이터)을 요구한다 — 패스 서술 없이 표만으로 PSO 를 만들지 않는다.
          * @details 엔진 PSO 등록(`FrameRenderer` 의 패스 자원 준비)과 쿠커의 표 단계(`ShaderCookRequest` 2단계)가 이 비트를 보고 건너뛴다.
          *          그 패스가 없는 파이프라인에서는 PSO 가 없고 실행도 없다. 강조 외곽선의 두께(`SW_HIGHLIGHT_WIDTH`)처럼 기본값을 코드에 두지 않는 값이 그 예다.
          */
-        static constexpr uint32 kRequiresPassDesc = SW_BIT( 16 );
+        static constexpr uint32 kRequiresPassDesc = BitUtil::bit( 16 );
         /**
          * @brief 꺼진 뷰에서는 패스를 기록하지 않고 출력 이름이 원본(SourceColor 입력)을 가리킨다 — 출력 타깃도 처음 켜질 때까지 만들지 않는다(블룸 · 외곽선 · 피사계 심도 · 모션 블러 · TAA. TAA 출력은 셋업이 기록 형식으로 읽어 늘 만든다).
          * @details 원본을 복사하거나 셰이더가 원본을 고르던 길은 꺼져 있어도 전 화면을 한 번 읽고 쓰고, 출력 타깃이 늘 메모리를 차지했다.
          *          뷰마다 프레임에 한 번 정한다(`FrameViewResources::applyViewPassSelection`).
          *          출력이 원본과 형식 · 크기가 같아야 하고 그 출력을 쓰는 패스가 하나뿐이어야 한다 — 로드가 검사한다(`RenderPipelineAsset::validate` 3-6).
          */
-        static constexpr uint32 kBypassesToSource = SW_BIT( 17 );
+        static constexpr uint32 kBypassesToSource = BitUtil::bit( 17 );
         /**
          * @brief 꺼진 뷰에서는 패스를 기록하지 않고 출력이 없다 — 원본 색이 없는 효과(SSAO)다. 읽는 쪽은 그 역할을 바인딩하지 않아 셰이더 기본값(AO = 1, 가림 없음)을 쓴다.
          * @details 지우기만 하던 길은 꺼져 있어도 타깃을 한 번 쓰고 늘 메모리를 차지했다. 출력을 쓰는 패스가 하나이고, 읽는 패스가 모두 그 역할을 선택 입력으로만 받는지
          *          로드가 검사한다(`RenderPipelineAsset::validate` 3-7).
          */
-        static constexpr uint32 kOmittedWhenOff = SW_BIT( 18 );
+        static constexpr uint32 kOmittedWhenOff = BitUtil::bit( 18 );
         /**
          * @brief 주 출력(Swapchain · 오프스크린 출력 · 캡처 텍스처)에 그리는 출력 패스다(Present · Canvas · FSR RCAS).
          * @details 렌더 타깃 포맷이 대상마다 달라 PSO 는 셋업이 대상 포맷마다 만들고(`FramePSOManager::collectOutputPSOJobs`) 엔진 PSO 는 없다.
          *          파이프라인에서 Swapchain 을 출력으로 적을 수 있는 패스는 이 비트가 있는 패스뿐이다(`RenderPipelineAsset::validate`).
          */
-        static constexpr uint32 kOutputPass = SW_BIT( 19 );
+        static constexpr uint32 kOutputPass = BitUtil::bit( 19 );
         /**
          * @brief 셰이더가 메시지(`SW_GPU_ASSERT` · `SW_GPU_PRINT` · `SW_GPU_LOG`)를 가진 패스다 — 컴퓨트(gpu_cull · mesh_morph · canvas_marker)와 그래픽스(Present 의 fullscreen_blit). `-gv_gpuMessages` 가 켜지면 PSO 가 `kGPUMessagesDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 메시지 버퍼를 u4 에 건다(컴퓨트 `bindCompute`, 그래픽스 `bindGraphics`).
          * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GPUMessageChannel::isRequested` 가 거짓이라 변형이 생기지 않는다.
          */
-        static constexpr uint32 kGPUMessageTarget = SW_BIT( 20 );
+        static constexpr uint32 kGPUMessageTarget = BitUtil::bit( 20 );
         /**
          * @brief 진단 패스다 — 요청한 실행에서만 PSO 를 만든다(`isDiagnosticPassRequested`). 요청하지 않은 실행(Shipping 은 늘)에서는 PSO 도 디스패치도 없다.
          */
-        static constexpr uint32 kDiagnostic = SW_BIT( 21 );
+        static constexpr uint32 kDiagnostic = BitUtil::bit( 21 );
         /**
          * @brief 컴퓨트가 엔진 텍스처를 읽어야 해서 네이티브 bindless 샘플링(DX12 · Vulkan)이 있는 백엔드에서만 PSO 를 만든다. 에뮬 백엔드(DX11 · GL)의 컴퓨트는 샘플 텍스처를 읽지 못한다(binding.hlsli).
          */
-        static constexpr uint32 kRequiresNativeBindless = SW_BIT( 22 );
+        static constexpr uint32 kRequiresNativeBindless = BitUtil::bit( 22 );
         /** @brief 파이프라인 XML 의 패스가 컴퓨트 셰이더를 고른다(`RenderPassKind::Compute`). 셰이더가 패스마다 달라 PSO 를 패스 이름으로 찾는다(`FramePSOManager::findPipelineComputePSO`). */
-        static constexpr uint32 kPipelineCompute = SW_BIT( 23 );
+        static constexpr uint32 kPipelineCompute = BitUtil::bit( 23 );
         /**
          * @brief 머티리얼이 렌더 타깃과 상관없는 렌더 상태(깊이 · 스텐실 · 채우기)를 덮을 수 있는 색 패스다. 없는 씬 메시 패스(그림자 · 깊이 프리패스 · 외곽선)는 컬 · 앞면 방향만 받는다.
          * @details 그림자 · 프리패스에 머티리얼의 깊이 비교 · 스텐실이 들어가면 깊이의 모양이 색 패스와 어긋난다. 언리얼도 머티리얼의 Two Sided 만 깊이 패스에 넘긴다(기억에 의존한 비교).
          */
-        static constexpr uint32 kMaterialFixedState = SW_BIT( 24 );
+        static constexpr uint32 kMaterialFixedState = BitUtil::bit( 24 );
         /** @brief 머티리얼이 블렌드까지 덮을 수 있는 색 패스다(한 첨부에 그리는 포워드 · 반투명). G버퍼는 첨부 셋의 의미가 정해져 있어 받지 않는다. */
-        static constexpr uint32 kMaterialBlend = SW_BIT( 25 );
+        static constexpr uint32 kMaterialBlend = BitUtil::bit( 25 );
         /**
          * @brief 깊이를 쓰는 불투명 지오메트리 패스라 화면 속도(Velocity 역할 출력)를 쓸 수 있다(G버퍼 · 포워드 불투명 · 포워드 전용 불투명). 이 비트가 없는 패스가 속도 출력을 선언하면 읽기 오류다.
          * @details 속도는 깊이와 같은 픽셀의 것이어야 TAA · 모션 블러가 깊이와 짝지어 읽는다 — 깊이를 쓰지 않는 반투명 · 외곽선은 쓰지 않는다(언리얼 기본값도 반투명은 속도를 쓰지 않는다).
          *          G버퍼는 명세가 속도를 넷째 MRT 로 늘 가지고, 포워드는 출력 선언이 있을 때만 `kPassVelocityDefine` 으로 둘째 타깃에 쓴다.
          */
-        static constexpr uint32 kWritesVelocity = SW_BIT( 26 );
+        static constexpr uint32 kWritesVelocity = BitUtil::bit( 26 );
         /**
          * @brief 컬러 출력 없이 픽셀 스테이지가 깊이(SV_Depth)를 쓰는 내부 패스다(그림자 캐시 복원). 컬러가 없는 패스는 픽셀 스테이지를 떼는데(`FramePSOManager::makePassPSODesc`)
          *        이 패스만 남긴다. 쿠커는 내부 슬롯의 VS · PS 를 늘 굽는다.
          */
-        static constexpr uint32 kWritesPixelDepth = SW_BIT( 27 );
+        static constexpr uint32 kWritesPixelDepth = BitUtil::bit( 27 );
         /**
          * @brief 일반 풀스크린 패스지만 컴퓨트 구현(같은 셰이더 파일의 `CSMain`, define `SW_PASS_COMPUTE`)도 있어 XML 의 `_implementation="Compute"` 로 고를 수 있다(블룸 다운샘플 · 피사계 심도).
          * @details 컴퓨트 구현은 입력을 bindless 번호로 직접 읽어 네이티브 bindless(DX12 · Vulkan)에서만 돈다 — 에뮬 백엔드(DX11 · GL · WebGPU)는 픽셀 구현이 돈다(능력이 정한 길).
          *          어느 쪽이 나은지는 측정으로 정한다(언리얼 블룸 · DOF 의 r.*.Compute 스위치 자리). 비트 27 — W10 이 더한 kWritesVelocity 와 겹치지 않게 26 을 비워 둔다.
          */
-        static constexpr uint32 kComputeImplementation = SW_BIT( 28 );
+        static constexpr uint32 kComputeImplementation = BitUtil::bit( 28 );
         /**
          * @brief 화면 회전 출력 패스다(`RenderPassKind::ScreenRotation`) — `kOutputPass` 와 함께 붙고, 대상은 스왑체인 이미지 하나라 PSO 를 **백버퍼 포맷으로만** 만들며
          *        서피스를 돌릴 수 있는 장치(`RHICapabilities::_bSurfacePreRotation`)에서만 만든다(`FramePSOManager::collectOutputPSOJobs`).
          */
-        static constexpr uint32 kSurfaceRotation = SW_BIT( 29 );
+        static constexpr uint32 kSurfaceRotation = BitUtil::bit( 29 );
         /**
          * @brief 읽는 쪽을 위해서만 도는 생산 패스다(장면 색 사본) — 출력을 혼자 쓰고, 출력을 읽는 패스가 이번 뷰에 모두 쉬면 뷰 패스 고르기가 출력을 빼고 실행은 기록하지 않는다.
          * @details 일반 풀스크린 패스(장면 깊이 사본)는 이 표시 없이도 같은 규칙을 탄다. 읽는 쪽이 누구인지는 파이프라인 선언과 그 패스의 이번 뷰 판정이 정한다 — 생산 패스가 읽는 쪽을 알지 않는다(언리얼 RDG 의 소비자 없는 패스 컬링).
          */
-        static constexpr uint32 kCullWhenUnconsumed = SW_BIT( 30 );
+        static constexpr uint32 kCullWhenUnconsumed = BitUtil::bit( 30 );
         /**
          * @brief 풀스크린 삼각형 대신 그리기마다 상자 볼륨(정점 36 개, 정점 버퍼 없음)을 그린다(DBuffer 데칼). 파이프라인 XML 의 `_cullMode` 는 Front 여야 한다 —
          *        뒷면만 그려야 픽셀마다 한 번 섞이고 카메라가 상자 안에 있어도 덮는다(언리얼 데칼의 카메라 안쪽 판정을 뒷면 하나로 줄인 모양).
          */
-        static constexpr uint32 kDrawsBoxVolume = SW_BIT( 31 );
+        static constexpr uint32 kDrawsBoxVolume = BitUtil::bit( 31 );
     };
 } // namespace sw
 
