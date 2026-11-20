@@ -154,6 +154,9 @@ namespace sw
         inline constexpr const utf8* kParsingComponentBaseTypes   = "component_base_types";
         inline constexpr const utf8* kParsingPhysicsHookBaseTypes = "physics_hook_base_types";
         inline constexpr const utf8* kParsingTypeStripPrefixes    = "type_strip_prefixes";
+        inline constexpr const utf8* kParsingNameFieldTypes       = "name_field_types";
+        inline constexpr const utf8* kParsingNameFieldPrefixes    = "name_field_type_prefixes";
+        inline constexpr const utf8* kParsingNameFieldSkipFolders = "name_field_skip_folders";
         inline constexpr const utf8* kEmitValueForbiddenBases     = "value_forbidden_base_types";
         inline constexpr const utf8* kEmitValueForbiddenMessage   = "value_forbidden_message";
 

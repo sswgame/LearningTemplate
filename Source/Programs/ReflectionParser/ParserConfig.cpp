@@ -9,6 +9,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/Foundation.h"
 
@@ -185,6 +186,9 @@ namespace sw
                 assignArrayIfPresent( config._listComponentBaseType, obj, jsonkey::kParsingComponentBaseTypes );
                 assignArrayIfPresent( config._listPhysicsHookBaseType, obj, jsonkey::kParsingPhysicsHookBaseTypes );
                 assignArrayIfPresent( config._listTypeStripPrefix, obj, jsonkey::kParsingTypeStripPrefixes );
+                assignArrayIfPresent( config._listNameFieldType, obj, jsonkey::kParsingNameFieldTypes );
+                assignArrayIfPresent( config._listNameFieldTypePrefix, obj, jsonkey::kParsingNameFieldPrefixes );
+                assignArrayIfPresent( config._listNameFieldSkipFolder, obj, jsonkey::kParsingNameFieldSkipFolders );
             }
 
             static void applyTuningSection( ParserConfig& config, const nlohmann::json& obj )
@@ -281,6 +285,7 @@ namespace sw
                     {  &config._listComponentBaseType,    "parsing.component_base_types"},
                     {&config._listPhysicsHookBaseType, "parsing.physics_hook_base_types"},
                     {    &config._listTypeStripPrefix,     "parsing.type_strip_prefixes"},
+                    {      &config._listNameFieldType,        "parsing.name_field_types"},
                 };
                 for ( const auto& [pList, pKey] : arrRequiredList )
                 {
@@ -398,6 +403,9 @@ namespace sw
         , _listComponentBaseType{}
         , _listPhysicsHookBaseType{}
         , _listTypeStripPrefix{}
+        , _listNameFieldType{}
+        , _listNameFieldTypePrefix{}
+        , _listNameFieldSkipFolder{}
         , _listLoadedFile{}
         , _sourceLookbackBytes{ 0 }
         , _maxParallelParses{ 0 }
@@ -578,5 +586,40 @@ namespace sw
             listArg.push_back( forceInclude );
         }
         return listArg;
+    }
+
+    bool ParserConfig::isNameFieldType( const string_view typeText ) const
+    {
+        for ( const string& typeName : _listNameFieldType )
+        {
+            if ( typeText == typeName )
+                return true;
+        }
+        for ( const string& prefix : _listNameFieldTypePrefix )
+        {
+            if ( StringUtil::startsWith( typeText, prefix ) )
+                return true;
+        }
+        return false;
+    }
+
+    bool ParserConfig::isNameFieldCheckSkipped( const string_view headerPath ) const
+    {
+        // 경로 마디마다 견준다 — 이름 앞부분만 같은 폴더(`TestsData`)는 빼지 않는다. 구분자는 두 OS 것을 모두 받는다.
+        size_t begin = 0;
+        while ( begin <= headerPath.size() )
+        {
+            size_t end = headerPath.find_first_of( "/\\", begin );
+            if ( end == string_view::npos )
+                end = headerPath.size();
+            const string_view part = headerPath.substr( begin, end - begin );
+            for ( const string& folder : _listNameFieldSkipFolder )
+            {
+                if ( part == folder && end < headerPath.size() )
+                    return true;
+            }
+            begin = end + 1;
+        }
+        return false;
     }
 } // namespace sw

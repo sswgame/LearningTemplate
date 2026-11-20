@@ -103,10 +103,10 @@ namespace sw
         AssetRef<FitTables> _regionTablePath;
         PROPERTY( Category = "Dismemberment", DisplayName = "Severable Regions", Tooltip = "Regions a fatal hit may cut off" )
         vector<hashed_string> _listSeverableRegion;
-        PROPERTY( Category = "Dismemberment", DisplayName = "Piece Layer", Tooltip = "Collision layer of the severed piece", Validate = validatePieceLayer )
-        hashed_string _pieceLayer;
-        PROPERTY( Category = "Dismemberment", DisplayName = "Piece Material", Tooltip = "Physics material of the severed piece", Validate = validatePieceMaterial )
-        hashed_string _pieceMaterial;
+        PROPERTY( DefaultName, Category = "Dismemberment", DisplayName = "Piece Layer", Tooltip = "Collision layer of the severed piece", Validate = validatePieceLayer )
+        hashed_string _pieceLayer{ "Debris" };
+        PROPERTY( DefaultName, Category = "Dismemberment", DisplayName = "Piece Material", Tooltip = "Physics material of the severed piece", Validate = validatePieceMaterial )
+        hashed_string _pieceMaterial{ "Flesh" };
         PROPERTY( Required, Category = "Dismemberment", DisplayName = "Blood Channel", Tooltip = "Surface channel raised on the severed region" )
         hashed_string _bloodChannel;
         PROPERTY( Category = "Dismemberment", DisplayName = "Piece Mass", Min = 0.1, Units = kg )

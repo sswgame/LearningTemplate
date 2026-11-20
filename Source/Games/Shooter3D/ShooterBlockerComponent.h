@@ -50,7 +50,7 @@ namespace sw
     private:
         PROPERTY( Category = "Blocker", DisplayName = "Half Size", Tooltip = "Half extents of the box around the object position", Units = m )
         float3 _halfSize;
-        PROPERTY( Category = "Blocker", DisplayName = "Body Layer", Tooltip = "Physics layer of the static body made from the box (physics settings)" )
-        hashed_string _bodyLayer;
+        PROPERTY( DefaultName, Category = "Blocker", DisplayName = "Body Layer", Tooltip = "Physics layer of the static body made from the box (physics settings)" )
+        hashed_string _bodyLayer{ "Static" };
     };
 } // namespace sw

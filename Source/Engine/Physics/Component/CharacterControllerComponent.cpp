@@ -60,7 +60,6 @@ namespace sw
         , _maxSlopeAngle{ Radians::fromRadians( MathUtil::kHalfPi * 0.5f ) }
         , _gravityScale{ 1.0f }
         , _mass{ 70.0f }
-        , _layer{ "Character" }
         , _bInnerBody{ true }
         , _character{}
         , _state{}

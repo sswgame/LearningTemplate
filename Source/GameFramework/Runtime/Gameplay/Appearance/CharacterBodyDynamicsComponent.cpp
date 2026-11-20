@@ -133,8 +133,7 @@ namespace sw
 namespace sw
 {
     CharacterBodyDynamicsComponent::CharacterBodyDynamicsComponent()
-        : _eyeSocket{ "Eyes" }
-        , _hitImpulseScale{ 0.02f }
+        : _hitImpulseScale{ 0.02f }
         , _sunTraceDistance{ 50.0f }
         , _skyLightValue{}
         , _wipeEvent{}

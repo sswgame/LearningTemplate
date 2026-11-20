@@ -31,6 +31,8 @@ namespace sw
          * @details 기본값은 컨테이너에 둘 수 없고, 기반이 없는 타입의 `EditCondition` 은 그 타입의 프로퍼티를 가리켜야 한다.
          *          `RuntimeState` 는 저작 저장만 빼고 스냅샷 · 세이브에는 쓰는 필드다. `Transient`(어디에도 쓰지 않는다)와 함께면 어느 쪽이 이기는지
          *          선언만 보고 알 수 없고, `Required`(데이터 파일이 반드시 적는다)와 함께면 저작 파일이 쓰지 않는 칸을 필수로 요구한다.
+         *          이름 · 경로 칸의 헤더 C++ 문자열 기본값은 `Required` · `Transient` · `DefaultName` 중 하나가 있어야 하고, `DefaultName` 은 그 기본값이 있는 칸에만 단다.
+         *          생성자 초기화 목록(.cpp)의 기본값은 파서가 보지 못한다 — 엔진 기본값은 헤더 초기값에 둔다.
          */
         [[nodiscard]] static bool validatePropertyFlags( const ParsedTypeInfo& type );
 

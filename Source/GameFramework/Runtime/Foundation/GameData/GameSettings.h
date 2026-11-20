@@ -67,7 +67,7 @@ namespace sw
         PROPERTY( Required )
         string _defaultLanguage; ///< 기본 활성 언어
 
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _fallbackLanguage{ "en_us" }; ///< 대체(Fallback) 언어
 
         // 입력 맵 묶음(`<inputMap path>` 여러 줄)은 이 구조체의 칸이 아니다 — 쿠킹 · 패널도 게임 설정 없이 읽으므로 엔진의 `InputMapBundle` 이 같은 파일에서 읽는다(`<Engine>` 과 같다).

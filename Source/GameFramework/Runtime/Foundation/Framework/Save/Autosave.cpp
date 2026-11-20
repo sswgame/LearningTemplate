@@ -43,9 +43,7 @@ namespace sw
 namespace sw
 {
     AutosaveSettings::AutosaveSettings()
-        : _group{ "autosave" }
-        , _prefix{ "slot" }
-        , _interval{ 300.0f }
+        : _interval{ 300.0f }
         , _minimumGap{ 30.0f }
         , _slotCount{ 3 }
         , _bOnAreaChange{ SW_TRUE }

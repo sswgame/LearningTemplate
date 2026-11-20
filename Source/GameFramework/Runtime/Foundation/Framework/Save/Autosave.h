@@ -56,10 +56,10 @@ namespace sw
         AutosaveSettings();
 
         /** @brief 로컬 저장 슬롯 그룹입니다(`ILocalStore` 슬롯 이름 규칙의 그룹 - `[0-9a-z_.-]`). 자리(사용자 데이터 폴더)는 `GameLocalStore` 가 정한다 */
-        PROPERTY()
-        string _group;
-        PROPERTY()
-        string _prefix; ///< 슬롯 이름의 접두사. 슬롯은 `<그룹>/<접두사><번호>`, 기록은 그 뒤에 `.info` 다
+        PROPERTY( DefaultName )
+        string _group{ "autosave" };
+        PROPERTY( DefaultName )
+        string _prefix{ "slot" }; ///< 슬롯 이름의 접두사. 슬롯은 `<그룹>/<접두사><번호>`, 기록은 그 뒤에 `.info` 다
         PROPERTY( Min = 0.0, Units = s )
         float32 _interval; ///< 간격 자동 저장(초, 플레이 시간). 0 이면 끈다
         PROPERTY( Min = 0.0, Units = s )

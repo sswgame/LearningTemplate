@@ -73,6 +73,22 @@
             "class ",
             "struct ",
             "enum "
+        ],
+        "name_field_types": [
+            "string",
+            "hashed_string",
+            "DataPath",
+            "AssetID",
+            "TagID",
+            "vector<string>",
+            "vector<hashed_string>",
+            "vector<DataPath>"
+        ],
+        "name_field_type_prefixes": [
+            "AssetRef<"
+        ],
+        "name_field_skip_folders": [
+            "Tests"
         ]
     },
     "tuning": {

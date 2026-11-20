@@ -253,8 +253,8 @@ namespace sw
         float32 _regenPerSecond;
         PROPERTY( Category = "Health", DisplayName = "Down Time", Tooltip = "Seconds the death clip plays before the round starts over", Min = 0.0, Units = s )
         float32 _downTime;
-        PROPERTY( Category = "Weapons", DisplayName = "Hitbox Layer", Tooltip = "Physics layer of the enemy hitboxes the shots query (the ragdoll bodies)" )
-        hashed_string _hitboxLayer;
+        PROPERTY( DefaultName, Category = "Weapons", DisplayName = "Hitbox Layer", Tooltip = "Physics layer of the enemy hitboxes the shots query (the ragdoll bodies)" )
+        hashed_string _hitboxLayer{ "Ragdoll" };
         PROPERTY( Category = "Weapons", DisplayName = "Shot Impulse", Tooltip = "Impulse a bullet gives the body it hits (hit reaction, ragdoll push)", Min = 0.0, Units = "N*s" )
         float32 _shotImpulse;
         PROPERTY( Category = "Melee", DisplayName = "Melee Damage", Tooltip = "Base damage of a melee hit (the hit zone multiplies it)", Min = 0.0 )

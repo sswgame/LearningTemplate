@@ -101,10 +101,10 @@ namespace sw
         PROPERTY()
         string _cacheName{};
         /** @brief 이 서버의 디렉터리 등록 종류(`game`, `lobby`)입니다. */
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _serverKind{ "game" };
         /** @brief 이 서버의 지역(`kr`, `us-west`)입니다. 매칭과 서버 고르기가 같은 지역을 먼저 고릅니다. */
-        PROPERTY()
+        PROPERTY( DefaultName )
         string _region{ "local" };
         /** @brief 클라이언트가 이 서버의 게임 포트에 붙을 주소입니다. 비우면 디렉터리에 이 서버를 등록하지 않습니다(서비스 전용 서버). */
         PROPERTY()

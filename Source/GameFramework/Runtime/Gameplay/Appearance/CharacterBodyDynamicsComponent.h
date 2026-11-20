@@ -110,8 +110,8 @@ namespace sw
         /** @brief 방아쇠 @p trigger 의 이번 세기입니다(애니메이터 커브와 수동 방아쇠 중 큰 쪽). */
         float32 computeTriggerStrength( const hashed_string& trigger ) const;
 
-        PROPERTY( Category = "Eyes", DisplayName = "Eye Socket", Tooltip = "Socket whose world position is where the eye light is measured" )
-        hashed_string _eyeSocket;
+        PROPERTY( DefaultName, Category = "Eyes", DisplayName = "Eye Socket", Tooltip = "Socket whose world position is where the eye light is measured" )
+        hashed_string _eyeSocket{ "Eyes" };
         PROPERTY( Category = "Jiggle", DisplayName = "Hit Impulse Scale", Min = 0.0, Tooltip = "Jiggle velocity (m/s) per newton-second of hit impulse" )
         float32 _hitImpulseScale;
         PROPERTY( Category = "Eyes", DisplayName = "Sun Trace Distance", Min = 0.0, Units = m, Tooltip = "Ray length from the eye towards the sun; a hit means shade or an interior" )

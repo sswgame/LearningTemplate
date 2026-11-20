@@ -342,12 +342,12 @@ namespace sw
         AssetRef<DestructionProfile> _profilePath;
         PROPERTY( Category = "Fracture", DisplayName = "Interior Material", Tooltip = "Material of the cut faces; empty uses the outer one" )
         AssetRef<Material> _interiorMaterialPath;
-        PROPERTY( Category = "Fracture", DisplayName = "Static Layer", Tooltip = "Physics layer of pieces still attached to the anchors", Validate = validateStaticLayer )
-        hashed_string _staticLayer;
-        PROPERTY( Category = "Fracture", DisplayName = "Chunk Layer", Tooltip = "Physics layer of falling chunks that keep collision", Validate = validateChunkLayer )
-        hashed_string _chunkLayer;
-        PROPERTY( Category = "Fracture", DisplayName = "Debris Layer", Tooltip = "Physics layer of small debris", Validate = validateDebrisLayer )
-        hashed_string _debrisLayer;
+        PROPERTY( DefaultName, Category = "Fracture", DisplayName = "Static Layer", Tooltip = "Physics layer of pieces still attached to the anchors", Validate = validateStaticLayer )
+        hashed_string _staticLayer{ "Static" };
+        PROPERTY( DefaultName, Category = "Fracture", DisplayName = "Chunk Layer", Tooltip = "Physics layer of falling chunks that keep collision", Validate = validateChunkLayer )
+        hashed_string _chunkLayer{ "Default" };
+        PROPERTY( DefaultName, Category = "Fracture", DisplayName = "Debris Layer", Tooltip = "Physics layer of small debris", Validate = validateDebrisLayer )
+        hashed_string _debrisLayer{ "Debris" };
         PROPERTY( Category = "Fracture", DisplayName = "Anchor Volumes", Tooltip = "Object-space boxes; pieces whose centre is inside are anchored" )
         vector<FractureAnchorVolume> _listAnchorVolume;
         PROPERTY( Category = "Fracture", DisplayName = "Seed", Tooltip = "Scatter seed (send it with the damage events to sync)" )

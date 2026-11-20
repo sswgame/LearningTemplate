@@ -32,7 +32,6 @@ namespace sw
     PixelPerfectCameraComponent::PixelPerfectCameraComponent()
         : _pixelsPerUnit{ 16.0f }
         , _referenceResolution{ 320.0f, 180.0f }
-        , _barSortingLayer{ "Overlay" }
         , _bCropX{ false }
         , _bCropY{ false }
         , _bPixelSnapping{ true }

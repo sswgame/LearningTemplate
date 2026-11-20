@@ -39,6 +39,15 @@ namespace sw
          */
         static vector<string> readEventParameterNames( CXCursor fieldCursor );
 
+        /**
+         * @brief 필드 @p name 의 헤더 초기값(`= …` · `{ … }`)에 비어 있지 않은 문자열 리터럴이 있는지 봅니다.
+         * @details 필드 커서 범위는 클래스 안 초기값까지 덮는다. 애노테이션 괄호 안의 글(`Tooltip = "…"`)은 이름 앞이라 보지 않는다.
+         */
+        [[nodiscard]] static bool hasStringLiteralDefault( CXCursor fieldCursor, const string& name );
+
+        /** @brief 필드 @p name 앞에 적은 타입 글입니다 — 애노테이션 매크로와 `const` · `mutable` · `std::` · `sw::` 를 떼고 띄어쓰기 없이 잇는다(`vector<string>`). */
+        static string readFieldTypeText( CXCursor fieldCursor, const string& name );
+
     private:
         /** @brief 커서 범위의 토큰 철자 · 종류입니다. */
         struct SourceToken;
@@ -61,5 +70,7 @@ namespace sw
          * @details 마지막 토큰이 이름이고 그 앞에 타입이 남아야 이름이다 — `int32` · `sw::TagID` · `const Foo` 는 이름이 없다.
          */
         static string findParameterName( const vector<SourceToken>& listToken, size_t begin, size_t end );
+        /** @brief 괄호 밖(깊이 0)에서 처음 나오는 식별자 @p name 의 자리입니다. 없으면 @p listToken 의 크기입니다. */
+        static size_t findTopLevelName( const vector<SourceToken>& listToken, const string& name );
     };
 } // namespace sw
