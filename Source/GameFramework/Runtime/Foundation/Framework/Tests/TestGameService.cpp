@@ -1,7 +1,11 @@
-// GameServiceTest — 게임 서비스 창구의 범위 전환: 지금 범위 → 상위 범위 → 호스트 순서로 찾고, 중첩한 테스트 범위가 가리고 되돌리는 것.
+// GameServiceTest — 게임 서비스 창구의 범위 전환: 지금 범위 → 상위 범위 → 호스트 순서로 찾고, 중첩한 테스트 범위가 가리고 되돌리는 것. 호스트 범위가 묶이지 않아도 호스트 전용 칸은 보이지 않는 것.
 #include "pch.h"
 
+#include "Core/File/AsyncFileIO.h"
 #include "Core/Testing/TestFramework.h"
+
+#include "Engine/Foundation/EngineScope.h"
+#include "Engine/Scene/SceneObjectHash.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
@@ -61,4 +65,17 @@ SW_TEST_CASE( GameServiceTest, FallsThroughToHostServices )
     const game::ScopedGameScope scoped{ emptyScope };
     // 엔진이 서 있으면 호스트 표에 무엇이든 있다 — 범위에 없는 타입을 범위가 막지 않는지만 본다.
     SW_EXPECT_TRUE( game::findSubsystem<ScopeTestService>() == locateSubsystem<ScopeTestService>( pHost ) );
+}
+
+/**
+ * @brief [GameServiceTest] 호스트 전용(`HostOnly`)으로 등록한 엔진 서비스는 게임 창구로 찾지 못한다 — 호스트 범위가 묶였든(게임 모듈 범위) 아니든(엔진 범위 폴백) 같다
+ * @details 폴백이 엔진 범위를 그대로 보이면 묶인 게임 모듈은 nullptr 을 받는 서비스를 테스트 · 체인 단계 사이에서만 찾아 결함이 가려진다(작업 풀이 그랬다).
+ *          해시 이력(`StateHashHistory`)은 키트가 줄을 달므로 게임에 보인다.
+ */
+SW_TEST_CASE( GameServiceTest, HostOnlyServicesStayHiddenWithoutAHostBinding )
+{
+    SW_EXPECT_TRUE( engine::isHostOnlyService( getSubsystemTypeHash<AsyncFileIO>() ) );
+    SW_EXPECT_FALSE( engine::isHostOnlyService( getSubsystemTypeHash<StateHashHistory>() ) );
+    SW_EXPECT_FALSE( engine::isHostOnlyService( getSubsystemTypeHash<ScopeTestService>() ) ); // 등록이 없는 타입은 거르지 않는다
+    SW_EXPECT_NULL( game::findSubsystem<AsyncFileIO>() );
 }

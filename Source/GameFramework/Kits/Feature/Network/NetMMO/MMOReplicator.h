@@ -207,7 +207,7 @@ namespace sw
          *          실행하는 동안 엔티티와 관찰자를 바꾸면 안 된다. 같은 스레드에서 차례로 호출하면 이 조건이 지켜진다.
          */
         void update( float32 deltaTime );
-        /** @brief 관심 영역 계산을 나눠 처리할 작업 스레드 풀을 지정합니다. 게임은 `&engine::getSubsystem<TaskManager>()` 를 넘깁니다. nullptr 이면 호출한 스레드에서 처리합니다. */
+        /** @brief 관심 영역 계산을 나눠 처리할 작업 스레드 풀을 지정합니다. 게임은 `game::findSubsystem<TaskManager>()` 를 넘깁니다(작업 풀은 `GameVisible`). nullptr 이면 호출한 스레드에서 처리합니다. */
         void setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold = NetParallelFor::kDefaultSerialThreshold );
 
         /**

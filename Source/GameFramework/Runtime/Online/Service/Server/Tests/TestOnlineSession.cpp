@@ -1,13 +1,15 @@
 #include "pch.h"
 
+#include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 
-// OnlineSessionTest — 게임의 온라인 세션: 등록된 키트 클라이언트를 만들어 형식으로 찾고, 설정이 빠지면 조용히 넘어가지 않으며, 루프백 서버에 붙어 Hello 를 마치고 끊는다(nogpu).
+// OnlineSessionTest — 게임의 온라인 세션: 등록된 키트 클라이언트를 만들어 형식으로 찾고, 설정이 빠지면 조용히 넘어가지 않으며, 루프백 서버에 붙어 Hello 를 마치고 끊으며, 다시 붙기의 준비가 지면 지금 연결을 그대로 둔다(nogpu).
 
 using namespace sw;
 
@@ -103,4 +105,31 @@ SW_TEST_CASE_F( OnlineSessionTest, ConnectsAndDisconnects )
     SW_EXPECT_FALSE( _session.isReady() );
     _session.update(); // 연결이 없으면 바로 돌아온다
     SW_EXPECT_FALSE( _session.isReady() );
+}
+
+/**
+ * @brief [OnlineSessionTest] 다시 붙기의 준비(TLS 믿을 파일)가 지면 지금 연결을 닫지 않는다
+ * @details 예전 `connect` 는 지금 연결을 먼저 끊고 전송 · TLS 를 만들어, 믿을 파일 하나가 틀려도 살아 있던 세션을 잃었다 — 실패할 수 있는 단계를 모두 지난 뒤에 끊는다.
+ */
+SW_TEST_CASE_F( OnlineSessionTest, FailedReconnectKeepsTheLiveConnection )
+{
+    if ( game::findSubsystem<INetSecurityProvider>() == nullptr )
+        SW_TEST_SKIP( "no INetSecurityProvider in this run - the TLS step is not reached" );
+    test::OnlineTestFixture rig;
+    _settings._onlineRequestRetryLimit     = 3;
+    unique_ptr<IStreamTransport> transport = rig._network.createTransport();
+    SW_REQUIRE_TRUE( _session.connectTo( transport.get(), OnlineClientSecurity::plaintextLoopback(), NetAddress::makeLoopback( rig._server._port ) ).has_value() );
+    for ( int32 round = 0; round < 8; ++round )
+    {
+        _session.updateAt( MonotonicMilliseconds{ kNowMs } );
+        rig._server.update( kNowMs );
+    }
+    SW_REQUIRE_TRUE( _session.isReady() );
+
+    _settings._onlineServerAddress = "127.0.0.1:7100";
+    _settings._onlineGameBuild     = "1.0.0";
+    _settings._onlineTrustFile     = "Missing/OnlineSessionTest/no-such-trust.pem";
+    SW_EXPECT_FALSE( _session.connect().has_value() );
+    SW_EXPECT_TRUE( _session.isReady() );
+    _session.disconnect();
 }

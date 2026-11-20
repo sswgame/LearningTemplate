@@ -209,14 +209,16 @@ namespace sw
         NetAddress serverAddress;
         if ( PlatformSocketUtil::resolveAddress( address, OnlineProtocolConstant::kDefaultPort, serverAddress ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "the server address did not resolve", address } );
-        disconnect();
-        _transport = StreamTransportFactory::createPlatformTransport();
-        if ( _transport == nullptr )
+        // 실패할 수 있는 준비(전송 · TLS)를 모두 마친 뒤에야 지금 연결을 닫는다 — 준비가 지면 연결이 그대로다(`startLocalServer` 와 같은 순서).
+        unique_ptr<IStreamTransport> transport = StreamTransportFactory::createPlatformTransport();
+        if ( transport == nullptr )
             return unexpected( Error{ ErrorKind::Unsupported, "this platform has no stream transport" } );
         // 서버의 서비스 스트림은 늘 TLS 1.3 이다. 믿을 인증서가 비면 개발 구성만 개발 인증서를 못 박아 믿고, 배포 구성은 여기서 오류다.
         expected<unique_ptr<ITLSContext>> tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), _settings._onlineTrustFile, "" );
         if ( tlsContext.has_value() == false )
             return unexpected( tlsContext.error() );
+        disconnect();
+        _transport  = std::move( transport );
         _tlsContext = std::move( *tlsContext );
         return connectTo( _transport.get(), OnlineClientSecurity::tls( *_tlsContext ), serverAddress );
     }
@@ -242,18 +244,18 @@ namespace sw
         IOnlineLocalServerFactory* const pFactory = game::findSubsystem<IOnlineLocalServerFactory>();
         if ( pFactory == nullptr )
             return unexpected( Error{ ErrorKind::Unsupported, "this build target has no online server code (a Client target does not build Server/ folders)", build::kTargetName } );
-        // 예외 - 서비스 시각의 뿌리다(`OnlineServerService` 와 같은 자리). 새 서버가 선 뒤에야 지금 연결을 닫는다 - 설정이 틀리면 연결이 그대로다.
+        if ( _settings._onlineRequestRetryLimit < 0 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no request retry limit (onlineRequestRetryLimit in gamesettings)" } );
+        // 예외 - 서비스 시각의 뿌리다(`OnlineServerService` 와 같은 자리). 새 서버와 전송이 선 뒤에야 지금 연결을 닫는다 - 설정이 틀리거나 전송이 없으면 연결이 그대로다.
+        unique_ptr<IStreamTransport> transport = StreamTransportFactory::createPlatformTransport();
+        if ( transport == nullptr )
+            return unexpected( Error{ ErrorKind::Unsupported, "this platform has no stream transport" } );
         expected<unique_ptr<IOnlineLocalServer>> server = pFactory->createLocalServer( serverConfigPath, _clock, WallClock::nowUnixMilliseconds() );
         if ( server.has_value() == false )
             return unexpected( server.error() );
         disconnect();
         _localServer = std::move( *server );
-        _transport   = StreamTransportFactory::createPlatformTransport();
-        if ( _transport == nullptr )
-        {
-            disconnect();
-            return unexpected( Error{ ErrorKind::Unsupported, "this platform has no stream transport" } );
-        }
+        _transport   = std::move( transport );
         return connectTo( _transport.get(), OnlineClientSecurity::plaintextLoopback(), NetAddress::makeLoopback( _localServer->getListenPort() ) );
     }
 

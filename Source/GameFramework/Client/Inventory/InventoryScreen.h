@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/WeakRef.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
@@ -29,7 +30,7 @@ namespace sw
      *          장비 칸을 누르면 집은 칸을 그 칸에 끼고, 집은 것이 없으면 벗긴다. 패드 · 키보드는 포커스 이동(방향 이웃) + 확인으로 같은 일을 한다.
      *          **동작 메뉴.** 오른쪽 누름 · 길게 누르기 · `UI.ContextMenu`(패드 X · 메뉴 키)가 그 칸의 메뉴(사용 · 장착 · 나누기 · 버리기)를 연다. 나누기 · 여러 개 버리기는 수량 대화 상자다.
      *          **정렬 · 거르기.** 정렬은 `Sort` 명령, 거르기는 분류를 차례로 돌며 맞지 않는 칸을 끈다. **툴팁.** 칸의 툴팁 · `Details` 글은 이름 · 설명 · 수치이고 이름 · 설명은 현지화 키다.
-     *          버린 조각은 캐릭터 앞에 월드 아이템(`WorldItemComponent`)으로 놓인다. 장비 컴포넌트는 화면보다 오래 살아야 합니다(여는 쪽이 끝낼 때 닫는다).
+     *          버린 조각은 캐릭터 앞에 월드 아이템(`WorldItemComponent`)으로 놓인다. 장비 컴포넌트가 먼저 사라지거나 끝나면 화면이 스스로 닫힙니다(`WeakRef`).
      */
     REFLECT( Abstract )
     class SW_GF_API InventoryScreen : public UIScreen
@@ -91,18 +92,18 @@ namespace sw
         static void onQuantityChosen( UISystem& ui, UIScreenHandle screen, InventoryCommand command, ConfirmDialogResult result, int32 count );
 
     private:
-        vector<InventorySlotWidget*> _listSlotWidget; ///< 가방 칸 순서(트리가 소유)
-        CharacterEquipmentComponent* _pCharacter;
-        hashed_string                _filter;       ///< 거르는 분류(비면 모두)
-        float32                      _pressSeconds; ///< 지금 누른 칸을 누른 시간(길게 누르기)
-        int32                        _pressedSlot;  ///< 포인터로 누른 칸
-        int32                        _heldSlot;     ///< 집은 칸(놓을 곳을 기다린다)
-        int32                        _menuSlot;     ///< 동작 메뉴가 열린 칸
-        uint32                       _shownBagRevision;
-        uint32                       _shownEquipmentRevision;
-        uint32                       _commandCount; ///< 낸 명령 수(성공 · 실패 모두 — 감시 값)
-        InventoryCommandResult       _lastResult;
-        uint8                        _bLongPressFired; ///< 길게 누르기가 메뉴를 열었다 — 이어 오는 클릭을 버린다
-        uint8                        _bBuilt;
+        vector<InventorySlotWidget*>         _listSlotWidget; ///< 가방 칸 순서(트리가 소유)
+        WeakRef<CharacterEquipmentComponent> _character;      ///< 장비 컴포넌트(씬 소유) — 먼저 사라지면 화면이 닫힌다
+        hashed_string                        _filter;         ///< 거르는 분류(비면 모두)
+        float32                              _pressSeconds;   ///< 지금 누른 칸을 누른 시간(길게 누르기)
+        int32                                _pressedSlot;    ///< 포인터로 누른 칸
+        int32                                _heldSlot;       ///< 집은 칸(놓을 곳을 기다린다)
+        int32                                _menuSlot;       ///< 동작 메뉴가 열린 칸
+        uint32                               _shownBagRevision;
+        uint32                               _shownEquipmentRevision;
+        uint32                               _commandCount; ///< 낸 명령 수(성공 · 실패 모두 — 감시 값)
+        InventoryCommandResult               _lastResult;
+        uint8                                _bLongPressFired; ///< 길게 누르기가 메뉴를 열었다 — 이어 오는 클릭을 버린다
+        uint8                                _bBuilt;
     };
 } // namespace sw

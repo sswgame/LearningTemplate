@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/WeakRef.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -42,9 +43,11 @@ namespace sw
          */
         [[nodiscard]] bool refresh( string_view kind );
 
-        ServerListState                getState() const { return _state; }
-        uint16                         getErrorCode() const { return _errorCode; }
-        uint64                         getRevision() const { return _revision; }
+        ServerListState getState() const { return _state; }
+        uint16          getErrorCode() const { return _errorCode; }
+        uint64          getRevision() const { return _revision; }
+        /** @brief 화면이 이 모델을 약하게 빌리는 출처입니다(`WeakRef`) — 모델이 화면보다 먼저 사라져도 화면이 사라진 모델을 부르지 않는다. */
+        WeakRefSource&                 getWeakRefSource() { return _weakRefSource; }
         const vector<ServerListEntry>& getEntries() const { return _listEntry; }
 
     private:
@@ -56,5 +59,6 @@ namespace sw
         uint64                  _revision;
         uint16                  _errorCode;
         ServerListState         _state;
+        WeakRefSource           _weakRefSource; ///< 맨 끝 멤버 — 먼저 닫혀, 다른 멤버가 사라지는 동안 화면이 모델을 돌려받지 않는다
     };
 } // namespace sw

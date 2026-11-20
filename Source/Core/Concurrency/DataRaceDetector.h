@@ -143,6 +143,10 @@ namespace sw
 
         /** @brief 읽기를 끝냅니다. */
         SW_INLINE ~ScopedRaceRead() { _context.exitRead(); }
+
+        // 복사본이 소멸하며 진입 한 번에 퇴장을 두 번 기록한다 — 가드는 복사하지 않는다.
+        ScopedRaceRead( const ScopedRaceRead& )            = delete;
+        ScopedRaceRead& operator=( const ScopedRaceRead& ) = delete;
 #else
         /** @brief Release 에서는 추적하지 않습니다. */
         SW_INLINE explicit ScopedRaceRead( const RaceDetectContext& ) {}
@@ -169,6 +173,10 @@ namespace sw
 
         /** @brief 쓰기를 끝냅니다. */
         SW_INLINE ~ScopedRaceWrite() { _context.exitWrite(); }
+
+        // 복사본이 소멸하며 진입 한 번에 퇴장을 두 번 기록한다 — 가드는 복사하지 않는다.
+        ScopedRaceWrite( const ScopedRaceWrite& )            = delete;
+        ScopedRaceWrite& operator=( const ScopedRaceWrite& ) = delete;
 #else
         /** @brief Release 에서는 추적하지 않습니다. */
         SW_INLINE explicit ScopedRaceWrite( const RaceDetectContext& ) {}

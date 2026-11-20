@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/AtomicSlot.h"
 #include "Core/Delegate/LockedMulticastDelegate.h"
+#include "Core/Delegate/WeakRef.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
@@ -832,4 +833,43 @@ SW_TEST_CASE( DelegateTest, SubscribeCost, ._tags = "bench" )
     listSubscription.clear();
     SW_LOG_INFO_ID( "DelegateTest.SubscribeCost", "%# sources with one subscription created and destroyed: %# ns per source", kSourceCount,
                     sourceStopwatch.getElapsedNanoseconds() / static_cast<int64>( kSourceCount ) );
+}
+
+namespace
+{
+    /** @brief 약한 참조의 대상입니다(화면이 빌리는 모델 자리). */
+    struct WeakRefTarget
+    {
+        int32             _value{ 7 };
+        sw::WeakRefSource _weakRefSource;
+
+        sw::WeakRefSource& getWeakRefSource() { return _weakRefSource; }
+    };
+} // namespace
+
+/**
+ * @brief [DelegateTest] 약한 참조는 대상이 사라지면 비고, 참조가 먼저 사라져도 대상은 그대로다
+ * @details 엔진 UI 가 소유한 화면이 게임 인스턴스가 소유한 모델을 날 포인터로 들다 모델이 먼저 지워져 죽던 모양을 형식으로 막는다(언리얼 `TWeakObjectPtr`).
+ */
+SW_TEST_CASE( DelegateTest, WeakRefEmptiesWhenTheTargetIsDestroyed )
+{
+    sw::WeakRef<WeakRefTarget> reference;
+    SW_EXPECT_NULL( reference.get() );
+    {
+        WeakRefTarget target;
+        reference = sw::WeakRef<WeakRefTarget>{ target };
+        SW_EXPECT_TRUE( reference.get() == &target );
+        SW_EXPECT_EQUAL( 7, reference.get()->_value );
+
+        sw::WeakRef<WeakRefTarget> moved{ std::move( reference ) };
+        SW_EXPECT_TRUE( moved.get() == &target );
+        SW_EXPECT_NULL( reference.get() ); // NOLINT(bugprone-use-after-move): 옮긴 참조는 빈다
+        reference = std::move( moved );
+        {
+            const sw::WeakRef<WeakRefTarget> shortLived{ target }; // 참조가 먼저 사라진다
+        }
+        SW_EXPECT_TRUE( reference.get() == &target );
+    }
+    SW_EXPECT_NULL( reference.get() );
+    reference.reset(); // 사라진 출처를 부르지 않아야 한다(ASan 이 잡는다)
 }

@@ -706,7 +706,7 @@ namespace sw
             return;
         SlotBinding binding;
         binding._slot    = slot;
-        binding._pRunner = sw::make_shared<BehaviorTreeRunner>();
+        binding._pRunner = sw::make_unique<BehaviorTreeRunner>();
         binding._pRunner->initialize( pTree );
         _listSlot.push_back( std::move( binding ) );
     }
