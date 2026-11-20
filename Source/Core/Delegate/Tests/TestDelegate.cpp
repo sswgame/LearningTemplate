@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
@@ -678,15 +679,17 @@ SW_TEST_CASE( DelegateTest, SourceDestroyedOnAnotherThreadWhileSubscriptionsRese
     {
         for ( uint32 round = 1; round <= kRoundCount; ++round )
         {
-            while ( startedRound.load() != round )
+            // 막는 대기 — 바쁜 대기(yield)는 ctest 가 GPU 일과 겹친 바쁜 기계에서 회차마다 밀려 1 만 회차가 시한(30 초)을 넘겼다.
+            for ( uint32 observed = startedRound.load(); observed != round; observed = startedRound.load() )
             {
-                sw::ThreadUtil::yield();
+                sw::Futex::wait( startedRound, observed );
             }
             if ( bResetsSource )
                 pSource.reset();
             else
                 subscription.reset();
             finishedCount.fetch_add( 1 );
+            sw::Futex::wakeAll( finishedCount );
         }
     };
     std::thread resetWorker{ runWorker, false };
@@ -696,9 +699,10 @@ SW_TEST_CASE( DelegateTest, SourceDestroyedOnAnotherThreadWhileSubscriptionsRese
         pSource      = sw::make_unique<ProbeSubscriptionSource>( probe );
         subscription = pSource->issue();
         startedRound.store( round );
-        while ( finishedCount.load() != round * 2 )
+        sw::Futex::wakeAll( startedRound );
+        for ( uint32 observed = finishedCount.load(); observed != round * 2; observed = finishedCount.load() )
         {
-            sw::ThreadUtil::yield();
+            sw::Futex::wait( finishedCount, observed );
         }
     }
     resetWorker.join();
