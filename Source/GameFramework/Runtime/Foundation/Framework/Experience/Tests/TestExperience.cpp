@@ -1,4 +1,5 @@
-// ExperienceTest — Experience 데이터 읽기 · 참조 검사(모르는 키트 · 빠진 맵 · 게임 모드 형식)와 Experience 범위(켜고 끄면 등록이 남지 않음, 두 Experience 를 차례로 켜도 앞 것이 새지 않음)(nogpu).
+// ExperienceTest — Experience 데이터 읽기 · 참조 검사(모르는 키트 · 빠진 맵 · 게임 모드 형식)와 Experience 범위(켜고 끄면 등록이 남지 않음, 두 Experience 를 차례로 켜도 앞 것이 새지 않음,
+// 범위 밖으로 건 것은 해제 검사가 잡음 — 음성 대조)(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -8,6 +9,7 @@
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Experience/ExperienceDefinition.h"
@@ -38,12 +40,13 @@ namespace
         return true;
     }
 
-    /** @brief 범위 테스트의 바탕 — 게임 범위 · 전역 변수 하나 · 팩 설정을 지역으로 든다(엔진 서비스와 섞이지 않는다). */
+    /** @brief 범위 테스트의 바탕 — 게임 범위 · 전역 변수 하나 · 팩 설정 · 입력 맵을 지역으로 든다(엔진 서비스와 섞이지 않는다). */
     struct ExperienceScopeFixture
     {
         SubsystemScope        _gameScope;
         GlobalVariableManager _variables;
         GamePackConfig        _packConfig;
+        InputMap              _inputMap;
         int32                 _volume;
         uint8                 _bRegistered : 1;
 
@@ -51,6 +54,7 @@ namespace
             : _gameScope{}
             , _variables{}
             , _packConfig{}
+            , _inputMap{}
             , _volume{ 10 }
             , _bRegistered{ SW_FALSE }
         {
@@ -64,6 +68,9 @@ namespace
             definition._name = hashed_string( name );
             return definition;
         }
+
+        /** @brief 이 바탕의 상태에 거는 범위를 만듭니다. */
+        unique_ptr<ExperienceScope> makeScope( string_view name ) { return make_unique<ExperienceScope>( _gameScope, _variables, _packConfig, &_inputMap, makeDefinition( name ) ); }
     };
 
     constexpr string_view kValidXML = R"(<Experience name="minigame" map="testproject/experience/minigame.scene.xml" entry="SceneSwitch" kits="TestKit"
@@ -179,7 +186,7 @@ SW_TEST_CASE( ExperienceTest, ScopeDeactivateLeavesNothing )
     TestKitService service;
     vector<int32>  listOrder;
     {
-        ExperienceScope scope( fixture._gameScope, fixture._variables, fixture._packConfig, ExperienceScopeFixture::makeDefinition( "a" ) );
+        ExperienceScope scope( fixture._gameScope, fixture._variables, fixture._packConfig, &fixture._inputMap, ExperienceScopeFixture::makeDefinition( "a" ) );
         SW_REQUIRE_TRUE( scope.bindService( &service ) );
         SW_REQUIRE_TRUE( scope.overrideGlobalVariable( "gv_testExperienceVolume", "3" ) );
         scope.addCleanup( Delegate<void()>::create( [&listOrder]()
@@ -189,7 +196,7 @@ SW_TEST_CASE( ExperienceTest, ScopeDeactivateLeavesNothing )
         SW_EXPECT_TRUE( fixture._gameScope.find<TestKitService>() == &service );
         SW_EXPECT_EQUAL( 3, fixture._volume );
 
-        scope.deactivate();
+        SW_EXPECT_EQUAL( 0u, scope.deactivate() ); // 해제 검사: 남은 것이 없다
         SW_EXPECT_NULL( fixture._gameScope.find<TestKitService>() );
         SW_EXPECT_EQUAL( 10, fixture._volume );
         SW_REQUIRE_TRUE( listOrder.size() == 2 );
@@ -200,7 +207,7 @@ SW_TEST_CASE( ExperienceTest, ScopeDeactivateLeavesNothing )
 
     // 끄지 않고 사라진 범위도 거둔다.
     {
-        ExperienceScope scope( fixture._gameScope, fixture._variables, fixture._packConfig, ExperienceScopeFixture::makeDefinition( "b" ) );
+        ExperienceScope scope( fixture._gameScope, fixture._variables, fixture._packConfig, &fixture._inputMap, ExperienceScopeFixture::makeDefinition( "b" ) );
         SW_REQUIRE_TRUE( scope.bindService( &service ) );
         SW_REQUIRE_TRUE( scope.overrideGlobalVariable( "gv_testExperienceVolume", "7" ) );
     }
@@ -216,7 +223,7 @@ SW_TEST_CASE( ExperienceTest, ScopeRejectsConflicts )
     ExperienceScopeFixture fixture;
     TestKitService         first;
     TestKitService         second;
-    ExperienceScope        scope( fixture._gameScope, fixture._variables, fixture._packConfig, ExperienceScopeFixture::makeDefinition( "a" ) );
+    ExperienceScope        scope( fixture._gameScope, fixture._variables, fixture._packConfig, &fixture._inputMap, ExperienceScopeFixture::makeDefinition( "a" ) );
     SW_REQUIRE_TRUE( scope.bindService( &first ) );
     SW_EXPECT_FALSE( scope.bindService( &second ) );
     SW_EXPECT_FALSE( scope.bindService( static_cast<const TestKitService*>( &second ) ) ); // const 칸도 같은 타입이다
@@ -235,12 +242,12 @@ SW_TEST_CASE( ExperienceTest, SequentialExperiencesDoNotLeak )
     TestOtherService otherA;
     TestKitService   serviceB;
     {
-        ExperienceScope first( fixture._gameScope, fixture._variables, fixture._packConfig, ExperienceScopeFixture::makeDefinition( "first" ) );
+        ExperienceScope first( fixture._gameScope, fixture._variables, fixture._packConfig, &fixture._inputMap, ExperienceScopeFixture::makeDefinition( "first" ) );
         SW_REQUIRE_TRUE( first.bindService( &serviceA ) );
         SW_REQUIRE_TRUE( first.bindService( &otherA ) );
         SW_REQUIRE_TRUE( first.overrideGlobalVariable( "gv_testExperienceVolume", "1" ) );
     }
-    ExperienceScope second( fixture._gameScope, fixture._variables, fixture._packConfig, ExperienceScopeFixture::makeDefinition( "second" ) );
+    ExperienceScope second( fixture._gameScope, fixture._variables, fixture._packConfig, &fixture._inputMap, ExperienceScopeFixture::makeDefinition( "second" ) );
     SW_EXPECT_NULL( fixture._gameScope.find<TestKitService>() );
     SW_EXPECT_NULL( fixture._gameScope.find<TestOtherService>() );
     SW_EXPECT_EQUAL( 10, fixture._volume );
@@ -248,4 +255,52 @@ SW_TEST_CASE( ExperienceTest, SequentialExperiencesDoNotLeak )
     SW_EXPECT_TRUE( fixture._gameScope.find<TestKitService>() == &serviceB );
     second.deactivate();
     SW_EXPECT_NULL( fixture._gameScope.find<TestKitService>() );
+}
+
+/** @brief [ExperienceTest] 해제 검사(음성 대조): 키트가 범위를 거치지 않고 건 서비스 · 입력 레이어 · 전역 값이 끈 뒤에 남으면 하나씩 오류로 알린다 */
+SW_TEST_CASE( ExperienceTest, LeakCheckCatchesBindingsOutsideScope )
+{
+    SW_EXPECT_LOG( "ExperienceScope.LeakedService" );
+    SW_EXPECT_LOG( "ExperienceScope.LeakedInputLayer" );
+    SW_EXPECT_LOG( "ExperienceScope.LeakedGlobalVariable" );
+    ExperienceScopeFixture fixture;
+    SW_REQUIRE_TRUE( fixture._bRegistered == SW_TRUE );
+    TestKitService                    tracked;
+    TestOtherService                  leaked;
+    const unique_ptr<ExperienceScope> pScope = fixture.makeScope( "leaky" );
+    // 범위로 건 것 — 끌 때 거둔다
+    SW_REQUIRE_TRUE( pScope->bindService( &tracked ) );
+    // 범위 밖으로 건 것 — 되돌릴 일이 없다
+    SW_REQUIRE_TRUE( fixture._gameScope.bind( &leaked ) );
+    fixture._inputMap.pushLayer( hashed_string( "leakyLayer" ) );
+    SW_REQUIRE_TRUE( fixture._variables.findVariable( "gv_testExperienceVolume" )->setValueFromString( "4" ) );
+    pScope->finishActivation();
+
+    SW_EXPECT_EQUAL( 3u, pScope->deactivate() );
+    SW_EXPECT_NULL( fixture._gameScope.find<TestKitService>() );
+    SW_EXPECT_TRUE( fixture._gameScope.find<TestOtherService>() == &leaked );
+    SW_EXPECT_EQUAL( 0u, pScope->deactivate() ); // 검사는 한 번
+    fixture._gameScope.unbind<TestOtherService>();
+}
+
+/** @brief [ExperienceTest] 해제 검사: 범위로 건 입력 레이어(되돌릴 일)는 끈 뒤 남지 않고, 켜기 전부터 있던 칸 · 레이어는 남은 것으로 세지 않는다 */
+SW_TEST_CASE( ExperienceTest, LeakCheckIgnoresScopedAndPriorState )
+{
+    ExperienceScopeFixture fixture;
+    TestOtherService       prior;
+    SW_REQUIRE_TRUE( fixture._gameScope.bind( &prior ) );
+    fixture._inputMap.pushLayer( hashed_string( "hub" ) );
+    {
+        const unique_ptr<ExperienceScope> pScope   = fixture.makeScope( "clean" );
+        InputMap&                         inputMap = fixture._inputMap;
+        inputMap.pushLayer( hashed_string( "minigame" ) );
+        pScope->addCleanup( Delegate<void()>::create( [&inputMap]()
+        { inputMap.popLayer( hashed_string( "minigame" ) ); } ) );
+        pScope->finishActivation();
+        SW_EXPECT_EQUAL( 0u, pScope->deactivate() );
+    }
+    SW_REQUIRE_TRUE( fixture._inputMap.getLayerStack().size() == 1 );
+    SW_EXPECT_TRUE( fixture._inputMap.getLayerStack()[0] == hashed_string( "hub" ) );
+    SW_EXPECT_TRUE( fixture._gameScope.find<TestOtherService>() == &prior );
+    fixture._gameScope.unbind<TestOtherService>();
 }

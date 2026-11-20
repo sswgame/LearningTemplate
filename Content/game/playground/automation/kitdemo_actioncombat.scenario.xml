@@ -7,7 +7,7 @@
   실행: ctest -R Scenario.game.playground.kitdemo_actioncombat
 -->
 <Scenario name="game.playground.kitdemo_actioncombat" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Launch variable="gv_firstScene" value="game/playground/maps/kitdemo_actioncombat.scene.xml"/>
+	<Launch variable="gv_firstExperience" value="kitdemo_actioncombat"/>
 	<WaitUntil watch="KitDemo.Combat.Alive" equals="2" timeoutFrames="120"/>
 	<Expect watch="KitDemo.Combat.Phase" equals="0"/>
 	<Expect watch="KitDemo.Combat.PlayerHP" equals="100"/>

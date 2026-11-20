@@ -7,7 +7,8 @@
  *          때는 `Client/` 폴더와 아래 `_clientPart` 를 지우면 된다.
  *          벤치 · 렌더 확장 시연 · UI 시연은 그리는 개발 장치라 클라이언트 전용 · 개발 전용 소스(`Client/Dev/`)다 — 게임은 그 부분을 `IGameClientPart` 로만 들고,
  *          전용 서버와 배포 구성은 그 소스를 짓지 않아(공장이 없다) 첫 씬을 연다.
- *          장르 키트 시연(액션 룸 · 액션 플랫포머 · 택틱스 SRPG — `KitDemo/`)은 씬 하나씩이고, 그 몬스터 정의(`data/monsters.xml`)를 여기서 게임 서비스로 건다.
+ *          장르 키트 시연(`KitDemo/`)은 씬 하나씩이고 미니게임 Experience(`experiences/*.experience.xml`)로 들어간다 — 키트 서비스 · 카탈로그(액션 룸의 몬스터 정의)는
+ *          Experience 가 켜고 끈다(`SW_EXPERIENCE_KIT`, 들어갈 때 걸고 나올 때 거둔다).
  *          지역 효과 시연(`maps/zoneshowcase` · `maps/surfaceinteraction`)의 이펙트 · 세트(`data/abilities.xml`)와 기본 어빌리티 클래스도 여기서 건다 — 지역 프로필이 읽을 때 참조를 이 카탈로그로 본다.
  */
 #include "pch.h"
@@ -19,7 +20,6 @@
 #include "Engine/Config/GameConfig.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
-#include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameClientPart.h"
@@ -59,8 +59,6 @@ namespace sw
         /** @brief 클라이언트 전용 개발 부분(벤치 · 렌더 확장 시연, `Client/Dev/PlaygroundClientPart.cpp`)입니다. 공장이 없는 구성(전용 서버 · 배포)에는 nullptr 이다. */
         unique_ptr<IGameClientPart> _clientPart;
 
-        /** @brief 장르 키트 시연(액션 룸 — `game/playground/maps/kitdemo_actioncombat`)의 몬스터 정의입니다. 액션 룸이 게임 서비스로 찾는다(공유 캐시의 한 벌). */
-        shared_ptr<const MonsterCatalog> _pMonsterCatalog;
         /** @brief 지역 효과 시연의 어빌리티 클래스(기본 — Generic · Combat 세트, ApplyEffects)입니다. */
         AbilityClassRegistry _abilityClasses;
         /** @brief 지역 효과 시연의 이펙트 · 어빌리티 · 세트입니다(공유 캐시의 한 벌). 어빌리티 시스템과 지역 프로필이 게임 서비스로 찾는다. */
@@ -73,7 +71,6 @@ namespace sw
     PlaygroundGame::PlaygroundGame()
         : _mods{ nullptr }
         , _clientPart{ nullptr }
-        , _pMonsterCatalog{ nullptr }
         , _abilityClasses{}
         , _pAbilityCatalog{ nullptr }
     {
@@ -96,9 +93,6 @@ namespace sw
 
     bool PlaygroundGame::onInitialize()
     {
-        // 장르 키트 시연의 필수 데이터 — 액션 룸은 몬스터 정의를 게임 서비스로 찾는다(코드 폴백 없음). 못 읽으면 게임을 띄우지 않는다.
-        if ( loadRequiredCatalogSnapshot( _pMonsterCatalog ) == false )
-            return false;
         // 지역 효과 시연의 필수 데이터 — 지역 프로필의 할 일이 이 카탈로그의 이펙트를 건다(읽을 때 참조를 본다). 못 읽으면 게임을 띄우지 않는다.
         return bindScopedService( &_abilityClasses ) && loadRequiredCatalog( _pAbilityCatalog );
     }

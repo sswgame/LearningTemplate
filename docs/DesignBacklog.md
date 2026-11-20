@@ -2093,7 +2093,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 **플레이 중 리로드 시나리오(사용자 요청).** 허브 · 미니게임을 플레이하는 도중에 게임 모듈 핫 리로드 · 에디터 모듈 리로드(PIE) · 에셋 리로드(텍스처 · 머티리얼 · 메시 · 프리팹 · 카탈로그) · 설정 리로드 · 셰이더 다시 컴파일(실패 하나 섞기)을 일으켜, 플레이 상태 보존 · 화면 안 깨짐 · 실패는 이전 판 유지 + 실패로 기록(`AssetCacheReloadFunction` void 결함 — 전수 조사 판단 1 절) · 소요 시간 감시 값을 확인한다. 키트가 많이 살아 있는 허브 지점에서 돈다.
 
 **결정(전수 조사 2026-11-20 — 게임 14 개, Empty 골든 613 · Shooter3D 510 · ThemePark 25 · WildWest 14 · Meadow 8).**
-- Experience 데이터 `Content/game/playground/experiences/<이름>.experience.xml`: `name` · `map` · `entry`(`SubLevel` | `SceneSwitch`) · `gameMode`(컴포넌트 형식 · 설정) · `kits[]` · `inputContexts[]` · `ui[]` · `catalogs[]`(지금 `PlaygroundGame::onInitialize` 에 박힌 필수 데이터를 옮김) · `net`(`None` | `ClientServer` | `Lockstep` | `Rollback` | `MMO`) · `results[]`(허브로 돌려줄 감시 값 → 경제 · 진행 매핑) · `returnTo`. 맵이 기본 Experience 를 가리킨다(Lyra World Settings 자리). 실행 인자 `-experience=<이름>` 은 `gv_firstScene` 의 상위.
+- Experience 데이터 `Content/game/playground/experiences/<이름>.experience.xml`: `name` · `map` · `entry`(`SubLevel` | `SceneSwitch`) · `gameMode`(컴포넌트 형식 · 설정) · `kits[]` · `inputContexts[]` · `ui[]` · `catalogs[]`(지금 `PlaygroundGame::onInitialize` 에 박힌 필수 데이터를 옮김) · `net`(`None` | `ClientServer` | `Lockstep` | `Rollback` | `MMO`) · `results[]`(허브로 돌려줄 감시 값 → 경제 · 진행 매핑) · `returnTo`. 맵이 기본 Experience 를 가리킨다(Lyra World Settings 자리). 실행 전역 변수 `-gv_firstExperience=<이름>` 은 `gv_firstScene` 의 상위(처음 둔 실행 인자 `-experience=` 는 2 단계에서 바꿈 — 아래 2 단계 판단).
 - 키트 켜기: 모두 링크하고 Experience 가 등록 · 서비스 바인딩만 켜고 끈다(정적 구성 · 결정성 · 핫 리로드와 맞음). 런타임 모듈 로드 · 언로드는 기각(정적 구성 불가, 미니게임마다 언로드 절차).
 - **Experience 범위 서비스(구조로 먼저):** 키트 23 개 이상이 한 인스턴스에 등록되면 전역 레지스트리 · 게임 서비스 · GV 가 Experience 사이로 샌다(지금은 체인 단계마다 인스턴스를 다시 세워 감춰짐). 들어갈 때 등록하고 나올 때 해제하는 범위 형식을 두고, 나온 뒤 남은 등록 · 입력 문맥 · 전역 값을 검사(시나리오 판정)한다. 락스텝 · 롤백 미니게임은 허브 틱 · 난수를 섞지 않는다. 넷 구성 해시는 Experience 마다.
 - 진입: 허브 사물 상호작용 · 트리거가 `experience.enter <이름>`. 하위 레벨 더하기(허브가 보임) — 농사 · 도시 · 테마파크 · 식당 · 카드 · 리듬, 씬 전환 — 격투 · 카트 · RTS · 복셀 · 2D · 플랫포머 · 메트로배니아 · 배틀로얄 · 호러. 씬 전환 전 허브를 `GameStateSnapshot` 으로 찍고 돌아올 때 복원, 하위 레벨은 허브 틱만 멈춤.
@@ -2143,7 +2143,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 | --- | --- | --- |
 | 0 `w-assetmovepack` | 도구 틈 ①–③(`move-asset` 팩 단위 옮기기 — 골든 이름 · `<Scenario name>` · 문자열 접두, 리다이렉트 표 규칙) + Python 테스트 | `py -3 -m Scripts lint`, 스크립트 단위 테스트, 작은 팩(PixelTown)에 `--dry-run` |
 | 1 `w-playground` | (가) `move-source` 소스 · 설정 + `rename-symbol` 식별자 (나) `move-asset game/empty game/playground`(골든 이름 · 시나리오 이름 · 문자열 접두) (다) 게임 이름 값(CMake 기본값 · 스크립트 · 테스트 · Linux 체인 목록 · 생성물 다시 생성) (라) `_bannedNames` | `Scenario.playground`(엔진 시나리오 포함 전체 — 그림은 안 바뀌고 골든 이름만), `Scenario.playground.editor`, `Scenario.editor`(편집기 시나리오 38 이 `game/empty` 를 씀), `Scenario.playground.load.*` 목록 확인(`ctest -N`), `Pack.*`(RunCookedContent), `UnitTests`, `net-pair` · `destruction-net-pair`, Linux 는 `.linux` 골든 이름까지 바꿨으니 모아 돌릴 때 |
-| 2 `w-kitexperience` | KitDemo 21(`kit_*` 17 · `kitdemo_*` 4)을 `experiences/*.experience.xml` + `-experience=` 로, `PlaygroundGame::onInitialize` 의 필수 데이터(몬스터 · 카탈로그)를 Experience `catalogs[]` 로, Experience 범위 서비스 해제 검사 | 그 21 시나리오 단독 목록(`-scenario=a,b,…`), 이어서 `Scenario.playground` |
+| 2 `w-kitexperience` | KitDemo 21(`kit_*` 17 · `kitdemo_*` 4)을 `experiences/*.experience.xml` + `gv_firstExperience` 로, `PlaygroundGame::onInitialize` 의 필수 데이터(몬스터 · 카탈로그)를 Experience `catalogs[]` 로, Experience 범위 서비스 해제 검사 | 그 21 시나리오 단독 목록(`-scenario=a,b,…`), 이어서 `Scenario.playground` |
 | 3 허브 맵 | `w-cellstate` · `w-netstream` · 씬 스트리밍 (가) 위에 허브 맵 · 하위 레벨 진입 | 새 허브 시나리오 + `Scenario.playground` |
 | 4 `w-absorb-pixeltown` | 오락실 RPG Experience(Overworld, 씬 전환) → 폴더 · 프리셋 · Linux 체인 줄 삭제 | 옮긴 2 시나리오 + `Scenario.playground` |
 | 5 `w-absorb-wildwest` | 허브 맵 바탕(OpenWorldWestern · 말 · 날씨 · 도착 컷씬), 골든 14 이름 재기록 | 옮긴 9 + 날씨 · 자동 저장 시나리오 |
@@ -2157,6 +2157,13 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 | 13 `w-absorb-starskirmish` | RTS 매치 Experience(`net: Lockstep`), `lockstep-pair` 의 `_GAME`, 팩 리다이렉트 표 처리 | 옮긴 4 + `load` 1 + `lockstep-pair` |
 | 14 `w-absorb-lanternvale` | 허브 서버(NetMMO · 계정 저장), `net-pair mmo` 의 `_MMO_GAME` · 로그 정규식 | 옮긴 2 + `net-pair mmo` |
 | 15 `w-absorb-shooter3d` | 사격장 · 온라인 매치 Experience, `Config/Server/Online/Shooter3D*` → `Playground*`(비밀 환경 변수 이름 `SW_SHOOTER3D_*` 도), `online-local` · `telemetry-local` 기본값, OnlineLoadBot 주석, 프리셋 `SW_GAMES=Shooter3D` 3 곳 → 온라인 키트가 활성 게임에 들었으니 `NileCity`, `sequential_scenario_packs`, 골든 510 이름 재기록 | 옮긴 32 + showcase 8 + desktop 4 + sequence 1 + editor 2, 서버 Release `Server --test`, `online-local run` |
+
+**2 단계 판단(`w-kitexperience`, 2026-11-20).**
+- 진입 값: 실행 인자 `-experience=`(+ `LaunchSelection` 서비스 칸)를 실행 전역 변수 `gv_firstExperience` 로 바꿨다. 시나리오 체인은 단계마다 게임을 다시 세우며 `<Launch>` 전역 변수만 되돌리고 다시 거는데, 실행 인자는 기동 때 한 번 읽혀 둘째 단계부터 바꿀 길이 없었다(Lyra 도 `?Experience=` URL 옵션 — 맵 · 게임 모드와 같은 실행 값). `gv_firstScene` 처럼 배포에도 있다. 옛 이름 `LaunchSelection` 은 `_bannedNames`.
+- 켜는 때: 맵이 선 뒤(로드 완료 알림)에 켜던 것을 맵 요청 전으로 옮겼다 — 씬 적용(`beginPlay`)이 완료 알림보다 앞이라 시연 컴포넌트의 `startGame` 이 키트 카탈로그를 못 봤다. 맵이 안 서면 끈다.
+- 키트 등록: 장르 키트 20 개가 `SW_EXPERIENCE_KIT` 로 등록한다. 걸 것이 있는 것은 ActionCombat(몬스터 정의 `MonsterCatalog` — `PlaygroundGame::onInitialize` 에서 옮김) 하나이고, 나머지는 `activateKitWithoutServices`(시연 컴포넌트가 규칙 객체를 쥐고 데이터를 경로 칸으로 읽는다 — 서비스가 생기면 그 자리를 바꾼다). Experience 의 `<GameMode>` 는 쓰지 않았다 — 맵에 시연 컴포넌트가 이미 있다.
+- 해제 검사: `ExperienceScope` 가 켜기 전 · 켠 뒤 · 끈 뒤의 게임 범위 칸 · 입력 레이어 스택 · 전역 값을 찍어, 켜기가 바꾸고 끈 뒤에도 남은 것을 `ExperienceScope.Leaked*` 오류로 알린다(범위 밖 직접 등록 — 형식이 못 막는 틈). 플레이 중 바뀐 것은 Experience 의 등록이 아니라 보지 않는다. 단위 테스트 `ExperienceTest.LeakCheck*`(음성 대조 포함).
+- 남긴 것: `PlaygroundGame::onInitialize` 의 어빌리티 카탈로그 · 클래스는 지역 효과 시연(`zoneshowcase` · `surfaceinteraction` — KitDemo 아님)의 것이라 허브 기본 Experience(3 단계, 맵이 기본 Experience 를 가리킴)와 함께 옮긴다.
 
 **겹치는 진행 중 갈래(main 대비 diff, 2026-11-20).** 이름 바꾸기(단계 1)는 아래가 합쳐진 뒤에 시작한다.
 - `w-reload` — `Content/game/empty/automation/desktop/editor/{playreload,shaderreload}` 새 파일 24 · `Source/Games/Empty/{CMakeLists.txt,HotReloadTestComponent.*}` · `Test/Scenario/CMakeLists.txt` · `AutomationRunner.cpp`(`game.empty.` 주석) · `Test/README.md`. 가장 크게 겹친다 — 반드시 먼저 합친다.

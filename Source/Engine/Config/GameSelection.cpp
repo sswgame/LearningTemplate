@@ -85,16 +85,6 @@ namespace sw
         return true;
     }
 
-    void LaunchSelection::read( const CommandLineManager& commandLine )
-    {
-#if defined( SW_SHIPPING )
-        (void)commandLine; // 배포는 맵의 기본 Experience 로만 들어간다 — 개발 인자를 보지 않는다
-#else
-        if ( commandLine.getArgument( CommandLineArgument::EXPERIENCE, _experience ) && _experience.empty() == false )
-            SW_LOG_INFO_ID( "GameSelection.LaunchExperience", "Launch experience %#", _experience.c_str() );
-#endif
-    }
-
     void GameSelection::storeName( string_view name )
     {
         StringUtil::strncpy( GameSelectionInternal::s_arrName, string{ name }.c_str(), kNameCapacity );

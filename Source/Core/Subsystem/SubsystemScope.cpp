@@ -156,6 +156,13 @@ namespace sw
         return nullptr;
     }
 
+    void SubsystemScope::collectBoundTypes( vector<uint64>& outListTypeHash ) const
+    {
+        outListTypeHash.clear();
+        for ( const Entry& entry : _listEntry )
+            outListTypeHash.push_back( entry._typeHash );
+    }
+
     void SubsystemScope::unregisterBorrowed( uint64 typeHash )
     {
         for ( size_t index = 0; index < _listEntry.size(); ++index )

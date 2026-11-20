@@ -28,6 +28,12 @@ namespace sw
      */
     using ExperienceKitActivateFunction = bool ( * )( ExperienceScope& scope );
 
+    /**
+     * @brief 범위에 걸 서비스 · 카탈로그가 없는 키트의 켜기 함수입니다(늘 true). 그런 키트도 등록해 두면 Experience 의 `kits` 가 이름을 검사하고,
+     *        서비스가 생기면 이 자리를 키트의 켜기 함수로 바꾸면 된다. 지금 장르 키트 대부분은 시연 컴포넌트가 규칙 객체를 직접 쥐어 걸 것이 없다.
+     */
+    [[nodiscard]] SW_GF_API bool activateKitWithoutServices( ExperienceScope& scope );
+
     /** @brief 키트 하나의 등록 줄입니다. 문자열은 등록한 이미지(키트 모듈)의 정적 저장소에 있습니다. */
     struct ExperienceKitRegistration
     {
