@@ -79,6 +79,26 @@ namespace sw
             return true;
         }
 
+        /** @brief 감시 값 `Scene.WorldOriginX` · `Scene.WorldOriginZ` 입니다. 활성 씬의 월드 원점(절대 = 로컬 + 원점)입니다 — 원점 이동 시나리오가 옮긴 뒤 본다. */
+        [[nodiscard]] bool readSceneWorldOrigin( bool bZ, float64& outValue )
+        {
+            if ( engine::areEngineServicesBound() == false )
+                return false;
+            const Scene* pScene = engine::getSubsystem<SceneManager>().getActiveScene();
+            if ( pScene == nullptr )
+                return false;
+            outValue = bZ ? pScene->getWorldOrigin()._z : pScene->getWorldOrigin()._x;
+            return true;
+        }
+        [[nodiscard]] bool readSceneWorldOriginX( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            return readSceneWorldOrigin( false, outValue );
+        }
+        [[nodiscard]] bool readSceneWorldOriginZ( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            return readSceneWorldOrigin( true, outValue );
+        }
+
         /**
          * @brief 감시 값 `Scene.Transitioning` 입니다. 비동기 씬 로드나 전환이 진행 중이면 1 입니다.
          * @details 씬 열기(`scene.open`)는 요청만 하고 돌아온다. 이미 같은 상태의 씬이 열려 있으면 다른 감시 값에 차이가 나타나지 않으므로, 열기가 끝났는지는 이 감시 값이 0 인 것으로 본다.
@@ -140,6 +160,8 @@ namespace sw
                          &readSceneLoadedCellCount );
     SW_AUTOMATION_WATCH( sceneSubLevelCount, "Scene.SubLevelCount", "Runtime sub-levels of the active scene, including ones still building or being removed", &readSceneSubLevelCount );
     SW_AUTOMATION_WATCH( sceneLoadedSubLevelCount, "Scene.LoadedSubLevelCount", "Runtime sub-levels of the active scene that are built and shown", &readSceneLoadedSubLevelCount );
+    SW_AUTOMATION_WATCH( sceneWorldOriginX, "Scene.WorldOriginX", "Absolute X of the active scene's world origin (m) - object positions are local to it", &readSceneWorldOriginX );
+    SW_AUTOMATION_WATCH( sceneWorldOriginZ, "Scene.WorldOriginZ", "Absolute Z of the active scene's world origin (m) - object positions are local to it", &readSceneWorldOriginZ );
     SW_AUTOMATION_WATCH( sceneCameraYaw, "Scene.CameraYaw", "Yaw (degrees) the active scene's game camera looks along (world +Z is 0, toward +X is positive)", &readSceneCameraYaw );
     // 활동 수 없음: 비동기 씬 로드는 워커 잡 하나가 다 지은 씬을 끝에 넘긴다 — 프리로드 진행(`SceneManager::tryGetLoadProgress`)은 쿠킹한 프리로드 목록이 있을 때만 있어 Dev 실행에서는 낼 수 없다.
     SW_AUTOMATION_WALL_WATCH( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight", &readSceneTransitioning, nullptr );

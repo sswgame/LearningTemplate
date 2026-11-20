@@ -831,7 +831,8 @@ namespace sw
         SceneDocumentInternal::writeEntities( arch, listNode );
         for ( const SceneObjectNode& node : listNode )
         {
-            arch << static_cast<uint8>( node._statePurpose );
+            // 런타임 칸도 함께 싣는다 — 하위 레벨의 쿠킹 상태 범위, 상태가 적힌 월드 원점(`_worldOrigin`).
+            arch << static_cast<uint8>( node._statePurpose ) << node._cookedStateIDScope << node._worldOrigin._x << node._worldOrigin._y << node._worldOrigin._z;
         }
         outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
     }
@@ -848,7 +849,7 @@ namespace sw
         for ( SceneObjectNode& node : outListNode )
         {
             uint8 purpose{ 0 };
-            arch >> purpose;
+            arch >> purpose >> node._cookedStateIDScope >> node._worldOrigin._x >> node._worldOrigin._y >> node._worldOrigin._z;
             if ( arch.isError() || purpose > static_cast<uint8>( SerializePurpose::SaveGame ) )
             {
                 SW_LOG_ERROR_ID( "SceneDocument.SavedNodePurposeInvalid", "Saved entity '%#' has no readable state purpose (%#) in %# - it is not used", node._name, static_cast<uint32>( purpose ),

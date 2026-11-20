@@ -75,6 +75,14 @@ namespace sw
         PROPERTY( SkipIfEmpty, Tooltip = "What the cooker packs when this scene is placed as an instance or added as a sub-level: empty (nothing) or StaticMeshes" )
         string _packing{};
 
+        /**
+         * @brief 게임 카메라가 월드 원점에서 이만큼(XZ, m) 멀어지면 원점을 카메라 쪽으로 옮깁니다(언리얼 World Origin Rebasing · 유니티 floating origin). 0 이면 옮기지 않는다.
+         * @details 옮기는 거리는 이 값의 배수다 — 셀 격자 · 정적 그림자 캐시가 덜 흔들린다. 바깥 원점으로 스트리밍하는 씬(서버 — 관찰자가 여럿)은 옮기지 않는다(서버 좌표는 절대).
+         *          월드 설정에 두는 까닭: 월드 크기마다 맞는 거리가 다르다(격자 · 여유 반경과 같은 자리).
+         */
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "The world origin moves to the game camera once it is this far away (XZ); 0 never moves it" )
+        float32 _originRebaseDistance{ 0.0f };
+
         /** @brief `_packing` 이 정적 메시를 묶는다는 값입니다. */
         static constexpr const utf8* kPackStaticMeshes = "StaticMeshes";
         /** @brief 쿠킹이 정적 메시를 묶으면 true 입니다. */

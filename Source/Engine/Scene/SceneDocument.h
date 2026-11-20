@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
@@ -135,6 +136,12 @@ namespace sw
              * @details 쿠커만 읽는다(`SceneCooker::packStaticMeshes`). 파일에는 쓰지 않는다 — 정하는 곳은 내부 씬 하나다.
              */
             SceneInstancePacking _instancePacking{ SceneInstancePacking::Separate };
+            /**
+             * @brief **런타임 칸.** 상태에 적힌 자리가 어느 월드 원점 기준인지입니다(절대 = 로컬 + 원점, `Scene::getWorldOrigin`). 씬 파일 · 쿠킹본의 엔티티는 0 이다.
+             * @details 떠 둔 상태(`Scene::captureCellNodes`)는 뜬 때의 원점을 적는다. 지을 때 루트 오브젝트를 (이 값 − 지금 원점)만큼 옮겨 지금 원점 기준으로 맞춘다(`Scene::finishNodeBuild`) —
+             *          목록이 섞여도(셀에 들어온 엔티티) 엔티티마다 맞는다. 세이브에 싣는다(`writeSavedNodes`).
+             */
+            double3 _worldOrigin{};
             /** @brief 멤버가 위에서부터 차례로 받은 덮어쓰기(`<PrefabOverrides>`)입니다. 안쪽 인스턴스의 것이 먼저입니다. 프리팹 상태 · 글 상태 위에 차례로 얹습니다. */
             vector<string> _listInstanceOverrideXML;
             /** @brief **저작 칸.** 문서 뿌리에서 멤버까지의 경로입니다(`5/7/3` — 앵커 파일 id 들 / 내부 파일 id). 앞 칸이 이 문서의 앵커이고 나머지가 그 앵커의 `<Part path>` 입니다. */
@@ -221,7 +228,7 @@ namespace sw
         /** @brief 엔티티 목록을 셀 내용 형식으로 씁니다(`readStreamingCellContent` 의 짝 — 비우고 채운다). 읽을 목적(`_statePurpose`)은 쓰지 않습니다. */
         SW_API static void writeStreamingCellContent( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );
         /**
-         * @brief 세이브에 싣는 엔티티 목록을 씁니다(비우고 채운다) — 셀 내용 형식에 엔티티마다 읽을 목적(`_statePurpose`)을 더한다. 떠 둔 상태(스냅숏)와 문서 내용(저작)이 섞여도 제 목적으로 읽힌다.
+         * @brief 세이브에 싣는 엔티티 목록을 씁니다(비우고 채운다) — 셀 내용 형식에 엔티티마다 런타임 칸(읽을 목적 `_statePurpose` · 쿠킹 상태 범위 · 월드 원점)을 더한다. 떠 둔 상태(스냅숏)와 문서 내용(저작)이 섞여도 제 목적으로 읽힌다.
          * @details 스트리밍 셀(`SceneStreamingSubsystem::writeSaveState`)과 데이터 레이어 묶음(`SceneDataLayerSubsystem::writeSaveState`)이 같은 형식을 쓴다.
          */
         SW_API static void writeSavedNodes( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );

@@ -503,6 +503,36 @@ namespace sw
                 return true;
             }
 
+            /** @brief `world.origin <x> <z>` — 활성 씬의 월드 원점을 절대 자리 (x, z) 로 옮깁니다(자동 옮기기와 같은 길). 인자가 없으면 지금 원점을 알립니다. */
+            static bool runWorldOrigin( const vector<string>& listArgument, string& outReply )
+            {
+                SceneManager* pManager = engine::findSubsystem<SceneManager>();
+                Scene*        pScene   = pManager != nullptr ? pManager->getActiveScene() : nullptr;
+                if ( pScene == nullptr )
+                {
+                    outReply = "no active scene";
+                    return false;
+                }
+                float32 x{ 0.0f };
+                float32 z{ 0.0f };
+                if ( listArgument.empty() == false )
+                {
+                    if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[0], x ) == false || StringUtil::parseFloat( listArgument[1], z ) == false )
+                        return false;
+                    if ( pScene->shiftWorldOrigin( double3{ static_cast<float64>( x ), 0.0, static_cast<float64>( z ) } ) == false )
+                    {
+                        outReply = "the world origin cannot move now (see the log)";
+                        return false;
+                    }
+                }
+                const double3& origin = pScene->getWorldOrigin();
+                outReply              = "world origin ";
+                StringUtil::appendNumber( outReply, origin._x );
+                outReply += ' ';
+                StringUtil::appendNumber( outReply, origin._z );
+                return true;
+            }
+
             static bool runTagAdd( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() != 2 || listArgument[1].empty() )
@@ -597,6 +627,7 @@ namespace sw
         , _sourcePath{}
         , _defaultMaterialPath{}
         , _sceneSettings{}
+        , _worldOrigin{}
         , _services{ services }
         , _objectManager{ make_unique<GameObjectManager>( services ) }
         , _pMaterial{ nullptr }
@@ -606,6 +637,7 @@ namespace sw
         , _mapObjectDataLayer{}
         , _bRegistrationHeld{ SW_FALSE }
         , _bBuildAllDataLayers{ SW_FALSE }
+        , _bOriginRebaseBlocked{ SW_FALSE }
         , _activeGameCamera{}
         , _gameCameraOverride{}
     {
@@ -817,6 +849,7 @@ namespace sw
                 continue; // 플레이 중 지웠다 — 다시 올려도 없다
             SceneDocument::SceneObjectNode node{};
             node._statePurpose = SerializePurpose::Snapshot;
+            node._worldOrigin  = _worldOrigin; // 상태의 자리는 지금 원점 기준이다 — 원점이 옮겨진 뒤 다시 지으면 그 차이만큼 옮긴다
             if ( SceneInternal::writeEntityNode( pGo, _mapPrefabSource, inputs, saveOptions, node ) == false )
                 continue;
             const auto layerIt = _mapObjectDataLayer.find( objectID );
@@ -963,6 +996,18 @@ namespace sw
                 SW_LOG_ERROR_ID( "Scene.InstanceAnchorNotPlaced", "Scene instance member '%#' could not attach to its anchor (id %#, it needs a scene component) - the load fails", entity._name, entity._instanceAnchorFileID );
                 return false;
             }
+        }
+
+        // 월드 원점: 상태의 자리는 적힌 때의 원점 기준이다(파일 · 쿠킹본은 0, 떠 둔 상태는 뜬 때의 원점). 루트 오브젝트만 지금 원점으로 옮긴다 — 붙은 것은 부모를 따른다.
+        // 등록(물리 바디 · 내비 · 셀 소속) 앞이라 처음부터 맞는 자리에 선다.
+        for ( const SceneDocument::SceneObjectNode& entity : listNode )
+        {
+            const float3    shift{ static_cast<float32>( entity._worldOrigin._x - _worldOrigin._x ), static_cast<float32>( entity._worldOrigin._y - _worldOrigin._y ),
+                                static_cast<float32>( entity._worldOrigin._z - _worldOrigin._z ) };
+            GameObject*     pObject = shift == float3{} || entity._fileID == 0 ? nullptr : batch.findBySavedID( entity._fileID );
+            SceneComponent* pRoot   = pObject != nullptr && pObject->getParent() == nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+            if ( pRoot != nullptr )
+                pRoot->setLocalPosition( pRoot->getLocalPosition() + shift );
         }
 
         if ( _services._pAssetManager != nullptr )
@@ -1398,6 +1443,7 @@ namespace sw
     {
         if ( _objectManager == nullptr )
             return;
+        updateOriginRebase();
         // 스트리밍 원점은 지난 프레임 끝의 카메라 자리다 — 셀은 프레임 끝(`DestroyPost`)에 오르내린다. 바깥 원점(서버의 접속자)을 쓰면 넣지 않는다.
         SceneStreamingSubsystem& streaming = _objectManager->getSubsystem<SceneStreamingSubsystem>();
         if ( streaming.isStreaming() && streaming.usesExternalSources() == false )
@@ -1409,6 +1455,66 @@ namespace sw
         // 시야를 따라가는 서비스(오디오 리스너)는 씬을 모른다 — 이번 프레임의 게임 카메라를 매니저에 둔다.
         _objectManager->setFrameCamera( getActiveGameCamera() );
         _objectManager->update( deltaTime );
+    }
+
+    bool Scene::shiftWorldOrigin( const double3& newOrigin )
+    {
+        if ( _objectManager == nullptr )
+            return false;
+        const utf8* const pBlocker = _objectManager->findWorldOriginShiftBlocker();
+        if ( pBlocker != nullptr )
+        {
+            SW_LOG_WARNING_ID( "Scene.WorldOriginShiftBlocked", "Scene '%#' keeps its world origin - service '%#' holds world positions it cannot move", _name.c_str(), pBlocker );
+            return false;
+        }
+        // Y 는 옮기지 않는다 — 높이는 좁고, 옮기면 물 · 하늘 · 고도 설정이 절대 높이를 다시 재야 한다(언리얼도 높이 범위가 좁은 월드는 XZ 만 옮기는 설정이 흔하다).
+        const double3 target{ newOrigin._x, _worldOrigin._y, newOrigin._z };
+        const float3  delta{ static_cast<float32>( _worldOrigin._x - target._x ), 0.0f, static_cast<float32>( _worldOrigin._z - target._z ) };
+        if ( delta == float3{} )
+            return true;
+        // 순회 안에서는 옮기지 않는다(계층 · 등록 줄을 건드린다) — 루트를 먼저 모은다.
+        vector<SceneComponent*> listRoot;
+        _objectManager->forEachGameObject( SceneIterationKey{}, [&listRoot]( GameObject* pObject )
+        {
+            SceneComponent* pRoot = pObject != nullptr && pObject->getParent() == nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+            if ( pRoot != nullptr && pRoot->getParent() == nullptr )
+                listRoot.push_back( pRoot );
+        } );
+        for ( SceneComponent* pRoot : listRoot )
+        {
+            pRoot->teleportTo( pRoot->getWorldPosition() + delta, TeleportType::TeleportPhysics ); // 속도는 잇는다 — 떨어지던 몸은 계속 떨어진다
+        }
+        _worldOrigin = target;
+        _objectManager->flushSceneTransforms();
+        _objectManager->notifyWorldOriginShifted( delta );
+        SW_LOG_INFO_ID( "Scene.WorldOriginShifted", "Scene '%#' moved its world origin to (%#, %#) - %# root objects moved", _name.c_str(), target._x, target._z, static_cast<uint32>( listRoot.size() ) );
+        return true;
+    }
+
+    void Scene::updateOriginRebase()
+    {
+        const float32 distance = _sceneSettings._originRebaseDistance;
+        if ( distance <= 0.0f )
+            return;
+        // 서버(바깥 원점 — 관찰자가 여럿)는 옮기지 않는다: 서버 좌표는 절대이고, 클라이언트만 자기 카메라 둘레로 옮긴다(언리얼도 서버는 원점을 옮기지 않는다).
+        if ( _objectManager->getSubsystem<SceneStreamingSubsystem>().usesExternalSources() )
+            return;
+        const CameraComponent* pCamera = getActiveGameCamera();
+        if ( pCamera == nullptr )
+            return;
+        const float3 local = pCamera->getWorldPosition();
+        if ( MathUtil::abs( local._x ) <= distance && MathUtil::abs( local._z ) <= distance )
+            return;
+        // 거리의 배수로 옮긴다 — 경계에서 왔다 갔다 해도 다음 옮기기까지 거리만큼 여유가 있다.
+        const float64 step = static_cast<float64>( distance );
+        const double3 origin{ _worldOrigin._x + MathUtil::round( static_cast<float64>( local._x ) / step ) * step, _worldOrigin._y,
+                              _worldOrigin._z + MathUtil::round( static_cast<float64>( local._z ) / step ) * step };
+        // 막는 서비스가 있으면 한 번만 경고한다(프레임마다 같은 경고를 쌓지 않는다) — 막힘이 풀리면 다음 프레임에 옮긴다.
+        const bool bBlocked = _objectManager->findWorldOriginShiftBlocker() != nullptr;
+        if ( bBlocked && _bOriginRebaseBlocked == SW_TRUE )
+            return;
+        _bOriginRebaseBlocked = bBlocked ? SW_TRUE : SW_FALSE;
+        (void)shiftWorldOrigin( origin );
     }
 
     /**
@@ -1549,6 +1655,7 @@ namespace sw
             snapshot._dataLayers = _objectManager->getSubsystem<SceneDataLayerSubsystem>().captureState();
             snapshot._subLevels  = _objectManager->getSubsystem<SceneSubLevelSubsystem>().captureState();
         }
+        snapshot._worldOrigin = _worldOrigin;
         return snapshot;
     }
 
@@ -1561,6 +1668,7 @@ namespace sw
         _mapObjectDataLayer   = std::move( snapshot._mapObjectDataLayer );
         _mapObjectIDToFileID  = std::move( snapshot._mapObjectIDToFileID );
         _listUnresolvedEntity = std::move( snapshot._listUnresolvedEntity );
+        _worldOrigin          = snapshot._worldOrigin; // 오브젝트는 찍은 때의 자리(그 원점 기준)로 돌아온다
         if ( _objectManager != nullptr )
         {
             _objectManager->getSubsystem<SceneDataLayerSubsystem>().restoreState( *this, _sceneSettings, std::move( snapshot._dataLayers ) );
@@ -1612,5 +1720,7 @@ namespace sw
     SW_DEV_COMMAND( DataLayer, "scene.layer", "scene.layer [<name> <on|off>]", "Turn a data layer of the active scene on or off, or list the active layers", &SceneDevCommandsInternal::runDataLayer );
     SW_DEV_COMMAND( SubLevel, "scene.sublevel", "scene.sublevel [add <name> <scene> <x> <y> <z> [yaw] | remove <name>]",
                     "Add a scene to the active scene as a runtime sub-level at a position, remove one, or list them with their state", &SceneDevCommandsInternal::runSubLevel );
+    SW_DEV_COMMAND( WorldOrigin, "world.origin", "world.origin [<x> <z>]", "Move the world origin of the active scene to an absolute XZ position (all root objects shift), or print it",
+                    &SceneDevCommandsInternal::runWorldOrigin );
     SW_DEV_COMMAND( TagAdd, "tag.add", "tag.add <object> <tag>", "Add a gameplay tag to a named object of the active scene", &SceneDevCommandsInternal::runTagAdd );
 } // namespace sw

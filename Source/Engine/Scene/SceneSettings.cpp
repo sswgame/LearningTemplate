@@ -3,6 +3,7 @@
 #include "Engine/Scene/SceneSettings.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 
 namespace sw
 {
@@ -33,6 +34,11 @@ namespace sw
         if ( _packing.empty() == false && ( usesStaticMeshPacking() == false || _bStreaming ) )
         {
             SW_LOG_ERROR_ID( "SceneSettings.PackingInvalid", "Scene '%#' packs '%#' - packing takes '%#' only and a streaming scene does not pack", sceneName, _packing, kPackStaticMeshes );
+            bValid = false;
+        }
+        if ( ( _originRebaseDistance >= 0.0f ) == false || MathUtil::isFinite( _originRebaseDistance ) == false )
+        {
+            SW_LOG_ERROR_ID( "SceneSettings.OriginRebaseDistanceInvalid", "Scene '%#' has an origin rebase distance that is negative or not finite (%#)", sceneName, _originRebaseDistance );
             bValid = false;
         }
         if ( _bStreaming == false )

@@ -20,7 +20,7 @@ namespace sw
         Removing, ///< 빼기를 받았다 — 다음 갱신이 내리고 목록에서 지운다
     };
 
-    /** @brief 하위 레벨을 놓을 자리입니다(앵커의 월드 위치 · 오일러 회전 — `SceneComponent::setLocalRotation` 과 같은 규칙, 라디안). */
+    /** @brief 하위 레벨을 놓을 자리입니다(앵커의 절대 위치 — 월드 원점과 무관, `Scene::getWorldOrigin` · 오일러 회전 — `SceneComponent::setLocalRotation` 과 같은 규칙, 라디안). */
     struct SubLevelPlacement
     {
         float3 _position{};

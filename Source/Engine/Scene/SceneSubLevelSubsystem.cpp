@@ -216,7 +216,11 @@ namespace sw
                 subLevel._state = SubLevelState::Failed;
                 return;
             }
-            pRoot->setLocalPosition( subLevel._placement._position );
+            // 자리는 절대 좌표다 — 원점을 옮긴 월드에서는 그 원점 기준으로 놓는다(세이브 · 서버 · 다른 프로세스와 같은 자리).
+            const double3& origin = _pScene->getWorldOrigin();
+            pRoot->setLocalPosition( float3{ static_cast<float32>( static_cast<float64>( subLevel._placement._position._x ) - origin._x ),
+                                             static_cast<float32>( static_cast<float64>( subLevel._placement._position._y ) - origin._y ),
+                                             static_cast<float32>( static_cast<float64>( subLevel._placement._position._z ) - origin._z ) } );
             pRoot->setLocalRotation( subLevel._placement._rotation );
             pAnchor->setAlwaysLoaded( true ); // 스트리밍 셀이 런타임 스폰으로 삼키지 않는다 — 하위 레벨은 자기 단위로 오르내린다
             subLevel._anchorObjectID = pAnchor->getObjectID();

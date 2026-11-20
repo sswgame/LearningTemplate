@@ -118,6 +118,7 @@ namespace sw
             SceneStreamingSubsystem::SaveState _streaming;
             SceneDataLayerSubsystem::SaveState _dataLayers;
             SceneSubLevelSubsystem::SaveState  _subLevels;
+            double3                            _worldOrigin{}; ///< 씬 섹션 오브젝트의 자리가 기준한 월드 원점(`Scene::getWorldOrigin`)
         };
 
         struct ScenePartInternal
@@ -141,6 +142,8 @@ namespace sw
                 {
                     arch << entry._objectID << entry._fileID;
                 }
+                const double3& origin = pScene->getWorldOrigin();
+                arch << origin._x << origin._y << origin._z;
                 vector<uint8> bytesStreaming;
                 pScene->getObjectManager()->getSubsystem<SceneStreamingSubsystem>().writeSaveState( bytesStreaming );
                 arch.writeSection( bytesStreaming.data(), static_cast<uint32>( bytesStreaming.size() ) );
@@ -165,6 +168,7 @@ namespace sw
                 {
                     arch >> entry._objectID >> entry._fileID;
                 }
+                arch >> outPart._worldOrigin._x >> outPart._worldOrigin._y >> outPart._worldOrigin._z;
                 vector<uint8> bytesStreaming;
                 vector<uint8> bytesDataLayers;
                 vector<uint8> bytesSubLevels;
@@ -187,6 +191,8 @@ namespace sw
                         listFileID.push_back( Scene::SavedFileID{ liveIt->second, entry._fileID } );
                 }
                 scene.rebindRestoredFileIDs( listFileID );
+                // 씬 섹션의 오브젝트는 저장 때의 원점 기준 자리로 다시 섰다 — 원점도 그때로 돌린다(셀 · 레이어 · 하위 레벨의 떠 둔 상태는 엔티티마다 원점을 든다).
+                scene.restoreWorldOrigin( part._worldOrigin );
                 // 켜진 레이어가 먼저다 — 스트리밍 셀 조각도 레이어로 오른다.
                 scene.getObjectManager()->getSubsystem<SceneDataLayerSubsystem>().applySaveState( std::move( part._dataLayers ) );
                 scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>().applySaveState( std::move( part._streaming ) );
