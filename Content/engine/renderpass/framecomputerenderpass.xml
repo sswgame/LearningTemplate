@@ -29,7 +29,12 @@
 		<RenderGraphResourceDesc _name="InstanceBuffer" _kind="External" />
 		<RenderGraphResourceDesc _name="LightBuffer" _kind="External" />
 		<RenderGraphResourceDesc _name="DeformVertices" _kind="External" />
-		<RenderGraphResourceDesc _name="CullResults" _kind="External" />
+		<!-- 컬링 슬롯마다의 산출물 — 이름은 코드가 안다(FrameGraphExecutor::registerCullResources). 등록 접근(프레임 시작이자 끝)이 달라 나눈다:
+		     인자는 간접 그리기, 가시 목록은 정점 셰이더 읽기, 전환 상태 · 2 단계 가림 차례 표시는 컬링만 읽고 쓴다. -->
+		<RenderGraphResourceDesc _name="CullArgs" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="CullVisibleInstances" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="CullLODState" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="OccludedOrders" _kind="Persistent" />
 		<RenderGraphResourceDesc _name="LightGrid" _kind="External" />
 		<RenderGraphResourceDesc _name="VolumetricFogVolume" _kind="External" />
 		<RenderGraphResourceDesc _name="ProbeIrradiance" _kind="Persistent" />
@@ -116,7 +121,10 @@
 				<item>HZB</item>
 			</_listInput>
 			<_listOutput>
-				<item>CullResults</item>
+				<item>CullArgs</item>
+				<item>CullVisibleInstances</item>
+				<item>CullLODState</item>
+				<item>OccludedOrders</item>
 			</_listOutput>
 		</RenderGraphPassDesc>
 		<!-- 뷰마다의 클러스터드 라이트 그리드(light_grid.hlsl). 뷰 그래프의 조명 패스(포워드 · 디퍼드 · 투명)가 읽는다. -->

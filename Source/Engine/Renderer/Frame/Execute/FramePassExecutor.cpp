@@ -1137,7 +1137,7 @@ namespace sw
                     listTransition.push_back( RHITextureTransition{ entry._handle, *state } );
                 }
             }
-            // 등록하지 않은 버퍼는 아직 패스가 스스로 전이한다(렌더 그래프 접근 핸들 ② 의 차례 — HZB · VFX 다음 자동 노출 · FrameGraphExecutor).
+            // 등록하지 않은 버퍼는 아직 패스가 스스로 전이한다(렌더 그래프 접근 핸들 ② 의 차례 — HZB · VFX · FrameGraphExecutor 다음 나머지 프레임 패스 · ③ 뷰 패스).
             if ( bRegistered || barrier._viewable != RenderGraphViewableKind::Texture )
                 continue;
             // 텍스처 UAV → UAV(`_bUAVBarrier`)는 만드는 접근이 없다 — 뷰 패스는 첨부(읽기 · 렌더 타깃 · 깊이)이고 프레임 패스 텍스처 출력은 렌더 타깃이다(규칙). 생기면 RHI 텍스처 UAV 배리어를 더한다.
