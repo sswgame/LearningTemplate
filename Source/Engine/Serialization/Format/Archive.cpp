@@ -14,7 +14,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/SerializerTranscodeUtil.h"

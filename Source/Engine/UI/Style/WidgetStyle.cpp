@@ -5,7 +5,7 @@
 #include "Core/Container/EnumArray.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {

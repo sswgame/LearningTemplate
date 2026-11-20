@@ -7,7 +7,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectedValue.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/UI/WidgetTree/Widget.h"

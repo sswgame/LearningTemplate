@@ -1,7 +1,7 @@
 /**
  * @file TypeCastHeader.h
  * @brief 캐스트가 읽는 `TypeInfo` 의 머리 — 조상 표(루트부터 자기까지의 이름 번호와 자기 깊이) · 살아 있음과 그 인라인 비교입니다. `TypeInfo` 의 맨 앞 멤버입니다.
- * @details 캐스트(`castTo`)가 `ReflectionTypes.h`(약 700 TU 에 닿는다)를 끌지 않고도 파생 검사를 인라인으로 하게 떼었다 — 게임 코드의 충돌 · 겹침 콜백처럼
+ * @details 캐스트(`castTo`)가 `TypeInfo.h`(약 700 TU 에 닿는다)를 끌지 않고도 파생 검사를 인라인으로 하게 떼었다 — 게임 코드의 충돌 · 겹침 콜백처럼
  *          등록부 없이 캐스트하는 자리가 매번 줄 밖 호출을 치르지 않는다(언리얼 `UStruct::IsChildOf` 가 인라인 `StructBaseChainArray` 비교인 것과 같다).
  *          `TypeInfo` 는 전방 선언만 보여도 되도록 이 표를 **맨 앞 멤버**로 두고 `TypeCastHeader::of` 가 그 주소를 읽는다. 맨 앞이라는 것은 Reflection.cpp 의
  *          `static_assert` 가 지킨다. 표가 아직 없거나 만들 수 없으면 `tryCompare` 는 답하지 않고, 부르는 쪽이 줄 밖 느린 길(`TypeInfo::isDerivedFromSlow`)로 간다.
@@ -28,7 +28,7 @@ namespace sw
         mutable atomic<uint8> _ancestorDepth{ constant::reflection::kAncestorDepthUnknown };
         /**
          * @brief 레지스트리에 살아 있는 타입인지입니다. 모듈을 해제하면 항목을 지우지 않고 이 값을 내린다(묘비). 같은 FQN 을 다시 등록하면 올린다. 사본은 늘 살아 있다.
-         * @details 머리에 두는 까닭은 컴포넌트의 타입 캐시(`Component::findCachedTypeInfo`)가 `ReflectionTypes.h` 없이 인라인으로 읽게 하려는 것이다.
+         * @details 머리에 두는 까닭은 컴포넌트의 타입 캐시(`Component::findCachedTypeInfo`)가 `TypeInfo.h` 없이 인라인으로 읽게 하려는 것이다.
          */
         mutable atomic<uint8> _bAlive{ SW_TRUE };
 

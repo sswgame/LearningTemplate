@@ -5,9 +5,9 @@
 #include "Editor/Panels/Inspector/Model/PropertyEditConditionExpr.h"
 
 #include "Engine/Reflection/ReflectionMetadata.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/TextAddress.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 // PropertyEditConditionTest — 인스펙터의 EditCondition 판정. 다른 프로퍼티 값을 따라 막고 · 숨긴다(엔진 테스트 타입 `DisplayMetaActor` 로 본다).
 

@@ -2,8 +2,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"

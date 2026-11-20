@@ -7,7 +7,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/VFX/VFXCPUSimulation.h"
 #include "Engine/VFX/VFXEffectDef.h"

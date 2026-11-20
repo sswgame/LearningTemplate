@@ -6,8 +6,8 @@
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 // ReflectionInvokeTest — 이름으로 부르기 · 인자 변환 · 기본 인자 · 이벤트. 타입을 모르는 쪽(콘솔 · 비주얼 스크립팅 · 기믹 배선)이 쓰는 길.

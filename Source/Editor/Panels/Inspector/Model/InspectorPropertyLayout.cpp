@@ -12,8 +12,8 @@
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/ReflectionUnits.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 // 인스펙터는 에디터 기능이라 배포 구성은 이 파일을 짓지 않는다(Editor 빌드 단위 — `Source/Editor/CMakeLists.txt`).
 namespace sw::editor

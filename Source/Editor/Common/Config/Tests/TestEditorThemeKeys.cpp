@@ -15,7 +15,7 @@
 #include "Editor/Common/Config/EditorThemeTokens.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 using namespace sw;

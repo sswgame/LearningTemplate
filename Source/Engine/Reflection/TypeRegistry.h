@@ -15,8 +15,8 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeFqn.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeLookupCache.h"
 
 namespace sw

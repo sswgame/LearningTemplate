@@ -5,8 +5,8 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 // ReflectionDocWriterTest — 리플렉션 → Markdown API 문서(`App --write-reflection-docs`).

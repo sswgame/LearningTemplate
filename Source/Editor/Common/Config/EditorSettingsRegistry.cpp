@@ -11,7 +11,7 @@
 #include "Editor/Common/Config/EditorUserFile.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 

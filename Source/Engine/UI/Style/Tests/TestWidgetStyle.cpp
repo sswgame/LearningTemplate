@@ -3,7 +3,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
 using namespace sw;

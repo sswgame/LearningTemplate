@@ -14,7 +14,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/Component/SceneTransformStorage.h"
+#include "Engine/Object/Component/SceneTransformPage.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

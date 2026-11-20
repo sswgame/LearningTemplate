@@ -4,7 +4,7 @@
 
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {

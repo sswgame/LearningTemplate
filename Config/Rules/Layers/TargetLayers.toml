@@ -60,7 +60,6 @@ reflectionparser = [
 	"Engine/Reflection/ReflectionIntellisense.h",
 	"Engine/Reflection/ReflectionMacros.h",
 	"Engine/Reflection/ReflectionMetadataBox.h",
-	"Engine/Reflection/ReflectionTypes.h",
 	"Engine/Reflection/ReflectionUnits.h",
 	"Engine/Reflection/TextAddress.h",
 	"Engine/Reflection/TypeCastHeader.h",

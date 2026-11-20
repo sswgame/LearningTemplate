@@ -586,7 +586,7 @@ namespace sw
          * @brief 만들 때 받은 TypeInfo 가 살아 있으면 그것을, 아니면 가상 `getTypeInfo()` 의 결과를 반환합니다.
          * @details `castTo` 의 핫패스다. 캐시에 적중하면 가상 호출 없이 포인터 하나와 원자 로드 하나로 끝난다. 테스트 목처럼
          *          `getTypeInfo()` 를 오버라이드하는 타입도 `addComponent<T>` 가 같은 `T::StaticType()` 을 넘기므로 결과가 같다.
-         *          인라인이다 — 살아 있음은 `TypeInfo` 의 머리(`TypeCastHeader`)라 `ReflectionTypes.h` 없이 읽는다.
+         *          인라인이다 — 살아 있음은 `TypeInfo` 의 머리(`TypeCastHeader`)라 `TypeInfo.h` 없이 읽는다.
          */
         const TypeInfo* findCachedTypeInfo() const { return _pTypeInfo != nullptr && TypeCastHeader::of( _pTypeInfo ).isAlive() ? _pTypeInfo : getTypeInfo(); }
         /** @brief 소유자 GameObject 를 반환합니다. */
