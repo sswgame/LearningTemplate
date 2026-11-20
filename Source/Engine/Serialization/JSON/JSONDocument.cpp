@@ -2,6 +2,7 @@
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
+#include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
@@ -70,7 +71,7 @@ namespace sw
              */
             static JSONImpl parseStrict( string_view text, sw::string& outProblem )
             {
-                std::vector<uint32> listKeyCount; // 열린 객체마다 받은 키 수(파서 콜백 안이라 짧게 산다)
+                sw::vector<uint32> listKeyCount; // 열린 객체마다 받은 키 수(파서 콜백 안이라 짧게 산다)
                 outProblem.clear();
                 const JSONImpl::parser_callback_t callback = [&listKeyCount, &outProblem]( int depth, JSONImpl::parse_event_t event, JSONImpl& parsed ) -> bool
                 {
