@@ -2,10 +2,10 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
-#include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
-#include "Editor/Panels/Inspector/Model/InspectorInvokeResult.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorBuiltinValue.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorFavorites.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorInvokeResult.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"

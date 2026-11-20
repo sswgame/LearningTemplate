@@ -769,7 +769,7 @@ msgctxt "EdCommon.CurvePreviewEdit"
 msgid "Click to edit the curve"
 msgstr "클릭하면 곡선을 편집합니다"
 
-#: Source/Editor/Panels/Inspector/DataPathPropertyDrawer.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/DataPathPropertyDrawer.cpp
 msgctxt "EdCommon.DataPathHint"
 msgid "Resource id, or drop an asset"
 msgstr "리소스 id 를 치거나 에셋을 끌어 놓기"
@@ -1899,7 +1899,7 @@ msgctxt "EdFormat.BuiltS"
 msgid "{sW_EDITORICON}  Built ({lastDurationSec}s)"
 msgstr "{sW_EDITORICON}  빌드됨({lastDurationSec}초)"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdFormat.CallFailed"
 msgid "{method} failed on {failureCount} of {targetCount}: {reason}"
 msgstr "{method} 호출이 {targetCount} 개 중 {failureCount} 개에서 실패했습니다: {reason}"
@@ -2049,12 +2049,12 @@ msgctxt "EdFormat.LastError"
 msgid "Last error: {error}"
 msgstr "마지막 오류: {error}"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdFormat.LastResult"
 msgid "Last result: {lastInvokeResult}"
 msgstr "마지막 결과: {lastInvokeResult}"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdFormat.LastResultTargets"
 msgid "Last result: {lastInvokeResult} ({targetCount} objects)"
 msgstr "마지막 결과: {lastInvokeResult}(오브젝트 {targetCount} 개)"
@@ -2104,7 +2104,7 @@ msgctxt "EdFormat.Nested"
 msgid "Nested: {prefabIndex}"
 msgstr "중첩: {prefabIndex}"
 
-#: Source/Editor/Panels/Inspector/Model/PropertyGridViewModel.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.cpp
 msgctxt "EdFormat.NoInspectorFor"
 msgid "No inspector for {type}"
 msgstr "{type} 에는 인스펙터가 없습니다"
@@ -2129,7 +2129,7 @@ msgctxt "EdFormat.NodesLinks2"
 msgid "(Nodes: {nodeCount}, Links: {linkCount})"
 msgstr "(노드: {nodeCount}, 링크: {linkCount})"
 
-#: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp
 msgctxt "EdFormat.NoneInScene"
 msgid "No {type} in this scene"
 msgstr "이 씬에 {type} 이 없습니다"
@@ -2334,7 +2334,7 @@ msgctxt "EdFormat.TickS"
 msgid "{label} - {sampleCount, plural, one {# tick} other {# ticks}}, {tick} .. {tick2}"
 msgstr "{label} - 틱 {sampleCount}개, {tick} .. {tick2}"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdFormat.TooManyArgumentsMax"
 msgid "Too many arguments (max {maxMethodArgCount} in UI)."
 msgstr "인자가 너무 많습니다(UI 는 최대 {maxMethodArgCount}개)."
@@ -2374,7 +2374,7 @@ msgctxt "EdFormat.Unknown"
 msgid "[Unknown {type}]"
 msgstr "[알 수 없음 {type}]"
 
-#: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp
 msgctxt "EdFormat.UnsupportedInUI"
 msgid "{label} (unsupported in UI)"
 msgstr "{label}(UI 에서 지원하지 않음)"
@@ -2482,7 +2482,7 @@ msgctxt "EdLabel.ClearOnPlay"
 msgid "Clear on Play"
 msgstr "플레이 때 지우기"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdLabel.CollapseAll"
 msgid "Collapse All"
 msgstr "모두 접기"
@@ -2502,12 +2502,12 @@ msgctxt "EdLabel.CopyMessage"
 msgid "Copy Message"
 msgstr "메시지 복사"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdLabel.CopyPropertyName"
 msgid "Copy Property Name"
 msgstr "프로퍼티 이름 복사"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdLabel.CopyValue"
 msgid "Copy Value"
 msgstr "값 복사"
@@ -2553,7 +2553,7 @@ msgctxt "EdLabel.Erase"
 msgid "Erase"
 msgstr "지우개"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdLabel.ExpandAll"
 msgid "Expand All"
 msgstr "모두 펼치기"
@@ -2674,7 +2674,7 @@ msgctxt "EdLabel.Orthographic"
 msgid "Orthographic"
 msgstr "직교"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdLabel.PasteValue"
 msgid "Paste Value"
 msgstr "값 붙여넣기"
@@ -2740,7 +2740,7 @@ msgid "Reset Overlays"
 msgstr "겹치기 초기화"
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdLabel.ResetToDefault"
 msgid "Reset to Default"
 msgstr "기본값으로"
@@ -2780,7 +2780,7 @@ msgctxt "EdLabel.ShowAll"
 msgid "Show All"
 msgstr "모두 보이기"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdLabel.ShowAllFunctions"
 msgid "Show All Functions"
 msgstr "모든 함수 보기"
@@ -2805,7 +2805,7 @@ msgctxt "EdLabel.ShowModifiedPropertiesOnly"
 msgid "Show Modified Properties Only"
 msgstr "바뀐 프로퍼티만 보이기"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdLabel.ShowOnlyModifiedProperties"
 msgid "Show Only Modified Properties"
 msgstr "바뀐 프로퍼티만 보이기"
@@ -2956,7 +2956,7 @@ msgctxt "EdSection.EditorSelfTests"
 msgid "Editor Self Tests"
 msgstr "에디터 자체 테스트"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdSection.Events"
 msgid "Events"
 msgstr "이벤트"
@@ -3043,7 +3043,7 @@ msgctxt "EdSection.Memory"
 msgid "Memory"
 msgstr "메모리"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdSection.Methods"
 msgid "Methods"
@@ -3289,7 +3289,7 @@ msgctxt "EdText.BodyPrefabSkeletalMeshOnItsRoot"
 msgid "Body prefab (skeletal mesh on its root)"
 msgstr "몸 프리팹(뿌리에 스켈레탈 메시)"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdText.Broadcast"
 msgid "Broadcast"
 msgstr "방송"
@@ -3314,7 +3314,7 @@ msgctxt "EdText.CinematicNote"
 msgid "Cinematic note"
 msgstr "시네마틱 메모"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdText.ClearAll"
 msgid "Clear All"
 msgstr "모두 지우기"
@@ -3548,7 +3548,7 @@ msgctxt "EdText.Interpolation"
 msgid "Interpolation"
 msgstr "보간"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdText.Invoke"
 msgid "Invoke"
 msgstr "부르기"
@@ -3985,7 +3985,7 @@ msgctxt "EdText.SceneHasUnsavedChangesPlayAnyway"
 msgid "Scene has unsaved changes. Play anyway?"
 msgstr "씬에 저장하지 않은 변경이 있습니다. 그래도 플레이할까요?"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdText.SelectAll"
 msgid "Select All"
 msgstr "모두 고르기"
@@ -4113,7 +4113,7 @@ msgctxt "EdText.Unparent"
 msgid "Unparent"
 msgstr "부모 풀기"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EdText.UnsupportedFUNCTIONArgsInvokeSkipped"
 msgid "Unsupported FUNCTION args - invoke skipped."
 msgstr "지원하지 않는 FUNCTION 인자 — 부르기를 건너뜁니다."
@@ -4376,7 +4376,7 @@ msgid "Cancel"
 msgstr "취소"
 
 #: Source/Editor/Panels/Console/ConsolePanel.cpp
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 #: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
 #: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
@@ -6676,12 +6676,12 @@ msgctxt "EditorInputMap.WaitingForInput"
 msgid "Waiting for input..."
 msgstr "입력을 기다리는 중..."
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.AddToActions"
 msgid "Pin to the top of the function list (saved)"
 msgstr "함수 목록 맨 위에 고정합니다(저장됨)"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.AddToFavorites"
 msgid "Add to Favorites"
 msgstr "즐겨찾기에 추가"
@@ -6696,42 +6696,42 @@ msgctxt "EditorInspector.ApplyToPrefab"
 msgid "Save this object's changes to the source prefab file"
 msgstr "현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.CallFailedArgumentMismatch"
 msgid "an argument cannot be converted to its parameter type"
 msgstr "인자를 그 인자 형식으로 바꿀 수 없습니다"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.CallFailedMissingArgument"
 msgid "an argument without a default value is missing"
 msgstr "기본값이 없는 인자가 빠졌습니다"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.CallFailedNotBound"
 msgid "the function is no longer on this type (was the module reloaded?)"
 msgstr "이 타입에 그 함수가 더는 없습니다(모듈을 다시 올렸나요?)"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.CallFailedNullInstance"
 msgid "there is no instance to call it on"
 msgstr "부를 인스턴스가 없습니다"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.CallFailedTooManyArguments"
 msgid "more arguments than the function takes"
 msgstr "인자가 함수가 받는 것보다 많습니다"
 
-#: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp
 msgctxt "EditorInspector.ClearAssetReference"
 msgid "Clear asset reference"
 msgstr "이 에셋 참조를 비웁니다."
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.DiagnosticMethodTag"
 msgid "Diagnostic"
 msgstr "진단"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.FavoriteProperty"
 msgid "Favorite property"
 msgstr "즐겨찾기한 프로퍼티"
@@ -6766,33 +6766,33 @@ msgctxt "EditorInspector.LockedToObject"
 msgid "Locked to this object - click to follow the selection"
 msgstr "이 오브젝트에 고정되어 있습니다 - 클릭하면 선택을 따라갑니다"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.MultiCallHint"
 msgid "Calls run on every selected object as one undo step."
 msgstr "선택한 오브젝트 모두에 부르고, 되돌리기는 한 단계입니다."
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EditorInspector.MultipleValues"
 msgid "Multiple values"
 msgstr "값이 여러 개입니다"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.NetRoleMethodRunsLocally"
 msgid "The network role is a declaration only: calling it here runs it in this process, not over the network"
 msgstr "네트워크 역할은 선언일 뿐입니다. 여기서 부르면 네트워크가 아니라 이 프로세스에서 실행됩니다"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.NetRoleNotRoutedTag"
 msgid "RPC not routed"
 msgstr "RPC 전달 안 됨"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.NewElementHint"
 msgid "new element (Enter)"
 msgstr "새 요소 (Enter)"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.NewKeyHint"
 msgid "new key (Enter)"
 msgstr "새 키 (Enter)"
@@ -6802,17 +6802,17 @@ msgctxt "EditorInspector.NoActiveScene"
 msgid "No active scene."
 msgstr "활성 씬이 없습니다."
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.NoCallInEditorMethods"
 msgid "No CallInEditor functions. Turn on Show All Functions in the view options to call the others."
 msgstr "CallInEditor 함수가 없습니다. 나머지를 부르려면 보기 옵션에서 모든 함수 보기를 켜세요."
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.NoFunctionMethods"
 msgid "No FUNCTION() methods."
 msgstr "FUNCTION() 메서드가 없습니다."
 
-#: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp
 msgctxt "EditorInspector.NoMatchingAssets"
 msgid "No matching assets."
 msgstr "맞는 에셋이 없습니다."
@@ -6837,7 +6837,7 @@ msgctxt "EditorInspector.ObjectName"
 msgid "Unique name of the GameObject (Enter to apply)"
 msgstr "게임오브젝트의 고유 이름 (Enter 키로 적용)"
 
-#: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp
 msgctxt "EditorInspector.PickAsset"
 msgid "Pick an asset"
 msgstr "에셋을 고릅니다"
@@ -6852,17 +6852,17 @@ msgctxt "EditorInspector.PresetNameHint"
 msgid "Preset Name..."
 msgstr "프리셋 이름..."
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.RemoveFromActions"
 msgid "Unpin from the top of the function list"
 msgstr "함수 목록 맨 위 고정을 풉니다"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.RemoveFromFavorites"
 msgid "Remove from Favorites"
 msgstr "즐겨찾기에서 제거"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 #: Source/Editor/Panels/Material/MaterialPanel.cpp
 msgctxt "EditorInspector.ResetToDefaultTooltip"
 msgid "Reset to the default value"
@@ -6888,12 +6888,12 @@ msgctxt "EditorInspector.SceneInstance"
 msgid "This object is part of another scene placed in this one"
 msgstr "다른 씬을 이 씬에 넣은 인스턴스의 일부입니다"
 
-#: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp
 msgctxt "EditorInspector.SearchAssetsHint"
 msgid "Search assets..."
 msgstr "에셋 검색..."
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 #: Source/Editor/Panels/Material/MaterialPanel.cpp
 msgctxt "EditorInspector.SearchPropertiesHint"
 msgid "Search properties..."
@@ -6909,17 +6909,17 @@ msgctxt "EditorInspector.SelectionGone"
 msgid "Selected object no longer exists."
 msgstr "선택한 오브젝트가 더 이상 없습니다."
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.ShowAllFunctionsTooltip"
 msgid "Diagnostic view: also list FUNCTIONs without CallInEditor. They declare no editor safety, so the default list hides them"
 msgstr "진단 보기: CallInEditor 가 없는 FUNCTION 도 보입니다. 에디터 안전을 선언하지 않았으므로 기본 목록에서는 숨깁니다"
 
-#: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp
 msgctxt "EditorInspector.ShowInContentBrowser"
 msgid "Show in the Content Browser"
 msgstr "콘텐츠 브라우저에서 보여 줍니다"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.TransientProperty"
 msgid "Transient property: not saved to disk"
 msgstr "Transient 프로퍼티: 디스크에 저장하지 않습니다"
@@ -6934,7 +6934,7 @@ msgctxt "EditorInspector.Unparent"
 msgid "Detach from the parent object and move to the scene root"
 msgstr "부모 오브젝트와의 연결을 해제하고 씬 루트로 이동합니다"
 
-#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.ViewOptions"
 msgid "View options: show only modified properties, expand or collapse all sections"
 msgstr "보기 옵션: 바뀐 프로퍼티만 보기, 모든 영역 펼치기 또는 접기"

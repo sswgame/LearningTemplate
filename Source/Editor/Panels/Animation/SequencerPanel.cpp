@@ -14,7 +14,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Input/RawInputEvent.h"

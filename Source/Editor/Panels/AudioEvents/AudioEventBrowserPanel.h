@@ -9,9 +9,9 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
+#include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.h"
 #include "Editor/Panels/AudioEvents/Model/AudioEventEditModel.h"
-#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
 #include "Engine/Audio/AudioEngineState.h"
 #include "Engine/Audio/AudioEvent.h"

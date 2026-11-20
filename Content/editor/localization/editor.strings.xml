@@ -724,7 +724,7 @@
 		</entry>
 		<entry key="EdCommon.DataPathHint" source="Resource id, or drop an asset">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/DataPathPropertyDrawer.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/DataPathPropertyDrawer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.DebugHUDNotRunning" source="Debug HUD is not running">
@@ -1885,7 +1885,7 @@
 		</entry>
 		<entry key="EdFormat.CallFailed" source="{method} failed on {failureCount} of {targetCount}: {reason}">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.CellMRadiusM"
@@ -2042,12 +2042,12 @@
 		</entry>
 		<entry key="EdFormat.LastResult" source="Last result: {lastInvokeResult}">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.LastResultTargets" source="Last result: {lastInvokeResult} ({targetCount} objects)">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.LeftTrigger" source="Left Trigger:  {leftTrigger}">
@@ -2100,7 +2100,7 @@
 		</entry>
 		<entry key="EdFormat.NoInspectorFor" source="No inspector for {type}">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/Model/PropertyGridViewModel.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.NoSamples" source="{seriesName}: no samples">
@@ -2125,7 +2125,7 @@
 		</entry>
 		<entry key="EdFormat.NoneInScene" source="No {type} in this scene">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.ObjectsSelected" source="{objectCount, plural, one {# object} other {# objects}} selected">
@@ -2340,7 +2340,7 @@
 		</entry>
 		<entry key="EdFormat.TooManyArgumentsMax" source="Too many arguments (max {maxMethodArgCount} in UI).">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.TotalAttachedComponents" source="Total Attached Components: {componentCount}">
@@ -2381,7 +2381,7 @@
 		</entry>
 		<entry key="EdFormat.UnsupportedInUI" source="{label} (unsupported in UI)">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.Usage" source="Usage: {usageBuf}{scope}">
@@ -2491,7 +2491,7 @@
 		</entry>
 		<entry key="EdLabel.CollapseAll" source="Collapse All">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.Collect" source="Collect">
@@ -2511,12 +2511,12 @@
 		</entry>
 		<entry key="EdLabel.CopyPropertyName" source="Copy Property Name">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.CopyValue" source="Copy Value">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.CopyVisibleLines" source="Copy Visible Lines">
@@ -2563,7 +2563,7 @@
 		</entry>
 		<entry key="EdLabel.ExpandAll" source="Expand All">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.FitView" source="Fit View">
@@ -2689,7 +2689,7 @@
 		</entry>
 		<entry key="EdLabel.PasteValue" source="Paste Value">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.PauseGraph" source="Pause Graph">
@@ -2755,7 +2755,7 @@
 		<entry key="EdLabel.ResetToDefault" source="Reset to Default">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.ResetToX100" source="Reset to x1.00">
@@ -2795,7 +2795,7 @@
 		</entry>
 		<entry key="EdLabel.ShowAllFunctions" source="Show All Functions">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.ShowDebugHUDCtrlF3" source="Show Debug HUD (Ctrl+F3)">
@@ -2820,7 +2820,7 @@
 		</entry>
 		<entry key="EdLabel.ShowOnlyModifiedProperties" source="Show Only Modified Properties">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.Skeleton" source="Skeleton">
@@ -2971,7 +2971,7 @@
 		</entry>
 		<entry key="EdSection.Events" source="Events">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSection.GPUMemory" source="GPU Memory">
@@ -3058,7 +3058,7 @@
 		</entry>
 		<entry key="EdSection.Methods" source="Methods">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
@@ -3306,7 +3306,7 @@
 		</entry>
 		<entry key="EdText.Broadcast" source="Broadcast">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.Build" source="Build">
@@ -3331,7 +3331,7 @@
 		</entry>
 		<entry key="EdText.ClearAll" source="Clear All">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.Clip" source="Clip">
@@ -3569,7 +3569,7 @@
 		</entry>
 		<entry key="EdText.Invoke" source="Invoke">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.Keep" source="Keep">
@@ -4009,7 +4009,7 @@
 		</entry>
 		<entry key="EdText.SelectAll" source="Select All">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.Selection" source="Selection">
@@ -4138,7 +4138,7 @@
 		</entry>
 		<entry key="EdText.UnsupportedFUNCTIONArgsInvokeSkipped" source="Unsupported FUNCTION args - invoke skipped.">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.UpSend" source="Up (send)">
@@ -4433,7 +4433,7 @@
 		<entry key="EdVerb.Clear" source="Clear">
 			<origins>
 				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
@@ -6859,12 +6859,12 @@
 		</entry>
 		<entry key="EditorInspector.AddToActions" source="Pin to the top of the function list (saved)">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.AddToFavorites" source="Add to Favorites">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.ApplyInstanceOverrides"
@@ -6881,43 +6881,43 @@
 		<entry key="EditorInspector.CallFailedArgumentMismatch"
 		       source="an argument cannot be converted to its parameter type">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.CallFailedMissingArgument" source="an argument without a default value is missing">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.CallFailedNotBound"
 		       source="the function is no longer on this type (was the module reloaded?)">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.CallFailedNullInstance" source="there is no instance to call it on">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.CallFailedTooManyArguments" source="more arguments than the function takes">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.ClearAssetReference" source="Clear asset reference">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.DiagnosticMethodTag" source="Diagnostic">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.FavoriteProperty" source="Favorite property">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.FavoritesSection" source="Favorites">
@@ -6952,34 +6952,34 @@
 		</entry>
 		<entry key="EditorInspector.MultiCallHint" source="Calls run on every selected object as one undo step.">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.MultipleValues" source="Multiple values">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.NetRoleMethodRunsLocally"
 		       source="The network role is a declaration only: calling it here runs it in this process, not over the network">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.NetRoleNotRoutedTag" source="RPC not routed">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.NewElementHint" source="new element (Enter)">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.NewKeyHint" source="new key (Enter)">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.NoActiveScene" source="No active scene.">
@@ -6990,17 +6990,17 @@
 		<entry key="EditorInspector.NoCallInEditorMethods"
 		       source="No CallInEditor functions. Turn on Show All Functions in the view options to call the others.">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.NoFunctionMethods" source="No FUNCTION() methods.">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.NoMatchingAssets" source="No matching assets.">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.NoTypeInfo" source="No TypeInfo registered for this component.">
@@ -7025,7 +7025,7 @@
 		</entry>
 		<entry key="EditorInspector.PickAsset" source="Pick an asset">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.PrefabInstance" source="This is a prefab instance">
@@ -7040,17 +7040,17 @@
 		</entry>
 		<entry key="EditorInspector.RemoveFromActions" source="Unpin from the top of the function list">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.RemoveFromFavorites" source="Remove from Favorites">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.ResetToDefaultTooltip" source="Reset to the default value">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
 			</origins>
 		</entry>
@@ -7077,12 +7077,12 @@
 		</entry>
 		<entry key="EditorInspector.SearchAssetsHint" source="Search assets...">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.SearchPropertiesHint" source="Search properties...">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
 			</origins>
 		</entry>
@@ -7099,17 +7099,17 @@
 		<entry key="EditorInspector.ShowAllFunctionsTooltip"
 		       source="Diagnostic view: also list FUNCTIONs without CallInEditor. They declare no editor safety, so the default list hides them">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.ShowInContentBrowser" source="Show in the Content Browser">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.TransientProperty" source="Transient property: not saved to disk">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.UnlinkPrefab"
@@ -7126,7 +7126,7 @@
 		<entry key="EditorInspector.ViewOptions"
 		       source="View options: show only modified properties, expand or collapse all sections">
 			<origins>
-				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorMapCheck.CheckMap" source="Validate every object of the active scene again">

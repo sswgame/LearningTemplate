@@ -15,8 +15,8 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Widgets/PropertyGrid/InspectorPropertyUndo.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
-#include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"

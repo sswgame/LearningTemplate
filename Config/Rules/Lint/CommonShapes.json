@@ -69,7 +69,7 @@
         "Source/GameFramework/Runtime/Online/Bus/ServerBus.cpp": "LogOnce 키(버린 메시지 경고를 한 번)다 — 겹쳐도 거절 수는 그대로 센다",
         "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.cpp": "무작위 씨앗에 섞는 값이다(pickUnit) — 겹쳐도 같은 씨앗일 뿐 표가 아니다",
         "Source/GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.cpp": "저장 상태의 노드 id 해시다 — 만들기(populateNodes)가 NameHashIndex 로 같은 해시의 두 id 를 거절해 회로 안에서는 하나로 정해진다",
-        "Source/Editor/Panels/Inspector/Model/PropertyGridViewModel.cpp": "인스펙터 행 높이 기억 키다 — 겹치면 한 행의 높이 추정이 섞일 뿐 데이터는 바뀌지 않는다"
+        "Source/Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.cpp": "인스펙터 행 높이 기억 키다 — 겹치면 한 행의 높이 추정이 섞일 뿐 데이터는 바뀌지 않는다"
     },
     "_frameIntern": {
         "Source/Games/NileCity/NileGameModeComponent.cpp|updateInput": "게임 스레드 입력, 프레임당 키 수가 상수이고 워커 경합이 없다",

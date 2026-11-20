@@ -1788,6 +1788,7 @@
     "rewrite_python_code": "dev.rename_symbol.rename_in_text — 지킬 구간 방식(Scripts 감사, 2026-11-21)",
     "rewrite_code": "dev.rename_symbol.rename_in_text(Scripts 감사, 2026-11-21)",
     "NAMING_PATH": "common.rename_scope.BANNED_NAMES_PATH — 이름 이력 표 경로는 한 곳(Scripts 감사, 2026-11-21)",
-    "NAMING_WORDS_PATH": "common.rename_scope.BANNED_NAMES_PATH — _bannedNames 는 NamingWordsBannedNames.json 으로 옮겼다(Scripts 감사, 2026-11-21)"
+    "NAMING_WORDS_PATH": "common.rename_scope.BANNED_NAMES_PATH — _bannedNames 는 NamingWordsBannedNames.json 으로 옮겼다(Scripts 감사, 2026-11-21)",
+    "InspectorPropertyManager": "PropertyDrawerRegistry — 프로퍼티 그리드 공용 층 이전 — 행 종류마다 그리는 드로어의 등록부(언리얼 PropertyEditorModule 의 커스텀 레이아웃 등록, 유니티 PropertyDrawer)(2026-11-21)"
   }
 }

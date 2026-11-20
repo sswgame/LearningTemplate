@@ -15,7 +15,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
-#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
+#include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreeEditModel.h"
 
