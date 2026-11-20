@@ -1782,6 +1782,7 @@
     "NAMING_WORDS_PATH": "common.rename_scope.BANNED_NAMES_PATH — _bannedNames 는 NamingWordsBannedNames.json 으로 옮겼다(Scripts 감사, 2026-11-21)",
     "_worldEntityCount": "ReplicationServer::_pendingEntityCount — setEntity 는 다음 월드 목록에 쌓고 endTick 이 판 번호를 정해 맞바꾼다(엔티티 상태 판 번호, 2026-11-21)",
     "kMaxRawPosition": "HousingTransformNetState 의 칸 선언 범위 — 하우징 날 변환의 범위는 Replicated 칸이 정한다(복제 칸 선언, 2026-11-21)",
-    "kMaxRawYaw": "HousingTransformNetState 의 칸 선언 범위 — 하우징 날 변환의 범위는 Replicated 칸이 정한다(복제 칸 선언, 2026-11-21)"
+    "kMaxRawYaw": "HousingTransformNetState 의 칸 선언 범위 — 하우징 날 변환의 범위는 Replicated 칸이 정한다(복제 칸 선언, 2026-11-21)",
+    "findServerKit": "ServerKitDependencies<ServerKitRequired<…>, ServerKitOptional<…>> — 게임 모듈은 형식 목록 묶음의 verify · resolve · get · find 로만 받는다(IServerKitLocator::findKitScope 비공개, 2026-11-21)"
   }
 }

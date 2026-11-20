@@ -57,6 +57,7 @@ namespace sw
         {
         }
 
+    private:
         const ISubsystemLocator* findKitScope() const override { return _directory.findKitScope(); }
 
     private:

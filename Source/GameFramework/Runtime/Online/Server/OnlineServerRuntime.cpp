@@ -475,7 +475,7 @@ namespace sw
         OnlineServerKitContext& context = parts._context;
         context._pHost                  = &parts._host;
         context._pStore                 = parts._store.get();
-        // 전용 서버의 게임 모듈도 같은 저장소를 쓴다 — 키트 범위에 걸어 호스트 칸(`IServerKitLocator` · `findServerKit<IServiceStore>`)으로 찾게 한다(키트 인터페이스와 같은 길).
+        // 전용 서버의 게임 모듈도 같은 저장소를 쓴다 — 키트 범위에 걸어 호스트 칸(`IServerKitLocator` · `ServerKitDependencies<ServerKitRequired<IServiceStore>, …>`)으로 찾게 한다(키트 인터페이스와 같은 길).
         if ( parts._kitScope.bind<IServiceStore>( parts._store.get() ) == false )
             return unexpected( Error{ ErrorKind::AlreadyExists, "the service store is already in the kit scope" } );
         context._pCache              = parts._cache.get();

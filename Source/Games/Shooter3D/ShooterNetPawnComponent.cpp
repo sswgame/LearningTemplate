@@ -32,6 +32,9 @@ namespace sw
 {
     namespace
     {
+        /** @brief 슈터 서버가 받는 서버 키트 인터페이스 형식 목록입니다. 백필은 매칭 키트가 `gameServer` 로 선 서버에만 있어 선택이다. */
+        using ShooterServerKits = ServerKitDependencies<ServerKitRequired<>, ServerKitOptional<IMatchBackfillSender>>;
+
         struct ShooterNetPawnComponentInternal
         {
             /**
@@ -41,7 +44,8 @@ namespace sw
              */
             static void reportPlayerLeft( uint64 accountID )
             {
-                IMatchBackfillSender* const pBackfill = findServerKit<IMatchBackfillSender>( game::findSubsystem<IServerKitLocator>() );
+                const optional<ShooterServerKits> kits      = ShooterServerKits::resolve( game::findSubsystem<IServerKitLocator>() );
+                IMatchBackfillSender* const       pBackfill = kits.has_value() ? kits->find<IMatchBackfillSender>() : nullptr;
                 if ( pBackfill == nullptr )
                     return;
                 const MatchmakingServiceResult result = pBackfill->submitPlayerLeft( static_cast<AccountID>( accountID ), WallClock::nowUnixMilliseconds() );

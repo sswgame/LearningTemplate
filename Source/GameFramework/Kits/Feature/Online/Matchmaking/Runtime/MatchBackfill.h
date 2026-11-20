@@ -1,7 +1,7 @@
 /**
  * @file MatchBackfill.h
  * @brief 전용 게임 서버가 경기 중 빈 슬롯(백필)을 맡기는 창구입니다. 게임 모듈이 include 하므로 공유 키트(Runtime)에 둡니다 — 구현은 서버 키트(`MatchBackfillSender`)입니다.
- * @details - 게임 서버 코드는 `IServerKitLocator`(ModuleAPI)로 이 인터페이스를 찾는다(`findServerKit<IMatchBackfillSender>`). 매칭 키트가 `gameServer` 로 조립된 전용 서버에만 있다.
+ * @details - 게임 서버 코드는 `IServerKitLocator`(ModuleAPI)로 이 인터페이스를 찾는다(`ServerKitDependencies<…, ServerKitOptional<IMatchBackfillSender>>`). 매칭 키트가 `gameServer` 로 조립된 전용 서버에만 있다.
  *          - 게임이 아는 것은 "누가 나갔다" 뿐이다 — 경기 id · 모드 · 팀은 게임 서버가 읽은 명단 기록(`MatchServerAgent`)이 안다(`submitPlayerLeft`). 게임이 팀 · 경기를 적어 다른 경기를 채우지 못한다.
  *          PlayFab Matchmaking 의 `CreateServerBackfillTicket`, GameLift FlexMatch 의 `StartMatchBackfill` 에 해당한다.
  */
@@ -12,6 +12,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
 
 namespace sw
 {
@@ -34,6 +35,8 @@ namespace sw
     class IMatchBackfillSender
     {
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kMatchmaking; ///< 이 인터페이스를 내는 키트다. 받는 쪽의 의존 이름이 여기서 나온다
+
         IMatchBackfillSender()          = default;
         virtual ~IMatchBackfillSender() = default;
 
