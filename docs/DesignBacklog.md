@@ -1461,6 +1461,8 @@ public:
 
 **② FrameGraphExecutor 단계에서 정한 것(2026-11-20).** 인스턴스 애니메이션 · 모프 · 스킨 · 라이트 그리드 · 컬링(되돌리기 → 컬링 → 정렬)의 손 전이 13 곳을 옮겼다. (1) **쓰는 패스가 도는 프레임에만 등록한다**(`InstanceBuffer` 는 인스턴스 애니메이션 `shouldAnimateInstances` · 메시 입자, `DeformVertices` 는 모프 · 스킨이 디스패치할 수 있을 때, `LightGrid` 는 GPU 생산자 프레임). 쓰지 않는 프레임은 등록 접근(셰이더 읽기)에서 쉬어 읽는 패스가 그 상태를 그대로 본다 — 쓰는 패스가 선언돼 있어도 전이가 나지 않는다. (2) **컬링 일감은 프레임 시작에 모은다**(`collectCullJobs` — 등록과 디스패치가 같은 목록). 준비되지 않은 추가 뷰를 쉬게 하는 일도 그때라 HZB 등록보다 앞이다. (3) 컬링 버퍼는 등록 접근이 달라 이름을 나눴다 — `CullArgs`(간접 인자) · `CullVisibleInstances`(셰이더 읽기) · `CullLODState` · `OccludedOrders`(UAV), 칸 = 컬링 슬롯. 컬링 뒤 "그리는 쪽 상태로" 전이는 그래프 끝 되돌림(`forEachChangedAccess`)이 맡는다. (4) 남긴 것: 깊이 히스토리 복사의 텍스처 전이 3 곳 — 읽는 쪽(HZB · 입자)이 RW 텍스처로 읽는데 데이터 규칙의 입력은 셰이더 읽기라 선언할 접근이 없다(텍스처 UAV 입력 목록 `_listUnorderedAccess` 를 더할 때 옮긴다). 뷰 그래프 안의 2 단계 가림 뒤 단계 · 반사 앞 HZB 는 ③.
 
+**② 나머지 프레임 패스(2026-11-20).** 볼륨 안개(`VolumetricFogVolume`) · 실시간 프로브(`ProbeIrradiance` · 새 `ProbeHistory`) · 화면 마커(`CanvasMarkers`, 인스턴스 버퍼 읽기 포함)의 손 전이 7 곳을 옮겼다 — 주인 함수는 리스트만 받고, 등록과 선언 확인은 `FrameGraphExecutor` 가 한다(도는 프레임에만 등록). 이로써 프레임 패스 몸통에 남은 손 전이는 깊이 히스토리 텍스처 3 곳뿐이다. `FramePassExecutorPasses` · `Draw`(22)는 뷰 그래프 패스 몸통(디퍼드 타일 분류 · 컴퓨트 후처리 · 그림자 층)과 그래프 밖 굽기(아틀라스)라 자동 노출과 같이 ③ 의 뷰 표가 먼저다 — ② 는 여기서 닫는다.
+
 ### 자원 구간 할당(설계 2026-11-20, 감사 R-4)
 
 **문제.** 머티리얼 인스턴스마다 상수 버퍼 하나 · bindless 디스크립터 하나(`MaterialRenderProxy::sync`)이고, 버퍼마다 백엔드 할당이 따로다 — DX12 는 업로드 커밋 자원(256 B 정렬 × 비행 중 프레임 수, `D3D12RHIResourceFactory::createConstantBuffer`), Vulkan 은 자원마다 `vkAllocateMemory`(`VulkanRHIDevice::allocateDeviceMemory` 9 곳). 인스턴스 5000 이면 할당 수가 Vulkan `maxMemoryAllocationCount`(흔히 4096)에 닿는다 — 지금은 한도 가드(`RHIConfig::_allocationCountReserve`)가 오류로 거절할 뿐이다.

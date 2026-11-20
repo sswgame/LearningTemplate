@@ -38,6 +38,7 @@
 		<RenderGraphResourceDesc _name="LightGrid" _kind="External" />
 		<RenderGraphResourceDesc _name="VolumetricFogVolume" _kind="External" />
 		<RenderGraphResourceDesc _name="ProbeIrradiance" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="ProbeHistory" _kind="Persistent" />
 		<RenderGraphResourceDesc _name="CanvasMarkers" _kind="External" />
 	</_listResource>
 	<_listFramePass>
@@ -152,6 +153,7 @@
 			</_listInput>
 			<_listOutput>
 				<item>ProbeIrradiance</item>
+				<item>ProbeHistory</item>
 			</_listOutput>
 		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="CanvasMarker" _type="CanvasMarker" _cullMode="None">

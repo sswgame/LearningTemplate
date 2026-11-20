@@ -71,6 +71,26 @@ namespace sw
                 static const hashed_string kName( "OccludedOrders" );
                 return kName;
             }
+            static hashed_string fogVolume()
+            {
+                static const hashed_string kName( "VolumetricFogVolume" );
+                return kName;
+            }
+            static hashed_string probeIrradiance()
+            {
+                static const hashed_string kName( "ProbeIrradiance" );
+                return kName;
+            }
+            static hashed_string probeHistory()
+            {
+                static const hashed_string kName( "ProbeHistory" );
+                return kName;
+            }
+            static hashed_string canvasMarkers()
+            {
+                static const hashed_string kName( "CanvasMarkers" );
+                return kName;
+            }
         };
     } // namespace
 
@@ -157,6 +177,17 @@ namespace sw
         if ( _state._lightBuffer.getGPUGridViewCount() > 0 )
             std::ignore = table.registerBuffer( FrameResource::lightGrid(), 0, _state._lightBuffer.getGPUGridBuffer(), RenderGraphAccess::ShaderRead );
         registerCullResources( table );
+        // 볼륨 안개 · 실시간 프로브 · 화면 마커 — 도는 프레임에만(등록 접근: 안개 볼륨 · 프로브 · 사각형은 그리기가 읽는 셰이더 읽기, 프로브 기록은 컴퓨트만 읽고 쓴다).
+        if ( _fog.isFogVolumeActive() && _fog.getFogVolumeBuffer().isValid() )
+            std::ignore = table.registerBuffer( FrameResource::fogVolume(), 0, _fog.getFogVolumeBuffer(), RenderGraphAccess::ShaderRead );
+        const RHIStructuredBuffer* pProbeBuffer = _state._lightBuffer.findProbeBuffer();
+        if ( _state._probeUpdater.isActive() && pProbeBuffer != nullptr && _state._lightBuffer.getProbeUAV() != kInvalidDescriptorIndex && _state._probeUpdater.getHistoryBuffer().isValid() )
+        {
+            std::ignore = table.registerBuffer( FrameResource::probeIrradiance(), 0, *pProbeBuffer, RenderGraphAccess::ShaderRead );
+            std::ignore = table.registerBuffer( FrameResource::probeHistory(), 0, _state._probeUpdater.getHistoryBuffer(), RenderGraphAccess::UnorderedAccess );
+        }
+        if ( _state._canvasRenderer.getMarkerCount() > 0 && _state._canvasRenderer.getQuadBuffer().isValid() )
+            std::ignore = table.registerBuffer( FrameResource::canvasMarkers(), 0, _state._canvasRenderer.getQuadBuffer(), RenderGraphAccess::ShaderRead );
     }
 
     void FrameGraphExecutor::executePass( RenderPassKind type, const RenderGraphPassContext& graphContext )
@@ -218,17 +249,21 @@ namespace sw
             }
             case RenderPassKind::VolumetricFog:
             {
-                _fog.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
+                // 선언 · 등록이 없으면 그래프가 볼륨 전이를 내지 않았다 — 기록하지 않는다(오류는 문맥이 남겼다).
+                if ( _fog.isFogVolumeActive() && graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::fogVolume() } ) != 0 )
+                    _fog.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
                 break;
             }
             case RenderPassKind::ProbeUpdate:
             {
-                dispatchRealtimeProbes();
+                dispatchRealtimeProbes( graphContext );
                 break;
             }
             case RenderPassKind::CanvasMarker:
             {
-                // 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스(뷰 그래프)보다 앞이다.
+                // 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스(뷰 그래프)보다 앞이다. 전이는 그래프가 낸다(`CanvasMarkers`).
+                if ( _state._canvasRenderer.getMarkerCount() == 0 || graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::canvasMarkers() } ) == 0 )
+                    break;
                 _state._canvasRenderer.recordMarkerProjection( *_pCmd, _psoManager.getEnginePSO( RenderPassKind::CanvasMarker ), _state._gpuScene.getInstanceBuffer(),
                                                                _state._gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv, _state._gpuMessages,
                                                                _state._mainView._settings._viewMode == RenderViewMode::MarkerSlots );
@@ -1063,9 +1098,12 @@ namespace sw
         _pCmd = nullptr;
     }
 
-    void FrameGraphExecutor::dispatchRealtimeProbes()
+    void FrameGraphExecutor::dispatchRealtimeProbes( const RenderGraphPassContext& graphContext )
     {
-        if ( _pCmd == nullptr || _state._probeUpdater.isActive() == false )
+        // 두 쓰기 버퍼의 전이는 그래프가 냈다 — 선언 · 등록이 없으면 기록하지 않는다(오류는 문맥이 남겼다).
+        const bool bDeclared = graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::probeIrradiance() } ) != 0 &&
+                               graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::probeHistory() } ) != 0;
+        if ( _pCmd == nullptr || _state._probeUpdater.isActive() == false || bDeclared == false )
             return;
         SW_PROFILE_SCOPE( "RT.Probe.Update" );
         _state._probeUpdater.dispatch( *_pCmd, _psoManager.getEnginePSO( RenderPassKind::ProbeUpdate ), _state._lightBuffer, _transparentRankPlaceholder._srv );

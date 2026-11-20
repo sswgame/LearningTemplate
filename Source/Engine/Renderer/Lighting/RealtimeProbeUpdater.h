@@ -125,6 +125,8 @@ namespace sw
         void prepare( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const GPULightBuffer& lightBuffer, const SkyGradient& sky, bool bHasSky, bool bPipelineReady );
         /** @brief 이번 프레임에 컴퓨트가 도는지입니다. */
         [[nodiscard]] bool isActive() const { return _bActive == SW_TRUE; }
+        /** @brief 프로브 기록 버퍼(컴퓨트 u0 — 프레임을 넘어 남는다)입니다. 프레임 그래프 표가 크기와 함께 등록한다(`ProbeHistory`). */
+        const RHIStructuredBuffer& getHistoryBuffer() const { return _historyBuffer; }
         /**
          * @brief 기록을 0 에서 다시 쌓거나 복셀(점유 · 발광)이 바뀐 뒤 갱신한 프레임 수입니다(그린 프레임만 센다). 이번 프레임에 돌지 않으면 0 입니다 — 감시 값 `Render.GIAccumulatedFrames`.
          * @details 복셀이 바뀌어도 기록은 0 으로 돌리지 않고 섞어 따라간다 — 그래서 섞는 비율의 초기 가속(`_framesSinceReset`)과 따로 센다.

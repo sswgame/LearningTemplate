@@ -158,7 +158,7 @@ namespace sw
         /** @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(light_grid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다. */
         void dispatchLightGrid( const RenderGraphPassContext& graphContext );
         /** @brief 실시간 프로브 갱신 컴퓨트를 기록합니다. `prepareRealtimeProbes` 가 켠 프레임에만 돕니다. */
-        void dispatchRealtimeProbes();
+        void dispatchRealtimeProbes( const RenderGraphPassContext& graphContext );
         /** @brief 뷰 @p view 의 지난 깊이를 이번 프레임에 히스토리로 옮길 수 있으면 true 입니다(지난 깊이 · 히스토리 · PSO 가 모두 있다). */
         bool canCopyDepthHistory( const FrameViewTarget& view ) const;
         /** @brief 뷰 @p view 의 장면 깊이 첨부를 깊이 히스토리 텍스처에 옮길 수 있으면 true 입니다(히스토리 · 복사 PSO · 장면 깊이가 있다 — 지난 깊이인지는 묻지 않는다). */

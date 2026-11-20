@@ -252,7 +252,7 @@ namespace sw
         const RHIDescriptorIndex   lights  = bLights ? lightBuffer.getBuffer()._srv : placeholderSRV;
         const RHIDescriptorIndex   grid    = pGrid != nullptr ? pGrid->_srv : placeholderSRV;
 
-        cmd.transitionBuffer( _fogVolumeBuffer._buffer, RHIBufferState::UnorderedAccess );
+        // 쓰기 앞 UAV · 안개 패스(그래프, t11) 앞 셰이더 읽기는 프레임 그래프가 낸다(`VolumetricFogVolume` — `FrameGraphExecutor::beginFrame` 이 등록한다).
         cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::VolumetricFog ) );
         // g_FogLights(t0) / g_FogParams(t1) / g_FogLightGrid(t2) / g_FogVolumeRW(u0). volumetric_fog.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeShaderResource( lights, 0 );
@@ -261,8 +261,6 @@ namespace sw
         cmd.bindComputeUAV( _fogVolumeBuffer._uav, 0 );
         constexpr uint32 kGroupSize = SW_FOG_VOLUME_GROUP_SIZE;
         cmd.dispatchThreads( SW_FOG_VOLUME_DIM_X, SW_FOG_VOLUME_DIM_Y, 1, kGroupSize, kGroupSize, 1 );
-        // 안개 패스(그래프)가 t11 로 읽는다. 쓰기가 끝났음을 알린다.
-        cmd.transitionBuffer( _fogVolumeBuffer._buffer, RHIBufferState::ShaderResource );
     }
 } // namespace sw
 
