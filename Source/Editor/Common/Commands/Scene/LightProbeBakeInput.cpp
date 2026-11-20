@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Scene/Scene.h"

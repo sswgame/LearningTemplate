@@ -17,6 +17,7 @@
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/EnumName.h"

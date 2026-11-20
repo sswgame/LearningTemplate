@@ -5,6 +5,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
