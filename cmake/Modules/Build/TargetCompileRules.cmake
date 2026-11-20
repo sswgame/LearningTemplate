@@ -188,7 +188,7 @@ endfunction()
 
 # ------------------------------------------------------------------------------
 # sw_mark_deterministic_sources —같은 입력이면 구성 · 컴파일러 · 플랫폼을 넘어 같은 비트를 내야 하는 시뮬레이션 TU(파괴 · 파쇄 · 그 복제)에
-#   부동소수점 축약(FMA 합치기)을 끈다. Release 의 /arch:AVX2 · -mavx2 는 `a * b + c` 를 FMA 한 번으로 합쳐 반올림이 Debug(/Od · AVX2 없음)와
+#   부동소수점 축약(FMA 합치기)을 끈다. Release 의 Haswell 수준(clang-cl /arch:AVX2 · GNU -march=haswell — X64.cmake)은 `a * b + c` 를 FMA 한 번으로 합쳐 반올림이 Debug(FMA 없음)와
 #   달라진다 — 씨앗과 사건만 보내고 받는 쪽이 같은 계산을 하는 파괴 네트워킹은 Debug 서버 ↔ Shipping 클라이언트에서 다른 그림이 된다.
 #   엔진 전체에는 걸지 않는다(렌더 · 애니메이션 수학은 FMA 가 이득이고 비트 결정성이 필요 없다). 언리얼도 결정성이 필요한 물리 경로만 /fp:precise 로 짓는다.
 #   clang-cl 의 기본 /fp:precise 는 축약을 허락하므로(-ffp-contract=on) 축약만 따로 끈다.
