@@ -35,8 +35,8 @@ namespace sw
     ENUM()
     enum class ExperienceEntry : uint8
     {
-        SubLevel,    ///< 허브 씬에 하위 레벨로 더한다(허브가 보이고 허브 틱만 멈춘다) — 하위 레벨 로더(허브 이전 ②)가 서야 들어갈 수 있다
-        SceneSwitch, ///< 맵 씬으로 바꾼다(허브는 `GameStateSnapshot` 으로 찍어 두고 돌아올 때 복원 — 허브 이전 ②)
+        SubLevel,    ///< 허브 씬에 하위 레벨로 더한다(허브가 보이고 그대로 돈다 — 허브 씬 안에서만 들어간다, `ExperienceManager`)
+        SceneSwitch, ///< 맵 씬으로 바꾼다(허브 씬에서 들어가면 허브를 `GameStateSnapshot` 으로 찍어 두고 돌아올 때 복원 — `ExperienceManager`)
     };
 
     /** @brief 게임 모드 설정 한 칸입니다 — `<GameMode>` 의 `type` 밖 속성 하나(이름은 게임 모드 형식의 칸 속성 이름, `XMLFields::getAttributeName`). */

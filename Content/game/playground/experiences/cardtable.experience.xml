@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8a4d650cc32c4ea58d520cfe08f6e2fd"?>
+<!--
+  허브의 카드 탁자 미니게임 — CardGame 키트, 하위 레벨 진입(허브가 보인 채로 maps/hub_cardtable 을 허브 씬에 더한다). 허브 씬 안에서만 들어간다.
+  허브의 CardTableGate(ExperienceTriggerComponent)가 들어가고 experience.leave 가 하위 레벨을 빼고 나온다. 시나리오 automation/hub.scenario.xml.
+-->
+<Experience name="cardtable" map="game/playground/maps/hub_cardtable.scene.xml" entry="SubLevel" kits="CardGame"/>

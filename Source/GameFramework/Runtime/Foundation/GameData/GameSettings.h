@@ -113,6 +113,9 @@ namespace sw
         DataPath _statCatalog; ///< 플레이어 통계 · 업적 정의(`*.stats.xml`, `StatCatalog`). 적으면 `PlayerStatsSubsystem` 이 통계 → 업적 → 플랫폼 서비스를 잇는다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 통계 없음
 
         PROPERTY()
+        string _hubExperience; ///< 허브 Experience 이름(`<팩>/experiences/<이름>.experience.xml`). 적으면 `ExperienceManager` 가 `onInitialize` 뒤 첫 씬 전에 켜 인스턴스 내내 미니게임 아래 바탕으로 둔다(언리얼 Lyra 기본 Experience 자리). 켜지 못하면 게임 초기화가 실패한다. 적지 않으면 허브 없음
+
+        PROPERTY()
         DataPath _autosaveSettings; ///< 자동 저장 정책(`<팩>/data/autosave.xml`). 적으면 `GameInstance` 가 `AutosaveManager` 를 세워 게임 범위에 건다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 자동 저장 없음
 
         /**

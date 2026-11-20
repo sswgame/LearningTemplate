@@ -34,6 +34,14 @@ namespace
         int32 _value{ 0 };
     };
 
+    /** @brief 범위가 쥐는 서비스 대역입니다 — 지워진 수를 센다(`emplaceService`). */
+    struct TestOwnedService
+    {
+        static inline int32 s_destroyedCount = 0;
+        int32               _value{ 0 };
+        ~TestOwnedService() { ++s_destroyedCount; }
+    };
+
     bool activateTestKit( ExperienceScope& scope )
     {
         (void)scope;
@@ -327,4 +335,30 @@ SW_TEST_CASE( ExperienceTest, LeakCheckIgnoresScopedAndPriorState )
     SW_EXPECT_TRUE( listStack[0] == hashed_string( "hub" ) );
     SW_EXPECT_TRUE( fixture._gameScope.find<TestOtherService>() == &prior );
     fixture._gameScope.unbind<TestOtherService>();
+}
+
+/** @brief [ExperienceTest] 허브 범위 위에 미니게임 범위를 켜고 끄면 미니게임이 쥔 서비스만 풀리고 지워지며, 허브의 것은 남고 해제 검사에 걸리지 않는다(`emplaceService`) */
+SW_TEST_CASE( ExperienceTest, LayeredScopesReleaseOnlyTheirOwn )
+{
+    SW_EXPECT_LOG( "ExperienceScope.ServiceConflict" );
+    ExperienceScopeFixture fixture;
+    TestOwnedService::s_destroyedCount = 0;
+    unique_ptr<ExperienceScope> hub    = fixture.makeScope( "hub" );
+    SW_REQUIRE_TRUE( hub->emplaceService<TestKitService>() );
+    hub->finishActivation();
+    const TestKitService* const pHubService = fixture._gameScope.find<TestKitService>();
+    SW_REQUIRE_NOT_NULL( pHubService );
+
+    unique_ptr<ExperienceScope> overlay = fixture.makeScope( "overlay" );
+    SW_REQUIRE_TRUE( overlay->emplaceService<TestOwnedService>() );
+    SW_EXPECT_FALSE( overlay->emplaceService<TestKitService>() ); // 허브가 건 타입은 미니게임이 다시 걸지 못한다(허브 것은 그대로)
+    overlay->finishActivation();
+    SW_EXPECT_NOT_NULL( fixture._gameScope.find<TestOwnedService>() );
+    SW_EXPECT_EQUAL( 0u, overlay->deactivate() ); // 허브가 건 것은 켜기 전부터 있었다 — 남은 것으로 세지 않는다
+    SW_EXPECT_NULL( fixture._gameScope.find<TestOwnedService>() );
+    SW_EXPECT_EQUAL( 1, TestOwnedService::s_destroyedCount ); // 끌 때 지웠다
+    SW_EXPECT_TRUE( fixture._gameScope.find<TestKitService>() == pHubService );
+
+    SW_EXPECT_EQUAL( 0u, hub->deactivate() );
+    SW_EXPECT_NULL( fixture._gameScope.find<TestKitService>() );
 }

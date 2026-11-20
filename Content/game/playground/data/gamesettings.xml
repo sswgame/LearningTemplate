@@ -12,6 +12,8 @@
     </_listResourceLayer>
   </Engine>
   <startMap>game/playground/maps/editortest.scene.xml</startMap>
+  <!-- 허브 Experience(experiences/hub) — 첫 씬 전에 켜 인스턴스 내내 미니게임 아래 바탕으로 둔다. 지역 효과 시연의 어빌리티 카탈로그 · 클래스도 그 키트가 건다. -->
+  <hubExperience>hub</hubExperience>
   <!-- 장르 키트 시연(maps/kitdemo_*)의 입력 — 기본 맵 · 걷기 축 · 시연 액션(docs/InputMapBundle.md). 다른 씬은 이 액션을 묻지 않는다. -->
   <inputMap path="common/input/base.input.xml"/>
   <inputMap path="common/input/move.input.xml"/>
