@@ -5,6 +5,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -861,7 +862,7 @@ namespace sw
         AutomationHangPayload::assign( _hangPayload._result, AutomationHangPayload::kResultBytes, getEnumName( AutomationResult::TimedOut ) );
         AutomationHangPayload::assign( _hangPayload._failureKind, AutomationHangPayload::kResultBytes, getEnumName( AutomationFailureKind::Hang ) );
         _hangPayload._startedUnixMs         = _startedUnixMs;
-        _hangPayload._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _wallLimitSeconds ) * 1000.0 );
+        _hangPayload._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _wallLimitSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
         // 행에서는 보고 폴더를 만들 수 없다(할당 · 잠금 없이 쓴다) — 미리 만들어 둔다.
         const string reportDirectory = FileUtil::getDirectoryPart( _reportWriter.getReportPath() );
         if ( reportDirectory.empty() == false )
@@ -1263,8 +1264,8 @@ namespace sw
         report._gameName              = _reproduceInput._game;
         report._startedAt             = _startedAt;
         report._startedUnixMs         = _startedUnixMs;
-        report._wallMilliseconds      = static_cast<uint32>( wallSeconds * 1000.0 );
-        report._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _wallLimitSeconds ) * 1000.0 );
+        report._wallMilliseconds      = static_cast<uint32>( wallSeconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
+        report._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _wallLimitSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
         report._lastStep              = lastStep;
         report._reproduce             = reproduce;
         report._pTimeline             = &_wallProfile;
