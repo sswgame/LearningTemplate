@@ -6,6 +6,7 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -69,7 +70,7 @@ namespace sw
         {
             furniture._bVacuum = false;
             furniture._bShake  = false;
-            StringUtil::forEachToken( search, ",; ", [&]( string_view token )
+            StringUtil::forEachToken( search, XMLReadUtil::kListSeparators, [&]( string_view token )
             {
                 if ( StringUtil::equals( token, string_view( "Vacuum" ) ) )
                     furniture._bVacuum = true;

@@ -9,6 +9,7 @@
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitOperator.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
             static void readArguments( const XMLNode& node, CharacterDataReader& reader, vector<FitArgument>& outListArgument )
             {
                 outListArgument.clear();
-                for ( const string_view token : StringUtil::split( node.getAttributeText( "args" ), CharacterDataReader::kTokenSeparators, { ._bDropEmpty = true } ) )
+                for ( const string_view token : StringUtil::split( node.getAttributeText( "args" ), XMLReadUtil::kListSeparators, { ._bDropEmpty = true } ) )
                 {
                     string_view name;
                     string_view valueText;

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
@@ -12,7 +13,7 @@
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
-// MaterialInstance — 값 덮어쓰기의 사본 재사용과 저장 글(nogpu).
+// MaterialInstance — 값 덮어쓰기의 사본 재사용과 저장 글, 키워드 · 멀티 컴파일 검사와 쿠킹 조합(nogpu).
 
 using namespace sw;
 
@@ -148,4 +149,130 @@ SW_TEST_CASE( MaterialInstanceTest, TextureCountDefineReplacesPassValue )
     SW_REQUIRE_EQUAL( size_t( 4 ), listDefine.size() );
     SW_EXPECT_EQUAL( MaterialPermutation::makeTextureCountDefine( 3 ), listDefine[1] );
     SW_EXPECT_EQUAL( string( "MATERIAL_ALPHA_CUTOFF" ), listDefine[3] );
+}
+
+namespace
+{
+    struct MaterialInstanceSwitchTestUtil
+    {
+        /** @brief 런타임 스위치(Detail) · 에셋 전용 스위치(Wet, 끔 키워드 있음) · 멀티 컴파일(FogMode)을 선언한 부모입니다. */
+        static constexpr const utf8* kSwitchMaterial = R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialDef formatVersion="0" name="Switches" shaderPath="engine/shaders/pbr_lit.hlsl" alphaMode="Opaque">
+	<_properties>
+		<item name="_color" type="Color" defaultValue="1 1 1 1"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_staticSwitches>
+			<item name="Detail" keyword="MATERIAL_DETAIL" bEnabled="0" bShaderFeature="0"/>
+			<item name="Wet" keyword="MATERIAL_WET" keywordOff="MATERIAL_DRY" bEnabled="0" bShaderFeature="1"/>
+		</_staticSwitches>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF">
+				<_options>
+					<item>FOG_OFF</item>
+					<item>FOG_EXP</item>
+				</_options>
+			</item>
+		</_multiCompiles>
+	</_permutations>
+</MaterialDef>
+)";
+
+        /** @brief 에셋 전용 스위치(Wet)를 켜고 안개를 고른 인스턴스 에셋입니다. */
+        static constexpr const utf8* kWetInstance = R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialInstanceDef formatVersion="0" name="WetInstance" parentPath="testproject/switches.material">
+	<_keywords>
+		<item name="Wet" bEnabled="1"/>
+	</_keywords>
+	<_multiCompiles>
+		<item name="FogMode" selected="FOG_EXP"/>
+	</_multiCompiles>
+</MaterialInstanceDef>
+)";
+
+        /** @brief 부모가 선언하지 않은 키워드를 켠 인스턴스 에셋입니다. */
+        static constexpr const utf8* kUnknownInstance = R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialInstanceDef formatVersion="0" name="UnknownInstance" parentPath="testproject/switches.material">
+	<_keywords>
+		<item name="MATERIAL_NOT_DECLARED" bEnabled="1"/>
+	</_keywords>
+</MaterialInstanceDef>
+)";
+
+        /** @brief @p text 를 케이스 폴더의 파일로 쓰고 @p instance 로 읽습니다. */
+        static bool loadInstance( MaterialInstance& instance, const utf8* pFileName, const utf8* text )
+        {
+            const string path = FileUtil::joinPath( test::makeScratchPath( "materialinstance" ), pFileName );
+            return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, string( text ) ) && instance.loadFromDiskFile( path );
+        }
+    };
+} // namespace
+
+/**
+ * @brief [MaterialInstanceTest] 키워드 · 멀티 컴파일은 부모가 선언한 런타임 스위치 · 선택지만 받는다 — 모르는 이름 · 에셋 전용 스위치 · 모르는 선택지는 오류이고 퍼뮤테이션이 그대로다
+ * @details 변이: 이름 검사를 지우면 `MATERIAL_BENCH_CHURN` 같은 쿠킹하지 않은 define 이 퍼뮤테이션에 섞여(배포에서 대체 해시) 해시 줄이 진다.
+ */
+SW_TEST_CASE( MaterialInstanceTest, KeywordsMustBeDeclaredByParent )
+{
+    SW_EXPECT_LOG( "MaterialInstance.KeywordUnknown" );
+    SW_EXPECT_LOG( "MaterialInstance.KeywordNotRuntime" );
+    SW_EXPECT_LOG( "MaterialInstance.MultiCompileUnknown" );
+    shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceSwitchTestUtil::kSwitchMaterial ) );
+    shared_ptr<MaterialInstance> instance = MaterialInstance::create( material.get() );
+    const uint64                 baseHash = instance->getPermutationHash();
+    SW_EXPECT_EQUAL( material->getPermutationHash(), baseHash );
+
+    SW_EXPECT_FALSE( instance->enableKeyword( hashed_string( "MATERIAL_BENCH_CHURN" ) ) );
+    SW_EXPECT_FALSE( instance->enableKeyword( hashed_string( "Wet" ) ) );
+    SW_EXPECT_FALSE( instance->setMultiCompile( hashed_string( "FogMode" ), "FOG_LINEAR" ) );
+    SW_EXPECT_FALSE( instance->setMultiCompile( hashed_string( "Unknown" ), "FOG_EXP" ) );
+    SW_EXPECT_EQUAL( baseHash, instance->getPermutationHash() );
+
+    shared_ptr<MaterialInstance> orphan = MaterialInstance::create( nullptr );
+    SW_EXPECT_FALSE( orphan->enableKeyword( hashed_string( "Detail" ) ) );
+
+    // 이름으로 켜도 키워드로 켜도 같은 스위치 한 칸이고, 부모가 그 스위치를 켠 것과 같은 define · 해시다(쿠커가 굽는 조합).
+    SW_EXPECT_TRUE( instance->enableKeyword( hashed_string( "MATERIAL_DETAIL" ) ) );
+    SW_EXPECT_TRUE( instance->setMultiCompile( hashed_string( "FogMode" ), "FOG_EXP" ) );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL" ) );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "FOG_EXP" ) );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "FOG_OFF" ) );
+    SW_REQUIRE_TRUE( material->setStaticSwitch( hashed_string( "Detail" ), true ) );
+    material->setMultiCompile( hashed_string( "FogMode" ), "FOG_EXP" );
+    shared_ptr<MaterialInstance> plain = MaterialInstance::create( material.get() );
+    SW_EXPECT_EQUAL( plain->getPermutationHash(), instance->getPermutationHash() );
+    SW_EXPECT_TRUE( instance->disableKeyword( hashed_string( "Detail" ) ) );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL" ) );
+}
+
+/**
+ * @brief [MaterialInstanceTest] 인스턴스 에셋이 고른 스위치 · 멀티 컴파일은 쿠커가 부르는 조합 목록(`collectRuntimeSwitchVariants`)에 든다 — 끔 키워드는 빠지고 런타임 정의와 같은 해시다.
+ *        부모가 선언하지 않은 덮어쓰기는 오류이고 false 다(쿠킹이 멈춘다)
+ * @details 변이: 쿠커가 `.material` 만 훑던 때처럼 부모의 조합만 내면 `MATERIAL_WET` 줄이 진다. 덮어쓰기를 define 글로 얹으면(예전 `refreshCachedDefines`) `MATERIAL_DRY` 가 남아 진다.
+ */
+SW_TEST_CASE( MaterialInstanceTest, InstanceAssetCombinationsAreCollectedForCook )
+{
+    SW_EXPECT_LOG( "MaterialInstance.KeywordUnknown" );
+    shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceSwitchTestUtil::kSwitchMaterial ) );
+
+    shared_ptr<MaterialInstance> wet = MaterialInstance::create( material.get() );
+    SW_REQUIRE_TRUE( MaterialInstanceSwitchTestUtil::loadInstance( *wet, "wet.materialinstance", MaterialInstanceSwitchTestUtil::kWetInstance ) );
+    SW_EXPECT_EQUAL( string( "testproject/switches.material" ), wet->getDesc()._parentPath );
+    vector<vector<string>> listDefine;
+    vector<uint64>         listHash;
+    SW_REQUIRE_TRUE( wet->collectRuntimeSwitchVariants( listDefine, listHash ) );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listDefine.size() ); // 인스턴스 상태 + 런타임 스위치(Detail) 켬
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( listDefine[0], "MATERIAL_WET" ) );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( listDefine[0], "MATERIAL_DRY" ) );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( listDefine[0], "FOG_EXP" ) );
+    SW_EXPECT_EQUAL( wet->getPermutationHash(), listHash[0] );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( listDefine[1], "MATERIAL_DETAIL" ) );
+
+    shared_ptr<MaterialInstance> unknown = MaterialInstance::create( material.get() );
+    SW_REQUIRE_TRUE( MaterialInstanceSwitchTestUtil::loadInstance( *unknown, "unknown.materialinstance", MaterialInstanceSwitchTestUtil::kUnknownInstance ) );
+    SW_EXPECT_FALSE( unknown->collectRuntimeSwitchVariants( listDefine, listHash ) );
+    SW_EXPECT_TRUE( listDefine.empty() );
+    SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( unknown->getCachedShaderDefines(), "MATERIAL_NOT_DECLARED" ) );
 }

@@ -286,11 +286,7 @@ namespace sw
         for ( const utf8* pName : { "TMPDIR", "TMP", "TEMP", "TEMPDIR" } )
         {
             if ( ProcessEnvironment::tryReadNonEmpty( pName, outResult ) )
-            {
-                while ( outResult.size() > 1 && outResult.back() == '/' )
-                    outResult.pop_back();
                 return true;
-            }
         }
         outResult = "/tmp";
         return true;

@@ -240,6 +240,11 @@ namespace sw
          *          쿠커(`ShaderCookRequestCollector`)와 런타임 PSO 미리 만들기(`MaterialCache` → `FramePSOManager::warmPinnedMaterialPSOs`)가 같은 조합을 쓴다.
          */
         void collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const;
+        /**
+         * @brief `collectRuntimeSwitchVariants` 와 같지만 이 머티리얼의 퍼뮤테이션 대신 @p basePermutations(인스턴스가 스위치 · 멀티 컴파일 · 품질을 덮은 사본)에서 시작합니다.
+         * @details 머티리얼 인스턴스(`MaterialInstance::collectRuntimeSwitchVariants`)가 부른다 — 인스턴스와 쿠커가 같은 정의 함수를 쓴다.
+         */
+        void collectRuntimeSwitchVariants( const MaterialPermutationDef& basePermutations, vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const;
         /** @brief 멀티컴파일 옵션을 선택합니다. */
         void setMultiCompile( hashed_string name, string_view selectedOption );
         /** @brief float32 파라미터를 설정합니다. */

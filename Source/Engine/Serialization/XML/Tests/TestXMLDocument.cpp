@@ -64,6 +64,38 @@ SW_TEST_CASE( XMLDocumentTest, FloatListRules )
 }
 
 /**
+ * @brief [XMLDocumentTest] 목록 읽기는 모두 한 구분자(`kListSeparators`)로 가른다 — 이름 목록 · "이름:숫자" 목록 · 실수 묶음이 같은 글을 같은 낱말로 나눈다
+ * @details 변이: 어느 읽기든 제 구분자로 돌리면(예전 `", "` · `",; "`) 세미콜론 · 세로줄 · 줄바꿈 줄이 진다.
+ */
+SW_TEST_CASE( XMLDocumentTest, ListReadsShareOneSeparatorSet )
+{
+    sw::vector<sw::hashed_string> listName;
+    sw::XMLReadUtil::parseNameList( "a, b;c|d\te\r\nf", listName );
+    SW_REQUIRE_EQUAL( 6u, static_cast<uint32>( listName.size() ) );
+    SW_EXPECT_TRUE( listName[2] == sw::hashed_string( "c" ) );
+    SW_EXPECT_TRUE( listName[5] == sw::hashed_string( "f" ) );
+    sw::XMLReadUtil::appendNameList( " ;; g ", listName );
+    SW_REQUIRE_EQUAL( 7u, static_cast<uint32>( listName.size() ) );
+    sw::XMLReadUtil::parseNameList( "", listName );
+    SW_EXPECT_TRUE( listName.empty() );
+
+    int32 sum   = 0;
+    int32 count = 0;
+    sw::XMLReadUtil::forEachNamedNumber( "x:1; y:2|z:3\nw:4", 0, sw::XMLReadUtil::MissingValue::Reject,
+                                         [&]( sw::string_view, sw::string_view, int32 value, bool bValid )
+    {
+        sum += bValid ? value : 100;
+        ++count;
+    } );
+    SW_EXPECT_EQUAL( 4, count );
+    SW_EXPECT_EQUAL( 10, sum );
+
+    float32 arrValue[3]{};
+    SW_EXPECT_TRUE( sw::XMLReadUtil::readFloatList( "1;2|3", arrValue, 3 ) );
+    SW_EXPECT_EQUAL( 3.0f, arrValue[2] );
+}
+
+/**
  * @brief [XMLDocumentTest] 한 요소의 중복 속성은 읽기 실패다 — 예전에는 pugixml 이 받아 이름으로 찾을 때 첫 값만 읽히고 둘째 값이 조용히 버려졌다
  */
 SW_TEST_CASE( XMLDocumentTest, DuplicateAttributeIsAParseError )

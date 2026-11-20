@@ -9,6 +9,7 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -105,7 +106,7 @@ namespace sw
         if ( points.empty() == false )
         {
             bool bPoints = true;
-            StringUtil::forEachToken( points, ",; ", [&]( string_view token )
+            StringUtil::forEachToken( points, XMLReadUtil::kListSeparators, [&]( string_view token )
             {
                 int32      value  = 0;
                 const bool bValue = StringUtil::parseInt( token, value ) && value >= 0;

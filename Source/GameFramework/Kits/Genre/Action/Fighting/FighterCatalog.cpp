@@ -9,6 +9,7 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -26,7 +27,7 @@ namespace sw
                     return true;
                 uint8 mask   = 0;
                 bool  bValid = true;
-                StringUtil::forEachToken( text, ",; \t", [&]( string_view token )
+                StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
                 {
                     if ( StringUtil::equals( token, "Standing" ) )
                         mask = static_cast<uint8>( mask | ( 1u << static_cast<uint32>( FighterPosture::Standing ) ) );

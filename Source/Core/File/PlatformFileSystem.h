@@ -83,7 +83,7 @@ namespace sw
         [[nodiscard]] static bool setCurrentDirectory( string_view path );
         /** @brief 이 프로세스의 실행 파일 경로입니다(구분자 `/`, 링크는 푼다). 경로가 길어도 자르지 않는다 - 다 담지 못하면 false 입니다. */
         [[nodiscard]] static bool getExecutablePath( string& outResult );
-        /** @brief 임시 폴더입니다(구분자 `/`, 끝에 구분자 없음). */
+        /** @brief 임시 폴더입니다(구분자 `/`). 끝 구분자는 OS 가 준 그대로다 — 떼는 규칙은 `FileUtil::getTempDirectory` 가 `trimTrailingSlashes` 하나로 맡는다. */
         [[nodiscard]] static bool getTempDirectory( string& outResult );
         /**
          * @brief 폴더의 바로 아래 항목(한 단계)마다 @p visit 를 부릅니다. `.` · `..` 는 건너뜁니다. 순서는 정해져 있지 않습니다.

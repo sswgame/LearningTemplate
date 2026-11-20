@@ -90,7 +90,7 @@ namespace sw
             if ( skill._name.empty() )
                 skill._name = pID;
             // "basic:2,stance" 형식이며, 이름:랭크로 적고 랭크를 생략하면 SkillRequirement 의 초기값(1)이다. 읽히지 않거나 1 아래인 랭크는 오류다.
-            XMLReadUtil::forEachNamedNumber( node.getAttributeText( "requires" ), ", ", SkillRequirement{}._rank, XMLReadUtil::MissingValue::UseDefault,
+            XMLReadUtil::forEachNamedNumber( node.getAttributeText( "requires" ), SkillRequirement{}._rank, XMLReadUtil::MissingValue::UseDefault,
                                              [&]( string_view token, string_view skillName, int32 rank, bool bNumberValid )
             {
                 if ( bNumberValid == false || rank < 1 )

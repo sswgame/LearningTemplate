@@ -41,7 +41,7 @@ namespace sw
 
             static void readTags( string_view text, TagContainer& outTags )
             {
-                StringUtil::forEachToken( text, ", ;", [&outTags]( string_view token )
+                StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&outTags]( string_view token )
                 { outTags.addTag( TagID::request( token ) ); } );
             }
 

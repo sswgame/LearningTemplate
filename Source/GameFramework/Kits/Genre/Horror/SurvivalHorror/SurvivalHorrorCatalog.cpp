@@ -6,6 +6,7 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -22,7 +23,7 @@ namespace sw
             {
                 outListDigit.clear();
                 bool bValid = true;
-                StringUtil::forEachToken( text, ",; ", [&]( string_view token )
+                StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
                 {
                     int32 digit = 0;
                     if ( StringUtil::parseInt( token, digit ) )
@@ -46,7 +47,7 @@ namespace sw
             {
                 outListLink.clear();
                 bool bValid = true;
-                StringUtil::forEachToken( text, ",; ", [&]( string_view token )
+                StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
                 {
                     const size_t dash           = token.find( '-' );
                     const bool   bMalformedLink = dash == string_view::npos || dash == 0 || dash + 1 >= token.size();

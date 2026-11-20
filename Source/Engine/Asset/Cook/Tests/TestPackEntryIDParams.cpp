@@ -13,6 +13,7 @@
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 using namespace sw;
 
@@ -21,8 +22,6 @@ namespace
     struct PackEntryIDPropertiesTestUtil
     {
         static constexpr const utf8* kExemptionPath = "Config/Dev/EntryIDFieldExemptions.json"; ///< 값이 우연히 항목 id 와 같은 칸(이유와 함께)
-
-        static constexpr string_view kIDSeparators = ",; \t\r\n";
 
         /** @brief 저장소 데이터의 모든 항목 id 와 카탈로그 파일입니다. */
         struct Catalogs
@@ -52,10 +51,10 @@ namespace
             size_t cursor = 0;
             while ( cursor < value.size() )
             {
-                const size_t start = value.find_first_not_of( kIDSeparators, cursor );
+                const size_t start = value.find_first_not_of( sw::XMLReadUtil::kListSeparators, cursor );
                 if ( start == string_view::npos )
                     break;
-                const size_t      end   = value.find_first_of( kIDSeparators, start );
+                const size_t      end   = value.find_first_of( sw::XMLReadUtil::kListSeparators, start );
                 const string_view token = value.substr( start, end == string_view::npos ? string_view::npos : end - start );
                 if ( setID.contains( string( token ) ) )
                     return string( token );

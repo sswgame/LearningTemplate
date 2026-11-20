@@ -59,6 +59,37 @@ SW_TEST_CASE( FileTest, FileUtilPathOperations )
 }
 
 /**
+ * @brief [FileTest] 끝 구분자는 한 규칙으로 뗀다 — 루트(`/` · `C:/` · `C:\`)는 남기고, 여러 구분자는 모두 떼며, 빈 글은 빈 글이다.
+ *        `joinPath` · `getDirectoryPart` 도 같은 규칙이라 드라이브 루트를 `C:`(그 드라이브의 현재 폴더)로 망치지 않는다
+ * @details 변이: 드라이브 루트 멈춤을 지우면 `C:/` 가 `C:` 가 되어 진다. 예전 내부 규칙(`a//` 를 남김)으로 돌리면 여러 슬래시 줄이 진다.
+ */
+SW_TEST_CASE( FileTest, TrimTrailingSlashesKeepsRoots )
+{
+    SW_EXPECT_EQUAL( sw::string( "" ), sw::FileUtil::trimTrailingSlashes( "" ) );
+    SW_EXPECT_EQUAL( sw::string( "/" ), sw::FileUtil::trimTrailingSlashes( "/" ) );
+    SW_EXPECT_EQUAL( sw::string( "/" ), sw::FileUtil::trimTrailingSlashes( "///" ) );
+    SW_EXPECT_EQUAL( sw::string( "C:/" ), sw::FileUtil::trimTrailingSlashes( "C:/" ) );
+    SW_EXPECT_EQUAL( sw::string( "C:\\" ), sw::FileUtil::trimTrailingSlashes( "C:\\" ) );
+    SW_EXPECT_EQUAL( sw::string( "C:/" ), sw::FileUtil::trimTrailingSlashes( "C://" ) );
+    SW_EXPECT_EQUAL( sw::string( "C:" ), sw::FileUtil::trimTrailingSlashes( "C:" ) );
+    SW_EXPECT_EQUAL( sw::string( "C:/Games" ), sw::FileUtil::trimTrailingSlashes( "C:/Games/" ) );
+    SW_EXPECT_EQUAL( sw::string( "a" ), sw::FileUtil::trimTrailingSlashes( "a//" ) );
+    SW_EXPECT_EQUAL( sw::string( "a/b" ), sw::FileUtil::trimTrailingSlashes( "a/b/\\/" ) );
+    SW_EXPECT_EQUAL( sw::string( "//server/share" ), sw::FileUtil::trimTrailingSlashes( "//server/share/" ) );
+    SW_EXPECT_EQUAL( sw::string( "\\\\server\\share" ), sw::FileUtil::trimTrailingSlashes( "\\\\server\\share\\\\" ) );
+
+    SW_EXPECT_EQUAL( sw::string( "C:/x" ), sw::FileUtil::joinPath( "C:/", "x" ) );
+    SW_EXPECT_EQUAL( sw::string( "C:/" ), sw::FileUtil::joinPath( "C:\\", "" ) );
+    SW_EXPECT_EQUAL( sw::string( "/x" ), sw::FileUtil::joinPath( "/", "x" ) );
+
+    SW_EXPECT_EQUAL( sw::string( "C:/" ), sw::FileUtil::getDirectoryPart( "C:/Games/" ) );
+    SW_EXPECT_EQUAL( sw::string( "/" ), sw::FileUtil::getDirectoryPart( "/home" ) );
+    SW_EXPECT_EQUAL( sw::string( "C:/Games" ), sw::FileUtil::getDirectoryPart( "C:/Games/a.txt" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::getDirectoryPart( "C:/" ).empty() ); // 루트의 부모는 없다 — 위로 오르는 걸음이 여기서 멈춘다
+    SW_EXPECT_TRUE( sw::FileUtil::getDirectoryPart( "/" ).empty() );
+}
+
+/**
  * @brief [FileTest] 디스크 경로의 포함 판정은 OS 대소문자 규칙을 따른다 — Windows 는 대소문자만 다른 폴더를 같은 폴더로, POSIX 는 다른(바깥) 폴더로 본다.
  *        이름만 겹치는 옆 폴더 · 구분자 차이 · 끝 구분자는 OS 와 무관하고, 돌려주는 상대 경로는 원래 철자다
  * @details 변이: 비교를 소문자로 접으면(예전 `normalizePath` · `bIgnoreCase=true`) POSIX 에서 `Content/SCRATCH` 가 `Content/scratch` 아래로 보여 이 시험이 진다.

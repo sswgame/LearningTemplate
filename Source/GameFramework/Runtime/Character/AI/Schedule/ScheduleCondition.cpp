@@ -19,8 +19,6 @@ namespace sw
     {
         struct ScheduleConditionInternal
         {
-            static constexpr const utf8* kNameSeparators = ",;| ";
-
             static constexpr const utf8* kArrConditionAttribute[] = { "days", "daysOfSeason", "weeks", "from", "to", "seasons", "weathers",
                                                                       "phases", "flags", "tags", "minAffinity", "maxAffinity", "notTags", "chance" };
             /** @brief 날짜 범위 비교용 열쇠에서 계절 한 칸의 폭입니다(계절당 날 수는 이보다 작다). */
@@ -45,7 +43,7 @@ namespace sw
             static void parseDayList( string_view text, vector<int32>& outListDay, int32 maxDay, string_view sourceName, string_view ownerName, const utf8* pWhat )
             {
                 outListDay.clear();
-                StringUtil::forEachToken( text, kNameSeparators, [&]( string_view token )
+                StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
                 {
                     const size_t dashPos = token.find( '-' );
                     int32        first{ 0 };
@@ -83,7 +81,7 @@ namespace sw
                     return true;
                 string_view seasonName;
                 string_view dayText;
-                StringUtil::forEachToken( text, kNameSeparators, [&]( string_view token )
+                StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
                 {
                     if ( seasonName.empty() )
                         seasonName = token;
@@ -120,7 +118,7 @@ namespace sw
             static string joinTokens( string_view text )
             {
                 string joined;
-                StringUtil::forEachToken( text, kNameSeparators, [&]( string_view token )
+                StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
                 {
                     joined += joined.empty() ? "" : ", ";
                     joined += token;
@@ -269,13 +267,13 @@ namespace sw
 
     void ScheduleCondition::parseNameList( string_view text, vector<hashed_string>& outListName )
     {
-        XMLReadUtil::parseNameList( text, ScheduleConditionInternal::kNameSeparators, outListName );
+        XMLReadUtil::parseNameList( text, outListName );
     }
 
     uint8 ScheduleCondition::parsePhaseMask( string_view text, string_view sourceName, string_view ownerName )
     {
         uint8 mask = 0;
-        StringUtil::forEachToken( text, ScheduleConditionInternal::kNameSeparators, [&]( string_view token )
+        StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
         {
             const hashed_string name( token );
             bool                bFound = false;
@@ -391,12 +389,12 @@ namespace sw
         }
 
         string tagText;
-        StringUtil::forEachToken( node.getAttributeText( "tags" ), Internal::kNameSeparators, [&]( string_view token )
+        StringUtil::forEachToken( node.getAttributeText( "tags" ), XMLReadUtil::kListSeparators, [&]( string_view token )
         {
             tagText += tagText.empty() ? "" : " && ";
             tagText += "tag(" + string( token ) + ")";
         } );
-        StringUtil::forEachToken( node.getAttributeText( "notTags" ), Internal::kNameSeparators, [&]( string_view token )
+        StringUtil::forEachToken( node.getAttributeText( "notTags" ), XMLReadUtil::kListSeparators, [&]( string_view token )
         {
             tagText += tagText.empty() ? "" : " && ";
             tagText += "!tag(" + string( token ) + ")";

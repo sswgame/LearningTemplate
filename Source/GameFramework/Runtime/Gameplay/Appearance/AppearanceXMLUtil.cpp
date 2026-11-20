@@ -129,7 +129,7 @@ namespace sw
 
     void AppearanceXMLUtil::readNameList( const XMLNode& node, const utf8* pAttribute, vector<hashed_string>& outListName )
     {
-        XMLReadUtil::appendNameList( node.getAttributeText( pAttribute ), ",; ", outListName );
+        XMLReadUtil::appendNameList( node.getAttributeText( pAttribute ), outListName );
     }
 
     void AppearanceXMLUtil::readOptionalFloat3( const XMLNode& node, const utf8* pAttribute, float3& inoutValue, AppearanceLoadReport& report, string_view sourceName )
@@ -178,7 +178,7 @@ namespace sw
 
     void AppearanceXMLUtil::readTags( const XMLNode& node, const utf8* pAttribute, TagContainer& outTags )
     {
-        StringUtil::forEachToken( node.getAttributeText( pAttribute ), ",; ", [&]( string_view token )
+        StringUtil::forEachToken( node.getAttributeText( pAttribute ), XMLReadUtil::kListSeparators, [&]( string_view token )
         {
             outTags.addTag( TagID::request( token ) );
         } );

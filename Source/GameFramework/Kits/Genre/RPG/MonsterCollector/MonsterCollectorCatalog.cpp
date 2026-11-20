@@ -9,6 +9,7 @@
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -42,7 +43,7 @@ namespace sw
                 int32 arrValue[kMonsterStatCount] = {};
                 int32 count                       = 0;
                 bool  bValid                      = true;
-                StringUtil::forEachToken( text, ",; \t", [&]( string_view token )
+                StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
                 {
                     int32      value  = 0;
                     const bool bRoom  = count < kMonsterStatCount;

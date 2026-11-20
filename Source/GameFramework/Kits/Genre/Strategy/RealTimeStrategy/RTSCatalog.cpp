@@ -7,6 +7,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -74,7 +75,7 @@ namespace sw
         if ( targets.empty() == false )
         {
             def._bTargetsGround = false;
-            StringUtil::forEachToken( targets, ",; ", [&]( string_view token )
+            StringUtil::forEachToken( targets, XMLReadUtil::kListSeparators, [&]( string_view token )
             {
                 if ( StringUtil::equals( token, string_view( "Ground" ) ) )
                     def._bTargetsGround = true;
