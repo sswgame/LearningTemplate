@@ -135,5 +135,14 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 플레이어 조종자 — 폰(Player)이 Player0 으로 이것에 쥐인다. 플레이어 진행(지갑 · 가방 · 퀘스트 일지 · 평판)을 들고 미니게임에 다녀와도 남는다(상태 범위 셋의 플레이어 몫). -->
+		<entity id="40" name="PlayerController">
+			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<PlayerControllerComponent _localID="8860314903698244725" _playerIndex="0" />
+					<PlayerProgressComponent _localID="6090168750676469640" _bOpenAtBeginPlay="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

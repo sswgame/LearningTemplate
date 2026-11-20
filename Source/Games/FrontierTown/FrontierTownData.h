@@ -7,6 +7,7 @@
 
 #include "Engine/Input/Map/CommonInputActions.h"
 
+#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
@@ -30,5 +31,8 @@ namespace sw
             settings._landHeight           = kLandSize;
             return settings;
         }
+
+        /** @brief 플레이어 진행(두 통화의 지갑)의 설정입니다 — 퀘스트 · 평판 · 가방은 쓰지 않는다. */
+        static PlayerProgressSettings makeProgressSettings() { return PlayerProgressSettings{}; }
     };
 } // namespace sw

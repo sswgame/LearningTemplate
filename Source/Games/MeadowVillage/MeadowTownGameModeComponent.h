@@ -22,6 +22,7 @@ namespace sw
     class CreatureLifeCatalog;
     struct CreatureSpeciesDef;
     struct HabitatCell;
+    class PlayerProgressComponent;
     class SessionStateComponent;
 
     /**
@@ -86,7 +87,7 @@ namespace sw
 
     private:
         /** @brief 마을을 열고 공유 상태(일지 · 평판 · 시계)를 빌립니다. 카탈로그가 없으면 false 입니다. */
-        [[nodiscard]] static bool initializeTown( CreatureTown& outTown, SessionStateComponent& state );
+        [[nodiscard]] static bool initializeTown( CreatureTown& outTown, SessionStateComponent& state, PlayerProgressComponent& progress );
         /** @brief 카탈로그의 서식지 오브젝트 · 종이 모두 뷰 표에 있는지 봅니다. 빠진 것마다 오류를 남기고 false 입니다(판을 열지 않는다). */
         [[nodiscard]] bool validateViews( const CreatureLifeCatalog& catalog ) const;
         void               spawnTown( GameObjectManager& manager );

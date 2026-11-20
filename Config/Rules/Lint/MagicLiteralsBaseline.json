@@ -921,7 +921,7 @@
     "Source/GameFramework/Runtime/Gameplay/Interaction/InteractionSession.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Gameplay/Inventory/Crafting.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Gameplay/Inventory/LootTable.cpp": {"float": 1},
-    "Source/GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.cpp": {"float": 1, "integer": 3},
+    "Source/GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Gameplay/Zone/ZoneWatches.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.cpp": {"integer": 2},

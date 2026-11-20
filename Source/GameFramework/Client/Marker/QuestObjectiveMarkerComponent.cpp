@@ -4,10 +4,9 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
-#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/PlayerProgressComponent.h"
 
 namespace sw
 {
@@ -49,29 +48,19 @@ namespace sw
 
     bool QuestObjectiveMarkerComponent::shouldShowMarker()
     {
-        uint32          sessionCount = 0;
-        const QuestLog* pQuestLog    = findSessionQuestLog( sessionCount );
+        const QuestLog* pQuestLog = findPlayerQuestLog();
         if ( pQuestLog != nullptr )
             return isObjectiveOpen( *pQuestLog );
         if ( _bQuestLogMissingReported == SW_FALSE )
-            SW_LOG_ERROR_ID( "QuestObjectiveMarkerComponent.QuestObjectiveMarkerNeeds2", "Quest objective marker '%#' needs exactly one game state with a quest log in the scene (found %#) - hidden", getLabel().c_str(), sessionCount );
+            SW_LOG_ERROR_ID( "QuestObjectiveMarkerComponent.QuestObjectiveMarkerNeeds2", "Quest objective marker '%#' needs exactly one open player progress (quest log) in the scene - hidden", getLabel().c_str() );
         _bQuestLogMissingReported = SW_TRUE;
         return false;
     }
 
-    const QuestLog* QuestObjectiveMarkerComponent::findSessionQuestLog( uint32& outCount ) const
+    const QuestLog* QuestObjectiveMarkerComponent::findPlayerQuestLog() const
     {
-        outCount                          = 0;
-        const GameObject*        pOwner   = getOwner();
-        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return nullptr;
-        const QuestLog* pQuestLog = nullptr;
-        for ( const SessionStateComponent* pState : pManager->getComponentRegistry().getAll<SessionStateComponent>() )
-        {
-            ++outCount;
-            pQuestLog = &pState->getQuestLog();
-        }
-        return outCount == 1 ? pQuestLog : nullptr;
+        const GameObject*              pOwner    = getOwner();
+        const PlayerProgressComponent* pProgress = PlayerProgressComponent::findOpen( pOwner != nullptr ? pOwner->getManager() : nullptr ); // 둘 이상이면 오류로 nullptr
+        return pProgress != nullptr ? &pProgress->getQuestLog() : nullptr;
     }
 } // namespace sw

@@ -533,6 +533,7 @@
 			<GameObject _schemaVersion="0" _name="Ranch" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<SessionStateComponent _localID="6673597520240684436" _componentName="SessionStateComponent" _bActive="true" />
+					<PlayerProgressComponent _localID="5291973908594363156" _componentName="PlayerProgressComponent" _bActive="true" />
 					<WildWestGameModeComponent _localID="17445800879317630793" _componentName="WildWestGameModeComponent"
 					                           _bActive="true"
 					                           _bAutoPlay="false"
