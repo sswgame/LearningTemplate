@@ -34,7 +34,11 @@ class WebPackageTest(unittest.TestCase):
         page = INDEX_HTML.format(title="Playground", loader=PACK_LOADER_NAME, reporter="")
         self.assertIn('<canvas id="canvas"', page)  # WebWindow::kCanvasSelector
         self.assertLess(page.index("var Module"), page.index(PACK_LOADER_NAME))
-        self.assertLess(page.index(PACK_LOADER_NAME), page.index('src="App.js"'))
+        self.assertLess(page.index(PACK_LOADER_NAME), page.index('"App.js"'))
+        # SIMD 가 없는 브라우저는 로더 · App.js 를 붙이기 전에 안내를 받는다(빌드가 -msimd128).
+        self.assertLess(page.index("WebAssembly.validate"), page.index(f'"{PACK_LOADER_NAME}"'))
+        self.assertIn("0, 97, 115, 109", page)
+        self.assertNotIn("{simd_probe}", page)
 
     def test_server_sends_isolation_headers(self) -> None:
         sent: list[tuple[str, str]] = []
@@ -52,7 +56,7 @@ class WebPackageTest(unittest.TestCase):
             write_check_page(Path(folder), "Playground", "abc123", 5)
             page = (Path(folder) / "check.html").read_text(encoding="utf-8")
         self.assertLess(page.index("var Module"), page.index("__swcheck/"))
-        self.assertLess(page.index("__swcheck/"), page.index('src="App.js"'))
+        self.assertLess(page.index("__swcheck/"), page.index('"App.js"'))
         self.assertIn('"abc123"', page)
         self.assertIn(PROBE_PATH, page)
 
