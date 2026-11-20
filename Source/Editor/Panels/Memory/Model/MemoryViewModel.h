@@ -42,8 +42,8 @@ namespace sw::editor
     struct MemoryTableRow
     {
         vector<string>   _listCell{};
-        string           _assetPath{};                      ///< 에셋 시트의 경로(콘텐츠 브라우저로 갈 수 있다). 다른 시트는 비어 있다
-        MemoryDiffStatus _status{ MemoryDiffStatus::Same }; ///< 비교 표의 상태(비교가 아니면 쓰지 않는다)
+        string           _assetPath{}; ///< 에셋 시트의 경로(콘텐츠 브라우저로 갈 수 있다). 다른 시트는 비어 있다
+        MemoryDiffStatus _status{};    ///< 비교 표의 상태(비교 표를 지을 때 채운다 — 비교가 아니면 쓰지 않는다)
     };
 
     /** @brief Memory 창이 한 프레임 그릴 값입니다. 포인터 · 참조를 두지 않는다(MVVM 계약). */

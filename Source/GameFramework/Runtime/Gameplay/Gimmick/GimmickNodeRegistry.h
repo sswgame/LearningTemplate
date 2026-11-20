@@ -144,9 +144,12 @@ namespace sw
      * @brief 종류 이름으로 정의를 찾는 레지스트리입니다. 내장 종류(센서, 연산자, 액추에이터)를 모두 가진 기본 레지스트리는 `GimmickNodeRegistrySubsystem` 가 가진다.
      *        게임은 그것을 복사해서 종류를 추가한 레지스트리로 회로를 만들 수 있습니다.
      */
+    REFLECT()
     class SW_GF_API GimmickNodeRegistry
     {
     public:
+        REFLECT_BODY();
+
         /** @brief 종류를 추가합니다. 이름이 이미 있거나, 이름의 32 비트 해시가 다른 종류와 같거나(오류 로그), 포트가 32 개를 넘거나, 상태 슬롯이 `GimmickNodeState::kMaxSlotCount` 를 넘으면 false 입니다. */
         [[nodiscard]] bool registerKind( const GimmickNodeKind& kind );
         /** @brief 이름에 해당하는 종류입니다. 없으면 nullptr 입니다. */
@@ -157,6 +160,23 @@ namespace sw
         static void registerBuiltinKinds( GimmickNodeRegistry& inoutRegistry );
 
     private:
+        /**
+         * @brief 내장 `Mover` 종류의 `mode` 매개변수입니다. 데이터는 열거자 이름(`Once` · `Loop` · `PingPong`)으로 적는다.
+         * @details 내장 Mover 만 쓰므로 private 중첩이다 — 이름 표는 리플렉션(`ENUM`)이 내고, 등록기는 위 `REFLECT_BODY()` friend 로 닿는다. 짧은 이름은 레지스트리 전역에서 하나여야 해서 `Gimmick` 을 붙인다.
+         */
+        ENUM()
+        enum class GimmickMoverMode : int32
+        {
+            Once = 0,
+            Loop,
+            PingPong
+        };
+
+        /** @brief 내장 Mover 의 초기화(`mode` · `curve` 읽기)입니다. 모르는 이름이면 이유를 적고 false 입니다. */
+        [[nodiscard]] static bool initializeMover( GimmickNodeContext& context );
+        /** @brief 내장 Mover 의 스텝입니다(`registerBuiltinKinds` 의 Mover 설명 참고). */
+        static void stepMover( GimmickNodeContext& context );
+
         NameRegistry<GimmickNodeKind> _registry{};
         /// @brief 종류 이름의 32 비트 해시 색인입니다. 회로 상태가 종류를 그 해시로 적어(`GimmickNodeState::_kind`) 같은 해시의 두 종류를 가리지 못한다 — 공용 충돌 검사 색인으로 등록에서 막는다.
         NameHashIndex<uint32> _kindHashIndex{};

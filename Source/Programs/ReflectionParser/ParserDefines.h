@@ -215,6 +215,7 @@ namespace sw
         inline constexpr const utf8* kID            = "ID";
         inline constexpr const utf8* kName          = "Name";
         inline constexpr const utf8* kFqn           = "FQN";
+        inline constexpr const utf8* kKey           = "Key"; ///< 등록기 특수화의 열쇠 — 보통 FQN, 숨은 중첩 형식이면 생성한 열쇠 구조체 이름(`CodeGenerator::makeRegistrarKey`)
         inline constexpr const utf8* kParentFqn     = "ParentFQN";
         inline constexpr const utf8* kModuleName    = "ModuleName";
         inline constexpr const utf8* kCppType       = "CppType";

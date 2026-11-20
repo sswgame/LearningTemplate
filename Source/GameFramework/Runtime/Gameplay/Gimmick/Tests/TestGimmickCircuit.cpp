@@ -587,3 +587,25 @@ SW_TEST_CASE( GimmickCircuitDefTest, SetParamReplacesAndFindReads )
     SW_EXPECT_TRUE( *node.findParam( hashed_string( "A" ) ) == "2" );
     SW_EXPECT_TRUE( node.findParam( hashed_string( "B" ) ) == nullptr );
 }
+
+/** @brief [GimmickCircuitTest] 내장 Mover 의 mode 는 열거자 이름(`GimmickMoverMode`, 철자 그대로)만 받는다 */
+SW_TEST_CASE( GimmickCircuitTest, BuiltinMoverModeReadsEnumeratorNames )
+{
+    GimmickNodeRegistry registry;
+    GimmickNodeRegistry::registerBuiltinKinds( registry );
+    for ( const utf8* pMode : { "Once", "Loop", "PingPong" } )
+    {
+        GimmickCircuitDef def;
+        def.addNode( hashed_string( "m" ), hashed_string( "Mover" ) ).setParam( hashed_string( "mode" ), pMode );
+        GimmickCircuit circuit;
+        vector<string> listError;
+        SW_EXPECT_TRUE_MSG( circuit.populate( def, registry, listError ), pMode );
+    }
+    GimmickCircuitDef def;
+    def.addNode( hashed_string( "m" ), hashed_string( "Mover" ) ).setParam( hashed_string( "mode" ), "pingpong" );
+    GimmickCircuit circuit;
+    vector<string> listError;
+    SW_EXPECT_FALSE( circuit.populate( def, registry, listError ) );
+    SW_REQUIRE_FALSE( listError.empty() );
+    SW_EXPECT_TRUE( listError[0].find( "mode must be" ) != string::npos );
+}

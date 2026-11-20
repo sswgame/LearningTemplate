@@ -125,15 +125,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 비교 줄의 상태입니다. */
-    enum class MemoryDiffStatus : uint8
-    {
-        New,    ///< 뒤 스냅숏에만 있다
-        Grown,  ///< 크기 칸이 늘었다
-        Shrunk, ///< 크기 칸이 줄었다
-        Gone,   ///< 앞 스냅숏에만 있다
-        Same    ///< 같다
-    };
+    /** @brief 비교 줄의 상태입니다. 정의(열거자 · 이름)는 `MemoryDiffStatus.h` — 열거자를 쓰는 단위만 그것을 넣는다. */
+    enum class MemoryDiffStatus : uint8;
 
     /** @brief 상태 이름입니다(표 · CSV 의 글). */
     SW_DEVTOOLS_API const utf8* getMemoryDiffStatusName( MemoryDiffStatus status );
@@ -145,7 +138,7 @@ namespace sw
         uint64           _before{ 0 };
         uint64           _after{ 0 };
         int64            _delta{ 0 }; ///< 뒤 − 앞
-        MemoryDiffStatus _status{ MemoryDiffStatus::Same };
+        MemoryDiffStatus _status{};   ///< 비교가 줄마다 채운다(`MemorySheetDiff::compare`) — 기본값을 읽는 길은 없다
     };
 
     /**

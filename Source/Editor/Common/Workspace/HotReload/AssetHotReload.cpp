@@ -11,6 +11,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "DevTools/AssetReload/ReloadSource.h"
 #include "DevTools/AssetReload/ReloadTracker.h"
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 

@@ -5,7 +5,6 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Curve/BlendCurve.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
@@ -28,13 +27,6 @@ namespace sw
             static constexpr int32  kDelayCapacity    = 16;
             static constexpr int32  kDelayQueueStart  = 4;
             static constexpr int32  kMaxElevatorFloor = 8;
-
-            enum class MoverMode : int32
-            {
-                Once = 0,
-                Loop,
-                PingPong
-            };
 
             static GimmickParamSpec makeParam( const utf8* pName, const utf8* pDefault, GimmickParamKind type = GimmickParamKind::Number )
             {
@@ -374,117 +366,6 @@ namespace sw
                 context.setOutput( 2, openness != previous );
             }
 
-            [[nodiscard]] static bool initializeMover( GimmickNodeContext& context )
-            {
-                const string& mode = context.getText( 1 );
-                if ( StringUtil::equals( mode, "Once" ) )
-                    context._pIntState[3] = static_cast<int32>( MoverMode::Once );
-                else if ( StringUtil::equals( mode, "Loop" ) )
-                    context._pIntState[3] = static_cast<int32>( MoverMode::Loop );
-                else if ( StringUtil::equals( mode, "PingPong" ) )
-                    context._pIntState[3] = static_cast<int32>( MoverMode::PingPong );
-                else
-                    return failParam( context, "mode must be Once, Loop or PingPong" );
-                BlendCurve curve{ BlendCurve::Linear };
-                if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( context.getText( 2 ) ), curve ) == false )
-                    return failParam( context, "curve is not a BlendCurve name (Linear, EaseIn, EaseOut, EaseInOut, SmoothStep, Cubic, Exponential)" );
-                context._pIntState[4] = static_cast<int32>( curve );
-                context._pIntState[1] = 1;
-                context.setOutput( 0, true );
-                return true;
-            }
-
-            /**
-             * @brief Mover 는 경로(호 길이)를 따라 speed(m/s)로 움직입니다. 입력은 Enable(수준, 연결이 없으면 autoStart), Reverse(수준), Restart(오름)이고,
-             *        출력은 AtStart, AtEnd, Moving, OnArrive 입니다. 모드는 Once, Loop, PingPong 이고, 곡선은 curve 이며, 끝에서 pause 초 동안 멈춥니다.
-             * @details 진행은 정수 스텝 p(0..P, P = ⌈길이 / 속도 / 스텝⌉)로 센다. 그래서 끝에 닿는 스텝이 정확히 정해지고 누적 오차가 없다. 거리는 곡선(p / P) × 길이이다.
-             *          상태 float[0] 은 거리, int[0] 은 p, [1] 은 방향, [2] 는 남은 멈춤, [3] 은 모드, [4] 는 곡선이다.
-             */
-            static void stepMover( GimmickNodeContext& context )
-            {
-                int32*        pState     = context._pIntState;
-                const float32 length     = context._pathLength > 0.0f ? context._pathLength : context.getNumber( 5 );
-                const float32 speed      = context.getNumber( 0 );
-                const bool    bCanMove   = length > 0.0f && speed > 0.0f && context._stepTime > 0.0f;
-                const int32   totalSteps = bCanMove ? MathUtil::max( 1, static_cast<int32>( MathUtil::ceil( length / speed / context._stepTime - MathUtil::kLooseEpsilon ) ) ) : 1;
-                if ( context.isRising( 2 ) )
-                {
-                    pState[0] = 0;
-                    pState[1] = 1;
-                    pState[2] = 0;
-                }
-                const bool      bEnabled = bCanMove && context.isInputHigh( 0, context.getNumber( 4 ) != 0.0f );
-                const bool      bReverse = context.isInput( 1 );
-                const MoverMode mode     = static_cast<MoverMode>( pState[3] );
-                bool            bMoving  = false;
-                bool            bArrive  = false;
-                if ( bEnabled && pState[2] > 0 )
-                {
-                    --pState[2];
-                }
-                else if ( bEnabled )
-                {
-                    const int32 pauseSteps = context.toSteps( context.getNumber( 3 ), 0 );
-                    switch ( mode )
-                    {
-                        case MoverMode::Once:
-                        {
-                            const int32 target = bReverse ? 0 : totalSteps;
-                            if ( pState[0] != target )
-                            {
-                                pState[0] += pState[0] < target ? 1 : -1;
-                                bMoving = true;
-                                bArrive = pState[0] == target;
-                            }
-                            break;
-                        }
-                        case MoverMode::Loop:
-                        {
-                            const int32 direction = bReverse ? -1 : 1;
-                            if ( direction > 0 && pState[0] >= totalSteps )
-                                pState[0] = 0;
-                            else if ( direction < 0 && pState[0] <= 0 )
-                                pState[0] = totalSteps;
-                            pState[0] += direction;
-                            bMoving = true;
-                            bArrive = direction > 0 ? pState[0] >= totalSteps : pState[0] <= 0;
-                            if ( bArrive )
-                                pState[2] = pauseSteps;
-                            break;
-                        }
-                        case MoverMode::PingPong:
-                        {
-                            pState[0] += pState[1];
-                            bMoving = true;
-                            if ( pState[0] >= totalSteps )
-                            {
-                                pState[0] = totalSteps;
-                                pState[1] = constant::invalid_index::kInt32;
-                                bArrive   = true;
-                                pState[2] = pauseSteps;
-                            }
-                            else if ( pState[0] <= 0 )
-                            {
-                                pState[0] = 0;
-                                pState[1] = 1;
-                                bArrive   = true;
-                                pState[2] = pauseSteps;
-                            }
-                            break;
-                        }
-                    }
-                }
-                pState[0] = MathUtil::clamp( pState[0], 0, totalSteps );
-                BlendCurveDef spec;
-                spec._curve             = static_cast<BlendCurve>( pState[4] );
-                const float32 weight    = evaluateBlendWeight( spec, static_cast<float32>( pState[0] ) / static_cast<float32>( totalSteps ) );
-                context._pFloatState[0] = bCanMove ? weight * length : 0.0f;
-                context.setOutput( 0, pState[0] <= 0 );
-                context.setOutput( 1, pState[0] >= totalSteps );
-                context.setOutput( 2, bMoving );
-                context.setOutput( 3, bArrive );
-            }
-
             [[nodiscard]] static bool initializeElevator( GimmickNodeContext& context )
             {
                 vector<float32> listFloor;
@@ -712,6 +593,112 @@ namespace sw
         return _registry.find( name );
     }
 
+    bool GimmickNodeRegistry::initializeMover( GimmickNodeContext& context )
+    {
+        GimmickMoverMode mode{ GimmickMoverMode::Once };
+        if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( context.getText( 1 ) ), mode ) == false )
+            return GimmickNodeRegistryInternal::failParam( context, "mode must be Once, Loop or PingPong" );
+        context._pIntState[3] = static_cast<int32>( mode );
+        BlendCurve curve{ BlendCurve::Linear };
+        if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( context.getText( 2 ) ), curve ) == false )
+            return GimmickNodeRegistryInternal::failParam( context, "curve is not a BlendCurve name (Linear, EaseIn, EaseOut, EaseInOut, SmoothStep, Cubic, Exponential)" );
+        context._pIntState[4] = static_cast<int32>( curve );
+        context._pIntState[1] = 1;
+        context.setOutput( 0, true );
+        return true;
+    }
+
+    /**
+     * @brief Mover 는 경로(호 길이)를 따라 speed(m/s)로 움직입니다. 입력은 Enable(수준, 연결이 없으면 autoStart), Reverse(수준), Restart(오름)이고,
+     *        출력은 AtStart, AtEnd, Moving, OnArrive 입니다. 모드는 Once, Loop, PingPong 이고, 곡선은 curve 이며, 끝에서 pause 초 동안 멈춥니다.
+     * @details 진행은 정수 스텝 p(0..P, P = ⌈길이 / 속도 / 스텝⌉)로 센다. 그래서 끝에 닿는 스텝이 정확히 정해지고 누적 오차가 없다. 거리는 곡선(p / P) × 길이이다.
+     *          상태 float[0] 은 거리, int[0] 은 p, [1] 은 방향, [2] 는 남은 멈춤, [3] 은 모드, [4] 는 곡선이다.
+     */
+    void GimmickNodeRegistry::stepMover( GimmickNodeContext& context )
+    {
+        int32*        pState     = context._pIntState;
+        const float32 length     = context._pathLength > 0.0f ? context._pathLength : context.getNumber( 5 );
+        const float32 speed      = context.getNumber( 0 );
+        const bool    bCanMove   = length > 0.0f && speed > 0.0f && context._stepTime > 0.0f;
+        const int32   totalSteps = bCanMove ? MathUtil::max( 1, static_cast<int32>( MathUtil::ceil( length / speed / context._stepTime - MathUtil::kLooseEpsilon ) ) ) : 1;
+        if ( context.isRising( 2 ) )
+        {
+            pState[0] = 0;
+            pState[1] = 1;
+            pState[2] = 0;
+        }
+        const bool             bEnabled = bCanMove && context.isInputHigh( 0, context.getNumber( 4 ) != 0.0f );
+        const bool             bReverse = context.isInput( 1 );
+        const GimmickMoverMode mode     = static_cast<GimmickMoverMode>( pState[3] );
+        bool                   bMoving  = false;
+        bool                   bArrive  = false;
+        if ( bEnabled && pState[2] > 0 )
+        {
+            --pState[2];
+        }
+        else if ( bEnabled )
+        {
+            const int32 pauseSteps = context.toSteps( context.getNumber( 3 ), 0 );
+            switch ( mode )
+            {
+                case GimmickMoverMode::Once:
+                {
+                    const int32 target = bReverse ? 0 : totalSteps;
+                    if ( pState[0] != target )
+                    {
+                        pState[0] += pState[0] < target ? 1 : -1;
+                        bMoving = true;
+                        bArrive = pState[0] == target;
+                    }
+                    break;
+                }
+                case GimmickMoverMode::Loop:
+                {
+                    const int32 direction = bReverse ? -1 : 1;
+                    if ( direction > 0 && pState[0] >= totalSteps )
+                        pState[0] = 0;
+                    else if ( direction < 0 && pState[0] <= 0 )
+                        pState[0] = totalSteps;
+                    pState[0] += direction;
+                    bMoving = true;
+                    bArrive = direction > 0 ? pState[0] >= totalSteps : pState[0] <= 0;
+                    if ( bArrive )
+                        pState[2] = pauseSteps;
+                    break;
+                }
+                case GimmickMoverMode::PingPong:
+                {
+                    pState[0] += pState[1];
+                    bMoving = true;
+                    if ( pState[0] >= totalSteps )
+                    {
+                        pState[0] = totalSteps;
+                        pState[1] = constant::invalid_index::kInt32;
+                        bArrive   = true;
+                        pState[2] = pauseSteps;
+                    }
+                    else if ( pState[0] <= 0 )
+                    {
+                        pState[0] = 0;
+                        pState[1] = 1;
+                        bArrive   = true;
+                        pState[2] = pauseSteps;
+                    }
+                    break;
+                }
+            }
+        }
+        pState[0] = MathUtil::clamp( pState[0], 0, totalSteps );
+        BlendCurveDef spec;
+        spec._curve             = static_cast<BlendCurve>( pState[4] );
+        const float32 weight    = evaluateBlendWeight( spec, static_cast<float32>( pState[0] ) / static_cast<float32>( totalSteps ) );
+        context._pFloatState[0] = bCanMove ? weight * length : 0.0f;
+        context.setOutput( 0, pState[0] <= 0 );
+        context.setOutput( 1, pState[0] >= totalSteps );
+        context.setOutput( 2, bMoving );
+        context.setOutput( 3, bArrive );
+    }
+
     void GimmickNodeRegistry::registerBuiltinKinds( GimmickNodeRegistry& inoutRegistry )
     {
         using Internal                          = GimmickNodeRegistryInternal;
@@ -762,7 +749,7 @@ namespace sw
                                         { Internal::makeParam( "speed", "1" ), Internal::makeParam( "mode", "Once", kT ), Internal::makeParam( "curve", "Linear", kT ),
                                           Internal::makeParam( "pause", "0" ), Internal::makeParam( "autoStart", "1" ), Internal::makeParam( "length", "0" ),
                                           Internal::makeParam( "faceForward", "0" ) },
-                                        1, 5, &Internal::initializeMover, &Internal::stepMover ),
+                                        1, 5, &GimmickNodeRegistry::initializeMover, &GimmickNodeRegistry::stepMover ),
             Internal::makeKind( "Elevator", kA, { "Up", "Down", "Call0", "Call1", "Call2", "Call3" }, { "Moving", "OnArrive", "AtBottom", "AtTop" },
                                         { Internal::makeParam( "floors", "0 4", kT ), Internal::makeParam( "speed", "2" ), Internal::makeParam( "startFloor", "0" ),
                                           Internal::makeParam( "axis", "0 1 0", kV ) },

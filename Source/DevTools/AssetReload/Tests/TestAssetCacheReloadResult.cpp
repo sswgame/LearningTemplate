@@ -5,6 +5,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "DevTools/AssetReload/ReloadSource.h"
 #include "DevTools/AssetReload/ReloadTracker.h"
 
 #include "Engine/Asset/AssetManager.h"

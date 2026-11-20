@@ -13,6 +13,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "DevTools/AssetReload/ReloadSource.h"
 #include "DevTools/AssetReload/ReloadTracker.h"
 #include "DevTools/FileWatch/IFileWatcher.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleCallGuard.h"

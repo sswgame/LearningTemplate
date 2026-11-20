@@ -1,6 +1,6 @@
 	// ── $FQN ──────────────────────────────
 	template <>
-	struct Registrar<$FQN>
+	struct Registrar<$Key>
 	{
 		using E = ::$FQN;
 

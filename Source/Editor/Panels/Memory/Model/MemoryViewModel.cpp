@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "DevTools/Profiling/Memory/MemoryDiffStatus.h"
 #include "DevTools/Profiling/Memory/MemorySnapshotSources.h"
 
 #include "Editor/Common/Workspace/EditorStateStore.h"

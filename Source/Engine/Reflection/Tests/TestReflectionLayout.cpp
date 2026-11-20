@@ -298,6 +298,30 @@ SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerClass )
 }
 
 /**
+ * @brief [ReflectionInnerTypesTest] private 중첩 구조체 · 열거형도 등록되고, 바깥 형식의 칸으로 값을 읽는다
+ */
+SW_TEST_CASE( ReflectionInnerTypesTest, FindHiddenNestedTypes )
+{
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const sw::TypeInfo*     pRecord  = registry.findType( sw::hashed_string( "sw::InnerNamespaceForTest::HiddenNestedOwner::HiddenNestedRecord" ) );
+    SW_REQUIRE_TRUE( pRecord != nullptr );
+    SW_EXPECT_TRUE( pRecord->findProperty( sw::hashed_string( "_count" ) ) != nullptr );
+    const sw::EnumInfo* pMode = registry.findEnum( sw::hashed_string( "sw::InnerNamespaceForTest::HiddenNestedOwner::HiddenNestedMode" ) );
+    SW_REQUIRE_TRUE( pMode != nullptr );
+    SW_EXPECT_EQUAL( sw::string( "Busy" ), sw::string( pMode->valueToCString( 1 ) ) );
+
+    const sw::TypeInfo* pOwner = registry.findType( sw::hashed_string( "sw::InnerNamespaceForTest::HiddenNestedOwner" ) );
+    SW_REQUIRE_TRUE( pOwner != nullptr );
+    const sw::PropertyInfo* pRecordProp = pOwner->findProperty( sw::hashed_string( "_record" ) );
+    SW_REQUIRE_TRUE( pRecordProp != nullptr );
+    const sw::InnerNamespaceForTest::HiddenNestedOwner owner;
+    const sw::PropertyInfo*                            pCountProp = pRecord->findProperty( sw::hashed_string( "_count" ) );
+    SW_REQUIRE_TRUE( pCountProp != nullptr );
+    const void* pRecordValue = pRecordProp->getValuePtr<char>( &owner );
+    SW_EXPECT_EQUAL( 7, *pCountProp->getValuePtr<int32>( pRecordValue ) );
+}
+
+/**
  * @brief [ReflectionInnerTypesTest] 내부 enum 조회
  */
 SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerEnum )
