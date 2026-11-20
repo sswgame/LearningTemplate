@@ -7,6 +7,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -133,7 +134,9 @@ namespace sw
                 const string path = context.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, AutomationFrameStats::toJSON( summary, path ) ) == false )
                 {
-                    context.recordFailure( step, "could not write the frame stats to " + path );
+                    StringBuilder<constant::buffer::kMax1024> text;
+                    text.appendFormat( "could not write the frame stats to %#", path );
+                    context.recordFailure( step, text.view() );
                     return true;
                 }
                 SW_LOG_INFO_ID( "AutomationFrameStats.FrameStatsFramesAvg", "[Scenario] frame stats: %# frames, avg %# ms (%# fps), p95 %# ms, p99 %# ms, max %# ms -> %#", summary._frameCount, summary._averageMilliseconds,

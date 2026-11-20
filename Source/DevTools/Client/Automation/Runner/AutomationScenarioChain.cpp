@@ -55,7 +55,9 @@ namespace sw
         if ( reportPath.empty() || stageCount <= 1 )
             return string( reportPath );
         // 확장자 앞에 단계 번호를 넣는다(폴더 이름의 점은 FileUtil 이 확장자로 읽지 않는다).
-        return FileUtil::removeExtension( reportPath ) + "." + to_string( stageIndex + 1 ) + FileUtil::getExtension( reportPath );
+        StringBuilder<constant::buffer::kMax1024> path;
+        path.appendFormat( "%#.%#%#", FileUtil::removeExtension( reportPath ), static_cast<uint64>( stageIndex + 1 ), FileUtil::getExtension( reportPath ) );
+        return string( path.view() );
     }
 
     void AutomationScenarioChain::begin( vector<string> listPath, bool bKeepGoing, uint32 repeatedFailureLimit )
@@ -81,7 +83,11 @@ namespace sw
             return false;
         const AutomationResult result = runResult.getResult();
         if ( runResult.isFailure() )
-            _listFailedStageLine.push_back( to_string( _stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + string( scenarioName ) + ": " + runResult.describe() );
+        {
+            StringBuilder<constant::buffer::kMax256> line;
+            line.appendFormat( "%#/%# %#: %#", static_cast<uint64>( _stageIndex + 1 ), static_cast<uint64>( _listPath.size() ), scenarioName, runResult.describe() );
+            _listFailedStageLine.emplace_back( line.view() );
+        }
         const bool bHasNext      = _stageIndex + 1 < _listPath.size();
         const bool bRepeatedStop = runResult.isFailure() && countRepeat( runResult );
         if ( _bKeepGoing && result == AutomationResult::Skipped )
@@ -118,7 +124,9 @@ namespace sw
     {
         if ( runResult.getRepeatKey().empty() )
             return false;
-        const string key    = string( getEnumName( runResult.getFailureKind() ) ) + " " + runResult.getRepeatKey();
+        StringBuilder<constant::buffer::kMax256> keyBuilder;
+        keyBuilder.appendFormat( "%# %#", getEnumName( runResult.getFailureKind() ), runResult.getRepeatKey() );
+        const string key    = string( keyBuilder.view() );
         RepeatCount* pFound = nullptr;
         for ( RepeatCount& repeat : _listRepeatCount )
         {
@@ -133,27 +141,26 @@ namespace sw
         ++pFound->_count;
         if ( pFound->_count < _repeatedFailureLimit )
             return false;
-        _repeatedFailureLine = string( getEnumName( AutomationFailureKind::RepeatedFailure ) ) + " - " + key + " x" + to_string( pFound->_count );
-        _listFailedStageLine.push_back( _repeatedFailureLine + " - chain stopped" );
+        StringBuilder<constant::buffer::kMax256> line;
+        line.appendFormat( "%# - %# x%#", getEnumName( AutomationFailureKind::RepeatedFailure ), key, pFound->_count );
+        _repeatedFailureLine = string( line.view() );
+        line.append( " - chain stopped" );
+        _listFailedStageLine.emplace_back( line.view() );
         return true;
     }
 
     string AutomationScenarioChain::describeStageEnd( size_t stageIndex, const AutomationRunResult& runResult, string_view scenarioName ) const
     {
-        const AutomationResult result = runResult.getResult();
-        string                 text   = "chain stage " + to_string( stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + getEnumName( result ) + " (" +
-                      string( scenarioName ) + ")";
+        const AutomationResult                   result = runResult.getResult();
+        StringBuilder<constant::buffer::kMax256> text;
+        text.appendFormat( "chain stage %#/%# %# (%#)", static_cast<uint64>( stageIndex + 1 ), static_cast<uint64>( _listPath.size() ), getEnumName( result ), scenarioName );
         // 진 단계 · 건너뛴 단계는 판정 값 한 줄이 까닭이다 — 끝 단계 이름이 까닭으로 남는 길이 없다.
         if ( const string line = runResult.describe(); line.empty() == false )
-            text += ": " + line;
+            text.appendFormat( ": %#", line );
         if ( result != AutomationResult::Passed && _skippedStageCount > 0 )
-        {
-            StringBuilder<constant::buffer::kMax256> textPart;
-            textPart.appendFormat( " - %# later stage(s) skipped", _skippedStageCount );
-            text += textPart.c_str();
-        }
+            text.appendFormat( " - %# later stage(s) skipped", _skippedStageCount );
         if ( result != AutomationResult::Passed && _repeatedFailureLine.empty() == false && _bFinished == SW_TRUE )
-            text += " - " + _repeatedFailureLine;
-        return text;
+            text.appendFormat( " - %#", _repeatedFailureLine );
+        return string( text.view() );
     }
 } // namespace sw

@@ -5,8 +5,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/formatString.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/EngineFrameHooks.h"
@@ -20,62 +20,35 @@ namespace sw
 {
     string AutomationRunTitleInput::makeSummary( const AutomationRunTitleInput& input )
     {
-        string summary;
+        StringBuilder<constant::buffer::kMax256> summary;
         if ( input._scenarioName.empty() == false )
-        {
-            summary += input._scenarioName;
-        }
+            summary.append( string_view{ input._scenarioName } );
+        else if ( input._benchSummary.empty() == false )
+            summary.appendFormat( "bench %#", input._benchSummary );
         else
-        {
-            summary += "bench";
-            if ( input._benchSummary.empty() == false )
-            {
-                summary += ' ';
-                summary += input._benchSummary;
-            }
-        }
+            summary.append( "bench" );
         if ( input._backendName.empty() == false )
-        {
-            summary += " \xC2\xB7 "; // " · "
-            summary += input._backendName;
-        }
+            summary.appendFormat( " \xC2\xB7 %#", input._backendName ); // " · "
         if ( input._scenarioName.empty() == false && input._stepKind.empty() == false )
-        {
-            utf8 arrStep[constant::buffer::kMax64];
-            formatstring( arrStep, constant::buffer::kMax64, " \xC2\xB7 step %# ", input._stepNumber );
-            summary += arrStep;
-            summary += input._stepKind;
-        }
-        utf8 arrFrame[constant::buffer::kMax64];
-        formatstring( arrFrame, constant::buffer::kMax64, " \xC2\xB7 f%#", input._frame );
-        summary += arrFrame;
-        return summary;
+            summary.appendFormat( " \xC2\xB7 step %# %#", input._stepNumber, input._stepKind );
+        summary.appendFormat( " \xC2\xB7 f%#", input._frame );
+        return string( summary.view() );
     }
 
     string AutomationRunTitleInput::makeWindowTitle( const AutomationRunTitleInput& input )
     {
-        string title;
+        StringBuilder<constant::buffer::kMax256> title;
         if ( input._baseTitle.empty() == false )
-        {
-            title += input._baseTitle;
-            title += " \xE2\x80\x94 "; // " — "
-        }
-        title += makeSummary( input );
-        return truncateUTF8( title, kMaxTitleBytes );
+            title.appendFormat( "%# \xE2\x80\x94 ", input._baseTitle ); // " — "
+        title.append( string_view{ makeSummary( input ) } );
+        return truncateUTF8( title.view(), kMaxTitleBytes );
     }
 
     string AutomationRunTitleInput::makeStepLogLine( string_view scenarioName, uint32 stepNumber, string_view stepKind, uint32 frame )
     {
-        string line = "[Scenario] ";
-        line += scenarioName;
-        utf8 arrStep[constant::buffer::kMax64];
-        formatstring( arrStep, constant::buffer::kMax64, " step %# ", stepNumber );
-        line += arrStep;
-        line += stepKind;
-        utf8 arrFrame[constant::buffer::kMax64];
-        formatstring( arrFrame, constant::buffer::kMax64, " frame %#", frame );
-        line += arrFrame;
-        return line;
+        StringBuilder<constant::buffer::kMax256> line;
+        line.appendFormat( "[Scenario] %# step %# %# frame %#", scenarioName, stepNumber, stepKind, frame );
+        return string( line.view() );
     }
 
     namespace
@@ -170,15 +143,28 @@ namespace sw
         }
         const auto hasInOriginal = [&]( string_view name )
         { return Rules::hasName( input._listOriginalArgument, name ); };
+        // 경로가 들 수 있어(-scenario=) 잘리지 않게 StringBuilder 로 만든다.
+        StringBuilder<constant::buffer::kMax1024> namedArgument;
         if ( input._game.empty() == false && hasInOriginal( "game" ) == false )
-            appendArgument( command, "-game=" + input._game );
+        {
+            namedArgument.appendFormat( "-game=%#", input._game );
+            appendArgument( command, namedArgument.view() );
+        }
         const bool bBackendInArgs = std::any_of( std::begin( Rules::kArrBackendName ), std::end( Rules::kArrBackendName ), hasInOriginal );
         if ( input._backendName.empty() == false && bBackendInArgs == false )
-            appendArgument( command, "-gv_rhiBackend=" + input._backendName );
+        {
+            namedArgument.clear();
+            namedArgument.appendFormat( "-gv_rhiBackend=%#", input._backendName );
+            appendArgument( command, namedArgument.view() );
+        }
         if ( input._bEditor && hasInOriginal( "EnableEditor" ) == false )
             appendArgument( command, "-EnableEditor" );
         if ( bScenarioInArgs == false )
-            appendArgument( command, "-scenario=" + input._scenarioArgument );
+        {
+            namedArgument.clear();
+            namedArgument.appendFormat( "-scenario=%#", input._scenarioArgument );
+            appendArgument( command, namedArgument.view() );
+        }
         if ( input._bKeepGoing && hasInOriginal( "scenario-keep-going" ) == false )
             appendArgument( command, "-scenario-keep-going" );
         for ( const string& extra : input._listExtraArgument )
@@ -248,10 +234,9 @@ namespace sw
                     string value;
                     if ( pCommandLine->findPendingGlobalValue( name, value ) == false )
                         continue;
-                    string pair = name;
-                    pair += '=';
-                    pair += value;
-                    listPair.push_back( std::move( pair ) );
+                    StringBuilder<constant::buffer::kMax256> pair;
+                    pair.appendFormat( "%#=%#", name, value );
+                    listPair.emplace_back( pair.view() );
                 }
                 _benchSummary = AutomationRunTitleInput::makeBenchSummary( std::move( listPair ) );
             }

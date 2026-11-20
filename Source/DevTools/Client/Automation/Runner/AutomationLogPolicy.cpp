@@ -3,6 +3,7 @@
 #include "DevTools/Client/Automation/Runner/AutomationLogPolicy.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationRunnerParams.h"
@@ -84,7 +85,13 @@ namespace sw
             ++inoutResult._missingIDCount;
         else
             ++inoutResult._notAllowedCount;
-        const string idText = bMissingID ? string( "(no log id)" ) : "(id=" + string( id ) + ")";
-        inoutResult._listUnhandled.push_back( string( level == LogLevel::Error ? "[Error] " : "[Warning] " ) + idText + " " + string( message ) );
+        StringBuilder<constant::buffer::kMax256> line;
+        line.append( level == LogLevel::Error ? "[Error] " : "[Warning] " );
+        if ( bMissingID )
+            line.append( "(no log id)" );
+        else
+            line.appendFormat( "(id=%#)", id );
+        line.appendFormat( " %#", message );
+        inoutResult._listUnhandled.emplace_back( line.view() );
     }
 } // namespace sw

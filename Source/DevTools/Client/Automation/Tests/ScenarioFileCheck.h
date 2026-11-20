@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/Client/Automation/Scenario/AutomationStepValidation.h"
@@ -19,14 +20,11 @@ namespace sw::test
     /** @brief 통과면 빈 글, 아니면 `<앞머리>: <오류>` 입니다 — 실패 글에 어느 파일 · 단계인지 쓴다. */
     inline string makeScenarioFailureText( bool bPassed, string_view prefix, string_view error )
     {
-        string text;
-        if ( bPassed == false )
-        {
-            text += prefix;
-            text += ": ";
-            text += error;
-        }
-        return text;
+        if ( bPassed )
+            return string();
+        StringBuilder<constant::buffer::kMax256> text;
+        text.appendFormat( "%#: %#", prefix, error );
+        return string( text.view() );
     }
 
     /** @brief `makeScenarioFailureText` 의 결과 형식 판입니다. */
@@ -60,11 +58,14 @@ namespace sw::test
             const string path( scenarioID.view() );
             string       text;
             SW_EXPECT_TRUE( AssetIO::readTextAsset( scenarioID, text ) );
-            AutomationScenario   scenario;
-            string               error;
-            const expected<void> parsed  = scenario.parse( text, path );
-            const bool           bParsed = parsed.has_value();
-            SW_EXPECT_EQUAL( string(), makeScenarioFailureText( bParsed, path, bParsed ? string() : string( parsed.error().message().data(), parsed.error().message().size() ) + ": " + string( parsed.error().detail().data(), parsed.error().detail().size() ) ) );
+            AutomationScenario                       scenario;
+            string                                   error;
+            const expected<void>                     parsed  = scenario.parse( text, path );
+            const bool                               bParsed = parsed.has_value();
+            StringBuilder<constant::buffer::kMax256> parseError;
+            if ( bParsed == false )
+                parseError.appendFormat( "%#: %#", parsed.error().message(), parsed.error().detail() );
+            SW_EXPECT_EQUAL( string(), makeScenarioFailureText( bParsed, path, parseError.view() ) );
             if ( bParsed == false )
                 continue;
             SW_EXPECT_EQUAL( string(), makeScenarioFailureText( AutomationStepValidation::validateDesktopSteps( scenario ), path ) );
@@ -75,16 +76,20 @@ namespace sw::test
             for ( const AutomationStep& step : scenario.getSteps() )
             {
                 // 엔진이 서 있고 모든 모듈(게임 · 키트)이 올라왔다 — 이름(단계 · 감시 값 · 전역 변수 · 개발 명령 · 입력 슬롯)을 모르면 그것이 오류다.
-                string                         unresolvedName;
-                const AutomationStepDependency dependency = AutomationStepValidation::findUnresolvedDependency( step, unresolvedName );
-                const bool                     bResolved  = dependency == AutomationStepDependency::Resolved;
-                SW_EXPECT_EQUAL( string(), makeScenarioFailureText( bResolved, path + " " + step.describe(), string( AutomationStepValidation::getDependencyLabel( dependency ) ) + " '" + unresolvedName + "'" ) );
+                string                                    unresolvedName;
+                const AutomationStepDependency            dependency = AutomationStepValidation::findUnresolvedDependency( step, unresolvedName );
+                const bool                                bResolved  = dependency == AutomationStepDependency::Resolved;
+                StringBuilder<constant::buffer::kMax1024> location;
+                location.appendFormat( "%# %#", path, step.describe() );
+                StringBuilder<constant::buffer::kMax256> dependencyError;
+                dependencyError.appendFormat( "%# '%#'", AutomationStepValidation::getDependencyLabel( dependency ), unresolvedName );
+                SW_EXPECT_EQUAL( string(), makeScenarioFailureText( bResolved, location.view(), dependencyError.view() ) );
                 if ( bResolved == false )
                     continue;
                 AutomationStepValidateFunction pfnValidate = nullptr;
                 if ( AutomationStepValidation::findValidator( step._kind, pfnValidate ) != AutomationValidatorResult::Found )
                     continue;
-                SW_EXPECT_EQUAL( string(), makeScenarioFailureText( pfnValidate( step ), path + " " + step.describe() ) );
+                SW_EXPECT_EQUAL( string(), makeScenarioFailureText( pfnValidate( step ), location.view() ) );
             }
         }
         return listScenario.empty() == false;

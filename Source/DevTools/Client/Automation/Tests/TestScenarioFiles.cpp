@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -14,14 +15,19 @@ using namespace sw;
 // 실행 없이 모든 시나리오를 실행기의 읽기 · 단계 검사(`AutomationRunner::prepare` 앞부분)에 넣는다 — 엔진과 활성 게임의 자동화 폴더(하위 폴더 포함).
 SW_TEST_CASE( ScenarioFilesTest, AllScenariosParseResolveAndValidate )
 {
-    const IModuleLoader* const pModuleLoader = engine::findSubsystem<IModuleLoader>(); // 선택: 호스트 없는 하니스에는 없다 — 모듈을 요구하는 시나리오는 이름 검사를 건너뛴다
-    const string               gameFolder    = "game/" + StringUtil::toLower( GameSelection::getName().c_str() ) + "/automation";
+    const IModuleLoader* const               pModuleLoader = engine::findSubsystem<IModuleLoader>(); // 선택: 호스트 없는 하니스에는 없다 — 모듈을 요구하는 시나리오는 이름 검사를 건너뛴다
+    StringBuilder<constant::buffer::kMax256> gameFolder;
+    gameFolder.appendFormat( "game/%#/automation", StringUtil::toLower( GameSelection::getName().c_str() ) );
     SW_EXPECT_TRUE( test::validateScenarioFolder( "engine/automation", pModuleLoader ) );
     (void)test::validateScenarioFolder( "engine/automation/rhiswap", pModuleLoader ); // 조건이 붙은 시나리오(네 백엔드) — 없어도 된다
-    (void)test::validateScenarioFolder( gameFolder, pModuleLoader );                  // 시나리오가 없는 게임도 있다
-    (void)test::validateScenarioFolder( gameFolder + "/desktop", pModuleLoader );     // 혼자 도는 데스크톱 시나리오(Test/Scenario 가 따로 등록한다)
-    (void)test::validateScenarioFolder( gameFolder + "/sequence", pModuleLoader );    // 두 번 기동 쌍
-    (void)test::validateScenarioFolder( gameFolder + "/showcase", pModuleLoader );    // 따로 띄우는 쇼케이스 씬
+    (void)test::validateScenarioFolder( gameFolder.view(), pModuleLoader );           // 시나리오가 없는 게임도 있다
+    // desktop: 혼자 도는 데스크톱 시나리오(Test/Scenario 가 따로 등록한다), sequence: 두 번 기동 쌍, showcase: 따로 띄우는 쇼케이스 씬
+    for ( const string_view subFolder : { "desktop", "sequence", "showcase" } )
+    {
+        StringBuilder<constant::buffer::kMax256> folder;
+        folder.appendFormat( "%#/%#", gameFolder.view(), subFolder );
+        (void)test::validateScenarioFolder( folder.view(), pModuleLoader );
+    }
 }
 
 // `<ExpectImage>` 는 시나리오 끝에서 판정한다 - 같은 파일을 두 번 찍으면 앞 단언이 뒤 그림을 보므로 읽을 때 거절한다.
@@ -96,8 +102,9 @@ namespace ScenarioFilesTestUtil
     /** @brief `<WaitUntil>` 한 줄(@p attributes 는 watch · 시한 뒤에 붙는 비교)을 읽어 실행기와 같은 단계 검사에 넣습니다. */
     expected<void> validateWaitUntil( const string& attributes, AutomationScenario& outScenario )
     {
-        const string         text   = "<Scenario name=\"test.increase\" fixedDelta=\"0.0166667\"><WaitUntil watch=\"Scene.ObjectCount\" timeoutFrames=\"10\" " + attributes + "/><Pass/></Scenario>";
-        const expected<void> parsed = outScenario.parse( text, "test.scenario.xml" );
+        StringBuilder<constant::buffer::kMax256> text;
+        text.appendFormat( "<Scenario name=\"test.increase\" fixedDelta=\"0.0166667\"><WaitUntil watch=\"Scene.ObjectCount\" timeoutFrames=\"10\" %#/><Pass/></Scenario>", attributes );
+        const expected<void> parsed = outScenario.parse( text.view(), "test.scenario.xml" );
         if ( parsed.has_value() == false )
             return parsed;
         AutomationStepValidateFunction pfnValidate = nullptr;

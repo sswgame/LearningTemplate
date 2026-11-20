@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -159,16 +160,9 @@ namespace sw
 
     string AutomationGoldenUtil::makeGoldenID( string_view folderID, string_view scenarioName, string_view goldenName, string_view backendTag, string_view platformTag )
     {
-        string id( folderID );
-        id += "/";
-        id += scenarioName;
-        id += ".";
-        id += goldenName;
-        id += ".";
-        id += backendTag;
-        id += platformTag;
-        id += AutomationGoldenInternal::kImageExtension;
-        return id;
+        StringBuilder<constant::buffer::kMax1024> id;
+        id.appendFormat( "%#/%#.%#.%#%#%#", folderID, scenarioName, goldenName, backendTag, platformTag, AutomationGoldenInternal::kImageExtension );
+        return string( id.view() );
     }
 
     string AutomationGoldenUtil::makeMetaID( string_view goldenID )

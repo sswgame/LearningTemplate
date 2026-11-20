@@ -4,6 +4,7 @@
 #include "Core/File/UserDataPath.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
@@ -44,15 +45,26 @@ namespace
 SW_TEST_CASE( AutomationUserDataRootTest, OnlyRootsUnderTheAutomationFolderPass )
 {
     const sw::string base = sw::AutomationUserDataRoot::getBaseFolder();
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateUnderBase( base + "/Runs/12-34/userdata", base ).has_value() );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateUnderBase( base + "/Runs/12-34/dx12/userdata", base ).has_value() );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateUnderBase( base + "/UserData/sequence.velmora.carry/", base ).has_value() );
+    // 판정할 뿌리를 `<base><꼬리>` 로 만든다 — 경로라 잘리지 않게 StringBuilder 를 쓴다.
+    sw::StringBuilder<sw::constant::buffer::kMax1024> root;
+    for ( const sw::string_view tail : { "/Runs/12-34/userdata", "/Runs/12-34/dx12/userdata", "/UserData/sequence.velmora.carry/" } )
+    {
+        root.clear();
+        root.appendFormat( "%#%#", base, tail );
+        SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateUnderBase( root.view(), base ).has_value() );
+    }
 
     SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( base, base ).has_value() );
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( base + "2/Runs/12-34", base ).has_value() );
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( base + "/../../../escaped", base ).has_value() );
+    for ( const sw::string_view tail : { "2/Runs/12-34", "/../../../escaped" } )
+    {
+        root.clear();
+        root.appendFormat( "%#%#", base, tail );
+        SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( root.view(), base ).has_value() );
+    }
     SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( "Saved/Automation/Runs/12-34/userdata", base ).has_value() );
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( sw::FileUtil::getDirectoryPart( base ) + "/Other", base ).has_value() );
+    root.clear();
+    root.appendFormat( "%#/Other", sw::FileUtil::getDirectoryPart( base ) );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateUnderBase( root.view(), base ).has_value() );
 }
 
 /**
@@ -61,8 +73,10 @@ SW_TEST_CASE( AutomationUserDataRootTest, OnlyRootsUnderTheAutomationFolderPass 
  */
 SW_TEST_CASE( AutomationUserDataRootTest, CaseOnlyDifferenceFollowsTheOSRule )
 {
-    const sw::string base       = sw::AutomationUserDataRoot::getBaseFolder(); // `.../Saved/Automation`
-    const sw::string otherCased = sw::FileUtil::getDirectoryPart( base ) + "/automation/Runs/12-34";
+    const sw::string                                  base = sw::AutomationUserDataRoot::getBaseFolder(); // `.../Saved/Automation`
+    sw::StringBuilder<sw::constant::buffer::kMax1024> otherCasedBuilder;
+    otherCasedBuilder.appendFormat( "%#/automation/Runs/12-34", sw::FileUtil::getDirectoryPart( base ) );
+    const sw::string_view otherCased = otherCasedBuilder.view();
 #if defined( SW_PLATFORM_WINDOWS )
     SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateUnderBase( otherCased, base ).has_value() );
 #elif defined( SW_PLATFORM_POSIX )
@@ -78,13 +92,21 @@ SW_TEST_CASE( AutomationUserDataRootTest, CaseOnlyDifferenceFollowsTheOSRule )
  */
 SW_TEST_CASE( AutomationUserDataRootTest, StatePathsMayNotPointAtThePersonFolders )
 {
-    const sw::string             base   = sw::AutomationUserDataRoot::getBaseFolder();
-    const sw::string             person = sw::FileUtil::getDirectoryPart( base ) + "/PersonEditor";
+    const sw::string                                  base = sw::AutomationUserDataRoot::getBaseFolder();
+    sw::StringBuilder<sw::constant::buffer::kMax1024> path;
+    path.appendFormat( "%#/PersonEditor", sw::FileUtil::getDirectoryPart( base ) );
+    const sw::string             person( path.view() );
     const sw::vector<sw::string> listPerson{ person };
     SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateStatePath( "gv_editorStateDir", person, listPerson ).has_value() );
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateStatePath( "gv_userSettingsFile", person + "/usersettings.json", listPerson ).has_value() );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateStatePath( "gv_editorStateDir", person + "2", listPerson ).has_value() );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateStatePath( "gv_editorStateDir", base + "/statedir.layout", listPerson ).has_value() );
+    path.clear();
+    path.appendFormat( "%#/usersettings.json", person );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::validateStatePath( "gv_userSettingsFile", path.view(), listPerson ).has_value() );
+    path.clear();
+    path.appendFormat( "%#2", person );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateStatePath( "gv_editorStateDir", path.view(), listPerson ).has_value() );
+    path.clear();
+    path.appendFormat( "%#/statedir.layout", base );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::validateStatePath( "gv_editorStateDir", path.view(), listPerson ).has_value() );
     SW_EXPECT_FALSE( sw::AutomationUserDataRoot::makePersonFolders().empty() ); // 적어도 `Saved/Editor`
 
     const sw::optional<sw::string> shared = sw::AutomationUserDataRoot::findSharedStateArgument( { "-unattended", "-gv_editorStateDir=C:/x", "-gv_firstScene=a" } );
@@ -99,20 +121,29 @@ SW_TEST_CASE( AutomationUserDataRootTest, StatePathsMayNotPointAtThePersonFolder
  */
 SW_TEST_CASE( AutomationUserDataRootTest, SessionRejectsRootOutsideTheAutomationFolder )
 {
-    ScopedUserDataRoot restore;
-    const sw::string   platformFolder = sw::UserDataPath::findPlatformDataDirectory( "" );
-    const sw::string   outside        = platformFolder.empty() ? sw::string( sw::FileUtil::getDirectoryPart( sw::AutomationUserDataRoot::getBaseFolder() ) + "/Other" ) : platformFolder;
+    ScopedUserDataRoot                                restore;
+    const sw::string                                  platformFolder = sw::UserDataPath::findPlatformDataDirectory( "" );
+    sw::StringBuilder<sw::constant::buffer::kMax1024> path;
+    if ( platformFolder.empty() )
+        path.appendFormat( "%#/Other", sw::FileUtil::getDirectoryPart( sw::AutomationUserDataRoot::getBaseFolder() ) );
+    else
+        path.append( sw::string_view{ platformFolder } );
+    const sw::string outside( path.view() );
 
     SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( sw::kUserDataRootVariable, outside ) );
     SW_EXPECT_FALSE( sw::AutomationUserDataRoot::resolve( false ).has_value() );
     const sw::expected<sw::string> allowed = sw::AutomationUserDataRoot::resolve( true );
     SW_EXPECT_TRUE( allowed.has_value() && *allowed == outside );
 
-    const sw::string inside = sw::AutomationUserDataRoot::getBaseFolder() + "/unit_test_root";
+    path.clear();
+    path.appendFormat( "%#/unit_test_root", sw::AutomationUserDataRoot::getBaseFolder() );
+    const sw::string inside( path.view() );
     SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( sw::kUserDataRootVariable, inside ) );
     const sw::expected<sw::string> accepted = sw::AutomationUserDataRoot::resolve( false );
     SW_EXPECT_TRUE( accepted.has_value() && *accepted == inside );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::makeRunUserDataRoot( inside ) == sw::string( inside + "/userdata" ) );
+    path.clear();
+    path.appendFormat( "%#/userdata", inside );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::makeRunUserDataRoot( inside ) == sw::string( path.view() ) );
 }
 
 /**

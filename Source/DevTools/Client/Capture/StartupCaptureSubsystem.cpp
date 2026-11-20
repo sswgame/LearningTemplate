@@ -211,9 +211,9 @@ namespace sw
         string path{ gv_screenshot.get() };
         if ( shotTotal > 1u )
         {
-            StringBuilder<constant::buffer::kMax16> suffix;
-            suffix.appendFormat( "_%03u", _shotCount );
-            path = FileUtil::removeExtension( path ) + suffix.c_str() + FileUtil::getExtension( path );
+            StringBuilder<constant::buffer::kMax1024> numbered;
+            numbered.appendFormat( "%#_%03u%#", FileUtil::removeExtension( path ), _shotCount, FileUtil::getExtension( path ) );
+            path = string( numbered.view() );
         }
         ++_shotCount;
         // 중간 단계를 보고 싶다고 첨부 이름을 지정했으면 그 렌더 타깃을, 아니면 화면에 나간 이미지를 읽는다.

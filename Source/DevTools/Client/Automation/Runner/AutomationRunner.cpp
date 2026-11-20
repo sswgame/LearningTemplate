@@ -236,9 +236,10 @@ namespace sw
         _reportWriter.setReportPath( reportPath );
         if ( const expected<void> loaded = _scenario.loadFromPath( assetID ); loaded.has_value() == false )
         {
-            const string error = string( loaded.error().message().data(), loaded.error().message().size() ) + ": " + string( loaded.error().detail().data(), loaded.error().detail().size() );
-            SW_LOG_ERROR_ID( "Automation.CouldNotLoad", "[Scenario] could not load '%#': %#", string( scenarioPath ).c_str(), error.c_str() );
-            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, error, {} ) );
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: %#", loaded.error().message(), loaded.error().detail() );
+            SW_LOG_ERROR_ID( "Automation.CouldNotLoad", "[Scenario] could not load '%#': %#", scenarioPath, error.view() );
+            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, error.view(), {} ) );
             return;
         }
         _outputDirectory  = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
@@ -276,7 +277,9 @@ namespace sw
             _startSceneLoad = sceneManager.requestLoadFuture( _startScenePath, SceneLoadKind::Travel );
             if ( _startSceneLoad.isValid() == false )
             {
-                finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, "the start scene '" + _startScenePath + "' could not be requested", {} ) );
+                StringBuilder<constant::buffer::kMax256> reason;
+                reason.appendFormat( "the start scene '%#' could not be requested", _startScenePath );
+                finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, reason.view(), {} ) );
                 return true;
             }
             SW_LOG_INFO_ID( "Automation.OpeningStartScene", "[Scenario] %#: opening the start scene %#", _scenario.getName().c_str(), _startScenePath.c_str() );
@@ -287,7 +290,9 @@ namespace sw
         const Scene* const pLoaded = _startSceneLoad.get();
         if ( pLoaded == nullptr )
         {
-            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, "the start scene '" + _startScenePath + "' failed to load (see the log)", {} ) );
+            StringBuilder<constant::buffer::kMax256> reason;
+            reason.appendFormat( "the start scene '%#' failed to load (see the log)", _startScenePath );
+            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, reason.view(), {} ) );
             return true;
         }
         if ( sceneManager.getActiveScene() != pLoaded )
@@ -302,7 +307,9 @@ namespace sw
         _reportWriter.setReportPath( reportPath );
         if ( const expected<void> parsed = _scenario.parse( xmlText, "<text>" ); parsed.has_value() == false )
         {
-            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, string( parsed.error().message().data(), parsed.error().message().size() ) + ": " + string( parsed.error().detail().data(), parsed.error().detail().size() ), {} ) );
+            StringBuilder<constant::buffer::kMax256> reason;
+            reason.appendFormat( "%#: %#", parsed.error().message(), parsed.error().detail() );
+            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, reason.view(), {} ) );
             return false;
         }
         _outputDirectory  = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
@@ -325,9 +332,10 @@ namespace sw
             const expected<void> prepared = AutomationScratchWorkspace::prepare( folder );
             if ( prepared.has_value() == false )
             {
-                const string error = string( prepared.error().message() ) + ": " + string( prepared.error().detail() );
-                SW_LOG_ERROR_ID( "Automation.ScratchFolderCouldNot", "[Scenario] %#: scratch folder %# could not be prepared: %#", _scenario.getName().c_str(), folder._scratchID.c_str(), error.c_str() );
-                finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, error, {} ) );
+                StringBuilder<constant::buffer::kMax256> error;
+                error.appendFormat( "%#: %#", prepared.error().message(), prepared.error().detail() );
+                SW_LOG_ERROR_ID( "Automation.ScratchFolderCouldNot", "[Scenario] %#: scratch folder %# could not be prepared: %#", _scenario.getName().c_str(), folder._scratchID.c_str(), error.view() );
+                finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, error.view(), {} ) );
                 return false;
             }
             SW_LOG_INFO_ID( "Automation.CopiedFreshRun", "[Scenario] %#: %# copied to %# (fresh for this run)", _scenario.getName().c_str(), folder._sourceID.c_str(), folder._scratchID.c_str() );
@@ -344,13 +352,17 @@ namespace sw
         {
             if ( pModuleLoader != nullptr && pModuleLoader->isModuleActive( moduleName ) )
                 continue;
-            finish( AutomationRunResult::skipped( "requiresModule: " + moduleName + " is not loaded in this build", true ) );
+            StringBuilder<constant::buffer::kMax256> reason;
+            reason.appendFormat( "requiresModule: %# is not loaded in this build", moduleName );
+            finish( AutomationRunResult::skipped( reason.view(), true ) );
             return true;
         }
         const AutomationStep* pMissingStep = AutomationRunnerInternal::findStepMissingFromThisBuild( _scenario );
         if ( pMissingStep == nullptr )
             return false;
-        finish( AutomationRunResult::skipped( pMissingStep->describe() + ": dev commands are compiled out of this build", true ) );
+        StringBuilder<constant::buffer::kMax256> reason;
+        reason.appendFormat( "%#: dev commands are compiled out of this build", pMissingStep->describe() );
+        finish( AutomationRunResult::skipped( reason.view(), true ) );
         return true;
     }
 
@@ -667,7 +679,9 @@ namespace sw
         const expected<AutomationGoldenPolicy>& policy = _evaluator.getGoldenPolicy();
         if ( policy.has_value() == false )
         {
-            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, "<AdvanceSimulation> needs _advanceDrawnFrames from the golden policy: " + AutomationStep::describeReason( policy.error() ), {} ) );
+            StringBuilder<constant::buffer::kMax256> reason;
+            reason.appendFormat( "<AdvanceSimulation> needs _advanceDrawnFrames from the golden policy: %#", AutomationStep::describeReason( policy.error() ) );
+            finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, reason.view(), {} ) );
             return;
         }
         if ( frameCount <= policy->_advanceDrawnFrames )
@@ -769,29 +783,15 @@ namespace sw
         const float64 elapsedSeconds = readElapsedSecondsWithoutCompile();
         if ( elapsedSeconds <= static_cast<float64>( _wallLimitSeconds ) )
             return;
-        StringBuilder<constant::buffer::kMax256> reasonBuilder;
-        reasonBuilder.appendFormat( "the wall-clock limit of %# s (wallTimeoutSeconds %# + step budgets) was exceeded at %#", _wallLimitSeconds, _scenario.getWallTimeoutSeconds(),
-                                    describeRunPosition() );
-        string reason{ reasonBuilder.view() };
+        StringBuilder<constant::buffer::kMax512> reason;
+        reason.appendFormat( "the wall-clock limit of %# s (wallTimeoutSeconds %# + step budgets) was exceeded at %#", _wallLimitSeconds, _scenario.getWallTimeoutSeconds(), describeRunPosition() );
         if ( _bStarted == SW_FALSE )
-        {
-            StringBuilder<constant::buffer::kMax256> reasonPart3;
-            reasonPart3.appendFormat( ", the scenario never started (%# frame(s) spent waiting for the start condition)", _run._waitFrameCount );
-            reason += reasonPart3.c_str();
-        }
+            reason.appendFormat( ", the scenario never started (%# frame(s) spent waiting for the start condition)", _run._waitFrameCount );
         if ( _run._holdFrameCount > 0 )
-        {
-            StringBuilder<constant::buffer::kMax256> reasonPart2;
-            reasonPart2.appendFormat( ", the current step has held the scenario clock for %# frame(s), waiting for %#", _run._holdFrameCount, _run._waitingFor.c_str() );
-            reason += reasonPart2.c_str();
-        }
+            reason.appendFormat( ", the current step has held the scenario clock for %# frame(s), waiting for %#", _run._holdFrameCount, _run._waitingFor );
         if ( _run._clockHoldFrameCount > 0 )
-        {
-            StringBuilder<constant::buffer::kMax256> reasonPart;
-            reasonPart.appendFormat( ", %# has held the scenario clock for %# frame(s)", _run._clockHolderName, _run._clockHoldFrameCount );
-            reason += reasonPart.c_str();
-        }
-        finish( AutomationRunResult::failed( AutomationFailureKind::WaitTimeout, reason, {} ) );
+            reason.appendFormat( ", %# has held the scenario clock for %# frame(s)", _run._clockHolderName, _run._clockHoldFrameCount );
+        finish( AutomationRunResult::failed( AutomationFailureKind::WaitTimeout, reason.view(), {} ) );
     }
 
     string AutomationRunner::findBackendName()
@@ -824,16 +824,13 @@ namespace sw
 
     void AutomationRunner::updateCrashContext( string_view note )
     {
-        const string position = describeRunPosition();
-        string       text     = position;
+        const string                             position = describeRunPosition();
+        StringBuilder<constant::buffer::kMax256> text;
+        text.append( string_view{ position } );
         if ( note.empty() == false )
-        {
-            text += " (";
-            text += note;
-            text += ')';
-        }
+            text.appendFormat( " (%#)", note );
         // 키 하나가 시나리오 · 백엔드 · 단계 · 프레임을 든다. 값 길이를 넘으면 글자 경계에서 자른다(저장소가 조용히 자르면 UTF-8 중간이 깨진다).
-        engine::getSubsystem<CrashHandler>().setContextValue( "Scenario", AutomationRunTitleInput::truncateUTF8( text, CrashContextStore::kMaxValueLength - 1 ) );
+        engine::getSubsystem<CrashHandler>().setContextValue( "Scenario", AutomationRunTitleInput::truncateUTF8( text.view(), CrashContextStore::kMaxValueLength - 1 ) );
         publishHangSnapshot( position ); // 행 감시 스레드가 읽을 같은 자리(단계 전환 때와 30 프레임마다)
     }
 
@@ -842,7 +839,10 @@ namespace sw
         AutomationReproduceInput reproduceInput = _reproduceInput;
         for ( const AutomationAttribute& variable : _scenario.getTestOptions()._listLaunchVariable )
         {
-            reproduceInput._listExtraArgument.push_back( "-" + variable._name + "=" + variable._value ); // `<Launch>` 변수는 명령줄에 있어야 시작한다
+            // `<Launch>` 변수는 명령줄에 있어야 시작한다
+            StringBuilder<constant::buffer::kMax256> argument;
+            argument.appendFormat( "-%#=%#", variable._name, variable._value );
+            reproduceInput._listExtraArgument.emplace_back( argument.view() );
         }
         return AutomationRunTitleInput::makeReproduceCommand( reproduceInput );
     }
@@ -974,8 +974,13 @@ namespace sw
             const bool                bLaunchedWithIt = pInfo != nullptr && AutomationStepArgsUtil::compareVariable( *pInfo, string_view{ variable._value }, 0.0f, bMatched ) && bMatched;
             if ( bLaunchedWithIt == false )
             {
-                return unexpected( "<Launch> needs the command line -" + variable._name + "=" + variable._value + " (now " +
-                                   ( pInfo != nullptr ? "'" + pInfo->getValueAsString() + "'" : string( "no such variable" ) ) + ")" );
+                StringBuilder<constant::buffer::kMax256> reason;
+                reason.appendFormat( "<Launch> needs the command line -%#=%# (now ", variable._name, variable._value );
+                if ( pInfo != nullptr )
+                    reason.appendFormat( "'%#')", pInfo->getValueAsString() );
+                else
+                    reason.append( "no such variable)" );
+                return unexpected( string( reason.view() ) );
             }
         }
         const expected<void> scenarioChecked = AutomationStepValidation::validateDesktopSteps( _scenario )
@@ -989,7 +994,11 @@ namespace sw
         {
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
             if ( pRegistration == nullptr )
-                return unexpected( step.describe() + ": unknown step (nothing registered under that name)" );
+            {
+                StringBuilder<constant::buffer::kMax256> reason;
+                reason.appendFormat( "%#: unknown step (nothing registered under that name)", step.describe() );
+                return unexpected( string( reason.view() ) );
+            }
             const expected<void> validated = pRegistration->_pValidate != nullptr ? pRegistration->_pValidate( step ) : expected<void>{};
             const expected<void> prepared  = validated.has_value() && pRegistration->_pPrepare != nullptr ? pRegistration->_pPrepare( *this, step ) : validated;
             if ( prepared.has_value() == false )
@@ -1079,8 +1088,8 @@ namespace sw
         if ( nowSeconds - _run._clockHoldStartSeconds > AutomationTimeLimits::kClockHoldTimeoutSeconds )
         {
             StringBuilder<constant::buffer::kMax256> textBuilder;
-            textBuilder.appendFormat( "%# s", static_cast<uint32>( AutomationTimeLimits::kClockHoldTimeoutSeconds ) );
-            finish( AutomationRunResult::failed( AutomationFailureKind::WaitTimeout, _run._clockHolderName + " held the scenario clock for more than " + string( textBuilder.view() ), {} ) );
+            textBuilder.appendFormat( "%# held the scenario clock for more than %# s", _run._clockHolderName, static_cast<uint32>( AutomationTimeLimits::kClockHoldTimeoutSeconds ) );
+            finish( AutomationRunResult::failed( AutomationFailureKind::WaitTimeout, textBuilder.view(), {} ) );
         }
         return true;
     }
@@ -1100,9 +1109,11 @@ namespace sw
         const AutomationStepArgsUtil::WaitTimeoutArgs& timeout        = *parsedTimeout;
         const uint32                                   heldFrameCount = _run._holdFrameCount;
         const uint32                                   timeoutFrames  = timeout._bSeconds ? convertSecondsToFrames( timeout._timeoutSeconds ) : timeout._timeoutFrames;
-        const string                                   waitingFor     = step.describe() + " (" + message + ")";
-        const AutomationStepHold                       hold           = timeout._bWallSeconds ? holdUntilReadyWithin( step, input, bReady, timeout._timeoutWallSeconds, waitingFor )
-                                                                                              : holdUntilReady( step, input, bReady, timeoutFrames, waitingFor );
+        StringBuilder<constant::buffer::kMax256>       waitingForText;
+        waitingForText.appendFormat( "%# (%#)", step.describe(), message );
+        const string_view        waitingFor = waitingForText.view();
+        const AutomationStepHold hold       = timeout._bWallSeconds ? holdUntilReadyWithin( step, input, bReady, timeout._timeoutWallSeconds, waitingFor )
+                                                                    : holdUntilReady( step, input, bReady, timeoutFrames, waitingFor );
         if ( hold == AutomationStepHold::Hold )
             return holdWhileWallWatchActive( step );
         // 처음부터 참이던 조건도 남긴다 - 고정 대기를 조건 대기로 바꿀 때 "기다리지 않고 지나간" 단언(일어나지 않음을 보는 부정형일 수 있다)을 가려낸다.
@@ -1112,8 +1123,10 @@ namespace sw
         {
             StringBuilder<constant::buffer::kMax256> textBuilder;
             textBuilder.appendFormat( "WaitUntil gave up after %# frame(s): %#", heldFrameCount, message );
-            const string* pWatch = step.findAttribute( "watch" );
-            giveUpWait( step, AutomationFailureKind::WaitTimeout, textBuilder.view(), "WaitUntil " + ( pWatch != nullptr ? *pWatch : string() ) );
+            const string*                            pWatch = step.findAttribute( "watch" );
+            StringBuilder<constant::buffer::kMax256> repeatKey;
+            repeatKey.appendFormat( "WaitUntil %#", pWatch != nullptr ? string_view{ *pWatch } : string_view{} );
+            giveUpWait( step, AutomationFailureKind::WaitTimeout, textBuilder.view(), repeatKey.view() );
         }
         return false;
     }
@@ -1134,7 +1147,9 @@ namespace sw
             return true;
         StringBuilder<constant::buffer::kMax256> textBuilder;
         textBuilder.appendFormat( "WaitUntil stalled - %# made no progress (activity %#) for %# s", pRegistration->_pName, activity, static_cast<uint32>( unchangedSeconds ) );
-        giveUpWait( step, AutomationFailureKind::WaitStalled, textBuilder.view(), "WaitUntil " + *pWatch );
+        StringBuilder<constant::buffer::kMax256> repeatKey;
+        repeatKey.appendFormat( "WaitUntil %#", *pWatch );
+        giveUpWait( step, AutomationFailureKind::WaitStalled, textBuilder.view(), repeatKey.view() );
         return false;
     }
 
@@ -1170,7 +1185,11 @@ namespace sw
     string AutomationRunner::resolveOutputPath( string_view file ) const
     {
         const bool bAbsolute = file.empty() == false && ( file[0] == '/' || file[0] == '\\' || ( file.size() > 1 && file[1] == ':' ) );
-        return bAbsolute ? string( file ) : _outputDirectory + "/" + string( file );
+        if ( bAbsolute )
+            return string( file );
+        StringBuilder<constant::buffer::kMax1024> path;
+        path.appendFormat( "%#/%#", _outputDirectory, file );
+        return string( path.view() );
     }
 
     void AutomationRunner::endRun( InputManager* pInput )
@@ -1217,25 +1236,21 @@ namespace sw
         else
         {
             // 첫 줄은 판정 값 하나(`<종류> - <까닭>`)다 — 아래 줄은 그 밖의 실패와 처리 안내다.
-            string detail = runResult.describe();
+            StringBuilder<constant::buffer::kMax1024> detail;
+            detail.append( string_view{ runResult.describe() } );
             if ( runResult.getStepLocation().empty() == false )
-                detail += " [" + runResult.getStepLocation() + "]";
+                detail.appendFormat( " [%#]", runResult.getStepLocation() );
             for ( const string& failure : _evaluator.getFailures() )
             {
                 if ( failure == runResult.getReason() )
                     continue;
-                detail += "\n    ";
-                detail += failure;
+                detail.appendFormat( "\n    %#", failure );
             }
             if ( logAdvice.empty() == false )
-                detail += "\n    " + logAdvice;
+                detail.appendFormat( "\n    %#", logAdvice );
             // 진 실행의 처리하지 않은 줄은 `failures` 에 섞지 않고 보고의 `unhandledLogs` 에 둔다 — 로그에는 있다는 사실만 적는다.
             if ( result != AutomationResult::UnhandledLog && _evaluator.getUnhandledLogs().empty() == false )
-            {
-                StringBuilder<constant::buffer::kMax256> detailPart;
-                detailPart.appendFormat( "\n    (%# unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)", static_cast<uint32>( _evaluator.getUnhandledLogs().size() ) );
-                detail += detailPart.c_str();
-            }
+                detail.appendFormat( "\n    (%# unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)", static_cast<uint32>( _evaluator.getUnhandledLogs().size() ) );
             SW_LOG_ERROR_ID( "Automation.Finished", "[Scenario] %# %# at frame %#: %#", getEnumName( result ), _scenario.getName().c_str(), _run._frameIndex, detail.c_str() );
         }
         // 결과마다 말씨가 다른 위 줄과 별개로, 시작 줄(`started after`)과 짝이 되는 같은 모양의 끝 줄을 남긴다(grep 한 번으로 시작 · 끝을 묶는다).
@@ -1270,6 +1285,8 @@ namespace sw
         report._reproduce             = reproduce;
         report._pTimeline             = &_wallProfile;
         _reportWriter.write( report );
-        updateCrashContext( string( "ended " ) + getEnumName( result ) );
+        StringBuilder<constant::buffer::kMax64> endNote;
+        endNote.appendFormat( "ended %#", getEnumName( result ) );
+        updateCrashContext( endNote.view() );
     }
 } // namespace sw
