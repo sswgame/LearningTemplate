@@ -7,6 +7,8 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorCommandTarget.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
@@ -424,10 +426,14 @@ namespace sw::editor
                     return false;
                 if ( pContext->getSubsystem<EditorCommandRegistry>().execute( listArgument[0], EditorCommandTarget::none() ) == false )
                 {
-                    outReply = "no enabled editor command '" + listArgument[0] + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no enabled editor command '%#'", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "ran " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "ran %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

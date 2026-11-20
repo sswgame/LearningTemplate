@@ -12,6 +12,8 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Commands/Asset/EditorContentWrite.h"
@@ -84,7 +86,9 @@ namespace sw::editor
                 if ( bReadArgument == false || editor::findSubsystem<EditorStateStore>() == nullptr )
                     return false;
                 getEditorState<ExplorerState>()._bDryRun = bDryRun;
-                outReply                                 = "explorer dry run " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "explorer dry run %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -330,7 +334,9 @@ namespace sw::editor
                         guid = meta.parseXML( rewrite._originalText, inoutPlan._listOldID[moveIndex] );
                     if ( guid.has_value() == false )
                     {
-                        inoutPlan._failure = "could not read the asset identity '" + inoutPlan._listOldID[moveIndex] + "' - nothing was moved";
+                        StringBuilder<constant::buffer::kMax512> failureBuilder;
+                        failureBuilder.appendFormat( "could not read the asset identity '%#' - nothing was moved", inoutPlan._listOldID[moveIndex] );
+                        inoutPlan._failure = string( failureBuilder.view() );
                         return false;
                     }
                     const string_view newSourceAbs = string_view{ move._destinationAbs }.substr( 0, move._destinationAbs.size() - AssetMeta::kExtension.size() );
@@ -497,7 +503,9 @@ namespace sw::editor
             string uniqueStem;
             string uniqueSuffix;
             splitAssetName( FileUtil::getFileNamePart( outAssetAbs ), uniqueStem, uniqueSuffix );
-            (void)replaceReference( text, assetTemplate._pNameAttribute, "name=\"" + uniqueStem + "\"" ); // 이름 속성이 없으면 템플릿 이름 그대로다
+            fixed_string<constant::buffer::kMax256> nameAttribute;
+            formatstring( nameAttribute.data(), nameAttribute.capacity(), "name=\"%#\"", uniqueStem );
+            (void)replaceReference( text, assetTemplate._pNameAttribute, nameAttribute ); // 이름 속성이 없으면 템플릿 이름 그대로다
         }
         // 틀은 그 자신의 정체성(머리 GUID)을 든 에셋이다 — 새 에셋은 새 GUID 를 받는다.
         if ( FileUtil::writeTextFile( outAssetAbs, text ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs ) )
@@ -887,7 +895,9 @@ namespace sw::editor
         const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( argument );
         if ( diskPath.has_value() == false || FileUtil::isRegularFile( diskPath->str() ) == false )
         {
-            outReply = "no resource '" + argument + "'";
+            StringBuilder<constant::buffer::kMax256> replyBuilder;
+            replyBuilder.appendFormat( "no resource '%#'", argument );
+            outReply = string( replyBuilder.view() );
             return false;
         }
         outAbsolutePath = diskPath->str();
@@ -951,10 +961,14 @@ namespace sw::editor
             if ( ch == '/' )
                 ch = '\\';
         }
-        command = "explorer.exe /select,\"" + windowsPath + "\"";
+        StringBuilder<constant::buffer::kMax512> commandBuilder;
+        commandBuilder.appendFormat( "explorer.exe /select,\"%#\"", windowsPath );
+        command = string( commandBuilder.view() );
 #else
         // 리눅스 파일 관리자에는 "선택한 채로 열기" 표준이 없다. 그래서 폴더까지만 연다.
-        command = "xdg-open \"" + FileUtil::getDirectoryPart( path ) + "\"";
+        StringBuilder<constant::buffer::kMax512> commandBuilder;
+        commandBuilder.appendFormat( "xdg-open \"%#\"", FileUtil::getDirectoryPart( path ) );
+        command = string( commandBuilder.view() );
 #endif
         return command;
     }

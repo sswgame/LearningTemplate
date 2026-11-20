@@ -166,7 +166,9 @@ namespace sw::editor
 
     ProcessCommand EditorPlayCommands::makeStandaloneCommand( const CommandLineManager& parent, string_view executablePath, string_view scenePath, string_view extraArguments )
     {
-        vector<string>       listArgument{ "-gv_firstScene=" + string( scenePath ) };
+        StringBuilder<constant::buffer::kMax256> sceneArgument;
+        sceneArgument.appendFormat( "-gv_firstScene=%#", scenePath );
+        vector<string>       listArgument{ string( sceneArgument.view() ) };
         const vector<string> listExtraArgument = StringUtil::splitQuotedTokens( extraArguments );
         listArgument.insert( listArgument.end(), listExtraArgument.begin(), listExtraArgument.end() );
         // 자동화 실행이 띄운 새 창은 사람의 설정 · 세이브를 건드리지 않는다. 경로가 절대 경로가 아니면 빈 명령 - 띄우기가 실패로 알린다

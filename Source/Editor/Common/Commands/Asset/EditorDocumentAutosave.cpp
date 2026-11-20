@@ -22,7 +22,9 @@ namespace sw::editor
             static string makeFolder( string_view sessionFolder ) { return FileUtil::joinPath( sessionFolder, EditorDocumentAutosaveEntry::kFolderName ); }
             static string makePath( string_view sessionFolder, string_view documentPath, string_view suffix )
             {
-                return FileUtil::joinPath( makeFolder( sessionFolder ), EditorAutosaveCommands::makeSlotName( documentPath ) + string{ suffix } );
+                StringBuilder<constant::buffer::kMax256> fileNameBuilder;
+                fileNameBuilder.appendFormat( "%#%#", EditorAutosaveCommands::makeSlotName( documentPath ), suffix );
+                return FileUtil::joinPath( makeFolder( sessionFolder ), fileNameBuilder.view() );
             }
         };
     } // namespace

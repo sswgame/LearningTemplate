@@ -3,6 +3,7 @@
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
+#include "Core/String/StringBuilder.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -24,8 +25,10 @@ SW_TEST_CASE( RigFileRewriteTest, VariantWritesOverrideRows )
         <item type="TwoBoneIK" name="Arm" weight="0.5" root="upperarm.l" mid="lowerarm.l" end="hand.l" target="Grip" />
         <item type="Position" name="Follow" bone="weapon" target="Grip" />
     </nodes></RigAsset>)" ) );
-    const string baseID    = test::ScopedScratchDomain::makeID( "base.rig.xml" ).str();
-    const string childText = "<RigAsset _base=\"" + baseID + "\"><nodes><item name=\"Arm\" weight=\"0.25\" /></nodes></RigAsset>";
+    const string                             baseID = test::ScopedScratchDomain::makeID( "base.rig.xml" ).str();
+    StringBuilder<constant::buffer::kMax256> childTextBuilder;
+    childTextBuilder.appendFormat( "<RigAsset _base=\"%#\"><nodes><item name=\"Arm\" weight=\"0.25\" /></nodes></RigAsset>", baseID );
+    const string childText( childTextBuilder.view() );
 
     RigSaveParams params;
     params._listNode.push_back( RigNodeSaveParams{ hashed_string( "Follow" ), 0.75f, false } );

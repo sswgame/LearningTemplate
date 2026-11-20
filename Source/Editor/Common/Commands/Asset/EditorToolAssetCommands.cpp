@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
@@ -157,18 +158,33 @@ namespace sw::editor
                 if ( resolved.empty() || FileUtil::isRegularFile( resolved ) == false )
                 {
                     if ( pOutStatus != nullptr )
-                        *pOutStatus = resolved.empty() ? ( string( "No " ) + desc._pLabel + " file yet" ) : ( "No file yet: " + makeShownPath( path, resolved ) );
+                    {
+                        StringBuilder<constant::buffer::kMax256> statusBuilder;
+                        if ( resolved.empty() )
+                            statusBuilder.appendFormat( "No %# file yet", desc._pLabel );
+                        else
+                            statusBuilder.appendFormat( "No file yet: %#", makeShownPath( path, resolved ) );
+                        *pOutStatus = string( statusBuilder.view() );
+                    }
                     return ToolAssetLoadResult::Missing;
                 }
                 if ( readDocument( outData, resolved ) == false )
                 {
                     SW_LOG_WARNING_ID( "EditorToolAssetCommands.CouldNotReadMalformed", "Could not read the %# '%#' (malformed or a newer format)", desc._pLabel, resolved );
                     if ( pOutStatus != nullptr )
-                        *pOutStatus = "Failed to read " + makeShownPath( path, resolved );
+                    {
+                        StringBuilder<constant::buffer::kMax256> statusBuilder;
+                        statusBuilder.appendFormat( "Failed to read %#", makeShownPath( path, resolved ) );
+                        *pOutStatus = string( statusBuilder.view() );
+                    }
                     return ToolAssetLoadResult::Malformed;
                 }
                 if ( pOutStatus != nullptr )
-                    *pOutStatus = "Loaded " + makeShownPath( path, resolved );
+                {
+                    StringBuilder<constant::buffer::kMax256> statusBuilder;
+                    statusBuilder.appendFormat( "Loaded %#", makeShownPath( path, resolved ) );
+                    *pOutStatus = string( statusBuilder.view() );
+                }
                 return ToolAssetLoadResult::Loaded;
             }
 

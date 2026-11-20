@@ -7,6 +7,9 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -181,16 +184,19 @@ namespace sw::editor
     {
         if ( pComp == nullptr || presetName.empty() )
             return {};
-        return string( pComp->getTypeName().c_str() ) + "_" + string{ presetName } + string( EditorTransformCommandsInternal::kPresetSuffix );
+        StringBuilder<constant::buffer::kMax256> fileNameBuilder;
+        fileNameBuilder.appendFormat( "%#_%#%#", pComp->getTypeName().c_str(), presetName, EditorTransformCommandsInternal::kPresetSuffix );
+        return string( fileNameBuilder.view() );
     }
 
     string EditorTransformCommands::getComponentPresetName( const Component* pComp, string_view presetFilePath )
     {
         if ( pComp == nullptr )
             return {};
-        const string fileName           = FileUtil::getFileNamePart( presetFilePath );
-        const string prefix             = string( pComp->getTypeName().c_str() ) + "_";
-        const bool   bNotPresetFileName = StringUtil::startsWith( fileName, prefix ) == false || StringUtil::endsWith( fileName, EditorTransformCommandsInternal::kPresetSuffix, true ) == false ||
+        const string                            fileName = FileUtil::getFileNamePart( presetFilePath );
+        fixed_string<constant::buffer::kMax128> prefix;
+        formatstring( prefix.data(), prefix.capacity(), "%#_", pComp->getTypeName().c_str() );
+        const bool bNotPresetFileName = StringUtil::startsWith( fileName, prefix ) == false || StringUtil::endsWith( fileName, EditorTransformCommandsInternal::kPresetSuffix, true ) == false ||
                                         fileName.size() <= prefix.size() + EditorTransformCommandsInternal::kPresetSuffix.size();
         if ( bNotPresetFileName )
             return {};
@@ -217,7 +223,11 @@ namespace sw::editor
 
         string fullPath( filePath );
         if ( StringUtil::endsWith( fullPath, EditorTransformCommandsInternal::kPresetSuffix, true ) == false )
-            fullPath = FileUtil::removeExtension( fullPath ) + string( EditorTransformCommandsInternal::kPresetSuffix );
+        {
+            StringBuilder<constant::buffer::kMax256> pathBuilder;
+            pathBuilder.appendFormat( "%#%#", FileUtil::removeExtension( fullPath ), EditorTransformCommandsInternal::kPresetSuffix );
+            fullPath = string( pathBuilder.view() );
+        }
         if ( FileUtil::ensureParentDirectoryExists( fullPath ) == false )
             return false;
 
