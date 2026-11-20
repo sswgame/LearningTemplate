@@ -17,11 +17,13 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
+#include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/WorldItemComponent.h"
 
 namespace sw
 {
@@ -60,6 +62,7 @@ namespace sw
         , _bag{}
         , _pendingStateBytes{}
         , _bagSlotCount{ 16 }
+        , _bagMaxWeight{ 0.0f }
         , _bStarted{ SW_FALSE }
     {
     }
@@ -78,7 +81,7 @@ namespace sw
             return;
         }
         _equipment.initialize( pCatalog, pDatabase->getSlotCatalog().makeEquipmentLayout() );
-        if ( _bag.initialize( pCatalog, _bagSlotCount ) == false )
+        if ( _bag.initialize( pCatalog, _bagSlotCount, _bagMaxWeight ) == false )
         {
             SW_LOG_ERROR_ID( "CharacterEquipment.BagInvalid", "'%#' bag of %# slots could not be made", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", _bagSlotCount );
             return;
@@ -101,6 +104,17 @@ namespace sw
     bool CharacterEquipmentComponent::addToBag( const InventorySlot& item )
     {
         return _bStarted == SW_TRUE && _bag.addStack( item );
+    }
+
+    InventoryCommandResult CharacterEquipmentComponent::applyCommand( const InventoryCommand& command, vector<InventorySlot>& outListDropped )
+    {
+        if ( _bStarted == SW_FALSE )
+            return InventoryCommandResult::InvalidSlot;
+        const uint32                 equipmentRevision = _equipment.getRevision();
+        const InventoryCommandResult result            = command.apply( _bag, _equipment, outListDropped );
+        if ( _equipment.getRevision() != equipmentRevision )
+            updateAppearance();
+        return result;
     }
 
     EquipResult CharacterEquipmentComponent::equipFromBag( int32 bagSlot, const hashed_string& slot )
@@ -342,6 +356,31 @@ namespace sw
                 return true;
             }
 
+            /** @brief `item.pickup <character> <worldItem>` — 월드 아이템의 조각을 캐릭터 가방에 모두 넣고 그 오브젝트를 없앤다. 다 들어가지 않으면 그대로 둔다(가방 가득). */
+            static bool runPickUp( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 2 )
+                    return false;
+                CharacterEquipmentComponent* pEquipment = findEquipment( listArgument[0], outReply );
+                if ( pEquipment == nullptr )
+                    return false;
+                GameObject*         pObject = engine::findActiveObject( hashed_string( listArgument[1] ) );
+                WorldItemComponent* pItem   = pObject != nullptr ? pObject->getComponent<WorldItemComponent>() : nullptr;
+                if ( pItem == nullptr )
+                {
+                    outReply = "no object named '" + listArgument[1] + "' with a WorldItemComponent";
+                    return false;
+                }
+                if ( pItem->pickUp( pEquipment->getBagForTrade() ) == false )
+                {
+                    SW_LOG_INFO_ID( "WorldItem.PickUpRefused", "The bag of %# has no room for %# - it stays on the ground", listArgument[0].c_str(), listArgument[1].c_str() );
+                    outReply = "the bag has no room for " + listArgument[1];
+                    return true; // 거절도 답이다 — 시나리오는 로그와 감시 값으로 본다
+                }
+                outReply = "picked up " + listArgument[1];
+                return true;
+            }
+
             /**
              * @brief `equipment.dye <object> <slot> <parameter> <value…>` — 낀 아이템 인스턴스의 꾸미기 값 하나를 바꾼다(염색). 값의 종류는 그 아이템 외형의 스키마가 정한다
              *        (슬라이더: 수 하나, 색: `r g b [a]`, 고르기: 항목 이름).
@@ -452,6 +491,71 @@ namespace sw
                 outValue.setText( valueCount == 0 ? string( item._itemID.c_str() ) : string( item._itemID.c_str() ) + " +" + to_string( static_cast<uint32>( valueCount ) ) );
                 return true;
             }
+
+            /** @brief 감시 값 `Equipment.BagUsedSlots` — 가방에서 아이템이 든 칸 수입니다. */
+            [[nodiscard]] static bool readBagUsedSlots( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CharacterEquipmentComponent* pEquipment = findTarget( query, outValue );
+                if ( pEquipment == nullptr )
+                    return false;
+                const Inventory& bag = pEquipment->getBag();
+                outValue.setNumber( static_cast<float64>( bag.getSlotCount() - bag.countEmptySlots() ) );
+                return true;
+            }
+
+            /** @brief 감시 값 `Equipment.BagCount` — 가방 칸(key, 0 부터)에 든 개수입니다(빈 칸은 0). */
+            [[nodiscard]] static bool readBagCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CharacterEquipmentComponent* pEquipment = findTarget( query, outValue );
+                int32                              bagSlot    = 0;
+                if ( pEquipment == nullptr )
+                    return false;
+                if ( StringUtil::parseInt( query._key, bagSlot ) == false || bagSlot < 0 || bagSlot >= pEquipment->getBag().getSlotCount() )
+                {
+                    outValue.setText( "key must be a bag slot index" );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( pEquipment->getBag().getSlot( bagSlot )._count ) );
+                return true;
+            }
+
+            /** @brief `equipment.sort <object>` — 가방을 정렬한다(인벤토리 화면의 정렬과 같은 명령 길 — `applyCommand`). */
+            static bool runSort( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 1 )
+                    return false;
+                CharacterEquipmentComponent* pEquipment = findEquipment( listArgument[0], outReply );
+                if ( pEquipment == nullptr )
+                    return false;
+                InventoryCommand command{};
+                command._kind = InventoryCommandKind::Sort;
+                vector<InventorySlot> listDropped;
+                (void)pEquipment->applyCommand( command, listDropped );
+                outReply = "sorted the bag of " + listArgument[0];
+                return true;
+            }
+
+            /** @brief 감시 값 `Equipment.ItemCount` — 가방에 든 아이템(key) 개수의 합입니다. */
+            [[nodiscard]] static bool readItemCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CharacterEquipmentComponent* pEquipment = findTarget( query, outValue );
+                if ( pEquipment == nullptr )
+                    return false;
+                outValue.setNumber( static_cast<float64>( pEquipment->getBag().getItemCount( hashed_string( query._key ) ) ) );
+                return true;
+            }
+
+            /** @brief 감시 값 `Equipment.Stat` — 낀 장비 능력치(key, 예: armor)의 합입니다(숨김 칸 제외 — `Equipment::computeStats`). */
+            [[nodiscard]] static bool readStat( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CharacterEquipmentComponent* pEquipment = findTarget( query, outValue );
+                if ( pEquipment == nullptr )
+                    return false;
+                StatBlock stats;
+                pEquipment->getEquipment().computeStats( stats );
+                outValue.setNumber( static_cast<float64>( stats.getValue( hashed_string( query._key ) ) ) );
+                return true;
+            }
         };
     } // namespace
 
@@ -459,6 +563,8 @@ namespace sw
     SW_DEV_COMMAND( EquipmentEquip, "equipment.equip", "equipment.equip <object> <bagSlot> [slot]", "Wear the item instance of a bag slot (what it displaces goes to the bag)",
                     &CharacterEquipmentCommandsInternal::runEquip );
     SW_DEV_COMMAND( EquipmentUnequip, "equipment.unequip", "equipment.unequip <object> <slot>", "Take off an equipment slot into the bag", &CharacterEquipmentCommandsInternal::runUnequip );
+    SW_DEV_COMMAND( ItemPickUp, "item.pickup", "item.pickup <character> <worldItem>", "Pick a world item stack up into a character's equipment bag (refused when it does not all fit)",
+                    &CharacterEquipmentCommandsInternal::runPickUp );
     SW_DEV_COMMAND( EquipmentRestore, "equipment.restore", "equipment.restore <object> <base64>", "Apply saved equipment state bytes (an older save sample upgrades on read)",
                     &CharacterEquipmentCommandsInternal::runRestore );
     SW_DEV_COMMAND( EquipmentDye, "equipment.dye", "equipment.dye <object> <slot> <parameter> <number | r g b [a] | option>",
@@ -467,4 +573,9 @@ namespace sw
                                &CharacterEquipmentCommandsInternal::readWorn, true, true );
     SW_AUTOMATION_QUERY_WATCH( equipmentBagItem, "Equipment.BagItem", "Item in the equipment bag slot key ('<id>' or '<id> +N' with N instance values, '(empty)')",
                                &CharacterEquipmentCommandsInternal::readBagItem, true, true );
+    SW_AUTOMATION_QUERY_WATCH( equipmentBagUsedSlots, "Equipment.BagUsedSlots", "Equipment bag slots that hold an item", &CharacterEquipmentCommandsInternal::readBagUsedSlots, true, false );
+    SW_AUTOMATION_QUERY_WATCH( equipmentBagCount, "Equipment.BagCount", "How many items the equipment bag slot key holds (0 when empty)", &CharacterEquipmentCommandsInternal::readBagCount, true, true );
+    SW_DEV_COMMAND( EquipmentSort, "equipment.sort", "equipment.sort <object>", "Sort a character's equipment bag (stacks merge)", &CharacterEquipmentCommandsInternal::runSort );
+    SW_AUTOMATION_QUERY_WATCH( equipmentItemCount, "Equipment.ItemCount", "How many of the item key the equipment bag holds", &CharacterEquipmentCommandsInternal::readItemCount, true, true );
+    SW_AUTOMATION_QUERY_WATCH( equipmentStat, "Equipment.Stat", "Sum of the stat key over the worn equipment (suppressed slots excluded)", &CharacterEquipmentCommandsInternal::readStat, true, true );
 } // namespace sw

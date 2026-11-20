@@ -716,7 +716,10 @@ namespace sw
         UIScreen*  pActive                 = getActiveScreen();
         const bool bRestoreNavigationFocus = mode == UIInputMode::Navigation && pActive != nullptr && _input.getFocusManager().getFocusedTree() != &pActive->getTree();
         if ( bRestoreNavigationFocus )
+        {
             _input.restoreFocus( *pActive );
+            _input.holdNavigationThisFrame(); // 바꾼 그 입력은 기본 포커스를 보이는 데만 쓴다
+        }
     }
 
     uint32 UISystem::closeScreensOfModule( string_view moduleName )
@@ -1029,6 +1032,16 @@ namespace sw
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
             count += screen->isDevOverlay() ? 0u : 1u;
+        }
+        return count;
+    }
+
+    uint32 UISystem::getMenuStackDepth() const
+    {
+        uint32 count = 0;
+        for ( const unique_ptr<UIScreen>& screen : _listScreen )
+        {
+            count += screen->isDevOverlay() == false && screen->isClosing() == false && screen->canTakeFocus() ? 1u : 0u;
         }
         return count;
     }
