@@ -45,6 +45,12 @@ namespace sw::editor
         outState._bCanRedo                        = snapshot._bCanRedo != SW_FALSE;
     }
 
+    uint64 HistoryViewModel::getGatherGeneration() const
+    {
+        const EditorUndoHistory* const pHistory = editor::findSubsystem<EditorUndoHistory>();
+        return pHistory != nullptr ? pHistory->getSnapshot()._generation : 0;
+    }
+
     void HistoryViewModel::undo()
     {
         (void)EditorCommandRegistry::getInEditorContext().request( editorcommand::kEditUndo, EditorCommandTarget::none() ); // Ctrl+Z 와 같은 명령 — 게임 단계가 실행한다

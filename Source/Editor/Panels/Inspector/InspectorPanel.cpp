@@ -78,7 +78,7 @@ namespace sw::editor
 
     void InspectorPanel::drawContent()
     {
-        _viewModel.gather( _state );
+        gatherViewState( _viewModel, _state );
         _propertyGrid.setFavorites( &_viewModel.editFavorites() );
         _propertyGrid.setActionFavorites( &_viewModel.editActionFavorites() );
         EditorWidgets::pushInspectorStyle();

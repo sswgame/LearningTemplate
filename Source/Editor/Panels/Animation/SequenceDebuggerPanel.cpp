@@ -28,7 +28,7 @@ namespace sw::editor
 
     void SequenceDebuggerPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
         if ( _viewState._listPlayer.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSequenceDebugger", "NoPlayersHint" ) );

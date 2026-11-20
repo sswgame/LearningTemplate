@@ -153,7 +153,7 @@ namespace sw::editor
 
     void HistoryPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
         if ( _viewState._bAvailable == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorScene", "CommandStackUnavailable" ) );

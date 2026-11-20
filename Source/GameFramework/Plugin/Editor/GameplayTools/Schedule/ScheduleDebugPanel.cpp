@@ -56,7 +56,7 @@ namespace sw::editor
 
     void ScheduleDebugPanel::drawContent()
     {
-        _model.gather( _state );
+        gatherViewState( _model, _state );
         if ( _state._bHasSystem == SW_FALSE )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdSchedule", "EmptyHint" ) );

@@ -135,7 +135,7 @@ namespace sw::editor
 
     void MapCheckPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
         drawToolbar();
 
         if ( _viewState._listRow.empty() )

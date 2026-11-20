@@ -30,6 +30,8 @@ namespace sw::editor
          * @details 스택은 선택 서비스다 — EditorModule 보다 오래 살아 종료할 때 결합이 먼저 풀린다.
          */
         void gather( HistoryViewState& outState ) const;
+        /** @brief 건너뛰기 세대 — 되돌리기 스냅숏이 바뀔 때만 오른다(`IEditorPanel::gatherViewState` 가 같은 세대의 `gather` 를 건너뛴다). 스냅숏이 없으면 0 입니다. */
+        uint64 getGatherGeneration() const;
 
         void undo();
         void redo();

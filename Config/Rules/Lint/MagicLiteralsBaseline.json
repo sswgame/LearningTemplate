@@ -185,7 +185,6 @@
     "Source/Editor/Common/GUI/EditorMenuBar.cpp": {"float": 4},
     "Source/Editor/Common/GUI/EditorPlayToolbar.cpp": {"float": 1},
     "Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp": {"float": 1},
-    "Source/Editor/Common/GUI/Panel/EditorPanelManager.cpp": {"integer": 2},
     "Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp": {"float": 4},
     "Source/Editor/Common/GUI/Panel/EditorPreviewViewport.cpp": {"float": 3},
     "Source/Editor/Common/GUI/Panel/IEditorPanel.h": {"float": 2},

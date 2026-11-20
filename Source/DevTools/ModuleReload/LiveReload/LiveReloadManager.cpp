@@ -112,6 +112,8 @@ namespace sw
         , _callbackIDAllocator{}
         , _deferredUnloadQueue{ kMaxDeferredUnloadBatchCount }
         , _shadowCopySerials{}
+        , _cascadePhases{}
+        , _buildFinishedSeconds{ 0.0 }
         , _completedReloadCount{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
         , _bBuildStampPending{ SW_FALSE }
@@ -364,9 +366,12 @@ namespace sw
                     context._bForceReload     = false;
                 }
             }
-            else if ( event._targetName.empty() == false && _mapModule.find( event._targetName ) != _mapModule.end() )
+            else
             {
-                triggerReload( event._targetName );
+                if ( _buildFinishedSeconds == 0.0 )
+                    _buildFinishedSeconds = MonotonicClock::nowSeconds(); // 대기 구간의 시작 — 디바운스 · 리로드 잡음을 지나 연쇄가 시작할 때까지
+                if ( event._targetName.empty() == false && _mapModule.find( event._targetName ) != _mapModule.end() )
+                    triggerReload( event._targetName );
             }
         }
         return event._bInProgress;
@@ -397,6 +402,8 @@ namespace sw
             {
                 _seenBuildToken     = std::move( currentToken );
                 _bBuildStampPending = SW_TRUE;
+                if ( _buildFinishedSeconds == 0.0 )
+                    _buildFinishedSeconds = MonotonicClock::nowSeconds(); // 바깥 빌드의 끝 — 연쇄 시작까지의 대기 구간을 잰다
             }
         }
 
@@ -1015,6 +1022,9 @@ namespace sw
     {
         const float64 startSeconds    = MonotonicClock::nowSeconds();
         const uint32  completedBefore = _completedReloadCount;
+        _cascadePhases                = ModuleReloadPhases{};
+        _cascadePhases._waitMs        = _buildFinishedSeconds > 0.0 ? ( startSeconds - _buildFinishedSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) : 0.0;
+        _buildFinishedSeconds         = 0.0;
         if ( runCascade( listSubgraphName ) == false )
             return;
         ReloadTracker* const pTracker = engine::areEngineServicesBound() ? engine::findSubsystem<ReloadTracker>() : nullptr;
@@ -1024,6 +1034,9 @@ namespace sw
         for ( const string& moduleName : listSubgraphName )
             pTracker->record( ReloadSource::Module, moduleName, bSucceeded ? ReloadResult::Reloaded : ReloadResult::Failed, "the module swap failed - see the LiveReloadManager log" );
         pTracker->recordElapsed( ReloadSource::Module, ( MonotonicClock::nowSeconds() - startSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
+        pTracker->recordModulePhases( _cascadePhases );
+        SW_LOG_INFO_ID( "LiveReloadManager.CascadePhasesMs", "Module reload phases: wait %# ms, prepare %# ms, suspend %# ms, commit %# ms", _cascadePhases._waitMs, _cascadePhases._prepareMs,
+                        _cascadePhases._suspendMs, _cascadePhases._commitMs );
     }
 
     bool LiveReloadManager::runCascade( const vector<string>& listSubgraphName )
@@ -1039,8 +1052,12 @@ namespace sw
 
         SW_LOG_TRACE_ID( "LiveReloadManager.CascadeReloadCount", "Cascade reload count=%#", static_cast<uint32>( listOrder.size() ) );
 
+        const float64         msPerSecond = static_cast<float64>( constant::time::kMillisecondsPerSecond );
+        float64               phaseStart  = MonotonicClock::nowSeconds();
         vector<PreparedEntry> listPrepared;
-        if ( prepareCascade( listOrder, listPrepared ) == false )
+        const bool            bPrepared = prepareCascade( listOrder, listPrepared );
+        _cascadePhases._prepareMs       = ( MonotonicClock::nowSeconds() - phaseStart ) * msPerSecond;
+        if ( bPrepared == false )
         {
             abortPrepared( listPrepared, 0 );
             return true;
@@ -1048,8 +1065,10 @@ namespace sw
 
         // 배치 직전 콜백의 거절은 적용 전 실패다. 아무것도 언로드하지 않았으니 새 라이브러리만 버리고 옛 라이브러리로 계속 돈다.
         // 나중에 더한 것(바깥 층)부터 부르고 처음 거절에서 멈춘다. 콜백이 자기 구독을 놓아도 그 항목은 순회가 끝난 뒤 빠진다.
+        phaseStart                 = MonotonicClock::nowSeconds();
         const bool bCommitAccepted = _onBeforeCommitBatch.broadcastUntilReverse( []( bool bAccepted )
         { return bAccepted == false; }, listOrder ) == false;
+        _cascadePhases._suspendMs  = ( MonotonicClock::nowSeconds() - phaseStart ) * msPerSecond;
         if ( bCommitAccepted == false )
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.CascadeReloadRefusedBefore", "Cascade reload refused before the first commit — keeping the previous modules" );
@@ -1058,7 +1077,10 @@ namespace sw
         }
 
         _deferredUnloadQueue.beginBatch();
-        if ( commitCascade( listPrepared ) == false )
+        phaseStart               = MonotonicClock::nowSeconds();
+        const bool bCommitted    = commitCascade( listPrepared );
+        _cascadePhases._commitMs = ( MonotonicClock::nowSeconds() - phaseStart ) * msPerSecond;
+        if ( bCommitted == false )
             return true;
 
         // 새 라이브러리가 모두 로드됐다. 의존 모듈이 옛 라이브러리에 바인딩돼 있으면, 옛 라이브러리를 언로드한 지금 거기로 점프하는 코드가 죽는다. 여기서 막는다.

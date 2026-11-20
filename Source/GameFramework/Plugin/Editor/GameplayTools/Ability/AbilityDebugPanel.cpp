@@ -86,7 +86,7 @@ namespace sw::editor
 
     void AbilityDebugPanel::drawContent()
     {
-        _viewModel.gather( _state );
+        gatherViewState( _viewModel, _state );
         drawTargetPicker();
 
         if ( _state._bPlayStopped != SW_FALSE )

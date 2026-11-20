@@ -138,7 +138,7 @@ namespace sw::editor
 
     void RigDebugPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
         if ( _viewState._content == RigDebugContent::NoRig )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorRigDebug", "SelectRig" ) );

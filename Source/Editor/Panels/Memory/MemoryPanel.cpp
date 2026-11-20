@@ -87,7 +87,7 @@ namespace sw::editor
 
     void MemoryPanel::drawContent()
     {
-        _viewModel.gather( _viewState );
+        gatherViewState( _viewModel, _viewState );
         drawToolbar();
         if ( _viewState._statusLine.empty() == false )
             EditorThemeUtil::textMuted( _viewState._statusLine.c_str() );

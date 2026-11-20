@@ -225,7 +225,7 @@ namespace sw::editor
             window._scrollY            = ImGui::GetScrollY();
             window._viewHeight         = ImGui::GetWindowHeight();
             window._bSkipOffscreenRows = _bSkipOffscreenRows;
-            HierarchyViewModel::get().gather( _filterBuffer.view(), window, _state );
+            gatherViewState( HierarchyViewModel::get(), _filterBuffer.view(), window, _state );
             if ( _state._bRenameStarted != 0 )
             {
                 _renameBuffer      = _state._renameStartText.view();
