@@ -47,7 +47,7 @@ namespace sw
          * @brief 타입 선언의 REFLECT_CONTAINER(Kind [, WrapperStem]) 를 조회합니다.
          * @return 어노테이션된 컨테이너 메타를 찾으면 true
          */
-        [[nodiscard]] static bool findReflectContainer( CXType type, const ParserConfig& config, ContainerKind& outKind, string& outWrapperStem );
+        [[nodiscard]] static bool findReflectContainer( CXType type, ContainerKind& outKind, string& outWrapperStem );
         /** @brief 노드를 그 종류 · 래퍼의 컨테이너로 표시합니다. */
         static void markContainer( ParsedContainerNode& node, ContainerKind kind, const string& wrapperStem );
         /** @brief 맵/시퀀스 템플릿 인자로 키·원소·중첩 노드를 채웁니다. */

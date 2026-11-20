@@ -105,7 +105,7 @@ namespace sw
         if ( _baseCount == 1 && bVirtualBase == false )
         {
             _pType->_parentFQN        = baseFQN;
-            _pType->_bParentReflected = AnnotationLookup::isReflectedRecord( baseDecl, _pSession->_config ) ? SW_TRUE : SW_FALSE;
+            _pType->_bParentReflected = AnnotationLookup::isReflectedRecord( baseDecl ) ? SW_TRUE : SW_FALSE;
             return;
         }
 
@@ -217,14 +217,14 @@ namespace sw
 
     void MemberCollector::collectField( const CXCursor cursor )
     {
+        // 멤버 앞의 속성은 선언에 붙어 AST 에 남는다(형식 앞 매크로만 표식 선언이다) — 자식 속성만 본다.
         const string spelling = AnnotationLookup::findAnnotateAttr( cursor, annotation::kPropertyPrefix );
-        if ( spelling.empty() && AnnotationLookup::hasSourceAnnotation( cursor, annotation::kProperty, _pSession->_config ) == false )
+        if ( spelling.empty() )
             return;
 
         if ( isEventType( clang_getCursorType( cursor ) ) )
         {
-            const string eventSpelling = spelling.empty() ? AnnotationLookup::extractSourceAnnotation( cursor, annotation::kProperty, _pSession->_config ) : spelling;
-            collectEvent( cursor, eventSpelling, clang_getCursorType( cursor ) );
+            collectEvent( cursor, spelling, clang_getCursorType( cursor ) );
             return;
         }
 
@@ -437,16 +437,9 @@ namespace sw
 
     void MemberCollector::collectMethod( const CXCursor cursor, const string& functionSpelling )
     {
-        // 순수 가상 함수는 실제 AnnotateAttr 가 있어야 한다. 소스 창 휴리스틱이
-        // 앞 타입의 FUNCTION(...) 을 집어 `= 0` 메서드를 잘못 등록할 수 있다.
-        const bool bHasAttr = functionSpelling.empty() == false;
-        if ( bHasAttr == false )
-        {
-            if ( clang_CXXMethod_isPureVirtual( cursor ) )
-                return;
-            if ( AnnotationLookup::hasSourceAnnotation( cursor, annotation::kFunction, _pSession->_config ) == false )
-                return;
-        }
+        // FUNCTION() 은 선언에 붙는 속성이다 — 없으면 리플렉션 함수가 아니다.
+        if ( functionSpelling.empty() )
+            return;
 
         const ParserSession& session = *_pSession;
         ParsedFunctionInfo   method;
@@ -457,7 +450,7 @@ namespace sw
         fillParameters( cursor, method, session );
 
         const string owner = CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, method._name );
-        if ( bHasAttr && AnnotationLookup::applyAnnotation( functionSpelling, method, session, owner ) == false )
+        if ( AnnotationLookup::applyAnnotation( functionSpelling, method, session, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;

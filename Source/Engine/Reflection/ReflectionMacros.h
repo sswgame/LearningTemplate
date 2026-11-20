@@ -43,11 +43,17 @@ namespace sw::generated
 } // namespace sw::generated
 
 #if defined( __REFLECT_PARSER__ )
-    /** @brief 리플렉션 대상 타입을 표시합니다. 선택 플래그: Abstract, Static */
-    #define REFLECT( ... )  __attribute__( ( annotate( "REFLECT;" #__VA_ARGS__ ) ) )
+    /**
+     * @brief 리플렉션 대상 타입을 표시합니다. 선택 플래그: Abstract, Static
+     * @details 형식 앞 매크로(REFLECT · ENUM · REFLECT_CONTAINER)는 파서 모드에서 **표식 선언**입니다. 형식 키워드 앞의 GNU 속성은 clang 이 형식
+     *          선언에서 버린다(`-Wignored-attributes`) — 파서는 표식을 바로 다음 형제 선언과 짝짓는다(`AnnotationLookup`). `static_assert` 는
+     *          이름공간 · 클래스 범위 어디서나 이름 없이 놓이고, `template` 앞이면 짝이 클래스 템플릿이라 그 자리에서 오류로 알린다.
+     *          멤버 · 열거자 매크로(PROPERTY · FUNCTION · ENUMERATOR)는 선언에 붙는 속성 그대로다.
+     */
+    #define REFLECT( ... )  static_assert( true, "REFLECT;" #__VA_ARGS__ );
     #define PROPERTY( ... ) __attribute__( ( annotate( "PROPERTY;" #__VA_ARGS__ ) ) )
     #define FUNCTION( ... ) __attribute__( ( annotate( "FUNCTION;" #__VA_ARGS__ ) ) )
-    #define ENUM( ... )     __attribute__( ( annotate( "ENUM;" #__VA_ARGS__ ) ) )
+    #define ENUM( ... )     static_assert( true, "ENUM;" #__VA_ARGS__ );
     /** @brief 열거자 하나의 표시 메타입니다(언리얼 `UMETA`). 열거자 이름 뒤에 적습니다: `Red ENUMERATOR( DisplayName = "빨강", Hidden ),` */
     #define ENUMERATOR( ... ) __attribute__( ( annotate( "ENUMERATOR;" #__VA_ARGS__ ) ) )
 
@@ -59,7 +65,7 @@ namespace sw::generated
      *   REFLECT_CONTAINER(Map)             → MapWrapper
      * std:: 등 수정할 수 없는 타입은 ReflectBuiltins.xxx 에 등록합니다.
      */
-    #define REFLECT_CONTAINER( ... ) __attribute__( ( annotate( "REFLECT_CONTAINER;" #__VA_ARGS__ ) ) )
+    #define REFLECT_CONTAINER( ... ) static_assert( true, "REFLECT_CONTAINER;" #__VA_ARGS__ );
 
     /**
      * @brief GENERATED_BODY 와 같은 역할입니다. .gen.cpp 에 StaticType() 정의를 요청합니다(파서용 마커).

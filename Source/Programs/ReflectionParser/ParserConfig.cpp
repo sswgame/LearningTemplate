@@ -193,8 +193,7 @@ namespace sw
 
             static void applyTuningSection( ParserConfig& config, const nlohmann::json& obj )
             {
-                config._sourceLookbackBytes = getUintOrDefault( obj, jsonkey::kSourceLookbackBytes, config._sourceLookbackBytes );
-                config._maxParallelParses   = getUintOrDefault( obj, jsonkey::kMaxParallelParses, config._maxParallelParses );
+                config._maxParallelParses = getUintOrDefault( obj, jsonkey::kMaxParallelParses, config._maxParallelParses );
             }
 
             /**
@@ -292,11 +291,6 @@ namespace sw
                     if ( pList->empty() == false )
                         continue;
                     SW_LOG_ERROR_ID( "ParserConfig.RequiredNonEmptyList", "%#: '%#' is required (a non-empty list)", defaultsPath, pKey );
-                    bComplete = false;
-                }
-                if ( config._sourceLookbackBytes == 0 )
-                {
-                    SW_LOG_ERROR_ID( "ParserConfig.TuningSourceLookbackBytes", "%#: 'tuning.source_lookback_bytes' is required (a positive number)", defaultsPath );
                     bComplete = false;
                 }
                 if ( config._maxParallelParses == 0 )
@@ -407,7 +401,6 @@ namespace sw
         , _listNameFieldTypePrefix{}
         , _listNameFieldSkipFolder{}
         , _listLoadedFile{}
-        , _sourceLookbackBytes{ 0 }
         , _maxParallelParses{ 0 }
         , _bLoaded{ SW_FALSE }
         , _reserved{ 0 }

@@ -44,7 +44,6 @@ namespace sw
          *          파서가 스스로 "최신" 이라며 건너뛴다).
          */
         vector<string> _listLoadedFile;
-        uint32         _sourceLookbackBytes;
         /**
          * @brief 묶음 파싱이 실패해 헤더마다 다시 파싱할 때 동시에 여는 TU 의 상한입니다(`tuning.max_parallel_parses`, 필수).
          * @details TU 하나가 엔진 공통 헤더 전체를 들고 메모리 대역을 나눠 쓴다 — 16 개를 함께 돌리면 한 파싱이 1.0 초에서 2.1 초로 늘었다(`ReflectionPipeline::parsePending` 주석의 실측).

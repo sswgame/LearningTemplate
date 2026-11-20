@@ -41,6 +41,8 @@ namespace sw
         const vector<ParsedHeader>& getParsedHeaders() const noexcept { return _listHeader; }
 
     private:
+        static constexpr int32 kNoTarget = constant::invalid_index::kInt32;
+
         static CXChildVisitResult visitCursor( CXCursor cursor, CXCursor parent, CXClientData clientData );
         /** @brief 대상 헤더의 글에서 `#if` 아래 놓인 리플렉션 매크로(REFLECT · ENUM · PROPERTY · FUNCTION · REFLECT_CONTAINER · REFLECT_BODY)를 찾아 알립니다. 없으면 true 입니다(W-R3 d). */
         bool validateConditionalReflectMacros( CXFile file, const string& path ) const;
@@ -56,16 +58,35 @@ namespace sw
          *          REFLECT 여야 한다 — 아니면 알리고 false 입니다(생성 코드가 컴파일에서야 접근 오류로 멈추지 않게).
          */
         [[nodiscard]] bool resolveHiddenNested( CXCursor cursor, const string& fqn, bool& outHidden ) const;
-        void               onStructDeclaration( CXCursor cursor, ParsedHeader& outHeader );
-        void               onEnumDeclaration( CXCursor cursor, ParsedHeader& outHeader );
+        /**
+         * @brief 형식 앞 표식(`REFLECT` · `ENUM` · `REFLECT_CONTAINER` 의 static_assert) 하나입니다. 다음에 방문하는 형제 선언과 짝짓습니다.
+         * @details libclang 에 "앞 형제" API 가 없어 순회 순서로 짝짓는다 — 표식 다음 방문 커서가 같은 부모면 바로 다음 형제다.
+         */
+        struct PendingMarker
+        {
+            CXCursor                     _cursor{};
+            CXCursor                     _parent{};
+            string                       _spelling;
+            const ReflectAnnotationDesc* _pDesc{ nullptr };
+            int32                        _targetIndex{ kNoTarget };
+        };
+        /** @brief 표식 선언이면 짝을 기다리는 표식으로 둡니다. 리플렉션 표식이 아닌 static_assert 는 무시합니다. */
+        void beginMarker( CXCursor cursor, CXCursor parent, int32 targetIndex );
+        /** @brief 기다리던 표식을 꺼냅니다. 부모가 @p parent 와 다르면(범위가 닫혔다) 짝이 없다고 알리고 빈 표식을 돌려줍니다. */
+        PendingMarker takePendingMarker( CXCursor parent );
+        /** @brief 표식이 있는데 @p next 가 그 표식이 가리킬 선언이 아니면 알리고 그 헤더를 실패로 둡니다. 표식이 없으면 아무것도 하지 않습니다. */
+        void reportUnpairedMarker( const PendingMarker& marker, CXCursor next );
+        void reportMarker( const PendingMarker& marker, string_view reason );
+        /** @brief struct · class 하나 — REFLECT 표식이 있으면 수집하고, 없는데 REFLECT_BODY 만 있으면 오류입니다. */
+        void onRecordDeclaration( CXCursor cursor, const string* pReflectSpelling, ParsedHeader& outHeader );
+        void onStructDeclaration( CXCursor cursor, const string& spelling, ParsedHeader& outHeader );
+        void onEnumDeclaration( CXCursor cursor, const string& spelling, ParsedHeader& outHeader );
         /** @brief 열거자마다 이름 뒤의 `ENUMERATOR( … )` 를 읽어 @p inoutEnum 의 열거자에 넣습니다. 모르는 키가 있으면 false 입니다(알림은 이미 했다). */
         [[nodiscard]] bool applyEnumeratorAnnotation( CXCursor enumCursor, ParsedEnumInfo& inoutEnum ) const;
         /** @brief 열거형의 열거자 커서를 선언 순서로 모읍니다(`CursorReader::collectEnumerators` 와 같은 순서). */
         static CXChildVisitResult collectEnumeratorCursor( CXCursor cursor, CXCursor parent, CXClientData clientData );
 
     private:
-        static constexpr int32 kNoTarget = constant::invalid_index::kInt32;
-
         CXTranslationUnit      _translationUnit;
         const ParserSession*   _pSession;
         vector<string>         _listTargetPath;
@@ -73,6 +94,7 @@ namespace sw
         vector<ParsedHeader>   _listHeader;
         mutable CXFile         _pLastFile;       ///< 직전에 본 파일 — 같은 헤더의 선언은 몰려 나온다
         mutable int32          _lastTargetIndex; ///< `_pLastFile` 의 답
+        PendingMarker          _pendingMarker;   ///< 짝을 기다리는 표식(없으면 `_pDesc` 가 nullptr)
         uint8                  _bHasError : 1;
         [[maybe_unused]] uint8 _reserved  : 7;
     };

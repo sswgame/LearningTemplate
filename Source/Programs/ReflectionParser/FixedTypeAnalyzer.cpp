@@ -48,9 +48,8 @@ namespace sw
             session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( clang_getCanonicalType( clang_getEnumDeclIntegerType( declaration ) ) ) ) );
         CursorReader::collectEnumerators( declaration, result->_listEnumerator );
 
-        string spelling = AnnotationLookup::extractSourceAnnotation( declaration, annotation::kEnum, session._config );
-        if ( spelling.empty() )
-            spelling = AnnotationLookup::findAnnotateAttr( declaration, annotation::kEnumPrefix );
+        // 칸의 열거형은 다른 헤더에 있을 수 있다 — 선언의 부모를 따라가 바로 앞 표식을 읽는다.
+        const string spelling = AnnotationLookup::findPreviousSiblingMarker( declaration, annotation::kEnum );
         if ( spelling.empty() )
             return result;
         ParsedEnumInfo annotated;
@@ -162,7 +161,7 @@ namespace sw
             return result;
         }
         const CXCursor declaration = clang_getTypeDeclaration( canonical );
-        if ( AnnotationLookup::isReflectedRecord( declaration, session._config ) )
+        if ( AnnotationLookup::isReflectedRecord( declaration ) )
         {
             result->_kind               = FixedValueKind::Reflect;
             result->_fullyQualifiedName = CursorReader::makeFullyQualifiedName( declaration );

@@ -12,7 +12,8 @@
             "-DENUMERATOR(...)=__attribute__((annotate(\"ENUMERATOR;\" #__VA_ARGS__)))",
             "-x",
             "c++",
-            "-w"
+            "-Wno-everything",
+            "-Werror=ignored-attributes"
         ],
         "platform": {
             "windows": [
@@ -92,7 +93,6 @@
         ]
     },
     "tuning": {
-        "source_lookback_bytes": 512,
         "max_parallel_parses": 8
     }
 }

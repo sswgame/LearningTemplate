@@ -38,14 +38,14 @@ namespace sw
         return result;
     }
 
-    bool ContainerTreeBuilder::findReflectContainer( const CXType type, const ParserConfig& config, ContainerKind& outKind, string& outWrapperStem )
+    bool ContainerTreeBuilder::findReflectContainer( const CXType type, ContainerKind& outKind, string& outWrapperStem )
     {
         const CXCursor declaration = findContainerDeclaration( type );
         if ( clang_Cursor_isNull( declaration ) )
             return false;
 
         const ReflectAnnotationDesc& desc     = annotation::kReflectContainer;
-        const string                 spelling = AnnotationLookup::readAnnotation( declaration, desc, config );
+        const string                 spelling = AnnotationLookup::findPreviousSiblingMarker( declaration, desc );
         if ( spelling.empty() )
             return false;
 
@@ -91,7 +91,7 @@ namespace sw
         // 컨테이너의 인자만 다시 짠다. 알려진 이름(`string` 은 `basic_string<utf8>`)의 인자를 벗기면 `string<char>` 같은 모르는 이름이 된다.
         ContainerKind kind = ContainerKind::None;
         string        wrapperStem;
-        const bool    bContainer = session._containerTypeMap.match( outSpelling ) != nullptr || findReflectContainer( resolved, session._config, kind, wrapperStem );
+        const bool    bContainer = session._containerTypeMap.match( outSpelling ) != nullptr || findReflectContainer( resolved, kind, wrapperStem );
         const int32   argCount   = clang_Type_getNumTemplateArguments( resolved );
         if ( bContainer == false || argCount <= 0 )
             return bChanged;
@@ -199,7 +199,7 @@ namespace sw
 
         ContainerKind kind = ContainerKind::None;
         string        wrapperStem;
-        if ( findReflectContainer( type, session._config, kind, wrapperStem ) )
+        if ( findReflectContainer( type, kind, wrapperStem ) )
             markContainer( *node, kind, wrapperStem );
         else if ( rule != nullptr )
             markContainer( *node, rule->_kind, rule->_type );
@@ -222,7 +222,7 @@ namespace sw
             ContainerKind kind     = ContainerKind::None;
             string        wrapperStem;
             const CXType  named         = current.kind == CXType_Elaborated ? clang_Type_getNamedType( current ) : current;
-            const bool    bResolvedType = session._containerTypeMap.match( spelling ) != nullptr || findReflectContainer( current, session._config, kind, wrapperStem ) ||
+            const bool    bResolvedType = session._containerTypeMap.match( spelling ) != nullptr || findReflectContainer( current, kind, wrapperStem ) ||
                                        session._typeNameMap.isKnown( spelling ) || named.kind != CXType_Typedef;
             if ( bResolvedType )
             {

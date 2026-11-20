@@ -23,6 +23,7 @@ namespace sw
         , _listHeader{}
         , _pLastFile{ nullptr }
         , _lastTargetIndex{ kNoTarget }
+        , _pendingMarker{}
         , _bHasError{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -55,6 +56,7 @@ namespace sw
             return false;
 
         clang_visitChildren( clang_getTranslationUnitCursor( _translationUnit ), visitCursor, this );
+        static_cast<void>( takePendingMarker( clang_getNullCursor() ) ); // 번역 단위 끝에 남은 표식은 짝이 없다
         for ( uint32 index = 0; index < _listTargetFile.size(); ++index )
         {
             if ( validateConditionalReflectMacros( _listTargetFile[index], _listTargetPath[index] ) == false )
@@ -156,26 +158,42 @@ namespace sw
         return targetIndex;
     }
 
-    CXChildVisitResult AstVisitor::visitCursor( CXCursor cursor, CXCursor, CXClientData clientData )
+    CXChildVisitResult AstVisitor::visitCursor( CXCursor cursor, CXCursor parent, CXClientData clientData )
     {
         AstVisitor*        self = static_cast<AstVisitor*>( clientData );
         const CXCursorKind kind = clang_getCursorKind( cursor );
 
+        // 표식(`REFLECT(…)` 의 static_assert) 다음에 방문하는 커서는 그 바로 다음 형제다 — 표식의 자식으로는 내려가지 않는다.
+        const PendingMarker marker = self->takePendingMarker( parent );
+
         if ( kind == CXCursor_Namespace )
+        {
+            self->reportUnpairedMarker( marker, cursor );
             return CXChildVisit_Recurse;
+        }
 
         // include 된 외부 · 시스템 헤더의 선언은 바로 건너뛴다(AST 순회 비용을 크게 줄인다)
         const int32 targetIndex = self->findTargetIndex( cursor );
         if ( targetIndex == kNoTarget )
+        {
+            self->reportUnpairedMarker( marker, cursor );
             return CXChildVisit_Continue;
+        }
 
-        ParsedHeader&       header = self->_listHeader[static_cast<size_t>( targetIndex )];
-        const ParserConfig& config = self->_pSession->_config;
+        ParsedHeader& header = self->_listHeader[static_cast<size_t>( targetIndex )];
+
+        if ( kind == CXCursor_StaticAssert )
+        {
+            self->reportUnpairedMarker( marker, cursor );
+            self->beginMarker( cursor, parent, targetIndex );
+            return CXChildVisit_Continue;
+        }
 
         if ( kind == CXCursor_FieldDecl )
         {
-            const bool bOrphanProperty = AnnotationLookup::hasAnnotation( cursor, annotation::kProperty, config ) &&
-                                         DeclarationValidator::isInsideReflectType( cursor, annotation::kPropertyMacro, config ) == false;
+            self->reportUnpairedMarker( marker, cursor );
+            const bool bOrphanProperty = AnnotationLookup::findAnnotateAttr( cursor, annotation::kPropertyPrefix ).empty() == false &&
+                                         DeclarationValidator::isInsideReflectType( cursor, annotation::kPropertyMacro ) == false;
             if ( bOrphanProperty )
                 self->markHeaderError( header );
             return CXChildVisit_Continue;
@@ -183,42 +201,109 @@ namespace sw
 
         if ( kind == CXCursor_CXXMethod )
         {
-            const bool bHasFunction = AnnotationLookup::hasAnnotation( cursor, annotation::kFunction, config );
-            // 메서드의 PROPERTY 는 실제 애노테이션만 본다(값 참조 접근자). 소스 창 휴리스틱은 필드 쪽 것이다.
-            const bool bHasProperty = AnnotationLookup::findAnnotateAttr( cursor, annotation::kPropertyPrefix ).empty() == false;
-            const bool bHasBody =
-                AnnotationLookup::findAnnotateAttr( cursor, annotation::kReflectBodyPrefix ).empty() == false ||
-                CursorReader::isStringEqual( clang_getCursorSpelling( cursor ), annotation::kReflectBodyMarkerFn );
-            const utf8* pMacroName   = bHasFunction ? annotation::kFunctionMacro
-                                                    : ( bHasProperty ? annotation::kPropertyMacro : annotation::kReflectBodyPrefix );
-            const bool  bOrphanMacro = ( bHasFunction || bHasProperty || bHasBody ) && DeclarationValidator::isInsideReflectType( cursor, pMacroName, config ) == false;
+            self->reportUnpairedMarker( marker, cursor );
+            // REFLECT_BODY 표식 함수는 형식 쪽에서 본다 — REFLECT 와 서로 필수다(`onRecordDeclaration` · `onStructDeclaration`).
+            const bool  bHasFunction = AnnotationLookup::findAnnotateAttr( cursor, annotation::kFunctionPrefix ).empty() == false;
+            const bool  bHasProperty = AnnotationLookup::findAnnotateAttr( cursor, annotation::kPropertyPrefix ).empty() == false;
+            const utf8* pMacroName   = bHasFunction ? annotation::kFunctionMacro : annotation::kPropertyMacro;
+            const bool  bOrphanMacro = ( bHasFunction || bHasProperty ) && DeclarationValidator::isInsideReflectType( cursor, pMacroName ) == false;
             if ( bOrphanMacro )
                 self->markHeaderError( header );
             return CXChildVisit_Continue;
         }
 
+        const bool bReflectMarker   = marker._pDesc == &annotation::kReflect;
+        const bool bEnumMarker      = marker._pDesc == &annotation::kEnum;
+        const bool bContainerMarker = marker._pDesc == &annotation::kReflectContainer;
+
         // 클래스 템플릿은 FQN 에 인자가 없어 offsetof / TypeRegistrar<T> 가 성립하지 않는다. 경고로 건너뛰면 적은 REFLECT 가 조용히 사라진다 — 생성 오류다.
+        // REFLECT_CONTAINER 는 클래스 템플릿에 적는다(칸 형식에서 `ContainerTreeBuilder` 가 읽는다).
         if ( kind == CXCursor_ClassTemplate || kind == CXCursor_ClassTemplatePartialSpecialization )
         {
-            if ( AnnotationLookup::hasAnnotation( cursor, annotation::kReflect, config ) )
+            if ( bReflectMarker )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.REFLECTClassTemplateNot", "ERROR: REFLECT on a class template is not supported: %# - reflect a concrete type",
                                  CursorReader::makeFullyQualifiedName( cursor ) );
                 self->markHeaderError( header );
             }
+            else if ( bContainerMarker == false )
+                self->reportUnpairedMarker( marker, cursor );
             return CXChildVisit_Continue;
         }
 
         if ( kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl )
         {
-            if ( AnnotationLookup::hasAnnotation( cursor, annotation::kReflect, config ) )
-                self->onStructDeclaration( cursor, header );
+            if ( bEnumMarker )
+                self->reportUnpairedMarker( marker, cursor );
+            self->onRecordDeclaration( cursor, bReflectMarker ? &marker._spelling : nullptr, header );
             return CXChildVisit_Recurse;
         }
 
-        if ( kind == CXCursor_EnumDecl && AnnotationLookup::hasAnnotation( cursor, annotation::kEnum, config ) )
-            self->onEnumDeclaration( cursor, header );
+        if ( kind == CXCursor_EnumDecl && bEnumMarker )
+        {
+            self->onEnumDeclaration( cursor, marker._spelling, header );
+            return CXChildVisit_Continue;
+        }
+        self->reportUnpairedMarker( marker, cursor );
         return CXChildVisit_Continue;
+    }
+
+    void AstVisitor::beginMarker( const CXCursor cursor, const CXCursor parent, const int32 targetIndex )
+    {
+        for ( const ReflectAnnotationDesc* pDesc : { &annotation::kReflect, &annotation::kEnum, &annotation::kReflectContainer } )
+        {
+            string spelling = AnnotationLookup::readMarker( cursor, *pDesc );
+            if ( spelling.empty() )
+                continue;
+            _pendingMarker = PendingMarker{ cursor, parent, std::move( spelling ), pDesc, targetIndex };
+            return;
+        }
+    }
+
+    AstVisitor::PendingMarker AstVisitor::takePendingMarker( const CXCursor parent )
+    {
+        PendingMarker marker = std::move( _pendingMarker );
+        _pendingMarker       = PendingMarker{};
+        if ( marker._pDesc == nullptr || clang_equalCursors( parent, marker._parent ) != 0 )
+            return marker;
+        // 다음 커서의 부모가 다르다 — 표식이 선언 없이 범위(이름공간 · 형식 · 헤더)를 닫았다. 조용히 버리면 적은 REFLECT · ENUM 이 사라진다.
+        reportMarker( marker, "ends its scope without a declaration after it" );
+        return PendingMarker{};
+    }
+
+    void AstVisitor::reportUnpairedMarker( const PendingMarker& marker, const CXCursor next )
+    {
+        if ( marker._pDesc == nullptr )
+            return;
+        StringBuilder<constant::buffer::kMax512> reason;
+        reason.appendFormat( "is followed by '%#' (%#), not the declaration it marks", CursorReader::getCursorSpelling( next ),
+                             CursorReader::takeString( clang_getCursorKindSpelling( clang_getCursorKind( next ) ) ) );
+        reportMarker( marker, reason.view() );
+    }
+
+    void AstVisitor::reportMarker( const PendingMarker& marker, const string_view reason )
+    {
+        CXFile file = nullptr;
+        uint32 line = 0;
+        clang_getExpansionLocation( clang_getCursorLocation( marker._cursor ), &file, &line, nullptr, nullptr );
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORMarkerNotBeforeType", "ERROR: %#(%#): %#() %# - write it right before the %# it marks.", CursorReader::takeString( clang_getFileName( file ) ), line,
+                         marker._pDesc->_pMacroName, reason, marker._pDesc == &annotation::kEnum ? "enum" : "class or struct" );
+        markHeaderError( _listHeader[static_cast<size_t>( marker._targetIndex )] );
+    }
+
+    void AstVisitor::onRecordDeclaration( const CXCursor cursor, const string* pReflectSpelling, ParsedHeader& outHeader )
+    {
+        if ( pReflectSpelling != nullptr )
+        {
+            onStructDeclaration( cursor, *pReflectSpelling, outHeader );
+            return;
+        }
+        // REFLECT_BODY() 만 있고 REFLECT() 가 없으면 등록기가 없어 StaticType() 이 링크에서야 멈춘다. 둘은 서로 필수다(반대쪽은 `onStructDeclaration`).
+        if ( AnnotationLookup::isReflectedRecord( cursor ) == false )
+            return;
+        SW_LOG_ERROR_ID( "AstVisitor.ERRORUsedClassStruct", "ERROR: %#() is used in class/struct '%#', but it lacks REFLECT()!", annotation::kReflectBodyPrefix,
+                         CursorReader::makeFullyQualifiedName( cursor ) );
+        markHeaderError( outHeader );
     }
 
     bool AstVisitor::resolveHiddenNested( const CXCursor cursor, const string& fqn, bool& outHidden ) const
@@ -236,7 +321,7 @@ namespace sw
             {
                 outHidden = true;
                 // 숨은 이름은 그 바깥 형식의 `REFLECT_BODY()` friend 로만 닿는다(언리얼은 중첩 UCLASS · USTRUCT 자체를 막는다 — 여기서는 바깥이 REFLECT 면 허용한다).
-                const bool bReflectedOwner = parentKind != CXCursor_ClassTemplate && AnnotationLookup::hasAnnotation( parent, annotation::kReflect, _pSession->_config );
+                const bool bReflectedOwner = parentKind != CXCursor_ClassTemplate && AnnotationLookup::isReflectedRecord( parent );
                 if ( bReflectedOwner == false )
                 {
                     SW_LOG_ERROR_ID( "AstVisitor.ERRORHiddenNestedOwnerNotReflected",
@@ -261,7 +346,7 @@ namespace sw
      * 4. `REFLECT_BODY()` 매크로가 있는지 확인
      * 5. 멤버 변수(`PROPERTY`)와 멤버 함수(`FUNCTION`) 메타데이터 수집
      */
-    void AstVisitor::onStructDeclaration( const CXCursor cursor, ParsedHeader& outHeader )
+    void AstVisitor::onStructDeclaration( const CXCursor cursor, const string& spelling, ParsedHeader& outHeader )
     {
         ParsedTypeInfo typeInfo;
         typeInfo._name               = CursorReader::getCursorSpelling( cursor );
@@ -276,9 +361,7 @@ namespace sw
 
         BLOCK( "Parse REFLECT Annotation" )
         {
-            const string spelling = AnnotationLookup::readAnnotation( cursor, annotation::kReflect, _pSession->_config );
-            if ( spelling.empty() == false &&
-                 AnnotationLookup::applyAnnotation( spelling, typeInfo, *_pSession, typeInfo._fullyQualifiedName ) == false )
+            if ( AnnotationLookup::applyAnnotation( spelling, typeInfo, *_pSession, typeInfo._fullyQualifiedName ) == false )
             {
                 markHeaderError( outHeader );
                 return;
@@ -376,7 +459,7 @@ namespace sw
         bool bValid = true;
         for ( size_t index = 0; index < listCursor.size(); ++index )
         {
-            // 열거자 뒤의 속성은 자식 AnnotateAttr 로만 본다 — 소스 창 폴백은 앞 열거자의 매크로를 제 것으로 읽는다.
+            // 열거자 뒤의 속성은 그 열거자의 자식 AnnotateAttr 다.
             const string spelling = AnnotationLookup::findAnnotateAttr( listCursor[index], annotation::kEnumeratorPrefix );
             if ( spelling.empty() )
                 continue;
@@ -388,7 +471,7 @@ namespace sw
         return bValid;
     }
 
-    void AstVisitor::onEnumDeclaration( const CXCursor cursor, ParsedHeader& outHeader )
+    void AstVisitor::onEnumDeclaration( const CXCursor cursor, const string& spelling, ParsedHeader& outHeader )
     {
         ParsedEnumInfo enumInfo;
         enumInfo._name               = CursorReader::getCursorSpelling( cursor );
@@ -428,12 +511,7 @@ namespace sw
 
         BLOCK( "Parse ENUM annotation (Alias / …)" )
         {
-            // 소스의 ENUM(...) 을 우선해 Alias= 가 BitFlag annotate 에 가려지지 않게 한다.
-            string spelling = AnnotationLookup::extractSourceAnnotation( cursor, annotation::kEnum, _pSession->_config );
-            if ( spelling.empty() )
-                spelling = AnnotationLookup::findAnnotateAttr( cursor, annotation::kEnumPrefix );
-            if ( spelling.empty() == false &&
-                 AnnotationLookup::applyAnnotation( spelling, enumInfo, *_pSession, enumInfo._fullyQualifiedName ) == false )
+            if ( AnnotationLookup::applyAnnotation( spelling, enumInfo, *_pSession, enumInfo._fullyQualifiedName ) == false )
             {
                 markHeaderError( outHeader );
                 return;
