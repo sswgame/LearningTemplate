@@ -10,7 +10,7 @@ namespace sw
 {
     namespace
     {
-        SW_DEFINE_REGISTRATION_LIST( getEntries, const NetSimGameEntry, "NetSimGameRegistry", RegistrationOrder::Insertion, true )
+        SW_DEFINE_REGISTRATION_LIST( getEntries, const NetSimGameEntry, "NetSimGameRegistry", RegistrationOrder::ByOrderThenName, true ) // 이름순 — 목록 첫 칸(기본 선택)이 모듈 로드 순서에 달리지 않게
     } // namespace
 
     bool NetSimGameRegistry::registerGame( const NetSimGameEntry& entry )

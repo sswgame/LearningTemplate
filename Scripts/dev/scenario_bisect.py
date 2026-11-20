@@ -158,14 +158,13 @@ def stage_failed_in_reports(list_report: Sequence[dict], stage_name: str) -> boo
 # 진 단계 다시 돌기(--rerun-failed) · 단계부터 끝까지(--from-stage) · 진행 목록(--advances) — DesignBacklog 검증 시간 절 V1
 # ------------------------------------------------------------------------------
 
-def find_latest_per_backend_folder(automation_dir: pathlib.Path, first_stage_path: str, stage_names: set[str], chain_log: pathlib.Path) -> pathlib.Path | None:
-    """마지막 체인 실행의 백엔드 보고 폴더 — `-scenario-report` 없는 체인은 `<Saved/Automation>/<첫 단계 파일 이름>/per-backend-<pid>/` 에
-    단계 보고 `<백엔드>[.<번호>].json` 을 남긴다(AutomationPerBackend). 첫 단계 폴더에서, 체인 로그(`Scenario.<체인>.log`)보다 늦지 않고
-    보고가 모두 이 체인의 단계인 것 중 가장 새것. 없으면 None.
-    폴더 전체에서 고르면 혼자 다시 돌린 단계(flowterrain 혼자)나 같은 단계를 실은 다른 체인의 나중 실행을 집었다."""
-    stem = pathlib.PurePosixPath(first_stage_path).name.split('.')[0]
+def find_latest_per_backend_folder(automation_dir: pathlib.Path, stage_names: set[str], chain_log: pathlib.Path) -> pathlib.Path | None:
+    """마지막 체인 실행의 백엔드 보고 폴더 — `-scenario-report` 없는 체인은 `<Saved/Automation>/<시나리오>/per-backend-<pid>/` 에
+    단계 보고 `<백엔드>[.<번호>].json` 을 남긴다(AutomationPerBackend — 폴더 이름의 시나리오는 나눠 주는 체인이면 첫 단계가 아니다).
+    체인 로그(`Scenario.<체인>.log`)보다 늦지 않고 보고가 모두 이 체인의 단계인 것 중 가장 새것. 없으면 None.
+    체인 뒤에 혼자 다시 돌린 실행은 로그보다 늦어 빠지고, 앞선 실행은 체인 폴더보다 오래돼 고르지 않는다."""
     latest_mtime = chain_log.stat().st_mtime + 5.0 if chain_log.is_file() else float('inf')   # 체인 로그는 자식 보고 뒤에 닫힌다 — 몇 초 여유
-    candidates = sorted((path for path in (automation_dir / stem).glob('per-backend-*') if path.is_dir() and path.stat().st_mtime <= latest_mtime),
+    candidates = sorted((path for path in automation_dir.glob('*/per-backend-*') if path.is_dir() and path.stat().st_mtime <= latest_mtime),
                         key=lambda path: path.stat().st_mtime, reverse=True)
     for folder in candidates:
         names = [report.get('name') for _, report in read_backend_reports(folder)]
@@ -412,7 +411,7 @@ def self_check() -> int:
     list_report = [('dx12', {'name': 'a', 'result': 'Passed'}), ('dx12', {'name': 'b', 'result': 'Failed'}), ('vk', {'name': 'a', 'result': 'Skipped'})]
     assert select_failed_stages({'dx12': ['a', 'b', 'c'], 'vk': ['a', 'b']}, list_report) == [('dx12', 'b'), ('dx12', 'c'), ('vk', 'b')]
     assert select_failed_stages({'dx12': ['a']}, list_report) == []
-    # 체인 보고 폴더 고르기 · 백엔드 목록: 첫 단계 폴더만, 체인 로그보다 늦은 혼자 실행은 빼고, 백엔드는 보고 파일 이름에서(보고 폴더에 로그가 없다).
+    # 체인 보고 폴더 고르기 · 백엔드 목록: 체인 로그보다 늦은 혼자 실행은 빼고, 백엔드는 보고 파일 이름에서(보고 폴더에 로그가 없다).
     import tempfile, json, os, time
     with tempfile.TemporaryDirectory() as temp:
         root = pathlib.Path(temp)
@@ -429,7 +428,7 @@ def self_check() -> int:
         os.utime(chain_folder, (now - 100, now - 100))
         os.utime(chain_log, (now - 90, now - 90))
         os.utime(solo_folder, (now, now))
-        assert find_latest_per_backend_folder(root, 'x/a.scenario.xml', {'a', 'b'}, chain_log) == chain_folder
+        assert find_latest_per_backend_folder(root, {'a', 'b'}, chain_log) == chain_folder
         assert collect_expected_stages(chain_folder, root, 'c', ['a', 'b'], False) == {'dx12': ['a', 'b'], 'vk': ['a', 'b']}
     # 진행 분류: 뒤가 Expect watch 면 condition, 사진이면 photo, 그 밖 other. render="true" 를 따로 적는다. 주석 안의 진행 · 조건 대기(WaitUntil)는 세지 않는다.
     advances = list_advance_steps('<Scenario name="x"><!-- <AdvanceSimulation frames="9"/> --><AdvanceSimulation frames="2"/><Expect watch="A" equals="1"/>'
@@ -499,7 +498,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if options.rerun_failed:
         names = [read_scenario_name(path) for path in paths]
         automation_dir = build_dir / 'Bin' / 'Saved' / 'Automation'
-        folder = find_latest_per_backend_folder(automation_dir, paths[0], set(names), log_dir / f'Scenario.{options.chain}.log')
+        folder = find_latest_per_backend_folder(automation_dir, set(names), log_dir / f'Scenario.{options.chain}.log')
         if folder is None:
             parser.error(f'{options.chain} 의 체인 보고가 {automation_dir} 에 없다 — 체인을 먼저 돌린다')
         split = any('scenario-backend-split' in part for part in command)

@@ -425,7 +425,7 @@ def retry_failed(arguments):
     paths = app_arguments.read_chain_stages(command)
     names = [scenario_bisect.read_scenario_name(path) for path in paths]
     log_dir = pathlib.Path(f'{RELEASE}/Testing/Logs')
-    folder = scenario_bisect.find_latest_per_backend_folder(pathlib.Path(f'{RELEASE}/Bin/Saved/Automation'), paths[0], set(names), log_dir / f'Scenario.{pack}.log')
+    folder = scenario_bisect.find_latest_per_backend_folder(pathlib.Path(f'{RELEASE}/Bin/Saved/Automation'), set(names), log_dir / f'Scenario.{pack}.log')
     if folder is None:
         print(f'{pack} 의 체인 보고가 없다 - chain {pack} 을 먼저 돌린다')
         return 1
