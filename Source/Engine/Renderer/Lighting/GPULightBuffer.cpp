@@ -581,7 +581,7 @@ namespace sw
         const bool bLacksUAV = bNeedsUAV && _buffer.isValid() && _buffer._uav == kInvalidDescriptorIndex;
         if ( bLacksUAV && _bUAVDenied == SW_FALSE )
             _buffer.release( pDevice );
-        if ( _buffer.ensureCapacity( pDevice, stride, totalCount, bNeedsUAV ? kLightBufferUsageWithUAV : kLightBufferUsage, true, bNeedsUAV, nullptr ) == false )
+        if ( _buffer.ensureCapacity( pDevice, stride, totalCount, bNeedsUAV ? kLightBufferUsageWithUAV : kLightBufferUsage, true, bNeedsUAV, _listUploadScratch.data() ) == false )
         {
             _count         = 0;
             _cpuCount      = 0;
@@ -666,7 +666,7 @@ namespace sw
         const bool bLacksProbeUAV = bWritable && _probeBuffer.isValid() && _probeBuffer._uav == kInvalidDescriptorIndex;
         if ( bLacksProbeUAV && _bProbeUAVDenied == SW_FALSE )
             _probeBuffer.release( pDevice );
-        if ( _probeBuffer.ensureCapacity( pDevice, probeStride, probeElementCount, bWritable ? kLightBufferUsageWithUAV : kLightBufferUsage, true, bWritable, nullptr ) )
+        if ( _probeBuffer.ensureCapacity( pDevice, probeStride, probeElementCount, bWritable ? kLightBufferUsageWithUAV : kLightBufferUsage, true, bWritable, listProbeElement.data() ) )
         {
             _probeBuffer.upload( pDevice, listProbeElement.data(), probeElementCount * probeStride );
             _probeElementCount = probeElementCount;
@@ -710,7 +710,7 @@ namespace sw
 
         constexpr RHIBufferUsage kUsage    = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         const uint32             wordCount = static_cast<uint32>( _listGridWordScratch.size() );
-        if ( _cpuGridBuffer.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), wordCount, kUsage, true, false, nullptr ) == false )
+        if ( _cpuGridBuffer.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), wordCount, kUsage, true, false, _listGridWordScratch.data() ) == false )
         {
             reportGridFailure( "could not allocate the CPU grid buffer", 0 );
             _listGridBase.assign( listGridViewProj.size(), constant::invalid_index::kUint32 );
@@ -756,7 +756,7 @@ namespace sw
         constexpr RHIBufferUsage kViewUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         constexpr RHIBufferUsage kGridUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
         const uint32             viewCount  = static_cast<uint32>( _listGridViewScratch.size() );
-        const bool               bViewReady = _gpuGridViewBuffer.ensureCapacity( pDevice, static_cast<uint32>( sizeof( float4 ) ), viewCount, kViewUsage, true, false, nullptr );
+        const bool               bViewReady = _gpuGridViewBuffer.ensureCapacity( pDevice, static_cast<uint32>( sizeof( float4 ) ), viewCount, kViewUsage, true, false, _listGridViewScratch.data() );
         const bool               bGridReady = _gpuGridBuffer.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), gridViewCount * grid::kGPUWordsPerView, kGridUsage, true, true, nullptr ) &&
                                 _gpuGridBuffer._uav != kInvalidDescriptorIndex;
         if ( bViewReady == false || bGridReady == false )

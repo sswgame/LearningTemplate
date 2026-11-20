@@ -124,7 +124,7 @@ namespace sw
         constexpr RHIBufferUsage kReadUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         const uint32             stride     = static_cast<uint32>( sizeof( LensFlareSprite ) );
         const uint32             count      = static_cast<uint32>( _listSpriteScratch.size() );
-        if ( _buffer.ensureCapacity( pDevice, stride, count, kReadUsage, true, false, nullptr ) == false )
+        if ( _buffer.ensureCapacity( pDevice, stride, count, kReadUsage, true, false, _listSpriteScratch.data() ) == false )
         {
             // 다른 모양으로 대신 그리지 않는다 — 이번 프레임의 플레어가 빠지고 까닭은 한 번만 남긴다.
             if ( _bReportedFailure == SW_FALSE )
