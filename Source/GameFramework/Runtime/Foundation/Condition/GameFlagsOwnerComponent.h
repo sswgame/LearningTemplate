@@ -36,7 +36,10 @@ namespace sw
         /** @brief 열려 있어 읽고 쓸 수 있는 플래그입니다. 아직 열리지 않았으면 nullptr 입니다. 게임 스레드입니다. */
         [[nodiscard]] virtual GameFlags* findOpenFlags() = 0;
 
-        /** @brief 씬 @p pManager 의 첫 열린 플래그(등록 순서)입니다 — 감시 값 `Session.Flag` 와 같은 판 상태입니다. 없으면 nullptr 입니다. */
-        [[nodiscard]] static GameFlags* findFirstOpen( const GameObjectManager* pManager );
+        /**
+         * @brief 씬 @p pManager 의 열린 월드 플래그(씬에 하나 — 감시 값 `Session.Flag` 와 같은 월드 상태)입니다. 없으면 nullptr 입니다.
+         * @details 열린 소유자가 둘 이상이면 오류를 남기고 nullptr 이다 — 어느 플래그에 적을지를 등록 순서로 고르지 않는다(하위 레벨이 둘째 소유자를 연 경우).
+         */
+        [[nodiscard]] static GameFlags* findOpen( const GameObjectManager* pManager );
     };
 } // namespace sw
