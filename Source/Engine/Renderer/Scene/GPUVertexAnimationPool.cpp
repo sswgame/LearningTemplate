@@ -124,10 +124,9 @@ namespace sw
             listWanted.push_back( Wanted{ pAnimation, contentID } );
         }
 
-        // 반납한 구간은 재구성 몇 번 뒤에야 다시 내준다(앞 프레임이 아직 읽는 구간을 덮어쓰지 않는다).
-        ++_rebuildSerial;
-        if ( _rebuildSerial > kRetireLag )
-            _allocator.retireDeferred( _rebuildSerial - kRetireLag );
+        // 반납한 구간은 그 재구성이 낸 펜스 값을 GPU 가 끝낸 뒤에야 다시 내준다(앞 프레임이 아직 읽는 구간을 덮어쓰지 않는다).
+        const uint64 retireStamp = _gpuFence.signal( *pDevice );
+        _allocator.retireDeferred( _gpuFence.getCompletedValue() );
 
         // 1) 내용이 그대로인 메시의 기록은 남기고, 아무 메시도 쓰지 않게 된 테이블의 구간은 돌려받는다.
         unordered_map<IdentityToken, MeshRecord>          mapKeptRecord;
@@ -154,7 +153,7 @@ namespace sw
             const auto kept = mapKeptRef.find( entry.first );
             if ( kept == mapKeptRef.end() )
             {
-                _allocator.freeDeferred( entry.second._base, entry.second._wordCount, _rebuildSerial );
+                _allocator.freeDeferred( entry.second._base, entry.second._wordCount, retireStamp );
                 listDropped.push_back( entry.first );
             }
             else

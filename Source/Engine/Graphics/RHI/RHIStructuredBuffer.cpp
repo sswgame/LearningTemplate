@@ -22,16 +22,25 @@ namespace sw
         if ( bEnough )
             return true;
 
+        // 같은 원소의 버퍼가 모자라 다시 만들 때는 1.5 배 이상으로 키운다 — 개수가 조금씩 늘 때(라이트 · 인스턴스) 프레임마다 다시 만들지 않는다.
+        // 처음 만들 때와 원소 크기가 바뀔 때는 요청 그대로다(고정 크기 버퍼가 부풀지 않는다). 언리얼 GPUScene 버퍼의 늘림 정책과 같은 자리다(기억에 의존한 비교).
+        const bool   bGrowing      = ( _buffer != 0 ) && ( _elementSize == elementSize );
+        const uint64 grownCount    = static_cast<uint64>( _capacityElements ) + _capacityElements / 2u;
+        const bool   bGrowthFits   = bGrowing && grownCount > elementCount && grownCount * elementSize <= std::numeric_limits<uint32>::max();
+        const uint32 capacityCount = bGrowthFits ? static_cast<uint32>( grownCount ) : elementCount;
+
         release( pDevice );
         if ( elementCount == 0 )
             return false;
 
+        // 내용은 요청한 원소 수만큼이다 — 용량이 더 크면 만든 뒤에 그만큼만 올린다(만들기가 용량 전체를 읽지 않게).
+        const bool    bExactSize = capacityCount == elementCount;
         RHIBufferDesc desc{};
         desc._elementSize  = elementSize;
-        desc._elementCount = elementCount;
-        desc._sizeBytes    = elementSize * elementCount;
+        desc._elementCount = capacityCount;
+        desc._sizeBytes    = elementSize * capacityCount;
         desc._usage        = usage;
-        desc._pInitialData = pInitialData;
+        desc._pInitialData = bExactSize ? pInitialData : nullptr;
 
         // 한 번만 만든다 — UAV 를 뺀 버퍼나 다른 생성 함수로 대신 만들지 않는다. 컴퓨트(UAV)를 못 쓰는 백엔드는 부르는 쪽이 능력(`RHICapabilities::_bCompute`)으로 가린다.
         _buffer = pDevice->getResourceFactory()->createBuffer( desc );
@@ -47,8 +56,10 @@ namespace sw
             _srv = pDevice->getResourceFactory()->registerBindlessBufferSRV( _buffer );
         if ( bNeedsUAV )
             _uav = pDevice->getResourceFactory()->registerBindlessBufferUAV( _buffer );
-        _capacityElements = elementCount;
+        _capacityElements = capacityCount;
         _elementSize      = elementSize;
+        if ( bExactSize == false )
+            upload( pDevice, pInitialData, elementSize * elementCount );
         return true;
     }
 
