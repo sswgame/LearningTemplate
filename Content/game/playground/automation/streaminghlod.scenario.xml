@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c9b7458145714b43a5c2b606f7a17cc6"?>
+<!--
+  씬 스트리밍 (라) — HLOD 대리 · 로드 큐. 무대는 maps/streaming_hlod.scene.xml(10 m 셀 · 15 m 반경, 정적 바위가 셀 (0,0) 과 (6,0) 에 있다).
+  셀은 쿠킹본에만 있어 소스 콘텐츠로는 gv_sceneStreamSourceCells 로 씬 로드가 쿠커와 같은 나누기(HLOD 굽기 포함)를 메모리에서 한다.
+  ① 카메라가 셀 (0,0) 위에 있으면 그 조각이 오르고 대리는 꺼지며, 먼 셀 (6,0) 은 바위 대신 대리가 켜져 있다. ② 카메라가 셀 (6,0) 으로 가면 뒤바뀐다(대리 수는 늘 하나).
+  ③ 로드 큐가 비고(Scene.PendingCellCount) 개발 명령 world.streamqueue 가 셀 · 텍스처 줄을 낸다. 값으로 판정한다(골든 없음).
+  실행: ctest -R Scenario.game.playground.streaminghlod · App -scenario=game/playground/automation/streaminghlod.scenario.xml -unattended
+-->
+<Scenario name="game.playground.streaminghlod" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/streaming_hlod.scene.xml"/>
+	<Launch variable="gv_sceneStreamSourceCells" value="true"/>
+	<WaitUntil watch="Scene.LoadedCellCount" atLeast="1" timeoutFrames="120"/> <!-- 카메라 둘레 셀이 올랐다(셀을 나눠 스트리밍한다) -->
+	<Expect watch="Scene.HLODCount" equals="2"/>                               <!-- 정적 메시가 있는 조각 둘만 대리를 받는다(등불 셀은 없다) -->
+
+	<!-- ① 셀 (0,0) 은 올라 대리가 꺼지고, 먼 셀 (6,0) 은 대리가 그린다 -->
+	<WaitUntil watch="Scene.PendingCellCount" equals="0" timeoutFrames="120"/>
+	<Expect watch="Object.Exists" target="RockA" equals="1"/>
+	<Expect watch="Object.Exists" target="RockC" equals="0"/>
+	<Expect watch="Object.Exists" target="HLOD_6_0" equals="1"/>
+	<Expect watch="Scene.HLODShownCount" equals="1"/>
+	<Expect watch="Texture.StreamingQueueCount" atLeast="0"/> <!-- 텍스처 로드 큐를 읽는다(값은 백엔드 · 밉 속도에 달려 문턱만) -->
+	<DevCommand line="world.streamqueue"/>
+
+	<!-- ② 카메라가 셀 (6,0) 으로 간다 — 그 조각이 오르면 대리가 꺼지고, 내려간 셀 (0,0) 의 대리가 켜진다 -->
+	<DevCommand line="move GameCamera 65 30 5"/>
+	<WaitUntil watch="Object.Exists" target="RockC" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="Scene.PendingCellCount" equals="0" timeoutFrames="120"/>
+	<Expect watch="Object.Exists" target="RockA" equals="0"/>
+	<Expect watch="Scene.HLODShownCount" equals="1"/>
+	<DevCommand line="world.streamqueue"/>
+
+	<!-- ③ 돌아오면 다시 셀 (0,0) 이 오르고 대리 수는 그대로 하나다 -->
+	<DevCommand line="move GameCamera 5 30 5"/>
+	<WaitUntil watch="Object.Exists" target="RockA" equals="1" timeoutFrames="120"/>
+	<Expect watch="Object.Exists" target="RockC" equals="0"/>
+	<Expect watch="Scene.HLODShownCount" equals="1"/>
+	<Pass/>
+</Scenario>

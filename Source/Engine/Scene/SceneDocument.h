@@ -168,6 +168,9 @@ namespace sw
             vector<string>          _listDataLayer;       ///< 이 셀 조각의 데이터 레이어(비면 레이어 없는 엔티티). 언리얼 World Partition 처럼 좌표 + 레이어 집합이 런타임 셀 하나다 — 켜고 끌 때 이 조각만 오르내린다
             uint64                  _contentOffset{ 0 };  ///< 쿠킹본 안 셀 내용(엔티티 목록)의 시작 바이트(`readStreamingCellContent` 로 푼다)
             uint64                  _contentSize{ 0 };    ///< 셀 내용의 바이트 수. 0 이면 내용이 `_listSceneObjectNode` 에 있다(메모리에서 나눈 문서)
+            /// 이 조각의 HLOD 대리 엔티티(기본 목록 `_listSceneObjectNode` 에 든 늘 올라 있는 엔티티)의 파일 id — 쿠커가 조각의 정적 메시를 인스턴스 메시로 모아 굽는다
+            /// (`SceneCooker::splitStreamingCells`). 0 이면 대리가 없다(정적 메시가 없는 조각). 스트리밍은 조각이 올라 있지 않을 때만 대리를 켠다
+            uint64 _hlodFileID{ 0 };
 
             /** @brief 내용이 쿠킹본의 구간에 있으면(색인만 읽은 셀) true 입니다. */
             bool hasFileContent() const { return _contentSize != 0; }

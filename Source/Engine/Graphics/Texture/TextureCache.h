@@ -17,6 +17,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Asset/Image/TextureMipLayout.h"
+#include "Engine/Asset/StreamingSourcePriority.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/RHIDescriptorIndex.h"
 #include "Engine/Foundation/RenderTargetDeclaration.h"
@@ -52,6 +53,31 @@ namespace sw
         uint8 _bFinishEachFrame : 1;
 
         TextureStreamingBudget() { _bFinishEachFrame = SW_FALSE; }
+    };
+
+    /**
+     * @brief 한 프레임에 텍스처 하나가 받은 스트리밍 요구입니다(`TextureCache::recordStreamingDemand`) — 화면 크기와, 그 메시 자리의 스트리밍 우선순위(셀 로드와 같은 값).
+     * @details 위쪽 밉 줄은 우선순위가 급한 것 → 화면에서 큰 것 차례다(언리얼 텍스처 스트리머의 wanted mip 에 World Partition 스트리밍 소스 우선순위를 앞에 둔 꼴).
+     */
+    struct TextureStreamingDemand
+    {
+        float32                 _screenSize{ 0.0f };                          ///< 가장 큰 뷰의 화면 크기 × UV 밀도(`TextureStreamingSystem`) — 클수록 위쪽 밉을 먼저
+        StreamingSourcePriority _priority{ StreamingSourcePriority::Lowest }; ///< 그 메시 자리를 덮는 스트리밍 소스 중 가장 급한 것(`SceneStreamingSubsystem::computePriorityAt`)
+
+        /** @brief 같은 텍스처를 여럿이 알리면 큰 화면 크기와 급한 우선순위를 남깁니다. */
+        void merge( const TextureStreamingDemand& other )
+        {
+            _screenSize = _screenSize > other._screenSize ? _screenSize : other._screenSize;
+            _priority   = other._priority < _priority ? other._priority : _priority;
+        }
+    };
+
+    /** @brief 텍스처 밉 스트리밍 줄의 한때 사본입니다(개발 명령 `world.streamqueue` · 감시 값 `Texture.StreamingQueueCount`). */
+    struct TextureStreamingQueueSnapshot
+    {
+        vector<TextureMipRequest> _listWaiting;         ///< 읽기를 기다리는 밉 요청(줄 차례 — 지난 정렬의 우선순위가 적혀 있다)
+        uint32                    _readingCount{ 0 };   ///< 범위를 읽는 중이거나 제출을 기다리는 요청 수
+        uint32                    _uploadingCount{ 0 }; ///< 업로드를 제출해 끝남을 기다리는 텍스처 수
     };
 
     class IRHIDevice;
@@ -160,11 +186,14 @@ namespace sw
          */
         uint32 updateStreaming( IRHIDevice* pDevice, const TextureStreamingBudget& budget );
         /**
-         * @brief 이번 프레임 화면에서 텍스처 @p relativePath 가 차지하는 크기를 알립니다(게임 스레드). 값은 가장 큰 뷰의 화면 크기(화면 높이에 대한 비율)이고 클수록 위쪽 밉을 먼저 올린다.
-         * @details 텍스처 밉 요청 우선순위다(계획 PreloadAndLOD P10 — 언리얼 텍스처 스트리머의 wanted mip · 보이는 것부터). 같은 프레임에 여러 번 부르면 큰 값을 쓴다.
-         *          `updateStreaming` 이 위쪽 밉을 기다리는 줄을 이 값의 내림차순(알리지 않은 것은 0, 같으면 먼저 읽힌 순)으로 정렬해 쓰고 알림을 비운다 — 한 프레임 안의 값이다.
+         * @brief 이번 프레임 텍스처 @p listRelativePath 의 스트리밍 요구(화면 크기 · 스트리밍 우선순위)를 알립니다(게임 스레드). 화면 크기가 0 이하면 알리지 않습니다.
+         * @details 텍스처 밉 요청 우선순위다(계획 PreloadAndLOD P10 — 언리얼 텍스처 스트리머의 wanted mip · 보이는 것부터). 같은 프레임에 여러 번 부르면 합친다(`TextureStreamingDemand::merge`).
+         *          `updateStreaming` 이 위쪽 밉을 기다리는 줄을 우선순위가 급한 것 → 화면 크기의 내림차순(알리지 않은 것은 `Lowest` · 0, 같으면 먼저 읽힌 순)으로 정렬해 쓰고 알림을 비운다 — 한 프레임 안의 값이다.
+         *          우선순위는 밉 구간 읽기의 IO 우선순위도 정한다(`toAsyncIOPriority` — 셀 내용 읽기와 같은 큐 · 같은 규칙).
          */
-        void recordScreenSizes( const vector<string>& listRelativePath, float32 screenSize );
+        void recordStreamingDemand( const vector<string>& listRelativePath, const TextureStreamingDemand& demand );
+        /** @brief 밉 스트리밍 줄의 사본입니다(게임 스레드 · 개발 도구 — 잠금 하나 동안 복사한다). */
+        [[nodiscard]] TextureStreamingQueueSnapshot captureStreamingQueue() const;
         /** @brief 위쪽 밉을 기다리는 텍스처가 있으면 true 입니다(게임 스레드가 화면 크기를 알릴 필요가 있는지 싸게 묻는다). */
         bool hasPendingStreamingUpgrades() const;
         /**
@@ -293,10 +322,10 @@ namespace sw
          */
         void ensureStandInTextures();
         /**
-         * @brief 이번 프레임의 화면 크기(@p mapFrameScreenSize)를 항목의 필요한 밉 · 유휴 프레임에 적고, `TextureStreamingPolicy` 가 고른 내리기 · 다시 올리기를 줄 앞에 넣습니다(R6-6).
+         * @brief 이번 프레임의 요구(@p mapFrameDemand — 화면 크기)를 항목의 필요한 밉 · 유휴 프레임에 적고, `TextureStreamingPolicy` 가 고른 내리기 · 다시 올리기를 줄 앞에 넣습니다(R6-6).
          * @details 내리기로 한 키를 @p outMapDemotionKey 에 담는다 — `updateStreaming` 이 줄에서 먼저 낸다. 바꾸는 중인 항목은 바이트만 세고 결정에서 뺀다.
          */
-        void collectStreamingDecisions( const unordered_map<string, float32>& mapFrameScreenSize, const TextureStreamingBudget& budget, unordered_map<string, uint8>& outMapDemotionKey );
+        void collectStreamingDecisions( const unordered_map<string, TextureStreamingDemand>& mapFrameDemand, const TextureStreamingBudget& budget, unordered_map<string, uint8>& outMapDemotionKey );
         /** @brief `completePendingLoads` · `finishPendingLoads` 의 본체입니다 — 제출한 로드의 끝남 확인(@p bBlocking 이면 끝날 때까지) 뒤 @p maxCount 개까지 새로 제출합니다. */
         uint32 processPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
 
