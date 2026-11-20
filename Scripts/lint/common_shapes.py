@@ -186,11 +186,11 @@ def find_problems(list_source: Iterable[tuple[str, str]], exceptions: dict, whol
     seen_key: set[tuple[str, str]] = set()
     for path, text in list_source:
         for rule, key, message in collect_violations(path, text):
-            seen_key.add((rule, key))
-            if key not in exceptions.get(rule, {}):
-                list_problem.append(f"{path}: {message} (예외는 {CONFIG_PATH} 의 {rule} 에 '{key}' 와 까닭)")
+            seen_key.add(("_" + rule, key))
+            if key not in exceptions.get("_" + rule, {}):
+                list_problem.append(f"{path}: {message} (예외는 {CONFIG_PATH} 의 _{rule} 에 '{key}' 와 까닭)")
     for rule, table in exceptions.items() if whole_repo else ():   # 낡은 예외는 저장소 전체를 봐야 안다
-        if rule.startswith("_"):
+        if rule == "_comment":
             continue
         for key in table:
             if (rule, key) not in seen_key:
@@ -217,8 +217,8 @@ def run_self_check() -> None:
     assert find_same_spelling_switches(filtered) == []
     assert len(find_problems([("Source/A/a.cpp", same)], {})) == 1
     assert find_problems([("Source/Core/a.cpp", same)], {}) == []
-    assert find_problems([("Source/A/a.cpp", same)], {"enumNameSwitch": {"Source/A/a.cpp|Kind": "이유"}}) == []
-    stale = find_problems([("Source/A/a.cpp", "int x;")], {"enumNameSwitch": {"Source/A/a.cpp|Kind": "이유"}})
+    assert find_problems([("Source/A/a.cpp", same)], {"_enumNameSwitch": {"Source/A/a.cpp|Kind": "이유"}}) == []
+    stale = find_problems([("Source/A/a.cpp", "int x;")], {"_enumNameSwitch": {"Source/A/a.cpp|Kind": "이유"}})
     assert len(stale) == 1 and "낡은" in stale[0], stale
     validator = "static expected<void> validateX( const AutomationStep& step )\n{\n    MyParams params;\n    return step.readProperties( params );\n}"
     assert [v[0] for v in collect_violations("Source/A/a.cpp", validator)] == ["oneLineValidator"]
@@ -260,7 +260,7 @@ def run_self_check() -> None:
     # 프레임 함수 안의 리터럴 이름(옛 frame-intern)
     tick = 'void Foo::onTick( float32 deltaTime )\n{\n    use( hashed_string( "A" ) );\n}\n'
     assert [v[1] for v in collect_violations("Source/A/a.cpp", tick)] == ["Source/A/a.cpp|onTick"], "틱 안의 리터럴은 잡아야 한다"
-    assert find_problems([("Source/A/a.cpp", tick)], {"frameIntern": {"Source/A/a.cpp|onTick": "까닭"}}) == [], "예외는 통과해야 한다"
+    assert find_problems([("Source/A/a.cpp", tick)], {"_frameIntern": {"Source/A/a.cpp|onTick": "까닭"}}) == [], "예외는 통과해야 한다"
     assert collect_violations("Source/A/a.h", tick) == [], "머리는 보지 않는다"
     clean = 'void Foo::onTick( float32 deltaTime )\n{\n    static const hashed_string s_name( "A" );\n    use( s_name );\n}\nvoid Foo::load()\n{\n    use( hashed_string( "B" ) );\n}\n'
     assert collect_violations("Source/A/a.cpp", clean) == [], "static 과 프레임 밖 함수는 통과해야 한다"

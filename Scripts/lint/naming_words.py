@@ -335,13 +335,14 @@ def read_baseline(project_root: Path) -> dict[str, list[str]]:
     path = project_root / BASELINE_PATH
     if path.exists() is False:
         return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {rule: data["_" + rule] for rule in RATCHET_RULES if "_" + rule in data}
 
 
 def write_baseline(project_root: Path, baseline: dict[str, list[str]]) -> None:
     data = {"_comment": "NamingWords 기준선 — 지금 남은 위반 이름(규칙마다). 줄기만 한다: 새 위반은 린트가 막고, 고친 이름은 --lower-baseline 으로 뺀다. 영역별 이전이 0 으로 줄인다."}
     for rule in RATCHET_RULES:
-        data[rule] = sorted(set(baseline.get(rule, [])))
+        data["_" + rule] = sorted(set(baseline.get(rule, [])))
     (project_root / BASELINE_PATH).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 

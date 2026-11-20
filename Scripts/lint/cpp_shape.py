@@ -12,7 +12,7 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
    이웃 칸(같은 바이트 경합)은 `bool` 로 두고 그 줄에 `NOLINT(sw-bool-flag): <이유>` 를 적는다.
 3. 익명 네임스페이스(`docs/agents/Helpers.md`): `.cpp` 에 하나(전처리 갈래가 갈리는 경우는 갈래마다), 빈 블록 없음.
 4. 주인 우선(`docs/agents/Helpers.md`): 헤더의 static 함수만 든 타입(이름은 보지 않는다 — Util · Scanner · Rules …)이 같은 헤더의 타입 하나(열거 · 템플릿 · I 인터페이스 제외)를
-   함수 서명 절반 이상에서 받으면, 그 함수는 그 타입의 (static) 멤버다. 주인이 정말 없는 것은 `Config/Rules/Lint/CppShape.json` 의 `staticOwner` 에 까닭을 적는다.
+   함수 서명 절반 이상에서 받으면, 그 함수는 그 타입의 (static) 멤버다. 주인이 정말 없는 것은 `Config/Rules/Lint/CppShape.json` 의 `_staticOwner` 에 까닭을 적는다.
 5. 중괄호 안 헤더 include: X-매크로 표(`.xxx`) · 인라인 본문(`.inl`) 말고는 `#include` 가 이름공간 · 클래스 · 함수 몸통 안에 있으면 안 된다.
    2026-11-05 — 파일을 합치는 일회용 스크립트가 "마지막 include 뒤" 에 헤더를 붙여 클래스 몸통 · 배열 초기값 안에 들어갔고, 다른 헤더가 먼저 끌어와
    `#pragma once` 로 비어 있어 컴파일러가 알리지 않았다.
@@ -25,11 +25,11 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
 
 9. 기반 클래스는 하나(사용자 2026-11-08 — 다중 상속은 최소로): 서브시스템이 창구 인터페이스를 함께 상속하지 않고 구현을 멤버로 들어 건다
    (`SubsystemScope::exposeMember` · 모듈 창구 `SW_MODULE_PART` · `getPublishedPart`). `std::enable_shared_from_this` 는 세지 않는다(표준 믹스인).
-   예외는 `Config/Rules/Lint/CppShape.json` 의 `multipleBase` 에 `경로|클래스` → 까닭으로 적는다(플랫폼 COM · 빈 기반 최적화 · 역할 인터페이스 묶음).
+   예외는 `Config/Rules/Lint/CppShape.json` 의 `_multipleBase` 에 `경로|클래스` → 까닭으로 적는다(플랫폼 COM · 빈 기반 최적화 · 역할 인터페이스 묶음).
    전체 실행(`--all`)은 더는 없는 예외 자리도 위반으로 센다.
 10. 상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/Helpers.md` — 규칙 4 의 `.cpp` 짝): `.cpp` 에 정의한 상태 타입(공개 칸, 이름이 `…Internal` 아님)의 공개 칸을
    같은 파일 `…Internal` 의 static 함수가 `const` 아닌 참조 · 포인터(`outX` 이름 말고 — 한 번 채우는 기록은 제외)로 받아 바꾸는 수가 문턱 이상이면 위반이다.
-   문턱 `stateMutatorMinFunctions` 과 예외 `stateMutator`(`경로|타입` → 까닭)는 `Config/Rules/Lint/CppShape.json`, 전체 실행은 낡은 예외도 센다.
+   문턱 `_stateMutatorMinFunctions` 과 예외 `_stateMutator`(`경로|타입` → 까닭)는 `Config/Rules/Lint/CppShape.json`, 전체 실행은 낡은 예외도 센다.
 11. 브라우저 JS 는 C++ 안에 쓰지 않는다(`EM_JS` · `EM_ASYNC_JS` · `EM_ASM…`): 매크로 본문을 C++ 포맷터가 C++ 로 다뤄 `=>` · `!==` 를 띄우고, 브라우저 JS 가 링크 뒤
    문법 오류로 멈췄다(2026-11-09 — IDBFS 마운트 · URL 열기). 기능 옆 `Web/*.js` Emscripten 라이브러리(addToLibrary)에 두고 C++ 는 `extern "C"` 로 선언한다
    (Platform/Web.cmake 가 모두 링크에 넘긴다). 예외는 없다.
@@ -524,7 +524,7 @@ def check_static_owner(code: str, relative: str, exceptions: dict[str, str]) -> 
     주인 우선(`docs/agents/Helpers.md`): 헤더의 static 함수만 든 타입이 같은 헤더의 타입 하나를 함수 서명 절반 이상에서 받으면 그 함수들은 그 타입의 (static) 멤버다.
     이름(`XUtil` · `XScanner` · `XRules` …)은 보지 않는다 — 2026-11-08 `MarkupTagScanner`(데이터 `MarkupToken` 옆)처럼 Util 이 아닌 이름으로 같은 모양이 남았다.
     형식으로는 막을 수 없다(어느 함수가 어느 타입의 일인지는 C++ 이 모른다). 여러 타입에 걸친 알고리즘 · 등록 목록처럼 주인이 정말 없는 것은
-    `Config/Rules/Lint/CppShape.json` 의 staticOwner 에 까닭과 함께 적는다.
+    `Config/Rules/Lint/CppShape.json` 의 _staticOwner 에 까닭과 함께 적는다.
     """
     if not relative.endswith(".h"):
         return []
@@ -542,14 +542,14 @@ def check_static_owner(code: str, relative: str, exceptions: dict[str, str]) -> 
         owner, count = max(sorted(counts.items()), key=lambda item: item[1])   # 같은 수면 이름 순 첫 것 — 집합 순서(해시)로 메시지가 실행마다 바뀌었다
         if count * 2 >= len(statics):
             problems.append((line, f"`{name}` 는 static 함수만 들고 그 함수 대부분({count}/{len(statics)})이 같은 헤더의 `{owner}` 를 다룬다 — `{owner}` 의 (static) 멤버로 합친다"
-                                   f"(Helpers.md 주인 우선). 주인이 정말 없으면 {EXCEPTIONS_PATH} 의 staticOwner 에 까닭과 함께 적는다"))
+                                   f"(Helpers.md 주인 우선). 주인이 정말 없으면 {EXCEPTIONS_PATH} 의 _staticOwner 에 까닭과 함께 적는다"))
     return problems
 
 
 @functools.lru_cache(maxsize=1)
 def load_static_owner_exceptions(project_root: str) -> dict[str, str]:
     """`경로|타입` → 까닭(주인 우선 예외). 파일이나 칸이 없으면 오류로 멈춘다."""
-    return json.loads((Path(project_root) / EXCEPTIONS_PATH).read_text(encoding="utf-8"))["staticOwner"]
+    return json.loads((Path(project_root) / EXCEPTIONS_PATH).read_text(encoding="utf-8"))["_staticOwner"]
 
 
 INCLUDE_LINE = re.compile(r'^[ \t]*#[ \t]*include[ \t]*[<"]([^>"]+)[>"]', re.M)
@@ -631,7 +631,7 @@ def check_net_message_table(code: str, relative: str) -> list[tuple[int, str]]:
 @functools.lru_cache(maxsize=1)
 def load_multiple_base_exceptions(project_root: str) -> dict[str, str]:
     """`경로|클래스` → 까닭. 파일이 없으면 오류로 멈춘다(예외 목록은 필수 데이터다)."""
-    return json.loads((Path(project_root) / EXCEPTIONS_PATH).read_text(encoding="utf-8"))["multipleBase"]
+    return json.loads((Path(project_root) / EXCEPTIONS_PATH).read_text(encoding="utf-8"))["_multipleBase"]
 
 
 def check_multiple_bases(info: ClassInfo, relative: str, exceptions: dict[str, str]) -> list[tuple[int, str]]:
@@ -640,7 +640,7 @@ def check_multiple_bases(info: ClassInfo, relative: str, exceptions: dict[str, s
     if len(counted) < 2 or f"{relative}|{info.name}" in exceptions:
         return []
     return [(info.line, f"`{info.name}` 의 기반이 {len(counted)} 개다({', '.join(counted)}) — 기반은 하나다. 창구 인터페이스는 구현을 멤버로 들어 건다"
-                        f"(`SubsystemScope::exposeMember` · `SW_MODULE_PART`). 불가피하면 {EXCEPTIONS_PATH} 의 multipleBase 에 까닭과 함께 적는다")]
+                        f"(`SubsystemScope::exposeMember` · `SW_MODULE_PART`). 불가피하면 {EXCEPTIONS_PATH} 의 _multipleBase 에 까닭과 함께 적는다")]
 
 
 FIELD_MUTATION = (r"\s*(?:\.|->)\s*(?:{fields})\b\s*(?:\[[^\]]*\]\s*)*(?:[-+*/%|&^]?=(?!=)|\+\+|--|"
@@ -696,7 +696,7 @@ def check_state_mutators(code: str, relative: str, rules: dict) -> list[tuple[in
     """
     상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/Helpers.md` 주인 우선): `.cpp` 의 상태 구조체 공개 칸을 따로 선 `…Internal` 의 static 함수 여럿이
     차례로 바꾸면, 상태를 비공개 칸 + 그 함수들을 멤버로 든 클래스로 합친다(`TerrainBrushToolState`). 규칙 4 는 헤더만 보아 이 모양이 `.cpp` 에 남았다(2026-11-09).
-    형식으로는 막을 수 없다(어느 함수가 어느 상태의 일인지 C++ 이 모른다). 문턱(`stateMutatorMinFunctions`)과 예외(`stateMutator`, `경로|타입` → 까닭)는 데이터다.
+    형식으로는 막을 수 없다(어느 함수가 어느 상태의 일인지 C++ 이 모른다). 문턱(`_stateMutatorMinFunctions`)과 예외(`_stateMutator`, `경로|타입` → 까닭)는 데이터다.
     """
     if not relative.endswith(".cpp"):
         return []
@@ -704,7 +704,7 @@ def check_state_mutators(code: str, relative: str, rules: dict) -> list[tuple[in
     for state, (line, helper, count) in find_state_mutators(code).items():
         if count >= rules["stateMutatorMinFunctions"] and f"{relative}|{state}" not in rules["stateMutator"]:
             problems.append((line, f"`{state}` 의 공개 칸을 `{helper}` 의 static 함수 {count} 개가 바꾼다 — 상태와 그것을 바꾸는 논리는 한 타입이다: 칸을 비공개로, 그 함수들을 `{state}` 의 멤버로"
-                                   f"(Helpers.md). 불가피하면 {EXCEPTIONS_PATH} 의 stateMutator 에 까닭과 함께 적는다"))
+                                   f"(Helpers.md). 불가피하면 {EXCEPTIONS_PATH} 의 _stateMutator 에 까닭과 함께 적는다"))
     return problems
 
 
@@ -712,7 +712,7 @@ def check_state_mutators(code: str, relative: str, rules: dict) -> list[tuple[in
 def load_state_mutator_rules(project_root: str) -> dict:
     """규칙 10 의 문턱 · 예외입니다. 칸이 없으면 오류로 멈춘다."""
     data = json.loads((Path(project_root) / EXCEPTIONS_PATH).read_text(encoding="utf-8"))
-    return {"stateMutatorMinFunctions": data["stateMutatorMinFunctions"], "stateMutator": data["stateMutator"]}
+    return {"stateMutatorMinFunctions": data["_stateMutatorMinFunctions"], "stateMutator": data["_stateMutator"]}
 
 
 def find_stale_state_mutator_exceptions(project_root: Path) -> list[str]:

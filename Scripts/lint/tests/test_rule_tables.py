@@ -15,7 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from lint.rule_tables import Baseline, ExceptionTable, check_head, get_table_path, read_table  # noqa: E402
+from common.paths import get_project_root  # noqa: E402
+from lint.rule_tables import TABLE_FOLDER, Baseline, ExceptionTable, check_head, get_table_path, read_table  # noqa: E402
 
 HEAD = {"_comment": "시험 표"}
 
@@ -40,6 +41,12 @@ class HeadTest(unittest.TestCase):
             with self.assertRaises(ValueError, msg=bad):
                 check_head("x.json", {"_comment": "c", bad: {}})
 
+    def test_every_lint_table_in_repo_has_the_head(self) -> None:
+        root = get_project_root()
+        list_path = sorted((root / TABLE_FOLDER).glob("*.json"))
+        self.assertTrue(list_path)
+        for path in list_path:
+            read_table(root, path.relative_to(root).as_posix())
 
 class ExceptionTableTest(unittest.TestCase):
     def make(self, **sections: dict) -> ExceptionTable:
