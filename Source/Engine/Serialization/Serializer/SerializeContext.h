@@ -11,6 +11,7 @@
 namespace sw
 {
     struct TypeInfo;
+    enum class ReflectBuiltinIndex : uint8; // 정의는 ReflectedValue.h — 이 머리는 그 표를 끌지 않는다
 
     class TypeRegistry;
 
@@ -65,6 +66,7 @@ namespace sw
             , _mapBinaryReader{}
             , _mapTextWriter{}
             , _mapTextReader{}
+            , _pBuiltinHandlers{}
             , _pTypeRegistry{ nullptr }
             , _pOuterInstance{ nullptr }
             , _pOwnedPointerCreateFn{ nullptr }
@@ -150,6 +152,16 @@ namespace sw
         const TextWriteFn* findTextWriter( hashed_string typeName ) const;
         /** @brief 등록된 텍스트 reader 를 찾습니다. */
         const TextReadFn* findTextReader( hashed_string typeName ) const;
+        /**
+         * @brief 내장형 색인으로 고르는 처리기입니다 — 프로퍼티에 묶은 사실(`ReflectValueBinding`)이 쓰는 길이라 이름 해시 조회가 없습니다(배열 한 칸).
+         * @details 표는 문맥마다 다르다 — 자기 표 먼저, 없으면 빌려 온 표다(이름 조회와 같은 순서). 내장형이 아닌 이름(`ReflectedAny` 등)은 이름으로 찾는다.
+         */
+        const BinaryWriteFn* findBinaryWriter( ReflectBuiltinIndex builtinIndex ) const;
+        const BinaryReadFn*  findBinaryReader( ReflectBuiltinIndex builtinIndex ) const;
+        const TextWriteFn*   findTextWriter( ReflectBuiltinIndex builtinIndex ) const;
+        const TextReadFn*    findTextReader( ReflectBuiltinIndex builtinIndex ) const;
+        /** @brief 레지스트리를 따로 준 문맥이면 true 입니다 — 프로퍼티에 묶은 사실은 엔진 레지스트리의 것이라 이 문맥은 이름으로 찾는다. */
+        bool hasCustomTypeRegistry() const noexcept { return _pTypeRegistry != nullptr; }
         /** @brief 타입에 없는 이름의 필드를 건너뛰고 계속하는지(`setSkipUnknownProperties`) 반환합니다. */
         bool shouldSkipUnknownProperties() const { return _bSkipUnknownProperties == SW_TRUE; }
         /** @brief 타입에 있는데 값을 읽지 못한 필드를 건너뛰고 계속하는지(`setSkipUnreadableProperties`) 반환합니다. */
@@ -252,10 +264,17 @@ namespace sw
         /** @brief 목적 @p purpose 의 문맥에 내장 핸들러를 모두 등록해 만듭니다(`getDefault` 가 목적마다 한 번). */
         static SerializeContext makeDefault( SerializePurpose purpose );
 
+        /** @brief 내장형 처리기의 색인 배열입니다. 내장형 처리기를 등록한 문맥만 갖는다(빌려 쓰는 문맥은 비어 있다). 사본끼리 나누고 등록할 때 떼어 낸다. */
+        struct BuiltinHandlerTable;
+        /** @brief 내장형 처리기 칸을 쓸 표입니다(없으면 만들고, 사본과 나누고 있으면 떼어 낸다). */
+        BuiltinHandlerTable& editBuiltinHandlers();
+
+    private:
         unordered_map<hashed_string, BinaryWriteFn> _mapBinaryWriter;
         unordered_map<hashed_string, BinaryReadFn>  _mapBinaryReader;
         unordered_map<hashed_string, TextWriteFn>   _mapTextWriter;
         unordered_map<hashed_string, TextReadFn>    _mapTextReader;
+        shared_ptr<BuiltinHandlerTable>             _pBuiltinHandlers;
         /** @brief 자기 표에 없을 때 물어볼 곳입니다. 전역 기본 컨텍스트라 수명은 프로그램 전체입니다. */
         const SerializeContext* _pHandlerFallback{ nullptr };
         /** @brief 타입 · enum 을 찾을 곳입니다. nullptr 이면 엔진 전역 레지스트리입니다. */

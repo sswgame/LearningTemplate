@@ -14,6 +14,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
@@ -47,6 +48,7 @@ namespace sw
         , _keyTypeName{}
         , _listAlias{}
         , _metadata{}
+        , _pValueBindings{}
         , _bitOffset{ 0 }
         , _containerKind{ ContainerKind::None }
         , _bIsContainer{ SW_FALSE }
@@ -101,12 +103,34 @@ namespace sw
         return true;
     }
 
+    const ReflectValueBinding* PropertyInfo::findValueBinding() const noexcept
+    {
+        return _pValueBindings != nullptr ? &_pValueBindings->_value : nullptr;
+    }
+
+    const ReflectValueBinding* PropertyInfo::findElementBinding() const noexcept
+    {
+        return _pValueBindings != nullptr ? &_pValueBindings->_element : nullptr;
+    }
+
+    const ReflectValueBinding* PropertyInfo::findKeyBinding() const noexcept
+    {
+        return _pValueBindings != nullptr ? &_pValueBindings->_key : nullptr;
+    }
+
     NestedContainerInfo PropertyInfo::getContainerShape() const
     {
         if ( _nestedContainer != nullptr )
-            return *_nestedContainer;
+        {
+            NestedContainerInfo shape = *_nestedContainer;
+            shape._pElementBinding    = findElementBinding();
+            shape._pKeyBinding        = findKeyBinding();
+            return shape;
+        }
 
         NestedContainerInfo flat{};
+        flat._pElementBinding = findElementBinding();
+        flat._pKeyBinding     = findKeyBinding();
         flat._kind            = _containerKind;
         flat._typeName        = _typeName;
         flat._elementTypeName = _elementTypeName;
@@ -140,6 +164,7 @@ namespace sw
         , _keyTypeName{ keyTypeName }
         , _listAlias{}
         , _metadata{}
+        , _pValueBindings{ make_shared<PropertyValueBindings>() }
         , _bitOffset{ 0 }
         , _containerKind{ containerKind }
         , _bIsContainer{ static_cast<uint8>( bIsContainer ? SW_TRUE : SW_FALSE ) }
@@ -165,6 +190,7 @@ namespace sw
         , _handleTargetTypeName{ desc._pHandleTargetTypeName != nullptr ? hashed_string( desc._pHandleTargetTypeName ) : hashed_string{} }
         , _listAlias{}
         , _metadata{}
+        , _pValueBindings{ make_shared<PropertyValueBindings>() }
         , _bitOffset{ 0 }
         , _containerKind{ desc._containerKind }
         , _bIsContainer{ static_cast<uint8>( desc._containerKind != ContainerKind::None ? SW_TRUE : SW_FALSE ) }

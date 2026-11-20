@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    class ReflectValueBinding;
     enum class FieldReadResult : uint8;
 
     /**
@@ -119,8 +120,15 @@ namespace sw
          * @return 바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입이면(`hasBinaryValueCodec` 이 거짓) 아무 바이트도 쓰지 않고 false 입니다.
          *         예전에는 0 바이트 하나를 쓰고 성공해, 세이브는 써지고 로드에서 값이 빠졌습니다. 구조체 안의 값이 실패해도 false 입니다.
          */
-        [[nodiscard]] SW_API static bool serializeValueBinary( ValueAddress value, const hashed_string& typeName,
-                                                               vector<uint8>& listBuffer, const SerializeContext& context );
+        /** @brief 값 하나를 바이너리로 씁니다. @p pBinding 은 @p typeName 에 묶은 사실(프로퍼티 · 컨테이너 원소 · 키)이고 nullptr 이면 이름으로 찾습니다. */
+        [[nodiscard]] SW_API static bool serializeValueBinary( ValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding, vector<uint8>& listBuffer,
+                                                               const SerializeContext& context );
+        /** @brief 값 하나를 바이너리에서 읽습니다. @p pBinding 은 `serializeValueBinary` 와 같습니다. */
+        [[nodiscard]] SW_API static FieldReadResult deserializeValueBinary( MutableValueAddress value, const hashed_string& typeName, const ReflectValueBinding* pBinding,
+                                                                            const uint8* pData, size_t dataSize, size_t& offset, const SerializeContext& context,
+                                                                            BinaryWireVersion wireVersion );
+        [[nodiscard]] SW_API static bool            serializeValueBinary( ValueAddress value, const hashed_string& typeName,
+                                                                          vector<uint8>& listBuffer, const SerializeContext& context );
         /** @brief 값 하나를 바이너리로 쓰고 읽을 수 있는 타입인가입니다. `serializeValueBinary` · `deserializeValueBinary` 가 고르는 순서와 같습니다. */
         [[nodiscard]] SW_API static bool hasBinaryValueCodec( const hashed_string& typeName, const SerializeContext& context );
         /**

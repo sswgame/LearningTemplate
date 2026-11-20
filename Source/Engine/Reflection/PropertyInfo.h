@@ -17,6 +17,8 @@ namespace sw
     /**
      * @brief 컨테이너가 중첩된 프로퍼티의 스키마입니다(`vector&lt;vector&lt;T&gt;&gt;`, `map&lt;K,vector&lt;V&gt;&gt;` 등).
      */
+    class ReflectValueBinding;
+
     struct NestedContainerInfo
     {
         ContainerKind              _kind = ContainerKind::None;
@@ -25,12 +27,16 @@ namespace sw
         hashed_string              _keyTypeName;
         const IContainerWrapper*   _wrapper;       ///< 생성 코드의 정적 래퍼 객체다(상태가 없다 — 모듈의 수명)
         const NestedContainerInfo* _elementNested; ///< 원소나 값이 컨테이너일 때 쓴다. 생성 코드의 정적 객체다
+        /** @brief 프로퍼티 맨 바깥 단계의 원소 · 키 이름에 묶은 사실입니다(`PropertyInfo::getContainerShape` 가 채운다). 그 이름의 값에만 쓴다 — 안쪽 단계는 비어 이름으로 찾는다. */
+        const ReflectValueBinding* _pElementBinding = nullptr;
+        const ReflectValueBinding* _pKeyBinding     = nullptr;
     };
 } // namespace sw
 
 namespace sw
 {
     struct PropertyDesc;
+    struct PropertyValueBindings;
 
     /// @brief 프로퍼티 하나의 리플렉션 정보입니다. 오프셋, 타입, 별칭, 컨테이너 래퍼를 담습니다.
     struct SW_API PropertyInfo
@@ -74,6 +80,12 @@ namespace sw
         hashed_string                        _handleTargetTypeName;
         vector<hashed_string>                _listAlias; ///< `PROPERTY( Alias = … )` 로 적은 다른 키 목록이다. 이름을 바꾸기 전의 키를 적는다
         ReflectMetadataBox<PropertyMetadata> _metadata;  ///< `PROPERTY()` 에 적은 메타데이터(`ReflectionMetadata.h`)
+        /**
+         * @brief 값(`_typeName`) · 원소(`_elementTypeName`) · 키(`_keyTypeName`) 형식에 묶은 레지스트리 사실입니다(세대마다 한 번 찾는다, `ReflectValueBinding`).
+         * @details 직렬화기가 값 · 원소마다 이름으로 처리기 · 열거형 · 구조체를 다시 찾지 않게 한다. 묶음은 이름과 함께 쓴다 — 칸 이름을 바꾼 사본은 다시 묶는다.
+         *          서술자로 만든 프로퍼티만 갖고(기본 생성은 없다 — 이름으로 찾는다), 사본끼리 나눈다.
+         */
+        shared_ptr<PropertyValueBindings> _pValueBindings;
 
         uint32                 _bitOffset;
         ContainerKind          _containerKind;
@@ -147,6 +159,10 @@ namespace sw
 
         /** @brief 단일 컨테이너와 중첩 컨테이너를 똑같이 다루기 위한 구조 정보를 반환합니다. */
         NestedContainerInfo getContainerShape() const;
+        /** @brief 값 · 원소 · 키 형식에 묶은 사실입니다. 묶음이 없으면(기본 생성) nullptr 이고 부르는 쪽은 이름으로 찾는다. */
+        const ReflectValueBinding* findValueBinding() const noexcept;
+        const ReflectValueBinding* findElementBinding() const noexcept;
+        const ReflectValueBinding* findKeyBinding() const noexcept;
 
         /**
          * @brief 상태 직렬화 · 상태 해시가 원소 차례대로 싣는 시퀀스 래퍼입니다 — 중첩이 아니고, 원소를 제자리에서 쓰는(차례가 정해진) 시퀀스.

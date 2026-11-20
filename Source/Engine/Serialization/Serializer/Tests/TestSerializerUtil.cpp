@@ -4,7 +4,10 @@
 #include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Reflection/ReflectValueBinding.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
@@ -481,4 +484,77 @@ SW_TEST_CASE( SerializerUtilTest, SameNamedPropertiesMoveBetweenTypes )
     SW_EXPECT_EQUAL( 42, target._count );
     SW_EXPECT_EQUAL( string( "knight" ), target._name );
     SW_EXPECT_EQUAL( 1.5f, target._extra ); // 짝이 없는 칸은 그대로다
+}
+
+/**
+ * @brief [SerializerUtilTest] 프로퍼티에 묶은 사실(`ReflectValueBinding`)은 이름으로 찾은 것과 같다 — 내장형은 색인, 열거형은 `EnumInfo`, 구조체는 `TypeInfo`
+ * @details 직렬화기가 값마다 이름으로 처리기 · 열거형 · 구조체를 다시 찾던 길을 세대마다 한 번 찾는 묶음으로 바꿨다. 두 번째 조회는 캐시이고 답이 같다.
+ */
+SW_TEST_CASE( SerializerUtilTest, ValueBindingMatchesNameLookup )
+{
+    const TypeRegistry& registry = getContext().getTypeRegistry();
+    const PropertyInfo& count    = getSampleProperty( "_count" );
+    const PropertyInfo& mode     = getSampleProperty( "_mode" );
+    SW_REQUIRE_TRUE( count.findValueBinding() != nullptr && mode.findValueBinding() != nullptr );
+
+    const ReflectValueFacts countFacts = count.findValueBinding()->resolve( count._typeName, registry );
+    SW_EXPECT_TRUE( countFacts._builtinIndex == ReflectBuiltinOf<int32>::kIndex );
+    SW_EXPECT_TRUE( countFacts._pEnum == nullptr );
+
+    const ReflectValueFacts modeFacts = mode.findValueBinding()->resolve( mode._typeName, registry );
+    SW_EXPECT_TRUE( modeFacts._pEnum != nullptr && modeFacts._pEnum == registry.findEnum( mode._typeName ) );
+    SW_EXPECT_TRUE( modeFacts._builtinIndex == ReflectBuiltinIndex::kNone );
+    const ReflectValueFacts modeAgain = mode.findValueBinding()->resolve( mode._typeName, registry );
+    SW_EXPECT_TRUE( modeAgain._pEnum == modeFacts._pEnum );
+
+    // 묶음으로 쓴 바이트와 이름으로 쓴 바이트가 같고, 묶음으로 다시 읽힌다.
+    const SerializerSampleMode fast = SerializerSampleMode::Fast;
+    vector<uint8>              byName;
+    vector<uint8>              byBinding;
+    SW_REQUIRE_TRUE( SerializerUtil::serializeValueBinary( ValueAddress{ &fast }, mode._typeName, byName, getContext() ) );
+    SW_REQUIRE_TRUE( SerializerUtil::serializeValueBinary( ValueAddress{ &fast }, mode._typeName, mode.findValueBinding(), byBinding, getContext() ) );
+    SW_EXPECT_TRUE( byName == byBinding );
+    SerializerSampleMode read   = SerializerSampleMode::Off;
+    size_t               offset = 0;
+    SW_EXPECT_TRUE( SerializerUtil::deserializeValueBinary( MutableValueAddress{ &read }, mode._typeName, mode.findValueBinding(), byBinding.data(), byBinding.size(), offset,
+                                                            getContext(), kCurrentBinaryWireVersion ) == FieldReadResult::Read );
+    SW_EXPECT_TRUE( read == SerializerSampleMode::Fast );
+}
+
+/** @brief [SerializerUtilTest] 내장형 처리기는 색인으로도 이름으로도 같은 것이 나오고, 빌린 문맥은 자기 등록이 빌린 표를 이긴다 */
+SW_TEST_CASE( SerializerUtilTest, BuiltinHandlerIndexMatchesName )
+{
+    const ReflectBuiltinIndex int32Index = ReflectBuiltinOf<int32>::kIndex;
+    SW_REQUIRE_TRUE( getContext().findBinaryWriter( int32Index ) != nullptr );
+    SW_EXPECT_TRUE( getContext().findBinaryReader( int32Index ) != nullptr );
+    SW_EXPECT_TRUE( getContext().findBinaryWriter( ReflectBuiltinIndex::kNone ) == nullptr );
+
+    const int32   value = 0x01020304;
+    vector<uint8> byIndex;
+    vector<uint8> byName;
+    ( *getContext().findBinaryWriter( int32Index ) )( &value, byIndex );
+    ( *getContext().findBinaryWriter( hashed_string( "int32" ) ) )( &value, byName );
+    SW_EXPECT_TRUE( byIndex == byName );
+
+    SerializeContext derived = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
+    derived.registerBinaryHandler(
+        hashed_string( "int32" ), []( const void*, vector<uint8>& outBuffer )
+    { outBuffer.push_back( 0xAB ); },
+        []( void*, const uint8*, size_t, size_t& )
+    { return false; } );
+    vector<uint8> custom;
+    ( *derived.findBinaryWriter( int32Index ) )( &value, custom );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), custom.size() );
+    SW_EXPECT_TRUE( getContext().findBinaryWriter( int32Index ) != derived.findBinaryWriter( int32Index ) );
+}
+
+/** @brief [SerializerUtilTest] 이름 값 형식은 정규 이름으로 가른다 — 파서가 모은 `AssetRef` · `CatalogKey` 와 이름 · 경로 형식은 이름 값, 글(`string`)은 아니다 */
+SW_TEST_CASE( SerializerUtilTest, NameValueTypeByCanonicalName )
+{
+    SW_EXPECT_TRUE( SerializerUtil::isNameValueType( hashed_string( "hashed_string" ) ) );
+    SW_EXPECT_TRUE( SerializerUtil::isNameValueType( hashed_string( "AssetRef" ) ) );
+    SW_EXPECT_TRUE( SerializerUtil::isNameValueType( hashed_string( "CatalogKey" ) ) );
+    SW_EXPECT_TRUE( SerializerUtil::isNameValueType( hashed_string( "DataPath" ) ) );
+    SW_EXPECT_FALSE( SerializerUtil::isNameValueType( hashed_string( "string" ) ) );
+    SW_EXPECT_FALSE( SerializerUtil::isNameValueType( hashed_string( "int32" ) ) );
 }
