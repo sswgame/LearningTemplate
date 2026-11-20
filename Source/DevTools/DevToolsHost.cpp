@@ -17,7 +17,7 @@
 #include "DevTools/Diagnostics/ReflectionDump.h"
 #include "DevTools/Diagnostics/StateHashRecorder.h"
 #include "DevTools/File/FileReadDiagnostics.h"
-#include "DevTools/Maintenance/SavedRetentionSubsystem.h"
+#include "DevTools/Maintenance/SavedCleanupSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Net/NetListenLaunch.h"
 #include "DevTools/Profiling/FrameProfileSession.h"
@@ -111,7 +111,7 @@ namespace sw
             RenderDocCapture::initialize( pCommandLine != nullptr && pCommandLine->isArgumentProvided( CommandLineArgument::RENDERDOC ) );
         }
         // 오래된 실행 산출물(`Saved` — 자동화 실행 · 로그 · 스크린샷 · 트레이스 …)을 자기 스레드에서 지운다.
-        (void)startup.emplaceSubsystem<SavedRetentionSubsystem>();
+        (void)startup.emplaceSubsystem<SavedCleanupSubsystem>();
         // 리로드 결과 집계 — 설정 · 셰이더 · 에디터 에셋 리로드가 결과를 적는다(`reload.status`). 리로드 주인보다 먼저 선다(셰이더 라이브 리로드는 클라이언트 부분 `IDevToolsClientPart` 가 세운다).
         (void)startup.emplaceSubsystem<ReloadTracker>();
         // 설정 파일 리로드는 서버에도 선다.

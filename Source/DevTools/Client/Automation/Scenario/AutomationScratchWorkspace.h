@@ -39,7 +39,7 @@ namespace sw
     {
         /**
          * @brief 사본 폴더를 지우고 원본을 복사합니다. 글 파일의 원본 id 는 사본 id 로 바꿉니다.
-         * @details 사본은 이 프로세스의 실행 뿌리 아래(`AssetPaths::getScratchFolderPath`)라 남의 실행 사본과 겹치지 않는다. 끝난 실행의 사본은 그 실행 뿌리째 `SavedRetention` 이 거둔다.
+         * @details 사본은 이 프로세스의 실행 뿌리 아래(`AssetPaths::getScratchFolderPath`)라 남의 실행 사본과 겹치지 않는다. 끝난 실행의 사본은 그 실행 뿌리째 `SavedCleanup` 이 거둔다.
          * @return 선언이 틀렸거나 원본이 없거나 지우기 · 복사 · 쓰기가 실패하면 오류입니다(시나리오는 시작하지 않는다 — 원본에 쓰는 길로 돌아가지 않는다).
          */
         [[nodiscard]] static expected<void> prepare( const AutomationScratchFolder& folder );

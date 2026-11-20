@@ -1,11 +1,11 @@
-// 보존 규칙 파일(`Config/Dev/SavedRetention.json`)을 리플렉션 스키마로 읽는다 — 손으로 읽던 키 이름 · 필수 칸이 그대로인지.
+// 보존 규칙 파일(`Config/Dev/SavedCleanup.json`)을 리플렉션 스키마로 읽는다 — 손으로 읽던 키 이름 · 필수 칸이 그대로인지.
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "DevTools/Maintenance/SavedRetentionSubsystem.h"
+#include "DevTools/Maintenance/SavedCleanupSubsystem.h"
 
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
@@ -14,18 +14,18 @@ using namespace sw;
 namespace sw
 {
     /** @brief 규칙 파일 스키마는 서브시스템의 private 중첩 형식이다 — 테스트만 이 창구로 이름을 본다. */
-    struct SavedRetentionTestAccess
+    struct SavedCleanupTestAccess
     {
-        using Settings = SavedRetentionSubsystem::RetentionSettings;
+        using Settings = SavedCleanupSubsystem::RetentionSettings;
     };
 } // namespace sw
 
-/** @brief [SavedRetentionSettingsTest] 저장소의 규칙 파일이 읽히고, 쓴 글을 다시 읽어 쓰면 같은 바이트다 */
-SW_TEST_CASE( SavedRetentionSettingsTest, ProjectFileReadsAndRoundTrips )
+/** @brief [SavedCleanupSettingsTest] 저장소의 규칙 파일이 읽히고, 쓴 글을 다시 읽어 쓰면 같은 바이트다 */
+SW_TEST_CASE( SavedCleanupSettingsTest, ProjectFileReadsAndRoundTrips )
 {
-    using Settings = SavedRetentionTestAccess::Settings;
+    using Settings = SavedCleanupTestAccess::Settings;
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Dev/SavedRetention.json" ), text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Dev/SavedCleanup.json" ), text ) );
     Settings settings;
     SW_REQUIRE_TRUE( JSONSerializer::deserialize( &settings, *Settings::StaticType(), text ) );
     SW_EXPECT_TRUE( settings._minAgeSeconds > 0 );
@@ -42,10 +42,10 @@ SW_TEST_CASE( SavedRetentionSettingsTest, ProjectFileReadsAndRoundTrips )
     SW_EXPECT_EQUAL( *written, *rewritten );
 }
 
-/** @brief [SavedRetentionSettingsTest] 필수 칸이 빠지면 기본값으로 읽지 않고 실패한다(기본값으로 지우지 않는다) */
-SW_TEST_CASE( SavedRetentionSettingsTest, MissingRequiredFieldFails )
+/** @brief [SavedCleanupSettingsTest] 필수 칸이 빠지면 기본값으로 읽지 않고 실패한다(기본값으로 지우지 않는다) */
+SW_TEST_CASE( SavedCleanupSettingsTest, MissingRequiredFieldFails )
 {
-    using Settings = SavedRetentionTestAccess::Settings;
+    using Settings = SavedCleanupTestAccess::Settings;
     Settings settings;
     SW_EXPECT_LOG( "Serialization.RequiredMissing" );
     SW_EXPECT_FALSE( JSONSerializer::deserialize( &settings, *Settings::StaticType(),

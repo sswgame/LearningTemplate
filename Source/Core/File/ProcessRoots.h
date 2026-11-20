@@ -39,7 +39,7 @@ namespace sw
         /**
          * @brief 실행 뿌리 — 이 프로세스가 쓰고 버리는 상태(사용자 데이터 · 에디터 상태 · 시나리오 사본 `scratch` 도메인 · 죽이기 전 덤프)가 모두 이 아래다.
          * @details 부모가 `kRunRootVariable` 로 주면 그 폴더(`Saved/Automation/Runs/<실행 id>/<백엔드>`), 혼자 뜬 실행은 `<_saved>/Automation/Runs/<pid>-<시작 ns>` 를 스스로 정한다.
-         *          폴더는 쓰는 쪽이 처음 쓸 때 만든다. 지우는 것은 주인(`SavedRetention` 의 `Automation` 규칙)뿐이다 — 자식은 제 뿌리 밖을 지우지 않는다.
+         *          폴더는 쓰는 쪽이 처음 쓸 때 만든다. 지우는 것은 주인(`SavedCleanup` 의 `Automation` 규칙)뿐이다 — 자식은 제 뿌리 밖을 지우지 않는다.
          *          예전에는 상태마다 pid 꼬리(`run_p<pid>` · `editor_p<pid>` · `scratch/<이름>_p<pid>`)로 이름을 짓고 자식마다 죽은 형제의 폴더를 거뒀다. Gauntlet 이 역할마다 주는 산출물 폴더와 같은 자리다.
          */
         AbsolutePath _run;

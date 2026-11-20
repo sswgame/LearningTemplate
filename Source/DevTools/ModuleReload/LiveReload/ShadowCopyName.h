@@ -16,7 +16,7 @@ namespace sw
      * @details 리눅스는 이 이름의 파일, Windows 는 이 이름의 **폴더** 안에 세대 이름 파일입니다(로더가 import 를 파일 이름으로 맞추므로 파일 이름이 곧 세대 이름이다 —
      *          `ModuleShadowCopy::writeShadowCopy`). 의존 DLL 은 `Bin` · `Bin/Modules` 를 사용자 검색 폴더로 더해 찾으므로(`ModuleLibraryUtil::loadLibraryAt`) 원본 옆이 아니어도 된다.
      *          예전에는 원본 옆(`Bin/Modules`)에 `<모듈>_temp_p<pid>_…` 로 두고 시작 · 종료마다 죽은 프로세스의 것을 이름으로 골라 거뒀다. 이제 남은 복사본(Windows 에서 아직 매핑돼
-     *          지우지 못한 것, 죽은 프로세스의 것)은 실행 뿌리째 주인(`SavedRetention` 의 `Automation` 규칙)이 거둔다 — 언리얼이 핫 리로드 DLL 을 새 이름으로 빌드 폴더에 남기는 것보다 거두는 자리가 분명하다.
+     *          지우지 못한 것, 죽은 프로세스의 것)은 실행 뿌리째 주인(`SavedCleanup` 의 `Automation` 규칙)이 거둔다 — 언리얼이 핫 리로드 DLL 을 새 이름으로 빌드 폴더에 남기는 것보다 거두는 자리가 분명하다.
      */
     struct ShadowCopyName
     {

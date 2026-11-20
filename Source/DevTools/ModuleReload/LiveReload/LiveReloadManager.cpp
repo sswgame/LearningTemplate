@@ -136,7 +136,7 @@ namespace sw
         _onBeforeCommitBatch.removeAll();
         _reloadHolds.removeAll();
 
-        // 지운 수일 뿐이다. 아직 매핑된 사본은 남고, 실행 뿌리째 주인 정리(`SavedRetention`)가 거둔다.
+        // 지운 수일 뿐이다. 아직 매핑된 사본은 남고, 실행 뿌리째 주인 정리(`SavedCleanup`)가 거둔다.
         (void)ShadowCopyName::removeCopies( ShadowCopyName::getDirectory() );
 
         if ( _fileWatcher != nullptr )

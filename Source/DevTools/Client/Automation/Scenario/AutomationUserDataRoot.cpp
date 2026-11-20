@@ -170,7 +170,7 @@ namespace sw
         }
         if ( bAllowOutside )
             return string{}; // 사람이 고른 OS 사용자 폴더 그대로
-        // 실행 뿌리는 실행마다 새 폴더다 — 옛 실행의 세이브가 없어 비울 것도, 거둘 형제도 없다(거두기는 `SavedRetention`).
+        // 실행 뿌리는 실행마다 새 폴더다 — 옛 실행의 세이브가 없어 비울 것도, 거둘 형제도 없다(거두기는 `SavedCleanup`).
         root = makeRunUserDataRoot( ProcessRoots::get()._run.str() );
         if ( expected<void> under = validateUnderBase( root, getBaseFolder() ); under.has_value() == false )
             return unexpected( under.error() ); // 부모가 실행 뿌리를 자동화 폴더 밖에 줬다

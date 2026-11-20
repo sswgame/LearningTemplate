@@ -1431,7 +1431,7 @@ public:
 5. **할당 사이트.** 세부 추적(`memory.tracking`)이 켜져 있을 때 `getTopCallStacks` 상위 N(설정) — 기호 풀기는 수집 때 한다(원격 스냅숏은 주소가 아니라 글이어야 한다).
 6. **배포에서 빠짐.** 수집 · 비교 · CSV · 명령은 DevTools(배포 호스트가 링크하지 않는다) · 에디터다. 엔진에 남는 것은 위 2 · 3 의 질의뿐이다.
 7. **패널 "Memory"**(MVVM — Model 은 ImGui 없이 단위 테스트): 요약(CPU · GPU 합 · 태그 막대), 시트 탭(정렬 · 이름 거르기 · 거르기 칸), 스냅숏 찍기 · 둘 고르기 · 비교(늘어난 것 순 — 새로 생김 · 늘어남 · 줄어듦 · 사라짐), 에셋 줄 → 콘텐츠 브라우저 · 인스펙터. 원천은 이 프로세스(편집 · PIE 같은 프로세스)와 원격(개발 명령 `memory.snapshot` 의 답이 스냅숏 글 — 디버그 채널 `EditorRemoteInspector`).
-8. **내보내기.** CSV(UTF-8 BOM · 쉼표 · RFC 4180 따옴표 · 첫 줄 머리말 · 바이트 칸은 원값 + `(MB)` 칸 따로). 표 하나 또는 스냅숏 전체(시트마다 파일 + Summary). 폴더는 `<Saved>/<_exportFolder>/<yyyyMMdd-HHmmss>`(같은 초는 `-2` — 덮지 않는다), 설정 `Config/Dev/MemorySnapshot.json`(없으면 오류). 쓰기는 워커(에디터 `EditorBackgroundTask`, 명령 · 인자는 `TaskManager`). 개발 명령 `memory.export [폴더]`, 실행 인자 `-memory-export=<폴더>`(루프가 끝날 때 한 번 — 언리얼 `-csvExitOnCompletion` 자리), `SavedRetention` 규칙 한 줄.
+8. **내보내기.** CSV(UTF-8 BOM · 쉼표 · RFC 4180 따옴표 · 첫 줄 머리말 · 바이트 칸은 원값 + `(MB)` 칸 따로). 표 하나 또는 스냅숏 전체(시트마다 파일 + Summary). 폴더는 `<Saved>/<_exportFolder>/<yyyyMMdd-HHmmss>`(같은 초는 `-2` — 덮지 않는다), 설정 `Config/Dev/MemorySnapshot.json`(없으면 오류). 쓰기는 워커(에디터 `EditorBackgroundTask`, 명령 · 인자는 `TaskManager`). 개발 명령 `memory.export [폴더]`, 실행 인자 `-memory-export=<폴더>`(루프가 끝날 때 한 번 — 언리얼 `-csvExitOnCompletion` 자리), `SavedCleanup` 규칙 한 줄.
 
 **확인.** 단위: 수집(가짜 캐시 · 추적기에 올린 가짜 자원), 비교(늘어남 · 새로 생김 · 사라짐), CSV(BOM · 이스케이프 · 한글 경로 · 숫자 칸), 스냅숏 글 왕복, ViewModel(정렬 · 거르기 · 비교). 시나리오 `editor/memorypanel`: 패널 열기 → 찍기 두 번 → 비교 → 내보내기 → `memory.exportinfo` 가 읽은 머리말 · 행 수.
 
@@ -1985,7 +1985,7 @@ ST-1 · ST-5 는 파일이 겹치지 않아 함께 맡길 수 있다. ST-2 · ST
 - 반복 실패 차단은 뒤 단계의 다른 실패를 가린다 — 돌지 않은 단계를 표에 남기고 `--from-stage` 로 잇는다.
 - scratch 마운트: 리소스 뿌리에 id 를 직접 붙여 디스크 경로를 만드는 에디터 코드가 있으면 사본을 찾지 못한다 — ST-5 의 첫 일은 그 자리를 `AssetPaths` 로 모으는 것이다.
 - 같은 모양이 남은 곳: `EngineConfig` 의 다른 개발 전용 칸. 모듈 섀도 복사본은 실행 뿌리 아래 `ModuleShadow/<pid>` 로 옮겼다(`ShadowCopyName` — 이름으로 거두는 코드 없음).
-- 시나리오 산출물 `{out}`(`Saved/Automation/<시나리오>/<pid>`)과 체인 보고 `…/per-backend-<pid>` 는 실행 뿌리로 옮기지 않는다: 사람과 도구(`scenario_bisect.py` · `linux_scenarios.py` · `test_history.py ingest`)가 시나리오 이름으로 찾는 자리이고, 보존이 시나리오마다 최근 3 개(`SavedRetention` 의 `Automation` 규칙 `_bPerChild`)라 실행 전체 최근 3 개인 `Runs` 보다 오래 남는다(실행 뿌리를 쓰는 단독 실행마다 `Runs` 에 폴더가 생겨 체인 산출물이 금방 밀린다). pid 꼬리는 자리 잡기(`reserveUniquePath` — 겹치면 번호를 붙인다)일 뿐 형제 거두기가 없어 ST-5 가 없앤 결함 모양이 아니다. 언리얼도 자동화 보고는 `Saved/Automation/Reports` 에 실행과 따로 둔다.
+- 시나리오 산출물 `{out}`(`Saved/Automation/<시나리오>/<pid>`)과 체인 보고 `…/per-backend-<pid>` 는 실행 뿌리로 옮기지 않는다: 사람과 도구(`scenario_bisect.py` · `linux_scenarios.py` · `test_history.py ingest`)가 시나리오 이름으로 찾는 자리이고, 보존이 시나리오마다 최근 3 개(`SavedCleanup` 의 `Automation` 규칙 `_bPerChild`)라 실행 전체 최근 3 개인 `Runs` 보다 오래 남는다(실행 뿌리를 쓰는 단독 실행마다 `Runs` 에 폴더가 생겨 체인 산출물이 금방 밀린다). pid 꼬리는 자리 잡기(`reserveUniquePath` — 겹치면 번호를 붙인다)일 뿐 형제 거두기가 없어 ST-5 가 없앤 결함 모양이 아니다. 언리얼도 자동화 보고는 `Saved/Automation/Reports` 에 실행과 따로 둔다.
 
 ## 외부 엔진 · 라이브러리 검토(2026-11-19)
 
@@ -2248,7 +2248,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 
 ## 리플렉션 적용 후보(2026-11-20)
 
-`.cpp` 안의 형식 · 열거형 가운데 리플렉션(`REFLECT` · `PROPERTY` · `ENUM`)으로 손 코드를 지울 자리를 훑었다(열거형 55 · 구조체 필드 이름 글 대조). 적용한 것은 `SavedRetentionSubsystem::RetentionRule` · `RetentionSettings`(손 JSON 읽기 → `JSONSerializer`), `GimmickNodeRegistry::GimmickMoverMode`(이름 비교 → `enumFromString`). 아래는 판단이 남은 것이다.
+`.cpp` 안의 형식 · 열거형 가운데 리플렉션(`REFLECT` · `PROPERTY` · `ENUM`)으로 손 코드를 지울 자리를 훑었다(열거형 55 · 구조체 필드 이름 글 대조). 적용한 것은 `SavedCleanupSubsystem::RetentionRule` · `RetentionSettings`(손 JSON 읽기 → `JSONSerializer`), `GimmickNodeRegistry::GimmickMoverMode`(이름 비교 → `enumFromString`). 아래는 판단이 남은 것이다.
 
 - **중첩 형식의 접근 제한.** 생성 코드는 `template <> struct Registrar<Outer::Inner>` 특수화 뒤에 이름공간 범위 등록 변수(`static Registrar<…> s_…`, `static EnumRegistrar s_…{ &Registrar<…>::registerEnum }`)와 `ReflectTypeTraits<…>` 특수화를 낸다. 그래서 private · protected 중첩 형식은 C++17 에서 접근 오류가 난다 — 지금은 public 중첩으로만 감춘다. 감추려면 등록 변수를 `Registrar` 의 정적 멤버로 옮기고 바깥 형식이 `REFLECT_BODY`(템플릿 friend)를 갖게 하는 생성기 변경이 필요하다(언리얼은 중첩 `UENUM` · `USTRUCT` 를 아예 막는다).
 - **`ScreenshotStabilityMode`(`AutomationRunnerSteps.cpp`).** `AutomationScreenshotParams::_stability` 를 열거형 칸으로 바꾸면 이름 비교가 사라지지만 데이터 철자가 소문자(`stability="assets"` 113 곳, `"none"` 33 곳, 61 파일)라 열거자 이름(`Assets`)과 다르다. 시나리오 파일을 일괄로 다시 쓸지(되돌리기 쉬운 데이터 이전) 정한 뒤 옮긴다.

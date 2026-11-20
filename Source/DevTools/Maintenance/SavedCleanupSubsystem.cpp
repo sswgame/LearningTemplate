@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/Maintenance/SavedRetentionSubsystem.h"
+#include "DevTools/Maintenance/SavedCleanupSubsystem.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/StopToken.h"
@@ -16,10 +16,10 @@ namespace sw
 {
     namespace
     {
-        struct SavedRetentionSubsystemInternal
+        struct SavedCleanupSubsystemInternal
         {
             /** @brief 정리 규칙 파일(프로젝트 루트 기준)입니다 — 무엇을 몇 개 남길지는 데이터가 정한다. */
-            static constexpr const utf8* kConfigFile = "Config/Dev/SavedRetention.json";
+            static constexpr const utf8* kConfigFile = "Config/Dev/SavedCleanup.json";
             /** @brief 지우려고 차지한 더미의 이름 머리입니다(`claimed-<프로세스>-<시각>-<번호>`). */
             static constexpr const utf8* kClaimPrefix = "claimed-";
 
@@ -66,20 +66,20 @@ namespace sw
         };
     } // namespace
 
-    SubsystemInitResult SavedRetentionSubsystem::initializeSubsystem()
+    SubsystemInitResult SavedCleanupSubsystem::initializeSubsystem()
     {
         _worker = thread( ThreadCreationKey{}, []( StopToken stopToken )
         { run( stopToken ); } );
         return SubsystemInitResult::Succeeded;
     }
 
-    bool SavedRetentionSubsystem::readSettings( RetentionSettings& outSettings )
+    bool SavedCleanupSubsystem::readSettings( RetentionSettings& outSettings )
     {
-        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), SavedRetentionSubsystemInternal::kConfigFile );
+        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), SavedCleanupSubsystemInternal::kConfigFile );
         string       text;
         if ( FileUtil::readTextFile( path, text ) == false )
         {
-            SW_LOG_ERROR_ID( "SavedRetention.ConfigUnreadable", "Saved retention rules %# could not be read - nothing is removed", path );
+            SW_LOG_ERROR_ID( "SavedCleanup.ConfigUnreadable", "Saved retention rules %# could not be read - nothing is removed", path );
             return false;
         }
         // 빠진 칸 · 모르는 키 · 틀린 값은 직렬화기가 칸 이름과 함께 알린다. 빈 글은 스키마로 막지 못해 여기서 본다.
@@ -88,13 +88,13 @@ namespace sw
         { return rule._folder.empty(); } );
         if ( bRead == false || bEmpty )
         {
-            SW_LOG_ERROR_ID( "SavedRetention.ConfigInvalid", "Saved retention rules %# need _minAgeSeconds, a non-empty _trashFolder and a _listRule array of non-empty _folder, _keepCount, _bPerChild, _listSkipChild - nothing is removed", path );
+            SW_LOG_ERROR_ID( "SavedCleanup.ConfigInvalid", "Saved retention rules %# need _minAgeSeconds, a non-empty _trashFolder and a _listRule array of non-empty _folder, _keepCount, _bPerChild, _listSkipChild - nothing is removed", path );
             return false;
         }
         return true;
     }
 
-    void SavedRetentionSubsystem::run( const StopToken& stopToken )
+    void SavedCleanupSubsystem::run( const StopToken& stopToken )
     {
         RetentionSettings settings;
         if ( readSettings( settings ) == false )
@@ -112,27 +112,27 @@ namespace sw
                 continue;
             if ( rule._bPerChild == false )
             {
-                SavedRetentionSubsystemInternal::moveOld( folder, rule._keepCount, minAgeTicks, nowTicks, trash, moved, stopToken );
+                SavedCleanupSubsystemInternal::moveOld( folder, rule._keepCount, minAgeTicks, nowTicks, trash, moved, stopToken );
                 continue;
             }
-            for ( const SavedRetentionSubsystemInternal::Entry& child : SavedRetentionSubsystemInternal::listNewestFirst( folder ) )
+            for ( const SavedCleanupSubsystemInternal::Entry& child : SavedCleanupSubsystemInternal::listNewestFirst( folder ) )
             {
                 if ( child._bDirectory && VectorUtil::contains( rule._listSkipChild, FileUtil::getFileNamePart( child._path ) ) == false )
-                    SavedRetentionSubsystemInternal::moveOld( child._path, rule._keepCount, minAgeTicks, nowTicks, trash, moved, stopToken );
+                    SavedCleanupSubsystemInternal::moveOld( child._path, rule._keepCount, minAgeTicks, nowTicks, trash, moved, stopToken );
             }
         }
         if ( moved > 0 )
-            SW_LOG_INFO_ID( "SavedRetention.Pruned", "Saved: moved %# old run output(s) aside to delete (%#)", moved, SavedRetentionSubsystemInternal::kConfigFile );
+            SW_LOG_INFO_ID( "SavedCleanup.Pruned", "Saved: moved %# old run output(s) aside to delete (%#)", moved, SavedCleanupSubsystemInternal::kConfigFile );
         // 버릴 자리를 통째로 지운다 — 앞 실행이 덜 지운 것도 함께. 종료가 멈추라 하면 그만두고 다음 기동이 잇는다.
         // 나란히 뜬 다른 프로세스(넷 플레이의 서버 · 클라이언트, ctest 의 백엔드 넷)도 같은 자리를 비운다 — 둘이 한 더미를 함께 지우면 한쪽이 "비어 있지 않음" 으로 진다.
         // 그래서 이름을 바꿔 차지한 더미만 지운다(같은 더미를 두 프로세스가 바꾸면 하나만 이긴다). 남이 차지한 더미는 오래된 것(그 프로세스가 지우다 죽었다)만 다시 차지한다.
-        const string claimPrefix = string( SavedRetentionSubsystemInternal::kClaimPrefix ) + to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) + "-";
+        const string claimPrefix = string( SavedCleanupSubsystemInternal::kClaimPrefix ) + to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) + "-";
         uint32       claimCount  = 0;
-        for ( const SavedRetentionSubsystemInternal::Entry& pile : SavedRetentionSubsystemInternal::listNewestFirst( trashRoot ) )
+        for ( const SavedCleanupSubsystemInternal::Entry& pile : SavedCleanupSubsystemInternal::listNewestFirst( trashRoot ) )
         {
             if ( stopToken.isStopRequested() )
                 return;
-            const bool bClaimedRecently = StringUtil::startsWith( FileUtil::getFileNamePart( pile._path ), SavedRetentionSubsystemInternal::kClaimPrefix ) && nowTicks - pile._writeTicks < minAgeTicks;
+            const bool bClaimedRecently = StringUtil::startsWith( FileUtil::getFileNamePart( pile._path ), SavedCleanupSubsystemInternal::kClaimPrefix ) && nowTicks - pile._writeTicks < minAgeTicks;
             if ( bClaimedRecently )
                 continue;
             const string claimedPath = FileUtil::joinPath( trashRoot, claimPrefix + to_string( claimCount++ ) );
@@ -142,7 +142,7 @@ namespace sw
         }
     }
 
-    void SavedRetentionSubsystem::shutdownSubsystem()
+    void SavedCleanupSubsystem::shutdownSubsystem()
     {
         _worker = thread{}; // 멈추라 하고 합류한다(남은 것은 다음 기동이 이어 지운다)
     }

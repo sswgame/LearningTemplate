@@ -81,13 +81,13 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 리플렉션 — 머티리얼 그래프 에셋 형식(`Material/` — 컴파일러가 Engine `Graphics/Material/Dev` 에서 옮겨 왔다, 설계 2026-11-17 G2)이 DevTools 의 첫 REFLECT 타입이다.
-# 입력은 적은 헤더뿐이다(빈 HEADERS 는 DevTools 전체를 훑는다). 보존 규칙 파일 스키마(`SavedRetentionSubsystem.h`), 리로드 길 · 메모리 비교 상태 이름(`ReloadSource.h` · `MemoryDiffStatus.h`)도 여기서 읽는다. 주인(CONTENT_OWNER)을 비워 호스트 소유로 둔다 — 개발 호스트가 늘 DevTools 를 링크한다.
+# 입력은 적은 헤더뿐이다(빈 HEADERS 는 DevTools 전체를 훑는다). 보존 규칙 파일 스키마(`SavedCleanupSubsystem.h`), 리로드 길 · 메모리 비교 상태 이름(`ReloadSource.h` · `MemoryDiffStatus.h`)도 여기서 읽는다. 주인(CONTENT_OWNER)을 비워 호스트 소유로 둔다 — 개발 호스트가 늘 DevTools 를 링크한다.
 # 셰이더 쿠커는 이 컴파일러를 모른다 — `IShaderSourceGenerator` 정적 등록(`MaterialGraphGeneratedPaths.cpp`)으로 붙는다.
 # ------------------------------------------------------------------------------
 sw_add_reflection_step(DevTools
 	MODULE DevTools
 	HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/Material/MaterialGraph.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Maintenance/SavedRetentionSubsystem.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Maintenance/SavedCleanupSubsystem.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/AssetReload/ReloadSource.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Memory/MemoryDiffStatus.h"
 	INCLUDES "${CMAKE_SOURCE_DIR}/Source"

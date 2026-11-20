@@ -41,7 +41,7 @@ namespace sw
     class ModuleCompiler;               // 빌드 프로세스가 끝나기를 분 단위로 기다린다
     class AutomationHangWatchdog;       // 멈춘 시나리오 감시 — 게임 스레드 · 작업 풀이 멈춘 때 깨어 있어야 한다
     class AutomationPerBackend;         // 자식 프로세스 출력 파이프의 막히는 읽기
-    class SavedRetentionSubsystem;      // 오래된 저장 파일 지우기 — 디스크 훑기가 기동을 막지 않게, 멈춤 요청을 받는다
+    class SavedCleanupSubsystem;        // 오래된 저장 파일 지우기 — 디스크 훑기가 기동을 막지 않게, 멈춤 요청을 받는다
     class FileDialog;                   // OS 파일 대화 상자가 닫힐 때까지 막는다
     class Win32SplashWindow;            // 스플래시 창의 메시지 루프(GetMessageW 가 막는다) — 기동 스레드가 몇 초씩 막혀도 창이 답한다(언리얼 FWindowsSplash)
     class LinuxSplashThread;            // X11 · Wayland 스플래시의 이벤트 루프(poll 이 막는다) — 컴포지터 핑에 늘 답한다(언리얼 FLinuxSplash)
@@ -88,7 +88,7 @@ namespace sw
         friend class ModuleCompiler;
         friend class AutomationHangWatchdog;
         friend class AutomationPerBackend;
-        friend class SavedRetentionSubsystem;
+        friend class SavedCleanupSubsystem;
         friend class FileDialog;
         friend class Win32SplashWindow;
         friend class LinuxSplashThread;
