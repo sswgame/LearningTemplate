@@ -873,27 +873,75 @@ namespace sw::editor
         if ( StringUtil::isNullOrEmpty( pRelativePath ) )
             return;
         // 경로 문자열을 싣지 않는다 — 끌기는 `{Asset, id}` 한 형식이고 경로는 id 표가 든다(받는 쪽이 이름을 비교하지 않는다).
-        const EditorDragPayload payload{ EditorPayloadKind::Asset, EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, pRelativePath ) };
+        const EditorDragPayload payload{ EditorPayloadKind::Asset, registerAssetPayload( pRelativePath ) };
         (void)EditorInputGUI::beginDragSource( payload, pRelativePath, bAllowNullID ); // 끌기가 시작됐는지는 쓰지 않는다
+    }
+
+    uint64 EditorWidgets::registerAssetPayload( string_view resourceID )
+    {
+        // 한 에셋은 한 id — 디스크 경로를 올리면 같은 에셋이 다른 id 가 된다.
+        SW_ASSERT( FileUtil::isAbsolutePath( resourceID ) == false );
+        return EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, resourceID );
+    }
+
+    bool EditorWidgets::findAssetPayload( uint64 id, string& outResourceID )
+    {
+        return EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, id, outResourceID );
     }
 
     bool EditorWidgets::acceptAssetDrop( string& outPath )
     {
         EditorDragPayload payload{};
         return EditorInputGUI::acceptDrop( EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload ) &&
-               EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, payload._id, outPath );
+               findAssetPayload( payload._id, outPath );
     }
 
     bool EditorWidgets::acceptAssetDrop( string& outPath, const utf8* pExpectedExt )
     {
-        return acceptAssetDrop( outPath ) && ( StringUtil::isNullOrEmpty( pExpectedExt ) || EditorAssetFilter::matches( outPath, pExpectedExt ) );
+        // 놓을 자리를 열기 전에 거른다 — 맞지 않는 애셋을 강조했다가 놓을 때 버리면 놓은 사람은 왜 안 됐는지 모른다(R11).
+        string draggedPath;
+        if ( StringUtil::isNullOrEmpty( pExpectedExt ) == false && peekAssetDrag( draggedPath ) && EditorAssetFilter::matches( draggedPath, pExpectedExt ) == false )
+            return false;
+        return acceptAssetDrop( outPath );
+    }
+
+    bool EditorWidgets::peekAssetDrag( string& outPath )
+    {
+        EditorDragPayload payload{};
+        return EditorInputGUI::peekPayload( EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload ) &&
+               findAssetPayload( payload._id, outPath );
+    }
+
+    bool EditorWidgets::acceptObjectDrop( uint64& outObjectID )
+    {
+        EditorDragPayload payload{};
+        if ( EditorInputGUI::acceptDrop( EditorPayloadKindSet{ EditorPayloadKind::GameObject }, payload ) == false )
+            return false;
+        outObjectID = payload._id;
+        return true;
+    }
+
+    void EditorWidgets::beginResetToDefaultGroup()
+    {
+        ImGui::BeginGroup();
+    }
+
+    bool EditorWidgets::endResetToDefaultGroup( bool bDiffersFromDefault, bool& outbHovered )
+    {
+        ImGuiContext&           context   = *ImGui::GetCurrentContext();
+        const ImGuiLastItemData innerItem = context.LastItemData;
+        ImGui::EndGroup();
+        outbHovered                = ImGui::IsItemHovered();
+        const bool bResetRequested = bDiffersFromDefault && EditorInputGUI::wasItemResetRequested();
+        context.LastItemData       = innerItem;
+        return bResetRequested;
     }
 
     bool EditorWidgets::previewAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath, bool& outbDelivered )
     {
         EditorDragPayload payload{};
         return EditorInputGUI::previewDropInRect( minPos, maxPos, pTargetID, EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload, outbDelivered ) &&
-               EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, payload._id, outPath );
+               findAssetPayload( payload._id, outPath );
     }
 
     bool EditorWidgets::updateListSelection( int32& selectedIndex, int32 itemCount, bool bRepeat )

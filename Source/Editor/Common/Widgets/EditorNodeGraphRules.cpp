@@ -3,6 +3,7 @@
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -171,6 +172,18 @@ namespace sw::editor
         if ( transform._scale <= 0.0f )
             return transform._canvasOrigin;
         return ( mapPoint - transform._mapOffset ) * ( 1.0f / transform._scale ) + transform._canvasOrigin;
+    }
+
+    optional<uint32> EditorNodeGraphRules::findAssetNodeKind( const vector<EditorGraphAssetNodeRule>& listRule, string_view assetPath )
+    {
+        if ( assetPath.empty() )
+            return {};
+        for ( const EditorGraphAssetNodeRule& rule : listRule )
+        {
+            if ( rule._pExtension != nullptr && FileUtil::hasExtension( assetPath, rule._pExtension ) )
+                return rule._kindID;
+        }
+        return {};
     }
 
     optional<int32> EditorNodeGraphRules::findNearestNode( const vector<EditorGraphNodeRect>& listRect, const float2& canvasPoint )

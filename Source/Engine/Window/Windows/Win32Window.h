@@ -88,8 +88,13 @@ namespace sw
             (void)bVisible;
             return false;
         }
-        [[nodiscard]] bool supportsPointerLock() const override { return false; }
-        [[nodiscard]] bool setPointerLock( WindowPointerLock lock ) override { return lock == WindowPointerLock::Released; }
+        /**
+         * @brief 놓은 순간만 받는다(`WM_DROPFILES` — `DragAcceptFiles`). 끄는 동안의 들어옴 · 위치는 OLE `IDropTarget` 이 필요한데 그것은 STA 를 요구하고,
+         *        메인 스레드는 오디오가 MTA 로 COM 을 연다(`XAudio2AudioBackend`) — 두 모델을 한 스레드에 섞을 수 없다.
+         */
+        [[nodiscard]] WindowFileDropSupport getFileDropSupport() const override { return WindowFileDropSupport::DropOnly; }
+        [[nodiscard]] bool                  supportsPointerLock() const override { return false; }
+        [[nodiscard]] bool                  setPointerLock( WindowPointerLock lock ) override { return lock == WindowPointerLock::Released; }
         /** @brief 창이 잇지 않는다 — Windows 클립보드는 `PlatformClipboard`(Win32Clipboard.cpp)가 창 없이 연다. */
         [[nodiscard]] bool supportsClipboard() const override { return false; }
         [[nodiscard]] bool readClipboardText( string& outText ) override
@@ -120,6 +125,8 @@ namespace sw
 
     private:
         static LRESULT CALLBACK wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
+        /** @brief `WM_DROPFILES` 의 셸 핸들(`HDROP`)에서 경로 · 놓은 자리를 읽어 처리기에 넘기고 핸들을 놓습니다(`DragFinish`). 헤더가 `shellapi.h` 를 끌지 않게 `void*` 로 받는다. */
+        void dispatchDroppedFiles( void* pDropHandle );
         /** @brief `WM_SIZE` 를 처리합니다. 최소화(0x0)는 창 크기로 기억하지 않고, 그 밖은 크기만 적습니다(`notifyResized` — 콜백은 프레임 시작). */
         void onSizeMessage( WPARAM wParam, LPARAM lParam );
         /**

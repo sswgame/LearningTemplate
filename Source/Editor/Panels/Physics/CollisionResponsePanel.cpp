@@ -8,6 +8,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -137,11 +138,14 @@ namespace sw::editor
                 if ( bDefault )
                     ImGui::PushStyleColor( ImGuiCol_Text, mutedColor );
                 const bool bClicked = ImGui::Selectable( Internal::getResponseLabel( _model.getResponse( profileIndex, channelIndex ) ) );
+                const bool bReset   = bDefault == false && EditorInputGUI::wasItemResetRequested(); // R10 — 휠클릭은 채널 기본으로
                 if ( bDefault )
                     ImGui::PopStyleColor();
                 ImGui::PopID();
                 if ( bClicked )
                     (void)_model.cycleResponse( profileIndex, channelIndex ); // 바꿨으면 모델이 되돌리기 이름으로 알린다
+                else if ( bReset )
+                    (void)_model.resetResponse( profileIndex, channelIndex );
             }
         }
         ImGui::EndTable();

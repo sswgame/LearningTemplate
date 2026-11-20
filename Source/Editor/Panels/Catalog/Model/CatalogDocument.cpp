@@ -286,6 +286,17 @@ namespace sw::editor
         return applyEdit( CatalogXMLText::setAttributeValue( _text, _parsed.getElement( elementIndex ), column, value ) );
     }
 
+    bool CatalogDocument::canRevertToInherited( int32 elementIndex, string_view column ) const
+    {
+        const bool bInvalidElementIndex = _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size();
+        if ( bInvalidElementIndex || _parsed.getElement( elementIndex )._parent != _parsed.getRootIndex() )
+            return false;
+        const CatalogXMLElement& row        = _parsed.getElement( elementIndex );
+        const string*            pKey       = _inheritance.findKeyAttribute( row._name );
+        const bool               bOwnColumn = column == DataInheritance::kBaseAttribute || ( pKey != nullptr && column == string_view( *pKey ) );
+        return bOwnColumn == false && row.findAttribute( DataInheritance::kBaseAttribute ).has_value() && row.findAttribute( column ).has_value();
+    }
+
     bool CatalogDocument::unsetCell( int32 elementIndex, string_view column )
     {
         const bool bInvalidElementIndex = _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size();

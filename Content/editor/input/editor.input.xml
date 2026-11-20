@@ -21,6 +21,14 @@
 	</layers>
 
 	<layer name="Editor.Global">
+		<!-- Property grid (inspector, settings, graph details …): copy / paste the field under the mouse — the row menu's Copy Value / Paste Value. Global because every
+		     panel that hosts the grid takes it; EditorPropertyGrid reads it only while its own window has focus, so a focused panel's Ctrl+C / Ctrl+V (hierarchy, console) is never doubled. -->
+		<action name="property.copyValue" trigger="Pressed">
+			<bind source="Key" modifier="Ctrl" code="C"/>
+		</action>
+		<action name="property.pasteValue" trigger="Pressed">
+			<bind source="Key" modifier="Ctrl" code="V"/>
+		</action>
 		<action name="scene.open" trigger="Pressed">
 			<bind source="Key" modifier="Ctrl" code="O"/>
 		</action>
@@ -111,6 +119,9 @@
 		</action>
 		<action name="asset.delete" trigger="Pressed">
 			<bind source="Key" code="Delete"/>
+		</action>
+		<action name="asset.copyRelativePath" trigger="Pressed">
+			<bind source="Key" modifier="Ctrl" code="C"/>
 		</action>
 		<action name="contentBrowser.navigateBack" trigger="Pressed">
 			<bind source="Key" modifier="Alt" code="Left"/>

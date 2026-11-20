@@ -83,6 +83,8 @@ namespace sw
         void applyTextInputWanted( bool bWanted ) override;
         /** @brief 받지 않는다 — NativeActivity 에는 글 커서 자리를 입력기에 알리는 API 가 없다(GameTextInput 의 `setImeInsets` 자리). */
         void applyTextInputArea( const WindowTextInputArea& area ) override { (void)area; }
+        /** @brief 받지 않는다 — Android 의 끌어 놓기(`View.OnDragListener`)는 다중 창 모드의 다른 앱에서 오고, 콘텐츠 임포트를 쓰는 에디터가 이 플랫폼에 없다. */
+        [[nodiscard]] WindowFileDropSupport getFileDropSupport() const override { return WindowFileDropSupport::None; }
 
     private:
         /** @brief 지금 표면 크기 · density · 안전 여백을 읽어 크기 콜백까지 맞춥니다(회전 · 크기 변경 · 표면 복귀). */

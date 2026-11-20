@@ -1,0 +1,1 @@
+osfiledropprobe — OS 파일 끌어 놓기 시나리오(editor.osfiledrop)가 콘텐츠 브라우저로 임포트하는 글 파일이다.

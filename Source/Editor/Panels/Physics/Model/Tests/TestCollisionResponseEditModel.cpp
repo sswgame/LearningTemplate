@@ -66,6 +66,19 @@ SW_TEST_CASE( CollisionResponseEditModelTest, CellEditWritesOnlyNonDefaultLines 
     SW_EXPECT_TRUE( model.isDefaultResponse( 0, 0 ) );
 }
 
+/** @brief [CollisionResponseEditModelTest] 휠클릭 되돌리기(R10): 적힌 칸은 채널 기본으로 돌아가 줄이 빠지고, 이미 기본인 칸 · 범위 밖은 아무 일도 하지 않는다 */
+SW_TEST_CASE( CollisionResponseEditModelTest, ResetReturnsCellToChannelDefault )
+{
+    CollisionResponseEditModel model;
+    SW_REQUIRE_TRUE( model.loadText( TestCollisionResponseEditModelInternal::getText() ) );
+    SW_REQUIRE_TRUE( model.resetResponse( 1, 1 ) ); // Glass · Look — 적힌 막음 → 채널 기본 무시
+    SW_EXPECT_TRUE( model.isDefaultResponse( 1, 1 ) );
+    SW_EXPECT_TRUE( model.getResponse( 1, 1 ) == CollisionResponse::Ignore );
+    SW_EXPECT_FALSE( model.resetResponse( 1, 1 ) );
+    SW_EXPECT_FALSE( model.resetResponse( 0, 0 ) );
+    SW_EXPECT_FALSE( model.resetResponse( 9, 9 ) );
+}
+
 /** @brief [CollisionResponseEditModelTest] 되돌리기 원문 단계: 고치기 전 원문을 적용하면 표가 처음 응답으로 돌아간다 */
 SW_TEST_CASE( CollisionResponseEditModelTest, UndoTextRestoresTheTable )
 {

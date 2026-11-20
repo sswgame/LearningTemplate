@@ -32,6 +32,8 @@ namespace sw::editor
         struct HierarchyPanelInternal
         {
             static constexpr Color kPrefabInstanceText{ 0.45f, 0.70f, 1.0f, 1.0f };
+            /** @brief 행 · 빈 곳에 놓으면 스폰하는 에셋의 확장자입니다(`EditorAssetCommands::spawnPrefab` 이 프리팹만 읽는다 — `PrefabAsset` 의 쿠킹 원본 접미사). */
+            static constexpr const utf8* kPrefabAssetExtension = ".prefab.xml";
 
             // 이 창만의 액션(행 목록을 아는 것). 키는 `editor.input.xml` 의 `Editor.Panel.hierarchy` 레이어가 정한다.
             static constexpr string_view kActionSelectAll      = "hierarchy.selectAll";
@@ -90,8 +92,9 @@ namespace sw::editor
                         viewModel.dropObject( payload._id, entry._id, zone );
                 }
 
+                // 프리팹만 스폰한다 — 다른 에셋은 놓을 자리를 열지 않는다(R11, 확장자 거르개는 놓기 전에 본다).
                 string droppedAssetPath;
-                if ( EditorWidgets::acceptAssetDrop( droppedAssetPath ) )
+                if ( EditorWidgets::acceptAssetDrop( droppedAssetPath, HierarchyPanelInternal::kPrefabAssetExtension ) )
                     viewModel.spawnPrefab( droppedAssetPath.c_str(), entry._id );
             }
 
@@ -428,7 +431,8 @@ namespace sw::editor
 
         // 행 뒤의 것(클릭 · 이름 칸 · 맥락 메뉴 · 끌기)은 방금 그린 트리 노드를 본다. 열린 노드가 넣은 깊이 위에 행 id 를 얹고 바로 닫는다.
         ImGui::PushID( static_cast<int32>( entry._id ) );
-        if ( EditorInputGUI::wasItemClicked() )
+        // 고르기는 뗄 때다(R12) — 누를 때 고르면 이 행을 인스펙터 칸으로 끄는 동안 인스펙터가 이 오브젝트로 넘어가 놓을 칸이 사라진다.
+        if ( EditorInputGUI::wasItemClickedWithoutDrag() )
         {
             const uint8 modifierMask = EditorInputGUI::getModifierMask();
             viewModel.clickRow( entry._id, ( modifierMask & ModifierKey::Ctrl ) != 0, ( modifierMask & ModifierKey::Shift ) != 0 );
@@ -495,7 +499,7 @@ namespace sw::editor
         if ( EditorInputGUI::acceptDrop( EditorPayloadKindSet{ EditorPayloadKind::GameObject }, objectPayload ) )
             viewModel.detachToRoot( objectPayload._id );
         string droppedAssetPath;
-        if ( EditorWidgets::acceptAssetDrop( droppedAssetPath ) )
+        if ( EditorWidgets::acceptAssetDrop( droppedAssetPath, HierarchyPanelInternal::kPrefabAssetExtension ) )
             viewModel.spawnPrefab( droppedAssetPath.c_str(), 0 );
 
         handleHierarchyShortcuts();

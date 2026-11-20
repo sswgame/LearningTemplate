@@ -98,3 +98,27 @@ SW_TEST_CASE( EditorNodeGraphTest, RemoveCommentsRemovesListedIDsOnly )
     SW_EXPECT_EQUAL( 1, listComment[0]._id );
     SW_EXPECT_EQUAL( 3, listComment[1]._id );
 }
+
+/**
+ * @brief [EditorNodeGraphRulesTest] 에셋 → 노드 종류 표는 확장자가 맞는 첫 줄을 고르고(대소문자 무시), 맞는 줄이 없으면 비어 있다 — 그 캔버스는 놓을 자리를 열지 않는다
+ */
+SW_TEST_CASE( EditorNodeGraphRulesTest, AssetNodeKindIsPickedByExtension )
+{
+    const vector<EditorGraphAssetNodeRule> listRule{
+        EditorGraphAssetNodeRule{         ".png",  7},
+        EditorGraphAssetNodeRule{".matgraph.xml",  9},
+        EditorGraphAssetNodeRule{         ".png", 11}, // 같은 확장자의 뒷줄은 쓰이지 않는다
+    };
+    const optional<uint32> texture = EditorNodeGraphRules::findAssetNodeKind( listRule, "engine/textures_raw/particles/kenney_particle/circle_01.png" );
+    SW_REQUIRE_TRUE( texture.has_value() );
+    SW_EXPECT_EQUAL( 7u, *texture );
+    const optional<uint32> upper = EditorNodeGraphRules::findAssetNodeKind( listRule, "game/x/ICON.PNG" );
+    SW_REQUIRE_TRUE( upper.has_value() );
+    SW_EXPECT_EQUAL( 7u, *upper );
+    const optional<uint32> subgraph = EditorNodeGraphRules::findAssetNodeKind( listRule, "engine/materials/layer.matgraph.xml" );
+    SW_REQUIRE_TRUE( subgraph.has_value() );
+    SW_EXPECT_EQUAL( 9u, *subgraph );
+    SW_EXPECT_FALSE( EditorNodeGraphRules::findAssetNodeKind( listRule, "engine/automation/editor/assetmove/pack/probe.material" ).has_value() );
+    SW_EXPECT_FALSE( EditorNodeGraphRules::findAssetNodeKind( listRule, "" ).has_value() );
+    SW_EXPECT_FALSE( EditorNodeGraphRules::findAssetNodeKind( vector<EditorGraphAssetNodeRule>{}, "a.png" ).has_value() );
+}

@@ -27,8 +27,10 @@ namespace
         bool              supportsCursorShape() const override { return false; }
         bool              setCursorShape( CursorShape /*shape*/ ) override { return false; }
         bool              setCursorVisible( bool /*bVisible*/ ) override { return false; }
-        void              simulateFocus( bool bFocused ) { applyPlatformFocus( bFocused ); }
-        void              simulateKey( PlatformInputKind kind )
+        // 콜백 창 바탕은 끌어 놓기를 정하지 않는다(웹 · Android 가 저마다 None) — 이 가짜도 받지 않는다.
+        WindowFileDropSupport getFileDropSupport() const override { return WindowFileDropSupport::None; }
+        void                  simulateFocus( bool bFocused ) { applyPlatformFocus( bFocused ); }
+        void                  simulateKey( PlatformInputKind kind )
         {
             PlatformInputEvent input{};
             input._kind = kind;

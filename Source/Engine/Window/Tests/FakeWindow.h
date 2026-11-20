@@ -16,6 +16,10 @@ namespace sw
     class FakeWindow : public IWindow
     {
     public:
+        /** @brief 가짜 창은 끌어 놓기를 받지 않는다 — 테스트는 사건 값(`WindowFileDropEvent`)을 받는 쪽에 바로 넘긴다. */
+        [[nodiscard]] WindowFileDropSupport getFileDropSupport() const override { return WindowFileDropSupport::None; }
+
+    public:
         explicit FakeWindow( NativeSurfaceKind surfaceKind = NativeSurfaceKind::Win32 )
             : IWindow{}
             , _surfaceKind{ surfaceKind }

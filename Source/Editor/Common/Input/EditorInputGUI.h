@@ -101,6 +101,11 @@ namespace sw::editor
     {
         /** @brief 끌어 놓기 페이로드의 ImGui 형식 이름입니다. 에디터의 끌어 놓기는 이 한 형식(`EditorDragPayload`)이다. */
         static constexpr const utf8* kPayloadTypeName = "SW_EDITOR_PAYLOAD";
+        /**
+         * @brief 칸을 기본값으로 되돌리는 단추입니다(R10 — 휠클릭). 맥락 메뉴의 오른쪽 단추처럼 코드의 한 값이다.
+         * @details 에디터 창 위의 마우스는 ImGui 가 먹어 입력 맵(`editor.input.xml`)이 보지 못한다 — 키 단축키만 재배치 대상이다(언리얼 · 유니티도 마우스 몸짓은 고정이다).
+         */
+        static constexpr EditorMouseButton kResetToDefaultButton = EditorMouseButton::Middle;
 
         // ------------------------------------------------------------------------------
         // 1) 맥락 메뉴(R1 · R2 · R3 · R6)
@@ -124,11 +129,20 @@ namespace sw::editor
         static bool beginItemContextMenu( const utf8* pPopupID );
         /** @brief 창의 빈 곳(어느 항목 밖) 우클릭에 @p pPopupID 팝업을 엽니다. 나머지는 `beginItemContextMenu` 와 같습니다. */
         static bool beginWindowContextMenu( const utf8* pPopupID );
+        /**
+         * @brief 행 메뉴(`beginItemContextMenu` 안)에 명령 하나를 대상 @p target 의 항목으로 그립니다. 눌렸으면 다음 프레임 첫머리에 그 대상으로 실행하고(`queueCommand`) true 입니다.
+         * @details 라벨 · 켜짐(그 대상의 활성 조건) · 단축키 글자는 명령이 정한다(R4) — `drawContextMenu` 와 같은 판정이다. 표식은 맥락 메뉴와 같은 `menu.<명령 id>` 다.
+         *          행에만 뜻이 있는 메뉴(속성 행)가 대상 종류 메뉴의 명령(에셋 칸의 Find References)을 빌릴 때 쓴다. 등록되지 않은 명령 id 는 멈춘다.
+         */
+        static bool drawCommandMenuItem( string_view commandID, const EditorCommandTarget& target );
 
         // ------------------------------------------------------------------------------
         // 2) 끌어 놓기 — {종류, id} 한 형식. 이름(에셋 경로 · 위젯 타입)은 id 표로 바꾼다
         // ------------------------------------------------------------------------------
-        /** @brief 직전 항목을 끌기 원본으로 만듭니다. 끌기가 시작됐으면 페이로드를 싣고 @p pPreviewLabel 을 미리보기로 그리고 true 입니다. */
+        /**
+         * @brief 직전 항목을 끌기 원본으로 만듭니다. 끌기가 시작됐으면 페이로드를 싣고 @p pPreviewLabel 을 미리보기로 그리고 true 입니다.
+         * @details 지난 프레임에 받은 자리가 없으면(놓을 곳 밖 · 받지 않는 종류 · 내용) 미리보기를 흐리게 그리고 커서를 금지 모양으로 둔다(R11 — 언리얼의 금지 아이콘).
+         */
         static bool beginDragSource( const EditorDragPayload& payload, const utf8* pPreviewLabel, bool bAllowNullItem = false );
         /**
          * @brief 직전 항목을 놓을 자리로 만듭니다. @p acceptedKinds 안의 페이로드가 놓였으면 @p outPayload 에 담고 true 입니다.
@@ -148,6 +162,12 @@ namespace sw::editor
                                                      EditorDragPayload& outPayload, bool& outbDelivered );
         /** @brief @p acceptedKinds 안의 끌기가 어디선가 진행 중이면 true 입니다(놓을 자리 위가 아니어도). 끌기 동안만 사는 상태를 놓는 쪽이 풀 때 씁니다. */
         [[nodiscard]] static bool isPayloadInFlight( EditorPayloadKindSet acceptedKinds );
+        /**
+         * @brief @p acceptedKinds 안의 끌기가 진행 중이면 그 페이로드를 @p outPayload 에 담고 true 입니다(놓을 자리를 열지 않는다).
+         * @details 받는 쪽이 종류 다음으로 내용(확장자 · 에셋 종류 · 대상 타입)을 보고 **놓을 자리를 열기 전에** 거르는 입구다(R11) — 받지 않을 것은 강조하지 않고,
+         *          받는 자리가 없으면 끄는 쪽이 금지 표시를 한다(`beginDragSource`).
+         */
+        [[nodiscard]] static bool peekPayload( EditorPayloadKindSet acceptedKinds, EditorDragPayload& outPayload );
         /** @brief 이름(에셋 상대 경로 · 위젯 타입 이름)을 페이로드 id 로 바꿉니다. 같은 이름은 같은 id 이고 `findPayloadName` 으로 되돌린다. */
         static uint64 registerPayloadName( EditorPayloadKind kind, string_view name );
         /** @brief `registerPayloadName` 이 만든 id 의 이름입니다. 모르는 id 면 false 입니다. */
@@ -160,6 +180,16 @@ namespace sw::editor
         static bool wasItemClicked( EditorMouseButton button = EditorMouseButton::Left );
         /** @brief 직전 항목 위에서 @p button 을 이번 프레임에 더블클릭했으면 true 입니다(열기). 간격 · 거리는 입력 맵의 `doubleClickTime` · `doubleClickMaxDistance` 입니다. */
         static bool wasItemDoubleClicked( EditorMouseButton button = EditorMouseButton::Left );
+        /**
+         * @brief 직전 항목 위에서 @p button 을 끌기 문턱 안에서 이번 프레임에 뗐으면 true 입니다(R12 — 끌 수 있는 목록 행의 선택).
+         * @details 누를 때 고르면 다른 패널의 칸으로 끄는 동안 그 패널의 대상이 바뀐다(인스펙터가 끄는 오브젝트로 넘어가 놓을 칸이 사라진다). 유니티 Hierarchy · 언리얼 Outliner 도 뗄 때 고른다.
+         */
+        static bool wasItemClickedWithoutDrag( EditorMouseButton button = EditorMouseButton::Left );
+        /**
+         * @brief 직전 항목(묶음이면 `ImGui::EndGroup` 뒤) 위에서 기본값 단추(`kResetToDefaultButton`)를 끌기 문턱 안에서 뗐으면 true 입니다(R10).
+         * @details 가운데 단추 끌기(캔버스 화면 이동)와 겹치지 않게 뗀 순간 · 문턱 안만 센다. 기본값과 다른 칸인지는 부른 쪽이 본다(`EditorWidgets::endResetToDefaultGroup`).
+         */
+        static bool wasItemResetRequested();
         /** @brief 이번 프레임의 포인터 · 수정 키 상태입니다. */
         static EditorPointerState readPointer();
         /** @brief 지금 누른 수정 키(`ModifierKey` 비트)입니다. */

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e9fdd69f3ba62632023f9d6910f325b3"?>
+<!--
+  에디터 시나리오 — 에셋 → 노드 그래프(EditorUI R11 · 에셋 → 노드 종류 표 EditorGraphAssetNodeRule). 머티리얼 그래프 패널을 열고 콘텐츠 브라우저의 텍스처(.png) 타일을
+  캔버스(materialGraph.canvas)에 놓으면 텍스처 샘플 노드가 하나 생기고(Editor.GraphNodeCount 가 바뀐다) Undo 한 번에 사라진다. 표에 없는 에셋(머티리얼)은 놓아도 노드가 생기지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/materialgraphtexturedrop.scenario.xml -unattended
+-->
+<Scenario name="editor.materialgraphtexturedrop" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_editorWatchPanel" value="materialgraph"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus materialgraph"/>
+	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutSeconds="10"/>
+	<EditorWaitStable/>
+	<DevCommand line="content.open engine/textures_raw/particles/kenney_particle"/>
+	<EditorWaitStable/>
+	<Store watch="Editor.GraphNodeCount" as="nodesBefore"/>
+	<!-- ① 텍스처를 캔버스에 놓으면 샘플 노드가 생긴다 -->
+	<EditorDrag mark="contentBrowser.asset.circle_01.png" toMark="materialGraph.canvas"/>
+	<WaitUntil watch="Editor.GraphNodeCount" differsFrom="nodesBefore" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<!-- ② 한 단계 되돌리기 -->
+	<DevCommand line="editor edit.undo"/>
+	<WaitUntil watch="Editor.GraphNodeCount" sameAs="nodesBefore" timeoutFrames="60"/>
+	<EditorWaitStable/>
+	<!-- ③ 표에 없는 에셋은 놓을 자리가 열리지 않는다 -->
+	<DevCommand line="content.open engine/automation/editor/assetmove/pack"/>
+	<EditorWaitStable/>
+	<EditorDrag mark="contentBrowser.asset.probe.material" toMark="materialGraph.canvas"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.GraphNodeCount" sameAs="nodesBefore"/>
+	<DevCommand line="panel.close materialgraph"/>
+	<EditorWaitStable/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

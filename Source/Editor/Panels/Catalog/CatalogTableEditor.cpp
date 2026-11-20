@@ -262,8 +262,20 @@ namespace sw::editor
         const utf8*       pInherited = pValue == nullptr ? document.findInheritedValue( elementIndex, column ) : nullptr;
         const string_view shown      = pValue != nullptr ? string_view( *pValue ) : ( pInherited != nullptr ? string_view( pInherited ) : string_view{} );
         string            committed;
-        if ( drawValueField( shown, pValue == nullptr, pInherited != nullptr, width, false, committed ) )
+        // 휠클릭 = 상속값으로(EditorUI R10) — `_base` 를 적은 행이 적은 칸만(`CatalogDocument::canRevertToInherited`). 칸을 지우면 `_base` 의 값(없으면 스키마 기본)이 보인다(데이터 상속 규칙). 되돌리기는 행 메뉴의 Unset 과 같은 한 단계다.
+        const bool bCanRevert = document.canRevertToInherited( elementIndex, column );
+        EditorWidgets::beginResetToDefaultGroup();
+        const bool bCommitted = drawValueField( shown, pValue == nullptr, pInherited != nullptr, width, false, committed );
+        bool       bHovered   = false;
+        const bool bReset     = EditorWidgets::endResetToDefaultGroup( bCanRevert, bHovered );
+        // 시나리오가 휠클릭할 칸 — `catalog.revert.<행 id>.<칸>`(되돌릴 수 있는 칸에만).
+        const string* pRowID = bCanRevert && EditorSelfTestMarks::isEnabled() ? document.findCellValue( elementIndex, "id" ) : nullptr;
+        if ( pRowID != nullptr )
+            EditorSelfTestMarks::recordFormat( "catalog.revert.%#.%#", pRowID->c_str(), column.c_str() );
+        if ( bCommitted )
             _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetCell, elementIndex, column, committed };
+        if ( bReset )
+            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, elementIndex, column, string() };
         if ( bFirstCell )
             EditorSelfTestMarks::record( "catalog.cell.first" );
 
@@ -488,9 +500,16 @@ namespace sw::editor
             }
             else
             {
+                // 휠클릭 = 상속값으로(R10) — 이 원소가 적은 열쇠 아닌 칸만(행 메뉴의 Unset 과 같은 조건 · 같은 편집).
                 string committed;
-                if ( drawValueField( cell._value, cell._bWritten == false, cell._bInherited, -1.0f, inoutbFirstCell, committed ) )
+                EditorWidgets::beginResetToDefaultGroup();
+                const bool bCommitted = drawValueField( cell._value, cell._bWritten == false, cell._bInherited, -1.0f, inoutbFirstCell, committed );
+                bool       bHovered   = false;
+                const bool bReset     = EditorWidgets::endResetToDefaultGroup( cell._bWritten && cell._bKey == false, bHovered );
+                if ( bCommitted )
                     _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetChildCell, _childOwner.value(), cell._column, committed, node._path };
+                if ( bReset )
+                    _pending = CatalogTableEdit{ CatalogTableEdit::Kind::UnsetChildCell, _childOwner.value(), cell._column, string(), node._path };
                 inoutbFirstCell = false;
                 if ( cell._bWritten && cell._bKey == false && EditorInputGUI::beginItemContextMenu( "##cellMenu" ) )
                 {

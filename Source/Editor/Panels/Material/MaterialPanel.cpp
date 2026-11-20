@@ -366,12 +366,18 @@ namespace sw::editor
             MaterialProperty* const pProp  = &edited;
             ++shownCount;
             ImGui::PushID( static_cast<int32>( propIndex ) );
-            bool bChanged = MaterialPanelInternal::drawTypedProperty( edited );
+            // 값 칸 휠클릭 = 기본값으로(R10) — 되돌리기 단추와 같은 조건 · 같은 모델 연산이다.
+            const bool bModified = MaterialPanelInternal::isModified( *pProp );
+            EditorWidgets::beginResetToDefaultGroup();
+            bool       bChanged      = MaterialPanelInternal::drawTypedProperty( edited );
+            bool       bHovered      = false;
+            const bool bResetByWheel = EditorWidgets::endResetToDefaultGroup( bModified, bHovered );
             EditorSelfTestMarks::recordFormat( "material.property.%s", pProp->_name.c_str() );
             // 기본값과 다른 행만 되돌리기 단추를 둔다 — 인스펙터와 같은 공용 단추라 모양 · 툴팁이 같다.
-            if ( MaterialPanelInternal::isModified( *pProp ) )
+            if ( bModified )
             {
-                if ( EditorCompactControls::drawResetButton( "##reset", SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) ) && _model.resetProperty( hashed_string( pProp->_name.c_str() ) ) )
+                const bool bResetPressed = EditorCompactControls::drawResetButton( "##reset", SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) );
+                if ( ( bResetPressed || bResetByWheel ) && _model.resetProperty( hashed_string( pProp->_name.c_str() ) ) )
                 {
                     applyLivePreview();
                     bChanged = false; // 되돌린 값이 사본의 값이다 — 위젯이 고친 사본을 다시 쓰지 않는다

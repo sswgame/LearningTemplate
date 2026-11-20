@@ -53,6 +53,8 @@ namespace sw
         void applyTextInputWanted( bool bWanted ) override;
         /** @brief 숨은 글 칸을 글 커서 자리(CSS 픽셀)로 옮깁니다 — 입력기 후보 창이 그 옆에 뜬다. */
         void applyTextInputArea( const WindowTextInputArea& area ) override;
+        /** @brief 받지 않는다 — 브라우저의 파일 놓기는 경로가 아니라 `File` 객체(바이트)를 주고 에디터가 웹에 없다. 웹 제약은 웹 깃발 뒤에 둔다. */
+        [[nodiscard]] WindowFileDropSupport getFileDropSupport() const override { return WindowFileDropSupport::None; }
 
     private:
         /** @brief 캔버스의 CSS 크기 · 화면 배율 · 안전 여백을 다시 읽어 캔버스 물리 크기를 맞춥니다(창 크기 · 회전 · 배율 변경). */

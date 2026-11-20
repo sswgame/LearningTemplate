@@ -15,6 +15,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorFileDrop.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -43,10 +44,12 @@ namespace sw::editor
         {
             static constexpr Color kThumbnailBg{ Color::fromBytes( 22, 24, 30, 255 ) };
             static constexpr Color kThumbnailBorder{ Color::fromBytes( 50, 55, 65, 200 ) };
-            static constexpr Color kFolderCardBorder{ Color::fromBytes( 40, 48, 62, 160 ) };
-            static constexpr Color kFolderPocketBorder{ Color::fromBytes( 15, 25, 45, 120 ) };
-            static constexpr Color kLockBadgeLocked{ Color::fromBytes( 255, 160, 40, 255 ) };
-            static constexpr Color kLockBadgeReadOnly{ Color::fromBytes( 170, 170, 170, 255 ) };
+            /** @brief OS 파일 놓기 미리보기 테두리 두께(96 DPI 픽셀) — 계층의 놓을 위치 표시와 같다. */
+            static constexpr float32 kDropOutlineThickness = 2.0f;
+            static constexpr Color   kFolderCardBorder{ Color::fromBytes( 40, 48, 62, 160 ) };
+            static constexpr Color   kFolderPocketBorder{ Color::fromBytes( 15, 25, 45, 120 ) };
+            static constexpr Color   kLockBadgeLocked{ Color::fromBytes( 255, 160, 40, 255 ) };
+            static constexpr Color   kLockBadgeReadOnly{ Color::fromBytes( 170, 170, 170, 255 ) };
 
             /** @brief 타일 이름의 줄 수입니다. 넘치면 마지막 줄을 말줄임표로 줄입니다(`EditorWidgets::drawClampedLabel`). */
             static constexpr uint32 kTileLabelLineCount = 2;
@@ -178,7 +181,7 @@ namespace sw::editor
 
             // ------------------------------------------------------------------------------
             // 에셋 명령 — 맥락 메뉴 · 단축키(`editor.input.xml` 의 `Editor.Panel.content_browser`)가 같은 명령을 부른다.
-            // 대상 id 는 절대 경로를 페이로드 이름 표(`EditorInputGUI::registerPayloadName`)에 올린 값이다. 대상이 없으면(단축키) 이 창의 선택이다.
+            // 대상 id 는 리소스 id 를 올린 에셋 페이로드 id 다(`EditorWidgets::registerAssetPayload` — 끌기와 같은 한 형식). 대상이 없으면(단축키) 이 창의 선택이다.
             // ------------------------------------------------------------------------------
             static ContentBrowserPanel* findWritablePanel()
             {
@@ -192,13 +195,22 @@ namespace sw::editor
                 const uint64 targetID = target._hoveredID != 0 ? target._hoveredID : ( target._listSelectedID.empty() ? 0 : target._listSelectedID.front() );
                 if ( targetID != 0 )
                 {
-                    (void)EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, targetID, path ); // 모르는 id 면 빈 경로 — 명령이 꺼진다
-                    return path;
+                    return findAssetDiskPath( targetID ); // 모르는 id · 디스크에 없는 에셋이면 빈 경로 — 명령이 꺼진다
                 }
                 const ContentBrowserPanel* pPanel = findPanel();
                 if ( pPanel != nullptr )
                     path = pPanel->getSelectedAssetPath();
                 return path;
+            }
+
+            /** @brief 에셋 페이로드 id 의 디스크 자리(절대 경로)입니다. 모르는 id 이거나 디스크에 없으면 빈 문자열입니다. */
+            static string findAssetDiskPath( uint64 assetID )
+            {
+                string resourceID;
+                if ( EditorWidgets::findAssetPayload( assetID, resourceID ) == false )
+                    return string{};
+                const optional<AbsolutePath> diskPath = EditorPaths::getAssetPaths().findLooseFile( resourceID );
+                return diskPath.has_value() ? string( diskPath->str() ) : string{};
             }
 
             static bool hasTarget( const EditorCommandTarget& target ) { return findTargetPath( target ).empty() == false; }
@@ -221,6 +233,20 @@ namespace sw::editor
             static void copyRelativePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( EditorPaths::getAssetPaths().toAssetID( findTargetPath( target ) ).c_str() ); }
 
             static void copyAbsolutePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( findTargetPath( target ).c_str() ); }
+
+            /** @brief 대상 에셋의 폴더를 열고 그 에셋을 고릅니다(언리얼 Browse to Asset — 인스펙터 에셋 칸의 행 메뉴가 부른다). */
+            static void selectInContentBrowser( const EditorCommandTarget& target )
+            {
+                const string        path    = findTargetPath( target );
+                EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( path.empty() || pPanels == nullptr || pPanels->setPanelOpen<ContentBrowserPanel>( true ) == false )
+                    return;
+                ContentBrowserPanel* pPanel = findWritablePanel();
+                if ( pPanel == nullptr )
+                    return;
+                pPanel->openFolder( FileUtil::getDirectoryPart( path ) );
+                pPanel->selectAssetPath( path );
+            }
 
             static void findReferences( const EditorCommandTarget& target )
             {
@@ -301,8 +327,8 @@ namespace sw::editor
             static void selectOnlyAsset( uint64 assetID )
             {
                 ContentBrowserPanel* pPanel = findWritablePanel();
-                string               path;
-                if ( pPanel != nullptr && EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, assetID, path ) )
+                const string         path   = findAssetDiskPath( assetID );
+                if ( pPanel != nullptr && path.empty() == false )
                     pPanel->selectAssetPath( path );
             }
         };
@@ -337,6 +363,7 @@ namespace sw::editor
     SW_EDITOR_CONTEXT_COMMAND( AssetShowInExplorer, "asset.showInExplorer", &ContentBrowserPanelInternal::showInExplorer, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetCopyRelativePath, "asset.copyRelativePath", &ContentBrowserPanelInternal::copyRelativePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetCopyAbsolutePath, "asset.copyAbsolutePath", &ContentBrowserPanelInternal::copyAbsolutePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetBrowseTo, "asset.browseTo", &ContentBrowserPanelInternal::selectInContentBrowser, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetFindReferences, "asset.findReferences", &ContentBrowserPanelInternal::findReferences, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetShowDependencies, "asset.showDependencies", &ContentBrowserPanelInternal::showDependencies, &ContentBrowserPanelInternal::hasTextAssetTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetLock, "asset.lock", &ContentBrowserPanelInternal::lockAsset, &ContentBrowserPanelInternal::canLock, NoScene, nullptr );
@@ -466,13 +493,13 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawAssetContextMenu( const AssetEntry& entry )
     {
-        // 항목은 `asset.*` 명령이다(이 파일의 등록 줄). 대상 id 는 절대 경로를 페이로드 이름 표에 올린 값이다.
+        // 항목은 `asset.*` 명령이다(이 파일의 등록 줄). 대상 id 는 리소스 id 의 에셋 페이로드 id 다(끌기와 같은 한 형식).
         EditorContextMenuSubject subject{};
         subject._pPopupID  = "AssetCtx";
         subject._kind      = EditorCommandTargetKind::Asset;
-        subject._hoveredID = EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, entry._absolutePath );
+        subject._hoveredID = EditorWidgets::registerAssetPayload( entry._relativePath );
         if ( _model.getSelectedAssetPath().empty() == false )
-            subject._listSelectedID.push_back( EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, _model.getSelectedAssetPath() ) );
+            subject._listSelectedID.push_back( EditorWidgets::registerAssetPayload( EditorPaths::getAssetPaths().toAssetID( _model.getSelectedAssetPath() ) ) );
         subject._selectOnly = &ContentBrowserPanelInternal::selectOnlyAsset;
         (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
     }
@@ -502,6 +529,9 @@ namespace sw::editor
         , _activeCollectionName{}
         , _collectionNameBuffer{}
         , _syncedAssetID{}
+        , _listFolderDropRect{}
+        , _assetViewMin{}
+        , _assetViewMax{}
     {
     }
 
@@ -1020,7 +1050,9 @@ namespace sw::editor
 
         drawSourcesSection();
         ImGui::SameLine();
+        _listFolderDropRect.clear();
         drawAssetView();
+        handleOSFileDrop();
         drawDeleteConfirmModal();
         drawMoveConfirmModal();
         drawCollectionNamePopups();
@@ -1265,6 +1297,11 @@ namespace sw::editor
         assetsDesc._kind  = editor::EditorSectionKind::Child;
         assetsDesc._flags = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::FillRemaining;
         EditorChrome::beginSection( assetsDesc );
+        // OS 파일 놓기를 받는 영역 — 시나리오가 놓을 자리(`contentBrowser.assetView`)도 이것이다.
+        const ImVec2 viewMin = ImGui::GetWindowPos();
+        _assetViewMin        = float2{ viewMin.x, viewMin.y };
+        _assetViewMax        = float2{ viewMin.x + ImGui::GetWindowSize().x, viewMin.y + ImGui::GetWindowSize().y };
+        EditorSelfTestMarks::recordRect( "contentBrowser.assetView", _assetViewMin, _assetViewMax );
 
         // 펼친 컬렉션이 있으면 폴더 대신 그 에셋 줄을 보인다
         const ContentBrowserCollection* pActiveCollection = _activeCollectionName.empty() ? nullptr : _collections.findCollection( _activeCollectionName, _bActiveCollectionShared == SW_TRUE );
@@ -1301,6 +1338,62 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::TextDisabled( "|  %s", _model.getSelectedAssetPath().c_str() );
         }
+    }
+
+    void ContentBrowserPanel::recordFolderDropRect( const AssetEntry& entry )
+    {
+        const ImVec2 itemMin = ImGui::GetItemRectMin();
+        const ImVec2 itemMax = ImGui::GetItemRectMax();
+        _listFolderDropRect.push_back( ContentBrowserFolderDropRect{
+            float2{itemMin.x, itemMin.y},
+            float2{itemMax.x, itemMax.y},
+            entry._absolutePath
+        } );
+    }
+
+    void ContentBrowserPanel::handleOSFileDrop()
+    {
+        const auto isInside = []( const float2& point, const float2& minPos, const float2& maxPos )
+        {
+            return point._x >= minPos._x && point._y >= minPos._y && point._x < maxPos._x && point._y < maxPos._y;
+        };
+        const auto findFolder = [this, &isInside]( const float2& point ) -> const string&
+        {
+            for ( const ContentBrowserFolderDropRect& rect : _listFolderDropRect )
+            {
+                if ( isInside( point, rect._min, rect._max ) )
+                    return rect._folderAbs;
+            }
+            return _model.getSelectedFolderPath();
+        };
+
+        // 끄는 동안(능력 Hover 인 창): 에셋 영역 위면 놓을 자리를 보인다 — 폴더 위면 그 폴더, 아니면 영역 전체를 강조한다(데이터 · 선택 색 — R11, taste app-screens).
+        float2 hoverPosition{};
+        if ( EditorFileDrop::findHover( hoverPosition ) && isInside( hoverPosition, _assetViewMin, _assetViewMax ) && _model.canImport() )
+        {
+            ImDrawList*   pDrawList = ImGui::GetForegroundDrawList();
+            const ImU32   color     = EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Accent" ) );
+            const float32 thickness = ContentBrowserPanelInternal::kDropOutlineThickness;
+            float2        minPos    = _assetViewMin;
+            float2        maxPos    = _assetViewMax;
+            for ( const ContentBrowserFolderDropRect& rect : _listFolderDropRect )
+            {
+                if ( isInside( hoverPosition, rect._min, rect._max ) )
+                {
+                    minPos = rect._min;
+                    maxPos = rect._max;
+                }
+            }
+            pDrawList->AddRect( ImVec2{ minPos._x, minPos._y }, ImVec2{ maxPos._x, maxPos._y }, color, 0.0f, 0, thickness );
+            requestAnimationFrame(); // 끄는 동안 강조가 포인터를 따라간다
+        }
+
+        float2 dropPosition{};
+        if ( EditorFileDrop::peekDrop( dropPosition ) == false || isInside( dropPosition, _assetViewMin, _assetViewMax ) == false )
+            return;
+        vector<string> listPath;
+        (void)EditorFileDrop::takeDrop( listPath, dropPosition );                // 위에서 놓인 것을 확인했다
+        (void)_model.importDroppedFiles( listPath, findFolder( dropPosition ) ); // 받은 수 · 거른 사유는 모델이 로그로 남긴다
     }
 
     void ContentBrowserPanel::drawBreadcrumbs()
@@ -1399,7 +1492,10 @@ namespace sw::editor
                     // 폴더도 끌기 원본이다(폴더째 옮기기 — 언리얼 콘텐츠 브라우저와 같다). 폴더는 놓을 자리이기도 하다
                     EditorWidgets::drawAssetDragSource( entry._relativePath.c_str(), true );
                     if ( entry._bIsDirectory )
+                    {
+                        recordFolderDropRect( entry );
                         acceptAssetDrop( entry._absolutePath );
+                    }
 
                     ImDrawList*       pDrawList = ImGui::GetWindowDrawList();
                     constexpr float32 inset     = 6.0f;
@@ -1471,7 +1567,10 @@ namespace sw::editor
                     // 폴더도 끌기 원본이다(타일 보기와 같다)
                     EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );
                     if ( entry._bIsDirectory )
+                    {
+                        recordFolderDropRect( entry );
                         acceptAssetDrop( entry._absolutePath );
+                    }
                     if ( _model.isRenaming( entry ) )
                     {
                         ImGui::SameLine();

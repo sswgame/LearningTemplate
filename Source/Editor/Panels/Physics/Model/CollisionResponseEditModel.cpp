@@ -171,6 +171,13 @@ namespace sw::editor
         return setResponse( profileIndex, channelIndex, next );
     }
 
+    bool CollisionResponseEditModel::resetResponse( uint32 profileIndex, uint32 channelIndex )
+    {
+        if ( isDefaultResponse( profileIndex, channelIndex ) ) // 범위 밖도 기본으로 답한다
+            return false;
+        return setResponse( profileIndex, channelIndex, _settings._listChannel[channelIndex]._defaultResponse );
+    }
+
     bool CollisionResponseEditModel::acceptText( string text )
     {
         PhysicsSettings settings;

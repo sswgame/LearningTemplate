@@ -104,6 +104,8 @@ namespace sw
         [[nodiscard]] bool readClipboardText( string& outText ) override;
         /** @brief 컴포지터에 데이터 장치(`wl_data_device_manager`)와 seat 가 있으면 true 입니다. 없으면(seat 없는 headless 컴포지터) UI 는 엔진 안 클립보드를 쓴다. */
         [[nodiscard]] bool supportsClipboard() const override;
+        /** @brief 데이터 장치가 있으면 enter · motion · drop · leave 를 받는다(`text/uri-list` 를 내놓는 끌기만). 없으면(관리자 없는 컴포지터) 받지 않는다. */
+        [[nodiscard]] WindowFileDropSupport getFileDropSupport() const override;
         /** @brief @p text 를 클립보드 선택으로 내놓습니다. 글은 창이 들고 다른 프로그램이 청할 때(`wl_data_source.send`) 보냅니다. 입력 일련번호가 아직 없거나 데이터 장치가 없으면 false 입니다. */
         [[nodiscard]] bool writeClipboardText( string_view text ) override;
         /** @brief 전체 화면은 `xdg_toplevel_set_fullscreen`, 창 모드는 크기를 정하고 크기 통보를 보냅니다. */
