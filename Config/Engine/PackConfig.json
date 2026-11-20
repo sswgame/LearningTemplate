@@ -77,7 +77,7 @@
       { "_name": "GameCodeLiterals_EngineAssets", "_listPattern": [ "engine/textures/test/checker.dds", "engine/shaders/extension_pass_demo.hlsl", "engine/shaders/extension_draw_demo.hlsl" ], "_bAutomationOnly": false },
       { "_name": "GameData_FoundByKindPathRule", "_listPattern": [ "game/*/data/**" ], "_bAutomationOnly": false },
       { "_name": "GameMaps_OpenedByName", "_listPattern": [ "game/*/maps/**" ], "_bAutomationOnly": false },
-      { "_name": "Scenarios_RunByName", "_listPattern": [ "game/*/automation/**", "engine/automation/**" ], "_bAutomationOnly": true, "_listExcludePattern": [ "game/*/automation/editor/**", "engine/automation/editor/**" ] },
+      { "_name": "Scenarios_RunByName", "_listPattern": [ "game/*/automation/**", "engine/automation/**" ], "_bAutomationOnly": true, "_listExcludePattern": [ "game/*/automation/editor/**", "game/*/automation/desktop/editor/**", "engine/automation/editor/**" ] },
       { "_name": "InputUIPipelineDialogue_ReadByName", "_listPattern": [ "game/*/input/**", "game/*/ui/**", "game/*/pipeline/**", "game/*/dialogue/**", "common/input/**", "common/ui/**" ], "_bAutomationOnly": false },
       { "_name": "CommonSql_ReadByLiteralPath", "_listPattern": [ "common/sql/**" ], "_bAutomationOnly": false }
     ],

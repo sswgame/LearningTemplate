@@ -1050,11 +1050,12 @@ namespace sw::editor
         if ( prop._handleTargetTypeName.empty() == false )
             return false;
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        if ( prop._containerWrapper == nullptr && getTypeRegistry().findEnum( prop._typeName ) != nullptr )
+        if ( const EnumInfo* pEnumInfo = prop._containerWrapper == nullptr ? getTypeRegistry().findEnum( prop._typeName ) : nullptr )
         {
-            // 열거형은 크기가 8 바이트를 넘지 않는다 — 빈 사본에 읽어 본다.
-            uint64 scratch = 0;
-            return SerializerUtil::parseTextValue( MutableValueAddress{ &scratch }, prop._typeName, text, context );
+            // 판정은 이름 읽기만 한다 — 적용 길(`parseTextValue`)은 모르는 이름을 경고로 남기므로, 클립보드를 칸마다 재 보는 판정이 경고를 쏟지 않게 한다.
+            const bool bQuoted     = text.size() >= 2 && text.front() == '"' && text.back() == '"'; // 플래그 조합은 따옴표로 복사된다(`parseTextValue` 와 같은 규칙)
+            int64      parsedValue = 0;
+            return pEnumInfo->tryParseText( bQuoted ? text.substr( 1, text.size() - 2 ) : text, parsedValue );
         }
         const InspectorBuiltinValue* pBuiltin = prop._containerWrapper == nullptr ? InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() ) : nullptr;
         if ( pBuiltin == nullptr )

@@ -529,6 +529,19 @@ namespace sw
                 return parsed;
             bCursorFrameUsed  = true;
             bFrameEndAtCursor = bFrameEndAtCursor || ( pRegistration != nullptr && bWaitUntil == false && bRunsAtFrameStart == false );
+            // `<Tap hold="N">` 은 누른 프레임부터 N 프레임 뒤에 뗀다 — 뒤 단계를 떼는 프레임으로 넘긴다. 안 넘기면 뒤 단계가 누르는 동안에 돌고, 같은 슬롯의 다음 `<Tap>` 은
+            // 아직 눌린 키를 다시 눌러 새 누름이 되지 않았다(일시정지 메뉴의 둘째 Esc 가 닫지 못함 — cutscenetrigger). hold 1 은 지금처럼 다음 프레임에 뗀다.
+            if ( elementName == "Tap" )
+            {
+                const string_view holdText = atNode.getAttributeText( "hold" );
+                int32             hold     = 1;
+                if ( holdText.empty() == false && StringUtil::parseInt( holdText, hold ) && hold > 1 )
+                {
+                    frameCursor += static_cast<uint32>( hold ) + 1u; // 떼는 프레임(+hold)의 다음 — 같은 프레임의 떼기 · 누르기는 장치가 눌린 채로 끝난다
+                    bCursorFrameUsed  = false;
+                    bFrameEndAtCursor = false;
+                }
+            }
             if ( bWaitUntil )
             {
                 ++frameCursor;

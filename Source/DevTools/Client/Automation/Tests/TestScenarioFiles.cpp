@@ -46,6 +46,17 @@ SW_TEST_CASE( ScenarioFilesTest, InputBelowEvaluationMovesToTheNextFrame )
     SW_EXPECT_TRUE( AutomationStepValidation::validateStepPhaseOrder( scenario ).has_value() );
 }
 
+// `<Tap hold="N">` 뒤 단계는 떼는 프레임 뒤에 돈다 - 누르는 동안 돌던 같은 슬롯의 다음 `<Tap>` 은 아직 눌린 키를 다시 눌러 새 누름이 되지 않았다(일시정지 메뉴의 둘째 Esc).
+SW_TEST_CASE( ScenarioFilesTest, HeldTapPushesLaterStepsPastTheRelease )
+{
+    AutomationScenario scenario;
+    SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.hold\"><Tap slot=\"Key.Escape\" hold=\"6\"/><Tap slot=\"Key.Escape\" hold=\"1\"/><Tap slot=\"Key.A\"/><Pass/></Scenario>", "test.scenario.xml" )
+                         .has_value() );
+    SW_REQUIRE_EQUAL( size_t{ 4 }, scenario.getSteps().size() );
+    SW_EXPECT_TRUE( scenario.getSteps()[1]._frameIndex > scenario.getSteps()[0]._frameIndex + 6u ); // 첫 탭이 뗀(+6) 뒤에 누른다
+    SW_EXPECT_EQUAL( scenario.getSteps()[1]._frameIndex, scenario.getSteps()[2]._frameIndex );      // hold 1 은 지금처럼 다음 단계를 밀지 않는다
+}
+
 // `<AdvanceSimulation frames>` 는 고정 프레임 시간을 적은 시나리오에서만 받는다 - 벽시계로 도는 시나리오에서 N 프레임은 길이가 없다. 받으면 뒤 단계가 N 프레임 뒤에 돈다.
 SW_TEST_CASE( ScenarioFilesTest, AdvanceSimulationNeedsAFixedFrameTime )
 {
