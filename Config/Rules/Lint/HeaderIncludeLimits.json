@@ -11,6 +11,13 @@
         { "_header": "Engine/Reflection/ReflectionInvoke.h", "_limit": 10, "_reason": "TypeInfo · FunctionInfo · EventInfo 를 참조로만 받는다 — TypeInfo.h 대신 ReflectionFwd.h" },
         { "_header": "Engine/Reflection/ReflectionMetadata.h", "_limit": 18, "_reason": "메타데이터 칸은 함수 포인터 별칭만 쓴다 — TypeInfo.h 대신 ReflectionMetadataBox.h" },
         { "_header": "Engine/Object/Component/SceneComponent.h", "_limit": 12, "_reason": "인라인 접근자는 트랜스폼 페이지만 본다 — 저장소(SceneTransformStorage.h) 대신 SceneTransformPage.h" },
-        { "_header": "Engine/Renderer/Frame/FrameRendererUtil.h", "_limit": 49, "_reason": "리플렉션 레지스트리를 쓰지 않는다 — TypeRegistry.h 포함을 지웠다" }
+        { "_header": "Engine/Renderer/Frame/FrameRendererUtil.h", "_limit": 49, "_reason": "리플렉션 레지스트리를 쓰지 않는다 — TypeRegistry.h 포함을 지웠다" },
+        { "_header": "Engine/Object/GameObject/GameObject.h", "_limit": 14, "_reason": "태그 형식 TagID 를 앞 선언한다(TagID.h 를 포함하지 않는다)" },
+        { "_header": "Engine/Object/GameObject/GameObjectStore.h", "_limit": 18, "_reason": "태그 질의 형식을 쓰지 않는다 — TagSystem.h 포함을 지웠다" },
+        { "_header": "Engine/Object/GameObject/GameObjectManager.h", "_limit": 18, "_reason": "템플릿 몸체는 .inl 둘에 두고 getSubsystem<T> 만 여기 둔다(SubsystemScope.h — 서비스만 얻는 TU 115 곳이 .inl 을 읽지 않게)" },
+        { "_header": "Engine/Object/GameObject/GameObjectManager.inl", "_limit": 38, "_reason": "순회 몸체만 — 타입 핸들 찾기 · 틱 뒤 작업은 GameObjectManagerResolve.inl, 서비스 얻기는 매니저 헤더" },
+        { "_header": "Engine/Object/GameObject/GameObjectManagerResolve.inl", "_limit": 24, "_reason": "컴포넌트를 앞 선언으로만 보고 ReflectionCast · TickContext 만 포함한다 — 저장소 · 레지스트리 · GameObject 를 읽지 않는다" },
+        { "_header": "Engine/Object/GameObject/Service/ISceneService.h", "_limit": 2, "_reason": "서비스 계약만 — 등록 줄 · 레지스트리 · 등록 매크로는 SceneServiceRegistry.h" },
+        { "_header": "Engine/Foundation/EngineServices.h", "_limit": 6, "_reason": "묶기 결과 EngineServiceBindResult 를 앞 선언한다 — 엔진 등록 표 헤더를 포함하지 않는다" }
     ]
 }
