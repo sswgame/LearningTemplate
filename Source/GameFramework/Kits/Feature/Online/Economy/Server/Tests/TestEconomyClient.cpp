@@ -10,7 +10,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/StorePurchaseFlow.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"

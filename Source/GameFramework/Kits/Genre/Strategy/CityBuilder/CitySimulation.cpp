@@ -12,7 +12,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 namespace sw
 {

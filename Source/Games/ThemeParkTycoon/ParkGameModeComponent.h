@@ -30,7 +30,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 namespace sw
 {

@@ -7,7 +7,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Gameplay/Respawn/CheckpointState.h"
 #include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
 #include "GameFramework/Runtime/Gameplay/Respawn/RespawnRules.h"

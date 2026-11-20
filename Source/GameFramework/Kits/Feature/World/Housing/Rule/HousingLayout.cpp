@@ -8,7 +8,7 @@
 
 #include "Engine/Reflection/EnumName.h"
 
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 #include <algorithm>
 

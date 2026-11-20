@@ -18,7 +18,7 @@
 #include "GameFramework/Runtime/Foundation/Condition/GameFlagsOwnerComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 #include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"

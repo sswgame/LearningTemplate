@@ -5,7 +5,7 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommand.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 // RTSCommandTest — 사람 명령의 값(`RTSCommand`): 바이트로 쓰고 읽으면 같은 명령이고, 판이 다르거나 깨진 바이트는 거절하며, 적용은 명령을 낸 플레이어의 유닛만 받는다.
 // 락스텝 대전(StarSkirmish)이 이 바이트를 틱마다 나누므로 왕복과 주인 확인이 깨지면 두 프로세스의 판이 어긋난다. 키트 GF_RealTimeStrategy(nogpu).

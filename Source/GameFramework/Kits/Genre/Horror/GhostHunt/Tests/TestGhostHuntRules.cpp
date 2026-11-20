@@ -15,7 +15,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
 // 유령 사냥 키트의 규칙: 카탈로그, 손전등 원뿔과 스트로브, 청소기 줄다리기와 서지, 저택(불 켜기, 열쇠 문, 가구, 부), 상태 왕복과 꾸민 바이트 거절. 키트 GF_GhostHunt(nogpu).

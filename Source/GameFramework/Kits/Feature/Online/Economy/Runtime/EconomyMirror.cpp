@@ -7,7 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 namespace sw
 {

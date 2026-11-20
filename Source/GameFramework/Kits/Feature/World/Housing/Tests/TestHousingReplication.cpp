@@ -9,7 +9,7 @@
 #include "GameFramework/Kits/Feature/World/Housing/Catalog/HousingPart.h"
 #include "GameFramework/Kits/Feature/World/Housing/Net/HousingReplication.h"
 #include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 // 하우징 서버 권위 배치 — 남의 부지 · 겹침 · 예산 · 거리 · 요청률 거절과 깨진 요청, 늦게 들어온 클라이언트가 같은 부지 상태를 받는지,
 // 주인이 주체라 다시 붙어도 같은지, 되돌리기 · 다시 하기의 거리, 큰 부지의 조각 전송 · 델타.

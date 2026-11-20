@@ -12,7 +12,7 @@
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 namespace sw
 {

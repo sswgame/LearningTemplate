@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Gameplay/Respawn/CheckpointState.h"
 #include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
 #include "GameFramework/Runtime/Gameplay/Respawn/RespawnRemoteTarget.h"

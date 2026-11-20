@@ -8,7 +8,7 @@
 
 #include "GameFramework/Kits/Feature/World/Housing/Catalog/HousingPart.h"
 #include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
 using namespace sw;

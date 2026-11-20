@@ -7,7 +7,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySaveState.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"

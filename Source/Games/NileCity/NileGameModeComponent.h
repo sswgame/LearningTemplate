@@ -31,7 +31,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/SimulationViewSync.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 #include "Games/NileCity/NileCityPlanner.h"
