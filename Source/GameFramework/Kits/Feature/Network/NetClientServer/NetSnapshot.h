@@ -72,6 +72,11 @@ namespace sw
          *          64 비트라 틱마다 엔티티 수천이 바뀌어도 감기지 않는다.
          */
         uint64 _revision{ 0 };
+        /**
+         * @brief 마지막으로 깨어난 서버 틱입니다 — 판이 오른 틱이거나 정책이 관련 여부가 바뀌었다고 알린 틱입니다. 서버만 채웁니다.
+         * @details 이 틱에서 `ReplicationServerConfig::_dormancyTicks` 가 지나면 휴면이다(`ReplicationServer` 머리말). 판을 올리는 자리(`endTick`)가 함께 정하므로 깨우는 호출을 따로 두지 않는다.
+         */
+        uint32 _wakeTick{ 0 };
     };
 
     /** @brief 연결에 보낸 엔티티 하나의 기록입니다 — 바이트 없이 판만 듭니다(퀘이크 3 · 소스 엔진의 클라이언트 프레임이 엔티티 번호만 들듯). */

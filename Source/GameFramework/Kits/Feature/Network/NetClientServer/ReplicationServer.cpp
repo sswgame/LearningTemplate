@@ -28,6 +28,9 @@ namespace sw
         , _defaultPolicy{}
         , _parallel{}
         , _snapshotScratch{}
+        , _listAwakeIndex{}
+        , _listAllIndex{}
+        , _listWokenScratch{}
         , _listConnectionScratch{}
         , _listClientScratch{}
         , _pendingEntityCount{ 0 }
@@ -38,14 +41,15 @@ namespace sw
     {
     }
 
-    void IReplicationPolicy::collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, vector<NetRelevantEntity>& outList ) const
+    void IReplicationPolicy::collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, const vector<uint32>& listCandidate,
+                                                      vector<NetRelevantEntity>& outList ) const
     {
         outList.clear();
-        for ( size_t worldIndex = 0; worldIndex < listWorldEntity.size(); ++worldIndex )
+        for ( const uint32 worldIndex : listCandidate )
         {
             float32 priority{ 0.0f };
             if ( evaluateEntity( connectionID, listWorldEntity[worldIndex], priority ) )
-                outList.push_back( NetRelevantEntity{ static_cast<uint32>( worldIndex ), priority } );
+                outList.push_back( NetRelevantEntity{ worldIndex, priority } );
         }
     }
 
@@ -140,6 +144,7 @@ namespace sw
             const NetEntityState* pOld       = oldIndex < listOld.size() && listOld[oldIndex]._entityID == entity._entityID ? &listOld[oldIndex] : nullptr;
             const bool            bUnchanged = pOld != nullptr && pOld->_typeID == entity._typeID && pOld->_buffer == entity._buffer;
             entity._revision                 = bUnchanged ? pOld->_revision : ++_lastRevision;
+            entity._wakeTick                 = bUnchanged ? pOld->_wakeTick : _world._tick; // 판이 오르면 깨어난다 — 깨우는 호출이 따로 없다
         }
         _world._listEntity.swap( _listPendingEntity );
     }
@@ -156,9 +161,10 @@ namespace sw
         // 클라이언트 상태는 나눠 실행하기 전에 모두 확보한다. `acquireClient` 는 목록을 키울 수 있기 때문이다. 나눠 실행하는 동안에는 아무도 목록을 건드리지 않는다.
         _pHost->collectConnected( _listConnectionScratch );
         _listClientScratch.resize( _listConnectionScratch.size() );
+        bool bNeedsAllIndex = false; // 첫 스냅샷을 받는 연결이 있으면 휴면 엔티티까지 후보로 둔다
         for ( size_t index = 0; index < _listConnectionScratch.size(); ++index )
         {
-            acquireClient( _listConnectionScratch[index] );
+            bNeedsAllIndex = acquireClient( _listConnectionScratch[index] )._bFullyEvaluated == SW_FALSE || bNeedsAllIndex;
         }
         for ( size_t index = 0; index < _listConnectionScratch.size(); ++index )
         {
@@ -171,6 +177,7 @@ namespace sw
             _listClientScratch[index]         = &client;
         }
         _pPolicy->prepareSnapshots( _world._listEntity ); // 연결이 함께 쓰는 정책 표 — 나눠 돌기 전에 게임 스레드에서 한 번
+        prepareCandidates( bNeedsAllIndex );
         _snapshotScratch.prepare( _parallel );
         _pRangeConnection = _listConnectionScratch.data();
         _ppRangeClient    = _listClientScratch.data();
@@ -190,19 +197,59 @@ namespace sw
     void ReplicationServer::sendSnapshot( int32 connectionID, ClientState& client, SnapshotScratch& scratch )
     {
         const NetSnapshot& world = _world; // 여러 워커가 함께 읽는다 — const 로 잡아 쓰기 접근(경합 검사가 쓰기로 센다)을 막는다
-        // 이 클라이언트에 관련 있는 엔티티의 월드 번호만 모은다. 상태 바이트는 복사하지 않는다.
+        // 기준은 클라이언트가 확인한 틱에 우리가 보낸 기록이다. 너무 오래돼 덮어써졌으면 기준 없이 보낸다.
+        const NetSentSnapshot* pBaseline = nullptr;
+        if ( client._bHasAck )
+        {
+            const NetSentSnapshot* pCandidate = client._listSent.find( client._ackedTick );
+            const bool             bRecent    = world._tick - client._ackedTick < static_cast<uint32>( client._listSent.getCapacity() );
+            if ( pCandidate != nullptr && bRecent )
+                pBaseline = pCandidate;
+        }
+
+        // 정책에는 후보(깨어 있는 엔티티, 첫 스냅샷이면 전부)만 묻는다. 차례는 월드 차례(id 순)다.
+        vector<NetRelevantEntity>& listEvaluated = scratch._listRelevant;
+        const vector<uint32>&      listCandidate = client._bFullyEvaluated == SW_TRUE ? _listAwakeIndex : _listAllIndex;
+        _pPolicy->collectRelevantEntities( connectionID, world._listEntity, listCandidate, listEvaluated );
+        // 지난 스냅샷에서 관련 있던 휴면 엔티티는 묻지 않고 그 판단(우선도)을 이어 간다. 둘 다 id 순이라 월드 쪽 자리는 앞으로만 간다.
+        vector<NetRelevantEntity>& listMerged = scratch._listMerged;
+        listMerged.clear();
+        size_t evaluatedCursor = 0;
+        auto   worldIt         = world._listEntity.begin();
+        for ( const RelevantRecord& record : client._listLastRelevant )
+        {
+            worldIt = std::lower_bound( worldIt, world._listEntity.end(), record._entityID, []( const NetEntityState& entity, uint32 id )
+            { return entity._entityID < id; } );
+            if ( worldIt == world._listEntity.end() )
+                break;
+            if ( worldIt->_entityID != record._entityID || isEntityDormant( *worldIt ) == false )
+                continue; // 사라졌거나, 깨어 있어 후보로 다시 물었다
+            const uint32 worldIndex = static_cast<uint32>( worldIt - world._listEntity.begin() );
+            while ( evaluatedCursor < listEvaluated.size() && listEvaluated[evaluatedCursor]._worldIndex < worldIndex )
+                listMerged.push_back( listEvaluated[evaluatedCursor++] );
+            listMerged.push_back( NetRelevantEntity{ worldIndex, record._priority } );
+        }
+        while ( evaluatedCursor < listEvaluated.size() )
+            listMerged.push_back( listEvaluated[evaluatedCursor++] );
+        client._bFullyEvaluated = SW_TRUE;
+
+        // 받는 쪽이 이미 지금 판을 가진 휴면 엔티티는 기준에서 그대로 둔다 — 받는 쪽이 가질 목록(사라짐 판정)에는 들지만 우선도 · 델타 후보에서는 빠진다.
         NetPrioritizer& prioritizer = client._prioritizer;
         prioritizer.beginAccumulate();
-        vector<NetRelevantEntity>& listRelevant = scratch._listRelevant;
-        _pPolicy->collectRelevantEntities( connectionID, world._listEntity, listRelevant ); // 월드는 여러 워커가 함께 읽는다. 차례는 월드 차례(id 순)다
         vector<uint32>& listRelevantIndex = scratch._listRelevantIndex;
         listRelevantIndex.clear();
-        for ( const NetRelevantEntity& relevant : listRelevant )
+        client._listLastRelevant.clear();
+        for ( const NetRelevantEntity& relevant : listMerged )
         {
+            const NetEntityState& entity = world._listEntity[relevant._worldIndex];
             listRelevantIndex.push_back( relevant._worldIndex );
-            prioritizer.accumulate( world._listEntity[relevant._worldIndex]._entityID, relevant._priority, 1.0f ); // 스냅샷 하나에 한 번 누적한다
+            client._listLastRelevant.push_back( RelevantRecord{ entity._entityID, relevant._priority } );
+            const NetSentEntity* pHave           = pBaseline != nullptr ? pBaseline->findEntity( entity._entityID ) : nullptr;
+            const bool           bAlreadyCurrent = pHave != nullptr && pHave->_revision == entity._revision && isEntityDormant( entity );
+            if ( bAlreadyCurrent == false )
+                prioritizer.accumulate( entity._entityID, relevant._priority, 1.0f ); // 스냅샷 하나에 한 번 누적한다
         }
-        prioritizer.removeUntouched(); // 더는 관련 없는 엔티티는 잊는다. 다시 관련되면 0부터 쌓는다
+        prioritizer.removeUntouched(); // 더는 관련 없거나 받는 쪽에 자리 잡은 휴면 엔티티는 잊는다. 다시 후보가 되면 0부터 쌓는다
         resolveUnconfirmedSends( client, listRelevantIndex );
         // 쌓인 우선도가 큰 것부터 처리한다. 관련 엔티티는 id 순이므로 이분 탐색으로 찾는다.
         vector<uint32>& listOrderEntity = scratch._listOrderEntity;
@@ -216,15 +263,6 @@ namespace sw
             listOrder[index]      = static_cast<int32>( relevantIt - listRelevantIndex.begin() );
         }
 
-        // 기준은 클라이언트가 확인한 틱에 우리가 보낸 기록이다. 너무 오래돼 덮어써졌으면 기준 없이 보낸다.
-        const NetSentSnapshot* pBaseline = nullptr;
-        if ( client._bHasAck )
-        {
-            const NetSentSnapshot* pCandidate = client._listSent.find( client._ackedTick );
-            const bool             bRecent    = world._tick - client._ackedTick < static_cast<uint32>( client._listSent.getCapacity() );
-            if ( pCandidate != nullptr && bRecent )
-                pBaseline = pCandidate;
-        }
         // 입력(빈틈없이 받은 다음 틱)은 전송 전에 게임 스레드가 넣었다 — 여러 워커가 읽기만 한다.
         const NetDeltaSource source{ world._listEntity, listRelevantIndex, listOrder, client._ownerState, world._tick, client._input.getFirstMissingTick() };
         BitWriter&           writer = scratch._messageWriter.beginMessage<NetClientServerMessage::Table, NetClientServerMessage::Snapshot>();
@@ -411,6 +449,37 @@ namespace sw
     uint64 ReplicationServer::getOversizedEntityCount() const
     {
         return _oversizedEntityCount;
+    }
+
+    bool ReplicationServer::isEntityDormant( const NetEntityState& entity ) const
+    {
+        const uint32 tick = _world._tick;
+        return tick >= entity._wakeTick && tick - entity._wakeTick >= static_cast<uint32>( _settings._dormancyTicks );
+    }
+
+    void ReplicationServer::prepareCandidates( bool bNeedsAllIndex )
+    {
+        // 정책이 관련 여부가 바뀌었다고 알린 엔티티를 깨운다(관찰자가 다가가 휴면 가구가 보이게 되는 등). 월드는 id 순이다.
+        vector<NetEntityState>& listWorld = _world._listEntity;
+        _listWokenScratch.clear();
+        _pPolicy->collectWokenEntities( _listWokenScratch );
+        for ( const uint32 entityID : _listWokenScratch )
+        {
+            const auto entityIt = std::lower_bound( listWorld.begin(), listWorld.end(), entityID, []( const NetEntityState& entity, uint32 id )
+            { return entity._entityID < id; } );
+            if ( entityIt != listWorld.end() && entityIt->_entityID == entityID )
+                entityIt->_wakeTick = _world._tick;
+        }
+        // 연결마다 묻는 후보는 깨어 있는 엔티티다 — 연결당 평가가 월드 크기가 아니라 깨어 있는 수에 비례한다.
+        _listAwakeIndex.clear();
+        _listAllIndex.clear();
+        for ( size_t worldIndex = 0; worldIndex < listWorld.size(); ++worldIndex )
+        {
+            if ( isEntityDormant( listWorld[worldIndex] ) == false )
+                _listAwakeIndex.push_back( static_cast<uint32>( worldIndex ) );
+            if ( bNeedsAllIndex )
+                _listAllIndex.push_back( static_cast<uint32>( worldIndex ) );
+        }
     }
 
     uint32 ReplicationServer::getAckedTick( int32 connectionID ) const

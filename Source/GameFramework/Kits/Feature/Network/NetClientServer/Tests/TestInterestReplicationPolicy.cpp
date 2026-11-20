@@ -32,10 +32,11 @@ namespace
         class AllEntityReference final : public IReplicationPolicy
         {
         public:
-            explicit AllEntityReference( const InterestReplicationPolicy& policy )
+            explicit AllEntityReference( InterestReplicationPolicy& policy )
                 : _policy{ policy }
             {
             }
+            void    collectWokenEntities( vector<uint32>& outListEntityID ) override { _policy.collectWokenEntities( outListEntityID ); } // 휴면 깨움은 같은 판단을 따른다
             bool    isRelevant( int32 connectionID, const NetEntityState& entity ) const override { return _policy.isRelevant( connectionID, entity ); }
             float32 computePriority( int32 connectionID, const NetEntityState& entity ) const override { return _policy.computePriority( connectionID, entity ); }
             bool    evaluateEntity( int32 connectionID, const NetEntityState& entity, float32& outPriority ) const override
@@ -44,7 +45,7 @@ namespace
             }
 
         private:
-            const InterestReplicationPolicy& _policy;
+            InterestReplicationPolicy& _policy;
         };
 
         static uint64 mixBytes( uint64 hash, const vector<uint8>& buffer )
@@ -180,17 +181,28 @@ SW_TEST_CASE( InterestReplicationPolicyTest, CollectMatchesEvaluateForEveryEntit
     policy.updateRelevancy();
     policy.removeEntity( listWorld[4]._entityID ); // 보이는 목록에 남은 채 자리를 지운 엔티티
     policy.prepareSnapshots( listWorld );
+    vector<uint32> listAllIndex;
+    vector<uint32> listOddIndex; // 휴면으로 후보가 줄어든 틱 — 후보 밖은 묻지도 넣지도 않는다
+    for ( uint32 worldIndex = 0; worldIndex < static_cast<uint32>( listWorld.size() ); ++worldIndex )
+    {
+        listAllIndex.push_back( worldIndex );
+        if ( worldIndex % 2u == 1u )
+            listOddIndex.push_back( worldIndex );
+    }
     vector<NetRelevantEntity> listVisible;
     vector<NetRelevantEntity> listAll;
-    for ( int32 connectionID = 0; connectionID < 4; ++connectionID ) // 1 · 3 은 관찰자가 없다
+    for ( const vector<uint32>* pCandidate : { &listAllIndex, &listOddIndex } )
     {
-        policy.collectRelevantEntities( connectionID, listWorld, listVisible );
-        policy.IReplicationPolicy::collectRelevantEntities( connectionID, listWorld, listAll );
-        SW_REQUIRE_EQUAL( listAll.size(), listVisible.size() );
-        for ( size_t index = 0; index < listAll.size(); ++index )
+        for ( int32 connectionID = 0; connectionID < 4; ++connectionID ) // 1 · 3 은 관찰자가 없다
         {
-            SW_EXPECT_EQUAL( listAll[index]._worldIndex, listVisible[index]._worldIndex );
-            SW_EXPECT_TRUE( listAll[index]._priority == listVisible[index]._priority );
+            policy.collectRelevantEntities( connectionID, listWorld, *pCandidate, listVisible );
+            policy.IReplicationPolicy::collectRelevantEntities( connectionID, listWorld, *pCandidate, listAll );
+            SW_REQUIRE_EQUAL( listAll.size(), listVisible.size() );
+            for ( size_t index = 0; index < listAll.size(); ++index )
+            {
+                SW_EXPECT_EQUAL( listAll[index]._worldIndex, listVisible[index]._worldIndex );
+                SW_EXPECT_TRUE( listAll[index]._priority == listVisible[index]._priority );
+            }
         }
     }
 }
