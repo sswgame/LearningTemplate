@@ -1778,6 +1778,7 @@
     "rewrite_python_code": "dev.rename_symbol.rename_in_text — 지킬 구간 방식(Scripts 감사, 2026-11-21)",
     "rewrite_code": "dev.rename_symbol.rename_in_text(Scripts 감사, 2026-11-21)",
     "NAMING_PATH": "common.rename_scope.BANNED_NAMES_PATH — 이름 이력 표 경로는 한 곳(Scripts 감사, 2026-11-21)",
-    "NAMING_WORDS_PATH": "common.rename_scope.BANNED_NAMES_PATH — _bannedNames 는 NamingWordsBannedNames.json 으로 옮겼다(Scripts 감사, 2026-11-21)"
+    "NAMING_WORDS_PATH": "common.rename_scope.BANNED_NAMES_PATH — _bannedNames 는 NamingWordsBannedNames.json 으로 옮겼다(Scripts 감사, 2026-11-21)",
+    "_worldEntityCount": "ReplicationServer::_pendingEntityCount — setEntity 는 다음 월드 목록에 쌓고 endTick 이 판 번호를 정해 맞바꾼다(엔티티 상태 판 번호, 2026-11-21)"
   }
 }

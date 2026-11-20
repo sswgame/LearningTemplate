@@ -116,7 +116,7 @@ namespace sw
         PROPERTY( Min = 0.001, Units = s )
         float32 _tickInterval{ 1.0f / 30.0f }; ///< `sendSnapshots` 를 부르는 간격(초). 연결 상한에서 스냅샷 하나의 할당량을 계산할 때 쓰며, 클라이언트 설정의 같은 이름과 맞춘다
         PROPERTY( Min = 2 )
-        int32 _historySize{ 64 }; ///< 클라이언트마다 기억하는 보낸 스냅샷(기준 후보)의 수
+        int32 _historySize{ 64 }; ///< 클라이언트마다 기억하는 보낸 스냅샷 기록(기준 후보)의 수. 기록은 엔티티마다 (id, 판)만 들므로 메모리는 엔티티 수 × 이 값에 비례한다
         PROPERTY( Min = 1 )
         int32 _inputBufferSize{ 64 }; ///< 클라이언트마다 받아 두는 입력 틱 수. 받은 가장 새 틱에서 이만큼 뒤까지 보관하고 더 오래된 입력은 버린다
         PROPERTY( Min = 0, Max = 256 )
@@ -151,7 +151,11 @@ namespace sw
         void               beginTick( uint32 tick );
         /** @brief 이 틱의 엔티티를 등록합니다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 복제하지 않으며, 처음 한 번 오류를 남기고(상태 스키마의 결함이다 — 테스트 · 시나리오가 멈춘다) 그 뒤로는 횟수만 셉니다. */
         void setEntity( uint32 entityID, uint32 typeID, const vector<uint8>& buffer );
-        /** @brief 이 틱의 엔티티를 확정하고 id 순으로 정렬합니다. 그 전까지 월드에는 지난 틱의 엔티티가 남아 있으므로 `sendSnapshots` 와 `getWorldSnapshot` 은 이 함수 뒤에 씁니다. */
+        /**
+         * @brief 이 틱의 엔티티를 확정하고 id 순으로 정렬합니다. 그 전까지 월드에는 지난 틱의 엔티티가 남아 있으므로 `sendSnapshots` 와 `getWorldSnapshot` 은 이 함수 뒤에 씁니다.
+         * @details 지난 틱과 종류나 바이트가 다른 엔티티는 새 판 번호(`NetEntityState::_revision`)를 받는다 — 판을 올리는 자리는 여기 하나다.
+         *          값이 A → B → A 로 돌아와도 새 판이다(지난 틱하고만 비교한다). 그만큼 다시 실을 뿐 받는 쪽 상태는 맞다.
+         */
         void endTick();
         /**
          * @brief 연결된 클라이언트마다 스냅샷을 보냅니다.
@@ -201,26 +205,26 @@ namespace sw
     private:
         struct ClientState
         {
-            NetPrioritizer              _prioritizer{}; ///< 관련 엔티티마다 쌓인 우선도
-            TickRingBuffer<NetSnapshot> _listSent{};    ///< 보낸 스냅샷(재구성한 것). 클라이언트가 확인한 틱의 스냅샷을 델타의 기준으로 찾는다
-            NetInputReceiveBuffer       _input{};       ///< 받은 입력. 받은 가장 새 틱을 따라가는 창이며 꺼낸 틱은 버린다
-            vector<uint8>               _lastInput{};
-            NetOwnerState               _ownerState{}; ///< 이 클라이언트가 조종하는 엔티티의 상태와 그 입력 틱. 스냅샷마다 싣는다
-            float32                     _viewTick{ 0.0f };
-            int32                       _snapshotBudgetBytes{ 0 }; ///< 이번 `sendSnapshots` 의 예산(그 연결의 지금 송신 속도에서). 나눠 실행하기 전에 정하며 워커는 읽기만 한다
-            uint32                      _ackedTick{ 0 };
-            uint8                       _bHasAck{ SW_FALSE };
-            uint8                       _bHasInput{ SW_FALSE };
-            uint8                       _bActive{ SW_FALSE };
+            NetPrioritizer                  _prioritizer{}; ///< 관련 엔티티마다 쌓인 우선도
+            TickRingBuffer<NetSentSnapshot> _listSent{};    ///< 보낸 스냅샷의 기록(엔티티 · 판). 클라이언트가 확인한 틱의 기록을 델타의 기준으로 찾는다
+            NetInputReceiveBuffer           _input{};       ///< 받은 입력. 받은 가장 새 틱을 따라가는 창이며 꺼낸 틱은 버린다
+            vector<uint8>                   _lastInput{};
+            NetOwnerState                   _ownerState{}; ///< 이 클라이언트가 조종하는 엔티티의 상태와 그 입력 틱. 스냅샷마다 싣는다
+            float32                         _viewTick{ 0.0f };
+            int32                           _snapshotBudgetBytes{ 0 }; ///< 이번 `sendSnapshots` 의 예산(그 연결의 지금 송신 속도에서). 나눠 실행하기 전에 정하며 워커는 읽기만 한다
+            uint32                          _ackedTick{ 0 };
+            uint8                           _bHasAck{ SW_FALSE };
+            uint8                           _bHasInput{ SW_FALSE };
+            uint8                           _bActive{ SW_FALSE };
         };
 
         /** @brief 작업 스레드 하나가 스냅샷 하나를 만드는 데 쓰는 스크래치 버퍼입니다. 틱마다 다시 사용합니다. */
         struct SnapshotScratch
         {
-            NetSnapshot               _filtered{}; ///< 클라이언트 하나에 관련된 엔티티
+            vector<uint32>            _listRelevantIndex{}; ///< 클라이언트 하나에 관련된 엔티티의 월드 번호(오름차순 — 곧 id 순). 상태 바이트는 복사하지 않는다
             vector<uint32>            _listOrderEntity{};
-            vector<int32>             _listOrder{};    ///< 위 순서를 `_filtered` 의 인덱스로 바꾼 것
-            vector<uint8>             _listCurrent{};  ///< `_filtered` 의 항목마다 `writeDelta` 가 낸 결과(`NetSnapshot::kEntity*`)
+            vector<int32>             _listOrder{};    ///< 위 순서를 `_listRelevantIndex` 의 인덱스로 바꾼 것
+            vector<uint8>             _listCurrent{};  ///< `_listRelevantIndex` 의 항목마다 `writeDelta` 가 낸 결과(`NetSnapshot::kEntity*`)
             vector<NetRelevantEntity> _listRelevant{}; ///< 정책이 고른 이 연결의 엔티티(`IReplicationPolicy::collectRelevantEntities`)
             NetMessageWriter          _messageWriter{};
         };
@@ -229,13 +233,14 @@ namespace sw
         void         sendSnapshotRange( uint32 start, uint32 end );
         void         sendSnapshot( int32 connectionID, ClientState& client, SnapshotScratch& scratch );
         /** @brief 이 클라이언트가 확인을 기다리는 전송을 판정합니다. 확인한 틱이 보낸 틱을 지났는데 확인된 스냅샷에 그때 보낸 상태가 없으면 잃은 것으로 보고 우선도를 되돌립니다. */
-        void               resolveUnconfirmedSends( ClientState& client, const NetSnapshot& filtered ) const;
+        void               resolveUnconfirmedSends( ClientState& client, const vector<uint32>& listRelevantIndex ) const;
         [[nodiscard]] bool handleInput( ClientState& client, BitReader& reader );
         void               resetClient( int32 connectionID );
 
     private:
         vector<ClientState>                 _listClient;
-        NetSnapshot                         _world;
+        NetSnapshot                         _world;             ///< 확정한 월드(id 순, 판 번호 포함)
+        vector<NetEntityState>              _listPendingEntity; ///< 이번 틱에 `setEntity` 로 받는 엔티티. `endTick` 이 지난 월드와 비교해 판을 정한 뒤 `_world` 와 맞바꾼다(버퍼 용량은 두 목록이 돌려 쓴다)
         ReplicationServerConfig             _settings;
         INetPeers*                          _pHost;
         IReplicationPolicy*                 _pPolicy; ///< 틱마다 `prepareSnapshots` 를 부르므로 const 가 아니다
@@ -244,7 +249,8 @@ namespace sw
         NetParallelScratch<SnapshotScratch> _snapshotScratch;       ///< 스레드마다 하나씩 둔다
         vector<int32>                       _listConnectionScratch; ///< 이번 틱에 보낼 연결
         vector<ClientState*>                _listClientScratch;     ///< 위 연결의 상태. 나눠 실행하기 전에 모두 찾아 두어, 실행 중에 목록이 커지지 않게 한다
-        size_t                              _worldEntityCount;      ///< 이 틱에 `setEntity` 를 호출한 수. 월드 엔티티 버퍼는 틱을 넘어 재사용하므로 용량을 남겨 둔다
+        size_t                              _pendingEntityCount;    ///< 이 틱에 `setEntity` 를 호출한 수. 엔티티 버퍼는 틱을 넘어 재사용하므로 용량을 남겨 둔다
+        uint64                              _lastRevision;          ///< 마지막으로 나눠 준 판 번호. 0 은 "판 없음" 이라 1 부터 준다
         uint64                              _oversizedEntityCount;
         const int32*                        _pRangeConnection; ///< 나눠 실행하는 본문이 읽는 `_listConnectionScratch.data()`. 워커는 컨테이너를 직접 만지지 않는다
         ClientState* const*                 _ppRangeClient;    ///< 나눠 실행하는 본문이 읽는 `_listClientScratch.data()`
