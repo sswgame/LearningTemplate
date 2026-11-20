@@ -29,7 +29,7 @@ namespace sw
         static constexpr uint32 kFramePassSlotBegin = kPassSlotEnd;
         /// @brief 예약 슬롯(프레임 끝 · 프레임 그래프 쌍 · 프레임 시작)의 첫 번호입니다.
         static constexpr uint32 kReservedSlotBegin = kFrameEnd;
-        /// @brief GPU 시간을 측정할 수 있는 프레임 패스 수입니다(프레임 패스 종류는 열하나 — `isFramePassType`). 위 예약 슬롯과 겹치지 않게 합니다.
+        /// @brief GPU 시간을 측정할 수 있는 프레임 패스 수입니다(프레임 패스 종류는 열셋 — `isFramePassType`). 위 예약 슬롯과 겹치지 않게 합니다.
         static constexpr uint32 kTimedFramePassCapacity = ( kReservedSlotBegin - kFramePassSlotBegin ) / 2u;
 
         /** @brief 프레임 패스 @p framePassIndex(`_listFramePass` 의 번호)의 시작 슬롯입니다(끝은 + 1). 측정 칸 밖이면 `constant::invalid_index::kUint32` 입니다. */

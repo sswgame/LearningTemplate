@@ -29,6 +29,7 @@
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
+#include "Engine/Renderer/Graph/FrameBufferTable.h"
 
 namespace sw
 {
@@ -99,6 +100,14 @@ namespace sw
             if ( view._bRenderThisFrame == SW_TRUE && shouldBuildFrameHZB( view ) )
                 HZBOcclusion::registerFrameResources( table, extraIndex + 1, view );
         }
+        // GPU 입자 — 방출기 버퍼(시뮬레이션 · 정렬 · 메시 쓰기의 세 프레임 패스)와, 이번 프레임에 쓸 때만 라이트 버퍼 GPU 구간 · 인스턴스 칸(쓰지 않는 프레임에 UAV 로 오가지 않게).
+        const VFXGPUSimulation& simulation = _state._particleRenderer.getGPUSimulation();
+        simulation.registerFrameResources( table );
+        if ( simulation.writesParticleLights() )
+            std::ignore = table.registerBuffer( VFXGPUSimulation::getLightBufferUAV()._name, 0, _state._lightBuffer.getBuffer(), RenderGraphAccess::ShaderRead );
+        // shortcut: 인스턴스 버퍼는 메시 입자가 쓰는 프레임만 등록한다 — 인스턴스 애니메이션 · 컬링이 아직 손으로 전이한다. FrameGraphExecutor 단계에서 GPUScene 이 늘 등록한다.
+        if ( simulation.writesMeshInstances() )
+            std::ignore = table.registerBuffer( VFXGPUSimulation::getInstanceBufferUAV()._name, 0, _state._gpuScene.getInstanceStructuredBuffer(), RenderGraphAccess::ShaderRead );
     }
 
     void FrameGraphExecutor::executePass( RenderPassKind type, const RenderGraphPassContext& graphContext )
@@ -118,9 +127,19 @@ namespace sw
             }
             case RenderPassKind::VFXSimulation:
             {
-                // 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고(VFXMeshInstance — 같은 패스의 두 번째 디스패치), 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다.
-                _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassKind::VFXSimulation ), _psoManager.getEnginePSO( RenderPassKind::VFXMeshInstance ),
-                                                           _psoManager.getEnginePSO( RenderPassKind::VFXParticleSort ) );
+                // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(그 상태는 그래프 끝에 표가 되돌린다 — `FrameBufferTable::forEachChangedAccess`).
+                _state._particleRenderer.getGPUSimulation().recordSimulation( graphContext, _psoManager.getEnginePSO( RenderPassKind::VFXSimulation ) );
+                break;
+            }
+            case RenderPassKind::VFXParticleSort:
+            {
+                _state._particleRenderer.getGPUSimulation().recordSort( graphContext, _psoManager.getEnginePSO( RenderPassKind::VFXParticleSort ) );
+                break;
+            }
+            case RenderPassKind::VFXMeshInstance:
+            {
+                // 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓴다 — 인스턴스 애니메이션 · 컬링 앞(XML 의 `InstanceBuffer` 쓰기 순서).
+                _state._particleRenderer.getGPUSimulation().recordMeshInstances( graphContext, _psoManager.getEnginePSO( RenderPassKind::VFXMeshInstance ) );
                 break;
             }
             case RenderPassKind::InstanceAnimation:

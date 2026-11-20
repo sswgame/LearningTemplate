@@ -262,6 +262,8 @@ namespace sw
 
         /** @brief 인스턴스 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getInstanceBuffer() const { return _instances._buffer; }
+        /** @brief 인스턴스 구조 버퍼(핸들 · 크기)입니다 — 프레임 그래프 표가 크기와 함께 등록한다(`FrameBufferTable::registerBuffer`). */
+        const RHIStructuredBuffer& getInstanceStructuredBuffer() const { return _instances; }
         /** @brief 인스턴스 SRV 인덱스를 반환합니다. */
         RHIDescriptorIndex getInstanceSRV() const { return _instances._srv; }
         /**

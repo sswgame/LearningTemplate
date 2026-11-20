@@ -1033,7 +1033,34 @@ namespace sw
         if ( _state._pRenderDebug != nullptr )
             _bufferInspector.service( *_pCmd, pDevice, _frameBufferTable, _frameGraphContext, &findGraphBufferState, *_state._pRenderDebug );
 #endif
+        returnFrameResourcesToInitialAccess();
         _frameGraphExecutor.endFrame( *_pCmd );
+    }
+
+    void FramePassExecutor::returnFrameResourcesToInitialAccess()
+    {
+        if ( _pCmd == nullptr )
+            return;
+        // 등록 접근은 프레임 시작이자 끝의 상태다 — 그래프가 다른 접근에 둔 등록(입자 인자는 정렬 · 메시 쓰기가 셰이더 읽기로 남긴다)을 뷰 그래프 앞에 되돌린다(언리얼 외부 자원의 끝 접근).
+        // 그래프 큐는 모두 조인했다(`RenderGraph::getFinalJoinBatches`) — 그래픽스 리스트에 낸다. 버퍼 보기(`service`)는 그래프가 둔 접근을 읽으므로 그 뒤다.
+        frame_vector<RHITextureTransition> listTexture{ FrameAllocator<RHITextureTransition>{ _frameArena } };
+        _frameBufferTable.forEachChangedAccess( _frameGraphContext,
+                                                [this, &listTexture]( const FrameBufferTable::Entry& entry )
+        {
+            if ( entry._viewable == RenderGraphViewableKind::Buffer )
+            {
+                if ( const optional<RHIBufferState> state = findGraphBufferState( entry._initialAccess ) )
+                    _levelBufferTransitions.add( entry._handle, *state );
+            }
+            else if ( const optional<RHITextureState> state = findGraphTextureState( entry._initialAccess ) )
+            {
+                listTexture.push_back( RHITextureTransition{ entry._handle, *state } );
+            }
+        } );
+        _graphTransitionCount += static_cast<uint32>( listTexture.size() + _levelBufferTransitions.getPending().size() );
+        _levelBufferTransitions.flush( *_pCmd );
+        if ( listTexture.empty() == false )
+            _pCmd->transitionTextures( listTexture.data(), static_cast<uint32>( listTexture.size() ) );
     }
 
     void FramePassExecutor::onFrameGraphPassExecute( const RenderGraphPassContext& graphContext )
@@ -1110,7 +1137,7 @@ namespace sw
                     listTransition.push_back( RHITextureTransition{ entry._handle, *state } );
                 }
             }
-            // 등록하지 않은 버퍼는 아직 패스가 스스로 전이한다(렌더 그래프 접근 핸들 ② 의 차례 — HZB 다음 VFX · 자동 노출 · FrameGraphExecutor).
+            // 등록하지 않은 버퍼는 아직 패스가 스스로 전이한다(렌더 그래프 접근 핸들 ② 의 차례 — HZB · VFX 다음 자동 노출 · FrameGraphExecutor).
             if ( bRegistered || barrier._viewable != RenderGraphViewableKind::Texture )
                 continue;
             // 텍스처 UAV → UAV(`_bUAVBarrier`)는 만드는 접근이 없다 — 뷰 패스는 첨부(읽기 · 렌더 타깃 · 깊이)이고 프레임 패스 텍스처 출력은 렌더 타깃이다(규칙). 생기면 RHI 텍스처 UAV 배리어를 더한다.

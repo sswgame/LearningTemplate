@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/VFX/VFXParticleOrder.h"
 #include "Engine/VFX/VFXEmitterClock.h"
 #include "Engine/VFX/VFXParticle.h"
@@ -24,6 +25,7 @@ namespace sw
     struct GPUParticleBatch;
     struct GPUVFXMeshEmitter;
 
+    class FrameBufferTable;
     class IRHICommandList;
     class IRHIDevice;
 
@@ -88,7 +90,7 @@ namespace sw
      * @brief 재생 토큰(`VFXGPUEmitterRequest::_pRunToken`)마다 GPU 상태(입자 상태 두 반쪽, 렌더 입력, 간접 인자)를 들고, 프레임마다 밀린 단계를 디스패치합니다.
      * @details 기록 전(`prepareFrame`)에 상태를 만들고 매개변수(방출기 상수 · 단계마다의 일정 · 커브 키 · 해시 상수 · 방출기 행렬 · 깊이 히스토리)를 한 버퍼로 올린다.
      *          일정은 게임 스레드와 같은 시계(`VFXEmitterClock`)를 여기서 다시 돌려 얻는다 — 요청이 누적 단계 수라 패킷을 건너뛴 프레임도 다음 프레임에 이어 돈다
-     *          (디스패치마다 상한 SW_VFX_MAX_STEPS_PER_DISPATCH, 넘친 단계는 다음 프레임). 프레임 그래프(`recordDispatches`)는 인스턴스 애니메이션 · 컬링 **앞에**
+     *          (디스패치마다 상한 SW_VFX_MAX_STEPS_PER_DISPATCH, 넘친 단계는 다음 프레임). 프레임 그래프(`recordSimulation`)는 인스턴스 애니메이션 · 컬링 **앞에**
      *          방출기마다 그룹 하나(풀이 `SW_VFX_MULTI_GROUP_MIN_POOL` 이상이면 단계마다 적분 · 접두사 합 · 압축 디스패치 셋 — 같은 결과)를 디스패치한다. 입자는 수명 내내 인스턴스 칸 하나를 쥔다 —
      *          빈 칸 스택(언리얼 Niagara GPU free ID, 유니티 VFX Graph dead list)에서 꺼내고 죽으면 돌려준다. 메시 방출기는 이어서 인스턴스 칸을 쓰고 빈 칸은 컬링이 빼는 플래그를 켠다(vfx_mesh_instance.hlsl — 매 프레임. 배치 구성이 바뀌어 CPU 자리표가
      *          올라온 프레임도 그리기 전에 다시 쓴다). 빌보드 · 띠는 투명 패스가 렌더 입력을 t11 에 걸고 간접 인자로 그린다(`VFXParticleRenderer::drawBatches`).
@@ -135,8 +137,32 @@ namespace sw
          */
         void prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter,
                            vector_reference<const VFXGPUParticleSortJob> listSortJob, uint32 gpuOrderCount, const VFXSimulationFrameInput& input );
-        /** @brief 프레임 그래프에 이번 프레임의 디스패치를 기록합니다(`prepareFrame` 뒤, 인스턴스 애니메이션 · 컬링 앞). 정렬 일은 시뮬레이션 뒤에 돈다. */
-        void recordDispatches( IRHICommandList& cmd, RHIPipelineStateHandle simulationPSO, RHIPipelineStateHandle meshInstancePSO, RHIPipelineStateHandle sortPSO ) const;
+        /**
+         * @brief 이번 프레임 디스패치가 쓰고 읽는 방출기 버퍼를 프레임 그래프 표 @p table 에 등록합니다(`prepareFrame` 뒤, 프레임 그래프 앞 — `FrameGraphExecutor::beginFrame`).
+         * @details 시뮬레이션하는 방출기는 `ParticleState` · `Particles` · `ParticleArgs`(칸 = 시뮬레이션 디스패치 번호), 시뮬레이션하지 않고 정렬 · 메시 쓰기만 읽는 방출기는
+         *          `IdleParticles` · `IdleParticleArgs`(칸 = 읽기 번호), 정렬이 있으면 `ParticleOrder`(칸 0)다. 그래프는 이름마다 상태 하나를 들어 쓰는 패스가 다른 방출기는
+         *          이름을 나눈다 — 한 이름이면 시뮬레이션하지 않은 방출기도 UAV 로 오가 전이가 는다(언리얼은 방출기마다 RDG 버퍼).
+         *          등록 접근(프레임 시작이자 끝)은 상태 UAV, 렌더 입력 · 순서 셰이더 읽기, 인자 간접 인자(투명 패스의 간접 그리기)다.
+         */
+        void registerFrameResources( FrameBufferTable& table ) const;
+        /** @brief 이번 프레임 시뮬레이션이 라이트 버퍼 GPU 구간에 쓰는지입니다 — 그때만 `LightBuffer` 를 등록한다(쓰지 않는 프레임에 UAV 로 오가지 않게). */
+        bool writesParticleLights() const;
+        /** @brief 이번 프레임 메시 입자가 인스턴스 칸에 쓰는지입니다 — 그때만 `InstanceBuffer` 를 등록한다. */
+        bool writesMeshInstances() const { return _listMeshDispatch.empty() == false; }
+        /**
+         * @brief 프레임 패스 `VFXSimulation` — 방출기마다 시뮬레이션 디스패치를 기록합니다(`prepareFrame` 뒤, 정렬 · 메시 쓰기 · 인스턴스 애니메이션 · 컬링 앞).
+         * @details 전이는 그래프 레벨 콜백이 냈다. 다중 그룹 패스 사이 · 라이트를 쓰는 방출기 사이는 선언한 UAV 핸들의 `uavBarrier` 다. 선언 · 등록이 없는 방출기는 건너뛴다(오류는 문맥이 남겼다).
+         */
+        void recordSimulation( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const;
+        /** @brief 프레임 패스 `VFXParticleSort` — 정렬 일마다 워크그룹 하나를 기록합니다. 렌더 입력 · 인자는 셰이더 읽기, 순서 버퍼는 UAV 로 그래프가 옮겼다. */
+        void recordSort( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const;
+        /** @brief 프레임 패스 `VFXMeshInstance` — 메시 방출기마다 인스턴스 칸 쓰기를 기록합니다. 방출기 사이는 `InstanceBuffer` UAV 의 `uavBarrier` 다. */
+        void recordMeshInstances( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const;
+
+        /** @brief 프레임 자원 `LightBuffer`(파이프라인 XML — `VFXSimulation` 출력)입니다. 라이트 버퍼 주인 대신 이 등록을 정하는 쪽이 여기라 이름도 여기 둔다. */
+        static RenderGraphBufferUAV getLightBufferUAV();
+        /** @brief 프레임 자원 `InstanceBuffer`(파이프라인 XML — `VFXMeshInstance` 출력)입니다. */
+        static RenderGraphBufferUAV getInstanceBufferUAV();
         /** @brief GPU 순서 버퍼(정렬 일이 쓴 입자 번호)의 SRV 입니다. 이번 프레임에 정렬 일이 없으면 무효일 수 있습니다. */
         RHIDescriptorIndex getOrderSRV() const { return _orderBuffer._srv; }
         /** @brief 배치 @p batchIndex 의 정렬 일이 이번 프레임에 모두 기록됩니다 — 아니면 그리기는 순서 없이 그린다(옛 순서 칸을 읽지 않는다). */
@@ -168,8 +194,10 @@ namespace sw
             RHIStructuredBuffer              _argsBuffer;     ///< 간접 인자 · 살아 있는 수 · 버린 수 · 빈 인스턴스 칸 스택 · 살아 있는 칸 목록(vfx_simulate.hlsli 의 SW_VFX_ARGS_WORD_*)
             DrawSource                       _drawSource;
             shared_ptr<const VFXGPURunToken> _pRunToken;       ///< 이 상태의 재생 토큰 — 들고 있어 열쇠(토큰 주소)가 다른 재생에 다시 쓰이지 않는다
+            uint32                           _frameSlot;       ///< 이번 프레임 표의 칸(`registerFrameResources` — 시뮬레이션이면 디스패치 번호, 읽기만 하면 읽기 번호). 없으면 무효 번호
             uint8                            _bNeedsReset : 1; ///< 아직 한 번도 디스패치하지 않았다
             uint8                            _bSeen       : 1; ///< 이번 프레임 목록에 있었다
+            uint8                            _bSimulated  : 1; ///< 이번 프레임 시뮬레이션 디스패치가 있다 — 표 이름(`Particles` · `IdleParticles`)을 가른다
             EmitterState( shared_ptr<const VFXEmitterDef> pDef, float32 spawnScale );
         };
 
@@ -203,8 +231,12 @@ namespace sw
         static bool usesMultiGroup( const VFXEmitterDef& def );
         /** @brief 다중 그룹 경로가 한 패스에 거는 그룹 수입니다(풀 / 스레드 수 올림). */
         static uint32 getGroupCount( const VFXEmitterDef& def );
-        /** @brief 방출기 하나의 시뮬레이션 패스들을 기록합니다(그룹 하나 경로는 디스패치 하나, 다중 그룹은 패스마다 하나와 UAV 장벽). */
-        void recordEmitterPasses( IRHICommandList& cmd, const Dispatch& dispatch ) const;
+        /** @brief 방출기 하나의 시뮬레이션 패스들을 기록합니다(그룹 하나 경로는 디스패치 하나, 다중 그룹은 패스마다 하나와 선언한 UAV 핸들의 장벽). */
+        void recordEmitterPasses( const RenderGraphPassContext& context, const Dispatch& dispatch ) const;
+        /** @brief 정렬 · 메시 쓰기가 @p state 를 읽도록 표 칸을 줍니다 — 이번 프레임 시뮬레이션했으면 그 칸 그대로, 아니면 다음 읽기 번호. */
+        void assignReadSlot( EmitterState& state );
+        /** @brief 정렬 · 메시 쓰기가 선언한 @p state 의 렌더 입력 · 인자 읽기가 있으면 true 입니다(시뮬레이션 여부로 표 이름을 고른다). */
+        static bool hasDeclaredReads( const RenderGraphPassContext& context, const EmitterState& state );
 
         /** @brief GPU 로 돌릴 방출기가 있는데 시뮬레이션 컴퓨트 PSO 가 없으면 한 번만 오류를 남깁니다(`prepareFrame` 의 한 단계). */
         void reportMissingSimulationPipeline( bool bAnyGPUBatch );
@@ -220,8 +252,6 @@ namespace sw
         void releaseStaleEmitters( IRHIDevice& device );
         /** @brief 모은 매개변수 단어를 버퍼에 올립니다. 버퍼를 잡지 못하면 이번 프레임의 디스패치를 모두 비웁니다. */
         void uploadParamBuffer( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch );
-        /** @brief 이번 프레임 디스패치 앞뒤의 버퍼 전이를 단계별 목록으로 짓습니다(`recordDispatches` 가 단계마다 `transitionBuffers` 한 번으로 낸다). */
-        void rebuildTransitionLists();
         /** @brief 요청의 상태를 찾거나 만들고 버퍼를 갖춥니다. 버퍼를 만들지 못했으면 오류를 남기고 nullptr 입니다. */
         EmitterState* prepareEmitterState( IRHIDevice& device, const VFXGPUEmitterRequest& request );
         /** @brief @p state 의 시뮬레이션 디스패치를 붙입니다(밀린 단계가 없고 이미 돌았으면 매개변수를 버리고 붙이지 않는다). */
@@ -238,19 +268,15 @@ namespace sw
         vector<const DrawSource*>                       _listBatchDrawSource; ///< 배치마다(GPU 배치가 아니면 nullptr) — 이번 프레임 안에서만 쓴다
         vector<uint32>                                  _listParamWord;       ///< 매개변수 행(uint4)을 단어로 이어 붙인 사본
         vector<uint64>                                  _listScratchStaleRunID;
-        vector<RHIBufferTransition>                     _listTransitionBeforeSimulate; ///< 시뮬레이션 앞 — 방출기 버퍼 셋 · 라이트 버퍼를 UAV 로
-        vector<RHIBufferTransition>                     _listTransitionAfterSimulate;  ///< 시뮬레이션 뒤 — 입자 SRV · 인자 간접 인자 · 라이트 SRV
-        vector<RHIBufferTransition>                     _listTransitionBeforeMesh;     ///< 메시 입자 앞 — 인스턴스 버퍼 UAV · 인자 SRV
-        vector<RHIBufferTransition>                     _listTransitionBeforeSort;     ///< 정렬 앞 — 정렬하는 방출기의 인자 SRV · 순서 버퍼 UAV
-        vector<RHIBufferTransition>                     _listTransitionAfterSort;      ///< 정렬 뒤 — 인자 간접 인자 · 순서 버퍼 SRV
         vector<SortDispatch>                            _listSortDispatch;
-        vector<const EmitterState*>                     _listBatchState;  ///< 배치마다의 상태(GPU 배치가 아니면 nullptr) — 이번 프레임 안에서만 쓴다
+        vector<EmitterState*>                           _listBatchState;  ///< 배치마다의 상태(GPU 배치가 아니면 nullptr) — 이번 프레임 안에서만 쓴다
         vector<uint8>                                   _listBatchSorted; ///< 배치마다 정렬 일이 모두 기록되면 SW_TRUE(`isBatchSorted`)
         vector<VFXGPULightRange>                        _listLightRange;  ///< 이번 프레임의 방출기별 파티클 라이트 슬롯 범위(`assignLightRanges`)
         VFXSimulationFrameInput                         _frameInput;      ///< 이번 프레임 입력(기록이 깊이 히스토리 · 인스턴스 버퍼 · 라이트 버퍼를 건다)
         RHIStructuredBuffer                             _paramBuffer;
         RHIStructuredBuffer                             _orderBuffer;      ///< GPU 방출기 정렬 결과(입자 번호, uint32 — SRV + UAV). 구간은 정렬 일마다 게임 스레드가 잡았다
         uint64                                          _pendingStepCount; ///< `getPendingStepCount`
+        uint32                                          _readSlotCount;    ///< 이번 프레임 읽기만 하는 방출기 수(`assignReadSlot` — `IdleParticles` 칸)
         uint8                                           _bPipelineMissingLogged     : 1;
         uint8                                           _bMeshPipelineMissingLogged : 1;
         uint8                                           _bLightOverflowLogged       : 1;
