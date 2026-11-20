@@ -2,6 +2,8 @@
 
 #include "Engine/Audio/AudioRoomGraph.h"
 
+#include "Core/Math/MathUtil.h"
+
 namespace sw
 {
     AudioRoomGraph::AudioRoomGraph()
@@ -160,7 +162,7 @@ namespace sw
             float3        segment = previous - portal._position; // 문 → 소리 쪽(다음 점)
             const float32 length  = segment.getLength();
             pathLength += length;
-            if ( length > 1e-4f )
+            if ( length > MathUtil::kLooseEpsilon )
             {
                 segment /= length;
                 if ( outgoing.getLengthSquared() > 0.0f )
@@ -175,7 +177,7 @@ namespace sw
         float3        toPortal       = nearestPortal - listener;
         const float32 listenerLength = toPortal.getLength();
         pathLength += listenerLength;
-        if ( listenerLength <= 1e-4f )
+        if ( listenerLength <= MathUtil::kLooseEpsilon )
             return propagation; // 리스너가 문 위에 있다 — 방향을 정할 수 없고 꺾임도 없다
         toPortal /= listenerLength;
         if ( outgoing.getLengthSquared() > 0.0f )

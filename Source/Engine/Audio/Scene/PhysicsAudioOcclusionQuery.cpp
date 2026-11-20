@@ -38,12 +38,12 @@ namespace sw
         if ( _pScene == nullptr )
             return AudioPropagation::makeOcclusion( 0.0f );
         float3 forward = emitter - listener;
-        if ( forward.getLengthSquared() <= 1e-6f )
+        if ( forward.getLengthSquared() <= MathUtil::kEpsilon )
             return AudioPropagation::makeOcclusion( 0.0f );
         forward.normalize();
         // 수평으로 옆 방향(위 × 앞). 똑바로 위아래면 X 축을 옆으로 쓴다.
         float3 side = float3( 0.0f, 1.0f, 0.0f ).cross( forward );
-        if ( side.getLengthSquared() <= 1e-6f )
+        if ( side.getLengthSquared() <= MathUtil::kEpsilon )
             side = float3( 1.0f, 0.0f, 0.0f );
         side.normalize();
         const float3 offset = side * kSideOffset;

@@ -23,7 +23,7 @@ namespace sw
         constexpr VirtualJoystick() noexcept = default;
         constexpr VirtualJoystick( const float2 anchor, const float32 radius, const float32 deadzone = 0.1f, const float32 outerDeadzone = 1.0f ) noexcept
             : _anchorPos{ anchor }
-            , _radius{ radius > 1e-4f ? radius : 64.0f }
+            , _radius{ radius > MathUtil::kLooseEpsilon ? radius : 64.0f }
             , _deadzone{ deadzone }
             , _outerDeadzone{ outerDeadzone }
         {
@@ -43,16 +43,16 @@ namespace sw
             const float32 distSq = dx * dx + dy * dy;
             const float32 dist   = MathUtil::sqrt( distSq );
 
-            if ( dist < 1e-4f )
+            if ( dist < MathUtil::kLooseEpsilon )
                 return float2{ 0.0f, 0.0f };
 
-            const float32 effectiveRadius = radius > 1e-4f ? radius : 64.0f;
+            const float32 effectiveRadius = radius > MathUtil::kLooseEpsilon ? radius : 64.0f;
             const float32 normalizedDist  = dist / effectiveRadius;
             if ( normalizedDist <= deadzone )
                 return float2{ 0.0f, 0.0f };
 
             const float32 maxRadius   = ( outerDeadzone > deadzone ) ? outerDeadzone : 1.0f;
-            const float32 safeSpan    = ( maxRadius - deadzone ) > 1e-4f ? ( maxRadius - deadzone ) : 1.0f;
+            const float32 safeSpan    = ( maxRadius - deadzone ) > MathUtil::kLooseEpsilon ? ( maxRadius - deadzone ) : 1.0f;
             const float32 clampedDist = MathUtil::clamp( ( normalizedDist - deadzone ) / safeSpan, 0.0f, 1.0f );
 
             const float32 dirX = dx / dist;

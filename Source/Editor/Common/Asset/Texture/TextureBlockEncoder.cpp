@@ -133,7 +133,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "TextureBlockEncoder.UnknownFormat", "TextureBlockEncoder cannot encode RHIFormat %#", static_cast<uint32>( format ) );
             return false;
         }
-        const uint32 blockBytes = getRHIFormatBlockInfo( format )._blockBytes;
+        const uint32 blockBytes = RHIFormatUtil::getBlockInfo( format )._blockBytes;
         const uint32 blocksX    = ( width + Internal::kBlockSize - 1 ) / Internal::kBlockSize;
         const uint32 blocksY    = ( height + Internal::kBlockSize - 1 ) / Internal::kBlockSize;
         const size_t offset     = ioBytes.size();

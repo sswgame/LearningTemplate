@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/NormalizedInt.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -711,7 +712,7 @@ namespace sw
             const uint8* pTexel = &splatBytes[texel * SurfaceLayerWeights::kLayerCount];
             for ( uint32 layer = 0; layer < SurfaceLayerWeights::kLayerCount; ++layer )
             {
-                listWeight[texel].set( layer, static_cast<float32>( pTexel[layer] ) / 255.0f );
+                listWeight[texel].set( layer, unorm8::fromRaw( pTexel[layer] ).toFloat() );
             }
         }
         TerrainSampleRect all{};

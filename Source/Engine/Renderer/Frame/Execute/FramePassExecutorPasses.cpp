@@ -800,7 +800,7 @@ namespace sw
     {
         // 인버티드 헐(inverted hull) 외곽선이다. 불투명 패스가 그린 색과 깊이 위에, 외곽선을 켠 머티리얼의 배치만 앞면을 컬링해 그린다(shouldDrawBatchInPass).
         // 와이어프레임과 표면 값 보기(Normals, Depth, Overdraw)에서는 빠진다(껍질이 선과 값 위를 덮는다). 타깃은 선언한 컬러 출력이다(불투명 패스와 같은 규칙).
-        const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const RenderViewModeInfo& viewModeInfo = RenderViewModeUtil::getInfo( _pActiveView->_settings._viewMode );
         if ( ( viewModeInfo._bWireframe && viewModeInfo._bOverlay == false ) || viewModeInfo._bShowsBuffer ) // 겹침(ShadedWireframe)은 Lit 그림이라 그린다
             return;
         FramePassContext&    context     = input._context;
@@ -817,7 +817,7 @@ namespace sw
     {
         // 인스턴스 강조 외곽선이다(highlight_outline.hlsl). 불투명 배치를 모두 그리되 이 패스의 강조 방식인 인스턴스만 정점이 남는다 —
         // 배치를 CPU 에서 거르지 않으므로 강조를 켜고 꺼도 배치가 다시 나뉘지 않는다. 와이어프레임과 표면 값 보기에서는 빠진다(메시 외곽선과 같다).
-        const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const RenderViewModeInfo& viewModeInfo = RenderViewModeUtil::getInfo( _pActiveView->_settings._viewMode );
         if ( ( viewModeInfo._bWireframe && viewModeInfo._bOverlay == false ) || viewModeInfo._bShowsBuffer )
             return;
         // 이 패스의 방식으로 강조된 인스턴스가 없으면 그리지 않는다 — 그려도 정점 셰이더가 모두 버린다(씬의 모든 정점을 헛돈다).
@@ -845,7 +845,7 @@ namespace sw
         // 씬에 하늘이 없으면 그리지 않는다 — 배경은 컬러 첨부의 클리어 색이다. 와이어프레임과 표면 값 보기에서도 빠진다(값 위를 덮는다).
         // 뎁스나 선언한 컬러 출력이 없으면 그리지 않는다(장면을 통째로 덮거나 백버퍼에 그린다 — 그런 파이프라인은 검증이 거부한다).
         // 앞의 불투명 패스가 색과 깊이를 이미 썼으므로 둘 다 불러온다(지우지 않는다).
-        const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const RenderViewModeInfo&    viewModeInfo = RenderViewModeUtil::getInfo( _pActiveView->_settings._viewMode );
         const RHIPipelineStateHandle skyPSO       = _psoManager.getEnginePSO( RenderPassKind::Sky );
         const bool                   bShowsSky    = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
         const bool                   bHasTargets  = input._passDepth.empty() == false;
@@ -911,7 +911,7 @@ namespace sw
         // 안개다. 장면 깊이로 광학 두께를 구해 선언한 컬러 출력(앞 패스가 칠한 색) 위에 프리멀티플라이 블렌드한다(fog.hlsl).
         // 씬에 안개가 없거나 표면 값 보기(Normals, Depth, Overdraw)와 와이어프레임에서는 그리지 않는다 — 값 위를 덮는다. 후처리를 끈 뷰(CCTV)도 안개는 그린다(장면의 일이다).
         // 출력이 곧 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다 — 일반 풀스크린 패스의 복사 · 지우기 길을 타면 장면이 지워진다.
-        const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const RenderViewModeInfo&    viewModeInfo = RenderViewModeUtil::getInfo( _pActiveView->_settings._viewMode );
         const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassKind::Fog );
         const bool                   bShowsScene  = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
         const bool                   bDraws       = _fog.hasFrameFog() && pso != 0 && bShowsScene;
@@ -1087,7 +1087,7 @@ namespace sw
     void FramePassExecutor::executeLensFlarePass( const PassExecuteInput& input )
     {
         // 스프라이트는 주 시점의 투영으로 펼쳤다 — 추가 뷰 · 표면 값 보기에서는 그리지 않는다(값 위를 덮는다). 출력 위에 더하므로 "그리지 않음" 은 아무것도 하지 않는 것이다.
-        const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const RenderViewModeInfo&    viewModeInfo = RenderViewModeUtil::getInfo( _pActiveView->_settings._viewMode );
         const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassKind::LensFlare );
         const LensFlareSpriteBuffer& sprites      = _state._lensFlare;
         const bool                   bDraws       = pso != 0 && sprites.getSpriteCount() > 0 && _pActiveView == &_state._mainView && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;

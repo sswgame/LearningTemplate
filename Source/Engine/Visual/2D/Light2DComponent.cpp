@@ -77,11 +77,11 @@ namespace sw
 
     float32 PointLight2DComponent::computeAttenuation( float32 distance, float32 innerRadius, float32 outerRadius, float32 exponent )
     {
-        const float32 outer = MathUtil::max( outerRadius, 1e-4f );
+        const float32 outer = MathUtil::max( outerRadius, MathUtil::kLooseEpsilon );
         const float32 inner = MathUtil::clamp( innerRadius, 0.0f, outer );
         if ( distance >= outer )
             return 0.0f;
-        const float32 ramp = MathUtil::saturate( ( outer - distance ) / MathUtil::max( outer - inner, 1e-4f ) );
+        const float32 ramp = MathUtil::saturate( ( outer - distance ) / MathUtil::max( outer - inner, MathUtil::kLooseEpsilon ) );
         return MathUtil::pow( ramp, MathUtil::max( exponent, 1e-3f ) );
     }
 
@@ -150,7 +150,7 @@ namespace sw
         }
         if ( bInside )
             return 1.0f;
-        const float32 ramp = MathUtil::saturate( 1.0f - distance / MathUtil::max( falloffDistance, 1e-4f ) );
+        const float32 ramp = MathUtil::saturate( 1.0f - distance / MathUtil::max( falloffDistance, MathUtil::kLooseEpsilon ) );
         return MathUtil::pow( ramp, MathUtil::max( exponent, 1e-3f ) );
     }
 

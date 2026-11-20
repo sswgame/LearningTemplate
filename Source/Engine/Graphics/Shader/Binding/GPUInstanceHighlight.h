@@ -7,7 +7,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-#include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Presentation/InstanceHighlight.h"
@@ -27,9 +27,9 @@ namespace sw
         {
             if ( style == InstanceHighlightStyle::None )
                 return 0u;
-            const uint32 red   = static_cast<uint32>( MathUtil::saturate( color._x ) * 255.0f + 0.5f );
-            const uint32 green = static_cast<uint32>( MathUtil::saturate( color._y ) * 255.0f + 0.5f );
-            const uint32 blue  = static_cast<uint32>( MathUtil::saturate( color._z ) * 255.0f + 0.5f );
+            const uint32 red   = static_cast<uint32>( unorm8::fromFloat( color._x ).getRaw() );
+            const uint32 green = static_cast<uint32>( unorm8::fromFloat( color._y ).getRaw() );
+            const uint32 blue  = static_cast<uint32>( unorm8::fromFloat( color._z ).getRaw() );
             return red | ( green << 8 ) | ( blue << 16 ) | ( static_cast<uint32>( style ) << 24 );
         }
         /** @brief 강조 하나를 담습니다(렌더러의 인스턴스 수집이 부른다). */

@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/Scene/SceneAudio.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Audio/AudioEngine.h"
@@ -408,7 +409,7 @@ namespace sw
                 if ( previous._snapshot == current._snapshot )
                     pPrevious = &previous;
             }
-            if ( pPrevious == nullptr || MathUtil::abs( pPrevious->_intensity - current._intensity ) > 1e-4f )
+            if ( pPrevious == nullptr || MathUtil::abs( pPrevious->_intensity - current._intensity ) > MathUtil::kLooseEpsilon )
                 audioEngine.setSnapshotIntensity( current._snapshot, current._intensity );
         }
         for ( const ZoneValue& previous : _listZoneValue )

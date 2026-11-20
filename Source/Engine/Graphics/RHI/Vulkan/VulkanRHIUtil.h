@@ -206,7 +206,7 @@ namespace sw
             { return StringUtil::equals( ext.extensionName, pName ); } );
         }
     };
-    static_assert( isRHIFormatTableInOrder( VulkanRHIUtil::kArrTextureFormatRow ), "kArrTextureFormatRow needs one row per RHIFormat, in enumerator order" );
+    static_assert( RHIFormatUtil::isTableInOrder( VulkanRHIUtil::kArrTextureFormatRow ), "kArrTextureFormatRow needs one row per RHIFormat, in enumerator order" );
     /** @brief 확장 함수 포인터를 조회해 디버그 메신저를 만듭니다(없으면 EXTENSION_NOT_PRESENT). */
     inline VkResult CreateDebugUtilsMessengerEXT(
         VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,

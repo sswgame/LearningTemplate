@@ -50,7 +50,7 @@ namespace sw
 
     bool GPUNanCheck::isScannableFormat( RHIFormat format )
     {
-        return isRHIFormatFloatTexel( format );
+        return RHIFormatUtil::isFloatTexel( format );
     }
 
     bool GPUNanCheck::initialize( IRHIDevice* pDevice )

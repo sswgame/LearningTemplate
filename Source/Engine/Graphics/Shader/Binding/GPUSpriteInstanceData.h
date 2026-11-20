@@ -8,7 +8,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-#include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
@@ -64,36 +64,36 @@ namespace sw
         /** @brief 실수 둘을 [0, 1] 로 제한해 unorm16 둘로 담습니다(x 가 하위 16비트). HLSL `InstanceData::unpackUnorm16x2` 의 역입니다. */
         static uint32 makeUnorm16x2( float32 x, float32 y )
         {
-            const uint32 low  = static_cast<uint32>( MathUtil::saturate( x ) * 65535.0f + 0.5f );
-            const uint32 high = static_cast<uint32>( MathUtil::saturate( y ) * 65535.0f + 0.5f );
+            const uint32 low  = static_cast<uint32>( unorm16::fromFloat( x ).getRaw() );
+            const uint32 high = static_cast<uint32>( unorm16::fromFloat( y ).getRaw() );
             return low | ( high << 16 );
         }
 
         /** @brief 색을 [0, 1] 로 제한해 RGBA8 로 담습니다(r 이 하위 바이트). */
         static uint32 makeRGBA8( const float4& color )
         {
-            const uint32 red   = static_cast<uint32>( MathUtil::saturate( color._x ) * 255.0f + 0.5f );
-            const uint32 green = static_cast<uint32>( MathUtil::saturate( color._y ) * 255.0f + 0.5f );
-            const uint32 blue  = static_cast<uint32>( MathUtil::saturate( color._z ) * 255.0f + 0.5f );
-            const uint32 alpha = static_cast<uint32>( MathUtil::saturate( color._w ) * 255.0f + 0.5f );
+            const uint32 red   = static_cast<uint32>( unorm8::fromFloat( color._x ).getRaw() );
+            const uint32 green = static_cast<uint32>( unorm8::fromFloat( color._y ).getRaw() );
+            const uint32 blue  = static_cast<uint32>( unorm8::fromFloat( color._z ).getRaw() );
+            const uint32 alpha = static_cast<uint32>( unorm8::fromFloat( color._w ).getRaw() );
             return red | ( green << 8 ) | ( blue << 16 ) | ( alpha << 24 );
         }
 
         /** @brief 담긴 UV 사각형 (u, v, 폭, 높이) 입니다. 셰이더 `InstanceData::computeUvRect` 와 같은 값입니다(양자화 뒤). */
         float4 getUVRect() const
         {
-            const float32 startU = static_cast<float32>( _uvStart & 0xFFFFu ) / 65535.0f;
-            const float32 startV = static_cast<float32>( _uvStart >> 16 ) / 65535.0f;
-            const float32 endU   = static_cast<float32>( _uvEnd & 0xFFFFu ) / 65535.0f;
-            const float32 endV   = static_cast<float32>( _uvEnd >> 16 ) / 65535.0f;
+            const float32 startU = unorm16::fromRaw( static_cast<uint16>( _uvStart & 0xFFFFu ) ).toFloat();
+            const float32 startV = unorm16::fromRaw( static_cast<uint16>( _uvStart >> 16 ) ).toFloat();
+            const float32 endU   = unorm16::fromRaw( static_cast<uint16>( _uvEnd & 0xFFFFu ) ).toFloat();
+            const float32 endV   = unorm16::fromRaw( static_cast<uint16>( _uvEnd >> 16 ) ).toFloat();
             return float4{ startU, startV, endU - startU, endV - startV };
         }
 
         /** @brief 담긴 색입니다. 셰이더 `InstanceData::computeTint` 와 같은 값입니다(양자화 뒤). */
         float4 getTint() const
         {
-            return float4{ static_cast<float32>( _tint & 0xFFu ) / 255.0f, static_cast<float32>( ( _tint >> 8 ) & 0xFFu ) / 255.0f,
-                           static_cast<float32>( ( _tint >> 16 ) & 0xFFu ) / 255.0f, static_cast<float32>( _tint >> 24 ) / 255.0f };
+            return float4{ unorm8::fromRaw( static_cast<uint8>( _tint & 0xFFu ) ).toFloat(), unorm8::fromRaw( static_cast<uint8>( ( _tint >> 8 ) & 0xFFu ) ).toFloat(),
+                           unorm8::fromRaw( static_cast<uint8>( ( _tint >> 16 ) & 0xFFu ) ).toFloat(), unorm8::fromRaw( static_cast<uint8>( _tint >> 24 ) ).toFloat() };
         }
 
         /** @brief 필드가 모두 같으면 true 입니다(스냅 단위는 비트로 비교합니다). */

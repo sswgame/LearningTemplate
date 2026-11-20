@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 
-#include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -42,7 +42,7 @@ namespace sw
 {
     bool RenderTargetImageFile::unpackRGBA8( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, vector<uint8>& outRGBABytes )
     {
-        const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
+        const uint32 bytesPerPixel = RHIFormatUtil::getBytesPerPixel( format );
         // 단일 채널(깊이 읽기 레이아웃 R32_FLOAT, 마스크 R8)은 회색으로 푼다. 세 채널에 같은 값이다.
         const bool bGrayFloat = ( format == RHIFormat::R32_FLOAT );
         const bool bGrayByte  = ( format == RHIFormat::R8_UNORM );
@@ -61,7 +61,7 @@ namespace sw
                     {
                         float32 value = 0.0f;
                         Memory::copy( &value, pPixel, sizeof( value ) );
-                        gray = static_cast<uint8>( MathUtil::clamp( value, 0.0f, 1.0f ) * 255.0f + 0.5f );
+                        gray = unorm8::fromFloat( value ).getRaw();
                     }
                     outRGBABytes.push_back( gray );
                     outRGBABytes.push_back( gray );

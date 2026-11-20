@@ -30,7 +30,7 @@ namespace sw
                 const float32 angularFrequency = MathUtil::max( 0.01f, spec._springFrequency ) * MathUtil::kTwoPi;
                 const float32 dampingRatio     = MathUtil::max( 1.0f, spec._springDamping );
                 const float32 endPosition      = computeSpringPosition( spec._duration, angularFrequency, dampingRatio );
-                if ( endPosition < 1.0e-6f )
+                if ( endPosition < MathUtil::kEpsilon )
                     return normalizedTime;
                 // 끝 값으로 나눠 1 에서 1 이 되게 한다. 스프링이 다 붙기 전에 블렌드가 끝나도 튀지 않는다.
                 return computeSpringPosition( normalizedTime * spec._duration, angularFrequency, dampingRatio ) / endPosition;

@@ -205,7 +205,7 @@ namespace sw
         // 입력 행 — 주 시점의 행렬, 눈, 안개 값, 해, 라이트 그리드(volumetric_fog.hlsl 머리 주석과 같은 순서).
         const float4x4 inverse = mainView._viewProj.invert();
         // (0, 0, 1, 0) 의 역투영 동차 좌표 w 가 0 이면 직교다(fog.hlsl 과 같은 판정). 원근은 눈에서, 직교는 화면 점의 가까운 면 점에서 쏜다.
-        const bool bPerspective = MathUtil::abs( inverse._34 ) > 1.0e-6f;
+        const bool bPerspective = MathUtil::abs( inverse._34 ) > MathUtil::kEpsilon;
         // 행은 이름 붙은 번호(kRow*)로 쓴다 — 넣는 순서가 셰이더의 행 번호와 어긋날 수 없다.
         vector<float4>& listRow = _listScratchFogVolumeParam;
         listRow.assign( SW_FOG_VOLUME_PARAM_FLOAT4_COUNT, float4{} );

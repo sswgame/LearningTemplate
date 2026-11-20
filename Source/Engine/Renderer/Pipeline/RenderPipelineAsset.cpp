@@ -148,7 +148,7 @@ namespace sw
                 for ( uint32 attachmentIndex = 0; attachmentIndex < desc._listAttachment.size(); ++attachmentIndex )
                 {
                     const RenderPassAttachment& attachment = desc._listAttachment[attachmentIndex];
-                    if ( isRHIFormatRenderable( attachment._format ) == false )
+                    if ( RHIFormatUtil::isRenderable( attachment._format ) == false )
                     {
                         // 이름은 맞지만 첨부가 될 수 없는 포맷(Unknown · 블록 압축 · R32G32B32_FLOAT) — 트랜지언트를 만들 때 백엔드가 실패한다.
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentFormatCannotRender", "[%#] attachment '%#': format '%#' cannot be a render target", sourcePath, attachment._name, getEnumName( attachment._format ) );

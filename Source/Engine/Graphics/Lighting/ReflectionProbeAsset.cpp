@@ -94,7 +94,7 @@ namespace sw
                 const ReflectionProbeFace& face  = pArrFace[bestFace];
                 const float3               point = capturePosition + direction;
                 const float4               clip  = float4::transform( float4{ point._x, point._y, point._z, 1.0f }, face._viewProj );
-                const float32              clipW = MathUtil::max( clip._w, 1e-6f );
+                const float32              clipW = MathUtil::max( clip._w, MathUtil::kEpsilon );
                 const float32              size  = static_cast<float32>( face._size );
                 const float32              ndcX  = clip._x / clipW;
                 const float32              ndcY  = clip._y / clipW;

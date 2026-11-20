@@ -127,7 +127,7 @@ namespace sw
         const float32 phaseRayleigh = 3.0f / ( 16.0f * MathUtil::kPi ) * ( 1.0f + cosine * cosine );
         const float32 squaredG      = _mieAnisotropy * _mieAnisotropy;
         const float32 phaseMie      = 3.0f / ( 8.0f * MathUtil::kPi ) * ( ( 1.0f - squaredG ) * ( 1.0f + cosine * cosine ) ) /
-                                 ( ( 2.0f + squaredG ) * MathUtil::pow( MathUtil::max( 1.0f + squaredG - 2.0f * _mieAnisotropy * cosine, 1.0e-4f ), 1.5f ) );
+                                 ( ( 2.0f + squaredG ) * MathUtil::pow( MathUtil::max( 1.0f + squaredG - 2.0f * _mieAnisotropy * cosine, MathUtil::kLooseEpsilon ), 1.5f ) );
         float3 radiance{ sumRayleigh._x * betaRayleigh._x * phaseRayleigh + sumMie._x * betaMie * phaseMie, sumRayleigh._y * betaRayleigh._y * phaseRayleigh + sumMie._y * betaMie * phaseMie,
                          sumRayleigh._z * betaRayleigh._z * phaseRayleigh + sumMie._z * betaMie * phaseMie };
 

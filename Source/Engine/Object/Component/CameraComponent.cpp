@@ -214,20 +214,20 @@ namespace sw
 
     float4x4 CameraComponent::getProjectionMatrix( float32 aspectRatio ) const
     {
-        const float32 aspect = aspectRatio > 1e-4f ? aspectRatio : ( 16.0f / 9.0f );
-        const float32 nearZ  = _nearZ > 1e-4f ? _nearZ : 0.1f;
-        const float32 farZ   = _farZ > nearZ + 1e-4f ? _farZ : ( nearZ + 100.0f );
+        const float32 aspect = aspectRatio > MathUtil::kLooseEpsilon ? aspectRatio : ( 16.0f / 9.0f );
+        const float32 nearZ  = _nearZ > MathUtil::kLooseEpsilon ? _nearZ : 0.1f;
+        const float32 farZ   = _farZ > nearZ + MathUtil::kLooseEpsilon ? _farZ : ( nearZ + 100.0f );
 
         float4x4 projection{};
         if ( _bOrthographic )
         {
-            const float32 height = _orthoHeight > 1e-4f ? _orthoHeight : 10.0f;
+            const float32 height = _orthoHeight > MathUtil::kLooseEpsilon ? _orthoHeight : 10.0f;
             const float32 width  = height * aspect;
             projection           = float4x4::makeOrthographic( width, height, nearZ, farZ );
         }
         else
         {
-            const float32 fov = _fovY.radians() > 1e-4f ? _fovY.radians() : kDefaultFOVY;
+            const float32 fov = _fovY.radians() > MathUtil::kLooseEpsilon ? _fovY.radians() : kDefaultFOVY;
             // 시야 거리 사용자 설정(graphics.viewDistance)은 원근 카메라의 먼 평면을 늘이고 줄인다 — 절두체 컬링이 같은 평면으로 자른다. 직교(2D · 위에서 보기)는 데이터 그대로다.
             const float32 viewFarZ = MathUtil::max( farZ * static_cast<float32>( gv_viewDistanceScale ), nearZ + 1e-3f );
             projection             = float4x4::makePerspectiveFieldOfView( fov, aspect, nearZ, viewFarZ );

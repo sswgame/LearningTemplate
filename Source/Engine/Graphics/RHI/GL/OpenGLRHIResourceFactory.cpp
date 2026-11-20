@@ -46,7 +46,7 @@ namespace sw
             {    RHIFormat::R8G8B8A8_UNORM,                                       GL_RGBA8,          GL_RGBA,               GL_UNSIGNED_BYTE},
             {    RHIFormat::B8G8R8A8_UNORM,                                       GL_RGBA8,          GL_BGRA,               GL_UNSIGNED_BYTE},
             // **half 는 GL_HALF_FLOAT 다.** GL_FLOAT 로 두면 GL 이 픽셀당 16 바이트를 읽고 쓰는데 엔진이 잡아 둔 버퍼는
-            // 8 바이트/픽셀이다(`getRHIFormatBlockInfo` 가 기준). HDR 첨부를 CPU 로 되읽는 경로(스크린샷 · 렌더 타깃 패널)가
+            // 8 바이트/픽셀이다(`RHIFormatUtil::getBlockInfo` 가 기준). HDR 첨부를 CPU 로 되읽는 경로(스크린샷 · 렌더 타깃 패널)가
             // 버퍼를 두 배로 넘겨 써서 **그냥 죽는다**.
             {RHIFormat::R16G16B16A16_FLOAT,                                     GL_RGBA16F,          GL_RGBA,                  GL_HALF_FLOAT},
             { RHIFormat::D24_UNORM_S8_UINT,                            GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL,           GL_UNSIGNED_INT_24_8},
@@ -71,7 +71,7 @@ namespace sw
             {      RHIFormat::R16G16_FLOAT,                                       GL_RG16F,            GL_RG,                  GL_HALF_FLOAT},
             { RHIFormat::R10G10B10A2_UNORM,                                    GL_RGB10_A2,          GL_RGBA, GL_UNSIGNED_INT_2_10_10_10_REV},
         };
-        static_assert( isRHIFormatTableInOrder( arrFormatRow ), "arrFormatRow needs one row per RHIFormat, in enumerator order" );
+        static_assert( RHIFormatUtil::isTableInOrder( arrFormatRow ), "arrFormatRow needs one row per RHIFormat, in enumerator order" );
 
         /** @brief 표에 없는 포맷(범위 밖)은 셋 다 0 인 `Unknown` 행입니다. */
         const OpenGLFormatRow& findFormatRow( RHIFormat format )
@@ -526,7 +526,7 @@ namespace sw
             SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadGLContextCould", "submitTextureUpload: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
-        const bool   bCompressed = isRHIFormatBlockCompressed( pRecord->_format );
+        const bool   bCompressed = RHIFormatUtil::isBlockCompressed( pRecord->_format );
         const GLenum glInternal  = toGlInternalFormat( pRecord->_format );
         const GLenum glFormat    = toGlFormat( pRecord->_format );
         const GLenum glType      = toGlType( pRecord->_format );
@@ -728,7 +728,7 @@ namespace sw
             const ScopedStagingPack pack( _pDevice->getReadbackBuffer( readback ) );
             void*                   pPixels     = ScopedStagingPack::toPixelOffset( readback._offsetBytes );
             const GLsizei           bufferBytes = static_cast<GLsizei>( readback._sizeBytes );
-            if ( isRHIFormatBlockCompressed( pRecord->_format ) )
+            if ( RHIFormatUtil::isBlockCompressed( pRecord->_format ) )
             {
                 glGetCompressedTextureSubImage( pRecord->_texture, static_cast<GLint>( mip ), 0, 0, static_cast<GLint>( arraySlice ),
                                                 static_cast<GLsizei>( outLayout._width ), static_cast<GLsizei>( outLayout._height ), 1, bufferBytes, pPixels );
@@ -768,7 +768,7 @@ namespace sw
             return 0;
         }
         // 이 장치가 샘플링하지 못하는 압축 형식(데스크톱의 ASTC · ETC2)은 드라이버에 넘기지 않는다 — 넘기면 D3D12 는 실패, Vulkan 드라이버는 0 나누기로 죽었다.
-        if ( isRHIFormatBlockCompressed( desc._format ) && _pDevice->supportsTextureFormat( desc._format ) == false )
+        if ( RHIFormatUtil::isBlockCompressed( desc._format ) && _pDevice->supportsTextureFormat( desc._format ) == false )
         {
             SW_LOG_ERROR_ID( "OpenGL.CreateTexture2DFormatUnsupported", "createTexture2D: this device cannot sample format %# (%#x%#) - the texture is not created", static_cast<uint32>( desc._format ), desc._width, desc._height );
             return 0;
