@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -178,7 +179,11 @@ namespace sw::editor
      *          메인 선택이 바뀌거나 창이 닫히면 메인으로 돌아온다(`EditorSelection::notifyChanged`, `unbindPreviewScope`). 둘 다 없으면 nullptr 다.
      */
     SW_EDITOR_API EditorSelection* getFocusedSelection();
-    /** @brief 대상 선택을 등록합니다(nullptr 이면 메인 선택). 미리보기 선택만 등록하고, 메인 씬 창(씬 뷰, 계층)이 포커스를 얻으면 nullptr 로 되돌립니다. */
+    /**
+     * @brief 대상 선택을 정합니다(nullptr 이면 메인 선택). 메인 씬 창(씬 뷰, 계층)이 포커스를 얻으면 nullptr 로 되돌립니다.
+     * @details 미리보기 목록에 오른 선택(`registerPreviewSelection` 의 구독이 살아 있는 것)만 대상이 된다 — 그 구독이 풀리면(창이 닫히거나 선택이 사라지면) 대상도 메인으로 돌아온다.
+     *          맨 포인터를 손으로 풀 일이 없다.
+     */
     SW_EDITOR_API void setFocusedSelection( EditorSelection* pSelection );
 
     // ------------------------------------------------------------------------------
@@ -196,7 +201,9 @@ namespace sw::editor
     SW_EDITOR_API EditorSelection* findSelectionOf( const GameObjectManager& manager );
     /** @brief 미리보기 씬에 묶인 선택들입니다(`EditorSelection::bindPreviewScope` 가 넣고 `unbindPreviewScope` 가 뺀다). */
     SW_EDITOR_API const vector<EditorSelection*>& getPreviewSelections();
-    /** @brief 미리보기 씬에 묶인 선택을 목록에 넣거나 뺍니다. `EditorSelection` 만 부릅니다. */
-    SW_EDITOR_API void registerPreviewSelection( EditorSelection& selection );
-    SW_EDITOR_API void unregisterPreviewSelection( EditorSelection& selection );
+    /**
+     * @brief 미리보기 씬에 묶인 선택을 목록에 넣고 그 등록의 구독을 돌려줍니다. 구독이 풀리면(놓거나 선택이 사라지면) 목록에서 빠지고, 대상 선택이었으면 메인으로 돌아온다.
+     * @details `EditorSelection` 만 부르고 그 멤버로 든다 — 수명이 형식으로 묶여 빈 포인터가 목록 · 대상에 남는 길이 없다. 에디터 범위가 없으면(테스트 · 종료) 빈 구독이다.
+     */
+    [[nodiscard]] SW_EDITOR_API Subscription registerPreviewSelection( EditorSelection& selection );
 } // namespace sw::editor

@@ -295,16 +295,14 @@ namespace sw::editor
     {
         _listSelectedObject.clear();
         _uniqueSelectedObject.clear();
-        _pPreviewScene = &scene;
-        _pPreviewStack = &stack;
-        editor::registerPreviewSelection( *this );
+        _pPreviewScene       = &scene;
+        _pPreviewStack       = &stack;
+        _previewRegistration = editor::registerPreviewSelection( *this );
     }
 
     void EditorSelection::unbindPreviewScope()
     {
-        if ( editor::getFocusedSelection() == this )
-            editor::setFocusedSelection( nullptr );
-        editor::unregisterPreviewSelection( *this );
+        _previewRegistration.reset(); // 목록에서 빠지고, 대상 선택이었으면 메인으로 돌아온다(구독의 해제)
         _listSelectedObject.clear();
         _uniqueSelectedObject.clear();
         _pPreviewScene = nullptr;

@@ -1,6 +1,7 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "unregisterPreviewSelection": "없음 — registerPreviewSelection 이 돌려준 Subscription 을 놓으면 목록 · 대상 선택에서 빠진다(2026-11-21)",
     "setFocusedCommandStack": "editor::setFocusedPanel — 앞 포커스는 패널 id 로 기억하고 읽는 순간 그 패널의 스택을 묻는다(2026-11-21)",
     "releaseFocusedCommandStack": "없음 — 패널 id 로 찾으므로 사라질 스택을 손으로 풀지 않는다(2026-11-21)",
     "setOnBeforeReload": "ILiveReloadManager::setModuleClient — 모듈 주인 창구 IReloadableModuleClient 하나로 칸 넷을 함께 건다(2026-11-21)",
