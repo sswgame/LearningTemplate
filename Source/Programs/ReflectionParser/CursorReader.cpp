@@ -98,6 +98,27 @@ namespace sw
         return false;
     }
 
+    bool CursorReader::isTextStringType( const CXType type )
+    {
+        const CXType canonical = clang_getCanonicalType( type );
+        if ( isAnyIdentity( getTypeIdentity( canonical ), typeidentity::kArrStringTemplate ) == false )
+            return false;
+        const CXTypeKind characterKind = clang_getCanonicalType( clang_Type_getTemplateArgumentAsType( canonical, 0 ) ).kind;
+        return characterKind == CXType_Char_S || characterKind == CXType_Char_U;
+    }
+
+    bool CursorReader::isNameFieldType( const CXType type )
+    {
+        const CXType canonical = clang_getCanonicalType( type );
+        const string identity  = getTypeIdentity( canonical );
+        if ( isTextStringType( canonical ) || isAnyIdentity( identity, typeidentity::kArrNameFieldType ) )
+            return true;
+        if ( isAnyIdentity( identity, typeidentity::kArrVectorTemplate ) == false )
+            return false;
+        const CXType elementType = clang_Type_getTemplateArgumentAsType( canonical, 0 );
+        return elementType.kind != CXType_Invalid && ( isTextStringType( elementType ) || isAnyIdentity( getTypeIdentity( elementType ), typeidentity::kArrNameFieldType ) );
+    }
+
     string CursorReader::getTemplateArgumentSpelling( const CXType type, const uint32 index )
     {
         const CXType argType = clang_Type_getTemplateArgumentAsType( type, index );

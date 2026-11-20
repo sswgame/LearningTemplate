@@ -47,6 +47,10 @@ namespace sw
         }
         /** @brief 형식이나 그 템플릿 형식 인자 · 배열 원소(끝까지)의 정체가 @p identity 면 true 입니다(`vector<AssetRef<T>>` 은 AssetRef 를 든다). */
         static bool containsTypeIdentity( CXType type, string_view identity );
+        /** @brief 문자 원소가 `char` 인 문자열 템플릿(`sw::string` · `std::string`)이면 true 입니다. 넓은 문자열은 아니다. */
+        static bool isTextStringType( CXType type );
+        /** @brief 이름 · 경로 칸 형식(글 · `typeidentity::kArrNameFieldType`)이거나 그 `vector` 면 true 입니다 — 형식의 정체로 가른다(소스 철자를 보지 않는다). */
+        static bool isNameFieldType( CXType type );
         /** @brief 템플릿 특수화 @p type 의 @p index 번째 형식 인자를 **적힌 철자 그대로**(별칭 유지) 돌려줍니다. 없으면 빈 문자열입니다. */
         static string getTemplateArgumentSpelling( CXType type, uint32 index );
 

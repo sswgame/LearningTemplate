@@ -97,6 +97,11 @@ namespace sw
         inline constexpr const utf8* kArrVectorTemplate[] = { "sw::vector", "std::vector" };
         /** @brief 고정 길이 시퀀스로 싣는 템플릿입니다. */
         inline constexpr const utf8* kArrArrayTemplate[] = { "sw::array", "std::array" };
+        /**
+         * @brief 이름 · 경로 칸 형식입니다(글 형식 `kArrStringTemplate` 과 함께) — 다른 데이터를 가리키는 칸이라 C++ 문자열 기본값이 엔진이 정한 기본값인지 묻는다
+         *        (`PROPERTY( DefaultName )` · `Required`). 이것들의 `vector` 도 같다.
+         */
+        inline constexpr const utf8* kArrNameFieldType[] = { "sw::basic_hashed_string", "sw::DataPath", "sw::AssetID", "sw::TagID", "sw::AssetRef" };
     } // namespace typeidentity
 
     namespace fixedlayout
@@ -173,8 +178,6 @@ namespace sw
         inline constexpr const utf8* kParsingComponentBaseTypes   = "component_base_types";
         inline constexpr const utf8* kParsingPhysicsHookBaseTypes = "physics_hook_base_types";
         inline constexpr const utf8* kParsingTypeStripPrefixes    = "type_strip_prefixes";
-        inline constexpr const utf8* kParsingNameFieldTypes       = "name_field_types";
-        inline constexpr const utf8* kParsingNameFieldPrefixes    = "name_field_type_prefixes";
         inline constexpr const utf8* kParsingNameFieldSkipFolders = "name_field_skip_folders";
         inline constexpr const utf8* kEmitValueForbiddenBases     = "value_forbidden_base_types";
         inline constexpr const utf8* kEmitValueForbiddenMessage   = "value_forbidden_message";

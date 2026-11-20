@@ -186,8 +186,6 @@ namespace sw
                 assignArrayIfPresent( config._listComponentBaseType, obj, jsonkey::kParsingComponentBaseTypes );
                 assignArrayIfPresent( config._listPhysicsHookBaseType, obj, jsonkey::kParsingPhysicsHookBaseTypes );
                 assignArrayIfPresent( config._listTypeStripPrefix, obj, jsonkey::kParsingTypeStripPrefixes );
-                assignArrayIfPresent( config._listNameFieldType, obj, jsonkey::kParsingNameFieldTypes );
-                assignArrayIfPresent( config._listNameFieldTypePrefix, obj, jsonkey::kParsingNameFieldPrefixes );
                 assignArrayIfPresent( config._listNameFieldSkipFolder, obj, jsonkey::kParsingNameFieldSkipFolders );
             }
 
@@ -284,7 +282,6 @@ namespace sw
                     {  &config._listComponentBaseType,    "parsing.component_base_types"},
                     {&config._listPhysicsHookBaseType, "parsing.physics_hook_base_types"},
                     {    &config._listTypeStripPrefix,     "parsing.type_strip_prefixes"},
-                    {      &config._listNameFieldType,        "parsing.name_field_types"},
                 };
                 for ( const auto& [pList, pKey] : arrRequiredList )
                 {
@@ -397,8 +394,6 @@ namespace sw
         , _listComponentBaseType{}
         , _listPhysicsHookBaseType{}
         , _listTypeStripPrefix{}
-        , _listNameFieldType{}
-        , _listNameFieldTypePrefix{}
         , _listNameFieldSkipFolder{}
         , _listLoadedFile{}
         , _maxParallelParses{ 0 }
@@ -581,21 +576,6 @@ namespace sw
             listArg.push_back( forceInclude );
         }
         return listArg;
-    }
-
-    bool ParserConfig::isNameFieldType( const string_view typeText ) const
-    {
-        for ( const string& typeName : _listNameFieldType )
-        {
-            if ( typeText == typeName )
-                return true;
-        }
-        for ( const string& prefix : _listNameFieldTypePrefix )
-        {
-            if ( StringUtil::startsWith( typeText, prefix ) )
-                return true;
-        }
-        return false;
     }
 
     bool ParserConfig::isNameFieldCheckSkipped( const string_view headerPath ) const

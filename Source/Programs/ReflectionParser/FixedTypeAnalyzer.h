@@ -29,8 +29,6 @@ namespace sw
         static constexpr int32 kMaxFixedTypeDepth = 4;
         static bool            isFixedIntegerKind( CXTypeKind kind ) noexcept;
         static bool            isFixedPointerKind( CXTypeKind kind ) noexcept;
-        /** @brief 문자 하나가 8 비트인 문자열(`sw::string` · `std::string`)인지 봅니다. 넓은 문자열은 표 밖입니다. */
-        static bool isFixedStringType( CXType canonical, string_view identity );
         /** @brief 열거형 선언에서 열거자 · `ENUM( Count, Flags )` 를 읽습니다. 다른 헤더의 열거형이면 그 헤더의 수집이 애노테이션 오류를 알립니다. */
         static shared_ptr<ParsedFixedEnum> collectFixedEnum( CXCursor declaration, const ParserSession& session );
         /**

@@ -33,15 +33,6 @@ namespace sw
                kind == CXType_BlockPointer || kind == CXType_ObjCObjectPointer;
     }
 
-    bool FixedTypeAnalyzer::isFixedStringType( const CXType canonical, const string_view identity )
-    {
-        // 글은 문자 원소가 `char` 인 문자열 템플릿이다 — 넓은 문자(`wchar_t` · `char16_t`) 문자열은 인코딩 표 밖이다.
-        if ( CursorReader::isAnyIdentity( identity, typeidentity::kArrStringTemplate ) == false )
-            return false;
-        const CXTypeKind characterKind = clang_getCanonicalType( clang_Type_getTemplateArgumentAsType( canonical, 0 ) ).kind;
-        return characterKind == CXType_Char_S || characterKind == CXType_Char_U;
-    }
-
     shared_ptr<ParsedFixedEnum> FixedTypeAnalyzer::collectFixedEnum( const CXCursor declaration, const ParserSession& session )
     {
         shared_ptr<ParsedFixedEnum> result = make_shared<ParsedFixedEnum>();
@@ -109,7 +100,8 @@ namespace sw
 
         // 형식의 정체는 선언의 FQN(템플릿이면 기본 템플릿)으로 가른다 — 정규 철자의 머리를 견주면 표준 라이브러리 구현(인라인 이름공간 · 기본 인자)마다 철자가 다르다.
         const string identity = CursorReader::getTypeIdentity( canonical );
-        if ( isFixedStringType( canonical, identity ) )
+        // 글은 문자 원소가 `char` 인 문자열 템플릿이다 — 넓은 문자(`wchar_t` · `char16_t`) 문자열은 인코딩 표 밖이다.
+        if ( CursorReader::isTextStringType( canonical ) )
         {
             result->_kind = FixedValueKind::String;
             return result;

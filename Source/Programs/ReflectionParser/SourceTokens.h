@@ -45,9 +45,6 @@ namespace sw
          */
         [[nodiscard]] static bool hasStringLiteralDefault( CXCursor fieldCursor, const string& name );
 
-        /** @brief 필드 @p name 앞에 적은 타입 글입니다 — 애노테이션 매크로와 `const` · `mutable` · `std::` · `sw::` 를 떼고 띄어쓰기 없이 잇는다(`vector<string>`). */
-        static string readFieldTypeText( CXCursor fieldCursor, const string& name );
-
     private:
         /** @brief 커서 범위의 토큰 철자 · 종류입니다. */
         struct SourceToken;

@@ -259,7 +259,7 @@ namespace sw
         clang_getExpansionLocation( clang_getCursorLocation( cursor ), &declarationFile, nullptr, nullptr, nullptr );
         const bool bNameCheckSkipped = declarationFile != nullptr && session._config.isNameFieldCheckSkipped( CursorReader::takeString( clang_getFileName( declarationFile ) ) );
         if ( bNameCheckSkipped == false && SourceTokens::hasStringLiteralDefault( cursor, prop._memberName ) &&
-             session._config.isNameFieldType( SourceTokens::readFieldTypeText( cursor, prop._memberName ) ) )
+             CursorReader::isNameFieldType( clang_getCursorType( cursor ) ) )
             prop._bHasNameLiteralDefault = SW_TRUE;
         if ( ContainerTreeBuilder::fillContainerDetails( prop, fieldType, session ) == false )
         {
