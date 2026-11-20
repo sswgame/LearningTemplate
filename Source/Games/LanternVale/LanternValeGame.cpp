@@ -8,7 +8,11 @@
  */
 #include "pch.h"
 
+#include "Engine/Net/NetMessageChannel.h"
+
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
+
+#include "Games/LanternVale/ValeNetLink.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
 
@@ -20,6 +24,15 @@ namespace sw
     public:
         LanternValeGame()           = default;
         ~LanternValeGame() override = default;
+
+    protected:
+        /** @brief 엔티티 상태 칸(`ValeEntityNetState`)의 복제 스키마를 종류 번호마다 핸드셰이크에 올린다 — 칸이 다른 빌드는 접속에서 갈린다. */
+        [[nodiscard]] bool onRegisterReplicatedTypes( NetMessageChannel& outChannel ) override
+        {
+            return outChannel.registerReplicatedType<ValeEntityNetState>( static_cast<uint8>( ValeEntityType::kAvatar ) ) &&
+                   outChannel.registerReplicatedType<ValeEntityNetState>( static_cast<uint8>( ValeEntityType::kCreature ) ) &&
+                   outChannel.registerReplicatedType<ValeEntityNetState>( static_cast<uint8>( ValeEntityType::kHerb ) );
+        }
     };
 } // namespace sw
 

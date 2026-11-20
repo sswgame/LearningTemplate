@@ -6,9 +6,12 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 namespace sw
 {
+    static_assert( ValeEntityType::kAvatar == 1 && ValeEntityType::kHerb == 3, "ValeEntityNetState::_typeID 의 Min · Max 를 엔티티 종류 번호와 맞춘다" );
+
     // ------------------------------------------------------------------------------
     // ValeServerLink
     // ------------------------------------------------------------------------------
@@ -294,11 +297,19 @@ namespace sw
         const auto iter = _mapPublished.find( entityID );
         if ( iter != _mapPublished.end() && iter->second == value )
             return;
-        // 상태 바이트 — 갈래(varuint) · 값(varint: 아바타는 레벨, 짐승은 체력, 버섯은 1). 위치는 엔티티 칸이 싣는다.
+        // 상태 바이트는 칸 선언(`ValeEntityNetState`)이 정한다. 위치는 엔티티 칸이 싣는다.
+        ValeEntityNetState state;
+        state._typeID     = value._typeID;
+        state._stateValue = value._stateValue;
         BitWriter writer( std::move( _listStateScratch ) );
-        writer.writeVarUint( value._typeID );
-        writer.writeVarInt( value._stateValue );
-        _listStateScratch = writer.releaseBytes();
+        writer.clear();
+        const bool bWritten = ReplicatedLayout::writeFull( state, writer );
+        _listStateScratch   = writer.releaseBytes();
+        if ( bWritten == false )
+        {
+            SW_LOG_ERROR_ID( "ValeServerLink.EntityStateOutOfRange", "ValeServerLink: entity %# has a state outside the replicated range (type %#) - not published", entityID, value._typeID );
+            return;
+        }
         MMOEntity entity;
         entity._listState  = _listStateScratch;
         entity._position   = value._position;

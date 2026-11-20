@@ -15,6 +15,7 @@
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
@@ -213,12 +214,11 @@ namespace sw
                 const MMOEntity* pEntity = vale.getClient().isActive() ? vale.getClient().getView().findEntity( ValeWorld::kPlacementIDBase ) : nullptr;
                 if ( pEntity == nullptr )
                     return false;
-                BitReader    reader( pEntity->_listState.data(), static_cast<int32>( pEntity->_listState.size() ) );
-                const uint64 typeID = reader.readVarUint();
-                const int32  health = reader.readVarInt32();
-                if ( reader.hasOverflowed() || typeID != ValeEntityType::kCreature )
+                BitReader          reader( pEntity->_listState.data(), static_cast<int32>( pEntity->_listState.size() ) );
+                ValeEntityNetState state;
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok || state._typeID != ValeEntityType::kCreature )
                     return false;
-                outValue = static_cast<float64>( health );
+                outValue = static_cast<float64>( state._stateValue );
                 return true;
             }
 

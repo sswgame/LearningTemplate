@@ -48,7 +48,58 @@ namespace sw
     class GameObjectManager;
     class PawnComponent;
     class RemoteControllerComponent;
+} // namespace sw
 
+namespace sw
+{
+    /**
+     * @brief 적 하나의 엔티티 상태입니다. 칸 선언(`Replicated` · 범위 · `Step`)이 곧 바이트다 — 쓰기 · 읽기 짝을 손으로 맞추지 않는다(`ReplicatedLayout`).
+     * @details 양자화는 범위 + 간격(`Step`)이고 비트 수는 그 둘에서 나온다 — 언리얼 Iris 의 범위 양자화 실수 서술자(범위 + 비트 수)와 같은 자리이되, 간격을 적어 정밀도가 단위(m · 라디안)로 읽힌다.
+     *          자리 · 요는 클라이언트 보간 모습에만 쓰므로 양자화한다(명중은 서버의 랙 보정 기록이 정한다). 칸을 바꾸면 와이어 버전이 바뀐다(`Shooter3DGame::onRegisterReplicatedTypes`).
+     */
+    REFLECT()
+    struct ShooterEnemyNetState
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated, Min = -4096, Max = 4096, Step = 0.01 )
+        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 발(m, 1 cm 간격)
+
+        PROPERTY( Replicated, Min = -3.2, Max = 3.2, Step = 0.001 )
+        float32 _yaw{ 0.0f }; ///< 라디안. 쓰는 쪽이 [-π, π] 로 감는다
+
+        PROPERTY( Replicated, Min = 0, Max = 4 )
+        uint8 _phase{ 0 }; ///< `ShooterEnemyPhase`(Rising ~ Dying). 끝 값은 cpp 의 static_assert 가 열거와 맞춘다
+
+        PROPERTY( Replicated )
+        uint8 _kindIndex{ 0 }; ///< 적 종류(`ShooterGameModeComponent::kEliteKindIndex` 는 정예)
+
+        PROPERTY( Replicated )
+        uint32 _appearanceSeed{ 0 };
+    };
+
+    /**
+     * @brief 받는 클라이언트가 조종하는 몸의 소유자 상태입니다 — 걸음 상태와 서버 판정 결과(맞힌 발 수 · 체력)를 한 선언으로 싣는다.
+     * @details 예전에는 걸음 상태 뒤에 두 값을 손으로 이어 쓰고 읽었다(순서가 어긋나도 컴파일됐다). 체력은 HUD 가 서버 값을 그대로 보이므로 양자화하지 않는다.
+     */
+    REFLECT()
+    struct ShooterOwnerNetState
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated )
+        ShooterMoveState _move{};
+
+        PROPERTY( Replicated )
+        uint32 _confirmedHitCount{ 0 };
+
+        PROPERTY( Replicated, Min = -100000, Max = 100000 )
+        float32 _health{ 0.0f }; ///< 범위는 NaN · 무한대를 읽기에서 거절하는 경계다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class ShooterNetPawnComponent
      * @brief 플레이어 오브젝트에 두는 네트워크 이동입니다. 같은 오브젝트의 `ShooterBodyMovementComponent` · `ShooterPlayerComponent`(감독의 막는 상자)를 씁니다.
@@ -65,6 +116,8 @@ namespace sw
         static constexpr uint32 kPawnTypeID = 1;
         /** @brief 적의 복제 엔티티 타입입니다. */
         static constexpr uint32 kEnemyTypeID = 2;
+        /** @brief 소유자 상태(`ShooterOwnerNetState`)의 복제 스키마를 핸드셰이크 목록에 올리는 번호입니다. 엔티티 타입이 아니며 위 둘과 겹치지 않는다. */
+        static constexpr uint32 kOwnerStateSchemaID = 3;
         /** @brief 조종을 맡고 아직 입력을 받지 못했다. 클라이언트 입력 틱은 1 부터다. */
         static constexpr uint32 kInputTickUnknown = 0;
 
@@ -113,7 +166,7 @@ namespace sw
         [[nodiscard]] static bool readState( const vector<uint8>& bytes, ShooterMoveState& outState );
         /** @brief 두 상태가 같다고 볼 만큼 가까운가입니다(재조정 판정 — 자리 `_reconcileTolerance` 안, 땅 여부가 같음). */
         bool isClose( const ShooterMoveState& left, const ShooterMoveState& right ) const;
-        /** @brief 소유자 상태를 바이트로 씁니다 — 걸음 상태 뒤에 서버 판정 결과(맞힌 발 수 · 체력). 걸음 상태가 범위 밖이면 false 입니다. */
+        /** @brief 소유자 상태를 바이트로 씁니다 — 걸음 상태와 서버 판정 결과(맞힌 발 수 · 체력)를 `ShooterOwnerNetState` 하나로. 칸이 범위 밖이면 false 입니다. */
         [[nodiscard]] static bool writeOwnerState( const ShooterMoveState& state, uint32 confirmedHitCount, float32 health, vector<uint8>& outBytes );
         [[nodiscard]] static bool readOwnerState( const vector<uint8>& bytes, ShooterMoveState& outState, uint32& outConfirmedHitCount, float32& outHealth );
 

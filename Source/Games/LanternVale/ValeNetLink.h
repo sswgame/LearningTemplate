@@ -117,6 +117,23 @@ namespace sw
     };
 
     /**
+     * @brief 복제 엔티티 하나의 상태 바이트입니다 — 칸 선언(`Replicated` · 범위)이 곧 바이트다(`ReplicatedLayout`). 위치는 MMO 엔티티 칸(`MMOEntity::_position`)이 싣는다.
+     * @details 예전에는 서버 링크가 갈래 · 값을 손으로 쓰고 클라이언트가 같은 차례로 손으로 읽었다(차례가 어긋나도 컴파일됐다).
+     *          갈래는 범위 비트(2 비트), 값은 가변 길이다. 칸을 바꾸면 와이어 버전이 바뀐다(`LanternValeGame::onRegisterReplicatedTypes`).
+     */
+    REFLECT()
+    struct ValeEntityNetState
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated, Min = 1, Max = 3 )
+        uint32 _typeID{ ValeEntityType::kAvatar }; ///< `ValeEntityType`(kAvatar ~ kHerb). 범위는 `ValeServerLink.cpp` 의 static_assert 가 상수와 맞춘다
+
+        PROPERTY( Replicated )
+        int32 _stateValue{ 0 }; ///< 아바타는 레벨, 짐승은 체력, 버섯은 1
+    };
+
+    /**
      * @class IValeServer
      * @brief 서버 쪽 골짜기(서버 링크)의 공유 창구입니다. 구현은 서버 전용 폴더(`Server/ValeServerLink`)에 있고, 씬 오브젝트는 공장(`IValeServerFactory`)으로만 만든다 —
      *        클라이언트 구성에는 서버 코드가 없다(키트의 `Server/` 와 같은 갈림, 언리얼 `WITH_SERVER_CODE` 자리).

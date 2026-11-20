@@ -9,6 +9,7 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -53,24 +54,26 @@ namespace sw
                 return nullptr;
             }
 
-            static void writeTransform( BitWriter& writer, const HousingTransform& transform )
+            /** @brief 날 변환을 씁니다 — 칸은 `HousingTransformNetState` 의 선언이다. 선언 범위 밖이면 false 이고 @p writer 에 쓰다 만 비트가 남습니다. */
+            [[nodiscard]] static bool writeTransform( BitWriter& writer, const HousingTransform& transform )
             {
-                writer.writeFloat( transform._position._x );
-                writer.writeFloat( transform._position._y );
-                writer.writeVarInt( transform._level );
-                writer.writeFloat( transform._yaw );
+                HousingTransformNetState state;
+                state._position = transform._position;
+                state._level    = transform._level;
+                state._yaw      = transform._yaw;
+                return ReplicatedLayout::writeFull( state, writer );
             }
 
-            /** @brief 날 변환을 읽습니다. 유한하지 않거나 범위 밖이면 false 입니다(깨진 메시지). */
+            /** @brief 날 변환을 읽습니다. 유한하지 않거나 선언 범위 밖이면 false 입니다(깨진 메시지). */
             [[nodiscard]] static bool readTransform( BitReader& reader, HousingTransform& outTransform )
             {
-                const bool bRead    = reader.readFiniteFloat( outTransform._position._x ) && reader.readFiniteFloat( outTransform._position._y );
-                outTransform._level = reader.readVarInt32();
-                const bool bYaw     = reader.readFiniteFloat( outTransform._yaw );
-                if ( bRead == false || bYaw == false || reader.hasOverflowed() )
+                HousingTransformNetState state;
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
                     return false;
-                return MathUtil::abs( outTransform._position._x ) <= NetHousingMessage::kMaxRawPosition &&
-                       MathUtil::abs( outTransform._position._y ) <= NetHousingMessage::kMaxRawPosition && MathUtil::abs( outTransform._yaw ) <= NetHousingMessage::kMaxRawYaw;
+                outTransform._position = state._position;
+                outTransform._level    = state._level;
+                outTransform._yaw      = state._yaw;
+                return true;
             }
 
             static HousingPlotOwner computeOwner( uint64 owner, uint64 recipient )
@@ -358,12 +361,21 @@ namespace sw
                 for ( const uint32 removedID : listRemovedID )
                     writer.writeVarUint( removedID );
                 writer.writeVarUint( listUpsert.size() );
+                bool bTransformsWritten = true;
                 for ( const HousingPlacement* pPlacement : listUpsert )
                 {
                     writer.writeVarUint( pPlacement->_placementID );
                     writer.writeVarUint( Internal::computeIDHash( pPlacement->_partID ) );
                     writer.writeVarInt( pPlacement->_partVersion );
-                    Internal::writeTransform( writer, pPlacement->_transform );
+                    if ( Internal::writeTransform( writer, pPlacement->_transform ) == false )
+                        bTransformsWritten = false;
+                }
+                if ( bTransformsWritten == false )
+                {
+                    // 서버 레이아웃이 받아 준 배치가 와이어 범위 밖이다 — 레이아웃과 와이어 선언의 어긋남(결함)이다. 상태 바이트(범위 없는 레이아웃 저장 꼴)로 보낸다.
+                    SW_LOG_ERROR_ID( "HousingReplication.PlacementOutsideWireRange", "HousingReplication: a placement of plot %# is outside the wire transform range - sent as a full state", entry._plotHash );
+                    startTransfer( plot, entry._plotHash, connectionID, readBytes() );
+                    continue;
                 }
                 if ( _writer.getByteCount() > NetHousingMessage::kMaxDeltaBytes )
                 {
@@ -616,7 +628,8 @@ namespace sw
         {
             case HousingEditOp::Place:
                 writer.writeVarUint( Internal::computeIDHash( request._candidate._partID ) );
-                Internal::writeTransform( writer, request._candidate._transform );
+                if ( Internal::writeTransform( writer, request._candidate._transform ) == false )
+                    return 0; // 서버가 깨진 메시지로 볼 범위 밖 변환은 보내지 않는다
                 writer.writeBool( request._candidate._mode == HousingPlacementMode::Free );
                 break;
             case HousingEditOp::Remove:
@@ -624,7 +637,8 @@ namespace sw
                 break;
             case HousingEditOp::Move:
                 writer.writeVarUint( request._placementID );
-                Internal::writeTransform( writer, request._candidate._transform );
+                if ( Internal::writeTransform( writer, request._candidate._transform ) == false )
+                    return 0; // 서버가 깨진 메시지로 볼 범위 밖 변환은 보내지 않는다
                 writer.writeBool( request._candidate._mode == HousingPlacementMode::Free );
                 break;
             case HousingEditOp::Claim:
