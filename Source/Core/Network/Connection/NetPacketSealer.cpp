@@ -100,6 +100,9 @@ namespace sw
     bool NetPacketSealer::seal( NetSlotSecurity& security, uint8 typeByte, uint32 connectionToken, uint32 protocolID, bool bServer, const uint8* pPlain, int32 plainSize,
                                 BitWriter& outWriter )
     {
+        // 예약 번호(키 확인 태그의 nonce)에 닿으면 더 오르지 않고 봉인을 거절한다 — 오르면 0 으로 감겨 nonce 를 다시 쓴다.
+        if ( security._sendPacketNumber == NetSessionKeys::kKeyConfirmPacketNumber )
+            return false;
         const uint64 packetNumber = security._sendPacketNumber++;
         uint8        arrHead[kSecureHeadSize]{};
         arrHead[0] = typeByte; // 종류 3비트와 0 5비트다. BitWriter 는 낮은 비트부터 쓰므로 받는 쪽의 readBits( 3 )과 peekPacketKind 이 그대로 읽는다.
@@ -131,7 +134,8 @@ namespace sw
         {
             packetNumber = ( packetNumber << 8 ) | pBody[5 + index];
         }
-        if ( receive._replayWindow.isAcceptable( packetNumber ) == false )
+        // 예약 번호는 키 확인 태그가 같은 방향 nonce 로 이미 썼다 — 데이터 패킷 번호로 받지 않는다.
+        if ( packetNumber == NetSessionKeys::kKeyConfirmPacketNumber || receive._replayWindow.isAcceptable( packetNumber ) == false )
             return OpenResult::Replayed;
         uint8 arrAad[kAadSize]{};
         NetPacketSealerInternal::makePacketAad( protocolID, pBody, arrAad );

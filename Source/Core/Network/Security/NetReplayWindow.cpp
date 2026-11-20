@@ -51,9 +51,11 @@ namespace sw
             }
             else
             {
-                for ( uint64 number = _highest + 1; number <= packetNumber; ++number )
+                // 번호가 아니라 차이로 돈다 — `number <= packetNumber` 꼴은 packetNumber 가 2^64-1 이면 number 가 0 으로 감겨 끝나지 않았다(상대가 정한 번호로 수신 스레드 정지).
+                // 횟수는 advance(< kWindowSize)로 묶이고, packetNumber > _highest 라 _highest + step 은 감기지 않는다(RFC 4303 §3.4.3 · RFC 6347 §4.1.2.6).
+                for ( uint64 step = 1; step <= advance; ++step )
                 {
-                    const uint64 slot = number % kWindowSize;
+                    const uint64 slot = ( _highest + step ) % kWindowSize;
                     _arrBit[slot / 64] &= ~( 1ull << ( slot % 64 ) );
                 }
             }

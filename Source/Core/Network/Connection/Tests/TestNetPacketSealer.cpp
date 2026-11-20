@@ -8,6 +8,7 @@
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Network/Tests/NetTestUtil.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include <cstring>
@@ -284,6 +285,48 @@ SW_TEST_CASE( NetPacketSealerTest, TamperedOrForeignBodyFailsWithoutBurningThePa
     // 실패한 열기는 번호를 표시하지 않는다 — 진짜 패킷은 그 뒤에도 열린다.
     SW_EXPECT_TRUE( NetPacketSealer::open( server._receive, NetPacketSealerTestInternal::kProtocolID, body.data(), static_cast<int32>( body.size() ), listPlain ) ==
                     NetPacketSealer::OpenResult::Opened );
+}
+
+// 예약 번호(키 확인 태그의 nonce, 2^64-1)는 봉인하지도 열지도 않는다. 고치기 전에는 2^64-2 다음 진짜 키로 봉인한 2^64-1 이 열려
+// 재전송 방지 창의 `markReceived` 가 번호 감김으로 끝나지 않았다 — 세션 키를 가진 상대가 패킷 둘로 수신 스레드를 멈출 수 있었다.
+SW_TEST_CASE( NetPacketSealerTest, ReservedPacketNumberIsNeitherSealedNorOpened )
+{
+    static constexpr uint64 kReserved = NetSessionKeys::kKeyConfirmPacketNumber;
+    MixingSecurityProvider  provider;
+    NetSlotSecurity         client;
+    NetSlotSecurity         server;
+    SW_REQUIRE_TRUE( NetPacketSealerTestInternal::makeKeyedPair( provider, client, server ) );
+    NetPacketSealer sealer;
+    BitWriter       writer;
+    vector<uint8>   listPlain;
+    const uint8     arrPlain[] = { 1, 2, 3 };
+
+    client._sendPacketNumber = kReserved - 1;
+    SW_REQUIRE_TRUE( sealer.seal( client, 5, 7u, NetPacketSealerTestInternal::kProtocolID, false, arrPlain, 3, writer ) );
+    const vector<uint8> lastBody( writer.getBytes().begin(), writer.getBytes().begin() + writer.getByteCount() );
+    SW_REQUIRE_TRUE( NetPacketSealer::open( server._receive, NetPacketSealerTestInternal::kProtocolID, lastBody.data(), static_cast<int32>( lastBody.size() ), listPlain ) ==
+                     NetPacketSealer::OpenResult::Opened );
+
+    // 보내는 쪽 — 예약 번호에서 멈추고 0 으로 감기지 않는다(감기면 nonce 재사용).
+    SW_EXPECT_FALSE( sealer.seal( client, 5, 7u, NetPacketSealerTestInternal::kProtocolID, false, arrPlain, 3, writer ) );
+    SW_EXPECT_EQUAL( kReserved, client._sendPacketNumber );
+
+    // 받는 쪽 — 진짜 키로 봉인한(태그가 맞는) 예약 번호 본문을 손으로 만들어도 거절한다.
+    vector<uint8> reservedBody( lastBody.begin(), lastBody.begin() + NetPacketSealer::kSecureHeadSize );
+    for ( int32 index = 5; index < NetPacketSealer::kSecureHeadSize; ++index )
+    {
+        reservedBody[static_cast<size_t>( index )] = 0xFF; // 패킷 번호 8 바이트(빅 엔디언) = 2^64-1
+    }
+    uint8 arrAad[NetPacketSealer::kAadSize]{};
+    LittleEndianUtil::writeUint32( arrAad, NetPacketSealerTestInternal::kProtocolID );
+    std::memcpy( arrAad + 4, reservedBody.data(), NetPacketSealer::kSecureHeadSize );
+    uint8 arrNonce[NetSecurityConstant::kAEADNonceSize]{};
+    NetSessionKeys::makeNonce( client._keys._clientToServer._arrIv, kReserved, arrNonce );
+    reservedBody.resize( static_cast<size_t>( NetPacketSealer::kSecureHeadSize + 3 + NetSecurityConstant::kAEADTagSize ) );
+    SW_REQUIRE_TRUE( client._sendAEAD->seal( arrNonce, arrAad, NetPacketSealer::kAadSize, arrPlain, 3, reservedBody.data() + NetPacketSealer::kSecureHeadSize ) );
+    SW_EXPECT_TRUE( NetPacketSealer::open( server._receive, NetPacketSealerTestInternal::kProtocolID, reservedBody.data(), static_cast<int32>( reservedBody.size() ),
+                                           listPlain ) == NetPacketSealer::OpenResult::Replayed );
+    SW_EXPECT_EQUAL( kReserved - 1, server._receive._replayWindow.getHighest() );
 }
 
 SW_TEST_CASE( NetPacketSealerTest, KeyConfirmTagBindsSlotIndexAndServerSalt )
