@@ -84,7 +84,7 @@ namespace sw
         const GameObjectManager* pManager = target.getManager();
         bool                     bHeld    = std::find( _listSpawnHeld.begin(), _listSpawnHeld.end(), handle ) != _listSpawnHeld.end();
         // 이미 대상인 것(걸어 들어와 안에 있다)은 빼지 않는다 — 새로 안에 든 것만 나타남인지 본다.
-        bHeld = bHeld || ( findOccupancy( handle ) == nullptr && pManager != nullptr && _spawnWindow.isSpawnEntry( *pManager, target ) );
+        bHeld = bHeld || ( findOccupancy( handle ) == nullptr && pManager != nullptr && _spawnWindow.isSpawnEntry( *pManager, target, ActivatorSpawnWindow::EntryPath::Sampled ) ); // 지역은 프레임마다 재는 표본(touch)이다 — 물리 겹침 사건이 아니다
         if ( bHeld )
             _listSpawnHeldNext.push_back( handle );
         return bHeld;

@@ -55,23 +55,31 @@ namespace sw
      * @class ActivatorSpawnWindow
      * @brief "안에서 나타남" 판정 한 벌입니다 — 진입이 나타남(활성자가 막 생겼거나 볼륨이 막 생겼거나 켜짐)에서 왔는지 가립니다. 활성자 볼륨과 지역 볼륨(`ZoneVolumeComponent`)이 같이 쓴다.
      * @details 오브젝트 id 는 만든 차례로 오른다 — 창 전에 적어 둔 다음 id 보다 크거나 같으면 그 뒤에 생긴 오브젝트다. 불러오기는 저장된 id 를 되살리지만 볼륨도 함께 다시 서므로 볼륨 쪽 창이 덮는다.
-     *          shortcut: 물리 스텝이 창(`kFrames`)보다 늦게 오면(아주 높은 프레임률 · 낮은 물리 주기) 걸어 들어온 것으로 센다 — 그런 구성이 생기면 물리가 겹침에 "막 더한 바디" 표시를 싣는다.
+     *          볼륨 쪽 나타남은 진입 길마다 첫 판정 한 번이다 — 물리 겹침 사건은 볼륨이 나타난 뒤 첫 물리 스텝(그때 안에 있던 몸의 겹침 시작이 그 스텝에 온다), 프레임 표본(거리 · 지역)은 첫 표본 프레임.
+     *          프레임 수 창으로 재면 나타난 직후 몇 프레임 안에 걸어 들어온 활성자까지 나타남으로 걸렀다(허브 입구 — 씬이 선 지 4 프레임에 들어온 플레이어).
      */
     class SW_GF_API ActivatorSpawnWindow
     {
     public:
-        /** @brief 나타남 판정의 프레임 창입니다. 안에서 생긴 겹침의 진입은 다음 물리 스텝에 오므로 그 사이를 덮는다. */
+        /** @brief 활성자 쪽 나타남(막 생긴 오브젝트)의 프레임 창입니다. 막 생긴 몸의 겹침 진입은 다음 물리 스텝에 오므로 그 사이를 덮는다. */
         static constexpr uint64 kFrames = 8;
+        /** @brief 진입이 온 길입니다 — 볼륨 쪽 나타남의 첫 판정 시점이 다르다. */
+        enum class EntryPath : uint8
+        {
+            Overlap, ///< 물리 겹침 — 볼륨이 나타난 뒤 첫 물리 스텝까지
+            Sampled  ///< 프레임마다 재는 표본(거리 측정 · 지역 표본) — 볼륨이 나타난 뒤 첫 표본 프레임
+        };
 
         /** @brief 볼륨이 나타났다(시작 · 다시 켜짐) — 창을 다시 연다. */
         void markAppeared( const GameObjectManager& manager );
         /** @brief 창을 민다 — 나타남을 거르는 볼륨이 프레임마다 부른다. */
         void advance( const GameObjectManager& manager );
         /** @brief @p activator 의 진입이 나타남에서 왔으면 true 입니다. 이미 있던 활성자를 끄고 켠 것은 나타남이 아니다(걸어 들어온 것과 같다). */
-        [[nodiscard]] bool isSpawnEntry( const GameObjectManager& manager, const GameObject& activator ) const;
+        [[nodiscard]] bool isSpawnEntry( const GameObjectManager& manager, const GameObject& activator, EntryPath path ) const;
 
     private:
         uint64 _appearedFrame{ 0 };     ///< 볼륨이 나타난(시작 · 다시 켜짐) 씬 프레임
+        uint64 _appearedStep{ 0 };      ///< 볼륨이 나타날 때의 물리 스텝 번호(`ScenePhysics::getStepCount`)
         uint64 _watermarkFrame{ 0 };    ///< `_watermarkCurrent` 를 적은 씬 프레임
         uint64 _watermarkPrevious{ 0 }; ///< 창 하나 전에 적은 다음 오브젝트 id — 이보다 크거나 같은 id 는 그 뒤에 생겼다
         uint64 _watermarkCurrent{ 0 };  ///< 마지막에 적은 다음 오브젝트 id
@@ -140,7 +148,7 @@ namespace sw
 
     private:
         /** @brief 진입(겹침 · 거리)이 나타남에서 왔으면 true 입니다(`ActivatorSpawnWindow::isSpawnEntry`). */
-        bool isSpawnEntry( const GameObject& activator ) const;
+        bool isSpawnEntry( const GameObject& activator, ActivatorSpawnWindow::EntryPath path ) const;
         /** @brief 볼륨이 나타났다(시작 · 다시 켜짐) — 나타남 창을 다시 연다. */
         void markAppeared();
 

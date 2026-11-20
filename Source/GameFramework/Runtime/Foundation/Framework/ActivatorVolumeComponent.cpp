@@ -9,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/ObjectIDAllocator.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlagsOwnerComponent.h"
@@ -18,6 +19,7 @@ namespace sw
     void ActivatorSpawnWindow::markAppeared( const GameObjectManager& manager )
     {
         _appearedFrame     = manager.getUpdateCount();
+        _appearedStep      = manager.getSubsystem<ScenePhysics>().getStepCount();
         _watermarkFrame    = _appearedFrame;
         _watermarkPrevious = manager.getObjectIDAllocator().peekNextObjectID();
         _watermarkCurrent  = _watermarkPrevious;
@@ -33,9 +35,11 @@ namespace sw
         _watermarkFrame    = manager.getUpdateCount();
     }
 
-    bool ActivatorSpawnWindow::isSpawnEntry( const GameObjectManager& manager, const GameObject& activator ) const
+    bool ActivatorSpawnWindow::isSpawnEntry( const GameObjectManager& manager, const GameObject& activator, EntryPath path ) const
     {
-        const bool bVolumeAppeared = manager.getUpdateCount() <= _appearedFrame + kFrames;
+        // 볼륨 쪽: 나타났을 때 이미 안에 있던 것만 — 그 길의 첫 판정에서 온 진입이다(프레임 수로 재지 않는다).
+        const bool bVolumeAppeared = path == EntryPath::Overlap ? manager.getSubsystem<ScenePhysics>().getStepCount() <= _appearedStep + 1
+                                                                : manager.getUpdateCount() <= _appearedFrame + 1;
         const bool bActivatorNew   = activator.getObjectID() >= _watermarkPrevious;
         return bVolumeAppeared || bActivatorNew;
     }
@@ -89,7 +93,7 @@ namespace sw
         const bool bEntered = bInside && _bActivatorInside == false;
         _bActivatorInside   = bInside;
         // 나타남의 진입을 받지 않는 볼륨은 안에 있는 것으로만 적는다 — 나갔다 다시 들어올 때 들어온 것이다. 판정은 겹침 길과 같은 규칙이다(`isSpawnEntry`).
-        const bool bSpawnIgnored = bEntered && _spawnInside == ActivatorSpawnInside::Ignore && isSpawnEntry( *pActivator );
+        const bool bSpawnIgnored = bEntered && _spawnInside == ActivatorSpawnInside::Ignore && isSpawnEntry( *pActivator, ActivatorSpawnWindow::EntryPath::Sampled );
         if ( bEntered == false || bSpawnIgnored )
             return;
         context.deferPostTickOnComponent( *this, []( ActivatorVolumeComponent& volume, GameObjectManager& deferredManager )
@@ -105,7 +109,7 @@ namespace sw
         if ( _radius > 0.0f && overlap._pOther->getHandle() == _activator )
             return;
         // 나타남의 진입을 받지 않는 볼륨 — 이 쌍의 다음 진입은 이탈 뒤에만 오므로(트리거 계약) 따로 기억할 것이 없다.
-        if ( _spawnInside == ActivatorSpawnInside::Ignore && isSpawnEntry( *overlap._pOther ) )
+        if ( _spawnInside == ActivatorSpawnInside::Ignore && isSpawnEntry( *overlap._pOther, ActivatorSpawnWindow::EntryPath::Overlap ) )
             return;
         (void)activate( overlap._pOther );
     }
@@ -169,10 +173,10 @@ namespace sw
         _bActivatorInside = false;
     }
 
-    bool ActivatorVolumeComponent::isSpawnEntry( const GameObject& activator ) const
+    bool ActivatorVolumeComponent::isSpawnEntry( const GameObject& activator, ActivatorSpawnWindow::EntryPath path ) const
     {
         const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
-        return pManager != nullptr && _spawnWindow.isSpawnEntry( *pManager, activator );
+        return pManager != nullptr && _spawnWindow.isSpawnEntry( *pManager, activator, path );
     }
 
     bool ActivatorAuthorityRule::hasAuthority( ActivatorAuthority authority, const GameObjectManager& manager )
