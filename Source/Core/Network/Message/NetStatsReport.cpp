@@ -176,19 +176,10 @@ namespace sw
 
     string NetStatsReport::makeLine() const
     {
-        string                                   text{ kLinePrefix };
-        StringBuilder<constant::buffer::kMax256> textPart4;
-        textPart4.appendFormat( " connections=%#", _connectionCount );
-        text += textPart4.c_str();
-        StringBuilder<constant::buffer::kMax256> textPart3;
-        textPart3.appendFormat( " sentPackets=%#", _sentPacketCount );
-        text += textPart3.c_str();
-        StringBuilder<constant::buffer::kMax256> textPart2;
-        textPart2.appendFormat( " receivedPackets=%#", _receivedPacketCount );
-        text += textPart2.c_str();
-        StringBuilder<constant::buffer::kMax256> textPart;
-        textPart.appendFormat( " resent=%#", _resentMessageCount );
-        text += textPart.c_str();
+        StringBuilder<constant::buffer::kMax256> headBuilder;
+        headBuilder.appendFormat( "%# connections=%# sentPackets=%# receivedPackets=%# resent=%#", kLinePrefix, _connectionCount, _sentPacketCount, _receivedPacketCount,
+                                  _resentMessageCount );
+        string text{ headBuilder.view() };
         NetStatsReportInternal::appendFloat( text, "sentBps", _sentBytesPerSecond );
         NetStatsReportInternal::appendFloat( text, "receivedBps", _receivedBytesPerSecond );
         NetStatsReportInternal::appendFloat( text, "rttMs", _rttMilliseconds );

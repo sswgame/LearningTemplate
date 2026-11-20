@@ -3,6 +3,7 @@
 #include "Programs/ReflectionParser/AstVisitor.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Programs/ReflectionParser/AnnotationLookup.h"
@@ -365,9 +366,10 @@ namespace sw
             const string spelling = AnnotationLookup::findAnnotateAttr( listCursor[index], annotation::kEnumeratorPrefix );
             if ( spelling.empty() )
                 continue;
-            ParsedEnumeratorInfo& enumerator = inoutEnum._listEnumerator[index];
-            const string          owner      = inoutEnum._fullyQualifiedName + "::" + enumerator._name;
-            bValid                           = AnnotationLookup::applyAnnotation( spelling, enumerator, *_pSession, owner ) && bValid;
+            ParsedEnumeratorInfo&                    enumerator = inoutEnum._listEnumerator[index];
+            StringBuilder<constant::buffer::kMax256> owner;
+            owner.appendFormat( "%#::%#", inoutEnum._fullyQualifiedName, enumerator._name );
+            bValid = AnnotationLookup::applyAnnotation( spelling, enumerator, *_pSession, owner.view() ) && bValid;
         }
         return bValid;
     }

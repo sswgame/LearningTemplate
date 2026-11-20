@@ -4,6 +4,8 @@
 
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/String/string_splitter.h"
 
 #include <cmath>
@@ -51,7 +53,9 @@ namespace sw
                             continue;
                         if ( index >= frame._limit )
                         {
-                            state.reportError( prop, "range field '" + name + "' must be declared before this field - the reader needs its value first" );
+                            fixed_string<constant::buffer::kMax512> message;
+                            formatstring( message.data(), message.capacity(), "range field '%#' must be declared before this field - the reader needs its value first", name );
+                            state.reportError( prop, message.view() );
                             return FindResult::Error;
                         }
                         const FixedValueKind kind     = candidate._fixedType != nullptr ? candidate._fixedType->_kind : FixedValueKind::Ineligible;
@@ -59,12 +63,16 @@ namespace sw
                         const bool           bStored  = candidate._bTransient == SW_FALSE && candidate._bIsBitField == SW_FALSE;
                         if ( ( bNumeric && bStored ) == false )
                         {
-                            state.reportError( prop, "range field '" + name + "' must be a non-transient integer or floating-point field" );
+                            fixed_string<constant::buffer::kMax512> message;
+                            formatstring( message.data(), message.capacity(), "range field '%#' must be a non-transient integer or floating-point field", name );
+                            state.reportError( prop, message.view() );
                             return FindResult::Error;
                         }
                         if ( bIntegerSite && kind != FixedValueKind::Integer )
                         {
-                            state.reportError( prop, "range field '" + name + "' is floating-point but this field is an integer - the fraction would be cut" );
+                            fixed_string<constant::buffer::kMax512> message;
+                            formatstring( message.data(), message.capacity(), "range field '%#' is floating-point but this field is an integer - the fraction would be cut", name );
+                            state.reportError( prop, message.view() );
                             return FindResult::Error;
                         }
                         outBound._ownerFqn   = frame._pType->_fullyQualifiedName;
@@ -100,7 +108,9 @@ namespace sw
             {
                 if ( StringUtil::parseDouble( term, bound._value ) == false )
                 {
-                    state.reportError( prop, "range term '" + bound._text + "' is not a number" );
+                    fixed_string<constant::buffer::kMax512> message;
+                    formatstring( message.data(), message.capacity(), "range term '%#' is not a number", bound._text );
+                    state.reportError( prop, message.view() );
                     return false;
                 }
                 bound._bLiteral = SW_TRUE;
@@ -109,12 +119,16 @@ namespace sw
                 const bool bExact       = static_cast<float64>( static_cast<float32>( bound._value ) ) == bound._value;
                 if ( bInteger && bWholeNumber == false )
                 {
-                    state.reportError( prop, "integer range term '" + bound._text + "' is not a whole number" );
+                    fixed_string<constant::buffer::kMax512> message;
+                    formatstring( message.data(), message.capacity(), "integer range term '%#' is not a whole number", bound._text );
+                    state.reportError( prop, message.view() );
                     return false;
                 }
                 if ( bInteger && bExact == false )
                 {
-                    state.reportError( prop, "integer range term '" + bound._text + "' is not exactly representable as float32 - Min/Max are stored as float32" );
+                    fixed_string<constant::buffer::kMax512> message;
+                    formatstring( message.data(), message.capacity(), "integer range term '%#' is not exactly representable as float32 - Min/Max are stored as float32", bound._text );
+                    state.reportError( prop, message.view() );
                     return false;
                 }
                 outListBound.push_back( std::move( bound ) );
@@ -130,7 +144,9 @@ namespace sw
             {
                 if ( state._listScope.size() > 1 )
                 {
-                    state.reportError( prop, "range name '" + name + "' is not a field of this type or of any enclosing type" );
+                    fixed_string<constant::buffer::kMax512> message;
+                    formatstring( message.data(), message.capacity(), "range name '%#' is not a field of this type or of any enclosing type", name );
+                    state.reportError( prop, message.view() );
                     return false;
                 }
                 // 자기 타입에는 없습니다. 같은 헤더의 바깥 타입이 펼치며 풀 수 있고, 그 타입 혼자서는 코덱이 없습니다.
@@ -140,7 +156,9 @@ namespace sw
                     state._unresolvedMember = prop._memberName;
                     state._unresolvedLine   = prop._line;
                 }
-                state.markIneligible( prop, "range name '" + name + "' refers to a field of an enclosing type" );
+                fixed_string<constant::buffer::kMax512> reason;
+                formatstring( reason.data(), reason.capacity(), "range name '%#' refers to a field of an enclosing type", name );
+                state.markIneligible( prop, reason.view() );
                 return false;
             }
             bound._bNegate = bNegative ? SW_TRUE : SW_FALSE;

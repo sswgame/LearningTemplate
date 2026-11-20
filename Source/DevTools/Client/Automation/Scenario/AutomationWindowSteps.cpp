@@ -88,7 +88,11 @@ namespace sw
                 if ( pWindow == nullptr )
                     runner.recordFailure( step, "there is no window to send a message to" );
                 else if ( pWindow->sendFocusEvent( bFocused ) == false )
-                    runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": this window cannot send itself a focus event" );
+                {
+                    StringBuilder<constant::buffer::kMax256> reason;
+                    reason.appendFormat( "%#: this window cannot send itself a focus event", step.describe() );
+                    runner.endScenario( AutomationStepEnd::Skip, reason.view() );
+                }
                 return true;
             }
 
@@ -174,7 +178,9 @@ namespace sw
                 const HWND                      hwnd   = findWindowHandle();
                 if ( hwnd == nullptr || GetForegroundWindow() != hwnd )
                 {
-                    runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": SendInput reaches only the foreground window and this window is not it" );
+                    StringBuilder<constant::buffer::kMax256> reason;
+                    reason.appendFormat( "%#: SendInput reaches only the foreground window and this window is not it", step.describe() );
+                    runner.endScenario( AutomationStepEnd::Skip, reason.view() );
                     return true;
                 }
                 vector<INPUT> listInput( params._count );
@@ -224,7 +230,9 @@ namespace sw
                 const bool bLostForeground = bWantLocked && GetForegroundWindow() != hwnd;
                 if ( bLostForeground )
                 {
-                    runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": the window lost the foreground while the scenario ran, so the cursor lock cannot be observed" );
+                    StringBuilder<constant::buffer::kMax256> reason;
+                    reason.appendFormat( "%#: the window lost the foreground while the scenario ran, so the cursor lock cannot be observed", step.describe() );
+                    runner.endScenario( AutomationStepEnd::Skip, reason.view() );
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax256> failure;
@@ -271,7 +279,9 @@ namespace sw
                 const bool bCaptureAreaUnavailable = hwnd == nullptr || GetClientRect( hwnd, &clientRect ) == FALSE || ClientToScreen( hwnd, &origin ) == FALSE;
                 if ( bCaptureAreaUnavailable )
                 {
-                    runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": no window to capture" );
+                    StringBuilder<constant::buffer::kMax256> reason;
+                    reason.appendFormat( "%#: no window to capture", step.describe() );
+                    runner.endScenario( AutomationStepEnd::Fail, reason.view() );
                     return true;
                 }
                 // 팝업을 눌러 팝업이 전경일 수 있다 — 전경 창이 같은 프로세스의 것이면 우리 화면이다.
@@ -287,7 +297,9 @@ namespace sw
                 const int32 clientHeight = clientRect.bottom - clientRect.top;
                 if ( clientWidth <= 0 || clientHeight <= 0 )
                 {
-                    runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": the window has an empty client area" );
+                    StringBuilder<constant::buffer::kMax256> reason;
+                    reason.appendFormat( "%#: the window has an empty client area", step.describe() );
+                    runner.endScenario( AutomationStepEnd::Fail, reason.view() );
                     return true;
                 }
                 // 캡처 영역 = 클라이언트 ∪ 팝업 창들. 화면 좌표의 사각형 목록과 그 경계 상자를 만든다.
@@ -331,7 +343,9 @@ namespace sw
 
                 if ( bCopied == FALSE || lineCount != height )
                 {
-                    runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": BitBlt/GetDIBits failed" );
+                    StringBuilder<constant::buffer::kMax256> reason;
+                    reason.appendFormat( "%#: BitBlt/GetDIBits failed", step.describe() );
+                    runner.endScenario( AutomationStepEnd::Fail, reason.view() );
                     return true;
                 }
                 for ( size_t offset = 0; offset < bytes.size(); offset += 4 )
@@ -365,7 +379,9 @@ namespace sw
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false ||
                      ImageFileWriter::writePNGRGBA8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
                 {
-                    runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": could not write " + path );
+                    StringBuilder<constant::buffer::kMax1024> reason;
+                    reason.appendFormat( "%#: could not write %#", step.describe(), path );
+                    runner.endScenario( AutomationStepEnd::Fail, reason.view() );
                     return true;
                 }
                 SW_LOG_INFO_ID( "AutomationWindowSteps.WindowCaptureXWindows", "[Scenario] window capture %#x%# (%# windows) -> %#", width, height, static_cast<int32>( context._listRect.size() ), path.c_str() );
@@ -375,7 +391,9 @@ namespace sw
             /** @brief 포커스 밖의 창 메시지 · 커서 클립 · 화면 찍기를 볼 구현이 없는 플랫폼입니다. 시나리오를 건너뜀으로 끝냅니다. */
             static bool runUnsupported( AutomationStepContext& runner, const AutomationStep& step )
             {
-                runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": this window step is implemented for Windows only" );
+                StringBuilder<constant::buffer::kMax256> reason;
+                reason.appendFormat( "%#: this window step is implemented for Windows only", step.describe() );
+                runner.endScenario( AutomationStepEnd::Skip, reason.view() );
                 return true;
             }
             static bool runMessage( AutomationStepContext& runner, const AutomationStep& step )

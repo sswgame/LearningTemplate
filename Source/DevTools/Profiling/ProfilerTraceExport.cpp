@@ -5,6 +5,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -110,8 +112,9 @@ namespace sw
         /** @brief 기본 저장 경로 `<실행 산출물>/Traces/<접두어>_<유닉스 밀리초>.trace.json` 입니다(`ProcessRoots::_saved`). */
         string makeDefaultTracePath( string_view prefix, int64 wallUnixMilliseconds )
         {
-            return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Traces" ),
-                                       string( prefix ) + "_" + to_string( wallUnixMilliseconds ) + ProfilerTraceExport::kFileExtension );
+            fixed_string<constant::buffer::kMax256> fileName;
+            formatstring( fileName.data(), fileName.capacity(), "%#_%#%#", prefix, wallUnixMilliseconds, ProfilerTraceExport::kFileExtension );
+            return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Traces" ), fileName.view() );
         }
 
         /** @brief 합치기에서 파일 하나의 정보입니다. */
@@ -174,7 +177,9 @@ namespace sw
                         if ( entry._pid == _listKey[index]._pid )
                             processName = entry._name;
                     }
-                    inoutTrace._listThread[index]._name = processName + " / " + inoutTrace._listThread[index]._name;
+                    StringBuilder<constant::buffer::kMax256> threadName;
+                    threadName.appendFormat( "%# / %#", processName, inoutTrace._listThread[index]._name );
+                    inoutTrace._listThread[index]._name = string( threadName.view() );
                 }
             }
 
@@ -448,12 +453,13 @@ namespace sw
                 size_t eventCount = 0;
                 for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
                 {
-                    const MergeSource& source = *listSource[sourceIndex];
-                    string             label  = source._label;
+                    const MergeSource&                       source = *listSource[sourceIndex];
+                    StringBuilder<constant::buffer::kMax256> label;
+                    label.append( source._label );
                     if ( source._hostName.empty() == false )
-                        label += " @ " + source._hostName;
-                    label += " [" + source._alignment + "]";
-                    writeTraceNameEvent( writer, "process_name", source._outputPID, 0, label );
+                        label.appendFormat( " @ %#", source._hostName );
+                    label.appendFormat( " [%#]", source._alignment );
+                    writeTraceNameEvent( writer, "process_name", source._outputPID, 0, label.view() );
                     writer.beginObject();
                     writer.key( "name" );
                     writer.valueString( "process_sort_index" );
@@ -589,7 +595,9 @@ namespace sw
                 {
                     writer.beginObject();
                     writer.key( "name" );
-                    writer.valueString( string( flow._bReceive ? "recv " : "send " ) + makeHexText( flow._kind, 2 ) );
+                    fixed_string<constant::buffer::kMax64> flowName;
+                    formatstring( flowName.data(), flowName.capacity(), "%#%#", flow._bReceive ? "recv " : "send ", makeHexText( flow._kind, 2 ) );
+                    writer.valueString( flowName.view() );
                     writer.key( "cat" );
                     writer.valueString( "net" );
                     writer.key( "ph" );
@@ -830,7 +838,9 @@ namespace sw
         {
             if ( FileUtil::ensureParentDirectoryExists( path ) == false )
             {
-                outReply = "cannot create the folder of " + path;
+                StringBuilder<constant::buffer::kMax1024> reply;
+                reply.appendFormat( "cannot create the folder of %#", path );
+                outReply = string( reply.view() );
                 return false;
             }
             // 네트워크 흐름은 저장하는 사건의 시간 구간만 담는다(흐름 링은 프로세스 하나 — `NetFlowLog::collect`).
@@ -849,7 +859,9 @@ namespace sw
                 NetFlowLog::collect( beginNanos, endNanos, metaWithFlow._listFlow );
             if ( FileUtil::writeTextFile( path, ProfilerTraceExport::makeTraceJSON( listThread, listFrameBegin, listSlotName, metaWithFlow ) ) == false )
             {
-                outReply = "cannot write " + path;
+                StringBuilder<constant::buffer::kMax1024> reply;
+                reply.appendFormat( "cannot write %#", path );
+                outReply = string( reply.view() );
                 return false;
             }
             size_t eventCount = 0;
@@ -857,10 +869,9 @@ namespace sw
             {
                 eventCount += thread._listEvent.size();
             }
-            StringBuilder<constant::buffer::kMax256> textBuilder;
-            textBuilder.appendFormat( "%# frame marks, %# net flows)", listFrameBegin.size(), metaWithFlow._listFlow.size() );
-            outReply = "saved " + path + " (" + to_string( listThread.size() ) + " threads, " + to_string( eventCount ) + " events, " +
-                       string( textBuilder.view() );
+            StringBuilder<constant::buffer::kMax1024> reply;
+            reply.appendFormat( "saved %# (%# threads, %# events, %# frame marks, %# net flows)", path, listThread.size(), eventCount, listFrameBegin.size(), metaWithFlow._listFlow.size() );
+            outReply = string( reply.view() );
             return true;
         }
 
@@ -898,8 +909,12 @@ namespace sw
         session._longRecordingPath        = string( path );
         session._longRecordingProcessName = string( processName );
         session._bLongRecordingActive.store( true, std::memory_order_release );
-        outReply = seconds > 0.0 ? "recording " + to_string( static_cast<int64>( seconds ) ) + " s - the file is written when it ends"
-                                 : string( "recording until finished" );
+        StringBuilder<constant::buffer::kMax128> reply;
+        if ( seconds > 0.0 )
+            reply.appendFormat( "recording %# s - the file is written when it ends", static_cast<int64>( seconds ) );
+        else
+            reply.append( "recording until finished" );
+        outReply = string( reply.view() );
         return true;
     }
 
@@ -1099,7 +1114,9 @@ namespace sw
             ProfilerTraceMergeInput input;
             if ( FileUtil::readTextFile( path, input._json ) == false )
             {
-                outReply = "cannot read " + path;
+                StringBuilder<constant::buffer::kMax1024> reply;
+                reply.appendFormat( "cannot read %#", path );
+                outReply = string( reply.view() );
                 return false;
             }
             listInput.push_back( std::move( input ) );
@@ -1111,13 +1128,16 @@ namespace sw
             outReply = report;
             return false;
         }
-        const string path( outputPath );
+        const string                              path( outputPath );
+        StringBuilder<constant::buffer::kMax1024> reply;
         if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, json ) == false )
         {
-            outReply = "cannot write " + path;
+            reply.appendFormat( "cannot write %#", path );
+            outReply = string( reply.view() );
             return false;
         }
-        outReply = report + " -> " + path;
+        reply.appendFormat( "%# -> %#", report, path );
+        outReply = string( reply.view() );
         return true;
     }
 

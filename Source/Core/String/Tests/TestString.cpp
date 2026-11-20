@@ -2030,6 +2030,8 @@ SW_TEST_CASE( StringTest, AppendFormatGrowsAcrossUTF8Boundary )
     {
         sw::StringBuilder<16> builder;
         builder.appendFormat( "%#%#", prefix, text );
-        SW_EXPECT_TRUE( builder.view() == sw::string( prefix ) + sw::string( text ) );
+        sw::string expected( prefix );
+        expected += text;
+        SW_EXPECT_TRUE( builder.view() == expected );
     }
 }

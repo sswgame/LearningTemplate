@@ -6,6 +6,8 @@
  */
 #include "pch.h"
 
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/FileWatch/IFileWatcher.h"
@@ -97,7 +99,9 @@ SW_TEST_CASE( FileWatcherTest, QueueCapCollapsesIntoSingleRescan )
     constexpr uint32 kPushCount = 5000;
     for ( uint32 pushIndex = 0; pushIndex < kPushCount; ++pushIndex )
     {
-        watcher.push( sw::FileWatcherAction::Modified, sw::string{ "file" } + sw::to_string( pushIndex ) );
+        sw::fixed_string<sw::constant::buffer::kMax32> filename;
+        sw::formatstring( filename.data(), filename.capacity(), "file%#", pushIndex );
+        watcher.push( sw::FileWatcherAction::Modified, filename.view() );
     }
 
     sw::vector<sw::FileChangeEvent> listEvent;

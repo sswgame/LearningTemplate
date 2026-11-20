@@ -266,7 +266,11 @@ namespace sw
                 for ( const auto& [path, listRecords] : listScenarioRecords )
                 {
                     for ( const string& mismatch : AutomationPerBackend::findRecordMismatches( listRecords ) )
-                        listProblem.push_back( path + ": " + mismatch );
+                    {
+                        StringBuilder<constant::buffer::kMax256> problem;
+                        problem.appendFormat( "%#: %#", path, mismatch );
+                        listProblem.emplace_back( problem.view() );
+                    }
                 }
                 return listProblem;
             }
@@ -391,7 +395,11 @@ namespace sw
             for ( size_t i = 0; i < listScenarioList.size(); ++i )
             {
                 if ( bSplit == false || i == nextBackend % listScenarioList.size() )
-                    listScenarioList[i] += ( listScenarioList[i].empty() ? "" : "," ) + path;
+                {
+                    if ( listScenarioList[i].empty() == false )
+                        listScenarioList[i] += ',';
+                    listScenarioList[i] += path;
+                }
             }
             if ( bSplit )
                 ++nextBackend;
@@ -414,11 +422,18 @@ namespace sw
             if ( it == listFolded.end() )
                 listFolded.push_back( FoldedFailure{ &runResult, runResult._backend } );
             else
-                it->_backends += "," + runResult._backend;
+            {
+                it->_backends += ',';
+                it->_backends += runResult._backend;
+            }
         }
         vector<string> listLine;
         for ( const FoldedFailure& folded : listFolded )
-            listLine.push_back( folded._pFirst->_stage + ": " + folded._pFirst->_kind + " " + folded._backends + " - " + folded._pFirst->_reason );
+        {
+            StringBuilder<constant::buffer::kMax256> line;
+            line.appendFormat( "%#: %# %# - %#", folded._pFirst->_stage, folded._pFirst->_kind, folded._backends, folded._pFirst->_reason );
+            listLine.emplace_back( line.view() );
+        }
         return listLine;
     }
 
@@ -437,7 +452,9 @@ namespace sw
 
     string AutomationPerBackend::insertBackendSuffix( string_view path, string_view backend )
     {
-        return FileUtil::removeExtension( path ) + "." + string( backend ) + FileUtil::getExtension( path );
+        StringBuilder<constant::buffer::kMax1024> pathBuilder;
+        pathBuilder.appendFormat( "%#.%#%#", FileUtil::removeExtension( path ), backend, FileUtil::getExtension( path ) );
+        return string( pathBuilder.view() );
     }
 
     vector<string> AutomationPerBackend::findRecordMismatches( const vector<AutomationBackendRecords>& listRecords )
@@ -470,19 +487,20 @@ namespace sw
                     break;
                 }
             }
-            string message = "record #" + to_string( lineIndex + 1 ) + " '" + string( label ) + "':";
+            StringBuilder<constant::buffer::kMax256> message;
+            message.appendFormat( "record #%# '%#':", static_cast<uint64>( lineIndex + 1 ), label );
             for ( const AutomationBackendRecords& records : listRecords )
             {
                 const optional<string_view> line = lineAt( records );
-                message += " " + records._backend + "=";
+                message.appendFormat( " %#=", records._backend );
                 if ( line.has_value() == false )
-                    message += "(none)";
+                    message.append( "(none)" );
                 else if ( Internal::getRecordLabel( *line ) == label )
-                    message += string( Internal::getRecordValue( *line ) );
+                    message.append( Internal::getRecordValue( *line ) );
                 else
-                    message += "'" + string( *line ) + "'";
+                    message.appendFormat( "'%#'", *line );
             }
-            listMismatch.push_back( std::move( message ) );
+            listMismatch.emplace_back( message.view() );
         }
         return listMismatch;
     }
@@ -524,15 +542,41 @@ namespace sw
                 listChild.push_back( std::move( pChild ) );
                 continue;
             }
-            pChild->_logPath = options._logFilePath.empty() ? defaultFolder + "/" + backend + ".log" : insertBackendSuffix( options._logFilePath, backend );
+            StringBuilder<constant::buffer::kMax1024> defaultPath;
+            if ( options._logFilePath.empty() )
+            {
+                defaultPath.appendFormat( "%#/%#.log", defaultFolder, backend );
+                pChild->_logPath = string( defaultPath.view() );
+            }
+            else
+                pChild->_logPath = insertBackendSuffix( options._logFilePath, backend );
             // 보고는 늘 받는다 — 부모가 단계 보고의 `records[]` 를 백엔드 사이에 견준다(`compareChildRecords`).
-            pChild->_reportPath = options._reportPath.empty() ? defaultFolder + "/" + backend + ".json" : insertBackendSuffix( options._reportPath, backend );
+            if ( options._reportPath.empty() )
+            {
+                defaultPath.clear();
+                defaultPath.appendFormat( "%#/%#.json", defaultFolder, backend );
+                pChild->_reportPath = string( defaultPath.view() );
+            }
+            else
+                pChild->_reportPath = insertBackendSuffix( options._reportPath, backend );
             // 앞 실행이 같은 경로에 남긴 단계 보고를 지운다 — 이번에 돌지 않은 단계의 낡은 기록을 견주지 않게. 없으면 지울 것이 없다(결과는 보지 않는다).
             const size_t stageCountOfChild = AutomationScenarioChain::splitList( scenarioList ).size();
             for ( size_t stage = 0; stage < stageCountOfChild; ++stage )
                 (void)FileUtil::removeFile( AutomationScenarioChain::makeStageReportPath( pChild->_reportPath, stage, stageCountOfChild ) );
 
-            vector<string> listArgument{ "-scenario=" + scenarioList, "-" + backend, "-log-file=" + pChild->_logPath, "-scenario-report=" + pChild->_reportPath };
+            vector<string>                            listArgument;
+            StringBuilder<constant::buffer::kMax1024> argument;
+            argument.appendFormat( "-scenario=%#", scenarioList );
+            listArgument.emplace_back( argument.view() );
+            argument.clear();
+            argument.appendFormat( "-%#", backend );
+            listArgument.emplace_back( argument.view() );
+            argument.clear();
+            argument.appendFormat( "-log-file=%#", pChild->_logPath );
+            listArgument.emplace_back( argument.view() );
+            argument.clear();
+            argument.appendFormat( "-scenario-report=%#", pChild->_reportPath );
+            listArgument.emplace_back( argument.view() );
             if ( bTileWindows )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder2;
@@ -604,11 +648,19 @@ namespace sw
             {
                 string where;
                 if ( FileUtil::ensureDirectoryExists( child._runRoot ) == false )
-                    where = "could not create the run root " + child._runRoot;
+                {
+                    StringBuilder<constant::buffer::kMax1024> text;
+                    text.appendFormat( "could not create the run root %#", child._runRoot );
+                    where = string( text.view() );
+                }
                 else if ( const expected<string> dump = child._process.requestDump( FileUtil::joinPath( child._runRoot, Internal::kKillDumpFileName ) ); dump.has_value() )
                     where = *dump;
                 else
-                    where = string( dump.error().message() ) + ": " + string( dump.error().detail() );
+                {
+                    StringBuilder<constant::buffer::kMax1024> text;
+                    text.appendFormat( "%#: %#", dump.error().message(), dump.error().detail() );
+                    where = string( text.view() );
+                }
                 // POSIX 는 덤프 요청(SIGABRT)으로 이미 끝났을 수 있다 — 그때는 죽일 것이 없다
                 const bool bTaken = child._process.isRunning() == false || child._process.terminate( getAutomationExitStatus( AutomationResult::TimedOut ) );
                 SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# %# - %# (dump: %#)", child._backend.c_str(),
@@ -697,7 +749,9 @@ namespace sw
         // 기록 대조만 진 실행은 진 단계가 없다 — 끝 줄의 실패 수가 0 이어도 결과 이름(종료 코드)이 실패를 말한다.
         const string resultLine = makeResultLine( exitCode, summary._stageCount, summary._failedCount, summary._notRunCount );
         SW_LOG_INFO_ID( "ScenarioPerBackend.Result", "[Scenario] %#", resultLine.c_str() );
-        (void)StandardOutput::write( resultLine + "\n" ); // 표준 출력의 마지막 줄 — 출력을 잘라 본 쪽도 결과를 읽는다(못 쓰면 로그 줄이 남는다)
+        StringBuilder<constant::buffer::kMax256> resultOutput;
+        resultOutput.appendFormat( "%#\n", resultLine );
+        (void)StandardOutput::write( resultOutput.view() ); // 표준 출력의 마지막 줄 — 출력을 잘라 본 쪽도 결과를 읽는다(못 쓰면 로그 줄이 남는다)
         return exitCode;
     }
 } // namespace sw

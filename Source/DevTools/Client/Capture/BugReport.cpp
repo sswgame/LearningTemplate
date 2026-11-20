@@ -133,20 +133,18 @@ namespace sw
             /** @brief `bugreport [메모…]` — 낱말을 공백으로 다시 이은 것이 메모다. */
             static bool runBugReport( const vector<string>& listArgument, string& outReply )
             {
-                string note;
+                StringBuilder<constant::buffer::kMax256> note;
                 for ( const string& word : listArgument )
-                {
-                    if ( note.empty() == false )
-                        note += " ";
-                    note += word;
-                }
+                    note.appendFormat( "%#%#", note.size() == 0 ? "" : " ", word );
                 string directory;
-                if ( BugReport::capture( BugReport::makeInputs( note ), directory ) == false )
+                if ( BugReport::capture( BugReport::makeInputs( note.view() ), directory ) == false )
                 {
                     outReply = "bugreport failed (see the log)";
                     return false;
                 }
-                outReply = "bugreport -> " + directory + " (screenshot next frame)";
+                StringBuilder<constant::buffer::kMax1024> reply;
+                reply.appendFormat( "bugreport -> %# (screenshot next frame)", directory );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -158,7 +156,9 @@ namespace sw
                                     static_cast<uint32>( frameCount ) <= BugReport::kMaxInputFrameCount;
                 if ( bValid == false )
                 {
-                    outReply = "bugreport.input.start <frames 1.." + to_string( BugReport::kMaxInputFrameCount ) + ">";
+                    StringBuilder<constant::buffer::kMax64> reply;
+                    reply.appendFormat( "bugreport.input.start <frames 1..%#>", BugReport::kMaxInputFrameCount );
+                    outReply = string( reply.view() );
                     return false;
                 }
                 if ( engine::areEngineServicesBound() == false )
@@ -167,7 +167,9 @@ namespace sw
                     return false;
                 }
                 engine::getSubsystem<InputManager>().startSessionRecording( static_cast<uint32>( frameCount ) );
-                outReply = "bugreport.input.start -> recording up to " + to_string( frameCount ) + " frames";
+                StringBuilder<constant::buffer::kMax64> reply;
+                reply.appendFormat( "bugreport.input.start -> recording up to %# frames", frameCount );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -178,7 +180,9 @@ namespace sw
                     return false;
                 InputManager& input = engine::getSubsystem<InputManager>();
                 input.stopSessionRecording();
-                outReply = "bugreport.input.stop -> " + to_string( input.getSessionRecording().getFrameCount() ) + " frames";
+                StringBuilder<constant::buffer::kMax64> reply;
+                reply.appendFormat( "bugreport.input.stop -> %# frames", input.getSessionRecording().getFrameCount() );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -202,11 +206,15 @@ namespace sw
                 InputManager& input = engine::getSubsystem<InputManager>();
                 if ( input.playSessionRecording( FileUtil::joinPath( folder, BugReport::kInputFileName ) ) == false )
                 {
-                    outReply = "bugreport.replay: no input recording in '" + folder + "'";
+                    StringBuilder<constant::buffer::kMax1024> reply;
+                    reply.appendFormat( "bugreport.replay: no input recording in '%#'", folder );
+                    outReply = string( reply.view() );
                     return false;
                 }
                 SW_LOG_INFO_ID( "BugReport.ReplayStarted", "bugreport.replay: playing %# input frames from %#", input.getSessionRecording().getFrameCount(), folder );
-                outReply = "bugreport.replay -> " + folder;
+                StringBuilder<constant::buffer::kMax1024> reply;
+                reply.appendFormat( "bugreport.replay -> %#", folder );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -230,21 +238,22 @@ namespace sw
 {
     bool BugReport::writeInfo( string_view directory ) const
     {
-        string text;
-        text += string( BugReportInternal::kKeyNote ) + " = " + _note + "\n";
-        text += string( BugReportInternal::kKeyScene ) + " = " + _scenePath + "\n";
-        text += string( BugReportInternal::kKeyRHI ) + " = " + _rhiBackend + "\n";
-        text += string( BugReportInternal::kKeyBuild ) + " = " + _buildConfiguration + "\n";
-        text += string( BugReportInternal::kKeyGame ) + " = " + _game + "\n";
-        text += string( BugReportInternal::kKeyPosition ) + " = " + BugReportInternal::formatFloat3( _cameraPosition ) + "\n";
-        text += string( BugReportInternal::kKeyRotation ) + " = " + BugReportInternal::formatFloat3( _cameraRotationDegrees ) + "\n";
-        text += string( BugReportInternal::kKeyPlatform ) + " = " + _platform + "\n";
-        text += string( BugReportInternal::kKeyTarget ) + " = " + _target + "\n";
-        text += string( BugReportInternal::kKeySceneHash ) + " = " + _sceneHash + "\n";
-        text += string( BugReportInternal::kKeyConfigHash ) + " = " + _configHash + "\n";
-        text += string( BugReportInternal::kKeyInputFrames ) + " = " + to_string( _inputFrameCount ) + "\n";
-        text += string( BugReportInternal::kKeyInputSeconds ) + " = " + BugReportInternal::formatFloat( _inputSeconds ) + "\n";
-        return FileUtil::writeTextFile( FileUtil::joinPath( directory, kInfoFileName ), text );
+        using Internal = BugReportInternal;
+        StringBuilder<constant::buffer::kMax1024> text;
+        text.appendFormat( "%# = %#\n", Internal::kKeyNote, _note );
+        text.appendFormat( "%# = %#\n", Internal::kKeyScene, _scenePath );
+        text.appendFormat( "%# = %#\n", Internal::kKeyRHI, _rhiBackend );
+        text.appendFormat( "%# = %#\n", Internal::kKeyBuild, _buildConfiguration );
+        text.appendFormat( "%# = %#\n", Internal::kKeyGame, _game );
+        text.appendFormat( "%# = %#\n", Internal::kKeyPosition, Internal::formatFloat3( _cameraPosition ) );
+        text.appendFormat( "%# = %#\n", Internal::kKeyRotation, Internal::formatFloat3( _cameraRotationDegrees ) );
+        text.appendFormat( "%# = %#\n", Internal::kKeyPlatform, _platform );
+        text.appendFormat( "%# = %#\n", Internal::kKeyTarget, _target );
+        text.appendFormat( "%# = %#\n", Internal::kKeySceneHash, _sceneHash );
+        text.appendFormat( "%# = %#\n", Internal::kKeyConfigHash, _configHash );
+        text.appendFormat( "%# = %#\n", Internal::kKeyInputFrames, _inputFrameCount );
+        text.appendFormat( "%# = %#\n", Internal::kKeyInputSeconds, Internal::formatFloat( _inputSeconds ) );
+        return FileUtil::writeTextFile( FileUtil::joinPath( directory, kInfoFileName ), text.view() );
     }
 
     bool BugReport::readInfo( string_view directory, BugReport& outReport )
@@ -375,7 +384,9 @@ namespace sw
         {
             if ( recordedValue.empty() || currentValue.empty() || recordedValue == currentValue )
                 return;
-            listLine.push_back( string( pKey ) + ": " + recordedValue + " -> " + currentValue );
+            StringBuilder<constant::buffer::kMax256> line;
+            line.appendFormat( "%#: %# -> %#", pKey, recordedValue, currentValue );
+            listLine.emplace_back( line.view() );
         };
         compare( BugReportInternal::kKeyBuild, recorded._buildConfiguration, current._buildConfiguration );
         compare( BugReportInternal::kKeyPlatform, recorded._platform, current._platform );
@@ -492,13 +503,14 @@ namespace sw
                 SW_LOG_WARNING_ID( "BugReport.BugreportSceneCopyCould", "bugreport: the scene copy could not be saved" );
         }
 
-        string repro = "App.exe";
+        StringBuilder<constant::buffer::kMax1024> repro;
+        repro.append( "App.exe" );
         if ( inputs._backendFlag.empty() == false )
-            repro += " -" + inputs._backendFlag;
+            repro.appendFormat( " -%#", inputs._backendFlag );
         if ( inputs._bEditor )
-            repro += " -EnableEditor";
-        repro += " -gv_devConsoleExec=\"bugreport.goto " + directory + "\"\n";
-        if ( FileUtil::writeTextFile( FileUtil::joinPath( directory, kReproFileName ), repro ) == false )
+            repro.append( " -EnableEditor" );
+        repro.appendFormat( " -gv_devConsoleExec=\"bugreport.goto %#\"\n", directory );
+        if ( FileUtil::writeTextFile( FileUtil::joinPath( directory, kReproFileName ), repro.view() ) == false )
             SW_LOG_WARNING_ID( "BugReport.BugreportCouldNotWrite2", "bugreport: could not write the repro command" );
 
         SW_LOG_INFO_ID( "BugReport.Saved", "Bug report saved to %# (note: %#)", directory, report._note );
@@ -518,7 +530,9 @@ namespace sw
         BugReport    report;
         if ( folder.empty() || readInfo( folder, report ) == false )
         {
-            outReply = "bugreport.goto: no BugReport folder at '" + folder + "'";
+            StringBuilder<constant::buffer::kMax1024> reply;
+            reply.appendFormat( "bugreport.goto: no BugReport folder at '%#'", folder );
+            outReply = string( reply.view() );
             return false;
         }
         Scene*     pScene      = sceneManager.getActiveScene();
@@ -529,7 +543,9 @@ namespace sw
             const TaskFuture<Scene*> future = sceneManager.requestLoadFuture( report._scenePath, SceneLoadKind::Tool );
             if ( future.waitFor( BugReportInternal::kSceneLoadTimeoutMilliseconds ) == false )
             {
-                outReply = "bugreport.goto: the scene '" + report._scenePath + "' did not load in time";
+                StringBuilder<constant::buffer::kMax1024> reply;
+                reply.appendFormat( "bugreport.goto: the scene '%#' did not load in time", report._scenePath );
+                outReply = string( reply.view() );
                 return false;
             }
             sceneManager.updateTransitions();
@@ -544,7 +560,9 @@ namespace sw
         pCamera->setWorldPosition( report._cameraPosition );
         pCamera->lookAt( report._cameraPosition + computeForward( report._cameraRotationDegrees ) );
         SW_LOG_INFO_ID( "BugReport.GotoMoved", "bugreport.goto moved the view camera to %# from %#", BugReportInternal::formatFloat3( report._cameraPosition ), folder );
-        outReply = "bugreport.goto -> " + folder + " (camera " + BugReportInternal::formatFloat3( report._cameraPosition ) + ")";
+        StringBuilder<constant::buffer::kMax1024> reply;
+        reply.appendFormat( "bugreport.goto -> %# (camera %#)", folder, BugReportInternal::formatFloat3( report._cameraPosition ) );
+        outReply = string( reply.view() );
         return true;
     }
 

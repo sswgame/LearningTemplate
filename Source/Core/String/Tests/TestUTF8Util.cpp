@@ -175,7 +175,9 @@ SW_TEST_CASE( UTF8UtilTest, DecodeReportsValidityAndSingleCharacters )
 SW_TEST_CASE( UTF8UtilTest, Ucs2ReplacesWhatItCannotHold )
 {
     vector<uint16> listUnit;
-    StringUtil::utf8ToUcs2( string( "a가😀" ) + string( 1, static_cast<utf8>( 0x80 ) ) + "b", listUnit );
+    StringUtil::utf8ToUcs2( "a가😀\x80"
+                            "b",
+                            listUnit ); // 끊은 리터럴: `\x80b` 로 붙으면 `b` 까지 16진 이스케이프가 된다
     SW_REQUIRE_EQUAL( listUnit.size(), size_t{ 5 } );
     SW_EXPECT_EQUAL( listUnit[0], uint16{ 'a' } );
     SW_EXPECT_EQUAL( listUnit[1], uint16{ 0xAC00 } );
@@ -208,20 +210,21 @@ SW_TEST_CASE( UTF8UtilTest, UTF16UnitsRoundTripWithSurrogatePairs )
 
 SW_TEST_CASE( UTF8UtilTest, UTF16UnitsReplaceLoneSurrogatesAndBadBytes )
 {
-    const string kReplacement = "\xEF\xBF\xBD";
+    const string kReplacement = "\xEF\xBF\xBD"; // 아래 이어 붙인 비교 글은 끊은 리터럴로 쓴다(`\xBDA` 처럼 뒤 글자가 16진 이스케이프에 먹히지 않게)
     string       text;
     const uint16 arrLoneHigh[] = { 0xD83D, 0x0041 }; // 높은 서로게이트 뒤에 낮은 것이 없다
     StringUtil::utf16UnitsToUTF8( arrLoneHigh, 2, text );
-    SW_REQUIRE_TRUE( text == kReplacement + "A" );
+    SW_REQUIRE_TRUE( text == "\xEF\xBF\xBD"
+                             "A" );
     const uint16 arrLoneLow[] = { 0xDE00 }; // 낮은 서로게이트 홀로
     StringUtil::utf16UnitsToUTF8( arrLoneLow, 1, text );
     SW_REQUIRE_TRUE( text == kReplacement );
     const uint16 arrHighAtEnd[] = { 0x0041, 0xD83D }; // 끝에서 끊긴 쌍
     StringUtil::utf16UnitsToUTF8( arrHighAtEnd, 2, text );
-    SW_REQUIRE_TRUE( text == "A" + kReplacement );
+    SW_REQUIRE_TRUE( text == "A\xEF\xBF\xBD" );
     const uint16 arrSwapped[] = { 0xDE00, 0xD83D }; // 순서가 뒤집힌 쌍은 둘 다 대체
     StringUtil::utf16UnitsToUTF8( arrSwapped, 2, text );
-    SW_REQUIRE_TRUE( text == kReplacement + kReplacement );
+    SW_REQUIRE_TRUE( text == "\xEF\xBF\xBD\xEF\xBF\xBD" );
 
     // 반대 방향: 잘못된 UTF-8 · 수정 UTF-8 의 서로게이트 3 바이트(CESU-8)는 U+FFFD 한 단위다.
     vector<uint16> listUnit;

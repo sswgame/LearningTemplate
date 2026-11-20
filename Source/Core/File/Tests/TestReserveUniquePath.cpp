@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;
@@ -8,18 +9,25 @@ using namespace sw;
 SW_TEST_CASE( ReserveUniquePathTest, FilesTakeTheNextFreeSuffix )
 {
     const string base = test::makeScratchPath( "shot" );
-    SW_EXPECT_EQUAL( base + ".png", FileUtil::reserveUniquePath( base, ".png", false ) );
-    SW_EXPECT_EQUAL( base + "-2.png", FileUtil::reserveUniquePath( base, ".png", false ) );
-    SW_EXPECT_EQUAL( base + "-3.png", FileUtil::reserveUniquePath( base, ".png", false ) );
-    SW_EXPECT_TRUE( FileUtil::isRegularFile( base + "-2.png" ) );
+    for ( const utf8* pSuffix : { "", "-2", "-3" } )
+    {
+        StringBuilder<constant::buffer::kMax1024> expectedPath;
+        expectedPath.appendFormat( "%#%#.png", base, pSuffix );
+        SW_EXPECT_EQUAL( string( expectedPath.view() ), FileUtil::reserveUniquePath( base, ".png", false ) );
+    }
+    StringBuilder<constant::buffer::kMax1024> secondPath;
+    secondPath.appendFormat( "%#-2.png", base );
+    SW_EXPECT_TRUE( FileUtil::isRegularFile( secondPath.view() ) );
 }
 
 SW_TEST_CASE( ReserveUniquePathTest, DirectoriesTakeTheNextFreeSuffix )
 {
     const string base = test::makeScratchPath( "report" );
     SW_EXPECT_EQUAL( base, FileUtil::reserveUniquePath( base, {}, true ) );
-    SW_EXPECT_EQUAL( base + "-2", FileUtil::reserveUniquePath( base, {}, true ) );
-    SW_EXPECT_TRUE( FileUtil::isDirectory( base + "-2" ) );
+    StringBuilder<constant::buffer::kMax1024> secondPath;
+    secondPath.appendFormat( "%#-2", base );
+    SW_EXPECT_EQUAL( string( secondPath.view() ), FileUtil::reserveUniquePath( base, {}, true ) );
+    SW_EXPECT_TRUE( FileUtil::isDirectory( secondPath.view() ) );
 }
 
 SW_TEST_CASE( ReserveUniquePathTest, GivesUpAfterTheLastAttempt )

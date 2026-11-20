@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include <algorithm>
 #include <atomic>
@@ -92,7 +93,9 @@ namespace sw
         {
             if ( site.has_value() == false || site->_pFile == nullptr )
                 return "(unknown site)";
-            return string( site->_pFile ) + "(" + to_string( site->_line ) + ")";
+            StringBuilder<constant::buffer::kMax512> siteBuilder;
+            siteBuilder.appendFormat( "%#(%#)", site->_pFile, site->_line );
+            return string( siteBuilder.view() );
         }
 
         /** @brief 겹친 정적 등록 한 줄을 세고, 칸이 남았으면 적습니다. */
@@ -110,11 +113,12 @@ namespace sw
         /** @brief 겹친 이름 하나를 두 자리와 함께 알립니다. @p bStatic 이면 정적 등록 거절로 센다(시작 단계가 로드 오류로 멈춘다). */
         void reportDuplicateName( const utf8* pWhat, string_view name, const optional<RegistrationSite>& existing, const optional<RegistrationSite>& rejected, bool bStatic )
         {
-            const string line = string( pWhat ) + " '" + string( name ) + "' is registered twice - first at " + describeRegistrationSite( existing ) + ", again at " +
-                                describeRegistrationSite( rejected ) + " (keeping the first)";
+            StringBuilder<constant::buffer::kMax1024> line;
+            line.appendFormat( "%# '%#' is registered twice - first at %#, again at %# (keeping the first)", pWhat, name, describeRegistrationSite( existing ),
+                               describeRegistrationSite( rejected ) );
             SW_LOG_ERROR_ID( "Registration.DuplicateName", "%#", line.c_str() );
             if ( bStatic )
-                recordRejectedStaticRegistration( line );
+                recordRejectedStaticRegistration( line.view() );
         }
     } // namespace
 
@@ -192,7 +196,11 @@ namespace sw
         for ( uint32 slot = 0; slot < count && slot < StaticRegistrationState::kKeptLineCount; ++slot )
             listLine.emplace_back( s_staticRegistration._arrRejectedLine[slot] );
         if ( count > StaticRegistrationState::kKeptLineCount )
-            listLine.push_back( "(+" + to_string( count - StaticRegistrationState::kKeptLineCount ) + " more - see the Registration.DuplicateName log lines)" );
+        {
+            StringBuilder<constant::buffer::kMax128> moreBuilder;
+            moreBuilder.appendFormat( "(+%# more - see the Registration.DuplicateName log lines)", count - StaticRegistrationState::kKeptLineCount );
+            listLine.push_back( string( moreBuilder.view() ) );
+        }
         return listLine;
     }
 

@@ -6,6 +6,7 @@
 #include "Core/Container/DependencyGraph.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw
 {
@@ -113,12 +114,12 @@ namespace sw
         const DependencyOrder order = graph.sortByName( listSubgraph );
         if ( order.isSorted() == false )
         {
-            string cycleModules;
+            StringBuilder<constant::buffer::kMax512> cycleModules;
             for ( const uint32 nodeIndex : order._listCycle )
             {
-                if ( cycleModules.empty() == false )
-                    cycleModules += " -> ";
-                cycleModules += listSubgraph[nodeIndex];
+                if ( cycleModules.view().empty() == false )
+                    cycleModules.append( " -> " );
+                cycleModules.append( listSubgraph[nodeIndex] );
             }
             SW_LOG_ERROR_ID( "LiveReloadManager.DependencyCycleModuleGraph", "Dependency cycle in module graph (%# of %# modules cannot be ordered): %#",
                              static_cast<uint32>( order._listUnsorted.size() ), static_cast<uint32>( listSubgraph.size() ), cycleModules.c_str() );

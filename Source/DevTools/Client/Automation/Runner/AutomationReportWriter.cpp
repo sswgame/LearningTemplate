@@ -68,11 +68,15 @@ namespace sw
             writer.beginObject();
             for ( uint32 kindIndex = 0; kindIndex < AutomationTimeline::kFrameKindCount; ++kindIndex )
             {
-                const AutomationFrameKind      kind  = static_cast<AutomationFrameKind>( kindIndex );
-                const AutomationTimelineSlice& slice = timeline.getSlice( kind );
-                writer.key( string( AutomationTimeline::getKindKey( kind ) ) + "Frames" );
+                const AutomationFrameKind               kind  = static_cast<AutomationFrameKind>( kindIndex );
+                const AutomationTimelineSlice&          slice = timeline.getSlice( kind );
+                StringBuilder<constant::buffer::kMax64> keyText;
+                keyText.appendFormat( "%#Frames", AutomationTimeline::getKindKey( kind ) );
+                writer.key( keyText.view() );
                 writer.valueUint( slice._frameCount );
-                writer.key( string( AutomationTimeline::getKindKey( kind ) ) + "Milliseconds" );
+                keyText.clear();
+                keyText.appendFormat( "%#Milliseconds", AutomationTimeline::getKindKey( kind ) );
+                writer.key( keyText.view() );
                 writer.valueUint( toAutomationMilliseconds( slice._seconds ) );
             }
             writer.key( "slowestWaits" );

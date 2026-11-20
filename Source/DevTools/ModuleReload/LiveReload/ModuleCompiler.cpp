@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ThreadCrashStack.h"
+#include "Core/String/StringBuilder.h"
 
 #include "DevTools/ModuleReload/LiveReload/LiveReloadManager.h"
 
@@ -48,7 +49,11 @@ namespace sw
         // 게임 모듈은 모듈 이름(`SWGame` — 산출물 Bin/Modules/SWGame)과 빌드 대상 이름이 다르다: 게임 팩마다 `SWGame_<게임>`(`sw_add_game_module`).
         // 모듈 이름을 그대로 넘기면 ninja 가 "unknown target 'SWGame'" 으로 졌다(에디터 Compile · `<RebuildModule name="SWGame">`).
         if ( moduleName == kGameModuleName )
-            return string( kGameModuleName ) + "_" + GameSelection::getName();
+        {
+            StringBuilder<constant::buffer::kMax128> target;
+            target.appendFormat( "%#_%#", kGameModuleName, GameSelection::getName() );
+            return string( target.view() );
+        }
         return string( moduleName );
     }
 

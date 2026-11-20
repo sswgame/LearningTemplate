@@ -3,6 +3,7 @@
 #include "Programs/ReflectionParser/PropertyResolver.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Programs/ReflectionParser/CursorReader.h"
@@ -331,9 +332,9 @@ namespace sw
         };
         for ( const Side& side : listSide )
         {
-            string      resolved;
-            bool        bChanged = false;
-            string_view rest     = side._pExpr->_text;
+            StringBuilder<constant::buffer::kMax256> resolved;
+            bool                                     bChanged = false;
+            string_view                              rest     = side._pExpr->_text;
             for ( size_t comma = 0; comma != string_view::npos; )
             {
                 comma                       = rest.find( ',' );
@@ -343,11 +344,11 @@ namespace sw
                 const string_view name      = bNegative ? StringUtil::trim( term.substr( 1 ) ) : term;
                 float32           number{ 0.0f };
                 const bool        bConstant = name.empty() == false && name.front() != '_' && StringUtil::parseFloat( term, number ) == false;
-                if ( resolved.empty() == false )
-                    resolved += ", ";
+                if ( resolved.size() > 0 )
+                    resolved.append( ", " );
                 if ( bConstant == false )
                 {
-                    resolved += term;
+                    resolved.append( term );
                     continue;
                 }
                 const CXCursor found = findNamedConstant( memberCursor, name );
@@ -382,14 +383,14 @@ namespace sw
                 }
                 utf8       buffer[40]{};
                 const auto converted = std::to_chars( buffer, buffer + sizeof( buffer ), bNegative ? -value : value );
-                resolved.append( buffer, converted.ptr );
+                resolved.append( buffer, static_cast<uint32>( converted.ptr - buffer ) );
                 bChanged = true;
             }
             if ( bChanged == false )
                 continue;
-            side._pExpr->_text = resolved;
+            side._pExpr->_text = string( resolved.view() );
             float32 parsed{ 0.0f };
-            if ( StringUtil::parseFloat( resolved, parsed ) == false )
+            if ( StringUtil::parseFloat( resolved.view(), parsed ) == false )
                 continue;
             if ( side._bMax )
             {

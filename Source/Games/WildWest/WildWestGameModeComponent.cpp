@@ -258,39 +258,20 @@ namespace sw
         const bool             bNothingToShow = pOutlaw->getHonorValue() == startHonor && pOutlaw->getWantedLevel() == 0 && pOutlaw->getBounty() == 0 && pOutlaw->getPeltCount() == 0 && pOutlaw->getCarcassCount() == 0 && bLowCore == false;
         if ( bNothingToShow )
             return string{};
-        StringBuilder<constant::buffer::kMax256> statusBuilder;
-        statusBuilder.appendFormat( "Honor %# (%#)", pOutlaw->getHonorValue(), pOutlaw->getHonorTierName().c_str() );
-        string status{ statusBuilder.view() };
+        StringBuilder<constant::buffer::kMax256> status;
+        status.appendFormat( "Honor %# (%#)", pOutlaw->getHonorValue(), pOutlaw->getHonorTierName().c_str() );
         if ( pOutlaw->getWantedLevel() > 0 )
-        {
-            StringBuilder<constant::buffer::kMax256> statusPart5;
-            statusPart5.appendFormat( " - Wanted %#", pOutlaw->getWantedLevel() );
-            status += statusPart5.c_str();
-        }
+            status.appendFormat( " - Wanted %#", pOutlaw->getWantedLevel() );
         if ( pOutlaw->getBounty() > 0 )
-        {
-            StringBuilder<constant::buffer::kMax256> statusPart4;
-            statusPart4.appendFormat( " - Bounty $%#", pOutlaw->getBounty() );
-            status += statusPart4.c_str();
-        }
+            status.appendFormat( " - Bounty $%#", pOutlaw->getBounty() );
         if ( pOutlaw->getCarcassCount() > 0 )
-        {
-            StringBuilder<constant::buffer::kMax256> statusPart3;
-            statusPart3.appendFormat( " - Carcasses %#", pOutlaw->getCarcassCount() );
-            status += statusPart3.c_str();
-        }
+            status.appendFormat( " - Carcasses %#", pOutlaw->getCarcassCount() );
         if ( pOutlaw->getPeltCount() > 0 )
-        {
-            StringBuilder<constant::buffer::kMax256> statusPart2;
-            statusPart2.appendFormat( " - Pelts %#", pOutlaw->getPeltCount() );
-            status += statusPart2.c_str();
-        }
-        StringBuilder<constant::buffer::kMax256> statusPart;
-        statusPart.appendFormat( " - $%#", pOutlaw->getMoney() );
-        status += statusPart.c_str();
+            status.appendFormat( " - Pelts %#", pOutlaw->getPeltCount() );
+        status.appendFormat( " - $%#", pOutlaw->getMoney() );
         if ( bLowCore )
-            status += " - Hungry";
-        return status;
+            status.append( " - Hungry" );
+        return string( status.view() );
     }
 
     void WildWestGameModeComponent::updateHUD()

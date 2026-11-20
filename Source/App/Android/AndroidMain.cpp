@@ -18,6 +18,7 @@
     #include "Core/File/ProcessRoots.h"
     #include "Core/File/UserDataPath.h"
     #include "Core/Log/Logger.h"
+    #include "Core/String/StringBuilder.h"
     #include "Core/String/StringUtil.h"
 
     #include "Engine/Window/Android/AndroidWindow.h"
@@ -85,8 +86,9 @@ namespace
             SW_FATAL( "AndroidMain: EngineConfig _fileServe._maxResponseBodyBytes %# is below the Fileserve chunk (%# bytes)", settings._maxResponseBodyBytes,
                       sw::FileServeContentSource::kChunkBytes );
         mount._pClient = sw::make_unique<sw::PlainHTTPClient>( settings );
-        mount._pSource = sw::make_unique<sw::FileServeContentSource>( *mount._pClient, baseURL, sw::ProcessRoots::get()._packs.str(),
-                                                                      sw::string( pInternalDataPath ) + "/" + kFileServeMirrorFolder );
+        sw::StringBuilder<sw::constant::buffer::kMax1024> mirrorRoot;
+        mirrorRoot.appendFormat( "%#/%#", pInternalDataPath, kFileServeMirrorFolder );
+        mount._pSource = sw::make_unique<sw::FileServeContentSource>( *mount._pClient, baseURL, sw::ProcessRoots::get()._packs.str(), mirrorRoot.view() );
         SW_LOG_INFO_ID( "AndroidMain.FileServeMounted", "Android: packs come from Fileserve %# (mirror %#/%#)", baseURL, pInternalDataPath, kFileServeMirrorFolder );
         return mount;
     }

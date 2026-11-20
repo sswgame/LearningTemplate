@@ -3,6 +3,7 @@
 #include "Games/NileCity/NileBuildingComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -73,17 +74,12 @@ namespace sw
         if ( def._kind != CityBuildingKind::House )
             return views.find( def._id );
         // 집 단계마다 커지는 집 모델 — 작은 단층에서 넓은 이층까지. 빈 땅은 낮은 울타리다.
-        string key( def._id.view() );
+        StringBuilder<constant::buffer::kMax128> key;
         if ( bInhabited )
-        {
-            key += ".";
-            key += to_string( level );
-        }
+            key.appendFormat( "%#.%#", def._id.view(), level );
         else
-        {
-            key += ".empty";
-        }
-        return views.find( hashed_string( key ) );
+            key.appendFormat( "%#.empty", def._id.view() );
+        return views.find( hashed_string( key.view() ) );
     }
 
     void NileBuildingComponent::onTick( TickContext& context )

@@ -570,7 +570,9 @@ namespace sw
         listArg.reserve( listArg.size() + listIncludePath.size() + _listForceInclude.size() * 2 );
         for ( const string& includePath : listIncludePath )
         {
-            listArg.push_back( _flagIncludePrefix + includePath );
+            StringBuilder<constant::buffer::kMax1024> arg;
+            arg.appendFormat( "%#%#", _flagIncludePrefix, includePath );
+            listArg.emplace_back( arg.view() );
         }
         for ( const string& forceInclude : _listForceInclude )
         {

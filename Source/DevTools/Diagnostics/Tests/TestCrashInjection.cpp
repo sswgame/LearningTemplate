@@ -46,16 +46,11 @@ namespace
     /** @brief 자식 인자 `<종류 번호>|<보고 폴더>[|<보고 시한 초>]` 를 만듭니다(`|` 는 Windows 경로에 들 수 없다). */
     string makeCrashChildArgument( CrashInjectionKind kind, const string& folder, uint32 deadlineSeconds = 0 )
     {
-        StringBuilder<constant::buffer::kMax256> argumentBuilder;
-        argumentBuilder.appendFormat( "%#|%#", static_cast<int32>( kind ), folder );
-        string argument{ argumentBuilder.view() };
+        StringBuilder<constant::buffer::kMax1024> argument;
+        argument.appendFormat( "%#|%#", static_cast<int32>( kind ), folder );
         if ( deadlineSeconds > 0 )
-        {
-            StringBuilder<constant::buffer::kMax256> argumentPart;
-            argumentPart.appendFormat( "|%#", deadlineSeconds );
-            argument += argumentPart.c_str();
-        }
-        return argument;
+            argument.appendFormat( "|%#", deadlineSeconds );
+        return string( argument.view() );
     }
 
     /** @brief 자식이 죽은 뒤 보고 폴더에 스택 파일(과 Windows 는 비지 않은 미니덤프)이 있어야 합니다. */
@@ -125,7 +120,9 @@ SW_TEST_CASE_EACH( CrashInjectionTest, EveryCrashKindLeavesAReport, kArrCrashCas
     const test::ChildRunResult child =
         test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( param._kind, folder ), kCrashChildTimeoutSeconds );
     SW_REQUIRE_TRUE_MSG( child._bLaunched && child._bTimedOut == false, param._pName );
-    SW_EXPECT_TRUE_MSG( ( child._exitCode.has_value() && *child._exitCode != 0 ), param._pName + string( " - last output:" ) + child.getOutputTail() );
+    StringBuilder<constant::buffer::kMax1024> message;
+    message.appendFormat( "%# - last output:%#", param._pName, child.getOutputTail() );
+    SW_EXPECT_TRUE_MSG( ( child._exitCode.has_value() && *child._exitCode != 0 ), message.view() );
     expectCrashFiles( folder, param._pName );
     #if defined( SW_PLATFORM_WINDOWS )
     // 접근 위반의 자세한 이유(쓰기 · 대상 주소 · 모듈)는 필터가 아닌 보고 스레드가 만든다 — 그 길이 끊기지 않았는지 본다.
@@ -152,7 +149,9 @@ SW_TEST_CASE( CrashInjectionTest, StuckReportStillEndsAndKeepsTheStackFile, ._ta
         test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashInjectionKind::StderrHeld, folder, kStuckReportDeadlineSeconds ), kCrashChildTimeoutSeconds );
     SW_REQUIRE_TRUE( child._bLaunched && child._bTimedOut == false );
     SW_EXPECT_TRUE( ( child._exitCode.has_value() && *child._exitCode != 0 ) );
-    SW_EXPECT_TRUE_MSG( child._output.find( "made no progress before its deadline" ) != string::npos, "no line saying the report hit its deadline - last output:" + child.getOutputTail() );
+    StringBuilder<constant::buffer::kMax1024> message;
+    message.appendFormat( "no line saying the report hit its deadline - last output:%#", child.getOutputTail() );
+    SW_EXPECT_TRUE_MSG( child._output.find( "made no progress before its deadline" ) != string::npos, message.view() );
     expectCrashFiles( folder, "stuck" );
 }
 
@@ -170,9 +169,11 @@ SW_TEST_CASE( CrashInjectionTest, FailedAssertNamesItsExpressionBeforeStopping, 
         test::runChildRole( "CrashInjectionTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashInjectionKind::AssertFailure, folder ), kCrashChildTimeoutSeconds );
     SW_REQUIRE_TRUE( child._bLaunched && child._bTimedOut == false );
     SW_EXPECT_TRUE( ( child._exitCode.has_value() && *child._exitCode != 0 ) );
-    const bool bNamesExpression = child._output.find( "[SW_ASSERT] bProbeHolds" ) != string::npos;
-    const bool bNamesPlace      = child._output.find( "CrashInjection.cpp:" ) != string::npos;
-    SW_EXPECT_TRUE_MSG( bNamesExpression && bNamesPlace, "the assert did not name its expression and place - last output:" + child.getOutputTail() );
+    const bool                                bNamesExpression = child._output.find( "[SW_ASSERT] bProbeHolds" ) != string::npos;
+    const bool                                bNamesPlace      = child._output.find( "CrashInjection.cpp:" ) != string::npos;
+    StringBuilder<constant::buffer::kMax1024> message;
+    message.appendFormat( "the assert did not name its expression and place - last output:%#", child.getOutputTail() );
+    SW_EXPECT_TRUE_MSG( bNamesExpression && bNamesPlace, message.view() );
     SW_EXPECT_FALSE( findReportFile( folder, "stack.txt" ).empty() );
 }
     #endif

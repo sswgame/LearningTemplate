@@ -9,6 +9,7 @@
 #include "pch.h"
 
 #include "Core/Container/string.h"
+#include "Core/String/StringBuilder.h"
 
 #include "DevTools/Diagnostics/DevSceneIterationAccess.h"
 
@@ -49,7 +50,9 @@ namespace sw
                 const string*                       pReport  = context.findStoredText( params._key );
                 if ( pReport == nullptr )
                 {
-                    context.recordFailure( step, "no state hash was recorded under key '" + params._key + "' - put <RecordStateHash key=\"" + params._key + "\"/> before it" );
+                    StringBuilder<constant::buffer::kMax256> text;
+                    text.appendFormat( "no state hash was recorded under key '%#' - put <RecordStateHash key=\"%#\"/> before it", params._key, params._key );
+                    context.recordFailure( step, text.view() );
                     return true;
                 }
                 if ( pManager == nullptr )
@@ -60,7 +63,9 @@ namespace sw
                 vector<SceneObjectHash> listExpected;
                 if ( SceneObjectHash::parseObjectReport( *pReport, listExpected ) == false )
                 {
-                    context.recordFailure( step, "the state hash recorded under key '" + params._key + "' could not be read back" );
+                    StringBuilder<constant::buffer::kMax256> text;
+                    text.appendFormat( "the state hash recorded under key '%#' could not be read back", params._key );
+                    context.recordFailure( step, text.view() );
                     return true;
                 }
                 vector<SceneObjectHash> listActual;
@@ -68,13 +73,11 @@ namespace sw
                 vector<string> listDiffering;
                 if ( SceneObjectHash::findDifferingObjects( listExpected, listActual, listDiffering ) )
                 {
-                    string names;
-                    for ( const string& name : listDiffering )
-                    {
-                        names += names.empty() ? "" : ", ";
-                        names += name;
-                    }
-                    context.recordFailure( step, "the scene state differs from '" + params._key + "' in " + sw::to_string( listDiffering.size() ) + " object(s): " + names );
+                    StringBuilder<constant::buffer::kMax256> text;
+                    text.appendFormat( "the scene state differs from '%#' in %# object(s): ", params._key, static_cast<uint64>( listDiffering.size() ) );
+                    for ( size_t index = 0; index < listDiffering.size(); ++index )
+                        text.appendFormat( "%#%#", index == 0 ? "" : ", ", listDiffering[index] );
+                    context.recordFailure( step, text.view() );
                 }
                 return true;
             }

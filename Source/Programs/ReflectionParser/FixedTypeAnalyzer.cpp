@@ -2,6 +2,7 @@
 
 #include "Programs/ReflectionParser/FixedTypeAnalyzer.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Programs/ReflectionParser/AnnotationApply.h"
@@ -100,7 +101,11 @@ namespace sw
         if ( isFixedPointerKind( kind ) )
             return makeIneligibleFixedType( result, "pointer or reference" );
         if ( kind != CXType_Record )
-            return makeIneligibleFixedType( result, "type '" + result->_typeName + "' is outside the fixed layout encoding table" );
+        {
+            StringBuilder<constant::buffer::kMax512> reason;
+            reason.appendFormat( "type '%#' is outside the fixed layout encoding table", result->_typeName );
+            return makeIneligibleFixedType( result, reason.view() );
+        }
 
         if ( isFixedStringType( result->_typeName, canonicalSpelling ) )
         {
@@ -136,7 +141,9 @@ namespace sw
         if ( session._typeNameMap.isPacked( result->_typeName ) )
         {
             result->_bPacked = SW_TRUE;
-            return makeIneligibleFixedType( result, "packed type '" + result->_typeName + "' has no fixed layout encoding" );
+            StringBuilder<constant::buffer::kMax512> reason;
+            reason.appendFormat( "packed type '%#' has no fixed layout encoding", result->_typeName );
+            return makeIneligibleFixedType( result, reason.view() );
         }
         // `sw::vector` 는 자체 클래스라 정규 이름이 `sw::vector<…>` 입니다(`SW_ENABLE_STL_CONTAINER` 면 `std::vector` 별칭입니다).
         const bool bVector = StringUtil::startsWith( canonicalSpelling, "std::vector<" ) || StringUtil::startsWith( canonicalSpelling, "sw::vector<" );
@@ -161,7 +168,9 @@ namespace sw
             result->_fullyQualifiedName = CursorReader::makeFullyQualifiedName( declaration );
             return result;
         }
-        return makeIneligibleFixedType( result, "type '" + result->_typeName + "' is outside the fixed layout encoding table" );
+        StringBuilder<constant::buffer::kMax512> reason;
+        reason.appendFormat( "type '%#' is outside the fixed layout encoding table", result->_typeName );
+        return makeIneligibleFixedType( result, reason.view() );
     }
 
     void FixedTypeAnalyzer::fillFixedLayoutFacts( const CXCursor cursor, const CXType fieldType, ParsedPropertyInfo& prop, const ParserSession& session )

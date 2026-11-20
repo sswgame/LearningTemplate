@@ -7,6 +7,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -105,28 +107,41 @@ SW_TEST_CASE( FileTest, PathContainmentFollowsTheOSCaseRule )
 #else
     #error "Unsupported platform"
 #endif
-    const sw::string otherCased = sw::FileUtil::getDirectoryPart( root ) + "/SCRATCH/a.txt";
+    sw::fixed_string<sw::constant::buffer::kMax256> otherCased;
+    sw::formatstring( otherCased.data(), otherCased.capacity(), "%#/SCRATCH/a.txt", sw::FileUtil::getDirectoryPart( root ) );
+    sw::fixed_string<sw::constant::buffer::kMax256> rootWithSlash;
+    sw::formatstring( rootWithSlash.data(), rootWithSlash.capacity(), "%#/", root );
+    sw::fixed_string<sw::constant::buffer::kMax256> path;
 
-    SW_EXPECT_TRUE( sw::FileUtil::isPathUnderRoot( root, root + "/a.txt" ) );
-    SW_EXPECT_TRUE( sw::FileUtil::isPathUnderRoot( root + "/", root + "\\sub\\a.txt" ) );
+    sw::formatstring( path.data(), path.capacity(), "%#/a.txt", root );
+    SW_EXPECT_TRUE( sw::FileUtil::isPathUnderRoot( root, path.view() ) );
+    sw::formatstring( path.data(), path.capacity(), "%#\\sub\\a.txt", root );
+    SW_EXPECT_TRUE( sw::FileUtil::isPathUnderRoot( rootWithSlash.view(), path.view() ) );
     SW_EXPECT_FALSE( sw::FileUtil::isPathUnderRoot( root, root ) );
-    SW_EXPECT_TRUE( sw::FileUtil::isPathAtOrUnderRoot( root, root + "/" ) );
-    SW_EXPECT_FALSE( sw::FileUtil::isPathAtOrUnderRoot( root, root + "2/a.txt" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isPathAtOrUnderRoot( root, rootWithSlash.view() ) );
+    sw::formatstring( path.data(), path.capacity(), "%#2/a.txt", root );
+    SW_EXPECT_FALSE( sw::FileUtil::isPathAtOrUnderRoot( root, path.view() ) );
 
-    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isSameDiskPath( root, sw::FileUtil::getDirectoryPart( root ) + "/SCRATCH" ) );
-    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathUnderRoot( root, otherCased ) );
-    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathAtOrUnderRoot( root, otherCased ) );
-    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::startsWithPathComponent( sw::FileUtil::makeComparableDiskPath( otherCased ), sw::FileUtil::makeComparableDiskPath( root ) ) );
+    sw::formatstring( path.data(), path.capacity(), "%#/SCRATCH", sw::FileUtil::getDirectoryPart( root ) );
+    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isSameDiskPath( root, path.view() ) );
+    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathUnderRoot( root, otherCased.view() ) );
+    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathAtOrUnderRoot( root, otherCased.view() ) );
+    SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::startsWithPathComponent( sw::FileUtil::makeComparableDiskPath( otherCased.view() ), sw::FileUtil::makeComparableDiskPath( root ) ) );
 
     sw::string relative;
-    SW_EXPECT_TRUE( sw::FileUtil::tryMakePathUnderRoot( root, root + "/Sub/A.txt", relative ) );
+    sw::formatstring( path.data(), path.capacity(), "%#/Sub/A.txt", root );
+    SW_EXPECT_TRUE( sw::FileUtil::tryMakePathUnderRoot( root, path.view(), relative ) );
     SW_EXPECT_EQUAL( sw::string( "Sub/A.txt" ), relative ); // 원래 철자
 
     // `..` 구간은 글로 안에 있어 보여도 밖이다(감사 C-18). 이름에 점이 든 구간은 그대로 안이다
-    SW_EXPECT_FALSE( sw::FileUtil::isPathUnderRoot( root, root + "/../outside.txt" ) );
-    SW_EXPECT_FALSE( sw::FileUtil::isPathAtOrUnderRoot( root, root + "\\sub\\..\\..\\x" ) );
-    SW_EXPECT_FALSE( sw::FileUtil::tryMakePathUnderRoot( root, root + "/a/../../b", relative ) );
-    SW_EXPECT_TRUE( sw::FileUtil::isPathUnderRoot( root, root + "/..hidden/a..b.txt" ) );
+    sw::formatstring( path.data(), path.capacity(), "%#/../outside.txt", root );
+    SW_EXPECT_FALSE( sw::FileUtil::isPathUnderRoot( root, path.view() ) );
+    sw::formatstring( path.data(), path.capacity(), "%#\\sub\\..\\..\\x", root );
+    SW_EXPECT_FALSE( sw::FileUtil::isPathAtOrUnderRoot( root, path.view() ) );
+    sw::formatstring( path.data(), path.capacity(), "%#/a/../../b", root );
+    SW_EXPECT_FALSE( sw::FileUtil::tryMakePathUnderRoot( root, path.view(), relative ) );
+    sw::formatstring( path.data(), path.capacity(), "%#/..hidden/a..b.txt", root );
+    SW_EXPECT_TRUE( sw::FileUtil::isPathUnderRoot( root, path.view() ) );
 }
 
 /**
@@ -173,11 +188,14 @@ SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
  */
 SW_TEST_CASE( FileTest, CreateParentDirectoryMakesNestedFolders )
 {
-    const sw::string root     = sw::test::makeScratchPath( "SwParentDirTest" );
-    const sw::string filePath = root + "/a\\b/c/leaf.txt";
-    SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::isDirectory( root + "/a/b/c" ) );
-    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "leaf" ) );
+    const sw::string                                 root = sw::test::makeScratchPath( "SwParentDirTest" );
+    sw::fixed_string<sw::constant::buffer::kMax1024> filePath;
+    sw::formatstring( filePath.data(), filePath.capacity(), "%#/a\\b/c/leaf.txt", root );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath.view() ) );
+    sw::fixed_string<sw::constant::buffer::kMax1024> leafFolder;
+    sw::formatstring( leafFolder.data(), leafFolder.capacity(), "%#/a/b/c", root );
+    SW_EXPECT_TRUE( sw::FileUtil::isDirectory( leafFolder.view() ) );
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath.view(), "leaf" ) );
 
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
 }
@@ -516,7 +534,7 @@ SW_TEST_CASE( FileTest, ReadRangeRespectsOffsetAndRejectsPastEnd )
 SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
 {
     const sw::string root     = sw::test::makeScratchPath( "SwReadOnlyTest" );
-    const sw::string filePath = root + "/locked.txt";
+    const sw::string filePath = sw::FileUtil::joinPath( root, "locked.txt" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "locked" ) );
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( filePath ) );
@@ -527,7 +545,7 @@ SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
     SW_REQUIRE_TRUE( sw::FileUtil::setWritable( filePath, true ) );
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( filePath ) );
 
-    SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( root + "/missing.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( sw::FileUtil::joinPath( root, "missing.txt" ) ) );
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( root ) );
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
 }
@@ -561,7 +579,7 @@ SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
 {
     SW_EXPECT_LOG( "File.NotOpenForEdit" );
     const sw::string controlled = sw::test::makeScratchPath( "controlled" );
-    const sw::string locked     = controlled + "/deep/locked.txt";
+    const sw::string locked     = sw::FileUtil::joinPath( controlled, "deep/locked.txt" );
     const sw::string loose      = sw::test::makeScratchPath( "loose_copy.txt" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( locked ) );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( loose ) );
@@ -577,7 +595,7 @@ SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
     SW_EXPECT_FALSE( sw::FileUtil::removeFile( locked ) );
     SW_EXPECT_FALSE( sw::FileUtil::tryRemoveFile( locked ) );
     SW_EXPECT_FALSE( sw::FileUtil::removeDirectory( controlled ) );
-    SW_EXPECT_FALSE( sw::FileUtil::renamePath( locked, controlled + "/moved.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::renamePath( locked, sw::FileUtil::joinPath( controlled, "moved.txt" ) ) );
     SW_EXPECT_FALSE( sw::FileUtil::copyFile( loose, locked ) );
     SW_EXPECT_FALSE( sw::FileUtil::isWriteAllowed( locked ) ); // 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 쓰기 전에 묻는 입구다
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( loose ) );       // 규칙 밖의 읽기 전용(속성이 따라온 사본)은 정리가 지운다
@@ -587,7 +605,7 @@ SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( locked, text ) );
     SW_EXPECT_EQUAL( text, sw::string( "kept" ) );
     SW_EXPECT_TRUE( sw::FileUtil::isReadOnlyFile( locked ) );
-    SW_EXPECT_FALSE( sw::FileUtil::exists( controlled + "/moved.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( controlled, "moved.txt" ) ) );
     SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, true ) ); // 케이스 폴더 정리는 규칙과 무관하게 지운다 — 다른 케이스와 같게 둔다
 }
 
@@ -598,9 +616,9 @@ SW_TEST_CASE( FileTest, DirectoryVisitorReportsEntriesAndStops )
 {
     const sw::string root = sw::test::makeScratchPath( "SwVisitorTest" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( root + "/a.txt", "a" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root + "/sub" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( root + "/sub/b.txt", "b" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "a.txt" ), "a" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( root, "sub" ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "sub/b.txt" ), "b" ) );
 
     uint32 fileCount{ 0 };
     uint32 directoryCount{ 0 };
@@ -625,7 +643,7 @@ SW_TEST_CASE( FileTest, DirectoryVisitorReportsEntriesAndStops )
         return false;
     } ) );
     SW_EXPECT_EQUAL( 1u, visitedBeforeStop );
-    SW_EXPECT_FALSE( sw::FileUtil::forEachDirectoryEntry( root + "/missing", true, []( const sw::DirectoryEntry& )
+    SW_EXPECT_FALSE( sw::FileUtil::forEachDirectoryEntry( sw::FileUtil::joinPath( root, "missing" ), true, []( const sw::DirectoryEntry& )
     { return true; } ) );
 }
 
@@ -637,14 +655,14 @@ SW_TEST_CASE( FileTest, RegularFileExcludesDirectories )
 {
     const sw::string root = sw::test::makeScratchPath( "SwRegularFileTest" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
-    const sw::string filePath = root + "/plain.txt";
-    const sw::string dirPath  = root + "/folder.txt";
+    const sw::string filePath = sw::FileUtil::joinPath( root, "plain.txt" );
+    const sw::string dirPath  = sw::FileUtil::joinPath( root, "folder.txt" );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "plain" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( dirPath ) );
 
     SW_EXPECT_TRUE( sw::FileUtil::isRegularFile( filePath ) );
     SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( dirPath ) );
-    SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( root + "/missing.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( sw::FileUtil::joinPath( root, "missing.txt" ) ) );
 
     SW_EXPECT_TRUE( sw::FileUtil::exists( filePath ) );
     SW_EXPECT_TRUE( sw::FileUtil::exists( dirPath ) );
@@ -658,11 +676,11 @@ SW_TEST_CASE( FileTest, FindPathIgnoringCaseReturnsTheDiskSpelling )
 {
     const sw::string root = sw::test::makeScratchPath( "SwIgnoreCaseRoot" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root + "/MixedDir/Sub" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( root + "/MixedDir/Sub/File.TXT", "x" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( root, "MixedDir/Sub" ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "MixedDir/Sub/File.TXT" ), "x" ) );
 
     const sw::string found = sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/file.txt" );
-    SW_EXPECT_EQUAL( sw::FileUtil::normalizeSeparators( root ) + "/MixedDir/Sub/File.TXT", found );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( sw::FileUtil::normalizeSeparators( root ), "MixedDir/Sub/File.TXT" ), found );
     SW_EXPECT_TRUE( sw::FileUtil::exists( found ) );
     SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/missing.txt" ).empty() );
     SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "nodir/sub/file.txt" ).empty() );
@@ -676,17 +694,17 @@ SW_TEST_CASE( FileTest, MakePathIgnoringCaseKeepsExistingSpellingAndAppendsTheRe
 {
     const sw::string root = sw::test::makeScratchPath( "SwMakePathCaseRoot" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root + "/MixedDir/Sub" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( root + "/MixedDir/Sub/File.TXT", "x" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( root, "MixedDir/Sub" ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "MixedDir/Sub/File.TXT" ), "x" ) );
     const sw::string base = sw::FileUtil::normalizeSeparators( root );
 
     // 있는 파일: 디스크 표기로 풀려 같은 파일을 가리킨다(둘째 쓰기가 옆 파일을 만들지 않는다).
-    SW_EXPECT_EQUAL( base + "/MixedDir/Sub/File.TXT", sw::FileUtil::makePathIgnoringCase( root, "mixeddir/sub/file.txt" ) );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/File.TXT" ), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/sub/file.txt" ) );
     // 새 파일: 있는 폴더는 디스크 표기이고 파일 이름은 받은 표기다. 구분자는 `\` 도 받는다.
-    SW_EXPECT_EQUAL( base + "/MixedDir/Sub/New.Txt", sw::FileUtil::makePathIgnoringCase( root, "MIXEDDIR\\sub/New.Txt" ) );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/New.Txt" ), sw::FileUtil::makePathIgnoringCase( root, "MIXEDDIR\\sub/New.Txt" ) );
     // 새 폴더: 없는 성분부터는 받은 표기를 그대로 잇고 그 아래는 훑지 않는다.
-    SW_EXPECT_EQUAL( base + "/MixedDir/Fresh/Deep/x.txt", sw::FileUtil::makePathIgnoringCase( root, "mixeddir/Fresh/Deep/x.txt" ) );
-    SW_EXPECT_EQUAL( base + "/NoDir/a.txt", sw::FileUtil::makePathIgnoringCase( root, "NoDir/a.txt" ) );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Fresh/Deep/x.txt" ), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/Fresh/Deep/x.txt" ) );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "NoDir/a.txt" ), sw::FileUtil::makePathIgnoringCase( root, "NoDir/a.txt" ) );
     SW_EXPECT_EQUAL( base, sw::FileUtil::makePathIgnoringCase( root, "" ) );
 }
 
@@ -697,7 +715,7 @@ SW_TEST_CASE( FileTest, AppendTextFileAddsToTheEnd )
 {
     const sw::string root = sw::test::makeScratchPath( "SwAppendRoot" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
-    const sw::string path = root + "/Spool.txt";
+    const sw::string path = sw::FileUtil::joinPath( root, "Spool.txt" );
 
     SW_REQUIRE_TRUE( sw::FileUtil::appendTextFile( path, "a\n" ) ); // 없는 파일은 만든다
     SW_REQUIRE_TRUE( sw::FileUtil::appendTextFile( path, "b\n" ) );
@@ -717,7 +735,7 @@ SW_TEST_CASE( FileTest, WriteFilterRefusesEveryMutatingEntry )
 {
     const sw::string root = sw::test::makeScratchPath( "SwWriteFilterRoot" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
-    const sw::string path = root + "/Guarded.txt";
+    const sw::string path = sw::FileUtil::joinPath( root, "Guarded.txt" );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "keep" ) );
 
     bool bWritten  = true;
@@ -751,31 +769,31 @@ SW_TEST_CASE( FileTest, LinuxTrashFollowsFreedesktop )
     const bool       bHadDataHome = sw::ProcessEnvironment::tryRead( "XDG_DATA_HOME", savedDataHome );
     const sw::string root         = sw::test::makeScratchPath( "TrashRoot" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", root + "/data" ) );
+    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", sw::FileUtil::joinPath( root, "data" ) ) );
     SW_EXPECT_TRUE( sw::PlatformFileUtil::hasRecycleBin() );
 
-    const sw::string path = root + "/my file.txt";
+    const sw::string path = sw::FileUtil::joinPath( root, "my file.txt" );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "first" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path } ) );
     SW_EXPECT_FALSE( sw::FileUtil::exists( path ) );
     sw::string text;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root + "/data/Trash/files/my file.txt", text ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( root, "data/Trash/files/my file.txt" ), text ) );
     SW_EXPECT_EQUAL( sw::string( "first" ), text );
     sw::string info;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root + "/data/Trash/info/my file.txt.trashinfo", info ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( root, "data/Trash/info/my file.txt.trashinfo" ), info ) );
     SW_EXPECT_TRUE( info.find( "[Trash Info]" ) == 0 );
     SW_EXPECT_TRUE( info.find( "my%20file.txt" ) != sw::string::npos );
     SW_EXPECT_TRUE( info.find( "DeletionDate=" ) != sw::string::npos );
 
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "second" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path } ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root + "/data/Trash/files/my file.txt.1", text ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( root, "data/Trash/files/my file.txt.1" ), text ) );
     SW_EXPECT_EQUAL( sw::string( "second" ), text );
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root + "/data/Trash/files/my file.txt", text ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( root, "data/Trash/files/my file.txt" ), text ) );
     SW_EXPECT_EQUAL( sw::string( "first" ), text );
 
-    SW_EXPECT_FALSE( sw::PlatformFileUtil::moveToRecycleBin( { root + "/nothing.txt" } ) );
-    SW_EXPECT_FALSE( sw::FileUtil::exists( root + "/data/Trash/info/nothing.txt.trashinfo" ) );
+    SW_EXPECT_FALSE( sw::PlatformFileUtil::moveToRecycleBin( { sw::FileUtil::joinPath( root, "nothing.txt" ) } ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( root, "data/Trash/info/nothing.txt.trashinfo" ) ) );
 
     if ( bHadDataHome )
         SW_EXPECT_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", savedDataHome ) );
@@ -801,23 +819,30 @@ SW_TEST_CASE( FileTest, LinuxTrashUsesVolumeTrashAcrossFileSystems )
 
     sw::string savedDataHome;
     const bool bHadDataHome = sw::ProcessEnvironment::tryRead( "XDG_DATA_HOME", savedDataHome );
-    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", root + "/data" ) );
+    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", sw::FileUtil::joinPath( root, "data" ) ) );
 
-    const sw::string name = "sw_volume_trash_" + sw::to_string( static_cast<uint64>( ::getpid() ) ) + ".txt";
-    const sw::string path = "/dev/shm/" + name;
+    sw::fixed_string<sw::constant::buffer::kMax64> name;
+    sw::formatstring( name.data(), name.capacity(), "sw_volume_trash_%#.txt", static_cast<uint64>( ::getpid() ) );
+    const sw::string path = sw::FileUtil::joinPath( "/dev/shm", name.view() );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "volume" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path } ) );
     SW_EXPECT_FALSE( sw::FileUtil::exists( path ) );
 
-    const sw::string volumeTrash = "/dev/shm/.Trash-" + sw::to_string( static_cast<uint64>( ::getuid() ) );
-    sw::string       text;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( volumeTrash + "/files/" + name, text ) );
+    const uint64                                    uid = static_cast<uint64>( ::getuid() );
+    sw::fixed_string<sw::constant::buffer::kMax256> trashedFile;
+    sw::formatstring( trashedFile.data(), trashedFile.capacity(), "/dev/shm/.Trash-%#/files/%#", uid, name.c_str() );
+    sw::fixed_string<sw::constant::buffer::kMax256> trashInfo;
+    sw::formatstring( trashInfo.data(), trashInfo.capacity(), "/dev/shm/.Trash-%#/info/%#.trashinfo", uid, name.c_str() );
+    sw::fixed_string<sw::constant::buffer::kMax1024> homeTrashedFile;
+    sw::formatstring( homeTrashedFile.data(), homeTrashedFile.capacity(), "%#/data/Trash/files/%#", root, name.c_str() );
+    sw::string text;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( trashedFile.view(), text ) );
     SW_EXPECT_EQUAL( sw::string( "volume" ), text );
-    SW_EXPECT_TRUE( sw::FileUtil::exists( volumeTrash + "/info/" + name + ".trashinfo" ) );
-    SW_EXPECT_FALSE( sw::FileUtil::exists( root + "/data/Trash/files/" + name ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( trashInfo.view() ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( homeTrashedFile.view() ) );
 
-    SW_EXPECT_TRUE( sw::FileUtil::removeFile( volumeTrash + "/files/" + name ) );
-    SW_EXPECT_TRUE( sw::FileUtil::removeFile( volumeTrash + "/info/" + name + ".trashinfo" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( trashedFile.view() ) );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( trashInfo.view() ) );
     if ( bHadDataHome )
         SW_EXPECT_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", savedDataHome ) );
     else

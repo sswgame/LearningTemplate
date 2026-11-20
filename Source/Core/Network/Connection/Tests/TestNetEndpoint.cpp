@@ -9,6 +9,8 @@
 #include "Core/Network/Tests/NetTestUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -231,7 +233,8 @@ SW_TEST_CASE( NetEndpointTest, EveryChannelPairsItsSendAndReceiveFlows )
             if ( flow._kind == flowCase._kind )
                 ( flow._bReceive ? listReceivedID : listSent ).push_back( flow._id );
         }
-        const string label = "kind " + sw::to_string( static_cast<uint32>( flowCase._kind ) );
+        fixed_string<constant::buffer::kMax32> label;
+        formatstring( label.data(), label.capacity(), "kind %#", static_cast<uint32>( flowCase._kind ) );
         SW_EXPECT_TRUE_MSG( listSent.size() == static_cast<size_t>( flowCase._count ), label.c_str() );
         VectorUtil::sort( listSent );
         VectorUtil::sort( listReceivedID );

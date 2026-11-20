@@ -58,11 +58,12 @@ namespace sw
             TypePlan&             plan = _listPlan[typeIndex];
             FixedCodecEmitState   state( _header, _sourceFilePath, type );
 
-            string     canonical = "T=" + type._fullyQualifiedName + "|";
-            const bool bHasBase  = type._baseCount == 1 && type._bParentReflected == SW_TRUE && type._parentFQN.empty() == false;
+            FixedCanonicalBuilder canonical;
+            canonical.appendFormat( "T=%#|", type._fullyQualifiedName );
+            const bool bHasBase = type._baseCount == 1 && type._bParentReflected == SW_TRUE && type._parentFQN.empty() == false;
             if ( bHasBase )
             {
-                canonical += "B=" + type._parentFQN + "|";
+                canonical.appendFormat( "B=%#|", type._parentFQN );
                 (void)state.addDependency( FixedCodecGeneratorInternal::kBaseFieldName, type._parentFQN ); // 기반은 의존 0 번이다(런타임 `FixedCodec::_pBaseCast`)
             }
             state._listInlineFqn.push_back( type._fullyQualifiedName );
@@ -83,7 +84,7 @@ namespace sw
             }
             plan._bEligible      = SW_TRUE;
             plan._bHasBase       = bHasBase ? SW_TRUE : SW_FALSE;
-            plan._canonical      = canonical;
+            plan._canonical      = string( canonical.view() );
             plan._listDependency = std::move( state._listDependency );
             plan._listRootNode   = std::move( state._listRootNode );
             plan._listEnum       = std::move( state._listEnum );
@@ -129,8 +130,9 @@ namespace sw
         if ( replicatedType._listProperty.empty() )
             return true;
 
-        FixedCodecEmitState state( _header, _sourceFilePath, replicatedType );
-        string              canonical = "R=" + type._fullyQualifiedName + "|";
+        FixedCodecEmitState   state( _header, _sourceFilePath, replicatedType );
+        FixedCanonicalBuilder canonical;
+        canonical.appendFormat( "R=%#|", type._fullyQualifiedName );
         state._listInlineFqn.push_back( type._fullyQualifiedName );
         FixedCodecValueEmitter::emitProperties( state, replicatedType, canonical, state._listRootNode );
         if ( state._bError == SW_TRUE )
@@ -147,7 +149,7 @@ namespace sw
                              _sourceFilePath, state._unresolvedLine, type._fullyQualifiedName, state._unresolvedMember, state._unresolvedName );
             return false;
         }
-        outPlan._replicatedCanonical        = canonical;
+        outPlan._replicatedCanonical        = string( canonical.view() );
         outPlan._replicated._listRootNode   = std::move( state._listRootNode );
         outPlan._replicated._listEnum       = std::move( state._listEnum );
         outPlan._replicated._listDependency = std::move( state._listDependency );
@@ -160,16 +162,16 @@ namespace sw
         outListEntry.resize( first + listNode.size() );
         for ( size_t index = 0; index < listNode.size(); ++index )
         {
-            const FixedCodecNode& node           = listNode[index];
-            const size_t          childFirst     = outListEntry.size();
-            string                entry          = node._call;
-            const string          childFirstText = FixedCodecEmitState::formatInteger( static_cast<int64>( childFirst ) );
+            const FixedCodecNode&                     node       = listNode[index];
+            const size_t                              childFirst = outListEntry.size();
+            StringBuilder<constant::buffer::kMax2048> entry;
+            entry.append( node._call );
             if ( node._childArgs == FixedCodecNode::ChildArgs::Element )
-                entry += ", " + childFirstText + "u";
+                entry.appendFormat( ", %#u", static_cast<int64>( childFirst ) );
             else if ( node._childArgs == FixedCodecNode::ChildArgs::Group )
-                entry += ", " + childFirstText + "u, " + FixedCodecEmitState::formatInteger( static_cast<int64>( node._listChild.size() ) ) + "u";
-            entry += " )";
-            outListEntry[first + index] = std::move( entry );
+                entry.appendFormat( ", %#u, %#u", static_cast<int64>( childFirst ), static_cast<int64>( node._listChild.size() ) );
+            entry.append( " )" );
+            outListEntry[first + index] = string( entry.view() );
             flattenNodes( node._listChild, outListEntry );
         }
     }
@@ -184,7 +186,6 @@ namespace sw
             if ( std::find( listEmittedEnum.begin(), listEmittedEnum.end(), tableName ) != listEmittedEnum.end() )
                 continue;
             listEmittedEnum.push_back( tableName );
-            const string enumType = "::" + pEnum->_fullyQualifiedName;
             emit.linef( "static constexpr int64 %#[] =", tableName );
             emit.line( "{" ).push();
             vector<int64> listSeen;
@@ -194,7 +195,7 @@ namespace sw
                 if ( enumerator._name == pEnum->_countEnumerator || bDuplicate )
                     continue;
                 listSeen.push_back( enumerator._value );
-                emit.linef( "static_cast<int64>( %#::%# ),", enumType, enumerator._name );
+                emit.linef( "static_cast<int64>( ::%#::%# ),", pEnum->_fullyQualifiedName, enumerator._name );
             }
             emit.pop().line( "};" );
         }
@@ -212,7 +213,9 @@ namespace sw
                 emit.linef( "%#,", entry );
             }
             emit.pop().line( "};" );
-            fieldArgs = tablePrefix + "Field, " + FixedCodecEmitState::formatInteger( static_cast<int64>( listRootNode.size() ) ) + "u";
+            StringBuilder<constant::buffer::kMax128> args;
+            args.appendFormat( "%#Field, %#u", tablePrefix, static_cast<int64>( listRootNode.size() ) );
+            fieldArgs = string( args.view() );
         }
 
         string dependencyArgs = "nullptr, 0u";
@@ -225,7 +228,9 @@ namespace sw
                 emit.linef( "{ %#, %# },", CodeEmit::quoted( dependency.first ), CodeEmit::quoted( dependency.second ) );
             }
             emit.pop().line( "};" );
-            dependencyArgs = tablePrefix + "Dependency, " + FixedCodecEmitState::formatInteger( static_cast<int64>( listDependency.size() ) ) + "u";
+            StringBuilder<constant::buffer::kMax128> args;
+            args.appendFormat( "%#Dependency, %#u", tablePrefix, static_cast<int64>( listDependency.size() ) );
+            dependencyArgs = string( args.view() );
         }
         return { fieldArgs, dependencyArgs };
     }
@@ -269,18 +274,23 @@ namespace sw
 
     string FixedCodecGenerator::makeSchemaLine( const size_t typeIndex ) const
     {
-        const TypePlan& plan = _listPlan[typeIndex];
-        string          line = _header._listType[typeIndex]._fullyQualifiedName;
-        line += plan._bEligible == SW_TRUE ? " | " : " | (not eligible) ";
-        line += plan._bEligible == SW_TRUE ? plan._canonical : plan._reason;
-        return line;
+        const TypePlan&                           plan = _listPlan[typeIndex];
+        StringBuilder<constant::buffer::kMax1024> line;
+        if ( plan._bEligible == SW_TRUE )
+            line.appendFormat( "%# | %#", _header._listType[typeIndex]._fullyQualifiedName, plan._canonical );
+        else
+            line.appendFormat( "%# | (not eligible) %#", _header._listType[typeIndex]._fullyQualifiedName, plan._reason );
+        return string( line.view() );
     }
 
     string FixedCodecGenerator::makeDumpLine( const size_t typeIndex ) const
     {
-        const TypePlan& plan = _listPlan[typeIndex];
+        const TypePlan&                           plan = _listPlan[typeIndex];
+        StringBuilder<constant::buffer::kMax1024> line;
         if ( plan._bEligible == SW_TRUE )
-            return "  FIXED codec: eligible  " + plan._canonical;
-        return "  FIXED codec: not eligible - " + plan._reason;
+            line.appendFormat( "  FIXED codec: eligible  %#", plan._canonical );
+        else
+            line.appendFormat( "  FIXED codec: not eligible - %#", plan._reason );
+        return string( line.view() );
     }
 } // namespace sw

@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -66,8 +67,10 @@ namespace sw
                 bOutFromParent = ProcessEnvironment::tryReadNonEmpty( kRunRootVariable, run );
                 if ( bOutFromParent )
                     return run;
-                const string runsFolder = FileUtil::joinPath( FileUtil::joinPath( binary, constant::path::kSavedFolder ), "Automation/Runs" );
-                return FileUtil::joinPath( runsFolder, to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) );
+                const string                            runsFolder = FileUtil::joinPath( FileUtil::joinPath( binary, constant::path::kSavedFolder ), "Automation/Runs" );
+                StringBuilder<constant::buffer::kMax64> runName;
+                runName.appendFormat( "%#-%#", Process::getCurrentProcessID(), MonotonicClock::nowNanoseconds() );
+                return FileUtil::joinPath( runsFolder, runName.view() );
             }
 
             static ProcessRoots make()

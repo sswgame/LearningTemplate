@@ -7,6 +7,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Process/ShutdownSignal.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "DevTools/Console/DevConsole.h"
@@ -144,7 +145,9 @@ namespace sw
             // 일시정지 · 한 틱 진행은 개발 명령이 아니라 서버 루프의 명령이다 - 같은 길로 받는다. 답은 서버가 지금 어디인지다.
             if ( executePauseCommand( line ) )
             {
-                outReply = ( _bPaused ? "paused tick " : "running tick " ) + to_string( _tickCount() );
+                StringBuilder<constant::buffer::kMax64> reply;
+                reply.appendFormat( "%#tick %#", _bPaused ? "paused " : "running ", _tickCount() );
+                outReply = string( reply.view() );
                 return true;
             }
             const bool bOk = _pDev->_console.execute( line, outReply ) == DevConsoleResult::Ok;

@@ -9,6 +9,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -47,10 +48,12 @@ namespace sw
             {
                 string folder;
                 if ( ProcessEnvironment::tryReadNonEmpty( "XDG_DATA_HOME", folder ) )
-                    return folder + "/Trash";
-                if ( ProcessEnvironment::tryReadNonEmpty( "HOME", folder ) )
-                    return folder + "/.local/share/Trash";
-                return {};
+                    folder += "/Trash";
+                else if ( ProcessEnvironment::tryReadNonEmpty( "HOME", folder ) )
+                    folder += "/.local/share/Trash";
+                else
+                    return {};
+                return folder;
             }
 
             /** @brief 폴더를 가는 길까지 만듭니다. */
@@ -86,7 +89,14 @@ namespace sw
             }
 
             /** @brief 휴지통 폴더의 `files` · `info` 를 만듭니다. */
-            [[nodiscard]] static bool ensureTrashFolder( const string& trashFolder ) { return ensureFolders( trashFolder + "/files" ) && ensureFolders( trashFolder + "/info" ); }
+            [[nodiscard]] static bool ensureTrashFolder( const string& trashFolder )
+            {
+                StringBuilder<constant::buffer::kMax1024> filesFolder;
+                filesFolder.appendFormat( "%#/files", trashFolder );
+                StringBuilder<constant::buffer::kMax1024> infoFolder;
+                infoFolder.appendFormat( "%#/info", trashFolder );
+                return ensureFolders( string( filesFolder.view() ) ) && ensureFolders( string( infoFolder.view() ) );
+            }
 
             /** @brief 경로의 부모 폴더입니다(`/a/b` → `/a`, `/a` → `/`). */
             static string getParentFolder( const string& path )
@@ -119,17 +129,22 @@ namespace sw
                     topFolder = getParentFolder( topFolder );
                 }
                 const string topPrefix = topFolder == "/" ? string() : topFolder;
-                const string uid       = to_string( static_cast<uint64>( ::getuid() ) );
+                const uint64 uid       = static_cast<uint64>( ::getuid() );
 
-                struct stat  adminStat{};
-                const string adminTrash = topPrefix + "/.Trash";
+                struct stat                               adminStat{};
+                StringBuilder<constant::buffer::kMax1024> adminTrash;
+                adminTrash.appendFormat( "%#/.Trash", topPrefix );
                 if ( ::lstat( adminTrash.c_str(), &adminStat ) == 0 && S_ISDIR( adminStat.st_mode ) && ( adminStat.st_mode & S_ISVTX ) != 0 )
                 {
-                    const string userTrash = adminTrash + "/" + uid;
+                    StringBuilder<constant::buffer::kMax1024> userTrashBuilder;
+                    userTrashBuilder.appendFormat( "%#/%#", adminTrash.view(), uid );
+                    const string userTrash( userTrashBuilder.view() );
                     if ( ensureTrashFolder( userTrash ) )
                         return userTrash;
                 }
-                const string volumeTrash = topPrefix + "/.Trash-" + uid;
+                StringBuilder<constant::buffer::kMax1024> volumeTrashBuilder;
+                volumeTrashBuilder.appendFormat( "%#/.Trash-%#", topPrefix, uid );
+                const string volumeTrash( volumeTrashBuilder.view() );
                 return ensureTrashFolder( volumeTrash ) ? volumeTrash : string();
             }
 
@@ -147,20 +162,24 @@ namespace sw
 
                 for ( int32 attempt = 0; attempt < kMaxNameAttempt; ++attempt )
                 {
-                    string name = baseName;
+                    StringBuilder<constant::buffer::kMax1024> name;
+                    name.append( baseName );
                     if ( attempt > 0 )
-                        name += "." + to_string( attempt );
-                    const string infoPath = trashFolder + "/info/" + name + ".trashinfo";
-                    const string destPath = trashFolder + "/files/" + name;
-                    const int32  file     = ::open( infoPath.c_str(), O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, 0600 );
+                        name.appendFormat( ".%#", attempt );
+                    StringBuilder<constant::buffer::kMax1024> infoPath;
+                    infoPath.appendFormat( "%#/info/%#.trashinfo", trashFolder, name.view() );
+                    StringBuilder<constant::buffer::kMax1024> destPath;
+                    destPath.appendFormat( "%#/files/%#", trashFolder, name.view() );
+                    const int32 file = ::open( infoPath.c_str(), O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, 0600 );
                     if ( file < 0 )
                     {
                         if ( errno == EEXIST )
                             continue;
                         return false;
                     }
-                    const string text     = "[Trash Info]\nPath=" + encodeTrashPath( path ) + "\nDeletionDate=" + arrDate + "\n";
-                    const bool   bWritten = ::write( file, text.data(), text.size() ) == static_cast<ssize_t>( text.size() );
+                    StringBuilder<constant::buffer::kMax4096> text;
+                    text.appendFormat( "[Trash Info]\nPath=%#\nDeletionDate=%#\n", encodeTrashPath( path ), arrDate );
+                    const bool bWritten = ::write( file, text.c_str(), text.size() ) == static_cast<ssize_t>( text.size() );
                     ::close( file );
                     const bool bNameTaken = ::access( destPath.c_str(), F_OK ) == 0; // rename 은 있는 파일을 덮어쓴다
                     if ( bWritten && bNameTaken == false && ::rename( path.c_str(), destPath.c_str() ) == 0 )
@@ -274,9 +293,10 @@ namespace sw
         if ( written == 0 || written >= needed )
             return {};
         full.resize( static_cast<size_t>( written ) );
-        if ( full.compare( 0, 2, L"\\\\" ) == 0 )
-            return wstring( L"\\\\?\\UNC\\" ) + full.substr( 2 );
-        return wstring( L"\\\\?\\" ) + full;
+        const bool bNetworkShare = full.compare( 0, 2, L"\\\\" ) == 0;
+        wstring    prefixed( bNetworkShare ? L"\\\\?\\UNC\\" : L"\\\\?\\" );
+        prefixed.append( full, bNetworkShare ? 2 : 0 );
+        return prefixed;
     }
 #endif
 

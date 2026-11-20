@@ -7,7 +7,10 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "DevTools/Profiling/Memory/MemoryExportSubsystem.h"
 #include "DevTools/Profiling/Memory/MemorySnapshotExport.h"
@@ -67,7 +70,9 @@ namespace sw
                 const string folder = MemorySnapshotExport::reserveFolder( root );
                 if ( folder.empty() )
                 {
-                    outReply = "memory.export: could not create a folder under '" + root + "'";
+                    StringBuilder<constant::buffer::kMax1024> reply;
+                    reply.appendFormat( "memory.export: could not create a folder under '%#'", root );
+                    outReply = string( reply.view() );
                     return true;
                 }
                 MemoryExportSubsystem* const pExport = engine::findSubsystem<MemoryExportSubsystem>(); // 개발 도구 클라이언트가 기동 범위에 세운다 — 엔진 서비스 칸이 없는 타입이다
@@ -77,7 +82,9 @@ namespace sw
                     return true;
                 }
                 pExport->writeAsync( make_shared<const MemorySnapshot>( std::move( snapshot ) ), folder );
-                outReply = "memory.export -> " + folder;
+                StringBuilder<constant::buffer::kMax1024> reply;
+                reply.appendFormat( "memory.export -> %#", folder );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -96,26 +103,27 @@ namespace sw
                     outReply = "memory.exportinfo: no policy";
                     return true;
                 }
-                const string  folder = MemorySnapshotExport::findLatestFolder( MemorySnapshotExport::getDefaultRoot( *policy ) );
-                const string  path   = FileUtil::joinPath( folder, sheetName + ".csv" );
+                const string                            folder = MemorySnapshotExport::findLatestFolder( MemorySnapshotExport::getDefaultRoot( *policy ) );
+                fixed_string<constant::buffer::kMax128> fileName;
+                formatstring( fileName.data(), fileName.capacity(), "%#.csv", sheetName );
+                const string  path = FileUtil::joinPath( folder, fileName.view() );
                 vector<uint8> listByte;
                 if ( folder.empty() || FileUtil::readFile( path, listByte ) == false )
                 {
-                    outReply = "memory.exportinfo: no file '" + path + "'";
+                    StringBuilder<constant::buffer::kMax1024> reply;
+                    reply.appendFormat( "memory.exportinfo: no file '%#'", path );
+                    outReply = string( reply.view() );
                     return true;
                 }
-                const string_view text{ reinterpret_cast<const utf8*>( listByte.data() ), listByte.size() };
-                const bool        bBOM      = StringUtil::startsWith( text, CSVTable::kByteOrderMark );
-                const string_view body      = bBOM ? text.substr( CSVTable::kByteOrderMark.size() ) : text;
-                const size_t      headerEnd = body.find( "\r\n" );
-                const uint32      lineCount = StringUtil::countChar( body, '\n' );
-                outReply                    = "memory.exportinfo: ";
-                outReply += sheetName;
-                outReply += bBOM ? " bom=yes" : " bom=no";
-                outReply += " header=";
-                outReply += body.substr( 0, headerEnd == string_view::npos ? body.size() : headerEnd );
-                outReply += " rows=";
-                StringUtil::appendNumber( outReply, lineCount > 0 ? lineCount - 1 : 0u );
+                const string_view                         text{ reinterpret_cast<const utf8*>( listByte.data() ), listByte.size() };
+                const bool                                bBOM      = StringUtil::startsWith( text, CSVTable::kByteOrderMark );
+                const string_view                         body      = bBOM ? text.substr( CSVTable::kByteOrderMark.size() ) : text;
+                const size_t                              headerEnd = body.find( "\r\n" );
+                const uint32                              lineCount = StringUtil::countChar( body, '\n' );
+                StringBuilder<constant::buffer::kMax1024> reply;
+                reply.appendFormat( "memory.exportinfo: %#%# header=%# rows=%#", sheetName, bBOM ? " bom=yes" : " bom=no", body.substr( 0, headerEnd == string_view::npos ? body.size() : headerEnd ),
+                                    lineCount > 0 ? lineCount - 1 : 0u );
+                outReply = string( reply.view() );
                 return true;
             }
         };
