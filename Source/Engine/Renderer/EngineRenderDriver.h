@@ -47,21 +47,22 @@ namespace sw
         /** @param startupScope 기동 범위입니다. 백엔드 교체가 그 컬렉션의 단계를 내리고 다시 세웁니다. 이 드라이버를 든 서브시스템의 주인이라 먼저 사라지지 않습니다. */
         EngineRenderDriver( SubsystemScope& startupScope, RHISubsystem& rhiSubsystem, FrameRendererSubsystem& frameRendererSubsystem, RenderThreadSubsystem& renderThreadSubsystem );
 
-        void                        onStartupFinished() override;
-        void                        onShutdownBegin() override;
-        [[nodiscard]] RHI*          findRHI() const override;
-        [[nodiscard]] RHIInitResult getRHIInitResult() const override;
-        [[nodiscard]] RenderThread* findRenderThread() const override { return _pRenderThread; }
-        void                        flushSubmittedPackets() override;
-        void                        waitRenderThreadIdle( RHIWaitIdleReason reason ) override;
-        void                        submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, FrameDrawMode drawMode ) override;
-        [[nodiscard]] bool          applyPendingBackendChange() override;
-        void                        discardViewTargets() override;
-        void                        setScenarioCaptureEnabled( bool bEnabled ) override;
-        void                        setPresentInterval( uint32 interval ) override;
-        [[nodiscard]] uint32        countPendingCaptureJobs( const GameObjectManager* pManager ) const override;
-        void                        overrideDeviceLostPolicy( RHIDeviceLostPolicy policy ) override;
-        [[nodiscard]] uint32        getDeviceRecreateCount() const override { return _deviceRecreateCount; }
+        void                            onStartupFinished() override;
+        void                            onShutdownBegin() override;
+        [[nodiscard]] RHI*              findRHI() const override;
+        [[nodiscard]] RHIInitResult     getRHIInitResult() const override;
+        [[nodiscard]] const IRHIDevice* findDevice() const override;
+        [[nodiscard]] RenderThread*     findRenderThread() const override { return _pRenderThread; }
+        void                            flushSubmittedPackets() override;
+        void                            waitRenderThreadIdle( RHIWaitIdleReason reason ) override;
+        void                            submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, FrameDrawMode drawMode ) override;
+        [[nodiscard]] bool              applyPendingBackendChange() override;
+        void                            discardViewTargets() override;
+        void                            setScenarioCaptureEnabled( bool bEnabled ) override;
+        void                            setPresentInterval( uint32 interval ) override;
+        [[nodiscard]] uint32            countPendingCaptureJobs( const GameObjectManager* pManager ) const override;
+        void                            overrideDeviceLostPolicy( RHIDeviceLostPolicy policy ) override;
+        [[nodiscard]] uint32            getDeviceRecreateCount() const override { return _deviceRecreateCount; }
 
         /** @brief 마지막으로 적용한 화면 출력입니다(능력에 맞춘 값 — 주 패킷이 싣는다). 아직 적용하지 않았으면 기본값(SDR)입니다. */
         const DisplayOutputDesc& getAppliedDisplayOutput() const { return _appliedDisplayOutput; }

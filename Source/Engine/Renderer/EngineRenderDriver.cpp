@@ -147,6 +147,11 @@ namespace sw
         return _rhiSubsystem.findRHI();
     }
 
+    const IRHIDevice* EngineRenderDriver::findDevice() const
+    {
+        return _pRHI != nullptr ? &_pRHI->getDevice() : nullptr;
+    }
+
     RHIInitResult EngineRenderDriver::getRHIInitResult() const
     {
         return _rhiSubsystem.getInitResult();

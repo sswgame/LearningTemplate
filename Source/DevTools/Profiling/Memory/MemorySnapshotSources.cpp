@@ -20,8 +20,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Presentation/IEngineRenderDriver.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -282,11 +282,12 @@ namespace sw
                 sources._listAssetCache.push_back( pCache );
             }
         }
-        if ( const FrameRenderer* pRenderer = engine::findSubsystem<FrameRenderer>(); pRenderer != nullptr && pRenderer->getDevice() != nullptr )
+        // 장치는 렌더 이음매로 읽는다 — 렌더러 헤더는 전용 서버가 짓지 않는다(서버에는 이음매가 없어 GPU 표가 빈다).
+        const IEngineRenderDriver* const pRenderDriver = engine::findSubsystem<IEngineRenderDriver>();
+        if ( const IRHIDevice* pDevice = pRenderDriver != nullptr ? pRenderDriver->findDevice() : nullptr; pDevice != nullptr )
         {
-            const IRHIDevice* pDevice = pRenderer->getDevice();
-            sources._pGPUTracker      = &pDevice->getMemoryTracker();
-            sources._gpuBackendName   = pDevice->getBackendName();
+            sources._pGPUTracker    = &pDevice->getMemoryTracker();
+            sources._gpuBackendName = pDevice->getBackendName();
         }
         if ( const SceneManager* pScenes = engine::findSubsystem<SceneManager>(); pScenes != nullptr )
         {

@@ -6,8 +6,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-
-#include "Engine/Renderer/Capture/ScreenshotLocalTime.h"
+#include "Core/Time/WallClock.h"
 
 namespace sw
 {
@@ -350,7 +349,8 @@ namespace sw
 
     string MemorySnapshot::makeTimeLabel()
     {
-        const ScreenshotLocalTime               localTime = ScreenshotLocalTime::getLocalTimeNow();
+        LocalCalendarTime localTime{};
+        (void)WallClock::toLocalCalendar( WallClock::nowUnixMilliseconds().toSeconds(), localTime ); // 바꾸지 못하면 0 날짜 이름이다(스크린샷 이름과 같은 규칙)
         StringBuilder<constant::buffer::kMax32> label;
         label.appendFormat( "%04d%02d%02d-%02d%02d%02d", localTime._year, localTime._month, localTime._day, localTime._hour, localTime._minute, localTime._second );
         return string{ label.view() };

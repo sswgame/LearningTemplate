@@ -15,6 +15,7 @@
 namespace sw
 {
     class GameObjectManager;
+    class IRHIDevice;
     class RenderThread;
     class RHI;
     struct FrameViewports;
@@ -40,6 +41,8 @@ namespace sw
         [[nodiscard]] virtual RHI* findRHI() const = 0;
         /** @brief RHI 기동 단계의 결과입니다. 돌지 않았으면 `NotStarted` 입니다. */
         [[nodiscard]] virtual RHIInitResult getRHIInitResult() const = 0;
+        /** @brief 지금 그리는 RHI 장치입니다. 장치가 서기 전 · 잃은 뒤면 nullptr 입니다 — 렌더러 헤더 없이 장치를 읽는 쪽(메모리 스냅숏의 GPU 자원 표)이 쓴다. */
+        [[nodiscard]] virtual const IRHIDevice* findDevice() const = 0;
         /** @brief 렌더 스레드입니다(서지 않았으면 nullptr). 클라이언트 호스트만 씁니다 — 형식은 앞으로 선언뿐이고 쓰는 쪽이 렌더러 헤더를 읽습니다. */
         [[nodiscard]] virtual RenderThread* findRenderThread() const = 0;
 
