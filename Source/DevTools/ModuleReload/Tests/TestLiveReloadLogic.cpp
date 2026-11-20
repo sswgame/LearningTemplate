@@ -8,9 +8,12 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/ModuleReload/LiveReload/DeferredLibraryUnloadQueue.h"
+#include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleDependencyGraph.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleShadowCopy.h"
 #include "DevTools/ModuleReload/LiveReload/ShadowCopyName.h"
+
+#include "Engine/Config/GameSelection.h"
 
 using namespace sw;
 
@@ -233,4 +236,13 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
     SW_EXPECT_TRUE( FileUtil::exists( original ) );
     ModuleShadowCopy::removeArtifacts( original );
     SW_EXPECT_FALSE( FileUtil::exists( original ) );
+}
+
+/** @brief [LiveReloadLogicTest] 게임 모듈 이름은 지금 고른 게임의 빌드 대상(SWGame_<게임>)으로 바뀌고, 그 밖의 대상은 그대로다 — 모듈 이름 그대로는 ninja 에 없는 대상이었다 */
+SW_TEST_CASE( LiveReloadLogicTest, GameModuleBuildTargetNamesTheSelectedGame )
+{
+    const sw::string gameTarget = sw::ModuleCompiler::resolveBuildTarget( sw::ModuleCompiler::kGameModuleName );
+    SW_EXPECT_EQUAL( sw::string( "SWGame_" ) + sw::GameSelection::getName(), gameTarget );
+    SW_EXPECT_EQUAL( sw::string( "EditorAll" ), sw::ModuleCompiler::resolveBuildTarget( "EditorAll" ) );
+    SW_EXPECT_TRUE( sw::ModuleCompiler::resolveBuildTarget( "" ).empty() );
 }

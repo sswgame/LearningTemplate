@@ -45,7 +45,11 @@ namespace sw
          * @param targetName 빌드할 CMake 타깃 이름
          * @return 이미 컴파일 중이면 false, 작업을 시작했으면 true
          */
-        [[nodiscard]] virtual bool compileModule( string_view targetName ) override;
+        [[nodiscard]] virtual bool compileModule( string_view moduleName ) override;
+
+        /** @brief 게임 모듈 이름(`SWGame`)을 지금 고른 게임의 빌드 대상(`SWGame_<게임>`)으로 바꿉니다. 그 밖의 이름(`EditorAll` · `EditorModule` · 빈 글 = 전체)은 그대로입니다. */
+        [[nodiscard]] static string  resolveBuildTarget( string_view moduleName );
+        static constexpr const utf8* kGameModuleName = "SWGame"; ///< 게임 모듈의 모듈 이름(산출물 `Bin/Modules/SWGame`)
 
         /**
          * @brief 모든 모듈을 비동기로 컴파일합니다.

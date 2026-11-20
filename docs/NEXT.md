@@ -35,6 +35,7 @@
 
 ## 2. 알려진 실패 · 흔들림
 
+- **`Scenario.empty.desktop.editor.playreload` 격리(만료 2026-11-27, `Config/Rules/Test/Quarantine.json`):** ② PIE 중 `module.reload EditorModule` 에서 플레이가 멈춘다 — 플레이 세션을 에디터 모듈이 소유해 `EditorModuleManager::onBeforeSuspendModules` 가 시뮬레이션을 멈춘다. 언리얼 Live Coding 처럼 잇는 쪽으로 정하고(플레이 세션 · 게임 인스턴스 핸들을 호스트(App)가 들고 에디터 모듈은 다시 붙는다) 구현한 뒤, 그 다음 단계(게임 모듈 교체가 시계를 170 초 넘게 붙잡음)를 본다. 빌드 대상 이름(`SWGame` → `SWGame_<게임>`)은 `ModuleCompiler::resolveBuildTarget` 로 고쳤다.
 - **shooter3d crowd `fight` dx11 한 번 25.7 %(2026-11-18, preflight30 — 큰 영역 70 px):** 체인만 다시 돌려 통과. 다시 지면 같은 체인 앞 단계와 `scenario_bisect --golden-margins` 로 화소 자리를 본다(enemydeath dx11 과 같은 백엔드 — dx11 군중 장면의 정착 조건을 의심).
 - **shooter3d enemydeath `death_b` dx11 한 번 1.37%(2026-11-18, ST-3 통합 전체 실행):** 곧바로 두 번 다시 돌려 통과. 다시 지면 같은 체인의 앞 단계와 `scenario_bisect --golden-margins` 로 화소 자리를 본다.
 - **`editor.tilemapdatalayers` 단독 실패:** 이름 칸을 누른 뒤 `<EditorText>` 가 "글 칸이 키보드 초점을 잡지 않았다"(화면에는 칸이 활성). 체인에서는 앞 단계가 가린다 — `EditorSelfTestInput::isKeyboardTargetStable` 가 두 프레임 같은 대상을 못 보는 까닭을 `scenario-debug` "단독으로만 지면" 으로.
