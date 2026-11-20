@@ -1,6 +1,8 @@
 #!/bin/bash
 # 묶음 끝 전체 검증: Windows(린트, Release · ASan · 서버 · 배포 빌드, 단위 · ctest)가 모두 통과한 뒤에만 Linux 를 돌린다.
-# 인자는 Linux 로 넘긴다(--record). --no-linux 면 Windows 까지만 돈다(Linux 골든이 곧 바뀌는 묶음 사이). 로그는 build/<프리셋>/Testing/Logs/verify.* · build/verify.*.log. 끝 줄 VERIFIED=<sha> 가 나와야 push 한다.
+# 인자는 Linux 로 넘긴다(--record). --no-linux 면 Windows 까지만 돈다(Linux 골든이 곧 바뀌는 묶음 사이). 로그는 build/<프리셋>/Testing/Logs/verify.* · build/verify.*.log.
+# 시작에 작업 트리가 깨끗해야 하고(검증한 것이 커밋 그 자체), 끝에 HEAD 가 그대로이고 추적 파일이 바뀌지 않았어야 한다. Windows 가 모두 통과하면 build/verify.ok 에 sha 를 적고
+# 끝 줄 WINDOWS_OK=<sha> 를 찍는다 — git pre-push 훅(Scripts/dev/verify_record.py)이 main 으로 가는 sha 가 그것인지 본다. Linux 까지 돌면 VERIFIED=<sha> 가 마지막 줄이다.
 # --show 는 게임 · 에디터 테스트 창을 화면에 띄우고 테스트를 하나씩 돌린다(사람이 지켜볼 때). --dry-run 은 돌릴 명령만 차례대로 찍는다(스크립트를 고친 뒤 확인).
 # --self-check 는 판정 요약(print_results)의 자체 검사만 하고 끝난다(빌드 · 테스트 없이). 끝 줄 SELF_CHECK_OK.
 # --from build|changed|cpu|gpu-release|linux 는 앞 단계를 건너뛴다(linux 는 Windows 가 이미 통과했고 그 뒤 고친 것이 Linux 쪽 스크립트 · 환경뿐일 때). 앞 단계가 통과한 뒤
@@ -84,6 +86,21 @@ case "$FROM" in
   linux) STAGE=5 ;;
   *) echo "--from 은 build · changed · cpu · gpu-release · linux 중 하나다: $FROM"; exit 2 ;;
 esac
+
+# 검증한 것이 커밋 SHA 그 자체여야 한다 — 추적 파일의 고친 것 · 무시되지 않은 새 파일이 있으면 SHA 가 아닌 트리를 검증한다. 끝에는 HEAD 가 그대로이고
+# 트리가 여전히 깨끗한지 본다(빌드 · 테스트가 커밋되는 파일을 고치면 — 예: 리플렉션 생성의 AssetReferenceFields.generated.json — 거기서 진다).
+list_tree_changes() { sw_git status --porcelain --untracked-files=normal | tr -d ''; }
+TREE_CHANGES=$(list_tree_changes)
+if [ -n "$TREE_CHANGES" ]; then
+  if [ $DRY -eq 1 ]; then
+    echo "[dry] 작업 트리가 깨끗하지 않다 — 실제 실행은 여기서 멈춘다"
+  else
+    echo "작업 트리가 깨끗하지 않다 — 커밋한 뒤 돌린다(검증한 SHA 와 트리가 달라진다):"
+    printf '%s
+' "$TREE_CHANGES" | head -20
+    exit 2
+  fi
+fi
 
 windows_failed() {
   echo "WINDOWS_FAILED ($1) - Linux 를 돌리지 않는다 sha=$SHA"
@@ -252,6 +269,17 @@ job_shader_warm() {
   return $RC
 }
 
+# Windows 끝 검사 — HEAD 가 시작 때 그대로이고 트리가 깨끗한가.
+check_tree_at_end() {
+  [ $DRY -eq 1 ] && return 0
+  local NOW CHANGES
+  NOW=$(sw_git rev-parse HEAD)
+  [ "$NOW" = "$SHA" ] || windows_failed "HEAD 가 검증 중에 바뀌었다 $SHA -> $NOW"
+  CHANGES=$(list_tree_changes)
+  [ -z "$CHANGES" ] || { printf '%s
+' "$CHANGES" | head -20; windows_failed "검증 중에 추적 파일이 바뀌었다(빌드 · 테스트가 소스 트리를 고쳤다)"; }
+}
+
 [ $DRY -eq 1 ] || mkdir -p build
 if [ $STAGE -le 1 ]; then
   start_job "lint --all" job_lint
@@ -288,11 +316,18 @@ if [ $STAGE -le 4 ]; then
   run_ctest Ninja-Release all || windows_failed "Ninja-Release ctest"
 fi
 
+check_tree_at_end
+if [ $DRY -eq 1 ]; then
+  echo "[dry] 통과 기록(build/verify.ok)과 WINDOWS_OK 줄은 실제 실행만 남긴다"
+else
+  py -3 Scripts/dev/verify_record.py ok "$SHA" || windows_failed "build/verify.ok 쓰기"
+  echo "WINDOWS_OK=$SHA (시작 단계 $FROM)"
+fi
 if [ $NO_LINUX -eq 1 ]; then
-  echo "WINDOWS_VERIFIED=$SHA (Linux 를 돌리지 않았다, 시작 단계 $FROM)"
+  echo "Linux 를 돌리지 않았다(--no-linux)"
   exit 0
 fi
-echo "== WINDOWS_OK, linux 시작 $(date +%T)"
+echo "== linux 시작 $(date +%T)"
 PYTHONUTF8=1 run build/verify.linux.log py -3 Scripts/dev/linux_scenarios.py all "${RECORD[@]}"
 RC=$?
 [ $DRY -eq 1 ] || tail -n 40 build/verify.linux.log
@@ -314,4 +349,4 @@ echo "== done $(date +%T)"
 [ $RC -eq 0 ] && { [ "$SAN_RC" = 0 ] || [ "$SAN_RC" = skip ]; } || exit 1
 SAN_NOTE=""
 [ "$SAN_RC" = skip ] && SAN_NOTE=", sanitize 건너뜀"
-echo "VERIFIED=$SHA (시작 단계 $FROM$SAN_NOTE)"
+[ $DRY -eq 1 ] || echo "VERIFIED=$SHA (시작 단계 $FROM$SAN_NOTE)"

@@ -1,4 +1,5 @@
 {
-    "_comment": "묶음 검증(Scripts/dev/preflight.sh)의 동시 실행 값. ctest -j 의 슬롯 수다 — 시나리오 체인은 백엔드 수만큼 슬롯을 차지하므로(PROCESSORS, Test/Scenario/CMakeLists.txt) GPU 자식 수의 상한도 이 값이다. --show 는 1 로 덮는다.",
-    "_ctestJobs": 6
+    "_comment": "묶음 검증(Scripts/dev/preflight.sh)의 정책 값. _ctestJobs: ctest -j 의 슬롯 수 — 시나리오 체인은 백엔드 수만큼 슬롯을 차지하므로(PROCESSORS, Test/Scenario/CMakeLists.txt) GPU 자식 수의 상한도 이 값이다. --show 는 1 로 덮는다. _verifiedPushRefs: git pre-push 훅(Scripts/dev/verify_record.py)이 build/verify.ok 의 sha 만 받는 원격 ref.",
+    "_ctestJobs": 6,
+    "_verifiedPushRefs": ["refs/heads/main"]
 }

@@ -93,6 +93,11 @@ def run_git_or_raise(args: Sequence[str], *, cwd: Path | None = None) -> str:
     return result.stdout
 
 
+def get_main_working_tree(project_root: Path) -> Path:
+    """메인 작업 폴더(공통 `.git` 의 부모) — 워크트리에서도 빌드 · 검증 기록(`build/`)은 이 폴더 하나에 있다."""
+    return Path(run_git_or_raise(["rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=project_root).strip()).parent
+
+
 def run_git_in_hook_repository(args: Sequence[str], *, cwd: Path) -> ProcessResult:
     """
     물려받은 git 환경 변수를 **그대로 둔** git — 커밋 훅 린트가 지금 커밋하는 인덱스를 볼 때만 쓴다. `git commit -a` · `git commit <경로>` 는 임시 인덱스를
