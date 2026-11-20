@@ -328,7 +328,7 @@ namespace sw::editor
             if ( key._bValid )
                 listReadKey.push_back( &key );
         }
-        std::stable_sort( listReadKey.begin(), listReadKey.end(), []( const CatalogCurveKey* pLeft, const CatalogCurveKey* pRight )
+        VectorUtil::stableSort( listReadKey, []( const CatalogCurveKey* pLeft, const CatalogCurveKey* pRight )
         { return pLeft->_time < pRight->_time; } );
 
         CatalogDocument draft;

@@ -43,7 +43,7 @@ namespace sw
                     return unexpected( Error{ ErrorKind::NotFound, "the FCM service account environment variable is not set", config._serviceAccountEnvironment } );
                 FCMPushSettings      settings;
                 const expected<void> read = ServiceAccountCredentials::read( serviceAccountJSON, settings._credentials );
-                Memory::set( serviceAccountJSON.data(), 0, serviceAccountJSON.size() ); // 키가 든 글을 남기지 않는다
+                Memory::wipe( serviceAccountJSON.data(), serviceAccountJSON.size() ); // 키가 든 글을 남기지 않는다
                 if ( read.has_value() == false )
                     return unexpected( read.error() );
                 if ( config._tokenURL.empty() == false )
@@ -80,10 +80,7 @@ namespace sw
                                                              : expected<void>{ unexpected( Error{ ErrorKind::InvalidArgument, "the APNs authentication key is not a usable ES256 private key (.p8 PEM)",
                                                                                              config._keyEnvironment } ) };
                 if ( ready.has_value() == false )
-                {
-                    Memory::set( settings._privateKeyPem.data(), 0, settings._privateKeyPem.size() ); // 키가 든 글을 남기지 않는다
-                    return unexpected( ready.error() );
-                }
+                    return unexpected( ready.error() ); // 키는 settings 의 소멸자가 지운다
                 return unique_ptr<IPushNotificationProvider>( make_unique<APNSPushProvider>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() ) );
             }
         };

@@ -22,10 +22,18 @@ namespace sw
      * @brief 패치 목록에 서명하는 입력입니다. 제공자가 없으면 서명하지 않습니다(서명 없는 패치 — 스토어가 무결성을 맡는 채널).
      * @details 개인 키 PEM 은 저장소에 없고 부르는 쪽이 저장소 밖 파일에서 읽어 넘긴다. 이 구조체는 디스크에 쓰지 않는다.
      */
-    struct PackPatchSigner
+    struct SW_API PackPatchSigner
     {
         INetSecurityProvider* _pProvider{ nullptr };
         string                _privateKeyPem{}; ///< ES256(P-256) PKCS#8 PEM
+
+        /** @brief 개인 키를 지웁니다(`Memory::wipe`) — 패치 만들기가 중간에 실패해 돌아가도 키가 남지 않는다. */
+        ~PackPatchSigner();
+        PackPatchSigner()                                        = default;
+        PackPatchSigner( const PackPatchSigner& )                = default;
+        PackPatchSigner( PackPatchSigner&& ) noexcept            = default;
+        PackPatchSigner& operator=( const PackPatchSigner& )     = default;
+        PackPatchSigner& operator=( PackPatchSigner&& ) noexcept = default;
     };
 } // namespace sw
 

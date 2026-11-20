@@ -72,7 +72,7 @@ namespace sw
                     ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ToolHostScope::loadModules, this ), "OnlineLoadBot" );
                 if ( pModuleLoader == nullptr )
                 {
-                    std::fprintf( stderr, "OnlineLoadBot: the host scope did not start\n" );
+                    SW_LOW_LEVEL_ERROR( "OnlineLoadBot: the host scope did not start" );
                     return false;
                 }
                 // 엔진 종료의 모듈 내리기 자리(`ModuleUnloadStage`)에서 등록을 역순으로 거둔다 — 모듈 서브시스템(GameFramework · 키트의 캐시)이 엔진보다 먼저 내려간다.
@@ -82,7 +82,7 @@ namespace sw
                 _bEngineStarted = SW_TRUE;
                 if ( _engine.initialize( engineArgumentCount, listEngineArgument.data(), EngineHostRole::DedicatedServer, &_host ) == false )
                 {
-                    std::fprintf( stderr, "OnlineLoadBot: the engine did not start (dedicated server role)\n" );
+                    SW_LOW_LEVEL_ERROR( "OnlineLoadBot: the engine did not start (dedicated server role)" );
                     return false;
                 }
                 return true;

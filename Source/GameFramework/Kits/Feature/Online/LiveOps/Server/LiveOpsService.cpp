@@ -17,7 +17,6 @@
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
-#include <string>
 
 namespace sw
 {
@@ -239,7 +238,8 @@ namespace sw
         int64 integer = 0;
         if ( _dependencies._pRemoteConfig->findInteger( key, integer ) )
         {
-            text = string( std::to_string( integer ).c_str() );
+            text.clear(); // findText 가 실패하며 남긴 글을 지운다
+            StringUtil::appendNumber( text, integer );
             return text;
         }
         SW_LOG_WARNING_ID( "LiveOpsService.LiveOpsRemoteConfigKey", "LiveOps: remote config key '%#' not found — parameter left as is", value.c_str() );

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleMatch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -236,7 +237,7 @@ namespace sw
         {
             listZoneOrder.push_back( static_cast<int32>( index ) );
         }
-        std::stable_sort( listZoneOrder.begin(), listZoneOrder.end(), [this]( int32 left, int32 right )
+        VectorUtil::stableSort( listZoneOrder, [this]( int32 left, int32 right )
         {
             const BattleRoyalePlayer& leftPlayer  = _listPlayer[static_cast<size_t>( left )];
             const BattleRoyalePlayer& rightPlayer = _listPlayer[static_cast<size_t>( right )];

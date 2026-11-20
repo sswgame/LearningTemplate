@@ -32,7 +32,7 @@ namespace sw
     class JSONValue;
 
     /** @brief 애플 제공자의 설정입니다. 시간은 밀리초입니다. */
-    struct AppleReceiptSettings
+    struct SW_KIT_SERVER_API AppleReceiptSettings
     {
         static constexpr const utf8* kProductionBaseURL = "https://api.storekit.itunes.apple.com";
         static constexpr const utf8* kSandboxBaseURL    = "https://api.storekit-sandbox.itunes.apple.com";
@@ -58,6 +58,14 @@ namespace sw
 
         /** @brief 이 환경에서 알림 이력의 시작점으로 쓸 수 있는 가장 오랜 나이입니다. 칸으로 두지 않는다 — 서버(`_bSandboxServer`)와 어긋난 한계는 조회를 영원히 거절당하게 한다. */
         int64 getHistoryMaxAgeMs() const { return _bSandboxServer == SW_TRUE ? kSandboxHistoryMaxAgeMs : kProductionHistoryMaxAgeMs; }
+
+        /** @brief 서명 키를 지웁니다(`Memory::wipe`) — 만든 함수가 중간에 돌아가도 · 제공자가 옮겨 가진 사본이 풀려도 비밀이 남지 않는다. */
+        ~AppleReceiptSettings();
+        AppleReceiptSettings()                                             = default;
+        AppleReceiptSettings( const AppleReceiptSettings& )                = default;
+        AppleReceiptSettings( AppleReceiptSettings&& ) noexcept            = default;
+        AppleReceiptSettings& operator=( const AppleReceiptSettings& )     = default;
+        AppleReceiptSettings& operator=( AppleReceiptSettings&& ) noexcept = default;
     };
 } // namespace sw
 

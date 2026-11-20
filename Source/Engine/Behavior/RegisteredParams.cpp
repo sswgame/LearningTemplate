@@ -23,7 +23,7 @@ namespace sw
         , _generation{ generation }
     {
         if ( _pRaw != nullptr )
-            new ( _arrStorage ) shared_ptr<const void>( std::move( pParams ) );
+            sw_placement_new( _arrStorage ) shared_ptr<const void>( std::move( pParams ) );
     }
 
     RegisteredParams::RegisteredParams( const RegisteredParams& other )
@@ -35,7 +35,7 @@ namespace sw
     {
         // 참조 수 올리기는 이 이미지의 인라인 원자 연산이다 — 줄이 빠진 뒤에 복사해도 내린 코드를 부르지 않는다.
         if ( _pRaw != nullptr )
-            new ( _arrStorage ) shared_ptr<const void>( other.getShared() );
+            sw_placement_new( _arrStorage ) shared_ptr<const void>( other.getShared() );
     }
 
     RegisteredParams& RegisteredParams::operator=( const RegisteredParams& other )
@@ -48,7 +48,7 @@ namespace sw
         _pEntryOps  = other._pEntryOps;
         _generation = other._generation;
         if ( _pRaw != nullptr )
-            new ( _arrStorage ) shared_ptr<const void>( other.getShared() );
+            sw_placement_new( _arrStorage ) shared_ptr<const void>( other.getShared() );
         return *this;
     }
 
@@ -61,7 +61,7 @@ namespace sw
     {
         if ( _pRaw == nullptr )
             return;
-        new ( _arrStorage ) shared_ptr<const void>( std::move( other.getShared() ) );
+        sw_placement_new( _arrStorage ) shared_ptr<const void>( std::move( other.getShared() ) );
         other.getShared().~shared_ptr<const void>(); // 옮긴 뒤 빈 포인터라 해제 코드를 부르지 않는다
         other._pRaw = nullptr;
     }
@@ -77,7 +77,7 @@ namespace sw
         _generation = other._generation;
         if ( _pRaw == nullptr )
             return *this;
-        new ( _arrStorage ) shared_ptr<const void>( std::move( other.getShared() ) );
+        sw_placement_new( _arrStorage ) shared_ptr<const void>( std::move( other.getShared() ) );
         other.getShared().~shared_ptr<const void>();
         other._pRaw = nullptr;
         return *this;

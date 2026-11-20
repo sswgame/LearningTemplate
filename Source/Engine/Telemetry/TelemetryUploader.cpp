@@ -2,6 +2,8 @@
 
 #include "Engine/Telemetry/TelemetryUploader.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "Engine/Net/HTTPClient.h"
 
 namespace sw
@@ -31,7 +33,9 @@ namespace sw
         request._body   = batch._content;
         request._listHeader.push_back( { "Content-Type", "application/x-ndjson" } );
         request._listHeader.push_back( { "X-Telemetry-Session", batch._sessionID } );
-        request._listHeader.push_back( { "X-Telemetry-Events", std::to_string( batch._eventCount ) } );
+        string eventCount;
+        StringUtil::appendNumber( eventCount, batch._eventCount );
+        request._listHeader.push_back( { "X-Telemetry-Events", std::move( eventCount ) } );
         if ( _apiKey.empty() == false )
             request._listHeader.push_back( { "X-Api-Key", _apiKey } );
         const HTTPResponse response = _pClient->send( request );

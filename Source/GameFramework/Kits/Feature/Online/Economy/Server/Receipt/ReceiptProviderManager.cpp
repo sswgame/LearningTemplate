@@ -92,7 +92,7 @@ namespace sw
                     return unexpected( Error{ ErrorKind::NotFound, "the google service account environment variable is not set", config._serviceAccountEnvironment } );
                 GoogleReceiptSettings settings;
                 const expected<void>  read = ServiceAccountCredentials::read( serviceAccountJSON, settings._credentials );
-                Memory::set( serviceAccountJSON.data(), 0, serviceAccountJSON.size() ); // 키가 든 글을 남기지 않는다
+                Memory::wipe( serviceAccountJSON.data(), serviceAccountJSON.size() ); // 키가 든 글을 남기지 않는다
                 if ( read.has_value() == false )
                     return unexpected( read.error() );
                 settings._packageName = config._packageName;

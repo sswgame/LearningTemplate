@@ -634,8 +634,8 @@ namespace sw
         atomic<uint32>                 _runningWorkerCount;
         vector<unique_ptr<WorkerSlot>> _listWorkerSlot; ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다
         /// 도우미 슬롯 장부 — 슬롯을 받은 스레드의 상태도 쥔다. 그 스레드가 끝날 때 매니저가 먼저 사라졌어도 돌려줄 자리가 남는다.
-        std::shared_ptr<HelperSlotPool> _pHelperSlotPool;
-        uint32                          _instanceID; ///< 매니저마다 다른 번호. 스레드에 캐시한 슬롯 번호가 **이** 매니저 것인지 가린다
+        shared_ptr<HelperSlotPool> _pHelperSlotPool;
+        uint32                     _instanceID; ///< 매니저마다 다른 번호. 스레드에 캐시한 슬롯 번호가 **이** 매니저 것인지 가린다
         /**
          * @brief 잠든 워커의 비트마스크입니다. 깨우는 쪽은 비트를 **원자적으로 내리고** 그 워커만 깨웁니다.
          * @details 비트를 내린 쪽만 깨우므로 두 제출자가 같은 워커를 두 번 깨우지 않고, n 번의 깨우기는 서로 독립적인 n 번의 주소

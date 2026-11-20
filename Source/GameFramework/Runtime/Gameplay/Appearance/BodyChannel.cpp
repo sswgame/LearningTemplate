@@ -28,7 +28,7 @@ namespace sw
         listSorted.reserve( listLayer.size() );
         for ( const BodyChannelLayerDef& layer : listLayer )
             listSorted.push_back( &layer );
-        std::stable_sort( listSorted.begin(), listSorted.end(), []( const BodyChannelLayerDef* pLhs, const BodyChannelLayerDef* pRhs )
+        VectorUtil::stableSort( listSorted, []( const BodyChannelLayerDef* pLhs, const BodyChannelLayerDef* pRhs )
         { return pLhs->_priority < pRhs->_priority; } );
         for ( const BodyChannelLayerDef* pLayer : listSorted )
         {

@@ -27,10 +27,10 @@ namespace sw
          */
         struct ThreadTaskState
         {
-            int32                                        _helperScratchSlot = -1; ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
-            uint32                                       _helperSlotOwnerID = 0;  ///< 위 번호를 준 매니저의 `_instanceID`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
-            uint32                                       _parallelBodyDepth = 0;  ///< 이 스레드에서 지금 실행 중인 병렬 본문(`ParallelTaskScope`)의 겹침 깊이. 0 이면 병렬 본문 밖
-            std::shared_ptr<TaskManager::HelperSlotPool> _pHelperSlotPool;        ///< 위 번호를 준 장부. 스레드가 끝날 때 여기로 돌려준다
+            int32                                   _helperScratchSlot = -1; ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
+            uint32                                  _helperSlotOwnerID = 0;  ///< 위 번호를 준 매니저의 `_instanceID`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
+            uint32                                  _parallelBodyDepth = 0;  ///< 이 스레드에서 지금 실행 중인 병렬 본문(`ParallelTaskScope`)의 겹침 깊이. 0 이면 병렬 본문 밖
+            shared_ptr<TaskManager::HelperSlotPool> _pHelperSlotPool;        ///< 위 번호를 준 장부. 스레드가 끝날 때 여기로 돌려준다
 
             ThreadTaskState()                                    = default;
             ThreadTaskState( const ThreadTaskState& )            = delete;
@@ -216,7 +216,7 @@ namespace sw
         , _bStop{ false }
         , _runningWorkerCount{ 0 }
         , _listWorkerSlot{}
-        , _pHelperSlotPool{ std::make_shared<HelperSlotPool>() }
+        , _pHelperSlotPool{ make_shared<HelperSlotPool>() }
         , _instanceID{ s_nextInstanceID.fetch_add( 1, std::memory_order_relaxed ) }
         , _idleWorkerMask{ 0 }
         , _jobEpoch{ 0 }

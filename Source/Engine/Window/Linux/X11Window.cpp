@@ -556,7 +556,7 @@ namespace sw
         const Atom netWmName  = XInternAtom( pDisplay, "_NET_WM_NAME", 0 );
         const Atom utf8String = XInternAtom( pDisplay, "UTF8_STRING", 0 );
         XChangeProperty( pDisplay, win, netWmName, utf8String, 8, PropModeReplace, reinterpret_cast<const uint8*>( _arrTitle ),
-                         static_cast<int32>( std::strlen( _arrTitle ) ) );
+                         static_cast<int32>( StringUtil::strlen( _arrTitle ) ) );
         XFlush( pDisplay );
     }
 

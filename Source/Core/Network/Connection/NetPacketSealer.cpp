@@ -3,6 +3,7 @@
 #include "Core/Network/Connection/NetPacketSealer.h"
 
 #include "Core/Foundation/Expected.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Serialization/LittleEndianUtil.h"
@@ -64,18 +65,8 @@ namespace sw
                     bComputed = provider.computeHKDFSHA256( arrProofKey, static_cast<int32>( sizeof( arrProofKey ) ), nullptr, 0, arrInfo,
                                                             static_cast<int32>( sizeof( kLabel ) ) + aadSize, pOutTag, NetSecurityConstant::kAEADTagSize );
                 }
-                std::memset( arrProofKey, 0, sizeof( arrProofKey ) );
+                Memory::wipe( arrProofKey, sizeof( arrProofKey ) );
                 return bComputed;
-            }
-
-            /** @brief 바이트를 지웁니다. volatile 로 써서 최적화가 "다시 읽지 않는 쓰기" 로 보고 지우지 못하게 한다(`NetSessionKeys::wipe` 와 같다). */
-            static void wipeBytes( void* pData, size_t size )
-            {
-                volatile uint8* pByte = static_cast<volatile uint8*>( pData );
-                for ( size_t index = 0; index < size; ++index )
-                {
-                    pByte[index] = 0;
-                }
             }
 
             /** @brief 길이가 같은 두 바이트 열을 내용과 무관한 시간에 견줍니다(태그 비교가 첫 다른 바이트에서 멈추면 시간으로 한 바이트씩 맞춰 간다). */
@@ -94,7 +85,7 @@ namespace sw
 {
     void NetReceiveCryptContext::wipe()
     {
-        NetPacketSealerInternal::wipeBytes( _arrIv, sizeof( _arrIv ) );
+        Memory::wipe( _arrIv, sizeof( _arrIv ) );
         _aead.reset();
         _replayWindow.reset();
     }
@@ -165,7 +156,7 @@ namespace sw
         const bool bKeys = provider.makeX25519KeyPair( outSecurity._keyPair ) &&
                            provider.computeX25519SharedSecret( outSecurity._keyPair._arrPrivateKey, pClientPublicKey, arrShared ) &&
                            NetSessionKeys::computeSessionKeys( provider, arrShared, pSecret, clientSalt, serverSalt, protocolID, outSecurity._keys );
-        std::memset( arrShared, 0, sizeof( arrShared ) );
+        Memory::wipe( arrShared, sizeof( arrShared ) );
         outSecurity._keyPair.wipe(); // 서버는 수락을 다시 보낼 때 쓰도록 공개 키만 남긴다.
         if ( bKeys == false )
             return false;
@@ -181,7 +172,7 @@ namespace sw
         uint8      arrShared[NetSecurityConstant::kX25519KeySize]{};
         const bool bKeys = provider.computeX25519SharedSecret( inoutSecurity._keyPair._arrPrivateKey, pServerPublicKey, arrShared ) &&
                            NetSessionKeys::computeSessionKeys( provider, arrShared, pSecret, clientSalt, serverSalt, protocolID, inoutSecurity._keys );
-        std::memset( arrShared, 0, sizeof( arrShared ) );
+        Memory::wipe( arrShared, sizeof( arrShared ) );
         if ( bKeys == false )
             return false;
         inoutSecurity._sendAEAD      = provider.createAEAD( algorithm, inoutSecurity._keys._clientToServer._arrKey );

@@ -5,6 +5,7 @@
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/String/StringUtil.h"
@@ -66,9 +67,12 @@ namespace sw
                                       context._pSecurityProvider->computeHKDFSHA256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
                                                                                      reinterpret_cast<const uint8*>( kKeyIDInfo ), sizeof( kKeyIDInfo ) - 1, arrKeyID,
                                                                                      static_cast<int32>( kKeyIDSize ) );
-                std::memset( arrDeviceKey, 0, sizeof( arrDeviceKey ) );
+                Memory::wipe( arrDeviceKey, sizeof( arrDeviceKey ) );
                 if ( bDerived == false )
+                {
+                    Memory::wipe( outSealKey, sizeof( outSealKey ) ); // 첫 유도만 된 봉인 키를 남기지 않는다
                     return LocalStoreResult::IOError;
+                }
                 outKeyID = LittleEndianUtil::readUint64( arrKeyID );
                 return LocalStoreResult::Ok;
             }
@@ -148,7 +152,10 @@ namespace sw
         vector<uint8>          storedBody;
         const LocalStoreResult compressResult = Internal::compressBody( context, pBody, bodySize, options._compressionCodec, storedBody, header._codec );
         if ( compressResult != LocalStoreResult::Ok )
+        {
+            Memory::wipe( arrSealKey, sizeof( arrSealKey ) ); // 위에서 유도한 봉인 키 — 여기서 수명이 끝난다
             return compressResult;
+        }
         header._bodySize = storedBody.size();
 
         outEnvelopeBytes.resize( kHeaderSize );
@@ -163,7 +170,7 @@ namespace sw
         }
 
         unique_ptr<INetAEAD> aead = context._pSecurityProvider->createAEAD( NetAEADAlgorithm::AES256Gcm, arrSealKey );
-        std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
+        Memory::wipe( arrSealKey, sizeof( arrSealKey ) );
         uint8 arrNonce[NetSecurityConstant::kAEADNonceSize] = {};
         if ( aead == nullptr || context._pSecurityProvider->fillRandomBytes( arrNonce, NetSecurityConstant::kAEADNonceSize ) == false )
             return LocalStoreResult::IOError;
@@ -235,11 +242,11 @@ namespace sw
                     return keyResult;
                 if ( keyID != header._keyID )
                 {
-                    std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
+                    Memory::wipe( arrSealKey, sizeof( arrSealKey ) );
                     return LocalStoreResult::WrongKey;
                 }
                 unique_ptr<INetAEAD> aead = context._pSecurityProvider->createAEAD( NetAEADAlgorithm::AES256Gcm, arrSealKey );
-                std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
+                Memory::wipe( arrSealKey, sizeof( arrSealKey ) );
                 if ( aead == nullptr )
                     return LocalStoreResult::IOError;
                 if ( header._seal == LocalStoreSeal::Authenticated )

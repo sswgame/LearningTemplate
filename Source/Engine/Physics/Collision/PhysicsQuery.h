@@ -3,6 +3,7 @@
  * @brief 레이캐스트, 셰이프 캐스트, 겹침 질의의 필터 조건과 결과입니다. 2D 와 3D 가 같은 템플릿을 씁니다.
  */
 #pragma once
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -67,12 +68,12 @@ namespace sw
         {
             using Hit                                  = PhysicsCastHit<TDimension>;
             const typename vector<Hit>::iterator first = inoutListHit.begin() + static_cast<ptrdiff_t>( firstIndex );
-            std::sort( first, inoutListHit.end(), []( const Hit& lhs, const Hit& rhs )
+            VectorUtil::sortRange( first, inoutListHit.end(), []( const Hit& lhs, const Hit& rhs )
             { return lhs._body == rhs._body ? lhs._fraction < rhs._fraction : lhs._body < rhs._body; } );
             inoutListHit.erase( std::unique( first, inoutListHit.end(), []( const Hit& lhs, const Hit& rhs )
             { return lhs._body == rhs._body; } ),
                                 inoutListHit.end() );
-            std::sort( first, inoutListHit.end(), []( const Hit& lhs, const Hit& rhs )
+            VectorUtil::sortRange( first, inoutListHit.end(), []( const Hit& lhs, const Hit& rhs )
             { return lhs._fraction == rhs._fraction ? lhs._body < rhs._body : lhs._fraction < rhs._fraction; } );
             return static_cast<uint32>( inoutListHit.size() - firstIndex );
         }

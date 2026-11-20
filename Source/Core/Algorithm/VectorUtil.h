@@ -273,29 +273,50 @@ namespace sw
             return removeCount;
         }
 
-        /** @brief 오름차순(`operator<`)으로 정렬합니다(같은 원소의 순서는 정하지 않는다). 언리얼 `Algo::Sort` 자리. */
+        /** @brief 오름차순(`operator<`)으로 정렬합니다(같은 원소의 순서는 정하지 않는다). 언리얼 `Algo::Sort` 자리. C 배열도 받는다. */
         template <typename TVector>
         static void sort( TVector& list )
         {
-            std::sort( list.begin(), list.end() );
+            std::sort( std::begin( list ), std::end( list ) );
         }
-        /** @brief `compare` 로 정렬합니다(같은 원소의 순서는 정하지 않는다). */
+        /** @brief `compare` 로 정렬합니다(같은 원소의 순서는 정하지 않는다). C 배열도 받는다. */
         template <typename TVector, typename TCompare>
         static void sort( TVector& list, TCompare compare )
         {
-            std::sort( list.begin(), list.end(), compare );
+            std::sort( std::begin( list ), std::end( list ), compare );
         }
-        /** @brief 오름차순(`operator<`)으로 정렬하고 같은 원소는 원래 순서를 지킵니다. */
+        /** @brief 오름차순(`operator<`)으로 정렬하고 같은 원소는 원래 순서를 지킵니다. C 배열도 받는다. */
         template <typename TVector>
         static void stableSort( TVector& list )
         {
-            std::stable_sort( list.begin(), list.end() );
+            std::stable_sort( std::begin( list ), std::end( list ) );
         }
-        /** @brief `compare` 로 정렬하고 같은 원소는 원래 순서를 지킵니다(결정적 순서가 필요한 곳). */
+        /** @brief `compare` 로 정렬하고 같은 원소는 원래 순서를 지킵니다(결정적 순서가 필요한 곳). C 배열도 받는다. */
         template <typename TVector, typename TCompare>
         static void stableSort( TVector& list, TCompare compare )
         {
-            std::stable_sort( list.begin(), list.end(), compare );
+            std::stable_sort( std::begin( list ), std::end( list ), compare );
+        }
+        /**
+         * @brief [@p first, @p last) 부분만 오름차순으로 정렬합니다(앞에 쌓인 몫은 두고 이번에 덧붙인 꼬리만 — `outList` 계약).
+         * @details 목록 판(`sort( list )`)과 이름을 나눈 이유: 인자 둘인 `sort( first, last )` 는 `sort( list, compare )` 와 모호하다.
+         */
+        template <typename TIterator>
+        static void sortRange( TIterator first, TIterator last )
+        {
+            std::sort( first, last );
+        }
+        /** @brief [@p first, @p last) 부분만 `compare` 로 정렬합니다(같은 원소의 순서는 정하지 않는다). */
+        template <typename TIterator, typename TCompare>
+        static void sortRange( TIterator first, TIterator last, TCompare compare )
+        {
+            std::sort( first, last, compare );
+        }
+        /** @brief [@p first, @p last) 부분만 `compare` 로 정렬하고 같은 원소는 원래 순서를 지킵니다. */
+        template <typename TIterator, typename TCompare>
+        static void stableSortRange( TIterator first, TIterator last, TCompare compare )
+        {
+            std::stable_sort( first, last, compare );
         }
         /** @brief 순서를 뒤집습니다. */
         template <typename TVector>

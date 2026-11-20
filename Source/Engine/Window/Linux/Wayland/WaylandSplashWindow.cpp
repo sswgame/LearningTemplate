@@ -69,11 +69,11 @@ namespace sw
             {
                 (void)version;
                 State& state = *static_cast<State*>( pData );
-                if ( std::strcmp( pInterface, wl_compositor_interface.name ) == 0 )
+                if ( StringUtil::equals( pInterface, wl_compositor_interface.name ) )
                     state._pCompositor = static_cast<wl_compositor*>( wl_registry_bind( pRegistry, name, &wl_compositor_interface, kCompositorVersion ) );
-                else if ( std::strcmp( pInterface, wl_shm_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, wl_shm_interface.name ) )
                     state._pShm = static_cast<wl_shm*>( wl_registry_bind( pRegistry, name, &wl_shm_interface, kShmVersion ) );
-                else if ( std::strcmp( pInterface, xdg_wm_base_interface.name ) == 0 )
+                else if ( StringUtil::equals( pInterface, xdg_wm_base_interface.name ) )
                     state._pWmBase = static_cast<xdg_wm_base*>( wl_registry_bind( pRegistry, name, &xdg_wm_base_interface, kWmBaseVersion ) );
             }
 

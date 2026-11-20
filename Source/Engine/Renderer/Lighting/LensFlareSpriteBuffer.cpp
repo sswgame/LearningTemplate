@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Lighting/LensFlareSpriteBuffer.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -100,7 +101,7 @@ namespace sw
         }
         if ( outListSprite.empty() == false )
             outListRange.push_back( LensFlareDrawRange{ 0u, static_cast<uint32>( outListSprite.size() ), nullptr } );
-        std::stable_sort( listImage.begin(), listImage.end(), []( const pair<const DataPath*, LensFlareSprite>& lhs, const pair<const DataPath*, LensFlareSprite>& rhs )
+        VectorUtil::stableSort( listImage, []( const pair<const DataPath*, LensFlareSprite>& lhs, const pair<const DataPath*, LensFlareSprite>& rhs )
         { return lhs.first->get() < rhs.first->get(); } );
         for ( const pair<const DataPath*, LensFlareSprite>& image : listImage )
         {

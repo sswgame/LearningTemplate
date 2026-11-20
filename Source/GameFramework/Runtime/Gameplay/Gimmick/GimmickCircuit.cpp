@@ -132,7 +132,10 @@ namespace sw
             node._id                      = nodeDef._id;
             if ( nodeDef._id.empty() )
             {
-                outListError.push_back( def.describeSource() + ": node #" + std::to_string( nodeIndex ).c_str() + " has no id" );
+                string message = def.describeSource() + ": node #";
+                StringUtil::appendNumber( message, nodeIndex );
+                message += " has no id";
+                outListError.push_back( std::move( message ) );
                 continue;
             }
             for ( size_t otherIndex = 0; otherIndex < nodeIndex; ++otherIndex )

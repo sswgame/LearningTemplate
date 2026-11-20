@@ -42,10 +42,14 @@ namespace sw
     {
     }
 
+    AppleReceiptSettings::~AppleReceiptSettings()
+    {
+        Memory::wipe( _privateKeyPem.data(), _privateKeyPem.size() );
+    }
+
     AppleReceiptValidator::~AppleReceiptValidator()
     {
-        Memory::set( _settings._privateKeyPem.data(), 0, _settings._privateKeyPem.size() ); // 서명 키를 메모리에 남기지 않는다
-        Memory::set( _authorization.data(), 0, _authorization.size() );
+        Memory::wipe( _authorization.data(), _authorization.size() ); // 서명 키는 _settings 의 소멸자가 지운다
     }
 
     bool AppleReceiptValidator::isTransactionID( string_view text )

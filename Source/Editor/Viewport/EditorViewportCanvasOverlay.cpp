@@ -2,6 +2,7 @@
 
 #include "Editor/Viewport/EditorViewportCanvasOverlay.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/Color.h"
@@ -222,8 +223,8 @@ namespace sw::editor
         }
 
         // 깊이 오름차순으로 정렬해 먼 것부터 그린다
-        std::sort( std::begin( arrAxis ), std::end( arrAxis ),
-                   []( const AxisItem& a, const AxisItem& b )
+        VectorUtil::sort( arrAxis,
+                          []( const AxisItem& a, const AxisItem& b )
         { return a._depth < b._depth; } );
 
         const ImVec2 mousePos = ImGui::GetMousePos();

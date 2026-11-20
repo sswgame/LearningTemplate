@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/Shader/Reflection/SPIRVConstants.h"
@@ -28,7 +29,7 @@ namespace
         /** @brief 이름 명령어(OpName · OpMemberName)입니다 — 글은 널 끝 · 4 바이트 채움이다. */
         void addName( uint32 opcode, std::initializer_list<uint32> listOperand, const utf8* pName )
         {
-            const size_t   length = std::strlen( pName ) + 1;
+            const size_t   length = StringUtil::strlen( pName ) + 1;
             vector<uint32> listText( ( length + 3 ) / 4, 0u );
             std::memcpy( listText.data(), pName, length );
             _listWord.push_back( ( static_cast<uint32>( listOperand.size() + listText.size() + 1 ) << 16 ) | opcode );

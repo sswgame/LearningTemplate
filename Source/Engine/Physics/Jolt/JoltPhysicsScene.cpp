@@ -2184,7 +2184,7 @@ namespace sw
                 outListBody.push_back( body );
         }
         const vector<PhysicsBodyHandle>::iterator first = outListBody.begin() + static_cast<ptrdiff_t>( firstIndex );
-        std::sort( first, outListBody.end() );
+        VectorUtil::sortRange( first, outListBody.end() );
         outListBody.erase( std::unique( first, outListBody.end() ), outListBody.end() );
         return static_cast<uint32>( outListBody.size() - firstIndex );
     }

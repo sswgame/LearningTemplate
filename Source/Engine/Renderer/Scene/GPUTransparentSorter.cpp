@@ -150,8 +150,8 @@ namespace sw
                 continue;
             const uint32 begin = batch._instanceBase - tailBase;
             const uint32 end   = begin + batch._instanceCount;
-            std::sort( outListTailSlot.begin() + begin, outListTailSlot.begin() + end,
-                       [&listRank, tailBase]( uint32 slotA, uint32 slotB )
+            VectorUtil::sortRange( outListTailSlot.begin() + begin, outListTailSlot.begin() + end,
+                                   [&listRank, tailBase]( uint32 slotA, uint32 slotB )
             { return listRank[slotA - tailBase] < listRank[slotB - tailBase]; } );
         }
     }

@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/FileLocalSlotStorage.h"
 
 #include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include <algorithm>
@@ -102,7 +103,7 @@ namespace sw
         } );
         if ( bListed == false )
             return LocalStoreResult::IOError;
-        std::sort( outListSlotInfo.begin() + static_cast<ptrdiff_t>( firstIndex ), outListSlotInfo.end(), Ascending<&LocalSlotInfo::_slot>{} );
+        VectorUtil::sortRange( outListSlotInfo.begin() + static_cast<ptrdiff_t>( firstIndex ), outListSlotInfo.end(), Ascending<&LocalSlotInfo::_slot>{} );
         return LocalStoreResult::Ok;
     }
 
