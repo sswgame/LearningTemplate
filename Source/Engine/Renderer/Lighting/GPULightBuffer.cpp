@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
 #include "Engine/Scene/Scene.h"
