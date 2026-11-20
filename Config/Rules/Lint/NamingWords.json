@@ -208,6 +208,8 @@
     "removeOtherProcessInstances": "없음 — isOtherProcessInstance 와 같다. 리소스 트리 훑기는 EditorContentScan 이 옛 자리(Content/scratch)만 뺀다(2026-11-18, ST-5)",
     "findInstanceProcessID": "없음 — pid 꼬리 풀기. 실행 뿌리(ProcessRoots::_run)가 실행마다 새 폴더다(2026-11-18, ST-5)",
     "bindScratchInstances": "없음 — 사본 id 를 바꾸지 않는다(시나리오가 적은 그대로)(2026-11-18, ST-5)",
+    "refuseWhileLoading": "ExperienceManager::rejectIfLoadPending — 거절을 알리고 bool 을 돌려준다는 것이 이름에 보이게(2026-11-20 preflight 이름 검토)",
+    "followReloadedCatalogs": "ExperienceScope::rebindReloadedCatalogs — 다시 읽힌 카탈로그를 새 판으로 다시 건다(rebind)(2026-11-20 preflight 이름 검토)",
     "SavedRetentionSubsystem": "SavedCleanupSubsystem — 지우는 주체의 이름(언리얼 `FMaintenance::DeleteOldLogs` 자리). Retention 은 보존 정책 값(`RetentionRule` · `RetentionSettings`)에만 쓴다 — Saved + Retention 합성어는 업계 이름이 아니다(사용자 지적 2026-11-20)",
     "resetInstanceFolder": "없음 — 실행 뿌리가 실행마다 새 폴더라 비울 것도 거둘 형제도 없다. 거두기는 SavedCleanup(2026-11-18, ST-5)",
     "removeDeadInstances": "없음 — 형제 거두기. 끝난 실행의 뿌리는 SavedCleanup 의 Automation 규칙이 거둔다(2026-11-18, ST-5)",

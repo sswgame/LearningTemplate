@@ -67,7 +67,7 @@ namespace sw
         _listCleanup.push_back( std::move( cleanup ) );
     }
 
-    void ExperienceScope::followReloadedCatalogs()
+    void ExperienceScope::rebindReloadedCatalogs()
     {
         for ( const Delegate<void()>& follow : _listFollow )
         {

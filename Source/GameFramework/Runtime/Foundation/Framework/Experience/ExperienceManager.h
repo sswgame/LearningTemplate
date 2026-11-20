@@ -80,7 +80,7 @@ namespace sw
          * @details 씬 전환의 허브 스냅숏은 씬을 도는 동안 찍지 않는다(자동 저장과 같은 자리 — `GameInstance::update`).
          */
         void requestEnter( string_view name );
-        /** @brief 켜진 범위의 다시 읽힌 카탈로그를 새 판으로 걸고(`ExperienceScope::followReloadedCatalogs`) 맡긴 진입을 처리합니다 — `GameInstance::update` 앞머리(틱 밖)가 부른다. */
+        /** @brief 켜진 범위의 다시 읽힌 카탈로그를 새 판으로 걸고(`ExperienceScope::rebindReloadedCatalogs`) 맡긴 진입을 처리합니다 — `GameInstance::update` 앞머리(틱 밖)가 부른다. */
         void update();
         /**
          * @brief 실행 전역 변수 `gv_firstExperience` 가 있으면 그 Experience 로 들어갑니다 — 게임 인스턴스의 첫 씬 자리(`GameInstance::startFirstScene`)가 부른다.
@@ -118,7 +118,7 @@ namespace sw
         /** @brief @p pScope 를 끄고 남은 것을 `_leakCount` 에 더한 뒤 비웁니다(없으면 할 일이 없다). */
         void deactivateScope( unique_ptr<ExperienceScope>& pScope );
         /** @brief 다른 진입 · 돌아가기가 맵을 기다리는 중이면 @p name 의 요청을 거절한다고 알리고 true 입니다. */
-        bool refuseWhileLoading( string_view name ) const;
+        bool rejectIfLoadPending( string_view name ) const;
         /** @brief 활성 씬이 허브 맵이면 그 씬입니다. 허브가 없거나 다른 씬이면 nullptr 입니다. */
         Scene* findActiveHubScene() const;
         /** @brief 입력 맵 레이어를 스택에 넣어 켜고(`InputMap::pushLayer`) 끌 때 빼서 넣기 전의 켬으로 되돌립니다(`popLayer` — 한 쌍). 없는 레이어 · 입력 서비스가 없는 호스트에 적은 레이어는 오류입니다. */

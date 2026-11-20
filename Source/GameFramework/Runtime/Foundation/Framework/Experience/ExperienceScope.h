@@ -77,7 +77,7 @@ namespace sw
         /**
          * @brief 카탈로그 @p TCatalog(종류 `TCatalog::kDataKind`)를 공유 캐시에서 받아 게임 범위에 const 로 겁니다(`game::findSubsystem<const TCatalog>()`). 끌 때 풀고 놓습니다.
          * @details 종류는 Experience 의 `catalogs` 에 적혀 있어야 한다 — 데이터가 무엇을 읽는지 정의 한 곳에 보이게. 경로는 게임 인스턴스의 필수 데이터와 같은 규칙이다
-         *          (`GamePackConfig::makeRequiredDataPath`). 공유 캐시의 `SharedAssetRef` 를 쥐고 다시 읽히면 `followReloadedCatalogs` 가 칸을 새 판으로 바꿔 건다 — 게임 인스턴스의
+         *          (`GamePackConfig::makeRequiredDataPath`). 공유 캐시의 `SharedAssetRef` 를 쥐고 다시 읽히면 `rebindReloadedCatalogs` 가 칸을 새 판으로 바꿔 건다 — 게임 인스턴스의
          *          필수 카탈로그(`GameInstance::loadRequiredCatalog` · `followScopedService`)와 같은 길이다. 스냅숏 사본은 두지 않는다(찾는 쪽이 옛 판을 계속 보지 않게).
          * @return 적지 않은 종류이거나 경로를 못 만들거나 못 읽거나 이미 걸려 있으면 알리고 false 입니다.
          */
@@ -112,7 +112,7 @@ namespace sw
         }
 
         /** @brief 다시 읽힌 카탈로그(`loadCatalog`)의 칸을 새 판으로 바꿔 겁니다 — 관리자의 `update`(게임 프레임 앞, 틱 밖)가 부른다. 끈 범위는 할 일이 없다. */
-        void followReloadedCatalogs();
+        void rebindReloadedCatalogs();
 
         /**
          * @brief 서비스 @p T 를 기본 생성해 이 범위가 쥐고 게임 범위에 겁니다(`game::findSubsystem<T>()`). 끌 때 풀고 지운다.

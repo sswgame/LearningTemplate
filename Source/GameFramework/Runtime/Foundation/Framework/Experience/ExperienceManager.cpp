@@ -205,7 +205,7 @@ namespace sw
         return outDefinition.validate( game::getSubsystem<ExperienceKitRegistry>(), game::getSubsystem<TypeRegistry>(), assetPath );
     }
 
-    bool ExperienceManager::refuseWhileLoading( string_view name ) const
+    bool ExperienceManager::rejectIfLoadPending( string_view name ) const
     {
         if ( isEntering() == false && isReturning() == false )
             return false;
@@ -216,7 +216,7 @@ namespace sw
 
     bool ExperienceManager::enter( string_view name )
     {
-        if ( refuseWhileLoading( name ) )
+        if ( rejectIfLoadPending( name ) )
             return false;
         if ( _pHub != nullptr && _pHub->getDefinition()._name == hashed_string( name ) )
             return returnToHub();
@@ -281,7 +281,7 @@ namespace sw
             return false;
         }
         const ExperienceDefinition& hub = _pHub->getDefinition();
-        if ( refuseWhileLoading( hub._name.view() ) )
+        if ( rejectIfLoadPending( hub._name.view() ) )
             return false;
         deactivateActive();
         if ( findActiveHubScene() != nullptr )
@@ -310,9 +310,9 @@ namespace sw
     {
         // 다시 읽힌 카탈로그를 먼저 건다 — 이 프레임의 진입 · 컴포넌트가 새 판을 찾는다.
         if ( _pHub != nullptr )
-            _pHub->followReloadedCatalogs();
+            _pHub->rebindReloadedCatalogs();
         if ( _pActive != nullptr )
-            _pActive->followReloadedCatalogs();
+            _pActive->rebindReloadedCatalogs();
         if ( _pendingEnter.empty() )
             return;
         const string name = std::move( _pendingEnter );
