@@ -61,6 +61,31 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 스트리밍 소스의 우선순위입니다. 앞 값일수록 그 소스가 덮는 셀을 먼저 읽습니다(언리얼 `EStreamingSourcePriority` 와 같은 다섯 단계 · 같은 차례). */
+    enum class StreamingSourcePriority : uint8
+    {
+        Highest,
+        High,
+        Normal,
+        Low,
+        Lowest,
+    };
+
+    /**
+     * @struct StreamingSource
+     * @brief 스트리밍 소스 하나 — 위치와 그 둘레에서 올릴 반경, 읽기 차례입니다(언리얼 World Partition 의 `FWorldPartitionStreamingSource` 자리).
+     * @details 서버는 접속자(관찰자)마다 하나씩 넣고 올리는 셀은 모든 소스 반경의 합집합이다(`SceneStreamingSubsystem::setExternalSources`).
+     */
+    struct StreamingSource
+    {
+        float3                  _position{};
+        float32                 _loadingRadius{ 0.0f }; ///< 이 거리 안에 닿는 셀을 올린다. 유한한 0 이상이어야 한다
+        StreamingSourcePriority _priority{ StreamingSourcePriority::Normal };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct StreamingCellObjectRecord
      * @brief 셀을 넘는 참조 검사에 넣는 오브젝트 한 줄입니다.
@@ -101,7 +126,7 @@ namespace sw
          */
         [[nodiscard]] static bool tryCreate( const StreamingCellGridDef& def, StreamingCellGrid& outGrid );
 
-        /** @brief 위치가 든 셀을 반환합니다. 셀 경계는 아래쪽(작은 좌표)에 속합니다. */
+        /** @brief 위치가 든 셀을 반환합니다. 셀 경계는 아래쪽(작은 좌표)에 속합니다. 셀 번호는 ±2^30 에서 포화합니다(망에서 온 거대 · NaN 좌표도 정의된 셀이 된다). */
         StreamingCellCoord computeCell( const float3& position ) const;
         /** @brief 셀의 XZ 사각형과 점 사이의 최단 거리 제곱을 반환합니다(셀 안이면 0). */
         float32 computeCellDistanceSquared( const StreamingCellCoord& cell, const float3& position ) const;
@@ -110,6 +135,11 @@ namespace sw
          * @param outListCell 비우고 채웁니다.
          */
         void computeCellsInRange( const float3& origin, vector<StreamingCellCoord>& outListCell ) const;
+        /**
+         * @brief 원점 둘레에서 반경 @p radius 안에 닿는 셀을 모두 채웁니다(소스마다 반경이 다를 때). 순서 · 비우기는 `computeCellsInRange` 와 같습니다.
+         * @warning 셀 수는 (2 × 반경 / 셀 크기)² 이다 — 믿을 수 없는 반경으로 부르지 않는다. 스트리밍은 셀 수가 받은 셀보다 많으면 받은 셀을 훑는다(`SceneStreamingSubsystem::update`).
+         */
+        void computeCellsInRadius( const float3& origin, float32 radius, vector<StreamingCellCoord>& outListCell ) const;
 
         /**
          * @brief 셀을 넘는 참조를 찾습니다. 같은 셀이거나 가리키는 쪽이 항상 올라 있으면 허용합니다.

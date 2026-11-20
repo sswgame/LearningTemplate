@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 
@@ -312,5 +313,69 @@ namespace sw::test
 
     private:
         FakeRHIDevice* _pDevice; ///< 진단을 든 디바이스
+    };
+} // namespace sw::test
+
+namespace sw::test
+{
+    /** @brief 버퍼 핸들만 내고 내용은 버리는 팩토리입니다(만들기 · 구조 버퍼 갱신 수만 센다). 나머지 가상 함수는 쓰이지 않는다(호출되면 0 · false). */
+    class FakeRHIBufferFactory final : public IRHIResourceFactory
+    {
+    public:
+        RHIBufferHandle _nextBuffer{ 1 };
+        uint32          _gpuVertexBufferCount{ 0 };
+        uint32          _structuredUpdateCount{ 0 };      /**< `updateStructuredBufferRegions` 호출 수(한 조각 갱신 · 만들 때의 초기 내용도 이 길이다) */
+        uint32          _structuredCreateCount{ 0 };      /**< `createStructuredBuffer` 호출 수 */
+        uint32          _lastStructuredElementCount{ 0 }; /**< 마지막으로 만든 구조 버퍼의 원소 수 */
+
+        RHIBufferHandle createVertexBuffer( const void*, uint32 ) override { return _nextBuffer++; }
+        RHIBufferHandle createGPUVertexBuffer( uint32 ) override
+        {
+            ++_gpuVertexBufferCount;
+            return _nextBuffer++;
+        }
+        RHIBufferHandle createIndexBuffer( const void*, uint32 ) override { return _nextBuffer++; }
+        void            updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
+        void            updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override { ++_structuredUpdateCount; }
+        void            destroyBuffer( RHIBufferHandle ) override {}
+
+        RHITransferSubmit      submitTextureUpload( RHITextureHandle, const RHITextureUploadDesc& ) override { return RHITransferSubmit::rejected(); }
+        RHITransferSubmit      submitTextureRegionUpload( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return RHITransferSubmit::rejected(); }
+        RHITransferSubmit      submitTextureReadback( RHITextureHandle, uint32, uint32, RHITextureMipSpan& ) override { return RHITransferSubmit::rejected(); }
+        RHITransferStatus      pollTransfer( RHITransferTicket ) override { return RHITransferStatus::Failed; }
+        bool                   takeTextureReadback( RHITransferTicket, vector<uint8>& ) override { return false; }
+        void                   discardTextureReadback( RHITransferTicket ) override {}
+        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& ) override { return 0; }
+        RHIPipelineStateHandle createComputePipelineStateNative( string_view, string_view, const vector<string>& ) override { return 0; }
+        void                   destroyPipelineState( RHIPipelineStateHandle ) override {}
+        RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
+        void                   destroyRenderPass( RHIRenderPassHandle ) override {}
+        RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
+        void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
+        RHIBufferHandle        createConstantBufferPage( uint32 ) override { return 0; }
+        void                   updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 ) override {}
+        RHIBufferHandle        createStructuredBuffer( uint32, uint32 elementCount ) override
+        {
+            ++_structuredCreateCount;
+            _lastStructuredElementCount = elementCount;
+            return _nextBuffer++;
+        }
+        RHIBufferHandle    createReadbackBuffer( uint32, uint32 ) override { return 0; }
+        [[nodiscard]] bool readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
+        RHITextureHandle   createTexture2D( const RHITextureDesc& ) override { return 0; }
+        void               destroyTexture( RHITextureHandle ) override {}
+        RHIFormat          getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
+        RHIDescriptorIndex registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
+        bool               rebindBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
+        RHIDescriptorIndex reserveBindlessTextureIndex() override { return kInvalidDescriptorIndex; }
+        bool               activateReservedBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
+        bool               isTextureReadyToSample( RHITextureHandle ) override { return false; }
+        void               unregisterBindlessTexture( RHIDescriptorIndex ) override {}
+        RHIDescriptorIndex registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIDescriptorIndex registerBindlessBufferSRV( const RHIBufferSlice& ) override { return kInvalidDescriptorIndex; }
+        void               unregisterBindlessResource( RHIDescriptorIndex ) override {}
+        RHIDescriptorIndex registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIDescriptorIndex registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
+        void               unregisterBindlessUAV( RHIDescriptorIndex ) override {}
     };
 } // namespace sw::test

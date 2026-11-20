@@ -15,6 +15,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -23,6 +24,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileDrop.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
@@ -596,6 +598,34 @@ namespace sw::editor
         }
         _importFolderAbs = _selectedFolderAbs;
         _importQueue.openDialog( _importFolderAbs );
+    }
+
+    uint32 ContentBrowserViewModel::importDroppedFiles( const vector<string>& listPath, string_view destFolderAbs )
+    {
+        if ( destFolderAbs.empty() )
+        {
+            SW_LOG_WARNING_ID( "ContentBrowserViewModel.ImportCancelledNoDestination", "Import cancelled — no destination folder." );
+            return 0;
+        }
+        const EditorToolDefaults&   defaults = editor::getEditorToolDefaults();
+        ContentBrowserFileDropRules rules{};
+        EditorAssetTypeRegistry::appendImportExtensions( rules._listExtension );
+        rules._maxBytes = static_cast<uint64>( defaults._fileDropMaxMegabytes ) * constant::memory::kBytesPerMegabyte;
+        rules._maxCount = defaults._fileDropMaxCount;
+
+        vector<ContentBrowserDroppedFile> listFile;
+        ContentBrowserFileDropPlan::collectDroppedFiles( listPath, listFile );
+        ContentBrowserFileDropPlan plan;
+        ContentBrowserFileDropPlan::make( listFile, rules, plan );
+        for ( const ContentBrowserRejectedFile& rejected : plan._listRejected )
+        {
+            SW_LOG_WARNING_ID( "ContentBrowser.FileDropRejected", "Dropped file not imported (%#): %#", ContentBrowserFileDropPlan::describeRejection( rejected._reason ), rejected._path.c_str() );
+        }
+        const uint32 imported = plan._listImport.empty() ? 0u : EditorAssetFileCommands::importFiles( destFolderAbs, plan._listImport );
+        if ( imported > 0 )
+            _bFolderDirty = SW_TRUE;
+        SW_LOG_INFO_ID( "ContentBrowser.FileDropImported", "Imported %# of %# dropped file(s) into %#", imported, static_cast<uint64>( listPath.size() ), string( destFolderAbs ).c_str() );
+        return imported;
     }
 
     void ContentBrowserViewModel::processPendingImports()

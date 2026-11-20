@@ -28,6 +28,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
@@ -1448,6 +1449,28 @@ namespace sw
         return _impl->_mapEntry.size();
     }
 
+    void TextureCache::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
+    {
+        if ( _impl == nullptr )
+            return;
+        ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
+        for ( const auto& [key, entry] : _impl->_mapEntry )
+        {
+            const Texture2D* pTexture = entry._texture.get();
+            if ( pTexture == nullptr )
+                continue;
+            // GPU 몫은 서술로 계산한 논리 크기다 — 드라이버 할당 크기는 GPU 자원 표가 핸들로 보인다.
+            RHITextureDesc desc{};
+            desc._width           = pTexture->getWidth();
+            desc._height          = pTexture->getHeight();
+            desc._format          = pTexture->getFormat();
+            desc._mipLevels       = pTexture->getMipCount() > 0 ? pTexture->getMipCount() : 1u;
+            const uint64 gpuBytes = pTexture->getHandle() != 0 ? RHIMemoryTracker::computeTextureLogicalBytes( desc ) : 0;
+            const uint64 cpuBytes = sizeof( Texture2D ) + pTexture->getCPUBytes().size();
+            outListEntry.push_back( AssetMemoryEntry{ key, cpuBytes, gpuBytes, entry._refCount } );
+        }
+    }
+
     /**
      * @brief 표를 통째로 비웁니다. **GPU 자원을 돌려주지는 않습니다.**
      * @warning **디바이스가 죽은 뒤에만 부를 수 있습니다.** `AssetCacheBase::clear()` 는 디바이스를
@@ -1788,7 +1811,7 @@ namespace sw
 {
     SW_BUILT_IN_ASSET_CACHE( TextureCache );
 
-    void TextureCache::reload( const AssetID& assetID )
+    ReloadResult TextureCache::reload( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
         SW_MEMORY_SCOPE( Texture );
@@ -1797,7 +1820,7 @@ namespace sw
         const bool bNotOnDisk = relativePath.empty() || isRenderTargetPath( relativePath ) || isCPUTexturePath( relativePath );
         const bool bCanReload = _impl != nullptr && pDevice != nullptr;
         if ( bNotOnDisk || bCanReload == false )
-            return;
+            return ReloadResult::NotTracked;
         const string key = AssetRedirect::toCacheKey( relativePath );
 
         // 렌더 스레드 비우기와 다시 올리기는 잠금 밖에서 한다. 잠금을 쥔 채 비우면 같은 잠금을 기다리는
@@ -1808,7 +1831,7 @@ namespace sw
         {
             const auto it = _impl->_mapEntry.find( key );
             if ( it == _impl->_mapEntry.end() || it->second._texture == nullptr )
-                return;
+                return ReloadResult::NotTracked;
             // 스트리밍이 위쪽 밉을 바꿔 끼우는 중이면 그 끝을 기다린다(렌더 스레드가 같은 텍스처의 핸들을 바꾸고 있다).
             if ( it->second._bLoading || it->second._bUpgrading )
             {
@@ -1822,7 +1845,7 @@ namespace sw
             if ( bIsStandIn )
             {
                 SW_LOG_WARNING_ID( "TextureCache.StandInHotReloadSkipped", "Hot-Reload skipped for stand-in texture %# - restart to see the change", key.c_str() );
-                return;
+                return ReloadResult::NotTracked;
             }
             it->second._bLoading = true;
             pTexture             = it->second._texture.get();
@@ -1830,15 +1853,22 @@ namespace sw
         }
         lock.unlock();
 
-        // 이전 프레임이 아직 이 텍스처와 그 bindless SRV 인덱스를 읽고 있을 수 있어도 GPU 를 기다리지 않는다. `releaseRHI` 의 `releaseHandle` 이 이미 만든 패킷 뒤로 반환을 미루므로
-        // 새 텍스처는 새 인덱스를 받고, DX12 · Vulkan 은 그 뒤 펜스까지, DX11 · GL 은 기록 때 슬롯으로 풀었으니 그 패킷이 끝난 것으로 충분하다. 렌더 스레드만 비운다 — 등록은 병렬 기록 중에 할 수 없다.
-        pDevice->flushRenderThread();
-        // 옛 텍스처만 해제 줄로 보내고 SRV 번호는 지킨다 — 다시 읽은 텍스처가 같은 번호를 받아 머티리얼을 다시 묶지 않는다(R-6).
-        Texture2DRetiredResource retired{};
-        pTexture->detachRHIKeepingSRV( pDevice, retired );
-        _impl->_retired.add( pDevice, retired );
-        const bool bReloaded = pTexture->loadFromAsset( pDevice, AssetID{ key }, _impl->_qualityMipDrop.load( std::memory_order_relaxed ) );
-        if ( bReloaded == false )
+        // 옛 텍스처를 놓기 전에 파일을 읽는다 — 읽지 못하면(오류는 `readImage` 가 남겼다) 옛 텍스처로 계속 그린다(언리얼 리임포트 실패도 옛 에셋을 둔다).
+        DDSImageData image;
+        const bool   bRead     = Texture2D::readImage( AssetID{ key }, image );
+        bool         bReloaded = false;
+        if ( bRead )
+        {
+            // 이전 프레임이 아직 이 텍스처와 그 bindless SRV 인덱스를 읽고 있을 수 있어도 GPU 를 기다리지 않는다. `releaseRHI` 의 `releaseHandle` 이 이미 만든 패킷 뒤로 반환을 미루므로
+            // 새 텍스처는 새 인덱스를 받고, DX12 · Vulkan 은 그 뒤 펜스까지, DX11 · GL 은 기록 때 슬롯으로 풀었으니 그 패킷이 끝난 것으로 충분하다. 렌더 스레드만 비운다 — 등록은 병렬 기록 중에 할 수 없다.
+            pDevice->flushRenderThread();
+            // 옛 텍스처만 해제 줄로 보내고 SRV 번호는 지킨다 — 다시 읽은 텍스처가 같은 번호를 받아 머티리얼을 다시 묶지 않는다(R-6).
+            Texture2DRetiredResource retired{};
+            pTexture->detachRHIKeepingSRV( pDevice, retired );
+            _impl->_retired.add( pDevice, retired );
+            bReloaded = pTexture->loadFromImage( pDevice, key, image, TextureResidency::Full, _impl->_qualityMipDrop.load( std::memory_order_relaxed ) );
+        }
+        if ( bRead && bReloaded == false )
         {
             SW_LOG_ERROR_ID( "TextureCache.HotReloadFailedTexture", "Hot-Reload failed for Texture %#", key.c_str() );
             // 지키던 번호는 해제 줄로 간 옛 텍스처를 가리킨다 — 누락 체커로 다시 묶는다. 텍스처는 그 번호를 계속 지키고 다음 업로드가 다시 묶는다(R-6).
@@ -1862,6 +1892,7 @@ namespace sw
         if ( pErased != nullptr )
             pErased->releaseRHI( pDevice ); // 지키던 번호도 함께 놓는다
         _impl->_cvLoaded.notify_all();
+        return bReloaded ? ReloadResult::Reloaded : ReloadResult::Failed;
     }
 } // namespace sw
 

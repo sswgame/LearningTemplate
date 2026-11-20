@@ -386,30 +386,36 @@ def make_redirect_table_id(asset_id: str) -> str:
 REDIRECT_ID_CHARACTERS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789_.-/")
 
 
-def add_redirects(table_text: str | None, list_move: list[tuple[str, str]]) -> str:
-    """표 글(없으면 None)에 옮기기(옛 id, 새 id)를 더한 글을 돌려준다 — C++ `AssetRedirect::addToXMLText` 와 같은 규칙 · 같은 글 모양(에디터 옮기기와 diff 가 같게).
+REDIRECT_ELEMENT = "Redirect"
+PREFIX_REDIRECT_ELEMENT = "PrefixRedirect"   # 폴더 접두 줄(C++ `kPrefixRedirectElement`) — 팩을 통째로 옮기면 파일마다가 아니라 한 줄
+
+
+def add_redirects(table_text: str | None, list_move: list[tuple[str, str]], list_prefix_move: list[tuple[str, str]] = ()) -> str:
+    """표 글(없으면 None)에 옮기기(옛 id, 새 id)와 폴더 접두 옮기기(옛 폴더, 새 폴더)를 더한 글을 돌려준다 — C++ `AssetRedirect::addToXMLText` 와 같은 규칙 · 같은 글 모양.
 
     옮긴 자리(새 id)를 옛 id 로 둔 줄은 뺀다(그 id 에 다시 에셋이 산다 — 남기면 되돌린 옮기기가 순환이 된다). 같은 옛 id 의 줄은 새 줄로 바꾼다. 사슬은 둔다.
+    접두 줄은 접두 줄끼리 같은 규칙이고 파일 옮기기가 건드리지 않는다(런타임은 정확한 줄을 먼저 본다).
     틀린 표 · 맞춤 꼴이 아닌 id · 순환이면 ValueError — 런타임이 기동을 멈출 표를 쓰지 않는다.
     """
-    list_entry: list[tuple[str, str]] = []
+    list_entry: list[tuple[str, str, str]] = []   # (원소, from, to) — 글 순서 그대로
     if table_text is not None:
         root = ElementTree.fromstring(table_text)   # 틀린 XML 은 ParseError(ValueError 가 아니다 — 부른 쪽이 그대로 멈춘다)
         if root.tag != "Redirects":
             raise ValueError(f"리다이렉트 표의 뿌리가 <Redirects> 가 아니다: <{root.tag}>")
         for node in root:
-            if node.tag != "Redirect" or not node.get("from") or not node.get("to"):
+            if node.tag not in (REDIRECT_ELEMENT, PREFIX_REDIRECT_ELEMENT) or not node.get("from") or not node.get("to"):
                 raise ValueError(f"리다이렉트 표에 틀린 줄이 있다: <{node.tag} {node.attrib}>")
-            list_entry.append((node.get("from"), node.get("to")))
-    for old_id, new_id in list_move:
-        for asset_id in (old_id, new_id):
-            if not asset_id or not set(asset_id) <= REDIRECT_ID_CHARACTERS or asset_id.startswith("/") or "//" in asset_id or "/../" in f"/{asset_id}/":
-                raise ValueError(f"'{asset_id}' 는 맞춤 꼴 리소스 id 가 아니다")
-        if old_id == new_id:
-            raise ValueError(f"'{old_id}' 를 자기 자신으로 옮긴다")
-        list_entry = [entry for entry in list_entry if entry[0] not in (old_id, new_id)] + [(old_id, new_id)]
-    map_old_to_new = dict(list_entry)
-    if len(map_old_to_new) != len(list_entry):
+            list_entry.append((node.tag, node.get("from"), node.get("to")))
+    for tag, list_pair in ((REDIRECT_ELEMENT, list_move), (PREFIX_REDIRECT_ELEMENT, list_prefix_move)):
+        for old_id, new_id in list_pair:
+            for asset_id in (old_id, new_id):
+                if not asset_id or not set(asset_id) <= REDIRECT_ID_CHARACTERS or asset_id.startswith("/") or asset_id.endswith("/") or "//" in asset_id or "/../" in f"/{asset_id}/":
+                    raise ValueError(f"'{asset_id}' 는 맞춤 꼴 리소스 id 가 아니다")
+            if old_id == new_id:
+                raise ValueError(f"'{old_id}' 를 자기 자신으로 옮긴다")
+            list_entry = [entry for entry in list_entry if entry[0] != tag or entry[1] not in (old_id, new_id)] + [(tag, old_id, new_id)]
+    map_old_to_new = {source: target for tag, source, target in list_entry if tag == REDIRECT_ELEMENT}
+    if len(map_old_to_new) + len({source for tag, source, _ in list_entry if tag == PREFIX_REDIRECT_ELEMENT}) != len(list_entry):
         raise ValueError("리다이렉트 표에 같은 옛 id 가 두 번 있다")
     for start in map_old_to_new:
         target, steps = map_old_to_new[start], 0
@@ -417,7 +423,7 @@ def add_redirects(table_text: str | None, list_move: list[tuple[str, str]]) -> s
             target, steps = map_old_to_new[target], steps + 1
             if steps > len(map_old_to_new):
                 raise ValueError(f"리다이렉트가 '{start}' 에서 순환한다")
-    return "<Redirects>\n" + "".join(f'\t<Redirect from="{source}" to="{target}" />\n' for source, target in list_entry) + "</Redirects>\n"
+    return "<Redirects>\n" + "".join(f'\t<{tag} from="{source}" to="{target}" />\n' for tag, source, target in list_entry) + "</Redirects>\n"
 
 
 def collect_problems(list_relative_path: list[str], map_text: dict[str, str], assets: AssetSet, config: FieldConfig, map_redirect: dict[str, str] | None = None) -> list[str]:
@@ -495,8 +501,12 @@ def run_self_check() -> None:
     assert parse_redirects({"t": chained}) == {"common/data/a.xml": "common/data/b.xml", "common/data/b.xml": "common/data/c.xml"}
     back = add_redirects(chained, [("common/data/c.xml", "common/data/a.xml")])
     assert parse_redirects({"t": back}) == {"common/data/b.xml": "common/data/c.xml", "common/data/c.xml": "common/data/a.xml"}, back
+    prefixed = add_redirects(None, [], [("game/oldpack", "game/newpack")])   # C++ `AssetRedirectTest.PrefixRedirectsMoveWholeFolders` 와 같은 글
+    assert prefixed == '<Redirects>\n\t<PrefixRedirect from="game/oldpack" to="game/newpack" />\n</Redirects>\n', prefixed
+    kept = add_redirects(prefixed, [("game/newpack/a.xml", "game/newpack/b.xml")])
+    assert kept == prefixed.replace("</Redirects>", '\t<Redirect from="game/newpack/a.xml" to="game/newpack/b.xml" />\n</Redirects>'), kept
     for bad in (lambda: add_redirects("<Moves/>", [("common/a.xml", "common/b.xml")]), lambda: add_redirects(None, [("Common/A.xml", "common/b.xml")]),
-                lambda: add_redirects(None, [("common/a.xml", "common/a.xml")])):
+                lambda: add_redirects(None, [("common/a.xml", "common/a.xml")]), lambda: add_redirects(None, [], [("game/a/", "game/b")])):
         try:
             bad()
         except ValueError:

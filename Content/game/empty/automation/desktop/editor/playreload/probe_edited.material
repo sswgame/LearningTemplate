@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5be1d475963e4c97aebf7ece2f78e554"?>
+<!-- probe.material 에 덮는 고친 판 — 색만 다르다(플레이 중 리로드 시나리오). -->
+<MaterialDef formatVersion="0" name="PlayReloadProbe" _base="engine/materials/pbrmaterial.material">
+	<_properties>
+		<item name="_color" defaultValue="0.4 0.8 1 1" />
+		<item name="_roughness" defaultValue="0.7" />
+		<item name="_metallic" defaultValue="0" />
+		<item name="_albedoMap" assetPath="game/empty/automation/desktop/editor/playreload/probe.dds" />
+	</_properties>
+</MaterialDef>

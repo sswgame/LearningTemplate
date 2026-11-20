@@ -190,6 +190,8 @@
 		       text="두 칸(디버그 채널로 읽은 서버, 또는 세션 클라이언트)에 지금의 오브젝트별 해시를 물어 다른 오브젝트를 나열합니다(어긋난 틱 가까이에서 서버를 먼저 멈춥니다. 두 답은 같은 틱이어야 합니다)" />
 		<entry source="Ask the selected process for its line and connection numbers"
 		       text="고른 프로세스에 회선 · 연결 수치를 묻습니다" />
+		<entry source="Ask the server attached in Multiplayer > Inspector for its snapshot (memory.snapshot)"
+		       text="멀티플레이어 > 인스펙터에 붙은 서버에 그 스냅숏을 청합니다(memory.snapshot)" />
 		<entry source="Asset" text="에셋" />
 		<entry source="Assets" text="에셋" />
 		<entry source="Atlas" text="아틀라스" />
@@ -288,6 +290,7 @@
 		<entry source="Bus" text="버스" />
 		<entry source="Buttons:" text="단추:" />
 		<entry source="CPU Scopes" text="CPU 구간" />
+		<entry source="CPU {cpu}   GPU {gpu}   ({source})" text="CPU {cpu}   GPU {gpu}   ({source})" />
 		<entry source="Call Tree" text="호출 트리" />
 		<entry source="Cam" text="카메라" />
 		<entry source="Camera" text="카메라" />
@@ -427,6 +430,7 @@
 		<entry source="Compare" text="비교" />
 		<entry source="Compare draws the left half with the volume and the right half as plain fog. The slice views show the froxel volume up to one distance slice."
 		       text="비교는 왼쪽 반을 볼륨으로, 오른쪽 반을 평범한 안개로 그립니다. 단면 보기는 거리 조각 하나까지의 froxel 볼륨을 보입니다." />
+		<entry source="Compare with Previous" text="이전과 비교" />
 		<entry source="Compile" text="컴파일" />
 		<entry source="Compile All Modules" text="모든 모듈 컴파일" />
 		<entry source="Compile Editor (EditorModule)" text="에디터 컴파일(EditorModule)" />
@@ -693,6 +697,11 @@
 		<entry source="Exits the editor" text="에디터를 종료합니다" />
 		<entry source="Expand" text="펼치기" />
 		<entry source="Expand All" text="모두 펼치기" />
+		<entry source="Export Snapshot as CSV" text="스냅숏을 CSV 로 내보내기" />
+		<entry source="Export Table as CSV" text="표를 CSV 로 내보내기" />
+		<entry source="Export failed: {reason}" text="내보내기 실패: {reason}" />
+		<entry source="Exported {fileCount} file(s) to {folder}"
+		       text="파일 {fileCount} 개를 {folder} 에 내보냈습니다" />
 		<entry source="Exposure" text="노출" />
 		<entry source="Expression the game evaluates when the conversation reaches this node; true follows the True link, false the False link."
 		       text="대화가 이 노드에 닿으면 게임이 평가하는 식입니다. 참이면 True 링크, 거짓이면 False 링크를 따라갑니다." />
@@ -732,6 +741,7 @@
 		       text="특정 에셋 종류(텍스처, 씬, 프리팹, 사운드 등)별로 필터링합니다" />
 		<entry source="Filter by log message, module tag or file name"
 		       text="로그 메시지, 모듈 태그, 파일명으로 필터링하여 검색합니다" />
+		<entry source="Filter by name" text="이름으로 거르기" />
 		<entry source="Filter by property and component name"
 		       text="프로퍼티 및 컴포넌트 이름을 검색하여 필터링합니다" />
 		<entry source="Filter files" text="파일 거르기" />
@@ -1221,6 +1231,7 @@
 		<entry source="No catalog kinds are registered" text="등록된 카탈로그 종류가 없습니다" />
 		<entry source="No changed files. Edits you save appear here."
 		       text="바뀐 파일이 없습니다. 저장한 편집이 여기에 나타납니다." />
+		<entry source="No comparison" text="비교 안 함" />
 		<entry source="No components in the active scene." text="활성 씬에 컴포넌트가 없습니다." />
 		<entry source="No content roots found." text="리소스 루트를 찾지 못했습니다." />
 		<entry source="No curves under this row" text="이 줄 아래에 커브가 없습니다" />
@@ -1275,6 +1286,7 @@
 		       text="아직 캡처한 렌더 그래프가 없습니다. 캡처를 누릅니다." />
 		<entry source="No renderer debug data in this process."
 		       text="이 프로세스에는 렌더러 디버그 데이터가 없습니다." />
+		<entry source="No rows match the filters" text="거르기에 맞는 줄이 없습니다" />
 		<entry source="No saved layouts." text="저장된 레이아웃이 없습니다." />
 		<entry source="No saved presets." text="저장한 프리셋이 없습니다." />
 		<entry source="No saved searches or collections yet. Save a search or make a collection below."
@@ -1284,6 +1296,8 @@
 		       text="선택한 것이 없습니다. Hierarchy 에서 오브젝트를 고르십시오." />
 		<entry source="No settings file was loaded from Config/ or Content/"
 		       text="Config/ 나 Content/ 에서 읽은 설정 파일이 없습니다" />
+		<entry source="No snapshots yet. Take Snapshot records this process, editor and Play in Editor included."
+		       text="아직 스냅숏이 없습니다. 스냅숏 찍기는 에디터와 에디터에서 플레이를 포함해 이 프로세스를 기록합니다." />
 		<entry source="No stats yet - press Refresh stats"
 		       text="아직 수치가 없습니다 - Refresh stats 를 누르세요" />
 		<entry source="No surface under the cursor - {asset} will not be placed. Aim at an object, a collider or the ground"
@@ -1728,6 +1742,8 @@
 		<entry source="Record input into a scenario file" text="입력을 시나리오 파일로 녹화합니다" />
 		<entry source="Record profile scopes per thread into a ring (8192 events per thread) - only while recording"
 		       text="스레드마다 프로파일 스코프를 링 버퍼(스레드당 이벤트 8192 개)에 기록합니다 - 녹화 중에만" />
+		<entry source="Record this process now: memory tags, allocation sites, assets, GPU resources, object types and caches (Play in Editor included)"
+		       text="이 프로세스를 지금 기록합니다: 메모리 태그 · 할당 사이트 · 에셋 · GPU 자원 · 오브젝트 타입 · 캐시(에디터에서 플레이 포함)" />
 		<entry source="Record traces" text="추적 기록" />
 		<entry source="Record while hidden" text="숨겨져도 기록" />
 		<entry source="Recording the whole frame ({eventCount} draws)"
@@ -1767,6 +1783,7 @@
 		<entry source="Reload the graph from its file, discarding unsaved edits"
 		       text="파일에서 그래프를 다시 읽습니다. 저장하지 않은 편집은 버립니다" />
 		<entry source="Remaining" text="남은 시간" />
+		<entry source="Remote snapshot failed: {reason}" text="원격 스냅숏 실패: {reason}" />
 		<entry source="Remove" text="제거" />
 		<entry source="Remove Animation" text="애니메이션 제거" />
 		<entry source="Remove Component" text="컴포넌트 제거" />
@@ -2159,6 +2176,7 @@
 		<entry source="Show error rows" text="오류 줄을 보입니다" />
 		<entry source="Show fewer frames around the current frame. Ctrl+wheel over the key strips zooms at the pointer."
 		       text="현재 프레임 둘레의 프레임을 더 적게 봅니다. 키 띠 위에서 Ctrl+휠은 포인터 자리에서 확대합니다." />
+		<entry source="Show in Content Browser" text="콘텐츠 브라우저에서 보기" />
 		<entry source="Show in Explorer" text="탐색기에서 보기" />
 		<entry source="Show in the Content Browser" text="콘텐츠 브라우저에서 보여 줍니다" />
 		<entry source="Show more frames." text="프레임을 더 많이 봅니다." />
@@ -2240,6 +2258,8 @@
 		<entry source="Snap selected objects onto the ground plane"
 		       text="선택한 오브젝트를 바닥 평면에 붙입니다" />
 		<entry source="Snap to Ground (Y=0)" text="바닥에 붙이기(Y=0)" />
+		<entry source="Snapshot to compare against - rows that grew come first"
+		       text="비교할 스냅숏 — 늘어난 줄이 먼저 옵니다" />
 		<entry source="Solid" text="단단함" />
 		<entry source="Solo" text="솔로" />
 		<entry source="Solo - only this bus, its ancestors and its descendants are heard"
@@ -2346,6 +2366,8 @@
 		       text="표 편집은 주석과 들여쓰기를 지킵니다. 중첩 원소는 원본 글 보기에서 고칩니다." />
 		<entry source="Tags" text="태그" />
 		<entry source="Tags:" text="태그:" />
+		<entry source="Take Remote Snapshot" text="원격 스냅숏 찍기" />
+		<entry source="Take Snapshot" text="스냅숏 찍기" />
 		<entry source="Take the pressed cell's value as the value to paint (I)"
 		       text="누른 칸의 값을 칠할 값으로 가져옵니다 (I)" />
 		<entry source="Tap Key (Down + Up)" text="키 톡(누름 + 뗌)" />
@@ -2410,6 +2432,8 @@
 		       text="플레이어가 읽는 대사입니다. Choice 노드에서는 선택지 위에 나오는 질문입니다." />
 		<entry source="The maps of this game, in load order: the base map, the shared maps, the kit maps and last the game's own differences. Saving writes each action back to the file that set it, and files you did not change are left alone."
 		       text="이 게임의 맵을 읽는 차례대로 보입니다. 기본 맵, 공통 맵, 키트 맵, 맨 끝이 게임의 차이입니다. 저장하면 액션은 그것을 정한 파일로 돌아가고, 고치지 않은 파일은 쓰지 않습니다." />
+		<entry source="The memory snapshot settings could not be read: {reason}"
+		       text="메모리 스냅숏 설정을 읽지 못했습니다: {reason}" />
 		<entry source="The network role is a declaration only: calling it here runs it in this process, not over the network"
 		       text="네트워크 역할은 선언일 뿐입니다. 여기서 부르면 네트워크가 아니라 이 프로세스에서 실행됩니다" />
 		<entry source="The node canvas could not be drawn" text="노드 캔버스를 그리지 못했습니다" />
@@ -2680,6 +2704,8 @@
 		<entry source="World-space height of the visible area; the width follows the aspect ratio."
 		       text="보이는 영역의 월드 높이입니다. 너비는 화면 비율을 따라갑니다." />
 		<entry source="World: {worldX}, {worldY}, {worldZ}" text="월드: {worldX}, {worldY}, {worldZ}" />
+		<entry source="Write CSV files (UTF-8, opens in Excel) under Saved/MemorySnapshots/&lt;time>/"
+		       text="CSV 파일(UTF-8, Excel 에서 열린다)을 Saved/MemorySnapshots/&lt;시각>/ 아래에 씁니다" />
 		<entry source="Write every override of this instance back to the prefab template"
 		       text="이 인스턴스의 모든 오버라이드를 프리팹 템플릿에 반영합니다" />
 		<entry source="Write instance overrides back to the prefab template"

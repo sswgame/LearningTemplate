@@ -36,6 +36,7 @@
 		<EditorPanelText _title="Map Check" _label="Map Check" />
 		<EditorPanelText _title="Material" _label="Material" />
 		<EditorPanelText _title="Material Graph" _label="Material Graph" />
+		<EditorPanelText _title="Memory" _label="Memory" />
 		<EditorPanelText _title="Mesh Modifiers" _label="Mesh Modifiers" />
 		<EditorPanelText _title="Mesh Preview" _label="Mesh Preview" />
 		<EditorPanelText _title="Modules" _label="Modules" />

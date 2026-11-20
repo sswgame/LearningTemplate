@@ -17,7 +17,9 @@ from typing import Mapping, Sequence
 from common.paths import get_project_root
 
 ARGUMENT_TABLE = Path('Source') / 'Core' / 'Predefined' / 'ArgumentList.xxx'
-ARGUMENT_LINE = re.compile(r'^SW_REGISTER_ARGUMENT\(\s*\w+\s*,\s*([^,]+?)\s*,\s*\w+\s*,\s*(.+?)\s*\)\s*$', re.MULTILINE)
+ARGUMENT_LINE = re.compile(r'^SW_REGISTER_ARGUMENT\(\s*\w+\s*,\s*(\w+)\s*,\s*([^,]+?)\s*,\s*\w+\s*,\s*(.+?)\s*\)\s*$', re.MULTILINE)
+#: 쓰는 구성(`CommandLineArgumentUsage`) 중 배포 구성이 철자를 등록하지 않는 것 — 배포 App 에 주면 기동이 멈춘다.
+SHIPPING_REJECTED_USAGE_SET = frozenset({'Dev', 'Test', 'AndroidDev'})
 GLOBAL_VARIABLE = re.compile(r'SW_[A-Z_]*GLOBAL_VARIABLE[A-Z_]*\(\s*[\w:<> ]+?\s*,\s*(gv_\w+)\s*,')
 SOURCE_SUFFIX = {'.cpp', '.h', '.inl'}
 
@@ -27,17 +29,27 @@ class AppArgumentError(RuntimeError):
 
 
 @functools.cache
-def read_argument_table() -> dict[str, bool]:
-    """명령줄 철자 → 값을 받는가. 한 줄의 철자 여럿(백엔드 별칭)은 모두 같은 모양이다."""
+def read_argument_lines() -> tuple[tuple[str, bool, str], ...]:
+    """표의 철자마다 (철자, 값을 받는가, 쓰는 구성). 한 줄의 철자 여럿(백엔드 별칭)은 모두 같은 모양이다."""
     text = (get_project_root() / ARGUMENT_TABLE).read_text(encoding='utf-8')
-    table: dict[str, bool] = {}
-    for default_value, spellings in ARGUMENT_LINE.findall(text):
+    lines: list[tuple[str, bool, str]] = []
+    for usage, default_value, spellings in ARGUMENT_LINE.findall(text):
         takes_value = default_value not in ('false', 'true')
-        for spelling in re.findall(r'"([^"]+)"', spellings):
-            table[spelling] = takes_value
-    if not table:
-        raise AppArgumentError(f'{ARGUMENT_TABLE}: SW_REGISTER_ARGUMENT 줄을 하나도 읽지 못했다 — 표 모양이 바뀌었으면 kArgumentLine 을 고친다')
-    return table
+        lines += [(spelling, takes_value, usage) for spelling in re.findall(r'"([^"]+)"', spellings)]
+    if not lines:
+        raise AppArgumentError(f'{ARGUMENT_TABLE}: SW_REGISTER_ARGUMENT 줄을 하나도 읽지 못했다 — 표 모양이 바뀌었으면 ARGUMENT_LINE 을 고친다')
+    return tuple(lines)
+
+
+@functools.cache
+def read_argument_table() -> dict[str, bool]:
+    """명령줄 철자 → 값을 받는가."""
+    return {spelling: takes_value for spelling, takes_value, _ in read_argument_lines()}
+
+
+def read_shipping_rejected_arguments() -> list[str]:
+    """배포 구성이 받지 않는 인자(쓰는 구성 Dev · Test · AndroidDev)를 그 모양대로 적은 글(`-name` · `-name=x`)."""
+    return [f'-{spelling}=x' if takes_value else f'-{spelling}' for spelling, takes_value, usage in read_argument_lines() if usage in SHIPPING_REJECTED_USAGE_SET]
 
 
 @functools.cache
@@ -132,6 +144,8 @@ def read_chain_stages(command: Sequence[str]) -> list[str]:
 
 def self_check() -> int:
     assert read_argument_table()['scenario'] is True and read_argument_table()['unattended'] is False
+    rejected = read_shipping_rejected_arguments()
+    assert '-test' in rejected and '-EnableEditor' in rejected and '-unattended' not in rejected and '-log-file=x' not in rejected
     assert flag('scenario-keep-going') == '-scenario-keep-going'
     assert option('scenario', 'a,b') == '-scenario=a,b'
     assert 'gv_scenarioWallScale' in read_global_variable_names()

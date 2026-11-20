@@ -76,7 +76,14 @@ namespace sw
          * @return 그 이름의 모듈이 실려 있지 않으면 false 입니다.
          */
         [[nodiscard]] bool queueReload( const utf8* pModuleName );
-        /** @brief `queueReload` 로 예약한 리로드가 아직 끝나지 않았으면 true 입니다(그래프가 깨졌으면 끝난 것으로 봅니다). 앞선 리로드 횟수와 무관합니다. */
+        /**
+         * @brief 시나리오 단계 `<RebuildModule>` — 실린 모듈 타깃을 다시 짓고(빌드 도구를 부르는 `ModuleCompiler`), 성공하면 매니저가 그 모듈을 갈아 끼웁니다.
+         * @details 컴파일러는 이 구동기가 처음 부를 때 매니저에게서 받는다(`createModuleCompiler` — 빌드 시작 · 끝을 매니저에 알린다). 끝은 `isReloadPending` 으로 본다:
+         *          빌드 중이면 true, 빌드가 실패하면 false(옛 이미지로 계속 돈다 — 실패는 매니저가 리로드 집계에 적는다), 성공하면 교체가 끝날 때까지 true 다.
+         * @return 그 이름의 모듈이 실려 있지 않거나 이미 빌드 중이면 false 입니다.
+         */
+        [[nodiscard]] bool queueRebuild( const utf8* pModuleName );
+        /** @brief `queueReload` · `queueRebuild` 로 예약한 일이 아직 끝나지 않았으면 true 입니다(그래프가 깨졌거나 다시 짓기가 실패했으면 끝난 것으로 봅니다). 앞선 리로드 횟수와 무관합니다. */
         bool isReloadPending() const;
 
     private:

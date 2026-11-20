@@ -15,11 +15,17 @@
  * [참조]
  * 묶음은 레이어 수가 적은 것부터 짓는다. 쿠커가 "대상의 레이어 ⊆ 가리키는 쪽의 레이어" 를 검사하므로(`SceneCooker`) 가리키는 쪽이 오를 때 대상은 늘 올라 있다.
  *
+ * [상태 보존 — 스트리밍 셀과 같다(설계 "스트리밍 셀 경계 정합 · 저장")]
+ * 레이어를 꺼 묶음을 내릴 때 오브젝트의 지금 상태를 떠 두고(`Scene::captureCellNodes` — 목적 `Snapshot`, 런타임 칸까지) 다시 켜면 그 상태로 짓는다(`_listHeldNode`).
+ * 세이브 복원이 매니저를 비우면(`onSceneCleared`) 묶음 · 켜진 레이어를 지키고 지은 표시만 지운다 — 다음 갱신이 다시 짓는다. 세이브 봉투는 묶음 오브젝트를 씬 섹션에서 빼고(`isGroupObject`)
+ * 켜진 레이어와 묶음마다의 상태를 씬 몫에 싣는다(`writeSaveState` · `readSaveState` · `applySaveState`).
+ *
  * [저장]
- * 짓지 않은 묶음의 엔티티는 문서 그대로 저장에 다시 쓴다(`Scene::serializeToDocument`). 그래서 레이어를 끈 채 열고 저장해도 그 엔티티를 잃지 않는다.
+ * 짓지 않은 묶음의 엔티티는 문서 그대로 저장에 다시 쓴다(`Scene::serializeToDocument`, `_listNode` — 떠 둔 상태는 스냅숏이라 저작 파일에 쓰지 않는다). 그래서 레이어를 끈 채 열고 저장해도 그 엔티티를 잃지 않는다.
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -51,10 +57,12 @@ namespace sw
         struct Group
         {
             vector<string>                         _listLayer;
-            vector<SceneDocument::SceneObjectNode> _listNode;
-            vector<uint64>                         _listObjectID;        ///< 지은 오브젝트(엔티티마다 하나, 부품 제외)
-            bool                                   _bBuilt{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                                   _bFailed{ SW_FALSE }; ///< 짓다 실패했다 — 다시 시도하지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            vector<SceneDocument::SceneObjectNode> _listNode;               ///< 문서의 엔티티(저작) — 저장이 다시 쓴다
+            vector<SceneDocument::SceneObjectNode> _listHeldNode;           ///< 내릴 때 떠 둔 상태(스냅숏, `_bStateHeld` 일 때) — 다시 지을 때 문서 대신 쓴다
+            vector<uint64>                         _listObjectID;           ///< 지은 오브젝트(엔티티마다 하나, 부품 제외)
+            bool                                   _bBuilt{ SW_FALSE };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                   _bFailed{ SW_FALSE };    ///< 짓다 실패했다 — 다시 시도하지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                   _bStateHeld{ SW_FALSE }; ///< `_listHeldNode` 로 짓는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 플레이 종료 복원이 들고 있는 값입니다. 오브젝트는 원래 id 로 돌아오므로 묶음의 id 목록이 그대로 맞습니다. */
@@ -76,9 +84,12 @@ namespace sw
          */
         void beginScene( Scene& scene, const SceneSettings& settings, const vector<SceneDocument::SceneObjectNode>& listLayeredNode, bool bActivateAll );
 
+        /** @brief 씬을 내립니다(`Scene::shutdown`) — 묶음을 버리고 켜진 레이어 태그를 비웁니다. 받은 씬이 없으면 아무것도 하지 않습니다(다른 씬의 태그를 지우지 않게). */
+        void endScene();
+
         /** @brief 켜고 끄기를 처리합니다(바뀐 것이 있을 때만). */
         void update( float32 deltaTime ) override;
-        /** @brief 씬을 비울 때 묶음을 버립니다(오브젝트는 매니저가 이미 비웠다). */
+        /** @brief 매니저가 오브젝트를 비웠습니다(세이브 복원). 묶음 · 켜진 레이어는 지키고 지은 표시만 지웁니다 — 다음 갱신이 켜진 묶음을 다시 짓는다(복원은 그 전에 `applySaveState`). */
         void onSceneCleared() override;
 
         /**
@@ -95,6 +106,28 @@ namespace sw
         /** @brief 묶음 목록입니다(레이어 수 · 이름 순서). */
         const vector<Group>& getGroups() const { return _listGroup; }
 
+        /** @brief 세이브에 싣는 묶음 하나의 상태입니다. */
+        struct SavedGroup
+        {
+            vector<string>                         _listLayer;
+            vector<SceneDocument::SceneObjectNode> _listHeldNode;
+            bool                                   _bStateHeld{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        };
+        /** @brief 세이브의 데이터 레이어 몫입니다. */
+        struct SaveState
+        {
+            vector<string>     _listActiveLayer;
+            vector<SavedGroup> _listGroup;
+        };
+        /** @brief 켜진 레이어와 묶음마다의 상태(지어 있으면 지금 떠서, 내려가 있으면 떠 둔 것)를 @p outBytes 에 씁니다(비우고 채운다). 씬을 받지 않았으면 빈 목록입니다. */
+        void writeSaveState( vector<uint8>& outBytes ) const;
+        /** @brief `writeSaveState` 의 짝입니다(검증 — 씬을 건드리지 않는다). 잘렸으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool readSaveState( const uint8* pData, size_t size, SaveState& outState );
+        /** @brief 세이브의 켜진 레이어 · 묶음 상태를 얹습니다(매니저를 비운 뒤). 다음 갱신이 켜진 묶음을 그 상태로 짓습니다. 문서에 없는 묶음 · 선언하지 않은 레이어는 오류를 남기고 건너뜁니다. */
+        void applySaveState( SaveState state );
+        /** @brief 오브젝트(또는 그 조상)가 지은 묶음에 들어 있으면 true 입니다 — 세이브의 씬 섹션이 빼는 오브젝트입니다(묶음 몫은 `writeSaveState` 가 싣는다). */
+        bool isGroupObject( uint64 objectID ) const;
+
         /** @brief 지금 상태를 값으로 찍습니다. */
         [[nodiscard]] State captureState() const;
         /** @brief @p state 로 되돌립니다. 오브젝트는 짓지 않습니다 — 부르는 쪽이 같은 id 로 이미 복원했습니다. */
@@ -103,14 +136,17 @@ namespace sw
     private:
         /** @brief 바라는 상태와 다른 묶음을 내리고 짓습니다. 큰 집합을 먼저 내리고 작은 집합을 먼저 짓습니다. */
         void applyGroups();
+        /** @brief 묶음 오브젝트 표(`_mapObjectGroup`)를 묶음의 id 목록으로 다시 만듭니다. */
+        void rebuildObjectGroupMap();
         /** @brief 켜진 레이어를 리소스 태그 `layer` 축으로 넣습니다 — 리소스의 `<_when _if="layer.Winter">` 가 읽고, 그 태그에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
         void publishLayerTags() const;
 
     private:
-        Scene*                _pScene; ///< 받은 씬(빌림)
-        SceneSettings         _settings;
-        vector<Group>         _listGroup;
-        unordered_set<string> _uniqueActiveLayer;
-        uint8                 _bDirty : 1; ///< 켜고 끄기가 있었다 — 다음 갱신이 처리한다
+        Scene*                        _pScene; ///< 받은 씬(빌림)
+        SceneSettings                 _settings;
+        vector<Group>                 _listGroup;
+        unordered_set<string>         _uniqueActiveLayer;
+        unordered_map<uint64, uint32> _mapObjectGroup; ///< 지은 묶음 오브젝트 id → 묶음 번호(`isGroupObject`)
+        uint8                         _bDirty : 1;     ///< 켜고 끄기가 있었다 — 다음 갱신이 처리한다
     };
 } // namespace sw

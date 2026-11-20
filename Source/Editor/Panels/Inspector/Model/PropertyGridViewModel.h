@@ -183,6 +183,20 @@ namespace sw::editor
         void resetToDefault( uint32 rowID );
         /** @brief 행 @p rowID 의 값 글(`SerializerUtil::formatPropertyText`)입니다 — Copy Value 가 부른다. 없는 행은 빈 글입니다. */
         string formatPropertyText( uint32 rowID ) const;
+        /**
+         * @brief 글 @p text 를 행 @p rowID 에 붙여 넣을 수 있으면 true 입니다(R13 — Paste Value 의 켜짐). 값은 바꾸지 않는다.
+         * @details 내장 값(수 · 벡터 · bool …)과 열거형은 그 타입의 빈 사본에 읽혀야 한다 — 읽히지 않는 글을 켜 두면 눌러도 아무 일이 없다(유니티의 타입 있는 클립보드가 회색으로 두는 것).
+         *          글 칸(`string` · `hashed_string`)은 어떤 글이든 받는다. 그 밖의 타입(구조체 · 컨테이너 · 에셋 참조)은 적용(`SerializerUtil::applyPropertyText`)이 거르고 값은 그대로다.
+         *          타입 핸들은 선택기만이 입력 길이라 false 다(`PropertyValueRow::_bPasteAllowed`).
+         */
+        [[nodiscard]] bool canPasteText( uint32 rowID, string_view text ) const;
+        /** @brief 에셋 경로 행 @p rowID 가 경로 @p path 를 받으면 true 입니다(`FileFilter` · `AssetRef<T>` 의 대상 종류 — `setAssetPath` 와 같은 판정). 끄는 동안 놓을 자리를 열기 전에 부른다(R11). */
+        [[nodiscard]] bool canAcceptAssetPath( uint32 rowID, string_view path ) const;
+        /**
+         * @brief 편집 대상의 씬에서 오브젝트 @p objectID 의 컴포넌트 가운데 @p targetTypeName(이나 그 파생)인 첫 컴포넌트의 핸들을 @p outHandle 에 담습니다.
+         * @details 계층 행을 타입 핸들 칸에 끌어 놓을 때 쓴다(언리얼 액터 칸 · 유니티 컴포넌트 칸에 오브젝트를 놓으면 그 컴포넌트가 들어가는 것). 없으면 false 이고 값은 그대로다.
+         */
+        [[nodiscard]] bool findObjectComponent( const hashed_string& targetTypeName, uint64 objectID, ComponentHandle& outHandle ) const;
         /** @brief 열거형 행 @p rowID 를 @p value 로 씁니다. 고르는 순간 바뀌는 콤보라 한 번 쓰기 구간이다(다음 마감에 오른다). */
         void setEnumValue( uint32 rowID, int64 value );
         /** @brief 시퀀스 행 @p rowID 끝에 기본값 원소를 하나 더합니다. */

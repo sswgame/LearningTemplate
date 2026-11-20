@@ -33,6 +33,34 @@ namespace sw
 
     namespace
     {
+        /** @brief 받는 XDND 판입니다(freedesktop XDND 5 — `XdndAware` 에 적는다). */
+        constexpr uint32 kXdndVersion = 5;
+        /** @brief 놓은 파일 목록(`text/uri-list`)을 한 번에 읽는 최대 길이(32 비트 단위)입니다. 4 MB — 파일 수만 개의 경로다. */
+        constexpr long kXdndMaxListWords = static_cast<long>( constant::memory::kBytesPerMegabyte );
+        /** @brief 원천이 내놓는 형식 목록(`XdndTypeList`)을 읽는 최대 개수입니다. */
+        constexpr long kXdndMaxTypeCount = 64;
+        /** @brief `XdndStatus` 의 l[1]: 받는다(비트 0) + 위치마다 다시 묻기(비트 1) · 받지 않는다(비트 1 만). */
+        constexpr int64 kXdndStatusAccept = 3;
+        constexpr int64 kXdndStatusRefuse = 2;
+        /** @brief `XdndPosition` 의 l[2] 는 뿌리 좌표 x << 16 | y 다. */
+        constexpr int32 kXdndPositionShift = 16;
+        constexpr long  kXdndPositionMask  = 0xFFFF;
+        /** @brief `XdndEnter` 가 형식 셋을 싣는 자리 l[2] ~ l[4] 입니다(넘으면 `XdndTypeList`). */
+        constexpr uint32 kXdndInlineTypeFirst = 2;
+        constexpr uint32 kXdndInlineTypeLast  = 4;
+        /** @brief XDND 메시지 값 자리: l[1] 은 깃발(비트 0 — 형식이 `XdndTypeList` 에 있다), l[2] 는 위치(`XdndPosition`) · 시각(`XdndDrop`)이다. */
+        constexpr uint32 kXdndFlagsWord    = 1;
+        constexpr long   kXdndTypeListFlag = 1;
+        constexpr uint32 kXdndPositionWord = 2;
+        constexpr uint32 kXdndDropTimeWord = 2;
+        /** @brief `XdndFinished` 의 l[1]: 받아 썼다(1) · 버렸다(0). */
+        constexpr int64 kXdndFinishedAccepted = 1;
+        constexpr int64 kXdndFinishedRefused  = 0;
+        /** @brief 속성 형식(비트) — 원자 목록은 32, 글은 8 이다. */
+        constexpr int32 kAtomPropertyFormat = 32;
+        constexpr int32 kTextPropertyFormat = 8;
+        /** @brief `XGetWindowProperty` 의 delete 인자 — 읽은 목록 속성은 지운다(다음 놓기가 낡은 값을 읽지 않는다). */
+        constexpr int32 kDeletePropertyAfterRead = 1;
         /** @brief 클립보드 주인에게 변환을 청한 뒤 답(`SelectionNotify`)을 기다리는 한 번의 길이(ms)입니다. */
         constexpr int32 kClipboardPollMs = 10;
         /** @brief 위 기다림의 최대 횟수입니다. 붙여넣기 한 번이 메인 스레드를 최대 200 ms 멈춘다(GLFW · SDL 도 같은 동기 대기다). */
@@ -202,6 +230,10 @@ namespace sw
         , _x11WmDelete{ 0 }
         , _invisibleCursor{ 0 }
         , _arrShapeCursor{}
+        , _xdndSource{ 0 }
+        , _xdndX{ 0 }
+        , _xdndY{ 0 }
+        , _bXdndURIList{ SW_FALSE }
         , _reservedX11{ 0 }
         , _padding{ 0 }
     {
@@ -240,6 +272,9 @@ namespace sw
 
         Atom wmDeleteMessage = XInternAtom( pDisplay, "WM_DELETE_WINDOW", 0 );
         XSetWMProtocols( pDisplay, win, &wmDeleteMessage, 1 );
+        // 파일 관리자의 끌어 놓기를 받는다고 알린다(XDND 판 5 — `handleDragAndDropEvent`).
+        const Atom xdndVersion = kXdndVersion;
+        XChangeProperty( pDisplay, win, XInternAtom( pDisplay, "XdndAware", 0 ), XA_ATOM, kAtomPropertyFormat, PropModeReplace, reinterpret_cast<const unsigned char*>( &xdndVersion ), 1 );
 
         XSelectInput( pDisplay, win,
                       ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask |
@@ -608,8 +643,8 @@ namespace sw
             if ( bAnyWindowFocusChange )
                 _inputMethod.onFocusChanged( static_cast<uint64>( event.xany.window ), event.type == FocusIn );
 
-            // 선택 이벤트는 입력이 아니다 — 외부 처리기(ImGui)가 먹기 전에 답한다. 답하지 않으면 붙여넣는 프로그램이 시간 제한까지 기다린다.
-            if ( handleSelectionEvent( &event ) || handleIncrPropertyEvent( &event ) )
+            // 선택 이벤트는 입력이 아니다 — 외부 처리기(ImGui)가 먹기 전에 답한다. 답하지 않으면 붙여넣는 프로그램이 시간 제한까지 기다린다. 끌어 놓기도 같다(원천이 답을 기다린다).
+            if ( handleDragAndDropEvent( &event ) || handleSelectionEvent( &event ) || handleIncrPropertyEvent( &event ) )
                 continue;
 
             bool bConsumed = false;
@@ -652,6 +687,144 @@ namespace sw
         }
 
         return _bShouldClose == SW_FALSE;
+    }
+
+    void X11Window::sendDragAndDropMessage( const utf8* pMessageName, const int64 ( &arrData )[kXdndDataWordCount] )
+    {
+        Display* pDisplay = static_cast<Display*>( _pX11Display );
+        XEvent   message{};
+        message.xclient.type         = ClientMessage;
+        message.xclient.display      = pDisplay;
+        message.xclient.window       = static_cast<Window>( _xdndSource );
+        message.xclient.message_type = XInternAtom( pDisplay, pMessageName, 0 );
+        message.xclient.format       = kAtomPropertyFormat; // 클라이언트 메시지 값은 32 비트 칸이다
+        message.xclient.data.l[0]    = static_cast<long>( _x11Window );
+        for ( uint32 index = 0; index < kXdndDataWordCount; ++index )
+            message.xclient.data.l[index + 1] = static_cast<long>( arrData[index] );
+        XSendEvent( pDisplay, static_cast<Window>( _xdndSource ), 0, NoEventMask, &message );
+        XFlush( pDisplay );
+    }
+
+    bool X11Window::handleDragAndDropEvent( const void* pEvent )
+    {
+        const XEvent& event    = *static_cast<const XEvent*>( pEvent );
+        Display*      pDisplay = static_cast<Display*>( _pX11Display );
+        const Atom    uriList  = XInternAtom( pDisplay, "text/uri-list", 0 );
+        const Atom    copy     = XInternAtom( pDisplay, "XdndActionCopy", 0 );
+
+        if ( event.type == SelectionNotify )
+        {
+            if ( event.xselection.selection != XInternAtom( pDisplay, "XdndSelection", 0 ) )
+                return false;
+            // 놓은 파일 목록이 이 창 속성에 왔다 — 읽어 경로로 바꾸고 원천에 끝을 알린다.
+            WindowFileDropEvent drop{};
+            drop._phase = WindowFileDropPhase::Drop;
+            drop._x     = _xdndX;
+            drop._y     = _xdndY;
+            bool bRead  = false;
+            if ( event.xselection.property != 0 )
+            {
+                Atom           type{ 0 };
+                int32          format{ 0 };
+                unsigned long  itemCount{ 0 };
+                unsigned long  bytesAfter{ 0 };
+                unsigned char* pData{ nullptr };
+                const int32    result = XGetWindowProperty( pDisplay, static_cast<Window>( _x11Window ), event.xselection.property, 0, kXdndMaxListWords, kDeletePropertyAfterRead, AnyPropertyType,
+                                                            &type, &format, &itemCount, &bytesAfter, &pData );
+                if ( result == 0 && pData != nullptr && format == kTextPropertyFormat )
+                {
+                    (void)WindowFileDropUtil::parseURIList( string_view( reinterpret_cast<const utf8*>( pData ), static_cast<size_t>( itemCount ) ), drop._listPath );
+                    bRead = true;
+                }
+                if ( pData != nullptr )
+                    XFree( pData );
+            }
+            const int64 arrFinished[kXdndDataWordCount]{ bRead ? kXdndFinishedAccepted : kXdndFinishedRefused, bRead ? static_cast<int64>( copy ) : 0, 0, 0 };
+            sendDragAndDropMessage( "XdndFinished", arrFinished );
+            _xdndSource   = 0;
+            _bXdndURIList = SW_FALSE;
+            dispatchFileDrop( drop );
+            return true;
+        }
+        if ( event.type != ClientMessage || event.xclient.window != static_cast<Window>( _x11Window ) )
+            return false;
+
+        const Atom messageType = event.xclient.message_type;
+        if ( messageType == XInternAtom( pDisplay, "XdndEnter", 0 ) )
+        {
+            _xdndSource   = static_cast<uint64>( event.xclient.data.l[0] );
+            _bXdndURIList = SW_FALSE;
+            // 형식이 셋을 넘으면 원천 창의 `XdndTypeList` 속성에 있다(l[1] 의 비트 0).
+            if ( ( event.xclient.data.l[kXdndFlagsWord] & kXdndTypeListFlag ) != 0 )
+            {
+                Atom           type{ 0 };
+                int32          format{ 0 };
+                unsigned long  itemCount{ 0 };
+                unsigned long  bytesAfter{ 0 };
+                unsigned char* pData{ nullptr };
+                const int32    result = XGetWindowProperty( pDisplay, static_cast<Window>( _xdndSource ), XInternAtom( pDisplay, "XdndTypeList", 0 ), 0, kXdndMaxTypeCount, 0, XA_ATOM,
+                                                            &type, &format, &itemCount, &bytesAfter, &pData );
+                if ( result == 0 && pData != nullptr && format == kAtomPropertyFormat )
+                {
+                    const Atom* pTypeList = reinterpret_cast<const Atom*>( pData );
+                    for ( unsigned long index = 0; index < itemCount; ++index )
+                        _bXdndURIList = ( _bXdndURIList != SW_FALSE || pTypeList[index] == uriList ) ? SW_TRUE : SW_FALSE;
+                }
+                if ( pData != nullptr )
+                    XFree( pData );
+            }
+            else
+            {
+                for ( uint32 index = kXdndInlineTypeFirst; index <= kXdndInlineTypeLast; ++index )
+                    _bXdndURIList = ( _bXdndURIList != SW_FALSE || static_cast<Atom>( event.xclient.data.l[index] ) == uriList ) ? SW_TRUE : SW_FALSE;
+            }
+            if ( _bXdndURIList != SW_FALSE )
+                dispatchFileDrop( WindowFileDropEvent{ WindowFileDropPhase::Enter, 0, 0, {} } );
+            return true;
+        }
+        if ( messageType == XInternAtom( pDisplay, "XdndPosition", 0 ) )
+        {
+            // 위치는 뿌리 창 좌표(l[2] = x << 16 | y)다 — 이 창 좌표로 옮긴다.
+            const int32 rootX = static_cast<int32>( ( event.xclient.data.l[kXdndPositionWord] >> kXdndPositionShift ) & kXdndPositionMask );
+            const int32 rootY = static_cast<int32>( event.xclient.data.l[kXdndPositionWord] & kXdndPositionMask );
+            Window      child{ 0 };
+            int32       localX{ 0 };
+            int32       localY{ 0 };
+            (void)XTranslateCoordinates( pDisplay, DefaultRootWindow( pDisplay ), static_cast<Window>( _x11Window ), rootX, rootY, &localX, &localY, &child );
+            _xdndX = localX;
+            _xdndY = localY;
+            // 받는지 답한다(비트 0 받음 · 비트 1 위치마다 다시 묻기). 받는 끌기는 복사로만 받는다 — 원본을 옮기지 않는다.
+            const bool  bAccept = _bXdndURIList != SW_FALSE;
+            const int64 arrStatus[kXdndDataWordCount]{ bAccept ? kXdndStatusAccept : kXdndStatusRefuse, 0, 0, bAccept ? static_cast<int64>( copy ) : 0 };
+            sendDragAndDropMessage( "XdndStatus", arrStatus );
+            if ( bAccept )
+                dispatchFileDrop( WindowFileDropEvent{ WindowFileDropPhase::Over, localX, localY, {} } );
+            return true;
+        }
+        if ( messageType == XInternAtom( pDisplay, "XdndLeave", 0 ) )
+        {
+            if ( _bXdndURIList != SW_FALSE )
+                dispatchFileDrop( WindowFileDropEvent{ WindowFileDropPhase::Leave, _xdndX, _xdndY, {} } );
+            _xdndSource   = 0;
+            _bXdndURIList = SW_FALSE;
+            return true;
+        }
+        if ( messageType == XInternAtom( pDisplay, "XdndDrop", 0 ) )
+        {
+            if ( _bXdndURIList == SW_FALSE )
+            {
+                const int64 arrRefused[kXdndDataWordCount]{};
+                sendDragAndDropMessage( "XdndFinished", arrRefused );
+                _xdndSource = 0;
+                return true;
+            }
+            // 파일 목록을 이 창 속성으로 변환해 달라고 청한다 — 답은 `SelectionNotify` 로 온다(위). 시각은 원천이 준 값(l[2])이다.
+            XConvertSelection( pDisplay, XInternAtom( pDisplay, "XdndSelection", 0 ), uriList, XInternAtom( pDisplay, "SW_XDND", 0 ), static_cast<Window>( _x11Window ),
+                               static_cast<Time>( event.xclient.data.l[kXdndDropTimeWord] ) );
+            XFlush( pDisplay );
+            return true;
+        }
+        return false;
     }
 
     void X11Window::waitForMessages( uint32 timeoutMilliseconds )

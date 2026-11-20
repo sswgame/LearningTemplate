@@ -41,11 +41,13 @@ namespace sw
                 return pAudio != nullptr && pAudio->isDataFile( relativePath );
             }
 
-            /** @brief 그 파일을 다시 읽어 바꿉니다(`IAudioService::reloadDataFile`). 실패하면 지금 것을 그대로 씁니다. */
-            void reload( const AssetID& assetID )
+            /** @brief 그 파일을 다시 읽어 바꿉니다(`IAudioService::reloadDataFile`). 실패하면 서비스가 오류로 남기고 지금 것을 그대로 씁니다. */
+            [[nodiscard]] ReloadResult reload( const AssetID& assetID )
             {
-                if ( IAudioService* pAudio = engine::findSubsystem<IAudioService>() )
-                    (void)pAudio->reloadDataFile( assetID ); // 실패는 서비스가 오류로 남기고 지금 것을 유지한다
+                IAudioService* const pAudio = engine::findSubsystem<IAudioService>();
+                if ( pAudio == nullptr || pAudio->isDataFile( assetID.view() ) == false )
+                    return ReloadResult::NotTracked;
+                return pAudio->reloadDataFile( assetID ) ? ReloadResult::Reloaded : ReloadResult::Failed;
             }
 
             /** @brief 서비스가 들고 있는 데이터 파일 수의 하한(믹서 그래프가 파일이면 1)입니다. */
@@ -54,6 +56,9 @@ namespace sw
                 const IAudioService* pAudio = engine::findSubsystem<IAudioService>();
                 return pAudio != nullptr && pAudio->getMixerPath().empty() == false ? 1u : 0u;
             }
+
+            /** @brief 데이터는 오디오 서비스 가 쥐어 덧붙일 줄이 없습니다(그 몫은 메모리 태그 표에 있다). */
+            void collectMemoryEntries( vector<AssetMemoryEntry>& /*outListEntry*/ ) const override {}
 
             /** @brief 아무것도 하지 않습니다(파일 설명). */
             void clear() override {}

@@ -9,6 +9,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -72,7 +73,7 @@ namespace sw
     {
         CardBattleCardDef def;
         bool              bValid = XMLFields::readProperties( node, def, sourceName, { "effects" } );
-        XMLReadUtil::forEachNamedNumber( node.getAttributeText( "effects" ), ",; ", 0, XMLReadUtil::MissingValue::Reject,
+        XMLReadUtil::forEachNamedNumber( node.getAttributeText( "effects" ), 0, XMLReadUtil::MissingValue::Reject,
                                          [&]( string_view token, string_view kindName, int32 amount, bool bAmount )
         {
             CardBattleEffect effect;

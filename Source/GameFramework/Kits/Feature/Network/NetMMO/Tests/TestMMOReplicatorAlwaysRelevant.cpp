@@ -137,6 +137,7 @@ namespace
         writer.writeBool( true );
         writer.writeVarUint( entityID ); // id
         writer.writeVarUint( 1 );        // 타입
+        writer.writeVarUint( 0 );        // 정적 id(동적 엔티티)
         writer.writeFloat( 0.0f );
         writer.writeFloat( 0.0f );
         writer.writeFloat( 0.0f );

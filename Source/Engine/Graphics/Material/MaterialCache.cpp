@@ -201,6 +201,18 @@ namespace sw
         return _impl->_mapEntry.size();
     }
 
+    void MaterialCache::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
+    {
+        if ( _impl == nullptr )
+            return;
+        // shortcut: 객체 크기만 센다 — 상수 버퍼 · 텍스처는 그것을 쥔 GPU 자원 표와 텍스처 캐시 줄에 있다.
+        ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
+        for ( const auto& [key, entry] : _impl->_mapEntry )
+        {
+            outListEntry.push_back( AssetMemoryEntry{ key, sizeof( Material ), 0, entry._refCount } );
+        }
+    }
+
     void MaterialCache::requestInitialize( string_view relativePath )
     {
         if ( relativePath.empty() || _impl == nullptr )
@@ -402,12 +414,12 @@ namespace sw
         _impl->_pBoundDevice.store( pDevice, std::memory_order_release );
     }
 
-    void MaterialCache::reload( const AssetID& assetID )
+    ReloadResult MaterialCache::reload( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
         SW_MEMORY_SCOPE( Material );
         if ( relativePath.empty() || _impl == nullptr )
-            return;
+            return ReloadResult::NotTracked;
 
         const string key = AssetRedirect::toCacheKey( relativePath );
 
@@ -418,12 +430,18 @@ namespace sw
             ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
             const auto                     it = _impl->_mapEntry.find( key );
             if ( it == _impl->_mapEntry.end() )
-                return;
+                return ReloadResult::NotTracked;
             material = it->second._material;
+        }
+        // 쥔 머티리얼의 GPU 자원을 놓기 전에 새 파일이 읽히는지 본다 — 저장 중 반쯤 쓰인 파일 · 깨진 XML 이면 이전 판을 그대로 그린다.
+        if ( Material::create()->loadFromAsset( AssetID{ key } ) == false )
+        {
+            SW_LOG_ERROR_ID( "MaterialCache.HotReloadParseFailed", "Hot-Reload failed for Material %# - keeping the previous version", key.c_str() );
+            return ReloadResult::Failed;
         }
         IRHIDevice* const pDevice = _impl->_pBoundDevice.load( std::memory_order_acquire );
         if ( pDevice == nullptr )
-            return;
+            return ReloadResult::NotTracked;
 
         const Impl::DeviceInitScope initScope{ *_impl };
         if ( material->getInitState() == MaterialInitState::Ready )
@@ -435,7 +453,11 @@ namespace sw
         }
 
         if ( material->initialize( pDevice, AssetID{ key } ) == false )
+        {
             SW_LOG_ERROR_ID( "MaterialCache.HotReloadFailedMaterial", "Hot-Reload failed for Material %#", key.c_str() );
+            return ReloadResult::Failed;
+        }
+        return ReloadResult::Reloaded;
     }
 } // namespace sw
 

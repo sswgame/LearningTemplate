@@ -23,6 +23,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
 {
@@ -65,6 +66,20 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @struct AssetMemoryEntry
+     * @brief 캐시가 쥔 에셋 한 줄의 메모리입니다(`AssetCacheBase::collectMemoryEntries`). 메모리 스냅숏의 에셋 표가 읽는다(언리얼 `obj list` · `ListTextures` 의 줄).
+     * @details 바이트는 캐시가 아는 만큼의 추정이다 — 텍스처 · 메시는 픽셀 · 정점 버퍼까지, 나머지는 객체 크기(`sizeof`)다. 에셋 안 컨테이너의 정확한 합은
+     *          메모리 태그 표(`MemoryProfiler`)가 종류별 줄로 센다. 종류 이름은 캐시의 것(`getAssetKindName`)이라 줄에 두지 않는다.
+     */
+    struct AssetMemoryEntry
+    {
+        string _path{};              ///< 리소스 id. 경로가 키가 아닌 캐시(지어 나누는 값)는 `<종류>#<번호>` 다
+        uint64 _cpuBytes{ 0 };       ///< CPU 쪽 추정 바이트(객체 + 쥔 버퍼)
+        uint64 _gpuBytes{ 0 };       ///< GPU 쪽 논리 바이트(텍스처 밉 · 메시 정점 · 인덱스). GPU 자원이 없으면 0
+        uint32 _referenceCount{ 0 }; ///< 쥔 쪽 수(캐시 자신과 이 질의의 사본은 뺀다)
+    };
+
     class AssetLoadOperation;
 
     /**
@@ -111,6 +126,13 @@ namespace sw
 
         /** @brief 지금 들고 있는 항목 수입니다. */
         virtual size_t getCachedCount() const = 0;
+
+        /**
+         * @brief 지금 쥔 에셋마다 한 줄(`AssetMemoryEntry`)을 @p outListEntry 뒤에 덧붙입니다. 어느 스레드에서 불러도 됩니다(캐시가 자기 잠금을 잠깐 잡는다).
+         * @details 순수 가상이라 새 캐시는 이 질의를 빠뜨리고 지을 수 없다 — 에셋 표에 줄이 없는 캐시가 생기지 않는다(`getCachedCount` 와 같은 진단 계약).
+         *          스스로 데이터를 쥐지 않는 어댑터(데이터는 서비스가 쥔다)는 아무것도 덧붙이지 않는다 — 그 몫은 메모리 태그 표에 있다.
+         */
+        virtual void collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const = 0;
 
         /**
          * @brief @p relativePath 가 이 캐시가 다루는 종류의 경로면 로드를 걸고(워커), 그 에셋을 붙드는 토큰과 로드를 돌려줍니다. 이 캐시의 종류가 아니면 빈 토큰입니다.
@@ -163,14 +185,18 @@ namespace sw
      *          인스턴스화되지도 링크되지도 않는다(템플릿이 아닌 캐시의 본문은 개발 전용 `<캐시>Reload.cpp` 다). 디바이스는 받지 않는다 — GPU 자원을 가진
      *          캐시(텍스처 · 머티리얼 · 메시)는 엔진이 붙인 디바이스(`bindDevice`, `SceneRHISubsystem` 이 RHI 를 세울 때 붙이고 내릴 때 뗀다)를 쓴다(언리얼 리임포트도
      *          RHI 를 인자로 받지 않는다). 예전에는 부르는 쪽(에디터)이 디바이스를 찾아 캐시 여덟의 인자로 관통시켰다.
+     *          결과(`ReloadResult`)를 돌려준다 — 예전에는 `void` 라 파싱이 실패해도 부르는 쪽이 성공으로 적었다. 실패면 캐시는 이전 판을 지킨다(Reloaded · NotTracked · Failed).
      */
-    using AssetCacheReloadFunction = void ( * )( AssetCacheBase& cache, const AssetID& assetID );
+    using AssetCacheReloadFunction = ReloadResult ( * )( AssetCacheBase& cache, const AssetID& assetID );
 
-    /** @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`). */
+    /**
+     * @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`).
+     * @details 멤버가 `ReloadResult` 를 돌려주지 않으면(예전 `void`) 이 `return` 이 컴파일되지 않는다 — 결과를 버리는 캐시를 등록할 수 없다.
+     */
     template <typename TCache>
-    void reloadAssetCache( AssetCacheBase& cache, const AssetID& assetID )
+    ReloadResult reloadAssetCache( AssetCacheBase& cache, const AssetID& assetID )
     {
-        static_cast<TCache&>( cache ).reload( assetID );
+        return static_cast<TCache&>( cache ).reload( assetID );
     }
 } // namespace sw
 

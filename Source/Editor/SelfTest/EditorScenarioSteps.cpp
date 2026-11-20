@@ -9,7 +9,9 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/EditorSubsystem.h"
@@ -334,6 +336,33 @@ namespace sw::editor
                 {
                     EditorSelfTestInput::setKey( modifier, false );
                 }
+                return true;
+            }
+
+            /**
+             * @brief OS 파일 끌어 놓기를 흉내 냅니다 — 레이블 가운데에 `files` 를 놓는다(창 처리기와 같은 입구 `EditorFileDrop`). 받는 창은 다음 그리기에서 꺼낸다.
+             * @details 원본은 리소스 id 나 절대 경로로 적고(`EditorAssetFileCommands::readSourceFileArgument`), 풀리지 않는 글은 그대로 놓는다 — 받는 쪽의 거르기가 판정 대상이다.
+             */
+            static bool runDropFiles( AutomationStepContext& runner, const AutomationStep& step )
+            {
+                const EditorDropFilesParams params = step.readValidatedProperties<EditorDropFilesParams>();
+                EditorSelfTestMark          found{};
+                if ( EditorSelfTestMarks::find( params._mark, found ) == false )
+                {
+                    runner.recordFailure( step, "no editor widget is marked '" + params._mark + "' (was it drawn in the last frame?)" );
+                    return true;
+                }
+                vector<string>     listPath;
+                StringSplitOptions splitOptions{};
+                splitOptions._bDropEmpty = true;
+                for ( const string_view token : StringUtil::split( params._files, ";", splitOptions ) )
+                {
+                    string absolutePath;
+                    string reply;
+                    listPath.push_back( EditorAssetFileCommands::readSourceFileArgument( string( token ), absolutePath, reply ) ? absolutePath : string( token ) );
+                }
+                const float2 center{ ( found._min._x + found._max._x ) * 0.5f, ( found._min._y + found._max._y ) * 0.5f };
+                EditorSelfTestInput::dropFiles( listPath, center );
                 return true;
             }
 
@@ -666,6 +695,7 @@ namespace sw::editor
 
     SW_AUTOMATION_STEP( editorClick, EditorScenarioStepValidation::kClickKind, &EditorScenarioStepsInternal::runClick, &EditorScenarioStepValidation::validateClick, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilHoverReady<EditorClickParams> ) );
     SW_AUTOMATION_STEP( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepValidation::validateDrag, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilHoverReady<EditorDragParams> ) );
+    SW_AUTOMATION_STEP( editorDropFiles, EditorScenarioStepValidation::kDropFilesKind, &EditorScenarioStepsInternal::runDropFiles, &AutomationStep::validateProperties<EditorDropFilesParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ) );
     SW_AUTOMATION_STEP( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepsInternal::runHover, &EditorScenarioStepValidation::validateHover, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilHoverReady<EditorHoverParams> ) );
     SW_AUTOMATION_STEP( editorText, EditorScenarioStepValidation::kTextKind, &EditorScenarioStepsInternal::runText, &AutomationStep::validateProperties<EditorTextParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilTextTarget ) );
     SW_AUTOMATION_STEP( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepsInternal::runKey, &EditorScenarioStepValidation::validateKey, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareKey ).withHold( &EditorScenarioStepsInternal::holdUntilKeyboardStable ) );

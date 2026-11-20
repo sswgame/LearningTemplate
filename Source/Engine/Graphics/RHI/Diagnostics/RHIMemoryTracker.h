@@ -8,9 +8,13 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/array.h"
+#include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+
+#include "Engine/Graphics/RHI/RHIEnums.h"
 
 namespace sw
 {
@@ -75,6 +79,33 @@ namespace sw
         {
             return RHIMemoryKey{ static_cast<uint64>( reinterpret_cast<uintptr_t>( pObject ) ), RHIMemoryKeySpace::DeviceObject };
         }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 텍스처 자원 하나의 모양입니다(서술에서 온 값). 버퍼 · 디바이스 객체는 비어 있다(크기 0 · 포맷 Unknown). */
+    struct RHIMemoryResourceShape
+    {
+        uint32    _width{ 0 };
+        uint32    _height{ 0 };
+        uint32    _arraySize{ 0 }; ///< 면 수(큐브 6)
+        uint32    _mipLevels{ 0 };
+        RHIFormat _format{ RHIFormat::Unknown };
+    };
+
+    /**
+     * @brief 살아 있는 GPU 자원 한 줄입니다(`RHIMemoryTracker::collectResources` 가 잠금 아래에서 복사한 값).
+     * @details 메모리 스냅숏의 GPU 자원 표 · 렌더링 디버그의 RT 목록이 같은 줄을 읽는다(언리얼 `rhi.DumpResourceMemory` · `ListTextures` 의 줄).
+     *          바이트는 추적기의 기준(`RHIMemorySizeBasis` — DX12 · Vulkan 은 할당 크기, DX11 · GL 은 서술로 계산한 크기)이다.
+     */
+    struct RHIMemoryResourceEntry
+    {
+        RHIMemoryKey           _key{};
+        RHIMemoryKind          _kind{ RHIMemoryKind::Texture };
+        uint64                 _bytes{ 0 }; ///< `kRHIMemoryUnknownBytes` 면 크기를 모른다
+        RHIMemoryResourceShape _shape{};
+        string                 _label{}; ///< 디버그 이름(`IRHIResourceFactory::setTextureDebugName`). 붙이지 않았으면 비어 있다
     };
 } // namespace sw
 
@@ -175,6 +206,15 @@ namespace sw
          */
         void recordAllocation( const RHIMemoryKey& key, RHIMemoryKind kind, uint64 bytes );
         /**
+         * @brief 텍스처 하나를 서술 @p desc 의 항목(`classifyTexture`) · 모양과 함께 올립니다. 네 백엔드가 텍스처를 만드는 곳에서 이것 하나를 부른다.
+         * @details 모양은 자원 목록(`collectResources`)이 그대로 내준다 — 백엔드마다 서술을 다시 읽어 맞추지 않게 공통 면을 여기 하나로 둔다.
+         */
+        void recordTexture( uint64 textureHandle, const RHITextureDesc& desc, uint64 bytes );
+        /** @brief 올라 있는 자원 @p key 에 디버그 이름 @p label 을 붙입니다(백엔드의 `setTextureDebugName`). 올라 있지 않은 키는 무시한다. */
+        void setLabel( const RHIMemoryKey& key, string_view label );
+        /** @brief 살아 있는 자원 전부를 @p outListEntry 에 복사합니다(비운 뒤 채운다). 잠금은 복사하는 동안만 잡는다 — 렌더 · 로더 스레드를 오래 막지 않는다. */
+        void collectResources( vector<RHIMemoryResourceEntry>& outListEntry ) const;
+        /**
          * @brief 자원 하나를 추적기에서 내립니다. 백엔드가 자원을 실제로 해제하는 곳(GPU 지연 해제 콜백) 한 군데에서 부릅니다.
          * @details 올린 때의 종류와 바이트를 그대로 뺀다. 올라 있지 않은 키는 무시한다(추적기를 켜기 전에 만든 자원).
          */
@@ -212,8 +252,10 @@ namespace sw
         /** @brief 키 하나가 올라 있는 동안 기억하는 값입니다. 해제는 이 값을 그대로 뺍니다. */
         struct LiveEntry
         {
-            uint64        _bytes{ 0 };
-            RHIMemoryKind _kind{ RHIMemoryKind::Texture };
+            uint64                 _bytes{ 0 };
+            RHIMemoryKind          _kind{ RHIMemoryKind::Texture };
+            RHIMemoryResourceShape _shape{};
+            string                 _label{};
         };
 
         /** @brief 추적기에서 항목 하나를 뺍니다. `_mutex` 를 잡고 부릅니다. */

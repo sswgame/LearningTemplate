@@ -1218,6 +1218,8 @@ struct SW_API ReplicatedLayout
 
 **확인.** 단위 `PhysicsOverlapTrackerTest.*`(물리 없음 — 여러 바디 한 번, 끝 먼저, 들고 남, 다시 짓기, 트리거 열쇠 분리, 유지), `TriggerOverlapContractTest.*`(Jolt · Box2D 씬 — 안에서 생성 · 파괴 · 비활성 · 트리거 끄고 켜기 · 순간 이동 · 몸 둘), `ZoneTest.*`(꺼진 볼륨 이탈 · 안에서 생성 첫 프레임 진입 · 파괴 이탈 기록) — 서버 단위(`Server --test`)에도 같은 케이스가 돈다. 시나리오 `triggercontract`(감시 값 `Physics.OverlapCount`).
 
+**소비자 — 지역 진입 컷씬(2026-11-20).** `SequenceTriggerComponent` 는 이 계약의 오브젝트 쌍 진입(`onOverlapBegin`)만 받는다(유지 · 이탈 안 씀 — 진입이 이탈 뒤에만 오므로 다시 재생의 재무장이 따로 없다). 한 번만 · 다시 재생은 바탕의 `_bOnce`(블루프린트 `DoOnce` 자리 — 언리얼 Level Sequence Actor 에는 트리거가 없다), 발동 수는 상태 칸이라 세이브 · 재접속 뒤에도 다시 틀지 않는다. 재생 중 재진입은 다시 틀지 않고(언리얼 `Play` 와 같다), 플레이어가 데이터 결함으로 틀지 못하면 발동이 아니다. 시나리오 `game.empty.cutscenetrigger`(안에서 태어남 · 유지 · 재진입 · 폰 재생성).
+
 ### 충돌 채널 · 응답 · 프리셋(설계 2026-11-20)
 
 **문제.** 충돌 거름이 이름 붙은 레이어(`physicssettings.xml` 의 `PhysicsLayerDef` 7 개)와 32 × 32 "부딪힘 / 안 부딪힘" 대칭 행렬 하나였다 — 응답이 둘뿐(막지 않고 겹침만 내는 쌍을 적을 수 없다), 질의 채널이 없어(카메라 · 시야 질의가 레이어 이름 목록을 저마다 들었다) 프리셋(오브젝트 종류 + 응답 묶음)이 없었다. 2D 콜라이더(`BoxCollider2DComponent`)만 레이어를 이름이 아닌 번호(`_colliderType`)로 들었다.
@@ -1382,6 +1384,24 @@ public:
 
 **구현에서 바꾼 것(2026-11-20, ②~⑤).** ① 기본값은 사용자 설정 스키마 `display.hdr`(off) · `-gv_displayOutput` 이 맡고 EngineConfig `_render._displayOutput` 칸은 두지 않았다 — 원천을 둘로 만들지 않는다. ② 장면 패스는 SDR 과 같은 [0,1] 출력 신호(1 = 최대 휘도)를 내고 톤 곡선은 `x / (x + 어깨)`(어깨 = `(최대 휘도 / 종이 흰색)^(1/2.2)`, SDR 1)를 PassCB `g_DisplayOutput` 으로 받는다 — Tonemap · 후처리 체인에 퍼뮤테이션을 두지 않아 PSO 가 늘지 않고 SDR 셰이더 결과가 그대로다. 인코딩(퍼뮤테이션 `SW_DISPLAY_OUTPUT`)은 끝의 패스 하나라 RCAS 는 바꿀 것이 없다. ③ UI 합성 · 인코딩은 파이프라인 XML 패스 대신 회전 출력(`FrameScreenRotation`)과 같은 그래프 밖 출력(`FrameDisplayEncode`)으로 했다 — 화면에 쓰는 곳이 넷이 넘어(Present · Canvas · 캡처 → 화면 · 개발 겹치기 · 렌더 스레드 UI) XML 패스로는 다 모을 수 없고, 모두 `getScreenTarget` 한 자리를 본다. 패스는 `DisplayEncodeHDR10` · `DisplayEncodeScRGB` · `DisplayCompositeUI`(고정 포맷, 모니터가 HDR 을 받을 때만 PSO). 에뮬 백엔드(DX11)의 엔진 텍스처 칸을 늘리지 않으려고 UI 는 인코딩 앞 합성 패스로 장면 RT 위에 섞는다. ④ Vulkan 은 HDR 인 동안 다른 창(에디터 도구 창)을 새로 열지 않는다(주 창 렌더 패스 포맷을 따른다 — 코드의 shortcut 주석).
 
+### 메모리 사용량 디버그 · 내보내기(설계 2026-11-20)
+
+**문제.** 메모리를 볼 곳이 흩어져 있다 — 태그 표는 로그(`memory.report`) · HUD · Profiler 메모리 탭, 할당 사이트 상위 N 은 `-gv_profileAllocSites` 의 파일, 캐시 계수(`CacheStats`)는 `FrameProfileSession` 파일에만 있다. 에셋별 · 형식별 크기, GPU 자원별 VRAM, 두 시점 비교, 표 내보내기는 없다. "어디서 메모리가 늘었나" 를 숫자로 답할 수 없다.
+
+**대조.** 언리얼은 LLM 태그 + Memory Insights(할당 콜스택 · 두 시점 비교), `memreport -full`(`obj list` · `ListTextures` · `rhi.DumpMemory` 의 글 보고), 유니티 Memory Profiler 는 스냅숏을 찍어 표(All Of Memory · Unity Objects — 거르기 · 정렬)로 보고 두 스냅숏을 비교한다. Godot 디버거의 Video RAM 탭은 자원(경로 · 형식 · 포맷 · 크기) 목록을 CSV 로 내보낸다. → 셋 다 "한 시점의 스냅숏 하나 + 표 여럿 + 두 스냅숏 비교 + 파일로 내보내기" 다. 같은 꼴로 간다.
+
+**결정.**
+1. **스냅숏은 일반 표 여섯.** `MemorySnapshot`(DevTools/Profiling/Memory) = 시트 여섯(Tags · AllocationSites · Assets · GPUResources · Types · Caches)이고, 시트마다 칸 서술(이름 · 종류 Text/Bytes/Count · 키 칸 · 크기 칸 · 거르기 칸)이 표 하나(`MemorySheetSchema`)에 있다. 비교 · CSV · 패널 · 원격 글이 시트별 코드를 갖지 않는다 — 시트를 더할 때 서술 한 줄과 수집 함수 하나만 는다.
+2. **캐시 질의.** `AssetCacheBase::collectMemoryEntries`(순수 가상 — 새 캐시가 빠뜨리고 지을 수 없다, `getCachedCount` 와 같은 진단 계약이라 배포에도 둔다). 줄은 경로 · CPU · GPU 바이트 · 쥔 쪽 수, 종류는 캐시 이름. 약한 표는 `WeakInternTable::forEachLive`(잠금 안에서는 포인터 복사만 — 마지막 사본을 놓는 소멸자가 같은 잠금을 잡는다). 크기는 텍스처(밉 논리 크기 + CPU 사본) · 메시(정점 · 인덱스)만 정확하고 나머지는 `sizeof` — 컨테이너 몫은 태그 표가 센다.
+3. **GPU 자원 공통 면은 `RHIMemoryTracker` 하나.** 네 백엔드가 이미 키별로 올리므로 줄에 모양(`recordTexture( 핸들, 서술, 바이트 )`)과 디버그 이름(`setLabel` — 백엔드 `setTextureDebugName` 한 줄)을 붙이고, `collectResources` 가 잠금 아래에서 복사한다. 해제는 백엔드가 펜스 뒤 콜백에서 내리므로 복사본이 곧 "GPU 가 놓은 뒤" 의 목록이다 — 렌더 스레드에 따로 펜스 복사를 두지 않는다. 렌더링 디버그(RT 목록 · HUD VRAM 줄)도 이 면만 읽는다.
+4. **형식별.** 올라온 모든 씬(`SceneManager::collectAllScenes` — PIE · 미리보기 포함)의 오브젝트 저장소를 돌아 GameObject 형식 · 컴포넌트 형식(리플렉션 이름)마다 수 × `TypeInfo::_size`.
+5. **할당 사이트.** 세부 추적(`memory.tracking`)이 켜져 있을 때 `getTopCallStacks` 상위 N(설정) — 기호 풀기는 수집 때 한다(원격 스냅숏은 주소가 아니라 글이어야 한다).
+6. **배포에서 빠짐.** 수집 · 비교 · CSV · 명령은 DevTools(배포 호스트가 링크하지 않는다) · 에디터다. 엔진에 남는 것은 위 2 · 3 의 질의뿐이다.
+7. **패널 "Memory"**(MVVM — Model 은 ImGui 없이 단위 테스트): 요약(CPU · GPU 합 · 태그 막대), 시트 탭(정렬 · 이름 거르기 · 거르기 칸), 스냅숏 찍기 · 둘 고르기 · 비교(늘어난 것 순 — 새로 생김 · 늘어남 · 줄어듦 · 사라짐), 에셋 줄 → 콘텐츠 브라우저 · 인스펙터. 원천은 이 프로세스(편집 · PIE 같은 프로세스)와 원격(개발 명령 `memory.snapshot` 의 답이 스냅숏 글 — 디버그 채널 `EditorRemoteInspector`).
+8. **내보내기.** CSV(UTF-8 BOM · 쉼표 · RFC 4180 따옴표 · 첫 줄 머리말 · 바이트 칸은 원값 + `(MB)` 칸 따로). 표 하나 또는 스냅숏 전체(시트마다 파일 + Summary). 폴더는 `<Saved>/<_exportFolder>/<yyyyMMdd-HHmmss>`(같은 초는 `-2` — 덮지 않는다), 설정 `Config/Dev/MemorySnapshot.json`(없으면 오류). 쓰기는 워커(에디터 `EditorBackgroundTask`, 명령 · 인자는 `TaskManager`). 개발 명령 `memory.export [폴더]`, 실행 인자 `-memory-export=<폴더>`(루프가 끝날 때 한 번 — 언리얼 `-csvExitOnCompletion` 자리), `SavedRetention` 규칙 한 줄.
+
+**확인.** 단위: 수집(가짜 캐시 · 추적기에 올린 가짜 자원), 비교(늘어남 · 새로 생김 · 사라짐), CSV(BOM · 이스케이프 · 한글 경로 · 숫자 칸), 스냅숏 글 왕복, ViewModel(정렬 · 거르기 · 비교). 시나리오 `editor/memorypanel`: 패널 열기 → 찍기 두 번 → 비교 → 내보내기 → `memory.exportinfo` 가 읽은 머리말 · 행 수.
+
 ### 헤더 팬인 다이어트(설계 2026-11-20, 감사 8)
 
 **문제.** 공통 헤더 하나를 고치면 전체 재빌드(50 분대 — 4 절 "검증 시간")다. 숫자(`py -3 -m Scripts header-fanin`, 2026-11-20, TU 3685 · pch 가 끄는 헤더 65): 점수(헤더를 포함하는 TU 수 × 그 헤더가 pch 밖에서 끌어오는 헤더 수) 합 867 490. 위 넷은 오브젝트 · 리플렉션 핵심이다 —
@@ -1502,12 +1522,12 @@ public:
 7. **발화 규칙(이벤트 · 카메라 신호).** 갱신 하나는 구간(`SequencePlaybackSegment { from, to }`) 많아야 둘이다. 정방향 구간은 `from < 시작 <= to`, 역방향은 `to <= 시작 < from` 인 항목을 쏜다 — 역재생도 쏜다(언리얼 기본). 반복 되감기: (이전, 끝] + (시작 − 1, 지금] (역방향은 대칭). 왕복 꺾임: (이전, 끝] + (끝, 지금] 역방향 — 꺾이는 끝 프레임은 한 번. 한 갱신에 여러 바퀴를 넘으면 첫 바퀴 끝 구간과 마지막 바퀴 앞 구간만(언리얼과 같다). 점프(`seekToFrame` · `playFromFrame` · `skipToEnd`)는 쏘지 않는다. 같은 문턱을 한 번 지나면 한 번 — 단위 테스트가 정방향 · 역방향 · 큰 dt · 반복 경계 · 왕복 꺾임을 센다.
 8. **구간(애니메이션 · 소리 · 자막 · 스폰)은 상태다.** 지금 프레임이 구간 안이면 들어가 있고 밖이면 나가 있다 — 들어가기 · 나가기는 바뀔 때 한 번. 한 갱신에 통째로 지나친 구간은 들어가지 않는다(언리얼 섹션 평가와 같다 — 이벤트는 "지난 것", 구간은 "지금 있는 것"). 자막 길이는 구간 길이 ÷ |속도|.
 9. **카메라.** 트랜스폼 키 트랙(위치 · 회전) · 렌즈 키 트랙(화각 · 초점 · 조리개)은 이미 컷 카메라를 몬다(`LensTrackKeysTheCameraAndRestores`). 빈 것: 컷 사이 블렌드 — 카메라 컷 항목의 구간 섞임 `_easeInFrames` · 곡선(앞 컷 화면에서 이 컷으로 섞는 길이, 0 은 끊음 — 언리얼 Camera Cut 섹션 Ease In, Cinemachine 클립 겹침, 결정 12). 컷 카메라에 디렉터가 없으면 끊는다(지금 규칙). 시퀀스 Blend In/Out 은 그대로. 화각은 감시 값 `Object.Property`(`CameraComponent._fovY`)로 읽어 새 감시 값을 두지 않는다.
-10. **컷씬 옵션(플레이어 컴포넌트 PROPERTY).** `_bDisablePlayerInput`(언리얼 `bDisableMovementInput` + `bDisableLookAtInput`) — 입력 관리자의 셈하는 막기 요청(`InputManager::addPlayerInputBlockRequest`), 플레이어 컨트롤러는 막힌 동안 의도 0 · 시선 없음. `_bHideHud`(`bHideHud`) — 레이어 숨김 창구(`IUILayerVisibility`)의 HUD 요청. `_bSkippable` — 엔진 컷씬 입력 맵(`EngineDefaultAssets::_cutsceneInputMap` = `engine/input/cutscene.input.xml`, 액션 `Cutscene.Skip`)을 재생 동안 읽어 누르면 `skipToEnd`. 포토 모드 입력 맵과 같은 꼴(게임마다 맵에 액션을 더하지 않는다, 키는 데이터). 맵이 없거나 액션이 없으면 오류 로그 + 건너뛰기 없음(폴백 없음). 셋 다 재생 시작에 걸고 끝내기(`endPlayback`)가 같은 수로 푼다. 움직임 정책은 열거 `SequencePlayerMovement { Free, Blocked, Confined }` 로 넓혔다 — `Confined` 는 대상 · 중심 · 반지름 칸(비면 오류로 틀지 않음)으로 대상을 바닥 평면 원 안에 두고 넘으면 경계로 되돌린다(볼륨 겹침 계약은 트리거 갈래가 만드는 중이라 단순 원 포함 검사로 두고 통합 뒤 옮긴다). 빨리감기(`Cutscene.FastForward` 를 누르는 동안 EngineConfig `_sequencer._fastForwardRate` 배) — 이벤트는 모두 쏘고, 자막은 벽시계 길이, 소리는 음 높이를 두고 구간 끝에서 멈춘다(늘이기 없음, 언리얼과 같다). 일시정지는 게임 시간(`GameTimeScale`)이 원천이다 — 재생 갱신 시간이 0 이면 위치가 서고 컷씬 입력도 쉰다(일시정지 메뉴 화면은 런타임 UI 갈래 몫). 정상 끝은 위치를 끝에 둔다(Stop 만 되감는다).
+10. **컷씬 옵션(플레이어 컴포넌트 PROPERTY).** `_bDisablePlayerInput`(언리얼 `bDisableMovementInput` + `bDisableLookAtInput`) — 입력 관리자의 셈하는 막기 요청(`InputManager::addPlayerInputBlockRequest`), 플레이어 컨트롤러는 막힌 동안 의도 0 · 시선 없음. `_bHideHud`(`bHideHud`) — 레이어 숨김 창구(`IUILayerVisibility`)의 HUD 요청. `_bSkippable` — 엔진 컷씬 입력 맵(`EngineDefaultAssets::_cutsceneInputMap` = `engine/input/cutscene.input.xml`, 액션 `Cutscene.Skip`)을 재생 동안 읽어 누르면 `skipToEnd`. 포토 모드 입력 맵과 같은 꼴(게임마다 맵에 액션을 더하지 않는다, 키는 데이터). 맵이 없거나 액션이 없으면 오류 로그 + 건너뛰기 없음(폴백 없음). 셋 다 재생 시작에 걸고 끝내기(`endPlayback`)가 같은 수로 푼다. 움직임 정책은 열거 `SequencePlayerMovement { Free, Blocked, Confined }` 로 넓혔다 — `Confined` 는 대상 · 중심 · 반지름 칸(비면 오류로 틀지 않음)으로 대상을 바닥 평면 원 안에 두고 넘으면 경계로 되돌린다(원 포함 검사로 둔다 — 겹침 계약은 들고 남만 알려 되돌릴 경계 점을 주지 않는다. 언리얼 · 유니티는 이 칸이 없고 게임 코드가 막는다). 빨리감기(`Cutscene.FastForward` 를 누르는 동안 EngineConfig `_sequencer._fastForwardRate` 배) — 이벤트는 모두 쏘고, 자막은 벽시계 길이, 소리는 음 높이를 두고 구간 끝에서 멈춘다(늘이기 없음, 언리얼과 같다). 일시정지는 게임 시간(`GameTimeScale`)이 원천이다 — 재생 갱신 시간이 0 이면 위치가 서고 컷씬 입력도 쉰다(일시정지 메뉴 화면은 런타임 UI 갈래 몫). 정상 끝은 위치를 끝에 둔다(Stop 만 되감는다).
 11. **자막 지우기는 창구가 모자란다.** `ISubtitleSink` 는 `postSubtitle` 뿐이라 역재생 · 건너뛰기 · 멈춤에서 남은 줄을 지울 수 없다 — 줄 id 를 돌려주는 `post` 와 `clearSubtitle(id)` 가 필요하다(표시 장치 `UISubtitleService` 는 다른 갈래 몫이라 이번에 고치지 않았다).
 12. **이징 · 보간.** 키 보간은 `FloatCurve` 의 Constant · Linear · Cubic(들어오는 · 나가는 접선, 자동 · 사용자)에 `Eased` 하나를 더했다 — 다음 키까지 `BlendCurve` 표(카메라 · UI · 애니메이션 블렌드와 같은 곡선)로 섞는다(언리얼 `ERichCurveInterpMode` + 섹션 Easing, 이징 표를 시퀀서에 따로 두지 않는다). `BlendCurve` 는 기반 층(`Engine/Curve`)으로 옮겼다(커브 층이 애니메이션 층을 읽을 수 없다). 자동 접선은 넘치지 않게 바꿨다(극값 키는 평평, 기울기는 양옆 구간의 3 배 이하 — 언리얼 Smart Auto · 유니티 Clamped Auto). 넘치는 이징(Back · Elastic · Bounce)은 언리얼 내장 이징에도 없고 블렌드 가중치 계약("단조 · 0→0 · 1→1")을 깨므로 들이지 않는다. 가중 접선(언리얼 Weighted Tangent)은 키 칸 둘(길이)이 더 들어 다음으로 미룬다. 구간 섞임은 항목 칸 `_easeInFrames` · `_easeOutFrames` · 곡선 둘 — 애니메이션 세기와 카메라 컷 사이 섞임이 쓴다(역방향으로 들어오면 꼬리). 자막 · 소리는 창구(`ISubtitleSink` · `ISoundPlayer`)에 세기 칸이 없어 아직 섞지 않는다. 시퀀스 파일에 키가 든 것이 지금 없어(검색) 옛 파일 업그레이드는 필요 없다 — 리플렉션이 모든 칸을 쓰므로 새 칸(`_easing`)만 기본값으로 읽힌다.
 13. **이번에 하지 않음.** CineCamera Rig Rail · Crane(레일 위 위치 0..1 키 트랙 + 크레인 팔 길이 · 각 키 트랙 — 리그 컴포넌트가 카메라를 자식으로 몬다), 표식 프레임(`JumpToMarkedFrame` — 에셋에 표식 표가 먼저), 반복 횟수(`LoopCount`).
 
-**확인.** 단위: `TestSequencePlayback`(틱 · 속도 · 범위 · 왕복 · 건너뛰기 · 발화 수). 시나리오: `game.empty.cinematicplayback`(역재생 컷 순서 · 속도 2 배 · 0.5 배 끝 프레임 · 왕복 · 범위 · 건너뛰기 뒤 게임 카메라), `game.empty.cinematiccamera`(키 사이 위치 · 화각 보간), `game.wildwest.arrivalskip`(입력 막힘 · HUD 숨김 · 건너뛰기 · 조작 복귀), `editor.sequencerplayback`(재생 · 일시정지 · 역재생 · 스크럽).
+**확인.** 단위: `TestSequencePlayback`(틱 · 속도 · 범위 · 왕복 · 건너뛰기 · 발화 수). 시나리오: `game.empty.cinematicplayback`(역재생 컷 순서 · 속도 2 배 · 0.5 배 끝 프레임 · 왕복 · 범위 · 건너뛰기 뒤 게임 카메라), `game.empty.cinematiccamera`(키 사이 위치 · 화각 보간), `game.wildwest.arrivalskip`(입력 막힘 · HUD 숨김 · 건너뛰기 · 조작 복귀), `game.empty.cutscenetrigger`(물리 트리거 진입으로 한 번 · 다시 재생, 막기 · 범위 제한 · 빨리감기 · 재생 중 일시정지 메뉴와 옵션 — UI 맵이라 컷씬 레이어가 막지 않는다 — · 건너뛰기, Empty 는 이 때문에 `_bUIPauseMenu` 를 켰다), `editor.sequencerplayback`(재생 · 일시정지 · 역재생 · 스크럽).
 
 ### 공유 DDC(설계 2026-11-17, NEXT 5 에셋 GUID 3 단계)
 
@@ -1729,6 +1749,50 @@ public:
 
 **측정이 먼저다.** 지난 Release 로그의 `[Scenario] … timeline:` 줄에서 shooter3d 의 고정 대기 ms 합과 체인 벽시계를 모은다(새로 재지 않는다). 판정: 고정 대기가 체인의 50 % 이상이면 V3 를 짓고, 그린 프레임 대비 안 그린 프레임 비용이 1/3 이하면 V4 로 간다. 아니면 닫고 `stage reset took` 과 기동을 본다.
 
+### 플레이 중 리로드 확인 장치(설계 2026-11-20)
+
+**문제.** 리로드 다섯 길(게임 모듈 · 에디터 모듈 · 에셋 · 설정 · 셰이더)을 플레이 중에 일으키고 결과를 판정할 장치가 없었다. 에셋 캐시 리로드 함수가 `void` 라 깨진 파일도 `Reloaded` 로 적혔고(`reload.status` 가 OK), 머티리얼 · 텍스처 · 프리팹은 새 파일을 읽기 전에 옛 판을 놓아 깨진 저장이 마젠타 · 체커 · 스폰 실패로 번졌다.
+
+**대조.** 언리얼 리임포트는 실패하면 옛 에셋을 둔다. Live Coding 은 빌드가 지면 옛 이미지로 돈다. 자동화는 정리 단계(`AddCleanup`)로 바꾼 파일을 되돌린다. 유니티 Test Framework 도 `TearDown` 에서 되돌린다. → 같은 계약: 실패면 이전 판, 결과는 한 형식, 바꾼 파일은 실행기의 끝 한 곳에서 되돌린다.
+
+**결정.**
+1. 형식: `AssetCacheReloadFunction` 이 `ReloadResult` 를 돌려주고 `reloadAssetCache<T>` 가 멤버 결과를 `return` 한다 — `void` 를 돌려주는 캐시는 등록이 컴파일되지 않는다. 결과를 적는 곳은 `AssetHotReload::reloadCaches` 한 곳이다.
+2. 집계: `ReloadTracker` 에 길 `Module` 과 길마다 결과 수 · 실패 수 · 마지막 시간(감시 값 `Reload.Count.<길>` · `Reload.FailedCount` · `Reload.StaleCount` · `Reload.LastMs.<길>`). 모듈 결과는 `LiveReloadManager`(빌드 실패 · 연쇄 교체)가 적는다.
+3. 단계: `<RebuildModule name variant>`(빌드 트리의 판 머리를 덮고 `ModuleCompiler` 로 다시 짓기 — 추적 소스는 고치지 않는다, 판 표 `Config/Dev/ModuleRebuildVariants.json`), `<OverwriteConfig configFile from>`(쓰기 게이트가 연 `Config/Editor` 만), `<RestoreOverwrites/>`. 바꾼 파일은 `AutomationStepContext::restoreFileAtEnd` 에 맡기고 실행기가 `endRun` · 소멸자에서 되돌린다. 셰이더 · 에셋은 `<Scratch>` 사본을 `asset.overwriteScratch` 로 덮는다(원본은 게이트가 막는다).
+4. 시나리오: `game/empty/automation/desktop/editor/playreload`(편집기 · 혼자 · RUN_SERIAL — 빌드 트리 · 모듈 DLL · `Config/Editor` 를 바꾸므로 백엔드 넷 체인에 넣지 않는다), `shaderreload`(재컴파일기가 Debug 클라이언트만이라 `<SkipUnless Shader.LiveRecompile>`). 허브 게임(Playground)으로 옮겨도 같은 단계 · 감시 값을 쓴다.
+
+**남은 위험.** 메시는 임포트 산출물이라 추적 사본이 없어 시나리오 무대에 없다. 다른 갈래가 새로 더한 캐시의 `reload` 는 통합 때 `ReloadResult` 로 맞춰야 컴파일된다.
+
+### 에디터 마우스 상호작용 공통 규칙(설계 2026-11-20)
+
+**전수(패널 62 · 공통 위젯).** 있던 공통 층: 끌기 형식 하나(`EditorDragPayload` `{종류, id}` · 받는 쪽 `EditorPayloadKindSet`), 맥락 메뉴 R1 ~ R9(`EditorInputGUI::drawContextMenu` — 명령 등록부, `beginItemContextMenu` — 행 메뉴), 단축키는 입력 맵(`editor.input.xml` 패널 레이어), 프로퍼티 행 메뉴(Reset · Copy · Paste · Copy Name)와 노란 되돌리기 단추, 에셋 칸 끌어 놓기 · 고르기 · Browse.
+
+| 패널 · 위젯 | 끌어 놓기 | 우클릭 | 휠클릭 | 그 밖 |
+| --- | --- | --- | --- | --- |
+| 인스펙터(프로퍼티 그리드) | 에셋 → 에셋 칸(받는 종류 검사는 놓은 뒤) · **오브젝트 → 참조 · 핸들 칸 없음** | 행: Reset · Copy · Paste(형식 검사 없음) · Copy Name, 컴포넌트 카드: 명령 메뉴. **에셋 칸의 찾기 · 참조 없음** | **없음** | **칸 위 Ctrl+C/V 없음** |
+| 계층 | 오브젝트 → 행(앞 · 뒤 · 안 표시) · 에셋 → 행 · 빈 곳 | 오브젝트 · 컴포넌트 · 빈 곳 명령 메뉴 | — | F2 · Ctrl+D · Del · Ctrl+C/V · Ctrl+A · 화살표, Ctrl/Shift 다중 선택. **누르는 순간 선택해 다른 패널로 끌면 그 패널 대상이 바뀐다** |
+| 콘텐츠 브라우저 | 에셋 → 폴더(이동 · 참조 고침 확인 창) · 폴더 트리 | 에셋 명령 메뉴 | — | 더블클릭 열기 · F2 · Ctrl+D · Del · Alt+←/→. **OS 파일 끌어 놓기 없음** |
+| 씬 뷰 | 에셋 → 캔버스(배치 고스트) | 오브젝트 · 빈 곳 명령 메뉴(R7) | 화면 이동 | F · W/E/R · 책갈피 |
+| 시퀀서 | 에셋 → 트랙(확장자 거르개 — **맞지 않아도 강조**) | — | — | (w-sequencer 갈래) |
+| 노드 그래프 6(머티리얼 · 애니 · 오디오 · 대화 · 행동 트리 · 기믹) | 핀 끌기 → 노드 검색 | 빈 곳: 노드 넣기 | — | Ctrl+C/V/D · Del(`EditorGraphEditCommand`). **에셋 → 노드 없음** |
+| UI 미리보기 | 위젯 타입 → 디자이너 | — | 화면 이동 | 더블클릭 |
+| VFX 미리보기 | 프리팹 에셋 → 미리보기(**확장자 맞지 않아도 강조**) | — | — | — |
+| 머티리얼 · 전역 변수 | — | — | **없음**(되돌리기 단추만) | — |
+| 콘솔 · 카탈로그 · 맵 점검 · 타일 맵 | — | 행 메뉴 | 타일 맵: 화면 이동 | 콘솔 Ctrl+C, 맵 점검 더블클릭 |
+| 나머지 40(설정 · 디버거 · 프로파일러 · 키트 확장 패널) | 다룰 끌 것 없음 | 표 행 메뉴 없음(읽기 전용 표) | — | — |
+
+**대조.** 언리얼: Details 행 우클릭 Copy · Paste · Reset to Default, 노란 화살표, 행 위 Ctrl+C/V, Content Browser · Outliner 끌기(놓을 수 없으면 금지 아이콘), 액터를 액터 칸에 끌어 놓기. 유니티: Inspector 우클릭 Reset · Copy/Paste(타입 있는 클립보드 — 맞지 않으면 회색), Hierarchy 에서 Inspector 칸으로 끌기(끌기가 시작되면 선택을 바꾸지 않는다), Project 창 OS 파일 끌기. Godot: Inspector 되돌리기 아이콘, 노드를 칸에 끌기. 휠클릭으로 기본값은 셋 다 없다 — 사용자 규칙이다.
+
+**규칙(정함).**
+- R10 휠클릭 = 기본값으로: 프로퍼티 칸(이름 · 값)에서 가운데 단추를 끌기 문턱 안에서 떼면 기본값으로 되돌린다. 기본값과 다른 칸에서만(되돌리기 단추가 보이는 칸 — 상용의 화살표 자리), 되돌리기는 한 단계(편집 구간 — 전 · 후가 같으면 버린다). 단추는 `EditorInputGUI::kResetToDefaultButton` 하나, 패널은 `EditorWidgets::beginResetToDefaultGroup` · `endResetToDefaultGroup` 로 감싼다. 마우스 몸짓은 입력 맵이 보지 못해(에디터 창 위 마우스는 ImGui 가 먹는다) 맥락 메뉴의 오른쪽 단추처럼 코드 상수다.
+- R11 끌어 놓기: 받는 쪽은 종류(`EditorPayloadKindSet`)로, 그다음 내용(확장자 · 에셋 종류 · 대상 타입)으로 **놓을 자리를 열기 전에** 거른다(`EditorInputGUI::peekPayload`) — 받지 않을 것은 강조하지 않는다. 받은 자리가 없으면 끄는 쪽 미리보기가 흐려지고 커서가 금지 모양이 된다(`beginDragSource` 한 곳). 놓기는 모델 명령 하나 = 되돌리기 한 단계.
+- R12 끌 수 있는 목록 행은 누를 때가 아니라 끌기 문턱 안에서 뗄 때 고른다(`wasItemClickedWithoutDrag`) — 다른 패널의 칸으로 끄는 동안 그 패널의 대상이 바뀌지 않는다(유니티 Hierarchy · 언리얼 Outliner).
+- R13 프로퍼티 칸: 행 메뉴의 Paste 는 클립보드 글이 그 칸 타입으로 읽힐 때만 켜진다(`PropertyGridViewModel::canPasteText`). 칸 위에서 Ctrl+C · Ctrl+V 는 행 메뉴와 같은 명령이다(입력 맵 `Editor.Global` 의 `property.copyValue` · `property.pasteValue` — 그리드를 둔 모든 패널에서, 그 창이 포커스일 때만 읽어 계층 · 콘솔의 Ctrl+C/V 와 겹치지 않는다). 에셋 칸 메뉴에 Browse to Asset · Find References(명령 등록부 — `EditorInputGUI::drawCommandMenuItem`).
+- 항목 단축키: 계층은 F2 · Ctrl+D · Del · Ctrl+C/V 가 이미 있고, 콘텐츠 브라우저에 Ctrl+C = Copy Relative Path(언리얼 콘텐츠 브라우저의 Ctrl+C 가 에셋 참조 글을 복사하는 것)를 더한다. 노드 그래프는 `EditorGraphEditCommand` 가 같은 키를 맡는다.
+- 오브젝트 → 칸: 계층 행을 `SceneObjectReference` · 타입 핸들 칸에 놓으면 그 오브젝트(핸들은 그 오브젝트의 첫 대상 타입 컴포넌트)가 들어간다.
+
+**닫은 것(2 차).** OS 파일 → 콘텐츠 브라우저: 창 사건 `WindowFileDropEvent`(원시 입력 큐가 아니다 — 길이가 정해지지 않은 경로이고 리플레이 대상이 아니다)와 능력 표 `WindowFileDropSupport`(Win32 `WM_DROPFILES` 놓기만 — OLE `IDropTarget` 은 STA 가 필요한데 메인 스레드가 오디오 때문에 MTA, X11 XDND · Wayland `wl_data_device` 는 끄는 동안도, 웹 · Android 는 받지 않음) → `EditorFileDrop` → `ContentBrowserFileDropPlan`(경로를 믿지 않는다) → 기존 임포트 길. 에셋 → 노드 그래프: `EditorGraphAssetNodeRule` 표와 `EditorNodeGraph::acceptAssetDrop`, 머티리얼 그래프에 텍스처 → TextureSample 첫 등록. 카탈로그 칸 휠클릭 = 상속값으로(`CatalogDocument::canRevertToInherited` — 데이터 테이블은 상속 칸이 없다). 에셋 페이로드 id 는 리소스 id 한 형식(`EditorWidgets::registerAssetPayload`). 시퀀서 · 카메라 프리셋 · 충돌 프리셋 패널은 그 갈래가 공통 층을 붙인다.
+
 ## 시나리오 · 테스트 프레임워크 개편 판단(2026-11-17)
 
 통합 묶음 5(작업자 갈래 약 30 개를 빌드 없이 합침)에서 겪은 실패 열 가지가 형식 · 실행기 동작으로 다시 생기지 않게 하는 설계다. 코드 근거는 f615fb04f4 다. 할 일 줄은 [NEXT](NEXT.md) 5 절 ST-1 ~ ST-6 이다.
@@ -1924,13 +1988,13 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 - 라이브 셰이더: 일부 실패면 `clearCache` 로 캐시 · PSO 전부 버림(이전 판 유지 없음), 셰이더 하나에 패스 자원 전부 동기 재생성, DDC 키의 define 이 받은 순서(헛 미스 · 두 벌), 도구 지문에 WGSL 꾸러미 · Tint · FXC 판 빠짐, `compileHLSL` 이 DDC 히트 전에 매번 가림 검사로 폴더를 재귀로 훑음.
 - 목록 구분자가 자리마다 다름(`",; "` · `",;| "` · `" ,\t\n\r"`) — `XMLReadUtil::kListSeparators` 하나로.
 - 머티리얼: 인스턴스 `enableKeyword` · `setMultiCompile` 이 아무 이름이나 받고 쿠커는 `.material` 만 훑어(`ShaderCookRequestCollector.cpp:441`) 인스턴스가 켠 조합을 굽지 않는다 — 배포에서 대체 해시로 그린다. 인스턴스의 Bool · 키워드 값 덮어쓰기가 define 을 바꾸지 않는다(`refreshCachedDefines`). `_base` 부모를 고쳐도 자식이 옛 값을 쥐는지(확인 필요). → 정적 변경은 부모가 선언한 런타임 스위치 색인으로만(`StaticSwitchParam` 형식), 값 API 는 정적 종류 거절.
-- JNI 수정 UTF-8 은 `w-android` 가 고침. 실행 인자 `-fileserve` 의 `ArgumentList.xxx` 안 `#if` 는 임시 — 아래 3 의 칸으로 바꾼다.
+- JNI 수정 UTF-8 은 `w-android` 가 고침. 실행 인자 `-fileserve` 의 `ArgumentList.xxx` 안 `#if` 는 아래 2 의 쓰는 구성 칸(`AndroidDev`)으로 바꿨다(`w-cmdargs`).
 
 **2. 구조 장치(형식으로 막기).**
 - 등록: 손 `*Registrar` 약 20 · 기능 헤더마다 배포 이중 정의(`SW_AUTOMATION_*` 7 번 재정의)를 `SW_STATIC_REGISTRATION` 틀 하나 + 배포 정책 인자(`Dev` · `Automation` · `Always`)로. Action · Condition 레지스트리 → `NamedEntryRegistry<T>`.
 - 리플렉션: 내장 형식 한 곳 정본(`w-reflbuiltin`). 다음 — `tryParseEnum<E>` · 배포에도 남는 열거자 데이터 철자(`ENUMERATOR(Text=)`) · 반사 동등 비교 · 해시 · 기본값 · 기반 형식으로 하위 형식 생성 · `FUNCTION(Exec)` 콘솔. `StateIO::value(T&)` 를 반사 구조체에 닫아 칸 나열 손 코드(103 파일 · 723 줄)를 `io.reflected` 로. `.cpp` 안 `REFLECT`(최초 커밋부터 헤더만 입력)는 손 코드 이득은 작고 헤더로 새는 반사 스키마(약 227)를 줄이는 값 — Qt moc 꼴(`#include "Foo.gen.inl"`)로, 익명 이름공간 FQN 충돌 키를 먼저 정한다.
 - 매크로: 쓰는 곳 0 · `SW_CONCAT` 사본 정리, 에셋 캐시 6 · 엔진 서비스 6 매크로를 하나씩으로. `SourceLocation`(`Core/Foundation/SourceLocation.h`, `__builtin_FILE/LINE/FUNCTION`) — Error · Warning 로그 · `SW_FATAL` 은 함수로(`%#` 컴파일 검사 길 먼저), Info 로그 · 단언 · 테스트 검사 · 프로파일은 매크로 몸만 얇게. `-fmacro-prefix-map` 추가.
-- 실행 인자: `ArgumentList.xxx` 에 "쓰는 구성" 칸(`All` · `Dev` · `Test` · `Server`) — 배포는 철자를 등록하지 않아 알 수 없는 인자 오류, 열거값은 남김. `shipping-check` 에 개발 인자 철자 검사.
+- 실행 인자(됨 — `w-cmdargs`): `ArgumentList.xxx` 에 "쓰는 구성" 칸(`CommandLineArgumentUsage` — `All` · `Dev` · `Test` · `Server` · `AndroidDev`) — 정책(`CommandLineBuildPolicy`)이 받지 않는 줄은 자리만 두고 철자를 등록하지 않아 주면 알 수 없는 인자 오류로 기동이 멈춘다, 열거값은 모든 구성에 남김(읽으면 "주지 않음"). `Server` 는 클라이언트 전용 타깃이 받지 않는다(`build::kWithServerCode`). 배포 App · Server 가 스스로 굽는 `-cook-all` 길(`-cooked-dir` · `-pack-dir` · `-game` · `-pack-for-shipping` · `-pack-build`)은 `All` — 쿠킹이 `DevTools/Cook` 으로 옮겨 가면 `Dev` 로. `shipping-check` 는 Dev · Test · AndroidDev 철자 전부를 배포 App 에 주어 모두 거절되는지 본다(예전 `-scenario` 한 줄 확인을 대신). 대조: 언리얼은 `UE_BUILD_SHIPPING` 에서 개발 명령줄 처리와 `#if !UE_BUILD_SHIPPING` 콘솔 변수를 컴파일에서 빼 조용히 무시되고, 유니티는 Development Build 에서만 듣는 플레이어 인자를 배포 플레이어가 무시한다 — 여기는 빼되 무시하지 않고 거절한다(오타 · 잘못된 빌드에 개발 인자를 준 실행이 조용히 다르게 돌지 않게). 남은 틈: 서버가 클라이언트 전용 헤드리스 작업(`-cook-shaders` · `-import-*`)을 실행 시점에 거절하는 표(`HeadlessSubsystem::rejectClientOnlyTask`)는 `Client` 칸으로 같은 구조가 된다.
 - Dev → DevTools: 빈 `Core/Diagnostics/Dev` · 낡은 `FolderLayout.md` 줄 정리, 게임 `Dev/*Autoplay.cpp` 10 개를 `SW_GAME_AUTOPLAY` 배포 무효로 접기, 엔진 개발 명령은 DevTools 로 · GF 치트는 `GameFrameworkDev` 로. 쿠킹 코드(`runCookTask` · `PackCooker` · `SceneCooker` · `ShaderCookDriver`)도 배포에 남음 → `DevTools/Cook`.
 - 파일: 자기 `.cpp` 만 포함하는 60 줄 미만 헤더 65 개 접기, 한 곳만 쓰는 도우미 헤더 36 개 합치기(`header-fanin` 합이 늘면 안 함). 헤더끼리 합치기는 하지 않는다(늘 함께 포함되는 쌍은 1 쌍뿐). 테스트 위치는 그대로(같은 대상 안 컴파일 — 내부 접근 · 층 규칙 · 모듈별 등록, 크로미움 곁 배치와 같은 판단).
 - 렌더러 규격(접근 핸들 · R-4 뒤): 그래프 일시 버퍼(`graph.createBuffer`) → 뷰 히스토리, `RHITextureSlot`(텍스처 손 생성 · 뷰 등록 8 곳 — HDR 뒤), 컴퓨트 패스 도우미(디스패치 21 · 그룹 크기는 셰이더 `[numthreads]` 리플렉션), 풀 버퍼(펜스 재사용), 되읽기 단일 면. RHI 자원 생성은 패스키로 막는다.
@@ -1943,6 +2007,48 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 **3. 에디터 · 키트.** 빈 곳(영향 순): VFX 편집기(미리보기만), 폴리지 칠하기, 스플라인 점 손잡이, 물리 에셋 시각 편집, 패키징 플랫폼 선택, 로컬라이제이션 패널. 키트: "꽂으면 도는" 컴포넌트 층(데모 래퍼를 키트 `Component/` 로 — Lyra Game Feature 자리), 테마파크 배치 패널을 표본으로 카탈로그 편집 · 미리보기 일반화 + Map Check 키트 검증 등록점, 새 게임 · 장르 키트 생성기, 키트 README. 서버만 있고 쓰는 게임이 없는 키트(Social · Trade · LiveOps · ServerDirectory · NetTurnRelay)는 지우지 않고 붙인다. 정리 검토: GF 본체 `Gimmick/Genre/*` 를 키트로, 호러 4 종 공통(은신 · 소음 · 조명) 합치기.
 
 **4. 성능(측정 뒤 — S8 줄과 같은 규칙).** 동기 대기(히치)가 처리량보다 먼저: 프레임 단계 안 동기 로드 경고 · 렌더 스레드 디스크 IO 단언을 구조로 먼저 넣고, VAT 굽기 · Vulkan 파이프라인 캐시 저장 · 파괴 셰이프 · 프레임 경로 동기 에셋 로드 5 곳을 비동기로. 문자열: 텍스처 스트리밍의 머티리얼 경로 복사 · 글꼴 체인 키 · 프리팹 스폰 경로 정규화 · 캐릭터마다 이름 intern — 유틸에 버퍼 받는 판, 핫 경로 API 는 `string_view` · `hashed_string` 만. 리플렉션 로드 경로 칸 형식 해석을 `PropertyInfo` 캐시로. 컨테이너: Swiss table 꼴 색인 · 정수 해시 곱셈 · `m[sv]` 임시 문자열. 숫자 확인: NEXT "생성 코드 1.65 MB" 대 지금 빌드 트리 9.33 MB — 측정 범위부터 맞춘다.
+
+### 스트리밍 셀 경계 정합 · 저장(설계 2026-11-20)
+
+**문제.** 셀 소속이 쿠킹 때 고정된다 — `Scene::unloadCell` 은 셀이 지은 id 목록만 지운다. 그래서 (1) 셀 A 의 NPC 가 B 로 걸어간 뒤 A 가 내리면 NPC 도 같이 지워지고 A 가 다시 오를 때 A 자리에 돌아온다, (2) 런타임 스폰은 어느 셀에도 들지 않아 영영 내리지 않는다, (3) 바닥(셀의 정적 바디)이 내려가도 그 위 늘 올라 있는 동적 물체가 남아 떨어진다, (4) 내릴 때 떠 둔 상태(`captureCellNodes`)는 목적 `Authoring` 이라 `RuntimeState` 칸(활성 볼륨 발동 수 · AI 블랙보드)이 빠지고, 메모리에만 있어 세이브에 실리지 않는다. 게다가 세이브 복원이 매니저를 비우면(`GameObjectManager::clear` → `onSceneCleared`) 스트리밍이 셀을 통째로 버려 그 뒤로 아무 셀도 오르지 않았고, 다른 실행의 세이브로 새 id 를 받은 오브젝트는 씬의 파일 id 표에서 빠져 셀이 늘 올라 있는 오브젝트를 파일 id 로 찾지 못했다.
+
+**대조.** 언리얼 World Partition: 액터의 셀은 에디터 · 쿠킹 때 자리로 정해지고(`bIsSpatiallyLoaded` 를 끄면 늘 올라 있음) 런타임에 셀을 옮기지 않는다 — 걸어 나간 액터는 원래 셀과 함께 내린다. 런타임 스폰 액터는 스트리밍 밖(퍼시스턴트 레벨)이라 내리지 않는다. 내린 셀의 상태는 엔진이 지키지 않는다 — 게임이 `SaveGame` 칸 · World Partition 세이브 플러그인으로 직접 싣는다. 유니티 Additive 씬: 새 오브젝트는 활성 씬에 들고, 다른 씬으로 옮기는 것은 게임이 `SceneManager.MoveGameObjectToScene` 으로 명시한다(씬을 내리면 그 씬의 것이 모두 지워진다). Godot 은 셀 스트리밍이 없다(게임이 노드를 붙이고 뗀다). → 엔진 셋 모두 "옮기기 · 세이브는 게임 몫" 이다. 우리는 NPC · 물리가 셀을 넘는 열린 월드를 키트가 바로 쓰므로 그 몫을 엔진에 둔다 — 규칙은 하나(자리가 곧 소속)로 쿠킹과 같게 한다.
+
+**결정.**
+1. **소속은 내릴 때 자리로 다시 정한다**(`SceneStreamingSubsystem` — 유니티 `MoveGameObjectToScene` 을 엔진이 내릴 때 부르는 꼴). 셀을 내리는 프레임에 그 셀이 든 루트 오브젝트마다 지금 자리(primary 씬 컴포넌트, 쿠커와 같은 식)의 셀을 다시 본다. 같으면 그 셀로 떠 두고, 다르면 같은 레이어 집합의 그 셀 조각으로 옮긴다 — 올라 있으면(또는 반경 안이라 지금 만든 조각이면) id 만 옮겨 살려 두고, 내려가 있으면 그 오브젝트를 떠서 그 조각의 떠 둔 상태에 합친다(쿠킹 내용만 든 조각은 "들어온 엔티티" 목록에 두었다가 다음 짓기에서 같은 배치로 짓는다). 조각이 없으면 만든다(조각은 `unique_ptr` 로 들어 짓는 중인 조각의 주소가 흔들리지 않는다). 셀을 넘는 참조는 약한 참조라 갈라지면 빈 핸들로 이어진다(배치 규칙 그대로).
+2. **런타임 스폰은 자리의 셀에 든다**(유니티의 "새 오브젝트는 활성 씬에" 와 같은 쪽, 언리얼과는 반대). 늘 올라 있음 표시가 없고(`GameObject::_bAlwaysLoaded` — 놓은 오브젝트와 같은 데이터 칸) 자리가 있는 루트 오브젝트 중 어느 셀에도 들지 않은 것은 셀을 내리는 프레임에 반경 밖이면 그 자리 셀에 들어 함께 떠 둔다(그때 파일 id 를 준다 — 새 id 는 쿠킹본 머리의 셀 최대 파일 id 위에서 고른다, `SceneDocument::_maxCellFileID` · 쿠킹본 판 10). 레이어 묶음 오브젝트 · 파생 오브젝트(`isTransient`)는 뺀다.
+   **복제 스폰은 넣지 않는다**: 네트워크 생성 번호를 받은 오브젝트(`NetObjectTable::registerSpawned` — MMO 엔티티 · 투사체처럼 서버가 번호를 매겨 클라이언트와 잇는 것)는 셀과 함께 지우면 복제가 끊긴다. 존재는 서버가, 클라이언트 보임은 복제기의 관심 영역(관찰자 반경, `MMOReplicator`)이 정한다(언리얼: 복제 액터는 스트리밍 밖, 관련성은 Replication Graph). 또 원점이 하나도 없으면(관찰자 없는 서버) 스폰을 넣지 않는다 — 셀은 원점이 덮지 않는 자리에서만 스폰을 내린다. 플레이어 · 카메라처럼 늘 있어야 하는 스폰은 프리팹에 표시를 켠다 — 언리얼처럼 기본을 끄면 놓은 것과 스폰한 것의 규칙이 둘이 된다.
+3. **바닥이 없으면 물리를 쥔다.** 자리 셀에 문서의 조각(켜진 레이어)이 있는데 올라 있지 않으면(읽는 중 · 짓는 중 포함) 바닥이 없다(`SceneStreamingSubsystem::isFloorMissing`). 스트리밍(층 5)은 물리(층 6)를 모르므로 물리가 묻는다 — `ScenePhysics::updateStreamingHolds` 가 프레임마다 바닥이 필요한 컴포넌트(`PhysicsComponent::needsStreamingFloor` — 동적 강체 · 캐릭터 컨트롤러)를 쥐어(`isStreamingHeld`) 시뮬레이션 밖으로 빼 바디를 놓고, 셀이 오르면 풀어 지금 트랜스폼에서 다시 만든다(속도는 0 에서 다시). 조각이 없는 셀(늘 올라 있는 지형만)은 쥐지 않는다. 셀이 내려간 후보에만 몸 아래 광선(`PhysicsSettings::_streamingFloorProbeDistance` — 데이터 필수, 땅 광선 층, 제 몸 제외)을 쏴 받쳐 줄 충돌(늘 올라 있는 지형 · 정적 바디)이 닿으면 쥐지 않는다 — 순간이동으로 남겨진 캐릭터가 땅 위에서 서지 않는다. 상용 엔진에는 기본 장치가 없다(로딩 반경을 물리보다 넓게 잡는 운영 규칙) — 반경 밖으로 굴러 나간 물체가 사라지지 않게 하는 최소 장치다.
+4. **떠 둔 상태는 목적 `Snapshot`** 이다 — `RuntimeState` 를 싣고 `Transient` 는 뺀다. 엔티티마다 읽을 목적을 든다(`SceneObjectNode::_statePurpose`, 런타임 칸 — 씬 파일 · 쿠킹본에는 쓰지 않는다). 쿠킹 내용은 `Authoring`. 프리팹 엔티티는 원형과의 차이(런타임 칸 포함)로, 그 밖은 전체 상태로 적는다.
+5. **세이브에 싣는다**(봉투 판 7). 씬 오브젝트 섹션은 셀이 든 오브젝트(와 그 자식)를 빼고, 넷째 섹션에 씬 몫 — 늘 올라 있는 오브젝트의 파일 id 표(찍은 id → 파일 id)와 조각마다 쿠킹 내용에서 달라진 상태(올라 있으면 지금 떠서, 내려가 있으면 떠 둔 것, 들어온 엔티티)를 싣는다. 복원은 매니저를 비우면 스트리밍이 조각을 쿠킹 내용으로 되돌리되 월드는 놓지 않고(`onSceneCleared`), 오브젝트를 다시 만든 뒤 씬이 파일 id 표를 새 id 로 다시 잇고(`Scene::rebindRestoredFileIDs`) 조각에 세이브의 상태를 얹는다(`SceneStreamingSubsystem::applySaveState`) — 다음 갱신이 원점 둘레를 그 상태로 짓는다.
+6. **다시 오를 때 차례.** 셀 짓기는 엔티티를 모두 숨긴 채 만들고 → 배치를 이어(부착 · 핸들) → 한 번에 드러내며 등록한다(물리 바디 · 내비 · AI 는 등록 · 시작 뒤에 서로를 찾는다). 들어온 엔티티도 같은 배치다 — 따로 지으면 먼저 선 쪽이 아직 없는 쪽을 찾는다.
+7. **개발 실행의 셀.** 셀은 쿠킹본에만 있어 소스 콘텐츠 시나리오는 스트리밍을 밟지 못했다. 언리얼 PIE 가 에디터 데이터로 World Partition 을 스트리밍하듯, 개발 변수 `gv_sceneStreamSourceCells=1` 이면 씬 로드가 소스 문서를 메모리에서 셀로 나눈다(`SceneCooker::splitStreamingCells`) — 기본은 꺼짐(지금 시나리오 · 골든 그대로).
+8. **데이터 레이어 묶음도 같은 장치다**(`SceneDataLayerSubsystem`): 레이어를 끌 때 묶음 오브젝트를 Snapshot 으로 떠 두고(`_listHeldNode` — 문서 `_listNode` 는 저작 저장이 그대로 쓴다) 다시 켜면 그것으로 짓는다. 세이브 복원의 매니저 비우기는 묶음 · 켜진 레이어를 지키고(씬을 내리는 길은 `endScene`), 세이브 몫에 켜진 레이어 · 묶음 상태를 싣고 씬 섹션은 묶음 오브젝트를 뺀다(`isGroupObject`). 엔티티+목적 목록 형식은 `SceneDocument::writeSavedNodes` 하나.
+9. 셀이 내려갈 때 트리거 Exit 규칙은 트리거 · 충돌 채널 갈래(`w-trigger`)가 정한다 — 여기서는 오브젝트를 지울 뿐이다.
+
+**남는 위험.** (1) 바닥 광선은 바디 자리에서 아래 한 줄이다 — 비탈 · 가장자리에 걸친 큰 바디는 받쳐 줄 것을 못 보고 쥘 수 있다(사례가 나오면 셰이프 스윕으로). (2) 복제 번호가 없는 서버 스폰(게임이 번호를 매기지 않은 NPC)은 관찰자 반경 밖에서 셀과 함께 내린다 — 늘 있어야 하면 `_bAlwaysLoaded` 를 켜거나 복제 번호를 매긴다. (3) 상태 스냅숏의 컴포넌트 상태 섹션(`ComponentStateStore` — PROPERTY 밖 상태)은 셀 오브젝트의 것을 되돌려 줄 곳이 복원 순간에 없다 — 셀 안에 PROPERTY 밖 상태를 가진 컴포넌트(지형 편집)는 아직 세이브를 넘지 못한다. (4) 쿠킹본 판이 9 → 10 이라 다시 쿠킹하기 전의 쿠킹본은 읽지 않는다(기존 규칙 — 오류로 알린다).
+
+**확인.** 단위(`SceneStreamingTest`): 걸어 나간 오브젝트가 올라 있는 셀로 옮겨 살아남음 · 내려간 셀로 합쳐져 그 셀과 함께 다시 오름, 런타임 스폰이 자리 셀에 들어 함께 내리고 오름, 바닥 셀이 없으면 쥐고 오르면 풂, 런타임 칸이 내렸다 올려도 남음, 세이브 섹션 왕복(내려간 셀의 바뀐 상태 · 올라 있는 셀). `StreamingFloorHoldTest`: 내려간 셀 위 동적 바디는 쥐여 그 높이, 오르면 풀려 떨어짐. 시나리오 `game.wildwest.cellstate`(prairie 를 물려받은 무대, 16 m 셀 · 32 m 반경): NPC 가 A→B 로 간 뒤 A 를 내려도 하나 · 기믹(문 자리 · 상자 발동 수 — `RuntimeState`)이 내렸다 올라도 남음 · 세이브 · 로드 뒤 복원 · 바닥 셀이 내려간 동안 물체 높이 그대로.
+
+### 멀티플레이 스트리밍 소스 · 관련성(설계 2026-11-20)
+
+> 질문: 스트리밍 월드에서 서버는 어느 셀을 올리고, 관련성은 셀과 어떻게 맞물리며, 클라이언트는 아직 오르지 않은 셀의 복제 엔티티를 어떻게 다루는가?
+> 결론: 서버 셀 = 관찰자 소스(위치 · 반경 · 우선순위) 반경의 합집합, 관련성 격자 = 스트리밍 격자. 클라이언트는 셀이 다 오를 때까지 복제 엔티티를 보류하고, 셀에 놓인 엔티티는 쿠킹 파일 id 로 맞춰 스폰하지 않는다. 클라이언트가 셀 상태를 서버에 알리지 않는다.
+
+**대조.**
+- 언리얼 Replication Graph: Spatial2D 노드(격자 칸마다 액터 목록 — 연결은 둘레 칸만 모은다) · AlwaysRelevant 노드(전역 목록) · 연결별 노드(AlwaysRelevant_ForConnection — 자기 폰 · 파티). 우리: 칸 = `NetInterestGrid`(칸 = `StreamingCellGrid` 셀), 전역 = `_setAlwaysRelevant`, 연결별 = `IInterestPolicy::isAlwaysRelevant( connection, … )` — 이미 있다.
+- 언리얼 World Partition 서버 스트리밍: 플레이어 컨트롤러마다 스트리밍 소스(`FWorldPartitionStreamingSource` — 위치 · 모양 반경 · `EStreamingSourcePriority` 0 이 가장 먼저), 서버는 모든 소스의 합집합을 올린다. 우리: `StreamingSource{ 위치, 로딩 반경, 우선순위 }`, 우선순위는 언리얼과 같은 다섯 단계 · 같은 차례(Highest · High · Normal · Low · Lowest). 읽기 차례는 덮는 소스 중 가장 급한 우선순위 → 가까운 거리, 내리기는 모든 소스에서 (그 소스 반경 + 여유) 밖.
+- 정적 액터 NetGUID: 맵에서 읽은 액터(bNetStartup)는 경로 이름으로 서버 · 클라이언트가 같은 객체를 가리킨다 — 클라이언트는 새로 스폰하지 않고 이미 읽은 액터에 묶고, 관련성으로 채널이 닫혀도 지우지 않는다. 못 풀면 스폰하지 않고 경고한다. 우리: `MMOEntity::_staticID` = 쿠킹된 씬의 엔티티 파일 id(같은 쿠킹본이라 양쪽이 같다).
+- 레벨을 아직 안 올린 클라이언트: 언리얼은 클라이언트가 `ServerUpdateLevelVisibility` 로 보이는 레벨을 알리고, 서버는 그 레벨의 액터 복제를 미룬다(액터가 레벨 객체에 속해 레벨 없이 스폰할 수 없기 때문).
+
+**결정.**
+1. 소스(`Engine/Scene/StreamingCellGrid.h` 의 `StreamingSource` · `StreamingSourcePriority`): `SceneStreamingSubsystem::setExternalSources( span<const StreamingSource> )` 는 위치가 유한하지 않거나 반경이 유한한 0 이상이 아니면 오류로 거절한다. 위치만 받는 입구는 두지 않는다(부를 때의 반경을 박아 두면 월드가 바뀌어도 낡은 반경이 남는다) — 카메라 원점만 격자 로딩 반경 · Normal 이다. 셀 번호는 ±2^30 에서 포화하고, 범위 셀 수가 받은 셀 수보다 많은 큰 반경은 받은 셀을 훑는다(믿을 수 없는 좌표 · 반경이 서버를 멈추지 않게). `getActiveSources` 가 소스를 돌려주고 내비 타일 스트리밍도 소스 반경을 쓴다 — 셀과 타일이 다른 반경으로 오르지 않게.
+2. 서버 관찰자: `MMOReplicator::setObserver` 의 소스 반경은 격자 로딩 반경, 우선순위 Normal. `setObserverStreaming( 연결, 반경, 우선순위 )` 로 바꾸되 반경 < 나가는 반경이거나 Config 상한(`MMOReplicatorConfig::_maxStreamingRadius`, 0 이면 바꾸지 못함)을 넘으면 거절한다 — 보이는 엔티티가 서버에 오르지 않은 셀에 있을 수 없다(`initialize` 의 같은 규칙을 관찰자마다). 서버의 오른 셀 = 관찰자 반경의 합집합.
+3. 클라이언트 보류(`MMOClientView` + `INetClientWorld`, 씬 구현 `MMOSceneClientWorld`): 새로 보임의 자리 셀이 다 오르지 않았거나(`SceneStreamingSubsystem::isCellStreamingCompleted` — 그 좌표의 문서 조각(`_bFromDocument`) 가운데 켜진 레이어 조각이 모두 Loaded · Failed, 조각 없는 셀 · 옮겨 온 오브젝트용 조각만 있는 셀은 끝난 것 — 물리의 `isFloorMissing` 과 같은 질의 하나) 정적 엔티티의 셀 오브젝트가 아직 없으면 보류한다. 보류 중 갱신은 틱 규칙대로 들고, 사라짐이면 사건 없이 버린다. `update( 초 )` 가 다 오른 것을 놓고, 제한 시간(`MMOClientViewConfig::_cellHoldTimeoutSeconds` — 기본값 없음, 0 이면 `setWorld` 가 거절)이 지나면 경고한 뒤 동적은 놓고(영원히 숨기지 않는다 — 서버 나가는 반경이 클라이언트 로딩 반경보다 큰 설정 결함의 신호) 정적은 경고만 하고 사라짐이 올 때까지 보류한다(중복 스폰보다 안 보임이 낫다, 언리얼과 같다). 보류 · 보임은 한 표의 단계(`ClientEntity::_state`)라 한 id 가 둘에 동시에 있을 수 없고, 이미 아는 id 의 새로 보임은 상태만 새로 한다. 한 셀 오브젝트에 두 번째 묶기는 받지 않는다. 월드를 주지 않은 보기(LanternVale — 스트리밍 씬이 아니다)는 동적을 지금처럼 곧바로 놓고, 월드를 떼면(`detachWorld`) 보류한 동적이 보인다.
+4. 정적 엔티티 사건은 `Bound` · `Unbound`(셀 오브젝트 id 를 싣는다)로 `Entered` · `Left` 와 종류부터 다르다 — 게임이 `Entered` 에만 스폰하면 정적 엔티티를 스폰할 길이 없다(형식으로 막음). 월드 없이 정적 id 가 오면 오류를 남기고 월드가 걸리거나 사라짐이 올 때까지 보류한다.
+5. 클라이언트 → 서버 셀 상태 보고는 두지 않는다. 우리 엔티티는 셀 오브젝트에 속하지 않아 셀 없이도 상태를 들 수 있고(보류), 보고를 두면 서버가 믿을 수 없는 입력(가짜 "안 올랐음" 으로 복제를 피하기 · 셀 목록 폭주)을 검증해야 하는 공격면만 생긴다. 대가: 보류 중에도 갱신 대역폭이 든다 — 보류는 텔레포트 직후 몇 틱이다.
+
+**남은 위험.** 우선순위는 읽기 차례만 정한다(언리얼처럼 소스마다 목표 상태 Loaded · Activated 를 두지 않는다). 부모(붙은 오브젝트)를 기다리는 보류는 없다 — MMO 엔티티에 부모 칸이 없다. 두 프로세스 짝 시나리오는 스트리밍 씬을 쓰는 게임이 생길 때(LanternVale 은 격자만) — 그때까지 같은 경로를 루프백 끝단 두 클라이언트 · 서버 · 클라이언트 씬 셋으로 단위 테스트가 돈다(`NetMMOStreamingTest`).
 
 ### 허브 게임 · 미니게임 Experience(사용자 결정 2026-11-20)
 
@@ -1971,3 +2077,69 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 - **남길 것:** 다중 게임 팩 경로(`SW_GAMES` · `Bin/Games/<게임>` · `-game=` · 게임별 `_cookRules`)는 게임이 하나면 사용처가 사라진다 — 시험용 작은 둘째 팩 하나를 남긴다.
 
 **이전 차례.** ① `Empty` → `Playground` 이름 바꾸기 + Experience 로더 · `-experience=` + Experience 범위 서비스, KitDemo 20 개를 Experience 로 — `kit_*` 시나리오 20 개 그대로 통과. ② 허브 맵(스트리밍 셀 · 하위 레벨 — `w-cellstate` · `w-netstream` · 씬 스트리밍 (가) 이 기반). ③ 게임 흡수 · 삭제(작은 것부터): PixelTown(2D → 오락실 RPG 미니게임) → WildWest(대형 스트리밍 → 허브 맵) → FrontierTown → NileCity → HarvestValley → MeadowVillage(NetSimulation → 허브 하우징) → ThemeParkTycoon → VoxelCraft(복셀 → 광산 미니게임) → AbilityArena → Velmora(DLC 세이브 승계 → 허브 세이브 · ModSupport) → StarSkirmish(락스텝 → RTS 매치) → LanternVale(MMO 복제 · 셀 · 계정 저장 → 허브 서버) → Shooter3D(서버 권위 · 온라인 키트 → 허브 서버 · 사격장). 단계마다 그 게임의 사용처가 옮겨졌고 시나리오 · 골든이 통과한 뒤에 폴더를 지운다. 골든은 팩 이름이 경로에 들어 이름 재기록만(그림 재기록 없음), CTest 체인은 Experience 별로 나눠 지금의 시한 · 병렬성 유지. 비용: 게임 소스 약 2.7 만 줄 · 콘텐츠 약 1470 · 시나리오 104(Empty 제외) · CMake · `Config/Game` 13 · `CMakePresets.json` `SW_GAMES` 3 곳 · Linux 체인 목록. 먼저 합칠 갈래: `w-sequencer` · `w-runtimeui` · `w-r4` · `w-camsub`(게임 콘텐츠를 만짐), `w-respawn` · `w-trigger` · `w-navworld` · `w-cellstate` · `w-netstream`(허브 기반) — 그 전에는 이름 바꾸기 · WildWest · Shooter3D 흡수를 시작하지 않는다.
+
+**이전 실행표(조사 2026-11-20, main `8b09a82f50`).** 공통: 소스 `Source/Games/<게임>/`(매니페스트 `SWGame.module.json` 의 `GF_*` 가 쓰는 키트), 콘텐츠 `Content/game/<팩>/`, 게임 프리셋 `Config/Game/<게임>.json`(`_packRoot`), CTest 등록은 목록 없이 폴더를 훑는 `Test/Scenario/CMakeLists.txt` 한 곳 — `automation/*.scenario.xml` → `Scenario.<팩>`, `showcase/` → `.showcase`, `desktop/` → `.desktop.<이름>`, `sequence/*.1|.2` → `.sequence.<쌍>`, `editor/` → `.editor`, `load/` → `.load.<이름>`(라벨 load). `debugger/` · `resourcecondition/` · `netpair/` 는 손으로 · 스크립트로 돈다. 골든은 `<시나리오 폴더>/golden/<Scenario name>.<이름>.<백엔드>[.linux].ppm`(`AutomationGoldenUtil::makeGoldenID`) — 시나리오 `name="game.<팩>.<이름>"` 이 파일 이름에 들어간다. `-game=<게임>` 은 각 `<게임>Game.cpp` 머리 주석 · 일부 시나리오 주석에만 있고 실제 인자는 CTest 가 붙인다. 깃발 열은 그 게임만 정의한 `SW_TEST_GLOBAL_VARIABLE` · `SW_DEV_COMMAND`, 감시는 감시 값을 등록하는 파일 수.
+
+| 게임(팩) | 소스 줄 · 콘텐츠 파일 | 키트(`GF_*`) | CTest 항목(시나리오 수) | 골든 | 서버 짝 · 스크립트 | 그 게임만의 깃발 · 명령 · 감시 | 쿠킹 · 패키지 · 빌드 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Empty(`empty`) | 9467 · 1204 | 24: NetDestruction · NetPairedAnimation · ActionCombat · Housing · ModSupport + 장르 19(KitDemo) | `Scenario.empty`(154 + 엔진 시나리오 — 활성 게임), `.editor`(4), `.load.*`(13), 수동 `debugger/`(2) · `resourcecondition/` | 629 `automation/golden/` | `Config/Server/Empty.json`, `net-pair`(`Scripts/net/net_pair_run.py:34`) · `destruction_net_pair.py:31` | `gv_stressTest*` 44 · `gv_uiDemo`, `DemoInventory` · `DemoShop`, 감시 23 파일(`EmptyNav.*` 6 · `EmptyLoad.CrowdCharacters`), 렌더 확장 패스 `Empty.DrawDemo` · `Empty.TintDemo` | 활성 게임 기본값 `cmake/Modules/Config/BuildOptions.cmake:177`, `pack.py --game` 기본 · android-apk · web-package · web-check 예시, `Test/Pack/RunCookedContent.cmake:20`, `gv_firstScene` 149 시나리오 |
+| Shooter3D(`shooter3d`) | 7110 · 667 | Account · Chat · Economy · Leaderboard · Mailbox · Matchmaking · NetClientServer · NetSimulation | `Scenario.shooter3d`(32, SLOTS 1 — `sequential_scenario_packs`), `.showcase`(8), `.desktop.*`(4), `.sequence.*`(1 쌍), `.editor`(2) | 510 `automation/golden/` · `showcase/golden/` | `Config/Server/Online/Shooter3D{,.online,.external,.external.online}.json` · `Providers/Shooter3D.{push,receipts}.json`, `online-local`(기본) · `telemetry-local`(기본) · OnlineLoadBot `--store-config` | `gv_shooterAutoPlay` · `AutoMelee` · `MotionTrace`, Cheat 3 · `ShooterOnline*` 8 · `ShooterProjectile`, 감시 3 파일 | `CMakePresets.json` `SW_GAMES=Shooter3D` 3 곳(Debug · ASan cpu · Server), `gv_firstScene` 11 |
+| WildWest(`wildwest`) | 618 · 55 | OpenWorldWestern | `Scenario.wildwest`(9) | 14 | `telemetry-local --game WildWest` 예시 | `gv_wildWestAutoPlay`, 감시 1 | — |
+| ThemeParkTycoon(`themepark`) | 1252 · 84 | ThemePark | `Scenario.themepark`(3), `.editor`(2) | 25 | — | `gv_parkAutoBuild`, 감시 1 | 팩 이름이 게임 이름과 다름(`pack.py:87`) |
+| MeadowVillage(`meadowvillage`) | 1142 · 46 | Farming · CreatureLife · Housing · NetSimulation | `Scenario.meadowvillage`(5), `.editor`(1) | 8 | — | `gv_meadowAutoPlay` | — |
+| HarvestValley(`harvestvalley`) | 2370 · 67 | Farming | `Scenario.harvestvalley`(7), `.editor`(1) | 0 | — | `gv_farmAutoPlay`, 감시 1 | `_cookRules`(`_listVillagerPreset`) |
+| NileCity(`nilecity`) | 2102 · 69 | CityBuilder | `Scenario.nilecity`(5) | 0 | — | `gv_nileAutoPlay`, 감시 1 | `_cookRules` · `_bAutomationOnly` · `_listAlwaysCook` |
+| FrontierTown(`frontiertown`) | 743 · 11 | CityBuilder · RealTimeStrategy | `Scenario.frontiertown`(3) | 0 | — | `gv_frontierAutoPlay` | — |
+| StarSkirmish(`starskirmish`) | 2615 · 102 | NetLockstep · RealTimeStrategy | `Scenario.starskirmish`(4), `.load.*`(1) | 0 | `lockstep-pair`(`Scripts/net/lockstep_pair_run.py:33`) | `gv_skirmishAutoPlay`, `SkirmishLockstepStatus` · `SkirmishOrder`, 감시 1 | `_cookRules` · `_bAutomationOnly`, `Content/game/starskirmish/redirects.xml`(유일한 팩 리다이렉트 표) |
+| LanternVale(`lanternvale`) | 3045 · 7 | NetClientServer · NetMMO · Account | `Scenario.lanternvale`(2), 수동 `netpair/` | 0 | `net-pair mmo`(`net_pair_run.py:191` — 계정 저장 · 재접속) | `Vale*` 명령 7, 감시 1 | — |
+| Velmora(`velmora`) | 1420 · 17 | ActionAdventure · ActionCombat · ModSupport | `Scenario.velmora`(1), `.sequence.*`(2 쌍: carry · release) | 0 | — | 감시 1, DLC 모드 `Test/Mods/velmora_tidecaves/` | — |
+| VoxelCraft(`voxelcraft`) | 1749 · 25 | Voxel | `Scenario.voxelcraft`(3) | 0 | — | `gv_voxelAutoPlay`, 감시 1 | — |
+| AbilityArena(`abilityarena`) | 2228 · 48 | (없음 — GameFramework 만) | `Scenario.abilityarena`(3), `.editor`(2) | 0 | — | `gv_arenaAutoPlay`, 감시 1 | — |
+| PixelTown(`pixeltown`) | 629 · 12 | Overworld | `Scenario.pixeltown`(2) | 0 | — | 감시 1 | — |
+
+게임 이름이 박힌 공용 자리(모든 단계가 같이 고친다): `Scripts/dev/linux_scenarios.py:56` `ALL_CHAINS`(Linux 체인 목록), `Config/Dev/AssetReferenceFields.generated.json` 의 `owner: game:<게임>` 11 곳(생성물 — 다시 생성), `Config/Rules/Lint/MagicLiteralBaseline.json` · `CommonShapeExceptions.json` · `NamingWords.json` 의 `Source/Games/<게임>/` 경로, `Test/README.md`, `Test/Scenario/RunStateDirPair.cmake`(Velmora · Shooter3D 쌍).
+
+**`Empty` → `Playground` 이름 바꾸기 자리(전수 2026-11-20).** 합계 — 옮길 폴더 2(`Source/Games/Empty/` 73 파일 · `Content/game/empty/` 1204 파일) + 파일 이름 6 + 골든 파일 이름 629 + 안쪽 글 390 파일 3002 줄 + 바깥 글 164 파일 320 줄.
+- 폴더 · 파일 이름: `Source/Games/Empty/` → `Playground/`(CMake 타깃 `SWGame_Empty` → `SWGame_Playground` 는 폴더 이름에서 나옴, `Scripts/dev/hot_reload_debug_check.py:20,21,81`), `Content/game/empty/` → `game/playground/`, `Config/Game/Empty.json`(`_packRoot` 도), `Config/Server/Empty.json`, `EmptyGame.cpp`, `Client/Dev/EmptyClientPart.cpp`, `Client/Dev/EmptyRenderDemo.{h,cpp}`.
+- C++ 식별자(`rename-symbol`): `EmptyGame`(17) · `EmptyClientPart` · `EmptyClientPartFactory` · `EmptyRenderDemo`(11) · `EmptyDrawDemoProxy` · `EmptyRenderExtension`, 감시 변수 `emptyCrowdCharacters` · `emptyNavTestPathLength` · `emptyNavTestResultCount` · `emptyNavTestCancelLeaks` · `emptyNavWanderArrivals` · `emptyNavWanderProbeResults` · `emptyNavWanderCancelLeaks`.
+- 문자열 속 게임 이름(`rename-symbol` 이 기본으로 건너뜀 → `--include-strings` 또는 손): 감시 값 이름 `EmptyNav.*` 6 · `EmptyLoad.CrowdCharacters`(C++ 5 파일 + 시나리오 3: `navasync` · `load/charactermove` · `load/navcrowd`) → `PlaygroundNav.*` · `PlaygroundLoad.*`, 렌더 확장 패스 `Empty.DrawDemo` · `Empty.TintDemo`(+ `Content/engine/shaders/extension_{draw,pass}_demo.hlsl` 주석), 시나리오 이름 `name="game.empty.<이름>"` 170 파일 236 줄 + 바깥 16 파일(Source 9 — 테스트 주석 · `AutomationRunner.cpp:638`, Scripts 3, Test 1, docs 3), CTest 이름 `Scenario.empty*` → `Scenario.playground*`(`linux_scenarios.py:56` 의 `empty` · `preflight.sh:60` 테스트 로그 이름 · 문서 속 `ctest -R` 줄).
+- 경로 `game/empty/`: 팩 안 315 파일 2569 줄(경로 칸은 `move-asset` 이 고침, 칸 밖 주석 · 실행 줄은 끝에 찍히는 남은 목록), 팩 밖 158 파일 258 줄 — `Content/engine/automation/editor` 38 · `Content/engine/vfx` 9 · `Content/common/data/appearance` 3, C++ 문자열(Source 89 파일 152 줄 — `Engine/Content/Pack` · `Asset/Cook` 테스트 · `Games/Empty/KitDemo` 20 등)은 경로 칸이 아니라 `move-asset` 이 고치지 않는다.
+- 게임 이름 값 `Empty`: `-game=Empty`(`Test/Pack/RunCookedContent.cmake:20`, 시나리오 주석 `surfacelibrary` · `scanprops`), `cmake/Modules/Config/BuildOptions.cmake:177` 기본값, `Scripts/package/pack.py:26,315` · `android_apk.py:27-29` · `web_package.py:19-20` · `web_check.py:21-22`, 테스트 `Scripts/package/tests/test_android_apk.py`(5) · `test_web_package.py`(3), `Scripts/net/net_pair_run.py:34` · `destruction_net_pair.py:31`, 테스트 자료 `TestProjectSettingsJSONDocument.cpp:191,194` · `OnlineServerConfig.h:4` · `TestOnlineServerConfig.cpp:114-115`(`Config/Server/Empty.online.json` 예시), 주석 `GameInstance.h:52`, `AssetReferenceFields.generated.json:1026`(다시 생성), `MagicLiteralBaseline.json:974-982`(`move-source` 가 경로를 고침).
+- 일반 낱말 — 바꾸지 않는다(`rename-symbol Empty=Playground` 를 낱말 그대로 돌리면 이것들이 깨진다): 원소 규칙 `<Material id="Empty"/>`(`default.elements.xml` · `AdventureElementGrid.cpp:116` · `ElementRuleCatalog.h`), 기믹 볼륨 출력 `"Empty"`(`GimmickNodeRegistry.cpp:725`), `InputMapViewModel.cpp:54`, 테스트 자료 `TestCameraDirector.cpp:186` · `TestSequenceTrigger.cpp:52` · `TestRetargetProfileEdit.cpp:101` · `TestModulesViewModel.cpp:190`, `kEmptyGamepadSlot` · `createEmptyActiveScene` · `kEmptySceneName`, 편집기 시나리오 `emptyscene`(+ 골든 5), 모델 `stall_empty` · `stall_cart_empty`, 텍스처 `progress_empty`, `Test/Fuzz/Seeds/PackReader/empty.bin`.
+- 에셋 정체성: `.meta` · `<?asset guid?>` 의 GUID 는 옮겨도 그대로라 GUID 참조는 안 깨진다. 깨지는 것은 경로 참조뿐 — `move-asset` 이 경로 칸(`Config/Dev/AssetReferenceFields.json`)만 고치고 끝에 작업 트리 전체 끊긴 참조 검사를 돌린다. 임포트 산출물은 커밋하지 않으므로 옮긴 뒤 다시 임포트.
+- 도구: `py -3 -m Scripts move-source Games/Empty=Games/Playground`(include · CMake · 문서 · 설정 경로), `py -3 -m Scripts move-source --base . Config/Game/Empty.json=Config/Game/Playground.json Config/Server/Empty.json=Config/Server/Playground.json`, `py -3 -m Scripts move-asset game/empty game/playground`(meta 함께, 경로 칸 · 테스트 CMake), `py -3 -m Scripts rename-symbol EmptyGame=PlaygroundGame EmptyClientPart=PlaygroundClientPart EmptyClientPartFactory=PlaygroundClientPartFactory EmptyRenderDemo=PlaygroundRenderDemo EmptyDrawDemoProxy=PlaygroundDrawDemoProxy EmptyRenderExtension=PlaygroundRenderExtension emptyCrowdCharacters=playgroundCrowdCharacters …`(감시 변수 6 더). 모두 `--dry-run` 먼저.
+- **도구 틈(이름 바꾸기 전에 도구부터 고친다 — 원칙 1).** ① `move-asset` 은 골든 파일 이름(`game.empty.*` 629)과 `<Scenario name>` 을 바꾸지 않는다 — 팩 이름이 이름 안에 들어 있는 자리라 팩 단위 옮기기(`game/<옛>` → `game/<새>`)일 때 `game.<옛>.` 접두를 함께 바꾸게 넓힌다(게임 흡수마다 다시 쓴다). ② `move-asset` 은 옛 id 도메인 표(`Content/game/empty/redirects.xml`)에 옮긴 파일마다 리다이렉트를 무조건 쓴다 — 팩 통째 이름 바꾸기면 옛 팩 폴더가 표 하나로 되살아난다. 세이브 · 서버에 `game/empty/…` 가 남은 배포본이 없으므로 팩 이름 바꾸기에서는 파일마다 표를 쓰지 않고 도메인 한 줄로 둔다(언리얼은 플러그인 이름 바꾸기에 `[CoreRedirects]` PackageRedirects 한 줄 — 파일마다 리다이렉터가 아니다). ③ C++ 문자열 속 `game/empty/` 158 줄은 경로 칸이 아니어서 어느 도구도 고치지 않는다 — 같은 확장에서 `game/<옛>/` 접두 문자열을 함께(정확한 접두라 일반 낱말과 안 겹친다).
+- `_bannedNames` 에 올릴 옛 이름: `EmptyGame` · `EmptyClientPart` · `EmptyClientPartFactory` · `EmptyRenderDemo` · `EmptyDrawDemoProxy` · `EmptyRenderExtension` · `emptyCrowdCharacters` · `emptyNavTestPathLength` · `emptyNavTestResultCount` · `emptyNavTestCancelLeaks` · `emptyNavWanderArrivals` · `emptyNavWanderProbeResults` · `emptyNavWanderCancelLeaks`(`Empty` 자체는 일반 낱말이라 올리지 않는다). 문자열 이름(`EmptyNav.*` · `EmptyLoad.*` · `Empty.TintDemo` · `game/empty` · `game.empty.` · `-game=Empty`)은 린트 표가 아니라 경로 · 데이터라 끊긴 참조 검사 · 시나리오 판정이 잡는다.
+- 빌드 캐시: 이미 있는 빌드 폴더는 `SW_ACTIVE_GAME=Empty` 를 들고 있어 configure 가 멈춘다(`Source/Games/CMakeLists.txt` 의 FATAL_ERROR) — 통합 때 메인 작업 폴더의 각 프리셋을 `-DSW_ACTIVE_GAME=Playground` 로 다시 구성(캐시 기본값 바꾸기만으로는 안 바뀐다).
+
+**단계 · 갈래 · 통합 시나리오.** 한 단계 = 한 갈래, 커밋은 단계 안에서 나눈다. 단계마다 통합 담당이 Release · Shipping · ASan 증분 빌드 + 아래 시나리오 먼저, 묶음 끝 preflight.
+
+| 단계 · 갈래 | 내용(커밋 단위) | 통합 때 돌릴 것 |
+| --- | --- | --- |
+| 0 `w-assetmovepack` | 도구 틈 ①–③(`move-asset` 팩 단위 옮기기 — 골든 이름 · `<Scenario name>` · 문자열 접두, 리다이렉트 표 규칙) + Python 테스트 | `py -3 -m Scripts lint`, 스크립트 단위 테스트, 작은 팩(PixelTown)에 `--dry-run` |
+| 1 `w-playground` | (가) `move-source` 소스 · 설정 + `rename-symbol` 식별자 (나) `move-asset game/empty game/playground`(골든 이름 · 시나리오 이름 · 문자열 접두) (다) 게임 이름 값(CMake 기본값 · 스크립트 · 테스트 · Linux 체인 목록 · 생성물 다시 생성) (라) `_bannedNames` | `Scenario.playground`(엔진 시나리오 포함 전체 — 그림은 안 바뀌고 골든 이름만), `Scenario.playground.editor`, `Scenario.editor`(편집기 시나리오 38 이 `game/empty` 를 씀), `Scenario.playground.load.*` 목록 확인(`ctest -N`), `Pack.*`(RunCookedContent), `UnitTests`, `net-pair` · `destruction-net-pair`, Linux 는 `.linux` 골든 이름까지 바꿨으니 모아 돌릴 때 |
+| 2 `w-kitexperience` | KitDemo 21(`kit_*` 17 · `kitdemo_*` 4)을 `experiences/*.experience.xml` + `-experience=` 로, `EmptyGame::onInitialize` 의 필수 데이터(몬스터 · 카탈로그)를 Experience `catalogs[]` 로, Experience 범위 서비스 해제 검사 | 그 21 시나리오 단독 목록(`-scenario=a,b,…`), 이어서 `Scenario.playground` |
+| 3 허브 맵 | `w-cellstate` · `w-netstream` · 씬 스트리밍 (가) 위에 허브 맵 · 하위 레벨 진입 | 새 허브 시나리오 + `Scenario.playground` |
+| 4 `w-absorb-pixeltown` | 오락실 RPG Experience(Overworld, 씬 전환) → 폴더 · 프리셋 · Linux 체인 줄 삭제 | 옮긴 2 시나리오 + `Scenario.playground` |
+| 5 `w-absorb-wildwest` | 허브 맵 바탕(OpenWorldWestern · 말 · 날씨 · 도착 컷씬), 골든 14 이름 재기록 | 옮긴 9 + 날씨 · 자동 저장 시나리오 |
+| 6 `w-absorb-citybuilder` | FrontierTown → 도시 건설 Experience(CityBuilder · RTS), NileCity 는 **둘째 팩으로 남김**(`SW_GAMES` · `-game=` · `_cookRules` · `_bAutomationOnly` 를 함께 쓰는 작은 팩 — 위 "남길 것") | 옮긴 3 + `Scenario.nilecity` |
+| 7 `w-absorb-harvestvalley` | 허브 농장 지역(Farming · 낮밤 · NPC 일과 · 튜토리얼 힌트), `_cookRules` `_listVillagerPreset` 를 Playground 프리셋으로 | 옮긴 7 + `.editor` 1 |
+| 8 `w-absorb-meadowvillage` | 허브 하우징 · 생물(NetSimulation · 넷 하우징), 골든 8 | 옮긴 5 + `.editor` 1 |
+| 9 `w-absorb-themepark` | 테마파크 Experience(하위 레벨), 골든 25 | 옮긴 3 + `.editor` 2 |
+| 10 `w-absorb-voxelcraft` | 광산 Experience(Voxel, 씬 전환) | 옮긴 3 |
+| 11 `w-absorb-abilityarena` | 아레나 Experience(어빌리티 디버거 · 씬 저장 편집기 시나리오) | 옮긴 3 + `.editor` 2 |
+| 12 `w-absorb-velmora` | 액션 어드벤처 Experience + DLC 세이브 승계 → 허브 세이브 · ModSupport(`Test/Mods/velmora_tidecaves` 의 `-game=` 바꿈) | 옮긴 1 + `sequence` 2 쌍 → `Scenario.playground.sequence.*` |
+| 13 `w-absorb-starskirmish` | RTS 매치 Experience(`net: Lockstep`), `lockstep-pair` 의 `_GAME`, 팩 리다이렉트 표 처리 | 옮긴 4 + `load` 1 + `lockstep-pair` |
+| 14 `w-absorb-lanternvale` | 허브 서버(NetMMO · 계정 저장), `net-pair mmo` 의 `_MMO_GAME` · 로그 정규식 | 옮긴 2 + `net-pair mmo` |
+| 15 `w-absorb-shooter3d` | 사격장 · 온라인 매치 Experience, `Config/Server/Online/Shooter3D*` → `Playground*`(비밀 환경 변수 이름 `SW_SHOOTER3D_*` 도), `online-local` · `telemetry-local` 기본값, OnlineLoadBot 주석, 프리셋 `SW_GAMES=Shooter3D` 3 곳 → 온라인 키트가 활성 게임에 들었으니 `NileCity`, `sequential_scenario_packs`, 골든 510 이름 재기록 | 옮긴 32 + showcase 8 + desktop 4 + sequence 1 + editor 2, 서버 Release `Server --test`, `online-local run` |
+
+**겹치는 진행 중 갈래(main 대비 diff, 2026-11-20).** 이름 바꾸기(단계 1)는 아래가 합쳐진 뒤에 시작한다.
+- `w-reload` — `Content/game/empty/automation/desktop/editor/{playreload,shaderreload}` 새 파일 24 · `Source/Games/Empty/{CMakeLists.txt,HotReloadTestComponent.*}` · `Test/Scenario/CMakeLists.txt` · `AutomationRunner.cpp`(`game.empty.` 주석) · `Test/README.md`. 가장 크게 겹친다 — 반드시 먼저 합친다.
+- `w-cutscene` — `Content/game/empty/{automation/cutscenetrigger.scenario.xml,data/cutscenegate.seq.xml,data/cutscenelanding.seq.xml,data/gamesettings.xml,maps/cutscenetrigger.scene.xml}`.
+- `w-auditfix` — `Source/Games/Empty/Client/Dev/StressTestScene.cpp`, `NamingWords.json`.
+- `w-edinput` — `ContentBrowserPanel.{h,cpp}` · `ContentBrowserViewModel.h` · `ImGuiEditor.cpp` · `Content/engine/automation/editor/scenereference.scenario.xml`(`game/empty` 경로가 든 파일), `NamingWords.json`.
+- `w-memdebug` — `ContentBrowserPanel.h`, `NamingWords.json`.
+- `w-fenceretire` — `GPULightBuffer.cpp`(`game/empty` 주석 한 줄).
+- `w-experience` — 겹치는 파일 없음. 다만 Experience 데이터를 `Content/game/empty/experiences/` 에 더하기 시작하면 단계 1 과 겹치므로 그 갈래는 틀(`GameInstance.cpp` · `GameSettings` · `GameSelection`)만 합치고, 데이터는 단계 2 에서 `game/playground/` 에 둔다.
+- `w-stream` · `w-cmdargs` — 이름 바꾸기 자리와 겹치지 않음(`docs/DesignBacklog.md` 는 다른 절).
+- `NamingWords.json` `_bannedNames` 는 세 갈래가 더하므로 단계 1 (라) 는 맨 마지막 커밋으로 둬 충돌을 한 줄 병합으로 줄인다. `docs/NEXT.md` 에도 `Empty` · `game/empty` 줄이 있다 — `move-source` · `rename-symbol` 이 문서도 고치므로 단계 1 은 NEXT 를 만지는 갈래가 없을 때.

@@ -17,6 +17,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogRoot.h"
 
 namespace sw
@@ -139,6 +140,13 @@ namespace sw
     {
         const string pack = FileUtil::trimTrailingSlashes( _packRoot.get() );
         return FileUtil::joinPath( pack, FileUtil::normalizePath( packRelative ).str() );
+    }
+
+    expected<void> GamePackConfig::makeRequiredDataPath( string_view kindLabel, string& outPath ) const
+    {
+        const auto    itShared = _data._mapRequiredDataPack.find( string( kindLabel ) );
+        const string& pack     = itShared != _data._mapRequiredDataPack.end() ? itShared->second : _packRoot.get();
+        return GamePackDataUtil::tryMakeKindPath( pack, kindLabel, outPath );
     }
 
     bool GamePackConfig::load( string_view gameSettingsFileName )

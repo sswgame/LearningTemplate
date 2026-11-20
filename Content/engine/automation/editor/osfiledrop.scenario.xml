@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="54d1472447ac480739100115680c97d7"?>
+<!--
+  에디터 시나리오 — OS 파일 끌어 놓기 → 콘텐츠 브라우저 임포트(EditorUI R11 · 창 능력 WindowFileDropSupport). 자체 시험 입력(EditorDropFiles)이 창 처리기와 같은 입구(EditorFileDrop)로
+  파일 둘을 에셋 영역(contentBrowser.assetView)에 놓는다: 글 파일(notes.txt — 임포트 종류)은 지금 폴더(scratch/osfiledrop/target)로 임포트되고(새 GUID),
+  임포트 종류가 아닌 파일(payload.unknownkind)은 거른다(ContentBrowser.FileDropRejected — 사유와 함께). 경로 검사 · 크기 · 개수 한도는 단위 테스트 ContentBrowserFileDropTest 가 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/osfiledrop.scenario.xml -unattended
+-->
+<Scenario name="editor.osfiledrop" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/assetmove" as="scratch/osfiledrop"/>
+	<EditorWaitStable/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus content_browser"/>
+	<EditorWaitStable/>
+	<DevCommand line="content.open scratch/osfiledrop/target"/>
+	<EditorWaitStable/>
+	<ExpectLog id="ContentBrowser.FileDropRejected" contains="payload.unknownkind" count="1"/>
+	<ExpectLog id="ContentBrowser.FileDropImported" contains="Imported 1 of 2" count="1"/>
+	<EditorDropFiles mark="contentBrowser.assetView" files="engine/automation/editor/osfiledrop/notes.txt;engine/automation/editor/osfiledrop/payload.unknownkind"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.expectScratchContains scratch/osfiledrop/target/notes.txt osfiledropprobe"/>
+	<DevCommand line="asset.expectScratchMissing scratch/osfiledrop/target/payload.unknownkind"/>
+	<EditorWaitStable/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

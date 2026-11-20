@@ -268,12 +268,8 @@ namespace sw
 
     bool PlatformFileSystem::getTempDirectory( string& outResult )
     {
-        if ( WindowsFileSystemInternal::queryPath( []( wchar_t* pBuffer, const DWORD capacity )
-        { return GetTempPathW( capacity, pBuffer ); }, outResult ) == false )
-            return false;
-        while ( outResult.size() > 1 && outResult.back() == '/' )
-            outResult.pop_back();
-        return true;
+        return WindowsFileSystemInternal::queryPath( []( wchar_t* pBuffer, const DWORD capacity )
+        { return GetTempPathW( capacity, pBuffer ); }, outResult );
     }
 
     bool PlatformFileSystem::forEachChild( string_view directory, const ChildVisitFn visit, void* pContext )

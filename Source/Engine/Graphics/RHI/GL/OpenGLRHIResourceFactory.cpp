@@ -749,6 +749,7 @@ namespace sw
         const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_texture == 0 || pName == nullptr )
             return;
+        _pDevice->getMemoryTracker().setLabel( RHIMemoryKey::makeTexture( texture ), pName ); // 메모리 스냅숏 · RT 목록이 같은 이름을 보인다
         // KHR_debug(GL 4.3 코어) — 이벤트 표지 glPushDebugGroup 과 같은 확장이다.
         const string_view name = pName;
         glObjectLabel( GL_TEXTURE, pRecord->_texture, static_cast<GLsizei>( name.size() ), name.data() );
@@ -856,8 +857,7 @@ namespace sw
 
         // GPU 메모리 추적기에 올리는 유일한 자리다. GL 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 적는다.
         const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
-        _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryTracker::classifyTexture( desc ),
-                                                       RHIMemoryTracker::computeTextureLogicalBytes( desc ) );
+        _pDevice->getMemoryTracker().recordTexture( handle, desc, RHIMemoryTracker::computeTextureLogicalBytes( desc ) );
         return handle;
     }
 

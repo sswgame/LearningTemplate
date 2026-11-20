@@ -449,7 +449,12 @@ namespace sw::editor
 
         // Value / Widget 컬럼
         ImGui::TableNextColumn();
-        if ( GlobalVariablesPanelInternal::drawVariableWidget( info ) )
+        // 값 칸 휠클릭 = 기본값으로(R10) — 아래 Reset 단추와 같은 조건 · 같은 연산이다.
+        EditorWidgets::beginResetToDefaultGroup();
+        const bool bValueChanged = GlobalVariablesPanelInternal::drawVariableWidget( info );
+        bool       bHovered      = false;
+        const bool bResetByWheel = EditorWidgets::endResetToDefaultGroup( info.isAtDefault() == false, bHovered );
+        if ( bValueChanged )
             markSessionDirty();
         EditorSelfTestMarks::recordFormat( "globalVariables.value.%#", info._name.c_str() ); // 시나리오가 그 변수의 값을 바꾼다
 
@@ -457,7 +462,8 @@ namespace sw::editor
         ImGui::TableNextColumn();
         if ( info.isAtDefault() == false )
         {
-            if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Reset" ) ) )
+            const bool bResetPressed = ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Reset" ) );
+            if ( bResetPressed || bResetByWheel )
             {
                 info.resetToDefault();
                 markSessionDirty();

@@ -150,6 +150,8 @@ namespace sw
     protected:
         /** @brief `stopMovementImmediately` 입니다(`TeleportType::ResetPhysics`). */
         void resetMotion() override { stopMovementImmediately(); }
+        /** @brief 캐릭터는 바닥 없이 떨어진다. */
+        bool needsStreamingFloor() const override { return true; }
         void beginPhysicsFrame( ScenePhysics& physics ) override;
         /** @brief 이번 스텝의 속도를 정해 씬에 이동을 넣습니다(`ScenePhysics::queueCharacterMove` — 씬이 모든 캐릭터를 한 번에 옮긴다, 감사 S-8). */
         void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;

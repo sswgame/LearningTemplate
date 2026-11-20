@@ -106,7 +106,7 @@ namespace sw
         return AssetIO::readTextAsset( assetID, outText );
     }
 
-    void UITextAssetCache::reload( const AssetID& assetID )
+    ReloadResult UITextAssetCache::reload( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
         const string      key          = AssetRedirect::toCacheKey( relativePath );
@@ -114,7 +114,7 @@ namespace sw
         if ( readText( key, assetID, text ) == false )
         {
             SW_LOG_ERROR_ID( "UITextAssetCache.ReloadFailedNotFound", "[UI] %# reload failed - not found, keeping the old one: %#", _pAssetLabel, relativePath );
-            return;
+            return ReloadResult::Failed;
         }
         // 그 경로의 엔진 판과 변형을 모두 다시 읽는다(글은 하나다). 들고 있지 않으면 엔진 판을 읽어 둔다 — 예전 규칙 그대로다.
         vector<ResourceTagSet> listTagOverride;
@@ -137,15 +137,17 @@ namespace sw
             _mapKeyToEntry[makeKey( key, tagOverride )] = Entry{ key, tagOverride, *asset };
             bReplaced                                   = true;
         }
-        if ( bReplaced )
-            _onReloaded.broadcast( key );
+        if ( bReplaced == false )
+            return ReloadResult::Failed; // 판마다 오류를 남겼고 옛 판을 그대로 쓴다
+        _onReloaded.broadcast( key );
+        return ReloadResult::Reloaded;
     }
 
     bool UITextAssetCache::reloadComposed( string_view relativePath )
     {
         if ( isCached( relativePath ) == false )
             return false;
-        reload( AssetID{ relativePath } );
+        (void)reload( AssetID{ relativePath } ); // 들고 있으면 맡았다 — 실패는 다시 읽기가 오류로 남기고 옛 판을 쓴다
         return true;
     }
 } // namespace sw

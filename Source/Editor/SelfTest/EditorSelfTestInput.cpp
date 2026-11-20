@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Hash/HashUtil.h"
 
+#include "Editor/Common/Input/EditorFileDrop.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
@@ -450,6 +451,12 @@ namespace sw::editor
         event._kind = EditorSelfTestInputInternal::EventKind::Text;
         event._text = string( utf8Text );
         EditorSelfTestInputInternal::push( std::move( event ) );
+    }
+
+    void EditorSelfTestInput::dropFiles( const vector<string>& listPath, const float2& screenPosition )
+    {
+        EditorFileDrop::postAtScreenPosition( WindowFileDropPhase::Enter, vector<string>{}, screenPosition );
+        EditorFileDrop::postAtScreenPosition( WindowFileDropPhase::Drop, listPath, screenPosition );
     }
 
     void EditorSelfTestInput::scrollMouseWheel( float32 notches )

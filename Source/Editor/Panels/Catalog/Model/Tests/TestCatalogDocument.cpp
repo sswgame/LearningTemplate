@@ -1114,3 +1114,35 @@ SW_TEST_CASE( CatalogDocumentTest, ChildGroupWithoutRuleReplacesWhole )
     SW_REQUIRE_TRUE( document.setChildCell( b, stats, "armor", "3" ) );
     SW_EXPECT_EQUAL( string( Util::kItems ), document.getText() );
 }
+
+/** @brief [CatalogDocumentTest] 상속값으로(휠클릭 — EditorUI R10) - `_base` 행이 적은 칸만 되돌릴 수 있고, 되돌리면 부모 값이 보이며 Undo 한 번에 적은 값이 돌아온다 */
+SW_TEST_CASE( CatalogDocumentTest, RevertsWrittenCellToInheritedValue )
+{
+    using Util = CatalogInheritanceTestUtil;
+    CatalogInheritanceTestSource source;
+    CatalogDocument              document;
+    document.setInheritanceSource( &source );
+    SW_REQUIRE_TRUE( document.load( Util::kItems ) );
+    const int32 a = Util::findRow( document, "a" ).value();
+    const int32 b = Util::findRow( document, "b" ).value();
+
+    // 조건: `_base` 행(b)이 적은 칸(name)만 — 부모 없는 행(a), 적지 않은 칸(category), 항목 자신의 칸(열쇠 id · `_base`)은 아니다.
+    SW_EXPECT_TRUE( document.canRevertToInherited( b, "name" ) );
+    SW_EXPECT_FALSE( document.canRevertToInherited( a, "name" ) );
+    SW_EXPECT_FALSE( document.canRevertToInherited( b, "category" ) );
+    SW_EXPECT_FALSE( document.canRevertToInherited( b, "id" ) );
+    SW_EXPECT_FALSE( document.canRevertToInherited( b, "_base" ) );
+    SW_EXPECT_FALSE( document.canRevertToInherited( 999, "name" ) );
+
+    // 되돌리기는 행 메뉴의 Unset 과 같은 편집 하나 — 부모 값이 보인다.
+    string description;
+    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, b, "name", "" }.apply( document, description ) ) );
+    SW_EXPECT_TRUE( document.findCellValue( b, "name" ) == nullptr );
+    SW_REQUIRE_TRUE( document.findInheritedValue( b, "name" ) != nullptr );
+    SW_EXPECT_EQUAL( string( "A" ), string( document.findInheritedValue( b, "name" ) ) );
+    SW_EXPECT_FALSE( document.canRevertToInherited( b, "name" ) ); // 이미 물려받는 칸은 되돌릴 것이 없다
+
+    document.undo();
+    SW_REQUIRE_TRUE( document.findCellValue( b, "name" ) != nullptr );
+    SW_EXPECT_EQUAL( string( "B" ), *document.findCellValue( b, "name" ) );
+}

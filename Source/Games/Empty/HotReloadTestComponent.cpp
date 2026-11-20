@@ -4,6 +4,8 @@
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 
+#include "sw/dev/HotReloadProbeVariant.h" // 빌드 트리의 판 머리(`SW_HOTRELOAD_PROBE_STEP`) — 시나리오 단계 `<RebuildModule variant>` 가 덮는다(Games/Empty/CMakeLists.txt)
+
 namespace sw
 {
     namespace
@@ -23,7 +25,7 @@ namespace sw
 
     int32 HotReloadTestComponent::computeVersion() const
     {
-        return HotReloadTestInternal::kTestVersion;
+        return HotReloadTestInternal::kTestVersion + SW_HOTRELOAD_PROBE_STEP; // 판 머리의 걸음 — 기본 0, 다시 짓기 판(probe-next)은 1
     }
 
     int32 HotReloadTestComponent::getAddedValue() const

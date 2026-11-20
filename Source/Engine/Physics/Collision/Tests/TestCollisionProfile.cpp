@@ -32,7 +32,7 @@ namespace
          */
         static const utf8* getSettingsText()
         {
-            return R"(<PhysicsSettings _maxBodyCount="1024" _maxBodyPairCount="1024" _maxContactCount="1024" _tempAllocatorBytes="1048576" _maxDebrisBodyCount="64">
+            return R"(<PhysicsSettings _maxBodyCount="1024" _maxBodyPairCount="1024" _maxContactCount="1024" _tempAllocatorBytes="1048576" _maxDebrisBodyCount="64" _streamingFloorProbeDistance="1">
                 <_listChannel>
                     <CollisionChannelDef _name="Floor" />
                     <CollisionChannelDef _name="Solid" />
@@ -164,7 +164,7 @@ SW_TEST_CASE( CollisionProfileTest, BadProfileIsLoadError )
     SW_EXPECT_LOG( "PhysicsSettings.ProfileObjectChannel" );
     SW_EXPECT_LOG( "PhysicsSettings.PhysicsLayerCollidesUnknown" );
     PhysicsSettings settings;
-    SW_EXPECT_FALSE( settings.loadFromXMLText( R"(<PhysicsSettings _maxBodyCount="1024" _maxBodyPairCount="1024" _maxContactCount="1024" _tempAllocatorBytes="65536" _maxDebrisBodyCount="64">
+    SW_EXPECT_FALSE( settings.loadFromXMLText( R"(<PhysicsSettings _maxBodyCount="1024" _maxBodyPairCount="1024" _maxContactCount="1024" _tempAllocatorBytes="65536" _maxDebrisBodyCount="64" _streamingFloorProbeDistance="1">
         <_listChannel><CollisionChannelDef _name="Solid" /><CollisionChannelDef _name="Look" _kind="Trace" /></_listChannel>
         <_listProfile>
             <CollisionProfileDef _name="Default" _objectChannel="Look" />

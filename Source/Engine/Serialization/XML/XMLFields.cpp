@@ -25,7 +25,7 @@ namespace sw
                 void* const pContainer = prop.getRawPtr( pInstance );
                 sequence.clear( pContainer );
                 bool bValid = true;
-                StringUtil::forEachToken( text, ",;| \t", [&]( string_view token )
+                StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
                 {
                     sequence.addElementDefault( pContainer );
                     void* const pElement = sequence.getElement( pContainer, sequence.getSize( pContainer ) - 1 );

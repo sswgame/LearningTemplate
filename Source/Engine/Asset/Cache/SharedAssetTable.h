@@ -136,6 +136,12 @@ namespace sw
 
         /** @brief 살아 있는 항목 수입니다. */
         size_t countLive() const { return _table.countLive(); }
+        /** @brief 살아 있는 에셋마다 @p func( key, asset, referenceCount ) 를 부릅니다(`WeakInternTable::forEachLive` — 함수는 잠금 밖). */
+        template <typename Func>
+        void forEachLive( Func&& func ) const
+        {
+            _table.forEachLive( std::forward<Func>( func ) );
+        }
 
         /** @brief 표를 비웁니다(쥔 쪽의 객체는 그대로 삽니다). */
         void clear() { _table.clear(); }

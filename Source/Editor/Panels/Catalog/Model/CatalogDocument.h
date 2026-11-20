@@ -67,6 +67,11 @@ namespace sw::editor
         void setInheritanceSource( IDataInheritanceSource* pSource ) { _inheritance.setSource( pSource ); }
         /** @brief 원소가 칸 @p column 을 적지 않으면 물려받을 값입니다(카탈로그 항목 상속). 없으면 nullptr 이고, 포인터는 다음 편집까지 유효합니다. */
         const utf8* findInheritedValue( int32 elementIndex, string_view column ) const;
+        /**
+         * @brief 행 @p elementIndex 의 칸 @p column 을 지워 부모(`_base`) 값으로 되돌릴 수 있으면 true 입니다 — 휠클릭 "상속값으로"(EditorUI R10)의 조건.
+         * @details `_base` 를 적은 루트 행이 그 칸을 적었고, 그 칸이 항목 자신의 칸(열쇠 · `_base`)이 아니어야 한다. 지우면 부모 값이(부모도 안 적었으면 스키마 기본이) 보인다(데이터 상속 규칙).
+         */
+        [[nodiscard]] bool canRevertToInherited( int32 elementIndex, string_view column ) const;
         /** @brief 항목 상속을 펼치지 못한 이유입니다. 없으면 빈 글입니다. */
         const string& getInheritanceError() const { return _inheritance.getError(); }
         /** @brief 이 원소를 부모로 하는 변형을 만들 수 있으면(규칙 표에 있는 종류의 행이면) true 입니다. */

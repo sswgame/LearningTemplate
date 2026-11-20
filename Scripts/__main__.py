@@ -77,7 +77,7 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("web-check", "package.web_check", "Web-Shipping 묶음을 브라우저(헤드리스 Chrome · Edge)에서 두 번 띄워 기동 · WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속을 본다(--game)"),
     Subcommand("server-image", "package.server_image", "리눅스 서버 패키지 + 운영 설정을 배포 tar.gz(systemd 유닛)로 묶는다 — 묶을 서버로 -check-config 를 먼저 돌린다(--image 면 컨테이너 이미지도)"),
     Subcommand("customization-release", "dev.customization_release", "꾸미기 스키마를 출시 스냅숏과 견준다 — 판 올림 단계가 빠진 바뀜은 실패(쿠킹이 먼저 돈다), --fix 는 추론할 수 있는 제거 단계를 적고, accept 는 출시 때 스냅숏을 쓴다"),
-    Subcommand("shipping-check", "dev.shipping_check", "배포 프리셋 셋(클라이언트 · 서버 · 자동화 없음)을 빌드하고 산출물의 기동 · 종료를 본다(통합에서 한 번)"),
+    Subcommand("shipping-check", "dev.shipping_check", "배포 프리셋 셋(클라이언트 · 서버 · 개발 인자 거절)을 빌드하고 산출물의 기동 · 종료를 본다(통합에서 한 번)"),
     Subcommand("destruction-net", "net.destruction_net_pair", "파괴 복제 실제 세션 확인 — 서버 · 클라이언트 두 프로세스의 구조 해시 맞대기(run · compare)"),
 )
 

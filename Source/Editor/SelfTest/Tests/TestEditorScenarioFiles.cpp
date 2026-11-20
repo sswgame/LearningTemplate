@@ -18,5 +18,7 @@ SW_TEST_CASE( EditorScenarioFilesTest, AllEditorScenariosParseResolveAndValidate
     SW_EXPECT_TRUE( test::validateScenarioFolder( "engine/automation/editor", pModuleLoader ) );
     SW_EXPECT_TRUE( test::validateScenarioFolder( "engine/automation/editor/statedir", pModuleLoader ) ); // 두 프로세스가 같은 상태 폴더를 이어 쓰는 쌍
     // 활성 게임의 편집기 시나리오(편집기 체인이 함께 돈다) — 없는 게임도 있다
-    (void)test::validateScenarioFolder( "game/" + StringUtil::toLower( GameSelection::getName().c_str() ) + "/automation/editor", pModuleLoader );
+    const string gameAutomation = "game/" + StringUtil::toLower( GameSelection::getName().c_str() ) + "/automation";
+    (void)test::validateScenarioFolder( gameAutomation + "/editor", pModuleLoader );
+    (void)test::validateScenarioFolder( gameAutomation + "/desktop/editor", pModuleLoader ); // 편집기를 켜고 혼자 도는 데스크톱 시나리오(플레이 중 리로드 — Test/Scenario 가 따로 등록한다)
 }

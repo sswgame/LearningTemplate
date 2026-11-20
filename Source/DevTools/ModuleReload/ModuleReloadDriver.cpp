@@ -16,6 +16,8 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Module/ModuleCatalog.h"
 
+#include "ModuleAPI/Service/IModuleCompiler.h"
+
 #include "ModuleManager/ModuleCatalogLoader.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
@@ -115,6 +117,16 @@ namespace sw
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief `ModuleReloadDriver` 가 예약한 일의 종류입니다(교체만 · 다시 지은 뒤 교체). */
+        enum class ReloadRequestKind : uint8
+        {
+            Reload,  ///< `queueReload` — 이미 지은 이미지를 갈아 끼운다
+            Rebuild, ///< `queueRebuild` — 다시 짓고, 빌드가 성공하면 갈아 끼운다
+        };
+    } // namespace
+
     struct ModuleReloadDriver::State
     {
         unique_ptr<LiveReloadManager> _liveReloadManager;
@@ -124,6 +136,10 @@ namespace sw
         uint32 _reloadTargetCount = 0;
         /** @brief 모듈 라이브러리 창구에 건 "씬이 사라졌다" 훅의 구독입니다(창구가 먼저 사라지면 무효가 된다). */
         Subscription _scenesReleasedHook;
+        /** @brief `queueRebuild` 가 처음 부를 때 매니저에게서 받는 컴파일러입니다(빌드 시작 · 끝을 매니저에 알린다). 매니저보다 먼저 놓는다(소멸이 도는 빌드를 기다린다). */
+        unique_ptr<IModuleCompiler> _rebuildCompiler;
+        /** @brief 마지막 예약의 종류입니다 — 다시 짓기(`queueRebuild`)면 컴파일러의 빌드 상태가 끝을 정한다. */
+        ReloadRequestKind _requestKind = ReloadRequestKind::Reload;
     };
 
     ModuleReloadDriver::ModuleReloadDriver()
@@ -152,6 +168,7 @@ namespace sw
             if ( _pState->_pHostScope != nullptr )
                 _pState->_pHostScope->unbind<ModuleReloadDriver>();
             _pState->_pHostScope = nullptr;
+            _pState->_rebuildCompiler.reset(); // 매니저에 빌드 끝을 알리는 컴파일러를 매니저보다 먼저 내린다
             if ( _pState->_liveReloadManager != nullptr )
                 _pState->_liveReloadManager->shutdown();
         } ) );
@@ -203,7 +220,24 @@ namespace sw
         if ( pManager == nullptr || pManager->getModuleHandle( pModuleName ) == nullptr )
             return false;
         _pState->_reloadTargetCount = pManager->getCompletedReloadCount() + 1;
+        _pState->_requestKind       = ReloadRequestKind::Reload;
         pManager->triggerReload( pModuleName );
+        return true;
+    }
+
+    bool ModuleReloadDriver::queueRebuild( const utf8* pModuleName )
+    {
+        LiveReloadManager* const pManager = _pState->_liveReloadManager.get();
+        if ( pManager == nullptr || pManager->getModuleHandle( pModuleName ) == nullptr )
+            return false;
+        if ( _pState->_rebuildCompiler == nullptr )
+            _pState->_rebuildCompiler = pManager->createModuleCompiler();
+        // 빌드 성공은 다음 `update` 에서 교체로 이어진다(매니저가 빌드 끝을 받아 그 모듈을 다시 올린다) — 끝을 볼 완료 수는 빌드를 시작한 때의 수 + 1 이다.
+        const uint32 targetCount = pManager->getCompletedReloadCount() + 1;
+        if ( _pState->_rebuildCompiler->compileModule( pModuleName ) == false )
+            return false; // 이미 빌드 중이다 — 예약을 바꾸지 않는다
+        _pState->_reloadTargetCount = targetCount;
+        _pState->_requestKind       = ReloadRequestKind::Rebuild;
         return true;
     }
 
@@ -212,6 +246,13 @@ namespace sw
         const LiveReloadManager* const pManager = _pState->_liveReloadManager.get();
         if ( pManager == nullptr || _pState->_reloadTargetCount == 0 )
             return false;
+        if ( _pState->_requestKind == ReloadRequestKind::Rebuild && _pState->_rebuildCompiler != nullptr )
+        {
+            if ( _pState->_rebuildCompiler->isCompiling() )
+                return true;
+            if ( _pState->_rebuildCompiler->getBuildState() != BuildState::Success )
+                return false; // 다시 짓기가 실패했다(또는 취소) — 교체는 없고 옛 이미지로 돈다
+        }
         return pManager->getCompletedReloadCount() < _pState->_reloadTargetCount && pManager->isGraphBroken() == false;
     }
 } // namespace sw

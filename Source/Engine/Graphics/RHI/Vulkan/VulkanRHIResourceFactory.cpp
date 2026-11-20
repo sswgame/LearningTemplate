@@ -484,7 +484,10 @@ namespace sw
     void VulkanRHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )
     {
         const VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || pName == nullptr || _pDevice->_instance == VK_NULL_HANDLE )
+        if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || pName == nullptr )
+            return;
+        _pDevice->getMemoryTracker().setLabel( RHIMemoryKey::makeTexture( texture ), pName ); // 메모리 스냅숏 · RT 목록이 같은 이름을 보인다
+        if ( _pDevice->_instance == VK_NULL_HANDLE )
             return;
         // VK_EXT_debug_utils 가 켜진 인스턴스에서만 함수가 있다(이벤트 표지 vkCmdBeginDebugUtilsLabelEXT 와 같은 조회) — 없으면 이름을 붙이지 않는다.
         // https://docs.vulkan.org/refpages/latest/refpages/source/vkSetDebugUtilsObjectNameEXT.html
@@ -788,7 +791,7 @@ namespace sw
 
         // GPU 메모리 추적기에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
         const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
-        _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryTracker::classifyTexture( desc ), memRequirements.size );
+        _pDevice->getMemoryTracker().recordTexture( handle, desc, memRequirements.size );
         return handle;
     }
 

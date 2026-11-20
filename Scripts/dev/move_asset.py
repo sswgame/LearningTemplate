@@ -11,14 +11,21 @@
      칸 밖의 글(주석 · 문서 · 출처 표)은 고치지 않는다 — 끝에 남은 옛 경로를 찍는다.
   3. 옛 id 도메인의 리다이렉트 표(`Content/<도메인>/redirects.xml`)에 옮긴 파일마다 줄을 더한다 — 저장소 밖(세이브 · 서버 · 배포된 팩)에 적힌 옛 id 가 산다
      (언리얼이 옮긴 자리에 리다이렉터를 남기는 것과 같다). 규칙은 에디터 옮기기와 같다(`add_redirects` = C++ `AssetRedirect::addToXMLText`).
-  4. 작업 트리 전체를 검사해 끊어진 참조가 남았으면 알린다(실패 코드).
+     도메인 뿌리를 통째로 옮기면(`game/empty` → `game/playground`) 옛 도메인 폴더가 사라지므로 새 도메인 표에 접두 한 줄(`<PrefixRedirect>`)만 둔다
+     — 언리얼 `[CoreRedirects]` PackageRedirects 의 접두 꼴. 함께 옮겨진 표의 `to` 는 새 팩 아래로 고친다.
+  4. 팩 이름 바꾸기(`game/<옛>` → `game/<새>`)면 팩 이름이 든 이름도 함께: 골든 파일(`<Scenario name>.<이름>.<백엔드>…` — `AutomationGoldenUtil::makeGoldenID`)의
+     `game.<옛>.` 접두, 글 파일(C++ · 파이썬 · CMake · JSON · XML) 속 시나리오 이름 `game.<옛>.` 과 콘텐츠 경로 문자열 `game/<옛>/`.
+     정확한 접두만 바꾼다(앞 글자가 낱말 글자면 다른 낱말이다) — 일반 낱말 `Empty` 는 건드리지 않는다. 리다이렉트 표는 옛 id 를 적으려고 있어 건너뛴다.
+  5. 작업 트리 전체를 검사해 끊어진 참조가 남았으면 알린다(실패 코드).
 임포트 산출물은 커밋하지 않으므로 원본을 옮긴 뒤에는 `App --import-models` 등으로 다시 임포트한다.
 """
 
 from __future__ import annotations
 
 import argparse
+import re
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from common.exit_code import ExitCode
@@ -31,6 +38,79 @@ from lint.asset_references import (FieldConfig, add_redirects, check_working_tre
 NAME_CHARACTERS = set("abcdefghijklmnopqrstuvwxyz0123456789_.-/")
 # 옮긴 뒤 옛 경로가 칸 밖에 남았는지 훑는 글 파일 — 경로 칸의 글 에셋 · 문서 · 출처 표 · 테스트 CMake.
 LEFTOVER_SUFFIX = (".xml", ".json", ".material", ".md", ".txt", ".cpp", ".h")
+# 팩 이름 바꾸기에서 팩 이름 문자열(시나리오 이름 · 콘텐츠 경로)을 고치는 글 파일 — 문서(.md)는 사람이 읽고 고친다(남은 목록에 찍힌다).
+PACK_STRING_SUFFIX = (".cpp", ".h", ".hpp", ".inl", ".py", ".cmake", ".json", ".xml")
+PACK_STRING_FILE_NAME = ("CMakeLists.txt",)
+GOLDEN_FOLDER = "golden"
+
+
+@dataclass(frozen=True)
+class PackRename:
+    """팩 이름 바꾸기(`game/<옛>` → `game/<새>`)의 이름 접두들."""
+    old_pack: str
+    new_pack: str
+
+    @property
+    def old_scenario_prefix(self) -> str:
+        return f"game.{self.old_pack}."
+
+    @property
+    def new_scenario_prefix(self) -> str:
+        return f"game.{self.new_pack}."
+
+
+@dataclass
+class PackStringCount:
+    scenario_name: int = 0   # `<Scenario name="game.<옛>.…">`
+    other_name: int = 0      # 그 밖의 `game.<옛>.` (시나리오 목록 · 체인 · 주석)
+    path: int = 0            # `game/<옛>/`
+
+
+def get_pack_rename(old_id: str, new_id: str) -> PackRename | None:
+    """두 id 가 모두 팩 뿌리(`game/<팩>`)면 팩 이름 바꾸기다."""
+    old_parts, new_parts = old_id.split("/"), new_id.split("/")
+    if len(old_parts) == 2 and len(new_parts) == 2 and old_parts[0] == new_parts[0] == "game":
+        return PackRename(old_parts[1], new_parts[1])
+    return None
+
+
+def is_domain_root(asset_id: str) -> bool:
+    """도메인 뿌리(`game/<팩>` · `dlc/<묶음>` · `common` …) — 그 아래 표 하나를 런타임 검색 순서가 읽는다."""
+    return make_redirect_table_id(asset_id) == f"{asset_id}/{REDIRECT_FILE_NAME}"
+
+
+def rewrite_pack_strings(text: str, rename: PackRename) -> tuple[str, PackStringCount]:
+    """글 속 `game.<옛>.` 시나리오 이름과 `game/<옛>/` 경로 접두를 새 팩 이름으로. 앞 글자가 낱말 글자(`mygame/empty/`)면 다른 낱말이라 두지 않는다."""
+    count = PackStringCount()
+    old_name, new_name = rename.old_scenario_prefix, rename.new_scenario_prefix
+    scenario_pattern = re.compile(r"(<Scenario\b[^>]*?\bname\s*=\s*[\"'])" + re.escape(old_name))
+    count.scenario_name = len(scenario_pattern.findall(text))
+    name_pattern = re.compile(r"(?<![A-Za-z0-9_.])" + re.escape(old_name))
+    text, name_total = name_pattern.subn(new_name, text)
+    count.other_name = name_total - count.scenario_name
+    path_pattern = re.compile(r"(?<![A-Za-z0-9_.])" + re.escape(f"game/{rename.old_pack}/"))
+    text, count.path = path_pattern.subn(f"game/{rename.new_pack}/", text)
+    return text, count
+
+
+def is_pack_string_file(relative_path: str) -> bool:
+    name = relative_path.rsplit("/", 1)[-1]
+    return (relative_path.lower().endswith(PACK_STRING_SUFFIX) or name in PACK_STRING_FILE_NAME) and name != REDIRECT_FILE_NAME   # 표는 옛 id 를 적는 글이다
+
+
+def list_golden_renames(list_index: list[str], rename: PackRename) -> list[tuple[str, str]]:
+    """골든 폴더의 `game.<옛>.…` 파일(그림 · 기록 메타)마다 (옛 경로, 새 경로) — 팩 폴더 밖 골든도 이름에 팩이 들면 함께."""
+    list_rename = []
+    for path in list_index:
+        folder, _, name = path.rpartition("/")
+        if folder.rsplit("/", 1)[-1] == GOLDEN_FOLDER and name.startswith(rename.old_scenario_prefix):
+            list_rename.append((path, f"{folder}/{rename.new_scenario_prefix}{name[len(rename.old_scenario_prefix):]}"))
+    return list_rename
+
+
+def rewrite_table_targets(text: str, list_rule: list[tuple[str, str, bool]]) -> str:
+    """함께 옮겨진 표의 `to` 를 새 자리로 — `from` 은 옛 id 라 그대로 둔다(정확한 줄이 접두 줄보다 먼저 풀린다)."""
+    return re.sub(r'(\bto=")([^"]*)(")', lambda match: match.group(1) + (rewrite_path(match.group(2), list_rule) or match.group(2)) + match.group(3), text)
 
 
 def to_asset_id(argument: str) -> str:
@@ -118,15 +198,18 @@ def move_sidecar(root: Path, old_path: str, new_path: str) -> None:
         raise RuntimeError(f"git add {new_meta} 실패: {result.stderr.strip()}")
 
 
-def write_redirects(root: Path, list_move: list[tuple[str, str]]) -> list[str]:
-    """옛 id 도메인의 표마다 줄을 더해 쓰고 `git add` 한다. 쓴 표 경로 목록을 돌려준다."""
-    map_move_by_table: dict[str, list[tuple[str, str]]] = {}
+def write_redirects(root: Path, list_move: list[tuple[str, str]], prefix_move: tuple[str, str] | None = None) -> list[str]:
+    """옛 id 도메인의 표마다 줄을 더해 쓰고 `git add` 한다. 쓴 표 경로 목록을 돌려준다.
+    @p prefix_move 가 있으면(도메인 뿌리 옮기기) 파일마다 줄 대신 새 도메인 표에 접두 한 줄 — 옛 도메인 폴더는 사라져 검색 순서가 읽지 않는다."""
+    map_move_by_table: dict[str, tuple[list[tuple[str, str]], list[tuple[str, str]]]] = {}
     for move in list_move:
-        map_move_by_table.setdefault(make_redirect_table_id(move[0]), []).append(move)
+        map_move_by_table.setdefault(make_redirect_table_id(move[0]), ([], []))[0].append(move)
+    if prefix_move is not None:
+        map_move_by_table.setdefault(make_redirect_table_id(prefix_move[1]), ([], []))[1].append(prefix_move)
     list_written = []
-    for table_id, list_table_move in map_move_by_table.items():
+    for table_id, (list_table_move, list_prefix_move) in map_move_by_table.items():
         table_path = root / CONTENT_FOLDER / table_id
-        text = add_redirects(table_path.read_text(encoding="utf-8") if table_path.is_file() else None, list_table_move)
+        text = add_redirects(table_path.read_text(encoding="utf-8") if table_path.is_file() else None, list_table_move, list_prefix_move)
         table_path.parent.mkdir(parents=True, exist_ok=True)
         table_path.write_text(text, encoding="utf-8", newline="\n")
         result = run_git(["add", f"{CONTENT_FOLDER}/{table_id}"], cwd=root)
@@ -171,26 +254,53 @@ def main(argv: list[str]) -> int:
         return ExitCode.CHECK_INVALID
     is_folder = (root / old_path).is_dir()
     list_rule = make_rules(old_id, new_id, is_folder, config)
+    rename = get_pack_rename(old_id, new_id)
+    is_root_move = is_folder and is_domain_root(old_id) and is_domain_root(new_id)
 
     if not args.dry_run:
         git_move(root, old_path, new_path)
         if not is_folder:
             move_sidecar(root, old_path, new_path)   # 폴더는 안의 .meta 가 함께 간다
-    fixed_count = 0
+    list_golden = list_golden_renames(list_index_files(root), rename) if rename is not None else []
+    for old_golden, new_golden in list_golden:
+        print(f"  [골든] {old_golden} -> {new_golden.rsplit('/', 1)[-1]}")
+        if not args.dry_run:
+            git_move(root, old_golden, new_golden)
+    fixed_count, string_file_count, string_count = 0, 0, PackStringCount()
     for relative_path in list_index_files(root):
-        if not is_referrer(relative_path, config) or not (root / relative_path).is_file():
+        if not (root / relative_path).is_file():
+            continue
+        is_field_file = is_referrer(relative_path, config)
+        is_string_file = rename is not None and is_pack_string_file(relative_path)
+        if not is_field_file and not is_string_file:
             continue
         text = (root / relative_path).read_bytes().decode("utf-8", "surrogateescape")
-        rewritten, edit_count = rewrite_references(relative_path, text, list_rule, config)
-        if edit_count == 0:
-            continue
-        fixed_count += 1
-        print(f"  {relative_path}: {edit_count}")
-        if not args.dry_run:
+        rewritten, edit_count = rewrite_references(relative_path, text, list_rule, config) if is_field_file else (text, 0)
+        if is_string_file:
+            rewritten, count = rewrite_pack_strings(rewritten, rename)
+            if count.scenario_name + count.other_name + count.path:
+                string_file_count += 1
+                string_count.scenario_name += count.scenario_name
+                string_count.other_name += count.other_name
+                string_count.path += count.path
+                print(f"  [팩 이름 문자열] {relative_path}: 시나리오 이름 {count.scenario_name} · 그 밖 이름 {count.other_name} · 경로 {count.path}")
+        if edit_count:
+            fixed_count += 1
+            print(f"  {relative_path}: {edit_count}")
+        if rewritten != text and not args.dry_run:
             (root / relative_path).write_bytes(rewritten.encode("utf-8", "surrogateescape"))
     print(f"[move-asset] {old_id} -> {new_id}: 참조 파일 {fixed_count} 개{' (dry run — 아무것도 바꾸지 않았다)' if args.dry_run else ''}")
+    if rename is not None:
+        print(f"[move-asset] 팩 이름 {rename.old_pack} -> {rename.new_pack}: 골든 {len(list_golden)} 개, 문자열 파일 {string_file_count} 개 — "
+              f"시나리오 이름 {string_count.scenario_name} · 그 밖 이름 {string_count.other_name} · 경로 {string_count.path}")
+    if is_root_move:
+        print(f"[move-asset] 도메인 뿌리 옮기기 — 리다이렉트는 {make_redirect_table_id(new_id)} 에 접두 한 줄(<PrefixRedirect from=\"{old_id}\" to=\"{new_id}\" />)")
     if not args.dry_run:
-        for table_path in write_redirects(root, list_moved_files(root, old_id, new_id, is_folder)):
+        moved_table = root / CONTENT_FOLDER / make_redirect_table_id(new_id)
+        if is_root_move and moved_table.is_file():   # 옛 팩의 표가 함께 옮겨졌다 — 가리키던 자리(to)가 새 팩 아래다
+            moved_table.write_text(rewrite_table_targets(moved_table.read_text(encoding="utf-8"), list_rule), encoding="utf-8", newline="\n")
+        list_move = [] if is_root_move else list_moved_files(root, old_id, new_id, is_folder)
+        for table_path in write_redirects(root, list_move, (old_id, new_id) if is_root_move else None):
             print(f"  [리다이렉트] {table_path}")
         report_leftovers(root, old_id)
     if args.dry_run:

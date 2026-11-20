@@ -22,6 +22,7 @@
 #include "DevTools/Net/NetListenLaunch.h"
 #include "DevTools/Profiling/FrameProfileSession.h"
 #include "DevTools/Profiling/LeakBaselineDetailSwitch.h"
+#include "DevTools/Profiling/Memory/MemoryExportSubsystem.h"
 #include "DevTools/Profiling/ProfilerLaunchSubsystem.h"
 #include "DevTools/Profiling/ProfilerTraceExport.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
@@ -72,6 +73,7 @@ namespace sw
         hooks._onFrameBegin     = SW_DELEGATE_METHOD( EngineFrameDelegate, &DevToolsHost::onFrameBegin, this );
         hooks._onAfterSceneTick = SW_DELEGATE_METHOD( EngineFrameDelegate, &DevToolsHost::onAfterSceneTick, this );
         hooks._onFrameEnd       = SW_DELEGATE_METHOD( EngineFrameExitDelegate, &DevToolsHost::onFrameEnd, this );
+        hooks._onWindowClosed   = SW_DELEGATE_METHOD( EngineFrameExitDelegate, &DevToolsHost::onWindowClosed, this );
         return hooks;
     }
 
@@ -129,6 +131,8 @@ namespace sw
         (void)startup.emplaceSubsystem<ProfilerLaunchSubsystem>();
         // 프레임 프로파일 실행(`-gv_profileFrames` · `-gv_profileSeconds`, 부하 시나리오의 측정 창) — 프레임 끝 훅이 돌린다. GPU 메모리 표는 렌더러 창구로 묻는다(전용 서버는 없다).
         (void)startup.emplaceSubsystem<FrameProfileSession>( parts._pRenderDriver );
+        // 메모리 스냅숏 내보내기 — 개발 명령 `memory.export` 의 워커 쓰기와 `-memory-export` 의 루프 끝 쓰기의 주인이다.
+        (void)startup.emplaceSubsystem<MemoryExportSubsystem>();
         // 틱별 상태 해시 이력(`-gv_stateHashHistory`) — 이력 서비스는 서비스 범위라 이미 섰다. 초기화 때 용량을 건다(서버 디버깅 S7).
         (void)startup.emplaceSubsystem<StateHashRecorder>();
         // 서버 포즈 고스트 — 서버가 가진 위치를 클라이언트 씬에 겹친다(`-gv_serverPoseOverlayPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
@@ -188,5 +192,13 @@ namespace sw
         if ( _pConsole != nullptr && _pConsole->pollStandardInputCommands() )
             return ProcessExitCode::Passed;
         return exitCode;
+    }
+
+    EngineFrameExit DevToolsHost::onWindowClosed( [[maybe_unused]] const EngineFrameContext& context )
+    {
+        // 메모리 스냅숏 내보내기(`-memory-export`) — 엔진 서비스가 아직 살아 있는 마지막 자리다(언리얼 `-csvExitOnCompletion` 자리).
+        if ( MemoryExportSubsystem* const pMemoryExport = engine::findSubsystem<MemoryExportSubsystem>() )
+            pMemoryExport->exportOnLoopEnd();
+        return kEngineFrameRunning;
     }
 } // namespace sw

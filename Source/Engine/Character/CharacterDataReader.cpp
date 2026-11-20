@@ -142,7 +142,7 @@ namespace sw
     float3 CharacterDataReader::parseFloat3Text( const XMLNode& node, const utf8* pName, const utf8* pText )
     {
         float3 value{};
-        if ( StringUtil::parseExactFloats( string_view( pText ), kTokenSeparators, value.data(), 3 ) == false )
+        if ( StringUtil::parseExactFloats( string_view( pText ), XMLReadUtil::kListSeparators, value.data(), 3 ) == false )
             addError( "Character.Vector3Invalid", node, string( "attribute '" ) + pName + "' is not three numbers: '" + pText + "'" );
         return value;
     }
@@ -211,7 +211,7 @@ namespace sw
     void CharacterDataReader::readNameList( const XMLNode& node, const utf8* pName, vector<hashed_string>& outListName )
     {
         outListName.clear();
-        for ( const string_view token : StringUtil::split( node.getAttributeText( pName ), kTokenSeparators, { ._bDropEmpty = true } ) )
+        for ( const string_view token : StringUtil::split( node.getAttributeText( pName ), XMLReadUtil::kListSeparators, { ._bDropEmpty = true } ) )
         {
             const hashed_string name( token );
             // 빈 이름의 철자(`none`)는 이름이 될 수 없다 — 목록에 빈 이름이 조용히 들어가지 않게 오류로 남긴다.

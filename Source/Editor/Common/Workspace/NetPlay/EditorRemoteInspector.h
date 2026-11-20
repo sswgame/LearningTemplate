@@ -75,6 +75,11 @@ namespace sw::editor
         [[nodiscard]] bool dumpObject( string_view name );
         /** @brief 입력줄 한 줄을 채널로 보내고 `> <줄>` 과 답을 결과 줄에 더합니다. 서버가 오류로 답하거나 끊기면 false 입니다. */
         [[nodiscard]] bool execute( string_view line );
+        /**
+         * @brief 명령 한 줄을 보내고 답 본문을 그대로 @p outBody 에 받습니다. 입력줄 결과에 남기지 않는다 — 큰 답(메모리 스냅숏 `memory.snapshot`)을 값으로 받는 쪽이 쓴다.
+         * @details 서버가 오류로 답하거나 끊기면 false 이고 이유는 `getLastError` 입니다.
+         */
+        [[nodiscard]] bool fetchReply( string_view commandLine, string& outBody ) { return request( commandLine, outBody ); }
 
         /** @brief 명령 이름 가운데 @p prefix 로 시작하는 것(대소문자 무시)을 @p outListName 에 담습니다. */
         void collectCompletions( string_view prefix, vector<string>& outListName ) const;

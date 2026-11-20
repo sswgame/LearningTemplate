@@ -32,6 +32,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/ISceneRenderBinding.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/ScenePreloadList.h"
 
@@ -41,6 +42,8 @@ namespace sw
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadInFlight, 8, "씬 프리로드가 한 번에 걸어 두는 읽기 요청 수 (프레임에 IO 를 몰지 않는 예산)" );
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadPinMegabytes, 256, "씬 프리로드가 캐시에 붙드는 에셋 바이트 합의 상한 (MB, 넘으면 오래 안 쓴 것부터 놓는다)" );
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadHoldFrames, 120, "로드가 끝난 뒤 프리로드를 붙들고 있는 프레임 수 (씬이 에셋을 잡을 시간)" );
+    // 언리얼 PIE 가 에디터 데이터로 World Partition 을 스트리밍하는 자리 — 셀은 쿠킹본에만 있어 소스 콘텐츠 실행(개발 · 시나리오)은 셀 경계를 밟지 못한다.
+    SW_GLOBAL_VARIABLE( bool, gv_sceneStreamSourceCells, false, "스트리밍하는 씬을 소스(XML)로 열 때 쿠커처럼 메모리에서 셀로 나눠 스트리밍한다 (쿠킹본은 이미 셀이 있다)" );
     SW_GLOBAL_VARIABLE( int32, gv_sceneRegisterComponentsPerFrame, 2000, "비동기로 지은 씬을 받을 때 프레임마다 부르는 컴포넌트 등록 · 로드 뒤 처리 수 (0 = 한 프레임에 모두)" );
 
     SceneManager::SceneManager()
@@ -407,6 +410,13 @@ namespace sw
         {
             ScopedTimer parseTimer{ "Scene.load.parse" };
             ok = doc.load( AssetID{ pathStr } );
+        }
+        // 소스 문서는 셀이 없다 — 켜 두면 쿠커와 같은 나누기로 셀을 만든다(셀 내용은 메모리에 든다). 나누지 못하면 쿠킹과 같은 오류이고 씬을 짓지 않는다.
+        const bool bSplitSourceCells = ok && gv_sceneStreamSourceCells && doc._sceneSettings._bStreaming && doc._listStreamingCell.empty();
+        if ( bSplitSourceCells && SceneCooker::splitStreamingCells( slot->_services, doc, doc._name ) == false )
+        {
+            SW_LOG_ERROR_ID( "SceneManager.SourceCellsNotSplit", "[SceneLoad] '%#' could not be split into streaming cells (gv_sceneStreamSourceCells) - it is not loaded", pathStr );
+            ok = false;
         }
 
         if ( slot->_bAccepting.load( std::memory_order_acquire ) == false )

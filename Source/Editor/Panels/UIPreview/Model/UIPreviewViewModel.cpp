@@ -589,6 +589,13 @@ namespace sw::editor
         return true;
     }
 
+    bool UIPreviewViewModel::canAddWidget( WidgetTree& tree, const hashed_string& typeName, Widget* pTarget ) const
+    {
+        const TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
+        uint32              index{ 0 };
+        return pRegistry != nullptr && pRegistry->findType( typeName ) != nullptr && UIPreviewLogic::findDropContainer( tree, pTarget, index ) != nullptr;
+    }
+
     bool UIPreviewViewModel::canDeleteSelected( const WidgetTree& tree ) const
     {
         const Widget* pWidget = tree.findWidgetByID( _selected );

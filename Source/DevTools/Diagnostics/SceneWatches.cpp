@@ -1,6 +1,6 @@
 /**
  * @file SceneWatches.cpp
- * @brief 씬의 자동화 감시 값입니다(`Scene.*` — 오브젝트 수 · 전환 중 · 트랜스폼 해시 · 게임 카메라 요). 감시 값 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 씬이 자기 감시 값을 등록합니다 — 실행기가 대신 정의하지 않습니다.
+ * @brief 씬의 자동화 감시 값입니다(`Scene.*` — 오브젝트 수 · 올라 있는 스트리밍 셀 수 · 전환 중 · 트랜스폼 해시 · 게임 카메라 요). 감시 값 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 씬이 자기 감시 값을 등록합니다 — 실행기가 대신 정의하지 않습니다.
  * @details 감시 값과 결정성 진단 스위치(`gv_automationHashDump`)만 든 개발 장치라 DevTools 에 둔다 — 배포 구성은 이 파일을 짓지 않는다(`SW_DEV_ONLY_SOURCE_PATTERNS`).
  */
 #include "pch.h"
@@ -20,6 +20,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneStreamingSubsystem.h"
 
 namespace sw
 {
@@ -40,6 +41,18 @@ namespace sw
             pManager->forEachGameObject( DevSceneIterationAccess::getKey(), [&count]( const GameObject* /*pObject*/ )
             { ++count; } );
             outValue = static_cast<float64>( count );
+            return true;
+        }
+
+        /**
+         * @brief 감시 값 `Scene.LoadedCellCount` 입니다. 활성 씬의 스트리밍 셀 조각 가운데 올라 있는(다 지어 드러난) 수입니다 — 셀을 스트리밍하지 않으면 0 입니다.
+         * @details 셀 경계 시나리오가 원점을 옮긴 뒤 셀이 오르고 내렸는지를 기다린다(`SceneStreamingSubsystem::getLoadedCellCount`).
+         */
+        [[nodiscard]] bool readSceneLoadedCellCount( const GameObjectManager* pManager, float64& outValue )
+        {
+            if ( pManager == nullptr )
+                return false;
+            outValue = static_cast<float64>( pManager->getSubsystem<SceneStreamingSubsystem>().getLoadedCellCount() );
             return true;
         }
 
@@ -100,6 +113,8 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_WATCH( sceneObjectCount, "Scene.ObjectCount", "Objects in the active scene", &readSceneObjectCount );
+    SW_AUTOMATION_WATCH( sceneLoadedCellCount, "Scene.LoadedCellCount", "Streaming cell fragments of the active scene that are loaded (built and shown) - 0 when it does not stream cells",
+                         &readSceneLoadedCellCount );
     SW_AUTOMATION_WATCH( sceneCameraYaw, "Scene.CameraYaw", "Yaw (degrees) the active scene's game camera looks along (world +Z is 0, toward +X is positive)", &readSceneCameraYaw );
     // 활동 수 없음: 비동기 씬 로드는 워커 잡 하나가 다 지은 씬을 끝에 넘긴다 — 프리로드 진행(`SceneManager::tryGetLoadProgress`)은 쿠킹한 프리로드 목록이 있을 때만 있어 Dev 실행에서는 낼 수 없다.
     SW_AUTOMATION_WALL_WATCH( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight", &readSceneTransitioning, nullptr );

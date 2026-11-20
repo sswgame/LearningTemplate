@@ -30,6 +30,7 @@ namespace sw
         , _shapeScale{ 1.0f, 1.0f, 1.0f }
         , _phase{ phase }
         , _bRebuildPending{ false }
+        , _bStreamingHeld{ false }
         , _bTeleportPending{ false }
         , _spatialEntry{}
     {
@@ -128,7 +129,7 @@ namespace sw
 
     bool PhysicsComponent::isSimulated() const
     {
-        return hasBegunPlay() && isActive() && isPendingDestroy() == false && getOwner() != nullptr;
+        return hasBegunPlay() && isActive() && isPendingDestroy() == false && getOwner() != nullptr && _bStreamingHeld == false;
     }
 } // namespace sw
 

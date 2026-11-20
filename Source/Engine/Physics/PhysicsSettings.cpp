@@ -70,6 +70,12 @@ namespace sw
             bValid = false;
         }
         // 3D 씬 용량은 데이터가 정한다 — 코드 기본값으로 채우지 않는다(감사 S-2).
+        if ( _streamingFloorProbeDistance <= 0.0f )
+        {
+            SW_LOG_ERROR_ID( "PhysicsSettings.StreamingFloorProbeMissing", "Physics settings need a positive _streamingFloorProbeDistance (%#) - the ray that finds support under bodies over unloaded streaming cells",
+                             _streamingFloorProbeDistance );
+            bValid = false;
+        }
         if ( _maxBodyCount == 0 || _maxBodyPairCount == 0 || _maxContactCount == 0 || _tempAllocatorBytes == 0 || _maxDebrisBodyCount == 0 )
         {
             SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsSettingsNeedCapacity",

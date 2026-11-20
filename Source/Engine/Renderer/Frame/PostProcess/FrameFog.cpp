@@ -230,7 +230,7 @@ namespace sw
         listRow[Internal::kRowLightGrid]    = Internal::packBits( bLights ? lightBuffer.getCount() : 0u, bGrid ? gridBase : 0u, bGrid ? 1u : 0u, 0u );
 
         const uint32 paramRowCount = static_cast<uint32>( _listScratchFogVolumeParam.size() );
-        if ( _fogVolumeParamBuffer.ensureCapacity( pDevice, rowStride, paramRowCount, kParamUsage, true, false, _listScratchFogVolumeParam.data() ) == false )
+        if ( _fogVolumeParamBuffer.ensureCapacity( pDevice, rowStride, paramRowCount, kParamUsage, true, false, nullptr ) == false )
         {
             _volumeState = FogVolumeState::BufferFailed;
             SW_LOG_ERROR_ONCE_ID( "FrameFog.FailedCreateVolumetricFog2", "Failed to create the volumetric fog parameter buffer - the fog is drawn without the light-scattering volume" );

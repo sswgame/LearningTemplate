@@ -203,11 +203,17 @@ namespace sw::editor
 
     bool MaterialGraphViewModel::addNode( string_view kindName, const float2& canvasPosition )
     {
+        return addAssetNode( kindName, canvasPosition, string_view{} );
+    }
+
+    bool MaterialGraphViewModel::addAssetNode( string_view kindName, const float2& canvasPosition, string_view assetPath )
+    {
         if ( MaterialGraphNodeRegistry::find( kindName ) == nullptr )
             return false;
         MaterialGraphNodeDef node;
-        node._kind     = string{ kindName };
-        node._position = canvasPosition;
+        node._kind      = string{ kindName };
+        node._position  = canvasPosition;
+        node._assetPath = string{ assetPath };
         for ( uint32 number = 1; node._name.empty(); ++number )
         {
             fixed_string<constant::buffer::kMax64> name;
@@ -348,7 +354,7 @@ namespace sw::editor
         if ( _previewPath == previewPaths._materialPath )
         {
             if ( writtenCount > 0 )
-                editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( AssetID{ _previewPath } );
+                (void)editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( AssetID{ _previewPath } ); // 실패는 캐시가 오류로 남기고 미리보기는 이전 판을 그린다
             return;
         }
         _previewPath = previewPaths._materialPath;

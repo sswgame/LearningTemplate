@@ -31,8 +31,14 @@ namespace sw
     class SW_API MaterialInstance final
     {
     public:
-        /** @brief 머티리얼 인스턴스 에셋 종류입니다(등록은 `MaterialInstance.cpp` 의 `SW_ASSET_TYPE`). 경로에 정해진 접미사가 없어 접미사를 두지 않는다. 판 0. */
-        static constexpr AssetTypeDef kAssetType{ "MaterialInstance", nullptr, 0, {}, 0, {} };
+        /** @brief 머티리얼 인스턴스 파일의 확장자입니다 — 셰이더 쿠커(`ShaderCookRequestCollector`)가 이 접미사로 인스턴스 에셋을 훑어 인스턴스가 고른 조합을 굽는다. */
+        static constexpr string_view kExtension = ".materialinstance";
+        /** @brief 머티리얼 인스턴스 파일의 접미사입니다(쿠킹하지 않는다). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 머티리얼 인스턴스 에셋 종류입니다(등록은 `MaterialInstance.cpp` 의 `SW_ASSET_TYPE`). 판 0. */
+        static constexpr AssetTypeDef kAssetType{ "MaterialInstance", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /**
          * @brief 생성 키입니다. create() 만 만들 수 있습니다.
@@ -72,6 +78,8 @@ namespace sw
 
         /** @brief 오버라이드만 있는 MaterialInstanceDef XML 을 로드합니다. 부모는 따로 설정합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief `loadFromAsset` 과 같지만 디스크 경로에서 읽습니다(쿠커가 훑은 파일 — `Material::loadFromDiskFile` 과 같은 자리). */
+        [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 인스턴스 XML 을 저장합니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /**
@@ -81,10 +89,15 @@ namespace sw
         MaterialRenderBinding getRenderBinding( const MaterialRenderInputs& inputs );
         /** @brief 오버라이드를 모두 지웁니다. */
         void clearOverrides();
-        /** @brief 키워드를 켭니다. */
-        void enableKeyword( hashed_string keyword );
-        /** @brief 키워드를 끕니다. */
-        void disableKeyword( hashed_string keyword );
+        /**
+         * @brief 부모가 선언한 런타임 정적 스위치(`bShaderFeature="0"`, 이름이나 키워드)를 켭니다. 받았으면 true 입니다.
+         * @details 부모가 없거나, 선언하지 않은 이름이거나, 에셋 상태만 쿠킹되는 스위치(`bShaderFeature="1"`)면 오류를 남기고 false 다 — 받으면 Dev 는 실시간 컴파일이
+         *          가리고 배포에서는 그 조합의 바이너리가 없어 대체 해시로 그린다. 정적 스위치를 고정으로 바꾸는 인스턴스는 `.materialinstance` 에셋으로 적는다(쿠커가 그 조합을 굽는다).
+         *          언리얼 MID 는 정적 스위치를 바꿀 수 없고(MIC 에셋만 — 쿠킹이 컴파일), 유니티 shader_feature 는 머티리얼 에셋이 쓴 키워드만 남긴다 — 여기도 같은 경계다.
+         */
+        [[nodiscard]] bool enableKeyword( hashed_string keyword );
+        /** @brief 부모가 선언한 런타임 정적 스위치를 끕니다. 규칙은 `enableKeyword` 와 같습니다. */
+        [[nodiscard]] bool disableKeyword( hashed_string keyword );
 
         /** @brief 부모 머티리얼을 설정합니다. */
         void setParent( Material* pParentMaterial );
@@ -108,8 +121,14 @@ namespace sw
         void setTextureParameter( hashed_string name, string_view textureAssetPath );
         /** @brief 품질 레벨을 설정합니다. */
         void setQualityLevel( MaterialQualityLevel level );
-        /** @brief 멀티컴파일 옵션을 선택합니다. */
-        void setMultiCompile( hashed_string name, string_view selectedOption );
+        /** @brief 부모가 선언한 멀티 컴파일 @p name 의 선택지 @p selectedOption 을 고릅니다. 부모가 없거나 모르는 이름 · 선택지면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool setMultiCompile( hashed_string name, string_view selectedOption );
+        /**
+         * @brief 이 인스턴스가 낼 수 있는 define 목록 전부와 그 퍼뮤테이션 해시입니다 — 인스턴스가 고른 상태 하나 + 부모의 런타임 스위치 조합(`Material::collectRuntimeSwitchVariants`).
+         * @details 셰이더 쿠커가 `.materialinstance` 에셋마다 부른다. 런타임 정의(`getCachedShaderDefines`)와 같은 퍼뮤테이션 사본(`makePermutations`)에서 시작한다.
+         *          부모가 없거나 부모가 선언하지 않은 덮어쓰기가 있으면 오류를 남기고 false 이며 목록은 비어 있다 — 쿠킹이 멈춘다(배포에서 대체 해시로 그리지 않게).
+         */
+        [[nodiscard]] bool collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const;
 
         /** @brief 부모 머티리얼을 반환합니다. */
         Material* getParent() const { return _pParentMaterial; }
@@ -209,8 +228,16 @@ namespace sw
         optional<uint32> findTextureSlot( hashed_string name ) const;
         /** @brief XML 텍스트에서 인스턴스를 로드합니다. */
         [[nodiscard]] bool loadFromXML( string_view xmlText );
+        /** @brief `enableKeyword` · `disableKeyword` 의 본문입니다. */
+        [[nodiscard]] bool setRuntimeSwitch( hashed_string keyword, bool bEnabled );
         /** @brief 정의 캐시가 더러우면 다시 만듭니다(`getCachedShaderDefines` · `getPermutationHash`). */
         void refreshCachedDefines() const;
+        /**
+         * @brief 부모 퍼뮤테이션 사본에 덮어쓰기(스위치 · 멀티 컴파일 · 품질)를 적용합니다. 부모가 선언하지 않은 덮어쓰기는 오류로 알리고 빼며 false 입니다.
+         * @details 런타임 정의와 쿠커가 이 하나로 같은 define 을 낸다(부모의 `computeShaderDefines` 로 넘긴다). 덮어쓰기는 define 글이 아니라 부모 칸의 값이라
+         *          켬 키워드와 끔 키워드(`keywordOff`)가 함께 들어가는 일이 없다.
+         */
+        bool makePermutations( MaterialPermutationDef& outPermutations ) const;
 
     private:
         Material*           _pParentMaterial;

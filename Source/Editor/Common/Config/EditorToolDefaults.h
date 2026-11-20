@@ -61,6 +61,10 @@ namespace sw::editor
         uint32 _undoBufferMegabytes{}; ///< 되돌리기 스택 하나가 쥘 바이트 한도(MB) — 언리얼 에디터 설정 Undo Buffer Size 와 같은 값이다(감사 E-13)
         PROPERTY( Required )
         float32 _documentAutosaveSeconds{}; ///< 문서 패널 자동 저장 사본의 주기(초) — dirty 문서를 이만큼마다 세션 폴더에 사본으로 둔다(`EditorDocumentAutosaveScheduler`, 감사 E-1)
+        PROPERTY( Required, Min = 1 )
+        uint32 _fileDropMaxMegabytes{}; ///< OS 에서 콘텐츠 브라우저로 놓은 파일 하나의 최대 크기(MB) — 넘으면 임포트하지 않고 거른다(`ContentBrowserFileDropPlan`)
+        PROPERTY( Required, Min = 1 )
+        uint32 _fileDropMaxCount{}; ///< 한 번 놓기에 임포트하는 최대 파일 수 — 넘은 뒤의 파일은 거른다(폴더 통째 놓기로 메인 스레드가 오래 서지 않게)
 
         /**
          * @brief 실행 중에 다시 읽을 애셋 확장자입니다. **비우면 처리기가 있는 확장자 전부**를 봅니다.

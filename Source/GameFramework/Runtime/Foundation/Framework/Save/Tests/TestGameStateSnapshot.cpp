@@ -232,7 +232,7 @@ SW_TEST_CASE( GameStateSnapshotTest, FailedRestoreKeepsScene )
     SW_REQUIRE_TRUE( save.size() > 16 );
     SW_REQUIRE_NOT_NULL( pScene->createGameObject( hashed_string( "AfterSave" ) ) ); // 찍은 뒤에 선 오브젝트 — 복원이 씬을 갈았다면 사라진다
 
-    // 마지막 섹션(컴포넌트 상태)의 끝이 잘린 봉투 — 앞의 씬 섹션은 온전하다.
+    // 마지막 섹션(씬 몫)의 끝이 잘린 봉투 — 앞의 씬 섹션은 온전하다.
     const expected<void, SnapshotRestoreFailure> result = snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, save.data(), static_cast<uint32>( save.size() - 1 ) );
     SW_REQUIRE_TRUE( result.has_value() == false );
     SW_EXPECT_TRUE( result.error() == SnapshotRestoreFailure::Rejected );

@@ -96,7 +96,7 @@ namespace sw
         static string getFileNamePart( string_view fullPath );
         /** @brief 경로의 파일 이름 부분을 뷰로 돌려줍니다(할당 없음). */
         static void getFileNamePart( string_view fullPath, string_view& outFileName );
-        /** @brief 경로에서 디렉터리만 반환합니다. */
+        /** @brief 경로에서 디렉터리만 반환합니다. 부모가 루트면 루트를 남기고(`/a` → `/`, `C:/a` → `C:/`), 루트 자신의 부모는 빈 글입니다. */
         static string getDirectoryPart( string_view fullPath );
         /** @brief 경로의 디렉터리 부분을 뷰로 돌려줍니다(할당 없음). */
         static void getDirectoryPart( string_view fullPath, string_view& outDirectoryPath );
@@ -168,7 +168,8 @@ namespace sw
          */
         static bool isSameDiskPath( string_view lhs, string_view rhs );
         /**
-         * @brief 경로 끝의 `/` · `\` 를 뗍니다(루트 `/` 는 남깁니다).
+         * @brief 경로 끝의 `/` · `\` 를 모두 뗍니다. 루트 `/` 와 드라이브 루트 `C:/` · `C:\` 는 남깁니다(`C:` 는 그 드라이브의 현재 폴더라 다른 경로다).
+         * @details 끝 구분자 규칙은 이 하나다 — `getDirectoryPart` · `joinPath` 도 같은 규칙을 쓴다. 구분자는 바꾸지 않는다(필요하면 `normalizeSeparators` 를 먼저).
          */
         static string trimTrailingSlashes( string_view path );
         /**

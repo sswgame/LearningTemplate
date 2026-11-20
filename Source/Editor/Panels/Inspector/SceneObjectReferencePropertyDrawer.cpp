@@ -8,6 +8,7 @@
 #include "pch.h"
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
@@ -35,6 +36,7 @@ namespace sw::editor
                 const bool bOpen = EditorWidgets::beginCombo( "##sceneObjectReference", _choices._preview.c_str(), ImGuiComboFlags_HeightLarge );
                 if ( bWarn )
                     EditorThemeUtil::popTextColor();
+                acceptObjectDrop( row, model );
                 if ( bOpen == false )
                     return true;
 
@@ -57,6 +59,22 @@ namespace sw::editor
             }
 
         private:
+            /**
+             * @brief 계층 행(`GameObject` 페이로드)을 콤보에 놓으면 그 오브젝트를 가리키게 씁니다(유니티 · 언리얼의 오브젝트 칸 끌어 놓기).
+             * @details 참조를 만들 수 없는 오브젝트(저장한 적 없는 씬)는 놓을 자리를 열지 않는다(R11). 참조는 놓은 순간에만 만든다 — 끄는 동안 지나간 오브젝트에 파일 id 를 주지 않는다.
+             */
+            void acceptObjectDrop( const PropertyValueRow& row, PropertyGridViewModel& model ) const
+            {
+                EditorDragPayload dragged{};
+                uint64            droppedObjectID{ 0 };
+                if ( EditorInputGUI::peekPayload( EditorPayloadKindSet{ EditorPayloadKind::GameObject }, dragged ) == false ||
+                     SceneObjectReferencePickerState::canReferenceObject( dragged._id ) == false || EditorWidgets::acceptObjectDrop( droppedObjectID ) == false )
+                    return;
+                string valueText;
+                if ( SceneObjectReferencePickerState::makeObjectValueText( model, row._rowID, droppedObjectID, valueText ) && valueText != _choices._currentText )
+                    model.setPropertyText( row._rowID, valueText, "Pick Scene Object" );
+            }
+
             /** @brief 씬 하나의 오브젝트 줄을 보이고, 지금 값과 다른 줄을 골랐으면 그 값 글을 돌려줍니다. */
             static const string* drawSceneChoices( const SceneObjectReferenceScene& scene, const string& currentText )
             {

@@ -207,6 +207,17 @@ namespace sw
         return _pState->_sharedTable.countLive();
     }
 
+    void MeshCache::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
+    {
+        _pState->_sharedTable.forEachLive( [&outListEntry]( const string& key, const Mesh& mesh, uint32 referenceCount )
+        {
+            // 그리는 흐름(LOD 0 + 낮은 단계)의 정점 · 인덱스가 GPU 버퍼이고, CPU 사본은 LOD 0 이다(물리 · 내비 · 피킹이 읽는다).
+            const uint64 gpuBytes = static_cast<uint64>( mesh.getDrawVertexCount() ) * sizeof( RHIVertex ) + static_cast<uint64>( mesh.getDrawIndexCount() ) * sizeof( uint32 );
+            const uint64 cpuBytes = sizeof( Mesh ) + static_cast<uint64>( mesh.getVertexCount() ) * sizeof( RHIVertex ) + static_cast<uint64>( mesh.getIndexCount() ) * sizeof( uint32 );
+            outListEntry.push_back( AssetMemoryEntry{ key, cpuBytes, gpuBytes, referenceCount } );
+        } );
+    }
+
     AssetPin MeshCache::pinAsset( string_view relativePath )
     {
         if ( MeshAssetFormat::isMeshAssetPath( relativePath ) == false )
@@ -274,11 +285,13 @@ namespace sw
         _pState->_pBoundDevice.store( pDevice, std::memory_order_release );
     }
 
-    void MeshCache::reload( const AssetID& assetID )
+    ReloadResult MeshCache::reload( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
-        (void)reloadShared( relativePath ); // 사용 중인 메시가 없으면 다시 읽을 것이 없다. 다음에 읽는 쪽이 새 내용을 읽는다
-        invalidateDerivedCaches();          // 메시에서 기하를 만든 위 층 캐시(물리 셰이프)를 비운다. 이미 만든 바디는 이전 기하 그대로다
+        // 사용 중인 메시가 없으면 다시 읽을 것이 없다. 다음에 읽는 쪽이 새 내용을 읽는다. 읽지 못하면 `reloadShared` 가 오류를 남기고 이전 정점을 지킨다.
+        const ReloadResult result = isCached( relativePath ) == false ? ReloadResult::NotTracked : ( reloadShared( relativePath ) ? ReloadResult::Reloaded : ReloadResult::Failed );
+        invalidateDerivedCaches(); // 메시에서 기하를 만든 위 층 캐시(물리 셰이프)를 비운다. 이미 만든 바디는 이전 기하 그대로다
+        return result;
     }
 } // namespace sw
 

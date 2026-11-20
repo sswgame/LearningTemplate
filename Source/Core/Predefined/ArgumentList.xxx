@@ -1,8 +1,12 @@
 /**
  * @file ArgumentList.xxx
  * @brief 엔진이 아는 커맨드라인 인자 목록입니다(CommandLineArgument 열거와 등록 정보가 함께 씁니다).
- * @details include 하기 전에 SW_REGISTER_ARGUMENT( Name, defaultValue, bUseDefaultValue, ... ) 를 정의하십시오.
+ * @details include 하기 전에 SW_REGISTER_ARGUMENT( Name, Usage, defaultValue, bUseDefaultValue, ... ) 를 정의하십시오.
  *          Name             : 열거자 이름. 코드가 쓰는 이름이고 명령줄 키가 아닙니다.
+ *          Usage            : 쓰는 구성(`CommandLineArgumentUsage` — `All` · `Dev` · `Test` · `Server` · `AndroidDev`). 받지 않는 구성은 철자를 등록하지 않아
+ *                             주면 "알 수 없는 인자" 로 기동이 멈춘다(조용히 무시하지 않는다). 열거값은 모든 구성에 있어 읽는 코드는 그대로 컴파일되고 읽으면 "주지 않음" 이다.
+ *                             `All` 은 배포에서도 듣는 것(배포 App · Server 가 스스로 굽는 `-cook-all` 길 포함), `Dev` 는 개발 도구 · 진단, `Test` 는 단위 테스트 · 자동화 장치,
+ *                             `Server` 는 서버 코드가 있는 타깃(Game · Server), `AndroidDev` 는 Android 개발 구성만이다(언리얼 `UE_BUILD_SHIPPING` 에서 빠지는 명령줄과 같은 자리).
  *          defaultValue     : bUseDefaultValue 가 켜져 있을 때 반환할 값. 저장 타입은 bool · int32 · float32 · string ·
  *                             `CommandLineDiskPath{}`(디스크 경로 - 받을 때 기동 작업 폴더 기준으로 절대화, 빈 값은 오류) 다섯뿐입니다. **이 값의 타입이 곧 "값을 반드시 적어야 하는가" 입니다.** bool 은 `-key` 만 적을
  *                             수 있고(그때 true), 나머지는 `-key=value` 를 요구합니다(별도 칸을 두지 않습니다).
@@ -25,239 +29,244 @@
  */
 
 // 받는 인자 목록(철자와 값 모양)을 표준 출력에 찍고 끝낸다 — 창 · 렌더러를 세우지 않는 헤드리스 작업이다. 설명은 이 문서다
-SW_REGISTER_ARGUMENT( HELP, false, false, "help" )
+SW_REGISTER_ARGUMENT( HELP, All, false, false, "help" )
 
 // 창 클라이언트 영역 너비 · 높이(픽셀) — EngineConfig · 플레이어 해상도보다 이긴다
-SW_REGISTER_ARGUMENT( WIDTH, 0, false, "W" )
-SW_REGISTER_ARGUMENT( HEIGHT, 0, false, "H" )
+SW_REGISTER_ARGUMENT( WIDTH, All, 0, false, "W" )
+SW_REGISTER_ARGUMENT( HEIGHT, All, 0, false, "H" )
 
 // 창 틀 왼쪽 위의 화면 좌표(픽셀) — 둘을 함께 준다(하나만 주면 창을 만들지 않고 멈춘다). 없으면 플랫폼이 놓는다
-SW_REGISTER_ARGUMENT( WINDOW_X, 0, false, "WinX" )
-SW_REGISTER_ARGUMENT( WINDOW_Y, 0, false, "WinY" )
+SW_REGISTER_ARGUMENT( WINDOW_X, All, 0, false, "WinX" )
+SW_REGISTER_ARGUMENT( WINDOW_Y, All, 0, false, "WinY" )
 
 // 창을 바둑판의 이 칸(0 부터, 왼쪽 위에서 행 우선)에 놓는다 — 열 수 `-WinTileColumns` 와 함께 준다. 칸 간격은 창이 자기 틀 두께(`IWindow::tryGetFrameExtents`)와 클라이언트 크기로 정한다.
 // `-WinX` · `-WinY` 와 함께 주면 창을 만들지 않고 멈춘다. 백엔드마다 시나리오 실행 · 에디터 멀티 프로세스 재생이 자식 창을 나란히 놓는다
-SW_REGISTER_ARGUMENT( WINDOW_TILE, 0, false, "WinTile" )
-SW_REGISTER_ARGUMENT( WINDOW_TILE_COLUMNS, 0, false, "WinTileColumns" )
+SW_REGISTER_ARGUMENT( WINDOW_TILE, Dev, 0, false, "WinTile" )
+SW_REGISTER_ARGUMENT( WINDOW_TILE_COLUMNS, Dev, 0, false, "WinTileColumns" )
 
 // 수직 동기화를 켠다 — EngineConfig · 플레이어 값보다 이긴다
-SW_REGISTER_ARGUMENT( VSYNC, false, false, "vsync" )
+SW_REGISTER_ARGUMENT( VSYNC, All, false, false, "vsync" )
 
 // 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx12` · `-vk` · `-wgpu` …)
 #include "sw/config/CookContract.gen.h"
-#define SW_REGISTER_RHI_BACKEND_ARGUMENT( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) SW_REGISTER_ARGUMENT( Argument, false, false, CommandLineName )
+#define SW_REGISTER_RHI_BACKEND_ARGUMENT( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) SW_REGISTER_ARGUMENT( Argument, All, false, false, CommandLineName )
 SW_RHI_BACKEND_TABLE( SW_REGISTER_RHI_BACKEND_ARGUMENT )
 #undef SW_REGISTER_RHI_BACKEND_ARGUMENT
 
 // 에디터 모듈을 올린다(Dev 만) — 없으면 에디터 없이 게임만 뜬다
-SW_REGISTER_ARGUMENT( ENABLE_EDITOR, false, false, "EnableEditor" )
+SW_REGISTER_ARGUMENT( ENABLE_EDITOR, Dev, false, false, "EnableEditor" )
 
 // 시작 언어(`ko_kr` · `en_us` …)
-SW_REGISTER_ARGUMENT( LANGUAGE, "", false, "lang" )
+SW_REGISTER_ARGUMENT( LANGUAGE, All, "", false, "lang" )
 
 // 셰이더를 모든 백엔드의 바이너리로 쿠킹하고 끝낸다(헤드리스). 쓸 폴더는 `-cooked-dir=<폴더>` 다(`<폴더>/<도메인>/shaders/bin/<백엔드>` — 팩이 거기서 담는다). 개발 실행은 굽지 않아도 돈다(쓰일 때 컴파일)
-SW_REGISTER_ARGUMENT( COOK_SHADERS, false, false, "cook-shaders" )
+SW_REGISTER_ARGUMENT( COOK_SHADERS, Dev, false, false, "cook-shaders" )
 // `--cook-shaders` 와 함께: 표본 규칙(`Config/Dev/ShaderCookSample.json` 의 축 — 소스 · 진입점 · 스테이지 · 퍼뮤테이션 define)의 값마다 한 번 덮는 요청만 굽는다. 빈 쿠킹 폴더에만 굽는다(채워졌으면 실패)
-SW_REGISTER_ARGUMENT( COOK_SHADERS_SAMPLE, false, false, "cook-shaders-sample" )
+SW_REGISTER_ARGUMENT( COOK_SHADERS_SAMPLE, Dev, false, false, "cook-shaders-sample" )
 
 // 씬과 프리팹을 바이너리(SCN1, PFB2)로 쿠킹하고 끝낸다(VAT · 내비메시 포함). 쓸 폴더는 `-cooked-dir=<폴더>` 다
-SW_REGISTER_ARGUMENT( COOK_SCENES, false, false, "cook-scenes" )
+SW_REGISTER_ARGUMENT( COOK_SCENES, Dev, false, false, "cook-scenes" )
 
 // 리소스 팩(engine · common · game_<팩>.pack)을 `-pack-dir=<폴더>` 에 굽고 끝낸다. 스테이징(`-cooked-dir`)의 쿠킹 산출물을 함께 담는다. `-game=` 을 주면 그 게임 팩만, 없으면 모든 게임 팩이다
-SW_REGISTER_ARGUMENT( COOK_PACKS, false, false, "cook-packs" )
+SW_REGISTER_ARGUMENT( COOK_PACKS, Dev, false, false, "cook-packs" )
 
 // 씬 쿠킹(`-cook-scenes`)과 팩 쿠킹(`-cook-packs`)을 차례로 하고 끝낸다 — 빌드의 CookAssets 타깃과 배포 패키징이 부른다
-SW_REGISTER_ARGUMENT( COOK_ALL, false, false, "cook-all" )
+SW_REGISTER_ARGUMENT( COOK_ALL, All, false, false, "cook-all" )
 
 // `-cook-scenes` · `-cook-packs` · `-cook-all` 이 쿠킹 결과를 쓸 스테이징 폴더
-SW_REGISTER_ARGUMENT( COOKED_DIR, CommandLineDiskPath{}, false, "cooked-dir" )
+SW_REGISTER_ARGUMENT( COOKED_DIR, All, CommandLineDiskPath{}, false, "cooked-dir" )
 
 // 셰이더 DDC 폴더(기본은 실행 파일 폴더의 `Saved/ShaderCompileCache`) — 빈 캐시에서 굽기를 보는 테스트가 빌드 폴더가 함께 쓰는 DDC 를 지우지 않게 제 폴더를 준다
-SW_REGISTER_ARGUMENT( SHADER_DDC_DIR, CommandLineDiskPath{}, false, "shader-ddc-dir" )
+SW_REGISTER_ARGUMENT( SHADER_DDC_DIR, Dev, CommandLineDiskPath{}, false, "shader-ddc-dir" )
 
 // 이 실행이 컴파일 · 캐시에서 얻은 셰이더 요청을 끝날 때 이 파일(`*.shaderrequests`)에 적는다 — 다음 묶음 검증이 시간을 재기 전에 그 목록만 컴파일한다(언리얼 Shader Pipeline Cache 기록). 백엔드별 부모는 자식마다 `.<백엔드>` 를 붙여 넘긴다
-SW_REGISTER_ARGUMENT( SHADER_REQUEST_LOG, CommandLineDiskPath{}, false, "shader-request-log" )
+SW_REGISTER_ARGUMENT( SHADER_REQUEST_LOG, Dev, CommandLineDiskPath{}, false, "shader-request-log" )
 // `--cook-shaders` 와 함께: 모든 퍼뮤테이션 대신 이 폴더의 요청 기록(`-shader-request-log` 이 쓴 `*.shaderrequests`)만 컴파일해 셰이더 DDC 를 채우고 끝낸다. 쿠킹본은 쓰지 않는다(`-cooked-dir` 가 필요 없다)
-SW_REGISTER_ARGUMENT( SHADER_REQUEST_DIR, CommandLineDiskPath{}, false, "shader-request-dir" )
+SW_REGISTER_ARGUMENT( SHADER_REQUEST_DIR, Dev, CommandLineDiskPath{}, false, "shader-request-dir" )
 
 // `-cook-packs` · `-cook-all` 이 팩을 쓸 폴더
-SW_REGISTER_ARGUMENT( PACK_DIR, CommandLineDiskPath{}, false, "pack-dir" )
+SW_REGISTER_ARGUMENT( PACK_DIR, All, CommandLineDiskPath{}, false, "pack-dir" )
 
 // `-cook-packs` · `-cook-all` 이 배포 빌드의 팩을 굽는다 — 자동화 시나리오를 담지 않는다. 쿠킹하는 App 이 개발 구성이어도(교차 빌드는 호스트 개발 App 이 굽는다) 팩은 대상 구성을 따른다
-SW_REGISTER_ARGUMENT( PACK_FOR_SHIPPING, false, false, "pack-for-shipping" )
+SW_REGISTER_ARGUMENT( PACK_FOR_SHIPPING, All, false, false, "pack-for-shipping" )
 
 // 개발 구성에서도 배포처럼 쿠킹한 팩만 읽는다(낱개 파일 · 씬 XML · 라이브 셰이더 컴파일 없이) — 배포 읽기 경로를 배포 빌드 없이 확인한다. 팩이 먼저 있어야 한다(`-cook-all`)
-SW_REGISTER_ARGUMENT( COOKED_CONTENT, false, false, "cooked-content" )
+SW_REGISTER_ARGUMENT( COOKED_CONTENT, Dev, false, false, "cooked-content" )
 
 // Android 개발 구성: 팩을 APK 대신 PC 의 Fileserve 서버(`py -3 -m Scripts fileserve`)에서 받아 앱 전용 폴더 `FileServe/` 에 거울로 두고 읽는다. 값은 `http://<호스트>:<포트>`(USB 는 `adb reverse tcp:<포트> tcp:<포트>` 뒤 127.0.0.1).
 // 한도 · 시한은 EngineConfig `_fileServe`. 쓰는 곳(AndroidMain)이 있는 구성에서만 등록한다 — 데스크톱 · 배포 구성에서 주면 모르는 인자라 기동이 멈춘다(조용히 무시하지 않는다)
-#if defined( SW_PLATFORM_ANDROID ) && !defined( SW_SHIPPING )
-SW_REGISTER_ARGUMENT( FILESERVE, "", false, "fileserve" )
-#endif
+SW_REGISTER_ARGUMENT( FILESERVE, AndroidDev, "", false, "fileserve" )
 
 // `-cook-packs` · `-cook-all` 이 팩과 함께 `-pack-dir` 에 남기는 빌드 내용 목록(`base.packbuild.xml` — 설치된 빌드의 출처)의 빌드 번호. 비우면 번호도 내용 목록도 없는 `patching="none"` 기록을 남긴다(패치를 쓰지 않는 빌드).
 // `-make-patch` 에서는 새 빌드 번호다
-SW_REGISTER_ARGUMENT( PACK_BUILD, "", false, "pack-build" )
+SW_REGISTER_ARGUMENT( PACK_BUILD, All, "", false, "pack-build" )
 
 // 새 빌드의 팩(`-pack-dir`)과 이전 빌드의 내용 목록(`-patch-base=<파일>.packbuild.xml`)의 차이로 패치 팩 · 패치 목록 · 새 빌드의 내용 목록을 `-patch-dir` 에 만들고 끝낸다. 새 빌드 번호는 `-pack-build` 다
-SW_REGISTER_ARGUMENT( MAKE_PATCH, false, false, "make-patch" )
+SW_REGISTER_ARGUMENT( MAKE_PATCH, Dev, false, false, "make-patch" )
 
 // `-make-patch` 의 이전 빌드 내용 목록 파일
-SW_REGISTER_ARGUMENT( PATCH_BASE, CommandLineDiskPath{}, false, "patch-base" )
+SW_REGISTER_ARGUMENT( PATCH_BASE, Dev, CommandLineDiskPath{}, false, "patch-base" )
 
 // `-make-patch` 가 패치를 쓸 폴더
-SW_REGISTER_ARGUMENT( PATCH_DIR, CommandLineDiskPath{}, false, "patch-dir" )
+SW_REGISTER_ARGUMENT( PATCH_DIR, Dev, CommandLineDiskPath{}, false, "patch-dir" )
 
 // `-make-patch` 가 패치 목록에 서명할 개인 키(ES256 P-256, PKCS#8 PEM) 파일 경로. 개인 키는 저장소에 두지 않고 이 인자로만 받는다. 비우면 서명하지 않는다(서명 없는 패치)
-SW_REGISTER_ARGUMENT( PATCH_SIGN_KEY, CommandLineDiskPath{}, false, "patch-sign-key" )
+SW_REGISTER_ARGUMENT( PATCH_SIGN_KEY, Dev, CommandLineDiskPath{}, false, "patch-sign-key" )
 
 // 쿠킹 스테이징(`-cooked-dir`)의 셰이더 바이너리가 지금 소스에서 나온 것인지(`cook.stamp` · 매니페스트) 쿠킹 표의 모든 백엔드로 보고, 문제가 있으면 실패로 끝난다.
 // 팩을 구울 때(`-cook-all` · `-cook-packs`)는 이 인자 없이도 셰이더를 굽고 같은 판정을 한다
-SW_REGISTER_ARGUMENT( VERIFY_SHADERS, false, false, "verify-shaders" )
+SW_REGISTER_ARGUMENT( VERIFY_SHADERS, Dev, false, false, "verify-shaders" )
 
 // 전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<게임>.json`(`-game=` 으로 고른 게임). Shipping 도 디스크에서 읽는다.
-SW_REGISTER_ARGUMENT( SERVER_CONFIG, CommandLineDiskPath{}, false, "server-config" )
+SW_REGISTER_ARGUMENT( SERVER_CONFIG, Server, CommandLineDiskPath{}, false, "server-config" )
 
 // 전용 서버가 설정(`-server-config`)을 읽고 칸 사이 규칙(운영 포트 바인드 · 토큰, 관리 채널 토큰, 크래시 동의)을 본 뒤 포트를 열지 않고 끝낸다.
 // 맞으면 종료 0, 틀리면 종료 11(`LoadError`) — 배포 이미지 빌드(`Scripts/package/server_image.py`)와 CI 가 돌린다
-SW_REGISTER_ARGUMENT( CHECK_CONFIG, false, false, "check-config" )
+SW_REGISTER_ARGUMENT( CHECK_CONFIG, Server, false, false, "check-config" )
 
 // 돌릴 게임(Dev 만) — `Source/Games/<이름>`. 비우면 빌드의 활성 게임(`SW_ACTIVE_GAME`), 다른 게임은 같은 빌드가 함께 지은 것(`SW_GAMES`, `Bin/Games/<이름>/`)이어야 한다.
 // Shipping 은 구운 게임 하나라 보지 않는다(`GameSelection`)
-SW_REGISTER_ARGUMENT( GAME, "", false, "game" )
+SW_REGISTER_ARGUMENT( GAME, All, "", false, "game" )
+
+// 이 Experience(`<팩>/experiences/<이름>.experience.xml`)로 들어간다(Dev 만) — 첫 씬(`-gv_firstScene`)보다 위다. Shipping 은 보지 않는다(`GameSelection::getLaunchExperience`)
+SW_REGISTER_ARGUMENT( EXPERIENCE, Dev, "", false, "experience" )
 
 // 전용 서버를 Windows 서비스(SCM)로 돈다(`Server --service`). SCM 이 띄운 프로세스만 된다.
-SW_REGISTER_ARGUMENT( SERVICE, false, false, "service" )
+SW_REGISTER_ARGUMENT( SERVICE, Server, false, false, "service" )
 
 // 등록된 리플렉션 타입(엔진 · GameFramework · 킷 · 게임)으로 Markdown API 문서를 그 폴더에 쓰고 끝난다(헤드리스). 빌드 산출물이라 커밋하지 않는다.
-SW_REGISTER_ARGUMENT( WRITE_REFLECTION_DOCS, CommandLineDiskPath{}, false, "write-reflection-docs" )
+SW_REGISTER_ARGUMENT( WRITE_REFLECTION_DOCS, Dev, CommandLineDiskPath{}, false, "write-reflection-docs" )
 
 // 텍스처 원본(`textures_raw/`)을 DDS 로 임포트한다 · 원본과 DDS 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
-SW_REGISTER_ARGUMENT( IMPORT_TEXTURES, false, false, "import-textures" )
-SW_REGISTER_ARGUMENT( CHECK_TEXTURES, false, false, "check-textures" )
+SW_REGISTER_ARGUMENT( IMPORT_TEXTURES, Dev, false, false, "import-textures" )
+SW_REGISTER_ARGUMENT( CHECK_TEXTURES, Dev, false, false, "check-textures" )
 
 // 모든 배포 대상(`EngineConfig::_textureFormats`)의 형식 변형(`a.astc.dds` — ASTC · ETC2)을 원본에서 굽는다 · 맞는지 보기만 한다. 팩은 대상마다 같고 실행이 장치에 맞는 변형을 고른다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
-SW_REGISTER_ARGUMENT( COOK_TEXTURE_VARIANTS, false, false, "cook-texture-variants" )
-SW_REGISTER_ARGUMENT( CHECK_TEXTURE_VARIANTS, false, false, "check-texture-variants" )
+SW_REGISTER_ARGUMENT( COOK_TEXTURE_VARIANTS, Dev, false, false, "cook-texture-variants" )
+SW_REGISTER_ARGUMENT( CHECK_TEXTURE_VARIANTS, Dev, false, false, "check-texture-variants" )
 
 // 모델 원본(`models_raw/` 의 glTF)을 `.mesh` 로 임포트한다 · 원본과 `.mesh` 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
-SW_REGISTER_ARGUMENT( IMPORT_MODELS, false, false, "import-models" )
-SW_REGISTER_ARGUMENT( CHECK_MODELS, false, false, "check-models" )
+SW_REGISTER_ARGUMENT( IMPORT_MODELS, Dev, false, false, "import-models" )
+SW_REGISTER_ARGUMENT( CHECK_MODELS, Dev, false, false, "check-models" )
 
 // 음성(`voice/` 폴더의 .wav · .ogg)을 분석해 곁에 비즘 트랙(`.visemes.xml`)을 쓴다 — 립싱크 오프라인 분석(엔진 일, 헤드리스).
 // `-lipsync-dir` 을 주면 곁이 아니라 그 폴더 아래 같은 리소스 상대 경로에 쓴다(소스 트리를 건드리지 않는 실행 — ctest `Tool.ImportLipSync`)
-SW_REGISTER_ARGUMENT( IMPORT_LIPSYNC, false, false, "import-lipsync" )
-SW_REGISTER_ARGUMENT( LIPSYNC_DIR, CommandLineDiskPath{}, false, "lipsync-dir" )
+SW_REGISTER_ARGUMENT( IMPORT_LIPSYNC, Dev, false, false, "import-lipsync" )
+SW_REGISTER_ARGUMENT( LIPSYNC_DIR, Dev, CommandLineDiskPath{}, false, "lipsync-dir" )
 
 // 리타깃 베이크. 값은 `<프로필 *.retarget.xml>,<원본 .animclip>,<출력 .animclip>` 이다. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 베이크하고 끝낸다(헤드리스).
-SW_REGISTER_ARGUMENT( BAKE_RETARGET, "", false, "bake-retarget" )
+SW_REGISTER_ARGUMENT( BAKE_RETARGET, Dev, "", false, "bake-retarget" )
 
 // 프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits).
-SW_REGISTER_ARGUMENT( RENDER_PORTRAITS, "", false, "render-portraits" )
-SW_REGISTER_ARGUMENT( PORTRAIT_SIZE, 256, false, "portrait-size" )
-SW_REGISTER_ARGUMENT( PORTRAIT_DIR, CommandLineDiskPath{}, false, "portrait-dir" )
+SW_REGISTER_ARGUMENT( RENDER_PORTRAITS, Dev, "", false, "render-portraits" )
+SW_REGISTER_ARGUMENT( PORTRAIT_SIZE, Dev, 256, false, "portrait-size" )
+SW_REGISTER_ARGUMENT( PORTRAIT_DIR, Dev, CommandLineDiskPath{}, false, "portrait-dir" )
 
 // 높이장 원본(`heightfields_raw/` 의 16 비트 PNG · `.r16`)을 `.heightfield` 로 임포트한다 · 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
-SW_REGISTER_ARGUMENT( IMPORT_HEIGHTFIELDS, false, false, "import-heightfields" )
-SW_REGISTER_ARGUMENT( CHECK_HEIGHTFIELDS, false, false, "check-heightfields" )
+SW_REGISTER_ARGUMENT( IMPORT_HEIGHTFIELDS, Dev, false, false, "import-heightfields" )
+SW_REGISTER_ARGUMENT( CHECK_HEIGHTFIELDS, Dev, false, false, "check-heightfields" )
 
 // 로컬라이제이션 글 수집(에디터 모듈의 `LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다. 소스 트리가 있어야 하고 Dev 빌드에서만 된다.
 // `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다.
-SW_REGISTER_ARGUMENT( GATHER_TEXT, false, false, "gather-text" )
-SW_REGISTER_ARGUMENT( CHECK_TEXT, false, false, "check-text" )
-SW_REGISTER_ARGUMENT( LOC_PROJECT, "", false, "loc-project" )
+SW_REGISTER_ARGUMENT( GATHER_TEXT, Dev, false, false, "gather-text" )
+SW_REGISTER_ARGUMENT( CHECK_TEXT, Dev, false, false, "check-text" )
+SW_REGISTER_ARGUMENT( LOC_PROJECT, Dev, "", false, "loc-project" )
 
 // 에셋 참조 검사 — 글 에셋 · 테스트 CMake 의 경로 칸(`Config/Dev/AssetReferenceFields.json`)이 모두 있는 것을 가리키는지, 리플렉션 `AssetPath` 프로퍼티가
 // 모두 그 목록에 있는지 본다(ctest `ToolCheckAssetRefs`). 에디터 모듈의 일이라 Dev 빌드에서만 된다.
-SW_REGISTER_ARGUMENT( CHECK_ASSET_REFS, false, false, "check-asset-refs" )
+SW_REGISTER_ARGUMENT( CHECK_ASSET_REFS, Dev, false, false, "check-asset-refs" )
 
 // 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`). 에디터 모듈의 일이라 Dev 빌드에서만 된다.
-SW_REGISTER_ARGUMENT( EXPORT_PO, false, false, "export-po" )
-SW_REGISTER_ARGUMENT( IMPORT_PO, CommandLineDiskPath{}, false, "import-po" )
+SW_REGISTER_ARGUMENT( EXPORT_PO, Dev, false, false, "export-po" )
+SW_REGISTER_ARGUMENT( IMPORT_PO, Dev, CommandLineDiskPath{}, false, "import-po" )
 
 // 크래시 보고 프로세스 — 값은 크래시 묶음 폴더. 앞 실행이 띄운다(`CrashReportService::launchReporterProcess`). 엔진은 명령줄까지만 세우고(크래시 핸들러 · 리소스 루트 ·
 // 서비스 없이) 대기 중인 묶음을 보낸 뒤 끝낸다(헤드리스).
-SW_REGISTER_ARGUMENT( CRASH_REPORTER, CommandLineDiskPath{}, false, "crash-reporter" )
+SW_REGISTER_ARGUMENT( CRASH_REPORTER, All, CommandLineDiskPath{}, false, "crash-reporter" )
 
 // 엔진 안 단위 테스트(`<기능>/Tests/` 의 SW_TEST_CASE)를 헤드리스로 돌리고 끝낸다(Dev 만). 종료 코드는 모두 통과면 0. 형식은 `Core/Testing/TestFramework.h`.
-SW_REGISTER_ARGUMENT( TEST, false, false, "test" )
+SW_REGISTER_ARGUMENT( TEST, Test, false, false, "test" )
 // 돌릴 케이스 이름 와일드카드(`Suite.*`, 쉼표로 여럿, 앞에 - 면 뺀다).
-SW_REGISTER_ARGUMENT( TEST_FILTER, "*", false, "test-filter" )
+SW_REGISTER_ARGUMENT( TEST_FILTER, Test, "*", false, "test-filter" )
 // 순서 섞기 씨앗(0 이면 시각에서 고르고 찍는다 — 찍힌 값을 주면 같은 순서를 다시 돈다).
-SW_REGISTER_ARGUMENT( TEST_SEED, 0, false, "test-seed" )
+SW_REGISTER_ARGUMENT( TEST_SEED, Test, 0, false, "test-seed" )
 // 같은 거른 케이스를 몇 회차 돌지(간헐 실패 찾기, 회차마다 씨앗 + 1).
-SW_REGISTER_ARGUMENT( TEST_REPEAT, 1, false, "test-repeat" )
+SW_REGISTER_ARGUMENT( TEST_REPEAT, Test, 1, false, "test-repeat" )
 // 이 프로세스가 도는 몫 `i/n` — 케이스를 이름 해시로 n 몫으로 나눠 i 번째만 돈다(CTest 가 몫마다 프로세스 하나, `SW_UNIT_TEST_SHARDS`).
-SW_REGISTER_ARGUMENT( TEST_SHARD, "", false, "test-shard" )
+SW_REGISTER_ARGUMENT( TEST_SHARD, Test, "", false, "test-shard" )
 // 비활성 케이스(`._disabledReason`)도 돈다 — 고친 뒤 다시 켜기 전에 확인한다.
-SW_REGISTER_ARGUMENT( TEST_RUN_DISABLED, false, false, "test-run-disabled" )
+SW_REGISTER_ARGUMENT( TEST_RUN_DISABLED, Test, false, false, "test-run-disabled" )
 // 자식 역할(`SW_TEST_CHILD_ROLE`) 하나만 돈다 — 부모 케이스의 `test::runChildRole` 이 이 실행 파일을 다시 띄울 때 준다. 거르개 · 샤드 · 반복은 보지 않는다.
-SW_REGISTER_ARGUMENT( TEST_CHILD_ROLE, "", false, "test-child-role" )
+SW_REGISTER_ARGUMENT( TEST_CHILD_ROLE, Test, "", false, "test-child-role" )
 // 자식 역할이 `test::getChildRoleArgument()` 로 받는 값(환경 변수 대신 — 자식 하나를 명령줄로 손수 다시 돌릴 수 있다).
-SW_REGISTER_ARGUMENT( TEST_CHILD_ARG, "", false, "test-child-arg" )
+SW_REGISTER_ARGUMENT( TEST_CHILD_ARG, Test, "", false, "test-child-arg" )
 // 격리 케이스(`._bIsolated`) 하나만 이 프로세스에서 돈다 — 부모 실행기가 격리 케이스마다 이 실행 파일을 다시 띄울 때 준다. 거르개 · 샤드 · 반복은 보지 않는다.
-SW_REGISTER_ARGUMENT( TEST_ISOLATED_CASE, "", false, "test-isolated-case" )
+SW_REGISTER_ARGUMENT( TEST_ISOLATED_CASE, Test, "", false, "test-isolated-case" )
 // 정의한 파일 경로에 이 폴더(쉼표로 여럿, `/` 구분)가 든 케이스만 돈다 — 게임마다 그 게임이 싣는 키트 · 게임 케이스만 돌릴 때(`UnitTests.<게임>`).
-SW_REGISTER_ARGUMENT( TEST_SOURCE, "", false, "test-source" )
+SW_REGISTER_ARGUMENT( TEST_SOURCE, Test, "", false, "test-source" )
 // 결과 JSON(케이스 수 · 씨앗 · 케이스별 시간 · 실패 글)을 쓸 경로.
-SW_REGISTER_ARGUMENT( TEST_REPORT, CommandLineDiskPath{}, false, "test-report" )
+SW_REGISTER_ARGUMENT( TEST_REPORT, Test, CommandLineDiskPath{}, false, "test-report" )
 // 다른 스냅숏(`SW_EXPECT_SNAPSHOT`)을 지금 값으로 다시 쓴다 — 바뀐 파일을 리뷰한다.
-SW_REGISTER_ARGUMENT( UPDATE_SNAPSHOTS, false, false, "update-snapshots" )
+SW_REGISTER_ARGUMENT( UPDATE_SNAPSHOTS, Test, false, false, "update-snapshots" )
 // 없는 스냅숏만 지금 값으로 쓰고 그 케이스는 진다(`SnapshotMissing`) — 있는 스냅숏은 덮지 않는다. 쓴 파일을 보고 커밋한 뒤 이 깃발 없이 다시 돌린다(preflight `changed` 단계).
-SW_REGISTER_ARGUMENT( RECORD_MISSING_SNAPSHOTS, false, false, "record-missing-snapshots" )
+SW_REGISTER_ARGUMENT( RECORD_MISSING_SNAPSHOTS, Test, false, false, "record-missing-snapshots" )
 
 // 자동화 시나리오 — 값은 시나리오 파일(리소스 경로 `game/<팩>/automation/x.scenario.xml` 또는 절대 경로). 끝나면 결과를 종료 코드로 낸다
 // (0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀). 형식은 `Source/Engine/Automation/` 의 헤더 주석.
-SW_REGISTER_ARGUMENT( SCENARIO, "", false, "scenario" )
+SW_REGISTER_ARGUMENT( SCENARIO, Test, "", false, "scenario" )
 // 시나리오의 `<ExpectImage golden>` 이 없거나 · 크기가 다르거나 · 허용치에 가깝거나(`PassNearLimit`) · 진 골든을 지금 그림으로 쓰고 옆에 메타(`*.golden.json`)를 둔다(시나리오 파일 옆 `golden/`) — 쓴 파일은 보고의 updatedGoldens 에 남는다. 리뷰하고 커밋한다.
-SW_REGISTER_ARGUMENT( SCENARIO_UPDATE_GOLDEN, false, false, "scenario-update-golden" )
+SW_REGISTER_ARGUMENT( SCENARIO_UPDATE_GOLDEN, Test, false, false, "scenario-update-golden" )
 // 없는 골든만 지금 그림으로 쓰고 그 시나리오는 진다(`MissingBaseline`) — 있는 골든(근접 · 진 것 포함)은 덮지 않는다. 쓴 파일을 보고 커밋한 뒤 이 깃발 없이 다시 돌린다(preflight `changed` 단계).
-SW_REGISTER_ARGUMENT( SCENARIO_RECORD_MISSING_GOLDEN, false, false, "scenario-record-missing-golden" )
+SW_REGISTER_ARGUMENT( SCENARIO_RECORD_MISSING_GOLDEN, Test, false, false, "scenario-record-missing-golden" )
 // 시나리오 결과 JSON 을 쓸 경로(비면 쓰지 않는다).
-SW_REGISTER_ARGUMENT( SCENARIO_REPORT, CommandLineDiskPath{}, false, "scenario-report" )
+SW_REGISTER_ARGUMENT( SCENARIO_REPORT, Test, CommandLineDiskPath{}, false, "scenario-report" )
 // `-scenario` 를 이 백엔드들(`all` 또는 `dx11,vk` — 쿠킹 표의 명령줄 이름)마다 자식 App 으로 동시에 돌리고 결과를 모은다(`AutomationPerBackend`).
 // 이 프로세스는 창 · GPU 없이 기다리기만 한다. 종료 코드는 첫 실패 백엔드의 것, 모두 건너뛰면 13.
-SW_REGISTER_ARGUMENT( SCENARIO_BACKENDS, "", false, "scenario-backends" )
+SW_REGISTER_ARGUMENT( SCENARIO_BACKENDS, Test, "", false, "scenario-backends" )
 // `-scenario-backends` 와 함께 시나리오를 백엔드에 나눠 준다. `independent`: 판정이 백엔드에 달린 시나리오(`<ExpectImage>` · 마젠타 문턱이 있는 `<CaptureEditorUI>` · `<Record>` …)만 모든 백엔드에서 돌고,
 // 나머지는 백엔드를 돌아가며 하나씩 맡는다 — 백엔드와 무관한 로직을 네 번 돌지 않는다(언리얼 편집기 테스트가 RHI 하나로 도는 것과 같다). Release 편집기 체인이 쓴다.
 // `all`: 모든 시나리오를 돌아가며 하나씩 — 그림 · 기록 대조는 Release 가 네 백엔드로 맡고 Debug 체인은 단언 · 검사를 시나리오마다 한 번 지나려고 쓴다(`Test/Scenario/CMakeLists.txt`).
-SW_REGISTER_ARGUMENT( SCENARIO_BACKEND_SPLIT, "", false, "scenario-backend-split" )
+SW_REGISTER_ARGUMENT( SCENARIO_BACKEND_SPLIT, Test, "", false, "scenario-backend-split" )
 // 나눌 때 첫 시나리오를 맡을 백엔드 번호(돌아가며 맡는 시작점). 없으면(-1) UTC 날짜(일)로 정해 날마다 한 칸씩 돈다 — 나흘이면 모든 시나리오가 모든 백엔드를 거친다.
 // 부모 로그에 고른 값이 남으므로 같은 배정으로 다시 돌릴 때 이 값을 준다.
-SW_REGISTER_ARGUMENT( SCENARIO_BACKEND_SPLIT_OFFSET, -1, false, "scenario-backend-split-offset" )
+SW_REGISTER_ARGUMENT( SCENARIO_BACKEND_SPLIT_OFFSET, Test, -1, false, "scenario-backend-split-offset" )
 // `-scenario-backends` 와 함께: 동시에 도는 자식 수의 상한(0 이면 모두 함께). GPU 가 무거운 체인은 넷을 함께 돌려도 빨라지지 않고 프레임만 느려진다
 // (Shooter3D 체인 225 초 = dx11 혼자 57 초의 넷, `bodyviews` 프레임 7 ms → 100 ms) — 그런 체인에 작은 값을 준다(`Test/Scenario/CMakeLists.txt`).
-SW_REGISTER_ARGUMENT( SCENARIO_BACKEND_SLOTS, 0, false, "scenario-backend-slots" )
+SW_REGISTER_ARGUMENT( SCENARIO_BACKEND_SLOTS, Test, 0, false, "scenario-backend-slots" )
 // 로그를 이 파일 하나에 쓴다(있으면 덮어쓴다 · 시간별로 나누지 않는다 · 상대 경로는 기동 때의 작업 폴더 기준으로 받을 때 한 번 절대화한다). 비면 `Saved/Logs/LOG_<날짜>_<세션>.txt` 다.
 // 병렬 실행(ctest -j)이 실행마다 제 로그를 갖게 한다 — 언리얼의 `-abslog=`. 명령줄은 로거보다 먼저 서고(그 사이의 줄은 로거가 쌓았다가 싱크에 넘긴다), 로거가 이 값으로 파일 장치를 연다.
-SW_REGISTER_ARGUMENT( LOG_FILE, CommandLineDiskPath{}, false, "log-file" )
+SW_REGISTER_ARGUMENT( LOG_FILE, All, CommandLineDiskPath{}, false, "log-file" )
 // 시나리오 여럿(`-scenario=a,b,c`)에서 한 단계가 실패해도 다음 단계를 돌려 실패를 한꺼번에 모은다(기본은 첫 실패에서 멈춘다). 건너뜀(13)은 실패로 세지 않고 이어 간다.
-SW_REGISTER_ARGUMENT( SCENARIO_KEEP_GOING, false, false, "scenario-keep-going" )
+SW_REGISTER_ARGUMENT( SCENARIO_KEEP_GOING, Test, false, false, "scenario-keep-going" )
 // 플레이를 시나리오로 녹화한다 — 값은 `Saved/Automation/` 아래의 `.scenario.xml`. 씬 플레이 첫 프레임부터 입력을 적고 끝날 때 쓴다(`-scenario` 와 함께면 그 가상 입력도 적는다).
-SW_REGISTER_ARGUMENT( SCENARIO_RECORD, "", false, "scenario-record" )
+SW_REGISTER_ARGUMENT( SCENARIO_RECORD, Test, "", false, "scenario-record" )
 // 녹화 끝 프레임의 검사점 — 쉼표로 가른 `감시 값`, `감시 값@대상`, `감시 값@대상@키`. 값이 녹화 끝에 `<Expect>` 로 실린다.
-SW_REGISTER_ARGUMENT( SCENARIO_RECORD_PROBES, "", false, "scenario-record-probes" )
+SW_REGISTER_ARGUMENT( SCENARIO_RECORD_PROBES, Test, "", false, "scenario-record-probes" )
+
+// 메모리 스냅숏을 루프가 끝날 때 이 폴더 아래 `<yyyyMMdd-HHmmss>/` 에 시트별 CSV(Summary · Tags · AllocationSites · Assets · GPUResources · Types · Caches)로 쓴다(Dev 만 — `MemorySnapshotExport`).
+// 자동화 · CI 가 실행 끝의 메모리를 표로 남긴다(언리얼 `memreport` · `-csvExitOnCompletion`). 실행 중에는 개발 명령 `memory.export [폴더]`
+SW_REGISTER_ARGUMENT( MEMORY_EXPORT, CommandLineDiskPath{}, false, "memory-export" )
 
 // RenderDoc 을 RHI 디바이스보다 먼저 설치 경로에서 올린다(Dev 만 — `RenderDocCapture`). 없어도 RenderDoc UI 로 띄운 실행이면 캡처할 수 있다.
-SW_REGISTER_ARGUMENT( RENDERDOC, false, false, "renderdoc" )
+SW_REGISTER_ARGUMENT( RENDERDOC, Dev, false, false, "renderdoc" )
 
 // 그래픽 API 검증 층(D3D12 · D3D11 디버그 레이어, Vulkan 검증 레이어, GL 디버그 출력, WebGPU 검증 오류 로그)을 켠다(`-rhi-validation=0` 은 끈다) — EngineConfig `_rhi._validationLayer` 를 이긴다.
 // 배포가 아닌 구성(Debug · Release)에 컴파일돼 있고 장치를 만들 때 한 번 읽는다. 배포 구성에는 검증 층이 없어 듣지 않는다(언리얼 `-d3ddebug` · `-vulkandebug`)
-SW_REGISTER_ARGUMENT( RHI_VALIDATION, false, false, "rhi-validation" )
+SW_REGISTER_ARGUMENT( RHI_VALIDATION, Dev, false, false, "rhi-validation" )
 
 // D3D12 DRED(자동 브레드크럼 · 페이지 폴트 — 장치 소실 뒤 명령 진행과 폴트 주소)를 켠다(`-rhi-dred=0` 은 끈다) — EngineConfig `_rhi._dred` 를 이긴다. 장치를 만들 때 한 번 읽는다.
 // 배포 구성에서도 듣는다(언리얼 `-gpucrashdebugging`). 패스 표지(`-rhi-breadcrumbs`)와는 따로다
-SW_REGISTER_ARGUMENT( RHI_DRED, false, false, "rhi-dred" )
+SW_REGISTER_ARGUMENT( RHI_DRED, All, false, false, "rhi-dred" )
 
 // GPU 브레드크럼(패스마다 GPU 표지 · Vulkan 체크포인트 — 장치 소실 뒤 마지막 패스 이름)을 켠다(`-rhi-breadcrumbs=0` 은 끈다) — EngineConfig `_rhi._gpuBreadcrumbs` 를 이긴다.
 // 체크포인트 확장은 장치를 만들기 전에만 켤 수 있어 장치를 만들 때 한 번 읽는다. 배포 구성에서도 듣는다(언리얼 `-gpucrashdebugging`)
-SW_REGISTER_ARGUMENT( RHI_BREADCRUMBS, false, false, "rhi-breadcrumbs" )
+SW_REGISTER_ARGUMENT( RHI_BREADCRUMBS, All, false, false, "rhi-breadcrumbs" )
 
 // 교착 탐지기를 켜고 `sw::mutex` 잠금 순서를 추적한다(느리다). 코어 범위가 설 때 한 번 읽고 실행 중에 끄지 않는다. 배포 구성에는 없다
-SW_REGISTER_ARGUMENT( DEADLOCK_DETECTION, false, false, "deadlock-detection" )
+SW_REGISTER_ARGUMENT( DEADLOCK_DETECTION, Dev, false, false, "deadlock-detection" )
 
 // 사람이 지켜보지 않는 실행이다 — 에디터를 켜도 단언 대화상자를 걸지 않는다(Debug 단언은 지금처럼 멈춘다). App 을 띄우는 테스트 · 스크립트가 준다.
-SW_REGISTER_ARGUMENT( UNATTENDED, false, false, "unattended" )
+SW_REGISTER_ARGUMENT( UNATTENDED, All, false, false, "unattended" )
 
 // 작업 풀의 워커 수(1 이상) — 없으면 쓸 수 있는 코어 수에서 정한다. 부하 시나리오(`load/*`)를 워커 1 · 2 · 4 · 8 로 재서 병렬 효율 기준선을 잡는다(언리얼 `-numberofworkerthreadstouse=`)
-SW_REGISTER_ARGUMENT( WORKERS, 0, false, "workers" )
+SW_REGISTER_ARGUMENT( WORKERS, All, 0, false, "workers" )

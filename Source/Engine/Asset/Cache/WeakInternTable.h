@@ -300,6 +300,37 @@ namespace sw
             return liveCount;
         }
 
+        /**
+         * @brief 살아 있는 값마다 @p func( key, value, referenceCount ) 를 부릅니다. referenceCount 는 쥔 쪽 수입니다(이 순회가 잠깐 쥔 사본은 뺀다).
+         * @details 잠금 안에서는 포인터만 복사하고 함수는 잠금 밖에서 부른다 — 순회 중 마지막 사용자가 놓으면 사본이 마지막이 되고, 그 사본을 놓을 때 칸 주인의
+         *          소멸자가 같은 잠금을 잡는다(잠금 안에서 놓으면 교착). 메모리 스냅숏(`AssetCacheBase::collectMemoryEntries`)이 쓴다.
+         */
+        template <typename Func>
+        void forEachLive( Func&& func ) const
+        {
+            struct LiveItem
+            {
+                KeyType               _key;
+                shared_ptr<ValueType> _value;
+            };
+            vector<LiveItem> listLive;
+            {
+                ScopedLock<mutex> lock{ _pState->_mutex };
+                listLive.reserve( _pState->_mapValue.size() );
+                for ( const auto& [key, value] : _pState->_mapValue )
+                {
+                    shared_ptr<ValueType> live = value.lock();
+                    if ( live != nullptr )
+                        listLive.push_back( LiveItem{ key, std::move( live ) } );
+                }
+            }
+            for ( const LiveItem& item : listLive )
+            {
+                const auto useCount = item._value.use_count();
+                func( item._key, *item._value, static_cast<uint32>( useCount > 1 ? useCount - 1 : 0 ) );
+            }
+        }
+
         /** @brief 칸 수입니다(만료 칸 포함). 놓인 값은 삭제자가 지우므로 `countLive` 와 같아야 합니다 — 테스트가 봅니다. */
         size_t countSlots() const
         {

@@ -9,6 +9,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -54,7 +55,7 @@ namespace sw
                     return true;
                 uint8 mask   = 0;
                 bool  bValid = true;
-                StringUtil::forEachToken( sizes, ",; ", [&]( string_view token )
+                StringUtil::forEachToken( sizes, XMLReadUtil::kListSeparators, [&]( string_view token )
                 {
                     if ( StringUtil::equals( token, string_view( "Small" ) ) )
                         mask |= 1u << static_cast<uint32>( WesternAnimalSize::Small );

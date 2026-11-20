@@ -103,7 +103,7 @@ namespace sw
         }
         bValid = bValid && Internal::validateInside( region, region._respawn, "respawn", where );
         if ( attribute._startQuest.empty() == false )
-            XMLReadUtil::parseNameList( attribute._startQuest.c_str(), ", ", region._listStartQuest );
+            XMLReadUtil::parseNameList( attribute._startQuest.c_str(), region._listStartQuest );
 
         for ( XMLNode child = node.findChild(); bValid && child; child = child.findNextSibling() )
         {

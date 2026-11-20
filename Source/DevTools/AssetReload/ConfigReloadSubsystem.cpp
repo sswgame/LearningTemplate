@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/AssetReload/FileWatchDispatcher.h"
 #include "DevTools/AssetReload/ReloadTracker.h"
@@ -95,9 +96,14 @@ namespace sw
             return;
         const string fullPath = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
         // 모르는 파일은 NotTracked 로 지나간다. 깨진 파일은 읽는 쪽이 키 이름과 오류를 남겼다 — 이전 값으로 돈다는 것만 덧붙인다.
-        const ReloadResult result = reloadChangedFile( fullPath );
+        const float64      startSeconds = MonotonicClock::nowSeconds();
+        const ReloadResult result       = reloadChangedFile( fullPath );
         if ( ReloadTracker* const pTracker = engine::findSubsystem<ReloadTracker>() )
+        {
             pTracker->record( ReloadSource::Config, fullPath, result, "the file did not parse - see the log for the key" );
+            if ( result != ReloadResult::NotTracked )
+                pTracker->recordElapsed( ReloadSource::Config, ( MonotonicClock::nowSeconds() - startSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
+        }
         if ( result == ReloadResult::Failed )
             SW_LOG_WARNING_ID( "ConfigReload.ConfigReloadKeptPrevious", "Config reload kept the previous values - fix and save %# again", fullPath.c_str() );
     }

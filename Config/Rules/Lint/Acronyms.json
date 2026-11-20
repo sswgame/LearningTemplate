@@ -98,6 +98,7 @@
         "DeviceId": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "DockId": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "DpiScale": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
+        "DragDropAcceptIdPrev": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "EcdsaP256Sha256": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "EmscriptenUiEvent": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "EnumAdapterByGpuPreference": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",

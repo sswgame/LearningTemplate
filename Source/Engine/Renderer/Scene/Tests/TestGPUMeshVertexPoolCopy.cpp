@@ -1,7 +1,7 @@
 /**
  * @file TestGPUMeshVertexPoolCopy.cpp
  * @brief 정점 풀이 CPU 정점 대신 렌더 프록시 정점 버퍼에서 GPU 복사로 채우는가(감사 R-15 후속 1)입니다 — 복사는 쌓였다가 프레임 업로드 단계가 기록한다.
- * @details 디바이스 · 리스트는 가짜(`RHIFakeDevice.h`)이고 팩토리는 버퍼 핸들만 내는 `FakeBufferFactory` 다. 복사 내용이 아니라 원본 · 도착 · 오프셋 · 크기를 본다.
+ * @details 디바이스 · 리스트는 가짜(`RHIFakeDevice.h`)이고 팩토리는 버퍼 핸들만 내는 `test::FakeRHIBufferFactory` 다. 복사 내용이 아니라 원본 · 도착 · 오프셋 · 크기를 본다.
  */
 #include "pch.h"
 
@@ -19,60 +19,6 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 버퍼 핸들만 내고 내용은 버리는 팩토리입니다. 나머지 가상 함수는 쓰이지 않는다(호출되면 0 · false). */
-    class FakeBufferFactory final : public IRHIResourceFactory
-    {
-    public:
-        RHIBufferHandle _nextBuffer{ 1 };
-        uint32          _gpuVertexBufferCount{ 0 };
-        uint32          _structuredUpdateCount{ 0 };
-
-        RHIBufferHandle createVertexBuffer( const void*, uint32 ) override { return _nextBuffer++; }
-        RHIBufferHandle createGPUVertexBuffer( uint32 ) override
-        {
-            ++_gpuVertexBufferCount;
-            return _nextBuffer++;
-        }
-        RHIBufferHandle createIndexBuffer( const void*, uint32 ) override { return _nextBuffer++; }
-        void            updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
-        void            updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override { ++_structuredUpdateCount; }
-        void            destroyBuffer( RHIBufferHandle ) override {}
-
-        RHITransferSubmit      submitTextureUpload( RHITextureHandle, const RHITextureUploadDesc& ) override { return RHITransferSubmit::rejected(); }
-        RHITransferSubmit      submitTextureRegionUpload( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return RHITransferSubmit::rejected(); }
-        RHITransferSubmit      submitTextureReadback( RHITextureHandle, uint32, uint32, RHITextureMipSpan& ) override { return RHITransferSubmit::rejected(); }
-        RHITransferStatus      pollTransfer( RHITransferTicket ) override { return RHITransferStatus::Failed; }
-        bool                   takeTextureReadback( RHITransferTicket, vector<uint8>& ) override { return false; }
-        void                   discardTextureReadback( RHITransferTicket ) override {}
-        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& ) override { return 0; }
-        RHIPipelineStateHandle createComputePipelineStateNative( string_view, string_view, const vector<string>& ) override { return 0; }
-        void                   destroyPipelineState( RHIPipelineStateHandle ) override {}
-        RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
-        void                   destroyRenderPass( RHIRenderPassHandle ) override {}
-        RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
-        void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
-        RHIBufferHandle        createConstantBufferPage( uint32 ) override { return 0; }
-        void                   updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 ) override {}
-        RHIBufferHandle        createStructuredBuffer( uint32, uint32 ) override { return 0; }
-        RHIBufferHandle        createReadbackBuffer( uint32, uint32 ) override { return 0; }
-        [[nodiscard]] bool     readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
-        RHITextureHandle       createTexture2D( const RHITextureDesc& ) override { return 0; }
-        void                   destroyTexture( RHITextureHandle ) override {}
-        RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
-        RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
-        bool                   rebindBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
-        RHIDescriptorIndex     reserveBindlessTextureIndex() override { return kInvalidDescriptorIndex; }
-        bool                   activateReservedBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
-        bool                   isTextureReadyToSample( RHITextureHandle ) override { return false; }
-        void                   unregisterBindlessTexture( RHIDescriptorIndex ) override {}
-        RHIDescriptorIndex     registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
-        RHIDescriptorIndex     registerBindlessBufferSRV( const RHIBufferSlice& ) override { return kInvalidDescriptorIndex; }
-        void                   unregisterBindlessResource( RHIDescriptorIndex ) override {}
-        RHIDescriptorIndex     registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
-        RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
-        void                   unregisterBindlessUAV( RHIDescriptorIndex ) override {}
-    };
-
     /** @brief 삼각형 하나짜리 Packed 메시입니다. */
     shared_ptr<Mesh> makeTriangle()
     {
@@ -103,8 +49,8 @@ namespace
  */
 SW_TEST_CASE( GPUMeshVertexPoolCopyTest, ProxyMeshFillsByGPUCopy )
 {
-    FakeBufferFactory   factory;
-    test::FakeRHIDevice device;
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
     device._pResourceFactory    = &factory;
     const shared_ptr<Mesh> mesh = makeTriangle();
     SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
@@ -142,8 +88,8 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, ProxyMeshFillsByGPUCopy )
  */
 SW_TEST_CASE( GPUMeshVertexPoolCopyTest, MeshWithoutProxyUploadsCPUVertices )
 {
-    FakeBufferFactory   factory;
-    test::FakeRHIDevice device;
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
     device._pResourceFactory    = &factory;
     const shared_ptr<Mesh> mesh = makeTriangle();
 
@@ -162,8 +108,8 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, MeshWithoutProxyUploadsCPUVertices )
  */
 SW_TEST_CASE( GPUMeshVertexPoolCopyTest, PartlyPlacedMeshesRefillFromTheirProxyOnRepack )
 {
-    FakeBufferFactory   factory;
-    test::FakeRHIDevice device;
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
     device._pResourceFactory     = &factory;
     constexpr uint32       kWide = 30000u; // 첫 용량은 최소 용량(64 Ki 정점) — 둘은 들고 셋째는 못 든다
     const shared_ptr<Mesh> meshA = makeWideMesh( kWide );
@@ -206,8 +152,8 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, PartlyPlacedMeshesRefillFromTheirProxyO
  */
 SW_TEST_CASE( GPUMeshVertexPoolCopyTest, NewContentAtSameAddressIsNotACacheHit )
 {
-    FakeBufferFactory   factory;
-    test::FakeRHIDevice device;
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
     device._pResourceFactory    = &factory;
     const shared_ptr<Mesh> mesh = makeTriangle();
 

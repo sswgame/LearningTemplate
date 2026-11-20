@@ -1,0 +1,19 @@
+<?asset guid="20c53d3e350d4cff11f78a38533353d3"?>
+<!-- 지역 진입 컷씬(maps/cutscenetrigger.scene.xml 의 GateDirector, automation/cutscenetrigger) — 프레임 10 부터 290 까지 문 너머 컷(GateCut)이 화면을 덮고, 300 에 끝나 게임 카메라로 끊어 돌아온다(30 fps).
+     빨리감기 · 일시정지 · 옵션 메뉴 · 건너뛰기를 차례로 볼 시간이 있게 10 초로 길다. 컷 카메라는 바인딩 id 이고 씬의 GateDirector 가 묶는다. -->
+<SequenceAsset _frameMin="0"
+               _frameMax="300"
+               _note="cutscene trigger scenario: one long cut over the gate, entered from a trigger volume"
+               _nextBindingID="2"
+               _whenFinished="RestoreState"
+               _cameraBlendInSeconds="0"
+               _cameraBlendOutSeconds="0"
+               _cameraPrerollFrames="10">
+	<_listBinding>
+		<SequenceBinding _id="1" _name="GateCut" />
+	</_listBinding>
+	<_listItem>
+		<SequenceTrackItem _name="Gate" _binding="1" _start="10" _end="290" _kind="CameraCut" />
+	</_listItem>
+	<_listTrack />
+</SequenceAsset>

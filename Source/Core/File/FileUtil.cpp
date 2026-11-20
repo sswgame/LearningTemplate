@@ -276,13 +276,19 @@ namespace sw
                 vector<uint8>  _listDirectory; ///< `_listName` 과 같은 순서, 링크가 아닌 폴더면 1
             };
 
-            /** @brief 경로를 `/` 구분으로 맞추고 끝의 구분자를 지웁니다(루트 `/` · `C:/` 는 남긴다). */
-            static string trimTrailingSeparators( string_view path )
+            /**
+             * @brief 끝의 `/` · `\` 를 뗀 뷰입니다 — 끝 구분자 규칙은 이 하나다(`FileUtil::trimTrailingSlashes` · `getDirectoryPart` · `joinPath` 가 함께 쓴다).
+             * @details 루트는 남긴다: `/` 와 드라이브 루트 `C:/` · `C:\`. 여러 구분자는 모두 뗀다(`a//` → `a`). UNC 는 `//server/share/` → `//server/share`.
+             */
+            static string_view trimTrailingSeparatorView( string_view path )
             {
-                string result = FileUtil::normalizeSeparators( path );
-                while ( result.size() > 1 && result.back() == '/' && result.back() != result[result.size() - 2] && result[result.size() - 2] != ':' )
-                    result.pop_back();
-                return result;
+                while ( path.size() > 1 && ( path.back() == '/' || path.back() == '\\' ) )
+                {
+                    if ( path.size() == 3 && path[1] == ':' )
+                        break; // 드라이브 루트다 — `C:` 는 그 드라이브의 현재 폴더라 다른 경로다
+                    path.remove_suffix( 1 );
+                }
+                return path;
             }
 
             /** @brief 경로를 구간으로 나눕니다(빈 구간 제외). 글을 가리키는 뷰라 @p path 가 살아 있는 동안만 유효합니다. */
@@ -478,11 +484,7 @@ namespace sw
             return;
         }
 
-        string_view v = fullPath;
-        while ( v.size() > 1 && ( v.back() == '/' || v.back() == '\\' ) )
-        {
-            v.remove_suffix( 1 );
-        }
+        const string_view v = FileUtilInternal::trimTrailingSeparatorView( fullPath );
 
         if ( v.empty() )
         {
@@ -491,13 +493,16 @@ namespace sw
         }
 
         const size_t found = v.find_last_of( "/\\" );
-        if ( found == string_view::npos )
+        const bool   bRoot = v.size() == 1 || ( v.size() == 3 && v[1] == ':' && found == 2 );
+        if ( found == string_view::npos || bRoot )
         {
-            outDirectoryPath = {};
+            outDirectoryPath = {}; // 루트의 부모는 없다 — 위로 오르는 걸음(`createDirectoryTree` …)이 빈 글에서 멈춘다
             return;
         }
 
-        outDirectoryPath = v.substr( 0, found );
+        // 부모가 루트면 루트 구분자를 남긴다(`/a` → `/`, `C:/a` → `C:/`) — `trimTrailingSlashes` 와 같은 규칙이다
+        const bool bParentIsRoot = found == 0 || ( found == 2 && v[1] == ':' );
+        outDirectoryPath         = v.substr( 0, bParentIsRoot ? found + 1 : found );
     }
 
     string FileUtil::getDirectoryPart( string_view fullPath )
@@ -665,12 +670,7 @@ namespace sw
 
     string FileUtil::trimTrailingSlashes( string_view path )
     {
-        string_view v = path;
-        while ( v.size() > 1 && ( v.back() == '/' || v.back() == '\\' ) )
-        {
-            v.remove_suffix( 1 );
-        }
-        return string{ v };
+        return string{ FileUtilInternal::trimTrailingSeparatorView( path ) };
     }
 
     string FileUtil::joinPath( string_view root, string_view relative )
@@ -678,11 +678,7 @@ namespace sw
         if ( root.empty() )
             return {};
 
-        string_view r = root;
-        while ( r.size() > 1 && ( r.back() == '/' || r.back() == '\\' ) )
-        {
-            r.remove_suffix( 1 );
-        }
+        const string_view r = FileUtilInternal::trimTrailingSeparatorView( root );
 
         if ( relative.empty() )
             return normalizeSeparators( r );
@@ -1193,7 +1189,7 @@ namespace sw
         if ( directoryPath.empty() || isDirectory( directoryPath ) )
             return true;
 
-        const string directory = FileUtilInternal::trimTrailingSeparators( directoryPath );
+        const string directory = trimTrailingSlashes( normalizeSeparators( directoryPath ) );
         // 새 폴더도 새 자리다 — 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다(이미 있는 폴더에 흔히 부르는 입구다 — `setWriteFilter`).
         if ( isCreateAllowed( directory ) == false )
             return false;
@@ -1476,7 +1472,7 @@ namespace sw
         PlatformFileSystem::FileStatus status;
         if ( PlatformFileSystem::queryStatus( path, status ) )
         {
-            const string directory      = FileUtilInternal::trimTrailingSeparators( path );
+            const string directory      = trimTrailingSlashes( normalizeSeparators( path ) );
             const bool   bRealDirectory = status._kind == PlatformFileSystem::FileKind::Directory && status._bLink == false;
             const size_t removedCount   = bRealDirectory ? FileUtilInternal::removeTree( directory ) : ( PlatformFileSystem::removeEntry( directory ) ? 1 : 0 );
             if ( removedCount > 0 )
@@ -1496,7 +1492,7 @@ namespace sw
         string temp;
         if ( PlatformFileSystem::getTempDirectory( temp ) == false )
             return {};
-        return temp;
+        return trimTrailingSlashes( temp ); // OS 가 준 끝 구분자는 여기서 한 규칙으로 뗀다(드라이브 루트는 남긴다)
     }
 
     bool FileUtil::forEachDirectoryEntry( string_view directory, const bool bRecursive, const DirectoryEntryVisitFn visit, void* pContext )
@@ -1505,7 +1501,7 @@ namespace sw
             return false;
 
         FileUtilInternal::WalkContext walk;
-        walk._directory  = FileUtilInternal::trimTrailingSeparators( directory );
+        walk._directory  = trimTrailingSlashes( normalizeSeparators( directory ) );
         walk._bRecursive = bRecursive;
         walk._visit      = visit;
         walk._pContext   = pContext;

@@ -37,6 +37,43 @@ SW_TEST_CASE( AssetRedirectTest, ResolvesOldIdsAndCollapsesChains )
 }
 
 /**
+ * @brief [AssetRedirectTest] 폴더 접두 줄은 그 폴더 아래 id 를 새 폴더 아래로 풀고, 정확한 줄이 먼저다
+ * @details 팩을 통째로 옮기면(`move-asset game/oldpack game/newpack`) 파일마다가 아니라 한 줄이다 — 언리얼 `[CoreRedirects]` PackageRedirects 의 접두 꼴.
+ *          옮긴 뒤 바뀐 id 가 정확한 줄의 옛 id 면 한 번 더 푼다(팩 안에서 옮긴 뒤 팩을 옮긴 사슬). 이름이 접두와 겹치기만 한 폴더(`game/oldpackish`)는 풀지 않는다.
+ */
+SW_TEST_CASE( AssetRedirectTest, PrefixRedirectsMoveWholeFolders )
+{
+    SW_REQUIRE_TRUE( loadOne( "<Redirects>"
+                              "<PrefixRedirect from=\"game/oldpack\" to=\"game/newpack\"/>"
+                              "<Redirect from=\"game/oldpack/maps/kept.scene.xml\" to=\"game/newpack/maps/exact.scene.xml\"/>"
+                              "<Redirect from=\"game/newpack/maps/old.scene.xml\" to=\"game/newpack/maps/new.scene.xml\"/>"
+                              "</Redirects>" ) );
+    sw::string resolved;
+    SW_REQUIRE_TRUE( sw::AssetRedirect::resolve( "game/oldpack/maps/a.scene.xml", resolved ) );
+    SW_EXPECT_EQUAL( sw::string( "game/newpack/maps/a.scene.xml" ), resolved );
+    SW_REQUIRE_TRUE( sw::AssetRedirect::resolve( "game/oldpack/maps/kept.scene.xml", resolved ) );
+    SW_EXPECT_EQUAL( sw::string( "game/newpack/maps/exact.scene.xml" ), resolved );
+    SW_REQUIRE_TRUE( sw::AssetRedirect::resolve( "game/oldpack/maps/old.scene.xml", resolved ) );
+    SW_EXPECT_EQUAL( sw::string( "game/newpack/maps/new.scene.xml" ), resolved );
+    SW_EXPECT_FALSE( sw::AssetRedirect::resolve( "game/oldpackish/a.xml", resolved ) );
+    SW_EXPECT_FALSE( sw::AssetRedirect::resolve( "game/oldpack", resolved ) );
+
+    // 파일 옮기기가 표를 다시 써도 접두 줄은 그대로 남는다.
+    const sw::expected<sw::string> added = sw::AssetRedirect::addToXMLText( "<Redirects>\n\t<PrefixRedirect from=\"game/oldpack\" to=\"game/newpack\" />\n</Redirects>\n",
+                                                                            "game/newpack/redirects.xml", sw::vector<sw::string>{ "game/newpack/a.xml" },
+                                                                            sw::vector<sw::string>{ "game/newpack/b.xml" } );
+    SW_REQUIRE_TRUE( added.has_value() );
+    SW_EXPECT_EQUAL( sw::string( "<Redirects>\n\t<PrefixRedirect from=\"game/oldpack\" to=\"game/newpack\" />\n\t<Redirect from=\"game/newpack/a.xml\" to=\"game/newpack/b.xml\" />\n"
+                                 "</Redirects>\n" ),
+                     *added );
+
+    SW_EXPECT_LOG( "AssetRedirect.DuplicateFrom" );
+    SW_EXPECT_FALSE( loadOne( "<Redirects><PrefixRedirect from=\"game/a\" to=\"game/b\"/><PrefixRedirect from=\"game/a\" to=\"game/c\"/></Redirects>" ) );
+    sw::AssetRedirect::clear();
+    SW_EXPECT_FALSE( sw::AssetRedirect::resolve( "game/oldpack/maps/a.scene.xml", resolved ) );
+}
+
+/**
  * @brief [AssetRedirectTest] 틀린 표는 로드 오류이고 지금 표를 바꾸지 않는다
  */
 SW_TEST_CASE( AssetRedirectTest, MalformedTablesAreLoadErrors )
@@ -67,10 +104,10 @@ SW_TEST_CASE( AssetRedirectTest, MalformedTablesAreLoadErrors )
  */
 SW_TEST_CASE( AssetRedirectTest, MovesAddLinesAndMovingBackReplacesThem )
 {
-    SW_EXPECT_EQUAL( sw::string( "game/empty/redirects.xml" ), sw::AssetRedirect::makeTableID( "game/empty/maps/a.scene.xml" ) );
+    SW_EXPECT_EQUAL( sw::string( "game/oldpack/redirects.xml" ), sw::AssetRedirect::makeTableID( "game/oldpack/maps/a.scene.xml" ) );
     SW_EXPECT_EQUAL( sw::string( "common/redirects.xml" ), sw::AssetRedirect::makeTableID( "common/data/a.xml" ) );
-    SW_EXPECT_TRUE( sw::AssetRedirect::isTable( "game/empty/redirects.xml" ) );
-    SW_EXPECT_FALSE( sw::AssetRedirect::isTable( "game/empty/maps/a.scene.xml" ) );
+    SW_EXPECT_TRUE( sw::AssetRedirect::isTable( "game/oldpack/redirects.xml" ) );
+    SW_EXPECT_FALSE( sw::AssetRedirect::isTable( "game/oldpack/maps/a.scene.xml" ) );
 
     const sw::vector<sw::string>   listA{ "common/data/a.xml" };
     const sw::vector<sw::string>   listB{ "common/data/b.xml" };

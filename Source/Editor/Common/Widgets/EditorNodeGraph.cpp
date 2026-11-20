@@ -796,6 +796,32 @@ namespace sw::editor
         return bPicked;
     }
 
+    bool EditorNodeGraph::acceptAssetDrop( const vector<EditorGraphAssetNodeRule>& listRule, uint32& outKindID, string& outAssetPath, float2& outCanvasPosition )
+    {
+        // 놓기 전에 거른다 — 표에 없는 에셋은 놓을 자리를 열지 않는다(R11).
+        string draggedPath;
+        if ( EditorWidgets::peekAssetDrag( draggedPath ) == false || EditorNodeGraphRules::findAssetNodeKind( listRule, draggedPath ).has_value() == false )
+            return false;
+        // 캔버스 안의 마우스 위치는 캔버스 좌표다 — 화면 좌표로 놓을 자리를 열려고 멈추기(Suspend) 전에 잡는다(`drawAddNodePopup` 과 같다).
+        const ImVec2 canvasMouse = ImGui::GetMousePos();
+        ed::Suspend();
+        const ImVec2      windowMin = ImGui::GetWindowPos();
+        const ImVec2      windowMax{ windowMin.x + ImGui::GetWindowSize().x, windowMin.y + ImGui::GetWindowSize().y };
+        EditorDragPayload payload{};
+        bool              bDelivered = false;
+        const bool        bOver      = EditorInputGUI::previewDropInRect( float2{ windowMin.x, windowMin.y }, float2{ windowMax.x, windowMax.y }, "##graphAssetDrop",
+                                                                          EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload, bDelivered );
+        ed::Resume();
+        if ( bOver == false || bDelivered == false || EditorWidgets::findAssetPayload( payload._id, outAssetPath ) == false )
+            return false;
+        const optional<uint32> kindID = EditorNodeGraphRules::findAssetNodeKind( listRule, outAssetPath );
+        if ( kindID.has_value() == false )
+            return false;
+        outKindID         = *kindID;
+        outCanvasPosition = float2{ canvasMouse.x, canvasMouse.y };
+        return true;
+    }
+
     bool EditorNodeGraph::queryNewLink( const Delegate<bool( int32, EditorGraphPinInfo& )>& findPin, int32& outFromPin, int32& outToPin )
     {
         bool bAccepted = false;

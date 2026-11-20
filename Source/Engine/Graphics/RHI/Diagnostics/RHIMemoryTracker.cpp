@@ -175,6 +175,57 @@ namespace sw
         mapIDToEntry.erase( entryIt );
     }
 
+    void RHIMemoryTracker::recordTexture( uint64 textureHandle, const RHITextureDesc& desc, uint64 bytes )
+    {
+        const RHIMemoryKey key = RHIMemoryKey::makeTexture( textureHandle );
+        recordAllocation( key, classifyTexture( desc ), bytes );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        entryIt = _arrMapIDToEntry[static_cast<uint32>( RHIMemoryKeySpace::Texture )].find( textureHandle );
+        if ( entryIt == _arrMapIDToEntry[static_cast<uint32>( RHIMemoryKeySpace::Texture )].end() )
+            return; // 핸들 0 — recordAllocation 이 받지 않았다
+        RHIMemoryResourceShape& shape = entryIt->second._shape;
+        shape._width                  = desc._width;
+        shape._height                 = desc._height;
+        shape._arraySize              = desc._arraySize;
+        shape._mipLevels              = desc._mipLevels;
+        shape._format                 = desc._format;
+    }
+
+    void RHIMemoryTracker::setLabel( const RHIMemoryKey& key, string_view label )
+    {
+        const uint32 spaceIndex = static_cast<uint32>( key._space );
+        if ( spaceIndex >= kRHIMemoryKeySpaceCount )
+            return;
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        entryIt = _arrMapIDToEntry[spaceIndex].find( key._id );
+        if ( entryIt != _arrMapIDToEntry[spaceIndex].end() )
+            entryIt->second._label = string{ label };
+    }
+
+    void RHIMemoryTracker::collectResources( vector<RHIMemoryResourceEntry>& outListEntry ) const
+    {
+        outListEntry.clear();
+        ScopedLock<mutex> lock{ _mutex };
+        size_t            entryCount{ 0 };
+        for ( const unordered_map<uint64, LiveEntry>& mapIDToEntry : _arrMapIDToEntry )
+        {
+            entryCount += mapIDToEntry.size();
+        }
+        outListEntry.reserve( entryCount );
+        for ( uint32 spaceIndex = 0; spaceIndex < kRHIMemoryKeySpaceCount; ++spaceIndex )
+        {
+            for ( const auto& [id, entry] : _arrMapIDToEntry[spaceIndex] )
+            {
+                RHIMemoryResourceEntry& out = outListEntry.emplace_back();
+                out._key                    = RHIMemoryKey{ id, static_cast<RHIMemoryKeySpace>( spaceIndex ) };
+                out._kind                   = entry._kind;
+                out._bytes                  = entry._bytes;
+                out._shape                  = entry._shape;
+                out._label                  = entry._label;
+            }
+        }
+    }
+
     RHIMemoryKindStats RHIMemoryTracker::getStats( RHIMemoryKind kind ) const
     {
         const uint32 kindIndex = static_cast<uint32>( kind );

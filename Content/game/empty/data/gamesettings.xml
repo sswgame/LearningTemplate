@@ -5,6 +5,7 @@
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
   <!-- 덮어쓰기 층 layers/zones: 엔진 표면 종류 표에 지역 프로필(빙판 · 바다 · 용암 · 가시덩굴)을 얹는다 — 프로필이 이 게임의 이펙트를 부른다. -->
   <!-- _bUIPauseMenu: Esc · 패드 Start 가 엔진 일시정지 메뉴를 연다(런타임 UI 시나리오 frontend · pausemenu) -->
+  <!-- 컷씬 입력 레이어가 이동을 막는 동안에도 메뉴 · 옵션이 열리는지 automation/cutscenetrigger 가 본다. -->
   <Engine _windowTitle="SWEngine" _bUIPauseMenu="true">
     <_listResourceLayer>
       <item>game/empty/layers/zones</item>

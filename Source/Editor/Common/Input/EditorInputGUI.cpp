@@ -168,8 +168,16 @@ namespace sw::editor
         if ( ImGui::BeginDragDropSource( flags ) == false )
             return false;
         (void)ImGui::SetDragDropPayload( kPayloadTypeName, &payload, sizeof( payload ) ); // 처음 실은 프레임인지는 쓰지 않는다
+        // 받은 자리는 지난 프레임 값이다 — 원본은 놓을 자리보다 먼저 그려져 이번 프레임의 받음을 아직 모른다.
+        const bool bAcceptedLastFrame = ImGui::GetCurrentContext()->DragDropAcceptIdPrev != 0;
+        if ( bAcceptedLastFrame == false )
+            ImGui::SetMouseCursor( ImGuiMouseCursor_NotAllowed );
         if ( pPreviewLabel != nullptr )
+        {
+            ImGui::BeginDisabled( bAcceptedLastFrame == false );
             ImGui::TextUnformatted( pPreviewLabel );
+            ImGui::EndDisabled();
+        }
         ImGui::EndDragDropSource();
         return true;
     }
@@ -219,6 +227,11 @@ namespace sw::editor
         return EditorInputGUIInternal::peekAcceptedPayload( acceptedKinds, peeked );
     }
 
+    bool EditorInputGUI::peekPayload( EditorPayloadKindSet acceptedKinds, EditorDragPayload& outPayload )
+    {
+        return EditorInputGUIInternal::peekAcceptedPayload( acceptedKinds, outPayload );
+    }
+
     uint64 EditorInputGUI::registerPayloadName( EditorPayloadKind kind, string_view name )
     {
         // id 는 이름의 해시다 — 같은 이름은 어느 패널에서 끌어도 같은 id 이고, 표는 받는 쪽이 이름을 되찾는 데만 쓴다.
@@ -254,6 +267,26 @@ namespace sw::editor
         return ImGui::BeginPopup( pPopupID );
     }
 
+    bool EditorInputGUI::drawCommandMenuItem( string_view commandID, const EditorCommandTarget& target )
+    {
+        EditorContext&               editorContext = editor::getSubsystem<EditorContext>();
+        const EditorCommandRegistry& registry      = editorContext.getSubsystem<EditorCommandRegistry>();
+        EditorInputActions&          inputActions  = editorContext.getSubsystem<EditorInputActions>();
+        const EditorCommandDesc*     pDesc         = registry.find( commandID );
+        if ( pDesc == nullptr )
+            SW_FATAL( "Menu item names command '%#' which is not registered", string( commandID ).c_str() );
+        fixed_string<constant::buffer::kMax128> menuLabel;
+        EditorCommandRegistry::formatMenuLabel( *pDesc, menuLabel );
+        string shortcutLabel;
+        inputActions.getShortcuts().formatShortcutLabel( pDesc->_inputAction, shortcutLabel );
+        const utf8* pShortcut = shortcutLabel.empty() ? nullptr : shortcutLabel.c_str();
+        const bool  bPressed  = ImGui::MenuItem( menuLabel.c_str(), pShortcut, false, EditorCommandRegistry::isEnabled( *pDesc, target ) );
+        EditorSelfTestMarks::recordFormat( "menu.%#", pDesc->_id.c_str() );
+        if ( bPressed )
+            inputActions.queueCommand( pDesc->_id, target );
+        return bPressed;
+    }
+
     bool EditorInputGUI::wasItemClicked( EditorMouseButton button )
     {
         return ImGui::IsItemClicked( static_cast<ImGuiMouseButton>( button ) );
@@ -262,6 +295,17 @@ namespace sw::editor
     bool EditorInputGUI::wasItemDoubleClicked( EditorMouseButton button )
     {
         return ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( static_cast<ImGuiMouseButton>( button ) );
+    }
+
+    bool EditorInputGUI::wasItemClickedWithoutDrag( EditorMouseButton button )
+    {
+        // 누른 항목은 뗀 프레임까지 활성일 수 있다 — 활성 항목에 막힌 호버도 센다.
+        return ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) && EditorInputGUIInternal::wasClickedWithoutDrag( static_cast<ImGuiMouseButton>( button ) );
+    }
+
+    bool EditorInputGUI::wasItemResetRequested()
+    {
+        return wasItemClickedWithoutDrag( kResetToDefaultButton );
     }
 
     EditorPointerState EditorInputGUI::readPointer()

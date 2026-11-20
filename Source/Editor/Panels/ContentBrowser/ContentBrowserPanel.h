@@ -17,6 +17,14 @@ struct ImDrawList;
 
 namespace sw::editor
 {
+    /** @brief 이번 프레임에 그린 폴더 타일 · 줄 하나의 화면 사각형입니다 — OS 에서 놓은 파일이 그 위에 떨어지면 그 폴더로 임포트한다. */
+    struct ContentBrowserFolderDropRect
+    {
+        float2 _min{};
+        float2 _max{};
+        string _folderAbs{};
+    };
+
     /**
      * @brief 콘텐츠 루트를 탐색하고 애셋을 선택하거나 여는 창입니다.
      * @details 창은 그리기(뷰)만 한다. 루트 · 목록 · 이력 · 선택 · 파일 관리 · 참조 역색인은 모델(`ContentBrowserViewModel`)이 가지고, 아래 공개 함수는 모델로 넘긴다.
@@ -49,6 +57,8 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 폴더로 이동합니다. 그 폴더가 속한 콘텐츠 루트에서 브레드크럼 경로도 함께 만듭니다. */
         void openFolder( string_view absolutePath ) { _model.openFolder( absolutePath ); }
+        /** @brief 리소스 id @p assetID 의 폴더로 가서 그 애셋을 고르고 작업 공간 포커스(인스펙터)를 옮깁니다(`ContentBrowserViewModel::revealAsset`). 디스크에 없는 애셋이면 false 입니다. */
+        [[nodiscard]] bool revealAsset( string_view assetID ) { return _model.revealAsset( assetID ); }
         /** @brief 현재 폴더 목록의 항목 수를 반환합니다. 필터를 적용하기 전의 수입니다. */
         uint32 getEntryCount() const { return static_cast<uint32>( _model.getEntries().size() ); }
         /** @brief 폴더 목록을 다시 읽도록 예약했거나 읽는 중이면 true 입니다. */
@@ -148,6 +158,13 @@ namespace sw::editor
         void drawFolderTreeNode( string_view folderPath, string_view label, int32 depth );
         /** @brief 오른쪽 애셋 타일 또는 리스트를 그립니다. */
         void drawAssetView();
+        /**
+         * @brief OS 파일 끌어 놓기(`EditorFileDrop`)를 받습니다 — 끄는 동안 에셋 영역 위면 놓을 자리를 보이고(R11), 놓으면 그 아래 폴더(없으면 지금 폴더)로 임포트한다.
+         * @details 놓은 자리가 이 창 밖이면 꺼내지 않는다(다른 받는 쪽 몫 — 받는 쪽이 없으면 `EditorFileDrop` 이 다음 놓기 때 버렸다고 알린다).
+         */
+        void handleOSFileDrop();
+        /** @brief 직전 항목(폴더 타일 · 줄)을 OS 파일 놓기 대상으로 적습니다. */
+        void recordFolderDropRect( const AssetEntry& entry );
         /** @brief 현재 폴더의 브레드크럼 경로를 그립니다. */
         void drawBreadcrumbs();
         /** @brief 보이는 항목의 타일 그리드를 그립니다. */
@@ -219,5 +236,8 @@ namespace sw::editor
         string                                  _activeCollectionName; /**< 오른쪽에 펼친 컬렉션. 비었으면 폴더 보기다 */
         string                                  _collectionNameBuffer; /**< 저장 검색 · 새 컬렉션 이름 입력 */
         string                                  _syncedAssetID;        /**< 메인 씬에서 고른 오브젝트의 애셋(선택 동기화 채널의 메인 씬 칸) — 타일에 테두리로 보인다. 미리보기 창의 선택은 따르지 않는다 */
+        vector<ContentBrowserFolderDropRect>    _listFolderDropRect;   /**< 이번 프레임의 폴더 타일 · 줄 사각형(OS 파일 놓기 대상) */
+        float2                                  _assetViewMin;         /**< 이번 프레임의 에셋 영역(OS 파일 놓기를 받는 곳) */
+        float2                                  _assetViewMax;
     };
 } // namespace sw::editor

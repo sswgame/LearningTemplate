@@ -859,6 +859,7 @@ namespace sw
         ID3D12Resource* const pResource = _pDevice->resolveTexture( texture );
         if ( pResource == nullptr || pName == nullptr )
             return;
+        _pDevice->getMemoryTracker().setLabel( RHIMemoryKey::makeTexture( texture ), pName ); // 메모리 스냅숏 · RT 목록이 같은 이름을 보인다
         // PIX · DRED 페이지 폴트 출력이 이 이름을 보인다(디버그 빌드의 `SW Texture <핸들>` 이름을 첨부 이름으로 덮는다).
         const wstring wideName = StringUtil::utf8ToUTF16( pName );
         pResource->SetName( wideName.c_str() );
@@ -972,7 +973,7 @@ namespace sw
                                "CreateCommittedResource" ) == false )
             return 0;
 
-        const RHITextureHandle                 handle  = _pDevice->storeTexture( texture, RHIMemoryTracker::classifyTexture( desc ) );
+        const RHITextureHandle                 handle  = _pDevice->storeTexture( texture, desc );
         ID3D12Resource*                        pNative = _pDevice->resolveTexture( handle );
         D3D12RHIDevice::OffscreenTextureRecord record{};
         record._format     = bDepth ? dsvFmt : colorFmt;

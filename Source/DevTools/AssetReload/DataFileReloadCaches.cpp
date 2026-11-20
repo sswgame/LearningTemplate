@@ -40,12 +40,12 @@ namespace sw
                 return engine::areEngineServicesBound() && engine::getSubsystem<LocalizationManager>().isProjectFile( relativePath );
             }
 
-            /** @brief 그 파일이 든 프로젝트를 다시 읽습니다(`LocalizationManager::reloadChangedFile`). */
-            void reload( const AssetID& assetID )
+            /** @brief 그 파일이 든 프로젝트를 다시 읽습니다(`LocalizationManager::reloadChangedFile`). Failed 는 관리자가 오류로 남기고 지금 표를 지킨다. */
+            [[nodiscard]] ReloadResult reload( const AssetID& assetID )
             {
-                const string_view relativePath = assetID.view();
-                if ( engine::areEngineServicesBound() )
-                    (void)engine::getSubsystem<LocalizationManager>().reloadChangedFile( relativePath ); // Failed 는 관리자가 오류로 남겼다 — 캐시 `reload` 는 결과를 돌려주지 않는다
+                if ( engine::areEngineServicesBound() == false )
+                    return ReloadResult::NotTracked;
+                return engine::getSubsystem<LocalizationManager>().reloadChangedFile( assetID.view() );
             }
 
             /** @brief 로드한 프로젝트 개수입니다. */
@@ -53,6 +53,9 @@ namespace sw
             {
                 return engine::areEngineServicesBound() ? engine::getSubsystem<LocalizationManager>().getMountedProjectNames().size() : 0u;
             }
+
+            /** @brief 데이터는 `LocalizationManager` 가 쥐어 덧붙일 줄이 없습니다(그 몫은 메모리 태그 표에 있다). */
+            void collectMemoryEntries( vector<AssetMemoryEntry>& /*outListEntry*/ ) const override {}
 
             /** @brief 아무것도 하지 않습니다(파일 설명). */
             void clear() override {}

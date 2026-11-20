@@ -11,6 +11,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
@@ -58,6 +59,32 @@ namespace sw::editor
                 outValue = static_cast<float64>( *pProperty->getValuePtr<uint32>( pComponent ) );
             else
                 return false;
+            return true;
+        }
+
+        /**
+         * @brief 주 선택 오브젝트의 `-gv_editorWatchProperty` 가 그 컴포넌트 타입의 기본 인스턴스(CDO)와 다르면 1, 같으면 0 입니다. 타입을 가리지 않는다(에셋 칸 · 참조 칸 포함).
+         * @details 인스펙터의 되돌리기 단추 · 휠클릭(R10)과 같은 판정(`EditorDefaultObjects::isDefaultValue`)이라 끌어 놓기 · 붙여넣기 · 기본값 되돌리기 시나리오가 값 글을 적지 않고 본다.
+         */
+        [[nodiscard]] bool readSelectedPropertyModified( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            EditorContext* pContext = getWatchContext( __func__ );
+            if ( pContext == nullptr )
+                return false;
+            GameObject*  pObject         = editor::getMainSceneSelection().getPrimaryObject();
+            const string watchedProperty = gv_editorWatchProperty.get();
+            const size_t dot             = watchedProperty.find( '.' );
+            if ( pObject == nullptr || dot == string::npos )
+                return false;
+            Component* pComponent = pObject->findComponentByTypeName( hashed_string( watchedProperty.substr( 0, dot ).c_str() ) );
+            if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
+                return false;
+            const TypeInfo&     type      = *pComponent->getTypeInfo();
+            const PropertyInfo* pProperty = type.findPropertyInHierarchy( hashed_string( watchedProperty.substr( dot + 1 ).c_str() ) );
+            const Component*    pDefault  = pContext->getSubsystem<EditorDefaultObjects>().findDefault( type );
+            if ( pProperty == nullptr || pDefault == nullptr )
+                return false;
+            outValue = EditorDefaultObjects::isDefaultValue( *pProperty, ObjectAddress{ pComponent }, ObjectAddress{ pDefault } ) ? 0.0 : 1.0;
             return true;
         }
 
@@ -230,6 +257,9 @@ namespace sw::editor
                                &readSelectedSceneReference, false, false );
     SW_AUTOMATION_WATCH( editorSelectedProperty, "Editor.SelectedProperty",
                          "Numeric value of gv_editorWatchProperty (<ComponentType>.<property>) on the primary selection", &readSelectedProperty );
+    SW_AUTOMATION_WATCH( editorSelectedPropertyModified, "Editor.SelectedPropertyModified",
+                         "1 when gv_editorWatchProperty (<ComponentType>.<property>) on the primary selection differs from the component default, 0 when it matches",
+                         &readSelectedPropertyModified );
     SW_AUTOMATION_WATCH( editorSelectedPropertySum, "Editor.SelectedPropertySum",
                          "Sum of gv_editorWatchProperty (<ComponentType>.<property>) over every selected object", &readSelectedPropertySum );
     SW_AUTOMATION_WATCH( editorSelectedCurveKeyCount, "Editor.SelectedCurveKeyCount",

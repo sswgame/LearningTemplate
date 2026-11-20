@@ -9,6 +9,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/GameSelection.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Input/IInputCaptureQuery.h"
@@ -23,6 +24,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/Experience/ExperienceManager.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
@@ -32,7 +34,6 @@
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
-#include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettingsOverride.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDataWatcher.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
@@ -153,6 +154,8 @@ namespace sw
         _gameScope.emplaceSubsystem<TelemetryUploadLink>( _packConfig._data );
         // 플레이어 통계 · 업적은 gamesettings 에 통계 카탈로그가 있을 때만 선다 - 플랫폼 서비스(지금은 로컬 구현)까지 잇는다.
         _gameScope.emplaceSubsystem<PlayerStatsSubsystem>( _packConfig._data );
+        // Experience(허브의 미니게임)는 이 게임 범위에 키트 서비스를 걸고 나올 때 거둔다 — 종료가 `onShutdown` 뒤에 켜진 것을 끈다.
+        _gameScope.emplaceSubsystem<ExperienceManager>( _gameScope, _packConfig );
     }
 
     GameInstance::~GameInstance()
@@ -314,6 +317,13 @@ namespace sw
 
     void GameInstance::startFirstScene()
     {
+        // 개발 실행 인자 `-experience=<이름>` 은 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)보다 위다 — 그 Experience 의 맵으로 들어간다. 지면 씬 없이 오류로 남는다(다른 씬으로 대신하지 않는다).
+        const string launchExperience = GameSelection::getLaunchExperience();
+        if ( launchExperience.empty() == false )
+        {
+            (void)getSubsystem<ExperienceManager>().enter( launchExperience ); // 실패는 관리자가 알린다
+            return;
+        }
         (void)getSubsystem<GameSceneFlow>().requestFirstScene(); // 실패는 씬 흐름이 알리고, 다시 선 인스턴스는 살아 있는 씬을 쓴다
     }
 
@@ -471,14 +481,12 @@ namespace sw
 
     bool GameInstance::makeRequiredDataPath( string_view kindLabel, string& outPath ) const
     {
-        // 공용 팩에서 읽는 종류는 gamesettings 의 <RequiredData pack> 이 팩을 정한다 — 자리 규칙은 어느 팩이든 등록 줄 하나다.
-        const auto           itShared = _packConfig._data._mapRequiredDataPack.find( string( kindLabel ) );
-        const string&        pack     = itShared != _packConfig._data._mapRequiredDataPack.end() ? itShared->second : _packConfig._packRoot.get();
-        const expected<void> path     = GamePackDataUtil::tryMakeKindPath( pack, kindLabel, outPath );
+        // 공용 팩에서 읽는 종류는 gamesettings 의 <RequiredData pack> 이 팩을 정한다 — 자리 규칙은 어느 팩이든 등록 줄 하나다(`GamePackConfig::makeRequiredDataPath`).
+        const expected<void> path = _packConfig.makeRequiredDataPath( kindLabel, outPath );
         if ( path.has_value() )
             return true;
-        SW_LOG_ERROR_ID( "GameInstance.RequiredGameDataNo", "Required game data '%#' has no path in pack '%#': %# (%#) - the game does not start", kindLabel, pack.c_str(), path.error().message(),
-                         path.error().detail() );
+        SW_LOG_ERROR_ID( "GameInstance.RequiredGameDataNo", "Required game data '%#' has no path in pack '%#': %# (%#) - the game does not start", kindLabel, _packConfig._packRoot.c_str(),
+                         path.error().message(), path.error().detail() );
         return false;
     }
 

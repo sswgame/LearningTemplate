@@ -2,6 +2,7 @@
 
 #include "Engine/Content/Pack/PackConfig.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 namespace sw
@@ -41,11 +42,7 @@ namespace sw
 {
     void PackCookRules::mergeGameRules( string_view gamePackRoot, const GameCookRules& gameRules )
     {
-        string root{ gamePackRoot };
-        while ( root.empty() == false && root.back() == '/' )
-        {
-            root.pop_back();
-        }
+        const string root = FileUtil::trimTrailingSlashes( gamePackRoot );
         for ( const PackAlwaysCookRule& gameRule : gameRules._listAlwaysCook )
         {
             // 게임 규칙의 패턴은 그 게임 팩 루트 기준이다 — 루트를 붙인다(닿는 범위는 `_scope` 가 따로 막는다).

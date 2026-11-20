@@ -173,6 +173,12 @@ namespace sw::editor
          */
         bool drawAddNodePopup( const vector<EditorGraphNodeKind>& listKind, uint32& outKindID, float2& outCanvasPosition );
         /**
+         * @brief 에셋을 캔버스에 놓으면 표 @p listRule 이 정한 노드 종류를 돌려줍니다(언리얼 머티리얼 그래프의 텍스처 놓기 → Texture Sample). 캔버스 안에서 프레임마다 부릅니다.
+         * @details 표에 맞는 줄이 없는 에셋이면 놓을 자리를 열지 않는다(EditorUI R11 — 강조 없음, 끄는 쪽 금지 표시). 놓은 순간에만 true 이고,
+         *          종류 · 에셋 리소스 id · 놓은 캔버스 좌표를 돌려준다. 노드를 넣고 에셋을 채우는 일(되돌리기 한 단계)은 패널 모델이 한다.
+         */
+        bool acceptAssetDrop( const vector<EditorGraphAssetNodeRule>& listRule, uint32& outKindID, string& outAssetPath, float2& outCanvasPosition );
+        /**
          * @brief 드래그해서 잇는 새 링크를 받습니다. `ed::BeginCreate` 에서 `EndCreate` 까지 전체를 처리하며 캔버스 안에서 호출합니다.
          * @param findPin 핀 번호로 연결 정보를 찾는 콜백입니다. 모르는 핀이면 false 를 반환하며, 그 연결은 거절됩니다.
          * @details 방향이나 타입이 맞지 않으면 링크를 빨갛게 표시해 거절하고 이유를 그 위치의 툴팁으로 보여 준다(`EditorNodeGraphRules::canConnect`).

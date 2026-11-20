@@ -35,6 +35,55 @@ namespace sw
     // 1) CommandLineArgument — ArgumentList.xxx 에서 만드는 표준 키
     // ------------------------------------------------------------------------------
     /**
+     * @enum CommandLineArgumentUsage
+     * @brief 인자를 쓰는 구성입니다 — `ArgumentList.xxx` 줄마다의 둘째 칸입니다.
+     * @details 받지 않는 구성은 철자를 등록하지 않는다(`CommandLineManager::initialize`) — 주면 "알 수 없는 인자" 로 기동이 멈추고, 열거값은 남아 읽으면 "주지 않음" 이다.
+     *          언리얼은 배포 구성에서 개발 명령줄 · 콘솔 변수를 `#if !UE_BUILD_SHIPPING` 으로 빼고, 유니티는 Development Build 에서만 듣는 인자를 둔다 — 여기는 빼는 대신 거절한다.
+     */
+    enum class CommandLineArgumentUsage : uint8
+    {
+        All,       /**< 모든 구성(배포 포함) */
+        Dev,       /**< 개발 도구 · 진단(에디터 · 임포트 · 개별 쿠킹 · 검증 층) — 배포가 아닌 구성만 */
+        Test,      /**< 단위 테스트 · 자동화 시나리오 장치 — 배포가 아닌 구성만 */
+        Server,    /**< 서버 코드가 있는 타깃(Game · Server)만 — 클라이언트 전용 타깃은 받지 않는다 */
+        AndroidDev /**< Android 의 배포가 아닌 구성만 */
+    };
+
+    /**
+     * @struct CommandLineBuildPolicy
+     * @brief 이 빌드가 어느 쓰는 구성(`CommandLineArgumentUsage`)의 인자를 받는지 정하는 빌드 사실입니다.
+     * @details 값은 `current`(빌드 상수 `build::kShipping` · `kWithServerCode` · `kPlatformName`)가 정한다. 단위 테스트가 배포 정책을 개발 빌드에서 재현하려고 값으로 둔다.
+     */
+    struct CommandLineBuildPolicy
+    {
+        uint8                  _bShipping       : 1;
+        uint8                  _bWithServerCode : 1;
+        uint8                  _bAndroid        : 1;
+        [[maybe_unused]] uint8 _reserved        : 5;
+
+        /** @brief 이 빌드의 정책입니다. */
+        [[nodiscard]] static CommandLineBuildPolicy current();
+
+        /** @brief @p usage 의 인자를 이 빌드가 받으면 true 입니다. */
+        [[nodiscard]] constexpr bool isUsageAccepted( const CommandLineArgumentUsage usage ) const
+        {
+            switch ( usage )
+            {
+                case CommandLineArgumentUsage::All:
+                    return true;
+                case CommandLineArgumentUsage::Dev:
+                case CommandLineArgumentUsage::Test:
+                    return _bShipping == 0;
+                case CommandLineArgumentUsage::Server:
+                    return _bWithServerCode != 0;
+                case CommandLineArgumentUsage::AndroidDev:
+                    return _bShipping == 0 && _bAndroid != 0;
+            }
+            return false;
+        }
+    };
+
+    /**
      * @enum CommandLineArgument
      * @brief 엔진이 정해 둔 표준 커맨드라인 인자의 열거형 식별자입니다.
      */
@@ -54,13 +103,27 @@ namespace sw
      */
     inline constexpr const utf8* kArrCommandLineArgumentSpelling[] = {
 /** @brief 줄의 철자 목록(`...`)에서 첫 철자만 고릅니다. 철자가 하나뿐인 줄에서도 가변 인자가 비지 않게 뒤에 nullptr 를 붙여 부릅니다. */
-#define SW_ARGUMENT_FIRST_SPELLING( first, ... )                         first
-#define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... ) SW_ARGUMENT_FIRST_SPELLING( __VA_ARGS__, nullptr ),
+#define SW_ARGUMENT_FIRST_SPELLING( first, ... )                                first
+#define SW_REGISTER_ARGUMENT( name, usage, defaultValue, useDefaultValue, ... ) SW_ARGUMENT_FIRST_SPELLING( __VA_ARGS__, nullptr ),
 #include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
 #undef SW_ARGUMENT_FIRST_SPELLING
     };
+
+    /** @brief 표준 인자의 쓰는 구성(`ArgumentList.xxx` 줄의 둘째 칸)입니다 — 열거값 순서의 표입니다. */
+    inline constexpr CommandLineArgumentUsage kArrCommandLineArgumentUsage[] = {
+#define SW_REGISTER_ARGUMENT( name, usage, ... ) CommandLineArgumentUsage::usage,
+#include "Core/Predefined/ArgumentList.xxx"
+
+#undef SW_REGISTER_ARGUMENT
+    };
+
+    /** @brief 표준 인자의 쓰는 구성입니다. */
+    constexpr CommandLineArgumentUsage getCommandLineArgumentUsage( CommandLineArgument argument )
+    {
+        return kArrCommandLineArgumentUsage[static_cast<size_t>( argument )];
+    }
 
     /** @brief 표준 인자의 첫 명령줄 철자(`"scenario"`)입니다. 앞의 `-` 는 붙어 있지 않다. */
     constexpr const utf8* getCommandLineArgumentSpelling( CommandLineArgument argument )
@@ -126,12 +189,14 @@ namespace sw
 
         /**
          * @brief ArgumentList.xxx 를 읽어 허용하는 커맨드라인 인자를 등록합니다.
+         * @param policy 받는 쓰는 구성 — @p policy 가 받지 않는 줄은 자리(열거값 인덱스)만 두고 철자를 등록하지 않는다(주면 `parse` 가 모르는 인자로 거절한다).
+         *               기본은 이 빌드의 정책이고, 테스트만 다른 정책(배포)을 넘긴다.
          * @details 등록 순서는 그 파일의 줄 순서이고, `CommandLineArgument` 열거 멤버도 같은 파일에서 같은 순서로 만들어집니다.
          *          그래서 열거값이 곧 `_listArgument` 인덱스입니다. 그 일치를 줄마다 assert 하므로, 열거형으로 조회할 때는 이름을
          *          만들지도 해시하지도 않습니다. 표를 **먼저 비우므로 몇 번을 불러도 같은 표가 됩니다.** 다만 그 전에
          *          `addArgument` 로 넣어 둔 커스텀 인자는 함께 사라집니다.
          */
-        void initialize();
+        void initialize( const CommandLineBuildPolicy& policy = CommandLineBuildPolicy::current() );
         /** @brief 파싱 결과는 프로세스가 끝날 때까지 쓰므로 할 일이 없습니다. */
         void shutdown() {}
 
@@ -149,6 +214,7 @@ namespace sw
 
         /**
          * @brief 엔진이 서기 전(명령줄 표가 없을 때) 플래그 인자 @p argument 가 켜져 적혔는지 봅니다 - `parse` 와 같은 규칙(앞 하이픈 떼기 · `=값` · 철자는 `ArgumentList.xxx`)이다.
+         *        이 빌드가 받지 않는 인자(`CommandLineArgumentUsage`)는 적혀도 false 다 — `parse` 가 그 줄을 모르는 인자로 거절한다.
          * @details 서비스 호스트처럼 기동 전에 갈라야 하는 쪽이 글자를 따로 비교하지 않게 한다(`"--service"` 한 철자만 받던 결함).
          */
         [[nodiscard]] static bool isFlagGivenBeforeParse( int32 argc, utf8* pPpArgv[], CommandLineArgument argument );
@@ -293,6 +359,8 @@ namespace sw
         vector<string> _listParseError;
         /** @brief 지금 자동화 단계의 `<Launch>` 변수 이름입니다(`setStageGlobalVariables`). */
         vector<string> _listStageGlobal;
+        /** @brief `initialize` 가 받은 정책입니다 — 도움말(`makeUsageText`)이 받지 않는 줄을 뺀다. */
+        CommandLineBuildPolicy _buildPolicy{};
 
         SW_SERVICE_SLOT( CommandLineManager, Required );
     };

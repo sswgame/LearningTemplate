@@ -93,7 +93,7 @@ namespace sw
             bValid = false;
         }
         // "Spring:3,Summer:1" — 계절:가중치(가중치를 빼면 그 날씨의 `weight`). 읽히지 않거나 음수인 가중치는 오류다.
-        XMLReadUtil::forEachNamedNumber( node.getAttributeText( "seasons" ), ", ", weather._weight, XMLReadUtil::MissingValue::UseDefault,
+        XMLReadUtil::forEachNamedNumber( node.getAttributeText( "seasons" ), weather._weight, XMLReadUtil::MissingValue::UseDefault,
                                          [&]( string_view token, string_view seasonName, float32 weight, bool bNumberValid )
         {
             if ( bNumberValid == false || weight < 0.0f )

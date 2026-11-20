@@ -241,6 +241,12 @@ namespace sw::editor
         void importFilesFromDialog();
         /** @brief 임포트할 폴더가 있으면 true 입니다. */
         bool canImport() const { return _selectedFolderAbs.empty() == false; }
+        /**
+         * @brief OS 에서 놓은 파일 @p listPath(믿지 않는 경로)를 폴더 @p destFolderAbs 로 임포트합니다 — 규칙(`ContentBrowserFileDropPlan`)으로 거른 뒤 대화상자 임포트와 같은 길을 탄다.
+         * @details 규칙의 한도는 설정(`EditorToolDefaults::_fileDropMaxMegabytes` · `_fileDropMaxCount`), 확장자는 임포트 종류 표다. 거른 파일은 사유와 함께 경고(`ContentBrowser.FileDropRejected`)로,
+         *          받은 수는 `ContentBrowser.FileDropImported` 로 남긴다. 임포트한 파일 수를 돌려준다.
+         */
+        uint32 importDroppedFiles( const vector<string>& listPath, string_view destFolderAbs );
 
         // ------------------------------------------------------------------------------
         // 5) 참조 찾기

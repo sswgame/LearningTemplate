@@ -2,12 +2,22 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
 {
+    CommandLineBuildPolicy CommandLineBuildPolicy::current()
+    {
+        CommandLineBuildPolicy policy{};
+        policy._bShipping       = build::kShipping ? SW_TRUE : SW_FALSE;
+        policy._bWithServerCode = build::kWithServerCode ? SW_TRUE : SW_FALSE;
+        policy._bAndroid        = string_view( build::kPlatformName ) == "Android" ? SW_TRUE : SW_FALSE;
+        return policy;
+    }
+
     // ============================================================================
     // initialize
     // 미리 정의된 커맨드라인 인자 표(ArgumentList.xxx)를 읽어, 모든 인자의 초기 정보와 명령줄 철자를 _mapArgument 에 등록한다.
@@ -20,9 +30,12 @@ namespace sw
     // 그래서 표를 **먼저 비운다.** 줄마다 거는 assert 는 Debug 에서만 살아 있고, Shipping 에서 어긋난 표는 조용히
     // **다른 인자의 값을 돌려준다.** `getArgument(WIDTH)` 가 VSYNC 를 읽는 식이다. 비우고 시작하면 최악의 경우라도
     // "먼저 넣은 커스텀 인자가 사라진다" 로 끝나고, initialize 는 몇 번을 불러도 같은 표가 된다.
+    //
+    // 정책이 받지 않는 줄(배포의 Dev · Test 인자)은 자리만 두고 철자를 넣지 않는다 — 열거값 = 인덱스가 구성마다 같고, 그 철자를 주면 parse 가 모르는 인자로 거절한다.
     // ============================================================================
-    void CommandLineManager::initialize()
+    void CommandLineManager::initialize( const CommandLineBuildPolicy& policy )
     {
+        _buildPolicy = policy;
         _listArgument.clear();
         _mapArgument.clear();
         _listOriginalArgument.clear();
@@ -31,9 +44,10 @@ namespace sw
 
 // 줄마다 단언을 펼치지 않고 함수 하나(`assertRegistrationOrder`)를 부른다 — 단언은 서식 버퍼를 지역에 두고, 최적화하지 않는 Debug 는 펼친 줄마다 따로 자리를 잡아
 // 이 함수의 스택 틀이 인자 수에 비례해 자랐다(인자 여섯을 더하자 주 스레드 스택 1 MB 를 넘어 기동 전에 0xC00000FD 로 죽었다).
-#define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... ) \
-    assertRegistrationOrder( CommandLineArgument::name, #name );         \
-    addArgument( { __VA_ARGS__ }, defaultValue, useDefaultValue );
+#define SW_REGISTER_ARGUMENT( name, usage, defaultValue, useDefaultValue, ... )                                                                                        \
+    assertRegistrationOrder( CommandLineArgument::name, #name );                                                                                                       \
+    addArgument( policy.isUsageAccepted( CommandLineArgumentUsage::usage ) ? std::initializer_list<string_view>{ __VA_ARGS__ } : std::initializer_list<string_view>{}, \
+                 defaultValue, useDefaultValue );
 #include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
@@ -47,8 +61,9 @@ namespace sw
     string CommandLineManager::makeUsageText() const
     {
         string text{ "Usage: <executable> [-argument | -argument=value] ...\n" };
-#define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... ) \
-    appendUsageLine( text, { __VA_ARGS__ }, _listArgument[static_cast<size_t>( CommandLineArgument::name )] );
+#define SW_REGISTER_ARGUMENT( name, usage, defaultValue, useDefaultValue, ... ) \
+    if ( _buildPolicy.isUsageAccepted( CommandLineArgumentUsage::usage ) )      \
+        appendUsageLine( text, { __VA_ARGS__ }, _listArgument[static_cast<size_t>( CommandLineArgument::name )] );
 #include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
@@ -100,6 +115,8 @@ namespace sw
 
     optional<string_view> CommandLineManager::findLineBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument )
     {
+        if ( CommandLineBuildPolicy::current().isUsageAccepted( getCommandLineArgumentUsage( argument ) ) == false )
+            return nullopt; // 이 빌드가 받지 않는 인자다 — parse 가 그 줄을 모르는 인자로 거절한다
         const string_view spelling = getCommandLineArgumentSpelling( argument );
         for ( int32 argIndex = 1; argIndex < argc && pPpArgv != nullptr; ++argIndex )
         {

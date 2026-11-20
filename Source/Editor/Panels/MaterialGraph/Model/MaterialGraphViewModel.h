@@ -87,6 +87,8 @@ namespace sw::editor
         bool disconnectInputPin( int32 inputPin );
         /** @brief 종류 @p kindName 의 노드를 자리 @p canvasPosition 에 넣고 고릅니다. 이름은 종류 이름 + 겹치지 않는 번호입니다. */
         bool addNode( string_view kindName, const float2& canvasPosition );
+        /** @brief `addNode` 와 같되 노드의 에셋(텍스처 · 하위 그래프 파일)을 @p assetPath 로 채웁니다 — 에셋을 캔버스에 놓은 것이 되돌리기 한 단계다. */
+        bool addAssetNode( string_view kindName, const float2& canvasPosition, string_view assetPath );
         /** @brief 캔버스 노드 id 들을 지우고 그 노드를 읽던 링크도 지웁니다. */
         void               removeNodes( const vector<int32>& listNodeID );
         void               beginCanvasFrame();

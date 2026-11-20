@@ -218,6 +218,17 @@ namespace sw
         return _mapCache.size();
     }
 
+    void PrefabCache::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
+    {
+        // shortcut: 객체 크기만 센다 — 프리팹 안 노드 표는 메모리 태그(Scene) 줄에 있다.
+        ScopedSharedLock<shared_mutex> readLock{ _mapCacheMutex };
+        for ( const auto& [key, pAsset] : _mapCache )
+        {
+            const auto useCount = pAsset.use_count(); // 표가 쥔 하나를 뺀다
+            outListEntry.push_back( AssetMemoryEntry{ key, sizeof( PrefabAsset ), 0, static_cast<uint32>( useCount > 1 ? useCount - 1 : 0 ) } );
+        }
+    }
+
     void PrefabCache::clear()
     {
         UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
@@ -907,13 +918,29 @@ namespace sw
         return {};
     }
 
-    void PrefabCache::reload( const AssetID& assetID )
+    ReloadResult PrefabCache::reload( const AssetID& assetID )
     {
         const string_view assetRelativePath = assetID.view();
         if ( assetRelativePath.empty() )
-            return;
+            return ReloadResult::NotTracked;
 
         const string cacheKey = makeCacheKey( assetRelativePath );
+        bool         bCached  = false;
+        {
+            ScopedSharedLock<shared_mutex> readLock{ _mapCacheMutex };
+            bCached = _mapCache.find( cacheKey ) != _mapCache.end();
+        }
+        // 든 원본이 읽히는지 먼저 본다(소스를 읽는 구성만 — 쿠킹본은 실행 중에 바뀌지 않는다). 못 읽으면 캐시를 그대로 두어 다음 스폰도 이전 판으로 한다.
+        if ( bCached && AssetIO::usesSource() )
+        {
+            const shared_ptr<PrefabAsset> probe   = sw::make_shared<PrefabAsset>();
+            const bool                    bLoaded = FileUtil::hasExtension( assetRelativePath, ".json" ) ? probe->loadFromJSONFile( assetID ) : probe->loadFromXMLFile( assetID );
+            if ( bLoaded == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabCache.HotReloadFailed", "Hot-Reload failed for Prefab %# - keeping the previous version", cacheKey.c_str() );
+                return ReloadResult::Failed;
+            }
+        }
 
         UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
         // 읽는 중인 로드는 옛 파일을 읽었을 수 있다 — 세대를 올려 그 결과가 캐시에 들지 않게 하고, 다음 요청은 새로 읽게 진행 중 표에서 뗀다.
@@ -934,6 +961,7 @@ namespace sw
             else
                 ++cacheIt;
         }
+        return bCached ? ReloadResult::Reloaded : ReloadResult::NotTracked; // 버린 칸은 다음 로드가 새 파일로 채운다
     }
 
     shared_ptr<const PrefabAsset> AssetRefCache<PrefabAsset>::acquire( string_view path )

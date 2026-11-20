@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="99dcd38fa98e2c446e21ffa3ff162062"?>
+<!--
+  에디터 시나리오 — 카탈로그 칸 휠클릭 = 상속값으로(EditorUI R10 · 데이터 상속 _base). 아이템 표의 변형 행 helmet_knight_merged(_base="helmet_knight")가 적은 name 칸을
+  휠클릭하면 그 칸을 지워 부모 값을 물려받고(원문이 줄고 Catalog.TableEdited "Unset Item.name" 한 번), Undo 한 번에 적은 값이 돌아온다(원문 크기가 처음과 같다). 파일은 저장하지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/catalogcellrevert.scenario.xml -unattended
+-->
+<Scenario name="editor.catalogcellrevert" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus catalog_editor"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.CatalogFileCount" atLeast="1" timeoutFrames="800"/>
+	<EditorWaitStable/>
+	<EditorClick mark="catalog.filter"/>
+	<EditorWaitStable/>
+	<EditorText value="common/data/items.xml"/>
+	<EditorWaitStable/>
+	<EditorClick mark="catalog.file.first"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.CatalogRowCount" atLeast="1" timeoutFrames="300"/>
+	<EditorWaitStable/>
+	<Store watch="Editor.CatalogTextBytes" as="openedBytes"/>
+	<!-- ① 변형 행이 적은 칸을 휠클릭하면 지워져 부모 값을 물려받는다 -->
+	<EditorClick mark="catalog.revert.helmet_knight_merged.name" button="2"/>
+	<EditorWaitStable/>
+	<ExpectLog id="Catalog.TableEdited" contains="Unset Item.name" count="1"/>
+	<Expect watch="Editor.CatalogTextBytes" differsFrom="openedBytes"/>
+	<!-- ② 한 단계 되돌리기 -->
+	<EditorClick mark="catalog.undo"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.CatalogTextBytes" sameAs="openedBytes"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

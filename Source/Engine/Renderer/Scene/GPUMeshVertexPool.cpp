@@ -30,6 +30,7 @@ namespace sw
         , _listScratchRegion{}
         , _listScratchIndexRegion{}
         , _updateCount{ 0 }
+        , _gpuFence{}
         , _liveVertexCount{ 0 }
         , _listPendingCopy{}
         , _listRetiredBuffer{}
@@ -118,12 +119,11 @@ namespace sw
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return false;
 
-        // 번호 = 이 호출 수(프레임마다 한 번). N 번째에 돌려받은 구간은 N + kMaxFrameCountInFlight 번째부터 다시 나간다 — 그 사이에 N - 1 번째까지
-        // 제출한 프레임이 모두 끝난다.
+        // 돌려받은 구간의 키는 펜스 값이다 — 이번에 나간 메시를 읽던 앞 프레임은 모두 이 펜스 앞에 냈다. GPU 가 그 값을 끝냈다고 알린 구간만 다시 나간다.
         ++_updateCount;
-        _allocator.retireDeferred( _updateCount );
-        _indexAllocator.retireDeferred( _updateCount );
-        const uint64 retireStamp = _updateCount + constant::render::kMaxFrameCountInFlight;
+        const uint64 retireStamp = _gpuFence.signal( *pDevice );
+        _allocator.retireDeferred( _gpuFence.getCompletedValue() );
+        _indexAllocator.retireDeferred( _gpuFence.getCompletedValue() );
 
         const bool bMarkedChange = markListedMeshes( listMesh );
         const bool bChanged      = sweepUnlistedMeshes( retireStamp ) || bMarkedChange;

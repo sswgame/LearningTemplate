@@ -233,3 +233,41 @@ SW_TEST_CASE( RHIMemoryTrackerTest, ReportPrintsUsedKindsAndUnknownDriverValues 
     SW_EXPECT_TRUE_MSG( text.find( "unknown - no driver usage for this process" ) != string_view::npos, joined.c_str() );
 }
 #endif
+
+/**
+ * @brief [RHIMemoryTrackerTest] 자원 목록은 텍스처의 모양(서술) · 디버그 이름 · 바이트를 줄마다 내고, 내린 자원은 목록에서 빠진다
+ * @details 메모리 스냅숏의 GPU 자원 표와 렌더링 디버그의 RT 목록이 이 한 면(`collectResources`)을 읽는다 — 백엔드마다 따로 맞추지 않는다.
+ */
+SW_TEST_CASE( RHIMemoryTrackerTest, CollectResourcesListsShapeAndLabel )
+{
+    RHIMemoryTracker tracker;
+    RHITextureDesc   target{};
+    target._width            = 128;
+    target._height           = 64;
+    target._mipLevels        = 1;
+    target._arraySize        = 1;
+    target._format           = RHIFormat::R16G16B16A16_FLOAT;
+    target._bIsRenderTarget  = SW_TRUE;
+    constexpr uint64 kHandle = 7;
+    tracker.recordTexture( kHandle, target, 65536 );
+    tracker.setLabel( RHIMemoryKey::makeTexture( kHandle ), "SceneColor" );
+    tracker.recordAllocation( RHIMemoryKey::makeBuffer( 3 ), RHIMemoryKind::Buffer, 256 );
+    tracker.setLabel( RHIMemoryKey::makeTexture( 99 ), "NotRecorded" ); // 올리지 않은 키는 무시한다
+
+    vector<RHIMemoryResourceEntry> listEntry;
+    tracker.collectResources( listEntry );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listEntry.size() );
+    const RHIMemoryResourceEntry* pTexture = listEntry[0]._key._space == RHIMemoryKeySpace::Texture ? &listEntry[0] : &listEntry[1];
+    SW_EXPECT_TRUE( pTexture->_kind == RHIMemoryKind::RenderTarget );
+    SW_EXPECT_EQUAL( 65536ull, pTexture->_bytes );
+    SW_EXPECT_EQUAL( 128u, pTexture->_shape._width );
+    SW_EXPECT_EQUAL( 64u, pTexture->_shape._height );
+    SW_EXPECT_TRUE( pTexture->_shape._format == RHIFormat::R16G16B16A16_FLOAT );
+    SW_EXPECT_EQUAL( string( "SceneColor" ), pTexture->_label );
+
+    tracker.recordFree( RHIMemoryKey::makeTexture( kHandle ) );
+    tracker.collectResources( listEntry );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEntry.size() );
+    SW_EXPECT_TRUE( listEntry[0]._key._space == RHIMemoryKeySpace::Buffer );
+    SW_EXPECT_TRUE( listEntry[0]._label.empty() );
+}

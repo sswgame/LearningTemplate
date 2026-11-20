@@ -112,3 +112,34 @@ SW_TEST_CASE( WeakInternTableTest, ReleaseOutlivesTableAndNests )
     pHead.reset(); // 1 의 칸 주인이 잠금을 푼 뒤 값을 지우고, 그 값이 2 를 놓는다
     SW_EXPECT_EQUAL( size_t( 0 ), chainTable.countSlots() );
 }
+
+/**
+ * @brief [WeakInternTableTest] 살아 있는 값마다 한 번 부르고, 쥔 쪽 수에서 순회의 사본은 뺀다 — 놓인 값은 부르지 않는다
+ * @details 메모리 스냅숏(`AssetCacheBase::collectMemoryEntries`)의 참조 수가 이 값이다. 함수는 잠금 밖이라 그 안에서 표를 다시 찾아도 교착하지 않는다.
+ */
+SW_TEST_CASE( WeakInternTableTest, ForEachLiveVisitsHeldValuesOnce )
+{
+    FakeTable                 table;
+    sw::shared_ptr<FakeValue> pFirst       = table.insertOrGetLive( 1, sw::make_shared<FakeValue>( FakeValue{ 1 } ) );
+    sw::shared_ptr<FakeValue> pFirstShared = pFirst;
+    sw::shared_ptr<FakeValue> pSecond      = table.insertOrGetLive( 2, sw::make_shared<FakeValue>( FakeValue{ 2 } ) );
+    sw::shared_ptr<FakeValue> pDropped     = table.insertOrGetLive( 3, sw::make_shared<FakeValue>( FakeValue{ 3 } ) );
+    pDropped.reset();
+
+    sw::uint32 visitCount{ 0 };
+    sw::uint32 firstReferences{ 0 };
+    sw::uint32 secondReferences{ 0 };
+    table.forEachLive( [&]( const sw::int32& key, const FakeValue& value, sw::uint32 referenceCount )
+    {
+        ++visitCount;
+        SW_EXPECT_EQUAL( key, value._id );
+        SW_EXPECT_TRUE( table.findLive( key ) != nullptr ); // 잠금 밖에서 부른다
+        if ( key == 1 )
+            firstReferences = referenceCount;
+        if ( key == 2 )
+            secondReferences = referenceCount;
+    } );
+    SW_EXPECT_EQUAL( 2u, visitCount );
+    SW_EXPECT_EQUAL( 2u, firstReferences );
+    SW_EXPECT_EQUAL( 1u, secondReferences );
+}
