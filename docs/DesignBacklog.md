@@ -2213,3 +2213,13 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 - `w-experience` — 겹치는 파일 없음. 다만 Experience 데이터를 `Content/game/empty/experiences/` 에 더하기 시작하면 단계 1 과 겹치므로 그 갈래는 틀(`GameInstance.cpp` · `GameSettings` · `GameSelection`)만 합치고, 데이터는 단계 2 에서 `game/playground/` 에 둔다.
 - `w-stream` · `w-cmdargs` — 이름 바꾸기 자리와 겹치지 않음(`docs/DesignBacklog.md` 는 다른 절).
 - `NamingWords.json` `_bannedNames` 는 세 갈래가 더하므로 단계 1 (라) 는 맨 마지막 커밋으로 둬 충돌을 한 줄 병합으로 줄인다. `docs/NEXT.md` 에도 `Empty` · `game/empty` 줄이 있다 — `move-source` · `rename-symbol` 이 문서도 고치므로 단계 1 은 NEXT 를 만지는 갈래가 없을 때.
+
+## 리플렉션 적용 후보(2026-11-20)
+
+`.cpp` 안의 형식 · 열거형 가운데 리플렉션(`REFLECT` · `PROPERTY` · `ENUM`)으로 손 코드를 지울 자리를 훑었다(열거형 55 · 구조체 필드 이름 글 대조). 적용한 것은 `SavedRetentionSubsystem::RetentionRule` · `RetentionSettings`(손 JSON 읽기 → `JSONSerializer`), `GimmickNodeRegistry::GimmickMoverMode`(이름 비교 → `enumFromString`). 아래는 판단이 남은 것이다.
+
+- **중첩 형식의 접근 제한.** 생성 코드는 `template <> struct Registrar<Outer::Inner>` 특수화 뒤에 이름공간 범위 등록 변수(`static Registrar<…> s_…`, `static EnumRegistrar s_…{ &Registrar<…>::registerEnum }`)와 `ReflectTypeTraits<…>` 특수화를 낸다. 그래서 private · protected 중첩 형식은 C++17 에서 접근 오류가 난다 — 지금은 public 중첩으로만 감춘다. 감추려면 등록 변수를 `Registrar` 의 정적 멤버로 옮기고 바깥 형식이 `REFLECT_BODY`(템플릿 friend)를 갖게 하는 생성기 변경이 필요하다(언리얼은 중첩 `UENUM` · `USTRUCT` 를 아예 막는다).
+- **`ScreenshotStabilityMode`(`AutomationRunnerSteps.cpp`).** `AutomationScreenshotParams::_stability` 를 열거형 칸으로 바꾸면 이름 비교가 사라지지만 데이터 철자가 소문자(`stability="assets"` 113 곳, `"none"` 33 곳, 61 파일)라 열거자 이름(`Assets`)과 다르다. 시나리오 파일을 일괄로 다시 쓸지(되돌리기 쉬운 데이터 이전) 정한 뒤 옮긴다.
+- **`RigCopyTransformNode::Mode`(`RigConstraintNodes.cpp`).** `getTypeName` 의 switch 가 열거자 이름과 같다. 다만 노드 클래스 전체가 `.cpp` 에 있어 열거형만 꺼낼 주인이 없다 — 노드 클래스를 헤더로 옮길 일이 생길 때 함께.
+- **헤더 열거형의 손 이름 표(DevTools).** `ReloadSource`(`ReloadTracker::getSourceName`) · `MemoryDiffStatus`(`getMemoryDiffStatusName`)는 "DevTools 는 리플렉션 코드젠을 하지 않는다" 는 주석으로 `EnumNameTable` 을 둔다 — 2026-11-17 부터 DevTools 에 리플렉션 단계가 있어 낡은 이유다. `ENUM()` + DevTools `HEADERS` 에 그 헤더를 더하면 표가 사라지지만 `ReflectionMacros.h` 를 끌어와 팬인 점수가 는다(각 팬인 8 · 11). 같은 낡은 주석이 `AutomationRunnerParams.h` 머리말에도 있다.
+- **손으로 두는 것으로 판단:** `DialogBackend`(명령줄 백엔드 이름 — "손으로 두는 것" 절), `ShaderBindingValidatorInternal::RegisterClass` · `GlNamespace`(글이 열거자 이름이 아닌 `b` · `UBO`), `TextChoiceKind`(ICU 철자), `RichTextParser::TagKind`(`b` · `i`), `StageReportResult`(다른 쪽이 쓴 보고의 일부 키만 읽는다), `WaterBodyComponent::MaterialNames` · `FoliageComponent::ViewMaterialNames`(머티리얼 매개변수 이름 표).
