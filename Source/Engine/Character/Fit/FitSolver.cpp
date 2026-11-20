@@ -298,7 +298,9 @@ namespace sw
             const bool bInvalidPartInput  = partInput._pGeometry == nullptr || partInput._pFitData == nullptr || partInput._pGeometry->isValid() == false;
             if ( bInvalidPartInput )
             {
-                outReport.addMessage( "Character.FitPartInvalid", string( "part '" ) + partInput._name.c_str() + "' has no valid geometry or fit data" );
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "part '%#' has no valid geometry or fit data", partInput._name.c_str() );
+                outReport.addMessage( "Character.FitPartInvalid", string( builder.view() ) );
                 bValid = false;
                 continue;
             }
@@ -306,7 +308,9 @@ namespace sw
             part._pProfile            = tables.findProfile( partInput._pFitData->getProfile() );
             if ( pLayer == nullptr || part._pProfile == nullptr )
             {
-                outReport.addMessage( "Character.FitPartProfileUnknown", string( "part '" ) + partInput._name.c_str() + "' names a layer or profile the fit tables do not have" );
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "part '%#' names a layer or profile the fit tables do not have", partInput._name.c_str() );
+                outReport.addMessage( "Character.FitPartProfileUnknown", string( builder.view() ) );
                 bValid = false;
                 continue;
             }
@@ -390,7 +394,9 @@ namespace sw
         {
             if ( _operatorRegistry.findOperator( interaction._operator ) == nullptr )
             {
-                outResult._report.addMessage( "Character.FitSolveOperatorUnknown", string( "fit tables name unknown operator '" ) + interaction._operator.c_str() + "'" );
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "fit tables name unknown operator '%#'", interaction._operator.c_str() );
+                outResult._report.addMessage( "Character.FitSolveOperatorUnknown", string( builder.view() ) );
                 return false;
             }
         }

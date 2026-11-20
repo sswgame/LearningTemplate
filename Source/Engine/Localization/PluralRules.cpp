@@ -193,10 +193,15 @@ namespace sw
             /** @brief 보기 글(`1.50`)의 소수 자리 수와 점을 뗀 정수(150)입니다. 지수가 있거나 숫자가 아니면 false 입니다. */
             [[nodiscard]] static bool readScaled( string_view text, uint32& outFractionCount, int64& outScaled )
             {
-                const size_t dot  = text.find( '.' );
-                outFractionCount  = dot == string_view::npos ? 0 : static_cast<uint32>( text.size() - dot - 1 );
-                const string bare = dot == string_view::npos ? string( text ) : string( text.substr( 0, dot ) ) + string( text.substr( dot + 1 ) );
-                return bare.empty() == false && bare.find_first_not_of( "0123456789" ) == string::npos && StringUtil::parseInt64( bare, outScaled );
+                const size_t dot = text.find( '.' );
+                outFractionCount = dot == string_view::npos ? 0 : static_cast<uint32>( text.size() - dot - 1 );
+                StringBuilder<constant::buffer::kMax64> bareBuilder;
+                if ( dot == string_view::npos )
+                    bareBuilder.append( text );
+                else
+                    bareBuilder.appendFormat( "%#%#", text.substr( 0, dot ), text.substr( dot + 1 ) );
+                const string_view bare = bareBuilder.view();
+                return bare.empty() == false && bare.find_first_not_of( "0123456789" ) == string_view::npos && StringUtil::parseInt64( bare, outScaled );
             }
 
             /** @brief 보기 하나(`15`, `2~16`, `0.0~1.5`, `1c6`)를 @p outListSample 에 펼쳐 넣습니다. */

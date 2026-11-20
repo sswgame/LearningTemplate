@@ -110,7 +110,11 @@ namespace sw
                             listRule.push_back( std::move( clone ) );
                     }
                     if ( listRule.empty() )
-                        return fail( element, string( "TypeVariation '" ) + pName + "' extends class '" + pExtends + "' that no rule uses" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "TypeVariation '%#' extends class '%#' that no rule uses", pName, pExtends );
+                        return fail( element, message );
+                    }
                     for ( UIStyleRule& rule : _pSheet->_listRule )
                     {
                         listRule.push_back( std::move( rule ) );
@@ -149,18 +153,29 @@ namespace sw
                     if ( pNested != nullptr )
                         assignment._nestedProperty = PropertyHandle::of( *pNestedType, *pNested );
                     if ( resolveValue( pValue, assignment._text ) == false )
-                        return fail( node, string( "Rule uses unknown variable '" ) + pValue + "'" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "Rule uses unknown variable '%#'", pValue );
+                        return fail( node, message );
+                    }
                     WidgetStyle scratch{};
                     void*       pTarget = pNested != nullptr ? property.getRawPtr( &scratch ) : &scratch;
                     const bool  bRead   = SerializerUtil::applyPropertyText( pNested != nullptr ? *pNested : property, MutableObjectAddress{ pTarget }, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                     if ( bRead == false )
-                        return fail( node, string( "Rule value '" ) + assignment._text + "' cannot be read as '" + pName + "'" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "Rule value '%#' cannot be read as '%#'", assignment._text, pName );
+                        return fail( node, message );
+                    }
                     if ( field == UIStyleField::Transition )
                     {
                         UIStyleTransitionSpec spec{};
                         if ( const expected<void> transition = UIStyleTransitionSpec::parse( assignment._text, spec ); transition.has_value() == false )
-                            return fail( node, "Rule _transition: " + string( transition.error().message().data(), transition.error().message().size() ) + " '" +
-                                                   string( transition.error().detail().data(), transition.error().detail().size() ) + "'" );
+                        {
+                            fixed_string<constant::buffer::kMax256> message;
+                            formatstring( message.data(), message.capacity(), "Rule _transition: %# '%#'", transition.error().message(), transition.error().detail() );
+                            return fail( node, message );
+                        }
                     }
                     inoutRule._listAssignment.push_back( std::move( assignment ) );
                     return {};
@@ -175,8 +190,11 @@ namespace sw
                     if ( StringUtil::isNullOrEmpty( pSelector ) )
                         return fail( element, "Rule needs _selector" );
                     if ( const expected<void> selector = UIStyleSelector::parse( pSelector, rule._selector ); selector.has_value() == false )
-                        return fail( element, string( selector.error().message().data(), selector.error().message().size() ) + " '" +
-                                                  string( selector.error().detail().data(), selector.error().detail().size() ) + "'" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "%# '%#'", selector.error().message(), selector.error().detail() );
+                        return fail( element, message );
+                    }
 
                     const TypeInfo& styleType = *WidgetStyle::StaticType();
                     for ( XMLAttribute attribute = element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
@@ -187,7 +205,11 @@ namespace sw
                         UIStyleField        field{};
                         const PropertyInfo* pProperty = styleType.findPropertyByNameText( pName );
                         if ( pProperty == nullptr || UIStyleFieldTable::tryFindField( pName, field ) == false )
-                            return fail( element, string( "Rule has unknown style property '" ) + pName + "'" );
+                        {
+                            fixed_string<constant::buffer::kMax256> message;
+                            formatstring( message.data(), message.capacity(), "Rule has unknown style property '%#'", pName );
+                            return fail( element, message );
+                        }
                         if ( expected<void> added = addAssignment( element, rule, field, *pProperty, nullptr, nullptr, pName, attribute.getValue() ); added.has_value() == false )
                             return added;
                     }
@@ -198,12 +220,20 @@ namespace sw
                         const PropertyInfo* pProperty = styleType.findPropertyByNameText( pName );
                         const TypeInfo*     pNested   = pProperty != nullptr ? SerializerUtil::findNestedObjectType( pProperty->_typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ) : nullptr;
                         if ( pNested == nullptr || UIStyleFieldTable::tryFindField( pName, field ) == false )
-                            return fail( child, string( "Rule has unknown style element <" ) + pName + ">" );
+                        {
+                            fixed_string<constant::buffer::kMax256> message;
+                            formatstring( message.data(), message.capacity(), "Rule has unknown style element <%#>", pName );
+                            return fail( child, message );
+                        }
                         for ( XMLAttribute attribute = child.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                         {
                             const PropertyInfo* pInner = pNested->findPropertyByNameText( attribute.getName() );
                             if ( pInner == nullptr )
-                                return fail( child, string( "<" ) + pName + "> has unknown attribute '" + attribute.getName() + "'" );
+                            {
+                                fixed_string<constant::buffer::kMax256> message;
+                                formatstring( message.data(), message.capacity(), "<%#> has unknown attribute '%#'", pName, attribute.getName() );
+                                return fail( child, message );
+                            }
                             if ( expected<void> added = addAssignment( child, rule, field, *pProperty, pNested, pInner, attribute.getName(), attribute.getValue() ); added.has_value() == false )
                                 return added;
                         }
@@ -383,7 +413,11 @@ namespace sw
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey ) == false )
-                return context.fail( root, string( "UIStyleSheet has unknown attribute '" ) + attribute.getName() + "'" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "UIStyleSheet has unknown attribute '%#'", attribute.getName() );
+                return context.fail( root, message );
+            }
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UIStyleSheetAsset::kVersion ) )
             {
@@ -411,7 +445,11 @@ namespace sw
             if ( StringUtil::equals( pName, Internal::kVariableElement ) || StringUtil::equals( pName, Internal::kVariationElement ) )
                 continue;
             if ( StringUtil::equals( pName, Internal::kRuleElement ) == false )
-                return context.fail( child, string( "UIStyleSheet has unknown element <" ) + pName + ">" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "UIStyleSheet has unknown element <%#>", pName );
+                return context.fail( child, message );
+            }
             if ( expected<void> parsed = context.parseRule( child ); parsed.has_value() == false )
                 return parsed;
         }

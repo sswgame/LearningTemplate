@@ -24,7 +24,11 @@ namespace
             CookRecord record = CookRecord::make( job, uint64( 0x1234 ) );
             CookRecord loaded;
             if ( record.write( recordPath ) == false || CookRecord::read( recordPath, loaded ) == false )
-                test::reportFailure( __FILE__, __LINE__, "could not write and read back the cook record " + recordPath );
+            {
+                fixed_string<constant::buffer::kMax512> text;
+                formatstring( text.data(), text.capacity(), "could not write and read back the cook record %#", recordPath );
+                test::reportFailure( __FILE__, __LINE__, text );
+            }
             return loaded;
         }
 

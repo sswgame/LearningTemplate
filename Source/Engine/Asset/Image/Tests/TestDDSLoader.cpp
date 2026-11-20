@@ -260,17 +260,23 @@ SW_TEST_CASE( DDSLoaderTest, FormatSizeTableCoversTheLegacyTables )
     };
     for ( const DDSFormatSize& row : listSize )
     {
-        SW_EXPECT_TRUE_MSG( countOfDXGI( row._dxgiFormat ) == 1, "duplicate DXGI " + to_string( row._dxgiFormat ) );
+        fixed_string<constant::buffer::kMax64> text;
+        formatstring( text.data(), text.capacity(), "duplicate DXGI %#", row._dxgiFormat );
+        SW_EXPECT_TRUE_MSG( countOfDXGI( row._dxgiFormat ) == 1, text );
         SW_EXPECT_TRUE( row._blockBytes > 0 );
         SW_EXPECT_TRUE( ( row._blockWidth == 1 && row._blockHeight == 1 ) || ( row._blockWidth == 4 && row._blockHeight == 4 ) );
     }
     for ( const DDSLegacyFourCC& row : DDSLoader::getLegacyFourCCTable() )
     {
-        SW_EXPECT_TRUE_MSG( countOfDXGI( row._dxgiFormat ) == 1, "legacy FourCC maps to DXGI " + to_string( row._dxgiFormat ) + " which has no size" );
+        fixed_string<constant::buffer::kMax64> text;
+        formatstring( text.data(), text.capacity(), "legacy FourCC maps to DXGI %# which has no size", row._dxgiFormat );
+        SW_EXPECT_TRUE_MSG( countOfDXGI( row._dxgiFormat ) == 1, text );
     }
     for ( const DDSLegacyRGBMask& row : DDSLoader::getLegacyRGBMaskTable() )
     {
-        SW_EXPECT_TRUE_MSG( countOfDXGI( row._dxgiFormat ) == 1, "legacy RGB mask maps to DXGI " + to_string( row._dxgiFormat ) + " which has no size" );
+        fixed_string<constant::buffer::kMax64> text;
+        formatstring( text.data(), text.capacity(), "legacy RGB mask maps to DXGI %# which has no size", row._dxgiFormat );
+        SW_EXPECT_TRUE_MSG( countOfDXGI( row._dxgiFormat ) == 1, text );
     }
 }
 

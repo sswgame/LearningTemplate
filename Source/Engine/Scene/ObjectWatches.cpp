@@ -97,13 +97,17 @@ namespace sw
             Component*   pComponent = pTarget->findComponentByTypeName( hashed_string( componentName ) );
             if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
             {
-                outValue.setText( "no " + componentName + " on the target" );
+                fixed_string<constant::buffer::kMax256> text;
+                formatstring( text.data(), text.capacity(), "no %# on the target", componentName );
+                outValue.setText( text );
                 return false;
             }
             const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( propertyName ) );
             if ( pProperty == nullptr )
             {
-                outValue.setText( "no property " + propertyName );
+                fixed_string<constant::buffer::kMax256> text;
+                formatstring( text.data(), text.capacity(), "no property %#", propertyName );
+                outValue.setText( text );
                 return false;
             }
             // 갈래는 내장 타입 표 한 곳(`ReflectedValueUtil`)이 정한다 — 숫자 · bool 은 수, 글 갈래는 글로 읽는다.
@@ -124,7 +128,9 @@ namespace sw
                 outValue.setText( static_cast<const CatalogKeyBase*>( pValue )->toText() ); // 카탈로그 키는 항목 id 글이다(인스펙터 · XML 과 같은 글)
             else
             {
-                outValue.setText( "property type " + string( pProperty->_typeName.c_str() ) + " is not readable here" );
+                fixed_string<constant::buffer::kMax256> text;
+                formatstring( text.data(), text.capacity(), "property type %# is not readable here", pProperty->_typeName.c_str() );
+                outValue.setText( text );
                 return false;
             }
             return true;

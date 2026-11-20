@@ -29,7 +29,9 @@ namespace sw
                     FitArgument argument;
                     if ( StringUtil::trySplitKeyValue( token, name, valueText ) == false || StringUtil::parseFloat( valueText, argument._value ) == false )
                     {
-                        reader.addError( "Character.FitArgumentMalformed", node, string( "has malformed argument '" ) + string( token ) + "' (name=number)" );
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "has malformed argument '%#' (name=number)", token );
+                        reader.addError( "Character.FitArgumentMalformed", node, message );
                         continue;
                     }
                     argument._name = hashed_string( name );
@@ -98,7 +100,11 @@ namespace sw
                 if ( layer._name.empty() )
                     continue;
                 if ( findLayer( layer._name ) != nullptr )
-                    reader.addError( "Character.FitLayerRepeated", child, string( "repeats layer '" ) + layer._name.c_str() + "'" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "repeats layer '%#'", layer._name.c_str() );
+                    reader.addError( "Character.FitLayerRepeated", child, message );
+                }
                 else
                     _listLayer.push_back( layer );
             }
@@ -114,7 +120,11 @@ namespace sw
                 if ( region._name.empty() )
                     continue;
                 if ( findRegionIndex( region._name ).has_value() )
-                    reader.addError( "Character.FitRegionRepeated", child, string( "repeats region '" ) + region._name.c_str() + "'" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "repeats region '%#'", region._name.c_str() );
+                    reader.addError( "Character.FitRegionRepeated", child, message );
+                }
                 else
                     _listRegion.push_back( std::move( region ) );
             }
@@ -125,7 +135,11 @@ namespace sw
                 if ( profile._name.empty() )
                     continue;
                 if ( findProfile( profile._name ) != nullptr )
-                    reader.addError( "Character.FitProfileRepeated", child, string( "repeats profile '" ) + profile._name.c_str() + "'" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "repeats profile '%#'", profile._name.c_str() );
+                    reader.addError( "Character.FitProfileRepeated", child, message );
+                }
                 else
                     _listProfile.push_back( profile );
             }
@@ -145,18 +159,34 @@ namespace sw
             (void)reader.readProperties( node, interaction, { "args" } ); // 인자(`args`)는 `이름=수` 목록 글이라 손으로 푼다
             FitTablesInternal::readArguments( node, reader, interaction._listArgument );
             if ( interaction._inner.empty() == false && findProfile( interaction._inner ) == nullptr )
-                reader.addError( "Character.FitProfileUnknown", node, string( "names unknown inner profile '" ) + interaction._inner.c_str() + "'" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "names unknown inner profile '%#'", interaction._inner.c_str() );
+                reader.addError( "Character.FitProfileUnknown", node, message );
+            }
             if ( interaction._outer.empty() == false && findProfile( interaction._outer ) == nullptr )
-                reader.addError( "Character.FitProfileUnknown", node, string( "names unknown outer profile '" ) + interaction._outer.c_str() + "'" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "names unknown outer profile '%#'", interaction._outer.c_str() );
+                reader.addError( "Character.FitProfileUnknown", node, message );
+            }
             const IFitOperator* pOperator = interaction._operator.empty() ? nullptr : operators.findOperator( interaction._operator );
             if ( interaction._operator.empty() == false && pOperator == nullptr )
-                reader.addError( "Character.FitOperatorUnknown", node, string( "names unknown operator '" ) + interaction._operator.c_str() + "'" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "names unknown operator '%#'", interaction._operator.c_str() );
+                reader.addError( "Character.FitOperatorUnknown", node, message );
+            }
             if ( pOperator != nullptr )
             {
                 for ( const FitArgument& argument : interaction._listArgument )
                 {
                     if ( pOperator->canAcceptArgument( argument._name ) == false )
-                        reader.addError( "Character.FitArgumentUnknown", node, string( "operator '" ) + interaction._operator.c_str() + "' has no argument '" + argument._name.c_str() + "'" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "operator '%#' has no argument '%#'", interaction._operator.c_str(), argument._name.c_str() );
+                        reader.addError( "Character.FitArgumentUnknown", node, message );
+                    }
                 }
             }
             _listInteraction.push_back( std::move( interaction ) );

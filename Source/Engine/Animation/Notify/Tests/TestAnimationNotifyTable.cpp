@@ -37,9 +37,10 @@ namespace
     /** @brief 표에 `<FootContact>` 한 줄을 붙여 읽습니다(알림 `FootL` 은 늘 있다). */
     bool loadFootContactLine( const utf8* pLine )
     {
-        AnimationNotifyTable table;
-        const string         xml = string( R"(<AnimationNotifies><Notify name="FootL" handler="Footstep" socket="foot_l"/>)" ) + pLine + "</AnimationNotifies>";
-        return table.loadFromXMLText( xml, "bad", sw::engine::getSubsystem<sw::AnimationNotifyHandlerRegistry>() );
+        AnimationNotifyTable                     table;
+        StringBuilder<constant::buffer::kMax256> xml;
+        xml.appendFormat( R"(<AnimationNotifies><Notify name="FootL" handler="Footstep" socket="foot_l"/>%#</AnimationNotifies>)", pLine );
+        return table.loadFromXMLText( xml.view(), "bad", sw::engine::getSubsystem<sw::AnimationNotifyHandlerRegistry>() );
     }
 } // namespace
 
@@ -75,10 +76,11 @@ SW_TEST_CASE( AnimationNotifyTableTest, ChildTableMergesByKeys )
         <Notify name="FootR" handler="Footstep" socket="foot_r"/>
         <FootContact notify="FootL" bone="foot.l" contact_height="0.05" release_height="0.12" max_vertical_speed="0.6"/>
     </AnimationNotifies>)" ) );
-    const string         baseID = test::ScopedScratchDomain::makeID( "base.notifies.xml" ).str();
-    AnimationNotifyTable table;
-    SW_REQUIRE_TRUE( table.loadFromXMLText( "<AnimationNotifies _base=\"" + baseID + "\"><Notify name=\"FootR\" _op=\"Remove\"/><FootContact notify=\"FootL\" bone=\"foot.b\"/></AnimationNotifies>", "child",
-                                            sw::engine::getSubsystem<sw::AnimationNotifyHandlerRegistry>() ) );
+    const string                             baseID = test::ScopedScratchDomain::makeID( "base.notifies.xml" ).str();
+    AnimationNotifyTable                     table;
+    StringBuilder<constant::buffer::kMax256> xml;
+    xml.appendFormat( "<AnimationNotifies _base=\"%#\"><Notify name=\"FootR\" _op=\"Remove\"/><FootContact notify=\"FootL\" bone=\"foot.b\"/></AnimationNotifies>", baseID );
+    SW_REQUIRE_TRUE( table.loadFromXMLText( xml.view(), "child", sw::engine::getSubsystem<sw::AnimationNotifyHandlerRegistry>() ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, table.getEntries().size() );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( table.getFootContacts().size() ) );
     SW_EXPECT_TRUE( table.getFootContacts()[0]._bone == hashed_string( "foot.b" ) );
@@ -98,8 +100,10 @@ SW_TEST_CASE( AnimationNotifyTableTest, ChildSocketSetMergesByName )
     const string    baseID = test::ScopedScratchDomain::makeID( "base.sockets.xml" ).str();
     SocketKindTable kinds;
     kinds.addKind( hashed_string( "Attach" ) );
-    SocketSet sockets;
-    SW_REQUIRE_TRUE( sockets.loadFromXMLText( "<SocketSet _base=\"" + baseID + "\"><Socket name=\"Eyes\" parent=\"head_b\"/><Socket name=\"Chest\" _op=\"Remove\"/></SocketSet>", "child", kinds ) );
+    SocketSet                                sockets;
+    StringBuilder<constant::buffer::kMax256> xml;
+    xml.appendFormat( "<SocketSet _base=\"%#\"><Socket name=\"Eyes\" parent=\"head_b\"/><Socket name=\"Chest\" _op=\"Remove\"/></SocketSet>", baseID );
+    SW_REQUIRE_TRUE( sockets.loadFromXMLText( xml.view(), "child", kinds ) );
     const SocketDef* pEyes = sockets.findSocket( hashed_string( "Eyes" ) );
     SW_REQUIRE_TRUE( pEyes != nullptr );
     SW_EXPECT_TRUE( pEyes->_parent == hashed_string( "head_b" ) );
@@ -120,8 +124,10 @@ SW_TEST_CASE( AnimationNotifyTableTest, ChildSocketSetSavesOnlyItsDifference )
     const string    baseID = test::ScopedScratchDomain::makeID( "base.sockets.xml" ).str();
     SocketKindTable kinds;
     kinds.addKind( hashed_string( "Attach" ) );
-    SocketSet sockets;
-    SW_REQUIRE_TRUE( sockets.loadFromXMLText( "<SocketSet _base=\"" + baseID + "\"><Socket name=\"Eyes\" parent=\"head_b\"/><Socket name=\"Chest\" _op=\"Remove\"/></SocketSet>", "child", kinds ) );
+    SocketSet                                sockets;
+    StringBuilder<constant::buffer::kMax256> xml;
+    xml.appendFormat( "<SocketSet _base=\"%#\"><Socket name=\"Eyes\" parent=\"head_b\"/><Socket name=\"Chest\" _op=\"Remove\"/></SocketSet>", baseID );
+    SW_REQUIRE_TRUE( sockets.loadFromXMLText( xml.view(), "child", kinds ) );
     SW_EXPECT_EQUAL( baseID, sockets.getBaseID() );
     SocketDef eyes    = *sockets.findSocket( hashed_string( "Eyes" ) );
     eyes._translation = float3{ 0.0f, 2.0f, 0.0f };

@@ -300,8 +300,12 @@ namespace sw
         const string_view stemPath = boneLODPath.substr( 0, boneLODPath.size() - kExtension.size() );
         string_view       stem;
         FileUtil::getFileNamePart( stemPath, stem );
-        outImportedPath = string{ stemPath } + "/" + string{ stem } + string{ Skeleton::kExtension };
-        outSiblingPath  = string{ stemPath } + string{ Skeleton::kExtension };
+        StringBuilder<constant::buffer::kMax256> importedPath;
+        importedPath.appendFormat( "%#/%#%#", stemPath, stem, Skeleton::kExtension );
+        outImportedPath.assign( importedPath.view() );
+        StringBuilder<constant::buffer::kMax256> siblingPath;
+        siblingPath.appendFormat( "%#%#", stemPath, Skeleton::kExtension );
+        outSiblingPath.assign( siblingPath.view() );
     }
 } // namespace sw
 

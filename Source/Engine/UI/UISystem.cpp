@@ -660,13 +660,13 @@ namespace sw
 
     string UISystem::makeLayoutDump() const
     {
-        string text;
+        StringBuilder<constant::buffer::kMax4096> text;
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
-            text += "## " + ( screen->_documentPath.empty() ? string( "(code)" ) : screen->_documentPath ) + "\n";
-            text += UILayoutDump::makeDump( screen->getTree(), _viewport._uiScale );
+            text.appendFormat( "## %#\n", screen->_documentPath.empty() ? string_view( "(code)" ) : string_view( screen->_documentPath ) );
+            text.append( UILayoutDump::makeDump( screen->getTree(), _viewport._uiScale ) );
         }
-        return text;
+        return string( text.view() );
     }
 
     UIScreen* UISystem::getActiveScreen() const

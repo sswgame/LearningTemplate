@@ -9,6 +9,9 @@
 #include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/AssetID.h"
@@ -35,15 +38,18 @@ namespace sw::test
          */
         static string writeProject( const string& folder, string_view sourceCulture, string_view culturesJSON, string_view extraProperties = {} )
         {
-            const string projectPath = FileUtil::joinPath( folder, "test.locproject.xml" );
-            string       json        = "{ \"cultures\": " + string( culturesJSON ) + ", \"stringTables\": [ \"test.strings.xml\" ]";
+            const string                             projectPath = FileUtil::joinPath( folder, "test.locproject.xml" );
+            StringBuilder<constant::buffer::kMax512> json;
+            json.appendFormat( "{ \"cultures\": %#, \"stringTables\": [ \"test.strings.xml\" ]", culturesJSON );
             if ( extraProperties.empty() == false )
-                json += ", " + string( extraProperties );
-            json += " }";
+                json.appendFormat( ", %#", extraProperties );
+            json.append( " }" );
             JSONDocument params;
-            if ( params.parse( json, "test project fields" ) == false )
+            if ( params.parse( json.view(), "test project fields" ) == false )
             {
-                reportFailure( __FILE__, __LINE__, "test project fields are not JSON: " + json );
+                fixed_string<constant::buffer::kMax1024> message;
+                formatstring( message.data(), message.capacity(), "test project fields are not JSON: %#", json.view() );
+                reportFailure( __FILE__, __LINE__, message );
                 return projectPath;
             }
             XMLDocument   document;
@@ -60,15 +66,21 @@ namespace sw::test
                 }
             }
             if ( FileUtil::ensureDirectoryExists( folder ) == false || FileUtil::writeTextFile( projectPath, document.saveToString() ) == false )
-                reportFailure( __FILE__, __LINE__, "could not write " + projectPath );
+            {
+                fixed_string<constant::buffer::kMax512> message;
+                formatstring( message.data(), message.capacity(), "could not write %#", projectPath );
+                reportFailure( __FILE__, __LINE__, message );
+            }
             return projectPath;
         }
 
         /** @brief 원문 표를 씁니다. @p entriesJSON 은 `"Key": { "source": "…" }, …` 처럼 entries 객체의 안쪽입니다(`source` · `context` · `comment` · `maxLength` · `origins`). */
         static void writeSourceTable( const string& folder, string_view culture, string_view entriesJSON )
         {
+            StringBuilder<constant::buffer::kMax1024> entriesText;
+            entriesText.appendFormat( "{ %# }", entriesJSON );
             JSONDocument entries;
-            if ( entries.parse( "{ " + string( entriesJSON ) + " }", "test source entries" ) == false )
+            if ( entries.parse( entriesText.view(), "test source entries" ) == false )
             {
                 reportFailure( __FILE__, __LINE__, "test source entries are not JSON" );
                 return;
@@ -95,8 +107,10 @@ namespace sw::test
         /** @brief 번역 표를 씁니다. @p entriesJSON 은 `"Key": { "text": "…" }, …` 입니다(`text` · `sourceHash` · `review` · `translatorComment`). */
         static void writeTranslation( const string& folder, string_view culture, string_view entriesJSON )
         {
+            StringBuilder<constant::buffer::kMax1024> entriesText;
+            entriesText.appendFormat( "{ %# }", entriesJSON );
             JSONDocument entries;
-            if ( entries.parse( "{ " + string( entriesJSON ) + " }", "test translation entries" ) == false )
+            if ( entries.parse( entriesText.view(), "test translation entries" ) == false )
             {
                 reportFailure( __FILE__, __LINE__, "test translation entries are not JSON" );
                 return;
@@ -112,9 +126,15 @@ namespace sw::test
                 (void)value.readOptionalInto( "review", entry._bReview ); // 없으면 검토 표시 없음이다
                 const JSONValue hash = value.get( "sourceHash" );
                 if ( hash.isValid() && SourceTextEntry::tryParseSourceHash( hash.asString(), entry._sourceHash ) == false )
-                    reportFailure( __FILE__, __LINE__, "test translation has a bad sourceHash: " + hash.asString() );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "test translation has a bad sourceHash: %#", hash.asString() );
+                    reportFailure( __FILE__, __LINE__, message );
+                }
             }
-            save( table, FileUtil::joinPath( folder, string( culture ) + ".translation.xml" ) );
+            StringBuilder<constant::buffer::kMax64> fileName;
+            fileName.appendFormat( "%#.translation.xml", culture );
+            save( table, FileUtil::joinPath( folder, fileName.view() ) );
         }
 
         /** @brief 엔진 문화권 표를 읽은 매니저를 준비합니다. */
@@ -127,7 +147,11 @@ namespace sw::test
             const optional<AbsolutePath> absPath = AbsolutePath::tryMake( path );
             const bool                   bSaved  = absPath.has_value() && FileUtil::ensureParentDirectoryExists( path ) && table.saveToFile( *absPath );
             if ( bSaved == false )
-                reportFailure( __FILE__, __LINE__, "could not write " + path );
+            {
+                fixed_string<constant::buffer::kMax512> message;
+                formatstring( message.data(), message.capacity(), "could not write %#", path );
+                reportFailure( __FILE__, __LINE__, message );
+            }
         }
     };
 } // namespace sw::test

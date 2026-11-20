@@ -672,7 +672,9 @@ namespace sw
         if ( jsonText.empty() )
         {
             clear();
-            _lastError = string( source ) + ": empty document";
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: empty document", source );
+            _lastError = string( error.view() );
             return false;
         }
 
@@ -689,7 +691,9 @@ namespace sw
         }
         if ( strictProblem.empty() == false )
         {
-            _lastError = string( source ) + ": " + strictProblem;
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: %#", source, strictProblem );
+            _lastError = string( error.view() );
             SW_LOG_ERROR_ID( "JSON.ParseError", "JSON parse error at %#", _lastError );
             clear();
             return false;
@@ -723,7 +727,9 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( absPath, text ) == false )
         {
-            _lastError = string( absPath ) + ": cannot read the file (or it was read during cooking outside a cook job)";
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: cannot read the file (or it was read during cooking outside a cook job)", absPath );
+            _lastError = string( error.view() );
             return false;
         }
         return parse( text, absPath );
@@ -741,7 +747,9 @@ namespace sw
         string absPath;
         if ( AssetIO::readTextAsset( assetID, text, &absPath ) == false )
         {
-            _lastError = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
+            StringBuilder<constant::buffer::kMax256> error;
+            error.appendFormat( "%#: not found (no file at that path and no resource by that name)", relativePath );
+            _lastError = string( error.view() );
             return false;
         }
         if ( pOutAbsPath != nullptr )

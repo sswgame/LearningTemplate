@@ -160,7 +160,9 @@ namespace sw
                         };
                         if ( std::none_of( listReference.begin(), listReference.end(), pointsAtTarget ) )
                             return;
-                        outHolder = scene->getName() + "/" + pObject->getName().c_str() + "." + pType->_name.c_str() + "." + prop._name.c_str();
+                        StringBuilder<constant::buffer::kMax512> holder;
+                        holder.appendFormat( "%#/%#.%#.%#", scene->getName(), pObject->getName().c_str(), pType->_name.c_str(), prop._name.c_str() );
+                        outHolder = string( holder.view() );
                     }, true );
                 }
             } );

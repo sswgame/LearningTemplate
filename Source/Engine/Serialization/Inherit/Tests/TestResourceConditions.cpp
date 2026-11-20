@@ -362,13 +362,13 @@ SW_TEST_CASE( ResourceRemapTest, ReadsTheFirstMatchingTarget )
     (void)domain.makeDiskFolder( "ui" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "ui/logo.txt" ), "base" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "ui/logo_ko.txt" ), "korean" ) );
-    const string table = "<ResourceRemap>"
-                         "<Remap id=\"" +
-                         logo.str() + "\" when=\"locale.ja\" to=\"" + logo.str() + ".ja\" />"
-                                                                                   "<Remap id=\"" +
-                         logo.str() + "\" when=\"locale.ko\" to=\"" + logoKo.str() + "\" />"
-                                                                                     "</ResourceRemap>";
-    SW_REQUIRE_TRUE( ResourceRemap::loadFromXMLText( table, "test" ) );
+    StringBuilder<constant::buffer::kMax512> table;
+    table.appendFormat( "<ResourceRemap>"
+                        "<Remap id=\"%#\" when=\"locale.ja\" to=\"%#.ja\" />"
+                        "<Remap id=\"%#\" when=\"locale.ko\" to=\"%#\" />"
+                        "</ResourceRemap>",
+                        logo.str(), logo.str(), logo.str(), logoKo.str() );
+    SW_REQUIRE_TRUE( ResourceRemap::loadFromXMLText( table.view(), "test" ) );
 
     string text;
     SW_REQUIRE_TRUE( AssetIO::readTextAsset( logo, text ) );
@@ -544,7 +544,9 @@ SW_TEST_CASE( ResourceDigestComparerTest, LinesPerPeerAreBounded )
     ResourceDigestComparer comparer{ engine::getSubsystem<ResourceComposition>() };
     for ( uint32 index = 0; index < ResourceDigestComparer::kMaxLinesPerPeer; ++index )
     {
-        SW_REQUIRE_TRUE( comparer.addPeerLine( 1, ResourceDigestEntry{ "testproject/flood/" + sw::to_string( index ), 1u }, 0 ) );
+        StringBuilder<constant::buffer::kMax64> floodID;
+        floodID.appendFormat( "testproject/flood/%#", index );
+        SW_REQUIRE_TRUE( comparer.addPeerLine( 1, ResourceDigestEntry{ string( floodID.view() ), 1u }, 0 ) );
     }
     SW_EXPECT_TRUE( comparer.addPeerLine( 1, ResourceDigestEntry{ "testproject/flood/0", 2u }, 0 ) );
     SW_EXPECT_FALSE( comparer.addPeerLine( 1, ResourceDigestEntry{ "testproject/flood/over", 1u }, 0 ) );

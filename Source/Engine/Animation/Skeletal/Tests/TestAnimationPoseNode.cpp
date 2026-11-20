@@ -245,9 +245,10 @@ SW_TEST_CASE( AnimationPoseNodeTest, MirrorTableRejectsBadPairs )
     vector<uint32> listMirrored;
     const auto     build = [&]( const utf8* pPairs )
     {
-        SkeletonMirrorTable table;
-        const string        text = string( "<SkeletonMirrorTable><_listPair>" ) + pPairs + "</_listPair></SkeletonMirrorTable>";
-        return table.loadFromXMLText( text, "bad" ) && table.buildBoneMap( skeleton, listMirrored, "bad" );
+        SkeletonMirrorTable                      table;
+        StringBuilder<constant::buffer::kMax512> text;
+        text.appendFormat( "<SkeletonMirrorTable><_listPair>%#</_listPair></SkeletonMirrorTable>", pPairs );
+        return table.loadFromXMLText( text.view(), "bad" ) && table.buildBoneMap( skeleton, listMirrored, "bad" );
     };
     SW_EXPECT_LOG( "SkeletonMirrorTable.UnknownBone" );
     SW_EXPECT_FALSE( build( R"(<SkeletonMirrorPair _bone="arm_l" _mirroredBone="leg_r" />)" ) );

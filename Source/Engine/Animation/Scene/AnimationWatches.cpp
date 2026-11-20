@@ -128,15 +128,21 @@ namespace sw
                 SkeletalAnimatorComponent* pAnimator = pObject != nullptr ? pObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
                 if ( pAnimator == nullptr )
                 {
-                    outReply = "no object named '" + listArgument[0] + "' with a SkeletalAnimatorComponent in the active scene";
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "no object named '%#' with a SkeletalAnimatorComponent in the active scene", listArgument[0] );
+                    outReply = string( builder.view() );
                     return true;
                 }
                 if ( pAnimator->play( hashed_string( listArgument[1] ) ) == false )
                 {
-                    outReply = "anim.play: '" + listArgument[0] + "' has no state or clip '" + listArgument[1] + "'";
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "anim.play: '%#' has no state or clip '%#'", listArgument[0], listArgument[1] );
+                    outReply = string( builder.view() );
                     return true;
                 }
-                outReply = "anim.play " + listArgument[0] + " " + listArgument[1];
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "anim.play %# %#", listArgument[0], listArgument[1] );
+                outReply = string( builder.view() );
                 return true;
             }
         };

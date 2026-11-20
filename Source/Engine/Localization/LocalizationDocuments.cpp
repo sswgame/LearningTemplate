@@ -479,12 +479,16 @@ namespace sw
 
     string LocalizationProject::makeCookedTablePath( string_view projectPath, string_view culture ) const
     {
-        return makeSiblingPath( projectPath, _name + "." + CultureTable::normalizeCode( culture ) + LocalizationBinaryTable::kExtension );
+        StringBuilder<constant::buffer::kMax256> fileName;
+        fileName.appendFormat( "%#.%#%#", _name, CultureTable::normalizeCode( culture ), LocalizationBinaryTable::kExtension );
+        return makeSiblingPath( projectPath, fileName.view() );
     }
 
     string LocalizationProject::makeTranslationPath( string_view projectPath, string_view culture )
     {
-        return makeSiblingPath( projectPath, CultureTable::normalizeCode( culture ) + TranslationTable::kExtension );
+        StringBuilder<constant::buffer::kMax256> fileName;
+        fileName.appendFormat( "%#%#", CultureTable::normalizeCode( culture ), TranslationTable::kExtension );
+        return makeSiblingPath( projectPath, fileName.view() );
     }
 } // namespace sw
 

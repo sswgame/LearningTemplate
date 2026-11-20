@@ -281,7 +281,11 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
             const sw::string written{ info._bIsBitFlag ? info.toStringFlags( expected ) : info.toString( expected ) };
             int64            parsed = -1;
             if ( info.tryParseText( written.c_str(), parsed ) == false || parsed != expected )
-                report += sw::string( "\n  " ) + info._fullyQualifiedName.c_str() + " " + sw::to_string( expected ) + " -> '" + written.c_str() + "'";
+            {
+                sw::StringBuilder<sw::constant::buffer::kMax256> line;
+                line.appendFormat( "\n  %# %# -> '%#'", info._fullyQualifiedName.c_str(), expected, written );
+                report += line.view();
+            }
         };
         int64 allBits = 0;
         for ( const auto& [enumValue, name] : info._mapValueToName )
@@ -295,7 +299,9 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
             expectRoundTrip( allBits );
         }
     } );
-    SW_EXPECT_TRUE_MSG( report.empty(), ( "enum text that does not read back:" + report ).c_str() );
+    sw::StringBuilder<sw::constant::buffer::kMax256> message;
+    message.appendFormat( "enum text that does not read back:%#", report );
+    SW_EXPECT_TRUE_MSG( report.empty(), message.c_str() );
 }
 
 /**
@@ -320,7 +326,9 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
         info._size               = 1;
         for ( int64 value = 0; value < valueCount; ++value )
         {
-            const sw::hashed_string name( ( "V" + sw::to_string( value ) ).c_str() );
+            sw::fixed_string<sw::constant::buffer::kMax32> valueName;
+            sw::formatstring( valueName.data(), valueName.capacity(), "V%#", value );
+            const sw::hashed_string name( valueName.c_str() );
             info._mapNameToValue.insert_or_assign( name, value );
             info._mapValueToName.insert_or_assign( value, name );
         }
@@ -330,7 +338,9 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
     // 많이 올려 밀집 배열이 여러 번 커지게 한다.
     for ( int32 index = 0; index < 256; ++index )
     {
-        registry.registerEnum( makeEnum( "swtest::GrowthEnum" + sw::to_string( index ), 1 ) );
+        sw::StringBuilder<sw::constant::buffer::kMax64> enumName;
+        enumName.appendFormat( "swtest::GrowthEnum%#", index );
+        registry.registerEnum( makeEnum( sw::string( enumName.view() ), 1 ) );
     }
     SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "sw::CameraRole" ) ) == pRole );
 

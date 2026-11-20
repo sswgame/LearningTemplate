@@ -728,7 +728,9 @@ namespace sw
 
     void DataInheritanceProvenance::eraseUnder( const string& fieldPath )
     {
-        const string nestedPrefix = fieldPath + ".";
+        StringBuilder<constant::buffer::kMax256> nestedPrefixBuilder;
+        nestedPrefixBuilder.appendFormat( "%#.", fieldPath );
+        const string_view nestedPrefix = nestedPrefixBuilder.view();
         (void)VectorUtil::removeIf( _listOrigin, [&]( const FieldOrigin& origin )
         { return origin._fieldPath == fieldPath || StringUtil::startsWith( origin._fieldPath, nestedPrefix ); } );
     }
@@ -738,14 +740,20 @@ namespace sw
         for ( XMLAttribute attribute = element.getFirstAttribute(); attribute; attribute = attribute.getNext() )
         {
             if ( DataInheritanceInternal::isMetaAttribute( attribute.getName() ) == false )
-                setOrigin( prefix + attribute.getName(), assetID );
+            {
+                StringBuilder<constant::buffer::kMax256> attributePath;
+                attributePath.appendFormat( "%#%#", prefix, attribute.getName() );
+                setOrigin( string( attributePath.view() ), assetID );
+            }
         }
         for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             if ( child.isElement() == false || DataInheritance::isWhenElement( child ) )
                 continue; // 조건 원소는 칸이 아니다 — 어느 층이 그 칸을 적었는지는 펼친 뒤 조건 단계 앞의 값이다
-            const DataInheritanceSchema* pField = schema.findField( child.getName() );
-            const string                 path   = prefix + child.getName();
+            const DataInheritanceSchema*             pField = schema.findField( child.getName() );
+            StringBuilder<constant::buffer::kMax256> pathBuilder;
+            pathBuilder.appendFormat( "%#%#", prefix, child.getName() );
+            const string path( pathBuilder.view() );
             if ( pField == nullptr )
             {
                 setOrigin( path, assetID );
@@ -753,19 +761,24 @@ namespace sw
             }
             if ( pField->_keyAttribute.empty() )
             {
-                applyElement( child, *pField, path + ".", assetID );
+                pathBuilder.append( '.' );
+                applyElement( child, *pField, string( pathBuilder.view() ), assetID );
                 continue;
             }
             for ( XMLNode item = child.findChild(); item.isValid(); item = item.findNextSibling() )
             {
                 if ( item.isElement() == false || DataInheritance::isWhenElement( item ) )
                     continue;
-                const string      itemPath = path + "[" + string{ item.getAttributeText( pField->_keyAttribute.c_str() ) } + "]";
-                const string_view op       = item.getAttributeText( DataInheritance::kOpAttribute );
+                StringBuilder<constant::buffer::kMax256> itemPathBuilder;
+                itemPathBuilder.appendFormat( "%#[%#]", path, item.getAttributeText( pField->_keyAttribute.c_str() ) );
+                const string_view op = item.getAttributeText( DataInheritance::kOpAttribute );
                 if ( op == DataInheritance::kOpRemove || op == DataInheritance::kOpReplace )
-                    eraseUnder( itemPath );
+                    eraseUnder( string( itemPathBuilder.view() ) );
                 if ( op != DataInheritance::kOpRemove )
-                    applyElement( item, *pField, itemPath + ".", assetID );
+                {
+                    itemPathBuilder.append( '.' );
+                    applyElement( item, *pField, string( itemPathBuilder.view() ), assetID );
+                }
             }
         }
     }

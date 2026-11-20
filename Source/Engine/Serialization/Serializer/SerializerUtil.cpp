@@ -1104,7 +1104,11 @@ namespace sw
         const bool        bSkipProperty = prop._bIsBitField == SW_TRUE || prop.hasValueAccessor();
         if ( bSkipProperty )
             return;
-        const string      path   = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+        StringBuilder<constant::buffer::kMax256> pathBuilder;
+        if ( prefix.empty() == false )
+            pathBuilder.appendFormat( "%#.", prefix );
+        pathBuilder.append( prop._name.c_str() );
+        const string      path   = string( pathBuilder.view() );
         const void* const pValue = prop.getRawPtr( pInstance );
         // 소프트 읽기가 읽기 전 값으로 되돌린 칸은 파일 값이 아니다 — orphan 이 이미 알렸다.
         if ( pListRestored != nullptr && VectorUtil::contains( *pListRestored, RestoredPropertyValue{ pValue, &prop } ) )

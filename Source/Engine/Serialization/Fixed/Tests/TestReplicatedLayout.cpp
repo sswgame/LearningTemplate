@@ -88,7 +88,8 @@ SW_TEST_CASE( ReplicatedLayoutTest, FieldOrderChangesTheSchemaHash )
     string swapped;
     for ( const string& part : listPart )
     {
-        swapped += part + "|";
+        swapped += part;
+        swapped += '|';
     }
     SW_EXPECT_TRUE( swapped != canonical );
     SW_EXPECT_TRUE( FixedLayout::computeSchemaHash( FixedLayout::kVersion, swapped, {} ) != ReplicatedLayout::getSchemaHash( **schema ) );

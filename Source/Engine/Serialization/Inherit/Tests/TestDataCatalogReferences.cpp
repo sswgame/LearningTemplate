@@ -398,26 +398,32 @@ SW_TEST_CASE( DataCatalogReferencesTest, FieldTableMatchesReflection )
         setKeyHolder.insert( row._owner );
     }
 
-    vector<string> listProblem;
+    vector<string>                           listProblem;
+    StringBuilder<constant::buffer::kMax512> problem;
     for ( const PropertyRecord& record : listRecord )
     {
-        const string fieldName = record._owner + "::" + record._field;
         if ( isKey( record ) )
         {
             const DataCatalogKeyField* pRow = rules.findKeyField( record._owner, record._field );
+            problem.clear();
             if ( pRow == nullptr )
-                listProblem.push_back( fieldName + " has no <Field> row" );
+                problem.appendFormat( "%#::%# has no <Field> row", record._owner, record._field );
             else if ( pRow->_tag != record._tag )
-                listProblem.push_back( fieldName + " is CatalogKey<" + record._tag + "> but its row says " + pRow->_tag );
+                problem.appendFormat( "%#::%# is CatalogKey<%#> but its row says %#", record._owner, record._field, record._tag, pRow->_tag );
+            if ( problem.size() > 0 )
+                listProblem.push_back( string( problem.view() ) );
             continue;
         }
         if ( record._bContainer == false && setKeyHolder.contains( record._typeName ) )
         {
             const DataCatalogKeyStruct* pRow = rules.findKeyStruct( record._owner, record._field );
+            problem.clear();
             if ( pRow == nullptr )
-                listProblem.push_back( fieldName + " holds the key struct " + record._typeName + " but has no <Struct> row" );
+                problem.appendFormat( "%#::%# holds the key struct %# but has no <Struct> row", record._owner, record._field, record._typeName );
             else if ( pRow->_type != record._typeName )
-                listProblem.push_back( fieldName + " is " + record._typeName + " but its <Struct> row says " + pRow->_type );
+                problem.appendFormat( "%#::%# is %# but its <Struct> row says %#", record._owner, record._field, record._typeName, pRow->_type );
+            if ( problem.size() > 0 )
+                listProblem.push_back( string( problem.view() ) );
         }
     }
     for ( const DataCatalogKeyField& row : rules.getFieldRows() )
@@ -427,22 +433,38 @@ SW_TEST_CASE( DataCatalogReferencesTest, FieldTableMatchesReflection )
         const PropertyRecord* pRecord = findRecord( row._owner, row._field );
         if ( pRecord == nullptr || isKey( *pRecord ) == false )
         {
-            listProblem.push_back( row._owner + "::" + row._field + " row names no CatalogKey field" );
+            problem.clear();
+            problem.appendFormat( "%#::%# row names no CatalogKey field", row._owner, row._field );
+            listProblem.push_back( string( problem.view() ) );
             continue;
         }
         const bool                   bStructType = std::any_of( rules.getStructRows().begin(), rules.getStructRows().end(), [&row]( const DataCatalogKeyStruct& structRow )
                           { return structRow._type == row._owner; } );
         const DataCatalogKeyElement* pElement    = rules.findKeyElement( row._owner );
         if ( setComponent.contains( row._owner ) == false && setSequenceElement.contains( row._owner ) == false && bStructType == false && pElement == nullptr )
-            listProblem.push_back( row._owner + " (field " + row._field + ") is not a component, a list element, a <Struct> type or an <Element> type - the cook cannot find it" );
+        {
+            problem.clear();
+            problem.appendFormat( "%# (field %#) is not a component, a list element, a <Struct> type or an <Element> type - the cook cannot find it", row._owner, row._field );
+            listProblem.push_back( string( problem.view() ) );
+        }
         if ( pElement != nullptr && DataCatalogReferenceRules::findElementAttribute( row ) != pRecord->_attribute )
-            listProblem.push_back( row._owner + "::" + row._field + " is written as '" + pRecord->_attribute + "' in the catalog but the row reads '" + DataCatalogReferenceRules::findElementAttribute( row ) + "'" );
+        {
+            problem.clear();
+            problem.appendFormat( "%#::%# is written as '%#' in the catalog but the row reads '%#'", row._owner, row._field, pRecord->_attribute,
+                                  DataCatalogReferenceRules::findElementAttribute( row ) );
+            listProblem.push_back( string( problem.view() ) );
+        }
     }
     // 쿠커는 원소 이름(가장 아래 형식)으로 찾고 상속을 따라가지 않는다 — 키 칸을 든 형식을 물려받은 형식이 생기면 여기서 멈춘다.
     for ( const auto& [typeName, parentName] : listParent )
     {
         if ( setKeyHolder.contains( parentName ) && setKeyHolder.contains( typeName ) == false )
-            listProblem.push_back( typeName + " derives from the key holder " + parentName + " - the cook finds key fields by the element (leaf type) name and does not follow inheritance; keep key fields on the leaf type" );
+        {
+            problem.clear();
+            problem.appendFormat( "%# derives from the key holder %# - the cook finds key fields by the element (leaf type) name and does not follow inheritance; keep key fields on the leaf type",
+                                  typeName, parentName );
+            listProblem.push_back( string( problem.view() ) );
+        }
     }
     for ( const DataCatalogKeyStruct& row : rules.getStructRows() )
     {
@@ -450,7 +472,11 @@ SW_TEST_CASE( DataCatalogReferencesTest, FieldTableMatchesReflection )
             continue;
         const PropertyRecord* pRecord = findRecord( row._owner, row._field );
         if ( pRecord == nullptr || pRecord->_bContainer || pRecord->_typeName != row._type )
-            listProblem.push_back( row._owner + "::" + row._field + " <Struct> row names no " + row._type + " field" );
+        {
+            problem.clear();
+            problem.appendFormat( "%#::%# <Struct> row names no %# field", row._owner, row._field, row._type );
+            listProblem.push_back( string( problem.view() ) );
+        }
     }
     for ( const string& problem : listProblem )
     {

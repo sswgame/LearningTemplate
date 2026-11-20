@@ -40,7 +40,9 @@ namespace
         {
             for ( const PackEntryCatalog& rule : rules._listEntryCatalog )
             {
-                if ( StringUtil::endsWith( relativePath, string( "/" ) + rule._path ) )
+                StringBuilder<constant::buffer::kMax256> suffix;
+                suffix.appendFormat( "/%#", rule._path );
+                if ( StringUtil::endsWith( relativePath, suffix.view() ) )
                     return &rule;
             }
             return nullptr;
@@ -77,9 +79,12 @@ namespace
             {
                 if ( _setAllowed.contains( string( field ) ) )
                     return;
-                const string token = findIDToken( value, _setID );
-                SW_EXPECT_TRUE_MSG( token.empty(), _relativePath + ": field '" + string( field ) + "' holds catalog entry id '" + token +
-                                                       "' but is not in _listEntryIDField (Config/Engine/PackConfig.json) - the cook would drop that entry's assets. If it is not a reference, add it to " + kExemptionPath );
+                const string                             token = findIDToken( value, _setID );
+                fixed_string<constant::buffer::kMax1024> text;
+                formatstring( text.data(), text.capacity(),
+                              "%#: field '%#' holds catalog entry id '%#' but is not in _listEntryIDField (Config/Engine/PackConfig.json) - the cook would drop that entry's assets. If it is not a reference, add it to %#",
+                              _relativePath, field, token, kExemptionPath );
+                SW_EXPECT_TRUE_MSG( token.empty(), text );
             }
 
             void visit( const XMLNode& node, string_view parentName, bool bEntry ) const
@@ -150,8 +155,10 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
         uint32 entryCount = 0;
         for ( const string& file : listFile )
         {
-            const string normalized = FileUtil::normalizeSeparators( file );
-            if ( StringUtil::endsWith( normalized, string( "/" ) + rule._path ) == false )
+            const string                             normalized = FileUtil::normalizeSeparators( file );
+            StringBuilder<constant::buffer::kMax256> suffix;
+            suffix.appendFormat( "/%#", rule._path );
+            if ( StringUtil::endsWith( normalized, suffix.view() ) == false )
                 continue;
             string      text;
             XMLDocument doc;
@@ -167,7 +174,10 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
                 }
             }
         }
-        SW_EXPECT_TRUE_MSG( entryCount > 0u, "the entry catalog row '" + rule._kind + "' (" + rule._path + ", <" + rule._entryElement + " " + rule._idAttribute + ">) found no entry - the cook would select nothing from it" );
+        fixed_string<constant::buffer::kMax512> text;
+        formatstring( text.data(), text.capacity(), "the entry catalog row '%#' (%#, <%# %#>) found no entry - the cook would select nothing from it", rule._kind, rule._path, rule._entryElement,
+                      rule._idAttribute );
+        SW_EXPECT_TRUE_MSG( entryCount > 0u, text );
     }
     SW_REQUIRE_FALSE( setID.empty() );
 
@@ -176,9 +186,11 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
     for ( const PackEntryIDField& field : rules._listEntryIDField )
     {
         scan._setAllowed.insert( field._field );
+        fixed_string<constant::buffer::kMax256> text;
+        formatstring( text.data(), text.capacity(), "_listEntryIDField row '%#' names unknown kind '%#'", field._field, field._kind );
         SW_EXPECT_TRUE_MSG( VectorUtil::containsIf( rules._listEntryCatalog, [&field]( const PackEntryCatalog& rule )
         { return rule._kind == field._kind; } ),
-                            "_listEntryIDField row '" + field._field + "' names unknown kind '" + field._kind + "'" );
+                            text );
     }
     for ( size_t index = 0; index < listExempt.size(); ++index )
     {
@@ -207,5 +219,7 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
         scan.traverse( doc.getRoot(), {}, false, true );
         ++scannedCount;
     }
-    SW_EXPECT_TRUE_MSG( scannedCount > 100u, "only " + sw::to_string( scannedCount ) + " data files were read - the content root is wrong and this test saw nothing" );
+    fixed_string<constant::buffer::kMax128> scannedText;
+    formatstring( scannedText.data(), scannedText.capacity(), "only %# data files were read - the content root is wrong and this test saw nothing", scannedCount );
+    SW_EXPECT_TRUE_MSG( scannedCount > 100u, scannedText );
 }

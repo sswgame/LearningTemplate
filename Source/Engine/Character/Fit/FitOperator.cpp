@@ -307,12 +307,10 @@ namespace sw
                 if ( penetration._vertexCount == 0 || state._pReport == nullptr )
                     return;
                 state._pReport->_listPenetration.push_back( penetration );
-                string message( "parts '" );
-                message += state._listPart[pair._innerPart]._pInput->_name.view();
-                message += "' and '";
-                message += state._listPart[pair._outerPart]._pInput->_name.view();
-                message += "' penetrate (rigid against rigid is not resolved automatically)";
-                state._pReport->addMessage( "Character.FitRigidPenetration", std::move( message ) );
+                StringBuilder<constant::buffer::kMax256> message;
+                message.appendFormat( "parts '%#' and '%#' penetrate (rigid against rigid is not resolved automatically)", state._listPart[pair._innerPart]._pInput->_name.view(),
+                                      state._listPart[pair._outerPart]._pInput->_name.view() );
+                state._pReport->addMessage( "Character.FitRigidPenetration", string( message.view() ) );
             }
 
         private:

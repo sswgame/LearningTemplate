@@ -48,10 +48,9 @@ namespace sw
     {
         if ( prefix.empty() )
             return name;
-        string fullName( prefix.view() );
-        fullName += ".";
-        fullName += name.view();
-        return hashed_string( string_view( fullName ) );
+        StringBuilder<constant::buffer::kMax128> fullName;
+        fullName.appendFormat( "%#.%#", prefix.view(), name.view() );
+        return hashed_string( fullName.view() );
     }
 
     SocketID ResolvedSocketTable::getOrCreateSlot( const hashed_string& fullName )
