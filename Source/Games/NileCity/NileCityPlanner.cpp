@@ -12,7 +12,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 namespace sw
 {

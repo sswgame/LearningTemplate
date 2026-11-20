@@ -8,9 +8,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
-#include "Engine/Scene/SceneDataLayerSubsystem.h"
+#include "Engine/Scene/SceneDataLayerTypes.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneSubLevelTypes.h"
 
@@ -23,6 +22,9 @@ namespace sw
     class GameObjectManager;
     class Material;
     class Stopwatch;
+
+    /// `ObjectStateSerializer.h` 의 같은 별칭을 다시 선언한다 — 씬 헤더가 직렬화 헤더 사슬을 끌어오지 않게(형식이 다르면 컴파일이 멈춘다).
+    using ObjectSavedIDMap = unordered_map<uint64, uint64>;
 
     /**
      * @class Scene
@@ -240,7 +242,7 @@ namespace sw
             unordered_map<uint64, vector<string>>  _mapObjectDataLayer;
             ObjectSavedIDMap                       _mapObjectIDToFileID;
             vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;
-            SceneDataLayerSubsystem::State         _dataLayers;
+            SceneDataLayerState                    _dataLayers;
             SceneSubLevelCapture                   _subLevels;
             double3                                _worldOrigin{};
         };

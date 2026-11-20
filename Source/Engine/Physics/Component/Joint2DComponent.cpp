@@ -4,6 +4,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw

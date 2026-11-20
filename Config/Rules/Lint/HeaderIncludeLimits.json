@@ -32,6 +32,15 @@
         { "_header": "Engine/Object/GameObject/GameObjectManager.inl", "_limit": 38, "_reason": "순회 몸체만 — 타입 핸들 찾기 · 틱 뒤 작업은 GameObjectManagerResolve.inl, 서비스 얻기는 매니저 헤더" },
         { "_header": "Engine/Object/GameObject/GameObjectManagerResolve.inl", "_limit": 24, "_reason": "컴포넌트를 앞 선언으로만 보고 ReflectionCast · TickContext 만 포함한다 — 저장소 · 레지스트리 · GameObject 를 읽지 않는다" },
         { "_header": "Engine/Object/GameObject/Service/ISceneService.h", "_limit": 2, "_reason": "서비스 계약만 — 등록 줄 · 레지스트리 · 등록 매크로는 SceneServiceRegistry.h" },
-        { "_header": "Engine/Foundation/EngineServices.h", "_limit": 6, "_reason": "묶기 결과 EngineServiceBindResult 를 앞 선언한다 — 엔진 등록 표 헤더를 포함하지 않는다" }
+        { "_header": "Engine/Foundation/EngineServices.h", "_limit": 6, "_reason": "묶기 결과 EngineServiceBindResult 를 앞 선언한다 — 엔진 등록 표 헤더를 포함하지 않는다" },
+        { "_header": "Engine/Scene/Scene.h", "_limit": 19, "_reason": "14 → 19(사용자 결정 2026-11-20): 프리팹 엔티티 칸이 GUID 참조 AssetRef<PrefabAsset> 가 되어 AssetRef 최소 의존 넷(PrefabAssetKind.h 로 PrefabAsset.h 사슬은 뺐다)과 스트리밍 격자의 우선순위 형식(StreamingSourcePriority.h)이 더해졌다.데이터 레이어 값은 SceneDataLayerTypes.h 로(서비스 헤더의 ISceneService 사슬을 뺐다), 저장 id 표는 별칭만 — ObjectStateSerializer.h 를 포함하지 않는다" },
+        { "_header": "Engine/Physics/Collision/PhysicsShape.h", "_limit": 10, "_reason": "메시 형식은 전방 선언 — AssetRef<MeshAssetFormat> 칸을 만드는 생성자를 PhysicsShape.cpp 에 둔다(MeshAssetFormat.h 사슬 다섯 개를 뺐다)" },
+        { "_header": "Engine/Physics/Scene/ScenePhysics.h", "_limit": 43, "_reason": "물리 씬은 unique_ptr 로만 든다 — IPhysicsScene.h 대신 IPhysicsSceneFwd.h 와 쓰는 면(바디 · 캐릭터)만" },
+        { "_header": "GameFramework/Runtime/Gameplay/Inventory/Wallet.h", "_limit": 12, "_reason": "지갑만 쓰는 TU 가 가게 카탈로그 · 인벤토리 · 조건식을 끌어오지 않게 Shop.h 에서 나눴다" },
+        { "_header": "Editor/Common/GUI/Panel/IEditorPanel.h", "_limit": 10, "_reason": "문서 종류는 값만 — 종류 등록 표(EditorAssetType.h) 대신 EditorAssetTypeID.h" },
+        { "_header": "GameFramework/Runtime/Online/Service/OnlineServiceClient.h", "_limit": 18, "_reason": "프로토콜 항목은 참조로만 돌려준다 — OnlineProtocolRegistry.h(고정 배치 코덱 사슬) 대신 전방 선언" },
+        { "_header": "Engine/Graphics/Texture/TextureCache.h", "_limit": 13, "_reason": "10 → 13(사용자 결정 2026-11-20): 밉 요청이 셀 로드와 같은 우선순위 형식(StreamingSourcePriority — 리플렉션 ENUM 이라 리플렉션 매크로 헤더 넷)을 든다. DevOnly.h · ReloadResult.h 는 빠졌다.AssetRefCache<Texture2D> 특수화는 기본 템플릿 선언만 있으면 된다 — AssetRef.h(공유 에셋 캐시 사슬)를 포함하지 않는다" },
+        { "_header": "Engine/UI/UISystem.h", "_limit": 49, "_reason": "화면은 unique_ptr · 참조로만 든다 — UIScreen.h 대신 UIScreenTypes.h(번호 · UIScreenDef) · ResourceTags.h · Widget.h(문서 열기 템플릿)" },
+        { "_header": "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h", "_limit": 72, "_reason": "복제 채널은 가상 훅의 참조 인자로만 받는다 — NetMessageChannel.h(복제 배치 · 리플렉션 레지스트리 사슬) 대신 전방 선언" }
     ]
 }

@@ -42,6 +42,7 @@
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Menu/PauseMenuScreen.h"
+#include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Screen/UIScreenSwitch.h"
 #include "Engine/UI/Service/UISubtitleService.h"
 #include "Engine/UI/Style/UIStylePass.h"
@@ -379,6 +380,11 @@ namespace sw
         // 그리기: 더티한 위젯만 다시 칠하고 화면마다 캐시를 이어 붙인다(스타일 순회(5-2) 전까지는 그리기가 kStyle 도 비운다).
         paintScreens();
         _onUpdateAfterPaint.broadcast( deltaSeconds ); // 화면 마커 앵커 · World 위젯 렌더 텍스처 · 스택 밖 화면(오프스크린 — 에디터 미리보기)
+    }
+
+    UIScreenHandle UISystem::openScreen( string_view documentPath )
+    {
+        return openScreen<UIScreen>( documentPath );
     }
 
     UIScreenHandle UISystem::pushScreen( unique_ptr<UIScreen> screen )

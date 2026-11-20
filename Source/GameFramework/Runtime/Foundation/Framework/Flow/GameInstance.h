@@ -15,7 +15,6 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -39,6 +38,7 @@ namespace sw
     class IGameDevPart;
     class GameObjectManager;
     class ItemCatalog;
+    class NetMessageChannel;
 
     /** @brief 이 인스턴스에서 끝난 게임 상태 세이브 슬롯 쓰기 · 읽기(복원까지) 중 성공한 수입니다. 감시 값 `Save.Written` · `Save.Loaded` 가 읽는다. */
     struct SaveSlotCounts

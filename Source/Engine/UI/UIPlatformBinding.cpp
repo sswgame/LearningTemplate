@@ -11,6 +11,7 @@
 #include "Engine/UI/Input/UIClipboardService.h"
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/PlatformClipboard.h"
 

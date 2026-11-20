@@ -7,7 +7,7 @@
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaCatalog.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaMapState.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
 // MetroidvaniaMapStateTest — 지도: 지도 사기와 통화, 지도 없으면 안 그려짐, 아이템 표시 세 조건, 줍기, 지점 열기와 빠른 이동, 탐색 · 수집 · 완료율, 세이브 순서와 왕복.

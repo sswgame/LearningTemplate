@@ -19,6 +19,7 @@
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
 #include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw

@@ -8,7 +8,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 
 namespace sw

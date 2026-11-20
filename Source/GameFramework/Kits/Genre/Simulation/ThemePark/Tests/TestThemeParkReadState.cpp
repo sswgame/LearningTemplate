@@ -9,7 +9,7 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Tests/ThemeParkTestRules.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 // ThemeParkReadStateTest — 놀이공원 상태 바이트의 신뢰 경계: 음수 · 범위 밖 값, 손님과 맞지 않는 줄과 탑승자를 거절하고 공원을 그대로 둔다.
 // 꾸민 바이트는 `writeState` 의 형식을 그대로 손으로 적는다. 칸마다 맞는 값을 기본으로 두고 한 칸씩 망가뜨린다.

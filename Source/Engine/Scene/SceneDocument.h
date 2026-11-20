@@ -16,9 +16,9 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Asset/PrefabAssetKind.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/SceneSettings.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"

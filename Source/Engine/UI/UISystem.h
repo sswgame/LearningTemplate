@@ -21,6 +21,7 @@
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Presentation/IEngineUIDriver.h"
 #include "Engine/Presentation/IUILayerVisibility.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/UI/Document/UIBindingDef.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
 #include "Engine/UI/Input/UIInputRouter.h"
@@ -28,8 +29,9 @@
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Render/UICanvasPaintState.h"
 #include "Engine/UI/Render/UIPaintContext.h"
-#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/UIEngineDocuments.h"
+#include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
@@ -41,6 +43,7 @@ namespace sw
     class TextLayoutEngine;
     class UIDocumentCache;
     class UIStyleSheetCache;
+    class UIScreen;
     class UIThemeController;
     class UserSettingsManager;
 } // namespace sw
@@ -152,7 +155,7 @@ namespace sw
          * @brief UI 문서 @p documentPath 로 화면을 생성해 올립니다. 문서의 `UIScreenDef` 로 만들며, 바인딩 식은 화면이 보관합니다(`UIScreen::getBindings`).
          * @return 읽지 못하거나 생성할 수 없으면(모르는 타입, 속성, 값) 무효 핸들이며, 오류(파일, 줄)를 로그에 남깁니다.
          */
-        [[nodiscard]] UIScreenHandle openScreen( string_view documentPath ) { return openScreen<UIScreen>( documentPath ); }
+        [[nodiscard]] UIScreenHandle openScreen( string_view documentPath );
         /** @brief 문서를 C++ 화면 클래스 @p ScreenType 으로 엽니다. `onCommand` 와 `onBack` 을 재정의한 클래스여야 하며, 생성자는 `( const UIScreenDef&, unique_ptr<Widget> )` 형태입니다. */
         template <typename ScreenType>
         [[nodiscard]] UIScreenHandle openScreen( string_view documentPath )

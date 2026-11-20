@@ -9,6 +9,7 @@
 #include "Core/Serialization/LittleEndianUtil.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 
 #include <algorithm>
 

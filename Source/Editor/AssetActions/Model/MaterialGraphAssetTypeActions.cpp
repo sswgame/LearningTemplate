@@ -4,6 +4,7 @@
 #include "DevTools/Material/MaterialGraphGeneratedPaths.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
+#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 

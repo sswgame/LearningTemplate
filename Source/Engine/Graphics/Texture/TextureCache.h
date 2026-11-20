@@ -14,7 +14,6 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetHandle.h"
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Asset/Image/TextureMipLayout.h"
 #include "Engine/Asset/StreamingSourcePriority.h"
@@ -416,6 +415,10 @@ namespace sw
 
 namespace sw
 {
+    /// 기본 몸체는 `AssetRef.h` — 특수화에는 선언만 있으면 되어 이 헤더가 공유 에셋 캐시 사슬을 끌어오지 않는다.
+    template <typename T>
+    struct AssetRefCache;
+
     /** @brief `AssetRef<Texture2D>` 는 텍스처 캐시로 간다. 소유권은 캐시가 갖고 받은 쪽이 `release` 한다(`TextureCache::acquire`). */
     template <>
     struct SW_API AssetRefCache<Texture2D>

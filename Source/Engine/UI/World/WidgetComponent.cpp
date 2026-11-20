@@ -18,6 +18,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
