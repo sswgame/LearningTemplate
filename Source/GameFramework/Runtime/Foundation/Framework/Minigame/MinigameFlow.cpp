@@ -218,6 +218,7 @@ namespace sw
         , _pReturning{ nullptr }
         , _pendingEnter{}
         , _pendingPlacement{}
+        , _pendingLeave{}
         , _onFinished{}
         , _lastResult{}
         , _sceneLoadRequested{}
@@ -246,6 +247,7 @@ namespace sw
         _sceneLoadRequested.reset();
         _pendingEnter.clear();
         _pendingPlacement = nullopt;
+        _pendingLeave     = nullopt;
         _pReturning.reset();
         deactivateScope(); // 게임 범위 기능은 게임 인스턴스가 이 뒤에 끈다(미니게임의 해제 검사는 그것이 켜진 채로 찍었다)
         _stack.clear();
@@ -484,7 +486,7 @@ namespace sw
         return true;
     }
 
-    bool MinigameFlow::leave( const hashed_string& resultName )
+    bool MinigameFlow::leave( const hashed_string& resultName, vector<MinigameResultValue> listValue )
     {
         if ( rejectIfLoadPending( "leave" ) )
             return false;
@@ -495,7 +497,7 @@ namespace sw
             return false;
         }
         deactivateScope();
-        MinigameResult result{ frame._definition._name, resultName };
+        MinigameResult result{ frame._definition._name, resultName, std::move( listValue ) };
         // 하위 레벨은 그 자리에서 끝난다 — 빼고, 덮였던 미니게임을 다시 켜고, 결과를 넘긴다.
         if ( const MinigameSubLevelReturn* const pSubLevel = std::get_if<MinigameSubLevelReturn>( &frame._returnPoint ) )
         {
@@ -534,6 +536,17 @@ namespace sw
         return true;
     }
 
+    void MinigameFlow::requestLeave( const hashed_string& resultName, vector<MinigameResultValue> listValue )
+    {
+        if ( _pendingLeave.has_value() )
+        {
+            SW_LOG_WARNING_ID( "MinigameFlow.LeaveAlreadyRequested", "Minigame leave with result '%#' is dropped - a leave with result '%#' was requested first in this frame",
+                               resultName.c_str(), _pendingLeave->_resultName.c_str() );
+            return;
+        }
+        _pendingLeave = MinigameResult{ hashed_string{}, resultName, std::move( listValue ) };
+    }
+
     void MinigameFlow::requestEnter( string_view name, const optional<SubLevelPlacement>& placement )
     {
         if ( _pendingEnter.empty() == false )
@@ -550,6 +563,13 @@ namespace sw
         // 다시 읽힌 카탈로그를 먼저 건다 — 이 프레임의 진입 · 컴포넌트가 새 판을 찾는다.
         if ( _pActive != nullptr )
             _pActive->rebindReloadedCatalogs();
+        // 나가기가 먼저다 — 같은 프레임에 끝난 미니게임의 트리거가 다음 진입을 맡겨도 끝낸 칸 위에 쌓지 않는다(나가기가 맵을 기다리면 진입은 `rejectIfLoadPending` 이 거절한다).
+        if ( _pendingLeave.has_value() )
+        {
+            MinigameResult pending = std::move( *_pendingLeave );
+            _pendingLeave          = nullopt;
+            (void)leave( pending._resultName, std::move( pending._listValue ) ); // 실패는 leave 가 알렸다
+        }
         if ( _pendingEnter.empty() )
             return;
         const string                      name      = std::move( _pendingEnter );
@@ -644,7 +664,8 @@ namespace sw
     {
         SW_LOG_INFO_ID( "MinigameFlow.ClearedByTravel", "Travel to '%#' was requested outside the minigame flow - the stacked minigames and the scenes to return to are dropped",
                         scenePath.c_str() );
-        _pReturning.reset(); // 저장 막기도 풀린다 — 새 씬(세이브 · 타이틀)이 바깥 진행이다
+        _pReturning.reset();     // 저장 막기도 풀린다 — 새 씬(세이브 · 타이틀)이 바깥 진행이다
+        _pendingLeave = nullopt; // 맡긴 나가기의 칸은 방금 버렸다
         deactivateScope();
         _stack.clear();
     }

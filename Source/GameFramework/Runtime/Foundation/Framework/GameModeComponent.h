@@ -27,6 +27,7 @@ namespace sw
     class GameObject;
     class GameObjectManager;
     class IBehaviorTreeDebugSource;
+    struct MinigameResultValue;
     template <typename AssetType>
     class SharedAssetCache;
 
@@ -51,6 +52,12 @@ namespace sw
      *            주 틱은 선행 조건을 받지 못하므로 그때만 규칙을 서브틱(`kRuleSubTick`)으로 옮기고, 그 디렉터의 규칙 틱(`getRuleTickHandle`)을 선행 조건으로 등록한다.
      *            걸지 않은 디렉터는 주 틱 그대로이다.
      *
+     *          - **디렉터 계약 셋**(모든 미니게임 · 허브 디렉터가 같은 셋만 적는다 — 키트 규칙 객체에는 계약을 더하지 않는다):
+     *            ① 걸음 `updateGame`(틱 뒤 게임 스레드) — 베이스가 시간을 재어 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 로 낸다(줄 추가 없이 모든 미니게임이 값을 낸다).
+     *            ② 세이브 `serializeGameState`(리플렉션 상태 칸 뒤에 잇는 손 본문 하나).
+     *            ③ 결과 `finishMinigame` → `collectMinigameResult` — 한 판 임시 상태(미니게임 지갑 · 창고 · 점수)는 디렉터가 소유하고
+     *            바탕 판(플레이어 진행 · 월드 상태)에 직접 쓰지 않으며 `MinigameResult` 의 값 목록으로만 내보낸다(`MinigameFlow::requestLeave`).
+     *
      *          디렉터의 시뮬레이션은 키트의 보통 클래스이고 PROPERTY 가 아니다.
      *          모듈 정적 변수나 컴포넌트 PROPERTY 가 아닌 곳에 둔 상태는 핫 리로드에서 사라지므로, 상태는 `writeState` 로만 넘겨야 한다.
      *          Lyra 는 게임 상태를 GameState 컴포넌트에 붙이는데, 여기서는 디렉터 하나가 그 역할을 한다.
@@ -72,6 +79,10 @@ namespace sw
         void onBeginPlay() override;
         /** @brief 스폰한 오브젝트를 정리하고 판을 끝냅니다. */
         void onEndPlay() override;
+        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다 — 감시 값 `GameMode.StepMs` 가 씬을 훑지 않고 디렉터를 찾는다. */
+        void onRegister( GameObjectManager& manager ) override;
+        /** @brief 레지스트리에서 내립니다. */
+        void onUnregister( GameObjectManager& manager ) override;
         /** @brief 규칙이 주 틱에서 돌면 `runRules` 를 틱 뒤로 겁니다(`deferRules`). `_tickAfter` 를 걸었으면 서브틱이 겁니다. */
         void onTick( TickContext& context ) override;
         /** @brief 규칙 서브틱(`kRuleSubTick`)이면 `runRules` 를 틱 뒤로 겁니다. */
@@ -122,6 +133,17 @@ namespace sw
         /** @brief 스폰한 런타임 오브젝트를 모두 지웁니다. 상태를 저장하기 전에 부르며, 판은 그대로이고 다음 틱이 그 상태대로 다시 스폰합니다. */
         void despawnViews();
 
+        /**
+         * @brief 디렉터 계약 ③ — 이 디렉터가 도는 미니게임을 결과 @p resultName(예: `win` · `lose`)으로 끝냅니다. 넘길 값은 `collectMinigameResult` 가 모은다.
+         * @details 나가기는 다음 게임 인스턴스 갱신(틱 밖)이 한다(`MinigameFlow::requestLeave`) — 하위 레벨 나가기가 이 디렉터를 지우므로 규칙 안에서 바로 나가지 않는다.
+         * @return 미니게임 흐름이 없거나 켜진 미니게임이 없으면 오류를 남기고 false 입니다(허브 판에서 부르면 계약 위반이다).
+         */
+        [[nodiscard]] bool finishMinigame( const hashed_string& resultName );
+        /** @brief 마지막 걸음(`updateGame`)의 게임 스레드 시간(마이크로초)입니다. 감시 값 `GameMode.StepMs` 가 읽는다. */
+        int64 getLastStepMicroseconds() const { return _lastStepMicroseconds; }
+        /** @brief 판을 연 뒤 가장 길었던 걸음의 시간(마이크로초)입니다. 감시 값 `GameMode.StepPeakMs` 가 읽는다. */
+        int64 getPeakStepMicroseconds() const { return _peakStepMicroseconds; }
+
         /** @brief 판이 열렸으면(`startGame` 이 성공) true 입니다. */
         bool isStarted() const { return _bStarted == SW_TRUE; }
         /** @brief 게임이 스스로 돌면 true 입니다(`_bAutoPlay`, 또는 개발 구성에서 게임의 `-gv_<게임>AutoPlay=1`). */
@@ -154,6 +176,12 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive ) { return StateIO::readInPlace( *this, archive ); }
         /** @brief 복원 바이트를 적용한 뒤에 불립니다. 결과를 알리고, 실패했으면 반쯤 바뀐 판을 새 판으로 되돌립니다. */
         virtual void onStateRestored( bool bRestored ) { (void)bRestored; }
+        /**
+         * @brief `finishMinigame` 이 결과에 실을 값(번 돈 · 얻은 물건 · 점수)을 @p outListValue 에 더합니다. 한 판 임시 상태를 쥔 미니게임 디렉터가 덮는다.
+         * @details 바탕 판에 쓰는 것은 결과를 받는 쪽(`MinigameFlow::onFinished` 구독 — 허브 디렉터)이다. 미니게임 디렉터가 플레이어 진행을 직접 고치면
+         *          씬 전환 복원(들어갈 때 찍은 스냅숏)이 그 값을 되감는다.
+         */
+        virtual void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const { (void)outListValue; }
         /** @brief 판이 열리고(복원과 첫 플러시 뒤) 한 번 불립니다. 조작 안내, 첫 상태 로그, 카메라 맞추기에 씁니다. */
         virtual void onGameStarted() {}
         /** @brief 판이 열린 뒤 매 프레임 불립니다 — PrePhysics 틱이 건 틱 뒤 작업이라 게임 스레드(틱 밖)에서 돈다(`deferRules`). 시간이 멈춘 프레임(@p deltaTime 0)에도 불립니다. */
@@ -273,6 +301,8 @@ namespace sw
         GameSoundQueue           _soundQueue;           ///< 낼 소리. 오디오는 게임 스레드에서 다루므로 틱 뒤에 낸다
         uint32                   _compactThreshold;     ///< 이 수를 넘으면 사라진 핸들을 덜어 낸다
         float32                  _pendingRuleDeltaTime; ///< 틱이 쌓고 틱 뒤 `runPendingRules` 가 쓰는 시간
+        int64                    _lastStepMicroseconds; ///< 마지막 `updateGame` 시간(디렉터 계약 ① 의 감시 값)
+        int64                    _peakStepMicroseconds; ///< 판을 연 뒤 가장 긴 `updateGame` 시간
         uint8                    _bStarted        : 1;
         uint8                    _bViewsSpawned   : 1; ///< 지금 상태의 뷰 오브젝트가 스폰돼 있다(정리하면 다음 틱이 다시 스폰한다)
         uint8                    _bFlushScheduled : 1;
