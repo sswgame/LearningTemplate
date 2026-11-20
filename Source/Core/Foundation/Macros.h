@@ -445,30 +445,8 @@ namespace sw
 // ------------------------------------------------------------------------------
 // 11) CPU Pause / Yield. 스핀 대기 힌트(x64 PAUSE, arm64 YIELD).
 // ------------------------------------------------------------------------------
-#if defined( SW_X64 )
-    #if defined( SW_PLATFORM_WINDOWS )
-        #include <emmintrin.h>
-        /** @brief x64 PAUSE 명령입니다(MSVC intrinsic). */
-        #define SW_CPU_PAUSE() _mm_pause()
-    #elif defined( SW_PLATFORM_POSIX )
-        /** @brief x64 PAUSE — Clang/GCC 내장 함수입니다. */
-        #define SW_CPU_PAUSE() __builtin_ia32_pause()
-    #else
-        #error "Unsupported platform"
-    #endif
-#elif defined( SW_ARM64 )
-    #if defined( SW_PLATFORM_WINDOWS )
-        /** @brief arm64 YIELD 명령입니다(MSVC intrinsic). */
-        #define SW_CPU_PAUSE() __yield()
-    #elif defined( SW_PLATFORM_POSIX )
-        /** @brief arm64 YIELD — 인라인 어셈블리입니다. */
-        #define SW_CPU_PAUSE() asm volatile( "yield" ::: "memory" )
-    #else
-        #error "Unsupported platform"
-    #endif
-#elif defined( SW_WASM32 )
-    /** @brief wasm 에는 스핀 힌트 명령이 없다 — 빈 문장이다(브라우저 메인 스레드는 스핀하지 않고, 워커 스핀은 짧다). */
-    #define SW_CPU_PAUSE() ( (void)0 )
+#if defined( SW_X64 ) && defined( SW_PLATFORM_WINDOWS )
+    #include <emmintrin.h>
 #endif
 
 namespace sw
@@ -479,9 +457,28 @@ namespace sw
      * - **x64**: `PAUSE`(`_mm_pause`). 스핀 루프가 파이프라인을 헛돌리는 것을 줄여 전력을 아끼고, 루프를 빠져나올 때
      *   생기는 메모리 순서 위반 페널티를 없앱니다. 같은 코어의 다른 하이퍼스레드에 자원을 양보하는 효과도 있습니다.
      * - **arm64**: `yield`. 같은 코어를 나눠 쓰는 다른 스레드에 양보하라는 힌트입니다.
+     * - **wasm**: 스핀 힌트 명령이 없어 아무 일도 하지 않습니다(브라우저 메인 스레드는 스핀하지 않고, 워커 스핀은 짧다).
      */
     SW_INLINE void cpuPause() noexcept
     {
-        SW_CPU_PAUSE();
+#if defined( SW_X64 )
+    #if defined( SW_PLATFORM_WINDOWS )
+        _mm_pause(); // MSVC intrinsic
+    #elif defined( SW_PLATFORM_POSIX )
+        __builtin_ia32_pause(); // Clang/GCC 내장 함수
+    #else
+        #error "Unsupported platform"
+    #endif
+#elif defined( SW_ARM64 )
+    #if defined( SW_PLATFORM_WINDOWS )
+        __yield(); // MSVC intrinsic
+    #elif defined( SW_PLATFORM_POSIX )
+        asm volatile( "yield" ::: "memory" );
+    #else
+        #error "Unsupported platform"
+    #endif
+#elif !defined( SW_WASM32 )
+    #error "Unsupported architecture"
+#endif
     }
 } // namespace sw

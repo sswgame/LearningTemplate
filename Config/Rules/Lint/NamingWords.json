@@ -97,6 +97,8 @@
     "should"
   ],
   "_bannedNames": {
+    "sw_delete_func": "sw_delete — 함수 템플릿 이름 자체, 별칭 매크로를 두지 않는다(매크로 → constexpr 감사, 2026-11-20)",
+    "SW_CPU_PAUSE": "sw::cpuPause() — 스핀 힌트는 함수 본문 안의 플랫폼 갈래로, 매크로를 두지 않는다(매크로 → constexpr 감사, 2026-11-20)",
     "SW_BIT": "BitUtil::bit<T>( index ) — 매크로 대신 constexpr 함수 템플릿, 범위 밖 시프트를 상수 평가가 잡는다(매크로 → constexpr 감사, 2026-11-20)",
     "recordScreenSizes": "recordStreamingDemand — 텍스처 스트리밍 요구가 화면 크기와 스트리밍 우선순위(셀 로드와 같은 값)를 함께 싣는다(DesignBacklog 씬 스트리밍 (라), 2026-11-20)",
     "LaunchSelection": "gv_firstExperience — 실행 인자 -experience= 를 실행 전역 변수로 바꿨다(시나리오 <Launch> 가 체인 단계마다 바꾸고 되돌린다, DesignBacklog 허브 게임 · 미니게임 Experience 2 단계)",
