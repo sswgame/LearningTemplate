@@ -32,6 +32,12 @@ namespace sw
     {
     public:
         RHIFence();
+        ~RHIFence() = default;
+        // 복사하면 두 펜스가 완료 칸 하나를 나누면서 낸 값은 따로 세어, 한쪽의 완료가 다른 쪽의 값을 끝냈다고 잘못 알린다 — 이동만 둔다(풀이 이동한다).
+        RHIFence( const RHIFence& )                = delete;
+        RHIFence& operator=( const RHIFence& )     = delete;
+        RHIFence( RHIFence&& ) noexcept            = default;
+        RHIFence& operator=( RHIFence&& ) noexcept = default;
 
         /**
          * @brief 새 펜스 값을 내고, 지금 기록 중인(프레임 밖이면 다음에 낼) 프레임의 GPU 작업이 끝나면 완료 값을 그 값으로 올리게 디바이스에 맡깁니다.
