@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"

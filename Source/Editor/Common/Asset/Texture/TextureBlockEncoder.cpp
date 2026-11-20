@@ -8,6 +8,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIFormatInfo.h"
 
 #include <astcenc/astcenc.h>
 #include <etcpak/ProcessRGB.hpp>

@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 
-#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialTypes.h"
 
 namespace sw
 {

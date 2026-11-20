@@ -7,7 +7,6 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/Resource/FrameResourceRegistry.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantValues.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"

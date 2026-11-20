@@ -9,7 +9,6 @@
 
 #include "Engine/Graphics/RHI/RHIDeviceBuffer.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {

@@ -14,7 +14,6 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Config/OcclusionCullingConfig.h"
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
@@ -24,6 +23,7 @@
 
 namespace sw
 {
+    struct OcclusionCullingConfig;
     class FrameBufferTable;
     class IRHICommandList;
     class IRHIDevice;

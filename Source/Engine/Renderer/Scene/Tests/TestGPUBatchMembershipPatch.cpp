@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Renderer/Scene/GPUBatchMembershipPatch.h"
+#include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 using namespace sw;
 

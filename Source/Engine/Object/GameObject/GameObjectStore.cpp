@@ -19,7 +19,7 @@
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
-#include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {

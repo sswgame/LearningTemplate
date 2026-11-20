@@ -15,7 +15,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Reflection/Reflection.h"
 
 namespace sw
 {

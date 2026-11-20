@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
+#include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Window/IWindow.h"

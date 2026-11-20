@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/Shader/Binding/GPULight.h"
+
 namespace sw
 {
     namespace

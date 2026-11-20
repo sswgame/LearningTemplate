@@ -21,6 +21,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Backend/RHITrackedState.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 
 #include <thread>
 

@@ -7,7 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 
 namespace sw
 {

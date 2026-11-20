@@ -16,18 +16,12 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/Debug/GPUNanCheck.h"
-#include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHIBufferTransitionBatch.h"
-#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Debug/RenderBufferInspector.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/Execute/FrameGraphExecutor.h"
-#include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
-#include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
@@ -40,6 +34,9 @@
 
 namespace sw
 {
+    class FrameExtensionHost;
+    struct ExtensionFramePass;
+    struct FrameRenderState;
     class FrameCapture;
     class FrameDisplayEncode;
     class FrameScreenRotation;
@@ -526,7 +523,7 @@ namespace sw
         TransientAttachmentPool&       activePool() { return _pActiveView->_transientPool; }
         const TransientAttachmentPool& activePool() const { return _pActiveView->_transientPool; }
         /** @brief 지금 그리는 뷰가 추가 뷰면 true 입니다. */
-        bool isRenderingExtraView() const { return _pActiveView != &_state._mainView; }
+        bool isRenderingExtraView() const { return _pActiveView != _pMainView; }
 
     private:
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다(생성자 참고)
@@ -556,6 +553,8 @@ namespace sw
         uint32 _graphTransitionCount{ 0 };
         /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 `FrameRenderState::_mainView` 입니다. 바꾸는 곳은 `renderExtraView` 하나다.
         FrameViewTarget* _pActiveView;
+        /// @brief `FrameRenderState::_mainView` 입니다 — 인라인 판정(`isRenderingExtraView`)이 FrameRenderState.h 없이 견준다.
+        FrameViewTarget* const _pMainView;
         /// @brief 프레임 그래프 리스트와 그것을 만든 디바이스입니다. `_pCmd` 는 프리패스를 기록하는 동안만 그 리스트를 가리킨다.
         IRHIDevice*                 _pCmdOwnerDevice;
         unique_ptr<IRHICommandList> _frameCmd;

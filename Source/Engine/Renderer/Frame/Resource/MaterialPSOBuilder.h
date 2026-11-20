@@ -17,7 +17,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Task/DedicatedWorker.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
+#include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 
 namespace sw
 {

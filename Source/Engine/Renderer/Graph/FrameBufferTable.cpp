@@ -4,6 +4,8 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
+
 namespace sw
 {
     bool FrameBufferTable::registerBuffer( hashed_string name, uint32 slot, const RHIStructuredBuffer& buffer, RenderGraphAccess initialAccess )

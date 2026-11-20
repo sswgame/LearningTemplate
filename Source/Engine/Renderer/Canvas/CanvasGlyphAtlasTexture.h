@@ -8,7 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Text/GlyphAtlas.h"
 
 namespace sw

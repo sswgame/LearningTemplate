@@ -10,7 +10,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIConstantBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/Graphics/View/RenderViewSettings.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"

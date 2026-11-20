@@ -4,6 +4,8 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
+#include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
+
 namespace sw
 {
     void GPUBatchMembershipPatch::reset( uint32 slotCount )

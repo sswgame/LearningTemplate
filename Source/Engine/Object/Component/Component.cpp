@@ -12,7 +12,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
-#include "Engine/Reflection/Reflection.h"
 
 namespace sw
 {

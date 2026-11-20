@@ -13,11 +13,12 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIHandles.h"
-#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 
 namespace sw
 {
+    struct RHIStructuredBuffer;
+
     /**
      * @class FrameBufferTable
      * @brief 프레임 그래프 자원의 RHI 핸들 표입니다. 파일 머리말 참고. 렌더 스레드에서만 쓴다(레벨 콜백 · 패스 몸통은 등록이 끝난 뒤 읽기만 한다).

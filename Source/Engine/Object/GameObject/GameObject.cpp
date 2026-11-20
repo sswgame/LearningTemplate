@@ -15,7 +15,8 @@
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {

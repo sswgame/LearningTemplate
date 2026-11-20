@@ -3,7 +3,6 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"

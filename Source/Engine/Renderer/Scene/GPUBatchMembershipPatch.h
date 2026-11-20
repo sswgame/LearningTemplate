@@ -9,10 +9,11 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw
 {
+    struct GPUMeshBatch;
+
     /** @brief 배치 @p _batchIndex 에 들어가는 칸 @p _slot 입니다. */
     struct GPUBatchMemberEntry
     {

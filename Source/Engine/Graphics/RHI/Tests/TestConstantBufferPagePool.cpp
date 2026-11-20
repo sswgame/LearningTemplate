@@ -11,6 +11,7 @@
 
 #include "Engine/Graphics/RHI/ConstantBufferPagePool.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 
 using namespace sw;

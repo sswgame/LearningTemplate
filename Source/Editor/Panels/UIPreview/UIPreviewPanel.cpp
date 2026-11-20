@@ -3,6 +3,7 @@
 #include "Editor/Panels/UIPreview/UIPreviewPanel.h"
 
 #include "Core/Delegate/Delegate.h"
+#include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"

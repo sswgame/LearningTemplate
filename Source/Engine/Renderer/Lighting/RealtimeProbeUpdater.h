@@ -18,14 +18,13 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 
 namespace sw
 {
+    struct SkyGradient;
     class IRHICommandList;
     class IRHIDevice;
 

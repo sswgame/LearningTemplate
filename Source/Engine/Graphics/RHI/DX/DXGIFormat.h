@@ -6,8 +6,9 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

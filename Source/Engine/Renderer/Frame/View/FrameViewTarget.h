@@ -11,7 +11,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Frame/PostProcess/PostProcessChainTexture.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"

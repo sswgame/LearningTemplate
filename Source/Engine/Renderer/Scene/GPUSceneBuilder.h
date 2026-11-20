@@ -17,7 +17,6 @@
 #include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Renderer/Scene/GPUBatchMembershipPatch.h"
 #include "Engine/Renderer/Scene/GPUInstanceRing.h"

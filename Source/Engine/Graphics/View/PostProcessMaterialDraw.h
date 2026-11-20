@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Graphics/Material/MaterialRenderProxy.h"
+#include "Engine/Graphics/Material/MaterialRenderBinding.h"
 #include "Engine/Graphics/View/PostProcessValues.h"
 
 namespace sw

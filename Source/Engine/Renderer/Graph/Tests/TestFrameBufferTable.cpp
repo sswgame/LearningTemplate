@@ -7,6 +7,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Renderer/Graph/FrameBufferTable.h"
 

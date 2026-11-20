@@ -5,6 +5,7 @@
 #include "Core/Time/BusyClock.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw

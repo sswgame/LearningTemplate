@@ -11,6 +11,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 
 namespace sw

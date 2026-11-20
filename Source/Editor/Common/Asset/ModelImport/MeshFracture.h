@@ -26,7 +26,7 @@
 #include "Editor/Common/EditorExports.h"
 
 #include "Engine/Destruction/Fracture/FractureSettings.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 
 namespace sw
 {

@@ -8,7 +8,6 @@
     #include "Core/Log/Logger.h"
 
     #include "Engine/Graphics/RHI/GL/OpenGLRHIUtil.h"
-    #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {

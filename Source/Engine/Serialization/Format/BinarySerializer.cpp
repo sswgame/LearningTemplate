@@ -8,7 +8,6 @@
 #include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Reflection/ReflectVisit.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"

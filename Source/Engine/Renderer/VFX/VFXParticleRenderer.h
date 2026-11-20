@@ -19,7 +19,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/Resource/PathTextureSet.h"
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 #include "Engine/VFX/VFXParticle.h"

@@ -17,7 +17,8 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIEnums.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/View/ScreenshotTicketState.h"
 
 namespace sw

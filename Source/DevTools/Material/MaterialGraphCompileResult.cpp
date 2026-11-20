@@ -12,6 +12,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

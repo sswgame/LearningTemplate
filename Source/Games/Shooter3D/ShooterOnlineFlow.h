@@ -18,7 +18,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
 
 namespace sw

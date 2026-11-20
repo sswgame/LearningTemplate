@@ -16,11 +16,14 @@
 #include "Core/Memory/IdentityToken.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Graphics/Material/MaterialTypes.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/View/RenderViewMode.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
-#include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw

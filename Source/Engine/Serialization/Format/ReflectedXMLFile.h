@@ -17,7 +17,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {

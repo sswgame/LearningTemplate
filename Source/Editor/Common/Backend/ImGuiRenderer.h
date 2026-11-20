@@ -23,7 +23,6 @@
 #include "Editor/Common/Backend/Model/EditorDrawReleaseQueue.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {

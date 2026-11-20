@@ -2,6 +2,7 @@
 
 #include "Engine/Navigation/Scene/NavGeometryCollector.h"
 
+#include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
@@ -10,7 +11,6 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Navigation/Component/NavMeshLinkComponent.h"
 #include "Engine/Navigation/Component/NavMeshModifierComponent.h"

@@ -9,7 +9,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/PropertyHandle.h"
 #include "Engine/Reflection/ReflectedValue.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"

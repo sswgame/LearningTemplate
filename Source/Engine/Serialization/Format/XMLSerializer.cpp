@@ -9,7 +9,6 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectVisit.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"

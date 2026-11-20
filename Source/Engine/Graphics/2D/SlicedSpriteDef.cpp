@@ -3,6 +3,7 @@
 #include "Engine/Graphics/2D/SlicedSpriteDef.h"
 
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 

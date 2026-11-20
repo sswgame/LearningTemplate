@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/GPUTimestampSlotMask.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimelineExporter.h"

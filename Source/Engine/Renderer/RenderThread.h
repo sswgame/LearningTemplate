@@ -15,7 +15,6 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 

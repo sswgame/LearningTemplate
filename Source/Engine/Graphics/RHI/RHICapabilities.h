@@ -3,7 +3,6 @@
  * @brief RHI 백엔드 능력 플래그입니다. 백엔드마다의 값과 가용성 조회는 `RHIBackendInfo.h` 의 기술자 테이블에 있습니다.
  */
 #pragma once
-#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
 
 namespace sw

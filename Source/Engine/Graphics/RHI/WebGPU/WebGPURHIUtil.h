@@ -9,6 +9,7 @@
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 
 #include <webgpu/webgpu.h>

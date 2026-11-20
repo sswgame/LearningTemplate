@@ -7,6 +7,7 @@
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

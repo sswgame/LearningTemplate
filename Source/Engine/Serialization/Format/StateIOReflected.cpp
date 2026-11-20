@@ -9,7 +9,6 @@
 #include "Engine/Reflection/EnumInfo.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"

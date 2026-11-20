@@ -13,7 +13,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"

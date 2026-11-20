@@ -10,6 +10,7 @@
 
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 

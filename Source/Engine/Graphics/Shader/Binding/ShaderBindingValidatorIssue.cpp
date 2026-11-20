@@ -10,7 +10,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Reflection/EnumName.h"

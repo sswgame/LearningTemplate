@@ -25,6 +25,7 @@
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+#include "Engine/Graphics/View/RenderViewMode.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"

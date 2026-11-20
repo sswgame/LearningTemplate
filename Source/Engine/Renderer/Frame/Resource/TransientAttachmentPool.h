@@ -14,7 +14,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 
 namespace sw

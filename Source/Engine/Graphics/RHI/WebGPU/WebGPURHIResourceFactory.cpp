@@ -8,6 +8,9 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
+#include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/RHI/RHITextureMipLayout.h"
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHIDevice.h"
 #include "Engine/Graphics/Shader/Compile/WebGPUShaderContainer.h"
 

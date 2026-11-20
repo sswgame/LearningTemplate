@@ -12,7 +12,6 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/Foundation.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 

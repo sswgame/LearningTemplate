@@ -9,11 +9,12 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/Diagnostics/GPUTimestampSlotMask.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 
 namespace sw
 {
+    struct GPUTimestampSlotMask;
+
     /**
      * @struct RHITimestampFrame
      * @brief 이미 끝난 한 프레임의 타임스탬프입니다(`IRHITimestampProvider::readTimestamps`).

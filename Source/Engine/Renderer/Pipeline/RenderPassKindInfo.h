@@ -15,7 +15,6 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"

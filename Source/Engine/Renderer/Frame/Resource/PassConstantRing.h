@@ -15,7 +15,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHIConstantBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 
 namespace sw
 {

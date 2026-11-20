@@ -13,7 +13,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 
 namespace sw

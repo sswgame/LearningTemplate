@@ -11,7 +11,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectedValue.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"

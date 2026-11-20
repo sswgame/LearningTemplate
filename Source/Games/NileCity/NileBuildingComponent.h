@@ -12,10 +12,11 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/RuleViewCatalog.h"
 
 namespace sw
 {
+    struct RuleViewDef;
+    class RuleViewCatalog;
     struct CityBuildingDef;
 
     /**

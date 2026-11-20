@@ -14,7 +14,6 @@
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/VFX/VFXParticleOrder.h"
 #include "Engine/VFX/VFXEmitterClock.h"

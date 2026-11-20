@@ -11,7 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Foundation/RHIDescriptorIndex.h"
 
 namespace sw
 {

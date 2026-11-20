@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

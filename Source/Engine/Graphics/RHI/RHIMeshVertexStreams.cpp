@@ -2,10 +2,12 @@
 
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 
+#include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 
 namespace sw
 {

@@ -6,6 +6,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/GPUTimestampSlotMask.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 

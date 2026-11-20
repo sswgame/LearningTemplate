@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Frame/Resource/PathTextureSet.h"
 

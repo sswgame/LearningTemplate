@@ -12,13 +12,12 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Environment/Sky/SkyLight.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Renderer/Frame/View/RenderView.h"
+#include "Engine/Graphics/LOD/LODView.h"
+#include "Engine/Graphics/Lighting/LensFlareAsset.h"
+#include "Engine/Graphics/View/RenderViewSettings.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
-#include "Engine/Renderer/Lighting/LensFlareSpriteBuffer.h"
 
 namespace sw
 {

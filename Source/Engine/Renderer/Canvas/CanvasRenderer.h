@@ -9,7 +9,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Canvas/CanvasGlyphAtlasTexture.h"
 #include "Engine/Renderer/Canvas/CanvasMarkerProjection.h"
 #include "Engine/Renderer/Canvas/CanvasQuadBuffer.h"

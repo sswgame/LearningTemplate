@@ -5,9 +5,11 @@
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIGeometryBindings.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 
 namespace sw
 {

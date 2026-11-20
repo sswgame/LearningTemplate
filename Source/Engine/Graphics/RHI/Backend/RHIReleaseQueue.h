@@ -12,7 +12,7 @@
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 
 namespace sw
 {

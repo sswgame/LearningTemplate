@@ -12,7 +12,6 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/Display/DisplayOutput.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {

@@ -36,8 +36,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/IdentityToken.h"
 
+#include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIFence.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {

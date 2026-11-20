@@ -8,7 +8,6 @@
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX/DXGIColorSpace.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
