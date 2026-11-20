@@ -4,6 +4,8 @@
  */
 #include "pch.h"
 
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -55,10 +57,12 @@ SW_TEST_CASE( EditorShortcutMapTest, FocusedPanelCommandWinsOverGlobal )
     InputManager input;
     SW_REQUIRE_TRUE( input.initialize() );
 
-    EditorShortcutMap   shortcuts;
-    InputMap&           map = shortcuts.getInputMap();
-    const hashed_string globalLayer{ EditorShortcutMap::kGlobalLayer };
-    const hashed_string panelLayer{ ( string( EditorShortcutMap::kPanelLayerPrefix ) + "hierarchy" ).c_str() };
+    EditorShortcutMap                       shortcuts;
+    InputMap&                               map = shortcuts.getInputMap();
+    const hashed_string                     globalLayer{ EditorShortcutMap::kGlobalLayer };
+    fixed_string<constant::buffer::kMax256> layerName;
+    formatstring( layerName.data(), layerName.capacity(), "%#hierarchy", EditorShortcutMap::kPanelLayerPrefix );
+    const hashed_string panelLayer{ layerName.c_str() };
     map.setInputManager( &input );
     map.setKeyboardFocusIgnored( true );
     map.registerLayer( globalLayer, 0, true );

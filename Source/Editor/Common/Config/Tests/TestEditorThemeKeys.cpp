@@ -6,7 +6,10 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
@@ -66,7 +69,11 @@ namespace
                 continue;
             ++cursor;
             if ( readLiteral( text, cursor, key ) )
-                outSetKey.insert( ns + "." + key );
+            {
+                StringBuilder<constant::buffer::kMax128> keyBuilder;
+                keyBuilder.appendFormat( "%#.%#", ns, key );
+                outSetKey.insert( string( keyBuilder.view() ) );
+            }
         }
     }
 
@@ -129,9 +136,17 @@ SW_TEST_CASE( EditorThemeKeys, EveryCodeKeyIsInEveryTheme )
     for ( const EditorThemeConfig& theme : listTheme )
     {
         for ( const string& key : scan._setColorKey )
-            SW_EXPECT_TRUE_MSG( theme.findColor( hashed_string( string_view( key ) ) ) != nullptr, ( theme._name + " has no _color " + key ).c_str() );
+        {
+            fixed_string<constant::buffer::kMax256> message;
+            formatstring( message.data(), message.capacity(), "%# has no _color %#", theme._name, key );
+            SW_EXPECT_TRUE_MSG( theme.findColor( hashed_string( string_view( key ) ) ) != nullptr, message.c_str() );
+        }
         for ( const string& key : scan._setMetricKey )
-            SW_EXPECT_TRUE_MSG( theme.findMetric( hashed_string( string_view( key ) ) ) != nullptr, ( theme._name + " has no _metric " + key ).c_str() );
+        {
+            fixed_string<constant::buffer::kMax256> message;
+            formatstring( message.data(), message.capacity(), "%# has no _metric %#", theme._name, key );
+            SW_EXPECT_TRUE_MSG( theme.findMetric( hashed_string( string_view( key ) ) ) != nullptr, message.c_str() );
+        }
     }
 }
 
@@ -142,14 +157,29 @@ SW_TEST_CASE( EditorThemeKeys, EveryThemeKeyIsUsedAndEveryThemeHasTheSameKeys )
     SW_REQUIRE_TRUE( listTheme.empty() == false );
     for ( const EditorThemeConfig& theme : listTheme )
     {
-        string mismatchKey;
-        SW_EXPECT_FALSE_MSG( EditorThemeTokens::findKeyMismatch( listTheme.front(), theme, mismatchKey ), ( theme._name + " differs in key " + mismatchKey ).c_str() );
+        string                                  mismatchKey;
+        const bool                              bMismatch = EditorThemeTokens::findKeyMismatch( listTheme.front(), theme, mismatchKey );
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "%# differs in key %#", theme._name, mismatchKey );
+        SW_EXPECT_FALSE_MSG( bMismatch, message.c_str() );
     }
     // 남은 키: 매크로로도, 키 글자로도(`"Typography.FontSize"` — 테마 서브시스템보다 먼저 읽는 곳) 쓰지 않는 토큰은 지운다.
     const auto isUsed = [&scan]( const string& key, const unordered_set<string>& setMacroKey )
-    { return setMacroKey.count( key ) > 0 || scan._allText.find( "\"" + key + "\"" ) != string::npos; };
+    {
+        fixed_string<constant::buffer::kMax128> quotedKey;
+        formatstring( quotedKey.data(), quotedKey.capacity(), "\"%#\"", key );
+        return setMacroKey.count( key ) > 0 || scan._allText.find( quotedKey.c_str() ) != string::npos;
+    };
     for ( const auto& [key, color] : listTheme.front()._mapColor )
-        SW_EXPECT_TRUE_MSG( isUsed( key.c_str(), scan._setColorKey ), ( string( "_color " ) + key.c_str() + " is in the theme but no code uses it" ).c_str() );
+    {
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "_color %# is in the theme but no code uses it", key.c_str() );
+        SW_EXPECT_TRUE_MSG( isUsed( key.c_str(), scan._setColorKey ), message.c_str() );
+    }
     for ( const auto& [key, value] : listTheme.front()._mapMetric )
-        SW_EXPECT_TRUE_MSG( isUsed( key.c_str(), scan._setMetricKey ), ( string( "_metric " ) + key.c_str() + " is in the theme but no code uses it" ).c_str() );
+    {
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "_metric %# is in the theme but no code uses it", key.c_str() );
+        SW_EXPECT_TRUE_MSG( isUsed( key.c_str(), scan._setMetricKey ), message.c_str() );
+    }
 }

@@ -72,9 +72,11 @@ namespace sw::editor
             EditorSearchItem item{};
             item._source   = EditorSearchSource::Panel;
             item._category = "Panel";
-            item._title    = string( "Open Panel: " ) + panel._title;
-            item._detail   = "Editor Panel";
-            item._key      = panel._id;
+            StringBuilder<constant::buffer::kMax256> titleBuilder;
+            titleBuilder.appendFormat( "Open Panel: %#", panel._title );
+            item._title  = string( titleBuilder.view() );
+            item._detail = "Editor Panel";
+            item._key    = panel._id;
             inoutListItem.push_back( std::move( item ) );
         }
     }
@@ -100,13 +102,21 @@ namespace sw::editor
             {
                 const TypeInfo* pType = pComponent != nullptr ? pComponent->getTypeInfo() : nullptr;
                 if ( pType != nullptr )
-                    item._listFacet.push_back( "type:" + string( pType->_name.c_str() ) );
+                {
+                    StringBuilder<constant::buffer::kMax256> facetBuilder;
+                    facetBuilder.appendFormat( "type:%#", pType->_name.c_str() );
+                    item._listFacet.push_back( string( facetBuilder.view() ) );
+                }
             }
             for ( const TagID& tag : pObj->getTags().getTags() )
             {
                 const utf8* pTagName = tag.getString();
                 if ( pTagName != nullptr )
-                    item._listFacet.push_back( string( "tag:" ) + pTagName );
+                {
+                    StringBuilder<constant::buffer::kMax256> facetBuilder;
+                    facetBuilder.appendFormat( "tag:%#", pTagName );
+                    item._listFacet.push_back( string( facetBuilder.view() ) );
+                }
             }
             item._listFacet.push_back( pObj->isActiveInHierarchy() ? "is:active" : "is:inactive" );
             inoutListItem.push_back( std::move( item ) );
@@ -127,7 +137,11 @@ namespace sw::editor
             if ( colon != string_view::npos && colon > 0 && colon + 1 < word.size() )
                 query._listFacet.emplace_back( StringUtil::toLower( word.substr( 0, colon ) ), string( word.substr( colon + 1 ) ) );
             else if ( word.empty() == false )
-                query._text += ( query._text.empty() ? "" : " " ) + string( word );
+            {
+                if ( query._text.empty() == false )
+                    query._text += ' ';
+                query._text += word;
+            }
             start = end + 1;
         }
         return query;

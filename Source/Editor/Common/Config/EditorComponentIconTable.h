@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -38,7 +39,12 @@ namespace sw::editor
     {
         REFLECT_BODY();
         /** @brief 색 이름 @p colorName 의 테마 색 키(`Component.<이름>`)입니다. */
-        static string makeColorKey( string_view colorName ) { return string( "Component." ) + string( colorName ); }
+        static string makeColorKey( string_view colorName )
+        {
+            StringBuilder<constant::buffer::kMax128> keyBuilder;
+            keyBuilder.appendFormat( "Component.%#", colorName );
+            return string( keyBuilder.view() );
+        }
 
         PROPERTY( Required, Tooltip = "Icon of a component no meta or category matches" )
         string _defaultIcon{};
