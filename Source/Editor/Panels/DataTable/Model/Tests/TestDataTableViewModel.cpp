@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
@@ -304,7 +305,9 @@ SW_TEST_CASE( DataTableViewModelTest, ConfirmedTranslationIsSavedAsCurrent )
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( projectPath, "<LocalizationProject name=\"t\" sourceCulture=\"en\"><cultures><item>ko</item></cultures><stringTables><item>t.strings.xml</item></stringTables></LocalizationProject>" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "t.strings.xml" ), "<SourceStringTable culture=\"en\"><entries><entry key=\"a\" source=\"Old\" /></entries></SourceStringTable>" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "ko.translation.xml" ), string( "<TranslationTable culture=\"ko\"><entries><entry key=\"a\" text=\"글\" sourceHash=\"" ) + oldHash + "\" /></entries></TranslationTable>" ) );
+    StringBuilder<constant::buffer::kMax256> translationText;
+    translationText.appendFormat( "<TranslationTable culture=\"ko\"><entries><entry key=\"a\" text=\"글\" sourceHash=\"%#\" /></entries></TranslationTable>", oldHash );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "ko.translation.xml" ), translationText.view() ) );
 
     const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };

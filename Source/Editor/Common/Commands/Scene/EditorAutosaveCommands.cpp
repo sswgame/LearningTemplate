@@ -10,6 +10,8 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
@@ -259,8 +261,10 @@ namespace sw::editor
                 Scene* pScene = editor::getActiveScene();
                 if ( pScene == nullptr || EditorPlaySession::areSceneEditsAllowed() == false )
                     return false;
-                const string sourceID = pScene->getSourcePath();
-                if ( StringUtil::startsWith( sourceID, string( EditorAutosaveCommands::kDomain ) + "/" ) )
+                const string                           sourceID = pScene->getSourcePath();
+                fixed_string<constant::buffer::kMax64> domainPrefix;
+                formatstring( domainPrefix.data(), domainPrefix.capacity(), "%#/", EditorAutosaveCommands::kDomain );
+                if ( StringUtil::startsWith( sourceID, domainPrefix ) )
                     return false; // 복원 중인 사본 자신이다
                 State& state = getState();
                 if ( state._sessionFolder.empty() )
@@ -480,8 +484,10 @@ namespace sw::editor
         // 저장하지 않은 일은 종료 확인에서 사용자가 이미 골랐다(언리얼 FPackageAutoSaver 도 정상 종료 뒤에는 복원 파일을 묻지 않는다).
         if ( reason == EditorAutosaveSessionEnd::EditorExit && folder.empty() == false )
             EditorAutosaveSession::removeOwned( folder, Process::getCurrentProcessID() );
-        AssetPaths* pAssetPaths = editor::findSubsystem<AssetPaths>();
-        if ( pAssetPaths != nullptr && pAssetPaths->isMountedDiskDomainID( string( kDomain ) + "/session" ) )
+        AssetPaths*                            pAssetPaths = editor::findSubsystem<AssetPaths>();
+        fixed_string<constant::buffer::kMax64> sessionID;
+        formatstring( sessionID.data(), sessionID.capacity(), "%#/session", kDomain );
+        if ( pAssetPaths != nullptr && pAssetPaths->isMountedDiskDomainID( sessionID ) )
             (void)pAssetPaths->unmountDiskDomain( kDomain );
     }
 

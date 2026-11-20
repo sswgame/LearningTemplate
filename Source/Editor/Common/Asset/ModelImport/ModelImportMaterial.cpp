@@ -13,6 +13,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportGeometry.h"
@@ -98,11 +100,16 @@ namespace sw::editor
     {
         if ( pMesh == nullptr )
             return VrmFirstPersonMode::Auto;
-        const size_t meshIndex = static_cast<size_t>( pMesh - data.meshes );
-        const string name      = ( pMesh->name != nullptr && pMesh->name[0] != '\0' ) ? string( pMesh->name ) : "mesh" + to_string( static_cast<uint64>( meshIndex ) );
+        const size_t                             meshIndex = static_cast<size_t>( pMesh - data.meshes );
+        StringBuilder<constant::buffer::kMax256> nameBuilder;
+        if ( pMesh->name != nullptr && pMesh->name[0] != '\0' )
+            nameBuilder.append( pMesh->name );
+        else
+            nameBuilder.appendFormat( "mesh%#", static_cast<uint64>( meshIndex ) );
+        const string_view name = nameBuilder.view();
         for ( const VrmFirstPersonMesh& annotated : avatar._listFirstPersonMesh )
         {
-            if ( annotated._mesh == name )
+            if ( string_view( annotated._mesh ) == name )
                 return annotated._mode;
         }
         return VrmFirstPersonMode::Auto;
@@ -235,8 +242,11 @@ namespace sw::editor
                 const string baseStem = ModelImportUtil::makeFileStem( listMaterialName[materialIndex] );
                 stemIt                = mapMaterialStem.emplace( materialIndex, ModelImportUtil::makeNumberedStem( baseStem, mapStemUse[baseStem]++ ) ).first;
             }
-            section._fileStem                    = stemIt->second;
-            section._sectionName                 = section._fileStem + ( visibility == MeshPersonVisibility::ThirdPersonOnly ? "_tp" : ( visibility == MeshPersonVisibility::FirstPersonOnly ? "_fp" : "" ) );
+            section._fileStem = stemIt->second;
+            StringBuilder<constant::buffer::kMax256> sectionNameBuilder;
+            sectionNameBuilder.appendFormat( "%#%#", section._fileStem,
+                                             visibility == MeshPersonVisibility::ThirdPersonOnly ? "_tp" : ( visibility == MeshPersonVisibility::FirstPersonOnly ? "_fp" : "" ) );
+            section._sectionName                 = string( sectionNameBuilder.view() );
             section._firstIndex                  = static_cast<uint32>( begin * 3 );
             section._indexCount                  = static_cast<uint32>( ( end - begin ) * 3 );
             section._personVisibility            = visibility;
@@ -304,9 +314,17 @@ namespace sw::editor
         unordered_map<string, uint32> mapStemUse;
         for ( cgltf_size imageIndex = 0; imageIndex < data.images_count; ++imageIndex )
         {
-            const cgltf_image& image    = data.images[imageIndex];
-            const string       baseName = ( image.name != nullptr && image.name[0] != '\0' ) ? ModelImportUtil::makeFileStem( image.name ) : "image" + to_string( static_cast<uint64>( imageIndex ) );
-            listImageStem[imageIndex]   = ModelImportUtil::makeNumberedStem( baseName, mapStemUse[baseName]++ );
+            const cgltf_image& image = data.images[imageIndex];
+            string             baseName;
+            if ( image.name != nullptr && image.name[0] != '\0' )
+                baseName = ModelImportUtil::makeFileStem( image.name );
+            else
+            {
+                StringBuilder<constant::buffer::kMax32> nameBuilder;
+                nameBuilder.appendFormat( "image%#", static_cast<uint64>( imageIndex ) );
+                baseName = string( nameBuilder.view() );
+            }
+            listImageStem[imageIndex] = ModelImportUtil::makeNumberedStem( baseName, mapStemUse[baseName]++ );
         }
 
         inoutResult._listTexture.assign( data.textures_count, ModelImportTexture{} );
@@ -382,10 +400,10 @@ namespace sw::editor
         }
         if ( result._listIgnoredMaterialKey.empty() == false )
         {
-            string joined;
+            StringBuilder<constant::buffer::kMax1024> joined;
             for ( const string& key : result._listIgnoredMaterialKey )
             {
-                joined += ( joined.empty() ? "" : ", " ) + key;
+                joined.appendFormat( "%#%#", joined.size() == 0 ? "" : ", ", key );
             }
             SW_LOG_WARNING_ID( "ModelImporter.VRMMaterialKeysToon", "VRM '%#': material keys the toon material does not support (ignored): %#", sourcePath, joined.c_str() );
         }
@@ -452,7 +470,9 @@ namespace sw::editor
         {
             if ( pTexture == nullptr || pTexture->image == nullptr )
                 return true;
-            outTexture._fileStem = outPBR._name + pSuffix;
+            StringBuilder<constant::buffer::kMax256> stemBuilder;
+            stemBuilder.appendFormat( "%#%#", outPBR._name, pSuffix );
+            outTexture._fileStem = string( stemBuilder.view() );
             return readImageBytes( *pTexture->image, sourcePath, outTexture );
         };
         const cgltf_texture* pORM = pbr.metallic_roughness_texture.texture;
@@ -496,8 +516,9 @@ namespace sw::editor
             if ( texture._bytes.empty() )
                 return true;
             // 원본이 이미 텍스처 원본 폴더의 파일이면 그대로 가리킨다(같은 이미지를 두 벌 두지 않는다 — 내려받은 에셋은 이미지를 textures_raw 에 둔다).
-            const string rawMarker = "/" + string( ModelImportUtil::kRawTextureFolder ) + "/";
-            if ( texture._sourcePath.find( rawMarker ) != string::npos )
+            StringBuilder<constant::buffer::kMax64> rawMarker;
+            rawMarker.appendFormat( "/%#/", ModelImportUtil::kRawTextureFolder );
+            if ( texture._sourcePath.find( rawMarker.view() ) != string::npos )
             {
                 outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( texture._sourcePath ) );
                 return true;
@@ -561,7 +582,9 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate3", "glTF '%#': the PBR material template lacks a property the importer fills", sourcePath );
             return false;
         }
-        const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), string( fileStem ) + ".material" );
+        StringBuilder<constant::buffer::kMax256> fileNameBuilder;
+        fileNameBuilder.appendFormat( "%#.material", fileStem );
+        const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), fileNameBuilder.view() );
         if ( writeSharedMaterial( assetPaths, document.saveToString(), templateText, pDefaultAssets->_pbrMaterialTemplate.get(), fileStem, sourcePath, sideFolder ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWritePBRMaterial", "Failed to write PBR material %#", materialPath.c_str() );
@@ -577,17 +600,20 @@ namespace sw::editor
         TextureImportConfig config{};
         if ( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
             return false; // 로드가 오류를 남겼다 — 깨진 설정을 기본 규칙으로 읽지 않는다
-        const string           logicalPath = FileUtil::joinPath( rawTextureFolder, texture._fileStem + texture._extension );
+        fixed_string<constant::buffer::kMax256> fileName;
+        formatstring( fileName.data(), fileName.capacity(), "%#%#", texture._fileStem, texture._extension );
+        const string           logicalPath = FileUtil::joinPath( rawTextureFolder, fileName );
         TextureImportRuleMatch match       = config.findMatchingRule( assetPaths.toAssetID( logicalPath ) );
         if ( match.hasError() )
         {
             SW_LOG_ERROR_ID( "ModelImporter.TextureImportRuleRejected", "%#", match._error.c_str() );
             return false;
         }
-        const string rawMarker = "/" + string( ModelImportUtil::kRawTextureFolder ) + "/";
-        const string domain    = logicalPath.substr( 0, logicalPath.find( rawMarker ) );
-        const string key       = ImportedAssetStore::makeKey( texture._bytes.data(), texture._bytes.size(), string_view{} );
-        const string rawPath   = TextureImportConfig::makeSharedSourcePath( domain, match._rule._name, key, texture._extension );
+        StringBuilder<constant::buffer::kMax64> rawMarker;
+        rawMarker.appendFormat( "/%#/", ModelImportUtil::kRawTextureFolder );
+        const string domain  = logicalPath.substr( 0, logicalPath.find( rawMarker.view() ) );
+        const string key     = ImportedAssetStore::makeKey( texture._bytes.data(), texture._bytes.size(), string_view{} );
+        const string rawPath = TextureImportConfig::makeSharedSourcePath( domain, match._rule._name, key, texture._extension );
         if ( ImportedAssetStore::writeIfAbsent( rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
             return false;
         outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
@@ -609,8 +635,9 @@ namespace sw::editor
         root.setAttribute( "name", "" );
         const string nameless = document.saveToString();
         // 설정 글에 임포터 판을 섞는다 — 판이 바뀌면 결과 바이트(예: 판 9 의 GUID 머리)가 바뀌므로 옛 판의 같은 키 파일과 부딪히지 않는다(언리얼 DDC 키의 판 GUID 자리).
-        const string settings = "importer=" + to_string( static_cast<uint64>( ModelImportUtil::kImporterVersion ) );
-        outShared._key        = ImportedAssetStore::makeKey( nameless.data(), nameless.size(), settings );
+        StringBuilder<constant::buffer::kMax32> settings;
+        settings.appendFormat( "importer=%#", static_cast<uint64>( ModelImportUtil::kImporterVersion ) );
+        outShared._key = ImportedAssetStore::makeKey( nameless.data(), nameless.size(), settings.view() );
         root.setAttribute( "name", string_view{ outShared._key } );
         outShared._text = document.saveToString();
         return true;
@@ -643,13 +670,17 @@ namespace sw::editor
         if ( sharedText.has_value() == false || ImportedAssetStore::writeIfAbsent( sharedPath, sharedText->data(), sharedText->size() ) == false )
             return false;
         // 손 데이터(씬 · 프리팹)가 부르는 슬롯 주소는 그대로 둔다 — 값은 공유 파일 한 벌이고 슬롯 파일은 그것을 가리키는 한 줄이다(언리얼 Redirector · 덮어쓰기 없는 Material Instance).
-        const string slotPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), string( fileStem ) + ".material" );
+        StringBuilder<constant::buffer::kMax256> fileNameBuilder;
+        fileNameBuilder.appendFormat( "%#.material", fileStem );
+        const string slotPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), fileNameBuilder.view() );
         return ImportedAssetStore::writeTextWithIdentity( assetPaths, slotPath, makeSlotMaterialText( fileStem, assetPaths.toAssetID( sharedPath ) ) );
     }
 
     string ModelImportMaterial::findSharedMaterial( string_view sideFolder, string_view fileStem )
     {
-        const string slotPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), string( fileStem ) + ".material" );
+        StringBuilder<constant::buffer::kMax256> fileNameBuilder;
+        fileNameBuilder.appendFormat( "%#.material", fileStem );
+        const string slotPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), fileNameBuilder.view() );
         string       text;
         XMLDocument  document;
         if ( FileUtil::readTextFile( slotPath, text ) == false || document.parse( text ) == false )
@@ -659,13 +690,16 @@ namespace sw::editor
 
     string ModelImportMaterial::makeRawTextureFolder( string_view sourcePath )
     {
-        const string normalized = FileUtil::normalizeSeparators( sourcePath );
-        const string marker     = "/" + string( ModelImportUtil::kRawModelFolder ) + "/";
-        const size_t at         = normalized.find( marker );
+        const string                            normalized = FileUtil::normalizeSeparators( sourcePath );
+        StringBuilder<constant::buffer::kMax64> marker;
+        marker.appendFormat( "/%#/", ModelImportUtil::kRawModelFolder );
+        const size_t at = normalized.find( marker.view() );
         if ( at == string::npos )
             return {};
-        const string domain   = normalized.substr( 0, at );
-        const string relative = FileUtil::removeExtension( normalized.substr( at + marker.size() ) );
-        return domain + "/" + string( ModelImportUtil::kRawTextureFolder ) + "/" + relative;
+        const string                             domain   = normalized.substr( 0, at );
+        const string                             relative = FileUtil::removeExtension( normalized.substr( at + marker.size() ) );
+        StringBuilder<constant::buffer::kMax256> folderBuilder;
+        folderBuilder.appendFormat( "%#/%#/%#", domain, ModelImportUtil::kRawTextureFolder, relative );
+        return string( folderBuilder.view() );
     }
 } // namespace sw::editor

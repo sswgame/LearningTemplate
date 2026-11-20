@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Localization/PortableObjectFile.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
@@ -261,8 +262,9 @@ namespace sw
     {
         string text;
         text.append( "msgid \"\"\nmsgstr \"\"\n" );
-        text += "\"Language: " + escapeText( _language ) + "\\n\"\n";
-        text += "\"X-Localization-Project: " + escapeText( _projectName ) + "\\n\"\n";
+        StringBuilder<constant::buffer::kMax256> headerBuilder;
+        headerBuilder.appendFormat( "\"Language: %#\\n\"\n\"X-Localization-Project: %#\\n\"\n", escapeText( _language ), escapeText( _projectName ) );
+        text += headerBuilder.view();
         text.append( "\"MIME-Version: 1.0\\n\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Content-Transfer-Encoding: 8bit\\n\"\n" );
         text.append( "\"X-Message-Format: ICU\\n\"\n\"X-Generator: SWEngine LocalizationTools\\n\"\n" );
         for ( const PortableObjectEntry& entry : _listEntry )

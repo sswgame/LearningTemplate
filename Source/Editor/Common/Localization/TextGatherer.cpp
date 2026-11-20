@@ -7,6 +7,8 @@
 #include "Core/Foundation/HexDigitUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -289,9 +291,10 @@ namespace sw
                 const size_t delimiterEnd = _text.find( '(', _position );
                 if ( delimiterEnd == string_view::npos )
                     return false;
-                const string closing   = ")" + string( _text.substr( _position, delimiterEnd - _position ) ) + "\"";
+                fixed_string<constant::buffer::kMax32> closing;
+                formatstring( closing.data(), closing.capacity(), ")%#\"", _text.substr( _position, delimiterEnd - _position ) );
                 const size_t bodyStart = delimiterEnd + 1;
-                const size_t bodyEnd   = _text.find( closing, bodyStart );
+                const size_t bodyEnd   = _text.find( closing.view(), bodyStart );
                 if ( bodyEnd == string_view::npos )
                     return false;
                 const string_view body = _text.substr( bodyStart, bodyEnd - bodyStart );
@@ -341,14 +344,18 @@ namespace sw
                 {
                     if ( readConcatenatedLiteral( arrArgument[argumentIndex] ) == false )
                     {
-                        _pGatherer->addIssue( makeLocation( callLine ), string( macroName ) + " arguments must be string literals - the text is not gathered", true );
+                        fixed_string<constant::buffer::kMax256> issueText;
+                        formatstring( issueText.data(), issueText.capacity(), "%# arguments must be string literals - the text is not gathered", macroName );
+                        _pGatherer->addIssue( makeLocation( callLine ), issueText, true );
                         return;
                     }
                     const bool bLast = argumentIndex + 1 == literalCount;
                     if ( _position >= _text.size() || ( bLast == false && _text[_position] != ',' ) )
                     {
-                        _pGatherer->addIssue( makeLocation( callLine ),
-                                              string( macroName ) + ( bKeyOnly ? " needs ( \"Namespace\", \"Key\" )" : " needs ( \"Namespace\", \"Key\", \"Source\" )" ), true );
+                        fixed_string<constant::buffer::kMax256> issueText;
+                        formatstring( issueText.data(), issueText.capacity(), "%#%#", macroName,
+                                      bKeyOnly ? " needs ( \"Namespace\", \"Key\" )" : " needs ( \"Namespace\", \"Key\", \"Source\" )" );
+                        _pGatherer->addIssue( makeLocation( callLine ), issueText, true );
                         return;
                     }
                     if ( bLast == false )
@@ -356,7 +363,9 @@ namespace sw
                 }
                 if ( arrArgument[1].empty() )
                 {
-                    _pGatherer->addIssue( makeLocation( callLine ), string( macroName ) + " has an empty key", true );
+                    fixed_string<constant::buffer::kMax256> issueText;
+                    formatstring( issueText.data(), issueText.capacity(), "%# has an empty key", macroName );
+                    _pGatherer->addIssue( makeLocation( callLine ), issueText, true );
                     return;
                 }
                 if ( bKeyOnly )
@@ -365,7 +374,11 @@ namespace sw
                     return;
                 }
                 if ( const expected<void> valid = TextFormatter::validatePattern( arrArgument[2] ); valid.has_value() == false )
-                    _pGatherer->addIssue( makeLocation( callLine ), "source text is not a valid message pattern: " + string( valid.error().detail() ), true );
+                {
+                    fixed_string<constant::buffer::kMax512> issueText;
+                    formatstring( issueText.data(), issueText.capacity(), "source text is not a valid message pattern: %#", valid.error().detail() );
+                    _pGatherer->addIssue( makeLocation( callLine ), issueText, true );
+                }
                 _pGatherer->addKeyedText( SourceTextEntry::makeFullKey( arrArgument[0], arrArgument[1] ), arrArgument[2], {}, _originName );
             }
 
@@ -441,7 +454,8 @@ namespace sw
                         // `{` 로 시작하는 값은 UI 문서의 바인딩 식이다(`{bind:_health}`). 텍스트가 아니다.
                         if ( value.empty() || value.front() == '{' )
                             return;
-                        const string context = string( pType->_name.c_str() ) + "." + property._name.c_str();
+                        fixed_string<constant::buffer::kMax256> context;
+                        formatstring( context.data(), context.capacity(), "%#.%#", pType->_name.c_str(), property._name.c_str() );
                         if ( property._metadata->getEditor().findCustomMeta( hashed_string( TextGatherer::kMetaLocalizable ) ) != nullptr )
                         {
                             const string* pMaxLength = property._metadata->getEditor().findCustomMeta( hashed_string( TextGatherer::kMetaMaxLength ) );
@@ -454,8 +468,12 @@ namespace sw
                         const bool bExempt = property._metadata->getEditor().findCustomMeta( hashed_string( TextGatherer::kMetaNotLocalizable ) ) != nullptr ||
                                              property._metadata->_bAssetPath != SW_FALSE || property._metadata->_assetType.empty() == false;
                         if ( bExempt == false && isLikelyUserFacingText( value ) )
-                            gatherer.addIssue( originName, "possible hardcoded user-facing text in " + context + ": '" + string( value ) + "' - mark the property Meta = \"Localizable\" (or \"NotLocalizable\")",
-                                               false );
+                        {
+                            fixed_string<constant::buffer::kMax512> issueText;
+                            formatstring( issueText.data(), issueText.capacity(), "possible hardcoded user-facing text in %#: '%#' - mark the property Meta = \"Localizable\" (or \"NotLocalizable\")", context,
+                                          value );
+                            gatherer.addIssue( originName, issueText, false );
+                        }
                     }, true );
                 }
                 for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
@@ -516,7 +534,9 @@ namespace sw
         XMLDocument document;
         if ( document.parse( xmlText, originName ) == false )
         {
-            addIssue( originName, "XML cannot be parsed: " + document.getLastError(), true );
+            fixed_string<constant::buffer::kMax512> issueText;
+            formatstring( issueText.data(), issueText.capacity(), "XML cannot be parsed: %#", document.getLastError() );
+            addIssue( originName, issueText, true );
             return;
         }
         const XMLNode root = document.getRoot();
@@ -552,7 +572,9 @@ namespace sw
         const bool    bConflictingSource = bAdded == false && text._source.empty() == false && text._source != source;
         if ( bConflictingSource )
         {
-            addIssue( origin, "key '" + string( key ) + "' has two different source texts ('" + text._source + "' and '" + string( source ) + "') - the first one is kept", true );
+            fixed_string<constant::buffer::kMax1024> issueText;
+            formatstring( issueText.data(), issueText.capacity(), "key '%#' has two different source texts ('%#' and '%#') - the first one is kept", key, text._source, source );
+            addIssue( origin, issueText, true );
             return;
         }
         text._source = string( source );
@@ -576,7 +598,11 @@ namespace sw
         if ( bAdded == false )
             return;
         if ( const expected<void> valid = TextFormatter::validatePattern( textOrKey ); valid.has_value() == false )
-            addIssue( origin, "text '" + string( textOrKey ) + "' is not a valid message pattern: " + string( valid.error().detail() ), true );
+        {
+            fixed_string<constant::buffer::kMax512> issueText;
+            formatstring( issueText.data(), issueText.capacity(), "text '%#' is not a valid message pattern: %#", textOrKey, valid.error().detail() );
+            addIssue( origin, issueText, true );
+        }
     }
 
     void TextGatherer::addKeyReference( string_view key, string_view origin )
@@ -610,8 +636,11 @@ namespace sw
                     const SourceTextEntry* pEntry   = pTable != nullptr ? pTable->findEntry( text._key ) : nullptr;
                     const bool             bDiffers = pEntry != nullptr && text._kind == GatheredTextKind::Keyed && pEntry->_source != text._source;
                     if ( bDiffers )
-                        report._listIssue.push_back( { text._listOrigin.empty() ? string{} : text._listOrigin.front(),
-                                                       "key '" + text._key + "' is defined by another string table with a different source - the table wins", false } );
+                    {
+                        StringBuilder<constant::buffer::kMax256> issueBuilder;
+                        issueBuilder.appendFormat( "key '%#' is defined by another string table with a different source - the table wins", text._key );
+                        report._listIssue.push_back( { text._listOrigin.empty() ? string{} : text._listOrigin.front(), string( issueBuilder.view() ), false } );
+                    }
                 }
                 continue;
             }
@@ -620,8 +649,9 @@ namespace sw
             SourceTextEntry* pEntry  = entryIt != inoutGatherTable.getMutableEntries().end() ? &entryIt->second : nullptr;
             if ( pEntry == nullptr && text._kind == GatheredTextKind::KeyReference )
             {
-                report._listIssue.push_back( { text._listOrigin.empty() ? string{} : text._listOrigin.front(),
-                                               "key '" + text._key + "' is referenced but no string table defines it", true } );
+                StringBuilder<constant::buffer::kMax256> issueBuilder;
+                issueBuilder.appendFormat( "key '%#' is referenced but no string table defines it", text._key );
+                report._listIssue.push_back( { text._listOrigin.empty() ? string{} : text._listOrigin.front(), string( issueBuilder.view() ), true } );
                 continue;
             }
             uniqueSeen.insert( text._key );

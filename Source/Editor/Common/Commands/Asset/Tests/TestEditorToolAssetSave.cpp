@@ -1,6 +1,8 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
@@ -17,7 +19,9 @@ SW_TEST_CASE( EditorToolAssetSaveTest, GoodDocumentIsSaved )
     SequenceAsset asset;
     asset._note = "written";
     SW_REQUIRE_TRUE( EditorToolAssetCommands::saveSequence( asset, path ) );
-    SW_EXPECT_FALSE( FileUtil::exists( path + ".savecheck" ) );
+    fixed_string<constant::buffer::kMax512> checkPath;
+    formatstring( checkPath.data(), checkPath.capacity(), "%#.savecheck", path );
+    SW_EXPECT_FALSE( FileUtil::exists( checkPath ) );
 
     SequenceAsset read;
     SW_REQUIRE_TRUE( EditorToolAssetCommands::loadSequence( read, path ) == ToolAssetLoadResult::Loaded );
@@ -39,7 +43,9 @@ SW_TEST_CASE( EditorToolAssetSaveTest, DocumentThatCannotBeReadBackKeepsTheSaved
     item._kind = SequenceItemKind::Spawn; // 프리팹이 없어 다시 읽지 못한다
     broken._listItem.push_back( item );
     SW_EXPECT_FALSE( EditorToolAssetCommands::saveSequence( broken, path ) );
-    SW_EXPECT_FALSE( FileUtil::exists( path + ".savecheck" ) );
+    fixed_string<constant::buffer::kMax512> checkPath;
+    formatstring( checkPath.data(), checkPath.capacity(), "%#.savecheck", path );
+    SW_EXPECT_FALSE( FileUtil::exists( checkPath ) );
 
     SequenceAsset read;
     SW_REQUIRE_TRUE( EditorToolAssetCommands::loadSequence( read, path ) == ToolAssetLoadResult::Loaded );

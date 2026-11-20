@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogCurve.h"
@@ -55,7 +56,9 @@ namespace
             SW_REQUIRE_FALSE( result.has_value() );
             SW_EXPECT_FALSE( parsed.isParsed() );
             SW_EXPECT_TRUE( parsed.getElements().empty() );
-            const string reason = string( result.error().detail() ) + ": " + string( result.error().message() );
+            StringBuilder<constant::buffer::kMax256> reasonBuilder;
+            reasonBuilder.appendFormat( "%#: %#", result.error().detail(), result.error().message() );
+            const string reason( reasonBuilder.view() );
             SW_EXPECT_TRUE_MSG( reason.find( pExpectedError ) != string::npos, reason.c_str() );
         }
 
@@ -912,16 +915,16 @@ namespace
         {
             vector<CatalogChildSection> listSection;
             document.collectChildSections( row, listSection );
-            const CatalogChildSection* pSection = findSection( listSection, title );
-            string                     keys;
+            const CatalogChildSection*               pSection = findSection( listSection, title );
+            StringBuilder<constant::buffer::kMax256> keys;
             if ( pSection == nullptr )
-                return keys;
+                return string{};
             for ( const CatalogChildNode& node : pSection->_listNode )
             {
                 if ( node._bRemoved == false )
-                    keys += node._path.back()._key + ",";
+                    keys.appendFormat( "%#,", node._path.back()._key );
             }
-            return keys;
+            return string( keys.view() );
         }
     };
 } // namespace

@@ -5,6 +5,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
@@ -57,11 +58,11 @@ namespace sw::editor
         Internal::LockState& state = Internal::getState();
         Internal::releaseAll( state );
         // 장부를 먼저 적는다 — 잠근 뒤 프로세스가 죽어도 다음 실행이 무엇을 풀지 안다.
-        string ledger;
+        StringBuilder<constant::buffer::kMax1024> ledger;
         for ( const string& path : listPath )
-            ledger += path + "\n";
+            ledger.appendFormat( "%#\n", path );
         const string ledgerPath = Internal::getLedgerPath();
-        if ( FileUtil::ensureParentDirectoryExists( ledgerPath ) == false || FileUtil::writeTextFile( ledgerPath, ledger ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( ledgerPath ) == false || FileUtil::writeTextFile( ledgerPath, ledger.view() ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the lock ledger", ledgerPath } );
         for ( const string& path : listPath )
         {

@@ -3,7 +3,10 @@
 #include "Editor/Common/Workspace/NetPlay/EditorRemoteInspector.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Observability/DebugChannel.h"
 
@@ -113,14 +116,23 @@ namespace sw::editor
         _remoteAddress = remote;
         if ( _client->connect( remote, token, kConnectTimeoutMilliseconds ) == false )
         {
-            _lastError = "could not connect to the debug channel at " + remote.toString();
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "could not connect to the debug channel at %#", remote.toString() );
+            _lastError = string( errorBuilder.view() );
             return false;
         }
         // 틀린 토큰은 연결이 열린 뒤 첫 요청에서 `ERR` 과 닫기로 드러난다 — 자동완성 원천을 묻는 첫 요청이 그 확인을 겸한다.
         string helpBody;
         if ( request( "help", helpBody ) == false )
         {
-            _lastError = helpBody.empty() ? "the debug channel at " + remote.toString() + " did not answer help" : helpBody;
+            if ( helpBody.empty() )
+            {
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "the debug channel at %# did not answer help", remote.toString() );
+                _lastError = string( errorBuilder.view() );
+            }
+            else
+                _lastError = helpBody;
             disconnect();
             return false;
         }
@@ -172,8 +184,10 @@ namespace sw::editor
     bool EditorRemoteInspector::dumpObject( string_view name )
     {
         _selectedName = string( name );
-        string     body;
-        const bool bOk = request( "object.dump " + _selectedName, body );
+        string                                  body;
+        fixed_string<constant::buffer::kMax256> commandLine;
+        formatstring( commandLine.data(), commandLine.capacity(), "object.dump %#", _selectedName );
+        const bool bOk = request( commandLine, body );
         _dumpText      = bOk ? std::move( body ) : _lastError;
         return bOk;
     }
@@ -183,10 +197,19 @@ namespace sw::editor
         const string_view trimmed = StringUtil::trim( line );
         if ( trimmed.empty() )
             return true;
-        appendConsoleLine( "> " + string( trimmed ) );
+        StringBuilder<constant::buffer::kMax256> lineBuilder;
+        lineBuilder.appendFormat( "> %#", trimmed );
+        appendConsoleLine( string( lineBuilder.view() ) );
         string     body;
         const bool bOk = request( trimmed, body );
-        appendConsoleLine( bOk ? std::move( body ) : "error: " + _lastError );
+        if ( bOk )
+            appendConsoleLine( std::move( body ) );
+        else
+        {
+            StringBuilder<constant::buffer::kMax256> errorLine;
+            errorLine.appendFormat( "error: %#", _lastError );
+            appendConsoleLine( string( errorLine.view() ) );
+        }
         return bOk;
     }
 

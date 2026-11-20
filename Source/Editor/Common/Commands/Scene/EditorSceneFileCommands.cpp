@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
@@ -317,10 +318,14 @@ namespace sw::editor
                 const optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( absolutePath ); // readDiskPathArgument 가 절대만 받았다
                 if ( scenePath.has_value() == false || EditorSceneFileCommands::saveActiveSceneAs( *scenePath ) == false )
                 {
-                    outReply = "could not save the active scene to '" + absolutePath + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not save the active scene to '%#'", absolutePath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "saved " + absolutePath;
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "saved %#", absolutePath );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -333,16 +338,22 @@ namespace sw::editor
                 const string sceneID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
                 if ( sceneID.empty() )
                 {
-                    outReply = "'" + absolutePath + "' is outside the content root and every mounted disk domain";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' is outside the content root and every mounted disk domain", absolutePath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 // 미저장 씬이 있어도 대화상자를 띄우는 경로(tryOpenScene)를 쓰지 않고 바로 연다. 무인 실행에서는 대화상자를 아무도 닫지 않는다.
                 if ( EditorSceneFileCommands::loadSceneWithoutPrompt( sceneID ) == false )
                 {
-                    outReply = "could not open '" + absolutePath + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not open '%#'", absolutePath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "opening " + absolutePath;
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "opening %#", absolutePath );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

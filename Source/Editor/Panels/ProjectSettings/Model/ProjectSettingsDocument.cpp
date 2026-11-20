@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/Reflection.h"
@@ -26,7 +27,11 @@ namespace sw::editor
 
             static string makePath( const string& prefix, const string& key )
             {
-                return prefix.empty() ? key : string( prefix + "." + key );
+                if ( prefix.empty() )
+                    return key;
+                StringBuilder<constant::buffer::kMax256> pathBuilder;
+                pathBuilder.appendFormat( "%#.%#", prefix, key );
+                return string( pathBuilder.view() );
             }
 
             /** @brief 구조체 칸처럼 안으로 들어가 볼 값이면 true 입니다(`ConfigManager::collectEqualKeys` 와 같은 규칙 — 비어 있지 않은 오브젝트). */

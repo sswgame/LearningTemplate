@@ -3,6 +3,7 @@
 #include "Editor/Panels/Multiplayer/Model/MultiplayerSyncClientQuery.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/formatString.h"
 
 namespace sw::editor
@@ -27,7 +28,9 @@ namespace sw::editor
         const EditorNetPlayProcessStatus         status  = processes.getProcessStatus( processIndex );
         const string&                            channel = compare.getHashChannel();
         StringBuilder<constant::buffer::kMax256> commandBuilder;
-        commandBuilder.appendFormat( "state.hashline %#%#", kClientHistoryTicks, ( channel == StateHashHistory::kSceneChannelName ? string{} : " " + channel ) );
+        commandBuilder.appendFormat( "state.hashline %#", kClientHistoryTicks );
+        if ( channel != StateHashHistory::kSceneChannelName )
+            commandBuilder.appendFormat( " %#", channel );
         const string command{ commandBuilder.view() };
         if ( processes.sendProcessCommand( processIndex, command ) == false )
         {

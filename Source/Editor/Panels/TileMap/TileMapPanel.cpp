@@ -4,6 +4,8 @@
 
 #include "Core/Container/unordered_set.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -568,7 +570,8 @@ namespace sw::editor
                               ImVec2( uvRect._x + uvRect._z, uvRect._y + uvRect._w ) );
                 ImGui::SameLine();
             }
-            const string label = string( brush._name.c_str() ) + ( brush.isRuleTile() ? " (rule)" : "" ) + ( brush._defaultVisual.isAnimated() ? " (animated)" : "" );
+            fixed_string<constant::buffer::kMax256> label;
+            formatstring( label.data(), label.capacity(), "%#%#%#", brush._name.c_str(), brush.isRuleTile() ? " (rule)" : "", brush._defaultVisual.isAnimated() ? " (animated)" : "" );
             if ( ImGui::RadioButton( label.c_str(), selectedBrushID == brushIndex ) )
                 selectedBrushID = brushIndex;
             ImGui::PopID();

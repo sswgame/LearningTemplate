@@ -10,6 +10,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
@@ -109,7 +111,9 @@ namespace sw::editor
                 EditorSelfTestMark found{};
                 if ( EditorSelfTestMarks::find( mark, found ) == false || found._bClipped == false )
                     return false;
-                runner.recordFailure( step, "editor widget '" + mark + "' is still outside the visible area of its window after scrolling it into view (a collapsed header or a non-scrolling window hides it)" );
+                fixed_string<constant::buffer::kMax512> failure;
+                formatstring( failure.data(), failure.capacity(), "editor widget '%#' is still outside the visible area of its window after scrolling it into view (a collapsed header or a non-scrolling window hides it)", mark );
+                runner.recordFailure( step, failure );
                 return true;
             }
 
@@ -126,11 +130,23 @@ namespace sw::editor
                     return false;
                 EditorSelfTestInput::releaseMouseHold();
                 if ( hit == EditorMarkHit::Missing )
-                    runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
+                {
+                    fixed_string<constant::buffer::kMax512> failure;
+                    formatstring( failure.data(), failure.capacity(), "no editor widget is marked '%#' (was it drawn in the last frame?)", mark );
+                    runner.recordFailure( step, failure );
+                }
                 else if ( hit == EditorMarkHit::Covered )
-                    runner.recordFailure( step, "editor widget '" + mark + "' is covered by window '" + coverName + "' at the press point - the press would go there (move the camera/target or the overlay)" );
+                {
+                    fixed_string<constant::buffer::kMax512> failure;
+                    formatstring( failure.data(), failure.capacity(), "editor widget '%#' is covered by window '%#' at the press point - the press would go there (move the camera/target or the overlay)", mark, coverName );
+                    runner.recordFailure( step, failure );
+                }
                 else
-                    runner.recordFailure( step, "the pointer has not reached editor widget '" + mark + "' yet (it kept moving) - not pressing at a stale point" );
+                {
+                    fixed_string<constant::buffer::kMax512> failure;
+                    formatstring( failure.data(), failure.capacity(), "the pointer has not reached editor widget '%#' yet (it kept moving) - not pressing at a stale point", mark );
+                    runner.recordFailure( step, failure );
+                }
                 return true;
             }
 
@@ -143,15 +159,17 @@ namespace sw::editor
              *          진척을 낼 수 없는 프레임 대기라 시한만 본다(D2-3). 시한(60)이 정지 시한(`_stallFrames`)보다 짧아 진척을 세도 먼저 닿는 것은 시한이다.
              * @param target 반복 실패 차단의 열쇠 꼬리(레이블 이름 · 받을 곳) — 열쇠는 `<단계 종류> <target>` 이다
              */
-            static AutomationStepHold holdInputTarget( AutomationStepContext& runner, const AutomationStep& step, InputManager& input, bool bReady, const string& waitingFor,
+            static AutomationStepHold holdInputTarget( AutomationStepContext& runner, const AutomationStep& step, InputManager& input, bool bReady, string_view waitingFor,
                                                        string_view target )
             {
                 const AutomationStepHold hold = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames, waitingFor );
                 if ( hold != AutomationStepHold::Run || bReady )
                     return hold;
                 StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "gave up after %# frame(s) waiting for %#", kStabilityWaitFrames, waitingFor.c_str() );
-                runner.giveUpWait( step, AutomationFailureKind::WaitTimeout, textBuilder.view(), string( step._kind ) + " " + string( target ) );
+                textBuilder.appendFormat( "gave up after %# frame(s) waiting for %#", kStabilityWaitFrames, waitingFor );
+                fixed_string<constant::buffer::kMax128> repeatKey;
+                formatstring( repeatKey.data(), repeatKey.capacity(), "%# %#", step._kind, target );
+                runner.giveUpWait( step, AutomationFailureKind::WaitTimeout, textBuilder.view(), repeatKey );
                 return AutomationStepHold::Skip;
             }
 
@@ -193,9 +211,10 @@ namespace sw::editor
                 bool bStable = true;
                 updateMarkState( pMark, bDrawn, bStable );
                 updateMarkState( step.findAttribute( "toMark" ), bDrawn, bStable );
-                const bool bReady = bStable && EditorSelfTestInput::hasPendingEvents() == false;
-                return holdInputTarget( runner, step, input, bReady,
-                                        "editor widget '" + *pMark + ( bDrawn ? "' to settle (same rect two frames in a row, no pending input)" : "' to be drawn" ), *pMark );
+                const bool                              bReady = bStable && EditorSelfTestInput::hasPendingEvents() == false;
+                fixed_string<constant::buffer::kMax256> waitingFor;
+                formatstring( waitingFor.data(), waitingFor.capacity(), "editor widget '%#%#", *pMark, bDrawn ? "' to settle (same rect two frames in a row, no pending input)" : "' to be drawn" );
+                return holdInputTarget( runner, step, input, bReady, waitingFor, *pMark );
             }
 
             /**
@@ -219,11 +238,12 @@ namespace sw::editor
                 updateMarkState( step.findAttribute( "toMark" ), bDrawn, bStable );
                 const bool bInputFlushed = EditorSelfTestInput::hasPendingEvents() == false;
                 // 플랫폼이 다음 프레임에 실제 커서를 다시 넣으므로 옮기기 한 번으로는 머물지 않는다 - 입구가 프레임마다 붙잡는다. 단계가 놓는다.
-                string              coverName;
-                const EditorMarkHit hit    = EditorSelfTestInput::hoverMark( params._mark, params._anchor, coverName );
-                const bool          bReady = bStable && bInputFlushed && hit != EditorMarkHit::Pending && hit != EditorMarkHit::Missing;
-                return holdInputTarget( runner, step, input, bReady,
-                                        "the pointer to reach editor widget '" + params._mark + ( bDrawn ? "' and it to settle" : "' (not drawn yet)" ), params._mark );
+                string                                  coverName;
+                const EditorMarkHit                     hit    = EditorSelfTestInput::hoverMark( params._mark, params._anchor, coverName );
+                const bool                              bReady = bStable && bInputFlushed && hit != EditorMarkHit::Pending && hit != EditorMarkHit::Missing;
+                fixed_string<constant::buffer::kMax256> waitingFor;
+                formatstring( waitingFor.data(), waitingFor.capacity(), "the pointer to reach editor widget '%#%#", params._mark, bDrawn ? "' and it to settle" : "' (not drawn yet)" );
+                return holdInputTarget( runner, step, input, bReady, waitingFor, params._mark );
             }
 
             /** @brief `EditorWaitStable` 가 붙잡은 동안의 상태입니다(`EditorStabilityWait` — 자체 테스트의 정지 대기와 같은 재료 · 판정). */
@@ -249,8 +269,10 @@ namespace sw::editor
                 if ( readiness.isWaiting() && pState->_wait.isStalled() )
                 {
                     // 포기는 상태를 지운다 — 까닭을 먼저 복사해 넘긴다.
-                    const string reason = pState->_wait.describeOscillation();
-                    runner.giveUpWait( step, AutomationFailureKind::WaitStalled, reason, step._kind + " " + EditorStabilityState::kConditionName );
+                    const string                            reason = pState->_wait.describeOscillation();
+                    fixed_string<constant::buffer::kMax128> repeatKey;
+                    formatstring( repeatKey.data(), repeatKey.capacity(), "%# %#", step._kind, EditorStabilityState::kConditionName );
+                    runner.giveUpWait( step, AutomationFailureKind::WaitStalled, reason, repeatKey );
                     return AutomationStepHold::Skip;
                 }
                 // 진행 중인 일에는 시한이 없다(`EditorStabilityState`) — 끝나지 않으면 시나리오 벽시계 상한이 까닭과 함께 잡는다.
@@ -303,7 +325,11 @@ namespace sw::editor
                 if ( state == PressState::Up )
                 {
                     if ( EditorSelfTestInput::releaseMark( mark, anchor, button ) == false )
-                        runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?) - released where the pointer was" );
+                    {
+                        fixed_string<constant::buffer::kMax512> failure;
+                        formatstring( failure.data(), failure.capacity(), "no editor widget is marked '%#' (was it drawn in the last frame?) - released where the pointer was", mark );
+                        runner.recordFailure( step, failure );
+                    }
                     EditorSelfTestInput::releaseMouseHold();
                     return true;
                 }
@@ -349,7 +375,9 @@ namespace sw::editor
                 EditorSelfTestMark          found{};
                 if ( EditorSelfTestMarks::find( params._mark, found ) == false )
                 {
-                    runner.recordFailure( step, "no editor widget is marked '" + params._mark + "' (was it drawn in the last frame?)" );
+                    fixed_string<constant::buffer::kMax512> failure;
+                    formatstring( failure.data(), failure.capacity(), "no editor widget is marked '%#' (was it drawn in the last frame?)", params._mark );
+                    runner.recordFailure( step, failure );
                     return true;
                 }
                 vector<string>     listPath;
@@ -377,7 +405,9 @@ namespace sw::editor
                 EditorSelfTestMark     found{};
                 if ( EditorSelfTestMarks::find( mark, found ) == false )
                 {
-                    runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
+                    fixed_string<constant::buffer::kMax512> failure;
+                    formatstring( failure.data(), failure.capacity(), "no editor widget is marked '%#' (was it drawn in the last frame?)", mark );
+                    runner.recordFailure( step, failure );
                     return true;
                 }
                 if ( reportClippedMark( runner, step, mark ) || reportUnreachableMark( runner, step, mark, params._anchor ) )
@@ -397,7 +427,9 @@ namespace sw::editor
                     EditorSelfTestMark target{};
                     if ( EditorSelfTestMarks::find( params._toMark, target ) == false )
                     {
-                        runner.recordFailure( step, "no editor widget is marked '" + params._toMark + "' (was it drawn in the last frame?)" );
+                        fixed_string<constant::buffer::kMax512> failure;
+                        formatstring( failure.data(), failure.capacity(), "no editor widget is marked '%#' (was it drawn in the last frame?)", params._toMark );
+                        runner.recordFailure( step, failure );
                         return true;
                     }
                     deltaX = static_cast<float64>( ( target._min._x + target._max._x ) * 0.5f - start._x );
@@ -602,8 +634,11 @@ namespace sw::editor
                 }
                 const bool bAboveMinimum = pWindow->getWidth() >= pWindow->getMinimumClientWidth() && pWindow->getHeight() >= pWindow->getMinimumClientHeight();
                 if ( bAboveMinimum == false )
-                    runner.recordFailure( step, "the window (" + to_string( pWindow->getWidth() ) + "x" + to_string( pWindow->getHeight() ) +
-                                                    ") shrank below the editor minimum size" );
+                {
+                    fixed_string<constant::buffer::kMax128> failure;
+                    formatstring( failure.data(), failure.capacity(), "the window (%#x%#) shrank below the editor minimum size", pWindow->getWidth(), pWindow->getHeight() );
+                    runner.recordFailure( step, failure );
+                }
 
                 const ImGuiViewport* pMain         = ImGui::GetMainViewport();
                 const float32        widthDelta    = pMain->Size.x - static_cast<float32>( pWindow->getWidth() );
@@ -629,10 +664,17 @@ namespace sw::editor
                                          pLeaf->Pos.x + pLeaf->Size.x <= workMax.x + kPixelTolerance && pLeaf->Pos.y + pLeaf->Size.y <= workMax.y + kPixelTolerance;
                     const utf8* pWindowName = ( pLeaf->VisibleWindow != nullptr ) ? pLeaf->VisibleWindow->Name : "(empty)";
                     if ( bInside == false )
-                        runner.recordFailure( step, string( "dock node '" ) + pWindowName + "' lies outside the main viewport" );
+                    {
+                        fixed_string<constant::buffer::kMax512> failure;
+                        formatstring( failure.data(), failure.capacity(), "dock node '%#' lies outside the main viewport", pWindowName );
+                        runner.recordFailure( step, failure );
+                    }
                     if ( pLeaf->Size.x < minSide || pLeaf->Size.y < minSide )
-                        runner.recordFailure( step, string( "dock node '" ) + pWindowName + "' is " + to_string( pLeaf->Size.x ) + "x" + to_string( pLeaf->Size.y ) +
-                                                        " px - below the minimum side" );
+                    {
+                        fixed_string<constant::buffer::kMax256> failure;
+                        formatstring( failure.data(), failure.capacity(), "dock node '%#' is %#x%# px - below the minimum side", pWindowName, pLeaf->Size.x, pLeaf->Size.y );
+                        runner.recordFailure( step, failure );
+                    }
                 }
                 return true;
             }
@@ -665,8 +707,9 @@ namespace sw::editor
                         return AutomationStepHold::Run; // 에디터가 없거나 다른 실행(Test Runner 창)이 돈다 - 단계가 결과 없음으로 진다
                     pState->_pRequestedStep = &step;
                 }
-                return runner.holdUntilReady( step, input, EditorSelfTestRunner::isRunning() == false, std::numeric_limits<uint32>::max(),
-                                              "editor self tests (" + EditorSelfTestRunner::describeProgress() + ")" );
+                fixed_string<constant::buffer::kMax256> waitingFor;
+                formatstring( waitingFor.data(), waitingFor.capacity(), "editor self tests (%#)", EditorSelfTestRunner::describeProgress() );
+                return runner.holdUntilReady( step, input, EditorSelfTestRunner::isRunning() == false, std::numeric_limits<uint32>::max(), waitingFor );
             }
 
             static bool runSelfTest( AutomationStepContext& runner, const AutomationStep& step )
@@ -678,13 +721,19 @@ namespace sw::editor
                 const vector_reference<const EditorSelfTestResult> listResult = EditorSelfTestRunner::getResults();
                 if ( bRequested == false || listResult.empty() )
                 {
-                    runner.recordFailure( step, "no editor self test ran for pattern '" + readSelfTestPattern( step ) + "' (no editor, a run already active, or no match)" );
+                    fixed_string<constant::buffer::kMax512> failure;
+                    formatstring( failure.data(), failure.capacity(), "no editor self test ran for pattern '%#' (no editor, a run already active, or no match)", readSelfTestPattern( step ) );
+                    runner.recordFailure( step, failure );
                     return true;
                 }
                 for ( const EditorSelfTestResult& result : listResult )
                 {
                     if ( result._bPassed == false )
-                        runner.recordFailure( step, "self test " + result._id + ": " + result._reason );
+                    {
+                        fixed_string<constant::buffer::kMax512> failure;
+                        formatstring( failure.data(), failure.capacity(), "self test %#: %#", result._id, result._reason );
+                        runner.recordFailure( step, failure );
+                    }
                 }
                 return true;
             }

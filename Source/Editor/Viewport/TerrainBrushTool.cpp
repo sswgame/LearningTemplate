@@ -5,6 +5,8 @@
 #include "Core/Container/EnumArray.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Ray.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -58,7 +60,8 @@ namespace sw::editor
                     TerrainBrushEdit::collectUsableResolutions( listResolution );
                     for ( const uint32 resolution : listResolution )
                     {
-                        const string label = to_string( resolution ) + ( resolution == current ? " (current)" : "" );
+                        fixed_string<constant::buffer::kMax32> label;
+                        formatstring( label.data(), label.capacity(), "%#%#", resolution, resolution == current ? " (current)" : "" );
                         if ( ImGui::Selectable( label.c_str(), resolution == state._resizeResolution ) )
                             TerrainBrushEdit::setResizeResolution( resolution );
                     }

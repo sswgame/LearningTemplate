@@ -33,7 +33,12 @@ namespace sw::editor
         struct EditorScenarioRecordCommandsInternal
         {
             /// @brief 메뉴 커맨드가 쓰는 출력 경로입니다.
-            [[nodiscard]] static string makeDefaultOutputPath() { return string( kAutomationOutputFolder ) + "/Recorded/recorded.scenario.xml"; }
+            [[nodiscard]] static string makeDefaultOutputPath()
+            {
+                StringBuilder<constant::buffer::kMax256> pathBuilder;
+                pathBuilder.appendFormat( "%#/Recorded/recorded.scenario.xml", kAutomationOutputFolder );
+                return string( pathBuilder.view() );
+            }
 
             /** @brief 녹화가 프레임 사이에 들고 있는 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
             struct RecordState
@@ -48,12 +53,16 @@ namespace sw::editor
             {
                 if ( ScenarioRecorder::isAllowedOutputPath( path ) == false )
                 {
-                    outReply = "output must be a relative path under Saved/Automation/ ending in .scenario.xml, got '" + path + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "output must be a relative path under Saved/Automation/ ending in .scenario.xml, got '%#'", path );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 getState()._recorder.start();
                 getState()._outputPath = path;
-                outReply               = "recording input to " + path;
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "recording input to %#", path );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -72,7 +81,9 @@ namespace sw::editor
                 const ScenarioRecordOutput output = getState()._recorder.stop( settings );
                 if ( FileUtil::ensureParentDirectoryExists( getState()._outputPath ) == false || FileUtil::writeTextFile( getState()._outputPath, output._xmlText ) == false )
                 {
-                    outReply = "could not write '" + getState()._outputPath + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not write '%#'", getState()._outputPath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;

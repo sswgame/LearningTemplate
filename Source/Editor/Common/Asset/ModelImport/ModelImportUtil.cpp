@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 namespace sw::editor
 {
@@ -153,6 +154,8 @@ namespace sw::editor
 
     string ModelImportUtil::formatMaterialColor( const float4& color )
     {
-        return formatMaterialNumber( color._x ) + " " + formatMaterialNumber( color._y ) + " " + formatMaterialNumber( color._z ) + " " + formatMaterialNumber( color._w );
+        StringBuilder<constant::buffer::kMax128> colorBuilder;
+        colorBuilder.appendFormat( "%# %# %# %#", formatMaterialNumber( color._x ), formatMaterialNumber( color._y ), formatMaterialNumber( color._z ), formatMaterialNumber( color._w ) );
+        return string( colorBuilder.view() );
     }
 } // namespace sw::editor

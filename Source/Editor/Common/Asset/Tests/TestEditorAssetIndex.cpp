@@ -5,6 +5,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/EditorAssetIndex.h"
@@ -132,8 +133,9 @@ SW_TEST_CASE( EditorAssetIndexTest, MoveKeepsReferrers )
     Internal::write( root, "game/a/hero.prefab.xml", prefabText );
     Internal::write( root, "game/a/hit.ogg", "ogg" );
     Internal::write( root, "game/a/hit.ogg.meta", AssetMeta::makeText( "game/a/hit.ogg", soundGUID ) );
-    Internal::write( root, "game/a/level.scene.xml",
-                     "<Scene>\n  <Spawn _prefab=\"" + AssetRegistry::makeReferenceText( prefabGUID ) + "\"/>\n  <Sound _clip=\"" + AssetRegistry::makeReferenceText( soundGUID ) + "\"/>\n</Scene>\n" );
+    StringBuilder<constant::buffer::kMax256> sceneText;
+    sceneText.appendFormat( "<Scene>\n  <Spawn _prefab=\"%#\"/>\n  <Sound _clip=\"%#\"/>\n</Scene>\n", AssetRegistry::makeReferenceText( prefabGUID ), AssetRegistry::makeReferenceText( soundGUID ) );
+    Internal::write( root, "game/a/level.scene.xml", sceneText.view() );
     EditorAssetIndex index = Internal::scan( root );
     SW_EXPECT_EQUAL( 1u, index.countReferrerFiles( "game/a/hero.prefab.xml" ) );
     SW_EXPECT_EQUAL( 1u, index.countReferrerFiles( "game/a/hit.ogg" ) );

@@ -2,7 +2,10 @@
 
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Name/TagID.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
@@ -288,9 +291,11 @@ namespace sw::editor
                         return EditorSelfTestStep::WaitStable; // 도킹 · 첫 그리기 · 패널이 부른 에셋까지 — 프레임 수를 어림하지 않는다
                     }
                     // 앞으로 꺼낸 뒤 정지한 화면에 그 창이 그려졌다(지난 프레임에 살아 있고 그린 정점이 있다) — 탭 뒤에 숨거나 바인더가 틀려 다른 ImGui 컨텍스트로 가면 없다.
-                    const ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( item._title.c_str() ).c_str() );
-                    const bool         bDrew   = pWindow != nullptr && pWindow->LastFrameActive >= ImGui::GetFrameCount() - 1 && pWindow->DrawList->VtxBuffer.Size > 0;
-                    const string       what    = "panel did not draw when brought to the front: " + item._id;
+                    const ImGuiWindow*                       pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( item._title.c_str() ).c_str() );
+                    const bool                               bDrew   = pWindow != nullptr && pWindow->LastFrameActive >= ImGui::GetFrameCount() - 1 && pWindow->DrawList->VtxBuffer.Size > 0;
+                    StringBuilder<constant::buffer::kMax256> whatBuilder;
+                    whatBuilder.appendFormat( "panel did not draw when brought to the front: %#", item._id );
+                    const string what( whatBuilder.view() );
                     (void)context.expect( bDrew, what.c_str() );
                     if ( item._bWasOpen == false )
                         (void)panels.setPanelOpen( item._id, false ); // 닫히지 않으면(닫기 확인) 다음 테스트가 그 창을 본다 — 빈 상태로 연 패널은 미저장 편집이 없다

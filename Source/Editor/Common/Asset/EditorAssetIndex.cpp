@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
@@ -118,7 +119,11 @@ namespace sw::editor
             {
                 string underScratch;
                 if ( FileUtil::tryMakePathUnderRoot( AssetPaths::getScratchFolderPath(), filePath, underScratch ) )
-                    return string( AssetPaths::kScratchDomain ) + "/" + underScratch;
+                {
+                    StringBuilder<constant::buffer::kMax256> idBuilder;
+                    idBuilder.appendFormat( "%#/%#", AssetPaths::kScratchDomain, underScratch );
+                    return string( idBuilder.view() );
+                }
                 string       relativePath;
                 const string rootPath = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
                 if ( FileUtil::makeRelativePath( rootPath, FileUtil::normalizeSeparators( filePath ), relativePath ) == false )
@@ -433,11 +438,12 @@ namespace sw::editor
                 continue;
             }
             // 모르는 이름이 없다 — 사라진 폴더다. 그 아래 줄을 모두 뺀다(폴더 하나라 전체를 한 번 훑는다).
-            const string   folderPrefix = assetID + "/";
+            StringBuilder<constant::buffer::kMax256> folderPrefix;
+            folderPrefix.appendFormat( "%#/", assetID );
             vector<string> listRemoved;
             for ( const auto& [entryID, entry] : _data._mapEntry )
             {
-                if ( StringUtil::startsWith( entryID, folderPrefix ) )
+                if ( StringUtil::startsWith( entryID, folderPrefix.view() ) )
                     listRemoved.push_back( entryID );
             }
             for ( const string& removedID : listRemoved )

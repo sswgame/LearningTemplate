@@ -19,6 +19,8 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Time/WallClock.h"
 
 #include "DevTools/Profiling/ProfilerTraceExport.h"
@@ -204,7 +206,7 @@ namespace sw::editor
                 SW_LOG_WARNING_ID( "NetPlay.TracesCouldNotMerged", "Traces could not be merged: %#", report );
                 return mergedPath;
             }
-            mergedPath = input._traceDirectory + "/" + EditorNetPlaySession::kMergedTraceFileName;
+            mergedPath = FileUtil::joinPath( input._traceDirectory, EditorNetPlaySession::kMergedTraceFileName );
             if ( FileUtil::writeTextFile( mergedPath, json ) == false )
             {
                 SW_LOG_WARNING_ID( "NetPlay.MergedTraceCouldNot", "Merged trace could not be written to %#", mergedPath );
@@ -316,9 +318,10 @@ namespace sw::editor
     string EditorNetPlaySession::makeDefaultExecutablePath( const utf8* pBaseName )
     {
 #if defined( SW_PLATFORM_WINDOWS )
-        const string fileName = string( pBaseName ) + ".exe";
+        fixed_string<constant::buffer::kMax64> fileName;
+        formatstring( fileName.data(), fileName.capacity(), "%#.exe", pBaseName );
 #else
-        const string fileName = pBaseName;
+        const string_view fileName = pBaseName;
 #endif
         return FileUtil::joinPath( ProcessRoots::get()._binary.str(), fileName );
     }
@@ -340,8 +343,10 @@ namespace sw::editor
         }
         // 기다리지 못한 자식은 종료 코드가 없다 — 숫자로 꾸미지 않고 그 까닭을 출력 줄로 남겨 패널 · 끝 로그가 보이게 한다.
         {
-            ScopedLock<mutex> lock{ pChild->_mutex };
-            pChild->_listPendingLine.push_back( "[net play] could not wait for the process: " + string( waited.error().message() ) + " " + string( waited.error().detail() ) );
+            ScopedLock<mutex>                        lock{ pChild->_mutex };
+            StringBuilder<constant::buffer::kMax512> lineBuilder;
+            lineBuilder.appendFormat( "[net play] could not wait for the process: %# %#", waited.error().message(), waited.error().detail() );
+            pChild->_listPendingLine.push_back( string( lineBuilder.view() ) );
         }
         pChild->_exited.store( 2 );
     }
@@ -371,7 +376,11 @@ namespace sw::editor
 
     string EditorNetPlaySession::makeTracePath( const string& fileStem ) const
     {
-        return _traceDirectory.empty() ? string{} : _traceDirectory + "/" + fileStem + EditorNetPlaySessionInternal::kTraceExtension;
+        if ( _traceDirectory.empty() )
+            return {};
+        StringBuilder<constant::buffer::kMax256> pathBuilder;
+        pathBuilder.appendFormat( "%#/%#%#", _traceDirectory, fileStem, EditorNetPlaySessionInternal::kTraceExtension );
+        return string( pathBuilder.view() );
     }
 
     bool EditorNetPlaySession::launchChild( const string& label, const string& executablePath, vector<string> listArgument, const string& tracePath )
@@ -380,7 +389,11 @@ namespace sw::editor
         pChild->_label                  = label;
         pChild->_tracePath              = tracePath;
         if ( tracePath.empty() == false )
-            listArgument.push_back( "-gv_traceSaveOnExit=" + tracePath );
+        {
+            StringBuilder<constant::buffer::kMax256> traceArgument;
+            traceArgument.appendFormat( "-gv_traceSaveOnExit=%#", tracePath );
+            listArgument.push_back( string( traceArgument.view() ) );
+        }
         // 자동화 실행의 자식도 자동화 실행이다(EngineChildProcess) — 빠지면 약한 GPU 의 클라이언트가 품질 low 를 골라 서버와 합성이 갈려 접속이 끊겼다(editor.netresourcedigest, Linux).
         const ProcessCommand command = EngineChildProcess::makeCommand( editor::getSubsystem<CommandLineManager>(), executablePath, std::move( listArgument ) );
         ProcessOptions       options;
@@ -414,7 +427,9 @@ namespace sw::editor
         if ( bStarted == false )
             return false;
         // 서버는 멈춘 채 떴다(`-gv_serverStartPaused`). 틱 0 에서 재생을 건다 — 다음 `step N` 이 목표 틱까지 정확히 진행한다.
-        if ( sendServerCommand( "intent.play " + intentFilePath ) == false )
+        fixed_string<constant::buffer::kMax512> playCommand;
+        formatstring( playCommand.data(), playCommand.capacity(), "intent.play %#", intentFilePath );
+        if ( sendServerCommand( playCommand ) == false )
         {
             SW_LOG_ERROR_ID( "NetPlay.CouldNotSendIntent", "Could not send intent.play to the replay server" );
             requestStop();
@@ -473,20 +488,26 @@ namespace sw::editor
             }
         }
 #endif
-        const string serverPath = settings._serverExecutablePath.empty() ? makeDefaultExecutablePath( "Server" ) : settings._serverExecutablePath;
-        const string clientPath = settings._clientExecutablePath.empty() ? makeDefaultExecutablePath( "App" ) : settings._clientExecutablePath;
-        const string port       = to_string( _port );
+        const string                            serverPath = settings._serverExecutablePath.empty() ? makeDefaultExecutablePath( "Server" ) : settings._serverExecutablePath;
+        const string                            clientPath = settings._clientExecutablePath.empty() ? makeDefaultExecutablePath( "App" ) : settings._clientExecutablePath;
+        StringBuilder<constant::buffer::kMax64> listenArgument;
+        listenArgument.appendFormat( "-gv_netListenPort=%#", _port );
+        StringBuilder<constant::buffer::kMax64> connectArgument;
+        connectArgument.appendFormat( "-gv_netConnectAddress=127.0.0.1:%#", _port );
         // 사용자가 적은 추가 인자(백엔드 스위치)는 공백으로 나눈다 — 셸이 아니므로 그 글이 명령을 늘리지 못한다.
         const vector<string> listUserClientArgument = StringUtil::splitQuotedTokens( settings._clientArguments );
         // 클라이언트도 서버 틱 번호로 해시를 남긴다(S7). 포커스는 한 창만 가지므로 나머지 클라이언트가 배경 상한에 걸리지 않게 전속을 명시로 고른다
         // (`FramePacingState::FullSpeed`). 리슨 호스트는 넷 역할로 이미 전속(`Server`)이다.
         StringBuilder<constant::buffer::kMax256> textBuilder;
         textBuilder.appendFormat( "-gv_stateHashHistory=%#", kServerStateHashHistoryTicks );
-        vector<string> listClientArgument{ "-gv_netConnectAddress=127.0.0.1:" + port, "-gv_standardInputCommands=1",
+        vector<string> listClientArgument{ string( connectArgument.view() ), "-gv_standardInputCommands=1",
                                            string( textBuilder.view() ), "-gv_framePacing=FullSpeed" };
         listClientArgument.insert( listClientArgument.end(), listUserClientArgument.begin(), listUserClientArgument.end() );
         // 모든 프로세스가 같은 씬으로 시작한다 — 서버와 클라이언트가 다른 씬을 열면 복제할 것이 맞지 않는다.
-        const string firstSceneArgument = firstScenePath.empty() ? string{} : "-gv_firstScene=" + string( firstScenePath );
+        StringBuilder<constant::buffer::kMax256> sceneArgument;
+        if ( firstScenePath.empty() == false )
+            sceneArgument.appendFormat( "-gv_firstScene=%#", firstScenePath );
+        const string firstSceneArgument( sceneArgument.view() );
         if ( firstSceneArgument.empty() == false )
             listClientArgument.push_back( firstSceneArgument );
 
@@ -510,8 +531,9 @@ namespace sw::editor
             textBuilder.appendFormat( "-gv_stateHashHistory=%#", kServerStateHashHistoryTicks );
             StringBuilder<constant::buffer::kMax256> textBuilder2;
             textBuilder2.appendFormat( "-gv_debugChannelPort=%#", _debugChannelPort );
-            vector<string> listServerArgument{ "-gv_netListenPort=" + port, string( textBuilder2.view() ),
-                                               "-gv_debugChannelToken=" + _debugChannelToken, string( textBuilder.view() ) };
+            StringBuilder<constant::buffer::kMax256> tokenArgument;
+            tokenArgument.appendFormat( "-gv_debugChannelToken=%#", _debugChannelToken );
+            vector<string> listServerArgument{ string( listenArgument.view() ), string( textBuilder2.view() ), string( tokenArgument.view() ), string( textBuilder.view() ) };
             if ( _bReplayServer )
                 listServerArgument.push_back( "-gv_serverStartPaused=1" );
             if ( firstSceneArgument.empty() == false )
@@ -520,7 +542,7 @@ namespace sw::editor
         }
         else
         {
-            vector<string> listHostArgument{ "-gv_netListenPort=" + port, "-gv_standardInputCommands=1" };
+            vector<string> listHostArgument{ string( listenArgument.view() ), "-gv_standardInputCommands=1" };
             listHostArgument.insert( listHostArgument.end(), listUserClientArgument.begin(), listUserClientArgument.end() );
             if ( firstSceneArgument.empty() == false )
                 listHostArgument.push_back( firstSceneArgument );
@@ -531,11 +553,14 @@ namespace sw::editor
         const int32 clientCount = bDedicated ? settings._clientCount : settings._clientCount - 1;
         for ( int32 clientIndex = 1; bLaunched && clientIndex <= clientCount; ++clientIndex )
         {
-            const string         number             = to_string( clientIndex );
+            StringBuilder<constant::buffer::kMax32> labelBuilder;
+            labelBuilder.appendFormat( "Client%#", clientIndex );
+            StringBuilder<constant::buffer::kMax32> traceStem;
+            traceStem.appendFormat( "client%#", clientIndex );
             vector<string>       listArgument       = listClientArgument;
             const vector<string> listWindowArgument = makeWindowArguments( settings, windowIndex++ );
             listArgument.insert( listArgument.end(), listWindowArgument.begin(), listWindowArgument.end() );
-            bLaunched = launchChild( "Client" + number, clientPath, std::move( listArgument ), makeTracePath( "client" + number ) );
+            bLaunched = launchChild( string( labelBuilder.view() ), clientPath, std::move( listArgument ), makeTracePath( string( traceStem.view() ) ) );
         }
         if ( bLaunched == false )
         {
@@ -601,8 +626,10 @@ namespace sw::editor
             {
                 // 바란 틱보다 이른 답(서버는 멈췄고 클라이언트가 아직 따라오는 중)은 답으로 세지 않고 다시 묻는다 — 비교는 두 쪽이 같은 틱이어야 한다.
                 // 상한에 닿으면 이른 답을 그대로 넘긴다: 비교가 "틱이 다르다" 로 실패해 드러난다(숨기지 않는다).
-                const bool bEarly = child._objectHashTick < child._objectHashMinTick && child._objectHashRetryCount < EditorNetPlaySession::kMaxObjectHashRetry;
-                if ( bEarly && child._process.writeInput( string( EditorNetPlaySession::kObjectHashCommand ) + "\n" ) )
+                const bool                             bEarly = child._objectHashTick < child._objectHashMinTick && child._objectHashRetryCount < EditorNetPlaySession::kMaxObjectHashRetry;
+                fixed_string<constant::buffer::kMax64> hashCommand;
+                formatstring( hashCommand.data(), hashCommand.capacity(), "%#\n", EditorNetPlaySession::kObjectHashCommand );
+                if ( bEarly && child._process.writeInput( hashCommand ) )
                 {
                     ++child._objectHashRetryCount;
                     continue;
@@ -648,7 +675,9 @@ namespace sw::editor
         ChildProcess& child = *_listProcess[static_cast<size_t>( processIndex )];
         if ( child._exited.load() != 0 )
             return false;
-        return child._process.writeInput( string( command ) + "\n" );
+        StringBuilder<constant::buffer::kMax256> line;
+        line.appendFormat( "%#\n", command );
+        return child._process.writeInput( line.view() );
     }
 
     bool EditorNetPlaySession::requestObjectHashes( int32 processIndex, uint64 minTick )
@@ -804,6 +833,6 @@ namespace sw::editor
         _mergedTracePath      = mergedTracePath;
         _bMergedTraceUnopened = _mergedTracePath.empty() == false;
         _stopPhase            = StopPhase::Idle;
-        SW_LOG_INFO_ID( "NetPlay.SessionStopped", "Multiplayer session stopped%#", _mergedTracePath.empty() ? string{} : " - merged trace " + _mergedTracePath );
+        SW_LOG_INFO_ID( "NetPlay.SessionStopped", "Multiplayer session stopped%#%#", _mergedTracePath.empty() ? "" : " - merged trace ", _mergedTracePath );
     }
 } // namespace sw::editor

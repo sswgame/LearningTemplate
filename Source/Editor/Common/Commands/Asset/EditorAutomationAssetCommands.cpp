@@ -14,6 +14,8 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
@@ -83,13 +85,17 @@ namespace sw::editor
                 const string automationFolder = makeAutomationOutputFolderPath();
                 if ( FileUtil::isPathAtOrUnderRoot( automationFolder, absolutePath ) == false )
                 {
-                    outReply = "temp assets must be under Saved/Automation/: '" + absolutePath + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "temp assets must be under Saved/Automation/: '%#'", absolutePath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
                 if ( resourceRoot.empty() == false && FileUtil::isPathAtOrUnderRoot( resourceRoot, absolutePath ) )
                 {
-                    outReply = "temp assets must not be in the resource tree: '" + absolutePath + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "temp assets must not be in the resource tree: '%#'", absolutePath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 outAbsolutePath = absolutePath;
@@ -104,17 +110,23 @@ namespace sw::editor
                     return false;
                 if ( FileUtil::exists( absolutePath ) && FileUtil::removeFile( absolutePath ) == false )
                 {
-                    outReply = "could not remove the old temp asset '" + absolutePath + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not remove the old temp asset '%#'", absolutePath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
                 if ( EditorAssetCommands::openPath( absolutePath ) == false )
                 {
-                    outReply = "no editor opens '" + absolutePath + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no editor opens '%#'", absolutePath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 getEditorState<TempAssetState>()._lastPath = absolutePath;
-                outReply                                   = "opening " + absolutePath;
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "opening %#", absolutePath );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -125,27 +137,36 @@ namespace sw::editor
              */
             static bool runOpenScratchAsset( const vector<string>& listArgument, string& outReply )
             {
-                const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
-                const bool   bBadID        = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || AssetPaths::hasParentDirectoryComponent( listArgument[0] );
+                fixed_string<constant::buffer::kMax64> scratchPrefix;
+                formatstring( scratchPrefix.data(), scratchPrefix.capacity(), "%#/", AutomationScratch::kScratchDomain );
+                const bool bBadID = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || AssetPaths::hasParentDirectoryComponent( listArgument[0] );
                 if ( bBadID )
                 {
-                    outReply = "asset.openScratch takes one resource id under " + scratchPrefix;
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "asset.openScratch takes one resource id under %#", scratchPrefix );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 const optional<AbsolutePath> scratchPath  = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
                 const string                 absolutePath = scratchPath.has_value() ? scratchPath->str() : string{};
                 if ( absolutePath.empty() )
                 {
-                    outReply = "no scratch asset '" + listArgument[0] + "' (does the scenario declare <Scratch>?)";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no scratch asset '%#' (does the scenario declare <Scratch>?)", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 // 콘텐츠 브라우저 · Quick Open 과 같게 리소스 id 로 연다(`openPath` 의 인자는 id 다).
                 if ( EditorAssetCommands::openPath( listArgument[0] ) == false )
                 {
-                    outReply = "no editor opens '" + listArgument[0] + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no editor opens '%#'", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "opening " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "opening %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -155,12 +176,15 @@ namespace sw::editor
              */
             static bool runOverwriteScratchAsset( const vector<string>& listArgument, string& outReply )
             {
-                const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
-                const auto   isScratchID   = [&scratchPrefix]( const string& id )
+                fixed_string<constant::buffer::kMax64> scratchPrefix;
+                formatstring( scratchPrefix.data(), scratchPrefix.capacity(), "%#/", AutomationScratch::kScratchDomain );
+                const auto isScratchID = [&scratchPrefix]( const string& id )
                 { return StringUtil::startsWith( id, scratchPrefix ) && AssetPaths::hasParentDirectoryComponent( id ) == false; };
                 if ( listArgument.size() != 2 || isScratchID( listArgument[0] ) == false || isScratchID( listArgument[1] ) == false )
                 {
-                    outReply = "asset.overwriteScratch takes two resource ids under " + scratchPrefix + " (source, target)";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "asset.overwriteScratch takes two resource ids under %# (source, target)", scratchPrefix );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 const AssetPaths&            assetPaths = editor::getSubsystem<AssetPaths>();
@@ -169,23 +193,30 @@ namespace sw::editor
                 string                       text;
                 if ( sourcePath.has_value() == false || targetPath.has_value() == false || FileUtil::readTextFile( sourcePath->str(), text ) == false )
                 {
-                    outReply = "no scratch asset '" + listArgument[0] + "' or '" + listArgument[1] + "' (does the scenario declare <Scratch>?)";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no scratch asset '%#' or '%#' (does the scenario declare <Scratch>?)", listArgument[0], listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 if ( FileUtil::writeTextFile( targetPath->str(), text ) == false )
                 {
-                    outReply = "could not write '" + targetPath->str() + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not write '%#'", targetPath->str() );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "overwrote " + listArgument[1] + " with " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "overwrote %# with %#", listArgument[1], listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
             /** @brief `scratch/` 아래 id 하나를 받아 그 사본 파일의 글을 읽습니다. id 가 틀렸거나 파일이 없으면 그 까닭입니다. */
             [[nodiscard]] static expected<string> readScratchText( const vector<string>& listArgument, const utf8* pCommand )
             {
-                const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
-                const bool   bBadID        = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || AssetPaths::hasParentDirectoryComponent( listArgument[0] );
+                fixed_string<constant::buffer::kMax64> scratchPrefix;
+                formatstring( scratchPrefix.data(), scratchPrefix.capacity(), "%#/", AutomationScratch::kScratchDomain );
+                const bool bBadID = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || AssetPaths::hasParentDirectoryComponent( listArgument[0] );
                 if ( bBadID )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the command takes one resource id under the scratch folder", pCommand }.appendDetail( " " ).appendDetail( scratchPrefix ) );
                 const optional<AbsolutePath> scratchPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
@@ -205,7 +236,9 @@ namespace sw::editor
                     return false;
                 }
                 getEditorState<ScratchSnapshotState>()._mapTextByID.insert_or_assign( listArgument[0], std::move( *text ) );
-                outReply = "snapshot of " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "snapshot of %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -225,15 +258,21 @@ namespace sw::editor
                 const auto                           iter        = mapSnapshot.find( listArgument[0] );
                 if ( iter == mapSnapshot.end() )
                 {
-                    outReply = "no snapshot of '" + listArgument[0] + "' - run asset.snapshotScratch first";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no snapshot of '%#' - run asset.snapshotScratch first", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 if ( iter->second != *text )
                 {
-                    outReply = "'" + listArgument[0] + "' changed after save, reload and save again - loading drops or alters what saving wrote";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' changed after save, reload and save again - loading drops or alters what saving wrote", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = listArgument[0] + " is unchanged";
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%# is unchanged", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -251,32 +290,43 @@ namespace sw::editor
                 const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( listArgument[0] );
                 if ( diskPath.has_value() == false || FileUtil::isRegularFile( diskPath->str() ) == false )
                 {
-                    outReply = "'" + listArgument[0] + "' is not an asset file";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' is not an asset file", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 EditorSelection& selection = editor::getMainSceneSelection();
                 selection.clearObjectSelection();
                 selection.selectAsset( listArgument[0] );
-                outReply = "selected " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "selected %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
             /** @brief `scratch/` 아래 id 하나를 받아 그 사본 파일이 없으면 성공입니다 — 옮긴 뒤 저장이 옛 자리에 파일을 되살리지 않았는지 본다(감사 P0-4). */
             static bool runExpectScratchMissing( const vector<string>& listArgument, string& outReply )
             {
-                const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
-                const bool   bBadID        = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || AssetPaths::hasParentDirectoryComponent( listArgument[0] );
+                fixed_string<constant::buffer::kMax64> scratchPrefix;
+                formatstring( scratchPrefix.data(), scratchPrefix.capacity(), "%#/", AutomationScratch::kScratchDomain );
+                const bool bBadID = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || AssetPaths::hasParentDirectoryComponent( listArgument[0] );
                 if ( bBadID )
                 {
-                    outReply = "asset.expectScratchMissing takes one resource id under " + scratchPrefix;
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "asset.expectScratchMissing takes one resource id under %#", scratchPrefix );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 if ( editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() ).has_value() )
                 {
-                    outReply = "'" + listArgument[0] + "' exists - a save wrote to the old place";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' exists - a save wrote to the old place", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = listArgument[0] + " is missing";
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%# is missing", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -296,18 +346,23 @@ namespace sw::editor
                 }
                 if ( text->find( listArgument[1] ) == string::npos )
                 {
-                    outReply = "'" + listArgument[0] + "' does not contain '" + listArgument[1] + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' does not contain '%#'", listArgument[0], listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = listArgument[0] + " contains " + listArgument[1];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%# contains %#", listArgument[0], listArgument[1] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
             /** @brief `scratch/` 아래 id 둘(원본 · 대상)을 디스크 옮기기 하나로 풉니다. 원본은 있는 파일, 대상은 만들 자리다(`AssetPaths::toDiskPath`). */
             [[nodiscard]] static expected<EditorAssetMove> readScratchMove( const vector<string>& listArgument, size_t argumentCount, const utf8* pCommand )
             {
-                const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
-                const auto   isScratchID   = [&scratchPrefix]( const string& id )
+                fixed_string<constant::buffer::kMax64> scratchPrefix;
+                formatstring( scratchPrefix.data(), scratchPrefix.capacity(), "%#/", AutomationScratch::kScratchDomain );
+                const auto isScratchID = [&scratchPrefix]( const string& id )
                 { return StringUtil::startsWith( id, scratchPrefix ) && AssetPaths::hasParentDirectoryComponent( id ) == false; };
                 if ( listArgument.size() != argumentCount || isScratchID( listArgument[0] ) == false || isScratchID( listArgument[1] ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "wrong arguments - see the command's usage (two resource ids under the scratch folder first)", pCommand } );
@@ -345,10 +400,14 @@ namespace sw::editor
                 hotReload.restartPendingReferenceScan();
                 if ( bMoved == false )
                 {
-                    outReply = "not moved - " + plan._failure;
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "not moved - %#", plan._failure );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "moved " + listArgument[0] + " to " + listArgument[1];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "moved %# to %#", listArgument[0], listArgument[1] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -373,15 +432,21 @@ namespace sw::editor
                 EditorAssetMovePlan plan;
                 if ( EditorAssetFileCommands::planAssetMoves( vector<EditorAssetMove>{ *move }, *pIndex, plan ) )
                 {
-                    outReply = "'" + listArgument[0] + "' could move to '" + listArgument[1] + "' - the plan was expected to refuse";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' could move to '%#' - the plan was expected to refuse", listArgument[0], listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 if ( plan._failure.find( listArgument[2] ) == string::npos )
                 {
-                    outReply = "refused for another reason - " + plan._failure;
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "refused for another reason - %#", plan._failure );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "refused - " + plan._failure;
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "refused - %#", plan._failure );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -396,10 +461,14 @@ namespace sw::editor
                     return false;
                 if ( FileUtil::ensureDirectoryExists( folderPath ) == false )
                 {
-                    outReply = "could not create '" + folderPath + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not create '%#'", folderPath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "ready " + folderPath;
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "ready %#", folderPath );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -411,10 +480,14 @@ namespace sw::editor
                     return false;
                 if ( FileUtil::exists( absolutePath ) && FileUtil::removeFile( absolutePath ) == false )
                 {
-                    outReply = "could not remove '" + absolutePath + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not remove '%#'", absolutePath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "removed " + absolutePath;
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "removed %#", absolutePath );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -454,10 +527,14 @@ namespace sw::editor
                 }
                 if ( EditorAssetFileCommands::importFiles( *folderPath, { sourcePath } ) != 1 )
                 {
-                    outReply = "could not import '" + sourcePath + "' into '" + listArgument[1] + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not import '%#' into '%#'", sourcePath, listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "imported " + FileUtil::getFileNamePart( sourcePath ) + " into " + listArgument[1];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "imported %# into %#", FileUtil::getFileNamePart( sourcePath ), listArgument[1] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -475,34 +552,46 @@ namespace sw::editor
                 const string  targetID  = targetKey.str();
                 if ( FileUtil::startsWithPathComponent( targetID, kImportTempFolder ) == false || targetID.find( ".." ) != string::npos )
                 {
-                    outReply = "asset.replaceContent takes a target under " + string( kImportTempFolder ) + "/";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "asset.replaceContent takes a target under %#/", kImportTempFolder );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 const optional<AbsolutePath> targetPath = editor::getSubsystem<AssetPaths>().findLooseFile( targetID );
                 AssetIdentityRules           rules;
                 if ( targetPath.has_value() == false || rules.load( ProcessRoots::get()._project.str() ) == false )
                 {
-                    outReply = "no asset '" + targetID + "' or no asset identity rules";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no asset '%#' or no asset identity rules", targetID );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 const optional<AssetGUID> before = rules.readIdentity( targetPath->str(), targetID );
                 if ( before.has_value() == false )
                 {
-                    outReply = "'" + targetID + "' has no asset GUID - asset.import gives one";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' has no asset GUID - asset.import gives one", targetID );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 if ( EditorAssetFileCommands::replaceAssetContent( targetPath->str(), sourcePath ) == false )
                 {
-                    outReply = "could not replace '" + targetID + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not replace '%#'", targetID );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 const optional<AssetGUID> after = rules.readIdentity( targetPath->str(), targetID );
                 if ( after.has_value() == false || *after != *before )
                 {
-                    outReply = "'" + targetID + "' lost its asset GUID " + before->toString();
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' lost its asset GUID %#", targetID, before->toString() );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "replaced " + targetID + " and kept guid " + before->toString();
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "replaced %# and kept guid %#", targetID, before->toString() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -519,10 +608,14 @@ namespace sw::editor
                 }
                 if ( FileUtil::removeDirectory( *folderPath ) == false )
                 {
-                    outReply = "could not remove '" + *folderPath + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not remove '%#'", *folderPath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "removed " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "removed %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -565,21 +658,27 @@ namespace sw::editor
                 const optional<AbsolutePath> assetFile = FileUtil::requireAbsolutePath( absolutePath );
                 if ( assetFile.has_value() == false || asset.saveToFile( *assetFile ) == false )
                 {
-                    outReply = "could not write the prefab '" + absolutePath + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not write the prefab '%#'", absolutePath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 // 캐시 · 놓인 프리팹 표는 리소스 id 로 찾는다 — 작업 폴더의 `Saved/` 는 시나리오가 붙인 디스크 도메인이다.
                 const string prefabID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
                 if ( prefabID.empty() )
                 {
-                    outReply = "'" + absolutePath + "' is not under a mounted disk domain - run it from a scenario";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' is not under a mounted disk domain - run it from a scenario", absolutePath );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 // 같은 경로를 다시 만들면 캐시의 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽게 한다.
                 (void)editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( AssetID{ prefabID } ); // 방금 이 명령이 쓴 파일이다 — 못 읽으면 캐시가 오류를 남겼다
                 pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( *pObject, prefabID );
                 pContext->getSubsystem<EditorWorkspace>().markSceneDirty();
-                outReply = "created prefab " + absolutePath + " from " + pObject->getName().c_str();
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "created prefab %# from %#", absolutePath, pObject->getName().c_str() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -602,17 +701,23 @@ namespace sw::editor
                     path = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath ); // 시나리오가 붙인 `saved` 도메인의 id
                     if ( path.empty() )
                     {
-                        outReply = "'" + absolutePath + "' is not under a mounted disk domain - run it from a scenario";
+                        StringBuilder<constant::buffer::kMax256> replyBuilder;
+                        replyBuilder.appendFormat( "'%#' is not under a mounted disk domain - run it from a scenario", absolutePath );
+                        outReply = string( replyBuilder.view() );
                         return false;
                     }
                 }
                 const GameObject* pSpawned = EditorAssetCommands::spawnPrefab( pManager, path.c_str(), nullptr );
                 if ( pSpawned == nullptr )
                 {
-                    outReply = "could not spawn '" + path + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not spawn '%#'", path );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "spawned " + string( pSpawned->getName().c_str() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "spawned %#", pSpawned->getName().c_str() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

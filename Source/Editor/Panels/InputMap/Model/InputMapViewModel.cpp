@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
@@ -425,9 +426,17 @@ namespace sw::editor
         // 슬롯 하나만 보이면 Ctrl+S 가 S 로 읽혀, 다른 액션의 S 와 부딪히는 것처럼 보인다.
         const InputGlyphStyle style = InputGlyphStyle::KeyboardMouse;
         if ( pBinding->_kind == BindingKind::Shortcut )
-            return InputRemapSerializer::formatModifierNames( pBinding->_modifierMask ) + " + " + InputGlyphResolver::makeSlotGlyph( pBinding->_arrSlot[0], style );
+        {
+            StringBuilder<constant::buffer::kMax128> labelBuilder;
+            labelBuilder.appendFormat( "%# + %#", InputRemapSerializer::formatModifierNames( pBinding->_modifierMask ), InputGlyphResolver::makeSlotGlyph( pBinding->_arrSlot[0], style ) );
+            return string( labelBuilder.view() );
+        }
         if ( pBinding->_kind == BindingKind::Chord )
-            return InputGlyphResolver::makeSlotGlyph( pBinding->_arrSlot[0], style ) + " + " + InputGlyphResolver::makeSlotGlyph( pBinding->_arrSlot[1], style );
+        {
+            StringBuilder<constant::buffer::kMax128> labelBuilder;
+            labelBuilder.appendFormat( "%# + %#", InputGlyphResolver::makeSlotGlyph( pBinding->_arrSlot[0], style ), InputGlyphResolver::makeSlotGlyph( pBinding->_arrSlot[1], style ) );
+            return string( labelBuilder.view() );
+        }
         if ( pBinding->_kind == BindingKind::SingleSlot )
             return InputGlyphResolver::makeSlotGlyph( pBinding->_arrSlot[0], style );
         return string{ BindingKinds::toName( pBinding->_kind ) };

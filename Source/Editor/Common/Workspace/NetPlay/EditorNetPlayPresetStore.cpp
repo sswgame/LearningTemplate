@@ -36,9 +36,12 @@ namespace sw::editor
             _file = std::move( loaded );
             return EditorUserFileResult::Loaded;
         }
-        const string reason = string( consistent.error().message() ) + ( consistent.error().detail().empty() ? string() : ": " + string( consistent.error().detail() ) );
+        StringBuilder<constant::buffer::kMax512> reason;
+        reason.append( consistent.error().message() );
+        if ( consistent.error().detail().empty() == false )
+            reason.appendFormat( ": %#", consistent.error().detail() );
         // 깨진 사용자 파일은 치우고 새로 쓴다 — 그대로 두면 다음 저장이 사용자가 고친 파일을 말없이 덮는다.
-        if ( EditorUserFile::quarantineCorruptFile( filePath, reason ) )
+        if ( EditorUserFile::quarantineCorruptFile( filePath, reason.view() ) )
             (void)commitFile( EditorNetPlayPresetFile{} ); // 실패는 commitFile 이 오류로 남긴다
         return EditorUserFileResult::Recovered;
     }

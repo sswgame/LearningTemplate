@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
@@ -77,7 +78,11 @@ namespace sw::editor
     string InspectorPropertyLayout::makeUndoLabel( const utf8* pPropertyLabel )
     {
         const bool bUsable = pPropertyLabel != nullptr && pPropertyLabel[0] != '\0' && pPropertyLabel[0] != '#';
-        return bUsable ? string( "Edit " ) + pPropertyLabel : string( "Edit Property" );
+        if ( bUsable == false )
+            return string( "Edit Property" );
+        StringBuilder<constant::buffer::kMax128> labelBuilder;
+        labelBuilder.appendFormat( "Edit %#", pPropertyLabel );
+        return string( labelBuilder.view() );
     }
 
     PropertyInfo InspectorPropertyLayout::makeElementProperty( const PropertyInfo& containerProp )

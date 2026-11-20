@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
@@ -82,7 +83,9 @@ namespace sw::editor
             GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, _activePrefabPath ) : nullptr;
             if ( pSpawned == nullptr )
             {
-                _status = string( "Prefab '" ) + _activePrefabPath + "' could not be spawned - see the log";
+                StringBuilder<constant::buffer::kMax256> statusBuilder;
+                statusBuilder.appendFormat( "Prefab '%#' could not be spawned - see the log", _activePrefabPath );
+                _status = string( statusBuilder.view() );
                 return;
             }
             _body = pSpawned->getHandle();
@@ -92,7 +95,11 @@ namespace sw::editor
         if ( pAnimator == nullptr )
         {
             if ( pManager->resolveGameObject( _body ) != nullptr )
-                _status = string( "Prefab '" ) + _activePrefabPath + "' has no skeletal animator on its root - the clip cannot play";
+            {
+                StringBuilder<constant::buffer::kMax256> statusBuilder;
+                statusBuilder.appendFormat( "Prefab '%#' has no skeletal animator on its root - the clip cannot play", _activePrefabPath );
+                _status = string( statusBuilder.view() );
+            }
             return;
         }
         if ( string_view{ _playedClipPath } != clipPath )
@@ -109,12 +116,16 @@ namespace sw::editor
         const AnimationClip* pClip = animator.preloadClip( clipName ) ? animator.findClip( clipName ) : nullptr;
         if ( pClip == nullptr )
         {
-            _status = string( "The clip '" ) + stem + "' could not be read - see the log";
+            StringBuilder<constant::buffer::kMax256> statusBuilder;
+            statusBuilder.appendFormat( "The clip '%#' could not be read - see the log", stem );
+            _status = string( statusBuilder.view() );
             return;
         }
         if ( animator.play( clipName, _bLoop, 0.0f ) == false )
         {
-            _status = string( "The body could not play the clip '" ) + stem + "' - see the log";
+            StringBuilder<constant::buffer::kMax256> statusBuilder;
+            statusBuilder.appendFormat( "The body could not play the clip '%#' - see the log", stem );
+            _status = string( statusBuilder.view() );
             return;
         }
         _clipSeconds = pClip->getDuration();

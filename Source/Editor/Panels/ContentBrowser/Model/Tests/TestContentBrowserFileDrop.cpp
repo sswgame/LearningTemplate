@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileDrop.h"
@@ -15,7 +16,12 @@ namespace
     struct ContentBrowserFileDropTestInternal
     {
         /** @brief 이 플랫폼의 절대 경로 하나(케이스 작업 폴더 아래 — 파일은 만들지 않는다)입니다. 판정은 디스크를 보지 않는다. */
-        static string makeAbsolute( string_view fileName ) { return FileUtil::normalizeSeparators( test::makeScratchPath( "filedrop" ) + "/" + string( fileName ) ); } // joinPath 는 `..` 를 접을 수 있어 글로 잇는다
+        static string makeAbsolute( string_view fileName ) // joinPath 는 `..` 를 접을 수 있어 글로 잇는다
+        {
+            StringBuilder<constant::buffer::kMax512> pathBuilder;
+            pathBuilder.appendFormat( "%#/%#", test::makeScratchPath( "filedrop" ), fileName );
+            return FileUtil::normalizeSeparators( pathBuilder.view() );
+        }
 
         static ContentBrowserDroppedFile makeFile( string path, uint64 byteSize, bool bRegularFile )
         {

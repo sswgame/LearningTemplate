@@ -30,7 +30,9 @@ namespace sw::editor
     {
         if ( channelName != StateHashHistory::kSceneChannelName && StateHashHistory::isValidChannelName( channelName ) == false )
         {
-            _lastError = "'" + string( channelName ) + "' is not a state hash channel name ([a-z0-9_.-], up to 32 characters)";
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "'%#' is not a state hash channel name ([a-z0-9_.-], up to 32 characters)", channelName );
+            _lastError = string( errorBuilder.view() );
             return false;
         }
         _hashChannel        = string( channelName );
@@ -63,12 +65,16 @@ namespace sw::editor
         vector<StateHashSample> listSample;
         if ( StateHashHistory::parseReport( reportText, listSample ) == false )
         {
-            _lastError = string( label ) + " is not a state hash history (<tick> <hex hash> per line)";
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "%# is not a state hash history (<tick> <hex hash> per line)", label );
+            _lastError = string( errorBuilder.view() );
             return false;
         }
         if ( listSample.empty() )
         {
-            _lastError = string( label ) + " has no recorded ticks";
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "%# has no recorded ticks", label );
+            _lastError = string( errorBuilder.view() );
             return false;
         }
         VectorUtil::sort( listSample, []( const StateHashSample& left, const StateHashSample& right )
@@ -92,22 +98,38 @@ namespace sw::editor
         DebugChannelClient client;
         if ( client.connect( remote, token, kChannelTimeoutMilliseconds ) == false )
         {
-            _lastError = "could not connect to the debug channel at " + remote.toString();
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "could not connect to the debug channel at %#", remote.toString() );
+            _lastError = string( errorBuilder.view() );
             return false;
         }
         string                                   body;
         const bool                               bSceneChannel = _hashChannel == StateHashHistory::kSceneChannelName;
         StringBuilder<constant::buffer::kMax256> textBuilder;
-        textBuilder.appendFormat( "state.hashes 0 %#%#", kMaxRequestedTicks, ( bSceneChannel ? string{} : " " + _hashChannel ) );
+        textBuilder.appendFormat( "state.hashes 0 %#", kMaxRequestedTicks );
+        if ( bSceneChannel == false )
+            textBuilder.appendFormat( " %#", _hashChannel );
         const bool bAnswered = client.request( textBuilder.view(), kChannelTimeoutMilliseconds, body );
         client.disconnect();
         if ( bAnswered == false )
         {
             // 서버가 이력을 켜지 않았거나 그 이름의 줄이 없으면 `state.hashes` 가 그 이유를 오류로 답한다.
-            _lastError = body.empty() ? "no state.hashes answer from " + remote.toString() : body;
+            if ( body.empty() )
+            {
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "no state.hashes answer from %#", remote.toString() );
+                _lastError = string( errorBuilder.view() );
+            }
+            else
+                _lastError = body;
             return false;
         }
-        if ( loadFromReport( sourceIndex, bSceneChannel ? remote.toString() : remote.toString() + " [" + _hashChannel + "]", body ) == false )
+        StringBuilder<constant::buffer::kMax256> labelBuilder;
+        if ( bSceneChannel )
+            labelBuilder.append( remote.toString() );
+        else
+            labelBuilder.appendFormat( "%# [%#]", remote.toString(), _hashChannel );
+        if ( loadFromReport( sourceIndex, labelBuilder.view(), body ) == false )
             return false;
         _arrChannel[sourceIndex] = ChannelOrigin{ remote, string( token ), true };
         return true;
@@ -128,7 +150,9 @@ namespace sw::editor
         DebugChannelClient client;
         if ( client.connect( origin._remote, origin._token, kChannelTimeoutMilliseconds ) == false )
         {
-            _lastError = "could not connect to the debug channel at " + origin._remote.toString();
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "could not connect to the debug channel at %#", origin._remote.toString() );
+            _lastError = string( errorBuilder.view() );
             return false;
         }
         string     text;
@@ -136,7 +160,14 @@ namespace sw::editor
         client.disconnect();
         if ( bAnswered == false )
         {
-            _lastError = text.empty() ? "no state.objects answer from " + origin._remote.toString() : text;
+            if ( text.empty() )
+            {
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "no state.objects answer from %#", origin._remote.toString() );
+                _lastError = string( errorBuilder.view() );
+            }
+            else
+                _lastError = text;
             return false;
         }
         if ( SceneObjectHash::parseTickedObjectReport( text, outTick, outListObject ) == false )
@@ -214,7 +245,9 @@ namespace sw::editor
         string text;
         if ( FileUtil::readTextFile( path, text ) == false )
         {
-            _lastError = "could not read " + string( path );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "could not read %#", path );
+            _lastError = string( errorBuilder.view() );
             return false;
         }
         return loadFromReport( sourceIndex, path, text );

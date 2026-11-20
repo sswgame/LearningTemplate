@@ -5,6 +5,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
@@ -67,11 +69,13 @@ namespace sw::editor
     {
         if ( StringUtil::endsWith( assetID, AssetMeta::kExtension ) )
             return SourceKind::None;
-        const string modelSegment   = "/" + string{ ModelImportUtil::kRawModelFolder } + "/";
-        const string textureSegment = "/" + string{ ModelImportUtil::kRawTextureFolder } + "/";
-        if ( assetID.find( modelSegment ) != string_view::npos )
+        fixed_string<constant::buffer::kMax64> modelSegment;
+        formatstring( modelSegment.data(), modelSegment.capacity(), "/%#/", ModelImportUtil::kRawModelFolder );
+        fixed_string<constant::buffer::kMax64> textureSegment;
+        formatstring( textureSegment.data(), textureSegment.capacity(), "/%#/", ModelImportUtil::kRawTextureFolder );
+        if ( assetID.find( modelSegment.view() ) != string_view::npos )
             return SourceKind::Model;
-        if ( assetID.find( textureSegment ) != string_view::npos )
+        if ( assetID.find( textureSegment.view() ) != string_view::npos )
             return SourceKind::Texture;
         return SourceKind::None;
     }

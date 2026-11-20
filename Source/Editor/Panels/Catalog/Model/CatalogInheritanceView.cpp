@@ -3,6 +3,7 @@
 #include "Editor/Panels/Catalog/Model/CatalogInheritanceView.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw::editor
@@ -182,7 +183,9 @@ namespace sw::editor
                 {
                     CatalogChildPath path = outListSection[sectionIndex]._ownerPath;
                     path.push_back( row._step );
-                    appendSections( field, parsed, CatalogInheritanceView::findWrittenChild( parsed, ownerIndex, row._step ), row._flat, row._parent, path, ownerTitle + " " + row._step._key, outListSection );
+                    StringBuilder<constant::buffer::kMax256> childTitle;
+                    childTitle.appendFormat( "%# %#", ownerTitle, row._step._key );
+                    appendSections( field, parsed, CatalogInheritanceView::findWrittenChild( parsed, ownerIndex, row._step ), row._flat, row._parent, path, string( childTitle.view() ), outListSection );
                 }
             }
 
@@ -253,8 +256,15 @@ namespace sw::editor
                 for ( const string& name : listName )
                 {
                     CatalogChildSection section;
-                    section._name                       = name;
-                    section._title                      = ownerTitle.empty() ? name : string{ ownerTitle + " / " + name };
+                    section._name = name;
+                    if ( ownerTitle.empty() )
+                        section._title = name;
+                    else
+                    {
+                        StringBuilder<constant::buffer::kMax256> titleBuilder;
+                        titleBuilder.appendFormat( "%# / %#", ownerTitle, name );
+                        section._title = string( titleBuilder.view() );
+                    }
                     section._ownerPath                  = ownerPath;
                     section._bHasParent                 = parent.isValid();
                     const DataInheritanceSchema* pField = schema.findField( name );

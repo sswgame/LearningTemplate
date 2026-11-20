@@ -5,6 +5,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -67,13 +68,13 @@ namespace sw::editor
                 if ( hit != EditorMarkHit::Reachable )
                 {
                     EditorSelfTestInput::moveMouseAway();
-                    string what = string{ "could not press '" } + pKey + "': ";
+                    fixed_string<constant::buffer::kMax256> what;
                     if ( hit == EditorMarkHit::Missing )
-                        what += "it left no mark";
+                        formatstring( what.data(), what.capacity(), "could not press '%#': it left no mark", pKey );
                     else if ( hit == EditorMarkHit::Covered )
-                        what += "it is covered by window '" + coverName + "'";
+                        formatstring( what.data(), what.capacity(), "could not press '%#': it is covered by window '%#'", pKey, coverName );
                     else
-                        what += "the pointer never settled on it";
+                        formatstring( what.data(), what.capacity(), "could not press '%#': the pointer never settled on it", pKey );
                     (void)context.expect( false, what.c_str() );
                     return PressStep::Failed;
                 }
@@ -308,7 +309,12 @@ namespace sw::editor
                 const EditorMarkHit hit = EditorSelfTestInput::hoverMark( "selftest.tooltipButton", float2{ 0.5f, 0.5f }, coverName );
                 if ( hit == EditorMarkHit::Missing || hit == EditorMarkHit::Covered )
                 {
-                    (void)context.expect( false, hit == EditorMarkHit::Missing ? "the probe button left no mark" : ( "the probe button is covered by window '" + coverName + "'" ).c_str() );
+                    fixed_string<constant::buffer::kMax256> what;
+                    if ( hit == EditorMarkHit::Missing )
+                        what = "the probe button left no mark";
+                    else
+                        formatstring( what.data(), what.capacity(), "the probe button is covered by window '%#'", coverName );
+                    (void)context.expect( false, what.c_str() );
                     EditorSelfTestInput::moveMouseAway();
                     return EditorSelfTestStep::Done;
                 }
@@ -585,10 +591,13 @@ namespace sw::editor
                         return EditorSelfTestStep::Continue;
                     }
 
-                    EditorSelfTestMark row{};
-                    EditorSelfTestMark toggle{};
-                    const bool         bMarked = EditorSelfTestMarks::find( string( "hierarchy.row." ) + kRowTestObjectName, row ) &&
-                                         EditorSelfTestMarks::find( string( "hierarchy.toggle." ) + kRowTestObjectName, toggle );
+                    EditorSelfTestMark                      row{};
+                    EditorSelfTestMark                      toggle{};
+                    fixed_string<constant::buffer::kMax128> rowKey;
+                    formatstring( rowKey.data(), rowKey.capacity(), "hierarchy.row.%#", kRowTestObjectName );
+                    fixed_string<constant::buffer::kMax128> toggleKey;
+                    formatstring( toggleKey.data(), toggleKey.capacity(), "hierarchy.toggle.%#", kRowTestObjectName );
+                    const bool bMarked = EditorSelfTestMarks::find( rowKey, row ) && EditorSelfTestMarks::find( toggleKey, toggle );
                     if ( bMarked == false && stepIndex < kMaxMarkWaitStep )
                         return EditorSelfTestStep::Continue;
                     if ( context.expect( bMarked, "the probe row or its toggle left no mark" ) )

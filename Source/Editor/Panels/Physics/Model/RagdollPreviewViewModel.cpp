@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -144,14 +145,18 @@ namespace sw::editor
         GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, _activePrefabPath ) : nullptr;
         if ( pSpawned == nullptr )
         {
-            _status = string( "Prefab '" ) + _activePrefabPath + "' could not be spawned - see the log";
+            StringBuilder<constant::buffer::kMax256> statusBuilder;
+            statusBuilder.appendFormat( "Prefab '%#' could not be spawned - see the log", _activePrefabPath );
+            _status = string( statusBuilder.view() );
             return;
         }
         _body                            = pSpawned->getHandle();
         SkeletalMeshComponent* pBodyMesh = pSpawned->getComponent<SkeletalMeshComponent>();
         if ( pBodyMesh == nullptr )
         {
-            _status = string( "Prefab '" ) + _activePrefabPath + "' has no skeletal mesh on its root - the ragdoll cannot stand";
+            StringBuilder<constant::buffer::kMax256> statusBuilder;
+            statusBuilder.appendFormat( "Prefab '%#' has no skeletal mesh on its root - the ragdoll cannot stand", _activePrefabPath );
+            _status = string( statusBuilder.view() );
             return;
         }
         // 래그돌 히트 존은 화면 밖에서도 본을 요구한다(`requireBonesWhenNotRendered`) — 미리보기 몸은 고른 프리팹과 상관없이 맞춘다.

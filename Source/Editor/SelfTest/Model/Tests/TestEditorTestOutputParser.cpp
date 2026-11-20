@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestRunner.h"
 
@@ -73,7 +74,8 @@ SW_TEST_CASE( EditorTestOutputParserTest, CountsOnlyErrorLogLines )
 // 단위 테스트 실행의 끝 줄이 알린 선언된 Error 줄 수(`SW_EXPECT_LOG`)는 오류 줄 수에서 뺀다 — 거절 경로 테스트가 일부러 낸 줄이 오류로 보이지 않게.
 SW_TEST_CASE( EditorTestOutputParserTest, DeclaredErrorLinesAreNotCounted )
 {
-    const vector<string> listLine{ "12:00:00 [Error] Core - declared one", "12:00:00 [Error] Core - declared two", "12:00:01 [Error] Core - real",
-                                   string( sw::test::kDeclaredErrorLinesPrefix ) + "2 error log line(s) declared with SW_EXPECT_LOG" };
+    StringBuilder<constant::buffer::kMax128> declaredLine;
+    declaredLine.appendFormat( "%#2 error log line(s) declared with SW_EXPECT_LOG", sw::test::kDeclaredErrorLinesPrefix );
+    const vector<string> listLine{ "12:00:00 [Error] Core - declared one", "12:00:00 [Error] Core - declared two", "12:00:01 [Error] Core - real", string( declaredLine.view() ) };
     SW_EXPECT_EQUAL( 1u, EditorTestOutputParser::countUndeclaredErrorLines( listLine ) );
 }

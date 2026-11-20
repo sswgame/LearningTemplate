@@ -57,8 +57,9 @@ namespace sw::editor
              */
             static bool drawTypedProperty( MaterialProperty& prop )
             {
-                const string         label    = EditorDisplayNameUtil::chooseLabel( prop._displayName, prop._name ); // 인스펙터와 같은 이름표 규칙
-                const string         id       = "##" + label;
+                const string                            label = EditorDisplayNameUtil::chooseLabel( prop._displayName, prop._name ); // 인스펙터와 같은 이름표 규칙
+                fixed_string<constant::buffer::kMax256> id;
+                formatstring( id.data(), id.capacity(), "##%#", label );
                 const utf8*          pLabel   = label.c_str();
                 const EditorWidgetID widgetID = EditorWidgetID::fromString( id.c_str() );
                 const utf8*          pID      = id.c_str(); // 이름표는 왼쪽 열(`drawPropertyRowLabel`)에 둔다 — 셰이더 · 텍스처 슬롯과 같은 쪽이다(예전에는 값 오른쪽에 붙었다)

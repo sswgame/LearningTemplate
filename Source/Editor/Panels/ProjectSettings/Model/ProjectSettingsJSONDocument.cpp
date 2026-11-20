@@ -3,7 +3,10 @@
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsJSONDocument.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
@@ -295,7 +298,9 @@ namespace sw::editor
         if ( _listNode[node]._text == text )
             return true; // 같은 값 — 되돌리기 단계를 만들지 않는다
         // 글 칸을 치는 동안은 칸 하나가 한 단계다(`endTextEdit` 가 끊는다). 수 · 불은 칸을 떠날 때 · 누를 때 한 번 오므로 늘 새 단계다
-        const string coalesceKey = type == JSONType::String ? "text:" + to_string( static_cast<uint64>( node ) ) : string{};
+        fixed_string<constant::buffer::kMax32> coalesceKey;
+        if ( type == JSONType::String )
+            formatstring( coalesceKey.data(), coalesceKey.capacity(), "text:%#", static_cast<uint64>( node ) );
         recordEdit( coalesceKey );
         _listNode[node]._text = string( text );
         return true;
@@ -501,8 +506,12 @@ namespace sw::editor
         const string_view              lead  = Internal::slice( text, span._valueBegin + 1, first._memberBegin );
         const string_view              trail = Internal::slice( text, last._valueEnd, span._valueEnd - 1 );
         // 원소 사이 구분자는 원문의 첫 구분자다. 원소가 하나뿐이었으면 쉼표 뒤에 여는 괄호 뒤의 공백을 쓴다(`[\n    "a"\n  ]` → `,\n    `)
-        const string      separator   = value._listChildAtOpen.size() > 1 ? string( Internal::slice( text, first._valueEnd, _listNode[value._listChildAtOpen[1]]._source._memberBegin ) )
-                                                                          : "," + string( lead );
+        StringBuilder<constant::buffer::kMax64> separatorBuilder;
+        if ( value._listChildAtOpen.size() > 1 )
+            separatorBuilder.append( Internal::slice( text, first._valueEnd, _listNode[value._listChildAtOpen[1]]._source._memberBegin ) );
+        else
+            separatorBuilder.appendFormat( ",%#", lead );
+        const string      separator( separatorBuilder.view() );
         const string_view childIndent = Internal::getIndentAfterLastBreak( lead );
         const bool        bObject     = value._type == JSONType::Object;
         const string_view colon       = bObject ? Internal::slice( text, first._keyEnd, first._valueBegin ) : string_view{};

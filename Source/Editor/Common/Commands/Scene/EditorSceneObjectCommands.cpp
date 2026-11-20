@@ -369,7 +369,9 @@ namespace sw::editor
                 const TypeInfo* pType = editor::getSubsystem<TypeRegistry>().findType( hashed_string( listArgument[0] ) );
                 if ( pType == nullptr )
                 {
-                    outReply = "unknown type '" + listArgument[0] + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "unknown type '%#'", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 vector<GameObject*> listObject;

@@ -3,7 +3,10 @@
 #include "Editor/Panels/ProjectSettings/ProjectSettingsTableView.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -27,7 +30,14 @@ namespace sw::editor
             static constexpr uint32 kMinLines          = 2;
             static constexpr uint32 kMaxLines          = 6;
 
-            static string makeChildPath( const string& path, const string& part ) { return path.empty() ? part : string( path + "." + part ); }
+            static string makeChildPath( const string& path, const string& part )
+            {
+                if ( path.empty() )
+                    return part;
+                StringBuilder<constant::buffer::kMax256> pathBuilder;
+                pathBuilder.appendFormat( "%#.%#", path, part );
+                return string( pathBuilder.view() );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -136,10 +146,15 @@ namespace sw::editor
         }
         for ( size_t index = 0; index < value._listChild.size(); ++index )
         {
-            const uint32                   child      = value._listChild[index];
-            const ProjectSettingsJSONNode& childValue = document.getNode( child );
-            const string                   childPart  = value._type == JSONType::Array ? to_string( static_cast<uint64>( index ) ) : childValue._key;
-            const string                   childLabel = value._type == JSONType::Array ? string( "[" + childPart + "]" ) : childPart;
+            const uint32                            child      = value._listChild[index];
+            const ProjectSettingsJSONNode&          childValue = document.getNode( child );
+            const string                            childPart  = value._type == JSONType::Array ? to_string( static_cast<uint64>( index ) ) : childValue._key;
+            StringBuilder<constant::buffer::kMax64> labelBuilder;
+            if ( value._type == JSONType::Array )
+                labelBuilder.appendFormat( "[%#]", childPart );
+            else
+                labelBuilder.append( childPart );
+            const string childLabel( labelBuilder.view() );
             drawNode( document, child, childLabel, Internal::makeChildPath( path, childPart ), node, index );
         }
         ImGui::TreePop();
@@ -148,9 +163,10 @@ namespace sw::editor
 
     void ProjectSettingsTableView::drawLeaf( ProjectSettingsJSONDocument& document, uint32 node, const string& path )
     {
-        using Internal                       = ProjectSettingsTableViewInternal;
-        const ProjectSettingsJSONNode& value = document.getNode( node );
-        const string                   mark  = "projectsettings.table." + path;
+        using Internal                                = ProjectSettingsTableViewInternal;
+        const ProjectSettingsJSONNode&          value = document.getNode( node );
+        fixed_string<constant::buffer::kMax512> mark;
+        formatstring( mark.data(), mark.capacity(), "projectsettings.table.%#", path );
         switch ( value._type )
         {
             case JSONType::String:
@@ -184,7 +200,11 @@ namespace sw::editor
                         if ( document.setLeafText( node, _draftText ) )
                             _bEdited = 1;
                         else
-                            _status = "'" + _draftText + "' is not a number - " + path + " keeps " + value._text;
+                        {
+                            StringBuilder<constant::buffer::kMax512> statusBuilder;
+                            statusBuilder.appendFormat( "'%#' is not a number - %# keeps %#", _draftText, path, value._text );
+                            _status = string( statusBuilder.view() );
+                        }
                     }
                     _draftNode = kNoNode;
                 }
@@ -234,7 +254,9 @@ namespace sw::editor
             case PendingEdit::AddMember:
                 if ( document.addObjectMember( _pendingNode, _pendingKey ) )
                     return true;
-                _status = "'" + _pendingKey + "' is already a key here";
+                StringBuilder<constant::buffer::kMax512> statusBuilder;
+                statusBuilder.appendFormat( "'%#' is already a key here", _pendingKey );
+                _status = string( statusBuilder.view() );
                 return false;
             case PendingEdit::Remove:
                 _draftNode = kNoNode; // 뺀 칸의 초안을 남기지 않는다
