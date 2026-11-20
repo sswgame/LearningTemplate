@@ -108,6 +108,11 @@ namespace sw
         const string& getAIControllerPrefab() const { return _aiControllerPrefab.path(); }
         /** @brief 이 폰의 의도를 내는 네트워크 연결입니다. 0 이면 로컬이며, 빙의를 따라갑니다. 탈것은 운전석 조종자의 연결입니다. */
         uint32 getInputPeer() const { return _inputPeer; }
+        /**
+         * @brief 이 폰의 의도를 내는 네트워크 연결 id 입니다(서버에서 이 폰을 가진 연결 — 언리얼 `APawn::GetNetConnection` 자리). 로컬이거나 쥔 조종자가 없으면 없음입니다.
+         * @details 입력 피어는 연결 id + 1 이다(`ControllerComponent::setInputConnection`). 해석은 여기 한 곳이다.
+         */
+        optional<int32> findInputConnection() const { return _inputPeer != 0 ? optional<int32>{ static_cast<int32>( _inputPeer - 1u ) } : optional<int32>{}; }
 
     private:
         friend class ControlSystem;

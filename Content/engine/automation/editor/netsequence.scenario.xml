@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d9b5e92abaa741bda3122cc8b05417b9"?>
+<!--
+  컷씬 재생 복제(GF_NetSequence) — 한 프로세스 재생(서버 월드 0 · 클라이언트 월드 1 · 2, 뒤에 늦게 붙는 클라이언트 월드 3)에서 값으로 본다. 그림은 판정하지 않는다.
+  본보기 게임 `Sample: cutscene`(GF_EditorPlugin_NetSequence)의 서버가 클라이언트 둘이 붙은 뒤 Pawn1 으로 두 트리거(EveryoneTrigger 전원 · PlayerTrigger 그 플레이어만)를 열고,
+  PlayerTrigger 재생이 끝나면 Pawn2 로 다시 연다. 판정은 서버만 한다(클라이언트 월드의 트리거는 틀지 않는다).
+  ① 전원 재생은 세 월드가 모두 틀고, 진행 플래그는 서버의 판 상태에 선다.
+  ② 그 플레이어만 재생은 Pawn1 을 가진 클라이언트 1 만 틀고, 진행은 플레이어 1 의 상태에만 선다.
+  ③ 늦은 참가: 클라이언트 3 이 붙으면(netsim.addclient) 아직 도는 전원 재생을 서버의 지금 프레임부터 튼다(처음이 아니다). 그 플레이어만 재생은 오지 않는다.
+  ④ Pawn2 차례: 클라이언트 2 만 틀고 플레이어 2 의 상태에 선다 — 플레이어 1 은 따로 남는다.
+  값은 감시 값 Editor.NetSimValue(target = 월드, key = SequenceNetSimGame 의 값 이름)다. 건너뛰기 요청의 소유 연결 검증은 단위 테스트(SequenceNetSimTest)가 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/netsequence.scenario.xml -unattended
+-->
+<Scenario name="editor.netsequence" requiresModule="GF_EditorPlugin_NetSequence" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus multiplayer"/>
+	<EditorWaitStable/>
+	<EditorClick mark="multiplayer.tab.inprocess" state="Down"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
+	<EditorClick mark="multiplayer.tab.inprocess" state="Up"/>
+	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
+	<DevCommand line="netsim.start 2 Sample: cutscene"/>
+	<WaitUntil watch="Editor.NetSimRunning" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.NetSimWorldCount" equals="3"/>
+	<!-- ① 전원 재생 — 세 월드가 틀고 진행은 서버의 판 상태에 -->
+	<WaitUntil watch="Editor.NetSimValue" target="0" key="EveryonePlaying" equals="1" timeoutFrames="900"/>
+	<WaitUntil watch="Editor.NetSimValue" target="1" key="EveryonePlaying" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.NetSimValue" target="2" key="EveryonePlaying" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.NetSimValue" target="0" key="EveryoneSeen" equals="1"/>
+	<!-- ② 그 플레이어만 재생 — 클라이언트 1 만 -->
+	<WaitUntil watch="Editor.NetSimValue" target="1" key="PlayerPlaying" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.NetSimValue" target="2" key="PlayerPlaying" equals="0"/>
+	<Expect watch="Editor.NetSimValue" target="2" key="PlayerStarts" equals="0"/>
+	<Expect watch="Editor.NetSimValue" target="0" key="PlayerSeen1" equals="1"/>
+	<Expect watch="Editor.NetSimValue" target="0" key="PlayerSeen2" equals="0"/>
+	<!-- ③ 늦은 참가 — 아직 도는 전원 재생을 서버의 지금 프레임부터 -->
+	<DevCommand line="netsim.addclient"/>
+	<WaitUntil watch="Editor.NetSimWorldCount" equals="4" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.NetSimValue" target="3" key="EveryonePlaying" equals="1" timeoutFrames="600"/>
+	<Expect watch="Editor.NetSimValue" target="3" key="EveryoneFrame" atLeast="10"/>
+	<Expect watch="Editor.NetSimValue" target="3" key="PlayerStarts" equals="0"/>
+	<!-- ④ Pawn2 차례 — 클라이언트 2 만 틀고 플레이어 2 의 상태에 -->
+	<WaitUntil watch="Editor.NetSimValue" target="2" key="PlayerPlaying" equals="1" timeoutFrames="600"/>
+	<Expect watch="Editor.NetSimValue" target="1" key="PlayerPlaying" equals="0"/>
+	<Expect watch="Editor.NetSimValue" target="1" key="PlayerStarts" equals="1"/>
+	<Expect watch="Editor.NetSimValue" target="3" key="PlayerStarts" equals="0"/>
+	<Expect watch="Editor.NetSimValue" target="0" key="PlayerSeen2" equals="1"/>
+	<Expect watch="Editor.NetSimValue" target="0" key="PlayerSeen1" equals="1"/>
+	<!-- 끝: 다음 시나리오에 세션을 남기지 않는다 -->
+	<EditorClick mark="multiplayer.inprocess.stop" state="Down"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
+	<EditorClick mark="multiplayer.inprocess.stop" state="Up"/>
+	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
+	<Pass/>
+</Scenario>

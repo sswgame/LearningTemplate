@@ -53,7 +53,8 @@ namespace sw
             _spawnWatermarkCurrent  = manager.getObjectIDAllocator().peekNextObjectID();
             _spawnWatermarkFrame    = manager.getUpdateCount();
         }
-        const bool bNothingToMeasure = _radius <= 0.0f || ( _bOnce && _fireCount > 0 );
+        const bool bSpentHere        = _bOnce && _progressFlag.empty() && _fireCount > 0; // 플래그로 적는 볼륨은 활성자마다 다를 수 있어(플레이어별 기록) 계속 잰다
+        const bool bNothingToMeasure = _radius <= 0.0f || bSpentHere;
         if ( bNothingToMeasure )
             return;
         const GameObject*     pOwner     = getOwner();
@@ -112,17 +113,18 @@ namespace sw
     {
         if ( _fireCount > 0 )
             return true;
-        const GameFlags* pFlags = findProgressFlags();
+        const GameFlags* pFlags = _progressFlag.empty() ? nullptr : findProgressFlags( nullptr );
         return pFlags != nullptr && pFlags->hasFlag( _progressFlag );
     }
 
     bool ActivatorVolumeComponent::activate( const GameObject* pActivator )
     {
-        if ( pActivator == nullptr || ( _bOnce && _fireCount > 0 ) )
+        // 진행 플래그가 없으면 한 번은 이 볼륨의 발동 수로, 있으면 그 플래그로 정한다(플레이어별 기록이면 활성자마다 따로).
+        if ( pActivator == nullptr || ( _bOnce && _progressFlag.empty() && _fireCount > 0 ) || hasActivationAuthority() == false )
             return false;
         if ( _activatorTag.isValid() && pActivator->hasTag( _activatorTag ) == false )
             return false;
-        GameFlags* pFlags = findProgressFlags();
+        GameFlags* pFlags = _progressFlag.empty() ? nullptr : findProgressFlags( pActivator );
         if ( _progressFlag.empty() == false && pFlags == nullptr )
             return false; // 오류는 찾기가 남겼다 — 진행을 적을 곳이 없으면 일하지 않는다(볼륨의 발동 수로 대신하지 않는다)
         if ( _bOnce && pFlags != nullptr && pFlags->hasFlag( _progressFlag ) )
@@ -158,10 +160,9 @@ namespace sw
         return bVolumeAppeared || bActivatorNew;
     }
 
-    GameFlags* ActivatorVolumeComponent::findProgressFlags() const
+    GameFlags* ActivatorVolumeComponent::findProgressFlags( const GameObject* pActivator ) const
     {
-        if ( _progressFlag.empty() )
-            return nullptr;
+        (void)pActivator; // 바탕은 세션 기록이다 — 플레이어별 기록은 파생이 고른다(`SequenceTriggerComponent::_audience`)
         const GameObject* pOwner = getOwner();
         GameFlags*        pFlags = GameFlagsOwnerComponent::findFirstOpen( pOwner != nullptr ? pOwner->getManager() : nullptr ); // 감시 값 `Session.Flag` 와 같은 판 상태
         if ( pFlags == nullptr )

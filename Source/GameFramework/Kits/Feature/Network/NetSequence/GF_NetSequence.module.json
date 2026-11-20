@@ -1,0 +1,20 @@
+{
+    "_name": "GF_NetSequence",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "컷씬 재생 네트워킹 — 서버의 시퀀스 트리거가 튼 재생을 대상(그 플레이어만 · 전원)대로 신뢰 순서로 보내고, 늦은 참가에는 지금 프레임부터, 끝 · 건너뛰기에 끝을. 클라이언트의 건너뛰기 요청은 서버가 소유 연결로 검증한다",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

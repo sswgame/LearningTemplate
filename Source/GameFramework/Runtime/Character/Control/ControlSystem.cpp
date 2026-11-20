@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
+#include "Engine/Reflection/ReflectionCast.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
@@ -102,6 +103,12 @@ namespace sw
         const GameObject*          pObject     = manager.resolveGameObject( controllerObject );
         const ControllerComponent* pController = pObject != nullptr ? manager.resolveComponent( pawn.getController() ) : nullptr;
         return pController != nullptr && pController->getOwner() == pObject;
+    }
+
+    bool ControlSystem::isLocallyControlled( const GameObjectManager& manager, const PawnComponent& pawn )
+    {
+        const ControllerComponent* pController = manager.resolveComponent( pawn.getController() );
+        return pController != nullptr && pawn.getInputPeer() == 0 && isA<PlayerControllerComponent>( pController );
     }
 
     bool ControlSystem::returnPawnToPlayer( GameObjectManager& manager, PawnComponent& pawn, GameObjectHandle autoPlayObject )

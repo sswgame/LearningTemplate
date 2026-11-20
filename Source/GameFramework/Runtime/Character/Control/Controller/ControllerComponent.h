@@ -71,6 +71,12 @@ namespace sw
         uint32 getInputPeer() const { return _inputPeer; }
         /** @brief 연결을 바꿉니다. 원격 조종자에 씁니다. 쥔 폰이 있으면 그 폰의 연결도 바뀝니다. */
         void setInputPeer( uint32 inputPeer );
+        /**
+         * @brief 서버에서 이 조종자의 의도가 연결 @p connectionID(`INetPeers` 의 연결 id, 0 부터)에서 온다고 정합니다 — 입력 피어는 연결 id + 1 이다(0 = 로컬).
+         * @details 접속마다 원격 조종자를 세우는 쪽(언리얼 서버가 `PlayerController` 를 세워 `NetConnection` 을 주는 자리)이 부른다. 서버가 "이 폰은 누구 것인가" 를
+         *          묻는 정본 길(`PawnComponent::findInputConnection`)의 원천이다. 음수 id 는 오류를 남기고 거절한다.
+         */
+        void setInputConnection( int32 connectionID );
 
         float32 getControlYaw() const { return _controlYaw; }
         float32 getControlPitch() const { return _controlPitch; }

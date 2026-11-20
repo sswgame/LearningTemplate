@@ -58,6 +58,12 @@ namespace sw
         /** @brief @p pawn 을 지금 @p controllerObject 위의 조종자가 쥐고 있으면 true 입니다. 디렉터가 자동 플레이 AI 가 폰을 가졌는지 묻는다. */
         static bool isPawnControlledBy( const GameObjectManager& manager, const PawnComponent& pawn, GameObjectHandle controllerObject );
         /**
+         * @brief @p pawn 을 이 월드의 로컬 플레이어가 조종하면 true 입니다 — 쥔 조종자가 플레이어 조종자이고 입력 피어가 로컬(0)이다.
+         * @details 언리얼 `APawn::IsLocallyControlled`(`APlayerController::IsLocalController`), Godot `is_multiplayer_authority` 자리의 정본 창구다. 클라이언트 월드의 복제 폰 ·
+         *          서버의 원격 조종 폰은 거짓이고, 혼자 하는 게임의 플레이어 폰은 참이다. 서버에서 "누구 것인가" 는 `PawnComponent::findInputConnection` 이다.
+         */
+        static bool isLocallyControlled( const GameObjectManager& manager, const PawnComponent& pawn );
+        /**
          * @brief 자동 플레이를 끌 때 폰을 플레이어 0 의 조종자에게 돌려줍니다. 폰이 빈 채이거나 @p autoPlayObject 의 조종자가 쥐었을 때만 옮기며 그때 true 입니다.
          * @details 다른 조종자(컷신 등)가 쥔 폰은 그대로 둔다. 게임 스레드의 틱 밖에서 부른다(조종자를 만들 수 있다). 언리얼 GameMode 의 `SwapPlayerControllers` 자리 —
          *          디렉터 넷이 같은 되돌리기를 저마다 적던 것을 한 곳으로 모았다.

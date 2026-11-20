@@ -58,7 +58,7 @@ namespace sw
 
         /** @brief 활성자가 들어온 것으로 칩니다(겹침 · 거리 판정 · 테스트). 한 번만 하는 볼륨이 이미 했거나 태그가 맞지 않으면 false 이고, 일을 했으면 true 입니다. */
         bool activate( const GameObject* pActivator );
-        /** @brief 이 볼륨이 일을 했거나 진행 플래그가 서 있으면 true 입니다(게임 스레드 — 판 상태를 읽는다). */
+        /** @brief 이 볼륨이 일을 했거나 진행 플래그가 서 있으면 true 입니다(게임 스레드 — 판 상태를 읽는다). 플레이어별 기록은 활성자 없이 묻지 않으므로 발동 수만 본다. */
         bool hasFired() const;
         /** @brief 거리 판정의 활성자와 반지름을 정합니다. 코드로 만든 볼륨 · 테스트가 씁니다. 씬에 놓은 볼륨은 PROPERTY 가 채웁니다. */
         void setProximity( GameObjectHandle activator, float32 radius );
@@ -75,6 +75,18 @@ namespace sw
         [[nodiscard]] virtual bool onVolumeActivated( const GameObject& activator ) = 0;
         /** @brief 태그를 정하고 발동 기록을 지웁니다. 파생의 `configure` 가 부릅니다. */
         void resetActivation( TagID activatorTag );
+        /**
+         * @brief 진행 플래그(`_progressFlag` 가 있을 때만 부른다)를 적을 곳입니다. 바탕은 판 상태(세션)이고, 플레이어별 기록을 고르는 파생이 덮는다.
+         * @param pActivator 들어온 활성자입니다. nullptr 이면 활성자 없이 묻는 것(`hasFired`)이다 — 플레이어별 기록은 이때 nullptr 을 돌려준다.
+         * @return 적을 곳이 없으면 오류를 남기고 nullptr 입니다(볼륨은 일하지 않는다).
+         */
+        [[nodiscard]] virtual GameFlags* findProgressFlags( const GameObject* pActivator ) const;
+        /**
+         * @brief 이 월드가 이 볼륨의 진입을 판정하는지입니다(언리얼 `HasAuthority`). 거짓이면 `activate` 가 일하지 않고 진행 플래그도 찾지 않는다(발동 아님, 로그 없음).
+         * @details 바탕은 늘 참이다(튜토리얼 힌트 · 자동 저장은 월드마다 제 일을 한다). 서버만 판정하는 볼륨(시퀀스 트리거)이 덮는다.
+         */
+        [[nodiscard]] virtual bool hasActivationAuthority() const { return true; }
+        const hashed_string&       getProgressFlag() const { return _progressFlag; }
 
     private:
         /** @brief 나타남 판정의 프레임 창입니다. 안에서 생긴 겹침의 진입은 다음 물리 스텝에 오므로 그 사이를 덮는다. */
@@ -86,8 +98,6 @@ namespace sw
          *          shortcut: 물리 스텝이 창(`kSpawnWindowFrames`)보다 늦게 오면(아주 높은 프레임률 · 낮은 물리 주기) 걸어 들어온 것으로 센다 — 그런 구성이 생기면 물리가 겹침에 "막 더한 바디" 표시를 싣는다.
          */
         bool isSpawnEntry( const GameObject& activator ) const;
-        /** @brief 진행 플래그를 담는 판 상태입니다. 플래그가 없으면 nullptr 이고, 플래그가 있는데 열린 판 상태가 없으면 오류를 남기고 nullptr 입니다. */
-        GameFlags* findProgressFlags() const;
         /** @brief 볼륨이 나타났다(시작 · 다시 켜짐) — 나타남 창을 다시 연다. */
         void markAppeared();
 

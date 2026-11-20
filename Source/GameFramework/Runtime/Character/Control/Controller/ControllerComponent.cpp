@@ -2,6 +2,8 @@
 
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
 
+#include "Core/Log/Logger.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -127,6 +129,17 @@ namespace sw
         PawnComponent* pPawn = findPawn();
         if ( pPawn != nullptr )
             pPawn->_inputPeer = inputPeer;
+    }
+
+    void ControllerComponent::setInputConnection( int32 connectionID )
+    {
+        if ( connectionID < 0 )
+        {
+            SW_LOG_ERROR_ID( "Controller.InputConnectionNegative", "Controller '%#': connection id %# is not a connection - the input peer stays as it was", getOwner() != nullptr ? getOwner()->getName().c_str() : "?",
+                             connectionID );
+            return;
+        }
+        setInputPeer( static_cast<uint32>( connectionID ) + 1u );
     }
 
     void ControllerComponent::setControlRotation( float32 yaw, float32 pitch )

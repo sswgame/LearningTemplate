@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -66,6 +67,11 @@ namespace sw
 
         FUNCTION( Category = "Playback", DisplayName = "Play", CallInEditor )
         void play();
+        /**
+         * @brief @p frame(재생 범위 안으로 자른다)으로 점프해 틉니다 — 컷씬 옵션 · 되돌릴 상태는 `play` 와 같다. 그 앞 이벤트는 쏘지 않는다(점프).
+         * @details 늦게 들어온 클라이언트가 서버의 지금 프레임부터 잇는다(언리얼 `ULevelSequencePlayer` 복제의 `PlayFrom`/`SetPlaybackPosition` 자리).
+         */
+        void playFromFrame( int32 frame );
         FUNCTION( Category = "Playback", DisplayName = "Stop", CallInEditor )
         void stop();
         FUNCTION( Category = "Playback", DisplayName = "Pause", CallInEditor )
@@ -151,6 +157,8 @@ namespace sw
         float32 getFramesPerSecond() const { return _framesPerSecond; }
 
     private:
+        /** @brief `play` · `playFromFrame` 의 공통 시작입니다. @p startFrame 이 없으면 진행 방향의 처음에서 튼다. */
+        void startPlayback( optional<int32> startFrame );
         void applyTimeline( const SequencePlaybackStep& step );
         /** @brief 재생을 끝냅니다(클래스 머리말의 재생 계약). @p kind 는 기록에 남길 끝의 종류입니다. 쥔 것이 없으면 아무것도 하지 않는다. */
         void endPlayback( SequenceHistoryKind kind );
