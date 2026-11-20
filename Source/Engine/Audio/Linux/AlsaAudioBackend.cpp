@@ -74,6 +74,7 @@ namespace sw
         void*                                                            _pLibrary;            /**< `libasound.so.2` 핸들입니다. */
         void*                                                            _pPCM;                /**< 열린 재생 장치입니다. */
         uint32                                                           _channelCount;        /**< 스트림의 채널 수입니다. */
+        atomic<uint64>                                                   _underrunCount;       /**< 쓰기 실패를 복원한 수입니다(스트림 스레드가 쓰고 게임 스레드가 읽는다). */
 
         AlsaAudioBackendImpl()
             : _pfnOpen{ nullptr }
@@ -93,6 +94,7 @@ namespace sw
             , _pLibrary{ nullptr }
             , _pPCM{ nullptr }
             , _channelCount{ 0 }
+            , _underrunCount{ 0 }
         {
         }
 
@@ -216,6 +218,7 @@ namespace sw
                         _service.notifyOutputLost();
                         return;
                     }
+                    _impl->_underrunCount.fetch_add( 1, std::memory_order_relaxed );
                     continue;
                 }
                 written += static_cast<uint32>( result );
@@ -257,6 +260,11 @@ namespace sw
             ModuleLibraryUtil::unloadDynamicLibrary( _impl->_pLibrary );
             _impl->_pLibrary = nullptr;
         }
+    }
+
+    uint64 AlsaAudioBackend::getUnderrunCount() const
+    {
+        return _impl->_underrunCount.load( std::memory_order_relaxed );
     }
 
     SW_REGISTER_AUDIO_BACKEND( AlsaAudioBackend ); // 리눅스 클라이언트의 장치 백엔드(`AudioService::create` 가 등록표에서 고른다)

@@ -488,5 +488,14 @@ namespace sw
         }
     }
 
+    uint64 XAudio2AudioBackend::getUnderrunCount() const
+    {
+        if ( _impl->_pXAudio == nullptr )
+            return 0;
+        XAUDIO2_PERFORMANCE_DATA performance{};
+        _impl->_pXAudio->GetPerformanceData( &performance );
+        return performance.GlitchesSinceEngineStarted;
+    }
+
     SW_REGISTER_AUDIO_BACKEND( XAudio2AudioBackend ); // Windows 클라이언트의 장치 백엔드(`AudioService::create` 가 등록표에서 고른다)
 } // namespace sw

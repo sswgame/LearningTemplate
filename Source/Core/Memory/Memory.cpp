@@ -2,6 +2,7 @@
 
 #include "Core/Memory/Memory.h"
 
+#include "Core/Concurrency/RealtimeSection.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryBackend.h"
@@ -64,6 +65,7 @@ namespace sw
                 pHeader->_pRawPtr     = pRawPtr;
                 pHeader->_trackerID   = 0;
                 pHeader->_bObserved   = SW_FALSE;
+                RealtimeSection::recordAllocation(); // 실시간 구간(오디오 장치 콜백)의 할당을 센다 — 검사 구성의 할당은 모두 여기를 지난다
 
                 IAllocationTracker* pTracker = s_pAllocationTracker.load( std::memory_order_acquire );
                 if ( pTracker != nullptr )
@@ -105,6 +107,7 @@ namespace sw
                 AllocHeader* pHeader = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pUserPtr ) - sizeof( AllocHeader ) );
                 if ( pHeader->_magic != kAllocMagic )
                     return nullptr;
+                RealtimeSection::recordFree();
 
                 // 센 블록을 센 기록기에만 알린다. 기록기가 떨어졌거나 다른 기록기로 바뀌었으면 알릴 곳이 없다.
                 if ( pHeader->_trackerID != 0 )

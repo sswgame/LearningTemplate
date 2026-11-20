@@ -104,6 +104,8 @@ namespace sw
         bool isInitialized() const { return _bInitialized; }
         /** @brief 출력 장치가 엔진을 당기고 있는지입니다. false 면 `update` 가 렌더합니다. */
         bool isOutputOpen() const { return _bOutputOpen; }
+        /** @brief 지금 스트림의 언더런 수입니다(`IAudioOutputDevice::getUnderrunCount`). 출력이 닫혀 있으면 0 입니다. */
+        uint64 getOutputUnderrunCount() const { return _bOutputOpen && _pOutputDevice != nullptr ? _pOutputDevice->getUnderrunCount() : 0u; }
         /**
          * @brief (아무 스레드 — 장치 콜백 · 스트림 스레드) 장치 출력이 죽었다고 알립니다. 다음 `update` 가 스트림을 닫고 오프라인 렌더로 넘긴 뒤 백오프 간격으로 다시 엽니다.
          * @details 예전에는 백엔드마다 유실을 따로 다뤘다 — ALSA 는 복원에 지면 쉬지 않고 다시 써 코어 하나를 쓰고 오디오 시계가 실시간보다 빨리 흘렀고, XAudio2 는 유실을 몰라

@@ -98,6 +98,47 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `Audio.OutputUnderruns` 입니다. 지금 스트림이 연 뒤 장치가 알린 언더런 수입니다(출력이 닫혀 있으면 0). */
+            [[nodiscard]] static bool readOutputUnderruns( const GameObjectManager* pManager, float64& outValue )
+            {
+                const AudioService* pService = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioService() : nullptr;
+                if ( pService == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pService->getOutputUnderrunCount() );
+                return true;
+            }
+
+            /** @brief 감시 값 `Audio.RealtimeAllocations` 입니다. 렌더 구간(장치 콜백)의 할당 + 해제 수입니다(검사 구성만 센다). */
+            [[nodiscard]] static bool readRealtimeAllocations( const GameObjectManager* pManager, float64& outValue )
+            {
+                AudioService* pService = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioService() : nullptr;
+                if ( pService == nullptr )
+                    return false;
+                const RealtimeViolationCounters& counters = pService->getEngine().getRealtimeViolations();
+                outValue                                  = static_cast<float64>( counters._allocationCount.load( std::memory_order_relaxed ) + counters._freeCount.load( std::memory_order_relaxed ) );
+                return true;
+            }
+
+            /** @brief 감시 값 `Audio.RealtimeLocks` 입니다. 렌더 구간의 잠금 획득 수입니다(검사 구성만 센다). */
+            [[nodiscard]] static bool readRealtimeLocks( const GameObjectManager* pManager, float64& outValue )
+            {
+                AudioService* pService = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioService() : nullptr;
+                if ( pService == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pService->getEngine().getRealtimeViolations()._lockCount.load( std::memory_order_relaxed ) );
+                return true;
+            }
+
+            /** @brief 감시 값 `Audio.RetireOverflows` 입니다. 반납 큐가 차서 오디오 스레드가 직접 놓은 명령 수입니다. */
+            [[nodiscard]] static bool readRetireOverflows( const GameObjectManager* pManager, float64& outValue )
+            {
+                const AudioService* pService = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioService() : nullptr;
+                if ( pService == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pService->getEngine().getRetireOverflowCount() );
+                return true;
+            }
+
             /** @brief `Audio.InstanceCount` 의 활동 수 — 오디오 스레드가 지금까지 렌더한 프레임 수입니다(게시가 멈추면 값도 멈춘다). */
             [[nodiscard]] static uint64 readAudioActivity( const GameObjectManager* pManager )
             {
@@ -123,6 +164,11 @@ namespace sw
     // 오디오 스레드가 명령을 옮겨야 값이 바뀐다 — 벽시계 시한으로 기다린다.
     SW_AUTOMATION_WALL_WATCH( audioInstanceCount, "Audio.InstanceCount", "Sound event instances alive in the audio engine", &SceneAudioInternal::readInstanceCount, &SceneAudioInternal::readAudioActivity );
     // 디코드 결과는 워커가 넣는다 — 같은 까닭으로 벽시계 시한이다.
+    // 실시간 스레드의 최악 값 — 허브 부하 시나리오에서 0 이어야 한다(문턱: 할당 0 · 잠금 0 · 언더런 0, DesignBacklog Engine 발전 방향 ①).
+    SW_AUTOMATION_WATCH( audioOutputUnderruns, "Audio.OutputUnderruns", "Underruns (xruns, glitches) the output device reported since the stream opened", &SceneAudioInternal::readOutputUnderruns );
+    SW_AUTOMATION_WATCH( audioRealtimeAllocations, "Audio.RealtimeAllocations", "Heap allocations and frees inside the audio render callback (checked builds)", &SceneAudioInternal::readRealtimeAllocations );
+    SW_AUTOMATION_WATCH( audioRealtimeLocks, "Audio.RealtimeLocks", "Lock acquisitions inside the audio render callback (checked builds)", &SceneAudioInternal::readRealtimeLocks );
+    SW_AUTOMATION_WATCH( audioRetireOverflows, "Audio.RetireOverflows", "Commands whose shared objects the audio thread freed itself because the retire queue was full", &SceneAudioInternal::readRetireOverflows );
     SW_AUTOMATION_WALL_WATCH( audioClipCacheBytes, "Audio.ClipCacheBytes", "Decoded bytes held by the audio clip cache", &SceneAudioInternal::readClipCacheBytes,
                               &SceneAudioInternal::readClipCacheActivity );
 } // namespace sw

@@ -38,6 +38,8 @@ namespace sw
         void stopOutput() override;
         /** @brief 스트리밍 보이스와 장치를 놓습니다. */
         void closeDevice() override;
+        /** @brief XAudio2 의 글리치 수(`XAUDIO2_PERFORMANCE_DATA::GlitchesSinceEngineStarted`)입니다. 장치가 없으면 0 입니다. */
+        uint64 getUnderrunCount() const override;
 
     private:
         AudioService&                       _service; ///< 이 장치가 당기는 서비스(엔진 · 유실 알림) — 서비스가 장치를 들고 먼저 내린다

@@ -137,5 +137,13 @@ namespace sw
         stopOutput();
     }
 
+    uint64 AAudioAudioBackend::getUnderrunCount() const
+    {
+        if ( _impl->_pStream == nullptr )
+            return 0;
+        const int32_t underrunCount = AAudioStream_getXRunCount( _impl->_pStream );
+        return underrunCount > 0 ? static_cast<uint64>( underrunCount ) : 0u; // 음수는 오류 코드다
+    }
+
     SW_REGISTER_AUDIO_BACKEND( AAudioAudioBackend ); // Android 클라이언트의 장치 백엔드(`AudioService::create` 가 등록표에서 고른다)
 } // namespace sw

@@ -36,6 +36,8 @@ namespace sw
         void stopOutput() override;
         /** @brief 장치를 놓습니다. */
         void closeDevice() override;
+        /** @brief 스트림의 xrun 수(`AAudioStream_getXRunCount`)입니다. 스트림이 없으면 0 입니다. */
+        uint64 getUnderrunCount() const override;
 
     private:
         /** @brief 장치 콜백 본문입니다 — @p frameCount 프레임을 @p pOutput 에 렌더합니다. */

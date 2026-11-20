@@ -41,6 +41,11 @@ namespace sw
         virtual void stopOutput() = 0;
         /** @brief 장치를 닫습니다(`stopOutput` 뒤에 부릅니다). */
         virtual void closeDevice() = 0;
+        /**
+         * @brief 지금 스트림이 연 뒤로 장치가 알린 언더런(xrun · 글리치) 수입니다. 게임 스레드가 아무 때나 읽습니다(감시 값 `Audio.OutputUnderruns`).
+         * @details 끊김은 평균이 아니라 최악 값의 문제라 프레임 시간에 드러나지 않는다 — 장치의 셈을 그대로 낸다(XAudio2 글리치 · AAudio xrun · ALSA 복원 수).
+         */
+        virtual uint64 getUnderrunCount() const = 0;
 
     protected:
         IAudioOutputDevice()                                       = default;

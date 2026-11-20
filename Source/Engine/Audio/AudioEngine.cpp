@@ -33,8 +33,16 @@ namespace sw
 
     AudioEngine::AudioEngine()
         : _clipStore{}
-        , _commandQueue{}
-        , _listApplyingCommand{}
+        , _gameThread{}
+        , _gameThreadID{}
+        , _stagingMutex{}
+        , _listStagedCommand{}
+        , _listPendingCommand{}
+        , _pCommandQueue{ make_unique<SpscQueue<Command, kCommandQueueCapacity>>() }
+        , _pRetireQueue{ make_unique<SpscQueue<RetiredObjects, kRetireQueueCapacity>>() }
+        , _applyingCommand{}
+        , _realtimeViolations{}
+        , _retireOverflowCount{ 0 }
         , _mapGameLibrary{}
         , _pGameMixerDesc{ nullptr }
         , _libraryMutex{}
@@ -77,6 +85,9 @@ namespace sw
         shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
         if ( pMixer->initialize( mixerDesc, layout ) == false )
             return false;
+        // 초기화를 부른 스레드가 명령 큐의 생산자다(서비스 · 테스트 모두 게임 스레드에서 세운다).
+        _gameThread.bindToCurrentThread();
+        _gameThreadID.store( std::this_thread::get_id(), std::memory_order_release );
         _layout                                        = layout;
         _pMixer                                        = std::move( pMixer );
         shared_ptr<const AudioMixerDef> pGameMixerDesc = make_shared<AudioMixerDef>( mixerDesc );
@@ -100,8 +111,21 @@ namespace sw
         _audioThread.assumeHeld(); // 믹스를 도는 오디오 스레드에서, 또는 그 스레드를 멈춘 뒤(종료) 불린다
         if ( _bInitialized.exchange( false, std::memory_order_acq_rel ) == false )
             return;
-        _commandQueue.clear();
-        _listApplyingCommand.clear();
+        // 쌓인 명령과 반납 객체를 버린다 — 오디오 스레드가 멈춘 뒤라(위 역할) 두 큐의 소비자 · 생산자 쪽을 이 스레드가 함께 맡아도 된다.
+        {
+            ScopedLock<mutex> lock{ _stagingMutex };
+            _listStagedCommand.clear();
+        }
+        _gameThread.assumeHeldByJoinedTask(); // 종료 — 생산자(게임 스레드)가 멈춘 엔진을 내린다
+        _listPendingCommand.clear();
+        while ( _pCommandQueue->pop( _applyingCommand ) )
+        {
+        }
+        _applyingCommand = Command{};
+        RetiredObjects retired;
+        while ( _pRetireQueue->pop( retired ) )
+        {
+        }
         _voicePool.clear();
         _listInstance.clear();
         _snapshotMixer.clearSnapshots();
@@ -141,6 +165,8 @@ namespace sw
         if ( layout == _layout )
             return true;
         // 밀린 명령(옛 레이아웃으로 만든 그래프 교체 포함)을 먼저 적용한다. 장치가 닫혀 있어 오디오 스레드가 없으므로 여기서 불러도 된다.
+        _gameThread.assumeHeld();
+        submitStagedCommands();
         applyCommands();
         shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
         if ( pMixer->initialize( _pMixer->getDesc(), layout ) == false )
@@ -150,16 +176,17 @@ namespace sw
             return false;
         }
         _layout = layout;
-        applyMixer( std::move( pMixer ) );
+        (void)applyMixer( std::move( pMixer ) ); // 장치가 닫혀 있다 — 게임 스레드가 옛 그래프를 바로 놓는다
         _blockOutput.allocate( layout );
         _blockCursor = audio::kBlockFrameCount;
         return true;
     }
 
-    void AudioEngine::applyMixer( shared_ptr<AudioMixer> pMixer )
+    shared_ptr<AudioMixer> AudioEngine::applyMixer( shared_ptr<AudioMixer> pMixer )
     {
         SW_ASSERT( pMixer->getChannelLayout() == _layout );
-        _pMixer = std::move( pMixer );
+        shared_ptr<AudioMixer> pPrevious = std::move( _pMixer );
+        _pMixer                          = std::move( pMixer );
         _snapshotMixer.applyMixer( *_pMixer ); // 버스 사용자 상태 다시 적용, 스냅샷 설명자 다시 찾기
         // 살아 있는 보이스는 같은 이름의 버스로 옮긴다. 새 그래프에 그 버스가 없으면 보이스를 멈춘다(오류는 resolveBusIndex 가 남긴다).
         for ( AudioVoiceSlot& slot : _voicePool )
@@ -178,6 +205,7 @@ namespace sw
             _listInstance.resize( _pMixer->getDesc()._maxVoiceCount );
         }
         rebuildAttenuationTable();
+        return pPrevious;
     }
 
     bool AudioEngine::loadEventLibrary( const hashed_string& libraryName, const AudioEventLibrary& library )
@@ -644,23 +672,95 @@ namespace sw
         return _pMixer->getBusPeak( *busIndex );
     }
 
+    bool AudioEngine::isOnGameThread() const
+    {
+        const std::thread::id owner = _gameThreadID.load( std::memory_order_acquire );
+        return owner == std::thread::id{} || owner == std::this_thread::get_id();
+    }
+
     void AudioEngine::pushCommand( Command&& command )
     {
-        _commandQueue.push( std::move( command ) );
+        {
+            ScopedLock<mutex> lock{ _stagingMutex };
+            _listStagedCommand.push_back( std::move( command ) );
+        }
+        // 게임 스레드는 바로 큐에 넣는다(지연 없음). 워커(병렬 틱)의 요청은 게임 스레드의 다음 요청이나 프레임(`flushCommands`)에 들어간다 — 생산자는 늘 하나다.
+        if ( isOnGameThread() )
+        {
+            _gameThread.assumeHeld();
+            submitStagedCommands();
+        }
     }
 
     AudioPlayingID AudioEngine::pushPlayCommand( Command&& command )
     {
-        // id 는 큐에 넣는 잠금 안에서 매긴다. 큐 순서와 id 순서가 같아야 "아직 처리되지 않은 id" 판정(`isPlaying`)이 맞다.
-        return _commandQueue.pushStamped( std::move( command ), [this]( Command& queued )
-        { return queued._playingID = _nextPlayingID.fetch_add( 1 ); } );
+        // id 는 대기 목록에 넣는 잠금 안에서 매긴다. 대기 목록은 순서 그대로 큐에 들어가므로 큐 순서와 id 순서가 같다 — "아직 처리되지 않은 id" 판정(`isPlaying`)이 맞다.
+        AudioPlayingID playingID = 0;
+        {
+            ScopedLock<mutex> lock{ _stagingMutex };
+            playingID          = _nextPlayingID.fetch_add( 1 );
+            command._playingID = playingID;
+            _listStagedCommand.push_back( std::move( command ) );
+        }
+        if ( isOnGameThread() )
+        {
+            _gameThread.assumeHeld();
+            submitStagedCommands();
+        }
+        return playingID;
+    }
+
+    void AudioEngine::submitStagedCommands()
+    {
+        {
+            ScopedLock<mutex> lock{ _stagingMutex };
+            if ( _listPendingCommand.empty() )
+                _listPendingCommand.swap( _listStagedCommand );
+            else
+            {
+                for ( Command& staged : _listStagedCommand )
+                {
+                    _listPendingCommand.push_back( std::move( staged ) );
+                }
+                _listStagedCommand.clear();
+            }
+        }
+        size_t pushedCount = 0;
+        while ( pushedCount < _listPendingCommand.size() && _pCommandQueue->push( std::move( _listPendingCommand[pushedCount] ) ) )
+        {
+            ++pushedCount;
+        }
+        _listPendingCommand.erase( _listPendingCommand.begin(), _listPendingCommand.begin() + static_cast<ptrdiff_t>( pushedCount ) );
+    }
+
+    void AudioEngine::flushCommands()
+    {
+        _gameThread.assumeHeld();
+        submitStagedCommands();
+        // 오디오 스레드가 돌려보낸 객체를 여기서 놓는다 — 마지막 참조면 소멸자 · 해제가 게임 스레드에서 돈다.
+        RetiredObjects retired;
+        while ( _pRetireQueue->pop( retired ) )
+        {
+            retired = RetiredObjects{};
+        }
+    }
+
+    void AudioEngine::retireCommandObjects( Command& command )
+    {
+        if ( command._pMixer == nullptr && command._pLibrary == nullptr && command._pMusic == nullptr )
+            return;
+        RetiredObjects retired{ std::move( command._pMixer ), std::move( command._pLibrary ), std::move( command._pMusic ) };
+        if ( _pRetireQueue->push( std::move( retired ) ) == false )
+            _retireOverflowCount.fetch_add( 1, std::memory_order_relaxed ); // 큐가 찼다 — 이 스레드가 놓는다(감시 값)
     }
 
     void AudioEngine::render( float32* pOutput, uint32 frameCount )
     {
         if ( pOutput == nullptr )
             return;
-        const uint32 channelCount = AudioChannelLayoutUtil::getChannelCount( _layout );
+        // 장치 콜백 구간 — 검사 구성은 이 안의 할당 · 해제 · 잠금을 센다(`getRealtimeViolations`).
+        const RealtimeSection realtimeSection{ _realtimeViolations };
+        const uint32          channelCount = AudioChannelLayoutUtil::getChannelCount( _layout );
         if ( isInitialized() == false || _pMixer == nullptr )
         {
             Memory::set( pOutput, 0, static_cast<size_t>( frameCount ) * channelCount * sizeof( float32 ) );
@@ -695,12 +795,12 @@ namespace sw
     void AudioEngine::applyCommands()
     {
         _audioThread.assumeHeld(); // 믹스를 도는 오디오 스레드에서, 또는 그 스레드를 멈춘 뒤(종료) 불린다
-        _commandQueue.takeAll( _listApplyingCommand );
-        for ( Command& command : _listApplyingCommand )
+        // 칸 하나로 꺼내 적용한다 — 목록으로 통째로 가져가면 그 목록이 이 스레드에서 자란다(할당).
+        while ( _pCommandQueue->pop( _applyingCommand ) )
         {
-            applyCommand( command );
+            applyCommand( _applyingCommand );
+            retireCommandObjects( _applyingCommand );
         }
-        _listApplyingCommand.clear();
     }
 
     void AudioEngine::applyPlayClip( const Command& command )
@@ -800,7 +900,7 @@ namespace sw
             }
             case CommandKind::SwapMixer:
             {
-                applyMixer( std::move( command._pMixer ) );
+                command._pMixer = applyMixer( std::move( command._pMixer ) ); // 옛 그래프를 명령에 실어 게임 스레드로 돌려보낸다
                 break;
             }
             case CommandKind::SetLibrary:
@@ -1345,12 +1445,21 @@ namespace sw
         return it == _mapParameter.end() ? 0.0f : it->second._value;
     }
 
-    void AudioEngine::applySetLibrary( const Command& command )
+    void AudioEngine::applySetLibrary( Command& command )
     {
-        if ( command._pLibrary == nullptr )
-            _mapLibrary.erase( command._name );
-        else
-            _mapLibrary[command._name] = command._pLibrary;
+        // 갈아 내는 옛 라이브러리는 마지막 참조일 수 있다 — 아래 끝에서 명령에 실어 게임 스레드로 돌려보낸다(`retireCommandObjects`).
+        shared_ptr<const AudioEventLibrary> pPrevious;
+        const LibraryMap::iterator          found = _mapLibrary.find( command._name );
+        if ( found != _mapLibrary.end() )
+        {
+            pPrevious = std::move( found->second );
+            if ( command._pLibrary == nullptr )
+                _mapLibrary.erase( found );
+            else
+                found->second = command._pLibrary;
+        }
+        else if ( command._pLibrary != nullptr )
+            _mapLibrary.emplace( command._name, command._pLibrary );
 
         if ( command._pLibrary != nullptr )
         {
@@ -1372,6 +1481,7 @@ namespace sw
         }
         rebuildEventTable();
         rebuildAttenuationTable();
+        command._pLibrary = std::move( pPrevious ); // 새 라이브러리는 표가 쥔다 — 명령의 사본 대신 옛 것을 돌려보낸다
     }
 
     void AudioEngine::rebuildEventTable()

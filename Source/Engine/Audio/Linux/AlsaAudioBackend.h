@@ -40,6 +40,8 @@ namespace sw
         void stopOutput() override;
         /** @brief 장치를 닫고 라이브러리를 놓습니다. */
         void closeDevice() override;
+        /** @brief 스트림 스레드가 쓰기 실패를 복원한 수(언더런 · 일시정지 복귀)입니다. */
+        uint64 getUnderrunCount() const override;
 
     private:
         /** @brief 스트림 스레드 본문입니다. 멈추라는 표시가 설 때까지 블록을 렌더해 씁니다. */

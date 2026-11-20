@@ -405,6 +405,8 @@ namespace sw
             return;
         if ( _bOutputLost.load( std::memory_order_acquire ) )
             closeLostOutput();
+        // 워커(병렬 틱)가 이번 프레임에 낸 요청을 큐에 넣고, 오디오 스레드가 돌려보낸 객체를 게임 스레드에서 놓는다.
+        _pEngine->flushCommands();
         if ( _bOutputOpen || _bOutputSuspended != 0 )
             return; // 멈춘 동안은 오프라인으로도 렌더하지 않는다 — 게임 시간이 서 있다
         // 장치가 없으면 흐른 시간만큼 바로 렌더한다. 끝남, 박자, 가상 보이스가 장치가 있을 때와 같이 진행한다.
@@ -419,6 +421,7 @@ namespace sw
             if ( bListened )
                 AudioRenderListenerRegistry::notifyRenderedBlock( _listOfflineBlock.data(), audio::kBlockFrameCount, layout );
         }
+        _pEngine->flushCommands(); // 방금 이 스레드가 렌더하며 적용한 명령의 반납 객체도 이 프레임에 놓는다
         retryOpenOutput( deltaSeconds );
     }
 
