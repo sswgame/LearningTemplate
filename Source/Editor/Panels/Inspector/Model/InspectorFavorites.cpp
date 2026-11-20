@@ -77,6 +77,20 @@ namespace sw::editor
         return makeKey( pDeclaring->_name.c_str(), prop._name.c_str() );
     }
 
+    string InspectorFavorites::makeMethodKey( const TypeInfo& type, const FunctionInfo& method )
+    {
+        const TypeInfo* pDeclaring = &type;
+        for ( const TypeInfo* pType : type.getTypeChain() )
+        {
+            if ( pType->findMethod( method._hashName ) != nullptr )
+            {
+                pDeclaring = pType;
+                break;
+            }
+        }
+        return makeKey( pDeclaring->_name.c_str(), method._name );
+    }
+
     bool InspectorFavorites::hasAnyForTypeOrBase( const TypeInfo& type ) const
     {
         for ( const TypeInfo* pType : type.getTypeChain() )
@@ -145,8 +159,8 @@ namespace sw::editor
         return true;
     }
 
-    string InspectorFavorites::getDefaultFilePath()
+    string InspectorFavorites::getFilePath() const
     {
-        return EditorPaths::resolveEditorStateFile( kFileName );
+        return EditorPaths::resolveEditorStateFile( _pFileName );
     }
 } // namespace sw::editor

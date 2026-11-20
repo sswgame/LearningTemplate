@@ -18,6 +18,7 @@ namespace sw
     class Component;
     class GameObject;
     struct PropertyInfo;
+    struct TypeInfo;
 } // namespace sw
 
 namespace sw::editor
@@ -47,6 +48,8 @@ namespace sw::editor
         /** @brief 씬 @p sceneKey 의 오브젝트 @p objectID 입니다. 없거나 지우는 중이면 nullptr 입니다. */
         static GameObject* findObject( uint32 sceneKey, uint64 objectID );
 
+        /** @brief 오브젝트 @p object 에서 이 대상의 인스턴스(지역 id 의 컴포넌트, 0 이면 오브젝트 자신)와 그 타입입니다. 컴포넌트가 없으면 nullptr 입니다. */
+        [[nodiscard]] void* findInstance( GameObject& object, Component*& outComponent, const TypeInfo*& outType ) const;
         /** @brief 오브젝트 @p object 의 이 대상의 프로퍼티 @p propertyPath 에 값 글 @p valueText 를 쓰고 알립니다. 컴포넌트 · 프로퍼티가 없거나 글을 읽지 못하면 false 입니다. */
         [[nodiscard]] bool applyTo( GameObject& object, string_view propertyPath, string_view valueText ) const;
         /** @brief 오브젝트 @p object 의 이 대상의 프로퍼티 @p propertyPath 의 지금 값 글입니다. 컴포넌트 · 프로퍼티가 없으면 false 입니다. */

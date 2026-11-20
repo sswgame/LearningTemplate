@@ -1015,18 +1015,6 @@ namespace sw
         return ( flags & contains ) == contains;
     }
 
-    TaskValue TypeRegistry::invokeMethod( void* pInstance, const hashed_string& classFqn, const hashed_string& methodName, const TaskArgs& args ) const
-    {
-        const TypeInfo* pTypeInfo = findType( classFqn );
-        if ( pTypeInfo != nullptr )
-        {
-            const FunctionInfo* pFunc = pTypeInfo->findMethod( methodName );
-            if ( pFunc != nullptr && pFunc->_invoker.isBound() )
-                return pFunc->_invoker( pInstance, args );
-        }
-        return TaskValue{};
-    }
-
     SW_DEFINE_REGISTRATION_CHAIN( TypeRegistrar::getChain, TypeRegistrar )
 
     TypeRegistrar::TypeRegistrar( void ( *registerFunc )( TypeRegistry& ) )
