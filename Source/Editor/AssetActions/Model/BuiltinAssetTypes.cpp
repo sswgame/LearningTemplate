@@ -56,7 +56,7 @@ namespace sw::editor
             static EditorAssetMatchRule makeRawHeightfieldRule()
             {
                 EditorAssetMatchRule rule = EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, kArrHeightfieldRawExt, SW_COUNT_OF( kArrHeightfieldRawExt ), EditorAssetMatchPriority::Path,
-                                                                            { nullptr, &HeightfieldImporter::importChangedSourceHeightfield, AssetImportThread::Worker } );
+                                                                            { nullptr, &HeightfieldImporter::importChangedSourceHeightfield, AssetImportThread::WorkerParallel } );
                 rule._pfnAcceptPath       = &HeightfieldImporter::isRawHeightfieldPath;
                 return rule;
             }
