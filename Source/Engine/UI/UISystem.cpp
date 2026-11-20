@@ -56,6 +56,9 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
+/** @brief UI 안전 영역 비율입니다(정의와 설명은 `UIScale.cpp`). */
+SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiSafeZone );
+
 // UILayoutDump — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
 namespace sw
 {

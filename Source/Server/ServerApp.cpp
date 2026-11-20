@@ -346,7 +346,6 @@ namespace sw
                 return _adminChannel.start( *_pServerConfig, *_observability.getHealthRegistry(), SW_DELEGATE_LAMBDA( ServerAdminStatusDelegate, [this]()
                 { return ServerAdminStatus{ _tickCount, getServiceConnectionCount(), _bDraining == SW_TRUE }; } ) );
             }
-            case HostServiceID::BackendSwitcher:
             case HostServiceID::UserSettings:
             case HostServiceID::RuntimeUIHooks:
             {
@@ -404,7 +403,6 @@ namespace sw
                 _adminChannel.stop();
                 return;
             }
-            case HostServiceID::BackendSwitcher:
             case HostServiceID::UserSettings:
             case HostServiceID::RuntimeUIHooks:
             {

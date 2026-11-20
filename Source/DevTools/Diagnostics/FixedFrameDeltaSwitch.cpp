@@ -62,21 +62,18 @@ namespace sw
                 SW_LOG_ERROR_ID( "FixedFrameDeltaSwitch.VariableMissing", "The fixed frame delta switch found no '%#' registration", FixedFrameDeltaSwitchInternal::kVariableName );
                 return SubsystemInitResult::Failed;
             }
-            pVariable->_onValueChanged = GlobalVariableChangedDelegate::create<&FixedFrameDeltaSwitchInternal::onVariableChanged>();
+            _variableSubscription = pVariable->bindOnValueChanged( GlobalVariableChangedDelegate::create<&FixedFrameDeltaSwitchInternal::onVariableChanged>() );
             if ( gv_fixedFrameDelta > 0.0f )
                 FixedFrameDeltaSwitchInternal::applyToPolicy(); // 사람이 준 값만 옮긴다 — 0 이면 정책(자동화가 넣었을 수 있다)을 덮지 않는다
             return SubsystemInitResult::Succeeded;
         }
 
-        void shutdownSubsystem() override
-        {
-            GlobalVariableManager* const pManager  = engine::findSubsystem<GlobalVariableManager>();
-            GlobalVariableInfo* const    pVariable = pManager != nullptr ? pManager->findVariable( FixedFrameDeltaSwitchInternal::kVariableName ) : nullptr;
-            if ( pVariable != nullptr )
-                pVariable->_onValueChanged = {};
-        }
+        void shutdownSubsystem() override { _variableSubscription.reset(); }
 
         const utf8* getSubsystemName() const override { return kSubsystemName; }
+
+    private:
+        Subscription _variableSubscription; ///< 변경 콜백의 구독(변수가 먼저 사라져도 무효가 될 뿐이다)
     };
 
     // 기동 단계 — 서비스 단계 초기화 중에는 엔진 서비스(GlobalVariableManager 조회)가 아직 묶이지 않았다(`EnvironmentFreezeSwitch` 와 같다).

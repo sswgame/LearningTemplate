@@ -58,20 +58,17 @@ namespace sw
                 SW_LOG_ERROR_ID( "EnvironmentFreezeSwitch.VariableMissing", "The environment freeze switch found no '%#' registration", EnvironmentFreezeSwitchInternal::kVariableName );
                 return SubsystemInitResult::Failed;
             }
-            pVariable->_onValueChanged = GlobalVariableChangedDelegate::create<&EnvironmentFreezeSwitchInternal::onVariableChanged>();
+            _variableSubscription = pVariable->bindOnValueChanged( GlobalVariableChangedDelegate::create<&EnvironmentFreezeSwitchInternal::onVariableChanged>() );
             EnvironmentFreezeSwitchInternal::applyToPolicy();
             return SubsystemInitResult::Succeeded;
         }
 
-        void shutdownSubsystem() override
-        {
-            GlobalVariableManager* const pManager  = engine::findSubsystem<GlobalVariableManager>();
-            GlobalVariableInfo* const    pVariable = pManager != nullptr ? pManager->findVariable( EnvironmentFreezeSwitchInternal::kVariableName ) : nullptr;
-            if ( pVariable != nullptr )
-                pVariable->_onValueChanged = {};
-        }
+        void shutdownSubsystem() override { _variableSubscription.reset(); }
 
         const utf8* getSubsystemName() const override { return kSubsystemName; }
+
+    private:
+        Subscription _variableSubscription; ///< 변경 콜백의 구독(변수가 먼저 사라져도 무효가 될 뿐이다)
     };
 
     // 기동 단계 — 서비스 단계 초기화 중에는 엔진 서비스(GlobalVariableManager 조회)가 아직 묶이지 않았다(--test 가 시작 중 멈췄다).

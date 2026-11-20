@@ -22,7 +22,7 @@ namespace
 } // namespace
 
 /**
- * @brief [HostServiceSetTest] App · Server 의 선언 순서가 의존을 지킨다 — 게임은 교체기 · 콘솔보다 먼저, 서버 문맥은 관측 뒤 · 게임 앞, 원격 채널은 콘솔 뒤에 선다
+ * @brief [HostServiceSetTest] App · Server 의 선언 순서가 의존을 지킨다 — 게임은 콘솔보다 먼저, 서버 문맥은 관측 뒤 · 게임 앞, 원격 채널은 콘솔 뒤에 선다
  * @details 몸통 없이(세우기 함수가 늘 성공) 표만으로 정렬한 글을 본다. 변이: `HostService::getSubsystemDependents` 의 서버 문맥 줄을 빼면 `ServiceContext > Game` 단언이 진다.
  */
 SW_TEST_CASE( HostServiceSetTest, DeclaredOrderFollowsTheDependencies )
@@ -30,7 +30,6 @@ SW_TEST_CASE( HostServiceSetTest, DeclaredOrderFollowsTheDependencies )
     using Util = HostServiceSetTestUtil;
 
     const string client = describeDeclaredHostServiceOrder( kArrClientHostService );
-    SW_EXPECT_TRUE( Util::isBefore( client, HostServiceName::kGame, HostServiceName::kBackendSwitcher ) );
     SW_EXPECT_TRUE( Util::isBefore( client, HostServiceName::kGame, HostServiceName::kDevConsole ) );
     SW_EXPECT_TRUE( client.find( HostServiceName::kUserSettings ) != string::npos );
     SW_EXPECT_TRUE( client.find( HostServiceName::kRuntimeUIHooks ) != string::npos );

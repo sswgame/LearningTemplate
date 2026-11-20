@@ -10,6 +10,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/DelegateSlot.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -193,7 +194,12 @@ namespace sw
          */
         const GlobalVariableEnumTextParser* _pEnumTextParser{ nullptr };
 
-        GlobalVariableChangedDelegate _onValueChanged;
+        /**
+         * @brief 값이 바뀔 때(`setValue*` · 명령줄 · 기본값 되돌리기) 부를 콜백을 겁니다. 칸은 하나다 — 이미 걸려 있으면 단언(주인이 둘이다).
+         * @details 구독이 풀리면 칸이 빈다. 변수가 먼저 사라져도(모듈 내리기 · 매니저 종료) 구독은 무효가 될 뿐 사라진 칸을 건드리지 않는다 — 예전에는 거는 쪽이
+         *          `{}` 대입으로 떼다가 남이 건 것까지 지울 수 있었고, 떼는 일을 잊으면 사라진 객체를 가리켰다.
+         */
+        [[nodiscard]] Subscription bindOnValueChanged( GlobalVariableChangedDelegate delegate ) { return _onValueChanged.bind( std::move( delegate ) ); }
 
         /** @brief Boolean 이면 *_pData 를, 아니면 false 를 반환합니다. */
         bool getValueAsBool() const;
@@ -217,6 +223,12 @@ namespace sw
         bool setValueAsBool( bool val );
         /** @brief *_pData 에 Int32 · Enum 값을 쓰고 콜백을 부릅니다. */
         bool setValueAsInt( int32 val );
+        /**
+         * @brief *_pData 에 Int32 · Enum 값을 쓰되 변경 콜백을 부르지 않습니다(유니티 UI `SetValueWithoutNotify` 와 같은 자리).
+         * @details 변경 콜백 안에서 받아들이지 못한 요청을 되돌릴 때 쓴다 — 콜백을 부르는 `setValueAsInt` 로 되돌리면 같은 콜백이 다시 불린다. 저장소 주소(`_pData`)를
+         *          형식으로 바꿔 직접 쓰던 우회(`*static_cast<T*>( _pData ) = …`)를 대신한다.
+         */
+        bool setValueAsIntWithoutNotify( int32 val );
         /** @brief *_pData 에 Float 값을 쓰고 콜백을 부릅니다. */
         bool setValueAsFloat( float32 val );
         /** @brief *_pData 에 String 값을 쓰고 콜백을 부릅니다. */
@@ -235,6 +247,15 @@ namespace sw
         [[nodiscard]] expected<void> setValueFromCommandLine( string_view strValue );
         /** @brief *_pData 를 _defaultValue 로 되돌립니다. */
         void resetToDefault();
+
+    private:
+        friend class GlobalVariableManager; // 잠금 밖에서 콜백을 모아 부른다(`resetAllToDefault` · `updateFromCommandLine`)
+
+        /** @brief 걸린 변경 콜백이 있으면 부릅니다. */
+        void notifyValueChanged();
+
+    private:
+        DelegateSlot<GlobalVariableChangedDelegate> _onValueChanged; ///< 값 변경 콜백 칸(`bindOnValueChanged`)
     };
 } // namespace sw
 

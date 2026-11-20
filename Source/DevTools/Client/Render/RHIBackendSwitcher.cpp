@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "App/Dev/RHIBackendSwitcher.h"
+#include "DevTools/Client/Render/RHIBackendSwitcher.h"
 
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -14,38 +14,35 @@
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Presentation/IEngineRenderDriver.h"
+#include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Renderer/RenderThread.h"
-
-#include "sw/config/ConfigConstants.h"
+#include "Engine/Renderer/RenderThreadSubsystem.h"
 
 namespace sw
 {
-    /** @brief 시나리오가 장치 분실 정책을 설정 파일 대신 고르는 입구입니다(0 = 설정 값, 1 = Quit, 2 = Recreate). 교체기가 기동 때 렌더 드라이버에 덮는다(`overrideDeviceLostPolicy`). */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_deviceLostPolicy, 0, "장치 분실 정책 덮기 (0=EngineConfig 값, 1=Quit, 2=Recreate — 시나리오가 Recreate 길을 끝까지 볼 때)" );
-
     namespace
     {
-        /** @brief gv_rhiBackend 의 변수 정보를 찾습니다. 없거나 엔진 서비스가 묶이지 않았으면(크래시 보고 프로세스) nullptr 입니다. */
-        GlobalVariableInfo* findRHIBackendSwitcherVariable()
-        {
-            if ( engine::areEngineServicesBound() == false )
-                return nullptr;
-            return engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_rhiBackend" );
-        }
-
         struct RHIBackendSwitcherInternal
         {
+            /** @brief gv_rhiBackend 의 변수 정보를 찾습니다. 없거나 엔진 서비스가 묶이지 않았으면(크래시 보고 프로세스) nullptr 입니다. */
+            static GlobalVariableInfo* findBackendVariable()
+            {
+                if ( engine::areEngineServicesBound() == false )
+                    return nullptr;
+                return engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_rhiBackend" );
+            }
+
 #if SW_WITH_DYNAMIC_MODULES
-            /** @brief 준비 함수가 시나리오가 시작할 때의 백엔드를 교체기에 적습니다(`RHIBackendSwitcher::recordStartBackend`). 교체기는 백엔드 교체 · 모듈 리로드에서 내려가지 않는 App 의 객체다. */
+            /** @brief 준비 함수가 시나리오가 시작할 때의 백엔드를 교체기에 적습니다(`RHIBackendSwitcher::recordStartBackend`). 교체기는 백엔드 교체 · 모듈 리로드에서 내려가지 않는 기동 단계다. */
             [[nodiscard]] static expected<void> prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/ )
             {
                 RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
@@ -86,7 +83,7 @@ namespace sw
                     (void)AutomationBackendSteps::tryParseBackend( requested, backend ); // 검사에서 확인했다
                 if ( committed == backend && pSwitcher->isSwapPending() == false )
                 {
-                    SW_LOG_INFO_ID( "App.Already", "%# -> already on %#", step.describe().c_str(), RHI::getBackendTypeName( backend ) );
+                    SW_LOG_INFO_ID( "RHIBackendSwitcher.Already", "%# -> already on %#", step.describe().c_str(), RHI::getBackendTypeName( backend ) );
                     return true;
                 }
                 if ( pSwitcher->requestSwap( backend ) == false )
@@ -94,7 +91,7 @@ namespace sw
                     runner.recordFailure( step, "gv_rhiBackend is not registered" );
                     return true;
                 }
-                SW_LOG_INFO_ID( "App.Requested", "%# -> requested %#", step.describe().c_str(), RHI::getBackendTypeName( backend ) );
+                SW_LOG_INFO_ID( "RHIBackendSwitcher.Requested", "%# -> requested %#", step.describe().c_str(), RHI::getBackendTypeName( backend ) );
                 return true;
             }
 #endif // SW_WITH_DYNAMIC_MODULES — 정적 모듈 구성에는 `SwapBackend` 단계가 없다(백엔드 하나)
@@ -121,12 +118,11 @@ namespace sw
                         outReply = string( replyBuilder.view() );
                         return false;
                     }
-                    if ( pSwitcher == nullptr )
+                    if ( pSwitcher == nullptr || pSwitcher->removeDeviceAfterDriverWaitForTest( static_cast<uint32>( waitMilliseconds ) ) == false )
                     {
-                        outReply = "no backend switcher in this run";
+                        outReply = "no backend switcher or render thread in this run";
                         return false;
                     }
-                    pSwitcher->removeDeviceAfterDriverWaitForTest( static_cast<uint32>( waitMilliseconds ) );
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "next render frame waits %# ms where the fence wait is, then removes the device", waitMilliseconds );
                     outReply = string( replyBuilder.view() );
@@ -183,19 +179,53 @@ namespace sw
 
 namespace sw
 {
-    RHIBackendSwitcher::RHIBackendSwitcher()
-        : _pEngine{ nullptr }
+    RHIBackendSwitcher::RHIBackendSwitcher( RHISubsystem& rhiSubsystem, RenderThreadSubsystem& renderThreadSubsystem )
+        : _rhiSubsystem{ rhiSubsystem }
+        , _renderThreadSubsystem{ renderThreadSubsystem }
+        , _backendVariableSubscription{}
         , _pendingDeviceLossWaitMilliseconds{ 0 }
         , _startBackend{}
-        , _bHandlingChange{ SW_FALSE }
         , _bStartBackendRecorded{ SW_FALSE }
+        , _bBeginFrameHookBound{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
 
+    SubsystemInitResult RHIBackendSwitcher::initializeSubsystem()
+    {
+        GlobalVariableInfo* const pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
+        if ( pBackendVariable == nullptr )
+        {
+            SW_LOG_ERROR_ID( "RHIBackendSwitcher.VariableMissing", "The backend switcher found no 'gv_rhiBackend' registration" );
+            return SubsystemInitResult::Failed;
+        }
+        _backendVariableSubscription = pBackendVariable->bindOnValueChanged( SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &RHIBackendSwitcher::onBackendVariableChanged, this ) );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void RHIBackendSwitcher::shutdownSubsystem()
+    {
+        _backendVariableSubscription.reset();
+        // 렌더 스레드 객체는 단계를 내려도 남는다(`RenderThreadSubsystem::findRenderThread`) — 이 객체를 가리키는 훅을 떼고 사라진다.
+        RenderThread* const pRenderThread = _renderThreadSubsystem.findRenderThread();
+        if ( _bBeginFrameHookBound == SW_TRUE && pRenderThread != nullptr )
+            pRenderThread->setBeginFrameHook( {} );
+        _bBeginFrameHookBound = SW_FALSE;
+    }
+
+    SubsystemHostMask RHIBackendSwitcher::getSubsystemHost() const
+    {
+        return EngineSubsystemHost::kClient;
+    }
+
+    RHI* RHIBackendSwitcher::findRHI() const
+    {
+        return _rhiSubsystem.findRHI();
+    }
+
     bool RHIBackendSwitcher::findCommittedBackend( RHIBackend& outBackend ) const
     {
-        const RHI* pRHI = _pEngine != nullptr ? _pEngine->getRHI() : nullptr;
+        const RHI* pRHI = findRHI();
         if ( pRHI == nullptr )
             return false;
         outBackend = pRHI->getCommittedBackend();
@@ -222,87 +252,46 @@ namespace sw
 
     bool RHIBackendSwitcher::removeDeviceForTest()
     {
-        RHI* pRHI = _pEngine != nullptr ? _pEngine->getRHI() : nullptr;
-        return pRHI != nullptr && pRHI->getDevice().debugRemoveDevice();
+        RHI* pRHI = findRHI();
+        return pRHI != nullptr && pRHI->hasDevice() && pRHI->getDevice().debugRemoveDevice();
     }
 
     bool RHIBackendSwitcher::isSwapPending() const
     {
-        const RHI* pRHI = _pEngine != nullptr ? _pEngine->getRHI() : nullptr;
+        const RHI* pRHI = findRHI();
         return pRHI != nullptr && pRHI->hasPendingBackendChange();
     }
 
 #if SW_WITH_DYNAMIC_MODULES
     bool RHIBackendSwitcher::requestSwap( RHIBackend backend )
     {
-        GlobalVariableInfo* pBackendVariable = findRHIBackendSwitcherVariable();
+        GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
         if ( pBackendVariable == nullptr )
             return false;
-        // C++ 대입은 변경 콜백을 부르지 않는다. 메뉴 · 콘솔이 쓰는 setValueAsInt 로 가야 onBackendVariableChanged 가 받는다.
+        // 메뉴 · 콘솔이 쓰는 setValueAsInt 로 가야 변경 콜백(onBackendVariableChanged)이 받는다.
         pBackendVariable->setValueAsInt( static_cast<int32>( backend ) );
         return true;
     }
 #endif
 
-    void RHIBackendSwitcher::initialize( Engine* pEngine )
+    void RHIBackendSwitcher::onBackendVariableChanged( GlobalVariableInfo* pInfo )
     {
-        _pEngine = pEngine;
-
-        // 시나리오가 장치 분실 정책을 고르는 입구(`<Launch variable="gv_deviceLostPolicy" value="2"/>`) — 설정 파일을 고치지 않고 Recreate 길을 끝까지 본다.
-        IEngineRenderDriver* const pRenderDriver = pEngine != nullptr ? pEngine->getRenderDriver() : nullptr;
-        if ( gv_deviceLostPolicy != 0 && pRenderDriver != nullptr )
-        {
-            const bool bKnownPolicy = gv_deviceLostPolicy == static_cast<int32>( RHIDeviceLostPolicy::Quit ) || gv_deviceLostPolicy == static_cast<int32>( RHIDeviceLostPolicy::Recreate );
-            if ( bKnownPolicy )
-                pRenderDriver->overrideDeviceLostPolicy( static_cast<RHIDeviceLostPolicy>( gv_deviceLostPolicy ) );
-            else
-                SW_LOG_ERROR_ID( "App.DeviceLostPolicyOverrideUnknown", "gv_deviceLostPolicy %# is not a policy (1 = Quit, 2 = Recreate) - the EngineConfig value stays", gv_deviceLostPolicy );
-        }
-
-        GlobalVariableInfo* pBackendVariable = findRHIBackendSwitcherVariable();
-        if ( pBackendVariable != nullptr )
-            pBackendVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &RHIBackendSwitcher::onBackendVariableChanged, this );
-    }
-
-    void RHIBackendSwitcher::shutdown()
-    {
-        // **훅부터, 조건 없이 뗀다.** 훅은 `_pEngine` 와 상관없이 `initialize` 가 걸어 두므로, 루프를 받지 못한 채 초기화된
-        // 경우(도구 · 부분 초기화)에도 떼지 않으면 사라진 `this` 를 가리키는 콜백이 전역 변수에 남는다.
-        GlobalVariableInfo* pBackendVariable = findRHIBackendSwitcherVariable();
-        if ( pBackendVariable != nullptr )
-            pBackendVariable->_onValueChanged = {};
-
-        _pEngine = nullptr;
-    }
-
-    void RHIBackendSwitcher::onBackendVariableChanged( const GlobalVariableInfo* pInfo )
-    {
-        RHI* pRHI = _pEngine != nullptr ? _pEngine->getRHI() : nullptr;
+        RHI* pRHI = findRHI();
         if ( pInfo == nullptr || pRHI == nullptr )
             return;
-
-        // 아래의 되돌림은 C++ 대입이라 이 콜백을 다시 부르지 않는다(콜백은 GlobalVariableInfo 의 set* 경로만 부른다). 재진입
-        // 가드는 되돌림을 언젠가 set* 로 바꾸더라도 무한 재귀가 되지 않도록 남겨 둔다.
-        if ( _bHandlingChange == SW_TRUE )
-            return;
-        _bHandlingChange = SW_TRUE;
 
         const RHIBackend requestedBackend = static_cast<RHIBackend>( pInfo->getValueAsInt() );
 #if SW_WITH_DYNAMIC_MODULES
         pRHI->schedulePendingBackendChange( requestedBackend );
 #else
-        // 정적 모듈 구성은 백엔드 하나를 Engine 에 링크했다 — 다른 백엔드로 갈 길이 없다. 값을 되돌리고 알린다(C++ 대입이라 이 콜백을 다시 부르지 않는다).
+        // 정적 모듈 구성은 백엔드 하나를 Engine 에 링크했다 — 다른 백엔드로 갈 길이 없다. 값을 되돌리고 알린다(콜백 없이 써서 이 콜백이 다시 불리지 않는다).
         if ( requestedBackend != pRHI->getCommittedBackend() )
         {
-            SW_LOG_ERROR_ID( "App.BackendSwapStaticModules", "gv_rhiBackend: this build links one RHI backend statically (SW_STATIC_MODULES) - it cannot switch to %#; restart a desktop Dev build to change backends",
+            SW_LOG_ERROR_ID( "RHIBackendSwitcher.BackendSwapStaticModules", "gv_rhiBackend: this build links one RHI backend statically (SW_STATIC_MODULES) - it cannot switch to %#; restart a desktop Dev build to change backends",
                              RHI::getBackendTypeName( requestedBackend ) );
-            GlobalVariableInfo* const pBackendVariable = findRHIBackendSwitcherVariable();
-            if ( pBackendVariable != nullptr )
-                *static_cast<RHIBackend*>( pBackendVariable->_pData ) = pRHI->getCommittedBackend();
+            (void)pInfo->setValueAsIntWithoutNotify( static_cast<int32>( pRHI->getCommittedBackend() ) );
         }
 #endif
-
-        _bHandlingChange = SW_FALSE;
     }
 
     SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice [driverWaitMs]",
@@ -323,15 +312,20 @@ namespace sw
     SW_AUTOMATION_WATCH( rhiSwapFailedCount, "RHI.SwapFailedCount", "Backend swaps that failed since the process started (each falls back to the previous backend)",
                          &RHIBackendSwitcherInternal::readFailedSwapCount );
 
-    void RHIBackendSwitcher::removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds )
+    bool RHIBackendSwitcher::removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds )
     {
         SW_ASSERT( 1u <= waitMilliseconds && waitMilliseconds <= kMaxDeviceLossDriverWaitMilliseconds );
+        RenderThread* const pRenderThread = _renderThreadSubsystem.findRenderThread();
+        if ( pRenderThread == nullptr )
+            return false;
+        // 훅은 처음 요청 때 건다 — 렌더 스레드 단계와 기동 순서를 맞출 의존을 두지 않는다(클래스 설명). 렌더 스레드 객체는 백엔드 교체를 지나 그대로라 다시 걸 일이 없다.
+        if ( _bBeginFrameHookBound == SW_FALSE )
+        {
+            pRenderThread->setBeginFrameHook( SW_DELEGATE_METHOD( BeginFrameHookDelegate, &RHIBackendSwitcher::onBeginFrameOnRenderThread, this ) );
+            _bBeginFrameHookBound = SW_TRUE;
+        }
         _pendingDeviceLossWaitMilliseconds.store( waitMilliseconds, std::memory_order_relaxed );
-    }
-
-    void RHIBackendSwitcher::bindRenderThreadHook( RenderThread& renderThread )
-    {
-        renderThread.setBeginFrameHook( SW_DELEGATE_METHOD( BeginFrameHookDelegate, &RHIBackendSwitcher::onBeginFrameOnRenderThread, this ) ); // 개발 명령 `rhi.removeDevice <ms>`
+        return true;
     }
 
     void RHIBackendSwitcher::onBeginFrameOnRenderThread( IRHIDevice& device )
@@ -339,10 +333,18 @@ namespace sw
         const uint32 waitMilliseconds = _pendingDeviceLossWaitMilliseconds.exchange( 0u, std::memory_order_relaxed );
         if ( waitMilliseconds == 0u )
             return;
-        SW_LOG_WARNING_ID( "App.HoldingRenderThreadMs", "Holding the render thread %# ms before removing the device (rhi.removeDevice <ms>) - the driver wait a real TDR spends before the first device-lost result",
+        SW_LOG_WARNING_ID( "RHIBackendSwitcher.HoldingRenderThreadMs", "Holding the render thread %# ms before removing the device (rhi.removeDevice <ms>) - the driver wait a real TDR spends before the first device-lost result",
                            waitMilliseconds );
         MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( waitMilliseconds ) * constant::time::kNanosecondsPerMillisecond );
         if ( device.debugRemoveDevice() == false )
-            SW_LOG_ERROR_ID( "App.RhiRemoveDeviceMsBackend", "rhi.removeDevice <ms>: this backend cannot remove its device; only the wait ran" );
+            SW_LOG_ERROR_ID( "RHIBackendSwitcher.RemoveDeviceMsBackend", "rhi.removeDevice <ms>: this backend cannot remove its device; only the wait ran" );
     }
+
+    // 렌더러가 있는 클라이언트만 — 창 · RHI 를 두지 않는 기동(헤드리스 작업 · 단위 테스트)은 교체할 장치가 없다.
+    SW_ENGINE_SUBSYSTEM( RHIBackendSwitcher, Startup, ( RHISubsystem, RenderThreadSubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        if ( build._pStartupSetup->_bRenderer == false )
+            return;
+        (void)scope.emplaceSubsystem<RHIBackendSwitcher>( scope.get<RHISubsystem>(), scope.get<RenderThreadSubsystem>() );
+    } );
 } // namespace sw

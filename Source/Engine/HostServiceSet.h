@@ -22,31 +22,29 @@ namespace sw
     /** @brief 호스트 서비스입니다. 어느 호스트가 무엇을 세우는지는 `kArrClientHostService` · `kArrServerHostService` 가 정합니다. */
     enum class HostServiceID : uint8
     {
-        Observability,   ///< 지표 · 상태 레지스트리 · 운영 HTTP · 프로세스 지표(Server)
-        CrashReports,    ///< 지난 실행의 크래시를 묶어 지표로 낸다(Server)
-        ServiceContext,  ///< 서버 문맥을 호스트 범위에 빌려 건다 — 게임 · 키트가 찾는다(Server)
-        Game,            ///< 게임(과 에디터) 인스턴스 — 모듈 호스트
-        BackendSwitcher, ///< RHI 백엔드 교체기(App)
-        UserSettings,    ///< 사용자 설정의 화면 적용(App)
-        RuntimeUIHooks,  ///< 런타임 UI 의 클립보드 · 접근성 · 끝내기 명령(App)
-        DevConsole,      ///< 개발 콘솔(App 은 게임 창 콘솔과 표준 입력 채널, Server 는 명령 처리기)
-        StandardInput,   ///< 표준 입력 명령 채널(Server)
-        DebugChannel,    ///< 원격 개발 명령 채널(Server Dev)
+        Observability,  ///< 지표 · 상태 레지스트리 · 운영 HTTP · 프로세스 지표(Server)
+        CrashReports,   ///< 지난 실행의 크래시를 묶어 지표로 낸다(Server)
+        ServiceContext, ///< 서버 문맥을 호스트 범위에 빌려 건다 — 게임 · 키트가 찾는다(Server)
+        Game,           ///< 게임(과 에디터) 인스턴스 — 모듈 호스트
+        UserSettings,   ///< 사용자 설정의 화면 적용(App)
+        RuntimeUIHooks, ///< 런타임 UI 의 클립보드 · 접근성 · 끝내기 명령(App)
+        DevConsole,     ///< 개발 콘솔(App 은 게임 창 콘솔과 표준 입력 채널, Server 는 명령 처리기)
+        StandardInput,  ///< 표준 입력 명령 채널(Server)
+        DebugChannel,   ///< 원격 개발 명령 채널(Server Dev)
     };
 
     /** @brief 서비스 이름입니다. 의존 칸도 이 상수를 가리킨다 — 철자가 틀리면 컴파일 오류다. */
     namespace HostServiceName
     {
-        inline constexpr const utf8* kObservability   = "Observability";
-        inline constexpr const utf8* kCrashReports    = "CrashReports";
-        inline constexpr const utf8* kServiceContext  = "ServiceContext";
-        inline constexpr const utf8* kGame            = "Game";
-        inline constexpr const utf8* kBackendSwitcher = "BackendSwitcher";
-        inline constexpr const utf8* kUserSettings    = "UserSettings";
-        inline constexpr const utf8* kRuntimeUIHooks  = "RuntimeUIHooks";
-        inline constexpr const utf8* kDevConsole      = "DevConsole";
-        inline constexpr const utf8* kStandardInput   = "StandardInput";
-        inline constexpr const utf8* kDebugChannel    = "DebugChannel";
+        inline constexpr const utf8* kObservability  = "Observability";
+        inline constexpr const utf8* kCrashReports   = "CrashReports";
+        inline constexpr const utf8* kServiceContext = "ServiceContext";
+        inline constexpr const utf8* kGame           = "Game";
+        inline constexpr const utf8* kUserSettings   = "UserSettings";
+        inline constexpr const utf8* kRuntimeUIHooks = "RuntimeUIHooks";
+        inline constexpr const utf8* kDevConsole     = "DevConsole";
+        inline constexpr const utf8* kStandardInput  = "StandardInput";
+        inline constexpr const utf8* kDebugChannel   = "DebugChannel";
     } // namespace HostServiceName
 
     /** @brief 서비스 @p id 를 세웁니다. 못 세우면 false 입니다(기동 실패 — 이미 세운 것은 역순으로 내린다). */
@@ -55,8 +53,7 @@ namespace sw
     SW_DECLARE_DELEGATE( void, HostServiceStopDelegate, HostServiceID );
 
     /** @brief 플레이어 실행 파일(App)이 세우는 서비스입니다. */
-    inline constexpr HostServiceID kArrClientHostService[] = { HostServiceID::Game, HostServiceID::BackendSwitcher, HostServiceID::UserSettings, HostServiceID::RuntimeUIHooks,
-                                                               HostServiceID::DevConsole };
+    inline constexpr HostServiceID kArrClientHostService[] = { HostServiceID::Game, HostServiceID::UserSettings, HostServiceID::RuntimeUIHooks, HostServiceID::DevConsole };
     /** @brief 전용 서버(Server)가 세우는 서비스입니다. */
     inline constexpr HostServiceID kArrServerHostService[] = { HostServiceID::Observability, HostServiceID::CrashReports, HostServiceID::ServiceContext, HostServiceID::Game,
                                                                HostServiceID::StandardInput, HostServiceID::DevConsole, HostServiceID::DebugChannel };
@@ -91,8 +88,6 @@ namespace sw
                     return HostServiceName::kServiceContext;
                 case HostServiceID::Game:
                     return HostServiceName::kGame;
-                case HostServiceID::BackendSwitcher:
-                    return HostServiceName::kBackendSwitcher;
                 case HostServiceID::UserSettings:
                     return HostServiceName::kUserSettings;
                 case HostServiceID::RuntimeUIHooks:
@@ -129,8 +124,7 @@ namespace sw
                 case HostServiceID::CrashReports:   // 남은 묶음 수를 지표로 낸다
                 case HostServiceID::ServiceContext: // 문맥이 지표 · 상태 레지스트리를 빌려준다
                     return kArrNeedsObservability;
-                case HostServiceID::BackendSwitcher: // 교체 앞뒤로 게임 · 에디터 인스턴스를 내리고 다시 세운다
-                case HostServiceID::DevConsole:      // 명령이 게임이 올린 개발 명령 · 변수를 부른다 — 게임보다 먼저 내려간다
+                case HostServiceID::DevConsole: // 명령이 게임이 올린 개발 명령 · 변수를 부른다 — 게임보다 먼저 내려간다
                     return kArrNeedsGame;
                 case HostServiceID::DebugChannel: // 원격 줄을 개발 콘솔로 돌린다
                     return kArrNeedsDevConsole;

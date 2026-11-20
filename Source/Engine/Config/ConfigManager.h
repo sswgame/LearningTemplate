@@ -11,6 +11,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/DevOnly.h"
@@ -498,13 +499,13 @@ namespace sw
 
     private:
         unordered_map<uint32, unique_ptr<IConfig>> _mapConfig;
-        unique_ptr<IConfig>                        _pEngineSlot;                       ///< 호스트 엔진 설정의 객체 - 읽기 전까지 여기 있고 읽은 뒤 `_mapConfig` 가 쥔다
-        unique_ptr<IConfig>                        _pGameSlot;                         ///< 호스트 게임 프리셋의 객체 - `_pEngineSlot` 과 같다
-        EngineConfig*                              _pHostEngineConfig;                 ///< `_pEngineSlot` 의 객체 주소 - 표를 옮겨도 같다
-        GameConfig*                                _pHostGameConfig;                   ///< `_pGameSlot` 의 객체 주소
-        unordered_map<uint32, ReloadSource>        _mapSource;                         ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
-        unique_ptr<ConfigSource>                   _pEngineSource;                     ///< 엔진 설정을 읽은 출처(`loadEngineConfig`) — 품질 단계만 바꿔 다시 읽는다
-        GlobalVariableInfo*                        _pRenderQualityVariable{ nullptr }; ///< 훅을 건 `gv_renderQuality`(기동 범위에서만 건다)
+        unique_ptr<IConfig>                        _pEngineSlot;               ///< 호스트 엔진 설정의 객체 - 읽기 전까지 여기 있고 읽은 뒤 `_mapConfig` 가 쥔다
+        unique_ptr<IConfig>                        _pGameSlot;                 ///< 호스트 게임 프리셋의 객체 - `_pEngineSlot` 과 같다
+        EngineConfig*                              _pHostEngineConfig;         ///< `_pEngineSlot` 의 객체 주소 - 표를 옮겨도 같다
+        GameConfig*                                _pHostGameConfig;           ///< `_pGameSlot` 의 객체 주소
+        unordered_map<uint32, ReloadSource>        _mapSource;                 ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
+        unique_ptr<ConfigSource>                   _pEngineSource;             ///< 엔진 설정을 읽은 출처(`loadEngineConfig`) — 품질 단계만 바꿔 다시 읽는다
+        Subscription                               _renderQualitySubscription; ///< `gv_renderQuality` 변경 훅의 구독(기동 범위에서만 건다)
         ConfigReloadedDelegate                     _onConfigReloaded;
         ConfigWriteFenceDelegate                   _writeFence; ///< 덮기 전 울타리(`setWriteFence`) — 없으면(테스트 · 렌더 없는 호스트) 바로 덮는다
     };

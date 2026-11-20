@@ -2,6 +2,7 @@
 
 #include "Engine/UI/Layout/UIScale.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -9,6 +10,11 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
+/**
+ * @brief UI 안전 영역 비율(0..0.1)입니다. 각 변을 물리 크기의 이 비율만큼 안쪽으로 밉니다 — TV 가장자리 잘림(오버스캔)에 맞추는 화면 설정이고, 휴대 기기 노치 흉내 · 미리보기에도 쓴다.
+ * @details 배포본에도 둔다 — 플레이어가 맞추는 "안전 영역" 화면 설정이다(Lyra 의 Safe Zone 보정 화면 · `ULyraSettingsLocal::SafeZoneScale`). 언리얼 `r.DebugSafeZone.TitleRatio` 는 같은 겹침을 흉내만 낸다.
+ *          읽는 쪽(`UISystem.cpp`)이 `SW_EXTERN_GLOBAL_VARIABLE` 로 참조한다 — 헤더(`UIScale.h`)가 전역 변수 관리자 헤더를 끌어오지 않게.
+ */
 SW_GLOBAL_VARIABLE( float32, gv_uiSafeZone, 0.0f, "UI 안전 영역 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다(TV 오버스캔 · 노치 흉내)" );
 
 namespace sw

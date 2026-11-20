@@ -5,14 +5,12 @@
  * 소유권: App 은 최상위 창 콜백과 부팅 열(`HostLaunch` — Engine · 모듈 관리자 · 호스트 서비스)만 들고, 나머지 엔진 핵심 로직은 모두 Engine 에 맡깁니다.
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
- *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher(개발 구성만 — `App/Dev/`), 모듈 수명은 EditorModuleManager(공통 GameModuleManager 위의 App 전용 층),
+ *          시간 정책은 FixedTimestep, 장치 교체 · 다시 만들기는 모듈 관리자(`GameModuleManager::applyPendingDeviceChange` — 교체 요청은 개발 도구의 RHIBackendSwitcher), 모듈 수명은 EditorModuleManager(공통 GameModuleManager 위의 App 전용 층),
  *          핫 리로드 · 개발 콘솔 · 표준 입력 명령은 개발 계층(`IHostDevLayer` — Server 와 같이 쓴다, 배포에는 없다), 헤드리스 작업은 AppHeadlessTasks 가 각자 맡습니다.
- *          자동화가 찾아야 하는 호스트 객체(교체기 · 리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`HostLaunch::getHostScope`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
+ *          자동화가 찾아야 하는 호스트 객체(리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`HostLaunch::getHostScope`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
  *          런타임 UI 에 끼우는 것(일시정지 메뉴의 "끝내기", 운영체제 클립보드, 스크린 리더)은 엔진의 `UIPlatformBinding` 이 맡습니다.
  */
 #pragma once
-#include "App/Dev/RHIBackendSwitcher.h"
-
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -151,13 +149,8 @@ namespace sw
         /** @brief 주 창입니다(관찰 포인터). 소유자는 엔진 범위의 `MainWindowSubsystem` 이라 엔진 종료 때 창이 파괴된다. `acquireMainWindow` 가 채운다. */
         IWindow* _pWindow;
 
-        FixedTimestep _fixedTimestep;
-        /**
-         * @brief 백엔드 교체기입니다. 호스트 서비스 `BackendSwitcher` 가 서며 호스트 범위에 걸고 내려가며 풉니다(시나리오 단계 `SwapBackend` · 감시 값 `RHI.*` 가 찾는다).
-         * @details 개발 구성에만 있다(`App/Dev/` — 배포는 짓지 않고 늘 nullptr). 생성자가 `build::kShipping` 이 아닐 때만 만든다.
-         */
-        unique_ptr<RHIBackendSwitcher> _pBackendSwitcher;
-        UserSettingsHost               _userSettingsHost;
+        FixedTimestep    _fixedTimestep;
+        UserSettingsHost _userSettingsHost;
         /** @brief 런타임 UI 의 호스트 훅(클립보드 · 스크린 리더 · 끝내기)입니다. 호스트 서비스 `RuntimeUIHooks` 가 세우고 내린다. */
         UIPlatformBinding _uiPlatformBinding;
 

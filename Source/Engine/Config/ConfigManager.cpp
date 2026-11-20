@@ -92,14 +92,14 @@ namespace sw
         if ( loadEngineConfig( engineSource ) == nullptr )
             return SubsystemInitResult::Failed;
         // 사용자 설정이 기동 때 저장값을 넣거나 메뉴 · 콘솔이 바꾸면 그 자리에서 다시 읽는다.
-        _pRenderQualityVariable = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_renderQuality" );
-        if ( _pRenderQualityVariable == nullptr )
+        GlobalVariableInfo* const pRenderQualityVariable = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_renderQuality" );
+        if ( pRenderQualityVariable == nullptr )
         {
             SW_LOG_ERROR_ID( "ConfigManager.RenderQualityVariableMissing", "gv_renderQuality is not registered - the render quality option cannot reach the engine config" );
             return SubsystemInitResult::Failed;
         }
-        _pRenderQualityVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &ConfigManager::onRenderQualityChanged, this );
-        const ConfigSource gameSource            = build::kStaticModules ? ConfigSource::baked( shipping_host::kGameConfigJSON ) : ConfigSource::disk( GameSelection::getConfigPath() );
+        _renderQualitySubscription    = pRenderQualityVariable->bindOnValueChanged( SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &ConfigManager::onRenderQualityChanged, this ) );
+        const ConfigSource gameSource = build::kStaticModules ? ConfigSource::baked( shipping_host::kGameConfigJSON ) : ConfigSource::disk( GameSelection::getConfigPath() );
         if ( loadHostConfig<GameConfig>( gameSource ) == nullptr )
             return SubsystemInitResult::Failed;
         return SubsystemInitResult::Succeeded;
@@ -107,9 +107,7 @@ namespace sw
 
     void ConfigManager::shutdownSubsystem()
     {
-        if ( _pRenderQualityVariable != nullptr )
-            _pRenderQualityVariable->_onValueChanged = {};
-        _pRenderQualityVariable = nullptr;
+        _renderQualitySubscription.reset();
     }
 
     EngineConfig* ConfigManager::loadEngineConfig( const ConfigSource& source )
