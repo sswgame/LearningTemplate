@@ -160,6 +160,8 @@ namespace sw::editor
         // 2) 등록 순서대로 다시 줄 세우고 새 줄은 만든다 — 그리기 순서와 Panel 메뉴 순서가 등록 목록과 같다
         vector<EditorPanelEntry> listSorted;
         listSorted.reserve( PanelRegistry::getCount() + _listPanel.size() );
+        uint64 createNanos{ 0 };
+        uint32 createdCount{ 0 };
         for ( uint32 index = 0; index < PanelRegistry::getCount(); ++index )
         {
             const EditorPanelRegistration& registration = PanelRegistry::getAt( index );
@@ -170,9 +172,12 @@ namespace sw::editor
                 pExisting->_pRegistration = nullptr; // 옮긴 항목 — 3) 에서 다시 옮기지 않게
                 continue;
             }
+            const Stopwatch          createStopwatch; // 패널 지연 생성의 판정 근거 — 닫힌 패널까지 모두 만드는 비용(감시 값 `Editor.PanelCreateMs`)
             unique_ptr<IEditorPanel> pPanel = registration._pCreate();
+            createNanos += static_cast<uint64>( createStopwatch.getElapsedNanoseconds() );
             if ( pPanel == nullptr )
                 continue;
+            ++createdCount;
             const utf8*      pTitle = pPanel->getPanelTitle();
             EditorPanelEntry entry{};
             entry._id             = registration._pID;
@@ -192,6 +197,12 @@ namespace sw::editor
                 listSorted.push_back( std::move( entry ) );
         }
         _listPanel = std::move( listSorted );
+        if ( createdCount > 0 )
+        {
+            _lastPanelCreateNanos = createNanos;
+            SW_LOG_INFO_ID( "EditorPanelManager.PanelsCreated", "Editor panels created: %# in %# us (closed ones included)", createdCount,
+                            createNanos / static_cast<uint64>( constant::time::kNanosecondsPerMicrosecond ) );
+        }
     }
 
     uint32 EditorPanelManager::resetOptionalPanels()
@@ -416,6 +427,15 @@ namespace sw::editor
                 return true;
             }
 
+            [[nodiscard]] static bool readPanelCreate( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorPanelManager* const pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanels->getLastPanelCreateNanoseconds() ) / static_cast<float64>( constant::time::kNanosecondsPerMillisecond );
+                return true;
+            }
+
             [[nodiscard]] static bool readPanelsDraw( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorPanelManager* const pPanels = EditorPanelManager::findInEditorContext();
@@ -433,6 +453,8 @@ namespace sw::editor
                          &EditorPanelTimeWatchInternal::readWatchedPanel<EditorPanelTimeWatchInternal::PanelTimeField::GatherMicroseconds> );
     SW_AUTOMATION_WATCH( editorGatherSkipCount, "Editor.GatherSkipCount", "Gathers the panel named by gv_editorWatchPanel skipped because its view model generation did not change",
                          &EditorPanelTimeWatchInternal::readWatchedPanel<EditorPanelTimeWatchInternal::PanelTimeField::SkippedGatherCount> );
+    SW_AUTOMATION_WATCH( editorPanelCreateMs, "Editor.PanelCreateMs", "Milliseconds the editor spent creating every registered panel (closed ones included) the last time it synced the panel list",
+                         &EditorPanelTimeWatchInternal::readPanelCreate );
     SW_AUTOMATION_WATCH( editorPanelsDrawUs, "Editor.PanelsDrawUs", "Microseconds every open editor panel took to draw last frame (measured while gv_editorWatchPanel is set)",
                          &EditorPanelTimeWatchInternal::readPanelsDraw );
 } // namespace sw::editor

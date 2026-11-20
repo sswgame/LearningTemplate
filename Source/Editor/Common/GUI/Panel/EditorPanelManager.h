@@ -176,6 +176,8 @@ namespace sw::editor
         [[nodiscard]] bool findWatchedPanelTimes( uint64& outDrawNanos, uint64& outGatherNanos, uint64& outSkippedGatherCount ) const;
         /** @brief 마지막으로 잰 프레임의 열린 패널 전체 그리기 시간(ns)입니다(감시 값 `Editor.PanelsDrawUs`). */
         uint64 getLastPanelsDrawNanoseconds() const { return _lastPanelsDrawNanos; }
+        /** @brief 마지막으로 등록 목록을 맞출 때 패널을 만드는 데 든 시간(ns)입니다 — 닫힌 패널까지 모두 만든다(감시 값 `Editor.PanelCreateMs`, 지연 생성의 판정 근거). */
+        uint64 getLastPanelCreateNanoseconds() const { return _lastPanelCreateNanos; }
         void   shutdownAllPanels();
         /** @brief 포커스된 도구 문서가 dirty 이면 저장하고 true 를 반환합니다. */
         [[nodiscard]] bool saveFocusedDirtyDocument();
@@ -202,11 +204,12 @@ namespace sw::editor
 
     private:
         vector<EditorPanelEntry> _listPanel;
-        vector<string>           _listRememberedOpenID;     ///< 지운 패널 중 열려 있던 id. 다시 등록되면 연다
-        uint32                   _syncedGeneration;         ///< 마지막으로 맞춘 등록 세대. 맞춘 적이 없으면 kNotSynced 이다
-        uint32                   _panelTimeFrameCount;      ///< 패널 시간을 모은 프레임 수
-        uint64                   _lastPanelsDrawNanos{ 0 }; ///< 마지막으로 잰 프레임의 열린 패널 전체 그리기 시간(ns)
-        uint8                    _bPanelTimesReported : 1;  ///< 한 번 기록했으면 더 모으지 않는다
+        vector<string>           _listRememberedOpenID;      ///< 지운 패널 중 열려 있던 id. 다시 등록되면 연다
+        uint32                   _syncedGeneration;          ///< 마지막으로 맞춘 등록 세대. 맞춘 적이 없으면 kNotSynced 이다
+        uint32                   _panelTimeFrameCount;       ///< 패널 시간을 모은 프레임 수
+        uint64                   _lastPanelsDrawNanos{ 0 };  ///< 마지막으로 잰 프레임의 열린 패널 전체 그리기 시간(ns)
+        uint64                   _lastPanelCreateNanos{ 0 }; ///< 마지막 등록 맞추기에서 패널을 만든 시간(ns)
+        uint8                    _bPanelTimesReported : 1;   ///< 한 번 기록했으면 더 모으지 않는다
     };
 } // namespace sw::editor
 

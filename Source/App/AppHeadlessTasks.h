@@ -7,6 +7,7 @@
 
 namespace sw
 {
+    class EditorModuleHeadlessSession;
     class CommandLineManager;
     class Engine;
 
@@ -27,7 +28,8 @@ namespace sw
             Failed,       ///< 실행했고 실패했다. 다음 항목도 실행하고, 마지막에 실패로 반환한다.
             Finished,     ///< 이 작업만 하고 끝낸다(성공). 뒤의 항목은 보지 않는다.
         };
-        using TaskFunction = TaskResult ( * )( const CommandLineManager& commandLine );
+        /** @brief 작업 하나입니다. @p editorModule 은 실행 한 번에 에디터 모듈을 한 번만 올리는 세션이다(에디터 모듈 작업이 같이 쓴다). */
+        using TaskFunction = TaskResult ( * )( const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule );
         /** @brief 호스트 서비스가 선 뒤에 도는 작업입니다. 게임 타입 · 렌더 스레드가 있어 엔진을 받습니다. */
         using AfterHostServicesTask = TaskResult ( * )( const CommandLineManager& commandLine, Engine& hostEngine );
 
@@ -46,12 +48,12 @@ namespace sw
          * @details 표와 떼어 둔 것은 규칙(실패해도 계속, `Finished` 에서 멈춤)을 모듈 없이 테스트하기 위해서입니다(`App/Tests/TestAppHeadlessTasks.cpp`).
          * @return 실패한 작업이 없으면 true 를 반환합니다.
          */
-        [[nodiscard]] static bool runTable( const TaskFunction* pArrTask, uint32 taskCount, const CommandLineManager& commandLine )
+        [[nodiscard]] static bool runTable( const TaskFunction* pArrTask, uint32 taskCount, const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule )
         {
             bool bSucceeded = true;
             for ( uint32 taskIndex = 0; taskIndex < taskCount; ++taskIndex )
             {
-                const TaskResult result = pArrTask[taskIndex]( commandLine );
+                const TaskResult result = pArrTask[taskIndex]( commandLine, editorModule );
                 if ( result == TaskResult::Finished )
                     break;
                 if ( result == TaskResult::Failed )

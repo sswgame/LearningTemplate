@@ -32,7 +32,7 @@ namespace sw
              * @note App 은 GameFramework 의 HTTP 클라이언트를 링크하지 않아(층) 이 프로세스의 업로더는 보내지 않는 기본값이고 묶음을 건드리지 않습니다(`Kept`).
              *       끝점이 있는 게임은 다음 기동의 게임 프로세스가 같은 폴더를 올립니다(`TelemetryUploadLink`).
              */
-            static TaskResult runCrashReporter( const CommandLineManager& commandLine )
+            static TaskResult runCrashReporter( const CommandLineManager& commandLine, EditorModuleHeadlessSession& /*editorModule*/ )
             {
                 string reporterFolder;
                 if ( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) == false || reporterFolder.empty() )
@@ -48,7 +48,7 @@ namespace sw
              * @tparam kKind 임포트 종류. @tparam kImportArgument 임포트 인자. @tparam kCheckArgument 대조만 하는 인자.
              */
             template <EditorImportKind kKind, CommandLineArgument kImportArgument, CommandLineArgument kCheckArgument>
-            static TaskResult runEditorImport( const CommandLineManager& commandLine )
+            static TaskResult runEditorImport( const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule )
             {
                 bool bImport = false;
                 bool bCheck  = false;
@@ -63,7 +63,7 @@ namespace sw
                 }
                 else
                 {
-                    return importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
+                    return importAssetsWithEditorModule( editorModule, kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
                 }
             }
 
@@ -71,7 +71,7 @@ namespace sw
              * @brief 로컬라이제이션 도구(`--gather-text`, `--check-text`, `--import-po=<파일>`, `--export-po`, 프로젝트는 `-loc-project`)입니다.
              * @details 에디터 모듈의 일이라 임포트와 같은 경로로 부릅니다. 번역을 수집한 직후 교환할 수 있도록, 한 번의 실행에서 수집, 가져오기, 내보내기 순서로 처리합니다.
              */
-            static TaskResult runLocalizationTools( const CommandLineManager& commandLine )
+            static TaskResult runLocalizationTools( const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule )
             {
                 bool   bGatherText = false;
                 bool   bCheckText  = false;
@@ -98,12 +98,12 @@ namespace sw
                     if ( bGatherText || bCheckText )
                     {
                         const EditorLocalizationTask gatherTask = bCheckText ? EditorLocalizationTask::CheckText : EditorLocalizationTask::GatherText;
-                        bSucceeded                              = runLocalizationWithEditorModule( gatherTask, {}, projectPath ) && bSucceeded;
+                        bSucceeded                              = runLocalizationWithEditorModule( editorModule, gatherTask, {}, projectPath ) && bSucceeded;
                     }
                     if ( importPoPath.empty() == false )
-                        bSucceeded = runLocalizationWithEditorModule( EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
+                        bSucceeded = runLocalizationWithEditorModule( editorModule, EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
                     if ( bExportPo )
-                        bSucceeded = runLocalizationWithEditorModule( EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
+                        bSucceeded = runLocalizationWithEditorModule( editorModule, EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
                     return bSucceeded ? TaskResult::Succeeded : TaskResult::Failed;
                 }
             }
@@ -112,7 +112,7 @@ namespace sw
              * @brief 에셋 참조 검사(`--check-asset-refs`)입니다. 글 에셋 · 테스트 CMake 의 경로 칸과 리플렉션 `AssetPath` 프로퍼티를 칸 목록(`Config/Dev/AssetReferenceFields.json`)으로 본다.
              * @details 에디터 모듈의 일이라 임포트와 같은 경로로 부릅니다(배포 엔진에는 검증 코드가 없다).
              */
-            static TaskResult runAssetReferenceCheck( const CommandLineManager& commandLine )
+            static TaskResult runAssetReferenceCheck( const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule )
             {
                 bool bCheck = false;
                 commandLine.getArgument( CommandLineArgument::CHECK_ASSET_REFS, bCheck );
@@ -125,7 +125,7 @@ namespace sw
                 }
                 else
                 {
-                    return validateAssetReferencesWithEditorModule() ? TaskResult::Succeeded : TaskResult::Failed;
+                    return validateAssetReferencesWithEditorModule( editorModule ) ? TaskResult::Succeeded : TaskResult::Failed;
                 }
             }
 
@@ -181,7 +181,8 @@ namespace sw
     {
         if ( pCommandLine == nullptr )
             return true;
-        return runTable( AppHeadlessTasksInternal::kArrHeadlessTask, static_cast<uint32>( SW_COUNT_OF( AppHeadlessTasksInternal::kArrHeadlessTask ) ), *pCommandLine );
+        EditorModuleHeadlessSession editorModule; // 에디터 모듈 작업이 여럿이어도 모듈은 한 번 올리고 표가 끝나면 내린다
+        return runTable( AppHeadlessTasksInternal::kArrHeadlessTask, static_cast<uint32>( SW_COUNT_OF( AppHeadlessTasksInternal::kArrHeadlessTask ) ), *pCommandLine, editorModule );
     }
 
     AppHeadlessTasks::TaskResult AppHeadlessTasks::runAfterHostServices( const CommandLineManager& commandLine, Engine& hostEngine )

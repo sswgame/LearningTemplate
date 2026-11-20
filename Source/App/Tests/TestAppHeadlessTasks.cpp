@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "App/AppHeadlessTasks.h"
+#include "App/EditorModuleHeadlessTasks.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Testing/TestFramework.h"
@@ -19,7 +20,7 @@ namespace
         static void reset() { s_calledCount = 0; }
 
         template <TaskResult kResult>
-        static TaskResult countAndReturn( const CommandLineManager& /*commandLine*/ )
+        static TaskResult countAndReturn( const CommandLineManager& /*commandLine*/, EditorModuleHeadlessSession& /*editorModule*/ )
         {
             ++s_calledCount;
             return kResult;
@@ -35,8 +36,9 @@ SW_TEST_CASE( AppHeadlessTasksTest, FailureRunsTheRestAndFails )
     constexpr AppHeadlessTasks::TaskFunction kArrTask[] = { &Util::countAndReturn<Result::Failed>, &Util::countAndReturn<Result::NotRequested>, &Util::countAndReturn<Result::Succeeded> };
 
     Util::reset();
-    CommandLineManager commandLine;
-    SW_EXPECT_FALSE( AppHeadlessTasks::runTable( kArrTask, 3, commandLine ) );
+    CommandLineManager          commandLine;
+    EditorModuleHeadlessSession editorModule; // 모듈을 찾는 작업이 없으면 아무것도 올리지 않는다
+    SW_EXPECT_FALSE( AppHeadlessTasks::runTable( kArrTask, 3, commandLine, editorModule ) );
     SW_EXPECT_EQUAL( 3u, Util::s_calledCount );
 }
 
@@ -48,19 +50,28 @@ SW_TEST_CASE( AppHeadlessTasksTest, FinishedStopsTheTable )
     constexpr AppHeadlessTasks::TaskFunction kArrFinished[]    = { &Util::countAndReturn<Result::Succeeded>, &Util::countAndReturn<Result::Finished>, &Util::countAndReturn<Result::Failed> };
     constexpr AppHeadlessTasks::TaskFunction kArrFailedFirst[] = { &Util::countAndReturn<Result::Failed>, &Util::countAndReturn<Result::Finished>, &Util::countAndReturn<Result::Succeeded> };
 
-    CommandLineManager commandLine;
+    CommandLineManager          commandLine;
+    EditorModuleHeadlessSession editorModule; // 모듈을 찾는 작업이 없으면 아무것도 올리지 않는다
     Util::reset();
-    SW_EXPECT_TRUE( AppHeadlessTasks::runTable( kArrFinished, 3, commandLine ) );
+    SW_EXPECT_TRUE( AppHeadlessTasks::runTable( kArrFinished, 3, commandLine, editorModule ) );
     SW_EXPECT_EQUAL( 2u, Util::s_calledCount );
 
     Util::reset();
-    SW_EXPECT_FALSE( AppHeadlessTasks::runTable( kArrFailedFirst, 3, commandLine ) );
+    SW_EXPECT_FALSE( AppHeadlessTasks::runTable( kArrFailedFirst, 3, commandLine, editorModule ) );
     SW_EXPECT_EQUAL( 2u, Util::s_calledCount );
 }
 
 /** @brief [AppHeadlessTasksTest] 빈 표는 아무것도 부르지 않고 성공이다 */
 SW_TEST_CASE( AppHeadlessTasksTest, EmptyTableSucceeds )
 {
-    CommandLineManager commandLine;
+    CommandLineManager          commandLine;
+    EditorModuleHeadlessSession editorModule; // 모듈을 찾는 작업이 없으면 아무것도 올리지 않는다
     SW_EXPECT_TRUE( AppHeadlessTasks::runTable( nullptr, 0, commandLine ) );
+}
+
+/** @brief [AppHeadlessTasksTest] 에디터 모듈 세션은 부르는 작업이 없으면 모듈을 올리지 않는다(헤드리스 실행 한 번에 많아야 한 번 올린다) */
+SW_TEST_CASE( AppHeadlessTasksTest, EditorModuleSessionLoadsLazily )
+{
+    const EditorModuleHeadlessSession editorModule;
+    SW_EXPECT_EQUAL( 0u, editorModule.getLoadCount() );
 }
