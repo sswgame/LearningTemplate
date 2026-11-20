@@ -1787,6 +1787,12 @@
     "computeEntityBits": "BitWriter::truncate — MMO 엔티티 크기는 써 본 길이로 잰다(쓰기와 짝을 손으로 맞추던 크기 함수, 복제 칸 선언, 2026-11-21)",
     "computeEntityBits": "BitWriter::truncate — MMO 엔티티 크기는 써 본 길이로 잰다(쓰기와 짝을 손으로 맞추던 크기 함수, 복제 칸 선언, 2026-11-21)",
     "PairedAnimationNetState::kMaxSnapshotBytes": "PairedAnimationNetLimit::kMaxSnapshotBytes — 세션 상태 상한은 칸 선언(PairedAnimationSessionStateBody 의 MaxCount)이 쓴다(복제 칸 선언, 2026-11-21)",
-    "PairedAnimationNetState::kMaxRoleCount": "PairedAnimationNetLimit::kMaxRoleCount — 세션 상태 상한은 칸 선언이 쓴다(복제 칸 선언, 2026-11-21)"
+    "PairedAnimationNetState::kMaxRoleCount": "PairedAnimationNetLimit::kMaxRoleCount — 세션 상태 상한은 칸 선언이 쓴다(복제 칸 선언, 2026-11-21)",
+    "DestructionReplicationConfig::_positionRange": "DestructionMovingPoseNetState::kPositionRange — 움직이는 자세의 양자화 범위는 칸 선언이 정한다(복제 칸 선언, 2026-11-21)",
+    "DestructionReplicationConfig::_positionResolution": "DestructionMovingPoseNetState::_position 의 Step — 양자화 간격은 칸 선언이 정한다(복제 칸 선언, 2026-11-21)",
+    "kQuaternionResolution": "DestructionMovingPoseNetState::_rotation 의 Step — 회전 양자화 간격은 칸 선언이 정한다(복제 칸 선언, 2026-11-21)",
+    "canWriteQuantizedPose": "canWriteMovingPose — 움직이는 자세는 칸 선언(DestructionMovingPoseNetState)으로 쓴다(복제 칸 선언, 2026-11-21)",
+    "writeQuantizedPose": "writeMovingPose(DestructionMovingPoseNetState 칸 선언, 2026-11-21)",
+    "readQuantizedPose": "readMovingPose(DestructionMovingPoseNetState 칸 선언, 2026-11-21)"
   }
 }
