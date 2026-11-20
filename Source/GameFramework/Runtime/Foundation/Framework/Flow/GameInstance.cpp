@@ -24,13 +24,14 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Experience/ExperienceManager.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameDevPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
@@ -128,6 +129,7 @@ namespace sw
         , _pAppearanceDatabase{}
         , _pAppearanceWatcher{}
         , _pAutosave{}
+        , _pGameFeatureScope{}
         , _pDevPart{}
         , _loadedAudioEvents{}
         , _listFollowedService{}
@@ -154,8 +156,8 @@ namespace sw
         _gameScope.emplaceSubsystem<TelemetryUploadLink>( _packConfig._data );
         // 플레이어 통계 · 업적은 gamesettings 에 통계 카탈로그가 있을 때만 선다 - 플랫폼 서비스(지금은 로컬 구현)까지 잇는다.
         _gameScope.emplaceSubsystem<PlayerStatsSubsystem>( _packConfig._data );
-        // Experience(허브의 미니게임)는 이 게임 범위에 키트 서비스를 걸고 나올 때 거둔다 — 종료가 `onShutdown` 뒤에 켜진 것을 끈다.
-        _gameScope.emplaceSubsystem<ExperienceManager>( _gameScope, _packConfig, *this );
+        // 미니게임 흐름은 늘 선다(미니게임을 쓰지 않는 게임에서는 아무 일도 안 한다) — 들어갈 때 게임 기능을 이 게임 범위에 걸고 나올 때 거두며, 종료가 `onShutdown` 뒤에 켜진 것을 끈다.
+        _gameScope.emplaceSubsystem<MinigameFlow>( _gameScope, _packConfig, *this );
     }
 
     GameInstance::~GameInstance()
@@ -308,8 +310,8 @@ namespace sw
         _bDerivedEntered = SW_TRUE;
         if ( onInitialize() == false )
             return false;
-        // 허브 Experience(gamesettings `hubExperience`)는 파생 초기화 뒤 · 첫 씬 전에 켠다 — 허브 밖 첫 씬도 그 카탈로그를 읽는다. 못 켜면 필수 데이터처럼 게임을 띄우지 않는다.
-        if ( getSubsystem<ExperienceManager>().activateHub() == false )
+        // 게임 범위 기능(gamesettings `gameFeatures`)은 파생 초기화 뒤 · 첫 씬 전에 켠다 — 첫 씬부터 그 카탈로그를 읽는다. 못 켜면 필수 데이터처럼 게임을 띄우지 않는다.
+        if ( activateGameFeatures() == false )
             return false;
         startFirstScene();
         // 개발 전용 부분은 게임이 다 선 뒤에 붙는다(게임 `Dev/` 의 공장 — 배포 구성에는 없다).
@@ -320,8 +322,8 @@ namespace sw
 
     void GameInstance::startFirstScene()
     {
-        // 실행 전역 변수 `gv_firstExperience` 는 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)보다 위다 — 그 Experience 의 맵으로 들어간다. 지면 씬 없이 오류로 남는다(다른 씬으로 대신하지 않는다).
-        if ( getSubsystem<ExperienceManager>().enterFirstExperience() )
+        // 실행 전역 변수 `gv_firstMinigame` 는 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)보다 위다 — 그 미니게임의 맵으로 들어간다. 지면 씬 없이 오류로 남는다(다른 씬으로 대신하지 않는다).
+        if ( getSubsystem<MinigameFlow>().enterFirstMinigame() )
             return;
         (void)getSubsystem<GameSceneFlow>().requestFirstScene(); // 실패는 씬 흐름이 알리고, 다시 선 인스턴스는 살아 있는 씬을 쓴다
     }
@@ -345,6 +347,10 @@ namespace sw
         // 인스턴스 서브시스템(씬 흐름 → 로딩 화면 · 전환)을 onShutdown 뒤에 내린다 — 씬 흐름이 받아들임 알림을 풀고 맡긴 로드를 잊는다.
         // 네트워크 세션은 엔진 수명이라 닫지 않는다(리로드를 넘어 연결을 지킨다).
         _gameScope.getCollection().shutdownAll();
+        // 게임 범위 기능은 미니게임 흐름(서브시스템)이 미니게임을 끈 뒤에 끈다 — 미니게임의 해제 검사는 이것이 켜진 채로 찍었다.
+        if ( _pGameFeatureScope != nullptr )
+            (void)_pGameFeatureScope->deactivate(); // 남은 것은 해제 검사가 오류로 알렸다
+        _pGameFeatureScope.reset();
         _pendingSlotRestore = nullopt; // 씬 흐름이 맡긴 로드를 잊었다 — 기다리던 세이브(와 그 완료 함수)도 잊는다
         // 제공자는 GameFramework 의 것이라 이 인스턴스가 내려가면 거둔다(다시 서는 인스턴스가 다시 넣는다). 열린 세션은 이미 받은 포인터로 계속 돈다.
         GameNetSession* const pNetSession = game::findSubsystem<GameNetSession>();
@@ -450,6 +456,23 @@ namespace sw
         return bindScopedService( _pAutosave.get() );
     }
 
+    bool GameInstance::activateGameFeatures()
+    {
+        // 게임 모듈의 기능(`SW_GAME_FEATURE`)은 인스턴스를 만들기 전에 붙는다(`GameModuleManager::bindGameAPI` → `registerModuleTypes` → 등록자 붙이기 → `createGameInstance`).
+        // 그래도 없으면 `activateFeatures` 가 모르는 기능으로 알리고 여기서 진다 — 게임을 띄우지 않는다(기능 없이 켜지 않는다).
+        InputManager* const pInput = game::findSubsystem<InputManager>(); // 입력 서비스가 없는 호스트(전용 서버)는 입력 레이어를 걸지 않는다
+        _pGameFeatureScope         = make_unique<GameFeatureScope>( _gameScope, game::getSubsystem<GlobalVariableManager>(), _packConfig, pInput != nullptr ? &pInput->getInputMap() : nullptr,
+                                                                    hashed_string( "gameFeatures" ), GameFeatureScope::CatalogRule::PackData, vector<hashed_string>{} );
+        if ( _pGameFeatureScope->activateFeatures( _packConfig._data._listGameFeature ) == false )
+        {
+            SW_LOG_ERROR_ID( "GameInstance.GameFeaturesNotActivated", "The game features (GameSettings gameFeatures) could not be activated (see the messages above) - the game does not start" );
+            _pGameFeatureScope.reset(); // 그때까지 건 것을 거둔다(해제 검사 포함)
+            return false;
+        }
+        _pGameFeatureScope->finishActivation();
+        return true;
+    }
+
     bool GameInstance::loadDeclaredCharacterData()
     {
         const map<string, string>& mapRequired = _packConfig._data._mapRequiredDataPack;
@@ -498,12 +521,14 @@ namespace sw
 
     void GameInstance::update( float32 deltaTime )
     {
-        // 프레임 순서: 다시 읽힌 카탈로그 칸 → 맡긴 Experience 진입 → 씬 흐름(페이드 · 로딩 화면 · 끝난 로드 알림) → 넷 세션 → 파생 프레임 훅.
+        // 프레임 순서: 다시 읽힌 카탈로그 칸(게임 범위 기능 포함) → 맡긴 미니게임 진입 → 씬 흐름(페이드 · 로딩 화면 · 끝난 로드 알림) → 넷 세션 → 파생 프레임 훅.
         for ( const Delegate<void()>& follow : _listFollowedService )
         {
             follow();
         }
-        getSubsystem<ExperienceManager>().update(); // 트리거가 틱 뒤에 맡긴 진입 — 허브 스냅숏은 틱 밖에서 찍는다
+        if ( _pGameFeatureScope != nullptr )
+            _pGameFeatureScope->rebindReloadedCatalogs();
+        getSubsystem<MinigameFlow>().update(); // 트리거가 틱 뒤에 맡긴 진입 — 돌아올 씬의 스냅숏은 틱 밖에서 찍는다
         getSubsystem<GameSceneFlow>().update();
         getSubsystem<GameLocalStore>().update(); // 끝난 세이브 · 자동 저장 요청의 콜백(세이브 이벤트)
         // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다. 필수 서비스라 없으면 멈춘다.

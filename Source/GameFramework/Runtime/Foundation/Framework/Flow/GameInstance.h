@@ -34,6 +34,7 @@ namespace sw
     class AppearanceDatabase;
     class AppearanceDataWatcher;
     class AutosaveManager;
+    class GameFeatureScope;
     class GameLocalStore;
     class IGameDevPart;
     class GameObjectManager;
@@ -364,6 +365,13 @@ namespace sw
          */
         [[nodiscard]] bool startAutosave();
         /**
+         * @brief gamesettings `gameFeatures` 의 게임 기능을 게임 범위 하나(`GameFeatureScope`, 카탈로그는 팩 데이터 규칙)에 켭니다 — `onInitialize` 뒤 · 첫 씬 전의 필수 단계다.
+         * @details 언리얼 Game Features 의 늘 켜진 기능 자리다. 미니게임(`MinigameFlow`)보다 먼저 켜 미니게임 범위의 해제 검사가 그 몫을 남은 것으로 세지 않게 하고,
+         *          서브시스템 종료(미니게임 끄기) 뒤에 끈다. 비었으면 빈 범위다(기능 없는 게임도 같은 길).
+         * @return 겹친 이름 · 등록되지 않은 기능 · 켜기가 진 기능이 있으면 알리고 false 입니다(게임 초기화 실패 — 필수 데이터 없이 띄우지 않는다).
+         */
+        [[nodiscard]] bool activateGameFeatures();
+        /**
          * @brief gamesettings 가 `<RequiredData>` 로 적은 아이템(`items`) · 외형(`appearance`) 데이터를 읽어 게임 범위에 겁니다(외형은 아이템 뒤 — 아이템을 참조한다). 적지 않은 종류는 읽지 않는다.
          * @details 캐릭터 외형을 쓰는 게임마다 같은 로드 · 서비스 걸기 · 핫 리로드를 손으로 짜지 않게 데이터가 정한다(언리얼 GameInstance 서브시스템처럼 바탕이 세운다). 못 읽으면 false(게임을 띄우지 않는다).
          */
@@ -389,6 +397,7 @@ namespace sw
         unique_ptr<AppearanceDatabase>    _pAppearanceDatabase; ///< `<RequiredData kind="appearance">` 를 적은 게임의 외형 데이터(게임 범위 서비스)
         unique_ptr<AppearanceDataWatcher> _pAppearanceWatcher;  ///< 외형 데이터 핫 리로드(`update` 가 돌린다)
         unique_ptr<AutosaveManager>       _pAutosave;           ///< `<autosaveSettings>` 를 적은 게임의 자동 저장(게임 범위 서비스)
+        unique_ptr<GameFeatureScope>      _pGameFeatureScope;   ///< gamesettings `gameFeatures` 의 게임 범위 기능(`activateGameFeatures` 가 켜고 서브시스템 종료 뒤에 끈다)
         unique_ptr<IGameDevPart>          _pDevPart;            ///< 게임 `Dev/` 의 개발 전용 부분(`IGameDevPartFactory` — 배포 구성에는 공장이 없어 비었다). `onInitialize` 뒤에 서고 `onShutdown` 앞에 진다
         string                            _loadedAudioEvents;   ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
         vector<Delegate<void()>>          _listFollowedService; ///< 다시 읽힌 카탈로그를 범위의 칸에 다시 거는 일(`followScopedService`)

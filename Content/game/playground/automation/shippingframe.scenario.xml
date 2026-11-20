@@ -6,6 +6,7 @@
   실행: ctest -R Scenario.game.playground.shippingframe   (산출물: Bin/Saved/Automation/game.playground.shippingframe/)
 -->
 <Scenario name="game.playground.shippingframe" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/editortest.scene.xml"/> <!-- 그림 · 배치의 무대(팩 시작 맵은 마을이다) -->
 	<Screenshot file="shippingframe.ppm"/>
 	<ExpectImage file="shippingframe.ppm" golden="shippingframe"/>
 	<Pass/>

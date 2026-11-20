@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="aa65b6a5d1492c40625829a849a34a93"?>
 <!--
-  장르 수직 슬라이스(G1, 타일 걸음 마을 미니게임 Experience pixeltown) — 시작 → 목표(pixeltown_talk.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
+  장르 수직 슬라이스(G1, 타일 걸음 마을 미니게임 pixeltown) — 시작 → 목표(pixeltown_talk.scenario.xml 의 단계 그대로) → 결과 → 저장 · 복원 해시 동일.
   목표 단계는 그 시나리오가 정본이다 — 거기를 고치면 이 파일도 맞춘다. 저장 슬롯은 pixeltown/slice.
 -->
 <Scenario name="game.playground.pixeltown_slice" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Launch variable="gv_firstExperience" value="pixeltown"/>
+	<Launch variable="gv_firstMinigame" value="pixeltown"/>
 	<WaitUntil watch="Overworld.HeroTileX" equals="7" timeoutFrames="10"/>
 	<Expect watch="Overworld.HeroTileY" equals="7"/>
 	<!-- 위로 두 칸, 셋째 칸은 집 벽이라 서서 위를 본다(3 = 위). -->

@@ -1,11 +1,11 @@
 <?asset guid="57d6125ff94a46bfb947271e54e65b52"?>
 <Scene formatVersion="3" name="Hub">
-	<!-- 허브 월드(experiences/hub — gamesettings hubExperience, 허브 이전 3 단계). 플레이어가 장소 · 사물로 미니게임 Experience 에 들어가고 돌아온다.
+	<!-- 마을 — 팩의 시작 맵(gamesettings startMap). 심즈처럼 돌고, 플레이어가 장소 · 사물로 장르 미니게임에 들어가고 돌아온다(MinigameFlow).
 	     스트리밍하는 씬이다(셀 10 m) — 카메라 · 해 · 바닥 · 플레이어 · 입구 · 표지는 늘 올라 있고, 둘레 장식 상자는 쿠킹이 셀로 나눈다(XML 로 연 씬은 셀 없이 모두 올라 있다).
-	     CardTableGate(x -6): 카드 탁자 — experiences/cardtable(SubLevel)을 하위 레벨 maps/hub_cardtable 로 더한다(허브가 보인 채로).
-	     ArcadeGate(x 6): 오락실 기계 — experiences/kitdemo_actioncombat(SceneSwitch)으로 씬을 바꾼다. 허브는 찍어 두고 돌아올 때 복원한다.
+	     CardTableGate(x -6): 카드 탁자 — minigames/cardtable(SubLevel)을 하위 레벨 maps/hub_cardtable 로 더한다(마을이 보인 채로).
+	     ArcadeGate(x 6): 오락실 기계 — minigames/kitdemo_actioncombat(SceneSwitch)으로 씬을 바꾼다. 마을은 돌아올 자리로 찍어 두고 돌아올 때 복원한다.
 	     두 입구 모두 Player 태그만 받고 다시 들어갈 수 있으며(_bOnce false), 안에서 나타난 플레이어(돌아와 복원된 자리)는 세지 않는다(_spawnInside Ignore — 나갔다 들어와야 다시 들어간다).
-	     Marker 는 허브 상태 표지다 — 시나리오 automation/hub 가 옮긴 자리가 미니게임에 다녀온 뒤에도 그대로인지 본다. -->
+	     Marker 는 마을 상태 표지다 — 시나리오 automation/hub 가 옮긴 자리가 미니게임에 다녀온 뒤에도 그대로인지 본다. -->
 	<SceneSettings _bStreaming="true" _unloadMargin="10" _maxCellLoadsPerFrame="4" _addToWorldBudgetMicroseconds="2000">
 		<_cellGrid _cellSize="10" _loadingRadius="40" />
 	</SceneSettings>
@@ -79,7 +79,7 @@
 						</_listShape>
 					</RigidBodyComponent>
 					<MeshComponent _localPosition="0,-0.95,0" _localRotation="0,0,0" _localScale="3,0.1,3" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
-					<ExperienceTriggerComponent _activatorTag="Player" _bOnce="false" _spawnInside="Ignore" _experience="cardtable" />
+					<MinigameTriggerComponent _activatorTag="Player" _bOnce="false" _spawnInside="Ignore" _minigame="cardtable" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -95,7 +95,7 @@
 						</_listShape>
 					</RigidBodyComponent>
 					<MeshComponent _localPosition="0,-0.95,0" _localRotation="0,0,0" _localScale="3,0.1,3" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
-					<ExperienceTriggerComponent _activatorTag="Player" _bOnce="false" _spawnInside="Ignore" _experience="kitdemo_actioncombat" />
+					<MinigameTriggerComponent _activatorTag="Player" _bOnce="false" _spawnInside="Ignore" _minigame="kitdemo_actioncombat" />
 				</_listComponent>
 			</GameObject>
 		</entity>

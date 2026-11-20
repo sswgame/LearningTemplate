@@ -1,65 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="ec76a0b6bdbc4d04a124e01a21784c70"?>
 <!--
-  허브 입장 → 미니게임 둘 들어갔다 나오기 → 허브 상태 그대로(docs/DesignBacklog.md "허브 게임 · 미니게임 Experience", 허브 이전 3 단계). 무대 maps/hub.
-  ① 허브 입장: -gv_firstExperience=hub 가 허브 맵을 연다. 허브 Experience 는 기동 때 이미 켜진 바탕이다(gamesettings hubExperience).
-  ② 하위 레벨: CardTableGate(ExperienceTriggerComponent)에 들어가면 experiences/cardtable 이 켜지고 maps/hub_cardtable 이 허브 씬에 더해진다(씬은 그대로).
-     experience.leave 가 하위 레벨을 빼고 끈다. 안에 머물러도 다시 들어가지 않는다.
-  ③ 씬 전환: ArcadeGate 에 들어가면 허브를 찍고 experiences/kitdemo_actioncombat 의 맵으로 바꾼다. experience.leave 가 허브 맵을 열고 찍은 허브를 복원한다 —
+  마을 → 미니게임 둘 들어갔다 나오기 → 마을 상태 그대로(docs/DesignBacklog.md "게임 기능 · 미니게임"). 무대 maps/hub(팩 시작 맵).
+  ① 마을: -gv_firstScene 가 마을 맵을 연다. 게임 범위 기능(gamesettings gameFeatures)은 기동 때 이미 켜졌다 — 미니게임은 없다.
+  ② 하위 레벨: CardTableGate(MinigameTriggerComponent)에 들어가면 minigames/cardtable 이 켜지고 maps/hub_cardtable 이 마을 씬에 더해진다(씬은 그대로).
+     minigame.leave 가 하위 레벨을 빼고 끈다. 안에 머물러도 다시 들어가지 않는다.
+  ③ 씬 전환: ArcadeGate 에 들어가면 마을을 돌아올 자리로 찍고 minigames/kitdemo_actioncombat 의 맵으로 바꾼다. minigame.leave 가 마을 맵을 열고 찍은 마을을 복원한다 —
      옮겨 둔 Marker · 입구 안의 플레이어 · 입구의 발동 수가 그대로이고, 복원된 자리(입구 안)에서 다시 들어가지 않는다(_spawnInside Ignore).
-  판정은 감시 값이다(사진 없음): Experience.Active · Experience.Hub · Experience.HubRestoreCount · Experience.LeakCount(범위 해제 검사 — 남은 것이 있으면 ExperienceScope.Leaked* 오류도 남는다),
-  Scene.SubLevelCount · Scene.LoadedSubLevelCount, Object.X · Object.Z, 발동 수 Object.Property ExperienceTriggerComponent._fireCount.
+  판정은 감시 값이다(사진 없음): Minigame.Active · Minigame.RestoreCount · Minigame.LeakCount(범위 해제 검사 — 남은 것이 있으면 GameFeatureScope.Leaked* 오류도 남는다),
+  Scene.SubLevelCount · Scene.LoadedSubLevelCount, Object.X · Object.Z, 발동 수 Object.Property MinigameTriggerComponent._fireCount.
   실행: App -scenario=game/playground/automation/hub.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->
 <Scenario name="game.playground.hub" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Launch variable="gv_firstExperience" value="hub"/>
+	<Launch variable="gv_firstScene" value="game/playground/maps/hub.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 
-	<!-- ① 허브 입장 — 허브만 켜졌다 -->
+	<!-- ① 마을 — 미니게임 없음 -->
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
-	<Expect watch="Experience.Hub" is="hub"/>
-	<Expect watch="Experience.Active" is="none"/>
-	<Expect watch="Experience.LeakCount" equals="0"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<Expect watch="Scene.SubLevelCount" equals="0"/>
-	<DevCommand line="teleport Marker 2 0.5 -4"/> <!-- 허브 상태를 바꾼다 — 복원이 맵을 새로 연 것과 갈린다 -->
+	<DevCommand line="teleport Marker 2 0.5 -4"/> <!-- 마을 상태를 바꾼다 — 복원이 맵을 새로 연 것과 갈린다 -->
 	<AdvanceSimulation frames="2"/>
 	<Store watch="Object.X" target="Marker" as="markerX"/>
 	<Store watch="Object.Z" target="Marker" as="markerZ"/>
 
-	<!-- ② 하위 레벨 미니게임 — 허브가 보인 채로 더하고 뺀다 -->
+	<!-- ② 하위 레벨 미니게임 — 마을이 보인 채로 더하고 뺀다 -->
 	<DevCommand line="teleport Player -6 0.05 0"/>
-	<WaitUntil watch="Experience.Active" is="cardtable" timeoutFrames="30"/>
+	<WaitUntil watch="Minigame.Active" is="cardtable" timeoutFrames="30"/>
 	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutFrames="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
-	<Expect watch="Object.Property" target="CardTableGate" key="ExperienceTriggerComponent._fireCount" equals="1"/>
-	<DevCommand line="experience.leave"/>
-	<ExpectLog id="DevCommand.Reply" contains="experience.leave: returning to the hub" atLeast="1"/>
+	<Expect watch="Object.Property" target="CardTableGate" key="MinigameTriggerComponent._fireCount" equals="1"/>
+	<DevCommand line="minigame.leave"/>
+	<ExpectLog id="DevCommand.Reply" contains="minigame.leave: leaving" atLeast="1"/>
 	<WaitUntil watch="Scene.SubLevelCount" equals="0" timeoutFrames="10"/>
-	<Expect watch="Experience.Active" is="none"/>
+	<Expect watch="Minigame.Active" is="none"/>
 	<AdvanceSimulation frames="30"/> <!-- 입구 안에 머문다 — 다시 들어가지 않음은 시간이 내용 -->
-	<Expect watch="Experience.Active" is="none"/>
-	<Expect watch="Object.Property" target="CardTableGate" key="ExperienceTriggerComponent._fireCount" equals="1"/>
-	<Expect watch="Experience.LeakCount" equals="0"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Object.Property" target="CardTableGate" key="MinigameTriggerComponent._fireCount" equals="1"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
 
-	<!-- ③ 씬 전환 미니게임 — 허브를 찍고 바꾸며, 돌아와 복원한다 -->
+	<!-- ③ 씬 전환 미니게임 — 마을을 찍고 바꾸며, 돌아와 복원한다 -->
 	<DevCommand line="teleport Player 6 0.05 0"/>
-	<WaitUntil watch="Experience.Active" is="kitdemo_actioncombat" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Minigame.Active" is="kitdemo_actioncombat" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/kitdemo_actioncombat.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<DevCommand line="experience.leave"/>
-	<WaitUntil watch="Experience.HubRestoreCount" equals="1" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
-	<Expect watch="Experience.Active" is="none"/>
-	<Expect watch="Experience.Hub" is="hub"/>
+	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Object.X" target="Marker" sameAs="markerX" tolerance="0.001"/>
 	<Expect watch="Object.Z" target="Marker" sameAs="markerZ" tolerance="0.001"/>
 	<Expect watch="Object.X" target="Player" near="6" tolerance="0.05"/>
-	<Expect watch="Object.Property" target="ArcadeGate" key="ExperienceTriggerComponent._fireCount" equals="1"/>
-	<Expect watch="Object.Property" target="CardTableGate" key="ExperienceTriggerComponent._fireCount" equals="1"/>
+	<Expect watch="Object.Property" target="ArcadeGate" key="MinigameTriggerComponent._fireCount" equals="1"/>
+	<Expect watch="Object.Property" target="CardTableGate" key="MinigameTriggerComponent._fireCount" equals="1"/>
 	<AdvanceSimulation frames="30"/> <!-- 복원된 자리는 입구 안이다 — 나타남은 세지 않는다 -->
-	<Expect watch="Experience.Active" is="none"/>
-	<Expect watch="Object.Property" target="ArcadeGate" key="ExperienceTriggerComponent._fireCount" equals="1"/>
-	<Expect watch="Experience.LeakCount" equals="0"/>
-	<ExpectLog id="ExperienceManager.HubRestored" count="1"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Object.Property" target="ArcadeGate" key="MinigameTriggerComponent._fireCount" equals="1"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<ExpectLog id="MinigameFlow.Restored" count="1"/>
 	<Pass/>
 </Scenario>

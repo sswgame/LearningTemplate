@@ -1,7 +1,7 @@
 <?asset guid="cbc0674ef5fe44cbab0bb485c97e8107"?>
 <Scene formatVersion="3" name="HubCardTable">
-	<!-- 허브의 카드 탁자 하위 레벨(experiences/cardtable, entry SubLevel) — 허브 씬(maps/hub)에 원점 자리로 더하므로 허브 좌표로 놓는다(CardTableGate 뒤 x -6, z 3).
-	     하위 레벨은 스트리밍 · 데이터 레이어를 쓰지 않는다(SceneSubLevelSubsystem 이 받지 않는다). 카메라 · 해 · 플레이어는 허브의 것을 쓴다. -->
+	<!-- 마을의 카드 탁자 하위 레벨(minigames/cardtable, entry SubLevel) — 마을 씬(maps/hub)에 원점 자리로 더하므로 마을 좌표로 놓는다(CardTableGate 뒤 x -6, z 3).
+	     하위 레벨은 스트리밍 · 데이터 레이어를 쓰지 않는다(SceneSubLevelSubsystem 이 받지 않는다). 카메라 · 해 · 플레이어는 마을의 것을 쓴다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

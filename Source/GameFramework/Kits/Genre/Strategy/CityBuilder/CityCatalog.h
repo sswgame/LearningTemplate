@@ -157,7 +157,7 @@ namespace sw
     /**
      * @brief 도시 규칙의 수치입니다. 시간 단위는 게임 초입니다.
      * @details 규칙 자산이다 — 도시 카탈로그의 `<Rules …/>` 한 줄이 모든 칸을 적는다(`Required`, 없으면 카탈로그 로드가 실패한다). 도시는 카탈로그에서만 받으므로
-     *          게임이 C++ 기본값(`CitySettings{}`)으로 도시를 열 길이 없다(감사 K-4, Lyra `ExperienceDefinition` 자리).
+     *          게임이 C++ 기본값(`CitySettings{}`)으로 도시를 열 길이 없다(감사 K-4, Lyra `ULyraExperienceDefinition` 자리).
      *          범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 읽기가 그 줄을 넣지 않는 오류로 거절한다. 값을 조용히 맞추지 않는다(폴백 금지 원칙).
      */
     REFLECT()

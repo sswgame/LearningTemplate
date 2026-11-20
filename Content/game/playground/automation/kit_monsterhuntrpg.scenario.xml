@@ -7,7 +7,7 @@
   실행: ctest -R Scenario.playground
 -->
 <Scenario name="game.playground.kit_monsterhuntrpg" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Launch variable="gv_firstExperience" value="kit_monsterhuntrpg"/>
+	<Launch variable="gv_firstMinigame" value="kit_monsterhuntrpg"/>
 	<WaitUntil watch="KitDemo.MonsterHuntRPG.State" equals="1" timeoutFrames="120"/>
 	<Expect watch="KitDemo.MonsterHuntRPG.Solved" equals="1"/>
 	<Expect watch="KitDemo.MonsterHuntRPG.Reward" equals="150"/>

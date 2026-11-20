@@ -3,7 +3,7 @@
 <!--
   메인 메뉴 → 게임 시작을 패드만으로 끝까지 — 포커스 이동 순서, 끝내기 확인 대화 상자(아니오 · 뒤로 가기), 뒤로 가기 무시(첫 화면), 키보드 ↔ 패드 버튼 글리프 전환,
   안전 영역 · 글자 배율 · 의사 현지화(qps-ploc)에서 글 넘침 없음을 본다(docs/DesignBacklog.md "런타임 UI 공통 장치").
-  무대: maps/mainmenu(TitleMenuComponent 가 engine/ui/mainmenu.ui.xml 을 연다). "시작" 은 전역 명령 StartGame → 팩의 시작 맵(editortest)이다.
+  무대: maps/mainmenu(TitleMenuComponent 가 engine/ui/mainmenu.ui.xml 을 연다). "시작" 은 전역 명령 StartGame → 팩의 시작 맵(마을 maps/hub)이다.
   첫 패드 입력은 기본 포커스(StartGame)만 잡고 옮기지 않는다(UIInputRouter::handleNavigation). 메뉴 그림은 골든 한 장(mainmenu — 통합이 첫 실행에서 기록).
   실행: ctest -R Scenario.playground (체인)
 -->
@@ -76,7 +76,7 @@
 	<WaitUntil watch="UI.FocusedWidget" is="StartGame" timeoutFrames="10"/>
 	<Tap slot="Gamepad.A" hold="1"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/editortest.scene.xml"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<WaitUntil watch="UI.ActiveScreen" is="none" timeoutFrames="60"/>
 	<ExpectLog id="App.QuitRequested" count="0"/>
 	<ExpectImage file="mainmenu.ppm" golden="mainmenu" region="0.25,0.2,0.75,0.8"/>

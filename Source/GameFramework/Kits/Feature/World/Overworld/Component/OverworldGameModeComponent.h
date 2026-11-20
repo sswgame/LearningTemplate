@@ -1,6 +1,6 @@
 /**
  * @file OverworldGameModeComponent.h
- * @brief 탑다운 타일 걸음 마을의 규칙을 돌리는 컴포넌트입니다(허브의 미니게임 Experience `pixeltown`). 주인공의 타일 걸음(오버월드 키트), 충돌, 주민과의 대화를 맡습니다.
+ * @brief 탑다운 타일 걸음 마을의 규칙을 돌리는 컴포넌트입니다(미니게임 `pixeltown`). 주인공의 타일 걸음(오버월드 키트), 충돌, 주민과의 대화를 맡습니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 한 칸 걸음 · 바라보는 칸 · 상호작용 요청은 키트(`OverworldTileMover`)가,
  *          걸을 수 있는 칸은 키트 타일맵(`TileMap`)이 정합니다. 이 컴포넌트는 그 둘을 씬의 데이터에 잇습니다.
  *

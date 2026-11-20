@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="571a8d2965e699bc57a96a8e7be01bd4"?>
-<!-- 타일 걸음 마을 미니게임(experiences/pixeltown)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 말 걸기는 Space 도 받는다. -->
+<!-- 타일 걸음 마을 미니게임(minigames/pixeltown)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 말 걸기는 Space 도 받는다. -->
 <InputMap>
 	<override name="Interact" trigger="Pressed">
 		<bind source="Key" code="Space"/>
