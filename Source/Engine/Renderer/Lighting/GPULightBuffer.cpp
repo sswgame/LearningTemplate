@@ -605,7 +605,7 @@ namespace sw
         constexpr uint32 kStride          = static_cast<uint32>( sizeof( GPULight ) );
         constexpr uint32 kMergeGapLights  = 4; // 사이가 이만큼 이하인 두 구간은 한 조각으로 — 조각마다 복사 명령이 하나 더 나간다
         const uint32     totalCount       = static_cast<uint32>( _listUploadScratch.size() );
-        const bool       bLayoutUnchanged = _uploadedLightBuffer == _buffer._buffer && _uploadedCPUCount == cpuCount && _uploadedGPULightCount == _gpuLightCount &&
+        const bool       bLayoutUnchanged = _buffer.isValid() && _uploadedLightBufferCreation == _buffer._creationCount && _uploadedCPUCount == cpuCount && _uploadedGPULightCount == _gpuLightCount &&
                                       _listUploadedLight.size() == totalCount;
         [[maybe_unused]] uint32 uploadedBytes = 0;
         if ( bLayoutUnchanged == false )
@@ -624,9 +624,9 @@ namespace sw
         }
         SW_PROFILE_COUNT( "RT.Light.uploadBytes", uploadedBytes );
         _listUploadedLight.swap( _listUploadScratch );
-        _uploadedLightBuffer   = _buffer._buffer;
-        _uploadedCPUCount      = cpuCount;
-        _uploadedGPULightCount = _gpuLightCount;
+        _uploadedLightBufferCreation = _buffer._creationCount;
+        _uploadedCPUCount            = cpuCount;
+        _uploadedGPULightCount       = _gpuLightCount;
     }
 
     void GPULightBuffer::uploadProbeElements( IRHIDevice* pDevice )
@@ -642,13 +642,14 @@ namespace sw
         const bool bWritable = _bProbeWritable == SW_TRUE;
         // 컴퓨트가 쓰지 않는 버퍼에 이미 같은 묶음이 들어 있으면 올리지 않는다(베이크 프로브만 있는 씬은 내용이 바뀔 때만 올린다).
         // 컴퓨트가 쓰는 프레임은 예전처럼 올린다 — 0 자리를 다시 까는 흐름을 바꾸지 않는다.
-        if ( bWritable == false && _pUploadedProbeElements == _pProbeElements && _probeBuffer.isValid() )
+        if ( bWritable == false && _pUploadedProbeElements == _pProbeElements && _probeBuffer.isValid() && _uploadedProbeBufferCreation == _probeBuffer._creationCount )
         {
             _probeElementCount = probeElementCount;
             return;
         }
         // 컴퓨트가 쓰지 않는 버퍼는 지난 묶음과 견주어 바뀐 구간만 올린다(같은 버퍼 · 같은 원소 수일 때). 컴퓨트가 쓰는 버퍼는 GPU 가 덮어써 견줄 수 없다.
-        const bool bComparable = bWritable == false && _pUploadedProbeElements != nullptr && _pUploadedProbeElements->size() == listProbeElement.size() && _probeBuffer.isValid();
+        const bool bComparable = bWritable == false && _pUploadedProbeElements != nullptr && _pUploadedProbeElements->size() == listProbeElement.size() && _probeBuffer.isValid() &&
+                                 _uploadedProbeBufferCreation == _probeBuffer._creationCount;
         if ( bComparable )
         {
             constexpr uint32 kMergeGapProbeElements = 16; // SH9 프로브 하나가 원소 아홉이다 — 이웃 프로브 하나 정도의 사이는 붙인다
@@ -671,7 +672,8 @@ namespace sw
             _probeElementCount = probeElementCount;
             if ( bWritable == false )
                 _pUploadedProbeElements = _pProbeElements;
-            const bool bNewlyDenied = bWritable && _probeBuffer._uav == kInvalidDescriptorIndex;
+            _uploadedProbeBufferCreation = _probeBuffer._creationCount;
+            const bool bNewlyDenied      = bWritable && _probeBuffer._uav == kInvalidDescriptorIndex;
             if ( bNewlyDenied && _bProbeUAVDenied == SW_FALSE )
             {
                 _bProbeUAVDenied = SW_TRUE;

@@ -48,17 +48,17 @@
 	<EditorWaitStable/>
 	<EditorClick mark="projectsettings.page.Rules/Test/Quarantine"/>
 	<EditorWaitStable/>
-	<Expect watch="Editor.ProjectSettingsKeyCount" equals="1"/>
+	<Store watch="Editor.ProjectSettingsKeyCount" as="quarantineKeys"/> <!-- 표의 실제 항목 수에 기대지 않는다(격리 항목이 있으면 키가 는다) -->
 	<EditorClick mark="projectsettings.table._quarantined"/>
 	<EditorWaitStable/>
 	<EditorClick mark="projectsettings.table._quarantined.add"/>
 	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="1" timeoutFrames="60"/>
-	<Expect watch="Editor.ProjectSettingsKeyCount" equals="2"/>
+	<Expect watch="Editor.ProjectSettingsKeyCount" increaseFrom="quarantineKeys" increaseBy="1"/>
 	<EditorWaitStable/>
 	<CaptureEditorUI file="projectconfigedit/quarantinetable.png"/>
 	<EditorClick mark="projectsettings.revert"/>
 	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="0" timeoutFrames="60"/>
-	<Expect watch="Editor.ProjectSettingsKeyCount" equals="1"/>
+	<Expect watch="Editor.ProjectSettingsKeyCount" sameAs="quarantineKeys"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

@@ -33,6 +33,11 @@ namespace sw
         /// @brief 지금 버퍼가 담을 수 있는 원소 수입니다. 요청이 이보다 크면 다시 만듭니다.
         uint32 _capacityElements{ 0 };
         uint32 _elementSize{ 0 };
+        /**
+         * @brief 이 칸이 버퍼를 새로 만든 횟수입니다(`release` 로 줄지 않는다). "지난번에 올린 버퍼와 같은가" 는 핸들이 아니라 이 값으로 견준다 —
+         *        장치를 다시 만들거나 키우느라 다시 만든 버퍼가 옛 핸들과 같은 번호를 받으면, 핸들로 견준 쪽은 새 버퍼를 옛 버퍼로 보고 바뀐 구간만 올려 0 인 채 남겼다.
+         */
+        uint32 _creationCount{ 0 };
 
         /** @brief 버퍼가 만들어져 있는지 확인합니다. */
         bool isValid() const { return _buffer != 0; }

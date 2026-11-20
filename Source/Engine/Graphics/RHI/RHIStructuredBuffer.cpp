@@ -58,6 +58,7 @@ namespace sw
             _uav = pDevice->getResourceFactory()->registerBindlessBufferUAV( _buffer );
         _capacityElements = capacityCount;
         _elementSize      = elementSize;
+        ++_creationCount;
         if ( bExactSize == false )
             upload( pDevice, pInitialData, elementSize * elementCount );
         return true;
