@@ -480,8 +480,9 @@ namespace sw
             SW_LOG_ERROR_ID( "VFXGPUSimulation.FailedCreateGPUBuffers", "Failed to create the GPU buffers of VFX emitter '%#' (%# particles) - it is not drawn", def._name, def._maxParticles );
             return nullptr;
         }
-        state._drawSource._particleSRV = state._particleBuffer._srv;
-        state._drawSource._argsBuffer  = state._argsBuffer._buffer;
+        state._drawSource._particleSRV   = state._particleBuffer._srv;
+        state._drawSource._particleCount = state._particleBuffer._capacityElements;
+        state._drawSource._argsBuffer    = state._argsBuffer._buffer;
         return &state;
     }
 

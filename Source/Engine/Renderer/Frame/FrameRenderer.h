@@ -451,6 +451,8 @@ namespace sw
          * @details 데칼이 있는데 파이프라인에 Decal 패스가 없으면(포워드) 한 번 경고한다 — 덮을 G버퍼가 없다.
          */
         void prepareFrameDecals();
+        /** @brief (셋업) 그리기 목록의 데칼 원소를 데칼 구조 버퍼(`FrameRenderState::_decalBuffer`)에 한 번 올립니다. 버퍼를 못 만들면 그리기 목록을 비운다. */
+        void uploadFrameDecals();
         /** @brief 텍스처 구간 업로드 · 비동기 로드 마무리 · 밉 스트리밍입니다(그리는 패킷 · 그리지 않는 패킷 공통). */
         void updateTextureUploads( IRHIDevice* pDevice );
         /** @brief GPU 장면(인스턴스 · 배치 표)을 올립니다 — 간접 인자 방식 · 모프 풀 · 정점 풀을 먼저 맞춘다(그리는 패킷 · 그리지 않는 패킷 공통). */

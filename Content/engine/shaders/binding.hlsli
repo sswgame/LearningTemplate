@@ -331,15 +331,11 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_FogVolumeParams;
     float4 g_FogDebugParams;      // 안개 진단 보기(C++ FrameFog::makeDebugParams) — x 보기(0 없음 · 1 비교 · 2 산란 단면 · 3 투과율 단면), y 단면 조각, z 비교 경계 uv.x. 안개 패스만 읽는다
     float4 g_PostProcessMaterial; // 후처리 머티리얼 한 그리기 — x 블렌더블 무게(0..1). PostProcessMaterial 패스가 그리기마다 쓴다(post_process_material_main.hlsli)
-    // 데칼 한 그리기(decal.hlsl) — Decal 패스가 데칼마다 쓴다. 상자 월드 행렬은 g_World 다.
-    float4x4 g_DecalWorldToLocal;
-    float4   g_DecalColor;         // rgb 알베도 곱, a 불투명도
-    float4   g_DecalSurface;       // x 거칠기, y 금속도, z 노멀 세기, w 각도 페이드 시작(cos)
-    uint     g_DecalChannels;      // 1 알베도 · 2 노멀 · 4 머티리얼(C++ DecalChannels)
-    uint     g_DecalAlbedoTexture; // MaterialTexture::sampleIndex 의 번호(없으면 kInvalidIndex — 흰색)
-    uint     g_DecalNormalTexture;
-    uint     g_LensFlareTexture;     // 렌즈 플레어 Image 구간의 텍스처 번호(lens_flare.hlsl — MaterialTexture::sampleIndex 의 뜻, 절차적 구간은 kInvalidIndex)
-    uint     g_DeferredTileCapacity; // 디퍼드 조명 타일 목록의 종류 하나 칸 수(deferred_lighting.hlsl VSTile — 타일 그리기만 쓴다)
+    // 데칼 인스턴스 그리기(decal.hlsl) — 원소는 구조 버퍼 g_SwDecals 다. Decal 패스가 묶음마다 첫 원소를 쓴다(SV_InstanceID 에 더한다 — D3D 는 시작 인스턴스를 더하지 않는다).
+    uint g_DecalFirst;
+    uint g_DecalCount;           // g_SwDecals 의 원소 수 — 범위 밖 원소를 막는다
+    uint g_LensFlareTexture;     // 렌즈 플레어 Image 구간의 텍스처 번호(lens_flare.hlsl — MaterialTexture::sampleIndex 의 뜻, 절차적 구간은 kInvalidIndex)
+    uint g_DeferredTileCapacity; // 디퍼드 조명 타일 목록의 종류 하나 칸 수(deferred_lighting.hlsl VSTile — 타일 그리기만 쓴다)
     // 표면 변형 층의 창(C++ SurfaceDeformBinding::_params) — (창 최소 x, 창 최소 z, 1 / 창 너비, 깊이 범위). z 가 0 이면 층이 없다. 텍스처는 엔진 칸 SurfaceDeform(g_SurfaceDeformIndex)
     float4 g_SurfaceDeformParams;
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
@@ -388,9 +384,12 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  g_SwPrevInstanceWorldCount;  // 그 버퍼의 원소 수(인스턴스 수) — 범위 밖 번호를 막는다
     uint  g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
     uint  g_SwLightCount;              // 그 버퍼의 빛 원소 수 (0 이면 빛 없음 — 앰비언트만 받는다)
+    uint  g_SwLightElementCount;       // 그 버퍼의 전체 원소 수(빛 + 뒤에 붙은 그림자 타일 원소) — 범위 밖 타일 원소를 막는다(LightBuffer::loadElement)
     uint  g_SwLightGridIndex;          // 라이트 그리드 버퍼(g_SwLightGrid, t12)가 걸려 있으면 유효, 아니면 kInvalidIndex
     uint  g_SwLightGridBase;           // 지금 뷰의 라이트 그리드 첫 단어(g_SwLightGrid 안). kInvalidIndex 면 그리드 없이 목록 전체를 돈다(gv_lightCulling 0)
+    uint  g_SwLightGridWordCount;      // 그 버퍼의 단어 수 — 범위 밖 단어를 막는다(LightGrid::loadWord)
     uint  g_SwLightProbesIndex;        // 라이트 프로브 SH9 버퍼(g_SwLightProbes, t13)가 걸려 있으면 유효, 아니면 kInvalidIndex — 프로브 볼륨 원소는 이것이 유효할 때만 읽는다
+    uint  g_SwLightProbeElementCount;  // 그 버퍼의 원소(float4) 수 — 범위 밖 원소를 막는다(LightProbe::loadFromXML)
     uint  g_SwBatchesIndex;            // 씬 배치 표가 걸려 있으면 유효, 아니면 kInvalidIndex (풀스크린·픽스처)
     uint  g_SwBatchCount;              // 그 표의 원소 수 — 범위 밖 배치 번호를 막는다
     uint  g_SwVertexAnimationIndex;    // 정점 애니메이션(VAT) 표가 걸려 있으면 유효, 아니면 kInvalidIndex

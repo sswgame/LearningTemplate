@@ -430,12 +430,9 @@ namespace sw
         /// @brief 안개 패스의 진단 보기입니다(`FrameFog::makeDebugParams`, fog.hlsl).
         hashed_string _fogDebugParams{ "g_FogDebugParams" };
         hashed_string _postProcessMaterial{ "g_PostProcessMaterial" };   ///< 후처리 머티리얼 그리기마다의 무게(x)
-        hashed_string _decalWorldToLocal{ "g_DecalWorldToLocal" };       ///< 데칼 그리기마다 — 월드 → 상자 공간
-        hashed_string _decalColor{ "g_DecalColor" };                     ///< 데칼 알베도 곱 · 불투명도
-        hashed_string _decalSurface{ "g_DecalSurface" };                 ///< 데칼 거칠기 · 금속도 · 노멀 세기 · 각도 페이드 시작
-        hashed_string _decalChannels{ "g_DecalChannels" };               ///< 데칼이 덮는 칸(DecalChannels 비트)
-        hashed_string _decalAlbedoTexture{ "g_DecalAlbedoTexture" };     ///< 데칼 알베도 텍스처 번호(MaterialTexture::sampleIndex 의 뜻)
-        hashed_string _decalNormalTexture{ "g_DecalNormalTexture" };     ///< 데칼 노멀 텍스처 번호
+        hashed_string _decalFirst{ "g_DecalFirst" };                     ///< 데칼 인스턴스 그리기 묶음의 첫 원소(decal.hlsl — SV_InstanceID 에 더한다)
+        hashed_string _decalCount{ "g_DecalCount" };                     ///< 데칼 구조 버퍼의 원소 수 — 셰이더가 그 밖을 읽지 않는다
+        hashed_string _swDecals{ "SwDecals" };                           ///< 데칼 구조 버퍼(decal.hlsl g_SwDecals, `FrameRenderState::_decalBuffer`)
         hashed_string _lensFlareTexture{ "g_LensFlareTexture" };         ///< 렌즈 플레어 Image 구간의 텍스처 번호(MaterialTexture::sampleIndex 의 뜻, 없으면 kInvalidIndex)
         hashed_string _deferredTileCapacity{ "g_DeferredTileCapacity" }; ///< 디퍼드 조명 타일 목록의 종류 하나 칸 수(타일 그리기 — deferred_lighting.hlsl VSTile)
         hashed_string _shadowParams{ "g_ShadowParams" };
@@ -527,12 +524,18 @@ namespace sw
         hashed_string _swBatchCount{ "g_SwBatchCount" };
         /// @brief 씬 라이트 버퍼의 빛 원소 수입니다. PassCB g_SwLightCount 에 대응하며, 0이면 셰이더가 빛을 돌지 않습니다(앰비언트만).
         hashed_string _swLightCount{ "g_SwLightCount" };
+        /// @brief 씬 라이트 버퍼의 전체 원소 수(빛 + 그림자 타일 원소)입니다. PassCB g_SwLightElementCount 에 대응하며, 셰이더가 그 밖을 읽지 않습니다(LightBuffer::loadElement).
+        hashed_string _swLightElementCount{ "g_SwLightElementCount" };
         /// @brief 지금 뷰의 라이트 그리드 첫 단어입니다. PassCB g_SwLightGridBase 에 대응하며, 없으면 constant::invalid_index::kUint32 입니다(셰이더는 목록 전체를 돕니다).
         hashed_string _swLightGridBase{ "g_SwLightGridBase" };
+        /// @brief 라이트 그리드 버퍼의 단어 수입니다. PassCB g_SwLightGridWordCount 에 대응하며, 셰이더가 그 밖을 읽지 않습니다(LightGrid::loadWord).
+        hashed_string _swLightGridWordCount{ "g_SwLightGridWordCount" };
         /// @brief 뷰마다의 라이트 그리드 버퍼입니다. lighting.hlsli g_SwLightGrid(t12)와 "SwLightGrid" 에 대응하며, 패스당 한 번 바인딩합니다(CPU · GPU 생산자 공통).
         hashed_string _swLightGrid{ "SwLightGrid" };
         /// @brief 라이트 프로브 SH9 버퍼입니다. lighting.hlsli g_SwLightProbes(t13)와 "SwLightProbes" 에 대응하며, 볼륨이 있는 프레임에만 바인딩합니다.
         hashed_string _swLightProbes{ "SwLightProbes" };
+        /// @brief 라이트 프로브 버퍼의 원소(float4) 수입니다. PassCB g_SwLightProbeElementCount 에 대응하며, 셰이더가 그 밖을 읽지 않습니다(LightProbe::loadFromXML).
+        hashed_string _swLightProbeElementCount{ "g_SwLightProbeElementCount" };
         /// @brief 정점 애니메이션(VAT) 테이블입니다. binding.hlsli g_SwVertexAnimation 과 "SwVertexAnimation" 에 대응하며, 패스당 한 번 바인딩합니다.
         hashed_string _swVertexAnimation{ "SwVertexAnimation" };
         /// @brief 그 테이블의 원소 수입니다. PassCB g_SwVertexAnimationCount 에 대응합니다.

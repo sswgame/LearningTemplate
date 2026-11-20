@@ -46,6 +46,7 @@ namespace sw
         mutable mutex                                      _mutex;
         unordered_set<BindlessSiteKey> _uniqueReportedSite SW_GUARDED_BY( _mutex );
         unordered_set<BindlessSiteKey> _uniqueAbsentSite   SW_GUARDED_BY( _mutex );
+        unordered_set<BindlessSiteKey> _uniqueStrideSite   SW_GUARDED_BY( _mutex );
     };
 
     bool BindlessIndexValidator::isEnabled()
@@ -72,6 +73,15 @@ namespace sw
         if ( site._pDevice->isBindlessIndexLive( space, index ) )
             return true;
         (void)site._pDevice->getBindlessIndexReportLog().report( space, index, site._passName, fieldName, element ); // 같은 위치를 두 번째 본 것이면 이미 로그가 있다
+        return false;
+    }
+
+    bool BindlessIndexValidator::validateStride( const IRHIDevice* pDevice, const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, uint32 bufferStride )
+    {
+        const bool bUnknown = pDevice == nullptr || shaderStride == 0 || bufferStride == 0;
+        if ( bUnknown || shaderStride == bufferStride )
+            return true;
+        (void)pDevice->getBindlessIndexReportLog().reportStride( passName, fieldName, shaderStride, bufferStride ); // 같은 자리는 한 번만 남긴다
         return false;
     }
 
@@ -111,6 +121,25 @@ namespace sw
         return true;
     }
 
+    bool BindlessIndexReportLog::reportStride( const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, uint32 bufferStride )
+    {
+        const BindlessSiteKey siteKey = BindlessIndexValidatorInternal::makeSiteKey( passName, fieldName, 0 );
+        {
+            ScopedLock<mutex> lock{ _pState->_mutex };
+            if ( _pState->_uniqueStrideSite.insert( siteKey ).second == false )
+                return false;
+        }
+        SW_LOG_ERROR_ID( "RHI.StructuredStrideMismatch", "[BindlessIndex] pass '%#' buffer '%#' was created with %#-byte elements but the shader declares %#-byte elements — element reads are misaligned",
+                         passName.empty() ? "<no pass>" : passName.c_str(), fieldName.empty() ? "<unnamed>" : fieldName.c_str(), bufferStride, shaderStride );
+        return true;
+    }
+
+    uint32 BindlessIndexReportLog::getStrideReportCount() const
+    {
+        ScopedLock<mutex> lock{ _pState->_mutex };
+        return static_cast<uint32>( _pState->_uniqueStrideSite.size() );
+    }
+
     uint32 BindlessIndexReportLog::getReportCount() const
     {
         ScopedLock<mutex> lock{ _pState->_mutex };
@@ -129,5 +158,6 @@ namespace sw
         // 저장소까지 놓는다 — clear 는 버킷을 남긴다.
         _pState->_uniqueReportedSite = unordered_set<BindlessSiteKey>{};
         _pState->_uniqueAbsentSite   = unordered_set<BindlessSiteKey>{};
+        _pState->_uniqueStrideSite   = unordered_set<BindlessSiteKey>{};
     }
 } // namespace sw

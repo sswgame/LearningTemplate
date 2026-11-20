@@ -82,6 +82,14 @@
 #define SW_GPU_ASSERT_ID_MODIFIER_UV_TABLE_RANGE 48u // 정점 UV 표의 원소가 프로그램 표 밖이다(값 = 원소)
 
 // ------------------------------------------------------------------------------
+// 읽기 도우미의 범위 검사(SW_GPU_CHECK) — lighting.hlsli · binding_output.hlsli · particle.hlsl. 범위 밖 읽기는 0 을 돌려준다
+// ------------------------------------------------------------------------------
+#define SW_GPU_ASSERT_ID_LIGHT_ELEMENT_RANGE 60u // 빛 버퍼 원소(그림자 타일 포함)가 g_SwLightElementCount 이상이다(값 = 원소)
+#define SW_GPU_ASSERT_ID_LIGHT_GRID_RANGE    61u // 라이트 그리드 단어가 g_SwLightGridWordCount 이상이다(값 = 단어)
+#define SW_GPU_ASSERT_ID_LIGHT_PROBE_RANGE   62u // 라이트 프로브 원소가 g_SwLightProbeElementCount 이상이다(값 = 원소)
+#define SW_GPU_ASSERT_ID_PARTICLE_RANGE      63u // 입자 번호(방출기 구간 기준)가 g_SwParticleCount 이상이다(값 = 번호)
+
+// ------------------------------------------------------------------------------
 // 출력 메시지(SW_GPU_PRINT — 고른 픽셀 · 스레드만, SW_GPU_LOG — id 당 프레임 예산까지)
 // ------------------------------------------------------------------------------
 #define SW_GPU_MESSAGE_ID_PRESENT_PIXEL 1000u // present_output.hlsli(Present 셰이더 모두) — 고른 픽셀이 화면에 내는 색(인자 = r · g · b, 넷째 없음). `gpu.inspect x y` 가 고른다

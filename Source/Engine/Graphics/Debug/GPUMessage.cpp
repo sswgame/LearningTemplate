@@ -110,6 +110,14 @@ namespace sw
                            GPUMessageArg::None, "mesh_modifier.hlsli" );
     SW_GPU_MESSAGE_FORMAT( modifierUVTableRange, SW_GPU_ASSERT_ID_MODIFIER_UV_TABLE_RANGE, GPUMessageSeverity::Error, "modifier vertex UV table read %# is outside the program table", GPUMessageArg::Uint, GPUMessageArg::None, GPUMessageArg::None,
                            GPUMessageArg::None, "mesh_modifier.hlsli" );
+    SW_GPU_MESSAGE_FORMAT( lightElementRange, SW_GPU_ASSERT_ID_LIGHT_ELEMENT_RANGE, GPUMessageSeverity::Error, "light buffer element %# is outside the light buffer (read as zero)", GPUMessageArg::Uint, GPUMessageArg::None,
+                           GPUMessageArg::None, GPUMessageArg::None, "lighting.hlsli" );
+    SW_GPU_MESSAGE_FORMAT( lightGridRange, SW_GPU_ASSERT_ID_LIGHT_GRID_RANGE, GPUMessageSeverity::Error, "light grid word %# is outside the light grid buffer (read as zero)", GPUMessageArg::Uint, GPUMessageArg::None,
+                           GPUMessageArg::None, GPUMessageArg::None, "binding_output.hlsli" );
+    SW_GPU_MESSAGE_FORMAT( lightProbeRange, SW_GPU_ASSERT_ID_LIGHT_PROBE_RANGE, GPUMessageSeverity::Error, "light probe element %# is outside the probe buffer (read as zero)", GPUMessageArg::Uint, GPUMessageArg::None,
+                           GPUMessageArg::None, GPUMessageArg::None, "lighting.hlsli" );
+    SW_GPU_MESSAGE_FORMAT( particleRange, SW_GPU_ASSERT_ID_PARTICLE_RANGE, GPUMessageSeverity::Error, "particle %# is outside the emitter range (drawn empty)", GPUMessageArg::Uint, GPUMessageArg::None, GPUMessageArg::None,
+                           GPUMessageArg::None, "particle.hlsl" );
     SW_GPU_MESSAGE_FORMAT( presentPixel, SW_GPU_MESSAGE_ID_PRESENT_PIXEL, GPUMessageSeverity::Info, "present pixel color %# %# %#", GPUMessageArg::Float, GPUMessageArg::Float, GPUMessageArg::Float, GPUMessageArg::None, "present_output.hlsli" );
 
     bool GPUMessageFormat::isConsistent() const

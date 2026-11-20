@@ -1569,7 +1569,6 @@ namespace sw
             batch._source           = std::move( source );
             batch._world            = desc._world;
             batch._texturePath      = desc._texturePath;
-            batch._sizeScale        = desc._sizeScale;
             batch._bAdditive        = desc._bAdditive;
             batch._sortMode         = desc._sortMode;
         }

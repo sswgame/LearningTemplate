@@ -2372,3 +2372,105 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 | `LockKindBenchTest.ShaderBindingLayoutLookup` | `ShaderBindingLayoutCache`(#4) — 512 항목, 쓰기 없음 · 1/100 · 1/10 | 같음 | 같은 문턱(1/100 칸). 1/10 칸은 리로드 폭주 때 `shared_mutex` 가 느려지는지 보는 칸 — 30 % 넘게 느리면 바꾸지 않는다 |
 | `LockKindBenchTest.LockedSwapQueuePush` | `LockedSwapQueue`(#1) — 생산자 2 · 4 · 8 + 소비자 하나, 64 B 원소 | `LockedSwapQueue<T, mutex>`(기본) · `LockedSwapQueue<T, SpinLock>` | 4 · 8 생산자에서 `SpinLock` 이 10 % 이상 빠르고 2 생산자에서 느리지 않으면 기본 잠금 인자를 `SpinLock` 으로(잠금 인자는 이 감사에서 더했다) |
 | `LockKindBenchTest.JoltJobQueue` | Jolt 잡 큐(#11, 적용함) — 스레드마다 넣고 곧 꺼냄, 용량 2048 | `SpinLock` + `deque`(이전) · 실행 때 용량 `ConcurrentQueue`(지금) | 어느 스레드 수에서든 `ConcurrentQueue` 가 10 % 넘게 느리면 `SpinLock` + `deque` 로 되돌린다 |
+
+## bindless 범위 · GPU 구동 그리기 감사(2026-11-20)
+
+> 질문: 셰이더가 버퍼를 원소 수 안에서 읽는가, 씬 그리기가 GPU 생성 인자로 CPU 부담 없이 나가는가, CPU 일 가운데 compute 로 옮길 것 · 버퍼 갱신 빈도가 맞지 않는 곳은 어디인가.
+> 독자: 렌더러 · RHI 작업자, 통합 담당.
+> 결론: 씬 메시 그리기(주 뷰 · 그림자 캐스케이드 · 지역 그림자 타일 · 추가 뷰)는 이미 GPU 컬링 → 간접 인자 → 같은 PSO 묶음 멀티 드로우다. 남은 틈은 (1) 원소 수를 셰이더에 넘기지 않는 버퍼 넷(빛 버퍼의 그림자 타일 꼬리 · 라이트 그리드 · 라이트 프로브 · 입자) (2) CPU 직접 그리기 패스 둘(데칼 · 확장 요소) (3) 개수 버퍼 압축이 없는 간접 인자다. 결함 하나(접촉 그림자 빛 번호 반올림)는 고쳤고, 측정 카운터를 더했다. 나머지는 아래 설계 — 측정이 문턱을 넘을 때 한다.
+
+### 1. bindless 범위
+
+**지금 구조.** 버퍼는 bindless 배열이 아니라 고정 슬롯(t4 · t5 · t12 …, `binding_slots.hlsli`)에 걸리고, PassCB 의 `g_Sw<Name>Index` 는 "걸려 있는가" 깃발, `g_Sw<Name>Count` 가 원소 수다. 텍스처만 bindless 배열(`g_SwBindlessTex2D[]`, SM5.1 무제한 배열)이다. DX12 SRV 의 `NumElements` 는 만들 때 stride(`_mapStructuredStride`)로 정하고, 디스크립터 테이블 SRV 는 하드웨어 경계 검사가 있지만 **루트 SRV 는 없다**(binding.hlsli 2 절 주석) — 그래서 셰이더 쪽 원소 수 검사가 유일한 방어다.
+
+| 버퍼 | 원소 수 상수 | 셰이더 검사 | 판정 |
+| --- | --- | --- | --- |
+| `g_SwInstances` · `g_SwVisibleInstanceIDs` · `g_SwBatches` · `g_SwMorphVertices` · `g_SwSkinResultOffsets` · `g_SwPrevInstanceWorlds` · `g_SwVertexAnimation` | 있음 | 있음(binding.hlsli 4~8 절) | 맞음 |
+| `g_SwMaterials` | 루트 상수 `g_SwMaterialCount` | clamp(`MaterialBuffer::clampIndex`) | 맞음 |
+| `g_SwLights` 빛 구간 | `g_SwLightCount` | 커서 · 2D 빛 · 접촉 그림자 모두 검사 | 맞음(접촉 그림자는 이번에 고침 — 검사는 내림, 읽기는 반올림이라 `개수 - 0.5` 이상이면 한 칸 밖을 읽었다) |
+| `g_SwLights` 그림자 타일 꼬리(`g_SwLightCount + _params.w + face × 타일 원소`, lighting.hlsli) | **없음**(빛 원소 수만 있다) | 없음 | 틈 — CPU 가 쓴 타일 번호를 믿는다 |
+| `g_SwLightGrid`(`LightGrid::loadWord`) | **없음** | 없음 | 틈 — 그리드 머리의 클러스터 시작 · 개수를 믿는다 |
+| `g_SwLightProbes`(`LightProbe::loadFromXML`) | **없음** | 없음 | 틈 — 프로브 번호 × SH 원소, 반사 프로브 레벨 텍셀 |
+| `g_SwParticles` · `g_SwParticleOrder`(particle.hlsl) | 없음(루트 상수 `g_SwParticleBase` 만) | 없음 | 틈 — GPU 방출기는 인스턴스 수를 compute 가 쓴다(vfx_simulate) |
+| `g_SwCanvasQuads` | 없음 | 없음 | CPU 가 같은 프레임에 쓴 버퍼 · 시작이라 낮은 위험 |
+
+**수명.** 버퍼 번호 해제는 펜스 뒤 재사용이다(DX12 `deferFreeBindlessIndex` · Vulkan `deferFreeBufferIndex` — `RHIBindlessReuse::AfterFence`), 이중 해제 · 다른 종류 번호 해제는 거절한다. 그래서 비행 중 프레임이 해제된 번호로 **다른 자원**을 읽는 일은 없다. `-gv_validateBindlessIndex=DeadIndex` 는 바인드 시점(CPU)에 PassCB 로 가는 번호가 등록표에서 살아 있는지만 본다 — 잡는 것: 해제 뒤 · 발급한 적 없는 번호를 PassCB · 머티리얼 텍스처로 넘기는 것. 못 잡는 것: (가) 셰이더가 GPU 버퍼에서 읽은 번호(머티리얼 구조체의 `…Map`, 인스턴스의 materialIndex), (나) 살아 있는 버퍼의 **원소 범위 밖** 읽기(위 표의 틈), (다) SRV 종류 · stride 와 셰이더 선언의 어긋남(셰이더 구조체 크기 ≠ C++ stride).
+
+**설계 — 원소 수를 함께 받는 읽기 도우미(형식으로 막기).**
+- 틈 넷에 원소 수 상수를 더한다: PassCB `g_SwLightElementCount`(빛 + 그림자 타일 전체), `g_SwLightGridWordCount`, `g_SwLightProbeElementCount`, 입자 루트 상수 `g_SwParticleCount`. 리플렉션 이름 규약(`g_Sw<Name>Count`)을 따르니 C++ 는 `ShaderParameterBinder` 가 채운다.
+- 읽기 함수는 버퍼마다 한 곳(지금도 `LightGrid::loadWord` · `LightProbe::loadFromXML` 처럼 한 곳이다)에서 `index < count` 를 보고 밖이면 영(0) 원소를 돌려준다(DX11 · GL · Vulkan robustBufferAccess 와 같은 결과로 맞춘다 — early-return 없이 삼항, GL 드라이버 함정과 같은 꼴).
+- 개발 구성(`SW_GPU_MESSAGES_ENABLED`)에서는 같은 자리에 `SW_GPU_CHECK( index < count, <id>, index )` 를 둬 `GPUMessage` 링으로 셰이더 · 버퍼 이름 · 값을 보고한다. 배포는 접힌다. 언리얼 D3D12 GPU 기반 검증이 하는 일을 엔진 셰이더 계약으로 옮긴 것이다.
+- stride 어긋남: `ShaderBindingLayout` 리플렉션이 구조 버퍼의 원소 크기를 주므로 바인드 시점(DeadIndex 와 같은 자리)에 `RHIStructuredBuffer` 의 stride 와 비교해 오류로 멈춘다 — `BindlessIndexValidator` 에 `validateStride` 하나.
+- `GetDimensions` 로 셰이더가 스스로 원소 수를 읽는 안은 기각 — WGSL 변환(`arrayLength`)은 되지만 GLSL 변환 경로와 DX12 루트 SRV(크기 정보가 없다)에서 뜻이 갈린다.
+
+### 2. 간접 그리기 · GPU 생성 명령
+
+**패스별.**
+
+| 패스 | 지금 경로 | CPU 가 그리기마다 하는 일 | 재는 카운터 |
+| --- | --- | --- | --- |
+| 씬 불투명 · 투명(주 뷰) | GPU 컬링(`gpu_cull.hlsl`) → 배치마다 간접 인자 → 같은 PSO · 정점 풀 · 머티리얼 연속 배치를 `drawIndexedIndirect( …, groupCount )` 한 번 | 묶음마다 PSO 조회 · 머티리얼 버퍼 등록 · `bindForDraw`(루트 상수 1, CB 재사용 판정) | `RT.Draw.gpuBatchCount` · `RT.Draw.indirectCalls` · `RT.PSO.batchLookups` · `RT.Bind.constantBufferWrites` |
+| 그림자 캐스케이드 · 지역 그림자 타일 | 같은 경로, 컬 슬롯만 다름(`_cascadeCullSlotBase` · `findLocalShadowCullSlot`) | 타일마다 PassCB 슬롯(`acquirePassCb`) + 위와 같음 | `RT.Bind.passCbAcquires`(새로) · `RT.Draw.indirectCalls` |
+| 추가 뷰(에디터 뷰포트 · 미리보기 · 캡처) | 같은 경로(뷰의 `_cullSlot`, 투명 순서는 `GPUViewTransparentOrder`) | 위와 같음 | 위와 같음 |
+| 디퍼드 타일 분류 | `drawIndirect`(분류마다 GPU 가 쓴 인자) | 분류 수만큼 | — |
+| GPU 입자 | compute(`vfx_simulate.hlsl`)가 인자 · 입자를 씀 → `drawIndirect` | 방출기마다 루트 상수(월드 열 · 텍스처) | `RT.Draw.particleIndirectDraws`(새로) |
+| CPU 입자 | CPU 갱신 · 업로드 → `drawInstanced` | 방출기마다 | `RT.Draw.particleCPUDraws`(새로) |
+| 데칼(DBuffer · 디퍼드) | **CPU 직접** — 데칼마다 패스 상수 다섯 · PSO · `bindForDraw`(새 PassCB 슬롯) · `draw(36)` | 데칼마다 상수 버퍼 슬롯 하나 | `RT.Draw.decalDraws`(새로) · `RT.Bind.passCbAcquires` |
+| 렌더 확장 요소(`FrameExtensionHost`) | **CPU 직접** — 요소마다 PSO · 스트림 · 인덱스 · PassCB 슬롯 · `drawIndexedInstanced` | 요소마다 | `RT.Draw.extensionDraws`(새로) |
+| 캔버스(UI) | 사각형 구조 버퍼 + 묶음마다 `drawInstanced`(텍스처 · 가위 단위 묶음) | 묶음마다 루트 상수 | `RT.Draw.canvasBatches`(새로) |
+| 렌즈 플레어 스프라이트 · 후처리 · 풀스크린 | 패스당 한두 번 | — | — |
+| ImGui(에디터) | 명령마다 `drawInstanced` | ImGui 명령 수 | 에디터 전용, 측정 대상 아님 |
+
+**백엔드별.**
+
+| 백엔드 | 간접 그리기 | 멀티 드로우 | 개수 버퍼 | 없을 때 |
+| --- | --- | --- | --- | --- |
+| DX12 | `ExecuteIndirect`(커맨드 시그니처, 루트 상수 없음 — 넣으면 두 배 느렸다) | 예 | 예(`pCountResource`) | — |
+| Vulkan | `vkCmdDrawIndexedIndirect` | `multiDrawIndirect` 기능 | `vkCmdDrawIndexedIndirectCount`(1.2 · 확장) | 하나씩 루프 |
+| GL | `glDrawElementsIndirect` | 4.3 `glMultiDrawElementsIndirect` | 4.6 `glMultiDrawElementsIndirectCount` | 하나씩 |
+| DX11 | `DrawIndexedInstancedIndirect` | 없음(백엔드 루프, 능력 표는 묶기 이득 때문에 참) | 없음 — **상한(drawCount)만큼 그린다** | 컬링된 인자는 instanceCount 0 이라 결과는 같다 |
+| WebGPU | `drawIndexedIndirect` 루프 | 없음 | 없음 — 개수 버퍼를 넘기면 `SW_FATAL` | 씬 경로는 개수 버퍼를 넘기지 않는다 |
+
+**견줌.** 언리얼 GPU Scene 도 배치(메시 드로우 커맨드)마다 간접 인자를 두고 CPU 가 드로우 커맨드를 돈다(인스턴스 컬링만 GPU) — 이 엔진과 같은 단계다. Nanite 는 래스터 bin 마다 간접 하나로 CPU 가 bin 수만 돈다. 유니티 BatchRendererGroup 은 PSO · 머티리얼 단위 묶음마다 그리기 하나(SRP Batcher 와 같은 묶음)다.
+
+**설계 — 개수 버퍼 압축(측정 뒤).** 지금 간접 인자는 배치마다 칸 하나이고 컬링이 instanceCount 를 0 부터 센다 — 다 가려진 배치도 그리기 명령 하나가 나간다(GPU 쪽 빈 명령 비용, CPU 비용은 묶음 수). 컬링 뒤 작은 compute 가 instanceCount > 0 인 인자만 묶음 구간 안에서 앞으로 모으고 묶음마다 개수를 쓰면, DX12 · Vulkan · GL4.6 은 `drawIndexedIndirect( args, 묶음 시작, 묶음 크기, countBuffer, 묶음 번호 × 4 )` 로 빈 명령이 사라진다. DX11 · WebGPU 는 지금 그대로(압축 없는 인자). 문턱: `RT.Draw.gpuBatchCount` 대비 보이는 배치가 절반 아래이고 GPU 프레임에서 빈 간접 명령이 드러날 때. 그 다음 단계(CPU 가 묶음조차 돌지 않는 것 — 머티리얼 bin 마다 간접 하나)는 머티리얼 상수를 bindless 구조 버퍼로 옮긴 뒤(자원 구간 할당 (나) 다음)에만 뜻이 있다.
+
+**설계 — 데칼 인스턴스화.** 데칼마다 패스 상수 다섯을 바꿔 PassCB 슬롯을 하나씩 받는 꼴은 "객체당 데이터를 그리기마다 상수 버퍼 하나" 다. 데칼 원소(`FrameDecalDraw` — 월드 · 역행렬 · 색 · 표면 · 채널 · 텍스처 둘)를 구조 버퍼 하나로 프레임에 한 번 올리고 PSO 묶음마다 `drawInstanced( 36, 데칼 수 )`, 셰이더는 `SV_InstanceID` + 루트 상수 시작으로 원소를 읽는다(캔버스 · 입자와 같은 꼴, 언리얼 DBuffer 데칼은 데칼마다 그리기지만 유니티 URP 데칼은 인스턴싱한다). 에뮬 백엔드(DX11 · GL)의 텍스처 슬롯 두 칸은 데칼마다 다르므로 텍스처가 같은 데칼끼리만 묶는다. 문턱: `RT.Draw.decalDraws` 가 수백을 넘고 그 패스의 RT 시간이 드러날 때.
+
+### 3. compute 로 옮길 후보
+
+판정은 compute 먼저(UAV 에 쓰고 간접으로 잇는다). 지오메트리 셰이더 · 테셀레이션은 `RHICapabilities::_bGeometryStage` · `_bTessellationStages` 가 참인 곳만, WebGPU 대체(compute 또는 CPU)와 함께다. 스트림 아웃은 RHI 에 없고 더하지 않는다(WebGPU · Metal 에 없고 compute 가 대신한다).
+
+| CPU 일 | 지금 | 옮길 곳 | 판정 · 재는 것 |
+| --- | --- | --- | --- |
+| 스키닝 · 모프 | GPU compute(`GPUMeshMorphPool`, 결과 두 벌) | — | 됨(`RT.Skin.*` · `RT.Deform.*`) |
+| 인스턴스 컬링 · LOD 고르기 | GPU(`gpu_cull.hlsl`, LOD 상태 버퍼) | — | 됨. 컬링 없는 길만 CPU 개수(`uploadCPUIndirectCounts`) |
+| 입자 갱신 | GPU 방출기와 CPU 방출기가 함께 | compute(GPU 방출기 확대) | CPU 방출기는 곡선 · 이벤트 기능 차이로 남는다 — `RT.Draw.particleCPUDraws` 와 CPU 입자 갱신 시간으로 본다 |
+| 투명 정렬 | 주 뷰는 GPU 정렬(`bitonic_sort`), 큰 배치(`kGPUSortMaxElements` 초과)와 컬링 없는 추가 뷰 꼬리는 CPU(`GPUTransparentSorter`) | 다단 bitonic(그룹을 넘는 정렬) | 정렬 구간 시간 — 큰 투명 배치가 있을 때만 |
+| 라이트 그리드 | GPU 생산자 + CPU 생산자(컴퓨트 없는 길) | — | 됨 |
+| 자동 노출 히스토그램 | 네이티브 bindless 는 compute, 에뮬은 1x1 풀스크린 | — | 됨 |
+| 움직임 기록(지난 월드 행렬) | CPU 가 인스턴스마다 찾고 버퍼 통째 업로드(shortcut 주석) | GPU 복사: 이번 인스턴스 버퍼 → 지난 버퍼(칸 순이 같다) | `RT.GPUScene.motionHistory` 시간 — 인스턴스 수만에서 드러나면 |
+| 데칼 원소 | CPU 가 그리기마다 상수 | 위 2 절 인스턴스화(compute 불필요) | `RT.Draw.decalDraws` |
+| 지형 · 풀 | 전용 렌더 경로 없음(메시 인스턴스로 그린다) | 생기면 compute 배치 + 간접(지형 패치 LOD 는 테셀레이션보다 compute 가 WebGPU 까지 한 꼴) | — |
+| 디버그 도형 · 라인 | 에디터 기즈모는 ImGui 그리기 목록(CPU) | 그대로 | 에디터 전용, 측정 대상 아님 |
+
+### 4. 버퍼 갱신 빈도
+
+| 버퍼 | 지금 빈도 | 맞는가 | 고칠 안 |
+| --- | --- | --- | --- |
+| 정점 · 인덱스 풀(`GPUMeshVertexPool`) | 전역, 메시 집합이 바뀐 구간만 | 맞음 | — |
+| 머티리얼 데이터 구조 버퍼 · 머티리얼 CB | 머티리얼 단위, 바이트가 같으면 올리지 않음 | 맞음(CB 할당 수는 자원 구간 할당 R-4) | R-4 |
+| 인스턴스 버퍼 | 스냅샷이 바뀐 프레임에 dirty 구간만(`GPUInstanceRing` · `GPUSceneSlotBuffer`) | 맞음 | — |
+| 인스턴스 순서 · 배치 표 · 간접 인자 | 스냅샷 · 풀 오프셋이 바뀔 때만, 순서는 바뀐 구간만 | 맞음(배치 표는 바뀌면 통째 — 배치 수 규모라 작다) | — |
+| 지난 월드 행렬 | 움직인 프레임마다 통째(인스턴스당 64 B) | 빈도는 맞고 양이 큼 | 3 절(GPU 복사) |
+| 라이트 · 프로브 버퍼 | 프레임당 | 맞음 | `RT.Light.uploadBytes` · `RT.LightProbe.uploadBytes` |
+| PassCB | 패스당 링 슬롯(`_passCbRing`, 비행 중 프레임만큼 페이지) | 맞음 — 다만 데칼 · 확장 · 그림자 타일은 그리기마다 슬롯(객체당 데이터가 패스 빈도 버퍼에 있다) | 2 절 데칼 인스턴스화, `RT.Bind.passCbAcquires` |
+| 그리기당 값 | 루트 상수(DX12) · 푸시 상수(Vulkan) · b2 에뮬(DX11 · GL), 머티리얼 원소 수 하나 | 맞음(SRP Batcher PerDraw · 언리얼 느슨한 파라미터 자리) | — |
+
+레지스터 공간: 텍스처 bindless 배열은 space1, 엔진 고정 슬롯 · PassCB(패스) · 머티리얼 CB(머티리얼) · 루트 상수(그리기)가 나뉘어 있어 빈도 분할은 언리얼 Uniform Buffer 빈도(View · Material · Primitive)와 같은 축이다. 업로드는 `RHIStructuredBuffer::upload` 가 default 버퍼에 복사로 쓰는 꼴이라 프레임당 이하 빈도에 맞다.
+
+### 5. 구현한 것(같은 날, 뒤 커밋)
+
+- 원소 수가 없던 틈 넷: PassCB `g_SwLightElementCount` · `g_SwLightGridWordCount` · `g_SwLightProbeElementCount`(C++ `registerLightBuffer` 가 버퍼 용량을 싣는다)와 입자 루트 상수 `g_SwParticleCount`(크기 배율 칸을 비웠다 — 셰이더가 방출기 열에서 `getMaximumAxisScale` 과 같은 식으로 다시 구한다). 읽기 함수 한 곳(`LightBuffer::loadElement` · `LightGrid::loadWord` · `LightProbe::loadFromXML` · `loadParticle`)이 검사하고 범위 밖이면 0 을 돌려주며, 메시지 변형에서는 `SW_GPU_CHECK`(id 60 ~ 63)로 남긴다. 삼항은 양쪽을 평가하므로 읽기는 `if` 로 막는다.
+- stride 검사: `BindlessIndexValidator::validateStride` — 바인더가 리플렉션 원소 크기(`ShaderResourceBindOp::_elementStride`)와 등록한 버퍼의 원소 크기(`RegisteredBuffer::_elementStride`, `FrameResourceRegistry::registerBuffer( name, const RHIStructuredBuffer& )`)를 견준다. 원소 크기를 모르는 핸들 등록은 묻지 않는다 — 지금은 빛 · 그리드 · 프로브 · 데칼만 구조 버퍼로 등록한다. 나머지(인스턴스 · 배치 · 모프 · 머티리얼)를 옮기면 검사 범위가 넓어진다.
+- 데칼 인스턴스화: 데칼 값은 `FrameRenderState::_decalBuffer`(원소 `GPUDecal`, 176 B)에 셋업이 한 번 올리고, Decal 패스는 묶음마다 `drawInstanced( 36, n )` 하나다(네이티브 bindless 는 패스에 하나, 에뮬은 텍스처가 같은 이웃끼리). PassCB 의 데칼 필드 여섯은 `g_DecalFirst` · `g_DecalCount` 둘이 되었다.

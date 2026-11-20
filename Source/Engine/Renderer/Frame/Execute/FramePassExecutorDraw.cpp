@@ -550,23 +550,27 @@ namespace sw
             context._resourceRegistry.registerTexture( attachmentNames()._light2DCookieAtlas, pCookieAtlas->getHandle(), pCookieAtlas->getSRV() );
         // 개수는 버퍼가 없어도 채운다. 셰이더는 0 이면 빛을 돌지 않는다(앰비언트만).
         context._passValues.setUint( passConstantNames()._swLightCount, _state._lightBuffer.isBindable() ? _state._lightBuffer.getCount() : 0u );
+        // 셰이더 읽기 도우미의 범위(빛 · 그림자 타일 · 그리드 · 프로브) — 버퍼의 원소 수다. 걸지 않은 버퍼는 0 이라 아무것도 읽지 않는다.
+        context._passValues.setUint( passConstantNames()._swLightElementCount, _state._lightBuffer.isBindable() ? _state._lightBuffer.getBuffer()._capacityElements : 0u );
         // 지금 그리는 뷰의 라이트 그리드(t12). 없으면(생산자 None, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
         // 그리드 첫 단어와 버퍼는 같이 켜지고 같이 꺼진다 — 첫 단어만 있고 버퍼가 없으면 셰이더가 빈 슬롯을 읽는다(LightGrid::hasGrid 가 둘 다 본다).
         const RHIStructuredBuffer* pGridBuffer = _state._lightBuffer.isBindable() ? _state._lightBuffer.findGridBuffer() : nullptr;
         const bool                 bGridReady  = pGridBuffer != nullptr && pGridBuffer->_buffer != 0 && pGridBuffer->_srv != kInvalidDescriptorIndex;
         const uint32               gridBase    = bGridReady ? _state._lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : constant::invalid_index::kUint32;
         context._passValues.setUint( passConstantNames()._swLightGridBase, gridBase );
+        context._passValues.setUint( passConstantNames()._swLightGridWordCount, bGridReady ? pGridBuffer->_capacityElements : 0u );
         // 라이트 프로브 SH9 · 반사 프로브 · 스카이 라이트(t13) — 올린 원소가 있는 프레임에만 있다. 셰이더는 g_SwLightProbesIndex 로 걸렸는지 본다.
         // 라이트 버퍼와 따로 건다: 스카이 라이트는 라이트가 하나도 없는 장면에도 있다.
         const RHIStructuredBuffer* pProbeBuffer = _state._lightBuffer.findProbeBuffer();
         if ( pProbeBuffer != nullptr )
-            context._resourceRegistry.registerBuffer( passConstantNames()._swLightProbes, pProbeBuffer->_buffer, pProbeBuffer->_srv );
+            context._resourceRegistry.registerBuffer( passConstantNames()._swLightProbes, *pProbeBuffer );
+        context._passValues.setUint( passConstantNames()._swLightProbeElementCount, pProbeBuffer != nullptr ? pProbeBuffer->_capacityElements : 0u );
         if ( _state._lightBuffer.isBindable() == false )
             return;
         const RHIStructuredBuffer& buffer = _state._lightBuffer.getBuffer();
-        context._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer._buffer, buffer._srv );
+        context._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer );
         if ( bGridReady )
-            context._resourceRegistry.registerBuffer( passConstantNames()._swLightGrid, pGridBuffer->_buffer, pGridBuffer->_srv );
+            context._resourceRegistry.registerBuffer( passConstantNames()._swLightGrid, *pGridBuffer );
     }
 
     void FramePassExecutor::registerMaterialBuffer( FramePassContext& context, const GPUMeshBatchBinding& binding, RHIPipelineStateHandle pso )

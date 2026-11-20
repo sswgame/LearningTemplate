@@ -23,6 +23,28 @@
 #include "shading_math.hlsli"
 
 SW_DECLARE_STRUCTURED_BUFFER( LightData, g_SwLights, SW_SLOT_LIGHT_SRV );
+
+/** @brief 빛 버퍼 읽기 — 빛 구간은 g_SwLightCount, 뒤에 붙은 그림자 타일까지는 g_SwLightElementCount 가 범위다. */
+struct LightBuffer
+{
+    static LightData loadElement( uint element );
+};
+
+/** @brief 빛 버퍼(빛 + 그림자 타일 꼬리)의 원소 하나입니다. 범위 밖이면 0 원소다 — 검사와 읽기가 한 곳이다(DX12 루트 SRV 는 경계 검사가 없다). */
+static LightData LightBuffer::loadElement( uint element )
+{
+    const bool bValid = element < g_SwLightElementCount;
+    SW_GPU_CHECK( bValid, SW_GPU_ASSERT_ID_LIGHT_ELEMENT_RANGE, element );
+    LightData light;
+    light._positionRadius = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    light._colorIntensity = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    light._directionType  = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    light._params         = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    light._extra          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    if ( bValid )
+        light = g_SwLights[element];
+    return light;
+}
 // 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개). 볼륨 원소(SW_LIGHT_TYPE_PROBE_VOLUME)가 첫 프로브 번호를 싣는다 — 읽는 함수는 LightProbe::load 하나다.
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwLightProbes, SW_SLOT_LIGHT_PROBE_SRV );
 
@@ -291,8 +313,8 @@ float LightData::sampleLocalShadow( float3 worldPosition, float3 worldNormal )
             faceIndex = ( fromLight.z >= 0.0f ) ? 4u : 5u;
     }
     const uint      element    = g_SwLightCount + (uint)( _params.w + 0.5f ) + faceIndex * SW_SHADOW_TILE_ELEMENT_COUNT;
-    const LightData matrixRows = g_SwLights[element];
-    const LightData info       = g_SwLights[element + 1u];
+    const LightData matrixRows = LightBuffer::loadElement( element );
+    const LightData info       = LightBuffer::loadElement( element + 1u );
     const float4x4  viewProj   = float4x4( matrixRows._positionRadius, matrixRows._colorIntensity, matrixRows._directionType, matrixRows._params );
 
     const float  distance       = length( fromLight );
@@ -405,7 +427,13 @@ bool LightData::computeIncidence( float3 worldPosition, out float3 outToLight, o
 /** @brief 라이트 프로브 버퍼(g_SwLightProbes, t13)의 원소 하나입니다 — 이 함수만 그 버퍼를 읽는다(SH9 · 반사 프로브 텍셀이 같은 버퍼다). */
 static float4 LightProbe::loadFromXML( uint elementIndex )
 {
-    return g_SwLightProbes[elementIndex];
+    // 범위 밖이면 0 — 검사와 읽기가 한 곳이다(DX12 루트 SRV 는 경계 검사가 없다).
+    const bool bValid = elementIndex < g_SwLightProbeElementCount;
+    SW_GPU_CHECK( bValid, SW_GPU_ASSERT_ID_LIGHT_PROBE_RANGE, elementIndex );
+    float4 value = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    if ( bValid )
+        value = g_SwLightProbes[elementIndex];
+    return value;
 }
 
 /**

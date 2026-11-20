@@ -49,6 +49,13 @@ namespace sw
          */
         static bool validate( const BindlessIndexCheckSite& site, RHIBindlessIndexSpace space, RHIDescriptorIndex index, const hashed_string& fieldName,
                               uint32 element = 0 );
+
+        /**
+         * @brief 구조 버퍼 슬롯의 셰이더 원소 크기(@p shaderStride, 리플렉션)와 건 버퍼의 원소 크기(@p bufferStride)가 같으면 true 입니다. 아니면 자리마다 한 번 오류 로그를 남기고 false 입니다.
+         * @details @p pDevice 가 nullptr 이거나 둘 중 하나라도 0(모름)이면 묻지 않고 true 다. 보고 기록은 @p pDevice 가 든다. 다르면 셰이더가 원소 경계를 어긋나게 읽는다 — DX11 디버그 레이어만 드로우마다 알리고, DX12 루트 SRV · Vulkan · GL 은 조용히 틀린 값을 낸다.
+         *          켜짐은 `validate` 와 같다(`isEnabled` — 배포는 접힌다).
+         */
+        static bool validateStride( const IRHIDevice* pDevice, const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, uint32 bufferStride );
     };
 } // namespace sw
 
@@ -79,6 +86,10 @@ namespace sw
          *          손실이 났을 때 어느 패스와 필드가 후보인지 고르는 데 쓴다.
          */
         bool recordAbsent( const hashed_string& passName, const hashed_string& fieldName, uint32 element );
+        /** @brief 구조 버퍼 원소 크기 어긋남 하나를 보고합니다(`BindlessIndexValidator::validateStride`). 같은 자리(패스, 필드)를 처음 볼 때만 오류 로그를 남기고 true 입니다. */
+        bool reportStride( const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, uint32 bufferStride );
+        /** @brief 지금까지 원소 크기 어긋남을 남긴 자리 수입니다(테스트와 진단용). */
+        uint32 getStrideReportCount() const;
         /** @brief 지금까지 오류 로그를 남긴(죽은 번호) 자리 수입니다(테스트와 진단용). */
         uint32 getReportCount() const;
         /** @brief 지금까지 "없음" 정보 로그를 남긴 자리 수입니다(테스트와 진단용). */

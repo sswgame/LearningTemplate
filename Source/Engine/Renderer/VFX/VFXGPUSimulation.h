@@ -104,6 +104,7 @@ namespace sw
         {
             RHIDescriptorIndex _particleSRV{ kInvalidDescriptorIndex }; ///< 렌더 입력(GPUParticle) 구조 버퍼 — t11
             RHIBufferHandle    _argsBuffer{ 0 };                        ///< 간접 인자(RHIDrawIndirectCommand 가 맨 앞)
+            uint32             _particleCount{ 0 };                     ///< 렌더 입력 버퍼의 원소 수 — 셰이더가 그 밖을 읽지 않는다(particle.hlsl g_SwParticleCount)
         };
 
         /** @brief 이번 프레임 GPU 메시 방출기 하나의 되읽기 출처입니다(`VFXGPUMeshReadback` — 자동화 감시 값). */
