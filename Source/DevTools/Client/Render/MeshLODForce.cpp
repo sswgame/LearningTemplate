@@ -5,7 +5,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Visual/MeshLODSystem.h"

@@ -7,7 +7,7 @@
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/JointComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"

@@ -7,7 +7,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneManager.h"

@@ -1,7 +1,8 @@
 /**
  * @file GameObjectManager.h
  * @brief 씬 하나의 오브젝트 수명(생성 · 파괴 · 플레이 시작)을 관리합니다. 오브젝트 저장소 · 틱 디스패치 · 틱 중 규칙 · 레지스트리 · 물리를 소유하고, 게임이 부르는 API 를 전달합니다.
- * @details 템플릿(순회 · 타입 핸들 찾기 · `getSubsystem<T>` · 틱 뒤 컴포넌트 작업)의 몸체는 `GameObjectManager.inl` 에 있고 부르는 파일만 포함합니다.
+ * @details 템플릿(순회 · 타입 핸들 찾기 · 틱 뒤 컴포넌트 작업)의 몸체는 `GameObjectManager.inl` 에 있고 부르는 파일만 포함합니다. `getSubsystem<T>` 만은 여기 둔다 —
+ *          몸체가 보는 형식이 서비스 범위(`SubsystemScope.h`, pch 밖 셋) 하나이고 .inl 을 포함하던 TU 의 절반 가까이가 이것만 불렀다(헤더 팬인 점수로 정했다).
  */
 #pragma once
 #include "Core/Container/span.h"
@@ -13,6 +14,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -79,7 +81,6 @@ namespace sw
     class SceneComponent;
     class SceneTickScheduler;
     class SceneTransformHierarchy;
-    class SubsystemScope;
     class TagIndex;
     class TickRegistry;
     struct ComponentPoolEntry;
@@ -537,10 +538,16 @@ namespace sw
          *          (`manager.getSubsystem<sw::ScenePhysics>()` · `getSubsystem<sw::SceneAudio>()` · `getSubsystem<SceneNavigation>()` · `getSubsystem<AnimationSystem>()`).
          */
         template <typename TService>
-        TService& getSubsystem();
+        TService& getSubsystem()
+        {
+            return getSceneScope().get<TService>();
+        }
         /** @brief 이 씬의 서비스 @p TService 입니다. */
         template <typename TService>
-        const TService& getSubsystem() const;
+        const TService& getSubsystem() const
+        {
+            return getSceneScope().get<TService>();
+        }
         /** @brief 이번 프레임의 게임 카메라를 정합니다(씬이 `update` 전에 부른다). 시야를 따라가는 서비스(오디오 리스너)가 씬을 몰라도 읽는다. */
         void setFrameCamera( const CameraComponent* pCamera ) { _pFrameCamera = pCamera; }
         /** @brief 이번 프레임의 게임 카메라입니다. 없으면 nullptr 입니다. */

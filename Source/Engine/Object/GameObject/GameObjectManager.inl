@@ -1,13 +1,11 @@
 /**
  * @file GameObjectManager.inl
- * @brief `GameObjectManager` 의 템플릿 몸체(순회 · 타입 핸들 찾기 · 씬 서비스 얻기 · 틱 뒤 컴포넌트 작업)입니다. 이 템플릿을 부르는 파일만 포함합니다.
+ * @brief `GameObjectManager` 의 템플릿 몸체(순회 · 타입 핸들 찾기 · 틱 뒤 컴포넌트 작업)입니다. 이 템플릿을 부르는 파일만 포함합니다.
  * @details 매니저 헤더를 포함하는 TU 는 400 여 개이고 그중 이 템플릿을 부르는 것은 일부다. 몸체를 헤더에 두면 몸체가 보는 형식(저장소 · 레지스트리 · 범위 · GameObject)의
  *          헤더를 모든 TU 가 다시 읽는다(W-S4 허브 해체, 언리얼 `UWorld` 가 `World.h` 에 템플릿 몸체 대신 앞 선언을 두는 자리).
  *          포함을 잊으면 clang 은 컴파일에서(`-Werror=undefined-func-template`, `sw_require_template_definitions`), MSVC 는 링크에서 정의 없는 템플릿 심볼로 멈춘다 — 그 이름(`GameObjectManager::forEach…`)이 이 파일을 가리킨다.
  */
 #pragma once
-#include "Core/Subsystem/SubsystemScope.h"
-
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
@@ -191,17 +189,5 @@ namespace sw
         if ( result == TypedHandleResult::Success )
             outHandle = TComponentHandle<T>( ComponentHandleCastKey{}, handle );
         return result;
-    }
-
-    template <typename TService>
-    TService& GameObjectManager::getSubsystem()
-    {
-        return getSceneScope().get<TService>();
-    }
-
-    template <typename TService>
-    const TService& GameObjectManager::getSubsystem() const
-    {
-        return getSceneScope().get<TService>();
     }
 } // namespace sw

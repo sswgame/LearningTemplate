@@ -13,7 +13,8 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Viewport/Model/EditorAssetPlacement.h"
 
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Scene/Scene.h"

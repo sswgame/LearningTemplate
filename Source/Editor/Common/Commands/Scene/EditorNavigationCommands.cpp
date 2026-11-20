@@ -5,7 +5,8 @@
 #include "Engine/Navigation/INavMeshTileStore.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw::editor
 {
