@@ -27,7 +27,7 @@ Scripts/lint/naming_words.py
   (Source · Test · ThirdParty 감싸기 · 뿌리 CMakeLists, vcpkg 포트 제외)의 정의도 본다. 전수 집계는 `py -3 -m Scripts naming-census`.
 - 이름 하나씩의 예외는 `_keep`, 전수 개명한 옛 이름은 이름 이력 표(`Config/Rules/Lint/NamingWordsBannedNames.json` 의 `_bannedNames`, C++ 는 주석 · 문자열 밖 코드, 스크립트는 선언 · 파일 · CLI 명령 이름을 본다).
 
-verb · term · predicate · lookup · word 는 기준선(`Config/Rules/Lint/NamingWordsBaseline.json`)을 둔다 — 지금 있는 이름만 적혀 있고 **줄기만 한다**:
+verb · term · predicate · lookup · word · kind 는 이름 기준선(`Config/Rules/Lint/NamingWordsBaseline.json`, 표 형식 `rule_tables.NameBaseline`)을 둔다 — 지금 있는 이름만 적혀 있고 **줄기만 한다**:
 새 위반은 실패, 고쳐 사라진 이름이 기준선에 남아도 실패(`--lower-baseline` 으로 뺀다). 영역별 이전이 기준선을 0 으로 줄인다.
 
 `py -3 -m Scripts lint naming-words [--self-check | --write-baseline | --lower-baseline]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import argparse
 import functools
-import json
 import re
 import sys
 from pathlib import Path
@@ -49,12 +48,14 @@ from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.lint_scope import LintScope, is_under, make_whole_scope, read_texts  # noqa: E402
 from lint.acronyms import check_find_bad_words, find_acronym_problems  # noqa: E402
-from lint.rule_tables import get_table_path  # noqa: E402
+from lint.rule_tables import ExceptionTable, NameBaseline, get_table_path, read_rule_table  # noqa: E402
 
-CONFIG_PATH = get_table_path("naming-words")
-BASELINE_PATH = get_table_path("naming-words", "Baseline")
-BANNED_NAMES_PATH = get_table_path("naming-words", "BannedNames")   # 옛 이름 → 새 이름 이력 — 낱말 표와 달리 개명 도구가 줄을 더한다(언리얼 CoreRedirects 자리)
+RULE_ID = "naming-words"
+CONFIG_PATH = get_table_path(RULE_ID)   # 안내 글이 가리키는 낱말 표
 RATCHET_RULES = ("verb", "term", "predicate", "lookup", "word", "kind")
+BASELINE_SECTIONS = tuple(f"_{rule}" for rule in RATCHET_RULES)   # 이름 기준선(`NameBaseline`)의 칸
+KEEP_SECTIONS = ("_keep", "_acronymKeep")   # 이름 하나씩의 예외 — 까닭은 형식이 보고, 낡은 줄은 예전처럼 세지 않는다
+LOWER_COMMAND = "py -3 Scripts/lint/naming_words.py --lower-baseline"
 EXTENSIONS = (".h", ".cpp", ".inl")
 COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 STRING = re.compile(r'R"\((?:.|\n)*?\)"|"(?:[^"\\\n]|\\.)*"')
@@ -287,16 +288,9 @@ def classify_names(list_code: Iterable[tuple[str, str]], table: dict) -> tuple[l
     return list_problem, ratchet
 
 
-def compare_baseline(ratchet: dict[str, dict[str, str]], baseline: dict[str, list[str]], whole_repo: bool = True) -> list[str]:
-    list_problem: list[str] = []
-    for rule in RATCHET_RULES:
-        allowed = set(baseline.get(rule, []))
-        for name, where in sorted(ratchet[rule].items()):
-            if name not in allowed:
-                list_problem.append(f"[{rule}] {where}")
-        for name in sorted(allowed - set(ratchet[rule])) if whole_repo else ():   # 고친 이름은 저장소 전체를 봐야 안다
-            list_problem.append(f"[{rule}] 기준선의 '{name}' 가 더는 없다 — 고친 이름을 기준선에서 뺀다(`py -3 Scripts/lint/naming_words.py --lower-baseline`)")
-    return list_problem
+def compare_baseline(ratchet: dict[str, dict[str, str]], baseline: NameBaseline, whole_repo: bool = True) -> list[str]:
+    """기준선 판정(verb · term · predicate · lookup · word · kind)의 위반을 이름 기준선과 견준다."""
+    return baseline.compare({f"_{rule}": ratchet[rule] for rule in RATCHET_RULES}, whole_repo, LOWER_COMMAND)
 
 
 def read_sources(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
@@ -327,24 +321,9 @@ def collect_source_names(project_root: Path, scope: LintScope, list_code: list[t
 
 def read_table(project_root: Path) -> dict:
     """낱말 표에 이름 이력 표의 `_bannedNames` 를 붙인 것 — 판정 함수는 표 하나를 받는다."""
-    table = json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))
-    table["_bannedNames"] = json.loads((project_root / BANNED_NAMES_PATH).read_text(encoding="utf-8"))["_bannedNames"]
+    table = read_rule_table(project_root, RULE_ID)
+    table["_bannedNames"] = read_rule_table(project_root, RULE_ID, "BannedNames")["_bannedNames"]
     return table
-
-
-def read_baseline(project_root: Path) -> dict[str, list[str]]:
-    path = project_root / BASELINE_PATH
-    if path.exists() is False:
-        return {}
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return {rule: data["_" + rule] for rule in RATCHET_RULES if "_" + rule in data}
-
-
-def write_baseline(project_root: Path, baseline: dict[str, list[str]]) -> None:
-    data = {"_comment": "NamingWords 기준선 — 지금 남은 위반 이름(규칙마다). 줄기만 한다: 새 위반은 린트가 막고, 고친 이름은 --lower-baseline 으로 뺀다. 영역별 이전이 0 으로 줄인다."}
-    for rule in RATCHET_RULES:
-        data["_" + rule] = sorted(set(baseline.get(rule, [])))
-    (project_root / BASELINE_PATH).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 def classify_words(list_name: Iterable[tuple[str, str, str]], table: dict) -> dict[str, str]:
@@ -400,7 +379,9 @@ def collect_violations(project_root: Path, scope: LintScope) -> tuple[list[str],
 
 def check_naming_words(project_root: Path, scope: LintScope) -> list[str]:
     list_problem, ratchet = collect_violations(project_root, scope)
-    return list_problem + compare_baseline(ratchet, read_baseline(project_root), scope.whole_repo) + find_acronym_problems(project_root, scope, read_table(project_root))
+    table = read_table(project_root)
+    list_problem += compare_baseline(ratchet, NameBaseline.load(project_root, RULE_ID, BASELINE_SECTIONS), scope.whole_repo) + find_acronym_problems(project_root, scope, table)
+    return list_problem + ExceptionTable(CONFIG_PATH, table, KEEP_SECTIONS).list_problems(scope.whole_repo, stale_sections=())
 
 
 def run_self_check() -> None:
@@ -420,7 +401,8 @@ def run_self_check() -> None:
     assert set(ratchet["lookup"]) == {"materialGroupFor"}, ratchet
     kind_problems, kind_ratchet = classify_names([("a.h", strip_code("enum class PacketType : uint8 { A }; enum class PacketKind { A }; enum OldType { B }; struct ValueType {};"))], table)
     assert set(kind_ratchet["kind"]) == {"PacketType"}, kind_ratchet   # enum class 만 본다 — 구조체 · 옛 enum 은 다른 규칙 몫
-    baseline = {"verb": ["drainEvents"], "term": ["FooVerdict", "hasPendingWork", "_verdictCount", "goneName"], "predicate": ["drawsBatch"], "lookup": []}
+    baseline = NameBaseline("t.json", {"_comment": "테스트", "_verb": ["drainEvents"], "_term": ["FooVerdict", "hasPendingWork", "_verdictCount", "goneName"], "_predicate": ["drawsBatch"],
+                                       "_lookup": [], "_word": [], "_kind": []}, BASELINE_SECTIONS)
     ratchet_problems = compare_baseline(ratchet, baseline)
     assert any("materialGroupFor" in line for line in ratchet_problems), ratchet_problems   # 기준선에 없는 새 위반
     assert any("goneName" in line for line in ratchet_problems), ratchet_problems   # 고쳐 사라진 이름은 빼라고 한다
@@ -473,12 +455,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     project_root = get_project_root()
     if arguments.write_baseline or arguments.lower_baseline:
         _, ratchet = collect_violations(project_root, make_whole_scope(project_root))
-        current = {rule: list(ratchet[rule]) for rule in RATCHET_RULES}
-        if arguments.lower_baseline:
-            old = read_baseline(project_root)
-            current = {rule: [name for name in old.get(rule, []) if name in ratchet[rule]] for rule in RATCHET_RULES}
-        write_baseline(project_root, current)
-        print(f"[NamingWords] 기준선: " + ", ".join(f"{rule} {len(current[rule])}" for rule in RATCHET_RULES))
+        current = {f"_{rule}": ratchet[rule] for rule in RATCHET_RULES}
+        baseline = NameBaseline.load(project_root, RULE_ID, BASELINE_SECTIONS)
+        baseline.lower(current) if arguments.lower_baseline else baseline.replace(current)
+        baseline.write(project_root)
+        print(f"[NamingWords] 기준선: " + ", ".join(f"{section.lstrip('_')} {len(names)}" for section, names in baseline.names.items()))
         return ExitCode.PASSED
     list_problem = check_naming_words(project_root, make_whole_scope(project_root))
     for problem in list_problem:

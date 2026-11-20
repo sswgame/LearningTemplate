@@ -132,6 +132,53 @@ class ExceptionTable:
         return list_problem
 
 
+class NameBaseline:
+    """
+    이름 목록 래칫 — 칸(판정)마다 지금 남은 위반 이름 목록(`Baseline` 의 수 대신 이름 — 이름 판정은 파일이 아니라 이름 하나가 단위다).
+    `compare` 는 목록에 없는 새 위반을 늘, 고쳐 사라졌는데 목록에 남은 이름을 저장소 전체일 때 낸다. `lower` 는 빼기만 하고 `replace` 는 새 판정을 들일 때 한 번 쓴다.
+    """
+
+    def __init__(self, path: str, data: Mapping, sections: Sequence[str]) -> None:
+        check_head(path, data)
+        self.path = path
+        self.comment: str = data["_comment"]
+        self.names: dict[str, list[str]] = {}
+        for section in sections:
+            if section not in data:
+                raise ValueError(f"{path}: 칸 `{section}` 이 없다")
+            self.names[section] = list(data[section])
+
+    @classmethod
+    def load(cls, project_root: Path, rule_id: str, sections: Sequence[str]) -> "NameBaseline":
+        path = get_table_path(rule_id, "Baseline")
+        return cls(path, read_table(project_root, path), sections)
+
+    def compare(self, current: Mapping[str, Mapping[str, str]], whole_repo: bool, lower_command: str) -> list[str]:
+        """@p current 는 칸 → {위반 이름: 경로 · 안내}. 줄 머리는 칸 이름에서 `_` 를 뗀 판정 이름이다(`[verb]`)."""
+        list_problem: list[str] = []
+        for section, list_name in self.names.items():
+            label, allowed = section.lstrip("_"), set(list_name)
+            list_problem += [f"[{label}] {where}" for name, where in sorted(current[section].items()) if name not in allowed]
+            for name in sorted(allowed - set(current[section])) if whole_repo else ():   # 고친 이름은 저장소 전체를 봐야 안다
+                list_problem.append(f"[{label}] 기준선의 '{name}' 가 더는 없다 — 고친 이름을 기준선에서 뺀다(`{lower_command}`)")
+        return list_problem
+
+    def lower(self, current: Mapping[str, Mapping[str, str]]) -> None:
+        """고쳐 사라진 이름만 뺀다(늘리지 않는다)."""
+        self.names = {section: [name for name in list_name if name in current[section]] for section, list_name in self.names.items()}
+
+    def replace(self, current: Mapping[str, Iterable[str]]) -> None:
+        """지금 위반을 모두 기준선으로(새 판정을 들일 때 한 번)."""
+        self.names = {section: list(current[section]) for section in self.names}
+
+    def dump(self) -> str:
+        data = {"_comment": self.comment, **{section: sorted(set(list_name)) for section, list_name in self.names.items()}}
+        return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+
+    def write(self, project_root: Path) -> None:
+        (project_root / self.path).write_text(self.dump(), encoding="utf-8", newline="\n")
+
+
 class Baseline:
     """
     래칫 기준선 표 — `_files` 칸에 파일 → 종류 → 수. 판정(`compare`)은 늘면 실패 · 줄면 낮추라고 하고, `lower` · `accept` 가 고친 뒤 `write` 가

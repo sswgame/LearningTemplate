@@ -9,5 +9,6 @@
     "read_last_assistant_text",
     "test_cached_digest_matches_fresh_and_rereads_only_changed_files",
     "unfold_paths"
-  ]
+  ],
+  "_kind": []
 }
