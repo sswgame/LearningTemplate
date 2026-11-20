@@ -139,30 +139,13 @@ namespace sw
         virtual void updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) = 0;
 
         /**
-         * @brief 범용 버퍼(구조화, UAV, 인다이렉트 인자, 인덱스)를 만듭니다.
-         * @details 내용이 있는 `Vertex` 용도는 createVertexBuffer 로, `Index` 용도는 createIndexBuffer 로 넘긴다
-         *          (`_elementSize` 가 2 면 uint16 인덱스).
+         * @brief 범용 GPU 버퍼(구조화 · UAV · 인다이렉트 인자 · raw)를 만듭니다. 정점 · 인덱스 · 상수 버퍼는 각자의 생성 함수(`createVertexBuffer` · `createIndexBuffer` · `createConstantBuffer`)다.
+         * @details 서술체는 `isValidBufferDesc` 를 지켜야 한다 — 원소 크기 · 원소 수가 0 이 아니고 바이트 수가 그 곱이다. 예전 기본 구현은 비면 값을 지어냈다(바이트 0 → 256, 원소 0 → 4 바이트 · 1 개).
+         *          기본 구현은 구조 버퍼(`createStructuredBuffer`)로 만들고 처음 내용을 올린다. 다른 버퍼 종류가 필요한 백엔드(DX11 인다이렉트 인자 · GL SSBO)가 덮는다.
          */
-        [[nodiscard]] virtual RHIBufferHandle createBuffer( const RHIBufferDesc& desc )
-        {
-            const bool bHasVertexInitialData = EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0;
-            if ( bHasVertexInitialData )
-                return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
-            const bool bHasIndexInitialData = EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Index ) && desc._pInitialData != nullptr && desc._sizeBytes > 0;
-            if ( bHasIndexInitialData )
-                return createIndexBuffer( desc._pInitialData, desc._sizeBytes );
-            if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Constant ) )
-                return createConstantBuffer( desc._sizeBytes > 0 ? desc._sizeBytes : 256u );
-            const uint32    elemSize                  = desc._elementSize > 0 ? desc._elementSize : 4u;
-            const uint32    elemCount                 = desc._elementCount > 0
-                                                          ? desc._elementCount
-                                                          : ( desc._sizeBytes > 0 ? ( desc._sizeBytes / elemSize ) : 1u );
-            RHIBufferHandle buffer                    = createStructuredBuffer( elemSize, elemCount );
-            const bool      bHasStructuredInitialData = buffer != 0 && desc._pInitialData != nullptr && desc._sizeBytes > 0;
-            if ( bHasStructuredInitialData )
-                updateStructuredBuffer( buffer, desc._pInitialData, desc._sizeBytes );
-            return buffer;
-        }
+        [[nodiscard]] virtual RHIBufferHandle createBuffer( const RHIBufferDesc& desc );
+        /** @brief @p desc 가 범용 버퍼 서술로 맞으면 true, 아니면 무엇이 틀렸는지 @p pCaller 와 함께 오류로 남기고 false 입니다. 값을 대신 채우지 않는다. */
+        [[nodiscard]] static bool isValidBufferDesc( const RHIBufferDesc& desc, const utf8* pCaller );
 
         /**
          * @brief 내용을 담아 인덱스 버퍼(uint16, uint32)를 만듭니다. 인덱스 크기는 바인딩할 때(`setIndexBuffer`) 다시 알려 줍니다.

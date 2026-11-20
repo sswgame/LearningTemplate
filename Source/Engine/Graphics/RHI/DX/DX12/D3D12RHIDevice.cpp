@@ -636,12 +636,13 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 디바이스 · 큐 · 힙 · 전역 리소스 생성의 순서가 곧 의미라 나누지 않는다.
-    bool D3D12RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
+    bool D3D12RHIDevice::initializeInternal( const RHIDeviceDesc& deviceDesc )
     {
+        const RHISwapChainDesc& desc = deviceDesc._swapChain;
     #if defined( SW_DO_CHECKS )
         // 디버그 레이어는 배포가 아닌 구성에 컴파일돼 있고 켤지는 장치를 만들 때 정한다(EngineConfig `_rhi._validationLayer`, `-rhi-validation` — 언리얼 `-d3ddebug`).
-        _bValidationLayer = desc._bValidationLayer ? SW_TRUE : SW_FALSE;
-        if ( desc._bValidationLayer )
+        _bValidationLayer = deviceDesc._bValidationLayer ? SW_TRUE : SW_FALSE;
+        if ( deviceDesc._bValidationLayer )
         {
             Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
             if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( debugController.GetAddressOf() ) ) ) )
@@ -649,7 +650,7 @@ namespace sw
                 debugController->EnableDebugLayer();
                 SW_LOG_INFO_ID( "D3D12.DebugLayerEnabled", "Debug layer enabled." );
                 // GPU 기반 검증(GBV)은 장치를 만들기 **전에만** 켤 수 있다(ID3D12Debug1::SetEnableGPUBasedValidation 문서). 켜 달라고 했는데 인터페이스가 없으면 멈춘다(R-9).
-                if ( desc._bGPUBasedValidation )
+                if ( deviceDesc._bGPUBasedValidation )
                 {
                     Microsoft::WRL::ComPtr<ID3D12Debug1> debugController1;
                     if ( FAILED( debugController.As( &debugController1 ) ) )
@@ -661,23 +662,23 @@ namespace sw
                     SW_LOG_INFO_ID( "D3D12.GPUBasedValidationEnabled", "GPU-based validation enabled." );
                 }
             }
-            else if ( desc._bGPUBasedValidation )
+            else if ( deviceDesc._bGPUBasedValidation )
             {
                 SW_LOG_ERROR_ID( "D3D12.GPUBasedValidationNoDebugLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but the D3D12 debug layer is not installed" );
                 return false;
             }
         }
-        else if ( desc._bGPUBasedValidation )
+        else if ( deviceDesc._bGPUBasedValidation )
             SW_LOG_WARNING_ID( "D3D12.GPUBasedValidationWithoutLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but the debug layer is off (_rhi._validationLayer, -rhi-validation) - ignored" );
     #else
-        if ( desc._bGPUBasedValidation )
+        if ( deviceDesc._bGPUBasedValidation )
             SW_LOG_WARNING_ID( "D3D12.GPUBasedValidationWithoutLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but this build has no D3D12 debug layer - ignored" );
     #endif
         // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 켤지는 EngineConfig `_rhi._dred`(배포가 아닌 구성 기본 켬)와
         // `-rhi-dred` 가 정한다 — 배포 구성도 인자로 켠다(언리얼 `-gpucrashdebugging`). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`, `-rhi-breadcrumbs`)가 싣고,
         // DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
-        _bDRED = desc._bDRED ? SW_TRUE : SW_FALSE;
-        if ( desc._bDRED )
+        _bDRED = deviceDesc._bDRED ? SW_TRUE : SW_FALSE;
+        if ( deviceDesc._bDRED )
         {
             Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
             if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( dredSettings.GetAddressOf() ) ) ) )
@@ -694,14 +695,14 @@ namespace sw
 
         // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(_rhi._bSoftwareAdapter).
         Microsoft::WRL::ComPtr<IDXGIAdapter1> softwareAdapter;
-        if ( desc._bSoftwareAdapter && FAILED( factory->EnumWarpAdapter( IID_PPV_ARGS( softwareAdapter.GetAddressOf() ) ) ) )
+        if ( deviceDesc._bSoftwareAdapter && FAILED( factory->EnumWarpAdapter( IID_PPV_ARGS( softwareAdapter.GetAddressOf() ) ) ) )
         {
             SW_LOG_ERROR_ID( "D3D12.WARPAdapterNotAvailable", "WARP adapter is not available (_rhi._bSoftwareAdapter)" );
             return false;
         }
 
         // 하드웨어는 고성능 순서의 첫 어댑터다 — nullptr(기본 어댑터)은 하이브리드 노트북에서 내장 GPU 다(RHIDxgiAdapter.h).
-        const Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter != nullptr ? softwareAdapter : findDXGIPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
+        const Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter != nullptr ? softwareAdapter : findDXGIPreferredAdapter( factory.Get(), deviceDesc._bPreferMinimumPower );
         if ( adapter == nullptr )
         {
             SW_LOG_ERROR_ID( "D3D12.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );
@@ -904,7 +905,7 @@ namespace sw
         if ( isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _transferFence.GetAddressOf() ) ), "CreateFence" ) == false )
             return false;
         _transferFenceValue = 0;
-        if ( initializeTransfers( desc ) == false )
+        if ( initializeTransfers( deviceDesc ) == false )
             return false;
 
         if ( createGlobalResources() == false )
@@ -2267,7 +2268,7 @@ namespace sw
         return index < kBindlessDescriptorCapacity && _arrBindlessReadSlot.get()[index].isLive( space );
     }
 
-    bool D3D12RHIDevice::initializeTransfers( const RHISwapChainDesc& desc )
+    bool D3D12RHIDevice::initializeTransfers( const RHIDeviceDesc& desc )
     {
         if ( desc._stagingRingBytes == 0 || desc._readbackRingBytes == 0 )
         {

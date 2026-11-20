@@ -165,15 +165,9 @@ namespace sw
         if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::IndirectArgs ) == false )
             return IRHIResourceFactory::createBuffer( desc );
 
-        uint32 sizeBytes = desc._sizeBytes;
-        if ( sizeBytes == 0 )
-        {
-            const uint32 elemSize  = desc._elementSize > 0 ? desc._elementSize : 4u;
-            const uint32 elemCount = desc._elementCount > 0 ? desc._elementCount : 1u;
-            sizeBytes              = elemSize * elemCount;
-        }
-        if ( sizeBytes == 0 || _pDevice->_device == nullptr )
+        if ( isValidBufferDesc( desc, "createBuffer" ) == false || _pDevice->_device == nullptr )
             return 0;
+        const uint32 sizeBytes = desc._sizeBytes;
 
         D3D11_BUFFER_DESC bufferDesc{};
         bufferDesc.Usage     = D3D11_USAGE_DEFAULT;

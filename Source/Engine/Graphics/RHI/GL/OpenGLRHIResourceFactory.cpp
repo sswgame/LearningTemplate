@@ -289,25 +289,11 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
 
-        ScopedOpenGLContext contextScope( _pDevice );
-
-        const bool bHasVertexInitialData = EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0;
-        if ( bHasVertexInitialData )
-            return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
-        if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Constant ) )
-            return createConstantBuffer( desc._sizeBytes > 0 ? desc._sizeBytes : 256u );
-        if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Index ) )
-            return _pDevice->createIndexBuffer( desc._pInitialData, desc._sizeBytes );
-
-        uint32 sizeBytes = desc._sizeBytes;
-        if ( sizeBytes == 0 )
-        {
-            const uint32 elemSize  = desc._elementSize > 0 ? desc._elementSize : 4u;
-            const uint32 elemCount = desc._elementCount > 0 ? desc._elementCount : 1u;
-            sizeBytes              = elemSize * elemCount;
-        }
-        if ( sizeBytes == 0 )
+        // 정점 · 인덱스 · 상수 버퍼는 각자의 생성 함수다 — 서술이 비거나 틀리면 값을 지어내지 않고 거절한다(`isValidBufferDesc`).
+        if ( isValidBufferDesc( desc, "createBuffer" ) == false )
             return 0;
+        ScopedOpenGLContext contextScope( _pDevice );
+        const uint32        sizeBytes = desc._sizeBytes;
 
         const uint32 alignedSize = MathUtil::align( sizeBytes, constant::render::kConstantBufferAlignment );
 

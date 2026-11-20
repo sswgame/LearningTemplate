@@ -200,8 +200,9 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 인스턴스 · 물리 디바이스 · 논리 디바이스 · 스왑체인 생성의 순서가 곧 의미라 나누지 않는다.
-    bool VulkanRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
+    bool VulkanRHIDevice::initializeInternal( const RHIDeviceDesc& deviceDesc )
     {
+        const RHISwapChainDesc& desc = deviceDesc._swapChain;
 #if defined( SW_PLATFORM_WINDOWS )
         // Windows 의 표면은 Win32 `HWND` 다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고 오류로 멈춘다.
         if ( desc.tryGetWin32Handle( _pHWnd ) == false )
@@ -220,40 +221,40 @@ namespace sw
         _height         = desc._height;
 
         // 할당 수 여유는 EngineConfig 의 `_rhi` 값이다. 없으면(0) 짐작하지 않고 멈춘다.
-        if ( desc._allocationCountReserve == 0 )
+        if ( deviceDesc._allocationCountReserve == 0 )
         {
             SW_LOG_ERROR_ID( "Vulkan.AllocationCountReserveMissing", "EngineConfig _rhi._allocationCountReserve must be > 0 - the Vulkan backend does not start" );
             return false;
         }
-        _allocationCountReserve = desc._allocationCountReserve;
-        if ( desc._uploadStagingBytes == 0 )
+        _allocationCountReserve = deviceDesc._allocationCountReserve;
+        if ( deviceDesc._uploadStagingBytes == 0 )
         {
             SW_LOG_ERROR_ID( "Vulkan.UploadStagingMissing", "EngineConfig _rhi._uploadStagingMegabytes must be > 0 - the Vulkan backend does not start" );
             return false;
         }
-        _uploadStagingBytes = desc._uploadStagingBytes;
-        if ( desc._uploadStagingIdleFrames == 0 )
+        _uploadStagingBytes = deviceDesc._uploadStagingBytes;
+        if ( deviceDesc._uploadStagingIdleFrames == 0 )
         {
             SW_LOG_ERROR_ID( "Vulkan.UploadStagingIdleFramesMissing", "EngineConfig _rhi._uploadStagingIdleFrames must be > 0 - the Vulkan backend does not start" );
             return false;
         }
-        _uploadStagingIdleFrames = desc._uploadStagingIdleFrames;
-        if ( desc._pipelineCacheSaveIntervalSeconds <= 0.0 )
+        _uploadStagingIdleFrames = deviceDesc._uploadStagingIdleFrames;
+        if ( deviceDesc._pipelineCacheSaveIntervalSeconds <= 0.0 )
         {
             SW_LOG_ERROR_ID( "Vulkan.PipelineCacheSaveIntervalMissing", "EngineConfig _rhi._pipelineCacheSaveIntervalSeconds must be > 0 - the Vulkan backend does not start" );
             return false;
         }
-        _pipelineCacheSaveIntervalNanoseconds = MonotonicClock::secondsToNanoseconds( desc._pipelineCacheSaveIntervalSeconds );
+        _pipelineCacheSaveIntervalNanoseconds = MonotonicClock::secondsToNanoseconds( deviceDesc._pipelineCacheSaveIntervalSeconds );
 
         // 검증 레이어는 배포가 아닌 구성(레이어를 싣는 구성, `SW_VULKAN_VALIDATION`)에 컴파일돼 있고 켤지는 장치를 만들 때 정한다
         // (EngineConfig `_rhi._validationLayer`, `-rhi-validation` — 언리얼 `-vulkandebug`). 레이어가 없으면 아래 레이어 확인이 끈다.
 #if defined( SW_VULKAN_VALIDATION )
-        _bEnableValidationLayers = desc._bValidationLayer ? SW_TRUE : SW_FALSE;
+        _bEnableValidationLayers = deviceDesc._bValidationLayer ? SW_TRUE : SW_FALSE;
 #endif
         // 검증 스위치(EngineConfig _rhi)는 검증 레이어를 켠 실행에서만 듣는다. 끈 실행에서 켜 두었으면 듣지 않는다고 알린다.
-        _bGPUAssistedValidationRequested     = desc._bGPUBasedValidation ? SW_TRUE : SW_FALSE;
-        _bSynchronizationValidationRequested = desc._bSynchronizationValidation ? SW_TRUE : SW_FALSE;
-        if ( _bEnableValidationLayers == SW_FALSE && ( desc._bGPUBasedValidation || desc._bSynchronizationValidation ) )
+        _bGPUAssistedValidationRequested     = deviceDesc._bGPUBasedValidation ? SW_TRUE : SW_FALSE;
+        _bSynchronizationValidationRequested = deviceDesc._bSynchronizationValidation ? SW_TRUE : SW_FALSE;
+        if ( _bEnableValidationLayers == SW_FALSE && ( deviceDesc._bGPUBasedValidation || deviceDesc._bSynchronizationValidation ) )
             SW_LOG_WARNING_ID( "Vulkan.ValidationSwitchWithoutLayer", "EngineConfig _rhi asks for GPU-assisted or synchronization validation, but the Vulkan validation layer is off (_rhi._validationLayer, -rhi-validation) - ignored" );
 
         // 백버퍼 포맷 · 개수는 백엔드 간 계약값이다. 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
@@ -303,7 +304,7 @@ namespace sw
                 return false;
             markInitPhase( "surface" );
 
-            if ( pickPhysicalDevice( desc._bSoftwareAdapter, desc._bPreferMinimumPower ) == false )
+            if ( pickPhysicalDevice( deviceDesc._bSoftwareAdapter, deviceDesc._bPreferMinimumPower ) == false )
                 return false;
             markInitPhase( "adapter" );
 
@@ -359,7 +360,7 @@ namespace sw
 
         BLOCK( "Transfer Pool / Staging Rings" )
         {
-            if ( initializeTransfers( desc ) == false )
+            if ( initializeTransfers( deviceDesc ) == false )
                 return false;
             markInitPhase( "transfers" );
         }
@@ -3278,7 +3279,7 @@ namespace sw
         vkCmdSetScissor( _activeFrameBuffer, 0, 1, &scissor );
     }
 
-    bool VulkanRHIDevice::initializeTransfers( const RHISwapChainDesc& desc )
+    bool VulkanRHIDevice::initializeTransfers( const RHIDeviceDesc& desc )
     {
         if ( desc._stagingRingBytes == 0 || desc._readbackRingBytes == 0 )
         {

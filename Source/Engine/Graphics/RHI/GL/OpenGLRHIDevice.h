@@ -104,7 +104,6 @@ namespace sw
          *          언리얼 GL RHI 는 모든 GL 호출을 한 스레드로 넘겨 이 경합이 없다 — 자원 생성을 렌더 스레드로 넘기는 것이 근본 해법이다.
          */
         static constexpr uint32 kContextAcquireTimeoutMs = 5000;
-        RHIBufferHandle         createBuffer( const RHIBufferDesc& desc );
         RHIBufferHandle         createIndexBuffer( const void* pData, uint32 sizeBytes );
         /** @brief 빈 OpenGL 디바이스를 만듭니다. */
         /** @brief @p deviceGeneration 은 등록표가 붙인 이 장치의 세대입니다(전송 티켓에 싣는다). */
@@ -113,7 +112,7 @@ namespace sw
         virtual ~OpenGLRHIDevice() override;
 
         /** @brief 플랫폼 GL 컨텍스트(WGL, GLX)를 만들고 glad 로 GL 함수를 불러옵니다. */
-        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHIDeviceDesc& deviceDesc ) override;
 
         /** @brief GL 객체와 컨텍스트를 해제합니다. */
         void shutdownInternal() override;

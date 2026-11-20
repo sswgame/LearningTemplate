@@ -145,7 +145,7 @@ namespace sw::test
         vector<QueueEvent> _listQueueEvent;
         uint64             _asyncSubmitCount{ 0 }; /**< 지금까지 낸 비동기 제출 수(포크 번호) */
 
-        [[nodiscard]] bool   initializeInternal( const RHISwapChainDesc& ) override { return true; }
+        [[nodiscard]] bool   initializeInternal( const RHIDeviceDesc& ) override { return true; }
         void                 shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
         void                 resizeInternal( uint32, uint32 ) override {}
         IRHISwapChain*       createSwapChainInternal( const RHISwapChainDesc& ) override { return nullptr; } // 창이 없다

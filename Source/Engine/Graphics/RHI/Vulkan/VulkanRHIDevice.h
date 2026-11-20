@@ -190,7 +190,7 @@ namespace sw
         virtual ~VulkanRHIDevice() override;
 
         /** @brief Vulkan 인스턴스, 서피스, 디바이스, 스왑체인, 커맨드 풀, 동기화 객체를 만듭니다. */
-        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHIDeviceDesc& deviceDesc ) override;
 
         /** @brief Vulkan 파이프라인과 자원을 해제합니다. */
         void shutdownInternal() override;
@@ -683,7 +683,7 @@ namespace sw
         void savePipelineCache();
         /** @brief 파이프라인 캐시를 디스크에 씁니다. 디스크의 바이트와 같으면 쓰지 않는다. 캐시는 그대로 둔다(주기 저장 · 종료 저장이 함께 쓴다). */
         void writePipelineCacheFile();
-        /** @brief 주기(`RHISwapChainDesc::_pipelineCacheSaveIntervalSeconds`)가 지났고 캐시가 자랐으면 디스크에 씁니다(R-13). 프레임 시작이 부른다. */
+        /** @brief 주기(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)가 지났고 캐시가 자랐으면 디스크에 씁니다(R-13). 프레임 시작이 부른다. */
         void savePipelineCacheIfDue();
 
         /**
@@ -893,7 +893,7 @@ namespace sw
          * @param desc 업로드 링(`_stagingRingBytes`), 되읽기 링(`_readbackRingBytes`), 링보다 큰 한 장의 상한(`_stagingSoloMaxBytes`, 두 링에 같이)을 읽습니다.
          *             링 용량이 0 이면 오류를 남기고 false 입니다(기본값으로 바꾸지 않는다).
          */
-        [[nodiscard]] bool initializeTransfers( const RHISwapChainDesc& desc );
+        [[nodiscard]] bool initializeTransfers( const RHIDeviceDesc& desc );
         /** @brief 남은 전송 작업, 전송을 기다리던 해제, 링, 풀을 놓습니다. GPU 가 쉰 뒤(종료 2단계 뒤)에 부릅니다. */
         void shutdownTransfers();
         /** @brief @p ring 에 @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다. 단독 상한은 @p soloMaxBytes 입니다. */
@@ -973,8 +973,8 @@ namespace sw
         UploadStagingBlock         _openStagingBlock;
         vector<UploadStagingBlock> _listUsedStagingBlock;         ///< 열린 업로드 버퍼가 다 쓴 블록 · 전용 블록(제출과 함께 펜스 뒤 해제에 건다)
         vector<UploadStagingBlock> _listFreeStagingBlock;         ///< 펜스가 지나 돌려받은 블록
-        uint64                     _uploadStagingBytes{ 0 };      ///< 블록 크기(`RHISwapChainDesc::_uploadStagingBytes`)
-        uint32                     _uploadStagingIdleFrames{ 0 }; ///< 자유 블록을 놓기까지의 프레임 수(`RHISwapChainDesc::_uploadStagingIdleFrames`)
+        uint64                     _uploadStagingBytes{ 0 };      ///< 블록 크기(`RHIDeviceDesc::_uploadStagingBytes`)
+        uint32                     _uploadStagingIdleFrames{ 0 }; ///< 자유 블록을 놓기까지의 프레임 수(`RHIDeviceDesc::_uploadStagingIdleFrames`)
         /**
          * @brief `_graphicsQueue` 를 쓰는 모든 호출(`vkQueueSubmit`, `vkQueueWaitIdle`, `vkQueuePresentKHR`, `vkDeviceWaitIdle`)을 보호합니다.
          * @details VkQueue 는 외부 동기화 대상이다. 렌더 스레드의 프레임 제출과 게임 스레드의 일회성 업로드 제출이 겹칠 수 있다.
@@ -1063,8 +1063,8 @@ namespace sw
         uint16            _bSurfaceLost                        : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
         uint16            _bDeviceFault                        : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
         uint16            _bFragmentStores                     : 1; ///< 프래그먼트 셰이더가 스토리지 버퍼에 쓸 수 있는가(fragmentStoresAndAtomics — 셰이더 메시지 채널의 그래픽스 단계)
-        uint16            _bGPUAssistedValidationRequested     : 1; ///< 검증 레이어의 GPU 보조 검증을 켠다(`RHISwapChainDesc::_bGPUBasedValidation`, R-9)
-        uint16            _bSynchronizationValidationRequested : 1; ///< 검증 레이어의 동기화 검증을 켠다(`RHISwapChainDesc::_bSynchronizationValidation`, R-9)
+        uint16            _bGPUAssistedValidationRequested     : 1; ///< 검증 레이어의 GPU 보조 검증을 켠다(`RHIDeviceDesc::_bGPUBasedValidation`, R-9)
+        uint16            _bSynchronizationValidationRequested : 1; ///< 검증 레이어의 동기화 검증을 켠다(`RHIDeviceDesc::_bSynchronizationValidation`, R-9)
         /// @brief 새 번호를 세 링 세트에 바로 쓰는가(장치 생성 때 고정 — `descriptorBindingUpdateUnusedWhilePending` 이 있으면). 없으면 지금 슬롯 세트만 쓰고 나머지는 그 슬롯의 차례에 쓴다(R-6).
         uint16 _bWriteAllRingSetsNow : 1;
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
@@ -1155,13 +1155,13 @@ namespace sw
 
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
         VkPipelineCache                           _pipelineCache;
-        int64                                     _pipelineCacheSaveIntervalNanoseconds{ 0 }; ///< 주기 저장 간격(`RHISwapChainDesc::_pipelineCacheSaveIntervalSeconds`)
+        int64                                     _pipelineCacheSaveIntervalNanoseconds{ 0 }; ///< 주기 저장 간격(`RHIDeviceDesc::_pipelineCacheSaveIntervalSeconds`)
         int64                                     _pipelineCacheLastSaveNanoseconds{ 0 };     ///< 지난 저장(또는 읽기) 시각
         uint64                                    _pipelineCacheLastSavedBytes{ 0 };          ///< 지난 저장(또는 읽기) 때의 캐시 크기
 
         /// @brief 살아 있는 장치 메모리 할당 수입니다(`allocateDeviceMemory` · `freeDeviceMemory`). 한도는 물리 장치를 고른 뒤 정한다.
         VulkanMemoryAccount _memoryAccount;
-        /// @brief 할당 수 한도에서 남길 칸입니다(`RHISwapChainDesc::_allocationCountReserve`).
+        /// @brief 할당 수 한도에서 남길 칸입니다(`RHIDeviceDesc::_allocationCountReserve`).
         uint32 _allocationCountReserve{ 0 };
 
         /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 시리얼은 큐 제출 락 안에서 `_transferFenceQueue` 가 매긴다.

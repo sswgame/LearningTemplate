@@ -141,7 +141,7 @@ namespace sw
         virtual ~D3D11RHIDevice() override;
 
         /** @brief Direct3D 11 디바이스와 스왑체인(백버퍼 RTV 포함)을 만듭니다. */
-        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHIDeviceDesc& deviceDesc ) override;
 
         /** @brief D3D11 자원을 해제합니다. */
         void shutdownInternal() override;
@@ -696,10 +696,10 @@ namespace sw
         vector<Microsoft::WRL::ComPtr<ID3D11Query>> _listFreeTransferQuery;
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
         RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
-        /// @brief GPU 가 아직 복사 중인 업로드 스테이징의 바이트 합과 그 예산(`RHISwapChainDesc::_stagingRingBytes`)입니다. `UploadStaging` 이 잡고 놓습니다.
+        /// @brief GPU 가 아직 복사 중인 업로드 스테이징의 바이트 합과 그 예산(`RHIDeviceDesc::_stagingRingBytes`)입니다. `UploadStaging` 이 잡고 놓습니다.
         ///        이보다 큰 업로드 하나는 예산 전부를 잡고 혼자 들어갑니다(`allocateUploadStaging`).
         RHIStagingBudget _uploadStagingBudget;
-        /// @brief 이 크기(바이트, `RHISwapChainDesc::_directUploadMaxBytes`) 이하의 업로드는 스테이징 없이 즉시 컨텍스트의 `UpdateSubresource` 로 올립니다.
+        /// @brief 이 크기(바이트, `RHIDeviceDesc::_directUploadMaxBytes`) 이하의 업로드는 스테이징 없이 즉시 컨텍스트의 `UpdateSubresource` 로 올립니다.
         uint64 _directUploadMaxBytes;
 
         sw::unique_ptr<D3D11RHICommandContext>  _frameStreamContext;

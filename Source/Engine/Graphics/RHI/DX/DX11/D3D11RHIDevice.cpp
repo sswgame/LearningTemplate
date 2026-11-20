@@ -469,8 +469,9 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 디바이스 · 스왑체인 · 상태 객체 생성의 순서가 곧 의미라 나누지 않는다.
-    bool D3D11RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
+    bool D3D11RHIDevice::initializeInternal( const RHIDeviceDesc& deviceDesc )
     {
+        const RHISwapChainDesc& desc = deviceDesc._swapChain;
         // 이 백엔드는 Win32 전용이다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고 오류로 멈춘다.
         void* pWindowHandle{ nullptr };
         if ( desc.tryGetWin32Handle( pWindowHandle ) == false )
@@ -483,13 +484,13 @@ namespace sw
         // D3D11 에는 자원의 할당 크기를 물을 API 가 없다. 추적기는 서술로 계산한 논리 크기다.
         getMemoryTracker().setSizeBasis( RHIMemorySizeBasis::Logical );
         // 큰 업로드는 스테이징 예산 안에서만 받는다. 0 이면 큰 업로드를 하나도 받지 못하므로 기본값으로 바꾸지 않고 초기화를 멈춘다.
-        if ( desc._stagingRingBytes == 0 )
+        if ( deviceDesc._stagingRingBytes == 0 )
         {
             SW_LOG_ERROR_ID( "D3D11.UploadStagingBudgetZero", "The upload staging budget is 0 (_rhi._stagingRingMegabytes) - Direct3D 11 does not start" );
             return false;
         }
-        _uploadStagingBudget.initialize( desc._stagingRingBytes );
-        _directUploadMaxBytes = desc._directUploadMaxBytes;
+        _uploadStagingBudget.initialize( deviceDesc._stagingRingBytes );
+        _directUploadMaxBytes = deviceDesc._directUploadMaxBytes;
 
         // DX12 와 같게 FLIP_DISCARD 를 쓴다(DXGI 의 HWND 규칙). 한 HWND 에 플립 모델 스왑체인을 한 번 만든 뒤에는,
         // 같은 창에 DISCARD/blt 체인을 만들어 Present 해도 사용자가 보는 화면이 갱신되지 않을 수 있다
@@ -517,7 +518,7 @@ namespace sw
         UINT createDeviceFlags{ 0 };
     #if defined( SW_DO_CHECKS )
         // 디버그 레이어는 배포가 아닌 구성에 컴파일돼 있고 켤지는 장치를 만들 때 정한다(EngineConfig `_rhi._validationLayer`, `-rhi-validation` — 언리얼 `-d3ddebug`).
-        if ( desc._bValidationLayer )
+        if ( deviceDesc._bValidationLayer )
             createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     #endif
 
@@ -531,10 +532,10 @@ namespace sw
         // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(_rhi._bSoftwareAdapter). 하드웨어는 고성능 순서의 첫 어댑터다(RHIDxgiAdapter.h — 기본 어댑터는 하이브리드 노트북의 내장 GPU).
         Microsoft::WRL::ComPtr<IDXGIFactory1> factory;
         Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
-        if ( desc._bSoftwareAdapter == false )
+        if ( deviceDesc._bSoftwareAdapter == false )
         {
             if ( SUCCEEDED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
-                adapter = findDXGIPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
+                adapter = findDXGIPreferredAdapter( factory.Get(), deviceDesc._bPreferMinimumPower );
             if ( adapter == nullptr )
             {
                 SW_LOG_ERROR_ID( "D3D11.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );
@@ -547,7 +548,7 @@ namespace sw
         }
         markInitPhase( "adapter" );
         // 어댑터를 넘기면 드라이버 종류는 UNKNOWN 이어야 한다(D3D11CreateDevice 규칙).
-        const D3D_DRIVER_TYPE driverType = desc._bSoftwareAdapter ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_UNKNOWN;
+        const D3D_DRIVER_TYPE driverType = deviceDesc._bSoftwareAdapter ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_UNKNOWN;
         HRESULT               hr         = D3D11CreateDeviceAndSwapChain( adapter.Get(),
                                                                           driverType,
                                                                           nullptr,

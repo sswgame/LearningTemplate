@@ -359,15 +359,16 @@ namespace sw
     } // namespace
 
     // 길이 유지(긴 함수 정리 기준): 컨텍스트 · 확장 확인 · 기본 객체 생성의 순서가 곧 의미라 나누지 않는다(나누면 순서를 여러 곳에서 읽는다).
-    bool OpenGLRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
+    bool OpenGLRHIDevice::initializeInternal( const RHIDeviceDesc& deviceDesc )
     {
+        const RHISwapChainDesc& desc = deviceDesc._swapChain;
         if ( _bInitialized == SW_TRUE )
             return true;
 
         _width  = desc._width;
         _height = desc._height;
         _swapChain.setSize( desc._width, desc._height );
-        if ( desc._bSoftwareAdapter )
+        if ( deviceDesc._bSoftwareAdapter )
             SW_LOG_WARNING_ID( "OpenGL.SoftwareAdapterIgnored", "_rhi._bSoftwareAdapter is ignored on OpenGL (the driver decides)" );
         // GL 에는 자원의 할당 크기를 물을 API 가 없다. 추적기는 서술(버퍼 크기 · 텍스처 서술)로 계산한 논리 크기다.
         getMemoryTracker().setSizeBasis( RHIMemorySizeBasis::Logical );
@@ -535,9 +536,9 @@ namespace sw
             return false;
         }
 
-        if ( initializeStagingRing( desc._stagingRingBytes, desc._stagingSoloMaxBytes ) == false )
+        if ( initializeStagingRing( deviceDesc._stagingRingBytes, deviceDesc._stagingSoloMaxBytes ) == false )
             return false;
-        if ( initializeReadbackRing( desc._readbackRingBytes, desc._stagingSoloMaxBytes ) == false )
+        if ( initializeReadbackRing( deviceDesc._readbackRingBytes, deviceDesc._stagingSoloMaxBytes ) == false )
         {
             shutdownStagingRing(); // _bInitialized 전이라 shutdownInternal 이 링을 지우지 않는다
             return false;

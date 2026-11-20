@@ -442,7 +442,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 어댑터 → 기능 대조 → 한도 → 장치 요청의 순서가 곧 의미라 나누지 않는다.
-    bool WebGPURHIDevice::createDeviceInternal( const RHISwapChainDesc& desc )
+    bool WebGPURHIDevice::createDeviceInternal( const RHIDeviceDesc& desc )
     {
         WGPURequestAdapterOptions adapterOptions{};
         adapterOptions.featureLevel         = WGPUFeatureLevel_Core;
@@ -859,8 +859,9 @@ namespace sw
         _timestampRing.beginFrame( ringSlot );
     }
 
-    bool WebGPURHIDevice::initializeInternal( const RHISwapChainDesc& desc )
+    bool WebGPURHIDevice::initializeInternal( const RHIDeviceDesc& deviceDesc )
     {
+        const RHISwapChainDesc&       desc                 = deviceDesc._swapChain;
         const WGPUInstanceFeatureName arrInstanceFeature[] = { WGPUInstanceFeatureName_TimedWaitAny }; // 어댑터 · 장치 요청을 기다린다(`waitForFuture`)
         WGPUInstanceDescriptor        instanceDesc{};
         instanceDesc.requiredFeatureCount = SW_COUNT_OF( arrInstanceFeature );
@@ -873,7 +874,7 @@ namespace sw
             return false;
         }
         markInitPhase( "instance" );
-        if ( createDeviceInternal( desc ) == false )
+        if ( createDeviceInternal( deviceDesc ) == false )
             return false;
         markInitPhase( "device" );
         if ( _swapChain.createSurface( _instance, _adapter, desc ) == false || _swapChain.configure( _device, desc._width, desc._height, desc._bVSync ) == false )

@@ -173,8 +173,8 @@ namespace sw
          */
         void shutdown();
 
-        /** @brief RHI 디바이스와 스왑체인을 초기화합니다. */
-        [[nodiscard]] virtual bool initializeInternal( const RHISwapChainDesc& desc ) = 0;
+        /** @brief RHI 디바이스와 주 스왑체인을 초기화합니다(@p deviceDesc 의 `_swapChain` 이 주 스왑체인 서술). */
+        [[nodiscard]] virtual bool initializeInternal( const RHIDeviceDesc& deviceDesc ) = 0;
 
         /** @brief 종료 4단계입니다. 백엔드 자원, 스왑체인, 네이티브 디바이스를 해제합니다. GPU 대기와 커맨드 리스트 분리는 이미 끝나 있습니다. */
         virtual void shutdownInternal() = 0;

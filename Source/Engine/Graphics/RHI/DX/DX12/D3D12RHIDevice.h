@@ -177,7 +177,7 @@ namespace sw
         virtual ~D3D12RHIDevice() override;
 
         /** @brief Direct3D 12 디바이스, 커맨드 큐, DXGI 스왑체인, 힙 리소스를 초기화합니다. */
-        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHIDeviceDesc& deviceDesc ) override;
 
         /** @brief D3D12 자원과 펜스 동기화 객체를 해제합니다. */
         void shutdownInternal() override;
@@ -723,10 +723,10 @@ namespace sw
         void flushPendingUploads( bool bExecuteNow );
 
         /**
-         * @brief 전송 전용 스테이징 링(`RHISwapChainDesc::_stagingRingBytes`)을 만듭니다. 용량이 0 이면 오류를 남기고 false 입니다(기본값으로 바꾸지 않는다).
+         * @brief 전송 전용 스테이징 링(`RHIDeviceDesc::_stagingRingBytes`)을 만듭니다. 용량이 0 이면 오류를 남기고 false 입니다(기본값으로 바꾸지 않는다).
          * @param desc 업로드 링 용량과 링보다 큰 한 장의 상한(`_stagingSoloMaxBytes`)을 읽습니다.
          */
-        [[nodiscard]] bool initializeTransfers( const RHISwapChainDesc& desc );
+        [[nodiscard]] bool initializeTransfers( const RHIDeviceDesc& desc );
         /** @brief 남은 전송 작업, 전송을 기다리던 해제, 가져가지 않은 읽기, 링을 놓습니다. GPU 가 쉰 뒤(종료 2단계 뒤)에 부릅니다. */
         void shutdownTransfers();
         /** @brief 업로드 힙에 @p capacityBytes 의 버퍼를 만들어 영속 매핑하고 구간 할당기를 초기화합니다. 실패하면 이유를 로그로 남기고 false 입니다. */
@@ -908,8 +908,8 @@ namespace sw
         RHISwapChainSet<D3D12RHISwapChain> _windowSwapChains;
 
         uint8                  _bBindlessRootSignature : 1; ///< 루트 시그니처(텍스처 배열 테이블 포함)를 만드는 데 성공했다. 네이티브 bindless 텍스처 샘플링이 가능하다.
-        uint8                  _bValidationLayer       : 1; ///< 디버그 레이어를 켰다(`RHISwapChainDesc::_bValidationLayer`, 배포가 아닌 구성). 장치를 만들 때 한 번 정한다
-        uint8                  _bDRED                  : 1; ///< DRED 를 켰다(`RHISwapChainDesc::_bDRED`). 장치를 만들 때 한 번 정한다 — 배포 구성의 소실 보고가 이것을 본다
+        uint8                  _bValidationLayer       : 1; ///< 디버그 레이어를 켰다(`RHIDeviceDesc::_bValidationLayer`, 배포가 아닌 구성). 장치를 만들 때 한 번 정한다
+        uint8                  _bDRED                  : 1; ///< DRED 를 켰다(`RHIDeviceDesc::_bDRED`). 장치를 만들 때 한 번 정한다 — 배포 구성의 소실 보고가 이것을 본다
         [[maybe_unused]] uint8 _reservedPassFlags      : 5;
         /// @brief 디바이스 제거(DEVICE_HUNG/REMOVED) 상태를 이미 한 번 로그로 남겼으면 true 입니다. 매
         /// 프레임 flushDebugMessages() 가 똑같은 검증 메시지 수십 줄을 끝없이 반복 출력하는 것을 막습니다.
