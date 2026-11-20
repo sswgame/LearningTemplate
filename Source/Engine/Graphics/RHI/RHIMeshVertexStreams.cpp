@@ -3,7 +3,7 @@
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 
 #include "Core/Math/Half.h"
-#include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
@@ -20,12 +20,6 @@ namespace sw
     {
         cmd.setVertexBuffer( constant::render::kMeshPositionSlot, vertexBuffer, constant::render::kMeshPositionStride, 0 );
         cmd.setVertexBuffer( constant::render::kMeshAttributeSlot, vertexBuffer, constant::render::getMeshAttributeStride( format ), attributeOffset );
-    }
-
-    int8 RHIMeshVertexStreams::packSnorm8( float32 value )
-    {
-        const float32 scaled = MathUtil::clamp( value, -1.0f, 1.0f ) * 127.0f;
-        return static_cast<int8>( scaled >= 0.0f ? scaled + 0.5f : scaled - 0.5f );
     }
 
     void RHIMeshVertexStreams::write( RHIMeshVertexFormat format, const RHIVertex* pSource, uint32 count, uint32 firstVertex, uint32 vertexCapacity, uint8* pBuffer )
@@ -50,8 +44,8 @@ namespace sw
             RHIPackedMeshAttributes attributes{};
             for ( uint32 axis = 0; axis < 3; ++axis )
             {
-                attributes._arrNormal[axis]  = packSnorm8( vertex._arrNormal[axis] );
-                attributes._arrTangent[axis] = packSnorm8( vertex._arrTangent[axis] );
+                attributes._arrNormal[axis]  = snorm8::fromFloat( vertex._arrNormal[axis] ).getRaw();
+                attributes._arrTangent[axis] = snorm8::fromFloat( vertex._arrTangent[axis] ).getRaw();
             }
             attributes._arrTangent[3] = vertex._arrTangent[3] < 0.0f ? int8{ -127 } : int8{ 127 }; // 바이탄젠트 부호 — 0 은 +로 둔다(MikkTSpace 가 0 을 내지 않는다)
             Memory::copy( attributes._arrUV, vertex._arrUV, sizeof( attributes._arrUV ) );

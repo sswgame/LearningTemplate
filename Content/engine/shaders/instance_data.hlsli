@@ -15,6 +15,8 @@
 #ifndef SW_ENGINE_INSTANCEDATA_HLSLI
 #define SW_ENGINE_INSTANCEDATA_HLSLI
 
+#include "pack.hlsli"
+
 struct InstanceData
 {
     float4x4 _world;
@@ -47,7 +49,6 @@ struct InstanceData
     float4 getCustomData( uint index );
     void computeVertexAnimationElements( uint vertexID, out bool outValid, out uint outFirstElement, out uint outSecondElement, out float outAlpha );
     void loadAnimatedVertex( uint vertexID, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal );
-    static float2 unpackUnorm16x2( uint packed );
     static uint resolveEntry( uint instanceSlot );
     static uint resolveID( uint instanceSlot );
     static InstanceData load( uint instanceSlot );
@@ -75,13 +76,7 @@ uint InstanceData::getHighlightStyle()
 /** @brief 인스턴스 강조의 색(RGB, 0..1)입니다. */
 float3 InstanceData::getHighlightColor()
 {
-    return float3( _highlight & 0xFFu, ( _highlight >> 8 ) & 0xFFu, ( _highlight >> 16 ) & 0xFFu ) * ( 1.0f / 255.0f );
-}
-
-/** @brief unorm16 둘을 [0, 1] 실수 둘로 푼다(하위 16비트가 x). C++ `GPUSpriteInstanceData::makeUnorm16x2` 의 역이다. */
-static float2 InstanceData::unpackUnorm16x2( uint packed )
-{
-    return float2( packed & 0xFFFFu, packed >> 16 ) * ( 1.0f / 65535.0f );
+    return PackUtil::unpackUnorm8x4( _highlight ).rgb;
 }
 
 /**
@@ -90,16 +85,15 @@ static float2 InstanceData::unpackUnorm16x2( uint packed )
  */
 float4 InstanceData::computeUvRect()
 {
-    const float2 uvStart = InstanceData::unpackUnorm16x2( this._uvStart );
-    const float2 uvEnd   = InstanceData::unpackUnorm16x2( this._uvEnd );
+    const float2 uvStart = PackUtil::unpackUnorm16x2( this._uvStart );
+    const float2 uvEnd   = PackUtil::unpackUnorm16x2( this._uvEnd );
     return float4( uvStart, uvEnd - uvStart );
 }
 
 /** @brief 인스턴스 색 (r, g, b, a) — RGBA8 을 [0, 1] 로 푼다. 기본값은 흰색 불투명이다. */
 float4 InstanceData::computeTint()
 {
-    const uint packed = _tint;
-    return float4( packed & 0xFFu, ( packed >> 8 ) & 0xFFu, ( packed >> 16 ) & 0xFFu, packed >> 24 ) * ( 1.0f / 255.0f );
+    return PackUtil::unpackUnorm8x4( _tint );
 }
 
 /** @brief 픽셀 스냅: 인스턴스 원점의 X · Y 를 자산 픽셀 격자(1 / PPU)에 붙이는 월드 오프셋입니다. 정점마다가 아니라 원점을 붙여 사각형이 찌그러지지 않는다. 스냅이 꺼졌으면 0 입니다. */

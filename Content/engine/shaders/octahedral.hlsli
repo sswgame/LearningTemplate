@@ -8,6 +8,8 @@
 #ifndef SW_ENGINE_OCTAHEDRAL_HLSLI
 #define SW_ENGINE_OCTAHEDRAL_HLSLI
 
+#include "pack.hlsli"
+
 /** @brief 단위 벡터 ↔ 옥타헤드럴 좌표 [-1, 1]^2 와 그 snorm16 둘 묶음입니다. */
 struct Octahedral
 {
@@ -49,18 +51,16 @@ static float2 Octahedral::encodeTexture( float3 direction )
     return Octahedral::encode( direction ) * 0.5f + 0.5f;
 }
 
-/** @brief 방향을 snorm16 둘(u 가 아래 16 비트)로 묶는다 — C++ `OctahedralNormal`(R16G16_SNORM)과 같은 바이트. 오차는 0.01 도 아래다. */
+/** @brief 방향을 snorm16 둘(u 가 아래 16 비트)로 묶는다 — C++ `OctahedralNormal::fromNormal`(R16G16_SNORM)과 같은 반올림 · 같은 바이트. 오차는 0.01 도 아래다. */
 static uint Octahedral::pack( float3 direction )
 {
-    const int2 raw = (int2)round( clamp( Octahedral::encode( direction ), -1.0f, 1.0f ) * 32767.0f );
-    return ( (uint)raw.x & 0xFFFFu ) | ( (uint)raw.y << 16u );
+    return PackUtil::packSnorm16x2( Octahedral::encode( direction ) );
 }
 
 /** @brief `pack` 의 역 — snorm16 둘을 [-1, 1] 로 펴서(최솟값은 -1 로 자른다) 단위 벡터로 푼다. */
 static float3 Octahedral::unpack( uint word )
 {
-    const float2 coordinate = max( float2( (float)( (int)( word << 16u ) >> 16 ), (float)( (int)word >> 16 ) ) / 32767.0f, -1.0f );
-    return Octahedral::decode( coordinate );
+    return Octahedral::decode( PackUtil::unpackSnorm16x2( word ) );
 }
 
 #endif // SW_ENGINE_OCTAHEDRAL_HLSLI

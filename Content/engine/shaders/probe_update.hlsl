@@ -1,6 +1,7 @@
 #include "common.hlsli"
 #include "light_data.hlsli"
 #include "octahedral.hlsli"
+#include "pack.hlsli"
 #include "shading_math.hlsli"
 
 /**
@@ -198,13 +199,6 @@ bool traceVoxelRay( VoxelGrid grid, float3 origin, float3 direction, float maxDi
     return bHit;
 }
 
-/** @brief 공유 지수 32 비트(R9G9B9E5)를 복사휘도로 풉니다. C++ SceneVoxelGrid::unpackEmission 과 같은 식이다. */
-float3 unpackEmission( uint packed )
-{
-    const float scale = exp2( (float)( (int)( packed >> 27u ) - 15 - 9 ) );
-    return float3( (float)( packed & 511u ), (float)( ( packed >> 9u ) & 511u ), (float)( ( packed >> 18u ) & 511u ) ) * scale;
-}
-
 /** @brief 닿은 칸(면 바로 안쪽 점 @p insidePoint)의 발광입니다. 발광 칸이 없는 볼륨은 0 이다. */
 float3 findEmission( VoxelGrid grid, uint emissionOffset, float3 insidePoint )
 {
@@ -215,7 +209,7 @@ float3 findEmission( VoxelGrid grid, uint emissionOffset, float3 insidePoint )
         if ( all( cell >= int3( 0, 0, 0 ) ) && all( cell < (int3)grid._dimension ) )
         {
             const uint index = ( (uint)cell.z * grid._dimension.y + (uint)cell.y ) * grid._dimension.x + (uint)cell.x;
-            emission         = unpackEmission( g_ProbeVoxels[emissionOffset + index] );
+            emission         = PackUtil::unpackRGB9E5( g_ProbeVoxels[emissionOffset + index] );
         }
     }
     return emission;

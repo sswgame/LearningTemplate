@@ -2,6 +2,7 @@
 
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/PackUtil.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -444,12 +445,12 @@ SW_TEST_CASE( RealtimeProbeTest, BuildParamRowsFollowShaderLayout )
 SW_TEST_CASE( SceneVoxelGridTest, EmissionPackRoundTrips )
 {
     const sw::float3 radiance{ 3.5f, 0.25f, 12.0f };
-    const sw::float3 back = sw::SceneVoxelGrid::unpackEmission( sw::SceneVoxelGrid::packEmission( radiance ) );
+    const sw::float3 back = sw::PackUtil::unpackRGB9E5( sw::PackUtil::packRGB9E5( radiance ) );
     SW_EXPECT_NEAR( 3.5f, back._x, 3.5f * 0.01f + 0.02f );
     SW_EXPECT_NEAR( 0.25f, back._y, 0.03f ); // 가장 큰 채널의 지수를 나눠 쓰므로 작은 채널은 그 단위(12 / 512)로 둥글린다
     SW_EXPECT_NEAR( 12.0f, back._z, 12.0f * 0.01f );
-    SW_EXPECT_EQUAL( 0u, sw::SceneVoxelGrid::packEmission( sw::float3{} ) );
-    SW_EXPECT_EQUAL( 0u, sw::SceneVoxelGrid::packEmission( sw::float3{ -1.0f, -2.0f, -3.0f } ) );
+    SW_EXPECT_EQUAL( 0u, sw::PackUtil::packRGB9E5( sw::float3{} ) );
+    SW_EXPECT_EQUAL( 0u, sw::PackUtil::packRGB9E5( sw::float3{ -1.0f, -2.0f, -3.0f } ) );
 }
 
 /**

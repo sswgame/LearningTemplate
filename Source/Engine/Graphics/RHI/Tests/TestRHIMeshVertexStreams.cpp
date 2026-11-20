@@ -31,16 +31,6 @@ namespace
     }
 } // namespace
 
-SW_TEST_CASE( RHIMeshVertexStreamsTest, SnormRoundsAndClamps )
-{
-    SW_EXPECT_EQUAL( int8{ 127 }, RHIMeshVertexStreams::packSnorm8( 1.0f ) );
-    SW_EXPECT_EQUAL( int8{ -127 }, RHIMeshVertexStreams::packSnorm8( -1.0f ) );
-    SW_EXPECT_EQUAL( int8{ 127 }, RHIMeshVertexStreams::packSnorm8( 5.0f ) );
-    SW_EXPECT_EQUAL( int8{ 0 }, RHIMeshVertexStreams::packSnorm8( 0.001f ) );
-    SW_EXPECT_EQUAL( int8{ 64 }, RHIMeshVertexStreams::packSnorm8( 0.5f ) );
-    SW_EXPECT_EQUAL( int8{ -64 }, RHIMeshVertexStreams::packSnorm8( -0.5f ) );
-}
-
 SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedSplitsPositionAndAttributes )
 {
     const RHIVertex arrVertex[2] = { makeVertex( 1.0f, 1.0f, -1.0f, 0.5f ), makeVertex( 4.0f, -1.0f, 1.0f, 0.0f ) };

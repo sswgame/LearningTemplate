@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Lighting/SceneVoxelGrid.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/PackUtil.h"
 
 namespace sw
 {
@@ -14,27 +15,9 @@ namespace sw
             static constexpr float32 kParallelEpsilon = 1.0e-8f;
             /// @brief 삼각형-상자 판정에서 상자를 살짝 키우는 비율 — 면에 정확히 닿는 삼각형이 이웃 칸에서 빠지지 않게 한다.
             static constexpr float32 kOverlapSlack = 1.0e-4f;
-            /// @brief 발광 RGB9E5 — 채널마다 가수 비트 수 · 마스크, 공유 지수의 자리와 치우침, 접을 수 있는 최댓값((2^9 - 1) / 2^9 × 2^(31 - 15)).
-            static constexpr uint32  kEmissionMantissaBits  = 9u;
-            static constexpr uint32  kEmissionMantissaMask  = ( 1u << kEmissionMantissaBits ) - 1u;
-            static constexpr uint32  kEmissionExponentShift = kEmissionMantissaBits * 3u;
-            static constexpr int32   kEmissionExponentBias  = 15;
-            static constexpr float32 kEmissionMaxValue      = 65408.0f;
             /// @brief 점유 비트 — 칸 번호를 단어 번호로 옮기는 자리 수(32 칸 = 2^5)와 단어 안 자리 마스크.
             static constexpr uint32 kWordShift   = 5u;
             static constexpr uint32 kWordBitMask = ( 1u << kWordShift ) - 1u;
-
-            /** @brief 공유 지수 @p sharedExponent 의 가수 한 눈금입니다(2^(지수 - 치우침 - 가수 비트)). */
-            static float32 computeEmissionScale( int32 sharedExponent )
-            {
-                return MathUtil::pow( 2.0f, static_cast<float32>( sharedExponent - kEmissionExponentBias - static_cast<int32>( kEmissionMantissaBits ) ) );
-            }
-
-            /** @brief 채널 하나를 눈금 @p scale 의 가수로 둥글립니다(마스크 위는 자른다). */
-            static uint32 quantizeMantissa( float32 value, float32 scale )
-            {
-                return MathUtil::min( static_cast<uint32>( MathUtil::floor( value / scale + 0.5f ) ), kEmissionMantissaMask );
-            }
 
             /** @brief 점 하나를 축 배열로 풉니다. */
             static void unpack( const float3& value, float32 ( &outArr )[3] )
@@ -174,38 +157,11 @@ namespace sw
         return count;
     }
 
-    uint32 SceneVoxelGrid::packEmission( const float3& radiance )
-    {
-        // DXGI R9G9B9E5_SHAREDEXP 와 같은 식이다(가수 9 비트 셋 + 공유 지수 5 비트). 셰이더 짝: probe_update.hlsl unpackEmission.
-        using Internal           = SceneVoxelGridInternal;
-        const float32 red        = MathUtil::clamp( radiance._x, 0.0f, Internal::kEmissionMaxValue );
-        const float32 green      = MathUtil::clamp( radiance._y, 0.0f, Internal::kEmissionMaxValue );
-        const float32 blue       = MathUtil::clamp( radiance._z, 0.0f, Internal::kEmissionMaxValue );
-        const float32 maxChannel = MathUtil::max( red, MathUtil::max( green, blue ) );
-        if ( maxChannel <= 0.0f )
-            return 0u;
-        int32 sharedExponent = MathUtil::max( -Internal::kEmissionExponentBias - 1, static_cast<int32>( MathUtil::floor( MathUtil::log2( maxChannel ) ) ) ) + 1 + Internal::kEmissionExponentBias;
-        if ( MathUtil::floor( maxChannel / Internal::computeEmissionScale( sharedExponent ) + 0.5f ) > static_cast<float32>( Internal::kEmissionMantissaMask ) )
-            ++sharedExponent;
-        const float32 scale = Internal::computeEmissionScale( sharedExponent );
-        return Internal::quantizeMantissa( red, scale ) | ( Internal::quantizeMantissa( green, scale ) << Internal::kEmissionMantissaBits ) |
-               ( Internal::quantizeMantissa( blue, scale ) << ( Internal::kEmissionMantissaBits * 2u ) ) | ( static_cast<uint32>( sharedExponent ) << Internal::kEmissionExponentShift );
-    }
-
-    float3 SceneVoxelGrid::unpackEmission( uint32 packed )
-    {
-        using Internal      = SceneVoxelGridInternal;
-        const float32 scale = Internal::computeEmissionScale( static_cast<int32>( packed >> Internal::kEmissionExponentShift ) );
-        const uint32  mask  = Internal::kEmissionMantissaMask;
-        const uint32  bits  = Internal::kEmissionMantissaBits;
-        return float3{ static_cast<float32>( packed & mask ) * scale, static_cast<float32>( ( packed >> bits ) & mask ) * scale, static_cast<float32>( ( packed >> ( bits * 2u ) ) & mask ) * scale };
-    }
-
     float3 SceneVoxelGrid::findEmission( uint32 cellX, uint32 cellY, uint32 cellZ ) const
     {
         if ( _listEmission.empty() || containsCell( cellX, cellY, cellZ ) == false )
             return float3{};
-        return unpackEmission( _listEmission[computeCellIndex( cellX, cellY, cellZ )] );
+        return PackUtil::unpackRGB9E5( _listEmission[computeCellIndex( cellX, cellY, cellZ )] );
     }
 
     SceneVoxelGrid::CellRange SceneVoxelGrid::getFullRange() const
@@ -277,7 +233,7 @@ namespace sw
 
     void SceneVoxelGrid::voxelizeEmissiveTriangle( const float3& a, const float3& b, const float3& c, const float3& radiance, const CellRange& clip )
     {
-        const uint32 packed = packEmission( radiance );
+        const uint32 packed = PackUtil::packRGB9E5( radiance );
         if ( packed != 0u && _listEmission.empty() && isEmpty() == false )
             _listEmission.assign( getCellCount(), 0u );
         voxelizeTriangleCells( a, b, c, packed, clip );
@@ -327,8 +283,8 @@ namespace sw
                     if ( packedEmission == 0u )
                         continue;
                     uint32&       cellEmission = _listEmission[computeCellIndex( cellX, cellY, cellZ )];
-                    const float3  existing     = unpackEmission( cellEmission );
-                    const float3  incoming     = unpackEmission( packedEmission );
+                    const float3  existing     = PackUtil::unpackRGB9E5( cellEmission );
+                    const float3  incoming     = PackUtil::unpackRGB9E5( packedEmission );
                     const float32 existingSum  = existing._x + existing._y + existing._z;
                     if ( incoming._x + incoming._y + incoming._z > existingSum )
                         cellEmission = packedEmission;

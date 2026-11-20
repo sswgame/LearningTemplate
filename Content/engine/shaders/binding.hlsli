@@ -116,7 +116,6 @@ struct MorphPool
 /** @brief 정점 애니메이션(VAT) 표(6 절). 인스턴스마다의 원소 번호(표 안 단어 번호)는 InstanceData::computeVertexAnimationElements 다. */
 struct VertexAnimation
 {
-    static float toSnorm( int raw, float maxRaw );
     static float3 loadNormal( uint element );
     static float3 computePosition( uint headerBase, uint firstElement, uint secondElement, float alpha );
 };
@@ -616,19 +615,10 @@ static float4 MorphPool::loadTangent( uint batchIndex, uint skinSlot, uint verte
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMATION_SRV );
 // 헤더 · 원소 단어 수는 SW_VERTEX_ANIMATION_HEADER_WORDS · SW_VERTEX_ANIMATION_WORDS_PER_ELEMENT(binding_slots.hlsli — C++ MeshVertexAnimationElement 와 같은 배치).
 
-/** @brief 부호 있는 정수의 최대값(snorm16 = 32767 · snorm8 = 127)으로 나눈 [-1, 1] 실수다(최솟값은 -1 로 자른다, C++ snorm::toFloat 과 같다). */
-static float VertexAnimation::toSnorm( int raw, float maxRaw )
-{
-    return max( (float)raw / maxRaw, -1.0f );
-}
-
 /** @brief 원소의 법선(snorm8 옥타헤드럴 둘, 단어1 의 위쪽 16 비트)을 단위 노멀로 푼다. C++ `MeshVertexAnimation::unpackNormal` 과 같은 식이다. */
 static float3 VertexAnimation::loadNormal( uint element )
 {
-    const uint  word1   = g_SwVertexAnimation[element + 1u];
-    const float octantU = VertexAnimation::toSnorm( (int)( word1 << 8u ) >> 24, 127.0f );
-    const float octantV = VertexAnimation::toSnorm( (int)word1 >> 24, 127.0f );
-    return Octahedral::decode( float2( octantU, octantV ) );
+    return Octahedral::decode( PackUtil::unpackSnorm8x4( g_SwVertexAnimation[element + 1u] ).zw ); // 바이트 2 · 3 = u · v
 }
 
 /**
@@ -676,10 +666,8 @@ static float3 VertexAnimation::computePosition( uint headerBase, uint firstEleme
     const uint     firstWord1       = g_SwVertexAnimation[firstElement + 1u];
     const uint     secondWord0      = g_SwVertexAnimation[secondElement];
     const uint     secondWord1      = g_SwVertexAnimation[secondElement + 1u];
-    const float3   firstNormalized  = float3( VertexAnimation::toSnorm( (int)( firstWord0 << 16u ) >> 16, 32767.0f ), VertexAnimation::toSnorm( (int)firstWord0 >> 16, 32767.0f ),
-                                              VertexAnimation::toSnorm( (int)( firstWord1 << 16u ) >> 16, 32767.0f ) );
-    const float3   secondNormalized = float3( VertexAnimation::toSnorm( (int)( secondWord0 << 16u ) >> 16, 32767.0f ), VertexAnimation::toSnorm( (int)secondWord0 >> 16, 32767.0f ),
-                                              VertexAnimation::toSnorm( (int)( secondWord1 << 16u ) >> 16, 32767.0f ) );
+    const float3   firstNormalized  = float3( PackUtil::unpackSnorm16x2( firstWord0 ), PackUtil::unpackSnorm16x2( firstWord1 ).x );
+    const float3   secondNormalized = float3( PackUtil::unpackSnorm16x2( secondWord0 ), PackUtil::unpackSnorm16x2( secondWord1 ).x );
     const float3   center           = float3( asfloat( g_SwVertexAnimation[headerBase + 4u] ), asfloat( g_SwVertexAnimation[headerBase + 5u] ), asfloat( g_SwVertexAnimation[headerBase + 6u] ) );
     const float3   halfExtent       = float3( asfloat( g_SwVertexAnimation[headerBase + 7u] ), asfloat( g_SwVertexAnimation[headerBase + 8u] ), asfloat( g_SwVertexAnimation[headerBase + 9u] ) );
     precise float3 position         = center + halfExtent * lerp( firstNormalized, secondNormalized, alpha );

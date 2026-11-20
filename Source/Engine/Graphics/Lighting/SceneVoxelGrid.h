@@ -39,7 +39,7 @@ namespace sw
         uint32         _dimZ{ 0 };
         vector<uint32> _listWord; ///< 점유 비트(칸 번호 / 32 번째 단어의 칸 번호 % 32 번째 비트)
         /**
-         * @brief 칸마다 자체 발광 복사휘도(RGB9E5 — `packEmission`). 발광 면이 하나도 없으면 비어 있다(칸 수만큼 0 을 두지 않는다).
+         * @brief 칸마다 자체 발광 복사휘도(RGB9E5 — `PackUtil::packRGB9E5`). 발광 면이 하나도 없으면 비어 있다(칸 수만큼 0 을 두지 않는다).
          * @details 실시간 프로브 갱신이 광선이 닿은 칸의 빛으로 더한다(볼륨의 `_emissiveIntensity` 배). 칸 번호는 점유 비트와 같다.
          */
         vector<uint32> _listEmission;
@@ -96,11 +96,6 @@ namespace sw
         void voxelizeEmissiveTriangle( const float3& a, const float3& b, const float3& c, const float3& radiance, const CellRange& clip );
         /** @brief 칸의 발광 복사휘도입니다. 발광 칸이 없거나 범위 밖이면 0 입니다. */
         float3 findEmission( uint32 cellX, uint32 cellY, uint32 cellZ ) const;
-
-        /** @brief 복사휘도를 공유 지수 32 비트(DXGI R9G9B9E5_SHAREDEXP 배치)로 접습니다. 음수는 0, 상한(65408) 위는 상한입니다. */
-        [[nodiscard]] static uint32 packEmission( const float3& radiance );
-        /** @brief `packEmission` 의 역입니다(셰이더 `unpackEmission` 과 같은 식). */
-        [[nodiscard]] static float3 unpackEmission( uint32 packed );
 
         /**
          * @brief 광선이 처음 만나는 켜진 칸을 찾습니다.

@@ -39,8 +39,5 @@ namespace sw
 
         /** @brief 메시 정점 버퍼의 위치 구간(슬롯 0)과 속성 구간(슬롯 2, @p attributeOffset 부터)을 겁니다. stride 는 형식의 원소 크기다(드로우가 PSO 의 형식과 대조한다). */
         static void bind( IRHICommandList& cmd, RHIBufferHandle vertexBuffer, uint32 attributeOffset, RHIMeshVertexFormat format );
-
-        /** @brief 한 성분을 snorm8 로 줄입니다([-1, 1] 로 자르고 반올림). */
-        static int8 packSnorm8( float32 value );
     };
 } // namespace sw

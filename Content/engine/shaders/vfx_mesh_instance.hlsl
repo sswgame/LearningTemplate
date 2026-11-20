@@ -47,13 +47,6 @@ uint4 loadMeshRow( uint row )
     return g_VFXParams[SW_ROOT( g_VFXMeshParamBase ) + row];
 }
 
-/** @brief 색을 RGBA8 unorm 으로 묶습니다(r 이 아래 바이트) — C++ GPUSpriteInstanceData 의 반올림과 같다. */
-uint packColor( float4 color )
-{
-    const uint4 bytes = uint4( saturate( color ) * 255.0f + 0.5f );
-    return bytes.x | ( bytes.y << 8u ) | ( bytes.z << 16u ) | ( bytes.w << 24u );
-}
-
 SW_NUMTHREADS( SW_VFX_MESH_INSTANCE_THREAD_COUNT, 1, 1 )
 void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
@@ -88,7 +81,7 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
         instance._world[3]     = local.x * world0 + local.y * world1 + local.z * world2 + world3;
         instance._boundsCenter = instance._world[3].xyz;
         instance._boundsRadius = asfloat( header.z ) * size * asfloat( header.w );
-        instance._tint         = packColor( particle._color );
+        instance._tint         = PackUtil::packUnorm8x4( particle._color ); // C++ GPUSpriteInstanceData::make 와 같은 비트
         instance._instanceFlags &= ~kInstanceFlagEmpty;
     }
     else
