@@ -2,14 +2,15 @@
     "_name": "RHI_GL",
     "_version": "1.0.0",
     "_kind": "RHI",
-    "_description": "OpenGL 4.6 백엔드(Dev 의 MODULE — 배포본은 SW_SHIPPING_RHI_BACKEND 하나를 Engine 에 정적 링크)",
+    "_description": "OpenGL 4.6 백엔드(동적 Dev 는 MODULE — 정적 구성은 SW_SHIPPING_RHI_BACKEND 하나만 켜지고 Engine 에 정적 링크)",
     "_listDependency": [],
     "_listExcludedPlatform": [
         "Android",
         "Web"
     ],
     "_listConfiguration": [
-        "Dev"
+        "Dev",
+        "Shipping"
     ],
     "_listTarget": [
         "Client"

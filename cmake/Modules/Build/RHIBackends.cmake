@@ -45,17 +45,16 @@ function(sw_check_rhi_backend_name TEXT)
 	endif()
 endfunction()
 
-# 배포 빌드가 Engine 에 넣을 백엔드 — 이름을 확인하고, 이 플랫폼(SW_PLATFORM_NAME)에 그 백엔드가 있는지 본다. 없으면 구성을 세운다.
-# 플랫폼은 그 백엔드 모듈의 매니페스트(_listExcludedPlatform)가 원본이다. 주의: 배포 구성에서는 모듈이 꺼져 있으므로(`_listConfiguration`) 활성 여부가
-# 아니라 플랫폼 칸을 본다 — 이 확인이 없으면 그 플랫폼에 없는 백엔드를 고른 Engine 이 백엔드 없이 링크된다.
+# 정적 모듈 구성이 Engine 에 넣을 백엔드 — 이름을 확인하고, 그 백엔드 모듈이 켜졌는지 본다(매니페스트 해석이 정적 구성에서 고른 백엔드 하나만 켜고,
+# 플랫폼 · 대상이 맞지 않으면 그 까닭과 함께 끈다 — sw_decide_module_activation). 꺼졌으면 구성을 세운다 — 이 확인이 없으면 Engine 이 백엔드 없이 링크된다.
 function(sw_resolve_shipping_rhi_backend TEXT OUT_VAR)
 	sw_check_rhi_backend_name("${TEXT}")
 	set(backend_name ${TEXT})
 	set(module_name ${SW_RHI_BACKEND_${backend_name}_MODULE})
-	get_property(list_platform GLOBAL PROPERTY SW_MODULE_${module_name}_PLATFORMS)
-	if(NOT SW_PLATFORM_NAME IN_LIST list_platform)
-		message(FATAL_ERROR "[RHI] SW_SHIPPING_RHI_BACKEND=${TEXT}: ${backend_name} is not available on ${SW_PLATFORM_NAME} "
-			"(${module_name}.module.json _listExcludedPlatform leaves: ${list_platform})")
+	get_property(module_active GLOBAL PROPERTY SW_MODULE_${module_name}_ACTIVE)
+	if(NOT module_active)
+		get_property(module_reason GLOBAL PROPERTY SW_MODULE_${module_name}_REASON)
+		message(FATAL_ERROR "[RHI] SW_SHIPPING_RHI_BACKEND=${TEXT}: ${module_name} is ${module_reason} (${SW_PLATFORM_NAME} ${SW_CONFIGURATION_NAME} ${SW_TARGET_TYPE})")
 	endif()
 	set(${OUT_VAR} ${backend_name} PARENT_SCOPE)
 endfunction()
