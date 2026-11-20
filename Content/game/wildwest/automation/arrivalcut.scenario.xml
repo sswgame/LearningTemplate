@@ -16,6 +16,7 @@
 	<Expect watch="Cinematic.CutCamera" target="ArrivalDirector" is="none"/>
 	<Expect watch="Object.Property" target="TownArrival" key="SequenceTriggerComponent._fireCount" equals="0"/>
 
+	<AdvanceSimulation frames="10"/> <!-- 볼륨이 나타난 창(8 프레임 — _spawnInside Ignore)을 지나야 순간이동이 걸어 들어온 것이다 -->
 	<DevCommand line="teleport Player 40 0.05 0"/>
 	<WaitUntil watch="Object.Property" target="TownArrival" key="SequenceTriggerComponent._fireCount" equals="1" timeoutFrames="30"/>
 	<!-- 프리롤(10 프레임)에 대기 뷰가 플레이어의 카메라 매니저(GameCamera)로 가고, 컷이 오면 풀린다 -->

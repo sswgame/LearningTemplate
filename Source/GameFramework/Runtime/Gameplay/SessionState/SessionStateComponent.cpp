@@ -230,14 +230,14 @@ namespace sw
 
     void SessionStateComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onRegister( manager );
+        GameFlagsOwnerComponent::onRegister( manager );
         manager.getComponentRegistry().add<SessionStateComponent>( this );
     }
 
     void SessionStateComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getComponentRegistry().remove<SessionStateComponent>( this );
-        Component::onUnregister( manager );
+        GameFlagsOwnerComponent::onUnregister( manager );
     }
 
     void SessionStateComponent::onBeginPlay()
