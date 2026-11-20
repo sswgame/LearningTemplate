@@ -22,8 +22,8 @@
  * 스트리밍(D1-7)의 셀 하나, 지형 LOD 교체 하나가 수십 MB 업로드였습니다. 언리얼 GPUScene 이 프리미티브 구간을 `FSpanAllocator` 로 나눠
  * 바뀐 것만 올리는 것과 같은 구조입니다.
  * - **돌려받은 구간은 곧바로 다시 주지 않습니다.** DX12 · Vulkan 의 정점 버퍼는 CPU 가 직접 쓰는 메모리라 GPU 와 순서가 맞춰지지
- *   않습니다. 방금 나간 메시의 구간을 새 메시에 주면 아직 끝나지 않은 앞 프레임이 읽는 자리를 덮어씁니다. 그래서 `update` 를 부른 수
- *   (= 제출한 프레임 수, FrameRenderer::uploadSceneAndSubmit 가 프레임마다 한 번)로 번호를 매겨 `kMaxFrameCountInFlight` 프레임 뒤에 돌려받습니다.
+ *   않습니다. 방금 나간 메시의 구간을 새 메시에 주면 아직 끝나지 않은 앞 프레임이 읽는 자리를 덮어씁니다. 그래서 `update` 마다 펜스 값을 내고
+ *   (`RHIFence::signal`) 그 값을 키로 두었다가, GPU 가 그 펜스를 끝냈다고 디바이스가 알린 뒤에 돌려받습니다(프레임 수로 짐작하지 않는다).
  * - **용량이 모자라거나 조각나 들어갈 자리가 없으면 다시 채웁니다.** 더 큰 새 버퍼를 만들어 살아 있는 메시를 앞에서부터 다시 이어 붙입니다
  *   (`repack`). 새 버퍼는 아무 프레임도 읽지 않으므로 대기 중인 반납도 버립니다. 용량은 1.5 배씩 늘어 드물게만 일어납니다.
  */
@@ -36,6 +36,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/IdentityToken.h"
 
+#include "Engine/Graphics/RHI/RHIFence.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -177,7 +178,8 @@ namespace sw
         vector<uint32>              _listScratchIndex;
         vector<RHIBufferCopyRegion> _listScratchRegion;
         vector<RHIBufferCopyRegion> _listScratchIndexRegion;
-        uint64                      _updateCount;
+        uint64                      _updateCount; ///< `update` 를 부른 수 — 이번 목록에서 본 메시의 표시(`Entry::_seenStamp`)다
+        RHIFence                    _gpuFence;    ///< 돌려받은 구간의 대기 키(펜스 값)를 내고 GPU 가 끝낸 값을 안다
         uint32                      _liveVertexCount;
         vector<PendingCopy>         _listPendingCopy;   ///< 다음 프레임 업로드 단계가 기록할 GPU 복사(쌓인 순서)
         vector<RHIBufferHandle>     _listRetiredBuffer; ///< 다시 꾸려 비운 옛 풀 정점 버퍼 — 그것을 읽는 복사를 기록한 뒤 지연 해제한다

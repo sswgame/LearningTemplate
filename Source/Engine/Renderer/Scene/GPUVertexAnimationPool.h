@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/IdentityToken.h"
 
+#include "Engine/Graphics/RHI/RHIFence.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 
 namespace sw
@@ -57,8 +58,6 @@ namespace sw
     private:
         /// @brief 풀 상한(단어 수, 단어 하나 = 4바이트이며 256MB)입니다. 넘는 테이블은 싣지 않고 오류를 남기며 그 메시는 그리지 않습니다(바인드 포즈로 대신 그리지 않는다).
         static constexpr uint32 kMaxWordCount = 64u * 1024u * 1024u;
-        /// @brief 반납한 구간을 이 횟수만큼의 재구성이 지난 뒤에야 다시 내줍니다(앞 프레임들이 아직 읽는 구간을 덮어쓰지 않게 한다 — 재구성은 프레임보다 드물다).
-        static constexpr uint64 kRetireLag = 4;
 
         /// @brief 테이블 하나의 구간입니다. 같은 테이블을 나누는 메시는 `_refCount` 로 센다.
         struct Entry
@@ -101,7 +100,7 @@ namespace sw
         unordered_map<IdentityToken, MeshRecord> _mapRecord;
         unordered_map<IdentityToken, uint32>     _mapBase;
         vector<IdentityToken>                    _listBuiltContentID;
-        uint64                                   _rebuildSerial{ 0 };
+        RHIFence                                 _gpuFence;       ///< 반납한 구간의 대기 키(재구성마다 낸 펜스 값)를 내고 GPU 가 끝낸 값을 안다
         uint32                                   _wordCount{ 0 }; ///< 버퍼가 담는 단어 수(구간 할당기 용량)입니다. 셰이더 범위 검사 값이다
     };
 } // namespace sw

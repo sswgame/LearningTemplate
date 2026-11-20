@@ -146,8 +146,8 @@ namespace sw
             _listScratchSkinAdded.push_back( dataID );
         }
 
-        // 이번 목록에 없는 원본은 구간을 미뤄 돌려준다(앞 프레임들이 아직 읽는 중일 수 있다). 포인터는 따라가지 않는다.
-        const uint64 retireStamp = _updateCount + constant::render::kMaxFrameCountInFlight;
+        // 이번 목록에 없는 원본은 구간을 미뤄 돌려준다(앞 프레임들이 아직 읽는 중일 수 있다 — 이번 `update` 의 펜스 값이 끝나야 다시 나간다). 포인터는 따라가지 않는다.
+        const uint64 retireStamp = _gpuFence.getLastSignalValue();
         _listScratchSkinRemoved.clear();
         for ( const auto& [dataID, source] : _mapSkinSource )
         {
@@ -409,11 +409,13 @@ namespace sw
         if ( pDevice == nullptr )
             return;
 
-        // 번호 = 이 호출 수(프레임마다 한 번). 돌려받은 모프 구간은 kMaxFrameCountInFlight 프레임 뒤에 다시 나간다(GPUMeshVertexPool::update 와 같은 규칙).
+        // 돌려받은 구간의 키는 이번 호출이 낸 펜스 값이고, GPU 가 끝냈다고 알린 값까지만 다시 나간다(GPUMeshVertexPool::update 와 같은 규칙).
         ++_updateCount;
-        _morphAllocator.retireDeferred( _updateCount );
-        _skinRestAllocator.retireDeferred( _updateCount );
-        _skinWeightAllocator.retireDeferred( _updateCount );
+        (void)_gpuFence.signal( *pDevice ); // 이번 호출의 반납 키 — `getLastSignalValue` 로 읽는다
+        const uint64 completedFenceValue = _gpuFence.getCompletedValue();
+        _morphAllocator.retireDeferred( completedFenceValue );
+        _skinRestAllocator.retireDeferred( completedFenceValue );
+        _skinWeightAllocator.retireDeferred( completedFenceValue );
 
         // 모프 구간은 바뀐 메시만 올린다. 레스트 포즈 · 스킨 가중치는 변하지 않으므로 **한 번만** 올린다 — 매 프레임 올리면 이 클래스가 없애려던
         // 바로 그 비용(정점 재업로드)을 다시 치르게 된다.
@@ -560,7 +562,7 @@ namespace sw
 
     bool GPUMeshMorphPool::updateMorphMeshes( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh )
     {
-        const uint64 retireStamp   = _updateCount + constant::render::kMaxFrameCountInFlight;
+        const uint64 retireStamp   = _gpuFence.getLastSignalValue();
         const bool   bMarkedChange = markListedMorphMeshes( listMorphMesh );
         const bool   bChanged      = sweepUnlistedMorphMeshes( retireStamp ) || bMarkedChange;
         if ( _mapMorphEntry.empty() )

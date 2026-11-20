@@ -32,7 +32,7 @@
  *
  * [모프 구간의 부분 갱신 — C-43]
  * 모프 메시는 정점 풀(`GPUMeshVertexPool`)과 같은 구조다. 메시마다 `SpanAllocator` 구간과 칸 번호를 받고, 집합이 바뀌면 **들어온 메시의 레스트만**
- * 그 구간에 올린다(`updateStructuredBufferRegions`). 나간 메시의 구간은 `kMaxFrameCountInFlight` 프레임 뒤에 돌려받는다. 칸 번호(레스트 노멀의 w)는
+ * 그 구간에 올린다(`updateStructuredBufferRegions`). 나간 메시의 구간은 그 `update` 의 펜스 값(`RHIFence`)을 GPU 가 끝낸 뒤에 돌려받는다. 칸 번호(레스트 노멀의 w)는
  * 메시가 풀에 있는 동안 바뀌지 않는다. 모프 구간의 길이는 **용량**이라 빈 자리가 섞인다 — 컴퓨트는 빈 자리도 돌지만 아무도 그 결과를 읽지 않는다.
  * 스킨 구간은 모프 용량 뒤에서 시작하므로 모프 메시가 들고 나도 용량이 그대로면 스킨 인스턴스의 시작이 바뀌지 않는다.
  *
@@ -43,7 +43,7 @@
  *
  * [스킨 원본의 구간 갱신]
  * 스킨 원본도 같은 구조다. 원본(스킨 데이터 번호)마다 레스트 구간 · 차이 구간(둘 다 레스트 버퍼 `_skinRest` 안, 원소 하나 = float4 셋)과 가중치 구간(`_skinWeight`)을
- * `SpanAllocator` 로 따로 받고, 새로 들어온 원본의 구간만 올린다. 나간 원본의 구간은 `kMaxFrameCountInFlight` 프레임 뒤에 돌려받고, 다 차면 1.5 배로 다시 만들어 전부 올린다.
+ * `SpanAllocator` 로 따로 받고, 새로 들어온 원본의 구간만 올린다. 나간 원본의 구간은 펜스 값이 끝난 뒤에 돌려받고, 다 차면 1.5 배로 다시 만들어 전부 올린다.
  * 가중치 안의 차이 시작 번호는 **원본의 차이 구간 시작에 대한 상대 번호**라 다른 원본이 들고 나도 바뀌지 않는다. 구간 시작 셋(가중치 · 레스트 · 차이)은 인스턴스 표 줄이 싣는다.
  * 같은 원본을 쓰는 인스턴스는 한 구간을 나눠 쓰며 `_refCount` 로 센다. 언리얼 GPU Skin Cache 가 스켈레탈 메시마다 버퍼 구간을 나누고, 유니티 GPU skinning 이 메시 단위 버퍼 구간을 두는 것과 같은 선이다.
  */
@@ -60,6 +60,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
+#include "Engine/Graphics/RHI/RHIFence.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
@@ -376,7 +377,8 @@ namespace sw
         uint32         _skinBoneCount{ 0 };
         uint32         _skinSourceVertexCount{ 0 };
         uint32         _skinFrameValueCount{ 0 };                ///< 인스턴스 프레임 값(머리 + 모프 가중치)의 합(팔레트 뒤에 float4 로 싣는다)
-        uint64         _updateCount{ 0 };                        ///< update 를 부른 수(= 제출한 프레임 수). 돌려받은 모프 구간의 대기 번호다
+        uint64         _updateCount{ 0 };                        ///< update 를 부른 수 — 이번 목록에서 본 메시 · 원본의 표시(`_seenStamp`)다
+        RHIFence       _gpuFence;                                ///< 돌려받은 구간의 대기 키(펜스 값)를 내고 GPU 가 끝낸 값을 안다
         uint32         _skinParity{ 0 };                         ///< 이번 프레임에 스키닝이 쓰는 벌(0 앞 · 1 뒤, `advanceSkinHistory` 가 바꾼다)
         uint8          _bSkinLayoutChanged{ SW_TRUE };           ///< 지난 `advanceSkinHistory` 뒤에 스킨 결과 배치가 바뀌었다
         uint8          _bSkinDispatchedSinceAdvance{ SW_FALSE }; ///< 지난 `advanceSkinHistory` 뒤에 스키닝을 디스패치했다
