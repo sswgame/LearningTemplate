@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/ObjectIDAllocator.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
@@ -66,7 +67,7 @@ namespace sw
     // 오브젝트는 수천 개가 풀(16 B 단위 블록)에서 나온다. 필드 크기 합을 정렬로 올린 값을 넘으면 필드 사이에 패딩이 생긴 것이다(블록이 한 단계 커진다).
     static_assert( sizeof( GameObject ) <=
                        ( sizeof( void* ) + sizeof( uint64 ) + sizeof( hashed_string ) + sizeof( GameObjectManager* ) + sizeof( atomic<bool> ) * 4 + sizeof( uint32 ) +
-                         sizeof( vector<Component*, InlineAllocator<Component*, 4>> ) + sizeof( atomic<Component*> ) + sizeof( TickItemList ) +
+                         sizeof( vector<Component*, InlineAllocator<Component*, 4>> ) + sizeof( atomic<Component*> ) + sizeof( unique_ptr<GameObjectEvents> ) + sizeof( TickItemList ) +
                          sizeof( uint32 ) * TickRegistry::kGroupCount + sizeof( uint32 ) + sizeof( atomic<uint8> ) + sizeof( bool ) + sizeof( uint32 ) + sizeof( bool ) + alignof( GameObject ) - 1 ) /
                            alignof( GameObject ) * alignof( GameObject ),
                    "GameObject has padding between fields (or a field was added without adding its size here)" );
@@ -87,6 +88,7 @@ namespace sw
         , _managerIndex{ constant::invalid_index::kUint32 }
         , _listComponent{}
         , _pPrimaryScene{ nullptr }
+        , _pEvents{}
         , _listTickItem{}
         , _arrTickIndex{ TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList }
         , _tickPrerequisiteCount{ 0 }
@@ -117,6 +119,13 @@ namespace sw
         SceneValidationIssues* const pIssues = _pOwnerManager != nullptr ? _pOwnerManager->getSceneScope().find<SceneValidationIssues>() : nullptr;
         if ( pIssues != nullptr )
             pIssues->getLog().removeSource( _objectID );
+    }
+
+    GameObjectEvents& GameObject::getOrCreateEvents()
+    {
+        if ( _pEvents == nullptr )
+            _pEvents = make_unique<GameObjectEvents>();
+        return *_pEvents;
     }
 
     const TypeInfo* GameObject::getTypeInfo() const

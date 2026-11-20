@@ -14,6 +14,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -56,8 +57,8 @@ namespace sw
         /** @brief 떨어뜨린 조각을 지웁니다. 조각은 몸(시체)과 함께 사라진다 — 적을 걷는 게임(웨이브)에서 조각이 쌓이지 않는다(언리얼 고어 조각의 수명을 시체에 묶는 자리). */
         void onEndPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
-        /** @brief 치명적 맞음(`HitInfo::_bFatal`)이 잘라 낼 수 있는 영역의 뼈에 들면 그 영역을 자릅니다. */
-        void onHitReceived( const HitInfo& hit ) override;
+        /** @brief 맞음 사건을 구독합니다. */
+        void onRegister( GameObjectManager& manager ) override;
         /**
          * @brief 풀 반환: 처음 자르기 전의 몸 메시를 유닛에 다시 걸고, 떨어뜨린 조각을 지우고, 잘린 영역 목록을 비웁니다.
          * @details 뗀 래그돌 바디는 래그돌 되돌리기가, 잘린 영역의 피는 외형 되돌리기(표면 상태)가 되돌린다 — 그 상태의 주인이다.
@@ -93,6 +94,8 @@ namespace sw
         void validatePieceMaterial( ValidationContext& context ) const;
 
     private:
+        /** @brief 치명적 맞음(`HitInfo::_bFatal`, `GameObjectEvents::_hitReceived`)이 잘라 낼 수 있는 영역의 뼈에 들면 그 영역을 자릅니다. */
+        void handleHit( const HitInfo& hit );
         void loadRegionTable();
         /** @brief 떨어뜨린 조각 오브젝트를 모두 지웁니다. */
         void destroyPieces();
@@ -115,7 +118,8 @@ namespace sw
         SharedAssetRef<FitTables> _pRegionTable; ///< 영역 표(공유 캐시의 한 벌). 받지 못했으면 nullptr
         vector<hashed_string>     _listSeveredRegion;
         vector<GameObjectHandle>  _listPiece;
-        shared_ptr<Mesh>          _pIntactMesh; ///< 처음 자르기 전의 몸 메시(자른 적이 없으면 nullptr) — 풀 반환이 다시 건다
+        Subscription              _hitSubscription; ///< 맞음 사건 구독(`handleHit`)
+        shared_ptr<Mesh>          _pIntactMesh;     ///< 처음 자르기 전의 몸 메시(자른 적이 없으면 nullptr) — 풀 반환이 다시 건다
         bool                      _bTableLoaded;
     };
 } // namespace sw

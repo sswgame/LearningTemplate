@@ -379,7 +379,6 @@ namespace sw
         vector<PhysicsOverlapEvent>                                       _listOverlapTransition;              ///< 이번 프레임 진입 · 이탈(`dispatchEvents` 재사용)
         vector<PhysicsOverlapEvent>                                       _listOverlapStay;                    ///< 이번 프레임 겹침 유지(올린 듣는 쪽이 있을 때만, 재사용)
         unordered_map<uint64, vector<ContactStayListenerEntry>>           _mapStayListener;                    ///< 오브젝트 id → 유지 듣는 쪽(`registerContactStayListener`)
-        vector<Component*>                                                _listDeliverTarget;                  ///< `deliverEvent` 가 도는 컴포넌트 사본(재사용 — 처리가 붙이고 뗀다)
         vector<ContactStayListenerEntry>                                  _listStayTarget;                     ///< 유지를 나눠 주는 동안의 듣는 쪽 사본(재사용)
         PhysicsContactLogEntry                                            _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
         uint64                                                            _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)

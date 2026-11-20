@@ -22,6 +22,7 @@
 namespace sw
 {
     struct AABB;
+    struct GameObjectEvents;
     struct ObjectIdentity;
     struct ObjectSaveOptions;
     struct TagID;
@@ -112,6 +113,14 @@ namespace sw
          *          틱에서 일을 거는 길은 const 매니저의 명령 버퍼(`GameObjectManager::executeOrDeferPostTickOnComponent`)와 `TickContext` 다.
          */
         GameObjectManager* getMutableManager() const;
+
+        /**
+         * @brief 이 오브젝트의 사건 델리게이트(`GameObjectEvents`)입니다. 아무도 구독하지 않았으면 nullptr 입니다 — 사건을 내는 쪽은 `GameObjectEvents::broadcast` 를 씁니다.
+         * @details 묶음 안 델리게이트는 부르는 쪽의 상태라 const 오브젝트에서도 낼 수 있다(알림 처리기는 오브젝트를 const 로 받는다).
+         */
+        GameObjectEvents* findEvents() const { return _pEvents.get(); }
+        /** @brief 사건 델리게이트 묶음을 돌려줍니다. 없으면 만듭니다(첫 구독). 게임 스레드에서만 부릅니다 — 구독은 `GameObjectEvents::listen` 으로 겁니다. */
+        GameObjectEvents& getOrCreateEvents();
 
         /**
          * @brief 삭제 예정인지 확인합니다.
@@ -525,6 +534,8 @@ namespace sw
          *          `Component*` 로 보관하는 이유는, 이 헤더가 SceneComponent 를 모르기 때문이다. 씬 컴포넌트인지는 플래그 비트로 안다.
          */
         mutable atomic<Component*> _pPrimaryScene;
+        /** @brief 사건 델리게이트 묶음입니다(`findEvents`). 첫 구독 때 만든다 — 듣는 쪽이 없는 오브젝트는 포인터 하나만 든다. */
+        unique_ptr<GameObjectEvents> _pEvents;
         /** @brief 틱 레지스트리의 항목 목록입니다. 그룹과 순서 키 순이며, `TickRegistry` 만 만듭니다. 틱할 것이 없는 오브젝트는 비어 있습니다. */
         TickItemList _listTickItem;
         /** @brief 레지스트리의 그룹 목록에서 자기가 있는 인덱스입니다. 없으면 `TickRegistry::kNotInList` 입니다. */

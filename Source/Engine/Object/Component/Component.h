@@ -394,30 +394,8 @@ namespace sw
         virtual void onTick( TickContext& context );
         /** @brief 프레임마다 서브틱별로 불리는 보조 업데이트 콜백입니다. */
         virtual void onSubTick( uint32 subTickID, TickContext& context );
-        /**
-         * @brief 이 오브젝트의 콜라이더가 다른 오브젝트의 콜라이더와 겹치기 시작했을 때 불립니다(유니티의 `OnTriggerEnter2D`, 언리얼의 `BeginOverlap`).
-         * @details 틱과 트랜스폼 적용 뒤에 게임 스레드에서 오브젝트의 켜진 컴포넌트마다 불린다. 이 안에서 스폰, 파괴, 구조 변경을 해도 된다.
-         *          한 프레임 안에서는 이탈이 먼저, 진입이 다음이다. 트리거 안에서 생긴 것은 다음 물리 스텝에 진입하고, 파괴 · 비활성은 이탈을 받는다(DesignBacklog "트리거 Enter · Stay · Exit 계약").
-         */
-        virtual void onOverlapBegin( const OverlapInfo& overlap ) { (void)overlap; }
-        /** @brief 겹침이 끝났을 때 불립니다(떨어짐, 꺼짐, 사라짐). 상대가 이미 사라졌으면 `OverlapInfo::_pOther` 는 nullptr 입니다. */
-        virtual void onOverlapEnd( const OverlapInfo& overlap ) { (void)overlap; }
-        // 유지(Stay)는 여기 없다 — 듣는 쪽이 `ScenePhysics::registerContactStayListener` 로 opt-in 한다(`ContactStayListener`, 감사 S-1).
-        /**
-         * @brief 이 오브젝트의 강체가 다른 바디와 막는 접촉을 시작했을 때 불립니다(유니티의 `OnCollisionEnter`, 언리얼의 `OnComponentHit`).
-         * @details 물리 스텝이 끝나고 보간한 위치를 기록한 뒤 게임 스레드에서 켜진 컴포넌트마다 불린다. 스폰, 파괴, 구조 변경을 해도 된다.
-         *          한 프레임에 스텝이 여러 개이면 스텝 순서대로 온다.
-         */
-        virtual void onCollisionBegin( const CollisionInfo& collision ) { (void)collision; }
-        /** @brief 막는 접촉이 끝났을 때 불립니다(떨어짐, 바디 사라짐). */
-        virtual void onCollisionEnd( const CollisionInfo& collision ) { (void)collision; }
-        /**
-         * @brief 이 오브젝트가 맞았을 때 불립니다. 근접 판정이나 무기 레이캐스트가 `CharacterRayHit::deliverHit` 로 전달하며, 게임 스레드에서 켜진 컴포넌트마다 불립니다.
-         * @details 스폰, 파괴, 구조 변경을 해도 된다. 틱 밖이면 바로, 틱 중이면 틱이 끝난 뒤로 미뤄서 부른다.
-         */
-        virtual void onHitReceived( const HitInfo& hit ) { (void)hit; }
-        /** @brief 이 오브젝트의 애니메이션이 게임플레이 이벤트 알림을 울렸을 때 불립니다(알림 테이블의 `AbilityEvent`). 게임 스레드에서 켜진 컴포넌트마다 불립니다. */
-        virtual void onAnimationNotify( const AnimationNotifyInfo& notify ) { (void)notify; }
+        // 겹침 · 접촉 · 맞음 · 애니메이션 알림은 가상 함수가 아니다 — 듣는 컴포넌트만 `onRegister` 에서 `GameObjectEvents::listen` 으로 구독한다(`GameObjectEvents.h`).
+        // 모든 컴포넌트에 빈 가상 호출을 훑던 유니티식 메시지 대신 언리얼 액터 델리게이트 자리를 골랐다(듣지 않는 컴포넌트에는 비용이 없다).
         /**
          * @brief 소유 GameObject 에 붙은 직후 불립니다.
          * @details 컴포넌트가 어느 레지스트리에 들어가야 하는지는 컴포넌트 자신이 안다. GameObject 가 `castTo` 로

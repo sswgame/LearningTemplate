@@ -32,7 +32,7 @@ namespace sw
      * @brief 축 정렬 상자 하나의 2D 콜라이더입니다(유니티 `BoxCollider2D` 의 트리거 쪽, Godot `Area2D`).
      * @details 플레이 중에는 씬의 2D 물리 씬에 **키네마틱 센서 바디**를 하나 둡니다. 막는 콜라이더도 트리거도 센서입니다(`PhysicsBodyDesc::_bOverlapOnly`) —
      *          Box2D 는 키네마틱끼리 접촉을 만들지 않으므로, 센서여야 콜라이더끼리 겹침이 납니다. 그래서 이 콜라이더는 강체를 막지 않고 겹침만 냅니다
-     *          (`onOverlapBegin/End`, `OverlapInfo::_bOtherTrigger` 로 트리거를 가린다). 질의(광선 · 쓸기)에서는 트리거가 아닌 콜라이더가 막는 것으로 보입니다.
+     *          (겹침 사건 `GameObjectEvents::_overlapBegin` · `_overlapEnd`, `OverlapInfo::_bOtherTrigger` 로 트리거를 가린다). 질의(광선 · 쓸기)에서는 트리거가 아닌 콜라이더가 막는 것으로 보입니다.
      *
      *          바디는 상자(`getBounds`)를 그대로 따릅니다 — 매 물리 프레임 처음(`beginPhysicsFrame`)에 자리를 옮기고, 크기 · 레이어 · 트리거가 바뀌면
      *          다시 만듭니다. 상자는 축 정렬이라 바디는 돌지 않습니다.

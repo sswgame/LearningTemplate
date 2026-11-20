@@ -6,6 +6,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/ObjectIDAllocator.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
@@ -100,9 +101,14 @@ namespace sw
         { (void)volume.activate( deferredManager.resolveGameObject( volume._activator ) ); } );
     }
 
-    void ActivatorVolumeComponent::onOverlapBegin( const OverlapInfo& overlap )
+    void ActivatorVolumeComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onOverlapBegin( overlap );
+        Component::onRegister( manager );
+        _overlapSubscription = GameObjectEvents::listen<&ActivatorVolumeComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
+    }
+
+    void ActivatorVolumeComponent::handleOverlapBegin( const OverlapInfo& overlap )
+    {
         // 상대의 트리거(감지 범위)는 활성자가 아니다 — 몸이 들어와야 한다. 거리로 재는 활성자는 거리 판정만 들인다(몸도 있으면 두 길이 한 진입을 두 번 낸다).
         if ( overlap._bOtherTrigger == SW_TRUE || overlap._pOther == nullptr )
             return;

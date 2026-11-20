@@ -11,6 +11,7 @@
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
@@ -226,9 +227,17 @@ namespace sw
         return false;
     }
 
-    void ShooterEnemyComponent::onHitReceived( const HitInfo& hit )
+    void ShooterEnemyComponent::onRegister( GameObjectManager& manager )
     {
-        HealthSourceComponent::onHitReceived( hit );
+        HealthSourceComponent::onRegister( manager );
+        _hitSubscription    = GameObjectEvents::listen<&ShooterEnemyComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
+        _notifySubscription = GameObjectEvents::listen<&ShooterEnemyComponent::handleAnimationNotify>( *this, &GameObjectEvents::_animationNotify );
+    }
+
+    void ShooterEnemyComponent::handleHit( const HitInfo& hit )
+    {
+        if ( hit._bFatal )
+            return; // 쓰러질 때 다시 보낸 치명 사본이다(`deliverFatalHit`)
         if ( applyDamage( hit._damage * hit._damageMultiplier ) == false )
             return;
         // 쓰러졌다 — 치명 신호를 같은 오브젝트에 다시 보낸다. 래그돌(`_bRagdollOnFatalHit`)이 맞은 바디에 맞은 방향의 충격량을 주며 넘어가고,
@@ -262,9 +271,8 @@ namespace sw
         }
     }
 
-    void ShooterEnemyComponent::onAnimationNotify( const AnimationNotifyInfo& notify )
+    void ShooterEnemyComponent::handleAnimationNotify( const AnimationNotifyInfo& notify )
     {
-        HealthSourceComponent::onAnimationNotify( notify );
         const bool bSwingLands = _phase == ShooterEnemyPhase::Attacking && _attackHitEvent.empty() == false && notify._event == _attackHitEvent;
         if ( bSwingLands )
             _bAttackHitEvent = SW_TRUE;

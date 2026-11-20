@@ -3,6 +3,7 @@
  * @brief 스켈레톤 적 하나(폰) — 땅에서 일어나 AI 조종자의 의도대로 걸어오고, 휘두르기 버튼이 눌리면 휘두르고, 맞으면 움찔하고, 쓰러집니다.
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -43,8 +44,8 @@ namespace sw
      *          애니메이터 그래프(`data/anim/skeleton.animgraph.xml`)는 파라미터 `Move`(0 서기 · 1 걷기 · 2 달리기) ·
      *          `Attack` · `Hit`(트리거) · `Dead` 로 움직입니다. 플레이어를 때리는 것은 다른 오브젝트에 쓰는 일이라 틱 뒤로 미룹니다.
      *          휘두름이 맞는 시각은 클립 데이터다 — 클립 알림 `Impact` → 알림 표(`characters/skeleton_minion/skeleton_minion.notifies.xml`)의 `AbilityEvent` →
-     *          `onAnimationNotify` 가 이벤트 `_attackHitEvent` 를 받으면 다음 틱에 손이 닿는지 보고 때린다. 휘두름이 끝날 때까지 이벤트가 없으면 데이터 오류로 알린다.
-     *          **맞음**은 플레이어의 물리 질의 히트스캔이 틱 뒤에 `CharacterRayHit::deliverHit` 으로 보낸다(`onHitReceived`). 히트박스는 같은 오브젝트의
+     *          알림 사건(`GameObjectEvents::_animationNotify`)이 이벤트 `_attackHitEvent` 를 주면 다음 틱에 손이 닿는지 보고 때린다. 휘두름이 끝날 때까지 이벤트가 없으면 데이터 오류로 알린다.
+     *          **맞음**은 플레이어의 물리 질의 히트스캔이 틱 뒤에 `CharacterRayHit::deliverHit` 으로 보낸다(맞음 사건 `GameObjectEvents::_hitReceived`). 히트박스는 같은 오브젝트의
      *          `RagdollComponent`(물리 에셋 `skeleton_warrior.physics.xml` — 뼈마다 바디와 히트 존 배율)이고, 피해는 기본 피해 × 히트 존 배율이다.
      *          쓰러지면 치명 신호를 다시 보낸다(`deliverFatalHit`) — 래그돌이 맞은 바디에 충격량을 받으며 넘어가고, 절단이 있는 해골은 맞은 영역이 떨어진다. 쓰러지지 않은 맞음의 몸 흔들림은 래그돌 컴포넌트가 같은 맞음으로 스스로 한다.
      *          `_radius` · `_height` 는 몸 이동 · 내비 에이전트 · 자동 조준이 쓰는 몸 크기다(판정에는 쓰지 않는다).
@@ -59,10 +60,8 @@ namespace sw
         virtual ~ShooterEnemyComponent() override = default;
 
         void onTick( TickContext& context ) override;
-        /** @brief 무기 판정이 맞혔습니다(틱 밖 · 게임 스레드). 기본 피해 × 히트 존 배율을 깎고, 쓰러지면 맞은 바디에 충격량을 주며 래그돌로 넘깁니다. */
-        void onHitReceived( const HitInfo& hit ) override;
-        /** @brief 휘두름 클립의 맞는 알림(`_attackHitEvent`)을 받습니다(게임 스레드, 애니메이션 평가 뒤). 휘두르는 중이면 다음 틱이 맞힘을 처리합니다. */
-        void onAnimationNotify( const AnimationNotifyInfo& notify ) override;
+        /** @brief 맞음 · 애니메이션 알림 사건을 구독합니다. */
+        void onRegister( GameObjectManager& manager ) override;
         /**
          * @brief 풀 반환: 아직 `launch` 하지 않은 적으로 돌립니다 — 체력 · 단계 · 휘두름 · 복제 표시 · 넷 번호를 비우고, 복제 모습이 끈 폰의 자동 빙의를 되돌립니다.
          * @details 자리 · 요 · 빠르기 · 디렉터는 다음 `launch` 가 정한다. 래그돌 · 애니메이터 · 외형 · 폰은 각자 되돌린다.
@@ -106,6 +105,13 @@ namespace sw
         void   setNetEntityID( uint32 netEntityID ) { _netEntityID = netEntityID; }
 
     private:
+        /**
+         * @brief 무기 판정이 맞혔습니다(`GameObjectEvents::_hitReceived`, 틱 밖 · 게임 스레드). 기본 피해 × 히트 존 배율을 깎고, 쓰러지면 맞은 바디에 충격량을 주며 래그돌로 넘깁니다.
+         * @details 쓰러질 때 다시 보낸 치명 사본(`deliverFatalHit`)은 받지 않는다 — 피해는 이미 깎였다.
+         */
+        void handleHit( const HitInfo& hit );
+        /** @brief 휘두름 클립의 맞는 알림(`_attackHitEvent`, `GameObjectEvents::_animationNotify`)을 받습니다(게임 스레드, 애니메이션 평가 뒤). 휘두르는 중이면 다음 틱이 맞힘을 처리합니다. */
+        void handleAnimationNotify( const AnimationNotifyInfo& notify );
         /** @brief 체력을 깎고 움찔하거나 쓰러진다(틱 밖 · 게임 스레드). 이번 피해로 쓰러졌으면 true 입니다(이미 쓰러졌으면 false). */
         [[nodiscard]] bool applyDamage( float32 amount );
         void               enterPhase( ShooterEnemyPhase phase );
@@ -122,6 +128,8 @@ namespace sw
         void requestDropSocketParts() const;
 
     private:
+        Subscription _hitSubscription;    ///< 맞음 사건 구독(`handleHit`)
+        Subscription _notifySubscription; ///< 애니메이션 알림 사건 구독(`handleAnimationNotify`)
         PROPERTY( Category = "Enemy", DisplayName = "Game Mode", Tooltip = "Object with the ShooterGameModeComponent" )
         GameObjectHandle _gameMode;
         PROPERTY( Category = "Enemy", DisplayName = "Radius", Tooltip = "Capsule radius of the hit box and the body", Min = 0.0, Units = m )

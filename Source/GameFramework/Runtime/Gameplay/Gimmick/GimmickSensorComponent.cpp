@@ -5,6 +5,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
@@ -73,9 +74,8 @@ namespace sw
         }
     }
 
-    void GimmickSensorComponent::onOverlapBegin( const OverlapInfo& overlap )
+    void GimmickSensorComponent::handleOverlapBegin( const OverlapInfo& overlap )
     {
-        Component::onOverlapBegin( overlap );
         const bool bIgnoredTrigger = overlap._bOtherTrigger == SW_TRUE && _bCountTriggers == false;
         const bool bIgnoreOverlap  = overlap._pOther == nullptr || bIgnoredTrigger || canAcceptOccupant( *overlap._pOther ) == false;
         if ( bIgnoreOverlap )
@@ -83,9 +83,8 @@ namespace sw
         addOccupant( *overlap._pOther );
     }
 
-    void GimmickSensorComponent::onOverlapEnd( const OverlapInfo& overlap )
+    void GimmickSensorComponent::handleOverlapEnd( const OverlapInfo& overlap )
     {
-        Component::onOverlapEnd( overlap );
         // 세지 않은 상대 트리거(감지 범위)의 이탈은 몸의 겹침이 아니다 — 몸이 아직 안이면 빼지 않는다(진입과 같은 거름).
         // shortcut: 트리거도 세면(`_bCountTriggers`) 몸 · 트리거 중 먼저 나간 쪽에서 빠진다, 둘을 따로 세야 하는 기믹이 생기면 대상마다 종류 비트를 둔다.
         if ( overlap._bOtherTrigger == SW_TRUE && _bCountTriggers == false )
@@ -221,6 +220,8 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<GimmickSensorComponent>( this );
+        _overlapBeginSubscription = GameObjectEvents::listen<&GimmickSensorComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
+        _overlapEndSubscription   = GameObjectEvents::listen<&GimmickSensorComponent::handleOverlapEnd>( *this, &GameObjectEvents::_overlapEnd );
     }
 
     void GimmickSensorComponent::onUnregister( GameObjectManager& manager )

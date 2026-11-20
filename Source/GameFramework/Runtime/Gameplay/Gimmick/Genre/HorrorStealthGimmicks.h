@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
@@ -35,11 +36,16 @@ namespace sw
         ScareTriggerComponent();
         virtual ~ScareTriggerComponent() override = default;
 
-        void  onOverlapBegin( const OverlapInfo& overlap ) override;
+        /** @brief 겹침 진입 사건을 구독합니다. */
+        void  onRegister( GameObjectManager& manager ) override;
         void  onTick( TickContext& context ) override;
         int32 getFireCount() const { return _fireCount; }
 
     private:
+        /** @brief 태그가 맞는 것이 들어오면(`GameObjectEvents::_overlapBegin`) 연출 신호와 소리를 냅니다. */
+        void handleOverlapBegin( const OverlapInfo& overlap );
+
+        Subscription _overlapSubscription; ///< 겹침 진입 구독(`handleOverlapBegin`)
         PROPERTY( Required, Category = "Scare", DisplayName = "Cue", Tooltip = "Cue name for the sequencer / camera / audio listeners" )
         hashed_string _cue;
         PROPERTY( Category = "Scare", DisplayName = "Sound" )

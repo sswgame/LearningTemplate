@@ -12,6 +12,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -429,9 +430,14 @@ namespace sw
             _pUnit->markPoseDirty();
     }
 
-    void RagdollComponent::onHitReceived( const HitInfo& hit )
+    void RagdollComponent::onRegister( GameObjectManager& manager )
     {
-        PhysicsComponent::onHitReceived( hit );
+        PhysicsComponent::onRegister( manager );
+        _hitSubscription = GameObjectEvents::listen<&RagdollComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
+    }
+
+    void RagdollComponent::handleHit( const HitInfo& hit )
+    {
         // 맞은 바디를 모르면 충격 없이 쓰러지고, 부분 반응은 하지 않는다(움찔은 한다).
         const optional<uint32> hitBody = findHitBodyIndex( hit );
         const float3           impulse = hit._direction * hit._impulse;

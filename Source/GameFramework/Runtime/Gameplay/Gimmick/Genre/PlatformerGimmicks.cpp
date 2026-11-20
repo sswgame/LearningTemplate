@@ -6,6 +6,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
@@ -103,9 +104,14 @@ namespace sw
     {
     }
 
-    void LaunchPadComponent::onOverlapBegin( const OverlapInfo& overlap )
+    void LaunchPadComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onOverlapBegin( overlap );
+        Component::onRegister( manager );
+        _overlapSubscription = GameObjectEvents::listen<&LaunchPadComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
+    }
+
+    void LaunchPadComponent::handleOverlapBegin( const OverlapInfo& overlap )
+    {
         const bool bAccepted = overlap._pOther != nullptr && overlap._bOtherTrigger == SW_FALSE &&
                                ( _requiredTags.getTagCount() == 0 || overlap._pOther->getTags().hasAllTags( _requiredTags ) );
         if ( bAccepted )

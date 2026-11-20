@@ -1,7 +1,7 @@
 /**
  * @file PhysicsOverlapTracker.h
  * @brief 바디 쌍 겹침 시작 · 끝을 오브젝트 쌍의 진입 · 이탈 · 유지로 바꾸는 추적기입니다(트리거 계약 — DesignBacklog "트리거 Enter · Stay · Exit 계약").
- * @details 겹침을 받는 훅(`Component::onOverlapBegin/End`)은 오브젝트 전체에 가므로 단위는 오브젝트 쌍이다. 몸이 여럿인 오브젝트(래그돌 뼈 · 탈것 · 캐릭터 안쪽 바디)가
+ * @details 겹침 사건(`GameObjectEvents::_overlapBegin` · `_overlapEnd`)은 오브젝트 전체에 가므로 단위는 오브젝트 쌍이다. 몸이 여럿인 오브젝트(래그돌 뼈 · 탈것 · 캐릭터 안쪽 바디)가
  *          트리거에 들면 바디 쌍 시작이 여럿 오지만 진입은 한 번, 마지막 바디가 나갈 때 이탈 한 번이다(언리얼 `BeginOverlap` 한 번 · 유니티 콜라이더 쌍과 달리 오브젝트 단위).
  *          열쇠는 (두 오브젝트 id, 각 쪽 트리거 여부, 2D/3D)다 — 상대의 감지 범위(트리거)와 몸은 받는 쪽이 `OverlapInfo::_bOtherTrigger` 로 가르므로 따로 센다.
  *          프레임마다 정리한다: 프레임 시작과 끝의 수로 이탈(1→0) 먼저, 진입(0→1), 같은 프레임에 들고 난 것(0→0 인데 닿음 — 시작 + 끝) 순이다. 프레임 안에서 나갔다

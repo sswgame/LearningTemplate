@@ -8,6 +8,7 @@
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
@@ -72,7 +73,7 @@ namespace sw
                     return;
                 HitInfo resolved      = deferred;
                 resolved._pInstigator = pManager->resolveGameObject( instigator );
-                pStats->onHitReceived( resolved );
+                pStats->receiveHit( resolved );
             } );
         }
     } // namespace
@@ -144,8 +145,16 @@ namespace sw
             deliverFatalHit( HitInfo{} );
     }
 
-    void UnitStatsComponent::onHitReceived( const HitInfo& hit )
+    void UnitStatsComponent::onRegister( GameObjectManager& manager )
     {
+        HealthSourceComponent::onRegister( manager );
+        _hitSubscription = GameObjectEvents::listen<&UnitStatsComponent::receiveHit>( *this, &GameObjectEvents::_hitReceived );
+    }
+
+    void UnitStatsComponent::receiveHit( const HitInfo& hit )
+    {
+        if ( hit._bFatal )
+            return; // 쓰러짐을 정한 체력 원천이 다시 보낸 치명 사본이다(`deliverFatalHit`) — 피해는 이미 깎였다
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
@@ -153,7 +162,6 @@ namespace sw
             enqueueStatsHit( pOwner, hit ); // 틱 직후 같은 함수로 다시 들어온다
             return;
         }
-        HealthSourceComponent::onHitReceived( hit );
         const int32 amount = static_cast<int32>( MathUtil::round( hit._damage * hit._damageMultiplier ) );
         // 이 맞음으로 쓰러졌으면 래그돌 · 절단에 치명 신호를 낸다.
         if ( applyTakeDamage( amount, hit._pInstigator != nullptr ? hit._pInstigator->getHandle() : GameObjectHandle{} ) )

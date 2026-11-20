@@ -29,7 +29,7 @@ namespace sw
      * @details 컷 카메라 · 블렌드는 그 오브젝트의 `CinematicCameraComponent` 가, 외형 바꾸기는 `SequenceAppearanceComponent` 가 받는다 — 이 볼륨은 트는 때만 정한다.
      *          언리얼에서 트리거 박스의 겹침 이벤트로 Level Sequence Actor 를 Play 하는 블루프린트, 유니티에서 `OnTriggerEnter` 로 `PlayableDirector.Play` 를 부르는
      *          스크립트에 해당한다(둘 다 게임마다 손으로 적는다). 오브젝트에 시퀀스 플레이어가 없으면 오류를 남기고 발동한 것으로 치지 않는다.
-     *          들어옴은 트리거 계약의 오브젝트 쌍 진입(`onOverlapBegin`)이라 유지(Stay) · 몸 여럿에서 다시 틀지 않는다. 한 번만 · 다시 재생은 바탕의 `_bOnce`(블루프린트 `DoOnce` 자리)이고,
+     *          들어옴은 트리거 계약의 오브젝트 쌍 진입(겹침 사건 `GameObjectEvents::_overlapBegin`)이라 유지(Stay) · 몸 여럿에서 다시 틀지 않는다. 한 번만 · 다시 재생은 바탕의 `_bOnce`(블루프린트 `DoOnce` 자리)이고,
      *          발동 수(`_fireCount`)는 상태 칸이라 세이브 · 재접속 뒤에도 한 번만 하는 컷씬을 다시 틀지 않는다. 재생 중 다시 들어오면 처음부터 다시 틀지 않는다(발동 아님),
      *          플레이어가 데이터 결함으로 틀지 못하면 발동 아님이다.
      *          진입만 받으므로 재생 중 트리거 밖으로 밀려나거나 트리거의 스트리밍 셀이 내려가도(파괴 길의 이탈) 재생은 이어진다 — 시퀀스 오브젝트는 늘 올라 있는 자리에 둔다.

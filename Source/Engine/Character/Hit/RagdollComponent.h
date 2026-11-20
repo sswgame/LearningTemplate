@@ -88,8 +88,8 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
-        /** @brief 맞았을 때 호출합니다. 치명이면(`HitInfo::_bFatal`) 래그돌로 바꾸고, 아니면 맞은 바디 아래에 반응과 가산 움찔을 적용합니다. */
-        void onHitReceived( const HitInfo& hit ) override;
+        /** @brief 맞음 사건(`GameObjectEvents::_hitReceived`)을 구독합니다. */
+        void onRegister( GameObjectManager& manager ) override;
         /**
          * @brief 풀 반환: 애니메이션 히트박스(`Animated`)로 돌립니다 — 가중치 · 반응 · 움찔 · 기상 · 쌓인 충격을 비우고, 래그돌이 끈 컨트롤러를 다시 켭니다.
          * @details 바디가 있으면 물리 에셋을 다시 읽어 다음 물리 프레임이 바디째 다시 세운다 — 절단이 뗀 바디 · 지운 관절(`detachBoneBodies`)이 돌아온다. 바디를 세우기 전(갓 스폰)이면 바꿀 것이 없다.
@@ -150,6 +150,8 @@ namespace sw
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
+        /** @brief 맞음 사건을 받습니다. 치명이면(`HitInfo::_bFatal`) 래그돌로 바꾸고, 아니면 맞은 바디 아래에 반응과 가산 움찔을 적용합니다. */
+        void handleHit( const HitInfo& hit );
         /** @brief 충격 하나(물리 프레임 시작에 준다)입니다. */
         struct PendingImpulse
         {
@@ -214,6 +216,7 @@ namespace sw
         RagdollAnimationBinding        _binding;
         Subscription                   _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
         Subscription                   _boneRequirement;     ///< 바디 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`requirePhysicsBones`)
+        Subscription                   _hitSubscription;     ///< 맞음 사건 구독(`handleHit`)
         SharedAssetRef<PhysicsAsset>   _asset;
         PhysicsRagdoll                 _ragdoll;
         vector<hashed_string>          _listBoneName;

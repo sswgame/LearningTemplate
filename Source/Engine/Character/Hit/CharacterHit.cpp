@@ -9,6 +9,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
@@ -259,14 +260,7 @@ namespace sw
     {
         if ( target.isPendingDestroy() || target.isActiveInHierarchy() == false )
             return;
-        const vector<Component*> listTarget( target.getComponents().begin(), target.getComponents().end() );
-        for ( Component* pComponent : listTarget )
-        {
-            const bool bSkipHitTarget = pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isSelfActive() == false;
-            if ( bSkipHitTarget )
-                continue;
-            pComponent->onHitReceived( hit );
-        }
+        GameObjectEvents::broadcast( target, &GameObjectEvents::_hitReceived, hit );
     }
 
     GameObject* CharacterRayHit::findMutableObject( GameObjectManager& manager ) const
