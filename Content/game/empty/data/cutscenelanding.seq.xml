@@ -1,0 +1,15 @@
+<?asset guid="7a1e1c6a2dfdf3fd57c2fc67b59af525"?>
+<!-- 시작 자리 컷씬(maps/cutscenetrigger.scene.xml 의 LandingDirector) — 항목 없는 0.5 초(15 프레임, 30 fps)짜리다. 플레이어가 볼륨 안에서 태어나 진입 한 번에 한 번 틀고,
+     나갔다 다시 들어오면 다시 트는지(다시 재생 정책)만 본다 — 화면 · 입력은 건드리지 않는다. -->
+<SequenceAsset _frameMin="0"
+               _frameMax="15"
+               _note="cutscene trigger scenario: an empty short sequence for the spawn-inside volume"
+               _nextBindingID="1"
+               _whenFinished="RestoreState"
+               _cameraBlendInSeconds="0"
+               _cameraBlendOutSeconds="0"
+               _cameraPrerollFrames="0">
+	<_listBinding />
+	<_listItem />
+	<_listTrack />
+</SequenceAsset>

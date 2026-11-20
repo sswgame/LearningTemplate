@@ -38,6 +38,8 @@ namespace sw
         bool hasFired() const { return _fireCount > 0; }
         /** @brief 거리 판정의 활성자와 반지름을 정합니다. 코드로 만든 볼륨 · 테스트가 씁니다. 씬에 놓은 볼륨은 PROPERTY 가 채웁니다. */
         void setProximity( GameObjectHandle activator, float32 radius );
+        /** @brief 처음 한 번만 할지(참) 들어올 때마다 할지(거짓)를 정합니다. 코드로 만든 볼륨 · 테스트가 쓴다. 씬에 놓은 볼륨은 PROPERTY 가 채운다. */
+        void setOnce( bool bOnce ) { _bOnce = bOnce; }
 
     protected:
         /** @brief 활성자가 들어왔을 때의 일입니다. 일을 했으면 true 입니다(false 면 한 번도 안 한 것으로 남아 다음에 다시 시도한다). 게임 스레드입니다. */
