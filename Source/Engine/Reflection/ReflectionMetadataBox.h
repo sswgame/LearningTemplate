@@ -6,7 +6,6 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionConstants.h"
