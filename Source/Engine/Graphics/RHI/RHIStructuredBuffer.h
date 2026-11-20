@@ -48,8 +48,7 @@ namespace sw
          * @details 요청한 usage 그대로 한 번만 만듭니다. 못 만들면 크기와 usage 를 오류로 남기고 false 이며, UAV 를 뺀 버퍼나 다른 생성 함수로
          *          대신 만들지 않습니다 — 컴퓨트(UAV)를 쓸 수 없는 백엔드는 부르는 쪽이 `RHICapabilities::_bCompute` 로 가려 UAV 를 요청하지 않습니다.
          * @param elementCount 0 이면 버퍼를 해제합니다.
-         * @param pInitialData 만들 때 넣을 내용입니다(@p elementCount 개, 없으면 nullptr). 내용이 있는 버퍼는 뒤에서 다시 올리더라도 넘긴다 — 장치를 바꾸는 중에 낸
-         *        뒤따르는 업로드가 실행되지 않으면, 바뀐 구간만 올리는 쪽(라이트 · 인스턴스)은 다음 프레임에도 다시 올리지 않아 새 버퍼가 0 인 채 남았다(editor.flowterrain).
+         * @param pInitialData 만들 때 넣을 내용입니다(@p elementCount 개, 없으면 nullptr). 만든 뒤에 어차피 올리는 쪽은 nullptr 를 넘긴다 — 같은 내용을 두 번 올린다.
          * @return 요청한 용량을 확보했으면 true 입니다.
          */
         [[nodiscard]] bool ensureCapacity( IRHIDevice* pDevice, uint32 elementSize, uint32 elementCount, RHIBufferUsage usage,

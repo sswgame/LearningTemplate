@@ -27,7 +27,6 @@
 
 ## 2. 알려진 실패 · 흔들림
 
-- **장치 교체 중 낸 버퍼 업로드가 실행되지 않는 것으로 보임(2026-11-20, editor.flowterrain):** `RHIStructuredBuffer::ensureCapacity` 에 초기 내용을 빼고 뒤에서 `upload` 하던 w-fenceretire 판에서, 백엔드 교체 뒤 라이트 버퍼가 0 으로 남아 장면이 어두웠다(초기 내용을 다시 넘기니 네 백엔드 통과). 바뀐 구간만 올리는 쪽(라이트 · 인스턴스)은 다음 프레임에 다시 올리지 않아 드러났다. 교체 직후 프레임의 `updateStructuredBufferRange` 가 버려지는지 백엔드마다 확인하고, 버려진다면 RHI 가 교체 전 업로드를 거절(오류)하거나 새 장치로 넘기게 고친다.
 - **`Scenario.playground.desktop.editor.playreload` 격리(만료 2026-11-27, `Config/Rules/Test/Quarantine.json`):** PIE 가 모듈 다시 읽기를 넘어 이어지게 고쳤다(w-piereload — `IModuleStateStore` 의 `editor.playSession`). 남은 것: 게임 모듈 교체가 시계를 170 초 넘게 붙잡는 단계 — 격리를 풀고 다시 돌려 본다. 빌드 대상 이름(`SWGame` → `SWGame_<게임>`)은 `ModuleCompiler::resolveBuildTarget` 로 고쳤다.
 - **shooter3d crowd `fight` dx11 한 번 25.7 %(2026-11-18, preflight30 — 큰 영역 70 px):** 체인만 다시 돌려 통과. 다시 지면 같은 체인 앞 단계와 `scenario_bisect --golden-margins` 로 화소 자리를 본다(enemydeath dx11 과 같은 백엔드 — dx11 군중 장면의 정착 조건을 의심).
 - **shooter3d enemydeath `death_b` dx11 한 번 1.37%(2026-11-18, ST-3 통합 전체 실행):** 곧바로 두 번 다시 돌려 통과. 다시 지면 같은 체인의 앞 단계와 `scenario_bisect --golden-margins` 로 화소 자리를 본다.

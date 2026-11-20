@@ -307,7 +307,7 @@ namespace sw
             SW_PROFILE_SCOPE( "RT.GPUScene.instanceBuffer" );
             // 칸 순 버퍼다 — 원소 번호가 GPUScene 칸이다. 새로 만든 버퍼에는 아직 아무것도 없으므로 전체를 올린다(핸들이 바뀌었으면 다시 만들어진 것이다).
             const uint64 generationBefore = _instances._generation; // 다시 만들었는지는 핸들이 아니라 세대 번호로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
-            if ( _instances.ensureCapacity( pDevice, kStride, slotCount, kInstanceUsage, true, true, listSlot.data() ) )
+            if ( _instances.ensureCapacity( pDevice, kStride, slotCount, kInstanceUsage, true, true, nullptr ) )
             {
                 if ( _instances._generation != generationBefore )
                     _slotBuffer.markFullUpload();
@@ -373,7 +373,7 @@ namespace sw
         SW_ASSERT( pListOrder->size() == orderCount ); // 빌더가 차례(인스턴스)마다 칸 하나를 싣는다
         constexpr RHIBufferUsage kOrderUsage      = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         const uint64             generationBefore = _instanceOrder._generation; // 다시 만들었는지는 핸들이 아니라 세대 번호로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
-        if ( _instanceOrder.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), orderCount, kOrderUsage, true, false, pListOrder->data() ) == false )
+        if ( _instanceOrder.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), orderCount, kOrderUsage, true, false, nullptr ) == false )
         {
             if ( orderCount > 0 )
                 SW_LOG_ERROR_ONCE_ID( "GPUScene.FailedCreateInstanceOrder", "Failed to create the instance order buffer (%# entries) - scene meshes are not drawn", orderCount );
@@ -456,7 +456,7 @@ namespace sw
         constexpr RHIBufferUsage kPrevWorldUsage  = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         const uint32             count            = static_cast<uint32>( _listScratchPrevWorld.size() );
         const uint64             generationBefore = _prevInstanceWorlds._generation; // 세대 번호로 본다 — 다시 만든 버퍼가 같은 핸들 번호를 받을 수 있다
-        if ( _prevInstanceWorlds.ensureCapacity( pDevice, static_cast<uint32>( sizeof( float4x4 ) ), count, kPrevWorldUsage, true, false, _listScratchPrevWorld.data() ) == false )
+        if ( _prevInstanceWorlds.ensureCapacity( pDevice, static_cast<uint32>( sizeof( float4x4 ) ), count, kPrevWorldUsage, true, false, nullptr ) == false )
         {
             if ( count > 0 )
                 SW_LOG_ERROR_ONCE_ID( "GPUScene.FailedCreatePrevInstanceWorld", "Failed to create the previous instance world buffer (%# instances) - objects get camera-only velocity", count );
@@ -500,7 +500,7 @@ namespace sw
             _listScratchBatchInfo[argIndex]._sortMode = static_cast<uint32>( sortMode );
         }
         constexpr RHIBufferUsage kBatchInfoUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-        if ( _batchInfo.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GPUBatchInfo ) ), argsCount, kBatchInfoUsage, true, false, _listScratchBatchInfo.data() ) )
+        if ( _batchInfo.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GPUBatchInfo ) ), argsCount, kBatchInfoUsage, true, false, nullptr ) )
             _batchInfo.upload( pDevice, _listScratchBatchInfo.data(), argsCount * static_cast<uint32>( sizeof( GPUBatchInfo ) ) );
     }
 

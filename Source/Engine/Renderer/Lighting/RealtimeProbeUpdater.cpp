@@ -231,7 +231,7 @@ namespace sw
                 words.insert( words.end(), request._pVoxelGrid->_listEmission.begin(), request._pVoxelGrid->_listEmission.end() ); // planLayout 과 같은 차례
                 _listHeldGrid.push_back( request._pVoxelGrid );
             }
-            if ( _voxelBuffer.ensureCapacity( pDevice, wordStride, layout._totalVoxelWords, kReadUsage, true, false, words.data() ) == false )
+            if ( _voxelBuffer.ensureCapacity( pDevice, wordStride, layout._totalVoxelWords, kReadUsage, true, false, nullptr ) == false )
             {
                 SW_LOG_ERROR_ID( "RealtimeProbeUpdater.FailedCreateVoxelBuffer", "Failed to create the voxel buffer (%# words) - realtime light probes do not update", layout._totalVoxelWords );
                 _listHeldGrid.clear();
@@ -275,7 +275,7 @@ namespace sw
         }
         _listRowScratch       = makeParamRows( listRequest, layout, listWarmup, projectSky( sky, bHasSky ), _frameCounter, lightBuffer.getGPULightBase() );
         const uint32 rowCount = static_cast<uint32>( _listRowScratch.size() );
-        if ( _paramBuffer.ensureCapacity( pDevice, float4Stride, rowCount, kReadUsage, true, false, _listRowScratch.data() ) == false )
+        if ( _paramBuffer.ensureCapacity( pDevice, float4Stride, rowCount, kReadUsage, true, false, nullptr ) == false )
         {
             SW_LOG_ERROR_ID( "RealtimeProbeUpdater.FailedCreateProbeUpdate", "Failed to create the probe update parameter buffer - realtime light probes do not update" );
             return;
