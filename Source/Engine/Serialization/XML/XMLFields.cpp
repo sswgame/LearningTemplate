@@ -6,7 +6,6 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"

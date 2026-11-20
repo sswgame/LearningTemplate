@@ -7,9 +7,9 @@
 #include "Core/Foundation/Expected.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TextAddress.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 

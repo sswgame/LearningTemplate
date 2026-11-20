@@ -8,7 +8,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Reflection/ReflectVisit.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"

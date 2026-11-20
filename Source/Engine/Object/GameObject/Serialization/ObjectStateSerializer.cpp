@@ -20,7 +20,6 @@
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValueVisitor.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"

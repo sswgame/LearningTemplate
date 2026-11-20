@@ -6,7 +6,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/formatString.h"
 
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"

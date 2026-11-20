@@ -7,7 +7,9 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
-#include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include <cmath>
 
