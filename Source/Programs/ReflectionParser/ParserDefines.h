@@ -45,7 +45,7 @@ namespace sw
 
         /**
          * @brief 넷 역할 필드의 정규 이름입니다.
-         * @details AnnotationMeta.txt 의 `netrole.Server = Server` 는 필드 이름 자리에 **역할**을 적습니다(토큰 자체가 값).
+         * @details `FUNCTION( Server )` 는 키가 아니라 **역할** 이름을 적습니다(토큰 자체가 값).
          *          그래서 적용할 때는 이 이름의 필드에 역할 이름을 값으로 넘깁니다.
          */
         inline constexpr const utf8* kNetRoleField = "NetRole";
@@ -105,7 +105,6 @@ namespace sw
         inline constexpr const utf8* kOutput          = "--output";
         inline constexpr const utf8* kInclude         = "--include";
         inline constexpr const utf8* kBuiltins        = "--builtins";
-        inline constexpr const utf8* kAnnotationMeta  = "--annotation-meta";
         inline constexpr const utf8* kModule          = "--module";
         inline constexpr const utf8* kConfig          = "--config";
         inline constexpr const utf8* kEmitTemplates   = "--emit-templates";

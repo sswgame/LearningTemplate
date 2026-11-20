@@ -28,7 +28,6 @@ namespace sw
             {        cli::kInclude,                              nullptr, &ParserOptions::_listIncludePath,                 "<dir>",                                                                           "clang include path (repeatable)"},
             {         cli::kConfig,          &ParserOptions::_configPath,                          nullptr,   "<abs defaults.json>",                       "committed parser_config.defaults.json (local and toolchain settings sit next to it)"},
             {       cli::kBuiltins,        &ParserOptions::_builtinsPath,                          nullptr, "<ReflectBuiltins.xxx>",                                                                        "scalar aliases and container rules"},
-            { cli::kAnnotationMeta,  &ParserOptions::_annotationMetaPath,                          nullptr,  "<AnnotationMeta.txt>",                                                                                "annotation token spellings"},
             {  cli::kEmitTemplates,    &ParserOptions::_emitTemplatesDir,                          nullptr,                 "<dir>",                                                                                 "Templates/*.tpl directory"},
             {         cli::kModule,          &ParserOptions::_moduleName,                          nullptr,                "<name>",                                       "runtime module the types register under (the CMake target's module)"},
             {cli::kEmitBuiltinsGen, &ParserOptions::_emitBuiltinsGenPath,                          nullptr,            "<file.cpp>",                                                               "only write ReflectBuiltins.gen.cpp and exit"},
@@ -176,12 +175,11 @@ namespace sw
             SW_LOG_ERROR_ID( "ParserOptions.NoFilesSpecified", "No %# files specified.", cli::kInput );
             return false;
         }
-        // 철자 표가 없으면 모든 애노테이션 토큰이 "모르는 토큰" 이 되어 빌드가 선다. 시작할 때 이유를 알린다.
+        // 필수 인자가 빠지면 시작할 때 이유를 알린다.
         return ParserOptionsInternal::isGiven( _outputDir, cli::kOutput, cli::kInput ) &&
                ParserOptionsInternal::isGiven( _builtinsPath, cli::kBuiltins, cli::kInput ) &&
                ParserOptionsInternal::isGiven( _configPath, cli::kConfig, cli::kInput ) &&
                ParserOptionsInternal::isGiven( _emitTemplatesDir, cli::kEmitTemplates, cli::kInput ) &&
-               ParserOptionsInternal::isGiven( _annotationMetaPath, cli::kAnnotationMeta, cli::kInput ) &&
                ParserOptionsInternal::isGiven( _moduleName, cli::kModule, cli::kInput ) && hasTargetArgs();
     }
 
@@ -196,7 +194,7 @@ namespace sw
     void ParserOptions::printUsage()
     {
         StringBuilder<constant::buffer::kMax4096> out;
-        out.append( "Usage: ReflectionParser --input <header.h> ... --output <dir> --module <name> --config <file> --annotation-meta <file> --emit-templates <dir> [...]\n" );
+        out.append( "Usage: ReflectionParser --input <header.h> ... --output <dir> --module <name> --config <file> --emit-templates <dir> [...]\n" );
         out.append( "   or: ReflectionParser --builtins <file> --emit-templates <dir> --module <name> --emit-builtins-gen <file.cpp>\n" );
         for ( const OptionRow& row : kArrOptionRow )
         {

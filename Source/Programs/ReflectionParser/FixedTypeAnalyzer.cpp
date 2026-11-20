@@ -54,7 +54,7 @@ namespace sw
             return result;
         ParsedEnumInfo annotated;
         vector<string> listUnknownToken; // 그 열거형의 헤더를 수집할 때 알립니다. 여기서 다시 알리지 않습니다
-        sw::AnnotationApply::apply( spelling, annotated, session._annotationMeta, listUnknownToken );
+        sw::AnnotationApply::apply( spelling, annotated, listUnknownToken );
         result->_bIsBitFlag      = annotated._bIsBitFlag;
         result->_countEnumerator = CursorReader::resolveCountEnumerator( ParserUtil::scopeLeaf( annotated._countEnumerator ), result->_listEnumerator, annotated._bIsBitFlag != SW_FALSE );
         return result;

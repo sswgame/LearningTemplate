@@ -194,7 +194,7 @@ namespace sw
     {
         for ( const string& token : listUnknownToken )
         {
-            SW_LOG_ERROR_ID( "AstVisitor.ERRORUnknownTokenSpellings", "ERROR: %#() on '%#' has an unknown token '%#'. Spellings are listed in AnnotationMeta.txt [%#]; "
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORUnknownTokenSpellings", "ERROR: %#() on '%#' has an unknown token '%#'. Keys are listed in PredefinedAnnotationField.xxx [%#]; "
                                                                       "a free-form editor hint is written Meta = \"Key\" or Meta = \"Key=Value\".",
                              desc._pMacroName, owner, token, desc._pScope );
         }

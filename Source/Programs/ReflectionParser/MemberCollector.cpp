@@ -180,11 +180,10 @@ namespace sw
         }
         for ( const string& token : AnnotationApply::splitAnnotationArgs( AnnotationApply::annotationArgumentText( spelling, annotation::kPropertyPrefix ) ) )
         {
-            const size_t             eqPos    = token.find( '=' );
-            const AnnotationBinding* pBinding = ( eqPos == string::npos )
-                                                  ? session._annotationMeta.findBare( annotation::kPropertyScope, token )
-                                                  : session._annotationMeta.findKey( annotation::kPropertyScope, StringUtil::trim( string_view( token ).substr( 0, eqPos ) ) );
-            if ( pBinding != nullptr && AnnotationFields::canAcceptOnEvent( pBinding->_field ) == false )
+            // 키 철자가 곧 필드 표의 줄 이름이다. 모르는 키는 위의 적용이 이미 알렸다.
+            const size_t      eqPos = token.find( '=' );
+            const string_view key   = eqPos == string::npos ? string_view( token ) : StringUtil::trim( string_view( token ).substr( 0, eqPos ) );
+            if ( getAnnotationScope<ParsedPropertyInfo>().findField( key ) != nullptr && AnnotationFields::canAcceptOnEvent( key ) == false )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYEventEvent", "ERROR: PROPERTY() on event '%#' has '%#'. An event (multicast delegate) takes display metadata only (%#).", owner, token,
                                  AnnotationFields::makeEventFieldList() );

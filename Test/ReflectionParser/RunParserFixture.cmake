@@ -8,8 +8,8 @@
 #   // EXPECT-META: <글>       <이름>.gen.meta.cpp(개발 전용 에디터 메타데이터 단위)에 이 글이 있다.
 #   // EXPECT-TYPE: <FQN>      ReflectedTypes.list 에 `<FQN>\t<모듈>` 줄이 있다.
 #   // EXPECT-ASSET-FIELD: <이름> <대상> <ref|path|text>  AssetReferenceFields.list 에 `<이름>\t<대상>\t<ref|path|text>` 줄이 있다.
-# 입력: TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX
-foreach(required TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX)
+# 입력: TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX
+foreach(required TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX)
 	if(NOT DEFINED ${required})
 		message(FATAL_ERROR "RunParserFixture: ${required} is not given")
 	endif()
@@ -75,7 +75,6 @@ execute_process(
 		--input "${batch_header}"
 		--output "${WORK_DIR}"
 		--builtins "${BUILTINS}"
-		--annotation-meta "${ANNOTATION_META}"
 		--emit-templates "${TEMPLATES}"
 		--module "${module}"
 		--module-local

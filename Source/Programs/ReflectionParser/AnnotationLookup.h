@@ -43,7 +43,7 @@ namespace sw
         static bool isReflectedRecord( CXCursor declaration );
 
         /**
-         * @brief 애노테이션 토큰을 DTO 에 넣고, AnnotationMeta.txt 에 없는 토큰이 있으면 알립니다.
+         * @brief 애노테이션 토큰을 DTO 에 넣고, 필드 표(PredefinedAnnotationField.xxx)에 없는 토큰이 있으면 알립니다.
          * @details 모르는 토큰을 **조용히 버리지 않습니다** — 예: 에디터 색 선택기 요청의 철자는 `Meta = "Color"` 인데 `PROPERTY( …, Color, … )`
          *          로 적으면 버려지고, 멤버 이름에 color 가 들어 있으면 인스펙터의 이름 휴리스틱이 증상을 가립니다.
          * @return 모르는 토큰이 없으면 true
@@ -52,7 +52,7 @@ namespace sw
         [[nodiscard]] static bool applyAnnotation( const string_view spelling, TParsed& target, const ParserSession& session, const string_view owner )
         {
             vector<string> listUnknownToken;
-            AnnotationApply::apply( spelling, target, session._annotationMeta, listUnknownToken );
+            AnnotationApply::apply( spelling, target, listUnknownToken );
             reportUnknownTokens( *getAnnotationScope<TParsed>()._pDesc, owner, listUnknownToken );
             return listUnknownToken.empty();
         }

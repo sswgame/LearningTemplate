@@ -7,8 +7,9 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
+#include "Engine/Reflection/ReflectionEnumNames.h"
+
 #include "Programs/ReflectionParser/AnnotationFields.h"
-#include "Programs/ReflectionParser/AnnotationMeta.h"
 #include "Programs/ReflectionParser/ParsedReflection.h"
 #include "Programs/ReflectionParser/ParserDefines.h"
 
@@ -212,12 +213,11 @@ namespace sw
     }
 
     /**
-     * @details 토큰 하나는 두 꼴입니다 — 단독 토큰 `X`(플래그 · 넷 역할)와 `key = value`. 철자는 AnnotationMeta.txt 가 정규
-     *          필드명으로 바꾸고, 그 이름의 줄이 값을 넣습니다. 네 스코프가 이 루프 하나를 씁니다(같은 철자가 스코프마다 다르게 동작하지 않게).
+     * @details 토큰 하나는 두 꼴입니다 — 단독 토큰 `X`(플래그 · 넷 역할)와 `key = value`. 키 철자가 곧 필드 표(`PredefinedAnnotationField.xxx`)의
+     *          줄 이름이고, 그 줄이 값을 넣습니다. 네 스코프가 이 루프 하나를 씁니다(같은 철자가 스코프마다 다르게 동작하지 않게).
      */
     template <typename TParsed>
-    void AnnotationApply::apply( const string_view annotationSpelling, TParsed& target, const AnnotationMeta& meta,
-                                 vector<string>& outListUnknownToken )
+    void AnnotationApply::apply( const string_view annotationSpelling, TParsed& target, vector<string>& outListUnknownToken )
     {
         const AnnotationScope<TParsed>& scope  = getAnnotationScope<TParsed>();
         const string_view               prefix = scope._pDesc->_pPrefix;
@@ -227,23 +227,35 @@ namespace sw
 
         for ( const string& token : splitAnnotationArgs( annotationSpelling.substr( begin + prefix.size() ) ) )
         {
-            const size_t             eqPos    = token.find( '=' );
-            const bool               bBare    = ( eqPos == string::npos );
-            const AnnotationBinding* pBinding = nullptr;
-            string                   valueText; // 이스케이프를 푼 값 — `value` 가 이것을 본다
-            string_view              value;
+            const size_t                    eqPos  = token.find( '=' );
+            const bool                      bBare  = ( eqPos == string::npos );
+            const AnnotationField<TParsed>* pField = nullptr;
+            string                          valueText; // 이스케이프를 푼 값 — `value` 가 이것을 본다
+            string_view                     value;
             if ( bBare )
             {
-                pBinding = meta.findBare( scope._pDesc->_pScope, token );
+                // 단독 토큰은 플래그 줄, 아니면 넷 역할 이름이다(`FUNCTION( Server )` 는 NetRole 줄에 "Server" 를 넣는다).
+                pField = scope.findField( token );
+                if ( pField != nullptr && pField->_value != AnnotationValue::Bool )
+                    pField = nullptr;
+                FunctionNetRole role = FunctionNetRole::Local;
+                if ( pField == nullptr && tryParseFunctionNetRole( token, role ) && role != FunctionNetRole::Local )
+                {
+                    pField = scope.findField( annotation::kNetRoleField );
+                    value  = token;
+                }
             }
             else
             {
-                pBinding  = meta.findKey( scope._pDesc->_pScope, StringUtil::trim( string_view( token.data(), eqPos ) ) );
+                // `키 = 값` — 넷 역할 줄은 키로 적지 않는다(역할 이름이 토큰이다).
+                pField = scope.findField( StringUtil::trim( string_view( token.data(), eqPos ) ) );
+                if ( pField != nullptr && pField->_value == AnnotationValue::NetRole )
+                    pField = nullptr;
                 valueText = AnnotationApplyInternal::parseAnnotationStringValue( token, eqPos );
                 value     = valueText;
             }
 
-            if ( pBinding == nullptr )
+            if ( pField == nullptr )
             {
                 outListUnknownToken.push_back( token );
                 continue;
@@ -256,18 +268,6 @@ namespace sw
                 continue;
             }
 
-            // 넷 역할은 토큰 자체가 값이다 — `FUNCTION( Server )` 는 NetRole 필드에 "Server" 를 넣는다.
-            string_view fieldID = pBinding->_field;
-            if ( pBinding->_kind == AnnotationBinding::Kind::NetRole )
-            {
-                fieldID = annotation::kNetRoleField;
-                value   = pBinding->_field;
-            }
-
-            // 바인딩이 가리키는 줄은 파서가 시작할 때 `AnnotationFields::validateBindings` 가 보장한다.
-            const AnnotationField<TParsed>* pField = scope.findField( fieldID );
-            if ( pField == nullptr )
-                continue;
             // 숫자를 받는 줄에 숫자가 아닌 값(`Min = 0.5f` · `Max = ten`)은 거절한다(조용히 0 이 되지 않게).
             float32 number{ 0.0f };
             if ( pField->_value == AnnotationValue::Float && StringUtil::parseFloat( value, number ) == false )
@@ -295,9 +295,9 @@ namespace sw
         }
     }
 
-    template void AnnotationApply::apply<ParsedTypeInfo>( string_view, ParsedTypeInfo&, const AnnotationMeta&, vector<string>& );
-    template void AnnotationApply::apply<ParsedEnumInfo>( string_view, ParsedEnumInfo&, const AnnotationMeta&, vector<string>& );
-    template void AnnotationApply::apply<ParsedPropertyInfo>( string_view, ParsedPropertyInfo&, const AnnotationMeta&, vector<string>& );
-    template void AnnotationApply::apply<ParsedFunctionInfo>( string_view, ParsedFunctionInfo&, const AnnotationMeta&, vector<string>& );
-    template void AnnotationApply::apply<ParsedEnumeratorInfo>( string_view, ParsedEnumeratorInfo&, const AnnotationMeta&, vector<string>& );
+    template void AnnotationApply::apply<ParsedTypeInfo>( string_view, ParsedTypeInfo&, vector<string>& );
+    template void AnnotationApply::apply<ParsedEnumInfo>( string_view, ParsedEnumInfo&, vector<string>& );
+    template void AnnotationApply::apply<ParsedPropertyInfo>( string_view, ParsedPropertyInfo&, vector<string>& );
+    template void AnnotationApply::apply<ParsedFunctionInfo>( string_view, ParsedFunctionInfo&, vector<string>& );
+    template void AnnotationApply::apply<ParsedEnumeratorInfo>( string_view, ParsedEnumeratorInfo&, vector<string>& );
 } // namespace sw

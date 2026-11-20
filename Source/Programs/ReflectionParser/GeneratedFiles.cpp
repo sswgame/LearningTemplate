@@ -231,7 +231,6 @@ namespace sw
         hash           = HashUtil::combine( hash, options._bModuleLocal ? 1u : 0u );
         hash           = Internal::combineText( hash, options._builtinsPath );
         hash           = Internal::combineText( hash, options._configPath );
-        hash           = Internal::combineText( hash, options._annotationMetaPath );
         hash           = Internal::combineText( hash, options._emitTemplatesDir );
         // 목록은 개수부터 섞는다 — 인자가 다른 목록으로 옮겨 가도(`--include X` → `--target-arg X`) 같은 해시가 되지 않게.
         hash = HashUtil::combine( hash, static_cast<uint64>( options._listIncludePath.size() ) );
@@ -254,7 +253,6 @@ namespace sw
         vector<string> listToolFile;
         listToolFile.push_back( FileUtil::getExecutablePath() );
         listToolFile.push_back( options._builtinsPath );
-        listToolFile.push_back( options._annotationMetaPath );
         for ( const string& configFile : config._listLoadedFile )
         {
             listToolFile.push_back( configFile );

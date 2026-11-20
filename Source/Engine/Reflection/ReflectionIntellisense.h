@@ -11,7 +11,7 @@
  *          - 둘째는 인자 글자를 키 목록(`kArr*Key`)과 대조해 키 오타를 잡습니다. REFLECT_CONTAINER 는 둘째 인자가 래퍼 이름이라 대조하지 않습니다.
  *            인자가 두 번 펼쳐지므로 clangd 호버는 이 셋에서 키를 가리키지 못합니다. 키 설명은 완성 목록이 보여 줍니다.
  *          FUNCTION 은 값에 모르는 이름이 오지 않으므로 미루지 않고(STRICT), 오타는 그 자리의 "undeclared identifier" 오류이며 호버도 됩니다.
- *          키 목록은 생성 파일 `ReflectionAnnotationKeys.h` 이고 `AnnotationMeta.txt` 에서 만듭니다.
+ *          키 목록은 `ReflectionAnnotationKeys.h` 가 정본 표 `PredefinedAnnotationField.xxx` 를 펼쳐 만듭니다.
  *          값 형식은 검사하지 않습니다. 값이 매크로보다 **앞에** 선언된 메서드 이름이면 그 이름이 식이 될 수 없어 편집기가 오류로 보입니다.
  *          빌드에는 영향이 없습니다.
  */
@@ -136,13 +136,13 @@ namespace sw::reflect::attr
     _Pragma( "clang diagnostic pop" )
 
 #define SW_REFLECT_ATTR_KEY_CHECK_REFLECT( ... ) \
-    static_assert( ::sw::reflect::attr::hasOnlyAnnotationKeys( #__VA_ARGS__, ::sw::reflect::attr::kArrReflectKey ), "unknown REFLECT key (Source/Core/Predefined/AnnotationMeta.txt)" );
+    static_assert( ::sw::reflect::attr::hasOnlyAnnotationKeys( #__VA_ARGS__, ::sw::reflect::attr::kArrReflectKey ), "unknown REFLECT key (Source/Core/Predefined/PredefinedAnnotationField.xxx)" );
 #define SW_REFLECT_ATTR_KEY_CHECK_PROPERTY( ... ) \
-    static_assert( ::sw::reflect::attr::hasOnlyAnnotationKeys( #__VA_ARGS__, ::sw::reflect::attr::kArrPropertyKey ), "unknown PROPERTY key (Source/Core/Predefined/AnnotationMeta.txt)" );
+    static_assert( ::sw::reflect::attr::hasOnlyAnnotationKeys( #__VA_ARGS__, ::sw::reflect::attr::kArrPropertyKey ), "unknown PROPERTY key (Source/Core/Predefined/PredefinedAnnotationField.xxx)" );
 #define SW_REFLECT_ATTR_KEY_CHECK_FUNCTION( ... ) \
-    static_assert( ::sw::reflect::attr::hasOnlyAnnotationKeys( #__VA_ARGS__, ::sw::reflect::attr::kArrFunctionKey ), "unknown FUNCTION key (Source/Core/Predefined/AnnotationMeta.txt)" );
+    static_assert( ::sw::reflect::attr::hasOnlyAnnotationKeys( #__VA_ARGS__, ::sw::reflect::attr::kArrFunctionKey ), "unknown FUNCTION key (Source/Core/Predefined/PredefinedAnnotationField.xxx)" );
 #define SW_REFLECT_ATTR_KEY_CHECK_ENUM( ... ) \
-    static_assert( ::sw::reflect::attr::hasOnlyAnnotationKeys( #__VA_ARGS__, ::sw::reflect::attr::kArrEnumKey ), "unknown ENUM key (Source/Core/Predefined/AnnotationMeta.txt)" );
+    static_assert( ::sw::reflect::attr::hasOnlyAnnotationKeys( #__VA_ARGS__, ::sw::reflect::attr::kArrEnumKey ), "unknown ENUM key (Source/Core/Predefined/PredefinedAnnotationField.xxx)" );
 
 #undef REFLECT
 #undef PROPERTY
