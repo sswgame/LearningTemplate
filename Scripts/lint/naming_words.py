@@ -25,7 +25,7 @@ Scripts/lint/naming_words.py
   파이썬 이름의 PEP 8 꼴(모듈 · 함수 snake_case, 클래스 PascalCase, 상수 UPPER_CASE — docs/agents/NamingScripts.md)도 여기서 막는다.
   CMake 함수는 `sw_snake_case` 꼴만 받는다(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test). CMake 함수 꼴은 cmake 밖
   (Source · Test · ThirdParty 감싸기 · 뿌리 CMakeLists, vcpkg 포트 제외)의 정의도 본다. 전수 집계는 `py -3 -m Scripts naming-census`.
-- 이름 하나씩의 예외는 `_keep`, 전수 개명한 옛 이름은 `_bannedNames`(C++ 는 주석 · 문자열 밖 코드, 스크립트는 선언 · 파일 · CLI 명령 이름을 본다).
+- 이름 하나씩의 예외는 `_keep`, 전수 개명한 옛 이름은 이름 이력 표(`Config/Rules/Lint/NamingWordsBannedNames.json` 의 `_bannedNames`, C++ 는 주석 · 문자열 밖 코드, 스크립트는 선언 · 파일 · CLI 명령 이름을 본다).
 
 verb · term · predicate · lookup · word 는 기준선(`Config/Rules/Lint/NamingBaseline.json`)을 둔다 — 지금 있는 이름만 적혀 있고 **줄기만 한다**:
 새 위반은 실패, 고쳐 사라진 이름이 기준선에 남아도 실패(`--lower-baseline` 으로 뺀다). 영역별 이전이 기준선을 0 으로 줄인다.
@@ -51,6 +51,7 @@ from lint.lint_scope import LintScope, is_under, make_whole_scope, read_texts  #
 
 CONFIG_PATH = "Config/Rules/Lint/NamingWords.json"
 BASELINE_PATH = "Config/Rules/Lint/NamingBaseline.json"
+BANNED_NAMES_PATH = "Config/Rules/Lint/NamingWordsBannedNames.json"   # 옛 이름 → 새 이름 이력 — 낱말 표와 달리 개명 도구가 줄을 더한다(언리얼 CoreRedirects 자리)
 RATCHET_RULES = ("verb", "term", "predicate", "lookup", "word", "kind")
 EXTENSIONS = (".h", ".cpp", ".inl")
 COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
@@ -323,7 +324,10 @@ def collect_source_names(project_root: Path, scope: LintScope, list_code: list[t
 
 
 def read_table(project_root: Path) -> dict:
-    return json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))
+    """낱말 표에 이름 이력 표의 `_bannedNames` 를 붙인 것 — 판정 함수는 표 하나를 받는다."""
+    table = json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))
+    table["_bannedNames"] = json.loads((project_root / BANNED_NAMES_PATH).read_text(encoding="utf-8"))["_bannedNames"]
+    return table
 
 
 def read_baseline(project_root: Path) -> dict[str, list[str]]:

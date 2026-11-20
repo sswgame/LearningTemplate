@@ -5,7 +5,7 @@ Scripts/dev/rename_identifier.py
 
 식별자 이름을 저장소 전체에서 한 번에 옮긴다 — 코드(Source · Test · Scripts) · 데이터(Content — 리플렉션 칸 · 감시 값 · 개발 명령 이름이 글로 든다) ·
 설정(Config) · 문서(docs). 형식 이름이 파일 줄기와 같으면 파일도 옮긴다(`git mv` — include 경로는 같은 치환이 따라간다).
-옛 이름은 `Config/Rules/Lint/NamingWords.json` 의 `_bannedNames` 에 올려 다른 갈래 · 붙여 넣은 코드가 되살리지 못하게 하고, 이름 기준선을 줄인다.
+옛 이름은 이름 이력 표(`Config/Rules/Lint/NamingWordsBannedNames.json`)의 `_bannedNames` 에 올려 다른 갈래 · 붙여 넣은 코드가 되살리지 못하게 하고, 이름 기준선을 줄인다.
 
 **왜 도구인가.** 이름 하나를 손으로 옮기면 데이터 XML 의 칸 이름 · 시나리오의 감시 값 이름 · 문서가 남아, 빌드는 지나는데 데이터 읽기가 조용히 빈 값이 된다.
 언리얼은 CoreRedirects 로 옛 이름을 읽어 주지만 이 저장소는 옛 이름을 남기지 않고 데이터까지 한 번에 옮긴다(되돌리는 리다이렉트 표를 쌓지 않는다).
@@ -49,7 +49,7 @@ TEXT_SUFFIXES = {".h", ".cpp", ".inl", ".hlsl", ".hlsli", ".py", ".md", ".json",
 # ThirdParty 는 우리 감싸기(`ThirdParty/<lib>/CMakeLists.txt` — sw_add_vcpkg_package 를 부른다)만 본다. vcpkg 포트(`vcpkg-port/`)는 남의 코드다.
 SKIP_PARTS = {"vcpkg-port", "build", ".git", "graphify-out", "__pycache__", "node_modules"}
 CMAKE_SCOPE = "cmake"
-NAMING_PATH = "Config/Rules/Lint/NamingWords.json"
+BANNED_NAMES_PATH = "Config/Rules/Lint/NamingWordsBannedNames.json"
 MIN_LENGTH = 6
 WORD_SPLIT = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+")
 
@@ -206,10 +206,10 @@ def rename_all(root: Path, list_pair: Sequence[dict], dry_run: bool, reapply: bo
             print(f"    파일 {path.relative_to(root).as_posix()} → {target.name}")
         if pair.get("ban", True) is False:
             continue
-        table = json.loads((root / NAMING_PATH).read_text(encoding="utf-8"))
+        table = json.loads((root / BANNED_NAMES_PATH).read_text(encoding="utf-8"))
         table["_bannedNames"][old] = f"{new} — {pair.get('why', '')}({stamp})"
-        (root / NAMING_PATH).write_text(json.dumps(table, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
-        texts[root / NAMING_PATH] = (root / NAMING_PATH).read_text(encoding="utf-8")
+        (root / BANNED_NAMES_PATH).write_text(json.dumps(table, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+        texts[root / BANNED_NAMES_PATH] = (root / BANNED_NAMES_PATH).read_text(encoding="utf-8")
     if dry_run is False:
         subprocess.run([sys.executable, "Scripts/lint/naming_words.py", "--lower-baseline"], cwd=root, check=True)
     return 0
