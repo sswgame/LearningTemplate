@@ -1757,3 +1757,50 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
         ++expected;
     }
 }
+
+/**
+ * @brief [DataStructureTest] 해시 컨테이너 이터레이터 세대 — erase 뒤 옛 이터레이터를 역참조하면 검사 구성에서 단언하고, erase(it) 가 돌려준 이터레이터 · 삽입 뒤 이터레이터는 그대로 쓴다
+ */
+SW_TEST_CASE( DataStructureTest, HashIteratorGenerationCatchesUseAfterErase )
+{
+    sw::unordered_map<int32, int32> map;
+    for ( int32 key = 0; key < 8; ++key )
+    {
+        map[key] = key * 10;
+    }
+
+    // 지우며 도는 정석 — erase(it) 가 다음(옮겨 온) 원소를 돌려준다. 단언이 없어야 한다.
+    for ( auto it = map.begin(); it != map.end(); )
+    {
+        if ( it->first % 2 == 0 )
+            it = map.erase( it );
+        else
+            ++it;
+    }
+    SW_EXPECT_EQUAL( size_t( 4 ), map.size() );
+
+    // 삽입은 세대를 올리지 않는다 — 이터레이터가 번호라 같은 원소를 가리킨다.
+    auto kept = map.find( 1 );
+    SW_REQUIRE_TRUE( kept != map.end() );
+    map[100] = 1000;
+    SW_EXPECT_EQUAL( 10, kept->second );
+
+    sw::test::ScopedAssertCapture capture;
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 옛 이터레이터 역참조 단언은 이 테스트가 보려는 대상이다
+    auto stale = map.find( 3 );
+    SW_REQUIRE_TRUE( stale != map.end() );
+    (void)map.erase( 1 );
+    [[maybe_unused]] const int32 movedValue = stale->second; // 지운 자리로 옮겨 온 원소를 읽을 수 있다 — 세대가 달라 단언한다
+    if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, capture.getCount() );
+
+    sw::unordered_set<int32> set{ 1, 2, 3 };
+    auto                     setStale = set.find( 2 );
+    set.clear();
+    set.insert( 1 ); // 같은 번호 자리를 다시 채워 범위 안을 읽게 한다 — 세대 단언만 본다
+    set.insert( 2 );
+    set.insert( 3 );
+    [[maybe_unused]] const int32 setValue = *setStale;
+    if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 2u, capture.getCount() );
+}
