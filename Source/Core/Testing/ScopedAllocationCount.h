@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/BuildConfig.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 

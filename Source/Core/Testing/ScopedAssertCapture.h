@@ -8,7 +8,7 @@
  *          (`SW_ASSERT` 는 로그를 남기지 않는다).
  */
 #pragma once
-#include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/BuildConfig.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 

@@ -1092,10 +1092,8 @@ namespace sw
         if ( bHidden == false )
             return fqn;
         const string key  = "RegistrarKey_" + registrarName;
-        outKeyDeclaration = "	// " + fqn + " 는 숨은 중첩 형식이다 — 특수화 열쇠로 이름을 대신한다(본문은 바깥 형식의 REFLECT_BODY friend 안이다)
-                            struct " + key + ";
-        ";
-            return key;
+        outKeyDeclaration = "\t// " + fqn + " 는 숨은 중첩 형식이다 — 특수화 열쇠로 이름을 대신한다(본문은 바깥 형식의 REFLECT_BODY friend 안이다)\n\tstruct " + key + ";\n";
+        return key;
     }
 
     const ParsedEnumeratorInfo* CodeGenerator::findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec )
