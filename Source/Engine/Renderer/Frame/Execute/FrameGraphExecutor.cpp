@@ -181,10 +181,9 @@ namespace sw
         // 볼륨 안개 · 실시간 프로브 · 화면 마커 — 도는 프레임에만(등록 접근: 안개 볼륨 · 프로브 · 사각형은 그리기가 읽는 셰이더 읽기, 프로브 기록은 컴퓨트만 읽고 쓴다).
         if ( _fog.isFogVolumeActive() && _fog.getFogVolumeBuffer().isValid() )
             std::ignore = table.registerBuffer( FrameResource::fogVolume(), 0, _fog.getFogVolumeBuffer(), RenderGraphAccess::ShaderRead );
-        const RHIStructuredBuffer* pProbeBuffer = _state._lightBuffer.findProbeBuffer();
-        if ( _state._probeUpdater.isActive() && pProbeBuffer != nullptr && _state._lightBuffer.getProbeUAV() != kInvalidDescriptorIndex && _state._probeUpdater.getHistoryBuffer().isValid() )
+        if ( shouldUpdateRealtimeProbes() )
         {
-            std::ignore = table.registerBuffer( FrameResource::probeIrradiance(), 0, *pProbeBuffer, RenderGraphAccess::ShaderRead );
+            std::ignore = table.registerBuffer( FrameResource::probeIrradiance(), 0, *_state._lightBuffer.findProbeBuffer(), RenderGraphAccess::ShaderRead );
             std::ignore = table.registerBuffer( FrameResource::probeHistory(), 0, _state._probeUpdater.getHistoryBuffer(), RenderGraphAccess::UnorderedAccess );
         }
         if ( _state._canvasRenderer.getMarkerCount() > 0 && _state._canvasRenderer.getQuadBuffer().isValid() )
@@ -1099,12 +1098,21 @@ namespace sw
         _pCmd = nullptr;
     }
 
+    bool FrameGraphExecutor::shouldUpdateRealtimeProbes() const
+    {
+        return _state._probeUpdater.isActive() && _state._lightBuffer.findProbeBuffer() != nullptr && _state._lightBuffer.getProbeUAV() != kInvalidDescriptorIndex &&
+               _state._probeUpdater.getHistoryBuffer().isValid();
+    }
+
     void FrameGraphExecutor::dispatchRealtimeProbes( const RenderGraphPassContext& graphContext )
     {
-        // 두 쓰기 버퍼의 전이는 그래프가 냈다 — 선언 · 등록이 없으면 기록하지 않는다(오류는 문맥이 남겼다).
+        // 등록과 같은 판정(`shouldUpdateRealtimeProbes`)으로 먼저 거른다 — 안 도는 프레임에 핸들을 물으면 "등록 없음" 오류가 난다(2D 씬 · 프로브 없는 씬).
+        if ( _pCmd == nullptr || shouldUpdateRealtimeProbes() == false )
+            return;
+        // 두 쓰기 버퍼의 전이는 그래프가 냈다 — 선언이 없으면 기록하지 않는다(오류는 문맥이 남겼다).
         const bool bDeclared = graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::probeIrradiance() } ) != 0 &&
                                graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::probeHistory() } ) != 0;
-        if ( _pCmd == nullptr || _state._probeUpdater.isActive() == false || bDeclared == false )
+        if ( bDeclared == false )
             return;
         SW_PROFILE_SCOPE( "RT.Probe.Update" );
         _state._probeUpdater.dispatch( *_pCmd, _psoManager.getEnginePSO( RenderPassKind::ProbeUpdate ), _state._lightBuffer, _transparentRankPlaceholder._srv );

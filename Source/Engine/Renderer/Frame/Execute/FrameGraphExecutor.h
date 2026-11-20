@@ -156,6 +156,8 @@ namespace sw
         void computeLODFadeStep();
         /** @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(light_grid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다. */
         void dispatchLightGrid( const RenderGraphPassContext& graphContext );
+        /** @brief 이번 프레임에 실시간 프로브를 갱신하는가 — 버퍼 등록(`beginFrame`)과 패스 몸통이 같은 판정을 쓴다. */
+        [[nodiscard]] bool shouldUpdateRealtimeProbes() const;
         /** @brief 실시간 프로브 갱신 컴퓨트를 기록합니다. `prepareRealtimeProbes` 가 켠 프레임에만 돕니다. */
         void dispatchRealtimeProbes( const RenderGraphPassContext& graphContext );
         /** @brief 뷰 @p view 의 지난 깊이를 이번 프레임에 히스토리로 옮길 수 있으면 true 입니다(지난 깊이 · 히스토리 · PSO 가 모두 있다). */
