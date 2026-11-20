@@ -20,6 +20,9 @@ namespace sw
      * @details 거리 판정을 함께 두는 까닭: 말에 탄 기수(말은 물리 몸이 없다)나 격자로 걷는 농부처럼 물리 몸이 없는 활성자는 겹침을 내지 못한다. 언리얼 `ATriggerSphere` 와 유니티 `OnTriggerEnter` 는 몸을 요구하고
      *          그런 게임은 스크립트로 거리를 재는데(기억에 의존한 비교), 볼륨마다 되풀이되어 바탕에 둔다. `_radius` 가 0 이면 거리는 재지 않는다.
      *          거리는 틱(워커)에서 읽고, 일은 틱 뒤 게임 스레드에서 한다 — UI · 저장은 틱 안에서 부르지 않는다. 안에 있는 동안 다시 하지 않는다(들어오는 순간만).
+     *          거리 판정도 트리거 계약(DesignBacklog "트리거 Enter · Stay · Exit 계약")을 따른다: 안에서 생겨난 활성자는 첫 틱에 들어오고, 사라지거나 꺼진 활성자 · 꺼진 볼륨은
+     *          안의 활성자를 내보낸다(다시 켜면 안에 있는 활성자가 들어오는 순간이 된다). 거리로 재는 활성자의 몸 겹침은 받지 않는다 — 한 활성자는 한 길로만 들어온다.
+     *          발동 수(`_fireCount`)는 상태 칸이고 이 계층에 `SaveGame` 칸이 없어 세이브가 모든 칸을 싣는다 — 한 번만 하는 볼륨은 불러온 뒤에도 다시 하지 않는다.
      */
     REFLECT( Abstract, Category = "Gameplay", DisplayName = "Activator Volume", Tooltip = "Base of the volumes that do something when an activator enters (trigger overlap or distance)" )
     class SW_GF_API ActivatorVolumeComponent : public Component
@@ -32,6 +35,8 @@ namespace sw
 
         void onTick( TickContext& context ) override;
         void onOverlapBegin( const OverlapInfo& overlap ) override;
+        void onOwnerActiveInHierarchyChanged() override;
+        void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 활성자가 들어온 것으로 칩니다(겹침 · 거리 판정 · 테스트). 한 번만 하는 볼륨이 이미 했거나 태그가 맞지 않으면 false 이고, 일을 했으면 true 입니다. */
         bool activate( const GameObject* pActivator );
