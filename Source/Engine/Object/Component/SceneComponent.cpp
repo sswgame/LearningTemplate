@@ -429,9 +429,7 @@ namespace sw
 
     bool SceneComponent::attachToComponent( SceneComponent* pParent, AttachRule rule )
     {
-        // 이미 그 부모면 할 일이 없다(성공). 나머지는 틱 중이든 아니든 **여기서** 거른다 — 미룬 붙이기가 그때 실패하면 부른 쪽은 모른다.
-        if ( pParent != nullptr && _pParent == pParent )
-            return true;
+        // 붙일 수 있는지는 틱 중이든 아니든 **여기서** 거른다 — 미룬 붙이기가 그때 실패하면 부른 쪽은 모른다.
         if ( canAttachTo( pParent ) == false )
             return false;
 
@@ -450,6 +448,9 @@ namespace sw
             } );
             return true;
         }
+        // 이미 그 부모면 할 일이 없다(성공). 미룬 **뒤에** 본다 — 틱 중 떼기 → 다시 붙이기에서 아직 붙어 있다고 버리면 미룬 떼기만 남는다.
+        if ( _pParent == pParent )
+            return true;
 
         // 월드를 지키려면 붙이기 **전의** 월드를 찍어 두고, 붙인 뒤 새 부모 기준으로 다시 적는다(`setWorldTransform` 이 분해한다).
         const bool     bKeepWorld  = ( rule == AttachRule::KeepWorld );

@@ -183,16 +183,17 @@ namespace sw
      */
     void GameObject::setName( hashed_string name )
     {
-        // 철자까지 같을 때만 할 일이 없다. `==` 는 대소문자를 무시하므로(FName) 그것으로 비교하면 `hero` → `Hero` 가 아무 일도 하지 않게 된다.
-        if ( name.isEqual( _name, NameCase::CaseSensitive ) )
-            return;
         // 틱 중이면 틱 뒤로 미룬다. 다른 워커가 이 이름을 읽고(`getName`), 이름 테이블은 매니저의 것이기 때문이다. addTag, setActive 와 같다.
+        // 지금 이름과 견주기 **전에** 미룬다 — 앞서 미룬 다른 이름(A → B → A)이 큐에 있으면 마지막 요청을 잃는다.
         if ( isComponentMutationFrozen() )
         {
             deferOnSelfStructural( Delegate<void( GameObject& )>( [name]( GameObject& self )
             { self.setName( name ); } ) );
             return;
         }
+        // 철자까지 같을 때만 할 일이 없다. `==` 는 대소문자를 무시하므로(FName) 그것으로 비교하면 `hero` → `Hero` 가 아무 일도 하지 않게 된다.
+        if ( name.isEqual( _name, NameCase::CaseSensitive ) )
+            return;
 
         const hashed_string oldName = _name;
         _name                       = name;
@@ -272,8 +273,6 @@ namespace sw
     {
         if ( pParent == nullptr )
             return false;
-        if ( getParent() == pParent )
-            return true;
 
         // 미루기 **전에** 거른다. 미룬 일은 자기 매니저로 부모를 다시 찾으므로 다른 매니저의 부모는 그때 조용히 사라지고, 순환은 그때야
         // 실패하는데 이 호출은 이미 true 를 반환한 뒤다. 붙이는 쪽의 나머지 규칙은 `SceneComponent::canAttachTo` 가 본다.
@@ -299,6 +298,9 @@ namespace sw
             } );
             return true;
         }
+        // 이미 그 부모인지는 미룬 **뒤에** 본다 — 틱 중 떼기 → 다시 붙이기에서 아직 붙어 있다고 버리면 미룬 떼기만 남는다.
+        if ( getParent() == pParent )
+            return true;
 
         SceneComponent* pChildSc = getPrimarySceneComponent();
         if ( pChildSc == nullptr )
@@ -314,7 +316,7 @@ namespace sw
 
     void GameObject::detachFromParent( AttachRule rule )
     {
-        GameObjectManager* pManager = getMutableManager();
+        GameObjectManager* pManager = _pOwnerManager; // 틱 중에도 뗀다(계층 변경 큐) — `attachToParent` 와 같이 `getMutableManager` 의 틱 단언을 지나지 않는다
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             const uint64 childID = _objectID;

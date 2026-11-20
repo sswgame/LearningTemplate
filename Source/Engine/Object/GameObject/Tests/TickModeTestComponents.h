@@ -234,4 +234,28 @@ namespace sw
             Component::onEndPlay();
         }
     };
+
+    /**
+     * @brief 첫 틱에 테스트가 준 일을 한 번 하는 컴포넌트입니다(`TestDeferredSetters.cpp` — 틱 중 미뤄지는 세터).
+     * @details 틱 본문은 구조가 얼어 있으므로 세터가 틱 뒤로 미룬다. 그때 얼어 있었는지를 `_bRanFrozen` 에 적는다(테스트가 정말 틱 중에 불렀는지 본다).
+     */
+    REFLECT( HideInMenu )
+    struct DeferredSetterProbeTestComponent : public Component
+    {
+        REFLECT_BODY();
+
+        Delegate<void( Component& )> _onFirstTick; ///< 첫 틱에 한 번 부른다(부르기 전에 비운다)
+        bool                         _bRanFrozen = false;
+
+        void onTick( TickContext& /*context*/ ) override
+        {
+            if ( _onFirstTick.isBound() == false )
+                return;
+            const GameObjectManager* pManager = getOwner()->getManager();
+            _bRanFrozen                       = pManager != nullptr && pManager->isStructuralMutationFrozen();
+            Delegate<void( Component& )> func = std::move( _onFirstTick );
+            _onFirstTick                      = Delegate<void( Component& )>{};
+            func( *this );
+        }
+    };
 } // namespace sw
