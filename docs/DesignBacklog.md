@@ -2230,7 +2230,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 | 자리 | 옛 → 새 | 보호 대상 · 구간 | 다투는 스레드 | 근거 | 테스트 |
 | --- | --- | --- | --- | --- | --- |
 | `Box2DWorkerPool::_spinLock` | `mutex` → `SpinLock` | 조각 대기열 꺼내기(값 복사 + 색인 하나), 넣기는 용량을 남긴 `push_back` | 2D 일꾼(≤16) + 스텝 스레드, 빈 대기열을 양보하며 계속 두드림 | 머리말이 잎 · 할당 없음을 약속. 폴링 꼴이라 독점 잠금의 커널 대기가 낭비 | 새 `Box2DWorkerCountTest.StepIsDeterministicAcrossWorkerCounts`(일꾼 1 vs 4 비트 비교 — 머리말이 가리키던 테스트가 없었다, 기본값이 일꾼 1 이라 워커를 띄우는 테스트가 없었다) |
-| `JoltJobSystem::_queueSpinLock` | `mutex` → `SpinLock` | 잡 포인터 `deque` 넣기 · 꺼내기 | 태스크 일꾼 + `WaitForJobs` 의 돕기 루프(빈 큐를 양보하며 두드림) | 구간이 포인터 하나, 안에서 다른 잠금 없음. Jolt `JobSystemThreadPool` 도 락프리 큐 | 기존 3D 물리 테스트(`TestPhysicsScene3D` 등)가 태스크 매니저로 스텝 |
+| `JoltJobSystem::_queuedJob` | `mutex` + `deque` → (`SpinLock` 을 거쳐) 실행 때 용량 `ConcurrentQueue<Job*, kRuntimeQueueCapacity>` | 잡 포인터 넣기 · 꺼내기 | 태스크 일꾼 + `WaitForJobs` 의 돕기 루프(빈 큐를 양보하며 두드림) | 용량 = 살아 있는 잡 상한(`kMaxJobCount` 2048) — 큐에 든 잡은 참조로 잡 칸을 쥐어 넘칠 수 없다. 진짜 가득 참(`size() >= capacity()`)은 `SW_FATAL`, Vyukov 링의 잠깐 false 는 다시 시도. 꺼내기는 앞 칸을 예약만 한 생산자가 있으면 기다린다(잡 하나당 태스크 하나라 "남았는데 비었다" 로 돌아가면 그 잡을 꺼낼 태스크가 없다). Jolt `JobSystemThreadPool` 도 락프리 큐 | 기존 3D 물리 테스트 + 새 `DataStructureTest.RuntimeCapacityConcurrentQueue*` 둘(올림 · 가득 참 · MPMC 스트레스) |
 | `TickRegistry::_dirtyLock` | `mutex` → `SpinLock` | `_listDirtyObjectID` 넣기 · 맞바꾸기 | 워커의 `markObjectDirty`(오브젝트마다 원자 플래그로 한 번) + 게임 스레드 | `NavTileRebaker::_dirtyLock` · `EventDispatcher::_queueSpinLock` 과 같은 모양 | 기존 `TestTickModes` — 동작(상호 배제)은 같다 |
 | `PoolAllocator::_spinLock` | `mutex` → `SpinLock` | 자유 목록 머리 포인터 교체. 청크 할당은 `blocksPerChunk` 번에 한 번, Debug 는 반납 검사로 청크를 훑음 | `GameObjectStore` 풀(게임 스레드 + 비동기 씬 로드 워커) | 언리얼 `TLockFreeFixedSizeAllocator` 자리. 드문 청크 할당은 적응형 잠금이 잠들어 받는다 | 기존 `ThreadSafePoolNeverHandsOutTheSameBlockTwice` + 새 `ThreadSafePoolSurvivesInterleavedAllocateAndFree`(할당 · 반납 섞기) |
 
@@ -2262,7 +2262,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 | 8 | `ConstantBufferPagePool::_mutex` | `mutex` | `SpinLock` | 장치 호출(페이지 만들기 · 핸들 반납)은 이미 잠금 밖이고 잠금 안은 슬롯 할당기와 페이지 표(드문 `resize`)뿐 — 꼴은 스핀감이지만 호출 빈도 · 스레드 수 근거가 없다. 상수 버퍼 갱신 경합을 재고 정한다 |
 | 9 | D3D12 · Vulkan `_cmdListPoolMutex` · `_liveCmdListMutex` | `mutex` | `SpinLock` | 작은 자유 목록이지만 프레임당 몇 번뿐이라 이득이 측정에 안 잡힐 것. 종료 경로가 쥔 채 COM · Vulkan 객체를 푼다 |
 | 10 | D3D12 · Vulkan `_transferJobMutex` | `mutex` | `SpinLock` | 펜스 회수 콜백 안에서 잡는다 — `RHIReleaseQueue::_spinLock` 과 순서가 얽히는지 교착 검출로 먼저 확인해야 하므로 추적을 남긴다 |
-| 11 | `JoltJobSystem` 잡 큐 | `SpinLock`(이번) | 락프리 MPMC | 잡 상한은 실행 때 정해지는데(`maxJobs`) `ConcurrentQueue` 용량은 컴파일 상수, 가득 찬 경우의 폴백이 필요 — **실행 때 용량을 받는 MPMC 큐가 새로 필요**(만들지 않음). 스텝 잡 수가 수천일 때 스핀 대기를 잰 뒤 정한다 |
+| 11 | `JoltJobSystem` 잡 큐 | 실행 때 용량 `ConcurrentQueue`(적용함) | `SpinLock` + `deque` 로 되돌림 | `ConcurrentQueue` 가 실행 때 용량 판을 갖게 넓혀(`kRuntimeQueueCapacity`, 같은 알고리즘) 적용했다. 벤치 `JoltJobQueue` 가 문턱을 넘으면 되돌린다 |
 | 12 | `Box2DWorkerPool` 대기열 | `SpinLock`(이번) | 원자 색인(`fetch_add`) | 일꾼이 꺼내는 동안 스텝 스레드가 칸을 더하고, 다 꺼내면 목록을 비워 처음으로 되돌린다 — 색인만 원자로 하면 비우기와 꺼내기가 겹쳐 ABA · 수명 문제. 바꾸지 않는다 |
 | 13 | `TickRegistry` 더러움 목록 | `SpinLock`(이번) | `ConcurrentQueue` | 무한 목록이어야 한다(대량 생성 프레임). 고정 용량 큐는 넘침 폴백이 필요 |
 | 14 | `OcclusionTileMailbox::_mutex` | `mutex` | 원자 `shared_ptr` 교체 | C++17 의 `std::atomic_load( shared_ptr )` 은 구현 안에서 잠금(전역 스핀 풀)이라 이득이 없고, C++20 `atomic<shared_ptr>` 은 못 쓴다. 수명 규칙상 유지 |
@@ -2328,3 +2328,16 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 | `GameFramework/Plugin` | 1 | MeshModifierTextureSampler._mutex(RW) |
 | `GameFramework/Runtime` | 14 | ScheduleSystem._mutex(M) · ExperienceKitRegistry._mutex(M) · LocalDeviceKeyProvider._mutex(M) · MemoryLocalStore._mutex(M) · ThreadedLocalStore._mutex(M) · AppearanceMeshPart._mutex(M) · SmartObjectComponent._mutex(M) · LocalServerBus._mutex(M) · MemoryEphemeralStore._mutex(M) · BlockingHTTPClient._sendMutex(M) · HTTPClient._mutex(M) · HTTPServer._mutex(M) · MemoryServiceStore._mutex(M) · MemoryServiceStore._mutex(M) |
 | `Games/LanternVale` | 1 | ValeProfileStore._mutex(M) |
+
+### 5) 전후 비교 벤치(통합이 잰다)
+
+재는 법: Release `App --test --test-run-disabled --test-filter=LockKindBenchTest.*` 5 번, 줄마다 중앙값(`Source/Core/Concurrency/Tests/TestLockKindBench.cpp`).
+실제 자리의 잠금은 그대로 두고 같은 모양(자료 구조 · 구간 · 읽기/쓰기 비율)을 따로 만들어 잠금만 갈아 끼운다. 값은 한 연산의 평균 ns, 스레드 2 · 4 · 8.
+
+| 벤치 | 자리(후보 #) | 견주는 것 | 판정 문턱 |
+| --- | --- | --- | --- |
+| `LockKindBenchTest.RenderPSOCacheLookup` | `RenderPSOCache` 두 잠금(#2) — 4096 항목, 쓰기 없음 · 1/1000 · 1/100 | `mutex` · `shared_mutex` · `SpinLock` | 1/1000 · 1/100 에서 4 · 8 스레드 `shared_mutex` 가 `mutex` 보다 20 % 이상 빠르고 2 스레드에서 5 % 넘게 느리지 않으면 `shared_mutex` 로. `SpinLock` 이 둘보다 20 % 이상 빠르면 그쪽(잎 잠금일 때만) |
+| `LockKindBenchTest.CodecRegistryLookup` | `CompressionCodecRegistry`(#3) — 8 항목, 쓰기 없음 | 같음 | 같은 문턱(쓰기 없음 칸) |
+| `LockKindBenchTest.ShaderBindingLayoutLookup` | `ShaderBindingLayoutCache`(#4) — 512 항목, 쓰기 없음 · 1/100 · 1/10 | 같음 | 같은 문턱(1/100 칸). 1/10 칸은 리로드 폭주 때 `shared_mutex` 가 느려지는지 보는 칸 — 30 % 넘게 느리면 바꾸지 않는다 |
+| `LockKindBenchTest.LockedSwapQueuePush` | `LockedSwapQueue`(#1) — 생산자 2 · 4 · 8 + 소비자 하나, 64 B 원소 | `LockedSwapQueue<T, mutex>`(기본) · `LockedSwapQueue<T, SpinLock>` | 4 · 8 생산자에서 `SpinLock` 이 10 % 이상 빠르고 2 생산자에서 느리지 않으면 기본 잠금 인자를 `SpinLock` 으로(잠금 인자는 이 감사에서 더했다) |
+| `LockKindBenchTest.JoltJobQueue` | Jolt 잡 큐(#11, 적용함) — 스레드마다 넣고 곧 꺼냄, 용량 2048 | `SpinLock` + `deque`(이전) · 실행 때 용량 `ConcurrentQueue`(지금) | 어느 스레드 수에서든 `ConcurrentQueue` 가 10 % 넘게 느리면 `SpinLock` + `deque` 로 되돌린다 |
