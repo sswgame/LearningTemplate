@@ -213,8 +213,8 @@ foreach(tier IN LISTS list_core_tier)
 	list(APPEND list_core_objects ${part_name})
 endforeach()
 
-# 벡터 거리 · 길이(`float3::getDistance` 등)는 파괴 · 파쇄가 쓰는 줄 밖 함수다 — 구성마다 같은 비트여야 한다(`sw_mark_deterministic_sources`).
-# 여기서 축약을 끄는 비용은 이 함수들의 FMA 하나씩이다(인라인이 아니라 호출 비용이 이미 더 크다). 결정적 삼각함수(`DeterministicMathUtil`)는 롤백 시뮬레이션이
+# 벡터 기본 연산(`float3::dot` · `getDistance` 등)은 `VectorMath.h` 끝의 축약을 끈 pragma 구간에서 헤더 인라인이다 — 부르는 TU 의 옵션과 상관없이 같은 비트다.
+# 여기 남는 Math .cpp 는 행렬 · 쿼터니언 · libm 을 부르는 줄 밖 함수다(구성마다 같은 비트여야 한다 — `sw_mark_deterministic_sources`). 결정적 삼각함수(`DeterministicMathUtil`)는 롤백 시뮬레이션이
 # libm 대신 부르는 줄 밖 함수라 같은 표시를 건다. 파쇄 다각형 삼각 분할(`Spatial/PolygonTriangulation`)도 파괴 사건 해시가 구성마다 같아야 해 같은 표시를 건다.
 # 광선 ↔ 도형 판정 · 방향 판정(`Math/Ray` · `Math/OrientationUtil`)은 결정적 시뮬레이션 키트(MechArena)가 부르는 줄 밖 실수 함수라 같은 표시를 건다.
 # Math 폴더는 통째로 건다(감사 C-14) — 손으로 적은 목록은 결정성 물리가 부르는 `MatrixMath`(쿼터니언 곱 · 회전) · `ValueNoise` 를 빠뜨렸다.
