@@ -39,6 +39,7 @@ namespace sw
         , _currentNodeID{ 0 }
         , _currentSpeakerID{ kDialogueNoSpeaker }
         , _transitionSerial{ 0 }
+        , _postedSubtitleID{ 0 }
     {
         setCanEverTick( false ); // 대화는 입력 · 이벤트로만 넘어간다 — 빈 틱에 워커를 쓰지 않는다
     }
@@ -214,6 +215,7 @@ namespace sw
         _currentSpeaker.clear();
         _currentText.clear();
         _listCurrentChoice.clear();
+        removePostedSubtitle(); // 건너뛰거나 멈춘 대화의 줄이 남지 않는다
 
         if ( bWasActive && _onFinished.isBound() )
         {
@@ -293,10 +295,11 @@ namespace sw
     {
         if ( _bPostSubtitles )
         {
-            // 자막은 화면 스택 위의 엔진 서비스다 — 게임 코드는 창구만 안다. 창구가 없으면(전용 서버) 보일 곳이 없다.
-            ISubtitleSink* pSubtitles = _pSubtitleSinkOverride != nullptr ? _pSubtitleSinkOverride : game::findSubsystem<ISubtitleSink>();
+            // 자막은 화면 스택 위의 엔진 서비스다 — 게임 코드는 창구만 안다. 창구가 없으면(전용 서버) 보일 곳이 없다. 새 줄이 앞 줄을 바꾼다.
+            removePostedSubtitle();
+            ISubtitleSink* pSubtitles = findSubtitleSink();
             if ( pSubtitles != nullptr && _currentText.empty() == false )
-                pSubtitles->postSubtitle( _currentSpeaker, _currentText, 0.0f ); // 읽기 시간
+                _postedSubtitleID = pSubtitles->postSubtitle( _currentSpeaker, _currentText, 0.0f ); // 읽기 시간
         }
         if ( _onLine.isBound() == false )
             return;
@@ -310,6 +313,20 @@ namespace sw
         const string             text    = _currentText;
         const OnDialogueLineFunc onLine  = _onLine.get(); // 핸들러가 안에서 구독을 놓아도 부르는 델리게이트는 산다
         onLine( speaker, text );
+    }
+
+    ISubtitleSink* DialogueRunnerComponent::findSubtitleSink() const
+    {
+        return _pSubtitleSinkOverride != nullptr ? _pSubtitleSinkOverride : game::findSubsystem<ISubtitleSink>();
+    }
+
+    void DialogueRunnerComponent::removePostedSubtitle()
+    {
+        if ( _postedSubtitleID == 0 )
+            return;
+        if ( ISubtitleSink* pSubtitles = findSubtitleSink() )
+            pSubtitles->removeSubtitle( _postedSubtitleID );
+        _postedSubtitleID = 0;
     }
 
     void DialogueRunnerComponent::notifyChoices()
@@ -357,6 +374,7 @@ namespace sw
     void DialogueRunnerComponent::finishDialogue()
     {
         _state = DialogueRunnerState::Finished;
+        removePostedSubtitle();
         if ( _onFinished.isBound() )
         {
             const OnDialogueFinishedFunc onFinished = _onFinished.get();

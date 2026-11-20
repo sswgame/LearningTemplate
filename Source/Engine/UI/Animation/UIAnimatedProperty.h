@@ -9,7 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Animation/Graph/BlendCurve.h"
+#include "Engine/Curve/BlendCurve.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/UI/Binding/UIBindingValue.h"
 

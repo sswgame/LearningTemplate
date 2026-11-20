@@ -12,6 +12,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
@@ -32,6 +33,14 @@ namespace sw
          *          변수 관리자가 있는데 변수가 없거나 흔들림 배율이 음수이면(범위는 사용자 설정 스키마가 지킨다) 결함이라 `SW_ASSERT` 로 멈춘다. 음수를 0 으로 맞추지 않는다.
          */
         static CameraUserSettings makeFromGlobalVariables();
+
+        /**
+         * @brief 플레이어가 고른 카메라 프리셋(`gv_cameraPreset`, 사용자 설정 `gameplay.cameraPreset`)입니다. 고른 적 없거나 사용자 설정이 없는 실행이면 빈 id 입니다.
+         * @details 언리얼 `UGameUserSettings` · 유니티 PlayerPrefs 에 시점 선택을 두는 것과 같은 자리다. 세이브 게임이 아니라 사용자 설정이다 — 어느 세이브를 불러도 시점은 사람이 고른 것이다.
+         */
+        static hashed_string readChosenPreset();
+        /** @brief 고른 프리셋을 사용자 설정에 확정하고 파일에 씁니다(`UserSettingsManager::applyValue` — 이 설정 하나만). 사용자 설정이 없는 실행(서버 · 하네스)이면 아무것도 하지 않습니다. */
+        static void saveChosenPreset( const hashed_string& id );
 
         /** @brief @p mode 가 1인칭 · 3인칭이고 원근이면 포즈의 시야각을 `_fieldOfViewScale` 로 넓히거나 좁힌 포즈를, 아니면 그대로 돌려줍니다. */
         CameraPose applyFieldOfView( CameraPresetMode mode, const CameraPose& pose ) const;

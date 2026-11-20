@@ -906,8 +906,8 @@ namespace sw
     {
         if ( _pSettings != nullptr && _pSettings->findSetting( settingID ) != nullptr )
         {
-            (void)_pSettings->setPendingValue( settingID, value ); // 범위 밖이면 매니저가 보정해서 받는다
-            (void)_pSettings->applyPending();                      // 저장 실패는 매니저가 로그에 남긴다
+            // 이 설정 하나만 확정한다 — 옵션 메뉴가 보류한 다른 값을 HUD 단축키가 확정하지 않는다. 범위 밖이면 매니저가 보정해서 받는다.
+            (void)_pSettings->applyValue( settingID, value );
             return;
         }
         GlobalVariableInfo* pVariable = engine::getSubsystem<GlobalVariableManager>().findVariable( pVariableName );

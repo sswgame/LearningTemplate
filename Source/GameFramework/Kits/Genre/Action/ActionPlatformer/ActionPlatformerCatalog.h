@@ -21,6 +21,7 @@
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Respawn/RespawnRules.h"
 
 namespace sw
 {
@@ -45,7 +46,8 @@ namespace sw
         PROPERTY( Min = 1 )
         int32 _lives{ 3 }; ///< 처음 목숨(0이 되면 게임 오버이고, 스테이지를 처음부터 다시 시작한다)
         PROPERTY( Min = 1 )
-        int32 _hitTolerance{ 5 }; ///< 이만큼 맞으면 피격 점수가 0이다
+        int32        _hitTolerance{ 5 }; ///< 이만큼 맞으면 피격 점수가 0이다
+        RespawnRules _respawn{};         ///< 죽은 뒤 어디서 다시 서는지(자식 `<Respawn>`, 공통 `RespawnFlow` 의 규칙). 적지 않으면 정책이 없고, 부활 흐름을 쓰는 쪽이 시작을 거절한다
     };
 } // namespace sw
 
@@ -207,7 +209,7 @@ namespace sw
      * @class ActionPlatformerCatalog
      * @brief 다음 형식의 XML 을 읽는 카탈로그입니다. `<ActionPlatformer><Grading time="1" hits="1" collect="1"><Grade id="S" min="90"/></Grading><Body glideFallSpeed="2" .../>
      *        <Parry window="8" radius="1.5" reflectSpeed="1.5" reflectDamage="2" hitstop="6" buffer="8"/>
-     *        <Stage id="1-1" name="Rooftops" parTime="90" lives="3" hitTolerance="5" checkpoints="cp1,cp2" secrets="gem1,gem2"/>
+     *        <Stage id="1-1" name="Rooftops" parTime="90" lives="3" hitTolerance="5" checkpoints="cp1,cp2" secrets="gem1,gem2"><Respawn><Policy kind="LastCheckpoint"/></Respawn></Stage>
      *        <Combo id="sword" moves="slash1,slash2,slash3"/>
      *        <Pattern id="gunner" start="patrol"><State id="patrol" frames="90" next="aim" onNear="aim" near="5" moveX="1"/>
      *        <State id="aim" frames="20" next="shoot"/><State id="shoot" frames="1" next="patrol" fire="true" fireSpeed="9"/></Pattern></ActionPlatformer>`

@@ -152,6 +152,12 @@ namespace sw
          * @details 서비스 호스트처럼 기동 전에 갈라야 하는 쪽이 글자를 따로 비교하지 않게 한다(`"--service"` 한 철자만 받던 결함).
          */
         [[nodiscard]] static bool isFlagGivenBeforeParse( int32 argc, utf8* pPpArgv[], CommandLineArgument argument );
+        /**
+         * @brief 엔진이 서기 전 값 인자 @p argument 의 값(`-key=값`)을 찾습니다 — `isFlagGivenBeforeParse` 와 같은 철자 규칙이다.
+         * @details 엔진보다 앞에서 갈라야 하는 플랫폼 진입점(`AndroidMain` 의 `-fileserve` — 첫 팩을 읽기 전에 콘텐츠 소스를 건다)이 쓴다.
+         * @return 적혔으면 true 이고 @p outValue 가 값이다(값 없이 적었으면 빈 글 — 그 판단은 부른 쪽이 한다. `parse` 도 같은 줄을 오류로 모은다).
+         */
+        [[nodiscard]] static bool findValueBeforeParse( int32 argc, utf8* pPpArgv[], CommandLineArgument argument, string& outValue );
 
         /** @brief `parse` 가 거절한 인자의 이유(한 줄씩)입니다. 비어 있지 않으면 기동을 멈춘다(`CommandLineSubsystem`). */
         [[nodiscard]] const vector<string>& getParseErrors() const { return _listParseError; }
@@ -227,6 +233,12 @@ namespace sw
          *          Engine 변수를 놓친다 — "명령줄 값이 저장된 값을 이긴다" 같은 판단은 이 함수로 한다.
          */
         bool isGlobalVariableProvided( string_view name ) const;
+        /**
+         * @brief 자동화 단계의 `<Launch>` 변수 이름을 그 단계의 명령줄로 둡니다 — `isGlobalVariableProvided` 가 참이 되어, 게임을 다시 세울 때의 사용자 설정 적용이 그 값을 덮지 않는다.
+         * @details 체인의 둘째 단계부터는 `<Launch>` 를 실행 중에 걸므로 명령줄 표에 없다. 표시하지 않으면 설정에 묶인 변수(`gv_displayOutput` — display.hdr)가 재시작에서 설정 기본값으로 돌아간다
+         *          (언리얼 콘솔 변수의 SetByCommandline 이 SetByGameSetting 을 이기는 것과 같은 순서). 단계마다 통째로 바꾼다 — 빈 목록이면 지운다.
+         */
+        void setStageGlobalVariables( vector<string> listName ) { _listStageGlobal = std::move( listName ); }
 
         /** @brief 보류 중인 `gv_` 키 이름을 모두 반환합니다(오타 진단용). */
         vector<string> collectPendingGlobalNames() const;
@@ -240,6 +252,8 @@ namespace sw
          *          재현 명령)이 `find( '=' )` · 하이픈 떼기를 따로 적으면 공백 · 빈 키 처리가 파서와 어긋난다. 등록된 이름인지는 보지 않습니다.
          */
         [[nodiscard]] static string_view getArgumentName( string_view argumentLine );
+        /** @brief 엔진이 서기 전 @p argument 가 적힌 첫 줄(앞뒤 공백을 뗀 글)입니다. 없으면 빈 값이다 — `isFlagGivenBeforeParse` · `findValueBeforeParse` 의 찾기 하나. */
+        [[nodiscard]] static optional<string_view> findLineBeforeParse( int32 argc, utf8* pPpArgv[], CommandLineArgument argument );
 
     private:
         /** @brief 보류표에 담을 키의 접두어입니다. 이것으로 시작하는 미등록 키만 남깁니다. */
@@ -277,6 +291,8 @@ namespace sw
         vector<string> _listOriginalArgument;
         /** @brief `parse` 가 거절한 인자의 이유입니다(`getParseErrors`). `initialize` 가 비웁니다. */
         vector<string> _listParseError;
+        /** @brief 지금 자동화 단계의 `<Launch>` 변수 이름입니다(`setStageGlobalVariables`). */
+        vector<string> _listStageGlobal;
 
         SW_SERVICE_SLOT( CommandLineManager, Required );
     };

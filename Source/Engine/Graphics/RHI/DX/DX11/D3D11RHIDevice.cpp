@@ -97,6 +97,7 @@ namespace sw
         , _bTimestampReady{ SW_FALSE }
         , _bTimestampFrameOpen{ SW_FALSE }
         , _bDriverCommandLists{ SW_FALSE }
+        , _bConstantBufferSlices{ SW_FALSE }
         , _timestampFrame{}
         , _clockQuery{}
         , _idleQuery{}
@@ -204,6 +205,7 @@ namespace sw
         }
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
         visitor( context.get() );
+        _nativeContextSerial.fetch_add( 1u ); // 바깥 코드가 상수 버퍼 슬롯을 바꿨을 수 있다 — 렌더 스레드의 그림자가 다음 바인딩에서 버린다
     }
 
     bool D3D11RHIDevice::ensureRootConstantCb( D3D11RecordingState& state )
@@ -247,7 +249,14 @@ namespace sw
     RHIBufferHandle D3D11RHIDevice::bindlessBufferAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        return _bufferRegistry.get( index );
+        return _bufferRegistry.get( index )._buffer;
+    }
+
+    RHIBufferSlice D3D11RHIDevice::bindlessBufferSliceAt( RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        const BufferEntry              entry = _bufferRegistry.get( index );
+        return RHIBufferSlice{ entry._buffer, entry._sliceOffset, entry._sliceSize };
     }
 
     RHITextureHandle D3D11RHIDevice::bindlessTextureAt( RHIDescriptorIndex index ) const
@@ -469,7 +478,7 @@ namespace sw
             return false;
         }
         _pHWnd            = static_cast<HWND>( pWindowHandle );
-        _backBufferFormat = desc._format;
+        _backBufferFormat = desc._sdrFormat;
         // D3D11 에는 자원의 할당 크기를 물을 API 가 없다. 추적기는 서술로 계산한 논리 크기다.
         getMemoryTracker().setSizeBasis( RHIMemorySizeBasis::Logical );
         // 큰 업로드는 스테이징 예산 안에서만 받는다. 0 이면 큰 업로드를 하나도 받지 못하므로 기본값으로 바꾸지 않고 초기화를 멈춘다.
@@ -488,7 +497,7 @@ namespace sw
         swapChainDesc.BufferCount                        = ( desc._bufferCount < 2 ) ? 2 : desc._bufferCount;
         swapChainDesc.BufferDesc.Width                   = desc._width;
         swapChainDesc.BufferDesc.Height                  = desc._height;
-        swapChainDesc.BufferDesc.Format                  = toDXGIFormat( desc._format );
+        swapChainDesc.BufferDesc.Format                  = toDXGIFormat( desc.getFormat() );
         swapChainDesc.BufferDesc.RefreshRate.Numerator   = kDefaultNumerator;
         swapChainDesc.BufferDesc.RefreshRate.Denominator = kDefaultDenominator;
         swapChainDesc.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -600,7 +609,7 @@ namespace sw
         }
 
         // D3D11 은 디바이스와 스왑체인이 한 호출에서 함께 나온다. 만들어진 것을 넘겨 소유시킨다.
-        if ( _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height, swapChainDesc.Flags ) == false )
+        if ( _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height, swapChainDesc.Flags, desc._sdrFormat ) == false )
             return false;
 
         // Deferred Context 기반 병렬 기록이 실익이 있는지는 드라이버가 커맨드 리스트를 네이티브로
@@ -615,6 +624,21 @@ namespace sw
                                 static_cast<uint32>( threadingCaps.DriverConcurrentCreates ),
                                 static_cast<uint32>( threadingCaps.DriverCommandLists ) );
             }
+        }
+        // 상수 버퍼 페이지 구간(감사 R-4)은 D3D11.1 의 두 능력이 있어야 한다 — 오프셋 바인딩과 부분 갱신. Windows 8+ 런타임 · WDDM 1.2 드라이버면 기능 수준 11_0 에서도 켜진다.
+        {
+            D3D11_FEATURE_DATA_D3D11_OPTIONS options{};
+            if ( SUCCEEDED( _device->CheckFeatureSupport( D3D11_FEATURE_D3D11_OPTIONS, &options, sizeof( options ) ) ) )
+                _bConstantBufferSlices = options.ConstantBufferOffsetting != FALSE && options.ConstantBufferPartialUpdate != FALSE ? SW_TRUE : SW_FALSE;
+            // 필수 능력이다 — 없으면 머티리얼마다 매 프레임 구간을 못 받아 오류가 쌓이므로 장치를 세우지 않는다(폴백 없음).
+            if ( _bConstantBufferSlices == SW_FALSE )
+            {
+                SW_LOG_ERROR_ID( "D3D11.NoConstantBufferSlices", "D3D11.1 ConstantBufferOffsetting / ConstantBufferPartialUpdate are not supported - the DX11 backend does not start" );
+                return false;
+            }
+            const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+            if ( isHrSuccess( context->QueryInterface( IID_PPV_ARGS( _immediateContext1.GetAddressOf() ) ), "QueryInterface (immediate ID3D11DeviceContext1)" ) == false )
+                return false;
         }
 
         _swapChain.acquireNextImage( _device.Get() );
@@ -696,6 +720,7 @@ namespace sw
         _transferQueue.retireAll( []( TransferFence& probe )
         { probe._query.Reset(); } );
         _listFreeTransferQuery.clear();
+        _immediateContext1.Reset();
         _immediateContext.shutdown();
         _memoryAdapter.Reset();
         _device.Reset();
@@ -728,6 +753,7 @@ namespace sw
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             context->ClearState();
+            _recordingState._constantBuffers.invalidate();
         }
         _windowSwapChains.remove( static_cast<D3D11RHISwapChain&>( swapChain ) );
     }
@@ -742,7 +768,26 @@ namespace sw
         return swapChain;
     }
 
+    bool D3D11RHIDevice::setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
+    {
+        if ( _swapChain.isValid() == false )
+            return false;
+        // 크기 바꿈과 같은 길 — 백버퍼 참조를 모두 놓고 포맷만 바꿔 `ResizeBuffers` 한 뒤 RTV 를 다시 잡는다.
+        releaseSwapChainReferences( _swapChain );
+        const bool bChanged = _swapChain.setColorSpace( colorSpace, metadata );
+        _swapChain.acquireNextImage( _device.Get() );
+        return bChanged;
+    }
+
     void D3D11RHIDevice::resizeSwapChainBuffers( D3D11RHISwapChain& swapChain, uint32 width, uint32 height )
+    {
+        releaseSwapChainReferences( swapChain );
+        if ( swapChain.resize( width, height ) == false )
+            return;
+        swapChain.acquireNextImage( _device.Get() );
+    }
+
+    void D3D11RHIDevice::releaseSwapChainReferences( D3D11RHISwapChain& swapChain )
     {
 
         // 백버퍼를 가리키는 참조가 하나라도 남아 있으면 ResizeBuffers 가 거부된다
@@ -762,10 +807,8 @@ namespace sw
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             context->ClearState();
             context->Flush();
+            _recordingState._constantBuffers.invalidate();
         }
-        if ( swapChain.resize( width, height ) == false )
-            return;
-        swapChain.acquireNextImage( _device.Get() );
     }
 
     bool D3D11RHIDevice::bindGraphicsContext()
@@ -1253,6 +1296,7 @@ namespace sw
         // 그대로 끼워진다. DX12/Vulkan 이 세그먼트를 잘라 얻는 순서 보장을 공짜로 갖는다.
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
         context->ExecuteCommandList( pList, FALSE );
+        _recordingState._constantBuffers.invalidate(); // RestoreContextState FALSE 가 즉시 컨텍스트 상태를 지웠다
 
         // 남은 차이는 제출 시점뿐이다. Immediate Context 는 커맨드를 모아뒀다가 드라이버가 정한
         // 때(보통 Present)에 GPU 로 보내므로, 오류가 나면 어느 리스트 때문인지 알 수 없다.

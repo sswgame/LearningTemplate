@@ -17,6 +17,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/View/RenderViewSettings.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
@@ -91,6 +92,7 @@ namespace sw
         host._pProfiler        = &engine::getSubsystem<FrameProfiler>();
         host._pExtensions      = engine::findSubsystem<RenderExtensionRegistry>();
         host._pRenderTargets   = engine::findSubsystem<RenderTargetRegistry>();
+        host._pRenderDebug     = engine::findSubsystem<RenderDebugRegistry>();
         host._pPinnedMaterials = &engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
         _frameRenderer->bindHost( host );
         // 커맨드라인이 주 출력의 보기 모드를 정했으면 여기서 받는다(에디터 씬 뷰는 툴바가 따로 정한다).

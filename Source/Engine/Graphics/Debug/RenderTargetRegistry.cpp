@@ -16,8 +16,11 @@ namespace sw
     {
         struct RenderTargetReadbackInternal
         {
-            static constexpr float32 kUnorm8Max    = 255.0f; ///< 8 비트 정규화 채널의 최댓값
-            static constexpr float32 kSignedToUnit = 0.5f;   ///< [-1, 1] 방향을 [0, 1] 색으로 옮기는 배율 · 치우침(n * 0.5 + 0.5)
+            static constexpr float32 kUnorm8Max    = 255.0f;  ///< 8 비트 정규화 채널의 최댓값
+            static constexpr float32 kSignedToUnit = 0.5f;    ///< [-1, 1] 방향을 [0, 1] 색으로 옮기는 배율 · 치우침(n * 0.5 + 0.5)
+            static constexpr uint32  kUnorm10Mask  = 0x3FFu;  ///< 10 비트 채널 마스크(R10G10B10A2)
+            static constexpr float32 kUnorm10Max   = 1023.0f; ///< 10 비트 정규화 채널의 최댓값
+            static constexpr float32 kUnorm2Max    = 3.0f;    ///< 2 비트 정규화 알파의 최댓값
 
             /** @brief 32 비트 실수 채널 @p channel 을 읽습니다(정렬되지 않은 바이트). */
             static float32 readFloat( const uint8* pPixel, uint32 channel )
@@ -45,6 +48,7 @@ namespace sw
             case RHIFormat::B8G8R8A8_UNORM:
             case RHIFormat::R16G16B16A16_FLOAT:
             case RHIFormat::R32G32B32A32_FLOAT:
+            case RHIFormat::R10G10B10A2_UNORM:
                 return 4;
             case RHIFormat::R16G16_SNORM: // 옥타헤드럴 법선을 방향 색(xyz * 0.5 + 0.5)으로 풀어 보이므로 보이는 채널은 RGB 셋이다
             case RHIFormat::R32G32B32_FLOAT:
@@ -143,6 +147,17 @@ namespace sw
                 outValue._x = pPixel[0] / RenderTargetReadbackInternal::kUnorm8Max;
                 break;
             }
+            case RHIFormat::R10G10B10A2_UNORM:
+            {
+                // R 이 낮은 자리다(DXGI R10G10B10A2 · Vulkan A2B10G10R10_PACK32 가 같은 배치).
+                using Internal = RenderTargetReadbackInternal;
+                uint32 packed{ 0 };
+                Memory::copy( &packed, pPixel, sizeof( packed ) );
+                outValue = float4{ static_cast<float32>( packed & Internal::kUnorm10Mask ) / Internal::kUnorm10Max,
+                                   static_cast<float32>( ( packed >> 10 ) & Internal::kUnorm10Mask ) / Internal::kUnorm10Max,
+                                   static_cast<float32>( ( packed >> 20 ) & Internal::kUnorm10Mask ) / Internal::kUnorm10Max, static_cast<float32>( packed >> 30 ) / Internal::kUnorm2Max };
+                break;
+            }
             case RHIFormat::R16G16_SNORM:
             {
                 // G버퍼 법선(옥타헤드럴 좌표)이다. 방향으로 풀어 옛 `n * 0.5 + 0.5` 첨부와 같은 색으로 보인다.
@@ -203,21 +218,23 @@ namespace sw
         return VectorUtil::containsBy<&RenderTargetInfo::_texture>( _listTarget, texture );
     }
 
-    uint32 RenderTargetRegistry::requestReadback( RHITextureHandle texture )
+    uint32 RenderTargetRegistry::requestReadback( RHITextureHandle texture, uint32 mip )
     {
         ScopedLock<mutex> lock{ _readbackMutex };
         ++_lastRequestSerial;
         _pendingReadbackTexture = texture;
+        _pendingReadbackMip     = mip;
         _pendingReadbackSerial  = _lastRequestSerial;
         return _lastRequestSerial;
     }
 
-    bool RenderTargetRegistry::takeReadbackRequest( RHITextureHandle& outTexture, uint32& outSerial )
+    bool RenderTargetRegistry::takeReadbackRequest( RHITextureHandle& outTexture, uint32& outMip, uint32& outSerial )
     {
         ScopedLock<mutex> lock{ _readbackMutex };
         if ( _pendingReadbackSerial == 0 )
             return false;
         outTexture              = _pendingReadbackTexture;
+        outMip                  = _pendingReadbackMip;
         outSerial               = _pendingReadbackSerial;
         _pendingReadbackTexture = 0;
         _pendingReadbackSerial  = 0;

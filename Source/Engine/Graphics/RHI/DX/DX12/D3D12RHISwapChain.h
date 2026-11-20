@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/DX/DXGIColorSpace.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -65,6 +66,15 @@ namespace sw
          */
         bool resize( uint32 width, uint32 height );
 
+        /**
+         * @brief 색 공간을 바꿉니다 — 그 색 공간의 포맷(`getSwapChainFormat`)으로 `ResizeBuffers` 한 뒤 `SetColorSpace1` · `SetHDRMetaData` 를 알린다.
+         * @warning `resize` 와 같다 — GPU 가 이전 프레임을 다 썼고 백버퍼가 놓여 있어야 합니다.
+         * @return 실패하면 false 이고 백버퍼가 비워진 채로 남습니다(부르는 쪽이 다시 만든다). 색 공간은 성공했을 때만 바뀐다.
+         */
+        [[nodiscard]] bool setColorSpace( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata );
+        /** @brief 색 공간은 그대로 두고 HDR10 마스터링 값만 다시 알립니다(버퍼를 놓지 않아도 된다). HDR10 이 아니면 값만 기억합니다. 실패하면 옛 값을 다시 알리고 false 입니다. */
+        [[nodiscard]] bool setDisplayMetadata( const RHIDisplayMetadata& metadata );
+
         /** @brief 다음에 그릴 백버퍼를 고릅니다 (DXGI 가 정해 준 현재 인덱스를 읽어옵니다). */
         void acquireNextImage();
 
@@ -113,10 +123,18 @@ namespace sw
             return _backBufferIndex < _listBackBuffer.size();
         }
         uint32 getBufferCount() const { return _bufferCount; }
-        /** @brief 백버퍼 포맷입니다. DXGI 는 요청 포맷을 그대로 만듭니다(Vulkan 처럼 협상하지 않습니다). */
-        RHIFormat getFormat() const { return _format; }
-        uint32    getWidth() const override { return _width; }
-        uint32    getHeight() const override { return _height; }
+        /** @brief 백버퍼 포맷입니다 — 색 공간에서 정한다(`getSwapChainFormat`). DXGI 는 요청 포맷을 그대로 만듭니다(Vulkan 처럼 협상하지 않습니다). */
+        RHIFormat getFormat() const { return getSwapChainFormat( _colorSpace, _sdrFormat ); }
+        /** @brief SDR 일 때의 백버퍼 포맷입니다(다른 창은 늘 이 포맷의 SDR 로 만든다). */
+        RHIFormat getSDRFormat() const { return _sdrFormat; }
+        /** @brief 지금 화면에 내는 색 공간입니다. */
+        RHIColorSpace getColorSpace() const { return _colorSpace; }
+        /** @brief `ResizeBuffers` 에 다시 넘길 서술입니다. */
+        DXGISwapChainBuffers makeBuffers() const { return DXGISwapChainBuffers{ _swapChain.Get(), _bufferCount, _width, _height, _swapChainFlags, _sdrFormat }; }
+        /** @brief 창이 놓인 모니터가 받는 출력입니다(만들 때 · 크기 · 색 공간을 바꿀 때 묻는다 — `queryDXGIDisplayOutputSupport`). */
+        const DXGIDisplayOutputSupport& getDisplayOutputSupport() const { return _displayOutputSupport; }
+        uint32                          getWidth() const override { return _width; }
+        uint32                          getHeight() const override { return _height; }
 
         /** @brief 현재 백버퍼 리소스를 반환합니다. 준비 안 됐으면 nullptr 입니다. */
         ID3D12Resource* getCurrentBackBuffer() const;
@@ -141,8 +159,14 @@ namespace sw
         uint32                  _height;
         uint32                  _bufferCount;
         uint32 _backBufferIndex SW_GUARDED_BY( _renderThread ){ 0 };
-        /// @brief 백버퍼 포맷입니다(요청값 = 실제값).
-        RHIFormat _format;
+        /// @brief SDR 일 때의 백버퍼 포맷입니다(요청값 = 실제값). 지금 포맷은 색 공간과 함께 정한다(`getFormat`).
+        RHIFormat _sdrFormat;
+        /// @brief 지금 화면에 내는 색 공간입니다. `setColorSpace` 만 바꾼다.
+        RHIColorSpace _colorSpace;
+        /// @brief 창이 놓인 모니터가 받는 출력입니다.
+        DXGIDisplayOutputSupport _displayOutputSupport;
+        /// @brief 마지막으로 알린 HDR10 마스터링 값입니다 — `ResizeBuffers` 뒤에 다시 알린다.
+        RHIDisplayMetadata _displayMetadata;
         /// @brief 생성할 때 쓴 DXGI 플래그입니다. `ResizeBuffers` 가 같은 값을 다시 넘겨야 합니다.
         uint32 _swapChainFlags;
         /// @brief 티어링 허용으로 만들었는지입니다. Present 플래그와 짝입니다.

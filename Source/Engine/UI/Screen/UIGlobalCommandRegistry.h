@@ -33,7 +33,8 @@ namespace sw
     {
     public:
         static constexpr utf8 kReturnToTitle[] = "ReturnToTitle"; ///< 일시정지 메뉴의 "타이틀로" 명령입니다.
-        static constexpr utf8 kQuitGame[]      = "QuitGame";      ///< 일시정지 메뉴의 "끝내기" 명령입니다.
+        static constexpr utf8 kQuitGame[]      = "QuitGame";      ///< 일시정지 메뉴 · 메인 메뉴의 "끝내기" 명령입니다.
+        static constexpr utf8 kStartGame[]     = "StartGame";     ///< 메인 메뉴의 "시작" 명령입니다(타이틀 다음 씬을 연다 — `GameSceneFlow::requestEntranceScene`).
 
         UIGlobalCommandRegistry();
 

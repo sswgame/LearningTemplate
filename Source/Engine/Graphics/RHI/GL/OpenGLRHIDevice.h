@@ -273,12 +273,14 @@ namespace sw
         struct BindlessResourceRecord
         {
             RHIBufferHandle  _buffer{ 0 };
-            RHITextureHandle _texture{ 0 }; ///< UAV 레지스트리에서 RW 텍스처(이미지 유닛)면 0이 아니다.
+            RHITextureHandle _texture{ 0 };     ///< UAV 레지스트리에서 RW 텍스처(이미지 유닛)면 0이 아니다.
+            uint32           _sliceOffset{ 0 }; ///< 상수 버퍼 페이지 구간(`glBindBufferRange`, 감사 R-4). 크기 0 이면 버퍼 전체(`glBindBufferBase`)
+            uint32           _sliceSize{ 0 };
 
             /** @brief `RHIBindlessRegistry` 가 "이 칸이 비었는가" 를 묻는 데 씁니다. */
             bool operator==( const BindlessResourceRecord& other ) const
             {
-                return _buffer == other._buffer && _texture == other._texture;
+                return _buffer == other._buffer && _texture == other._texture && _sliceOffset == other._sliceOffset && _sliceSize == other._sliceSize;
             }
             bool operator!=( const BindlessResourceRecord& other ) const { return ( *this == other ) == false; }
             /** @brief 자원을 부술 때 이 칸을 찾는 주인입니다(`RHIBindlessRegistry::releaseBuffer` · `releaseTexture`). */
@@ -487,6 +489,8 @@ namespace sw
                                       uint32 depthMip );
         /** @brief 불투명 핸들로 GLuint 이름을 찾습니다. */
         uint32 resolveGlBuffer( RHIBufferHandle handle ) const;
+        /** @brief 불투명 핸들로 버퍼 크기(`glBufferData` 에 준 크기)를 찾습니다. 없으면 0 입니다. */
+        uint32 resolveGlBufferSize( RHIBufferHandle handle ) const;
         /**
          * @brief GL 버퍼 이름을 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 Buffer 항목에 `sizeBytes` 를 올리는 유일한 지점입니다.
          * @param sizeBytes `glBufferData` 에 준 크기입니다(논리 크기이며, GL 에는 할당 크기를 물을 API 가 없습니다).
@@ -524,7 +528,15 @@ namespace sw
         atomic<std::thread::id> _contextOwnerThread;
         atomic<uint64>          _contextOwnedStartNanos;
 
-        RHIHandleTable<uint32> _gpuBuffers;
+        /// @brief GL 버퍼 하나입니다 — 이름과 `glBufferData` 에 준 크기(구간 등록이 버퍼 밖 구간을 거절하는 데 쓴다).
+        struct OpenGLBufferRecord
+        {
+            uint32 _glName{ 0 };
+            uint32 _sizeBytes{ 0 };
+        };
+        RHIHandleTable<OpenGLBufferRecord> _gpuBuffers;
+        /// @brief GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT 입니다. 초기화가 한 번 묻고, 상수 버퍼 구간(256 B 배수)을 담지 못하는 값이면 백엔드를 세우지 않는다(감사 R-4).
+        uint32 _uniformBufferOffsetAlignment{ 0 };
         /// @brief 기록 상태입니다. GL 은 실제 상태가 하나라 리스트도 이것을 함께 씁니다(OpenGLRecordingState 참고).
         OpenGLRecordingState _recordingState;
 

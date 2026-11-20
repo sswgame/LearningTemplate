@@ -19,8 +19,10 @@
 #include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/Debug/GPUNanCheck.h"
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
+#include "Engine/Graphics/RHI/RHIBufferTransitionBatch.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Renderer/Debug/RenderBufferInspector.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/Execute/FrameGraphExecutor.h"
 #include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
@@ -30,6 +32,7 @@
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
+#include "Engine/Renderer/Graph/FrameBufferTable.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Scene/GPUMeshBatchBinding.h"
@@ -38,6 +41,7 @@
 namespace sw
 {
     class FrameCapture;
+    class FrameDisplayEncode;
     class FrameScreenRotation;
     class FrameAutoExposure;
     class FrameFog;
@@ -62,7 +66,7 @@ namespace sw
     public:
         FramePassExecutor( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameRenderState& state, FramePSOManager& psoManager,
                            FrameAutoExposure& autoExposure, FrameUpscale& upscale, FrameFog& fog, FrameExtensionHost& extensionHost, FrameCapture& capture,
-                           const FrameScreenRotation& screenRotation );
+                           const FrameScreenRotation& screenRotation, const FrameDisplayEncode& displayEncode );
         ~FramePassExecutor(); ///< 밖에 둔다 — 내보내는 클래스의 소멸자는 쓰는 곳마다 만들어져 앞선 선언만 본 `unique_ptr<IRHICommandList>` 을 지우지 못한다
         FramePassExecutor( const FramePassExecutor& )            = delete;
         FramePassExecutor& operator=( const FramePassExecutor& ) = delete;
@@ -217,7 +221,8 @@ namespace sw
         void recordFrameGraph( IRHIDevice* pDevice );
         /**
          * @brief 레벨을 기록하기 **직전에** 그 레벨이 만질 자원의 배리어를 미리 발행합니다. 직렬 경로에서는 패스마다 발행합니다.
-         * @details 자원 이름으로 실제 텍스처를 찾아 읽기 · 렌더 타깃 전이를 한 묶음(`IRHICommandList::transitionTextures`)으로
+         * @details 등록한 프레임 자원(`FrameBufferTable` — 이름의 모든 뷰 칸)의 버퍼 전이는 `transitionBuffers` 한 번, UAV → UAV 는 UAV 배리어로 낸다. 뷰 그래프와 프레임 그래프가 이 콜백 하나를 쓴다.
+         *          자원 이름으로 실제 텍스처를 찾아 읽기 · 렌더 타깃 전이를 한 묶음(`IRHICommandList::transitionTextures`)으로
          *          레벨 첫 패스 리스트의 앞머리에 기록한다(직렬 경로에서는
          *          그 패스의 리스트). 같은 레벨의 다른 리스트는 큐 순서상 그 뒤에 실행되므로 GPU 타임라인에서도 배리어가 앞선다.
          *
@@ -358,8 +363,11 @@ namespace sw
         /**
          * @brief 지금 뷰의 주 출력 대상을 고릅니다. 렌더 텍스처 뷰는 자기 텍스처를, 주 시점과 화면 사각형 뷰는 주 출력(백버퍼 또는 게임 뷰 RT)을 씁니다.
          *        스크린샷 실행이면 캡처 텍스처를 씁니다. Present 와 Canvas 가 같은 판단을 씁니다.
+         * @param bSceneLayer Present(장면)면 true 다 — HDR 출력이면 화면 대신 장면 출력 RT 에 쓴다(`FrameDisplayEncode`). Canvas 는 false(화면 = HDR 이면 UI RT)다.
          */
-        PresentTarget resolvePresentTarget() const;
+        PresentTarget resolvePresentTarget( bool bSceneLayer ) const;
+        /** @brief 화면에 쓰는 대상입니다 — 0 이면 스왑체인, 회전한 화면이면 회전 대기 텍스처, HDR 출력이면 UI RT 입니다(`FrameRenderer::getScreenTarget` 과 같은 판단). */
+        RHITextureHandle getScreenTarget() const;
         /** @brief 이 패스가 Swapchain 을 쓰는 마지막 패스면 true 입니다. 스크린샷 캡처를 백버퍼로 복사하는 일을 이 패스 끝에서 합니다. */
         bool isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const;
         /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
@@ -526,12 +534,21 @@ namespace sw
         FrameExtensionHost&        _extensionHost;
         FrameCapture&              _capture;
         const FrameScreenRotation& _screenRotation; ///< 화면에 쓰는 대상(0 = 스왑체인, 회전한 화면이면 논리 크기 대기 텍스처)
+        const FrameDisplayEncode&  _displayEncode;  ///< HDR 출력이면 Present 는 장면 출력 RT, 화면에 쓰는 나머지는 UI RT 에 쓴다
         /// @brief 프레임 패스 종류마다의 실행(깊이 히스토리 · 가림 타일 · 입자 · 변형 · 컬링 · 라이트 그리드 · 볼륨 안개 · 프로브 · 마커)입니다. 순서는 프레임 그래프가 정한다.
         FrameGraphExecutor _frameGraphExecutor;
         /// @brief 프레임 그래프 노드 이름 → `_listFramePass` 번호입니다. `bindPassCallbacks` 가 채웁니다.
         unordered_map<hashed_string, uint32> _mapFramePassNameToIndex;
         /// @brief 프레임 그래프 실행 상태입니다(뷰 그래프와 따로 — 자원 이름이 다르고 프레임에 한 번 돈다).
         RenderGraphExecutionContext _frameGraphContext;
+        /// @brief 프레임 그래프 자원(이름 · 뷰 칸) → RHI 핸들입니다. `recordFrameGraph` 가 프레임마다 비우고 주인이 다시 등록한다(`FrameGraphExecutor::beginFrame`).
+        FrameBufferTable _frameBufferTable;
+        /// @brief 버퍼 보기(에디터 렌더 디버거 · 개발 명령)가 요청한 `_frameBufferTable` 버퍼를 프레임 그래프 끝에서 읽는다(`RenderDebugRegistry`). 읽기 버퍼는 장치 자원이라 여기서 놓는다.
+        RenderBufferInspector _bufferInspector;
+        /// @brief 레벨 콜백이 모은 버퍼 전이입니다(`transitionBuffers` 한 번). 레벨 콜백은 한 스레드에서만 돈다 — 용량을 프레임 사이에 다시 쓴다.
+        RHIBufferTransitionBatch _levelBufferTransitions;
+        /// @brief 이번 프레임에 레벨 콜백이 낸 전이 · UAV 배리어 수입니다(지표 `RT.Graph.transitions` — 그래프로 옮긴 단계가 이 수를 늘리지 않아야 한다).
+        uint32 _graphTransitionCount{ 0 };
         /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 `FrameRenderState::_mainView` 입니다. 바꾸는 곳은 `renderExtraView` 하나다.
         FrameViewTarget* _pActiveView;
         /// @brief 프레임 그래프 리스트와 그것을 만든 디바이스입니다. `_pCmd` 는 프리패스를 기록하는 동안만 그 리스트를 가리킨다.

@@ -535,6 +535,22 @@ SW_TEST_CASE( CommandLineTest, DeadlockDetectionFlagIsReadBeforeParse )
     SW_EXPECT_FALSE( sw::CommandLineManager::isFlagGivenBeforeParse( 2, argvNone, sw::CommandLineArgument::DEADLOCK_DETECTION ) );
 }
 
+/** @brief 엔진 전 값 읽기(`findValueBeforeParse`)는 플래그 읽기와 같은 찾기를 쓴다 — 철자 · 하이픈 · `=값`, 값 없이 적으면 빈 글로 true. */
+SW_TEST_CASE( CommandLineTest, ValueIsReadBeforeParse )
+{
+    sw::string value       = "stale";
+    utf8*      argvValue[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-W=800" ), const_cast<utf8*>( " --scenario=a/b.xml " ) };
+    SW_EXPECT_TRUE( sw::CommandLineManager::findValueBeforeParse( 3, argvValue, sw::CommandLineArgument::SCENARIO, value ) );
+    SW_EXPECT_TRUE( value == "a/b.xml" );
+
+    utf8* argvBare[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-scenario" ) };
+    SW_EXPECT_TRUE( sw::CommandLineManager::findValueBeforeParse( 2, argvBare, sw::CommandLineArgument::SCENARIO, value ) );
+    SW_EXPECT_TRUE( value.empty() );
+
+    utf8* argvNone[] = { const_cast<utf8*>( "TestApp.exe" ), const_cast<utf8*>( "-scenario-report=x" ) };
+    SW_EXPECT_FALSE( sw::CommandLineManager::findValueBeforeParse( 2, argvNone, sw::CommandLineArgument::SCENARIO, value ) );
+}
+
 /**
  * @brief 인자 한 줄의 이름은 앞뒤 공백 · `=` 뒤 · 앞의 `-` 를 뗀 것이다 — `parse` 와 원본 인자를 거르는 쪽(자식 인자 · 재현 명령)이 같은 규칙을 쓴다.
  */
@@ -545,4 +561,20 @@ SW_TEST_CASE( CommandLineTest, ArgumentNameDropsHyphensAndValue )
     SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( "gv_x=1=2" ) == "gv_x" );
     SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( " -W = 800 " ) == "W" );
     SW_EXPECT_TRUE( sw::CommandLineManager::getArgumentName( "" ).empty() );
+}
+
+/**
+ * @brief 자동화 단계의 `<Launch>` 변수는 그 단계 동안 명령줄로 준 것과 같다 — 재시작의 사용자 설정 적용이 덮지 않는다. 다음 단계의 목록이 바꾼다.
+ */
+SW_TEST_CASE( CommandLineTest, StageGlobalVariablesCountAsProvided )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+    SW_EXPECT_FALSE( cmdManager.isGlobalVariableProvided( "gv_displayOutput" ) );
+
+    cmdManager.setStageGlobalVariables( { "gv_displayOutput" } );
+    SW_EXPECT_TRUE( cmdManager.isGlobalVariableProvided( "gv_displayOutput" ) );
+
+    cmdManager.setStageGlobalVariables( {} );
+    SW_EXPECT_FALSE( cmdManager.isGlobalVariableProvided( "gv_displayOutput" ) );
 }

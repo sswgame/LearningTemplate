@@ -113,8 +113,25 @@ namespace sw
     {
         vector<float3>              _listPoint;
         vector<NavPathLinkCrossing> _listLinkCrossing; ///< 오프 메시 링크를 건너는 곳(경로 순서)
+        vector<float3>              _listCoarsePoint;  ///< 계층 경로(스트리밍 월드 — `NavStreamRoute::findPath`)만: 세밀 경로 끝 너머 오르지 않은 타일을 지나는 대략 점(마지막은 끝). 비면 세밀 경로가 전부다
         NavPathStatus               _status{ NavPathStatus::Failed };
         uint32                      _polyCount{ 0 }; ///< 지나는 폴리곤 수(진단)
+
+        /** @brief 끝까지 이어진 길이면 true 입니다 — 세밀 경로가 끝에 닿았거나(`Complete`), 그 너머를 대략 점이 끝까지 잇는다(계층 경로). */
+        bool isEndReachable() const { return _status == NavPathStatus::Complete || ( _status == NavPathStatus::Partial && _listCoarsePoint.empty() == false ); }
+        /** @brief 세밀 경로에 대략 점까지 이은 길이입니다(대략 점이 없으면 `computeLength` 와 같다). */
+        float32 computeRouteLength() const
+        {
+            float32 length = computeLength();
+            float3  from   = _listPoint.empty() ? float3{} : _listPoint.back();
+            for ( size_t pointIndex = 0; pointIndex < _listCoarsePoint.size(); ++pointIndex )
+            {
+                if ( pointIndex > 0 || _listPoint.empty() == false )
+                    length += ( _listCoarsePoint[pointIndex] - from ).getLength();
+                from = _listCoarsePoint[pointIndex];
+            }
+            return length;
+        }
 
         /** @brief 점을 이은 길이입니다. */
         float32 computeLength() const

@@ -43,32 +43,33 @@ namespace sw
         };
 
         constexpr OpenGLFormatRow arrFormatRow[] = {
-            {    RHIFormat::R8G8B8A8_UNORM,                                       GL_RGBA8,          GL_RGBA,     GL_UNSIGNED_BYTE},
-            {    RHIFormat::B8G8R8A8_UNORM,                                       GL_RGBA8,          GL_BGRA,     GL_UNSIGNED_BYTE},
+            {    RHIFormat::R8G8B8A8_UNORM,                                       GL_RGBA8,          GL_RGBA,               GL_UNSIGNED_BYTE},
+            {    RHIFormat::B8G8R8A8_UNORM,                                       GL_RGBA8,          GL_BGRA,               GL_UNSIGNED_BYTE},
             // **half 는 GL_HALF_FLOAT 다.** GL_FLOAT 로 두면 GL 이 픽셀당 16 바이트를 읽고 쓰는데 엔진이 잡아 둔 버퍼는
             // 8 바이트/픽셀이다(`getRHIFormatBlockInfo` 가 기준). HDR 첨부를 CPU 로 되읽는 경로(스크린샷 · 렌더 타깃 패널)가
             // 버퍼를 두 배로 넘겨 써서 **그냥 죽는다**.
-            {RHIFormat::R16G16B16A16_FLOAT,                                     GL_RGBA16F,          GL_RGBA,        GL_HALF_FLOAT},
-            { RHIFormat::D24_UNORM_S8_UINT,                            GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8},
-            {   RHIFormat::R32G32B32_FLOAT,                                      GL_RGB32F,           GL_RGB,             GL_FLOAT},
-            {      RHIFormat::R32G32_FLOAT,                                       GL_RG32F,            GL_RG,             GL_FLOAT},
-            {         RHIFormat::R32_FLOAT,                                        GL_R32F,           GL_RED,             GL_FLOAT},
-            {           RHIFormat::Unknown,                                              0,                0,                    0},
-            {         RHIFormat::BC1_UNORM,                      kGlCompressedRGBAS3tcDxt1,                0,                    0},
-            {         RHIFormat::BC2_UNORM,                      kGlCompressedRGBAS3tcDxt3,                0,                    0},
-            {         RHIFormat::BC3_UNORM,                      kGlCompressedRGBAS3tcDxt5,                0,                    0},
-            {         RHIFormat::BC4_UNORM,                        GL_COMPRESSED_RED_RGTC1,                0,                    0},
-            {         RHIFormat::BC5_UNORM,                           kGlCompressedRgRgtc2,                0,                    0},
-            {         RHIFormat::BC7_UNORM,                  GL_COMPRESSED_RGBA_BPTC_UNORM,                0,                    0},
-            {         RHIFormat::BC6H_UF16,          GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT,                0,                    0},
-            {          RHIFormat::R8_UNORM,                                          GL_R8,           GL_RED,     GL_UNSIGNED_BYTE},
-            {      RHIFormat::R16G16_SNORM,                                  GL_RG16_SNORM,            GL_RG,             GL_SHORT},
-            {    RHIFormat::ASTC_4x4_UNORM,  OpenGLRHIDeviceFormat::kCompressedRGBAASTC4x4,                0,                    0},
-            {  RHIFormat::ETC2_RGBA8_UNORM, OpenGLRHIDeviceFormat::kCompressedRGBA8ETC2EAC,                0,                    0},
-            {     RHIFormat::EAC_R11_UNORM,       OpenGLRHIDeviceFormat::kCompressedR11EAC,                0,                    0},
-            {    RHIFormat::EAC_RG11_UNORM,      OpenGLRHIDeviceFormat::kCompressedRG11EAC,                0,                    0},
-            {RHIFormat::R32G32B32A32_FLOAT,                                     GL_RGBA32F,          GL_RGBA,             GL_FLOAT},
-            {      RHIFormat::R16G16_FLOAT,                                       GL_RG16F,            GL_RG,        GL_HALF_FLOAT},
+            {RHIFormat::R16G16B16A16_FLOAT,                                     GL_RGBA16F,          GL_RGBA,                  GL_HALF_FLOAT},
+            { RHIFormat::D24_UNORM_S8_UINT,                            GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL,           GL_UNSIGNED_INT_24_8},
+            {   RHIFormat::R32G32B32_FLOAT,                                      GL_RGB32F,           GL_RGB,                       GL_FLOAT},
+            {      RHIFormat::R32G32_FLOAT,                                       GL_RG32F,            GL_RG,                       GL_FLOAT},
+            {         RHIFormat::R32_FLOAT,                                        GL_R32F,           GL_RED,                       GL_FLOAT},
+            {           RHIFormat::Unknown,                                              0,                0,                              0},
+            {         RHIFormat::BC1_UNORM,                      kGlCompressedRGBAS3tcDxt1,                0,                              0},
+            {         RHIFormat::BC2_UNORM,                      kGlCompressedRGBAS3tcDxt3,                0,                              0},
+            {         RHIFormat::BC3_UNORM,                      kGlCompressedRGBAS3tcDxt5,                0,                              0},
+            {         RHIFormat::BC4_UNORM,                        GL_COMPRESSED_RED_RGTC1,                0,                              0},
+            {         RHIFormat::BC5_UNORM,                           kGlCompressedRgRgtc2,                0,                              0},
+            {         RHIFormat::BC7_UNORM,                  GL_COMPRESSED_RGBA_BPTC_UNORM,                0,                              0},
+            {         RHIFormat::BC6H_UF16,          GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT,                0,                              0},
+            {          RHIFormat::R8_UNORM,                                          GL_R8,           GL_RED,               GL_UNSIGNED_BYTE},
+            {      RHIFormat::R16G16_SNORM,                                  GL_RG16_SNORM,            GL_RG,                       GL_SHORT},
+            {    RHIFormat::ASTC_4x4_UNORM,  OpenGLRHIDeviceFormat::kCompressedRGBAASTC4x4,                0,                              0},
+            {  RHIFormat::ETC2_RGBA8_UNORM, OpenGLRHIDeviceFormat::kCompressedRGBA8ETC2EAC,                0,                              0},
+            {     RHIFormat::EAC_R11_UNORM,       OpenGLRHIDeviceFormat::kCompressedR11EAC,                0,                              0},
+            {    RHIFormat::EAC_RG11_UNORM,      OpenGLRHIDeviceFormat::kCompressedRG11EAC,                0,                              0},
+            {RHIFormat::R32G32B32A32_FLOAT,                                     GL_RGBA32F,          GL_RGBA,                       GL_FLOAT},
+            {      RHIFormat::R16G16_FLOAT,                                       GL_RG16F,            GL_RG,                  GL_HALF_FLOAT},
+            { RHIFormat::R10G10B10A2_UNORM,                                    GL_RGB10_A2,          GL_RGBA, GL_UNSIGNED_INT_2_10_10_10_REV},
         };
         static_assert( isRHIFormatTableInOrder( arrFormatRow ), "arrFormatRow needs one row per RHIFormat, in enumerator order" );
 
@@ -212,6 +213,25 @@ namespace sw
         ScopedOpenGLContext contextScope( _pDevice );
         glBindBuffer( GL_UNIFORM_BUFFER, ubo );
         glBufferSubData( GL_UNIFORM_BUFFER, 0, static_cast<GLsizeiptr>( size ), pData );
+        glBindBuffer( GL_UNIFORM_BUFFER, 0 );
+    }
+
+    RHIBufferHandle OpenGLRHIResourceFactory::createConstantBufferPage( uint32 size )
+    {
+        // UBO 하나를 구간이 나눠 쓴다(감사 R-4). 프레임 칸 복제는 드라이버의 이름 바꾸기가 맡는다(`createConstantBuffer` 와 같다).
+        return createConstantBuffer( size );
+    }
+
+    void OpenGLRHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    {
+        if ( slice._buffer == 0 || pData == nullptr )
+            return;
+        const GLuint ubo = _pDevice->resolveGlBuffer( slice._buffer );
+        if ( ubo == 0 )
+            return;
+        ScopedOpenGLContext contextScope( _pDevice );
+        glBindBuffer( GL_UNIFORM_BUFFER, ubo );
+        glBufferSubData( GL_UNIFORM_BUFFER, static_cast<GLintptr>( slice._offset ), static_cast<GLsizeiptr>( MathUtil::min( size, slice._size ) ), pData );
         glBindBuffer( GL_UNIFORM_BUFFER, 0 );
     }
 
@@ -382,9 +402,10 @@ namespace sw
         ScopedOpenGLContext contextScope( _pDevice );
         _pDevice->_recordingState._geometry.remove( buffer );
 
-        uint32 glName{ 0 };
-        if ( _pDevice->_gpuBuffers.take( buffer, glName ) == false )
+        OpenGLRHIDevice::OpenGLBufferRecord taken{};
+        if ( _pDevice->_gpuBuffers.take( buffer, taken ) == false )
             return;
+        const uint32 glName = taken._glName;
 
         {
             // 이 버퍼의 번호를 모두 놓는다(다섯 백엔드 같은 계약 — `IRHIResourceFactory::registerBindlessTexture`). 예전에는 값만 지우고 번호를 돌려받지 않아 칸이 샜다.
@@ -931,6 +952,29 @@ namespace sw
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return _pDevice->_bufferRegistry.allocate( OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
+    }
+
+    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
+        if ( slice._buffer == 0 || slice._size == 0 )
+            return kInvalidDescriptorIndex;
+        // glBindBufferRange 의 오프셋은 GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT(초기화가 256 의 약수임을 확인했다)의 배수여야 하고, 구간은 버퍼 안이어야 한다.
+        const uint32 bufferBytes = _pDevice->resolveGlBufferSize( slice._buffer );
+        const bool   bBadSlice   = bufferBytes == 0 || _pDevice->_uniformBufferOffsetAlignment == 0 || slice._offset % _pDevice->_uniformBufferOffsetAlignment != 0 ||
+                               static_cast<uint64>( slice._offset ) + slice._size > bufferBytes;
+        if ( bBadSlice )
+        {
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.BadConstantBufferSlice", "registerBindlessBufferSRV: slice (offset %#, size %#) is not an aligned slice inside the buffer (%# bytes, alignment %#)",
+                             slice._offset, slice._size, bufferBytes, _pDevice->_uniformBufferOffsetAlignment );
+            return kInvalidDescriptorIndex;
+        }
+        OpenGLRHIDevice::BindlessResourceRecord record{};
+        record._buffer      = slice._buffer;
+        record._sliceOffset = slice._offset;
+        record._sliceSize   = slice._size;
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_bufferRegistry.allocate( record );
     }
 
     void OpenGLRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )

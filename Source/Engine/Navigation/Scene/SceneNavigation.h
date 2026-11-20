@@ -102,7 +102,27 @@ namespace sw
         static constexpr uint32 kObstacle = 1u << 3; ///< 장애물 발자국
         /** @brief 걷는 면 · 에이전트 경로를 씬의 메시로(편집기 없는 게임 화면 · 스크린샷에도 보인다 — 디버그 선은 편집기 뷰포트만 그린다). */
         static constexpr uint32 kSolidView = 1u << 4;
-        static constexpr uint32 kAll       = kMesh | kPath | kVelocity | kObstacle | kSolidView;
+        /** @brief 스트리밍 월드의 대략 그래프(클러스터 · 간선, 타일이 오른 클러스터는 초록 · 읽는 중 노랑 · 내려감 회색)와 에이전트의 먼 경로(중간 목표 · 대략 점). */
+        static constexpr uint32 kCluster = 1u << 5;
+        static constexpr uint32 kAll     = kMesh | kPath | kVelocity | kObstacle | kSolidView | kCluster;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 에이전트 종류 하나의 스트리밍 길찾기 상태입니다(디버그 HUD `navstream` · 감시 값). */
+    struct NavStreamStats
+    {
+        hashed_string _agentType{};
+        uint32        _clusterCount{ 0 }; ///< 대략 그래프의 클러스터 수(0 이면 먼 경로를 쓰지 않는다)
+        uint32        _clusterEdgeCount{ 0 };
+        uint32        _streamTileCount{ 0 }; ///< 쿠킹본의 걸을 곳 있는 타일 수(내비 데이터 청크)
+        uint32        _loadedTileCount{ 0 };
+        uint32        _loadingTileCount{ 0 };
+        uint32        _failedTileCount{ 0 };
+        uint32        _coarseRouteAgentCount{ 0 }; ///< 중간 목표로 가는 에이전트 수
+        uint32        _virtualAgentCount{ 0 };     ///< 내려간 타일 위를 가상 이동하는 에이전트 수
+        uint64        _replanCount{ 0 };           ///< 먼 경로를 새로 정한 수(누적)
     };
 } // namespace sw
 
@@ -198,7 +218,8 @@ namespace sw
 
         /**
          * @brief 비동기 경로 요청 — 에이전트 종류의 거름(넘길 때의 영역 비용)으로 @p start 에서 @p end 까지를 줄에 세웁니다. 아무 스레드(병렬 틱)에서 부릅니다.
-         * @details 다음 갱신이 워커에 넘기고 그다음 갱신(⓪)이 수확한다. 요청자는 이동 전용 표를 쥐고 `takePathResult` 로 받는다 — 표가 사라지거나 `cancel` 하면
+         * @details 경로는 계층 경로다(`findStreamingPath` 와 같은 `NavStreamRoute::findPath`) — 오르지 않은 타일 너머 끝은 `Partial` 과 대략 점(`NavPath::_listCoarsePoint`)이다.
+         *          다음 갱신이 워커에 넘기고 그다음 갱신(⓪)이 수확한다. 요청자는 이동 전용 표를 쥐고 `takePathResult` 로 받는다 — 표가 사라지거나 `cancel` 하면
          *          버린다(언리얼 `AbortAsyncFindPathRequest`). 한 갱신은 설정의 `_maxPathRequestsPerUpdate` 까지 넘긴다. 씬을 비우면 모든 요청이 사라진다(남은 표는 `Unknown`). 아직 베이크하지 않은 종류면 결과는 `Failed` 경로다.
          */
         [[nodiscard]] NavPathTicket requestPath( const hashed_string& agentType, const float3& start, const float3& end );
@@ -214,7 +235,16 @@ namespace sw
         /** @brief 경로 — 에이전트 종류의 기본 거름(표의 영역 비용)입니다. 찾는 범위는 종류의 몸 크기입니다. 동기 질의 — 대상 수만큼 매 프레임 묻는 곳은 `requestPath` 를 쓴다. */
         NavPathStatus findPath( const hashed_string& agentType, const float3& start, const float3& end, NavPath& outPath ) const;
         /** @brief 경로 — 거름을 줍니다. */
-        NavPathStatus      findPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter, NavPath& outPath ) const;
+        NavPathStatus findPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter, NavPath& outPath ) const;
+        /**
+         * @brief 계층 경로 — 스트리밍 씬에서 목적지 쪽 타일이 아직 오르지 않았어도 대략 그래프(`NavClusterGraph`)로 지나갈 길을 정합니다(`NavStreamRoute::findPath`).
+         * @details 목적지까지 타일이 이어 올라 있으면 `findPath` 와 같다. 아니면 @p outPath 는 앞선 타일 가장자리까지의 세밀 경로이고 그 너머는 `NavPath::_listCoarsePoint`
+         *          (클러스터 중심들 · 마지막은 @p end)이며 결과는 `Partial` 이다. 대략 그래프가 없거나(스트리밍하지 않는 씬) 이어지지 않으면 `findPath` 와 같다. 동기 질의다 —
+         *          비동기 요청(`requestPath`)과 경로 감시 값도 같은 함수를 지난다.
+         */
+        NavPathStatus findStreamingPath( const hashed_string& agentType, const float3& start, const float3& end, NavPath& outPath ) const;
+        /** @brief 마련한 에이전트 종류마다 스트리밍 길찾기 상태를 @p outListStats 에 채웁니다(비우고 채운다, 진단). */
+        void               collectStreamStats( vector<NavStreamStats>& outListStats ) const;
         [[nodiscard]] bool findNearestPoint( const hashed_string& agentType, const float3& position, NavLocation& outLocation ) const;
         [[nodiscard]] bool raycast( const hashed_string& agentType, const float3& start, const float3& end, NavRaycastHit& outHit ) const;
         /**

@@ -3,6 +3,7 @@
  * @brief Android NativeActivity 의 진입점입니다(`android_native_app_glue` 가 자기 스레드에서 `android_main` 을 부른다). 앱 수명은 데스크톱과 같은 `AppEntry::run` 이다.
  * @details 명령줄은 인텐트의 문자열 추가값(`AndroidWindow::kIntentArgumentsExtra`)이다 — 데스크톱과 같은 글을 따옴표 규칙으로 나눈다(`-scenario` · `-log` …).
  *          표면이 생긴 뒤에 앱을 세운다(RHI 가 창을 찾는다).
+ *          개발 구성에서 `-fileserve=<주소>` 면 팩을 APK 대신 PC 의 Fileserve 서버에서 받아 읽는다(설계 DesignBacklog "Fileserve" 결정 3 — 엔진이 첫 팩을 읽기 전에 건다).
  */
 #include "pch.h"
 
@@ -19,6 +20,17 @@
 
     #include "Engine/Window/Android/AndroidWindow.h"
 
+    #if !defined( SW_SHIPPING )
+        #include "Core/CommandLine/CommandLineManager.h"
+
+        #include "Engine/Config/ConfigManager.h"
+        #include "Engine/Config/EngineConfig.h"
+        #include "Engine/Config/PlatformConfigOverride.h"
+        #include "Engine/Net/Dev/PlainHTTPClient.h"
+        #include "Engine/Net/FileServe/FileServeContentSource.h"
+        #include "Engine/Serialization/JSON/JSONDocument.h"
+    #endif
+
     #include <android_native_app_glue.h>
     #include <stdlib.h>
 
@@ -26,6 +38,57 @@
 namespace
 {
     constexpr int32 kWaitForever = -1; ///< ALooper_pollOnce 의 시한 없음
+
+    #if !defined( SW_SHIPPING )
+    /** @brief `-fileserve` 거울 폴더 이름(앱 내부 저장소 아래)입니다. */
+    constexpr const utf8* kFileServeMirrorFolder = "FileServe";
+
+    /** @brief `-fileserve` 전송 하나 — 클라이언트와 소스는 `AppEntry::run` 동안 산다. */
+    struct FileServeMount
+    {
+        sw::unique_ptr<sw::PlainHTTPClient>        _pClient;
+        sw::unique_ptr<sw::FileServeContentSource> _pSource;
+    };
+
+    /**
+     * @brief `-fileserve=<주소>` 가 적혔으면 팩 폴더를 그 서버로 옮기는 소스를 만듭니다. 안 적혔으면 빈 값이다.
+     * @details 한도는 구운 엔진 설정(`EngineConfig::_fileServe` — 정적 구성은 디스크 Config 가 없다)에서 읽는다. 주소 · 설정이 틀리면 멈춘다(APK 팩으로 대신하지 않는다).
+     */
+    FileServeMount mountFileServe( sw::vector<utf8*>& listArgumentPointer, const utf8* pInternalDataPath )
+    {
+        FileServeMount mount;
+        sw::string     baseURL;
+        if ( sw::CommandLineManager::findValueBeforeParse( static_cast<int32>( listArgumentPointer.size() - 1 ), listArgumentPointer.data(), sw::CommandLineArgument::FILESERVE,
+                                                           baseURL ) == false )
+            return mount;
+        if ( sw::PlainHTTPClient::isServerRootURL( baseURL ) == false )
+            SW_FATAL( "AndroidMain: -fileserve='%#' is not http://<host>:<port> (no path, query or trailing slash, printable ASCII)", baseURL );
+        // 엔진 설정 전체가 아니라 `_fileServe` 하위만 읽는다 — 다른 칸의 오류가 이 개발 전송을 막지 않고, 읽기 비용이 작다.
+        sw::string          engineJSON;
+        sw::JSONDocument    document;
+        sw::FileServeConfig settings;
+        bool                bRead = false;
+        if ( sw::PlatformConfigOverride::composeBakedEngineConfig( engineJSON ) && document.parse( engineJSON, "EngineConfig.json (baked)" ) )
+        {
+            const sw::JSONValue section = document.getRoot().get( "_fileServe" );
+            if ( section.isObject() )
+            {
+                const auto sectionJSON = section.dump();
+                bRead                  = sectionJSON.has_value() && sw::ConfigManager::readConfigJSON( &settings, *sw::FileServeConfig::StaticType(), *sectionJSON, "EngineConfig.json _fileServe (baked)" );
+            }
+        }
+        if ( bRead == false )
+            SW_FATAL( "AndroidMain: -fileserve needs the baked EngineConfig _fileServe limits (the log above names the key)" );
+        if ( settings._maxResponseBodyBytes < sw::FileServeContentSource::kChunkBytes )
+            SW_FATAL( "AndroidMain: EngineConfig _fileServe._maxResponseBodyBytes %# is below the Fileserve chunk (%# bytes)", settings._maxResponseBodyBytes,
+                      sw::FileServeContentSource::kChunkBytes );
+        mount._pClient = sw::make_unique<sw::PlainHTTPClient>( settings );
+        mount._pSource = sw::make_unique<sw::FileServeContentSource>( *mount._pClient, baseURL, sw::ProcessRoots::get()._packs.str(),
+                                                                      sw::string( pInternalDataPath ) + "/" + kFileServeMirrorFolder );
+        SW_LOG_INFO_ID( "AndroidMain.FileServeMounted", "Android: packs come from Fileserve %# (mirror %#/%#)", baseURL, pInternalDataPath, kFileServeMirrorFolder );
+        return mount;
+    }
+    #endif
 } // namespace
 
 extern "C" void android_main( android_app* pApp )
@@ -48,9 +111,15 @@ extern "C" void android_main( android_app* pApp )
     // 루트와 콘텐츠 소스는 무엇이 읽기 전에 건다 — 앱 전용 폴더가 바이너리 폴더를 대신하고(ProcessRoots), 팩 폴더 경로는 APK 의 assets/Packs 로 옮겨 읽는다.
     if ( pApp->activity->internalDataPath == nullptr || setenv( sw::kAndroidAppFolderVariable, pApp->activity->internalDataPath, 1 ) != 0 )
         SW_FATAL( "AndroidMain: the activity has no internal data path - the process roots cannot be set" );
-    const sw::AndroidAssetFileReader    assetReader{ pApp->activity->assetManager };
-    const sw::BundledContentFileSource  packSource{ assetReader, sw::ProcessRoots::get()._packs.str(), sw::constant::path::kPacksFolder };
-    const sw::IContentFileSource* const pPreviousSource = sw::ContentFileSource::bindCurrent( &packSource );
+    const sw::AndroidAssetFileReader   assetReader{ pApp->activity->assetManager };
+    const sw::BundledContentFileSource packSource{ assetReader, sw::ProcessRoots::get()._packs.str(), sw::constant::path::kPacksFolder };
+    const sw::IContentFileSource*      pPackSource = &packSource;
+    #if !defined( SW_SHIPPING )
+    const FileServeMount fileServe = mountFileServe( listArgumentPointer, pApp->activity->internalDataPath );
+    if ( fileServe._pSource != nullptr )
+        pPackSource = fileServe._pSource.get();
+    #endif
+    const sw::IContentFileSource* const pPreviousSource = sw::ContentFileSource::bindCurrent( pPackSource );
     (void)sw::AppEntry::run( static_cast<int32>( listArgument.size() ), listArgumentPointer.data() );
     (void)sw::ContentFileSource::bindCurrent( pPreviousSource );
     // 게임이 스스로 끝냈으면(종료 메뉴 · 시나리오 끝) 액티비티를 끝내 달라고 하고 글루의 destroyRequested 까지 기다린다(감사 P0-9).

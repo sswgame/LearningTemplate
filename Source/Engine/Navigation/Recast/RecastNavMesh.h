@@ -46,6 +46,7 @@ namespace sw
                                      NavTileData& outTile ) const override;
         [[nodiscard]] bool replaceTile( const NavTileData& tile ) override;
         void               collectTiles( vector<NavTileData>& outListTile ) const override;
+        void               collectClusterGraph( NavClusterGraph& outGraph ) const override;
         uint32             getLoadedTileCount() const override;
         uint32             getPolygonCount() const override;
         uint32             getRevision() const override { return _revision; }

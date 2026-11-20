@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHISwapChain.h"
 
+#include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/DXGITearing.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
 
@@ -9,7 +10,7 @@
 
 namespace sw
 {
-    bool D3D11RHISwapChain::attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height, uint32 swapChainFlags )
+    bool D3D11RHISwapChain::attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height, uint32 swapChainFlags, RHIFormat sdrFormat )
     {
         // 모든 DX11 스왑체인이 여기를 지나므로 창 연결 끄기도 여기 하나다(DXGITearing.h — Alt+Enter 배타 전체 화면 R-1).
         if ( disableDXGIWindowChanges( pSwapChain, hWnd ) == false )
@@ -17,11 +18,14 @@ namespace sw
             SW_LOG_ERROR_ID( "D3D11.WindowAssociationFailed", "IDXGIFactory::MakeWindowAssociation failed - DXGI would take Alt+Enter into exclusive fullscreen where tearing Present fails" );
             return false;
         }
-        _swapChain      = pSwapChain;
-        _pHWnd          = hWnd;
-        _width          = width;
-        _height         = height;
-        _swapChainFlags = swapChainFlags;
+        _swapChain            = pSwapChain;
+        _pHWnd                = hWnd;
+        _width                = width;
+        _height               = height;
+        _swapChainFlags       = swapChainFlags;
+        _sdrFormat            = sdrFormat;
+        _colorSpace           = RHIColorSpace::SRGBNonLinear; // 넘겨받는 스왑체인은 늘 SDR 로 만든다(주 창 · 다른 창) — HDR 은 `setColorSpace` 가 켠다
+        _displayOutputSupport = queryDXGIDisplayOutputSupport( pSwapChain );
         return true;
     }
 
@@ -33,6 +37,7 @@ namespace sw
         desc.OutputWindow      = hWnd;
         desc.BufferDesc.Width  = width;
         desc.BufferDesc.Height = height;
+        desc.BufferDesc.Format = toDXGIFormat( source._sdrFormat ); // 주 창이 HDR 이어도 다른 창(에디터 도구 창)은 SDR 이다 — 그 창의 UI PSO 는 SDR 포맷 하나다
 
         // 디바이스를 만든 팩터리에 만든다 — 다른 팩터리의 스왑체인은 이 디바이스와 짝이 아니다.
         Microsoft::WRL::ComPtr<IDXGIDevice>    dxgiDevice;
@@ -45,7 +50,7 @@ namespace sw
                               isHrSuccess( factory->CreateSwapChain( pDevice, &desc, created.GetAddressOf() ), "IDXGIFactory::CreateSwapChain" );
         if ( bCreated == false )
             return false;
-        return attach( created.Get(), hWnd, width, height, desc.Flags );
+        return attach( created.Get(), hWnd, width, height, desc.Flags, source._sdrFormat );
     }
 
     void D3D11RHISwapChain::shutdown()
@@ -73,7 +78,39 @@ namespace sw
             SW_LOG_ERROR_ID( "D3D11.ResizeBuffersFailedHrX", "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
             return false;
         }
+        _displayOutputSupport = queryDXGIDisplayOutputSupport( _swapChain.Get() );                     // 창을 다른 모니터로 끌어 크기가 바뀌었을 수 있다
+        _colorSpace           = reapplyDXGIColorSpace( makeBuffers(), _colorSpace, _displayMetadata ); // ResizeBuffers 가 HDR 메타데이터를 잃을 수 있다
         return true;
+    }
+
+    bool D3D11RHISwapChain::setColorSpace( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
+    {
+        if ( _swapChain == nullptr )
+            return false;
+        // 포맷만 바꿔 다시 만든다. 실패하면 옛 포맷 · 색 공간(못 하면 SDR)으로 되돌린 값이 온다 — 버퍼 포맷과 기록한 색 공간이 늘 짝이다.
+        const RHIColorSpace result   = changeDXGIColorSpace( makeBuffers(), _colorSpace, _displayMetadata, colorSpace, metadata );
+        const bool          bChanged = result == colorSpace;
+        if ( bChanged )
+            _displayMetadata = metadata;
+        _colorSpace           = result;
+        _displayOutputSupport = queryDXGIDisplayOutputSupport( _swapChain.Get() );
+        return bChanged;
+    }
+
+    bool D3D11RHISwapChain::setDisplayMetadata( const RHIDisplayMetadata& metadata )
+    {
+        if ( _colorSpace != RHIColorSpace::HDR10ST2084 )
+        {
+            _displayMetadata = metadata;
+            return true;
+        }
+        if ( applyDXGIColorSpace( _swapChain.Get(), _colorSpace, metadata ) )
+        {
+            _displayMetadata = metadata;
+            return true;
+        }
+        (void)applyDXGIColorSpace( _swapChain.Get(), _colorSpace, _displayMetadata ); // 실패는 색 공간을 SDR 로 내렸다 — 버퍼는 HDR10 이라 옛 값으로 다시 알린다
+        return false;
     }
 
     void D3D11RHISwapChain::acquireNextImage( ID3D11Device* pDevice )

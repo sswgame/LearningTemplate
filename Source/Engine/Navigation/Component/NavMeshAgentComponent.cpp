@@ -62,10 +62,14 @@ namespace sw
         , _writtenPosition{}
         , _linkTraversal{}
         , _linkType{}
+        , _listRoutePoint{}
+        , _routeTarget{}
         , _crowdAgentID{ NavigationConstant::kInvalidAgentID }
         , _navIndex{ SceneNavigation::kNotRegistered }
         , _crowdIndex{ SceneNavigation::kNotRegistered }
         , _writtenTransformVersion{ 0 }
+        , _routeRevision{ 0 }
+        , _routeReplanCount{ 0 }
         , _moveStatus{ NavMoveStatus::Idle }
         , _bHasDestination{ SW_FALSE }
         , _bDestinationDirty{ SW_FALSE }
@@ -74,6 +78,9 @@ namespace sw
         , _bHasWritten{ SW_FALSE }
         , _bParamsDirty{ SW_FALSE }
         , _bOnOffMeshLink{ SW_FALSE }
+        , _bRouteIntermediate{ SW_FALSE }
+        , _bVirtualMove{ SW_FALSE }
+        , _bVirtualOverLoaded{ SW_FALSE }
         , _reserved{ 0 }
     {
     }

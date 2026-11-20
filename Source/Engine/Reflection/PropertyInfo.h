@@ -141,6 +141,14 @@ namespace sw
         /** @brief 단일 컨테이너와 중첩 컨테이너를 똑같이 다루기 위한 구조 정보를 반환합니다. */
         NestedContainerInfo getContainerShape() const;
 
+        /**
+         * @brief 상태 직렬화 · 상태 해시가 원소 차례대로 싣는 시퀀스 래퍼입니다 — 중첩이 아니고, 원소를 제자리에서 쓰는(차례가 정해진) 시퀀스.
+         *        컨테이너가 아니거나 그 밖(맵 · 집합 · 중첩)이면 nullptr 입니다.
+         * @details 표(`ReflectBuiltins.xxx` CONTAINER 줄)의 State 역할과 같은 판정이다 — 생성 코드가 래퍼 형식과 역할을 컴파일 때 대조한다(`ContainerWrapperOf::matchesTable`).
+         *          `StateIO::reflected` 와 `Component::foldStateHash` 가 이 하나로 가른다.
+         */
+        const ISequenceContainerWrapper* findStateSequence() const;
+
         /** @brief 비트필드에서 그 비트 하나만 1 로 세우는 함수입니다. 생성 코드가 만듭니다. 인자는 0 으로 채운, 그 타입 크기의 메모리입니다. */
         using SetBitFunction = void ( * )( void* pInstance );
 

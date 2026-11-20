@@ -20,9 +20,11 @@
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
+#include "Engine/Renderer/Graph/RenderGraph.h"
 
 namespace sw
 {
+    class FrameBufferTable;
     class IRHICommandList;
     class IRHIDevice;
     struct FrameViewTarget;
@@ -43,16 +45,36 @@ namespace sw
         /** @brief 자리표와 되읽기 고리 · 우편함을 놓습니다. */
         void release( IRHIDevice* pDevice );
 
+        /** @brief 프레임 그래프의 피라미드 자원(파이프라인 XML `HZBBuild` 의 출력 `HZB`)입니다 — 뷰 칸마다 `FrameViewTarget::_hzb`. */
+        static RenderGraphBufferUAV getPyramidUAV();
+        /** @brief 프레임 그래프의 가림 타일 자원(파이프라인 XML `HZBBuild` 의 출력 `OcclusionTiles`)입니다 — 뷰 칸마다 `FrameViewTarget::_occlusionTiles`. */
+        static RenderGraphBufferUAV getTilesUAV();
         /**
-         * @brief 뷰 @p target 의 깊이 사본(이미 채운 `_depthHistory`)에서 피라미드를 짓는 디스패치를 기록하고, 지은 배치 · 뷰-투영을 뷰에 적습니다(`_bHZBValid`).
+         * @brief 이번 프레임 프레임 패스 `HZBBuild` 가 짓는 뷰의 피라미드 · 가림 타일을 @p table 의 칸 @p viewSlot 으로 등록합니다(처음 접근 셰이더 읽기 — 첫 사용이 UAV 쓰기라
+         *        그 전이는 늘 나간다). 버퍼가 없으면 등록하지 않는다(짓지도 않는다).
+         */
+        static void registerFrameResources( FrameBufferTable& table, uint32 viewSlot, const FrameViewTarget& target );
+
+        /**
+         * @brief 프레임 패스 `HZBBuild` 에서 뷰 @p target 의 깊이 사본(이미 채운 `_depthHistory`)으로 피라미드를 짓는 디스패치를 기록하고, 지은 배치 · 뷰-투영을 뷰에 적습니다(`_bHZBValid`).
+         * @details 전이는 그래프 레벨 콜백이 냈다(`HZB` · `OcclusionTiles` 를 UAV 로, 읽는 컬링 앞에서 SRV 로). 밉 사이 의존은 선언한 UAV 핸들의 `uavBarrier` 다.
+         *          깊이 사본은 생산자(`FrameGraphExecutor::copySceneDepth`)가 RW 텍스처 상태로 넘겨 둔다.
+         * @param graphContext 이 패스의 그래프 문맥(선언한 접근 · 자원 표 · 리스트)입니다.
+         * @param viewSlot 이 뷰의 칸(`registerFrameResources` 와 같은 값)입니다.
          * @param pso `RenderPassKind::HZBBuild` 의 PSO 입니다(없으면 0 — 짓지 않는다).
          * @param depthWidth · depthHeight 깊이 사본에서 읽을 사각형(px) — 자동 렌더 배율이면 텍스처보다 작다.
          * @param viewProj 그 깊이를 그린 뷰-투영(행 벡터 규약)입니다.
          * @param bWriteTiles 16 px 밉의 최대 깊이를 가림 타일 버퍼에도 쓸지입니다(프레임 처음 주 시점 — 되읽기).
          * @return 지었으면 true. 버퍼 · 사본 · PSO 가 없거나 용량이 모자라면 false 이고 `_bHZBValid` 를 내린다.
          */
-        bool record( IRHICommandList& cmd, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj, bool bWriteTiles,
-                     FrameViewTarget& target ) const;
+        bool record( const RenderGraphPassContext& graphContext, uint32 viewSlot, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight,
+                     const float4x4& viewProj, bool bWriteTiles, FrameViewTarget& target ) const;
+        /**
+         * @brief 뷰 그래프 패스 안(깊이 프리패스 뒤 2 단계 가림 · 화면 공간 반사 앞)에서 피라미드를 짓습니다. 인자 뜻은 프레임 패스 판과 같다.
+         * @details shortcut: 뷰 그래프는 버퍼 접근을 모른다 — 여기서는 전이와 밉 사이 UAV 배리어를 손으로 낸다(앞 UAV, 끝 SRV), 뷰 패스를 접근 핸들로 옮길 때(렌더 그래프 접근 핸들 ③) 지운다.
+         */
+        bool recordInViewPass( IRHICommandList& cmd, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj,
+                               FrameViewTarget& target ) const;
         /**
          * @brief 주 시점 가림 타일을 되읽는 복사를 프레임 그래프 리스트에 넣고, 이미 도착한 사본이 있으면 우편함에 올립니다(`getSnapshot`).
          * @details 프레임 처음 짓기 직후에 부른다. 이번 프레임에 타일을 짓지 않았거나 기록을 버리는 프레임이면 우편함을 비운다(그 타일은 지난 장면의 것이라 맞지 않는다).
@@ -84,6 +106,16 @@ namespace sw
         };
         static constexpr uint32 kReadbackMetaCount = 8;
 
+    private:
+        /**
+         * @brief 피라미드 디스패치(밉마다 하나)를 기록합니다. 짓지 못하면(버퍼 · 사본 · PSO · 용량) 아무것도 기록하지 않고 false 입니다.
+         * @details @p barriers 가 디스패치 앞(`begin`) · 밉 사이(`betweenMips`) · 뒤(`end`)의 배리어를 낸다 — 프레임 패스는 그래프 핸들, 뷰 패스 안은 손 배리어다(cpp 의 두 판).
+         */
+        template <typename Barriers>
+        bool recordPyramid( IRHICommandList& cmd, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj, bool bWriteTiles,
+                            FrameViewTarget& target, const Barriers& barriers ) const;
+
+    private:
         RHIStructuredBuffer  _placeholder{};                         ///< 가림 판정을 보지 않는 컬링의 t2(float2 하나 — 최소 · 최대 깊이 1)
         AsyncBufferReadback  _readback{};                            ///< 주 시점 가림 타일 되읽기 고리
         ReadbackMeta         _arrReadbackMeta[kReadbackMetaCount]{}; ///< 요청마다의 뷰-투영 · 격자

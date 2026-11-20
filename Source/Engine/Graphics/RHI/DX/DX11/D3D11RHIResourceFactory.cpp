@@ -71,6 +71,57 @@ namespace sw
         }
     }
 
+    RHIBufferHandle D3D11RHIResourceFactory::createConstantBufferPage( uint32 size )
+    {
+        // 기본 용도 상수 버퍼다 — 구간마다 `UpdateSubresource1` 로 부분 갱신하고, 진행 중 프레임과의 순서는 즉시 컨텍스트가 지킨다(동적 버퍼의 WRITE_DISCARD 는 페이지 전체를 버린다).
+        const bool bCannotCreatePage = _pDevice == nullptr || _pDevice->_device == nullptr || size == 0 || _pDevice->_bConstantBufferSlices == SW_FALSE;
+        if ( bCannotCreatePage )
+        {
+            SW_LOG_ERROR_ID( "D3D11.CreateConstantBufferPageUnsupported", "createConstantBufferPage: no device, size=%# or no D3D11.1 constant buffer slices", size );
+            return 0;
+        }
+        D3D11_BUFFER_DESC bufferDesc{};
+        bufferDesc.Usage     = D3D11_USAGE_DEFAULT;
+        bufferDesc.ByteWidth = MathUtil::align( size, constant::render::kConstantBufferAlignment );
+        bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+        Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
+        if ( isHrSuccess( _pDevice->_device->CreateBuffer( &bufferDesc, nullptr, buffer.GetAddressOf() ), "CreateBuffer (constant buffer page)" ) == false )
+            return 0;
+        return _pDevice->storeBuffer( std::move( buffer ) );
+    }
+
+    void D3D11RHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    {
+        const bool bInvalidSliceUpdate = slice._buffer == 0 || pData == nullptr || size == 0 || _pDevice->_immediateContext1 == nullptr;
+        if ( bInvalidSliceUpdate )
+            return;
+        ID3D11Buffer* pResource = _pDevice->resolveBuffer( slice._buffer );
+        if ( pResource == nullptr )
+            return;
+        // 부분 갱신 상자는 16 B 상수 단위다 — 16 B 배수 앞부분은 원본에서 바로 쓰고, 남는 꼬리(머티리얼 바이트는 256 B 정렬이라 보통 없다)만 스택의 0 채운 상수 하나로 쓴다.
+        constexpr uint32 kConstantBytes = D3D11RHIDevice::kShaderConstantBytes;
+        const uint32     writeBytes     = MathUtil::min( size, slice._size );
+        const uint32     bodyBytes      = writeBytes - writeBytes % kConstantBytes;
+        const uint32     tailBytes      = writeBytes - bodyBytes;
+        uint8            arrTail[kConstantBytes]{};
+        Memory::copy( arrTail, static_cast<const uint8*>( pData ) + bodyBytes, tailBytes );
+        // 상수 버퍼의 부분 갱신은 CopyFlags 가 NO_OVERWRITE · DISCARD 여야 한다(디버그 층 — 0 이면 드라이버가 상자를 버린다). DISCARD 는 리소스 내용 전체를 버릴 수 있어 다른 구간이 깨진다 —
+        // 구간은 서로 겹치지 않고 그 구간만 쓰므로 "다른 내용을 덮지 않는다" 인 NO_OVERWRITE 다.
+        constexpr UINT                          kPartialUpdateFlags = D3D11_COPY_NO_OVERWRITE;
+        const D3D11ImmediateContext::ScopedLock context             = _pDevice->_immediateContext.lock();
+        if ( bodyBytes != 0 )
+        {
+            const D3D11_BOX box{ slice._offset, 0, 0, slice._offset + bodyBytes, 1, 1 };
+            _pDevice->_immediateContext1->UpdateSubresource1( pResource, 0, &box, pData, 0, 0, kPartialUpdateFlags );
+        }
+        if ( tailBytes != 0 && bodyBytes + kConstantBytes <= slice._size )
+        {
+            const D3D11_BOX box{ slice._offset + bodyBytes, 0, 0, slice._offset + bodyBytes + kConstantBytes, 1, 1 };
+            _pDevice->_immediateContext1->UpdateSubresource1( pResource, 0, &box, arrTail, 0, 0, kPartialUpdateFlags );
+        }
+    }
+
     RHIBufferHandle D3D11RHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
     {
         if ( elementSize == 0 || elementCount == 0 )
@@ -821,7 +872,23 @@ namespace sw
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_bufferRegistry.allocate( buffer );
+        return _pDevice->_bufferRegistry.allocate( D3D11RHIDevice::BufferEntry{ buffer } );
+    }
+
+    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
+        if ( slice._buffer == 0 || _pDevice->resolveBuffer( slice._buffer ) == nullptr )
+            return kInvalidDescriptorIndex;
+        // `*SetConstantBuffers1` 의 첫 상수 · 상수 수는 16 상수(256 B)의 배수다 — 구간은 256 B 배수다.
+        const bool bBadSlice = _pDevice->_bConstantBufferSlices == SW_FALSE || slice._size == 0 || slice._offset % constant::render::kConstantBufferAlignment != 0;
+        if ( bBadSlice )
+        {
+            SW_LOG_ERROR_ID( "D3D11.BadConstantBufferSlice", "registerBindlessBufferSRV: slice (offset %#, size %#) is not a 256-aligned constant buffer page slice", slice._offset, slice._size );
+            return kInvalidDescriptorIndex;
+        }
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_bufferRegistry.allocate( D3D11RHIDevice::BufferEntry{ slice._buffer, slice._offset, slice._size } );
     }
 
     void D3D11RHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )

@@ -3,6 +3,7 @@
 #include "Engine/Animation/AnimationPlayback.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Time/PlaybackSegment.h"
 
 namespace sw
 {
@@ -119,14 +120,16 @@ namespace sw
                                              vector<AnimationFiredNotify>& outListFired ) const
     {
         const size_t firstAdded = outListFired.size();
+        // 문턱 규칙은 시퀀서와 같은 공용 구간(`PlaybackSegment` — (from, to])이다. 첫 걸음은 시작 시각 자체를 더 넣는다.
+        const PlaybackSegment<float32> segment{ fromTime, toTime };
         for ( size_t eventIndex = 0; eventIndex < _listEvent.size(); ++eventIndex )
         {
             const AnimationNotifyEvent& event         = _listEvent[eventIndex];
             const bool                  bState        = event._duration > 0.0f;
             const float32               endTime       = bState ? computeEndTime( event, playLength ) : 0.0f;
-            const bool                  bStartCrossed = ( bIncludeFrom ? event._time >= fromTime : event._time > fromTime ) && event._time <= toTime;
+            const bool                  bStartCrossed = segment.hasCrossed( event._time ) || ( bIncludeFrom && event._time == fromTime );
             // 끝은 시작과 같은 구간 규칙을 쓴다. 다만 시작 시각을 포함하는 첫 걸음에서도 끝 시각 자체가 from 이면 이미 닫힌 구간이라 뺀다.
-            const bool bEndCrossed = bState && endTime > fromTime && endTime <= toTime;
+            const bool bEndCrossed = bState && segment.hasCrossed( endTime );
             if ( bStartCrossed )
             {
                 AnimationFiredNotify fired{};

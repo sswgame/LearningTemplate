@@ -120,6 +120,10 @@ namespace sw
                 return false;
             }
         }
+        // 부활 규칙은 스테이지마다 다르다(체크포인트 · 제자리 · 스폰 지점) — 적힌 `<Respawn>` 이 틀리면 그 스테이지를 넣지 않는다.
+        const XMLNode respawnNode = node.findChild( "Respawn" );
+        if ( respawnNode && RespawnRules::readXML( respawnNode, sourceName, stage._respawn ) == false )
+            return false;
         (void)_stageCatalog.add( stage );
         return true;
     }

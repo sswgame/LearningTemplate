@@ -497,6 +497,12 @@ namespace sw
                 listEntry.push_back( Internal::makeBufferEntry( binding, _pDevice->_defaultBuffer, 0, WGPU_WHOLE_SIZE ) );
                 continue;
             }
+            // 상수 버퍼 페이지의 구간이면 그 오프셋 · 크기만 건다(감사 R-4). 구간은 팩토리 갱신만 받아 이름 바꾼 칸이 없다.
+            if ( entry._sliceSize != 0 )
+            {
+                listEntry.push_back( Internal::makeBufferEntry( binding, pBuffer->_buffer, entry._sliceOffset, entry._sliceSize ) );
+                continue;
+            }
             const bool bRenamed = pBuffer->_overrideSerial == _pDevice->getFrameSerial() && pBuffer->_overrideBuffer != nullptr;
             listEntry.push_back( bRenamed ? Internal::makeBufferEntry( binding, pBuffer->_overrideBuffer, pBuffer->_overrideOffset, pBuffer->_sizeBytes )
                                           : Internal::makeBufferEntry( binding, pBuffer->_buffer, 0, pBuffer->_sizeBytes ) );

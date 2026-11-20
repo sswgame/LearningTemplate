@@ -25,5 +25,6 @@ namespace sw
         Tool,            ///< 에디터 · 테스트 · 개발 토글 같은 도구 경로(프레임 경로가 아니다)
         PipelineSwitch,  ///< 렌더 파이프라인을 실행 중에 바꾼다(`gv_renderPipeline` · `gv_deferredShading`) — 옛 파이프라인의 패스 자원을 거두기 전
         WindowSwapChain, ///< 창 하나의 스왑체인을 만들거나 크기를 바꾸거나 부순다(에디터 플로팅 창 — `IRHIDevice::createSwapChain`)
+        DisplayOutput,   ///< 주 스왑체인의 색 공간(SDR · HDR10 · scRGB)을 바꾼다(`IRHIDevice::setBackBufferColorSpace` — 옵션 메뉴 · `-gv_displayOutput`, 창 크기 바뀜과 같은 길)
     };
 } // namespace sw

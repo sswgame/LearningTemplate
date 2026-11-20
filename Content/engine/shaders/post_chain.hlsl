@@ -22,6 +22,7 @@
     #include "post_outline.hlsli"
 #endif
 #if defined( SW_POST_TONEMAP )
+    #include "display_encode.hlsli"
     #include "post_grade.hlsli"
 #endif
 
@@ -63,7 +64,7 @@ float3 applyTonemap( float2 uv, float2 pixelPosition, float3 color )
 {
     // 뷰의 후처리 값은 톤맵과 함께 간다 — 노출 · 컬러 그레이딩은 톤맵 앞, LUT · 색 보정 · 비네트 · 레터박스는 뒤(post_grade.hlsli). 후처리를 끈 뷰는 PSMain 에서 원본을 고른다.
     color = CameraGrade::applyColorGrading( CameraGrade::applyExposure( color ) );
-    color = color / ( color + 1.0f );
+    color = DisplayEncode::applyToneCurve( color ); // 출력 휘도를 아는 곡선 — SDR 은 x / (x + 1) 그대로
     return CameraGrade::apply( uv, CameraGrade::applyFilmGrain( pixelPosition, CameraGrade::applyLUT( color ) ) );
 }
 #else

@@ -225,8 +225,9 @@ namespace sw
     /**
      * @struct OverlapInfo
      * @brief 겹침 시작과 끝 이벤트 하나의 정보입니다. 상대 오브젝트, 어느 콜라이더끼리 겹쳤는지(트리거 여부), 닿은 시점을 담습니다(언리얼 `OnComponentBeginOverlap` 의 인자).
-     * @details 겹침은 바디(콜라이더) 쌍마다 발생한다. 오브젝트 하나에 막는 콜라이더와 트리거(감지 범위)가 함께 있으면 같은 상대에게서 이벤트 둘이 올 수 있으므로,
-     *          받는 쪽은 트리거 여부로 구분한다. 예를 들어 투사체는 상대의 트리거에 막히지도 피해를 주지도 않는다.
+     * @details 겹침은 오브젝트 쌍마다 한 번이다(`PhysicsOverlapTracker` — 몸이 여럿인 상대도 진입 한 번, 마지막 몸이 나갈 때 이탈 한 번). 다만 트리거 여부는 따로 센다 —
+     *          오브젝트 하나에 막는 콜라이더와 트리거(감지 범위)가 함께 있으면 같은 상대에게서 이벤트 둘이 올 수 있으므로, 받는 쪽은 트리거 여부로 구분한다.
+     *          예를 들어 투사체는 상대의 트리거에 막히지도 피해를 주지도 않는다. 바디 칸은 그 쌍에서 마지막으로 알린 바디다.
      */
     struct OverlapInfo
     {
@@ -396,7 +397,7 @@ namespace sw
         /**
          * @brief 이 오브젝트의 콜라이더가 다른 오브젝트의 콜라이더와 겹치기 시작했을 때 불립니다(유니티의 `OnTriggerEnter2D`, 언리얼의 `BeginOverlap`).
          * @details 틱과 트랜스폼 적용 뒤에 게임 스레드에서 오브젝트의 켜진 컴포넌트마다 불린다. 이 안에서 스폰, 파괴, 구조 변경을 해도 된다.
-         *          한 step 의 겹침 이벤트는 닿은 시점(`OverlapInfo::_hitFraction`) 순서로 온다.
+         *          한 프레임 안에서는 이탈이 먼저, 진입이 다음이다. 트리거 안에서 생긴 것은 다음 물리 스텝에 진입하고, 파괴 · 비활성은 이탈을 받는다(DesignBacklog "트리거 Enter · Stay · Exit 계약").
          */
         virtual void onOverlapBegin( const OverlapInfo& overlap ) { (void)overlap; }
         /** @brief 겹침이 끝났을 때 불립니다(떨어짐, 꺼짐, 사라짐). 상대가 이미 사라졌으면 `OverlapInfo::_pOther` 는 nullptr 입니다. */

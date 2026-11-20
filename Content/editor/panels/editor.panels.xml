@@ -16,6 +16,7 @@
 		<EditorPanelText _title="Changes" _label="Changes" />
 		<EditorPanelText _title="Character Editor" _label="Character Editor" />
 		<EditorPanelText _title="Clip Preview" _label="Clip Preview" />
+		<EditorPanelText _title="Collision Responses" _label="Collision Responses" />
 		<EditorPanelText _title="Command Palette" _label="Command Palette" />
 		<EditorPanelText _title="Content Browser" _label="Content Browser" />
 		<EditorPanelText _title="Cutscene Debugger" _label="Cutscene Debugger" />
@@ -53,6 +54,7 @@
 		<EditorPanelText _title="Quick Open" _label="Quick Open" />
 		<EditorPanelText _title="Ragdoll Preview" _label="Ragdoll Preview" />
 		<EditorPanelText _title="Recovered Work" _label="Recovered Work" />
+		<EditorPanelText _title="Render Debugger" _label="Render Debugger" />
 		<EditorPanelText _title="Render Targets" _label="Render Targets" />
 		<EditorPanelText _title="Retarget Profile" _label="Retarget Profile" />
 		<EditorPanelText _title="Rig Debug" _label="Rig Debug" />

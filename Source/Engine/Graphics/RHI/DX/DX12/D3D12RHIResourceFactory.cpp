@@ -89,9 +89,29 @@ namespace sw
         if ( _pDevice->_mapCbMapped.contains( buffer ) == false )
             return;
         SW_PROFILE_COUNT( "RT.Bind.constantBufferWrites", 1 ); // 미러 락 경합의 분모(설계 L-1)
-        _pDevice->_constantBufferMirror.write( buffer, _pDevice->_frameRing.currentIndex(), pData, size,
-                                               [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
-        { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );
+        _pDevice->_constantBufferMirror.write( buffer, 0, _pDevice->_frameRing.currentIndex(), pData, size,
+                                               [this]( RHIBufferHandle target, uint32 slot, uint32 offset, const void* pBytes, uint32 byteCount )
+        { _pDevice->writeConstantBufferSlot( target, slot, offset, pBytes, byteCount ); } );
+    }
+
+    RHIBufferHandle D3D12RHIResourceFactory::createConstantBufferPage( uint32 size )
+    {
+        // 업로드 커밋 자원 하나(프레임 칸 × 페이지 크기)를 구간이 나눠 쓴다 — 버퍼마다 커밋 자원이던 것을 페이지당 하나로 줄인다(감사 R-4).
+        return createConstantBuffer( size );
+    }
+
+    void D3D12RHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    {
+        if ( slice._buffer == 0 || pData == nullptr )
+            return;
+        // 버퍼 갱신과 같은 길이되 이번 프레임 칸의 구간 오프셋에 쓴다(나머지 칸은 미러가 같은 오프셋에 채운다).
+        ScopedSharedLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        if ( _pDevice->_mapCbMapped.contains( slice._buffer ) == false )
+            return;
+        SW_PROFILE_COUNT( "RT.Bind.constantBufferWrites", 1 );
+        _pDevice->_constantBufferMirror.write( slice._buffer, slice._offset, _pDevice->_frameRing.currentIndex(), pData, MathUtil::min( size, slice._size ),
+                                               [this]( RHIBufferHandle target, uint32 slot, uint32 offset, const void* pBytes, uint32 byteCount )
+        { _pDevice->writeConstantBufferSlot( target, slot, offset, pBytes, byteCount ); } );
     }
 
     RHIBufferHandle D3D12RHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
@@ -1258,6 +1278,34 @@ namespace sw
         return index;
     }
 
+    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
+        if ( slice._buffer == 0 || _pDevice->_cbvHeap == nullptr )
+            return kInvalidDescriptorIndex;
+        auto* pResource = _pDevice->resolveBuffer( slice._buffer );
+        if ( pResource == nullptr )
+            return kInvalidDescriptorIndex;
+
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        // 루트 CBV 는 링 칸 주소 + 구간 오프셋이다(`resolveBufferAddress` 가 프레임 칸을 더한다). 링 페이지가 아니거나 칸을 넘는 구간은 부르는 쪽의 결함이다.
+        const auto sizeIt            = _pDevice->_mapCbAlignedSize.find( slice._buffer );
+        const bool bSliceOutsidePage = sizeIt == _pDevice->_mapCbAlignedSize.end() || static_cast<uint64>( slice._offset ) + slice._size > sizeIt->second;
+        const bool bSliceMisaligned  = slice._offset % D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT != 0 || slice._size == 0;
+        if ( bSliceOutsidePage || bSliceMisaligned )
+        {
+            lock.unlock(); // 잠금은 잎 잠금이다 — 로그는 놓은 뒤에 남긴다
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.BadConstantBufferSlice", "registerBindlessBufferSRV: slice (offset %#, size %#) is not a 256-aligned slice of a constant buffer page",
+                             slice._offset, slice._size );
+            return kInvalidDescriptorIndex;
+        }
+        const RHIDescriptorIndex index = acquireBindlessIndex( lock );
+        if ( index == kInvalidDescriptorIndex )
+            return kInvalidDescriptorIndex;
+        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, bindlessHandlesAt( index ), slice._buffer, 0, RHIBindlessLink::Owned, slice._offset );
+        return index;
+    }
+
     void D3D12RHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
@@ -1360,13 +1408,14 @@ namespace sw
     }
 
     void D3D12RHIResourceFactory::writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource,
-                                                       const BindlessHandleSet& handle, RHIBufferHandle buffer, RHITextureHandle texture, RHIBindlessLink link )
+                                                       const BindlessHandleSet& handle, RHIBufferHandle buffer, RHITextureHandle texture, RHIBindlessLink link, uint32 sliceOffset )
     {
         RHIBindlessRegistry<D3D12RHIDevice::BindlessResourceRecord>& target =
             ( registry == BindlessRegistry::UnorderedAccess ) ? _pDevice->_uavRegistry : _pDevice->_srvRegistry;
         D3D12RHIDevice::BindlessResourceRecord record{ pResource, handle._cpu, handle._offline };
-        record._buffer  = buffer;
-        record._texture = texture;
+        record._buffer      = buffer;
+        record._texture     = texture;
+        record._sliceOffset = sliceOffset;
         // 번호는 `acquireBindlessIndex` 가 발급기에서 받았다 — 산 칸이면 발급기를 거치지 않은 번호라 멈춘다.
         if ( target.assign( index, record, link ) == false )
             SW_FATAL( "D3D12: bindless index %# was written twice without a release", index );

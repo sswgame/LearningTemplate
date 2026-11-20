@@ -88,6 +88,15 @@ namespace sw
         Component::onEndPlay();
     }
 
+    void ZoneContactComponent::releaseOccupants( GameObjectManager& manager )
+    {
+        for ( unique_ptr<SurfaceZone>& pZone : _listSurfaceZone )
+        {
+            if ( pZone->_bValid == SW_TRUE && pZone->_tracker.getOccupants().empty() == false )
+                pZone->_tracker.exitAllOccupants( manager, pZone->_compiled, ActionSource{ pZone->_sourceName, GameObjectHandle{} } );
+        }
+    }
+
     void ZoneContactComponent::onCollisionBegin( const CollisionInfo& collision )
     {
         Component::onCollisionBegin( collision );

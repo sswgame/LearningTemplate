@@ -721,9 +721,9 @@ namespace sw
         // 위에서 연 백버퍼 패스를 연 쪽이 닫는다(남겨 두면 endFrame 이 닫지만 패스의 끝이 어디인지 여기서 보이게 둔다).
         if ( pFrameStream != nullptr )
             pFrameStream->endRenderPass();
-        // 화면에 쓰는 일이 모두 끝났다 — 회전한 화면이면 대기 텍스처를 스왑체인 이미지로 돌려 옮긴다(돌리지 않으면 아무것도 하지 않는다).
-        if ( pFrameStream != nullptr && screenTarget != 0 )
-            _pFrameRenderer->recordScreenRotation( *pFrameStream );
+        // 화면에 쓰는 일이 모두 끝났다 — 회전한 화면이면 대기 텍스처를 스왑체인 이미지로 돌려 옮기고, HDR 출력이면 UI 를 합성해 인코딩한다(둘 다 아니면 아무것도 하지 않는다).
+        if ( pFrameStream != nullptr && bRendererReady )
+            _pFrameRenderer->recordScreenOutput( *pFrameStream );
 
         {
             // 제출과 Present 다. GPU 가 밀리면 여기서 기다린다.
@@ -959,12 +959,14 @@ namespace sw
         if ( _pPendingTargetRead == nullptr )
         {
             RHITextureHandle texture = 0;
+            uint32           mip     = 0;
             uint32           serial  = 0;
-            if ( pRegistry->takeReadbackRequest( texture, serial ) == false )
+            if ( pRegistry->takeReadbackRequest( texture, mip, serial ) == false )
                 return;
             _pPendingTargetRead                     = make_unique<PendingRenderTargetRead>();
             _pPendingTargetRead->_pFactory          = &factory;
             _pPendingTargetRead->_readback._texture = texture;
+            _pPendingTargetRead->_readback._mip     = mip;
             _pPendingTargetRead->_readback._serial  = serial;
         }
 
@@ -988,7 +990,7 @@ namespace sw
                 publishFailure();
                 return;
             }
-            const RHITransferSubmit submit = factory.submitTextureReadback( pending._readback._texture, 0, 0, pending._readback._layout );
+            const RHITransferSubmit submit = factory.submitTextureReadback( pending._readback._texture, pending._readback._mip, 0, pending._readback._layout );
             if ( submit._result == RHISubmitResult::Busy )
                 return; // 스테이징이 찼다 — 같은 요청을 다음 프레임에 다시 낸다
             if ( submit.isAccepted() == false )

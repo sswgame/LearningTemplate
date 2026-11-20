@@ -1,6 +1,7 @@
 // NavTileStreamingTest — 스트리밍 씬의 내비메시 타일 스트리밍(감사 A-13): 씬 셀과 같은 원점 · 반경으로 쿠킹본 타일을 올리고 내린다(Detour `addTile` · `removeTile`).
 // 타일마다 그 영역의 입력 해시를 쿠킹 때와 견주어 다른 타일만 지금 기하로 다시 굽고, 셀이 오르내리면 그 구역 타일의 입력을 다시 잰다.
 // 쿠킹본은 메모리로 주고(`SceneNavigation::setCookedAsset`), 씬 기하는 기하 소스(`INavGeometrySource`)가 낸다.
+// 먼 경로(`NavStreamRoute`) — 오르지 않은 타일 너머 목적지로 출발해 타일이 오를 때마다 이어 가고, 내려간 구역은 대략 그래프로 가상 이동하며, 관찰자 둘(전용 서버 구성)에서도 닿는다.
 #include "pch.h"
 
 #include "Core/Delegate/Subscription.h"
@@ -8,11 +9,13 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Scene/Scene.h"
@@ -98,7 +101,8 @@ namespace
             NavMeshSettings settings;
             settings._listAgentType.push_back( agentType );
             settings._listArea.push_back( area );
-            settings._defaultAgentType = agentType._name;
+            settings._defaultAgentType         = agentType._name;
+            settings._maxPathRequestsPerUpdate = 8; // 정책 값(기본 0 은 "넘기지 않음") — 비동기 요청이 워커로 간다
             return settings;
         }
 
@@ -128,6 +132,7 @@ namespace
             entry._settingsHash = NavMeshSettings::computeAgentTypeHash( agentType );
             entry._bounds       = bounds;
             pBaked->collectTiles( entry._listTile );
+            pBaked->collectClusterGraph( entry._clusterGraph ); // 쿠커(`SceneNavigation::makeCookedEntry`)와 같다
             for ( const NavTileData& tile : entry._listTile )
             {
                 entry._listTileInputHash.push_back( bTileHashes ? geometry.computeRegionHash( pBaked->computeTileBakeRegion( tile._tileX, tile._tileZ ) ) : uint64{ 0 } );
@@ -138,6 +143,37 @@ namespace
         }
 
         static void setSource( SceneStreamingSubsystem& streaming, const float3& source ) { streaming.setExternalSources( span<const float3>( &source, 1 ) ); }
+
+        /** @brief 고정 걸음(초)입니다. */
+        static constexpr float32 kDeltaTime = 1.0f / 30.0f;
+
+        /** @brief x [-5, 95] · z [-4, 4] 의 긴 땅입니다 — 9.6 m 타일 열한 개가 한 줄로 잇는다(타일마다 클러스터 하나). */
+        static vector<BoxGeometrySource::Box> makeStrip()
+        {
+            return {
+                BoxGeometrySource::Box{ float3{ 45.0f, 0.0f, 0.0f }, float3{ 50.0f, 0.5f, 4.0f } }
+            };
+        }
+
+        /** @brief 이름 붙은 오브젝트에 씬 컴포넌트 · 내비메시 에이전트를 붙입니다(자리 @p position, 최고 속도 @p maxSpeed). */
+        static NavMeshAgentComponent* spawnAgent( GameObjectManager& objects, const utf8* pName, const float3& position, float32 maxSpeed )
+        {
+            GameObject* pObject = objects.createGameObject( hashed_string{ pName } );
+            if ( pObject == nullptr )
+                return nullptr;
+            SceneComponent* pScene = pObject->addComponent<SceneComponent>();
+            pScene->setWorldPosition( position );
+            NavMeshAgentComponent* pAgent = pObject->addComponent<NavMeshAgentComponent>();
+            pAgent->setMaxSpeed( maxSpeed );
+            return pAgent;
+        }
+
+        /** @brief 내비게이션 갱신 한 번(갱신 → 결과 쓰기 — 매니저의 `Navigation` · `FlushPostAnimation` 단계 차례)입니다. */
+        static void step( SceneNavigation& navigation )
+        {
+            navigation.update( kDeltaTime );
+            navigation.completeFrameJob();
+        }
     };
     using Util = NavTileStreamingTestUtil;
     using Box  = BoxGeometrySource::Box;
@@ -268,4 +304,192 @@ SW_TEST_CASE( NavTileStreamingTest, LoadedCellRefreshesTileInputForRebake )
     navigation.flushTileBakes();
     NavPath after;
     SW_EXPECT_TRUE( navigation.findPath( agentName, start, end, after ) != NavPathStatus::Failed );
+}
+
+namespace
+{
+    /** @brief 긴 땅 씬 하나 — 쿠킹본(대략 그래프 포함) · 기하 소스 · 마련한 내비메시입니다. 케이스마다 원점과 에이전트만 다르다. */
+    struct NavStripWorld
+    {
+        NavMeshSettings               _settings  = Util::makeSettings();
+        vector<Box>                   _listStrip = Util::makeStrip();
+        uint32                        _tileCount = 0;
+        shared_ptr<NavMeshAsset>      _pAsset    = Util::cook( _settings, _listStrip, true, _tileCount );
+        Scene                         _scene{ "NavStream" };
+        unique_ptr<BoxGeometrySource> _pGroundSource;
+        Subscription                  _groundSubscription;
+
+        /** @brief 씬을 세우고 쿠킹본으로 내비메시를 마련합니다. 실패하면 false 입니다. */
+        bool prepare()
+        {
+            if ( _pAsset == nullptr || _scene.instantiate( Util::makeStreamingDocument() ) == false )
+                return false;
+            GameObjectManager& objects  = *_scene.getObjectManager();
+            _pGroundSource              = make_unique<BoxGeometrySource>( objects.findGameObjectByName( hashed_string{ "Ground" } ), _listStrip );
+            SceneNavigation& navigation = getNavigation();
+            _groundSubscription         = navigation.registerGeometrySource( _pGroundSource.get() );
+            navigation.setSettings( _settings );
+            navigation.setCookedAsset( _pAsset );
+            return navigation.ensureNavMesh( _settings._listAgentType[0]._name ) != nullptr && navigation.isLoadedFromCooked( _settings._listAgentType[0]._name );
+        }
+
+        GameObjectManager&       getObjects() { return *_scene.getObjectManager(); }
+        SceneNavigation&         getNavigation() { return getObjects().getSubsystem<SceneNavigation>(); }
+        SceneStreamingSubsystem& getStreaming() { return getObjects().getSubsystem<SceneStreamingSubsystem>(); }
+    };
+} // namespace
+
+/** @brief [NavTileStreamingTest] 계층 경로 질의 — 목적지 타일이 내려가 있으면 세밀 경로는 앞선 타일 가장자리까지이고 그 너머는 대략 점(마지막은 목적지)이다. 보통 경로는 실패한다 */
+SW_TEST_CASE( NavTileStreamingTest, StreamingPathReachesPastStreamedOutTiles )
+{
+    NavStripWorld world;
+    SW_REQUIRE_TRUE( world.prepare() );
+    SceneNavigation&    navigation = world.getNavigation();
+    const hashed_string agentName  = world._settings._listAgentType[0]._name;
+    Util::setSource( world.getStreaming(), float3{ 0.0f, 0.0f, 0.0f } );
+    Util::step( navigation );
+
+    const float3 start{ 0.0f, 0.5f, 0.0f };
+    const float3 end{ 90.0f, 0.5f, 0.0f };
+    NavPath      direct;
+    SW_EXPECT_TRUE( navigation.findPath( agentName, start, end, direct ) == NavPathStatus::Failed ); // 목적지 타일이 없다
+    NavPath path;
+    SW_REQUIRE_TRUE( navigation.findStreamingPath( agentName, start, end, path ) == NavPathStatus::Partial );
+    SW_EXPECT_TRUE( path.isEndReachable() );
+    SW_EXPECT_TRUE( path.computeRouteLength() > 88.0f );
+    const vector<float3>& listCoarse = path._listCoarsePoint;
+    SW_REQUIRE_TRUE( path._listPoint.empty() == false );
+    SW_EXPECT_TRUE( path._listPoint.back()._x < 14.2f ); // 오른 타일(0 · 1) 안에서 끝난다
+    SW_REQUIRE_TRUE( listCoarse.size() >= 2u );
+    SW_EXPECT_NEAR( end._x, listCoarse.back()._x, 1.0e-4f );
+    for ( size_t pointIndex = 1; pointIndex < listCoarse.size(); ++pointIndex )
+    {
+        SW_EXPECT_TRUE( listCoarse[pointIndex]._x > listCoarse[pointIndex - 1]._x ); // 한 줄 땅이라 앞으로만 간다
+    }
+}
+
+/** @brief [NavTileStreamingTest] 원점이 에이전트를 따라가면(클라이언트 카메라) 오르지 않은 먼 목적지로도 출발하고, 타일이 오를 때마다 중간 목표를 이어 도착한다 */
+SW_TEST_CASE( NavTileStreamingTest, FarDestinationIsReachedAsTilesStreamIn )
+{
+    NavStripWorld world;
+    SW_REQUIRE_TRUE( world.prepare() );
+    SceneNavigation&       navigation = world.getNavigation();
+    NavMeshAgentComponent* pAgent     = Util::spawnAgent( world.getObjects(), "Walker", float3{ 0.0f, 0.5f, 0.0f }, 10.0f );
+    SW_REQUIRE_NOT_NULL( pAgent );
+    world.getObjects().beginPlay();
+    Util::setSource( world.getStreaming(), float3{ 0.0f, 0.0f, 0.0f } );
+    Util::step( navigation );
+
+    pAgent->setDestination( float3{ 90.0f, 0.5f, 0.0f } );
+    Util::step( navigation );
+    SW_EXPECT_TRUE( pAgent->getMoveStatus() == NavMoveStatus::Moving ); // 먼 목적지라고 실패하지 않는다
+    SW_EXPECT_TRUE( pAgent->isFollowingCoarseRoute() );
+    for ( uint32 frame = 0; frame < 900 && pAgent->getMoveStatus() == NavMoveStatus::Moving; ++frame )
+    {
+        Util::setSource( world.getStreaming(), pAgent->getAgentPosition() );
+        Util::step( navigation );
+    }
+    SW_EXPECT_TRUE( pAgent->getMoveStatus() == NavMoveStatus::Arrived );
+    SW_EXPECT_TRUE( pAgent->getAgentPosition()._x > 88.0f );
+    SW_EXPECT_TRUE( pAgent->getRouteReplanCount() >= 2u ); // 타일이 오를 때마다 이어 갔다
+    SW_EXPECT_FALSE( pAgent->isFollowingCoarseRoute() );
+}
+
+/**
+ * @brief [NavTileStreamingTest] 전용 서버 구성 — 원점이 관찰자 둘(x 0 · 45)뿐이면 그 사이 · 너머 타일은 내려가 있다. 에이전트는 내려간 구역을 대략 그래프로 가상 이동하고,
+ *        둘째 관찰자 둘레의 오른 타일에서는 군중(세밀 이동)으로 돌아오며, 관찰자 밖 목적지에도 닿는다
+ */
+SW_TEST_CASE( NavTileStreamingTest, ServerObserversLeaveGapsTheAgentCrossesVirtually )
+{
+    NavStripWorld world;
+    SW_REQUIRE_TRUE( world.prepare() );
+    SceneNavigation&       navigation = world.getNavigation();
+    NavMeshAgentComponent* pAgent     = Util::spawnAgent( world.getObjects(), "Courier", float3{ 0.0f, 0.5f, 0.0f }, 10.0f );
+    SW_REQUIRE_NOT_NULL( pAgent );
+    world.getObjects().beginPlay();
+    const float3 arrObserver[2] = {
+        float3{ 0.0f, 0.0f, 0.0f},
+        float3{45.0f, 0.0f, 0.0f}
+    };
+    world.getStreaming().setExternalSources( span<const float3>( arrObserver, 2 ) );
+    Util::step( navigation );
+
+    pAgent->setDestination( float3{ 90.0f, 0.5f, 0.0f } );
+    bool bSawVirtualMove  = false;
+    bool bReturnedToCrowd = false;
+    for ( uint32 frame = 0; frame < 900 && pAgent->getMoveStatus() != NavMoveStatus::Arrived && pAgent->getMoveStatus() != NavMoveStatus::Failed; ++frame )
+    {
+        Util::step( navigation );
+        bSawVirtualMove = bSawVirtualMove || pAgent->isInVirtualMove();
+        // 가상 이동 뒤 둘째 관찰자 둘레(타일 4 · 5 — x 33.4 ~ 52.6)에서 군중으로 걷는다.
+        const float32 x  = pAgent->getAgentPosition()._x;
+        bReturnedToCrowd = bReturnedToCrowd || ( bSawVirtualMove && pAgent->isInVirtualMove() == false && pAgent->isOnNavMesh() && x > 33.4f && x < 52.6f );
+    }
+    SW_EXPECT_TRUE( bSawVirtualMove );
+    SW_EXPECT_TRUE( bReturnedToCrowd );
+    SW_EXPECT_TRUE( pAgent->getMoveStatus() == NavMoveStatus::Arrived );
+    SW_EXPECT_NEAR( 90.0f, pAgent->getAgentPosition()._x, 1.0f );
+    SW_EXPECT_FALSE( pAgent->isInVirtualMove() );
+    SW_EXPECT_TRUE( pAgent->getRouteReplanCount() >= 3u ); // 중간 목표 · 가상 이동 · 되돌아옴 · 다시 가상 이동
+}
+
+/** @brief [NavTileStreamingTest] 선 타일이 내려갔다 다시 오른 뒤에도 에이전트가 군중에 다시 붙어 목적지로 간다(Detour 는 `INVALID` 에이전트를 스스로 되살리지 않는다) */
+SW_TEST_CASE( NavTileStreamingTest, AgentOnReloadedTileMovesAgain )
+{
+    NavStripWorld world;
+    SW_REQUIRE_TRUE( world.prepare() );
+    SceneNavigation&       navigation = world.getNavigation();
+    NavMeshAgentComponent* pAgent     = Util::spawnAgent( world.getObjects(), "Sleeper", float3{ 0.0f, 0.5f, 0.0f }, 5.0f );
+    SW_REQUIRE_NOT_NULL( pAgent );
+    world.getObjects().beginPlay();
+    Util::setSource( world.getStreaming(), float3{ 0.0f, 0.0f, 0.0f } );
+    Util::step( navigation );
+    Util::step( navigation );
+
+    Util::setSource( world.getStreaming(), float3{ -500.0f, 0.0f, -500.0f } );
+    Util::step( navigation );
+    Util::step( navigation );
+    Util::setSource( world.getStreaming(), float3{ 0.0f, 0.0f, 0.0f } );
+    Util::step( navigation );
+
+    pAgent->setDestination( float3{ 3.0f, 0.5f, 0.0f } );
+    for ( uint32 frame = 0; frame < 120 && pAgent->getMoveStatus() == NavMoveStatus::Moving; ++frame )
+    {
+        Util::step( navigation );
+    }
+    SW_EXPECT_TRUE( pAgent->getMoveStatus() == NavMoveStatus::Arrived );
+    SW_EXPECT_TRUE( pAgent->isOnNavMesh() );
+}
+
+/** @brief [NavTileStreamingTest] 비동기 경로 요청도 같은 계층 경로다 — 오르지 않은 타일 너머 끝을 `Failed` 로 끝내지 않고 `Partial` 과 대략 점(마지막은 끝)으로 낸다 */
+SW_TEST_CASE( NavTileStreamingTest, AsyncPathReachesPastStreamedOutTiles )
+{
+    NavStripWorld world;
+    SW_REQUIRE_TRUE( world.prepare() );
+    SceneNavigation&    navigation = world.getNavigation();
+    const hashed_string agentName  = world._settings._listAgentType[0]._name;
+    Util::setSource( world.getStreaming(), float3{ 0.0f, 0.0f, 0.0f } );
+    Util::step( navigation );
+
+    const float3     start{ 0.0f, 0.5f, 0.0f };
+    const float3     end{ 90.0f, 0.5f, 0.0f };
+    NavPathTicket    ticket = navigation.requestPath( agentName, start, end );
+    NavPath          path;
+    PathRequestState state = PathRequestState::Pending;
+    for ( uint32 frame = 0; frame < 4 && state == PathRequestState::Pending; ++frame )
+    {
+        Util::step( navigation ); // 넘기고 → 다음 갱신이 수확한다
+        state = navigation.takePathResult( ticket, path );
+    }
+    SW_REQUIRE_TRUE( state == PathRequestState::Ready );
+    SW_EXPECT_TRUE( path._status == NavPathStatus::Partial );
+    SW_EXPECT_TRUE( path.isEndReachable() );
+    SW_REQUIRE_TRUE( path._listCoarsePoint.empty() == false );
+    SW_EXPECT_NEAR( end._x, path._listCoarsePoint.back()._x, 1.0e-4f );
+
+    // 동기 질의와 같은 함수다 — 같은 점을 낸다.
+    NavPath direct;
+    (void)navigation.findStreamingPath( agentName, start, end, direct );
+    SW_EXPECT_EQUAL( direct._listPoint.size(), path._listPoint.size() );
+    SW_EXPECT_EQUAL( direct._listCoarsePoint.size(), path._listCoarsePoint.size() );
 }

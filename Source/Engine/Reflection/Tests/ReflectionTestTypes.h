@@ -674,7 +674,7 @@ namespace sw
         PROPERTY( AssetPath, AssetType = "Texture" )
         string _albedo;
 
-        PROPERTY( Polymorphic )
+        PROPERTY()
         ReflectedAny _payload;
     };
 } // namespace sw
@@ -725,7 +725,7 @@ namespace sw
         PROPERTY( AssetPath = true, AssetType = "Texture" )
         string _albedo;
 
-        PROPERTY( Polymorphic = true )
+        PROPERTY( Transient = true )
         ReflectedAny _payload;
 
         /** @brief 별칭도 두 꼴을 다 받아야 합니다 — 별칭 `xmlAttribute` 가 단독 토큰으로만 등록되면 이 대입 꼴이 버려집니다. */

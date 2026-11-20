@@ -73,6 +73,8 @@ namespace
         void                   destroyRenderPass( RHIRenderPassHandle ) override {}
         RHIBufferHandle        createConstantBuffer( uint32 ) override { return 0; }
         void                   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
+        RHIBufferHandle        createConstantBufferPage( uint32 ) override { return 0; }
+        void                   updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 ) override {}
         RHIBufferHandle        createStructuredBuffer( uint32, uint32 ) override { return 0; }
         void                   updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
         RHIBufferHandle        createVertexBuffer( const void*, uint32 ) override { return 0; }
@@ -92,6 +94,7 @@ namespace
         bool                   isTextureReadyToSample( RHITextureHandle ) override { return false; }
         void                   unregisterBindlessTexture( RHIDescriptorIndex ) override {}
         RHIDescriptorIndex     registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIDescriptorIndex     registerBindlessBufferSRV( const RHIBufferSlice& ) override { return kInvalidDescriptorIndex; }
         void                   unregisterBindlessResource( RHIDescriptorIndex ) override {}
         RHIDescriptorIndex     registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
         RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }

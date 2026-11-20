@@ -119,6 +119,56 @@ namespace sw
         PROPERTY( Min = 1, Meta = "Units=MB" )
         uint32 _clipCacheMegabytes{};
     };
+
+    /**
+     * @struct SequencerConfig
+     * @brief 시퀀스 재생(컷씬)의 정책 값입니다(`SequencePlayerComponent`).
+     * @details 빨리감기 동안 이벤트는 모두 쏘고(정수 틱이라 문턱을 건너뛰지 않는다), 자막은 벽시계 길이(구간 ÷ 속도)로 올리고, 소리 구간은 음 높이를 그대로 둔 채
+     *          구간이 끝나면 멈춘다(늘이기 · 피치 이동 없음 — 언리얼 시퀀서도 재생 속도에 소리를 늘이지 않는다).
+     */
+    REFLECT()
+    struct SW_API SequencerConfig
+    {
+        REFLECT_BODY();
+
+        /** @brief 빨리감기 입력(`Cutscene.FastForward`)을 누르는 동안 재생 속도에 곱하는 배율입니다. */
+        PROPERTY( Min = 1.0 )
+        float32 _fastForwardRate{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct SubtitleConfig
+     * @brief 자막 서비스(`UISubtitleService::configure`)의 표시 규칙입니다 — 동시에 보이는 줄 수, 최소 표시 시간, 읽기 속도, 크기 설정 배율.
+     * @details Xbox Accessibility Guidelines(XAG 104)의 자막 항목 — 한 번에 많은 줄을 쌓지 않고, 읽을 시간을 주고, 크기를 고르게 한다 — 을 데이터로 둔다.
+     *          언리얼 `USubtitleManager` 는 같은 값을 코드 상수로 두지만, 여기서는 정책 값이라 설정 파일이 정하고 없으면 자막 서비스 기동이 오류로 멈춘다.
+     */
+    REFLECT()
+    struct SW_API SubtitleConfig
+    {
+        REFLECT_BODY();
+
+        /** @brief 동시에 보이는 자막 줄 수입니다. 넘치는 줄은 대기열에서 자리를 기다린다. 자막 화면 문서에 `Line<n>` 자리가 그만큼 있어야 한다. */
+        PROPERTY( Min = 1, Max = 8 )
+        uint32 _maxVisibleLineCount{};
+
+        /** @brief 한 줄이 보이는 최소 시간(초)입니다. 짧은 대사 · 빨리 끝난 음성도 이만큼은 읽게 둔다. */
+        PROPERTY( Min = 0.1, Units = s )
+        float32 _minDisplaySeconds{};
+
+        /** @brief 글자(코드 포인트) 하나의 읽기 시간(초)입니다. 읽기 시간은 max( 최소 표시 시간, 글자 수 × 이 값 ) 이다. */
+        PROPERTY( Min = 0.001, Units = s )
+        float32 _readingSecondsPerCharacter{};
+
+        /** @brief 크기 설정 칸 수입니다 — 사용자 설정 `accessibility.subtitleSize` 의 선택지(작게 · 보통 · 크게)와 같다. */
+        static constexpr uint32 kSizeSettingCount = 3;
+
+        /** @brief 크기 설정(`gv_subtitleSize` — 작게 · 보통 · 크게 순)마다 문서 글 크기에 곱하는 배율입니다. 칸 수는 형식이 정한다(선택지 셋). 범위 밖 설정은 가까운 끝 값이다. */
+        PROPERTY( Min = 0.01 )
+        float32 _arrSizeScale[kSizeSettingCount]{};
+    };
 } // namespace sw
 
 namespace sw
@@ -138,6 +188,28 @@ namespace sw
         uint32 _budgetMegabytes{}; ///< 캐시 예산(MB). 0 이면(키가 없다) 캐시가 처음 남길 때 오류로 멈춘다
 
         SW_SERVICE_SLOT_CONST( CharacterMeshCacheConfig, Required );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct FileServeConfig
+     * @brief 장치가 PC 의 팩 폴더를 받는 개발 전용 전송(`-fileserve=<주소>` — `FileServeContentSource` + 평문 HTTP 클라이언트 `PlainHTTPClient`)의 한도입니다.
+     * @details 응답은 PC 쪽 서버(`py -3 -m Scripts fileserve`)가 보내지만 믿지 않는다 — 머리말 · 본문 상한과 요청 시한이 넘치면 그 요청은 실패다(언리얼 `HttpMaxContentLength` · 요청 시한 자리).
+     *          본문 상한은 받는 구간(`FileServeContentSource::kChunkBytes`, 1 MiB) 이상이어야 한다 — 아니면 기동(`AndroidMain`)이 멈춘다. 배포 구성은 이 전송을 짓지 않는다.
+     */
+    REFLECT()
+    struct SW_API FileServeConfig
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 256 )
+        uint32 _maxResponseHeaderBytes{}; ///< 상태 줄 + 헤더(빈 줄까지)의 바이트 상한 — chunked 의 구간 머리 · 트레일러에도 같은 상한
+        PROPERTY( Min = 1 )
+        uint32 _maxResponseBodyBytes{}; ///< 본문 바이트 상한(Content-Length · chunked 합 · 닫힘까지 모두)
+        PROPERTY( Min = 1, Max = 600000, Units = ms )
+        uint32 _requestTimeoutMs{}; ///< 잇기부터 응답 끝까지의 시한(요청 하나, 10 분까지 — 기다림 함수의 int32 ms 안)
     };
 } // namespace sw
 
@@ -605,7 +677,16 @@ namespace sw
         AudioConfig _audio{}; ///< 오디오 출력 장치 다시 열기 간격 · 클립 캐시 예산
 
         PROPERTY()
+        SubtitleConfig _subtitles{}; ///< 자막 표시 규칙(줄 수 · 최소 표시 시간 · 읽기 속도 · 크기 배율)
+
+        PROPERTY()
+        SequencerConfig _sequencer{}; ///< 시퀀스 재생(컷씬) 정책 값 — 빨리감기 배율
+
+        PROPERTY()
         CharacterMeshCacheConfig _characterMeshCache{}; ///< 캐릭터 외형이 구운 · 합친 메시 캐시의 예산(게임 모듈이 보는 조각)
+
+        PROPERTY()
+        FileServeConfig _fileServe{}; ///< 개발 전용 장치 전송(Fileserve)의 응답 한도 · 시한
 
         PROPERTY()
         RenderConfig _render{}; ///< 렌더러 정책 값(PSO 예산 · …)

@@ -75,6 +75,13 @@ namespace sw
                     {
                         break;
                     }
+                    case CurveInterpolation::Eased:
+                    {
+                        // GPU 커브 표에는 이징 곡선 칸이 없다 — 데이터 결함으로 알리고 직선으로 싣는다(셰이더에 BlendCurve 를 옮기기 전까지 VFX 커브는 Eased 를 쓰지 않는다).
+                        SW_LOG_ERROR_ID( "VFXGPUSimulation.EasedCurveKey", "GPU VFX curves do not support Eased keys (sequencer and CPU curves only) - uploaded as Linear" );
+                        outLinear = 1;
+                        break;
+                    }
                 }
             }
 

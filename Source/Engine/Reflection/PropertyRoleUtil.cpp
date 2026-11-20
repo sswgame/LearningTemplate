@@ -50,46 +50,31 @@ namespace sw
 
             using BlendFn = bool ( * )( const void* pFrom, const void* pTo, float32 alpha, void* pOut );
 
-            /** @brief 섞을 수 있는 내장 타입이면 그 함수, 아니면 nullptr 입니다. */
+            /** @brief Interp 역할 줄이면 그 타입의 섞기, 아니면 nullptr 입니다. 섞지 않는 타입(글 · 핸들)은 `blend<T>` 를 인스턴스화하지 않는다. */
+            template <typename T, bool bInterp>
+            static constexpr BlendFn pickBlend()
+            {
+                if constexpr ( bInterp )
+                    return &blend<T>;
+                else
+                    return nullptr;
+            }
+
+            /** @brief 섞을 수 있는 내장 타입이면 그 함수, 아니면 nullptr 입니다. 목록은 `ReflectBuiltins.xxx` 의 Interp 역할 하나다(파서의 `PROPERTY( Interp )` 검사와 같은 칸). */
             static BlendFn findBlend( const PropertyInfo& prop )
             {
+                static constexpr BlendFn kArrBlend[] = {
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickBlend<ReflectBuiltinCppTypeT<CppType>, ReflectBuiltinTraitTable::get( ReflectBuiltinIndex::k##Canon ).hasRole( ReflectBuiltinRole::Interp )>(),
+#define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
+#undef SW_REFLECT_BUILTIN_TYPE
+#undef SW_REFLECT_BUILTIN_CONTAINER
+                };
+                static_assert( std::size( kArrBlend ) == static_cast<size_t>( ReflectBuiltinIndex::kCount ), "kArrBlend must have one row per ReflectBuiltins.xxx type" );
                 if ( prop._bIsContainer == SW_TRUE || prop._bIsBitField == SW_TRUE )
                     return nullptr;
-                switch ( ReflectedValueUtil::findBuiltinIndex( prop._typeName ) ) // kNone 은 default
-                {
-                    case ReflectBuiltinIndex::kint8:
-                        return &blend<int8>;
-                    case ReflectBuiltinIndex::kint16:
-                        return &blend<int16>;
-                    case ReflectBuiltinIndex::kint32:
-                        return &blend<int32>;
-                    case ReflectBuiltinIndex::kint64:
-                        return &blend<int64>;
-                    case ReflectBuiltinIndex::kuint8:
-                        return &blend<uint8>;
-                    case ReflectBuiltinIndex::kuint16:
-                        return &blend<uint16>;
-                    case ReflectBuiltinIndex::kuint32:
-                        return &blend<uint32>;
-                    case ReflectBuiltinIndex::kuint64:
-                        return &blend<uint64>;
-                    case ReflectBuiltinIndex::kfloat32:
-                        return &blend<float32>;
-                    case ReflectBuiltinIndex::kfloat64:
-                        return &blend<float64>;
-                    case ReflectBuiltinIndex::kfloat2:
-                        return &blend<float2>;
-                    case ReflectBuiltinIndex::kfloat3:
-                        return &blend<float3>;
-                    case ReflectBuiltinIndex::kfloat4:
-                        return &blend<float4>;
-                    case ReflectBuiltinIndex::kquaternion:
-                        return &blend<quaternion>;
-                    case ReflectBuiltinIndex::kRadians:
-                        return &blend<Radians>;
-                    default:
-                        return nullptr;
-                }
+                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( prop._typeName );
+                return builtinIndex < ReflectBuiltinIndex::kCount ? kArrBlend[static_cast<size_t>( builtinIndex )] : nullptr;
             }
         };
     } // namespace

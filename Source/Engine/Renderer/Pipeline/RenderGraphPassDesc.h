@@ -258,6 +258,18 @@ namespace sw
          *        자리라 같은 때(톤맵하는 패스 앞)에 기록한다(`FrameAutoExposure::recordAutoExposure`). 원본을 샘플해야 해 네이티브 bindless 에서만 돈다 — 에뮬은 풀스크린이 같은 식이다.
          */
         AutoExposureHistogram,
+        /**
+         * @brief HDR10 인코딩 출력입니다(display_encode.hlsl, `SW_DISPLAY_OUTPUT=1`). HDR 출력이면 프레임 끝에 장면 출력 RT(UI 를 합성한 [0,1] 출력 신호)를 nits 로 풀어
+         *        BT.2020 + PQ 로 R10G10B10A2 백버퍼에 쓴다(`FrameDisplayEncode`). 백버퍼가 그 포맷일 때만 쓰는 고정 포맷 패스이고, 모니터가 HDR10 을 받을 때만 PSO 가 있다.
+         */
+        DisplayEncodeHDR10,
+        /** @brief scRGB 인코딩 출력입니다(display_encode.hlsl, `SW_DISPLAY_OUTPUT=2`) — 선형 Rec.709 × (nits / 80) 을 R16G16B16A16 실수 백버퍼에 쓴다. 나머지는 `DisplayEncodeHDR10` 과 같다. */
+        DisplayEncodeScRGB,
+        /**
+         * @brief HDR 출력의 UI 합성입니다(display_encode.hlsl, `SW_DISPLAY_UI_COMPOSITE`). SDR UI RT(미리 곱한 알파 — Canvas · 개발 겹치기 · 렌더 스레드 UI 가 그린다)를
+         *        종이 흰색 휘도의 출력 신호로 옮겨 장면 출력 RT 위에 섞는다(언리얼 `r.HDR.UI.CompositeMode`). 인코딩 바로 앞에 돈다. 모니터가 HDR 을 받을 때만 PSO 가 있다.
+         */
+        DisplayCompositeUI,
     };
 
     /**
@@ -411,6 +423,7 @@ namespace sw
      * @details 첨부가 아닌 자원 — 서브시스템이 가진 버퍼(인스턴스 · 라이트 · 컬링 결과)와 프레임을 넘는 히스토리(깊이 히스토리 · 가림 타일 · 입자 상태 · 프로브) — 의 이름이다.
      *          프레임 패스가 이 이름으로 읽기 · 쓰기를 선언하면 그래프가 순서를 정한다. 그래프는 버퍼를 만들지 않는다(주인은 서브시스템이다 — 언리얼 RDG 의 외부 버퍼 등록과 같다).
      *          `_kind` 는 Persistent 또는 External 이다(Transient 는 첨부의 몫이라 검증이 막는다).
+     *          `_viewable` 은 버퍼(기본) · 텍스처다 — 패스의 입력 · 출력이 그것과 함께 접근을 정한다(`RenderPipelineAsset::buildFramePassAccesses`, 언리얼 RDG 의 버퍼 · 텍스처 등록이 나뉜 것과 같다).
      */
     REFLECT()
     struct RenderGraphResourceDesc
@@ -421,6 +434,9 @@ namespace sw
 
         PROPERTY()
         RenderGraphResourceKind _kind{ RenderGraphResourceKind::External };
+
+        PROPERTY()
+        RenderGraphViewableKind _viewable{ RenderGraphViewableKind::Buffer };
     };
 
     /** @brief 첨부 나눗수의 상한입니다 — 모션 블러 타일(16² 픽셀, motion_blur_tile_max.hlsl kMotionBlurTileSize)이 가장 큰 쓰임이다. */
@@ -454,6 +470,19 @@ namespace sw
 
         PROPERTY( SkipIfEmpty )
         vector<string> _listOutput;
+
+        /**
+         * @brief 입력 · 출력 규칙(버퍼 입력 = SRV, 출력 = UAV — `RenderPipelineAsset::buildFramePassAccesses`) 밖의 접근입니다. 프레임 패스만 적는다(검증) — 이름은 `_listResource` 의 버퍼다.
+         * @details 간접 인자(그리기 · 디스패치가 읽는 인자 버퍼), 복사 원본, 복사 대상. 한 이름은 한 패스에서 한 접근이다(입출력과 겹치면 로드 오류 — 언리얼 RDG 패스 파라미터의 접근 하나).
+         */
+        PROPERTY( SkipIfEmpty )
+        vector<string> _listIndirectArgs;
+
+        PROPERTY( SkipIfEmpty )
+        vector<string> _listCopySource;
+
+        PROPERTY( SkipIfEmpty )
+        vector<string> _listCopyDest;
 
         /**
          * @brief 이 패스가 바인딩할 뎁스 첨부 이름입니다. **비어 있으면 뎁스 없이 엽니다.**

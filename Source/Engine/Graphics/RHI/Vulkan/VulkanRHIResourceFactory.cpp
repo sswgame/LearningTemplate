@@ -121,9 +121,29 @@ namespace sw
             return;
         }
         SW_PROFILE_COUNT( "RT.Bind.constantBufferWrites", 1 ); // 미러 락 경합의 분모(설계 L-1)
-        _pDevice->_constantBufferMirror.write( buffer, _pDevice->getFrameSlot() % constant::render::kMaxFrameCountInFlight, pData, size,
-                                               [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
-        { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );
+        _pDevice->_constantBufferMirror.write( buffer, 0, _pDevice->getFrameSlot() % constant::render::kMaxFrameCountInFlight, pData, size,
+                                               [this]( RHIBufferHandle target, uint32 slot, uint32 offset, const void* pBytes, uint32 byteCount )
+        { _pDevice->writeConstantBufferSlot( target, slot, offset, pBytes, byteCount ); } );
+    }
+
+    RHIBufferHandle VulkanRHIResourceFactory::createConstantBufferPage( uint32 size )
+    {
+        // `VkDeviceMemory` 하나(프레임 칸 × 페이지 크기)를 구간이 나눠 쓴다 — 버퍼마다 `vkAllocateMemory` 이던 것을 페이지당 하나로 줄인다(감사 R-4).
+        return createConstantBuffer( size );
+    }
+
+    void VulkanRHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    {
+        if ( slice._buffer == 0 || pData == nullptr || size == 0 )
+            return;
+        // 페이지는 링 상수 버퍼다 — 이번 프레임 칸의 구간 오프셋에 쓰고 나머지 칸은 미러가 같은 오프셋에 채운다.
+        const VulkanRHIDevice::VulkanBufferRecord* const pRecord = _pDevice->resolveAllocatedBuffer( slice._buffer );
+        if ( pRecord == nullptr || pRecord->_cbSlotSize == 0 )
+            return;
+        SW_PROFILE_COUNT( "RT.Bind.constantBufferWrites", 1 );
+        _pDevice->_constantBufferMirror.write( slice._buffer, slice._offset, _pDevice->getFrameSlot() % constant::render::kMaxFrameCountInFlight, pData, MathUtil::min( size, slice._size ),
+                                               [this]( RHIBufferHandle target, uint32 slot, uint32 offset, const void* pBytes, uint32 byteCount )
+        { _pDevice->writeConstantBufferSlot( target, slot, offset, pBytes, byteCount ); } );
     }
 
     RHIBufferHandle VulkanRHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
@@ -1285,6 +1305,33 @@ namespace sw
             return kInvalidDescriptorIndex;
         }
         _pDevice->publishBufferReadSlot( index, false, buffer );
+        return index;
+    }
+
+    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
+        const VulkanRHIDevice::VulkanBufferRecord* const pRecord = _pDevice->resolveAllocatedBuffer( slice._buffer );
+        if ( pRecord == nullptr )
+            return kInvalidDescriptorIndex;
+        // 디스크립터 offset 은 minUniformBufferOffsetAlignment(명세 상한 256)의 배수여야 한다 — 구간은 256 B 배수다. 링 페이지 칸을 넘는 구간은 부르는 쪽의 결함이다.
+        const bool bBadSlice = pRecord->_cbSlotSize == 0 || slice._size == 0 || slice._offset % constant::render::kConstantBufferAlignment != 0 ||
+                               static_cast<uint64>( slice._offset ) + slice._size > pRecord->_cbSlotSize;
+        if ( bBadSlice )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BadConstantBufferSlice", "registerBindlessBufferSRV: slice (offset %#, size %#) is not a 256-aligned slice of a constant buffer page",
+                             slice._offset, slice._size );
+            return kInvalidDescriptorIndex;
+        }
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = _pDevice->_bufferRegistry.allocate( slice._buffer );
+        if ( index == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessBufferTableFull", "The bindless buffer table (%#) is full.", VulkanRHIDevice::kBindlessBufferCapacity );
+            return kInvalidDescriptorIndex;
+        }
+        // 슬롯 세트를 쓰는 순간(setSlot)에 프레임 칸 오프셋 + 구간 오프셋, range = 구간 크기로 푼다.
+        _pDevice->publishBufferReadSlot( index, false, slice._buffer, slice._offset, slice._size );
         return index;
     }
 

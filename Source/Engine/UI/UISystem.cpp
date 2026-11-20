@@ -716,7 +716,10 @@ namespace sw
         UIScreen*  pActive                 = getActiveScreen();
         const bool bRestoreNavigationFocus = mode == UIInputMode::Navigation && pActive != nullptr && _input.getFocusManager().getFocusedTree() != &pActive->getTree();
         if ( bRestoreNavigationFocus )
+        {
             _input.restoreFocus( *pActive );
+            _input.holdNavigationThisFrame(); // 바꾼 그 입력은 기본 포커스를 보이는 데만 쓴다
+        }
     }
 
     uint32 UISystem::closeScreensOfModule( string_view moduleName )
@@ -988,13 +991,17 @@ namespace sw
         UIViewport viewport     = computeViewport( float2{ static_cast<float32>( frame._width ), static_cast<float32>( frame._height ) }, frame._contentScale, frame._safeInsets );
         viewport._pointerOrigin = frame._pointerOrigin; // 백버퍼면 빈 출력이라 0 이다
         // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
-        IAudioService* const pAudio = engine::findSubsystem<IAudioService>();
-        if ( pAudio != nullptr && pAudio->isInitialized() )
+        IAudioService* const pAudio      = engine::findSubsystem<IAudioService>();
+        const bool           bAudioReady = pAudio != nullptr && pAudio->isInitialized();
+        UISubtitleService&   subtitles   = engine::getSubsystem<UISubtitleService>();
+        if ( bAudioReady )
         {
             vector<AudioSubtitleCue> listCue;
             pAudio->getEngine().takeSubtitleCues( listCue );
-            engine::getSubsystem<UISubtitleService>().postAudioCues( listCue );
+            subtitles.postAudioCues( listCue );
         }
+        // 음성이 낸 줄은 그 음성이 끝날 때까지 남는다 — 오디오가 내려갔으면 모두 끝난 것으로 본다(줄이 영원히 남지 않는다).
+        subtitles.refreshVoiceState( bAudioReady ? &pAudio->getEngine() : nullptr );
         update( frame._unscaledDeltaSeconds, viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
     }
 
@@ -1025,6 +1032,16 @@ namespace sw
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
             count += screen->isDevOverlay() ? 0u : 1u;
+        }
+        return count;
+    }
+
+    uint32 UISystem::getMenuStackDepth() const
+    {
+        uint32 count = 0;
+        for ( const unique_ptr<UIScreen>& screen : _listScreen )
+        {
+            count += screen->isDevOverlay() == false && screen->isClosing() == false && screen->canTakeFocus() ? 1u : 0u;
         }
         return count;
     }

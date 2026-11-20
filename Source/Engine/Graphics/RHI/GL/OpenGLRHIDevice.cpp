@@ -272,15 +272,21 @@ namespace sw
 
     uint32 OpenGLRHIDevice::resolveGlBuffer( RHIBufferHandle handle ) const
     {
-        const uint32* pSlot = _gpuBuffers.get( handle );
-        return pSlot != nullptr ? *pSlot : 0;
+        const OpenGLBufferRecord* pSlot = _gpuBuffers.get( handle );
+        return pSlot != nullptr ? pSlot->_glName : 0;
+    }
+
+    uint32 OpenGLRHIDevice::resolveGlBufferSize( RHIBufferHandle handle ) const
+    {
+        const OpenGLBufferRecord* pSlot = _gpuBuffers.get( handle );
+        return pSlot != nullptr ? pSlot->_sizeBytes : 0;
     }
 
     RHIBufferHandle OpenGLRHIDevice::storeGlBuffer( uint32 glName, uint32 sizeBytes )
     {
         if ( glName == 0 )
             return 0;
-        const RHIBufferHandle handle = _gpuBuffers.insert( glName );
+        const RHIBufferHandle handle = _gpuBuffers.insert( OpenGLBufferRecord{ glName, sizeBytes } );
         getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, sizeBytes );
         return handle;
     }
@@ -479,6 +485,17 @@ namespace sw
             }
             // 결합 유닛은 엔진 칸 끝(머티리얼 t16..t31 위 엔진 t32..)까지, 프래그먼트 유닛은 한 셰이더의 샘플러 예산(머티리얼 + 쓰는 엔진 칸)만큼 있어야 한다.
             // 유닛이 모자라면 큰 번호의 텍스처가 조용히 흰색이 되거나 링크가 지므로 이 백엔드를 쓰지 않는다(판정은 shaderslot::gl::validateTextureUnits 하나).
+            // 상수 버퍼 페이지 구간(256 B 배수 — 감사 R-4)을 glBindBufferRange 로 건다. 정렬이 그보다 크면 머티리얼을 걸 수 없어 이 백엔드를 쓰지 않는다.
+            GLint uniformOffsetAlignment{ 0 };
+            glGetIntegerv( GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &uniformOffsetAlignment );
+            if ( uniformOffsetAlignment <= 0 || constant::render::kConstantBufferAlignment % static_cast<uint32>( uniformOffsetAlignment ) != 0 )
+            {
+                SW_LOG_WARNING_ID( "OpenGL.UniformOffsetAlignmentUnsupported", "The OpenGL backend is unusable - GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT %# does not divide %#.",
+                                   static_cast<int32>( uniformOffsetAlignment ), constant::render::kConstantBufferAlignment );
+                _initResult = RHIInitResult::DriverUnsupported;
+                return false;
+            }
+            _uniformBufferOffsetAlignment = static_cast<uint32>( uniformOffsetAlignment );
             GLint maxFragmentTextureUnit{ 0 };
             GLint maxCombinedTextureUnit{ 0 };
             glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextureUnit );
@@ -785,13 +802,13 @@ namespace sw
             _meshVaoAttribShadow.reset();
             _meshVao = 0;
         }
-        _gpuBuffers.forEach( []( uint32& name )
+        _gpuBuffers.forEach( []( OpenGLBufferRecord& record )
         {
-            if ( name != 0 )
+            if ( record._glName != 0 )
             {
-                GLuint glName = name;
+                GLuint glName = record._glName;
                 glDeleteBuffers( 1, &glName );
-                name = 0;
+                record._glName = 0;
             }
         } );
         _recordingState._geometry = RHIGeometryBindings{};
@@ -814,12 +831,13 @@ namespace sw
         _pipelineStates.clear();
         _renderPassRegistry.clear();
 
-        _gpuBuffers.forEach( []( uint32& glBuf )
+        _gpuBuffers.forEach( []( OpenGLBufferRecord& record )
         {
-            if ( glBuf != 0 )
+            if ( record._glName != 0 )
             {
-                glDeleteBuffers( 1, &glBuf );
-                glBuf = 0;
+                GLuint glName = record._glName;
+                glDeleteBuffers( 1, &glName );
+                record._glName = 0;
             }
         } );
         _gpuBuffers.clear();

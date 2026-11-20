@@ -972,8 +972,12 @@ namespace sw
         vector<const string*>             listKey;
         vector<uint8>                     listDemoted;
         vector<TextureMipRequest>         listRestore; ///< 내렸다가 `NeverStream` 이 된 텍스처의 되올리기
-        uint64                            residentBytes  = 0;
-        const int32                       qualityMipDrop = _impl->_qualityMipDrop.load( std::memory_order_relaxed ); // 이 차례 동안 같은 품질로 판정한다
+        uint64                            residentBytes = 0;
+        // 스트리밍 상태(HUD `streaming` · 렌더 디버거 창): 스트리밍하는 텍스처 수, 원하는 밉보다 거친 밉만 올라온 수와 그 밉 차의 합(요청 밉 대 올라온 밉).
+        uint32      streamingTextureCount = 0;
+        uint32      belowWantedCount      = 0;
+        uint32      missingMipCount       = 0;
+        const int32 qualityMipDrop        = _impl->_qualityMipDrop.load( std::memory_order_relaxed ); // 이 차례 동안 같은 품질로 판정한다
         {
             UniqueLock<shared_mutex> lock{ _impl->_mutex };
             for ( auto& [key, entry] : _impl->_mapEntry )
@@ -1016,6 +1020,12 @@ namespace sw
                 candidate._framesSinceChange = entry._framesSinceChange;
                 candidate._topMipBytes       = top._size;
                 residentBytes += candidate.computeResidentBytes( candidate._residentFirstMip );
+                ++streamingTextureCount;
+                if ( candidate._residentFirstMip > candidate._wantedFirstMip )
+                {
+                    ++belowWantedCount;
+                    missingMipCount += candidate._residentFirstMip - candidate._wantedFirstMip;
+                }
                 if ( entry._bUpgrading )
                     continue; // 바꾸는 중 — 바이트는 세고 이번 결정에서는 뺀다
                 listCandidate.push_back( candidate );
@@ -1030,6 +1040,9 @@ namespace sw
         vector<TextureStreamingDecision> listDecision;
         TextureStreamingPolicy::decide( vector_reference<const TextureStreamingCandidate>{ listCandidate }, residentBytes, budget._poolBytes, config, listDecision );
         SW_PROFILE_COUNT( "RT.TextureStreaming.residentBytes", residentBytes );
+        SW_PROFILE_COUNT( "RT.TextureStreaming.textures", streamingTextureCount );
+        SW_PROFILE_COUNT( "RT.TextureStreaming.belowWanted", belowWantedCount );
+        SW_PROFILE_COUNT( "RT.TextureStreaming.missingMips", missingMipCount );
         if ( listDecision.empty() && listRestore.empty() )
             return;
 

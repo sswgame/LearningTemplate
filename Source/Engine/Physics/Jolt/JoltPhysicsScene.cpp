@@ -1369,6 +1369,12 @@ namespace sw
     void JoltPhysicsScene::recordContact( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings,
                                           uint8 kind )
     {
+        // 겹침 응답 쌍(두 프로필 중 약한 쪽이 Overlap)은 밀어내지 않고 겹침만 낸다 — 이 쌍의 접촉을 센서로 돌린다(Jolt `ContactSettings::mIsSensor`).
+        // 잡 스레드가 읽는다 — 응답 표는 step 사이(`setLayerCollision`)에만 바뀐다. 추가 · 유지 모두 매번 정해야 한다(설정은 접촉마다 새로 온다).
+        const bool bOverlapPair = _objectLayerPairFilter.getLayers().getResponse( JoltLayerUtil::getLayer( bodyA.GetObjectLayer() ),
+                                                                                  JoltLayerUtil::getLayer( bodyB.GetObjectLayer() ) ) == CollisionResponse::Overlap;
+        if ( bOverlapPair )
+            ioSettings.mIsSensor = true;
         // 서브 셰이프의 재질로 마찰과 반발을 섞는다(바디 값은 첫 셰이프의 재질).
         const JoltPhysicsMaterial* pMaterialA = JoltPhysicsSceneInternal::findOurMaterial( bodyA.GetShape()->GetMaterial( manifold.mSubShapeID1 ) );
         const JoltPhysicsMaterial* pMaterialB = JoltPhysicsSceneInternal::findOurMaterial( bodyB.GetShape()->GetMaterial( manifold.mSubShapeID2 ) );
@@ -1385,16 +1391,18 @@ namespace sw
             return;
 
         ContactReport report;
-        report._bodyA._body     = handleA;
-        report._bodyB._body     = handleB;
-        report._bodyA._bTrigger = bodyA.IsSensor();
-        report._bodyB._bTrigger = bodyB.IsSensor();
-        report._point           = JoltUtil::toEngine( manifold.GetWorldSpaceContactPointOn1( 0 ) );
-        report._normal          = JoltUtil::toEngine( manifold.mWorldSpaceNormal );
-        report._subShapeA       = manifold.mSubShapeID1.GetValue();
-        report._subShapeB       = manifold.mSubShapeID2.GetValue();
-        report._kind            = kind;
-        if ( bodyA.IsSensor() == false && bodyB.IsSensor() == false )
+        report._bodyA._body         = handleA;
+        report._bodyB._body         = handleB;
+        report._bodyA._bTrigger     = bodyA.IsSensor();
+        report._bodyB._bTrigger     = bodyB.IsSensor();
+        report._bodyA._bOverlapOnly = bOverlapPair; // 이 쌍만의 표시다 — 추적기는 쌍마다 바디 정보를 든다
+        report._bodyB._bOverlapOnly = bOverlapPair;
+        report._point               = JoltUtil::toEngine( manifold.GetWorldSpaceContactPointOn1( 0 ) );
+        report._normal              = JoltUtil::toEngine( manifold.mWorldSpaceNormal );
+        report._subShapeA           = manifold.mSubShapeID1.GetValue();
+        report._subShapeB           = manifold.mSubShapeID2.GetValue();
+        report._kind                = kind;
+        if ( bodyA.IsSensor() == false && bodyB.IsSensor() == false && bOverlapPair == false )
         {
             JPH::CollisionEstimationResult estimate;
             JPH::EstimateCollisionResponse( bodyA, bodyB, manifold, estimate, ioSettings.mCombinedFriction, ioSettings.mCombinedRestitution );

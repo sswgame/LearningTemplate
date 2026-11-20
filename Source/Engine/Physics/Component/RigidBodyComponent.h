@@ -174,7 +174,7 @@ namespace sw
         PhysicsBodyType _bodyType;
         PROPERTY( Category = "Body", Tooltip = "Collision shapes; more than one makes a compound body" )
         vector<PhysicsShapeDesc3D> _listShape;
-        PROPERTY( Category = "Body", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
+        PROPERTY( Category = "Body", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
         hashed_string _layer;
         PROPERTY( Category = "Body", Tooltip = "Physics material name (empty: the first material)", Validate = validateMaterial )
         hashed_string _material;

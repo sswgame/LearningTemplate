@@ -57,6 +57,12 @@ namespace sw::editor
         const SequenceEditModel& getDocument() const { return _document; }
         /** @brief 바인딩 문맥(이 시퀀스를 트는 플레이어)에서 묶이지 않은 바인딩 수입니다. 문맥이 없으면 모든 바인딩입니다. */
         [[nodiscard]] uint32 countUnboundBindings() const;
+        /** @brief 시간 막대의 지금 프레임입니다(감시 값 `Editor.SequencerFrame`). */
+        int32 getCurrentFrame() const { return _currentFrame; }
+        /** @brief 미리보기가 재생 중이고 일시정지가 아니면 true 입니다(감시 값 `Editor.SequencerPlaying`). */
+        [[nodiscard]] bool isPreviewPlaying() const;
+        /** @brief 미리보기가 거꾸로 재생하면 true 입니다(감시 값 `Editor.SequencerReversed`). */
+        [[nodiscard]] bool isPreviewReversed() const;
 
     private:
         string captureDocumentText() const override;
@@ -67,7 +73,9 @@ namespace sw::editor
         void                applyAsset( const SequenceAsset& asset );
         SequenceAsset       captureAsset() const;
         void                syncPreviewPlayer();
-        void                updatePreview( float32 deltaSeconds );
+        /** @brief 미리보기를 지금 프레임부터 @p playRate(음수 = 거꾸로)로 반복 재생합니다(재생 · 거꾸로 재생 단추). */
+        void playPreview( float32 playRate );
+        void updatePreview( float32 deltaSeconds );
         /** @brief 지금 프레임을 씬에 적용합니다(뷰포트 미리보기). */
         void previewCurrentFrame();
         /** @brief @p asset 의 @p frame 을 바인딩 문맥으로 씬에 적용합니다(키 · 클립 · 컷 · 구간 동작). */

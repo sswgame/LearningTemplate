@@ -90,6 +90,13 @@ namespace sw
         SW_GLOBAL_VARIABLE( int32, gv_shadowFilter, kDefaultSettings._shadowFilter, "그림자 필터 0 PCF 3x3 1 PCSS — 원천 크기로 반그림자 폭을 바꾼다 (사용자 설정 graphics.shadowFilter)" );
         SW_GLOBAL_VARIABLE( int32, gv_postQuality, kDefaultSettings._postQuality, "후처리 품질 0~3 — 패스의 _minPostQuality 보다 낮으면 건너뛴다 (사용자 설정 graphics.postQuality)" );
         SW_GLOBAL_VARIABLE( bool, gv_motionBlur, kDefaultSettings._bMotionBlur != SW_FALSE, "모션 블러 (사용자 설정 graphics.motionBlur, MotionBlur 패스가 읽는다)" );
+        /**
+         * @brief `-gv_displayOutput=<SDR|HDR10|ScRGB>`: 화면 출력 장치입니다(사용자 설정 display.hdr). 백엔드 · 모니터가 받지 않으면 정보 로그 한 줄과 SDR 이다(`DisplayOutputDesc::resolve`).
+         * @details 실행 중에 바꾸면 렌더 드라이버가 다음 프레임 앞에서 스왑체인을 다시 만든다(창 크기 바뀜과 같은 길 — `EngineRenderDriver::applyDisplayOutput`). 언리얼 `r.HDR.EnableHDROutput` · `r.HDR.Display.OutputDevice` 자리다.
+         */
+        SW_GLOBAL_VARIABLE( DisplayOutputKind, gv_displayOutput, kDefaultSettings._displayOutput._kind, "화면 출력 장치 SDR · HDR10 · ScRGB — 받지 않는 모니터는 SDR (사용자 설정 display.hdr)" );
+        SW_GLOBAL_VARIABLE( float32, gv_displayPaperWhite, kDefaultSettings._displayOutput._paperWhiteNits, "HDR 출력의 종이 흰색(nits) — 장면 흰색 · UI 의 휘도 (사용자 설정 display.hdrPaperWhite)" );
+        SW_GLOBAL_VARIABLE( float32, gv_displayMaxLuminance, kDefaultSettings._displayOutput._maxLuminanceNits, "HDR 출력의 최대 휘도(nits) — 톤 곡선이 닿는 휘도 (사용자 설정 display.hdrMaxLuminance)" );
 
         struct RenderFrameSettingsInternal
         {
@@ -97,6 +104,11 @@ namespace sw
             static constexpr int32 kMaxShadowMapResolution = static_cast<int32>( 1u << ( constant::render::kMaxTextureMipCount - 1 ) );
             /// 병렬 기록 레벨 너비의 하한 — 패스 하나짜리 레벨은 늘 이어 기록한다.
             static constexpr int32 kMinParallelWidth = 2;
+            /// HDR 출력 휘도의 범위(nits) — `DisplayOutputDesc` 의 PROPERTY 범위와 같다(콘솔 · 명령줄 값도 이 안으로 자른다).
+            static constexpr float32 kMinPaperWhiteNits   = 80.0f;
+            static constexpr float32 kMaxPaperWhiteNits   = 500.0f;
+            static constexpr float32 kMinMaxLuminanceNits = 100.0f;
+            static constexpr float32 kMaxMaxLuminanceNits = 10000.0f;
 
             static uint8 toFlag( bool bValue ) { return bValue ? SW_TRUE : SW_FALSE; }
         };
@@ -110,25 +122,28 @@ namespace sw
             engine::getSubsystem<TaskManager>().ensureMainThread();
         RenderDiagnostics::publish(); // 패킷 밖 소비자(bindless 검사 · 셰이더 컴파일)의 원자 사본도 같은 자리에서 내보낸다
         RenderFrameSettings settings;
-        settings._diagnostics                 = RenderDiagnostics::get();
-        settings._upscalerSharpness           = MathUtil::max( 0.0f, static_cast<float32>( gv_upscalerSharpness ) );
-        settings._shadowMapResolution         = static_cast<uint32>( MathUtil::clamp( static_cast<int32>( gv_shadowMapResolution ), 1, Internal::kMaxShadowMapResolution ) );
-        settings._postQuality                 = gv_postQuality;
-        settings._upscaler                    = gv_upscaler;
-        settings._shadowFilter                = gv_shadowFilter;
-        settings._renderGraphParallelMinWidth = static_cast<uint32>( MathUtil::max( static_cast<int32>( gv_renderGraphParallelMinWidth ), Internal::kMinParallelWidth ) );
-        settings._meshMorphDebugMode          = gv_meshMorphDebugMode;
-        settings._bGPUCulling                 = Internal::toFlag( gv_gpuCulling );
-        settings._bDrawMerge                  = Internal::toFlag( gv_drawMerge );
-        settings._bAliasTransients            = Internal::toFlag( gv_transientAliasing );
-        settings._bAsyncCompute               = Internal::toFlag( gv_asyncCompute );
-        settings._bOcclusionCulling           = Internal::toFlag( gv_occlusionCulling );
-        settings._bVertexPool                 = Internal::toFlag( gv_vertexPool );
-        settings._bShadowCache                = Internal::toFlag( gv_shadowCache );
-        settings._bShadowCascadeCulling       = Internal::toFlag( gv_shadowCascadeCulling );
-        settings._bPSOAsync                   = Internal::toFlag( gv_psoAsync );
-        settings._bMotionBlur                 = Internal::toFlag( gv_motionBlur );
-        settings._bRHIImmediateSubmit         = Internal::toFlag( gv_rhiImmediateSubmit );
+        settings._diagnostics                     = RenderDiagnostics::get();
+        settings._displayOutput._kind             = gv_displayOutput;
+        settings._displayOutput._paperWhiteNits   = MathUtil::clamp( static_cast<float32>( gv_displayPaperWhite ), Internal::kMinPaperWhiteNits, Internal::kMaxPaperWhiteNits );
+        settings._displayOutput._maxLuminanceNits = MathUtil::clamp( static_cast<float32>( gv_displayMaxLuminance ), Internal::kMinMaxLuminanceNits, Internal::kMaxMaxLuminanceNits );
+        settings._upscalerSharpness               = MathUtil::max( 0.0f, static_cast<float32>( gv_upscalerSharpness ) );
+        settings._shadowMapResolution             = static_cast<uint32>( MathUtil::clamp( static_cast<int32>( gv_shadowMapResolution ), 1, Internal::kMaxShadowMapResolution ) );
+        settings._postQuality                     = gv_postQuality;
+        settings._upscaler                        = gv_upscaler;
+        settings._shadowFilter                    = gv_shadowFilter;
+        settings._renderGraphParallelMinWidth     = static_cast<uint32>( MathUtil::max( static_cast<int32>( gv_renderGraphParallelMinWidth ), Internal::kMinParallelWidth ) );
+        settings._meshMorphDebugMode              = gv_meshMorphDebugMode;
+        settings._bGPUCulling                     = Internal::toFlag( gv_gpuCulling );
+        settings._bDrawMerge                      = Internal::toFlag( gv_drawMerge );
+        settings._bAliasTransients                = Internal::toFlag( gv_transientAliasing );
+        settings._bAsyncCompute                   = Internal::toFlag( gv_asyncCompute );
+        settings._bOcclusionCulling               = Internal::toFlag( gv_occlusionCulling );
+        settings._bVertexPool                     = Internal::toFlag( gv_vertexPool );
+        settings._bShadowCache                    = Internal::toFlag( gv_shadowCache );
+        settings._bShadowCascadeCulling           = Internal::toFlag( gv_shadowCascadeCulling );
+        settings._bPSOAsync                       = Internal::toFlag( gv_psoAsync );
+        settings._bMotionBlur                     = Internal::toFlag( gv_motionBlur );
+        settings._bRHIImmediateSubmit             = Internal::toFlag( gv_rhiImmediateSubmit );
         return settings;
     }
 } // namespace sw

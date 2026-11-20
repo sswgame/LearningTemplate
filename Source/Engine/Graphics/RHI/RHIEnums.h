@@ -50,7 +50,29 @@ namespace sw
         R32G32B32A32_FLOAT = 21,
         /// @brief 16비트 부동소수점 RG(4 B) — 화면 속도(SceneVelocity) · 화면 왜곡 오프셋(SceneDistortion). 셰이더는 `.rg` 가 실수다.
         R16G16_FLOAT = 22,
+        /// @brief 10비트 RGB + 2비트 알파 정규화(4 B) — HDR10 스왑체인 백버퍼(`RHIColorSpace::HDR10ST2084`). 비트 배치는 R 이 낮은 자리다(DXGI R10G10B10A2 · Vulkan A2B10G10R10_PACK32 · GL RGB10_A2 · WebGPU RGB10A2Unorm).
+        R10G10B10A2_UNORM, // 23 — 앞 열거자 다음 번호(번호 리터럴은 린트 기준선이 늘리지 않게 막는다)
     };
+
+    /**
+     * @enum RHIColorSpace
+     * @brief 스왑체인이 화면에 내는 색 공간입니다. 백버퍼 포맷은 이 값에서 정한다(`getSwapChainFormat` — 둘을 따로 받지 않아 맞지 않는 짝을 만들 수 없다).
+     * @details 순서는 `DisplayOutputKind`(SDR · HDR10 · ScRGB)와 같다 — 능력 비트(`makeColorSpaceBit`)가 같은 값이다(DisplayOutput.cpp 가 static_assert 로 맞춘다).
+     *          DXGI `DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709` · `G2084_NONE_P2020` · `G10_NONE_P709`, Vulkan `VK_COLOR_SPACE_SRGB_NONLINEAR_KHR` · `HDR10_ST2084_EXT` · `EXTENDED_SRGB_LINEAR_EXT` 자리다.
+     */
+    ENUM()
+    enum class RHIColorSpace : uint8
+    {
+        SRGBNonLinear,      ///< sRGB 비선형(지금 그림) — 백버퍼는 EngineConfig `_rhi._backBufferFormat`(RGBA8 · BGRA8)
+        HDR10ST2084,        ///< BT.2020 원색 + PQ(ST 2084) — 백버퍼 R10G10B10A2_UNORM
+        ExtendedSRGBLinear, ///< scRGB(선형 Rec.709, 1.0 = 80 nits) — 백버퍼 R16G16B16A16_FLOAT
+    };
+
+    /** @brief 색 공간 @p colorSpace 의 능력 비트입니다(`RHICapabilities::_displayOutputSupport`). `DisplayOutputKind` 의 비트와 같은 값이다. */
+    constexpr uint8 makeColorSpaceBit( RHIColorSpace colorSpace )
+    {
+        return static_cast<uint8>( 1u << static_cast<uint32>( colorSpace ) );
+    }
 
     /**
      * @enum RHIQueueKind

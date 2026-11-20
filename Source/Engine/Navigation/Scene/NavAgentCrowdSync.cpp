@@ -9,6 +9,7 @@
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/Scene/NavMeshRuntime.h"
+#include "Engine/Navigation/Scene/NavStreamRoute.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
@@ -87,6 +88,7 @@ namespace sw
                 pController->setWorldPosition( agent._pendingWarp );
             agent._writtenPosition   = agent._pendingWarp;
             agent._bDestinationDirty = agent._bHasDestination;
+            NavStreamRoute::clearAgentRoute( agent ); // 새 자리에서 다시 계획한다(가상 이동도 끝난다)
         }
         else if ( agent._driveMode != NavAgentDriveMode::Transform )
         {
@@ -103,6 +105,7 @@ namespace sw
             {
                 crowd.teleportAgent( agent._crowdAgentID, currentPosition );
                 agent._bDestinationDirty = agent._bHasDestination;
+                NavStreamRoute::clearAgentRoute( agent );
             }
         }
         agent._bWarpPending = SW_FALSE;
@@ -115,19 +118,36 @@ namespace sw
             crowd.updateAgentParams( agent._crowdAgentID, params );
             agent._bParamsDirty = SW_FALSE;
         }
+        // 스트리밍 월드의 먼 경로 — 타일이 오르내렸거나 가상 이동이 오른 타일에 들었으면 다시 계획한다.
+        NavStreamRoute::refreshAgent( agent, runtime, currentPosition );
         if ( agent._bDestinationDirty == SW_TRUE )
         {
             agent._bDestinationDirty = SW_FALSE;
-            if ( agent._bHasDestination == SW_TRUE )
-                agent._moveStatus = crowd.requestMoveTarget( agent._crowdAgentID, agent._destination ) ? NavMoveStatus::Moving : NavMoveStatus::Failed;
-            else
+            if ( agent._bHasDestination == SW_FALSE )
+            {
+                NavStreamRoute::clearAgentRoute( agent );
                 crowd.resetMoveTarget( agent._crowdAgentID );
+            }
+            else if ( NavStreamRoute::usesRoutes( runtime ) )
+            {
+                NavStreamRoute::requestAgentMove( agent, runtime, currentPosition );
+            }
+            else
+            {
+                agent._moveStatus = crowd.requestMoveTarget( agent._crowdAgentID, agent._destination ) ? NavMoveStatus::Moving : NavMoveStatus::Failed;
+            }
         }
     }
 
     bool NavAgentCrowdSync::writeAgentResult( NavMeshAgentComponent& agent, NavMeshRuntime& runtime, float32 deltaTime, vector<SceneTransformWrite>& inoutListWrite )
     {
         using Internal = NavAgentCrowdSyncInternal;
+        if ( agent._bVirtualMove == SW_TRUE )
+        {
+            // 내려간 타일 위 — 군중이 아니라 대략 점을 따라 시간을 진행한다(`NavStreamRoute` 머리말).
+            NavStreamRoute::writeVirtualResult( agent, runtime, deltaTime, inoutListWrite );
+            return true;
+        }
         NavCrowdAgentState state;
         if ( runtime._pCrowd->findAgentState( agent._crowdAgentID, state ) == false )
             return false;
@@ -148,28 +168,40 @@ namespace sw
         if ( agent._bHasDestination == SW_TRUE && agent._moveStatus != NavMoveStatus::Arrived )
         {
             const bool bWithinStop = float3::getHorizontalDistance( state._position, agent._destination ) <= agent._stoppingDistance;
-            switch ( state._moveState )
+            if ( agent._bRouteIntermediate == SW_TRUE && bWithinStop == false )
             {
-                case NavCrowdMoveState::Failed:
+                // 목적지가 아니라 앞선 타일 가장자리로 가는 중이다 — 닿으면 다시 계획하고 도착으로 두지 않는다.
+                NavStreamRoute::handleIntermediateReached( agent, state._position, state._moveState == NavCrowdMoveState::Arrived );
+                agent._moveStatus = state._moveState == NavCrowdMoveState::Failed ? NavMoveStatus::Failed : NavMoveStatus::Moving;
+            }
+            else
+            {
+                switch ( state._moveState )
                 {
-                    agent._moveStatus = NavMoveStatus::Failed;
-                    break;
-                }
-                case NavCrowdMoveState::Arrived:
-                {
-                    agent._moveStatus = NavMoveStatus::Arrived;
-                    break;
-                }
-                case NavCrowdMoveState::Idle:
-                case NavCrowdMoveState::Pending:
-                case NavCrowdMoveState::Moving:
-                {
-                    agent._moveStatus = bWithinStop ? NavMoveStatus::Arrived : NavMoveStatus::Moving;
-                    break;
+                    case NavCrowdMoveState::Failed:
+                    {
+                        agent._moveStatus = NavMoveStatus::Failed;
+                        break;
+                    }
+                    case NavCrowdMoveState::Arrived:
+                    {
+                        agent._moveStatus = NavMoveStatus::Arrived;
+                        break;
+                    }
+                    case NavCrowdMoveState::Idle:
+                    case NavCrowdMoveState::Pending:
+                    case NavCrowdMoveState::Moving:
+                    {
+                        agent._moveStatus = bWithinStop ? NavMoveStatus::Arrived : NavMoveStatus::Moving;
+                        break;
+                    }
                 }
             }
             if ( agent._moveStatus == NavMoveStatus::Arrived )
+            {
                 runtime._pCrowd->resetMoveTarget( agent._crowdAgentID );
+                NavStreamRoute::clearAgentRoute( agent );
+            }
         }
 
         GameObject*                   pOwner      = agent.getOwner();
