@@ -183,5 +183,5 @@ def check_rewrite_unmarked_lines() -> None:
     table = dump_naming_table({"_bannedNames": {"OldName": "NewName — x"}, "_keep": {"OldName": "y"}})
     assert json.loads(rewrite_rename_target(NAMING_WORDS_PATH, table, rename)) == {"_bannedNames": {"OldName": "NewName — x"}, "_keep": {"NewName": "y"}}
     assert rewrite_rename_target(NAMING_BASELINE_PATH, "OldName", rename) == "OldName"
-    assert rewrite_rename_target(RENAME_PAIRS_FOLDER + "CMakeFunctions.json", "OldName", rename) == "OldName"
+    assert rewrite_rename_target(RENAME_PAIRS_FOLDER + "Example.json", "OldName", rename) == "OldName"
     assert rewrite_rename_target("Config/Rules/Lint/ThreadOwners.json", "OldName", rename) == "NewName"
