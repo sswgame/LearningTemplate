@@ -207,14 +207,13 @@ if(CMAKE_GENERATOR MATCHES "Ninja")
 		set(cpu_count 4)
 	endif()
 
-	# 링크 동시 실행 개수는 코어 수의 1/4 (최소 2, 최대 4)로 제한하여 RAM 부족/페이징 스래싱 방지
-	math(EXPR link_jobs "${cpu_count} / 4")
-
-	if(link_jobs LESS 2)
-		set(link_jobs 2)
-	elseif(link_jobs GREATER 4)
-		set(link_jobs 4)
+	# 링크 동시 실행 개수 — ThinLTO 로 링크하는 구성(배포 Release + SW_ENABLE_LTO, BuildLayout.cmake 의 IPO 조건과 같다)만 좁게 묶는다(LinkJobPool.cmake).
+	include("${CMAKE_CURRENT_LIST_DIR}/LinkJobPool.cmake")
+	set(link_lto OFF)
+	if(SW_ENABLE_LTO AND SW_SHIPPING_BUILD AND CMAKE_BUILD_TYPE MATCHES "^(Release|RelWithDebInfo|MinSizeRel)$")
+		set(link_lto ON)
 	endif()
+	sw_link_job_count(${cpu_count} ${link_lto} link_jobs)
 
 	set_property(GLOBAL PROPERTY JOB_POOLS compile_job_pool=${cpu_count} link_job_pool=${link_jobs})
 	set(CMAKE_JOB_POOL_COMPILE compile_job_pool)

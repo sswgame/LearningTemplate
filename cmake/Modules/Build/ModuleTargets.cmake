@@ -204,7 +204,11 @@ endfunction()
 #   OWNER       모듈 타깃(sw_add_module_library 로 만든 것)
 #   SOURCES     부분의 소스(모듈 SOURCES 에서는 부르는 쪽이 뺀다)
 #   LINK        부분이 쓰는 라이브러리(모듈의 LINK_PRIVATE 보다 좁게)
-#   LINK_OWNER  모듈의 링크 목록을 그대로 받는다(층 부분 — 좁힐 것이 없을 때). 다른 부분은 빼고 받는다.
+#   LINK_OWNER  모듈의 링크 목록을 그대로 받는다(층 부분 — 좁힐 것이 없을 때). 다른 부분은 빼고 받는다. 정의 · 옵션 · 링크가 주인과 같으므로
+#               PCH 도 하나를 나눠 쓴다(`<OWNER>PartPch` — Engine 층 12 개가 각자 굽던 1.4 GB 를 하나로, 언리얼 UBT SharedPCH 자리). 주인의 PCH 를
+#               바로 쓰지 않는 까닭: REUSE_FROM 은 그 타깃에 빌드 의존을 거는데 주인은 부분을 링크해 순환이 된다. 층 껍데기 include 자리는 PCH 뒤 TU 에만
+#               걸리지만 PCH 내용(pch.h)은 가장 낮은 층 부분에서도 지어지던 것이라 위 층 헤더를 끌어오지 않는다.
+#               부분만의 정의를 더하는 부분(에디터 MVVM View 의 SW_EDITOR_PANEL_VIEW)은 clang 이 PCH 를 거부하므로 쓰지 않는다.
 # ------------------------------------------------------------------------------
 function(sw_add_module_part PART_NAME)
 	cmake_parse_arguments(ARG "LINK_OWNER" "OWNER" "SOURCES;LINK" ${ARGN})
@@ -236,7 +240,24 @@ function(sw_add_module_part PART_NAME)
 	if(TARGET ${ARG_OWNER}_ReflectionGen)
 		add_dependencies(${PART_NAME} ${ARG_OWNER}_ReflectionGen)
 	endif()
-	sw_configure_pch(${PART_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	if(ARG_LINK_OWNER AND SW_ENABLE_PCH)
+		set(part_pch_owner ${ARG_OWNER}PartPch)
+		if(NOT TARGET ${part_pch_owner})
+			set(part_pch_source "${CMAKE_BINARY_DIR}/generated/sw/pch/${part_pch_owner}.cpp")
+			file(GENERATE OUTPUT "${part_pch_source}" CONTENT "// ${part_pch_owner}: PCH shared by the parts of ${ARG_OWNER} (no code)\n")
+			add_library(${part_pch_owner} OBJECT "${part_pch_source}")
+			set_target_properties(${part_pch_owner} PROPERTIES FOLDER "${owner_folder}" EXCLUDE_FROM_ALL ON POSITION_INDEPENDENT_CODE ${part_pic} SW_MODULE_PART_OWNER ${ARG_OWNER})
+			target_link_libraries(${part_pch_owner} PRIVATE sw_global_options)
+			cmake_language(EVAL CODE "cmake_language(DEFER CALL sw_copy_owner_compile_settings [[${part_pch_owner}]] [[${ARG_OWNER}]] ON)")
+			if(TARGET ${ARG_OWNER}_ReflectionGen)
+				add_dependencies(${part_pch_owner} ${ARG_OWNER}_ReflectionGen)
+			endif()
+			sw_configure_pch(${part_pch_owner} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+		endif()
+		target_precompile_headers(${PART_NAME} REUSE_FROM ${part_pch_owner})
+	else()
+		sw_configure_pch(${PART_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	endif()
 	sw_set_unity_build(${PART_NAME})
 	# OBJECT 라이브러리를 직접 링크하면 오브젝트가 모듈 라이브러리에 들어간다(CMake 3.12+). 확장 모듈은 모듈의 export 로 그대로 쓴다.
 	target_link_libraries(${ARG_OWNER} PRIVATE ${PART_NAME})

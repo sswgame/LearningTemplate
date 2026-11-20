@@ -2,6 +2,7 @@
 CMake 빌드 규칙 함수 검사 — 구성 없이 `cmake -P` 로 함수만 부른다(타깃이 필요한 판정은 통합 configure 가 본다).
 
 - `sw_is_platform_folder_built`(cmake/Modules/Build/PlatformFolders.cmake): 플랫폼 폴더 규칙 — 플랫폼 폴더 거르기와 구성 끝 훑기가 같은 판정을 쓴다.
+- `sw_link_job_count`(cmake/Modules/Config/LinkJobPool.cmake): Ninja 링크 풀 크기 — ThinLTO 구성만 좁게 묶는다.
 
 실행: SW_CMAKE_COMMAND=<cmake 실행 파일> python -X utf8 Scripts/setup/tests/test_cmake_build_rules.py (CTest `Scripts.CmakeBuildRules` 가 환경 변수를 준다).
 """
@@ -81,6 +82,24 @@ class PlatformFolderTest(unittest.TestCase):
         self.assertEqual([path for path in self.PATHS if built[path] == "ON"],
                          ["Source/Core/File/Posix/PosixFile.cpp", "Source/Engine/Window/Web/WebWindow.cpp",
                           "Source/Engine/Scene/Scene.cpp"])
+
+
+def link_job_counts(cases: list[tuple[int, bool]]) -> dict[str, str]:
+    lines = [f'include("{(PROJECT_ROOT / "cmake/Modules/Config/LinkJobPool.cmake").as_posix()}")']
+    for cpu_count, lto in cases:
+        lines.append(f'sw_link_job_count({cpu_count} {"ON" if lto else "OFF"} jobs)')
+        lines.append(f'message(NOTICE "{cpu_count}-{lto}=[${{jobs}}]")')
+    return run_cmake_script("\n".join(lines) + "\n")
+
+
+class LinkJobPoolTest(unittest.TestCase):
+    def test_lto_is_quarter_with_narrow_cap(self) -> None:
+        jobs = link_job_counts([(4, True), (16, True), (64, True)])
+        self.assertEqual((jobs["4-True"], jobs["16-True"], jobs["64-True"]), ("2", "4", "4"))
+
+    def test_without_lto_is_half_with_wider_cap(self) -> None:
+        jobs = link_job_counts([(2, False), (12, False), (32, False)])
+        self.assertEqual((jobs["2-False"], jobs["12-False"], jobs["32-False"]), ("2", "6", "8"))
 
 
 if __name__ == "__main__":
