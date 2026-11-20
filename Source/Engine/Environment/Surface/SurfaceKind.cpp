@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineServices.h"

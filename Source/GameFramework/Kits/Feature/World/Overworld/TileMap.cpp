@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/TileMap/TileGridUtil.h"
 #include "Engine/TileMap/TileSetAsset.h"
 

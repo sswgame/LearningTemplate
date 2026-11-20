@@ -10,6 +10,7 @@
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 
 namespace sw
 {

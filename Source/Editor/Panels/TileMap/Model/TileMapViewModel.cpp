@@ -16,6 +16,7 @@
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/TileMap/TileSetAsset.h"

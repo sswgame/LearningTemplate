@@ -7,6 +7,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"

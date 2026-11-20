@@ -18,6 +18,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/Experience/ExperienceDefinition.h"

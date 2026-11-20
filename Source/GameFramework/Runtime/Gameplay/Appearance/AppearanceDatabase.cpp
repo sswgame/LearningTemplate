@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Content/AssetIO.h"

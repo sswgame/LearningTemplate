@@ -9,6 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"

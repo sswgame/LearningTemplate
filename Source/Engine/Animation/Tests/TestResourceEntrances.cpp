@@ -8,6 +8,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Facial/LipSync.h"

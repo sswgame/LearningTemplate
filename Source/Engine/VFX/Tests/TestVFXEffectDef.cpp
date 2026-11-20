@@ -6,6 +6,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"

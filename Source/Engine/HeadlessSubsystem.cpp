@@ -22,6 +22,7 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/VertexAnimationCookList.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Asset/Cook/PackCooker.h"
 #include "Engine/Asset/EngineDefaultAssetsSubsystem.h"

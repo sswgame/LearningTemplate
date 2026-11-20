@@ -36,7 +36,6 @@
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 
 namespace sw
 {
@@ -57,6 +56,11 @@ namespace sw
     class SharedAssetTable;
     template <typename TAsset>
     class AssetReloadWatch;
+    // 반환 형식만 쓰는 이름 — `acquire` 를 부르는 TU 가 SharedAssetRef.h 를 읽는다(종류 헤더 · 칸만 쓰는 TU 는 판 사슬 표를 끌지 않는다).
+    template <typename T>
+    class SharedAssetRef;
+    template <typename ValueType>
+    struct WeakInternVersion;
 } // namespace sw
 
 namespace sw
