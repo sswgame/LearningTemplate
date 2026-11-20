@@ -199,6 +199,10 @@ namespace sw
                 _s_bInHook = false;
         }
 
+        // 복사본이 먼저 소멸하면 바깥 가드가 살아 있는데 훅 표시를 지워 관찰자가 다시 불린다 — 가드는 복사하지 않는다.
+        MutexReentryGuard( const MutexReentryGuard& )            = delete;
+        MutexReentryGuard& operator=( const MutexReentryGuard& ) = delete;
+
         explicit operator bool() const { return _bEntered; }
 
         /** @brief 이 스레드가 지금 관찰자 훅 안인지입니다. */
