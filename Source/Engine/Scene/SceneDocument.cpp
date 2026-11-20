@@ -448,6 +448,7 @@ namespace sw
             listExpanded.push_back( anchor );
             if ( anchor._sceneInstance.empty() )
                 continue;
+            SceneObjectNode& expandedAnchor = listExpanded.back();
 
             const string instancePath = FileUtil::normalizePath( anchor._sceneInstance ).str();
             for ( const string& chainPath : inoutListChain )
@@ -465,6 +466,7 @@ namespace sw
             }
             if ( PrefabOverrides::collectPartOverrides( anchor._prefabOverrideXML, listPart ) == false )
                 return false;
+            expandedAnchor._instancePacking = inner._sceneSettings.usesStaticMeshPacking() ? SceneInstancePacking::StaticMeshes : SceneInstancePacking::Separate;
 
             // 레이어 이름은 전역 집합이다. 같은 이름을 바깥이 선언했으면 바깥의 처음 상태가 이긴다.
             for ( const SceneDataLayerDef& layer : inner._sceneSettings._listDataLayer )

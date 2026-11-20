@@ -30,6 +30,11 @@ namespace sw
                 bValid = false;
             }
         }
+        if ( _packing.empty() == false && ( usesStaticMeshPacking() == false || _bStreaming ) )
+        {
+            SW_LOG_ERROR_ID( "SceneSettings.PackingInvalid", "Scene '%#' packs '%#' - packing takes '%#' only and a streaming scene does not pack", sceneName, _packing, kPackStaticMeshes );
+            bValid = false;
+        }
         if ( _bStreaming == false )
             return bValid;
 

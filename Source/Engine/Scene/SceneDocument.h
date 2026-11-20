@@ -59,6 +59,13 @@ namespace sw
     class AssetLoadScope;
     class XMLDocument;
 
+    /** @brief 씬 인스턴스의 멤버를 쿠킹이 묶는지입니다(`SceneObjectNode::_instancePacking`). */
+    enum class SceneInstancePacking : uint8
+    {
+        Separate,     ///< 멤버를 엔티티 그대로 싣는다
+        StaticMeshes, ///< 정적 메시 멤버를 인스턴스 메시로 묶는다(언리얼 Packed Level Actor)
+    };
+
     // ------------------------------------------------------------------------------
     // SceneDocument: 씬 메타데이터와 엔티티 노드 목록
     // ------------------------------------------------------------------------------
@@ -123,6 +130,11 @@ namespace sw
              * @details 런타임 하위 레벨이 쿠킹본을 자기 앵커 범위로 옮길 때 이 칸에 그 범위를 얹는다(`SceneSubLevelSubsystem::makeMemberNodes`) — 글 상태는 `_idScope` 가 같은 일을 한다. 파일에는 쓰지 않는다.
              */
             uint64 _cookedStateIDScope{ 0 };
+            /**
+             * @brief **런타임 칸.** 씬 인스턴스 앵커면 넣은 씬이 쿠킹에서 정적 메시를 묶는지입니다(내부 씬의 `SceneSettings::_packing`, 펼칠 때 정한다 — `expandSceneInstances`).
+             * @details 쿠커만 읽는다(`SceneCooker::packStaticMeshes`). 파일에는 쓰지 않는다 — 정하는 곳은 내부 씬 하나다.
+             */
+            SceneInstancePacking _instancePacking{ SceneInstancePacking::Separate };
             /** @brief 멤버가 위에서부터 차례로 받은 덮어쓰기(`<PrefabOverrides>`)입니다. 안쪽 인스턴스의 것이 먼저입니다. 프리팹 상태 · 글 상태 위에 차례로 얹습니다. */
             vector<string> _listInstanceOverrideXML;
             /** @brief **저작 칸.** 문서 뿌리에서 멤버까지의 경로입니다(`5/7/3` — 앵커 파일 id 들 / 내부 파일 id). 앞 칸이 이 문서의 앵커이고 나머지가 그 앵커의 `<Part path>` 입니다. */
