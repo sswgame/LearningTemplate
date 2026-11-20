@@ -4,6 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 #include "Engine/Serialization/Format/Tests/StateIOTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaSnapshot.h"
@@ -1051,4 +1052,52 @@ SW_TEST_CASE( MechArenaTest, CatalogRefusesBrokenRoot )
     MechCatalog catalog;
     SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<MechCatalog deckCostLimit="-1"><Mech id="a" name="A"/></MechCatalog>)", "MechArenaTest" ) );
     SW_EXPECT_TRUE( catalog.getMechs().empty() );
+}
+
+/**
+ * @brief [MechArenaRulesTest] 결정성: 사격 · 특수기 · 근접 · 대시 · 변형 · 스킬을 걸음 번호로 넣으면 두 판의 상태 바이트가 같고, 중간 세이브를 읽어 이어 돌려도 같다
+ */
+SW_TEST_CASE_F( MechArenaRulesTest, WorldDeterminism )
+{
+    const auto setup = [this]( MechArenaWorld& world )
+    {
+        if ( world.initialize( _settings, &_mechs, &_weapons, &_projectiles, &_moves ) == false )
+            return false;
+        (void)world.addTeam( hashed_string( "A" ) );
+        (void)world.addTeam( hashed_string( "B" ) );
+        MechPilotConfig gunner;
+        gunner._listMechID = { hashed_string( "gunner" ) };
+        gunner._team       = 0;
+        MechPilotConfig flyer;
+        flyer._listMechID    = { hashed_string( "flyer" ) };
+        flyer._listSkillID   = { hashed_string( "iron" ) };
+        flyer._spawnPosition = float3{ 0.0f, 0.0f, 8.0f };
+        flyer._team          = 1;
+        if ( world.addPilot( gunner ) != 0 || world.addPilot( flyer ) != 1 )
+            return false;
+        world.start();
+        return true;
+    };
+    const auto step = []( MechArenaWorld& world, int32 stepIndex )
+    {
+        MechInput input0;
+        input0._moveX    = stepIndex % 30 < 15 ? 0.5f : -0.5f;
+        input0._bFire    = static_cast<uint8>( stepIndex % 3 == 0 ? SW_TRUE : SW_FALSE );
+        input0._bSpecial = static_cast<uint8>( stepIndex % 20 == 5 ? SW_TRUE : SW_FALSE );
+        input0._bMelee   = static_cast<uint8>( stepIndex % 30 == 10 ? SW_TRUE : SW_FALSE );
+        input0._bDash    = static_cast<uint8>( stepIndex % 25 == 0 ? SW_TRUE : SW_FALSE );
+        input0._bJump    = static_cast<uint8>( stepIndex % 40 == 20 ? SW_TRUE : SW_FALSE );
+        input0._bLockOn  = static_cast<uint8>( stepIndex % 50 == 1 ? SW_TRUE : SW_FALSE );
+        MechInput input1;
+        input1._moveZ      = stepIndex % 20 < 10 ? 0.7f : -0.7f;
+        input1._skillSlot  = stepIndex % 60 == 7 ? 0 : constant::invalid_index::kInt32;
+        input1._bFire      = static_cast<uint8>( stepIndex % 4 == 0 ? SW_TRUE : SW_FALSE );
+        input1._bSpecial   = static_cast<uint8>( stepIndex % 4 == 2 ? SW_TRUE : SW_FALSE );
+        input1._bTransform = static_cast<uint8>( stepIndex % 45 == 30 ? SW_TRUE : SW_FALSE );
+        input1._bHover     = static_cast<uint8>( stepIndex % 40 > 30 ? SW_TRUE : SW_FALSE );
+        world.setInput( 0, input0 );
+        world.setInput( 1, input1 );
+        world.update( kMechStep );
+    };
+    SW_EXPECT_TRUE( StateBytesTestUtil::isDeterministic<MechArenaWorld>( setup, step, 240 ) );
 }

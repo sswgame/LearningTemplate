@@ -7,6 +7,7 @@
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestWorld.h"
@@ -767,6 +768,38 @@ SW_TEST_CASE_F( ConquestRulesTest, StateRoundTripWithFallenCommander )
     restored.initialize( &_catalog );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( ConquestTestUtil::isSameState( _world, restored ) );
+}
+
+/**
+ * @brief [ConquestRulesTest] 결정성: 건설 · 일꾼 · 훈련 · 지휘관 이동 · 부대 명령 · 적 병사를 걸음 번호로 넣은 판은 같은 바이트를 내고, 중간에 쓰고 읽은 판도 같게 이어 돈다
+ */
+SW_TEST_CASE_F( ConquestRulesTest, WorldDeterminism )
+{
+    const auto setup = [this]( sw::ConquestWorld& world )
+    {
+        world.initialize( &_catalog );
+        return true;
+    };
+    const auto step = []( sw::ConquestWorld& world, int32 stepIndex )
+    {
+        if ( stepIndex == 0 )
+        {
+            (void)world.placeBuilding( "mill", "home" );
+            (void)world.placeBuilding( "barracks", "home" );
+            (void)world.assignWorkers( 0, 2 );
+        }
+        if ( stepIndex % 15 == 1 )
+            (void)world.trainUnit( 1, "spear" );
+        if ( stepIndex % 40 == 10 )
+            (void)world.spawnUnit( "spear", sw::ConquestTeam::Enemy, 30.0f + static_cast<float32>( stepIndex % 7 ), sw::ConquestOrder::Charge );
+        if ( stepIndex == 60 )
+            (void)world.spawnUnit( "ladder", sw::ConquestTeam::Player, 90.0f, sw::ConquestOrder::Charge );
+        world.setCommanderMove( stepIndex % 50 < 30 ? 1.0f : -0.5f );
+        if ( stepIndex % 45 == 20 )
+            world.issueOrder( stepIndex % 90 == 20 ? sw::ConquestOrder::Charge : sw::ConquestOrder::Follow );
+        world.update( stepIndex % 4 == 3 ? 0.25f : 0.5f ); // 고정 걸음에 못 미친 시간도 지난다
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::ConquestWorld>( setup, step, 180 ) );
 }
 
 /**

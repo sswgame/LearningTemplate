@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartAI.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartGhost.h"
@@ -1467,4 +1468,43 @@ SW_TEST_CASE_F( KartRaceTest, ReadStateRefusesBrokenTimes )
     SW_EXPECT_FALSE( readPatched( bestLapAt, -1.0f ) );
     SW_EXPECT_FALSE( readPatched( firstFinishAt, nan ) );
     SW_EXPECT_NEAR( raceTime, _race.getRaceTime(), kKartTolerance );
+}
+
+/**
+ * @brief [KartRaceTest] 결정성: 사람과 AI 가 상자 · 아이템 · 러버밴딩을 지나는 같은 입력이면 상태 바이트가 같고, 중간 세이브를 읽어 이어 달려도 같다
+ */
+SW_TEST_CASE_F( KartRaceTest, RaceDeterminism )
+{
+    sw::KartTrackDef def = KartTestUtil::makeRingDef( 3, {} );
+    for ( const float32 at : { 0.02f, 0.05f, 0.1f, 0.15f } )
+    {
+        sw::KartItemBoxDef box;
+        box._at = at;
+        def._listItemBox.push_back( box );
+    }
+    SW_REQUIRE_TRUE( _track.initialize( def ) );
+    _settings._bRubberBand    = SW_TRUE;
+    _settings._itemBoxRespawn = 0.5f;
+
+    const auto setup = [this]( sw::KartRace& race )
+    {
+        if ( race.initialize( _settings, &_track, &_items, &_projectiles ) == false )
+            return false;
+        if ( race.addRacer( sw::KinematicVehicleSettings{}, false ).has_value() == false || race.addRacer( sw::KinematicVehicleSettings{}, true ).has_value() == false )
+            return false;
+        race.start();
+        return true;
+    };
+    const auto step = []( sw::KartRace& race, int32 stepIndex )
+    {
+        sw::KartRacerInput input;
+        input._vehicle._throttle      = stepIndex % 17 == 0 ? 0.0f : 1.0f;
+        input._vehicle._steer         = static_cast<float32>( stepIndex % 5 - 2 ) * 0.1f;
+        input._vehicle._bDriftHeld    = static_cast<uint8>( stepIndex % 40 < 10 ? SW_TRUE : SW_FALSE );
+        input._vehicle._bBoostPressed = static_cast<uint8>( stepIndex % 50 == 0 ? SW_TRUE : SW_FALSE );
+        input._bUseItem               = static_cast<uint8>( stepIndex % 23 == 0 ? SW_TRUE : SW_FALSE );
+        race.setInput( 0, input );
+        (void)race.update( 1.0f / 30.0f );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::KartRace>( setup, step, 240 ) );
 }

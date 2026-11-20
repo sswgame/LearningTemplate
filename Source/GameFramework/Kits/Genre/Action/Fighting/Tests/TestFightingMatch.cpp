@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Action/Fighting/FightingMatch.h"
 
@@ -1014,4 +1015,24 @@ SW_TEST_CASE( FightingTest, CatalogRefusesDuplicateFighterIDs )
                                               moves, "FightingTest" ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), catalog.getCount() );
     SW_EXPECT_EQUAL( 100, catalog.find( hashed_string( "a" ) )->_health );
+}
+
+/**
+ * @brief [FightingRulesTest] 결정성: 걸음 번호로 정한 입력을 두 판에 돌리면 세이브 바이트가 같고, 중간 세이브를 읽어 이어 돌려도 같다
+ */
+SW_TEST_CASE_F( FightingRulesTest, MatchDeterminism )
+{
+    const auto setup = [this]( FightingMatch& match )
+    { return match.initialize( def( "combo" ), def( "basic" ), _settings ); };
+    const auto step = []( FightingMatch& match, int32 stepIndex )
+    {
+        InputFrame input0;
+        InputFrame input1;
+        input0._direction = static_cast<uint8>( stepIndex % 7 == 0 ? kFightingUp : 6 );
+        input1._direction = static_cast<uint8>( stepIndex % 11 == 0 ? kFightingDown : 4 );
+        input0._buttons   = static_cast<uint16>( stepIndex % 5 == 0 ? kFightingButton1 : ( stepIndex % 9 == 0 ? kFightingButton3 : 0 ) );
+        input1._buttons   = static_cast<uint16>( stepIndex % 6 == 0 ? kFightingButton3 : ( stepIndex % 13 == 0 ? kFightingButton4 : 0 ) );
+        match.advanceFrame( input0, input1 );
+    };
+    SW_EXPECT_TRUE( StateBytesTestUtil::isDeterministic<FightingMatch>( setup, step, 240 ) );
 }

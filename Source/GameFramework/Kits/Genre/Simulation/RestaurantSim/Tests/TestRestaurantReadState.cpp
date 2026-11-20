@@ -5,6 +5,7 @@
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/IngredientStock.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
@@ -13,6 +14,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 // RestaurantReadStateTest — 식당 상태 바이트의 신뢰 경계: 음수 값, 없는 손님 · 요리 · 직원, 겹친 줄과 자리, 규칙으로 나올 수 없는 주문을 거절하고 상태를 그대로 둔다.
 // 꾸민 바이트는 `writeState` 의 형식을 그대로 손으로 적는다. 칸마다 맞는 값을 기본으로 두고 한 칸씩 망가뜨린다. 키트 GF_RestaurantSim(nogpu).
@@ -188,6 +190,27 @@ namespace
         }
     };
 
+    /** @brief 결정성 테스트가 쓰는 요리법입니다. 라면은 화덕에서, 국은 스테이션 없이 만든다. */
+    constexpr const utf8* kDeterminismRecipeXML = R"(<RecipeCatalog>
+  <Recipe id="ramen" station="stove" time="4"><In item="noodle"/><Out item="ramen"/></Recipe>
+  <Recipe id="soup" time="2"><In item="broth"/><Out item="soup"/></Recipe>
+</RecipeCatalog>)";
+
+    /** @brief 결정성 테스트의 판 하나입니다. 식당과 빌려 준 창고 · 지갑을 함께 싣는다 — 창고와 지갑은 식당 밖이라 식당 바이트에 없다. 창고를 먼저 읽어 재고가 가리킬 물건이 먼저 선다. */
+    struct RestaurantRun
+    {
+        sw::Inventory            _pantry{};
+        sw::Wallet               _wallet{};
+        sw::RestaurantSimulation _simulation{};
+
+        SW_DECLARE_STATE_IO_IN_PLACE()
+        {
+            io.value( _pantry );
+            io.value( _wallet );
+            io.value( _simulation );
+        }
+    };
+
     struct RestaurantReadStateTest
     {
         sw::RestaurantCatalog    _catalog{};
@@ -232,6 +255,50 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RealAndCraftedStatesRead )
     SW_REQUIRE_TRUE( read( RestaurantFixture{} ) );
     SW_EXPECT_EQUAL( size_t( 1 ), _simulation.getOrders().size() );
     SW_EXPECT_EQUAL( 1, _simulation.countOccupiedSeats() );
+}
+
+/**
+ * @brief [RestaurantReadStateTest] 결정성: 고용 · 재료 · 손님 · 조리 · 서빙 · 계산 · 가격 바꾸기 · 마감과 다음 날을 걸음 번호로 돌린 식당은 같은 바이트를 내고, 중간에 쓰고 읽은 식당도 같게 이어 돈다
+ */
+SW_TEST_CASE_F( RestaurantReadStateTest, RestaurantDeterminism )
+{
+    sw::RecipeCatalog recipes;
+    SW_REQUIRE_TRUE( recipes.loadFromXMLText( kDeterminismRecipeXML, "RestaurantReadStateTest" ) );
+    const auto setup = [this, &recipes]( RestaurantRun& run )
+    {
+        run._wallet.add( sw::Wallet::getDefaultCurrency(), 1000 );
+        sw::SessionStateRefs refs;
+        refs._pWallet = &run._wallet;
+        run._simulation.initialize( &_catalog, &recipes, nullptr, nullptr, nullptr, refs, run._pantry, sw::RestaurantSettings{} );
+        return true;
+    };
+    const auto step = []( RestaurantRun& run, int32 stepIndex )
+    {
+        sw::RestaurantSimulation& simulation = run._simulation;
+        if ( stepIndex == 0 )
+        {
+            (void)simulation.hireStaff( "cook", sw::StaffRole::Cook, 10 );
+            (void)simulation.hireStaff( "server", sw::StaffRole::Server, 8 );
+            simulation.setStationCount( "stove", 1 );
+            (void)simulation.addIngredient( "noodle", 20, 2 );
+            (void)simulation.addIngredient( "broth", 10, 1 );
+            simulation.openDay( "sunny" );
+        }
+        if ( stepIndex % 9 == 4 )
+            (void)simulation.admitCustomer( "student" );
+        if ( stepIndex == 60 )
+            (void)simulation.setMenuPrice( "ramen", 60 );
+        if ( stepIndex == 110 )
+        {
+            sw::RestaurantDaySummary summary;
+            simulation.closeDay( summary );
+            simulation.advanceDay();
+            (void)simulation.addIngredient( "noodle", 10, 3 );
+            simulation.openDay( "rain" );
+        }
+        simulation.update( 3.0f );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<RestaurantRun>( setup, step, 200 ) );
 }
 
 /**

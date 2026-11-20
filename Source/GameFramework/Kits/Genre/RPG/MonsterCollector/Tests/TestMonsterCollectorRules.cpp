@@ -6,6 +6,7 @@
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterCollectorCatalog.h"
@@ -1506,4 +1507,37 @@ SW_TEST_CASE( MonsterCollectorTest, CatalogReportsUnknownReferences )
   <Move id="m" name="M" category="Status" weather="nope"/>
 </MonsterCollectorCatalog>)",
                                               "MonsterTest" ) );
+}
+
+/**
+ * @brief [MonsterCollectorRulesTest] 결정성: 같은 행동이면 순서 · 피해(난수 폭 · 급소) · 상태이상 · 날씨 · 교체 · 기절 뒤 교체가 같은 바이트를 내고, 중간 저장에서 이어도 같다
+ */
+SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleDeterminism )
+{
+    const sw::vector<sw::MonsterInstance> listPlayer{ make( "normie", 50, "strike", "ember" ), make( "swift", 50, "quick", "toxin" ) };
+    const sw::vector<sw::MonsterInstance> listFoe{ make( "flamo", 50, "strike", "burnup" ), make( "rocky", 50, "strike", "growl" ) };
+    const auto                            setup = [this, &listPlayer, &listFoe]( sw::MonsterBattle& battle ) -> bool
+    {
+        battle.initialize( &_catalog, &_chart, 7 );
+        battle.start( listPlayer, listFoe, false ); // 트레이너전 — 볼 · 도망으로 끝나지 않는다
+        return battle.getResult() == sw::MonsterBattleResult::Ongoing;
+    };
+    const auto step = []( sw::MonsterBattle& battle, int32 stepIndex )
+    {
+        const int32 player = sw::MonsterBattle::kPlayerSide;
+        const int32 foe    = sw::MonsterBattle::kFoeSide;
+        for ( int32 side = 0; side < sw::MonsterBattle::kSideCount; ++side )
+        {
+            if ( battle.needsSwitch( side ) )
+                (void)battle.switchFainted( side, 1 - battle.getActiveIndex( side ) );
+        }
+        if ( stepIndex == 10 )
+            battle.setWeather( "Rain", 2 );
+        if ( stepIndex == 30 )
+            battle.setWeather( "Sand", 4 );
+        (void)battle.setAction( player, stepIndex % 13 == 6 ? sw::MonsterAction::makeSwitch( 1 - battle.getActiveIndex( player ) ) : sw::MonsterAction::makeMove( stepIndex % 2 ) );
+        (void)battle.setAction( foe, sw::MonsterAction::makeMove( ( stepIndex / 2 ) % 2 ) );
+        battle.resolveRound();
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::MonsterBattle>( setup, step, 80 ) );
 }

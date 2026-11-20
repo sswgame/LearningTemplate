@@ -1406,3 +1406,23 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnOrderReadRefusesCraftedBytes )
     order.removeActor( 4 );
     SW_EXPECT_FALSE( order.hasActor( 4 ) );
 }
+
+/**
+ * @brief [SurvivalHorrorTest] 결정성: 같은 시드면 차례 · 공포 판정 · 전투 판정 · 괴물 타격(주사위는 시드 난수)이 같은 바이트를 내고, 중간 저장에서 이어도 같다
+ */
+SW_TEST_CASE_F( SurvivalHorrorTest, EncounterDeterminism )
+{
+    _monster._toughness = 40;
+    _monster._horror    = 1;
+    vector<SurvivalHorrorInvestigator> listInvestigator{ makeInvestigator( 1, 20 ), makeInvestigator( 2, 20, 1 ), makeInvestigator( 3, 20, 3 ) };
+    for ( SurvivalHorrorInvestigator& investigator : listInvestigator )
+    {
+        investigator._sanity = 20;
+    }
+    listInvestigator[1]._speed = 0.5f; // 괴물보다 느린 조사자도 둔다
+    const auto setup           = [this, &listInvestigator]( SurvivalHorrorEncounter& encounter ) -> bool
+    { return encounter.initialize( _monster, listInvestigator, 11u ); };
+    const auto step = []( SurvivalHorrorEncounter& encounter, int32 )
+    { (void)encounter.playNextTurn(); };
+    SW_EXPECT_TRUE( StateBytesTestUtil::isDeterministic<SurvivalHorrorEncounter>( setup, step, 120 ) );
+}

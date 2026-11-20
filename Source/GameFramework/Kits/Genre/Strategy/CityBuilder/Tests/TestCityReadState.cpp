@@ -5,6 +5,7 @@
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
@@ -145,6 +146,19 @@ namespace
         }
     };
 
+    /** @brief 결정성 테스트의 판 하나입니다. 도시와 빌려 준 지갑을 함께 싣는다 — 지갑은 도시 밖이라 도시 바이트에 없다. */
+    struct CityRun
+    {
+        sw::Wallet         _wallet{};
+        sw::CitySimulation _city{};
+
+        SW_DECLARE_STATE_IO_IN_PLACE()
+        {
+            io.value( _city );
+            io.value( _wallet );
+        }
+    };
+
     struct CityReadStateTest
     {
         sw::CityCatalog    _catalog{};
@@ -191,6 +205,37 @@ SW_TEST_CASE_F( CityReadStateTest, RealAndCraftedStatesRead )
 
     SW_REQUIRE_TRUE( CityFixture( _catalog ).readInto( restored ) );
     SW_EXPECT_EQUAL( 3, restored.getPopulation() );
+}
+
+/**
+ * @brief [CityReadStateTest] 결정성: 도로 · 집 · 정원을 걸음 번호로 짓고 허물며 달 결산까지 돈 도시는 같은 바이트를 내고, 중간에 쓰고 읽은 도시도 같게 이어 돈다
+ */
+SW_TEST_CASE_F( CityReadStateTest, CityDeterminism )
+{
+    constexpr int32 kSize = 12;
+    const auto      setup = [this]( CityRun& run )
+    {
+        run._wallet.add( _catalog.getRules()._currency, 1000 );
+        sw::SessionStateRefs refs;
+        refs._pWallet = &run._wallet;
+        return run._city.initialize( &_catalog, kSize, kSize, refs );
+    };
+    const auto step = []( CityRun& run, int32 stepIndex )
+    {
+        sw::CitySimulation& city = run._city;
+        if ( stepIndex == 0 )
+            (void)city.placeRoadLine( sw::int2{ 0, 0 }, sw::int2{ kSize - 1, 0 } );
+        if ( stepIndex % 10 == 1 && stepIndex < 10 * kSize )
+            (void)city.placeBuilding( "hut", stepIndex / 10, 1 );
+        if ( stepIndex % 50 == 25 )
+            (void)city.placeBuilding( "garden", ( stepIndex / 50 ) * 3, 3 );
+        if ( stepIndex == 130 )
+            (void)city.demolish( 3, 1 );
+        if ( stepIndex % 40 == 39 )
+            city.settleMonth( stepIndex % 160 == 159 );
+        (void)city.update( 0.25f, 1.0f );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<CityRun>( setup, step, 200 ) );
 }
 
 /**

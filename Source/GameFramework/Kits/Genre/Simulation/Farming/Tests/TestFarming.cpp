@@ -4,6 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
@@ -312,4 +313,53 @@ SW_TEST_CASE( FarmingTest, ShippingBinStateRefusesRepeatedItemsAndSettlesLargeCo
     const int64 expected = int64( 0x7FFFFFFF ) * 60;
     SW_EXPECT_EQUAL( expected, bin.settleShipping( catalog, wallet ) );
     SW_EXPECT_EQUAL( expected, wallet.getBalance( sw::Wallet::getDefaultCurrency() ) );
+}
+
+/**
+ * @brief [FarmingTest] 결정성: 칸마다 갈기 · 심기 · 물 · 거두기를 걸음 번호로 돌리고 비와 계절(봄 → 여름 → 가을)을 넘긴 밭은 같은 바이트를 내고, 중간에 쓰고 읽은 밭도 같게 이어 돈다
+ */
+SW_TEST_CASE( FarmingTest, FieldDeterminism )
+{
+    sw::CropCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCropXML, "FarmingTest" ) );
+    constexpr int32 kWidth  = 4;
+    constexpr int32 kHeight = 3;
+    const auto      setup   = [&catalog]( sw::FarmField& field )
+    {
+        field.initialize( kWidth, kHeight, &catalog );
+        return true;
+    };
+    const auto step = []( sw::FarmField& field, int32 stepIndex )
+    {
+        const sw::hashed_string& season = stepIndex < 30 ? kSpring : ( stepIndex < 60 ? kSummer : kFall );
+        for ( int32 y = 0; y < kHeight; ++y )
+        {
+            for ( int32 x = 0; x < kWidth; ++x )
+            {
+                sw::hashed_string produce;
+                int32             count = 0;
+                switch ( ( stepIndex + x + y * kWidth ) % 6 )
+                {
+                    case 0:
+                        (void)field.till( x, y );
+                        break;
+                    case 1:
+                        (void)field.plant( x, y, x % 2 == 0 ? kTurnipSeed : kTomatoSeed, season );
+                        break;
+                    case 2:
+                    case 3:
+                        if ( stepIndex % 3 != 0 )
+                            (void)field.water( x, y );
+                        break;
+                    case 4:
+                        (void)field.harvest( x, y, produce, count );
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        field.advanceDay( season, stepIndex % 7 == 0 );
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::FarmField>( setup, step, 90 ) );
 }

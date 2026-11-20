@@ -5,6 +5,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerCarry.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerCatalog.h"
@@ -14,6 +15,7 @@
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 #include <limits>
 
@@ -1006,4 +1008,75 @@ SW_TEST_CASE( ScavengerCatalogTest, ReportsBrokenElements )
     SW_EXPECT_EQUAL( 50, catalog.getQuotaSettings()._startQuota );
     SW_EXPECT_NEAR( 0.25f, catalog.computeBuyRate( 1 ), kScavengerTolerance );
     SW_EXPECT_TRUE( catalog.findScrap( "bolt" ) != nullptr );
+}
+
+namespace
+{
+    /** @brief 원정과 빌려 준 지갑 · 플래그 · 창고를 한 판으로 묶습니다. 지갑은 원정 밖(주인이 저장한다)이라 결정성 테스트가 함께 싣습니다. */
+    struct ScavengerDeterminismRun
+    {
+        sw::Wallet              _wallet{};
+        sw::GameFlags           _flags{};
+        sw::Inventory           _storage{};
+        sw::ScavengerExpedition _expedition{};
+
+        /** @brief 원정과 지갑을 함께 싣습니다 — 벌금 · 매입이 지갑을 바꾸고, 벌금은 지갑 잔액에서 계산한다. */
+        SW_DECLARE_STATE_IO_IN_PLACE()
+        {
+            io.value( _wallet );
+            io.value( _expedition );
+        }
+    };
+} // namespace
+
+/**
+ * @brief [ScavengerExpeditionTest] 결정성: 같은 입력이면 시설 생성(시드 난수) · 줍기 · 죽음 · 시신 · 자정 이륙 · 벌금이 같은 바이트를 내고, 중간 저장에서 이어도 같다
+ */
+SW_TEST_CASE_F( ScavengerExpeditionTest, ExpeditionDeterminism )
+{
+    const auto setup = [this]( ScavengerDeterminismRun& run ) -> bool
+    {
+        sw::ScavengerExpeditionData data;
+        data._pCatalog = &_catalog;
+        sw::SessionStateRefs refs;
+        refs._pWallet = &run._wallet;
+        refs._pFlags  = &run._flags;
+        return run._expedition.initialize( data, refs, run._storage, 11, 2 );
+    };
+    const auto step = []( ScavengerDeterminismRun& run, int32 stepIndex )
+    {
+        sw::ScavengerExpedition& expedition = run._expedition;
+        const sw::hashed_string  arrRoute[] = { "outside", "entrance", "room1", "room2" };
+        if ( stepIndex == 0 )
+            (void)expedition.land();
+        if ( 2 <= stepIndex && stepIndex < 6 )
+            (void)expedition.movePlayer( 1, arrRoute[stepIndex - 2] ); // 시설 연결은 시드가 정한다 — 막힌 문은 거절된다
+        if ( 20 <= stepIndex && stepIndex < 22 )
+            (void)expedition.movePlayer( 0, arrRoute[stepIndex - 20] );
+        for ( int32 player = 0; player < 2; ++player )
+        {
+            const sw::ScavengerCrewMember* pMember = expedition.findCrewMember( player );
+            for ( const sw::ScavengerScrap& scrap : expedition.getFacility().getGroundScrap() )
+            {
+                if ( stepIndex % 3 == player && scrap._areaID == pMember->_areaID )
+                {
+                    (void)expedition.pickUp( player, scrap._uid );
+                    break;
+                }
+            }
+        }
+        if ( stepIndex == 30 )
+            (void)expedition.applyDamage( 0, 30.0f );
+        if ( stepIndex == 40 )
+            (void)expedition.applyDamage( 1, 500.0f ); // 든 것이 떨어지고 시신이 남는다
+        if ( 50 <= stepIndex && stepIndex < 52 )
+            (void)expedition.movePlayer( 0, arrRoute[51 - stepIndex] );
+        if ( stepIndex == 52 )
+        {
+            (void)expedition.movePlayer( 0, sw::ScavengerExpedition::kShipAreaID );
+            (void)expedition.depositToShip( 0 );
+        }
+        expedition.update( 2.0f ); // 하루 240 초 — 내린 지 90 걸음에 자정이라 저절로 뜬다
+    };
+    SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<ScavengerDeterminismRun>( setup, step, 160 ) );
 }

@@ -1051,3 +1051,49 @@ SW_TEST_CASE_F( GhostHuntRulesTest, MansionReadRefusesCraftedBytes )
     SW_EXPECT_FALSE( readFixture( good, "foyer", 2u, 3u, 2 ) );
     SW_EXPECT_TRUE( _mansion.getCurrentRoom() == hashed_string( "foyer" ) );
 }
+
+/**
+ * @brief [GhostHuntTest] 결정성: 같은 입력이면 유령 주기 · 손전등 · 스트로브 · 흡입 줄다리기(도망 방향은 시드 난수) · 서지가 같은 바이트를 내고, 중간 저장에서 이어도 같다
+ */
+SW_TEST_CASE_F( GhostHuntTest, EncounterDeterminism )
+{
+    const auto setup = [this]( GhostEncounter& encounter ) -> bool
+    {
+        if ( encounter.initialize( &_catalog, 3u ) == false )
+            return false;
+        const bool bSpawned = encounter.spawnGhost( "goob", float3{ 0.0f, 0.0f, 2.0f } ) != 0 && encounter.spawnGhost( "goob", float3{ 1.0f, 0.0f, 3.0f } ) != 0 &&
+                              encounter.spawnGhost( "shy", float3{ -1.0f, 0.0f, 2.0f } ) != 0;
+        return bSpawned;
+    };
+    const auto step = []( GhostEncounter& encounter, int32 stepIndex )
+    {
+        constexpr float32 kDeltaTime = 0.1f;
+        const float3      eye{};
+        const float3      forward{ 0.0f, 0.0f, 1.0f };
+        encounter.update( kDeltaTime );
+        if ( stepIndex % 5 == 0 )
+            (void)encounter.shineBeam( eye, forward );
+        if ( stepIndex % 20 < 10 )
+            encounter.chargeStrobe( kDeltaTime );
+        else if ( stepIndex % 20 == 10 )
+            (void)encounter.releaseStrobe( eye, forward );
+        if ( stepIndex % 60 == 30 )
+            (void)encounter.spawnGhost( "goob", float3{ 0.0f, 0.0f, 2.0f } );
+        if ( encounter.getSuctionTarget() == 0 )
+        {
+            for ( const GhostInstance& ghost : encounter.getGhosts() )
+            {
+                if ( ghost._state == GhostState::Stunned && encounter.startSuction( ghost._id, eye ) )
+                    break;
+            }
+            return;
+        }
+        const float3 pull = ( stepIndex / 7 ) % 2 == 0 ? float3{ 0.0f, 0.0f, -1.0f } : float3{ 1.0f, 0.0f, 0.0f };
+        (void)encounter.updateSuction( pull, kDeltaTime );
+        if ( stepIndex % 15 == 14 )
+            (void)encounter.triggerSurge();
+        if ( stepIndex % 40 == 39 )
+            encounter.stopSuction();
+    };
+    SW_EXPECT_TRUE( StateBytesTestUtil::isDeterministic<GhostEncounter>( setup, step, 200 ) );
+}
