@@ -4,6 +4,8 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -341,7 +343,8 @@ namespace sw::editor
         if ( ImGui::BeginTable( "##locTable", columnCount, flags, ImGui::GetContentRegionAvail() ) )
         {
             ImGui::TableSetupColumn( "Key", ImGuiTableColumnFlags_WidthStretch, 0.22f );
-            const string sourceHeader = "Source (" + sheet._sourceCulture + ")";
+            fixed_string<constant::buffer::kMax64> sourceHeader;
+            formatstring( sourceHeader.data(), sourceHeader.capacity(), "Source (%#)", sheet._sourceCulture );
             ImGui::TableSetupColumn( sourceHeader.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.28f );
             // 머리에 진행도를 적는다(유니티 Localization 표의 완료율 자리). 줄마다 세지 않고 문화권마다 한 번 센다.
             for ( size_t cultureIndex = 0; cultureIndex < cultureCount; ++cultureIndex )

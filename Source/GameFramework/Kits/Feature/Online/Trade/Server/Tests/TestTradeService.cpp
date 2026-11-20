@@ -140,7 +140,9 @@ namespace
         {
             LedgerTransferRequest request;
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), string( assetID ), amount } );
-            request._journalKey = "test/grant/" + to_string( accountID ) + "/" + string( assetID );
+            StringBuilder<constant::buffer::kMax128> journalKey;
+            journalKey.appendFormat( "test/grant/%#/%#", accountID, assetID );
+            request._journalKey = string( journalKey.view() );
             request._reason     = "test.grant";
             LedgerTransferResult result;
             SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );
@@ -150,7 +152,9 @@ namespace
         {
             LedgerTransferRequest request;
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeAccount( accountID ), LedgerHolder::makeSink(), string( assetID ), amount } );
-            request._journalKey = "test/spend/" + to_string( accountID ) + "/" + string( assetID );
+            StringBuilder<constant::buffer::kMax128> journalKey;
+            journalKey.appendFormat( "test/spend/%#/%#", accountID, assetID );
+            request._journalKey = string( journalKey.view() );
             request._reason     = "test.spend";
             LedgerTransferResult result;
             SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );

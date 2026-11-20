@@ -5,7 +5,10 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -52,8 +55,12 @@ namespace sw
                     outListHeader.push_back( column._pName );
                     return;
                 }
-                outListHeader.push_back( string{ column._pName } + " (bytes)" );
-                outListHeader.push_back( string{ column._pName } + " (MB)" );
+                StringBuilder<constant::buffer::kMax128> header;
+                header.appendFormat( "%# (bytes)", column._pName );
+                outListHeader.push_back( string( header.view() ) );
+                header.clear();
+                header.appendFormat( "%# (MB)", column._pName );
+                outListHeader.push_back( string( header.view() ) );
             }
 
             static void appendNamedRow( CSVTable& outTable, string_view name, string value )
@@ -192,10 +199,17 @@ namespace sw
         const string sizeName{ schema._pColumn[schema._sizeColumn]._pName };
         for ( const utf8* pSide : { "Before", "After", "Delta" } )
         {
-            const string prefix = sizeName + " " + pSide;
-            table._listHeader.push_back( bBytes ? prefix + " (bytes)" : prefix );
+            StringBuilder<constant::buffer::kMax128> header;
+            header.appendFormat( "%# %#", sizeName, pSide );
             if ( bBytes )
-                table._listHeader.push_back( prefix + " (MB)" );
+                header.append( " (bytes)" );
+            table._listHeader.push_back( string( header.view() ) );
+            if ( bBytes )
+            {
+                header.clear();
+                header.appendFormat( "%# %# (MB)", sizeName, pSide );
+                table._listHeader.push_back( string( header.view() ) );
+            }
         }
         table._listHeader.push_back( "Status" );
 
@@ -233,8 +247,10 @@ namespace sw
         Internal::appendNamedRow( table, "GPU Live (MB)", formatMegabytes( snapshot._gpuLiveBytes ) );
         for ( uint32 sheetIndex = 0; sheetIndex < kMemorySheetCount; ++sheetIndex )
         {
-            const MemorySheetKind kind = static_cast<MemorySheetKind>( sheetIndex );
-            Internal::appendNamedRow( table, string{ getMemorySheetSchema( kind )._pName } + " rows", Internal::toText( snapshot.getSheet( kind )._listRow.size() ) );
+            const MemorySheetKind                   kind = static_cast<MemorySheetKind>( sheetIndex );
+            fixed_string<constant::buffer::kMax128> name;
+            formatstring( name.data(), name.capacity(), "%# rows", getMemorySheetSchema( kind )._pName );
+            Internal::appendNamedRow( table, name.view(), Internal::toText( snapshot.getSheet( kind )._listRow.size() ) );
         }
         return table;
     }
@@ -287,8 +303,10 @@ namespace sw
         result._listFile.push_back( std::move( *summary ) );
         for ( uint32 sheetIndex = 0; sheetIndex < kMemorySheetCount; ++sheetIndex )
         {
-            const MemorySheetKind      kind = static_cast<MemorySheetKind>( sheetIndex );
-            expected<MemoryExportFile> file = writeTable( makeSheetTable( snapshot, kind ), FileUtil::joinPath( folder, string{ getMemorySheetSchema( kind )._pName } + ".csv" ) );
+            const MemorySheetKind                   kind = static_cast<MemorySheetKind>( sheetIndex );
+            fixed_string<constant::buffer::kMax128> fileName;
+            formatstring( fileName.data(), fileName.capacity(), "%#.csv", getMemorySheetSchema( kind )._pName );
+            expected<MemoryExportFile> file = writeTable( makeSheetTable( snapshot, kind ), FileUtil::joinPath( folder, fileName.view() ) );
             if ( file.has_value() == false )
                 return unexpected( file.error() );
             result._listFile.push_back( std::move( *file ) );

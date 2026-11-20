@@ -27,7 +27,12 @@ namespace sw::editor
         struct ImportedAssetStoreInternal
         {
             /** @brief 글에서 찾는 저장소 구간입니다(`/models/_shared/`). */
-            static string makeMarker() { return "/" + string( ImportedAssetStore::kModelFolderName ) + "/" + string( ImportedAssetStore::kStoreFolderName ) + "/"; }
+            static string makeMarker()
+            {
+                StringBuilder<constant::buffer::kMax64> markerBuilder;
+                markerBuilder.appendFormat( "/%#/%#/", ImportedAssetStore::kModelFolderName, ImportedAssetStore::kStoreFolderName );
+                return string( markerBuilder.view() );
+            }
         };
     } // namespace
 
@@ -59,14 +64,18 @@ namespace sw::editor
 
     string ImportedAssetStore::findDomainFolder( string_view sourcePath )
     {
-        const string normalized = FileUtil::normalizeSeparators( sourcePath );
-        const size_t at         = normalized.find( "/" + string( ModelImportUtil::kRawModelFolder ) + "/" );
+        const string                            normalized = FileUtil::normalizeSeparators( sourcePath );
+        StringBuilder<constant::buffer::kMax64> segmentBuilder;
+        segmentBuilder.appendFormat( "/%#/", ModelImportUtil::kRawModelFolder );
+        const size_t at = normalized.find( segmentBuilder.view() );
         return at == string::npos ? string{} : normalized.substr( 0, at );
     }
 
     string ImportedAssetStore::makeStorePath( string_view domainFolder, string_view kind, string_view key, string_view extension )
     {
-        return string( domainFolder ) + "/" + string( kModelFolderName ) + "/" + string( kStoreFolderName ) + "/" + string( kind ) + "/" + string( key ) + string( extension );
+        StringBuilder<constant::buffer::kMax256> pathBuilder;
+        pathBuilder.appendFormat( "%#/%#/%#/%#/%#%#", domainFolder, kModelFolderName, kStoreFolderName, kind, key, extension );
+        return string( pathBuilder.view() );
     }
 
     bool ImportedAssetStore::writeIfAbsent( string_view storePath, const void* pBytes, size_t byteCount )
@@ -118,10 +127,18 @@ namespace sw::editor
         for ( const string& reference : listReference )
         {
             // 리소스 경로의 도메인(`common` · `game/x`)을 디스크 경로에서 찾아 리소스 루트를 얻는다.
-            const string domain   = reference.substr( 0, reference.find( marker ) );
-            const size_t rootEnd  = normalized.find( "/" + domain + "/" + string( kModelFolderName ) + "/" );
-            const uint64 fileHash = rootEnd == string::npos ? 0 : AssetImportStampUtil::computeFileHash( normalized.substr( 0, rootEnd + 1 ) + reference );
-            hash                  = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
+            const string                             domain = reference.substr( 0, reference.find( marker ) );
+            StringBuilder<constant::buffer::kMax256> rootBuilder;
+            rootBuilder.appendFormat( "/%#/%#/", domain, kModelFolderName );
+            const size_t rootEnd  = normalized.find( rootBuilder.view() );
+            uint64       fileHash = 0;
+            if ( rootEnd != string::npos )
+            {
+                StringBuilder<constant::buffer::kMax512> fileBuilder;
+                fileBuilder.appendFormat( "%#%#", string_view( normalized ).substr( 0, rootEnd + 1 ), reference );
+                fileHash = AssetImportStampUtil::computeFileHash( fileBuilder.view() );
+            }
+            hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
         }
         return hash;
     }
@@ -135,10 +152,16 @@ namespace sw::editor
         const string marker     = ImportedAssetStoreInternal::makeMarker();
         for ( const string& reference : listReference )
         {
-            const string domain  = reference.substr( 0, reference.find( marker ) );
-            const size_t rootEnd = normalized.find( "/" + domain + "/" + string( kModelFolderName ) + "/" );
+            const string                             domain = reference.substr( 0, reference.find( marker ) );
+            StringBuilder<constant::buffer::kMax256> rootBuilder;
+            rootBuilder.appendFormat( "/%#/%#/", domain, kModelFolderName );
+            const size_t rootEnd = normalized.find( rootBuilder.view() );
             if ( rootEnd != string::npos )
-                outListPath.push_back( normalized.substr( 0, rootEnd + 1 ) + reference );
+            {
+                StringBuilder<constant::buffer::kMax512> fileBuilder;
+                fileBuilder.appendFormat( "%#%#", string_view( normalized ).substr( 0, rootEnd + 1 ), reference );
+                outListPath.push_back( string( fileBuilder.view() ) );
+            }
         }
     }
 
@@ -166,7 +189,9 @@ namespace sw::editor
                 string text;
                 if ( FileUtil::readTextFile( result, text ) == false )
                 {
-                    inoutListProblem.push_back( result + ": could not read it to find its shared results - nothing is removed from " + store );
+                    StringBuilder<constant::buffer::kMax512> problemBuilder;
+                    problemBuilder.appendFormat( "%#: could not read it to find its shared results - nothing is removed from %#", result, store );
+                    inoutListProblem.push_back( string( problemBuilder.view() ) );
                     return removedCount;
                 }
                 vector<string> listReference;
@@ -187,7 +212,11 @@ namespace sw::editor
                 if ( FileUtil::removeFile( stored ) )
                     ++removedCount;
                 else
-                    inoutListProblem.push_back( stored + ": could not remove the unreferenced shared result" );
+                {
+                    StringBuilder<constant::buffer::kMax512> problemBuilder;
+                    problemBuilder.appendFormat( "%#: could not remove the unreferenced shared result", stored );
+                    inoutListProblem.push_back( string( problemBuilder.view() ) );
+                }
             }
         }
         return removedCount;

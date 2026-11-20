@@ -247,7 +247,11 @@ namespace sw
                 const string file = step.readValidatedProperties<AutomationFileStepParams>()._file;
                 const string path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
-                    runner.recordFailure( step, "could not write " + path );
+                {
+                    fixed_string<constant::buffer::kMax512> message;
+                    formatstring( message.data(), message.capacity(), "could not write %#", path );
+                    runner.recordFailure( step, message );
+                }
                 return true;
             }
 
@@ -317,7 +321,9 @@ namespace sw
             const string focused = Internal::describeFocus( ui );
             if ( focused != *pFocus )
             {
-                outFailure += "focus is '" + focused + "', expected '" + *pFocus + "'. ";
+                StringBuilder<constant::buffer::kMax256> failure;
+                failure.appendFormat( "focus is '%#', expected '%#'. ", focused, *pFocus );
+                outFailure += failure.view();
                 bPassed = false;
             }
         }
@@ -328,7 +334,9 @@ namespace sw
             const bool   bMatches = bNone ? active == Internal::kNone : FileUtil::normalizePath( *pScreen ).str() == active;
             if ( bMatches == false )
             {
-                outFailure += "active screen is '" + active + "', expected '" + *pScreen + "'. ";
+                StringBuilder<constant::buffer::kMax256> failure;
+                failure.appendFormat( "active screen is '%#', expected '%#'. ", active, *pScreen );
+                outFailure += failure.view();
                 bPassed = false;
             }
         }
@@ -337,12 +345,16 @@ namespace sw
             int32 expected = 0;
             if ( StringUtil::parseInt( string_view{ *pCount }, expected ) == false )
             {
-                outFailure += "screens '" + *pCount + "' is not a number. "; // 검사 뒤 단계가 바뀌었다(핫 리로드)
+                StringBuilder<constant::buffer::kMax256> failure; // 검사 뒤 단계가 바뀌었다(핫 리로드)
+                failure.appendFormat( "screens '%#' is not a number. ", *pCount );
+                outFailure += failure.view();
                 bPassed = false;
             }
             else if ( ui.getMenuStackDepth() != static_cast<uint32>( expected ) )
             {
-                outFailure += "menu stack depth is " + to_string( ui.getMenuStackDepth() ) + ", expected " + *pCount + ". ";
+                StringBuilder<constant::buffer::kMax256> failure;
+                failure.appendFormat( "menu stack depth is %#, expected %#. ", ui.getMenuStackDepth(), *pCount );
+                outFailure += failure.view();
                 bPassed = false;
             }
         }

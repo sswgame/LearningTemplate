@@ -325,7 +325,11 @@ namespace sw::editor
     {
         const SourceControlLock* pLock = findLock( absolutePath );
         if ( pLock != nullptr )
-            return "Locked by " + pLock->_owner + " (" + string{ _pProvider->getName() } + ")";
+        {
+            StringBuilder<constant::buffer::kMax256> statusBuilder;
+            statusBuilder.appendFormat( "Locked by %# (%#)", pLock->_owner, _pProvider->getName() );
+            return string( statusBuilder.view() );
+        }
         if ( bReadOnly )
             return _pProvider->canLock() ? string{ "Read-only - Check Out (lock) before editing" } : string{ "Read-only file" };
         return {};

@@ -22,7 +22,9 @@ namespace sw
             {
                 utf8 arrBuffer[constant::buffer::kMax64];
                 StringUtil::formatNumber( arrBuffer, sizeof( arrBuffer ), static_cast<int64>( MathUtil::round( in.toNumber() * kPercentScale ) ) );
-                outValue = UIBindingValue::makeText( string( arrBuffer ) + "%" );
+                fixed_string<constant::buffer::kMax64> text;
+                formatstring( text.data(), text.capacity(), "%#%%", static_cast<const utf8*>( arrBuffer ) );
+                outValue = UIBindingValue::makeText( text );
                 return true;
             }
 
@@ -54,7 +56,9 @@ namespace sw
                 utf8        arrSecondText[constant::buffer::kMax32];
                 StringUtil::formatNumber( arrMinuteText, sizeof( arrMinuteText ), minutes );
                 StringUtil::formatNumber( arrSecondText, sizeof( arrSecondText ), seconds );
-                outValue = UIBindingValue::makeText( string( arrMinuteText ) + ( seconds < 10 ? ":0" : ":" ) + arrSecondText );
+                fixed_string<constant::buffer::kMax64> text;
+                formatstring( text.data(), text.capacity(), "%#%#%#", static_cast<const utf8*>( arrMinuteText ), seconds < 10 ? ":0" : ":", static_cast<const utf8*>( arrSecondText ) );
+                outValue = UIBindingValue::makeText( text );
                 return true;
             }
         };

@@ -245,7 +245,12 @@ namespace
             SW_REQUIRE_TRUE( _server.initialize( StreamTransportFactory::createPlatformTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&FakeFCMEndpoint::onRequest>( this ) ) );
         }
 
-        string makeBaseURL() { return "http://127.0.0.1:" + to_string( static_cast<int32>( _server.getListenPort() ) ); }
+        string makeBaseURL()
+        {
+            StringBuilder<constant::buffer::kMax64> url;
+            url.appendFormat( "http://127.0.0.1:%#", static_cast<int32>( _server.getListenPort() ) );
+            return string( url.view() );
+        }
 
         void onRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse )
         {
@@ -289,7 +294,9 @@ namespace
             NetPublicKey          publicKey;
             SW_REQUIRE_TRUE( security.createSigningKeyPair( NetSignatureAlgorithm::RsaPkcs1SHA256, fcmKey, publicKey ) );
             SW_REQUIRE_TRUE( security.createSigningKeyPair( NetSignatureAlgorithm::EcdsaP256Sha256, apnsKey, publicKey ) );
-            _fcmEnv  = make_unique<test::ScopedEnvironmentVariable>( kFCMEnv, R"({"project_id":"proj","client_email":"a@b","private_key":")" + test::escapeJSONText( fcmKey ) + R"("})" );
+            StringBuilder<constant::buffer::kMax4096> fcmJSON;
+            fcmJSON.appendFormat( R"({"project_id":"proj","client_email":"a@b","private_key":"%#"})", test::escapeJSONText( fcmKey ) );
+            _fcmEnv  = make_unique<test::ScopedEnvironmentVariable>( kFCMEnv, fcmJSON.view() );
             _apnsEnv = make_unique<test::ScopedEnvironmentVariable>( kAPNSEnv, apnsKey );
         }
 
@@ -390,8 +397,10 @@ SW_TEST_CASE_F( PushEndToEndTest, ProvidersReachTheirEndpoints )
     SW_EXPECT_EQUAL( string( kFCMToken ), fcmDeviceToken );
 
     SW_REQUIRE_EQUAL( size_t( 1 ), _apns._listRequest.size() );
-    const APNSRequestRecord& request = _apns._listRequest[0];
-    SW_EXPECT_EQUAL( string( "/3/device/" ) + kAPNSToken, request._path );
+    const APNSRequestRecord&               request = _apns._listRequest[0];
+    fixed_string<constant::buffer::kMax64> expectedPath;
+    formatstring( expectedPath.data(), expectedPath.capacity(), "/3/device/%#", kAPNSToken );
+    SW_EXPECT_EQUAL( string( expectedPath.view() ), request._path );
     SW_EXPECT_EQUAL( string( kTopic ), request._topic );
     SW_EXPECT_EQUAL( string( "alert" ), request._pushType );
     SW_EXPECT_TRUE( StringUtil::startsWith( request._authorization, "bearer " ) );
@@ -456,7 +465,9 @@ SW_TEST_CASE_F( PushEndToEndTest, BadSettingsStopAssembly )
     _apnsEnv.reset();
     const auto failed1 = assemble();
     SW_REQUIRE_FALSE( failed1.has_value() );
-    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    StringBuilder<constant::buffer::kMax512> error1Builder;
+    error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );
+    const sw::string error1( error1Builder.view() );
     SW_EXPECT_TRUE( error1.find( kAPNSEnv ) != string::npos );
     SW_EXPECT_EQUAL( 0, _providers.getProviderCount() );
 }
@@ -487,7 +498,9 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
         test::OnlineRuntimeFixture noTrust;
         const auto                 failed1 = noTrust.fromConfig( kServerJSON, makeOnlineJSON( "" ), nowMs );
         SW_REQUIRE_FALSE( failed1.has_value() );
-        const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+        StringBuilder<constant::buffer::kMax512> error1Builder;
+        error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );
+        const sw::string error1( error1Builder.view() );
         SW_EXPECT_TRUE( error1.find( "pushTrustFile" ) != string::npos );
     }
 

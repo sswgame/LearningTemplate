@@ -3,6 +3,7 @@
 #include "Programs/ReflectionParser/MemberCollector.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Programs/ReflectionParser/AnnotationApply.h"
@@ -562,8 +563,10 @@ namespace sw
                 return true;
         }
 
-        const string cacheKey = ( listBaseType.empty() ? string() : listBaseType.front() ) + "|" + fqn;
-        const auto   cacheIt  = s_mapFqnToDerives.find( cacheKey );
+        StringBuilder<constant::buffer::kMax512> cacheKeyText;
+        cacheKeyText.appendFormat( "%#|%#", listBaseType.empty() ? string_view() : string_view( listBaseType.front() ), fqn );
+        const string cacheKey( cacheKeyText.view() );
+        const auto   cacheIt = s_mapFqnToDerives.find( cacheKey );
         if ( cacheIt != s_mapFqnToDerives.end() )
             return cacheIt->second;
 

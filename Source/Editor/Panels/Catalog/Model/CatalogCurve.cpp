@@ -98,7 +98,11 @@ namespace sw::editor
                     const CatalogXMLElement& child = parsed.getElement( childIndex );
                     if ( string_view{ child._name } == CatalogCurve::kKeyListName )
                         continue;
-                    const string          label        = prefix.empty() ? makeSegment( child ) : prefix + "/" + makeSegment( child );
+                    StringBuilder<constant::buffer::kMax256> labelBuilder;
+                    if ( prefix.empty() == false )
+                        labelBuilder.appendFormat( "%#/", prefix );
+                    labelBuilder.append( makeSegment( child ) );
+                    const string          label( labelBuilder.view() );
                     const optional<int32> listKeyIndex = findChildNamed( parsed, child, CatalogCurve::kKeyListName );
                     // 키가 없는 채널(`<_red/>`)은 모양만으로는 곡선인지 알 수 없다 - 형제에 곡선이 있는 색 채널 이름일 때만 빈 곡선으로 본다.
                     const bool bEmptyChannel = child._listChild.empty() && bHasCurveChild && isGradientChannel( child._name );

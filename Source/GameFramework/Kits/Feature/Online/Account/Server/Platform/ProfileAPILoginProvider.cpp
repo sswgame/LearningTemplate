@@ -50,10 +50,10 @@ namespace sw
 
     string ProfileAPILoginProvider::makeRequestURL( string_view ticket ) const
     {
-        string url = _settings._profileURL;
-        url += url.find( '?' ) == string::npos ? "?" : "&";
-        url += _settings._keyParam + "=" + _key + "&" + _settings._ticketParam + "=" + string( ticket ) + "&" + _settings._identityParam + "=" + _settings._identity;
-        return url;
+        StringBuilder<constant::buffer::kMax2048> url;
+        url.appendFormat( "%#%#%#=%#&%#=%#&%#=%#", _settings._profileURL, _settings._profileURL.find( '?' ) == string::npos ? "?" : "&", _settings._keyParam, _key,
+                          _settings._ticketParam, ticket, _settings._identityParam, _settings._identity );
+        return string( url.view() );
     }
 
     uint64 ProfileAPILoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds /*nowMs*/ )
@@ -78,7 +78,9 @@ namespace sw
         else
         {
             request._url = _settings._profileURL;
-            request._listHeader.push_back( HTTPHeader{ "Authorization", "Bearer " + string( ticket ) } );
+            StringBuilder<constant::buffer::kMax2048> authorization;
+            authorization.appendFormat( "Bearer %#", ticket );
+            request._listHeader.push_back( HTTPHeader{ "Authorization", string( authorization.view() ) } );
         }
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
         _mapRequestToVerification[_pHTTPClient->submitRequest( request )] = verificationID;

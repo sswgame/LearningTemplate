@@ -326,10 +326,10 @@ namespace sw
             /** @brief 외부 주체의 다이제스트를 계산합니다. 키는 주체 문자열이고 정보는 라벨 뒤에 제공자 이름을 붙인 것이므로, 제공자가 다르면 같은 주체 문자열도 다른 다이제스트가 나옵니다. */
             [[nodiscard]] static bool computeSubjectDigestHex( ILoginCrypto& crypto, string_view provider, string_view subject, string& outHex )
             {
-                string info{ kSubjectLabel };
-                info += provider;
+                StringBuilder<constant::buffer::kMax128> info;
+                info.appendFormat( "%#%#", kSubjectLabel, provider );
                 uint8 arrDigest[LoginConstant::kDigestSize];
-                if ( crypto.computeKeyedHash( reinterpret_cast<const uint8*>( subject.data() ), static_cast<int32>( subject.size() ), reinterpret_cast<const uint8*>( info.data() ),
+                if ( crypto.computeKeyedHash( reinterpret_cast<const uint8*>( subject.data() ), static_cast<int32>( subject.size() ), reinterpret_cast<const uint8*>( info.c_str() ),
                                               static_cast<int32>( info.size() ), arrDigest, LoginConstant::kDigestSize ) == false )
                     return false;
                 outHex = HexUtil::encodeBytes( arrDigest, static_cast<size_t>( LoginConstant::kDigestSize ) );
@@ -338,18 +338,16 @@ namespace sw
 
             static string makeExternalKey( string_view provider, string_view digestHex )
             {
-                string key{ provider };
-                key.push_back( '/' );
-                key += digestHex;
-                return key;
+                StringBuilder<constant::buffer::kMax256> key;
+                key.appendFormat( "%#/%#", provider, digestHex );
+                return string( key.view() );
             }
 
             static string makeAccountExternalKey( uint64 accountID, string_view provider )
             {
-                string key = ServiceKeyUtil::makeHex64( accountID );
-                key.push_back( '/' );
-                key += provider;
-                return key;
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%#/%#", ServiceKeyUtil::makeHex64( accountID ), provider );
+                return string( key.view() );
             }
 
             /** @brief 철회 대기열의 키 `<제공자>/<계정 16진>` 입니다. */
@@ -399,7 +397,12 @@ namespace sw
                 return hex.substr( hex.size() - static_cast<size_t>( digitCount ) );
             }
 
-            static string makeGuestDisplayName( uint64 accountID ) { return string( kGuestNamePrefix ) + makeIDSuffix( accountID, 6 ); }
+            static string makeGuestDisplayName( uint64 accountID )
+            {
+                StringBuilder<constant::buffer::kMax64> name;
+                name.appendFormat( "%#%#", kGuestNamePrefix, makeIDSuffix( accountID, 6 ) );
+                return string( name.view() );
+            }
 
             /** @brief 제공자가 준 이름에서 ASCII 영숫자와 `_` 만 12자까지 남기고, "-" 와 계정 id 꼬리 4자리를 붙입니다. 이름이 없으면 "Player" 를 씁니다. */
             static string makePlatformDisplayName( string_view hint, uint64 accountID )

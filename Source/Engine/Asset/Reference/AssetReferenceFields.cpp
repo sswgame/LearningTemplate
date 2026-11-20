@@ -245,9 +245,17 @@ namespace sw
         // 리다이렉트 표(`redirects.xml`)는 옛 id 를 적는 글이다 — 있는지 검사하거나 옮기기가 고칠 참조가 아니다(`from` 은 다른 형식의 경로 칸 이름이기도 하다).
         if ( isTextAsset( lowered ) == false || AssetReferenceFieldsInternal::startsWithDomain( lowered, _listUncheckedDomain ) || AssetRedirect::isTable( lowered ) )
             return false;
-        const string wrapped = "/" + lowered;
-        return std::none_of( _listImported.begin(), _listImported.end(), [&wrapped]( const AssetImportedFolder& folder )
-        { return folder._bGeneratedReferrers && wrapped.find( "/" + folder._folder + "/" ) != string::npos; } );
+        StringBuilder<constant::buffer::kMax512> wrapped;
+        wrapped.appendFormat( "/%#", lowered );
+        StringBuilder<constant::buffer::kMax256> marker;
+        return std::none_of( _listImported.begin(), _listImported.end(), [&wrapped, &marker]( const AssetImportedFolder& folder )
+        {
+            if ( folder._bGeneratedReferrers == false )
+                return false;
+            marker.clear();
+            marker.appendFormat( "/%#/", folder._folder );
+            return wrapped.view().find( marker.view() ) != string_view::npos;
+        } );
     }
 
     bool AssetReferenceFields::isChecked( string_view path ) const
@@ -475,8 +483,10 @@ namespace sw
     {
         for ( const string& argument : _listCMakeArgument )
         {
-            const string prefix = argument + "=";
-            size_t       start  = text.find( prefix );
+            StringBuilder<constant::buffer::kMax128> prefixBuilder;
+            prefixBuilder.appendFormat( "%#=", argument );
+            const string_view prefix = prefixBuilder.view();
+            size_t            start  = text.find( prefix );
             while ( start != string_view::npos )
             {
                 const bool   bBoundary  = start == 0 || AssetReferenceFieldsInternal::isOneOf( text[start - 1], AssetReferenceFieldsInternal::kCMakeArgumentBoundary );
@@ -514,11 +524,15 @@ namespace sw
     {
         for ( const AssetImportedFolder& imported : _listImported )
         {
-            const string marker   = "/" + imported._folder + "/";
-            size_t       position = assetID.find( marker );
+            StringBuilder<constant::buffer::kMax256> markerBuilder;
+            markerBuilder.appendFormat( "/%#/", imported._folder );
+            const string_view marker   = markerBuilder.view();
+            size_t            position = assetID.find( marker );
             while ( position != string_view::npos )
             {
-                const string              base        = string( assetID.substr( 0, position ) ) + "/" + imported._sourceFolder + "/";
+                StringBuilder<constant::buffer::kMax512> baseBuilder;
+                baseBuilder.appendFormat( "%#/%#/", assetID.substr( 0, position ), imported._sourceFolder );
+                const string_view         base        = baseBuilder.view();
                 const vector<string_view> listSegment = StringUtil::split( assetID.substr( position + marker.size() ), "/" );
                 // 원본은 산출물 자리의 어느 조상이다 — `models/a/b/c.mesh` 는 `models_raw/a/b/c.glb` → `a/b.glb` → `a.glb` 순서로 본다(옆 폴더 `a/clips` 도 `a.glb` 의 것).
                 for ( size_t count = listSegment.size(); count > 0; --count )
@@ -528,13 +542,16 @@ namespace sw
                     {
                         head.append( listSegment[segment] ).append( "/" );
                     }
-                    const string last( listSegment[count - 1] );
-                    const string arrStem[] = { last.substr( 0, last.find( '.' ) ), FileUtil::removeExtension( last ) };
+                    const string                             last( listSegment[count - 1] );
+                    const string                             arrStem[] = { last.substr( 0, last.find( '.' ) ), FileUtil::removeExtension( last ) };
+                    StringBuilder<constant::buffer::kMax512> candidate;
                     for ( const string& stem : arrStem )
                     {
                         for ( const string& extension : imported._listSourceExtension )
                         {
-                            if ( assets.contains( base + head + stem + extension ) )
+                            candidate.clear();
+                            candidate.appendFormat( "%#%#%#%#", base, head, stem, extension );
+                            if ( assets.contains( candidate.view() ) )
                                 return true;
                         }
                     }
@@ -559,15 +576,22 @@ namespace sw
         };
         for ( const AssetImportedFolder& imported : _listImported )
         {
-            const string marker      = "/" + imported._sourceFolder + "/";
-            string       oldImported = "/" + oldPath;
-            string       newImported = "/" + newPath;
-            const size_t oldAt       = oldImported.find( marker );
-            const size_t newAt       = newImported.find( marker );
+            StringBuilder<constant::buffer::kMax256> markerBuilder;
+            markerBuilder.appendFormat( "/%#/", imported._sourceFolder );
+            const string_view                        marker = markerBuilder.view();
+            StringBuilder<constant::buffer::kMax256> folderBuilder;
+            folderBuilder.appendFormat( "/%#/", imported._folder );
+            const string_view folderMarker = folderBuilder.view();
+            string            oldImported( 1, '/' );
+            oldImported += oldPath;
+            string newImported( 1, '/' );
+            newImported += newPath;
+            const size_t oldAt = string_view( oldImported ).find( marker );
+            const size_t newAt = string_view( newImported ).find( marker );
             if ( oldAt == string::npos || newAt == string::npos )
                 continue;
-            oldImported.replace( oldAt, marker.size(), "/" + imported._folder + "/" );
-            newImported.replace( newAt, marker.size(), "/" + imported._folder + "/" );
+            oldImported.replace( oldAt, marker.size(), folderMarker );
+            newImported.replace( newAt, marker.size(), folderMarker );
             if ( bFolder == false )
             {
                 const auto hasSourceExtension = [&imported]( const string& path )
@@ -607,8 +631,9 @@ namespace sw
                                      ( path[rule._oldPath.size()] == '/' || path[rule._oldPath.size()] == '.' );
                 if ( bExact == false && bPrefix == false )
                     continue;
-                const string rewritten = rule._newPath + path.substr( rule._oldPath.size() );
-                inoutText.replace( itReference->_offset, itReference->_length, rewritten );
+                StringBuilder<constant::buffer::kMax512> rewritten;
+                rewritten.appendFormat( "%#%#", rule._newPath, string_view( path ).substr( rule._oldPath.size() ) );
+                inoutText.replace( itReference->_offset, itReference->_length, rewritten.view() );
                 ++rewriteCount;
                 break;
             }

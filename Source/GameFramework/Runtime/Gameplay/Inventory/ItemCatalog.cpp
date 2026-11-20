@@ -40,19 +40,17 @@ namespace sw
                 if ( XMLFields::readProperties( node, params, sourceName, { "bodyShape" } ) == false ) // 모르는 속성 · 깨진 pieces 는 오류다
                     return false;
                 // 속성은 공통 어휘의 줄임말이다. 칸은 읽기 때의 정적 검사(조건 순환 · 없는 세트)가 읽는다.
-                string text;
+                StringBuilder<constant::buffer::kMax256> text;
                 if ( pSet != nullptr )
                 {
                     outCondition._setID = params._set;
                     outCondition._kind  = params._pieces > 0 ? EquipmentConditionKind::SetPieces : EquipmentConditionKind::SetComplete;
                     if ( outCondition._setID.empty() )
                         return false;
-                    StringBuilder<constant::buffer::kMax256> textBuilder;
                     if ( params._pieces > 0 )
-                        textBuilder.appendFormat( "setPieces(%#, %#)", outCondition._setID.c_str(), params._pieces );
+                        text.appendFormat( "setPieces(%#, %#)", outCondition._setID.c_str(), params._pieces );
                     else
-                        textBuilder.appendFormat( "setComplete(%#)", outCondition._setID.c_str() );
-                    text = string( textBuilder.view() );
+                        text.appendFormat( "setComplete(%#)", outCondition._setID.c_str() );
                 }
                 else if ( pEquippedTag != nullptr || pCharacterTag != nullptr )
                 {
@@ -61,21 +59,24 @@ namespace sw
                     outCondition._tag         = TagID::request( tagText );
                     if ( outCondition._tag.isValid() == false )
                         return false;
-                    text = string( pEquippedTag != nullptr ? "equippedTag(" : "tag(" ) + string( tagText ) + ")";
+                    text.appendFormat( "%#(%#)", pEquippedTag != nullptr ? "equippedTag" : "tag", tagText );
                 }
                 else
                 {
                     outCondition._kind = EquipmentConditionKind::BodyShape;
+                    text.append( "bodyShape(" );
+                    const uint32 openSize = text.size();
                     StringUtil::forEachToken( string_view( pBodyShape ), XMLReadUtil::kListSeparators, [&]( string_view token )
                     {
-                        text += text.empty() ? "" : ", ";
-                        text += token;
+                        if ( text.size() > openSize )
+                            text.append( ", " );
+                        text.append( token );
                     } );
-                    if ( text.empty() )
+                    if ( text.size() == openSize )
                         return false;
-                    text = "bodyShape(" + text + ")";
+                    text.append( ')' );
                 }
-                return ConditionExpr::compile( text, sourceName, outCondition._expr );
+                return ConditionExpr::compile( text.view(), sourceName, outCondition._expr );
             }
         };
     } // namespace

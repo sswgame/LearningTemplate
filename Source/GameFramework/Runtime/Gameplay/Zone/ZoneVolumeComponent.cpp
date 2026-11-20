@@ -136,8 +136,10 @@ namespace sw
 
     hashed_string ZoneVolumeComponent::getSourceName() const
     {
-        const GameObject* const pOwner = getOwner();
-        return hashed_string( string( "volume:" ) + ( pOwner != nullptr ? pOwner->getName().c_str() : "?" ) );
+        const GameObject* const                  pOwner = getOwner();
+        StringBuilder<constant::buffer::kMax256> sourceName;
+        sourceName.appendFormat( "volume:%#", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
+        return hashed_string( sourceName.view() );
     }
 
     bool ZoneVolumeComponent::composeProfile( ZoneProfile& outProfile ) const

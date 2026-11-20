@@ -101,7 +101,9 @@ namespace sw
                 continue;
             if ( hasKind( name ) )
             {
-                reader.addError( "Character.SocketKindRepeated", child, string( "repeats kind '" ) + name.c_str() + "'" );
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "repeats kind '%#'", name.c_str() );
+                reader.addError( "Character.SocketKindRepeated", child, message );
                 continue;
             }
             _listKind.push_back( name );
@@ -240,7 +242,9 @@ namespace sw
             return;
         if ( findSocket( socket._name ) != nullptr )
         {
-            reader.addError( "Character.SocketRepeated", node, string( "repeats socket '" ) + socket._name.c_str() + "'" );
+            fixed_string<constant::buffer::kMax256> message;
+            formatstring( message.data(), message.capacity(), "repeats socket '%#'", socket._name.c_str() );
+            reader.addError( "Character.SocketRepeated", node, message );
             return;
         }
         const auto markWritten = [&node, &socket]( const utf8* pName, uint16 bit )
@@ -256,7 +260,11 @@ namespace sw
         {
             socket._kind = params._kind;
             if ( socket._kind.empty() == false && kinds.hasKind( socket._kind ) == false )
-                reader.addError( "Character.SocketKindUnknown", node, string( "has unknown kind '" ) + socket._kind.c_str() + "'" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "has unknown kind '%#'", socket._kind.c_str() );
+                reader.addError( "Character.SocketKindUnknown", node, message );
+            }
         }
         if ( markWritten( "translation", SocketFieldBit::kTranslation ) )
             socket._translation = params._translation;
@@ -287,7 +295,9 @@ namespace sw
             return;
         if ( findVirtualBone( virtualBone._name ) != nullptr )
         {
-            reader.addError( "Character.VirtualBoneRepeated", node, string( "repeats virtual bone '" ) + virtualBone._name.c_str() + "'" );
+            fixed_string<constant::buffer::kMax256> message;
+            formatstring( message.data(), message.capacity(), "repeats virtual bone '%#'", virtualBone._name.c_str() );
+            reader.addError( "Character.VirtualBoneRepeated", node, message );
             return;
         }
         _listVirtualBone.push_back( virtualBone );
@@ -405,7 +415,11 @@ namespace sw
             {
                 bValid = false;
                 if ( pOutIssues != nullptr )
-                    pOutIssues->add( "Character.SocketKindUnknown", string( "socket '" ) + socket._name.c_str() + "' has unknown kind '" + socket._kind.c_str() + "'" );
+                {
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "socket '%#' has unknown kind '%#'", socket._name.c_str(), socket._kind.c_str() );
+                    pOutIssues->add( "Character.SocketKindUnknown", string( builder.view() ) );
+                }
             }
             for ( const hashed_string& fallback : socket._listFallback )
             {
@@ -413,7 +427,11 @@ namespace sw
                     continue;
                 bValid = false;
                 if ( pOutIssues != nullptr )
-                    pOutIssues->add( "Character.SocketFallbackUnknown", string( "socket '" ) + socket._name.c_str() + "' has unknown fallback '" + fallback.c_str() + "'" );
+                {
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "socket '%#' has unknown fallback '%#'", socket._name.c_str(), fallback.c_str() );
+                    pOutIssues->add( "Character.SocketFallbackUnknown", string( builder.view() ) );
+                }
             }
         }
         return bValid;
@@ -431,8 +449,10 @@ namespace sw
             bValid = false;
             if ( pOutIssues != nullptr )
             {
-                pOutIssues->add( "Character.VirtualBoneBoneUnknown", string( "virtual bone '" ) + virtualBone._name.c_str() + "' names a bone the skeleton does not have ('" +
-                                                                         ( bFromKnown ? virtualBone._to.c_str() : virtualBone._from.c_str() ) + "')" );
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "virtual bone '%#' names a bone the skeleton does not have ('%#')", virtualBone._name.c_str(),
+                                      bFromKnown ? virtualBone._to.c_str() : virtualBone._from.c_str() );
+                pOutIssues->add( "Character.VirtualBoneBoneUnknown", string( builder.view() ) );
             }
         }
         for ( const SocketDef& socket : _listSocket )
@@ -442,7 +462,11 @@ namespace sw
                 continue;
             bValid = false;
             if ( pOutIssues != nullptr )
-                pOutIssues->add( "Character.SocketParentBoneUnknown", string( "socket '" ) + socket._name.c_str() + "' has unknown parent bone '" + socket._parent.c_str() + "'" );
+            {
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "socket '%#' has unknown parent bone '%#'", socket._name.c_str(), socket._parent.c_str() );
+                pOutIssues->add( "Character.SocketParentBoneUnknown", string( builder.view() ) );
+            }
         }
         return bValid;
     }

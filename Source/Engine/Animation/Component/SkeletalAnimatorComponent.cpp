@@ -890,7 +890,11 @@ namespace sw
     {
         // '/' 가 든 이름은 클립 파일의 콘텐츠 경로다 — 셋을 거치지 않는다(미리보기 창이 고른 파일).
         if ( StringUtil::contains( clipName.c_str(), "/" ) )
-            return StringUtil::toLower( clipName.c_str() ) + string( AnimationClip::kExtension );
+        {
+            StringBuilder<constant::buffer::kMax256> builder;
+            builder.appendFormat( "%#%#", StringUtil::toLower( clipName.c_str() ), AnimationClip::kExtension );
+            return string( builder.view() );
+        }
         const string* const pClipPath = _animationSet != nullptr ? _animationSet->findClipPath( clipName ) : nullptr;
         return pClipPath != nullptr ? *pClipPath : string{};
     }

@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
@@ -43,7 +44,12 @@ namespace sw
                 return string( arrBuffer );
             }
 
-            static string makeBusyErrorKey() { return "code" + to_string( OnlineError::kBusy ); }
+            static string makeBusyErrorKey()
+            {
+                StringBuilder<constant::buffer::kMax32> key;
+                key.appendFormat( "code%#", OnlineError::kBusy );
+                return string( key.view() );
+            }
 
             /** @brief 칸 하나를 너비에 맞춰 붙입니다(글은 왼쪽, 수는 오른쪽 정렬). */
             static void appendCell( string& outText, string_view cell, int32 width, bool bLeft )

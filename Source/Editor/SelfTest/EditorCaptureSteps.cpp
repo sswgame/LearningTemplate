@@ -17,6 +17,8 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -126,8 +128,10 @@ namespace sw::editor
                 vector<PendingCapture>& listPending = findSession()->_listPending; // 항목이 있으므로 세션이 있다
                 listPending.erase( listPending.begin() + ( &pending - listPending.data() ) );
                 StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "gave up after %# frame(s) waiting for %#", kCaptureWaitFrames, string( reason ).c_str() );
-                runner.giveUpWait( step, AutomationFailureKind::WaitTimeout, textBuilder.view(), step._kind + " " + string( phase ) );
+                textBuilder.appendFormat( "gave up after %# frame(s) waiting for %#", kCaptureWaitFrames, reason );
+                fixed_string<constant::buffer::kMax128> repeatKey;
+                formatstring( repeatKey.data(), repeatKey.capacity(), "%# %#", step._kind, phase );
+                runner.giveUpWait( step, AutomationFailureKind::WaitTimeout, textBuilder.view(), repeatKey );
                 return AutomationStepHold::Skip;
             }
 
@@ -151,7 +155,11 @@ namespace sw::editor
                     if ( bStalled )
                         runner.recordFailure( step, pPending->_stability.describeOscillation() ); // 포기하지 않고 찍는다 — 진동하는 배치가 결과 파일에 남아야 어느 창이 움직였는지 눈으로 본다(실패는 적었다)
                     if ( readiness.isWaiting() && bStalled == false )
-                        return runner.holdUntilReady( step, input, false, std::numeric_limits<uint32>::max(), pPending->_stability.describeWait() + " before the UI capture" );
+                    {
+                        fixed_string<constant::buffer::kMax512> waitingFor;
+                        formatstring( waitingFor.data(), waitingFor.capacity(), "%# before the UI capture", pPending->_stability.describeWait() );
+                        return runner.holdUntilReady( step, input, false, std::numeric_limits<uint32>::max(), waitingFor );
+                    }
                     pPending->_bStable = true;
                 }
                 if ( pPending->_bRequested == false )

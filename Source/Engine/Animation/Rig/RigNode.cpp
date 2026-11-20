@@ -22,11 +22,9 @@ namespace sw
         /** @brief "key '<키>' <설명>" 형태의 오류 문장입니다. */
         string makeKeyMessage( string_view key, string_view what )
         {
-            string message = "key '";
-            message += key;
-            message += "' ";
-            message += what;
-            return message;
+            StringBuilder<constant::buffer::kMax256> builder;
+            builder.appendFormat( "key '%#' %#", key, what );
+            return string( builder.view() );
         }
 
         /** @brief 목록 원소 요소의 이름입니다. */
@@ -78,9 +76,8 @@ namespace sw
         const utf8* const pValue = _element.findAttribute( keyText.c_str() );
         if ( pValue == nullptr && bRequired )
         {
-            string message = "missing required key '";
-            message += key;
-            message += "'";
+            fixed_string<constant::buffer::kMax256> message;
+            formatstring( message.data(), message.capacity(), "missing required key '%#'", key );
             fail( message );
         }
         return pValue;
@@ -95,9 +92,8 @@ namespace sw
         const XMLNode child = _element.findChild( keyText.c_str() );
         if ( child.isValid() == false && bRequired )
         {
-            string message = "missing required key '";
-            message += key;
-            message += "'";
+            fixed_string<constant::buffer::kMax256> message;
+            formatstring( message.data(), message.capacity(), "missing required key '%#'", key );
             fail( message );
         }
         return child;
@@ -269,12 +265,20 @@ namespace sw
             for ( XMLAttribute attribute = _element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
             {
                 if ( VectorUtil::contains( _listUsedKey, string{ attribute.getName() } ) == false )
-                    fail( string{ "unknown key '" } + attribute.getName() + "'" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "unknown key '%#'", attribute.getName() );
+                    fail( message );
+                }
             }
             for ( XMLNode child = _element.findChild(); child.isValid(); child = child.findNextSibling() )
             {
                 if ( VectorUtil::contains( _listUsedKey, string{ child.getName() } ) == false )
-                    fail( string{ "unknown key '" } + child.getName() + "'" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "unknown key '%#'", child.getName() );
+                    fail( message );
+                }
             }
         }
         return isOk();

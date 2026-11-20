@@ -35,10 +35,12 @@ namespace sw
             {
                 utf8 arrBuffer[constant::buffer::kMax64]{};
                 formatstring( arrBuffer, sizeof( arrBuffer ), "%.9g", static_cast<float64>( value ) );
-                string literal( arrBuffer );
-                if ( literal.find_first_of( ".eE" ) == string::npos )
-                    literal += ".0";
-                return literal + "f";
+                StringBuilder<constant::buffer::kMax64> literal;
+                literal.append( arrBuffer );
+                if ( literal.view().find_first_of( ".eE" ) == string_view::npos )
+                    literal.append( ".0" );
+                literal.append( 'f' );
+                return string( literal.view() );
             }
 
             /** @brief 프로퍼티에 개발 전용 단위로 낼 에디터 메타데이터(표시 · 편집 필드, 슬라이더 범위)가 있으면 true 입니다. */
@@ -101,9 +103,11 @@ namespace sw
             /** @brief 인스턴스 `o` 에서 그 이름의 값을 읽는 C++ 식입니다. 이 타입의 접근자 프로퍼티면 메서드를 부르고, 기반의 이름은 필드로 읽는다(틀리면 컴파일 오류). */
             static string makeMemberRead( const ParsedTypeInfo& typeInfo, const string_view name )
             {
-                const ParsedPropertyInfo* pOwn  = findOwnProperty( typeInfo, name );
-                const bool                bCall = pOwn != nullptr && pOwn->_bIsAccessor == SW_TRUE;
-                return "o." + string( name ) + ( bCall ? "()" : "" );
+                const ParsedPropertyInfo*                pOwn  = findOwnProperty( typeInfo, name );
+                const bool                               bCall = pOwn != nullptr && pOwn->_bIsAccessor == SW_TRUE;
+                StringBuilder<constant::buffer::kMax128> b;
+                b.appendFormat( "o.%#%#", name, bCall ? "()" : "" );
+                return string( b.view() );
             }
 
             /**
@@ -119,7 +123,11 @@ namespace sw
                 const bool bBareEnumerator = kind == FixedValueKind::Enum && prop._fixedType->_enum != nullptr && text.find( "::" ) == string_view::npos &&
                                              ( text.empty() == false && ( text.front() < '0' || text.front() > '9' ) && text.front() != '-' );
                 if ( bBareEnumerator )
-                    return "::" + prop._fixedType->_enum->_fullyQualifiedName + "::" + string( text );
+                {
+                    StringBuilder<constant::buffer::kMax256> b;
+                    b.appendFormat( "::%#::%#", prop._fixedType->_enum->_fullyQualifiedName, text );
+                    return string( b.view() );
+                }
                 return string( text );
             }
 
@@ -135,20 +143,27 @@ namespace sw
                 const size_t      nePos = text.find( "!=" );
                 if ( eqPos == string_view::npos && nePos == string_view::npos )
                 {
-                    const bool        bNegate = text.front() == '!';
-                    const string_view name    = StringUtil::trim( bNegate ? text.substr( 1 ) : text );
-                    return string( bNegate ? "!" : "" ) + "static_cast<bool>( " + makeMemberRead( typeInfo, name ) + " )";
+                    const bool                               bNegate = text.front() == '!';
+                    const string_view                        name    = StringUtil::trim( bNegate ? text.substr( 1 ) : text );
+                    StringBuilder<constant::buffer::kMax256> b;
+                    b.appendFormat( "%#static_cast<bool>( %# )", bNegate ? "!" : "", makeMemberRead( typeInfo, name ) );
+                    return string( b.view() );
                 }
-                const size_t      opPos = eqPos != string_view::npos ? eqPos : nePos;
-                const string      read  = makeMemberRead( typeInfo, StringUtil::trim( text.substr( 0, opPos ) ) );
-                const string_view op    = text.substr( opPos, 2 );
-                string_view       value = StringUtil::trim( text.substr( opPos + 2 ) );
-                int64             number{ 0 };
+                const size_t                             opPos = eqPos != string_view::npos ? eqPos : nePos;
+                const string                             read  = makeMemberRead( typeInfo, StringUtil::trim( text.substr( 0, opPos ) ) );
+                const string_view                        op    = text.substr( opPos, 2 );
+                string_view                              value = StringUtil::trim( text.substr( opPos + 2 ) );
+                int64                                    number{ 0 };
+                StringBuilder<constant::buffer::kMax256> b;
                 if ( StringUtil::parseInt64( value, number ) )
-                    return "static_cast<::int64>( " + read + " ) " + string( op ) + " " + string( value );
+                {
+                    b.appendFormat( "static_cast<::int64>( %# ) %# %#", read, op, value );
+                    return string( b.view() );
+                }
                 // 한정해 적어도(`Mode::Orbit`) 끝 이름을 칸의 타입으로 다시 한정한다 — 적은 한정자가 다른 열거형이어도 칸과 맞춘다.
                 value = ParserUtil::scopeLeaf( value );
-                return read + " " + string( op ) + " ::std::decay_t<decltype( " + read + " )>::" + string( value );
+                b.appendFormat( "%# %# ::std::decay_t<decltype( %# )>::%#", read, op, read, value );
+                return string( b.view() );
             }
 
             /**
@@ -369,12 +384,12 @@ namespace sw
         const ParserConfig& config = _session._config;
         if ( config._listValueForbiddenBaseType.empty() )
             return;
-        string condition;
+        StringBuilder<constant::buffer::kMax1024> condition;
         for ( const string& baseType : config._listValueForbiddenBaseType )
         {
-            if ( condition.empty() == false )
-                condition += " || ";
-            condition += "std::is_base_of_v<" + baseType + ", TValue>";
+            if ( condition.size() > 0 )
+                condition.append( " || " );
+            condition.appendFormat( "std::is_base_of_v<%#, TValue>", baseType );
         }
         CodeEmit emit( outBuffer );
         emit.line( "#ifndef SW_GENERATED_PROPERTY_VALUE_CHECK" );
@@ -387,7 +402,7 @@ namespace sw
         emit.line( "{" );
         emit.push();
         emit.line( "using TValue = std::remove_cv_t<std::remove_reference_t<TDecl>>;" );
-        emit.linef( "static_assert( std::is_pointer_v<TValue> || ( %# ) == false, \"%#\" );", condition, config._valueForbiddenMessage );
+        emit.linef( "static_assert( std::is_pointer_v<TValue> || ( %# ) == false, \"%#\" );", condition.view(), config._valueForbiddenMessage );
         emit.line( "return true;" );
         emit.pop();
         emit.line( "}" );
@@ -558,9 +573,12 @@ namespace sw
     string CodeGenerator::makePropertyDeclType( const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop )
     {
         // 접근자 프로퍼티(값이 객체 밖)는 필드가 없다. 선언 타입은 메서드가 돌려주는 참조의 대상이다.
+        StringBuilder<constant::buffer::kMax256> b;
         if ( prop._bIsAccessor == SW_TRUE )
-            return "std::remove_reference_t<decltype( std::declval<" + typeInfo._fullyQualifiedName + "&>()." + prop._memberName + "() )>";
-        return "decltype( " + typeInfo._fullyQualifiedName + "::" + prop._memberName + " )";
+            b.appendFormat( "std::remove_reference_t<decltype( std::declval<%#&>().%#() )>", typeInfo._fullyQualifiedName, prop._memberName );
+        else
+            b.appendFormat( "decltype( %#::%# )", typeInfo._fullyQualifiedName, prop._memberName );
+        return string( b.view() );
     }
 
     void CodeGenerator::emitPropertyStatics( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, const uint32 propIndex ) const
@@ -571,14 +589,14 @@ namespace sw
             emit.linef( "static_assert( ::sw::generated::isPropertyValueAllowed<%#>() );", makePropertyDeclType( typeInfo, prop ) );
         if ( prop._listAlias.empty() == false )
         {
-            string aliases;
+            StringBuilder<constant::buffer::kMax256> aliases;
             for ( const string& alias : prop._listAlias )
             {
-                if ( aliases.empty() == false )
-                    aliases += ", ";
-                aliases += CodeEmit::quoted( alias );
+                if ( aliases.size() > 0 )
+                    aliases.append( ", " );
+                aliases.append( CodeEmit::quoted( alias ) );
             }
-            emit.linef( "static constexpr const ::utf8* kAlias%#[] = { %# };", propIndex, aliases );
+            emit.linef( "static constexpr const ::utf8* kAlias%#[] = { %# };", propIndex, aliases.view() );
         }
         emitNestedContainerTree( emit, typeInfo, prop, propIndex );
         emitContainerTableCheck( emit, typeInfo, prop );
@@ -608,15 +626,19 @@ namespace sw
         const string& fqn        = typeInfo._fullyQualifiedName;
         const auto    textOrNull = []( const string& text )
         { return text.empty() ? string( "nullptr" ) : CodeEmit::quoted( text ); };
-        const bool   bNoOffset    = prop._bIsBitField == SW_TRUE || prop._bIsAccessor == SW_TRUE;
-        const string offsetExpr   = bNoOffset ? string( "0u" ) : "offsetof( " + fqn + ", " + prop._memberName + " )";
+        const bool                               bNoOffset = prop._bIsBitField == SW_TRUE || prop._bIsAccessor == SW_TRUE;
+        StringBuilder<constant::buffer::kMax256> offsetExpr;
+        if ( bNoOffset )
+            offsetExpr.append( "0u" );
+        else
+            offsetExpr.appendFormat( "offsetof( %#, %# )", fqn, prop._memberName );
         const bool   bNestedShape = prop._containerTree != nullptr && prop._containerTree->_bIsContainer != SW_FALSE;
         const string declType     = makePropertyDeclType( typeInfo, prop );
 
         emit.line( "{" );
         emit.push();
         // 비트필드는 `offsetof` 를 쓸 수 없다. 자리는 `resolveBitField` 가 이 구성의 실제 레이아웃에서 찾는다(아래 `_pSetBit`).
-        emit.linef( "%#, %#, %#,", CodeEmit::quoted( prop._name ), CodeEmit::quoted( _session._typeNameMap.normalize( prop._typeName ) ), offsetExpr );
+        emit.linef( "%#, %#, %#,", CodeEmit::quoted( prop._name ), CodeEmit::quoted( _session._typeNameMap.normalize( prop._typeName ) ), offsetExpr.view() );
         if ( prop._bIsContainer )
         {
             emit.linef( "%#, %#, %#,", toCppExpr( prop._containerKind ), textOrNull( _session._typeNameMap.normalize( prop._elementTypeName ) ),
@@ -718,8 +740,10 @@ namespace sw
                 if ( parameter._handleTargetTypeName.empty() )
                     continue;
                 emit.linef( "::%# typedArg%#{};", parameter._canonicalTypeName, static_cast<uint32>( paramIndex ) );
+                StringBuilder<constant::buffer::kMax256> methodName;
+                methodName.appendFormat( "%#::%#", typeInfo._fullyQualifiedName, method._name );
                 emit.linef( "if ( ::sw::ComponentHandleArgument::cast( *self, args.get<::sw::ComponentHandle>( %# ), typedArg%#, %# ) == false )", static_cast<uint32>( paramIndex ),
-                            static_cast<uint32>( paramIndex ), CodeEmit::quoted( typeInfo._fullyQualifiedName + "::" + method._name ) );
+                            static_cast<uint32>( paramIndex ), CodeEmit::quoted( methodName.view() ) );
                 emit.line( "    return ::sw::TaskValue{};" );
             }
             if ( returnType == annotation::kVoidTypeName )
@@ -878,7 +902,8 @@ namespace sw
             fe.flagIf( typeInfo._bAbstract, "info._bAbstract" );
             fe.flagIf( typeInfo._bStatic, "info._bStatic" );
             // 컴포넌트 생성 함수는 타입 줄의 칸이다(언리얼 `UClass` 의 생성자 칸과 같은 자리). 이름으로 만드는 길은 이 칸만 본다.
-            fe.flagIf( typeInfo.requiresComponentFactory(), "info._addComponent", "&::sw::GameObject::addComponentForReflection<" + typeInfo._fullyQualifiedName + ">" );
+            if ( typeInfo.requiresComponentFactory() )
+                fe.linef( "info._addComponent = &::sw::GameObject::addComponentForReflection<%#>;", typeInfo._fullyQualifiedName );
             if ( typeInfo._validate.empty() == false )
             {
                 fe.linef( "info._pValidate = []( const void* pInstance, ::sw::ValidationContext& context ) { static_cast<%#*>( const_cast<void*>( pInstance ) )->%#( context ); };",
@@ -948,14 +973,15 @@ namespace sw
             _fixedCodec.emitRegistration( emit, typeIndex );
         }
 
+        StringBuilder<constant::buffer::kMax1024> aliasRegs;
+        aliasRegs.append( CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) );
+        aliasRegs.append( CodeGeneratorInternal::emitRetiredTypeLines( typeInfo._listRemovedType ) );
         appendTemplate( outBuffer, EmitTemplate::TypeRegistrarEnd,
                         {
-                            { templatekey::kID, registrarName },
-                            { templatekey::kFqn, typeInfo._fullyQualifiedName },
-                            { templatekey::kKey, registrarKey },
-                            { templatekey::kAliasRegs,
-                             CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) +
-                                  CodeGeneratorInternal::emitRetiredTypeLines( typeInfo._listRemovedType ) },
+                            {       templatekey::kID,                registrarName},
+                            {      templatekey::kFqn, typeInfo._fullyQualifiedName},
+                            {      templatekey::kKey,                 registrarKey},
+                            {templatekey::kAliasRegs,             aliasRegs.view()},
         } );
     }
 
@@ -1093,9 +1119,15 @@ namespace sw
         outKeyDeclaration.clear();
         if ( bHidden == false )
             return fqn;
-        const string key  = "RegistrarKey_" + registrarName;
-        outKeyDeclaration = "\t// " + fqn + " 는 숨은 중첩 형식이다 — 특수화 열쇠로 이름을 대신한다(본문은 바깥 형식의 REFLECT_BODY friend 안이다)\n\tstruct " + key + ";\n";
-        return key;
+        StringBuilder<constant::buffer::kMax512> builder;
+        builder.appendFormat( "\t// %# 는 숨은 중첩 형식이다 — 특수화 열쇠로 이름을 대신한다(본문은 바깥 형식의 REFLECT_BODY friend 안이다)\n\tstruct ", fqn );
+        const uint32 keyStart = builder.size();
+        builder.appendFormat( "RegistrarKey_%#", registrarName );
+        const uint32 keyLength = builder.size() - keyStart;
+        builder.append( ";\n" );
+        // 열쇠 이름은 선언 글 안의 한 토막이다 — 버퍼가 다 자란 뒤에 잘라 낸다.
+        outKeyDeclaration = string( builder.view() );
+        return string( builder.view().substr( keyStart, keyLength ) );
     }
 
     const ParsedEnumeratorInfo* CodeGenerator::findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec )

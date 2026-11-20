@@ -67,9 +67,11 @@ namespace
     /** @brief 운영자 @p adminID 의 거절 감사 줄(`admin.command.denied`) 수입니다. */
     int32 countDeniedOf( MemoryServiceDatabase& database, AccountID adminID )
     {
-        vector<ServiceAuditEntry> listEntry;
-        string                    nextCursor;
-        SW_EXPECT_TRUE( ServiceAuditLog::listEntries( database, ServiceAuditLog::makeOperatorActor( adminID ) + "/", "", 16, listEntry, nextCursor ) == ServiceStoreResult::Ok );
+        vector<ServiceAuditEntry>               listEntry;
+        string                                  nextCursor;
+        StringBuilder<constant::buffer::kMax32> subjectPrefix;
+        subjectPrefix.appendFormat( "%#/", ServiceAuditLog::makeOperatorActor( adminID ) );
+        SW_EXPECT_TRUE( ServiceAuditLog::listEntries( database, subjectPrefix.view(), "", 16, listEntry, nextCursor ) == ServiceStoreResult::Ok );
         int32 count = 0;
         for ( const ServiceAuditEntry& entry : listEntry )
         {

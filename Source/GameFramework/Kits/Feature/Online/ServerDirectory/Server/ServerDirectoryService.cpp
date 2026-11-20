@@ -428,7 +428,9 @@ namespace sw
         }
         pendingJob._table = Internal::getMaintenanceTable();
         pendingJob._key   = window._scope;
-        pendingJob.setOperatorAudit( actor, "sd.maintenance.set", "sd/" + window._scope, nowMs, memo );
+        StringBuilder<constant::buffer::kMax128> subject;
+        subject.appendFormat( "sd/%#", window._scope );
+        pendingJob.setOperatorAudit( actor, "sd.maintenance.set", subject.view(), nowMs, memo );
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
@@ -443,7 +445,9 @@ namespace sw
         ServiceAuditedWrite pendingJob;
         pendingJob._table = Internal::getMaintenanceTable();
         pendingJob._key   = string( scope );
-        pendingJob.setOperatorAudit( actor, "sd.maintenance.clear", "sd/" + string( scope ), nowMs, memo );
+        StringBuilder<constant::buffer::kMax128> subject;
+        subject.appendFormat( "sd/%#", scope );
+        pendingJob.setOperatorAudit( actor, "sd.maintenance.clear", subject.view(), nowMs, memo );
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
@@ -463,7 +467,9 @@ namespace sw
         }
         pendingJob._table = Internal::getAnnouncementTable();
         pendingJob._key   = ServiceKeyUtil::makeHex64( announcement._announcementID );
-        pendingJob.setOperatorAudit( actor, "sd.notice.post", "sd/notice/" + pendingJob._key, nowMs );
+        StringBuilder<constant::buffer::kMax128> subject;
+        subject.appendFormat( "sd/notice/%#", pendingJob._key );
+        pendingJob.setOperatorAudit( actor, "sd.notice.post", subject.view(), nowMs );
         pendingJob._auditEntry._after = announcement._text;
         submitWrite( std::move( pendingJob ), requestTag );
     }
@@ -493,7 +499,9 @@ namespace sw
         ServiceAuditedWrite pendingJob;
         pendingJob._table = Internal::getAnnouncementTable();
         pendingJob._key   = ServiceKeyUtil::makeHex64( announcementID );
-        pendingJob.setOperatorAudit( actor, "sd.notice.remove", "sd/notice/" + pendingJob._key, nowMs );
+        StringBuilder<constant::buffer::kMax128> subject;
+        subject.appendFormat( "sd/notice/%#", pendingJob._key );
+        pendingJob.setOperatorAudit( actor, "sd.notice.remove", subject.view(), nowMs );
         submitWrite( std::move( pendingJob ), requestTag );
     }
 

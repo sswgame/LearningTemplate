@@ -185,7 +185,9 @@ namespace sw
 
     string ExperienceManager::makeAssetPath( const GamePackConfig& packConfig, string_view name )
     {
-        return packConfig.resolve( string( kExperienceFolder ) + string( name ) + kExperienceSuffix );
+        StringBuilder<constant::buffer::kMax256> packRelative;
+        packRelative.appendFormat( "%#%#%#", kExperienceFolder, name, kExperienceSuffix );
+        return packConfig.resolve( packRelative.view() );
     }
 
     bool ExperienceManager::loadDefinition( string_view name, ExperienceDefinition& outDefinition ) const

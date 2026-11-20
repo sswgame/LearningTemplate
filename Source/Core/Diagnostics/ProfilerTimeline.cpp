@@ -11,6 +11,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetFlowLog.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include <thread>
@@ -128,7 +129,11 @@ namespace sw
         if ( ThreadName::tryGetCurrentThreadName( arrName, constant::buffer::kMax64 ) )
             pBuffer->_name = arrName;
         else
-            pBuffer->_name = string( "Thread " ) + to_string( index );
+        {
+            StringBuilder<constant::buffer::kMax32> nameBuilder;
+            nameBuilder.appendFormat( "Thread %#", index );
+            pBuffer->_name = string( nameBuilder.view() );
+        }
         _arrThreadBuffer[index].store( pBuffer, std::memory_order_release );
         cache._slot    = index;
         cache._pBuffer = pBuffer;

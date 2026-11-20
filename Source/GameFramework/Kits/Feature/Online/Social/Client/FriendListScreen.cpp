@@ -173,13 +173,11 @@ namespace sw
             }
             case FriendListState::Loaded:
             {
-                statusText = listEntry.empty() ? "No friends yet" : "Friends";
+                StringBuilder<constant::buffer::kMax256> statusTextBuilder;
+                statusTextBuilder.append( listEntry.empty() ? "No friends yet" : "Friends" );
                 if ( pModel->getPendingRequestCount() > 0 )
-                {
-                    StringBuilder<constant::buffer::kMax256> statusTextPart;
-                    statusTextPart.appendFormat( "  (%# pending requests)", pModel->getPendingRequestCount() );
-                    statusText += statusTextPart.c_str();
-                }
+                    statusTextBuilder.appendFormat( "  (%# pending requests)", pModel->getPendingRequestCount() );
+                statusText = string( statusTextBuilder.view() );
                 break;
             }
             case FriendListState::Failed:

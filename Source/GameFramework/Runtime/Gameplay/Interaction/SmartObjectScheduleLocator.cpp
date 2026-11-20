@@ -26,7 +26,9 @@ namespace sw
             /** @brief 저장 키(`<오브젝트 id>:<슬롯>`)입니다. */
             static string makeKey( uint64 objectID, int32 slot )
             {
-                return to_string( objectID ) + string( 1, kKeySeparator ) + to_string( static_cast<int64>( slot ) );
+                StringBuilder<constant::buffer::kMax64> key;
+                key.appendFormat( "%#%#%#", objectID, kKeySeparator, static_cast<int64>( slot ) );
+                return string( key.view() );
             }
 
             /** @brief 저장 키를 읽습니다. 틀리면 false 입니다. */

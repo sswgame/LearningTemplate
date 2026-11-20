@@ -8,6 +8,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -104,7 +105,11 @@ namespace sw::editor
             {
                 string relative;
                 if ( FileUtil::tryMakePathUnderRoot( AssetPaths::getScratchFolderPath(), diskPath, relative ) )
-                    return string( AssetPaths::kScratchDomain ) + "/" + relative;
+                {
+                    StringBuilder<constant::buffer::kMax256> idBuilder;
+                    idBuilder.appendFormat( "%#/%#", AssetPaths::kScratchDomain, relative );
+                    return string( idBuilder.view() );
+                }
                 if ( FileUtil::tryMakePathUnderRoot( editor::getSubsystem<AssetPaths>().getRootFolderPath(), diskPath, relative ) == false ||
                      FileUtil::startsWithPathComponent( FileUtil::normalizePath( relative ).str(), AssetPaths::kScratchDomain ) )
                     return {};

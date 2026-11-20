@@ -910,8 +910,9 @@ namespace sw::editor
         const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( widget, "_slot" );
         if ( pSlotProp == nullptr )
             return;
-        const TypeInfo* pParentType = widget.getParent()->getTypeInfo();
-        const string    header      = string{ SW_LOCKEY( "EditorUIPreview", "SlotHeader" ) } + " (" + ( pParentType != nullptr ? pParentType->_name.c_str() : "Panel" ) + ")###uipreviewslot";
+        const TypeInfo*                         pParentType = widget.getParent()->getTypeInfo();
+        fixed_string<constant::buffer::kMax256> header;
+        formatstring( header.data(), header.capacity(), "%# (%#)###uipreviewslot", SW_LOCKEY( "EditorUIPreview", "SlotHeader" ), pParentType != nullptr ? pParentType->_name.c_str() : "Panel" );
         if ( ImGui::CollapsingHeader( header.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) == false )
             return;
 

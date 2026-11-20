@@ -17,7 +17,6 @@
 #include "Engine/Server/OpsHTTPEndpoint.h"
 #include "Engine/Server/ServiceHealthRegistry.h"
 
-#include <charconv>
 #include <thread>
 
 // 운영 HTTP — 경로 셋 · 405 · 404 · 400 · Content-Length(전송 없이), 루프백 위 /metrics · 머리 상한 431 · 조각난 머리, 실제 소켓(이 기계 주소)의 /healthz,
@@ -182,11 +181,10 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ContentLengthMatchesTheBody )
     (void)OpsHTTPEndpoint::makeResponse( "GET /metrics HTTP/1.1", &metrics, nullptr, 0, {}, response );
     const size_t headEnd = response.find( "\r\n\r\n" );
     SW_REQUIRE_TRUE( headEnd != string::npos );
-    const string               body = response.substr( headEnd + 4 );
-    utf8                       arrLength[constant::buffer::kMax32];
-    const std::to_chars_result result   = std::to_chars( arrLength, arrLength + sizeof( arrLength ), body.size() );
-    const string               expected = string( "Content-Length: " ) + string( arrLength, result.ptr ) + "\r\n";
-    SW_EXPECT_TRUE( response.find( expected ) != string::npos );
+    const string                           body = response.substr( headEnd + 4 );
+    fixed_string<constant::buffer::kMax64> expected;
+    formatstring( expected.data(), expected.capacity(), "Content-Length: %#\r\n", body.size() );
+    SW_EXPECT_TRUE( response.find( expected.c_str() ) != string::npos );
     SW_EXPECT_TRUE( response.find( "Connection: close\r\n" ) != string::npos );
 }
 

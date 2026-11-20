@@ -250,8 +250,10 @@ SW_TEST_CASE( LoginServiceTest, SeedAccountsAreNotLimited )
     LoginFixture rig( database, settings );
     for ( int32 index = 0; index < 5; ++index )
     {
-        const uint64 tag = static_cast<uint64>( index ) + 1;
-        rig._service.seedAccount( LoginCredential{ "seed" + to_string( index ), "password123" }, UnixMilliseconds{ kNowMs }, tag );
+        const uint64                            tag = static_cast<uint64>( index ) + 1;
+        StringBuilder<constant::buffer::kMax32> loginName;
+        loginName.appendFormat( "seed%#", index );
+        rig._service.seedAccount( LoginCredential{ string( loginName.view() ), "password123" }, UnixMilliseconds{ kNowMs }, tag );
         SW_EXPECT_TRUE( rig.take( tag )._result == LoginResult::Ok );
     }
 }
@@ -596,10 +598,13 @@ SW_TEST_CASE( LoginServiceTest, PlatformNonceIsServerIssuedAndUsedOnce )
     SW_REQUIRE_TRUE( issued._result == LoginResult::Ok );
     SW_EXPECT_EQUAL( size_t( LoginConstant::kLoginNonceTextSize ), issued._loginNonce.size() );
 
-    const string ticket = "subject:sub1:Hero|" + issued._loginNonce;
-    SW_EXPECT_TRUE( rig.platformLogin( ticket )._result == LoginResult::Ok );
-    SW_EXPECT_TRUE( rig.platformLogin( ticket )._result == LoginResult::ProviderRejected ); // 다시 쓴 토큰
-    SW_EXPECT_TRUE( rig.platformLogin( "subject:sub1:Hero|" + string( static_cast<size_t>( LoginConstant::kLoginNonceTextSize ), 'a' ) )._result == LoginResult::ProviderRejected );
+    fixed_string<constant::buffer::kMax128> ticket;
+    formatstring( ticket.data(), ticket.capacity(), "subject:sub1:Hero|%#", issued._loginNonce );
+    SW_EXPECT_TRUE( rig.platformLogin( ticket.view() )._result == LoginResult::Ok );
+    SW_EXPECT_TRUE( rig.platformLogin( ticket.view() )._result == LoginResult::ProviderRejected ); // 다시 쓴 토큰
+    fixed_string<constant::buffer::kMax128> spoofedTicket;
+    formatstring( spoofedTicket.data(), spoofedTicket.capacity(), "subject:sub1:Hero|%#", string( static_cast<size_t>( LoginConstant::kLoginNonceTextSize ), 'a' ) );
+    SW_EXPECT_TRUE( rig.platformLogin( spoofedTicket.view() )._result == LoginResult::ProviderRejected );
     SW_EXPECT_TRUE( rig.platformLogin( "subject:sub1:Hero" )._result == LoginResult::ProviderRejected );
     SW_EXPECT_EQUAL( 1, rig._provider.getSubmittedCount() ); // 거절은 제공자에 닿지 않았다
 }

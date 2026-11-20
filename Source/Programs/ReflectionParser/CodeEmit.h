@@ -174,7 +174,7 @@ namespace sw
         static string hs( const string_view name )
         {
             StringBuilder<constant::buffer::kMax1024> b;
-            b.appendFormat( "::sw::hashed_string( \"%#\" )", escapeCppString( string( name ) ) );
+            b.appendFormat( "::sw::hashed_string( \"%#\" )", escapeCppString( name ) );
             return string( b.view() );
         }
 
@@ -182,52 +182,51 @@ namespace sw
         static string quoted( const string_view value )
         {
             StringBuilder<constant::buffer::kMax1024> b;
-            b.appendFormat( "\"%#\"", escapeCppString( string( value ) ) );
+            b.appendFormat( "\"%#\"", escapeCppString( value ) );
             return string( b.view() );
         }
 
         /** @brief C++ 문자열 리터럴에 넣을 수 있도록 특수문자를 이스케이프합니다. */
-        static string escapeCppString( const string& value )
+        static string escapeCppString( const string_view value )
         {
-            string escaped;
-            escaped.reserve( value.size() + 8 );
+            StringBuilder<constant::buffer::kMax1024> escaped;
             for ( utf8 c : value )
             {
                 switch ( c )
                 {
                     case '\\':
                     {
-                        escaped += "\\\\";
+                        escaped.append( "\\\\" );
                         break;
                     }
                     case '"':
                     {
-                        escaped += "\\\"";
+                        escaped.append( "\\\"" );
                         break;
                     }
                     case '\n':
                     {
-                        escaped += "\\n";
+                        escaped.append( "\\n" );
                         break;
                     }
                     case '\r':
                     {
-                        escaped += "\\r";
+                        escaped.append( "\\r" );
                         break;
                     }
                     case '\t':
                     {
-                        escaped += "\\t";
+                        escaped.append( "\\t" );
                         break;
                     }
                     default:
                     {
-                        escaped += c;
+                        escaped.append( c );
                         break;
                     }
                 }
             }
-            return escaped;
+            return string( escaped.view() );
         }
 
     private:

@@ -119,10 +119,11 @@ SW_TEST_CASE( CharacterDataReaderTest, FormatsRoundTrip )
     SW_REQUIRE_TRUE( reader.parseRoot( document, "<C r=\"10 20 30\"/>", "C", root ) );
     const quaternion rotation = reader.readRotation( root, "r" );
 
-    XMLDocument  written;
-    XMLNode      writtenRoot;
-    const string xml = string( "<C r=\"" ) + CharacterDataReader::formatRotation( rotation ) + "\"/>";
-    SW_REQUIRE_TRUE( reader.parseRoot( written, xml, "C", writtenRoot ) );
+    XMLDocument                              written;
+    XMLNode                                  writtenRoot;
+    StringBuilder<constant::buffer::kMax256> xml;
+    xml.appendFormat( "<C r=\"%#\"/>", CharacterDataReader::formatRotation( rotation ) );
+    SW_REQUIRE_TRUE( reader.parseRoot( written, xml.view(), "C", writtenRoot ) );
     const quaternion again = reader.readRotation( writtenRoot, "r" );
     const float32    dot   = rotation._x * again._x + rotation._y * again._y + rotation._z * again._z + rotation._w * again._w;
     SW_EXPECT_NEAR( 1.0f, MathUtil::abs( dot ), 1.0e-4f );

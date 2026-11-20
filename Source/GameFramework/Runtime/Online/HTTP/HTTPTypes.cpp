@@ -210,16 +210,14 @@ namespace sw
 
     string HTTPUtil::encodeForm( const vector<HTTPHeader>& listPair )
     {
-        string text;
+        StringBuilder<constant::buffer::kMax1024> text;
         for ( const HTTPHeader& pair : listPair )
         {
-            if ( text.empty() == false )
-                text.push_back( '&' );
-            text += encodePercent( pair._name );
-            text.push_back( '=' );
-            text += encodePercent( pair._value );
+            if ( text.size() > 0 )
+                text.append( '&' );
+            text.appendFormat( "%#=%#", encodePercent( pair._name ), encodePercent( pair._value ) );
         }
-        return text;
+        return string( text.view() );
     }
 
     bool HTTPUtil::decodeForm( string_view text, vector<HTTPHeader>& outListPair )
@@ -565,14 +563,11 @@ namespace sw
         Internal::appendText( outBytes, " " );
         Internal::appendText( outBytes, url._target );
         Internal::appendText( outBytes, " HTTP/1.1\r\n" );
-        string host = url._host;
+        StringBuilder<constant::buffer::kMax256> host;
+        host.append( url._host );
         if ( ( url._bSecure == SW_TRUE && url._port != 443 ) || ( url._bSecure == SW_FALSE && url._port != 80 ) )
-        {
-            StringBuilder<constant::buffer::kMax256> hostPart;
-            hostPart.appendFormat( ":%#", static_cast<int32>( url._port ) );
-            host += hostPart.c_str();
-        }
-        Internal::appendHeader( outBytes, "Host", host );
+            host.appendFormat( ":%#", static_cast<int32>( url._port ) );
+        Internal::appendHeader( outBytes, "Host", host.view() );
         Internal::appendHeader( outBytes, "Connection", "close" );
         if ( request._method == HTTPMethod::Post || request._bodyBytes.empty() == false )
             Internal::appendHeader( outBytes, "Content-Length", to_string( static_cast<int64>( request._bodyBytes.size() ) ) );

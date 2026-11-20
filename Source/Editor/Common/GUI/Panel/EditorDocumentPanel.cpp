@@ -4,6 +4,8 @@
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -78,10 +80,13 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopup( "##DocumentOpen" ) == false )
             return;
-        const string markPrefix = string{ pMarkPrefix } + ".open.";
+        fixed_string<constant::buffer::kMax128> markPrefix;
+        formatstring( markPrefix.data(), markPrefix.capacity(), "%#.open.", pMarkPrefix );
         if ( ImGui::IsWindowAppearing() )
             ImGui::SetKeyboardFocusHere();
-        EditorWidgets::drawSearchField( "##DocumentOpenSearch", _openFilter, SW_LOCKEY( "EdCommon", "SearchAssetsHint" ), 360.0f * EditorThemeUtil::getDPIScale(), false, ( markPrefix + "search" ).c_str() );
+        fixed_string<constant::buffer::kMax256> searchMark;
+        formatstring( searchMark.data(), searchMark.capacity(), "%#search", markPrefix );
+        EditorWidgets::drawSearchField( "##DocumentOpenSearch", _openFilter, SW_LOCKEY( "EdCommon", "SearchAssetsHint" ), 360.0f * EditorThemeUtil::getDPIScale(), false, searchMark.c_str() );
 
         const EditorListFilter filter{ _openFilter.c_str() };
         string                 openPath;

@@ -26,7 +26,12 @@ namespace sw
         struct CreatureTownInternal
         {
             /** @brief 종의 호감도 세력 id 를 반환합니다. 공유 평판에서 키트 접두어로 다른 키트의 세력과 구분하며, 문자열 이어 붙이기는 여기 한 곳에서만 합니다. */
-            static hashed_string makeFactionID( const hashed_string& speciesID ) { return hashed_string( string( "creature." ) + speciesID.c_str() ); }
+            static hashed_string makeFactionID( const hashed_string& speciesID )
+            {
+                fixed_string<constant::buffer::kMax128> factionID;
+                formatstring( factionID.data(), factionID.capacity(), "creature.%#", speciesID.c_str() );
+                return hashed_string( factionID.c_str() );
+            }
 
             static constexpr int32 kRotationCount = 4;
 

@@ -71,11 +71,10 @@ SW_TEST_CASE( SoftReadRestoredFieldTest, XMLUnreadableValueIsOneOrphan )
 {
     RenderConfig render{};
     SW_REQUIRE_TRUE( loadCommittedRender( render ) );
-    string text   = XMLSerializer::serialize( &render, *RenderConfig::StaticType() );
-    string before = "_shadowLocalMinTileResolution=\"";
-    before += to_string( render._shadowLocalMinTileResolution );
-    before += "\"";
-    const size_t at = text.find( before );
+    string                                   text = XMLSerializer::serialize( &render, *RenderConfig::StaticType() );
+    StringBuilder<constant::buffer::kMax128> before;
+    before.appendFormat( "_shadowLocalMinTileResolution=\"%#\"", render._shadowLocalMinTileResolution );
+    const size_t at = text.find( before.c_str() );
     SW_REQUIRE_TRUE( at != string::npos );
     text.replace( at, before.size(), "_shadowLocalMinTileResolution=\"abc\"" );
 

@@ -41,8 +41,10 @@ namespace
         {
             if ( isAccountOnline( accountID ) == false )
                 return false;
-            outIdentity._accountID   = accountID;
-            outIdentity._displayName = "user" + to_string( accountID );
+            outIdentity._accountID = accountID;
+            StringBuilder<constant::buffer::kMax32> displayName;
+            displayName.appendFormat( "user%#", accountID );
+            outIdentity._displayName = string( displayName.view() );
             return true;
         }
         bool findIdentityByDisplayName( string_view /*displayName*/, AccountIdentity& /*outIdentity*/ ) const override { return false; }
@@ -308,7 +310,9 @@ SW_TEST_CASE( ChatServiceTest, JoinAndLeaveRules )
 
     for ( int32 index = 1; index < ChatLimit::kMaxChannelPerMember; ++index )
     {
-        SW_REQUIRE_TRUE( rig.join( kAlice, "custom.room" + to_string( index ) ) == ChatResult::Ok );
+        fixed_string<constant::buffer::kMax32> channelID;
+        formatstring( channelID.data(), channelID.capacity(), "custom.room%#", index );
+        SW_REQUIRE_TRUE( rig.join( kAlice, channelID.view() ) == ChatResult::Ok );
     }
     SW_EXPECT_TRUE( rig.join( kAlice, "custom.over" ) == ChatResult::TooManyChannels );
     SW_EXPECT_TRUE( rig._service.addMember( kAlice, "whisper.x", UnixMilliseconds{ kNowMs } ).hasError( OnlineError::kInvalidRequest ) ); // 서버 시스템도 귓속말 채널은 못 넣는다
@@ -639,7 +643,9 @@ SW_TEST_CASE( ChatServiceTest, HistoryPagesNewestFirst )
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
     for ( int32 index = 0; index < 5; ++index )
     {
-        SW_REQUIRE_TRUE( rig.send( kAlice, "m" + to_string( index ), kWorld, kNowMs + index )._result == ChatResult::Ok );
+        fixed_string<constant::buffer::kMax32> text;
+        formatstring( text.data(), text.capacity(), "m%#", index );
+        SW_REQUIRE_TRUE( rig.send( kAlice, text.view(), kWorld, kNowMs + index )._result == ChatResult::Ok );
     }
     SW_EXPECT_EQUAL( 5, rig._service.getQueuedHistoryCount() );
     SW_EXPECT_TRUE( rig.history( kAlice )._listHistory.empty() ); // 아직 쓰지 않았다
@@ -696,7 +702,9 @@ SW_TEST_CASE( ChatServiceTest, HistoryTrimsAndDropsWhenItMust )
 
     for ( int32 index = 0; index < 3; ++index )
     {
-        SW_EXPECT_TRUE( rig.send( kAlice, "q" + to_string( index ), kWorld, laterMs + index )._result == ChatResult::Ok );
+        fixed_string<constant::buffer::kMax32> text;
+        formatstring( text.data(), text.capacity(), "q%#", index );
+        SW_EXPECT_TRUE( rig.send( kAlice, text.view(), kWorld, laterMs + index )._result == ChatResult::Ok );
     }
     SW_EXPECT_EQUAL( 2, rig._service.getQueuedHistoryCount() );
 }
@@ -803,8 +811,10 @@ SW_TEST_CASE( ChatServiceTest, AccountDeletionErasesSentHistory )
     const ChatCompletion left = rig.history( kBob );
     SW_REQUIRE_EQUAL( size_t( 1 ), left._listHistory.size() );
     SW_EXPECT_EQUAL( kBob, left._listHistory[0]._senderID );
-    vector<ServiceRecord> listSender;
-    SW_REQUIRE_TRUE( ServiceRecordReader::readPage( database, senderTable, ServiceKeyUtil::makeHex64( kAlice ) + "/", "", 100, false, listSender ).isOk() );
+    vector<ServiceRecord>                   listSender;
+    StringBuilder<constant::buffer::kMax32> senderPrefix;
+    senderPrefix.appendFormat( "%#/", ServiceKeyUtil::makeHex64( kAlice ) );
+    SW_REQUIRE_TRUE( ServiceRecordReader::readPage( database, senderTable, senderPrefix.view(), "", 100, false, listSender ).isOk() );
     SW_EXPECT_TRUE( listSender.empty() );
     SW_EXPECT_EQUAL( 1, database.countRecords( senderExpiryTable ) );                                  // Bob 의 줄만 남는다
     SW_EXPECT_TRUE( ChatService::eraseAccount( database, kAlice, kNowMs ) == ServiceStoreResult::Ok ); // 멱등

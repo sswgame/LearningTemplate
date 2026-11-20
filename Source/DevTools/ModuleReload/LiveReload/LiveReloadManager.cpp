@@ -10,6 +10,8 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -69,13 +71,14 @@ namespace sw
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #elif defined( SW_PLATFORM_LINUX )
                 (void)dependencyFileName;
-                const string stampSymbolName = string{ "sw_moduleEngineABIStamp_" } + string{ dependencyName };
-                pOutExpected                 = ModuleLibraryUtil::getDynamicSymbol( pExpected, stampSymbolName );
-                pOutActual                   = nullptr;
+                fixed_string<constant::buffer::kMax256> stampSymbolName;
+                formatstring( stampSymbolName.data(), stampSymbolName.capacity(), "sw_moduleEngineABIStamp_%#", dependencyName );
+                pOutExpected = ModuleLibraryUtil::getDynamicSymbol( pExpected, stampSymbolName.view() );
+                pOutActual   = nullptr;
                 // 스탬프가 없는 모듈(정적 링크 · 스탬프를 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
                 if ( pOutExpected == nullptr )
                     return true;
-                pOutActual = ModuleLibraryUtil::getDynamicSymbol( pModule, stampSymbolName );
+                pOutActual = ModuleLibraryUtil::getDynamicSymbol( pModule, stampSymbolName.view() );
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #else
                 (void)pModule;

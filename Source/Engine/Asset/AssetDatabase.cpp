@@ -96,10 +96,14 @@ namespace sw
 
     bool AssetIdentityRules::isUnderDerivedFolder( string_view assetID ) const
     {
-        const string wrapped = "/" + AssetDatabaseInternal::toLowerID( assetID );
+        StringBuilder<constant::buffer::kMax512> wrapped;
+        wrapped.appendFormat( "/%#", AssetDatabaseInternal::toLowerID( assetID ) );
+        StringBuilder<constant::buffer::kMax256> marker;
         for ( const string& folder : _listDerivedFolder )
         {
-            if ( wrapped.find( "/" + folder + "/" ) != string::npos )
+            marker.clear();
+            marker.appendFormat( "/%#/", folder );
+            if ( wrapped.view().find( marker.view() ) != string_view::npos )
                 return true;
         }
         return false;
@@ -129,7 +133,9 @@ namespace sw
 
     string AssetMeta::makePath( string_view sourcePath )
     {
-        return string( sourcePath ) + string( kExtension );
+        StringBuilder<constant::buffer::kMax512> builder;
+        builder.appendFormat( "%#%#", sourcePath, kExtension );
+        return string( builder.view() );
     }
 
     string AssetMeta::makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride )
@@ -208,7 +214,9 @@ namespace sw
             return false;
         }
         // 원본 · 정체성이 없는 파일은 바이트만 바꾼다(곁의 .meta 는 그대로). 지면 옛 바이트로 되돌린다.
-        const string backupAbs = string( targetAbs ) + ".replacing";
+        StringBuilder<constant::buffer::kMax512> backupBuilder;
+        backupBuilder.appendFormat( "%#.replacing", targetAbs );
+        const string backupAbs( backupBuilder.view() );
         if ( FileUtil::copyFile( targetAbs, backupAbs ) == false )
         {
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );
@@ -231,22 +239,30 @@ namespace sw
 
     string AssetIdentityIssue::toString() const
     {
+        StringBuilder<constant::buffer::kMax512> builder;
         switch ( _kind )
         {
             case AssetIdentityIssueKind::DuplicateGUID:
-                return _assetID + ": has the same GUID as " + _otherAssetID + " - a copy needs a new GUID (py -3 -m Scripts asset-ids --fix)";
+                builder.appendFormat( "%#: has the same GUID as %# - a copy needs a new GUID (py -3 -m Scripts asset-ids --fix)", _assetID, _otherAssetID );
+                return string( builder.view() );
             case AssetIdentityIssueKind::MissingHeader:
-                return _assetID + ": has no <?asset guid?> header (py -3 -m Scripts asset-ids --fix)";
+                builder.appendFormat( "%#: has no <?asset guid?> header (py -3 -m Scripts asset-ids --fix)", _assetID );
+                return string( builder.view() );
             case AssetIdentityIssueKind::InvalidHeader:
-                return _assetID + ": the <?asset guid?> header is unreadable, misplaced or repeated";
+                builder.appendFormat( "%#: the <?asset guid?> header is unreadable, misplaced or repeated", _assetID );
+                return string( builder.view() );
             case AssetIdentityIssueKind::MissingMeta:
-                return _assetID + ": has no .meta beside it (py -3 -m Scripts asset-ids --fix)";
+                builder.appendFormat( "%#: has no .meta beside it (py -3 -m Scripts asset-ids --fix)", _assetID );
+                return string( builder.view() );
             case AssetIdentityIssueKind::OrphanMeta:
-                return _assetID + ": its source file is missing - move the .meta with the file or let asset-ids --fix reattach it";
+                builder.appendFormat( "%#: its source file is missing - move the .meta with the file or let asset-ids --fix reattach it", _assetID );
+                return string( builder.view() );
             case AssetIdentityIssueKind::InvalidMeta:
-                return _assetID + ": the .meta is unreadable or names another source file";
+                builder.appendFormat( "%#: the .meta is unreadable or names another source file", _assetID );
+                return string( builder.view() );
             case AssetIdentityIssueKind::Unreadable:
-                return _assetID + ": could not be read";
+                builder.appendFormat( "%#: could not be read", _assetID );
+                return string( builder.view() );
         }
         return _assetID;
     }

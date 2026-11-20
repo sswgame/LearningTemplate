@@ -67,7 +67,9 @@ namespace sw
                 world.set<GameFlagsWriteSlot>( &flags );
 
                 // 1) 행동 트리: 경보가 꺼져 있으면 켠다.
-                const shared_ptr<const BehaviorTreeAsset> pTree = SharedAssetCache<BehaviorTreeAsset>::acquire( folder + "/guard.bt.xml" ).snapshot();
+                StringBuilder<constant::buffer::kMax512> treePath;
+                treePath.appendFormat( "%#/guard.bt.xml", folder );
+                const shared_ptr<const BehaviorTreeAsset> pTree = SharedAssetCache<BehaviorTreeAsset>::acquire( treePath.view() ).snapshot();
                 if ( pTree == nullptr )
                 {
                     outReply = "the behavior tree could not be read (see the log)";
@@ -80,7 +82,9 @@ namespace sw
                 (void)runner.tick( blackboard, nullptr, 0.0f ); // 결과는 플래그로 본다
 
                 // 2) 스케줄: 경보가 켜진 날에만 문으로 가고, 도착하면 visits 를 올린다.
-                const shared_ptr<const ScheduleCatalog> pCatalog = SharedAssetCache<ScheduleCatalog>::acquire( folder + "/watch.schedules.xml" ).snapshot();
+                StringBuilder<constant::buffer::kMax512> schedulePath;
+                schedulePath.appendFormat( "%#/watch.schedules.xml", folder );
+                const shared_ptr<const ScheduleCatalog> pCatalog = SharedAssetCache<ScheduleCatalog>::acquire( schedulePath.view() ).snapshot();
                 if ( pCatalog == nullptr )
                 {
                     outReply = "the schedule could not be read (see the log)";
@@ -97,8 +101,10 @@ namespace sw
                 schedules.advanceTo( 9 * kMinutesPerHour );
 
                 // 3) 대화: 둘을 모두 봤으면 보고를 남긴다.
-                DialogueRunnerComponent dialogue;
-                if ( dialogue.loadGraphFile( AssetID{ folder + "/report.dialogue.xml" } ) == false )
+                DialogueRunnerComponent                  dialogue;
+                StringBuilder<constant::buffer::kMax512> dialoguePath;
+                dialoguePath.appendFormat( "%#/report.dialogue.xml", folder );
+                if ( dialogue.loadGraphFile( AssetID{ dialoguePath.view() } ) == false )
                 {
                     outReply = "the dialogue could not be read (see the log)";
                     return false;

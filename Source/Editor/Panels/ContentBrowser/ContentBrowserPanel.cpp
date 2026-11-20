@@ -7,6 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
@@ -138,7 +140,9 @@ namespace sw::editor
                 if ( pPanel == nullptr )
                     return false;
                 pPanel->openFolder( folderAbs );
-                outReply = "content browser at " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "content browser at %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -560,7 +564,8 @@ namespace sw::editor
         const ContentBrowserSavedSearch* pApplySearch = nullptr;
         for ( const ContentBrowserSavedSearch& search : _collections.getSavedSearches() )
         {
-            const string label = string( SW_EDITOR_ICON( "Filter" ) ) + "  " + search._name + ( search._bShared ? "  (shared)" : "" );
+            fixed_string<constant::buffer::kMax256> label;
+            formatstring( label.data(), label.capacity(), "%#  %#%#", SW_EDITOR_ICON( "Filter" ), search._name, search._bShared ? "  (shared)" : "" );
             if ( ImGui::Selectable( label.c_str(), false ) )
                 pApplySearch = &search;
             EditorWidgets::drawTooltip( search._searchText.c_str() );
@@ -1260,10 +1265,11 @@ namespace sw::editor
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
         ImGui::PushID( absPath.c_str() );
-        const bool   bDefaultOpen  = ( ( flags & ImGuiTreeNodeFlags_DefaultOpen ) != 0 );
-        const utf8*  pFolderIcon   = EditorThemeUtil::getFolderIcon( bDefaultOpen );
-        const string labelWithIcon = string( pFolderIcon ) + "  " + string( label );
-        const Color  folderColor   = EditorThemeUtil::getFolderColor();
+        const bool                              bDefaultOpen = ( ( flags & ImGuiTreeNodeFlags_DefaultOpen ) != 0 );
+        const utf8*                             pFolderIcon  = EditorThemeUtil::getFolderIcon( bDefaultOpen );
+        fixed_string<constant::buffer::kMax256> labelWithIcon;
+        formatstring( labelWithIcon.data(), labelWithIcon.capacity(), "%#  %#", pFolderIcon, label );
+        const Color folderColor = EditorThemeUtil::getFolderColor();
         ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( folderColor.withAlpha( 1.0f ) ) );
         const bool opened = ImGui::TreeNodeEx( labelWithIcon.c_str(), flags );
         ImGui::PopStyleColor();
@@ -1548,10 +1554,11 @@ namespace sw::editor
 
                     const bool selected = _model.isSelected( entry, false );
                     ImGui::TableSetColumnIndex( 0 );
-                    const utf8*  pAssetIcon   = EditorThemeUtil::getAssetIconForPath( entry._name, entry._bIsDirectory );
-                    const Color  assetColor   = EditorThemeUtil::getAssetColorForPath( entry._name, entry._bIsDirectory );
-                    const string statusText   = ContentBrowserViewModel::describeSourceControlStatus( entry );
-                    const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name + ( statusText.empty() ? string() : string( "  " ) + SW_EDITOR_ICON( "Lock" ) );
+                    const utf8*                             pAssetIcon = EditorThemeUtil::getAssetIconForPath( entry._name, entry._bIsDirectory );
+                    const Color                             assetColor = EditorThemeUtil::getAssetColorForPath( entry._name, entry._bIsDirectory );
+                    const string                            statusText = ContentBrowserViewModel::describeSourceControlStatus( entry );
+                    fixed_string<constant::buffer::kMax256> nameWithIcon;
+                    formatstring( nameWithIcon.data(), nameWithIcon.capacity(), "%#  %#%#%#", pAssetIcon, entry._name, statusText.empty() ? "" : "  ", statusText.empty() ? "" : SW_EDITOR_ICON( "Lock" ) );
                     ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( assetColor ) );
                     const bool bSelected = ImGui::Selectable( nameWithIcon.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
                     ImGui::PopStyleColor();

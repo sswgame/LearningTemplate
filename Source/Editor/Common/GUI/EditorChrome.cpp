@@ -3,6 +3,8 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelText.h"
@@ -74,12 +76,14 @@ namespace sw::editor
                 const bool         bNoButton = pOpen == nullptr || pWindow->Collapsed || ( bDocked && pWindow->DockTabIsVisible == false );
                 if ( bNoButton || EditorSelfTestMarks::isEnabled() == false )
                     return;
-                const ImVec2  padding = ImGui::GetStyle().FramePadding;
-                const float32 size    = ImGui::GetFontSize();
-                const ImRect  strip   = bDocked ? pWindow->DC.DockTabItemRect : pWindow->TitleBarRect();
-                const float32 left    = bDocked ? ImMax( strip.Min.x, strip.Max.x - padding.x * 2.0f - size ) : strip.Max.x - padding.x - size;
-                const float32 top     = strip.Min.y + padding.y;
-                EditorSelfTestMarks::recordRect( ( string{ "panel.close." } + pTitle ).c_str(), float2{ left, top }, float2{ left + size, top + size } );
+                const ImVec2                            padding = ImGui::GetStyle().FramePadding;
+                const float32                           size    = ImGui::GetFontSize();
+                const ImRect                            strip   = bDocked ? pWindow->DC.DockTabItemRect : pWindow->TitleBarRect();
+                const float32                           left    = bDocked ? ImMax( strip.Min.x, strip.Max.x - padding.x * 2.0f - size ) : strip.Max.x - padding.x - size;
+                const float32                           top     = strip.Min.y + padding.y;
+                fixed_string<constant::buffer::kMax256> closeMark;
+                formatstring( closeMark.data(), closeMark.capacity(), "panel.close.%#", pTitle );
+                EditorSelfTestMarks::recordRect( closeMark.c_str(), float2{ left, top }, float2{ left + size, top + size } );
             }
 
             /**

@@ -159,7 +159,10 @@ namespace sw::editor
             row._pKindLabel                   = Internal::getHistoryKindLabel( entry._kind );
             row._what                         = entry._name.c_str();
             if ( entry._kind == SequenceHistoryKind::CameraSignal )
-                row._what += string( " - " ) + Internal::getSignalLabel( entry._detail );
+            {
+                row._what += " - ";
+                row._what += Internal::getSignalLabel( entry._detail );
+            }
         }
 
         // 키트의 해석 — 그 키트 모듈이 올라와 있을 때만 제공자가 목록에 있다.

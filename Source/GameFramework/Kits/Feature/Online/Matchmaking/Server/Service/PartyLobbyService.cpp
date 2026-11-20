@@ -374,27 +374,37 @@ namespace sw
 
     string PartyLobbyService::makePartyKey( uint64 partyID )
     {
-        return "mm/party/" + ServiceKeyUtil::makeHex64( partyID );
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "mm/party/%#", ServiceKeyUtil::makeHex64( partyID ) );
+        return string( key.view() );
     }
 
     string PartyLobbyService::makeAccountPartyKey( AccountID accountID )
     {
-        return "mm/acct/" + ServiceKeyUtil::makeHex64( accountID );
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "mm/acct/%#", ServiceKeyUtil::makeHex64( accountID ) );
+        return string( key.view() );
     }
 
     string PartyLobbyService::makeInviteKey( AccountID accountID, uint64 partyID )
     {
-        return "mm/pinv/" + ServiceKeyUtil::makeHex64( accountID ) + "/" + ServiceKeyUtil::makeHex64( partyID );
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "mm/pinv/%#/%#", ServiceKeyUtil::makeHex64( accountID ), ServiceKeyUtil::makeHex64( partyID ) );
+        return string( key.view() );
     }
 
     string PartyLobbyService::makeLobbyKey( uint64 lobbyID )
     {
-        return "mm/lobby/" + ServiceKeyUtil::makeHex64( lobbyID );
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "mm/lobby/%#", ServiceKeyUtil::makeHex64( lobbyID ) );
+        return string( key.view() );
     }
 
     string PartyLobbyService::makeLobbyListKey( string_view modeID )
     {
-        return "mm/lobbies/" + string( modeID );
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "mm/lobbies/%#", modeID );
+        return string( key.view() );
     }
 
     void PartyLobbyService::submitStep( const EphemeralRequest& cacheRequest, StepKind kind, const Request& request, uint64 listID, int32 slot )

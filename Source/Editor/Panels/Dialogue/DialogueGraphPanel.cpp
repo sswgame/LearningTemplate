@@ -603,7 +603,9 @@ namespace sw::editor
             _actionError.clear();
             if ( const expected<void> read = GameActionCall::tryReadProperties( node._actionCommand, _pActionEntry, _actionProperties ); read.has_value() == false )
             {
-                _actionError  = string( read.error().message().data(), read.error().message().size() ) + ": " + string( read.error().detail().data(), read.error().detail().size() );
+                StringBuilder<constant::buffer::kMax512> errorBuilder;
+                errorBuilder.appendFormat( "%#: %#", read.error().message(), read.error().detail() );
+                _actionError  = string( errorBuilder.view() );
                 _pActionEntry = nullptr;
             }
         }

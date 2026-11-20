@@ -107,9 +107,10 @@ namespace sw
         listQuery.push_back( HTTPHeader{ "nonce", pending._nonce } );
         listQuery.push_back( HTTPHeader{ "code_challenge", Base64Util::encodeURL( arrChallenge, sizeof( arrChallenge ) ) } );
         listQuery.push_back( HTTPHeader{ "code_challenge_method", "S256" } );
-        const bool   bHasQuery = pSettings->_authorizationURL.find( '?' ) != string::npos;
-        const string url       = pSettings->_authorizationURL + ( bHasQuery ? "&" : "?" ) + HTTPUtil::encodeForm( listQuery );
-        if ( _pBrowser->openURL( url ) == false )
+        const bool                                bHasQuery = pSettings->_authorizationURL.find( '?' ) != string::npos;
+        StringBuilder<constant::buffer::kMax2048> url;
+        url.appendFormat( "%#%#%#", pSettings->_authorizationURL, bHasQuery ? "&" : "?", HTTPUtil::encodeForm( listQuery ) );
+        if ( _pBrowser->openURL( url.view() ) == false )
         {
             finish( pending, false, false, "could not open the system browser", vector<uint8>{} );
             return requestID;
@@ -144,10 +145,12 @@ namespace sw
                 }
                 else
                 {
-                    string ticketText = token.asString();
+                    StringBuilder<constant::buffer::kMax2048> ticketText;
+                    ticketText.appendFormat( "%#", token.asString() );
                     if ( pSettings->_bUseIDToken == SW_TRUE )
-                        ticketText += "|" + pending._nonce;
-                    finish( pending, true, false, "", vector<uint8>( reinterpret_cast<const uint8*>( ticketText.data() ), reinterpret_cast<const uint8*>( ticketText.data() ) + ticketText.size() ) );
+                        ticketText.appendFormat( "|%#", pending._nonce );
+                    const string_view ticketView = ticketText.view();
+                    finish( pending, true, false, "", vector<uint8>( reinterpret_cast<const uint8*>( ticketView.data() ), reinterpret_cast<const uint8*>( ticketView.data() ) + ticketView.size() ) );
                 }
                 _listPending.erase( _listPending.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
                 break;
@@ -202,13 +205,17 @@ namespace sw
         const bool                     bLoginDenied = pError != nullptr || pCode == nullptr || pCode->_value.empty() || pSettings == nullptr;
         if ( bLoginDenied )
         {
-            const bool   bDenied = pError != nullptr && pError->_value == "access_denied";
-            const string reason  = pError != nullptr ? "provider returned " + pError->_value : string( "redirect carried no code" );
+            const bool                               bDenied = pError != nullptr && pError->_value == "access_denied";
+            StringBuilder<constant::buffer::kMax256> reason;
+            if ( pError != nullptr )
+                reason.appendFormat( "provider returned %#", pError->_value );
+            else
+                reason.append( "redirect carried no code" );
             for ( size_t pendingIndex = 0; pendingIndex < _listPending.size(); ++pendingIndex )
             {
                 if ( &_listPending[pendingIndex] != pFound )
                     continue;
-                finish( *pFound, false, bDenied, reason, vector<uint8>{} );
+                finish( *pFound, false, bDenied, reason.view(), vector<uint8>{} );
                 _listPending.erase( _listPending.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
                 break;
             }
@@ -260,6 +267,8 @@ namespace sw
 
     string LoopbackPkceLoginClient::makeRedirectURI() const
     {
-        return "http://127.0.0.1:" + to_string( static_cast<int32>( _redirectServer.getListenPort() ) ) + LoopbackPkceLoginClientInternal::kCallbackPath;
+        StringBuilder<constant::buffer::kMax64> uri;
+        uri.appendFormat( "http://127.0.0.1:%#%#", static_cast<int32>( _redirectServer.getListenPort() ), LoopbackPkceLoginClientInternal::kCallbackPath );
+        return string( uri.view() );
     }
 } // namespace sw

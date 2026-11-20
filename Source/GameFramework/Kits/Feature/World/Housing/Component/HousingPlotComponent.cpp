@@ -57,7 +57,9 @@ namespace sw
             /** @brief 그 이름의 열린 부지가 없을 때의 답입니다. */
             static string makeNoPlotReply( const string& objectName )
             {
-                return "no open housing plot named '" + objectName + "' in the active scene";
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "no open housing plot named '%#' in the active scene", objectName );
+                return string( reply.view() );
             }
 
             /** @brief `<x> <z> <level> <yawDegrees> [free]` 를 @p first 자리부터 읽습니다. 날 변환(부지 기준)과 모드입니다. */
@@ -162,7 +164,9 @@ namespace sw
                 const HousingPartDef*      pPart    = catalog.findPart( hashed_string( listArgument[1] ) );
                 if ( pPart == nullptr )
                 {
-                    outReply = "housing: no part '" + listArgument[1] + "' in the plot's catalog";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "housing: no part '%#' in the plot's catalog", listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 const float32    cellSize = catalog.getRoot()._cellSize;
@@ -241,7 +245,19 @@ namespace sw
                 if ( listArgument.size() != 2 || DevCommandRegistry::readDiskPathArgument( listArgument[1], path, outReply ) == false )
                     return false;
                 HousingPlotComponent* pPlot = findPlot( listArgument[0] );
-                outReply                    = pPlot != nullptr ? string( pPlot->saveToFile( path ) ? "housing: saved " + path : "housing: save failed (see the log)" ) : makeNoPlotReply( listArgument[0] );
+                if ( pPlot == nullptr )
+                {
+                    outReply = makeNoPlotReply( listArgument[0] );
+                    return true;
+                }
+                if ( pPlot->saveToFile( path ) == false )
+                {
+                    outReply = "housing: save failed (see the log)";
+                    return true;
+                }
+                StringBuilder<constant::buffer::kMax512> replyBuilder;
+                replyBuilder.appendFormat( "housing: saved %#", path );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -252,7 +268,19 @@ namespace sw
                 if ( listArgument.size() != 2 || DevCommandRegistry::readDiskPathArgument( listArgument[1], path, outReply ) == false )
                     return false;
                 HousingPlotComponent* pPlot = findPlot( listArgument[0] );
-                outReply                    = pPlot != nullptr ? string( pPlot->loadFromFile( path ) ? "housing: loaded " + path : "housing: load failed (see the log)" ) : makeNoPlotReply( listArgument[0] );
+                if ( pPlot == nullptr )
+                {
+                    outReply = makeNoPlotReply( listArgument[0] );
+                    return true;
+                }
+                if ( pPlot->loadFromFile( path ) == false )
+                {
+                    outReply = "housing: load failed (see the log)";
+                    return true;
+                }
+                StringBuilder<constant::buffer::kMax512> replyBuilder;
+                replyBuilder.appendFormat( "housing: loaded %#", path );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

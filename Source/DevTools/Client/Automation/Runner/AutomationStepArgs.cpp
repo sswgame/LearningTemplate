@@ -5,6 +5,7 @@
 #include "Core/Container/pair.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationRunnerParams.h"
@@ -79,27 +80,32 @@ namespace sw
 
     bool AutomationStepArgsUtil::matchesNumber( const NumberComparison& comparison, float64 value, string& outRule )
     {
-        const float64 expected = static_cast<float64>( comparison._expected );
+        const float64                            expected = static_cast<float64>( comparison._expected );
+        StringBuilder<constant::buffer::kMax256> rule;
         switch ( comparison._rule )
         {
             case NumberRule::Equals:
             {
-                outRule = "== " + comparison._text;
+                rule.appendFormat( "== %#", comparison._text );
+                outRule = string( rule.view() );
                 return value == expected;
             }
             case NumberRule::Near:
             {
-                outRule = "near " + comparison._text;
+                rule.appendFormat( "near %#", comparison._text );
+                outRule = string( rule.view() );
                 return MathUtil::abs( value - expected ) <= static_cast<float64>( comparison._tolerance );
             }
             case NumberRule::AtLeast:
             {
-                outRule = ">= " + comparison._text;
+                rule.appendFormat( ">= %#", comparison._text );
+                outRule = string( rule.view() );
                 return value >= expected;
             }
             case NumberRule::AtMost:
             {
-                outRule = "<= " + comparison._text;
+                rule.appendFormat( "<= %#", comparison._text );
+                outRule = string( rule.view() );
                 return value <= expected;
             }
         }

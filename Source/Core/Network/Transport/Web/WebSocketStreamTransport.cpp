@@ -6,6 +6,8 @@
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Network/Transport/WebSocketProtocol.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include <emscripten/websocket.h>
 
@@ -96,7 +98,8 @@ namespace sw
 
     StreamConnectionHandle WebSocketStreamTransport::connect( const NetAddress& remote )
     {
-        const string                        url = "ws://" + remote.toString() + "/";
+        fixed_string<constant::buffer::kMax128> url;
+        formatstring( url.data(), url.capacity(), "ws://%#/", remote.toString() );
         EmscriptenWebSocketCreateAttributes attributes;
         emscripten_websocket_init_create_attributes( &attributes );
         attributes.url                      = url.c_str();

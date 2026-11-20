@@ -100,11 +100,15 @@ namespace sw
 
     string GameSelection::getConfigPath()
     {
-        return FileUtil::joinPath( config::kDirRuntimeGamePreset, getName() + ".json" );
+        StringBuilder<constant::buffer::kMax128> fileName;
+        fileName.appendFormat( "%#.json", getName() );
+        return FileUtil::joinPath( config::kDirRuntimeGamePreset, fileName.view() );
     }
 
     string GameSelection::getServerConfigPath()
     {
-        return FileUtil::joinPath( config::kDirRuntimeServerPreset, getName() + ".json" );
+        StringBuilder<constant::buffer::kMax128> fileName;
+        fileName.appendFormat( "%#.json", getName() );
+        return FileUtil::joinPath( config::kDirRuntimeServerPreset, fileName.view() );
     }
 } // namespace sw

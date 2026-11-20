@@ -9,6 +9,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
@@ -234,7 +235,12 @@ namespace sw::editor
         }
         EditorSceneCommandsInternal::removeFromSelection( *pManager, listPendingDestroy );
 
-        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Destroy GameObject" ) : "Destroy " + to_string( listRoot.size() ) + " GameObjects" );
+        fixed_string<constant::buffer::kMax64> transactionLabel;
+        if ( listRoot.size() == 1 )
+            transactionLabel = "Destroy GameObject";
+        else
+            formatstring( transactionLabel.data(), transactionLabel.capacity(), "Destroy %# GameObjects", listRoot.size() );
+        EditorTransaction::beginTransaction( transactionLabel );
         size_t first = 0;
         for ( const size_t last : listSubtreeEnd )
         {
@@ -265,7 +271,12 @@ namespace sw::editor
         const bool                bNothingToDuplicate = EditorPlaySession::refuseSceneEdit( "Duplicate GameObjects" ) || pManager == nullptr || listRoot.empty();
         if ( bNothingToDuplicate )
             return;
-        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Duplicate GameObject" ) : "Duplicate " + to_string( listRoot.size() ) + " GameObjects" );
+        fixed_string<constant::buffer::kMax64> transactionLabel;
+        if ( listRoot.size() == 1 )
+            transactionLabel = "Duplicate GameObject";
+        else
+            formatstring( transactionLabel.data(), transactionLabel.capacity(), "Duplicate %# GameObjects", listRoot.size() );
+        EditorTransaction::beginTransaction( transactionLabel );
         for ( GameObject* pSource : listRoot )
         {
             GameObject* pCopy = duplicate( transaction, pManager, pSource );

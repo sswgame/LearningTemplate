@@ -9,6 +9,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationLogPolicy.h"
@@ -444,11 +446,11 @@ namespace sw::editor
         ImGui::Separator();
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyVisibleLines" ), nullptr, false, _listVisible.empty() == false ) )
         {
-            string allLogs;
+            StringBuilder<constant::buffer::kMax8192> allLogs;
             for ( const LogEntry* pEntry : _listVisible )
             {
                 if ( pEntry != nullptr )
-                    allLogs += ConsoleLogRows::formatEntryLine( *pEntry ) + "\n";
+                    allLogs.appendFormat( "%#\n", ConsoleLogRows::formatEntryLine( *pEntry ) );
             }
             ImGui::SetClipboardText( allLogs.c_str() );
         }

@@ -381,7 +381,11 @@ namespace sw::editor
                         return unexpected( Error{ ErrorKind::InvalidArgument, "the texture tiling is not four numbers", key } );
                     const bool bIdentity = arrTiling[0] == 0.0f && arrTiling[1] == 0.0f && arrTiling[2] == 1.0f && arrTiling[3] == 1.0f;
                     if ( bIdentity == false )
-                        appendIgnored( pOutListIgnored, key + string( " tiling" ) );
+                    {
+                        StringBuilder<constant::buffer::kMax128> keyBuilder;
+                        keyBuilder.appendFormat( "%# tiling", key );
+                        appendIgnored( pOutListIgnored, keyBuilder.view() );
+                    }
                 }
                 return {};
             }
@@ -530,8 +534,10 @@ namespace sw::editor
         if ( materialProperty.isObject() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "materialProperties element is not an object" } );
         ToonMaterialDef desc;
-        desc._name                   = materialProperty.get( "name" ).asString();
-        const string         context = "VRM 0.x material '" + desc._name + "'";
+        desc._name = materialProperty.get( "name" ).asString();
+        StringBuilder<constant::buffer::kMax256> contextBuilder;
+        contextBuilder.appendFormat( "VRM 0.x material '%#'", desc._name );
+        const string_view    context = contextBuilder.view();
         const string         shader  = materialProperty.get( "shader" ).asString();
         const expected<void> keys    = Internal::validateKeys( materialProperty, Internal::kArrVrm0RootKey );
         if ( keys.has_value() == false )
@@ -568,8 +574,10 @@ namespace sw::editor
     {
         using Internal = VrmMaterialImporterInternal;
         ToonMaterialDef desc;
-        desc._name                   = gltfMaterial.get( "name" ).asString();
-        const string         context = "VRM 1.0 material '" + desc._name + "'";
+        desc._name = gltfMaterial.get( "name" ).asString();
+        StringBuilder<constant::buffer::kMax256> contextBuilder;
+        contextBuilder.appendFormat( "VRM 1.0 material '%#'", desc._name );
+        const string_view    context = contextBuilder.view();
         const expected<void> base    = Internal::readGltfBase( gltfMaterial, desc, pOutListIgnored );
         if ( base.has_value() == false )
             return unexpected( Internal::withContext( base.error(), context ) );
@@ -583,7 +591,11 @@ namespace sw::editor
         }
         const expected<void> keys = Internal::validateKeys( mtoon, Internal::kArrMtoon1Key );
         if ( keys.has_value() == false )
-            return unexpected( Internal::withContext( keys.error(), context + ": VRMC_materials_mtoon" ) );
+        {
+            StringBuilder<constant::buffer::kMax256> mtoonContext;
+            mtoonContext.appendFormat( "%#: VRMC_materials_mtoon", context );
+            return unexpected( Internal::withContext( keys.error(), mtoonContext.view() ) );
+        }
 
         // 키가 없으면 `ToonMaterialDef` 의 초기값이다 — 그 값이 1.0 의 기본값(VRMC_materials_mtoon 스키마)이다.
         const pair<string_view, float4*> arrColorFactor[] = {

@@ -333,7 +333,9 @@ namespace sw::editor
                         GlobalVariableInfo* pInfo = gvm.findVariable( pinnedName );
                         if ( pInfo != nullptr )
                         {
-                            ImGui::PushID( ( "Pinned_" + pInfo->_name ).c_str() );
+                            fixed_string<constant::buffer::kMax256> pinnedID;
+                            formatstring( pinnedID.data(), pinnedID.capacity(), "Pinned_%#", pInfo->_name );
+                            ImGui::PushID( pinnedID.c_str() );
                             drawVariableRow( *pInfo, true );
                             ImGui::PopID();
                         }
@@ -376,7 +378,8 @@ namespace sw::editor
 
                 if ( bModuleHeaderOpen )
                 {
-                    const string tableID = "GvTable_" + currentModule;
+                    fixed_string<constant::buffer::kMax256> tableID;
+                    formatstring( tableID.data(), tableID.capacity(), "GvTable_%#", currentModule );
                     if ( GlobalVariablesPanelInternal::beginVariableTable( tableID.c_str(), GlobalVariablesPanelInternal::kGroupedTableFlags, 0.0f ) )
                     {
                         for ( size_t rowIndex = varIndex; rowIndex < rangeEnd; ++rowIndex )

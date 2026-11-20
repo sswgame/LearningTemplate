@@ -154,12 +154,16 @@ namespace sw::editor
         const auto readPath = getDocumentDiskPath();
         if ( readPath.has_value() == false )
         {
-            _status = "The paired animation '" + path + "' has no file on disk to read";
+            StringBuilder<constant::buffer::kMax512> status;
+            status.appendFormat( "The paired animation '%#' has no file on disk to read", path );
+            _status = string( status.view() );
             return ToolAssetLoadResult::Malformed;
         }
         if ( _model.loadFromFile( readPath->str() ) == false )
         {
-            _status = "The paired animation '" + readPath->str() + "' could not be read - see the log";
+            StringBuilder<constant::buffer::kMax512> status;
+            status.appendFormat( "The paired animation '%#' could not be read - see the log", readPath->str() );
+            _status = string( status.view() );
             return ToolAssetLoadResult::Malformed;
         }
         // 역할 수가 바뀌었을 수 있다 — 미리보기 오브젝트를 새로 놓는다(프리팹 경로는 같은 인덱스면 남긴다).
@@ -249,8 +253,10 @@ namespace sw::editor
 
             PairedAnimationRoleSlot& slot = _previewDriver.editSlots()[roleIndex];
             ImGui::SetNextItemWidth( -1.0f );
+            fixed_string<constant::buffer::kMax128> prefabMark;
+            formatstring( prefabMark.data(), prefabMark.capacity(), "pairedanim.role.%#.prefab", role._name.c_str() );
             (void)EditorWidgets::drawAssetPathField( "##Prefab", slot._prefabPath.data(), slot._prefabPath.max_size(), "Preview prefab (resource id, not saved)", ".prefab.xml,.prefab.json",
-                                                     ( string( "pairedanim.role." ) + role._name.c_str() + ".prefab" ).c_str() );
+                                                     prefabMark.c_str() );
 
             if ( role._bAnchor == false )
             {
@@ -289,7 +295,7 @@ namespace sw::editor
                     reportEdit( _model.setRoleOffset( roleIndex, offset, Radians::fromDegrees( yawDegrees ), true ) );
                 if ( bOffsetDone || bYawDone )
                     _model.endContinuousEdit();
-                EditorSelfTestMarks::record( ( string( "pairedanim.role." ) + role._name.c_str() + ".offset" ).c_str() );
+                EditorSelfTestMarks::recordFormat( "pairedanim.role.%#.offset", role._name.c_str() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "AnchorRelativeRootPositionAndYawAt" ) );
             }
             if ( role._bAnchor == false && role._align == PairedAnimationAlign::Warp )
@@ -322,7 +328,7 @@ namespace sw::editor
                 reportEdit( _model.setNotifyTime( notifyIndex, time, true ) );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 _model.endContinuousEdit();
-            EditorSelfTestMarks::record( ( string( "pairedanim.notify." ) + notify._name.c_str() + ".time" ).c_str() );
+            EditorSelfTestMarks::recordFormat( "pairedanim.notify.%#.time", notify._name.c_str() );
             ImGui::SameLine();
             EditorChrome::setNextItemWidthColumns( 19.0f );
             if ( EditorWidgets::beginCombo( "##Role", notify._role.c_str() ) )

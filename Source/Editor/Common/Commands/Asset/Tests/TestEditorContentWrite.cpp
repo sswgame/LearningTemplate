@@ -34,9 +34,9 @@ SW_TEST_CASE( EditorContentWriteTest, ReadOnlyFileIsRefusedAndKept )
 SW_TEST_CASE( EditorContentWriteTest, FolderIsRefusedByAReadOnlyFileUnderIt )
 {
     const string folder     = test::makeScratchPath( "pack" );
-    const string writable   = folder + "/a.material";
-    const string readOnly   = folder + "/deep/b.material";
-    const string missingNew = folder + "/new.material";
+    const string writable   = FileUtil::joinPath( folder, "a.material" );
+    const string readOnly   = FileUtil::joinPath( folder, "deep/b.material" );
+    const string missingNew = FileUtil::joinPath( folder, "new.material" );
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( readOnly ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( writable, "a" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( readOnly, "b" ) );

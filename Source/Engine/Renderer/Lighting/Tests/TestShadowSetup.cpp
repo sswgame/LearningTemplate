@@ -200,8 +200,9 @@ SW_TEST_CASE( ShadowSetupTest, CascadesTakeQuadrantsAndLocalCellsDoNotOverlap )
         SW_EXPECT_TRUE( cell._x + cell._size <= Internal::kAtlasResolution && cell._y + cell._size <= Internal::kAtlasResolution );
         for ( size_t second = first + 1; second < frame._listLocalTile.size(); ++second )
         {
-            SW_EXPECT_FALSE_MSG( Internal::overlaps( cell, frame._listLocalTile[second]._cell ),
-                                 ( "칸 " + sw::to_string( static_cast<uint64>( first ) ) + " 과 " + sw::to_string( static_cast<uint64>( second ) ) + " 이 겹친다" ).c_str() );
+            sw::fixed_string<sw::constant::buffer::kMax128> message;
+            sw::formatstring( message.data(), message.capacity(), "칸 %# 과 %# 이 겹친다", static_cast<uint64>( first ), static_cast<uint64>( second ) );
+            SW_EXPECT_FALSE_MSG( Internal::overlaps( cell, frame._listLocalTile[second]._cell ), message );
         }
     }
 }
@@ -311,14 +312,17 @@ SW_TEST_CASE( ShadowSetupTest, PointFacesProjectIntoTheirOwnCells )
     {
         const sw::float3 worldPoint = lightPosition + arrOffset[faceIndex];
         SW_REQUIRE_EQUAL( Internal::selectPointFace( arrOffset[faceIndex] ), faceIndex );
-        const sw::GPULight& matrixElement = frame._listTileElement[faceIndex * sw::shaderslot::kShadowTileElementCount];
-        const sw::GPULight& info          = frame._listTileElement[faceIndex * sw::shaderslot::kShadowTileElementCount + 1];
-        const sw::float3    atlasNdc      = Internal::projectToNdc( worldPoint, Internal::makeMatrixFromElement( matrixElement ) );
-        const sw::float2    atlasUV       = Internal::computeUV( atlasNdc );
-        const sw::string    label         = "face " + sw::to_string( faceIndex );
-        SW_EXPECT_TRUE_MSG( info._positionRadius._x <= atlasUV._x && atlasUV._x <= info._positionRadius._z, ( label + " u " + sw::to_string( atlasUV._x ) ).c_str() );
-        SW_EXPECT_TRUE_MSG( info._positionRadius._y <= atlasUV._y && atlasUV._y <= info._positionRadius._w, ( label + " v " + sw::to_string( atlasUV._y ) ).c_str() );
-        SW_EXPECT_TRUE_MSG( 0.0f < atlasNdc._z && atlasNdc._z < 1.0f, ( label + " depth " + sw::to_string( atlasNdc._z ) ).c_str() );
+        const sw::GPULight&                             matrixElement = frame._listTileElement[faceIndex * sw::shaderslot::kShadowTileElementCount];
+        const sw::GPULight&                             info          = frame._listTileElement[faceIndex * sw::shaderslot::kShadowTileElementCount + 1];
+        const sw::float3                                atlasNdc      = Internal::projectToNdc( worldPoint, Internal::makeMatrixFromElement( matrixElement ) );
+        const sw::float2                                atlasUV       = Internal::computeUV( atlasNdc );
+        sw::fixed_string<sw::constant::buffer::kMax128> message;
+        sw::formatstring( message.data(), message.capacity(), "face %# u %#", faceIndex, atlasUV._x );
+        SW_EXPECT_TRUE_MSG( info._positionRadius._x <= atlasUV._x && atlasUV._x <= info._positionRadius._z, message );
+        sw::formatstring( message.data(), message.capacity(), "face %# v %#", faceIndex, atlasUV._y );
+        SW_EXPECT_TRUE_MSG( info._positionRadius._y <= atlasUV._y && atlasUV._y <= info._positionRadius._w, message );
+        sw::formatstring( message.data(), message.capacity(), "face %# depth %#", faceIndex, atlasNdc._z );
+        SW_EXPECT_TRUE_MSG( 0.0f < atlasNdc._z && atlasNdc._z < 1.0f, message );
 
         // 그리는 행렬로는 칸 NDC — 칸 원점 + 칸 uv · 칸 크기가 셰이딩 uv 와 같다.
         const sw::ShadowTileDraw& tile    = frame._listLocalTile[faceIndex];
@@ -407,8 +411,9 @@ SW_TEST_CASE( ShadowSetupTest, PerspectiveCameraSplitsIntoNestedCascades )
         SW_EXPECT_NEAR( drawNdc._x, baseNdc._x * value._x + value._y, 1e-3f );
         SW_EXPECT_NEAR( drawNdc._y, baseNdc._y * value._x + value._z, 1e-3f );
         SW_EXPECT_NEAR( drawNdc._z, baseNdc._z, 1e-5f );
-        const sw::string label = "cascade " + sw::to_string( cascadeIndex ) + " ndc (" + sw::to_string( drawNdc._x ) + ", " + sw::to_string( drawNdc._y ) + ")";
-        SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( drawNdc._x ) <= 1.0f && sw::MathUtil::abs( drawNdc._y ) <= 1.0f && 0.0f <= drawNdc._z && drawNdc._z <= 1.0f, label.c_str() );
+        sw::fixed_string<sw::constant::buffer::kMax128> label;
+        sw::formatstring( label.data(), label.capacity(), "cascade %# ndc (%#, %#)", cascadeIndex, drawNdc._x, drawNdc._y );
+        SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( drawNdc._x ) <= 1.0f && sw::MathUtil::abs( drawNdc._y ) <= 1.0f && 0.0f <= drawNdc._z && drawNdc._z <= 1.0f, label );
     }
 }
 

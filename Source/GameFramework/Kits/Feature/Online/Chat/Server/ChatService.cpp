@@ -57,15 +57,18 @@ namespace sw
 
             static int64 getDayEndMs( int64 sentMs ) { return ( MathUtil::max<int64>( 0, sentMs ) / kIndexDayMs + 1 ) * kIndexDayMs; }
 
-            static string makeSenderPrefix( AccountID senderID ) { return ServiceKeyUtil::makeHex64( senderID ) + "/"; }
+            static string makeSenderPrefix( AccountID senderID )
+            {
+                StringBuilder<constant::buffer::kMax32> prefix;
+                prefix.appendFormat( "%#/", ServiceKeyUtil::makeHex64( senderID ) );
+                return string( prefix.view() );
+            }
 
             static string makeSenderKey( AccountID senderID, int64 sentMs, string_view historyKey )
             {
-                string key = makeSenderPrefix( senderID );
-                ServiceKeyUtil::appendHex64( key, static_cast<uint64>( MathUtil::max<int64>( 0, sentMs ) ) );
-                key.push_back( '/' );
-                key += historyKey;
-                return key;
+                StringBuilder<constant::buffer::kMax256> key;
+                key.appendFormat( "%#%#/%#", makeSenderPrefix( senderID ), ServiceKeyUtil::makeHex64( static_cast<uint64>( MathUtil::max<int64>( 0, sentMs ) ) ), historyKey );
+                return string( key.view() );
             }
 
             static string makeSenderIndexKey( AccountID senderID, int64 sentMs ) { return ServiceTTLRule::makeTTLIndexKey( getDayEndMs( sentMs ), makeSenderPrefix( senderID ) ); }
@@ -200,9 +203,11 @@ namespace sw
             /** @brief 기록을 최근 것부터 읽습니다. 커서는 앞 응답의 마지막 키이며 그보다 이전 기록부터 읽습니다. 손상된 영속 기록은 건너뛰지 않고 이 읽기를 실패로 돌려준다. */
             static ChatHistoryReadResult readHistory( IServiceStoreConnection& connection, const string& channelID, const string& cursor, int32 maxCount )
             {
-                ChatHistoryReadResult read;
-                vector<ServiceRecord> listRecord;
-                if ( ServiceRecordReader::readPage( connection, ChatServiceInternal::getHistoryTable(), channelID + "/", cursor, maxCount, true, listRecord )._result != ServiceStoreResult::Ok )
+                ChatHistoryReadResult                    read;
+                vector<ServiceRecord>                    listRecord;
+                StringBuilder<constant::buffer::kMax256> channelPrefix;
+                channelPrefix.appendFormat( "%#/", channelID );
+                if ( ServiceRecordReader::readPage( connection, ChatServiceInternal::getHistoryTable(), channelPrefix.view(), cursor, maxCount, true, listRecord )._result != ServiceStoreResult::Ok )
                     return read;
                 for ( const ServiceRecord& record : listRecord )
                 {
@@ -227,11 +232,13 @@ namespace sw
              */
             static ChatServiceResult writeReport( IServiceStoreConnection& connection, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, UnixMilliseconds nowMs )
             {
-                using Internal                   = ChatServiceInternal;
-                const string          messageKey = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, request._sequence );
-                const string          cursorKey  = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, static_cast<uint64>( request._sequence ) + 1 );
-                vector<ServiceRecord> listRecord;
-                if ( ServiceRecordReader::readPage( connection, Internal::getHistoryTable(), request._channelID + "/", cursorKey, ChatLimit::kReportContextCount, true, listRecord )._result != ServiceStoreResult::Ok )
+                using Internal                                      = ChatServiceInternal;
+                const string                             messageKey = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, request._sequence );
+                const string                             cursorKey  = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, static_cast<uint64>( request._sequence ) + 1 );
+                vector<ServiceRecord>                    listRecord;
+                StringBuilder<constant::buffer::kMax256> channelPrefix;
+                channelPrefix.appendFormat( "%#/", request._channelID );
+                if ( ServiceRecordReader::readPage( connection, Internal::getHistoryTable(), channelPrefix.view(), cursorKey, ChatLimit::kReportContextCount, true, listRecord )._result != ServiceStoreResult::Ok )
                     return ChatServiceResult::fail( OnlineError::kUnavailable );
                 if ( listRecord.empty() || listRecord.front()._key != messageKey )
                     return ChatResult::NotFound;
@@ -882,7 +889,9 @@ namespace sw
         // 귓속말 채널은 id 에 두 계정이 있다 — 상대가 보낸 기록까지 채널째 지운다. 그 채널의 TTL 색인 줄은 대상이 비어 TTL 쓸기가 지운다
         for ( const string& channelID : listWhisperChannel )
         {
-            if ( const ServiceStoreResult erased = ServiceStoreUtil::erasePrefix( connection, Internal::getHistoryTable(), channelID + "/" ); erased != ServiceStoreResult::Ok )
+            StringBuilder<constant::buffer::kMax256> channelPrefix;
+            channelPrefix.appendFormat( "%#/", channelID );
+            if ( const ServiceStoreResult erased = ServiceStoreUtil::erasePrefix( connection, Internal::getHistoryTable(), channelPrefix.view() ); erased != ServiceStoreResult::Ok )
                 return erased;
         }
         return ServiceStoreResult::Ok;

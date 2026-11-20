@@ -58,15 +58,18 @@ namespace sw
         {
             static string makeRequestKey( const string& normPath, string_view entryPoint, ShaderStage stage, uint64 permutationHash )
             {
-                return normPath + '\n' + string( entryPoint ) + '\n' + to_string( static_cast<uint64>( stage ) ) + '\n' + to_string( permutationHash );
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "%#\n%#\n%#\n%#", normPath, entryPoint, static_cast<uint64>( stage ), permutationHash );
+                return string( builder.view() );
             }
 
             static string makeRawKey( string_view shaderPath, string_view entryPoint, ShaderStage stage, const vector<string>& listPermutation )
             {
-                string key = string( shaderPath ) + '\n' + string( entryPoint ) + '\n' + to_string( static_cast<uint64>( stage ) );
+                StringBuilder<constant::buffer::kMax512> builder;
+                builder.appendFormat( "%#\n%#\n%#", shaderPath, entryPoint, static_cast<uint64>( stage ) );
                 for ( const string& define : listPermutation )
-                    key += '\n' + define;
-                return key;
+                    builder.appendFormat( "\n%#", define );
+                return string( builder.view() );
             }
 
             static OriginGroup makeOriginGroup( vector<string> listAsset )
@@ -86,10 +89,10 @@ namespace sw
 
             static string makeOriginKey( const vector<string>& listOrigin )
             {
-                string key;
+                StringBuilder<constant::buffer::kMax512> builder;
                 for ( const string& origin : listOrigin )
-                    key += origin + '\n';
-                return key;
+                    builder.appendFormat( "%#\n", origin );
+                return string( builder.view() );
             }
 
             static void appendRequestUnique( RequestList& outListRequest, string_view shaderPath, string_view entryPoint, ShaderStage stage, const vector<string>& listPermutation,
@@ -556,19 +559,21 @@ namespace sw
                 unordered_set<string> uniqueOriginKey;
                 const auto            appendOriginOnce = [&uniqueOriginKey]( string_view kind, size_t index, const vector<string>& listOrigin, vector<vector<string>>& inoutListOrigin )
                 {
-                    string originKey = string( kind ) + to_string( static_cast<uint64>( index ) );
+                    StringBuilder<constant::buffer::kMax512> originKeyBuilder;
+                    originKeyBuilder.appendFormat( "%#%#", kind, static_cast<uint64>( index ) );
                     for ( const string& origin : listOrigin )
-                        originKey += '\n' + origin;
-                    if ( uniqueOriginKey.insert( originKey ).second )
+                        originKeyBuilder.appendFormat( "\n%#", origin );
+                    if ( uniqueOriginKey.insert( string( originKeyBuilder.view() ) ).second )
                         inoutListOrigin.push_back( listOrigin );
                 };
                 for ( const MeshPassInfo& passInfo : listMeshPass )
                 {
-                    string key = passInfo._shaderPath + '\n' + passInfo._vertexEntryPoint + '\n' + passInfo._pixelEntryPoint + '\n' + to_string( static_cast<uint64>( passInfo._passType ) ) +
-                                 ( passInfo._bUsesMaterialShader ? "M" : "-" ) + ( passInfo._bAppliesViewMode ? "V" : "-" ) + ( passInfo._bHasPixelStage ? "P" : "-" );
+                    StringBuilder<constant::buffer::kMax512> keyBuilder;
+                    keyBuilder.appendFormat( "%#\n%#\n%#\n%#%#%#%#", passInfo._shaderPath, passInfo._vertexEntryPoint, passInfo._pixelEntryPoint, static_cast<uint64>( passInfo._passType ),
+                                             passInfo._bUsesMaterialShader ? "M" : "-", passInfo._bAppliesViewMode ? "V" : "-", passInfo._bHasPixelStage ? "P" : "-" );
                     for ( const string& define : passInfo._listPermutation )
-                        key += '\n' + define;
-                    const auto [passIt, bInserted] = mapPassIndex.emplace( std::move( key ), listUniquePass.size() );
+                        keyBuilder.appendFormat( "\n%#", define );
+                    const auto [passIt, bInserted] = mapPassIndex.emplace( string( keyBuilder.view() ), listUniquePass.size() );
                     if ( bInserted )
                     {
                         listUniquePass.push_back( &passInfo );
@@ -582,10 +587,11 @@ namespace sw
                 unordered_map<string, size_t>      mapVariantIndex;
                 for ( const MaterialVariantInfo& variant : listMaterialVariant )
                 {
-                    string key = variant._shaderPath;
+                    StringBuilder<constant::buffer::kMax512> keyBuilder;
+                    keyBuilder.append( variant._shaderPath );
                     for ( const string& define : variant._listDefine )
-                        key += '\n' + define;
-                    const auto [variantIt, bInserted] = mapVariantIndex.emplace( std::move( key ), listUniqueVariant.size() );
+                        keyBuilder.appendFormat( "\n%#", define );
+                    const auto [variantIt, bInserted] = mapVariantIndex.emplace( string( keyBuilder.view() ), listUniqueVariant.size() );
                     if ( bInserted )
                     {
                         listUniqueVariant.push_back( &variant );

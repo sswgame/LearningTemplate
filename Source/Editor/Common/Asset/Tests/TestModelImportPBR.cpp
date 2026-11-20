@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -33,8 +34,9 @@ namespace
             if ( FileUtil::writeTextFile( FileUtil::joinPath( textureFolder, pName ), pName ) == false )
                 return false;
         }
-        const string occlusion = bOcclusionInORM ? R"(, "occlusionTexture": { "index": 2, "strength": 0.5 })" : "";
-        const string json      = string( R"({ "asset": { "version": "2.0" },
+        const string                              occlusion = bOcclusionInORM ? R"(, "occlusionTexture": { "index": 2, "strength": 0.5 })" : "";
+        StringBuilder<constant::buffer::kMax2048> json;
+        json.appendFormat( R"({ "asset": { "version": "2.0" },
             "images": [ { "uri": "../textures_raw/scan/crate_diff_2k.jpg", "mimeType": "image/jpeg" },
                         { "uri": "../textures_raw/scan/crate_nor_gl_2k.jpg", "mimeType": "image/jpeg" },
                         { "uri": "../textures_raw/scan/crate_arm_2k.jpg", "mimeType": "image/jpeg" } ],
@@ -42,11 +44,11 @@ namespace
             "materials": [ { "name": "Untextured" },
                            { "name": "Wooden Crate", "normalTexture": { "index": 1, "scale": 0.75 },
                              "pbrMetallicRoughness": { "baseColorTexture": { "index": 0 }, "metallicRoughnessTexture": { "index": 2 },
-                                                       "baseColorFactor": [ 1, 0.5, 0.25, 1 ], "metallicFactor": 0.2, "roughnessFactor": 0.9 })" ) +
-                            occlusion + " } ] }";
+                                                       "baseColorFactor": [ 1, 0.5, 0.25, 1 ], "metallicFactor": 0.2, "roughnessFactor": 0.9 }%# } ] })",
+                           occlusion );
         outSourcePath = FileUtil::joinPath( root, "models_raw/crate.gltf" );
         cgltf_options options{};
-        return cgltf_parse( &options, json.data(), json.size(), &outParsed._pData ) == cgltf_result_success;
+        return cgltf_parse( &options, json.c_str(), json.size(), &outParsed._pData ) == cgltf_result_success;
     }
 } // namespace
 

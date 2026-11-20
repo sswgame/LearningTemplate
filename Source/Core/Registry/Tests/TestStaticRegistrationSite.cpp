@@ -3,6 +3,7 @@
 
 #include "Core/Process/StandardOutput.h"
 #include "Core/Registry/RegistrationList.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -45,7 +46,9 @@ SW_TEST_CHILD_ROLE( StaticRegistrationTest, DuplicateRegistrarChild )
     const vector<string> listRejected = collectRejectedStaticRegistrations();
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listRejected.size() ) );
     SW_EXPECT_TRUE( DuplicateProbeRegistry::getList().findByName( "probe" ) == &first ); // 먼저 것을 둔다
-    SW_EXPECT_TRUE( StandardOutput::write( "SW_REJECTED:" + listRejected.front() + "\n" ) );
+    StringBuilder<constant::buffer::kMax512> output;
+    output.appendFormat( "SW_REJECTED:%#\n", listRejected.front() );
+    SW_EXPECT_TRUE( StandardOutput::write( output.view() ) );
 }
 
 /**

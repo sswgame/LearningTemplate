@@ -85,7 +85,9 @@ SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
     };
     for ( const DDSFormatSize& row : listSize )
     {
-        SW_EXPECT_TRUE_MSG( hasName( row._dxgiFormat ), "DDSLoader reads DXGI " + to_string( row._dxgiFormat ) + " but DdsFormats.json has no name for it" );
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "DDSLoader reads DXGI %# but DdsFormats.json has no name for it", row._dxgiFormat );
+        SW_EXPECT_TRUE_MSG( hasName( row._dxgiFormat ), message );
     }
 
     // 옛 FourCC 표 — 네 글자 코드(fourcc) 또는 D3DFMT 정수(d3dfmt)
@@ -100,8 +102,10 @@ SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
             uint32          code = 0;
             if ( row.has( "fourcc" ) )
             {
-                const string letters = row.get( "fourcc" ).asString();
-                SW_REQUIRE_TRUE_MSG( letters.size() == 4, "fourcc must be four letters: " + letters );
+                const string                            letters = row.get( "fourcc" ).asString();
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "fourcc must be four letters: %#", letters );
+                SW_REQUIRE_TRUE_MSG( letters.size() == 4, message );
                 code = static_cast<uint32>( static_cast<uint8>( letters[0] ) ) | ( static_cast<uint32>( static_cast<uint8>( letters[1] ) ) << 8 ) |
                        ( static_cast<uint32>( static_cast<uint8>( letters[2] ) ) << 16 ) | ( static_cast<uint32>( static_cast<uint8>( letters[3] ) ) << 24 );
             }
@@ -113,7 +117,9 @@ SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
             }
             bFound = code == loaderRow._fourCC && readDXGI( row ) == loaderRow._dxgiFormat;
         }
-        SW_EXPECT_TRUE_MSG( bFound, "DDSLoader FourCC row " + to_string( loaderRow._fourCC ) + " -> " + to_string( loaderRow._dxgiFormat ) + " is not in DdsFormats.json" );
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "DDSLoader FourCC row %# -> %# is not in DdsFormats.json", loaderRow._fourCC, loaderRow._dxgiFormat );
+        SW_EXPECT_TRUE_MSG( bFound, message );
     }
 
     // 옛 RGB 마스크 표 — 다섯 칸이 모두 같아야 맞는다
@@ -132,7 +138,9 @@ SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
             bFound = row.get( "bits" ).read<uint32>() == loaderRow._bitCount && arrMask[0] == loaderRow._rMask && arrMask[1] == loaderRow._gMask &&
                      arrMask[2] == loaderRow._bMask && arrMask[3] == loaderRow._aMask && readDXGI( row ) == loaderRow._dxgiFormat;
         }
-        SW_EXPECT_TRUE_MSG( bFound, "DDSLoader RGB mask row -> DXGI " + to_string( loaderRow._dxgiFormat ) + " is not in DdsFormats.json" );
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "DDSLoader RGB mask row -> DXGI %# is not in DdsFormats.json", loaderRow._dxgiFormat );
+        SW_EXPECT_TRUE_MSG( bFound, message );
     }
 
     // Texture2D 가 읽는 번호는 모두 이름 · 크기가 있다(DXGI 번호는 0 ~ 132 안이다) — 이름이 없으면 검증이 `DXGI_<번호>` 로 적고 규칙이 그 형식을 적을 길이 없다
@@ -140,7 +148,10 @@ SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
     {
         if ( Texture2D::toRHIFormatFromDXGI( dxgiFormat ) == RHIFormat::Unknown )
             continue;
-        SW_EXPECT_TRUE_MSG( hasName( dxgiFormat ), "Texture2D reads DXGI " + to_string( dxgiFormat ) + " but DdsFormats.json has no name for it" );
-        SW_EXPECT_TRUE_MSG( hasSize( dxgiFormat ), "Texture2D reads DXGI " + to_string( dxgiFormat ) + " but DDSLoader has no block size for it" );
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "Texture2D reads DXGI %# but DdsFormats.json has no name for it", dxgiFormat );
+        SW_EXPECT_TRUE_MSG( hasName( dxgiFormat ), message );
+        formatstring( message.data(), message.capacity(), "Texture2D reads DXGI %# but DDSLoader has no block size for it", dxgiFormat );
+        SW_EXPECT_TRUE_MSG( hasSize( dxgiFormat ), message );
     }
 }

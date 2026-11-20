@@ -157,8 +157,10 @@ SW_TEST_CASE( TextureFormatSelectionTest, CompanionsCoverEveryFamilySuffix )
         const string suffix = families.at( index ).get( "_suffix" ).asString();
         if ( suffix.empty() )
             continue;
-        const string variant = TextureFormatFamily::makeVariantPath( "engine/textures/a.dds", suffix );
-        SW_EXPECT_TRUE_MSG( VectorUtil::contains( listCompanion, variant ), "no SW_ASSET_COMPANION for the format suffix " + suffix );
+        const string                            variant = TextureFormatFamily::makeVariantPath( "engine/textures/a.dds", suffix );
+        fixed_string<constant::buffer::kMax256> message;
+        formatstring( message.data(), message.capacity(), "no SW_ASSET_COMPANION for the format suffix %#", suffix );
+        SW_EXPECT_TRUE_MSG( VectorUtil::contains( listCompanion, variant ), message );
         // 변형 자신은 곁 파일이 없다(`a.astc.astc.dds` 를 찾지 않는다).
         vector<string> listNested;
         AssetCompanionRegistry::appendCompanionPaths( variant, listNested );

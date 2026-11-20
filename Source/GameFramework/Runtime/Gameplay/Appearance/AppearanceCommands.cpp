@@ -32,7 +32,11 @@ namespace sw
                 GameObject*                   pObject     = engine::findActiveObject( hashed_string( objectName ) );
                 CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
                 if ( pAppearance == nullptr )
-                    outReply = "no object named '" + objectName + "' with a CharacterAppearanceComponent in the active scene";
+                {
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no object named '%#' with a CharacterAppearanceComponent in the active scene", objectName );
+                    outReply = string( replyBuilder.view() );
+                }
                 return pAppearance;
             }
 
@@ -51,7 +55,9 @@ namespace sw
                 if ( pAppearance == nullptr )
                     return false;
                 pAppearance->setPreset( hashed_string( listArgument[1] ), static_cast<uint32>( seed ) );
-                outReply = "preset " + listArgument[1];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "preset %#", listArgument[1] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -65,7 +71,9 @@ namespace sw
                     return false;
                 const string item = listArgument.size() == 3 ? listArgument[2] : string{};
                 pAppearance->setSlotItem( hashed_string( listArgument[1] ), hashed_string( item ) );
-                outReply = listArgument[1] + " = " + ( item.empty() ? string( "(empty)" ) : item );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%# = %#", listArgument[1], item.empty() ? string_view( "(empty)" ) : string_view( item ) );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -92,7 +100,9 @@ namespace sw
                 const CustomizationParamDef*  pParam  = pSchema != nullptr ? pSchema->findParameter( hashed_string( listArgument[1] ) ) : nullptr;
                 if ( pParam == nullptr )
                 {
-                    outReply = "schema '" + string( selection._schema.c_str() ) + "' has no parameter '" + listArgument[1] + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "schema '%#' has no parameter '%#'", selection._schema.c_str(), listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 CustomizationValue value;
@@ -118,13 +128,17 @@ namespace sw
                 }
                 if ( bRead == false )
                 {
-                    outReply = "parameter '" + listArgument[1] + "' does not take that value (slider: one number, color: r g b [a], choice: an option name)";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "parameter '%#' does not take that value (slider: one number, color: r g b [a], choice: an option name)", listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 if ( pSchema->applyValue( value, true, selection._customization ) == false )
                     return false;
                 pAppearance->applySelection( selection );
-                outReply = listArgument[1] + " set";
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%# set", listArgument[1] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -170,10 +184,14 @@ namespace sw
                 }
                 if ( FileUtil::writeTextFile( path, AppearanceSelection::encode( selection, *pDatabase ) ) == false )
                 {
-                    outReply = "could not write " + path;
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not write %#", path );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "saved " + path;
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "saved %#", path );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -190,18 +208,27 @@ namespace sw
                     return false;
                 if ( pDatabase == nullptr || FileUtil::readTextFile( path, code ) == false )
                 {
-                    outReply = pDatabase == nullptr ? string( "no AppearanceDatabase game service" ) : "could not read " + path;
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    if ( pDatabase == nullptr )
+                        replyBuilder.append( "no AppearanceDatabase game service" );
+                    else
+                        replyBuilder.appendFormat( "could not read %#", path );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 AppearanceSelection  selection;
                 const expected<void> decoded = AppearanceSelection::decode( StringUtil::trim( code ), *pDatabase, selection );
                 if ( decoded.has_value() == false )
                 {
-                    outReply = "bad appearance code in " + path + ": " + string( decoded.error().message() );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "bad appearance code in %#: %#", path, decoded.error().message() );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 pAppearance->applySelection( selection );
-                outReply = "loaded " + path;
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "loaded %#", path );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

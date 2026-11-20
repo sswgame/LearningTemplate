@@ -117,25 +117,23 @@ namespace sw
             /** @brief 낱말 목록을 쉼표로 이은 글입니다. 호출 인자로 씁니다. */
             static string joinTokens( string_view text )
             {
-                string joined;
+                StringBuilder<constant::buffer::kMax256> joined;
                 StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
                 {
-                    joined += joined.empty() ? "" : ", ";
-                    joined += token;
+                    joined.appendFormat( "%#%#", joined.size() == 0 ? "" : ", ", token );
                 } );
-                return joined;
+                return string( joined.view() );
             }
 
             /** @brief 수 목록을 쉼표로 이은 글입니다. */
             static string joinNumbers( const vector<int32>& listValue )
             {
-                string joined;
+                StringBuilder<constant::buffer::kMax256> joined;
                 for ( const int32 value : listValue )
                 {
-                    joined += joined.empty() ? "" : ", ";
-                    joined += to_string( value );
+                    joined.appendFormat( "%#%#", joined.size() == 0 ? "" : ", ", value );
                 }
-                return joined;
+                return string( joined.view() );
             }
 
             /** @brief 절 하나를 컴파일해 더합니다. */
@@ -342,44 +340,46 @@ namespace sw
         }
 
         // 속성은 공통 어휘의 줄임말이다 — 절마다 식 하나로 컴파일한다. 이름 · 수는 위에서 검사한 값이고, 여기서 틀릴 수 있는 것은 `flags` 뿐이다.
-        const auto addCall = [&]( ScheduleConditionClause clause, const utf8* pName, const string& arguments )
+        const auto addCall = [&]( ScheduleConditionClause clause, const utf8* pName, string_view arguments )
         {
-            if ( arguments.empty() == false )
-                bValid = Internal::addClause( *this, clause, string( pName ) + "(" + arguments + ")", sourceName ) && bValid;
+            if ( arguments.empty() )
+                return;
+            StringBuilder<constant::buffer::kMax256> call;
+            call.appendFormat( "%#(%#)", pName, arguments );
+            bValid = Internal::addClause( *this, clause, call.view(), sourceName ) && bValid;
         };
         addCall( ScheduleConditionClause::Weekday, "weekday", Internal::joinTokens( node.getAttributeText( "days" ) ) );
         addCall( ScheduleConditionClause::DayOfSeason, "dayOfSeason", Internal::joinNumbers( listDayOfSeason ) );
         addCall( ScheduleConditionClause::Week, "week", Internal::joinNumbers( listWeek ) );
         if ( fromDay > 0 || toDay > 0 )
         {
-            string arguments;
+            StringBuilder<constant::buffer::kMax128> arguments;
             if ( fromDay > 0 )
-                arguments += string( "fromSeason=" ) + fromSeason.c_str() + ", fromDay=" + to_string( fromDay );
+                arguments.appendFormat( "fromSeason=%#, fromDay=%#", fromSeason.c_str(), fromDay );
             if ( toDay > 0 )
-                arguments += string( arguments.empty() ? "" : ", " ) + "toSeason=" + toSeason.c_str() + ", toDay=" + to_string( toDay );
-            addCall( ScheduleConditionClause::DateRange, "date", arguments );
+                arguments.appendFormat( "%#toSeason=%#, toDay=%#", arguments.size() == 0 ? "" : ", ", toSeason.c_str(), toDay );
+            addCall( ScheduleConditionClause::DateRange, "date", arguments.view() );
         }
         if ( minAffinity.has_value() || maxAffinity.has_value() )
         {
-            string text;
+            StringBuilder<constant::buffer::kMax128> text;
             if ( minAffinity.has_value() )
-                text += "affinity >= " + to_string( *minAffinity );
+                text.appendFormat( "affinity >= %#", *minAffinity );
             if ( maxAffinity.has_value() )
-                text += string( text.empty() ? "" : " && " ) + "affinity <= " + to_string( *maxAffinity );
-            bValid = Internal::addClause( *this, ScheduleConditionClause::Affinity, text, sourceName ) && bValid;
+                text.appendFormat( "%#affinity <= %#", text.size() == 0 ? "" : " && ", *maxAffinity );
+            bValid = Internal::addClause( *this, ScheduleConditionClause::Affinity, text.view(), sourceName ) && bValid;
         }
         addCall( ScheduleConditionClause::Season, "season", Internal::joinTokens( node.getAttributeText( "seasons" ) ) );
         addCall( ScheduleConditionClause::Weather, "weather", Internal::joinTokens( node.getAttributeText( "weathers" ) ) );
-        const uint8 phaseMask = parsePhaseMask( node.getAttributeText( "phases" ), sourceName, ownerName );
-        string      phaseNames;
+        const uint8                              phaseMask = parsePhaseMask( node.getAttributeText( "phases" ), sourceName, ownerName );
+        StringBuilder<constant::buffer::kMax128> phaseNames;
         for ( uint32 phaseIndex = 0; phaseIndex <= static_cast<uint32>( DayPhase::Dusk ); ++phaseIndex )
         {
             if ( ( phaseMask & ( 1u << phaseIndex ) ) == 0 )
                 continue;
-            phaseNames += phaseNames.empty() ? "" : ", ";
-            phaseNames += getEnumName( static_cast<DayPhase>( phaseIndex ) );
+            phaseNames.appendFormat( "%#%#", phaseNames.size() == 0 ? "" : ", ", getEnumName( static_cast<DayPhase>( phaseIndex ) ) );
         }
-        addCall( ScheduleConditionClause::Phase, "phase", phaseNames );
+        addCall( ScheduleConditionClause::Phase, "phase", phaseNames.view() );
 
         const string_view flags = node.getAttributeText( "flags" );
         if ( StringUtil::trim( flags ).empty() == false && Internal::addClause( *this, ScheduleConditionClause::Flags, flags, sourceName ) == false )
@@ -388,22 +388,20 @@ namespace sw
             bValid = false;
         }
 
-        string tagText;
+        StringBuilder<constant::buffer::kMax256> tagText;
         StringUtil::forEachToken( node.getAttributeText( "tags" ), XMLReadUtil::kListSeparators, [&]( string_view token )
         {
-            tagText += tagText.empty() ? "" : " && ";
-            tagText += "tag(" + string( token ) + ")";
+            tagText.appendFormat( "%#tag(%#)", tagText.size() == 0 ? "" : " && ", token );
         } );
         StringUtil::forEachToken( node.getAttributeText( "notTags" ), XMLReadUtil::kListSeparators, [&]( string_view token )
         {
-            tagText += tagText.empty() ? "" : " && ";
-            tagText += "!tag(" + string( token ) + ")";
+            tagText.appendFormat( "%#!tag(%#)", tagText.size() == 0 ? "" : " && ", token );
         } );
-        if ( tagText.empty() == false )
-            bValid = Internal::addClause( *this, ScheduleConditionClause::Tags, tagText, sourceName ) && bValid;
+        if ( tagText.size() > 0 )
+            bValid = Internal::addClause( *this, ScheduleConditionClause::Tags, tagText.view(), sourceName ) && bValid;
 
         if ( chance.has_value() && *chance < 1.0f && *chance >= 0.0f )
-            addCall( ScheduleConditionClause::Chance, "chance", string( node.getAttributeText( "chance" ) ) );
+            addCall( ScheduleConditionClause::Chance, "chance", node.getAttributeText( "chance" ) );
         return bValid;
     }
 

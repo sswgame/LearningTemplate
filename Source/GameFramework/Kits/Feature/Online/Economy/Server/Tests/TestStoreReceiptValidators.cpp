@@ -43,9 +43,11 @@ namespace
         /** @brief 본문 @p payload 의 JWS 를 만듭니다. 사슬과 서명은 가짜 제공자가 답합니다. */
         static string makeJws( string_view payload )
         {
-            const string_view header = R"({"alg":"ES256","x5c":["AAAA"]})";
-            return Base64Util::encodeURL( reinterpret_cast<const uint8*>( header.data() ), header.size() ) + "." +
-                   Base64Util::encodeURL( reinterpret_cast<const uint8*>( payload.data() ), payload.size() ) + "." + Base64Util::encodeURL( reinterpret_cast<const uint8*>( "s" ), 1 );
+            const string_view                         header = R"({"alg":"ES256","x5c":["AAAA"]})";
+            StringBuilder<constant::buffer::kMax1024> compact;
+            compact.appendFormat( "%#.%#.%#", Base64Util::encodeURL( reinterpret_cast<const uint8*>( header.data() ), header.size() ),
+                                  Base64Util::encodeURL( reinterpret_cast<const uint8*>( payload.data() ), payload.size() ), Base64Util::encodeURL( reinterpret_cast<const uint8*>( "s" ), 1 ) );
+            return string( compact.view() );
         }
 
         static ReceiptValidationRequest makeRequest( string_view storeName, string_view payload )
@@ -68,7 +70,9 @@ namespace
 
         static string makeBaseURL( LoopbackHTTP& http )
         {
-            return "http://127.0.0.1:" + to_string( static_cast<int32>( http._server.getListenPort() ) );
+            StringBuilder<constant::buffer::kMax64> url;
+            url.appendFormat( "http://127.0.0.1:%#", static_cast<int32>( http._server.getListenPort() ) );
+            return string( url.view() );
         }
 
         /** @brief 요청 하나를 맡기고 왕복을 돌린 뒤 결과 하나를 받습니다. */
@@ -108,12 +112,14 @@ namespace
             GoogleReceiptSettings settings;
             settings._credentials._clientEmail   = "a@b";
             settings._credentials._privateKeyPem = "key";
-            settings._credentials._tokenURL      = StoreTestUtil::makeBaseURL( _http ) + "/token";
-            settings._packageName                = kBundle;
-            settings._baseURL                    = StoreTestUtil::makeBaseURL( _http );
-            settings._voidedPollIntervalMs       = kPollMs;
-            settings._voidedLookbackMs           = kLookbackMs;
-            _pValidator                          = make_unique<GoogleReceiptValidator>( std::move( settings ), &_security, &_http._client );
+            StringBuilder<constant::buffer::kMax64> tokenURL;
+            tokenURL.appendFormat( "%#/token", StoreTestUtil::makeBaseURL( _http ) );
+            settings._credentials._tokenURL = string( tokenURL.view() );
+            settings._packageName           = kBundle;
+            settings._baseURL               = StoreTestUtil::makeBaseURL( _http );
+            settings._voidedPollIntervalMs  = kPollMs;
+            settings._voidedLookbackMs      = kLookbackMs;
+            _pValidator                     = make_unique<GoogleReceiptValidator>( std::move( settings ), &_security, &_http._client );
             if ( bRestoreCursor )
                 _pValidator->restoreRefundCursor( 0 ); // 서비스가 저장소에서 읽어 넘기는 자리다 — 기준이 없는 첫 기동
         }
@@ -278,7 +284,12 @@ namespace
         }
 
         /** @brief 서명한 거래 본문을 담은 답을 정합니다. */
-        void setTransaction( string_view payload ) { _transactionBody = R"({"signedTransactionInfo":")" + StoreTestUtil::makeJws( payload ) + R"("})"; }
+        void setTransaction( string_view payload )
+        {
+            StringBuilder<constant::buffer::kMax1024> body;
+            body.appendFormat( R"({"signedTransactionInfo":"%#"})", StoreTestUtil::makeJws( payload ) );
+            _transactionBody = string( body.view() );
+        }
     };
 
     struct AppleBodyTestUtil
@@ -286,16 +297,25 @@ namespace
         /** @brief 거래 @p pTransactionID 의 환불 알림 항목(JSON)을 만듭니다. */
         static string makeRefundItem( const utf8* pTransactionID, const utf8* pEnvironment = "Production", const utf8* pNotificationBundle = kBundle, const utf8* pTransactionBundle = kBundle )
         {
-            const string transaction  = StoreTestUtil::makeJws( string( R"({"transactionId":")" ) + pTransactionID + R"(","bundleId":")" + pTransactionBundle + R"(","revocationDate":1700000000000})" );
-            const string notification = StoreTestUtil::makeJws( string( R"({"notificationType":"REFUND","data":{"bundleId":")" ) + pNotificationBundle + R"(","environment":")" + pEnvironment +
-                                                                R"(","signedTransactionInfo":")" + transaction + R"("}})" );
-            return R"({"signedPayload":")" + notification + R"("})";
+            StringBuilder<constant::buffer::kMax256> transactionBody;
+            transactionBody.appendFormat( R"({"transactionId":"%#","bundleId":"%#","revocationDate":1700000000000})", pTransactionID, pTransactionBundle );
+            const string                              transaction = StoreTestUtil::makeJws( transactionBody.view() );
+            StringBuilder<constant::buffer::kMax1024> notificationBody;
+            notificationBody.appendFormat( R"({"notificationType":"REFUND","data":{"bundleId":"%#","environment":"%#","signedTransactionInfo":"%#"}})", pNotificationBundle, pEnvironment, transaction );
+            const string                              notification = StoreTestUtil::makeJws( notificationBody.view() );
+            StringBuilder<constant::buffer::kMax2048> item;
+            item.appendFormat( R"({"signedPayload":"%#"})", notification );
+            return string( item.view() );
         }
 
         static string makeHistory( const string& items, const utf8* pNextToken = nullptr )
         {
-            const string more = pNextToken != nullptr ? string( R"("hasMore":true,"paginationToken":")" ) + pNextToken + R"(",)" : string( R"("hasMore":false,)" );
-            return "{" + more + R"("notificationHistory":[)" + items + "]}";
+            StringBuilder<constant::buffer::kMax8192> history;
+            if ( pNextToken != nullptr )
+                history.appendFormat( R"({"hasMore":true,"paginationToken":"%#","notificationHistory":[%#]})", pNextToken, items );
+            else
+                history.appendFormat( R"({"hasMore":false,"notificationHistory":[%#]})", items );
+            return string( history.view() );
         }
 
         static constexpr const utf8* kGoodTransaction = R"({"transactionId":"1234","bundleId":"com.x.game","environment":"Production","productId":"gem100","purchaseDate":1700000000000,"appAccountToken":"tok"})";
@@ -783,7 +803,9 @@ SW_TEST_CASE( AppleReceiptValidatorTest, OnlyProductionIsNotSandbox )
     AppleFixture rig;
     for ( const utf8* pEnvironment : { "Sandbox", "Xcode", "production" } )
     {
-        rig.setTransaction( string( R"({"transactionId":"1234","bundleId":"com.x.game","productId":"gem100","environment":")" ) + pEnvironment + R"("})" );
+        StringBuilder<constant::buffer::kMax256> transaction;
+        transaction.appendFormat( R"({"transactionId":"1234","bundleId":"com.x.game","productId":"gem100","environment":"%#"})", pEnvironment );
+        rig.setTransaction( transaction.view() );
         const ReceiptValidationResult result = rig.validate();
         SW_EXPECT_TRUE( result._status == ReceiptStatus::Valid );
         SW_EXPECT_TRUE_MSG( result._bSandbox == SW_TRUE, pEnvironment );
@@ -813,8 +835,10 @@ SW_TEST_CASE( AppleReceiptValidatorTest, RefundHistoryFilters )
 {
     AppleFixture rig;
     using Body = AppleBodyTestUtil;
-    rig._listHistoryBody.push_back( Body::makeHistory( Body::makeRefundItem( "1" ) + "," + Body::makeRefundItem( "2", "Sandbox" ) + "," + Body::makeRefundItem( "3", "Production", "com.other" ) + "," +
-                                                       Body::makeRefundItem( "4", "Production", kBundle, "com.other" ) + "," + Body::makeRefundItem( "x5" ) + "," + Body::makeRefundItem( "1" ) ) );
+    StringBuilder<constant::buffer::kMax8192> items;
+    items.appendFormat( "%#,%#,%#,%#,%#,%#", Body::makeRefundItem( "1" ), Body::makeRefundItem( "2", "Sandbox" ), Body::makeRefundItem( "3", "Production", "com.other" ),
+                        Body::makeRefundItem( "4", "Production", kBundle, "com.other" ), Body::makeRefundItem( "x5" ), Body::makeRefundItem( "1" ) );
+    rig._listHistoryBody.push_back( Body::makeHistory( string( items.view() ) ) );
     rig.poll();
     const vector<ReceiptRefundNotification> listNotification = rig.takeRefunds();
     SW_REQUIRE_EQUAL( size_t( 1 ), listNotification.size() );

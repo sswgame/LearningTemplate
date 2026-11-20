@@ -7,6 +7,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
@@ -139,7 +140,9 @@ namespace sw::editor
             GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, _activeTargetPath ) : nullptr;
             if ( pSpawned == nullptr )
             {
-                _status = string( "Target prefab '" ) + _activeTargetPath + "' could not be spawned - see the log";
+                StringBuilder<constant::buffer::kMax256> statusBuilder;
+                statusBuilder.appendFormat( "Target prefab '%#' could not be spawned - see the log", _activeTargetPath );
+                _status = string( statusBuilder.view() );
                 return;
             }
             _target = pSpawned->getHandle();

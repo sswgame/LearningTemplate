@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -51,27 +52,30 @@ namespace
                     const string_view kind = step._kind;
                     bChoosesBackend        = bChoosesBackend || kind == "SkipUnless" || kind == "SwapBackend";
                 }
-                const string goldenFolder = FileUtil::getDirectoryPart( scenarioID.view() ) + "/" + kAutomationGoldenFolder;
+                StringBuilder<constant::buffer::kMax1024> goldenFolder;
+                goldenFolder.appendFormat( "%#/%#", FileUtil::getDirectoryPart( scenarioID.view() ), kAutomationGoldenFolder );
                 for ( const AutomationStep& step : scenario.getSteps() )
                 {
                     const string* pGolden = string_view{ step._kind } == "ExpectImage" ? step.findAttribute( "golden" ) : nullptr;
                     if ( pGolden == nullptr )
                         continue;
-                    string missing;
-                    uint32 foundCount = 0;
+                    StringBuilder<constant::buffer::kMax256> message;
+                    message.appendFormat( "%# golden '%#' has no golden for:", scenarioID.view(), *pGolden );
+                    uint32 foundCount   = 0;
+                    uint32 missingCount = 0;
                     for ( const string& tag : listTag )
                     {
-                        const string goldenID = AutomationGoldenUtil::makeGoldenID( goldenFolder, scenario.getName(), *pGolden, tag, "" );
+                        const string goldenID = AutomationGoldenUtil::makeGoldenID( goldenFolder.view(), scenario.getName(), *pGolden, tag, "" );
                         if ( AssetIO::hasAsset( AssetID{ goldenID } ) )
                             ++foundCount;
                         else
                         {
-                            missing += " ";
-                            missing += tag;
+                            message.appendFormat( " %#", tag );
+                            ++missingCount;
                         }
                     }
-                    const bool bCovered = bChoosesBackend ? foundCount > 0 : missing.empty();
-                    SW_EXPECT_TRUE_MSG( bCovered, ( string( scenarioID.view() ) + " golden '" + *pGolden + "' has no golden for: " + missing ).c_str() );
+                    const bool bCovered = bChoosesBackend ? foundCount > 0 : missingCount == 0;
+                    SW_EXPECT_TRUE_MSG( bCovered, message.c_str() );
                 }
             }
             return listScenario.empty() == false;
@@ -85,15 +89,19 @@ SW_TEST_CASE( ScenarioGoldensTest, EveryChainBackendHasGoldens )
 {
     const vector<string> listTag = Util::getWindowsChainTags();
     SW_REQUIRE_FALSE( listTag.empty() );
-    const string gameFolder = "game/" + StringUtil::toLower( GameSelection::getName().c_str() ) + "/automation";
+    StringBuilder<constant::buffer::kMax256> gameFolder;
+    gameFolder.appendFormat( "game/%#/automation", StringUtil::toLower( GameSelection::getName().c_str() ) );
     SW_EXPECT_TRUE( Util::validateFolder( "engine/automation", listTag ) );
     (void)Util::validateFolder( "engine/automation/editor", listTag );
     (void)Util::validateFolder( "engine/automation/rhiswap", listTag );
     (void)Util::validateFolder( "engine/automation/render", listTag );
-    (void)Util::validateFolder( gameFolder, listTag ); // 시나리오가 없는 게임도 있다
-    (void)Util::validateFolder( gameFolder + "/desktop", listTag );
-    (void)Util::validateFolder( gameFolder + "/sequence", listTag );
-    (void)Util::validateFolder( gameFolder + "/showcase", listTag );
+    (void)Util::validateFolder( gameFolder.view(), listTag ); // 시나리오가 없는 게임도 있다
+    for ( const string_view subFolder : { "desktop", "sequence", "showcase" } )
+    {
+        StringBuilder<constant::buffer::kMax256> folder;
+        folder.appendFormat( "%#/%#", gameFolder.view(), subFolder );
+        (void)Util::validateFolder( folder.view(), listTag );
+    }
 }
 
 // 골든 꼬리는 쿠킹 표의 명령줄 이름이다 — 판정기에 따로 적은 표가 WebGPU 를 빠뜨려 그 백엔드의 골든을 뜰 수 없었다.

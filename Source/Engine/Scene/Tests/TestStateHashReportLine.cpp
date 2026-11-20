@@ -22,8 +22,10 @@ SW_TEST_CASE( StateHashReportLineTest, ALineRoundTripsInsideALogLine )
     string line;
     SW_REQUIRE_TRUE( StateHashHistory::writeReportLine( listSample, line ) );
 
-    vector<StateHashSample> parsed;
-    SW_REQUIRE_TRUE( StateHashHistory::tryParseReportLine( "[Info] > state.hashline 2 : " + line + " (main.cpp:10)", parsed ) );
+    vector<StateHashSample>                  parsed;
+    StringBuilder<constant::buffer::kMax256> logLine;
+    logLine.appendFormat( "[Info] > state.hashline 2 : %# (main.cpp:10)", line );
+    SW_REQUIRE_TRUE( StateHashHistory::tryParseReportLine( logLine.view(), parsed ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), parsed.size() );
     SW_EXPECT_EQUAL( uint64( 12 ), parsed[0]._tick );
     SW_EXPECT_EQUAL( uint64( 0x00000000DEADBEEFull ), parsed[0]._hash );
@@ -35,7 +37,9 @@ SW_TEST_CASE( StateHashReportLineTest, ALineRoundTripsInsideALogLine )
     SW_EXPECT_TRUE( parsed.empty() );
 
     SW_EXPECT_FALSE( StateHashHistory::tryParseReportLine( "net stats only", parsed ) );
-    SW_EXPECT_FALSE( StateHashHistory::tryParseReportLine( string( StateHashHistory::kReportLinePrefix ) + " 12:zz,13:ff", parsed ) );
+    fixed_string<constant::buffer::kMax64> badLine;
+    formatstring( badLine.data(), badLine.capacity(), "%# 12:zz,13:ff", StateHashHistory::kReportLinePrefix );
+    SW_EXPECT_FALSE( StateHashHistory::tryParseReportLine( badLine, parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
 }
 
@@ -113,9 +117,11 @@ SW_TEST_CASE( StateHashReportLineTest, AnObjectLineRoundTripsAwkwardNamesInsideA
     string line;
     SW_REQUIRE_TRUE( SceneObjectHash::writeObjectReportLine( 42, listObject, line ) );
     SW_EXPECT_TRUE( line.find( '\n' ) == string::npos );
-    uint64                  tick = 0;
-    vector<SceneObjectHash> parsed;
-    SW_REQUIRE_TRUE( SceneObjectHash::tryParseObjectReportLine( "[12:00:00][Info] " + line + " (client)", tick, parsed ) );
+    uint64                                   tick = 0;
+    vector<SceneObjectHash>                  parsed;
+    StringBuilder<constant::buffer::kMax256> logLine;
+    logLine.appendFormat( "[12:00:00][Info] %# (client)", line );
+    SW_REQUIRE_TRUE( SceneObjectHash::tryParseObjectReportLine( logLine.view(), tick, parsed ) );
     SW_EXPECT_EQUAL( uint64( 42 ), tick );
     SW_REQUIRE_EQUAL( size_t( 2 ), parsed.size() );
     SW_EXPECT_TRUE( parsed[0]._name == "Door 1" && parsed[0]._hash == 0x1111ull );
@@ -127,8 +133,12 @@ SW_TEST_CASE( StateHashReportLineTest, AnObjectLineRoundTripsAwkwardNamesInsideA
     SW_EXPECT_EQUAL( uint64( 7 ), tick );
 
     SW_EXPECT_FALSE( SceneObjectHash::tryParseObjectReportLine( "no prefix 1 2", tick, parsed ) );
-    SW_EXPECT_FALSE( SceneObjectHash::tryParseObjectReportLine( string( SceneObjectHash::kObjectReportLinePrefix ) + " 5 zz:Door", tick, parsed ) );
-    SW_EXPECT_FALSE( SceneObjectHash::tryParseObjectReportLine( string( SceneObjectHash::kObjectReportLinePrefix ) + " 5 00000000000000aa:Do%2", tick, parsed ) );
+    fixed_string<constant::buffer::kMax64> badLine;
+    formatstring( badLine.data(), badLine.capacity(), "%# 5 zz:Door", SceneObjectHash::kObjectReportLinePrefix );
+    SW_EXPECT_FALSE( SceneObjectHash::tryParseObjectReportLine( badLine, tick, parsed ) );
+    fixed_string<constant::buffer::kMax64> badNameLine;
+    formatstring( badNameLine.data(), badNameLine.capacity(), "%# 5 00000000000000aa:Do%%2", SceneObjectHash::kObjectReportLinePrefix );
+    SW_EXPECT_FALSE( SceneObjectHash::tryParseObjectReportLine( badNameLine, tick, parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
 }
 
@@ -161,7 +171,8 @@ SW_TEST_CASE( StateHashReportLineTest, ALineOverTheLimitIsAnErrorOnBothSides )
     SW_EXPECT_EQUAL( size_t( 20 ), parsed.size() );
 
     // 읽는 쪽: 같은 상수를 넘는 줄(유효한 항목이라도)은 거절한다.
-    string tooLong = string( SceneObjectHash::kObjectReportLinePrefix ) + " 1 ";
+    string tooLong( SceneObjectHash::kObjectReportLinePrefix );
+    tooLong += " 1 ";
     while ( tooLong.size() <= DebugReplyLine::kMaxBytes )
     {
         tooLong += "00000000000000aa:Door,";
@@ -189,7 +200,10 @@ SW_TEST_CASE( StateHashReportLineTest, ALineOverTheLimitIsAnErrorOnBothSides )
     }
     SW_EXPECT_FALSE( StateHashHistory::writeReportLine( listSample, historyLine ) );
     SW_EXPECT_TRUE( historyLine.empty() );
-    SW_EXPECT_FALSE( StateHashHistory::tryParseReportLine( string( StateHashHistory::kReportLinePrefix ) + " " + string( DebugReplyLine::kMaxBytes, '1' ), parsedSample ) );
+    StringBuilder<constant::buffer::kMax4096> longHistoryLine;
+    longHistoryLine.appendFormat( "%# ", StateHashHistory::kReportLinePrefix );
+    longHistoryLine.append( string( DebugReplyLine::kMaxBytes, '1' ) );
+    SW_EXPECT_FALSE( StateHashHistory::tryParseReportLine( longHistoryLine.view(), parsedSample ) );
 }
 
 namespace

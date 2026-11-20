@@ -105,14 +105,14 @@ namespace sw
                     node.appendAttribute( "cell", visual._listFrameCell[0] );
                     return;
                 }
-                string frames;
+                StringBuilder<constant::buffer::kMax256> frames;
                 for ( const int32 cell : visual._listFrameCell )
                 {
-                    if ( frames.empty() == false )
-                        frames += " ";
-                    frames += to_string( cell );
+                    if ( frames.size() != 0 )
+                        frames.append( ' ' );
+                    frames.appendFormat( "%#", cell );
                 }
-                node.appendAttribute( "frames", string_view( frames ) );
+                node.appendAttribute( "frames", frames.view() );
                 node.appendAttribute( "fps", visual._framesPerSecond );
             }
 

@@ -7,6 +7,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -39,12 +40,16 @@ namespace
         sw::unordered_map<sw::string, sw::string> mapText;
         for ( const auto& [pReferrer, pTarget] : listEdge )
         {
-            mapText[pReferrer] += "<I _base=\"" + sw::string( pTarget ) + "\"/>\n";
+            sw::StringBuilder<sw::constant::buffer::kMax256> itemText;
+            itemText.appendFormat( "<I _base=\"%#\"/>\n", pTarget );
+            mapText[pReferrer] += itemText.view();
             (void)mapText[pTarget];
         }
         for ( const auto& [pReferrer, pTarget] : listPlainEdge )
         {
-            mapText[pReferrer] += "<I path=\"" + sw::string( pTarget ) + "\"/>\n";
+            sw::StringBuilder<sw::constant::buffer::kMax256> itemText;
+            itemText.appendFormat( "<I path=\"%#\"/>\n", pTarget );
+            mapText[pReferrer] += itemText.view();
             (void)mapText[pTarget];
         }
         outIndex.assign( EditorAssetIndexData{} );
@@ -56,16 +61,17 @@ namespace
 
     sw::string makeMaterialText( const char* pName, const sw::string& parentID, const char* pRoughness )
     {
-        sw::string text = "<MaterialDef formatVersion=\"0\" name=\"" + sw::string( pName ) + "\"";
+        sw::StringBuilder<sw::constant::buffer::kMax512> text;
+        text.appendFormat( "<MaterialDef formatVersion=\"0\" name=\"%#\"", pName );
         if ( parentID.empty() == false )
-            text += " _base=\"" + parentID + "\"";
+            text.appendFormat( " _base=\"%#\"", parentID );
         else
-            text += " shaderPath=\"engine/shaders/forward_lit.hlsl\" surfaceModel=\"Lit\" alphaMode=\"Opaque\"";
-        text += "><_properties>";
+            text.append( " shaderPath=\"engine/shaders/forward_lit.hlsl\" surfaceModel=\"Lit\" alphaMode=\"Opaque\"" );
+        text.append( "><_properties>" );
         if ( pRoughness != nullptr )
-            text += "<item name=\"_roughness\" type=\"Range\" defaultValue=\"" + sw::string( pRoughness ) + "\" min=\"0.0\" max=\"1.0\" />";
-        text += "</_properties></MaterialDef>";
-        return text;
+            text.appendFormat( "<item name=\"_roughness\" type=\"Range\" defaultValue=\"%#\" min=\"0.0\" max=\"1.0\" />", pRoughness );
+        text.append( "</_properties></MaterialDef>" );
+        return sw::string( text.view() );
     }
 
     sw::string readRoughness( const sw::Material& material )

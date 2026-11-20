@@ -8,6 +8,7 @@
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -1420,13 +1421,15 @@ namespace sw::editor
                 listAssetID.push_back( EditorPaths::getAssetPaths().toAssetID( filePath ) );
             }
         }
-        const string opening      = "<" + pTarget->_catalog;
-        const string entryOpening = "<" + pTarget->_entry; // 항목 하나짜리 파일(`collectEntryIDs` 가 루트 이름으로 가린다)
+        fixed_string<constant::buffer::kMax128> opening;
+        formatstring( opening.data(), opening.capacity(), "<%#", pTarget->_catalog );
+        fixed_string<constant::buffer::kMax128> entryOpening; // 항목 하나짜리 파일(`collectEntryIDs` 가 루트 이름으로 가린다)
+        formatstring( entryOpening.data(), entryOpening.capacity(), "<%#", pTarget->_entry );
         for ( const string& assetID : listAssetID )
         {
             string text;
             if ( StringUtil::endsWith( assetID, ".xml", true ) == false || AssetIO::readTextAsset( AssetID{ assetID }, text ) == false ||
-                 ( text.find( opening ) == string::npos && text.find( entryOpening ) == string::npos ) )
+                 ( text.find( opening.view() ) == string::npos && text.find( entryOpening.view() ) == string::npos ) )
                 continue;
             XMLDocument doc;
             if ( doc.parseData( text, assetID ) == false )

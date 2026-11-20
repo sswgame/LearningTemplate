@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/EditorSubsystem.h"
@@ -89,10 +90,9 @@ namespace sw::editor
                     textBuilder.appendFormat( "test %# step %#", Registry::getAt( _listSelectedIndex[_cursor] )._pID, _context.getStepIndex() );
                 else
                     textBuilder.append( "starting" );
-                string text{ textBuilder.view() };
                 if ( _stabilityWait.has_value() )
-                    text += ", waiting for " + _stabilityWait->describeWait();
-                return text;
+                    textBuilder.appendFormat( ", waiting for %#", _stabilityWait->describeWait() );
+                return string( textBuilder.view() );
             }
 
             /** @brief 실행을 한 프레임 진행합니다. 실행이 없으면 아무것도 하지 않는다. */

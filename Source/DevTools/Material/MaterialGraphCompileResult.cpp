@@ -8,6 +8,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
@@ -400,7 +401,9 @@ namespace sw
                         report( scope, node._name, "BadParameter", std::move( message ) );
                         return {};
                     }
-                    const string name = _parameterPrefix + localName;
+                    StringBuilder<constant::buffer::kMax128> nameBuilder;
+                    nameBuilder.appendFormat( "%#%#", _parameterPrefix, localName );
+                    const string name( nameBuilder.view() );
                     for ( const MaterialGraphField& field : _listField )
                     {
                         if ( field._name != name )
@@ -794,7 +797,9 @@ namespace sw
                     if ( bAllRead == false || mask.empty() )
                         return;
 
-                    const string       weightName = "_" + node._name + "Weight";
+                    StringBuilder<constant::buffer::kMax128> weightNameBuilder;
+                    weightNameBuilder.appendFormat( "_%#Weight", node._name );
+                    const string       weightName( weightNameBuilder.view() );
                     MaterialGraphField weight;
                     weight._name         = weightName;
                     weight._hlslType     = "float";
@@ -805,8 +810,10 @@ namespace sw
 
                     string innerScope{ scope };
                     innerScope.append( node._name ).append( "/" );
-                    const string previousPrefix = _parameterPrefix;
-                    _parameterPrefix            = "_" + node._name;
+                    const string                             previousPrefix = _parameterPrefix;
+                    StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                    prefixBuilder.appendFormat( "_%#", node._name );
+                    _parameterPrefix = string( prefixBuilder.view() );
                     _listGraphStack.push_back( node._assetPath );
                     vector<NamedValue> listLayerOutput;
                     const bool         bLayerEmitted = emitGraph( layer, innerScope, listArgument, false, listLayerOutput );
@@ -831,9 +838,15 @@ namespace sw
                             report( scope, node._name, "BadLayerPin", std::move( message ) );
                             continue;
                         }
-                        const string field{ pAttribute->_field };
-                        const string blended = "lerp( output." + field + ", " + expression + ", " + maskName.c_str() + " )";
-                        _outputLines.append( "    output." ).append( field ).append( " = " ).append( pAttribute->_field == "_normal" ? string{ "normalize( " + blended + " )" } : blended ).append( ";\n" );
+                        const string                             field{ pAttribute->_field };
+                        StringBuilder<constant::buffer::kMax512> blended;
+                        blended.appendFormat( "lerp( output.%#, %#, %# )", field, expression, maskName.c_str() );
+                        _outputLines.append( "    output." ).append( field ).append( " = " );
+                        if ( pAttribute->_field == "_normal" )
+                            _outputLines.append( "normalize( " ).append( blended.view() ).append( " )" );
+                        else
+                            _outputLines.append( blended.view() );
+                        _outputLines.append( ";\n" );
                         _bEmissive = _bEmissive || pAttribute->_field == "_emissive";
                     }
                 }
@@ -849,8 +862,9 @@ namespace sw
                     const expected<LayerLimits> limits = loadLayerLimits();
                     if ( limits.has_value() == false )
                     {
-                        report( scope, "(graph)", "LayerLimitsUnreadable",
-                                string( limits.error().message().data(), limits.error().message().size() ) + " (" + string( limits.error().detail().data(), limits.error().detail().size() ) + ")" );
+                        StringBuilder<constant::buffer::kMax1024> message;
+                        message.appendFormat( "%# (%#)", limits.error().message(), limits.error().detail() );
+                        report( scope, "(graph)", "LayerLimitsUnreadable", string( message.view() ) );
                         return false;
                     }
                     _layerLimits = *limits;

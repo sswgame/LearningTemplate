@@ -1358,12 +1358,21 @@ namespace sw
                     writer.addLine( "navmesh", "none prepared" );
                 for ( const NavStreamStats& stats : listStats )
                 {
-                    const string name = stats._agentType.empty() ? string( "default" ) : string( stats._agentType.c_str() );
-                    writer.addLineFormat( name + " tiles", "%# / %# loaded, %# loading", stats._loadedTileCount, stats._streamTileCount, stats._loadingTileCount );
+                    const string_view                      name = stats._agentType.empty() ? string_view( "default" ) : string_view( stats._agentType.c_str() );
+                    fixed_string<constant::buffer::kMax64> label;
+                    formatstring( label.data(), label.capacity(), "%# tiles", name );
+                    writer.addLineFormat( label, "%# / %# loaded, %# loading", stats._loadedTileCount, stats._streamTileCount, stats._loadingTileCount );
                     if ( stats._failedTileCount > 0 )
-                        writer.addLine( name + " failed tiles", to_string( static_cast<uint64>( stats._failedTileCount ) ), DebugHUDLineStyle::Warning );
-                    writer.addLineFormat( name + " clusters", "%# nodes, %# edges", stats._clusterCount, stats._clusterEdgeCount );
-                    writer.addLineFormat( name + " routes", "%# coarse, %# virtual, %# replans", stats._coarseRouteAgentCount, stats._virtualAgentCount, stats._replanCount );
+                    {
+                        fixed_string<constant::buffer::kMax32> failedCount;
+                        formatstring( label.data(), label.capacity(), "%# failed tiles", name );
+                        formatstring( failedCount.data(), failedCount.capacity(), "%#", static_cast<uint64>( stats._failedTileCount ) );
+                        writer.addLine( label, failedCount, DebugHUDLineStyle::Warning );
+                    }
+                    formatstring( label.data(), label.capacity(), "%# clusters", name );
+                    writer.addLineFormat( label, "%# nodes, %# edges", stats._clusterCount, stats._clusterEdgeCount );
+                    formatstring( label.data(), label.capacity(), "%# routes", name );
+                    writer.addLineFormat( label, "%# coarse, %# virtual, %# replans", stats._coarseRouteAgentCount, stats._virtualAgentCount, stats._replanCount );
                 }
                 const DebugHUDRegistry*      pRegistry = engine::findSubsystem<DebugHUDRegistry>();
                 const GameObjectHandle       target    = pRegistry != nullptr ? pRegistry->getTarget() : GameObjectHandle{};
@@ -1386,7 +1395,9 @@ namespace sw
                 NavMeshAgentComponent* pAgent  = pObject != nullptr ? pObject->getComponent<NavMeshAgentComponent>() : nullptr;
                 if ( pAgent == nullptr )
                 {
-                    outReply = "no object named '" + listArgument[0] + "' with a navmesh agent in the active scene";
+                    StringBuilder<constant::buffer::kMax256> reply;
+                    reply.appendFormat( "no object named '%#' with a navmesh agent in the active scene", listArgument[0] );
+                    outReply.assign( reply.view() );
                     return false;
                 }
                 float3 destination{};
@@ -1403,13 +1414,17 @@ namespace sw
                     const SceneComponent* pScene = pGoal != nullptr ? pGoal->getPrimarySceneComponent() : nullptr;
                     if ( pScene == nullptr )
                     {
-                        outReply = "no object named '" + listArgument[1] + "' with a scene component in the active scene";
+                        StringBuilder<constant::buffer::kMax256> reply;
+                        reply.appendFormat( "no object named '%#' with a scene component in the active scene", listArgument[1] );
+                        outReply.assign( reply.view() );
                         return false;
                     }
                     destination = pScene->getWorldPosition();
                 }
                 pAgent->setDestination( destination );
-                outReply = "moving " + listArgument[0];
+                StringBuilder<constant::buffer::kMax128> reply;
+                reply.appendFormat( "moving %#", listArgument[0] );
+                outReply.assign( reply.view() );
                 return true;
             }
         };

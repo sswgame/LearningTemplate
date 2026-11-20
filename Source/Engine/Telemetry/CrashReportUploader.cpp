@@ -64,7 +64,9 @@ namespace sw
         HTTPRequest request;
         request._method = "POST";
         request._url    = _endpoint;
-        request._listHeader.push_back( { "Content-Type", string( "multipart/form-data; boundary=" ) + kBoundary } );
+        StringBuilder<constant::buffer::kMax128> contentType;
+        contentType.appendFormat( "multipart/form-data; boundary=%#", kBoundary );
+        request._listHeader.push_back( { "Content-Type", string( contentType.view() ) } );
         request._listHeader.push_back( { "X-Crash-Session", bundle._sessionID } );
         Internal::appendPartHeader( request._body, "manifest", "", "application/json" );
         request._body += bundle._manifest;

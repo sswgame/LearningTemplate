@@ -122,7 +122,8 @@ namespace sw::editor
             ensureDocumentLoaded(); // 팩 데이터가 경로 칸을 채운 뒤에 읽는다
         if ( _document.getPackDataState() == PackDataState::Missing )
         {
-            const string hint = "This game has no character editor data (" + _document.getPackDataPath() + ")";
+            fixed_string<constant::buffer::kMax512> hint;
+            formatstring( hint.data(), hint.capacity(), "This game has no character editor data (%#)", _document.getPackDataPath() );
             EditorWidgets::drawEmptyHint( hint.c_str() );
             return;
         }

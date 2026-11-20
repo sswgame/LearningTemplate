@@ -563,8 +563,10 @@ namespace sw
         }
         vector<string> listEntryPath;
         reader.collectAllEntryPaths( listEntryPath );
-        const string contentPrefix = ModManifest::makeContentPrefix( manifest._id );
-        const string layerPrefix   = ModManifest::makeLayerRoot( manifest._id ) + "/";
+        const string                             contentPrefix = ModManifest::makeContentPrefix( manifest._id );
+        StringBuilder<constant::buffer::kMax256> layerPrefixBuilder;
+        layerPrefixBuilder.appendFormat( "%#/", ModManifest::makeLayerRoot( manifest._id ) );
+        const string layerPrefix( layerPrefixBuilder.view() );
         // 팩 파일마다 밝힌 덮어쓰기 목록을, 밝힌 덮어쓰기 · 층마다 팩 파일 목록을 훑지 않는다(팩 파일 수 × 밝힌 수).
         unordered_set<string> uniqueEntryPath;
         for ( const string& entryPath : listEntryPath )
@@ -625,9 +627,11 @@ namespace sw
         }
         for ( const string& layerPath : manifest._listLayer )
         {
-            if ( uniqueEntryPath.contains( string( layerPrefix + layerPath ) ) == false )
+            StringBuilder<constant::buffer::kMax512> layerEntry;
+            layerEntry.appendFormat( "%#%#", layerPrefix, layerPath );
+            if ( uniqueEntryPath.contains( string( layerEntry.view() ) ) == false )
             {
-                SW_LOG_ERROR_ID( "ModSession.LayerNotInPack", "Mod '%#' declares layer '%#' but its pack does not hold '%#'", manifest._id, layerPath, layerPrefix + layerPath );
+                SW_LOG_ERROR_ID( "ModSession.LayerNotInPack", "Mod '%#' declares layer '%#' but its pack does not hold '%#'", manifest._id, layerPath, layerEntry.view() );
                 return false;
             }
             // 층은 원본을 부모로 삼는다 — 원본이 없으면 얹을 곳이 없다(오타난 층이 조용히 아무것도 바꾸지 않게 두지 않는다).

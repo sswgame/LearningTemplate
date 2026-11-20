@@ -448,7 +448,9 @@ namespace sw
                         SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp3", "Failed to write the cook stamp: the shader path contains the dependency separator character: %#", source._absPath.c_str() );
                         return false;
                     }
-                    listLine.push_back( formatHex64( hash ) + " " + source._key );
+                    StringBuilder<constant::buffer::kMax256> lineBuilder;
+                    lineBuilder.appendFormat( "%# %#", formatHex64( hash ), source._key );
+                    listLine.push_back( string( lineBuilder.view() ) );
 
                     const auto includedIter = mapIncludedFile.find( source._absPath );
                     if ( includedIter == mapIncludedFile.end() )
@@ -464,14 +466,15 @@ namespace sw
                             SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp4", "Failed to write the cook stamp: the include dependency '%#' of '%#' is not under a shader include root or cannot be read", header.c_str(), source._absPath.c_str() );
                             return false;
                         }
-                        string dependencyLine = formatHex64( headerHash ) + " " + source._key;
-                        dependencyLine += kDependencySeparator;
-                        dependencyLine += headerKey;
-                        listLine.push_back( std::move( dependencyLine ) );
+                        StringBuilder<constant::buffer::kMax256> dependencyLine;
+                        dependencyLine.appendFormat( "%# %#%#%#", formatHex64( headerHash ), source._key, kDependencySeparator, headerKey );
+                        listLine.push_back( string( dependencyLine.view() ) );
                     }
                 }
 
-                listLine.push_back( formatHex64( computeToolchainFingerprint( cookStampCache.getEnginePolicy() ) ) + " " + string( kToolchainKey ) );
+                StringBuilder<constant::buffer::kMax64> toolchainLine;
+                toolchainLine.appendFormat( "%# %#", formatHex64( computeToolchainFingerprint( cookStampCache.getEnginePolicy() ) ), kToolchainKey );
+                listLine.push_back( string( toolchainLine.view() ) );
 
                 VectorUtil::sortUnique( listLine ); // 같은 헤더를 다른 이름으로 열었어도 한 줄이다
 
@@ -575,7 +578,11 @@ namespace sw
                     if ( bInside == false )
                         continue;
                     const string relative{ resolved.substr( root._comparableDir.size() + 1 ) };
-                    return root._domain.empty() ? relative : string{ root._domain + ":" + relative };
+                    if ( root._domain.empty() )
+                        return relative;
+                    StringBuilder<constant::buffer::kMax256> keyBuilder;
+                    keyBuilder.appendFormat( "%#:%#", root._domain, relative );
+                    return string( keyBuilder.view() );
                 }
                 return string{};
             }
@@ -718,7 +725,9 @@ namespace sw
                 if ( listSource.empty() )
                     return;
 
-                const string label = domain + "/shaders";
+                StringBuilder<constant::buffer::kMax256> labelBuilder;
+                labelBuilder.appendFormat( "%#/shaders", domain );
+                const string label( labelBuilder.view() );
                 // 쿠킹본은 소스 트리가 아니라 쿠킹 스테이징의 같은 상대 자리에 있다 — 쿠커 출력(`ShaderCookDriver`) · 런타임 읽기와 같은 규칙(`ShaderBinaryLocation`) 하나다.
                 const string binDir = FileUtil::joinPath( cookedDir, ShaderBinaryLocation::makeForDomain( domain, format )._binDirectory );
                 if ( FileUtil::isDirectory( binDir ) == false )

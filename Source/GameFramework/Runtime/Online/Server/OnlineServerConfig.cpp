@@ -38,7 +38,8 @@ namespace sw
 
     expected<void> OnlineServerKitEntry::readSettingsInto( void* pSettings, const TypeInfo& typeInfo ) const
     {
-        const string label = "kit '" + _name + "' settings";
+        fixed_string<constant::buffer::kMax256> label;
+        formatstring( label.data(), label.capacity(), "kit '%#' settings", _name );
         if ( ConfigManager::readConfigJSON( pSettings, typeInfo, _settings.empty() ? string_view( "{}" ) : string_view( _settings ), label.c_str() ) )
             return {};
         return unexpected( Error{ ErrorKind::InvalidArgument, "the kit settings are invalid (see the errors above)", _name } );
@@ -61,8 +62,8 @@ namespace sw
         string_view stem = serverConfigPath;
         if ( StringUtil::endsWith( stem, OnlineServerConfigInternal::kJSONExtension ) )
             stem = stem.substr( 0, stem.size() - OnlineServerConfigInternal::kJSONExtension.size() );
-        string path{ stem };
-        path += OnlineServerConfigInternal::kOnlineExtension;
-        return path;
+        StringBuilder<constant::buffer::kMax256> path;
+        path.appendFormat( "%#%#", stem, OnlineServerConfigInternal::kOnlineExtension );
+        return string( path.view() );
     }
 } // namespace sw

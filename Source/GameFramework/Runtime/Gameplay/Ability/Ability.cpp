@@ -418,7 +418,9 @@ namespace sw
                 }
                 if ( changedCount == 0 )
                 {
-                    outReply = "cheat.attribute: no ability system has the attribute '" + listArgument[0] + "'";
+                    StringBuilder<constant::buffer::kMax256> failBuilder;
+                    failBuilder.appendFormat( "cheat.attribute: no ability system has the attribute '%#'", listArgument[0] );
+                    outReply = string( failBuilder.view() );
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;

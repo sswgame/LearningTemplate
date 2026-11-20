@@ -3,6 +3,7 @@
 #include "Core/File/Android/AndroidAssetFileReader.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include <android/asset_manager.h>
 
@@ -42,7 +43,9 @@ namespace sw
             return false;
         // 파일만 돌려준다(하위 폴더는 없다) — 이름은 ASCII 오름차순이다(문서). 그래서 마운트 순서가 실행마다 같다.
         // 문서는 "AAssetManager_open 에 넘길 수 있는 이름" 이라고만 한다 — 폴더 앞머리가 붙어 오면 떼어 계약(폴더를 뺀 이름)에 맞춘다.
-        const string prefix = folder + "/";
+        StringBuilder<constant::buffer::kMax1024> prefixBuilder;
+        prefixBuilder.appendFormat( "%#/", folder );
+        const string_view prefix = prefixBuilder.view();
         for ( const utf8* pName = AAssetDir_getNextFileName( pDir ); pName != nullptr; pName = AAssetDir_getNextFileName( pDir ) )
         {
             const string_view name{ pName };

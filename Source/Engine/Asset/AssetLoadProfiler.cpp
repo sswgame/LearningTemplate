@@ -120,7 +120,8 @@ namespace sw
                     entry._arrProfilerSlot[phase] = FrameProfiler::kInvalidSlot;
                     if ( bFrameProfiler )
                     {
-                        const string name             = string( "Asset." ) + record._kind.c_str() + "." + AssetLoadProfilerInternal::kArrPhaseName[phase];
+                        fixed_string<constant::buffer::kMax128> name;
+                        formatstring( name.data(), name.capacity(), "Asset.%#.%#", record._kind.c_str(), AssetLoadProfilerInternal::kArrPhaseName[phase] );
                         entry._arrProfilerSlot[phase] = engine::getSubsystem<FrameProfiler>().registerScope( name.c_str() );
                     }
                 }

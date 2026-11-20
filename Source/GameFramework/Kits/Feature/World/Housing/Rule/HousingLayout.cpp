@@ -100,8 +100,10 @@ namespace sw
         releaseLand();
         if ( pLand == nullptr )
             return true;
-        LandBinding land;
-        land.bind( pLand, origin, hashed_string( "Housing." + string( _settings._plotID.c_str() ) ) );
+        LandBinding                             land;
+        fixed_string<constant::buffer::kMax128> landName;
+        formatstring( landName.data(), landName.capacity(), "Housing.%#", _settings._plotID.c_str() );
+        land.bind( pLand, origin, hashed_string( landName.c_str() ) );
         if ( land.claimRect( 0, 0, _settings._sizeX - 1, _settings._sizeZ - 1, false ) == false )
         {
             SW_LOG_ERROR_ID( "HousingLayout.LandTaken", "Housing plot '%#': its %#x%# cells at land cell %#,%# are outside the land or used by another kit", _settings._plotID.c_str(), _settings._sizeX,

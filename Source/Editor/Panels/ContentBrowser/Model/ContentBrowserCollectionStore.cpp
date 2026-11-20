@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 
@@ -142,23 +143,24 @@ namespace sw::editor
     string ContentBrowserCollectionStore::toText( bool bShared ) const
     {
         using Internal = ContentBrowserCollectionStoreInternal;
-        string text;
+        StringBuilder<constant::buffer::kMax4096> text;
         for ( const ContentBrowserSavedSearch& search : _listSavedSearch )
         {
             if ( search._bShared != bShared )
                 continue;
-            text += "search\t" + Internal::sanitize( search._name ) + "\t" + Internal::sanitize( search._typeFilterLabel ) + "\t" + Internal::sanitize( search._searchText ) + "\n";
+            text.appendFormat( "search\t%#\t%#\t%#\n", Internal::sanitize( search._name ), Internal::sanitize( search._typeFilterLabel ), Internal::sanitize( search._searchText ) );
         }
         for ( const ContentBrowserCollection& collection : _listCollection )
         {
             if ( collection._bShared != bShared )
                 continue;
             // 빈 컬렉션도 남도록 머리 줄을 하나 둔다(에셋 칸이 빈 줄)
-            text += "collection\t" + Internal::sanitize( collection._name ) + "\t\n";
+            const string name = Internal::sanitize( collection._name );
+            text.appendFormat( "collection\t%#\t\n", name );
             for ( const string& assetID : collection._listAssetID )
-                text += "collection\t" + Internal::sanitize( collection._name ) + "\t" + Internal::sanitize( assetID ) + "\n";
+                text.appendFormat( "collection\t%#\t%#\n", name, Internal::sanitize( assetID ) );
         }
-        return text;
+        return string( text.view() );
     }
 
     void ContentBrowserCollectionStore::fromText( string_view text, bool bShared )

@@ -1294,7 +1294,9 @@ namespace sw
         GLint isLinked{ 0 };
         {
             // 드라이버 링크(상태를 묻는 데서 기다린다)가 정지 시한보다 길 수 있다 — 일하는 중임을 간격마다 알린다.
-            const ScopedProgressReport progress{ string( pLabel ) + " program link" };
+            StringBuilder<constant::buffer::kMax256> what;
+            what.appendFormat( "%# program link", pLabel );
+            const ScopedProgressReport progress{ string( what.view() ) };
             glLinkProgram( program );
             glGetProgramiv( program, GL_LINK_STATUS, &isLinked );
         }

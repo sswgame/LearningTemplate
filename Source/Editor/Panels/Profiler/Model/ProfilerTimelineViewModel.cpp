@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Panels/Profiler/Model/ProfilerCaptureViewModel.h"
@@ -166,7 +167,9 @@ namespace sw::editor
         expected<ProfilerLoadedTrace> loaded = ProfilerTraceExport::loadTraceFile( path );
         if ( loaded.has_value() == false )
         {
-            _traceStatus = "Load failed: " + string( loaded.error().message() ) + ": " + string( loaded.error().detail() );
+            StringBuilder<constant::buffer::kMax512> statusBuilder;
+            statusBuilder.appendFormat( "Load failed: %#: %#", loaded.error().message(), loaded.error().detail() );
+            _traceStatus = string( statusBuilder.view() );
             SW_LOG_WARNING_ID( "ProfilerTimelineViewModel.TraceNotLoaded", "Trace not loaded: %#", _traceStatus );
             return false;
         }
@@ -226,8 +229,10 @@ namespace sw::editor
         _listDraw             = _listThread;
         for ( const ProfilerTimelineThread& source : _loadedTrace._listThread )
         {
-            ProfilerTimelineThread copy;
-            copy._name = "[loaded] " + source._name;
+            ProfilerTimelineThread                   copy;
+            StringBuilder<constant::buffer::kMax256> nameBuilder;
+            nameBuilder.appendFormat( "[loaded] %#", source._name );
+            copy._name = string( nameBuilder.view() );
             copy._listEvent.reserve( source._listEvent.size() );
             for ( ProfilerTimelineEvent event : source._listEvent )
             {

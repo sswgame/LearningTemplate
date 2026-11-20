@@ -269,9 +269,17 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, EveryRegisteredRolePropertyIsUsable )
         for ( const sw::PropertyInfo& prop : type._listProperty )
         {
             if ( prop._metadata->_bInterp == SW_TRUE && sw::PropertyRoleUtil::isInterpolatable( prop ) == false )
-                failures += sw::string( type._fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + " (Interp) ";
+            {
+                sw::StringBuilder<sw::constant::buffer::kMax256> failure;
+                failure.appendFormat( "%#::%# (Interp) ", type._fullyQualifiedName.c_str(), prop._name.c_str() );
+                failures += failure.view();
+            }
             if ( prop._metadata->_repNotify.empty() == false && prop._pRepNotify == nullptr )
-                failures += sw::string( type._fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + " (RepNotify) ";
+            {
+                sw::StringBuilder<sw::constant::buffer::kMax256> failure;
+                failure.appendFormat( "%#::%# (RepNotify) ", type._fullyQualifiedName.c_str(), prop._name.c_str() );
+                failures += failure.view();
+            }
         }
     } );
     SW_EXPECT_TRUE_MSG( failures.empty(), failures.c_str() );

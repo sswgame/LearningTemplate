@@ -6,6 +6,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -36,8 +38,10 @@ namespace sw::editor
         if ( bFocusSearch )
             ImGui::SetKeyboardFocusHere();
         EditorChrome::setNextItemWidthColumns( 24.0f );
-        const string           markPrefix{ pMarkPrefix };
-        const bool             bEnter = EditorWidgets::drawHintField( "##compSearch", search.data(), search.capacity(), SW_LOCKEY( "EdCommon", "SearchHint" ), ( markPrefix + ".search" ).c_str(), true )._bSubmitted;
+        const string_view                       markPrefix{ pMarkPrefix };
+        fixed_string<constant::buffer::kMax256> searchMark;
+        formatstring( searchMark.data(), searchMark.capacity(), "%#.search", markPrefix );
+        const bool             bEnter = EditorWidgets::drawHintField( "##compSearch", search.data(), search.capacity(), SW_LOCKEY( "EdCommon", "SearchHint" ), searchMark.c_str(), true )._bSubmitted;
         const EditorListFilter compFilter{ search.c_str() };
         const bool             bHasFilter = compFilter.isActive();
 

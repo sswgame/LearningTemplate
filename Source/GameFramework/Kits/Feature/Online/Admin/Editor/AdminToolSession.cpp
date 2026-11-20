@@ -60,7 +60,9 @@ namespace sw::editor
         if ( expected<void> opened = _connection.open( address, gameBuild ); opened.has_value() == false )
         {
             useFake();
-            _statusLine = "GM connection failed: " + string( opened.error().message() ) + " (" + string( opened.error().detail() ) + ")";
+            StringBuilder<constant::buffer::kMax256> statusLine;
+            statusLine.appendFormat( "GM connection failed: %# (%#)", opened.error().message(), opened.error().detail() );
+            _statusLine = string( statusLine.view() );
             return opened;
         }
         useLiveClient( _connection.getAdminClient() );
@@ -79,7 +81,9 @@ namespace sw::editor
             pRefusal = "the login handler refused the account name or the password";
         if ( pRefusal != nullptr )
         {
-            _statusLine = string( "GM connection failed: " ) + pRefusal;
+            StringBuilder<constant::buffer::kMax256> statusLine;
+            statusLine.appendFormat( "GM connection failed: %#", pRefusal );
+            _statusLine = string( statusLine.view() );
             return unexpected( Error{ ErrorKind::InvalidArgument, pRefusal } );
         }
         return connectLive( address, gameBuild );
@@ -275,7 +279,9 @@ namespace sw::editor
         _lastResult    = AdminServiceResult::fail( OnlineError::kInvalidRequest );
         _lastMethod    = method;
         _bLastReplayed = SW_FALSE;
-        _statusLine    = string( AdminToolUtil::getMethodName( method ) ) + ": InvalidRequest (the duration must be zero or a positive number that fits)";
+        StringBuilder<constant::buffer::kMax256> statusLine;
+        statusLine.appendFormat( "%#: InvalidRequest (the duration must be zero or a positive number that fits)", AdminToolUtil::getMethodName( method ) );
+        _statusLine = string( statusLine.view() );
         SW_LOG_INFO_ID( "Admin.CommandResult", "Admin command %#", _statusLine.c_str() );
     }
 
@@ -318,9 +324,16 @@ namespace sw::editor
         const string line = makeReplyLine( reply );
         SW_LOG_INFO_ID( "Admin.CommandResult", "Admin command %#", line.c_str() );
         if ( reply._errorCode == OnlineError::kOk && reply._reply._result == AdminResult::Ok )
+        {
             storeResult( reply );
+        }
         else
-            _statusLine += " - refresh failed: " + line; // 명령은 끝났고 화면이 낡았다는 뜻이다
+        {
+            // 명령은 끝났고 화면이 낡았다는 뜻이다
+            StringBuilder<constant::buffer::kMax512> statusLine;
+            statusLine.appendFormat( "%# - refresh failed: %#", _statusLine, line );
+            _statusLine = string( statusLine.view() );
+        }
     }
 
     void AdminToolSession::storeResult( const AdminClient::Reply& reply )

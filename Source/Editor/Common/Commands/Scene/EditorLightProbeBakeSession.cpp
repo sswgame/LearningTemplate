@@ -2,7 +2,9 @@
 
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Scene/EditorBakeSession.h"
@@ -229,13 +231,17 @@ namespace sw::editor
         const string assetPath = pVolume->getOwner() != nullptr ? makeSceneBakeAssetPath( sceneAssetID, pVolume->getOwner()->getName().view(), LightProbeGrid::kExtension ) : string{};
         if ( assetPath.empty() )
         {
-            reportFailure( "no bake output for scene '" + sceneAssetID + "' - it must be a .scene.xml resource and the volume needs a named owner" );
+            StringBuilder<constant::buffer::kMax512> failureBuilder;
+            failureBuilder.appendFormat( "no bake output for scene '%#' - it must be a .scene.xml resource and the volume needs a named owner", sceneAssetID );
+            reportFailure( string( failureBuilder.view() ) );
             return;
         }
         const optional<AbsolutePath> gridPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
         if ( gridPath.has_value() == false || grid.saveToFile( *gridPath ) == false )
         {
-            reportFailure( "could not write " + assetPath );
+            StringBuilder<constant::buffer::kMax512> failureBuilder;
+            failureBuilder.appendFormat( "could not write %#", assetPath );
+            reportFailure( string( failureBuilder.view() ) );
             return;
         }
         const uint32 probeCount = static_cast<uint32>( grid._listProbe.size() );

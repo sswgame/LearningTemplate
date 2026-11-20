@@ -78,7 +78,11 @@ namespace sw
         if ( compareWatch( context, step, bMatched, message ) == false )
             context.recordFailure( step, message );
         else if ( bMatched == false )
-            context.recordFailure( step, "Expect " + message );
+        {
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "Expect %#", message );
+            context.recordFailure( step, text.view() );
+        }
     }
 
     bool AutomationEvaluator::readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const
@@ -88,7 +92,9 @@ namespace sw
         // 모듈을 언로드했다 로드하면 감시 값이 빠질 수 있다. 시작 때 있었어도 다시 찾는다.
         if ( pRegistration == nullptr )
         {
-            outMessage = watchName + " is no longer registered";
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "%# is no longer registered", watchName );
+            outMessage = string( text.view() );
             return false;
         }
         const string*        pTarget = step.findAttribute( "target" );
@@ -96,18 +102,22 @@ namespace sw
         AutomationWatchQuery query   = AutomationWatchQuery::make( context.findActiveObjectManager(), pTarget != nullptr ? string_view{ *pTarget } : string_view{},
                                                                  pKey != nullptr ? string_view{ *pKey } : string_view{} );
           query._pLogCounter = &_logCapture; // 로그 수 감시 값(`Log.Count`)이 이 실행의 줄을 센다
-        string subject               = watchName;
-        if ( pTarget != nullptr )
-            subject += "(" + *pTarget + ( pKey != nullptr ? ", " + *pKey : string() ) + ")";
+        StringBuilder<constant::buffer::kMax256> subject;
+        subject.append( string_view{ watchName } );
+        if ( pTarget != nullptr && pKey != nullptr )
+            subject.appendFormat( "(%#, %#)", *pTarget, *pKey );
+        else if ( pTarget != nullptr )
+            subject.appendFormat( "(%#)", *pTarget );
         else if ( pKey != nullptr )
-            subject += "(" + *pKey + ")";
+            subject.appendFormat( "(%#)", *pKey );
         if ( AutomationWatchRegistry::read( *pRegistration, query, outValue ) == false )
         {
             const string reason = outValue._bText && outValue._text.empty() == false ? outValue._text : string( "no target in the scene" );
-            outMessage          = subject + " has no value (" + reason + ")";
+            subject.appendFormat( " has no value (%#)", reason );
+            outMessage = string( subject.view() );
             return false;
         }
-        outMessage = subject;
+        outMessage = string( subject.view() );
         return true;
     }
 
@@ -118,14 +128,16 @@ namespace sw
         outMatched = false;
         if ( readWatchValue( context, step, value, outMessage ) == false )
             return false;
-        const string valueText = Internal::makeValueText( value );
-        const string subject   = outMessage;
-        bool         bOk       = true;
-        string       rule;
-        const bool   bNumberRule = step.findAttribute( "is" ) == nullptr && step.findAttribute( "sameAs" ) == nullptr && step.findAttribute( "differsFrom" ) == nullptr;
+        const string                             valueText = Internal::makeValueText( value );
+        const string                             subject   = outMessage;
+        bool                                     bOk       = true;
+        string                                   rule;
+        StringBuilder<constant::buffer::kMax256> text;
+        const bool                               bNumberRule = step.findAttribute( "is" ) == nullptr && step.findAttribute( "sameAs" ) == nullptr && step.findAttribute( "differsFrom" ) == nullptr;
         if ( bNumberRule && value._bText )
         {
-            outMessage = subject + " is text ('" + value._text + "') - compare it with is=\"…\"";
+            text.appendFormat( "%# is text ('%#') - compare it with is=\"…\"", subject, value._text );
+            outMessage = string( text.view() );
             return false;
         }
         const string* pSameAs      = step.findAttribute( "sameAs" );
@@ -137,7 +149,8 @@ namespace sw
             const string* pStored = _stored.find( name );
             if ( pStored == nullptr )
             {
-                outMessage = subject + ": nothing was stored as '" + name + "' (add <Store as=\"" + name + "\"> before this step)";
+                text.appendFormat( "%#: nothing was stored as '%#' (add <Store as=\"%#\"> before this step)", subject, name, name );
+                outMessage = string( text.view() );
                 return false;
             }
             bool bSame = valueText == *pStored;
@@ -150,14 +163,16 @@ namespace sw
                     return false; // 검사가 본다 — 단계가 바뀌었다(핫 리로드)
                 if ( value._bText || StringUtil::parseFloat( string_view{ *pStored }, remembered ) == false )
                 {
-                    outMessage = subject + ": tolerance compares numbers, but '" + name + "' ('" + *pStored + "') or the value (" + valueText + ") is not a number";
+                    text.appendFormat( "%#: tolerance compares numbers, but '%#' ('%#') or the value (%#) is not a number", subject, name, *pStored, valueText );
+                    outMessage = string( text.view() );
                     return false;
                 }
                 bSame = MathUtil::abs( value._number - static_cast<float64>( remembered ) ) <= static_cast<float64>( tolerance );
             }
             bOk        = pSameAs != nullptr ? bSame : bSame == false;
             outMatched = bOk;
-            outMessage = subject + ( pSameAs != nullptr ? " same as " : " differs from " ) + name + " ('" + *pStored + "'), got " + valueText;
+            text.appendFormat( "%#%#%# ('%#'), got %#", subject, pSameAs != nullptr ? " same as " : " differs from ", name, *pStored, valueText );
+            outMessage = string( text.view() );
             return true;
         }
         if ( const string* pOppositeOf = step.findAttribute( "oppositeOf" ); pOppositeOf != nullptr )
@@ -167,7 +182,8 @@ namespace sw
             float32       remembered = 0.0f;
             if ( pStored == nullptr || StringUtil::parseFloat( string_view{ *pStored }, remembered ) == false )
             {
-                outMessage = subject + ": no number was remembered as '" + *pOppositeOf + "' (add <Remember as=\"" + *pOppositeOf + "\"> on a number watch before this step)";
+                text.appendFormat( "%#: no number was remembered as '%#' (add <Remember as=\"%#\"> on a number watch before this step)", subject, *pOppositeOf, *pOppositeOf );
+                outMessage = string( text.view() );
                 return false;
             }
             float32 tolerance = Internal::kWatchNearTolerance;
@@ -175,7 +191,8 @@ namespace sw
                 return false; // 검사가 본다 — 단계가 바뀌었다(핫 리로드)
             bOk        = MathUtil::abs( value._number + static_cast<float64>( remembered ) ) <= static_cast<float64>( tolerance );
             outMatched = bOk;
-            outMessage = subject + " opposite of " + *pOppositeOf + " ('" + *pStored + "'), got " + valueText;
+            text.appendFormat( "%# opposite of %# ('%#'), got %#", subject, *pOppositeOf, *pStored, valueText );
+            outMessage = string( text.view() );
             return true;
         }
         if ( const string* pIncreaseFrom = step.findAttribute( "increaseFrom" ); pIncreaseFrom != nullptr )
@@ -185,18 +202,22 @@ namespace sw
             const expected<bool> increaseMatch = Internal::matchesIncrease( step, value._number, pStored );
             if ( increaseMatch.has_value() == false )
             {
-                outMessage = subject + " (increaseFrom '" + *pIncreaseFrom + "'): " + AutomationStep::describeReason( increaseMatch.error() );
+                text.appendFormat( "%# (increaseFrom '%#'): %#", subject, *pIncreaseFrom, AutomationStep::describeReason( increaseMatch.error() ) );
+                outMessage = string( text.view() );
                 return false;
             }
             bOk        = *increaseMatch;
             outMatched = bOk;
-            outMessage = subject + " increase by " + *step.findAttribute( "increaseBy" ) + " from " + *pIncreaseFrom + " ('" + *pStored + "'), got " + valueText;
+            text.appendFormat( "%# increase by %# from %# ('%#'), got %#", subject, *step.findAttribute( "increaseBy" ), *pIncreaseFrom, *pStored, valueText );
+            outMessage = string( text.view() );
             return true;
         }
         if ( step.findAttribute( "is" ) != nullptr )
         {
-            bOk  = valueText == *step.findAttribute( "is" );
-            rule = "is '" + *step.findAttribute( "is" ) + "'";
+            bOk = valueText == *step.findAttribute( "is" );
+            StringBuilder<constant::buffer::kMax256> ruleText;
+            ruleText.appendFormat( "is '%#'", *step.findAttribute( "is" ) );
+            rule = string( ruleText.view() );
         }
         else
         {
@@ -209,7 +230,8 @@ namespace sw
             bOk = Internal::matchesNumber( *comparison, value._number, rule );
         }
         outMatched = bOk;
-        outMessage = subject + " " + rule + ", got " + valueText;
+        text.appendFormat( "%# %#, got %#", subject, rule, valueText );
+        outMessage = string( text.view() );
         return true;
     }
 
@@ -299,27 +321,27 @@ namespace sw
             if ( pWatch->_listFrame[index] <= since )
                 first = index;
         }
-        size_t wantIndex = 0;
-        string seen;
+        size_t                                   wantIndex = 0;
+        StringBuilder<constant::buffer::kMax256> seen;
         for ( size_t index = first; pWatch != nullptr && index < pWatch->_listValue.size(); ++index )
         {
-            seen += seen.empty() ? "" : " > ";
-            seen += pWatch->_listValue[index] + "@" + to_string( pWatch->_listFrame[index] );
+            seen.appendFormat( "%#%#@%#", seen.size() == 0 ? "" : " > ", pWatch->_listValue[index], pWatch->_listFrame[index] );
             if ( wantIndex < listWant.size() && pWatch->_listValue[index] == listWant[wantIndex] )
                 ++wantIndex;
         }
         if ( wantIndex == listWant.size() )
             return;
-        string want;
-        for ( const string& value : listWant )
-        {
-            want += want.empty() ? string( value ) : " > " + value;
-        }
-        string subject = string( watch );
+        StringBuilder<constant::buffer::kMax256> text;
+        text.append( watch );
         if ( target.empty() == false || key.empty() == false )
-            subject += "(" + string( target ) + ( target.empty() || key.empty() ? "" : ", " ) + string( key ) + ")";
-        context.recordFailure( step, subject + " never went through '" + want + "' since frame " + to_string( since ) + " (missing '" + listWant[wantIndex] +
-                                         "'), saw: " + ( seen.empty() ? string( "no value" ) : seen ) );
+            text.appendFormat( "(%#%#%#)", target, target.empty() || key.empty() ? "" : ", ", key );
+        text.append( " never went through '" );
+        for ( size_t index = 0; index < listWant.size(); ++index )
+        {
+            text.appendFormat( "%#%#", index == 0 ? "" : " > ", listWant[index] );
+        }
+        text.appendFormat( "' since frame %# (missing '%#'), saw: %#", since, listWant[wantIndex], seen.size() == 0 ? string_view{ "no value" } : seen.view() );
+        context.recordFailure( step, text.view() );
     }
 
     void AutomationEvaluator::runRecord( AutomationStepContext& context, const AutomationStep& step )
@@ -328,10 +350,14 @@ namespace sw
         string               message;
         if ( readWatchValue( context, step, value, message ) == false )
         {
-            context.recordFailure( step, "Record " + message );
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "Record %#", message );
+            context.recordFailure( step, text.view() );
             return;
         }
-        addRecordLine( "frame " + to_string( context.getFrameIndex() ) + " " + message + " = " + AutomationStepArgsUtil::makeValueText( value ) );
+        StringBuilder<constant::buffer::kMax256> line;
+        line.appendFormat( "frame %# %# = %#", context.getFrameIndex(), message, AutomationStepArgsUtil::makeValueText( value ) );
+        addRecordLine( string( line.view() ) );
     }
 
     void AutomationEvaluator::runStore( AutomationStepContext& context, const AutomationStep& step )
@@ -340,7 +366,9 @@ namespace sw
         string               message;
         if ( readWatchValue( context, step, value, message ) == false )
         {
-            context.recordFailure( step, "Store " + message );
+            StringBuilder<constant::buffer::kMax256> failure;
+            failure.appendFormat( "Store %#", message );
+            context.recordFailure( step, failure.view() );
             return;
         }
         const string name = step.readValidatedProperties<AutomationStoreParams>()._as;
@@ -351,9 +379,13 @@ namespace sw
 
     void AutomationEvaluator::runExpectLog( AutomationStepContext& context, const AutomationStep& step )
     {
-        const AutomationExpectLogParams params     = step.readValidatedProperties<AutomationExpectLogParams>();
-        const string                    target     = params._contains.empty() ? params._id : string( params._id + "' containing '" + params._contains );
-        const uint32                    matchCount = _logCapture.countLinesWithID( params._id, params._contains, params._since );
+        const AutomationExpectLogParams          params = step.readValidatedProperties<AutomationExpectLogParams>();
+        StringBuilder<constant::buffer::kMax256> targetBuilder;
+        targetBuilder.append( string_view{ params._id } );
+        if ( params._contains.empty() == false )
+            targetBuilder.appendFormat( "' containing '%#", params._contains );
+        const string target     = string( targetBuilder.view() );
+        const uint32 matchCount = _logCapture.countLinesWithID( params._id, params._contains, params._since );
         if ( params._count != kAutomationNoCount )
         {
             if ( matchCount != params._count )
@@ -393,7 +425,9 @@ namespace sw
         const optional<string_view> backendTag = AutomationGoldenUtil::findBackendTag( static_cast<uint32>( backendValue ) );
         if ( backendTag.has_value() == false )
         {
-            context.recordFailure( step, "the RHI backend " + AutomationStepArgsUtil::formatNumber( backendValue ) + " is not in the cook table - no golden name for it" );
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "the RHI backend %# is not in the cook table - no golden name for it", AutomationStepArgsUtil::formatNumber( backendValue ) );
+            context.recordFailure( step, text.view() );
             return;
         }
         _listDeferredImage.push_back( DeferredImageCheck{ &step, string( *backendTag ) } );
@@ -409,13 +443,18 @@ namespace sw
         const AutomationExpectImagesDifferParams params = step.readValidatedProperties<AutomationExpectImagesDifferParams>();
         if ( _goldenPolicy.has_value() == false )
         {
-            context.recordFailure( step, "could not compare the images: " + AutomationStep::describeReason( _goldenPolicy.error() ) );
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "could not compare the images: %#", AutomationStep::describeReason( _goldenPolicy.error() ) );
+            context.recordFailure( step, text.view() );
             return;
         }
         AutomationImageRegion region{};
         if ( params._region.empty() == false && AutomationImage::tryParseRegion( params._region, region ) == false )
         {
-            context.recordFailure( step, "could not compare the images: the region is not x0,y0,x1,y1 - " + params._region ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "could not compare the images: the region is not x0,y0,x1,y1 - %#", params._region );
+            context.recordFailure( step, text.view() );
             return;
         }
         const auto loadReduced = [&]( const string& file )
@@ -428,18 +467,30 @@ namespace sw
         { return AutomationImage::compare( *reducedFirst, second, _goldenPolicy->_measure ); } );
         if ( compared.has_value() == false )
         {
-            context.recordFailure( step, "could not compare the images: " + AutomationStep::describeReason( compared.error() ) );
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "could not compare the images: %#", AutomationStep::describeReason( compared.error() ) );
+            context.recordFailure( step, text.view() );
             return;
         }
-        const AutomationImageDifference& difference = *compared;
-        string                           line       = params._first + " vs " + params._second + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (at least " +
-                      AutomationStepArgsUtil::formatNumber( static_cast<float64>( params._minDiffering ) * 100.0 ) + "%)";
+        const AutomationImageDifference&         difference = *compared;
+        StringBuilder<constant::buffer::kMax256> line;
+        line.appendFormat( "%# vs %#: %#%% differing (at least %#%%)", params._first, params._second, AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ),
+                           AutomationStepArgsUtil::formatNumber( static_cast<float64>( params._minDiffering ) * 100.0 ) );
         SW_LOG_INFO_ID( "Automation.ImagesDiffer", "[Scenario] image %#", line.c_str() );
-        _listMetricLine.push_back( line );
+        _listMetricLine.emplace_back( line.view() );
         if ( difference._differingFraction < static_cast<float64>( params._minDiffering ) )
-            context.recordFailure( step, "the field did not change the picture - " + line );
+        {
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "the field did not change the picture - %#", line.view() );
+            context.recordFailure( step, text.view() );
+        }
         if ( difference._differingFraction > static_cast<float64>( params._maxDiffering ) )
-            context.recordFailure( step, "the field changed the picture more than allowed (at most " + AutomationStepArgsUtil::formatNumber( static_cast<float64>( params._maxDiffering ) * 100.0 ) + "%) - " + line );
+        {
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "the field changed the picture more than allowed (at most %#%%) - %#", AutomationStepArgsUtil::formatNumber( static_cast<float64>( params._maxDiffering ) * 100.0 ),
+                               line.view() );
+            context.recordFailure( step, text.view() );
+        }
     }
 
     void AutomationEvaluator::deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue )
@@ -464,14 +515,17 @@ namespace sw
 
         for ( const DeferredAtMostCheck& check : _listDeferredAtMost )
         {
-            float64                              value = 0.0;
-            const AutomationDeferredValue::State state = check._pValue->findValue( value );
+            float64                                  value = 0.0;
+            const AutomationDeferredValue::State     state = check._pValue->findValue( value );
+            StringBuilder<constant::buffer::kMax256> text;
             if ( state == AutomationDeferredValue::State::Pending )
-                context.recordFailure( *check._pStep, check._description + ": the value was never measured (background work did not finish)" );
+                text.appendFormat( "%#: the value was never measured (background work did not finish)", check._description );
             else if ( state == AutomationDeferredValue::State::Missing )
-                context.recordFailure( *check._pStep, check._description + ": the value could not be measured" );
+                text.appendFormat( "%#: the value could not be measured", check._description );
             else if ( value > check._limit )
-                context.recordFailure( *check._pStep, check._description + ", got " + AutomationStepArgsUtil::formatNumber( value ) );
+                text.appendFormat( "%#, got %#", check._description, AutomationStepArgsUtil::formatNumber( value ) );
+            if ( text.size() != 0 )
+                context.recordFailure( *check._pStep, text.view() );
         }
         _listDeferredAtMost.clear();
     }
@@ -486,12 +540,16 @@ namespace sw
         }
         if ( _goldenPolicy.has_value() == false )
         {
-            context.recordFailure( step, "could not judge the image: " + AutomationStep::describeReason( _goldenPolicy.error() ) );
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "could not judge the image: %#", AutomationStep::describeReason( _goldenPolicy.error() ) );
+            context.recordFailure( step, text.view() );
             return;
         }
         if ( _goldenWriteMode.has_value() == false )
         {
-            context.recordFailure( step, "could not judge the image: " + AutomationStep::describeReason( _goldenWriteMode.error() ) );
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "could not judge the image: %#", AutomationStep::describeReason( _goldenWriteMode.error() ) );
+            context.recordFailure( step, text.view() );
             return;
         }
         const AutomationGoldenPolicy&                  policy = *_goldenPolicy;
@@ -503,7 +561,9 @@ namespace sw
         { return AutomationImage::reduce( image, args._region, AutomationImage::kGoldenMaxWidth ); } );
         if ( loaded.has_value() == false )
         {
-            context.recordFailure( step, "could not read the image: " + AutomationStep::describeReason( loaded.error() ) );
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "could not read the image: %#", AutomationStep::describeReason( loaded.error() ) );
+            context.recordFailure( step, text.view() );
             return;
         }
         const AutomationImage& reduced  = *loaded;
@@ -517,7 +577,9 @@ namespace sw
             _listReferencedGolden.push_back( ReferencedGolden{ goldenID, args._region } );
         else if ( owner->_region._x0 != args._region._x0 || owner->_region._y0 != args._region._y0 || owner->_region._x1 != args._region._x1 || owner->_region._y1 != args._region._y1 )
         {
-            context.recordFailure( step, "golden " + goldenID + " is the region of an earlier assertion - a second assertion on it must use the same region" );
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "golden %# is the region of an earlier assertion - a second assertion on it must use the same region", goldenID );
+            context.recordFailure( step, text.view() );
             return;
         }
         const GoldenWriteMode                     recording = bOwnsGolden ? *_goldenWriteMode : GoldenWriteMode::Off;
@@ -529,17 +591,21 @@ namespace sw
         const expected<AutomationImageDifference> compared =
             golden.and_then( [&]( const AutomationImage& goldenImage )
         { return AutomationImage::compare( reduced, goldenImage, policy._measure ); } );
-        const bool                      bCompared  = compared.has_value();
-        const AutomationImageDifference difference = bCompared ? *compared : AutomationImageDifference{};
-        const GoldenResult              evaluation = bCompared ? AutomationGoldenUtil::evaluate( difference, limits, policy._nearLimitRatio ) : GoldenResult::Fail;
-        string                          line;
+        const bool                               bCompared  = compared.has_value();
+        const AutomationImageDifference          difference = bCompared ? *compared : AutomationImageDifference{};
+        const GoldenResult                       evaluation = bCompared ? AutomationGoldenUtil::evaluate( difference, limits, policy._nearLimitRatio ) : GoldenResult::Fail;
+        StringBuilder<constant::buffer::kMax512> lineBuilder;
         if ( bCompared )
         {
             static constexpr const utf8* kArrResultName[] = { "pass", "pass near limit", "fail" };
-            line                                          = file + " vs " + goldenID + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (at most " +
-                   AutomationStepArgsUtil::formatNumber( limits._maxDifferingFraction * 100.0 ) + "%), mean distance " + AutomationStepArgsUtil::formatNumber( difference._meanDistance ) + " (at most " +
-                   AutomationStepArgsUtil::formatNumber( limits._maxMeanDistance ) + "), largest deep region " + to_string( difference._largestDeepRegionPixels ) + " px (at most " +
-                   to_string( limits._maxDeepRegionPixels ) + ") - " + kArrResultName[static_cast<uint32>( evaluation )];
+            lineBuilder.appendFormat( "%# vs %#: %#%% differing (at most %#%%), mean distance %# (at most %#), largest deep region %# px (at most %#) - %#", file, goldenID,
+                                      AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ), AutomationStepArgsUtil::formatNumber( limits._maxDifferingFraction * 100.0 ),
+                                      AutomationStepArgsUtil::formatNumber( difference._meanDistance ), AutomationStepArgsUtil::formatNumber( limits._maxMeanDistance ),
+                                      difference._largestDeepRegionPixels, limits._maxDeepRegionPixels, kArrResultName[static_cast<uint32>( evaluation )] );
+        }
+        const string line = string( lineBuilder.view() );
+        if ( bCompared )
+        {
             SW_LOG_INFO_ID( "Automation.Image", "[Scenario] image %#", line.c_str() );
             _listMetricLine.push_back( line );
             // 모두 쓰는 기록 실행은 앞 골든과의 차이라 같은 골든의 실행 사이 흔들림이 아니다 — 있는 골든을 덮지 않는 실행만 모은다.
@@ -569,12 +635,16 @@ namespace sw
             {
                 // 처음 쓴 골든은 아직 사람이 보지 않았다 — 지고 보고의 `updatedGoldens` 에 남아, 그림을 보고 커밋한 뒤 기록 없이 다시 돌려 통과해야 한다.
                 writeGolden( context, step, reduced, goldenID, backendTag, AutomationGoldenUtil::describeWriteReason( bHasGolden, bCompared, evaluation ), nullptr, limits );
-                addFailure( step, "no golden " + goldenID + " yet - recorded it now; review the image, commit it and run again without recording", AutomationFailureKind::MissingBaseline );
+                StringBuilder<constant::buffer::kMax256> text;
+                text.appendFormat( "no golden %# yet - recorded it now; review the image, commit it and run again without recording", goldenID );
+                addFailure( step, text.view(), AutomationFailureKind::MissingBaseline );
                 return;
             }
             case GoldenAction::FailMissing:
             {
-                addFailure( step, "no golden " + goldenID + " yet - run with -scenario-record-missing-golden and review the image", AutomationFailureKind::MissingBaseline );
+                StringBuilder<constant::buffer::kMax256> text;
+                text.appendFormat( "no golden %# yet - run with -scenario-record-missing-golden and review the image", goldenID );
+                addFailure( step, text.view(), AutomationFailureKind::MissingBaseline );
                 return;
             }
             case GoldenAction::FailUnreadable:
@@ -584,7 +654,9 @@ namespace sw
             }
             case GoldenAction::Fail:
             {
-                addFailure( step, "differs from its golden: " + line, AutomationFailureKind::GoldenMismatch );
+                StringBuilder<constant::buffer::kMax256> text;
+                text.appendFormat( "differs from its golden: %#", line );
+                addFailure( step, text.view(), AutomationFailureKind::GoldenMismatch );
                 return;
             }
         }
@@ -599,7 +671,9 @@ namespace sw
             const expected<string> commit = AutomationGoldenUtil::findRecordingCommit();
             if ( commit.has_value() == false )
             {
-                context.recordFailure( step, "could not write the golden " + goldenID + ": " + AutomationStep::describeReason( commit.error() ) );
+                StringBuilder<constant::buffer::kMax256> text;
+                text.appendFormat( "could not write the golden %#: %#", goldenID, AutomationStep::describeReason( commit.error() ) );
+                context.recordFailure( step, text.view() );
                 return;
             }
             _recordingCommit = *commit;
@@ -623,7 +697,9 @@ namespace sw
                               FileUtil::writeFile( imagePath->str(), listEncoded.data(), listEncoded.size() ) && FileUtil::writeTextFile( metaPath->str(), AutomationGoldenUtil::makeMetaText( meta ) );
         if ( bWritten == false )
         {
-            context.recordFailure( step, "could not write the golden " + goldenID );
+            StringBuilder<constant::buffer::kMax256> text;
+            text.appendFormat( "could not write the golden %#", goldenID );
+            context.recordFailure( step, text.view() );
             return;
         }
         SW_LOG_INFO_ID( "Automation.Golden", "[Scenario] golden written (%#) %#", pReason, goldenID.c_str() );
@@ -637,14 +713,17 @@ namespace sw
         {
             for ( const string& key : engine::getSubsystem<LocalizationManager>().getMissingKeys() )
             {
-                const string line         = "Missing localized text for key '" + key + "'";
-                const bool   bAlreadySeen = _logCapture.containsLine( line ); // 시나리오 구간에 남은 경고 줄은 위에서 이미 셌다
+                StringBuilder<constant::buffer::kMax256> line;
+                line.appendFormat( "Missing localized text for key '%#'", key );
+                const bool bAlreadySeen = _logCapture.containsLine( line.view() ); // 시나리오 구간에 남은 경고 줄은 위에서 이미 셌다
                 // 시나리오 앞에 남은 같은 사건(`LocalizationManager` 의 `Localization.MissingKey` 줄)이다 — 같은 id 로 판정한다
-                const AutomationLogResult result = _pLogPolicy->classify( LogLevel::Warning, "Localization.MissingKey", line );
+                const AutomationLogResult result = _pLogPolicy->classify( LogLevel::Warning, "Localization.MissingKey", line.view() );
                 if ( bAlreadySeen || result == AutomationLogResult::Declared || result == AutomationLogResult::Allowed )
                     continue;
                 ++evaluation._notAllowedCount;
-                evaluation._listUnhandled.push_back( "[Warning] [LocalizationManager] (id=Localization.MissingKey) " + line + " (before the scenario started)" );
+                StringBuilder<constant::buffer::kMax256> unhandled;
+                unhandled.appendFormat( "[Warning] [LocalizationManager] (id=Localization.MissingKey) %# (before the scenario started)", line.view() );
+                evaluation._listUnhandled.emplace_back( unhandled.view() );
             }
         }
         _listAllowedLogID = std::move( evaluation._listAllowedID );
@@ -656,18 +735,25 @@ namespace sw
             return nullopt;
         for ( const string& line : _listUnhandledLog )
         {
-            _listFailure.push_back( "unhandled log: " + line );
+            StringBuilder<constant::buffer::kMax256> failure;
+            failure.appendFormat( "unhandled log: %#", line );
+            _listFailure.emplace_back( failure.view() );
         }
-        return to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( evaluation._missingIDCount ) +
-               " without a log id - fix the cause, declare the line with <ExpectLog>, or allow its log id in this scenario with <AllowLog id=\"...\" reason=\"...\"/>"
-               " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
+        StringBuilder<constant::buffer::kMax512> summary;
+        summary.appendFormat( "%# unhandled Warning/Error log line(s), %#"
+                              " without a log id - fix the cause, declare the line with <ExpectLog>, or allow its log id in this scenario with <AllowLog id=\"...\" reason=\"...\"/>"
+                              " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)",
+                              static_cast<uint32>( _listUnhandledLog.size() ), evaluation._missingIDCount );
+        return string( summary.view() );
     }
 
     void AutomationEvaluator::addFailure( const AutomationStep& step, string_view message, AutomationFailureKind kind )
     {
         if ( _listFailure.empty() )
             _firstFailureKind = kind;
-        string line = step.describe() + ": " + string( message );
+        StringBuilder<constant::buffer::kMax256> lineBuilder;
+        lineBuilder.appendFormat( "%#: %#", step.describe(), message );
+        string line = string( lineBuilder.view() );
         SW_LOG_WARNING_ID( "Automation.EvaluationWarning", "[Scenario] %#", line.c_str() );
         _listFailure.push_back( std::move( line ) );
     }
@@ -682,8 +768,10 @@ namespace sw
         _listNearLimitGolden.clear();
         _listGoldenSample.clear();
         _recordingCommit.clear();
-        _goldenPolicy    = AutomationGoldenUtil::loadPolicy(); // 이미지 단언이 없는 시나리오는 오류를 쓰지 않는다 — 단언이 그 이유로 진다
-        _goldenFolderID  = FileUtil::getDirectoryPart( scenario.getSourcePath() ) + "/" + kAutomationGoldenFolder;
+        _goldenPolicy = AutomationGoldenUtil::loadPolicy(); // 이미지 단언이 없는 시나리오는 오류를 쓰지 않는다 — 단언이 그 이유로 진다
+        StringBuilder<constant::buffer::kMax1024> goldenFolder;
+        goldenFolder.appendFormat( "%#/%#", FileUtil::getDirectoryPart( scenario.getSourcePath() ), kAutomationGoldenFolder );
+        _goldenFolderID  = string( goldenFolder.view() );
         _goldenPrefix    = scenario.getName();
         _goldenWriteMode = AutomationGoldenUtil::readWriteMode(); // 두 깃발을 함께 줬으면 이미지 단언마다 그 이유로 진다(정책 파일과 같은 길)
         _logCapture.start();

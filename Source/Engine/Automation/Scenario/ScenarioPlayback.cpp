@@ -52,8 +52,10 @@ namespace sw
                 else
                     return false;
             }
-            const bool bStarted = ScenarioPlayback::play( AssetID{ listArgument[0] }, options );
-            outReply            = bStarted ? "playing " + listArgument[0] : "could not play " + listArgument[0] + " (see the log)";
+            const bool                               bStarted = ScenarioPlayback::play( AssetID{ listArgument[0] }, options );
+            StringBuilder<constant::buffer::kMax256> reply;
+            reply.appendFormat( bStarted ? "playing %#" : "could not play %# (see the log)", listArgument[0] );
+            outReply.assign( reply.view() );
             return true;
         }
 

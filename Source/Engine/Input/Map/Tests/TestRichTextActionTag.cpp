@@ -29,7 +29,9 @@ SW_TEST_CASE( RichTextTest, ActionTagUsesCurrentInputGlyph )
     style = sw::InputGlyphStyle::GamepadXbox;
     SW_EXPECT_EQUAL( 1u, sw::RichTextParser::expandActionTags( "[action=Interact] [b]open[/b] [[x]", resolver, text ) );
     SW_EXPECT_TRUE( text.find( "[ E ]" ) == sw::string::npos );
-    SW_EXPECT_EQUAL( sw::InputGlyphResolver::findActionGlyph( inputMap, "Interact", style ) + " [b]open[/b] [[x]", text );
+    sw::StringBuilder<sw::constant::buffer::kMax128> expected;
+    expected.appendFormat( "%# [b]open[/b] [[x]", sw::InputGlyphResolver::findActionGlyph( inputMap, "Interact", style ) );
+    SW_EXPECT_EQUAL( sw::string( expected.view() ), text );
 
     SW_EXPECT_EQUAL( 0u, sw::RichTextParser::expandActionTags( "no tags [[action=Interact]", resolver, text ) );
     SW_EXPECT_EQUAL( sw::string( "no tags [[action=Interact]" ), text );

@@ -17,6 +17,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -135,7 +137,9 @@ namespace sw::editor
                 {
                     if ( VectorUtil::contains( arrKnown, key ) || VectorUtil::contains( kArrCommonKey, key ) )
                         continue;
-                    pOutListIgnored->push_back( string( context ) + "." + key + " (unknown key)" );
+                    StringBuilder<constant::buffer::kMax256> ignoredBuilder;
+                    ignoredBuilder.appendFormat( "%#.%# (unknown key)", context, key );
+                    pOutListIgnored->push_back( string( ignoredBuilder.view() ) );
                 }
             }
 
@@ -329,7 +333,9 @@ namespace sw::editor
             /** @brief 벡터를 `x,y,z` 글로 만듭니다(성분마다 `makeNumberText`). */
             static string makeVectorText( const float3& value )
             {
-                return makeNumberText( value._x ) + "," + makeNumberText( value._y ) + "," + makeNumberText( value._z );
+                StringBuilder<constant::buffer::kMax128> vectorBuilder;
+                vectorBuilder.appendFormat( "%#,%#,%#", makeNumberText( value._x ), makeNumberText( value._y ), makeNumberText( value._z ) );
+                return string( vectorBuilder.view() );
             }
 
             static string_view makeBoolName( bool bValue ) { return bValue ? "true" : "false"; }
@@ -363,7 +369,9 @@ namespace sw::editor
                     }
                     if ( VectorUtil::contains( kArrHumanBone, humanBone ) == false )
                         return unexpected( makeError( ErrorKind::InvalidArgument, "unknown human bone", "VRM 0.x humanoid", humanBone ) );
-                    const expected<string> node = resolveNode( names, entry.get( "node" ), "VRM 0.x humanoid bone '" + humanBone + "'" );
+                    fixed_string<constant::buffer::kMax256> boneContext;
+                    formatstring( boneContext.data(), boneContext.capacity(), "VRM 0.x humanoid bone '%#'", humanBone );
+                    const expected<string> node = resolveNode( names, entry.get( "node" ), boneContext.view() );
                     if ( node.has_value() == false )
                         return unexpected( node.error() );
                     VrmHumanBone bone;
@@ -400,10 +408,15 @@ namespace sw::editor
                             }
                         }
                         if ( bKnown == false )
-                            return unexpected( makeError( ErrorKind::InvalidArgument, "unknown presetName", "VRM 0.x blend shape group '" + expression._name + "'", presetName ) );
+                        {
+                            fixed_string<constant::buffer::kMax256> unknownContext;
+                            formatstring( unknownContext.data(), unknownContext.capacity(), "VRM 0.x blend shape group '%#'", expression._name );
+                            return unexpected( makeError( ErrorKind::InvalidArgument, "unknown presetName", unknownContext.view(), presetName ) );
+                        }
                     }
-                    const string         groupContext = "VRM 0.x blend shape group '" + expression._name + "'";
-                    const expected<void> binary       = readFlag( group, "isBinary", groupContext, expression._bBinary );
+                    fixed_string<constant::buffer::kMax256> groupContext;
+                    formatstring( groupContext.data(), groupContext.capacity(), "VRM 0.x blend shape group '%#'", expression._name );
+                    const expected<void> binary = readFlag( group, "isBinary", groupContext.view(), expression._bBinary );
                     if ( binary.has_value() == false )
                         return binary;
                     const JSONValue listBind = group.get( "binds" );
@@ -509,7 +522,9 @@ namespace sw::editor
                         return unexpected( makeError( ErrorKind::InvalidArgument, "the center is not a node number", context, "center", center.describe() ) );
                     if ( bHasCenter )
                     {
-                        const expected<string> centerNode = resolveNode( names, center, context + " center" );
+                        fixed_string<constant::buffer::kMax256> centerContext;
+                        formatstring( centerContext.data(), centerContext.capacity(), "%# center", context );
+                        const expected<string> centerNode = resolveNode( names, center, centerContext );
                         if ( centerNode.has_value() == false )
                             return unexpected( centerNode.error() );
                         centerBone = *centerNode;
@@ -528,7 +543,9 @@ namespace sw::editor
                     const JSONValue listRoot = group.get( "bones" );
                     for ( size_t rootIndex = 0; rootIndex < listRoot.size(); ++rootIndex )
                     {
-                        const expected<uint32> rootNode = readIndex( listRoot.at( rootIndex ), names._listNodeName.size(), context + " bone", "node", "is not a node of the model" );
+                        fixed_string<constant::buffer::kMax256> boneContext;
+                        formatstring( boneContext.data(), boneContext.capacity(), "%# bone", context );
+                        const expected<uint32> rootNode = readIndex( listRoot.at( rootIndex ), names._listNodeName.size(), boneContext, "node", "is not a node of the model" );
                         if ( rootNode.has_value() == false )
                             return unexpected( rootNode.error() );
                         VrmSpring spring;
@@ -609,8 +626,11 @@ namespace sw::editor
             [[nodiscard]] static expected<void> readVrm1Expression( const JSONValue& value, const string& name, bool bPreset, const VrmGltfNames& names, VrmAvatarDef& inoutDef,
                                                                     vector<string>* pOutListIgnored )
             {
-                collectUnknownKeys( value, kArrVrm1ExpressionKey, "VRMC_vrm.expressions." + name, pOutListIgnored );
-                const string  context = "VRM 1.0 expression '" + name + "'";
+                fixed_string<constant::buffer::kMax256> expressionKey;
+                formatstring( expressionKey.data(), expressionKey.capacity(), "VRMC_vrm.expressions.%#", name );
+                collectUnknownKeys( value, kArrVrm1ExpressionKey, expressionKey, pOutListIgnored );
+                fixed_string<constant::buffer::kMax256> context;
+                formatstring( context.data(), context.capacity(), "VRM 1.0 expression '%#'", name );
                 VrmExpression expression;
                 expression._name            = name;
                 expression._bPreset         = bPreset ? SW_TRUE : SW_FALSE;
@@ -625,8 +645,10 @@ namespace sw::editor
                 const JSONValue listBind = value.get( "morphTargetBinds" );
                 for ( size_t index = 0; index < listBind.size(); ++index )
                 {
-                    const JSONValue bindValue = listBind.at( index );
-                    collectUnknownKeys( bindValue, kArrVrm1BindKey, "VRMC_vrm.expressions." + name + ".morphTargetBinds", pOutListIgnored );
+                    const JSONValue                         bindValue = listBind.at( index );
+                    fixed_string<constant::buffer::kMax256> bindContext;
+                    formatstring( bindContext.data(), bindContext.capacity(), "VRMC_vrm.expressions.%#.morphTargetBinds", name );
+                    collectUnknownKeys( bindValue, kArrVrm1BindKey, bindContext, pOutListIgnored );
                     const expected<uint32> node = readIndex( bindValue.get( "node" ), names._listNodeMesh.size(), context, "node", "is not a node of the model" );
                     if ( node.has_value() == false )
                         return unexpected( node.error() );
@@ -723,8 +745,10 @@ namespace sw::editor
                     const JSONValue listColliderRef = groupValue.get( "colliders" );
                     for ( size_t refIndex = 0; refIndex < listColliderRef.size(); ++refIndex )
                     {
+                        fixed_string<constant::buffer::kMax256> groupContext;
+                        formatstring( groupContext.data(), groupContext.capacity(), "VRM 1.0 collider group '%#'", group._name );
                         const expected<uint32> ref =
-                            readIndex( listColliderRef.at( refIndex ), inoutDef._listCollider.size(), "VRM 1.0 collider group '" + group._name + "'", "collider", "the collider does not exist" );
+                            readIndex( listColliderRef.at( refIndex ), inoutDef._listCollider.size(), groupContext, "collider", "the collider does not exist" );
                         if ( ref.has_value() == false )
                             return unexpected( ref.error() );
                         group._listCollider.push_back( *ref );
@@ -743,12 +767,15 @@ namespace sw::editor
                     const JSONValue springValue = listSpring.at( index );
                     collectUnknownKeys( springValue, kArrVrm1SpringKey, "VRMC_springBone.springs", pOutListIgnored );
                     VrmSpring spring;
-                    spring._name            = springValue.get( "name" ).asString();
-                    const string    context = "VRM 1.0 spring '" + spring._name + "'";
-                    const JSONValue center  = springValue.get( "center" );
+                    spring._name = springValue.get( "name" ).asString();
+                    fixed_string<constant::buffer::kMax256> context;
+                    formatstring( context.data(), context.capacity(), "VRM 1.0 spring '%#'", spring._name );
+                    const JSONValue center = springValue.get( "center" );
                     if ( center.isValid() )
                     {
-                        const expected<string> centerNode = resolveNode( names, center, context + " center" );
+                        fixed_string<constant::buffer::kMax256> centerContext;
+                        formatstring( centerContext.data(), centerContext.capacity(), "%# center", context );
+                        const expected<string> centerNode = resolveNode( names, center, centerContext );
                         if ( centerNode.has_value() == false )
                             return unexpected( centerNode.error() );
                         spring._centerBone = *centerNode;
@@ -766,7 +793,9 @@ namespace sw::editor
                     {
                         const JSONValue jointValue = listJoint.at( jointIndex );
                         collectUnknownKeys( jointValue, kArrVrm1JointKey, "VRMC_springBone.springs.joints", pOutListIgnored );
-                        const expected<string> node = resolveNode( names, jointValue.get( "node" ), context + " joint" );
+                        fixed_string<constant::buffer::kMax256> jointContext;
+                        formatstring( jointContext.data(), jointContext.capacity(), "%# joint", context );
+                        const expected<string> node = resolveNode( names, jointValue.get( "node" ), jointContext );
                         if ( node.has_value() == false )
                             return unexpected( node.error() );
                         VrmSpringJoint joint;
@@ -931,9 +960,13 @@ namespace sw::editor
         {
             if ( VectorUtil::contains( Internal::kArrHumanBone, humanBone ) == false )
                 return unexpected( Internal::makeError( ErrorKind::InvalidArgument, "unknown human bone", "VRM 1.0 humanoid", humanBone ) );
-            const JSONValue entry = humanBones.get( humanBone );
-            Internal::collectUnknownKeys( entry, Internal::kArrVrm1NodeKey, "VRMC_vrm.humanoid.humanBones." + humanBone, pOutListIgnored );
-            const expected<string> node = Internal::resolveNode( names, entry.get( "node" ), "VRM 1.0 humanoid bone '" + humanBone + "'" );
+            const JSONValue                         entry = humanBones.get( humanBone );
+            fixed_string<constant::buffer::kMax256> boneKey;
+            formatstring( boneKey.data(), boneKey.capacity(), "VRMC_vrm.humanoid.humanBones.%#", humanBone );
+            Internal::collectUnknownKeys( entry, Internal::kArrVrm1NodeKey, boneKey, pOutListIgnored );
+            fixed_string<constant::buffer::kMax256> boneContext;
+            formatstring( boneContext.data(), boneContext.capacity(), "VRM 1.0 humanoid bone '%#'", humanBone );
+            const expected<string> node = Internal::resolveNode( names, entry.get( "node" ), boneContext );
             if ( node.has_value() == false )
                 return unexpected( node.error() );
             VrmHumanBone bone;

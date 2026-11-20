@@ -2,6 +2,8 @@
 #include "pch.h"
 
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/AssetReload/ReloadSource.h"
@@ -60,7 +62,9 @@ SW_TEST_CASE( ReloadTrackerTest, CapacityEvictsOldest )
     ReloadTracker tracker;
     for ( uint32 index = 0; index <= ReloadTracker::kMaxPathCount; ++index )
     {
-        tracker.record( ReloadSource::Asset, "game/" + to_string( index ), ReloadResult::Reloaded );
+        fixed_string<constant::buffer::kMax32> path;
+        formatstring( path.data(), path.capacity(), "game/%#", index );
+        tracker.record( ReloadSource::Asset, path.view(), ReloadResult::Reloaded );
     }
     const vector<ReloadTrackerEntry> listEntry = tracker.copyEntries();
     SW_EXPECT_EQUAL( size_t( ReloadTracker::kMaxPathCount ), listEntry.size() );

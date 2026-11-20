@@ -41,19 +41,26 @@ namespace
                 SceneDocument::StreamingCell cell{};
                 cell._cell = StreamingCellCoord{ x, 0 };
                 SceneDocument::SceneObjectNode node{};
-                node._fileID      = static_cast<uint64>( x + 1 );
-                node._name        = "Crate" + sw::to_string( static_cast<int64>( x ) );
-                node._embeddedXML = "<GameObject _schemaVersion=\"0\" _name=\"" + node._name + "\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"" +
-                                    sw::to_string( static_cast<int64>( x * 10 + 5 ) ) + ",0,5\" /></_listComponent></GameObject>";
+                node._fileID = static_cast<uint64>( x + 1 );
+                StringBuilder<constant::buffer::kMax512> text;
+                text.appendFormat( "Crate%#", static_cast<int64>( x ) );
+                node._name = string( text.view() );
+                text.clear();
+                text.appendFormat( "<GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"%#,0,5\" /></_listComponent></GameObject>", node._name,
+                                   static_cast<int64>( x * 10 + 5 ) );
+                node._embeddedXML = string( text.view() );
                 cell._listSceneObjectNode.push_back( std::move( node ) );
                 if ( x == 0 || x == 2 )
                 {
                     SceneDocument::SceneObjectNode proxy{};
-                    proxy._fileID      = kProxyFileIDBase + static_cast<uint64>( x );
-                    proxy._name        = "HLOD_" + sw::to_string( static_cast<int64>( x ) ) + "_0";
-                    proxy._embeddedXML = "<GameObject _schemaVersion=\"0\" _name=\"" + proxy._name +
-                                         "\" _bActive=\"true\" _bAlwaysLoaded=\"true\"><_listComponent><SceneComponent /></_listComponent></GameObject>";
-                    cell._hlodFileID = proxy._fileID;
+                    proxy._fileID = kProxyFileIDBase + static_cast<uint64>( x );
+                    text.clear();
+                    text.appendFormat( "HLOD_%#_0", static_cast<int64>( x ) );
+                    proxy._name = string( text.view() );
+                    text.clear();
+                    text.appendFormat( "<GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\" _bAlwaysLoaded=\"true\"><_listComponent><SceneComponent /></_listComponent></GameObject>", proxy._name );
+                    proxy._embeddedXML = string( text.view() );
+                    cell._hlodFileID   = proxy._fileID;
                     doc._listSceneObjectNode.push_back( std::move( proxy ) );
                 }
                 doc._listStreamingCell.push_back( std::move( cell ) );

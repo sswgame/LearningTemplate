@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
@@ -24,7 +25,9 @@ SW_TEST_CASE( EditorSourceControlLocksTest, FindsTheLockOfARepositoryFile )
     const SourceControlLock* pLock      = sourceControl.findLock( lockedPath );
     SW_REQUIRE_NOT_NULL( pLock );
     SW_EXPECT_EQUAL( string( "alice" ), pLock->_owner );
-    SW_EXPECT_EQUAL( "Locked by alice (" + string{ sourceControl.getProvider().getName() } + ")", sourceControl.describeStatus( lockedPath, false ) );
+    StringBuilder<constant::buffer::kMax128> expectedStatus;
+    expectedStatus.appendFormat( "Locked by alice (%#)", sourceControl.getProvider().getName() );
+    SW_EXPECT_EQUAL( string( expectedStatus.view() ), sourceControl.describeStatus( lockedPath, false ) );
 
     const string otherPath = FileUtil::joinPath( root, "Content/other.prefab.xml" );
     SW_EXPECT_NULL( sourceControl.findLock( otherPath ) );

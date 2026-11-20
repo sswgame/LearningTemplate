@@ -20,11 +20,19 @@ namespace
 
 SW_TEST_CASE( ShaderBinaryLocationTest, BinFolderSitsUnderTheFirstShadersComponent )
 {
-    const string rhi = string( ShaderCooker::getSubfolderForFormat( ShaderTargetFormat::DXIL_D3D12 ) );
-    SW_EXPECT_EQUAL( makeDX12BinDirectory( "engine/shaders/forward_lit.hlsl" ), string( "engine/shaders/bin/" + rhi ) );
-    SW_EXPECT_EQUAL( makeDX12BinDirectory( "engine/shaders/sub/x.hlsl" ), string( "engine/shaders/bin/" + rhi ) );
-    SW_EXPECT_EQUAL( makeDX12BinDirectory( "game/shooter3d/shaders/x.hlsl" ), string( "game/shooter3d/shaders/bin/" + rhi ) );
-    SW_EXPECT_EQUAL( makeDX12BinDirectory( "mounted/myshaders/shaders/x.hlsl" ), string( "mounted/myshaders/shaders/bin/" + rhi ) ); // `myshaders` 는 shaders 칸이 아니다
+    const string                             rhi = string( ShaderCooker::getSubfolderForFormat( ShaderTargetFormat::DXIL_D3D12 ) );
+    StringBuilder<constant::buffer::kMax128> expected;
+    expected.appendFormat( "engine/shaders/bin/%#", rhi );
+    SW_EXPECT_EQUAL( makeDX12BinDirectory( "engine/shaders/forward_lit.hlsl" ), string( expected.view() ) );
+    expected.clear();
+    expected.appendFormat( "engine/shaders/bin/%#", rhi );
+    SW_EXPECT_EQUAL( makeDX12BinDirectory( "engine/shaders/sub/x.hlsl" ), string( expected.view() ) );
+    expected.clear();
+    expected.appendFormat( "game/shooter3d/shaders/bin/%#", rhi );
+    SW_EXPECT_EQUAL( makeDX12BinDirectory( "game/shooter3d/shaders/x.hlsl" ), string( expected.view() ) );
+    expected.clear();
+    expected.appendFormat( "mounted/myshaders/shaders/bin/%#", rhi );
+    SW_EXPECT_EQUAL( makeDX12BinDirectory( "mounted/myshaders/shaders/x.hlsl" ), string( expected.view() ) ); // `myshaders` 는 shaders 칸이 아니다
 }
 
 SW_TEST_CASE( ShaderBinaryLocationTest, IDWithoutADomainShadersFolderHasNoLocation )

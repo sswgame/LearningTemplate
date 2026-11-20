@@ -351,7 +351,9 @@ SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked 
             {
                 bAllWhite = bAllWhite && vertex._arrColor[0] == 1.0f && vertex._arrColor[1] == 1.0f && vertex._arrColor[2] == 1.0f && vertex._arrColor[3] == 1.0f;
             }
-            SW_EXPECT_TRUE_MSG( bAllWhite, sw::string( "vertex colors are not white: " ) + pID );
+            sw::fixed_string<sw::constant::buffer::kMax256> message;
+            sw::formatstring( message.data(), message.capacity(), "vertex colors are not white: %#", pID );
+            SW_EXPECT_TRUE_MSG( bAllWhite, message );
         }
     }
 
@@ -402,8 +404,11 @@ SW_TEST_CASE( MeshPrimitiveTest, MeshReferenceTakesBuiltinShapesOnly )
     {
         sw::AssetRef<sw::MeshAssetFormat> mesh;
         mesh = name;
-        SW_EXPECT_TRUE_MSG( mesh == name && mesh.isBuiltin(), sw::string( "built-in mesh name is not taken: " ) + sw::string( name ) );
-        SW_EXPECT_TRUE_MSG( sw::MeshUtil::createPrimitive( name ) != nullptr, sw::string( "built-in mesh name makes no shape: " ) + sw::string( name ) );
+        sw::fixed_string<sw::constant::buffer::kMax256> message;
+        sw::formatstring( message.data(), message.capacity(), "built-in mesh name is not taken: %#", name );
+        SW_EXPECT_TRUE_MSG( mesh == name && mesh.isBuiltin(), message );
+        sw::formatstring( message.data(), message.capacity(), "built-in mesh name makes no shape: %#", name );
+        SW_EXPECT_TRUE_MSG( sw::MeshUtil::createPrimitive( name ) != nullptr, message );
     }
 
     sw::AssetRef<sw::MeshAssetFormat> mesh;

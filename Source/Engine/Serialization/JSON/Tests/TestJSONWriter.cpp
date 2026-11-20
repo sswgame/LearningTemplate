@@ -33,8 +33,11 @@ SW_TEST_CASE( JSONWriterTest, EscapesQuotesBackslashesAndControlCharacters )
     SW_EXPECT_EQUAL( sw::string( "\"/\x7F\"" ), writeStringValue( "/\x7F" ) );                                                                   // 슬래시와 DEL 은 그대로
     SW_EXPECT_EQUAL( sw::string( "\"\xEA\xB0\x80 \xC2\xB7 \xF0\x9F\x98\x80\"" ), writeStringValue( "\xEA\xB0\x80 \xC2\xB7 \xF0\x9F\x98\x80" ) ); // 가 · 😀
 
-    const sw::string mixed = sw::string( "a\"b\\c\nd\x01" ) + "\xEA\xB0\x80";
-    SW_EXPECT_EQUAL( sw::string( R"("a\"b\\c\nd\u0001)" ) + "\xEA\xB0\x80\"", writeStringValue( mixed ) );
+    const sw::string mixed = "a\"b\\c\nd\x01"
+                             "\xEA\xB0\x80";
+    SW_EXPECT_EQUAL( sw::string( R"("a\"b\\c\nd\u0001)"
+                                 "\xEA\xB0\x80\"" ),
+                     writeStringValue( mixed ) );
 
     // 키도 같은 규칙으로 이스케이프한다.
     sw::string     json;

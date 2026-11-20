@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsTableHistory.h"
 
+#include "Core/String/StringBuilder.h"
+
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
@@ -37,8 +39,10 @@ namespace sw::editor
             } ),
                                             *_pOwner, 0u ); // 표 글은 페이지의 창 안 기록(`_tableDocument`)이 쥔다 — 이 단계는 가리키기만 한다
         };
-        CommandStack::Command command;
-        command._label = "Edit " + page._entry._page;
+        CommandStack::Command                    command;
+        StringBuilder<constant::buffer::kMax256> labelBuilder;
+        labelBuilder.appendFormat( "Edit %#", page._entry._page );
+        command._label = string( labelBuilder.view() );
         command._undo  = makeStep( true );
         command._redo  = makeStep( false );
         _pStack->push( std::move( command ) );

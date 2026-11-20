@@ -127,7 +127,11 @@ namespace sw
                         if ( mNameIt != memberNameMap.end() )
                             varInfo._name = mNameIt->second;
                         else
-                            varInfo._name = string( "member_" ) + to_string( memberIdx );
+                        {
+                            StringBuilder<constant::buffer::kMax32> nameBuilder;
+                            nameBuilder.appendFormat( "member_%#", memberIdx );
+                            varInfo._name = string( nameBuilder.view() );
+                        }
 
                         auto mOffIt     = memberOffsetMap.find( memberIdx );
                         varInfo._offset = baseOffset + ( ( mOffIt != memberOffsetMap.end() ) ? mOffIt->second : 0 );
@@ -223,7 +227,16 @@ namespace sw
                     const auto  nameIt = _mapName.find( id );
                     const auto  setIt  = _mapDescriptorSet.find( id );
                     BindingSlot slot{};
-                    slot._name      = nameIt != _mapName.end() ? nameIt->second : string( "Resource_" ) + to_string( id );
+                    if ( nameIt != _mapName.end() )
+                    {
+                        slot._name = nameIt->second;
+                    }
+                    else
+                    {
+                        StringBuilder<constant::buffer::kMax32> nameBuilder;
+                        nameBuilder.appendFormat( "Resource_%#", id );
+                        slot._name = string( nameBuilder.view() );
+                    }
                     slot._space     = ( setIt != _mapDescriptorSet.end() ) ? setIt->second : 0;
                     slot._bindPoint = bindPoint;
 
@@ -337,7 +350,9 @@ namespace sw
                         uint32 subSize = 4;
                         string subName = resolveSPIRVTypeName( spirvType._subTypeID, mapType, subSize, depth + 1 );
                         outSize        = subSize * spirvType._count;
-                        return subName + to_string( spirvType._count );
+                        StringBuilder<constant::buffer::kMax64> nameBuilder;
+                        nameBuilder.appendFormat( "%#%#", subName, spirvType._count );
+                        return string( nameBuilder.view() );
                     }
                     case SPIRVType::Kind::Matrix:
                     {

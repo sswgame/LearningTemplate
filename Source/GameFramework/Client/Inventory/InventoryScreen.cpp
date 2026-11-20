@@ -184,8 +184,10 @@ namespace sw
         pEquipment->clearChildren();
         for ( const EquipmentSlot& equipSlot : pCharacter->getEquipment().getSlots() )
         {
-            unique_ptr<ButtonWidget> button = make_unique<ButtonWidget>();
-            button->setName( hashed_string( string( Internal::kEquipNamePrefix ) + equipSlot._name.c_str() ) );
+            unique_ptr<ButtonWidget>                button = make_unique<ButtonWidget>();
+            fixed_string<constant::buffer::kMax128> name;
+            formatstring( name.data(), name.capacity(), "%#%#", Internal::kEquipNamePrefix, equipSlot._name.c_str() );
+            button->setName( hashed_string( name.c_str() ) );
             button->setCommand( hashed_string( Internal::kEquipSlotCommand ) );
             (void)button->addChild( Internal::makeLabel() );
             (void)pEquipment->addChild( std::move( button ) );

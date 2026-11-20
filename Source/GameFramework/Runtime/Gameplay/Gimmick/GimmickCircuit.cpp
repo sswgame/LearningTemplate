@@ -12,6 +12,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -21,16 +22,20 @@ namespace sw
     {
         struct GimmickCircuitInternal
         {
-            static string joinNames( const vector<hashed_string>& listName )
+            /** @brief 이름들을 `, ` 로 이어 @p outText 에 덧붙입니다. 없으면 `none` 입니다. */
+            static void appendNames( StringBuilder<constant::buffer::kMax512>& outText, const vector<hashed_string>& listName )
             {
-                string joined;
-                for ( const hashed_string& name : listName )
+                if ( listName.empty() )
                 {
-                    if ( joined.empty() == false )
-                        joined += ", ";
-                    joined += name.c_str();
+                    outText.append( "none" );
+                    return;
                 }
-                return joined.empty() ? string( "none" ) : joined;
+                for ( size_t nameIndex = 0; nameIndex < listName.size(); ++nameIndex )
+                {
+                    if ( nameIndex > 0 )
+                        outText.append( ", " );
+                    outText.append( listName[nameIndex].c_str() );
+                }
             }
 
             /** @brief 매개변수 문자열을 종류의 형식대로 해석합니다. 숫자나 벡터를 하나도 읽지 못하면 false 입니다. */
@@ -132,23 +137,32 @@ namespace sw
             node._id                      = nodeDef._id;
             if ( nodeDef._id.empty() )
             {
-                string message = def.describeSource() + ": node #";
-                StringUtil::appendNumber( message, nodeIndex );
-                message += " has no id";
-                outListError.push_back( std::move( message ) );
+                StringBuilder<constant::buffer::kMax512> message;
+                message.appendFormat( "%#: node #%# has no id", def.describeSource(), static_cast<uint64>( nodeIndex ) );
+                outListError.push_back( string( message.view() ) );
                 continue;
             }
             for ( size_t otherIndex = 0; otherIndex < nodeIndex; ++otherIndex )
             {
                 if ( listNodeDef[otherIndex]._id == nodeDef._id )
-                    outListError.push_back( def.describeNode( nodeDef ) + ": duplicate node id" );
+                {
+                    StringBuilder<constant::buffer::kMax512> message;
+                    message.appendFormat( "%#: duplicate node id", def.describeNode( nodeDef ) );
+                    outListError.push_back( string( message.view() ) );
+                }
             }
             if ( const expected<void> assigned = nodeIDIndex.assign( nodeDef._id.view(), nodeDef._id.getHash() ); assigned.has_value() == false )
-                outListError.push_back( def.describeNode( nodeDef ) + ": node ids share a 32-bit name hash (" + string( assigned.error().detail() ) + ") - saved states match nodes by it; rename one" );
+            {
+                StringBuilder<constant::buffer::kMax512> message;
+                message.appendFormat( "%#: node ids share a 32-bit name hash (%#) - saved states match nodes by it; rename one", def.describeNode( nodeDef ), assigned.error().detail() );
+                outListError.push_back( string( message.view() ) );
+            }
             node._pKind = registry.findKind( nodeDef._kind );
             if ( node._pKind == nullptr )
             {
-                outListError.push_back( def.describeNode( nodeDef ) + ": unknown node kind" );
+                StringBuilder<constant::buffer::kMax512> message;
+                message.appendFormat( "%#: unknown node kind", def.describeNode( nodeDef ) );
+                outListError.push_back( string( message.view() ) );
                 continue;
             }
             const GimmickNodeKind& kind = *node._pKind;
@@ -161,8 +175,11 @@ namespace sw
                     {
                         listParamName.push_back( spec._name );
                     }
-                    outListError.push_back( def.describeNode( nodeDef ) + ": unknown parameter '" + param._name.c_str() + "' (parameters: " +
-                                            Internal::joinNames( listParamName ) + ")" );
+                    StringBuilder<constant::buffer::kMax512> message;
+                    message.appendFormat( "%#: unknown parameter '%#' (parameters: ", def.describeNode( nodeDef ), param._name.c_str() );
+                    Internal::appendNames( message, listParamName );
+                    message.append( ')' );
+                    outListError.push_back( string( message.view() ) );
                 }
             }
             node._paramStart = static_cast<uint32>( _listParam.size() );
@@ -171,8 +188,11 @@ namespace sw
                 const string*     pText = nodeDef.findParam( spec._name );
                 GimmickParamValue value;
                 if ( Internal::parseParam( spec, pText != nullptr ? *pText : spec._defaultText, value ) == false )
-                    outListError.push_back( def.describeNode( nodeDef ) + ": parameter '" + spec._name.c_str() + "' is not a number: '" +
-                                            ( pText != nullptr ? *pText : spec._defaultText ) + "'" );
+                {
+                    StringBuilder<constant::buffer::kMax512> message;
+                    message.appendFormat( "%#: parameter '%#' is not a number: '%#'", def.describeNode( nodeDef ), spec._name.c_str(), pText != nullptr ? *pText : spec._defaultText );
+                    outListError.push_back( string( message.view() ) );
+                }
                 _listParam.push_back( value );
             }
             node._floatStart = static_cast<uint32>( _listFloatState.size() );
@@ -188,22 +208,42 @@ namespace sw
         vector<vector<InputWire>> listWirePerNode( _listNode.size() );
         for ( const GimmickWireDef& wire : def.getWires() )
         {
-            const string where = def.describeSource() + ": wire " + wire._fromNode.c_str() + "." + wire._fromPort.c_str() + " -> " + wire._toNode.c_str() +
-                                 "." + wire._toPort.c_str();
+            StringBuilder<constant::buffer::kMax512> where;
+            where.appendFormat( "%#: wire %#.%# -> %#.%#", def.describeSource(), wire._fromNode.c_str(), wire._fromPort.c_str(), wire._toNode.c_str(), wire._toPort.c_str() );
             const optional<int32> fromNode = findNode( wire._fromNode );
             const optional<int32> toNode   = findNode( wire._toNode );
             if ( fromNode.has_value() == false )
-                outListError.push_back( where + ": unknown source node '" + wire._fromNode.c_str() + "'" );
+            {
+                StringBuilder<constant::buffer::kMax512> message;
+                message.appendFormat( "%#: unknown source node '%#'", where.view(), wire._fromNode.c_str() );
+                outListError.push_back( string( message.view() ) );
+            }
             if ( toNode.has_value() == false )
-                outListError.push_back( where + ": unknown target node '" + wire._toNode.c_str() + "'" );
+            {
+                StringBuilder<constant::buffer::kMax512> message;
+                message.appendFormat( "%#: unknown target node '%#'", where.view(), wire._toNode.c_str() );
+                outListError.push_back( string( message.view() ) );
+            }
             const GimmickNodeKind* pFromKind = fromNode.has_value() ? _listNode[static_cast<size_t>( *fromNode )]._pKind : nullptr;
             const GimmickNodeKind* pToKind   = toNode.has_value() ? _listNode[static_cast<size_t>( *toNode )]._pKind : nullptr;
             const optional<uint32> fromPort  = pFromKind != nullptr ? pFromKind->findOutput( wire._fromPort ) : nullopt;
             const optional<uint32> toPort    = pToKind != nullptr ? pToKind->findInput( wire._toPort ) : nullopt;
             if ( pFromKind != nullptr && fromPort.has_value() == false )
-                outListError.push_back( where + ": unknown output '" + wire._fromPort.c_str() + "' (outputs: " + Internal::joinNames( pFromKind->_listOutput ) + ")" );
+            {
+                StringBuilder<constant::buffer::kMax512> message;
+                message.appendFormat( "%#: unknown output '%#' (outputs: ", where.view(), wire._fromPort.c_str() );
+                Internal::appendNames( message, pFromKind->_listOutput );
+                message.append( ')' );
+                outListError.push_back( string( message.view() ) );
+            }
             if ( pToKind != nullptr && toPort.has_value() == false )
-                outListError.push_back( where + ": unknown input '" + wire._toPort.c_str() + "' (inputs: " + Internal::joinNames( pToKind->_listInput ) + ")" );
+            {
+                StringBuilder<constant::buffer::kMax512> message;
+                message.appendFormat( "%#: unknown input '%#' (inputs: ", where.view(), wire._toPort.c_str() );
+                Internal::appendNames( message, pToKind->_listInput );
+                message.append( ')' );
+                outListError.push_back( string( message.view() ) );
+            }
             if ( fromPort.has_value() == false || toPort.has_value() == false )
                 continue;
             InputWire input;
@@ -235,7 +275,11 @@ namespace sw
             GimmickNodeContext context = makeContext( node );
             context._pError            = &error;
             if ( node._pKind->_pInitialize( context ) == false )
-                outListError.push_back( def.describeNode( listNodeDef[nodeIndex] ) + ": " + ( error.empty() ? string( "invalid parameters" ) : error ) );
+            {
+                StringBuilder<constant::buffer::kMax512> message;
+                message.appendFormat( "%#: %#", def.describeNode( listNodeDef[nodeIndex] ), error.empty() ? string_view( "invalid parameters" ) : string_view( error ) );
+                outListError.push_back( string( message.view() ) );
+            }
             node._outputBits = context._outputBits;
         }
     }
@@ -265,14 +309,17 @@ namespace sw
         const DependencyOrder order = graph.sortInDataOrder();
         if ( order.isSorted() == false )
         {
-            string cycleNodes;
+            StringBuilder<constant::buffer::kMax512> message;
+            message.appendFormat( "%#: signal loop without a Delay through nodes ", def.describeSource() );
+            bool bFirstNode = true;
             for ( const uint32 nodeIndex : order._listCycle )
             {
-                if ( cycleNodes.empty() == false )
-                    cycleNodes += " -> ";
-                cycleNodes += _listNode[nodeIndex]._id.c_str();
+                if ( bFirstNode == false )
+                    message.append( " -> " );
+                bFirstNode = false;
+                message.append( _listNode[nodeIndex]._id.c_str() );
             }
-            outListError.push_back( def.describeSource() + ": signal loop without a Delay through nodes " + cycleNodes );
+            outListError.push_back( string( message.view() ) );
             return;
         }
         for ( const uint32 nodeIndex : order._listOrder )
@@ -352,40 +399,53 @@ namespace sw
     void GimmickCircuit::writeDebugLines( DebugHUDSectionWriter& writer, uint32 maxLines ) const
     {
         // 켜진 비트를 포트 이름으로 — 비트 번호는 사람이 읽지 못한다.
-        const auto makePortNames = []( const vector<hashed_string>& listPort, uint32 bits ) -> string
+        const auto appendPortNames = []( StringBuilder<constant::buffer::kMax256>& outText, const vector<hashed_string>& listPort, uint32 bits )
         {
-            string text;
+            const uint32 startSize = outText.size();
             for ( size_t port = 0; port < listPort.size() && port < 32; ++port )
             {
                 if ( ( bits & ( 1u << static_cast<uint32>( port ) ) ) == 0 )
                     continue;
-                if ( text.empty() == false )
-                    text += ",";
-                text += listPort[port].c_str();
+                if ( outText.size() > startSize )
+                    outText.append( ',' );
+                outText.append( listPort[port].c_str() );
             }
-            return text.empty() ? string( "-" ) : text;
+            if ( outText.size() == startSize )
+                outText.append( '-' );
         };
         uint32 lineCount = 0;
-        writer.addLine( "step", to_string( _stepIndex ) );
+        writer.addLineFormat( "step", "%#", _stepIndex );
         for ( int32 node = 0; node < getNodeCount(); ++node )
         {
             if ( ++lineCount > maxLines )
                 break;
-            const GimmickNodeKind& kind  = getKind( node );
-            string                 value = "out " + makePortNames( kind._listOutput, getOutputBits( node ) ) + "  in " + makePortNames( kind._listInput, getPreviousInputBits( node ) );
+            const GimmickNodeKind&                   kind = getKind( node );
+            StringBuilder<constant::buffer::kMax256> value;
+            value.append( "out " );
+            appendPortNames( value, kind._listOutput, getOutputBits( node ) );
+            value.append( "  in " );
+            appendPortNames( value, kind._listInput, getPreviousInputBits( node ) );
             if ( kind._category == GimmickNodeCategory::Sensor )
-                value += "  sensor " + to_string( getSensorValue( node ) );
+                value.appendFormat( "  sensor %#", getSensorValue( node ) );
             if ( kind._floatStateCount > 0 )
-                value += "  value " + to_string( getActuatorValue( node ) );
-            writer.addLine( string( getNodeID( node ).c_str() ) + " (" + kind._name.c_str() + ")", value );
+                value.appendFormat( "  value %#", getActuatorValue( node ) );
+            fixed_string<constant::buffer::kMax128> label;
+            formatstring( label.data(), label.capacity(), "%# (%#)", getNodeID( node ).c_str(), kind._name.c_str() );
+            writer.addLine( label.view(), value.view() );
         }
         vector<GimmickOutputTransition> listTransition;
         collectRecentTransitions( listTransition );
         for ( auto it = listTransition.rbegin(); it != listTransition.rend() && ++lineCount <= maxLines; ++it )
         {
-            const GimmickNodeKind& kind = getKind( it->_node );
-            writer.addLine( "step " + to_string( it->_stepIndex ), string( getNodeID( it->_node ).c_str() ) + " " + makePortNames( kind._listOutput, it->_beforeBits ) + " -> " +
-                                                                       makePortNames( kind._listOutput, it->_afterBits ) );
+            const GimmickNodeKind&                 kind = getKind( it->_node );
+            fixed_string<constant::buffer::kMax32> label;
+            formatstring( label.data(), label.capacity(), "step %#", it->_stepIndex );
+            StringBuilder<constant::buffer::kMax256> value;
+            value.appendFormat( "%# ", getNodeID( it->_node ).c_str() );
+            appendPortNames( value, kind._listOutput, it->_beforeBits );
+            value.append( " -> " );
+            appendPortNames( value, kind._listOutput, it->_afterBits );
+            writer.addLine( label.view(), value.view() );
         }
     }
 
@@ -491,7 +551,9 @@ namespace sw
 
     string GimmickCircuitDef::describeNode( const GimmickNodeDef& node ) const
     {
-        return describeSource() + ": node '" + node._id.c_str() + "' (" + node._kind.c_str() + ")";
+        StringBuilder<constant::buffer::kMax512> text;
+        text.appendFormat( "%#: node '%#' (%#)", describeSource(), node._id.c_str(), node._kind.c_str() );
+        return string( text.view() );
     }
 
     float3 GimmickCircuit::readParamVector( int32 node, const utf8* pName ) const

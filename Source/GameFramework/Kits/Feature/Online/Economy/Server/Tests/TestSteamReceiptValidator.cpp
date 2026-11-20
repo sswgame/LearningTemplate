@@ -51,9 +51,14 @@ namespace
             SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&SteamFixture::onRequest>( this ) ) );
             SW_EXPECT_TRUE( _client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             SteamReceiptSettings settings;
-            settings._appID                = "480";
-            settings._key                  = "KEY";
-            settings._baseURL              = pBaseURL != nullptr ? string( pBaseURL ) : "http://127.0.0.1:" + to_string( static_cast<int32>( _server.getListenPort() ) );
+            settings._appID = "480";
+            settings._key   = "KEY";
+            StringBuilder<constant::buffer::kMax128> baseURL;
+            if ( pBaseURL != nullptr )
+                baseURL.append( pBaseURL );
+            else
+                baseURL.appendFormat( "http://127.0.0.1:%#", static_cast<int32>( _server.getListenPort() ) );
+            settings._baseURL              = string( baseURL.view() );
             settings._reportPollIntervalMs = kPollMs;
             settings._reportLookbackMs     = kLookbackMs;
             settings._bSandbox             = bSandbox ? SW_TRUE : SW_FALSE;
@@ -126,21 +131,23 @@ namespace
         /** @brief 주문 @p pOrderID · 상태 @p pStatus 의 정상 QueryTxn 응답입니다. */
         static string makeOrder( const utf8* pOrderID, const utf8* pStatus )
         {
-            return string( R"({"response":{"result":"OK","params":{"orderid":")" ) + pOrderID + R"(","status":")" + pStatus +
-                   R"(","time":"2023-11-14T22:13:20Z","items":[{"itemid":"100","qty":1},{"itemid":"200","qty":1}]}}})";
+            StringBuilder<constant::buffer::kMax256> body;
+            body.appendFormat( R"({"response":{"result":"OK","params":{"orderid":"%#","status":"%#","time":"2023-11-14T22:13:20Z","items":[{"itemid":"100","qty":1},{"itemid":"200","qty":1}]}}})",
+                               pOrderID, pStatus );
+            return string( body.view() );
         }
 
         /** @brief 상한만큼 찬 환불 보고입니다. @p pExtraField 를 줄마다 덧붙입니다. */
         static string makeFullReport( const utf8* pExtraField )
         {
-            string body = R"({"response":{"result":"OK","params":{"orders":[)";
+            StringBuilder<constant::buffer::kMax8192> body;
+            body.append( R"({"response":{"result":"OK","params":{"orders":[)" );
             for ( int32 index = 0; index < SteamReceiptValidator::kReportMaxResults; ++index )
             {
-                body += index == 0 ? "" : ",";
-                body += R"({"orderid":")" + to_string( index + 1 ) + R"(","status":"Refunded")" + pExtraField + "}";
+                body.appendFormat( R"(%#{"orderid":"%#","status":"Refunded"%#})", index == 0 ? "" : ",", index + 1, pExtraField );
             }
-            body += "]}}}";
-            return body;
+            body.append( "]}}}" );
+            return string( body.view() );
         }
     };
 } // namespace

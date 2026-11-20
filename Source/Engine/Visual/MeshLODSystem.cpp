@@ -100,27 +100,30 @@ namespace sw
         const Mesh* pMesh = component.getRawMesh();
         if ( pMesh == nullptr )
             return "no mesh";
-        const float32 screenSize = computeScreenSize( component );
-        string        text       = "LOD " + to_string( component.getLODIndex() ) + "/" + to_string( pMesh->getLODCount() ) + " screen " + to_string( screenSize ) + " thresholds [";
+        const float32                            screenSize = computeScreenSize( component );
+        StringBuilder<constant::buffer::kMax512> text;
+        text.appendFormat( "LOD %#/%# screen %# thresholds [", component.getLODIndex(), pMesh->getLODCount(), screenSize );
         for ( size_t lodIndex = 0; lodIndex < pMesh->getLODs().size(); ++lodIndex )
         {
-            text += ( lodIndex == 0 ? "" : " " ) + to_string( pMesh->getLODs()[lodIndex]._screenSize );
+            if ( lodIndex != 0 )
+                text.append( ' ' );
+            text.appendFormat( "%#", pMesh->getLODs()[lodIndex]._screenSize );
         }
-        text += "] by ";
+        text.append( "] by " );
         // `update` 와 같은 순서로 누가 단계를 정하는지 가른다.
         if ( pMesh->getLODs().empty() )
-            text += "single";
+            text.append( "single" );
         else if ( castTo<MeshSectionComponent>( &component ) != nullptr )
-            text += "section";
+            text.append( "section" );
         else if ( _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false && isGPUSelectable( *pMesh, component.getSkinSlot() ) )
-            text += "gpu (strict pick " + to_string( pMesh->selectLOD( screenSize ) ) + ")";
+            text.appendFormat( "gpu (strict pick %#)", pMesh->selectLOD( screenSize ) );
         else if ( _forcedLOD >= 0 )
-            text += "forced " + to_string( _forcedLOD );
+            text.appendFormat( "forced %#", _forcedLOD );
         else if ( _bViewsSet == SW_FALSE )
-            text += "views-not-set";
+            text.append( "views-not-set" );
         else
-            text += "cpu (strict pick " + to_string( pMesh->selectLOD( screenSize ) ) + ", refine hysteresis " + to_string( MeshLODSettings::getDefault()._refineHysteresis ) + ")";
-        return text;
+            text.appendFormat( "cpu (strict pick %#, refine hysteresis %#)", pMesh->selectLOD( screenSize ), MeshLODSettings::getDefault()._refineHysteresis );
+        return string( text.view() );
     }
 
     void MeshLODSystem::update( float32 deltaTime )
@@ -188,7 +191,9 @@ namespace sw
                     const MeshComponent* pMesh = castTo<MeshComponent>( pComponent );
                     if ( pMesh == nullptr )
                         continue;
-                    outText += ( bFound ? "; " : "" ) + system.explainLOD( *pMesh );
+                    if ( bFound )
+                        outText += "; ";
+                    outText += system.explainLOD( *pMesh );
                     bFound = true;
                 }
                 return bFound;
@@ -199,20 +204,24 @@ namespace sw
             {
                 if ( listArgument.size() != 1 )
                     return false;
-                GameObjectManager* const pManager = engine::findActiveObjectManager();
-                const GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( listArgument[0] ) ) : nullptr;
+                GameObjectManager* const                  pManager = engine::findActiveObjectManager();
+                const GameObject*                         pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( listArgument[0] ) ) : nullptr;
+                StringBuilder<constant::buffer::kMax1024> reply;
                 if ( pObject == nullptr )
                 {
-                    outReply = "lod.explain: no object '" + listArgument[0] + "' in the active scene";
+                    reply.appendFormat( "lod.explain: no object '%#' in the active scene", listArgument[0] );
+                    outReply = string( reply.view() );
                     return false;
                 }
                 string text;
                 if ( describeObject( *pObject, text ) == false )
                 {
-                    outReply = "lod.explain: '" + listArgument[0] + "' has no mesh component";
+                    reply.appendFormat( "lod.explain: '%#' has no mesh component", listArgument[0] );
+                    outReply = string( reply.view() );
                     return false;
                 }
-                outReply = listArgument[0] + ": " + text;
+                reply.appendFormat( "%#: %#", listArgument[0], text );
+                outReply = string( reply.view() );
                 SW_LOG_INFO_ID( "MeshLOD.Explain", "%#", outReply.c_str() );
                 return true;
             }

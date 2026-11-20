@@ -49,7 +49,11 @@ namespace sw
             static string findUnavailableReason( const ModuleManifest& manifest, const ModuleResolveContext& context )
             {
                 if ( ( manifest._platformMask & static_cast<uint8>( context._platform ) ) == 0 )
-                    return string( "not available on " ) + getEnumName( context._platform );
+                {
+                    StringBuilder<constant::buffer::kMax64> builder;
+                    builder.appendFormat( "not available on %#", getEnumName( context._platform ) );
+                    return string( builder.view() );
+                }
                 if ( ( manifest._configurationMask & static_cast<uint8>( context._configuration ) ) == 0 )
                     return context._configuration == ModuleConfiguration::Dev ? "not built for Dev" : "not built for Shipping";
                 if ( ( manifest._targetMask & context._targetMask ) == 0 )
@@ -73,17 +77,17 @@ namespace sw
                 const SoftReadResult      result = JSONSerializer::deserializeSoft( &outFile, *ModuleManifestFile::StaticType(), jsonText, &listOrphan, nullptr, context );
                 if ( result == SoftReadResult::NotParsed )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "not valid JSON, or the root is not an object", where } );
-                string problem;
+                StringBuilder<constant::buffer::kMax512> problem;
                 for ( const SchemaOrphanValue& orphan : listOrphan )
                 {
-                    problem += problem.empty() ? string() : string( "; " );
-                    problem += "unknown key '" + string( orphan.getDisplayName() ) + "' or a value that cannot be read (" +
-                               orphan._text + ")";
+                    if ( problem.view().empty() == false )
+                        problem.append( "; " );
+                    problem.appendFormat( "unknown key '%#' or a value that cannot be read (%#)", orphan.getDisplayName(), orphan._text );
                 }
                 if ( result == SoftReadResult::Rejected )
-                    problem += problem.empty() ? string( "a value outside its PROPERTY( Min, Max )" ) : string( "; a value outside its PROPERTY( Min, Max )" );
-                if ( problem.empty() == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown key, unreadable value or a value outside its range", where }.appendDetail( ": " ).appendDetail( problem ) ); // 목록은 대상 길이에서 잘린다
+                    problem.append( problem.view().empty() ? "a value outside its PROPERTY( Min, Max )" : "; a value outside its PROPERTY( Min, Max )" );
+                if ( problem.view().empty() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown key, unreadable value or a value outside its range", where }.appendDetail( ": " ).appendDetail( problem.view() ) ); // 목록은 대상 길이에서 잘린다
                 return {};
             }
 
@@ -95,8 +99,10 @@ namespace sw
                     return unexpected( Error{ ErrorKind::InvalidArgument, "_name is missing", where } );
                 if ( sourcePath.empty() == false )
                 {
-                    const string fileName = FileUtil::getFileNamePart( sourcePath );
-                    if ( StringUtil::equals( fileName, inoutManifest._name + ModuleCatalog::kManifestExtension, false ) == false )
+                    const string                             fileName = FileUtil::getFileNamePart( sourcePath );
+                    StringBuilder<constant::buffer::kMax128> expectedFileName;
+                    expectedFileName.appendFormat( "%#%#", inoutManifest._name, ModuleCatalog::kManifestExtension );
+                    if ( StringUtil::equals( fileName, expectedFileName.view(), false ) == false )
                         return unexpected( Error{ ErrorKind::InvalidArgument, "the manifest file must be named after the module", where }
                                                .appendDetail( " -> " )
                                                .appendDetail( inoutManifest._name )
@@ -256,7 +262,9 @@ namespace sw
                             if ( inoutListActive[dependencyIndex] == SW_FALSE )
                             {
                                 inoutListActive[index] = SW_FALSE;
-                                inoutListReason[index] = "needs " + dependency._name + ", which is " + inoutListReason[dependencyIndex];
+                                StringBuilder<constant::buffer::kMax256> reason;
+                                reason.appendFormat( "needs %#, which is %#", dependency._name, inoutListReason[dependencyIndex] );
+                                inoutListReason[index] = string( reason.view() );
                                 bChanged               = true;
                                 break;
                             }
@@ -416,7 +424,9 @@ namespace sw
         if ( expected<void> read = Internal::readName( file, sourcePath, where, outManifest ); read.has_value() == false )
             return read;
 
-        const string errorContext = where + " (" + outManifest._name + ")";
+        StringBuilder<constant::buffer::kMax512> errorContextBuilder;
+        errorContextBuilder.appendFormat( "%# (%#)", where, outManifest._name );
+        const string errorContext = string( errorContextBuilder.view() );
         if ( expected<void> read = Internal::readIdentity( file, errorContext, outManifest ); read.has_value() == false )
             return read;
         if ( expected<void> read = Internal::readDependencies( file, errorContext, outManifest ); read.has_value() == false )

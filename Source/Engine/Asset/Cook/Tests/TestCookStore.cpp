@@ -41,8 +41,9 @@ namespace
                 vector<uint8> bytes;
                 if ( AssetIO::readBinaryFile( _inputPath, bytes ) == false )
                     return CookStep::Failed;
-                const string text = "baked:" + string( reinterpret_cast<const char*>( bytes.data() ), bytes.size() );
-                return FileUtil::ensureParentDirectoryExists( outputPath ) && FileUtil::writeTextFile( outputPath, text ) ? CookStep::Written : CookStep::Failed;
+                StringBuilder<constant::buffer::kMax256> text;
+                text.appendFormat( "baked:%#", string_view( reinterpret_cast<const char*>( bytes.data() ), bytes.size() ) );
+                return FileUtil::ensureParentDirectoryExists( outputPath ) && FileUtil::writeTextFile( outputPath, text.view() ) ? CookStep::Written : CookStep::Failed;
             } );
         }
 
@@ -174,8 +175,10 @@ SW_TEST_CASE( CookRecordTest, RoundTripsAndRejectsBrokenRecords )
     const string oldFormat = FileUtil::joinPath( root, "old.cookrec" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( oldFormat, "SWCOOKREC 1\nkey 0123456789abcdef\noutput 0123456789abcdef\n" ) );
     SW_EXPECT_FALSE( CookRecord::read( oldFormat, readBack ) );
-    const string shortHash = FileUtil::joinPath( root, "short.cookrec" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( shortHash, string( CookRecord::kHeader ) + "\nkey 0123\noutput 0123456789abcdef\n" ) );
+    const string                             shortHash = FileUtil::joinPath( root, "short.cookrec" );
+    StringBuilder<constant::buffer::kMax128> shortHashText;
+    shortHashText.appendFormat( "%#\nkey 0123\noutput 0123456789abcdef\n", CookRecord::kHeader );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( shortHash, shortHashText.view() ) );
     SW_EXPECT_FALSE( CookRecord::read( shortHash, readBack ) );
     SW_EXPECT_EQUAL( 0ull, readBack._key ); // 거절한 기록은 빈 값으로 돌려준다
 }

@@ -64,26 +64,26 @@ namespace sw::editor
             /** @brief 놀이기구의 배치 문제를 한 줄로 만듭니다. */
             static string makeIssueText( const ParkLayoutViewModel& model, const ParkRidePreview& ride )
             {
-                string text;
+                StringBuilder<constant::buffer::kMax512> text;
                 for ( const ParkRideIssue& issue : ride._listIssue )
                 {
-                    if ( text.empty() == false )
-                        text += ", ";
+                    if ( text.size() > 0 )
+                        text.append( ", " );
                     const string& otherName = model.getRides()[issue._otherRide]._name;
                     switch ( issue._kind )
                     {
                         case ParkRideIssueKind::Overlap:
-                            text += SW_LOCKEYFORMAT( "EdPluginParkLayout", "IssueOverlap", TextArgumentList().addText( "name", otherName ) );
+                            text.append( SW_LOCKEYFORMAT( "EdPluginParkLayout", "IssueOverlap", TextArgumentList().addText( "name", otherName ) ) );
                             break;
                         case ParkRideIssueKind::EntranceInsideFootprint:
-                            text += SW_LOCKEY( "EdPluginParkLayout", "IssueEntrance" );
+                            text.append( SW_LOCKEY( "EdPluginParkLayout", "IssueEntrance" ) );
                             break;
                         case ParkRideIssueKind::DuplicateID:
-                            text += SW_LOCKEYFORMAT( "EdPluginParkLayout", "IssueDuplicateID", TextArgumentList().addText( "name", otherName ) );
+                            text.append( SW_LOCKEYFORMAT( "EdPluginParkLayout", "IssueDuplicateID", TextArgumentList().addText( "name", otherName ) ) );
                             break;
                     }
                 }
-                return text;
+                return string( text.view() );
             }
         };
     } // namespace

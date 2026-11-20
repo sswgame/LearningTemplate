@@ -22,7 +22,9 @@ namespace sw
 {
     IntentTrackControllerComponent* IntentPlayback::getOrCreateTrackController( GameObjectManager& manager, string_view pawnName )
     {
-        const hashed_string controllerName( string( kControllerPrefix ) + string( pawnName ) );
+        fixed_string<constant::buffer::kMax128> controllerText;
+        formatstring( controllerText.data(), controllerText.capacity(), "%#%#", kControllerPrefix, pawnName );
+        const hashed_string controllerName( controllerText.c_str() );
         GameObject*         pTrackObject = manager.findGameObjectByName( controllerName );
         if ( pTrackObject == nullptr )
             pTrackObject = manager.createGameObject( controllerName );

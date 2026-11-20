@@ -8,6 +8,8 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "DevTools/AssetReload/AutomationReloadSteps.h"
 #include "DevTools/ModuleReload/ModuleReloadDriver.h"
@@ -70,13 +72,19 @@ namespace sw
                     const expected<void> applied = applyVariant( context, params._variant );
                     if ( applied.has_value() == false )
                     {
-                        context.recordFailure( step, string( applied.error().message() ) + ": " + string( applied.error().detail() ) );
+                        fixed_string<constant::buffer::kMax1024> message;
+                        formatstring( message.data(), message.capacity(), "%#: %#", applied.error().message(), applied.error().detail() );
+                        context.recordFailure( step, message.view() );
                         return true;
                     }
                 }
                 // 빌드는 컴파일러 스레드가 돌고, 끝은 `Module.ReloadPending`(벽시계 감시 값)으로 기다린다 — 빌드 시간은 구성 · 기계에 달려 프레임으로 셀 수 없다.
                 if ( pDriver->queueRebuild( params._name.c_str() ) == false )
-                    context.recordFailure( step, "module '" + params._name + "' is not loaded, or a module build is already running" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "module '%#' is not loaded, or a module build is already running", params._name );
+                    context.recordFailure( step, message.view() );
+                }
                 return true;
             }
         };

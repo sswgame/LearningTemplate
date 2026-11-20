@@ -12,6 +12,7 @@
 #include "Core/File/BundledContentFileSource.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;
@@ -60,7 +61,9 @@ namespace
 
         bool collectFileNames( string_view bundledFolder, vector<string>& outListFileName ) const override
         {
-            const string prefix = string( bundledFolder ) + "/";
+            StringBuilder<constant::buffer::kMax1024> prefixBuilder;
+            prefixBuilder.appendFormat( "%#/", bundledFolder );
+            const string prefix( prefixBuilder.view() );
             for ( const Entry& entry : _listEntry )
             {
                 const bool bUnder = entry._name.compare( 0, prefix.size(), prefix ) == 0 && entry._name.find( '/', prefix.size() ) == string::npos;

@@ -54,7 +54,9 @@ namespace sw
         , _pHTTPClient{ pHTTPClient }
         , _requestTimeoutMs{ settings._requestTimeoutMs }
     {
-        _sendURL = settings._sendBaseURL + "/v1/projects/" + _tokenSource.getProjectID() + "/messages:send";
+        StringBuilder<constant::buffer::kMax256> url;
+        url.appendFormat( "%#/v1/projects/%#/messages:send", settings._sendBaseURL, _tokenSource.getProjectID() );
+        _sendURL = string( url.view() );
     }
 
     FCMPushProvider::~FCMPushProvider() = default;
@@ -175,7 +177,9 @@ namespace sw
         request._url       = _sendURL;
         request._timeoutMs = _requestTimeoutMs;
         request._bodyBytes = bodyBytes;
-        request._listHeader.push_back( HTTPHeader{ "Authorization", "Bearer " + _tokenSource.getToken() } );
+        StringBuilder<constant::buffer::kMax2048> authorization;
+        authorization.appendFormat( "Bearer %#", _tokenSource.getToken() );
+        request._listHeader.push_back( HTTPHeader{ "Authorization", string( authorization.view() ) } );
         request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/json" } );
         _mapRequestToDelivery[_pHTTPClient->submitRequest( request )] = deliveryID;
     }

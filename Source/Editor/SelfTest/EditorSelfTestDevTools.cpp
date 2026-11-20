@@ -9,6 +9,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Name/TagID.h"
 #include "Core/Process/Process.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "DevTools/Console/DevConsole.h"
 
@@ -282,7 +284,9 @@ namespace sw::editor
                 if ( context.expect( pDock != nullptr, "no dock layout" ) == false )
                     return EditorSelfTestStep::Done;
                 // 프로세스마다 따로 — 백엔드별 실행이 나란히 돌 때 같은 파일을 덮어쓰면 방금 저장한 레이아웃을 다른 실행의 것으로 읽는다.
-                const string folder = FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Test/editor_selftest_layouts_" + to_string( Process::getCurrentProcessID() ) );
+                fixed_string<constant::buffer::kMax64> folderName;
+                formatstring( folderName.data(), folderName.capacity(), "Test/editor_selftest_layouts_%#", Process::getCurrentProcessID() );
+                const string folder = FileUtil::joinPath( ProcessRoots::get()._saved.str(), folderName );
 
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
@@ -381,8 +385,12 @@ namespace sw::editor
                             ++probe._hoverSteps; // 같은 단계에 머문다(단계 번호에서 뺀다)
                             return EditorSelfTestStep::Continue;
                         }
-                        const bool   bOnTarget = hit == EditorMarkHit::Reachable;
-                        const string what      = hit == EditorMarkHit::Covered ? "the gizmo center is covered by window '" + coverName + "'" : string{ "the gizmo center was not drawn or never settled under the pointer" };
+                        const bool                              bOnTarget = hit == EditorMarkHit::Reachable;
+                        fixed_string<constant::buffer::kMax256> what;
+                        if ( hit == EditorMarkHit::Covered )
+                            formatstring( what.data(), what.capacity(), "the gizmo center is covered by window '%#'", coverName );
+                        else
+                            what = "the gizmo center was not drawn or never settled under the pointer";
                         if ( context.expect( bOnTarget, what.c_str() ) == false )
                         {
                             probe.finishGizmo( pManager );

@@ -32,14 +32,12 @@ namespace sw
             /** @brief `:method` · `:scheme` · `:authority` · `:path` 다음에 소문자 머리, 본문이 있으면 `content-length` 를 놓습니다. */
             static vector<HTTPHeader> makeRequestHeaders( const HTTPClientRequest& request, const HTTPAddress& url )
             {
-                vector<HTTPHeader> listHeader;
-                string             authority = url._host;
+                vector<HTTPHeader>                       listHeader;
+                StringBuilder<constant::buffer::kMax256> authorityBuilder;
+                authorityBuilder.append( url._host );
                 if ( url._port != kDefaultHTTPSPort )
-                {
-                    StringBuilder<constant::buffer::kMax256> authorityPart;
-                    authorityPart.appendFormat( ":%#", static_cast<int32>( url._port ) );
-                    authority += authorityPart.c_str();
-                }
+                    authorityBuilder.appendFormat( ":%#", static_cast<int32>( url._port ) );
+                const string authority( authorityBuilder.view() );
                 listHeader.push_back( HTTPHeader{ ":method", toString( request._method ) } );
                 listHeader.push_back( HTTPHeader{ ":scheme", "https" } );
                 listHeader.push_back( HTTPHeader{ ":authority", authority } );

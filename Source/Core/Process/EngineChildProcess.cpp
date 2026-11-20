@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw
 {
@@ -15,8 +16,9 @@ namespace sw
             return {};
         if ( parent.isAutomatedRun() )
         {
-            const string unattended = "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) );
-            VectorUtil::addUnique( listArgument, unattended );
+            StringBuilder<constant::buffer::kMax64> unattended;
+            unattended.appendFormat( "-%#", getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) );
+            VectorUtil::addUnique( listArgument, string( unattended.view() ) );
         }
         return ProcessCommand::at( *executable, std::move( listArgument ) );
     }

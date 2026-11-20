@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "DevTools/Profiling/Memory/MemoryDiffStatus.h"
@@ -118,7 +119,11 @@ namespace sw::editor
             if ( result.has_value() )
                 jobResult._fileCount = static_cast<uint32>( result->_listFile.size() );
             else
-                jobResult._error = string{ result.error().message() } + " - " + string{ result.error().detail() };
+            {
+                StringBuilder<constant::buffer::kMax512> errorBuilder;
+                errorBuilder.appendFormat( "%# - %#", result.error().message(), result.error().detail() );
+                jobResult._error = string( errorBuilder.view() );
+            }
         }
         else
         {
@@ -126,7 +131,11 @@ namespace sw::editor
             if ( file.has_value() )
                 jobResult._fileCount = 1;
             else
-                jobResult._error = string{ file.error().message() } + " - " + string{ file.error().detail() };
+            {
+                StringBuilder<constant::buffer::kMax512> errorBuilder;
+                errorBuilder.appendFormat( "%# - %#", file.error().message(), file.error().detail() );
+                jobResult._error = string( errorBuilder.view() );
+            }
         }
         publish( pState, generation, std::move( jobResult ) );
     }
@@ -175,8 +184,10 @@ namespace sw::editor
     {
         if ( bytes == 0 )
             return string{ "0 B" };
-        const uint64 magnitude = bytes < 0 ? static_cast<uint64>( -bytes ) : static_cast<uint64>( bytes );
-        return ( bytes < 0 ? string{ "-" } : string{ "+" } ) + formatBytes( magnitude );
+        const uint64                            magnitude = bytes < 0 ? static_cast<uint64>( -bytes ) : static_cast<uint64>( bytes );
+        StringBuilder<constant::buffer::kMax32> deltaBuilder;
+        deltaBuilder.appendFormat( "%#%#", bytes < 0 ? '-' : '+', formatBytes( magnitude ) );
+        return string( deltaBuilder.view() );
     }
 
     void MemoryViewModel::buildSheetTable( const MemorySnapshot& snapshot, MemorySheetKind sheet, uint32 sortColumn, bool bDescending, string_view nameFilter, string_view filterText,
@@ -323,7 +334,9 @@ namespace sw::editor
         outState._listSnapshotLabel.clear();
         for ( const shared_ptr<const MemorySnapshot>& pSnapshot : _listSnapshot )
         {
-            outState._listSnapshotLabel.push_back( pSnapshot->_label + " · " + pSnapshot->_source );
+            StringBuilder<constant::buffer::kMax256> labelBuilder;
+            labelBuilder.appendFormat( "%# · %#", pSnapshot->_label, pSnapshot->_source );
+            outState._listSnapshotLabel.push_back( string( labelBuilder.view() ) );
         }
         outState._currentIndex     = _currentIndex;
         outState._compareIndex     = isCompareMode() ? _compareIndex : kMemoryNoSnapshot;
@@ -501,18 +514,22 @@ namespace sw::editor
         if ( folder.empty() )
             return;
         const MemorySnapshot& snapshot = *_listSnapshot[static_cast<size_t>( _currentIndex )];
-        const string          name{ getMemorySheetSchema( _sheet )._pName };
+        const string_view     name{ getMemorySheetSchema( _sheet )._pName };
         MemoryExportRequest   request{};
         request._folder = folder;
         if ( isCompareMode() )
         {
-            request._table    = MemorySnapshotExport::makeDiffTable( MemorySheetDiff::compare( *_listSnapshot[static_cast<size_t>( _compareIndex )], snapshot, _sheet ) );
-            request._fileName = name + "-Compare.csv";
+            request._table = MemorySnapshotExport::makeDiffTable( MemorySheetDiff::compare( *_listSnapshot[static_cast<size_t>( _compareIndex )], snapshot, _sheet ) );
+            StringBuilder<constant::buffer::kMax256> fileNameBuilder;
+            fileNameBuilder.appendFormat( "%#-Compare.csv", name );
+            request._fileName = string( fileNameBuilder.view() );
         }
         else
         {
-            request._table    = MemorySnapshotExport::makeSheetTable( snapshot, _sheet );
-            request._fileName = name + ".csv";
+            request._table = MemorySnapshotExport::makeSheetTable( snapshot, _sheet );
+            StringBuilder<constant::buffer::kMax256> fileNameBuilder;
+            fileNameBuilder.appendFormat( "%#.csv", name );
+            request._fileName = string( fileNameBuilder.view() );
         }
         _exportJob.request( std::move( request ) );
     }

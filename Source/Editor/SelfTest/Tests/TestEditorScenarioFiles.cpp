@@ -1,6 +1,8 @@
 #include "pch.h"
 
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/Client/Automation/Tests/ScenarioFileCheck.h"
@@ -18,7 +20,11 @@ SW_TEST_CASE( EditorScenarioFilesTest, AllEditorScenariosParseResolveAndValidate
     SW_EXPECT_TRUE( test::validateScenarioFolder( "engine/automation/editor", pModuleLoader ) );
     SW_EXPECT_TRUE( test::validateScenarioFolder( "engine/automation/editor/statedir", pModuleLoader ) ); // 두 프로세스가 같은 상태 폴더를 이어 쓰는 쌍
     // 활성 게임의 편집기 시나리오(편집기 체인이 함께 돈다) — 없는 게임도 있다
-    const string gameAutomation = "game/" + StringUtil::toLower( GameSelection::getName().c_str() ) + "/automation";
-    (void)test::validateScenarioFolder( gameAutomation + "/editor", pModuleLoader );
-    (void)test::validateScenarioFolder( gameAutomation + "/desktop/editor", pModuleLoader ); // 편집기를 켜고 혼자 도는 데스크톱 시나리오(플레이 중 리로드 — Test/Scenario 가 따로 등록한다)
+    const string                            gameName = StringUtil::toLower( GameSelection::getName().c_str() );
+    fixed_string<constant::buffer::kMax256> folder;
+    formatstring( folder.data(), folder.capacity(), "game/%#/automation/editor", gameName );
+    (void)test::validateScenarioFolder( folder, pModuleLoader );
+    // 편집기를 켜고 혼자 도는 데스크톱 시나리오(플레이 중 리로드 — Test/Scenario 가 따로 등록한다)
+    formatstring( folder.data(), folder.capacity(), "game/%#/automation/desktop/editor", gameName );
+    (void)test::validateScenarioFolder( folder, pModuleLoader );
 }

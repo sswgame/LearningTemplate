@@ -23,29 +23,13 @@ namespace sw
     {
         struct ScavengerFacilityInternal
         {
-            static void appendNumber( string& inoutText, int32 value )
-            {
-                utf8         arrBuffer[constant::buffer::kMax32];
-                const uint32 length = StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, value );
-                inoutText.append( arrBuffer, length );
-            }
-
-            static void appendRoomID( string& inoutText, int32 roomIndex )
-            {
-                if ( roomIndex == 0 )
-                {
-                    inoutText += "entrance";
-                    return;
-                }
-                inoutText += "room";
-                appendNumber( inoutText, roomIndex );
-            }
-
             static string makeRoomText( int32 roomIndex )
             {
-                string text;
-                appendRoomID( text, roomIndex );
-                return text;
+                if ( roomIndex == 0 )
+                    return string( "entrance" );
+                StringBuilder<constant::buffer::kMax32> text;
+                text.appendFormat( "room%#", roomIndex );
+                return string( text.view() );
             }
 
             static hashed_string makeRoomID( int32 roomIndex )
@@ -84,7 +68,11 @@ namespace sw
                 writer.attribute( "to", toText );
                 writer.attribute( "kind", pKind );
                 if ( bLocked )
-                    writer.attribute( "requires", "unlocked." + toText );
+                {
+                    StringBuilder<constant::buffer::kMax128> requirement;
+                    requirement.appendFormat( "unlocked.%#", toText );
+                    writer.attribute( "requires", requirement.view() );
+                }
                 writer.endElement();
             }
 
@@ -230,9 +218,9 @@ namespace sw
 
     bool ScavengerFacility::unlockDoor( const hashed_string& roomID )
     {
-        string flagText = "unlocked.";
-        flagText += roomID.c_str();
-        const hashed_string flag( string_view( flagText.data(), flagText.size() ) );
+        fixed_string<constant::buffer::kMax128> flagText;
+        formatstring( flagText.data(), flagText.capacity(), "unlocked.%#", roomID.c_str() );
+        const hashed_string flag( flagText.view() );
         if ( _pFlags == nullptr || _pFlags->hasFlag( flag ) )
             return false;
         for ( const AreaLink& link : _graph.getLinks() )

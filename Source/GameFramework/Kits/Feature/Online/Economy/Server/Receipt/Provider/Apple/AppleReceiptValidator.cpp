@@ -66,15 +66,18 @@ namespace sw
 
     string AppleReceiptValidator::makeTransactionURL( string_view transactionID ) const
     {
-        return _settings._baseURL + "/inApps/v1/transactions/" + string( transactionID );
+        StringBuilder<constant::buffer::kMax256> url;
+        url.appendFormat( "%#/inApps/v1/transactions/%#", _settings._baseURL, transactionID );
+        return string( url.view() );
     }
 
     string AppleReceiptValidator::makeHistoryURL( string_view paginationToken ) const
     {
-        string url = _settings._baseURL + "/inApps/v1/notifications/history";
+        StringBuilder<constant::buffer::kMax1024> url;
+        url.appendFormat( "%#/inApps/v1/notifications/history", _settings._baseURL );
         if ( paginationToken.empty() == false )
-            url += "?paginationToken=" + HTTPUtil::encodePercent( paginationToken );
-        return url;
+            url.appendFormat( "?paginationToken=%#", HTTPUtil::encodePercent( paginationToken ) );
+        return string( url.view() );
     }
 
     optional<JWTVerified> AppleReceiptValidator::verifyJws( string_view compact, int64 unixSeconds ) const
@@ -122,7 +125,9 @@ namespace sw
             SW_LOG_ERROR_ID( "AppleReceiptValidator.CouldNotSignApp", "Could not sign the App Store Server API token with the key '%#'", _settings._keyID.c_str() );
             return {};
         }
-        _authorization     = "Bearer " + token;
+        StringBuilder<constant::buffer::kMax1024> authorization;
+        authorization.appendFormat( "Bearer %#", token );
+        _authorization     = string( authorization.view() );
         _authExpiresWallMs = expiresMs;
         return _authorization;
     }

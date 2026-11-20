@@ -33,7 +33,12 @@ namespace sw
                 return result;
             }
 
-            static string makeSubject( AccountID accountID ) { return "acct." + ServiceKeyUtil::makeHex64( accountID ); }
+            static string makeSubject( AccountID accountID )
+            {
+                StringBuilder<constant::buffer::kMax32> subject;
+                subject.appendFormat( "acct.%#", ServiceKeyUtil::makeHex64( accountID ) );
+                return string( subject.view() );
+            }
 
             /**
              * @brief 등급이 모자란 명령을 거절합니다. 거절 감사 줄(`admin.command.denied`, 대상은 운영자 `gm.<16 진>`)을 남기고 kForbidden 으로 끝낸다.
@@ -45,9 +50,11 @@ namespace sw
                 audit._actor   = ServiceAuditLog::makeOperatorActor( command._adminID );
                 audit._action  = "admin.command";
                 audit._subject = audit._actor;
-                audit._after   = "method " + to_string( static_cast<uint32>( command._method ) );
-                audit._memo    = command._request._memo;
-                audit._timeMs  = command._nowMs;
+                StringBuilder<constant::buffer::kMax32> after;
+                after.appendFormat( "method %#", static_cast<uint32>( command._method ) );
+                audit._after  = string( after.view() );
+                audit._memo   = command._request._memo;
+                audit._timeMs = command._nowMs;
                 ServiceAuditLog::commitRejection( connection, audit );
                 return finish( outReply, AdminServiceResult::fail( OnlineError::kForbidden ) );
             }
@@ -178,7 +185,9 @@ namespace sw
                 for ( const AccountID recipient : request._listAccountID )
                 {
                     // 받는 계정마다 배치 키를 둔다. 중간에 끊긴 뒤 다시 돌리면 이미 보낸 계정은 건너뛴다.
-                    string             key = "bulk." + ServiceKeyUtil::makeHex64( request._batchID ) + "." + ServiceKeyUtil::makeHex64( recipient );
+                    StringBuilder<constant::buffer::kMax64> keyBuilder;
+                    keyBuilder.appendFormat( "bulk.%#.%#", ServiceKeyUtil::makeHex64( request._batchID ), ServiceKeyUtil::makeHex64( recipient ) );
+                    string             key( keyBuilder.view() );
                     string             mailKey;
                     bool               bReplayed = false;
                     const LedgerResult staged    = ServiceMail::stageSend( connection, makeGMMail( command, recipient, std::move( key ) ), inoutTransaction, mailKey, bReplayed );
@@ -186,8 +195,10 @@ namespace sw
                         return toAdminResult( staged );
                     outReply._processedCount += bReplayed ? 0 : 1;
                 }
-                inoutAudit._action  = "admin.bulk_mail";
-                inoutAudit._subject = "batch." + ServiceKeyUtil::makeHex64( request._batchID );
+                inoutAudit._action = "admin.bulk_mail";
+                StringBuilder<constant::buffer::kMax32> subject;
+                subject.appendFormat( "batch.%#", ServiceKeyUtil::makeHex64( request._batchID ) );
+                inoutAudit._subject = string( subject.view() );
                 inoutAudit._after   = formatAmount( "sent", outReply._processedCount );
                 return AdminResult::Ok;
             }
@@ -315,13 +326,15 @@ namespace sw
                     }
                     case AdminMethod::SendMail::kID:
                     {
-                        string             mailKey;
-                        bool               bReplayed = false;
-                        const string       key       = "gm." + ServiceKeyUtil::makeHex64( command._adminID ) + "." + ServiceKeyUtil::makeHex64( command._keyLow );
-                        const LedgerResult sent      = ServiceMail::stageSend( connection, makeGMMail( command, request._accountID, key ), inoutTransaction, mailKey, bReplayed );
-                        staged                       = toAdminResult( sent );
-                        audit._action                = "admin.mail";
-                        audit._after                 = mailKey;
+                        string                                  mailKey;
+                        bool                                    bReplayed = false;
+                        StringBuilder<constant::buffer::kMax64> keyBuilder;
+                        keyBuilder.appendFormat( "gm.%#.%#", ServiceKeyUtil::makeHex64( command._adminID ), ServiceKeyUtil::makeHex64( command._keyLow ) );
+                        const string       key( keyBuilder.view() );
+                        const LedgerResult sent = ServiceMail::stageSend( connection, makeGMMail( command, request._accountID, key ), inoutTransaction, mailKey, bReplayed );
+                        staged                  = toAdminResult( sent );
+                        audit._action           = "admin.mail";
+                        audit._after            = mailKey;
                         break;
                     }
                     case AdminMethod::BulkMail::kID:
@@ -343,7 +356,9 @@ namespace sw
                         campaign._actorID        = command._adminID;
                         staged                   = ServiceMailCampaign::stageCreate( campaign, inoutTransaction ) ? AdminResult::Ok : AdminServiceResult::fail( OnlineError::kInvalidRequest );
                         audit._action            = "admin.campaign";
-                        audit._subject           = "campaign." + ServiceKeyUtil::makeHex64( request._batchID );
+                        StringBuilder<constant::buffer::kMax32> subject;
+                        subject.appendFormat( "campaign.%#", ServiceKeyUtil::makeHex64( request._batchID ) );
+                        audit._subject = string( subject.view() );
                         break;
                     }
                     case AdminMethod::SetRole::kID:
@@ -461,8 +476,9 @@ namespace sw
                             line._listChange.push_back( LedgerBalance{ posting._assetID, sign * posting._amount, 0 } );
                     }
                 }
-                const string             subject = makeSubject( request._accountID ) + "/";
-                const ServiceStoreResult listed  = ServiceAuditLog::listEntries( connection, subject, "", AdminProtocol::kMaxLookupCount, outReply._listAudit, ignoredCursor );
+                StringBuilder<constant::buffer::kMax32> subject;
+                subject.appendFormat( "%#/", makeSubject( request._accountID ) );
+                const ServiceStoreResult listed = ServiceAuditLog::listEntries( connection, subject.view(), "", AdminProtocol::kMaxLookupCount, outReply._listAudit, ignoredCursor );
                 return listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminServiceResult::fail( OnlineError::kUnavailable );
             }
         };

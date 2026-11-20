@@ -45,19 +45,22 @@ SW_TEST_CASE( LoginTicketKeyTest, ParseHex )
         SW_EXPECT_EQUAL( static_cast<uint8>( index ), arrKey[index] );
     }
 
-    string upper = "  " + text + "\n";
+    fixed_string<constant::buffer::kMax128> upper;
+    formatstring( upper.data(), upper.capacity(), "  %#\n", text );
     for ( utf8& character : upper )
     {
         character = 'a' <= character && character <= 'f' ? static_cast<utf8>( character - 'a' + 'A' ) : character;
     }
     uint8 arrUpper[LoginTicketAuthority::kMasterKeySize]{};
-    SW_EXPECT_TRUE( LoginTicketKey::parseHex( upper, arrUpper ) );
+    SW_EXPECT_TRUE( LoginTicketKey::parseHex( upper.view(), arrUpper ) );
     SW_EXPECT_EQUAL( uint8( 31 ), arrUpper[31] );
 
     uint8 arrBad[LoginTicketAuthority::kMasterKeySize]{};
     SW_EXPECT_FALSE( LoginTicketKey::parseHex( "", arrBad ) );
     SW_EXPECT_FALSE( LoginTicketKey::parseHex( text.substr( 2 ), arrBad ) );
-    SW_EXPECT_FALSE( LoginTicketKey::parseHex( text + "00", arrBad ) );
+    fixed_string<constant::buffer::kMax128> tooLong;
+    formatstring( tooLong.data(), tooLong.capacity(), "%#00", text );
+    SW_EXPECT_FALSE( LoginTicketKey::parseHex( tooLong.view(), arrBad ) );
     string notHex = text;
     notHex[10]    = 'g';
     SW_EXPECT_FALSE( LoginTicketKey::parseHex( notHex, arrBad ) );

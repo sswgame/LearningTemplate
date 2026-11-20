@@ -2,7 +2,10 @@
 
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/Network/Transport/NetEmulation.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 // DebugReplyLine — 한 줄 답의 바이트 상한 · 잘림 표시와 UTF-8 글자 경계 자르기.
@@ -16,10 +19,11 @@ namespace
     {
         for ( int32 index = 0; index < count; ++index )
         {
-            const string item = to_string( static_cast<uint64>( index ) ) + ",";
+            fixed_string<constant::buffer::kMax32> item;
+            formatstring( item.data(), item.capacity(), "%#,", static_cast<uint64>( index ) );
             if ( inoutText.size() + item.size() > maxBytes )
                 break;
-            inoutText += item;
+            inoutText += item.view();
         }
     }
 } // namespace
@@ -51,7 +55,9 @@ SW_TEST_CASE( DebugReplyLineTest, AnOverlongTailIsCutAndMarkedWithItsFullLength 
         appendItems( inoutText, maxBytes, 2000 );
     } );
     SW_EXPECT_TRUE( DebugReplyLine::canFit( line.size() ) );
-    const string marker = string( DebugReplyLine::kTruncatedMarker ) + to_string( static_cast<uint64>( fullLine.size() ) );
+    StringBuilder<constant::buffer::kMax64> markerBuilder;
+    markerBuilder.appendFormat( "%#%#", DebugReplyLine::kTruncatedMarker, static_cast<uint64>( fullLine.size() ) );
+    const string marker( markerBuilder.view() );
     SW_REQUIRE_TRUE( line.size() > marker.size() );
     SW_EXPECT_EQUAL( line.substr( line.size() - marker.size() ), marker );
     SW_EXPECT_TRUE( line.compare( 0, 4, "head" ) == 0 );
@@ -77,7 +83,9 @@ SW_TEST_CASE( DebugReplyLineTest, AnOverlongFixedLineIsCutAndMarked )
     const string tooLong( DebugReplyLine::kMaxBytes + 100, 'a' );
     const string line = DebugReplyLine::makeFixed( tooLong );
     SW_EXPECT_TRUE( DebugReplyLine::canFit( line.size() ) );
-    SW_EXPECT_TRUE( line.find( string( DebugReplyLine::kTruncatedMarker ) + to_string( static_cast<uint64>( tooLong.size() ) ) ) != string::npos );
+    fixed_string<constant::buffer::kMax64> marker;
+    formatstring( marker.data(), marker.capacity(), "%#%#", DebugReplyLine::kTruncatedMarker, static_cast<uint64>( tooLong.size() ) );
+    SW_EXPECT_TRUE( line.find( marker.c_str() ) != string::npos );
 }
 
 /**

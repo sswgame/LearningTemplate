@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Ray.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
@@ -448,7 +449,9 @@ namespace sw::editor
                 }
                 if ( bKnownMode == false )
                 {
-                    outReply = "unknown brush mode '" + listArgument[0] + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "unknown brush mode '%#'", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 const bool bRadiusBad   = listArgument.size() > 1 && StringUtil::parseFloat( listArgument[1], settings._radius ) == false;
@@ -460,7 +463,9 @@ namespace sw::editor
                     return false;
                 settings._layerIndex = static_cast<uint32>( layer );
                 get()._settings      = settings;
-                outReply             = "terrain brush " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "terrain brush %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -481,11 +486,15 @@ namespace sw::editor
                 const uint32 resolution = static_cast<uint32>( value );
                 if ( state.resizeTerrain( *pTerrain, resolution ) == false )
                 {
-                    outReply = "terrain resize to " + listArgument[0] + " failed (resolution - 1 must be a multiple of the chunk cells)";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "terrain resize to %# failed (resolution - 1 must be a multiple of the chunk cells)", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 state._resizeResolution = resolution;
-                outReply                = "terrain resized to " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "terrain resized to %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
@@ -74,9 +76,10 @@ namespace sw::test
         sw::Skeleton skeleton;
         for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
         {
-            const sw::string name = sw::string( "bone" ) + sw::to_string( boneIndex ).c_str();
+            sw::fixed_string<sw::constant::buffer::kMax32> name;
+            sw::formatstring( name.data(), name.capacity(), "bone%#", boneIndex );
             const sw::float3 offset{ 0.0f, boneIndex == 0 ? 0.0f : 1.0f, 0.0f };
-            (void)skeleton.addBone( sw::hashed_string( name ), static_cast<int32>( boneIndex ) - 1, makeBoneTransform( offset ) );
+            (void)skeleton.addBone( sw::hashed_string( name.view() ), static_cast<int32>( boneIndex ) - 1, makeBoneTransform( offset ) );
         }
         return skeleton;
     }

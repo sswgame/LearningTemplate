@@ -432,9 +432,10 @@ SW_TEST_CASE( TileMapXMLTest, DataLayersRoundTripAndRejectBrokenLayers )
     SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" ); // 이름 · 기본값 없는 레이어(TileDataLayerParams 의 Required)
     for ( const sw::string_view broken : arrBroken )
     {
-        sw::TileMapXMLData map;
-        const sw::string   xml = sw::string( kHead ) + sw::string( broken ) + "</dataLayers></TileMap>";
-        SW_EXPECT_FALSE( map.loadFromXML( xml ) );
+        sw::TileMapXMLData                               map;
+        sw::StringBuilder<sw::constant::buffer::kMax512> xml;
+        xml.appendFormat( "%#%#</dataLayers></TileMap>", kHead, broken );
+        SW_EXPECT_FALSE( map.loadFromXML( xml.view() ) );
         SW_EXPECT_TRUE( map._listDataLayer.empty() && map._width == 0 );
     }
 }

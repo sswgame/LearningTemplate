@@ -53,9 +53,9 @@ namespace sw
 
             static string makeConfigKey( const utf8* pPrefix, string_view platform )
             {
-                string key{ pPrefix };
-                key += platform;
-                return key;
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%#%#", pPrefix, platform );
+                return string( key.view() );
             }
         };
     } // namespace
@@ -511,8 +511,9 @@ namespace sw
             onAllowed();
             return;
         }
-        const string key       = string( LoginServiceInternal::kAttemptKeyPrefix ) + ServiceKeyUtil::makeHex64( clientKey );
-        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeIncrement( key, 1, _settings._sharedAttemptWindowMs ),
+        StringBuilder<constant::buffer::kMax64> key;
+        key.appendFormat( "%#%#", LoginServiceInternal::kAttemptKeyPrefix, ServiceKeyUtil::makeHex64( clientKey ) );
+        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeIncrement( key.view(), 1, _settings._sharedAttemptWindowMs ),
                                                    EphemeralStoreRouter::ReplyDelegate::create<&LoginService::onCacheReply>( this ), _cacheReplyOwner );
         if ( requestID == 0 )
         {
@@ -559,8 +560,10 @@ namespace sw
             nonce += ServiceKeyUtil::makeHex64( word );
         }
         Memory::wipe( arrNonce, sizeof( arrNonce ) );
+        StringBuilder<constant::buffer::kMax128> nonceKey;
+        nonceKey.appendFormat( "%#%#", LoginServiceInternal::kNonceKeyPrefix, nonce );
         const uint64 requestID =
-            _pRouter->submit( EphemeralRequest::makeSet( string( LoginServiceInternal::kNonceKeyPrefix ) + nonce, vector<uint8>{ 1 }, _settings._loginNonceLifetimeMs, EphemeralCondition::IfAbsent ),
+            _pRouter->submit( EphemeralRequest::makeSet( nonceKey.view(), vector<uint8>{ 1 }, _settings._loginNonceLifetimeMs, EphemeralCondition::IfAbsent ),
                               EphemeralStoreRouter::ReplyDelegate::create<&LoginService::onCacheReply>( this ), _cacheReplyOwner );
         if ( requestID == 0 )
         {
@@ -1181,7 +1184,9 @@ namespace sw
             pushImmediate( operation, requestTag, LoginResult::ProviderRejected, LoginGrant{} );
             return;
         }
-        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeErase( string( LoginServiceInternal::kNonceKeyPrefix ) + nonce ),
+        StringBuilder<constant::buffer::kMax128> nonceKey;
+        nonceKey.appendFormat( "%#%#", LoginServiceInternal::kNonceKeyPrefix, nonce );
+        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeErase( nonceKey.view() ),
                                                    EphemeralStoreRouter::ReplyDelegate::create<&LoginService::onCacheReply>( this ), _cacheReplyOwner );
         if ( requestID == 0 )
         {

@@ -31,7 +31,9 @@ namespace sw
 
     string CookStore::makeRecordPath( string_view outputID ) const
     {
-        return FileUtil::joinPath( _recordRootPath, string( outputID ) + ".cookrec" );
+        StringBuilder<constant::buffer::kMax512> builder;
+        builder.appendFormat( "%#.cookrec", outputID );
+        return FileUtil::joinPath( _recordRootPath, builder.view() );
     }
 
     bool CookStore::reuseFreshOutput( const CookJobDesc& desc, string_view outputID, string_view outputPath ) const

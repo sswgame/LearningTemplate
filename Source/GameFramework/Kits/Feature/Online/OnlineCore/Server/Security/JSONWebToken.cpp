@@ -220,7 +220,9 @@ namespace sw
         if ( provider.signData( algorithm, privateKeyPem, reinterpret_cast<const uint8*>( signingInput.data() ), static_cast<int32>( signingInput.size() ), signature ) ==
              false )
             return false;
-        outCompact = signingInput + "." + Base64Util::encodeURL( signature.data(), signature.size() );
+        StringBuilder<constant::buffer::kMax2048> compact;
+        compact.appendFormat( "%#.%#", signingInput, Base64Util::encodeURL( signature.data(), signature.size() ) );
+        outCompact = string( compact.view() );
         return true;
     }
 

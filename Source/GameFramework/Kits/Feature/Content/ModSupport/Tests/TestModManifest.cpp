@@ -59,21 +59,20 @@ namespace
             vector<size_t> listOrder;
             if ( ModResolver::resolveOrder( listManifest, makeSettings(), listOrder ) == false )
                 return "<rejected>";
-            string text;
+            StringBuilder<constant::buffer::kMax256> text;
             for ( const size_t index : listOrder )
             {
-                if ( text.empty() == false )
-                    text += ',';
-                text += listManifest[index]._id;
+                text.appendFormat( "%#%#", text.size() == 0 ? "" : ",", listManifest[index]._id );
             }
-            return text;
+            return string( text.view() );
         }
 
         static bool parseOverride( string_view path )
         {
-            ModManifest  manifest;
-            const string text = R"(<Mod id="a" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Override path=")" + string{ path } + R"("/></Mod>)";
-            return ModManifest::parseXMLText( text, "test", manifest );
+            ModManifest                              manifest;
+            StringBuilder<constant::buffer::kMax512> text;
+            text.appendFormat( R"(<Mod id="a" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Override path="%#"/></Mod>)", path );
+            return ModManifest::parseXMLText( text.view(), "test", manifest );
         }
     };
 } // namespace

@@ -74,7 +74,9 @@ namespace sw
         const string previousGroup = _group;
         bool         bValid        = root.readProperties( *this, sourceName );
         // 자리(폴더)는 로컬 저장소가 정한다 - 데이터는 슬롯 그룹 이름만 적는다(경로 · `..` 는 슬롯 이름 규칙에 걸린다).
-        if ( ILocalStore::isValidGroupPrefix( _group + "/" ) == false )
+        StringBuilder<constant::buffer::kMax128> groupPrefix;
+        groupPrefix.appendFormat( "%#/", _group );
+        if ( ILocalStore::isValidGroupPrefix( groupPrefix.view() ) == false )
         {
             SW_LOG_ERROR_ID( "Autosave.AutosaveGroupMustOne", "%#: Autosave group '%#' must be one local store slot group ([0-9a-z_.-], not starting with '.')", sourceName, _group );
             _group = previousGroup; // 틀린 그룹은 쓰지 않는다
@@ -92,7 +94,9 @@ namespace sw
 
     string AutosaveSettings::makeInfoSlotName( int32 slot ) const
     {
-        return makeSlotName( slot ) + AutosaveInternal::kInfoExtension;
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "%#/%#%#%#", _group, _prefix, slot, AutosaveInternal::kInfoExtension );
+        return string( resultBuilder.view() );
     }
 
     // ------------------------------------------------------------------------------

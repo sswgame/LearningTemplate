@@ -35,7 +35,9 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "CharacterEditorPackData.SkeletonMustEndReference", "%#: skeleton '%#' must end with '%#' (the reference pose is named after it)", sourceName, skeletonPath.c_str(), kSkeletonExtension );
                     return false;
                 }
-                outValue = skeletonPath.substr( 0, skeletonPath.size() - skeletonExtension.size() ) + kRefPoseExtension;
+                StringBuilder<constant::buffer::kMax512> refPosePath;
+                refPosePath.appendFormat( "%#%#", string_view( skeletonPath ).substr( 0, skeletonPath.size() - skeletonExtension.size() ), kRefPoseExtension );
+                outValue = string( refPosePath.view() );
                 return true;
             }
         };

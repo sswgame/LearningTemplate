@@ -578,7 +578,9 @@ SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceBeyondTheFirstPageStillBloc
     const UnixMilliseconds  nowMs{ kNowMs };
     for ( int32 index = 0; index < 70; ++index )
     {
-        rig.writeMaintenanceDirectly( makeWindow( "aa" + to_string( 100 + index ) ) ); // 키 순서로 game 앞에 온다
+        fixed_string<constant::buffer::kMax16> scope;
+        formatstring( scope.data(), scope.capacity(), "aa%#", 100 + index );
+        rig.writeMaintenanceDirectly( makeWindow( scope.view() ) ); // 키 순서로 game 앞에 온다
     }
     rig.writeMaintenanceDirectly( makeWindow( "game" ) );
     rig._service.notifyChanged();

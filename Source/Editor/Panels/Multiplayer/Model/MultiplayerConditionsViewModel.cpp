@@ -86,7 +86,9 @@ namespace sw::editor
                 int32 lastIndex  = 0;
                 if ( EditorNetLinkSettings::tryParseTarget( listArgument[0], pSession->getProcessCount(), firstIndex, lastIndex ) == false )
                 {
-                    outReply = "no process '" + listArgument[0] + "' (server, client<N>, clients, all)";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no process '%#' (server, client<N>, clients, all)", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 string command;
@@ -138,10 +140,9 @@ namespace sw::editor
             {
                 const NetEmulationReport                 total = sumReports( session );
                 StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "%#%%", static_cast<int32>( total._measuredLossPercent ) );
-                return "netplay stats from " + to_string( answeredCount ) + " of " + to_string( askedCount ) + " process(es): resent " +
-                       to_string( total._resentMessageCount ) + ", dropped " + to_string( total._droppedPacketCount ) + ", measured loss " +
-                       string( textBuilder.view() );
+                textBuilder.appendFormat( "netplay stats from %# of %# process(es): resent %#, dropped %#, measured loss %#%%", answeredCount, askedCount, total._resentMessageCount,
+                                          total._droppedPacketCount, static_cast<int32>( total._measuredLossPercent ) );
+                return string( textBuilder.view() );
             }
 
             /**

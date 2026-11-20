@@ -4,6 +4,8 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
@@ -54,13 +56,18 @@ SW_TEST_CASE( EditorTexturePipelineTest, DDSFormatFileMatchesTheImportTable )
                                                    TextureImportFormat::R8 };
     for ( const TextureImportFormat format : kArrFormat )
     {
-        const string name{ TextureImportFormatUtil::getName( format ) };
-        SW_EXPECT_TRUE_MSG( findName( TextureImportFormatUtil::getDXGIFormat( format, false ) ) == name, "import table name differs from DdsFormats.json: " + name );
+        const string                            name{ TextureImportFormatUtil::getName( format ) };
+        fixed_string<constant::buffer::kMax256> nameMessage;
+        formatstring( nameMessage.data(), nameMessage.capacity(), "import table name differs from DdsFormats.json: %#", name );
+        SW_EXPECT_TRUE_MSG( findName( TextureImportFormatUtil::getDXGIFormat( format, false ) ) == name, nameMessage );
         for ( const bool bSRGB : { false, true } )
         {
-            const uint32 dxgiFormat = TextureImportFormatUtil::getDXGIFormat( format, bSRGB );
-            SW_EXPECT_TRUE_MSG( findName( dxgiFormat ).empty() == false, "import writes DXGI " + to_string( dxgiFormat ) + " which DdsFormats.json does not name" );
-            SW_EXPECT_TRUE_MSG( hasSize( dxgiFormat ), "import writes DXGI " + to_string( dxgiFormat ) + " which DDSLoader cannot size" );
+            const uint32                            dxgiFormat = TextureImportFormatUtil::getDXGIFormat( format, bSRGB );
+            fixed_string<constant::buffer::kMax128> formatMessage;
+            formatstring( formatMessage.data(), formatMessage.capacity(), "import writes DXGI %# which DdsFormats.json does not name", dxgiFormat );
+            SW_EXPECT_TRUE_MSG( findName( dxgiFormat ).empty() == false, formatMessage );
+            formatstring( formatMessage.data(), formatMessage.capacity(), "import writes DXGI %# which DDSLoader cannot size", dxgiFormat );
+            SW_EXPECT_TRUE_MSG( hasSize( dxgiFormat ), formatMessage );
         }
     }
 }

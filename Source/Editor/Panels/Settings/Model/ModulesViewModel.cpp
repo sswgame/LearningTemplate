@@ -6,6 +6,9 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -31,7 +34,9 @@ namespace sw::editor
                 const string gameName = GameSelection::getName();
                 if ( gameName.empty() )
                     return nullopt;
-                return AbsolutePath::tryResolve( "Source/Games/" + gameName + "/" + config::kTargetGameModule + ModuleCatalog::kManifestExtension, ProcessRoots::get()._project );
+                fixed_string<constant::buffer::kMax512> manifestPath;
+                formatstring( manifestPath.data(), manifestPath.capacity(), "Source/Games/%#/%#%#", gameName, config::kTargetGameModule, ModuleCatalog::kManifestExtension );
+                return AbsolutePath::tryResolve( manifestPath, ProcessRoots::get()._project );
             }
 
             /** @brief 이 실행이 모듈을 올린 조건입니다(`ModuleCatalogLoader` 와 같다). 기본값(Windows · 양쪽 대상)으로 풀면 다른 플랫폼에서 창이 실제와 다른 켜짐을 보인다. */
@@ -86,7 +91,11 @@ namespace sw::editor
         if ( loaded.has_value() )
             loaded = _catalog.resolve( context, _resolution );
         if ( loaded.has_value() == false )
-            _loadError = string( loaded.error().message().data(), loaded.error().message().size() ) + " (" + string( loaded.error().detail().data(), loaded.error().detail().size() ) + ")";
+        {
+            StringBuilder<constant::buffer::kMax512> errorBuilder;
+            errorBuilder.appendFormat( "%# (%#)", string( loaded.error().message().data(), loaded.error().message().size() ), string( loaded.error().detail().data(), loaded.error().detail().size() ) );
+            _loadError = string( errorBuilder.view() );
+        }
         if ( loaded.has_value() == false )
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesCatalogCouldNot", "Modules: the catalog in %# could not be resolved - %#", string( directory ).c_str(), _loadError.c_str() );
     }

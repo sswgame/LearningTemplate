@@ -37,9 +37,17 @@ namespace sw
             case BlackboardValueKind::Bool:
                 return _int != 0 ? string( "true" ) : string( "false" );
             case BlackboardValueKind::Vector:
-                return "(" + to_string( _vector._x ) + ", " + to_string( _vector._y ) + ", " + to_string( _vector._z ) + ")";
+            {
+                StringBuilder<constant::buffer::kMax128> text;
+                text.appendFormat( "(%#, %#, %#)", _vector._x, _vector._y, _vector._z );
+                return string( text.view() );
+            }
             case BlackboardValueKind::Object:
-                return "#" + to_string( _object );
+            {
+                StringBuilder<constant::buffer::kMax32> text;
+                text.appendFormat( "#%#", _object );
+                return string( text.view() );
+            }
             case BlackboardValueKind::None:
                 return string( "-" );
         }

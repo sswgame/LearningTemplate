@@ -41,6 +41,10 @@ namespace sw
     void NavAreaNameValidation::validate( ValidationContext& context, const utf8* pFieldName, const hashed_string& name )
     {
         if ( name.empty() == false && NavAreaNameValidationInternal::getSettings().findAreaIndex( name ).has_value() == false )
-            context.addError( string( pFieldName ) + " names '" + name.c_str() + "', which is not in the navigation areas (navmeshsettings.xml) - it bakes as plain ground" );
+        {
+            fixed_string<constant::buffer::kMax512> message;
+            formatstring( message.data(), message.capacity(), "%# names '%#', which is not in the navigation areas (navmeshsettings.xml) - it bakes as plain ground", pFieldName, name.c_str() );
+            context.addError( message );
+        }
     }
 } // namespace sw

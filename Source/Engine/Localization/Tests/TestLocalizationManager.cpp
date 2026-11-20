@@ -33,11 +33,11 @@ namespace
             LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.title": { "source": "Mystery Island", "maxLength": 20 },
                                                                 "ui.start": { "source": "Start Game" },
                                                                 "ui.quit": { "source": "Quit" })" );
-            const sw::string titleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Mystery Island" ) );
-            const sw::string staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
-            LocalizationTestUtil::writeTranslation( folder, "ko",
-                                                    "\"ui.title\": { \"text\": \"신비의 섬\", \"sourceHash\": \"" + titleHash + "\" }, \"ui.start\": { \"text\": \"시작\", \"sourceHash\": \"" +
-                                                        staleHash + "\" }" );
+            const sw::string                                 titleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Mystery Island" ) );
+            const sw::string                                 staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
+            sw::StringBuilder<sw::constant::buffer::kMax256> koEntries;
+            koEntries.appendFormat( "\"ui.title\": { \"text\": \"신비의 섬\", \"sourceHash\": \"%#\" }, \"ui.start\": { \"text\": \"시작\", \"sourceHash\": \"%#\" }", titleHash, staleHash );
+            LocalizationTestUtil::writeTranslation( folder, "ko", koEntries.view() );
             LocalizationTestUtil::writeTranslation( folder, "ko_kr", R"json("ui.quit": { "text": "종료(한국)" })json" );
             LocalizationTestUtil::writeTranslation( folder, "ja", R"("ui.title": { "text": "神秘の島", "review": true }, "ui.quit": { "text": "終了" })" );
             return projectPath;
@@ -404,8 +404,9 @@ SW_TEST_CASE( LocalizationManagerTest, LookupPointerOutlivesTableChanges )
 
     for ( int32 index = 0; index < 200; ++index )
     {
-        const sw::string key = sw::string( "KEY_FILL_" ) + sw::to_string( index );
-        table.setString( sw::hashed_string( key.c_str() ), "Fill" );
+        sw::fixed_string<sw::constant::buffer::kMax32> key;
+        sw::formatstring( key.data(), key.capacity(), "KEY_FILL_%#", index );
+        table.setString( sw::hashed_string( key.view() ), "Fill" );
     }
     table.clear();
     SW_EXPECT_EQUAL( sw::string( "Alpha" ), sw::string( pHeld ) );

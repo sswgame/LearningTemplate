@@ -67,13 +67,6 @@ namespace sw::editor
                 }
                 return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Text" ) );
             }
-
-            static string makeMark( string_view prefix, string_view name )
-            {
-                string mark( prefix );
-                mark.append( name.data(), name.size() );
-                return mark;
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -201,7 +194,7 @@ namespace sw::editor
                         editAddNode( kind._name, &position );
                     }
                     if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::record( GimmickGraphPanelInternal::makeMark( "gimmick.kind.", kind._name.c_str() ).c_str() );
+                        EditorSelfTestMarks::recordFormat( "gimmick.kind.%#", kind._name.c_str() );
                 }
             }
             ImGui::EndPopup();
@@ -481,15 +474,17 @@ namespace sw::editor
                 ImGui::TextUnformatted( spec._name.c_str() );
                 if ( ImGui::IsItemHovered() )
                     ImGui::SetTooltip( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "ParamDefault", TextArgumentList().addText( "hasDefault", spec._defaultText.empty() ? "no" : "yes" ).addText( "value", spec._defaultText ) ).c_str() );
-                string       newValue;
-                const string current = GimmickGraphEditModel::readParam( node._params, spec._name.c_str() );
-                if ( drawCommittedText( ( string( "gimmick.param." ) + spec._name.c_str() ).c_str(), current, newValue ) )
+                string                                  newValue;
+                const string                            current = GimmickGraphEditModel::readParam( node._params, spec._name.c_str() );
+                fixed_string<constant::buffer::kMax128> paramID;
+                formatstring( paramID.data(), paramID.capacity(), "gimmick.param.%#", spec._name.c_str() );
+                if ( drawCommittedText( paramID.c_str(), current, newValue ) )
                 {
                     editSetParam( node._graphID, spec._name.c_str(), newValue );
                     return;
                 }
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::record( GimmickGraphPanelInternal::makeMark( "gimmick.param.", spec._name.c_str() ).c_str() );
+                    EditorSelfTestMarks::recordFormat( "gimmick.param.%#", spec._name.c_str() );
             }
         }
 
@@ -546,11 +541,13 @@ namespace sw::editor
                     continue;
                 for ( const hashed_string& port : pKind->_listOutput )
                 {
-                    const string label = string( node._id.c_str() ) + "." + port.c_str();
+                    StringBuilder<constant::buffer::kMax128> labelBuilder;
+                    labelBuilder.appendFormat( "%#.%#", node._id.c_str(), port.c_str() );
+                    const string label( labelBuilder.view() );
                     if ( ImGui::Selectable( label.c_str(), label == _formFrom._label ) )
                         _formFrom = PortChoice{ label, port.c_str(), node._graphID };
                     if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::record( GimmickGraphPanelInternal::makeMark( "gimmick.wire.from.", label ).c_str() );
+                        EditorSelfTestMarks::recordFormat( "gimmick.wire.from.%#", label );
                 }
             }
             ImGui::EndCombo();
@@ -565,11 +562,13 @@ namespace sw::editor
                     continue;
                 for ( const hashed_string& port : pKind->_listInput )
                 {
-                    const string label = string( node._id.c_str() ) + "." + port.c_str();
+                    StringBuilder<constant::buffer::kMax128> labelBuilder;
+                    labelBuilder.appendFormat( "%#.%#", node._id.c_str(), port.c_str() );
+                    const string label( labelBuilder.view() );
                     if ( ImGui::Selectable( label.c_str(), label == _formTo._label ) )
                         _formTo = PortChoice{ label, port.c_str(), node._graphID };
                     if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::record( GimmickGraphPanelInternal::makeMark( "gimmick.wire.to.", label ).c_str() );
+                        EditorSelfTestMarks::recordFormat( "gimmick.wire.to.%#", label );
                 }
             }
             ImGui::EndCombo();
@@ -683,14 +682,12 @@ namespace sw::editor
                 editDuplicate( listCopied, pastePosition - corner );
             return;
         }
-        string text;
+        StringBuilder<constant::buffer::kMax256> text;
         for ( const int32 graphID : listNode )
         {
-            fixed_string<constant::buffer::kMax32> number;
-            formatstring( number.data(), number.capacity(), text.empty() ? "%#" : ",%#", graphID );
-            text += number.c_str();
+            text.appendFormat( text.size() == 0 ? "%#" : ",%#", graphID );
         }
-        EditorNodeGraph::storeClipboard( GimmickGraphPanelInternal::kClipboardKind, std::move( text ) );
+        EditorNodeGraph::storeClipboard( GimmickGraphPanelInternal::kClipboardKind, string( text.view() ) );
         if ( command != EditorGraphEditCommand::Cut )
             return;
         EditorGraphRemoval removal;

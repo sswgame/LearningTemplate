@@ -7,6 +7,7 @@
 #include "Core/Foundation/ASCIIUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetDatabase.h"
@@ -26,7 +27,7 @@ namespace sw::editor
             }
 
             /** @brief 경로 목록 중 하나(폴더 마디의 연속)가 디렉터리 안에 마디 경계로 들어 있는지 봅니다. @p dirHaystack 은 앞뒤에 `/` 를 붙인 디렉터리입니다. */
-            static bool containsAnyPath( const vector<string>& listPath, const string& dirHaystack )
+            static bool containsAnyPath( const vector<string>& listPath, string_view dirHaystack )
             {
                 return VectorUtil::containsIf( listPath, [&]( const string& path )
                 {
@@ -43,7 +44,9 @@ namespace sw::editor
                     }
                     if ( begin == end )
                         return false;
-                    return StringUtil::contains( dirHaystack, "/" + string( trimmed.substr( begin, end - begin ) ) + "/", true );
+                    StringBuilder<constant::buffer::kMax256> segmentBuilder;
+                    segmentBuilder.appendFormat( "/%#/", trimmed.substr( begin, end - begin ) );
+                    return StringUtil::contains( dirHaystack, segmentBuilder.view(), true );
                 } );
             }
         };
@@ -54,8 +57,10 @@ namespace sw::editor
 {
     bool AssetImportPathFilter::matchesPath( string_view relativePath ) const
     {
-        const string normalized  = FileUtil::normalizeSeparators( relativePath );
-        const string dirHaystack = "/" + FileUtil::getDirectoryPart( normalized ) + "/";
+        const string                             normalized = FileUtil::normalizeSeparators( relativePath );
+        StringBuilder<constant::buffer::kMax256> haystackBuilder;
+        haystackBuilder.appendFormat( "/%#/", FileUtil::getDirectoryPart( normalized ) );
+        const string_view dirHaystack = haystackBuilder.view();
 
         if ( AssetImportPathFilterInternal::containsAnyPath( _listExcludePath, dirHaystack ) )
             return false;
@@ -114,7 +119,8 @@ namespace sw::editor
     {
         const auto isNameChar = []( const utf8 c )
         { return StringUtil::isDigitChar( c ) || ( 'a' <= ASCIIUtil::toLower( c ) && ASCIIUtil::toLower( c ) <= 'z' ) || c == '_'; };
-        string text = "{";
+        StringBuilder<constant::buffer::kMax1024> text;
+        text.append( '{' );
         for ( size_t index = 0; index < listOverride.size(); ++index )
         {
             const AssetImportOverride& item       = listOverride[index];
@@ -126,13 +132,15 @@ namespace sw::editor
             if ( bNameValid == false || bForbidden || bRepeated )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "an import override names no setting (a rule key other than name and filter, written once)", string_view{ item._key } } );
             // 값 하나씩 따로 읽어 본다 — `1, "filter": …` 같은 글이 다른 칸을 끼워 넣지 못한다.
-            JSONDocument check;
-            if ( check.tryParse( "{\"v\":" + item._value + "}" ) == false || check.getRoot().getMemberNames().size() != 1 )
+            JSONDocument                             check;
+            StringBuilder<constant::buffer::kMax256> valueBuilder;
+            valueBuilder.appendFormat( "{\"v\":%#}", item._value );
+            if ( check.tryParse( valueBuilder.view() ) == false || check.getRoot().getMemberNames().size() != 1 )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "an import override value is not one JSON value (strings are quoted: \"raw\")", string_view{ item._key } } );
-            text += ( index == 0 ? "\"" : ",\"" ) + item._key + "\":" + item._value;
+            text.appendFormat( "%#\"%#\":%#", ( index == 0 ? "" : "," ), item._key, item._value );
         }
-        text += "}";
-        if ( outDoc.parse( text ) == false )
+        text.append( '}' );
+        if ( outDoc.parse( text.view() ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the import overrides are not one JSON object" } );
         return {};
     }

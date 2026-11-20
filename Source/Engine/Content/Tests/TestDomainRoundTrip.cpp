@@ -26,7 +26,12 @@ namespace
         static constexpr const utf8* kGamePack = "game/playground"; ///< 테스트 호스트의 활성 팩(`ResourceEntryRefusesOSPathsInEveryContentSource` 와 같은 팩)
 
         static string makeDomainFolder( const string& domain ) { return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._content.str(), domain ), kFolder ); }
-        static string makeID( const string& domain ) { return domain + "/" + kRelative; }
+        static string makeID( const string& domain )
+        {
+            StringBuilder<constant::buffer::kMax128> builder;
+            builder.appendFormat( "%#/%#", domain, kRelative );
+            return string( builder.view() );
+        }
 
         static string readDisk( const string& domain )
         {
@@ -46,7 +51,11 @@ namespace
             {
                 const string folder = DomainRoundTripInternal::makeDomainFolder( domain );
                 if ( FileUtil::ensureDirectoryExists( folder ) == false || FileUtil::writeTextFile( FileUtil::joinPath( folder, "shared.txt" ), domain ) == false )
-                    test::reportFailure( __FILE__, __LINE__, "could not write the shared file under " + folder );
+                {
+                    fixed_string<constant::buffer::kMax512> text;
+                    formatstring( text.data(), text.capacity(), "could not write the shared file under %#", folder );
+                    test::reportFailure( __FILE__, __LINE__, text );
+                }
             }
         }
         ~ScopedSharedFiles() { removeAll(); }
@@ -104,12 +113,15 @@ SW_TEST_CASE( DomainRoundTripTest, OnlyTheOpenedDomainFileChanges )
     {
         const optional<AbsolutePath> target = paths.toDiskPath( Internal::makeID( domain ) );
         SW_REQUIRE_TRUE( target.has_value() );
-        const string other  = domain == game ? common : game;
-        const string before = Internal::readDisk( other );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( target->str(), "edited-" + domain ) );
-        SW_EXPECT_EQUAL( "edited-" + domain, Internal::readDisk( domain ) );
+        const string                            other  = domain == game ? common : game;
+        const string                            before = Internal::readDisk( other );
+        StringBuilder<constant::buffer::kMax64> editedBuilder;
+        editedBuilder.appendFormat( "edited-%#", domain );
+        const string edited = string( editedBuilder.view() );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( target->str(), edited ) );
+        SW_EXPECT_EQUAL( edited, Internal::readDisk( domain ) );
         SW_EXPECT_EQUAL( before, Internal::readDisk( other ) );
         SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ Internal::makeID( domain ) }, text ) );
-        SW_EXPECT_EQUAL( "edited-" + domain, text );
+        SW_EXPECT_EQUAL( edited, text );
     }
 }

@@ -50,7 +50,9 @@ namespace sw
 
     string MaterialPermutation::makeTextureCountDefine( uint32 count )
     {
-        return string( kMaterialTextureCountDefine ) + "=" + to_string( count );
+        StringBuilder<constant::buffer::kMax64> builder;
+        builder.appendFormat( "%#=%#", kMaterialTextureCountDefine, count );
+        return string( builder.view() );
     }
 
     void MaterialPermutation::appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine )
@@ -63,19 +65,27 @@ namespace sw
                 continue;
             const utf8* pName = getEnumName( flag );
             SW_ASSERT( StringUtil::equals( pName, "Unknown" ) == false ); // 비트마다 ENUM 이름이 있어야 define 이 생긴다
-            MaterialPermutation::appendUniqueDefine( outListDefine, string( "MATERIAL_USAGE_" ) + StringUtil::toSnakeCase( pName, true ) );
+            StringBuilder<constant::buffer::kMax64> define;
+            define.appendFormat( "MATERIAL_USAGE_%#", StringUtil::toSnakeCase( pName, true ) );
+            MaterialPermutation::appendUniqueDefine( outListDefine, define.view() );
         }
     }
 
     void MaterialPermutation::appendQualityDefines( MaterialQualityLevel quality, vector<string>& outListDefine )
     {
-        MaterialPermutation::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY=" ) + to_string( static_cast<uint32>( quality ) ) );
-        MaterialPermutation::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY_" ) + StringUtil::toUpper( getEnumName( quality ) ) );
+        StringBuilder<constant::buffer::kMax64> define;
+        define.appendFormat( "MATERIAL_QUALITY=%#", static_cast<uint32>( quality ) );
+        MaterialPermutation::appendUniqueDefine( outListDefine, define.view() );
+        define.clear();
+        define.appendFormat( "MATERIAL_QUALITY_%#", StringUtil::toUpper( getEnumName( quality ) ) );
+        MaterialPermutation::appendUniqueDefine( outListDefine, define.view() );
     }
 
     void MaterialPermutation::appendSurfaceModelDefines( MaterialSurfaceModel model, vector<string>& outListDefine )
     {
-        MaterialPermutation::appendUniqueDefine( outListDefine, string( "MATERIAL_SURFACE_MODEL_" ) + StringUtil::toUpper( getEnumName( model ) ) );
+        StringBuilder<constant::buffer::kMax64> define;
+        define.appendFormat( "MATERIAL_SURFACE_MODEL_%#", StringUtil::toUpper( getEnumName( model ) ) );
+        MaterialPermutation::appendUniqueDefine( outListDefine, define.view() );
         if ( isForwardOnlySurfaceModel( model ) )
             MaterialPermutation::appendUniqueDefine( outListDefine, kMaterialForwardOnlyDefine );
     }

@@ -47,9 +47,9 @@ SW_TEST_CASE( LoadBotScheduleTest, OpenPacingNeverAnchorsAfterTheSend )
 SW_TEST_CASE( LoadBotScheduleTest, ScenarioRequiresPacing )
 {
     constexpr string_view kSteps = R"("_executor": "per_vu_iterations", "_listStep": [ { "_action": "logout" } ] })";
-    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( R"({ "_name": "x", )" ) + string( kSteps ) ).has_value() );
-    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( R"({ "_name": "x", "_pacing": "fast", )" ) + string( kSteps ) ).has_value() );
-    const expected<LoadBotScenario> open = LoadBotScenario::loadFromXMLText( string( R"({ "_name": "x", "_pacing": "open", )" ) + string( kSteps ) );
+    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( R"({ "_name": "x", )" ).append( kSteps ) ).has_value() );
+    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( R"({ "_name": "x", "_pacing": "fast", )" ).append( kSteps ) ).has_value() );
+    const expected<LoadBotScenario> open = LoadBotScenario::loadFromXMLText( string( R"({ "_name": "x", "_pacing": "open", )" ).append( kSteps ) );
     SW_REQUIRE_TRUE( open.has_value() );
     SW_EXPECT_TRUE( open->_pacing == LoadBotPacing::Open );
 }
@@ -59,11 +59,11 @@ SW_TEST_CASE( LoadBotScheduleTest, ScenarioRequiresExecutor )
 {
     constexpr string_view kHead  = R"({ "_name": "x", "_pacing": "open", )";
     constexpr string_view kSteps = R"("_listStep": [ { "_action": "logout" } ] })";
-    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ) + string( kSteps ) ).has_value() );
-    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ) + R"("_executor": "constant_arrival_rate", )" + string( kSteps ) ).has_value() );
-    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ) + R"("_executor": "per_vu_iterations", "_arrivalRatePerSecond": 5, )" + string( kSteps ) ).has_value() );
+    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ).append( kSteps ) ).has_value() );
+    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ).append( R"("_executor": "constant_arrival_rate", )" ).append( kSteps ) ).has_value() );
+    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ).append( R"("_executor": "per_vu_iterations", "_arrivalRatePerSecond": 5, )" ).append( kSteps ) ).has_value() );
     const expected<LoadBotScenario> arrival =
-        LoadBotScenario::loadFromXMLText( string( kHead ) + R"("_executor": "constant_arrival_rate", "_arrivalRatePerSecond": 5, "_gracefulStopMs": 100, )" + string( kSteps ) );
+        LoadBotScenario::loadFromXMLText( string( kHead ).append( R"("_executor": "constant_arrival_rate", "_arrivalRatePerSecond": 5, "_gracefulStopMs": 100, )" ).append( kSteps ) );
     SW_REQUIRE_TRUE( arrival.has_value() );
     SW_EXPECT_TRUE( arrival->_executor == LoadBotExecutor::ConstantArrivalRate );
     SW_EXPECT_EQUAL( 5, arrival->_arrivalRatePerSecond );
@@ -74,11 +74,11 @@ SW_TEST_CASE( LoadBotScheduleTest, ScenarioRequiresExecutor )
 SW_TEST_CASE( LoadBotScheduleTest, PickRequiresWeights )
 {
     constexpr string_view kHead = R"({ "_name": "x", "_pacing": "closed", "_executor": "per_vu_iterations", "_listStep": [ )";
-    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ) + R"({ "_action": "pick", "_listStep": [ { "_action": "logout" } ] } ] })" ).has_value() );
-    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ) + R"({ "_action": "pick", "_listStep": [ { "_action": "logout", "_weight": 0 } ] } ] })" ).has_value() );
-    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ) + R"({ "_action": "logout", "_weight": 3 } ] })" ).has_value() );
+    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ).append( R"({ "_action": "pick", "_listStep": [ { "_action": "logout" } ] } ] })" ) ).has_value() );
+    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ).append( R"({ "_action": "pick", "_listStep": [ { "_action": "logout", "_weight": 0 } ] } ] })" ) ).has_value() );
+    SW_EXPECT_FALSE( LoadBotScenario::loadFromXMLText( string( kHead ).append( R"({ "_action": "logout", "_weight": 3 } ] })" ) ).has_value() );
     const expected<LoadBotScenario> pick = LoadBotScenario::loadFromXMLText(
-        string( kHead ) + R"({ "_action": "pick", "_listStep": [ { "_action": "economy_wallet", "_weight": 3 }, { "_action": "guild_deposit", "_asset": "cur.gold", "_amount": 2, "_weight": 1 } ] } ] })" );
+        string( kHead ).append( R"({ "_action": "pick", "_listStep": [ { "_action": "economy_wallet", "_weight": 3 }, { "_action": "guild_deposit", "_asset": "cur.gold", "_amount": 2, "_weight": 1 } ] } ] })" ) );
     SW_REQUIRE_TRUE( pick.has_value() );
     SW_REQUIRE_EQUAL( size_t( 2 ), pick->_listStep[0]._listStep.size() );
     SW_EXPECT_EQUAL( 3, pick->_listStep[0]._listStep[0]._weight );

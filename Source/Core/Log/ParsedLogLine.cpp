@@ -3,6 +3,8 @@
 #include "Core/Log/ParsedLogLine.h"
 
 #include "Core/Container/EnumArray.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 namespace sw
 {
@@ -27,8 +29,9 @@ namespace sw
         size_t levelEnd = string_view::npos;
         for ( const LogLevel level : EnumRange<LogLevel>{} )
         {
-            const string label = string( "[" ) + LogLineFormatInternal::kArrLevelLabel[level] + "] ";
-            const size_t found = line.find( label );
+            fixed_string<constant::buffer::kMax32> label;
+            formatstring( label.data(), label.capacity(), "[%#] ", LogLineFormatInternal::kArrLevelLabel[level] );
+            const size_t found = line.find( label.view() );
             if ( found != string_view::npos && ( levelEnd == string_view::npos || found + label.size() < levelEnd ) )
             {
                 levelEnd       = found + label.size();

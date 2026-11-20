@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw::editor
@@ -60,19 +61,25 @@ namespace sw::editor
 
     string EditorNetLinkSettings::makeLinkCommand( EditorNetLinkDirection direction, const EditorNetLinkSettings& settings )
     {
-        return string( "net.emulation " ) + toString( direction ) + " " + makeConditions( settings ).makeOverrideText();
+        StringBuilder<constant::buffer::kMax256> commandBuilder;
+        commandBuilder.appendFormat( "net.emulation %# %#", toString( direction ), makeConditions( settings ).makeOverrideText() );
+        return string( commandBuilder.view() );
     }
 
     string EditorNetLinkSettings::makePresetCommand( string_view presetName )
     {
-        return "net.emulation both " + string( presetName );
+        StringBuilder<constant::buffer::kMax256> commandBuilder;
+        commandBuilder.appendFormat( "net.emulation both %#", presetName );
+        return string( commandBuilder.view() );
     }
 
     string EditorNetLinkSettings::makeSpikeCommand( float32 seconds )
     {
         utf8 arrBuffer[constant::buffer::kMax32];
         (void)StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, MathUtil::max( 0.0f, seconds ) );
-        return string( "net.emulation spike " ) + arrBuffer;
+        StringBuilder<constant::buffer::kMax256> commandBuilder;
+        commandBuilder.appendFormat( "net.emulation spike %#", arrBuffer );
+        return string( commandBuilder.view() );
     }
 
     bool EditorNetLinkSettings::tryParseTarget( string_view text, int32 processCount, int32& outFirstIndex, int32& outLastIndex )

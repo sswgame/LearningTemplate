@@ -43,11 +43,13 @@ SW_TEST_CASE( SpriteLibraryTest, ChildChangesOnlyWhatItNames )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.spritelib.xml" ), string{ kBaseLibrary } ) );
     const string baseID = test::ScopedScratchDomain::makeID( "base.spritelib.xml" ).str();
 
-    const string  text = "<SpriteLibrary _base=\"" + baseID + "\"><_listCategory><SpriteLibraryCategory _name=\"Body\"><_listLabel>"
-                                                              "<SpriteLibraryLabel _name=\"Idle\" _uvRect=\"0,0.5,0.5,0.5\" /><SpriteLibraryLabel _name=\"Run\" _op=\"Remove\" /></_listLabel></SpriteLibraryCategory>"
-                                                              "<SpriteLibraryCategory _name=\"Head\"><_listLabel><SpriteLibraryLabel _name=\"Hat\" /></_listLabel></SpriteLibraryCategory></_listCategory></SpriteLibrary>";
+    StringBuilder<constant::buffer::kMax1024> text;
+    text.appendFormat( "<SpriteLibrary _base=\"%#\"><_listCategory><SpriteLibraryCategory _name=\"Body\"><_listLabel>"
+                       "<SpriteLibraryLabel _name=\"Idle\" _uvRect=\"0,0.5,0.5,0.5\" /><SpriteLibraryLabel _name=\"Run\" _op=\"Remove\" /></_listLabel></SpriteLibraryCategory>"
+                       "<SpriteLibraryCategory _name=\"Head\"><_listLabel><SpriteLibraryLabel _name=\"Hat\" /></_listLabel></SpriteLibraryCategory></_listCategory></SpriteLibrary>",
+                       baseID );
     SpriteLibrary library;
-    SW_REQUIRE_TRUE( library.loadFromXMLText( text, "<test>" ) );
+    SW_REQUIRE_TRUE( library.loadFromXMLText( text.view(), "<test>" ) );
     SW_EXPECT_EQUAL( string( "engine/textures/test/quadrants.dds" ), library._atlasPath.path() ); // 물려받음
     const SpriteLibraryLabel* pIdle = library.findLabel( "Body", "Idle" );
     SW_REQUIRE_TRUE( pIdle != nullptr );

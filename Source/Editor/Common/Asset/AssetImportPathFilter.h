@@ -9,6 +9,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -118,8 +119,10 @@ namespace sw::editor
                 }
                 if ( firstIndex != listRule.size() )
                 {
-                    match._error = string( configName ) + ": '" + string( relativePath ) + "' matches both rule " + describe( listRule[firstIndex]._name, firstIndex ) +
-                                   " and rule " + describe( rule._name, ruleIndex ) + ". Narrow one of them with exclude_patterns.";
+                    StringBuilder<constant::buffer::kMax512> errorBuilder;
+                    errorBuilder.appendFormat( "%#: '%#' matches both rule %# and rule %#. Narrow one of them with exclude_patterns.", configName, relativePath,
+                                               describe( listRule[firstIndex]._name, firstIndex ), describe( rule._name, ruleIndex ) );
+                    match._error = string( errorBuilder.view() );
                     return match;
                 }
                 firstIndex = ruleIndex;
@@ -206,13 +209,23 @@ namespace sw::editor
         /** @brief `makeOverrideObject` 의 오류를 규칙 선택 결과(`AssetImportRuleMatch::_error`)의 한 문장으로 씁니다. */
         static string describeOverrideError( string_view label, const Error& error )
         {
-            return string( label ) + ": " + string( error.message() ) + " - '" + string( error.detail() ) + "'.";
+            StringBuilder<constant::buffer::kMax512> errorBuilder;
+            errorBuilder.appendFormat( "%#: %# - '%#'.", label, error.message(), error.detail() );
+            return string( errorBuilder.view() );
         }
 
     private:
         static void reportSingleFilePattern( string_view configName, const string& ruleName, string_view pattern );
 
         /** @brief 오류 문장에 쓰는 규칙 이름입니다. 이름이 없으면 목록 번호입니다. */
-        static string describe( const string& name, size_t ruleIndex ) { return name.empty() ? "#" + to_string( static_cast<uint32>( ruleIndex ) ) : "'" + name + "'"; }
+        static string describe( const string& name, size_t ruleIndex )
+        {
+            StringBuilder<constant::buffer::kMax128> nameBuilder;
+            if ( name.empty() )
+                nameBuilder.appendFormat( "#%#", static_cast<uint32>( ruleIndex ) );
+            else
+                nameBuilder.appendFormat( "'%#'", name );
+            return string( nameBuilder.view() );
+        }
     };
 } // namespace sw::editor

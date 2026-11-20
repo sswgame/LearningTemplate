@@ -245,7 +245,11 @@ namespace sw
         if ( pExisting != nullptr && pExisting->_kind != kind )
         {
             if ( inoutClash.empty() )
-                inoutClash = string( name.c_str() ) + " (already names " + ( pExisting->_kind == WireTypeKind::Retired ? string( "a removed type" ) : string( pExisting->_name.c_str() ) ) + ")";
+            {
+                StringBuilder<constant::buffer::kMax256> clash;
+                clash.appendFormat( "%# (already names %#)", name.c_str(), pExisting->_kind == WireTypeKind::Retired ? "a removed type" : pExisting->_name.c_str() );
+                inoutClash = string( clash.view() );
+            }
             return;
         }
         const expected<void> assigned = _wireTypeNameIndex.assign( name.view(), name.getHash(), WireTypeEntry{ wireName, kind } );
@@ -540,7 +544,11 @@ namespace sw
                 for ( const hashed_string& removed : pDeclaring->_listRemovedField )
                 {
                     if ( removed.empty() == false && clash.empty() && index.find( removed.getHash() ) != nullptr )
-                        clash = string( removed.c_str() ) + " (a removed field) and a current field or alias";
+                    {
+                        StringBuilder<constant::buffer::kMax256> removedClash;
+                        removedClash.appendFormat( "%# (a removed field) and a current field or alias", removed.c_str() );
+                        clash = string( removedClash.view() );
+                    }
                 }
             }
             if ( clash.empty() == false )
@@ -553,7 +561,11 @@ namespace sw
     {
         const TypeInfo* pType = findType( nameOrFqn );
         if ( pType == nullptr )
-            return string( "TYPE '" ) + nameOrFqn.c_str() + "' is not registered (no REFLECT, its module is not loaded, or a typo)\n";
+        {
+            StringBuilder<constant::buffer::kMax256> missing;
+            missing.appendFormat( "TYPE '%#' is not registered (no REFLECT, its module is not loaded, or a typo)\n", nameOrFqn.c_str() );
+            return string( missing.view() );
+        }
 
         // 부모 체인은 기반부터 찍으려고 모은다. 찾을 수 없는 부모 이름도 그대로 적는다(부모가 늦게 등록된 경우가 여기서 보인다).
         vector<const TypeInfo*> listChain;
@@ -651,7 +663,11 @@ namespace sw
     {
         const EnumInfo* pEnum = findEnum( nameOrFqn );
         if ( pEnum == nullptr )
-            return string( "ENUM '" ) + nameOrFqn.c_str() + "' is not registered (no ENUM(), its module is not loaded, or a typo)\n";
+        {
+            StringBuilder<constant::buffer::kMax256> missing;
+            missing.appendFormat( "ENUM '%#' is not registered (no ENUM(), its module is not loaded, or a typo)\n", nameOrFqn.c_str() );
+            return string( missing.view() );
+        }
 
         StringBuilder<constant::buffer::kMax4096> out;
         out.appendFormat( "ENUM %# (module %#, %# bytes, %#%#)\n", pEnum->_fullyQualifiedName.c_str(),

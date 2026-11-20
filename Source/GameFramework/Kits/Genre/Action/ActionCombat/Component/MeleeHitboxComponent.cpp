@@ -150,7 +150,9 @@ namespace sw
                 MeleeHitboxComponent* pHitbox = pObject != nullptr ? pObject->getComponent<MeleeHitboxComponent>() : nullptr;
                 if ( pHitbox == nullptr )
                 {
-                    outReply = "no object named '" + listArgument[0] + "' with a MeleeHitboxComponent in the active scene";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no object named '%#' with a MeleeHitboxComponent in the active scene", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 pHitbox->beginAttack( damage, duration );

@@ -121,7 +121,9 @@ namespace sw
                     const string fileName = FileUtil::getFileNamePart( filePath );
                     if ( fileName == currentName || isHashedShaderOfStem( fileName, paths._stem ) == false )
                         continue;
-                    carryStaleMeta( filePath, folder->str() + "/" + currentName );
+                    StringBuilder<constant::buffer::kMax1024> currentPath;
+                    currentPath.appendFormat( "%#/%#", folder->str(), currentName );
+                    carryStaleMeta( filePath, string( currentPath.view() ) );
                     if ( FileUtil::removeFile( filePath ) == false )
                         SW_LOG_WARNING_ID( "MaterialGraph.StaleShaderNotRemoved", "Could not remove old generated shader '%#'", filePath );
                 }

@@ -71,10 +71,14 @@ namespace sw
         uint32 written = 0;
         for ( uint32 back = 0; back < _count && written < maxLines; ++back, ++written )
         {
-            const GrowthEvent& entry = getEntry( _count - 1 - back );
-            string             value = string( getEnumName( entry._kind ) ) + " " + entry._what.c_str() + " " + to_string( entry._value );
-            value += entry._source.empty() ? string( " (no source)" ) : string( " from " ) + entry._source.c_str();
-            writer.addLine( string( entry._subject.c_str() ), value );
+            const GrowthEvent&                       entry = getEntry( _count - 1 - back );
+            StringBuilder<constant::buffer::kMax256> value;
+            value.appendFormat( "%# %# %#", getEnumName( entry._kind ), entry._what.c_str(), entry._value );
+            if ( entry._source.empty() )
+                value.append( " (no source)" );
+            else
+                value.appendFormat( " from %#", entry._source.c_str() );
+            writer.addLine( entry._subject.c_str(), value.view() );
         }
         if ( _count == 0 )
             writer.addLine( "growth", "no change recorded yet" );

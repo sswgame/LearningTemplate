@@ -74,7 +74,9 @@ namespace sw
         HTTPClientRequest clientRequest;
         if ( makeClientRequest( request, clientRequest ) == false )
         {
-            response._error = "unsupported HTTP method: " + request._method;
+            StringBuilder<constant::buffer::kMax128> error;
+            error.appendFormat( "unsupported HTTP method: %#", request._method );
+            response._error = string( error.view() );
             return response;
         }
         ScopedLock<mutex>          lock{ _sendMutex };

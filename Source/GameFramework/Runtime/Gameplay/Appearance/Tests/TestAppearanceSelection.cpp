@@ -60,15 +60,17 @@ namespace
                 <ItemVisual id="helm_visual" customization="Metal"><Part name="Shell" kind="SocketPrefab" prefab="helm.prefab" socket="Head"/><State name="Up"/><State name="Down"/></ItemVisual>
                 <ItemVisual id="gold_visual" customization="Metal"><Part name="Shell" kind="SocketPrefab" prefab="gold.prefab" socket="Head" breakable="true"/></ItemVisual>
             </ItemVisualCatalog>)" );
-            loadSection( database, string( R"(<CustomizationSchemaCatalog>
+            StringBuilder<constant::buffer::kMax1024> schemaXML;
+            schemaXML.appendFormat( R"(<CustomizationSchemaCatalog>
                 <Schema id="Metal"><Slider name="Wear" min="0" max="1" default="0"/></Schema>
                 <Schema id="Human">
-                  )" ) + pHeightSlider +
-                                       R"(
+                  %#
                   <Color name="Dye" default="1 0 0 1" category="Hair"/>
                   <Choice name="Style" default="Short" category="Hair"><Option name="Short"/><Option name="Long"/></Choice>
                 </Schema>
-            </CustomizationSchemaCatalog>)" );
+            </CustomizationSchemaCatalog>)",
+                                    pHeightSlider );
+            loadSection( database, string( schemaXML.view() ) );
             loadSection( database, R"(<CharacterAppearanceCatalog>
                 <CharacterAppearance id="Base" schema="Human" bodyType="Male" bodyShape="Average" body="body_visual">
                   <Equip slot="Head" item="iron_helm"/>
@@ -397,8 +399,10 @@ SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeRoundTripAndRejects )
     const string code = AppearanceSelection::encode( selection, _database );
     SW_REQUIRE_FALSE( code.empty() );
 
-    AppearanceSelection decoded;
-    SW_REQUIRE_TRUE( AppearanceSelection::decode( string( "  " ) + code + "\n", _database, decoded ) );
+    AppearanceSelection                      decoded;
+    StringBuilder<constant::buffer::kMax512> padded;
+    padded.appendFormat( "  %#\n", code );
+    SW_REQUIRE_TRUE( AppearanceSelection::decode( padded.view(), _database, decoded ) );
     SW_EXPECT_TRUE( decoded._basePresetID == hashed_string( "Base" ) );
     SW_EXPECT_EQUAL( code, AppearanceSelection::encode( decoded, _database ) );
 

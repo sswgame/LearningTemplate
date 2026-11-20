@@ -133,9 +133,10 @@ namespace sw
             for ( const string& topic : listTopic )
             {
                 // 토픽 이름은 키 규칙 밖의 글자(대문자)를 가질 수 있어 키에는 해시를 쓴다.
-                const string claimKey = start._eventID + "/" + ServiceKeyUtil::makeHex64( static_cast<uint64>( start._windowEndMs ) ) + "/" +
-                                        ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( topic.data(), topic.size(), false ) );
-                _pDispatcher->notifyTopicOnce( claimKey, topic, start._message, nowMs );
+                StringBuilder<constant::buffer::kMax128> claimKey;
+                claimKey.appendFormat( "%#/%#/%#", start._eventID, ServiceKeyUtil::makeHex64( static_cast<uint64>( start._windowEndMs ) ),
+                                       ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( topic.data(), topic.size(), false ) ) );
+                _pDispatcher->notifyTopicOnce( string( claimKey.view() ), topic, start._message, nowMs );
             }
         }
     }

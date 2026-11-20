@@ -72,7 +72,11 @@ namespace sw
             static void prefixNames( Widget& widget, const string& prefix )
             {
                 if ( widget.getName().empty() == false )
-                    widget.setName( hashed_string( prefix + "." + widget.getName().c_str() ) );
+                {
+                    StringBuilder<constant::buffer::kMax256> name;
+                    name.appendFormat( "%#.%#", prefix, widget.getName().c_str() );
+                    widget.setName( hashed_string( name.c_str() ) );
+                }
                 PanelWidget* pPanel = castTo<PanelWidget>( &widget );
                 if ( pPanel == nullptr )
                     return;
@@ -289,8 +293,10 @@ namespace sw
             _pSettings->collectSettings( category._id, listSetting );
             if ( listSetting.empty() )
                 continue; // 이 게임이나 플랫폼에 보일 설정이 없는 탭은 뺀다
-            unique_ptr<ButtonWidget> button = make_unique<ButtonWidget>();
-            button->setName( hashed_string( string( "Tab." ) + category._id.c_str() ) );
+            unique_ptr<ButtonWidget>                 button = make_unique<ButtonWidget>();
+            StringBuilder<constant::buffer::kMax256> tabName;
+            tabName.appendFormat( "Tab.%#", category._id.c_str() );
+            button->setName( hashed_string( tabName.c_str() ) );
             button->setStyleClass( OptionsMenuScreenInternal::kTabClass );
             button->setCommand( "SelectTab" );
             unique_ptr<TextWidget> label = make_unique<TextWidget>();
@@ -351,12 +357,15 @@ namespace sw
             addBinding( binding );
         }
 
-        TextWidget* pLabel = tree.findWidget<TextWidget>( hashed_string( prefix + "." + Internal::kLabelName ) );
+        fixed_string<constant::buffer::kMax256> widgetName;
+        formatstring( widgetName.data(), widgetName.capacity(), "%#.%#", prefix, Internal::kLabelName );
+        TextWidget* pLabel = tree.findWidget<TextWidget>( hashed_string( widgetName.c_str() ) );
         if ( pLabel != nullptr )
             pLabel->setText( setting._textKey.empty() ? string_view( prefix ) : string_view( setting._textKey ) );
         RowEntry entry{};
         entry._settingID = setting._id;
-        Widget* pValue   = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueName ) );
+        formatstring( widgetName.data(), widgetName.capacity(), "%#.%#", prefix, Internal::kValueName );
+        Widget* pValue = tree.findWidgetByName( hashed_string( widgetName.c_str() ) );
         if ( pValue == nullptr )
         {
             SW_LOG_ERROR_ID( "OptionsMenuScreen.OptionsRowDocumentNo", "[UI] Options row document %# has no '%#' widget", documentPath, Internal::kValueName );
@@ -365,14 +374,21 @@ namespace sw
         entry._value = pValue->getID();
         if ( pLabel != nullptr && pValue->getAccessibleName().empty() )
             pValue->setAccessibleLabelledBy( pLabel->getName() ); // 스크린 리더가 슬라이더 · 콤보를 옆 레이블의 글로 읽는다
-        const string expression = "{setting:" + prefix + "}";
-        const utf8*  pProperty  = Internal::getRowWidget( setting._type )._pValueProperty;
+        StringBuilder<constant::buffer::kMax256> expression;
+        expression.appendFormat( "{setting:%#}", prefix );
+        const utf8* pProperty = Internal::getRowWidget( setting._type )._pValueProperty;
         if ( pProperty != nullptr )
-            addBinding( UIBindingDef{ pProperty, expression, pValue->getID(), 0 } );
-        Widget* pValueText = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueTextName ) );
+            addBinding( UIBindingDef{ pProperty, string( expression.view() ), pValue->getID(), 0 } );
+        formatstring( widgetName.data(), widgetName.capacity(), "%#.%#", prefix, Internal::kValueTextName );
+        Widget* pValueText = tree.findWidgetByName( hashed_string( widgetName.c_str() ) );
         if ( pValueText != nullptr )
-            addBinding( UIBindingDef{ "_text", "{setting:" + prefix + ", mode=OneWay}", pValueText->getID(), 0 } );
-        Widget* pGlyph = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kGlyphName ) );
+        {
+            expression.clear();
+            expression.appendFormat( "{setting:%#, mode=OneWay}", prefix );
+            addBinding( UIBindingDef{ "_text", string( expression.view() ), pValueText->getID(), 0 } );
+        }
+        formatstring( widgetName.data(), widgetName.capacity(), "%#.%#", prefix, Internal::kGlyphName );
+        Widget* pGlyph = tree.findWidgetByName( hashed_string( widgetName.c_str() ) );
         if ( pGlyph != nullptr )
             entry._glyph = pGlyph->getID();
         _listRow.push_back( entry );

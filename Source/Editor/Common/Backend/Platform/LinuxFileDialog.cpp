@@ -10,6 +10,8 @@
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Backend/FileDialog.h"
 
@@ -223,7 +225,9 @@ namespace sw
                     const string label = params._description.empty() ? "Files" : params._description;
                     const string globs = makeCombinedGlobList( params._listFilterExtension );
                     cmd += " --file-filter=";
-                    cmd += shellQuote( label + " | " + globs );
+                    fixed_string<constant::buffer::kMax512> filterText;
+                    formatstring( filterText.data(), filterText.capacity(), "%# | %#", label, globs );
+                    cmd += shellQuote( filterText );
                     // 선언한 확장자 밖도 고를 수 있게 둘째 필터(zenity · yad 모두 --file-filter 를 여러 번 받는다).
                     cmd += " --file-filter=";
                     cmd += shellQuote( string{ "All files | *" } );
@@ -301,7 +305,9 @@ namespace sw
                     const string globs = makeCombinedGlobList( params._listFilterExtension );
                     // kdialog 필터 형식: "Description (*.ext *.ext2)"
                     cmd.push_back( ' ' );
-                    cmd += shellQuote( label + " (" + globs + ")" );
+                    fixed_string<constant::buffer::kMax512> filterText;
+                    formatstring( filterText.data(), filterText.capacity(), "%# (%#)", label, globs );
+                    cmd += shellQuote( filterText );
                 }
 
                 const optional<string> output = runCommandCapture( cmd );

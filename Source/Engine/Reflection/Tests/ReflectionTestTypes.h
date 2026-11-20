@@ -193,7 +193,12 @@ namespace sw
 
         /** @brief `접두어:HP` 글을 돌려줍니다. */
         FUNCTION()
-        string describe( const string& prefix = "hp" ) const { return prefix + ":" + to_string( _hp ); }
+        string describe( const string& prefix = "hp" ) const
+        {
+            StringBuilder<constant::buffer::kMax64> text;
+            text.appendFormat( "%#:%#", prefix, _hp );
+            return string( text.view() );
+        }
 
         /** @brief 이벤트에 묶이는 받는 쪽입니다. */
         FUNCTION()

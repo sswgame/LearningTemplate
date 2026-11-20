@@ -20,7 +20,11 @@ namespace
     template <typename T>
     sw::string describeError( const sw::expected<T>& result )
     {
-        return result.has_value() ? sw::string{} : sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
+        if ( result.has_value() )
+            return sw::string{};
+        sw::StringBuilder<sw::constant::buffer::kMax512> text;
+        text.appendFormat( "%# %#", result.error().message(), result.error().detail() );
+        return sw::string( text.view() );
     }
 } // namespace
 
@@ -151,11 +155,15 @@ namespace
             else if ( name == "SUBSCRIBE" && listArgument.size() == 2 )
             {
                 peer._listChannel.push_back( listArgument[1] );
-                reply( handle, "*3\r\n$9\r\nsubscribe\r\n" + makeBulk( listArgument[1] ) + ":1\r\n" );
+                StringBuilder<constant::buffer::kMax256> text;
+                text.appendFormat( "*3\r\n$9\r\nsubscribe\r\n%#:1\r\n", makeBulk( listArgument[1] ) );
+                reply( handle, text.view() );
             }
             else if ( name == "UNSUBSCRIBE" && listArgument.size() == 2 )
             {
-                reply( handle, "*3\r\n$11\r\nunsubscribe\r\n" + makeBulk( listArgument[1] ) + ":0\r\n" );
+                StringBuilder<constant::buffer::kMax256> text;
+                text.appendFormat( "*3\r\n$11\r\nunsubscribe\r\n%#:0\r\n", makeBulk( listArgument[1] ) );
+                reply( handle, text.view() );
             }
             else if ( name == "PUBLISH" && listArgument.size() == 3 )
             {
@@ -178,7 +186,9 @@ namespace
                 {
                     if ( subscribed != channel )
                         continue;
-                    reply( StreamConnectionHandle::fromPacked( packed ), "*3\r\n$7\r\nmessage\r\n" + makeBulk( channel ) + makeBulk( payload ) );
+                    StringBuilder<constant::buffer::kMax256> text;
+                    text.appendFormat( "*3\r\n$7\r\nmessage\r\n%#%#", makeBulk( channel ), makeBulk( payload ) );
+                    reply( StreamConnectionHandle::fromPacked( packed ), text.view() );
                     ++receiverCount;
                 }
             }

@@ -3,6 +3,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/AssetReload/AutomationReloadSteps.h"
@@ -23,9 +24,10 @@ namespace
     /** @brief 단계 하나뿐인 시나리오 글을 읽어 그 단계를 등록된 검사 함수에 넣습니다(실행기의 시작 검사와 같은 길). */
     expected<void> validateSingleStep( string_view stepXML )
     {
-        AutomationScenario scenario;
-        const string       text   = "<Scenario name=\"test.reloadsteps\">" + string( stepXML ) + "<Pass/></Scenario>";
-        const auto         parsed = scenario.parse( text, "test.scenario.xml" );
+        AutomationScenario                        scenario;
+        StringBuilder<constant::buffer::kMax1024> text;
+        text.appendFormat( "<Scenario name=\"test.reloadsteps\">%#<Pass/></Scenario>", stepXML );
+        const auto parsed = scenario.parse( text.view(), "test.scenario.xml" );
         if ( parsed.has_value() == false )
             return parsed;
         const AutomationStep&                   step          = scenario.getSteps().front();

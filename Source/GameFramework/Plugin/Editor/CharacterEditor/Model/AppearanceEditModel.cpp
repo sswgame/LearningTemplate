@@ -170,7 +170,10 @@ namespace sw::editor
     {
         if ( index >= _selection._listSkinLayer.size() || _selection._listSkinLayer[index] == value )
             return false;
-        recordUndo( bContinuous ? makeKey( "skinlayer", hashed_string{} ) + to_string( index ) : string{} );
+        StringBuilder<constant::buffer::kMax32> coalesceKey;
+        if ( bContinuous )
+            coalesceKey.appendFormat( "skinlayer:%#", index );
+        recordUndo( coalesceKey.view() );
         _selection._listSkinLayer[index] = value;
         return true;
     }
@@ -379,9 +382,8 @@ namespace sw::editor
 
     string AppearanceEditModel::makeKey( string_view kind, const hashed_string& target )
     {
-        string key( kind );
-        key += ":";
-        key += target.c_str();
-        return key;
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "%#:%#", kind, target.c_str() );
+        return string( key.view() );
     }
 } // namespace sw::editor

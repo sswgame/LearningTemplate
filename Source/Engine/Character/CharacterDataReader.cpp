@@ -50,7 +50,9 @@ namespace sw
             }
             case XMLRootStatus::RootMissing:
             {
-                addError( "Character.RootMissing", string( "root element <" ) + pRootName + "> is missing" );
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "root element <%#> is missing", pRootName );
+                addError( "Character.RootMissing", message );
                 return false;
             }
         }
@@ -59,12 +61,9 @@ namespace sw
 
     void CharacterDataReader::addError( const utf8* pID, const XMLNode& node, string_view message )
     {
-        string text = _sourceName;
-        text += ": <";
-        text += node.isValid() ? node.getName() : "?";
-        text += "> ";
-        text += message;
-        _listError.push_back( { std::move( text ), pID } );
+        StringBuilder<constant::buffer::kMax512> text;
+        text.appendFormat( "%#: <%#> %#", _sourceName, node.isValid() ? node.getName() : "?", message );
+        _listError.push_back( { string( text.view() ), pID } );
     }
 
     bool CharacterDataReader::readProperties( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead )
@@ -78,10 +77,9 @@ namespace sw
 
     void CharacterDataReader::addError( const utf8* pID, string_view message )
     {
-        string text = _sourceName;
-        text += ": ";
-        text += message;
-        _listError.push_back( { std::move( text ), pID } );
+        StringBuilder<constant::buffer::kMax512> text;
+        text.appendFormat( "%#: %#", _sourceName, message );
+        _listError.push_back( { string( text.view() ), pID } );
     }
 
     void CharacterDataReader::addIssues( const CharacterIssueList& issues )
@@ -98,7 +96,9 @@ namespace sw
         (void)XMLNameCheck::collectUnknownAttributes( node, ppKnown, static_cast<uint32>( knownCount ), listUnknown ); // 수는 목록이 말한다
         for ( const utf8* pName : listUnknown )
         {
-            addError( "Character.UnknownAttribute", node, string( "has unknown attribute '" ) + pName + "'" );
+            fixed_string<constant::buffer::kMax256> message;
+            formatstring( message.data(), message.capacity(), "has unknown attribute '%#'", pName );
+            addError( "Character.UnknownAttribute", node, message );
         }
     }
 
@@ -111,7 +111,11 @@ namespace sw
     {
         const utf8* pText = node.findAttribute( pName );
         if ( pText == nullptr )
-            addError( "Character.AttributeMissing", node, string( "needs attribute '" ) + pName + "'" );
+        {
+            fixed_string<constant::buffer::kMax256> message;
+            formatstring( message.data(), message.capacity(), "needs attribute '%#'", pName );
+            addError( "Character.AttributeMissing", node, message );
+        }
         return pText;
     }
 
@@ -119,7 +123,11 @@ namespace sw
     {
         float32 value = 0.0f;
         if ( StringUtil::parseFloat( StringUtil::trim( string_view( pText ) ), value ) == false )
-            addError( "Character.NumberInvalid", node, string( "attribute '" ) + pName + "' is not a number: '" + pText + "'" );
+        {
+            fixed_string<constant::buffer::kMax512> message;
+            formatstring( message.data(), message.capacity(), "attribute '%#' is not a number: '%#'", pName, pText );
+            addError( "Character.NumberInvalid", node, message );
+        }
         return value;
     }
 
@@ -127,7 +135,11 @@ namespace sw
     {
         int32 value = 0;
         if ( StringUtil::parseInt( StringUtil::trim( string_view( pText ) ), value ) == false )
-            addError( "Character.IntegerInvalid", node, string( "attribute '" ) + pName + "' is not an integer: '" + pText + "'" );
+        {
+            fixed_string<constant::buffer::kMax512> message;
+            formatstring( message.data(), message.capacity(), "attribute '%#' is not an integer: '%#'", pName, pText );
+            addError( "Character.IntegerInvalid", node, message );
+        }
         return value;
     }
 
@@ -135,7 +147,11 @@ namespace sw
     {
         bool value = false;
         if ( StringUtil::tryParseBool( StringUtil::trim( string_view( pText ) ), value ) == false )
-            addError( "Character.BooleanInvalid", node, string( "attribute '" ) + pName + "' is not a boolean: '" + pText + "'" );
+        {
+            fixed_string<constant::buffer::kMax512> message;
+            formatstring( message.data(), message.capacity(), "attribute '%#' is not a boolean: '%#'", pName, pText );
+            addError( "Character.BooleanInvalid", node, message );
+        }
         return value;
     }
 
@@ -143,7 +159,11 @@ namespace sw
     {
         float3 value{};
         if ( StringUtil::parseExactFloats( string_view( pText ), XMLReadUtil::kListSeparators, value.data(), 3 ) == false )
-            addError( "Character.Vector3Invalid", node, string( "attribute '" ) + pName + "' is not three numbers: '" + pText + "'" );
+        {
+            fixed_string<constant::buffer::kMax512> message;
+            formatstring( message.data(), message.capacity(), "attribute '%#' is not three numbers: '%#'", pName, pText );
+            addError( "Character.Vector3Invalid", node, message );
+        }
         return value;
     }
 
@@ -220,7 +240,11 @@ namespace sw
     {
         const hashed_string name = XMLReadUtil::readOptionalName( node, pName );
         if ( name.empty() && bRequired )
-            addError( "Character.AttributeMissing", node, string( "needs attribute '" ) + pName + "'" );
+        {
+            fixed_string<constant::buffer::kMax256> message;
+            formatstring( message.data(), message.capacity(), "needs attribute '%#'", pName );
+            addError( "Character.AttributeMissing", node, message );
+        }
         return name;
     }
 
@@ -233,7 +257,9 @@ namespace sw
             // 빈 이름의 철자(`none`)는 이름이 될 수 없다 — 목록에 빈 이름이 조용히 들어가지 않게 오류로 남긴다.
             if ( name.empty() )
             {
-                addError( "Character.NameEmpty", node, string( "attribute '" ) + pName + "' lists the empty name (none)" );
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "attribute '%#' lists the empty name (none)", pName );
+                addError( "Character.NameEmpty", node, message );
                 continue;
             }
             outListName.push_back( name );
@@ -261,7 +287,9 @@ namespace sw
 
     string CharacterDataReader::formatFloat3( const float3& value )
     {
-        return formatFloat( value._x ) + " " + formatFloat( value._y ) + " " + formatFloat( value._z );
+        StringBuilder<constant::buffer::kMax256> builder;
+        builder.appendFormat( "%# %# %#", formatFloat( value._x ), formatFloat( value._y ), formatFloat( value._z ) );
+        return string( builder.view() );
     }
 
     string CharacterDataReader::formatRotation( const quaternion& rotation )

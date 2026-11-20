@@ -20,10 +20,12 @@ namespace
             switch ( action._kind )
             {
                 case AndroidTextActionKind::Composition:
-                    text += "C:" + action._text;
+                    text += "C:";
+                    text += action._text;
                     break;
                 case AndroidTextActionKind::Commit:
-                    text += "T:" + action._text;
+                    text += "T:";
+                    text += action._text;
                     break;
                 case AndroidTextActionKind::BackspaceKey:
                     text += "B";

@@ -3,6 +3,8 @@
 #include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
@@ -23,7 +25,9 @@ namespace
 
         [[nodiscard]] static string writeTheme( string_view name, string_view text )
         {
-            const string path = test::makeScratchPath( string( name ) + EditorThemeTokens::kExtension );
+            fixed_string<constant::buffer::kMax256> fileName;
+            formatstring( fileName.data(), fileName.capacity(), "%#%#", name, EditorThemeTokens::kExtension );
+            const string path = test::makeScratchPath( fileName );
             return FileUtil::writeTextFile( path, text ) ? path : string{};
         }
     };

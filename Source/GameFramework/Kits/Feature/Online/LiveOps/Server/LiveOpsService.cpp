@@ -313,7 +313,9 @@ namespace sw
             return;
         }
         pendingJob._key = definition._eventID;
-        pendingJob.setOperatorAudit( actor, "liveops.event.put", "liveops/" + definition._eventID, nowMs, memo );
+        StringBuilder<constant::buffer::kMax128> subject;
+        subject.appendFormat( "liveops/%#", definition._eventID );
+        pendingJob.setOperatorAudit( actor, "liveops.event.put", subject.view(), nowMs, memo );
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
@@ -373,7 +375,9 @@ namespace sw
         }
         ServiceAuditedWrite pendingJob;
         pendingJob._key = string( eventID );
-        pendingJob.setOperatorAudit( actor, "liveops.event.remove", "liveops/" + pendingJob._key, nowMs, memo );
+        StringBuilder<constant::buffer::kMax128> subject;
+        subject.appendFormat( "liveops/%#", pendingJob._key );
+        pendingJob.setOperatorAudit( actor, "liveops.event.remove", subject.view(), nowMs, memo );
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
