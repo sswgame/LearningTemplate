@@ -5,7 +5,6 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Curve/BlendCurve.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
@@ -29,12 +28,7 @@ namespace sw
             static constexpr int32  kDelayQueueStart  = 4;
             static constexpr int32  kMaxElevatorFloor = 8;
 
-            enum class MoverMode : int32
-            {
-                Once = 0,
-                Loop,
-                PingPong
-            };
+            using MoverMode = GimmickNodeRegistry::GimmickMoverMode;
 
             static GimmickParamSpec makeParam( const utf8* pName, const utf8* pDefault, GimmickParamKind type = GimmickParamKind::Number )
             {
@@ -376,15 +370,10 @@ namespace sw
 
             [[nodiscard]] static bool initializeMover( GimmickNodeContext& context )
             {
-                const string& mode = context.getText( 1 );
-                if ( StringUtil::equals( mode, "Once" ) )
-                    context._pIntState[3] = static_cast<int32>( MoverMode::Once );
-                else if ( StringUtil::equals( mode, "Loop" ) )
-                    context._pIntState[3] = static_cast<int32>( MoverMode::Loop );
-                else if ( StringUtil::equals( mode, "PingPong" ) )
-                    context._pIntState[3] = static_cast<int32>( MoverMode::PingPong );
-                else
+                MoverMode mode{ MoverMode::Once };
+                if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( context.getText( 1 ) ), mode ) == false )
                     return failParam( context, "mode must be Once, Loop or PingPong" );
+                context._pIntState[3] = static_cast<int32>( mode );
                 BlendCurve curve{ BlendCurve::Linear };
                 if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( context.getText( 2 ) ), curve ) == false )
                     return failParam( context, "curve is not a BlendCurve name (Linear, EaseIn, EaseOut, EaseInOut, SmoothStep, Cubic, Exponential)" );

@@ -147,6 +147,18 @@ namespace sw
     class SW_GF_API GimmickNodeRegistry
     {
     public:
+        /**
+         * @brief 내장 `Mover` 종류의 `mode` 매개변수입니다. 데이터는 열거자 이름(`Once` · `Loop` · `PingPong`)으로 적는다.
+         * @details 내장 종류만 쓰지만 이름 표를 리플렉션(`ENUM`)이 내려고 헤더에 둔다 — private 중첩 열거형은 생성 코드의 등록 변수가 닿지 못해 public 이다. 짧은 이름은 레지스트리 전역에서 하나여야 해서 `Gimmick` 을 붙인다.
+         */
+        ENUM()
+        enum class GimmickMoverMode : int32
+        {
+            Once = 0,
+            Loop,
+            PingPong
+        };
+
         /** @brief 종류를 추가합니다. 이름이 이미 있거나, 이름의 32 비트 해시가 다른 종류와 같거나(오류 로그), 포트가 32 개를 넘거나, 상태 슬롯이 `GimmickNodeState::kMaxSlotCount` 를 넘으면 false 입니다. */
         [[nodiscard]] bool registerKind( const GimmickNodeKind& kind );
         /** @brief 이름에 해당하는 종류입니다. 없으면 nullptr 입니다. */
