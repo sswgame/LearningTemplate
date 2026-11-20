@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
@@ -109,16 +110,33 @@ namespace sw
                 return true;
             }
 
-            /** @brief `minigame.leave [결과]` 의 몸통입니다 — 맨 위 미니게임을 끄고 돌아올 자리로 간다(돌아왔는지는 감시 값 `Minigame.Active` · `Minigame.RestoreCount` · `Minigame.LastResult`). */
+            /**
+             * @brief `minigame.leave [결과] [이름=수 ...]` 의 몸통입니다 — 맨 위 미니게임을 끄고 돌아올 자리로 간다(돌아왔는지는 감시 값 `Minigame.Active` · `Minigame.RestoreCount` · `Minigame.LastResult`).
+             * @details 뒤의 `이름=수` 는 결과 값(`MinigameResultValue`)이다 — 디렉터 없이 결과를 받는 쪽(허브의 `MinigameRewardComponent`)을 시나리오가 볼 때 쓴다. 꼴이 틀리면 거절한다.
+             */
             static bool runLeaveCommand( const vector<string>& listArgument, string& outReply )
             {
-                if ( listArgument.size() > 1 )
-                    return false;
+                vector<MinigameResultValue> listValue;
+                for ( size_t index = 1; index < listArgument.size(); ++index )
+                {
+                    const string_view   token  = listArgument[index];
+                    const size_t        equals = token.find( '=' );
+                    MinigameResultValue value;
+                    const bool          bParsed = equals != string_view::npos && equals > 0 && StringUtil::parseInt64( token.substr( equals + 1 ), value._amount );
+                    if ( bParsed == false )
+                    {
+                        outReply = "minigame.leave: a result value must be name=integer";
+                        return true;
+                    }
+                    value._name = hashed_string( token.substr( 0, equals ) );
+                    listValue.push_back( std::move( value ) );
+                }
                 MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
                 if ( pFlow == nullptr )
                     outReply = "minigame.leave: no game is running";
                 else
-                    outReply = pFlow->leave( listArgument.empty() ? hashed_string{} : hashed_string( listArgument[0] ) ) ? "minigame.leave: leaving" : "minigame.leave: refused";
+                    outReply = pFlow->leave( listArgument.empty() ? hashed_string{} : hashed_string( listArgument[0] ), std::move( listValue ) ) ? "minigame.leave: leaving"
+                                                                                                                                                 : "minigame.leave: refused";
                 return true;
             }
 
@@ -767,8 +785,8 @@ namespace sw
     SW_DEV_COMMAND( MinigameEnter, "minigame.enter", "minigame.enter <name> [anchor object]",
                     "Stack a minigame (<pack>/minigames/<name>.minigame.xml); a sub-level minigame is placed at the anchor object's transform", &MinigameFlowInternal::runEnterCommand );
     SW_DEV_COMMAND( MinigameSwitch, "minigame.switch", "minigame.switch <name>", "Replace the top scene-switch minigame and keep its scene to return to", &MinigameFlowInternal::runSwitchCommand );
-    SW_DEV_COMMAND( MinigameLeave, "minigame.leave", "minigame.leave [result]",
-                    "Leave the top minigame and return to the scene it was entered from (restored from the capture on a scene switch; the entrance scene without one), then hand over the result",
+    SW_DEV_COMMAND( MinigameLeave, "minigame.leave", "minigame.leave [result] [name=amount ...]",
+                    "Leave the top minigame and return to the scene it was entered from (restored from the capture on a scene switch; the entrance scene without one), then hand over the result and its values",
                     &MinigameFlowInternal::runLeaveCommand );
     SW_AUTOMATION_QUERY_WATCH( minigameActive, "Minigame.Active", "Name of the active (top) minigame; none without one (also while it waits for its map)", &MinigameFlowInternal::readActive, false,
                                false );

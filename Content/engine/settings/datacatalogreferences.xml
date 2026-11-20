@@ -166,6 +166,7 @@
 	<Field owner="QuestObjectiveMarkerComponent" field="_quest" tag="QuestDef"/>
 	<CatalogKey tag="AbilityEffectDef" catalog="AbilityCatalog" entry="AbilityEffect"/>
 	<Field owner="JumpEscapeReactionComponent" field="_effect" tag="AbilityEffectDef"/>
+	<Field owner="MinigameRewardEffect" field="_effect" tag="AbilityEffectDef"/>
 	<CatalogKey tag="WeatherDef" catalog="WeatherCatalog" entry="Weather"/>
 	<Field owner="WeatherDirectorComponent" field="_startWeather" tag="WeatherDef"/>
 	<CatalogKey tag="VoxelBlockDef" catalog="VoxelBlockCatalog" entry="Block"/>
