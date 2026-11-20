@@ -55,7 +55,8 @@ namespace sw
     } );
 
     // 워커 수는 명령줄 `-workers=N` 이 정한다(없으면 코어 수). 명령줄은 코어 범위에 있어 상위 범위로 올라가며 찾는다 — 공장 범위의 먼저 만들 타입이 아니다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( TaskManager, HostOnly, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    // 게임 모듈에도 보인다 — 키트(계정 서버의 비밀번호 해시 줄 · RTS 길찾기)가 작업 풀을 쓴다(언리얼 게임 모듈도 태스크 그래프를 그대로 쓴다).
+    SW_ENGINE_SERVICE_SUBSYSTEM( TaskManager, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         TaskManager&              taskManager = scope.emplaceSubsystem<TaskManager>();
