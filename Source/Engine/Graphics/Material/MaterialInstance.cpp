@@ -101,6 +101,32 @@ namespace sw
                 return true;
             }
 
+            /** @brief 부모가 선언한 정적 스위치를 이름이나 켬 키워드로 찾습니다(`Material::setStaticSwitch` 와 같은 규칙). 부모가 없거나 없으면 nullptr 입니다. */
+            static const MaterialStaticSwitch* findSwitch( const Material* pParent, hashed_string name )
+            {
+                if ( pParent == nullptr )
+                    return nullptr;
+                for ( const MaterialStaticSwitch& entry : pParent->getPermutations()._listStaticSwitch )
+                {
+                    if ( hashed_string( entry._name.c_str() ) == name || hashed_string( entry._keyword.c_str() ) == name )
+                        return &entry;
+                }
+                return nullptr;
+            }
+
+            /** @brief 부모가 멀티 컴파일 @p name 을 선언하고 그 선택지에 @p option 이 있으면 true 입니다. */
+            static bool findMultiCompileOption( const Material* pParent, hashed_string name, string_view option )
+            {
+                if ( pParent == nullptr )
+                    return false;
+                for ( const MaterialMultiCompile& entry : pParent->getPermutations()._listMultiCompile )
+                {
+                    if ( hashed_string( entry._name.c_str() ) == name )
+                        return VectorUtil::contains( entry._listOption, option );
+                }
+                return false;
+            }
+
             template <typename T>
             static const T* findValue( const vector<pair<hashed_string, T>>& listPair, hashed_string key )
             {
@@ -190,6 +216,14 @@ namespace sw
     {
         XMLDocument doc;
         if ( doc.loadResource( assetID ) == false )
+            return false;
+        return loadFromXML( doc.saveToString() );
+    }
+
+    bool MaterialInstance::loadFromDiskFile( string_view diskPath )
+    {
+        XMLDocument doc;
+        if ( doc.loadFromFile( diskPath ) == false )
             return false;
         return loadFromXML( doc.saveToString() );
     }
@@ -428,22 +462,38 @@ namespace sw
         markRenderDirty();
     }
 
-    void MaterialInstance::enableKeyword( hashed_string keyword )
+    bool MaterialInstance::enableKeyword( hashed_string keyword )
     {
-        if ( MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, true ) == false )
-            return; // 이미 켰다 — 퍼뮤테이션이 그대로다
-        _bDefinesDirty = SW_TRUE;
-        MaterialPermutation::recordPermutationChange( this );
-        markRenderDirty();
+        return setRuntimeSwitch( keyword, true );
     }
 
-    void MaterialInstance::disableKeyword( hashed_string keyword )
+    bool MaterialInstance::disableKeyword( hashed_string keyword )
     {
-        if ( MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, false ) == false )
-            return; // 이미 껐다 — 퍼뮤테이션이 그대로다
+        return setRuntimeSwitch( keyword, false );
+    }
+
+    bool MaterialInstance::setRuntimeSwitch( hashed_string keyword, bool bEnabled )
+    {
+        const MaterialStaticSwitch* pSwitch = MaterialInstanceInternal::findSwitch( _pParentMaterial, keyword );
+        if ( pSwitch == nullptr )
+        {
+            SW_LOG_ERROR_ID( "MaterialInstance.KeywordUnknown", "Material instance '%#': the parent material '%#' declares no static switch '%#'", _desc._name,
+                             _pParentMaterial != nullptr ? string_view( _pParentMaterial->getDesc()._name ) : string_view( "<none>" ), keyword.c_str() );
+            return false;
+        }
+        if ( pSwitch->_bShaderFeature != SW_FALSE )
+        {
+            SW_LOG_ERROR_ID( "MaterialInstance.KeywordNotRuntime", "Material instance '%#': static switch '%#' is a shader feature (bShaderFeature=\"1\") - only asset states are cooked, so set it in a .materialinstance asset",
+                             _desc._name, keyword.c_str() );
+            return false;
+        }
+        // 덮어쓰기는 스위치 이름으로 든다 — 키워드로 켜도 이름으로 켜도 한 칸이다.
+        if ( MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, hashed_string( pSwitch->_name.c_str() ), bEnabled ) == false )
+            return true; // 이미 그 상태다 — 퍼뮤테이션이 그대로다
         _bDefinesDirty = SW_TRUE;
         MaterialPermutation::recordPermutationChange( this );
         markRenderDirty();
+        return true;
     }
 
     void MaterialInstance::setParent( Material* pParentMaterial )
@@ -515,13 +565,83 @@ namespace sw
         }
     }
 
-    void MaterialInstance::setMultiCompile( hashed_string name, string_view selectedOption )
+    bool MaterialInstance::setMultiCompile( hashed_string name, string_view selectedOption )
     {
+        if ( MaterialInstanceInternal::findMultiCompileOption( _pParentMaterial, name, selectedOption ) == false )
+        {
+            SW_LOG_ERROR_ID( "MaterialInstance.MultiCompileUnknown", "Material instance '%#': the parent material '%#' declares no multi-compile '%#' with option '%#'", _desc._name,
+                             _pParentMaterial != nullptr ? string_view( _pParentMaterial->getDesc()._name ) : string_view( "<none>" ), name.c_str(), selectedOption );
+            return false;
+        }
         if ( MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, name, string( selectedOption ) ) == false )
-            return; // 이미 고른 값이다 — 퍼뮤테이션이 그대로다
+            return true; // 이미 고른 값이다 — 퍼뮤테이션이 그대로다
         _bDefinesDirty = SW_TRUE;
         MaterialPermutation::recordPermutationChange( this );
         markRenderDirty();
+        return true;
+    }
+
+    bool MaterialInstance::makePermutations( MaterialPermutationDef& outPermutations ) const
+    {
+        if ( _pParentMaterial == nullptr )
+            return false;
+        outPermutations = _pParentMaterial->getPermutations();
+        if ( _qualityOverride != MaterialQualityLevel::Count )
+            outPermutations._quality = _qualityOverride;
+        bool bAllDeclared = true;
+        // 에셋(`.materialinstance`)에서 읽은 덮어쓰기는 부모를 모른 채 들어온다 — 부모 칸에 없는 이름은 여기서 알리고 뺀다(쿠커도 같은 함수라 같은 오류를 낸다).
+        for ( const auto& [name, bEnabled] : _listKeywordOverride )
+        {
+            MaterialStaticSwitch* pSwitch = nullptr;
+            for ( MaterialStaticSwitch& entry : outPermutations._listStaticSwitch )
+            {
+                if ( hashed_string( entry._name.c_str() ) == name || hashed_string( entry._keyword.c_str() ) == name )
+                {
+                    pSwitch = &entry;
+                    break;
+                }
+            }
+            if ( pSwitch == nullptr )
+            {
+                SW_LOG_ERROR_ID( "MaterialInstance.KeywordUnknown", "Material instance '%#': the parent material '%#' declares no static switch '%#'", _desc._name,
+                                 _pParentMaterial->getDesc()._name, name.c_str() );
+                bAllDeclared = false;
+                continue;
+            }
+            pSwitch->_bEnabled = bEnabled ? 1 : 0;
+        }
+        for ( const auto& [name, selected] : _listMultiCompileOverride )
+        {
+            MaterialMultiCompile* pMultiCompile = nullptr;
+            for ( MaterialMultiCompile& entry : outPermutations._listMultiCompile )
+            {
+                if ( hashed_string( entry._name.c_str() ) == name && VectorUtil::contains( entry._listOption, selected ) )
+                {
+                    pMultiCompile = &entry;
+                    break;
+                }
+            }
+            if ( pMultiCompile == nullptr )
+            {
+                SW_LOG_ERROR_ID( "MaterialInstance.MultiCompileUnknown", "Material instance '%#': the parent material '%#' declares no multi-compile '%#' with option '%#'", _desc._name,
+                                 _pParentMaterial->getDesc()._name, name.c_str(), selected );
+                bAllDeclared = false;
+                continue;
+            }
+            pMultiCompile->_selected = selected;
+        }
+        return bAllDeclared;
+    }
+
+    bool MaterialInstance::collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const
+    {
+        outListDefine.clear();
+        outListPermutationHash.clear();
+        MaterialPermutationDef permutations;
+        if ( makePermutations( permutations ) == false )
+            return false; // 부모가 없거나 모르는 덮어쓰기다(makePermutations 가 알렸다)
+        _pParentMaterial->collectRuntimeSwitchVariants( permutations, outListDefine, outListPermutationHash );
+        return true;
     }
 
     bool MaterialInstance::getParameter( hashed_string name, string& outValue ) const
@@ -579,52 +699,21 @@ namespace sw
 
         if ( _bDefinesDirty == SW_TRUE )
         {
-            _listCachedDefine.clear();
-            if ( _pParentMaterial != nullptr )
-                _listCachedDefine = _pParentMaterial->getCachedShaderDefines();
-
-            if ( _qualityOverride != MaterialQualityLevel::Count )
-            {
-                VectorUtil::removeIf( _listCachedDefine, []( string_view defineStr )
-                { return StringUtil::startsWith( defineStr, "MATERIAL_QUALITY" ); } );
-                MaterialPermutation::appendQualityDefines( _qualityOverride, _listCachedDefine );
-            }
-
-            for ( const auto& [name, selected] : _listMultiCompileOverride )
-            {
-                if ( _pParentMaterial != nullptr )
-                {
-                    for ( const MaterialMultiCompile& mc : _pParentMaterial->getPermutations()._listMultiCompile )
-                    {
-                        if ( hashed_string( mc._name.c_str() ) != name )
-                            continue;
-                        for ( const string& option : mc._listOption )
-                        {
-                            VectorUtil::removeValue( _listCachedDefine, option );
-                        }
-                        break;
-                    }
-                }
-                MaterialPermutation::appendUniqueDefine( _listCachedDefine, selected );
-            }
-
-            for ( const auto& [keyword, enabled] : _listKeywordOverride )
-            {
-                const utf8* pKey = keyword.c_str();
-                if ( pKey == nullptr )
-                    continue;
-                VectorUtil::removeValue( _listCachedDefine, string( pKey ) );
-                if ( enabled )
-                    MaterialPermutation::appendUniqueDefine( _listCachedDefine, pKey );
-            }
-
-            VectorUtil::sort( _listCachedDefine );
             _previousPermutationHash = _cachedPermutationHash; // 처음 만들 때는 0 이다
-            _cachedPermutationHash   = MaterialPermutation::hashDefines( _listCachedDefine );
-            // 렌더 상태 · 그리기 순서는 부모의 것이다 — 부모와 같은 해시 규칙으로 섞어야 다른 렌더 상태의 부모가 한 배치로 합쳐지지 않는다.
-            const uint64 renderPropertiesHash = _pParentMaterial != nullptr ? _pParentMaterial->getRenderPropertiesHash() : 0u;
-            if ( renderPropertiesHash != 0 )
-                _cachedPermutationHash = HashUtil::combine( _cachedPermutationHash, renderPropertiesHash );
+            MaterialPermutationDef permutations;
+            if ( _pParentMaterial != nullptr )
+            {
+                // 모르는 덮어쓰기는 makePermutations 가 오류로 알리고 뺀다 — 부모가 선언한 칸만 define 이 되어, 쿠킹하지 않은 define 글이 퍼뮤테이션에 섞이지 않는다.
+                (void)makePermutations( permutations );
+                // 부모와 같은 정의 함수 · 해시 규칙이다 — 렌더 상태 · 그리기 순서는 부모의 것이라 다른 렌더 상태의 부모가 한 배치로 합쳐지지 않는다.
+                _pParentMaterial->computeShaderDefines( permutations, _listCachedDefine );
+                _cachedPermutationHash = _pParentMaterial->computePermutationHash( _listCachedDefine );
+            }
+            else
+            {
+                _listCachedDefine.clear();
+                _cachedPermutationHash = MaterialPermutation::hashDefines( _listCachedDefine );
+            }
             _bDefinesDirty = SW_FALSE;
         }
     }

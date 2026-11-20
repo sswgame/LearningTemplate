@@ -1016,12 +1016,19 @@ namespace sw
 
     void Material::collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const
     {
+        collectRuntimeSwitchVariants( _desc._permutations, outListDefine, outListPermutationHash );
+    }
+
+    void Material::collectRuntimeSwitchVariants( const MaterialPermutationDef& basePermutations, vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const
+    {
         outListDefine.clear();
         outListPermutationHash.clear();
-        outListDefine.push_back( getCachedShaderDefines() );
-        outListPermutationHash.push_back( getPermutationHash() );
+        vector<string> listBaseDefine;
+        computeShaderDefines( basePermutations, listBaseDefine );
+        outListPermutationHash.push_back( computePermutationHash( listBaseDefine ) );
+        outListDefine.push_back( std::move( listBaseDefine ) );
         vector<size_t>                      listRuntimeSwitch;
-        const vector<MaterialStaticSwitch>& listSwitch = _desc._permutations._listStaticSwitch;
+        const vector<MaterialStaticSwitch>& listSwitch = basePermutations._listStaticSwitch;
         for ( size_t switchIndex = 0; switchIndex < listSwitch.size(); ++switchIndex )
         {
             if ( listSwitch[switchIndex]._bShaderFeature == SW_FALSE )
@@ -1035,7 +1042,7 @@ namespace sw
                              _desc._name.c_str(), listRuntimeSwitch.size(), kMaxRuntimeStaticSwitchCount );
             return;
         }
-        MaterialPermutationDef variantDesc = _desc._permutations;
+        MaterialPermutationDef variantDesc = basePermutations;
         vector<string>         listDefine;
         const uint32           comboCount = 1u << static_cast<uint32>( listRuntimeSwitch.size() );
         for ( uint32 combo = 0; combo < comboCount; ++combo )

@@ -222,7 +222,7 @@ namespace sw
     struct MaterialInstanceDef
     {
         string _name;
-        string _parentPath; ///< 선택적 힌트입니다. 런타임에는 여전히 Material* 부모가 필요합니다
+        string _parentPath; ///< 부모 머티리얼의 리소스 id 입니다. 런타임은 Material* 부모를 따로 받지만, 셰이더 쿠커는 이 경로로 부모를 읽어 인스턴스가 고른 조합을 굽는다(`.materialinstance` 에셋에는 필수)
 
         /// @brief 인스턴스가 덮어쓴 프로퍼티 값입니다.
         struct Override
@@ -234,7 +234,7 @@ namespace sw
 
         vector<Override> _listOverride;
 
-        /// @brief 인스턴스가 덮어쓴 정적 스위치입니다.
+        /// @brief 인스턴스가 덮어쓴 정적 스위치입니다(부모가 선언한 스위치의 이름이나 켬 키워드 — 모르는 이름은 `MaterialInstance::makePermutations` 가 오류로 알린다).
         struct KeywordOverride
         {
             string _name;

@@ -66,12 +66,6 @@ namespace sw
         constexpr size_t kChurnInstanceCap = 512;
         /** @brief 래그돌 군중이 쓰러진 수를 로그로 남기는 프레임 간격입니다. 소수로 정했으므로 `-gv_stressTestRagdollPeriod` 의 배수와 겹치지 않아, 같은 상태만 기록되는 일이 없습니다. */
         constexpr uint32 kRagdollLogInterval = 97;
-        /** @brief 스트레스가 인스턴스에서 켜고 끄는 키워드입니다. 읽는 셰이더는 없고 퍼뮤테이션만 갈립니다. */
-        constexpr const utf8* kChurnKeyword = "MATERIAL_BENCH_CHURN";
-        /** @brief 스트레스가 흔드는 멀티컴파일 이름입니다. */
-        constexpr const utf8* kChurnFogMultiCompile = "FogMode";
-        /** @brief 그 멀티컴파일의 선택지입니다. 머티리얼 에셋의 _multiCompiles 와 같아야 합니다. */
-        constexpr const utf8* kArrChurnFogOption[] = { "FOG_OFF", "FOG_LINEAR", "FOG_EXP" };
         /**
          * @brief 벤치가 섞어 쓸 도형입니다. `MeshUtil::createPrimitive` 가 아는 이름입니다.
          * @note 큐브가 **첫 번째**여야 합니다. `-gv_stressTestMeshShapes=1`(기본값)일 때 큐브만 그려야
@@ -1801,20 +1795,37 @@ namespace sw
         if ( bShouldChurnKeywords )
         {
             MaterialInstance* pInstance = _listChurnInstance[_churnRandom.nextUint() % _listChurnInstance.size()].get();
-            if ( pInstance != nullptr )
+            const Material*   pParent   = pInstance != nullptr ? pInstance->getParent() : nullptr;
+            if ( pParent != nullptr )
             {
+                // 부모가 선언한 런타임 스위치 · 멀티 컴파일만 흔든다 — 선언하지 않은 키워드는 인스턴스가 거절한다(쿠킹하지 않은 조합이라 배포에서 대체 해시로 그린다).
+                const MaterialPermutationDef&       permutations = pParent->getPermutations();
+                vector<const MaterialStaticSwitch*> listRuntimeSwitch;
+                for ( const MaterialStaticSwitch& entry : permutations._listStaticSwitch )
+                {
+                    if ( entry._bShaderFeature == SW_FALSE )
+                        listRuntimeSwitch.push_back( &entry );
+                }
+                // 난수를 뽑는 차례는 예전(키워드 켬/끔 · 안개 선택지)과 같다 — 고를 것이 하나뿐이면 뽑지 않아 벤치의 뒤 단계가 같은 수열을 받는다.
+                const auto pickIndex = [this]( size_t count ) -> size_t
+                { return count > 1 ? _churnRandom.nextUint() % count : 0; };
+                bool bAccepted = true;
                 if ( ( _churnRandom.nextUint() & 1u ) != 0u )
                 {
-                    if ( ( _churnRandom.nextUint() & 1u ) != 0u )
-                        pInstance->enableKeyword( hashed_string( kChurnKeyword ) );
-                    else
-                        pInstance->disableKeyword( hashed_string( kChurnKeyword ) );
+                    const bool bEnable = ( _churnRandom.nextUint() & 1u ) != 0u;
+                    if ( listRuntimeSwitch.empty() == false )
+                    {
+                        const hashed_string switchName( listRuntimeSwitch[pickIndex( listRuntimeSwitch.size() )]->_name.c_str() );
+                        bAccepted = bEnable ? pInstance->enableKeyword( switchName ) : pInstance->disableKeyword( switchName );
+                    }
                 }
-                else
+                else if ( permutations._listMultiCompile.empty() == false )
                 {
-                    pInstance->setMultiCompile( hashed_string( kChurnFogMultiCompile ),
-                                                kArrChurnFogOption[_churnRandom.nextUint() % SW_COUNT_OF( kArrChurnFogOption )] );
+                    const MaterialMultiCompile& multiCompile = permutations._listMultiCompile[pickIndex( permutations._listMultiCompile.size() )];
+                    if ( multiCompile._listOption.empty() == false )
+                        bAccepted = pInstance->setMultiCompile( hashed_string( multiCompile._name.c_str() ), multiCompile._listOption[_churnRandom.nextUint() % multiCompile._listOption.size()] );
                 }
+                SW_ASSERT( bAccepted ); // 부모가 선언한 것만 골랐다
             }
         }
     }
