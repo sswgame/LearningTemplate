@@ -1,6 +1,6 @@
 /**
  * @file StressTestSceneSettings.h
- * @brief 벤치 씬의 배치 값, 튜닝 값, 에셋 경로입니다. 값의 원본은 `Content/game/playground/data/benchscene.xml` 입니다.
+ * @brief 벤치 씬의 배치 값, 튜닝 값, 에셋 경로입니다. 값의 원본은 `Content/game/playground/automation/benchscene.xml` 입니다(자동화 전용 폴더 — 벤치 코드가 개발 전용이라 배포 쿡에 담지 않는다).
  * @details 어떤 벤치를 켤지(`-gv_stressTest*`)는 Test/Load 시나리오와 실행기가 명령줄로 넘기는 인터페이스이므로 그대로 두었습니다.
  *          켠 벤치가 **어떻게 배치되는지**를 정하는 값만 이 데이터로 옮겼습니다. 간격, 높이, 카메라 여백, 색, 크기, 에셋 경로, 클립 이름이 해당합니다.
  *          생성자가 없고 필드는 빈 값입니다. 코드에는 기본값이 없으므로 파일을 읽지 못하면 벤치를 시작하지 않습니다.
