@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="af2958472a3f32c8906a5454d181feef"?>
 <!--
-  에디터 시나리오 — 타일셋 편집 창(Tile Set Editor): PixelTown 의 실제 타일셋 구성(town.tileset.xml — puny_world 아틀라스 27 × 65, grass · path · water)을 테스트 사본
+  에디터 시나리오 — 타일셋 편집 창(Tile Set Editor): 타일 걸음 마을 미니게임(Experience pixeltown)의 실제 타일셋 구성(town.tileset.xml — puny_world 아틀라스 27 × 65, grass · path · water)을 테스트 사본
   (scratch/tilesetedit, <Scratch>)에서 연다. 원본은 건드리지 않는다.
   path(브러시 1)의 첫 규칙을 고르면 모습 셀이 4 이고(Editor.TileSetFirstCell), 아틀라스 격자에서 셀 31(열 4 · 행 1)을 누르면 31 이 된다. 이웃 단추 0(왼위)을 누르면 패턴이 바뀐다.
   새 타일 브러시를 더해 4 개가 되고 위반이 없으므로(Editor.TileSetIssueCount = 0) 저장 · 다시 읽기 뒤에도 4 개이며 규칙의 셀이 31 로 남는다.

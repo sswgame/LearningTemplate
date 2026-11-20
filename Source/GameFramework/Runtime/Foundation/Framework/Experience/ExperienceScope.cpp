@@ -96,7 +96,10 @@ namespace sw
         StateSnapshot snapshot;
         _gameScope.collectBoundTypes( snapshot._listServiceType );
         if ( _pInputMap != nullptr )
-            snapshot._listInputLayer = _pInputMap->getLayerStack();
+        {
+            _pInputMap->collectLayerStack( snapshot._listInputLayer );
+            _pInputMap->collectEnabledLayers( snapshot._listEnabledInputLayer );
+        }
         vector<GlobalVariableInfo*> listVariable;
         _variables.collectVariables( listVariable );
         snapshot._listGlobalValue.reserve( listVariable.size() );
@@ -125,6 +128,17 @@ namespace sw
                 continue;
             SW_LOG_ERROR_ID( "ExperienceScope.LeakedInputLayer", "Experience '%#': input layer '%#' is still pushed after leaving - it was pushed without a scope cleanup", _definition._name.c_str(),
                              layer.c_str() );
+            ++leakCount;
+        }
+        for ( const hashed_string& layer : _activated._listEnabledInputLayer )
+        {
+            // 스택에 남은 것은 위에서 알렸다 — 여기는 push 없이 켠(`setLayerEnabled`) 레이어다.
+            if ( VectorUtil::contains( _before._listEnabledInputLayer, layer ) || VectorUtil::contains( after._listEnabledInputLayer, layer ) == false ||
+                 VectorUtil::contains( after._listInputLayer, layer ) )
+                continue;
+            SW_LOG_ERROR_ID( "ExperienceScope.LeakedEnabledInputLayer",
+                             "Experience '%#': input layer '%#' is still enabled after leaving though it is not on the layer stack - it was enabled without a scope cleanup (use pushLayer/popLayer)",
+                             _definition._name.c_str(), layer.c_str() );
             ++leakCount;
         }
         const auto findValue = []( const vector<GlobalValue>& listValue, const string& name ) -> const GlobalValue*

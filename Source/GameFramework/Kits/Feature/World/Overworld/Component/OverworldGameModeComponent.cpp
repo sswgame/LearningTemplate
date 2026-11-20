@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/PixelTown/TownGameModeComponent.h"
+#include "GameFramework/Kits/Feature/World/Overworld/Component/OverworldGameModeComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Encoding/FourCCUtil.h"
@@ -22,23 +22,23 @@ namespace sw
 {
     namespace
     {
-        constexpr uint32 kTownStateTag     = FourCCUtil::make( "TOWN" );
-        constexpr uint32 kTownStateVersion = 1;
+        constexpr uint32 kGameModeStateTag     = FourCCUtil::make( "TOWN" ); // 게임에서 키트로 옮기기 전 태그 그대로(바꿀 까닭이 없다)
+        constexpr uint32 kGameModeStateVersion = 1;
 
     } // namespace
 
-    SW_AUTOMATION_GETTER_WATCH( townHeroTileX, "Town.HeroTileX", "Tile column of the hero", TownGameModeComponent, &TownGameModeComponent::getHeroTileX );
-    SW_AUTOMATION_GETTER_WATCH( townHeroTileY, "Town.HeroTileY", "Tile row of the hero (rows grow down)", TownGameModeComponent, &TownGameModeComponent::getHeroTileY );
-    SW_AUTOMATION_GETTER_WATCH( townHeroWalking, "Town.HeroWalking", "1 while the hero walks between tiles (0 once it stands on a tile)", TownGameModeComponent, &TownGameModeComponent::isHeroWalking );
-    SW_AUTOMATION_GETTER_WATCH( townHeroFacing, "Town.HeroFacing", "Hero facing (0 down, 1 left, 2 right, 3 up)", TownGameModeComponent, &TownGameModeComponent::getHeroFacing );
-    SW_AUTOMATION_GETTER_WATCH( townTalking, "Town.Talking", "1 while a talk with a villager is open", TownGameModeComponent, &TownGameModeComponent::isTalking );
-    SW_AUTOMATION_GETTER_WATCH( townShownLines, "Town.ShownLines", "Dialogue lines shown this session", TownGameModeComponent, &TownGameModeComponent::getShownLineCount );
-    SW_AUTOMATION_GETTER_WATCH( townFinishedTalks, "Town.FinishedTalks", "Talks finished this session", TownGameModeComponent, &TownGameModeComponent::getFinishedTalkCount );
+    SW_AUTOMATION_GETTER_WATCH( overworldHeroTileX, "Overworld.HeroTileX", "Tile column of the hero", OverworldGameModeComponent, &OverworldGameModeComponent::getHeroTileX );
+    SW_AUTOMATION_GETTER_WATCH( overworldHeroTileY, "Overworld.HeroTileY", "Tile row of the hero (rows grow down)", OverworldGameModeComponent, &OverworldGameModeComponent::getHeroTileY );
+    SW_AUTOMATION_GETTER_WATCH( overworldHeroWalking, "Overworld.HeroWalking", "1 while the hero walks between tiles (0 once it stands on a tile)", OverworldGameModeComponent, &OverworldGameModeComponent::isHeroWalking );
+    SW_AUTOMATION_GETTER_WATCH( overworldHeroFacing, "Overworld.HeroFacing", "Hero facing (0 down, 1 left, 2 right, 3 up)", OverworldGameModeComponent, &OverworldGameModeComponent::getHeroFacing );
+    SW_AUTOMATION_GETTER_WATCH( overworldTalking, "Overworld.Talking", "1 while a talk with a villager is open", OverworldGameModeComponent, &OverworldGameModeComponent::isTalking );
+    SW_AUTOMATION_GETTER_WATCH( overworldShownLines, "Overworld.ShownLines", "Dialogue lines shown this session", OverworldGameModeComponent, &OverworldGameModeComponent::getShownLineCount );
+    SW_AUTOMATION_GETTER_WATCH( overworldFinishedTalks, "Overworld.FinishedTalks", "Talks finished this session", OverworldGameModeComponent, &OverworldGameModeComponent::getFinishedTalkCount );
 } // namespace sw
 
 namespace sw
 {
-    TownGameModeComponent::TownGameModeComponent()
+    OverworldGameModeComponent::OverworldGameModeComponent()
         : _ground{}
         , _props{}
         , _hero{}
@@ -60,12 +60,12 @@ namespace sw
     {
     }
 
-    TownGameModeComponent::~TownGameModeComponent() = default;
+    OverworldGameModeComponent::~OverworldGameModeComponent() = default;
 
     // ------------------------------------------------------------------------------
     // 데이터
     // ------------------------------------------------------------------------------
-    bool TownGameModeComponent::startGame()
+    bool OverworldGameModeComponent::startGame()
     {
         GameObjectManager* pManager = getObjectManager();
         if ( pManager == nullptr )
@@ -75,7 +75,7 @@ namespace sw
             return false;
         if ( _tileMap.assign( pGround->getTileMap(), pGround->getTileSet() ) == false )
         {
-            SW_LOG_ERROR_ID( "TownGameMode.GroundLayerCannotBecome", "[Town] the ground layer '%#' cannot become a walk grid", pGround->getTileMap()._sourcePath );
+            SW_LOG_ERROR_ID( "OverworldGameMode.GroundLayerCannotBecome", "[Overworld] the ground layer '%#' cannot become a walk grid", pGround->getTileMap()._sourcePath );
             return false;
         }
         if ( _props.isValid() )
@@ -88,19 +88,19 @@ namespace sw
         const SceneComponent* pGroundScene  = pGroundObject->getPrimarySceneComponent();
         if ( pGroundScene == nullptr )
         {
-            SW_LOG_ERROR_ID( "TownGameMode.GroundObjectNoScene", "[Town] the ground object has no scene component - the map has no place in the world" );
+            SW_LOG_ERROR_ID( "OverworldGameMode.GroundObjectNoScene", "[Overworld] the ground object has no scene component - the map has no place in the world" );
             return false;
         }
         _mapOrigin = pGroundScene->getWorldPosition();
         _tileSize  = pGround->getTileSet().getTileSize();
         if ( findHeroPawn() == nullptr )
         {
-            SW_LOG_ERROR_ID( "TownGameMode.HeroObjectNoPawnComponent", "[Town] the hero object has no PawnComponent - the town cannot start" );
+            SW_LOG_ERROR_ID( "OverworldGameMode.HeroObjectNoPawnComponent", "[Overworld] the hero object has no PawnComponent - the overworld cannot start" );
             return false;
         }
         if ( findHeroPawn()->findButton( _interactButton ).has_value() == false )
         {
-            SW_LOG_ERROR_ID( "TownGameMode.HeroPawnNoButton", "[Town] the hero pawn has no button '%#' (Interact Button)", _interactButton.c_str() );
+            SW_LOG_ERROR_ID( "OverworldGameMode.HeroPawnNoButton", "[Overworld] the hero pawn has no button '%#' (Interact Button)", _interactButton.c_str() );
             return false;
         }
         if ( collectVillagers( *pManager ) == false )
@@ -124,20 +124,20 @@ namespace sw
         return true;
     }
 
-    const TileMapRendererComponent* TownGameModeComponent::findLayer( GameObjectHandle layer, const utf8* pRole ) const
+    const TileMapRendererComponent* OverworldGameModeComponent::findLayer( GameObjectHandle layer, const utf8* pRole ) const
     {
         const GameObjectManager*        pManager  = getObjectManager();
         const GameObject*               pObject   = pManager != nullptr ? pManager->resolveGameObject( layer ) : nullptr;
         const TileMapRendererComponent* pRenderer = pObject != nullptr ? pObject->getComponent<TileMapRendererComponent>() : nullptr;
         if ( pRenderer == nullptr || pRenderer->getTileMap()._width <= 0 )
         {
-            SW_LOG_ERROR_ID( "TownGameMode.LayerObjectNoLoaded", "[Town] the %# layer object has no loaded TileMapRendererComponent", pRole );
+            SW_LOG_ERROR_ID( "OverworldGameMode.LayerObjectNoLoaded", "[Overworld] the %# layer object has no loaded TileMapRendererComponent", pRole );
             return nullptr;
         }
         return pRenderer;
     }
 
-    bool TownGameModeComponent::collectVillagers( GameObjectManager& manager )
+    bool OverworldGameModeComponent::collectVillagers( GameObjectManager& manager )
     {
         _listVillager.clear();
         bool bAllPlaced = true;
@@ -151,7 +151,7 @@ namespace sw
             const bool bInsideTheMap = 0 <= tile._x && tile._x < _tileMap.getWidth() && 0 <= tile._y && tile._y < _tileMap.getHeight();
             if ( bInsideTheMap == false )
             {
-                SW_LOG_ERROR_ID( "TownGameMode.VillagerStandsOutsideX", "[Town] villager '%#' stands outside the %#x%# map (tile %#,%#)", pObject->getName().c_str(), _tileMap.getWidth(), _tileMap.getHeight(),
+                SW_LOG_ERROR_ID( "OverworldGameMode.VillagerStandsOutsideX", "[Overworld] villager '%#' stands outside the %#x%# map (tile %#,%#)", pObject->getName().c_str(), _tileMap.getWidth(), _tileMap.getHeight(),
                                  tile._x, tile._y );
                 bAllPlaced = false;
                 continue;
@@ -162,25 +162,25 @@ namespace sw
         return bAllPlaced;
     }
 
-    int2 TownGameModeComponent::computeTile( const float3& worldPosition ) const
+    int2 OverworldGameModeComponent::computeTile( const float3& worldPosition ) const
     {
         const float32 column = ( worldPosition._x - _mapOrigin._x ) / _tileSize;
         const float32 row    = ( _mapOrigin._y - worldPosition._y ) / _tileSize;
         return int2{ static_cast<int32>( MathUtil::floor( column ) ), static_cast<int32>( MathUtil::floor( row ) ) };
     }
 
-    float3 TownGameModeComponent::computeTileCenter( int32 x, int32 y ) const
+    float3 OverworldGameModeComponent::computeTileCenter( int32 x, int32 y ) const
     {
         // 렌더러와 같은 배치 — 열은 +X, 행은 -Y 로 자란다(`TileMapRendererComponent`).
         return float3{ _mapOrigin._x + ( static_cast<float32>( x ) + 0.5f ) * _tileSize, _mapOrigin._y - ( static_cast<float32>( y ) + 0.5f ) * _tileSize, _mapOrigin._z };
     }
 
-    const TownGameModeComponent::Villager* TownGameModeComponent::findVillager( const int2& tile ) const
+    const OverworldGameModeComponent::Villager* OverworldGameModeComponent::findVillager( const int2& tile ) const
     {
         return VectorUtil::findBy<&Villager::_tile>( _listVillager, tile );
     }
 
-    const PawnComponent* TownGameModeComponent::findHeroPawn() const
+    const PawnComponent* OverworldGameModeComponent::findHeroPawn() const
     {
         return findOn<PawnComponent>( _hero );
     }
@@ -188,9 +188,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태
     // ------------------------------------------------------------------------------
-    void TownGameModeComponent::serializeGameState( StateIO& io )
+    void OverworldGameModeComponent::serializeGameState( StateIO& io )
     {
-        io.header( kTownStateTag, kTownStateVersion );
+        io.header( kGameModeStateTag, kGameModeStateVersion );
         if ( io.isOk() == false )
             return;
         OverworldTileMover mover = _mover;
@@ -205,25 +205,25 @@ namespace sw
         }
     }
 
-    void TownGameModeComponent::onStateRestored( bool bRestored )
+    void OverworldGameModeComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored == false )
-            SW_LOG_WARNING_ID( "TownGameMode.SavedTownStateDoes", "[Town] the saved town state does not match this build - starting at the spawn tile" );
+            SW_LOG_WARNING_ID( "OverworldGameMode.SavedTownStateDoes", "[Overworld] the saved town state does not match this build - starting at the spawn tile" );
         _stepFromTile = int2{ _mover.getTileX(), _mover.getTileY() };
         _stepElapsed  = _stepSeconds;
         updateHeroPosition();
     }
 
-    void TownGameModeComponent::onGameStarted()
+    void OverworldGameModeComponent::onGameStarted()
     {
-        SW_LOG_INFO_ID( "TownGameMode.TownReadyWASDArrows", "[Town] town is ready - WASD / arrows walk one tile, Space / E talk to the villager you face (%# villager(s))",
+        SW_LOG_INFO_ID( "OverworldGameMode.TownReadyWASDArrows", "[Overworld] town is ready - WASD / arrows walk one tile, Space / E talk to the villager you face (%# villager(s))",
                         static_cast<uint32>( _listVillager.size() ) );
     }
 
     // ------------------------------------------------------------------------------
     // 규칙(PrePhysics, 워커)
     // ------------------------------------------------------------------------------
-    void TownGameModeComponent::updateGame( float32 deltaTime )
+    void OverworldGameModeComponent::updateGame( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;
@@ -265,7 +265,7 @@ namespace sw
         updateHeroPosition();
     }
 
-    void TownGameModeComponent::updateHeroPosition()
+    void OverworldGameModeComponent::updateHeroPosition()
     {
         const float3  to       = computeTileCenter( _mover.getTileX(), _mover.getTileY() );
         const float3  from     = computeTileCenter( _stepFromTile._x, _stepFromTile._y );
@@ -276,13 +276,13 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 대화(틱이 끝난 뒤, 게임 스레드)
     // ------------------------------------------------------------------------------
-    void TownGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void OverworldGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         (void)bRespawnViews; // 세우는 런타임 오브젝트가 없다 — 모습은 모두 씬에 있다
         processTalk( manager );
     }
 
-    void TownGameModeComponent::processTalk( GameObjectManager& manager )
+    void OverworldGameModeComponent::processTalk( GameObjectManager& manager )
     {
         const TalkRequest request = _pendingTalk;
         _pendingTalk              = TalkRequest::None;
@@ -294,14 +294,14 @@ namespace sw
         _pendingTarget                   = GameObjectHandle{};
         if ( pRunner == nullptr )
         {
-            SW_LOG_ERROR_ID( "TownGameMode.VillagerTalkGoneTalk", "[Town] the villager to talk to is gone - the talk is closed" );
+            SW_LOG_ERROR_ID( "OverworldGameMode.VillagerTalkGoneTalk", "[Overworld] the villager to talk to is gone - the talk is closed" );
             _talkTarget = GameObjectHandle{};
             return;
         }
         const bool bStepped = request == TalkRequest::Start ? pRunner->startDialogue() : pRunner->advance();
         if ( bStepped == false && request == TalkRequest::Start )
         {
-            SW_LOG_ERROR_ID( "TownGameMode.VillagerNoDialogueStart", "[Town] villager '%#' has no dialogue to start (empty or unreadable graph)", pObject->getName().c_str() );
+            SW_LOG_ERROR_ID( "OverworldGameMode.VillagerNoDialogueStart", "[Overworld] villager '%#' has no dialogue to start (empty or unreadable graph)", pObject->getName().c_str() );
             return;
         }
         switch ( pRunner->getState() )
@@ -315,7 +315,7 @@ namespace sw
             case DialogueRunnerState::WaitingForChoice:
             {
                 // 이 게임에는 선택지 UI 가 없다 — 고를 수 없는 대화를 열어 두면 주인공이 멈춘다. 데이터 오류로 알리고 닫는다.
-                SW_LOG_ERROR_ID( "TownGameMode.VillagerAsksChoiceBut", "[Town] villager '%#' asks a choice, but PixelTown has no choice UI - the talk is closed", pObject->getName().c_str() );
+                SW_LOG_ERROR_ID( "OverworldGameMode.VillagerAsksChoiceBut", "[Overworld] villager '%#' asks a choice, but the overworld game mode has no choice UI - the talk is closed", pObject->getName().c_str() );
                 pRunner->stopDialogue();
                 _talkTarget = GameObjectHandle{};
                 break;

@@ -283,6 +283,28 @@ SW_TEST_CASE( ExperienceTest, LeakCheckCatchesBindingsOutsideScope )
     fixture._gameScope.unbind<TestOtherService>();
 }
 
+/** @brief [ExperienceTest] 해제 검사(음성 대조): 스택에는 없는데 켜진 레이어(push 없이 켜고 되돌릴 일을 걸지 않았다)도 끈 뒤 남으면 알린다 — 빈 스택이 그 레이어를 살린다 */
+SW_TEST_CASE( ExperienceTest, LeakCheckCatchesLayersEnabledOutsideTheStack )
+{
+    SW_EXPECT_LOG( "ExperienceScope.LeakedEnabledInputLayer" );
+    ExperienceScopeFixture fixture;
+    const hashed_string    town( "town" );
+    const hashed_string    menu( "menu" );
+    fixture._inputMap.registerLayer( town, 0, false );
+    fixture._inputMap.registerLayer( menu, 0, false );
+    const unique_ptr<ExperienceScope> pScope   = fixture.makeScope( "enabledleak" );
+    InputMap&                         inputMap = fixture._inputMap;
+    fixture._inputMap.setLayerEnabled( town, true ); // 되돌릴 일이 없다
+    inputMap.pushLayer( menu );                      // 범위로 건 것 — pop 이 꺼진 상태로 되돌린다
+    pScope->addCleanup( Delegate<void()>::create( [&inputMap]()
+    { inputMap.popLayer( hashed_string( "menu" ) ); } ) );
+    pScope->finishActivation();
+
+    SW_EXPECT_EQUAL( 1u, pScope->deactivate() );
+    SW_EXPECT_TRUE( fixture._inputMap.isLayerEnabled( town ) );
+    SW_EXPECT_FALSE( fixture._inputMap.isLayerEnabled( menu ) );
+}
+
 /** @brief [ExperienceTest] 해제 검사: 범위로 건 입력 레이어(되돌릴 일)는 끈 뒤 남지 않고, 켜기 전부터 있던 칸 · 레이어는 남은 것으로 세지 않는다 */
 SW_TEST_CASE( ExperienceTest, LeakCheckIgnoresScopedAndPriorState )
 {
@@ -299,8 +321,10 @@ SW_TEST_CASE( ExperienceTest, LeakCheckIgnoresScopedAndPriorState )
         pScope->finishActivation();
         SW_EXPECT_EQUAL( 0u, pScope->deactivate() );
     }
-    SW_REQUIRE_TRUE( fixture._inputMap.getLayerStack().size() == 1 );
-    SW_EXPECT_TRUE( fixture._inputMap.getLayerStack()[0] == hashed_string( "hub" ) );
+    vector<hashed_string> listStack;
+    fixture._inputMap.collectLayerStack( listStack );
+    SW_REQUIRE_TRUE( listStack.size() == 1 );
+    SW_EXPECT_TRUE( listStack[0] == hashed_string( "hub" ) );
     SW_EXPECT_TRUE( fixture._gameScope.find<TestOtherService>() == &prior );
     fixture._gameScope.unbind<TestOtherService>();
 }

@@ -18,6 +18,8 @@
      `Scenario.<옛>`(`Test/Scenario/CMakeLists.txt` 가 팩 이름으로 짓는다 — 격리 표 · 로그 이름), 따옴표로 끝나는 도메인 `"game/<옛>"`(게임 프리셋 `_packRoot`), 팩 줄기 `game_<옛>`,
      씬 청크 이름 `scene_<옛>_`, 대소문자 · 구분자가 다른 경로 `Game/<Old>/` · `Game\\<Old>/`(옛 이름의 대소문자 꼴을 새 이름에 옮긴다).
      정확한 접두만 바꾼다(앞 글자가 낱말 글자면 다른 낱말이다) — 일반 낱말 `Empty` 는 건드리지 않는다. 리다이렉트 표는 옛 id 를 적으려고 있어 건너뛴다.
+     팩 흡수(`game/<옛>` → `game/<새>/<하위>` — 폐기할 게임을 허브 팩의 미니게임 폴더로)면 콘텐츠 경로 `game/<옛>/` 와 도메인 `"game/<옛>"` 만 새 자리로 바꾸고,
+     옛 도메인이 사라지므로 리다이렉트는 새 도메인 표에 접두 한 줄이다. 시나리오 이름 `game.<옛>.` · 체인 `Scenario.<옛>` 은 새 이름을 Experience 마다 고르므로 남은 목록에 찍는다.
   5. 작업 트리 전체를 검사해 끊어진 참조가 남았으면 알린다(실패 코드).
 `--resume` 은 파일 옮기기를 건너뛰고 2–5 만 다시 돈다 — 규칙을 넓힌 뒤 이미 옮긴 자리에 적용한다(바꾸기는 모두 정확한 접두라 두 번 돌아도 같다).
 임포트 산출물은 커밋하지 않으므로 원본을 옮긴 뒤에는 `App --import-models` 등으로 다시 임포트한다.
@@ -40,10 +42,11 @@ from lint.asset_references import (FieldConfig, add_redirects, check_working_tre
 
 NAME_CHARACTERS = set("abcdefghijklmnopqrstuvwxyz0123456789_.-/")
 # 옮긴 뒤 옛 경로가 칸 밖에 남았는지 훑는 글 파일 — 경로 칸의 글 에셋 · 문서 · 출처 표 · 테스트 CMake.
-LEFTOVER_SUFFIX = (".xml", ".json", ".material", ".md", ".txt", ".cpp", ".h")
+LEFTOVER_SUFFIX = (".xml", ".json", ".material", ".md", ".txt", ".cpp", ".h", ".py", ".cmake", ".js")
 # 팩 이름 바꾸기에서 팩 이름 문자열(시나리오 이름 · 콘텐츠 경로)을 고치는 글 파일 — 문서(.md)는 사람이 읽고 고친다(남은 목록에 찍힌다).
 # 번역 팩(.po 의 `#:` 출처 줄) · 셰이더 · 머티리얼 · 셸 스크립트 · .gitignore 예외 줄도 팩 경로를 적는다.
-PACK_STRING_SUFFIX = (".cpp", ".h", ".hpp", ".inl", ".py", ".cmake", ".json", ".xml", ".po", ".hlsl", ".hlsli", ".material", ".sh")
+# `Tools/` 의 우리 확장(launch-args · comment-fold)은 자바스크립트다.
+PACK_STRING_SUFFIX = (".cpp", ".h", ".hpp", ".inl", ".py", ".cmake", ".json", ".xml", ".po", ".hlsl", ".hlsli", ".material", ".sh", ".js")
 PACK_STRING_FILE_NAME = ("CMakeLists.txt", ".gitignore")
 GOLDEN_FOLDER = "golden"
 
@@ -78,6 +81,35 @@ def get_pack_rename(old_id: str, new_id: str) -> PackRename | None:
     if len(old_parts) == 2 and len(new_parts) == 2 and old_parts[0] == new_parts[0] == "game":
         return PackRename(old_parts[1], new_parts[1])
     return None
+
+
+@dataclass(frozen=True)
+class PackAbsorb:
+    """팩 흡수(`game/<옛>` → `game/<새>/<하위>`)의 옛 팩 이름과 새 자리."""
+    old_pack: str
+    new_id: str
+
+
+def get_pack_absorb(old_id: str, new_id: str) -> PackAbsorb | None:
+    """옛 id 가 팩 뿌리이고 새 id 가 다른 팩 아래 폴더면 팩 흡수다."""
+    old_parts, new_parts = old_id.split("/"), new_id.split("/")
+    if len(old_parts) == 2 and len(new_parts) > 2 and old_parts[0] == new_parts[0] == "game" and old_parts[1] != new_parts[1]:
+        return PackAbsorb(old_parts[1], new_id)
+    return None
+
+
+def rewrite_absorbed_strings(text: str, absorb: PackAbsorb) -> tuple[str, int]:
+    """글 속 `game/<옛>/…` 경로와 따옴표로 끝나는 도메인 `"game/<옛>"` 를 새 자리로. 앞 글자가 낱말 글자(`mygame/<옛>/`)거나 더 긴 이름이면 두지 않는다."""
+    pattern = re.compile(r"(?<![A-Za-z0-9_.])game/" + re.escape(absorb.old_pack) + r"(?=[/\"'`])")
+    return pattern.subn(absorb.new_id, text)
+
+
+def list_leftover_patterns(old_id: str, absorb: PackAbsorb | None) -> list[str]:
+    """옮긴 뒤 칸 밖에 남았는지 훑을 옛 글(소문자) — 흡수면 바꾸지 않은 시나리오 이름 · 체인 이름도."""
+    list_pattern = [old_id.lower()]
+    if absorb is not None:
+        list_pattern += [f"game.{absorb.old_pack}.", f"scenario.{absorb.old_pack}"]
+    return list_pattern
 
 
 def is_domain_root(asset_id: str) -> bool:
@@ -249,14 +281,14 @@ def write_redirects(root: Path, list_move: list[tuple[str, str]], prefix_move: t
     return list_written
 
 
-def report_leftovers(root: Path, old_id: str) -> None:
-    """칸 밖에 옛 경로가 남은 추적 글 파일(주석 · 출처 표 · 문서)을 알립니다. 고치지 않는다 — 경로인지 사람이 읽고 정한다."""
-    lowered = old_id.lower()
+def report_leftovers(root: Path, list_pattern: list[str]) -> None:
+    """칸 밖에 옛 경로 · 이름(@p list_pattern, 소문자)이 남은 추적 글 파일(주석 · 출처 표 · 문서)을 알립니다. 고치지 않는다 — 경로인지 사람이 읽고 정한다."""
     list_leftover = []
     for relative_path in list_index_files(root):
         if not relative_path.lower().endswith(LEFTOVER_SUFFIX) or relative_path.endswith("/" + REDIRECT_FILE_NAME) or not (root / relative_path).is_file():
             continue   # 리다이렉트 표는 옛 id 를 적으려고 있다
-        if lowered in (root / relative_path).read_bytes().decode("utf-8", "replace").lower():
+        lowered_text = (root / relative_path).read_bytes().decode("utf-8", "replace").lower()
+        if any(pattern_text in lowered_text for pattern_text in list_pattern):
             list_leftover.append(relative_path)
     for relative_path in list_leftover:
         print(f"  [남은 옛 경로 — 칸 밖] {relative_path}")
@@ -287,7 +319,12 @@ def main(argv: list[str]) -> int:
     is_folder = (root / moved_path).is_dir()
     list_rule = make_rules(old_id, new_id, is_folder, config)
     rename = get_pack_rename(old_id, new_id)
-    is_root_move = is_folder and is_domain_root(old_id) and is_domain_root(new_id)
+    absorb = get_pack_absorb(old_id, new_id)
+    # 옛 도메인 뿌리를 통째로 옮기면 옛 도메인 폴더가 사라진다 — 새 자리가 다른 도메인의 하위 폴더여도(흡수) 접두 한 줄이 새 도메인 표에 간다.
+    is_root_move = is_folder and is_domain_root(old_id)
+    if is_root_move and not is_domain_root(new_id) and (root / moved_path / REDIRECT_FILE_NAME).is_file():
+        print(f"[move-asset] '{moved_path}/{REDIRECT_FILE_NAME}' 는 옮긴 뒤 아무 검색 순서도 읽지 않는다 — 그 줄을 {make_redirect_table_id(new_id)} 에 먼저 합친 뒤 지우고 다시 옮긴다")
+        return ExitCode.CHECK_INVALID
 
     if not args.dry_run and not args.resume:
         git_move(root, old_path, new_path)
@@ -303,12 +340,18 @@ def main(argv: list[str]) -> int:
         if not (root / relative_path).is_file():
             continue
         is_field_file = is_referrer(relative_path, config)
-        is_string_file = rename is not None and is_pack_string_file(relative_path)
+        is_string_file = (rename is not None or absorb is not None) and is_pack_string_file(relative_path)
         if not is_field_file and not is_string_file:
             continue
         text = (root / relative_path).read_bytes().decode("utf-8", "surrogateescape")
         rewritten, edit_count = rewrite_references(relative_path, text, list_rule, config) if is_field_file else (text, 0)
-        if is_string_file:
+        if is_string_file and absorb is not None:
+            rewritten, absorbed_count = rewrite_absorbed_strings(rewritten, absorb)
+            if absorbed_count:
+                string_file_count += 1
+                string_count.path += absorbed_count
+                print(f"  [팩 흡수 경로] {relative_path}: {absorbed_count}")
+        elif is_string_file:
             rewritten, count = rewrite_pack_strings(rewritten, rename)
             if count.scenario_name + count.other_name + count.path + count.chain + count.domain:
                 string_file_count += 1
@@ -328,6 +371,9 @@ def main(argv: list[str]) -> int:
     if rename is not None:
         print(f"[move-asset] 팩 이름 {rename.old_pack} -> {rename.new_pack}: 골든 {len(list_golden)} 개, 문자열 파일 {string_file_count} 개 — "
               f"시나리오 이름 {string_count.scenario_name} · 그 밖 이름 {string_count.other_name} · 경로 {string_count.path} · 체인 {string_count.chain} · 도메인 {string_count.domain}")
+    if absorb is not None:
+        print(f"[move-asset] 팩 흡수 {absorb.old_pack} -> {absorb.new_id}: 문자열 파일 {string_file_count} 개 — 경로 {string_count.path}"
+              f"(시나리오 이름 game.{absorb.old_pack}. · 체인 Scenario.{absorb.old_pack} 은 남은 목록을 보고 고친다)")
     if is_root_move:
         print(f"[move-asset] 도메인 뿌리 옮기기 — 리다이렉트는 {make_redirect_table_id(new_id)} 에 접두 한 줄(<PrefixRedirect from=\"{old_id}\" to=\"{new_id}\" />)")
     if not args.dry_run:
@@ -337,7 +383,7 @@ def main(argv: list[str]) -> int:
         list_move = [] if is_root_move else list_moved_files(root, old_id, new_id, is_folder)
         for table_path in write_redirects(root, list_move, (old_id, new_id) if is_root_move else None):
             print(f"  [리다이렉트] {table_path}")
-        report_leftovers(root, old_id)
+        report_leftovers(root, list_leftover_patterns(old_id, absorb))
     if args.dry_run:
         return ExitCode.PASSED
 
