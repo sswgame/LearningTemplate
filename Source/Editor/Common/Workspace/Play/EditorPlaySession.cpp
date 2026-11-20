@@ -23,12 +23,18 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "ModuleAPI/Service/IModuleStateStore.h"
+
 namespace sw::editor
 {
     namespace
     {
         struct EditorPlaySessionInternal
         {
+            /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션의 키와 형식 판입니다. */
+            static constexpr string_view kCarryStoreKey = "editor.playSession";
+            static constexpr uint32      kCarryVersion  = 1;
+
             /**
              * @brief 월드의 플레이 상태를 바꿉니다. 활성 씬의 시작과 끝은 `SceneManager` 가 처리하며, 플레이 중에 씬을 바꾸면 새 씬도 시작합니다.
              * @details 활성 씬의 매니저에 직접 `beginPlay` 와 `endPlay` 를 호출하지 않는다. 그러면 플레이 중에 연 씬이 시작하지 않는다.
@@ -40,8 +46,8 @@ namespace sw::editor
 
             static void capturePlaySnapshot( PlaySessionData& data )
             {
-                data._listSnapshot.clear();
-                data._bHasSnapshot = SW_FALSE;
+                data._snapshot._listSnapshot.clear();
+                data._snapshot._bHasSnapshot = SW_FALSE;
 
                 // 선택: 씬이 없는 상태에서도 플레이를 누를 수 있다. 되돌릴 것이 없으므로 스냅샷 없이 시작한다(`_bHasSnapshot` 이 false).
                 Scene* pScene = editor::getActiveScene();
@@ -49,22 +55,22 @@ namespace sw::editor
                     return;
 
                 // Stop 할 때 활성 씬이 이 씬인지 알아보려고 세대를 기록하고, 아니면 다시 만들려고 이름과 소스 경로를 기록한다.
-                data._sceneGeneration = editor::getSubsystem<SceneManager>().getSceneGeneration();
-                data._sceneName       = pScene->getName();
-                data._sceneSourcePath = pScene->getSourcePath();
-                data._sceneAssembly   = pScene->captureAssembly();
+                data._snapshot._sceneGeneration = editor::getSubsystem<SceneManager>().getSceneGeneration();
+                data._snapshot._sceneName       = pScene->getName();
+                data._snapshot._sceneSourcePath = pScene->getSourcePath();
+                data._snapshot._sceneAssembly   = pScene->captureAssembly();
 
                 GameObjectManager*  pObjects = pScene->getObjectManager();
                 vector<GameObject*> listAllObject;
                 pObjects->getAllGameObjects( editor::EditorSceneIterationAccess::getKey(), listAllObject );
-                data._listSnapshot.reserve( listAllObject.size() );
+                data._snapshot._listSnapshot.reserve( listAllObject.size() );
 
                 for ( GameObject* pObj : listAllObject )
                 {
                     if ( pObj == nullptr )
                         continue;
 
-                    PlaySessionData::ObjectSnapshot entry;
+                    ScenePlaySnapshot::ObjectSnapshot entry;
                     entry._identity               = ObjectStateSerializer::captureIdentity( pObj );
                     entry._name                   = pObj->getName().c_str();
                     entry._prefabPath             = pScene->getEntityPrefabPath( entry._identity._objectID );
@@ -83,20 +89,20 @@ namespace sw::editor
                     }
 
                     if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) )
-                        data._listSnapshot.push_back( std::move( entry ) );
+                        data._snapshot._listSnapshot.push_back( std::move( entry ) );
                 }
 
-                data._bHasSnapshot = SW_TRUE;
+                data._snapshot._bHasSnapshot = SW_TRUE;
                 SW_LOG_TRACE_ID( "EditorPlaySession.PlaySnapshotCapturedObjects", "Play snapshot captured (%# objects).",
-                                 static_cast<uint32>( data._listSnapshot.size() ) );
+                                 static_cast<uint32>( data._snapshot._listSnapshot.size() ) );
             }
 
             /** @brief 되돌리기 1 단계: 스냅샷에 없는 오브젝트(플레이 도중 생성된 것)를 파괴합니다. */
             static void destroySpawnedDuringPlay( const PlaySessionData& data, GameObjectManager& objects )
             {
                 unordered_set<uint64> uniqueSnapIDs;
-                uniqueSnapIDs.reserve( data._listSnapshot.size() );
-                for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
+                uniqueSnapIDs.reserve( data._snapshot._listSnapshot.size() );
+                for ( const ScenePlaySnapshot::ObjectSnapshot& snap : data._snapshot._listSnapshot )
                 {
                     uniqueSnapIDs.insert( snap._identity._objectID );
                 }
@@ -122,7 +128,7 @@ namespace sw::editor
              */
             static void restoreSnapshotObjects( const PlaySessionData& data, Scene* pScene, GameObjectManager& objects, ObjectStateBatch& inoutBatch )
             {
-                for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
+                for ( const ScenePlaySnapshot::ObjectSnapshot& snap : data._snapshot._listSnapshot )
                 {
                     GameObject* pObj = objects.findGameObjectByID( snap._identity._objectID );
 
@@ -152,7 +158,7 @@ namespace sw::editor
 
             static void restorePlaySnapshot( PlaySessionData& data )
             {
-                if ( data._bHasSnapshot == SW_FALSE )
+                if ( data._snapshot._bHasSnapshot == SW_FALSE )
                     return;
 
                 // 플레이 중에 활성 씬이 바뀌었으면(게임 코드가 다음 레벨을 열었거나 씬 로드가 끝났다) 스냅샷은 현재 씬의 것이 아니다. 그 씬에
@@ -160,21 +166,21 @@ namespace sw::editor
                 // 덮어쓴다. 편집하던 씬을 빈 씬으로 다시 만들고(이름과 소스 경로 복원) 거기에 되돌린다. 로드가 아직 진행 중이면 끝나면서 씬을 다시
                 // 바꾸므로 먼저 취소한다. 오브젝트는 원래 id 로 복원되므로 프리팹 연결도 id 로 다시 연결한다(아래 2).
                 SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
-                if ( sceneManager.getSceneGeneration() != data._sceneGeneration )
+                if ( sceneManager.getSceneGeneration() != data._snapshot._sceneGeneration )
                 {
                     sceneManager.cancelPendingAsyncLoads();
-                    Scene* pRebuilt = sceneManager.createEmptyActiveScene( data._sceneName );
+                    Scene* pRebuilt = sceneManager.createEmptyActiveScene( data._snapshot._sceneName );
                     if ( pRebuilt != nullptr )
-                        pRebuilt->setSourcePath( data._sceneSourcePath );
-                    SW_LOG_INFO_ID( "EditorPlaySession.ActiveSceneChangedDuring", "The active scene changed during play - restoring the edited scene '%#'.", data._sceneName.c_str() );
+                        pRebuilt->setSourcePath( data._snapshot._sceneSourcePath );
+                    SW_LOG_INFO_ID( "EditorPlaySession.ActiveSceneChangedDuring", "The active scene changed during play - restoring the edited scene '%#'.", data._snapshot._sceneName.c_str() );
                 }
 
                 Scene*             pScene   = editor::getActiveScene();
                 GameObjectManager* pObjects = editor::getActiveObjectManager();
                 if ( pObjects == nullptr )
                 {
-                    data._listSnapshot.clear();
-                    data._bHasSnapshot = SW_FALSE;
+                    data._snapshot._listSnapshot.clear();
+                    data._snapshot._bHasSnapshot = SW_FALSE;
                     return;
                 }
 
@@ -185,7 +191,7 @@ namespace sw::editor
                 ObjectStateBatch batch( ObjectIDSpace::Live );
                 restoreSnapshotObjects( data, pScene, *pObjects, batch );
                 if ( pScene != nullptr )
-                    pScene->restoreAssembly( std::move( data._sceneAssembly ) );
+                    pScene->restoreAssembly( std::move( data._snapshot._sceneAssembly ) );
 
                 // 3. 계층을 다시 연결한다. 모두 읽은 뒤에 부모의 원래 id 로 연결해야 한다. 읽으면서 바로 연결하면, 플레이 중에 부모도 지워졌고 자식이
                 // 스냅샷에서 먼저 나올 때 부모가 아직 없어 루트로 남는다. 이름으로 찾으면 플레이 중에 이름을 바꾼 오브젝트(A 가 B 의
@@ -195,7 +201,7 @@ namespace sw::editor
                 SW_ASSERT( bLinked );
 
                 // 4. 플레이 전에 칠한 지형 편집을 되돌려 쓴다. 다시 만든 지형 컴포넌트는 디스크 에셋을 읽은 상태다.
-                for ( PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
+                for ( ScenePlaySnapshot::ObjectSnapshot& snap : data._snapshot._listSnapshot )
                 {
                     if ( snap._listTerrainEdit.empty() )
                         continue;
@@ -206,10 +212,10 @@ namespace sw::editor
                 }
 
                 SW_LOG_TRACE_ID( "EditorPlaySession.PlaySnapshotRestoredObjects", "Play snapshot restored (%# objects).",
-                                 static_cast<uint32>( data._listSnapshot.size() ) );
+                                 static_cast<uint32>( data._snapshot._listSnapshot.size() ) );
 
-                data._listSnapshot.clear();
-                data._bHasSnapshot = SW_FALSE;
+                data._snapshot._listSnapshot.clear();
+                data._snapshot._bHasSnapshot = SW_FALSE;
             }
 
             /**
@@ -219,13 +225,13 @@ namespace sw::editor
             static void applyKeptStates( PlaySessionData& data, EditorTransaction& transaction )
             {
                 GameObjectManager* pObjects = editor::getActiveObjectManager();
-                if ( data._listKept.empty() || pObjects == nullptr )
+                if ( data._snapshot._listKept.empty() || pObjects == nullptr )
                 {
-                    data._listKept.clear();
+                    data._snapshot._listKept.clear();
                     return;
                 }
 
-                for ( const PlaySessionData::ObjectSnapshot& kept : data._listKept )
+                for ( const ScenePlaySnapshot::ObjectSnapshot& kept : data._snapshot._listKept )
                 {
                     GameObject* pObj = pObjects->findGameObjectByID( kept._identity._objectID );
                     if ( pObj == nullptr )
@@ -248,8 +254,8 @@ namespace sw::editor
                     SW_ASSERT( bLinked );
                     transaction.recordModify( pObj, before, EditorTransaction::captureSnapshot( pObj ), "Keep Simulation Changes" );
                 }
-                SW_LOG_INFO_ID( "EditorPlaySession.KeptPlayStateObject", "Kept the play state of %# object(s).", static_cast<uint32>( data._listKept.size() ) );
-                data._listKept.clear();
+                SW_LOG_INFO_ID( "EditorPlaySession.KeptPlayStateObject", "Kept the play state of %# object(s).", static_cast<uint32>( data._snapshot._listKept.size() ) );
+                data._snapshot._listKept.clear();
             }
 
             /**
@@ -627,7 +633,7 @@ namespace sw::editor
         // 정지에서 일시정지로 가면 일시정지 상태로 플레이를 시작한다. 스냅샷과 시작은 하고 씬은 틱하지 않는다.
         if ( previous == PlaySessionState::Stopped )
         {
-            pData->_listKept.clear();
+            pData->_snapshot._listKept.clear();
             if ( pCommandStack != nullptr )
                 pCommandStack->suspendHistory();
             captureSnapshot( *pData );
@@ -654,12 +660,12 @@ namespace sw::editor
     {
         if ( data._state == PlaySessionState::Stopped || pObject == nullptr )
             return false;
-        PlaySessionData::ObjectSnapshot entry;
+        ScenePlaySnapshot::ObjectSnapshot entry;
         entry._identity = ObjectStateSerializer::captureIdentity( pObject );
         entry._name     = pObject->getName().c_str();
         if ( ObjectStateSerializer::saveToBinaryBuffer( pObject, entry._bytes, ObjectSaveOptions{ SerializePurpose::Authoring } ) == false )
             return false;
-        for ( PlaySessionData::ObjectSnapshot& kept : data._listKept )
+        for ( ScenePlaySnapshot::ObjectSnapshot& kept : data._snapshot._listKept )
         {
             if ( kept._identity._objectID == entry._identity._objectID )
             {
@@ -667,7 +673,80 @@ namespace sw::editor
                 return true;
             }
         }
-        data._listKept.push_back( std::move( entry ) );
+        data._snapshot._listKept.push_back( std::move( entry ) );
+        return true;
+    }
+
+    SubsystemInitResult EditorPlaySession::initializeSubsystem()
+    {
+        // 선택 조회(②): 에디터 컨텍스트만 세우는 테스트 · 도구에는 맡김 칸 · 씬 관리자가 없다 — 그때는 정지 상태로 시작한다.
+        IModuleStateStore* const pStore        = editor::findSubsystem<IModuleStateStore>();
+        SceneManager* const      pSceneManager = editor::findSubsystem<SceneManager>();
+        if ( pStore != nullptr && pSceneManager != nullptr && carryIn( _data, *pStore, pSceneManager->takePlaySnapshot() ) && _data._state != PlaySessionState::Stopped )
+            SW_LOG_INFO_ID( "EditorPlaySession.ResumedPlaySession", "Resumed the play session across the editor reload (%#).", _data._bSimulate == SW_TRUE ? "simulate" : "play" );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void EditorPlaySession::shutdownSubsystem()
+    {
+        // 선택 조회(②): 종료 경로라 호스트가 서비스 결합을 먼저 풀었을 수 있다. 그때는 다음 인스턴스가 이어받을 세션도 없다.
+        IModuleStateStore* const pStore        = editor::findSubsystem<IModuleStateStore>();
+        SceneManager* const      pSceneManager = editor::findSubsystem<SceneManager>();
+        if ( pStore == nullptr || pSceneManager == nullptr )
+            return;
+        pSceneManager->holdPlaySnapshot( carryOut( _data, *pStore ) );
+    }
+
+    unique_ptr<ScenePlaySnapshot> EditorPlaySession::carryOut( PlaySessionData& data, IModuleStateStore& store )
+    {
+        Archive archive;
+        archive << EditorPlaySessionInternal::kCarryVersion << static_cast<uint8>( data._state ) << static_cast<uint8>( data._queuedState ) << data._pendingStepCount
+                << data._heldSceneEditCount << data._startPosition << ( data._bStartQueued == SW_TRUE ) << ( data._bSimulate == SW_TRUE ) << ( data._bStartAtPosition == SW_TRUE )
+                << ( data._bStartMovePending == SW_TRUE ) << ( data._bEjected == SW_TRUE );
+        store.store( EditorPlaySessionInternal::kCarryStoreKey, vector<uint8>( archive.getData(), archive.getData() + archive.getSize() ) );
+        unique_ptr<ScenePlaySnapshot> snapshot = make_unique<ScenePlaySnapshot>( std::move( data._snapshot ) );
+        data                                   = PlaySessionData{};
+        return snapshot;
+    }
+
+    bool EditorPlaySession::carryIn( PlaySessionData& data, IModuleStateStore& store, unique_ptr<ScenePlaySnapshot> snapshot )
+    {
+        vector<uint8> bytes;
+        if ( store.take( EditorPlaySessionInternal::kCarryStoreKey, bytes ) == false )
+            return false;
+        Archive archive( bytes.data(), bytes.size() );
+        uint32  version{ 0 };
+        uint8   state{ 0 };
+        uint8   queuedState{ 0 };
+        uint32  pendingStepCount{ 0 };
+        uint32  heldSceneEditCount{ 0 };
+        float3  startPosition{};
+        bool    bStartQueued{ false };
+        bool    bSimulate{ false };
+        bool    bStartAtPosition{ false };
+        bool    bStartMovePending{ false };
+        bool    bEjected{ false };
+        archive >> version >> state >> queuedState >> pendingStepCount >> heldSceneEditCount >> startPosition >> bStartQueued >> bSimulate >> bStartAtPosition >> bStartMovePending >> bEjected;
+        constexpr uint8 kMaxState = static_cast<uint8>( PlaySessionState::Paused );
+        if ( archive.isOk() == false || version != EditorPlaySessionInternal::kCarryVersion || state > kMaxState || queuedState > kMaxState )
+        {
+            SW_LOG_WARNING_ID( "EditorPlaySession.CarriedPlaySessionUnreadable", "The play session from the previous editor instance could not be read - starting stopped" );
+            return false;
+        }
+        data._state              = static_cast<PlaySessionState>( state );
+        data._queuedState        = static_cast<PlaySessionState>( queuedState );
+        data._pendingStepCount   = pendingStepCount;
+        data._heldSceneEditCount = heldSceneEditCount;
+        data._startPosition      = startPosition;
+        data._bStartQueued       = bStartQueued ? SW_TRUE : SW_FALSE;
+        data._bSimulate          = bSimulate ? SW_TRUE : SW_FALSE;
+        data._bStartAtPosition   = bStartAtPosition ? SW_TRUE : SW_FALSE;
+        data._bStartMovePending  = bStartMovePending ? SW_TRUE : SW_FALSE;
+        data._bEjected           = bEjected ? SW_TRUE : SW_FALSE;
+        if ( snapshot != nullptr )
+            data._snapshot = std::move( *snapshot );
+        else if ( data._state != PlaySessionState::Stopped )
+            SW_LOG_WARNING_ID( "EditorPlaySession.CarriedPlaySnapshotMissing", "The play session resumed without its rollback snapshot - Stop will not restore the edited scene" );
         return true;
     }
 

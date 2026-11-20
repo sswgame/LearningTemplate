@@ -11,19 +11,19 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
 
-#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
-#include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
-#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/ScenePlaySnapshot.h"
 
 namespace sw
 {
     class CameraComponent;
     class GameObject;
     class GameObjectManager;
+    class IModuleStateStore;
 } // namespace sw
 
 namespace sw::editor
@@ -68,43 +68,8 @@ namespace sw::editor
      */
     struct PlaySessionData
     {
-        /**
-         * @brief 롤백용 오브젝트 스냅샷 하나입니다.
-         * @details 런타임 id(`_identity`)도 함께 저장한다. 정지할 때 상태를 되돌리면서 컴포넌트를 다시 만드는데, 원래 id 를
-         *          복원해야 플레이 전에 보관하던 핸들(선택, 씬의 활성 카메라)이 그대로 이어진다.
-         */
-        struct ObjectSnapshot
-        {
-            ObjectIdentity _identity;
-            string         _name;
-            vector<uint8>  _bytes;
-            string         _prefabPath; ///< 씬이 이 오브젝트에 연결한 프리팹 경로(`Scene::getEntityPrefabPath`). 씬을 다시 만들 때 복원한다
-            /**
-             * @brief 중첩 프리팹 부품 표시(`PrefabInstanceRegistry`)입니다. `_bNestedPart` 가 false 면 부품이 아닙니다.
-             * @details 레지스트리는 놓인 오브젝트의 표시를 제거하므로, 플레이 중에 지워진 부품을 원래 id 로 복원할 때 이 값으로 다시 기록한다.
-             */
-            PrefabNestedPart _nestedPart;
-            bool             _bNestedPart{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            /**
-             * @brief 프로퍼티 밖에 있는 저장하지 않은 지형 편집(`TerrainComponent::writeState`)입니다. 없으면 비어 있습니다.
-             * @details 되돌리기는 컴포넌트를 다시 만들고 지형이 디스크 에셋을 다시 읽으므로, 플레이 전에 칠한 것은 이것으로만 돌아온다.
-             */
-            vector<uint8> _listTerrainEdit;
-        };
-
-        vector<ObjectSnapshot> _listSnapshot;
-        /** @brief 오브젝트 상태에 없는 씬 조립 기록(인스턴스 · 데이터 레이어 · 상속)입니다. 씬을 다시 만들어도 저장에서 풀리지 않게 함께 되돌립니다. */
-        Scene::AssemblySnapshot _sceneAssembly;
-        /** @brief Keep Simulation Changes 로 저장한 오브젝트의 플레이 중 상태입니다. Stop 이 씬을 되돌린 뒤 편집 씬에 적용합니다(`keepObjectState`). */
-        vector<ObjectSnapshot> _listKept;
-        /**
-         * @brief 스냅샷을 찍을 때의 활성 씬입니다. 씬 세대(`SceneManager::getSceneGeneration`), 이름, 소스 경로를 저장합니다.
-         * @details Stop 할 때 활성 씬의 세대가 다르면 플레이 중에 씬이 바뀐 것이다. 게임 코드가 다음 레벨을 열었을 때가 그렇다.
-         *          이때는 편집하던 씬을 저장해 둔 이름과 소스 경로로 다시 만든 뒤 되돌린다(`EditorPlaySession::restoreSnapshot`).
-         */
-        uint64 _sceneGeneration;
-        string _sceneName;
-        string _sceneSourcePath;
+        /** @brief 플레이 전 편집 씬의 롤백 스냅샷과 남길 변경입니다. 에디터 모듈 리로드 동안 씬 관리자가 맡는다(`EditorPlaySession::carryOut`). */
+        ScenePlaySnapshot _snapshot;
         /** @brief "카메라 위치에서 시작" 의 위치입니다. `_bStartAtPosition` 일 때만 의미가 있습니다. */
         float3 _startPosition;
         /** @brief 아직 진행할 Step 프레임 수입니다. 0 이 되면 일시정지로 돌아갑니다(`consumePendingStep`). */
@@ -122,7 +87,6 @@ namespace sw::editor
          */
         string _lastRefusedAction;
         uint8  _bLastRefusedByHold : 1; ///< `_lastRefusedAction` 을 거절한 이유가 작업의 편집 막기(`holdSceneEdits`)였다
-        uint8  _bHasSnapshot       : 1;
         uint8  _bStartQueued       : 1; ///< 씬을 여는 중이라 시작을 미뤘다(언리얼의 RequestPlaySession 대기 요청에 해당)
         uint8  _bSimulate          : 1; ///< 월드만 실행한다. 게임 모듈 업데이트와 게임 입력이 없고 에디터 카메라를 유지한다(언리얼의 Simulate)
         uint8  _bStartAtPosition   : 1; ///< 다음 Play 를 `_startPosition` 에서 시작한다
@@ -130,11 +94,7 @@ namespace sw::editor
         uint8  _bEjected           : 1; ///< F8 로 조종을 놓았다. 다시 누르면 조종으로 돌아간다
 
         PlaySessionData()
-            : _listSnapshot{}
-            , _listKept{}
-            , _sceneGeneration{ 0 }
-            , _sceneName{}
-            , _sceneSourcePath{}
+            : _snapshot{}
             , _startPosition{}
             , _pendingStepCount{ 0 }
             , _state{ PlaySessionState::Stopped }
@@ -143,7 +103,6 @@ namespace sw::editor
             , _heldSceneEditCount{ 0 }
             , _lastRefusedAction{}
             , _bLastRefusedByHold{ SW_FALSE }
-            , _bHasSnapshot{ SW_FALSE }
             , _bStartQueued{ SW_FALSE }
             , _bSimulate{ SW_FALSE }
             , _bStartAtPosition{ SW_FALSE }
@@ -238,6 +197,11 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "EditorPlaySession";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+
+        /** @brief 앞선 에디터 인스턴스가 맡긴 플레이 세션을 되찾습니다(`carryIn`) — 에디터 모듈 리로드 · 백엔드 교체 너머로 PIE 가 이어진다. */
+        SubsystemInitResult initializeSubsystem() override;
+        /** @brief 세션을 호스트에 맡깁니다(`carryOut`). 종료는 호스트가 먼저 Stop 해 정지 상태를 맡긴다(`EditorModuleManager::onBeforeSuspendModules`). */
+        void shutdownSubsystem() override;
 
         /** @brief "카메라 위치에서 시작" 이 먼저 찾는 태그입니다. 이 태그를 가진 오브젝트가 없으면 게임 카메라를 가진 오브젝트를 옮깁니다. */
         static constexpr const utf8* kPlayerStartTag = "Player";
@@ -364,6 +328,19 @@ namespace sw::editor
          *          플레이 중에 생긴 오브젝트는 되돌리기가 지우므로 남지 않는다.
          */
         static bool keepObjectState( PlaySessionData& data, const GameObject* pObject );
+
+        /**
+         * @brief 인스턴스가 내려갈 때 세션을 맡깁니다 — 상태 · 플래그 · Step · 시작 위치는 @p store 에 바이트로, 롤백 스냅샷은 돌려주는 객체로(부르는 쪽이 씬 관리자에 맡긴다).
+         * @details 스냅샷의 조립 기록은 바이트로 옮기기에 커서 엔진 형 그대로 넘긴다(`ScenePlaySnapshot.h`). 편집 막기 수 · 거절 기록은 맡기지 않는다 —
+         *          막기를 쥔 작업은 옛 인스턴스와 함께 사라진다. @p data 는 정지 상태의 빈 세션으로 남는다.
+         */
+        [[nodiscard]] static unique_ptr<ScenePlaySnapshot> carryOut( PlaySessionData& data, IModuleStateStore& store );
+        /**
+         * @brief `carryOut` 이 맡긴 세션을 @p data 에 되찾습니다. 맡긴 것이 없거나 형식 판이 다르면 @p data 를 건드리지 않고 false 입니다.
+         * @details 상태를 바로 적는다 — `setState` 를 거치면 스냅샷을 다시 찍고 월드를 다시 켠다(월드는 리로드 동안 계속 돌았다). @p snapshot 이 없으면(맡긴 칸을 잃음)
+         *          플레이는 잇되 Stop 이 되돌릴 것이 없다고 경고한다.
+         */
+        [[nodiscard]] static bool carryIn( PlaySessionData& data, IModuleStateStore& store, unique_ptr<ScenePlaySnapshot> snapshot );
 
     private:
         /** @brief 읽기 · 세션 안의 기록(거절 로그 · 편집 막기)용 조회입니다. 밖으로는 열쇠를 받는 `findData` 만 상태를 고칠 수 있게 내준다. */

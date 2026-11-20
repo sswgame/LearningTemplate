@@ -332,8 +332,8 @@ namespace sw
         const bool bSuspendHostModule = scope != ModuleScope::Game;
         const bool bSuspendGame       = scope != ModuleScope::Editor;
 
-        // 무엇을 언로드하든 호스트 모듈(에디터 시뮬레이션)부터 멈춘다. 이유는 `EditorModuleManager::onBeforeSuspendModules` 에 있다.
-        onBeforeSuspendModules();
+        // 무엇을 언로드하든 호스트 모듈(에디터)에 먼저 묻는다 — 플레이 세션을 이을지(리로드), 멈출지(종료). 이유는 `EditorModuleManager::onBeforeSuspendModules` 에 있다.
+        const bool bKeepWorldPlaying = onBeforeSuspendModules( reason );
 
         // 무엇이든 언로드하기 전에 저장한다. 저장하지 못했으면(리로드 직전일 때만) 여기서 멈춘다. 아직 아무것도 언로드하지 않았다.
         const bool bAbortOnCaptureFailure = bSuspendGame && captureGameState() == false && bKeepGameOnCaptureFailure;
@@ -342,8 +342,9 @@ namespace sw
         if ( bSuspendHostModule )
         {
             suspendHostModule( bReleaseAPITable );
-            // 일시정지 함수가 없던 호스트 모듈이라도 월드가 플레이 중으로 남지 않게 한다. 호스트 모듈 없이 다시 돌면 beginFrame 이 다시 켠다.
-            if ( engine::areEngineServicesBound() && engine::getSubsystem<SceneManager>().isWorldPlaying() )
+            // 세션을 잇지 않는 내리기(종료)는 월드가 플레이 중으로 남지 않게 한다. 호스트 모듈 없이 다시 돌면 beginFrame 이 다시 켠다.
+            // 잇는 내리기(PIE 중 리로드)는 월드를 그대로 둔다 — 끄면 endPlay 가 돌아 게임 상태가 바뀐다(언리얼 Live Coding 이 PIE 를 잇는 것과 같다).
+            if ( bKeepWorldPlaying == false && engine::areEngineServicesBound() && engine::getSubsystem<SceneManager>().isWorldPlaying() )
                 engine::getSubsystem<SceneManager>().setWorldPlaying( false );
         }
         if ( bSuspendGame )

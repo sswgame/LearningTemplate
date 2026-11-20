@@ -269,14 +269,22 @@ namespace sw
     // 공통 호스트가 부르는 지점. 언로드와 비우기.
     // ======================================================================
 
-    void EditorModuleManager::onBeforeSuspendModules()
+    bool EditorModuleManager::onBeforeSuspendModules( FlushReason reason )
     {
-        const bool bStopSimulation = hasEditor() && _editorAPI.stopSimulation != nullptr;
-        if ( bStopSimulation )
+        if ( hasEditor() == false )
+            return false;
+        // 리로드 · 백엔드 교체는 플레이(PIE)를 잇는다. 세션은 에디터 인스턴스가 내려가며 호스트에 맡기고(`EditorPlaySession::carryOut` — 상태는 `IModuleStateStore`,
+        // 롤백 스냅샷은 씬 관리자) 새 인스턴스가 되찾는다. 월드 · 씬 오브젝트 · 게임 인스턴스는 처음부터 호스트 것이라 옮길 것이 없다. 언리얼 Live Coding 이 PIE 를 잇는 자리다.
+        const bool bCarrySession = reason == FlushReason::Reload || reason == FlushReason::BackendSwap;
+        if ( bCarrySession )
+            return true;
+        // 종료(다시 설 인스턴스가 없다)는 Stop 해 편집 씬을 되돌리고 월드를 멈춘다.
+        if ( _editorAPI.stopSimulation != nullptr )
         {
             SW_LOG_INFO_ID( "EditorModuleManager.StoppingEditorSimulationBefore", "Stopping editor simulation before module suspend." );
             _editorAPI.stopSimulation( _editor );
         }
+        return false;
     }
 
     void EditorModuleManager::suspendHostModule( bool bReleaseAPITable )
