@@ -5,6 +5,8 @@
 #include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include <type_traits>
+
 using namespace sw;
 
 SW_TEST_CASE( LittleEndianUtilTest, ReadsLowByteFirst )
@@ -49,4 +51,36 @@ SW_TEST_CASE( LittleEndianUtilTest, SignedValuesRoundTrip )
     uint8 arrByte[8] = {};
     LittleEndianUtil::writeInt64( arrByte, -1234567890123ll );
     SW_EXPECT_EQUAL( -1234567890123ll, ByteReader( arrByte, sizeof( arrByte ) ).readInt64() );
+}
+
+namespace
+{
+    // 날 읽기(`LittleEndianUtil::read*`)는 비공개다 — 바깥이 부르면 컴파일 오류여야 한다(접근 검사는 치환 실패다). 읽기는 범위를 보는 `ByteReader` 만 한다.
+    template <typename T, typename = void>
+    struct IsRawReadCallable : std::false_type
+    {
+    };
+    template <typename T>
+    struct IsRawReadCallable<T, std::void_t<decltype( T::readUint32( std::declval<const sw::uint8*>() ) )>> : std::true_type
+    {
+    };
+    static_assert( IsRawReadCallable<sw::LittleEndianUtil>::value == false, "LittleEndianUtil::read* must stay private - read through ByteReader" );
+} // namespace
+
+SW_TEST_CASE( LittleEndianUtilTest, CountReadStopsAtRemainingBytes )
+{
+    vector<uint8> bytes;
+    LittleEndianUtil::appendUint32( bytes, 1000000u ); // 원소 백만 개라고 적었지만 뒤에 바이트가 없다
+    ByteReader shortReader( bytes.data(), bytes.size() );
+    uint32     count = 7;
+    SW_EXPECT_FALSE( shortReader.readCount( 4, count ) );
+    SW_EXPECT_TRUE( shortReader.hasOverflowed() );
+    SW_EXPECT_EQUAL( 7u, count ); // 실패하면 개수를 건드리지 않는다
+
+    LittleEndianUtil::appendUint32( bytes, 0xAABBCCDDu );
+    bytes[0] = 1;
+    bytes[1] = bytes[2] = bytes[3] = 0;
+    ByteReader fullReader( bytes.data(), bytes.size() );
+    SW_EXPECT_TRUE( fullReader.readCount( 4, count ) );
+    SW_EXPECT_EQUAL( 1u, count );
 }
