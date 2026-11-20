@@ -43,7 +43,7 @@ from common.exit_code import ExitCode  # noqa: E402
 from common.git import run_git, run_git_in_hook_repository  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.format import run_clang_format_batch  # noqa: E402
-from lint.lint_scope import LintScope, clear_read_cache, make_staged_scope, make_whole_scope  # noqa: E402
+from lint.lint_scope import LintScope, clear_read_cache, list_staged_with_unstaged_changes, make_staged_scope, make_whole_scope  # noqa: E402
 from lint.index_cache import CACHE_FOLDER  # noqa: E402
 from lint.module_imports import list_imported_module_files  # noqa: E402
 from lint.rules import Rule, find_orphan_tables, format_table, RULE_BY_ID, RULES  # noqa: E402
@@ -353,7 +353,14 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     list_argument = list(sys.argv[1:] if argv is None else argv)
     if not list_argument:
-        return run_lint(get_project_root(), make_staged_scope(get_project_root()))
+        project_root = get_project_root()
+        scope = make_staged_scope(project_root)
+        list_partial = list_staged_with_unstaged_changes(project_root, scope)
+        if list_partial:
+            print(f"[lint] FAIL — 스테이지한 파일에 스테이지 안 된 변경이 더 있다(린트는 작업 폴더 글을 본다): {', '.join(list_partial)}\n"
+                  "  남은 변경도 git add 하거나 되돌린 뒤 커밋한다(git stash 는 쓰지 않는다).")
+            return ExitCode.VIOLATION
+        return run_lint(project_root, scope)
     if list_argument[0] == "--all":
         return run_lint(get_project_root(), make_whole_scope(get_project_root()))
     if list_argument[0] == "--list":

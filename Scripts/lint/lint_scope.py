@@ -98,6 +98,16 @@ def make_staged_scope(project_root: Path) -> LintScope:
     return LintScope(tuple(sorted(path for path in list_changed if (project_root / path).is_file())), tuple(sorted(list_removed)), False)
 
 
+def list_staged_with_unstaged_changes(project_root: Path, scope: LintScope) -> list[str]:
+    """
+    스테이지 파일 가운데 작업 폴더에 스테이지 안 된 변경이 더 있는 것. 규칙은 작업 폴더 글을 읽으므로(`read_bytes`) 이런 파일은 커밋할 내용이 아닌 글로
+    판정된다 — 일부만 스테이지한 작업자의 커밋을 린트가 다른 상태로 본다. 인덱스 블롭을 읽게 바꾸는 대신 멈춘다(커밋 훅의 읽기 경로를 둘로 두지 않는다).
+    `git commit -a` 의 임시 인덱스(`GIT_INDEX_FILE`)는 작업 폴더와 같아 빈 목록이다.
+    """
+    set_unstaged = set(run_git_lines(project_root, ["diff", "--name-only", "--no-renames"]))
+    return [path for path in scope.list_file if path in set_unstaged]
+
+
 def make_file_scope(project_root: Path, list_file_argument: Iterable[str]) -> LintScope:
     """규칙 모듈의 `--files` — 절대 · 상대 경로를 저장소 기준으로 푼다(저장소 밖 · 없는 파일은 뺀다)."""
     resolved_root = project_root.resolve()
