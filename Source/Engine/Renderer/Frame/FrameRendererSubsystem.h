@@ -5,6 +5,7 @@
  *          보관하고 있어 렌더러와 같은 시점에, 디바이스가 살아 있을 때(종료) 해제한다. 소멸은 패킷 빌더(해제 `destroy` 뒤) → 렌더러 순이다.
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -58,5 +59,7 @@ namespace sw
         unique_ptr<OffscreenSceneRenderers> _offscreenRenderers;
         unique_ptr<RenderPacketBuilder>     _packetBuilder;
         const RHISubsystem&                 _rhiSubsystem;
+        /** @brief 파이프라인 변수(`gv_renderPipeline` · `gv_deferredShading`) 변경 훅의 구독입니다. 백엔드 교체로 내렸다 세울 때 다시 건다. */
+        Subscription _arrPipelineVariableSubscription[2];
     };
 } // namespace sw

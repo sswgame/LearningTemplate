@@ -41,8 +41,8 @@ SW_TEST_CASE( GameAutoplayTest, FakeGameRegistersAndTheSwitchFlipsItsVariable )
     SW_EXPECT_NOT_NULL( pInfo );
     if ( pInfo != nullptr )
     {
-        pInfo->_onValueChanged = GlobalVariableChangedDelegate::create<&onFakeAutoPlayChanged>();
-        s_autoPlayChangedCount = 0;
+        const Subscription changedSubscription = pInfo->bindOnValueChanged( GlobalVariableChangedDelegate::create<&onFakeAutoPlayChanged>() );
+        s_autoPlayChangedCount                 = 0;
         {
             const GameAutoplayRegistration registration{ "FakeGame", "AI plays the fake game", "gv_fakeGameAutoPlay", &s_fakeGameAutoPlay };
             const GameAutoplayRegistrar    registrar{ &registration };

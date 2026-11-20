@@ -111,9 +111,6 @@ namespace sw
         /** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
         void endFrame();
 
-        /** @brief 대기 중인 RHI 핫스왑을 수행합니다(`IEngineRenderDriver::applyPendingBackendChange`). 렌더러가 없으면(전용 서버) false 입니다. */
-        [[nodiscard]] bool applyPendingBackendChange();
-
         // ----------------------------------------------------------------------
         // 도우미
         // ----------------------------------------------------------------------

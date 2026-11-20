@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="bfcfc9e61c422758a9b0eb8c5180a292"?>
 <!--
-  에디터 시나리오 — 미리보기 창을 연 채 백엔드를 건넌다(다중 월드 6절 6번). 교체(메뉴 · 콘솔 · 단계 SwapBackend 가 같은 길 — gv_rhiBackend 변경 → 프레임 끝의 RHIBackendSwitcher::applyIfPending)는
+  에디터 시나리오 — 미리보기 창을 연 채 백엔드를 건넌다(다중 월드 6절 6번). 교체(메뉴 · 콘솔 · 단계 SwapBackend 가 같은 길 — gv_rhiBackend 변경 → 프레임 끝의 GameModuleManager::applyPendingDeviceChange)는
   렌더 워커를 비우고 모듈 인스턴스(에디터 포함)를 내린 뒤 디바이스를 다시 만들고 모듈을 다시 세운다. 미리보기 창이 쥔 씬 · 렌더 타깃 · 씬별 렌더러(FrameRenderer 의 미리보기 렌더러 목록)가 이 길을 지난다.
   이 시나리오는 같은 길을 단계 `SwapBackend` 로 창이 열린 프레임에 요청한다.
   ① 머티리얼 창에 빨간 테스트 머티리얼을 열어 구 미리보기가 그려지게 한다(렌더러 시작 줄 하나, 미리보기 타깃을 gv_editorPreviewScreenshot 으로 before 에 저장).

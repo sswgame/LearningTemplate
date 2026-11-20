@@ -76,7 +76,7 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_WATCH( appAssertDialogInstalled, "App.AssertDialogInstalled", "1 when App installed the interactive assert dialog (never in automated runs)",
+    SW_AUTOMATION_WATCH( appAssertDialogInstalled, "App.AssertDialogInstalled", "1 when the interactive assert dialog is installed (editor runs a person watches; never in automated runs)",
                          &AssertDialogInternal::readAssertDialogInstalled );
 } // namespace sw
 

@@ -111,14 +111,16 @@ namespace sw
             _frameRenderer->setViewMode( viewMode );
         GlobalVariableManager&    globalVariables       = engine::getSubsystem<GlobalVariableManager>();
         GlobalVariableInfo* const arrPipelineVariable[] = { globalVariables.findVariableOf( gv_renderPipeline ), globalVariables.findVariableOf( gv_deferredShading ) };
-        for ( GlobalVariableInfo* const pVariable : arrPipelineVariable )
+        static_assert( std::size( arrPipelineVariable ) == std::extent_v<decltype( _arrPipelineVariableSubscription )>, "one subscription per pipeline variable" );
+        for ( size_t index = 0; index < std::size( arrPipelineVariable ); ++index )
         {
+            GlobalVariableInfo* const pVariable = arrPipelineVariable[index];
             if ( pVariable == nullptr )
             {
                 SW_LOG_ERROR_ID( "FrameRenderer.PipelineVariableGvRenderPipeline", "A pipeline variable (gv_renderPipeline · gv_deferredShading) is not registered" );
                 return SubsystemInitResult::Failed;
             }
-            pVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &FrameRendererSubsystem::onPipelineVariableChanged, this );
+            _arrPipelineVariableSubscription[index] = pVariable->bindOnValueChanged( SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &FrameRendererSubsystem::onPipelineVariableChanged, this ) );
         }
         return SubsystemInitResult::Succeeded;
     }
@@ -154,14 +156,8 @@ namespace sw
 
     void FrameRendererSubsystem::shutdownSubsystem()
     {
-        if ( GlobalVariableManager* const pGlobalVariables = engine::findSubsystem<GlobalVariableManager>() )
-        {
-            for ( GlobalVariableInfo* const pVariable : { pGlobalVariables->findVariableOf( gv_renderPipeline ), pGlobalVariables->findVariableOf( gv_deferredShading ) } )
-            {
-                if ( pVariable != nullptr )
-                    pVariable->_onValueChanged = {};
-            }
-        }
+        for ( Subscription& subscription : _arrPipelineVariableSubscription )
+            subscription.reset();
         _packetBuilder->shutdown();
         _offscreenRenderers->shutdown(); // 주 렌더러의 PSO 캐시를 빌려 쓴다 — 먼저 내린다
         _frameRenderer->shutdown();

@@ -622,11 +622,6 @@ namespace sw
         engine::getSubsystem<VisualLogger>().endFrame();
     }
 
-    bool Engine::applyPendingBackendChange()
-    {
-        return _pRenderDriver != nullptr && _pRenderDriver->applyPendingBackendChange();
-    }
-
     RenderThread* Engine::getRenderThread() const
     {
         return _pRenderDriver != nullptr ? _pRenderDriver->findRenderThread() : nullptr;

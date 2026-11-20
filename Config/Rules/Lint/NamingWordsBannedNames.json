@@ -1,6 +1,14 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "EditorModuleManager": "ClientModuleManager — 배포 게임도 쓰는 클라이언트 호스트의 모듈 관리자, 장치 재생성 순서는 GameModuleManager::applyPendingDeviceChange(2026-11-21)",
+    "reinitializeAfterRHISwap": "GameModuleManager::applyPendingDeviceChange — 장치 교체 순서(DeviceChangeSequence)가 게임 → 호스트 모듈을 다시 세운다(2026-11-21)",
+    "recreateEditorInstance": "ClientModuleManager::recreateHostModule — suspendHostModule 의 짝 가상(2026-11-21)",
+    "applyIfPending": "GameModuleManager::applyPendingDeviceChange — App 이 프레임 경계에서 호출 하나로 부른다, 교체기는 요청만 예약한다(2026-11-21)",
+    "getFailedSwapCount": "IEngineRenderDriver::getFailedBackendChangeCount — 실패 집계는 교체를 하는 렌더러가 든다(2026-11-21)",
+    "InteractiveAssertDialog": "AssertDialog::installForInteractiveRun — 개발 도구 클라이언트가 첫 프레임 끝에 스스로 건다(App/Dev 폴더 폐지, 2026-11-21)",
+    "findRHIBackendSwitcherVariable": "RHIBackendSwitcherInternal::findBackendVariable(2026-11-21)",
+    "kBackendSwitcher": "호스트 서비스 BackendSwitcher 폐지 — 교체기는 DevTools 기동 단계 서브시스템으로 스스로 선다(2026-11-21)",
     "ExperienceManager": "MinigameFlow — 하는 일 둘로 나눴다 — 게임 범위에 키트 서비스 · 카탈로그를 거는 일은 GameFeature(언리얼 Game Features 자리), 미니게임 들어가고 나오기는 MinigameFlow(DesignBacklog 게임 기능 · 미니게임, 2026-11-21)",
     "ExperienceScope": "GameFeatureScope — 하는 일 둘로 나눴다 — 게임 범위에 키트 서비스 · 카탈로그를 거는 일은 GameFeature(언리얼 Game Features 자리), 미니게임 들어가고 나오기는 MinigameFlow(DesignBacklog 게임 기능 · 미니게임, 2026-11-21)",
     "ExperienceDefinition": "MinigameDefinition — 하는 일 둘로 나눴다 — 게임 범위에 키트 서비스 · 카탈로그를 거는 일은 GameFeature(언리얼 Game Features 자리), 미니게임 들어가고 나오기는 MinigameFlow(DesignBacklog 게임 기능 · 미니게임, 2026-11-21)",

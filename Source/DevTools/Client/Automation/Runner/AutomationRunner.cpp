@@ -805,7 +805,7 @@ namespace sw
         const GlobalVariableInfo* const pBackend = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_rhiBackend" );
         if ( pBackend == nullptr )
             return string{};
-        return string{ RHI::getBackendTypeName( *static_cast<const RHIBackend*>( pBackend->_pData ) ) };
+        return string{ RHI::getBackendTypeName( static_cast<RHIBackend>( pBackend->getValueAsInt() ) ) }; // 저장소 주소를 형식으로 바꿔 읽지 않는다 — enum 값은 변수 정보가 읽는다
     }
 
     string AutomationRunner::describeRunPosition() const

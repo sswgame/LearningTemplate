@@ -47,22 +47,24 @@ namespace sw
         /** @param startupScope 기동 범위입니다. 백엔드 교체가 그 컬렉션의 단계를 내리고 다시 세웁니다. 이 드라이버를 든 서브시스템의 주인이라 먼저 사라지지 않습니다. */
         EngineRenderDriver( SubsystemScope& startupScope, RHISubsystem& rhiSubsystem, FrameRendererSubsystem& frameRendererSubsystem, RenderThreadSubsystem& renderThreadSubsystem );
 
-        void                            onStartupFinished() override;
-        void                            onShutdownBegin() override;
-        [[nodiscard]] RHI*              findRHI() const override;
-        [[nodiscard]] RHIInitResult     getRHIInitResult() const override;
-        [[nodiscard]] const IRHIDevice* findDevice() const override;
-        [[nodiscard]] RenderThread*     findRenderThread() const override { return _pRenderThread; }
-        void                            flushSubmittedPackets() override;
-        void                            waitRenderThreadIdle( RHIWaitIdleReason reason ) override;
-        void                            submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, FrameDrawMode drawMode ) override;
-        [[nodiscard]] bool              applyPendingBackendChange() override;
-        void                            discardViewTargets() override;
-        void                            setScenarioCaptureEnabled( bool bEnabled ) override;
-        void                            setPresentInterval( uint32 interval ) override;
-        [[nodiscard]] uint32            countPendingCaptureJobs( const GameObjectManager* pManager ) const override;
-        void                            overrideDeviceLostPolicy( RHIDeviceLostPolicy policy ) override;
-        [[nodiscard]] uint32            getDeviceRecreateCount() const override { return _deviceRecreateCount; }
+        void                              onStartupFinished() override;
+        void                              onShutdownBegin() override;
+        [[nodiscard]] RHI*                findRHI() const override;
+        [[nodiscard]] RHIInitResult       getRHIInitResult() const override;
+        [[nodiscard]] const IRHIDevice*   findDevice() const override;
+        [[nodiscard]] RenderThread*       findRenderThread() const override { return _pRenderThread; }
+        void                              flushSubmittedPackets() override;
+        void                              waitRenderThreadIdle( RHIWaitIdleReason reason ) override;
+        void                              submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, FrameDrawMode drawMode ) override;
+        [[nodiscard]] bool                hasPendingBackendChange() const override;
+        [[nodiscard]] BackendChangeResult applyPendingBackendChange() override;
+        void                              discardViewTargets() override;
+        void                              setScenarioCaptureEnabled( bool bEnabled ) override;
+        void                              setPresentInterval( uint32 interval ) override;
+        [[nodiscard]] uint32              countPendingCaptureJobs( const GameObjectManager* pManager ) const override;
+        void                              overrideDeviceLostPolicy( RHIDeviceLostPolicy policy ) override;
+        [[nodiscard]] uint32              getDeviceRecreateCount() const override { return _deviceRecreateCount; }
+        [[nodiscard]] uint32              getFailedBackendChangeCount() const override { return _failedBackendChangeCount; }
 
         /** @brief 마지막으로 적용한 화면 출력입니다(능력에 맞춘 값 — 주 패킷이 싣는다). 아직 적용하지 않았으면 기본값(SDR)입니다. */
         const DisplayOutputDesc& getAppliedDisplayOutput() const { return _appliedDisplayOutput; }
@@ -72,7 +74,7 @@ namespace sw
         /**
          * @brief 장치 분실에 대한 답입니다. 잃지 않았으면 비고, 잃었으면 지금 할 일(`Quit` 또는 `Recreate`)입니다(`submitFrame` 이 프레임마다 묻는다).
          * @details 브레드크럼 보고는 손실을 처음 본 백엔드가 이미 했다(`GPUBreadcrumbs::reportDeviceLost`) — 여기서는 끝낼지 다시 만들지만 정한다.
-         *          `Recreate` 정책도 다시 만들 수 없는 @p backend(`RHI::canRecreateAfterDeviceLost`)면 `Quit` 다. 다시 만드는 길은 개발 · 배포 공통이다(`EditorModuleManager::applyPendingBackendChange`).
+         *          `Recreate` 정책도 다시 만들 수 없는 @p backend(`RHI::canRecreateAfterDeviceLost`)면 `Quit` 다. 다시 만드는 길은 개발 · 배포 공통이다(`GameModuleManager::applyPendingDeviceChange`).
          */
         [[nodiscard]] static optional<RHIDeviceLostPolicy> decideDeviceLostResponse( const IRHIDevice& device, RHIBackend backend, RHIDeviceLostPolicy policy );
 
@@ -117,6 +119,7 @@ namespace sw
         RHIDeviceLostPolicy     _deviceLostPolicy;          ///< `onStartupFinished` 가 `EngineConfig::_deviceLostPolicy` 에서 읽는다
         RHIDeviceLostPolicy     _deviceLostPolicyOverride;  ///< `overrideDeviceLostPolicy` 가 덮은 값(`None` 이면 덮지 않았다 — 설정 값을 쓴다)
         uint32                  _deviceRecreateCount;       ///< 잃은 장치를 다시 만들어 장면을 다시 묶은 횟수
+        uint32                  _failedBackendChangeCount;  ///< 요청한 백엔드로 장치를 세우지 못한 교체 횟수(`applyPendingBackendChange` 가 `Applied` 가 아니었다)
         uint8                   _bDeviceLostHandled    : 1; ///< 분실을 한 번 처리했다(로그 · 종료 요청을 프레임마다 되풀이하지 않는다)
         uint8                   _bDisplayOutputApplied : 1; ///< 지금 장치에 화면 출력 요청을 적용했다(장치를 다시 만들면 내린다)
         DisplayOutputDesc       _displayRequest;            ///< 마지막으로 적용한 요청(능력에 맞추기 전)

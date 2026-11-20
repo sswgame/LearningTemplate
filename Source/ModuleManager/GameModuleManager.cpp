@@ -25,6 +25,7 @@
 #include "ModuleAPI/Service/IModuleStateStore.h"
 #include "ModuleAPI/Service/IServerKitLocator.h"
 
+#include "ModuleManager/DeviceChangeSequence.h"
 #include "ModuleManager/ILiveReloadManager.h"
 #include "ModuleManager/ModuleInstanceUtil.h"
 
@@ -171,12 +172,12 @@ namespace sw
         suspendModules( ModuleScope::Game, true, FlushReason::Reload );
     }
 
-    void GameModuleManager::onAfterGameReload( void* pLibraryModule )
+    void GameModuleManager::onAfterGameReload( ModuleLibraryHandle library )
     {
         const ScopedMemoryTag moduleMemoryTag{ kGameModuleMemoryTag }; // 다시 올린 모듈의 서비스 묶기(표의 `bindService`)가 모듈 코드다
         // 핸들을 받지 못했으면(기동 · RHI 교체) 리로드 매니저가 든 것을 쓴다. 배포는 정적 링크라 핸들이 없고 `bindGameAPI` 가 정적 테이블을 읽는다.
-        void* const pModuleHandle = pLibraryModule != nullptr ? pLibraryModule : getLoadedModuleHandle( sw::config::kTargetGameModule );
-        if ( bindGameAPI( pModuleHandle ) == false )
+        const ModuleLibraryHandle gameLibrary = library.isValid() ? library : getLoadedModuleHandle( sw::config::kTargetGameModule );
+        if ( bindGameAPI( gameLibrary ) == false )
         {
             markReloadGraphBroken( "GameAPI bind failed after reload" );
             return;
@@ -201,7 +202,7 @@ namespace sw
         onBeforeGameReload();
     }
 
-    void GameModuleManager::onAfterGameplayDLLReload( void* /*hLibraryModule*/ )
+    void GameModuleManager::onAfterGameplayDLLReload( ModuleLibraryHandle /*library*/ )
     {
         if ( engine::areEngineServicesBound() == false )
             return;
@@ -232,9 +233,9 @@ namespace sw
         return true;
     }
 
-    bool GameModuleManager::isGameLibraryUsable( void* pLibraryModule ) const
+    bool GameModuleManager::isGameLibraryUsable( ModuleLibraryHandle library ) const
     {
-        return ModuleInstanceUtil::isLibraryUsable<GameAPI, PFN_ExportGameAPI>( pLibraryModule, getModuleSymbols() );
+        return ModuleInstanceUtil::isLibraryUsable<GameAPI, PFN_ExportGameAPI>( library, getModuleSymbols() );
     }
 
     // ======================================================================
@@ -304,10 +305,10 @@ namespace sw
         return kGameSymbols;
     }
 
-    bool GameModuleManager::bindGameAPI( void* pLibraryModule )
+    bool GameModuleManager::bindGameAPI( ModuleLibraryHandle library )
     {
         _gameAPI = {};
-        if ( exportGameAPITable( pLibraryModule ) == false )
+        if ( exportGameAPITable( library ) == false )
             return false;
 
         rebindGameService();
@@ -328,9 +329,9 @@ namespace sw
         flushRenderWorkers( reason );
 
         const bool bSuspendHostModule = scope != ModuleScope::Game;
-        const bool bSuspendGame       = scope != ModuleScope::Editor;
+        const bool bSuspendGame       = scope != ModuleScope::Host;
 
-        // 무엇을 언로드하든 호스트 모듈(에디터)에 먼저 묻는다 — 플레이 세션을 이을지(리로드), 멈출지(종료). 이유는 `EditorModuleManager::onBeforeSuspendModules` 에 있다.
+        // 무엇을 언로드하든 호스트 모듈(에디터)에 먼저 묻는다 — 플레이 세션을 이을지(리로드), 멈출지(종료). 이유는 `ClientModuleManager::onBeforeSuspendModules` 에 있다.
         const bool bKeepWorldPlaying = onBeforeSuspendModules( reason );
 
         // 무엇이든 언로드하기 전에 저장한다. 저장하지 못했으면(리로드 직전일 때만) 여기서 멈춘다. 아직 아무것도 언로드하지 않았다.
@@ -415,11 +416,30 @@ namespace sw
         }
     }
 
-    bool GameModuleManager::recreateGameInstance( void* pGameModule )
+    bool GameModuleManager::applyPendingDeviceChange( QuitRequest& quitRequest )
     {
+        if ( _pRenderDriver == nullptr )
+            return true; // 렌더러가 없는 호스트(전용 서버)는 장치가 없다
+        DeviceChangeSequence sequence;
+        // API 표는 놓지 않는다. 모듈을 언로드하지 않고 같은 표로 다시 만든다(편집기는 리로드와 같은 길로 상태를 맡겼다 되찾는다 — `IModuleStateStore`).
+        sequence._suspendModules  = SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
+         { suspendModules( ModuleScope::Both, false, FlushReason::BackendSwap ); } );
+        sequence._recreateModules = SW_DELEGATE_LAMBDA( Delegate<bool()>, [this]()
+        {
+            // 기동과 같은 순서다. 게임이 먼저 스폰되고 호스트 모듈(에디터)이 그 타입과 서비스를 본다. 하나가 실패해도 다른 하나는 세운다(끝내기 전 로그가 둘 다 남는다).
+            const bool bGameRecreated = recreateGameInstance();
+            const bool bHostRecreated = recreateHostModule();
+            return bGameRecreated && bHostRecreated;
+        } );
+        return sequence.apply( *_pRenderDriver, quitRequest );
+    }
+
+    bool GameModuleManager::recreateGameInstance()
+    {
+        // 테이블이 비었으면(앞 바인딩 실패) 리로드 경로가 모듈 핸들로 다시 바인딩한다. 핸들은 모듈 수명을 아는 이 클래스가 찾는다(배포는 정적 링크라 nullptr).
         if ( _gameAPI.create == nullptr || _gameAPI.initialize == nullptr )
         {
-            onAfterGameReload( pGameModule );
+            onAfterGameReload( getLoadedModuleHandle( sw::config::kTargetGameModule ) );
             return _game != nullptr;
         }
 
@@ -596,17 +616,17 @@ namespace sw
             _pLiveReloadManager->markGraphBroken( pReason != nullptr ? pReason : "unspecified" );
     }
 
-    void* GameModuleManager::getLoadedModuleHandle( string_view moduleName ) const
+    ModuleLibraryHandle GameModuleManager::getLoadedModuleHandle( string_view moduleName ) const
     {
         if ( _pLiveReloadManager == nullptr )
-            return nullptr;
+            return ModuleLibraryHandle{};
         return _pLiveReloadManager->getModuleHandle( moduleName );
     }
 
-    bool GameModuleManager::exportGameAPITable( void* pLibraryModule )
+    bool GameModuleManager::exportGameAPITable( ModuleLibraryHandle library )
     {
         // 동적 경로라 새 라이브러리가 이 호스트와 다른 테이블로 빌드됐을 수 있다 — ABI 를 대조한다(배포는 정적 링크라 어긋날 수 없다).
-        return ModuleInstanceUtil::exportAPIFromLibrary<GameAPI, PFN_ExportGameAPI>( pLibraryModule, getModuleSymbols(), _gameAPI );
+        return ModuleInstanceUtil::exportAPIFromLibrary<GameAPI, PFN_ExportGameAPI>( library, getModuleSymbols(), _gameAPI );
     }
 #else
 
@@ -620,7 +640,7 @@ namespace sw
 
     bool GameModuleManager::startGameInstance()
     {
-        onAfterGameReload( nullptr );
+        onAfterGameReload( ModuleLibraryHandle{} );
         return true;
     }
 
@@ -628,13 +648,13 @@ namespace sw
     {
     }
 
-    void* GameModuleManager::getLoadedModuleHandle( [[maybe_unused]] string_view moduleName ) const
+    ModuleLibraryHandle GameModuleManager::getLoadedModuleHandle( [[maybe_unused]] string_view moduleName ) const
     {
-        // 정적 링크라 "로드된 모듈"이라는 것이 없다. 부르는 쪽이 nullptr 을 처리한다.
-        return nullptr;
+        // 정적 링크라 "로드된 모듈"이라는 것이 없다. 부르는 쪽이 빈 핸들을 처리한다.
+        return ModuleLibraryHandle{};
     }
 
-    bool GameModuleManager::exportGameAPITable( [[maybe_unused]] void* pLibraryModule )
+    bool GameModuleManager::exportGameAPITable( [[maybe_unused]] ModuleLibraryHandle library )
     {
         if ( exportGameAPI( &_gameAPI ) == false )
         {

@@ -3,8 +3,7 @@
 #include "App/App.h"
 
 #include "App/AppHeadlessTasks.h"
-#include "App/Dev/InteractiveAssertDialog.h"
-#include "App/EditorModuleManager.h"
+#include "App/ClientModuleManager.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/PlatformFileUtil.h"
@@ -23,6 +22,7 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
@@ -118,9 +118,9 @@ namespace sw
     App::App()
         : _launch{}
         , _pAutomation{ nullptr }
+        , _pModuleManager{ nullptr }
         , _pWindow{ nullptr }
         , _fixedTimestep{}
-        , _pBackendSwitcher{}
         , _userSettingsHost{}
         , _uiPlatformBinding{}
         , _sceneViewCameraProvider{}
@@ -139,16 +139,13 @@ namespace sw
         , _bActiveSceneSeen{ SW_FALSE }
         , _reserved{ 0 }
     {
-        // 백엔드 교체기는 개발 구성에만 있다(`App/Dev/` — 배포 구성은 짓지 않는다). 렌더 스레드 훅이 호스트 서비스보다 먼저 묶으므로 여기서 만든다.
-        if constexpr ( build::kShipping == false )
-            _pBackendSwitcher = make_unique<RHIBackendSwitcher>();
     }
 
     App::~App() = default;
 
-    EditorModuleManager* App::getModuleManager() const
+    ClientModuleManager* App::getModuleManager() const
     {
-        return static_cast<EditorModuleManager*>( _launch.getModuleManager() ); // 만든 쪽이 형식을 안다(`loadModuleLibraries`)
+        return _pModuleManager;
     }
 
     // 길이를 나누지 않는다: 호스트 범위 → 엔진 → 헤드리스 작업 → 자동화 → 설정 감시 순의 시동 열이라 순서가 곧 뜻이다.
@@ -321,7 +318,12 @@ namespace sw
     bool App::loadModuleLibraries()
     {
         // App 은 빌드가 담은 모든 대상을 로드한다(Game 은 클라이언트와 리슨 서버용 서버 모듈, Client 는 클라이언트). 전용 서버는 Server 실행 파일이 Server 대상으로 같은 해석을 한다.
-        return _launch.loadModuleLibraries( ModuleCatalog::getBuildTargetMask(), make_unique<EditorModuleManager>() );
+        // 형식을 아는 것은 만든 이쪽이다 — 부팅 열은 공통 형식(`GameModuleManager`)으로 소유하고 App 은 만든 형식의 관찰 포인터를 든다(내려 쓰는 형 변환을 두지 않는다).
+        unique_ptr<ClientModuleManager> pModuleManager = make_unique<ClientModuleManager>();
+        ClientModuleManager* const      pCreated       = pModuleManager.get();
+        const bool                      bLoaded        = _launch.loadModuleLibraries( ModuleCatalog::getBuildTargetMask(), std::move( pModuleManager ) );
+        _pModuleManager                                = _launch.getModuleManager() == pCreated ? pCreated : nullptr; // 부팅 열이 받기 전에 실패하면 매니저는 이미 사라졌다
+        return bLoaded;
     }
 
     bool App::startHostService( HostServiceID id )
@@ -341,18 +343,6 @@ namespace sw
                 bindEditorRenderHooks( true );
                 // 시나리오 체인이 단계마다 게임을 처음부터 다시 세운다(`AutomationSession::startStage` 가 `engine::findSubsystem<IGameRestarter>()` 로 찾는다).
                 return _launch.getHostScope().bind<IGameRestarter>( _launch.getModuleManager() );
-            }
-            case HostServiceID::BackendSwitcher:
-            {
-                // 실행 중 백엔드 교체는 개발 기능이다(App/Dev — 언리얼도 RHI 변경은 재시작). 배포는 교체기가 없어 설 것이 없다.
-                if constexpr ( build::kShipping )
-                    return true;
-                else
-                {
-                    _pBackendSwitcher->initialize( &_launch.getEngine(), getModuleManager(), bEnableEditor );
-                    // 시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` 가 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾는다(엔진 범위 → 호스트 범위).
-                    return _launch.getHostScope().bind( _pBackendSwitcher.get() );
-                }
             }
             case HostServiceID::UserSettings:
             {
@@ -394,17 +384,8 @@ namespace sw
                 getModuleManager()->shutdown();
                 // 렌더 스레드가 받은 패킷을 끝낸 뒤 훅을 뗀다(`RenderThread::setPresentHook`) — 그 뒤에 매니저를 지운다.
                 bindEditorRenderHooks( false );
+                _pModuleManager = nullptr;
                 _launch.releaseModuleManager();
-                return;
-            }
-            case HostServiceID::BackendSwitcher:
-            {
-                // 범위에서 먼저 풀어 자동화가 내려간 교체기를 찾지 않게 한다. 전역 변수 훅은 GlobalVariableManager(엔진 소유)가 사라지기 전에 뗀다.
-                if constexpr ( build::kShipping == false )
-                {
-                    _launch.getHostScope().unbind<RHIBackendSwitcher>();
-                    _pBackendSwitcher->shutdown();
-                }
                 return;
             }
             case HostServiceID::UserSettings:
@@ -467,25 +448,13 @@ namespace sw
         if ( _bEnableEditor == SW_TRUE )
         {
             // 모듈 매니저는 루프가 도는 동안 산다(호스트 서비스 Game 이 세우고 루프 뒤 `shutdown` 이 내린다) — App 이 중계하지 않고 바로 묶는다.
-            _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &EditorModuleManager::getSceneViewCamera, static_cast<const EditorModuleManager*>( getModuleManager() ) );
+            _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &ClientModuleManager::getSceneViewCamera, static_cast<const ClientModuleManager*>( getModuleManager() ) );
             // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다(언리얼 메인 프레임과 유니티 에디터 창도 최소 크기를 둔다).
             _pWindow->setMinimumClientSize( AppInternal::kEditorMinClientWidth, AppInternal::kEditorMinClientHeight );
-            // 대화형 에디터 실행에서만 단언을 묻는다(Windows Debug). 자동 실행과 테스트는 기존처럼 멈춘다. 대화상자는 개발 도구다(배포는 DevTools 를 링크하지 않는다).
-            if constexpr ( build::kShipping == false )
-            {
-                const CommandLineManager* pCommandLine = _launch.getEngine().getCommandLineManager();
-                if ( pCommandLine != nullptr )
-                    InteractiveAssertDialog::install( *pCommandLine );
-            }
+            // 대화형 에디터 실행의 단언 대화상자는 개발 도구가 스스로 건다(`AssertDialog` — 배포는 DevTools 를 링크하지 않는다).
         }
 
-        // 개발 도구의 프레임 시작 훅은 렌더 스레드에 바로 건다(엔진은 렌더 스레드를 빌려 줄 뿐 훅을 중계하지 않는다). 헤드리스가 아닌 클라이언트에는 늘 있다.
-        // 에디터 렌더 훅은 게임 호스트 서비스와 함께 걸고 뗀다(`bindEditorRenderHooks`). 백엔드 교체기는 개발 구성에만 있다(`App/Dev/`).
-        if constexpr ( build::kShipping == false )
-        {
-            if ( RenderThread* const pRenderThread = _launch.getEngine().getRenderThread() )
-                _pBackendSwitcher->bindRenderThreadHook( *pRenderThread );
-        }
+        // 에디터 렌더 훅은 게임 호스트 서비스와 함께 걸고 뗀다(`bindEditorRenderHooks`). 개발 도구의 렌더 스레드 훅(장치 제거 시험)은 개발 도구가 스스로 건다(`RHIBackendSwitcher`).
     }
 
     void App::bindEditorRenderHooks( bool bBind )
@@ -622,15 +591,11 @@ namespace sw
         _launch.getEngine().update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
         getModuleManager()->endEditorFrame();
 
-        // 프레임 경계의 장치 교체 · 다시 만들기 — 개발 구성은 교체기(메뉴 · 콘솔 교체 + 실패 집계)를 거치고, 배포는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)만 예약한다.
+        // 프레임 경계의 장치 교체 · 다시 만들기 — 개발 구성의 백엔드 교체(`gv_rhiBackend`)와 배포도 쓰는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)이 같은 길이다.
         // 창 모달 루프 안의 프레임은 건너뛴다 — 교체가 창을 다시 만들면 아직 그 창에서 도는 모달 루프의 HWND 가 사라진다. 예약은 남아 루프가 끝난 뒤 첫 프레임이 한다.
+        // 실패는 반환값으로 따로 다루지 않는다 — 장치나 모듈 인스턴스가 없으면 모듈 관리자가 종료(DeviceLost)를 이미 요청했고, 되돌린 교체는 렌더러가 센다(`RHI.SwapFailedCount`).
         if ( _pWindow->isInModalLoopUpdate() == false )
-        {
-            if constexpr ( build::kShipping == false )
-                _pBackendSwitcher->applyIfPending();
-            else if ( const RHI* pRHI = _launch.getEngine().getRHI(); pRHI != nullptr && pRHI->hasPendingBackendChange() )
-                (void)getModuleManager()->applyPendingBackendChange( _launch.getEngine() ); // 실패하면 렌더 드라이버가 종료(DeviceLost)를 이미 요청했다
-        }
+            (void)getModuleManager()->applyPendingDeviceChange( engine::getSubsystem<QuitRequest>() );
 
         _launch.getEngine().endFrame();
         onStartupFrameEnded();
@@ -748,7 +713,7 @@ namespace sw
         }
 
         // 이벤트를 GameModuleManager(ImGui 등)에 먼저 보낸다.
-        EditorModuleManager* const pModuleManager    = getModuleManager();
+        ClientModuleManager* const pModuleManager    = getModuleManager();
         const bool                 bConsumedByEditor = ( pModuleManager != nullptr && pModuleManager->onWindowMessage( event ) );
 
         // 에디터가 가로채지 않았을 때만 게임 InputManager 로 전달한다.

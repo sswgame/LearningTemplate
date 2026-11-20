@@ -1,7 +1,7 @@
 /**
  * @file DevTools/Client/Diagnostics/AssertDialog.h
  * @brief 대화형 에디터 실행의 단언 대화상자입니다(Windows Debug). 언리얼의 ensure 대화상자에 해당합니다.
- * @details 개발 기능이라 DevTools 에 둔다(배포 구성은 짓지 않는다 — 예전 App/AppAssertDialog). App 은 `build::kShipping` 이 아닐 때만 부른다.
+ * @details 개발 기능이라 DevTools 에 둔다(배포 구성은 짓지 않는다 — 예전 App/AppAssertDialog). 개발 도구의 클라이언트 부분이 에디터 실행의 첫 프레임 끝에 한 번 부른다(`DevToolsClient::onFrameEnd`).
  */
 #pragma once
 #include "DevTools/DevToolsAPI.h"

@@ -362,10 +362,16 @@ namespace sw
         if ( isTextType() )
             return std::holds_alternative<string>( _defaultValue ) ? std::get<string>( _defaultValue ) : string{};
         // 값 칸이 아니라 빈 칸에 기본값을 써서 같은 형식기로 글을 만든다(bool · 정수 · 실수 · enum 은 8 바이트 안이다).
-        int64              storage       = 0;
-        GlobalVariableInfo scratch       = *this;
+        // 변경 콜백 칸은 옮기지 않는다 — 형식기가 읽는 칸(형식 · 크기 · 기본값 · enum 이름)만 사본에 둔다.
+        int64              storage{ 0 };
+        GlobalVariableInfo scratch;
+        scratch._name                    = _name;
+        scratch._type                    = _type;
         scratch._pData                   = &storage;
-        scratch._onValueChanged          = {};
+        scratch._defaultValue            = _defaultValue;
+        scratch._enumType                = _enumType;
+        scratch._typeSize                = _typeSize;
+        scratch._pEnumTextParser         = _pEnumTextParser;
         const GlobalVariableTypeOps& row = GlobalVariableTypeTable::getRow( _type );
         row._writeDefault( scratch );
         return row._formatValue( scratch );
@@ -388,8 +394,7 @@ namespace sw
             return false;
 
         *static_cast<bool*>( _pData ) = val;
-        if ( _onValueChanged.isBound() )
-            _onValueChanged( this );
+        notifyValueChanged();
         return true;
     }
 
@@ -398,19 +403,29 @@ namespace sw
      */
     bool GlobalVariableInfo::setValueAsInt( int32 val )
     {
+        if ( setValueAsIntWithoutNotify( val ) == false )
+            return false;
+        notifyValueChanged();
+        return true;
+    }
+
+    bool GlobalVariableInfo::setValueAsIntWithoutNotify( int32 val )
+    {
         if ( _pData == nullptr )
             return false;
-
         if ( _type == GlobalVariableType::Int32 )
             *static_cast<int32*>( _pData ) = val;
         else if ( _type == GlobalVariableType::Enum )
             GlobalVariableInternal::writeEnumValue( _pData, _typeSize, val );
         else
             return false;
-
-        if ( _onValueChanged.isBound() )
-            _onValueChanged( this );
         return true;
+    }
+
+    void GlobalVariableInfo::notifyValueChanged()
+    {
+        if ( _onValueChanged.isBound() )
+            _onValueChanged.get()( this );
     }
 
     /**
@@ -422,8 +437,7 @@ namespace sw
             return false;
 
         *static_cast<float32*>( _pData ) = val;
-        if ( _onValueChanged.isBound() )
-            _onValueChanged( this );
+        notifyValueChanged();
         return true;
     }
 
@@ -437,8 +451,7 @@ namespace sw
         // 경로 변수는 받을 때 절대화한다 - 처리 표의 같은 함수로 쓴다(글을 그대로 넣는 갈래를 두지 않는다).
         if ( GlobalVariableTypeTable::getRow( _type )._parseValue( *this, val ) == false )
             return false;
-        if ( _onValueChanged.isBound() )
-            _onValueChanged( this );
+        notifyValueChanged();
         return true;
     }
 
@@ -454,8 +467,7 @@ namespace sw
         if ( GlobalVariableTypeTable::getRow( _type )._parseValue( *this, strValue ) == false )
             return false;
 
-        if ( _onValueChanged.isBound() )
-            _onValueChanged( this );
+        notifyValueChanged();
         return true;
     }
 
@@ -494,8 +506,7 @@ namespace sw
 
         GlobalVariableTypeTable::getRow( _type )._writeDefault( *this );
 
-        if ( _onValueChanged.isBound() )
-            _onValueChanged( this );
+        notifyValueChanged();
     }
 
     // ============================================================================
@@ -558,8 +569,7 @@ namespace sw
             string pendingText;
             if ( GlobalVariableTypeTable::getRow( pInfo->_type )._readCommandLineArgument( *pCmdLineManager, *pInfo, pendingText ) )
             {
-                if ( pInfo->_onValueChanged.isBound() )
-                    pInfo->_onValueChanged( pInfo );
+                pInfo->notifyValueChanged();
             }
             else if ( pendingText.empty() == false )
             {
@@ -724,7 +734,7 @@ namespace sw
                 GlobalVariableTypeTable::getRow( info->_type )._writeDefault( *info );
 
                 if ( info->_onValueChanged.isBound() )
-                    listPendingCallback.push_back( { info->_onValueChanged, info.get() } );
+                    listPendingCallback.push_back( { info->_onValueChanged.get(), info.get() } );
             }
         } // unique_lock 해제
 

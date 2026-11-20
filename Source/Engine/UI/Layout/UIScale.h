@@ -7,19 +7,12 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
-
-/**
- * @brief UI 안전 영역 비율(0..0.1)입니다. 각 변을 물리 크기의 이 비율만큼 안쪽으로 밉니다 — TV 가장자리 잘림(오버스캔)에 맞추는 화면 설정이고, 휴대 기기 노치 흉내 · 미리보기에도 쓴다.
- * @details 배포본에도 둔다 — 플레이어가 맞추는 "안전 영역" 화면 설정이다(Lyra 의 Safe Zone 보정 화면 · `ULyraSettingsLocal::SafeZoneScale`). 언리얼 `r.DebugSafeZone.TitleRatio` 는 같은 겹침을 흉내만 낸다.
- */
-SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiSafeZone );
 
 namespace sw
 {

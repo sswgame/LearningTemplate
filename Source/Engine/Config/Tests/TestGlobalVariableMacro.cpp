@@ -101,45 +101,72 @@ SW_TEST_CASE( GlobalVariableMacroTest, DefinitionTakesStorageFromTypeAndDefaultF
 
 namespace
 {
-    /** @brief 케이스 동안 `gv_rhiBackend` 의 변경 콜백(앱의 백엔드 교체 요청)을 떼어 두고, 끝나면 값과 콜백을 되돌립니다. */
-    struct ScopedRHIBackendVariable
-    {
+    /** @brief 엔진 리플렉션 enum(`RHIBackend`)을 형식으로 둔 케이스 전용 변수의 저장소입니다 — 실행 중인 `gv_rhiBackend` 는 교체기가 변경 콜백을 걸어 두어 건드리지 않는다. */
+    sw::RHIBackend s_testEngineEnumVariable = sw::RHIBackend::DirectX12;
+    /** @brief 변경 콜백이 불린 횟수입니다. */
+    int32 s_testEngineEnumChangedCount = 0;
 
-        sw::GlobalVariableInfo&           _info;
-        int32                             _valueBefore;
-        sw::GlobalVariableChangedDelegate _onChangedBefore;
-        explicit ScopedRHIBackendVariable( sw::GlobalVariableInfo& info )
-            : _info{ info }
-            , _valueBefore{ info.getValueAsInt() }
-            , _onChangedBefore{ info._onValueChanged }
-        {
-            _info._onValueChanged = {};
-        }
-        ~ScopedRHIBackendVariable()
-        {
-            (void)_info.setValueAsInt( _valueBefore );
-            _info._onValueChanged = _onChangedBefore;
-        }
-        ScopedRHIBackendVariable( const ScopedRHIBackendVariable& )            = delete;
-        ScopedRHIBackendVariable& operator=( const ScopedRHIBackendVariable& ) = delete;
-    };
+    void onTestEngineEnumChanged( sw::GlobalVariableInfo* )
+    {
+        ++s_testEngineEnumChangedCount;
+    }
+
+    constexpr const utf8* kTestEngineEnumVariable = "gv_testEngineEnumVariable";
+    constexpr const utf8* kTestEngineEnumModule   = "GlobalVariableMacroTest";
 } // namespace
 
 /**
  * @brief [GlobalVariableMacroTest] 엔진의 enum 전역 변수는 리플렉션 열거자 이름을 받는다
  * @details 기동이 리플렉션 enum 표를 파서로 건다(`engine::bindGlobalVariableEnumNames`). 걸리지 않으면 `-gv_rhiBackend=Vulkan` ·
- *          콘솔의 `gv_rhiBackend Vulkan` 이 숫자만 받아 거절된다.
+ *          콘솔의 `gv_rhiBackend Vulkan` 이 숫자만 받아 거절된다. 같은 enum 형식(`RHIBackend`)의 케이스 전용 변수로 본다.
  */
 SW_TEST_CASE( GlobalVariableMacroTest, EngineEnumVariableTakesEnumeratorNames )
 {
-    sw::GlobalVariableInfo* pInfo = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_rhiBackend" );
-    SW_REQUIRE_NOT_NULL( pInfo );
-    const ScopedRHIBackendVariable restore( *pInfo );
+    sw::GlobalVariableManager& manager = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+    SW_REQUIRE_TRUE( manager.registerVariable( kTestEngineEnumVariable, sw::GlobalVariableType::Enum, &s_testEngineEnumVariable, static_cast<int32>( sw::RHIBackend::DirectX12 ),
+                                               "engine enum test variable", "RHIBackend", kTestEngineEnumModule, static_cast<uint32>( sizeof( sw::RHIBackend ) ), true ) );
+    sw::GlobalVariableInfo* pInfo = manager.findVariable( kTestEngineEnumVariable );
+    SW_EXPECT_NOT_NULL( pInfo );
+    if ( pInfo != nullptr )
+    {
+        SW_EXPECT_TRUE( pInfo->setValueFromString( "Vulkan" ) );
+        SW_EXPECT_EQUAL( static_cast<int32>( sw::RHIBackend::Vulkan ), pInfo->getValueAsInt() );
+        SW_EXPECT_TRUE( pInfo->setValueFromString( "DirectX11" ) );
+        SW_EXPECT_EQUAL( static_cast<int32>( sw::RHIBackend::DirectX11 ), pInfo->getValueAsInt() );
+        SW_EXPECT_FALSE( pInfo->setValueFromString( "NoSuchBackend" ) );
+        SW_EXPECT_EQUAL( static_cast<int32>( sw::RHIBackend::DirectX11 ), pInfo->getValueAsInt() );
+    }
+    manager.unregisterVariablesByModule( kTestEngineEnumModule );
+}
 
-    SW_EXPECT_TRUE( pInfo->setValueFromString( "Vulkan" ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( sw::RHIBackend::Vulkan ), pInfo->getValueAsInt() );
-    SW_EXPECT_TRUE( pInfo->setValueFromString( "DirectX11" ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( sw::RHIBackend::DirectX11 ), pInfo->getValueAsInt() );
-    SW_EXPECT_FALSE( pInfo->setValueFromString( "NoSuchBackend" ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( sw::RHIBackend::DirectX11 ), pInfo->getValueAsInt() );
+/**
+ * @brief [GlobalVariableMacroTest] 변경 콜백은 구독이 쥐고, 콜백 없는 쓰기(`setValueAsIntWithoutNotify`)는 값만 바꾼다 — 변경 콜백 안의 되돌리기가 같은 콜백을 다시 부르지 않는 근거다
+ * @details 구독이 풀리면 칸이 비어 다음 쓰기는 콜백을 부르지 않는다. 변수가 먼저 내려가도(모듈 내리기) 구독은 무효가 될 뿐이다.
+ */
+SW_TEST_CASE( GlobalVariableMacroTest, ChangeHookIsASubscriptionAndSilentWriteSkipsIt )
+{
+    sw::GlobalVariableManager& manager = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+    SW_REQUIRE_TRUE( manager.registerVariable( kTestEngineEnumVariable, sw::GlobalVariableType::Enum, &s_testEngineEnumVariable, static_cast<int32>( sw::RHIBackend::DirectX12 ),
+                                               "engine enum test variable", "RHIBackend", kTestEngineEnumModule, static_cast<uint32>( sizeof( sw::RHIBackend ) ), true ) );
+    sw::GlobalVariableInfo* pInfo = manager.findVariable( kTestEngineEnumVariable );
+    SW_EXPECT_NOT_NULL( pInfo );
+    if ( pInfo != nullptr )
+    {
+        s_testEngineEnumChangedCount  = 0;
+        sw::Subscription subscription = pInfo->bindOnValueChanged( sw::GlobalVariableChangedDelegate::create<&onTestEngineEnumChanged>() );
+        SW_EXPECT_TRUE( pInfo->setValueAsInt( static_cast<int32>( sw::RHIBackend::Vulkan ) ) );
+        SW_EXPECT_EQUAL( 1, s_testEngineEnumChangedCount );
+        SW_EXPECT_TRUE( pInfo->setValueAsIntWithoutNotify( static_cast<int32>( sw::RHIBackend::DirectX11 ) ) );
+        SW_EXPECT_TRUE( s_testEngineEnumVariable == sw::RHIBackend::DirectX11 );
+        SW_EXPECT_EQUAL( 1, s_testEngineEnumChangedCount ); // 콜백 없는 쓰기
+        subscription.reset();
+        SW_EXPECT_TRUE( pInfo->setValueAsInt( static_cast<int32>( sw::RHIBackend::Vulkan ) ) );
+        SW_EXPECT_EQUAL( 1, s_testEngineEnumChangedCount ); // 풀린 구독은 부르지 않는다
+
+        // 변수가 먼저 내려가면 남은 구독은 무효가 될 뿐이다.
+        subscription = pInfo->bindOnValueChanged( sw::GlobalVariableChangedDelegate::create<&onTestEngineEnumChanged>() );
+        manager.unregisterVariablesByModule( kTestEngineEnumModule );
+        SW_EXPECT_FALSE( subscription.isActive() );
+    }
+    manager.unregisterVariablesByModule( kTestEngineEnumModule );
 }
