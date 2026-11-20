@@ -10,6 +10,7 @@
 #include "Core/Foundation/StdHeaders.h"
 
 #include "Engine/Object/Component/TagComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw
 {
