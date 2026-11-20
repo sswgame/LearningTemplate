@@ -29,6 +29,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Environment/Surface/ZoneProfileAssetKind.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
 
@@ -137,8 +138,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        /** @brief 이 데이터 종류입니다(`*.zone.xml`). 타입 있는 참조 `AssetRef<ZoneProfile>` 이 이 접미사로 가른다. */
-        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "zone", AssetPathRule{ {}, {}, ".zone.xml" }, {} );
+        /** @brief 이 데이터 종류입니다(`*.zone.xml`). 타입 있는 참조 `AssetRef<ZoneProfile>` 이 이 접미사로 가른다. 정의는 엔진 칸이 함께 쓰는 `ZoneProfileAssetKind` 한 곳이다. */
+        static constexpr AssetTypeDef kAssetType = ZoneProfileAssetKind::kAssetType;
 
         PROPERTY( Tooltip = "Modules by name; the order is the processing order" )
         vector<ZoneModuleDef> _listModule;

@@ -427,7 +427,7 @@ namespace sw
         }
         const utf8* const pTag = params._tag.c_str();
         outDef._cueTag         = TagID::request( string_view( params._tag ) );
-        outDef._prefab         = params._prefab; // 둘 중 하나는 아래에서 필수로 확인한다
+        outDef._prefab         = params._prefab.key(); // 둘 중 하나는 아래에서 필수로 확인한다
         outDef._soundEvent     = params._sound;
         outDef._offset         = params._offset;
         outDef._bOnRemoved     = params._bOnRemoved ? SW_TRUE : SW_FALSE;

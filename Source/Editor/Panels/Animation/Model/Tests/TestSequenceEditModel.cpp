@@ -59,7 +59,7 @@ namespace
             if ( pInfo->requiresField( SequenceItemField::Binding ) )
                 item._binding = pInfo->_bSpawns ? spawnBinding : 1;
             if ( pInfo->requiresField( SequenceItemField::Prefab ) )
-                item._prefab = "a.prefab.xml";
+                item._spawnPrefab = "a.prefab.xml";
             if ( pInfo->requiresField( SequenceItemField::Preset ) )
                 item._preset = "wet";
             if ( pInfo->requiresField( SequenceItemField::Scenario ) )
@@ -155,7 +155,7 @@ SW_TEST_CASE( SequenceEditModelTest, EveryKindCanBeCreatedAndSurvivesSaveAndLoad
     SW_REQUIRE_TRUE( readBack.loadFromXMLText( document._asset.toXML() ) );
     const SequenceTrackItem& spawn = readBack._listItem[static_cast<size_t>( SequenceItemKind::Spawn )];
     SW_EXPECT_TRUE( spawn._kind == SequenceItemKind::Spawn );
-    SW_EXPECT_TRUE( spawn._prefab == "a.prefab.xml" );
+    SW_EXPECT_TRUE( spawn._spawnPrefab == "a.prefab.xml" );
     SW_EXPECT_TRUE( readBack._listItem[static_cast<size_t>( SequenceItemKind::Appearance )]._preset == "wet" );
     SW_EXPECT_TRUE( readBack._listItem[static_cast<size_t>( SequenceItemKind::Scenario )]._scenario == "a.scenario.xml" );
 }
@@ -186,8 +186,8 @@ SW_TEST_CASE( SequenceEditModelTest, DraftWithEmptyPropertiesNeverEntersTheDocum
     const string snapshot = document._asset.toXML();
 
     SW_EXPECT_FALSE( document.commitItemDraft().has_value() );
-    document._itemEdit._prefab  = "a.prefab.xml";
-    document._itemEdit._binding = 9;
+    document._itemEdit._spawnPrefab = "a.prefab.xml";
+    document._itemEdit._binding     = 9;
     SW_EXPECT_FALSE( document.commitItemDraft().has_value() ); // 시퀀스에 없는 바인딩이다
     SW_EXPECT_TRUE( document.isDraftingItem() );
     SW_EXPECT_TRUE( document._asset.toXML() == snapshot );
@@ -256,13 +256,13 @@ SW_TEST_CASE( SequenceEditModelTest, ClearingARequiredFieldIsRefusedAndRestored 
     SW_EXPECT_EQUAL( 1u, document._asset._listItem[0]._binding );
     SW_EXPECT_EQUAL( 1u, document._itemEdit._binding ); // 칸이 앞 값으로 돌아온다
 
-    document._itemEdit._prefab.clear();
+    document._itemEdit._spawnPrefab.clear();
     SW_EXPECT_FALSE( document.commitItemEdit() );
-    SW_EXPECT_TRUE( document._asset._listItem[0]._prefab == "a.prefab.xml" );
+    SW_EXPECT_TRUE( document._asset._listItem[0]._spawnPrefab == "a.prefab.xml" );
 
-    document._itemEdit._prefab = "b.prefab.xml";
+    document._itemEdit._spawnPrefab = "b.prefab.xml";
     SW_EXPECT_TRUE( document.commitItemEdit() );
-    SW_EXPECT_TRUE( document._asset._listItem[0]._prefab == "b.prefab.xml" );
+    SW_EXPECT_TRUE( document._asset._listItem[0]._spawnPrefab == "b.prefab.xml" );
     SequenceAsset readBack;
     SW_EXPECT_TRUE( readBack.loadFromXMLText( document._asset.toXML() ) );
 }

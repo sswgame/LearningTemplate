@@ -55,7 +55,7 @@ namespace sw
         {
             if ( blendable.isActive() == false )
                 continue;
-            Entry* pEntry = getOrCreateEntry( hashed_string( blendable._materialPath.c_str() ) );
+            Entry* pEntry = getOrCreateEntry( blendable._materialPath.key() );
             if ( pEntry == nullptr )
                 continue;
             pEntry->_lastUsedFrame = _frame;

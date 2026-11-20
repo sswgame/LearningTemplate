@@ -202,13 +202,13 @@ namespace sw
                 if ( StringUtil::equals( pName, "SwapMesh" ) )
                 {
                     outAction._kind  = AppearanceRuleActionKind::SwapMesh;
-                    outAction._value = params._mesh;
+                    outAction._value = params._mesh.key();
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "SwapMaterial" ) )
                 {
                     outAction._kind  = AppearanceRuleActionKind::SwapMaterial;
-                    outAction._value = params._material;
+                    outAction._value = params._material.key();
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "Morph" ) )

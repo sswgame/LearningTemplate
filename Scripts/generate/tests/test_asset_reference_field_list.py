@@ -48,15 +48,17 @@ class AssetReferenceFieldListTest(unittest.TestCase):
             self.assertFalse(update_table(table_path, {"game:a": {"A._x": {"path"}}}))
 
     def test_field_names_are_listed_by_stored_form(self) -> None:
-        """`AssetRef<T>` 칸(ref)과 경로 글 칸(path)을 따로 적는다 — GUID 이전 도구가 ref 칸만 바꾼다. 한 주인에서 두 꼴인 이름은 두 목록에 다 든다."""
+        """`AssetRef<T>` 칸(ref) · 경로 글 칸(path) · 경로가 아닌 글 칸(text)을 따로 적는다 — GUID 이전 도구가 ref 칸만 바꾸고, ref 와 text 가 겹친 이름의 경로 값은 멈춘다.
+        한 주인에서 두 꼴인 이름은 두 목록에 다 든다. 글 칸은 경로 칸 목록(`listField` — 검사 · 옮기기가 읽는다)에 들지 않는다."""
         with tempfile.TemporaryDirectory() as folder:
             list_path = Path(folder) / "AssetReferenceFields.list"
-            list_path.write_text("_mesh\tMesh\tref\n_base\t-\tpath\n_shared\tMesh\tref\n_shared\t-\tpath\n", encoding="utf-8")
+            list_path.write_text("_mesh\tMesh\tref\n_base\t-\tpath\n_shared\tMesh\tref\n_shared\t-\tpath\n_name\t-\ttext\n", encoding="utf-8")
             inputs_path = Path(folder) / "inputs.txt"
             inputs_path.write_text(f"game:a\t{list_path}\n", encoding="utf-8")
             list_owner = merge_owners([], read_built_owners(inputs_path))
             self.assertEqual(list_owner, [{"owner": "game:a", "listField": ["_base", "_mesh", "_shared"],
-                                           "listAssetRefField": ["_mesh", "_shared"], "listPathTextField": ["_base", "_shared"]}])
+                                           "listAssetRefField": ["_mesh", "_shared"], "listPathTextField": ["_base", "_shared"],
+                                           "listTextField": ["_name"]}])
 
     def test_two_column_lines_of_old_parser_are_refused(self) -> None:
         with tempfile.TemporaryDirectory() as folder:

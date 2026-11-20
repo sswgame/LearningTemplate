@@ -799,7 +799,7 @@ namespace sw
             StringBuilder<constant::buffer::kMax256> nameBuilder;
             nameBuilder.appendFormat( "%#_Part%#", getOwner()->getName().c_str(), placement._placementID );
             const string name{ nameBuilder.view() };
-            GameObject*  pObject = pPart != nullptr ? spawnPrefab( manager, pPart->_prefabPath, name.c_str() ) : nullptr;
+            GameObject*  pObject = pPart != nullptr ? spawnPrefab( manager, pPart->_prefabPath.path(), name.c_str() ) : nullptr;
             if ( pObject == nullptr )
             {
                 SW_LOG_ERROR_ID( "HousingPlot.PartPrefabNotSpawned", "Housing plot '%#': placement %# of part '%#' could not spawn its prefab", _settings._plotID.c_str(), placement._placementID,

@@ -8,11 +8,13 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {
+    class Material;
     struct PostProcessOverrides;
 
     /**
@@ -40,15 +42,19 @@ namespace sw
     {
         REFLECT_BODY();
 
+        /** @brief 빈 항목입니다. 정의는 .cpp 에 둔다 — `AssetRef<Material>` 의 생성이 `Material` 을 완전한 형식으로 요구해 이 헤더가 머티리얼 헤더를 읽지 않게 한다. */
+        PostProcessBlendable();
+
+        /** @brief 머티리얼 참조입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). `DataPath` 였을 때는 다른 칸의 `AssetRef<T>` `_materialPath` 와 이름이 같아 GUID 이전 도구가 칸 꼴을 가르지 못했다. */
         PROPERTY( Tooltip = "Post process material (PostProcess domain)" )
-        DataPath _materialPath;
+        AssetRef<Material> _materialPath;
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "How much of the material result covers the colour below; 0 is off" )
         float32 _weight{ 1.0f };
         PROPERTY( Tooltip = "Where in the post process chain the material is drawn" )
         PostProcessBlendableLocation _location{ PostProcessBlendableLocation::AfterTonemap };
 
         /** @brief 그려질 수 있는 항목인지(경로가 있고 무게가 0 보다 크고 자리가 있다) 반환합니다. */
-        bool isActive() const { return _materialPath.isSet() && _weight > 0.0f && _location != PostProcessBlendableLocation::None; }
+        bool isActive() const { return _materialPath.empty() == false && _weight > 0.0f && _location != PostProcessBlendableLocation::None; }
         /** @brief 같은 머티리얼 · 같은 자리의 항목인지 반환합니다(목록 섞기의 열쇠). */
         bool isSameSlot( const PostProcessBlendable& other ) const;
         /** @brief @p location 자리에 그려질 항목이 하나라도 있으면 true 입니다. */

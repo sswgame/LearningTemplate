@@ -12,8 +12,10 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -64,8 +66,9 @@ namespace sw
         hashed_string _id{};
         PROPERTY( Required )
         string _name{};
+        /** @brief 회전 0 으로 저작한 프리팹(점유 칸의 가운데 바닥이 원점)입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). 글 칸이었을 때는 GUID 이전 도구가 같은 이름(`prefab`)의 참조 칸으로 보고 GUID 로 바꿔 쓰면 이 칸이 GUID 글을 경로로 받았다. */
         PROPERTY( Name = "prefab", Required )
-        string _prefabPath{}; ///< 회전 0 으로 저작한 프리팹(점유 칸의 가운데 바닥이 원점)
+        AssetRef<PrefabAsset> _prefabPath{};
         PROPERTY()
         HousingPartLayer _layer{ HousingPartLayer::Furniture };
         PROPERTY( Min = 1, Max = 16 )

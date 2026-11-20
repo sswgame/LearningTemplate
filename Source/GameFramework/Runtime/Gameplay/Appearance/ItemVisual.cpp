@@ -49,9 +49,9 @@ namespace sw
                 switch ( kind )
                 {
                     case AppearancePartKind::Skinned:
-                        return def._meshAsset;
+                        return def._meshAsset.key();
                     case AppearancePartKind::SocketPrefab:
-                        return def._prefabAsset;
+                        return def._prefabAsset.key();
                     case AppearancePartKind::Sprite:
                         return def._spriteAsset;
                     case AppearancePartKind::BodyModification:

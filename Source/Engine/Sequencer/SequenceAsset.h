@@ -52,7 +52,7 @@ namespace sw
         Event       = 1, /**< 시작 프레임을 지날 때 한 번 알립니다(`SequencePlayerComponent::registerSequenceEvent`). */
         CameraCut   = 2, /**< 구간 동안 대상의 카메라가 게임 카메라입니다(언리얼 Camera Cut 트랙, `CameraRegistry::setCutCamera`). `_preset` 이 있으면 대상의 카메라 디렉터가 그 프리셋을 켭니다. */
         CameraShake = 3, /**< 구간 동안 대상 카메라를 흔듭니다(언리얼 Camera Shake 트랙). 세기는 `_amplitude`, 길이는 구간입니다. */
-        Spawn       = 4, /**< 프리팹 `_prefab` 을 구간 시작 `_prerollFrames` 프레임 앞에 **꺼 둔 채** 스폰해 첫 포즈 · 머티리얼 · PSO 를 준비하고, 구간 동안 켜고, 끝나면 지웁니다(언리얼 Spawnable). 스폰한 오브젝트가 그 바인딩이다. */
+        Spawn       = 4, /**< 프리팹 `_spawnPrefab` 을 구간 시작 `_prerollFrames` 프레임 앞에 **꺼 둔 채** 스폰해 첫 포즈 · 머티리얼 · PSO 를 준비하고, 구간 동안 켜고, 끝나면 지웁니다(언리얼 Spawnable). 스폰한 오브젝트가 그 바인딩이다. */
         Appearance  = 5, /**< 시작 프레임을 지날 때 대상 오브젝트의 외형 프리셋을 `_preset` 으로 바꿉니다. 엔진은 외형을 모르므로 이벤트(`registerSequenceEvent`)로 알리고, 듣는 쪽(게임 프레임워크의 `SequenceAppearanceComponent`)이 바꿉니다. */
         Scenario    = 6, /**< 시작 프레임을 지날 때 시나리오 `_scenario` 를 재생합니다(`ScenarioPlayback::play` — 연출 안에 게임 행동 · 입력을 끼운다, 언리얼 시퀀서 이벤트 트랙이 블루프린트를 부르는 자리). */
         Animation   = 7, /**< 구간 동안 대상 애니메이터의 시퀀서 슬롯에 클립 `_clip` 을 구간 시작부터의 시간으로 섞습니다(언리얼 Skeletal Animation 트랙). 세기는 `_amplitude`(0..1)입니다. */
@@ -65,7 +65,7 @@ namespace sw
     enum class SequenceItemField : uint8
     {
         Binding = 0, ///< `_binding` — 대상 오브젝트(스폰: 만들 오브젝트의 바인딩)
-        Prefab,      ///< `_prefab`
+        Prefab,      ///< `_spawnPrefab`
         Preset,      ///< `_preset`
         Scenario,    ///< `_scenario`
         Clip,        ///< `_clip`
@@ -224,9 +224,9 @@ namespace sw
 
         PROPERTY( Tooltip = "Item name (event name for Event items)" )
         string _name;
-        /** @brief 스폰: 구간 시작 몇 프레임 전(`_prerollFrames`)부터 꺼 둔 채 만들어 구간 동안 켤 프리팹입니다. 다른 종류는 비운다. */
+        /** @brief 스폰: 구간 시작 몇 프레임 전(`_prerollFrames`)부터 꺼 둔 채 만들어 구간 동안 켤 프리팹입니다(언리얼 Spawnable). 다른 종류는 비운다. 글 칸 표(`findTextField`)에 들어 경로 글로 쓴다 — 이름은 GUID 참조 칸 `_prefab` 과 갈라 둔다(GUID 이전 도구가 칸 이름으로 꼴을 가른다). */
         PROPERTY( AssetPath, AssetType = "Prefab", SkipIfEmpty, Tooltip = "Spawn: prefab spawned inactive before the span and shown during it" )
-        string _prefab;
+        string _spawnPrefab;
         /** @brief 카메라 컷: 대상의 카메라 디렉터가 켤 프리셋 id 입니다. 비우면 카메라를 그대로 씁니다. 외형: 대상이 입을 외형 프리셋 id 입니다(필수). */
         PROPERTY( SkipIfEmpty, Tooltip = "Camera cut: preset id the target's camera director turns on (empty: camera as is). Appearance: preset id the target wears (required)" )
         string _preset;
@@ -289,7 +289,7 @@ namespace sw
         [[nodiscard]] string* accessTextField( SequenceItemField field );
         /** @brief 글 칸 @p field 입니다(읽기). 바인딩 · 범위 밖이면 nullptr 입니다. */
         [[nodiscard]] const string* findTextField( SequenceItemField field ) const;
-        /** @brief 칸의 PROPERTY 이름(`_prefab`)입니다. 오류 · 에디터 표식에 씁니다. */
+        /** @brief 칸의 PROPERTY 이름(`_spawnPrefab`)입니다. 오류 · 에디터 표식에 씁니다. */
         static const utf8* getFieldPropertyName( SequenceItemField field );
     };
 } // namespace sw

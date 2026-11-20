@@ -62,7 +62,7 @@ namespace
             for ( const AppearanceSectionDef& section : part._listSection )
             {
                 if ( section._name == hashed_string( pSection ) )
-                    return section._material;
+                    return section._material.key();
             }
             return hashed_string{};
         }

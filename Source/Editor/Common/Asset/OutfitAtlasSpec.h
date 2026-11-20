@@ -26,7 +26,9 @@
 
 #include "Editor/Common/EditorExports.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw::editor
@@ -41,8 +43,9 @@ namespace sw::editor
 
         PROPERTY( Required )
         hashed_string _name{};
+        /** @brief 부품 메시입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`, 같은 이름의 다른 칸과 저장 꼴이 같다). */
         PROPERTY( Required )
-        string _mesh{};
+        AssetRef<MeshAssetFormat> _mesh{};
     };
 } // namespace sw::editor
 

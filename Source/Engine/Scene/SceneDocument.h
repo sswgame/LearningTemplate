@@ -18,6 +18,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/SceneSettings.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
@@ -47,8 +48,9 @@ namespace sw
         uint64 _id{ 0 };
         PROPERTY()
         string _name{};
-        PROPERTY( AssetPath )
-        string _prefab{};
+        /** @brief 프리팹 엔티티의 프리팹입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). 경로 글 칸이었을 때는 다른 칸의 `AssetRef<PrefabAsset>` `_prefab` 과 이름이 같아 GUID 이전 도구가 칸 꼴을 가르지 못했다. */
+        PROPERTY()
+        AssetRef<PrefabAsset> _prefab{};
         /** @brief 씬 인스턴스의 앵커면 넣을 씬의 리소스 id 입니다(언리얼 Level Instance). 앵커 자리에 그 씬이 펼쳐진다. */
         PROPERTY()
         string _scene{};

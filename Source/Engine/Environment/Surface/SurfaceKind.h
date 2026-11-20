@@ -39,9 +39,11 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Environment/Surface/SurfaceStamp.h"
+#include "Engine/Environment/Surface/ZoneProfileAssetKind.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
 
@@ -89,15 +91,16 @@ namespace sw
         SurfaceStepResponse _step;
         PROPERTY( Tooltip = "Footstep response while the ground is wet (wetness at or above the table's _wetThreshold); empty: the dry response" )
         SurfaceStepResponse _wetStep;
+        /** @brief 지역 프로필 참조입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). `DataPath` 였을 때는 볼륨의 `AssetRef<ZoneProfile>` `_zoneProfile` 과 이름이 같아 GUID 이전 도구가 칸 꼴을 가르지 못했다. */
         PROPERTY( Tooltip = "Zone profile (*.zone.xml) applied to what stands on, touches or is submerged in this surface (empty: none)" )
-        DataPath _zoneProfile;
+        AssetRef<ZoneProfileAssetKind> _zoneProfile;
 
         /** @brief 땅의 젖음 @p wetness 에 맞는 반응입니다 — 젖은 반응이 있고 @p wetness 가 @p wetThreshold 이상이면 젖은 반응, 아니면 마른 반응이다. */
         const SurfaceStepResponse& selectStep( float32 wetness, float32 wetThreshold ) const { return isWetStep( wetness, wetThreshold ) ? _wetStep : _step; }
         /** @brief `selectStep` 이 젖은 반응을 고르는지입니다. */
         bool isWetStep( float32 wetness, float32 wetThreshold ) const { return _wetStep.isSet() && wetness >= wetThreshold; }
         /** @brief 지역 프로필이 붙은 표면인지입니다. */
-        bool hasZoneProfile() const { return _zoneProfile.isSet(); }
+        bool hasZoneProfile() const { return _zoneProfile.empty() == false; }
     };
 } // namespace sw
 

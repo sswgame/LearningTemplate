@@ -42,7 +42,7 @@ SW_TEST_CASE( ItemVisualSectionsTest, ReadsSectionMaterialsInOrder )
     const sw::AppearancePartDef& part = pVisual->_listPart.front();
     SW_REQUIRE_EQUAL( size_t{ 2 }, part._listSection.size() );
     SW_EXPECT_TRUE( part._listSection[0]._name == sw::hashed_string( "mi_body" ) );
-    SW_EXPECT_TRUE( part._listSection[1]._material == sw::hashed_string( "hair.material" ) );
+    SW_EXPECT_TRUE( part._listSection[1]._material == "hair.material" );
 }
 
 /**
