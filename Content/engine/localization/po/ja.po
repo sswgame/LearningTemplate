@@ -14,6 +14,12 @@ msgctxt "Already used by"
 msgid "Already used by"
 msgstr "使用中:"
 
+#. Context: SliderWidget._accessibleName
+#: engine/ui/quantity.ui.xml
+msgctxt "Amount"
+msgid "Amount"
+msgstr "量"
+
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml
 #: engine/ui/options.ui.xml
@@ -24,6 +30,7 @@ msgstr "適用"
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml
 #: engine/ui/key_rebind.ui.xml
+#: engine/ui/quantity.ui.xml
 msgctxt "Cancel"
 msgid "Cancel"
 msgstr "キャンセル"
@@ -1242,6 +1249,11 @@ msgctxt "EdPlugin.Remove"
 msgid "Remove"
 msgstr "削除"
 
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.RemoveAnnouncement"
+msgid "Remove notice"
+msgstr "お知らせを削除"
+
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPlugin.RemoveBrokenWires"
 msgid "Remove broken wires"
@@ -1251,11 +1263,6 @@ msgstr "切れた配線を削除"
 msgctxt "EdPlugin.RemoveLiveEvent"
 msgid "Remove live event"
 msgstr "ライブイベントを削除"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.RemoveAnnouncement"
-msgid "Remove notice"
-msgstr "お知らせを削除"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.RemoveSkinLayer"
@@ -1465,6 +1472,16 @@ msgctxt "EdPluginField.Anchor"
 msgid "Anchor"
 msgstr "アンカー"
 
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginField.AnnouncementId"
+msgid "Notice id"
+msgstr "お知らせ id"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginField.AnnouncementSeconds0UntilRemoved"
+msgid "Notice seconds (0 = until removed)"
+msgstr "お知らせ秒(0 = 削除まで)"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginField.BasePreset"
 msgid "Base preset"
@@ -1529,16 +1546,6 @@ msgstr "高さ比(0 = 骨盤)"
 msgctxt "EdPluginField.MaintenanceSeconds0UntilCleared"
 msgid "Maintenance seconds (0 = until cleared)"
 msgstr "メンテナンス秒(0 = 解除まで)"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.AnnouncementId"
-msgid "Notice id"
-msgstr "お知らせ id"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.AnnouncementSeconds0UntilRemoved"
-msgid "Notice seconds (0 = until removed)"
-msgstr "お知らせ秒(0 = 削除まで)"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginField.OffsetM"
@@ -1912,6 +1919,11 @@ msgid "Acting role"
 msgstr "担当ロール"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.AnnouncementText"
+msgid "Notice text"
+msgstr "お知らせ本文"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPluginWidget.AssetId"
 msgid "Asset id"
 msgstr "アセット id"
@@ -2001,11 +2013,6 @@ msgstr "メモ(チケット)"
 msgctxt "EdPluginWidget.MessageKey"
 msgid "Message key"
 msgstr "メッセージキー"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.AnnouncementText"
-msgid "Notice text"
-msgstr "お知らせ本文"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginWidget.Options"
@@ -2207,6 +2214,56 @@ msgctxt "EditorTip.ZoneRevertParam"
 msgid "Use the preset's value for this parameter again."
 msgstr "このパラメーターにプリセットの値を再び使います。"
 
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.Done"
+msgid "Done."
+msgstr "完了しました。"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.DropTitle"
+msgid "Drop how many?"
+msgstr "いくつ捨てますか?"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.EmptySlot"
+msgid "The slot is empty."
+msgstr "空きスロットです。"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.InvalidCount"
+msgid "That amount is not possible."
+msgstr "その数量は指定できません。"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.InvalidSlot"
+msgid "That slot cannot take it."
+msgstr "そのスロットには入れられません。"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.NoRoom"
+msgid "Your bag is full."
+msgstr "バッグがいっぱいです。"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.NotUsable"
+msgid "This cannot be used."
+msgstr "使用できません。"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.Picked"
+msgid "Choose where to put it."
+msgstr "置く場所を選んでください。"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.Refused"
+msgid "You cannot equip this there."
+msgstr "そこには装備できません。"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.SplitTitle"
+msgid "Split how many?"
+msgstr "いくつ分けますか?"
+
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 msgctxt "Keep"
@@ -2225,6 +2282,12 @@ msgctxt "Loading"
 msgid "Loading"
 msgstr "読み込み中"
 
+#. Context: TextWidget._text
+#: engine/ui/mainmenu.ui.xml
+msgctxt "Main Menu"
+msgid "Main Menu"
+msgstr "メインメニュー"
+
 #: Source/Engine/UI/Widgets/TextInputWidget.cpp
 msgctxt "Notification.ClipboardWriteFailed"
 msgid "Could not copy to the clipboard."
@@ -2241,12 +2304,19 @@ msgid "Some changes take effect after a restart."
 msgstr "一部の変更は再起動後に反映されます。"
 
 #. Context: TextWidget._text
+#: engine/ui/quantity.ui.xml
+msgctxt "OK"
+msgid "OK"
+msgstr "OK"
+
+#. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Opacity"
 msgid "Opacity"
 msgstr "不透明度"
 
 #. Context: TextWidget._text
+#: engine/ui/mainmenu.ui.xml
 #: engine/ui/options.ui.xml
 #: engine/ui/pause.ui.xml
 msgctxt "Options"
@@ -2266,6 +2336,7 @@ msgid "Press a key. Escape cancels; hold Escape for one second to bind it."
 msgstr "キーを押してください。Esc でキャンセル、Esc を 1 秒押し続けると Esc を割り当てます。"
 
 #. Context: TextWidget._text
+#: engine/ui/mainmenu.ui.xml
 #: engine/ui/pause.ui.xml
 msgctxt "Quit Game"
 msgid "Quit Game"
@@ -2302,6 +2373,76 @@ msgctxt "Sections"
 msgid "Sections"
 msgstr "セクション"
 
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.Bought"
+msgid "Bought."
+msgstr "購入しました。"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.Busy"
+msgid "A purchase is still in progress."
+msgstr "購入処理中です。"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.ConfirmAccept"
+msgid "Buy"
+msgstr "購入"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.ConfirmCancel"
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.ConfirmMessage"
+msgid "Buy {item} for {price} {currency}?"
+msgstr "{item}を{price} {currency}で購入しますか?"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.ConfirmTitle"
+msgid "Confirm Purchase"
+msgstr "購入の確認"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.LimitReached"
+msgid "You cannot buy this any more."
+msgstr "これ以上購入できません。"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.NoRoom"
+msgid "Your bag is full."
+msgstr "バッグがいっぱいです。"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.NotEnoughMoney"
+msgid "Not enough money."
+msgstr "お金が足りません。"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.OutOfStock"
+msgid "Sold out."
+msgstr "売り切れです。"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.Purchasing"
+msgid "Purchasing..."
+msgstr "購入中..."
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.Rejected"
+msgid "This cannot be bought now."
+msgstr "現在は購入できません。"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.ServerError"
+msgid "Could not reach the store. The wallet shows what the server holds."
+msgstr "ストアに接続できませんでした。ウォレットにはサーバーの値が表示されます。"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.Unverified"
+msgid "The purchase reply did not match; your wallet was refreshed."
+msgstr "購入の応答が一致しなかったため、ウォレットを更新しました。"
+
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Show HUD (Ctrl+F3)"
@@ -2315,10 +2456,36 @@ msgid "Some changes take effect after a restart."
 msgstr "一部の変更は再起動後に反映されます。"
 
 #. Context: TextWidget._text
+#: engine/ui/mainmenu.ui.xml
+msgctxt "Start Game"
+msgid "Start Game"
+msgstr "ゲーム開始"
+
+#. Context: TextWidget._text
 #: engine/ui/key_rebind.ui.xml
 msgctxt "Swap"
 msgid "Swap"
 msgstr "入れ替え"
+
+#: Source/Engine/UI/Menu/MainMenuScreen.cpp
+msgctxt "UIMenu.Cancel"
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: Source/Engine/UI/Menu/MainMenuScreen.cpp
+msgctxt "UIMenu.QuitAccept"
+msgid "Quit"
+msgstr "終了"
+
+#: Source/Engine/UI/Menu/MainMenuScreen.cpp
+msgctxt "UIMenu.QuitMessage"
+msgid "Quit the game?"
+msgstr "ゲームを終了しますか?"
+
+#: Source/Engine/UI/Menu/MainMenuScreen.cpp
+msgctxt "UIMenu.QuitTitle"
+msgid "Quit Game"
+msgstr "ゲームを終了"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml

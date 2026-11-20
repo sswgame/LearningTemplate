@@ -648,11 +648,24 @@
 		<entry key="EditorTip.ZoneRevertParam"
 		       text="このパラメーターにプリセットの値を再び使います。"
 		       sourceHash="2216bc5d4a3af475" />
+		<entry key="Inventory.Done" text="完了しました。" sourceHash="7301570d0bb8fc6d" />
+		<entry key="Inventory.DropTitle" text="いくつ捨てますか?" sourceHash="5851b629b00886c2" />
+		<entry key="Inventory.EmptySlot" text="空きスロットです。" sourceHash="b56cc9d513099dfd" />
+		<entry key="Inventory.InvalidCount" text="その数量は指定できません。" sourceHash="e710ff918fd580da" />
+		<entry key="Inventory.InvalidSlot"
+		       text="そのスロットには入れられません。"
+		       sourceHash="af46c51eb2b0ce83" />
+		<entry key="Inventory.NoRoom" text="バッグがいっぱいです。" sourceHash="3034de0a57eb2551" />
+		<entry key="Inventory.NotUsable" text="使用できません。" sourceHash="fee7c8ce0b060e74" />
+		<entry key="Inventory.Picked" text="置く場所を選んでください。" sourceHash="76033ca89d70f4b0" />
+		<entry key="Inventory.Refused" text="そこには装備できません。" sourceHash="e65da3e12aa85757" />
+		<entry key="Inventory.SplitTitle" text="いくつ分けますか?" sourceHash="009e2ff8de6bc491" />
 		<entry key="Keep" text="維持" sourceHash="d60a7dde73859828" />
 		<entry key="Keep these display settings?"
 		       text="この表示設定を維持しますか?"
 		       sourceHash="0048bd736e33dcdf" />
 		<entry key="Loading" text="読み込み中" sourceHash="b59d68ed12d46377" />
+		<entry key="Main Menu" text="メインメニュー" sourceHash="76813002d9c586bf" />
 		<entry key="Notification.ClipboardWriteFailed"
 		       text="クリップボードにコピーできませんでした。"
 		       sourceHash="0dda6cd8320699c2" />
@@ -660,6 +673,7 @@
 		<entry key="Notification.RestartRequired"
 		       text="一部の変更は再起動後に反映されます。"
 		       sourceHash="14441b823018dda4" />
+		<entry key="OK" text="OK" sourceHash="091d3d07b5b3076f" />
 		<entry key="Opacity" text="不透明度" sourceHash="ba64d8954d027206" />
 		<entry key="Options" text="オプション" sourceHash="463b8c4e92751ba5" />
 		<entry key="Paused" text="一時停止中" sourceHash="95bc8722b2708f8b" />
@@ -672,13 +686,35 @@
 		<entry key="Revert" text="元に戻す" sourceHash="d89a2e529b31ef43" />
 		<entry key="Reverting in" text="元に戻すまで" sourceHash="9cef80c4c43e7e14" />
 		<entry key="Sections" text="セクション" sourceHash="0337d90cf703df0d" />
+		<entry key="Shop.Bought" text="購入しました。" sourceHash="7eba7cbbd2693250" />
+		<entry key="Shop.Busy" text="購入処理中です。" sourceHash="839e3be6e938c8ed" />
+		<entry key="Shop.ConfirmAccept" text="購入" sourceHash="166a4319b11387ab" />
 		<entry key="Shop.ConfirmCancel" text="キャンセル" sourceHash="2ceb11be2290bb1b" />
+		<entry key="Shop.ConfirmMessage"
+		       text="{item}を{price} {currency}で購入しますか?"
+		       sourceHash="ea9754ab6e1a7ebc" />
+		<entry key="Shop.ConfirmTitle" text="購入の確認" sourceHash="e3d3f829c35e7d0a" />
+		<entry key="Shop.LimitReached" text="これ以上購入できません。" sourceHash="90b45ac5c64d58fe" />
+		<entry key="Shop.NoRoom" text="バッグがいっぱいです。" sourceHash="3034de0a57eb2551" />
+		<entry key="Shop.NotEnoughMoney" text="お金が足りません。" sourceHash="7d5f2b96ea36e02c" />
+		<entry key="Shop.OutOfStock" text="売り切れです。" sourceHash="53429c9af9f7338b" />
+		<entry key="Shop.Purchasing" text="購入中..." sourceHash="4c1549e91d83c479" />
+		<entry key="Shop.Rejected" text="現在は購入できません。" sourceHash="cc4a444b068922aa" />
+		<entry key="Shop.ServerError"
+		       text="ストアに接続できませんでした。ウォレットにはサーバーの値が表示されます。"
+		       sourceHash="7894b59a4b718b86" />
+		<entry key="Shop.Unverified"
+		       text="購入の応答が一致しなかったため、ウォレットを更新しました。"
+		       sourceHash="ccfce3ecd112ddfe" />
 		<entry key="Show HUD (Ctrl+F3)" text="HUD を表示 (Ctrl+F3)" sourceHash="8f553b077c9a458d" />
 		<entry key="Some changes take effect after a restart."
 		       text="一部の変更は再起動後に反映されます。"
 		       sourceHash="14441b823018dda4" />
+		<entry key="Start Game" text="ゲーム開始" sourceHash="0fbde37bb5f3fb3f" />
 		<entry key="Swap" text="入れ替え" sourceHash="cf28302518a72dee" />
 		<entry key="UIMenu.Cancel" text="キャンセル" sourceHash="2ceb11be2290bb1b" />
+		<entry key="UIMenu.QuitAccept" text="終了" sourceHash="45156213b0fb2396" />
+		<entry key="UIMenu.QuitMessage" text="ゲームを終了しますか?" sourceHash="d9be4613bcb7a27a" />
 		<entry key="UIMenu.QuitTitle" text="ゲームを終了" sourceHash="92aee0b2e93f7fd0" />
 		<entry key="You have changes that are not applied."
 		       text="適用していない変更があります。"

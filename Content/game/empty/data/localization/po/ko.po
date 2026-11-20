@@ -1,0 +1,63 @@
+msgid ""
+msgstr ""
+"Language: ko\n"
+"X-Localization-Project: empty\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Message-Format: ICU\n"
+"X-Generator: SWEngine LocalizationTools\n"
+
+#. Context: SequenceBinding._name
+#: game/empty/data/cinematic.seq.xml
+msgctxt "Actor"
+msgid "Actor"
+msgstr "배우"
+
+#. Context: SequenceBinding._name
+#: game/empty/data/cinematic.seq.xml
+msgctxt "CutA"
+msgid "CutA"
+msgstr "컷 A"
+
+#. Context: SequenceBinding._name
+#: game/empty/data/cinematic.seq.xml
+msgctxt "CutB"
+msgid "CutB"
+msgstr "컷 B"
+
+#. Context: Subtitle speaker (audio event SubtitleGuideLine)
+#: game/empty/audio/empty.audioevents.xml
+msgctxt "Subtitle.Guide"
+msgid "Guide"
+msgstr "안내인"
+
+#. Context: Subtitle line
+#: game/empty/audio/empty.audioevents.xml
+msgctxt "Subtitle.GuideLine"
+msgid "Follow the lantern path to the old bridge."
+msgstr "등불 길을 따라 옛 다리로 가세요."
+
+#. Context: Subtitle line long enough to wrap at the maximum width
+#: game/empty/audio/empty.audioevents.xml
+msgctxt "Subtitle.LongLine"
+msgid "The ford is gone after the storm; take the long road past the mill and wait for the bell."
+msgstr "폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요."
+
+#. Context: Subtitle speaker (audio event SubtitleScoutLine)
+#: game/empty/audio/empty.audioevents.xml
+msgctxt "Subtitle.Scout"
+msgid "Scout"
+msgstr "정찰병"
+
+#. Context: Subtitle line
+#: game/empty/audio/empty.audioevents.xml
+msgctxt "Subtitle.ScoutLine"
+msgid "Movement on the ridge. Stay low."
+msgstr "능선에 움직임이 있다. 몸을 낮춰."
+
+#. Context: SequenceTrackItem._text
+#: game/empty/data/cinematic.seq.xml
+msgctxt "The warrior wakes."
+msgid "The warrior wakes."
+msgstr "전사가 깨어난다."

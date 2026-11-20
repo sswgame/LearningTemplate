@@ -1,0 +1,15 @@
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="Actor" text="배우" sourceHash="f865a44470a1eb3a" />
+		<entry key="CutA" text="컷 A" sourceHash="770f429cae410066" />
+		<entry key="CutB" text="컷 B" sourceHash="770f419cae40feb3" />
+		<entry key="Subtitle.Guide" text="안내인" sourceHash="7bf3b283b3f22c4b" />
+		<entry key="Subtitle.GuideLine" text="등불 길을 따라 옛 다리로 가세요." sourceHash="330029ad4a1d3f28" />
+		<entry key="Subtitle.LongLine"
+		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요."
+		       sourceHash="7c1819fcaa99eaf9" />
+		<entry key="Subtitle.Scout" text="정찰병" sourceHash="7d573c625719c1a5" />
+		<entry key="Subtitle.ScoutLine" text="능선에 움직임이 있다. 몸을 낮춰." sourceHash="f5effb26f2446842" />
+		<entry key="The warrior wakes." text="전사가 깨어난다." sourceHash="2cbe2d95a0824eaf" />
+	</entries>
+</TranslationTable>

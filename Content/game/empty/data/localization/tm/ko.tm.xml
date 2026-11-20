@@ -1,0 +1,14 @@
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="Actor" text="배우" />
+		<entry source="CutA" text="컷 A" />
+		<entry source="CutB" text="컷 B" />
+		<entry source="Follow the lantern path to the old bridge." text="등불 길을 따라 옛 다리로 가세요." />
+		<entry source="Guide" text="안내인" />
+		<entry source="Movement on the ridge. Stay low." text="능선에 움직임이 있다. 몸을 낮춰." />
+		<entry source="Scout" text="정찰병" />
+		<entry source="The ford is gone after the storm; take the long road past the mill and wait for the bell."
+		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요." />
+		<entry source="The warrior wakes." text="전사가 깨어난다." />
+	</entries>
+</TranslationMemory>

@@ -636,11 +636,22 @@
 		<entry key="EditorTip.ZoneRevertParam"
 		       text="이 매개변수에 프리셋 값을 다시 씁니다."
 		       sourceHash="2216bc5d4a3af475" />
+		<entry key="Inventory.Done" text="완료했습니다." sourceHash="7301570d0bb8fc6d" />
+		<entry key="Inventory.DropTitle" text="몇 개를 버릴까요?" sourceHash="5851b629b00886c2" />
+		<entry key="Inventory.EmptySlot" text="빈 칸입니다." sourceHash="b56cc9d513099dfd" />
+		<entry key="Inventory.InvalidCount" text="그 수량은 안 됩니다." sourceHash="e710ff918fd580da" />
+		<entry key="Inventory.InvalidSlot" text="그 칸에는 넣을 수 없습니다." sourceHash="af46c51eb2b0ce83" />
+		<entry key="Inventory.NoRoom" text="가방이 가득 찼습니다." sourceHash="3034de0a57eb2551" />
+		<entry key="Inventory.NotUsable" text="사용할 수 없습니다." sourceHash="fee7c8ce0b060e74" />
+		<entry key="Inventory.Picked" text="놓을 곳을 고르세요." sourceHash="76033ca89d70f4b0" />
+		<entry key="Inventory.Refused" text="그 자리에는 장착할 수 없습니다." sourceHash="e65da3e12aa85757" />
+		<entry key="Inventory.SplitTitle" text="몇 개를 나눌까요?" sourceHash="009e2ff8de6bc491" />
 		<entry key="Keep" text="유지" sourceHash="d60a7dde73859828" />
 		<entry key="Keep these display settings?"
 		       text="이 디스플레이 설정을 유지할까요?"
 		       sourceHash="0048bd736e33dcdf" />
 		<entry key="Loading" text="로딩 중" sourceHash="b59d68ed12d46377" />
+		<entry key="Main Menu" text="메인 메뉴" sourceHash="76813002d9c586bf" />
 		<entry key="Notification.ClipboardWriteFailed"
 		       text="클립보드에 복사하지 못했습니다."
 		       sourceHash="0dda6cd8320699c2" />
@@ -648,6 +659,7 @@
 		<entry key="Notification.RestartRequired"
 		       text="일부 변경은 다시 시작한 뒤 적용됩니다."
 		       sourceHash="14441b823018dda4" />
+		<entry key="OK" text="확인" sourceHash="091d3d07b5b3076f" />
 		<entry key="Opacity" text="불투명도" sourceHash="ba64d8954d027206" />
 		<entry key="Options" text="옵션" sourceHash="463b8c4e92751ba5" />
 		<entry key="Paused" text="일시 정지" sourceHash="95bc8722b2708f8b" />
@@ -660,13 +672,35 @@
 		<entry key="Revert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
 		<entry key="Reverting in" text="되돌리기까지" sourceHash="9cef80c4c43e7e14" />
 		<entry key="Sections" text="섹션" sourceHash="0337d90cf703df0d" />
+		<entry key="Shop.Bought" text="구매했습니다." sourceHash="7eba7cbbd2693250" />
+		<entry key="Shop.Busy" text="구매가 아직 진행 중입니다." sourceHash="839e3be6e938c8ed" />
+		<entry key="Shop.ConfirmAccept" text="구매" sourceHash="166a4319b11387ab" />
 		<entry key="Shop.ConfirmCancel" text="취소" sourceHash="2ceb11be2290bb1b" />
+		<entry key="Shop.ConfirmMessage"
+		       text="{item}을(를) {price} {currency}에 구매할까요?"
+		       sourceHash="ea9754ab6e1a7ebc" />
+		<entry key="Shop.ConfirmTitle" text="구매 확인" sourceHash="e3d3f829c35e7d0a" />
+		<entry key="Shop.LimitReached" text="더 이상 구매할 수 없습니다." sourceHash="90b45ac5c64d58fe" />
+		<entry key="Shop.NoRoom" text="가방이 가득 찼습니다." sourceHash="3034de0a57eb2551" />
+		<entry key="Shop.NotEnoughMoney" text="돈이 부족합니다." sourceHash="7d5f2b96ea36e02c" />
+		<entry key="Shop.OutOfStock" text="품절입니다." sourceHash="53429c9af9f7338b" />
+		<entry key="Shop.Purchasing" text="구매 중..." sourceHash="4c1549e91d83c479" />
+		<entry key="Shop.Rejected" text="지금은 구매할 수 없습니다." sourceHash="cc4a444b068922aa" />
+		<entry key="Shop.ServerError"
+		       text="상점에 연결하지 못했습니다. 지갑에는 서버가 가진 값이 보입니다."
+		       sourceHash="7894b59a4b718b86" />
+		<entry key="Shop.Unverified"
+		       text="구매 응답이 맞지 않아 지갑을 새로 고쳤습니다."
+		       sourceHash="ccfce3ecd112ddfe" />
 		<entry key="Show HUD (Ctrl+F3)" text="HUD 표시 (Ctrl+F3)" sourceHash="8f553b077c9a458d" />
 		<entry key="Some changes take effect after a restart."
 		       text="일부 변경은 다시 시작한 뒤 적용됩니다."
 		       sourceHash="14441b823018dda4" />
+		<entry key="Start Game" text="게임 시작" sourceHash="0fbde37bb5f3fb3f" />
 		<entry key="Swap" text="맞바꾸기" sourceHash="cf28302518a72dee" />
 		<entry key="UIMenu.Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
+		<entry key="UIMenu.QuitAccept" text="끝내기" sourceHash="45156213b0fb2396" />
+		<entry key="UIMenu.QuitMessage" text="게임을 끝낼까요?" sourceHash="d9be4613bcb7a27a" />
 		<entry key="UIMenu.QuitTitle" text="게임 종료" sourceHash="92aee0b2e93f7fd0" />
 		<entry key="You have changes that are not applied."
 		       text="적용하지 않은 변경이 있습니다."

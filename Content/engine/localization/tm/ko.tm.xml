@@ -5,6 +5,7 @@
 		<entry source="(none)" text="(없음)" />
 		<entry source="5.1 Surround" text="5.1 서라운드" />
 		<entry source="7.1 Surround" text="7.1 서라운드" />
+		<entry source="A purchase is still in progress." text="구매가 아직 진행 중입니다." />
 		<entry source="A scene's Character Appearance component names this id."
 		       text="씬의 캐릭터 외형 컴포넌트가 이 id 를 가리킵니다." />
 		<entry source="A wild {name} appeared!" text="야생의 {name}(이)가 나타났다!" />
@@ -73,8 +74,11 @@
 		<entry source="Bone scale" text="뼈 크기" />
 		<entry source="Bone translation" text="뼈 이동" />
 		<entry source="Borderless" text="테두리 없음" />
+		<entry source="Bought." text="구매했습니다." />
 		<entry source="Bounds and cells of every housing plot in the scene, with its id and size"
 		       text="씬의 하우징 부지마다 경계와 칸, id 와 크기" />
+		<entry source="Buy" text="구매" />
+		<entry source="Buy {item} for {price} {currency}?" text="{item}을(를) {price} {currency}에 구매할까요?" />
 		<entry source="CPU only (Recompute Normals)" text="CPU 전용(법선 다시 계산)" />
 		<entry source="CPU only:" text="CPU 전용:" />
 		<entry source="Camera Shake" text="카메라 흔들림" />
@@ -84,6 +88,7 @@
 		<entry source="Center" text="중심" />
 		<entry source="Chains" text="체인" />
 		<entry source="Check" text="검사" />
+		<entry source="Choose where to put it." text="놓을 곳을 고르세요." />
 		<entry source="Clamped to range: {clamped}" text="범위로 자름: {clamped}" />
 		<entry source="Clear smears" text="번짐 지우기" />
 		<entry source="Clear target" text="대상 지우기" />
@@ -98,6 +103,7 @@
 		       text="카메라가 그리는 가장 가까운 거리입니다. 이보다 가까운 지오메트리는 잘려 나갑니다. 깊이 충돌(z-fighting)을 피하려면 장면이 허용하는 만큼 크게 두세요." />
 		<entry source="Color Vision Mode" text="색각 보정" />
 		<entry source="Compare" text="비교" />
+		<entry source="Confirm Purchase" text="구매 확인" />
 		<entry source="Connect" text="연결" />
 		<entry source="Control Points" text="제어점" />
 		<entry source="Controls" text="조작" />
@@ -105,6 +111,8 @@
 		<entry source="Corner" text="모서리" />
 		<entry source="Cost" text="비용" />
 		<entry source="Could not copy to the clipboard." text="클립보드에 복사하지 못했습니다." />
+		<entry source="Could not reach the store. The wallet shows what the server holds."
+		       text="상점에 연결하지 못했습니다. 지갑에는 서버가 가진 값이 보입니다." />
 		<entry source="Count" text="개수" />
 		<entry source="Count (0 = until it fails)" text="횟수(0 = 실패할 때까지)" />
 		<entry source="Crash Reports" text="크래시 보고" />
@@ -133,7 +141,9 @@
 		<entry source="Disconnect" text="연결 끊기" />
 		<entry source="Dismiss" text="닫기" />
 		<entry source="Display" text="화면" />
+		<entry source="Done." text="완료했습니다." />
 		<entry source="Down" text="아래로" />
+		<entry source="Drop how many?" text="몇 개를 버릴까요?" />
 		<entry source="Drop this placement override and use the preset again."
 		       text="이 배치 덮어쓰기를 지우고 프리셋을 다시 씁니다." />
 		<entry source="Dropped: {dropped}" text="빠짐: {dropped}" />
@@ -248,6 +258,7 @@
 		<entry source="Lookup" text="찾기" />
 		<entry source="Loop" text="반복" />
 		<entry source="Low" text="낮음" />
+		<entry source="Main Menu" text="메인 메뉴" />
 		<entry source="Maintenance / Notice" text="점검 / 공지" />
 		<entry source="Maintenance seconds (0 = until cleared)" text="점검 초(0 = 풀 때까지)" />
 		<entry source="Makeup smear" text="화장 번짐" />
@@ -300,9 +311,11 @@
 		<entry source="No skin layers. Add makeup or a tattoo from the list above."
 		       text="피부 층이 없습니다. 위 목록에서 화장이나 문신을 더하세요." />
 		<entry source="No target" text="대상 없음" />
+		<entry source="Not enough money." text="돈이 부족합니다." />
 		<entry source="Notice id" text="공지 id" />
 		<entry source="Notice seconds (0 = until removed)" text="공지 초(0 = 지울 때까지)" />
 		<entry source="Notice text" text="공지 글" />
+		<entry source="OK" text="확인" />
 		<entry source="Off" text="끔" />
 		<entry source="Offset" text="위치" />
 		<entry source="Offset (m)" text="오프셋(m)" />
@@ -359,8 +372,11 @@
 		<entry source="Protanopia" text="적색약" />
 		<entry source="Provider: {providerName}" text="제공자: {providerName}" />
 		<entry source="Pupil size" text="동공 크기" />
+		<entry source="Purchasing..." text="구매 중..." />
 		<entry source="Put live event" text="라이브 이벤트 넣기" />
+		<entry source="Quit" text="끝내기" />
 		<entry source="Quit Game" text="게임 종료" />
+		<entry source="Quit the game?" text="게임을 끝낼까요?" />
 		<entry source="Raw timeline" text="타임라인 원문" />
 		<entry source="Reactive (re-check higher priority children every tick)"
 		       text="반응형(틱마다 우선순위가 높은 자식을 다시 본다)" />
@@ -477,6 +493,7 @@
 		<entry source="Slots" text="칸" />
 		<entry source="Sockets" text="소켓" />
 		<entry source="Soft" text="부드럽게" />
+		<entry source="Sold out." text="품절입니다." />
 		<entry source="Solve the end onto the source end position (feet that plant without sliding)"
 		       text="끝을 원본 끝 위치로 풉니다(미끄러지지 않고 딛는 발)" />
 		<entry source="Some changes take effect after a restart."
@@ -485,10 +502,12 @@
 		<entry source="Source bones" text="원본 뼈" />
 		<entry source="Spatial" text="공간" />
 		<entry source="Speaker Setup" text="스피커 구성" />
+		<entry source="Split how many?" text="몇 개를 나눌까요?" />
 		<entry source="Sprint" text="달리기" />
 		<entry source="Stacks" text="스택" />
 		<entry source="Stage" text="단계" />
 		<entry source="Start (s)" text="시작(초)" />
+		<entry source="Start Game" text="게임 시작" />
 		<entry source="Start an empty profile at this resource id (an existing file is opened instead)"
 		       text="이 리소스 id 에 빈 프로필을 시작합니다(파일이 있으면 그것을 엽니다)" />
 		<entry source="Start in process" text="한 프로세스로 시작" />
@@ -514,6 +533,8 @@
 		<entry source="Text Language" text="표시 언어" />
 		<entry source="Text Size" text="글자 크기" />
 		<entry source="Texture Quality" text="텍스처 품질" />
+		<entry source="That amount is not possible." text="그 수량은 안 됩니다." />
+		<entry source="That slot cannot take it." text="그 칸에는 넣을 수 없습니다." />
 		<entry source="The catalog file the game reads. Edits keep its comments and layout."
 		       text="게임이 읽는 카탈로그 파일입니다. 편집해도 주석과 줄 배치가 남습니다." />
 		<entry source="The curve's value at this key." text="이 키에서 곡선이 가지는 값입니다." />
@@ -524,13 +545,18 @@
 		       text="공원 배치를 읽지 못했습니다({path}). 로그를 보고 파일을 고친 뒤 다시 불러오세요." />
 		<entry source="The preview body has no body profile. Pick a preset with bodyProfile."
 		       text="미리보기 몸에 몸 프로필이 없습니다. bodyProfile 이 있는 프리셋을 고르세요." />
+		<entry source="The purchase reply did not match; your wallet was refreshed."
+		       text="구매 응답이 맞지 않아 지갑을 새로 고쳤습니다." />
 		<entry source="The runtime loader could not read the saved file. See the log for the reason."
 		       text="런타임 로더가 저장한 파일을 읽지 못했습니다. 이유는 로그를 보세요." />
 		<entry source="The runtime loader reads the saved file."
 		       text="런타임 로더가 저장한 파일을 읽습니다." />
 		<entry source="The same checklist as a runtime UI window (shows in the game view while playing)"
 		       text="같은 체크리스트를 런타임 UI 창으로 엽니다(플레이 중 게임 뷰에 보입니다)." />
+		<entry source="The slot is empty." text="빈 칸입니다." />
 		<entry source="The target object no longer exists." text="대상 오브젝트가 더 이상 없습니다." />
+		<entry source="This cannot be bought now." text="지금은 구매할 수 없습니다." />
+		<entry source="This cannot be used." text="사용할 수 없습니다." />
 		<entry source="This file could not be opened: {statusText}" text="이 파일을 열 수 없습니다: {statusText}" />
 		<entry source="This game has no park layout data ({path})"
 		       text="이 게임에는 공원 배치 데이터가 없습니다({path})" />
@@ -596,7 +622,10 @@
 		<entry source="Wrinkle intensity" text="주름 세기" />
 		<entry source="Wrinkles" text="주름" />
 		<entry source="Yaw (deg)" text="방향(도)" />
+		<entry source="You cannot buy this any more." text="더 이상 구매할 수 없습니다." />
+		<entry source="You cannot equip this there." text="그 자리에는 장착할 수 없습니다." />
 		<entry source="You have changes that are not applied." text="적용하지 않은 변경이 있습니다." />
+		<entry source="Your bag is full." text="가방이 가득 찼습니다." />
 		<entry source="Zone modules" text="지역 모듈" />
 		<entry source="Zoom fit" text="맞춰 보기" />
 		<entry source="[action=UI.Accept] Select" text="[action=UI.Accept] 선택" />
