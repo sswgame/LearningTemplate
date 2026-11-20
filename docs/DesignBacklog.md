@@ -2213,3 +2213,24 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 - `w-experience` — 겹치는 파일 없음. 다만 Experience 데이터를 `Content/game/empty/experiences/` 에 더하기 시작하면 단계 1 과 겹치므로 그 갈래는 틀(`GameInstance.cpp` · `GameSettings` · `GameSelection`)만 합치고, 데이터는 단계 2 에서 `game/playground/` 에 둔다.
 - `w-stream` · `w-cmdargs` — 이름 바꾸기 자리와 겹치지 않음(`docs/DesignBacklog.md` 는 다른 절).
 - `NamingWords.json` `_bannedNames` 는 세 갈래가 더하므로 단계 1 (라) 는 맨 마지막 커밋으로 둬 충돌을 한 줄 병합으로 줄인다. `docs/NEXT.md` 에도 `Empty` · `game/empty` 줄이 있다 — `move-source` · `rename-symbol` 이 문서도 고치므로 단계 1 은 NEXT 를 만지는 갈래가 없을 때.
+
+## 자체 컨테이너 최적화 검토(2026-11-20)
+
+> 질문: `Source/Core/Container/` 의 자체 컨테이너를 동작을 바꾸지 않고 더 빠르게 할 수 있는가?
+> 결론: 근거가 분명하고 동작이 같은 한 곳(`deque` 키우기의 비트 복사)만 바꿨다. 나머지는 벤치(`ContainerBenchTest.*`, Release `--test-run-disabled`)로 전후를 잰 뒤 통합 담당이 문턱으로 정한다.
+
+재는 법: Release `App --test --test-run-disabled --test-filter=ContainerBenchTest.*` 5 번, 로그 값의 중앙값. 바꾼 것은 바꾸기 전 커밋과 같은 케이스로 견준다.
+
+| 컨테이너 · 자리 | 지금 | 개선안 | 근거 · 대조 | 벤치 | 판정 |
+| --- | --- | --- | --- | --- | --- |
+| `deque::moveToNewBuffer` | 원소마다 이동 생성 + 소멸, 슬롯은 마스크로 찾는다 | 비트 복사 형식(`is_bitwise_copyable_v`)은 링의 두 토막을 `memcpy` | 마스크 때문에 컴파일러가 루프를 `memcpy` 로 못 바꾼다. `vector::reserveInternal` 이 이미 같은 규칙 | `DequeGrowBitwise` | **바꿈** — 바꾼 뒤가 길면 되돌린다 |
+| `vector` 키우기 — 비트 복사가 아닌 형식 | 원소마다 이동 생성 + 소멸(예외 규칙 순서) | 비트로 옮겨도 되는 형식(`string` · `unique_ptr` · 핸들)에 형식 표식(`is_trivially_relocatable`)을 두고 `memcpy` | 언리얼 `TArray` 는 모든 형식을 비트로 옮기고(`TIsBitwiseConstructible` 아닌 형식도), folly `IsRelocatable` · EASTL `has_trivial_relocate` 는 형식이 알린다. 표식이 틀리면 메모리 결함이라 형식으로만 연다 | `VectorGrowString` | 예약한 경우의 1.5 배 이상이면 연다 |
+| `vector::insert( pos, count, value )` · `erase` 밀기 | 원소 루프(목적지가 살아 있는지 원소마다 가름) | 비트 복사 형식은 `Memory::move` 한 번 | 가르는 분기 때문에 루프가 `memmove` 로 바뀌지 않는다. `insert( pos, first, last )` 는 AC-2 로 이미 재는 중(`VectorRangeInsert`) | `VectorShiftBitwise` | `memmove` 기준의 2 배 이상이면 바꾼다 |
+| `vector` 성장 배수 | 2 배(첫 4) | 1.5 배 | folly · MSVC STL 1.5, EASTL · libstdc++ 2, 언리얼 `DefaultCalculateSlackGrow` 는 약 1.375 + 할당기 버킷 맞춤. 2 배는 옛 블록을 다시 쓰지 못하지만 우리 할당기(mimalloc 후보)는 크기 등급으로 맞춘다 | `VectorGrowString`(키우기 횟수) | 측정 없이 바꾸지 않는다 — 메모리 최대치와 함께 잰다 |
+| `unordered_map` · `unordered_set`(`DenseHashTable`) | 버킷 → 밀집 배열 인덱스 체인, 부하율 1.0, 32 비트 태그로 키 비교를 거름, 지우기는 끝과 바꿈 | 열린 주소 + 제어 바이트 그룹 탐사 | abseil `flat_hash_map` · Boost `unordered_flat_map` 은 SIMD 16 칸 그룹, 언리얼 `TMap`(`TSet`)은 우리와 같은 체인 + 밀집 배열. 순회가 밀집 배열이라 지금 꼴이 순회 · 직렬화에 유리 | `UnorderedMapFind` · `UnorderedMapReservedInsertAllocations` | 찾기 원소당 20 ns 이상이면 설계를 연다 |
+| `map` · `set`(`SortedVectorBase`) | `std::vector` 정렬 배열, 한 개 넣기 O(n), 범위 넣기는 붙이고 병합(AC-2) | 저장소를 `sw::vector` 로(범위 검사 · 할당 태그 · 비트 복사 키우기를 함께 얻는다) | EASTL `vector_map`, Boost `flat_map`. 지금은 MSVC Debug 반복자 검사만 받는다 | `MapRangeBuild` | 동작이 같아 다음 정리 때 — 반복자 형식이 바뀌어 부르는 곳(`std::vector` 반복자 가정)을 먼저 센다 |
+| `string` · `ChunkedArray` · `list` | std 상속 래퍼(+ 레이스 탐지) | `string` 은 std SSO 그대로 둔다. `ChunkedArray` 는 MSVC 16 B 블록이라 큰 원소마다 할당(감사 C-9) — 블록 크기를 정하는 자체 구현 | 언리얼 `TChunkedArray` 는 고정 64 KB 청크. 사용자 결정: std 상속은 불필요하면 자체 구현 | `DequeChurn`(옛 꼴 비교) | 자체 구현은 `ChunkedArray` 를 쓰는 곳이 늘 때 |
+| `array( initializer_list )` | 멤버를 값 초기화(`_elems{}`) 한 뒤 다시 대입 | 대입만 | 두 번 쓰기지만 생성 때 한 번이고 N 이 작다 | — | 하지 않는다(측정할 값이 없다) |
+| `RingBuffer` · `EnumArray` · `span` · `PagedArray` · `DynamicBitset` · `IndexFreeList` · `SlotHandleTable` | 2 의 거듭제곱 마스크 · 고정 배열 · 포인터 + 크기 · 청크 표 · uint64 블록 + popcount · LIFO 스택 · 세대 핸들 | — | 이미 정본 꼴(언리얼 `TBitArray` 도 32 비트 블록 + popcount) | — | 바꿀 것 없음 |
+
+범위 검사(`SW_CHECK_INDEX`, 같은 날 `w-boundscheck`)는 개발 구성의 비교 한 번이고 배포(Shipping) 코드는 같다 — 위 벤치는 Release(검사 켜짐)에서 재므로 검사 비용이 값에 들어간다. 배포 수치가 필요하면 Shipping 으로 한 번 더 잰다.
