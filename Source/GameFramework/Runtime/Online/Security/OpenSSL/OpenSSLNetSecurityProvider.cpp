@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Encoding/HexUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
@@ -344,7 +345,11 @@ namespace sw
                                      EVP_CIPHER_CTX_ctrl( _pDecrypt, EVP_CTRL_AEAD_SET_TAG, NetSecurityConstant::kAEADTagSize, const_cast<uint8*>( pCipher + plainSize ) ) == 1 &&
                                      EVP_DecryptFinal_ex( _pDecrypt, pOut + ( plainSize == 0 ? 0 : length ), &finalLength ) == 1;
                 if ( bOpened == false )
+                {
+                    // DecryptUpdate 는 태그를 대조하기 전에 평문을 pOut 에 쓴다 — 검증 못 한 평문을 부르는 쪽 버퍼에 남기지 않는다.
+                    Memory::wipe( pOut, static_cast<size_t>( plainSize ) );
                     ERR_clear_error();
+                }
                 return bOpened;
             }
 

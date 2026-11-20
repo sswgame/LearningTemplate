@@ -213,6 +213,11 @@ namespace sw
 
 namespace sw
 {
+    PackPatchSigner::~PackPatchSigner()
+    {
+        Memory::wipe( _privateKeyPem.data(), _privateKeyPem.size() );
+    }
+
     string PackPatchBuilder::makePatchPackFileName( string_view build )
     {
         return string( PackPatchBuilderInternal::kPatchPackPrefix ) + string( build ) + string( PackPatchBuilderInternal::kPackExtension );

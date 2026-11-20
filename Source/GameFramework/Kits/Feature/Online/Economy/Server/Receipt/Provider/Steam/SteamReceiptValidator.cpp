@@ -79,10 +79,12 @@ namespace sw
     {
     }
 
-    SteamReceiptValidator::~SteamReceiptValidator()
+    SteamReceiptSettings::~SteamReceiptSettings()
     {
-        Memory::set( _settings._key.data(), 0, _settings._key.size() ); // 키를 메모리에 남기지 않는다
+        Memory::wipe( _key.data(), _key.size() );
     }
+
+    SteamReceiptValidator::~SteamReceiptValidator() = default; // 키는 _settings 의 소멸자가 지운다
 
     bool SteamReceiptValidator::isOrderID( string_view text )
     {

@@ -59,8 +59,13 @@ namespace sw
 
     void ServiceAccountCredentials::wipe()
     {
-        Memory::set( _privateKeyPem.data(), 0, _privateKeyPem.size() );
+        Memory::wipe( _privateKeyPem.data(), _privateKeyPem.size() );
         _privateKeyPem.clear();
+    }
+
+    ServiceAccountCredentials::~ServiceAccountCredentials()
+    {
+        wipe();
     }
 
     ServiceAccountTokenSource::ServiceAccountTokenSource( ServiceAccountCredentials credentials, string scope, INetSecurityProvider* pSecurity, HTTPClient* pHTTPClient,
@@ -79,7 +84,7 @@ namespace sw
     ServiceAccountTokenSource::~ServiceAccountTokenSource()
     {
         _credentials.wipe(); // 서명 키와 토큰을 메모리에 남기지 않는다
-        Memory::set( _accessToken.data(), 0, _accessToken.size() );
+        Memory::wipe( _accessToken.data(), _accessToken.size() );
     }
 
     bool ServiceAccountTokenSource::request( UnixMilliseconds now )
@@ -137,7 +142,7 @@ namespace sw
                               document.getRoot().readOptionalInto( "expires_in", expiresInSec ) && expiresInSec > 0;
         if ( bGranted )
         {
-            Memory::set( _accessToken.data(), 0, _accessToken.size() );
+            Memory::wipe( _accessToken.data(), _accessToken.size() );
             _accessToken = std::move( token );
             _expiresMs   = now.count() + expiresInSec * constant::time::kMillisecondsPerSecond;
             return ResponseResult::Granted;
@@ -150,7 +155,7 @@ namespace sw
 
     void ServiceAccountTokenSource::invalidate()
     {
-        Memory::set( _accessToken.data(), 0, _accessToken.size() );
+        Memory::wipe( _accessToken.data(), _accessToken.size() );
         _accessToken.clear();
         _expiresMs = 0;
     }

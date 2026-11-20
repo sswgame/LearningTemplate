@@ -35,6 +35,14 @@ namespace sw
         [[nodiscard]] static expected<void> read( string_view json, ServiceAccountCredentials& outCredentials );
         /** @brief 서명 키를 메모리에서 지웁니다. */
         void wipe();
+
+        /** @brief 서명 키를 지웁니다(`Memory::wipe`) — 만든 함수가 중간에 돌아가도 · 제공자가 옮겨 가진 사본이 풀려도 비밀이 남지 않는다. */
+        ~ServiceAccountCredentials();
+        ServiceAccountCredentials()                                                  = default;
+        ServiceAccountCredentials( const ServiceAccountCredentials& )                = default;
+        ServiceAccountCredentials( ServiceAccountCredentials&& ) noexcept            = default;
+        ServiceAccountCredentials& operator=( const ServiceAccountCredentials& )     = default;
+        ServiceAccountCredentials& operator=( ServiceAccountCredentials&& ) noexcept = default;
     };
 } // namespace sw
 

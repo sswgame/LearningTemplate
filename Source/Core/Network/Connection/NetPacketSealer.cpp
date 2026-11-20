@@ -69,16 +69,6 @@ namespace sw
                 return bComputed;
             }
 
-            /** @brief 바이트를 지웁니다. volatile 로 써서 최적화가 "다시 읽지 않는 쓰기" 로 보고 지우지 못하게 한다(`NetSessionKeys::wipe` 와 같다). */
-            static void wipeBytes( void* pData, size_t size )
-            {
-                volatile uint8* pByte = static_cast<volatile uint8*>( pData );
-                for ( size_t index = 0; index < size; ++index )
-                {
-                    pByte[index] = 0;
-                }
-            }
-
             /** @brief 길이가 같은 두 바이트 열을 내용과 무관한 시간에 견줍니다(태그 비교가 첫 다른 바이트에서 멈추면 시간으로 한 바이트씩 맞춰 간다). */
             [[nodiscard]] static bool isEqualConstantTime( const uint8* pLeft, const uint8* pRight, int32 size )
             {
@@ -95,7 +85,7 @@ namespace sw
 {
     void NetReceiveCryptContext::wipe()
     {
-        NetPacketSealerInternal::wipeBytes( _arrIv, sizeof( _arrIv ) );
+        Memory::wipe( _arrIv, sizeof( _arrIv ) );
         _aead.reset();
         _replayWindow.reset();
     }

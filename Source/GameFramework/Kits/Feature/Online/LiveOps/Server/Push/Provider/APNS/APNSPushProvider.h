@@ -42,6 +42,14 @@ namespace sw
         string _baseURL{ kDefaultBaseURL };
         int64  _requestTimeoutMs{ 10000 };
         int64  _tokenRefreshMinMs{ 0 }; ///< 필수 — 403 뒤 다시 서명하기까지의 최소 간격(제공자 파일 `tokenRefreshMinSeconds`). 0 이면 생성자가 멈춘다
+
+        /** @brief 인증 키를 지웁니다(`Memory::wipe`) — 만든 함수가 중간에 돌아가도 · 제공자가 옮겨 가진 사본이 풀려도 비밀이 남지 않는다. */
+        ~APNSPushSettings();
+        APNSPushSettings()                                         = default;
+        APNSPushSettings( const APNSPushSettings& )                = default;
+        APNSPushSettings( APNSPushSettings&& ) noexcept            = default;
+        APNSPushSettings& operator=( const APNSPushSettings& )     = default;
+        APNSPushSettings& operator=( APNSPushSettings&& ) noexcept = default;
     };
 } // namespace sw
 

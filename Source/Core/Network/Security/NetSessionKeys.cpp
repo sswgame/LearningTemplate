@@ -2,6 +2,7 @@
 
 #include "Core/Network/Security/NetSessionKeys.h"
 
+#include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Serialization/LittleEndianUtil.h"
 
@@ -16,15 +17,6 @@ namespace sw
             static constexpr utf8  kSessionLabel[] = "sw-net-v1";
             static constexpr utf8  kProofLabel[]   = "sw-net-proof-v1";
             static constexpr int32 kKeyBlockSize   = 2 * ( NetSecurityConstant::kAEADKeySize + NetSecurityConstant::kAEADNonceSize );
-
-            static void wipeBytes( void* pData, size_t size )
-            {
-                volatile uint8* pByte = static_cast<volatile uint8*>( pData );
-                for ( size_t index = 0; index < size; ++index )
-                {
-                    pByte[index] = 0;
-                }
-            }
         };
     } // namespace
 } // namespace sw
@@ -33,7 +25,7 @@ namespace sw
 {
     void NetSessionKeys::wipe()
     {
-        NetSessionKeysInternal::wipeBytes( this, sizeof( NetSessionKeys ) );
+        Memory::wipe( this, sizeof( NetSessionKeys ) );
     }
 
     bool NetSessionKeys::computeSessionKeys( INetSecurityProvider& provider, const uint8* pSharedSecret, const NetSessionSecret* pSessionSecret, uint64 clientSalt,
@@ -61,7 +53,7 @@ namespace sw
         std::memcpy( outKeys._serverToClient._arrKey, pCursor, NetSecurityConstant::kAEADKeySize );
         pCursor += NetSecurityConstant::kAEADKeySize;
         std::memcpy( outKeys._serverToClient._arrIv, pCursor, NetSecurityConstant::kAEADNonceSize );
-        Internal::wipeBytes( arrBlock, sizeof( arrBlock ) );
+        Memory::wipe( arrBlock, sizeof( arrBlock ) );
         return true;
     }
 

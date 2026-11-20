@@ -26,7 +26,7 @@ namespace sw
     class JSONValue;
 
     /** @brief 스팀 제공자의 설정입니다. 시간은 밀리초입니다. */
-    struct SteamReceiptSettings
+    struct SW_KIT_SERVER_API SteamReceiptSettings
     {
         static constexpr const utf8* kDefaultBaseURL = "https://partner.steam-api.com";
 
@@ -38,6 +38,14 @@ namespace sw
         int64            _reportPollIntervalMs{ 3600000 };
         int64            _reportLookbackMs{ 172800000 }; ///< 보고서를 지난 조회 시각보다 이만큼 앞에서부터 읽는다(2 일)
         uint8            _bSandbox{ SW_FALSE };
+
+        /** @brief 퍼블리셔 키를 지웁니다(`Memory::wipe`) — 만든 함수가 중간에 돌아가도 · 제공자가 옮겨 가진 사본이 풀려도 비밀이 남지 않는다. */
+        ~SteamReceiptSettings();
+        SteamReceiptSettings()                                             = default;
+        SteamReceiptSettings( const SteamReceiptSettings& )                = default;
+        SteamReceiptSettings( SteamReceiptSettings&& ) noexcept            = default;
+        SteamReceiptSettings& operator=( const SteamReceiptSettings& )     = default;
+        SteamReceiptSettings& operator=( SteamReceiptSettings&& ) noexcept = default;
     };
 } // namespace sw
 

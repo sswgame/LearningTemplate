@@ -45,10 +45,12 @@ namespace sw
         _deviceURLPrefix = _settings._baseURL + "/3/device/";
     }
 
-    APNSPushProvider::~APNSPushProvider()
+    APNSPushSettings::~APNSPushSettings()
     {
-        Memory::set( _settings._privateKeyPem.data(), 0, _settings._privateKeyPem.size() ); // 키가 든 글을 남기지 않는다
+        Memory::wipe( _privateKeyPem.data(), _privateKeyPem.size() );
     }
+
+    APNSPushProvider::~APNSPushProvider() = default; // 키는 _settings 의 소멸자가 지운다
 
     bool APNSPushProvider::isValidDeviceToken( string_view token )
     {

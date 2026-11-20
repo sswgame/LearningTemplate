@@ -131,6 +131,7 @@ namespace sw
                 return unexpected( Error{ ErrorKind::ExternalFailure, "Local store key file could not be read", _keyFilePath } ); // 잠김 · 권한 — 다음 요청이 다시 읽는다
             if ( Internal::unprotectKey( bytes, _arrKey, kKeySize ) )
             {
+                Memory::wipe( bytes.data(), bytes.size() ); // DPAPI 가 없는 플랫폼에서는 파일 바이트가 곧 키다
                 _bLoaded = SW_TRUE;
                 return {};
             }
@@ -139,6 +140,7 @@ namespace sw
             // 앞서 남긴 것도 지우지 않는다(번호를 붙인 새 이름). 새 키는 아래 쓰기가 원래 이름에 바꿔 끼운다.
             outSetAsidePath       = FileUtil::reserveUniquePath( _keyFilePath + kUnreadableKeySuffix, "", false );
             const bool bKeptAside = outSetAsidePath.empty() == false && ( bytes.empty() || FileUtil::writeFileDurable( outSetAsidePath, bytes.data(), bytes.size() ) );
+            Memory::wipe( bytes.data(), bytes.size() ); // 다른 사용자의 키 파일일 수 있다
             if ( bKeptAside == false )
             {
                 outSetAsidePath.clear();
@@ -150,8 +152,10 @@ namespace sw
         vector<uint8> bytes;
         const bool    bWritten = Internal::protectKey( _arrKey, kKeySize, bytes ) && FileUtil::ensureParentDirectoryExists( _keyFilePath ) &&
                               FileUtil::writeFileDurable( _keyFilePath, bytes.data(), bytes.size() );
+        Memory::wipe( bytes.data(), bytes.size() ); // DPAPI 가 없는 플랫폼에서는 파일에 쓴 바이트가 곧 키다
         if ( bWritten == false )
         {
+            Memory::wipe( _arrKey, sizeof( _arrKey ) ); // 쓰지 못한 키는 쓰이지 않는다 — 다음 요청이 새로 만든다
             return unexpected( Error{ ErrorKind::ExternalFailure, "Could not write the local store key file", _keyFilePath } );
         }
         Internal::restrictToOwner( _keyFilePath );

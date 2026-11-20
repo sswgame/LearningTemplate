@@ -69,7 +69,10 @@ namespace sw
                                                                                      static_cast<int32>( kKeyIDSize ) );
                 Memory::wipe( arrDeviceKey, sizeof( arrDeviceKey ) );
                 if ( bDerived == false )
+                {
+                    Memory::wipe( outSealKey, sizeof( outSealKey ) ); // 첫 유도만 된 봉인 키를 남기지 않는다
                     return LocalStoreResult::IOError;
+                }
                 outKeyID = LittleEndianUtil::readUint64( arrKeyID );
                 return LocalStoreResult::Ok;
             }
@@ -149,7 +152,10 @@ namespace sw
         vector<uint8>          storedBody;
         const LocalStoreResult compressResult = Internal::compressBody( context, pBody, bodySize, options._compressionCodec, storedBody, header._codec );
         if ( compressResult != LocalStoreResult::Ok )
+        {
+            Memory::wipe( arrSealKey, sizeof( arrSealKey ) ); // 위에서 유도한 봉인 키 — 여기서 수명이 끝난다
             return compressResult;
+        }
         header._bodySize = storedBody.size();
 
         outEnvelopeBytes.resize( kHeaderSize );
