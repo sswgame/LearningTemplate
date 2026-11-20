@@ -172,7 +172,7 @@ SW_TEST_CASE( SkyTest, GroundAlbedoLightsTheDownwardView )
 }
 
 /**
- * @brief [SkyTest] 대기 모드의 해는 씬의 첫 활성 방향광이다 — 해 쪽은 빛이 나아가는 방향의 반대이고, 방향광이 없으면 해 색이 0 이다. 구름 값은 컴포넌트에서 그대로 온다
+ * @brief [SkyTest] 대기 모드의 해는 씬의 주광(가장 밝은 활성 방향광)이다 — 해 쪽은 빛이 나아가는 방향의 반대이고, 방향광이 없으면 해 색이 0 이다. 구름 값은 컴포넌트에서 그대로 온다
  */
 SW_TEST_CASE( SkyTest, FindSkyTakesTheSunFromTheDirectionalLight )
 {

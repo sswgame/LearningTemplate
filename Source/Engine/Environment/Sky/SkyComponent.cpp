@@ -109,7 +109,7 @@ namespace sw
         {
             outGradient           = pSky->makeGradient();
             outGradient._sourceID = pSky->getComponentID();
-            // 대기 모드의 해는 씬의 첫 활성 방향광이다. 없으면 해 색 0 — 하늘이 어둡다. 구름도 같은 해로 빛을 받는다.
+            // 대기 모드의 해는 씬의 주광(가장 밝은 활성 방향광)이다. 없으면 해 색 0 — 하늘이 어둡다. 구름도 같은 해로 빛을 받는다.
             if ( const DirectionalLightComponent* const pDirectional = DirectionalLightComponent::findActive( &manager ) )
                 outGradient.setSun( pDirectional->getLightDirection(), pDirectional->getColor() );
             return true;
