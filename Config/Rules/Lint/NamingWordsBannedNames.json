@@ -1793,6 +1793,7 @@
     "kMaxQueueFullRunDepth": "삭제 — 가득 찬 큐 앞의 그 자리 실행이 없어졌다(OverflowConcurrentQueue, 2026-11-21)",
     "_queueFullRunDepth": "삭제 — 가득 찬 큐 앞의 그 자리 실행이 없어졌다(2026-11-21)",
     "registerLockObserver": "mutex::bindLockObserver — 관찰자 하나, 둘째 등록은 단언(ObserverSlot, 2026-11-21)",
-    "unregisterLockObserver": "mutex::bindLockObserver 가 돌려준 토큰의 reset(2026-11-21)"
+    "unregisterLockObserver": "mutex::bindLockObserver 가 돌려준 토큰의 reset(2026-11-21)",
+    "setReportFunction": "RaceDetectContext::bindReportFunction — 보고기 하나, 둘째 등록은 단언(ObserverSlot, 2026-11-21)"
   }
 }
