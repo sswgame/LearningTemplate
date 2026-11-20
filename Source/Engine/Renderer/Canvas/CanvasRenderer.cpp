@@ -131,6 +131,7 @@ namespace sw
         }
         // 가위를 대상 전체로 되돌린다(같은 패스에서 뒤에 그리는 것이 있어도 잘리지 않게).
         cmd.setScissorRect( wholeTarget );
+        SW_PROFILE_COUNT( "RT.Draw.canvasBatches", drawnBatchCount );
         return drawnBatchCount;
     }
 

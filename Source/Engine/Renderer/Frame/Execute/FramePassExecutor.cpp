@@ -668,6 +668,8 @@ namespace sw
     {
         // 슬롯 하나를 잡는다. 패스 진입 때 한 번 부르고, 한 패스 안에서 상수가 바뀌는 반복(그림자 타일)은 반복마다 다시 부른다.
         // 못 잡으면(링 고갈) false — 부르는 쪽은 그 패스 · 타일을 그리지 않는다. 앞 슬롯으로 그리면 상수가 섞인다(링이 이유를 남겼다).
+        // 그리기마다 슬롯을 잡는 패스(데칼 · 확장 요소 · 그림자 타일)의 객체당 상수 비용 — 패스 수보다 크게 늘면 인스턴스 버퍼로 옮길 후보다.
+        SW_PROFILE_COUNT( "RT.Bind.passCbAcquires", 1 );
         return _state._passCbRing.acquire( context._passCb, context._passCbIndex );
         // 값은 드로우 직전 ShaderParameterBinder::bindGraphics 가 리플렉션 오프셋으로 채운다
         // (context._passValues 에 이미 프레임 시드가 들어 있으므로 따로 먼저 올릴 필요가 없다).

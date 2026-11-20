@@ -211,6 +211,7 @@ namespace sw
             {
                 // 정점 수 · 인스턴스 수(띠는 마디 수)는 컴퓨트가 썼다(vfx_simulate.hlsl). 시작 인스턴스는 0 이다.
                 cmd.drawIndirect( pGPUSource->_argsBuffer, 0, 1 );
+                SW_PROFILE_COUNT( "RT.Draw.particleIndirectDraws", 1 );
                 continue;
             }
             // 시작 인스턴스는 0 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않는다. 시작 입자는 루트 상수로 간다.
@@ -218,6 +219,7 @@ namespace sw
             const uint32 particleCount = static_cast<uint32>( batch.findCPUParticles()->size() );
             const uint32 instanceCount = batch._bRibbon == SW_TRUE ? particleCount - 1u : particleCount;
             cmd.drawInstanced( GPUParticle::kVertexCount, instanceCount, 0, 0 );
+            SW_PROFILE_COUNT( "RT.Draw.particleCPUDraws", 1 ); // CPU 가 입자를 갱신 · 업로드한 방출기 — GPU 시뮬레이션으로 옮길 후보의 수
         }
         return drawnBatchCount;
     }

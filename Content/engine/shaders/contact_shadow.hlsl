@@ -42,9 +42,11 @@ static float ContactShadow::computeEdgeFade( float2 uv )
 static float ContactShadow::traceLight( float3 worldPosition, float viewDepth, float jitter, float lightIndexValue )
 {
     float lit = 1.0f;
-    if ( lightIndexValue >= 0.0f && (uint)lightIndexValue < g_SwLightCount )
+    // 검사와 읽기가 같은 번호를 쓴다 — 검사가 내림, 읽기가 반올림이면 (개수 - 0.5) 이상의 값이 버퍼 끝 너머를 읽는다.
+    const uint lightIndex = (uint)( max( lightIndexValue, 0.0f ) + 0.5f );
+    if ( lightIndexValue >= 0.0f && lightIndex < g_SwLightCount )
     {
-        const LightData light     = g_SwLights[(uint)( lightIndexValue + 0.5f )];
+        const LightData light     = g_SwLights[lightIndex];
         const uint      lightType = (uint)( light._directionType.w + 0.5f );
         float3          toLight   = -light._directionType.xyz;
         float           rayLength = light._extra.y;

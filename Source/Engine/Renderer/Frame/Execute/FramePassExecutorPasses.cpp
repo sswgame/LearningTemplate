@@ -1081,7 +1081,10 @@ namespace sw
             // 상자 하나 = 삼각형 12 개(정점 버퍼 없이 SV_VertexID — decal.hlsl VSMain). 앞면은 XML 의 컬(Front)이 버린다.
             // shortcut: 거울 상자(월드 행렬식 < 0)는 감김이 뒤집혀 앞면이 남는다 — 그런 데칼이 생기면 FramePSOManager::reverseCullMode 처럼 컬을 뒤집은 PSO 를 고른다.
             if ( bindForDraw( context, pso, kInvalidDescriptorIndex, decal._arrTextureSRV ) )
+            {
                 context._pCmd->draw( kDecalBoxVertexCount, 0 );
+                SW_PROFILE_COUNT( "RT.Draw.decalDraws", 1 ); // CPU 직접 그리기(데칼마다 상수 · 바인딩) — 인스턴스 버퍼 + 그리기 하나로 옮길지 재는 수
+            }
         }
         context._pCmd->endRenderPass();
         setIdentityWorld( context );
@@ -1438,7 +1441,10 @@ namespace sw
             context._pCmd->setIndexBuffer( mesh.getRenderData().getIndexBuffer(), mesh.getRenderData().getIndexStride(), 0 );
             commitBindlessTextureBindings( context );
             if ( bindForDraw( context, pass._pso, kInvalidDescriptorIndex ) )
+            {
                 context._pCmd->drawIndexedInstanced( indexCount, element._instanceCount );
+                SW_PROFILE_COUNT( "RT.Draw.extensionDraws", 1 ); // CPU 직접 그리기(요소마다 PSO · 스트림 · 상수 슬롯)
+            }
         }
         setIdentityWorld( context );
         context._pCmd->endRenderPass();
