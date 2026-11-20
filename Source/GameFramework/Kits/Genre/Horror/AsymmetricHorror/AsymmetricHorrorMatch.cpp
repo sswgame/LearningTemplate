@@ -8,6 +8,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Net/NetMessageChannel.h"
+#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"

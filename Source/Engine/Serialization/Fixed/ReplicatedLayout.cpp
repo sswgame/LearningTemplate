@@ -4,8 +4,10 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Reflection/PropertyInfo.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {

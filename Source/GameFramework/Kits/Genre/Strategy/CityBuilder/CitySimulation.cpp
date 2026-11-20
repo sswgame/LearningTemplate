@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/TimeRollover.h"
 
+#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 

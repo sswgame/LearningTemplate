@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"

@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/View/RenderViewMode.h"
+#include "Engine/Presentation/ViewCameraProvider.h"
 #include "Engine/Renderer/Frame/Packet/PostProcessMaterialSet.h"
 
 namespace sw

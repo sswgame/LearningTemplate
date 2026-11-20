@@ -10,6 +10,7 @@
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/ReflectedStateUpgrade.h"

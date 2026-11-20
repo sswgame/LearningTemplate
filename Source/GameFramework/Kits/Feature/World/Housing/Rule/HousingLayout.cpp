@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/TypeFqn.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
