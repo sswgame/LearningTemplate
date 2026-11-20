@@ -54,6 +54,8 @@ namespace sw
         /** @brief 레지스트리의 자기 칸에 오릅니다 — 넷 키트가 씬을 훑지 않고 트리거를 찾는다. */
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
+        /** @brief 가리킨 디렉터가 스스로 트는(`_bAutoPlay`) 것이면 오류를 남깁니다 — 시작 때 이미 틀어 트리거는 "재생 중" 으로 보고 영영 발동하지 않는다. */
+        void onBeginPlay() override;
 
         SequenceTriggerAudience getAudience() const { return _audience; }
         const GameObjectHandle& getSequence() const { return _sequence; }

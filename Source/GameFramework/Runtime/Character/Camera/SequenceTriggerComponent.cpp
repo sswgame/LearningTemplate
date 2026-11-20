@@ -35,6 +35,21 @@ namespace sw
         ActivatorVolumeComponent::onUnregister( manager );
     }
 
+    void SequenceTriggerComponent::onBeginPlay()
+    {
+        ActivatorVolumeComponent::onBeginPlay();
+        // 트리거가 트는 디렉터는 스스로 틀지 않아야 한다(언리얼 Level Sequence 의 bAutoPlay 끔 + Trigger Box 와 같은 짝) — 둘 다 켜면 데이터 모순이다.
+        const GameObject*              pOwner    = getOwner();
+        const GameObjectManager*       pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*              pSequence = pManager != nullptr ? pManager->resolveGameObject( _sequence ) : nullptr;
+        const SequencePlayerComponent* pPlayer   = pSequence != nullptr ? pSequence->getComponent<SequencePlayerComponent>() : nullptr;
+        if ( pPlayer != nullptr && pPlayer->isAutoPlay() )
+        {
+            SW_LOG_ERROR_ID( "SequenceTrigger.DirectorAutoPlays", "Sequence trigger '%#' points at '%#' whose SequencePlayerComponent plays by itself (_bAutoPlay) - it starts before anyone enters and the trigger never fires; turn Auto Play off",
+                             pOwner->getName().c_str(), pSequence->getName().c_str() );
+        }
+    }
+
     bool SequenceTriggerComponent::onVolumeActivated( const GameObject& activator )
     {
         const GameObject*        pOwner    = getOwner();

@@ -42,6 +42,7 @@ namespace sw
             asset._frameMin = 0;
             asset._frameMax = frameCount;
             pPlayer->setSequence( asset );
+            pPlayer->setAutoPlay( false ); // 트리거가 튼다 — 켜 두면 모든 월드가 시작 때 스스로 틀어 서버 판정 · 대상이 의미를 잃는다
         }
 
         void addTrigger( GameObjectManager& manager, const utf8* name, const utf8* directorName, const utf8* flag, SequenceTriggerAudience audience )
@@ -192,6 +193,8 @@ namespace sw
         {
             GameObject*    pPawnObject = manager.createGameObject( hashed_string( makePawnName( playerNumber ) ) );
             PawnComponent* pPawn       = pPawnObject != nullptr ? pPawnObject->addComponent<PawnComponent>() : nullptr;
+            if ( pPawn != nullptr )
+                pPawn->setLookAction( hashed_string{} ); // 본보기 폰은 보기가 없다 — 입력 맵 없는 하니스 월드에서 축 경고를 내지 않게
             if ( pPawn == nullptr || world.isServer() == false )
                 continue;
             // 언리얼 서버가 접속마다 PlayerController 를 세우는 자리 — 원격 조종자가 플레이어 상태를 들고 그 연결의 폰을 쥔다.

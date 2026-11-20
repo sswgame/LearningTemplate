@@ -9,6 +9,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
 namespace sw

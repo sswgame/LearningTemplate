@@ -40,7 +40,7 @@
 	<DevCommand line="netsim.addclient"/>
 	<WaitUntil watch="Editor.NetSimWorldCount" equals="4" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.NetSimValue" target="3" key="EveryonePlaying" equals="1" timeoutFrames="600"/>
-	<Expect watch="Editor.NetSimValue" target="3" key="EveryoneFrame" atLeast="10"/>
+	<Expect watch="Editor.NetSimValue" target="3" key="EveryoneFrame" atLeast="3"/> <!-- 처음부터 튼 재생은 0 · 1 이다(시퀀스 30 fps · 틱 60 이라 서버는 아직 몇 프레임 앞) -->
 	<Expect watch="Editor.NetSimValue" target="3" key="PlayerStarts" equals="0"/>
 	<!-- ④ Pawn2 차례 — 클라이언트 2 만 틀고 플레이어 2 의 상태에 -->
 	<WaitUntil watch="Editor.NetSimValue" target="2" key="PlayerPlaying" equals="1" timeoutFrames="600"/>

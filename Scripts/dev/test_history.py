@@ -552,10 +552,21 @@ def read_scenario_rows(run: ChangedRun, find_branch: Callable[[str], str]) -> li
         end_line = get_last_result_line(result.stdout, "SCENARIO_RESULT=")
         kind = "Hang" if result.timed_out else "LoadError"
         return [ChangedRow(run.item, change, kind, end_line or f"보고가 없다(종료 코드 {result.return_code}) — {run.output / 'parent.log'}", branch)]
+    return fold_scenario_rows(run.item, change, branch, by_backend)
+
+
+def fold_scenario_rows(item: str, change: str, branch: str, by_backend: dict[str, dict]) -> list[ChangedRow]:
+    """백엔드별 보고를 표 줄로 — 모든 백엔드가 건너뛰었으면 `NotRun`(새 · 바뀐 시나리오가 한 번도 돌지 않았다 — 통과로 적으면 거짓 통과다), 일부만이면 통과 줄에 건너뛴 백엔드를 적는다."""
+    list_report = list(by_backend.values())
+    list_skipped = sorted(backend for backend, report in by_backend.items() if report.get("result") == "Skipped")
+    if len(list_skipped) == len(list_report):
+        return [ChangedRow(item, change, "NotRun", f"모든 백엔드가 건너뛰었다 — {make_one_line(list_report[0].get('reason', ''))}", branch)]
     list_fold = fold_scenario_failures(list_report)
     if not list_fold:
-        return [ChangedRow(run.item, change, "", "통과 — " + ",".join(sorted(by_backend)), branch)]
-    return [ChangedRow(run.item, change, kind, f"[{label}] {reason}", branch) for kind, reason, label in list_fold]
+        list_ran = sorted(backend for backend in by_backend if backend not in list_skipped)
+        skipped_note = f" (건너뜀: {','.join(list_skipped)})" if list_skipped else ""
+        return [ChangedRow(item, change, "", "통과 — " + ",".join(list_ran) + skipped_note, branch)]
+    return [ChangedRow(item, change, kind, f"[{label}] {reason}", branch) for kind, reason, label in list_fold]
 
 
 def parse_branch(subject: str) -> str:
@@ -731,6 +742,11 @@ def run_changed_self_check() -> None:
         return {"name": "s", "backend": backend, "result": result, "startedAtUnixMs": 1, "failure": {"kind": kind, "step": step, "reason": reason}}
     premise = fold_scenario_failures([make_report(backend, "Failed", "Assertion", "#3", "PiP equal") for backend in ("dx11", "dx12", "vk", "gl")])
     assert premise == [("Assertion", "PiP equal", "전제")], premise
+    # 모든 백엔드가 건너뛴 새 시나리오는 통과가 아니다(requiresModule 이 꺼진 모듈 — editor.netsequence 가 "통과" 로 적혔다)
+    skipped_rows = fold_scenario_rows("s", "새것", "b", {"dx12": {"result": "Skipped", "reason": "requiresModule: X is not loaded"}, "vk": {"result": "Skipped", "reason": "requiresModule: X is not loaded"}})
+    assert [row.kind for row in skipped_rows] == ["NotRun"], skipped_rows
+    partial_rows = fold_scenario_rows("s", "새것", "b", {"dx12": {"result": "Passed"}, "gl": {"result": "Skipped", "reason": "no GL"}})
+    assert partial_rows[0].kind == "" and "건너뜀: gl" in partial_rows[0].reason, partial_rows
     single = fold_scenario_failures([make_report("dx11", "Passed"), make_report("vk", "Failed", "GoldenMismatch", "#5", "1.2% differing"), make_report("gl", "Skipped")])
     assert single == [("GoldenMismatch", "1.2% differing", "백엔드 vk")], single
     assert parse_branch("Merge branch 'w-st5'") == "w-st5" and parse_branch("Merge branch 'w-a' into main") == "w-a"

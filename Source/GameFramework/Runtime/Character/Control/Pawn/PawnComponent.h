@@ -93,8 +93,10 @@ namespace sw
         void                         setAnalogNames( const vector<hashed_string>& listAnalog ) { _listAnalog = listAnalog; }
         const hashed_string&         getMoveAction() const { return _moveAction; }
         const hashed_string&         getLookAction() const { return _lookAction; }
-        const hashed_string&         getUpAction() const { return _upAction; }
-        const hashed_string&         getInputLayer() const { return _inputLayer; }
+        /** @brief 보기 축 액션 이름입니다(빈 이름: 보기 없음 — 입력 맵에 묻지 않는다). 코드로 만든 폰 · 테스트가 쓴다. 씬의 폰은 PROPERTY 가 채운다. */
+        void                 setLookAction( const hashed_string& lookAction ) { _lookAction = lookAction; }
+        const hashed_string& getUpAction() const { return _upAction; }
+        const hashed_string& getInputLayer() const { return _inputLayer; }
         /** @brief 눌린 순간의 조종 회전을 의도에 싣게 할 버튼 이름입니다(서브틱 입력). 비었으면 싣지 않는다. */
         const hashed_string& getTriggerLookButton() const { return _triggerLookButton; }
         void                 setTriggerLookButton( const hashed_string& button ) { _triggerLookButton = button; }
