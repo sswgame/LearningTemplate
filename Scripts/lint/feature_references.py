@@ -17,7 +17,7 @@ Scripts/lint/feature_references.py
   `Tests/` 안에서는 `SW_*_ID( "X"` 의 첫 인자. 로그 매크로만 보지 않는 까닭: id 는 `addErrorWithID` · `report` · `parseBoolToken` · `#define SW_LOG_ID_…` 같은 도우미를 거쳐
   매크로에 닿아(`"" id` 이어 붙이기) 매크로 자리에는 이름만 남는다. 실행 중에 이어 붙인 id 는 리터럴이 없으니 예외 표(`_logIDs`)에 까닭과 함께 둔다.
 
-예외는 데이터 한 곳(`Config/Rules/Lint/FeatureReferenceExceptions.json`)에 까닭과 함께 둔다. 까닭이 비었거나, 이제 참조가 생겼거나, 정의가 사라진 예외도 위반이다 — 표가 낡지 않게.
+예외는 데이터 한 곳(`Config/Rules/Lint/FeatureRefs.json`)에 까닭과 함께 둔다. 까닭이 비었거나, 이제 참조가 생겼거나, 정의가 사라진 예외도 위반이다 — 표가 낡지 않게.
 
 `py -3 -m Scripts lint feature-refs [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
 """
@@ -39,8 +39,9 @@ from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.index_cache import open_facts  # noqa: E402
 from lint.lint_scope import LintScope, list_repo_files, make_whole_scope  # noqa: E402
+from lint.rule_tables import get_table_path  # noqa: E402
 
-CONFIG_PATH = "Config/Rules/Lint/FeatureReferenceExceptions.json"
+CONFIG_PATH = get_table_path("feature-refs")
 CPP_EXTENSIONS = (".h", ".cpp", ".inl", ".xxx")
 CONTENT_EXTENSIONS = (".xml", ".json")
 SCRIPT_EXTENSIONS = (".py", ".cmake", ".sh", ".txt")
@@ -75,7 +76,7 @@ class Sources:
 
 @dataclass(frozen=True)
 class Exceptions:
-    """`Config/Rules/Lint/FeatureReferenceExceptions.json` 의 내용."""
+    """`Config/Rules/Lint/FeatureRefs.json` 의 내용."""
 
     dict_folder: dict[str, str]        # 폴더 → 까닭(그 안의 컴포넌트 모두)
     dict_component: dict[str, str]

@@ -141,7 +141,7 @@ A new row names the header and the API.
 - 아직 쓰는 게임이 없는 키트 카탈로그(약 20 종)는 라이브러리라 지우지 않고 캐시 등록과 접미사만 둔다.
 
 - **리소스는 id 로 읽는다.** 그래야 조건(`_when`) · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조(리소스 해시)를 받는다. 리플렉션 파일 하나는 `ConfigManager::readComposedXMLDocument`, 루트를 손으로 읽는 형식은 `XMLReadUtil::parseResourceRoot`, 그 밖은 `XMLDocument::loadResource` · `loadResourceAs` · `parseResourceText`(테스트 `ResourceEntranceTest`).
-- 글을 읽은 뒤 id 없이 글 입구(`loadFromAsset` · `loadFromFile`)로 넘기지 않는다 — 린트 `common-shapes` 의 `assetEntrance` 가 막고, 예외는 문맥을 정하는 쪽(문화권 표 · 경로 교체 표)만 `Config/Rules/Lint/CommonShapeExceptions.json` 에 까닭과 함께. 팩 설정(`PackEngineSettings`)은 층 · 조건이 기대는 값을 정하므로 그대로 읽는다. 미리 보기 · 테스트는 `loadFromXMLText`(층을 얹지 않는다).
+- 글을 읽은 뒤 id 없이 글 입구(`loadFromAsset` · `loadFromFile`)로 넘기지 않는다 — 린트 `common-shapes` 의 `assetEntrance` 가 막고, 예외는 문맥을 정하는 쪽(문화권 표 · 경로 교체 표)만 `Config/Rules/Lint/CommonShapes.json` 에 까닭과 함께. 팩 설정(`PackEngineSettings`)은 층 · 조건이 기대는 값을 정하므로 그대로 읽는다. 미리 보기 · 테스트는 `loadFromXMLText`(층을 얹지 않는다).
 - **다른 에셋을 가리키는 칸은 `AssetRef<T>`**(언리얼 `TSoftObjectPtr<T>`). 스스로 읽지 않는다(`acquire()` · `request()`). 접미사가 대상 종류와 다르면 로드 오류다. 값은 `AssetRefBase`(경로 + `const AssetTypeDef*`)와 `AssetRef<T>` — 대상 종류를 값이 품어 `vector<AssetRef<T>>` · 중첩 구조체 · 덮어쓰기 패치가 같은 검사를 지나고, 의존성 수집 · 미리 읽기(`PreloadSet`) · 쿠킹 입력 · 참조 색인 · 에디터 선택기가 모두 이 칸을 본다.
 - 경로 칸은 리플렉션 선언에서만 온다 — 손으로 쓴 이름 표를 두지 않는다. 생성 목록은 `Config/Dev/AssetReferenceFields.generated.json`(낡음은 `--check-asset-refs`), `Config/Dev/AssetReferenceFields.json` 에는 도메인 · 확장자 · 임포트 폴더 규칙만.
 - `AssetRef<T>` 칸이 만들어지는 곳에서 `T` 는 완전해야 한다(`unique_ptr<T>` 소멸자와 같은 규칙) — 대상 헤더를 못 읽으면 생성자를 .cpp 로 옮긴다.

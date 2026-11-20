@@ -23,8 +23,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.lint_scope import LintScope, make_whole_scope  # noqa: E402
+from lint.rule_tables import get_table_path  # noqa: E402
 
-CONFIG_PATH = "Config/Rules/Lint/FolderLayout.json"
+CONFIG_PATH = get_table_path("folder-layout")
 
 
 def check_folder_layout(project_root: Path, scope: LintScope) -> list[str]:

@@ -46,7 +46,7 @@ from lint.format import run_clang_format_batch  # noqa: E402
 from lint.lint_scope import LintScope, clear_read_cache, make_staged_scope, make_whole_scope  # noqa: E402
 from lint.index_cache import CACHE_FOLDER  # noqa: E402
 from lint.module_imports import list_imported_module_files  # noqa: E402
-from lint.rules import Rule, format_table, RULE_BY_ID, RULES  # noqa: E402
+from lint.rules import Rule, find_orphan_tables, format_table, RULE_BY_ID, RULES  # noqa: E402
 
 CPP_SUFFIXES = tuple(sorted(CPP_ALL_EXTENSIONS))
 SHADER_SUFFIXES = tuple(sorted(SHADER_SOURCE_EXTENSIONS))
@@ -347,14 +347,15 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
             list_problem = list_problem + ([f"자체 검사 실패 — {failure}"] if failure else [])
         if list_problem:
             has_errors = True
-            where = f" — 예외 · 기준선: {rule.exceptions}" if rule.exceptions else ""
+            where = f" — 예외 · 기준선: {rule.describe_tables()}" if rule.describe_tables() else ""
             print(f"[{rule.id}] FAIL — {rule.blocks} {len(list_problem)}건{where}")
             for line in list_problem:
                 print(f"  - {line}")
 
-    # 린트 코드(규칙 · 도우미 · 이 파일 · 하위 명령 표)가 바뀌면 커밋 훅의 모양(스테이지 비례 읽기 · 병합 범위)과 안내가 시키는 고치는 명령을 다시 본다 — 시간을 재지 않고 연 파일을 센다.
-    if scope.whole_repo or scope.touches(roots=("Scripts/lint/", "Scripts/__main__.py", *sorted({path for rule in RULES for path in rule.list_inputs() if path.startswith("Scripts/")}))):
-        list_shape = check_read_bound(project_root) + check_merge_scope() + check_fix_command(project_root) + check_rule_row_diff() + check_fact_store()
+    # 린트 코드(규칙 · 도우미 · 이 파일 · 하위 명령 표) · 린트 표 폴더가 바뀌면 커밋 훅의 모양(스테이지 비례 읽기 · 병합 범위)과 안내가 시키는 고치는 명령, 린트 표마다 읽는 규칙이 하나인지를 다시 본다 — 시간을 재지 않고 연 파일을 센다.
+    if scope.whole_repo or scope.touches(roots=("Scripts/lint/", "Scripts/__main__.py", "Config/Rules/Lint/", *sorted({path for rule in RULES for path in rule.list_inputs() if path.startswith("Scripts/")}))):
+        list_shape = (check_read_bound(project_root) + check_merge_scope() + check_fix_command(project_root) + check_rule_row_diff() + check_fact_store()
+                      + find_orphan_tables(project_root))
         if list_shape:
             has_errors = True
             print(f"[lint-shape] FAIL — 커밋 훅 · 고치는 명령의 모양 {len(list_shape)}건")

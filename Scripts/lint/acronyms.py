@@ -26,8 +26,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.lint_scope import LintScope, make_whole_scope, read_text  # noqa: E402
+from lint.rule_tables import get_table_path  # noqa: E402
 
-CONFIG_PATH = "Config/Rules/Lint/Acronyms.json"
+CONFIG_PATH = get_table_path("acronyms")
 EXTENSIONS = (".h", ".cpp", ".inl")
 LITERAL_OR_COMMENT = re.compile(r'//[^\n]*|/\*.*?\*/|(?:u8|[uUL])?R"(?P<delim>[^()\\\s]{0,16})\(.*?\)(?P=delim)"|(?:u8|[uUL])?"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])+\'', re.S)
 IDENTIFIER = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")

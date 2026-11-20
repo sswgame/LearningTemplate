@@ -41,6 +41,7 @@ from common.paths import get_project_root  # noqa: E402
 from common.rename_scope import (  # noqa: E402
     check_rewrite_unmarked_lines, check_serialized_rename, collect_reflected_properties, plan_serialized_rename, replace_serialized_name, rewrite_rename_target,
 )
+from lint.rule_tables import get_table_path  # noqa: E402
 
 ROOTS = ("Source", "Content", "Config", "docs", "Scripts", "Test", "cmake", ".claude/skills", "AGENTS.md", "CLAUDE.md", "CMakeLists.txt", "CMakePresets.json", "ThirdParty")
 TEXT_SUFFIXES = {".h", ".cpp", ".inl", ".hlsl", ".hlsli", ".py", ".md", ".json", ".xml", ".txt", ".cmake", ".material", ".ini", ".toml", ".yaml", ".yml",
@@ -49,7 +50,7 @@ TEXT_SUFFIXES = {".h", ".cpp", ".inl", ".hlsl", ".hlsli", ".py", ".md", ".json",
 # ThirdParty 는 우리 감싸기(`ThirdParty/<lib>/CMakeLists.txt` — sw_add_vcpkg_package 를 부른다)만 본다. vcpkg 포트(`vcpkg-port/`)는 남의 코드다.
 SKIP_PARTS = {"vcpkg-port", "build", ".git", "graphify-out", "__pycache__", "node_modules"}
 CMAKE_SCOPE = "cmake"
-BANNED_NAMES_PATH = "Config/Rules/Lint/NamingWordsBannedNames.json"
+BANNED_NAMES_PATH = get_table_path("naming-words", "BannedNames")
 MIN_LENGTH = 6
 WORD_SPLIT = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+")
 

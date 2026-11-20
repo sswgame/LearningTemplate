@@ -11,9 +11,11 @@ import json
 import re
 from typing import Callable, Mapping
 
+from lint.rule_tables import get_table_path
+
 KEEP_OLD_NAME_MARKER = "keep-old-name"
-BANNED_NAMES_PATH = "Config/Rules/Lint/NamingWordsBannedNames.json"     # 이름 이력 — `_bannedNames` 의 키가 옛 이름이다
-NAMING_BASELINE_PATH = "Config/Rules/Lint/NamingBaseline.json"   # 남은 위반 이름 — `--lower-baseline` 만 줄인다(새 이름이 또 위반이면 린트가 지게)
+BANNED_NAMES_PATH = get_table_path("naming-words", "BannedNames")     # 이름 이력 — `_bannedNames` 의 키가 옛 이름이다
+NAMING_BASELINE_PATH = get_table_path("naming-words", "Baseline")   # 남은 위반 이름 — `--lower-baseline` 만 줄인다(새 이름이 또 위반이면 린트가 지게)
 RENAME_PAIRS_FOLDER = "Config/Rules/Renames/"   # 병합 뒤 다시 돌릴 쌍 표(`rename_identifier.py --reapply`) — 옛 이름이 열쇠다
 
 

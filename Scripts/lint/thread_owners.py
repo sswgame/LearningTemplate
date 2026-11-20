@@ -32,8 +32,9 @@ from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.lint_scope import LintScope, make_whole_scope, read_texts  # noqa: E402
 from lint.cpp_shape import strip_code  # noqa: E402
+from lint.rule_tables import get_table_path  # noqa: E402
 
-CONFIG_PATH = "Config/Rules/Lint/ThreadOwners.json"
+CONFIG_PATH = get_table_path("thread-owners")
 THREAD_SHAPE = re.compile(r"\bstd::thread\b(?!\s*::)|\bstd::jthread\b|\bstd::async\s*\(|\bCreateThread\s*\(|\b_beginthreadex\s*\(|\bpthread_create\s*\(")
 PREFILTER = ("std::thread", "std::jthread", "std::async", "CreateThread", "_beginthreadex", "pthread_create")
 

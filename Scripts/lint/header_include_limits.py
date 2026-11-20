@@ -26,8 +26,9 @@ from common.paths import get_project_root  # noqa: E402
 from dev.header_fanin import SUFFIXES, find_includes, measure_non_pch, resolve_edges  # noqa: E402
 from lint.index_cache import open_facts  # noqa: E402
 from lint.lint_scope import LintScope, list_repo_files, make_whole_scope  # noqa: E402
+from lint.rule_tables import get_table_path  # noqa: E402
 
-CONFIG_PATH = "Config/Rules/Lint/HeaderIncludeLimits.json"
+CONFIG_PATH = get_table_path("header-include-limits")
 _HEADER_SUFFIXES = (".h", ".hpp", ".inl", ".xxx")
 
 

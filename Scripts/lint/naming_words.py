@@ -27,7 +27,7 @@ Scripts/lint/naming_words.py
   (Source · Test · ThirdParty 감싸기 · 뿌리 CMakeLists, vcpkg 포트 제외)의 정의도 본다. 전수 집계는 `py -3 -m Scripts naming-census`.
 - 이름 하나씩의 예외는 `_keep`, 전수 개명한 옛 이름은 이름 이력 표(`Config/Rules/Lint/NamingWordsBannedNames.json` 의 `_bannedNames`, C++ 는 주석 · 문자열 밖 코드, 스크립트는 선언 · 파일 · CLI 명령 이름을 본다).
 
-verb · term · predicate · lookup · word 는 기준선(`Config/Rules/Lint/NamingBaseline.json`)을 둔다 — 지금 있는 이름만 적혀 있고 **줄기만 한다**:
+verb · term · predicate · lookup · word 는 기준선(`Config/Rules/Lint/NamingWordsBaseline.json`)을 둔다 — 지금 있는 이름만 적혀 있고 **줄기만 한다**:
 새 위반은 실패, 고쳐 사라진 이름이 기준선에 남아도 실패(`--lower-baseline` 으로 뺀다). 영역별 이전이 기준선을 0 으로 줄인다.
 
 `py -3 -m Scripts lint naming-words [--self-check | --write-baseline | --lower-baseline]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
@@ -48,10 +48,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.lint_scope import LintScope, is_under, make_whole_scope, read_texts  # noqa: E402
+from lint.rule_tables import get_table_path  # noqa: E402
 
-CONFIG_PATH = "Config/Rules/Lint/NamingWords.json"
-BASELINE_PATH = "Config/Rules/Lint/NamingBaseline.json"
-BANNED_NAMES_PATH = "Config/Rules/Lint/NamingWordsBannedNames.json"   # 옛 이름 → 새 이름 이력 — 낱말 표와 달리 개명 도구가 줄을 더한다(언리얼 CoreRedirects 자리)
+CONFIG_PATH = get_table_path("naming-words")
+BASELINE_PATH = get_table_path("naming-words", "Baseline")
+BANNED_NAMES_PATH = get_table_path("naming-words", "BannedNames")   # 옛 이름 → 새 이름 이력 — 낱말 표와 달리 개명 도구가 줄을 더한다(언리얼 CoreRedirects 자리)
 RATCHET_RULES = ("verb", "term", "predicate", "lookup", "word", "kind")
 EXTENSIONS = (".h", ".cpp", ".inl")
 COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)

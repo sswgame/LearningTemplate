@@ -41,7 +41,7 @@ Scripts/lint/common_shapes.py
    글자 → FNV → 샤드 뮤텍스를 지난다 — 함수 안 `static const hashed_string` 이나 데이터 칸으로 옮긴다(`.cpp` 만 본다). 예외 열쇠는 `경로|함수`.
    형식으로 못 막는 까닭: 리터럴 암시적 생성은 정상 코드이고, 자리마다 한 번 만드는 형식(C++20 고정 문자열 템플릿 인자)은 표준이 C++17 이라 미뤘다(2026-11-12).
 
-예외는 `Config/Rules/Lint/CommonShapeExceptions.json` 에 까닭과 함께 적는다. 낡은 예외(더는 없는 자리)도 위반이다.
+예외는 `Config/Rules/Lint/CommonShapes.json` 에 까닭과 함께 적는다. 낡은 예외(더는 없는 자리)도 위반이다.
 `py -3 -m Scripts lint common-shapes [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
 """
 
@@ -61,8 +61,9 @@ from common.paths import get_project_root  # noqa: E402
 from lint.cpp_shape import is_target, strip_code  # noqa: E402
 from lint.function_spans import find_closing_brace, find_function_spans, run_self_check as run_function_spans_self_check  # noqa: E402
 from lint.lint_scope import LintScope, make_whole_scope, read_texts  # noqa: E402
+from lint.rule_tables import get_table_path  # noqa: E402
 
-CONFIG_PATH = "Config/Rules/Lint/CommonShapeExceptions.json"
+CONFIG_PATH = get_table_path("common-shapes")
 EXTENSIONS = (".h", ".cpp", ".inl")
 SKIP_PARTS = ("ThirdParty", "Tests")
 COMMENT_PATTERN = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)

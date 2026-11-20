@@ -8,7 +8,7 @@ Scripts/lint/magic_literals.py
 방향 · 이름 붙은 표지)를 이름과 문맥으로 첫 분류한다. 정본 규칙은 `docs/agents/Constants.md`, 판단은 `docs/DesignBacklog.md` "데이터 기반 값 · 매직 리터럴".
 
 **왜 래칫인가.** 리터럴 하나가 매직인지는 형식이 가르지 못한다(`0.5f` 는 절반이고 `0.35f` 는 튜닝이다). 그래서 모든 줄을 막지 않고, **일반 코드**
-(`code` 장소)에서 흔한 수학 값이 아닌 리터럴의 **파일마다 종류별 수**를 기준선(`Config/Rules/Lint/MagicLiteralBaseline.json`)에 두고:
+(`code` 장소)에서 흔한 수학 값이 아닌 리터럴의 **파일마다 종류별 수**를 기준선(`Config/Rules/Lint/MagicLiteralsBaseline.json`)에 두고:
 - 수가 기준선보다 **늘면** 커밋이 멈춘다 — 새 값에 이름을 붙이거나(`XxxInternal::k…`) 데이터(PROPERTY · 카탈로그)로 옮긴다.
 - 수가 **줄면** 기준선도 같이 낮춰야 커밋이 선다(`--ratchet` 이 낮추기만 한다) — 옮긴 자리에 다시 리터럴이 들어오지 못한다.
 - 기준선을 **올리는** 길은 `--accept <파일…>` 하나다(통합에서 합친 브랜치가 규칙 전 코드를 가져올 때). diff 에 그대로 보인다.
@@ -45,9 +45,10 @@ from lint.cpp_shape import strip_code  # noqa: E402
 from lint.format import get_modified_cpp_files  # noqa: E402
 from lint.lint_scope import LintScope, read_text  # noqa: E402
 from lint.parallel import flat_map_in_processes  # noqa: E402
+from lint.rule_tables import get_table_path  # noqa: E402
 
 
-BASELINE_PATH = "Config/Rules/Lint/MagicLiteralBaseline.json"
+BASELINE_PATH = get_table_path("magic-literals", "Baseline")
 SOURCE_EXTENSIONS = (".h", ".cpp", ".inl")
 KINDS = ("minus-one", "float", "integer", "hex")
 

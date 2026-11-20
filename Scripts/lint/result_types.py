@@ -13,8 +13,8 @@ Scripts/lint/result_types.py
   `return false` · `nullptr` · `nullopt` · `unexpected` 이고 그 인자를 다른 함수에 넘기지 않는 정의만 센다(넘기면 성공 쪽 쓰기를 볼 수 없어 세지 않는다).
 
 **왜 래칫인가.** 형식(`sw::expected`)은 새 함수가 옛 모양을 쓰지 못하게 막지 못한다 — `std::optional` 도 `string&` 도 언어가 준다. 그래서:
-- `Source/Core/` 는 **0** 이어야 한다(옮김이 끝났다). 예외는 기준선 파일의 `_coreExemptions`(`경로` → `종류` → 까닭)에만 둔다.
-- 그 밖은 파일마다 종류별 수를 기준선(`Config/Rules/Lint/ResultTypeBaseline.json`)에 두고, **늘면** 커밋이 멈추고 **줄면** `--ratchet` 으로 함께 낮춘다
+- `Source/Core/` 는 **0** 이어야 한다(옮김이 끝났다). 예외는 `Config/Rules/Lint/ResultTypes.json` 의 `_coreExemptions`(`경로` → `종류` → 까닭)에만 둔다.
+- 그 밖은 파일마다 종류별 수를 기준선(`Config/Rules/Lint/ResultTypesBaseline.json`)에 두고, **늘면** 커밋이 멈추고 **줄면** `--ratchet` 으로 함께 낮춘다
   (`magic_literals.py` 와 같은 모양). 올리는 길은 `--accept <파일…>` 하나(통합에서 규칙 전 코드를 합칠 때).
 
     py -3 -m Scripts lint result-types                    # 폴더별 남은 수
@@ -41,9 +41,11 @@ from lint.cpp_shape import find_param_list_end, BODY_OPEN, match_brace, strip_co
 from lint.format import get_modified_cpp_files  # noqa: E402
 from lint.lint_scope import LintScope, read_text  # noqa: E402
 from lint.magic_literals import is_source_file, list_source_files, read_staged_renames  # noqa: E402
+from lint.rule_tables import get_table_path  # noqa: E402
 
 
-BASELINE_PATH = "Config/Rules/Lint/ResultTypeBaseline.json"
+BASELINE_PATH = get_table_path("result-types", "Baseline")
+CONFIG_PATH = get_table_path("result-types")
 KINDS = ("std-optional", "out-error", "out-error-pointer", "out-text-on-failure")
 PATTERN = {
     "std-optional": re.compile(r"\bstd\s*::\s*(?:optional\b|nullopt\b|nullopt_t\b)"),
@@ -54,7 +56,7 @@ PATTERN = {
 OUT_TEXT_PARAM = re.compile(r"\b(?:sw\s*::\s*)?string\s*&\s*(out\w+)\s*(?=[,)])")
 REASON_NAME = re.compile(r"Error|Reason|Message")
 FAILURE_RETURN = re.compile(r"\s*return\s+(?:false\b|nullptr\b|(?:std\s*::\s*|sw\s*::\s*)?nullopt\b|(?:sw\s*::\s*)?unexpected\b)")
-# 0 이어야 하는 폴더(옮김이 끝난 곳). 그 안의 예외는 기준선 파일의 `_coreExemptions` 데이터다.
+# 0 이어야 하는 폴더(옮김이 끝난 곳). 그 안의 예외는 `ResultTypes.json` 의 `_coreExemptions` 데이터다.
 STRICT_PREFIX = "Source/Core/"
 ADVICE = {
     "std-optional": "`sw::optional<T>`(없음이 정상) 이나 `sw::expected<T, E>`(이유가 둘 이상)로 — docs/agents/Errors.md",
@@ -116,18 +118,15 @@ def read_baseline(project_root: Path) -> dict[str, dict[str, int]]:
 
 def read_core_exemptions(project_root: Path) -> dict[str, dict[str, str]]:
     """Core 0 규칙의 예외 `경로` → `종류` → 까닭입니다. 칸이 없으면 오류로 멈춘다."""
-    return json.loads((project_root / BASELINE_PATH).read_text(encoding="utf-8"))["_coreExemptions"]
+    return json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))["_coreExemptions"]
 
 
 def write_baseline(project_root: Path, baseline: dict[str, dict[str, int]]) -> None:
     comment = ("결과 형식 래칫 기준선(Scripts/lint/result_types.py). Core 밖 파일마다 std::optional · string& outError · string* pOutError · 실패 때만 쓰는 글 출력 인자의 수 — "
                "늘면 커밋이 멈추고, 줄면 `py -3 -m Scripts lint result-types --ratchet` 로 낮춘다. 손으로 올리지 않는다(올리는 길은 --accept 하나, docs/agents/Errors.md). "
-               "_coreExemptions 는 Core 0 규칙의 예외(경로 → 종류 → 까닭)다.")
-    exemptions = read_core_exemptions(project_root)
-    list_exemption = [f"    {json.dumps(path)}: {json.dumps(exemptions[path], ensure_ascii=False)}" for path in sorted(exemptions)]
+               "Core 0 규칙의 예외는 ResultTypes.json 이다.")
     list_line = [f"    {json.dumps(path)}: {json.dumps(baseline[path])}" for path in sorted(baseline) if baseline[path]]
     text = (f"{{\n  \"_comment\": {json.dumps(comment, ensure_ascii=False)},\n"
-            "  \"_coreExemptions\": {\n" + ",\n".join(list_exemption) + "\n  },\n"
             "  \"_files\": {\n" + ",\n".join(list_line) + "\n  }\n}\n")
     (project_root / BASELINE_PATH).write_text(text, encoding="utf-8", newline="\n")
 

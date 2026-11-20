@@ -42,8 +42,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.lint_scope import LintScope, make_whole_scope, read_texts  # noqa: E402
+from lint.rule_tables import get_table_path  # noqa: E402
 
-CONFIG_PATH = "Config/Rules/Lint/PlatformChains.json"
+CONFIG_PATH = get_table_path("platform-chains")
 EXTENSIONS = (".h", ".cpp", ".inl")
 DIRECTIVE = re.compile(r"^\s*#\s*(if|ifdef|ifndef|elif|else|endif)\b(.*)$")
 PLATFORM_ONLY = re.compile(r"^!?defined\( SW_PLATFORM_\w+ \)(?: \|\| !?defined\( SW_PLATFORM_\w+ \))*$")
