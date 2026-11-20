@@ -1186,6 +1186,13 @@ namespace sw
         return nullptr;
     }
 
+    optional<uint32> SerializerUtil::findPropertyIndexByNameHash( PropertyListView listProp, const uint32 nameHash, const uint32 expectedIndex )
+    {
+        if ( expectedIndex < listProp.size() && listProp[expectedIndex].getNameHash() == nameHash )
+            return expectedIndex;
+        return findPropertyIndexByNameHash( listProp, nameHash );
+    }
+
     optional<uint32> SerializerUtil::findPropertyIndexByNameHash( PropertyListView listProp, uint32 nameHash )
     {
         for ( size_t propIndex = 0; propIndex < listProp.size(); ++propIndex )

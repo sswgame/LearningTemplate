@@ -558,3 +558,18 @@ SW_TEST_CASE( SerializerUtilTest, NameValueTypeByCanonicalName )
     SW_EXPECT_FALSE( SerializerUtil::isNameValueType( hashed_string( "string" ) ) );
     SW_EXPECT_FALSE( SerializerUtil::isNameValueType( hashed_string( "int32" ) ) );
 }
+
+/** @brief [SerializerUtilTest] 태그 찾기는 기대 자리(직전 + 1)를 먼저 보고, 맞지 않으면 훑어 같은 답을 낸다 — 기대 자리가 범위 밖이어도 된다 */
+SW_TEST_CASE( SerializerUtilTest, NameHashLookupTriesExpectedIndexFirst )
+{
+    const vector<PropertyInfo>& listProp  = getSampleType()._listProperty;
+    const uint32                countHash = hashed_string( "_count" ).getHash();
+    const optional<uint32>      scanned   = SerializerUtil::findPropertyIndexByNameHash( listProp, countHash );
+    SW_REQUIRE_TRUE( scanned.has_value() );
+    // 기대 자리가 맞을 때, 다른 자리일 때, 범위 밖일 때 모두 훑기와 같은 답이다.
+    SW_EXPECT_TRUE( SerializerUtil::findPropertyIndexByNameHash( listProp, countHash, *scanned ) == scanned );
+    SW_EXPECT_TRUE( SerializerUtil::findPropertyIndexByNameHash( listProp, countHash, *scanned + 1 ) == scanned );
+    SW_EXPECT_TRUE( SerializerUtil::findPropertyIndexByNameHash( listProp, countHash, static_cast<uint32>( listProp.size() ) + 3 ) == scanned );
+    const uint32 unknownHash = static_cast<uint32>( hashed_string::computeHash( string_view{ "_notAField" } ) );
+    SW_EXPECT_FALSE( SerializerUtil::findPropertyIndexByNameHash( listProp, unknownHash, 0 ).has_value() );
+}

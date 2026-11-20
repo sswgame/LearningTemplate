@@ -330,6 +330,12 @@ namespace sw
          *          지금 이름이 늘 옛 이름보다 먼저입니다. 바이너리 태그 스트림과 오브젝트 diff 가 함께 씁니다.
          */
         [[nodiscard]] static optional<uint32> findPropertyIndexByNameHash( PropertyListView listProp, uint32 nameHash );
+        /**
+         * @brief 위와 같되 @p expectedIndex(직전에 맞은 자리 + 1)를 먼저 봅니다 — 태그는 쓴 순서(= 선언 순서)로 오므로 보통 한 번 비교로 끝나고, 놓칠 때만 훑는다.
+         * @details 훑기 두 번(지금 이름 · 옛 이름)이 필드마다라 형식 하나 읽기가 최악 n² 비교였다(언리얼 태그 프로퍼티 로드 · protobuf 생성 파서의 다음 필드 예측과 같은 자리).
+         *          기대 자리는 지금 이름만 견준다 — 옛 이름은 지금 이름을 모두 본 뒤에만 보는 규칙이 그대로다.
+         */
+        [[nodiscard]] static optional<uint32> findPropertyIndexByNameHash( PropertyListView listProp, uint32 nameHash, uint32 expectedIndex );
 
         /**
          * @brief 이 문맥의 저장 목적에서 이 타입의 프로퍼티를 쓰고 읽는지 판정합니다. 세 형식(XML · JSON · 바이너리)과 diff 가 모두 이 함수를 지납니다.
