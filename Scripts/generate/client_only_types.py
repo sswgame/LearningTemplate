@@ -41,7 +41,7 @@ def is_client_only_source(relative_path: str, list_excluded_folder: list[str]) -
 
 
 def collect_type_names(project_root: Path) -> list[str]:
-    """클라이언트 전용 헤더의 리플렉션 형식 이름 — 내용이 바뀐 헤더만 다시 읽는다(`lint/index_cache.py`, 못 읽는 글은 include-order 가 막는다)."""
+    """클라이언트 전용 헤더의 리플렉션 형식 이름 — 내용이 바뀐 헤더만 다시 읽는다(`lint/index_cache.py`)."""
     list_excluded_folder = read_server_excluded_folders(project_root)
     list_path = [path for path in list_repo_files(project_root)
                 if path.startswith("Source/") and path.endswith(".h") and "/Tests/" not in path and is_client_only_source(path, list_excluded_folder)]

@@ -7,15 +7,15 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 
 #if defined( SW_PLATFORM_LINUX )
-    #include "Core/Foundation/X11Headers.h"
     #include "Core/Concurrency/atomic.h"
+    #include "Core/Foundation/X11Headers.h"
 
     #include "Engine/Input/Devices/GamepadDevice.h"
     #include "Engine/Input/Devices/KeyboardDevice.h"
     #include "Engine/Input/Devices/MouseDevice.h"
-    #include "Engine/Input/RawInputEvent.h"
-    #include "Engine/Input/Map/InputKeyTable.h"
     #include "Engine/Input/Linux/LinuxGamepadDevice.h"
+    #include "Engine/Input/Map/InputKeyTable.h"
+    #include "Engine/Input/RawInputEvent.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
     #include "Engine/Window/NativeWindowEvent.h"

@@ -8,9 +8,9 @@
 
 - Headers prefer forward declarations. Include only when a forward declaration is impossible; never include ThirdParty headers from a project header.
 - Class declaration order: public member variables; constructors/destructor; `initialize`/`shutdown`; `process`; getters/setters; private functions in a separate access section; private member variables last.
-- In `.cpp`: `"pch.h"` first, a blank line, then the matching header. Then project headers grouped by relative source scope, separated by blank lines. System, OS-specific, project-global and ThirdParty headers use angle brackets, each in its own group.
+- In `.cpp`: `"pch.h"` first, a blank line, then the matching header. Then project headers grouped by their first folder (`Core/`, `Engine/` …), separated by blank lines. System, OS-specific and ThirdParty headers use angle brackets in the last group. clang-format enforces this order (`.clang-format` `IncludeCategories`; `py -3 -m Scripts format`).
 - **Every project include is a full path from a root**: `Source/` (`Engine/Scene/SceneManager.h`), `Content/`, the generated folder, or `Tools/` for that tree; or a bare name in the same folder (`Foo.h`). No folder under `Source/` is on an include path, so `Scene/SceneManager.h` does not compile.
-- Sort includes within a group where that does not break a required order.
+- Includes are sorted within a group. A header other headers depend on goes first through a `SortPriority` category in `.clang-format` (`Windows.h`, `WinSock2.h`, `imgui.h`, `Jolt/Jolt.h` …), not through hand order.
 - Prefer `Core/Foundation/StdHeaders.h` and `Core/Foundation/PlatformOSHeaders.h` over scattered system/OS includes. Heavy standard headers few files use (streams, `<random>`, `<regex>`, `<future>`, `<variant>`, `<condition_variable>`, `<csignal>`, `<queue>`, `<stack>`, `<bitset>`) are included directly by the file that uses them (declare stream operators with `<iosfwd>`).
 - Platform-specific includes go in **one** `#if SW_PLATFORM_WINDOWS / #elif ... / #endif` chain after the unconditional includes; inside a branch, project headers, a blank line, then system headers.
 - Use the type aliases from `Types.h`. Prefer Core and Engine facilities over STL or system calls ([ExistingFacilities](ExistingFacilities.md)).

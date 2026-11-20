@@ -15,12 +15,12 @@
 #include "Core/Network/Transport/StreamSendQueue.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include <cstring>
-#include <mutex>
-#include <thread>
 #include <WinSock2.h>
 #include <MSWSock.h>
 #include <WS2tcpip.h>
+#include <cstring>
+#include <mutex>
+#include <thread>
 
 namespace sw
 {

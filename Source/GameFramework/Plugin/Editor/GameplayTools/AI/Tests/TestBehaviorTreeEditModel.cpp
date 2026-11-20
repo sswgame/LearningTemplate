@@ -6,9 +6,10 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
+
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
-#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreeEditModel.h"
 
 using namespace sw;

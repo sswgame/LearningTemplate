@@ -3,11 +3,11 @@
 """
 Scripts/lint/format.py
 
-C++ · 셰이더 소스를 고친다 — 고치는 명령은 `format` 하나다: C++ 는 include 순서 · 중복(규칙은 `include_order.py`)을 고친 뒤 clang-format, 셰이더는
-clang-format. 린트(include-order · format)의 안내도 이 명령을 가리킨다(`include_order.FIX_COMMAND`) — 안내 명령과 고치는 명령이 갈리지 않는다.
+C++ · 셰이더 소스를 고친다 — 고치는 명령은 `format` 하나다: clang-format(include 순서 · 묶음도 `.clang-format` 의 IncludeCategories 가 정한다).
+린트의 format 안내도 이 명령을 가리킨다.
 대상 고르기(`--files` > `--all` > git 변경분 > 전체)와 clang-format 일괄 실행(`run_clang_format_batch`, 커밋 훅도 부른다)이 한 자리다.
 
-  py -3 -m Scripts format [--files ...|--all]            include 순서 + clang-format 적용(C++ 와 셰이더)
+  py -3 -m Scripts format [--files ...|--all] [--check]  clang-format 적용(C++ 와 셰이더), --check 는 고치지 않고 다른 파일만 알린다
 
 파일을 고쳐 쓰되 줄 끝 · BOM 은 건드리지 않는다.
 """
@@ -30,10 +30,8 @@ from common.git import list_git_files  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from common.project_constants import CPP_ALL_EXTENSIONS, NOT_OUR_DIR_NAMES, SHADER_SOURCE_EXTENSIONS  # noqa: E402
 from common.run_process import run_process  # noqa: E402
-from lint.include_order import fix_text  # noqa: E402
-from lint.parallel import flat_map_concurrent, run_until_non_zero  # noqa: E402
+from lint.parallel import run_until_non_zero  # noqa: E402
 
-INCLUDE_TAG = "FormatIncludeOrder"
 CLANG_FORMAT_TAG = "FormatClangFormat"
 
 
@@ -190,49 +188,15 @@ def _select_file_kind_targets(args: argparse.Namespace, repository_root: Path, t
     return list_all
 
 
-# --- include 순서 -----------------------------------------------------------------
-
-class FormatIncludeOrderFixer:
-    """include 순서 픽서 — 파일 하나를 읽어 `fix_text` 로 고친다."""
-
-    def process_file(self, file_path: Path, check_only: bool = False) -> list[str]:
-        try:
-            relative_path = file_path.resolve().relative_to(get_project_root().resolve()).as_posix()
-        except ValueError:
-            relative_path = file_path.as_posix()
-        try:
-            with file_path.open("r", encoding="utf-8", errors="strict", newline="") as file:
-                content = file.read()
-        except UnicodeDecodeError as error:
-            # 고쳐 쓰면 UTF-8 이 아닌 바이트가 사라진다 — 읽지 못한 파일은 손대지 않고 알린다.
-            return [f"[{INCLUDE_TAG}] {file_path}: UTF-8 이 아니라 건너뜁니다({error.reason}, 바이트 {error.start}) — 파일을 UTF-8 로 저장하십시오"]
-        except OSError as error:
-            return [f"[{INCLUDE_TAG}] {file_path} 읽기 실패: {error}"]
-
-        formatted, changed = fix_text(content, relative_path)
-        if not changed:
-            return []
-        if check_only:
-            return [f"[{INCLUDE_TAG}] {file_path}: include 순서 · 중복이 규칙과 다르다"]
-        try:
-            with file_path.open("w", encoding="utf-8", newline="") as file:
-                file.write(formatted)
-        except OSError as error:
-            return [f"[{INCLUDE_TAG}] {file_path} 쓰기 실패: {error}"]
-        return [f"[{INCLUDE_TAG}] {file_path}: include 순서를 고쳤다"]
-
-    def process_files(self, files: Sequence[Path], check_only: bool = False, max_workers: int | None = None) -> list[str]:
-        return flat_map_concurrent(lambda path: self.process_file(path, check_only), list(files), worker_count=max_workers)
-
-
 # --- clang-format -----------------------------------------------------------------
 
 SHADER_FILE_KIND = FixerFileKind(suffixes=tuple(sorted(SHADER_SOURCE_EXTENSIONS)))
 
 
 def main_format(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="C++ 는 include 순서 · 중복을 고친 뒤 clang-format, 셰이더는 clang-format 을 적용합니다.")
+    parser = argparse.ArgumentParser(description="C++ 와 셰이더에 clang-format 을 적용합니다(include 순서 포함).")
     add_file_arguments(parser)
+    parser.add_argument("--check", action="store_true", help="고치지 않고 다른 파일만 알린다(clang-format --dry-run --Werror)")
     args = parser.parse_args(argv)
 
     root = get_project_root()
@@ -244,7 +208,5 @@ def main_format(argv: Sequence[str] | None = None) -> int:
         sys.stderr.write(f"[{CLANG_FORMAT_TAG}] 포맷팅 대상 C++ · 셰이더 파일이 없습니다.\n")
         return ExitCode.PASSED
 
-    for message in FormatIncludeOrderFixer().process_files(list_cpp):   # include 를 먼저 — 줄을 옮긴 뒤 clang-format 이 정렬한다
-        print(message)
-    print(f"[{CLANG_FORMAT_TAG}] {len(file_list)}개 파일(셰이더 {len(list_shader)}개)에 대해 clang-format 적용 중...", file=sys.stderr)
-    return run_clang_format_batch(file_list, check_only=False, cwd=root)
+    print(f"[{CLANG_FORMAT_TAG}] {len(file_list)}개 파일(셰이더 {len(list_shader)}개)에 대해 clang-format {'검사' if args.check else '적용'} 중...", file=sys.stderr)
+    return run_clang_format_batch(file_list, check_only=args.check, cwd=root)

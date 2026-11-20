@@ -15,11 +15,10 @@
 
     #include <X11/XKBlib.h>
     #include <X11/cursorfont.h>
+    #include <cstring>
     #include <poll.h>
 
     #include "Core/Foundation/X11MacroUndef.h"
-
-    #include <cstring>
 
 namespace sw
 {

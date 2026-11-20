@@ -19,8 +19,8 @@
     #include "Engine/UI/UISystem.h"
     #include "Engine/Window/IWindow.h"
 
-    #include <dbus/dbus.h>
     #include <X11/Xlib.h>
+    #include <dbus/dbus.h>
 
     #include "Core/Foundation/X11MacroUndef.h"
 

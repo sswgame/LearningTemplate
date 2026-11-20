@@ -65,8 +65,6 @@ class Rule:
 
 
 RULES: tuple[Rule, ...] = (
-    # --- 형식(고치는 것은 `format` 하나 — include 순서 + clang-format) -------------------------------------------------------------------------
-    Rule("include-order", "형식", "include 순서 · 묶음", "include 줄의 순서는 컴파일러가 보지 않는다", "lint.include_order:check_include_order_scope"),
     # --- 경계(빌드 게이트가 닿지 않는 자리) ------------------------------------------------------------------------------------
     Rule("layer-includes", "경계", "아래 층 파일이 위 층 헤더를 include(Core · Engine · GameFramework · Editor 층 표)", "빌드의 #error 껍데기가 막지만 그 부분을 컴파일할 때(Debug 빌드)에야 드러나고, 아무도 include 하지 않는 헤더는 보지 않는다 — 같은 표로 커밋 때 먼저 본다", "lint.layer_includes:check_layer_includes", inputs=LAYER_TABLES),
     Rule("layer-cycles", "경계", "같은 엔진 층의 폴더끼리 서로 include(층 안 순환)", "같은 층은 한 부분이라 #error 껍데기가 없다 — 폴더마다 부분을 나누면 층 번호가 폴더 순서를 흉내 낼 뿐이다", "lint.layer_cycles:check_layer_cycles", exceptions="Config/Rules/Layers/EngineLayers.toml [sameTierCycle]", inputs=LAYER_TABLES),

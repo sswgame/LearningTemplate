@@ -14,12 +14,12 @@
 #include "Engine/Physics/Jolt/JoltUtil.h"
 #include "Engine/Physics/PhysicsSettings.h"
 
-#include <atomic>
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/IssueReporting.h>
 #include <Jolt/Core/Memory.h>
 #include <Jolt/RegisterTypes.h>
+#include <atomic>
 
 namespace sw
 {

@@ -1,12 +1,11 @@
 #include "pch.h"
 
 #if defined( SW_TEXT_COMPLEX_SHAPING )
-    #include "Engine/Text/HarfBuzz/ComplexTextShaper.h"
-
-    #include "Core/String/StringUtil.h"
     #include "Core/Container/unordered_map.h"
     #include "Core/Log/Logger.h"
+    #include "Core/String/StringUtil.h"
 
+    #include "Engine/Text/HarfBuzz/ComplexTextShaper.h"
     #include "Engine/Text/IFontRasterizer.h"
 
     #include <hb.h>

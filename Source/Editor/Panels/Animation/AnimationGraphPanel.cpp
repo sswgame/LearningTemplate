@@ -26,8 +26,8 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
 
-#include <algorithm>
 #include <imgui.h>
+#include <algorithm>
 #include <imgui-node-editor/imgui_node_editor.h>
 
 namespace ed = ax::NodeEditor;

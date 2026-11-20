@@ -8,25 +8,25 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Facial/LiveLinkFace.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
-#include "Engine/Visual/MeshLODSettings.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/TileMap/TileMapXML.h"
+#include "Engine/Visual/MeshLODSettings.h"
 
 using namespace sw;
 using sw::test::ScopedScratchDomain;

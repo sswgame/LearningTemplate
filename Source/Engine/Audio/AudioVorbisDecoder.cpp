@@ -58,9 +58,9 @@
 #undef temp_block_array
 #undef temp_free
 
-#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 #include "Engine/Audio/AudioDownmix.h"
 #include "Engine/Audio/AudioStream.h"

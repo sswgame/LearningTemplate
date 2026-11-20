@@ -10,7 +10,7 @@ move-source: 경로는 `Source/` 기준(폴더면 안의 파일 전부, 하위 �
   2. 추적 중인 텍스트 파일(Source · Tools · cmake · Scripts · docs · 스킬 · 최상위 CMake)에서 옮긴 파일의 전체 경로(`Engine/X/Y.h`)와
      폴더 접두어(`Engine/X/` — CMake 정규식 · 주석)를 새 경로로
   3. 같은 폴더 짧은 include(`#include "Y.h"`)가 옮긴 뒤 다른 폴더를 가리키게 되면 전체 경로로
-  4. 고친 C++ 파일의 include 순서를 include-order 규칙으로(`format` 의 첫 단계와 같은 픽서)
+  4. 고친 C++ 파일을 clang-format 으로(include 순서 · 묶음 · 정렬 칸)
 rename-symbol: 낱말 경계로 바꾼다(부분 일치 없음, 코드 · 문서 .md · 데이터 Content · 설정 Config — 린트 예외 표 포함, 금지 이름 표의 키와 이름 기준선은 지킨다). 옛 이름을 일부러 적은 줄은 `keep-old-name` 표지로 남는다. 새 이름이 이미 쓰이고 있으면 겹친 파일을 알리고 멈춘다(`--force` 로 강행). 리플렉션 프로퍼티(`PROPERTY` 가 붙은 `_` 멤버)는 데이터의 직렬화 이름(`_bFooBar` → `fooBar`)도 함께 바꾸고, 그 이름을 다른 멤버도 쓰면 멈춘다.
   C 계열 소스(C++ · HLSL)의 문자열 리터럴 안은 기본으로 건너뛰고 그 파일을 알린다(`--include-strings` 로 함께 바꾼다).
 """
@@ -327,10 +327,9 @@ def main_move(argv: list[str]) -> int:
                 changed_cpp_set.add(path)
     list_changed_cpp = sorted(changed_cpp_set)
 
-    from lint.format import FormatIncludeOrderFixer, run_clang_format_batch
+    from lint.format import run_clang_format_batch
 
-    FormatIncludeOrderFixer().process_files(list_changed_cpp, check_only=False)
-    run_clang_format_batch(list_changed_cpp, cwd=root)  # 경로 길이가 바뀌면 정렬 칸이 어긋난다
+    run_clang_format_batch(list_changed_cpp, cwd=root)  # 경로가 바뀌면 include 순서와 정렬 칸이 어긋난다
     print(f"[move-source] {len(map_file)} 파일을 옮기고 C++ {len(list_changed_cpp)} 파일의 참조 · include 순서를 고쳤다")
     return ExitCode.PASSED
 
