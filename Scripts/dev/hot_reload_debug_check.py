@@ -16,7 +16,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import app_arguments  # noqa: E402
 from common.paths import get_bin_dir, get_build_dir  # noqa: E402
-from common.run_process import run_process  # noqa: E402
+from common.run_process import run_cmake, run_process  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PROBE_H = REPO / 'Source/Games/Playground/HotReloadTestComponent.h'
@@ -83,7 +83,7 @@ def main():
     build = ['cmake', '--build', '--preset', options.preset, '--target', 'SWGame_Playground']
     originals = {path: path.read_bytes() for path in (PROBE_H, PROBE_CPP)}
     # 리로드 전 모듈이 지금 소스와 같아야 한다(확인 컴포넌트가 없는 옛 SWGame 으로 띄우면 씬이 읽히지 않는다).
-    if subprocess.run(build, cwd=REPO).returncode != 0:
+    if run_cmake(build[1:], cwd=REPO, capture=False).return_code != 0:
         sys.exit('SWGame 을 짓지 못했다')
     config = {
         'app': str(bin_dir / 'App.exe'), 'bin': str(bin_dir), 'repo': str(REPO), 'function': FUNCTION,
@@ -98,7 +98,7 @@ def main():
     finally:
         for path, data in originals.items():
             path.write_bytes(data)
-        restore = subprocess.run(build, cwd=REPO).returncode
+        restore = run_cmake(build[1:], cwd=REPO, capture=False).return_code
     line = next((l for l in run.stdout.splitlines() if l.startswith('HOTRELOAD_RESULT ')), None)
     if line is None:
         print(run.stdout[-4000:], run.stderr[-4000:])

@@ -28,7 +28,7 @@ from typing import Callable, Sequence
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import app_arguments  # noqa: E402
 from common.paths import get_bin_dir, get_build_dir  # noqa: E402
-from common.run_process import run_process  # noqa: E402
+from common.run_process import run_cmake  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 
@@ -40,7 +40,7 @@ def build_preset_or_exit(preset: str) -> None:
     고치기 전 결함을 다시 찾는다(preflight.sh --from 과 같은 틈). 지면 멈춘다 — 반쯤 지은 바이너리로 돌리지 않는다.
     """
     print(f'{preset} 증분 빌드', flush=True)
-    result = run_process(['cmake', '--build', '--preset', preset], cwd=REPO)
+    result = run_cmake(['--build', '--preset', preset], cwd=REPO)
     if not result.succeeded:
         sys.exit('\n'.join([line for line in result.stdout.splitlines() if 'error' in line or 'FAILED' in line][:30] + [f'{preset} 빌드 실패 — 고친 뒤 다시 돌린다']))
 

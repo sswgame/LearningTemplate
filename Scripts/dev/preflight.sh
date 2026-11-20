@@ -71,6 +71,11 @@ if [ $SELF_CHECK -eq 1 ]; then
   self_check
   exit $?
 fi
+# 빌드 · 구성 · ctest 는 메인 작업 폴더 하나에서만(공용 vcpkg · 디스크, 사용자 지시 2026-11-12) — 연결된 워크트리는 .git 이 파일이다. --dry-run 은 명령만 찍어 워크트리에서도 된다.
+if [ -f .git ] && [ $DRY -eq 0 ]; then
+  echo "워크트리($(pwd))에서 묶음 검증을 시작하지 않는다 — 메인 작업 폴더에서 돌린다(--dry-run 은 된다)"
+  exit 2
+fi
 case "$FROM" in
   build) STAGE=1 ;;
   changed) STAGE=2 ;;
