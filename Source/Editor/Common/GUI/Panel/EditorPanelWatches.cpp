@@ -6,6 +6,7 @@
 #include "pch.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
@@ -42,6 +43,20 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief `-gv_editorWatchPanel` 의 문서 패널이 마지막 편집 알림에서 문서 글을 만든 시간(us)입니다. 문서 패널이 아니면 값을 내지 않습니다. */
+        [[nodiscard]] bool readWatchedDocumentCapture( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            EditorContext* pContext = getWatchContext( __func__ );
+            if ( pContext == nullptr )
+                return false;
+            const IEditorPanel*         pPanel    = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
+            const IEditorDocumentPanel* pDocument = pPanel != nullptr ? pPanel->asDocumentPanel() : nullptr;
+            if ( pDocument == nullptr )
+                return false;
+            outValue = static_cast<float64>( pDocument->getLastCaptureMicroseconds() );
+            return true;
+        }
+
         /**
          * @brief 패널 id(`key`)의 패널을 패널 매니저가 가지면 1, 아니면 0 입니다. 등록 목록이 DLL 마다 갈라지면 그 이미지의 패널이 0 이 됩니다.
          * @details 패널 수를 숫자 하나로 박으면 패널을 더할 때마다 시나리오를 손으로 고쳐야 한다. 이미지마다 대표 패널의 id 로 묻는다.
@@ -70,5 +85,7 @@ namespace sw::editor
 
     SW_AUTOMATION_WATCH( editorWatchedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorWatchPanel is open", &readWatchedPanelOpen );
     SW_AUTOMATION_WATCH( editorWatchedPanelDirty, "Editor.PanelDirty", "1 when the document of the panel named by gv_editorWatchPanel has unsaved edits", &readWatchedPanelDirty );
+    SW_AUTOMATION_WATCH( editorDocumentCaptureUs, "Editor.DocumentCaptureUs", "Microseconds the document panel named by gv_editorWatchPanel spent serializing its document on the last edit (undo diff threshold)",
+                         &readWatchedDocumentCapture );
     SW_AUTOMATION_QUERY_WATCH( editorHasPanel, "Editor.HasPanel", "1 when the panel manager holds a panel whose id is the key, else 0", &readHasPanel, false, true );
 } // namespace sw::editor
