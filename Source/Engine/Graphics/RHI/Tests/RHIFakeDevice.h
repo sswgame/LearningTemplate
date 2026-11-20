@@ -37,6 +37,7 @@ namespace sw::test
         uint32                       _transitionCount{ 0 };                                                          /**< `transitionBuffers` 로 받은 전이 수의 합 */
         uint32                       _uavBarrierCount{ 0 };                                                          /**< `uavBarrier` 호출 수 */
         vector<RHITextureTransition> _listTextureTransition;                                                         /**< `transitionTextures` 로 받은 텍스처 전이(받은 순서) */
+        vector<RHITextureHandle>     _listTextureUAVBarrier;                                                         /**< `uavBarrierTexture` 로 받은 텍스처(받은 순서) */
         vector<RHIBufferTransition>  _listBufferTransition;                                                          /**< `transitionBuffer` 로 받은 단일 버퍼 전이(받은 순서) */
         /** @brief `copyBufferRegion` 한 번입니다. */
         struct BufferCopy
@@ -102,6 +103,7 @@ namespace sw::test
         void copyBufferToReadback( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
         void copyBufferRegion( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override { _listBufferCopy.push_back( BufferCopy{ destination, destinationOffset, source, sourceOffset, sizeBytes } ); }
         void uavBarrier( RHIBufferHandle ) override { ++_uavBarrierCount; }
+        void uavBarrierTexture( RHITextureHandle texture ) override { _listTextureUAVBarrier.push_back( texture ); }
         void drawIndexedIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
         void beginEventMarker( const utf8* ) override {}
         void endEventMarker() override {}
@@ -313,6 +315,7 @@ namespace sw::test
         void copyBufferToReadbackNative( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
         void copyBufferRegionNative( RHIBufferHandle, uint64, RHIBufferHandle, uint64, uint64 ) override {}
         void uavBarrierNative( RHIBufferHandle ) override {}
+        void uavBarrierTextureNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
         void updateConstantBufferNative( RHIBufferHandle, const void*, uint32 ) override {}
 
     private:

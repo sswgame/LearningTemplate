@@ -576,6 +576,35 @@ namespace sw
                               &barrier, 0, nullptr );
     }
 
+    void VulkanRHICommandContext::uavBarrierTextureNative( RHITextureHandle texture )
+    {
+        VkCommandBuffer                             cmd       = commandBuffer();
+        const VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
+        if ( cmd == VK_NULL_HANDLE || pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE )
+            return;
+        if ( _pState->_bRenderPassActive == SW_TRUE )
+        {
+            vkCmdEndRenderPass( cmd );
+            _pState->_bRenderPassActive = SW_FALSE;
+        }
+        // RW 텍스처는 GENERAL 그대로다(`transitionTexturesNative` 의 UAV) — 레이아웃 전이가 아니라 앞 쓰기의 가시성만 맞춘다(버퍼 판과 같은 접근 · 단계).
+        VkImageMemoryBarrier barrier{};
+        barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.srcAccessMask                   = VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.dstAccessMask                   = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.oldLayout                       = VK_IMAGE_LAYOUT_GENERAL;
+        barrier.newLayout                       = VK_IMAGE_LAYOUT_GENERAL;
+        barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image                           = pResolved->_image;
+        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel   = 0;
+        barrier.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+    }
+
     void VulkanRHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
         const RHIBufferTransition transition{ buffer, newState };

@@ -725,9 +725,9 @@ namespace sw
 
     void VFXGPUSimulation::recordEmitterPasses( const RenderGraphPassContext& context, const Dispatch& dispatch ) const
     {
-        IRHICommandList&    cmd   = *context._pCmdList;
-        const EmitterState& state = *dispatch._pState;
-        const uint32        slot  = state._frameSlot;
+        IRHIPassCommandList& cmd   = *context.getCommandList();
+        const EmitterState&  state = *dispatch._pState;
+        const uint32         slot  = state._frameSlot;
         // 루트 상수 둘: 매개변수 구간의 첫 행, 패스 번호 | 단계 번호 << SW_VFX_PASS_STEP_SHIFT(vfx_simulate.hlsl).
         const auto recordPass = [&]( uint32 pass, uint32 stepIndex, uint32 groupCount )
         {
@@ -768,11 +768,11 @@ namespace sw
 
     void VFXGPUSimulation::recordSimulation( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const
     {
-        const bool bNothingToDispatch = _listDispatch.empty() || pso == 0 || _paramBuffer.isValid() == false || context._pCmdList == nullptr;
+        const bool bNothingToDispatch = _listDispatch.empty() || pso == 0 || _paramBuffer.isValid() == false || context.getCommandList() == nullptr;
         if ( bNothingToDispatch )
             return;
         SW_PROFILE_SCOPE( "RT.VFX.Simulate" );
-        IRHICommandList&            cmd   = *context._pCmdList;
+        IRHIPassCommandList&        cmd   = *context.getCommandList();
         const VFXDepthHistoryInput& depth = _frameInput._depth;
         cmd.setComputePipelineState( pso );
         // 깊이 히스토리 — 지난 프레임 그 뷰가 남긴 깊이를 옮긴 R32 실수 텍스처. RW 텍스처로 읽는다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다).
@@ -811,11 +811,11 @@ namespace sw
     void VFXGPUSimulation::recordSort( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const
     {
         // 정렬 — 방출기(ViewDepth 는 방출기 × 뷰)마다 워크그룹 하나가 살아 있는 입자를 정렬해 순서 버퍼의 그 구간에 쓴다(vfx_particle_sort.hlsl).
-        const bool bSortReady = _listSortDispatch.empty() == false && pso != 0 && _orderBuffer.isValid() && _paramBuffer.isValid() && context._pCmdList != nullptr;
+        const bool bSortReady = _listSortDispatch.empty() == false && pso != 0 && _orderBuffer.isValid() && _paramBuffer.isValid() && context.getCommandList() != nullptr;
         if ( bSortReady == false || context.getBuffer( RenderGraphBufferUAV{ VFXFrameResource::order() } ) == 0 )
             return;
         SW_PROFILE_SCOPE( "RT.VFX.SortParticles" );
-        IRHICommandList& cmd = *context._pCmdList;
+        IRHIPassCommandList& cmd = *context.getCommandList();
         cmd.setComputePipelineState( pso );
         for ( const SortDispatch& dispatch : _listSortDispatch )
         {
@@ -836,10 +836,10 @@ namespace sw
     {
         // 메시 입자 — 렌더 입력을 인스턴스 칸으로 옮긴다. 인스턴스 애니메이션 · 컬링이 이어서 이 버퍼를 읽는다(그 앞 전이도 그래프가 낸다).
         const bool bMeshWrites =
-            _listMeshDispatch.empty() == false && pso != 0 && _frameInput._instanceUAV != kInvalidDescriptorIndex && _paramBuffer.isValid() && context._pCmdList != nullptr;
+            _listMeshDispatch.empty() == false && pso != 0 && _frameInput._instanceUAV != kInvalidDescriptorIndex && _paramBuffer.isValid() && context.getCommandList() != nullptr;
         if ( bMeshWrites == false || context.getBuffer( getInstanceBufferUAV() ) == 0 )
             return;
-        IRHICommandList& cmd = *context._pCmdList;
+        IRHIPassCommandList& cmd = *context.getCommandList();
         cmd.setComputePipelineState( pso );
         for ( const MeshDispatch& dispatch : _listMeshDispatch )
         {

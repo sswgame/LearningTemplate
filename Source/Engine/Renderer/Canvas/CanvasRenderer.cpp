@@ -70,7 +70,7 @@ namespace sw
         _quadBuffer.upload( device, inoutFrame, _markers.getMarkerCount() > 0 );
     }
 
-    void CanvasRenderer::recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV, RHIDescriptorIndex placeholderSRV,
+    void CanvasRenderer::recordMarkerProjection( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV, RHIDescriptorIndex placeholderSRV,
                                                  GPUMessageChannel& inoutMessages, bool bShowInstanceSlots )
     {
         _markers.record( cmd, _quadBuffer, pso, instanceBuffer, instanceSRV, placeholderSRV, inoutMessages, bShowInstanceSlots );

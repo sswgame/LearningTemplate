@@ -87,7 +87,7 @@ namespace sw
         _bMarkerReadsInstances = bAnyInstanceSlot;
     }
 
-    void CanvasMarkerProjection::record( IRHICommandList& cmd, const CanvasQuadBuffer& quadBuffer, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV,
+    void CanvasMarkerProjection::record( IRHIPassCommandList& cmd, const CanvasQuadBuffer& quadBuffer, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV,
                                          RHIDescriptorIndex placeholderSRV, GPUMessageChannel& inoutMessages, bool bShowInstanceSlots ) const
     {
         if ( _markerCount == 0 )

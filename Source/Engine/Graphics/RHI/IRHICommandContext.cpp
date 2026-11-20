@@ -251,4 +251,12 @@ namespace sw
         endRenderPassBefore( "uavBarrier" );
         uavBarrierNative( buffer );
     }
+
+    void IRHICommandContext::uavBarrierTexture( RHITextureHandle texture )
+    {
+        if ( isTextureHandleValid( texture, "uavBarrierTexture" ) == false )
+            return;
+        endRenderPassBefore( "uavBarrierTexture" );
+        uavBarrierTextureNative( texture );
+    }
 } // namespace sw

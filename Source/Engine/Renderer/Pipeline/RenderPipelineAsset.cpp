@@ -82,7 +82,9 @@ namespace sw
                 listAccess.push_back( RenderGraphResourceAccess{ hashed_string( name.c_str() ), access, viewable } );
             }
         };
-        append( pass._listInput, RenderGraphAccess::ShaderRead, RenderGraphAccess::ShaderRead );
+        // 컴퓨트 종류의 텍스처 입력은 RW 텍스처로 읽는다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다 — 깊이 히스토리를 읽는 HZB 짓기 · GPU 입자) — UAV 읽기다.
+        const RenderGraphAccess textureInputAccess = getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kCompute ) ? RenderGraphAccess::UnorderedAccessRead : RenderGraphAccess::ShaderRead;
+        append( pass._listInput, RenderGraphAccess::ShaderRead, textureInputAccess );
         append( pass._listOutput, RenderGraphAccess::UnorderedAccess, RenderGraphAccess::RenderTarget );
         append( pass._listIndirectArgs, RenderGraphAccess::IndirectArgs, RenderGraphAccess::IndirectArgs );
         append( pass._listCopySource, RenderGraphAccess::CopySource, RenderGraphAccess::CopySource );

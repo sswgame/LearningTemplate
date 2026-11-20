@@ -487,6 +487,15 @@ namespace sw
         glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT );
     }
 
+    void OpenGLRHICommandContext::uavBarrierTextureNative( RHITextureHandle texture )
+    {
+        // GL 에는 텍스처 단위 배리어가 없다 — 이미지 저장 뒤의 이미지 접근 · 텍스처 읽기를 기다린다.
+        (void)texture;
+        if ( _pDevice->_bInitialized == SW_FALSE )
+            return;
+        glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT );
+    }
+
     void OpenGLRHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
         (void)buffer;

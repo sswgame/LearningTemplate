@@ -115,6 +115,7 @@ namespace sw
         void copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override;
         /** @brief 같은 패스 안의 디스패치 사이는 구현이 순서를 지킨다 — 배리어가 없다. */
         void uavBarrierNative( RHIBufferHandle buffer ) override { (void)buffer; }
+        void uavBarrierTextureNative( RHITextureHandle texture ) override { (void)texture; } ///< 패스 경계가 저장 텍스처 쓰기를 동기화한다(버퍼 판과 같다)
 
     private:
         /** @brief 지금 기록할 인코더입니다(프레임 스트림은 디바이스 것, 리스트는 자기 것). */

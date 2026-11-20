@@ -90,9 +90,9 @@ SW_TEST_CASE( FrameBufferTableTest, PassContextHandsOutOnlyDeclaredAccesses )
     const vector<RenderGraphResourceAccess> listAccess{ RenderGraphBufferUAV{ hzb }, RenderGraphBufferSRV{ grid } };
     test::FakeRHICommandList                cmd( 0 );
     RenderGraphPassContext                  context;
-    context._passName       = hashed_string( "HZBBuild" );
-    context._pListAccess    = &listAccess;
-    context._pCmdList       = &cmd;
+    context._passName    = hashed_string( "HZBBuild" );
+    context._pListAccess = &listAccess;
+    context.setCommandList( &cmd );
     context._pResourceTable = &table;
 
     SW_EXPECT_EQUAL( RHIBufferHandle{ 11 }, context.getBuffer( RenderGraphBufferUAV{ hzb } ) );
@@ -190,9 +190,9 @@ SW_TEST_CASE( FrameBufferTableTest, PassTransitionsOnlyDeclaredWrites )
     const vector<RenderGraphResourceAccess> listAccess{ RenderGraphTextureUAV{ target }, RenderGraphBufferUAV{ hzb } };
     test::FakeRHICommandList                cmd( 0 );
     RenderGraphPassContext                  context;
-    context._passName       = hashed_string( "Tonemap" );
-    context._pListAccess    = &listAccess;
-    context._pCmdList       = &cmd;
+    context._passName    = hashed_string( "Tonemap" );
+    context._pListAccess = &listAccess;
+    context.setCommandList( &cmd );
     context._pResourceTable = &table;
 
     context.transition( RenderGraphTextureUAV{ target }, RHITextureState::ShaderResource );

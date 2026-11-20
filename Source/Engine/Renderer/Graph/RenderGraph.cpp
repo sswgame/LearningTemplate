@@ -32,7 +32,7 @@ namespace sw
             passContext._pListInputs  = &node._listInput;
             passContext._pListOutputs = &node._listOutput;
             passContext._pListAccess  = &node._listAccess;
-            passContext._pCmdList     = pCmdList;
+            passContext.setCommandList( pCmdList );
             node._execute( passContext );
         }
 
@@ -308,6 +308,18 @@ namespace sw
         const RHIBufferHandle buffer = findDeclaredHandle( handle, slot );
         if ( buffer != 0 && _pCmdList != nullptr )
             _pCmdList->uavBarrier( buffer );
+    }
+
+    IRHIPassCommandList* RenderGraphPassContext::getCommandList() const
+    {
+        return _pCmdList;
+    }
+
+    void RenderGraphPassContext::uavBarrier( RenderGraphTextureUAV handle, uint32 slot ) const
+    {
+        const RHITextureHandle texture = findDeclaredHandle( handle, slot );
+        if ( texture != 0 && _pCmdList != nullptr )
+            _pCmdList->uavBarrierTexture( texture );
     }
 
     void RenderGraphPassContext::transitionTexture( const RenderGraphResourceAccess& access, RHITextureState state, uint32 slot ) const
@@ -1001,9 +1013,11 @@ namespace sw
     {
         // 같은 자원을 여러 패스가 요구하면 **한 번만** 낸다(SceneDepth 처럼 여러 패스가 읽는 자원이 레벨마다 읽기 전이를
         // 여러 번 받지 않게 한다).
-        const RenderGraphExecutionContext::TrackedAccess before    = context.transitionTo( access._resource, access._access );
-        const bool                                       bKnown    = before._state != RenderGraphResourceState::Undefined;
-        const bool                                       bUAVChain = bKnown && before._access == RenderGraphAccess::UnorderedAccess && access._access == RenderGraphAccess::UnorderedAccess;
+        const RenderGraphExecutionContext::TrackedAccess before = context.transitionTo( access._resource, access._access );
+        const bool                                       bKnown = before._state != RenderGraphResourceState::Undefined;
+        // UAV 쓰기 뒤의 UAV 읽기 · 쓰기는 상태가 그대로라도 앞 쓰기를 기다린다(UAV 배리어). UAV 읽기끼리는 기다릴 것이 없다(이미 그 상태 — 아래 같음 판정).
+        const bool bUAVAfter = access._access == RenderGraphAccess::UnorderedAccess || access._access == RenderGraphAccess::UnorderedAccessRead;
+        const bool bUAVChain = bKnown && before._access == RenderGraphAccess::UnorderedAccess && bUAVAfter;
         if ( bKnown && before._access == access._access && bUAVChain == false )
             return; // 이미 그 상태다. 낼 배리어가 없다.
 

@@ -118,23 +118,23 @@ namespace sw
         // 파이프라인 XML 의 `HZBBuild` 가 두 이름을 출력으로 적어야 한다.
         const bool bHasBuffers = target._hzb.isValid() && target._occlusionTiles.isValid();
         const bool bDeclared   = bHasBuffers && graphContext.getBuffer( getPyramidUAV(), viewSlot ) != 0 && graphContext.getBuffer( getTilesUAV(), viewSlot ) != 0;
-        if ( graphContext._pCmdList == nullptr || bDeclared == false )
+        if ( graphContext.getCommandList() == nullptr || bDeclared == false )
         {
             target._bHZBValid = SW_FALSE;
             return false;
         }
-        return recordPyramid( *graphContext._pCmdList, device, pso, depthWidth, depthHeight, viewProj, bWriteTiles, target, HZBGraphBarriers{ graphContext, viewSlot } );
+        return recordPyramid( *graphContext.getCommandList(), device, pso, depthWidth, depthHeight, viewProj, bWriteTiles, target, HZBGraphBarriers{ graphContext, viewSlot } );
     }
 
     bool HZBOcclusion::recordInViewPass( const RenderGraphPassContext& graphContext, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight,
                                          const float4x4& viewProj, FrameViewTarget& target ) const
     {
-        if ( graphContext._pCmdList == nullptr )
+        if ( graphContext.getCommandList() == nullptr )
         {
             target._bHZBValid = SW_FALSE;
             return false;
         }
-        return recordPyramid( *graphContext._pCmdList, device, pso, depthWidth, depthHeight, viewProj, false, target, HZBViewPassBarriers{ graphContext } );
+        return recordPyramid( *graphContext.getCommandList(), device, pso, depthWidth, depthHeight, viewProj, false, target, HZBViewPassBarriers{ graphContext } );
     }
 
     template <typename Barriers>
@@ -189,7 +189,7 @@ namespace sw
         return true;
     }
 
-    void HZBOcclusion::requestReadback( IRHICommandList* pCmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view )
+    void HZBOcclusion::requestReadback( IRHIPassCommandList* pCmd, IRHIDevice* pDevice, bool bEnabled, const FrameViewTarget& view )
     {
         // 켜져 있지 않으면 고리를 비워 둔다(읽기 버퍼를 만들지 않는다). 켰다 끄면 남은 사본도 치운다.
         const bool bReadable = bEnabled && pDevice != nullptr && pCmd != nullptr;

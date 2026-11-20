@@ -255,6 +255,12 @@ namespace sw
         (void)buffer;
     }
 
+    void D3D11RHICommandContext::uavBarrierTextureNative( RHITextureHandle texture )
+    {
+        // 버퍼 판과 같다 — 컨텍스트가 디스패치를 순서대로 실행하고 UAV 위험을 드라이버가 처리한다.
+        (void)texture;
+    }
+
     void D3D11RHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
         // D3D11 에 배리어는 없다. 하지만 "이제 읽는다" 는 요청이 할 일 없는 것은 아니다. 같은 리소스를

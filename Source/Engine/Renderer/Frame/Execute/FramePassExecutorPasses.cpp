@@ -595,13 +595,11 @@ namespace sw
             return;
         }
         // 그룹은 8x8 출력 텍셀이다(셰이더의 SW_NUMTHREADS 와 같다 — 그룹 공유 타일의 크기).
-        // 입력은 레벨 콜백이 셰이더 읽기로, 출력은 이 패스의 UAV 선언으로 RW 텍스처 상태로 옮겼다(`bindPassCallbacks`). 끝에 출력을 셰이더 읽기로 돌린다 —
-        // 뒤 컴퓨트의 UAV 선언이 실제 전이가 되어 쓰기를 기다린다(텍스처 UAV → UAV 배리어가 RHI 에 없다).
+        // 입력은 레벨 콜백이 셰이더 읽기로, 출력은 이 패스의 UAV 선언으로 RW 텍스처 상태로 옮겼다(`bindPassCallbacks`). 뒤 패스의 읽기 · UAV 는 레벨 콜백이 옮기거나 기다린다.
         constexpr uint32 kGroupSize = 8;
         context._pCmd->setComputePipelineState( pso );
         context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( constants._width, kGroupSize ), FrameRendererUtil::divideRoundUp( constants._height, kGroupSize ), 1 );
-        context._pGraphPass->transition( RenderGraphTextureUAV{ target }, RHITextureState::ShaderResource );
         (void)markAttachmentCleared( target );
     }
 
@@ -631,7 +629,7 @@ namespace sw
         constants._outputIndex = bNative ? static_cast<uint32>( output._uav ) : 0u;
         constants._width       = _pActiveView->scaleToRect( output, true ); // 사각형 밖은 디스패치하지 않는다
         constants._height      = _pActiveView->scaleToRect( output, false );
-        // 출력 · 입력은 이 패스가 UAV 로 선언했다 — 레벨 콜백이 RW 텍스처 상태로 옮겼다(`bindPassCallbacks`).
+        // 출력은 UAV, 입력은 UAV 읽기로 이 패스가 선언했다 — 레벨 콜백이 RW 텍스처 상태로 옮기고, 앞 컴퓨트의 쓰기 뒤면 텍스처 UAV 배리어로 기다린다(`bindPassCallbacks`).
         context._pCmd->bindComputeUAV( output._uav, shaderslot::kComputeTextureUAV0 );
         for ( uint32 inputIndex = 0; inputIndex < passDesc._listResolvedInput.size(); ++inputIndex )
         {
@@ -647,13 +645,7 @@ namespace sw
         context._pCmd->setComputePipelineState( pso );
         context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( constants._width, passDesc._threadGroupSize ), FrameRendererUtil::divideRoundUp( constants._height, passDesc._threadGroupSize ), 1 );
-        // 뒤 패스가 샘플한다. 쓰기로 선언한 출력 · 입력을 셰이더 읽기로 돌린다 — 뒤 컴퓨트의 UAV 선언이 실제 전이가 되어 쓰기를 기다린다(텍스처 UAV → UAV 배리어가 RHI 에 없다).
-        // 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.
-        context._pGraphPass->transition( RenderGraphTextureUAV{ target }, RHITextureState::ShaderResource );
-        for ( const RenderGraphPassDesc::ResolvedAttachment& resolved : passDesc._listResolvedInput )
-        {
-            context._pGraphPass->transition( RenderGraphTextureUAV{ resolved._attachment }, RHITextureState::ShaderResource );
-        }
+        // 뒤 패스가 샘플하면 레벨 콜백이 셰이더 읽기로 옮긴다. 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.
         (void)markAttachmentCleared( target );
     }
 

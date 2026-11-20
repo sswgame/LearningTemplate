@@ -22,6 +22,8 @@ namespace sw
     class FrameBufferTable;
     class IRHICommandList;
     class IRHIDevice;
+    class IRHIPassCommandList;
+    class FramePassExecutor;
     class TaskManager;
 
     /**
@@ -58,14 +60,15 @@ namespace sw
     ENUM()
     enum class RenderGraphAccess : uint8
     {
-        ShaderRead,      ///< 셰이더 읽기(SRV)
-        UnorderedAccess, ///< 셰이더 읽고 쓰기(UAV) — 같은 상태가 이어져도 레벨 사이에는 UAV 배리어가 든다
-        RenderTarget,    ///< 색 첨부 쓰기
-        DepthRead,       ///< 깊이 첨부 읽기 전용(깊이 판정만)
-        DepthWrite,      ///< 깊이 첨부 쓰기
-        IndirectArgs,    ///< 간접 그리기 · 디스패치 인자
-        CopySource,      ///< 복사 원본
-        CopyDest,        ///< 복사 대상
+        ShaderRead,          ///< 셰이더 읽기(SRV)
+        UnorderedAccess,     ///< 셰이더 읽고 쓰기(UAV) — 같은 상태가 이어져도 레벨 사이에는 UAV 배리어가 든다
+        UnorderedAccessRead, ///< RW 텍스처 · 버퍼로 읽기만 한다(상태는 UAV, 쓰기가 아니다 — WebGPU read-only storage 자리). 에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못해 이렇게 읽는다
+        RenderTarget,        ///< 색 첨부 쓰기
+        DepthRead,           ///< 깊이 첨부 읽기 전용(깊이 판정만)
+        DepthWrite,          ///< 깊이 첨부 쓰기
+        IndirectArgs,        ///< 간접 그리기 · 디스패치 인자
+        CopySource,          ///< 복사 원본
+        CopyDest,            ///< 복사 대상
     };
 
     /** @brief @p access 가 내용을 바꾸면 true 입니다(UAV · 렌더 타깃 · 깊이 쓰기 · 복사 대상). */
@@ -114,6 +117,7 @@ namespace sw
 
     using RenderGraphTextureSRV        = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::ShaderRead>;
     using RenderGraphTextureUAV        = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::UnorderedAccess>;
+    using RenderGraphTextureUAVRead    = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::UnorderedAccessRead>;
     using RenderGraphRenderTarget      = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::RenderTarget>;
     using RenderGraphDepthRead         = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::DepthRead>;
     using RenderGraphDepthWrite        = RenderGraphHandle<RenderGraphViewableKind::Texture, RenderGraphAccess::DepthWrite>;
@@ -163,7 +167,6 @@ namespace sw
         const vector<hashed_string>*             _pListInputs{ nullptr };
         const vector<hashed_string>*             _pListOutputs{ nullptr };
         const vector<RenderGraphResourceAccess>* _pListAccess{ nullptr };    ///< 이 패스가 선언한 접근 전부(이름으로 선언한 패스는 입력 = 셰이더 읽기, 출력 = 렌더 타깃)
-        IRHICommandList*                         _pCmdList{ nullptr };       ///< (선택) 병렬 기록 때 활성 패스의 커맨드 리스트
         const FrameBufferTable*                  _pResourceTable{ nullptr }; ///< 그래프 밖 자원의 RHI 핸들 표(프레임 그래프는 프레임 자원 표, 뷰 그래프는 지금 뷰의 엔진 자원 표 — 실행기가 싣는다). 없으면 핸들 요청은 모두 무효다
 
         /** @brief 이 패스가 선언한 버퍼 접근 @p handle 의 뷰 칸 @p slot 버퍼입니다. 선언하지 않은 접근 · 등록하지 않은 칸은 오류를 남기고 0 입니다. */
@@ -183,6 +186,19 @@ namespace sw
          * @details UAV 핸들만 받는다 — SRV 로 선언한 버퍼로는 부를 수 없다(형식). 같은 상태의 연속이라 전이로는 알 수 없는 의존이다.
          */
         void uavBarrier( RenderGraphBufferUAV handle, uint32 slot = 0 ) const;
+        /**
+         * @brief 한 패스 안의 연속 디스패치가 앞 디스패치의 텍스처 UAV 쓰기를 기다리게 합니다(뷰 칸 @p slot) — 버퍼 판과 같은 모양이다. 텍스처 UAV 핸들만 받는다(형식).
+         * @details 레벨 사이의 텍스처 UAV → UAV 는 레벨 콜백이 같은 배리어를 낸다(`RenderGraphBarrier::_bUAVBarrier`).
+         */
+        void uavBarrier( RenderGraphTextureUAV handle, uint32 slot = 0 ) const;
+        /**
+         * @brief 이 패스의 기록 면입니다 — 텍스처 상태 전이 · 기록 범위가 없는 형식이다(`IRHIPassCommandList`). 리스트가 없으면(GPU 없는 테스트) nullptr 입니다.
+         * @details 전이는 그래프가 선언에서 내고, 패스 안 왕복은 `transition` 하나다. 패스 몸통에서 보이는 형식에 전체 리스트를 두지 않는다 — 선언하지 않은 자원을 병렬 레벨에서
+         *          옮기던 모양(RHI 검토 S1)을 쓸 수 없게 한다.
+         */
+        IRHIPassCommandList* getCommandList() const;
+        /** @brief 이 패스를 기록할 리스트를 싣습니다 — 그래프 실행(`recordPassBody`) · 실행기 · 테스트가 부른다. 다시 꺼내는 길은 패스 기록 면(`getCommandList`)뿐이다. */
+        void setCommandList( IRHICommandList* pCmdList ) { _pCmdList = pCmdList; }
         /**
          * @brief 이 패스가 **쓰기로** 선언한 텍스처 @p handle(뷰 칸 @p slot)을 패스 안에서 @p state 로 옮깁니다 — 패스 안 왕복(UAV 로 쓰고 같은 패스가 셰이더 읽기로 읽는다).
          * @details 읽기 접근 핸들로는 부를 수 없다(형식 — 읽기 선언은 그래프가 레벨 앞에서 옮긴다). 선언하지 않은 이름은 `getTexture` 와 같은 오류를 남기고 아무것도 내지 않는다.
@@ -220,6 +236,11 @@ namespace sw
         uint64 findDeclaredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const;
         void   transitionTexture( const RenderGraphResourceAccess& access, RHITextureState state, uint32 slot ) const;
         void   transitionBuffer( const RenderGraphResourceAccess& access, RHIBufferState state, uint32 slot ) const;
+
+    private:
+        /// @brief 실행기의 개발 보기(`FramePassExecutor::prepareVisualizedAttachment` — `gpu.show` 가 선언 밖 첨부를 읽는 유일한 길)만 전체 리스트에 닿는다. 패스 몸통은 닿지 않는다.
+        friend class FramePassExecutor;
+        IRHICommandList* _pCmdList{ nullptr }; ///< 이 패스의 리스트(전체) — 전이 · UAV 배리어가 쓴다. 밖에는 패스 기록 면으로만 내준다
     };
 } // namespace sw
 

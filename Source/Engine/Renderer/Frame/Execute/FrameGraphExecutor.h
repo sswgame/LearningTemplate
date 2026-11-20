@@ -175,13 +175,16 @@ namespace sw
         /** @brief 뷰 @p view 의 장면 깊이 첨부를 깊이 히스토리 텍스처에 옮길 수 있으면 true 입니다(히스토리 · 복사 PSO · 장면 깊이가 있다 — 지난 깊이인지는 묻지 않는다). */
         bool canCopySceneDepth( const FrameViewTarget& view ) const;
         /** @brief 뷰마다 지난 장면 깊이를 깊이 히스토리로 옮기는 풀스크린을 기록합니다(depth_history.hlsl). 프레임 패스 `DepthHistory` 의 일입니다. */
-        void recordDepthHistories();
+        void recordDepthHistories( const RenderGraphPassContext& graphContext );
+        /** @brief 이번 프레임에 깊이 히스토리를 옮기는 뷰의 지난 장면 깊이 · 히스토리를 @p table 에 등록합니다(`PreviousSceneDepth` · `DepthHistory`, 칸은 HZB 와 같다). */
+        void registerDepthHistoryResources( FrameBufferTable& table ) const;
         /**
          * @brief 뷰 @p target 하나의 깊이 히스토리 복사를 기록합니다(`recordDepthHistories` 가 뷰마다 부른다).
          * @details 끝에 히스토리를 RW 텍스처 상태로 둔다 — 읽는 쪽(가림 타일 · GPU 입자)은 둘 다 RW 텍스처로 읽고, 비동기 컴퓨트 큐에서 돌면 그래픽스 상태(렌더 타깃)에서
          *          옮기는 배리어를 기록할 수 없다(D3D12 컴퓨트 리스트는 렌더 타깃 상태를 모른다). 생산자가 소비자의 상태로 넘겨 주는 자리다.
+         *          앞 전이(지난 장면 깊이 셰이더 읽기 · 히스토리 렌더 타깃)는 레벨 콜백이, 끝의 RW 텍스처 전이는 이 패스가 쓰기로 선언한 핸들의 `transition` 이 낸다(칸 @p slot).
          */
-        void recordDepthHistory( FrameViewTarget& target );
+        void recordDepthHistory( const RenderGraphPassContext& graphContext, FrameViewTarget& target, uint32 slot );
         /**
          * @brief 뷰 @p target 의 장면 깊이 첨부를 깊이 히스토리 텍스처에 옮기는 풀스크린 렌더 패스를 @p cmd 에 기록합니다(depth_history.hlsl). 전이는 하지 않는다 —
          *        부르는 쪽이 장면 깊이를 셰이더 읽기, 히스토리를 렌더 타깃으로 두고, 끝나면 히스토리를 읽는 쪽 상태(RW 텍스처)로 넘긴다.
@@ -212,11 +215,11 @@ namespace sw
                              FrameRendererUtil::GPUCullParams& outParams ) const;
 
     private:
-        IRHIDevice* const& _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
-        FrameRenderState&  _state;
-        FramePSOManager&   _psoManager;
-        FrameFog&          _fog;
-        IRHICommandList*   _pCmd{ nullptr }; ///< 프레임 패스(`executePass`) · `endFrame` 하는 동안만 지금 리스트를 가리킨다 — 뷰 그래프 패스는 쓰지 않는다(그래프 문맥의 리스트를 받는다)
+        IRHIDevice* const&   _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
+        FrameRenderState&    _state;
+        FramePSOManager&     _psoManager;
+        FrameFog&            _fog;
+        IRHIPassCommandList* _pCmd{ nullptr }; ///< 프레임 패스(`executePass`)를 기록하는 동안만 그 패스의 기록 면을 가리킨다(텍스처 전이 없음) — 뷰 그래프 패스는 쓰지 않는다
         /// @brief 순번 테이블이 없는 뷰(주 시점, 그림자)의 정렬 디스패치가 t2 에 바인딩하는 원소 하나짜리 자리 표시 버퍼입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않습니다.
         RHIStructuredBuffer _transparentRankPlaceholder{};
         /// @brief GPU 컬링의 가림 판정(HZB 짓기 · 가림 타일 되읽기 · 자리표)입니다.

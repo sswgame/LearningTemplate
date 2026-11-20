@@ -935,7 +935,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, FramePassAccessesFollowTheRules )
         return RenderGraphResourceAccess{};
     };
     SW_EXPECT_TRUE( findAccess( "InstanceBuffer" )._access == RenderGraphAccess::ShaderRead && findAccess( "InstanceBuffer" )._viewable == RenderGraphViewableKind::Buffer );
-    SW_EXPECT_TRUE( findAccess( "DepthHistory" )._access == RenderGraphAccess::ShaderRead && findAccess( "DepthHistory" )._viewable == RenderGraphViewableKind::Texture );
+    // 컴퓨트 종류의 텍스처 입력은 RW 텍스처 읽기(UAV 읽기)다 — 에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다.
+    SW_EXPECT_TRUE( findAccess( "DepthHistory" )._access == RenderGraphAccess::UnorderedAccessRead && findAccess( "DepthHistory" )._viewable == RenderGraphViewableKind::Texture );
     SW_EXPECT_TRUE( findAccess( "CullResults" )._access == RenderGraphAccess::UnorderedAccess );
     SW_EXPECT_TRUE( findAccess( "CullArgs" )._access == RenderGraphAccess::IndirectArgs );
     SW_EXPECT_TRUE( findAccess( "HZB" )._access == RenderGraphAccess::CopySource );

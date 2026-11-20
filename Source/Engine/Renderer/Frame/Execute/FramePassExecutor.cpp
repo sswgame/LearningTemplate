@@ -106,6 +106,7 @@ namespace sw
                 case RenderGraphAccess::ShaderRead:
                     return RHIBufferState::ShaderResource;
                 case RenderGraphAccess::UnorderedAccess:
+                case RenderGraphAccess::UnorderedAccessRead:
                     return RHIBufferState::UnorderedAccess;
                 case RenderGraphAccess::IndirectArgs:
                     return RHIBufferState::IndirectArgument;
@@ -130,6 +131,7 @@ namespace sw
                 case RenderGraphAccess::DepthRead:
                     return RHITextureState::ShaderResource;
                 case RenderGraphAccess::UnorderedAccess:
+                case RenderGraphAccess::UnorderedAccessRead:
                     return RHITextureState::UnorderedAccess;
                 case RenderGraphAccess::RenderTarget:
                 case RenderGraphAccess::DepthWrite:
@@ -881,13 +883,14 @@ namespace sw
             // 여기서 쓰기로 적는다. 그래야 레벨 프롤로그가 첨부 전이(prepareTextureForRenderTarget)를 미리 내고, 앞 패스가 SRV 로 바인딩해 둔 깊이를
             // D3D11 이 해제하며(OMSetRenderTargets 해저드), 뒤에서 깊이를 읽는 패스가 다시 읽기 전이를 받는다(언리얼 RDG 의 깊이 첨부 접근).
             // 순서는 쓰기 사슬을 따른다. 이 패스보다 **먼저 선언한** 읽는 패스는 앞 버전을 읽고 이 패스 앞에 온다.
-            // 컴퓨트로 쓰는 패스는 그 첨부를 UAV 로 선언한다 — 패스 몸통이 전이하지 않고 레벨 콜백이 RW 텍스처 상태로 옮긴다(Compute 패스는 입력도 RW 텍스처로 읽는다).
+            // 컴퓨트로 쓰는 패스는 그 첨부를 UAV 로 선언한다 — 패스 몸통이 전이하지 않고 레벨 콜백이 RW 텍스처 상태로 옮긴다(Compute 패스는 입력을 RW 텍스처로 읽기만 한다 — UAV 읽기).
+            // 앞 컴퓨트의 쓰기 뒤에 오는 UAV 접근은 레벨 콜백이 텍스처 UAV 배리어를 낸다(`RenderGraphBarrier::_bUAVBarrier`).
             const bool                        bComputePass   = pass._type == RenderPassKind::Compute;
             const bool                        bComputeOutput = bComputePass || ( pass._implementation == RenderPassExecutionMode::Compute && bNativeBindless );
             vector<RenderGraphResourceAccess> listAccess;
             for ( const string& in : pass._listInput )
             {
-                addAttachmentAccess( listAccess, hashed_string( in.c_str() ), bComputePass ? RenderGraphAccess::UnorderedAccess : RenderGraphAccess::ShaderRead );
+                addAttachmentAccess( listAccess, hashed_string( in.c_str() ), bComputePass ? RenderGraphAccess::UnorderedAccessRead : RenderGraphAccess::ShaderRead );
             }
             for ( const string& out : pass._listOutput )
             {
@@ -1152,7 +1155,7 @@ namespace sw
         const vector<RenderGraphPassDesc>& listFramePass = _pipelineResource.getFramePass();
         const uint32                       passIndex     = graphContext._payload;
         SW_ASSERT( passIndex < listFramePass.size() );
-        IRHICommandList* const pCmd = graphContext._pCmdList;
+        IRHIPassCommandList* const pCmd = graphContext.getCommandList();
         if ( passIndex >= listFramePass.size() || pCmd == nullptr )
             return;
         const RenderGraphPassDesc& passDesc = listFramePass[passIndex];
@@ -1172,7 +1175,6 @@ namespace sw
         const GPUPassScope scope{ *pCmd, passDesc._name, timestampBeginSlot };
         // 패스 몸통은 선언한 접근 핸들로만 등록 자원을 받는다(`RenderGraphPassContext::getBuffer` · `uavBarrier`) — 표와 이 패스의 리스트를 문맥에 싣는다.
         RenderGraphPassContext passContext = graphContext;
-        passContext._pCmdList              = pCmd;
         passContext._pResourceTable        = &_frameBufferTable;
         _frameGraphExecutor.executePass( passDesc._type, passContext );
     }
@@ -1226,6 +1228,11 @@ namespace sw
                         _levelBufferTransitions.add( entry._handle, *state );
                     }
                 }
+                else if ( barrier._bUAVBarrier != 0 )
+                {
+                    cmd.uavBarrierTexture( entry._handle );
+                    ++uavBarrierCount;
+                }
                 else if ( const optional<RHITextureState> state = findGraphTextureState( barrier._access ) )
                 {
                     listTransition.push_back( RHITextureTransition{ entry._handle, *state } );
@@ -1234,12 +1241,19 @@ namespace sw
             // 등록하지 않은 버퍼는 이 프레임 · 뷰에 일하지 않는다(등록 조건이 실행 조건) — 전이를 내지 않는다.
             if ( bRegistered || barrier._viewable != RenderGraphViewableKind::Texture )
                 continue;
-            // 텍스처 UAV → UAV(`_bUAVBarrier`)는 만드는 접근이 없다 — 뷰 패스는 첨부(읽기 · 렌더 타깃 · 깊이)이고 프레임 패스 텍스처 출력은 렌더 타깃이다(규칙). 생기면 RHI 텍스처 UAV 배리어를 더한다.
-            if ( barrier._access == RenderGraphAccess::UnorderedAccess )
+            // 컴퓨트로 쓰고 읽는 첨부(UAV · UAV 읽기) — 앞 레벨의 UAV 쓰기 뒤면(`_bUAVBarrier`) 상태는 그대로이고 텍스처 UAV 배리어로 기다린다.
+            if ( barrier._access == RenderGraphAccess::UnorderedAccess || barrier._access == RenderGraphAccess::UnorderedAccessRead )
             {
                 const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource );
-                if ( texture != 0 )
+                if ( texture != 0 && barrier._bUAVBarrier != 0 )
+                {
+                    cmd.uavBarrierTexture( texture );
+                    ++uavBarrierCount;
+                }
+                else if ( texture != 0 )
+                {
                     listTransition.push_back( RHITextureTransition{ texture, RHITextureState::UnorderedAccess } );
+                }
                 continue;
             }
             const bool bAttachmentWrite = barrier._access == RenderGraphAccess::RenderTarget || barrier._access == RenderGraphAccess::DepthWrite;
@@ -1302,7 +1316,7 @@ namespace sw
         FramePassContext& passContext = const_cast<FramePassContext&>( std::as_const( _listPassContext ).data()[passIndex] );
         passContext                   = _state._frameContext;
         passContext._passName         = graphContext._passName;
-        passContext._pCmd             = graphContext._pCmdList; // 직렬 · 병렬 모두 그래프가 패스의 리스트를 싣는다(`recordPassBody`)
+        passContext._pCmd             = graphContext.getCommandList(); // 직렬 · 병렬 모두 그래프가 패스의 리스트를 싣는다(`recordPassBody`) — 패스 기록 면만
         // 패스 몸통은 뷰 엔진 자원(`ViewGraphResource`)을 선언한 핸들로만 받고 패스 안 왕복도 그 핸들로 옮긴다 — 지금 뷰의 표를 실은 문맥을 넘긴다(몸통이 도는 동안만 산다).
         RenderGraphPassContext viewGraphContext = graphContext;
         viewGraphContext._pResourceTable        = &_viewResourceTable;
@@ -1320,8 +1334,9 @@ namespace sw
         // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다. 여기서 문자열을 다시 비교하면 디스패치와
         // PSO 생성이 서로 다른 표기를 받아 줄 여지가 생긴다.
         const RenderGraphPassDesc& passDesc = listPass[passIndex];
-        // 개발 보기 `gpu.show <첨부>` 는 Present 가 선언 밖 첨부를 읽는 유일한 길이다 — 패스 몸통은 텍스처를 옮길 수 없어 실행기가 몸통 앞에서 이 패스의 리스트로 옮긴다(개발 전용).
-        if ( passDesc._type == RenderPassKind::Present )
+        // 개발 보기 `gpu.show <첨부>` 는 Present 가 선언 밖 첨부를 읽는 유일한 길이다 — 무엇을 보일지가 실행 중에 바뀌어(개발 명령) 선언으로 적을 수 없다.
+        // 패스 몸통은 전체 리스트에 닿지 않으므로 실행기(그래프 문맥의 friend — 이 한 자리)가 몸통 앞에서 이 패스의 리스트로 옮긴다(개발 전용).
+        if ( passDesc._type == RenderPassKind::Present && graphContext._pCmdList != nullptr )
             prepareVisualizedAttachment( *graphContext._pCmdList );
 
 #if SW_PROFILE_COMPILED
@@ -1373,30 +1388,6 @@ namespace sw
             _viewResourceTable.registerTexture( ViewGraphResource::postProcessChainBeforeTonemap()._name, 0, view._postProcessChainBeforeTonemap.getTexture(), RenderGraphAccess::ShaderRead );
         if ( view._postProcessChainAfterTonemap.getTexture() != 0 )
             _viewResourceTable.registerTexture( ViewGraphResource::postProcessChainAfterTonemap()._name, 0, view._postProcessChainAfterTonemap.getTexture(), RenderGraphAccess::ShaderRead );
-        // 컴퓨트로 쓰는 첨부(UAV 로 선언) — 패스가 끝에 셰이더 읽기로 돌려 다음 컴퓨트의 UAV 전이가 배리어가 되게 한다(텍스처 UAV → UAV 배리어가 RHI 에 없다). 풀이 가진 텍스처만.
-        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
-        {
-            const bool bComputePass = pass._type == RenderPassKind::Compute;
-            const bool bComputeImpl = pass._implementation == RenderPassExecutionMode::Compute && _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
-            if ( bComputePass == false && bComputeImpl == false )
-                continue;
-            const auto registerAttachment = [this, &view]( const hashed_string& attachment )
-            {
-                const RHITextureHandle texture = view._transientPool.findOwnTexture( attachment );
-                if ( texture != 0 && _viewResourceTable.findTexture( attachment, 0 ) == 0 )
-                    _viewResourceTable.registerTexture( attachment, 0, texture, RenderGraphAccess::ShaderRead );
-            };
-            for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
-            {
-                registerAttachment( output._attachment );
-            }
-            if ( bComputePass == false )
-                continue;
-            for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
-            {
-                registerAttachment( input._attachment );
-            }
-        }
         // 이번 장면 깊이로 HZB 를 짓는 패스(화면 공간 반사)와 2 단계 가림의 뒤 단계(주 시점)가 쓰는 깊이 사본 · HZB · 컬링 버퍼.
         _frameGraphExecutor.registerViewGraphResources( _viewResourceTable, view, isPassKindEnabledInView( RenderPassKind::ScreenSpaceReflection ) );
     }

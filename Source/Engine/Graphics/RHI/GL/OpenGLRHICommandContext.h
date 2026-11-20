@@ -57,6 +57,7 @@ namespace sw
         void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
         void                     copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override;
         void                     uavBarrierNative( RHIBufferHandle buffer ) override;
+        void                     uavBarrierTextureNative( RHITextureHandle texture ) override;
 
     private:
         /** @brief 번호 @p index 의 상수 버퍼를 UBO 바인딩 @p slot 에 겁니다. 페이지 구간이면 `glBindBufferRange`, 아니면 `glBindBufferBase` 입니다(감사 R-4). */

@@ -1044,6 +1044,19 @@ namespace sw
         commandListForRecord()->ResourceBarrier( 1, &barrier );
     }
 
+    void D3D12RHICommandContext::uavBarrierTextureNative( RHITextureHandle texture )
+    {
+        if ( _pCmdList == nullptr )
+            return;
+        ID3D12Resource* pResource = _pDevice->resolveTexture( texture );
+        if ( pResource == nullptr )
+            return;
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        barrier.UAV.pResource = pResource;
+        commandListForRecord()->ResourceBarrier( 1, &barrier );
+    }
+
     void D3D12RHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
         const RHIBufferTransition transition{ buffer, newState };

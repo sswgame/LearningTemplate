@@ -276,6 +276,13 @@ namespace sw
          */
         virtual void uavBarrier( RHIBufferHandle buffer ) = 0;
         /**
+         * @brief 앞선 디스패치의 텍스처 UAV(RW 텍스처) 쓰기가 끝난 뒤에 다음 디스패치가 읽고 쓰도록 막습니다 — 버퍼 판(`uavBarrier`)의 텍스처 짝이다.
+         * @details 상태가 그대로(UAV → UAV)라 전이로는 알 수 없는 의존이다(컴퓨트 패스 둘이 같은 첨부를 RW 로 이어 쓴다). 핸들 0 은 오류로 알리고 버린다.
+         *          DX12 는 그 리소스의 UAV 배리어, Vulkan 은 GENERAL → GENERAL 이미지 메모리 배리어(가시성만), GL 은 이미지 접근 · 텍스처 읽기 glMemoryBarrier,
+         *          DX11 · WebGPU 는 디스패치 · 패스가 순서를 지켜 할 일이 없다.
+         */
+        virtual void uavBarrierTexture( RHITextureHandle texture ) = 0;
+        /**
          * @brief 인덱스 버퍼를 쓰는 드로우를 GPU 가 기록해 둔 인자로 발행합니다(`drawIndirect` 와 같은 모양 — 여러 개 · 개수 버퍼).
          * @param argumentBuffer `RHIDrawIndexedIndirectCommand` 가 이어 놓인 버퍼입니다. 위와 같은 이유로 그 구조체가 레이아웃 기준입니다.
          * @param argumentBufferOffset 그 버퍼 안의 바이트 오프셋입니다.

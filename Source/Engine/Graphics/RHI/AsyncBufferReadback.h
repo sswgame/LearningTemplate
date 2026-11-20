@@ -20,6 +20,7 @@
 namespace sw
 {
     class IRHICommandList;
+    class IRHIPassCommandList;
     class IRHIDevice;
 
     /**
@@ -55,7 +56,7 @@ namespace sw
          * @param tag        이 요청을 가리키는 값입니다. `takeLatest` 가 그대로 돌려줍니다(요청 때의 메타데이터를 찾는 열쇠). 증가하는 값이어야 합니다.
          * @return 비어 있는 읽기 버퍼가 없거나 초기화되지 않았으면 false 이며 아무것도 기록하지 않습니다.
          */
-        [[nodiscard]] bool request( IRHICommandList& commands, RHIBufferHandle source, RHIBufferState stateAfter, uint64 tag );
+        [[nodiscard]] bool request( IRHIPassCommandList& commands, RHIBufferHandle source, RHIBufferState stateAfter, uint64 tag );
 
         /**
          * @brief 마지막으로 가져간 뒤 새로 도착한 가장 최근 내용을 @p outBytes 에 줍니다. 새 것이 없으면 false 입니다. 어느 스레드에서 불러도 됩니다.

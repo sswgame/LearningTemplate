@@ -84,7 +84,7 @@ namespace sw
          * @param bShowInstanceSlots 보기 모드 `MarkerSlots` 입니다 — 참이면 컴퓨트가 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 써 캔버스가 마커 위젯을 칠한다.
          * @param inoutMessages 셰이더 메시지 링입니다. 메시지 변형 PSO 일 때 디스패치 앞에서 u4 에 겁니다(꺼져 있으면 아무것도 하지 않는다).
          */
-        void recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV, RHIDescriptorIndex placeholderSRV,
+        void recordMarkerProjection( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV, RHIDescriptorIndex placeholderSRV,
                                      GPUMessageChannel& inoutMessages, bool bShowInstanceSlots );
         /** @brief 마지막 `prepareFrame` 에서 주 출력 사각형이 버퍼에서 시작하는 위치입니다(버퍼 맨 앞은 화면 앵커입니다). */
         uint32 getMainQuadBase() const { return _quadBuffer.getMainQuadBase(); }

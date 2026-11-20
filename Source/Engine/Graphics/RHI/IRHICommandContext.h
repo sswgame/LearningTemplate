@@ -75,6 +75,7 @@ namespace sw
         void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) final;
         void copyBufferRegion( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) final;
         void uavBarrier( RHIBufferHandle buffer ) final;
+        void uavBarrierTexture( RHITextureHandle texture ) final;
 
         // ------------------------------------------------------------------------------
         // 기록 경로의 상수 버퍼 쓰기 — 한 프레임에 한 버퍼는 한 번(`IRHIDevice::getConstantBufferWriteLog`)
@@ -111,6 +112,8 @@ namespace sw
         /** @brief `copyBufferRegion` 의 백엔드 몸통입니다(렌더 패스는 닫혀 있고 인자는 검사를 지났다). */
         virtual void copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) = 0;
         virtual void uavBarrierNative( RHIBufferHandle buffer )                                                                                                     = 0;
+        /** @brief `uavBarrierTexture` 의 백엔드 몸통입니다(핸들 0 은 기반이 걸렀고 렌더 패스는 닫혀 있다). */
+        virtual void uavBarrierTextureNative( RHITextureHandle texture ) = 0;
         /** @brief 버퍼의 이번 프레임 슬롯(DX11 은 이 리스트의 판)에 씁니다. 두 번째 쓰기 진단은 기반이 이미 했다. */
         virtual void updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
 

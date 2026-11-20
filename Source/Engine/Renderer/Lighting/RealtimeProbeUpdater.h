@@ -26,6 +26,7 @@ namespace sw
 {
     struct SkyGradient;
     class IRHICommandList;
+    class IRHIPassCommandList;
     class IRHIDevice;
 
     /** @brief 요청 목록을 컴퓨트 버퍼에 놓는 자리입니다(볼륨마다 복셀 단어 · 기록 · 스레드 범위의 시작). 순수 계산이라 테스트가 직접 본다. */
@@ -132,7 +133,7 @@ namespace sw
          */
         [[nodiscard]] uint32 getAccumulatedFrames() const { return _bActive == SW_TRUE ? _framesSinceInputChange : 0u; }
         /** @brief 컴퓨트를 기록합니다(라이트 업로드 뒤 · 조명 패스 앞). @p placeholderSRV 는 라이트가 없는 프레임에 t0 에 거는 자리표입니다. */
-        void dispatch( IRHICommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV );
+        void dispatch( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV );
         /** @brief 버퍼를 놓습니다. */
         void release( IRHIDevice* pDevice );
 

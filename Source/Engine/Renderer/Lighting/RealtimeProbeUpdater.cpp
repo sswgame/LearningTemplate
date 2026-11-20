@@ -290,7 +290,7 @@ namespace sw
         _bActive = SW_TRUE;
     }
 
-    void RealtimeProbeUpdater::dispatch( IRHICommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV )
+    void RealtimeProbeUpdater::dispatch( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV )
     {
         if ( _bActive == SW_FALSE || pso == 0 )
             return;
