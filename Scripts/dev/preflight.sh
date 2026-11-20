@@ -9,6 +9,8 @@
 # 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 # 단계 기록: 단계가 통과하면 그 sha 를 build/verify.stages.json 에 적고(Scripts/dev/verify_record.py), 다음 실행에서 그 sha 뒤 바뀐 파일이 모두 입력이 아닌 경로
 # (Config/Dev/Verify.json 의 _nonInputPaths — 문서 · 스킬)면 그 단계를 건너뛴다. 거꾸로 적는 목록이라 빠뜨리면 더 돌 뿐이다. lint --all 은 문서 · 스킬도 읽어 build 범위면 늘 돈다.
+# 이력(Scripts/dev/test_history.py, Saved/TestHistory/history.sqlite): ctest 보고는 단계 시작 표지 뒤의 것만 이 sha · 검증 실행(verify)으로 쌓고, 단계마다 걸린 시간을 쌓아
+# 지난 p95 보다 느리면 경고한다. Windows 끝에 흔들림 판정(test_history.py flaky — 끝 줄 FLAKY=)이 격리 표 밖 흔들림이 문턱을 넘으면 진다.
 #
 # 단계(시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을 판정하므로 GPU 단계는 혼자 돈다):
 #   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 → (바뀐 파일 clang-tidy, 뒤에서) → 서버 빌드 ‖ 배포 프리셋 둘 빌드 · 쿠킹 → shipping-check 기동 · 종료). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
@@ -104,7 +106,18 @@ if [ -n "$TREE_CHANGES" ]; then
   fi
 fi
 
+# 단계 시간(test_history.py stage) — begin_stage 가 시작 시각을 잡고, 통과 · 건너뜀 · 실패 때 한 줄씩 쌓는다. 갈래(서브셸)에서는 쌓지 않는다(부모가 쌓는다).
+CURRENT_STAGE=""
+STAGE_STARTED=$SECONDS
+begin_stage() { CURRENT_STAGE=$1; STAGE_STARTED=$SECONDS; }
+record_stage_time() {   # <이름> <passed|failed|skipped>
+  [ $DRY -eq 1 ] && return 0
+  [ "$BASHPID" = "$$" ] || return 0
+  py -3 Scripts/dev/test_history.py stage "$1" --commit "$SHA" --result "$2" --seconds $((SECONDS - STAGE_STARTED)) || echo "단계 시간을 쌓지 못했다($1)"
+}
+
 windows_failed() {
+  [ -n "$CURRENT_STAGE" ] && record_stage_time "$CURRENT_STAGE" failed
   echo "WINDOWS_FAILED ($1) - Linux 를 돌리지 않는다 sha=$SHA"
   # 겹쳐 돌던 갈래(배포 빌드 · 쿠킹 등)를 끝까지 기다린다 — 두고 나가면 다음 실행과 같은 빌드 폴더를 다퉈 구성이
   # "failed recompaction: Permission denied" 로 진다(2026-11-17). 갈래 안(서브셸)에서 부르면 남의 pid 라 wait 가 바로 돌아온다.
@@ -157,7 +170,9 @@ run_ctest() {
   [ $DRY -eq 1 ] || grep -E "tests passed|tests failed|\*\*\*Failed|Timeout|Not Run" build/$P/Testing/Logs/verify.ctest.$NAME.log | head -30
   # 진 실행의 판정 요약(끝 줄 · 백엔드로 접은 진 단계) — 단계 끝마다 찍는다. 이번 실행이 쓴 로그만 본다(앞 실행이 남긴 로그를 섞지 않게 ctest 로그보다 새 것).
   [ $DRY -eq 1 ] || [ $RC -eq 0 ] || print_results build/$P/Testing/Logs/verify.ctest.$NAME.log $(find build/$P/Testing/Logs -maxdepth 1 -name "Scenario.*.log" -newer build/$P/Testing/Logs/verify.ctest.$NAME.log.start 2>/dev/null)
-  run "" py -3 Scripts/dev/test_history.py ingest build/$P/Bin/Saved/Automation --commit "$SHA" || { echo "$P test history ingest 실패"; return 1; }
+  # 표지(.log.start) 앞에 시작한 보고는 손 실행 · 다시 돌리기가 남긴 것이라 sha 없이 manual 로 들어간다(흔들림 판정은 verify 만 본다).
+  run "" py -3 Scripts/dev/test_history.py ingest build/$P/Bin/Saved/Automation --commit "$SHA" --kind verify --since build/$P/Testing/Logs/verify.ctest.$NAME.log.start ||
+    { echo "$P test history ingest 실패"; return 1; }
   return $RC
 }
 
@@ -281,12 +296,15 @@ job_shader_warm() {
 should_run_stage() {   # <단계 번호> <이름>
   [ $STAGE -le "$1" ] || return 1
   if py -3 Scripts/dev/verify_record.py skip "$2" "$SHA"; then
-    stage_passed "$2"
+    STAGE_STARTED=$SECONDS
+    stage_passed "$2" skipped
     return 1
   fi
   return 0
 }
-stage_passed() {
+stage_passed() {   # <이름> [skipped]
+  record_stage_time "$1" "${2:-passed}"
+  CURRENT_STAGE=""
   [ $DRY -eq 1 ] || py -3 Scripts/dev/verify_record.py pass "$1" "$SHA" || windows_failed "$1 통과 기록"
 }
 
@@ -310,6 +328,7 @@ should_run_stage 4 gpu-release && RUN_GPU=1
 
 [ $STAGE -le 1 ] && start_job "lint --all" job_lint
 if [ $RUN_BUILD -eq 1 ]; then
+  begin_stage build
   build_preset Ninja-Release
   # 임포트를 먼저 끝낸다 — 낡은 산출물을 Content 에 다시 쓰는 일이라 배포 빌드의 쿠킹이 그 파일을 읽는 동안 돌지 않게(ctest 의 고정 단계 ImportedAssets 는 아래에서 곧바로 끝난다).
   # 최적화 App 으로 임포트한다 — Debug 의 BC7 · BC6H 압축기는 큰 텍스처 하나에 몇 분이다(AssetImportEntry.TextureImportDebugBuild). 산출물은 구성과 무관하게 Content 하나다.
@@ -331,11 +350,13 @@ else
 fi
 
 if [ $RUN_CHANGED -eq 1 ]; then
+  begin_stage changed
   run_changed
   stage_passed changed
 fi
 
 if [ $RUN_CPU -eq 1 ]; then
+  begin_stage cpu
   start_job "ASan nogpu" job_sanitizer_cpu
   start_job "server · tools · shipping" job_server_tools
   start_job "shader warm" job_shader_warm
@@ -344,9 +365,17 @@ if [ $RUN_CPU -eq 1 ]; then
 fi
 
 if [ $RUN_GPU -eq 1 ]; then
+  begin_stage gpu-release
   run_ctest Ninja-Release all || windows_failed "Ninja-Release ctest"
   stage_passed gpu-release
 fi
+
+# 흔들림 판정 — 최근 검증 커밋에서 같은 커밋에 통과 · 실패가 함께 있는 (테스트, 백엔드)가 격리 표 밖에서 문턱(Verify.json)을 넘으면 진다. 끝 줄 FLAKY=.
+echo "== flaky $(date +%T)"
+run build/verify.flaky.log py -3 Scripts/dev/test_history.py flaky
+FLAKY_RC=$?
+[ $DRY -eq 1 ] || tail -n 20 build/verify.flaky.log
+[ $FLAKY_RC -eq 0 ] || windows_failed "흔들림이 문턱을 넘었다 - build/verify.flaky.log"
 
 check_tree_at_end
 if [ $DRY -eq 1 ]; then
@@ -364,6 +393,7 @@ if [ $RUN_LINUX -eq 0 ]; then
   exit 0
 fi
 echo "== linux 시작 $(date +%T)"
+begin_stage linux
 PYTHONUTF8=1 run build/verify.linux.log py -3 Scripts/dev/linux_scenarios.py all "${RECORD[@]}"
 RC=$?
 [ $DRY -eq 1 ] || tail -n 40 build/verify.linux.log

@@ -1,6 +1,9 @@
 {
-    "_comment": "묶음 검증(Scripts/dev/preflight.sh)의 정책 값. _ctestJobs: ctest -j 의 슬롯 수 — 시나리오 체인은 백엔드 수만큼 슬롯을 차지하므로(PROCESSORS, Test/Scenario/CMakeLists.txt) GPU 자식 수의 상한도 이 값이다. --show 는 1 로 덮는다. _verifiedPushRefs: git pre-push 훅(Scripts/dev/verify_record.py)이 build/verify.ok 의 sha 만 받는 원격 ref. _nonInputPaths: 어느 단계의 입력도 아닌 경로(`/` 로 끝나면 폴더) — 단계가 통과한 sha 뒤 이 목록 안의 파일만 바뀌었으면 그 단계를 건너뛴다. 확실한 것만 적는다(빠뜨리면 더 돌 뿐, 잘못 넣으면 검증 안 된 단계를 건너뛴다).",
+    "_comment": "묶음 검증(Scripts/dev/preflight.sh)의 정책 값. _ctestJobs: ctest -j 의 슬롯 수 — 시나리오 체인은 백엔드 수만큼 슬롯을 차지하므로(PROCESSORS, Test/Scenario/CMakeLists.txt) GPU 자식 수의 상한도 이 값이다. --show 는 1 로 덮는다. _verifiedPushRefs: git pre-push 훅(Scripts/dev/verify_record.py)이 build/verify.ok 의 sha 만 받는 원격 ref. _nonInputPaths: 어느 단계의 입력도 아닌 경로(`/` 로 끝나면 폴더) — 단계가 통과한 sha 뒤 이 목록 안의 파일만 바뀌었으면 그 단계를 건너뛴다. 확실한 것만 적는다(빠뜨리면 더 돌 뿐, 잘못 넣으면 검증 안 된 단계를 건너뛴다). _flakyCommitWindow · _flakyRateLimit: 흔들림 판정(Scripts/dev/test_history.py flaky)이 보는 최근 검증 커밋 수와 진 비율 문턱(격리 표 밖). _slowFactor: 테스트 · 단계 시간이 지난 통과 p95 의 이 배를 넘으면 느려짐 경고(판정은 바꾸지 않는다).",
     "_ctestJobs": 6,
     "_verifiedPushRefs": ["refs/heads/main"],
-    "_nonInputPaths": ["docs/", ".claude/skills/", "CLAUDE.md", "AGENTS.md"]
+    "_nonInputPaths": ["docs/", ".claude/skills/", "CLAUDE.md", "AGENTS.md"],
+    "_flakyCommitWindow": 20,
+    "_flakyRateLimit": 0.01,
+    "_slowFactor": 1.5
 }

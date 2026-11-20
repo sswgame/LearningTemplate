@@ -27,6 +27,7 @@ from typing import Callable, Sequence
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import app_arguments  # noqa: E402
+from common.git import run_git_or_raise  # noqa: E402
 from common.paths import get_bin_dir, get_build_dir  # noqa: E402
 from common.run_process import run_cmake  # noqa: E402
 
@@ -43,6 +44,13 @@ def build_preset_or_exit(preset: str) -> None:
     result = run_cmake(['--build', '--preset', preset], cwd=REPO)
     if not result.succeeded:
         sys.exit('\n'.join([line for line in result.stdout.splitlines() if 'error' in line or 'FAILED' in line][:30] + [f'{preset} 빌드 실패 — 고친 뒤 다시 돌린다']))
+
+
+def record_rerun(run_dir: pathlib.Path) -> None:
+    """다시 돌린 보고를 이력에 `rerun` 으로 넣는다 — 흔들림 판정(`test_history.py flaky`)은 검증 실행만 본다. 같은 보고는 다시 들어가지 않아
+    다음 검증의 ingest 가 이것을 검증 실행으로 덮지 못한다."""
+    from dev.test_history import DEFAULT_DATABASE, ingest, open_database, read_reports
+    ingest(open_database(REPO / DEFAULT_DATABASE), read_reports([run_dir]), run_git_or_raise(['rev-parse', 'HEAD'], cwd=REPO).strip(), 'rerun')
 
 
 def resolve_target(names: dict[int, str], target: str) -> tuple[int, str]:
@@ -495,6 +503,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         bad = stage_failed_in_reports(list_report, target_name)
         cause = f' — {describe_stage_failures(list_report, target_name)}' if bad else ''
         print(f'{backend} {len(stage_paths):3d} 단계 (첫 {stage_paths[0]}) → {target_name} {"짐" if bad else "통과"}{cause}  ({run_dir})', flush=True)
+        record_rerun(run_dir)
         return bad
 
     if options.rerun_failed:
