@@ -24,10 +24,16 @@ SW_TEST_CASE( CookCodeFingerprintTest, EveryCookerHasItsOwnFingerprint )
     SW_EXPECT_EQUAL( uint64( 0 ), CookCodeFingerprint::find( "Nothing" ) );
 }
 
-/** @brief [CookCodeFingerprintTest] 셰이더 컴파일러 버전은 vcpkg 설치 기록에서 온 `directx-dxc <판>` 이다 */
+/**
+ * @brief [CookCodeFingerprintTest] 셰이더 도구 버전은 vcpkg 설치 기록에서 온 `directx-dxc <판>; dawn <판>` 이다
+ * @details 예전에는 DXC 판만 실어 Tint(dawn) 를 올려도 WGSL 셰이더 DDC · 쿠킹본이 낡지 않았다.
+ */
 SW_TEST_CASE( CookCodeFingerprintTest, ShaderCompilerVersionComesFromTheInstallRecord )
 {
     const string version = CookCodeFingerprint::getShaderCompilerVersion();
     SW_EXPECT_TRUE( version.find( "directx-dxc " ) == 0 );
-    SW_EXPECT_TRUE( version.size() > string_view( "directx-dxc " ).size() );
+    const size_t dawnAt = version.find( "; dawn " );
+    SW_REQUIRE_TRUE( dawnAt != string::npos );
+    SW_EXPECT_TRUE( dawnAt > string_view( "directx-dxc " ).size() );
+    SW_EXPECT_TRUE( version.size() > dawnAt + string_view( "; dawn " ).size() );
 }

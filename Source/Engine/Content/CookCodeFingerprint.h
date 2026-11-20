@@ -22,7 +22,7 @@ namespace sw
     {
         /** @brief 입력 목록의 이름 @p name 의 지문입니다. 목록에 없으면 0 입니다(`CookJob` 이 0 을 받지 않는다). */
         [[nodiscard]] static uint64 find( string_view name );
-        /** @brief 설치된 셰이더 컴파일러의 버전 글입니다(`directx-dxc <판>`, vcpkg 설치 기록에서 읽는다). */
+        /** @brief 설치된 셰이더 도구의 버전 글입니다(`directx-dxc <판>; dawn <판>` — DXC 와 Tint, vcpkg 설치 기록에서 읽는다). 도구 지문이 섞는다. */
         [[nodiscard]] static const utf8* getShaderCompilerVersion();
     };
 } // namespace sw
