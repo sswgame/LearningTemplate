@@ -164,6 +164,16 @@ namespace sw::engine
         _pBoundScope = nullptr;
     }
 
+    bool EngineRegistrationList::isHostOnlyService( uint64 typeHash ) const
+    {
+        for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+        {
+            if ( pRecord->_typeHash == typeHash )
+                return pRecord->_visibility == EngineServiceVisibility::HostOnly;
+        }
+        return false;
+    }
+
     const utf8* EngineRegistrationList::findMissingRequiredService() const
     {
         const utf8* pMissing = nullptr;

@@ -16,7 +16,7 @@ namespace sw
     {
         namespace internal
         {
-            /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindGameService`). 없으면 nullptr 입니다. */
+            /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindGameService`). 묶이지 않았으면 엔진 범위를 `HostOnly` 칸을 거른 창구로 보이고, 엔진도 없으면 nullptr 입니다. */
             SW_GAMESERVICE_API const ISubsystemLocator* findHostServices();
         } // namespace internal
 
