@@ -160,7 +160,7 @@ namespace sw
 {
     /** @brief 이름으로 부르기 · 기본 인자 · 이벤트 샘플입니다(`ReflectionInvokeTest` · `ReflectionDocWriterTest`). */
     REFLECT()
-    struct InvokeDemoActor
+    struct SW_API InvokeDemoActor
     {
         REFLECT_BODY();
 

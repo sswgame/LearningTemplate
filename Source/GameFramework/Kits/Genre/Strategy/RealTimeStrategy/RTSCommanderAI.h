@@ -83,7 +83,7 @@ namespace sw
          * @brief 생각 간격 타이머와 공격 횟수를 씁니다. 행동 트리와 블랙보드는 쓰지 않으며, 읽은 쪽에서 트리를 처음부터 다시 고릅니다.
          *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
          */
-        SW_DECLARE_STATE_IO();
+        SW_DECLARE_STATE_IO_IN_PLACE(); // 행동 트리 실행기는 복사할 수 없다 — 사본 대신 실패하면 읽기 전 값으로 되돌린다
 
         // 트리 데이터(`*.bt.xml`)가 이름으로 가리키는 작업입니다(`RTSCommanderAI.cpp` 끝의 `SW_GAME_ACTION` 줄이 `rts.*` 이름을 붙인다).
         static ActionResult taskDefend( ActionContext& context, const VocabularyNoParams& params );

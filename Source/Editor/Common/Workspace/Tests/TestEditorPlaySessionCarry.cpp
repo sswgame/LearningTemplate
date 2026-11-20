@@ -92,7 +92,7 @@ SW_TEST_CASE( EditorPlaySessionCarryTest, CarryOutThenInRoundTrips )
     SW_EXPECT_TRUE( newInstance._queuedState == PlaySessionState::Playing );
     SW_EXPECT_EQUAL( newInstance._pendingStepCount, 3u );
     SW_EXPECT_EQUAL( newInstance._heldSceneEditCount, 7u );
-    SW_EXPECT_EQUAL( newInstance._startPosition.y, 2.0f );
+    SW_EXPECT_EQUAL( newInstance._startPosition._y, 2.0f );
     SW_EXPECT_TRUE( newInstance._bSimulate == SW_TRUE );
     SW_EXPECT_TRUE( newInstance._bStartAtPosition == SW_TRUE );
     SW_EXPECT_TRUE( newInstance._bStartMovePending == SW_TRUE );

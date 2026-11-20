@@ -1081,9 +1081,7 @@ namespace sw
         // 표면 모델은 셰이더 뼈대의 조명 훅과 짝이다(material_graph.hlsli) — 후처리는 조명이 없고, Hair 는 포워드 전용을 모델이 낸다.
         const utf8* pSurfaceModel = result._bPostProcess ? "Unlit" : ( result._bHair ? "Hair" : ( result._bEmissive ? "Emissive" : "Lit" ) );
         text.append( "<MaterialDef formatVersion=\"0\" name=\"" ).append( materialName ).append( "\" shaderPath=\"" ).append( shaderPath ).append( "\" surfaceModel=\"" ).append( pSurfaceModel );
-        text.append( "\" alphaMode=\"Opaque\">
-	<_properties>
-" );
+        text.append( "\" alphaMode=\"Opaque\">\n\t<_properties>\n" );
         for ( const MaterialGraphField& field : result._listField )
         {
             text.append( "\t\t<item name=\"" ).append( field._name ).append( "\" type=\"" ).append( field._propertyType ).append( "\"" );

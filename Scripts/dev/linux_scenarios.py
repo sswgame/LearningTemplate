@@ -424,12 +424,13 @@ def retry_failed(arguments):
     command = app_arguments.find_chain_command(pathlib.Path(RELEASE), pack)
     paths = app_arguments.read_chain_stages(command)
     names = [scenario_bisect.read_scenario_name(path) for path in paths]
-    folder = scenario_bisect.find_latest_per_backend_folder(pathlib.Path(f'{RELEASE}/Bin/Saved/Automation'), set(names))
+    log_dir = pathlib.Path(f'{RELEASE}/Testing/Logs')
+    folder = scenario_bisect.find_latest_per_backend_folder(pathlib.Path(f'{RELEASE}/Bin/Saved/Automation'), paths[0], set(names), log_dir / f'Scenario.{pack}.log')
     if folder is None:
         print(f'{pack} 의 체인 보고가 없다 - chain {pack} 을 먼저 돌린다')
         return 1
     split = any('scenario-backend-split' in part for part in command)
-    failed = scenario_bisect.select_failed_stages(scenario_bisect.collect_expected_stages(folder, names, split), scenario_bisect.read_backend_reports(folder))
+    failed = scenario_bisect.select_failed_stages(scenario_bisect.collect_expected_stages(folder, log_dir, pack, names, split), scenario_bisect.read_backend_reports(folder))
     print(f'{pack}: {folder} 에서 진 단계 {len(failed)} 개', flush=True)
     with Xvfb():
         env = scenario_env(99)

@@ -158,11 +158,15 @@ def stage_failed_in_reports(list_report: Sequence[dict], stage_name: str) -> boo
 # 진 단계 다시 돌기(--rerun-failed) · 단계부터 끝까지(--from-stage) · 진행 목록(--advances) — DesignBacklog 검증 시간 절 V1
 # ------------------------------------------------------------------------------
 
-def find_latest_per_backend_folder(automation_dir: pathlib.Path, stage_names: set[str]) -> pathlib.Path | None:
-    """마지막 체인 실행의 백엔드 보고 폴더 — `-scenario-report` 없는 체인은 `<Saved/Automation>/<시나리오>/per-backend-<pid>/` 에
-    `<백엔드>.log` 와 단계 보고 `<백엔드>[.<번호>].json` 을 남긴다. 보고가 모두 이 체인의 단계인 폴더 중 가장 새것. 없으면 None.
-    하나만 맞는 것으로 고르면 여러 체인에 든 단계(kitmodulereload)를 실은 다른 체인의 나중 실행을 집었다(editor 체인이 empty 의 폴더를 읽어 "진 단계 0 개")."""
-    candidates = sorted((path for path in automation_dir.glob('*/per-backend-*') if path.is_dir()), key=lambda path: path.stat().st_mtime, reverse=True)
+def find_latest_per_backend_folder(automation_dir: pathlib.Path, first_stage_path: str, stage_names: set[str], chain_log: pathlib.Path) -> pathlib.Path | None:
+    """마지막 체인 실행의 백엔드 보고 폴더 — `-scenario-report` 없는 체인은 `<Saved/Automation>/<첫 단계 파일 이름>/per-backend-<pid>/` 에
+    단계 보고 `<백엔드>[.<번호>].json` 을 남긴다(AutomationPerBackend). 첫 단계 폴더에서, 체인 로그(`Scenario.<체인>.log`)보다 늦지 않고
+    보고가 모두 이 체인의 단계인 것 중 가장 새것. 없으면 None.
+    폴더 전체에서 고르면 혼자 다시 돌린 단계(flowterrain 혼자)나 같은 단계를 실은 다른 체인의 나중 실행을 집었다."""
+    stem = pathlib.PurePosixPath(first_stage_path).name.split('.')[0]
+    latest_mtime = chain_log.stat().st_mtime + 5.0 if chain_log.is_file() else float('inf')   # 체인 로그는 자식 보고 뒤에 닫힌다 — 몇 초 여유
+    candidates = sorted((path for path in (automation_dir / stem).glob('per-backend-*') if path.is_dir() and path.stat().st_mtime <= latest_mtime),
+                        key=lambda path: path.stat().st_mtime, reverse=True)
     for folder in candidates:
         names = [report.get('name') for _, report in read_backend_reports(folder)]
         if names and all(name in stage_names for name in names):
@@ -195,12 +199,15 @@ def select_failed_stages(expected_by_backend: dict[str, list[str]], list_report:
     return failed
 
 
-def collect_expected_stages(folder: pathlib.Path, chain_names: list[str], split: bool) -> dict[str, list[str]]:
-    """폴더의 `<백엔드>.log` 마다 그 백엔드가 돌았어야 할 단계 — 나눠 주는 체인은 그 로그가 실제로 실은 순서(`read_backend_chain_order`), 아니면 체인 전부."""
+def collect_expected_stages(folder: pathlib.Path, log_dir: pathlib.Path, chain: str, chain_names: list[str], split: bool) -> dict[str, list[str]]:
+    """보고 폴더에 보고를 낸 백엔드마다 그 백엔드가 돌았어야 할 단계 — 나눠 주는 체인은 그 백엔드 체인 로그(`Scenario.<체인>.<백엔드>.log`,
+    `read_backend_chain_order`)가 실은 순서, 아니면 체인 전부. 백엔드 로그는 보고 폴더가 아니라 Testing/Logs 에 있다."""
     expected: dict[str, list[str]] = {}
-    for log in sorted(folder.glob('*.log')):
-        backend = log.name.split('.')[0]
+    for backend in sorted({backend for backend, _ in read_backend_reports(folder)}):
         if split:
+            log = log_dir / f'Scenario.{chain}.{backend}.log'
+            if not log.is_file():
+                sys.exit(f'{log} 가 없다 — 나눠 주는 체인의 {backend} 순서를 알 수 없다(짐작하지 않는다)')
             expected[backend] = [read_scenario_name(path) for path in read_backend_chain_order(log.read_text(encoding='utf-8', errors='replace'))]
         else:
             expected[backend] = list(chain_names)
@@ -405,6 +412,25 @@ def self_check() -> int:
     list_report = [('dx12', {'name': 'a', 'result': 'Passed'}), ('dx12', {'name': 'b', 'result': 'Failed'}), ('vk', {'name': 'a', 'result': 'Skipped'})]
     assert select_failed_stages({'dx12': ['a', 'b', 'c'], 'vk': ['a', 'b']}, list_report) == [('dx12', 'b'), ('dx12', 'c'), ('vk', 'b')]
     assert select_failed_stages({'dx12': ['a']}, list_report) == []
+    # 체인 보고 폴더 고르기 · 백엔드 목록: 첫 단계 폴더만, 체인 로그보다 늦은 혼자 실행은 빼고, 백엔드는 보고 파일 이름에서(보고 폴더에 로그가 없다).
+    import tempfile, json, os, time
+    with tempfile.TemporaryDirectory() as temp:
+        root = pathlib.Path(temp)
+        chain_folder = root / 'a' / 'per-backend-1'
+        solo_folder = root / 'a' / 'per-backend-2'
+        other_folder = root / 'b' / 'per-backend-3'
+        for folder, files in ((chain_folder, {'dx12.1.json': 'a', 'vk.1.json': 'a', 'vk.2.json': 'b'}), (solo_folder, {'dx12.json': 'a'}), (other_folder, {'dx12.json': 'b'})):
+            folder.mkdir(parents=True)
+            for name, stage in files.items():
+                (folder / name).write_text(json.dumps({'name': stage, 'result': 'Passed'}), encoding='utf-8')
+        chain_log = root / 'Scenario.c.log'
+        chain_log.write_text('', encoding='utf-8')
+        now = time.time()
+        os.utime(chain_folder, (now - 100, now - 100))
+        os.utime(chain_log, (now - 90, now - 90))
+        os.utime(solo_folder, (now, now))
+        assert find_latest_per_backend_folder(root, 'x/a.scenario.xml', {'a', 'b'}, chain_log) == chain_folder
+        assert collect_expected_stages(chain_folder, root, 'c', ['a', 'b'], False) == {'dx12': ['a', 'b'], 'vk': ['a', 'b']}
     # 진행 분류: 뒤가 Expect watch 면 condition, 사진이면 photo, 그 밖 other. render="true" 를 따로 적는다. 주석 안의 진행 · 조건 대기(WaitUntil)는 세지 않는다.
     advances = list_advance_steps('<Scenario name="x"><!-- <AdvanceSimulation frames="9"/> --><AdvanceSimulation frames="2"/><Expect watch="A" equals="1"/>'
                              '<AdvanceSimulation frames="600"/><Screenshot name="s"/><WaitUntil watch="B" atLeast="1"/><AdvanceSimulation frames="5" render="true"/><Click x="1"/>'
@@ -473,11 +499,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if options.rerun_failed:
         names = [read_scenario_name(path) for path in paths]
         automation_dir = build_dir / 'Bin' / 'Saved' / 'Automation'
-        folder = find_latest_per_backend_folder(automation_dir, set(names))
+        folder = find_latest_per_backend_folder(automation_dir, paths[0], set(names), log_dir / f'Scenario.{options.chain}.log')
         if folder is None:
             parser.error(f'{options.chain} 의 체인 보고가 {automation_dir} 에 없다 — 체인을 먼저 돌린다')
         split = any('scenario-backend-split' in part for part in command)
-        failed = select_failed_stages(collect_expected_stages(folder, names, split), read_backend_reports(folder))
+        failed = select_failed_stages(collect_expected_stages(folder, log_dir, options.chain, names, split), read_backend_reports(folder))
         print(f'{options.chain}: {folder} 에서 진 단계 {len(failed)} 개', flush=True)
         return retry_failed_stages(paths, failed, run_stage)
     if options.from_stage:

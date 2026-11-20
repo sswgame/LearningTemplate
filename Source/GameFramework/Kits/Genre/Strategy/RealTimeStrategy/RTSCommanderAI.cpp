@@ -69,8 +69,16 @@ namespace sw
 
     void RTSCommanderAI::serializeState( StateIO& io )
     {
-        io.reflected( *this );   // 공격 횟수의 범위는 `PROPERTY( Min )` 이 지킨다
-        io.value( _thinkTimer ); // 리플렉션 밖 값 — 무한대 타이머는 AI 를 영영 세우는데, 아카이브의 실수 읽기가 유한만 받는다
+        const int32 attackWaveCountBefore = _attackWaveCount;
+        Countdown   thinkTimer            = _thinkTimer;
+        io.reflected( *this );  // 공격 횟수의 범위는 `PROPERTY( Min )` 이 지킨다
+        io.value( thinkTimer ); // 리플렉션 밖 값 — 무한대 타이머는 AI 를 영영 세우는데, 아카이브의 실수 읽기가 유한만 받는다
+        if ( io.isOk() == false )
+        {
+            _attackWaveCount = attackWaveCountBefore; // 끝까지 맞을 때만 바꾼다
+            return;
+        }
+        _thinkTimer = thinkTimer;
     }
 
     RTSUnitID RTSCommanderAI::findDepot() const
