@@ -628,10 +628,10 @@ namespace sw
         return bAllBound;
     }
 
-    void* LiveReloadManager::getModuleHandle( string_view moduleName ) const
+    ModuleLibraryHandle LiveReloadManager::getModuleHandle( string_view moduleName ) const
     {
         auto it = _mapModule.find( string( moduleName ) );
-        return it != _mapModule.end() ? it->second->_pLibraryModule : nullptr;
+        return ModuleLibraryHandle{ it != _mapModule.end() ? it->second->_pLibraryModule : nullptr };
     }
 
     unique_ptr<IModuleCompiler> LiveReloadManager::createModuleCompiler()
@@ -779,7 +779,7 @@ namespace sw
                 const bool  bCompleted = ModuleCallGuard::run(
                     SW_DELEGATE_LAMBDA( Delegate<void()>, [&context, &bAccepted, pNewHandle]()
                  {
-                    bAccepted = context._onValidateLibrary( pNewHandle );
+                    bAccepted = context._onValidateLibrary( ModuleLibraryHandle{ pNewHandle } );
                 } ),
                     faultCode );
                 if ( bCompleted == false || bAccepted == false )
@@ -861,7 +861,7 @@ namespace sw
         const bool bCompleted = ModuleCallGuard::run(
             SW_DELEGATE_LAMBDA( Delegate<void()>, [&context]()
         {
-            context._onAfterReload( context._pLibraryModule );
+            context._onAfterReload( ModuleLibraryHandle{ context._pLibraryModule } );
         } ),
             faultCode );
         if ( bCompleted == false )

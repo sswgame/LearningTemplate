@@ -93,12 +93,12 @@ namespace sw
         /** @brief 에디터 모듈을 언로드하기 직전에 불립니다. 인스턴스와 API 테이블을 해제합니다. */
         void onBeforeEditorReload();
         /** @brief 에디터 모듈이 다시 로드된 직후에 불립니다. API 를 다시 바인딩하고 인스턴스를 만듭니다. */
-        void onAfterEditorReload( void* pLibraryModule );
+        void onAfterEditorReload( ModuleLibraryHandle library );
         /**
          * @brief 새 에디터 이미지가 이 호스트와 같은 API 테이블로 빌드됐는지 확인합니다(ABI 버전, 지문, `exportEditorAPI`). 옛 이미지를 언로드하기 전에 불립니다.
          * @details 여기서 거절하면 옛 에디터가 그대로 돈다. 같은 검사를 옛 이미지를 언로드한 뒤(`onAfterEditorReload`)에야 하면 거절이 곧 에디터를 잃는 일이 된다.
          */
-        bool isEditorLibraryUsable( void* pLibraryModule ) const;
+        bool isEditorLibraryUsable( ModuleLibraryHandle library ) const;
         /** @brief 편집기 모듈을 지금 내리면 안 되는지입니다(편집기 API `isReloadHeld` — 열린 파일 대화상자). 리로드 잡음(`LiveReloadManager::addReloadHold`)으로 건다. */
         bool isEditorReloadHeld() const;
         /**
@@ -108,7 +108,7 @@ namespace sw
         void onEditorReloadFault( uint32 faultCode );
 
         /** @brief 에디터 DLL 에서 API 테이블을 받아 바인딩합니다. ABI 버전이나 스탬프가 다르면 실패합니다. */
-        [[nodiscard]] bool bindEditorAPI( void* pLibraryModule );
+        [[nodiscard]] bool bindEditorAPI( ModuleLibraryHandle library );
 
     private:
         /** @brief 에디터를 켤 때 EditorModule 다음에 로드할 확장 모듈(종류 EditorExtension) 하나입니다. */

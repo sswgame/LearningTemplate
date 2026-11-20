@@ -226,10 +226,10 @@ namespace sw
         suspendModules( ModuleScope::Editor, true, FlushReason::Reload );
     }
 
-    void EditorModuleManager::onAfterEditorReload( void* pLibraryModule )
+    void EditorModuleManager::onAfterEditorReload( ModuleLibraryHandle library )
     {
         const ScopedMemoryTag moduleMemoryTag{ kEditorModuleMemoryTag }; // 다시 올린 모듈의 서비스 묶기(표의 `bindService`)가 모듈 코드다
-        if ( bindEditorAPI( pLibraryModule ) == false )
+        if ( bindEditorAPI( library ) == false )
         {
             markReloadGraphBroken( "EditorAPI bind failed after reload" );
             return;
@@ -243,9 +243,9 @@ namespace sw
         }
     }
 
-    bool EditorModuleManager::isEditorLibraryUsable( void* pLibraryModule ) const
+    bool EditorModuleManager::isEditorLibraryUsable( ModuleLibraryHandle library ) const
     {
-        return ModuleInstanceUtil::isLibraryUsable<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, getModuleSymbols() );
+        return ModuleInstanceUtil::isLibraryUsable<EditorAPI, PFN_ExportEditorAPI>( library, getModuleSymbols() );
     }
 
     void EditorModuleManager::onEditorReloadFault( uint32 faultCode )
@@ -307,9 +307,9 @@ namespace sw
         return EditorModuleManagerInternal::kEditorSymbols;
     }
 
-    bool EditorModuleManager::bindEditorAPI( void* pLibraryModule )
+    bool EditorModuleManager::bindEditorAPI( ModuleLibraryHandle library )
     {
-        if ( ModuleInstanceUtil::exportAPIFromLibrary<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, getModuleSymbols(), _editorAPI ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromLibrary<EditorAPI, PFN_ExportEditorAPI>( library, getModuleSymbols(), _editorAPI ) == false )
             return false;
 
         rebindEditorService();
@@ -426,10 +426,10 @@ namespace sw
             template <typename TEntryFn, typename TCall>
             [[nodiscard]] static bool callEditorModuleEntry( const ModuleAPISymbols& symbols, const utf8* pSymbol, const utf8* pPurpose, TCall&& call )
             {
-                const string                 modulePath     = ModuleLibraryUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
-                const optional<AbsolutePath> libraryPath    = AbsolutePath::tryMake( modulePath );
-                void* const                  pLibraryModule = libraryPath.has_value() && FileUtil::exists( modulePath ) ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr;
-                if ( pLibraryModule == nullptr )
+                const string                 modulePath  = ModuleLibraryUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
+                const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( modulePath );
+                const ModuleLibraryHandle    library{ libraryPath.has_value() && FileUtil::exists( modulePath ) ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr };
+                if ( library.isValid() == false )
                 {
                     SW_LOG_ERROR_ID( "EditorModuleManager.NeedsEditorModuleBin", "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );
                     return false;
@@ -439,9 +439,9 @@ namespace sw
                 bool bSucceeded = false;
                 if ( engine::registerModuleTypes( sw::config::kTargetEditorModule ) == false )
                     SW_LOG_ERROR_ID( "EditorModuleManager.CannotRegisterEditorModule", "%# cannot register the editor module types", pPurpose );
-                else if ( ModuleInstanceUtil::matchesModuleABI( pLibraryModule, symbols ) )
+                else if ( ModuleInstanceUtil::matchesModuleABI( library, symbols ) )
                 {
-                    const TEntryFn pfnEntry = reinterpret_cast<TEntryFn>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, pSymbol ) );
+                    const TEntryFn pfnEntry = reinterpret_cast<TEntryFn>( library.findSymbol( pSymbol ) );
                     if ( pfnEntry == nullptr )
                         SW_LOG_ERROR_ID( "EditorModuleManager.EditorModuleDoesNot", "The editor module does not export %#", pSymbol );
                     else
@@ -454,7 +454,7 @@ namespace sw
 
                 engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
                 // 언로드하지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 로드된 채로 남을 뿐이다. 이유는 경고로 남는다.
-                (void)ModuleLibraryUtil::unloadModuleLibrary( sw::config::kTargetEditorModule, pLibraryModule );
+                (void)ModuleLibraryUtil::unloadModuleLibrary( sw::config::kTargetEditorModule, library.getOSHandle() );
                 return bSucceeded;
             }
         };

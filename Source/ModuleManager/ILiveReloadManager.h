@@ -13,6 +13,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "ModuleManager/ModuleLibraryHandle.h"
+
 namespace sw
 {
     class IModuleCompiler;
@@ -25,11 +27,11 @@ namespace sw
     {
     public:
         using OnBeforeReloadDelegate = Delegate<void()>;
-        using OnAfterReloadDelegate  = Delegate<void( void* pLibraryModule )>;
+        using OnAfterReloadDelegate  = Delegate<void( ModuleLibraryHandle library )>;
         /** @brief onAfterReload 안에서 하드웨어 예외가 났을 때 불립니다. 인자는 예외 코드(Windows)나 시그널 번호(리눅스)입니다. */
         using OnReloadFaultDelegate = Delegate<void( uint32 faultCode )>;
         /** @brief 새로 로드한 라이브러리를 받아들일지 묻습니다(prepare 때 — false 면 옛 라이브러리를 그대로 둔다). */
-        using OnValidateLibraryDelegate = Delegate<bool( void* pLibraryModule )>;
+        using OnValidateLibraryDelegate = Delegate<bool( ModuleLibraryHandle library )>;
         /** @brief 연쇄 교체의 첫 commit 직전에 불립니다. false 면 아무것도 바꾸지 않는다. */
         using OnBeforeCommitBatchDelegate = Delegate<bool( const vector<string>& listModuleName )>;
         using FlushWorkersDelegate        = Delegate<void()>;
@@ -57,8 +59,8 @@ namespace sw
         virtual void markGraphBroken( string_view reason ) = 0;
         /** @brief 그래프가 깨졌으면 true 입니다. */
         virtual bool isGraphBroken() const = 0;
-        /** @brief 로드된 모듈의 핸들입니다. 없으면 nullptr 입니다. */
-        virtual void* getModuleHandle( string_view moduleName ) const = 0;
+        /** @brief 로드된 모듈의 라이브러리 핸들입니다. 없으면 빈 핸들입니다. */
+        virtual ModuleLibraryHandle getModuleHandle( string_view moduleName ) const = 0;
 
         /** @brief 이 매니저에 빌드 시작 · 끝을 알리는 모듈 컴파일러를 만듭니다(에디터 모듈의 `IModuleCompiler`). */
         [[nodiscard]] virtual unique_ptr<IModuleCompiler> createModuleCompiler() = 0;

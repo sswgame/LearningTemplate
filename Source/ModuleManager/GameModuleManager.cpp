@@ -172,12 +172,12 @@ namespace sw
         suspendModules( ModuleScope::Game, true, FlushReason::Reload );
     }
 
-    void GameModuleManager::onAfterGameReload( void* pLibraryModule )
+    void GameModuleManager::onAfterGameReload( ModuleLibraryHandle library )
     {
         const ScopedMemoryTag moduleMemoryTag{ kGameModuleMemoryTag }; // 다시 올린 모듈의 서비스 묶기(표의 `bindService`)가 모듈 코드다
         // 핸들을 받지 못했으면(기동 · RHI 교체) 리로드 매니저가 든 것을 쓴다. 배포는 정적 링크라 핸들이 없고 `bindGameAPI` 가 정적 테이블을 읽는다.
-        void* const pModuleHandle = pLibraryModule != nullptr ? pLibraryModule : getLoadedModuleHandle( sw::config::kTargetGameModule );
-        if ( bindGameAPI( pModuleHandle ) == false )
+        const ModuleLibraryHandle gameLibrary = library.isValid() ? library : getLoadedModuleHandle( sw::config::kTargetGameModule );
+        if ( bindGameAPI( gameLibrary ) == false )
         {
             markReloadGraphBroken( "GameAPI bind failed after reload" );
             return;
@@ -202,7 +202,7 @@ namespace sw
         onBeforeGameReload();
     }
 
-    void GameModuleManager::onAfterGameplayDLLReload( void* /*hLibraryModule*/ )
+    void GameModuleManager::onAfterGameplayDLLReload( ModuleLibraryHandle /*library*/ )
     {
         if ( engine::areEngineServicesBound() == false )
             return;
@@ -233,9 +233,9 @@ namespace sw
         return true;
     }
 
-    bool GameModuleManager::isGameLibraryUsable( void* pLibraryModule ) const
+    bool GameModuleManager::isGameLibraryUsable( ModuleLibraryHandle library ) const
     {
-        return ModuleInstanceUtil::isLibraryUsable<GameAPI, PFN_ExportGameAPI>( pLibraryModule, getModuleSymbols() );
+        return ModuleInstanceUtil::isLibraryUsable<GameAPI, PFN_ExportGameAPI>( library, getModuleSymbols() );
     }
 
     // ======================================================================
@@ -305,10 +305,10 @@ namespace sw
         return kGameSymbols;
     }
 
-    bool GameModuleManager::bindGameAPI( void* pLibraryModule )
+    bool GameModuleManager::bindGameAPI( ModuleLibraryHandle library )
     {
         _gameAPI = {};
-        if ( exportGameAPITable( pLibraryModule ) == false )
+        if ( exportGameAPITable( library ) == false )
             return false;
 
         rebindGameService();
@@ -616,17 +616,17 @@ namespace sw
             _pLiveReloadManager->markGraphBroken( pReason != nullptr ? pReason : "unspecified" );
     }
 
-    void* GameModuleManager::getLoadedModuleHandle( string_view moduleName ) const
+    ModuleLibraryHandle GameModuleManager::getLoadedModuleHandle( string_view moduleName ) const
     {
         if ( _pLiveReloadManager == nullptr )
-            return nullptr;
+            return ModuleLibraryHandle{};
         return _pLiveReloadManager->getModuleHandle( moduleName );
     }
 
-    bool GameModuleManager::exportGameAPITable( void* pLibraryModule )
+    bool GameModuleManager::exportGameAPITable( ModuleLibraryHandle library )
     {
         // 동적 경로라 새 라이브러리가 이 호스트와 다른 테이블로 빌드됐을 수 있다 — ABI 를 대조한다(배포는 정적 링크라 어긋날 수 없다).
-        return ModuleInstanceUtil::exportAPIFromLibrary<GameAPI, PFN_ExportGameAPI>( pLibraryModule, getModuleSymbols(), _gameAPI );
+        return ModuleInstanceUtil::exportAPIFromLibrary<GameAPI, PFN_ExportGameAPI>( library, getModuleSymbols(), _gameAPI );
     }
 #else
 
@@ -640,7 +640,7 @@ namespace sw
 
     bool GameModuleManager::startGameInstance()
     {
-        onAfterGameReload( nullptr );
+        onAfterGameReload( ModuleLibraryHandle{} );
         return true;
     }
 
@@ -648,13 +648,13 @@ namespace sw
     {
     }
 
-    void* GameModuleManager::getLoadedModuleHandle( [[maybe_unused]] string_view moduleName ) const
+    ModuleLibraryHandle GameModuleManager::getLoadedModuleHandle( [[maybe_unused]] string_view moduleName ) const
     {
-        // 정적 링크라 "로드된 모듈"이라는 것이 없다. 부르는 쪽이 nullptr 을 처리한다.
-        return nullptr;
+        // 정적 링크라 "로드된 모듈"이라는 것이 없다. 부르는 쪽이 빈 핸들을 처리한다.
+        return ModuleLibraryHandle{};
     }
 
-    bool GameModuleManager::exportGameAPITable( [[maybe_unused]] void* pLibraryModule )
+    bool GameModuleManager::exportGameAPITable( [[maybe_unused]] ModuleLibraryHandle library )
     {
         if ( exportGameAPI( &_gameAPI ) == false )
         {

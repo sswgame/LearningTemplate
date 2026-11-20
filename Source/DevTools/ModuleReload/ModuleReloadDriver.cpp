@@ -217,7 +217,7 @@ namespace sw
     bool ModuleReloadDriver::queueReload( const utf8* pModuleName )
     {
         LiveReloadManager* const pManager = _pState->_liveReloadManager.get();
-        if ( pManager == nullptr || pManager->getModuleHandle( pModuleName ) == nullptr )
+        if ( pManager == nullptr || pManager->getModuleHandle( pModuleName ).isValid() == false )
             return false;
         _pState->_reloadTargetCount = pManager->getCompletedReloadCount() + 1;
         _pState->_requestKind       = ReloadRequestKind::Reload;
@@ -228,7 +228,7 @@ namespace sw
     bool ModuleReloadDriver::queueRebuild( const utf8* pModuleName )
     {
         LiveReloadManager* const pManager = _pState->_liveReloadManager.get();
-        if ( pManager == nullptr || pManager->getModuleHandle( pModuleName ) == nullptr )
+        if ( pManager == nullptr || pManager->getModuleHandle( pModuleName ).isValid() == false )
             return false;
         if ( _pState->_rebuildCompiler == nullptr )
             _pState->_rebuildCompiler = pManager->createModuleCompiler();

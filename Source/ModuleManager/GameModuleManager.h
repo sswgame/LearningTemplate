@@ -20,6 +20,7 @@
 #include "ModuleAPI/ABI/GameAPI.h"
 #include "ModuleAPI/Service/IModuleCompiler.h"
 
+#include "ModuleManager/ModuleLibraryHandle.h"
 #include "ModuleManager/ModuleManagerAPI.h"
 
 namespace sw
@@ -111,11 +112,11 @@ namespace sw
         GameModuleManager& operator=( const GameModuleManager& ) = delete;
 
         /**
-         * @brief 이미 로드된 모듈의 핸들을 반환합니다. 핫 리로드가 없으면(Shipping) 항상 nullptr 입니다.
+         * @brief 이미 로드된 모듈의 라이브러리 핸들을 반환합니다. 핫 리로드가 없으면(Shipping) 항상 빈 핸들입니다.
          * @details 모듈 수명은 이 클래스가 압니다. 부르는 쪽이 LiveReloadManager 를 직접 알 필요가 없습니다. RHI 백엔드 교체가
          *          모듈을 다시 만들 때 이 핸들로 같은 DLL 을 다시 바인딩합니다.
          */
-        void* getLoadedModuleHandle( string_view moduleName ) const;
+        ModuleLibraryHandle getLoadedModuleHandle( string_view moduleName ) const;
 
         /**
          * @brief 타입 공급자 모듈(GameFramework, 키트, SWGame)의 라이브러리를 로드해 그 타입을 등록합니다. 인스턴스는 만들지 않습니다.
@@ -173,16 +174,16 @@ namespace sw
         void onBeforeGameReload();
         /**
          * @brief 게임 모듈이 다시 로드된 직후에 불립니다. API 를 바인딩하고 인스턴스를 만든 뒤 상태를 복원합니다.
-         * @param pLibraryModule 새로 로드된 DLL 핸들. 배포 구성은 정적 링크라 쓰지 않습니다.
+         * @param library 새로 로드된 라이브러리. 배포 구성은 정적 링크라 쓰지 않습니다.
          */
-        void onAfterGameReload( void* pLibraryModule );
+        void onAfterGameReload( ModuleLibraryHandle library );
         /** @brief GameFramework 와 키트 DLL 을 언로드하기 직전에 불립니다. 게임과 같은 절차를 밟습니다. */
         void onBeforeGameplayDLLReload();
         /**
          * @brief 키트 DLL 이 다시 로드된 직후에 불립니다. 씬이 캐시한 TypeInfo 포인터를 새 DLL 의 것으로 바꿉니다.
          * @details 이 작업을 빠뜨리면 살아 있는 오브젝트가 언로드된 DLL 의 TypeInfo 를 가리킵니다.
          */
-        void onAfterGameplayDLLReload( void* pLibraryModule );
+        void onAfterGameplayDLLReload( ModuleLibraryHandle library );
         /**
          * @brief 연쇄 교체 대상이 모두 준비된 뒤 첫 commit 직전에 불립니다. 게임 쪽 모듈(SWGame · GameFramework · 키트)이 섞여 있으면 게임을 먼저 언로드합니다.
          * @details 에디터 모듈과 에디터 확장(`GF_EditorPlugin_*`)만의 배치는 게임을 건드리지 않는다 — 언로드하면 다시 만들 쪽(게임 리로드 콜백)이 오지 않아
@@ -195,7 +196,7 @@ namespace sw
          * @brief 새 게임 라이브러리가 이 호스트와 같은 API 테이블로 빌드됐는지 확인합니다(ABI 버전, 지문, `exportGameAPI`). 옛 라이브러리를 언로드하기 전에 불립니다.
          * @details 여기서 거절하면 옛 게임이 그대로 돈다. 같은 검사를 옛 라이브러리를 언로드한 뒤(`onAfterGameReload`)에야 하면 거절이 곧 게임을 잃는 일이 된다.
          */
-        bool isGameLibraryUsable( void* pLibraryModule ) const;
+        bool isGameLibraryUsable( ModuleLibraryHandle library ) const;
         /**
          * @brief 새 게임 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 **모듈을 부르지 않고** 버립니다.
          * @param faultCode 예외 코드(Windows) 또는 시그널 번호(리눅스)
@@ -223,7 +224,7 @@ namespace sw
 
         // 4) 모듈 바인딩
         /** @brief 게임 API 테이블을 바인딩합니다. 배포 구성은 정적 `exportGameAPI` 를, 개발 구성은 DLL 심볼을 씁니다. */
-        [[nodiscard]] bool bindGameAPI( void* pLibraryModule );
+        [[nodiscard]] bool bindGameAPI( ModuleLibraryHandle library );
 
         // 5) 장치 교체 · 다시 만들기
         /**
@@ -298,8 +299,8 @@ namespace sw
          * @return 개발 구성에서 리로드 매니저가 게임 인스턴스를 세우지 못하면 false 입니다.
          */
         [[nodiscard]] bool startGameInstance();
-        /** @brief `_gameAPI` 를 채웁니다. 개발은 @p pLibraryModule 의 심볼(ABI 대조 포함), 배포는 정적 `exportGameAPI` 다(이 클래스 cpp 의 `SW_WITH_DYNAMIC_MODULES` 구역). */
-        [[nodiscard]] bool exportGameAPITable( void* pLibraryModule );
+        /** @brief `_gameAPI` 를 채웁니다. 개발은 @p library 의 심볼(ABI 대조 포함), 배포는 정적 `exportGameAPI` 다(이 클래스 cpp 의 `SW_WITH_DYNAMIC_MODULES` 구역). */
+        [[nodiscard]] bool exportGameAPITable( ModuleLibraryHandle library );
         /** @brief 호스트가 모듈에 넘기는 서비스 테이블을 채웁니다. @p bGameModule 이면 게임에 허용된 것(GameVisible)만 채웁니다. */
         void fillModuleServiceScope( SubsystemScope& outScope, bool bGameModule ) const;
         /** @brief 장치를 다시 만든 뒤 게임을 다시 만듭니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */

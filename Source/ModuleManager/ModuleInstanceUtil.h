@@ -3,14 +3,16 @@
  * @brief 모듈 라이브러리에서 API 표를 받고 인스턴스를 만들고 내리는 절차입니다. 게임(`GameModuleManager`)과 에디터(`EditorModuleManager`)가 같은 절차를 씁니다.
  */
 #pragma once
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "ModuleAPI/ABI/ModuleABI.h"
+
+#include "ModuleManager/ModuleLibraryHandle.h"
 
 namespace sw
 {
@@ -37,6 +39,10 @@ namespace sw
      */
     struct ModuleInstanceUtil
     {
+        /** @brief API 표 @p TAPI 가 만드는 인스턴스 핸들 형식입니다(`create` 의 반환 — `GameHandle` · `EditorHandle`). 라이브러리 핸들(`ModuleLibraryHandle`)과 다른 형식이다. */
+        template <typename TAPI>
+        using InstanceHandleOf = decltype( std::declval<const TAPI&>().create() );
+
         /**
          * @brief 모듈이 호스트와 **같은 테이블 구조**로 빌드됐는지 대조합니다.
          * @details `GameAPI` · `EditorAPI` 는 함수 포인터를 순서대로 늘어놓은 구조체입니다. 모듈은 자기가 아는 자리에 채우고 호스트는
@@ -44,9 +50,9 @@ namespace sw
          *          만으로는 막지 못합니다 — 그 둘은 **맨 앞**에 있어서 가운데에 끼워 넣어도 채워집니다. 핫 리로드는 모듈만 다시 빌드하는 기능이라 이런
          *          어긋남이 생기는 바로 그 상황입니다. 스탬프는 표 선언 글의 해시라 표를 고치면 저절로 바뀝니다(`ModuleABI.h`).
          */
-        static bool matchesModuleABI( void* pLibraryModule, const ModuleAPISymbols& symbols )
+        static bool matchesModuleABI( ModuleLibraryHandle library, const ModuleAPISymbols& symbols )
         {
-            const PFN_GetModuleABIStamp pfnStamp = reinterpret_cast<PFN_GetModuleABIStamp>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pStampSymbol ) );
+            const PFN_GetModuleABIStamp pfnStamp = reinterpret_cast<PFN_GetModuleABIStamp>( library.findSymbol( symbols._pStampSymbol ) );
             if ( pfnStamp == nullptr || pfnStamp() != symbols._expectedStamp )
             {
                 SW_LOG_ERROR_ID( "ModuleInstanceUtil.ModuleABIStampDiffers", "The %# module ABI stamp differs (expected %#) - rebuild the engine and the module together.", symbols._pModuleLabel, symbols._expectedStamp );
@@ -60,12 +66,12 @@ namespace sw
          * @details 리로드 전 검사(`is*LibraryUsable`)와 바인딩(`bind*API`)이 같은 절차를 씁니다.
          */
         template <typename TAPI, typename TExportFn>
-        [[nodiscard]] static bool exportAPIFromLibrary( void* pLibraryModule, const ModuleAPISymbols& symbols, TAPI& outAPI )
+        [[nodiscard]] static bool exportAPIFromLibrary( ModuleLibraryHandle library, const ModuleAPISymbols& symbols, TAPI& outAPI )
         {
             outAPI = {};
-            if ( pLibraryModule == nullptr || matchesModuleABI( pLibraryModule, symbols ) == false )
+            if ( library.isValid() == false || matchesModuleABI( library, symbols ) == false )
                 return false;
-            const TExportFn pfnExport = reinterpret_cast<TExportFn>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pExportSymbol ) );
+            const TExportFn pfnExport = reinterpret_cast<TExportFn>( library.findSymbol( symbols._pExportSymbol ) );
             if ( pfnExport == nullptr || pfnExport( &outAPI ) == false )
             {
                 outAPI = {};
@@ -77,10 +83,10 @@ namespace sw
 
         /** @brief 새 라이브러리로 리로드해도 되는지(ABI 가 맞고 API 표에 만들기 · 부수기가 있는지) 봅니다 — 리로드 전 검사(에디터 · 게임 공통). */
         template <typename TAPI, typename TExportFn>
-        [[nodiscard]] static bool isLibraryUsable( void* pLibraryModule, const ModuleAPISymbols& symbols )
+        [[nodiscard]] static bool isLibraryUsable( ModuleLibraryHandle library, const ModuleAPISymbols& symbols )
         {
             TAPI api{};
-            return exportAPIFromLibrary<TAPI, TExportFn>( pLibraryModule, symbols, api ) && api.create != nullptr && api.destroy != nullptr;
+            return exportAPIFromLibrary<TAPI, TExportFn>( library, symbols, api ) && api.create != nullptr && api.destroy != nullptr;
         }
 
         /**
@@ -89,7 +95,7 @@ namespace sw
          *       길이고, 만들어 봐야 초기화가 실패할 것이 정해져 있습니다. 전용 서버의 게임은 디바이스 없이(nullptr) 만듭니다.
          */
         template <typename TAPI, typename TInitialize>
-        [[nodiscard]] static bool createInstance( const TAPI& api, void*& pOutHandle, const TInitialize& initialize, RHI* pRHI, bool bRequireDevice, const utf8* pModuleLabel )
+        [[nodiscard]] static bool createInstance( const TAPI& api, InstanceHandleOf<TAPI>& pOutHandle, const TInitialize& initialize, RHI* pRHI, bool bRequireDevice, const utf8* pModuleLabel )
         {
             pOutHandle            = nullptr;
             const bool bHasDevice = pRHI != nullptr && pRHI->hasDevice();
@@ -124,7 +130,7 @@ namespace sw
          * @details 타입 등록 해제가 그 모듈의 살아 있는 컴포넌트를 지웁니다. 그 소멸자는 모듈 코드라 서비스가 아직 붙어 있는 동안이어야 합니다.
          */
         template <typename TAPI>
-        static void destroyInstance( TAPI& inoutAPI, void*& pInOutHandle, bool bReleaseAPITable, const utf8* pModuleName )
+        static void destroyInstance( TAPI& inoutAPI, InstanceHandleOf<TAPI>& pInOutHandle, bool bReleaseAPITable, const utf8* pModuleName )
         {
             if ( pInOutHandle != nullptr && inoutAPI.shutdown != nullptr )
                 inoutAPI.shutdown( pInOutHandle );

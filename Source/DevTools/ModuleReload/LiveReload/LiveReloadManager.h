@@ -185,7 +185,7 @@ namespace sw
         bool verifyModuleBindings() const;
 
         /** @brief 로드된 모듈의 핸들을 반환합니다. */
-        void* getModuleHandle( string_view moduleName ) const override;
+        ModuleLibraryHandle getModuleHandle( string_view moduleName ) const override;
         /** @brief 이 매니저에 빌드 시작 · 끝을 알리는 모듈 컴파일러(`ModuleCompiler`)를 만듭니다. */
         [[nodiscard]] unique_ptr<IModuleCompiler> createModuleCompiler() override;
 
