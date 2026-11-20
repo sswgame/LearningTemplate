@@ -8,6 +8,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/PropertyHandle.h"
+#include "Engine/Reflection/ReflectedAny.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionInvoke.h"
@@ -33,6 +34,27 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, FindRegisteredClass )
 
     SW_EXPECT_EQUAL( sw::string( "DummyActor" ), sw::string( info->_name.c_str() ) );
     SW_EXPECT_EQUAL( sizeof( sw::DummyActor ), info->_size );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] ReflectedAny 의 형식 붙은 make · tryGet 은 `StaticType()` 으로 형식을 찾아 값을 왕복한다
+ * @details 예전에는 .gen.cpp 안의 `ReflectTypeTraits<T>` 특수화로 찾아 다른 번역 단위(이 테스트)에서는 빈 값 · false 였다. 리플렉트 형식이 아닌 T 는 이제 컴파일 오류다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, ReflectedAnyRoundTripThroughStaticType )
+{
+    sw::SampleTestActor source;
+    source._hp                 = 42;
+    source._name               = "Copied";
+    const sw::ReflectedAny any = sw::ReflectedAny::make( source );
+    SW_EXPECT_FALSE( any.empty() );
+    SW_EXPECT_EQUAL( sw::string( "sw::SampleTestActor" ), sw::string( any._typeFqn.c_str() ) );
+
+    sw::SampleTestActor restored;
+    restored._hp   = 0;
+    restored._name = "";
+    SW_EXPECT_TRUE( any.tryGet( restored ) );
+    SW_EXPECT_EQUAL( 42, restored._hp );
+    SW_EXPECT_EQUAL( sw::string( "Copied" ), restored._name );
 }
 
 /**

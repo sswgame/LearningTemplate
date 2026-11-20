@@ -368,9 +368,6 @@ namespace sw
 
         for ( const ParsedTypeInfo& typeInfo : _header._listType )
         {
-            // 숨은 중첩 형식은 이름공간 범위 특수화를 내지 않는다(접근 오류). 그 형식은 `REFLECT_BODY()` 의 `StaticType()` 으로 찾는다(`TypeRegistry::findType` 이 먼저 본다).
-            if ( typeInfo._bHidden == SW_FALSE )
-                emitReflectTypeTraits( buffer, typeInfo );
             if ( typeInfo.requiresTypeAPI() )
                 emitTypeInfoAccessors( buffer, typeInfo );
         }
@@ -434,14 +431,6 @@ namespace sw
         appendTemplate( outBuffer, EmitTemplate::FileHeader, {
                                                                  {templatekey::kSourcePath,                   _sourceFilePath},
                                                                  {    templatekey::kBanner, sw::config::kTextReflectionBanner}
-        } );
-    }
-
-    void CodeGenerator::emitReflectTypeTraits( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
-    {
-        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::TypeTraits };
-        appendTemplate( outBuffer, EmitTemplate::ReflectTypeTraits, {
-                                                                        { templatekey::kFqn, typeInfo._fullyQualifiedName }
         } );
     }
 

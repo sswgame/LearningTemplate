@@ -144,8 +144,6 @@ namespace sw
         {
             if constexpr ( HasStaticType_v<T> )
                 return T::StaticType();
-            else if constexpr ( HasReflectStaticType_v<T> )
-                return ReflectTypeTraits<T>::StaticType();
             else
                 return findType( typeFqn<T>() );
         }

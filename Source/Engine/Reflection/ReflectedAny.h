@@ -32,34 +32,29 @@ namespace sw
         /** @brief 저장된 값을 대상 TypeInfo로 꺼냅니다. */
         [[nodiscard]] bool tryGetFrom( const TypeInfo& info, void* pOut ) const;
 
-        /** @brief 리플렉트 타입 T 의 값으로 ReflectedAny 를 만듭니다. */
+        /**
+         * @brief 리플렉트 타입 T 의 값으로 ReflectedAny 를 만듭니다. T 는 `REFLECT_BODY()` 를 선언한 형식이어야 합니다(컴파일 오류).
+         * @details 리플렉트 형식이 아닌 T 를 빈 값으로 조용히 넘기지 않는다 — 형식이 틀리면 그 자리에서 멈춘다.
+         */
         template <typename T>
         static ReflectedAny make( const T& value )
         {
-            if constexpr ( HasReflectStaticType<T>::value )
-            {
-                const TypeInfo* pInfo = ReflectTypeTraits<T>::StaticType();
-                if ( pInfo == nullptr )
-                    return ReflectedAny{};
-                return makeFrom( *pInfo, &value );
-            }
-            else
+            static_assert( HasStaticType_v<T>, "ReflectedAny::make<T> needs a REFLECT type with REFLECT_BODY()" );
+            const TypeInfo* pInfo = T::StaticType();
+            if ( pInfo == nullptr )
                 return ReflectedAny{};
+            return makeFrom( *pInfo, &value );
         }
 
-        /** @brief 저장된 값을 T로 꺼냅니다. */
+        /** @brief 저장된 값을 T 로 꺼냅니다. T 는 `REFLECT_BODY()` 를 선언한 형식이어야 합니다(컴파일 오류). */
         template <typename T>
         [[nodiscard]] bool tryGet( T& outValue ) const
         {
-            if constexpr ( HasReflectStaticType<T>::value )
-            {
-                const TypeInfo* pInfo = ReflectTypeTraits<T>::StaticType();
-                if ( pInfo == nullptr )
-                    return false;
-                return tryGetFrom( *pInfo, &outValue );
-            }
-            else
+            static_assert( HasStaticType_v<T>, "ReflectedAny::tryGet<T> needs a REFLECT type with REFLECT_BODY()" );
+            const TypeInfo* pInfo = T::StaticType();
+            if ( pInfo == nullptr )
                 return false;
+            return tryGetFrom( *pInfo, &outValue );
         }
     };
 
