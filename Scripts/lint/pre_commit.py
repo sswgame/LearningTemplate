@@ -23,30 +23,28 @@ from __future__ import annotations
 import builtins
 import collections
 import contextlib
-import dataclasses
 import functools
 import importlib
 import io
-import os
+import re
 import subprocess
 import sys
 import tempfile
-import types
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.project_constants import CPP_ALL_EXTENSIONS, LINT_TARGET_REL_DIRS, NOT_OUR_DIR_NAMES, SHADER_SOURCE_EXTENSIONS  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
-from common.git import run_git, run_git_in_hook_repository  # noqa: E402
+from common.git import outside_hook_repository, run_git, run_git_in_hook_repository  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.format import run_clang_format_batch  # noqa: E402
 from lint.lint_scope import LintScope, clear_read_cache, list_staged_with_unstaged_changes, make_staged_scope, make_whole_scope  # noqa: E402
 from lint.index_cache import CACHE_FOLDER  # noqa: E402
 from lint.module_imports import list_imported_module_files  # noqa: E402
-from lint.rules import Rule, find_orphan_tables, format_table, RULE_BY_ID, RULES  # noqa: E402
+from lint.rules import LAYER_TABLES, Rule, find_orphan_tables, format_table, RULE_BY_ID, RULES  # noqa: E402
 
 CPP_SUFFIXES = tuple(sorted(CPP_ALL_EXTENSIONS))
 SHADER_SUFFIXES = tuple(sorted(SHADER_SOURCE_EXTENSIONS))
@@ -91,21 +89,30 @@ def find_changed_rule_rows(project_root: Path) -> frozenset[str]:
     result = run_git_in_hook_repository(["show", f"HEAD:{RULES_FILE}"], cwd=project_root)
     if result.return_code != 0:
         return frozenset(rule.id for rule in RULES)   # HEAD 에 표가 없다(첫 커밋 · 새 표) — 모두 새 줄이다
-    return diff_rule_rows(result.stdout, RULES)
+    return diff_rule_rows(result.stdout, Path(__file__).with_name("rules.py").read_text(encoding="utf-8"))
 
 
-def diff_rule_rows(old_table_text: str, new_rules: Sequence[Rule]) -> frozenset[str]:
-    """옛 표 글(`rules.py` 전체)을 읽어 칸이 다르거나 새로 생긴 규칙 id."""
-    name = "lint.RulesAtHead"
-    module = types.ModuleType(name)
-    sys.modules[name] = module   # dataclass 가 모듈을 sys.modules 에서 찾는다
-    module.__file__ = str(Path(__file__).with_name("rules.py"))   # 표가 자기 자리로 다른 파일을 찾는다(HEAD 판도 같은 자리)
-    try:
-        exec(compile(old_table_text, f"HEAD:{RULES_FILE}", "exec"), module.__dict__)   # noqa: S102 — 이 저장소의 커밋된 표다
-    finally:
-        del sys.modules[name]
-    map_old = {rule.id: dataclasses.astuple(rule) for rule in module.RULES}
-    return frozenset(rule.id for rule in new_rules if map_old.get(rule.id) != dataclasses.astuple(rule))
+RULE_ROW = re.compile(r'^\s*Rule\("([^"]+)"')
+CONSTANT_ROW = re.compile(r"^([A-Z][A-Z0-9_]*)\s*=")
+
+
+def diff_rule_rows(old_table_text: str, new_table_text: str) -> frozenset[str]:
+    """
+    옛 표 글과 새 표 글(`rules.py` 전체)을 줄로 견준 바뀐 규칙 id — 옛 글에 그대로 없는 새 줄이 `Rule("id", …)` 이면 그 id, 모듈 상수 줄(`NAME = …`)이면
+    그 이름을 쓰는 규칙 줄의 id. 규칙은 한 줄에 하나, 표가 쓰는 상수는 한 줄로 둔다(rules.py). 예전에는 HEAD 판 표를 exec 해 칸을 견줬다 — 그 판이 지금
+    작업 폴더의 모듈을 import 해 이름을 바꾼 커밋에서 ImportError 로 훅이 막혔고, 커밋된 코드를 훅에서 실행했다.
+    """
+    set_old = set(old_table_text.splitlines())
+    list_row = [(match.group(1), line) for line in new_table_text.splitlines() if (match := RULE_ROW.match(line))]
+    set_changed: set[str] = set()
+    for line in new_table_text.splitlines():
+        if line in set_old:
+            continue
+        if match := RULE_ROW.match(line):
+            set_changed.add(match.group(1))
+        elif match := CONSTANT_ROW.match(line):
+            set_changed |= {rule_id for rule_id, row in list_row if re.search(rf"\b{match.group(1)}\b", row)}
+    return frozenset(set_changed)
 
 
 #: 읽기 한도를 볼 스테이지 파일의 갈래(뿌리, 접미사) — 갈래마다 저장소의 첫 파일 하나를 스테이지된 것처럼 넘긴다.
@@ -207,21 +214,16 @@ def check_read_bound(project_root: Path) -> list[str]:
 
 
 def check_merge_scope() -> list[str]:
-    """병합 중 범위(`make_staged_scope`) — 임시 저장소에서 양쪽이 고친 파일 · 한쪽만 고친 파일 · 한쪽이 지운 파일 · 새 파일을 섞어 병합하고, 손으로 푼 충돌만 남는지 본다."""
+    """
+    병합 중 범위(`make_staged_scope`) — 임시 저장소에서 양쪽이 고친 파일 · 한쪽만 고친 파일 · 한쪽이 지운 파일 · 새 파일을 섞어 병합하고, 손으로 푼 충돌만 남는지 본다.
+    커밋 훅이 넘긴 GIT_DIR · GIT_INDEX_FILE 은 `common/__init__.py` 가 떼어 두었고, 훅 입구(`make_staged_scope`)도 `outside_hook_repository` 안에서는 되돌리지 않는다
+    — 임시 저장소의 git 이 이 저장소를 건드리지 않는다.
+    """
     def git(root: Path, *list_argument: str) -> None:
         result = run_git(["-c", "user.name=lint", "-c", "user.email=lint@localhost", "-c", "core.autocrlf=false", *list_argument], cwd=root)
         if result.return_code != 0 and list_argument[0] != "merge":   # 충돌 난 병합은 0 이 아니다
             raise RuntimeError(f"git {' '.join(list_argument)}: {result.stderr.strip()}")
 
-    # 커밋 훅 안에서는 git 이 GIT_DIR · GIT_INDEX_FILE 을 넘겨 준다 — 그대로 두면 임시 저장소의 git 이 이 저장소를 건드린다(core.bare 를 켰다).
-    map_saved = {name: os.environ.pop(name) for name in list(os.environ) if name.startswith("GIT_")}
-    try:
-        return _check_merge_scope(git)
-    finally:
-        os.environ.update(map_saved)
-
-
-def _check_merge_scope(git: Callable[..., None]) -> list[str]:
     with tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
         git(root, "init", "-q", "-b", "main")
@@ -242,7 +244,8 @@ def _check_merge_scope(git: Callable[..., None]) -> list[str]:
         git(root, "merge", "-q", "side")
         (root / "c.txt").write_text("c merged\n", encoding="utf-8")
         git(root, "add", "c.txt")
-        scope = make_staged_scope(root)
+        with outside_hook_repository():
+            scope = make_staged_scope(root)
     return [] if (scope.list_file, scope.list_removed) == (("c.txt",), ()) else [f"병합 범위가 손으로 푼 c.txt 하나가 아니다: {scope.list_file} · 지움 {scope.list_removed}"]
 
 
@@ -280,12 +283,15 @@ def check_fact_store() -> list[str]:
 
 
 def check_rule_row_diff() -> list[str]:
-    """표 줄 비교(`diff_rule_rows`) — 지금 표 글과 같으면 바뀐 줄이 없고, 한 규칙의 `blocks` 를 바꾼 글이면 그 규칙 하나다."""
+    """표 줄 비교(`diff_rule_rows`) — 같은 글이면 바뀐 줄이 없고, 한 규칙의 `blocks` 를 바꾼 글이면 그 규칙 하나, 상수 `LAYER_TABLES` 를 바꾼 글이면 그것을 쓰는 규칙들이다."""
     text = (Path(__file__).resolve().parent / "rules.py").read_text(encoding="utf-8")
     target = RULES[1]
     edited = text.replace(f'Rule("{target.id}", "{target.group}", "{target.blocks}"', f'Rule("{target.id}", "{target.group}", "{target.blocks} 바꿈"', 1)
-    list_problem = [] if diff_rule_rows(text, RULES) == frozenset() else ["지금 표와 같은 글에서 바뀐 규칙 줄이 나온다"]
-    return list_problem + ([] if edited != text and diff_rule_rows(edited, RULES) == {target.id} else [f"'{target.id}' 줄만 바꾼 표에서 그 id 하나가 나오지 않는다"])
+    constant = re.sub(r"^(LAYER_TABLES = .*)$", r"\1  # 바꿈", text, count=1, flags=re.M)
+    set_layer_user = {rule.id for rule in RULES if rule.inputs == LAYER_TABLES}
+    list_problem = [] if diff_rule_rows(text, text) == frozenset() else ["같은 표 글에서 바뀐 규칙 줄이 나온다"]
+    list_problem += [] if edited != text and diff_rule_rows(text, edited) == {target.id} else [f"'{target.id}' 줄만 바꾼 표에서 그 id 하나가 나오지 않는다"]
+    return list_problem + ([] if constant != text and set_layer_user and diff_rule_rows(text, constant) == set_layer_user else ["상수 LAYER_TABLES 를 바꾼 표에서 그것을 쓰는 규칙이 나오지 않는다"])
 
 
 def run_self_check(rule: Rule) -> str | None:
