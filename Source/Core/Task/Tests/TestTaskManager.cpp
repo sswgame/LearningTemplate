@@ -1830,8 +1830,28 @@ SW_TEST_CASE( TaskManagerTest, RunParallelReduceMatchesTheSerialBlockOrderBitFor
     }
 }
 
+namespace
+{
+    /** @brief 합류 대기 구간이 열렸다는 표지입니다 — 프로파일 훅은 함수 포인터라 캡처가 없어 파일 정적 칸으로 받는다. */
+    sw::atomic<int32> s_joinWaitStarted{ 0 };
+
+    sw::TaskProfileZone markJoinWaitStarted( const utf8*, sw::TaskProfileZoneKind kind )
+    {
+        if ( kind == sw::TaskProfileZoneKind::WaitJoin )
+            s_joinWaitStarted.store( 1, std::memory_order_release );
+        return {}; // 구간을 열지 않는다 — 닫는 쪽이 불리지 않는다
+    }
+
+    void ignoreZoneEnd( const sw::TaskProfileZone& )
+    {
+    }
+} // namespace
+
 /**
- * @brief 호출 스레드가 제 청크를 끝내고 워커의 청크를 기다리면 합류 대기 계기에 한 번 남고, `takeWaitStats` 는 읽은 몫을 0 으로 되돌린다
+ * @brief 호출 스레드가 제 청크를 다 돌고 남의 청크를 기다리면 합류 대기가 한 번 세지고, 읽으면 횟수 · 시간이 0 으로 돌아간다
+ * @details 순서는 시간이 아니라 사건으로 맞춘다: 첫 워커 청크는 합류 대기 구간이 열릴 때(프로파일 훅 `WaitJoin`)까지 끝나지 않고, 호출 스레드의 청크는
+ *          워커가 청크 하나를 잡을 때까지 끝나지 않는다. 그래서 부하 · 스케줄과 무관하게 호출 스레드는 반드시 남의 청크를 기다린다(예전에는 워커가 5 ms 자는 동안
+ *          호출 스레드가 먼저 합류 자리에 닿는다고 가정해 묶음 검증의 부하에서 졌다).
  */
 SW_TEST_CASE( TaskManagerTest, JoinWaitIsCountedAndTakeResetsTheStats )
 {
@@ -1839,18 +1859,28 @@ SW_TEST_CASE( TaskManagerTest, JoinWaitIsCountedAndTakeResetsTheStats )
     SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );
     (void)manager.takeWaitStats();
 
+    static const sw::TaskProfileHook kJoinWaitProbe{ &markJoinWaitStarted, &ignoreZoneEnd };
+    s_joinWaitStarted.store( 0, std::memory_order_relaxed );
+    const sw::Subscription probe = sw::TaskManager::bindProfileHook( &kJoinWaitProbe );
+
     sw::atomic<int32>     workerChunkCount{ 0 };
     const std::thread::id callerID = std::this_thread::get_id();
     manager.runParallel( 64, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&workerChunkCount, callerID]( uint32, uint32 )
     {
+        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
         if ( std::this_thread::get_id() != callerID )
         {
-            // 워커 청크는 늦게 끝난다 — 호출 스레드가 제 몫을 다 돌고 이 청크를 기다리게 한다.
+            // 첫 워커 청크는 호출 스레드가 합류 대기에 들어갈 때까지 붙든다.
             if ( workerChunkCount.fetch_add( 1, std::memory_order_acq_rel ) == 0 )
-                sw::ThreadUtil::sleepForMilliseconds( 5 );
+            {
+                while ( s_joinWaitStarted.load( std::memory_order_acquire ) == 0 && deadline.isExpired() == false )
+                {
+                    sw::ThreadUtil::yield();
+                }
+            }
             return;
         }
-        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
+        // 호출 스레드 청크는 워커가 청크 하나를 잡을 때까지 붙든다 — 호출 스레드가 모든 청크를 혼자 돌면 기다릴 남의 청크가 없다.
         while ( workerChunkCount.load( std::memory_order_acquire ) == 0 && deadline.isExpired() == false )
         {
             sw::ThreadUtil::yield();
@@ -1859,9 +1889,12 @@ SW_TEST_CASE( TaskManagerTest, JoinWaitIsCountedAndTakeResetsTheStats )
 
     const sw::TaskManager::WaitStats stats = manager.takeWaitStats();
     SW_EXPECT_TRUE( workerChunkCount.load() > 0 );
+    SW_EXPECT_EQUAL( int32{ 1 }, s_joinWaitStarted.load() );
     SW_EXPECT_EQUAL( uint64{ 1 }, stats._joinWaitCount );
-    SW_EXPECT_TRUE( stats._joinWaitNanos > 0 );
-    SW_EXPECT_EQUAL( uint64{ 0 }, manager.takeWaitStats()._joinWaitCount );
+    // 대기 시간의 크기는 단언하지 않는다 — 표지가 켜진 뒤 워커가 곧 끝나면 대기가 시계 한 눈금보다 짧을 수 있다(사건으로 보장할 수 없는 값). 읽으면 0 으로 돌아가는지만 본다.
+    const sw::TaskManager::WaitStats statsAfterTake = manager.takeWaitStats();
+    SW_EXPECT_EQUAL( uint64{ 0 }, statsAfterTake._joinWaitCount );
+    SW_EXPECT_EQUAL( uint64{ 0 }, statsAfterTake._joinWaitNanos );
     manager.shutdown();
 }
 
