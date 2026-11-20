@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3dc972f7fe0eb334dcaed9be870247f5"?>
+<!-- 인벤토리 · 상점 시연(maps/inventorydemo)의 가게 — 아이템은 공용 팩(common/data/items.xml)의 것이다. 투구는 재고 하나, 포션 · 장화는 무한. -->
+<ShopCatalog>
+  <Shop id="general" currency="Gold" buybackLimit="0">
+    <Stock item="potion_health" price="20"/>
+    <Stock item="helmet_knight" price="60" count="1"/>
+    <Stock item="boots_low" price="30"/>
+  </Shop>
+</ShopCatalog>

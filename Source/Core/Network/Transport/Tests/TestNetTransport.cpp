@@ -199,3 +199,14 @@ SW_TEST_CASE( NetTransportTest, Ipv6AddressTextRoundTrips )
     SW_EXPECT_FALSE( NetAddress::parse( "1.2.3.4.5", 1, parsed ) );
     SW_EXPECT_TRUE( NetAddress::makeLoopback( 1 ) != NetAddress::makeIpv6Loopback( 1 ) );
 }
+
+SW_TEST_CASE( NetTransportTest, WaitMillisecondsAreClampedIntoPollRange )
+{
+    // 남은 시한을 int32 로 그냥 바꾸면 2^31 ms 위가 음수 — poll 의 "시한 없음" 이 된다. 자르기 하나가 막는다.
+    SW_REQUIRE_EQUAL( 0, PlatformSocketUtil::toWaitMilliseconds( -5 ) );
+    SW_REQUIRE_EQUAL( 0, PlatformSocketUtil::toWaitMilliseconds( 0 ) );
+    SW_REQUIRE_EQUAL( 1234, PlatformSocketUtil::toWaitMilliseconds( 1234 ) );
+    SW_REQUIRE_EQUAL( std::numeric_limits<int32>::max(), PlatformSocketUtil::toWaitMilliseconds( int64{ 1 } << 31 ) );
+    SW_REQUIRE_EQUAL( std::numeric_limits<int32>::max(), PlatformSocketUtil::toWaitMilliseconds( std::numeric_limits<int64>::max() ) );
+    SW_REQUIRE_TRUE( PlatformSocketUtil::toWaitMilliseconds( Deadline::afterMilliseconds( 50 ).getRemainingMilliseconds() ) <= 50 );
+}

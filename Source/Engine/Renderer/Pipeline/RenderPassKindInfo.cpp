@@ -25,6 +25,9 @@ namespace sw
 
         /// FSR 1 중간 RT 의 고정 포맷입니다(EASU 출력 — 톤맵한 [0,1] 색이라 AMD 권고대로 32 bpp).
         constexpr RHIFormat kArrUpscaleIntermediateFormat[] = { RHIFormat::R8G8B8A8_UNORM };
+        /// HDR 화면 출력의 고정 포맷 — HDR10 백버퍼, scRGB 백버퍼 · 장면 출력 RT(`FrameDisplayEncode`)는 R16G16B16A16 실수다.
+        constexpr RHIFormat kArrDisplayHDR10Format[] = { RHIFormat::R10G10B10A2_UNORM };
+        constexpr RHIFormat kArrDisplaySceneFormat[] = { RHIFormat::R16G16B16A16_FLOAT };
 
         using Role = RenderPassInputRole;
         using Flag = RenderPassTraitFlag;
@@ -113,7 +116,8 @@ namespace sw
                     {
                         // 블렌드를 켜고 깊이 쓰기를 끄는 것까지가 패스의 몫이다. 어떤 퍼뮤테이션으로 그릴지는 머티리얼이 정한다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
-                        info._flags          = Flag::kDepthTest | Flag::kBlend | Flag::kDrawsTransparentBatch | Flag::kMaterialFixedState | Flag::kMaterialBlend | kSceneColorPassFlags;
+                        info._blend          = RenderPassBlend::Straight;
+                        info._flags          = Flag::kDepthTest | Flag::kDrawsTransparentBatch | Flag::kMaterialFixedState | Flag::kMaterialBlend | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassKind::SSAO:
@@ -211,7 +215,8 @@ namespace sw
                         // 입력 계약은 비어 있다 — 첨부를 읽지 않으므로 선언한 입력은 검증 오류다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderCanvas;
                         info._inputContract  = makeContract( {}, {} );
-                        info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract | Flag::kOutputPass;
+                        info._blend          = RenderPassBlend::Premultiplied;
+                        info._flags          = Flag::kHasInputContract | Flag::kOutputPass;
                         break;
                     }
                     case RenderPassKind::ForwardOnlyOpaque:
@@ -253,7 +258,8 @@ namespace sw
                         // 색 첨부를 읽지 않으므로 입력은 장면 깊이뿐이다 — 읽으면서 쓰는 첨부가 없다. 전용 실행(안개가 없거나 후처리를 끈 뷰는 그리지 않는다).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderFog;
                         info._inputContract  = makeContract( { Role::SceneDepth }, {} );
-                        info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        info._blend          = RenderPassBlend::Premultiplied;
+                        info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
                         break;
                     }
                     case RenderPassKind::SceneColorCopy:
@@ -278,7 +284,8 @@ namespace sw
                         info._pDefaultShader          = &EngineDefaultAssets::_shaderDistortion;
                         info._pPassDefine             = kPassDistortionDefine;
                         info._pRequiredMaterialDefine = kMaterialDistortionDefine;
-                        info._flags                   = Flag::kDepthTest | Flag::kBlend | Flag::kDrawsSceneMeshes | Flag::kUsesMaterialShader | Flag::kDrawsTransparentBatch | Flag::kDrawsDeclaredColor;
+                        info._blend                   = RenderPassBlend::Straight;
+                        info._flags                   = Flag::kDepthTest | Flag::kDrawsSceneMeshes | Flag::kUsesMaterialShader | Flag::kDrawsTransparentBatch | Flag::kDrawsDeclaredColor;
                         break;
                     }
                     case RenderPassKind::DistortionApply:
@@ -295,7 +302,8 @@ namespace sw
                         // 전용 실행이 세기 0 · 후처리를 끈 뷰 · 표면 값 보기에서 그리지 않는다. 출력이 장면 색이라 원본을 가리키는 끄기(kBypassesToSource)는 쓸 수 없다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderScreenSpaceReflection;
                         info._inputContract  = makeContract( { Role::SceneColorCopy, Role::SceneDepth, Role::GBufferNormal, Role::GBufferAlbedo }, { Role::GBufferMaterial } ); // 알베도 알파 = 셰이딩 모델(그려짐 판정)
-                        info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        info._blend          = RenderPassBlend::Premultiplied;
+                        info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
                         break;
                     }
                     case RenderPassKind::MotionBlur:
@@ -337,7 +345,8 @@ namespace sw
                         // 스프라이트 버퍼(패스 버퍼 슬롯)를 읽어 선언한 컬러 출력에 더한다 — 전용 실행(`FramePassExecutor::executeLensFlarePass`). 가림은 장면 깊이를 읽는다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderLensFlare;
                         info._inputContract  = makeContract( { Role::SceneDepth }, {} );
-                        info._flags          = Flag::kBlend | Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kRequiresPassDesc;
+                        info._blend          = RenderPassBlend::Straight;
+                        info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kRequiresPassDesc;
                         break;
                     }
                     case RenderPassKind::Decal:
@@ -346,7 +355,8 @@ namespace sw
                         // 데칼이 없는 뷰는 기록하지 않고 출력이 없다(kCullWhenUnconsumed 고르기 — FrameViewResources 의 isPassEnabledInView).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDecal;
                         info._inputContract  = makeContract( { Role::SceneDepth }, {} );
-                        info._flags          = Flag::kBlend | Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kCullWhenUnconsumed | Flag::kDrawsBoxVolume;
+                        info._blend          = RenderPassBlend::Straight;
+                        info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kCullWhenUnconsumed | Flag::kDrawsBoxVolume;
                         break;
                     }
                     case RenderPassKind::PostProcessMaterial:
@@ -536,6 +546,27 @@ namespace sw
                         info._pDefaultShader   = &EngineDefaultAssets::_shaderScreenRotation;
                         info._colorTargetCount = 1;
                         info._flags            = Flag::kOutputPass | Flag::kSurfaceRotation;
+                        break;
+                    }
+                    case RenderPassKind::DisplayEncodeHDR10:
+                    case RenderPassKind::DisplayEncodeScRGB:
+                    {
+                        // 백버퍼 포맷 하나에 그리는 고정 포맷 패스다(엔진 PSO) — 백버퍼 포맷이 색 공간에서 정해지므로 출력 패스처럼 포맷마다 만들 까닭이 없다. 원본은 C++ 가 루트 상수 · 엔진 슬롯으로 건다.
+                        const bool bHDR10      = type == RenderPassKind::DisplayEncodeHDR10;
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderDisplayEncode;
+                        info._pPassDefine      = bHDR10 ? kPassDisplayOutputHDR10Define : kPassDisplayOutputScRGBDefine;
+                        info._pColorFormat     = bHDR10 ? kArrDisplayHDR10Format : kArrDisplaySceneFormat;
+                        info._colorTargetCount = 1;
+                        break;
+                    }
+                    case RenderPassKind::DisplayCompositeUI:
+                    {
+                        // 장면 출력 RT(R16G16B16A16 실수)에 미리 곱한 알파로 섞는 고정 포맷 패스다. 원본(UI RT)은 C++ 가 루트 상수 · 엔진 슬롯으로 건다.
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderDisplayEncode;
+                        info._pPassDefine      = kPassDisplayUICompositeDefine;
+                        info._pColorFormat     = kArrDisplaySceneFormat;
+                        info._colorTargetCount = 1;
+                        info._blend            = RenderPassBlend::Premultiplied;
                         break;
                     }
                 }

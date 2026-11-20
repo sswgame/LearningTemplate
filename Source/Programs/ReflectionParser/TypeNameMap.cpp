@@ -13,7 +13,7 @@ namespace sw
     TypeNameMap::TypeNameMap()
         : _mapAliasToCanonical{}
         , _listStripPrefix{}
-        , _listPacked{}
+        , _mapTraits{}
         , _bLoaded{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -22,24 +22,25 @@ namespace sw
     void TypeNameMap::clear()
     {
         _mapAliasToCanonical.clear();
-        _listPacked.clear();
+        _mapTraits.clear();
         _bLoaded = SW_FALSE;
     }
 
-    void TypeNameMap::markPacked( const string& canonical )
+    void TypeNameMap::registerTraits( const string& canonical, const BuiltinTypeTraits& traits )
     {
-        if ( canonical.empty() == false && isPacked( canonical ) == false )
-            _listPacked.push_back( canonical );
+        _mapTraits.insert_or_assign( canonical, traits );
+    }
+
+    const BuiltinTypeTraits* TypeNameMap::findTraits( const string& canonical ) const
+    {
+        const auto it = _mapTraits.find( canonical );
+        return it != _mapTraits.end() ? &it->second : nullptr;
     }
 
     bool TypeNameMap::isPacked( const string& canonical ) const
     {
-        for ( const string& packed : _listPacked )
-        {
-            if ( packed == canonical )
-                return true;
-        }
-        return false;
+        const BuiltinTypeTraits* pTraits = findTraits( canonical );
+        return pTraits != nullptr && pTraits->_bPacked == SW_TRUE;
     }
 
     void TypeNameMap::addKey( const string& key, const string& canonical )

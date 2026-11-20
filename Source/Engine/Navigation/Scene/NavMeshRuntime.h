@@ -21,6 +21,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Navigation/INavMesh.h"
+#include "Engine/Navigation/NavClusterGraph.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
@@ -133,7 +134,9 @@ namespace sw
         AABB                           _bounds{};
         float3                         _searchExtent{ 1.0f, 2.0f, 1.0f };
         float32                        _crowdDeltaTime{ 0.0f }; ///< 워커에 넘긴 군중 진행의 시간(`SceneNavigation::launchCrowdUpdates` 가 넘기기 전에 적는다)
-        vector<NavStreamTile>          _listStreamTile;         ///< 스트리밍 씬에서 쿠킹본의 타일들(비면 모든 타일이 늘 끼워져 있다)
+        vector<NavStreamTile>          _listStreamTile;         ///< 스트리밍 씬에서 쿠킹본의 타일들((Z, X) 순 — `findStreamTile`). 비면 모든 타일이 늘 끼워져 있다
+        NavClusterGraph                _clusterGraph;           ///< 스트리밍 씬의 대략 그래프(쿠킹본). 오르지 않은 구역을 지나는 먼 경로를 정한다(`NavStreamRoute`)
+        uint64                         _routeReplanCount{ 0 };  ///< 먼 경로의 중간 목표 · 가상 이동을 새로 정한 수(누적, 진단)
         shared_ptr<const NavMeshAsset> _pStreamAsset;           ///< 타일 자리 · 구간을 준 쿠킹본(메모리 쿠킹본이면 타일 바이트도 여기 있다)
         string                         _streamPath;             ///< 타일을 구간으로 읽는 쿠킹본의 리소스 id
         uint8                          _bFromCooked : 1;
@@ -189,15 +192,20 @@ namespace sw
             }
         }
 
+        /** @brief 스트리밍 타일 자리입니다(이분 찾기 — `_listStreamTile` 은 (Z, X) 순). 걸을 곳이 없는 자리 · 스트리밍하지 않으면 nullptr 입니다. */
+        const NavStreamTile* findStreamTile( int32 tileX, int32 tileZ ) const
+        {
+            const auto found = std::lower_bound( _listStreamTile.begin(), _listStreamTile.end(), int2{ tileX, tileZ }, []( const NavStreamTile& tile, const int2& key )
+            {
+                return tile._tileZ != key._y ? tile._tileZ < key._y : tile._tileX < key._x;
+            } );
+            return found != _listStreamTile.end() && found->_tileX == tileX && found->_tileZ == tileZ ? &*found : nullptr;
+        }
         /** @brief 타일을 원점 둘레로 올리고 내리는 중인데 이 타일이 지금 내려가 있으면 true 입니다 — 다시 베이크 결과를 끼우지 않는다(내린 구역에 타일이 되살아나지 않게). */
         bool isTileStreamedOut( const int2& tile ) const
         {
-            for ( const NavStreamTile& streamTile : _listStreamTile )
-            {
-                if ( streamTile._tileX == tile._x && streamTile._tileZ == tile._y )
-                    return streamTile._state != NavStreamTile::State::Loaded;
-            }
-            return false;
+            const NavStreamTile* pTile = findStreamTile( tile._x, tile._y );
+            return pTile != nullptr && pTile->_state != NavStreamTile::State::Loaded;
         }
         bool isTileInFlight( const int2& tile ) const
         {

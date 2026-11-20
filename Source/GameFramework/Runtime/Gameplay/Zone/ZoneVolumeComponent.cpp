@@ -92,6 +92,15 @@ namespace sw
         Component::onEndPlay();
     }
 
+    void ZoneVolumeComponent::releaseOccupants( GameObjectManager& manager )
+    {
+        GameObject* const pOwner = getOwner();
+        if ( pOwner == nullptr || _bReady == SW_FALSE || _tracker.getOccupants().empty() )
+            return;
+        const ActionSource source{ getSourceName(), pOwner->getHandle() };
+        _tracker.exitAllOccupants( manager, _compiled, source );
+    }
+
     float32 ZoneVolumeComponent::getHorizontalReach() const
     {
         // 월드 경계 상자의 수평 반 크기 중 큰 쪽이다 — 회전 · 배율이 든다. 오너 트랜스폼이 없으면 로컬 반 크기다.

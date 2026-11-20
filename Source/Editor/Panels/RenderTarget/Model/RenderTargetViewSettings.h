@@ -29,9 +29,22 @@ namespace sw::editor
     {
         float32             _nearPlane{ 0.1f };                    ///< 깊이 선형화에 쓰는 가까운 면(월드 단위)
         float32             _farPlane{ 100.0f };                   ///< 깊이 선형화에 쓰는 먼 면(월드 단위)
+        float32             _exposure{ 0.0f };                     ///< 색에 곱하는 노출(EV — 2^EV 배). HDR 타깃의 1 넘는 값을 내려 보거나 어두운 값을 올려 본다(언리얼 `vis` 의 범위 조절)
         RenderTargetChannel _channel{ RenderTargetChannel::RGBA }; ///< 보여 줄 채널
         uint8               _bLinearizeDepth{ SW_TRUE };           ///< 깊이를 원근 투영 값으로 보고 거리로 되돌린다
         uint8               _bAutoDepthRange{ SW_TRUE };           ///< 깊이의 회색 범위를 화면에 있는 값(배경 제외)의 최솟값과 최댓값에 맞춘다
+
+        /** @brief 노출의 한계(EV)입니다. 반정밀도 실수의 범위(약 2^16)를 덮는다. */
+        static constexpr float32 kMaxExposure = 16.0f;
+
+        /** @brief 노출을 정합니다. [-kMaxExposure, kMaxExposure] 로 자른다. */
+        void setExposure( float32 exposure );
+        /** @brief 색 미리보기를 GPU 텍스처 그대로가 아니라 CPU 스냅숏으로 만들어야 하면 true 입니다(채널 하나 · 노출). 깊이는 늘 스냅숏이다. */
+        bool needsSnapshotImage( bool bDepth ) const { return bDepth || _channel != RenderTargetChannel::RGBA || _exposure != 0.0f; }
+        /** @brief 밉 @p mip 의 한 축 크기입니다(최소 1). */
+        static uint32 getMipExtent( uint32 extent, uint32 mip ) { return mip >= kExtentBits ? 1u : ( ( extent >> mip ) > 0u ? ( extent >> mip ) : 1u ); }
+        /** @brief 크기 값의 비트 수입니다 — 이만큼 밀면 0 이다(시프트가 정의되지 않는 자리). */
+        static constexpr uint32 kExtentBits = 32;
 
         /** @brief 깊이 선형화 범위를 정합니다. 가까운 면은 0.001 이상, 먼 면은 그보다 멀게 맞춥니다(0 이나 뒤집힌 범위는 선형화를 깨뜨린다). */
         void setDepthPlanes( float32 nearPlane, float32 farPlane );
@@ -41,7 +54,7 @@ namespace sw::editor
         static float32 linearizeDepth( float32 depth, float32 nearPlane, float32 farPlane );
 
         /**
-         * @brief 읽은 픽셀로 미리보기 RGBA8 을 만듭니다. 깊이는 선형화와 범위 조정을 거쳐 회색으로, 한 채널은 회색으로, RGBA 는 [0,1] 로 자른 색으로 만듭니다.
+         * @brief 읽은 픽셀로 미리보기 RGBA8 을 만듭니다. 깊이는 선형화와 범위 조정을 거쳐 회색으로, 한 채널은 회색으로, RGBA 는 [0,1] 로 자른 색으로 만듭니다. 색은 노출(2^EV)을 곱한 뒤 자른다(알파 채널은 곱하지 않는다).
          * @details 자동 범위는 지운 값(깊이 1 이 배경)을 빼고 잡는다. 배경까지 넣으면 하늘이 범위를 차지해 장면이 한 색으로 뭉개진다. 배경은 흰색이다.
          * @return 포맷을 풀 수 없거나 바이트가 모자라면 false 입니다.
          */

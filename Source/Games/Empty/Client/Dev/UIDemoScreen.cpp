@@ -220,6 +220,7 @@ namespace sw
         combo->setSelectedIndex( 2 );
         Internal::addLabeled( *column, "Quality", std::move( combo ) );
         unique_ptr<TextInputWidget> input = make_unique<TextInputWidget>();
+        input->setName( hashed_string( "NameInput" ) ); // 시나리오 textinput 이 포커스 이름으로 찾는다
         input->setHintText( "Player name" );
         Internal::addLabeled( *column, "Name", std::move( input ) );
         (void)column->addChild( Internal::makeSamples() );

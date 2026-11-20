@@ -180,7 +180,7 @@ namespace sw
         float32 _gravityScale;
         PROPERTY( Category = "Character", Min = 0.0, Tooltip = "Mass used to push dynamic bodies", Units = kg )
         float32 _mass;
-        PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
+        PROPERTY( Category = "Character", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
         hashed_string _layer;
         /// 기본 켬(감사 S-7) — 트리거 · 천이 캐릭터를 느낀다. 캐릭터끼리 막는 것은 씬의 캐릭터 대 캐릭터 충돌이 한다(속 바디와 상관없다).
         PROPERTY( Category = "Character", DisplayName = "Inner Body", Tooltip = "Keep a kinematic capsule body on the character so triggers, cloth and sensors feel it (it also pushes dynamic bodies harder)" )

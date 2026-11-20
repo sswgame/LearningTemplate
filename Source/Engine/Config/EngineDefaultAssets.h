@@ -46,6 +46,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _photoModeInputMap; ///< 포토 모드 자유 카메라의 행동 맵 — 이동 · 오르내림 · 둘러보기 · 기울이기 · 줌 · 노출(`CameraDirectorComponent`, 포토 모드 동안만 읽는다)
         PROPERTY( Required )
+        DataPath _cutsceneInputMap; ///< 컷씬 레이어(`Cutscene`)의 행동 맵 — 건너뛰기 · 빨리감기(`SequencePlayerComponent` 가 처음 쓸 때 플레이어 맵에 더한다)
+        PROPERTY( Required )
         DataPath _userSettingsSchema; ///< 플레이어 옵션 메뉴의 엔진 설정 스키마(`UserSettingsManager`)
         PROPERTY( Required )
         DataPath _telemetrySchema; ///< 엔진 텔레메트리 사건 스키마(`TelemetryService`)
@@ -85,6 +87,12 @@ namespace sw
         DataPath _uiSettingsConfirm; ///< 바꾼 설정을 되돌리기 전 카운트다운 확인 창
         PROPERTY( Required )
         DataPath _uiSettingsUnsaved; ///< 저장하지 않은 설정을 두고 닫을 때의 확인 창
+        PROPERTY( Required )
+        DataPath _uiConfirmDialog; ///< 공통 확인 대화 상자(`ConfirmDialogScreen` — 제목 · 본문 · 확인 · 취소)
+        PROPERTY( Required )
+        DataPath _uiQuantityDialog; ///< 수량 대화 상자(`QuantityDialogScreen` — 나누기 · 여러 개 사기)
+        PROPERTY( Required )
+        DataPath _uiMainMenu; ///< 타이틀 씬의 메인 메뉴(`MainMenuScreen` — 시작 · 옵션 · 끝내기, `TitleMenuComponent` 가 연다)
         PROPERTY( Required )
         DataPath _uiKeyRebind; ///< 키 바인딩을 받는 창
         PROPERTY( Required )
@@ -188,6 +196,8 @@ namespace sw
         DataPath _shaderUpscale; ///< FSR 1 업스케일(EASU · RCAS) — Present 가 배율 크기 뷰를 출력 크기로 키울 때(graphics.upscaler)
         PROPERTY( Required )
         DataPath _shaderScreenRotation; ///< 화면 회전 출력(풀스크린) — 회전한 휴대 기기 화면에서 논리 크기 대기 텍스처를 스왑체인 이미지로 돌려 옮긴다(pre-rotation)
+        PROPERTY( Required )
+        DataPath _shaderDisplayEncode; ///< HDR 화면 출력의 마지막 두 패스(풀스크린) — UI 합성(SDR UI RT → 장면 출력 RT)과 인코딩(장면 출력 RT → HDR10 PQ · scRGB 백버퍼)
         PROPERTY( Required )
         DataPath _shaderHZBBuild; ///< HZB 짓기(컴퓨트) — 장면 깊이를 최소 · 최대 깊이 밉 사슬로 줄인다. GPU 컬링의 가림 판정과 화면 공간 반사의 hi-z trace 가 읽는다
         PROPERTY( Required )

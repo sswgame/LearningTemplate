@@ -24,6 +24,16 @@ namespace sw
         {
             /** @brief 디버그 메시를 걷는 면 위로 띄우는 높이입니다(바닥과 겹쳐 깜빡이지 않게). */
             static constexpr float32 kViewLift = 0.04f;
+            // 대략 그래프(`NavDebugDrawFlag::kCluster`)의 색 · 크기 — 타일 스트리밍 단계마다 색 하나, 먼 경로는 중간 목표 주황 · 대략 점 보라.
+            static constexpr float4  kClusterLoadedColor{ 0.2f, 0.85f, 0.3f, 1.0f };
+            static constexpr float4  kClusterLoadingColor{ 0.95f, 0.8f, 0.1f, 1.0f };
+            static constexpr float4  kClusterUnloadedColor{ 0.5f, 0.5f, 0.5f, 1.0f };
+            static constexpr float4  kClusterFailedColor{ 1.0f, 0.2f, 0.15f, 1.0f };
+            static constexpr float4  kRouteTargetColor{ 1.0f, 0.55f, 0.05f, 1.0f };
+            static constexpr float4  kRouteCoarseColor{ 0.75f, 0.35f, 0.95f, 1.0f };
+            static constexpr float32 kClusterLift      = 0.3f; ///< 걷는 면 테두리와 겹치지 않게 띄운다
+            static constexpr float32 kClusterMarkSize  = 0.4f; ///< 클러스터 십자의 반 길이
+            static constexpr float32 kClusterEdgeAlpha = 0.5f;
 
             static float4 makeAreaColor( uint8 area, size_t triangleIndex )
             {
@@ -75,8 +85,10 @@ namespace sw
 namespace sw
 {
     void NavDebugView::drawLines( IPhysicsDebugRenderer& renderer, uint32 flags, const vector<unique_ptr<NavMeshRuntime>>& listRuntime,
-                                  const vector<NavMeshObstacleComponent*>& listObstacle )
+                                  const vector<NavMeshObstacleComponent*>& listObstacle, const vector<NavMeshAgentComponent*>& listAgent )
     {
+        if ( ( flags & NavDebugDrawFlag::kCluster ) != 0 )
+            drawClusterGraph( renderer, listRuntime, listAgent );
         const float4 meshColor{ 0.1f, 0.85f, 0.9f, 1.0f };
         const float4 obstacleColor{ 1.0f, 0.25f, 0.2f, 1.0f };
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
@@ -99,6 +111,56 @@ namespace sw
                 const float3& to   = volume._listPoint[( pointIndex + 1 ) % volume._listPoint.size()];
                 renderer.drawLine( float3{ from._x, volume._minY, from._z }, float3{ to._x, volume._minY, to._z }, obstacleColor );
                 renderer.drawLine( float3{ from._x, volume._maxY, from._z }, float3{ to._x, volume._maxY, to._z }, obstacleColor );
+            }
+        }
+    }
+
+    void NavDebugView::drawClusterGraph( IPhysicsDebugRenderer& renderer, const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const vector<NavMeshAgentComponent*>& listAgent )
+    {
+        // 클러스터는 작은 십자, 간선은 중심 사이 선이다. 색은 그 클러스터 타일의 스트리밍 단계(오름 초록 · 읽는 중 노랑 · 내려감 회색 · 실패 빨강).
+        using Internal = NavDebugViewInternal;
+        const float3 lift{ 0.0f, Internal::kClusterLift, 0.0f };
+        const float3 markX{ Internal::kClusterMarkSize, 0.0f, 0.0f };
+        const float3 markZ{ 0.0f, 0.0f, Internal::kClusterMarkSize };
+        for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
+        {
+            const vector<NavCluster>&     listCluster = pRuntime->_clusterGraph.getClusterList();
+            const vector<NavClusterEdge>& listEdge    = pRuntime->_clusterGraph.getEdges();
+            for ( const NavCluster& cluster : listCluster )
+            {
+                const NavStreamTile* pTile = pRuntime->findStreamTile( cluster._tileX, cluster._tileZ );
+                float4               color = Internal::kClusterUnloadedColor;
+                if ( pTile != nullptr && pTile->_state == NavStreamTile::State::Loaded )
+                    color = Internal::kClusterLoadedColor;
+                else if ( pTile != nullptr && pTile->_state == NavStreamTile::State::Loading )
+                    color = Internal::kClusterLoadingColor;
+                else if ( pTile != nullptr && pTile->_state == NavStreamTile::State::Failed )
+                    color = Internal::kClusterFailedColor;
+                const float3 center = cluster._center + lift;
+                const float4 edgeColor{ color._x, color._y, color._z, Internal::kClusterEdgeAlpha };
+                renderer.drawLine( center - markX, center + markX, color );
+                renderer.drawLine( center - markZ, center + markZ, color );
+                for ( uint32 edgeIndex = cluster._firstEdge; edgeIndex < cluster._firstEdge + cluster._edgeCount; ++edgeIndex )
+                {
+                    renderer.drawLine( center, listCluster[listEdge[edgeIndex]._target]._center + lift, edgeColor );
+                }
+            }
+        }
+        // 먼 경로 — 자리 → 중간 목표(주황) → 대략 점들(보라). 가상 이동은 자리에서 바로 대략 점이다.
+        for ( const NavMeshAgentComponent* pAgent : listAgent )
+        {
+            if ( pAgent->isFollowingCoarseRoute() == false && pAgent->isInVirtualMove() == false )
+                continue;
+            float3 from = pAgent->getAgentPosition() + lift;
+            if ( pAgent->isFollowingCoarseRoute() )
+            {
+                renderer.drawLine( from, pAgent->getRouteTarget() + lift, Internal::kRouteTargetColor );
+                from = pAgent->getRouteTarget() + lift;
+            }
+            for ( const float3& point : pAgent->getCoarseRoutePoints() )
+            {
+                renderer.drawLine( from, point + lift, Internal::kRouteCoarseColor );
+                from = point + lift;
             }
         }
     }

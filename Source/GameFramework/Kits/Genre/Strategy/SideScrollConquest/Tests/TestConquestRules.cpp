@@ -9,6 +9,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestWorld.h"
+#include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
 
 #include <algorithm>
 #include <limits>
@@ -177,7 +178,13 @@ namespace
             written << 0.0f;
             written << _commanderHealth;
             sw::StateIO::writeCountdown( written, sw::Countdown{} );
-            sw::StateIO::writeCountdown( written, sw::Countdown{} );
+            // 지휘관 부활 흐름(공통 `RespawnFlow` — 살아 있는 상태, 판이 거는 규칙과 같은 정책 수 하나). 부활이 남은 시간 하나였을 때의 자리다.
+            sw::RespawnRules respawnRules;
+            respawnRules._listPolicy.push_back( sw::RespawnPolicyEntry{} );
+            respawnRules._listPolicy[0]._kind = sw::RespawnPolicyKind::TeamBase;
+            sw::RespawnFlow respawn;
+            (void)respawn.initialize( respawnRules );
+            respawn.writeState( written );
             written << _moveAxis;
             written << _facing;
             written << _commanderAlive;

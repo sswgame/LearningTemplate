@@ -18,17 +18,33 @@
 
 namespace sw
 {
+    class InputMap;
     class SequenceAsset;
+
+    /**
+     * @brief 컷씬 동안 플레이어 움직임 정책입니다(언리얼 `FMovieSceneSequencePlaybackSettings` 의 `bDisableMovementInput` · `bDisableLookAtInput` 와 "플레이 가능한 컷씬").
+     * @details 막기는 입력 맵 문맥으로 가른다 — 재생 동안 엔진 컷씬 레이어(`Cutscene`)를 플레이어 입력 맵 위에 올리고, `Blocked` 면 아래 레이어(이동 · 시선 · 공격)를 막는다.
+     *          컷씬 레이어의 동작(건너뛰기 · 빨리감기)과 UI 맵(일시정지 · 메뉴 조작)은 막히지 않는다.
+     */
+    ENUM()
+    enum class SequencePlayerMovement : int32
+    {
+        Free     = 0, /**< 막지 않는다. */
+        Blocked  = 1, /**< 이동 · 시선 · 게임 동작 입력을 막는다(컷씬 레이어가 아래 레이어를 막는다). */
+        Confined = 2, /**< 움직일 수 있되 `_confineTarget` 을 `_confineCenter` 둘레 `_confineRadius` 안에 둔다(넘으면 경계로 되돌린다). */
+    };
     /** @brief 이벤트 항목 하나를 지났을 때 부르는 델리게이트입니다. 항목은 알림 동안만 유효한 사본이고 대상은 그 바인딩의 오브젝트입니다. */
     SW_DECLARE_DELEGATE( void, OnSequenceEventDelegate, const SequenceFiredEvent& event );
     /** @brief 카메라 신호(컷 바뀜, 시네마틱 시작 · 끝, 대기 뷰, 흔들림) 하나를 냈을 때 부르는 델리게이트입니다. */
     SW_DECLARE_DELEGATE( void, OnSequenceCameraSignalDelegate, const SequenceCameraSignal& signal );
+    /** @brief 재생이 정상으로 끝났을 때(끝 프레임 · `skipToEnd`) 부르는 델리게이트입니다(언리얼 `OnFinished`). `stop` 은 부르지 않는다. */
+    using OnSequenceFinishedDelegate = Delegate<void()>;
 
     /**
      * @class SequencePlayerComponent
      * @brief 시퀀스 하나를 재생합니다. 시퀀스의 바인딩 id 마다 이 씬의 오브젝트를 `_listBinding` 으로 묶는다(유니티 PlayableDirector 의 바인딩, 언리얼 Level Sequence Actor 의 Binding Overrides).
      * @details **재생 계약**: 시작할 때 재생에 필요한 바인딩이 모두 묶였는지 보고, 하나라도 비면 오류를 남기고 틀지 않는다(이름 찾기 폴백 없음).
-     *          끝(루프가 아닐 때 끝 프레임) · `stop` · 씬 나감(`onEndPlay`) · 재생 중 다시 틀기(먼저 멈춘다) · 시퀀스 바꾸기는 모두 같은 끝내기(`endPlayback`)를 지난다 —
+     *          끝(반복이 아닐 때 진행 방향의 끝 프레임) · 끝으로 건너뛰기(`skipToEnd`) · `stop` · 씬 나감(`onEndPlay`) · 재생 중 다시 틀기(먼저 멈춘다) · 시퀀스 바꾸기는 모두 같은 끝내기(`endPlayback`)를 지난다 —
      *          덮던 컷이 있으면 시네마틱 끝을 알리고, 구간 동작(소리 · 애니메이션 덮어쓰기)을 나가고, 스폰을 지우고, 컷을 풀고, 시퀀스의 `_whenFinished` 가
      *          `RestoreState` 면 시작 전 상태로 되돌린다. 일시정지는 끝내기가 아니다.
      */
@@ -56,6 +72,41 @@ namespace sw
         void pause();
         FUNCTION( Category = "Playback", DisplayName = "Resume", CallInEditor )
         void resume();
+        /** @brief 속도를 음수로 두고(크기는 그대로) 끝에서 거꾸로 틉니다(언리얼 `PlayReverse`). */
+        FUNCTION( Category = "Playback", DisplayName = "Play Reverse", CallInEditor )
+        void playReverse();
+        /**
+         * @brief 진행 방향의 끝 프레임으로 점프해 그 상태를 적용하고 정상 끝으로 끝냅니다(언리얼 `GoToEndAndStop`). 사이의 이벤트는 쏘지 않는다(점프).
+         * @details 덮던 컷이 있으면 시네마틱 끝(Blend Out)을 알려 게임 카메라로 돌아온다. 재생 중이 아니면 아무것도 하지 않고 false 입니다.
+         */
+        FUNCTION( Category = "Playback", DisplayName = "Skip To End", CallInEditor )
+        bool skipToEnd();
+        /** @brief 재생 속도를 바꿉니다(음수 = 역방향, 재생 중에도). 0 · 유한하지 않은 값은 오류를 남기고 거절한다(false). */
+        [[nodiscard]] bool setPlayRate( float32 playRate );
+        float32            getPlayRate() const { return _playRate; }
+        /** @brief 지금 거꾸로 진행하는지입니다(속도 부호와 왕복이 뒤집은 방향). */
+        bool isReversed() const { return _player.isReversed(); }
+        /** @brief 반복 방식을 바꿉니다(재생 중에도). */
+        void             setLoopMode( SequenceLoopMode loopMode );
+        SequenceLoopMode getLoopMode() const { return _loopMode; }
+        /** @brief 컷씬 움직임 정책을 바꿉니다. 다음 재생부터 따른다(재생 중의 막기 요청은 끝내기가 같은 값으로 푼다). */
+        void                   setPlayerMovement( SequencePlayerMovement movement ) { _playerMovement = movement; }
+        SequencePlayerMovement getPlayerMovement() const { return _playerMovement; }
+        /** @brief 범위 제한(`Confined`)의 대상 · 중심 · 반지름을 정합니다. 코드 · 테스트가 쓴다 — 씬 파일은 PROPERTY 로 든다. */
+        void setConfine( GameObjectHandle target, GameObjectHandle center, float32 radius )
+        {
+            _confineTarget = target;
+            _confineCenter = center;
+            _confineRadius = radius;
+        }
+        /** @brief 이 플레이어가 지금 플레이어 입력(아래 레이어)을 막고 있으면 true 입니다(감시 값 `Sequence.InputBlocked`). */
+        bool isBlockingPlayerInput() const { return _bInputLayerPushed == SW_TRUE && _playerMovement == SequencePlayerMovement::Blocked; }
+        /** @brief 빨리감기 입력이 눌려 배율이 걸려 있으면 true 입니다. */
+        bool isFastForwardHeld() const { return _bFastForwardHeld == SW_TRUE; }
+        /** @brief 지금 플레이어에 걸린 재생 속도입니다(빨리감기 배율 포함, 감시 값 `Sequence.PlayRate`). */
+        float32 getEffectivePlayRate() const { return _player.getPlayRate(); }
+        /** @brief 재생 범위를 정합니다(`SequencePlayer::setPlaybackRange` — 시퀀스 안 · 시작 < 끝이 아니면 오류 · false). 시퀀스를 다시 열면 전체로 돌아간다. */
+        [[nodiscard]] bool setPlaybackRange( int32 startFrame, int32 endFrame ) { return _player.setPlaybackRange( startFrame, endFrame ); }
         /** @brief 시퀀스를 재생 중이면 true 입니다(시나리오의 `WaitSequence` 가 끝을 기다린다). */
         bool isPlaying() const { return _player.isPlaying(); }
         /** @brief 지금 프레임입니다(디버거 · 감시 값). */
@@ -94,6 +145,8 @@ namespace sw
          *          대기 뷰 신호는 카메라 매니저를 거쳐 LOD 까지 간다(`CameraManagerComponent` 의 대기 뷰 설명). 돌려준 구독이 사라지면 뗍니다.
          */
         [[nodiscard]] Subscription registerCameraSignal( const OnSequenceCameraSignalDelegate& delegate );
+        /** @brief 재생이 정상으로 끝날 때(끝 프레임 · `skipToEnd`) 부를 델리게이트를 등록합니다. 끝내기(되돌림 · 컷 풀기)를 마친 뒤 부른다. 돌려준 구독이 사라지면 뗍니다. */
+        [[nodiscard]] Subscription registerFinished( const OnSequenceFinishedDelegate& delegate );
         /** @brief 재생 빠르기(초당 프레임)입니다. */
         float32 getFramesPerSecond() const { return _framesPerSecond; }
 
@@ -107,6 +160,18 @@ namespace sw
         void loadSequenceFromPath();
         /** @brief 재생에 필요한 바인딩이 모두 묶였으면 true 입니다. 아니면 비어 있는 바인딩마다 오류와 기록을 남긴다. */
         [[nodiscard]] bool validateBindings();
+        /** @brief 범위 제한(`Confined`)에 필요한 칸(대상 · 중심 · 반지름)이 찼으면 true 입니다. 아니면 오류를 남긴다(제한 없이 트는 길은 없다). */
+        [[nodiscard]] bool validateConfine() const;
+        /** @brief 컷씬 옵션을 겁니다(입력 레이어 · HUD 숨김). 재생 시작이 부른다. */
+        void acquireCutsceneOptions();
+        /** @brief `acquireCutsceneOptions` 가 건 것을 같은 수로 풉니다(빨리감기 배율 포함). 끝내기가 부른다. */
+        void releaseCutsceneOptions();
+        /** @brief 플레이어 입력 맵입니다. 입력 관리자가 없는 구성(전용 서버 · 하네스)이면 nullptr 입니다. */
+        static InputMap* findPlayerInputMap();
+        /** @brief 건너뛰기 · 빨리감기 입력을 읽습니다(틱 — 게임이 멈춰 있으면 읽지 않는다). 건너뛰기를 눌렀으면 true 입니다. */
+        [[nodiscard]] bool readCutsceneInput();
+        /** @brief 범위 제한 대상을 중심 둘레 반지름 안으로 되돌립니다(틱 뒤). */
+        void applyConfine();
 
         PROPERTY( Category = "Sequence", DisplayName = "Sequence", Tooltip = "Sequence asset (.seq.xml)" )
         AssetRef<SequenceAsset> _sequencePath;
@@ -115,12 +180,34 @@ namespace sw
         vector<SequenceBindingSlot> _listBinding;
         PROPERTY( Category = "Playback", DisplayName = "Frames Per Second", Min = 1.0, Max = 120.0 )
         float32 _framesPerSecond;
-        PROPERTY( Category = "Playback", DisplayName = "Loop" )
-        uint8 _bLoop : 1;
+        /** @brief 재생 속도입니다. 부호가 방향이다(음수 = 역방향). 0 이면 시작에서 오류로 틀지 않는다. */
+        PROPERTY( Category = "Playback", DisplayName = "Play Rate", Tooltip = "Playback speed; negative plays backwards from the end (0 is rejected)" )
+        float32 _playRate;
+        PROPERTY( Category = "Playback", DisplayName = "Loop Mode", Tooltip = "At the end of the range: stop, loop, or ping-pong" )
+        SequenceLoopMode _loopMode;
+        PROPERTY( Category = "Cutscene", DisplayName = "Player Movement", Tooltip = "Player input during playback: free, blocked (movement, look and game actions), or confined to a radius" )
+        SequencePlayerMovement _playerMovement;
+        /** @brief 범위 제한을 받는 오브젝트(보통 플레이어 폰)입니다. `Confined` 일 때 필수입니다. */
+        PROPERTY( Category = "Cutscene", DisplayName = "Confine Target", Tooltip = "Confined: object kept inside the radius (usually the player pawn)" )
+        GameObjectHandle _confineTarget;
+        /** @brief 범위 제한의 중심 오브젝트입니다. `Confined` 일 때 필수입니다. */
+        PROPERTY( Category = "Cutscene", DisplayName = "Confine Center", Tooltip = "Confined: object at the center of the allowed circle" )
+        GameObjectHandle _confineCenter;
+        PROPERTY( Category = "Cutscene", DisplayName = "Confine Radius", Min = 0.0, Units = m, Tooltip = "Confined: radius of the allowed circle on the ground plane" )
+        float32 _confineRadius;
         PROPERTY( Category = "Playback", DisplayName = "Auto Play" )
-        uint8                  _bAutoPlay : 1;
-        [[maybe_unused]] uint8 _reserved  : 6;
-        SequencePlayer         _player;
+        uint8 _bAutoPlay : 1;
+        PROPERTY( Category = "Cutscene", DisplayName = "Hide HUD", Tooltip = "Hide the game HUD layer during playback" )
+        uint8 _bHideHUD : 1;
+        PROPERTY( Category = "Cutscene", DisplayName = "Skippable", Tooltip = "The cutscene input map's Cutscene.Skip jumps to the end" )
+        uint8 _bSkippable : 1;
+        PROPERTY( Category = "Cutscene", DisplayName = "Fast Forward", Tooltip = "Holding Cutscene.FastForward multiplies the play rate (EngineConfig _sequencer._fastForwardRate)" )
+        uint8          _bAllowFastForward  : 1;
+        uint8          _bInputLayerPushed  : 1; ///< 컷씬 레이어를 켰다(끝내기가 끈다). 저장하지 않는다
+        uint8          _bInputLayerStacked : 1; ///< 막기(Blocked)라 컷씬 레이어를 스택에 올렸다(끝내기가 뺀다). 저장하지 않는다
+        uint8          _bHUDHidden         : 1; ///< HUD 숨김 요청을 걸었다. 저장하지 않는다
+        uint8          _bFastForwardHeld   : 1; ///< 빨리감기 배율이 걸렸다. 저장하지 않는다
+        SequencePlayer _player;
         /** @brief 이번 틱이 민 재생 구간입니다 — 틱 뒤 작업이 묶인 오브젝트에 적용한다(틱 뒤 작업은 값을 캡처하지 않는다). 저장하지 않는다. */
         SequencePlaybackStep _pendingStep;
         /** @brief 재생이 쥔 것(스폰 · 구간 · 되돌릴 값)입니다. 저장하지 않는다 — 재생이 만들고 끝내기가 거둔다. */
@@ -131,5 +218,7 @@ namespace sw
         MulticastDelegate<void( const SequenceFiredEvent& )> _sequenceEventMulticast;
         /** @brief 카메라 신호 구독자들입니다. 저장하지 않습니다. */
         MulticastDelegate<void( const SequenceCameraSignal& )> _cameraSignalMulticast;
+        /** @brief 정상 끝 구독자들입니다. 저장하지 않습니다. */
+        MulticastDelegate<void()> _finishedMulticast;
     };
 } // namespace sw

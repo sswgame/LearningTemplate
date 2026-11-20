@@ -57,6 +57,7 @@
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
+#include "Engine/Renderer/Frame/Screen/FrameDisplayEncode.h"
 #include "Engine/Renderer/Frame/Screen/FrameScreenRotation.h"
 #include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
@@ -376,7 +377,14 @@ namespace sw
         }
     }
 
-    FramePassExecutor::PresentTarget FramePassExecutor::resolvePresentTarget() const
+    RHITextureHandle FramePassExecutor::getScreenTarget() const
+    {
+        // 회전(Android)과 HDR 출력(데스크톱)은 함께 오지 않는다 — HDR 은 SDR 만 내는 Android 에 없다(RHICapabilities::_displayOutputSupport).
+        const RHITextureHandle rotationTarget = _screenRotation.getScreenTarget();
+        return rotationTarget != 0 ? rotationTarget : _displayEncode.getUITarget();
+    }
+
+    FramePassExecutor::PresentTarget FramePassExecutor::resolvePresentTarget( const bool bSceneLayer ) const
     {
         // 렌더 텍스처와 호스트 타깃 뷰는 자기 출력 전체, 주 시점과 화면 사각형 뷰는 주 출력(백버퍼, 게임 뷰 RT)이다. 스크린샷 실행이면 백버퍼 대신 캡처
         // 텍스처에 그린다. 백버퍼는 핸들이 없어 읽을 수 없고, 후처리와 UI 가 끝난 최종 화면을 볼 방법이 그것뿐이다. 캡처는 주 출력만 받는다.
@@ -397,11 +405,14 @@ namespace sw
 
         PresentTarget target{};
         // 주 출력이 화면이면 화면 대상이다 — 회전한 휴대 기기 화면이면 논리 크기 대기 텍스처(끝에 FrameScreenRotation 이 스왑체인으로 돌려 옮긴다), 아니면 0(스왑체인).
-        const RHITextureHandle mainOutput = _state._outputRenderTarget != 0 ? _state._outputRenderTarget : _screenRotation.getScreenTarget();
-        target._texture                   = bOwnOutput ? ownOutput : bCapture ? _capture.getPresentTexture()
-                                                                              : mainOutput;
-        target._width                     = bOwnOutput ? activeView._outputWidth : _state._outputWidth;
-        target._height                    = bOwnOutput ? activeView._outputHeight : _state._outputHeight;
+        // HDR 출력이면 장면(Present)은 장면 출력 RT, 나머지(Canvas)는 UI RT 다 — 끝에 FrameDisplayEncode 가 합성 · 인코딩해 스왑체인으로 옮긴다.
+        const RHITextureHandle sceneTarget = bSceneLayer ? _displayEncode.getSceneTarget() : RHITextureHandle{ 0 };
+        const RHITextureHandle mainOutput  = _state._outputRenderTarget != 0 ? _state._outputRenderTarget : sceneTarget != 0 ? sceneTarget
+                                                                                                                             : getScreenTarget();
+        target._texture                    = bOwnOutput ? ownOutput : bCapture ? _capture.getPresentTexture()
+                                                                               : mainOutput;
+        target._width                      = bOwnOutput ? activeView._outputWidth : _state._outputWidth;
+        target._height                     = bOwnOutput ? activeView._outputHeight : _state._outputHeight;
         // 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과)이고, 텍스처는 그 텍스처가 기록한 포맷이다.
         target._format             = ( target._texture == 0 ) ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( target._texture );
         target._bOwnOutput         = bOwnOutput ? SW_TRUE : SW_FALSE;
@@ -894,6 +905,21 @@ namespace sw
         registerMaterialBuffer( context, headBinding, batchPSO );
         if ( bindForDraw( context, batchPSO, headBinding._materialCb, headBinding._arrMaterialTexSRV ) == false )
             return false;
+#if !defined( SW_SHIPPING )
+        // 렌더링 런타임 디버그(주 시점만 — 렌더 타깃 창이 보는 풀): 프레임 디버거의 멈춤 지점 뒤 드로우는 내지 않고, 통계는 삼각형 상한(GPU 컬링 전)을 센다.
+        if ( RenderDebugRegistry* const pDebug = _state._pRenderDebug; pDebug != nullptr && pDebug->isRecording() && isRenderingExtraView() == false )
+        {
+            const uint32 headBatchIndex = argIndex - inoutState._batchOffset;
+            uint64       triangleCount  = 0;
+            for ( uint32 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
+            {
+                const GPUMeshBatch& batch = inoutState._batches[headBatchIndex + groupIndex];
+                triangleCount += static_cast<uint64>( batch._indexCount / 3u ) * batch._visibleCapacity;
+            }
+            if ( pDebug->allowDraw( context._passName, batchPSO, _psoManager.findLayout( batchPSO ), head._indexCount, groupCount, triangleCount ) == false )
+                return false;
+        }
+#endif
         context._pCmd->drawIndexedIndirect( inoutState._argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ), groupCount );
         return true;
     }

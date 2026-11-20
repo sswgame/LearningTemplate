@@ -17,13 +17,14 @@
 	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripaudioevents/empty.audioevents.xml"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.AudioEventEditCount" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.AudioEventEditCount" atLeast="1" timeoutFrames="60"/> <!-- 고치기 시작(수는 라이브러리 크기라 고정하지 않는다) -->
+	<Store watch="Editor.AudioEventEditCount" as="eventCount"/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<DevCommand line="panel.saveDocument audioevents"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripaudioevents/empty.audioevents.xml"/>
 	<DevCommand line="panel.reloadDocument audioevents"/>
 	<EditorWaitStable/>
-	<Expect watch="Editor.AudioEventEditCount" equals="1"/>
+	<Expect watch="Editor.AudioEventEditCount" sameAs="eventCount"/>
 	<DevCommand line="panel.saveDocument audioevents"/>
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripaudioevents/empty.audioevents.xml"/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>

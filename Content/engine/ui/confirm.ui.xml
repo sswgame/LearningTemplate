@@ -1,0 +1,51 @@
+<?asset guid="7380c60af64226c592f196082c98f89d"?>
+<UIDocument _schemaVersion="1">
+	<!-- 공통 확인 대화 상자(`ConfirmDialogScreen`). 글은 연 쪽이 넘긴 값을 뷰모델이 바인딩한다. 단추 명령은 `Accept` · `Cancel`, 뒤로 가기는 취소다. -->
+	<UIScreenDef _layer="Modal" _bModal="true" _defaultFocus="Accept" />
+	<_listAnimation>
+		<UIAnimation _name="Open">
+			<_listTrack>
+				<UIAnimationTrack _widget="Window" _property="_opacity">
+					<_listKey>
+						<UIAnimationKey _time="0" _value="0" _curve="Linear" />
+						<UIAnimationKey _time="0.12" _value="1" _curve="EaseOut" />
+					</_listKey>
+				</UIAnimationTrack>
+			</_listTrack>
+		</UIAnimation>
+		<UIAnimation _name="Close">
+			<_listTrack>
+				<UIAnimationTrack _widget="Window" _property="_opacity">
+					<_listKey>
+						<UIAnimationKey _time="0" _value="1" _curve="Linear" />
+						<UIAnimationKey _time="0.1" _value="0" _curve="EaseIn" />
+					</_listKey>
+				</UIAnimationTrack>
+			</_listTrack>
+		</UIAnimation>
+	</_listAnimation>
+	<SafeZonePanel>
+		<CanvasPanel>
+			<BorderPanel _name="Window" _styleClass="window">
+				<_slot _anchorMin="0.5,0.5"
+				       _anchorMax="0.5,0.5"
+				       _offsetMax="0,0"
+				       _bAutoSize="true"
+				       _growHorizontal="Both"
+				       _growVertical="Both" />
+				<BoxPanel _spacing="16" _orientation="Vertical">
+					<TextWidget _name="Title" _styleClass="title" _text="{bind:_title}" />
+					<TextWidget _name="Message" _text="{bind:_message}" />
+					<BoxPanel _name="Buttons" _spacing="8">
+						<ButtonWidget _name="Accept" _command="Accept">
+							<TextWidget _text="{bind:_acceptText}" />
+						</ButtonWidget>
+						<ButtonWidget _name="Cancel" _command="Cancel">
+							<TextWidget _text="{bind:_cancelText}" />
+						</ButtonWidget>
+					</BoxPanel>
+				</BoxPanel>
+			</BorderPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

@@ -3,7 +3,6 @@
 #include "Engine/Object/Component/Component.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Math/VectorMath.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -12,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Reflection/ReflectVisit.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/Reflection.h"
 
 namespace sw
@@ -20,72 +20,122 @@ namespace sw
     {
         struct ComponentInternal
         {
-            /** @brief 상태 해시가 바이트 그대로 접는 내장 정수입니다(크기는 등록된 `TypeInfo::_size`). */
-            static constexpr const utf8* kArrIntegerTypeName[] = { "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64" };
+            using FoldNumberFn = void ( * )( StateHashBuilder& inoutBuilder, const void* pValue );
 
-            /** @brief 잎 값 하나를 접습니다. 형식이 표 밖이면 false 입니다(부르는 쪽이 멈춘다). float32 는 `StateHashBuilder` 가 -0 · NaN 을 맞춘다. */
+            /** @brief num 값 하나를 접습니다. float32 는 `StateHashBuilder` 가 -0 · NaN 을 맞추고, float64 는 -0 을 +0 으로, 정수는 바이트 그대로다. */
+            template <typename T>
+            static void foldNumber( StateHashBuilder& inoutBuilder, const void* pValue )
+            {
+                const T value = *static_cast<const T*>( pValue );
+                if constexpr ( std::is_same_v<T, float32> )
+                {
+                    inoutBuilder.addFloat( value );
+                }
+                else if constexpr ( std::is_floating_point_v<T> )
+                {
+                    const T normalized = value == T( 0 ) ? T( 0 ) : value; // -0 과 +0 은 같은 값이다(float32 와 같은 규칙)
+                    inoutBuilder.addBytes( &normalized, sizeof( normalized ) );
+                }
+                else
+                {
+                    inoutBuilder.addBytes( &value, sizeof( value ) );
+                }
+            }
+
+            /** @brief State 역할인 num 줄이면 그 타입의 접기, 아니면 nullptr 입니다. */
+            template <typename T, bool bNumber>
+            static constexpr FoldNumberFn pickFoldNumber()
+            {
+                if constexpr ( bNumber )
+                    return &foldNumber<T>;
+                else
+                    return nullptr;
+            }
+
+            static constexpr bool isStateNumber( const ReflectBuiltinIndex builtinIndex )
+            {
+                const ReflectBuiltinTraits traits = ReflectBuiltinTraitTable::get( builtinIndex );
+                return traits.hasRole( ReflectBuiltinRole::State ) && traits._layout == ReflectBuiltinLayout::Number;
+            }
+
+            static FoldNumberFn findFoldNumber( const ReflectBuiltinIndex builtinIndex )
+            {
+                static constexpr FoldNumberFn kArrFoldNumber[] = {
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) pickFoldNumber<ReflectBuiltinCppTypeT<CppType>, isStateNumber( ReflectBuiltinIndex::k##Canon )>(),
+#define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
+#undef SW_REFLECT_BUILTIN_TYPE
+#undef SW_REFLECT_BUILTIN_CONTAINER
+                };
+                return builtinIndex < ReflectBuiltinIndex::kCount ? kArrFoldNumber[static_cast<size_t>( builtinIndex )] : nullptr;
+            }
+
+            /** @brief f32 · i32 성분을 접습니다. float32 는 -0 · NaN 을 맞추고, int32 는 바이트 그대로다. */
+            static void foldComponents( StateHashBuilder& inoutBuilder, const ReflectBuiltinLayout layout, const uint8 count, const void* pValue )
+            {
+                for ( uint8 index = 0; index < count; ++index )
+                {
+                    if ( layout == ReflectBuiltinLayout::Float32 )
+                        inoutBuilder.addFloat( static_cast<const float32*>( pValue )[index] );
+                    else
+                        inoutBuilder.addBytes( static_cast<const int32*>( pValue ) + index, sizeof( int32 ) );
+                }
+            }
+
+            /** @brief 길이를 앞에 둔 글자입니다 — 이웃 칸과 경계가 섞이지 않는다. */
+            static void foldText( StateHashBuilder& inoutBuilder, const string_view text )
+            {
+                inoutBuilder.addUint32( static_cast<uint32>( text.size() ) );
+                inoutBuilder.addString( text );
+            }
+
+            /**
+             * @brief 잎 값 하나를 접습니다. 형식이 State 역할 밖이면 false 입니다(부르는 쪽이 멈춘다).
+             * @details 내장 타입은 `ReflectBuiltins.xxx` 의 State 역할 · Layout 이 정한다(`StateIO::reflected` 와 같은 칸). Layout 이 none 인 State 타입만 손으로 접는다.
+             */
             static bool foldLeaf( StateHashBuilder& inoutBuilder, const TypeRegistry& registry, const hashed_string& typeName, const void* pValue )
             {
-                const string_view name = typeName.c_str();
-                if ( name == "bool" )
+                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
+                if ( builtinIndex != ReflectBuiltinIndex::kNone )
                 {
-                    inoutBuilder.addUint8( *static_cast<const bool*>( pValue ) ? 1 : 0 );
-                    return true;
-                }
-                if ( name == "float32" )
-                {
-                    inoutBuilder.addFloat( *static_cast<const float32*>( pValue ) );
-                    return true;
-                }
-                if ( name == "float64" )
-                {
-                    const float64 raw   = *static_cast<const float64*>( pValue );
-                    const float64 value = raw == 0.0 ? 0.0 : raw; // -0 과 +0 은 같은 값이다(float32 와 같은 규칙)
-                    inoutBuilder.addBytes( &value, sizeof( value ) );
-                    return true;
-                }
-                const bool bFloatVector = name == "float2" || name == "float3" || name == "float4" || name == "quaternion";
-                if ( bFloatVector )
-                {
-                    const TypeInfo* pVector = registry.findType( typeName );
-                    const size_t    count   = pVector != nullptr ? pVector->_size / sizeof( float32 ) : 0;
-                    const float32*  pFloat  = static_cast<const float32*>( pValue );
-                    for ( size_t index = 0; index < count; ++index )
-                    {
-                        inoutBuilder.addFloat( pFloat[index] );
-                    }
-                    return count != 0;
-                }
-                if ( name == "int2" )
-                {
-                    const int2& cell = *static_cast<const int2*>( pValue );
-                    inoutBuilder.addBytes( &cell._x, sizeof( cell._x ) );
-                    inoutBuilder.addBytes( &cell._y, sizeof( cell._y ) );
-                    return true;
-                }
-                if ( name == "GameObjectHandle" )
-                {
-                    // objectID 는 매니저가 만든 순서로 매긴다 — 같은 입력 · 같은 순서의 실행에서 같은 값이라 결정적이다
-                    const uint64 objectID = static_cast<const GameObjectHandle*>( pValue )->objectID();
-                    inoutBuilder.addBytes( &objectID, sizeof( objectID ) );
-                    return true;
-                }
-                if ( name == "string" )
-                {
-                    const string& text = *static_cast<const string*>( pValue );
-                    inoutBuilder.addUint32( static_cast<uint32>( text.size() ) ); // 길이를 앞에 둬 이웃 칸과 경계가 섞이지 않는다
-                    inoutBuilder.addString( text );
-                    return true;
-                }
-                for ( const utf8* pIntegerName : kArrIntegerTypeName )
-                {
-                    if ( name != pIntegerName )
-                        continue;
-                    const TypeInfo* pInteger = registry.findType( typeName );
-                    if ( pInteger == nullptr )
+                    const ReflectBuiltinTraits traits = ReflectBuiltinTraitTable::get( builtinIndex );
+                    if ( traits.hasRole( ReflectBuiltinRole::State ) == false )
                         return false;
-                    inoutBuilder.addBytes( pValue, pInteger->_size );
-                    return true;
+                    switch ( traits._layout )
+                    {
+                        case ReflectBuiltinLayout::Number:
+                            findFoldNumber( builtinIndex )( inoutBuilder, pValue );
+                            return true;
+                        case ReflectBuiltinLayout::Float32:
+                        case ReflectBuiltinLayout::Int32:
+                            foldComponents( inoutBuilder, traits._layout, ReflectedValueUtil::getBuiltinComponentCount( builtinIndex ), pValue );
+                            return true;
+                        case ReflectBuiltinLayout::Angle: // State 가 아니다(`ReflectBuiltinTraitTable::isStateCarried`)
+                            return false;
+                        case ReflectBuiltinLayout::None:
+                            break;
+                    }
+                    switch ( builtinIndex ) // 손 처리기 — 목록은 `ReflectBuiltinTraitTable::hasStateHandHandler` 하나다
+                    {
+                        case ReflectBuiltinIndex::kbool:
+                            inoutBuilder.addUint8( *static_cast<const bool*>( pValue ) ? 1 : 0 );
+                            return true;
+                        case ReflectBuiltinIndex::kstring:
+                            foldText( inoutBuilder, *static_cast<const string*>( pValue ) );
+                            return true;
+                        case ReflectBuiltinIndex::khashed_string:
+                            foldText( inoutBuilder, static_cast<const hashed_string*>( pValue )->c_str() ); // 글자로 접는다 — 이름 해시 값은 실행마다 같다는 약속이 없다
+                            return true;
+                        case ReflectBuiltinIndex::kGameObjectHandle:
+                        {
+                            // objectID 는 매니저가 만든 순서로 매긴다 — 같은 입력 · 같은 순서의 실행에서 같은 값이라 결정적이다
+                            const uint64 objectID = static_cast<const GameObjectHandle*>( pValue )->objectID();
+                            inoutBuilder.addBytes( &objectID, sizeof( objectID ) );
+                            return true;
+                        }
+                        default:
+                            return false;
+                    }
                 }
                 const EnumInfo* pEnum = registry.findEnum( typeName );
                 if ( pEnum != nullptr )
@@ -99,7 +149,7 @@ namespace sw
 
             [[noreturn]] static void stopForUnsupportedField( const TypeInfo& owner, const PropertyInfo& prop )
             {
-                SW_FATAL( "state field '%#::%#' (%#) cannot be folded into the state hash - use a number, vector, string, enum, reflected struct or a sequence of those, "
+                SW_FATAL( "state field '%#::%#' (%#) cannot be folded into the state hash - use a builtin with the State role (ReflectBuiltins.xxx), an enum, a reflected struct or a sequence of those, "
                           "or keep the value out of RuntimeState and fold it in a foldStateHash override",
                           owner._fullyQualifiedName.c_str(), prop._name.c_str(), prop._typeName.c_str() );
             }
@@ -115,8 +165,7 @@ namespace sw
                 }
                 if ( prop._bIsContainer == SW_TRUE )
                 {
-                    const bool                       bNested   = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
-                    const ISequenceContainerWrapper* pSequence = prop._containerWrapper != nullptr && bNested == false ? prop._containerWrapper->asSequence() : nullptr;
+                    const ISequenceContainerWrapper* pSequence = prop.findStateSequence(); // 상태 직렬화와 같은 판정 — 집합처럼 차례가 없는 컨테이너는 해시가 실행마다 달라진다
                     if ( pSequence == nullptr )
                         stopForUnsupportedField( field._owner, prop );
                     const size_t elementCount = pSequence->getSize( field._pValue );

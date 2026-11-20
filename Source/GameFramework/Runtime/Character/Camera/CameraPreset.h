@@ -51,6 +51,32 @@ namespace sw
         float3 _position{};
     };
 
+    /** @brief 상황 머리(`<Context name priority action>`)의 칸입니다. 바꿀 프리셋은 자식 `<Map from to>` 다. */
+    REFLECT()
+    struct SW_GF_API CameraContextParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{}; ///< 게임 코드(`CameraDirectorComponent::setContext`)와 데이터가 부르는 이름(Aim · Vehicle · Indoor …)
+        PROPERTY( Required )
+        int32 _priority{ 0 }; ///< 켜진 상황이 여럿이면 큰 쪽이 이긴다. 같으면 먼저 적은 쪽
+        PROPERTY()
+        hashed_string _action{}; ///< 비어 있지 않으면 이 입력 맵 액션을 누르고 있는 동안 상황이 켜진다(입력을 읽는 디렉터만)
+    };
+
+    /** @brief 상황 한 줄(`<Map from="thirdperson" to="thirdperson_aim"/>`)입니다. `from` 이 `*` 면 아무 선택 프리셋입니다. */
+    REFLECT()
+    struct SW_GF_API CameraContextMap
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _from{};
+        PROPERTY( Required )
+        hashed_string _to{};
+    };
+
     class XMLNode;
 
     /** @brief 프리셋이 카메라를 놓는 방식입니다. */
@@ -447,6 +473,22 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 상황 하나(`<Context>`)입니다. 켜져 있으면 지금 선택 프리셋(`from`)을 다른 프리셋(`to`)으로 바꿔 보입니다.
+     * @details 언리얼 Lyra 의 카메라 모드 스택(능력이 모드를 밀어 넣고 우선순위가 이긴다), Cinemachine 의 State-Driven Camera(상태 → 가상 카메라)와 같은 자리다.
+     *          바꾸는 블렌드는 프리셋 사이 블렌드 표(`getBlend`)를 그대로 쓴다.
+     */
+    struct CameraContextDef
+    {
+        hashed_string            _name{};
+        hashed_string            _action{};
+        int32                    _priority{ 0 };
+        vector<CameraContextMap> _listMap{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @brief 카메라가 따라가는 대상과 그 카메라가 그리는 화면의 비율입니다.
      * @details 월드 초점, 대상이 보는 요와 피치(라디안, 피치는 +가 아래), 대상 그룹의 반지름을 담는다.
      *          여러 대상을 담을 때는 `makeGroupCameraTarget` 이 초점을 그룹의 가운데로, 반지름을 그룹을 감싸는 구의 반지름으로 채운다.
@@ -483,9 +525,13 @@ namespace sw
      *         <DefaultBlend curve="SmoothStep" duration="0.5"/>
      *         <Preset id="orbit"> ... </Preset>
      *         <Blend from="topdown" to="orbit" curve="Cut"/>
+     *         <Context name="Aim" priority="10" action="Aim">
+     *             <Map from="orbit" to="orbit_aim"/>
+     *         </Context>
      *     </CameraPresetCatalog>
      * @endcode
-     * @details 모르는 속성, 원소, 열거자 이름과 범위 밖 값은 오류이고 그 프리셋 · 블렌드 줄을 넣지 않는다.
+     * @details 모르는 속성, 원소, 열거자 이름과 범위 밖 값은 오류이고 그 프리셋 · 블렌드 · 상황 줄을 넣지 않는다.
+     *          상황의 `<Map>` 이 카탈로그에 없는 프리셋을 부르면 오류이고 그 줄을 넣지 않는다(켜는 순간 조용히 아무 일도 없게 두지 않는다).
      */
     class SW_GF_API CameraPresetCatalog : public GameCatalog<CameraPresetDef, XMLCatalog<CameraPresetCatalog>>
     {
@@ -508,16 +554,32 @@ namespace sw
         const BlendCurveDef& getDefaultBlend() const { return _defaultBlend; }
         void                 setDefaultBlend( const BlendCurveDef& blend ) { _defaultBlend = blend; }
 
+        /** @brief 상황 표입니다(적은 순서). */
+        const vector<CameraContextDef>& getContextList() const { return _listContext; }
+        /** @brief 이름이 @p name 인 상황입니다. 없으면 nullptr 입니다. */
+        const CameraContextDef* findContext( const hashed_string& name ) const;
+        /**
+         * @brief 선택 프리셋 @p selected 에 켜진 상황 @p listActive 를 적용한 프리셋입니다. 맞는 줄이 없으면 @p selected 그대로입니다.
+         * @details 켜진 상황 가운데 @p selected(또는 `*`)의 줄이 있는 것 중 우선순위가 가장 큰 것이 이긴다. 같으면 먼저 적은 상황이다.
+         */
+        hashed_string resolveContextPreset( const hashed_string& selected, const vector<hashed_string>& listActive ) const;
+        /** @brief @p id 가 어느 상황의 바꿀 프리셋(`to`)이면 true 입니다. 순환(`CameraDirectorComponent::activateNextPreset`)이 건너뜁니다 — 상황이 켜고 끄는 프리셋이다. */
+        bool isContextPreset( const hashed_string& id ) const;
+
     private:
         static constexpr const utf8* kXMLRootName = "CameraPresetCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadDefaultBlend( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadPreset( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadBlendRule( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadContext( const XMLNode& node, string_view sourceName );
+        /** @brief 상황 줄이 부르는 프리셋이 카탈로그에 있는지 봅니다. 없는 줄은 오류를 남기고 뺍니다(프리셋은 상황보다 뒤에 적어도 된다 — 다 읽은 뒤에 본다). */
+        void validateContextList( string_view sourceName );
 
     private:
-        vector<CameraBlendRule> _listBlendRule;
-        BlendCurveDef           _defaultBlend;
+        vector<CameraBlendRule>  _listBlendRule;
+        vector<CameraContextDef> _listContext;
+        BlendCurveDef            _defaultBlend;
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<CameraPresetCatalog>::acquire` 로 한 벌을 받습니다. */

@@ -71,6 +71,7 @@ namespace sw::editor
         hashed_string              _typeName{};             ///< 프로퍼티 타입 이름(그리기 확장을 찾는 키)
         hashed_string              _propName{};             ///< 프로퍼티 이름(자체 테스트 표식 · ImGui id)
         hashed_string              _handleTargetTypeName{}; ///< 타입 핸들(`TComponentHandle<T>`)의 대상 타입 이름. 비면 타입 없는 핸들이다
+        hashed_string              _nameSource{};           ///< 이름 칸의 고르기 목록 출처(`Meta = "NameSource=…"`, `InspectorNameSource`). 비면 글로 친다
         int64                      _enumValue{ 0 };         ///< 열거형의 지금 값
         uint64                     _key{ 0 };               ///< 프레임을 넘어 같은 행을 가리키는 키(높이 · 펼침 상태)
         float32                    _height{ 0.0f };         ///< `Skipped` 행이 차지하는 높이(지난 프레임에 잰 값)

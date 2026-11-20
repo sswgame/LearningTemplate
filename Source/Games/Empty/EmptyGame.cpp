@@ -23,7 +23,9 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameClientPart.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
@@ -75,6 +77,9 @@ namespace sw
         , _abilityClasses{}
         , _pAbilityCatalog{ nullptr }
     {
+        // 키트 시연 디렉터(GameModeComponent 파생 — KitDemoComponent · ActionPlatformerDemoComponent …)의 판 상태를 세이브 · 핫 리로드에 싣는다. 바탕 형식 하나로 올리면
+        // 파생이 모두 실린다(순회는 파생을 포함하고 상태는 가상 serializeState). 올리지 않으면 game.save · game.load 가 판을 조용히 새로 연다(kitdemo_respawn 4).
+        getStateSnapshot().registerGameMode<GameModeComponent>();
     }
 
     EmptyGame::~EmptyGame() = default;

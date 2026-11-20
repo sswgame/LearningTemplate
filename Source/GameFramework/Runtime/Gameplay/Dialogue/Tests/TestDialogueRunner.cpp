@@ -1,11 +1,13 @@
 // DialogueRunnerTest — 대화 러너: 줄 · 선택지 · 조건 분기 · 행동 · 끝, 플래그 명령, 핸들러 안의 재진입, 순환과 끊긴 그래프(nogpu). 그래프 형식과 커서는 DialogueGraphTest 가 본다.
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Presentation/ISubtitleSink.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
@@ -117,6 +119,25 @@ namespace
         }
 
         void onFinished() { ++_finishCount; }
+    };
+
+    /** @brief 올린 줄 · 내린 줄을 적어 두는 자막 창구입니다. */
+    struct RecordingSubtitleSink final : ISubtitleSink
+    {
+        vector<uint32> _listShown{};
+        uint32         _nextID{ 1 };
+
+        uint32 postSubtitle( string_view /*speaker*/, string_view /*text*/, float32 /*durationSeconds*/ ) override
+        {
+            _listShown.push_back( _nextID );
+            return _nextID++;
+        }
+        void removeSubtitle( uint32 lineID ) override
+        {
+            VectorUtil::removeIf( _listShown, [lineID]( uint32 shown )
+            { return shown == lineID; } );
+        }
+        void clearSubtitles() override { _listShown.clear(); }
     };
 } // namespace
 
@@ -354,4 +375,25 @@ SW_TEST_CASE( DialogueRunnerTest, SpeakerSlotBindsTheSceneObject )
 
     pRunner->setSpeakerObject( 1, GameObjectHandle{} );
     SW_EXPECT_NULL( pRunner->findSpeakerObject( 1 ) );
+}
+
+/** @brief [DialogueRunnerTest] 자막을 올리는 러너는 다음 줄에서 앞 줄을 내리고, 멈추면(건너뛰기) 지금 줄도 내린다 — 읽기 시간만큼 남지 않는다 */
+SW_TEST_CASE( DialogueRunnerTest, SubtitleLineFollowsTheDialogue )
+{
+    DialogueRunnerComponent runner;
+    RecordingSubtitleSink   sink;
+    runner._bPostSubtitles = true;
+    runner.setSubtitleSink( &sink );
+    runner.setGraph( makeConversation() );
+
+    SW_REQUIRE_TRUE( runner.startDialogue() );
+    SW_REQUIRE_EQUAL( size_t( 1 ), sink._listShown.size() );
+    SW_EXPECT_EQUAL( uint32( 1 ), sink._listShown[0] );
+    SW_REQUIRE_TRUE( runner.advance() ); // 선택지 — 줄을 내리지 않는다(물음과 함께 보인다)
+    SW_REQUIRE_TRUE( runner.selectChoice( 0 ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), sink._listShown.size() ); // 새 줄이 앞 줄을 바꿨다
+    SW_EXPECT_EQUAL( uint32( 2 ), sink._listShown[0] );
+
+    runner.stopDialogue();
+    SW_EXPECT_TRUE( sink._listShown.empty() );
 }

@@ -26,6 +26,8 @@ namespace sw
         void                            destroyRenderPass( RHIRenderPassHandle pass ) override;
         RHIBufferHandle                 createConstantBuffer( uint32 size ) override;
         void                            updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        RHIBufferHandle                 createConstantBufferPage( uint32 size ) override;
+        void                            updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
         RHIBufferHandle                 createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
         void                            updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                        const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
@@ -57,6 +59,7 @@ namespace sw
         bool                            isTextureReadyToSample( RHITextureHandle texture ) override;
         void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
         void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex              registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
         RHIDescriptorIndex              registerBindlessTextureUAV( RHITextureHandle texture ) override;
@@ -119,7 +122,7 @@ namespace sw
          *          인덱스를 집은 잠금 안에서 부릅니다. @p link 는 번호가 자원의 것인가(등록) · 받은 쪽의 것인가(예약)다(`RHIBindlessLink`).
          */
         void writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource, const BindlessHandleSet& handle,
-                                  RHIBufferHandle buffer, RHITextureHandle texture, RHIBindlessLink link );
+                                  RHIBufferHandle buffer, RHITextureHandle texture, RHIBindlessLink link, uint32 sliceOffset = 0 );
 
         /** @brief 텍스처와 버퍼 공용 힙 슬롯을 비우고 프리리스트에 돌려줍니다(빈 슬롯은 무시합니다). */
         void releaseBindlessSlot( RHIDescriptorIndex index );

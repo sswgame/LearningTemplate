@@ -246,7 +246,7 @@ namespace sw
         {
             // 픽셀 맞춤(UILayoutPass)은 양 끝을 반올림해 원하는 너비에 놓인 텍스트를 물리 픽셀 하나까지 줄인다. 그만큼은 넘쳐도 한 줄로 둔다
             // (상자 줄의 버튼 텍스트가 끝 글자를 다음 줄로 넘기지 않게 하기 위해서다).
-            const float32 snapSlack = width > 0.0f && context._uiScale > 0.0f ? 1.0f / context._uiScale : 0.0f;
+            const float32 snapSlack = computeSnapSlack( width, context._uiScale );
             context._pTextLayout->layout( getPlainText(), style, width + snapSlack, _layoutCache, getSpans() );
             _layoutWidth    = width;
             _layoutFontSize = style._fontSize;

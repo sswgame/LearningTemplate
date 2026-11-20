@@ -71,7 +71,7 @@ namespace sw
 
         PROPERTY( AssetPath, Tooltip = "Resource path of the clip (wav, ogg) or of a sound graph (.audiograph.xml)" )
         hashed_string _path{};
-        PROPERTY( Tooltip = "Subtitle text key (Namespace.Key in a string table) shown when this clip starts; empty shows none" )
+        PROPERTY( Meta = "Localizable", Tooltip = "Subtitle text key (Namespace.Key in a string table) shown when this clip starts; empty shows none" )
         hashed_string _subtitleKey{};
         PROPERTY( Min = 0.0, Tooltip = "Random container weight" )
         float32 _weight{ 1.0f };
@@ -147,7 +147,7 @@ namespace sw
         hashed_string _bus{};
         PROPERTY( Tooltip = "Attenuation preset; empty plays 2D (no spatialization)" )
         hashed_string _attenuation{};
-        PROPERTY( Tooltip = "Speaker name key (Namespace.Key) of the clip subtitles; empty hides the speaker line" )
+        PROPERTY( Meta = "Localizable", Tooltip = "Speaker name key (Namespace.Key) of the clip subtitles; empty hides the speaker line" )
         hashed_string _subtitleSpeakerKey{};
         PROPERTY( Tooltip = "Clips of the container" )
         vector<AudioClipEntry> _listClip{};

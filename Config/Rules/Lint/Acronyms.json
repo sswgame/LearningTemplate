@@ -84,6 +84,9 @@
         "XML"
     ],
     "_keep": {
+        "VkHdrMetadataEXT": "바깥 이름(Vulkan VK_EXT_hdr_metadata 헤더의 철자)",
+        "PFN_vkSetHdrMetadataEXT": "바깥 이름(Vulkan VK_EXT_hdr_metadata 헤더의 철자)",
+        "decodePolyId": "바깥 이름(Detour dtNavMesh 의 철자)",
         "AInputEvent_getDeviceId": "바깥 이름(Android NDK)",
         "AMotionEvent_getPointerId": "바깥 이름(Android NDK)",
         "ActiveId": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",

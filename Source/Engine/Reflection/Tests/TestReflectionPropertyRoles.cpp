@@ -7,6 +7,8 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
+#include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
@@ -14,6 +16,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 // ReflectionPropertyRoleTest — 역할 플래그. 네트워크(Replicated · RepNotify) · 세이브(SaveGame) · 시퀀서(Interp)가 읽는 프로퍼티 메타.
 
@@ -272,4 +275,131 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, EveryRegisteredRolePropertyIsUsable )
         }
     } );
     SW_EXPECT_TRUE_MSG( failures.empty(), failures.c_str() );
+}
+
+/**
+ * @brief [ReflectionPropertyRoleTest] 내장 표(`ReflectBuiltins.xxx`)의 Interp 역할 줄마다 그 타입의 칸이 섞이고, Interp 가 아닌 줄은 섞이지 않는다
+ * @details 시퀀서 · 파서 · UI 애니메이션이 같은 칸을 읽는다 — 손 목록이 셋이던 때는 하나만 늘고 둘이 남았다.
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, InterpRoleRowsAreInterpolatable )
+{
+    for ( size_t index = 0; index < static_cast<size_t>( sw::ReflectBuiltinIndex::kCount ); ++index )
+    {
+        const sw::ReflectBuiltinIndex  builtinIndex = static_cast<sw::ReflectBuiltinIndex>( index );
+        const sw::ReflectBuiltinTraits traits       = sw::ReflectBuiltinTraitTable::get( builtinIndex );
+        const sw::hashed_string&       typeName     = sw::ReflectedValueUtil::getBuiltinTypeName( builtinIndex );
+        const sw::PropertyInfo         prop( sw::hashed_string( "_value" ), typeName, 0 );
+        SW_EXPECT_TRUE_MSG( sw::PropertyRoleUtil::isInterpolatable( prop ) == traits.hasRole( sw::ReflectBuiltinRole::Interp ), typeName.c_str() );
+    }
+}
+
+/**
+ * @brief [ReflectionPropertyRoleTest] 내장 표의 Layout 이 성분 수와 크기를 정한다 — f32 · i32 는 멤버 수 × 4 바이트가 등록된 크기이고, num · angle 은 성분 하나, none 은 0 이다
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, BuiltinLayoutGivesComponentCountAndSize )
+{
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    for ( size_t index = 0; index < static_cast<size_t>( sw::ReflectBuiltinIndex::kCount ); ++index )
+    {
+        const sw::ReflectBuiltinIndex  builtinIndex = static_cast<sw::ReflectBuiltinIndex>( index );
+        const sw::ReflectBuiltinTraits traits       = sw::ReflectBuiltinTraitTable::get( builtinIndex );
+        const sw::hashed_string&       typeName     = sw::ReflectedValueUtil::getBuiltinTypeName( builtinIndex );
+        const uint8                    count        = sw::ReflectedValueUtil::getBuiltinComponentCount( builtinIndex );
+        switch ( traits._layout )
+        {
+            case sw::ReflectBuiltinLayout::Float32:
+            case sw::ReflectBuiltinLayout::Int32:
+            {
+                const sw::TypeInfo* pType = registry.findType( typeName );
+                SW_REQUIRE_TRUE_MSG( pType != nullptr, typeName.c_str() );
+                SW_EXPECT_TRUE_MSG( count > 0 && pType->_size == static_cast<size_t>( count ) * sizeof( float32 ), typeName.c_str() );
+                break;
+            }
+            case sw::ReflectBuiltinLayout::Number:
+            case sw::ReflectBuiltinLayout::Angle:
+                SW_EXPECT_TRUE_MSG( count == 1, typeName.c_str() );
+                break;
+            case sw::ReflectBuiltinLayout::None:
+                SW_EXPECT_TRUE_MSG( count == 0, typeName.c_str() );
+                break;
+        }
+    }
+    SW_EXPECT_EQUAL( static_cast<uint8>( 2 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kint2 ) );
+    SW_EXPECT_TRUE( sw::ReflectBuiltinTraitTable::get( sw::ReflectBuiltinIndex::kint2 )._layout == sw::ReflectBuiltinLayout::Int32 );
+    SW_EXPECT_EQUAL( static_cast<uint8>( 16 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kfloat4x4 ) );
+    SW_EXPECT_EQUAL( static_cast<uint8>( 0 ), sw::ReflectedValueUtil::getBuiltinComponentCount( sw::ReflectBuiltinIndex::kNone ) );
+}
+
+namespace
+{
+    // 래퍼 형식이 정하는 모양 — 표(`ReflectBuiltins.xxx` CONTAINER 줄)의 종류 · State · Fixed 와 생성 코드가 이 값으로 대조한다.
+    using VectorWrapperT = sw::VectorWrapper<sw::vector<int32>>;
+    using SetWrapperT    = sw::SetWrapper<sw::set<int32>>;
+    using ArrayWrapperT  = sw::ArrayWrapper<int32[4]>;
+    using MapWrapperT    = sw::MapWrapper<sw::map<int32, int32>>;
+    static_assert( sw::ContainerWrapperOf<VectorWrapperT>::matchesTable( sw::ContainerKind::Sequence, true, false ) );
+    static_assert( sw::ContainerWrapperOf<SetWrapperT>::matchesTable( sw::ContainerKind::Sequence, false, false ) );
+    static_assert( sw::ContainerWrapperOf<ArrayWrapperT>::matchesTable( sw::ContainerKind::Sequence, true, true ) );
+    static_assert( sw::ContainerWrapperOf<MapWrapperT>::matchesTable( sw::ContainerKind::Map, false, false ) );
+    static_assert( sw::ContainerWrapperOf<SetWrapperT>::matchesTable( sw::ContainerKind::Sequence, true, false ) == false, "집합에 State 를 달면 컴파일이 멈춰야 한다" );
+    static_assert( sw::ContainerWrapperOf<VectorWrapperT>::matchesTable( sw::ContainerKind::Map, true, false ) == false, "시퀀스 래퍼를 Map 이라 적으면 컴파일이 멈춰야 한다" );
+} // namespace
+
+/**
+ * @brief [ReflectionPropertyRoleTest] 상태 직렬화 · 해시가 싣는 시퀀스는 차례가 정해진 평평한 시퀀스뿐이다 — 집합 · 맵은 nullptr(`PropertyInfo::findStateSequence`)
+ * @details 래퍼 가상 함수(`allowsInPlaceElementWrite` · `isFixedSize`)가 같은 형식의 정적 값과 같아 표 · 생성 코드 · 런타임 판정이 한 값을 본다.
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, StateSequenceIsTheOrderedFlatSequence )
+{
+    const auto makeContainer = []( const sw::ContainerKind kind, const sw::IContainerWrapper* pWrapper )
+    { return sw::PropertyInfo( sw::hashed_string( "_list" ), sw::hashed_string( "container" ), 0, true, kind, sw::hashed_string( "int32" ), {}, pWrapper ); };
+    const sw::PropertyInfo vectorProp = makeContainer( sw::ContainerKind::Sequence, &sw::ContainerWrapperOf<VectorWrapperT>::kInstance );
+    const sw::PropertyInfo arrayProp  = makeContainer( sw::ContainerKind::Sequence, &sw::ContainerWrapperOf<ArrayWrapperT>::kInstance );
+    const sw::PropertyInfo setProp    = makeContainer( sw::ContainerKind::Sequence, &sw::ContainerWrapperOf<SetWrapperT>::kInstance );
+    const sw::PropertyInfo mapProp    = makeContainer( sw::ContainerKind::Map, &sw::ContainerWrapperOf<MapWrapperT>::kInstance );
+    const sw::PropertyInfo scalarProp( sw::hashed_string( "_value" ), sw::hashed_string( "int32" ), 0 );
+
+    SW_EXPECT_TRUE( vectorProp.findStateSequence() != nullptr );
+    SW_EXPECT_TRUE( arrayProp.findStateSequence() != nullptr );
+    SW_EXPECT_TRUE( setProp.findStateSequence() == nullptr );
+    SW_EXPECT_TRUE( mapProp.findStateSequence() == nullptr );
+    SW_EXPECT_TRUE( scalarProp.findStateSequence() == nullptr );
+    SW_EXPECT_TRUE( sw::ContainerWrapperOf<ArrayWrapperT>::kInstance.isFixedSize() );
+    SW_EXPECT_FALSE( sw::ContainerWrapperOf<SetWrapperT>::kInstance.allowsInPlaceElementWrite() );
+}
+
+/**
+ * @brief [ReflectionPropertyRoleTest] State 줄은 모두 실릴 길이 있다 — 손 처리기 목록(`hasStateHandHandler`)의 줄은 State 이고 Layout 이 none 이며, 각(angle)은 State 가 아니다
+ * @details 손 처리기 목록은 하나다. 상태 직렬화 · 상태 해시 · 테스트 값 바꾸기가 같은 목록을 보고, `ReflectedValue.cpp` 가 줄마다 `isStateCarried` 를 컴파일 때 본다.
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, StateRowsHaveOneHandHandlerList )
+{
+    for ( size_t index = 0; index < static_cast<size_t>( sw::ReflectBuiltinIndex::kCount ); ++index )
+    {
+        const sw::ReflectBuiltinIndex  builtinIndex = static_cast<sw::ReflectBuiltinIndex>( index );
+        const sw::ReflectBuiltinTraits traits       = sw::ReflectBuiltinTraitTable::get( builtinIndex );
+        const sw::hashed_string&       typeName     = sw::ReflectedValueUtil::getBuiltinTypeName( builtinIndex );
+        SW_EXPECT_TRUE_MSG( sw::ReflectBuiltinTraitTable::isStateCarried( builtinIndex ), typeName.c_str() );
+        if ( sw::ReflectBuiltinTraitTable::hasStateHandHandler( builtinIndex ) )
+            SW_EXPECT_TRUE_MSG( traits.hasRole( sw::ReflectBuiltinRole::State ) && traits._layout == sw::ReflectBuiltinLayout::None, typeName.c_str() );
+        if ( traits._layout == sw::ReflectBuiltinLayout::Angle )
+            SW_EXPECT_FALSE_MSG( traits.hasRole( sw::ReflectBuiltinRole::State ), typeName.c_str() );
+    }
+}
+
+/**
+ * @brief [ReflectionPropertyRoleTest] 핸들 칸도 세이브가 쓴다 — 대상의 고정 지역 id · 키 해시로 적혀 다른 실행에서도 같은 대상을 찾는다(감사 A-2, ObjectStateSerializerTest.HandleToMissingComponentSurvivesBinarySaveRoundTrip)
+ */
+SW_TEST_CASE( ReflectionPropertyRoleTest, HandlesAreSavedByStableKey )
+{
+    const sw::PropertyInfo handleProp( sw::hashed_string( "_target" ), sw::hashed_string( "GameObjectHandle" ), 0 );
+    const sw::PropertyInfo handleListProp( sw::hashed_string( "_listTarget" ), sw::hashed_string( "vector" ), 0, true, sw::ContainerKind::Sequence,
+                                           sw::hashed_string( "ComponentHandle" ) );
+    SW_EXPECT_TRUE( sw::ReflectBuiltinTraitTable::get( sw::ReflectBuiltinIndex::kGameObjectHandle ).hasRole( sw::ReflectBuiltinRole::State ) );
+
+    const sw::TypeInfo* pOwner = sw::AssetPathActor::StaticType(); // SaveGame 칸이 없는 타입 — 세이브가 모든 칸을 쓴다
+    SW_REQUIRE_NOT_NULL( pOwner );
+    const sw::SerializeContext saveContext = makeSaveContext();
+    SW_EXPECT_TRUE( sw::SerializerUtil::shouldSerializeProperty( *pOwner, handleProp, saveContext ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::shouldSerializeProperty( *pOwner, handleListProp, saveContext ) );
 }

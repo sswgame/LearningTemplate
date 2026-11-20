@@ -147,9 +147,9 @@ namespace sw
         PROPERTY( Min = 1, Max = NetConnection::kMaxSingleMessageSize )
         int32 _updateBudgetBytes{ 600 }; ///< 관찰자 한 명당 틱마다 보내는 갱신 메시지 바이트(1 ~ `NetConnection::kMaxSingleMessageSize`). 종류 바이트와 틱을 포함한다. 연결 상한이 더 작으면 그 값을 쓴다
         PROPERTY( Min = 1 )
-        int32 _maxEnterPerTick{ 32 };
+        int32 _maxEnterPerTick{ 32 }; ///< 한 틱에 새로 보이게 하는 엔티티 수의 상한. 텔레포트 직후에 몰리지 않게 하며, 신뢰 메시지 하나에 묶고 64 KB를 넘는 나머지는 다음 틱에 보낸다
         PROPERTY( Min = 0, Units = m )
-        float32 _maxStreamingRadius{ 0.0f }; ///< `setObserverStreaming` 이 받는 반경의 상한. 0(기본값)이면 관찰자 반경을 바꾸지 못한다 — 쓰는 게임이 Config 데이터로 준다(관찰자 소스 반경은 서버가 올리는 셀 수를 정한다) ///< 한 틱에 새로 보이게 하는 엔티티 수의 상한. 텔레포트 직후에 몰리지 않게 하며, 신뢰 메시지 하나에 묶고 64 KB를 넘는 나머지는 다음 틱에 보낸다
+        float32 _maxStreamingRadius{ 0.0f }; ///< `setObserverStreaming` 이 받는 반경의 상한. 0(기본값)이면 관찰자 반경을 바꾸지 못한다 — 쓰는 게임이 Config 데이터로 준다(관찰자 소스 반경은 서버가 올리는 셀 수를 정한다)
     };
 } // namespace sw
 

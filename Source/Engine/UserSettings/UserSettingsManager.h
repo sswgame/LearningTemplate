@@ -270,6 +270,12 @@ namespace sw
 
         /** @brief 보류 값을 넣습니다. `Immediate` 설정은 바로 대상에 미리 적용합니다. 품질 번들의 프리셋과 Custom 도 함께 맞춥니다. */
         UserSettingSetResult setPendingValue( const hashed_string& settingID, string_view value );
+        /**
+         * @brief 설정 하나만 바로 확정해 대상에 넣고 파일에 씁니다. 다른 설정의 보류 값 · 확인 대기는 건드리지 않습니다(이 설정의 보류 값만 버립니다).
+         * @details 게임 코드가 메뉴 밖에서 설정 하나를 바꿀 때 쓴다(카메라 시점 순환 · 디버그 HUD). `applyPending` 은 메뉴의 "적용" 이라 보류 중인 모든 값(확인을 기다리는 해상도까지)을 확정한다.
+         *          품질 번들에 든 설정은 묶인 설정이 함께 바뀌어야 하므로 받지 않는다(오류 · `Rejected` — 메뉴 길 `setPendingValue` + `applyPending` 을 쓴다).
+         */
+        UserSettingSetResult applyValue( const hashed_string& settingID, string_view value );
         UserSettingSetResult setPendingBoolValue( const hashed_string& settingID, bool bValue );
         UserSettingSetResult setPendingIntValue( const hashed_string& settingID, int32 value );
         UserSettingSetResult setPendingFloatValue( const hashed_string& settingID, float32 value );
@@ -301,6 +307,20 @@ namespace sw
         /** @brief 다음 실행에 닿을 값(`NeedsRestart`)이 확정돼 있으면 true 입니다. */
         bool isRestartRequired() const;
 
+        /**
+         * @brief 자동화 단계 경계의 기준으로 지금 확정 값을 기억합니다. 무인 실행의 기동이 적용(`reapplyAll`)을 마친 뒤 한 번 부릅니다.
+         * @details 시나리오 체인은 단계마다 새 프로세스처럼 시작해야 한다. 세션은 전역 변수만 되돌리므로(`AutomationSession::startStage`) 핸들러 대상(언어 · 키 바인딩 · 화질 묶음)과
+         *          확정 값 자체는 이 기준이 되돌린다 — 예전에는 시나리오마다 끝에서 손으로 되돌렸고, 지면 다음 단계로 샜다.
+         */
+        void captureStageBaseline();
+        /**
+         * @brief 기준과 다른 확정 값(보류 · 확인 대기 포함)을 기준으로 되돌려 대상에 다시 넣습니다. 파일에는 쓰지 않습니다. 기준이 없으면 아무 일도 하지 않습니다.
+         * @details 자동화 단계 되돌리기(`SW_AUTOMATION_STAGE_RESET`)가 다음 단계 앞에서 부른다. 전역 변수 대상은 기동 적용처럼 넣는다 — 명령줄로 준 변수(`<Launch>`)를 덮지 않는다.
+         *          다음 실행에 닿는 설정(`NeedsRestart`)은 확정 값만 되돌린다.
+         * @return 되돌린 설정 수입니다.
+         */
+        uint32 restoreStageBaseline();
+
         // ------------------------------------------------------------------------------
         // 6) 키 바인딩과 글리프
         // ------------------------------------------------------------------------------
@@ -328,6 +348,13 @@ namespace sw
     private:
         /** @brief 키 바인딩 대상 맵의 구독이 풀렸습니다. 맵을 뗍니다(주소로만 찾는다 — 역참조하지 않는다). */
         void releaseKeyBindingInputMap( const InputMap* pInputMap );
+
+        /** @brief 단계 기준의 한 줄입니다. 설정 id 로 찾는다 — 기준 뒤에 스키마가 바뀌어도(게임 모듈이 더 읽었다) 순번이 어긋나지 않는다. */
+        struct StageBaselineValue
+        {
+            hashed_string _settingID{};
+            string        _value{};
+        };
 
         /** @brief 설정 하나의 값 상태입니다. `UserSettingsSchema::getSettings` 와 같은 순번입니다. */
         struct SettingState
@@ -358,6 +385,8 @@ namespace sw
         bool                 isAvailableAt( uint32 settingIndex ) const;
         [[nodiscard]] bool   applyToTarget( uint32 settingIndex, const string& value, bool bStartup );
         UserSettingSetResult setPendingAt( uint32 settingIndex, const string& normalized, UserSettingValueResult normalizeResult );
+        /** @brief @p value 를 설정 @p settingIndex 의 값으로 정규화하고 선택지 · 키 겹침을 봅니다. 결과는 `Accepted` · `Clamped` · `Rejected` · `Conflict` 중 하나입니다. */
+        UserSettingSetResult normalizeForSetting( uint32 settingIndex, string_view value, string& outNormalized ) const;
         void                 refreshScalabilityGroup( const ScalabilityGroupDef& group, bool bCommitted );
         void                 applyScalabilityPreset( const ScalabilityGroupDef& group, const hashed_string& presetName, bool bCommitted );
         /** @brief 파일에 없던(@p listInFile 이 0) 묶인 설정의 확정 값을 프리셋 @p presetName 의 값으로 둡니다(옛 파일 — `loadUserJSON`). 프리셋이 아니면(custom) 그대로다. */
@@ -381,6 +410,7 @@ namespace sw
         uint8                                   _bUserFileLoaded : 1;
         uint8                                   _bStartupApplied : 1;    ///< 첫 `reapplyAll`(기동 적용)이 지났는지 나타냅니다. 그 뒤로 `NeedsRestart` 값은 바뀌지 않습니다.
         vector<DataPath EngineDefaultAssets::*> _listStartupSchemaField; ///< `addStartupSchema` 가 더한 스키마 칸(기동이 사용자 파일보다 먼저 읽는다)
+        vector<StageBaselineValue>              _listStageBaseline;      ///< 자동화 단계 경계의 기준 확정 값(`captureStageBaseline`). 비면 기준이 없다
 
     private:
         /** @brief 키 바인딩 대상 맵 등록의 구독입니다. 풀리면 `releaseKeyBindingInputMap` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */

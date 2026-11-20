@@ -179,8 +179,40 @@ namespace sw::editor
             outValue = static_cast<float64>( pPanel->getDocument()._asset._listItem.size() );
             return true;
         }
+        /** @brief Sequencer 시간 막대의 지금 프레임입니다(재생 · 거꾸로 재생 · 스크럽이 바꾼다). */
+        [[nodiscard]] bool readSequencerFrame( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getCurrentFrame() );
+            return true;
+        }
+
+        /** @brief Sequencer 미리보기가 재생 중(일시정지 아님)이면 1 입니다. */
+        [[nodiscard]] bool readSequencerPlaying( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = pPanel->isPreviewPlaying() ? 1.0 : 0.0;
+            return true;
+        }
+
+        /** @brief Sequencer 미리보기가 거꾸로 재생하면 1 입니다. */
+        [[nodiscard]] bool readSequencerReversed( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = pPanel->isPreviewReversed() ? 1.0 : 0.0;
+            return true;
+        }
     } // namespace
 
+    SW_AUTOMATION_WATCH( editorSequencerFrame, "Editor.SequencerFrame", "Current frame of the Sequencer panel's time bar (play, play reverse and scrubbing move it)", &readSequencerFrame );
+    SW_AUTOMATION_WATCH( editorSequencerPlaying, "Editor.SequencerPlaying", "1 while the Sequencer panel's preview plays (not paused)", &readSequencerPlaying );
+    SW_AUTOMATION_WATCH( editorSequencerReversed, "Editor.SequencerReversed", "1 while the Sequencer panel's preview plays backwards", &readSequencerReversed );
     SW_AUTOMATION_WATCH( editorSequencerBindingCount, "Editor.SequencerBindingCount", "Bindings in the sequence open in the Sequencer panel", &readSequencerBindingCount );
     SW_AUTOMATION_WATCH( editorSequencerUnboundCount, "Editor.SequencerUnboundCount", "Bindings of the open sequence that the scene's Sequence Player does not bind to a live object",
                          &readSequencerUnboundCount );

@@ -1,0 +1,109 @@
+<?asset guid="58514b2c976a44f493e91eaea073f4c5"?>
+<Scene formatVersion="3" name="CollisionProfiles">
+	<!-- 충돌 프로필 무대(시나리오 automation/collisionprofiles) — 투사체(Bolt, Projectile)가 트리거(Gate, Trigger)를 겹치며 지나가 Pawn(Guard, Character)에 막힌다.
+	     z = 4 줄: 눈(Eye)이 +X 로 Camera · Visibility 트레이스를 쏜다 — Camera 는 Pawn(Watcher)을 무시하고 벽(Wall, Static)에 맞고, Visibility 는 Watcher 에 맞는다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="-4,6,-14" _localRotation="0.35,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="20,0.25,20" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Gate">
+			<GameObject _schemaVersion="0" _name="Gate" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-6,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Stone" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,1,1" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Guard">
+			<GameObject _schemaVersion="0" _name="Guard" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Character" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,1,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Bolt">
+			<GameObject _schemaVersion="0" _name="Bolt" _bActive="false">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-10,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Projectile" _material="Stone" _mass="1" _gravityFactor="0" _bContinuous="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.1,0.1,0.1" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<LaunchVelocityComponent _speed="10" _localDirection="1,0,0" _alignGain="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Eye">
+			<GameObject _schemaVersion="0" _name="Eye" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-3,1,4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Watcher">
+			<GameObject _schemaVersion="0" _name="Watcher" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,1,4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Character" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,1,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Wall">
+			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="5,1,4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,2,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

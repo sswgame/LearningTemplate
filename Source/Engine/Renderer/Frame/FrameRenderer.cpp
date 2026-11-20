@@ -33,6 +33,7 @@
 #include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
@@ -63,11 +64,14 @@ namespace sw
         , _pipelineRequest{}
         , _lastIndirectDrawCallCount{ 0 }
         , _lastPendingPSOBatchCount{ 0 }
+        , _bOffscreenRenderer{ SW_FALSE }
         , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
         , _screenRotation{ _pDevice, _psoManager }
-        , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture, _screenRotation }
+        , _displayEncode{ _pDevice, _psoManager }
+        , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture, _screenRotation, _displayEncode }
         , _host{}
         , _statusMessage{}
+        , _publishedDisplaySceneTarget{ 0 }
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
@@ -352,7 +356,21 @@ namespace sw
         // 값 업로드와 바인딩은 드로우 직전에 ShaderParameterBinder 가 한다. 여기서는 시드만 채운다.
         _passExecutor.resetViewRecordState();
 
+#if !defined( SW_SHIPPING )
+        // 렌더링 런타임 디버그: 프레임 디버거 · 통계는 주 시점 씬 드로우를 센다(`FramePassExecutor::drawBatchGroup` 의 허용), 그래프 사본은 요청한 프레임에 컴파일 결과를 옮긴다.
+        RenderDebugRegistry* const pRenderDebug = _state._pRenderDebug;
+        if ( pRenderDebug != nullptr )
+        {
+            pRenderDebug->beginFrame( _state._graph.getExecutionOrder() );
+            if ( pRenderDebug->takeGraphCaptureRequest() )
+                pRenderDebug->publishGraphs( { RenderGraphSnapshot::build( _state._graph, "view" ), RenderGraphSnapshot::build( _state._frameGraph, "frame" ) } );
+        }
+#endif
         const bool bDrew = uploadSceneAndSubmit( pDevice, "executePacket" );
+#if !defined( SW_SHIPPING )
+        if ( pRenderDebug != nullptr )
+            pRenderDebug->endFrame();
+#endif
         // 건너뛴 프레임 뒤의 따라잡기 — GPU 입자가 다 따라잡았으면 이 패킷이 실은 건너뛴 번호까지 끝났다고 적는다(캡처 준비가 본다).
         if ( SimulationOnlyFrameQueue* const pSimulationOnly = engine::areEngineServicesBound() ? engine::findSubsystem<SimulationOnlyFrameQueue>() : nullptr )
             pSimulationOnly->reportDrawnFrame( packet._simulationOnlySerial, _state._particleRenderer.getPendingGPUStepCount() );
@@ -969,6 +987,15 @@ namespace sw
         const uint32 screenWidth   = bScreenOutput ? _state._outputWidth : ( _pDevice != nullptr ? _pDevice->getBackBufferWidth() : 0u );
         const uint32 screenHeight  = bScreenOutput ? _state._outputHeight : ( _pDevice != nullptr ? _pDevice->getBackBufferHeight() : 0u );
         _screenRotation.prepare( screenWidth, screenHeight );
+        // HDR 출력의 두 RT 도 화면 크기다(SDR 은 놓기만 한다). 호스트 타깃(에디터 게임 뷰)이면 장면은 그 타깃에 가고 UI RT 에는 렌더 스레드 UI 만 쓴다.
+        const bool bOwnsScreen = _bOffscreenRenderer == SW_FALSE;
+        _displayEncode.prepare( bOwnsScreen ? screenWidth : 0u, bOwnsScreen ? screenHeight : 0u, _state._settings._displayOutput );
+        // HDR 출력의 두 RT 는 풀과 따로 서고 놓인다(출력 장치를 바꾸면 풀은 그대로다) — 목록이 그 RT 를 잃지도 죽은 핸들을 들지도 않게 바뀔 때 다시 싣는다.
+        if ( _displayEncode.getSceneTarget() != _publishedDisplaySceneTarget )
+        {
+            _publishedDisplaySceneTarget = _displayEncode.getSceneTarget();
+            publishRenderTargets();
+        }
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -985,6 +1012,7 @@ namespace sw
         // 캡처도 트랜지언트와 크기가 같아야 한다. 같이 버리고 다음 ensureTransientResources 가 새 크기로 만든다. 화면 회전 대기 텍스처도 주 출력 크기다.
         _capture.releasePresent();
         _screenRotation.release();
+        _displayEncode.release();
     }
 
     void FrameRenderer::reportRenderTargetMemory() const
@@ -1094,6 +1122,27 @@ namespace sw
                 }
             }
         }
+
+        // HDR 출력의 장면 출력 RT(디스플레이 기준 선형 [0,1] 신호)와 SDR UI RT 도 싣는다 — 인코딩 앞의 두 그림이라 HDR 이 깨질 때 먼저 보는 곳이다.
+        // 패스가 아니라 그래프 밖 출력(`FrameDisplayEncode`)이 쓰고 읽어 생산자 · 소비자 대신 그 이름을 적는다.
+        const auto appendDisplayTarget = [&]( const utf8* pName, RHITextureHandle texture, RHIFormat format )
+        {
+            if ( texture == 0 )
+                return;
+            RenderTargetInfo info{};
+            info._name    = pName;
+            info._texture = texture;
+            info._width   = _displayEncode.getWidth();
+            info._height  = _displayEncode.getHeight();
+            info._format  = format;
+            info._listProducer.push_back( "DisplayEncode" );
+            info._listConsumer.push_back( "DisplayEncode" );
+            listTarget.push_back( std::move( info ) );
+        };
+        appendDisplayTarget( "DisplaySceneTarget", _displayEncode.getSceneTarget(), FrameDisplayEncode::getSceneFormat() );
+        // UI RT 는 장치가 고른 포맷으로 선다(`FrameDisplayEncode::prepare`) — RT 가 있으면 장치도 있다.
+        if ( _pDevice != nullptr )
+            appendDisplayTarget( "DisplayUITarget", _displayEncode.getUITarget(), _pDevice->getUITargetFormat() );
 
         // 이름순으로 정렬해 둔다. 해시맵 순서는 실행마다 달라서, 정렬하지 않으면 목록이 프레임마다
         // 흔들리는 것처럼 보이고 "어디 있었더라" 를 매번 다시 찾게 된다.
@@ -1484,6 +1533,7 @@ namespace sw
     bool FrameRenderer::initializeOffscreen( IRHIDevice* pDevice, FrameRenderer& mainRenderer, string_view pipelinePath )
     {
         // 호스트는 걸지 않는다(주 렌더러의 일). PSO 저장소는 initialize 앞에 둔다 — 같은 파이프라인일 때만 함께 쓴다.
+        _bOffscreenRenderer = SW_TRUE;
         if ( pipelinePath.empty() )
             _psoManager.shareCache( mainRenderer._psoManager );
         // 설정 · 파이프라인 요청은 주 렌더러가 든 사본이다 — 이 렌더러는 렌더 스레드에서 서므로 변수를 읽지 않는다.

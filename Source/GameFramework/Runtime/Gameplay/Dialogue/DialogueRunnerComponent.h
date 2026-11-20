@@ -184,6 +184,10 @@ namespace sw
         void notifyLine();
         /** @brief `_onChoices` 를 사본으로 부릅니다. 핸들러가 돌면서 `selectChoice()` 를 불러도 됩니다. */
         void notifyChoices();
+        /** @brief 자막을 보낼 곳입니다(테스트가 준 창구, 없으면 엔진 서비스, 전용 서버는 nullptr). */
+        ISubtitleSink* findSubtitleSink() const;
+        /** @brief 이 러너가 올린 자막 줄이 있으면 내립니다 — 다음 줄 · 대화 끝 · 건너뛰기에서 앞 줄이 읽기 시간만큼 남지 않게 한다(언리얼 대화의 자막 종료). */
+        void removePostedSubtitle();
 
         DialogueGraphAsset                   _graph;
         vector<DialogueCompiledNode>         _listCompiled;
@@ -202,5 +206,6 @@ namespace sw
         uint32                               _currentSpeakerID;
         /** @brief 노드에 들어가거나 대화를 멈출 때마다 늘어납니다. Action 핸들러가 그 안에서 대화를 옮겼는지 봅니다. */
         uint32 _transitionSerial;
+        uint32 _postedSubtitleID; ///< 이 러너가 올려 아직 내리지 않은 자막 줄 번호(`ISubtitleSink::postSubtitle`). 0 이면 없다
     };
 } // namespace sw

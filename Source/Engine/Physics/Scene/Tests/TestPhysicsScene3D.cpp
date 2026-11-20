@@ -145,11 +145,11 @@ SW_TEST_CASE( PhysicsScene3DTest, MissingCapacityIsLoadError )
     SW_EXPECT_LOG( "PhysicsSettings.PhysicsSettingsTextCould" );
     PhysicsSettings settings;
     SW_EXPECT_FALSE( settings.loadFromXMLText( R"(<PhysicsSettings>
-        <_listLayer><PhysicsLayerDef _name="Default"><_listCollidesWith><item>Default</item></_listCollidesWith></PhysicsLayerDef></_listLayer>
+        <_listChannel><CollisionChannelDef _name="WorldDynamic" /></_listChannel><_listProfile><CollisionProfileDef _name="Default" _objectChannel="WorldDynamic" /></_listProfile>
         <_listMaterial><PhysicsMaterialDef _name="Default" /></_listMaterial>
     </PhysicsSettings>)" ) );
     SW_EXPECT_TRUE( settings.loadFromXMLText( R"(<PhysicsSettings _maxBodyCount="1024" _maxBodyPairCount="1024" _maxContactCount="1024" _tempAllocatorBytes="65536" _maxDebrisBodyCount="64" _streamingFloorProbeDistance="1">
-        <_listLayer><PhysicsLayerDef _name="Default"><_listCollidesWith><item>Default</item></_listCollidesWith></PhysicsLayerDef></_listLayer>
+        <_listChannel><CollisionChannelDef _name="WorldDynamic" /></_listChannel><_listProfile><CollisionProfileDef _name="Default" _objectChannel="WorldDynamic" /></_listProfile>
         <_listMaterial><PhysicsMaterialDef _name="Default" /></_listMaterial>
         <_listGroundQueryLayer><item>Default</item></_listGroundQueryLayer>
     </PhysicsSettings>)" ) );

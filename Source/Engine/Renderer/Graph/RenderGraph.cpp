@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Graph/FrameBufferTable.h"
 
 #include <algorithm>
 #include <atomic>
@@ -266,6 +267,39 @@ namespace sw
         _pParallelScratch->_pCmdListDevice = nullptr;
     }
 
+    uint64 RenderGraphPassContext::findDeclaredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const
+    {
+        bool bDeclared = false;
+        if ( _pListAccess != nullptr )
+        {
+            for ( const RenderGraphResourceAccess& declared : *_pListAccess )
+            {
+                bDeclared = bDeclared || ( declared._resource == access._resource && declared._access == access._access && declared._viewable == access._viewable );
+            }
+        }
+        if ( bDeclared == false )
+        {
+            // 선언하지 않은 접근을 주면 그래프가 그 전이를 내지 않은 자원을 묶는다 — 무효 핸들로 막는다(손으로 묶을 길이 없다).
+            SW_LOG_ERROR_ONCE_ID( "Renderer.GraphUndeclaredAccess", "Render graph pass '%#' asked for '%#' with an access it did not declare - it gets no handle", _passName.c_str(),
+                                  access._resource.c_str() );
+            return 0;
+        }
+        const uint64 handle = _pResourceTable == nullptr                          ? 0
+                            : access._viewable == RenderGraphViewableKind::Buffer ? _pResourceTable->findBuffer( access._resource, slot )
+                                                                                  : _pResourceTable->findTexture( access._resource, slot );
+        if ( handle == 0 )
+            SW_LOG_ERROR_ONCE_ID( "Renderer.GraphUnregisteredResource", "Render graph pass '%#' declared '%#' but nothing registered slot %# this frame - it gets no handle", _passName.c_str(),
+                                  access._resource.c_str(), slot );
+        return handle;
+    }
+
+    void RenderGraphPassContext::uavBarrier( RenderGraphBufferUAV handle, uint32 slot ) const
+    {
+        const RHIBufferHandle buffer = findDeclaredHandle( handle, slot );
+        if ( buffer != 0 && _pCmdList != nullptr )
+            _pCmdList->uavBarrier( buffer );
+    }
+
     /**
      * @brief 그래프에 새 패스 노드를 등록합니다.
      */
@@ -338,7 +372,9 @@ namespace sw
 
     void RenderGraph::importResource( hashed_string name, RenderGraphViewableKind type, RenderGraphAccess initialAccess )
     {
-        declareResource( name, RenderGraphResourceKind::External );
+        // 파이프라인이 Persistent 로 선언한 자원(HZB · 입자 상태)은 그 종류를 지킨다 — 들이기는 처음 접근만 정한다.
+        if ( getResourceKind( name ) == RenderGraphResourceKind::Transient )
+            declareResource( name, RenderGraphResourceKind::External );
         for ( RenderGraphResourceAccess& imported : _listImportedResource )
         {
             if ( imported._resource == name )
@@ -1011,6 +1047,12 @@ namespace sw
         life._bRead          = bWritten == false;
         _mapResourceLifetimeIndex.emplace( resource, _listResourceLifetime.size() );
         _listResourceLifetime.push_back( life );
+    }
+
+    const RenderGraphNode* RenderGraph::findNode( hashed_string passName ) const
+    {
+        const auto it = _mapNameToIndex.find( passName );
+        return it != _mapNameToIndex.end() ? &_listNode[it->second] : nullptr;
     }
 
     void RenderGraph::computeResourceLifetimes()

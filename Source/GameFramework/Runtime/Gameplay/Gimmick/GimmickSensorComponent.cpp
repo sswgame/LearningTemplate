@@ -86,6 +86,10 @@ namespace sw
     void GimmickSensorComponent::onOverlapEnd( const OverlapInfo& overlap )
     {
         Component::onOverlapEnd( overlap );
+        // 세지 않은 상대 트리거(감지 범위)의 이탈은 몸의 겹침이 아니다 — 몸이 아직 안이면 빼지 않는다(진입과 같은 거름).
+        // shortcut: 트리거도 세면(`_bCountTriggers`) 몸 · 트리거 중 먼저 나간 쪽에서 빠진다, 둘을 따로 세야 하는 기믹이 생기면 대상마다 종류 비트를 둔다.
+        if ( overlap._bOtherTrigger == SW_TRUE && _bCountTriggers == false )
+            return;
         if ( overlap._pOther != nullptr )
         {
             removeOccupant( overlap._pOther->getHandle() );

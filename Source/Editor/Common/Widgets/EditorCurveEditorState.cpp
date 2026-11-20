@@ -28,6 +28,14 @@ namespace sw::editor
             static constexpr float32 kGridMinPixels    = 48.0f; ///< 격자 줄 사이 최소 픽셀
             static constexpr float32 kPreviewSamples   = 64.0f; ///< 미리보기 꺾은선 점 수
             static constexpr float32 kWheelZoomPerStep = 1.15f;
+            /** @brief 보간 이름입니다(열거자 순서 — 파일 철자와 같아 옮기지 않는다). 열거자를 더하면 아래 static_assert 가 이 표를 고치게 한다. */
+            static constexpr const utf8* kArrInterpolationName[] = { "Constant", "Linear", "Cubic", "Eased" };
+            static constexpr int32       kInterpolationCount     = static_cast<int32>( SW_COUNT_OF( kArrInterpolationName ) );
+            /** @brief 이징 곡선 이름입니다(`BlendCurve` 열거자 순서 — 블렌드 표와 같은 철자). */
+            static constexpr const utf8* kArrEasingName[] = { "Cut", "Linear", "EaseIn", "EaseOut", "EaseInOut", "SmoothStep", "Cubic", "Exponential", "Spring", "Custom" };
+            static constexpr int32       kEasingCount     = static_cast<int32>( SW_COUNT_OF( kArrEasingName ) );
+            static_assert( static_cast<int32>( CurveInterpolation::Eased ) + 1 == kInterpolationCount, "CurveInterpolation 마다 이름이 하나" );
+            static_assert( static_cast<int32>( BlendCurve::Custom ) + 1 == kEasingCount, "BlendCurve 마다 이름이 하나" );
 
             static ImVec2 toImVec2( const float2& value ) { return ImVec2{ value._x, value._y }; }
 
@@ -138,14 +146,28 @@ namespace sw::editor
                 ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Interpolation" ) );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
-                const utf8* const arrName[] = { "Constant", "Linear", "Cubic" };
-                int32             current   = static_cast<int32>( key._interpolation );
-                if ( EditorWidgets::combo( SW_WIDGET_ID( "##interpolation" ), &current, arrName, 3 ) )
+                int32 current = static_cast<int32>( key._interpolation );
+                if ( EditorWidgets::combo( SW_WIDGET_ID( "##interpolation" ), &current, kArrInterpolationName, kInterpolationCount ) )
                 {
                     key._interpolation = static_cast<CurveInterpolation>( current );
                     bFinished          = true;
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CurveKeyInterpolation" ) );
+                // Eased 키만 이징 곡선을 고른다 — 곡선 표는 블렌드와 같다(BlendCurve).
+                if ( key._interpolation == CurveInterpolation::Eased )
+                {
+                    ImGui::SameLine();
+                    ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Easing" ) );
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth( width );
+                    int32 easing = static_cast<int32>( key._easing );
+                    if ( EditorWidgets::combo( SW_WIDGET_ID( "##easing" ), &easing, kArrEasingName, kEasingCount ) )
+                    {
+                        key._easing = static_cast<BlendCurve>( easing );
+                        bFinished   = true;
+                    }
+                    EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CurveKeyEasing" ) );
+                }
                 if ( bFinished )
                     curve.sortAndComputeAutoTangents();
                 return bFinished;
@@ -167,15 +189,30 @@ namespace sw::editor
                         state._selectedKey = constant::invalid_index::kUint32;
                         bEdited            = true;
                     }
-                    const utf8* const        arrName[] = { "Constant", "Linear", "Cubic" };
-                    const CurveInterpolation arrMode[] = { CurveInterpolation::Constant, CurveInterpolation::Linear, CurveInterpolation::Cubic };
-                    for ( uint32 modeIndex = 0; modeIndex < 3 && bEdited == false; ++modeIndex )
+                    for ( int32 modeIndex = 0; modeIndex < kInterpolationCount && bEdited == false; ++modeIndex )
                     {
-                        if ( ImGui::MenuItem( arrName[modeIndex], nullptr, key._interpolation == arrMode[modeIndex] ) )
+                        const CurveInterpolation mode = static_cast<CurveInterpolation>( modeIndex );
+                        if ( ImGui::MenuItem( kArrInterpolationName[modeIndex], nullptr, key._interpolation == mode ) )
                         {
-                            key._interpolation = arrMode[modeIndex];
+                            key._interpolation = mode;
                             bEdited            = true;
                         }
+                    }
+                    // 이징 곡선은 하위 메뉴다 — 고르면 그 키가 Eased 가 된다(언리얼 키 우클릭의 보간 메뉴와 같은 자리).
+                    if ( bEdited == false && ImGui::BeginMenu( SW_LOCKEY( "EdText", "Easing" ) ) )
+                    {
+                        for ( int32 easingIndex = 0; easingIndex < kEasingCount && bEdited == false; ++easingIndex )
+                        {
+                            const BlendCurve easing   = static_cast<BlendCurve>( easingIndex );
+                            const bool       bCurrent = key._interpolation == CurveInterpolation::Eased && key._easing == easing;
+                            if ( ImGui::MenuItem( kArrEasingName[easingIndex], nullptr, bCurrent ) )
+                            {
+                                key._interpolation = CurveInterpolation::Eased;
+                                key._easing        = easing;
+                                bEdited            = true;
+                            }
+                        }
+                        ImGui::EndMenu();
                     }
                     if ( bEdited == false && ImGui::MenuItem( SW_LOCKEY( "EdLabel", "AutoTangent" ), nullptr, key._bAutoTangent ) )
                     {

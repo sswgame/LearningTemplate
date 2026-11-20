@@ -17,8 +17,6 @@ namespace sw
         static void emitProperties( FixedCodecEmitState& state, const ParsedTypeInfo& type, string& outCanonical, vector<FixedCodecNode>& outListNode );
 
     private:
-        static const FixedMathTypeDef* findMathType( string_view typeName );
-        static vector<string>          splitMembers( string_view memberList );
         /** @brief 쓰기 · 읽기 · 비교 · 정규 문자열이 볼 원소 종류입니다. 컨테이너는 원소까지 내려갑니다. */
         static const ParsedFixedType& findLeafType( const ParsedFixedType& type );
         /** @brief 가변 길이 단계 수입니다(vector · 문자열). 중첩 REFLECT 타입 안은 그 타입의 키가 맡으므로 세지 않습니다. */

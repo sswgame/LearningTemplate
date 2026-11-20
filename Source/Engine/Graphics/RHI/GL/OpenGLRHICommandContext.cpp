@@ -658,9 +658,19 @@ namespace sw
         const bool bInvalidConstantBufferIndex = _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex;
         if ( bInvalidConstantBufferIndex )
             return;
-        const RHIBufferHandle buffer = _pDevice->findBindlessBuffer( constantBufferIndex )._buffer;
-        const GLuint          ubo    = buffer != 0 ? _pDevice->resolveGlBuffer( buffer ) : 0;
-        if ( ubo != 0 )
+        bindUniformBuffer( constantBufferIndex, slot );
+    }
+
+    void OpenGLRHICommandContext::bindUniformBuffer( RHIDescriptorIndex index, uint32 slot )
+    {
+        const OpenGLRHIDevice::BindlessResourceRecord record = _pDevice->findBindlessBuffer( index );
+        const GLuint                                  ubo    = record._buffer != 0 ? _pDevice->resolveGlBuffer( record._buffer ) : 0;
+        if ( ubo == 0 )
+            return;
+        // 상수 버퍼 페이지의 구간이면 그 범위만 건다(감사 R-4).
+        if ( record._sliceSize != 0 )
+            glBindBufferRange( GL_UNIFORM_BUFFER, slot, ubo, static_cast<GLintptr>( record._sliceOffset ), static_cast<GLsizeiptr>( record._sliceSize ) );
+        else
             glBindBufferBase( GL_UNIFORM_BUFFER, slot, ubo );
     }
 
@@ -834,10 +844,7 @@ namespace sw
         const bool bInvalidComputeConstantBufferIndex = _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex;
         if ( bInvalidComputeConstantBufferIndex )
             return;
-        const RHIBufferHandle buffer = _pDevice->findBindlessBuffer( constantBufferIndex )._buffer;
-        const GLuint          ubo    = buffer != 0 ? _pDevice->resolveGlBuffer( buffer ) : 0;
-        if ( ubo != 0 )
-            glBindBufferBase( GL_UNIFORM_BUFFER, slot, ubo );
+        bindUniformBuffer( constantBufferIndex, slot );
     }
 
     void OpenGLRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )

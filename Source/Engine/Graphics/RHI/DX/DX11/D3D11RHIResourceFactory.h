@@ -23,6 +23,8 @@ namespace sw
         void                            destroyRenderPass( RHIRenderPassHandle pass ) override;
         RHIBufferHandle                 createConstantBuffer( uint32 size ) override;
         void                            updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        RHIBufferHandle                 createConstantBufferPage( uint32 size ) override;
+        void                            updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
         RHIBufferHandle                 createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
         RHIBufferHandle                 createBuffer( const RHIBufferDesc& desc ) override;
         void                            updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
@@ -51,6 +53,7 @@ namespace sw
         bool                            isTextureReadyToSample( RHITextureHandle texture ) override;
         void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
         void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex              registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
         RHIDescriptorIndex              registerBindlessTextureUAV( RHITextureHandle texture ) override;

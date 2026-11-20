@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Animation/Graph/BlendCurve.h"
+#include "Engine/Curve/BlendCurve.h"
 #include "Engine/UI/Animation/UIAnimatedProperty.h"
 #include "Engine/UI/Animation/UIAnimation.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"

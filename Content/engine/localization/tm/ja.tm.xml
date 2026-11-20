@@ -74,6 +74,7 @@
 		<entry source="CPU only (Recompute Normals)" text="CPU のみ (法線の再計算)" />
 		<entry source="CPU only:" text="CPU のみ:" />
 		<entry source="Camera Shake" text="カメラの揺れ" />
+		<entry source="Camera View" text="カメラ視点" />
 		<entry source="Cancel" text="キャンセル" />
 		<entry source="Capacity" text="定員" />
 		<entry source="Center" text="中心" />
@@ -182,6 +183,10 @@
 		<entry source="Graphics" text="グラフィックス" />
 		<entry source="Graphics Quality" text="グラフィック品質" />
 		<entry source="Groups" text="グループ" />
+		<entry source="HDR" text="HDR" />
+		<entry source="HDR Paper White" text="HDR ペーパーホワイト" />
+		<entry source="HDR Peak Brightness" text="HDR 最大輝度" />
+		<entry source="HDR10" text="HDR10" />
 		<entry source="Head Bob" text="頭の揺れ" />
 		<entry source="Headphones (3D)" text="ヘッドホン (3D)" />
 		<entry source="Height ratio (0 = pelvis)" text="高さ比(0 = 骨盤)" />
@@ -585,6 +590,7 @@
 		       text="オフセット {offsetX}, {offsetY}, {offsetZ}  距離 {distance}  ピッチ {pitch}  ヨー {yaw}  視野角 {computeFieldOfViewY}" />
 		<entry source="removed here" text="ここで削除" />
 		<entry source="replaced here" text="ここで置換" />
+		<entry source="scRGB" text="scRGB" />
 		<entry source="tick {tick}  input focus: world {inputFocus}"
 		       text="ティック {tick}  入力フォーカス: ワールド {inputFocus}" />
 		<entry source="unsupported" text="非対応" />

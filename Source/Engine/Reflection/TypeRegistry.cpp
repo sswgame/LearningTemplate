@@ -615,7 +615,6 @@ namespace sw
                     {   prop._metadata->_bTransient != SW_FALSE,    "Transient"},
                     {prop._metadata->_bXMLAttribute != SW_FALSE, "XMLAttribute"},
                     {   prop._metadata->_bAssetPath != SW_FALSE,    "AssetPath"},
-                    { prop._metadata->_bPolymorphic != SW_FALSE,  "Polymorphic"},
                     { prop._metadata->_bSkipIfEmpty != SW_FALSE,  "SkipIfEmpty"},
                     {    prop._metadata->_bRequired != SW_FALSE,     "Required"},
                     {  prop._metadata->_bInheritKey != SW_FALSE,   "InheritKey"},

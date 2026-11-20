@@ -68,7 +68,7 @@
 					                        _attachComponent="None"
 					                        _offsetPos="0,0"
 					                        _offsetScale="1.5,1.5"
-					                        _colliderType="0" />
+					                        _layer="Default" />
 				</_listComponent>
 			</GameObject>
 		</entity>

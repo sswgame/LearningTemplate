@@ -2,7 +2,7 @@
  * @file InspectorBuiltinValue.h
  * @brief 내장 값 타입(`ReflectBuiltins.xxx`)마다 인스펙터 위젯 종류와 CallInEditor 인자, 반환 처리를 정하는 테이블입니다.
  * @details ImGui 에 의존하지 않으므로 테스트를 붙일 수 있다. 테이블의 항목은 `ReflectBuiltins.xxx` 를 include 해서 만들므로, 내장 타입이
- *          하나 늘어나면 `InspectorWidgetFor` 특수화가 없는 한 컴파일되지 않는다. 그리는 쪽은 `InspectorPropertyManager.cpp` 이다.
+ *          하나 늘어나면 그 줄의 Widget 칸으로 `InspectorWidgetFor` 특수화가 만들어진다. 그리는 쪽은 `InspectorPropertyManager.cpp` 이다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -53,7 +53,7 @@ namespace sw::editor
 
     /**
      * @brief 내장 값 타입 하나의 위젯 종류입니다.
-     * @details 기본 템플릿은 정의하지 않는다. `ReflectBuiltins.xxx` 에 타입이 늘어나면 여기에 특수화가 없는 한 테이블(.cpp)과
+     * @details 기본 템플릿은 정의하지 않는다. 특수화는 `ReflectBuiltins.xxx` 의 Widget 칸에서 만든다(아래) — 표 밖 타입은 테이블(.cpp)과
      *          위젯 등록(`InspectorPropertyManager::registerDefaults`)이 컴파일되지 않는다.
      */
     template <typename T>
@@ -68,48 +68,16 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    // clang-format off
-    template <> struct InspectorWidgetFor<int8>             : InspectorWidgetKind<InspectorValueWidget::Number> {};
-    template <> struct InspectorWidgetFor<int16>            : InspectorWidgetKind<InspectorValueWidget::Number> {};
-    template <> struct InspectorWidgetFor<int32>            : InspectorWidgetKind<InspectorValueWidget::Number> {};
-    template <> struct InspectorWidgetFor<int64>            : InspectorWidgetKind<InspectorValueWidget::Number> {};
-    template <> struct InspectorWidgetFor<uint8>            : InspectorWidgetKind<InspectorValueWidget::Number> {};
-    template <> struct InspectorWidgetFor<uint16>           : InspectorWidgetKind<InspectorValueWidget::Number> {};
-    template <> struct InspectorWidgetFor<uint32>           : InspectorWidgetKind<InspectorValueWidget::Number> {};
-    template <> struct InspectorWidgetFor<uint64>           : InspectorWidgetKind<InspectorValueWidget::Number> {};
-    template <> struct InspectorWidgetFor<float32>          : InspectorWidgetKind<InspectorValueWidget::Number> {};
-    template <> struct InspectorWidgetFor<float64>          : InspectorWidgetKind<InspectorValueWidget::Number> {};
-    template <> struct InspectorWidgetFor<bool>             : InspectorWidgetKind<InspectorValueWidget::Checkbox> {};
-    template <> struct InspectorWidgetFor<atomic<bool>>     : InspectorWidgetKind<InspectorValueWidget::Checkbox> {};
-    template <> struct InspectorWidgetFor<string>           : InspectorWidgetKind<InspectorValueWidget::Text> {};
-    template <> struct InspectorWidgetFor<hashed_string>    : InspectorWidgetKind<InspectorValueWidget::Name> {};
-    template <> struct InspectorWidgetFor<float2>           : InspectorWidgetKind<InspectorValueWidget::Vector2> {};
-    template <> struct InspectorWidgetFor<float3>           : InspectorWidgetKind<InspectorValueWidget::Vector3> {};
-    template <> struct InspectorWidgetFor<float4>           : InspectorWidgetKind<InspectorValueWidget::Vector4> {};
-    template <> struct InspectorWidgetFor<float4x4>         : InspectorWidgetKind<InspectorValueWidget::Matrix> {};
-    template <> struct InspectorWidgetFor<quaternion>       : InspectorWidgetKind<InspectorValueWidget::Rotation> {};
-    template <> struct InspectorWidgetFor<SlotHandle>       : InspectorWidgetKind<InspectorValueWidget::Handle> {};
-    template <> struct InspectorWidgetFor<ComponentHandle>  : InspectorWidgetKind<InspectorValueWidget::Handle> {};
-    template <> struct InspectorWidgetFor<GameObjectHandle> : InspectorWidgetKind<InspectorValueWidget::Handle> {};
-    template <> struct InspectorWidgetFor<TagID>            : InspectorWidgetKind<InspectorValueWidget::Tag> {};
-    template <> struct InspectorWidgetFor<half>             : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<half2>            : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<half3>            : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<half4>            : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<unorm8>           : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<unorm16>          : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<snorm8>           : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<snorm16>          : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<unorm8x4>         : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<snorm8x4>         : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<unorm16x2>        : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<snorm16x2>        : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<snorm16x4>        : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<RGB10A2>          : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<OctahedralNormal> : InspectorWidgetKind<InspectorValueWidget::Direction> {};
-    template <> struct InspectorWidgetFor<Radians>          : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    template <> struct InspectorWidgetFor<int2>             : InspectorWidgetKind<InspectorValueWidget::Packed> {};
-    // clang-format on
+    // 위젯 종류는 `ReflectBuiltins.xxx` 의 Widget 칸이 정본이다 — 줄을 더하면 특수화가 따라오고, 칸 철자가 열거자에 없으면 컴파일이 멈춘다.
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, Widget, ... )                                       \
+    template <>                                                                                                    \
+    struct InspectorWidgetFor<ReflectBuiltinCppTypeT<CppType>> : InspectorWidgetKind<InspectorValueWidget::Widget> \
+    {                                                                                                              \
+    };
+#define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
+#undef SW_REFLECT_BUILTIN_TYPE
+#undef SW_REFLECT_BUILTIN_CONTAINER
 } // namespace sw::editor
 
 namespace sw::editor

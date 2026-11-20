@@ -10,6 +10,37 @@
 
 namespace sw
 {
+    /** @brief 내장 타입의 메모리 모양입니다 — `ReflectBuiltins.xxx` 의 Layout 칸(엔진 `ReflectBuiltinLayout` 과 같은 철자 집합). */
+    enum class BuiltinLayoutKind : uint8
+    {
+        None,    ///< none
+        Number,  ///< num — 산술 스칼라 하나
+        Float32, ///< f32(멤버, …)
+        Int32,   ///< i32(멤버, …)
+        Angle,   ///< angle — 라디안 float32 하나
+    };
+
+    /** @brief `ReflectBuiltins.xxx` 의 TYPE 줄 하나가 파서에 알리는 모양 · 역할입니다. 손 표(고정 배치 수학 표 · Interp 허용 목록)를 대신하는 정본입니다. */
+    struct BuiltinTypeTraits
+    {
+        vector<string>         _listMember; ///< f32 · i32 의 멤버 이름(선언 순서). 고정 배치형 코덱이 `offsetof` 로 쓴다
+        BuiltinLayoutKind      _layout;
+        uint8                  _bPacked  : 1; ///< 글 처리기가 `packed` 다
+        uint8                  _bInterp  : 1; ///< Roles 에 Interp — `PROPERTY( Interp )` 를 받는다
+        uint8                  _bState   : 1; ///< Roles 에 State — `PROPERTY( RuntimeState )` 칸이 될 수 있다
+        [[maybe_unused]] uint8 _reserved : 5;
+
+        BuiltinTypeTraits()
+            : _listMember{}
+            , _layout{ BuiltinLayoutKind::None }
+            , _bPacked{ SW_FALSE }
+            , _bInterp{ SW_FALSE }
+            , _bState{ SW_FALSE }
+            , _reserved{ 0 }
+        {
+        }
+    };
+
     // ------------------------------------------------------------------------------
     // 1) maps — clang 표기 alias → canonical
     // ------------------------------------------------------------------------------
@@ -32,9 +63,11 @@ namespace sw
         void registerEntry( const string& canonical, const string& nameSpace,
                             const vector<string>& aliases );
 
-        /** @brief @p canonical 이 `ReflectBuiltins.xxx` 에서 글 처리기 `packed` 로 적힌 압축 타입임을 적습니다(고정 배치형 코덱이 이 타입을 받지 못하는 것을 오류로 알리는 데 씁니다). */
-        void markPacked( const string& canonical );
-        /** @brief 정규 이름 @p canonical 이 압축 타입인지 반환합니다. */
+        /** @brief 정규 이름 @p canonical 의 모양 · 역할을 적습니다(`ReflectBuiltinsLoader` 가 줄마다 한 번). */
+        void registerTraits( const string& canonical, const BuiltinTypeTraits& traits );
+        /** @brief 정규 이름 @p canonical 의 모양 · 역할입니다. 내장 타입이 아니면(열거형 · 구조체) nullptr 입니다. */
+        const BuiltinTypeTraits* findTraits( const string& canonical ) const;
+        /** @brief 정규 이름 @p canonical 이 압축 타입(글 처리기 `packed`)인지 반환합니다. 고정 배치형 코덱이 이 타입을 받지 못하는 것을 오류로 알리는 데 씁니다. */
         bool isPacked( const string& canonical ) const;
 
         /** @brief 정규화 전에 떼어 낼 clang 수식어(`const ` · `class ` …)를 정합니다. parser_config 의 `type_strip_prefixes` 입니다. */
@@ -53,11 +86,11 @@ namespace sw
         string_view stripDecorations( string_view spelling ) const;
 
     private:
-        unordered_map<string, string> _mapAliasToCanonical;
-        vector<string>                _listStripPrefix;
-        vector<string>                _listPacked;
-        uint8                         _bLoaded  : 1;
-        [[maybe_unused]] uint8        _reserved : 7;
+        unordered_map<string, string>            _mapAliasToCanonical;
+        vector<string>                           _listStripPrefix;
+        unordered_map<string, BuiltinTypeTraits> _mapTraits;
+        uint8                                    _bLoaded  : 1;
+        [[maybe_unused]] uint8                   _reserved : 7;
     };
 
 } // namespace sw

@@ -24,7 +24,7 @@ namespace sw
         , _listKill{}
         , _eventBuffer{}
         , _corpse{}
-        , _respawnSite{}
+        , _checkpoints{}
         , _pWallet{ nullptr }
         , _lostCurrency{ 0 }
         , _flaskCharges{ 0 }
@@ -39,8 +39,8 @@ namespace sw
         _pWallet  = refs._pWallet;
         _listKill.clear();
         _eventBuffer.clear();
-        _corpse            = MetroidvaniaCorpse{};
-        _respawnSite       = hashed_string{};
+        _corpse = MetroidvaniaCorpse{};
+        _checkpoints.reset();
         _lostCurrency      = 0;
         _flaskMaxCharges   = pCatalog != nullptr ? pCatalog->getRules()._flaskCharges : 0;
         _flaskCharges      = _flaskMaxCharges;
@@ -54,7 +54,11 @@ namespace sw
         const MetroidvaniaSiteDef* pSite = _pCatalog->findSite( siteID );
         if ( pSite == nullptr || pSite->_bRest == false )
             return false;
-        _respawnSite = pSite->_id;
+        // 쉬는 지점은 다시 쓸 수 있는 체크포인트다(화톳불) — 전에 쉰 곳에 다시 쉬면 그곳이 되살아날 지점으로 돌아온다.
+        CheckpointDef def;
+        def._id        = pSite->_id;
+        def._bReusable = true;
+        (void)_checkpoints.activate( def, float3{}, 0.0f );
         refreshWorld( healthMachine );
         pushEvent( MetroidvaniaDeathRestEventKind::Rested, pSite->_id, 0 );
         return true;
@@ -81,8 +85,15 @@ namespace sw
             pushEvent( MetroidvaniaDeathRestEventKind::CorpseDropped, areaID, _corpse._currency );
         }
         refreshWorld( healthMachine );
-        pushEvent( MetroidvaniaDeathRestEventKind::Died, _respawnSite, 0 );
-        return _respawnSite;
+        const hashed_string respawnSite = getRespawnSite();
+        pushEvent( MetroidvaniaDeathRestEventKind::Died, respawnSite, 0 );
+        return respawnSite;
+    }
+
+    hashed_string MetroidvaniaDeathRestState::getRespawnSite() const
+    {
+        const CheckpointRecord* pCurrent = _checkpoints.getCurrent();
+        return pCurrent != nullptr ? pCurrent->_id : hashed_string{};
     }
 
     bool MetroidvaniaDeathRestState::tryRecoverCorpse( const hashed_string& areaID, const float2& position )
@@ -213,9 +224,13 @@ namespace sw
         }
         if ( io.isReading() )
         {
-            // 되살아날 곳은 쉬는 지점이어야 한다. 시체 위치가 NaN 이면 거리 비교가 거짓이라 어디서든 되찾는다.
-            const MetroidvaniaSiteDef* pSite = _respawnSite.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findSite( _respawnSite );
-            io.check( _respawnSite.empty() || ( pSite != nullptr && pSite->_bRest ) );
+            // 쉰 곳은 모두 쉬는 지점이어야 한다(안쪽 반사 구조체는 범위만 검사된다 — 칸 사이 규칙은 `isConsistent`). 시체 위치가 NaN 이면 거리 비교가 거짓이라 어디서든 되찾는다.
+            io.check( _checkpoints.isConsistent() );
+            for ( const CheckpointRecord& record : _checkpoints.getActivated() )
+            {
+                const MetroidvaniaSiteDef* pSite = _pCatalog != nullptr ? _pCatalog->findSite( record._id ) : nullptr;
+                io.check( pSite != nullptr && pSite->_bRest );
+            }
             io.check( _flaskCharges <= _flaskMaxCharges ); // 칸 사이 검사
             _eventBuffer.clear();
         }

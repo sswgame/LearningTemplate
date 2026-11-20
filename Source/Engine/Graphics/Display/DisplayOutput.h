@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -46,7 +47,20 @@ namespace sw
         /**
          * @brief 요청 @p requested 를 능력 마스크 @p supportedMask(`makeDisplayOutputBit` 들의 합 — 백엔드 · 모니터가 받는 종류)에 맞춥니다.
          * @details 받지 않는 종류면 정보 로그(`Display.OutputUnsupported`) 한 줄과 SDR 이다(휘도 값은 그대로 둔다 — 다시 HDR 을 켤 때 쓴다). SDR 은 늘 받는다.
+         *          종이 흰색은 최대 휘도로 자른다.
          */
         [[nodiscard]] static DisplayOutputDesc resolve( const DisplayOutputDesc& requested, uint8 supportedMask );
+
+        /** @brief 스왑체인 색 공간 @p colorSpace 가 내는 출력 종류입니다(`getColorSpace` 의 거꾸로 — 장치가 실제로 낸 색 공간에서 적용 값을 다시 정할 때). */
+        [[nodiscard]] static DisplayOutputKind getKind( RHIColorSpace colorSpace );
+        /** @brief 이 출력의 스왑체인 색 공간입니다(SDR → sRGB 비선형, HDR10 → ST 2084, scRGB → 확장 선형 sRGB). 백버퍼 포맷은 이것에서 정한다(`getSwapChainFormat`). */
+        [[nodiscard]] RHIColorSpace getColorSpace() const;
+        /** @brief HDR10 스왑체인에 알릴 마스터링 값입니다 — 최대 휘도는 이 출력의 최대 휘도, 프레임 평균은 종이 흰색이다(언리얼 `HDRSetMetaData` 와 같은 고르기). */
+        [[nodiscard]] RHIDisplayMetadata makeDisplayMetadata() const;
+        /** @brief 종류 · 종이 흰색 · 최대 휘도가 모두 같으면 true 입니다(바뀐 요청만 스왑체인을 다시 만든다). */
+        [[nodiscard]] bool isSameOutput( const DisplayOutputDesc& other ) const
+        {
+            return _kind == other._kind && _paperWhiteNits == other._paperWhiteNits && _maxLuminanceNits == other._maxLuminanceNits;
+        }
     };
 } // namespace sw

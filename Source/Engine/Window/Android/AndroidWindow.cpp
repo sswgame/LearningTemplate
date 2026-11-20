@@ -7,6 +7,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Input/Map/InputKeyTable.h"
+#include "Engine/Window/Android/AndroidInputView.h"
+#include "Engine/Window/Android/AndroidJNIScope.h"
+#include "Engine/Window/Android/AndroidJNIString.h"
 #include "Engine/Window/WindowPlatform.h"
 
 #include <android/configuration.h>
@@ -34,45 +37,35 @@ namespace sw
                 return ( source & AINPUT_SOURCE_GAMEPAD ) == AINPUT_SOURCE_GAMEPAD || ( source & AINPUT_SOURCE_JOYSTICK ) == AINPUT_SOURCE_JOYSTICK;
             }
 
-            /** @brief 지금 스레드를 JVM 에 붙입니다. 실패하면 nullptr 입니다(부른 쪽이 `DetachCurrentThread` 한다). */
-            static JNIEnv* attachThread()
-            {
-                if ( s_pApp == nullptr || s_pApp->activity == nullptr )
-                    return nullptr;
-                JNIEnv* pEnv = nullptr;
-                return s_pApp->activity->vm->AttachCurrentThread( &pEnv, nullptr ) == JNI_OK ? pEnv : nullptr;
-            }
-
             /** @brief 지금 붙은 패드 · 조이스틱 입력 장치 번호를 @p outListID 에 담습니다(`InputDevice.getDeviceIds` · `getSources`). 못 읽으면 false 입니다. */
             static bool readGamepadDeviceIds( vector<int32>& outListID )
             {
                 outListID.clear();
-                JNIEnv* const pEnv = attachThread();
-                if ( pEnv == nullptr )
+                const AndroidJNIScope jni;
+                const jclass          deviceC    = jni.findClass( "android/view/InputDevice" );
+                const jmethodID       getIds     = jni.getStaticMethod( deviceC, "getDeviceIds", "()[I" );
+                const jmethodID       getDevice  = jni.getStaticMethod( deviceC, "getDevice", "(I)Landroid/view/InputDevice;" );
+                const jmethodID       getSources = jni.getMethod( deviceC, "getSources", "()I" );
+                const auto            arrID      = static_cast<jintArray>( jni.callStaticObject( deviceC, getIds ) );
+                if ( arrID == nullptr || getDevice == nullptr || getSources == nullptr )
                     return false;
-                const jclass    deviceC    = pEnv->FindClass( "android/view/InputDevice" );
-                const jmethodID getIds     = deviceC != nullptr ? pEnv->GetStaticMethodID( deviceC, "getDeviceIds", "()[I" ) : nullptr;
-                const jmethodID getDevice  = deviceC != nullptr ? pEnv->GetStaticMethodID( deviceC, "getDevice", "(I)Landroid/view/InputDevice;" ) : nullptr;
-                const jmethodID getSources = deviceC != nullptr ? pEnv->GetMethodID( deviceC, "getSources", "()I" ) : nullptr;
-                const jintArray arrID      = getIds != nullptr ? static_cast<jintArray>( pEnv->CallStaticObjectMethod( deviceC, getIds ) ) : nullptr;
-                const jsize     count      = arrID != nullptr ? pEnv->GetArrayLength( arrID ) : 0;
-                jint* const     pId        = arrID != nullptr ? pEnv->GetIntArrayElements( arrID, nullptr ) : nullptr;
-                for ( jsize index = 0; pId != nullptr && getDevice != nullptr && getSources != nullptr && index < count; ++index )
+                JNIEnv* const pEnv  = jni.getEnv();
+                const jsize   count = pEnv->GetArrayLength( arrID );
+                jint* const   pId   = pEnv->GetIntArrayElements( arrID, nullptr );
+                if ( pId == nullptr )
+                    return false;
+                for ( jsize index = 0; index < count; ++index )
                 {
-                    const jobject device = pEnv->CallStaticObjectMethod( deviceC, getDevice, pId[index] );
+                    const jobject device = jni.callStaticObject( deviceC, getDevice, pId[index] );
                     if ( device == nullptr )
                         continue;
-                    if ( isGamepadSource( pEnv->CallIntMethod( device, getSources ) ) )
+                    const optional<jint> sources = jni.callInt( device, getSources );
+                    if ( sources.has_value() && isGamepadSource( *sources ) )
                         outListID.push_back( static_cast<int32>( pId[index] ) );
                     pEnv->DeleteLocalRef( device );
                 }
-                if ( pId != nullptr )
-                    pEnv->ReleaseIntArrayElements( arrID, pId, JNI_ABORT );
-                const bool bFailed = pEnv->ExceptionCheck() || getIds == nullptr;
-                if ( pEnv->ExceptionCheck() )
-                    pEnv->ExceptionClear();
-                s_pApp->activity->vm->DetachCurrentThread();
-                return bFailed == false;
+                pEnv->ReleaseIntArrayElements( arrID, pId, JNI_ABORT );
+                return true;
             }
 
             /**
@@ -82,26 +75,19 @@ namespace sw
              */
             static uint32 readKeyUnicode( AInputEvent* pEvent )
             {
-                JNIEnv* const pEnv = attachThread();
-                if ( pEnv == nullptr )
-                    return 0;
-                constexpr int64 kNanosecondsPerMillisecond = 1000000;
-                const jclass    keyC                       = pEnv->FindClass( "android/view/KeyEvent" );
-                const jmethodID construct                  = keyC != nullptr ? pEnv->GetMethodID( keyC, "<init>", "(JJIIIIIIII)V" ) : nullptr;
-                const jmethodID getUnicode                 = keyC != nullptr ? pEnv->GetMethodID( keyC, "getUnicodeChar", "(I)I" ) : nullptr;
-                const int32     metaState                  = AKeyEvent_getMetaState( pEvent );
-                const jobject   keyEvent                   = construct != nullptr ? pEnv->NewObject( keyC, construct, static_cast<jlong>( AKeyEvent_getDownTime( pEvent ) / kNanosecondsPerMillisecond ),
-                                                                                                     static_cast<jlong>( AKeyEvent_getEventTime( pEvent ) / kNanosecondsPerMillisecond ),
-                                                                                                     AKeyEvent_getAction( pEvent ), AKeyEvent_getKeyCode( pEvent ), AKeyEvent_getRepeatCount( pEvent ), metaState,
-                                                                                                     AInputEvent_getDeviceId( pEvent ), AKeyEvent_getScanCode( pEvent ), AKeyEvent_getFlags( pEvent ),
-                                                                                                     AInputEvent_getSource( pEvent ) )
-                                                                                  : nullptr;
-                const jint      unicode                    = keyEvent != nullptr && getUnicode != nullptr ? pEnv->CallIntMethod( keyEvent, getUnicode, metaState ) : 0;
-                if ( pEnv->ExceptionCheck() )
-                    pEnv->ExceptionClear();
-                s_pApp->activity->vm->DetachCurrentThread();
-                constexpr uint32 kCombiningAccent = 0x80000000u; // KeyCharacterMap.COMBINING_ACCENT
-                const uint32     codepoint        = static_cast<uint32>( unicode );
+                const AndroidJNIScope jni;
+                constexpr int64       kNanosecondsPerMillisecond = 1000000;
+                const jclass          keyC                       = jni.findClass( "android/view/KeyEvent" );
+                const jmethodID       construct                  = jni.getMethod( keyC, "<init>", "(JJIIIIIIII)V" );
+                const jmethodID       getUnicode                 = jni.getMethod( keyC, "getUnicodeChar", "(I)I" );
+                const int32           metaState                  = AKeyEvent_getMetaState( pEvent );
+                const jobject         keyEvent                   = jni.newObject( keyC, construct, static_cast<jlong>( AKeyEvent_getDownTime( pEvent ) / kNanosecondsPerMillisecond ),
+                                                                                  static_cast<jlong>( AKeyEvent_getEventTime( pEvent ) / kNanosecondsPerMillisecond ), AKeyEvent_getAction( pEvent ),
+                                                                                  AKeyEvent_getKeyCode( pEvent ), AKeyEvent_getRepeatCount( pEvent ), metaState, AInputEvent_getDeviceId( pEvent ),
+                                                                                  AKeyEvent_getScanCode( pEvent ), AKeyEvent_getFlags( pEvent ), AInputEvent_getSource( pEvent ) );
+                const optional<jint>  unicode                    = jni.callInt( keyEvent, getUnicode, metaState );
+                constexpr uint32      kCombiningAccent           = 0x80000000u; // KeyCharacterMap.COMBINING_ACCENT
+                const uint32          codepoint                  = unicode.has_value() ? static_cast<uint32>( *unicode ) : 0u;
                 return ( codepoint & kCombiningAccent ) != 0 ? 0 : codepoint;
             }
 
@@ -146,6 +132,7 @@ namespace sw
         : CallbackInputWindow{}
         , _arrGamepadDeviceID{}
         , _gamepadScanCountdown{ 0 }
+        , _pInputView{}
     {
         for ( int32& deviceId : _arrGamepadDeviceID )
         {
@@ -156,28 +143,17 @@ namespace sw
     string AndroidWindow::readIntentArguments()
     {
         // activity.getIntent().getStringExtra( "args" ) — https://developer.android.com/reference/android/content/Intent#getStringExtra(java.lang.String)
-        JNIEnv* const pEnv = AndroidWindowInternal::attachThread();
-        if ( pEnv == nullptr )
+        const AndroidJNIScope jni;
+        if ( jni.isValid() == false )
             return {};
-        const jobject activity  = AndroidWindowInternal::s_pApp->activity->clazz;
-        const jobject intent    = pEnv->CallObjectMethod( activity, pEnv->GetMethodID( pEnv->GetObjectClass( activity ), "getIntent", "()Landroid/content/Intent;" ) );
-        const jstring extraName = pEnv->NewStringUTF( kIntentArgumentsExtra );
-        const jstring extra     = intent != nullptr ? static_cast<jstring>( pEnv->CallObjectMethod( intent, pEnv->GetMethodID( pEnv->GetObjectClass( intent ), "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;" ),
-                                                                                                    extraName ) )
-                                                    : nullptr;
-        string        arguments;
-        const utf8*   pText = extra != nullptr ? pEnv->GetStringUTFChars( extra, nullptr ) : nullptr;
-        if ( pText != nullptr )
-        {
-            arguments = pText;
-            pEnv->ReleaseStringUTFChars( extra, pText );
-        }
-        if ( pEnv->ExceptionCheck() )
-        {
-            pEnv->ExceptionClear();
+        const jobject activity  = jni.getActivity();
+        const jobject intent    = jni.callObject( activity, jni.getMethod( jni.getObjectClass( activity ), "getIntent", "()Landroid/content/Intent;" ) );
+        const jstring extraName = jni.newString( kIntentArgumentsExtra );
+        const auto    extra     = static_cast<jstring>( extraName != nullptr ? jni.callObject( intent, jni.getMethod( jni.getObjectClass( intent ), "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;" ), extraName )
+                                                                             : nullptr );
+        string        arguments = AndroidJNIString::toUTF8( jni.getEnv(), extra ); // 경로 · 시나리오 이름의 평면 밖 글자를 깨뜨리지 않는다
+        if ( jni.hadException() )
             SW_LOG_ERROR_ID( "AndroidWindow.IntentArgumentsFailed", "Android: reading the launch intent's '%#' extra threw - starting without a command line", kIntentArgumentsExtra );
-        }
-        AndroidWindowInternal::s_pApp->activity->vm->DetachCurrentThread();
         return arguments;
     }
 
@@ -225,6 +201,13 @@ namespace sw
         pApp->userData                   = this;
         pApp->onAppCmd                   = &AndroidWindow::onAppCommand;
         pApp->onInputEvent               = &AndroidWindow::onInputEvent;
+        _pInputView                      = make_unique<AndroidInputView>();
+        if ( _pInputView->attach( pApp, &AndroidWindow::onInputViewReady ) == false )
+        {
+            _pInputView.reset();
+            destroy();
+            return false; // 입력기 조합 없이 띄우지 않는다 — 이유는 attach 가 남겼다
+        }
         syncSurfaceMetrics();
         applyTextInputWanted( isTextInputWanted() );
         applyPlatformFocus( true );
@@ -233,6 +216,7 @@ namespace sw
 
     void AndroidWindow::destroy()
     {
+        _pInputView.reset(); // Java 뷰를 떼고 파이프를 닫는다 — 아래에서 콜백을 풀기 전에
         android_app* const pApp = AndroidWindowInternal::s_pApp;
         if ( pApp != nullptr && AndroidWindowInternal::s_pWindow == this )
         {
@@ -357,14 +341,48 @@ namespace sw
 
     void AndroidWindow::applyTextInputWanted( bool bWanted )
     {
-        android_app* const pApp = AndroidWindowInternal::s_pApp;
-        if ( pApp == nullptr || pApp->activity == nullptr )
+        if ( _pInputView != nullptr )
+            _pInputView->setSoftInputVisible( bWanted ); // 창이 서기 전의 요청은 initializeWindow 가 다시 낸다
+    }
+
+    void AndroidWindow::pollInputView()
+    {
+        if ( _pInputView == nullptr )
             return;
-        // 플래그 0 은 명시적 요청이다 — IMPLICIT 은 글 칸이 아닌 뷰(NativeActivity)에서 입력기가 무시한다(InputMethodManager.showSoftInput 문서).
-        if ( bWanted )
-            ANativeActivity_showSoftInput( pApp->activity, 0 );
-        else
-            ANativeActivity_hideSoftInput( pApp->activity, 0 );
+        vector<AndroidTextAction> listAction;
+        _pInputView->takePendingActions( listAction );
+        for ( const AndroidTextAction& action : listAction )
+        {
+            switch ( action._kind )
+            {
+                case AndroidTextActionKind::Composition:
+                    queueTextInput( WindowTextInputKind::Composition, action._text );
+                    break;
+                case AndroidTextActionKind::Commit:
+                    queueTextInput( WindowTextInputKind::Commit, action._text );
+                    break;
+                case AndroidTextActionKind::BackspaceKey:
+                case AndroidTextActionKind::DeleteKey:
+                {
+                    // 입력기의 지우기는 키 누름 · 뗌 한 쌍이다 — 하드웨어 키(AKEYCODE_DEL · FORWARD_DEL)와 같은 길로 간다.
+                    PlatformInputEvent input{};
+                    input._keyCode = action._kind == AndroidTextActionKind::BackspaceKey ? AndroidInputConnectionState::kBackspaceKeyCode : AndroidInputConnectionState::kForwardDeleteKeyCode;
+                    input._kind    = PlatformInputKind::KeyDown;
+                    queueInput( input );
+                    input._kind = PlatformInputKind::KeyUp;
+                    queueInput( input );
+                    break;
+                }
+            }
+        }
+    }
+
+    void AndroidWindow::onInputViewReady( android_app* pApp, android_poll_source* pSource )
+    {
+        (void)pSource;
+        AndroidWindow* const pWindow = static_cast<AndroidWindow*>( pApp->userData );
+        if ( pWindow != nullptr )
+            pWindow->pollInputView();
     }
 
     void AndroidWindow::queueKeyText( AInputEvent* pEvent )
@@ -401,31 +419,17 @@ namespace sw
 
     float4 AndroidWindow::readSafeInsets() const
     {
-        android_app* const pApp = AndroidWindowInternal::s_pApp;
-        if ( pApp == nullptr || pApp->activity == nullptr )
-            return float4{};
         // activity.getWindow().getDecorView().getRootWindowInsets() — 상태 바 · 내비게이션 바 · 노치가 든 시스템 창 여백(API 23+, getSystemWindowInset* 는 30 부터 낡았지만 남아 있다, 기억).
-        JavaVM* const pVM  = pApp->activity->vm;
-        JNIEnv*       pEnv = nullptr;
-        if ( pVM->AttachCurrentThread( &pEnv, nullptr ) != JNI_OK || pEnv == nullptr )
-            return float4{};
-        float4        insets{};
-        const jobject activity  = pApp->activity->clazz;
-        const jclass  activityC = pEnv->GetObjectClass( activity );
-        const jobject window    = pEnv->CallObjectMethod( activity, pEnv->GetMethodID( activityC, "getWindow", "()Landroid/view/Window;" ) );
-        const jobject decorView = window != nullptr ? pEnv->CallObjectMethod( window, pEnv->GetMethodID( pEnv->GetObjectClass( window ), "getDecorView", "()Landroid/view/View;" ) ) : nullptr;
-        const jobject rootInset = decorView != nullptr ? pEnv->CallObjectMethod( decorView, pEnv->GetMethodID( pEnv->GetObjectClass( decorView ), "getRootWindowInsets", "()Landroid/view/WindowInsets;" ) ) : nullptr;
-        if ( rootInset != nullptr )
-        {
-            const jclass insetC = pEnv->GetObjectClass( rootInset );
-            const auto   read   = [&]( const utf8* pMethod )
-            { return static_cast<float32>( pEnv->CallIntMethod( rootInset, pEnv->GetMethodID( insetC, pMethod, "()I" ) ) ); };
-            insets = float4{ read( "getSystemWindowInsetLeft" ), read( "getSystemWindowInsetTop" ), read( "getSystemWindowInsetRight" ), read( "getSystemWindowInsetBottom" ) };
-        }
-        if ( pEnv->ExceptionCheck() )
-            pEnv->ExceptionClear(); // 메서드가 없는 옛 판 — 여백 0 으로 그린다(그리기는 이어 간다)
-        pVM->DetachCurrentThread();
-        return insets;
+        // 메서드가 없는 옛 판이면 호출이 빈 값이고 여백 0 으로 그린다(그리기는 이어 간다).
+        const AndroidJNIScope jni;
+        const jobject         activity  = jni.getActivity();
+        const jobject         window    = jni.callObject( activity, jni.getMethod( jni.getObjectClass( activity ), "getWindow", "()Landroid/view/Window;" ) );
+        const jobject         decorView = jni.callObject( window, jni.getMethod( jni.getObjectClass( window ), "getDecorView", "()Landroid/view/View;" ) );
+        const jobject         rootInset = jni.callObject( decorView, jni.getMethod( jni.getObjectClass( decorView ), "getRootWindowInsets", "()Landroid/view/WindowInsets;" ) );
+        const jclass          insetC    = jni.getObjectClass( rootInset );
+        const auto            read      = [&]( const utf8* pMethod )
+        { return static_cast<float32>( jni.callInt( rootInset, jni.getMethod( insetC, pMethod, "()I" ) ).value_or( 0 ) ); };
+        return float4{ read( "getSystemWindowInsetLeft" ), read( "getSystemWindowInsetTop" ), read( "getSystemWindowInsetRight" ), read( "getSystemWindowInsetBottom" ) };
     }
 
     void AndroidWindow::onAppCommand( android_app* pApp, int32 command )
