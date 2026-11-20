@@ -1785,6 +1785,9 @@
     "setTimingClock": "SubsystemCollection::setTimingEnabled — Time 을 티어 2 로 내려 MonotonicClock 을 직접 읽는다(2026-11-21)",
     "_pClockNanos": "SubsystemCollection::_bTimingEnabled — 시계 함수 포인터 우회 삭제(2026-11-21)",
     "bUseDefaultValue": "명령줄 표의 죽은 칸 삭제 — 기본값은 설정(EngineConfig)이 가진다, 표의 셋째 칸은 valueSample(2026-11-21)",
-    "_bUseDefaultValue": "명령줄 표의 죽은 칸 삭제(2026-11-21)"
+    "_bUseDefaultValue": "명령줄 표의 죽은 칸 삭제(2026-11-21)",
+    "addRecorder": "ProfilerTimeline::isAnyTimelineRecording — 흐름 링이 진단을 읽는다(Network 맨 위 티어, 2026-11-21)",
+    "removeRecorder": "ProfilerTimeline::isAnyTimelineRecording — 흐름 링이 진단을 읽는다(2026-11-21)",
+    "_recorderCount": "ProfilerTimeline 의 s_recordingTimelineCount(2026-11-21)"
   }
 }
