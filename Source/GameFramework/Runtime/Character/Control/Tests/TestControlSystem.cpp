@@ -14,6 +14,7 @@
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/IntentPlayback.h"
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
+#include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntentHistory.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -313,13 +314,13 @@ SW_TEST_CASE( ControlSystemTest, MovingToAnotherPawnReleasesTheFirst )
 // 폰의 연결은 빙의를 따라간다 — 탈것은 운전석 조종자의 연결이다.
 SW_TEST_CASE( ControlSystemTest, InputPeerFollowsThePossession )
 {
-    ControlRig rig;
-    rig._pFirst->setInputPeer( 7 );
-    rig._pFirst->possess( *rig._pPawn );
+    ControlRig                 rig;
+    RemoteControllerComponent* pRemote = RemoteControllerComponent::spawnForConnection( rig._manager, hashed_string( "Remote" ), 6, *rig._pPawn ); // 입력 피어 = 연결 id + 1
+    SW_REQUIRE_NOT_NULL( pRemote );
     SW_EXPECT_EQUAL( 7u, rig._pPawn->getInputPeer() );
-    rig._pFirst->setInputPeer( 9 );
+    pRemote->transferToConnection( 8 );
     SW_EXPECT_EQUAL( 9u, rig._pPawn->getInputPeer() );
-    rig._pFirst->unpossess();
+    pRemote->unpossess();
     SW_EXPECT_EQUAL( 0u, rig._pPawn->getInputPeer() );
 }
 

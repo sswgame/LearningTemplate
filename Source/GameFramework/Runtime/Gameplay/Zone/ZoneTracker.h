@@ -7,6 +7,7 @@
  *          게임 스레드에서 틱 뒤에 부른다(물리 자리 읽기 · 동작이 오브젝트를 만들고 지운다).
  *          나타남(`setSpawnInside`): 기본은 트리거 계약대로 안에서 생긴 대상도 진입이다. Ignore 면 활성자 볼륨과 같은 판정(`ActivatorSpawnWindow`)으로 나타난 대상을
  *          나갈 때까지 대상으로 세지 않는다(진입 · 체류 없음) — 나갔다 다시 들어오면 진입이다.
+ *          판정 자리: 대상 기록(진입 · 이탈 기록 포함)은 모든 넷 월드가 같이 하고, 처리기 사건은 모듈 종류의 판정 자리(`ZoneModuleProcessor::getAuthority`)가 이 월드를 고를 때만 낸다.
  */
 #pragma once
 #include "Core/Container/vector.h"

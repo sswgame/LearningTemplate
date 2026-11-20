@@ -249,9 +249,9 @@ namespace sw
             }
             collector.synthesizeDefaultConstructor();
             // 추상 타입(REFLECT(Abstract) · C++ 추상)은 팩토리를 내지 않는다 — 팩토리는 `addComponent<T>()` 로 T 를 만든다. 공통 기반
-            // 컴포넌트(`LightComponent`)가 그 예다.
+            // 컴포넌트(`LightComponent`)가 그 예다. `NotPlaceable` 도 내지 않는다 — 데이터로 놓는 길을 막고 코드의 정본 생성 길만 남긴다(`RemoteControllerComponent`).
             const bool bRequiresFactory = MemberCollector::isDerivedFromComponent( cursor, _pSession->_config );
-            const bool bFactory         = bRequiresFactory && typeInfo._bAbstract == SW_FALSE;
+            const bool bFactory         = bRequiresFactory && typeInfo._bAbstract == SW_FALSE && typeInfo._bNotPlaceable == SW_FALSE;
             typeInfo._bReflectBody      = collector.isBodyFound() ? SW_TRUE : SW_FALSE;
             typeInfo._bComponentFactory = bFactory ? SW_TRUE : SW_FALSE;
             typeInfo._bComponent        = bRequiresFactory ? SW_TRUE : SW_FALSE;

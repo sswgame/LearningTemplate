@@ -175,13 +175,20 @@ namespace sw
         return pManager != nullptr && _spawnWindow.isSpawnEntry( *pManager, activator );
     }
 
-    bool ActivatorVolumeComponent::hasActivationAuthority() const
+    bool ActivatorAuthorityRule::hasAuthority( ActivatorAuthority authority, const GameObjectManager& manager )
     {
-        if ( _authority == ActivatorAuthority::Local )
+        if ( authority == ActivatorAuthority::Local )
             return true;
         // 서버 판정 — 클라이언트 월드도 같은 트리거 계약으로 진입을 내지만 일하지 않는다(서버가 낸 결과를 복제로 받는다).
-        const NetLinkValue* pLink = SceneNetLink::findBoundFor( *this );
-        return pLink == nullptr || pLink->_role != NetLinkRole::Client;
+        const SceneNetLink& link = manager.getSubsystem<SceneNetLink>();
+        return link.isBound() == false || link.get()._role != NetLinkRole::Client;
+    }
+
+    bool ActivatorVolumeComponent::hasActivationAuthority() const
+    {
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        return pManager == nullptr || ActivatorAuthorityRule::hasAuthority( _authority, *pManager ); // 월드 밖(등록 전)은 넷 링크가 없는 것과 같다
     }
 
     GameFlags* ActivatorVolumeComponent::findProgressFlags( const GameObject* pActivator ) const

@@ -39,6 +39,8 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey HiddenInMenu{};
         /** @brief flag.HideInMenu — 단독 토큰 `EditorHidden` 또는 `EditorHidden = true`. 같은 필드의 철자: HideInMenu, HiddenInMenu, EditorHidden. */
         static constexpr AnnotationKey EditorHidden{};
+        /** @brief flag.NotPlaceable — 단독 토큰 `NotPlaceable` 또는 `NotPlaceable = true`. 데이터(씬 · 프리팹 · "Add Component")로 놓을 수 없는 컴포넌트 — 이름 생성 함수를 내지 않는다(언리얼 UCLASS(NotPlaceable)) */
+        static constexpr AnnotationKey NotPlaceable{};
         /** @brief string.Alias — `Alias = "…"`. 직렬화 · 핫 리로드용 옛 타입 이름. 여러 개면 Alias="OldA, OldB" */
         static constexpr AnnotationKey Alias{};
         /** @brief string.Category — `Category = "…"`. */
@@ -67,6 +69,7 @@ namespace sw::reflect::attr
         "HideInMenu",
         "HiddenInMenu",
         "EditorHidden",
+        "NotPlaceable",
         "Alias",
         "Category",
         "DisplayName",

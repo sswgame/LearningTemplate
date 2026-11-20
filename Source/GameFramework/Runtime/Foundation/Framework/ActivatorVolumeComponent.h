@@ -26,7 +26,17 @@ namespace sw
     enum class ActivatorAuthority : uint8
     {
         Server = 0, ///< 서버(와 혼자 하는 게임)만 판정한다 — 게임 상태를 바꾸는 일(컷씬 시작 · 저장 · 진행 플래그). 클라이언트 월드는 진입을 받아도 일하지 않는다
-        Local       ///< 월드마다 판정한다 — 그 월드의 로컬 플레이어 화면 일(힌트). 원격 플레이어의 진입을 거르는 것은 파생의 몫이다
+        Local       ///< 월드마다 판정한다 — 그 월드의 로컬 플레이어 화면 일(힌트) · 월드마다 같이 도는 보이는 일 · 이동 시뮬레이션(지역 표면 겉모습 · 물리 필드). 원격 플레이어의 진입을 거르는 것은 파생의 몫이다
+    };
+
+    /**
+     * @struct ActivatorAuthorityRule
+     * @brief 판정 자리 규칙 한 벌입니다 — 활성자 볼륨(`ActivatorVolumeComponent`)과 지역 모듈(`ZoneModuleProcessor::getAuthority`)이 같이 쓴다(언리얼 `HasAuthority()` 자리).
+     */
+    struct SW_GF_API ActivatorAuthorityRule
+    {
+        /** @brief 월드 @p manager 가 @p authority 의 일을 판정하면 true 입니다. Server 는 넷 링크가 클라이언트인 월드에서 거짓이고, Local 과 넷 링크가 없는 월드(혼자 하는 게임)는 늘 참이다. */
+        [[nodiscard]] static bool hasAuthority( ActivatorAuthority authority, const GameObjectManager& manager );
     };
 
     /**
