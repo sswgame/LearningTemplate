@@ -58,11 +58,8 @@ namespace sw
          */
         void prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, vector_reference<const uint32> listParticleOrder, const vector<GPUVFXMeshEmitter>& listMeshEmitter,
                            vector_reference<const VFXGPUParticleSortJob> listGPUSortJob, uint32 gpuOrderCount, const VFXSimulationFrameInput& input );
-        /** @brief GPU 방출기의 디스패치를 프레임 그래프에 기록합니다(`prepareFrame` 뒤, 인스턴스 애니메이션 · 컬링 앞). */
-        void recordSimulation( IRHICommandList& cmd, RHIPipelineStateHandle simulationPSO, RHIPipelineStateHandle meshInstancePSO, RHIPipelineStateHandle sortPSO ) const
-        {
-            _gpuSimulation.recordDispatches( cmd, simulationPSO, meshInstancePSO, sortPSO );
-        }
+        /** @brief GPU 방출기 시뮬레이션입니다 — 프레임 그래프가 자원을 등록하고(`registerFrameResources`) 세 프레임 패스(시뮬레이션 · 정렬 · 메시 쓰기)를 기록한다. */
+        const VFXGPUSimulation& getGPUSimulation() const { return _gpuSimulation; }
         /**
          * @brief 지금 열린 렌더 패스에 @p listSlot 의 방출기마다 그리기 하나를 그 순서로 기록합니다. PSO 와 PassCB 는 부르는 쪽이 걸어 두었어야 합니다.
          * @details 투명 패스는 메시 투명 배치 사이의 자리마다 그 자리의 구간으로 부른다(`FramePassExecutor::drawParticleSlots`).

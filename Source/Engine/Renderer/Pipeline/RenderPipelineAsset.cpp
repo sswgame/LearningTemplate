@@ -386,7 +386,7 @@ namespace sw
                 {
                     const RenderGraphPassDesc& pass = desc._listFramePass[passIndex];
                     if ( isFramePassType( pass._type ) == false )
-                        report( "RenderPipelineAsset.FramePassType", pass._name, "_type must be a frame pass type (DepthHistory, HZBBuild, VFXSimulation, InstanceAnimation, MeshMorph, MeshSkin, "
+                        report( "RenderPipelineAsset.FramePassType", pass._name, "_type must be a frame pass type (DepthHistory, HZBBuild, VFXSimulation, VFXParticleSort, VFXMeshInstance, InstanceAnimation, MeshMorph, MeshSkin, "
                                                                                  "GPUCull, LightGrid, VolumetricFog, ProbeUpdate, CanvasMarker)" );
                     const bool bTableOwnsShader = pass._shaderPath.empty() && pass._vertexEntryPoint.empty() && pass._pixelEntryPoint.empty() && pass._computeEntryPoint.empty() &&
                                                   pass._geometryEntryPoint.empty() && pass._hullEntryPoint.empty() && pass._domainEntryPoint.empty() && pass._listPermutation.empty();

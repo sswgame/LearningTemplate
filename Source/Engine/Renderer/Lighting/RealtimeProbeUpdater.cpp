@@ -299,12 +299,7 @@ namespace sw
         // t0 라이트는 라이트 버퍼가 없는 프레임에 자리표를 건다(라이트 수 0 이면 셰이더가 읽지 않는다 - DX12 는 빈 디스크립터를 읽으면 폴트).
         const RHIDescriptorIndex lights = lightBuffer.isBindable() ? lightBuffer.getBuffer()._srv : placeholderSRV;
 
-        // 두 쓰기 버퍼를 배리어 한 번으로 옮긴다(`IRHICommandList::transitionBuffers`).
-        const RHIBufferTransition arrToWrite[] = {
-            { pProbeBuffer->_buffer, RHIBufferState::UnorderedAccess},
-            {_historyBuffer._buffer, RHIBufferState::UnorderedAccess}
-        };
-        cmd.transitionBuffers( arrToWrite, static_cast<uint32>( std::size( arrToWrite ) ) );
+        // 두 쓰기 버퍼의 UAV 전이와 조명 패스(그래프, t13) 앞 셰이더 읽기는 프레임 그래프가 낸다(`ProbeIrradiance` · `ProbeHistory` — `FrameGraphExecutor::beginFrame` 이 등록한다).
         cmd.setComputePipelineState( pso );
         // g_ProbeLights(t0) / g_ProbeParams(t1) / g_ProbeVoxels(t2) / g_ProbeHistoryRW(u0) / g_ProbeOutRW(u1). probe_update.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeShaderResource( lights, 0 );
@@ -313,8 +308,6 @@ namespace sw
         cmd.bindComputeUAV( _historyBuffer._uav, 0 );
         cmd.bindComputeUAV( lightBuffer.getProbeUAV(), 1 );
         cmd.dispatchThreads( _totalProbes, 1, 1, kThreadGroupSize, 1, 1 );
-        // 조명 패스(그래프)가 t13 으로 읽는다. 쓰기가 끝났음을 알린다.
-        cmd.transitionBuffer( pProbeBuffer->_buffer, RHIBufferState::ShaderResource );
     }
 
     void RealtimeProbeUpdater::release( IRHIDevice* pDevice )

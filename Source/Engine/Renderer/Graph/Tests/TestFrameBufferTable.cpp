@@ -1,6 +1,7 @@
 /**
  * @file TestFrameBufferTable.cpp
- * @brief 프레임 그래프 자원 표(`FrameBufferTable`) 테스트 — 등록 · 찾기, 같은 이름 · 칸 두 번과 칸마다 다른 처음 접근 거절, 패스 문맥이 선언한 접근 핸들로만 핸들을 주는지(GPU 없음).
+ * @brief 프레임 그래프 자원 표(`FrameBufferTable`) 테스트 — 등록 · 찾기, 같은 이름 · 칸 두 번과 칸마다 다른 처음 접근 거절, 패스 문맥이 선언한 접근 핸들로만 핸들을 주는지,
+ *        그래프 끝에 등록 접근으로 되돌릴 등록을 고르는지(GPU 없음).
  */
 #include "pch.h"
 
@@ -130,4 +131,42 @@ SW_TEST_CASE( FrameBufferTableTest, StructuredRegistrationCarriesSize )
     SW_EXPECT_EQUAL( 8u, table.getEntries()[0]._elementSize );
     SW_EXPECT_EQUAL( 100u, table.getEntries()[0]._elementCount );
     SW_EXPECT_EQUAL( RHIBufferHandle{ 31 }, table.findBuffer( hashed_string( "HZB" ), 0 ) );
+}
+
+/**
+ * @brief [FrameBufferTableTest] 그래프가 등록 접근과 다른 접근에 둔 이름의 모든 칸만 되돌릴 대상이다 — 같은 접근으로 끝난 이름 · 그래프가 보지 않은 이름은 아니다
+ * @details 결함이면 정렬 · 메시 쓰기가 셰이더 읽기로 남긴 입자 인자를 투명 패스가 간접 인자로 읽거나(DX12 · Vulkan 검증 오류), 이미 맞는 버퍼에 전이를 다시 낸다.
+ *          입자 패스 셋(시뮬레이션 UAV → 정렬 · 메시 쓰기 셰이더 읽기)의 모양을 그대로 쓴다.
+ */
+SW_TEST_CASE( FrameBufferTableTest, ChangedAccessesReturnToTheirInitialAccess )
+{
+    const hashed_string particles( "Particles" );
+    const hashed_string args( "ParticleArgs" );
+    const hashed_string state( "ParticleState" );
+    const hashed_string order( "ParticleOrder" );
+    FrameBufferTable    table;
+    SW_REQUIRE_TRUE( table.registerBuffer( state, 0, makeBuffer( 10 ), RenderGraphAccess::UnorderedAccess ) );
+    SW_REQUIRE_TRUE( table.registerBuffer( particles, 0, makeBuffer( 11 ), RenderGraphAccess::ShaderRead ) );
+    SW_REQUIRE_TRUE( table.registerBuffer( args, 0, makeBuffer( 12 ), RenderGraphAccess::IndirectArgs ) );
+    SW_REQUIRE_TRUE( table.registerBuffer( args, 1, makeBuffer( 13 ), RenderGraphAccess::IndirectArgs ) );
+    SW_REQUIRE_TRUE( table.registerBuffer( order, 0, makeBuffer( 14 ), RenderGraphAccess::ShaderRead ) ); // 이 그래프의 어느 패스도 선언하지 않는다
+
+    RenderGraph graph;
+    for ( const FrameBufferTable::Entry& entry : table.getEntries() )
+    {
+        graph.importResource( entry._name, entry._viewable, entry._initialAccess );
+    }
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "ParticleSimulation" ), { RenderGraphBufferUAV{ state }, RenderGraphBufferUAV{ particles }, RenderGraphBufferUAV{ args } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "ParticleSort" ), { RenderGraphBufferSRV{ particles }, RenderGraphBufferSRV{ args } } ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.execute( context ) );
+
+    vector<RHIBufferHandle> listReturned;
+    table.forEachChangedAccess( context, [&listReturned]( const FrameBufferTable::Entry& entry )
+    { listReturned.push_back( entry._handle ); } );
+    // 상태(UAV 로 시작 · 끝) · 렌더 입력(셰이더 읽기로 끝) · 순서(그래프가 보지 않았다)는 그대로, 인자는 두 칸 모두 간접 인자로 되돌린다.
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listReturned.size() );
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 12 }, listReturned[0] );
+    SW_EXPECT_EQUAL( RHIBufferHandle{ 13 }, listReturned[1] );
 }

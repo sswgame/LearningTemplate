@@ -29,9 +29,71 @@
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
+#include "Engine/Renderer/Graph/FrameBufferTable.h"
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief 프레임 그래프 자원 이름(파이프라인 XML `framecomputerenderpass.xml` 의 `_listResource`)입니다. 한 번만 intern 한다(전역 문자열 표의 뮤텍스를 프레임마다 잡지 않는다).
+         * @details 컬링 버퍼는 등록 접근(프레임 시작이자 끝)이 달라 이름을 나눈다 — 인자는 간접 인자, 가시 목록은 셰이더 읽기, 전환 상태 · 차례 표시는 UAV.
+         */
+        struct FrameResource
+        {
+            static hashed_string deformVertices()
+            {
+                static const hashed_string kName( "DeformVertices" );
+                return kName;
+            }
+            static hashed_string lightGrid()
+            {
+                static const hashed_string kName( "LightGrid" );
+                return kName;
+            }
+            static hashed_string cullArgs()
+            {
+                static const hashed_string kName( "CullArgs" );
+                return kName;
+            }
+            static hashed_string cullVisibleInstances()
+            {
+                static const hashed_string kName( "CullVisibleInstances" );
+                return kName;
+            }
+            static hashed_string cullLODState()
+            {
+                static const hashed_string kName( "CullLODState" );
+                return kName;
+            }
+            static hashed_string occludedOrders()
+            {
+                static const hashed_string kName( "OccludedOrders" );
+                return kName;
+            }
+            static hashed_string fogVolume()
+            {
+                static const hashed_string kName( "VolumetricFogVolume" );
+                return kName;
+            }
+            static hashed_string probeIrradiance()
+            {
+                static const hashed_string kName( "ProbeIrradiance" );
+                return kName;
+            }
+            static hashed_string probeHistory()
+            {
+                static const hashed_string kName( "ProbeHistory" );
+                return kName;
+            }
+            static hashed_string canvasMarkers()
+            {
+                static const hashed_string kName( "CanvasMarkers" );
+                return kName;
+            }
+        };
+    } // namespace
+
     FrameGraphExecutor::FrameGraphExecutor( IRHIDevice* const& pDevice, FrameRenderState& state, FramePSOManager& psoManager, FrameFog& fog )
         : _pDevice{ pDevice }
         , _state{ state }
@@ -90,6 +152,8 @@ namespace sw
             pView->_bOcclusionTilesThisFrame = SW_FALSE;
             pView->_bHZBValid                = SW_FALSE;
         }
+        // 컬링 일감은 프레임 시작에 모은다 — 등록(아래 `registerCullResources`)과 디스패치(GPUCull 패스)가 같은 목록을 본다. 준비되지 않은 추가 뷰를 쉬게 하므로 HZB 등록보다 앞이다.
+        collectCullJobs( _state._gpuScene.getInstanceOrderCount() );
         // 이번 프레임에 짓는 뷰의 피라미드 · 가림 타일 — 그래프가 짓기 앞(UAV) · 컬링 앞(SRV) 전이를 낸다. 칸 번호는 `recordFrameHZBs` 와 같다.
         if ( shouldBuildFrameHZB( _state._mainView ) )
             HZBOcclusion::registerFrameResources( table, 0, _state._mainView );
@@ -99,6 +163,31 @@ namespace sw
             if ( view._bRenderThisFrame == SW_TRUE && shouldBuildFrameHZB( view ) )
                 HZBOcclusion::registerFrameResources( table, extraIndex + 1, view );
         }
+        // GPU 입자 — 방출기 버퍼(시뮬레이션 · 정렬 · 메시 쓰기의 세 프레임 패스)와, 이번 프레임에 쓸 때만 라이트 버퍼 GPU 구간 · 인스턴스 칸(쓰지 않는 프레임에 UAV 로 오가지 않게).
+        const VFXGPUSimulation& simulation = _state._particleRenderer.getGPUSimulation();
+        simulation.registerFrameResources( table );
+        if ( simulation.writesParticleLights() )
+            std::ignore = table.registerBuffer( VFXGPUSimulation::getLightBufferUAV()._name, 0, _state._lightBuffer.getBuffer(), RenderGraphAccess::ShaderRead );
+        // 이번 프레임에 쓰는 패스가 있는 버퍼만 등록한다 — 쓰지 않는 프레임은 등록 접근(셰이더 읽기)에서 쉬어 쓰는 패스 앞뒤의 전이가 나지 않는다(읽는 패스는 이미 그 상태를 본다).
+        if ( shouldAnimateInstances() || simulation.writesMeshInstances() )
+            std::ignore = table.registerBuffer( VFXGPUSimulation::getInstanceBufferUAV()._name, 0, _state._gpuScene.getInstanceStructuredBuffer(), RenderGraphAccess::ShaderRead );
+        const GPUMeshMorphPool& morphPool = _state._deform._meshMorphPool;
+        if ( morphPool.getMorphBuffer().isValid() && ( morphPool.isDispatchable() || morphPool.isSkinDispatchable() ) )
+            std::ignore = table.registerBuffer( FrameResource::deformVertices(), 0, morphPool.getMorphBuffer(), RenderGraphAccess::ShaderRead );
+        if ( _state._lightBuffer.getGPUGridViewCount() > 0 )
+            std::ignore = table.registerBuffer( FrameResource::lightGrid(), 0, _state._lightBuffer.getGPUGridBuffer(), RenderGraphAccess::ShaderRead );
+        registerCullResources( table );
+        // 볼륨 안개 · 실시간 프로브 · 화면 마커 — 도는 프레임에만(등록 접근: 안개 볼륨 · 프로브 · 사각형은 그리기가 읽는 셰이더 읽기, 프로브 기록은 컴퓨트만 읽고 쓴다).
+        if ( _fog.isFogVolumeActive() && _fog.getFogVolumeBuffer().isValid() )
+            std::ignore = table.registerBuffer( FrameResource::fogVolume(), 0, _fog.getFogVolumeBuffer(), RenderGraphAccess::ShaderRead );
+        const RHIStructuredBuffer* pProbeBuffer = _state._lightBuffer.findProbeBuffer();
+        if ( _state._probeUpdater.isActive() && pProbeBuffer != nullptr && _state._lightBuffer.getProbeUAV() != kInvalidDescriptorIndex && _state._probeUpdater.getHistoryBuffer().isValid() )
+        {
+            std::ignore = table.registerBuffer( FrameResource::probeIrradiance(), 0, *pProbeBuffer, RenderGraphAccess::ShaderRead );
+            std::ignore = table.registerBuffer( FrameResource::probeHistory(), 0, _state._probeUpdater.getHistoryBuffer(), RenderGraphAccess::UnorderedAccess );
+        }
+        if ( _state._canvasRenderer.getMarkerCount() > 0 && _state._canvasRenderer.getQuadBuffer().isValid() )
+            std::ignore = table.registerBuffer( FrameResource::canvasMarkers(), 0, _state._canvasRenderer.getQuadBuffer(), RenderGraphAccess::ShaderRead );
     }
 
     void FrameGraphExecutor::executePass( RenderPassKind type, const RenderGraphPassContext& graphContext )
@@ -118,49 +207,63 @@ namespace sw
             }
             case RenderPassKind::VFXSimulation:
             {
-                // 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고(VFXMeshInstance — 같은 패스의 두 번째 디스패치), 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다.
-                _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassKind::VFXSimulation ), _psoManager.getEnginePSO( RenderPassKind::VFXMeshInstance ),
-                                                           _psoManager.getEnginePSO( RenderPassKind::VFXParticleSort ) );
+                // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(그 상태는 그래프 끝에 표가 되돌린다 — `FrameBufferTable::forEachChangedAccess`).
+                _state._particleRenderer.getGPUSimulation().recordSimulation( graphContext, _psoManager.getEnginePSO( RenderPassKind::VFXSimulation ) );
+                break;
+            }
+            case RenderPassKind::VFXParticleSort:
+            {
+                _state._particleRenderer.getGPUSimulation().recordSort( graphContext, _psoManager.getEnginePSO( RenderPassKind::VFXParticleSort ) );
+                break;
+            }
+            case RenderPassKind::VFXMeshInstance:
+            {
+                // 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓴다 — 인스턴스 애니메이션 · 컬링 앞(XML 의 `InstanceBuffer` 쓰기 순서).
+                _state._particleRenderer.getGPUSimulation().recordMeshInstances( graphContext, _psoManager.getEnginePSO( RenderPassKind::VFXMeshInstance ) );
                 break;
             }
             case RenderPassKind::InstanceAnimation:
             {
-                dispatchInstanceAnimation( _state._gpuScene.getInstanceSlotCount() ); // 칸 순 버퍼를 칸마다 돈다(구멍은 시드가 0 이라 건너뛴다)
+                dispatchInstanceAnimation( graphContext ); // 칸 순 버퍼를 칸마다 돈다(구멍은 시드가 0 이라 건너뛴다)
                 break;
             }
             case RenderPassKind::MeshMorph:
             {
-                dispatchMeshMorph();
+                dispatchMeshMorph( graphContext );
                 break;
             }
             case RenderPassKind::MeshSkin:
             {
-                dispatchMeshSkin();
+                dispatchMeshSkin( graphContext );
                 break;
             }
             case RenderPassKind::GPUCull:
             {
-                dispatchCullAndSort( _state._gpuScene.getInstanceOrderCount() ); // 차례마다 스레드 하나(인스턴스 버퍼는 칸 순 — 차례 → 칸 목록으로 찾는다)
+                dispatchCullAndSort( graphContext, _state._gpuScene.getInstanceOrderCount() ); // 차례마다 스레드 하나(인스턴스 버퍼는 칸 순 — 차례 → 칸 목록으로 찾는다)
                 break;
             }
             case RenderPassKind::LightGrid:
             {
-                dispatchLightGrid();
+                dispatchLightGrid( graphContext );
                 break;
             }
             case RenderPassKind::VolumetricFog:
             {
-                _fog.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
+                // 선언 · 등록이 없으면 그래프가 볼륨 전이를 내지 않았다 — 기록하지 않는다(오류는 문맥이 남겼다).
+                if ( _fog.isFogVolumeActive() && graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::fogVolume() } ) != 0 )
+                    _fog.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
                 break;
             }
             case RenderPassKind::ProbeUpdate:
             {
-                dispatchRealtimeProbes();
+                dispatchRealtimeProbes( graphContext );
                 break;
             }
             case RenderPassKind::CanvasMarker:
             {
-                // 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스(뷰 그래프)보다 앞이다.
+                // 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스(뷰 그래프)보다 앞이다. 전이는 그래프가 낸다(`CanvasMarkers`).
+                if ( _state._canvasRenderer.getMarkerCount() == 0 || graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::canvasMarkers() } ) == 0 )
+                    break;
                 _state._canvasRenderer.recordMarkerProjection( *_pCmd, _psoManager.getEnginePSO( RenderPassKind::CanvasMarker ), _state._gpuScene.getInstanceBuffer(),
                                                                _state._gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv, _state._gpuMessages,
                                                                _state._mainView._settings._viewMode == RenderViewMode::MarkerSlots );
@@ -197,42 +300,37 @@ namespace sw
         return _state._settings._bGPUCulling != SW_FALSE && _psoManager.getEnginePSO( RenderPassKind::GPUCull ) != 0 && _psoManager.getEnginePSO( RenderPassKind::IndirectArgsReset ) != 0;
     }
 
-    void FrameGraphExecutor::dispatchInstanceAnimation( uint32 instanceCount )
+    bool FrameGraphExecutor::shouldAnimateInstances() const
+    {
+        // 회전을 요청한 인스턴스가 하나도 없으면 디스패치 자체를 건너뛴다. 안 그러면 회전을 쓰지 않는 씬도
+        // 매 프레임 인스턴스당 96바이트를 읽고 아무 일도 하지 않는다. 컬링 능력과는 무관하다(DX11 도 돈다).
+        const bool bSpinAnimationNeeded =
+            _state._gpuScene.isUploaded() && _state._gpuScene.getInstanceSlotCount() > 0 && _state._gpuScene.getSpinInstanceCount() > 0;
+        return bSpinAnimationNeeded && _psoManager.getEnginePSO( RenderPassKind::InstanceAnimation ) != 0 && _state._deform._instanceAnimationCb.isValid() &&
+               _state._gpuScene.getInstanceUAV() != kInvalidDescriptorIndex;
+    }
+
+    void FrameGraphExecutor::dispatchInstanceAnimation( const RenderGraphPassContext& graphContext )
     {
         // 인스턴스 애니메이션이 컬링보다 먼저다(XML 의 `InstanceBuffer` 쓰기 · 읽기). 순서가 뒤집히면 컬링이
         // **이번 프레임에 회전하기 전의** 바운드로 판정한다. 애니메이션이 회전만 바꾸므로 지금 씬에서는
         // 결과가 같지만, 이동을 넣는 순간 한 프레임 늦은 컬링이 된다.
-        // 회전을 요청한 인스턴스가 하나도 없으면 디스패치 자체를 건너뛴다. 안 그러면 회전을 쓰지 않는 씬도
-        // 매 프레임 인스턴스당 96바이트를 읽고 아무 일도 하지 않는다. 컬링 능력과는 무관하다(DX11 도 돈다).
-        const bool bSpinAnimationNeeded = _state._gpuScene.isUploaded() && instanceCount > 0 && _state._gpuScene.getSpinInstanceCount() > 0;
-        if ( bSpinAnimationNeeded )
-        {
-            const RHIPipelineStateHandle animationPSO        = _psoManager.getEnginePSO( RenderPassKind::InstanceAnimation );
-            const bool                   bSpinAnimationReady = animationPSO != 0 && _state._deform._instanceAnimationCb.isValid() &&
-                                             _state._gpuScene.getInstanceUAV() != kInvalidDescriptorIndex;
-            if ( bSpinAnimationReady )
-            {
-                FrameRendererUtil::GPUAnimationParams animationParams{};
-                animationParams._time = _state.getAnimationTime();
-                // 기준 각속도와 편차 폭(라디안/초). 편차가 기준보다 커야 "다 같은 속도" 로 보이지 않는다.
-                animationParams._baseSpeed     = FrameRendererUtil::kGPUSpinBaseSpeed;
-                animationParams._speedRange    = FrameRendererUtil::kGPUSpinSpeedRange;
-                animationParams._instanceCount = instanceCount;
-                _state._deform._instanceAnimationCb.update( *_pCmd, &animationParams, sizeof( animationParams ) );
-
-                // **쓰기 전에** UAV 상태로 옮긴다. 인스턴스 버퍼는 직전 프레임에 정점 셰이더가 읽던
-                // (그리고 방금 CPU 업로드가 쓴) 상태라, 이 전이 없이 UAV 로 쓰면 DX12 와 Vulkan 에서 쓰기가
-                // 유효하지 않다. 화면은 조용히 예전 값 그대로다.
-                _pCmd->transitionBuffer( _state._gpuScene.getInstanceBuffer(), RHIBufferState::UnorderedAccess );
-                _pCmd->setComputePipelineState( animationPSO );
-                // AnimationParams(b0) / g_InstancesRW(u0). instance_animation.hlsl 레지스터와 1:1 로 대응한다.
-                _pCmd->bindComputeConstantBuffer( _state._deform._instanceAnimationCb._index, 0 );
-                _pCmd->bindComputeUAV( _state._gpuScene.getInstanceUAV(), 0 );
-                _pCmd->dispatchThreads( instanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
-                // 다음 디스패치(컬링)와 정점 셰이더가 이 결과를 읽는다. 쓰기가 끝났음을 알린다.
-                _pCmd->transitionBuffer( _state._gpuScene.getInstanceBuffer(), RHIBufferState::ShaderResource );
-            }
-        }
+        // 쓰기 앞 UAV · 읽는 쪽(컬링 · 정점 셰이더) 앞 셰이더 읽기는 그래프가 낸다(`beginFrame` 이 같은 판정 `shouldAnimateInstances` 로 등록했다).
+        if ( shouldAnimateInstances() == false || graphContext.getBuffer( VFXGPUSimulation::getInstanceBufferUAV() ) == 0 )
+            return;
+        const uint32                          instanceCount = _state._gpuScene.getInstanceSlotCount();
+        FrameRendererUtil::GPUAnimationParams animationParams{};
+        animationParams._time = _state.getAnimationTime();
+        // 기준 각속도와 편차 폭(라디안/초). 편차가 기준보다 커야 "다 같은 속도" 로 보이지 않는다.
+        animationParams._baseSpeed     = FrameRendererUtil::kGPUSpinBaseSpeed;
+        animationParams._speedRange    = FrameRendererUtil::kGPUSpinSpeedRange;
+        animationParams._instanceCount = instanceCount;
+        _state._deform._instanceAnimationCb.update( *_pCmd, &animationParams, sizeof( animationParams ) );
+        _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::InstanceAnimation ) );
+        // AnimationParams(b0) / g_InstancesRW(u0). instance_animation.hlsl 레지스터와 1:1 로 대응한다.
+        _pCmd->bindComputeConstantBuffer( _state._deform._instanceAnimationCb._index, 0 );
+        _pCmd->bindComputeUAV( _state._gpuScene.getInstanceUAV(), 0 );
+        _pCmd->dispatchThreads( instanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
     }
 
     bool FrameGraphExecutor::isDeformPassDeclared() const
@@ -364,7 +462,7 @@ namespace sw
         SW_PROFILE_COUNT( "RT.Deform.skinSlots", deform._listScratchSkinSlot.size() );
     }
 
-    void FrameGraphExecutor::dispatchMeshMorph()
+    void FrameGraphExecutor::dispatchMeshMorph( const RenderGraphPassContext& graphContext )
     {
         const MeshMorphDiagMode morphDiag = getEffectiveMeshMorphDiag();
         if ( _pDevice == nullptr || _pCmd == nullptr )
@@ -407,13 +505,11 @@ namespace sw
         morphParams._amplitude   = FrameRendererUtil::kMeshMorphAmplitude;
         morphParams._frequency   = FrameRendererUtil::kMeshMorphFrequency;
         morphParams._vertexCount = _state._deform._meshMorphPool.getMorphVertexCount();
-        if ( morphParams._vertexCount == 0 )
+        // 쓰기 앞 UAV · 드로우 앞 셰이더 읽기는 그래프가 낸다(`DeformVertices` — `beginFrame` 이 등록했다). 정점 셰이더가 이 버퍼를 읽으므로 전이가 빠지면
+        // DX12 와 Vulkan 에서 조용히 예전 값이 나온다 — 선언 · 등록이 없으면 디스패치하지 않는다(오류는 문맥이 남겼다).
+        if ( morphParams._vertexCount == 0 || graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::deformVertices() } ) == 0 )
             return;
         _state._deform._meshMorphCb.update( *_pCmd, &morphParams, sizeof( morphParams ) );
-
-        // 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로 전이한다. 정점 셰이더가 이 버퍼를 읽으므로 배리어가 빠지면
-        // DX12 와 Vulkan 에서 조용히 예전 값이 나온다(인스턴스 애니메이션과 같은 함정이다).
-        _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( morphPSO );
         _pCmd->bindComputeConstantBuffer( _state._deform._meshMorphCb._index, 0 );
         // MorphParams(b0) / g_RestVertices(t0) / g_DeformPrograms(t1, 칸 표 + 변형 프로그램) / g_MorphVerticesRW(u0). mesh_morph.hlsl 레지스터와 1:1 로 대응한다.
@@ -422,10 +518,9 @@ namespace sw
         _pCmd->bindComputeUAV( _state._deform._meshMorphPool.getMorphBuffer()._uav, 0 );
         _state._gpuMessages.bindCompute( *_pCmd ); // mesh_morph.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
         _pCmd->dispatchThreads( morphParams._vertexCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
-        _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
     }
 
-    void FrameGraphExecutor::dispatchMeshSkin()
+    void FrameGraphExecutor::dispatchMeshSkin( const RenderGraphPassContext& graphContext )
     {
         if ( _pDevice == nullptr || _pCmd == nullptr )
             return;
@@ -438,7 +533,8 @@ namespace sw
         if ( _state._deform._meshMorphPool.isSkinDispatchable() == false )
             return;
         const RHIPipelineStateHandle skinPSO = _psoManager.getEnginePSO( RenderPassKind::MeshSkin );
-        if ( skinPSO == 0 || _state._deform._meshSkinCb.isValid() == false )
+        // 모프와 같은 결과 버퍼의 뒤 구간에 쓴다 — 전이와 모프 뒤 UAV 배리어(같은 이름의 UAV 연속)는 그래프가 낸다.
+        if ( skinPSO == 0 || _state._deform._meshSkinCb.isValid() == false || graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::deformVertices() } ) == 0 )
             return;
 
         FrameRendererUtil::GPUSkinParams skinParams{};
@@ -449,8 +545,6 @@ namespace sw
         skinParams._skinInstanceCount = _state._deform._meshMorphPool.getSkinInstanceCount();
         _state._deform._meshSkinCb.update( *_pCmd, &skinParams, sizeof( skinParams ) );
 
-        // 모프와 같은 결과 버퍼의 뒤 구간에 쓴다. 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로 전이한다(배리어가 빠지면 DX12 와 Vulkan 에서 예전 값이 나온다).
-        _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( skinPSO );
         // SkinParams(b0) / g_RestVertices(t0, 원본 레스트) / g_SkinWeights(t1) / g_SkinPalette(t2) / g_SkinInstances(t3) / g_MorphVerticesRW(u0).
         // mesh_skin.hlsl 레지스터와 1:1 로 대응한다.
@@ -461,7 +555,6 @@ namespace sw
         _pCmd->bindComputeShaderResource( _state._deform._meshMorphPool.getSkinInstanceBuffer()._srv, 3 );
         _pCmd->bindComputeUAV( _state._deform._meshMorphPool.getMorphBuffer()._uav, 0 );
         _pCmd->dispatchThreads( skinParams._skinVertexCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
-        _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
         _state._deform._meshMorphPool.markSkinDispatched();
     }
 
@@ -483,8 +576,11 @@ namespace sw
         _lodFadeStep           = static_cast<uint32>( MathUtil::clamp( progress, 1.0f, 255.0f ) );
     }
 
-    void FrameGraphExecutor::dispatchCullAndSort( uint32 instanceCount )
+    void FrameGraphExecutor::collectCullJobs( uint32 instanceCount )
     {
+        _listCullJob.clear();
+        _bCullJobsCoverAllViews = 0;
+        _bOccludedOrdersReady   = 0;
         // 컬링은 GPUScene 이 "개수를 컴퓨트에 맡겼다" 고 답할 때만 돈다. 그래야 인자의 초기 개수(0)와
         // 디스패치 여부가 절대 어긋나지 않는다. 어긋나면 한쪽은 빈 화면, 다른 쪽은 낡은 목록이다.
         //
@@ -501,8 +597,7 @@ namespace sw
             return;
 
         computeLODFadeStep();
-        // 1) 돌릴 슬롯을 모은다. 돌 수 있는지는 디스패치 전에 정해진다(isCullViewReady) — 그래서 추가 뷰의 그림자 슬롯 조건도 여기서 가린다.
-        _listCullJob.clear();
+        // 돌릴 슬롯을 모은다. 돌 수 있는지는 디스패치 전에 정해진다(isCullViewReady) — 그래서 추가 뷰의 그림자 슬롯 조건도 여기서 가린다.
         bool bAllViewsCulled = true;
         // 캐스케이드가 각자 슬롯을 돌고 점광 · 스폿이 모두 자기 슬롯을 가지면 합친 칸(주 시점 그림자 슬롯)은 아무 패스도 읽지 않는다 — 돌리지 않는다.
         const bool bMainShadowSlotUnused =
@@ -543,48 +638,59 @@ namespace sw
 
         // 2 단계 가림의 차례 표시 — 주 시점 앞 단계가 쓰고 프리패스 뒤 뒤 단계가 읽는다. 차례 수만큼(만들지 못하면 한 단계로 돈다 — dispatchCullView 가 본다).
         _lateInstanceCount = instanceCount;
-        if ( isTwoPhaseOcclusionEnabled() &&
-             _occludedOrders.ensureCapacity( _pDevice, sizeof( uint32 ), MathUtil::max( instanceCount, 1u ), RHIBufferUsage::Structured | RHIBufferUsage::UnorderedAccess, false, true, nullptr ) )
-            _bufferTransitions.add( _occludedOrders._buffer, RHIBufferState::UnorderedAccess );
+        const bool bOrdersReady =
+            isTwoPhaseOcclusionEnabled() &&
+            _occludedOrders.ensureCapacity( _pDevice, sizeof( uint32 ), MathUtil::max( instanceCount, 1u ), RHIBufferUsage::Structured | RHIBufferUsage::UnorderedAccess, false, true, nullptr );
+        _bOccludedOrdersReady   = bOrdersReady ? 1u : 0u;
+        _bCullJobsCoverAllViews = bAllViewsCulled ? 1u : 0u;
+    }
 
-        // 2) 모든 슬롯의 버퍼를 UAV 로 — 한 번에 낸다. 간접 인자는 직전 프레임에 IndirectArgument 로, 가시 목록은 ShaderResource 로 두고 끝냈다.
-        //    슬롯마다 버퍼가 따로라 앞 슬롯의 디스패치와 뒤 슬롯의 전이 사이에 지켜야 할 순서가 없다.
+    void FrameGraphExecutor::registerCullResources( FrameBufferTable& table ) const
+    {
+        // 등록 접근은 프레임 시작이자 끝의 상태다 — 인자는 간접 그리기, 가시 목록은 정점 셰이더 읽기(그래프 끝에 표가 되돌린다), 전환 상태 · 차례 표시는 컬링만 읽고 쓴다(UAV).
+        // 칸은 컬링 슬롯 번호다. 이번 프레임에 돌릴 슬롯만 등록한다(`collectCullJobs`).
         for ( const CullJob& job : _listCullJob )
         {
             const GPUCullViewResources& view = _state._gpuScene.getCullView( job._cullViewIndex );
-            _bufferTransitions.add( view._indirectArgs._buffer, RHIBufferState::UnorderedAccess );
-            _bufferTransitions.add( view._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
+            std::ignore                      = table.registerBuffer( FrameResource::cullArgs(), job._cullViewIndex, view._indirectArgs, RenderGraphAccess::IndirectArgs );
+            std::ignore                      = table.registerBuffer( FrameResource::cullVisibleInstances(), job._cullViewIndex, view._visibleInstances, RenderGraphAccess::ShaderRead );
             if ( _state._gpuScene.hasLODState( job._cullViewIndex ) )
-                _bufferTransitions.add( view._lodState._buffer, RHIBufferState::UnorderedAccess );
+                std::ignore = table.registerBuffer( FrameResource::cullLODState(), job._cullViewIndex, view._lodState, RenderGraphAccess::UnorderedAccess );
         }
-        _bufferTransitions.flush( *_pCmd );
+        if ( _listCullJob.empty() == false && _bOccludedOrdersReady != 0 )
+            std::ignore = table.registerBuffer( FrameResource::occludedOrders(), 0, _occludedOrders, RenderGraphAccess::UnorderedAccess );
+    }
 
-        // 3) 슬롯마다 컬링 + 정렬.
+    void FrameGraphExecutor::dispatchCullAndSort( const RenderGraphPassContext& graphContext, uint32 instanceCount )
+    {
+        // 일감과 전이: `beginFrame` 이 모으고(`collectCullJobs`) 등록했다 — 슬롯 버퍼의 UAV 전이(앞)와 그리는 쪽 상태(인자 간접 인자 · 가시 목록 셰이더 읽기)는 그래프가 낸다.
+        if ( _listCullJob.empty() )
+            return;
+        bool bAllViewsCulled = _bCullJobsCoverAllViews != 0;
         for ( const CullJob& job : _listCullJob )
         {
-            dispatchCullView( job._cullViewIndex, *job._pRenderView, instanceCount, job._pExtraView );
+            // 선언 · 등록이 없으면 그래프가 전이를 내지 않았다 — 돌리지 않는다(오류는 문맥이 남겼다). 파이프라인 XML 의 `GPUCull` 이 컬링 버퍼 이름을 출력으로 적어야 한다.
+            const bool bDeclared = graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::cullArgs() }, job._cullViewIndex ) != 0 &&
+                                   graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::cullVisibleInstances() }, job._cullViewIndex ) != 0;
+            if ( bDeclared == false )
+            {
+                bAllViewsCulled = false;
+                continue;
+            }
+            dispatchCullView( graphContext, job._cullViewIndex, *job._pRenderView, instanceCount, job._pExtraView );
         }
-
-        // 4) 그리는 쪽이 읽는 상태로 — 한 번에 낸다.
-        for ( const CullJob& job : _listCullJob )
-        {
-            const GPUCullViewResources& view = _state._gpuScene.getCullView( job._cullViewIndex );
-            _bufferTransitions.add( view._indirectArgs._buffer, RHIBufferState::IndirectArgument );
-            _bufferTransitions.add( view._visibleInstances._buffer, RHIBufferState::ShaderResource );
-        }
-        _bufferTransitions.flush( *_pCmd );
         _bGPUCullingActive = bAllViewsCulled ? 1u : 0u;
     }
 
-    void FrameGraphExecutor::dispatchLightGrid()
+    void FrameGraphExecutor::dispatchLightGrid( const RenderGraphPassContext& graphContext )
     {
         // 생산자가 GPU 인 프레임에만 뷰 수가 0 보다 크다(GPULightBuffer::updateGPUGrid). 그때 PSO 와 버퍼는 이미 확인됐다(selectLightGridProducer, updateGPUGrid) —
         // 여기서 건너뛰면 채우지 않은 그리드를 셰이더가 읽으므로 더 거르지 않는다.
+        // 쓰기 앞 UAV · 읽는 쪽(조명 패스 t12 · 볼륨 안개 · 프로브) 앞 셰이더 읽기는 그래프가 낸다(`LightGrid` — `beginFrame` 이 같은 판정으로 등록했다).
         const uint32 viewCount = _state._lightBuffer.getGPUGridViewCount();
-        if ( viewCount == 0 || _pCmd == nullptr )
+        if ( viewCount == 0 || _pCmd == nullptr || graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::lightGrid() } ) == 0 )
             return;
         const RHIStructuredBuffer& gridBuffer = _state._lightBuffer.getGPUGridBuffer();
-        _pCmd->transitionBuffer( gridBuffer._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::LightGrid ) );
         // g_LightGridLights(t0) / g_LightGridViews(t1) / g_LightGridRW(u0). light_grid.hlsl 레지스터와 1:1 로 대응한다. 상수 버퍼는 없다(뷰마다의 값은 t1).
         _pCmd->bindComputeShaderResource( _state._lightBuffer.getBuffer()._srv, 0 );
@@ -592,8 +698,6 @@ namespace sw
         _pCmd->bindComputeUAV( gridBuffer._uav, 0 );
         // 그룹 하나 = 뷰 하나. 그룹 안에서 세기 · 접두사 합 · 채우기를 그룹 동기화로 잇는다.
         _pCmd->dispatchCompute( viewCount, 1, 1 );
-        // 조명 패스(포워드 · 디퍼드 · 투명)가 t12 로 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 예전 그리드를 읽는다).
-        _pCmd->transitionBuffer( gridBuffer._buffer, RHIBufferState::ShaderResource );
     }
 
     bool FrameGraphExecutor::canCopyDepthHistory( const FrameViewTarget& view ) const
@@ -693,6 +797,7 @@ namespace sw
         _pCmd->draw( 3, 0 );
         _pCmd->endRenderPass();
         // 읽는 쪽(HZB 짓기 · GPU 입자)의 상태로 넘겨 둔다 — `recordDepthHistory` 머리말 참고.
+        // shortcut: 깊이 히스토리 · 지난 장면 깊이는 표에 없다 — 읽는 쪽이 RW 텍스처로 읽는데 데이터 규칙의 입력은 셰이더 읽기라 선언할 접근이 없다. 텍스처 UAV 입력 목록을 더할 때 옮긴다.
         _pCmd->prepareTextureForUnorderedAccess( target._depthHistory );
     }
 
@@ -761,7 +866,8 @@ namespace sw
         return true;
     }
 
-    void FrameGraphExecutor::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView )
+    void FrameGraphExecutor::dispatchCullView( const RenderGraphPassContext& graphContext, uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount,
+                                               const FrameViewTarget* pExtraView )
     {
         const GPUCullViewResources& view = _state._gpuScene.getCullView( cullViewIndex );
 
@@ -787,7 +893,7 @@ namespace sw
         // 상수 버퍼는 **뷰마다 자기 것**이다. 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치가 읽을 내용을 덮어쓴다.
         renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
 
-        // 컬링이 쓰는 버퍼(인자 · 가시 목록 · 전환 상태)는 dispatchCullAndSort 가 모든 슬롯을 묶어 UAV 로 옮겨 두었다.
+        // 컬링이 쓰는 버퍼(인자 · 가시 목록 · 전환 상태 · 차례 표시)는 그래프 레벨 콜백이 모든 슬롯을 묶어 UAV 로 옮겨 두었다(`registerCullResources`).
         // 개수를 GPU 에서 되돌린다 — 배치마다 0(압축을 포기한 배치는 CPU 개수). 예전에는 CPU 가 프레임마다 모든 뷰의 인자 전체를 다시 올렸다.
         // 나머지 칸(인덱스 수 · 시작 · 정점 시작 · 인스턴스 시작)은 배치 표가 바뀔 때만 CPU 가 올린다. 바인딩은 컬링과 같은 자리(b0 · t1 · u0)라 그대로 이어 쓴다.
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::IndirectArgsReset ) );
@@ -795,7 +901,7 @@ namespace sw
         _pCmd->bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
         _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
         _pCmd->dispatchThreads( cullParams._batchCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
-        _pCmd->uavBarrier( view._indirectArgs._buffer ); // 되돌린 개수 위에서 컬링이 InterlockedAdd 로 센다
+        graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::cullArgs() }, cullViewIndex ); // 되돌린 개수 위에서 컬링이 InterlockedAdd 로 센다
         // PSO 와 바인딩은 **뷰마다** 다시 설정한다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::GPUCull ) );
         // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_HZB(t2) / g_InstanceOrder(t3) / g_IndirectArgs(u0) / g_VisibleInstanceIDs(u1) / g_LODState(u2) / g_OccludedOrders(u3).
@@ -824,11 +930,11 @@ namespace sw
         _pCmd->dispatchThreads( cullParams._instanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
         // 압축이 끝났으면 투명 배치의 순서를 CPU 가 정한 순서(인스턴스 번호 오름차순)로 되돌린다. 원자 연산이 준 슬롯 번호는
         // 완료 순서라 그대로 두면 블렌딩이 틀린다. 되돌리기가 GPU 에서 돌므로 투명도 압축과 컬링 이득을 받는다(instance_sort.hlsl).
-        // 컬링이 채운 목록을 정렬이 바로 읽는다. 상태가 그대로라 transitionBuffer 는
-        // 아무것도 하지 않으므로 **UAV 배리어**를 따로 걸어야 한다. 없으면 정렬이 아직
+        // 컬링이 채운 목록을 정렬이 바로 읽는다. 상태가 그대로라 전이로는 알 수 없으므로
+        // 선언한 UAV 핸들의 **UAV 배리어**를 따로 건다. 없으면 정렬이 아직
         // 채워지지 않은 목록을 읽는다(백엔드마다 결과가 달라 재현이 어렵다).
-        _pCmd->uavBarrier( view._indirectArgs._buffer );
-        _pCmd->uavBarrier( view._visibleInstances._buffer );
+        graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::cullArgs() }, cullViewIndex );
+        graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::cullVisibleInstances() }, cullViewIndex );
 
         const RHIPipelineStateHandle sortPSO        = _psoManager.getEnginePSO( RenderPassKind::InstanceSort );
         const bool                   bSortPassReady = sortPSO != 0 && renderView._sortCb.isValid() && cullParams._batchCount > 0;
@@ -992,9 +1098,12 @@ namespace sw
         _pCmd = nullptr;
     }
 
-    void FrameGraphExecutor::dispatchRealtimeProbes()
+    void FrameGraphExecutor::dispatchRealtimeProbes( const RenderGraphPassContext& graphContext )
     {
-        if ( _pCmd == nullptr || _state._probeUpdater.isActive() == false )
+        // 두 쓰기 버퍼의 전이는 그래프가 냈다 — 선언 · 등록이 없으면 기록하지 않는다(오류는 문맥이 남겼다).
+        const bool bDeclared = graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::probeIrradiance() } ) != 0 &&
+                               graphContext.getBuffer( RenderGraphBufferUAV{ FrameResource::probeHistory() } ) != 0;
+        if ( _pCmd == nullptr || _state._probeUpdater.isActive() == false || bDeclared == false )
             return;
         SW_PROFILE_SCOPE( "RT.Probe.Update" );
         _state._probeUpdater.dispatch( *_pCmd, _psoManager.getEnginePSO( RenderPassKind::ProbeUpdate ), _state._lightBuffer, _transparentRankPlaceholder._srv );

@@ -116,38 +116,49 @@ namespace sw
          * @brief 인스턴스 애니메이션 컴퓨트를 기록합니다(instance_animation.hlsl).
          * @details 컬링보다 먼저여야 한다 — XML 에서 둘 다 `InstanceBuffer` 를 쓰고(애니메이션) 읽어(컬링) 그래프가 순서를 정한다. 회전을 요청한 인스턴스가 없으면 통째로 건너뛴다.
          */
-        void dispatchInstanceAnimation( uint32 instanceCount );
-        /** @brief 모프를 요청한 메시들의 정점을 GPU 가 변형합니다(레스트에서 결과로). 컬링 앞이다(XML: `DeformVertices` 를 쓰고 컬링이 읽는다). */
-        void dispatchMeshMorph();
+        void dispatchInstanceAnimation( const RenderGraphPassContext& graphContext );
+        /** @brief 이번 프레임 인스턴스 애니메이션이 도는지입니다(회전 인스턴스 · PSO · 상수 버퍼 · UAV). `InstanceBuffer` 등록과 디스패치가 같은 판정을 본다. */
+        bool shouldAnimateInstances() const;
+        /** @brief 모프를 요청한 메시들의 정점을 GPU 가 변형합니다(레스트에서 결과로). 컬링 앞이다(XML: `DeformVertices` 를 쓰고 컬링이 읽는다). 전이는 그래프가 낸다. */
+        void dispatchMeshMorph( const RenderGraphPassContext& graphContext );
         /** @brief 스킨드 메시들의 정점을 GPU 가 본 팔레트로 블렌딩합니다(바인드 포즈에서 모프 풀의 스킨 구간으로). 디스패치 하나가 모든 스킨드 메시를 처리한다. */
-        void dispatchMeshSkin();
+        void dispatchMeshSkin( const RenderGraphPassContext& graphContext );
         /** @brief 지금 적용되는 모프 진단 모드입니다. 프레임 사본(`RenderFrameSettings::_meshMorphDebugMode`)입니다. */
         MeshMorphDiagMode getEffectiveMeshMorphDiag() const;
         /** @brief 파이프라인이 메시 변형 패스(MeshMorph · MeshSkin)를 하나라도 선언했는지 — 그 PSO 는 선언했을 때만 있다(`FramePSOManager::createPassPSOs`). */
         bool isDeformPassDeclared() const;
         /**
          * @brief 뷰마다 컬링을 돌리고, 압축된 투명 목록을 CPU 정렬 순서로 되돌립니다(gpu_cull/instance_sort.hlsl).
-         * @details 컬링 결과는 절두체에 종속되므로 뷰(메인, 그림자)마다 자기 인자와 목록을 따로 만든다.
+         * @details 컬링 결과는 절두체에 종속되므로 뷰(메인, 그림자)마다 자기 인자와 목록을 따로 만든다. 일감은 `collectCullJobs` 가 모았고 전이는 그래프가 낸다.
          */
-        void dispatchCullAndSort( uint32 instanceCount );
+        void dispatchCullAndSort( const RenderGraphPassContext& graphContext, uint32 instanceCount );
+        /**
+         * @brief 이번 프레임에 돌릴 컬링 슬롯(`_listCullJob`)과 2 단계 가림 차례 표시를 프레임 시작에 갖춥니다(`beginFrame`). 컬링을 돌릴 수 없으면 목록이 빈다.
+         * @details 표 등록(`registerCullResources`)과 디스패치가 같은 목록을 본다. 준비되지 않은 추가 뷰는 여기서 쉬게 한다(`_bRenderThisFrame`).
+         */
+        void collectCullJobs( uint32 instanceCount );
+        /** @brief 모은 컬링 슬롯의 버퍼를 표에 등록합니다 — `CullArgs` · `CullVisibleInstances` · `CullLODState`(칸 = 컬링 슬롯), `OccludedOrders`(칸 0). */
+        void registerCullResources( FrameBufferTable& table ) const;
         /** @brief 컬링 슬롯 @p cullViewIndex 를 @p renderView 로 돌릴 수 있으면 true 입니다(슬롯 · 인자 · 가시 목록 UAV · 컬링 상수 버퍼가 있다). */
         bool isCullViewReady( uint32 cullViewIndex, const RenderView& renderView ) const;
         /**
-         * @brief 돌 수 있는 컬링 슬롯이면 일감 목록(`_listCullJob`)에 넣고 true 입니다. 디스패치 · 배리어는 `dispatchCullAndSort` 가 목록을 모은 뒤 한꺼번에 낸다.
+         * @brief 돌 수 있는 컬링 슬롯이면 일감 목록(`_listCullJob`)에 넣고 true 입니다. 전이는 그래프가, 디스패치는 `dispatchCullAndSort` 가 목록을 따라 낸다.
          * @param pExtraView 추가 뷰면 그 뷰(투명 순번 테이블을 정렬에 바인딩합니다), 고정 뷰(주 시점, 그림자)면 nullptr 입니다.
          */
         bool enqueueCullView( uint32 cullViewIndex, const RenderView& renderView, const FrameViewTarget* pExtraView );
         /**
-         * @brief 컬링 슬롯 하나를 컬링하고 정렬합니다. 그 뷰의 절두체와 자기 상수 버퍼를 씁니다. 버퍼는 이미 UAV 상태다 — 앞 · 뒤 전이는 부르는 쪽이 모든 슬롯을 묶어 낸다.
+         * @brief 컬링 슬롯 하나를 컬링하고 정렬합니다. 그 뷰의 절두체와 자기 상수 버퍼를 씁니다. 버퍼는 이미 UAV 상태다 — 앞 · 뒤 전이는 그래프가 모든 슬롯을 묶어 낸다.
+         *        되돌리기 → 컬링 → 정렬 사이는 선언한 UAV 핸들의 `uavBarrier` 다.
          * @param pExtraView 추가 뷰면 그 뷰(투명 순번 테이블을 정렬에 바인딩합니다), 고정 뷰(주 시점, 그림자)면 nullptr 입니다.
          */
-        void dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView );
+        void dispatchCullView( const RenderGraphPassContext& graphContext, uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount,
+                               const FrameViewTarget* pExtraView );
         /** @brief 이번 프레임의 LOD 전환 진행량(`_lodFadeStep`)을 렌더 프레임 간격에서 정합니다. 컬링 디스패치 앞에서 한 번 부른다. */
         void computeLODFadeStep();
         /** @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(light_grid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다. */
-        void dispatchLightGrid();
+        void dispatchLightGrid( const RenderGraphPassContext& graphContext );
         /** @brief 실시간 프로브 갱신 컴퓨트를 기록합니다. `prepareRealtimeProbes` 가 켠 프레임에만 돕니다. */
-        void dispatchRealtimeProbes();
+        void dispatchRealtimeProbes( const RenderGraphPassContext& graphContext );
         /** @brief 뷰 @p view 의 지난 깊이를 이번 프레임에 히스토리로 옮길 수 있으면 true 입니다(지난 깊이 · 히스토리 · PSO 가 모두 있다). */
         bool canCopyDepthHistory( const FrameViewTarget& view ) const;
         /** @brief 뷰 @p view 의 장면 깊이 첨부를 깊이 히스토리 텍스처에 옮길 수 있으면 true 입니다(히스토리 · 복사 PSO · 장면 깊이가 있다 — 지난 깊이인지는 묻지 않는다). */
@@ -224,5 +235,9 @@ namespace sw
         vector<VFXGPUSimulation::MeshProbeSource> _listScratchMeshProbeSource;
         /// @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지입니다(`isGPUCullingActive`).
         uint8 _bGPUCullingActive{ 0 };
+        /// @brief 이번 프레임 컬링 일감이 그려야 할 슬롯을 모두 덮는지입니다(`collectCullJobs` — 빠진 슬롯이 있으면 CPU 개수로 그린다).
+        uint8 _bCullJobsCoverAllViews{ 0 };
+        /// @brief 이번 프레임 2 단계 가림 차례 표시 버퍼를 갖췄는지입니다(`collectCullJobs` — 표 등록이 본다).
+        uint8 _bOccludedOrdersReady{ 0 };
     };
 } // namespace sw

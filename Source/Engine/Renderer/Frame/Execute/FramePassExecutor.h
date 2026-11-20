@@ -220,6 +220,11 @@ namespace sw
         /** @brief 프레임 그래프를 프리패스 리스트(`_pCmd`)에 기록합니다. 뷰 그래프보다 먼저 큐에 내는 리스트다. */
         void recordFrameGraph( IRHIDevice* pDevice );
         /**
+         * @brief 프레임 그래프가 등록 접근과 다른 접근에 둔 등록 자원을 등록 접근(프레임 시작이자 끝의 상태)으로 되돌립니다(`FrameBufferTable::forEachChangedAccess`).
+         * @details 그래프 뒤, 뷰 그래프 앞의 그래픽스 리스트(`_pCmd`)에 버퍼 한 묶음 · 텍스처 한 묶음으로 낸다. 전이 수는 `_graphTransitionCount` 에 더한다.
+         */
+        void returnFrameResourcesToInitialAccess();
+        /**
          * @brief 레벨을 기록하기 **직전에** 그 레벨이 만질 자원의 배리어를 미리 발행합니다. 직렬 경로에서는 패스마다 발행합니다.
          * @details 등록한 프레임 자원(`FrameBufferTable` — 이름의 모든 뷰 칸)의 버퍼 전이는 `transitionBuffers` 한 번, UAV → UAV 는 UAV 배리어로 낸다. 뷰 그래프와 프레임 그래프가 이 콜백 하나를 쓴다.
          *          자원 이름으로 실제 텍스처를 찾아 읽기 · 렌더 타깃 전이를 한 묶음(`IRHICommandList::transitionTextures`)으로

@@ -18,14 +18,27 @@
 		<RenderGraphResourceDesc _name="HZB" _kind="Persistent" />
 		<!-- 주 시점 HZB 의 16 px 밉 최대 깊이(가림 타일) — 게임 스레드가 몇 프레임 늦게 되읽는다. 이름은 코드가 안다(HZBOcclusion::getTilesUAV · getPyramidUAV). -->
 		<RenderGraphResourceDesc _name="OcclusionTiles" _kind="Persistent" />
+		<!-- GPU 방출기 버퍼 — 이름은 코드가 안다(VFXGPUSimulation::registerFrameResources). 이번 프레임 시뮬레이션하는 방출기는 ParticleState · Particles · ParticleArgs,
+		     시뮬레이션하지 않고 정렬 · 메시 쓰기만 읽는 방출기는 IdleParticles · IdleParticleArgs 다(그래프는 이름마다 상태 하나 — 쓰는 패스가 다르면 이름을 나눈다). -->
 		<RenderGraphResourceDesc _name="ParticleState" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="Particles" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="ParticleArgs" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="IdleParticles" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="IdleParticleArgs" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="ParticleOrder" _kind="Persistent" />
 		<RenderGraphResourceDesc _name="InstanceBuffer" _kind="External" />
 		<RenderGraphResourceDesc _name="LightBuffer" _kind="External" />
 		<RenderGraphResourceDesc _name="DeformVertices" _kind="External" />
-		<RenderGraphResourceDesc _name="CullResults" _kind="External" />
+		<!-- 컬링 슬롯마다의 산출물 — 이름은 코드가 안다(FrameGraphExecutor::registerCullResources). 등록 접근(프레임 시작이자 끝)이 달라 나눈다:
+		     인자는 간접 그리기, 가시 목록은 정점 셰이더 읽기, 전환 상태 · 2 단계 가림 차례 표시는 컬링만 읽고 쓴다. -->
+		<RenderGraphResourceDesc _name="CullArgs" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="CullVisibleInstances" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="CullLODState" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="OccludedOrders" _kind="Persistent" />
 		<RenderGraphResourceDesc _name="LightGrid" _kind="External" />
 		<RenderGraphResourceDesc _name="VolumetricFogVolume" _kind="External" />
 		<RenderGraphResourceDesc _name="ProbeIrradiance" _kind="Persistent" />
+		<RenderGraphResourceDesc _name="ProbeHistory" _kind="Persistent" />
 		<RenderGraphResourceDesc _name="CanvasMarkers" _kind="External" />
 	</_listResource>
 	<_listFramePass>
@@ -49,15 +62,41 @@
 				<item>OcclusionTiles</item>
 			</_listOutput>
 		</RenderGraphPassDesc>
-		<!-- GPU 방출기의 입자 시뮬레이션(vfx_simulate.hlsl) + 메시 입자의 인스턴스 칸 쓰기(vfx_mesh_instance.hlsl). 깊이 충돌은 주 시점 깊이 히스토리를 읽는다. -->
+		<!-- GPU 방출기의 입자 시뮬레이션(vfx_simulate.hlsl). 깊이 충돌은 주 시점 깊이 히스토리를 읽는다. 렌더 입력 · 인자를 UAV 로 쓰고, 뒤의 정렬 · 메시 쓰기가 셰이더 읽기로 읽는다 —
+		     읽는 상태가 달라 패스를 나눈다(전이는 그래프가 패스 사이에 낸다). 투명 패스가 읽는 상태(렌더 입력 읽기 · 인자 간접 인자)는 그래프 끝에 표가 되돌린다. -->
 		<RenderGraphPassDesc _name="ParticleSimulation" _type="VFXSimulation" _cullMode="None" _queue="AsyncCompute">
 			<_listInput>
 				<item>DepthHistory</item>
 			</_listInput>
 			<_listOutput>
 				<item>ParticleState</item>
-				<item>InstanceBuffer</item>
+				<item>Particles</item>
+				<item>ParticleArgs</item>
 				<item>LightBuffer</item>
+			</_listOutput>
+		</RenderGraphPassDesc>
+		<!-- 방출기 안 입자의 그리는 순서(vfx_particle_sort.hlsl) — 투명 패스의 정점 셰이더가 순서 버퍼를 읽는다. -->
+		<RenderGraphPassDesc _name="ParticleSort" _type="VFXParticleSort" _cullMode="None" _queue="AsyncCompute">
+			<_listInput>
+				<item>Particles</item>
+				<item>ParticleArgs</item>
+				<item>IdleParticles</item>
+				<item>IdleParticleArgs</item>
+			</_listInput>
+			<_listOutput>
+				<item>ParticleOrder</item>
+			</_listOutput>
+		</RenderGraphPassDesc>
+		<!-- 메시 입자의 인스턴스 칸 쓰기(vfx_mesh_instance.hlsl) — 인스턴스 애니메이션 · 컬링이 이어서 읽는다(InstanceBuffer 쓰기는 선언 순서). -->
+		<RenderGraphPassDesc _name="ParticleMeshInstance" _type="VFXMeshInstance" _cullMode="None" _queue="AsyncCompute">
+			<_listInput>
+				<item>Particles</item>
+				<item>ParticleArgs</item>
+				<item>IdleParticles</item>
+				<item>IdleParticleArgs</item>
+			</_listInput>
+			<_listOutput>
+				<item>InstanceBuffer</item>
 			</_listOutput>
 		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="InstanceAnimation" _type="InstanceAnimation" _cullMode="None">
@@ -83,7 +122,10 @@
 				<item>HZB</item>
 			</_listInput>
 			<_listOutput>
-				<item>CullResults</item>
+				<item>CullArgs</item>
+				<item>CullVisibleInstances</item>
+				<item>CullLODState</item>
+				<item>OccludedOrders</item>
 			</_listOutput>
 		</RenderGraphPassDesc>
 		<!-- 뷰마다의 클러스터드 라이트 그리드(light_grid.hlsl). 뷰 그래프의 조명 패스(포워드 · 디퍼드 · 투명)가 읽는다. -->
@@ -111,6 +153,7 @@
 			</_listInput>
 			<_listOutput>
 				<item>ProbeIrradiance</item>
+				<item>ProbeHistory</item>
 			</_listOutput>
 		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="CanvasMarker" _type="CanvasMarker" _cullMode="None">

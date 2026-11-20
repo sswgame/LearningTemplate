@@ -82,7 +82,7 @@ namespace sw
         void prepareVolumetricFog( IRHIDevice* pDevice, const RenderView& mainView, const float4& keyLightDirIntensity, const float4& keyLightColorAmbient,
                                    const GPULightBuffer& lightBuffer, uint32 mainLightGridIndex );
         /**
-         * @brief 볼륨 안개 컴퓨트를 @p cmd 에 기록합니다(라이트 그리드 디스패치 뒤). `isFogVolumeActive` 일 때만 돕니다.
+         * @brief 볼륨 안개 컴퓨트를 @p cmd 에 기록합니다(라이트 그리드 디스패치 뒤). `isFogVolumeActive` 일 때만 돕니다. 볼륨 버퍼의 전이는 프레임 그래프가 낸다(`VolumetricFogVolume`).
          * @param placeholderSRV 라이트 버퍼 · 그리드가 없는 프레임에 t0 · t2 에 거는 자리표(DX12 는 빈 디스크립터를 읽으면 폴트)
          */
         void dispatchVolumetricFog( IRHICommandList& cmd, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV ) const;

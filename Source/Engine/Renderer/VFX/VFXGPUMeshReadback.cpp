@@ -82,7 +82,7 @@ namespace sw
             meta._arrBatch[meta._emitterCount] = listInstance[source._instanceSlot]._meshBatchIndex;
             ++meta._emitterCount;
             listBefore.push_back( RHIBufferTransition{ source._argsBuffer, RHIBufferState::CopySource } );
-            listAfter.push_back( RHIBufferTransition{ source._argsBuffer, RHIBufferState::ShaderResource } ); // 메시 인스턴스 쓰기가 끝낸 상태
+            listAfter.push_back( RHIBufferTransition{ source._argsBuffer, RHIBufferState::IndirectArgument } ); // 프레임 그래프 표의 등록 접근(프레임 시작이자 끝 — `VFXGPUSimulation::registerFrameResources`)
         }
         if ( meta._emitterCount == 0 )
             return;

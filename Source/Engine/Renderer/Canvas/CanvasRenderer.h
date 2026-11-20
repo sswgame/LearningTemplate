@@ -88,6 +88,10 @@ namespace sw
                                      GPUMessageChannel& inoutMessages, bool bShowInstanceSlots );
         /** @brief 마지막 `prepareFrame` 에서 주 출력 사각형이 버퍼에서 시작하는 위치입니다(버퍼 맨 앞은 화면 앵커입니다). */
         uint32 getMainQuadBase() const { return _quadBuffer.getMainQuadBase(); }
+        /** @brief 이번 프레임 사각형 버퍼(앵커 · 주 출력 · 대상)입니다. 마커 투영이 쓰는 프레임에 프레임 그래프 표가 등록한다(`CanvasMarkers`). */
+        const RHIStructuredBuffer& getQuadBuffer() const { return _quadBuffer.getSlot(); }
+        /** @brief 이번 프레임 마커 투영 컴퓨트가 돌릴 마커 수입니다(0 이면 돌지 않는다). */
+        uint32 getMarkerCount() const { return _markers.getMarkerCount(); }
         /** @brief 마지막 `prepareFrame` 에서 개발 겹치기 사각형이 버퍼에서 시작하는 위치입니다. */
         uint32 getDevOverlayQuadBase() const { return _quadBuffer.getDevOverlayQuadBase(); }
         /** @brief 마지막 `prepareFrame` 에서 대상 @p targetIndex 의 사각형이 버퍼에서 시작하는 위치입니다. */

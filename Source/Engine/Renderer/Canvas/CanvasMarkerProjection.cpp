@@ -112,13 +112,11 @@ namespace sw
         }
         using Internal = CanvasMarkerProjectionInternal;
         SW_PROFILE_SCOPE( "RT.Canvas.MarkerProject" );
-        // 앵커 원소는 사각형 버퍼의 맨 앞이다. 컴퓨트가 쓰고 나면 캔버스 그리기가 읽기로 본다(프로브 갱신과 같은 상태 전환).
-        cmd.transitionBuffer( quads._buffer, RHIBufferState::UnorderedAccess );
+        // 앵커 원소는 사각형 버퍼의 맨 앞이다. 쓰기 앞 UAV · 캔버스 그리기 앞 셰이더 읽기 · 인스턴스 버퍼 읽기는 프레임 그래프가 낸다
+        // (`CanvasMarkers` · `InstanceBuffer` — `FrameGraphExecutor::beginFrame` 이 등록한다. 인스턴스 버퍼는 쓰는 패스가 없는 프레임에 셰이더 읽기로 쉰다).
         cmd.setComputePipelineState( pso );
         // g_MarkerRows(t0) / g_MarkerInstances(t1) / g_MarkerQuadsRW(u0). canvas_marker.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeShaderResource( _markerRowBuffer._srv, 0 );
-        if ( _bMarkerReadsInstances )
-            cmd.transitionBuffer( instanceBuffer, RHIBufferState::ShaderResource );
         cmd.bindComputeShaderResource( _bMarkerReadsInstances ? instanceSRV : placeholderSRV, 1 );
         cmd.bindComputeUAV( quads._uav, 0 );
         // 루트 상수 하나(canvas_marker.hlsl g_MarkerDebugMode) — 1 이면 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 쓴다(보기 모드 MarkerSlots).
@@ -126,7 +124,6 @@ namespace sw
         cmd.setComputeRootConstants( 0, 1, &debugMode );
         inoutMessages.bindCompute( cmd ); // canvas_marker.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
         cmd.dispatchThreads( _markerCount, 1, 1, Internal::kMarkerThreadGroupSize, 1, 1 );
-        cmd.transitionBuffer( quads._buffer, RHIBufferState::ShaderResource );
     }
 
     void CanvasMarkerProjection::release( IRHIDevice* pDevice )
