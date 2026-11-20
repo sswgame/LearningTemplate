@@ -6,6 +6,8 @@
 // EXPECT-ASSET-FIELD: _annotated - path
 // EXPECT-ASSET-FIELD: single FixtureAsset ref
 // EXPECT-ASSET-FIELD: annotated - path
+// EXPECT-ASSET-FIELD: _notAPath - text
+// EXPECT-ASSET-FIELD: notAPath - text
 // EXPECT-NOT-GEN: AssetRef<FixtureAsset>"
 #pragma once
 #include "Core/Container/string.h"

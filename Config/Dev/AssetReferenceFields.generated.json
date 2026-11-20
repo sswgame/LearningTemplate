@@ -769,17 +769,22 @@
         "_defaultMap",
         "_editorInputMap",
         "_inputReplayFile",
+        "_mesh",
         "_spriteAtlas",
         "_uiPreviewDocument",
         "_warpMap",
         "defaultMap",
         "editorInputMap",
         "inputReplayFile",
+        "mesh",
         "spriteAtlas",
         "uiPreviewDocument",
         "warpMap"
       ],
-      "listAssetRefField": [],
+      "listAssetRefField": [
+        "_mesh",
+        "mesh"
+      ],
       "listPathTextField": [
         "_defaultMap",
         "_editorInputMap",

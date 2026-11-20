@@ -15,8 +15,10 @@
 #include "Core/Name/TagID.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -158,8 +160,9 @@ namespace sw
 
         PROPERTY( Required )
         string _tag{};
+        /** @brief 표현 프리팹입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`, 같은 이름의 다른 칸과 저장 꼴이 같다). */
         PROPERTY()
-        hashed_string _prefab{};
+        AssetRef<PrefabAsset> _prefab{};
         PROPERTY()
         hashed_string _sound{};
         PROPERTY( Units = m )

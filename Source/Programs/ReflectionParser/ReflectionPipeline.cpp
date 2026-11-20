@@ -32,6 +32,17 @@ namespace sw
              * @brief 칸 이름 @p name 의 XML 속성 이름입니다 — `XMLFields::getAttributeName` 과 같은 규칙이다(직접 적은 이름은 그대로, `_` 를 떼고, 불리언 `_bX` 는 `x`).
              * @details 파서는 엔진을 링크하지 않아 같은 규칙을 여기 둔다. 규칙을 바꾸면 둘을 함께 고친다(칸이 두 이름으로 생성 목록에 드는지 파서 픽스처 `Test/ReflectionParser/Fixtures/AssetRefParams.h` 가 본다).
              */
+            /**
+             * @brief 경로 칸이 아닌 글 칸(`string` · `hashed_string`, 그 한 겹 시퀀스)이면 true 입니다 — 생성 목록에 `text` 줄로 낸다.
+             * @details 글 칸만 경로를 담을 수 있다. GUID 이전 도구가 같은 이름의 참조 칸과 겹치는지 이 줄로 본다(파서 픽스처 `Test/ReflectionParser/Fixtures/AssetRefParams.h`).
+             */
+            static bool isTextFieldType( const ParsedPropertyInfo& prop )
+            {
+                const auto isText = []( const string& typeName )
+                { return typeName == "string" || typeName == "hashed_string"; };
+                return isText( prop._typeName ) || isText( prop._elementTypeName );
+            }
+
             static string makeXMLAttributeName( const string& name )
             {
                 if ( name.empty() || name.front() != '_' )
@@ -590,11 +601,13 @@ namespace sw
             for ( const ParsedPropertyInfo& prop : parsed._listType[typeIndex]._listProperty )
             {
                 const bool bPathField = prop._bAssetPath == SW_TRUE || prop._typeName == "DataPath" || prop._elementTypeName == "DataPath";
-                if ( bPathField == false )
+                // 경로 칸이 아닌 글 칸도 이름을 낸다 — 같은 이름이 다른 주인에서 참조 칸이면 GUID 이전 도구가 이름만으로 칸을 가르지 못한다(그 충돌을 도구가 잡는다).
+                const bool bTextField = bPathField == false && ReflectionPipelineInternal::isTextFieldType( prop );
+                if ( bPathField == false && bTextField == false )
                     continue;
                 const string target = prop._assetType.empty() ? string( "-" ) : prop._assetType;
-                // 저장 꼴 — `AssetRef<T>` 는 GUID 참조로 쓴다(`AssetRefBase`), 나머지 경로 칸은 경로 글이다.
-                const utf8* const                        pKind = prop._typeName == "AssetRef" || prop._elementTypeName == "AssetRef" ? "ref" : "path";
+                // 저장 꼴 — `AssetRef<T>` 는 GUID 참조로 쓴다(`AssetRefBase`), 나머지 경로 칸은 경로 글, 경로가 아닌 글 칸은 `text` 다.
+                const utf8* const                        pKind = bTextField ? "text" : ( prop._typeName == "AssetRef" || prop._elementTypeName == "AssetRef" ? "ref" : "path" );
                 StringBuilder<constant::buffer::kMax256> textBuilder3;
                 textBuilder3.appendFormat( "%#\t%#\t%#", prop._name, target, pKind );
                 stamp._listAssetField.push_back( string( textBuilder3.view() ) );

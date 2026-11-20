@@ -65,7 +65,7 @@ namespace sw
                 if ( findTarget( context, pTarget, pManager ) == false )
                     return ActionResult::Failed;
                 // 바꿀 것이 서지 못하면 원래 것을 지우지 않는다(물체가 조용히 사라지지 않게).
-                if ( spawnAt( *pManager, params._prefab, findPosition( *pTarget ) ) == nullptr )
+                if ( spawnAt( *pManager, params._prefab.path(), findPosition( *pTarget ) ) == nullptr )
                     return ActionResult::Failed;
                 pManager->destroyGameObject( pTarget );
                 return ActionResult::Succeeded;
@@ -77,7 +77,7 @@ namespace sw
                 GameObjectManager* pManager = nullptr;
                 if ( findTarget( context, pTarget, pManager ) == false )
                     return ActionResult::Failed;
-                return spawnAt( *pManager, params._prefab, findPosition( *pTarget ) ) != nullptr ? ActionResult::Succeeded : ActionResult::Failed;
+                return spawnAt( *pManager, params._prefab.path(), findPosition( *pTarget ) ) != nullptr ? ActionResult::Succeeded : ActionResult::Failed;
             }
 
             static ActionResult runTeleport( ActionContext& context, const ObjectTeleportParams& params )

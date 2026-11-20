@@ -5,6 +5,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Animation/Component/MotionWarpingComponent.h"
+#include "Engine/Animation/Notify/AnimationNotifyAssetParams.h"
 #include "Engine/Animation/Notify/AnimationNotifyComponent.h"
 #include "Engine/Animation/Notify/AnimationNotifyTable.h"
 #include "Engine/Asset/AssetManager.h"
@@ -89,10 +90,11 @@ namespace sw
                     static const hashed_string s_socket( "socket" );
                     static const hashed_string s_offset( "offset" );
                     static const hashed_string s_attach( "attach" );
-                    // 프리팹 칸은 참조 글이다(GUID 참조 · 옮기는 동안의 경로 글) — 타입 있는 참조의 읽기로 경로를 푼다(틀린 글 · 지운 에셋은 그 읽기가 오류를 남기고 비운다).
-                    AssetRef<PrefabAsset> prefab;
-                    (void)prefab.assign( context._entry.getTextParam( s_prefab ) );
-                    float4x4 world;
+                    // 프리팹 인자는 참조 글이다(GUID 참조 · 옮기는 동안의 경로 글) — 선언 구조체의 칸으로 받아 경로를 푼다(틀린 글 · 지운 에셋은 그 읽기가 오류를 남기고 비운다).
+                    AnimationNotifySpawnPrefabParams params;
+                    (void)params._prefab.assign( context._entry.getTextParam( s_prefab ) );
+                    const AssetRef<PrefabAsset>& prefab = params._prefab;
+                    float4x4                     world;
                     (void)context._component.findSocketWorldTransform( context._entry.getNameParam( s_socket ), world ); // 없으면 오브젝트 루트 변환이 담긴다(선언 설명)
                     const float3       offset   = context._entry.getVectorParam( s_offset );
                     const float3       position = float3::transform( offset, world );
