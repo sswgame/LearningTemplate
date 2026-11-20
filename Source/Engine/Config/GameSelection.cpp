@@ -24,6 +24,8 @@ namespace sw
              *          테스트도 범위 없이 묻는다(고르기 전이면 기본 게임) — 그래서 범위에 맡기지 않고 이 변수 하나가 소유한다. 지연 생성하는 접근자를 두지 않는다.
              */
             static inline utf8 s_arrName[GameSelection::kNameCapacity]{};
+            /** @brief 개발 실행 인자로 고른 Experience 이름 — 게임 이름과 같은 까닭으로 고정 배열 하나가 소유한다(기동 스레드에서 한 번 적고, 게임 인스턴스가 읽는다). */
+            static inline utf8 s_arrLaunchExperience[GameSelection::kNameCapacity]{};
         };
     } // namespace
 
@@ -41,6 +43,8 @@ namespace sw
 
     bool GameSelection::select( const CommandLineManager& commandLine )
     {
+        if ( selectLaunchExperience( commandLine ) == false )
+            return false;
         // 정적 구성(배포 · 웹 · Android 개발)은 베이크한 게임 하나이고 `-game=` 을 보지 않는다(모듈은 정적 링크).
         if constexpr ( build::kStaticModules )
         {
@@ -83,6 +87,31 @@ namespace sw
         storeName( name );
         SW_LOG_INFO_ID( "GameSelection.GameBuildActiveGame", "Game %# (build active game %#)", name.c_str(), activeGame.c_str() );
         return true;
+    }
+
+    bool GameSelection::selectLaunchExperience( const CommandLineManager& commandLine )
+    {
+#if defined( SW_SHIPPING )
+        (void)commandLine; // 배포는 맵의 기본 Experience 로만 들어간다 — 개발 인자를 보지 않는다
+        return true;
+#else
+        string name;
+        if ( commandLine.getArgument( CommandLineArgument::EXPERIENCE, name ) == false || name.empty() )
+            return true;
+        if ( name.size() >= kNameCapacity )
+        {
+            SW_LOG_ERROR_ID( "GameSelection.ExperienceNameTooLong", "Experience name '%#' is too long", name.c_str() );
+            return false;
+        }
+        StringUtil::strncpy( GameSelectionInternal::s_arrLaunchExperience, name.c_str(), kNameCapacity );
+        SW_LOG_INFO_ID( "GameSelection.LaunchExperience", "Launch experience %#", name.c_str() );
+        return true;
+#endif
+    }
+
+    string GameSelection::getLaunchExperience()
+    {
+        return string{ GameSelectionInternal::s_arrLaunchExperience };
     }
 
     void GameSelection::storeName( string_view name )

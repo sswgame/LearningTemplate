@@ -28,6 +28,11 @@ namespace sw
         static string getConfigPath();
         /** @brief 고른 게임의 전용 서버 운영 설정 경로(`Config/Server/<이름>.json`)입니다. 파일이 없을 수 있다(서버가 없는 게임). */
         static string getServerConfigPath();
+        /**
+         * @brief 개발 실행 인자 `-experience=<이름>` 으로 고른 Experience 입니다(게임 인스턴스가 첫 씬 대신 그 Experience 로 들어간다). 주지 않았거나 배포 구성이면 빈 문자열입니다.
+         * @details 명령줄은 호스트 전용(`CommandLineManager`)이라 게임은 이 값으로 받는다 — 게임 이름과 함께 "이 프로세스가 무엇을 돌리는가" 의 한 칸이다.
+         */
+        static string getLaunchExperience();
 
         /** @brief 게임 이름의 최대 길이(끝 0 포함)입니다. */
         static constexpr uint32 kNameCapacity = 64;
@@ -37,5 +42,7 @@ namespace sw
         static string readDefaultName();
         /** @brief 고른 이름을 적어 둡니다(`select` 가 기동 스레드에서 한 번). */
         static void storeName( string_view name );
+        /** @brief `-experience=` 를 읽어 적어 둡니다(`select` 앞머리). 이름이 너무 길면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool selectLaunchExperience( const CommandLineManager& commandLine );
     };
 } // namespace sw
