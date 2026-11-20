@@ -76,6 +76,17 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct ShaderBinaryNameCollision
+     * @brief 같은 바이너리 이름에 정본 define 이 다른 두 쿠킹 요청입니다(`ShaderCooker::findBinaryNameCollisions`). 쿠킹은 이것이 하나라도 있으면 실패로 센다.
+     */
+    struct ShaderBinaryNameCollision
+    {
+        size_t _firstIndex{ 0 };  ///< 그 이름을 먼저 받은 요청(목록 안 위치)
+        size_t _secondIndex{ 0 }; ///< 같은 이름에 다른 define 으로 온 요청 — 쿠킹하지 않는다
+        string _fileName;         ///< 겹친 바이너리 이름(확장자 없음)
+    };
+
+    /**
      * @struct ShaderCooker
      * @brief HLSL 소스를 타깃 백엔드(DXIL, SPIR-V, DXBC) 바이너리로 미리 컴파일(쿠킹)하고 산출물 이름을 짓는 엔진 유틸리티입니다.
      */
@@ -127,6 +138,14 @@ namespace sw
          *          같은 조합이 차례만 달라 헛 미스가 나고 DDC 에 두 벌이 쌓인다. 언리얼도 셰이더 컴파일 환경의 정의를 정렬해 DDC 키를 만든다.
          */
         [[nodiscard]] static vector<string> makeCanonicalDefines( const vector<ShaderMacroDefine>& listDefine );
+        /** @brief 글 목록 판 정본입니다(쿠킹 요청의 `_listPermutation` — `FOO` 는 `FOO=1`, 빈 줄은 뺀다, 정렬). 문자열 판 `computePermutationHash` 가 이것을 해시한다. */
+        [[nodiscard]] static vector<string> makeCanonicalDefines( const vector<string>& listPermutation );
+
+        /**
+         * @brief 같은 바이너리 이름(경로 · 스테이지 · 진입점 · 퍼뮤테이션 해시 16 자리)에 정본 define 이 다른 요청 짝을 찾습니다. 같은 define 의 중복 요청은 짝이 아니다.
+         * @details 검사는 쿠킹 드라이버 한 곳에서만 한다 — 팩은 실행 중 바뀌지 않아 로드 때 대조는 두지 않는다(로드마다 비용).
+         */
+        [[nodiscard]] static vector<ShaderBinaryNameCollision> findBinaryNameCollisions( const vector<ShaderCookRequest>& listRequest );
 
         /** @brief 셰이더 파일 이름, 스테이지, 진입점, 퍼뮤테이션 해시를 조합한 표준 바이너리 파일 이름을 만듭니다. */
         static string computeBinaryFileName( string_view stemLower, ShaderStage stage,
