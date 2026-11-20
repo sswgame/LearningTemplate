@@ -88,15 +88,27 @@ namespace sw
         MaterialGraphNodeKind( const MaterialGraphNodeKind& )            = delete;
         MaterialGraphNodeKind& operator=( const MaterialGraphNodeKind& ) = delete;
 
-        [[nodiscard]] const utf8*                     getName() const { return _pName; }
-        [[nodiscard]] const utf8*                     getCategory() const { return _pCategory; }
-        [[nodiscard]] MaterialGraphNodeRole           getRole() const { return _role; }
-        [[nodiscard]] uint32                          getInputCount() const { return _inputCount; }
-        [[nodiscard]] uint32                          getOutputCount() const { return _outputCount; }
-        [[nodiscard]] uint32                          getSettingCount() const { return _settingCount; }
-        [[nodiscard]] const MaterialGraphPinDecl&     getInput( uint32 index ) const { return _arrInput[index]; }
-        [[nodiscard]] const MaterialGraphOutputDecl&  getOutput( uint32 index ) const { return _arrOutput[index]; }
-        [[nodiscard]] const MaterialGraphSettingDecl& getSetting( uint32 index ) const { return _arrSetting[index]; }
+        [[nodiscard]] const utf8*                 getName() const { return _pName; }
+        [[nodiscard]] const utf8*                 getCategory() const { return _pCategory; }
+        [[nodiscard]] MaterialGraphNodeRole       getRole() const { return _role; }
+        [[nodiscard]] uint32                      getInputCount() const { return _inputCount; }
+        [[nodiscard]] uint32                      getOutputCount() const { return _outputCount; }
+        [[nodiscard]] uint32                      getSettingCount() const { return _settingCount; }
+        [[nodiscard]] const MaterialGraphPinDecl& getInput( uint32 index ) const
+        {
+            SW_CHECK_INDEX( index, _inputCount );
+            return _arrInput[index];
+        }
+        [[nodiscard]] const MaterialGraphOutputDecl& getOutput( uint32 index ) const
+        {
+            SW_CHECK_INDEX( index, _outputCount );
+            return _arrOutput[index];
+        }
+        [[nodiscard]] const MaterialGraphSettingDecl& getSetting( uint32 index ) const
+        {
+            SW_CHECK_INDEX( index, _settingCount );
+            return _arrSetting[index];
+        }
         /** @brief 머티리얼 칸의 HLSL 형식입니다. 파라미터 노드가 아니면 빈 글입니다. */
         [[nodiscard]] string_view getParameterHLSLType() const { return _parameterHLSLType; }
         /** @brief 머티리얼 칸의 프로퍼티 형식(`MaterialPacking::stringToType` 의 이름)입니다. */

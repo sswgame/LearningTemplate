@@ -7,6 +7,7 @@
  *          WebGPU 도 칸마다 되읽기 버퍼 하나(풀이 → 복사 → 매핑을 그 프레임 완료에 넣는다)라 같은 표를 쓴다.
  */
 #pragma once
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/GPUTimestampSlotMask.h"
@@ -51,17 +52,23 @@ namespace sw
         /** @brief 이번 프레임의 마스크를 칸 @p ringSlot 에 굳히고 돌려줍니다(제출 직전 — 기록이 모두 끝났다). */
         GPUTimestampSlotMask closeFrame( uint32 ringSlot )
         {
+            SW_CHECK_INDEX( ringSlot, kSlotCount );
             const GPUTimestampSlotMask mask = _currentMask.load();
             _arrSlotMask[ringSlot]          = mask;
             return mask;
         }
 
         /** @brief 칸 @p ringSlot 에 굳힌 마스크입니다(그 칸의 앞 프레임이 적은 슬롯). */
-        const GPUTimestampSlotMask& getSlotMask( uint32 ringSlot ) const { return _arrSlotMask[ringSlot]; }
+        const GPUTimestampSlotMask& getSlotMask( uint32 ringSlot ) const
+        {
+            SW_CHECK_INDEX( ringSlot, kSlotCount );
+            return _arrSlotMask[ringSlot];
+        }
 
         /** @brief 칸 @p ringSlot 을 다시 씁니다 — 지난 결과를 읽은 뒤 그 칸 마스크와 이번 프레임 마스크를 비운다. */
         void beginFrame( uint32 ringSlot )
         {
+            SW_CHECK_INDEX( ringSlot, kSlotCount );
             _arrSlotMask[ringSlot] = GPUTimestampSlotMask{};
             _currentMask.clear();
         }

@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -28,7 +29,11 @@ namespace sw
         /** @brief 블록이 비어 있는지입니다. */
         bool isEmpty() const { return _pData == nullptr; }
         /** @brief 채널 하나의 샘플(프레임 순서)입니다. */
-        float32* getChannel( uint32 channelIndex ) const { return _pData + static_cast<size_t>( channelIndex ) * audio::kBlockFrameCount; }
+        float32* getChannel( uint32 channelIndex ) const
+        {
+            SW_CHECK_INDEX( channelIndex, _channelCount );
+            return _pData + static_cast<size_t>( channelIndex ) * audio::kBlockFrameCount;
+        }
     };
 } // namespace sw
 
@@ -61,6 +66,7 @@ namespace sw
         /** @brief 앞 @p frameCount 프레임을 가리키는 값을 만듭니다. */
         AudioBlockView makeView( uint32 frameCount )
         {
+            SW_CHECK_INDEX_OR_END( frameCount, audio::kBlockFrameCount ); // 채널 하나의 칸 수를 넘으면 다음 채널을 덮는다
             AudioBlockView view;
             view._pData        = _listSample.data();
             view._channelCount = _channelCount;

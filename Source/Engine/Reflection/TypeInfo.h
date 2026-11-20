@@ -67,9 +67,13 @@ namespace sw
 
         size_t              size() const noexcept { return _count; }
         bool                empty() const noexcept { return _count == 0; }
-        const PropertyInfo& operator[]( size_t index ) const noexcept { return _ppItems != nullptr ? *_ppItems[index] : _pValues[index]; }
-        Iterator            begin() const noexcept { return _ppItems != nullptr ? Iterator{ nullptr, _ppItems } : Iterator{ _pValues, nullptr }; }
-        Iterator            end() const noexcept { return _ppItems != nullptr ? Iterator{ nullptr, _ppItems + _count } : Iterator{ _pValues + _count, nullptr }; }
+        const PropertyInfo& operator[]( size_t index ) const noexcept
+        {
+            SW_CHECK_INDEX( index, _count );
+            return _ppItems != nullptr ? *_ppItems[index] : _pValues[index];
+        }
+        Iterator begin() const noexcept { return _ppItems != nullptr ? Iterator{ nullptr, _ppItems } : Iterator{ _pValues, nullptr }; }
+        Iterator end() const noexcept { return _ppItems != nullptr ? Iterator{ nullptr, _ppItems + _count } : Iterator{ _pValues + _count, nullptr }; }
 
     private:
         const PropertyInfo*        _pValues;
@@ -93,9 +97,13 @@ namespace sw
         uint8           _bLoop{ SW_FALSE };   ///< 고리를 만나 끝났다
         uint8           _bCapped{ SW_FALSE }; ///< 깊이 상한에서 끝났다
 
-        uint32                 size() const { return _count; }
-        bool                   isLoop() const { return _bLoop != SW_FALSE; }
-        const TypeInfo*        operator[]( uint32 index ) const { return _arrType[index]; }
+        uint32          size() const { return _count; }
+        bool            isLoop() const { return _bLoop != SW_FALSE; }
+        const TypeInfo* operator[]( uint32 index ) const
+        {
+            SW_CHECK_INDEX( index, _count );
+            return _arrType[index];
+        }
         const TypeInfo* const* begin() const { return _arrType; }
         const TypeInfo* const* end() const { return _arrType + _count; }
     };

@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/Serialization/ByteStream.h"
+#include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;
@@ -222,4 +223,30 @@ SW_TEST_CASE( ByteStreamTest, VarIntsStringsPodsRoundTripAndTruncationFails )
     sw::ByteReader shortReader{ truncated.data(), truncated.size() };
     SW_EXPECT_FALSE( shortReader.readString( text ) );
     SW_EXPECT_TRUE( shortReader.hasOverflowed() );
+}
+
+/**
+ * @brief [ByteStreamTest] 이미 쓴 길이를 넘는 `writePodAt` 은 범위 검사가 알리고(개발 구성) 아무것도 쓰지 않는다 — 경계 안 덮어쓰기는 잡히지 않는다(음성 대조)
+ */
+SW_TEST_CASE( ByteStreamTest, WritePodAtPastTheEndIsCheckedAndIgnored )
+{
+    vector<uint8> bytes;
+    ByteWriter    writer{ bytes };
+    writer.writeUint32( 0 );
+    writer.writeUint32( 0 );
+    {
+        const test::ScopedAssertCapture assertCapture;
+        writer.writePodAt( 4, uint32{ 0x11223344u } );
+        SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
+    }
+    {
+        const test::ScopedAssertCapture assertCapture;
+        writer.writePodAt( 6, uint32{ 0xFFFFFFFFu } ); // 끝을 2 바이트 넘는다
+        writer.writePodAt( 9, uint8{ 0xFF } );         // 시작부터 끝 밖
+        if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 2u, assertCapture.getCount() );
+    }
+    SW_REQUIRE_EQUAL( size_t( 8 ), bytes.size() );
+    SW_EXPECT_EQUAL( uint8{ 0x44 }, bytes[4] );
+    SW_EXPECT_EQUAL( uint8{ 0x11 }, bytes[7] );
 }

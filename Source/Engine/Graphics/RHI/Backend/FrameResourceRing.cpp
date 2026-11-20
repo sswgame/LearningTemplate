@@ -31,6 +31,7 @@ namespace sw
 
     uint64 FrameResourceRing::getFenceValue( uint32 index ) const
     {
+        SW_CHECK_INDEX( index, constant::render::kMaxFrameCountInFlight ); // 링 칸 번호는 내부 값이다 — 개발 구성에서 알리고 배포는 아래 가드
         if ( index >= constant::render::kMaxFrameCountInFlight )
             return 0;
         return _arrFenceValue[index];
@@ -38,6 +39,7 @@ namespace sw
 
     void FrameResourceRing::setFenceValue( uint32 index, uint64 fenceValue )
     {
+        SW_CHECK_INDEX( index, constant::render::kMaxFrameCountInFlight );
         if ( index >= constant::render::kMaxFrameCountInFlight )
             return;
         _arrFenceValue[index] = fenceValue;

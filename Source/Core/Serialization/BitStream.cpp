@@ -79,7 +79,7 @@ namespace sw
     void BitWriter::writeBits( uint32 value, int32 bitCount )
     {
         const bool bValidBitCount = 0 <= bitCount && bitCount <= BitMath::kMaxBitsPerCall;
-        SW_ASSERT( bValidBitCount );
+        SW_CHECK_INDEX_OR_END( bitCount, BitMath::kMaxBitsPerCall );
         if ( bValidBitCount == false )
         {
             _bFailed = SW_TRUE;
@@ -222,7 +222,7 @@ namespace sw
     uint32 BitReader::readBits( int32 bitCount )
     {
         const bool bValidBitCount = 0 <= bitCount && bitCount <= BitMath::kMaxBitsPerCall;
-        SW_ASSERT( bValidBitCount );
+        SW_CHECK_INDEX_OR_END( bitCount, BitMath::kMaxBitsPerCall );
         if ( bValidBitCount == false )
         {
             _bOverflow = SW_TRUE; // 쓰는 쪽과 다른 비트 수를 읽으면 그 뒤가 모두 어긋난다 — 깨진 읽기로 멈춘다
