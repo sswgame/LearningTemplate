@@ -73,6 +73,18 @@ namespace sw
         MaterialPermutation::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY_" ) + StringUtil::toUpper( getEnumName( quality ) ) );
     }
 
+    void MaterialPermutation::appendSurfaceModelDefines( MaterialSurfaceModel model, vector<string>& outListDefine )
+    {
+        MaterialPermutation::appendUniqueDefine( outListDefine, string( "MATERIAL_SURFACE_MODEL_" ) + StringUtil::toUpper( getEnumName( model ) ) );
+        if ( isForwardOnlySurfaceModel( model ) )
+            MaterialPermutation::appendUniqueDefine( outListDefine, kMaterialForwardOnlyDefine );
+    }
+
+    bool MaterialPermutation::isForwardOnlySurfaceModel( MaterialSurfaceModel model )
+    {
+        return model == MaterialSurfaceModel::Toon || model == MaterialSurfaceModel::Hair || model == MaterialSurfaceModel::CustomLit;
+    }
+
     uint64 MaterialPermutation::hashDefines( const vector<string>& listDefine )
     {
         uint64 hash = HashUtil::kFNVOffset64;

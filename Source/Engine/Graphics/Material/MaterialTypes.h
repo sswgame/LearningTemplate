@@ -27,6 +27,31 @@ namespace sw
         Blend,  ///< 반투명 배치 목록. 반투명 패스의 블렌드를 쓰고, 머티리얼이 프리셋으로 덮을 수 있다
     };
 
+    /**
+     * @brief 머티리얼의 표면 모델입니다 — 표면 값(알베도 · 노멀 · 거칠기 · 금속도 · 발광)을 빛과 어떻게 합치는지, 그래서 어느 패스가 그 값을 담을 수 있는지를 정한다.
+     * @details 언리얼 Material Shading Model · 유니티 셰이더 그래프 Material(Lit · Unlit) · Godot `render_mode unshaded` 자리다. `.material` 의 필수 칸 `surfaceModel` 이고
+     *          (`_base` 로 물려받는다), 셰이더 define `MATERIAL_SURFACE_MODEL_<이름>` 을 낸다(`MaterialPermutation::appendSurfaceModelDefines`). 셰이더 뼈대
+     *          (material_shader.hlsli)가 그 define 과 셰이더가 고른 조명 훅이 맞는지 보고 어긋나면 쿠킹이 멈춘다 — 데이터와 셰이더가 다른 모델을 말할 수 없다.
+     *          G버퍼에 칸이 없는 모델(`Toon` · `Hair` · `CustomLit`)은 `MATERIAL_FORWARD_ONLY` 를 모델이 낸다 — `.material` 에 그 define 을 적으면 읽기 오류다.
+     */
+    ENUM()
+    enum class MaterialSurfaceModel : uint8
+    {
+        Lit,       ///< 기본 PBR(`SW_MATERIAL_DEFAULT_LIGHTING`), 또는 G버퍼 셰이딩 모델 번호를 스스로 고르는 겹 셰이딩(`SW_MATERIAL_CUSTOM_LIGHTING` + `SW_MATERIAL_CUSTOM_SHADING`)
+        Unlit,     ///< 표면 색 그대로(`SW_MATERIAL_UNLIT`) — G버퍼에는 Unlit 번호로 간다
+        Emissive,  ///< 기본 PBR + 자체 발광 훅(`SW_MATERIAL_EMISSIVE`) — G버퍼 발광 칸으로 디퍼드에서도 그린다
+        Toon,      ///< 셀 셰이딩(toon.hlsl — 계단 · 그림자색 · 림 · 맷캡). 포워드 전용
+        Hair,      ///< 머리카락 Marschner(hair.hlsl · 그래프 셰이딩 모델 Hair). 포워드 전용
+        CustomLit, ///< 셰이더가 정한 그 밖의 조명 식(물 · 2D 빛). 포워드 전용
+    };
+
+    /**
+     * @brief G버퍼로 나타낼 수 없는 셰이딩의 머티리얼 define 입니다. G버퍼 패스가 그 배치를 빼고 `ForwardOnlyOpaque` 패스가 포워드로 그립니다.
+     * @details 포워드 전용 표면 모델(`MaterialSurfaceModel` — 툰 · 머리카락 · 자체 조명)은 모델이 이 define 을 낸다. G버퍼에 담길 수 있는 모델이어도 칸이 모자라는
+     *          갈래(겹친 엽 — appearance_lit.hlsl)는 `.material` 의 `_alwaysDefines` 에 직접 적는다. 유니티 URP 디퍼드의 `UniversalForwardOnly` 와 같다.
+     */
+    inline constexpr const utf8* kMaterialForwardOnlyDefine = "MATERIAL_FORWARD_ONLY";
+
     /** @brief `alphaMode="Mask"` 머티리얼의 define 입니다. 깊이 패스(그림자, 깊이 프리패스)도 머티리얼 셰이더로 그려 같은 형태로 오립니다(`RenderPassKindInfo::usesMaterialShaderForDepth`). 머티리얼 XML 에 직접 적지 않습니다(읽기 오류). */
     inline constexpr const utf8* kMaterialAlphaCutoffDefine = "MATERIAL_ALPHA_CUTOFF";
     /// @brief 머티리얼 변형의 텍스처 칸 수 define 의 이름입니다(`MATERIAL_TEXTURE_COUNT=N`, `Material::getTextureSlotCount`). 웹 에뮬 셰이더가 이 칸만 선언한다.
@@ -202,13 +227,14 @@ namespace sw
         /** @brief .material 리소스에서 채웁니다(팩별 C++ 기본값 없음). */
         string                   _name;
         string                   _shaderPath;
-        MaterialAlphaMode        _alphaMode{ MaterialAlphaMode::Opaque }; ///< 어느 배치 목록으로 가고 알파를 어떻게 쓰는지입니다
-        float32                  _alphaCutoff{ 0.5f };                    ///< `Mask` 의 문턱값입니다. 셰이더의 `_alphaCutoff` 프로퍼티로 간다
-        int32                    _renderQueue{ 0 };                       ///< 그리기 순서입니다. 작은 것부터 그립니다(유니티 renderQueue · 언리얼 Translucency Sort Priority 자리). 0 이 기본입니다
-        uint8                    _bTwoSidedLighting{ SW_FALSE };          ///< 뒷면에서 노멀을 뒤집습니다(`MATERIAL_TWO_SIDED`). `cullMode="None"` 과 함께 적습니다
-        string                   _blendPreset;                            ///< 블렌드 프리셋 이름입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
-        vector<BlendTargetState> _listBlendTarget;                        ///< 렌더 타깃마다의 블렌드입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
-        RenderStateOverride      _renderStateOverride;                    ///< 패스의 렌더 상태 위에 덮는 칸입니다(표: `docs/agents/RenderPipelineXml.md`)
+        MaterialAlphaMode        _alphaMode{ MaterialAlphaMode::Opaque };    ///< 어느 배치 목록으로 가고 알파를 어떻게 쓰는지입니다
+        MaterialSurfaceModel     _surfaceModel{ MaterialSurfaceModel::Lit }; ///< 표면 값을 빛과 합치는 법입니다. `.material` 에서는 필수 칸이다(초기값은 코드로 만든 머티리얼의 형식일 뿐)
+        float32                  _alphaCutoff{ 0.5f };                       ///< `Mask` 의 문턱값입니다. 셰이더의 `_alphaCutoff` 프로퍼티로 간다
+        int32                    _renderQueue{ 0 };                          ///< 그리기 순서입니다. 작은 것부터 그립니다(유니티 renderQueue · 언리얼 Translucency Sort Priority 자리). 0 이 기본입니다
+        uint8                    _bTwoSidedLighting{ SW_FALSE };             ///< 뒷면에서 노멀을 뒤집습니다(`MATERIAL_TWO_SIDED`). `cullMode="None"` 과 함께 적습니다
+        string                   _blendPreset;                               ///< 블렌드 프리셋 이름입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
+        vector<BlendTargetState> _listBlendTarget;                           ///< 렌더 타깃마다의 블렌드입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
+        RenderStateOverride      _renderStateOverride;                       ///< 패스의 렌더 상태 위에 덮는 칸입니다(표: `docs/agents/RenderPipelineXml.md`)
         vector<MaterialProperty> _listProperty;
         MaterialPermutationDef   _permutations;
         /** @brief 부모 머티리얼(`.material` 루트의 `_base`)입니다. 비어 있지 않으면 위 칸은 부모를 펼친 값이고, 저장은 부모와 다른 칸만 적는다(`MaterialXML::makeParentDelta`). */

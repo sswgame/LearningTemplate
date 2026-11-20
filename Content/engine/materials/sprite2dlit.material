@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="39c05fe22138bb5dc3f0ba06404fe9e4"?>
-<MaterialDef formatVersion="0" name="Sprite2DLit" shaderPath="engine/shaders/sprite_2d_lit.hlsl" alphaMode="Blend">
+<MaterialDef formatVersion="0" name="Sprite2DLit" shaderPath="engine/shaders/sprite_2d_lit.hlsl" surfaceModel="CustomLit" alphaMode="Blend">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1.0 1.0 1.0 1.0" displayName="Tint Color" group="Sprite"/>
 		<item name="_uvRect" type="Vector4" defaultValue="0.0 0.0 1.0 1.0" displayName="UV Rect" group="Sprite"/>

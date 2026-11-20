@@ -83,7 +83,7 @@ namespace
 
         static string makeMaterial( const utf8* pName, const string& inner )
         {
-            return string( R"(<MaterialDef formatVersion="0" name=")" ) + pName + R"(" shaderPath="engine/shaders/forward_lit.hlsl" alphaMode="Opaque">)" + inner + "</MaterialDef>";
+            return string( R"(<MaterialDef formatVersion="0" name=")" ) + pName + R"(" shaderPath="engine/shaders/forward_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">)" + inner + "</MaterialDef>";
         }
 
         static string makeScene( const utf8* pName, const string& inner )

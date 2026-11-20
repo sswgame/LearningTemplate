@@ -971,6 +971,7 @@ namespace sw
             MaterialPermutation::appendUniqueDefine( outListDefine, defineStr );
         }
 
+        MaterialPermutation::appendSurfaceModelDefines( _desc._surfaceModel, outListDefine );
         MaterialPermutation::appendQualityDefines( permutationDesc._quality, outListDefine );
         MaterialPermutation::appendUniqueDefine( outListDefine, string( "SHADER_LOD=" ) + to_string( permutationDesc._shaderLOD ) );
         MaterialPermutation::appendUsageDefines( permutationDesc._usage, outListDefine );
@@ -1166,6 +1167,7 @@ namespace sw
         rootParams._name              = _desc._name;
         rootParams._shaderPath        = _desc._shaderPath;
         rootParams._alphaMode         = _desc._alphaMode;
+        rootParams._surfaceModel      = _desc._surfaceModel;
         rootParams._renderQueue       = _desc._renderQueue;
         rootParams._bTwoSidedLighting = _desc._bTwoSidedLighting != SW_FALSE;
         rootParams._blendPreset       = _desc._blendPreset;

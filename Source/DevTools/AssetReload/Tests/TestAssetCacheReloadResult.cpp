@@ -20,7 +20,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kMaterialXML = "<MaterialDef formatVersion=\"0\" name=\"Probe\" shaderPath=\"engine/shaders/forward_lit.hlsl\" alphaMode=\"Opaque\"><_properties>"
+    constexpr const utf8* kMaterialXML = "<MaterialDef formatVersion=\"0\" name=\"Probe\" shaderPath=\"engine/shaders/forward_lit.hlsl\" surfaceModel=\"Lit\" alphaMode=\"Opaque\"><_properties>"
                                          "<item name=\"_roughness\" type=\"Range\" defaultValue=\"0.3\" min=\"0.0\" max=\"1.0\" /></_properties></MaterialDef>";
     // 뿌리 요소가 틀린 머티리얼 — 저장 도중 다른 글이 덮인 파일과 같다(읽기는 "MaterialDef 뿌리 없음" 으로 진다).
     constexpr const utf8* kBrokenMaterialXML = "<NotAMaterial name=\"Probe\" />";

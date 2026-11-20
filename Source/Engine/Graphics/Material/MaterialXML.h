@@ -89,6 +89,8 @@ namespace sw
         string _shaderPath{};
         PROPERTY()
         MaterialAlphaMode _alphaMode{ MaterialAlphaMode::Opaque };
+        PROPERTY( Required, Tooltip = "How the surface values meet light (MaterialSurfaceModel) - the shader's lighting hook must match it" )
+        MaterialSurfaceModel _surfaceModel{ MaterialSurfaceModel::Lit };
         PROPERTY( Min = 0, Max = 1 )
         float32 _alphaCutoff{ MaterialDef{}._alphaCutoff };
         PROPERTY()
@@ -200,6 +202,7 @@ namespace sw
          * @brief 루트의 렌더 칸(@p rootParams 와 렌더 상태 · `_listBlendTarget`)을 읽어 @p inoutDesc 에 담습니다. 받아 줄 수 없는 조합은 오류를 남기고 false 입니다.
          * @details 조합 규칙: 깊이 테스트는 덮을 수 없다(첨부와 함께 움직인다 — `depthCompare="Always"` 를 쓴다). 켜진 블렌드는 `alphaMode="Blend"` 만 받는다. 프리셋과 타깃 목록은 함께 적지 않는다.
          *          `twoSidedLighting` 은 `cullMode="None"` 과 함께다. `alphaCutoff` 는 `Mask` 일 때만 기본값이 아닐 수 있다. `MATERIAL_ALPHA_CUTOFF` · `MATERIAL_TWO_SIDED` 를 define 으로 직접 적지 않는다.
+         *          포워드 전용 표면 모델(`MaterialPermutation::isForwardOnlySurfaceModel`)은 `MATERIAL_FORWARD_ONLY` 를 모델이 내므로 직접 적지 않는다.
          *          @p inoutDesc 의 퍼뮤테이션을 읽은 뒤에 부른다.
          */
         [[nodiscard]] static bool parseRenderProperties( XMLNode root, const MaterialRootParams& rootParams, string_view sourceName, MaterialDef& inoutDesc );

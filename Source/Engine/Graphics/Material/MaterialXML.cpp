@@ -9,7 +9,9 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -266,6 +268,7 @@ namespace sw
         RenderStateOverride stateOverride = RenderStateOverride::makeFromReads( overZeros, overOnes );
 
         inoutDesc._alphaMode         = rootParams._alphaMode;
+        inoutDesc._surfaceModel      = rootParams._surfaceModel;
         inoutDesc._alphaCutoff       = rootParams._alphaCutoff;
         inoutDesc._renderQueue       = rootParams._renderQueue;
         inoutDesc._bTwoSidedLighting = rootParams._bTwoSidedLighting ? SW_TRUE : SW_FALSE;
@@ -364,6 +367,19 @@ namespace sw
         if ( bDefineFound )
         {
             SW_LOG_ERROR_ID( "Material.DefineBelongsToField", "%#: %# and %# come from alphaMode=\"Mask\" and twoSidedLighting - do not write them as defines or switches", sourceName, kMaterialAlphaCutoffDefine, kMaterialTwoSidedDefine );
+            fail();
+        }
+        // 포워드 전용 모델의 포워드 전용 define 은 모델이 낸다 — 직접 적으면 모델을 바꿀 때 define 만 남아 G버퍼에 담길 머티리얼이 포워드로 빠진다.
+        const bool bForwardOnlyModel = MaterialPermutation::isForwardOnlySurfaceModel( rootParams._surfaceModel );
+        bool       bForwardOnlyFound = inoutDesc._permutations.hasAlwaysDefine( kMaterialForwardOnlyDefine );
+        for ( const MaterialStaticSwitch& entry : inoutDesc._permutations._listStaticSwitch )
+        {
+            bForwardOnlyFound = bForwardOnlyFound || entry._keyword == kMaterialForwardOnlyDefine || entry._keywordOff == kMaterialForwardOnlyDefine;
+        }
+        if ( bForwardOnlyModel && bForwardOnlyFound )
+        {
+            SW_LOG_ERROR_ID( "Material.ForwardOnlyBelongsToSurfaceModel", "%#: surfaceModel=\"%#\" draws forward-only by itself - do not write %# as a define or switch", sourceName,
+                             getEnumName( rootParams._surfaceModel ), kMaterialForwardOnlyDefine );
             fail();
         }
         inoutDesc._renderStateOverride = stateOverride;
