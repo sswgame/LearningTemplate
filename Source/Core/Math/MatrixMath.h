@@ -20,6 +20,8 @@ namespace sw
     struct SW_API quaternion final
     {
         static const quaternion Identity; /**< 회전이 없는 단위 쿼터니언 (0, 0, 0, 1) */
+        /** @brief `isNormalized` 의 기본 허용치(노름 제곱과 1 의 차 — 언리얼 `THRESH_QUAT_NORMALIZED` 와 같은 자리)입니다. */
+        static constexpr float32 kNormalizedTolerance = 1e-4f;
 
         float32 _x;
         float32 _y;
@@ -61,7 +63,7 @@ namespace sw
             , _z{ pArray[2] }
             , _w{ pArray[3] } {}
 
-        /** @brief 축(axis)과 각(angle, 라디안)으로 회전을 만듭니다. 축은 정규화해서 씁니다. */
+        /** @brief 축(axis)과 각(angle, 라디안)으로 회전을 만듭니다. 축은 정규화해서 씁니다. 축이 0 벡터(또는 유한하지 않음)면 단위 쿼터니언입니다. */
         static quaternion makeFromAxisAngle( const float3& axis, float32 angle ) noexcept;
         /** @brief 요 · 피치 · 롤(라디안)로 회전을 만듭니다. */
         static quaternion makeFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept;
@@ -75,7 +77,7 @@ namespace sw
 
         /** @brief 선형 보간한 뒤 정규화합니다(nlerp). 두 회전 사이의 짧은 쪽으로 갑니다. */
         static quaternion lerp( const quaternion& from, const quaternion& to, float32 t ) noexcept;
-        /** @brief 구면 선형 보간합니다(짧은 쪽). 두 회전이 거의 같으면 lerp() 로 대신합니다. */
+        /** @brief 구면 선형 보간합니다(짧은 쪽). 두 회전이 거의 같으면 lerp() 로 대신합니다. 결과는 정규화합니다(언리얼 `FQuat::Slerp` 와 같다 — 입력의 반올림 오차가 쌓이지 않게). */
         static quaternion slerp( const quaternion& from, const quaternion& to, float32 t ) noexcept;
 
         /**
@@ -112,6 +114,20 @@ namespace sw
 
         /** @brief 다른 쿼터니언과의 내적을 구합니다. */
         float32 dot( const quaternion& other ) const noexcept;
+
+        /** @brief 성분이 모두 유한하면 true 입니다(언리얼 `FQuat::ContainsNaN` 의 반대). */
+        bool isFinite() const noexcept;
+        /** @brief 길이가 1 에서 @p tolerance 안이면 true 입니다(언리얼 `FQuat::IsNormalized` — 노름 제곱으로 잰다). */
+        bool isNormalized( float32 tolerance = kNormalizedTolerance ) const noexcept;
+        /**
+         * @brief 회전축(단위)과 각(라디안, 0 ~ 2π)으로 풉니다(언리얼 `FQuat::ToAxisAndAngle`). 회전이 거의 없으면 축은 +X 입니다.
+         * @details 단위 쿼터니언을 가정한다. `makeFromAxisAngle` 의 역이다(q 와 −q 는 같은 회전이라 각은 2π − θ, 축은 반대로 나올 수 있다).
+         */
+        void toAxisAngle( float3& outAxis, float32& outAngle ) const noexcept;
+        /**
+         * @brief @p other 와 내적이 음수면 부호를 뒤집어 같은 반구에 둡니다(언리얼 `FQuat::EnforceShortestArcWith`). 회전은 그대로이고, 성분별 섞기 · 비교가 짧은 쪽을 갑니다.
+         */
+        void enforceShortestArcWith( const quaternion& other ) noexcept;
 
         /** @brief 오일러 각(라디안)을 구합니다. `_x` 가 피치, `_y` 가 요, `_z` 가 롤로, makeFromYawPitchRoll( angles ) 와 같은 배치입니다. */
         float3 getEulerAngles() const noexcept;
@@ -367,6 +383,14 @@ namespace sw
         /** @brief 이동(마지막 행)만 바꿉니다. */
         void setTranslation( const float3& translation ) noexcept;
 
+        /** @brief 성분 열여섯이 모두 유한하면 true 입니다(언리얼 `FMatrix::ContainsNaN` 의 반대). */
+        bool isFinite() const noexcept;
+        /**
+         * @brief 회전 · 스케일 부분(1 · 2 · 3 행)을 정규 직교로 만든 사본입니다 — 스케일 · 기울임을 빼고 회전만 남깁니다. 이동 · 넷째 열은 그대로입니다.
+         * @details 그람-슈미트(1 행 → 2 행 → 3 행 순서, Godot 기저의 정규 직교화와 같다). 3 행은 두 행의 외적이고, 원래 3 행과 반대쪽이면 뒤집어 거울(행렬식 음수)을 지킨다.
+         *          행이 0 이거나 앞 행과 나란하면 그 행은 표준 축으로 채운다 — 늘 유한한 직교 행렬이 나온다.
+         */
+        float4x4 orthogonalize() const noexcept;
         /** @brief 행렬식을 구합니다. */
         float32 determinant() const noexcept;
         /** @brief 전치 행렬을 반환합니다. */

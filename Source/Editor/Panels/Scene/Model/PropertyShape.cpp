@@ -150,7 +150,7 @@ namespace sw::editor
         }
         // 화살표: 잡은 끝을 지나 레이에 수직인 평면 위로 끈다(레이에서 잡은 끝에 가장 가까운 점) — 원점에서 그 점 쪽이 새 방향이다.
         const float32 alongRay  = ( _position - ray._origin ).dot( ray._direction );
-        const float3  target    = ray._origin + ray._direction * alongRay;
+        const float3  target    = ray.getPoint( alongRay );
         const float3  worldDir  = ( target - _frame._origin ).normalizeOr( _direction, PropertyShapeValue::kMinExtent );
         const float32 length    = _vector.getLength();
         const float32 keptScale = length > MathUtil::kEpsilon ? length : 1.0f;

@@ -512,7 +512,7 @@ namespace sw::editor
         const MeshModifierParamDef& def = _listParamDef[paramIndex];
         if ( def._kind != MeshModifierParamKind::Vector3 )
             return;
-        const bool bFinite = MathUtil::isFinite( value._x ) && MathUtil::isFinite( value._y ) && MathUtil::isFinite( value._z );
+        const bool bFinite = value.isFinite();
         if ( bFinite == false )
             return;
         _listParamValue[paramIndex]._value = float3{ MathUtil::clamp( value._x, def._min, def._max ), MathUtil::clamp( value._y, def._min, def._max ),

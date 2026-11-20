@@ -129,7 +129,7 @@ namespace sw::editor
         const bool              bAligned = role._bAnchor == false && role._align != PairedAnimationAlign::None;
         if ( bAligned == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "Role does not align (align is none or it is the anchor)", role._name.view() } );
-        const bool bFinite = MathUtil::isFinite( offset._x ) && MathUtil::isFinite( offset._y ) && MathUtil::isFinite( offset._z ) && MathUtil::isFinite( yaw.radians() );
+        const bool bFinite = offset.isFinite() && MathUtil::isFinite( yaw.radians() );
         if ( bFinite == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "Offset and yaw must be finite" } );
         recordUndo( bContinuous ? PairedAnimationEditModelInternal::makeCoalesceKey( "offset", roleIndex ) : string{} );

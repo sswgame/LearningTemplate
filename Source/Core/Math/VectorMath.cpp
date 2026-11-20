@@ -101,6 +101,16 @@ namespace sw
         return MathUtil::isInfinite( _x ) || MathUtil::isInfinite( _y );
     }
 
+    bool float2::isFinite() const noexcept
+    {
+        return MathUtil::isFinite( _x ) && MathUtil::isFinite( _y );
+    }
+
+    bool float2::nearEqual( const float2& other, float32 tolerance ) const noexcept
+    {
+        return MathUtil::nearEqual( _x, other._x, tolerance ) && MathUtil::nearEqual( _y, other._y, tolerance );
+    }
+
     float32 float2::dot( const float2& other ) const noexcept
     {
         return ( _x * other._x ) + ( _y * other._y );
@@ -387,6 +397,16 @@ namespace sw
         return MathUtil::isInfinite( _x ) || MathUtil::isInfinite( _y ) || MathUtil::isInfinite( _z );
     }
 
+    bool float3::isFinite() const noexcept
+    {
+        return MathUtil::isFinite( _x ) && MathUtil::isFinite( _y ) && MathUtil::isFinite( _z );
+    }
+
+    bool float3::nearEqual( const float3& other, float32 tolerance ) const noexcept
+    {
+        return MathUtil::nearEqual( _x, other._x, tolerance ) && MathUtil::nearEqual( _y, other._y, tolerance ) && MathUtil::nearEqual( _z, other._z, tolerance );
+    }
+
     void float3::clamp( const float3& minValue, const float3& maxValue ) noexcept
     {
         _x = MathUtil::clamp( _x, minValue._x, maxValue._x );
@@ -563,6 +583,16 @@ namespace sw
             0.0f };
     }
 
+    bool float4::isFinite() const noexcept
+    {
+        return MathUtil::isFinite( _x ) && MathUtil::isFinite( _y ) && MathUtil::isFinite( _z ) && MathUtil::isFinite( _w );
+    }
+
+    bool float4::nearEqual( const float4& other, float32 tolerance ) const noexcept
+    {
+        return MathUtil::nearEqual( _x, other._x, tolerance ) && MathUtil::nearEqual( _y, other._y, tolerance ) && MathUtil::nearEqual( _z, other._z, tolerance ) && MathUtil::nearEqual( _w, other._w, tolerance );
+    }
+
     float32 float4::dot( const float4& other ) const noexcept
     {
         return ( _x * other._x ) + ( _y * other._y ) + ( _z * other._z ) + ( _w * other._w );
@@ -704,6 +734,11 @@ namespace sw
     bool double3::isInBounds( const double3& bound ) const noexcept
     {
         return ( -bound._x <= _x && _x <= bound._x ) && ( -bound._y <= _y && _y <= bound._y ) && ( -bound._z <= _z && _z <= bound._z );
+    }
+
+    bool double3::isFinite() const noexcept
+    {
+        return MathUtil::isFinite( _x ) && MathUtil::isFinite( _y ) && MathUtil::isFinite( _z );
     }
 
     bool double3::isInfinite() const noexcept

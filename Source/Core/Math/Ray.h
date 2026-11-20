@@ -29,6 +29,9 @@ namespace sw
         float3 _origin{};
         float3 _direction{ 0.0f, 0.0f, 1.0f };
 
+        /** @brief 시작점에서 방향으로 @p distance 만큼 간 점입니다(유니티 `Ray.GetPoint`, 언리얼 `FRay::PointAt`). */
+        [[nodiscard]] float3 getPoint( const float32 distance ) const noexcept { return _origin + _direction * distance; }
+
         /**
          * @brief 광선이 구와 만나는 가장 가까운 앞쪽 거리를 구합니다. 시작점이 구 안이면 0 이고, 안 만나면 false 입니다.
          * @param maxDistance 이 거리보다 먼 만남은 놓친 것으로 봅니다.

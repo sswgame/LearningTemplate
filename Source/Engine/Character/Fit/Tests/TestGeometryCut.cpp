@@ -610,7 +610,7 @@ SW_TEST_CASE( GeometryCutTest, CapHandlesDegenerateLoop )
     SW_EXPECT_TRUE( cap._listNormal[0] == float3::UnitY );
     for ( const float2& uv : cap._listUV )
     {
-        SW_EXPECT_TRUE( MathUtil::isFinite( uv._x ) && MathUtil::isFinite( uv._y ) );
+        SW_EXPECT_TRUE( uv.isFinite() );
     }
 
     SW_EXPECT_EQUAL( 0u, AppearanceGeometry::createCaps( Util::makeTetrahedron(), cap ) );

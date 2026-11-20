@@ -856,10 +856,10 @@ namespace sw
                     travelled                     = hitDistance + kPierceStep;
                     ignoreID                      = rayHit._pObject->getObjectID();
                 }
-                record.finish( shot._ray._origin + shot._ray._direction * distance );
+                record.finish( shot._ray.getPoint( distance ) );
                 if ( pKillcam != nullptr && record.getHits().empty() == false )
                     pKillcam->recordShot( record );
-                const float3 end = shot._ray._origin + shot._ray._direction * distance;
+                const float3 end = shot._ray.getPoint( distance );
                 // 탄도선은 총구에서 맞은 위치까지 이은 선이다. 색 · 두께는 탄의 궤적이다. 1인칭이면 시점 총의 총구라 총 앞에서 시작해 화면에 보인다.
                 if ( shot._bHasMuzzle )
                 {

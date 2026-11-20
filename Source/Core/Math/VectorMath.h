@@ -99,6 +99,10 @@ namespace sw
 
         /** @brief 성분 중 하나라도 무한대이면 true 입니다. */
         bool isInfinite() const noexcept;
+        /** @brief 성분이 모두 유한하면(NaN · 무한대가 없으면) true 입니다(언리얼 `ContainsNaN` 의 반대). `isInfinite` 는 NaN 을 잡지 못한다. */
+        bool isFinite() const noexcept;
+        /** @brief 성분마다 차이가 @p tolerance 보다 작으면 true 입니다(언리얼 `Equals( V, Tolerance )`). `==` 는 허용치가 `MathUtil::kEpsilon` 으로 고정이다. */
+        bool nearEqual( const float2& other, float32 tolerance ) const noexcept;
 
         /** @brief 다른 벡터와의 내적을 구합니다. */
         float32 dot( const float2& other ) const noexcept;
@@ -423,6 +427,10 @@ namespace sw
 
         /** @brief 성분 중 하나라도 무한대이면 true 입니다. */
         bool isInfinite() const noexcept;
+        /** @brief 성분이 모두 유한하면(NaN · 무한대가 없으면) true 입니다(언리얼 `ContainsNaN` 의 반대). `isInfinite` 는 NaN 을 잡지 못한다. */
+        bool isFinite() const noexcept;
+        /** @brief 성분마다 차이가 @p tolerance 보다 작으면 true 입니다(언리얼 `Equals( V, Tolerance )`). `==` 는 허용치가 `MathUtil::kEpsilon` 으로 고정이다. */
+        bool nearEqual( const float3& other, float32 tolerance ) const noexcept;
 
         /** @brief 각 성분을 minValue ~ maxValue 로 자릅니다(clamp). */
         void clamp( const float3& minValue, const float3& maxValue ) noexcept;
@@ -599,6 +607,10 @@ namespace sw
 
         /** @brief 각 성분이 [-bound, bound] 안에 있으면 true 입니다. */
         bool isInBounds( const float4& bound ) const noexcept;
+        /** @brief 성분이 모두 유한하면(NaN · 무한대가 없으면) true 입니다(언리얼 `ContainsNaN` 의 반대). `isInfinite` 는 NaN 을 잡지 못한다. */
+        bool isFinite() const noexcept;
+        /** @brief 성분마다 차이가 @p tolerance 보다 작으면 true 입니다(언리얼 `Equals( V, Tolerance )`). `==` 는 허용치가 `MathUtil::kEpsilon` 으로 고정이다. */
+        bool nearEqual( const float4& other, float32 tolerance ) const noexcept;
 
         /** @brief 각 성분을 minValue ~ maxValue 로 자릅니다(clamp). */
         void clamp( const float4& minValue, const float4& maxValue ) noexcept;
@@ -726,6 +738,8 @@ namespace sw
         bool isInBounds( const double3& bound ) const noexcept;
         /** @brief 성분 중 하나라도 무한대이면 true 입니다. */
         bool isInfinite() const noexcept;
+        /** @brief 성분이 모두 유한하면(NaN · 무한대가 없으면) true 입니다(언리얼 `ContainsNaN` 의 반대). `isInfinite` 는 NaN 을 잡지 못한다. */
+        bool isFinite() const noexcept;
 
         /** @brief 다른 벡터와의 내적을 구합니다. */
         float64 dot( const double3& other ) const noexcept;

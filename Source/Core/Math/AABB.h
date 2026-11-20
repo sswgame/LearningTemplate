@@ -45,9 +45,12 @@ namespace sw
         /**
          * @brief 이 상자(로컬)를 행렬(행 벡터, `로컬 × 월드`)로 옮긴 것을 덮는 축 정렬 상자입니다.
          * @details 축마다 회전 · 스케일 성분의 절댓값으로 반 크기를 모은다(언리얼 `FBox::TransformBy`). 모서리 여덟 개를 옮기는 것과 같은 결과다.
+         *          빈 상자(`empty()`)는 그대로 돌려준다 — 반 크기가 −무한대라 행렬의 0 성분과 곱하면 NaN 상자가 됐다.
          */
         AABB transformedBy( const float4x4& m ) const noexcept
         {
+            if ( isValid() == false )
+                return *this;
             const float3 center = float3::transform( float3{ ( _min._x + _max._x ) * 0.5f, ( _min._y + _max._y ) * 0.5f, ( _min._z + _max._z ) * 0.5f }, m );
             const float3 half{ ( _max._x - _min._x ) * 0.5f, ( _max._y - _min._y ) * 0.5f, ( _max._z - _min._z ) * 0.5f };
             const float3 extent{ MathUtil::abs( m._11 ) * half._x + MathUtil::abs( m._21 ) * half._y + MathUtil::abs( m._31 ) * half._z,
@@ -67,6 +70,28 @@ namespace sw
             };
         }
 
+        /** @brief 점 @p point 까지 덮도록 넓힌 상자입니다(언리얼 `FBox::operator+=( FVector )`). `empty()` 에 점을 차례로 더하면 점들의 경계 상자다. */
+        AABB unionWith( const float3& point ) const noexcept
+        {
+            return AABB{
+                float3{MathUtil::min( _min._x, point._x ), MathUtil::min( _min._y, point._y ), MathUtil::min( _min._z, point._z )},
+                float3{MathUtil::max( _max._x, point._x ), MathUtil::max( _max._y, point._y ), MathUtil::max( _max._z, point._z )}
+            };
+        }
+        /** @brief 사방으로 @p amount 만큼 넓힌 상자입니다(음수면 줄인다 — 언리얼 `FBox::ExpandBy`). */
+        AABB expandBy( const float32 amount ) const noexcept
+        {
+            return AABB{
+                float3{_min._x - amount, _min._y - amount, _min._z - amount},
+                float3{_max._x + amount, _max._y + amount, _max._z + amount}
+            };
+        }
+        /** @brief 상자 안에서 @p point 에 가장 가까운 점입니다(안이면 그 점 — 언리얼 `FBox::GetClosestPointTo`). */
+        float3 getClosestPoint( const float3& point ) const noexcept { return point.clamp( _min, _max ); }
+        /** @brief 상자까지의 거리 제곱입니다(안이면 0 — 언리얼 `FBox::ComputeSquaredDistanceToPoint`). */
+        float32 getDistanceSquared( const float3& point ) const noexcept { return float3::getDistanceSquared( point, getClosestPoint( point ) ); }
+        /** @brief 축마다의 길이(max − min)입니다. 유효하지 않으면 0 입니다(언리얼 `FBox::GetSize`). */
+        float3 getSize() const noexcept { return isValid() ? ( _max - _min ) : float3{ 0.0f, 0.0f, 0.0f }; }
         /** @brief 점이 AABB 안에 있는지 반환합니다. */
         bool contains( const float3& point ) const noexcept
         {

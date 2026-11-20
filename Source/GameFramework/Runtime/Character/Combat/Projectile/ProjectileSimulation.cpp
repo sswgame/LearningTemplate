@@ -64,8 +64,6 @@ namespace sw
                 return ( direction * fromPart + desired * toPart ).normalizeOr( direction, kTiny );
             }
 
-            static bool isFinite( const float3& value ) { return MathUtil::isFinite( value._x ) && MathUtil::isFinite( value._y ) && MathUtil::isFinite( value._z ); }
-
             static void pushEvent( vector<ProjectileEvent>& outListEvent, const ProjectileState& projectile, const ProjectileHit& hit, ProjectileEvent::Kind kind )
             {
                 ProjectileEvent event;

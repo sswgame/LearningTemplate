@@ -2,9 +2,11 @@
 #include "pch.h"
 
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 #include "Core/Math/SecureRandom.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Math/XorShift32.h"
@@ -865,4 +867,162 @@ SW_TEST_CASE( MathTest, EulerRoundTripSurvivesGimbalLock )
             }
         }
     }
+}
+
+/** @brief [MathTest] remap 은 입력 범위의 비율을 출력 범위로 옮기고(밖은 그대로 이어감), remapClamped 는 출력 범위에 머문다. 입력 범위 폭이 0 이면 출력 시작값이다 */
+SW_TEST_CASE( MathTest, RemapMapsRangesAndClampedStaysInside )
+{
+    SW_EXPECT_NEAR( 50.0f, MathUtil::remap( 5.0f, 0.0f, 10.0f, 0.0f, 100.0f ), 1e-4 );
+    SW_EXPECT_NEAR( 150.0f, MathUtil::remap( 15.0f, 0.0f, 10.0f, 0.0f, 100.0f ), 1e-4 );
+    SW_EXPECT_NEAR( 100.0f, MathUtil::remapClamped( 15.0f, 0.0f, 10.0f, 0.0f, 100.0f ), 1e-4 );
+    SW_EXPECT_NEAR( 1.0f, MathUtil::remapClamped( -3.0f, 0.0f, 10.0f, 1.0f, 0.0f ), 1e-6 ); // 출력이 거꾸로여도 된다
+    SW_EXPECT_EQUAL( 7.0f, MathUtil::remap( 3.0f, 2.0f, 2.0f, 7.0f, 9.0f ) );
+}
+
+/** @brief [MathTest] sign 은 −1 · 0 · 1, nearZero 는 허용치 안, divideAndRoundUp 은 올림 나눗셈이다 */
+SW_TEST_CASE( MathTest, SignNearZeroAndDivideAndRoundUp )
+{
+    SW_EXPECT_EQUAL( -1.0f, MathUtil::sign( -2.5f ) );
+    SW_EXPECT_EQUAL( 0.0f, MathUtil::sign( 0.0f ) );
+    SW_EXPECT_EQUAL( 1, MathUtil::sign( 7 ) );
+    SW_EXPECT_TRUE( MathUtil::nearZero( 1e-7f ) );
+    SW_EXPECT_FALSE( MathUtil::nearZero( 1e-3f ) );
+    SW_EXPECT_TRUE( MathUtil::nearZero( 1e-3f, 1e-2f ) );
+    SW_EXPECT_FALSE( MathUtil::nearZero( std::numeric_limits<float32>::quiet_NaN() ) );
+    SW_EXPECT_EQUAL( 3u, MathUtil::divideAndRoundUp( 9u, 4u ) );
+    SW_EXPECT_EQUAL( 2u, MathUtil::divideAndRoundUp( 8u, 4u ) );
+    SW_EXPECT_EQUAL( 0u, MathUtil::divideAndRoundUp( 0u, 4u ) );
+}
+
+/** @brief [MathTest] repeat 은 [0, 길이) 로 감고(음수 포함), pingPong 은 0 → 길이 → 0 을 오간다, deltaAngle 은 짧은 쪽의 부호 있는 차이다 */
+SW_TEST_CASE( MathTest, RepeatPingPongAndDeltaAngle )
+{
+    SW_EXPECT_NEAR( 0.5f, MathUtil::repeat( 2.5f, 1.0f ), 1e-6 );
+    SW_EXPECT_NEAR( 0.75f, MathUtil::repeat( -0.25f, 1.0f ), 1e-6 );
+    SW_EXPECT_EQUAL( 0.0f, MathUtil::repeat( 3.0f, 1.0f ) );
+    const float32 tiny = MathUtil::repeat( -1e-9f, 1.0f ); // 반올림으로 1 이 나오면 0 으로 감는다
+    SW_EXPECT_TRUE( 0.0f <= tiny && tiny < 1.0f );
+    SW_EXPECT_NEAR( 1.0f, MathUtil::pingPong( 1.0f, 2.0f ), 1e-6 );
+    SW_EXPECT_NEAR( 1.5f, MathUtil::pingPong( 2.5f, 2.0f ), 1e-6 );
+    SW_EXPECT_NEAR( 0.0f, MathUtil::pingPong( 4.0f, 2.0f ), 1e-6 );
+    SW_EXPECT_NEAR( -0.2f, MathUtil::deltaAngle( 0.1f, -0.1f ), 1e-6 );
+    SW_EXPECT_NEAR( 0.2f, MathUtil::deltaAngle( MathUtil::kPi - 0.1f, -MathUtil::kPi + 0.1f ), 1e-5 ); // ±π 를 넘는 짧은 쪽
+}
+
+/** @brief [MathTest] asin · acos 는 반올림으로 [−1, 1] 을 살짝 넘은 입력에서 NaN 이 아니라 끝값을 낸다(NaN 입력은 NaN 그대로), float64 isFinite 짝 */
+SW_TEST_CASE( MathTest, InverseTrigClampsSlightlyOutOfRangeInput )
+{
+    SW_EXPECT_EQUAL( 0.0f, MathUtil::acos( 1.0000001f ) );
+    SW_EXPECT_NEAR( MathUtil::kPi, MathUtil::acos( -1.0000001f ), 1e-6 );
+    SW_EXPECT_NEAR( MathUtil::kHalfPi, MathUtil::asin( 1.0001f ), 1e-6 );
+    SW_EXPECT_NEAR( 0.0, MathUtil::acos( 1.0000000001 ), 1e-12 );
+    SW_EXPECT_TRUE( MathUtil::isNan( MathUtil::acos( std::numeric_limits<float32>::quiet_NaN() ) ) );
+    SW_EXPECT_TRUE( MathUtil::isFinite( 1.0 ) );
+    SW_EXPECT_FALSE( MathUtil::isFinite( std::numeric_limits<float64>::infinity() ) );
+}
+
+/** @brief [MathTest] 벡터의 isFinite 는 NaN 도 잡는다(isInfinite 는 무한대만), nearEqual 은 주어진 허용치로 비교한다 */
+SW_TEST_CASE( MathTest, VectorIsFiniteCatchesNanAndNearEqualUsesTolerance )
+{
+    const float32 nan = std::numeric_limits<float32>::quiet_NaN();
+    SW_EXPECT_TRUE( float3( 1.0f, 2.0f, 3.0f ).isFinite() );
+    SW_EXPECT_FALSE( float3( 1.0f, nan, 3.0f ).isFinite() );
+    SW_EXPECT_FALSE( float3( 1.0f, nan, 3.0f ).isInfinite() );
+    SW_EXPECT_FALSE( float2( std::numeric_limits<float32>::infinity(), 0.0f ).isFinite() );
+    SW_EXPECT_FALSE( float4( 0.0f, 0.0f, 0.0f, nan ).isFinite() );
+    SW_EXPECT_FALSE( double3( 0.0, std::numeric_limits<float64>::quiet_NaN(), 0.0 ).isFinite() );
+    SW_EXPECT_TRUE( double3( 1.0, 2.0, 3.0 ).isFinite() );
+    SW_EXPECT_TRUE( float3( 1.0f, 2.0f, 3.0f ).nearEqual( float3( 1.05f, 2.0f, 2.95f ), 0.1f ) );
+    SW_EXPECT_FALSE( float3( 1.0f, 2.0f, 3.0f ).nearEqual( float3( 1.2f, 2.0f, 3.0f ), 0.1f ) );
+    SW_EXPECT_TRUE( float2( 0.0f, 0.0f ).nearEqual( float2( 0.01f, -0.01f ), 0.02f ) );
+    SW_EXPECT_FALSE( float4( 0.0f ).nearEqual( float4( 0.0f, 0.0f, 0.0f, nan ), 1.0f ) );
+}
+
+/** @brief [MathTest] 0 벡터 축의 makeFromAxisAngle 은 단위 쿼터니언이다(예전에는 (0, 0, 0, cos) 라 행렬이 줄었다), slerp 결과는 단위 길이다 */
+SW_TEST_CASE( MathTest, QuaternionZeroAxisIsIdentityAndSlerpIsNormalized )
+{
+    SW_EXPECT_TRUE( quaternion::makeFromAxisAngle( float3::Zero, 1.0f ) == quaternion::Identity );
+    SW_EXPECT_TRUE( quaternion::makeFromAxisAngle( float3( std::numeric_limits<float32>::quiet_NaN(), 0.0f, 0.0f ), 1.0f ) == quaternion::Identity );
+    const quaternion from = quaternion::makeFromAxisAngle( float3::UnitY, 0.0f );
+    const quaternion to   = quaternion{ 0.0f, 0.8f, 0.0f, 0.62f }; // 길이가 1 에서 조금 벗어난 입력
+    const quaternion mid  = quaternion::slerp( from, to, 0.5f );
+    SW_EXPECT_NEAR( 1.0f, mid.norm(), 1e-5 );
+}
+
+/** @brief [MathTest] 쿼터니언 isFinite · isNormalized, toAxisAngle 은 makeFromAxisAngle 의 역이고 회전이 없으면 +X 축 · 0 각, enforceShortestArcWith 는 부호만 맞춘다 */
+SW_TEST_CASE( MathTest, QuaternionAxisAngleRoundTripAndShortestArc )
+{
+    SW_EXPECT_TRUE( quaternion::Identity.isFinite() );
+    SW_EXPECT_FALSE( quaternion( 0.0f, std::numeric_limits<float32>::quiet_NaN(), 0.0f, 1.0f ).isFinite() );
+    SW_EXPECT_TRUE( quaternion::Identity.isNormalized() );
+    SW_EXPECT_FALSE( quaternion( 0.0f, 0.0f, 0.0f, 2.0f ).isNormalized() );
+
+    const float3     axis = float3( 1.0f, 2.0f, -2.0f ).normalize();
+    const quaternion q    = quaternion::makeFromAxisAngle( axis, 1.2f );
+    float3           outAxis{};
+    float32          outAngle = 0.0f;
+    q.toAxisAngle( outAxis, outAngle );
+    SW_EXPECT_NEAR( 1.2f, outAngle, 1e-5 );
+    SW_EXPECT_TRUE( outAxis.nearEqual( axis, 1e-5f ) );
+    quaternion::Identity.toAxisAngle( outAxis, outAngle );
+    SW_EXPECT_NEAR( 0.0f, outAngle, 1e-6 );
+    SW_EXPECT_TRUE( outAxis == float3::UnitX );
+
+    quaternion flipped = -q;
+    flipped.enforceShortestArcWith( q );
+    SW_EXPECT_TRUE( flipped == q );
+    quaternion same = q;
+    same.enforceShortestArcWith( q );
+    SW_EXPECT_TRUE( same == q );
+}
+
+/** @brief [MathTest] 행렬 isFinite 는 열여섯 성분 어디의 NaN 이든 잡고, orthogonalize 는 스케일 · 기울임을 빼 직교 회전을 남기며 거울(행렬식 음수)과 이동을 지킨다 */
+SW_TEST_CASE( MathTest, MatrixIsFiniteAndOrthogonalize )
+{
+    float4x4 m = float4x4::Identity;
+    SW_EXPECT_TRUE( m.isFinite() );
+    m._43 = std::numeric_limits<float32>::infinity();
+    SW_EXPECT_FALSE( m.isFinite() );
+
+    const quaternion rotation = quaternion::makeFromYawPitchRoll( 0.3f, -0.4f, 0.5f );
+    float4x4         skewed   = float4x4::makeTrs( float3( 1.0f, 2.0f, 3.0f ), rotation, float3( 2.0f, 3.0f, 0.5f ) );
+    skewed._21 += 0.2f; // 기울임
+    const float4x4 ortho = skewed.orthogonalize();
+    SW_EXPECT_NEAR( 1.0f, ortho.determinant(), 1e-4 );
+    SW_EXPECT_TRUE( ortho.getScale().nearEqual( float3::UnitScale, 1e-5f ) );
+    SW_EXPECT_TRUE( ortho.getTranslation() == float3( 1.0f, 2.0f, 3.0f ) );
+    const float4x4 clean = float4x4::makeTrs( float3::Zero, rotation, float3( 2.0f, 3.0f, 0.5f ) ).orthogonalize();
+    SW_EXPECT_TRUE( clean == float4x4::makeFromQuaternion( rotation ) );
+
+    const float4x4 mirrored = float4x4::makeScale( -1.0f, 1.0f, 1.0f ).orthogonalize();
+    SW_EXPECT_NEAR( -1.0f, mirrored.determinant(), 1e-5 );
+    const float4x4 degenerate = float4x4::makeScale( 0.0f, 0.0f, 0.0f ).orthogonalize();
+    SW_EXPECT_TRUE( degenerate.isFinite() );
+    SW_EXPECT_NEAR( 1.0f, MathUtil::abs( degenerate.determinant() ), 1e-5 );
+}
+
+/** @brief [MathTest] AABB — 빈 상자를 옮겨도 NaN 이 아닌 빈 상자다, 점으로 넓히기 · 사방 넓히기 · 가장 가까운 점 · 거리 제곱 · 크기 */
+SW_TEST_CASE( MathTest, AABBEmptyTransformAndPointQueries )
+{
+    const AABB moved = AABB::empty().transformedBy( float4x4::makeTranslation( 1.0f, 2.0f, 3.0f ) );
+    SW_EXPECT_FALSE( moved.isValid() );
+    SW_EXPECT_TRUE( moved._min.isFinite() && moved._max.isFinite() );
+
+    const AABB box = AABB::empty().unionWith( float3( 1.0f, 0.0f, -1.0f ) ).unionWith( float3( -1.0f, 2.0f, 1.0f ) );
+    SW_EXPECT_TRUE( box._min == float3( -1.0f, 0.0f, -1.0f ) );
+    SW_EXPECT_TRUE( box._max == float3( 1.0f, 2.0f, 1.0f ) );
+    SW_EXPECT_TRUE( box.getSize() == float3( 2.0f, 2.0f, 2.0f ) );
+    SW_EXPECT_TRUE( AABB::empty().getSize() == float3::Zero );
+    SW_EXPECT_TRUE( box.expandBy( 0.5f )._max == float3( 1.5f, 2.5f, 1.5f ) );
+    SW_EXPECT_TRUE( box.getClosestPoint( float3( 3.0f, 1.0f, 0.0f ) ) == float3( 1.0f, 1.0f, 0.0f ) );
+    SW_EXPECT_EQUAL( 0.0f, box.getDistanceSquared( float3( 0.0f, 1.0f, 0.0f ) ) );
+    SW_EXPECT_NEAR( 4.0f, box.getDistanceSquared( float3( 3.0f, 1.0f, 0.0f ) ), 1e-6 );
+}
+
+/** @brief [MathTest] Ray::getPoint 는 시작점에서 방향으로 거리만큼 간 점이다 */
+SW_TEST_CASE( MathTest, RayGetPointWalksAlongTheDirection )
+{
+    const Ray ray{ float3( 1.0f, 0.0f, 0.0f ), float3( 0.0f, 0.0f, 1.0f ) };
+    SW_EXPECT_TRUE( ray.getPoint( 2.5f ) == float3( 1.0f, 0.0f, 2.5f ) );
+    SW_EXPECT_TRUE( ray.getPoint( 0.0f ) == ray._origin );
 }

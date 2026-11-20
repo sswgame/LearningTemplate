@@ -394,7 +394,7 @@ namespace sw
         float32                distance    = 0.0f;
         if ( Ray::intersectHorizontalPlane( ray, groundHeight, pose._farPlane * CameraDirectorComponentInternal::kGroundRayFarPlaneScale, distance ) == false )
             return false;
-        outPoint = ray._origin + ray._direction * distance;
+        outPoint = ray.getPoint( distance );
         return true;
     }
 

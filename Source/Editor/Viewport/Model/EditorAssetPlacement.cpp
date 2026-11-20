@@ -49,7 +49,7 @@ namespace sw::editor
             const bool       bPicked = EditorViewportRayPick::pick( query._pManager, ray, false, pickResult );
             if ( bPicked && pickResult._distance >= 0.0f && pickResult._distance < best._distance && pickResult._distance <= maxReach )
             {
-                best._position = ray._origin + ray._direction * pickResult._distance;
+                best._position = ray.getPoint( pickResult._distance );
                 best._normal   = float3{ 0.0f, 1.0f, 0.0f }; // 경계는 면 법선이 없다 — 고스트는 바닥처럼 눕힌다
                 best._distance = pickResult._distance;
                 best._surface  = EditorPlacementSurface::Bounds;

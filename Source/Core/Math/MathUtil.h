@@ -156,6 +156,26 @@ namespace sw
         /** @brief 무한대도 NaN 도 아닌 수이면 true 입니다. */
         [[nodiscard]] static SW_INLINE bool isFinite( const float32 value ) noexcept { return std::isfinite( value ); }
         [[nodiscard]] static SW_INLINE bool isNan( const float64 value ) noexcept { return std::isnan( value ); }
+        [[nodiscard]] static SW_INLINE bool isFinite( const float64 value ) noexcept { return std::isfinite( value ); }
+
+        /** @brief |@p value| 가 @p epsilon 보다 작으면 true 입니다(언리얼 `FMath::IsNearlyZero`). NaN 은 false 입니다. */
+        [[nodiscard]] static SW_INLINE bool nearZero( const float32 value, const float32 epsilon = kEpsilon ) noexcept { return abs( value ) < epsilon; }
+
+        /** @brief 부호입니다 — 음수 -1, 0 은 0, 양수 1(언리얼 `FMath::Sign`). */
+        template <typename T>
+        [[nodiscard]] static SW_INLINE constexpr T sign( T value ) noexcept
+        {
+            static_assert( std::is_arithmetic_v<T>, "T should be arithmetic" );
+            return static_cast<T>( static_cast<int32>( T( 0 ) < value ) - static_cast<int32>( value < T( 0 ) ) );
+        }
+
+        /** @brief 양의 정수 나눗셈을 올림합니다(언리얼 `FMath::DivideAndRoundUp`). @p divisor 는 0 보다 커야 합니다. */
+        template <typename T>
+        [[nodiscard]] static SW_INLINE constexpr T divideAndRoundUp( T numerator, T divisor ) noexcept
+        {
+            static_assert( std::is_integral_v<T>, "T should be integral" );
+            return ( numerator + divisor - T( 1 ) ) / divisor;
+        }
 
         /** @brief 역제곱근(1 / sqrt(x))을 계산합니다. */
         [[nodiscard]] static SW_INLINE float32 invSqrt( const float32 x ) noexcept
@@ -196,13 +216,15 @@ namespace sw
         [[nodiscard]] static SW_INLINE float32 tan( const float32 radian ) noexcept { return ::tanf( radian ); }
         [[nodiscard]] static SW_INLINE float64 tan( const float64 radian ) noexcept { return ::tan( radian ); }
 
-        /** @brief 아크사인 asin(x)를 계산합니다. */
-        [[nodiscard]] static SW_INLINE float32 asin( const float32 x ) noexcept { return ::asinf( x ); }
-        [[nodiscard]] static SW_INLINE float64 asin( const float64 x ) noexcept { return ::asin( x ); }
+        /**
+         * @brief 아크사인 asin(x)를 계산합니다. 입력을 [-1, 1] 로 자릅니다 — 정규화한 두 벡터의 내적이 반올림으로 1 을 살짝 넘어도 NaN 이 되지 않는다(NaN 입력은 NaN).
+         */
+        [[nodiscard]] static SW_INLINE float32 asin( const float32 x ) noexcept { return ::asinf( clamp( x, -1.0f, 1.0f ) ); }
+        [[nodiscard]] static SW_INLINE float64 asin( const float64 x ) noexcept { return ::asin( clamp( x, -1.0, 1.0 ) ); }
 
-        /** @brief 아크코사인 acos(x)를 계산합니다. */
-        [[nodiscard]] static SW_INLINE float32 acos( const float32 x ) noexcept { return ::acosf( x ); }
-        [[nodiscard]] static SW_INLINE float64 acos( const float64 x ) noexcept { return ::acos( x ); }
+        /** @brief 아크코사인 acos(x)를 계산합니다. 입력을 [-1, 1] 로 자릅니다(`asin` 과 같은 까닭). */
+        [[nodiscard]] static SW_INLINE float32 acos( const float32 x ) noexcept { return ::acosf( clamp( x, -1.0f, 1.0f ) ); }
+        [[nodiscard]] static SW_INLINE float64 acos( const float64 x ) noexcept { return ::acos( clamp( x, -1.0, 1.0 ) ); }
 
         /** @brief 아크탄젠트 atan2(y, x)를 계산합니다. */
         [[nodiscard]] static SW_INLINE float32 atan2( const float32 y, const float32 x ) noexcept { return ::atan2f( y, x ); }
@@ -236,6 +258,23 @@ namespace sw
             return ::remainderf( radians, kTwoPi );
         }
 
+        /** @brief 각(라디안) @p from 에서 @p to 까지 짧은 쪽으로 잰 부호 있는 차이(−π ~ π)입니다(유니티 `Mathf.DeltaAngle`, 언리얼 `FMath::FindDeltaAngleRadians`). */
+        [[nodiscard]] static SW_INLINE float32 deltaAngle( float32 from, float32 to ) noexcept { return wrapAngle( to - from ); }
+
+        /** @brief @p value 를 [0, @p length) 로 감습니다(유니티 `Mathf.Repeat`). 음수도 양수 쪽으로 감습니다. @p length 는 0 보다 커야 합니다. */
+        [[nodiscard]] static SW_INLINE float32 repeat( const float32 value, const float32 length ) noexcept
+        {
+            const float32 wrapped = value - ::floorf( value / length ) * length;
+            return ( wrapped >= length ) ? 0.0f : wrapped; // 반올림으로 length 가 나오면 0 이다
+        }
+
+        /** @brief @p value 가 0 → @p length → 0 을 오가는 값입니다(유니티 `Mathf.PingPong`). @p length 는 0 보다 커야 합니다. */
+        [[nodiscard]] static SW_INLINE float32 pingPong( const float32 value, const float32 length ) noexcept
+        {
+            const float32 cycle = repeat( value, length * 2.0f );
+            return length - abs( cycle - length );
+        }
+
         /** @brief 각(라디안) @p from 에서 @p to 로 짧은 쪽을 따라 @p weight 만큼 보간합니다. 결과는 감지 않습니다(언리얼 `FMath::LerpAngle` 과 같은 뜻). */
         [[nodiscard]] static SW_INLINE float32 lerpAngle( float32 from, float32 to, float32 weight ) noexcept { return from + wrapAngle( to - from ) * weight; }
 
@@ -266,6 +305,20 @@ namespace sw
         {
             static_assert( std::is_arithmetic_v<T>, "T should be arithmetic" );
             return ( MathUtil::abs( value2 - value1 ) < epsilon ) ? T( 0 ) : ( ( pos - value1 ) / ( value2 - value1 ) );
+        }
+
+        /**
+         * @brief @p value 를 [@p inMin, @p inMax] 에서 [@p outMin, @p outMax] 로 옮깁니다(자르지 않음 — 언리얼 `GetMappedRangeValueUnclamped`). 입력 범위가 0 폭이면 @p outMin 입니다.
+         */
+        [[nodiscard]] static SW_INLINE float32 remap( const float32 value, const float32 inMin, const float32 inMax, const float32 outMin, const float32 outMax ) noexcept
+        {
+            return lerp( outMin, outMax, inverseLerp( inMin, inMax, value ) );
+        }
+
+        /** @brief `remap` 과 같고 비율을 [0, 1] 로 잘라 결과가 출력 범위 밖으로 나가지 않습니다(언리얼 `GetMappedRangeValueClamped`). */
+        [[nodiscard]] static SW_INLINE float32 remapClamped( const float32 value, const float32 inMin, const float32 inMax, const float32 outMin, const float32 outMax ) noexcept
+        {
+            return lerp( outMin, outMax, saturate( inverseLerp( inMin, inMax, value ) ) );
         }
 
         /** @brief 부드러운 S자 곡선을 그리는 보간을 수행합니다 (Smoothstep). */

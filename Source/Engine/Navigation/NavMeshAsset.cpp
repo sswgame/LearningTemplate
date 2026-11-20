@@ -184,8 +184,7 @@ namespace sw
             uint32     tileCount = 0;
             const bool bHead     = reader.readString( agentType ) && reader.readPod( entry._settingsHash ) && reader.readPod( entry._inputHash ) && reader.readPod( entry._bounds ) && reader.readPod( tileCount );
             // 경계는 통째로 읽었다 — 유한한지는 여기서 본다(`readFloat32` 의 규칙).
-            const bool bFiniteBounds = MathUtil::isFinite( entry._bounds._min._x ) && MathUtil::isFinite( entry._bounds._min._y ) && MathUtil::isFinite( entry._bounds._min._z ) &&
-                                       MathUtil::isFinite( entry._bounds._max._x ) && MathUtil::isFinite( entry._bounds._max._y ) && MathUtil::isFinite( entry._bounds._max._z );
+            const bool bFiniteBounds = entry._bounds._min.isFinite() && entry._bounds._max.isFinite();
             if ( bHead == false || bFiniteBounds == false )
                 return false;
             entry._agentType = hashed_string( agentType );

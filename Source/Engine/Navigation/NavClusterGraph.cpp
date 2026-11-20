@@ -27,8 +27,6 @@ namespace sw
             static constexpr float32 kStaleEstimateTolerance = 1.0e-3f;
 
             static bool isTileBefore( const NavCluster& lhs, const NavCluster& rhs ) { return lhs._tileZ != rhs._tileZ ? lhs._tileZ < rhs._tileZ : lhs._tileX < rhs._tileX; }
-
-            static bool isFinite( const float3& value ) { return MathUtil::isFinite( value._x ) && MathUtil::isFinite( value._y ) && MathUtil::isFinite( value._z ); }
         };
     } // namespace
 } // namespace sw
@@ -206,7 +204,7 @@ namespace sw
                                 ( _listCluster[clusterIndex - 1]._tileX == cluster._tileX && _listCluster[clusterIndex - 1]._tileZ == cluster._tileZ );
             // 간선 묶음은 클러스터 순으로 빈틈없이 잇는다.
             const bool bEdges = cluster._firstEdge == nextEdge && static_cast<uint64>( cluster._edgeCount ) <= edgeCount - nextEdge;
-            if ( bOrder == false || bEdges == false || Internal::isFinite( cluster._center ) == false )
+            if ( bOrder == false || bEdges == false || cluster._center.isFinite() == false )
                 return false;
             nextEdge += cluster._edgeCount;
         }

@@ -10,6 +10,13 @@ namespace sw
     {
         struct MatrixMathInternal
         {
+            /// 정규화한 축의 길이 제곱은 0(퇴화 — normalize 가 0 벡터를 돌려줌)이거나 1 이다 — 그 사이를 가르는 문턱.
+            static constexpr float32 kDegenerateAxisLengthSquared = 0.5f;
+            /// `orthogonalize` 가 1 행에 수직인 보조 축을 고를 때, 1 행의 y 가 이보다 크면 위(+Y) 대신 앞(+Z)을 쓴다(나란한 축의 외적을 피한다).
+            static constexpr float32 kHelperAxisParallelLimit = 0.9f;
+            /// 4x4 행렬의 성분 수.
+            static constexpr uint32 kMatrixElementCount = sizeof( float4x4 ) / sizeof( float32 );
+
             /**
              * @brief 투영 행렬이 나누는 폭(가로 · 세로 · 깊이)입니다. 0 에 가까우면 1 로 바꿔 무한대 · NaN 행렬을 막습니다. 부호는 그대로 둡니다.
              * @details 투영 함수 다섯이 폭마다 이것을 씁니다.
@@ -53,7 +60,10 @@ namespace sw
     quaternion quaternion::makeFromAxisAngle( const float3& axis, float32 angle ) noexcept
     {
         const float3 normalizedAxis = axis.normalize();
-        const float3 halfAngle      = normalizedAxis * MathUtil::sin( angle * 0.5f );
+        // 0 벡터 · NaN 축은 normalize 가 0 벡터로 돌려준다 — 그대로 쓰면 (0, 0, 0, cos) 라는 단위가 아닌 쿼터니언이 되어 행렬이 줄어든다.
+        if ( normalizedAxis.getLengthSquared() < MatrixMathInternal::kDegenerateAxisLengthSquared )
+            return Identity;
+        const float3 halfAngle = normalizedAxis * MathUtil::sin( angle * 0.5f );
         return quaternion{ halfAngle._x, halfAngle._y, halfAngle._z, MathUtil::cos( angle * 0.5f ) };
     }
 
@@ -161,7 +171,7 @@ namespace sw
         const float32 scale1   = MathUtil::sin( ( 1.f - t ) * theta ) / sinTheta;
         const float32 scale2   = MathUtil::sin( t * theta ) / sinTheta;
 
-        return ( scale1 * from ) + ( scale2 * q2 );
+        return ( ( scale1 * from ) + ( scale2 * q2 ) ).normalize();
     }
 
     quaternion quaternion::concatenate( const quaternion& q1, const quaternion& q2 ) noexcept
@@ -283,6 +293,35 @@ namespace sw
     float32 quaternion::dot( const quaternion& other ) const noexcept
     {
         return ( _x * other._x ) + ( _y * other._y ) + ( _z * other._z ) + ( _w * other._w );
+    }
+
+    bool quaternion::isFinite() const noexcept
+    {
+        return MathUtil::isFinite( _x ) && MathUtil::isFinite( _y ) && MathUtil::isFinite( _z ) && MathUtil::isFinite( _w );
+    }
+
+    bool quaternion::isNormalized( float32 tolerance ) const noexcept
+    {
+        return MathUtil::abs( 1.0f - normSquared() ) < tolerance;
+    }
+
+    void quaternion::toAxisAngle( float3& outAxis, float32& outAngle ) const noexcept
+    {
+        outAngle                 = 2.0f * MathUtil::acos( _w );
+        const float32 sinSquared = MathUtil::max( 1.0f - _w * _w, 0.0f );
+        if ( sinSquared < MathUtil::kEpsilon )
+        {
+            outAxis = float3{ 1.0f, 0.0f, 0.0f };
+            return;
+        }
+        const float32 invSin = 1.0f / MathUtil::sqrt( sinSquared );
+        outAxis              = float3{ _x * invSin, _y * invSin, _z * invSin };
+    }
+
+    void quaternion::enforceShortestArcWith( const quaternion& other ) noexcept
+    {
+        if ( dot( other ) < 0.0f )
+            *this = -*this;
     }
 
     float3 quaternion::getEulerAngles() const noexcept
@@ -713,6 +752,47 @@ namespace sw
         _41 = translation._x;
         _42 = translation._y;
         _43 = translation._z;
+    }
+
+    bool float4x4::isFinite() const noexcept
+    {
+        const float32* pValue = &_11;
+        for ( uint32 index = 0; index < MatrixMathInternal::kMatrixElementCount; ++index )
+        {
+            if ( MathUtil::isFinite( pValue[index] ) == false )
+                return false;
+        }
+        return true;
+    }
+
+    float4x4 float4x4::orthogonalize() const noexcept
+    {
+        const float3 row1{ _11, _12, _13 };
+        const float3 row2{ _21, _22, _23 };
+        const float3 row3{ _31, _32, _33 };
+
+        const float3 xAxis = row1.normalizeOr( float3::Right, MathUtil::kEpsilon );
+        float3       yAxis = ( row2 - xAxis * xAxis.dot( row2 ) ).normalizeOr( float3::Zero, MathUtil::kEpsilon );
+        if ( yAxis.getLengthSquared() < MatrixMathInternal::kDegenerateAxisLengthSquared ) // 2 행이 0 이거나 1 행과 나란하다 — 1 행에 수직인 축을 고른다
+        {
+            const float3 helper = MathUtil::abs( xAxis._y ) < MatrixMathInternal::kHelperAxisParallelLimit ? float3::Up : float3::Forward;
+            yAxis               = ( helper - xAxis * xAxis.dot( helper ) ).normalize();
+        }
+        float3 zAxis = xAxis.cross( yAxis );
+        if ( zAxis.dot( row3 ) < 0.0f )
+            zAxis = -zAxis;
+
+        float4x4 result = *this;
+        result._11      = xAxis._x;
+        result._12      = xAxis._y;
+        result._13      = xAxis._z;
+        result._21      = yAxis._x;
+        result._22      = yAxis._y;
+        result._23      = yAxis._z;
+        result._31      = zAxis._x;
+        result._32      = zAxis._y;
+        result._33      = zAxis._z;
+        return result;
     }
 
     float32 float4x4::determinant() const noexcept

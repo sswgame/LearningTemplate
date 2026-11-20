@@ -111,7 +111,7 @@ SW_TEST_CASE( MeshModifierSweepTest, EveryModifierIsFiniteAndDeterministic )
         SW_EXPECT_TRUE_MSG( MeshModifierSweepTestUtil::isSamePositions( first, again ), context.c_str() );
         for ( const float3& position : first._listPosition )
         {
-            const bool bFinite = MathUtil::isFinite( position._x ) && MathUtil::isFinite( position._y ) && MathUtil::isFinite( position._z );
+            const bool bFinite = position.isFinite();
             SW_EXPECT_TRUE_MSG( bFinite, context.c_str() );
             if ( bFinite == false )
                 break;

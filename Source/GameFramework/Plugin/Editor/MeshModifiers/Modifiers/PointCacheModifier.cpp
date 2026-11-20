@@ -63,7 +63,7 @@ namespace sw::editor
                 std::memcpy( outData._listFramePosition.data(), bytes.data() + kHeaderSize, static_cast<size_t>( floatCount * sizeof( float32 ) ) );
                 for ( const float3& value : outData._listFramePosition )
                 {
-                    const bool bNonFinitePosition = MathUtil::isFinite( value._x ) == false || MathUtil::isFinite( value._y ) == false || MathUtil::isFinite( value._z ) == false;
+                    const bool bNonFinitePosition = value.isFinite() == false;
                     if ( bNonFinitePosition )
                         return false;
                 }
