@@ -52,7 +52,9 @@ namespace sw
             /** @brief 상호작용 @p def 의 건 길입니다 — 시작 효과는 `interaction:<id>`(끝날 때 지운다), 완료 · 취소 효과는 뒤에 `:complete` · `:cancel`(남는다). */
             static hashed_string makeSourceName( const InteractionDef& def, const utf8* pSuffix )
             {
-                return hashed_string( string( "interaction:" ) + def._id.c_str() + pSuffix );
+                StringBuilder<constant::buffer::kMax256> name;
+                name.appendFormat( "interaction:%#%#", def._id.c_str(), pSuffix );
+                return hashed_string( name.view() );
             }
 
             /** @brief 진행 동안만 걸린 시작 효과를 지웁니다(`_bEndStartEffect`, 채널링 중 이동 금지 같은 것). */

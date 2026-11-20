@@ -463,7 +463,9 @@ namespace sw
         shared_ptr<Mesh>   pieceMesh = Mesh::create();
         pieceMesh->setVertices( std::move( listPieceVertex ) );
 
-        GameObject*         pPiece = pManager->createGameObject( hashed_string( string( pOwner->getName().c_str() ) + "_" + region.c_str() ) );
+        StringBuilder<constant::buffer::kMax256> pieceName;
+        pieceName.appendFormat( "%#_%#", pOwner->getName().c_str(), region.c_str() );
+        GameObject*         pPiece = pManager->createGameObject( hashed_string( pieceName.view() ) );
         RigidBodyComponent* pBody  = pPiece != nullptr ? pPiece->addComponent<RigidBodyComponent>() : nullptr;
         MeshComponent*      pDraw  = pPiece != nullptr ? pPiece->addComponent<MeshComponent>() : nullptr;
         if ( pBody != nullptr && pDraw != nullptr )

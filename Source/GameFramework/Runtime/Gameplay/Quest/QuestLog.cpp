@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
@@ -149,7 +150,7 @@ namespace sw
     {
         uint32     lineCount = 0;
         uint32     skipped   = 0;
-        const auto add       = [&]( const string& label, const string& value )
+        const auto add       = [&]( string_view label, string_view value )
         {
             if ( lineCount >= maxLines )
             {
@@ -165,27 +166,29 @@ namespace sw
             const QuestStage* pStage = pQuest != nullptr ? pQuest->findStage( progress._stageID ) : nullptr;
             if ( progress._status != QuestStatus::Active )
             {
-                add( string( progress._questID.c_str() ), string( getEnumName( progress._status ) ) + " x" + to_string( progress._completedCount ) );
+                fixed_string<constant::buffer::kMax128> status;
+                formatstring( status.data(), status.capacity(), "%# x%#", getEnumName( progress._status ), progress._completedCount );
+                add( progress._questID.c_str(), status.view() );
                 continue;
             }
-            string state = string( "Active stage " ) + progress._stageID.c_str() + " t=" + to_string( static_cast<int32>( progress._stageTime ) ) + "s";
+            StringBuilder<constant::buffer::kMax256> state;
+            state.appendFormat( "Active stage %# t=%#s", progress._stageID.c_str(), static_cast<int32>( progress._stageTime ) );
             if ( pStage != nullptr && pStage->_timeLimit > 0.0f )
-                state += "/" + to_string( static_cast<int32>( pStage->_timeLimit ) ) + "s";
+                state.appendFormat( "/%#s", static_cast<int32>( pStage->_timeLimit ) );
             if ( progress._bAwaitingChoice == SW_TRUE )
-                state += " (awaiting choice)";
-            add( string( progress._questID.c_str() ), state );
+                state.append( " (awaiting choice)" );
+            add( progress._questID.c_str(), state.view() );
             if ( pStage == nullptr )
                 continue;
             for ( size_t index = 0; index < pStage->_listObjective.size() && index < progress._listCount.size(); ++index )
             {
-                const QuestObjective& objective = pStage->_listObjective[index];
-                const int32           count     = progress._listCount[index];
-                string                value     = to_string( count ) + "/" + to_string( objective._count );
-                if ( count >= objective._count )
-                    value += " done";
-                else if ( objective._bOptional )
-                    value += " optional";
-                add( string( "  " ) + objective._kind.c_str() + " " + objective._target.c_str(), value );
+                const QuestObjective&                  objective = pStage->_listObjective[index];
+                const int32                            count     = progress._listCount[index];
+                fixed_string<constant::buffer::kMax64> value;
+                formatstring( value.data(), value.capacity(), "%#/%#%#", count, objective._count, count >= objective._count ? " done" : ( objective._bOptional ? " optional" : "" ) );
+                fixed_string<constant::buffer::kMax256> label;
+                formatstring( label.data(), label.capacity(), "  %# %#", objective._kind.c_str(), objective._target.c_str() );
+                add( label.view(), value.view() );
             }
         }
         if ( _pCatalog == nullptr )
@@ -195,29 +198,36 @@ namespace sw
         {
             if ( findProgress( quest._id ) != nullptr )
                 continue;
-            const QuestStartResult result = evaluateStart( quest._id, playerLevel );
-            string                 reason = getEnumName( result );
-            if ( result == QuestStartResult::RequirementMissing )
+            const QuestStartResult                   result = evaluateStart( quest._id, playerLevel );
+            StringBuilder<constant::buffer::kMax256> text;
+            if ( result == QuestStartResult::Ok )
             {
-                for ( const hashed_string& requiredID : quest._listRequiredQuest )
+                text.append( "available" );
+                if ( quest._requiredLevel > 0 )
+                    text.appendFormat( " (level %#+)", quest._requiredLevel );
+            }
+            else
+            {
+                text.appendFormat( "locked: %#", getEnumName( result ) );
+                if ( result == QuestStartResult::RequirementMissing )
                 {
-                    const QuestProgress* pRequired = findProgress( requiredID );
-                    if ( pRequired == nullptr || pRequired->_completedCount <= 0 )
+                    for ( const hashed_string& requiredID : quest._listRequiredQuest )
                     {
-                        reason += string( " (" ) + requiredID.c_str() + ")";
-                        break;
+                        const QuestProgress* pRequired = findProgress( requiredID );
+                        if ( pRequired == nullptr || pRequired->_completedCount <= 0 )
+                        {
+                            text.appendFormat( " (%#)", requiredID.c_str() );
+                            break;
+                        }
                     }
                 }
+                else if ( result == QuestStartResult::LevelTooLow )
+                    text.appendFormat( " (needs %#)", quest._requiredLevel );
             }
-            else if ( result == QuestStartResult::LevelTooLow )
-                reason += " (needs " + to_string( quest._requiredLevel ) + ")";
-            string available = "available";
-            if ( quest._requiredLevel > 0 )
-                available += " (level " + to_string( quest._requiredLevel ) + "+)";
-            add( string( quest._id.c_str() ), result == QuestStartResult::Ok ? available : "locked: " + reason );
+            add( quest._id.c_str(), text.view() );
         }
         if ( skipped > 0 )
-            writer.addLine( "...", to_string( skipped ) + " more" );
+            writer.addLineFormat( "...", "%# more", skipped );
     }
 
     QuestStartResult QuestLog::start( const hashed_string& questID, int32 level )

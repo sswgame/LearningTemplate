@@ -325,14 +325,14 @@ namespace sw
         vector<hashed_string> listCycle;
         if ( EquipmentCondition::findConditionCycle( *_pItemCatalog, &_sets, listCycle ) )
         {
-            string chain;
+            StringBuilder<constant::buffer::kMax512> chain;
             for ( const hashed_string& itemID : listCycle )
             {
-                if ( chain.empty() == false )
-                    chain += " -> ";
-                chain += itemID.c_str();
+                if ( chain.size() > 0 )
+                    chain.append( " -> " );
+                chain.append( itemID.c_str() );
             }
-            _report.addErrorWithID( "Appearance.EquipmentConditionCycle", "equip conditions form a cycle: %#", chain );
+            _report.addErrorWithID( "Appearance.EquipmentConditionCycle", "equip conditions form a cycle: %#", chain.view() );
         }
         // 공유 코드와 네트워크는 아이템, 외형, 프리셋 id 를 32 비트 해시로 싣는다.
         const vector<ItemDef>& listItem = _pItemCatalog->getAll();
@@ -508,7 +508,8 @@ namespace sw
                 _report.addErrorWithID( "Appearance.PresetParentCycle", "preset '%#' parent chain forms a cycle", preset._id.c_str() );
                 continue;
             }
-            const string where = string( "preset '" ) + preset._id.c_str() + "'";
+            fixed_string<constant::buffer::kMax256> where;
+            formatstring( where.data(), where.capacity(), "preset '%#'", preset._id.c_str() );
             if ( preset._schema.empty() == false && _schemas.findSchema( preset._schema ) == nullptr )
                 _report.addErrorWithID( "Appearance.SchemaUnknown", "%# names unknown schema '%#'", where, preset._schema.c_str() );
             if ( preset._bodyProfile.empty() == false && _bodyProfiles.findProfile( preset._bodyProfile ) == nullptr )

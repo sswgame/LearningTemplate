@@ -164,10 +164,9 @@ namespace sw
             {
                 if ( owner.empty() )
                     return socket;
-                string name = owner.c_str();
-                name += ".";
-                name += socket.c_str();
-                return hashed_string( string_view( name.c_str(), name.size() ) );
+                StringBuilder<constant::buffer::kMax256> name;
+                name.appendFormat( "%#.%#", owner.c_str(), socket.c_str() );
+                return hashed_string( name.view() );
             }
 
             static void setMorph( ResolvedAppearance& out, const hashed_string& owner, const hashed_string& name, float32 weight )

@@ -11,6 +11,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -53,16 +54,22 @@ namespace sw
                     const GameObject* const pObject = pInteractable->getOwner();
                     if ( pObject == nullptr || lineCount >= GameplayDebugTarget::kMaxLines )
                         continue;
-                    const InteractionDef* const pDef  = pInteractable->getDefinition();
-                    string                      value = pOwner != nullptr ? string( getEnumName( pInteractable->findBlockReason( *pOwner ) ) ) : string( "-" );
+                    const InteractionDef* const              pDef = pInteractable->getDefinition();
+                    StringBuilder<constant::buffer::kMax256> value;
+                    value.append( pOwner != nullptr ? getEnumName( pInteractable->findBlockReason( *pOwner ) ) : "-" );
                     if ( pInteractable->getCooldownRemaining() > 0.0f )
-                        value += " " + to_string( pInteractable->getCooldownRemaining() ) + "s";
+                        value.appendFormat( " %#s", pInteractable->getCooldownRemaining() );
                     if ( pOwner != nullptr && pDef != nullptr )
                     {
                         const float32 distance = ( findWorldPosition( *pObject ) - findWorldPosition( *pOwner ) ).getLength();
-                        value += " dist " + to_string( distance ) + "/" + to_string( pDef->_maxDistance );
+                        value.appendFormat( " dist %#/%#", distance, pDef->_maxDistance );
                     }
-                    writer.addLine( string( "use " ) + pObject->getName().c_str() + ( pDef != nullptr ? string( " (" ) + pDef->_id.c_str() + ")" : string{} ), value );
+                    fixed_string<constant::buffer::kMax256> label;
+                    if ( pDef != nullptr )
+                        formatstring( label.data(), label.capacity(), "use %# (%#)", pObject->getName().c_str(), pDef->_id.c_str() );
+                    else
+                        formatstring( label.data(), label.capacity(), "use %#", pObject->getName().c_str() );
+                    writer.addLine( label.view(), value.view() );
                     ++lineCount;
                 }
                 for ( const ZoneVolumeComponent* pVolume : registry.getAll<ZoneVolumeComponent>() )
@@ -70,7 +77,9 @@ namespace sw
                     const GameObject* const pObject = pVolume->getOwner();
                     if ( pObject == nullptr || lineCount >= GameplayDebugTarget::kMaxLines )
                         continue;
-                    writer.addLine( string( "volume " ) + pObject->getName().c_str(), to_string( pVolume->getTracker().getOccupants().size() ) + " inside" );
+                    fixed_string<constant::buffer::kMax256> label;
+                    formatstring( label.data(), label.capacity(), "volume %#", pObject->getName().c_str() );
+                    writer.addLineFormat( label.view(), "%# inside", static_cast<uint64>( pVolume->getTracker().getOccupants().size() ) );
                     ++lineCount;
                 }
             }

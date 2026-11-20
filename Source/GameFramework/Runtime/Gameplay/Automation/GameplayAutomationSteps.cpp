@@ -89,7 +89,11 @@ namespace sw
                 GameObject*    pObject = findObject( runner, step, objectName );
                 PawnComponent* pPawn   = pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
                 if ( pObject != nullptr && pPawn == nullptr )
-                    runner.recordFailure( step, "object '" + objectName + "' has no pawn" );
+                {
+                    fixed_string<constant::buffer::kMax256> text;
+                    formatstring( text.data(), text.capacity(), "object '%#' has no pawn", objectName );
+                    runner.recordFailure( step, text.view() );
+                }
                 return pPawn;
             }
 
@@ -112,12 +116,18 @@ namespace sw
                 } );
                 if ( pSeat == nullptr )
                 {
-                    runner.recordFailure( step, "vehicle '" + vehicleName + "' has no free seat" );
+                    fixed_string<constant::buffer::kMax256> text;
+                    formatstring( text.data(), text.capacity(), "vehicle '%#' has no free seat", vehicleName );
+                    runner.recordFailure( step, text.view() );
                     return true;
                 }
                 const MountResult result = VehicleSeatComponent::mount( *pRider, *pSeat );
                 if ( result != MountResult::Mounted )
-                    runner.recordFailure( step, "'" + riderName + "' could not mount '" + vehicleName + "': " + getEnumName( result ) );
+                {
+                    fixed_string<constant::buffer::kMax256> text;
+                    formatstring( text.data(), text.capacity(), "'%#' could not mount '%#': %#", riderName, vehicleName, getEnumName( result ) );
+                    runner.recordFailure( step, text.view() );
+                }
                 return true;
             }
 
@@ -126,7 +136,11 @@ namespace sw
                 const string   riderName = step.readValidatedProperties<DismountStepParams>()._rider;
                 PawnComponent* pRider    = findPawn( runner, step, riderName );
                 if ( pRider != nullptr && VehicleSeatComponent::dismount( *pRider, false ) == false )
-                    runner.recordFailure( step, "'" + riderName + "' is not seated" );
+                {
+                    fixed_string<constant::buffer::kMax256> text;
+                    formatstring( text.data(), text.capacity(), "'%#' is not seated", riderName );
+                    runner.recordFailure( step, text.view() );
+                }
                 return true;
             }
         };

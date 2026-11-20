@@ -295,7 +295,11 @@ namespace sw
                 GameObject*                  pObject    = engine::findActiveObject( hashed_string( objectName ) );
                 CharacterEquipmentComponent* pEquipment = pObject != nullptr ? pObject->getComponent<CharacterEquipmentComponent>() : nullptr;
                 if ( pEquipment == nullptr || pEquipment->isStarted() == false )
-                    outReply = "no object named '" + objectName + "' with a started CharacterEquipmentComponent in the active scene";
+                {
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no object named '%#' with a started CharacterEquipmentComponent in the active scene", objectName );
+                    outReply = string( replyBuilder.view() );
+                }
                 return pEquipment != nullptr && pEquipment->isStarted() ? pEquipment : nullptr;
             }
 
@@ -312,10 +316,14 @@ namespace sw
                 item._count  = 1;
                 if ( pEquipment->addToBag( item ) == false )
                 {
-                    outReply = "the bag cannot take '" + listArgument[1] + "' (unknown item or no room)";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "the bag cannot take '%#' (unknown item or no room)", listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "gave " + listArgument[1];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "gave %#", listArgument[1] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -332,10 +340,14 @@ namespace sw
                 const EquipResult   result = pEquipment->equipFromBag( bagSlot, slot );
                 if ( result != EquipResult::Ok )
                 {
-                    outReply = "could not equip bag slot " + listArgument[1] + " (EquipResult " + to_string( static_cast<uint32>( result ) ) + ")";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not equip bag slot %# (EquipResult %#)", listArgument[1], static_cast<uint32>( result ) );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "equipped bag slot " + listArgument[1];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "equipped bag slot %#", listArgument[1] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -349,10 +361,14 @@ namespace sw
                     return false;
                 if ( pEquipment->unequipToBag( hashed_string( listArgument[1] ) ) == false )
                 {
-                    outReply = "could not unequip '" + listArgument[1] + "' (empty slot or no room in the bag)";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "could not unequip '%#' (empty slot or no room in the bag)", listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = "unequipped " + listArgument[1];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "unequipped %#", listArgument[1] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -368,16 +384,22 @@ namespace sw
                 WorldItemComponent* pItem   = pObject != nullptr ? pObject->getComponent<WorldItemComponent>() : nullptr;
                 if ( pItem == nullptr )
                 {
-                    outReply = "no object named '" + listArgument[1] + "' with a WorldItemComponent";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no object named '%#' with a WorldItemComponent", listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 if ( pItem->pickUp( pEquipment->getBagForTrade() ) == false )
                 {
                     SW_LOG_INFO_ID( "WorldItem.PickUpRefused", "The bag of %# has no room for %# - it stays on the ground", listArgument[0].c_str(), listArgument[1].c_str() );
-                    outReply = "the bag has no room for " + listArgument[1];
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "the bag has no room for %#", listArgument[1] );
+                    outReply = string( replyBuilder.view() );
                     return true; // 거절도 답이다 — 시나리오는 로그와 감시 값으로 본다
                 }
-                outReply = "picked up " + listArgument[1];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "picked up %#", listArgument[1] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -399,7 +421,9 @@ namespace sw
                 const CustomizationParamDef*  pParam    = pSchema != nullptr ? pSchema->findParameter( hashed_string( listArgument[2] ) ) : nullptr;
                 if ( pParam == nullptr )
                 {
-                    outReply = "the item in '" + listArgument[1] + "' has no customization parameter '" + listArgument[2] + "'";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "the item in '%#' has no customization parameter '%#'", listArgument[1], listArgument[2] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 CustomizationValue value;
@@ -422,10 +446,14 @@ namespace sw
                 }
                 if ( bRead == false || pEquipment->setEquippedValue( slot, value ) == false )
                 {
-                    outReply = "parameter '" + listArgument[2] + "' does not take that value (slider: one number, color: r g b [a], choice: an option name)";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "parameter '%#' does not take that value (slider: one number, color: r g b [a], choice: an option name)", listArgument[2] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = listArgument[2] + " dyed";
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%# dyed", listArgument[2] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -447,7 +475,9 @@ namespace sw
                     return false;
                 }
                 pEquipment->restoreState( std::move( bytes ) );
-                outReply = "restored the equipment state of " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "restored the equipment state of %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -487,8 +517,13 @@ namespace sw
                     outValue.setText( "(empty)" );
                     return true;
                 }
-                const size_t valueCount = item.getCustomization().getCount();
-                outValue.setText( valueCount == 0 ? string( item._itemID.c_str() ) : string( item._itemID.c_str() ) + " +" + to_string( static_cast<uint32>( valueCount ) ) );
+                const size_t                            valueCount = item.getCustomization().getCount();
+                fixed_string<constant::buffer::kMax256> text;
+                if ( valueCount == 0 )
+                    formatstring( text.data(), text.capacity(), "%#", item._itemID.c_str() );
+                else
+                    formatstring( text.data(), text.capacity(), "%# +%#", item._itemID.c_str(), static_cast<uint32>( valueCount ) );
+                outValue.setText( text.view() );
                 return true;
             }
 
@@ -531,7 +566,9 @@ namespace sw
                 command._kind = InventoryCommandKind::Sort;
                 vector<InventorySlot> listDropped;
                 (void)pEquipment->applyCommand( command, listDropped );
-                outReply = "sorted the bag of " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "sorted the bag of %#", listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

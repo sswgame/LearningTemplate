@@ -224,8 +224,13 @@ namespace sw
     void GimmickCircuitComponent::makeDef( GimmickCircuitDef& outDef, vector<string>& outListError ) const
     {
         outDef.clear();
-        const GameObject* pOwner = getOwner();
-        outDef.setSourceName( pOwner != nullptr ? string( pOwner->getName().c_str() ) + ".GimmickCircuit" : string( "GimmickCircuit" ) );
+        const GameObject*                        pOwner = getOwner();
+        StringBuilder<constant::buffer::kMax256> sourceName;
+        if ( pOwner != nullptr )
+            sourceName.appendFormat( "%#.GimmickCircuit", pOwner->getName().c_str() );
+        else
+            sourceName.append( "GimmickCircuit" );
+        outDef.setSourceName( sourceName.view() );
         outDef.setStepTime( _stepTime );
         for ( const GimmickNodeDesc& desc : _listNode )
         {
@@ -245,7 +250,9 @@ namespace sw
                 string_view value;
                 if ( StringUtil::trySplitKeyValue( pair, name, value ) == false )
                 {
-                    outListError.push_back( outDef.getSourceName() + ": node '" + desc._id.c_str() + "' has a parameter without name=value: '" + string( pair ) + "'" );
+                    StringBuilder<constant::buffer::kMax512> message;
+                    message.appendFormat( "%#: node '%#' has a parameter without name=value: '%#'", outDef.getSourceName(), desc._id.c_str(), pair );
+                    outListError.push_back( string( message.view() ) );
                     continue;
                 }
                 node.setParam( hashed_string( name ), value );
@@ -254,7 +261,11 @@ namespace sw
         for ( const GimmickWireDesc& wire : _listWire )
         {
             if ( outDef.addWire( wire._from, wire._to, wire._bInvert ) == false )
-                outListError.push_back( outDef.getSourceName() + ": wire '" + wire._from + "' -> '" + wire._to + "' needs node.port on both ends" );
+            {
+                StringBuilder<constant::buffer::kMax512> message;
+                message.appendFormat( "%#: wire '%#' -> '%#' needs node.port on both ends", outDef.getSourceName(), wire._from, wire._to );
+                outListError.push_back( string( message.view() ) );
+            }
         }
     }
 
@@ -359,10 +370,11 @@ namespace sw
                                       binding == Binding::Signal || binding == Binding::Hazard;
             if ( bNeedsSensor && pTarget->getComponent<GimmickSensorComponent>() == nullptr )
             {
-                const string error = string( "Gimmick node '" ) + _circuit.getNodeID( node ).c_str() + "' (" + _circuit.getKind( node )._name.c_str() + ") needs a GimmickSensorComponent on '" +
-                                     pTarget->getName().c_str() + "'";
-                SW_LOG_ERROR_ID( "GimmickCircuitComponent.SensorMissing", "%#", error );
-                _listError.push_back( error );
+                StringBuilder<constant::buffer::kMax512> error;
+                error.appendFormat( "Gimmick node '%#' (%#) needs a GimmickSensorComponent on '%#'", _circuit.getNodeID( node ).c_str(), _circuit.getKind( node )._name.c_str(),
+                                    pTarget->getName().c_str() );
+                SW_LOG_ERROR_ID( "GimmickCircuitComponent.SensorMissing", "%#", error.view() );
+                _listError.push_back( string( error.view() ) );
             }
             if ( binding == Binding::Mover )
             {
