@@ -157,10 +157,10 @@ namespace sw
                                                          ServiceTTLSweepReport& inoutReport )
     {
         using Internal = ServiceTTLRuleInternal;
-        string progressKey{ rule._table.view() };
-        progressKey.push_back( '/' );
-        progressKey += rule._keyPrefix;
-        int32 scannedCount = 0;
+        StringBuilder<constant::buffer::kMax128> progressKeyBuilder;
+        progressKeyBuilder.appendFormat( "%#/%#", rule._table.view(), rule._keyPrefix );
+        string progressKey( progressKeyBuilder.view() );
+        int32  scannedCount = 0;
         while ( scannedCount < maxScanCount )
         {
             ServiceRecord            progressRecord;
@@ -227,11 +227,9 @@ namespace sw
 
     string ServiceTTLRule::makeTTLIndexKey( int64 timeMs, string_view target )
     {
-        string key;
-        ServiceKeyUtil::appendHex64( key, static_cast<uint64>( timeMs < 0 ? 0 : timeMs ) );
-        key.push_back( '/' );
-        key += target;
-        return key;
+        StringBuilder<constant::buffer::kMax128> key; // 시각은 `ServiceKeyUtil::appendHex64` 와 같은 소문자 16 진 16자다
+        key.appendFormat( "%016llx/%#", static_cast<unsigned long long>( timeMs < 0 ? 0 : timeMs ), target );
+        return string( key.view() );
     }
 
     bool ServiceTTLRule::parseTTLIndexKey( string_view indexKey, int64& outTimeMs, string_view& outTarget )

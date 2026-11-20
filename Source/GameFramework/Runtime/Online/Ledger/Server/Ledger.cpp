@@ -330,20 +330,16 @@ namespace sw
 
             static string makeBalanceKey( const string& holderKey, string_view assetID )
             {
-                string key{ holderKey };
-                key.push_back( '/' );
-                key += assetID;
-                return key;
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%#/%#", holderKey, assetID );
+                return string( key.view() );
             }
 
             static string makeHistoryKey( const string& holderKey, int64 timeMs, string_view journalKey )
             {
-                string key{ holderKey };
-                key.push_back( '/' );
-                ServiceKeyUtil::appendHex64( key, static_cast<uint64>( timeMs < 0 ? 0 : timeMs ) );
-                key.push_back( '/' );
-                key += journalKey;
-                return key;
+                StringBuilder<constant::buffer::kMax128> key; // 시각은 `ServiceKeyUtil::appendHex64` 와 같은 소문자 16 진 16자다
+                key.appendFormat( "%#/%016llx/%#", holderKey, static_cast<unsigned long long>( timeMs < 0 ? 0 : timeMs ), journalKey );
+                return string( key.view() );
             }
 
             /** @brief 저장된 분개로 결과를 채웁니다(같은 내용이면 Ok + 다시 돌려줌, 다르면 JournalKeyReused). */
@@ -516,13 +512,13 @@ namespace sw
                         done.erase( Ledger::getDeletionQueueTable(), account.makeKey() );
                         return connection.commit( done );
                     }
-                    LedgerTransferRequest request;
-                    request._journalKey = LedgerJournalKey::makeAccountScope( accountID );
-                    request._journalKey += "/delete.";
-                    request._journalKey += listBalance.front()._assetID;
-                    request._reason    = "account.delete";
-                    request._timeMs    = timeMs;
-                    request._actorKind = LedgerActorKind::System;
+                    LedgerTransferRequest                    request;
+                    StringBuilder<constant::buffer::kMax128> journalKey;
+                    journalKey.appendFormat( "%#/delete.%#", LedgerJournalKey::makeAccountScope( accountID ), listBalance.front()._assetID );
+                    request._journalKey = string( journalKey.view() );
+                    request._reason     = "account.delete";
+                    request._timeMs     = timeMs;
+                    request._actorKind  = LedgerActorKind::System;
                     ServiceTransaction transaction;
                     const size_t       burnCount = std::min( listBalance.size(), static_cast<size_t>( LedgerConstant::kMaxPostingCount ) );
                     for ( size_t balanceIndex = 0; balanceIndex < burnCount; ++balanceIndex )
@@ -775,7 +771,10 @@ namespace sw
             return ServiceStoreResult::Invalid;
         string prefix = holder.makeKey();
         prefix.push_back( '/' );
-        const string             cursor = afterAssetID.empty() ? string() : prefix + string( afterAssetID );
+        StringBuilder<constant::buffer::kMax256> cursorBuilder;
+        if ( afterAssetID.empty() == false )
+            cursorBuilder.appendFormat( "%#%#", prefix, afterAssetID );
+        const string             cursor( cursorBuilder.view() );
         vector<ServiceRecord>    listRecord;
         const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, getBalanceTable(), prefix, cursor, maxCount, false, listRecord )._result;
         if ( listed != ServiceStoreResult::Ok )

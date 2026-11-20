@@ -69,14 +69,18 @@ namespace
             transportSettings._ioThreadCount = 0;
             SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&FCMFixture::onRequest>( this ) ) );
             SW_EXPECT_TRUE( _client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
-            const string    baseURL = "http://127.0.0.1:" + to_string( static_cast<int32>( _server.getListenPort() ) );
+            StringBuilder<constant::buffer::kMax64> baseURLBuilder;
+            baseURLBuilder.appendFormat( "http://127.0.0.1:%#", static_cast<int32>( _server.getListenPort() ) );
+            const string    baseURL( baseURLBuilder.view() );
             FCMPushSettings settings;
             settings._credentials._projectID     = "proj";
             settings._credentials._clientEmail   = "a@b";
             settings._credentials._privateKeyPem = "key";
-            settings._credentials._tokenURL      = baseURL + "/token";
-            settings._sendBaseURL                = baseURL;
-            _pProvider                           = make_unique<FCMPushProvider>( std::move( settings ), &_security, &_client );
+            StringBuilder<constant::buffer::kMax64> tokenURL;
+            tokenURL.appendFormat( "%#/token", baseURL );
+            settings._credentials._tokenURL = string( tokenURL.view() );
+            settings._sendBaseURL           = baseURL;
+            _pProvider                      = make_unique<FCMPushProvider>( std::move( settings ), &_security, &_client );
         }
 
         void onRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse )

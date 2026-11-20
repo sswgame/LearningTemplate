@@ -42,7 +42,9 @@ namespace sw
         , _tokenIssuedMs{ 0 }
     {
         SW_ASSERT( _settings._tokenRefreshMinMs > 0 ); // 제공자 파일의 필수 키다 — 0 이면 403 마다 곧바로 다시 서명한다
-        _deviceURLPrefix = _settings._baseURL + "/3/device/";
+        StringBuilder<constant::buffer::kMax256> prefix;
+        prefix.appendFormat( "%#/3/device/", _settings._baseURL );
+        _deviceURLPrefix = string( prefix.view() );
     }
 
     APNSPushSettings::~APNSPushSettings()
@@ -159,11 +161,15 @@ namespace sw
         }
         const bool        bAlert = PushPayloadUtil::hasAlert( message );
         HTTPClientRequest request;
-        request._method    = HTTPMethod::Post;
-        request._url       = _deviceURLPrefix + deviceToken;
+        request._method = HTTPMethod::Post;
+        StringBuilder<constant::buffer::kMax512> url;
+        url.appendFormat( "%#%#", _deviceURLPrefix, deviceToken );
+        request._url       = string( url.view() );
         request._timeoutMs = _settings._requestTimeoutMs;
         request._bodyBytes = StringUtil::toBytes( makePayloadJSON( message ) );
-        request._listHeader.push_back( HTTPHeader{ "authorization", "bearer " + _providerToken } );
+        StringBuilder<constant::buffer::kMax1024> authorization;
+        authorization.appendFormat( "bearer %#", _providerToken );
+        request._listHeader.push_back( HTTPHeader{ "authorization", string( authorization.view() ) } );
         request._listHeader.push_back( HTTPHeader{ "apns-topic", _settings._topic } );
         request._listHeader.push_back( HTTPHeader{ "apns-push-type", bAlert ? Internal::kPushTypeAlert : Internal::kPushTypeBackground } );
         if ( bAlert == false )

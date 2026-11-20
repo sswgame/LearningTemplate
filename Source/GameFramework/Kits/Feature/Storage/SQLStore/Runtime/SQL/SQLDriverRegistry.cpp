@@ -56,15 +56,15 @@ namespace sw
         } );
         if ( pDriver != nullptr )
             return pDriver;
-        string available;
-        for ( const string& name : listAvailable )
-        {
-            if ( available.empty() == false )
-                available += ", ";
-            available += name;
-        }
         StringBuilder<constant::buffer::kMax256> detailBuilder;
-        detailBuilder.appendFormat( "%# (target %#, available: %#)", driverName, build::kTargetName, available.c_str() );
+        detailBuilder.appendFormat( "%# (target %#, available: ", driverName, build::kTargetName );
+        for ( size_t nameIndex = 0; nameIndex < listAvailable.size(); ++nameIndex )
+        {
+            if ( nameIndex > 0 )
+                detailBuilder.append( ", " );
+            detailBuilder.append( listAvailable[nameIndex] );
+        }
+        detailBuilder.append( ')' );
         return unexpected( Error{ ErrorKind::NotFound, "no such SQL driver in this build target", detailBuilder.view() } );
     }
 

@@ -198,7 +198,9 @@ SW_TEST_CASE( PushDispatcherTest, DeviceLimitEvictsTheOldest )
     DispatcherFixture rig;
     for ( int32 index = 0; index < PushLimit::kMaxDevicePerAccount; ++index )
     {
-        rig.addDevice( "t" + to_string( index ), kNowMs + index );
+        fixed_string<constant::buffer::kMax16> token;
+        formatstring( token.data(), token.capacity(), "t%#", index );
+        rig.addDevice( token.view(), kNowMs + index );
     }
     rig.addDevice( "t5", kNowMs + 5 ); // 덮어쓰기 — 밀어내지 않는다
     rig.addDevice( "new", kNowMs + 100 );
@@ -283,9 +285,11 @@ SW_TEST_CASE( PushDispatcherTest, TopicClaimSendsOnce )
 /** @brief [PushDispatcherTest] 토픽 표는 창 끝에서 보존 기간이 지나면 지우고, 창 끝을 읽을 수 없는 키는 남긴다(감사 O-9) */
 SW_TEST_CASE( PushDispatcherTest, TopicClaimsExpireAfterWindow )
 {
-    DispatcherFixture             rig;
-    const PushNotificationMessage message;
-    const string                  claimKey = "event.1/" + ServiceKeyUtil::makeHex64( static_cast<uint64>( kNowMs ) ) + "/" + ServiceKeyUtil::makeHex64( 7 );
+    DispatcherFixture                        rig;
+    const PushNotificationMessage            message;
+    StringBuilder<constant::buffer::kMax128> claimKeyBuilder;
+    claimKeyBuilder.appendFormat( "event.1/%#/%#", ServiceKeyUtil::makeHex64( static_cast<uint64>( kNowMs ) ), ServiceKeyUtil::makeHex64( 7 ) );
+    const string claimKey( claimKeyBuilder.view() );
     rig._dispatcher.notifyTopicOnce( claimKey, "news", message, UnixMilliseconds{ rig._nowMs } );
     rig._dispatcher.notifyTopicOnce( "event.2", "news", message, UnixMilliseconds{ rig._nowMs } );
     rig.poll();

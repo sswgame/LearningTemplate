@@ -107,7 +107,9 @@ namespace sw
                     PostgresParameters parameters;
                     if ( const expected<void> encoded = PostgresCodec::encodeParameters( pParam, paramCount, pStatement->_paramCount, parameters ); encoded.has_value() == false )
                     {
-                        _lastError = string( encoded.error().message() ) + ": " + string( encoded.error().detail() );
+                        StringBuilder<constant::buffer::kMax512> lastError;
+                        lastError.appendFormat( "%#: %#", encoded.error().message(), encoded.error().detail() );
+                        _lastError = string( lastError.view() );
                         return SQLResult::Error;
                     }
                     ScopedResult    result{ PQexecPrepared( _pConnection, pStatement->_name.c_str(), pStatement->_paramCount, parameters._listValue.data(), parameters._listLength.data(),
@@ -119,7 +121,9 @@ namespace sw
                     {
                         if ( const expected<void> read = readRows( result.get(), *pOutRowSet ); read.has_value() == false )
                         {
-                            _lastError = string( read.error().message() ) + ": " + string( read.error().detail() );
+                            StringBuilder<constant::buffer::kMax512> lastError;
+                            lastError.appendFormat( "%#: %#", read.error().message(), read.error().detail() );
+                            _lastError = string( lastError.view() );
                             pOutRowSet->clear();
                             return SQLResult::Error;
                         }

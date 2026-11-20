@@ -17,5 +17,7 @@ SW_TEST_CASE( LeaderboardTypesTest, IDRuleAcceptsLowercaseDigitsAndUnderscore )
     SW_EXPECT_FALSE( LeaderboardNameRule::isValidID( "weekly score" ) );
     const string atLimit( static_cast<size_t>( LeaderboardLimit::kMaxIDSize ), 'a' );
     SW_EXPECT_TRUE( LeaderboardNameRule::isValidID( atLimit ) );
-    SW_EXPECT_FALSE( LeaderboardNameRule::isValidID( atLimit + "a" ) );
+    StringBuilder<constant::buffer::kMax128> overLimit;
+    overLimit.appendFormat( "%#a", atLimit );
+    SW_EXPECT_FALSE( LeaderboardNameRule::isValidID( overLimit.view() ) );
 }

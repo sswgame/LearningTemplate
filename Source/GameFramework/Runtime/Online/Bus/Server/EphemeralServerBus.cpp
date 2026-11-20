@@ -20,9 +20,9 @@ namespace sw
 
             static string makeChannel( string_view topic )
             {
-                string channel{ kChannelPrefix };
-                channel += topic;
-                return channel;
+                StringBuilder<constant::buffer::kMax128> channel;
+                channel.appendFormat( "%#%#", kChannelPrefix, topic );
+                return string( channel.view() );
             }
         };
     } // namespace

@@ -167,7 +167,9 @@ SW_TEST_CASE( RemoteConfigTest, ExperimentAssignsStableVariantsAndCountsThem )
     string text;
     registry.writePrometheusText( text );
     SW_EXPECT_TRUE( text.find( "remote_config_experiment_total" ) != string::npos );
-    SW_EXPECT_TRUE( text.find( string( "variant=\"" ) + variant + "\"" ) != string::npos );
+    fixed_string<constant::buffer::kMax128> expectedLabel;
+    formatstring( expectedLabel.data(), expectedLabel.capacity(), "variant=\"%#\"", variant );
+    SW_EXPECT_TRUE( text.find( expectedLabel.view() ) != string::npos );
     front.shutdown();
 }
 
