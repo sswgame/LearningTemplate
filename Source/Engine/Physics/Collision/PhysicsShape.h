@@ -14,11 +14,12 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    struct MeshAssetFormat;
+
     /** @brief 3D 셰이프 종류입니다(Jolt 의 Box, Sphere, Capsule, ConvexHull, Mesh). */
     ENUM()
     enum class PhysicsShapeType3D : uint8
@@ -54,6 +55,9 @@ namespace sw
     struct SW_API PhysicsShapeDesc3D
     {
         REFLECT_BODY();
+
+        /// .cpp 에 둔다 — `AssetRef<MeshAssetFormat>` 의 칸이 만들어지는 곳만 메시 형식을 알면 되어(AssetRef.h 머리말) 이 헤더가 메시 헤더 사슬을 끌어오지 않는다.
+        PhysicsShapeDesc3D();
 
         PROPERTY( Tooltip = "Shape kind" )
         PhysicsShapeType3D _type{ PhysicsShapeType3D::Box };

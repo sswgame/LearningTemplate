@@ -12,6 +12,7 @@
         { "_header": "Engine/Reflection/ReflectionMetadata.h", "_limit": 18, "_reason": "메타데이터 칸은 함수 포인터 별칭만 쓴다 — TypeInfo.h 대신 ReflectionMetadataBox.h" },
         { "_header": "Engine/Object/Component/SceneComponent.h", "_limit": 12, "_reason": "인라인 접근자는 트랜스폼 페이지만 본다 — 저장소(SceneTransformStorage.h) 대신 SceneTransformPage.h" },
         { "_header": "Engine/Scene/Scene.h", "_limit": 14, "_reason": "데이터 레이어 값은 SceneDataLayerTypes.h 로(서비스 헤더의 ISceneService 사슬을 뺐다), 저장 id 표는 별칭만 — ObjectStateSerializer.h 를 포함하지 않는다" },
+        { "_header": "Engine/Physics/Collision/PhysicsShape.h", "_limit": 18, "_reason": "메시 형식은 전방 선언 — AssetRef<MeshAssetFormat> 칸을 만드는 생성자를 PhysicsShape.cpp 에 둔다(MeshAssetFormat.h 사슬 다섯 개를 뺐다)" },
         { "_header": "Engine/Renderer/Frame/FrameRendererUtil.h", "_limit": 49, "_reason": "리플렉션 레지스트리를 쓰지 않는다 — TypeRegistry.h 포함을 지웠다" }
     ]
 }
