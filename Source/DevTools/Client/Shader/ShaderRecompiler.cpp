@@ -139,6 +139,12 @@ namespace sw
                 continue;
             }
 
+            // 바뀐 항목만 새 바이트로 바꾼다 — 캐시를 통째로 비우면 이번 묶음에서 깨진 셰이더의 마지막 성공 판까지 사라진다(`ShaderCache::replaceCompiled`).
+            if ( shaderCache.replaceCompiled( desc, newResult ) == false )
+            {
+                ++failed;
+                continue;
+            }
             ++changed;
             if ( pTracker != nullptr )
                 pTracker->record( ReloadSource::Shader, desc._source.str(), ReloadResult::Reloaded );
@@ -147,14 +153,11 @@ namespace sw
 
         if ( changed > 0 )
         {
-            // 인메모리 캐시는 마지막에 한 번만 비운다. 셰이더마다 비우면 같은 패스의 남은 재컴파일이
-            // 방금 지운 항목을 다시 채워 넣는다.
-            shaderCache.clearCache();
-            // 리플렉션도 비운다. 셰이더가 머티리얼 구조(SW_MATERIAL_BEGIN/END)를 바꿨을 수 있고, 머티리얼은 이 캐시 세대를 보고 레이아웃을
+            // 리플렉션은 비운다. 셰이더가 머티리얼 구조(SW_MATERIAL_BEGIN/END)를 바꿨을 수 있고, 머티리얼은 이 캐시 세대를 보고 레이아웃을
             // 다시 맞춘다(Material::isShaderLayoutSynced). 비우지 않으면 맞춘 레이아웃이 옛 셰이더 것 그대로 남는다.
             ShaderReflectionLibrary::clearCache();
         }
-        // 알림은 캐시를 비운 **뒤에** 한다 — 받는 쪽(렌더러)이 PSO 를 다시 만들 때 새 바이트코드를 집는다. 비우기 전에 알리면 렌더 스레드가 그사이 옛 캐시 항목으로 다시 만든다.
+        // 알림은 항목을 바꾸고 리플렉션을 비운 **뒤에** 한다 — 받는 쪽(렌더러)이 PSO 를 다시 만들 때 새 바이트코드 · 레이아웃을 집는다.
         if ( listChangedPath.empty() == false && _onAnyRecompiled.isBound() )
             _onAnyRecompiled.get()( listChangedPath );
 
