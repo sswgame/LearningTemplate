@@ -4,6 +4,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 #include <cstring>
@@ -95,7 +96,7 @@ namespace sw
 
     LocalDeviceKeyProvider::~LocalDeviceKeyProvider()
     {
-        std::memset( _arrKey, 0, sizeof( _arrKey ) );
+        Memory::wipe( _arrKey, sizeof( _arrKey ) );
     }
 
     bool LocalDeviceKeyProvider::getSealKey( uint8 ( &outKey )[kKeySize] )

@@ -3,6 +3,7 @@
 #include "Core/Network/Connection/NetPacketSealer.h"
 
 #include "Core/Foundation/Expected.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Serialization/LittleEndianUtil.h"
@@ -64,7 +65,7 @@ namespace sw
                     bComputed = provider.computeHKDFSHA256( arrProofKey, static_cast<int32>( sizeof( arrProofKey ) ), nullptr, 0, arrInfo,
                                                             static_cast<int32>( sizeof( kLabel ) ) + aadSize, pOutTag, NetSecurityConstant::kAEADTagSize );
                 }
-                std::memset( arrProofKey, 0, sizeof( arrProofKey ) );
+                Memory::wipe( arrProofKey, sizeof( arrProofKey ) );
                 return bComputed;
             }
 
@@ -165,7 +166,7 @@ namespace sw
         const bool bKeys = provider.makeX25519KeyPair( outSecurity._keyPair ) &&
                            provider.computeX25519SharedSecret( outSecurity._keyPair._arrPrivateKey, pClientPublicKey, arrShared ) &&
                            NetSessionKeys::computeSessionKeys( provider, arrShared, pSecret, clientSalt, serverSalt, protocolID, outSecurity._keys );
-        std::memset( arrShared, 0, sizeof( arrShared ) );
+        Memory::wipe( arrShared, sizeof( arrShared ) );
         outSecurity._keyPair.wipe(); // 서버는 수락을 다시 보낼 때 쓰도록 공개 키만 남긴다.
         if ( bKeys == false )
             return false;
@@ -181,7 +182,7 @@ namespace sw
         uint8      arrShared[NetSecurityConstant::kX25519KeySize]{};
         const bool bKeys = provider.computeX25519SharedSecret( inoutSecurity._keyPair._arrPrivateKey, pServerPublicKey, arrShared ) &&
                            NetSessionKeys::computeSessionKeys( provider, arrShared, pSecret, clientSalt, serverSalt, protocolID, inoutSecurity._keys );
-        std::memset( arrShared, 0, sizeof( arrShared ) );
+        Memory::wipe( arrShared, sizeof( arrShared ) );
         if ( bKeys == false )
             return false;
         inoutSecurity._sendAEAD      = provider.createAEAD( algorithm, inoutSecurity._keys._clientToServer._arrKey );
