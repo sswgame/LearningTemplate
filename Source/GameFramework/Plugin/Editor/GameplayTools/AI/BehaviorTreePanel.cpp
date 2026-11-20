@@ -21,7 +21,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/Model/BehaviorTreeLiveRunner.h"

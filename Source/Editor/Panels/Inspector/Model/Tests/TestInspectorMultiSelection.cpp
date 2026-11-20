@@ -15,7 +15,7 @@
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/SceneManager.h"
 
 // InspectorMultiSelectionTest — 여러 오브젝트를 고른 인스펙터의 활성 칸 · 공통 아닌 컴포넌트 수 · 혼합 판정. 씬 밖의 지역 매니저로 본다.

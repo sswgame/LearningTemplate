@@ -12,7 +12,7 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Presentation/UIViewModel.h"
 #include "Engine/Reflection/ReflectedValue.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"

@@ -25,7 +25,7 @@
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>

@@ -4,7 +4,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 namespace sw::editor

@@ -13,7 +13,7 @@ namespace sw
 
     /**
      * @brief pType 이 pTarget 이거나 그 파생이면 true 입니다. 둘 중 하나가 nullptr 이면 false 입니다(`TypeInfo::isDerivedFrom` 과 같다).
-     * @details 인라인이다 — 조상 표(`TypeCastHeader`, `TypeInfo` 의 맨 앞 멤버)만 보므로 이 헤더가 `ReflectionTypes.h`(약 700 TU 에 닿는다)를 끌지 않는다.
+     * @details 인라인이다 — 조상 표(`TypeCastHeader`, `TypeInfo` 의 맨 앞 멤버)만 보므로 이 헤더가 `TypeInfo.h`(약 700 TU 에 닿는다)를 끌지 않는다.
      *          표가 아직 없거나 만들 수 없는 드문 경우만 줄 밖 느린 길로 간다.
      */
     inline bool isTypeDerivedFrom( const TypeInfo* pType, const TypeInfo* pTarget )

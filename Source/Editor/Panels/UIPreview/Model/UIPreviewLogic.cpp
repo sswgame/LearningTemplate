@@ -13,7 +13,7 @@
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"

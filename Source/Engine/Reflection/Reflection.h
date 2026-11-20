@@ -8,6 +8,6 @@
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"

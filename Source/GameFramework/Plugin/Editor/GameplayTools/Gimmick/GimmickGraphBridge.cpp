@@ -2,7 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphBridge.h"
 
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitComponent.h"

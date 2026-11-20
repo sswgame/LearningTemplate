@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Animation/UIStyleTransitionState.h"
 #include "Engine/UI/Render/UIPaintContext.h"

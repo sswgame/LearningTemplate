@@ -1,6 +1,9 @@
 /**
  * @file TypeInfo.h
  * @brief 형식 하나의 리플렉션 정보입니다.
+ * @details `GameObject.h` · `Component.h` 를 거쳐 TU 약 700 개가 읽는 묶음 헤더다(EnumInfo · FunctionInfo · PropertyInfo). 속성 키를 더할 때마다 바뀌는 메타데이터 구조
+ *          (`TypeMetadata` · `PropertyMetadata` · `FunctionMetadata`)는 `ReflectionMetadata.h` 에 있고 여기서는 `ReflectionMetadataBox` 로만 든다 — 메타데이터 칸을 읽는 인라인 본문을 두지 않는다.
+ *          옛 껍데기 `ReflectionTypes.h`(이 헤더 하나만 포함했다)는 지웠다(헤더 팬인 다이어트 ④).
  */
 #pragma once
 #include "Engine/Reflection/EnumInfo.h"

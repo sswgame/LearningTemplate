@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 

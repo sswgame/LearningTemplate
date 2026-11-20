@@ -8,8 +8,8 @@
 #include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 
 #include "Engine/Reflection/ReflectionInvoke.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 // InspectorMethodCallTest — 인스펙터의 FUNCTION 호출. 인자 칸(내장 표 위젯 값)은 `ReflectedValue` 로 넘어가 인자 타입으로 바뀌고,
 // 결과 갈래(`ReflectCallResult`) · 반환 글 · 실패 수/대상 수가 결과 칸에 남는다(엔진 테스트 타입 `InvokeDemoActor` 로 본다 — 씬 밖 대상이라 바로 부른다).

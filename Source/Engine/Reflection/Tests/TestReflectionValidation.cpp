@@ -3,9 +3,9 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 // ReflectionValidationTest — 검증 함수. PROPERTY( Validate = fn ) · REFLECT( Validate = fn ) 를 돌려 결과를 모으는 길.
 

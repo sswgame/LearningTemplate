@@ -9,7 +9,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectBuiltinClass.h"
 #include "Engine/Reflection/ReflectedValue.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"

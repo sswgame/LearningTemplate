@@ -9,7 +9,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {

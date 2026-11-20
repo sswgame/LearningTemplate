@@ -4,7 +4,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
 #include "Engine/UI/Layout/UILayoutPass.h"

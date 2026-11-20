@@ -12,7 +12,7 @@
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"

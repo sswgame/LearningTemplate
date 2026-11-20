@@ -20,7 +20,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"

@@ -9,7 +9,7 @@
 
 #include "Engine/Foundation/SceneIterationKey.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 

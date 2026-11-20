@@ -9,7 +9,7 @@
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 // PropertyGridViewModelTest — 프로퍼티 그리드 대상이 값(범위 · 오브젝트 id · 컴포넌트 id)이라 그리는 사이 사라진 대상은 묶이지 않고, 씬 밖 대상은 주소 그대로 묶인다.

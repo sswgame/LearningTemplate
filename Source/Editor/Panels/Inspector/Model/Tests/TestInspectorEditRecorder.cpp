@@ -8,7 +8,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeInfo.h"
 
 // InspectorEditRecorderTest — 인스펙터 프로퍼티 편집 구간(감사 E-7): 찍는 때는 모델의 첫 쓰기 직전이고, 단위는 (오브젝트 id, 컴포넌트 키, 프로퍼티 경로, 값 글)이다.

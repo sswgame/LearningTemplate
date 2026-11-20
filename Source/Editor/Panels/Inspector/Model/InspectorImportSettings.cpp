@@ -19,7 +19,6 @@
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLFields.h"

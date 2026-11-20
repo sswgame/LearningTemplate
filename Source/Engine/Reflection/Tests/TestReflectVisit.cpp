@@ -4,8 +4,8 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectVisit.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 // ReflectVisitTest — 리플렉션 칸을 도는 한 곳(`ReflectPropertyVisitor`). 순서(기반부터) · 구조체 값과 시퀀스 원소로 내려가기 · 멈춤.
 

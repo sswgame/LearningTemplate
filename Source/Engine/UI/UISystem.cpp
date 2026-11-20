@@ -27,7 +27,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Presentation/UIViewModel.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Text/FontService.h"

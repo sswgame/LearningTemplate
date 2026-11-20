@@ -2,7 +2,7 @@
 
 #include "GameFramework/Client/HUD/HUDControllerComponent.h"
 
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"

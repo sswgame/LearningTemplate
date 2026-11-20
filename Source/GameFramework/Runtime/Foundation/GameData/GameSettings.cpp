@@ -10,7 +10,7 @@
 #include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

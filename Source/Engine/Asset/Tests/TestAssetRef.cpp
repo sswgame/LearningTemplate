@@ -6,7 +6,7 @@
 #include "Engine/Asset/Tests/AssetRefTestTypes.h"
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
