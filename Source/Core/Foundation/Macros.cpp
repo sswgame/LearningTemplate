@@ -3,6 +3,7 @@
 #include "Core/Foundation/Macros.h"
 
 #include "Core/Foundation/AssertDialogSlot.h"
+#include "Core/Foundation/LowLevelReporterSlot.h"
 
 #include <array>
 #include <atomic>
@@ -14,8 +15,8 @@ namespace sw::internal
 {
     namespace
     {
-        /** @brief 로그가 설치한 보고자입니다. 상수 초기화라 정적 초기화 순서를 타지 않습니다. */
-        std::atomic<LowLevelReporterFunc> s_pfnLowLevelReporter{ nullptr };
+        /** @brief 로그가 건 보고자입니다(`bindLowLevelReporter` — 하나, 둘째 등록은 단언). 상수 초기화라 정적 초기화 순서를 타지 않습니다. */
+        ObserverSlot<LowLevelReporterSignature> s_lowLevelReporterSlot{};
         /**
          * @brief 단언 대화상자의 사용자 설정입니다(에디터 환경설정 Editor/Diagnostics). 대화상자는 검사 구성(SW_DO_CHECKS)에만 있지만 설정은 모든 구성에 둔다 —
          *        에디터가 구성마다 다른 길 없이 입히고 읽게 한다. 설정을 읽기 전의 초기화 구간은 이 기본값(띄움 · 기억함)으로 돈다.
@@ -43,9 +44,14 @@ namespace sw::internal
         };
     } // namespace
 
-    LowLevelReporterFunc setLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept
+    LowLevelReporterRegistration bindLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept
     {
-        return s_pfnLowLevelReporter.exchange( pfnReporter, std::memory_order_acq_rel );
+        return s_lowLevelReporterSlot.bind( pfnReporter );
+    }
+
+    LowLevelReporterSuspension suspendLowLevelReporter() noexcept
+    {
+        return LowLevelReporterSuspension{ s_lowLevelReporterSlot };
     }
 
     void formatLowLevelMessage( utf8* pBuffer, size_t capacity, const utf8* pFormat, ... ) noexcept
@@ -72,7 +78,7 @@ namespace sw::internal
         if ( bWarning == false )
             LowLevelReportInternal::writeStderr( LowLevelReportLevel::Error, pFile, line, pMessage, pID ); // Fatal 도 stderr 에는 Error 로 쓴다
 
-        const LowLevelReporterFunc pfnReporter = s_pfnLowLevelReporter.load( std::memory_order_acquire );
+        const LowLevelReporterFunc pfnReporter = s_lowLevelReporterSlot.get();
         const bool                 bReported   = pfnReporter != nullptr && pfnReporter( level, pFile, line, pMessage, pID );
         // 로거가 서기 전이거나 로거가 없는 도구이거나 싱크가 없다 — 경고를 잃지 않게 stderr 에 남긴다(Error · Fatal 은 위에서 이미 썼다).
         if ( bReported == false && bWarning )
@@ -133,7 +139,7 @@ namespace sw::internal
 
         /**
          * @brief 단언 대화상자의 설치 칸과 "항상 무시" 자리입니다. 프로세스에 하나이고 `bindAssertDialog` 가 겁니다(토큰이 사라지면 뗀다).
-         * @details 단언은 서비스 범위보다 아래 층이라 범위에 맡길 수 없고, 단언 안에서 할당하면 안 되어 지연 생성도 못 한다. 그래서 위의 `s_pfnLowLevelReporter` 와
+         * @details 단언은 서비스 범위보다 아래 층이라 범위에 맡길 수 없고, 단언 안에서 할당하면 안 되어 지연 생성도 못 한다. 그래서 위의 `s_lowLevelReporterSlot` 와
          *          같은 모양 — 이름공간의 이 한 변수(상수 초기화라 정적 초기화 순서를 타지 않는다)가 소유자이고, 접근자 함수를 두지 않는다.
          */
         AssertDialogState s_dialogState;

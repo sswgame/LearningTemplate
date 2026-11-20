@@ -1800,6 +1800,7 @@
     "registerReadObserver": "PlatformFileUtil::bindReadObserver — 관찰자 하나, 둘째 등록은 단언(ObserverSlot, 2026-11-21)",
     "unregisterReadObserver": "PlatformFileUtil::bindReadObserver 가 돌려준 토큰의 reset(2026-11-21)",
     "registerWriteObserver": "PlatformFileUtil::bindWriteObserver — 관찰자 하나, 둘째 등록은 단언(ObserverSlot, 2026-11-21)",
-    "unregisterWriteObserver": "PlatformFileUtil::bindWriteObserver 가 돌려준 토큰의 reset(2026-11-21)"
+    "unregisterWriteObserver": "PlatformFileUtil::bindWriteObserver 가 돌려준 토큰의 reset(2026-11-21)",
+    "setLowLevelReporter": "internal::bindLowLevelReporter(LowLevelReporterSlot.h) — 보고자 하나, 둘째 등록은 단언, 테스트는 suspendLowLevelReporter(2026-11-21)"
   }
 }

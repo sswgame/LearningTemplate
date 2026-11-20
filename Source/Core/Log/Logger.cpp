@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/LowLevelReporterSlot.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -70,12 +71,8 @@ namespace sw
             return true;
         }
 
-        /// @brief 기동 때 보고자를 건다. 포인터 하나를 상수 초기화된 원자에 넣을 뿐이라 정적 초기화 순서를 타지 않는다.
-        [[maybe_unused]] const bool s_bLowLevelReporterInstalled = []() noexcept
-        {
-            internal::setLowLevelReporter( &forwardLowLevelReport );
-            return true;
-        }();
+        /// @brief 기동 때 건 보고자의 등록이다. 칸이 상수 초기화돼 정적 초기화 순서를 타지 않고, 프로세스가 끝날 때 토큰이 떼어 낸다(그 뒤 보고는 stderr).
+        internal::LowLevelReporterRegistration s_lowLevelReporterRegistration = internal::bindLowLevelReporter( &forwardLowLevelReport );
     } // namespace
 } // namespace sw
 

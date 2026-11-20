@@ -4,6 +4,7 @@
 #include "pch.h"
 
 #include "Core/Container/string.h"
+#include "Core/Foundation/LowLevelReporterSlot.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
@@ -114,7 +115,7 @@ namespace
     };
 
     /**
-     * @brief 보고자를 걸고 stderr 를 케이스 폴더의 파일로 돌립니다. 끝에 둘 다 되돌립니다(로그가 건 보고자도 되돌린다).
+     * @brief 보고자를 걸고 stderr 를 케이스 폴더의 파일로 돌립니다. 끝에 둘 다 되돌립니다(로그가 건 보고자는 떼어 두었다가 되돌린다).
      * @details 보고자는 `nullptr` 도 걸 수 있다 — 받는 쪽이 없는 상태를 만든다. stderr 는 파일 서술자째 돌려야 하므로 `FILE*` 를 주는 `fopen` 을 쓴다(`FileUtil` 은 통째 읽기 · 쓰기뿐이다).
      */
     class ScopedLowLevelCapture
@@ -122,7 +123,8 @@ namespace
     public:
         explicit ScopedLowLevelCapture( internal::LowLevelReporterFunc pfnReporter, bool bHandled = true )
             : _savedStderr{ -1 }
-            , _pPreviousReporter{ nullptr }
+            , _suspension{ internal::suspendLowLevelReporter() } // 로그가 건 보고자를 범위 동안 떼어 둔다 — 보고자는 하나라 그대로 걸면 이중 등록 단언이다
+            , _registration{}
         {
             LowLevelReportTestInternal::_s_received = {};
             LowLevelReportTestInternal::_s_bHandled = bHandled;
@@ -135,14 +137,14 @@ namespace
             _savedStderr = LowLevelReportTestInternal::duplicateDescriptor( LowLevelReportTestInternal::getDescriptorOf( stderr ) );
             LowLevelReportTestInternal::redirectDescriptor( LowLevelReportTestInternal::getDescriptorOf( LowLevelReportTestInternal::_s_pCapture ),
                                                             LowLevelReportTestInternal::getDescriptorOf( stderr ) );
-            _pPreviousReporter = internal::setLowLevelReporter( pfnReporter );
+            _registration = internal::bindLowLevelReporter( pfnReporter ); // nullptr 이면 받는 쪽이 없는 상태 그대로다
         }
 
         ~ScopedLowLevelCapture()
         {
             if ( LowLevelReportTestInternal::_s_pCapture != nullptr )
             {
-                (void)internal::setLowLevelReporter( _pPreviousReporter );
+                _registration.reset(); // 떼어 둔 로그 보고자는 범위가 끝날 때(멤버 소멸) 돌아온다
                 std::fflush( stderr );
                 LowLevelReportTestInternal::redirectDescriptor( _savedStderr, LowLevelReportTestInternal::getDescriptorOf( stderr ) );
                 LowLevelReportTestInternal::closeDescriptor( _savedStderr );
@@ -176,8 +178,9 @@ namespace
         }
 
     private:
-        int32                          _savedStderr;
-        internal::LowLevelReporterFunc _pPreviousReporter;
+        int32                                  _savedStderr;
+        internal::LowLevelReporterSuspension   _suspension;
+        internal::LowLevelReporterRegistration _registration;
     };
 } // namespace
 
@@ -345,3 +348,29 @@ SW_TEST_CASE( LowLevelReportTest, MissingRequiredServiceReportsOneErrorBeforeSto
     SW_EXPECT_TRUE_MSG( received._bStderrHadTextAtCall, "stderr was still empty when the reporter ran" );
 }
 #endif
+
+/**
+ * @brief 보고자는 하나다 — 걸린 동안 둘째 등록은 단언(가로채기로 센다)하고 앞 보고자를 덮지 않는다
+ */
+SW_TEST_CASE( LowLevelReportTest, SecondReporterBindAsserts )
+{
+    const internal::LowLevelReporterSuspension   hostSuspension = internal::suspendLowLevelReporter();
+    const internal::LowLevelReporterRegistration first          = internal::bindLowLevelReporter( &LowLevelReportTestInternal::reporter );
+    SW_EXPECT_TRUE( first.isActive() );
+    LowLevelReportTestInternal::_s_received = {};
+    LowLevelReportTestInternal::_s_bHandled = true;
+    {
+        test::ScopedAssertCapture capture;
+        // 이중 등록 단언은 보고 통로로도 나가 첫 보고자가 받는다(로그에는 닿지 않는다 — 로그 보고자는 떼어 두었다)
+        const internal::LowLevelReporterRegistration second = internal::bindLowLevelReporter( &LowLevelReportTestInternal::reporter );
+        SW_EXPECT_FALSE( second.isActive() );
+        if ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 1u, capture.getCount() );
+    }
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( LowLevelReportTestInternal::_s_received._count ) );
+    // 받은 글은 놓는다 — 정적 칸에 남으면 종료 누수 보고에 찍힌다(`ScopedLowLevelCapture` 소멸자와 같은 까닭)
+    LowLevelReceived& received = LowLevelReportTestInternal::_s_received;
+    received                   = LowLevelReceived{};
+    received._file.shrink_to_fit();
+    received._message.shrink_to_fit();
+}
