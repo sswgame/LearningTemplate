@@ -21,6 +21,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
+#include "Engine/Scene/SceneSubLevelSubsystem.h"
 
 namespace sw
 {
@@ -53,6 +54,28 @@ namespace sw
             if ( pManager == nullptr )
                 return false;
             outValue = static_cast<float64>( pManager->getSubsystem<SceneStreamingSubsystem>().getLoadedCellCount() );
+            return true;
+        }
+
+        /**
+         * @brief 감시 값 `Scene.SubLevelCount` 입니다. 활성 씬의 런타임 하위 레벨 수(짓는 중 · 빼는 중 포함)입니다(`SceneSubLevelSubsystem`).
+         */
+        [[nodiscard]] bool readSceneSubLevelCount( const GameObjectManager* pManager, float64& outValue )
+        {
+            if ( pManager == nullptr )
+                return false;
+            outValue = static_cast<float64>( pManager->getSubsystem<SceneSubLevelSubsystem>().getSubLevelCount() );
+            return true;
+        }
+
+        /**
+         * @brief 감시 값 `Scene.LoadedSubLevelCount` 입니다. 활성 씬의 런타임 하위 레벨 가운데 다 지어 드러난 수입니다 — 하위 레벨 시나리오가 더한 뒤 오르기를 기다린다.
+         */
+        [[nodiscard]] bool readSceneLoadedSubLevelCount( const GameObjectManager* pManager, float64& outValue )
+        {
+            if ( pManager == nullptr )
+                return false;
+            outValue = static_cast<float64>( pManager->getSubsystem<SceneSubLevelSubsystem>().getLoadedSubLevelCount() );
             return true;
         }
 
@@ -115,6 +138,8 @@ namespace sw
     SW_AUTOMATION_WATCH( sceneObjectCount, "Scene.ObjectCount", "Objects in the active scene", &readSceneObjectCount );
     SW_AUTOMATION_WATCH( sceneLoadedCellCount, "Scene.LoadedCellCount", "Streaming cell fragments of the active scene that are loaded (built and shown) - 0 when it does not stream cells",
                          &readSceneLoadedCellCount );
+    SW_AUTOMATION_WATCH( sceneSubLevelCount, "Scene.SubLevelCount", "Runtime sub-levels of the active scene, including ones still building or being removed", &readSceneSubLevelCount );
+    SW_AUTOMATION_WATCH( sceneLoadedSubLevelCount, "Scene.LoadedSubLevelCount", "Runtime sub-levels of the active scene that are built and shown", &readSceneLoadedSubLevelCount );
     SW_AUTOMATION_WATCH( sceneCameraYaw, "Scene.CameraYaw", "Yaw (degrees) the active scene's game camera looks along (world +Z is 0, toward +X is positive)", &readSceneCameraYaw );
     // 활동 수 없음: 비동기 씬 로드는 워커 잡 하나가 다 지은 씬을 끝에 넘긴다 — 프리로드 진행(`SceneManager::tryGetLoadProgress`)은 쿠킹한 프리로드 목록이 있을 때만 있어 Dev 실행에서는 낼 수 없다.
     SW_AUTOMATION_WALL_WATCH( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight", &readSceneTransitioning, nullptr );

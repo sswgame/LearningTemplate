@@ -32,6 +32,7 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
+#include "Engine/Scene/SceneSubLevelSubsystem.h"
 
 namespace sw
 {
@@ -227,7 +228,8 @@ namespace sw
                 context._savedID = entity._fileID;
                 if ( entity._embeddedStateBytes.empty() == false )
                 {
-                    // 쿠킹된 상태의 참조는 이미 평평한 파일 id 다(`SceneObjectNode::_idScope`).
+                    // 쿠킹된 상태의 참조는 이미 평평한 파일 id 다(`SceneObjectNode::_idScope`). 런타임 하위 레벨만 자기 범위로 한 번 더 옮긴다.
+                    context._savedIDScope = entity._cookedStateIDScope;
                     if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, entity._embeddedStateBytes.data(), entity._embeddedStateBytes.size(), context ) == 0 )
                         SW_LOG_WARNING_ID( "Scene.EmbeddedBinaryStateApply", "Embedded binary state apply failed for '%#'", entity._name );
                     return;
@@ -444,6 +446,60 @@ namespace sw
                     return false;
                 }
                 outReply = "data layer " + listArgument[0] + " " + listArgument[1];
+                return true;
+            }
+
+            /**
+             * @brief `scene.sublevel add <name> <scene> <x> <y> <z> [yaw]` · `scene.sublevel remove <name>` — 활성 씬에 하위 레벨을 더하고 뺍니다(다음 프레임에 짓는다). 인자가 없으면 하위 레벨과 단계를 알립니다.
+             */
+            static bool runSubLevel( const vector<string>& listArgument, string& outReply )
+            {
+                SceneManager* pManager = engine::findSubsystem<SceneManager>();
+                Scene*        pScene   = pManager != nullptr ? pManager->getActiveScene() : nullptr;
+                if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+                {
+                    outReply = "no active scene";
+                    return false;
+                }
+                SceneSubLevelSubsystem& subLevels = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
+                if ( listArgument.empty() )
+                {
+                    static constexpr const utf8* kArrStateName[] = { "queued", "building", "loaded", "failed", "removing" };
+                    vector<string>               listName;
+                    subLevels.collectSubLevelNames( listName );
+                    outReply = "sub-levels:";
+                    for ( const string& name : listName )
+                    {
+                        SubLevelState state{ SubLevelState::Queued };
+                        (void)subLevels.findSubLevelState( name, state ); // 방금 모은 이름이다
+                        outReply += " " + name + "(" + kArrStateName[static_cast<uint32>( state )] + ")";
+                    }
+                    return true;
+                }
+                if ( listArgument[0] == "remove" && listArgument.size() == 2 )
+                {
+                    if ( subLevels.removeSubLevel( listArgument[1] ) == false )
+                    {
+                        outReply = "no sub-level named '" + listArgument[1] + "'";
+                        return false;
+                    }
+                    outReply = "removing sub-level " + listArgument[1];
+                    return true;
+                }
+                SceneSubLevelSubsystem::Placement placement{};
+                float32                           yawDegrees{ 0.0f };
+                const bool                        bParsed = listArgument[0] == "add" && ( listArgument.size() == 6 || listArgument.size() == 7 ) && StringUtil::parseFloat( listArgument[3], placement._position._x ) &&
+                                     StringUtil::parseFloat( listArgument[4], placement._position._y ) && StringUtil::parseFloat( listArgument[5], placement._position._z ) &&
+                                     ( listArgument.size() == 6 || StringUtil::parseFloat( listArgument[6], yawDegrees ) );
+                if ( bParsed == false )
+                    return false;
+                placement._rotation._y = yawDegrees * MathUtil::kDegreeToRadian;
+                if ( subLevels.addSubLevel( *pScene, listArgument[1], listArgument[2], placement ) == false )
+                {
+                    outReply = "sub-level '" + listArgument[1] + "' was not added (see the log)";
+                    return false;
+                }
+                outReply = "adding sub-level " + listArgument[1];
                 return true;
             }
 
@@ -951,6 +1007,7 @@ namespace sw
         AssetManager* const pAssetManager = _services._pAssetManager;
         SceneInternal::prepareSavePrefabInputs( SceneIterationKey{}, *_objectManager, pAssetManager, _mapPrefabSource, inputs );
         collectSceneInstanceParts( inputs._mapPartOverride, inputs._mapAnchorPart );
+        const SceneSubLevelSubsystem& subLevels = _objectManager->getSubsystem<SceneSubLevelSubsystem>();
 
         // **자식 오브젝트도 자기 엔티티로 적는다.** 오브젝트 상태에는 자식 목록이 없고, 자식은 자기 씬 컴포넌트의 부착 필드(부모의 파일 id)로
         // 읽은 뒤 다시 붙는다(`instantiate` 의 배치이므로 순서는 상관없다). 부모가 있는 오브젝트를 건너뛰면 계층 아래의 오브젝트가
@@ -966,6 +1023,8 @@ namespace sw
                 return; // 바깥 프리팹 인스턴스가 로드할 때 다시 스폰한다
             if ( _mapInstanceMember.find( pGo->getObjectID() ) != _mapInstanceMember.end() )
                 return; // 앵커가 로드할 때 다시 펼친다. 덮어쓴 것은 앵커의 `<Part>` 로 적는다
+            if ( subLevels.isSubLevelObject( pGo->getObjectID() ) )
+                return; // 실행 중에 더한 하위 레벨은 이 씬 파일의 것이 아니다(세이브가 따로 싣는다)
             SceneDocument::SceneObjectNode node{};
             if ( SceneInternal::writeEntityNode( pGo, _mapPrefabSource, inputs, saveOptions, node ) )
             {
@@ -1219,9 +1278,12 @@ namespace sw
         // 새 id 는 이 씬이 지금껏 쓴 어느 파일 id 보다 크다. 사라진 오브젝트나 해석하지 못한 엔티티의 id 를 다시 주면 그것을 가리키던 참조가
         // (파일을 넘는 참조 `SceneObjectReference` 를 포함해) 새 오브젝트에 붙는다.
         uint64 nextFileID = 1;
+        // 인스턴스 멤버 · 런타임 하위 레벨 앵커의 넓은 id 는 세지 않는다(앵커 범위에서 온 값이다).
+        const SceneSubLevelSubsystem* pSubLevels = _objectManager != nullptr ? &_objectManager->getSubsystem<SceneSubLevelSubsystem>() : nullptr;
         for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
         {
-            if ( _mapInstanceMember.find( objectID ) == _mapInstanceMember.end() )
+            const bool bWide = _mapInstanceMember.find( objectID ) != _mapInstanceMember.end() || ( pSubLevels != nullptr && pSubLevels->isAnchorFileID( fileID ) );
+            if ( bWide == false )
                 nextFileID = MathUtil::max( nextFileID, fileID + 1 );
         }
         const auto recordHeldNode = [&nextFileID]( const SceneDocument::SceneObjectNode& node )
@@ -1291,6 +1353,15 @@ namespace sw
         return 0;
     }
 
+    bool Scene::assignFileID( const uint64 objectID, const uint64 fileID )
+    {
+        const uint64 holderID = findObjectIDByFileID( fileID );
+        if ( fileID == 0 || objectID == 0 || ( holderID != 0 && holderID != objectID ) )
+            return false;
+        _mapObjectIDToFileID[objectID] = fileID;
+        return true;
+    }
+
     /**
      * @brief 씬 리소스를 정리하고 머티리얼 참조를 해제합니다.
      */
@@ -1302,6 +1373,7 @@ namespace sw
         {
             _objectManager->getSubsystem<SceneStreamingSubsystem>().endWorld();
             _objectManager->getSubsystem<SceneDataLayerSubsystem>().endScene(); // 매니저 비우기(`onSceneCleared`)는 복원이라 묶음을 지킨다 — 내리는 길은 여기서 버린다
+            _objectManager->getSubsystem<SceneSubLevelSubsystem>().endScene();
         }
         _mapPrefabSource.clear();
         _mapSceneInstancePath.clear();
@@ -1473,7 +1545,10 @@ namespace sw
         snapshot._mapObjectIDToFileID  = _mapObjectIDToFileID;
         snapshot._listUnresolvedEntity = _listUnresolvedEntity;
         if ( _objectManager != nullptr )
+        {
             snapshot._dataLayers = _objectManager->getSubsystem<SceneDataLayerSubsystem>().captureState();
+            snapshot._subLevels  = _objectManager->getSubsystem<SceneSubLevelSubsystem>().captureState();
+        }
         return snapshot;
     }
 
@@ -1487,7 +1562,10 @@ namespace sw
         _mapObjectIDToFileID  = std::move( snapshot._mapObjectIDToFileID );
         _listUnresolvedEntity = std::move( snapshot._listUnresolvedEntity );
         if ( _objectManager != nullptr )
+        {
             _objectManager->getSubsystem<SceneDataLayerSubsystem>().restoreState( *this, _sceneSettings, std::move( snapshot._dataLayers ) );
+            _objectManager->getSubsystem<SceneSubLevelSubsystem>().restoreState( *this, std::move( snapshot._subLevels ) );
+        }
     }
 
     uint32 Scene::remapAssetPaths( const unordered_map<string, string>& mapOldToNew )
@@ -1532,5 +1610,7 @@ namespace sw
     SW_DEV_COMMAND( StreamingCells, "world.cells", "world.cells", "Show loaded streaming cells, or split the active scene into cells as the cooker would",
                     &SceneDevCommandsInternal::runStreamingCells );
     SW_DEV_COMMAND( DataLayer, "scene.layer", "scene.layer [<name> <on|off>]", "Turn a data layer of the active scene on or off, or list the active layers", &SceneDevCommandsInternal::runDataLayer );
+    SW_DEV_COMMAND( SubLevel, "scene.sublevel", "scene.sublevel [add <name> <scene> <x> <y> <z> [yaw] | remove <name>]",
+                    "Add a scene to the active scene as a runtime sub-level at a position, remove one, or list them with their state", &SceneDevCommandsInternal::runSubLevel );
     SW_DEV_COMMAND( TagAdd, "tag.add", "tag.add <object> <tag>", "Add a gameplay tag to a named object of the active scene", &SceneDevCommandsInternal::runTagAdd );
 } // namespace sw

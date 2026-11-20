@@ -118,6 +118,11 @@ namespace sw
              *          쿠킹된 바이너리 상태(`_embeddedStateBytes`)는 이미 평평한 id 라 이 값을 쓰지 않습니다.
              */
             uint64 _idScope{ 0 };
+            /**
+             * @brief **런타임 칸.** 쿠킹된 바이너리 상태(`_embeddedStateBytes`)의 참조 id 에 XOR 하는 값입니다. 씬 파일 · 쿠킹본에서 읽은 엔티티는 0 이다(바이너리 상태는 이미 평평한 id).
+             * @details 런타임 하위 레벨이 쿠킹본을 자기 앵커 범위로 옮길 때 이 칸에 그 범위를 얹는다(`SceneSubLevelSubsystem::makeMemberNodes`) — 글 상태는 `_idScope` 가 같은 일을 한다. 파일에는 쓰지 않는다.
+             */
+            uint64 _cookedStateIDScope{ 0 };
             /** @brief 멤버가 위에서부터 차례로 받은 덮어쓰기(`<PrefabOverrides>`)입니다. 안쪽 인스턴스의 것이 먼저입니다. 프리팹 상태 · 글 상태 위에 차례로 얹습니다. */
             vector<string> _listInstanceOverrideXML;
             /** @brief **저작 칸.** 문서 뿌리에서 멤버까지의 경로입니다(`5/7/3` — 앵커 파일 id 들 / 내부 파일 id). 앞 칸이 이 문서의 앵커이고 나머지가 그 앵커의 `<Part path>` 입니다. */

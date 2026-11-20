@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/SceneSubLevelTypes.h"
 
 namespace sw
 {
@@ -124,6 +125,11 @@ namespace sw
          * @details 다른 실행의 세이브는 오브젝트가 새 id 를 받는다 — 다시 붙이지 않으면 스트리밍 셀이 늘 올라 있는 오브젝트를 파일 id 로 찾지 못한다(셀의 참조가 빈다).
          */
         void rebindRestoredFileIDs( const vector<SavedFileID>& listFileID );
+        /**
+         * @brief 오브젝트 @p objectID 에 바깥이 정한 파일 id @p fileID 를 붙입니다(런타임 하위 레벨의 앵커 — `SceneSubLevelSubsystem`, 이름에서 정한 넓은 id).
+         * @return id 가 0 이거나 다른 살아 있는 오브젝트가 그 id 를 쓰면 false 입니다(붙이지 않는다). 막 만든(병합 전) 오브젝트에도 붙일 수 있다.
+         */
+        [[nodiscard]] bool assignFileID( uint64 objectID, uint64 fileID );
         /** @brief 파일 id 의 살아 있는 오브젝트 id 입니다. 이 씬에 없으면(지운 오브젝트 · 내려간 스트리밍 셀) 0 입니다. */
         [[nodiscard]] uint64 findObjectIDByFileID( uint64 fileID ) const;
 
@@ -221,6 +227,7 @@ namespace sw
             ObjectSavedIDMap                       _mapObjectIDToFileID;
             vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;
             SceneDataLayerSubsystem::State         _dataLayers;
+            SceneSubLevelCapture                   _subLevels;
         };
         /** @brief 지금 조립 기록을 찍습니다. */
         [[nodiscard]] AssemblySnapshot captureAssembly() const;
