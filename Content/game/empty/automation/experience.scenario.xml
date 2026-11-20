@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ad695c56d01545c481cd8e55cbb24594"?>
+<!--
+  Experience 진입(개발 명령 experience.enter) — 읽기 · 검사 · 맵 요청 · 맵이 선 뒤 켜기를 한 번 지난다(docs/DesignBacklog.md "허브 게임 · 미니게임 Experience").
+  무대: 첫 씬 maps/fogshowcase 에서 experiences/smoketest(맵 editortest, 키트 없음)로 들어간다.
+  실행: App -scenario=game/empty/automation/experience.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.experience" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/fogshowcase.scene.xml"/>
+	<Expect watch="Experience.Active" is="none"/>
+	<DevCommand line="experience.enter smoketest"/>
+	<ExpectLog id="DevCommand.Reply" contains="experience.enter: entering 'smoketest'" atLeast="1"/>
+	<WaitUntil watch="Experience.Active" is="smoketest" timeoutWallSeconds="60"/> <!-- 맵 로드(워커)가 끝나고 켜졌다 -->
+	<ExpectActiveScene path="game/empty/maps/editortest.scene.xml"/>
+	<ExpectLog id="ExperienceManager.Activated" contains="'smoketest' is active (0 kits)" count="1"/>
+	<Pass/>
+</Scenario>

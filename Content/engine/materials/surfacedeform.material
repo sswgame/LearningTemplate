@@ -5,7 +5,7 @@
      정점을 옮기므로 MATERIAL_VERTEX_DEFORM 이다(깊이 프리패스에서 빠지고 그림자는 같은 오프셋으로 그린다). 정점이 촘촘한 메시(PlaneDense)에 건다.
      _weather · _rain 은 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather · Rain 에 묶는다 — 비가 오면 땅이 젖고 발자국 · 바퀴 자국에 물이 고이며 빗방울 링이 돈다.
      프로퍼티 이름 · 순서 · 타입은 surface_deform.hlsl 의 SW_MATERIAL 구조체와 같다(정점 셰이더만 읽는다). -->
-<MaterialDef formatVersion="0" name="SurfaceDeform" shaderPath="engine/shaders/surface_deform.hlsl" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="SurfaceDeform" shaderPath="engine/shaders/surface_deform.hlsl" surfaceModel="Lit" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_weather" collection="engine/materials/weather.matparams.xml" collectionParameter="Weather" type="Vector4" defaultValue="0 0 0 0" displayName="Weather (wet, puddle, snow, snow line)" group="Weather"/>

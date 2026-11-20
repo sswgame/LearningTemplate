@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -27,6 +28,7 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/ScenePreloadList.h"
 #include "Engine/Scene/StreamingCellGrid.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -416,6 +418,9 @@ namespace sw
                     return CookStep::Skipped;
                 }
 
+                // Packed Level: 묶는 씬을 넣은 앵커의 정적 메시를 인스턴스 메시로 바꾼다(에디터는 원본을 편집한다). 바뀐 엔티티도 아래에서 바이너리 상태로 쿠킹된다.
+                if ( SceneCooker::packStaticMeshes( services, doc, scenePath ) == false )
+                    return CookStep::Failed;
                 // 쿠킹 전에 "상태가 있는 엔티티" 수를 세 둔다. 쿠킹하고 나면 XML 이 비워져 셀 수 없다.
                 uint32 statefulCount{ 0 };
                 for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
@@ -689,6 +694,200 @@ namespace sw
         SW_LOG_INFO_ID( "SceneCooker.SceneCookTime", "Scene cook time: %# ms over %# cooked scenes, slowest %# ms ('%#')", cookedNanoseconds / constant::time::kNanosecondsPerMillisecond,
                         stats._cookedCount, slowestNanoseconds / constant::time::kNanosecondsPerMillisecond, slowestScene );
         return stats.getWrittenCount();
+    }
+
+    bool SceneCooker::packStaticMeshes( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view scenePath )
+    {
+        // 묶을 주인: 묶는 씬을 넣은 앵커(파일 id)와, 문서 자신이 묶는 씬이면 맨 위(0).
+        unordered_set<uint64> uniquePackedAnchor;
+        for ( const SceneDocument::SceneObjectNode& node : inoutDoc._listSceneObjectNode )
+        {
+            if ( node._instancePacking == SceneInstancePacking::StaticMeshes )
+                uniquePackedAnchor.insert( node._fileID );
+        }
+        const bool bPackTop = inoutDoc._sceneSettings.usesStaticMeshPacking();
+        if ( bPackTop == false && uniquePackedAnchor.empty() )
+            return true;
+
+        // 층: 메시 형식은 위 층(Visual)이라 타입 표로 찾는다. 이름이 바뀌면 여기서 멈춘다(묶지 않고 넘어가지 않는다).
+        static constexpr const utf8* kMeshTypeName      = "MeshComponent";
+        static constexpr const utf8* kInstancedTypeName = "InstancedMeshComponent";
+        static constexpr const utf8* kTransformTypeName = "InstancedMeshTransform";
+        const TypeInfo* const        pMeshType          = services._pTypeRegistry != nullptr ? services._pTypeRegistry->findType( hashed_string( kMeshTypeName ) ) : nullptr;
+        const TypeInfo* const        pInstancedType     = services._pTypeRegistry != nullptr ? services._pTypeRegistry->findType( hashed_string( kInstancedTypeName ) ) : nullptr;
+        if ( pMeshType == nullptr || pInstancedType == nullptr )
+        {
+            SW_LOG_ERROR_ID( "SceneCooker.PackTypesMissing", "Scene cook: '%#' packs static meshes but '%#' or '%#' is not in the type table", scenePath, kMeshTypeName, kInstancedTypeName );
+            return false;
+        }
+        // 읽는 칸의 차례: 메시 · 머티리얼 · 구간 · 정적 · 사용자 값 둘 · 로컬 위치 · 회전 · 스케일.
+        constexpr uint32             kMesh                      = 0;
+        constexpr uint32             kMaterial                  = 1;
+        constexpr uint32             kSection                   = 2;
+        constexpr uint32             kStatic                    = 3;
+        constexpr uint32             kCustomData0               = 4;
+        constexpr uint32             kCustomData1               = 5;
+        constexpr uint32             kPosition                  = 6;
+        constexpr uint32             kRotation                  = 7;
+        constexpr uint32             kScale                     = 8;
+        constexpr uint32             kMeshKeyCount              = 9;
+        static constexpr const utf8* kArrMeshKey[kMeshKeyCount] = { "_meshID", "_materialPath", "_sectionName", "_bStatic", "_customData0", "_customData1", "_localPosition", "_localRotation", "_localScale" };
+        const PropertyInfo*          arrMeshProp[kMeshKeyCount] = {};
+        bool                         bPropertiesKnown           = true;
+        for ( uint32 keyIndex = 0; keyIndex < kMeshKeyCount; ++keyIndex )
+        {
+            arrMeshProp[keyIndex] = pMeshType->findPropertyInHierarchy( hashed_string( kArrMeshKey[keyIndex] ) );
+            bPropertiesKnown      = bPropertiesKnown && arrMeshProp[keyIndex] != nullptr;
+        }
+        if ( bPropertiesKnown == false )
+        {
+            SW_LOG_ERROR_ID( "SceneCooker.PackPropertiesMissing", "Scene cook: '%#' packs static meshes but '%#' lacks a property the packer reads", scenePath, kMeshTypeName );
+            return false;
+        }
+
+        Scene packing{ "SceneCooker.Pack", services };
+        packing.setBuildAllDataLayers();
+        if ( packing.instantiate( inoutDoc ) == false || packing.getUnresolvedEntityCount() > 0 )
+        {
+            SW_LOG_ERROR_ID( "SceneCooker.PackCouldNotBuild", "Scene cook: '%#' could not be built to pack its static meshes", scenePath );
+            return false;
+        }
+        unordered_map<uint64, GameObject*> mapObjectByFileID;
+        SceneCookerInternal::makeObjectByFileID( packing, mapObjectByFileID );
+        ObjectSavedIDMap mapSavedID;
+        packing.collectSavedIDMap( mapSavedID );
+
+        // 가리켜지는 엔티티는 묶지 않는다 — 묶으면 그 오브젝트가 사라져 참조가 빈다(부착된 자식도 부모를 가리킨다).
+        unordered_set<uint64> uniqueReferenced;
+        vector<uint64>        listReferencedID;
+        for ( const SceneDocument::SceneObjectNode& node : inoutDoc._listSceneObjectNode )
+        {
+            const auto objectIt = mapObjectByFileID.find( node._fileID );
+            if ( objectIt == mapObjectByFileID.end() )
+                continue;
+            listReferencedID.clear();
+            ObjectSaveOptions options{ SerializePurpose::Authoring };
+            options._pSavedIDMap          = &mapSavedID;
+            options._pOutListReferencedID = &listReferencedID;
+            vector<uint8> stateBytes;
+            (void)ObjectStateSerializer::saveToBinaryBuffer( objectIt->second, stateBytes, options ); // 참조만 모은다
+            for ( const uint64 referencedObjectID : listReferencedID )
+            {
+                const auto targetIt = mapSavedID.find( referencedObjectID );
+                if ( targetIt != mapSavedID.end() && targetIt->second != node._fileID )
+                    uniqueReferenced.insert( targetIt->second );
+            }
+        }
+
+        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
+        const float4            zeroData{};
+        const string            zeroDataText = SerializerUtil::formatValueText( ValueAddress{ &zeroData }, arrMeshProp[kCustomData0]->_typeName, context );
+        struct PackGroup
+        {
+            uint64         _ownerFileID{ 0 };
+            vector<string> _listDataLayer;
+            string         _meshText;
+            string         _materialText;
+            string         _sectionText;
+            vector<string> _listTransformText; ///< 인스턴스마다 위치 · 회전 · 스케일 글 셋
+        };
+        vector<PackGroup>     listGroup;
+        unordered_set<uint64> uniquePackedFileID;
+        string                arrText[kMeshKeyCount];
+        for ( const SceneDocument::SceneObjectNode& node : inoutDoc._listSceneObjectNode )
+        {
+            const bool bAnchorMember = node._instanceAnchorFileID != 0 && uniquePackedAnchor.count( node._instanceAnchorFileID ) != 0;
+            const bool bTopEntity    = bPackTop && node._instanceAnchorFileID == 0;
+            const auto objectIt      = mapObjectByFileID.find( node._fileID );
+            if ( ( bAnchorMember == false && bTopEntity == false ) || node._sceneInstance.empty() == false || uniqueReferenced.count( node._fileID ) != 0 || objectIt == mapObjectByFileID.end() )
+                continue;
+            const GameObject* pObject  = objectIt->second;
+            const auto        ownerIt  = mapObjectByFileID.find( node._instanceAnchorFileID );
+            const GameObject* pOwner   = bAnchorMember && ownerIt != mapObjectByFileID.end() ? ownerIt->second : nullptr;
+            const bool        bOneMesh = pObject->getComponents().size() == 1 && pObject->getComponents()[0] != nullptr && pObject->getComponents()[0]->getTypeInfo() == pMeshType;
+            if ( bOneMesh == false || pObject->getParent() != pOwner )
+                continue;
+            const Component* pMesh = pObject->getComponents()[0];
+            for ( uint32 keyIndex = 0; keyIndex < kMeshKeyCount; ++keyIndex )
+            {
+                arrText[keyIndex] = SerializerUtil::formatPropertyText( *arrMeshProp[keyIndex], ObjectAddress{ pMesh }, context );
+            }
+            // 묶은 인스턴스는 정적 그리기만 싣는다 — 움직이는 메시 · 사용자 값(인스턴스마다 다른 셰이더 값)은 그대로 둔다.
+            if ( arrText[kStatic] != "true" || arrText[kCustomData0] != zeroDataText || arrText[kCustomData1] != zeroDataText )
+                continue;
+            const uint64 ownerFileID = bAnchorMember ? node._instanceAnchorFileID : 0;
+            PackGroup*   pGroup      = nullptr;
+            for ( PackGroup& group : listGroup )
+            {
+                const bool bSame = group._ownerFileID == ownerFileID && group._listDataLayer == node._listDataLayer && group._meshText == arrText[kMesh] && group._materialText == arrText[kMaterial] &&
+                                   group._sectionText == arrText[kSection];
+                pGroup = pGroup == nullptr && bSame ? &group : pGroup;
+            }
+            if ( pGroup == nullptr )
+                pGroup = &listGroup.emplace_back( PackGroup{ ownerFileID, node._listDataLayer, arrText[kMesh], arrText[kMaterial], arrText[kSection], {} } );
+            pGroup->_listTransformText.push_back( arrText[kPosition] );
+            pGroup->_listTransformText.push_back( arrText[kRotation] );
+            pGroup->_listTransformText.push_back( arrText[kScale] );
+            uniquePackedFileID.insert( node._fileID );
+        }
+        if ( listGroup.empty() )
+            return true;
+
+        // 묶은 엔티티 하나 — 인스턴스 메시 컴포넌트 하나를 가진 오브젝트. 앵커 멤버면 앵커 범위의 넓은 id(내부 파일 id 와 겹치지 않는 높은 자리)로 앵커에 붙는다.
+        constexpr uint64                       kPackedInnerIDBase = uint64{ 1 } << 62;
+        uint64                                 nextTopFileID      = SceneDocument::computeMaxFileID( inoutDoc._listSceneObjectNode ) + 1;
+        vector<SceneDocument::SceneObjectNode> listPacked;
+        for ( size_t groupIndex = 0; groupIndex < listGroup.size(); ++groupIndex )
+        {
+            const PackGroup& group = listGroup[groupIndex];
+            string           anchorPrefix;
+            for ( const SceneDocument::SceneObjectNode& anchor : inoutDoc._listSceneObjectNode )
+            {
+                if ( group._ownerFileID != 0 && anchor._fileID == group._ownerFileID )
+                    anchorPrefix = anchor._name + "/";
+            }
+            SceneDocument::SceneObjectNode node{};
+            node._name                 = anchorPrefix + "Packed" + sw::to_string( static_cast<uint64>( groupIndex ) );
+            node._fileID               = group._ownerFileID != 0 ? ( SceneDocument::computeInstanceIDScope( group._ownerFileID ) ^ ( kPackedInnerIDBase + groupIndex ) ) : nextTopFileID++;
+            node._instanceAnchorFileID = group._ownerFileID;
+            node._listDataLayer        = group._listDataLayer;
+
+            XMLDocument state;
+            XMLNode     root = state.appendRoot( "GameObject" );
+            root.setAttribute( "_schemaVersion", "0" );
+            root.setAttribute( "_name", string_view( node._name ) );
+            root.setAttribute( "_bActive", "true" );
+            XMLNode component = root.appendChild( "_listComponent" ).appendChild( kInstancedTypeName );
+            component.setAttribute( "_meshID", string_view( group._meshText ) );
+            component.setAttribute( "_materialPath", string_view( group._materialText ) );
+            component.setAttribute( "_sectionName", string_view( group._sectionText ) );
+            const XMLNode listInstance = component.appendChild( "_listInstance" );
+            for ( size_t textIndex = 0; textIndex + 2 < group._listTransformText.size(); textIndex += 3 )
+            {
+                const XMLNode instance = listInstance.appendChild( kTransformTypeName );
+                instance.setAttribute( "_position", string_view( group._listTransformText[textIndex] ) );
+                instance.setAttribute( "_rotation", string_view( group._listTransformText[textIndex + 1] ) );
+                instance.setAttribute( "_scale", string_view( group._listTransformText[textIndex + 2] ) );
+            }
+            node._embeddedXML = root.toString();
+            listPacked.push_back( std::move( node ) );
+        }
+
+        vector<SceneDocument::SceneObjectNode> listKept;
+        listKept.reserve( inoutDoc._listSceneObjectNode.size() + listPacked.size() );
+        for ( SceneDocument::SceneObjectNode& node : inoutDoc._listSceneObjectNode )
+        {
+            if ( uniquePackedFileID.count( node._fileID ) == 0 )
+                listKept.push_back( std::move( node ) );
+        }
+        for ( SceneDocument::SceneObjectNode& node : listPacked )
+        {
+            listKept.push_back( std::move( node ) );
+        }
+        inoutDoc._listSceneObjectNode = std::move( listKept );
+        SW_LOG_INFO_ID( "SceneCooker.PackedStaticMeshes", "Scene cook: '%#' packed %# static mesh entities into %# instanced meshes", scenePath, static_cast<uint32>( uniquePackedFileID.size() ),
+                        static_cast<uint32>( listPacked.size() ) );
+        return true;
     }
 
     bool SceneCooker::splitStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view sceneName,

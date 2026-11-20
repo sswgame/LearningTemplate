@@ -121,6 +121,13 @@ namespace sw
         /** @brief 매크로 퍼뮤테이션(ShaderMacroDefine 목록)으로 64비트 해시를 계산합니다(퍼뮤테이션이 없으면 0). */
         static uint64 computePermutationHash( const vector<ShaderMacroDefine>& listDefine );
 
+        /**
+         * @brief define 집합의 정본 글 목록입니다 — `NAME=VALUE`(값 없으면 `=1`)를 정렬했고 이름 없는 줄은 뺍니다. 받은 차례와 무관합니다.
+         * @details 쿠킹 파일 이름(`computePermutationHash`) · 메모리 캐시 키(`ShaderCache`) · 셰이더 DDC 키가 모두 이것으로 define 을 적는다 — 받은 차례로 적으면
+         *          같은 조합이 차례만 달라 헛 미스가 나고 DDC 에 두 벌이 쌓인다. 언리얼도 셰이더 컴파일 환경의 정의를 정렬해 DDC 키를 만든다.
+         */
+        [[nodiscard]] static vector<string> makeCanonicalDefines( const vector<ShaderMacroDefine>& listDefine );
+
         /** @brief 셰이더 파일 이름, 스테이지, 진입점, 퍼뮤테이션 해시를 조합한 표준 바이너리 파일 이름을 만듭니다. */
         static string computeBinaryFileName( string_view stemLower, ShaderStage stage,
                                              string_view entryPoint, uint64 permutationHash, string_view ext );

@@ -1899,6 +1899,11 @@ msgctxt "EdFormat.BuiltS"
 msgid "{sW_EDITORICON}  Built ({lastDurationSec}s)"
 msgstr "{sW_EDITORICON}  빌드됨({lastDurationSec}초)"
 
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdFormat.CallFailed"
+msgid "{method} failed on {failureCount} of {targetCount}: {reason}"
+msgstr "{method} 호출이 {targetCount} 개 중 {failureCount} 개에서 실패했습니다: {reason}"
+
 #: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
 msgctxt "EdFormat.CellMRadiusM"
 msgid "cell {cellSize} m, radius {loadingRadius} m, margin {unloadMargin} m, {maxCellLoadsPerFrame} per frame"
@@ -2048,6 +2053,11 @@ msgstr "마지막 오류: {error}"
 msgctxt "EdFormat.LastResult"
 msgid "Last result: {lastInvokeResult}"
 msgstr "마지막 결과: {lastInvokeResult}"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdFormat.LastResultTargets"
+msgid "Last result: {lastInvokeResult} ({targetCount} objects)"
+msgstr "마지막 결과: {lastInvokeResult}(오브젝트 {targetCount} 개)"
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdFormat.LeftTrigger"
@@ -3033,6 +3043,7 @@ msgctxt "EdSection.Memory"
 msgid "Memory"
 msgstr "메모리"
 
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdSection.Methods"
 msgid "Methods"
@@ -6666,6 +6677,11 @@ msgid "Waiting for input..."
 msgstr "입력을 기다리는 중..."
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.AddToActions"
+msgid "Pin to the top of the function list (saved)"
+msgstr "함수 목록 맨 위에 고정합니다(저장됨)"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.AddToFavorites"
 msgid "Add to Favorites"
 msgstr "즐겨찾기에 추가"
@@ -6679,6 +6695,31 @@ msgstr "씬을 저장합니다. 인스턴스 멤버의 변경은 앵커에 차�
 msgctxt "EditorInspector.ApplyToPrefab"
 msgid "Save this object's changes to the source prefab file"
 msgstr "현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.CallFailedArgumentMismatch"
+msgid "an argument cannot be converted to its parameter type"
+msgstr "인자를 그 인자 형식으로 바꿀 수 없습니다"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.CallFailedMissingArgument"
+msgid "an argument without a default value is missing"
+msgstr "기본값이 없는 인자가 빠졌습니다"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.CallFailedNotBound"
+msgid "the function is no longer on this type (was the module reloaded?)"
+msgstr "이 타입에 그 함수가 더는 없습니다(모듈을 다시 올렸나요?)"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.CallFailedNullInstance"
+msgid "there is no instance to call it on"
+msgstr "부를 인스턴스가 없습니다"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.CallFailedTooManyArguments"
+msgid "more arguments than the function takes"
+msgstr "인자가 함수가 받는 것보다 많습니다"
 
 #: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
 msgctxt "EditorInspector.ClearAssetReference"
@@ -6724,6 +6765,11 @@ msgstr "임포트 설정"
 msgctxt "EditorInspector.LockedToObject"
 msgid "Locked to this object - click to follow the selection"
 msgstr "이 오브젝트에 고정되어 있습니다 - 클릭하면 선택을 따라갑니다"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.MultiCallHint"
+msgid "Calls run on every selected object as one undo step."
+msgstr "선택한 오브젝트 모두에 부르고, 되돌리기는 한 단계입니다."
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
@@ -6805,6 +6851,11 @@ msgstr "프리팹 인스턴스입니다"
 msgctxt "EditorInspector.PresetNameHint"
 msgid "Preset Name..."
 msgstr "프리셋 이름..."
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.RemoveFromActions"
+msgid "Unpin from the top of the function list"
+msgstr "함수 목록 맨 위 고정을 풉니다"
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.RemoveFromFavorites"

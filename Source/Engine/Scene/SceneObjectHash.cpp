@@ -839,5 +839,6 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( StateHashHistory, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( StateHashHistory ) );
+    // 게임 모듈에도 보인다 — 키트가 이름 붙은 해시 줄을 단다(`DestructionNetSessionComponent` 의 `destruction` 줄, 언리얼 게임 코드도 네트워크 예측 · 리플레이 디버그 해시를 직접 남긴다).
+    SW_ENGINE_SERVICE_SUBSYSTEM( StateHashHistory, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( StateHashHistory ) );
 } // namespace sw

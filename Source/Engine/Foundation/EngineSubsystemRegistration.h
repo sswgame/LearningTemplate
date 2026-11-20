@@ -289,6 +289,8 @@ namespace sw::engine
         [[nodiscard]] const ISubsystemLocator* findBoundScope() const { return _pBoundScope; }
         /** @brief 지금 칸에서 비어 있는 필수 칸의 타입 이름(이름 순으로 첫 것)입니다. 모두 있으면 nullptr 입니다. */
         [[nodiscard]] const utf8* findMissingRequiredService() const;
+        /** @brief @p typeHash 가 `HostOnly` 로 등록한 서비스 칸이면 true 입니다(등록이 없는 타입은 false). */
+        [[nodiscard]] bool isHostOnlyService( uint64 typeHash ) const;
         /**
          * @brief 지금 칸의 객체를 @p outScope 에 그 타입으로 빌려 겁니다. 빈 칸은 걸지 않는다.
          * @param bGameModuleOnly true 면 `GameVisible` 칸만 건다.

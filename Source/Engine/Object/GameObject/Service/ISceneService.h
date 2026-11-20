@@ -76,6 +76,16 @@ namespace sw
         // 씬이 기능을 모르게 하는 훅 — 씬(`Scene` · `SceneManager` · `SceneDebugDraw`)은 모든 서비스에 같은 부름을 돌리고, 기능이 자기 몫만 한다.
         /** @brief 씬 문서를 짓기 전에 그 원본 경로 @p sourcePath 를 알립니다(쿠킹본 이름을 찾는 서비스 — 내비메시). */
         virtual void onSceneLoading( string_view sourcePath ) { (void)sourcePath; }
+        /**
+         * @brief 월드 원점이 옮겨졌습니다 — 씬이 모든 루트 오브젝트를 @p delta 만큼 옮긴 뒤 부릅니다(`Scene::shiftWorldOrigin`, 게임 스레드 · 틱 밖).
+         * @details 오브젝트 밖에 월드 좌표를 들고 있는 서비스(캐시 · 시뮬레이션 상태)가 같은 만큼 옮긴다. 오브젝트에서 매 프레임 다시 읽는 서비스(오디오 · 렌더 수집)는 할 일이 없다.
+         */
+        virtual void onWorldOriginShifted( const float3& delta ) { (void)delta; }
+        /**
+         * @brief 지금 월드 원점을 옮길 수 있으면 true 입니다 — 옮기면 자기 상태가 오브젝트와 어긋나는데 그 상태를 옮길 수 없는 서비스(쿠킹된 절대 좌표 내비메시)가 false 로 답한다.
+         * @details 씬은 하나라도 false 면 원점을 옮기지 않고 경고한다(어긋난 채 옮기지 않는다 — `Scene::shiftWorldOrigin`).
+         */
+        virtual bool canShiftWorldOrigin() const { return true; }
         /** @brief 미리보기 씬의 정책을 적용합니다 — 오디오는 켜고 끄기, 물리는 고정 스텝을 읽는다. */
         virtual void applyPreviewPolicy( const ScenePreviewPolicy& policy ) { (void)policy; }
         /** @brief 씬 틱 뒤 디버그 선을 그립니다(`SceneDebugDraw`). 켜고 끄는 전역 변수는 그 기능의 .cpp 에 둔다. */

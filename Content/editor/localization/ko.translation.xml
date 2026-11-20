@@ -621,6 +621,7 @@
 		       sourceHash="438e02af5e338cbb" />
 		<entry key="EdFormat.Budget" text="예산: {budgetBuf}" sourceHash="f10128f4ae13948e" />
 		<entry key="EdFormat.BuiltS" text="{sW_EDITORICON}  빌드됨({lastDurationSec}초)" sourceHash="9bc796538c48e0c1" />
+		<entry key="EdFormat.CallFailed" text="{method} 호출이 {targetCount} 개 중 {failureCount} 개에서 실패했습니다: {reason}" sourceHash="a110705e428a5fd0" />
 		<entry key="EdFormat.CellMRadiusM"
 		       text="셀 {cellSize} m, 반경 {loadingRadius} m, 여유 {unloadMargin} m, 프레임당 {maxCellLoadsPerFrame}"
 		       sourceHash="2d17573e065de4bb" />
@@ -681,6 +682,7 @@
 		       sourceHash="f7e2c705c947d9a3" />
 		<entry key="EdFormat.LastError" text="마지막 오류: {error}" sourceHash="efc82ee1082a3a9f" />
 		<entry key="EdFormat.LastResult" text="마지막 결과: {lastInvokeResult}" sourceHash="64defb75f9d6dbcb" />
+		<entry key="EdFormat.LastResultTargets" text="마지막 결과: {lastInvokeResult}(오브젝트 {targetCount} 개)" sourceHash="25f99c8a3a8c46b6" />
 		<entry key="EdFormat.LeftTrigger" text="왼쪽 트리거:  {leftTrigger}" sourceHash="137aed7ac4d6901d" />
 		<entry key="EdFormat.MaskMissingBones"
 		       text="스켈레톤에 없는 본: {bones}. 고치기 전까지 게임은 이 마스크를 버립니다."
@@ -2295,6 +2297,7 @@
 		       sourceHash="f89f8deb8dcdc8a8" />
 		<entry key="EditorInputMap.UnsavedChanges" text="* 저장하지 않은 변경" sourceHash="973e262de06494ae" />
 		<entry key="EditorInputMap.WaitingForInput" text="입력을 기다리는 중..." sourceHash="fbd1ecd3af100cc7" />
+		<entry key="EditorInspector.AddToActions" text="함수 목록 맨 위에 고정합니다(저장됨)" sourceHash="7d2969d84769118f" />
 		<entry key="EditorInspector.AddToFavorites" text="즐겨찾기에 추가" sourceHash="7b1bc15f29f533d4" />
 		<entry key="EditorInspector.ApplyInstanceOverrides"
 		       text="씬을 저장합니다. 인스턴스 멤버의 변경은 앵커에 차이로 적히고, 넣은 씬 파일은 그대로입니다"
@@ -2302,6 +2305,11 @@
 		<entry key="EditorInspector.ApplyToPrefab"
 		       text="현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다"
 		       sourceHash="eea047cb60eefcdf" />
+		<entry key="EditorInspector.CallFailedArgumentMismatch" text="인자를 그 인자 형식으로 바꿀 수 없습니다" sourceHash="6cf767c7af8f47d3" />
+		<entry key="EditorInspector.CallFailedMissingArgument" text="기본값이 없는 인자가 빠졌습니다" sourceHash="64a4514ee5bf8332" />
+		<entry key="EditorInspector.CallFailedNotBound" text="이 타입에 그 함수가 더는 없습니다(모듈을 다시 올렸나요?)" sourceHash="de51beacf585cf21" />
+		<entry key="EditorInspector.CallFailedNullInstance" text="부를 인스턴스가 없습니다" sourceHash="eb8a86c3c8778404" />
+		<entry key="EditorInspector.CallFailedTooManyArguments" text="인자가 함수가 받는 것보다 많습니다" sourceHash="7971e56aa98b613c" />
 		<entry key="EditorInspector.ClearAssetReference"
 		       text="이 에셋 참조를 비웁니다."
 		       sourceHash="f17ea5903678d603" />
@@ -2319,6 +2327,7 @@
 		<entry key="EditorInspector.LockedToObject"
 		       text="이 오브젝트에 고정되어 있습니다 - 클릭하면 선택을 따라갑니다"
 		       sourceHash="2949005a455de65b" />
+		<entry key="EditorInspector.MultiCallHint" text="선택한 오브젝트 모두에 부르고, 되돌리기는 한 단계입니다." sourceHash="943ed4b7ba22c399" />
 		<entry key="EditorInspector.MultipleValues" text="값이 여러 개입니다" sourceHash="076c678f4bbd3ed9" />
 		<entry key="EditorInspector.NetRoleMethodRunsLocally"
 		       text="네트워크 역할은 선언일 뿐입니다. 여기서 부르면 네트워크가 아니라 이 프로세스에서 실행됩니다"
@@ -2349,6 +2358,7 @@
 		<entry key="EditorInspector.PickAsset" text="에셋을 고릅니다" sourceHash="1a666750f52aa673" />
 		<entry key="EditorInspector.PrefabInstance" text="프리팹 인스턴스입니다" sourceHash="186d3d2098e60c4d" />
 		<entry key="EditorInspector.PresetNameHint" text="프리셋 이름..." sourceHash="81a722b4f5d5b585" />
+		<entry key="EditorInspector.RemoveFromActions" text="함수 목록 맨 위 고정을 풉니다" sourceHash="382a0d51f62a10a7" />
 		<entry key="EditorInspector.RemoveFromFavorites" text="즐겨찾기에서 제거" sourceHash="36c7ff52d04afe46" />
 		<entry key="EditorInspector.ResetToDefaultTooltip"
 		       text="기본값으로 되돌립니다"

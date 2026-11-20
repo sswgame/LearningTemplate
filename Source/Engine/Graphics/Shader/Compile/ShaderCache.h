@@ -139,6 +139,12 @@ namespace sw
          */
         [[nodiscard]] bool findCachedBytecode( const ShaderCompileDesc& desc, vector<uint8>& outBytecode ) const;
         /**
+         * @brief 재컴파일(`ShaderRecompiler`)이 새로 낸 바이트코드로 이 요청의 항목 하나만 바꿉니다. 성공한 결과가 아니면 오류를 남기고 false 입니다.
+         * @details 캐시를 통째로 비우지 않는다 — 비우면 이번 묶음에서 컴파일이 깨진 셰이더의 마지막 성공 판까지 사라져 다음 요청이 깨진 소스를 다시 컴파일하다 진다.
+         *          언리얼은 재컴파일이 실패한 셰이더의 이전 셰이더 맵을 그대로 쓴다 — 같은 규칙이다.
+         */
+        [[nodiscard]] bool replaceCompiled( const ShaderCompileDesc& desc, const ShaderCompileResult& result );
+        /**
          * @brief 실시간 컴파일이 실제로 쓰는 요청입니다. @p bDebugCodegen 이 켜졌으면 디버그 코드젠(RenderDoc 에서 한 줄씩), 아니면 요청 그대로(쿠킹과 같은 최적화)입니다.
          * @details 캐시의 실시간 컴파일과 `ShaderRecompiler` 의 재컴파일이 **이 하나**로 코드젠을 정합니다. 깃발은 둘 다 `isLiveDebugCodegen` 의 값을 넘긴다.
          *          둘이 따로 정하면 DDC 에 두 코드젠이 섞이고, 핫 리로드한 셰이더만 디버그 정보를 잃습니다.

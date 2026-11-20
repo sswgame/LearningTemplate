@@ -318,7 +318,7 @@ namespace sw
     void GameInstance::startFirstScene()
     {
         // 개발 실행 인자 `-experience=<이름>` 은 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)보다 위다 — 그 Experience 의 맵으로 들어간다. 지면 씬 없이 오류로 남는다(다른 씬으로 대신하지 않는다).
-        const string launchExperience = GameSelection::getLaunchExperience();
+        const string& launchExperience = game::getSubsystem<const LaunchSelection>()._experience;
         if ( launchExperience.empty() == false )
         {
             (void)getSubsystem<ExperienceManager>().enter( launchExperience ); // 실패는 관리자가 알린다

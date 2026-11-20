@@ -14,6 +14,7 @@
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
+#include "Engine/Scene/SceneSubLevelSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
@@ -36,7 +37,7 @@ namespace sw
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
              *          머리의 씬 정체는 찍을 때 활성 씬의 리소스 id(`Scene::getSourcePath`)다 — 읽을 때 지금 활성 씬과 다르면 섞지 않고 거절한다.
              */
-            static constexpr uint32 kVersion = 7; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다, 7: 넷째 섹션 씬 몫(파일 id · 스트리밍 셀)
+            static constexpr uint32 kVersion = 8; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다, 7: 넷째 섹션 씬 몫(파일 id · 스트리밍 셀), 8: 씬 몫에 런타임 하위 레벨
 
             /** @brief 봉투 머리(매직 · 판 뒤의 칸)입니다. */
             struct Header
@@ -116,6 +117,8 @@ namespace sw
             vector<Scene::SavedFileID>         _listFileID; ///< 찍은 오브젝트 id → 파일 id(`_objectID` 는 찍은 실행의 id)
             SceneStreamingSubsystem::SaveState _streaming;
             SceneDataLayerSubsystem::SaveState _dataLayers;
+            SceneSubLevelSubsystem::SaveState  _subLevels;
+            double3                            _worldOrigin{}; ///< 씬 섹션 오브젝트의 자리가 기준한 월드 원점(`Scene::getWorldOrigin`)
         };
 
         struct ScenePartInternal
@@ -139,12 +142,17 @@ namespace sw
                 {
                     arch << entry._objectID << entry._fileID;
                 }
+                const double3& origin = pScene->getWorldOrigin();
+                arch << origin._x << origin._y << origin._z;
                 vector<uint8> bytesStreaming;
                 pScene->getObjectManager()->getSubsystem<SceneStreamingSubsystem>().writeSaveState( bytesStreaming );
                 arch.writeSection( bytesStreaming.data(), static_cast<uint32>( bytesStreaming.size() ) );
                 vector<uint8> bytesDataLayers;
                 pScene->getObjectManager()->getSubsystem<SceneDataLayerSubsystem>().writeSaveState( bytesDataLayers );
                 arch.writeSection( bytesDataLayers.data(), static_cast<uint32>( bytesDataLayers.size() ) );
+                vector<uint8> bytesSubLevels;
+                pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>().writeSaveState( bytesSubLevels );
+                arch.writeSection( bytesSubLevels.data(), static_cast<uint32>( bytesSubLevels.size() ) );
                 outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
             }
 
@@ -160,12 +168,15 @@ namespace sw
                 {
                     arch >> entry._objectID >> entry._fileID;
                 }
+                arch >> outPart._worldOrigin._x >> outPart._worldOrigin._y >> outPart._worldOrigin._z;
                 vector<uint8> bytesStreaming;
                 vector<uint8> bytesDataLayers;
-                if ( arch.readSection( bytesStreaming ) == false || arch.readSection( bytesDataLayers ) == false || arch.isError() )
+                vector<uint8> bytesSubLevels;
+                if ( arch.readSection( bytesStreaming ) == false || arch.readSection( bytesDataLayers ) == false || arch.readSection( bytesSubLevels ) == false || arch.isError() )
                     return false;
                 return SceneStreamingSubsystem::readSaveState( bytesStreaming.data(), bytesStreaming.size(), outPart._streaming ) &&
-                       SceneDataLayerSubsystem::readSaveState( bytesDataLayers.data(), bytesDataLayers.size(), outPart._dataLayers );
+                       SceneDataLayerSubsystem::readSaveState( bytesDataLayers.data(), bytesDataLayers.size(), outPart._dataLayers ) &&
+                       SceneSubLevelSubsystem::readSaveState( bytesSubLevels.data(), bytesSubLevels.size(), outPart._subLevels );
             }
 
             /** @brief 교체한 활성 씬에 씬 몫을 얹습니다 — 다시 만든 오브젝트에 파일 id 를 다시 붙이고(@p mapObjectID 찍은 id → 이번 id) 스트리밍 셀에 세이브의 상태를 얹는다. */
@@ -180,9 +191,12 @@ namespace sw
                         listFileID.push_back( Scene::SavedFileID{ liveIt->second, entry._fileID } );
                 }
                 scene.rebindRestoredFileIDs( listFileID );
+                // 씬 섹션의 오브젝트는 저장 때의 원점 기준 자리로 다시 섰다 — 원점도 그때로 돌린다(셀 · 레이어 · 하위 레벨의 떠 둔 상태는 엔티티마다 원점을 든다).
+                scene.restoreWorldOrigin( part._worldOrigin );
                 // 켜진 레이어가 먼저다 — 스트리밍 셀 조각도 레이어로 오른다.
                 scene.getObjectManager()->getSubsystem<SceneDataLayerSubsystem>().applySaveState( std::move( part._dataLayers ) );
                 scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>().applySaveState( std::move( part._streaming ) );
+                scene.getObjectManager()->getSubsystem<SceneSubLevelSubsystem>().applySaveState( scene, std::move( part._subLevels ) );
             }
         };
 
@@ -461,10 +475,11 @@ namespace sw
         // 스트리밍 셀 · 데이터 레이어 묶음에 든 오브젝트는 그 상태로 따로 싣는다(씬 몫) — 여기에 실으면 복원 뒤 셀 · 묶음이 다시 지을 때 겹친다.
         const SceneStreamingSubsystem& streaming  = pObjectManager->getSubsystem<SceneStreamingSubsystem>();
         const SceneDataLayerSubsystem& dataLayers = pObjectManager->getSubsystem<SceneDataLayerSubsystem>();
+        const SceneSubLevelSubsystem&  subLevels  = pObjectManager->getSubsystem<SceneSubLevelSubsystem>();
         vector<GameObject*>            listValidObject;
-        pObjectManager->forEachGameObject( SceneIterationKey{}, [&listValidObject, &streaming, &dataLayers]( GameObject* pObj )
+        pObjectManager->forEachGameObject( SceneIterationKey{}, [&listValidObject, &streaming, &dataLayers, &subLevels]( GameObject* pObj )
         {
-            const bool bPartOwned = streaming.isCellObject( pObj->getObjectID() ) || dataLayers.isGroupObject( pObj->getObjectID() );
+            const bool bPartOwned = streaming.isCellObject( pObj->getObjectID() ) || dataLayers.isGroupObject( pObj->getObjectID() ) || subLevels.isSubLevelObject( pObj->getObjectID() );
             if ( pObj->isTransient() == false && bPartOwned == false )
                 listValidObject.push_back( pObj );
         } );

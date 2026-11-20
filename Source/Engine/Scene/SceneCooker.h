@@ -76,6 +76,16 @@ namespace sw
         SW_API static uint32 cookEntityState( const SceneEngineServices& services, SceneDocument& inoutDoc, uint32* pOutMissingComponentCount = nullptr );
 
         /**
+         * @brief 정적 메시 엔티티를 인스턴스 메시로 묶습니다(언리얼 Packed Level Actor — 레벨 인스턴스를 한 묶음으로 굽는다). 에디터 · 소스 실행은 묶지 않은 원본을 짓는다.
+         * @details 묶는 범위: 정적 메시를 묶는 씬(`SceneSettings::usesStaticMeshPacking`)을 넣은 앵커의 직접 멤버(`SceneObjectNode::_instancePacking`)와, 문서 자신이 묶는 씬이면 그 맨 위 엔티티.
+         *          묶는 엔티티: 컴포넌트가 메시 컴포넌트 하나(그 형식 그대로)이고 `_bStatic` 이며, 사용자 값이 없고, 부모가 앵커(맨 위면 없음)이고, 아무 엔티티도 가리키지 않는다(부착 · 핸들 — 자식이 있으면 가리킨다).
+         *          (주인, 레이어, 메시, 머티리얼, 구간)마다 인스턴스 메시 엔티티 하나로 바꾼다 — 앵커 멤버면 파일 id 는 앵커 범위의 넓은 값, 맨 위면 문서의 가장 큰 id 다음이다.
+         *          층: 씬(5)은 메시(6)를 모른다 — 두 형식은 타입 표의 이름과 칸으로 읽고 쓴다. 둘 중 하나라도 표에 없으면 오류다(조용히 묶지 않고 넘어가지 않는다).
+         * @return 문서를 지을 수 없거나 형식이 표에 없으면 오류를 남기고 false 이며 문서는 그대로다. 묶을 것이 없으면 true 이고 그대로다.
+         */
+        [[nodiscard]] SW_API static bool packStaticMeshes( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view scenePath );
+
+        /**
          * @brief 스트리밍하는 씬의 엔티티를 격자로 셀에 나눕니다. 늘 올라 있는 엔티티는 `_listSceneObjectNode` 에 남고 나머지는 `_listStreamingCell` 로 갑니다.
          * @details 문서를 한 번 지어 엔티티마다 자리(계층 루트의 primary 씬 컴포넌트) · 늘 올라 있음 · 다른 엔티티로의 참조(부착 · 핸들)를 읽는다.
          *          셀을 넘는 참조(`StreamingCellGrid::findCrossCellReferences`)나 프리팹을 찾지 못한 엔티티가 있으면 엔티티마다 오류를 남기고 false 이며 문서는 그대로다.

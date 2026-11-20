@@ -448,6 +448,7 @@ namespace sw
             listExpanded.push_back( anchor );
             if ( anchor._sceneInstance.empty() )
                 continue;
+            SceneObjectNode& expandedAnchor = listExpanded.back();
 
             const string instancePath = FileUtil::normalizePath( anchor._sceneInstance ).str();
             for ( const string& chainPath : inoutListChain )
@@ -465,6 +466,7 @@ namespace sw
             }
             if ( PrefabOverrides::collectPartOverrides( anchor._prefabOverrideXML, listPart ) == false )
                 return false;
+            expandedAnchor._instancePacking = inner._sceneSettings.usesStaticMeshPacking() ? SceneInstancePacking::StaticMeshes : SceneInstancePacking::Separate;
 
             // 레이어 이름은 전역 집합이다. 같은 이름을 바깥이 선언했으면 바깥의 처음 상태가 이긴다.
             for ( const SceneDataLayerDef& layer : inner._sceneSettings._listDataLayer )
@@ -829,7 +831,8 @@ namespace sw
         SceneDocumentInternal::writeEntities( arch, listNode );
         for ( const SceneObjectNode& node : listNode )
         {
-            arch << static_cast<uint8>( node._statePurpose );
+            // 런타임 칸도 함께 싣는다 — 하위 레벨의 쿠킹 상태 범위, 상태가 적힌 월드 원점(`_worldOrigin`).
+            arch << static_cast<uint8>( node._statePurpose ) << node._cookedStateIDScope << node._worldOrigin._x << node._worldOrigin._y << node._worldOrigin._z;
         }
         outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
     }
@@ -846,7 +849,7 @@ namespace sw
         for ( SceneObjectNode& node : outListNode )
         {
             uint8 purpose{ 0 };
-            arch >> purpose;
+            arch >> purpose >> node._cookedStateIDScope >> node._worldOrigin._x >> node._worldOrigin._y >> node._worldOrigin._z;
             if ( arch.isError() || purpose > static_cast<uint8>( SerializePurpose::SaveGame ) )
             {
                 SW_LOG_ERROR_ID( "SceneDocument.SavedNodePurposeInvalid", "Saved entity '%#' has no readable state purpose (%#) in %# - it is not used", node._name, static_cast<uint32>( purpose ),

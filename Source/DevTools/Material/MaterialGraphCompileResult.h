@@ -50,8 +50,8 @@ namespace sw
         vector<MaterialGraphField> _listField;
         vector<MaterialGraphIssue> _listIssue;
         uint32                     _contentHash{ 0 };      ///< `_hlsl` 의 해시 — 셰이더 파일 이름에 든다. 새 내용은 새 경로라 옛 PSO · 리플렉션이 섞이지 않는다
-        bool                       _bEmissive{ false };    ///< NOLINT(sw-bool-flag): 집합체다. 자체 발광을 쓴다 — G버퍼에 칸이 없어 포워드로 그린다(`MATERIAL_FORWARD_ONLY`)
-        bool                       _bHair{ false };        ///< NOLINT(sw-bool-flag): 집합체다. 셰이딩 모델 Hair(`SW_MATERIAL_GRAPH_HAIR`) — G버퍼에 칸이 없어 포워드로 그린다
+        bool                       _bEmissive{ false };    ///< NOLINT(sw-bool-flag): 집합체다. 자체 발광을 쓴다 — 표면 모델 Emissive(G버퍼 발광 칸으로 디퍼드에서도 그린다)
+        bool                       _bHair{ false };        ///< NOLINT(sw-bool-flag): 집합체다. 셰이딩 모델 Hair(`SW_MATERIAL_GRAPH_HAIR`) — 표면 모델 Hair 라 포워드로 그린다
         bool                       _bPostProcess{ false }; ///< NOLINT(sw-bool-flag): 집합체다. 출력이 `PostProcessOutput` 이다 — PostProcess 영역(post_process_material_graph.hlsli · `MATERIAL_DOMAIN_POST_PROCESS`)
 
         // 파일 머리말 참고.

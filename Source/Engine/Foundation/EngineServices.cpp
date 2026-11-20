@@ -54,6 +54,11 @@ namespace sw
             return s_bServicesBound.load( std::memory_order_acquire );
         }
 
+        bool isHostOnlyService( uint64 typeHash )
+        {
+            return EngineRegistrationList::getGlobal().isHostOnlyService( typeHash );
+        }
+
         void bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly, bool bSkipAlreadyBound )
         {
             EngineRegistrationList::getGlobal().bindModuleServices( outScope, bGameModuleOnly, bSkipAlreadyBound );

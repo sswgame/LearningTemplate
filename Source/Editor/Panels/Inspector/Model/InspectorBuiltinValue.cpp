@@ -191,34 +191,14 @@ namespace sw::editor
         return bAllFilled;
     }
 
-    TaskArgs InspectorBuiltinValue::makeMethodArgs( const vector<InspectorMethodArgSlot>& listSlot )
+    vector<ReflectedValue> InspectorBuiltinValue::makeMethodArgs( const vector<InspectorMethodArgSlot>& listSlot )
     {
-        TaskArgs args;
+        vector<ReflectedValue> listArg;
+        listArg.reserve( listSlot.size() );
         for ( const InspectorMethodArgSlot& slot : listSlot )
         {
-            args.add( slot._value );
+            listArg.emplace_back( hashed_string( getBuiltin( slot._builtinIndex )._pTypeName ), slot._value );
         }
-        return args;
-    }
-
-    bool InspectorBuiltinValue::formatMethodResult( const TaskValue& value, string_view returnType, utf8* pOutBuf, uint32 capacity )
-    {
-        if ( pOutBuf == nullptr || capacity == 0 )
-            return false;
-        const bool bNoReturnValue = returnType.empty() || returnType == "void" || value.hasValue() == false;
-        if ( bNoReturnValue )
-        {
-            formatstring( pOutBuf, capacity, "(void / empty)" );
-            return true;
-        }
-
-        const InspectorBuiltinValue* pRow = findBuiltin( returnType );
-        if ( pRow == nullptr )
-        {
-            formatstring( pOutBuf, capacity, "(unsupported return: %#)", string( returnType ).c_str() );
-            return false;
-        }
-        pRow->_pFormatValue( pRow->_pFindTaskValue( value ), pOutBuf, capacity );
-        return true;
+        return listArg;
     }
 } // namespace sw::editor

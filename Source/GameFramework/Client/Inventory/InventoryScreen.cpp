@@ -114,7 +114,7 @@ namespace sw
     InventoryScreen::InventoryScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
         , _listSlotWidget{}
-        , _pCharacter{ nullptr }
+        , _character{}
         , _filter{}
         , _pressSeconds{ 0.0f }
         , _pressedSlot{ kNoSlot }
@@ -141,7 +141,7 @@ namespace sw
         // 칸은 올리기 전에 짓는다 — 탐색 방식으로 열면 올리는 순간 기본 포커스(`Slot0`)가 서야 한다.
         return ui.openScreen<InventoryScreen>( documentPath, [&character]( InventoryScreen& screen )
         {
-            screen._pCharacter = &character;
+            screen._character = WeakRef<CharacterEquipmentComponent>{ character };
             screen.buildWidgets();
             return true;
         } );
@@ -149,13 +149,14 @@ namespace sw
 
     void InventoryScreen::buildWidgets()
     {
-        using Internal          = InventoryScreenInternal;
-        WidgetTree&  tree       = getTree();
-        PanelWidget* pGrid      = tree.findWidget<PanelWidget>( hashed_string( kGridName ) );
-        PanelWidget* pEquipment = tree.findWidget<PanelWidget>( hashed_string( kEquipmentName ) );
-        const bool   bTexts     = tree.findWidget<TextWidget>( hashed_string( kDetailsName ) ) != nullptr && tree.findWidget<TextWidget>( hashed_string( kStatsName ) ) != nullptr &&
+        using Internal                                = InventoryScreenInternal;
+        CharacterEquipmentComponent* const pCharacter = _character.get();
+        WidgetTree&                        tree       = getTree();
+        PanelWidget*                       pGrid      = tree.findWidget<PanelWidget>( hashed_string( kGridName ) );
+        PanelWidget*                       pEquipment = tree.findWidget<PanelWidget>( hashed_string( kEquipmentName ) );
+        const bool                         bTexts     = tree.findWidget<TextWidget>( hashed_string( kDetailsName ) ) != nullptr && tree.findWidget<TextWidget>( hashed_string( kStatsName ) ) != nullptr &&
                             tree.findWidget<TextWidget>( hashed_string( kWeightName ) ) != nullptr && tree.findWidget<TextWidget>( hashed_string( kStatusName ) ) != nullptr;
-        if ( pGrid == nullptr || pEquipment == nullptr || tree.findWidgetByName( hashed_string( kActionsName ) ) == nullptr || bTexts == false || _pCharacter == nullptr )
+        if ( pGrid == nullptr || pEquipment == nullptr || tree.findWidgetByName( hashed_string( kActionsName ) ) == nullptr || bTexts == false || pCharacter == nullptr )
         {
             SW_LOG_ERROR_ID( "InventoryScreen.InventoryDocumentNeeds", "Inventory document %# needs '%#' and '%#' panels, an '%#' panel and the '%#', '%#', '%#' and '%#' texts", getDocumentPath().c_str(),
                              kGridName, kEquipmentName, kActionsName, kDetailsName, kStatsName, kWeightName, kStatusName );
@@ -164,7 +165,7 @@ namespace sw
         }
         pGrid->clearChildren();
         _listSlotWidget.clear();
-        for ( int32 index = 0; index < _pCharacter->getBag().getSlotCount(); ++index )
+        for ( int32 index = 0; index < pCharacter->getBag().getSlotCount(); ++index )
         {
             unique_ptr<InventorySlotWidget>         slot = make_unique<InventorySlotWidget>( *this, index );
             StringBuilder<constant::buffer::kMax32> nameBuilder;
@@ -180,7 +181,7 @@ namespace sw
             (void)pGrid->addChild( std::move( slot ) );
         }
         pEquipment->clearChildren();
-        for ( const EquipmentSlot& equipSlot : _pCharacter->getEquipment().getSlots() )
+        for ( const EquipmentSlot& equipSlot : pCharacter->getEquipment().getSlots() )
         {
             unique_ptr<ButtonWidget> button = make_unique<ButtonWidget>();
             button->setName( hashed_string( string( Internal::kEquipNamePrefix ) + equipSlot._name.c_str() ) );
@@ -194,9 +195,10 @@ namespace sw
 
     void InventoryScreen::refresh()
     {
-        if ( _pCharacter == nullptr || _listSlotWidget.empty() )
+        CharacterEquipmentComponent* const pCharacter = _character.get();
+        if ( pCharacter == nullptr || _listSlotWidget.empty() )
             return;
-        const Inventory&   bag      = _pCharacter->getBag();
+        const Inventory&   bag      = pCharacter->getBag();
         const ItemCatalog* pCatalog = bag.getCatalog();
         for ( InventorySlotWidget* pWidget : _listSlotWidget )
         {
@@ -220,7 +222,7 @@ namespace sw
         PanelWidget* pEquipment = getTree().findWidget<PanelWidget>( hashed_string( kEquipmentName ) );
         if ( pEquipment != nullptr )
         {
-            const vector<EquipmentSlot>& listSlot = _pCharacter->getEquipment().getSlots();
+            const vector<EquipmentSlot>& listSlot = pCharacter->getEquipment().getSlots();
             for ( uint32 index = 0; index < pEquipment->getChildCount() && index < listSlot.size(); ++index )
             {
                 const EquipmentSlot&                     equipSlot = listSlot[index];
@@ -236,7 +238,7 @@ namespace sw
             }
         }
         StatBlock stats;
-        _pCharacter->getEquipment().computeStats( stats );
+        pCharacter->getEquipment().computeStats( stats );
         StringBuilder<constant::buffer::kMax256> statsBuilder;
         for ( const StatValue& stat : stats.getValues() )
         {
@@ -254,7 +256,7 @@ namespace sw
         if ( pWeight != nullptr )
             pWeight->setText( string( weightBuilder.view() ) );
         _shownBagRevision       = bag.getRevision();
-        _shownEquipmentRevision = _pCharacter->getEquipment().getRevision();
+        _shownEquipmentRevision = pCharacter->getEquipment().getRevision();
     }
 
     void InventoryScreen::refreshDetails()
@@ -277,14 +279,15 @@ namespace sw
 
     InventoryCommandResult InventoryScreen::run( const InventoryCommand& command )
     {
-        if ( _pCharacter == nullptr )
+        CharacterEquipmentComponent* const pCharacter = _character.get();
+        if ( pCharacter == nullptr )
             return InventoryCommandResult::InvalidSlot;
         vector<InventorySlot> listDropped;
-        _lastResult = _pCharacter->applyCommand( command, listDropped );
+        _lastResult = pCharacter->applyCommand( command, listDropped );
         ++_commandCount;
         SW_LOG_INFO_ID( "InventoryScreen.CommandApplied", "Inventory %# from %# to %# (count %#, slot '%#'): %#", getEnumName( command._kind ), command._fromSlot, command._toSlot, command._count,
                         command._equipSlot.c_str(), getEnumName( _lastResult ) );
-        GameObject*        pOwner   = _pCharacter->getOwner();
+        GameObject*        pOwner   = pCharacter->getOwner();
         GameObjectManager* pManager = engine::findActiveObjectManager();
         if ( listDropped.empty() == false && pOwner != nullptr && pManager != nullptr )
         {
@@ -303,11 +306,12 @@ namespace sw
 
     void InventoryScreen::onSlotActivated( int32 bagSlot )
     {
-        if ( _pCharacter == nullptr || bagSlot < 0 || bagSlot >= _pCharacter->getBag().getSlotCount() )
+        CharacterEquipmentComponent* const pCharacter = _character.get();
+        if ( pCharacter == nullptr || bagSlot < 0 || bagSlot >= pCharacter->getBag().getSlotCount() )
             return;
         if ( _heldSlot == kNoSlot )
         {
-            if ( _pCharacter->getBag().getSlot( bagSlot ).isEmpty() == false )
+            if ( pCharacter->getBag().getSlot( bagSlot ).isEmpty() == false )
             {
                 _heldSlot = bagSlot;
                 setStatus( SW_LOCKEYREF( "Inventory", "Picked" ) );
@@ -369,7 +373,8 @@ namespace sw
 
     void InventoryScreen::openActions( int32 bagSlot )
     {
-        if ( _pCharacter == nullptr || bagSlot < 0 || bagSlot >= _pCharacter->getBag().getSlotCount() || _pCharacter->getBag().getSlot( bagSlot ).isEmpty() )
+        CharacterEquipmentComponent* const pCharacter = _character.get();
+        if ( pCharacter == nullptr || bagSlot < 0 || bagSlot >= pCharacter->getBag().getSlotCount() || pCharacter->getBag().getSlot( bagSlot ).isEmpty() )
             return;
         Widget* pActions = getTree().findWidgetByName( hashed_string( kActionsName ) );
         if ( pActions == nullptr )
@@ -380,7 +385,7 @@ namespace sw
         // 나누기는 둘 이상일 때만 켠다.
         Widget* pSplit = getTree().findWidgetByName( hashed_string( "ActSplit" ) );
         if ( pSplit != nullptr )
-            pSplit->setEnabled( _pCharacter->getBag().getSlot( bagSlot )._count > 1 );
+            pSplit->setEnabled( pCharacter->getBag().getSlot( bagSlot )._count > 1 );
         Widget*   pFirst = getTree().findWidgetByName( hashed_string( "ActUse" ) );
         UISystem* pUI    = getUISystem();
         if ( pFirst != nullptr && pUI != nullptr )
@@ -402,9 +407,10 @@ namespace sw
     void InventoryScreen::cycleFilter()
     {
         // 가방에 있는 분류를 칸 순서로 돌고, 끝이면 모두(빈 분류)로 돌아온다.
-        if ( _pCharacter == nullptr )
+        CharacterEquipmentComponent* const pCharacter = _character.get();
+        if ( pCharacter == nullptr )
             return;
-        const Inventory&      bag      = _pCharacter->getBag();
+        const Inventory&      bag      = pCharacter->getBag();
         const ItemCatalog*    pCatalog = bag.getCatalog();
         vector<hashed_string> listCategory;
         for ( int32 index = 0; index < bag.getSlotCount() && pCatalog != nullptr; ++index )
@@ -423,7 +429,8 @@ namespace sw
 
     bool InventoryScreen::onCommand( const hashed_string& command, Widget& source )
     {
-        using Internal = InventoryScreenInternal;
+        using Internal                                = InventoryScreenInternal;
+        CharacterEquipmentComponent* const pCharacter = _character.get();
         if ( command == hashed_string( Internal::kSlotCommand ) )
         {
             const InventorySlotWidget* pSlot = castTo<InventorySlotWidget>( &source );
@@ -472,11 +479,11 @@ namespace sw
             return UIScreen::onCommand( command, source );
         const int32 slot = _menuSlot;
         closeActions();
-        if ( _pCharacter == nullptr || slot == kNoSlot )
+        if ( pCharacter == nullptr || slot == kNoSlot )
             return true;
         InventoryCommand action{};
         action._fromSlot  = slot;
-        const int32 count = _pCharacter->getBag().getSlot( slot )._count;
+        const int32 count = pCharacter->getBag().getSlot( slot )._count;
         if ( command == hashed_string( "ActUse" ) )
             action._kind = InventoryCommandKind::Use;
         else if ( command == hashed_string( "ActEquip" ) )
@@ -547,9 +554,15 @@ namespace sw
     void InventoryScreen::onTick( float32 deltaSeconds )
     {
         UIScreen::onTick( deltaSeconds );
-        if ( _pCharacter == nullptr || _bBuilt == SW_FALSE )
+        CharacterEquipmentComponent* const pCharacter = _character.get();
+        if ( pCharacter == nullptr || pCharacter->isStarted() == false )
+        {
+            close(); // 캐릭터(씬 · 게임 인스턴스 소유)가 먼저 사라지거나 끝났다 — 화면도 함께 닫는다(언리얼: 위젯이 약한 포인터로 대상을 잃으면 스스로 내린다)
             return;
-        if ( _pCharacter->getBag().getRevision() != _shownBagRevision || _pCharacter->getEquipment().getRevision() != _shownEquipmentRevision )
+        }
+        if ( _bBuilt == SW_FALSE )
+            return;
+        if ( pCharacter->getBag().getRevision() != _shownBagRevision || pCharacter->getEquipment().getRevision() != _shownEquipmentRevision )
             refresh();
         refreshDetails();
         // 길게 누르기(터치 · 마우스): 입력 맵의 hold 문턱을 넘도록 누르고 있으면 동작 메뉴를 연다.

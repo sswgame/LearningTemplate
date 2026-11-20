@@ -56,7 +56,7 @@ namespace
     sw::shared_ptr<sw::Material> makeTranslucentMaterial()
     {
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        SW_EXPECT_TRUE( material->loadFromXML( "<MaterialDef formatVersion=\"0\" name=\"ProbeGlass\" shaderPath=\"engine/shaders/forward_lit.hlsl\" alphaMode=\"Blend\">"
+        SW_EXPECT_TRUE( material->loadFromXML( "<MaterialDef formatVersion=\"0\" name=\"ProbeGlass\" shaderPath=\"engine/shaders/forward_lit.hlsl\" surfaceModel=\"Lit\" alphaMode=\"Blend\">"
                                                "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item></_alwaysDefines></_permutations></MaterialDef>" ) );
         return material;
     }
@@ -65,7 +65,7 @@ namespace
     sw::shared_ptr<sw::Material> makeOpaqueMaterial()
     {
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        SW_EXPECT_TRUE( material->loadFromXML( "<MaterialDef formatVersion=\"0\" name=\"ProbeWall\" shaderPath=\"engine/shaders/forward_lit.hlsl\"/>" ) );
+        SW_EXPECT_TRUE( material->loadFromXML( "<MaterialDef formatVersion=\"0\" name=\"ProbeWall\" shaderPath=\"engine/shaders/forward_lit.hlsl\" surfaceModel=\"Lit\"/>" ) );
         return material;
     }
 

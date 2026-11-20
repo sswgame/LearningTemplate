@@ -112,7 +112,7 @@ namespace sw
          */
         void onSceneCleared() override;
 
-        /** @brief 이번 프레임의 카메라 원점입니다. 바깥 원점(`setExternalSources`)을 쓰는 동안에는 무시합니다. */
+        /** @brief 이번 프레임의 카메라 원점입니다(씬의 로컬 자리 — 월드 원점을 더해 절대로 든다). 바깥 원점(`setExternalSources`)을 쓰는 동안에는 무시합니다. */
         void setCameraSource( const float3& position );
         /**
          * @brief 원점 목록(반경 · 우선순위가 원점마다 다르다)을 바깥(게임 · 서버 — 접속자마다)이 정합니다. 부른 뒤로는 카메라 원점을 쓰지 않습니다. 빈 목록이면 아무 셀도 원하지 않습니다.
@@ -179,7 +179,7 @@ namespace sw
         bool isCellStreamingCompleted( const StreamingCellCoord& cell ) const;
         /** @brief 받은 격자입니다. `isStreaming` 이 false 이면 쓰지 않습니다. */
         const StreamingCellGrid& getGrid() const { return _grid; }
-        /** @brief 지금 원점 목록입니다(바깥 원점 또는 카메라 원점 하나). 같은 반경으로 따라 올리는 것(내비메시 타일 — `SceneNavigation`)도 이것을 본다. */
+        /** @brief 지금 원점 목록입니다(바깥 원점 또는 카메라 원점 하나, 절대 좌표). 같은 반경으로 따라 올리는 것(내비메시 타일 — `SceneNavigation`)도 이것을 본다. */
         span<const StreamingSource> getActiveSources() const;
         /** @brief 이 거리 안에 닿는 것을 올립니다(월드 설정의 로딩 반경). `isStreaming` 이 false 이면 쓰지 않습니다. */
         float32 getLoadingRadius() const { return _settings._cellGrid._loadingRadius; }
@@ -231,7 +231,9 @@ namespace sw
         void resetCells();
         /** @brief 좌표 @p cell · 레이어 집합 @p listDataLayer 의 조각 번호입니다. 없으면 빈 조각(떠 둔 상태가 빈 목록)을 그 좌표의 끝 조각으로 만듭니다. */
         uint32 findOrAddSlot( const StreamingCellCoord& cell, const vector<string>& listDataLayer );
-        /** @brief 오브젝트의 셀입니다 — 쿠커와 같이 primary 씬 컴포넌트의 월드 자리입니다. 씬 컴포넌트가 없으면 false 입니다. */
+        /** @brief 씬의 로컬 자리 @p local 을 절대 자리로 옮깁니다(+ 월드 원점, `Scene::getWorldOrigin`). 격자 · 원점 · 셀 판정은 절대 좌표다(쿠킹본 · 서버와 같다). */
+        float3 toAbsolute( const float3& local ) const;
+        /** @brief 오브젝트의 셀입니다 — 쿠커와 같이 primary 씬 컴포넌트의 월드 자리(절대)입니다. 씬 컴포넌트가 없으면 false 입니다. */
         bool computeObjectCell( const GameObject& object, StreamingCellCoord& outCell ) const;
         /**
          * @brief 셀을 내리는 프레임에 루트 오브젝트의 소속을 지금 자리로 다시 정합니다(파일 머리말의 셀 경계). @p listUnloading 은 이번에 내릴 조각입니다.

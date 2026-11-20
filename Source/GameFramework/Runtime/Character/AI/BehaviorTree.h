@@ -203,6 +203,11 @@ namespace sw
     {
     public:
         BehaviorTreeRunner();
+        // 행위자 하나의 실행 상태다 — 복사본이 슬롯 러너를 나눠 들면 두 행위자가 한 가지의 커서 · 타이머를 함께 돌린다(언리얼 `UBehaviorTreeComponent` 도 행위자마다 하나, 복사하지 않는다).
+        BehaviorTreeRunner( const BehaviorTreeRunner& )            = delete;
+        BehaviorTreeRunner& operator=( const BehaviorTreeRunner& ) = delete;
+        BehaviorTreeRunner( BehaviorTreeRunner&& )                 = delete;
+        BehaviorTreeRunner& operator=( BehaviorTreeRunner&& )      = delete;
 
         void initialize( const BehaviorTree* pTree );
         /** @brief 이동 노드(`addMoveTo`)가 쓸 행위자의 이동 인터페이스입니다. 행위자보다 먼저 사라지면 nullptr 로 바꿉니다. */
@@ -257,11 +262,11 @@ namespace sw
         bool pollHigherPriorityTrigger();
 
     private:
-        /** @brief 채운 슬롯 하나입니다. 러너가 복사될 수 있어 나눠 듭니다. */
+        /** @brief 채운 슬롯 하나입니다. 슬롯의 러너는 이 러너만 소유한다(러너는 복사하지 않는다). */
         struct SlotBinding
         {
             hashed_string                  _slot{};
-            shared_ptr<BehaviorTreeRunner> _pRunner{};
+            unique_ptr<BehaviorTreeRunner> _pRunner{};
         };
 
         const BehaviorTree* _pTree;

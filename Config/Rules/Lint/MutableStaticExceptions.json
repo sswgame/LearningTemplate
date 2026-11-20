@@ -467,11 +467,6 @@
             "_why": "게임 선택 — 코어 범위의 CrashHandlerSubsystem 이 기동 스레드에서 한 번 적고, 모듈 · 설정 경로를 찾는 정적 함수가 서비스 범위가 서기 전에도 묻는다(테스트는 범위 없이 기본 게임). 고정 배열이라 상수 초기화된다."
         },
         {
-            "_path": "Source/Engine/Config/GameSelection.cpp",
-            "_name": "s_arrLaunchExperience",
-            "_why": "게임 선택의 한 칸(개발 실행 인자 -experience=) — 게임 이름과 같은 자리에서 기동 스레드가 한 번 적고, 명령줄을 볼 수 없는 게임 인스턴스(CommandLineManager 는 호스트 전용)가 첫 씬 대신 읽는다. 고정 배열이라 상수 초기화된다."
-        },
-        {
             "_path": "Source/Engine/Foundation/EngineServices.cpp",
             "_name": "s_bServicesBound",
             "_why": "엔진 서비스 표의 뿌리 — 묶은 범위를 가리킬 뿐 소유하지 않는다(엔진 범위가 bind · unbind). 주인 객체에 닿는 유일한 창구라 이것까지 객체로 옮기면 창구가 없다(언리얼 GEngine 과 같은 자리)."

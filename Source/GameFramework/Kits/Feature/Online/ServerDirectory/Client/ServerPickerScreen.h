@@ -4,7 +4,7 @@
  * @details 문서(`.ui.xml`)는 호출하는 게임이 경로를 준다(코드에 기본 경로가 없다). 문서가 갖춰야 할 위젯: 서버 줄을 담을 가상 목록 `Servers`(`ListViewWidget`), 상태 글 `Status`,
  *          명령이 `Refresh` 인 단추와 `Close` 인 단추(견본: `Content/common/ui/online/serverpicker.ui.xml`). 서버가 수천 개여도 보이는 줄만 단추가 있고, 고른 항목은 그 줄이 맡은 번호로 찾는다(명령 `Pick`).
  *          받을 수 없는 상태(`Open` 이 아닌 서버)의 단추는 눌리지 않는다. 목록이 비면 이유를 `Status` 에 적는다 — 빈 화면으로 두지 않는다.
- *          화면은 요청을 보내지 않고 모델을 읽는다. 모델이 화면보다 오래 살아야 한다.
+ *          화면은 요청을 보내지 않고 모델을 읽는다. 모델이 먼저 사라지면 화면이 닫힌다(`WeakRef`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -57,7 +57,7 @@ namespace sw
 
         ServerPickedDelegate _onPicked;
         string               _kind;
-        ServerList*          _pModel;
+        WeakRef<ServerList>  _model; ///< 모델은 게임 쪽이 소유한다 — 먼저 사라지면 화면이 닫힌다
         uint64               _shownRevision;
         bool                 _bBuilt;
     };

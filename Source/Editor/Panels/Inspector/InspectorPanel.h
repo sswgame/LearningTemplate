@@ -43,6 +43,10 @@ namespace sw::editor
         uint32 getMethodRowCount() const { return _propertyGrid.getMethodRowCount(); }
         /** @brief 그리드가 마지막 프레임에 숨긴(`CallInEditor` 없는) 메서드 수입니다. */
         uint32 getHiddenMethodCount() const { return _propertyGrid.getHiddenMethodCount(); }
+        /** @brief 그리드가 마지막 프레임에 맨 위에 그린 액션 즐겨찾기 메서드 행 수입니다. */
+        uint32 getFavoriteMethodRowCount() const { return _propertyGrid.getFavoriteMethodRowCount(); }
+        /** @brief 그리드의 마지막 FUNCTION 호출 결과입니다. */
+        const InspectorInvokeResult& getLastInvokeResult() const { return _propertyGrid.getLastInvokeResult(); }
         /** @brief 그리드가 마지막 프레임에 값을 채운 프로퍼티 행 수입니다(`EditorPropertyGrid::getFilledRowCount`). */
         uint32 getFilledRowCount() const { return _propertyGrid.getFilledRowCount(); }
         /** @brief 그리드가 마지막 프레임에 화면 밖이라 높이만 둔 행 수입니다(`EditorPropertyGrid::getSkippedRowCount`). */

@@ -65,6 +65,7 @@
 | 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
 |---|---|---|
 | `alphaMode` | `Opaque` · `Mask`(불투명 목록, 문턱 아래 알파를 버린다 — `MATERIAL_ALPHA_CUTOFF`) · `Blend`(반투명 목록) | 그 밖의 글. define `MATERIAL_ALPHA_CUTOFF` 를 직접 적었을 때 |
+| `surfaceModel` | 필수(`_base` 로 물려받는다). `Lit` · `Unlit` · `Emissive` · `Toon` · `Hair` · `CustomLit`(`MaterialSurfaceModel`) — define `MATERIAL_SURFACE_MODEL_<이름>` 을 내고, 셰이더 뼈대가 조명 훅과 맞춰 본다(material_shader.hlsli 머리말 표, 어긋나면 쿠킹 실패). `Toon` · `Hair` · `CustomLit` 은 `MATERIAL_FORWARD_ONLY` 도 낸다 | 적지 않았을 때. 그 밖의 글. 포워드 전용 모델에 `MATERIAL_FORWARD_ONLY` 를 define · 스위치로 직접 적었을 때 |
 | `alphaCutoff` | `Mask` 의 문턱. `_alphaCutoff` 프로퍼티로 간다 | `Mask` 가 아닌데 기본값(0.5)이 아닐 때. 프로퍼티가 없는 셰이더의 기본값 아닌 값 |
 | `renderQueue` | 그리기 순서(작은 것부터, 기본 0). 반투명 정렬의 첫 키, 불투명은 띠 안의 순서다. 불투명의 띠는 렌더 상태가 정한다(`OpaqueDrawBand`) — 보통 → 스텐실 쓰기(마스크) → 그려진 것을 읽거나 일부만 덮는 것(채널 일부 쓰기 · 블렌드 · 스텐실 비교 · 깊이 Less/LessEqual 밖 · 깊이 쓰기 끔). 순서에 기대는 머티리얼에 차례를 적지 않는다 | |
 | `twoSidedLighting` | 뒷면에서 노멀을 뒤집는다(`MATERIAL_TWO_SIDED`) | `cullMode="None"` 없이 적었을 때. define 을 직접 적었을 때 |

@@ -118,21 +118,22 @@ namespace sw
 
     uint64 ShaderCooker::computePermutationHash( const vector<ShaderMacroDefine>& listDefine )
     {
-        if ( listDefine.empty() )
-            return 0;
+        return computePermutationHash( makeCanonicalDefines( listDefine ) );
+    }
 
-        vector<string> listString;
-        listString.reserve( listDefine.size() );
-        for ( const auto& define : listDefine )
+    vector<string> ShaderCooker::makeCanonicalDefines( const vector<ShaderMacroDefine>& listDefine )
+    {
+        vector<string> listCanonical;
+        listCanonical.reserve( listDefine.size() );
+        for ( const ShaderMacroDefine& define : listDefine )
         {
             if ( define._name.empty() )
                 continue;
-            if ( define._value.empty() )
-                listString.push_back( define._name );
-            else
-                listString.push_back( define._name + "=" + define._value );
+            // `FOO` 와 `FOO=1` 은 컴파일러에게 같은 것이다(문자열 판 `computePermutationHash` 와 같은 규칙).
+            listCanonical.push_back( define._name + "=" + ( define._value.empty() ? string( "1" ) : define._value ) );
         }
-        return computePermutationHash( listString );
+        VectorUtil::sort( listCanonical );
+        return listCanonical;
     }
 
     string ShaderCooker::computeBinaryFileName( string_view stemLower, ShaderStage stage,

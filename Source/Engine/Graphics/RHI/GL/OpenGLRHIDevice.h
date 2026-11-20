@@ -647,5 +647,9 @@ namespace sw
             if ( _bNeedsUnbind && _pDevice != nullptr )
                 _pDevice->unbindGraphicsContext();
         }
+
+        // 복사본이 소멸하며 바인딩을 두 번 놓는다(아직 쓰는 쪽의 컨텍스트가 풀린다) — 가드는 복사하지 않는다.
+        ScopedOpenGLContext( const ScopedOpenGLContext& )            = delete;
+        ScopedOpenGLContext& operator=( const ScopedOpenGLContext& ) = delete;
     };
 } // namespace sw

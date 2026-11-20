@@ -3,6 +3,7 @@
 #include "DevTools/AssetReload/ReloadTracker.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/EnumNameTable.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -256,18 +257,11 @@ namespace sw
 
     const utf8* ReloadTracker::getSourceName( ReloadSource source )
     {
-        switch ( source )
-        {
-            case ReloadSource::Config:
-                return "Config";
-            case ReloadSource::Asset:
-                return "Asset";
-            case ReloadSource::Shader:
-                return "Shader";
-            case ReloadSource::Module:
-                return "Module";
-        }
-        return "?";
+        // DevTools 는 리플렉션 코드젠을 하지 않는 모듈이라 ENUM() 대신 순서 이름 표를 쓴다.
+        static constexpr const utf8*                 kArrName[] = { "Config", "Asset", "Shader", "Module" };
+        static constexpr EnumNameTable<ReloadSource> kTable{ kArrName };
+        static_assert( kTable.getCount() == kReloadSourceCount, "ReloadSource 열거자와 이름 표의 칸 수가 같아야 한다" );
+        return kTable.toString( source );
     }
 
     void ReloadTracker::clear()

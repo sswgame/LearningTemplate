@@ -1,4 +1,4 @@
-"""쿠커 코드의 지문과 셰이더 컴파일러 버전을 C++ 헤더로 씁니다 — 쿠킹 재사용 판단의 입력을 사람이 올리지 않고 산출합니다.
+"""쿠커 코드의 지문과 셰이더 도구(DXC · Tint) 버전을 C++ 헤더로 씁니다 — 쿠킹 재사용 판단의 입력을 사람이 올리지 않고 산출합니다.
 
 쿠킹은 입력이 그대로면 옛 결과를 재사용합니다. 손으로 올리는 쿠커 번호를 키에 넣으면 형식이나 규칙을 고치고 번호를
 잊었을 때 옛 쿠킹본이 배포본에 실립니다(프리팹 형식 2 → 3 에서 실제로 났다). 쿠커 코드의 내용을 키에 넣으면 잊을 번호가 없습니다.
@@ -30,7 +30,9 @@ from generate.generator_output import write_generated_file  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 
 SOURCE_EXTENSIONS = (".h", ".hpp", ".cpp", ".inl", ".xxx")
-SHADER_COMPILER_PACKAGE = "directx-dxc"
+# 셰이더 바이트를 내는 도구 꾸러미 — DXC(DXIL · SPIR-V · GL)와 Tint(SPIR-V → WGSL, dawn[tint-tools]). 판이 바뀌면 셰이더 DDC · 쿠킹본이 낡는다.
+# 언리얼은 셰이더 형식마다 컴파일러 판(IShaderFormat::GetVersion)을 셰이더 맵 키에 넣는다. FXC(d3dcompiler_47)는 OS 의 것이라 vcpkg 기록에 없다.
+LIST_SHADER_TOOL_PACKAGE = ("directx-dxc", "dawn")
 
 
 def _collect_files(repository_root: Path, list_input: Sequence[str]) -> list[str]:
@@ -67,13 +69,18 @@ def _read_installed_version(status_path: Path, package_name: str) -> str:
     raise ValueError(f"{package_name} is not in the vcpkg install record: {status_path}")
 
 
+def _make_tool_version_text(status_path: Path) -> str:
+    """셰이더 도구 꾸러미마다 `<이름> <판>` 을 `; ` 로 이은 글입니다. 하나라도 설치 기록에 없으면 오류입니다."""
+    return "; ".join(f"{name} {_read_installed_version(status_path, name)}" for name in LIST_SHADER_TOOL_PACKAGE)
+
+
 def _make_header_text(map_fingerprint: dict[str, int], compiler_version: str) -> str:
     list_row = [f'        {{ "{name}", 0x{value:016x}ull }},\n' for name, value in sorted(map_fingerprint.items())]
     return (
         "// 생성 파일 - Scripts/generate/cook_code_fingerprint.py. 고치지 마십시오.\n"
         "#pragma once\n\n"
         "namespace sw::cookcode\n{\n"
-        f'    inline constexpr const utf8* kShaderCompilerVersion = "{SHADER_COMPILER_PACKAGE} {compiler_version}";\n\n'
+        f'    inline constexpr const utf8* kShaderCompilerVersion = "{compiler_version}";\n\n'
         "    inline constexpr CookCodeFingerprintRow kArrRow[] = {\n"
         + "".join(list_row)
         + "    };\n"
@@ -96,7 +103,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         cache = FileDigestCache(Path(args.cache))
         map_fingerprint = {name: _compute_fingerprint(repository_root, list_input, cache) for name, list_input in map_input.items()}
         cache.save()
-        compiler_version = _read_installed_version(Path(args.vcpkg_status), SHADER_COMPILER_PACKAGE)
+        compiler_version = _make_tool_version_text(Path(args.vcpkg_status))
     except (OSError, ValueError, TypeError, AttributeError) as error:
         print(f"[CookCodeFingerprint] {error}", file=sys.stderr)
         return ExitCode.CHECK_INVALID

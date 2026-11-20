@@ -96,3 +96,15 @@ SW_TEST_CASE( FriendListTest, ReplyWithoutAClientFails )
     SW_EXPECT_FALSE( idle.refresh() );
     SW_EXPECT_TRUE( idle.getState() == FriendListState::Failed );
 }
+
+/** @brief [FriendListTest] 화면이 든 약한 참조는 모델이 사라지면 빈다 — 화면(엔진 UI 소유)이 게임 쪽 모델보다 오래 살아도 사라진 모델을 부르지 않는다 */
+SW_TEST_CASE( FriendListTest, ScreenReferenceEmptiesWhenTheModelIsDestroyed )
+{
+    WeakRef<FriendList> reference;
+    {
+        FriendList model;
+        reference = WeakRef<FriendList>{ model };
+        SW_EXPECT_TRUE( reference.get() == &model );
+    }
+    SW_EXPECT_NULL( reference.get() );
+}

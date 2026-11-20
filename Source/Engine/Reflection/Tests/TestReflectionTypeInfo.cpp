@@ -11,6 +11,7 @@
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
+#include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/Tests/ScopedTestModule.h"
@@ -444,8 +445,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )
     sw::FunctionInfo funcInfo;
     funcInfo._name     = "addScore";
     funcInfo._hashName = sw::hashed_string( "addScore" );
-    funcInfo._invoker  = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
-     {
+    funcInfo._listParameter.push_back( sw::FunctionParameterInfo( "delta", "int32", {}, &sw::ReflectTypeOpsOf<int32>::kOps ) );
+    funcInfo._invoker = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
+    {
         static_cast<InvokableTestActor*>( pObjPtr )->addScore( args.get<int32>( 0 ) );
         return sw::TaskValue{};
     } );
@@ -460,10 +462,11 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )
     const sw::test::ScopedTestModule scopedModule( "TestDynamicInvoke" );
     sw::engine::getSubsystem<sw::TypeRegistry>().registerClass( info );
 
-    sw::TaskArgs args;
-    args.add( int32{ 50 } );
-    sw::engine::getSubsystem<sw::TypeRegistry>().invokeMethod( &actor, sw::hashed_string( "sw::InvokableTestActor" ), sw::hashed_string( "addScore" ), args );
-
+    // 이름으로 부르는 길은 `ReflectionInvoke::callByName` 하나다 — 인자는 인자 타입의 변환(`_pType`)을 거친다.
+    const sw::TypeInfo* pRegistered = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::InvokableTestActor" ) );
+    SW_REQUIRE_NOT_NULL( pRegistered );
+    const sw::ReflectCallResult result = sw::ReflectionInvoke::callByName( *pRegistered, &actor, sw::hashed_string( "addScore" ), { sw::ReflectedValue::make<int32>( 50 ) } );
+    SW_EXPECT_TRUE( result == sw::ReflectCallResult::Ok );
     SW_EXPECT_EQUAL( 50, actor._score );
 }
 

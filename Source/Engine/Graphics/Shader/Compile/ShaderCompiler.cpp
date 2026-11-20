@@ -235,9 +235,9 @@ namespace sw
                 string& text = slot._description;
                 text.append( "source=" ).append( desc._source.str() ).append( "\nentry=" ).append( desc._entryPoint );
                 text.append( "\nstage=" ).append( to_string( static_cast<uint32>( desc._stage ) ) ).append( "\nformat=" ).append( to_string( static_cast<uint32>( desc._targetFormat ) ) );
-                for ( const auto& def : desc._listDefine )
+                for ( const string& define : ShaderCooker::makeCanonicalDefines( desc._listDefine ) )
                 {
-                    text.append( "\ndefine=" ).append( def._name ).append( "=" ).append( def._value );
+                    text.append( "\ndefine=" ).append( define );
                 }
                 text.append( "\nsourceHash=" ).append( to_string( sourceBytes.empty() ? uint64( 0 ) : ContentHash::computeBytes( sourceBytes ) ) );
                 // 주 소스 바이트만 키에 넣으면 **include 된 .hlsli 는 키에 없다**. common.hlsli 의 상수버퍼 바인딩을 고쳐도
@@ -875,20 +875,6 @@ namespace sw
             return result;
         }
 
-        // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 캐시 적중보다 먼저, 오류로 멈춘다.
-        vector<string> listShadowed;
-        if ( ShaderCookStamp::findShadowedHeaders( resolver->getIncludeResolver(), input->_shadersFolder, listShadowed ) == false )
-        {
-            for ( const string& problem : listShadowed )
-            {
-                result._errorMessage += problem + "\n";
-            }
-            if ( result._errorMessage.empty() )
-                result._errorMessage = "Shader headers could not be checked for shadowing (see the error above).";
-            SW_LOG_ERROR_ID( "ShaderCompiler.HeaderShadowed", "%#", result._errorMessage );
-            return result;
-        }
-
         result._sourceFile                        = input->_source.str();
         const Internal::ShaderCacheSlot cacheSlot = Internal::computeCacheSlot( desc, *input );
         if ( cacheSlot._directory.empty() == false ) // 의존 기록이 없으면(없는 항목 · 쓰는 중) 읽기 한 번이 "없음" 으로 답한다
@@ -908,6 +894,22 @@ namespace sw
                 result._bSuccess         = true;
                 return result;
             }
+        }
+
+        // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 실제로 컴파일하기 전에 오류로 멈춘다. DDC 적중 뒤에 본다: 폴더를 재귀로 훑는 검사라
+        // 요청마다 하면 적중도 느려지고, 맞은 항목의 의존 기록은 없던 후보 자리까지 적어 가리는 헤더가 새로 생기면 이미 낡음이다(`readIncludeRecord`). 쿠킹 스탬프는 따로 막는다.
+        // 언리얼도 셰이더 맵 DDC 조회가 컴파일 준비(include 검사)보다 먼저다.
+        vector<string> listShadowed;
+        if ( ShaderCookStamp::findShadowedHeaders( resolver->getIncludeResolver(), input->_shadersFolder, listShadowed ) == false )
+        {
+            for ( const string& problem : listShadowed )
+            {
+                result._errorMessage += problem + "\n";
+            }
+            if ( result._errorMessage.empty() )
+                result._errorMessage = "Shader headers could not be checked for shadowing (see the error above).";
+            SW_LOG_ERROR_ID( "ShaderCompiler.HeaderShadowed", "%#", result._errorMessage );
+            return result;
         }
 
         const string profile = Internal::getTargetProfile( desc._stage, desc._targetFormat );

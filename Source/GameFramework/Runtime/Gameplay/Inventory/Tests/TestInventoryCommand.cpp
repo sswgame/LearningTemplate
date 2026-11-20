@@ -3,12 +3,13 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
-// InventoryCommandTest — 가방 · 장비 조작 명령의 검사와 적용: 옮기기(겹치기 · 바꾸기), 나누기, 버리기, 장착 · 해제, 사용, 서버가 거절할 요청(범위 밖 · 복제 수량 · 음수)(nogpu).
+// InventoryCommandTest — 가방 · 장비 조작 명령의 검사와 적용: 옮기기(겹치기 · 바꾸기), 나누기, 버리기, 장착 · 해제, 사용, 서버가 거절할 요청(범위 밖 · 복제 수량 · 음수), 인벤토리 화면이 드는 장비 컴포넌트 약한 참조(nogpu).
 
 namespace
 {
@@ -117,4 +118,19 @@ SW_TEST_CASE( InventoryCommandTest, DropEquipUnequipAndUse )
     const sw::optional<int32> stoneSlot = fixture._bag.findFirstSlot( sw::hashed_string( "stone" ) );
     SW_REQUIRE_TRUE( stoneSlot.has_value() );
     SW_EXPECT_TRUE( fixture.run( sw::InventoryCommandKind::Use, stoneSlot.value() ) == sw::InventoryCommandResult::NotUsable );
+}
+
+/**
+ * @brief [InventoryCommandTest] 인벤토리 화면이 드는 장비 컴포넌트 약한 참조는 컴포넌트가 사라지면 빈다
+ * @details 화면은 엔진 UI 가 소유해 씬 · 게임 인스턴스보다 오래 산다 — 날 포인터면 캐릭터가 지워진 뒤 다음 틱이 사라진 컴포넌트를 읽는다(상점 공급자와 같은 모양).
+ */
+SW_TEST_CASE( InventoryCommandTest, ScreenReferenceEmptiesWhenTheEquipmentComponentIsDestroyed )
+{
+    sw::WeakRef<sw::CharacterEquipmentComponent> reference;
+    {
+        sw::CharacterEquipmentComponent character;
+        reference = sw::WeakRef<sw::CharacterEquipmentComponent>{ character };
+        SW_EXPECT_TRUE( reference.get() == &character );
+    }
+    SW_EXPECT_NULL( reference.get() );
 }

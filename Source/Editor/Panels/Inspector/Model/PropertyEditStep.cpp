@@ -33,30 +33,36 @@ namespace sw::editor
 
             static Slot findSlot( GameObject& object, const PropertyEditTarget& target, string_view propertyPath )
             {
-                Slot slot;
-                if ( target._componentLocalID != 0 )
-                {
-                    for ( Component* pComponent : object.getComponents() )
-                    {
-                        if ( pComponent != nullptr && ComponentStableKey::getLocalID( pComponent ) == target._componentLocalID )
-                        {
-                            slot._pComponent = pComponent;
-                            break;
-                        }
-                    }
-                    if ( slot._pComponent == nullptr )
-                        return slot;
-                    slot._pInstance = slot._pComponent;
-                }
-                else
-                    slot._pInstance = &object;
-                const TypeInfo* pType = slot._pComponent != nullptr ? slot._pComponent->getTypeInfo() : object.getTypeInfo();
-                if ( pType != nullptr )
+                Slot            slot;
+                const TypeInfo* pType = nullptr;
+                slot._pInstance       = target.findInstance( object, slot._pComponent, pType );
+                if ( slot._pInstance != nullptr && pType != nullptr )
                     slot._pProp = pType->findPropertyInHierarchy( hashed_string( string{ propertyPath }.c_str() ) );
                 return slot;
             }
         };
     } // namespace
+
+    void* PropertyEditTarget::findInstance( GameObject& object, Component*& outComponent, const TypeInfo*& outType ) const
+    {
+        outComponent = nullptr;
+        outType      = nullptr;
+        if ( _componentLocalID == 0 )
+        {
+            outType = object.getTypeInfo();
+            return &object;
+        }
+        for ( Component* pComponent : object.getComponents() )
+        {
+            if ( pComponent != nullptr && ComponentStableKey::getLocalID( pComponent ) == _componentLocalID )
+            {
+                outComponent = pComponent;
+                outType      = pComponent->getTypeInfo();
+                return pComponent;
+            }
+        }
+        return nullptr;
+    }
 
     PropertyEditTarget PropertyEditTarget::make( const GameObject& owner, const Component* pComponent )
     {

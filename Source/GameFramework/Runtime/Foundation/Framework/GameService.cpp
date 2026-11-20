@@ -18,6 +18,32 @@ namespace sw
         };
 
         GameServiceState s_gameServiceState{};
+
+        /**
+         * @class GameVisibleEngineLocator
+         * @brief 호스트 범위를 받지 못한 실행의 게임 창구입니다 — 엔진 범위를 위로 올라가며 찾되 `HostOnly` 로 등록한 칸은 내주지 않는다.
+         * @details 묶인 게임 모듈의 범위는 `GameVisible` 칸만 건다(`engine::bindModuleServices`). 폴백이 엔진 범위를 그대로 보이면 묶인 실행에서 nullptr 인 서비스를
+         *          테스트 · 체인 단계 사이(앞 단계가 묶기를 푼 뒤)에서만 찾아 결함이 가려진다(작업 풀 `TaskManager` 가 그랬다). 노출 규칙을 두 길에서 같게 둔다.
+         */
+        class GameVisibleEngineLocator final : public ISubsystemLocator
+        {
+        public:
+            void* findInScope( uint64 typeHash ) const override
+            {
+                if ( engine::isHostOnlyService( typeHash ) )
+                    return nullptr;
+                for ( const ISubsystemLocator* pScope = engine::getEngineSubsystems(); pScope != nullptr; pScope = pScope->getParentScope() )
+                {
+                    void* const pFound = pScope->findInScope( typeHash );
+                    if ( pFound != nullptr )
+                        return pFound;
+                }
+                return nullptr;
+            }
+            const ISubsystemLocator* getParentScope() const override { return nullptr; } // 상위 범위는 `findInScope` 가 이미 걸었다
+        };
+
+        const GameVisibleEngineLocator s_gameVisibleEngineLocator{};
     } // namespace
 
     namespace game
@@ -47,9 +73,9 @@ namespace sw
         {
             SW_GAMESERVICE_API const ISubsystemLocator* findHostServices()
             {
-                // 호스트가 게임 서비스를 묶지 않은 실행(쿠커 · 테스트 하네스)은 게임 모듈을 돌리지 않으므로 엔진 범위를 그대로 본다.
+                // 호스트가 게임 서비스를 묶지 않은 실행(쿠커 · 테스트 하네스 · 체인 단계 사이)은 엔진 범위를 보되, 묶인 게임 모듈과 같은 노출 규칙으로 거른다.
                 if ( s_gameServiceState._pHostServices == nullptr )
-                    return engine::getEngineSubsystems();
+                    return engine::getEngineSubsystems() != nullptr ? &s_gameVisibleEngineLocator : nullptr;
                 return s_gameServiceState._pHostServices;
             }
         } // namespace internal

@@ -540,3 +540,21 @@ SW_TEST_CASE( BlackboardTest, KeysAndTextForTheDebugger )
     SW_EXPECT_EQUAL( string( "3" ), blackboard.findValue( "zeta" )->formatText() );
     SW_EXPECT_EQUAL( string( "#42" ), blackboard.findValue( "mid" )->formatText() );
 }
+
+/**
+ * @brief [BehaviorTreeTest] 러너는 복사 · 이동하지 않는다 — 슬롯 러너를 나눠 든 복사본이 한 가지의 커서 · 타이머를 함께 돌리던 모양을 형식으로 막는다
+ * @details 슬롯 러너는 `unique_ptr` 로 이 러너만 소유한다. 이동도 막는다 — 러너를 든 쪽(`RTSCommanderAI`)이 문맥에 자기 주소를 싣는다.
+ */
+SW_TEST_CASE( BehaviorTreeTest, RunnerIsNeitherCopiedNorMoved )
+{
+    static_assert( std::is_copy_constructible_v<BehaviorTreeRunner> == false, "a runner copy would share its slot runners" );
+    static_assert( std::is_copy_assignable_v<BehaviorTreeRunner> == false, "a runner copy would share its slot runners" );
+    static_assert( std::is_move_constructible_v<BehaviorTreeRunner> == false, "owners put their own address in the runner context" );
+    BehaviorTree tree;
+    SW_REQUIRE_TRUE( tree.addSequence( nullopt ).has_value() );
+    BehaviorTreeRunner runner;
+    runner.initialize( &tree );
+    runner.setSlotTree( hashed_string( "Combat" ), &tree );
+    runner.setSlotTree( hashed_string( "Combat" ), nullptr ); // 슬롯을 비우면 소유한 슬롯 러너가 지워진다(ASan 이 이중 해제 · 누수를 잡는다)
+    SW_EXPECT_TRUE( runner.getActiveLeaf().has_value() == false );
+}

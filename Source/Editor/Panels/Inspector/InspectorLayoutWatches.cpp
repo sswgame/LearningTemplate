@@ -1,6 +1,7 @@
 /**
  * @file InspectorLayoutWatches.cpp
- * @brief 인스펙터 그리드의 배치 · 메서드 목록 · 값 행을 시나리오가 읽는 감시 값입니다(`Editor.InspectorLayoutRebuildCount` · `Editor.InspectorMethodRows` · `Editor.InspectorHiddenMethods` ·
+ * @brief 인스펙터 그리드의 배치 · 메서드 목록 · 호출 결과 · 값 행을 시나리오가 읽는 감시 값입니다(`Editor.InspectorLayoutRebuildCount` · `Editor.InspectorMethodRows` · `Editor.InspectorHiddenMethods` ·
+ *        `Editor.InspectorFavoriteMethodRows` · `Editor.InspectorCallTargets` · `Editor.InspectorCallFailures` ·
  *        `Editor.InspectorFilledRows` · `Editor.InspectorSkippedRows`).
  * @details 묶음은 (타입, 확장이 그린 이름, 검색 글, 타입 레지스트리 세대)가 바뀔 때만 짓는다. 같은 선택을 몇 프레임 그려도 이 수가 늘지 않으면 매 프레임 재구성이 없다.
  *          메서드 수는 마지막으로 그린 프레임의 값이다 — 기본 목록은 `CallInEditor` 만이고 나머지는 숨긴 수로 센다.
@@ -52,6 +53,36 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief 인스펙터가 마지막 프레임에 맨 위에 그린 액션 즐겨찾기 메서드 행 수입니다. */
+        [[nodiscard]] bool readInspectorFavoriteMethodRows( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const InspectorPanel* pPanel = findInspectorPanel();
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getFavoriteMethodRowCount() );
+            return true;
+        }
+
+        /** @brief 인스펙터의 마지막 FUNCTION 호출이 닿은 대상 수입니다(다중 선택이면 선택한 오브젝트 수). */
+        [[nodiscard]] bool readInspectorCallTargets( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const InspectorPanel* pPanel = findInspectorPanel();
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getLastInvokeResult()._targetCount );
+            return true;
+        }
+
+        /** @brief 인스펙터의 마지막 FUNCTION 호출이 실패한 대상 수입니다. */
+        [[nodiscard]] bool readInspectorCallFailures( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const InspectorPanel* pPanel = findInspectorPanel();
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getLastInvokeResult()._failureCount );
+            return true;
+        }
+
         /** @brief 인스펙터가 마지막 프레임에 값을 채운 프로퍼티 행 수입니다(화면 밖 행은 세지 않는다). */
         [[nodiscard]] bool readInspectorFilledRows( const GameObjectManager* /*pManager*/, float64& outValue )
         {
@@ -80,6 +111,12 @@ namespace sw::editor
                          "FUNCTION rows the Inspector drew in its last frame (CallInEditor only unless the diagnostic view is on)", &readInspectorMethodRows );
     SW_AUTOMATION_WATCH( editorInspectorHiddenMethods, "Editor.InspectorHiddenMethods",
                          "FUNCTIONs without CallInEditor the Inspector hid in its last frame (0 while the diagnostic view shows all)", &readInspectorHiddenMethods );
+    SW_AUTOMATION_WATCH( editorInspectorFavoriteMethodRows, "Editor.InspectorFavoriteMethodRows",
+                         "Starred FUNCTION rows the Inspector drew at the top of the method list in its last frame (the repeat-action list)", &readInspectorFavoriteMethodRows );
+    SW_AUTOMATION_WATCH( editorInspectorCallTargets, "Editor.InspectorCallTargets",
+                         "Objects the Inspector's last FUNCTION call reached (every selected object in a multi-selection)", &readInspectorCallTargets );
+    SW_AUTOMATION_WATCH( editorInspectorCallFailures, "Editor.InspectorCallFailures",
+                         "Objects on which the Inspector's last FUNCTION call failed (missing or unconvertible argument, function gone)", &readInspectorCallFailures );
     SW_AUTOMATION_WATCH( editorInspectorFilledRows, "Editor.InspectorFilledRows",
                          "Property rows the Inspector filled with values in its last frame (rows outside the visible area are not filled)", &readInspectorFilledRows );
     SW_AUTOMATION_WATCH( editorInspectorSkippedRows, "Editor.InspectorSkippedRows",
