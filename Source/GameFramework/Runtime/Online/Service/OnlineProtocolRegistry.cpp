@@ -5,6 +5,7 @@
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 

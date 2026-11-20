@@ -11,6 +11,7 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"

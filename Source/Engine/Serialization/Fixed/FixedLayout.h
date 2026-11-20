@@ -25,7 +25,10 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Reflection/ReflectionFwd.h"
+#include "Engine/Reflection/ReflectionMetadataBox.h"
+#include "Engine/Reflection/TypeFqn.h"
+#include "Engine/Reflection/TypeLookupCache.h"
 #include "Engine/Serialization/Fixed/FixedFieldDesc.h"
 
 namespace sw

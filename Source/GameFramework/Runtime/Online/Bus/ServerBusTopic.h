@@ -11,6 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Reflection/TypeInfo.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"

@@ -6,6 +6,8 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Reflection/TypeRegistry.h"
+
 namespace sw
 {
     namespace

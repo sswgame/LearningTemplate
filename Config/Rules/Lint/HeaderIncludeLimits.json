@@ -5,6 +5,8 @@
         { "_header": "Engine/Object/GameObject/Registry/TagIndex.h", "_limit": 7, "_reason": "오브젝트를 포인터로만 들어 GameObject.h 대신 ObjectFwd.h 를 포함한다" },
         { "_header": "Engine/Reflection/EnumInfo.h", "_limit": 12, "_reason": "태스크 형식(TaskTypes.h)을 쓰지 않는다 — 함수 호출 형식이 필요한 FunctionInfo.h 만 포함한다" },
         { "_header": "Engine/Reflection/PropertyInfo.h", "_limit": 10, "_reason": "태스크 형식(TaskTypes.h)을 쓰지 않는다" },
-        { "_header": "Engine/Reflection/ReflectionMetadataBox.h", "_limit": 9, "_reason": "태스크 형식(TaskTypes.h)을 쓰지 않는다" }
+        { "_header": "Engine/Reflection/ReflectionMetadataBox.h", "_limit": 9, "_reason": "태스크 형식(TaskTypes.h)을 쓰지 않는다" },
+        { "_header": "Engine/Reflection/EnumName.h", "_limit": 14, "_reason": "열거 이름은 EnumInfo 만 본다 — TypeRegistry.h 대신 EnumInfo.h · TypeFqn.h · TypeLookupCache.h 를 포함한다" },
+        { "_header": "Engine/Serialization/Fixed/FixedLayout.h", "_limit": 17, "_reason": "타입은 이름 캐시(TypeLookupCache)로 찾고 TypeInfo 는 참조로만 든다 — TypeRegistry.h 대신 ReflectionFwd.h 를 포함한다" }
     ]
 }

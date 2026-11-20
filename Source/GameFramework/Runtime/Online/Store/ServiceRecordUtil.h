@@ -26,6 +26,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
