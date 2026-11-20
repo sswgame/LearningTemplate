@@ -33,6 +33,8 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Foundation/WorkerReadFence.h"
+
 namespace sw
 {
     /** @brief 경로 요청 하나의 칸 번호와 세대입니다(`SlotHandle` 한 벌). 줄 안에서만 쓴다 — 요청자는 `PathRequestQueue::Ticket` 을 쥔다. */
@@ -57,17 +59,10 @@ namespace sw
         using Job = typename TSolver::Job;
 
         /**
-         * @class Fence
          * @brief "이 줄의 워커가 지금 아무것도 읽지 않는다" 는 증표입니다. 이 줄의 `complete` · `clear` 만 만듭니다(줄의 종류마다 다른 타입 — 격자 줄의 증표로 내비메시를 바꾸지 못한다).
-         * @details 질의가 읽는 데이터를 바꾸는 함수가 이 증표를 받으면, 수확(기다림)을 건너뛰고 바꾸는 코드는 컴파일되지 않습니다 — 주석 · 단언이 아니라 형식으로 지키는 순서입니다.
+         * @details 질의가 읽는 데이터를 바꾸는 함수가 이 증표를 받으면, 수확(기다림)을 건너뛰고 바꾸는 코드는 컴파일되지 않습니다 — 물리 읽기 구간과 같은 형식(`WorkerReadFence`)입니다.
          */
-        class Fence
-        {
-            friend class PathRequestQueue;
-
-        private:
-            Fence() {} // NOLINT(modernize-use-equals-default): 사용자 제공 생성자라야 C++17 집합체가 아니다 — 집합체면 아무나 `{}` 로 만든다
-        };
+        using Fence = WorkerReadFence<PathRequestQueue>;
 
         /** @brief `launch` 의 상한 없음입니다. 한 걸음의 요청을 모두 그 걸음에 풀어야 하는 결정적 시뮬레이션(RTS 걸음)만 쓴다. */
         static constexpr uint32 kNoLaunchLimit = ~uint32{ 0 };

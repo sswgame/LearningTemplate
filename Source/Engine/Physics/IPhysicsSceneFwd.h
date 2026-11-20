@@ -17,4 +17,10 @@ namespace sw
 
     using IPhysicsScene3D = IPhysicsScene<PhysicsDimension3D>;
     using IPhysicsScene2D = IPhysicsScene<PhysicsDimension2D>;
+
+    template <typename TDimension>
+    class IPhysicsQueryScene;
+
+    using IPhysicsQueryScene3D = IPhysicsQueryScene<PhysicsDimension3D>; ///< 같은 별칭을 `IPhysicsQueryScene.h` 도 둔다(같은 형식이라 겹쳐 선언해도 된다)
+    using IPhysicsQueryScene2D = IPhysicsQueryScene<PhysicsDimension2D>;
 } // namespace sw

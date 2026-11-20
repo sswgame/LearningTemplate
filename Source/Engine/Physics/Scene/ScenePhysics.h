@@ -102,6 +102,43 @@ namespace sw
 
 namespace sw
 {
+    class ScenePhysics;
+    template <typename TOwner>
+    class WorkerReadFence; ///< `Engine/Foundation/WorkerReadFence.h` — 선언만 쓴다(헤더 포함 상한)
+
+    /**
+     * @class PhysicsReadScope
+     * @brief 물리 씬을 워커가 함께 읽는 구간의 표입니다(이동 전용) — 스텝 밖에서만 열리고, 열린 동안 씬은 질의 창(`const IPhysicsQueryScene*`)으로만 보인다.
+     * @details 씬 하나는 한 스레드가 다룬다는 계약(`IPhysicsScene.h`)에 읽기 구간을 더한다: Box2D 3.1.1 은 스텝 밖 읽기 전용 질의를 여러 스레드에서 불러도 되고
+     *          (스텝 중 읽기는 단언으로 막는다 — `b2World_CastRay`), Jolt 는 잠금 있는 인터페이스(`GetNarrowPhaseQuery`)만 쓴다. 가림 · 시야 · 발자국 질의를 워커에 넘길 때
+     *          워커에는 이 표가 내준 질의 창만 건넨다. 닫기(`ScenePhysics::closeReadScope`)는 워커를 기다린 뒤 하고, 그 답인 증표(`WorkerReadFence<ScenePhysics>`)가 있어야
+     *          씬을 고치는 길(스텝)이 돈다 — 경로 줄의 `Fence` 와 같은 형식이다. 닫지 않고 버리면 검사 구성에서 멈춘다.
+     *          유니티 `RaycastCommand`(잡 질의) · 언리얼 물리 씬 읽기 잠금 자리이고, 일괄 질의 API 는 쓰는 곳이 늘면 그 위에 얹는다.
+     */
+    class SW_API PhysicsReadScope
+    {
+    public:
+        PhysicsReadScope( PhysicsReadScope&& other ) noexcept;
+        PhysicsReadScope& operator=( PhysicsReadScope&& )      = delete;
+        PhysicsReadScope( const PhysicsReadScope& )            = delete;
+        PhysicsReadScope& operator=( const PhysicsReadScope& ) = delete;
+        ~PhysicsReadScope();
+
+        /** @brief 3D 질의 창입니다(3D 씬이 없으면 nullptr). 워커가 함께 불러도 된다. */
+        const IPhysicsQueryScene3D* findQuery3D() const { return _pQuery3D; }
+        /** @brief 2D 질의 창입니다(2D 씬이 없으면 nullptr). */
+        const IPhysicsQueryScene2D* findQuery2D() const { return _pQuery2D; }
+
+    private:
+        friend class ScenePhysics;
+        PhysicsReadScope( ScenePhysics& owner, const IPhysicsQueryScene3D* pQuery3D, const IPhysicsQueryScene2D* pQuery2D );
+
+    private:
+        ScenePhysics*               _pOwner; ///< 닫으면 nullptr
+        const IPhysicsQueryScene3D* _pQuery3D;
+        const IPhysicsQueryScene2D* _pQuery2D;
+    };
+
     /** @class ScenePhysics @brief 씬 하나의 강체 물리입니다. 파일 머리말 참고. */
     class SW_API ScenePhysics final : public ISceneService
     {
@@ -186,6 +223,15 @@ namespace sw
         float32 getInterpolationAlpha() const { return _stepTimer.getAlpha(); }
         /** @brief 지금까지 돈 고정 스텝 수입니다. */
         uint64 getStepCount() const { return _stepCount; }
+        /**
+         * @brief (게임 스레드, 스텝 밖) 워커가 함께 읽는 구간을 엽니다(`PhysicsReadScope`). 열린 동안 스텝은 돌지 않는다(검사 구성 단언).
+         * @details 씬을 만들지 않는다 — 아직 없는 차원은 질의 창이 nullptr 이다.
+         */
+        [[nodiscard]] PhysicsReadScope openReadScope();
+        /** @brief (게임 스레드) 워커를 기다린 뒤 구간을 닫고 "읽는 워커 없음" 증표를 돌려줍니다 — 씬을 고치는 길이 이 증표를 받는다. */
+        [[nodiscard]] WorkerReadFence<ScenePhysics> closeReadScope( PhysicsReadScope&& scope );
+        /** @brief 지금 열린 읽기 구간 수입니다. */
+        uint32 getOpenReadScopeCount() const { return _openReadScopeCount; }
         /** @brief 마지막 프레임이 낸 3D 접촉 이벤트입니다(스텝 순서). 다음 `step` 까지 그대로입니다. */
         const vector<PhysicsContactEvent3D>& getFrameEvents3D() const { return _listFrameEvent3D; }
         /** @brief 마지막 프레임이 낸 2D 접촉 이벤트입니다. */
@@ -263,6 +309,10 @@ namespace sw
         const DebrisBudget& getDebrisBudget() const { return _debrisBudget; }
 
     private:
+        /** @brief 열린 읽기 구간이 없음을 확인하고(검사 구성 단언) 씬을 고쳐도 된다는 증표를 만듭니다 — 스텝이 이것을 받는다. */
+        WorkerReadFence<ScenePhysics> makeWriteFence() const;
+        /** @brief 3D · 2D 월드를 고정 스텝 하나만큼 돌립니다. 읽는 워커가 없다는 증표가 있어야 부를 수 있다. */
+        void stepWorlds( const WorkerReadFence<ScenePhysics>& fence, float32 fixedStep );
         /** @brief 3D · 2D 이벤트를 두 오브젝트의 켜진 컴포넌트에 나눠 줍니다. */
         void dispatchEvents( GameObjectManager& manager );
         /** @brief 이벤트 하나를 한 쪽(@p selfUserData)에서 본 것으로 그 오브젝트의 컴포넌트에 줍니다. */
@@ -384,6 +434,7 @@ namespace sw
         PhysicsContactLogEntry                                            _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
         uint64                                                            _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
         uint64                                                            _stepCount;
+        uint32                                                            _openReadScopeCount; ///< 열린 읽기 구간 수(`openReadScope` · `closeReadScope`, 게임 스레드)
         DebrisBudget                                                      _debrisBudget;
         float32                                                           _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
         uint8                                                             _bConfigured         : 1;
