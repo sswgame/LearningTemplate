@@ -147,6 +147,8 @@ namespace sw
             static constexpr TaskProfileHook kTaskProfileHook{ &beginTaskZone, &endTaskZone };
             /** @brief 외부 출력이 켜진 동안 태스크 훅을 쥡니다(`shutdown` 이 풉니다). */
             static inline Subscription s_taskProfileHookBinding{};
+            /** @brief 외부 출력이 할당을 관찰하는 동안 쥔 관찰자 등록입니다(`shutdown` 이 풉니다). */
+            static inline Memory::AllocationObserverRegistration s_allocationObserverRegistration{};
 #endif
         };
 
@@ -161,8 +163,8 @@ namespace sw
     void ProfilerBackend::shutdown()
     {
         // 무엇이 나갔는지의 요약 줄은 출력을 켠 개발 도구가 남긴다(`TracyProfilerBackend::logSummary`).
-        Memory::unregisterAllocationObserver();
 #if SW_PROFILER_BACKEND_COMPILED
+        ProfilerBackendInternal::s_allocationObserverRegistration.reset();
         ProfilerBackendInternal::s_taskProfileHookBinding.reset();
 #endif
         setActiveBackend( nullptr );
@@ -177,7 +179,7 @@ namespace sw
         // 태스크 · 스테이지 이름이 구간이 된다(Core 는 프로파일러를 모르므로 여기서 꽂는다).
         ProfilerBackendInternal::s_taskProfileHookBinding = TaskManager::bindProfileHook( &ProfilerBackendInternal::kTaskProfileHook );
         if ( bObserveAllocations )
-            Memory::registerAllocationObserver( &ProfilerBackendInternal::kObserver );
+            ProfilerBackendInternal::s_allocationObserverRegistration = Memory::registerAllocationObserver( &ProfilerBackendInternal::kObserver );
         // 카운터 그래프 · GPU 타임스탬프는 엔진 프로파일러 경로를 탄다. 켜 두지 않으면 외부 출력에 GPU 줄이 없다.
         if ( engine::areEngineServicesBound() )
             engine::getSubsystem<FrameProfiler>().setEnabled( true );

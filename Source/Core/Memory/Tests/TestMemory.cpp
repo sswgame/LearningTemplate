@@ -533,7 +533,7 @@ SW_TEST_CASE( MemoryTest, AllocationObserverSeesOnlyBlocksAllocatedWhileAttached
     void* pBefore = sw::Memory::allocate( Record::kProbeSize );
     SW_REQUIRE_NOT_NULL( pBefore );
 
-    sw::Memory::registerAllocationObserver( &kObserver );
+    sw::Memory::AllocationObserverRegistration registration = sw::Memory::registerAllocationObserver( &kObserver );
     Record::s_pWatchedFree.store( pBefore );
     sw::Memory::free( pBefore );
     [[maybe_unused]] const uint32 freeOfUnobserved = Record::s_freeCount.load();
@@ -542,7 +542,7 @@ SW_TEST_CASE( MemoryTest, AllocationObserverSeesOnlyBlocksAllocatedWhileAttached
     SW_REQUIRE_NOT_NULL( pDuring );
     Record::s_pWatchedFree.store( pDuring );
     sw::Memory::free( pDuring );
-    sw::Memory::unregisterAllocationObserver();
+    registration.reset();
 
 #if defined( SW_SHIPPING )
     SW_EXPECT_EQUAL( 0u, Record::s_allocateCount.load() );

@@ -3,6 +3,7 @@
  * @brief OS 수준 정렬 할당과 memcpy · memset · memcmp 래퍼입니다.
  */
 #pragma once
+#include "Core/Concurrency/ObserverSlot.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -127,22 +128,30 @@ namespace sw
         /** @brief 할당 블록 하나가 사용자 크기 앞에 더 잡는 헤더 바이트입니다(크기 · 태그 · 콜스택 해시). 배포본은 헤더가 없어 0 입니다. */
         static size_t getAllocationHeaderSize();
 
-        /**
-         * @brief 할당 · 해제를 밖(외부 프로파일러)에 알리는 관찰자를 등록합니다. 배포본에서는 아무것도 하지 않습니다(헤더가 없다).
-         * @details 관찰자가 등록된 동안 할당된 블록에만 표시를 남기고, **그 블록의 해제만** 알립니다 — 관찰자를 등록하기 전에 잡은 블록의 해제를
-         *          알리면 받는 쪽(Tracy)은 짝 없는 해제로 기록을 멈춥니다. @p pObserver 는 `unregisterAllocationObserver` 까지 살아 있어야 합니다.
-         */
-        static void registerAllocationObserver( const MemoryAllocationObserver* pObserver );
-        /** @brief 등록된 할당 관찰자를 해제합니다. 배포본에서는 아무것도 하지 않습니다. */
-        static void unregisterAllocationObserver();
+        /** @brief 할당 관찰자 등록 토큰입니다. 토큰이 사라지면 관찰자를 뗍니다. */
+        using AllocationObserverRegistration = ObserverSlot<const MemoryAllocationObserver>::Registration;
+        /** @brief 할당 기록기 등록 토큰입니다. 토큰이 사라지면 기록기를 뗍니다. */
+        using AllocationTrackerRegistration = ObserverSlot<IAllocationTracker>::Registration;
 
         /**
-         * @brief 할당 기록기를 겁니다. 이미 다른 기록기가 걸려 있으면 아무것도 하지 않습니다.
-         * @param pTracker 뗄 때까지 살아 있어야 합니다.
+         * @brief 할당 · 해제를 밖(외부 프로파일러)에 알리는 관찰자를 겁니다. 배포본은 블록 헤더가 없어 알리지 않습니다.
+         * @details 관찰자가 걸린 동안 할당된 블록에만 표시를 남기고, **그 블록의 해제만** 알립니다 — 관찰자를 걸기 전에 잡은 블록의 해제를
+         *          알리면 받는 쪽(Tracy)은 짝 없는 해제로 기록을 멈춥니다. 관찰자는 하나이고 이미 걸려 있으면 이중 등록 단언입니다(덮어쓰지 않는다).
+         *          @p pObserver 는 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
          */
-        static void registerAllocationTracker( IAllocationTracker* pTracker );
-        /** @brief @p pTracker 가 걸린 기록기이면 뗍니다. */
-        static void unregisterAllocationTracker( IAllocationTracker* pTracker );
+        [[nodiscard]] static AllocationObserverRegistration registerAllocationObserver( const MemoryAllocationObserver* pObserver );
+
+        /**
+         * @brief 할당 기록기를 겁니다. 먼저 건 기록기가 주인이라 이미 걸려 있으면 빈 토큰입니다(`isActive()` 가 false — 엔진 기록기가 걸린 뒤 테스트의 지역 기록기).
+         * @param pTracker 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
+         */
+        [[nodiscard]] static AllocationTrackerRegistration registerAllocationTracker( IAllocationTracker* pTracker );
+
+        /**
+         * @brief 이 스레드가 지금까지 한 sw 할당 횟수입니다. 배포본은 블록 헤더 경로가 없어 늘 0 입니다.
+         * @details 테스트 계수기(`test::ScopedAllocationCount`)가 앞뒤 차이로 센다 — 관찰자 칸을 빌리지 않으므로 프로파일러 관찰자와 부딪히지 않는다.
+         */
+        [[nodiscard]] static uint64 getThreadAllocationCount();
 
         /** @brief 현재 스레드의 할당 태그를 설정합니다. 보통은 구조 자리(서브시스템 생성 · 초기화, 에셋 로더, 모듈 경계, 스레드 · 태스크 상속)가 `ScopedMemoryTag` 로 겁니다. */
         static void setCurrentMemoryTag( MemoryTag tag );

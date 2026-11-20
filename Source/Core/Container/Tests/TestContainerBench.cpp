@@ -19,7 +19,7 @@
  * @file TestContainerBench.cpp
  * @brief 컨테이너 벤치 넷입니다. 시간 문턱은 두지 않고 값을 로그(`ContainerBenchTest.*`)로 남긴다 — 판정은 통합이 설계 문턱(DesignBacklog "출하 할당기와 컨테이너 복잡도")으로 한다.
  * @details 재는 법: Release `App --test --test-run-disabled --test-filter=ContainerBenchTest.*` 5 번, 로그 값의 중앙값.
- *          할당 수는 할당 관찰자(`Memory::registerAllocationObserver`)로 이 스레드의 할당만 센다 — 배포본에는 관찰자가 없어 0 이다(Release 로 잰다).
+ *          할당 수는 스레드 할당 수(`Memory::getThreadAllocationCount`)의 앞뒤 차이로 이 스레드의 할당만 센다 — 배포본은 0 이다(Release 로 잰다).
  *          케이스는 무거워 평소 실행에서 끈다(`map` 범위 구축은 AC-2 로 붙이고 정렬 · 병합하는 O(n log n), 고치기 전은 O(n²)).
  */
 namespace sw
