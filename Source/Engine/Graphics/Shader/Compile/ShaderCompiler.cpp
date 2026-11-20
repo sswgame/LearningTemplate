@@ -875,20 +875,6 @@ namespace sw
             return result;
         }
 
-        // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 캐시 적중보다 먼저, 오류로 멈춘다.
-        vector<string> listShadowed;
-        if ( ShaderCookStamp::findShadowedHeaders( resolver->getIncludeResolver(), input->_shadersFolder, listShadowed ) == false )
-        {
-            for ( const string& problem : listShadowed )
-            {
-                result._errorMessage += problem + "\n";
-            }
-            if ( result._errorMessage.empty() )
-                result._errorMessage = "Shader headers could not be checked for shadowing (see the error above).";
-            SW_LOG_ERROR_ID( "ShaderCompiler.HeaderShadowed", "%#", result._errorMessage );
-            return result;
-        }
-
         result._sourceFile                        = input->_source.str();
         const Internal::ShaderCacheSlot cacheSlot = Internal::computeCacheSlot( desc, *input );
         if ( cacheSlot._directory.empty() == false ) // 의존 기록이 없으면(없는 항목 · 쓰는 중) 읽기 한 번이 "없음" 으로 답한다
@@ -908,6 +894,22 @@ namespace sw
                 result._bSuccess         = true;
                 return result;
             }
+        }
+
+        // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 실제로 컴파일하기 전에 오류로 멈춘다. DDC 적중 뒤에 본다: 폴더를 재귀로 훑는 검사라
+        // 요청마다 하면 적중도 느려지고, 맞은 항목의 의존 기록은 없던 후보 자리까지 적어 가리는 헤더가 새로 생기면 이미 낡음이다(`readIncludeRecord`). 쿠킹 스탬프는 따로 막는다.
+        // 언리얼도 셰이더 맵 DDC 조회가 컴파일 준비(include 검사)보다 먼저다.
+        vector<string> listShadowed;
+        if ( ShaderCookStamp::findShadowedHeaders( resolver->getIncludeResolver(), input->_shadersFolder, listShadowed ) == false )
+        {
+            for ( const string& problem : listShadowed )
+            {
+                result._errorMessage += problem + "\n";
+            }
+            if ( result._errorMessage.empty() )
+                result._errorMessage = "Shader headers could not be checked for shadowing (see the error above).";
+            SW_LOG_ERROR_ID( "ShaderCompiler.HeaderShadowed", "%#", result._errorMessage );
+            return result;
         }
 
         const string profile = Internal::getTargetProfile( desc._stage, desc._targetFormat );
