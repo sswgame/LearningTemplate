@@ -20,6 +20,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
+#include "Core/Testing/ScopedAllocationCount.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
@@ -162,7 +163,7 @@ namespace
         sw::vector<sw::string> _listFormatted;
         [[nodiscard]] bool     open() override { return true; }
         void                   close() override {}
-        void                   write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
+        void                   write( const sw::LogRecord& record ) override { _listFormatted.push_back( sw::string( record._formatted.view() ) ); }
     };
 
     /**
@@ -181,13 +182,13 @@ namespace
         void               write( const sw::LogRecord& record ) override
         {
             sw::ScopedLock<sw::mutex> lock{ _mutex };
-            if ( record._formatted.find( "TestLog.BlockHere" ) != sw::string::npos )
+            if ( record._formatted.view().find( "TestLog.BlockHere" ) != sw::string::npos )
             {
                 _bHeld.store( true );
                 (void)sw::test::waitUntil( [this]()
                 { return _bOpen.load(); } );
             }
-            const size_t orderStart = record._formatted.find( "TestLog.LineOrder " );
+            const size_t orderStart = record._formatted.view().find( "TestLog.LineOrder " );
             if ( orderStart != sw::string::npos )
                 _listOrder.push_back( static_cast<uint32>( std::strtoul( record._formatted.c_str() + orderStart + 18, nullptr, 10 ) ) );
         }
@@ -713,7 +714,7 @@ namespace
             return _bFolderReady;
         }
         void close() override {}
-        void write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
+        void write( const sw::LogRecord& record ) override { _listFormatted.push_back( sw::string( record._formatted.view() ) ); }
     };
 
     /** @class SelfLoggingLogOutput @brief `open` 이나 첫 `write` 안에서 로그를 남기는 장치입니다 — 장치가 부르는 쪽으로 로그를 되돌리는 모양을 만듭니다. */
@@ -1048,4 +1049,31 @@ SW_TEST_CASE( LogTest, FullQueueKeepsLineOrder )
     {
         SW_REQUIRE_EQUAL( index, listOrder[index] );
     }
+}
+
+/**
+ * @brief [LogTest] 레코드의 완성된 줄은 고정 칸에 들어가면 할당하지 않고, 칸을 넘는 긴 줄만 힙 글에 둔다(크래시 처리기가 큐를 비울 때 짧은 줄은 힙을 부르지 않는다)
+ */
+SW_TEST_CASE( LogTest, RecordLineTextKeepsShortLinesInline )
+{
+    sw::LogRecord record{};
+    {
+        const sw::test::ScopedAllocationCount counter;
+        record._formatted = sw::string_view{ "[Info][Engine] short line" };
+        if ( sw::test::ScopedAllocationCount::kCountsAreActive )
+            SW_EXPECT_EQUAL( uint64( 0 ), counter.getCount() );
+    }
+    SW_EXPECT_TRUE( record._formatted.isInline() );
+    SW_EXPECT_EQUAL( sw::string_view{ "[Info][Engine] short line" }, record._formatted.view() );
+
+    const sw::string longLine( sw::LogLineText::kInlineCapacity + 10, 'x' );
+    record._formatted = sw::string_view{ longLine };
+    SW_EXPECT_FALSE( record._formatted.isInline() );
+    SW_EXPECT_EQUAL( longLine.size(), record._formatted.size() );
+    SW_EXPECT_EQUAL( sw::string_view{ longLine }, sw::string_view{ record._formatted.c_str() } );
+
+    // 다시 짧은 줄 — 칸으로 돌아오고 널로 끝난다
+    record._formatted = sw::string_view{ "ok" };
+    SW_EXPECT_TRUE( record._formatted.isInline() );
+    SW_EXPECT_EQUAL( sw::string_view{ "ok" }, sw::string_view{ record._formatted.c_str() } );
 }

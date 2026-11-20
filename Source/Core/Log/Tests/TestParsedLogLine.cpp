@@ -24,7 +24,7 @@ namespace
         void               write( const LogRecord& record ) override
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            _listFormatted.push_back( record._formatted );
+            _listFormatted.push_back( sw::string( record._formatted.view() ) );
         }
     };
 } // namespace
