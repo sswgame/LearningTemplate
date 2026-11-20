@@ -150,7 +150,7 @@ namespace sw
                                              : 0.0f;
         for ( const ActionGradeDef& grade : grading._listGrade )
         {
-            if ( result._score + 1.0e-4f >= grade._minScore )
+            if ( result._score + MathUtil::kLooseEpsilon >= grade._minScore )
             {
                 result._grade = grade._grade;
                 break;

@@ -406,7 +406,7 @@ namespace sw
                 const float32 length     = context._pathLength > 0.0f ? context._pathLength : context.getNumber( 5 );
                 const float32 speed      = context.getNumber( 0 );
                 const bool    bCanMove   = length > 0.0f && speed > 0.0f && context._stepTime > 0.0f;
-                const int32   totalSteps = bCanMove ? MathUtil::max( 1, static_cast<int32>( MathUtil::ceil( length / speed / context._stepTime - 1.0e-4f ) ) ) : 1;
+                const int32   totalSteps = bCanMove ? MathUtil::max( 1, static_cast<int32>( MathUtil::ceil( length / speed / context._stepTime - MathUtil::kLooseEpsilon ) ) ) : 1;
                 if ( context.isRising( 2 ) )
                 {
                     pState[0] = 0;

@@ -113,7 +113,7 @@ namespace sw
     int32 MonsterHuntCombat::getAdrenalinePoints() const
     {
         // 0.1씩 열 번 더한 값이 0.9999…가 되어 포인트를 놓치지 않도록, 아주 조금 올려서 자른다.
-        return static_cast<int32>( MathUtil::floor( _adrenaline + 1.0e-4f ) );
+        return static_cast<int32>( MathUtil::floor( _adrenaline + MathUtil::kLooseEpsilon ) );
     }
 
     float32 MonsterHuntCombat::getActionCost( MonsterHuntAction action ) const

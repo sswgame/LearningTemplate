@@ -495,7 +495,7 @@ namespace sw
     {
         const ScavengerPenaltyDef& penalty   = _data._pCatalog->getPenaltySettings();
         const int32                total     = static_cast<int32>( _listShipScrap.size() );
-        int32                      loseCount = static_cast<int32>( MathUtil::ceil( static_cast<float32>( total ) * penalty._allDeadLossRatio - 1.0e-4f ) );
+        int32                      loseCount = static_cast<int32>( MathUtil::ceil( static_cast<float32>( total ) * penalty._allDeadLossRatio - MathUtil::kLooseEpsilon ) );
         if ( penalty._allDeadMaxKept > 0 )
             loseCount = MathUtil::min( loseCount, MathUtil::max( 0, total - penalty._allDeadMaxKept ) );
         loseCount = MathUtil::clamp( loseCount, 0, total );

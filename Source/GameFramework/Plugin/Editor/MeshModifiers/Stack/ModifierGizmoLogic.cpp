@@ -254,7 +254,7 @@ namespace sw::editor
         const float32 angleY = ::atan2f( -r20, cosY );
         float32       angleX = 0.0f;
         float32       angleZ = 0.0f;
-        if ( cosY > 1e-4f )
+        if ( cosY > MathUtil::kLooseEpsilon )
         {
             angleX = ::atan2f( r21, r22 );
             angleZ = ::atan2f( r10, r00 );

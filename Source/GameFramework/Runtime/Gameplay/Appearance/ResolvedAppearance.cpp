@@ -8,6 +8,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
 #include "Core/String/formatString.h"
 
 #include "Engine/Reflection/EnumName.h"
@@ -1118,7 +1119,7 @@ namespace sw
 
     float32 ResolvedAppearance::snapDamage( float32 damage )
     {
-        return static_cast<float32>( static_cast<uint32>( MathUtil::saturate( damage ) * 255.0f + 0.5f ) ) / 255.0f;
+        return unorm8::fromFloat( damage ).toFloat();
     }
 
     void ResolvedAppearance::resolve( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, ResolvedAppearance& outResolved )

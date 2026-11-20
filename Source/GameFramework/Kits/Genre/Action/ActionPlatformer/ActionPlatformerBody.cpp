@@ -292,7 +292,7 @@ namespace sw
         velocity._y -= _motor.getGravity() * deltaTime;
         const float2  rope   = _position - _anchor;
         const float32 length = rope.getLength();
-        if ( length > 1.0e-4f )
+        if ( length > MathUtil::kLooseEpsilon )
         {
             // 좌우 입력은 줄에 수직인 접선 방향으로 민다(오른쪽 입력이 +X 쪽 접선이다).
             const float2 radial = rope * ( 1.0f / length );
@@ -309,7 +309,7 @@ namespace sw
         float2        next      = _position + velocity * deltaTime;
         const float2  toNext    = next - _anchor;
         const float32 nextRange = toNext.getLength();
-        if ( nextRange > _ropeLength && nextRange > 1.0e-4f )
+        if ( nextRange > _ropeLength && nextRange > MathUtil::kLooseEpsilon )
         {
             const float2 normal   = toNext * ( 1.0f / nextRange );
             next                  = _anchor + normal * _ropeLength;

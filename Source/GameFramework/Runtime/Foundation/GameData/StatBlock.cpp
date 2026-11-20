@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -67,7 +68,7 @@ namespace sw
     {
         for ( const StatValue& value : cost.getValues() )
         {
-            if ( getValue( value._name ) + 1.0e-4f < value._value )
+            if ( getValue( value._name ) + MathUtil::kLooseEpsilon < value._value )
                 return false;
         }
         return true;

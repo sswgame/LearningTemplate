@@ -481,7 +481,7 @@ namespace sw
         _position                  = next._position;
         _velocity                  = next._tangent * speed;
         const float32 horizontalSq = next._tangent._x * next._tangent._x + next._tangent._z * next._tangent._z;
-        if ( horizontalSq > 1.0e-6f )
+        if ( horizontalSq > MathUtil::kEpsilon )
             _yaw = MathUtil::atan2( next._tangent._x, next._tangent._z );
         _bAirborne = SW_FALSE;
     }

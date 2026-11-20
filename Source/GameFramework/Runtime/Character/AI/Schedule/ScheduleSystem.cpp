@@ -70,7 +70,7 @@ namespace sw
             {
                 if ( minutes <= 0.0f )
                     return 0;
-                return static_cast<int32>( ::ceilf( minutes - 1.0e-4f ) );
+                return static_cast<int32>( ::ceilf( minutes - MathUtil::kLooseEpsilon ) );
             }
 
             static constexpr int32 kNoWake = 0x7fffffff;
