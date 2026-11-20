@@ -1,9 +1,0 @@
-<?asset guid="3901a089664fd8eaf69ca4d9e5c81ce9"?>
-<!--
-	파이프라인 XML 의 지오메트리 스테이지 — 패스 칸에 진입점을 적으면 그 스테이지가 붙는다. 시나리오: automation/geometrystage.
--->
-<RenderPipelineDesc _base="game/empty/pipeline/tessellationstagepipeline.xml" _name="GeometryStagePipeline">
-	<_listPass>
-		<RenderGraphPassDesc _name="Tonemap" _vertexEntryPoint="" _geometryEntryPoint="GSMain" _hullEntryPoint="" _domainEntryPoint="" />
-	</_listPass>
-</RenderPipelineDesc>

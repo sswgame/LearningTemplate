@@ -110,7 +110,7 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 
 ## 컴퓨트 패스
 
-`_type="Compute"` 패스는 셰이더 하나로 효과를 더한다. 선언: 컬러 출력 하나, 입력 최대 둘(깊이 형식 제외 — 깊이는 `SceneDepthCopy` 를 읽는다), 입력과 출력은 겹치지 않는다. 첨부는 RW 텍스처로 묶이고 값은 `compute_pass.hlsli` 의 루트 상수로 받는다. GL 은 묶은 포맷과 셰이더 선언이 같아야 하므로 include 전에 `SW_RW_SLOT0_GL_FORMAT` 을 적는다. 예: `game/empty/pipeline/computepasspipeline.xml`.
+`_type="Compute"` 패스는 셰이더 하나로 효과를 더한다. 선언: 컬러 출력 하나, 입력 최대 둘(깊이 형식 제외 — 깊이는 `SceneDepthCopy` 를 읽는다), 입력과 출력은 겹치지 않는다. 첨부는 RW 텍스처로 묶이고 값은 `compute_pass.hlsli` 의 루트 상수로 받는다. GL 은 묶은 포맷과 셰이더 선언이 같아야 하므로 include 전에 `SW_RW_SLOT0_GL_FORMAT` 을 적는다. 예: `game/playground/pipeline/computepasspipeline.xml`.
 
 ## 후처리 값 · 볼륨
 
@@ -213,7 +213,7 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 ## 선택 스테이지를 쓰는 셰이더
 
 - 소스는 패스 셰이더 한 파일이다. 머티리얼 변형은 머티리얼 셰이더의 정점 출력으로 만들어져 신호가 맞지 않아 머티리얼 셰이더 패스에는 쓸 수 없다.
-- 헐 · 도메인의 제어점 위치는 `SV_POSITION` 이 아니라 일반 값으로 넘긴다. 내장 위치로 넘기면 GL 에서 오류 없이 아무것도 그리지 않는다. 예: `game/empty/shaders/optional_stages.hlsl`.
+- 헐 · 도메인의 제어점 위치는 `SV_POSITION` 이 아니라 일반 값으로 넘긴다. 내장 위치로 넘기면 GL 에서 오류 없이 아무것도 그리지 않는다. 예: `game/playground/shaders/optional_stages.hlsl`.
 - 이 스테이지는 패스 상수 · 루트 상수를 받지 않는다고 보고 쓴다. 필요하면 정점 스테이지에서 값으로 넘긴다.
 
 ## 머티리얼 변위(테셀레이션)
@@ -241,6 +241,6 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 
 렌더 상태 칸을 더할 곳은 `Engine/Graphics/RenderState/RenderState.h` 하나와 각 백엔드의 읽기다 — XML 읽기 · 쓰기는 리플렉션이, 패스 · 머티리얼 합치기와 해시 · 비교는 바이트가 따라온다(패딩이 생기면 `static_assert` 가 멈춘다). 조합 규칙은 `findInvalidReason`, 머티리얼에게 내주지 않을 칸은 `RenderStateOverride::applyTo` 에 적는다. RHI ABI 는 손으로 올리지 않는다 — 헤더가 바뀌면 빌드가 엔진 ABI 스탬프를 다시 만들어 옛 백엔드 모듈이 거부된다(`RHIModuleABI.h`).
 
-그 밖의 패스 칸은 PSO(`FramePSOManager::makePassPSODesc`) · 쿠커(`ShaderCookRequestCollector`) · 검증(`RenderPipelineAsset::validate`)을 함께 고친다. 칸만 두고 실행이 읽지 않으면 XML 이 거짓말을 한다. 값이 그림을 바꾸는지는 끄고 켠 두 장을 같은 실행에서 견주는 시나리오로 확인한다(`<ExpectImagesDiffer>`, 예: `game/empty/automation/renderstate_stencil`).
+그 밖의 패스 칸은 PSO(`FramePSOManager::makePassPSODesc`) · 쿠커(`ShaderCookRequestCollector`) · 검증(`RenderPipelineAsset::validate`)을 함께 고친다. 칸만 두고 실행이 읽지 않으면 XML 이 거짓말을 한다. 값이 그림을 바꾸는지는 끄고 켠 두 장을 같은 실행에서 견주는 시나리오로 확인한다(`<ExpectImagesDiffer>`, 예: `game/playground/automation/renderstate_stencil`).
 
 쿠커 코드를 고칠 때 번호를 올릴 일이 없다 — 쿠킹 키는 소스 지문에서 산출한다(`Config/Dev/CookCodeInputs.json`). 새 쿠커는 이 표에 폴더를 적는다.

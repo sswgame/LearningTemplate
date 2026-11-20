@@ -144,7 +144,7 @@ SW_TEST_CASE( PackManagerTest, PatchPackAloneAnswersItsFullPaths )
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
     SW_REQUIRE_TRUE( Internal::writePack( mod, {
     },
-                                          { { "mods/lantern/data/lantern.xml", "lamp" }, { "game/empty/data/welcome.xml", "modded" } } ) );
+                                          { { "mods/lantern/data/lantern.xml", "lamp" }, { "game/playground/data/welcome.xml", "modded" } } ) );
 
     PackManager packs;
     SW_EXPECT_FALSE( packs.hasPatchPacks() );
@@ -153,8 +153,8 @@ SW_TEST_CASE( PackManagerTest, PatchPackAloneAnswersItsFullPaths )
     SW_EXPECT_TRUE( packs.hasPatchPacks() );
     SW_EXPECT_EQUAL( 3000, packs.getTopPriority() );
     SW_EXPECT_EQUAL( string( "lamp" ), Internal::read( packs, "mods/lantern/data/lantern.xml" ) );
-    SW_EXPECT_EQUAL( string( "modded" ), Internal::read( packs, "game/empty/data/welcome.xml" ) );
-    SW_EXPECT_TRUE( packs.hasPatchFile( "game/empty/data/welcome.xml" ) );
+    SW_EXPECT_EQUAL( string( "modded" ), Internal::read( packs, "game/playground/data/welcome.xml" ) );
+    SW_EXPECT_TRUE( packs.hasPatchFile( "game/playground/data/welcome.xml" ) );
     SW_EXPECT_FALSE( packs.hasPatchFile( "data/welcome.xml" ) ); // 패치 질의는 전체 경로만 본다
     vector<string> listEntry;
     packs.collectFolderEntries( "mods/lantern/data", listEntry );

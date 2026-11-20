@@ -2,7 +2,7 @@
  * @file ClassicJRPGDemoComponent.h
  * @brief 장르 키트 시연 — 클래식 JRPG(`GF_ClassicJRPG`)의 전투 한 바퀴입니다. 용사 하나가 약한 적을 한 라운드에 쓰러뜨려 경험치와 골드를 받는 것을 봅니다.
  * @details 판을 여는 순간(`startGame`) 규칙을 끝까지 돌리고 결과만 쥔다 — 모습 · 입력이 없는 규칙 확인 시연이다(언리얼 Functional Test 의 규칙 단계와 같은 자리).
- *          시나리오: `game/empty/automation/kit_classicjrpg.scenario.xml`.
+ *          시나리오: `game/playground/automation/kit_classicjrpg.scenario.xml`.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

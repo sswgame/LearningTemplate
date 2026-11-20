@@ -2,7 +2,7 @@
  * @file FightingDemoComponent.h
  * @brief 장르 키트 시연 — 3D 격투(`GF_Fighting`)의 한 판입니다. 같은 캐릭터 둘을 세우고 0 번이 하단 한 방으로 K.O. 를 내 선승 1 라운드 대전이 끝나는 것을 봅니다.
  * @details 판을 여는 순간(`startGame`) 규칙을 끝까지 돌리고 결과만 쥔다 — 모습 · 입력이 없는 규칙 확인 시연이다(언리얼 Functional Test 의 규칙 단계와 같은 자리).
- *          시나리오: `game/empty/automation/kit_fighting.scenario.xml`.
+ *          시나리오: `game/playground/automation/kit_fighting.scenario.xml`.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

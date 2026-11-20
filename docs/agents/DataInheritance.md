@@ -138,7 +138,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 - **규칙 출처의 순서:** 문서 표 · 카탈로그 표(`datacataloginheritance.xml`) → 합치기 함수(`SW_DATA_INHERITANCE_MERGE`) → 손 형식 → 리플렉션 형식. 쿠킹은 Engine 코드만 보므로 게임 · 키트 형식은 표에만 있어도 된다. 프리팹(`PrefabOverrides`)은 열쇠 모양이 달라 따로이고 문서 머리의 조건 · 층만 같은 길을 지난다.
 - **태그 주인:** 식은 `ConditionExpr` 이고 그냥 이름은 태그 조건(`resourceTag`)이다. 태그는 코어 범위 리소스 루트(`ContentRootSubsystem::getResourceTags`)가 든 `ResourceTags`, 합성 기록(`ResourceComposition`)도 같은 주인이 든다. 쿠킹본을 런타임이 푼 결과가 소스를 바로 푼 결과와 같은지는 `ResourceConditionTest.CookedTextResolvesLikeTheSource`.
 - **바이너리 경로 교체:** 텍스처 · 오디오 · 메시는 경로를 바꾼다(`ResourceRemap`). 같은 id 는 위에서 처음 참인 줄, 사슬은 오류. `AssetIO` 입구가 찾기 전에 한 번 바꾸고, 쿠킹 작업 안에서는 바꾸지 않는다(쿠킹본이 기계마다 달라지지 않게). 두 파일 모두 팩에 든다.
-- **다시 읽기:** 리소스 id 로 읽은 합성은 기댄 로드 축 태그를 `ResourceComposition` 에 남기고, 태그가 바뀌면 `AssetManager::reloadComposedDependents` → `AssetCacheBase::reloadComposed` 가 그 id 를 쥔 캐시를 다시 읽는다. 배포 구성에도 있다. 시나리오 `game.empty.resourcecondition`.
+- **다시 읽기:** 리소스 id 로 읽은 합성은 기댄 로드 축 태그를 `ResourceComposition` 에 남기고, 태그가 바뀌면 `AssetManager::reloadComposedDependents` → `AssetCacheBase::reloadComposed` 가 그 id 를 쥔 캐시를 다시 읽는다. 배포 구성에도 있다. 시나리오 `game.playground.resourcecondition`.
 - **한계:** 캐시 열쇠는 경로뿐이라 한 프로세스의 문맥은 하나다. 서버가 플레이어마다 다른 지역 값을 고르려면 데이터의 키로 나눈다. 에디터에서 씬이 여럿이면 `layer` 축은 마지막에 넣은 씬의 집합이다. 예외 하나: 몇 축만 바꿔 끼우는 미리보기 합성(`ResourceContext::withTagOverride` — UI 미리보기의 `screen` · `orientation`)은 그 캐시가 경로 + 태그 열쇠로 따로 들고(`UITextAssetCache`) 다시 읽기 · 접속 대조 기록에 적지 않는다.
 - **네트워크:** 게임플레이 값이 클라이언트마다 다르면 판정이 어긋난다. 클라이언트는 붙자마자, 그리고 새로 읽거나 바뀔 때마다 로드 축 · 층에 기댄 합성 한 줄(리소스 id + 결과 해시, `GameNetSessionMessage::kResourceDigest`)을 보내고, 서버(`ResourceDigestComparer`)는 같은 리소스를 다르게 합성했고 유예(`gv_netResourceDigestGraceSeconds`)가 지나도 다르면 끊는다(`Net.ResourceDigestMismatch`). 서버가 조건 · 층 없이 읽은 표도 해시를 들어, 클라이언트만 모드 층을 얹으면 거절된다. 서버가 읽지 않는 리소스(시각 효과)는 대조하지 않는다. `ResourceTagScope::PerClient` 축(품질 · 언어)은 달라도 되므로 판정 값은 이 축에 기대지 않는다. 일관성 검사이지 부정행위 방지가 아니다. 시뮬레이션 데이터에 쿠킹 축과 로드 축 조건을 섞지 않는다. 시나리오 `editor.netresourcedigest`.
 - **편집기 저장:** 참인 조건이 정한 칸의 편집은 그 조건의 값이 된다(규칙은 `restoreConditions` 머리말). 층을 얹어 읽은 리소스는 원본 자리에 쓰지 않는다(`ResourceLayer.SaveWouldBake`). 시나리오 `editor.resourcesave`.
@@ -192,9 +192,9 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 에디터 카탈로그 창(`CatalogDocument`)은 원문을 고치므로 적은 칸만 저장하고, 부모와 같은 값을 적으면 그 칸을 지운다. 자식 원소 편집(`CatalogChildSection`)도 같은 규칙(열쇠와 함께 적고, 비면 지움, `_op` · `_before` · `_after` · `_op="Clear"`)을 쓴다. 시나리오: `engine/automation/editor/catalogchildren`.
 
-핫 리로드: 부모 파일을 고치면 물려받은 카탈로그가 다시 읽힌다(`AssetReloadCascade`, 역색인은 `#` 앞 파일 기준). 계획이 파일 단위라 두 파일이 서로의 항목을 부모로 삼으면 순환 오류(`AssetReloadCascade.ReferenceCycle`)다. 시나리오: `game/empty/automation/editor/catalogcascade`. 공유 캐시의 다시 읽기(새 판 · 옛 판)는 [ExistingFacilities](ExistingFacilities.md) "리소스 읽기 입구와 에셋 참조".
+핫 리로드: 부모 파일을 고치면 물려받은 카탈로그가 다시 읽힌다(`AssetReloadCascade`, 역색인은 `#` 앞 파일 기준). 계획이 파일 단위라 두 파일이 서로의 항목을 부모로 삼으면 순환 오류(`AssetReloadCascade.ReferenceCycle`)다. 시나리오: `game/playground/automation/editor/catalogcascade`. 공유 캐시의 다시 읽기(새 판 · 옛 판)는 [ExistingFacilities](ExistingFacilities.md) "리소스 읽기 입구와 에셋 참조".
 
-외형 항목의 머티리얼은 메시 구간 **이름**으로 적는다(`<Section name material>` · `<SwapMaterial section>` · `<MaterialValue section>`; 번호는 다시 임포트하면 어긋난다). 물려받은 항목은 변형의 `<Section>` 을 이름으로 덮는다. 시나리오: `game/empty/automation/sectionmaterial` · `game/shooter3d/automation/showcase/itemvariant`.
+외형 항목의 머티리얼은 메시 구간 **이름**으로 적는다(`<Section name material>` · `<SwapMaterial section>` · `<MaterialValue section>`; 번호는 다시 임포트하면 어긋난다). 물려받은 항목은 변형의 `<Section>` 을 이름으로 덮는다. 시나리오: `game/playground/automation/sectionmaterial` · `game/shooter3d/automation/showcase/itemvariant`.
 
 외형 프리셋(`CharacterAppearance` 의 `parent`)은 여기에 올리지 않는다 — 값은 씨앗으로 뽑고 세트는 쌓이는 규칙이라 칸 덮어쓰기와 다르다(`presets.xml` 머리말).
 
@@ -245,7 +245,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 - **쿠킹:** 펼친 목록을 굽고 저작 칸을 비운다(`stripAuthoringInstanceData`). 끈 레이어까지 굽는다. 참조 대상의 레이어가 가리키는 쪽의 레이어에 들어 있지 않으면 쿠킹 실패다(`SceneCooker.DataLayerCrossReference`).
 - **저장:** 멤버는 엔티티로 적지 않고, 내부 씬을 임시로 지어 쓴 상태와의 차이를 앵커의 `<Part>` 로 적는다. 상속 씬은 부모를 지어 쓴 글과의 차이로 적는다(`saveXMLDelta`). 끈 레이어의 엔티티는 읽은 그대로 다시 적는다.
 - **지우기:** 멤버는 지울 수 없다(프리팹 부품과 같다).
-- **켜고 끄기:** `SceneDataLayerSubsystem::setLayerActive`(개발 명령 `scene.layer <이름> on|off`). 시나리오: `game/empty/automation/datalayer`.
+- **켜고 끄기:** `SceneDataLayerSubsystem::setLayerActive`(개발 명령 `scene.layer <이름> on|off`). 시나리오: `game/playground/automation/datalayer`.
 
 ## 기본값을 쓰지 않는 저장
 
@@ -258,7 +258,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 행동 트리 · 스케줄 · 대화 · 어빌리티 · 기믹 회로는 실행기를 합치지 않고(아래 "합치지 않은 것") 조건과 동작의 이름만 공유한다.
 
 - **조건 `ConditionExpr`**(`Engine/Behavior/ConditionExpr.h`): 문법 `flag && !other` · `tag(Quest.Done)` · `weather(rain, storm)` · `affinity >= 4`, 등록은 `SW_CONDITION( 이름, 칸 스키마, 함수 )`. 읽을 때 후위 배열 + 함수 포인터로 컴파일하고 모르는 이름은 로드 오류, 확률 조건은 문맥의 씨앗을 쓴다. 세계는 형식 있는 칸의 문맥(`GameplayContext` — `GameFlagsSlot` · `BlackboardSlot` · `ScheduleConditionSlot`)으로 넘긴다 — 없는 칸은 거짓, 없는 값은 NaN(`hasBlackboard` 로 묻는다). 장착 · 외형 조건의 종류 칸(`_kind` · `_setID` · `_tag`)은 순환 · 뒤집힌 규칙 검사가 쓰므로 남는다. 쓰는 곳: `ScheduleCondition` · `EquipmentCondition` · `AppearanceRuleCondition` · 대화 `_condition` · 행동 트리 블랙보드 조건 · 상점 조건 · 리소스 `_when`. 쓰지 않는 곳: `AnimationConditionOp`(매 프레임 값 비교), `UserSettingConditionOperator`(게임 문맥 없음).
-- **동작 `ActionRegistry`**(`Engine/Behavior/ActionRegistry.h`): `SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop )` — 칸은 리플렉션 구조체라 에디터가 목록과 칸을 보이고, 함수는 `Succeeded` · `Failed` · `Running`. 글 형식은 `flag.set(hasKey, 1)` · `flag.set(flag=hasKey, value=1)`, 행동 트리는 노드 속성(`<Action task="flag.set" flag="alarm"/>` — 칸 이름은 `id` · `name` · `task` 와 겹치지 않게). 쓰는 곳: 행동 트리 `<Action task>` · 대화 `_actionCommand` · 스케줄 `onStart` · `onEnd` · 퀘스트 `<Reward><Action call>`(시나리오 `game/empty/automation/vocabulary`). 쓰지 않는 곳: 어빌리티 이펙트(복제 · 예측), 기믹 회로 노드(스텝 상태가 저장 대상), 에디터 · 개발 명령. 코드로 짓는 트리(`BehaviorTree::addAction( …, BehaviorTaskFunction )`)는 이름 없이 함수를 받는다.
+- **동작 `ActionRegistry`**(`Engine/Behavior/ActionRegistry.h`): `SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop )` — 칸은 리플렉션 구조체라 에디터가 목록과 칸을 보이고, 함수는 `Succeeded` · `Failed` · `Running`. 글 형식은 `flag.set(hasKey, 1)` · `flag.set(flag=hasKey, value=1)`, 행동 트리는 노드 속성(`<Action task="flag.set" flag="alarm"/>` — 칸 이름은 `id` · `name` · `task` 와 겹치지 않게). 쓰는 곳: 행동 트리 `<Action task>` · 대화 `_actionCommand` · 스케줄 `onStart` · `onEnd` · 퀘스트 `<Reward><Action call>`(시나리오 `game/playground/automation/vocabulary`). 쓰지 않는 곳: 어빌리티 이펙트(복제 · 예측), 기믹 회로 노드(스텝 상태가 저장 대상), 에디터 · 개발 명령. 코드로 짓는 트리(`BehaviorTree::addAction( …, BehaviorTaskFunction )`)는 이름 없이 함수를 받는다.
 - **행동 트리 변형:** 노드 `id` 가 열쇠(`BehaviorTreeSchema`, `_bSelfNested`)라 `_base` 트리에서 가지만 바꾼다. `<SubTree tree>` 는 읽을 때 펼치고(순환 오류, 언리얼 Run Behavior), `<SubTree slot>` 은 러너가 `setSlotTree` 로 채운다(Run Behavior Dynamic). 퀘스트 · 루트 · 스폰 · 상점은 `datacataloginheritance.xml` 의 줄이다.
 
 ## 종류별 변형 축
@@ -278,7 +278,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 | 기타 | 리그 · 리타겟 · 물리 · 소켓 · 알림 표 · 입력 레이어에 `InheritKey` 또는 표 한 줄 | — |
 
 - **뺀 것:** 물리 셰이프 · 충돌 쌍, 리그 · 리타겟 안의 뼈 목록(순서가 뜻)은 통째로 바뀐다. 입력 맵의 `<override>` · `<remove>` 는 실행 중 쌓기다([InputMapBundle](../InputMapBundle.md)).
-- **LOD:** 애니메이션은 등급 한 축(`AnimationLODState::_lodGrade`)으로 그래프 `<layer>` · 블렌드 `<node>` · 리그 노드가 `max_lod` 칸에서 꺼지고 `_nodeFadeSeconds` 동안 가중치를 옮긴다(`AnimationLODFade`, 본 LOD `SkeletonBoneLOD` 와 따로). `ClothComponent` 는 조상 스켈레탈 메시의 등급으로 반복 수를 낮추고(`_listLODIterationCount`) `_maxLOD` 를 넘으면 시뮬레이션을 내린다 — 다시 켜면 지금 고정 자세에서 새로 만든다(확인 `ClothLODTest` · `game.empty.clothlod`).
+- **LOD:** 애니메이션은 등급 한 축(`AnimationLODState::_lodGrade`)으로 그래프 `<layer>` · 블렌드 `<node>` · 리그 노드가 `max_lod` 칸에서 꺼지고 `_nodeFadeSeconds` 동안 가중치를 옮긴다(`AnimationLODFade`, 본 LOD `SkeletonBoneLOD` 와 따로). `ClothComponent` 는 조상 스켈레탈 메시의 등급으로 반복 수를 낮추고(`_listLODIterationCount`) `_maxLOD` 를 넘으면 시뮬레이션을 내린다 — 다시 켜면 지금 고정 자세에서 새로 만든다(확인 `ClothLODTest` · `game.playground.clothlod`).
 - **메시 런타임 조립(언리얼 Mutable 자리):** 부품 피팅 · 모프 굽기(`AppearanceMeshPart::assemble`) → 구간 있는 메시 하나로 병합(`mergeParts`) → 결과 캐시(`AppearanceBakedMeshCache`) · 진행 중 짓기 나눔(`CharacterAppearanceInFlightTable`), 짓기는 워커. 캐릭터마다 텍스처 층을 굽지 않는다 — 염색 · 마스크 · 표면 상태는 머티리얼 매개변수라 군중이 머티리얼을 나눈다. 고정 차림 아틀라스는 에디터가 쿠킹한다(`OutfitAtlasSpec`).
 
 ## 합치지 않은 것과 까닭

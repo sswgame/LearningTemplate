@@ -30,7 +30,7 @@
 	<CaptureEditorUI file="mapcheck.png"/>
 	<!-- 오류를 심은 씬을 열어 둔 채 끝내면 상태줄의 검사 수와 토스트가 다음 시나리오까지 남는다 — 깨끗한 씬으로 돌아가고 끝낸다 -->
 	<EditorWaitStable/>
-	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

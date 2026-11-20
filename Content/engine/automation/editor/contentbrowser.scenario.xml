@@ -29,7 +29,7 @@
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<!-- 폴더로 가서 검색으로 그 메시만 남긴다(도킹 칸이 낮아 타일 한 줄만 보인다) -->
 	<EditorWaitStable/>
-	<DevCommand line="content.open game/empty/models"/>
+	<DevCommand line="content.open game/playground/models"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.search"/>
 	<EditorWaitStable/>

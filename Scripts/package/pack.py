@@ -23,7 +23,7 @@ Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테�
 서버 패키지에도 같은 모드를 담는다 — 서버와 클라이언트의 구성 해시가 같아야 핸드셰이크가 통한다.
 
 사용법:
-    py -3 Scripts/package/pack.py --target Client --game Empty
+    py -3 Scripts/package/pack.py --target Client --game Playground
     py -3 Scripts/package/pack.py --target Server --game Shooter3D --rhi DirectX12 --output Saved/Packages
     py -3 Scripts/package/pack.py --target Client --skip-build --skip-cook --bin-dir build/Ninja-Debug/Bin   # 스테이징만(창의 시나리오)
 """
@@ -312,7 +312,7 @@ def make_package(request: PackageRequest, project_root: Path) -> Path:
 def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Shipping 빌드 · 쿠킹 · 스테이징으로 배포 패키지 하나를 만든다")
     parser.add_argument("--target", choices=sorted(MAP_TARGET_PRESET), default="Client", help="빌드 타깃(Client · Server)")
-    parser.add_argument("--game", default="Empty", help="게임 프리셋 이름(Config/Game/<이름>.json, SW_ACTIVE_GAME)")
+    parser.add_argument("--game", default="Playground", help="게임 프리셋 이름(Config/Game/<이름>.json, SW_ACTIVE_GAME)")
     parser.add_argument("--rhi", default="", help="Shipping 이 정적으로 링크할 백엔드(쿠킹 표 이름 — DirectX12 · DirectX11 · Vulkan · OpenGL)")
     parser.add_argument("--output", default="Saved/Packages", help="산출 폴더(저장소 기준 상대 경로 가능). 패키지는 <산출 폴더>/<게임>-<타깃>")
     parser.add_argument("--bin-dir", default="", help="스테이징할 빌드의 Bin(기본: 타깃 프리셋의 build/<프리셋>/Bin)")

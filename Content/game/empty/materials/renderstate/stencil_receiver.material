@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<?asset guid="71596398fea77dcf122c9110f4f0f60f"?>
-<MaterialDef formatVersion="0" name="stencil_receiver" _base="game/empty/materials/renderstate/plain_blue.material" enableStencil="true" stencilRef="1" stencilFrontCompare="Equal" stencilBackCompare="Equal">
-</MaterialDef>

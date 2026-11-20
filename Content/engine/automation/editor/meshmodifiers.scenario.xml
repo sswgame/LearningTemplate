@@ -16,7 +16,7 @@
 	<EditorWaitStable/>
 	<DevCommand line="panel.resetOptional"/>
 	<EditorWaitStable/>
-	<DevCommand line="scene.open game/empty/maps/destructionshowcase.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/destructionshowcase.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ObjectCount" atLeast="9" timeoutFrames="600"/>
 	<EditorWaitStable/>

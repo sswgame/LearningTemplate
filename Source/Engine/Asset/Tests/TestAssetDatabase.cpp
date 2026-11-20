@@ -42,7 +42,7 @@ SW_TEST_CASE( AssetDatabaseTest, ClassifiesByRuleTable )
     SW_EXPECT_TRUE( rules.classify( "engine/materials/grass.material" ) == AssetIdentityKind::Header );
     SW_EXPECT_TRUE( rules.classify( "common/audio/hit.ogg" ) == AssetIdentityKind::Source );
     SW_EXPECT_TRUE( rules.classify( "common/audio/hit.ogg.meta" ) == AssetIdentityKind::Sidecar );
-    SW_EXPECT_TRUE( rules.classify( "game/empty/automation/golden/a.dx11.ppm" ) == AssetIdentityKind::Skipped );
+    SW_EXPECT_TRUE( rules.classify( "game/playground/automation/golden/a.dx11.ppm" ) == AssetIdentityKind::Skipped );
     SW_EXPECT_TRUE( rules.classify( "common/credits.md" ) == AssetIdentityKind::Skipped );
     SW_EXPECT_TRUE( rules.isUnderDerivedFolder( "common/models/barrel.mesh" ) );
     SW_EXPECT_FALSE( rules.isUnderDerivedFolder( "common/models_raw/barrel.glb" ) );

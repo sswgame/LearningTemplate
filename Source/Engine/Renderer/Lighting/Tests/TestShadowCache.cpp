@@ -4,7 +4,7 @@
 
 #include "Engine/Renderer/Lighting/ShadowCache.h"
 
-// 그림자 캐시의 규칙(타일마다 DrawAll · Rebuild · Reuse)을 GPU 없이 본다. 그림은 시나리오 game.empty.shadow_cache 가 본다.
+// 그림자 캐시의 규칙(타일마다 DrawAll · Rebuild · Reuse)을 GPU 없이 본다. 그림은 시나리오 game.playground.shadow_cache 가 본다.
 
 namespace sw
 {

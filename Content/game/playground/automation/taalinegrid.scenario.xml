@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0f0f8a9b2ab44344a2dbf11f52854f07"?>
+<!--
+  TAA 서브픽셀 지터(RN-2) — 디퍼드 + TAA 에서 낮게 비스듬히 본 바닥 격자와 두께 0.02 m 의 가는 막대 격자를 기록이 쌓인 뒤(16 프레임) 찍는다.
+  지터가 없으면 TAA 가 같은 픽셀 중심만 모아 계단이 그대로 남고, 있으면 가장자리가 고르게 풀린다. TAA 만 끄는 손잡이가 없어 한 장만 찍는다.
+  실행: ctest -R Scenario.game.playground.taalinegrid
+-->
+<Scenario name="game.playground.taalinegrid" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/taalinegrid.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Launch variable="gv_environmentAnimate" value="0"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Screenshot file="taalinegrid.ppm"/>
+	<ExpectImage file="taalinegrid.ppm" golden="taalinegrid"/>
+	<Pass/>
+</Scenario>

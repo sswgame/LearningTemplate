@@ -23,7 +23,7 @@ namespace
     {
         static constexpr const utf8* kFolder   = "tests_domain_roundtrip";
         static constexpr const utf8* kRelative = "tests_domain_roundtrip/shared.txt";
-        static constexpr const utf8* kGamePack = "game/empty"; ///< 테스트 호스트의 활성 팩(`ResourceEntryRefusesOSPathsInEveryContentSource` 와 같은 팩)
+        static constexpr const utf8* kGamePack = "game/playground"; ///< 테스트 호스트의 활성 팩(`ResourceEntryRefusesOSPathsInEveryContentSource` 와 같은 팩)
 
         static string makeDomainFolder( const string& domain ) { return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._content.str(), domain ), kFolder ); }
         static string makeID( const string& domain ) { return domain + "/" + kRelative; }

@@ -2,8 +2,8 @@
  * @file ActionCombatDemoComponent.h
  * @brief 장르 키트 시연 — 액션 컴뱃(`GF_ActionCombat`)의 홀 → 보스 → 결과 한 판입니다. 키트의 `ActionRoom` 을 플레이어 입력(입력 맵 `Move` · `KitDemo.Attack` · `KitDemo.Dash`)으로 돌립니다.
  * @details 룸은 전투만 안다. 플레이어 자리 · HP · 판의 단계(홀, 보스 대기, 보스, 승리, 패배)는 이 디렉터가 가진다(언리얼 GameMode 가 폰의 죽음을 받는 자리).
- *          적 배치는 씬 데이터(PROPERTY), 적 수치는 게임 서비스 `MonsterCatalog`(Empty 의 `data/monsters.xml`)이다. 모습은 룸의 디버그 그리기와 플레이어 구 하나다.
- *          장르 완결 루프 시나리오: `game/empty/automation/kitdemo_actioncombat.scenario.xml`.
+ *          적 배치는 씬 데이터(PROPERTY), 적 수치는 게임 서비스 `MonsterCatalog`(Playground 의 `data/monsters.xml`)이다. 모습은 룸의 디버그 그리기와 플레이어 구 하나다.
+ *          장르 완결 루프 시나리오: `game/playground/automation/kitdemo_actioncombat.scenario.xml`.
  */
 #pragma once
 #include "Core/Container/vector.h"

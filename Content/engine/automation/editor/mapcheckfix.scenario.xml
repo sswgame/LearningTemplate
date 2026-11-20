@@ -50,7 +50,7 @@
 	<WaitUntil watch="Editor.MapCheckIssueCount" equals="0" timeoutFrames="60"/>
 	<!-- 오류를 심은 씬을 열어 둔 채 끝내지 않는다 -->
 	<EditorWaitStable/>
-	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<!-- 심은 오류는 씬을 열 때 · 되돌린 뒤 · Check Map 이 다시 검증할 때 한 줄씩 알린다 -->
 	<ExpectLog id="ObjectValidation.Issue" contains="ZeroRadiusLight" count="3"/>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="833f49692d45427ba8cc5a155d5fa83f"?>
+<!--
+  부하 시나리오 — 퍼뮤테이션 런타임 변경. 큐브 512 개가 저마다 머티리얼 인스턴스를 들고, 30 프레임마다 인스턴스 하나의 키워드 · 멀티 컴파일을 바꾼다
+  (-gv_stressTestMaterialChurnKeyword — 처음 보는 퍼뮤테이션이면 새 PSO). 그 인스턴스를 쓰는 칸만 다시 모으고(전체 수집 아님), 새 배치를 끝에 붙이고,
+  PSO 는 빌더 스레드가 만드는 동안 직전 변형으로 그리는지(언리얼 PSO precaching · 유니티 비동기 셰이더 컴파일) 잰다.
+  감시 값: GT.GPUScene.build.permutationDirtySlots(바뀐 인스턴스를 쓰는 칸 — 1 근처), GT.GPUScene.build.collect 시간(전체 수집이면 512 칸),
+           GT.GPUScene.build.patchNewBatch, 프레임 시간의 최댓값(히치).
+  측정 창(<Load>)이 끝내므로 <Pass/> 가 없다. 하위 폴더라 게임 체인이 줍지 않는다.
+  실행: ctest -L load (항목 Scenario.playground.load.materialpermutation)
+-->
+<Scenario name="game.playground.load.materialpermutation" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
+	<Launch variable="gv_stressTestMeshes" value="512"/>
+	<Launch variable="gv_stressTestMaterialInstances" value="1"/>
+	<Launch variable="gv_stressTestTransparent" value="0"/>
+	<Launch variable="gv_stressTestAnimate" value="0"/>
+	<Launch variable="gv_stressTestMaterialChurnKeyword" value="30"/>
+	<Load durationSeconds="15"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Scene.ObjectCount" atLeast="512"/>
+</Scenario>

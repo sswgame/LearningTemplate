@@ -33,7 +33,7 @@ namespace sw
     inline constexpr const utf8* kAutomationGoldenFolder = "golden";
 
     /**
-     * @brief 시나리오 경로의 이름 줄기(`game/empty/automation/fog.scenario.xml` → `fog`)입니다 — 보고 · 로그 · 에디터 상태 폴더 이름의 앞머리(`<줄기>_<백엔드>`)입니다.
+     * @brief 시나리오 경로의 이름 줄기(`game/playground/automation/fog.scenario.xml` → `fog`)입니다 — 보고 · 로그 · 에디터 상태 폴더 이름의 앞머리(`<줄기>_<백엔드>`)입니다.
      * @details 마지막 `/` 뒤 파일 이름의 첫 `.` 앞입니다. 스크립트(`ScenarioDeclaration.stem`)가 같은 규칙을 쓴다.
      */
     inline string getAutomationScenarioStem( string_view path )

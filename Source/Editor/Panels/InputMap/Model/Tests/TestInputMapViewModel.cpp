@@ -42,12 +42,12 @@ SW_TEST_CASE( InputMapViewModelTest, GameSettingsPathOpensTheBundle )
     InputMapViewModelTestRecorder documentRecorder;
     InputMapViewModel             document{ documentRecorder._recorder };
     SW_EXPECT_FALSE( document.isBundlePath() );
-    SW_REQUIRE_TRUE( document.editInputMapPath().commit( "game/empty/input/bundletest/data/gamesettings.xml" ) );
+    SW_REQUIRE_TRUE( document.editInputMapPath().commit( "game/playground/input/bundletest/data/gamesettings.xml" ) );
     SW_EXPECT_TRUE( document.isBundlePath() );
     SW_REQUIRE_TRUE( document.reload() );
     SW_EXPECT_EQUAL( uint32{ 3 }, document.getInputMap().getSourceCount() );
-    SW_EXPECT_EQUAL( string( "game/empty/input/bundletest/diff.input.xml" ), document.describeActionSource( hashed_string( "Use" ) ) );
-    SW_EXPECT_EQUAL( string( "game/empty/input/bundletest/common.input.xml" ), document.describeActionSource( hashed_string( "Move" ) ) );
+    SW_EXPECT_EQUAL( string( "game/playground/input/bundletest/diff.input.xml" ), document.describeActionSource( hashed_string( "Use" ) ) );
+    SW_EXPECT_EQUAL( string( "game/playground/input/bundletest/common.input.xml" ), document.describeActionSource( hashed_string( "Move" ) ) );
     SW_EXPECT_TRUE( document.describeActionSource( hashed_string( "Missing" ) ).empty() );
 }
 
@@ -405,7 +405,7 @@ SW_TEST_CASE( InputMapViewModelTest, BundleUndoTextRoundTrips )
 {
     InputMapViewModelTestRecorder recorder;
     InputMapViewModel             document{ recorder._recorder };
-    SW_REQUIRE_TRUE( document.editInputMapPath().commit( "game/empty/input/bundletest/data/gamesettings.xml" ) );
+    SW_REQUIRE_TRUE( document.editInputMapPath().commit( "game/playground/input/bundletest/data/gamesettings.xml" ) );
     SW_REQUIRE_TRUE( document.reload() );
     const string before = document.captureText();
     SW_REQUIRE_TRUE( before.empty() == false );
@@ -413,7 +413,7 @@ SW_TEST_CASE( InputMapViewModelTest, BundleUndoTextRoundTrips )
     SW_REQUIRE_TRUE( document.deleteAction( hashed_string( "Use" ) ) );
     SW_REQUIRE_TRUE( document.applyText( before ) );
     SW_EXPECT_EQUAL( uint32{ 3 }, document.getInputMap().getSourceCount() );
-    SW_EXPECT_EQUAL( string( "game/empty/input/bundletest/diff.input.xml" ), document.describeActionSource( hashed_string( "Use" ) ) );
+    SW_EXPECT_EQUAL( string( "game/playground/input/bundletest/diff.input.xml" ), document.describeActionSource( hashed_string( "Use" ) ) );
     SW_EXPECT_TRUE( document.captureText() == before );
 }
 

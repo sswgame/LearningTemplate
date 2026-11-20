@@ -1,0 +1,29 @@
+<?asset guid="ee82ee5f21a4ff18bba046d9ae3417a3"?>
+<!--
+	Playground 사운드 이벤트(AudioEventLibrary). 시네마틱 시나리오(automation/cinematic)의 시퀀스 소리 구간(data/cinematic.seq.xml 의 Audio 항목)이 낸다 — 화면 소리(2D)다.
+	Subtitle* 는 자막 시나리오(automation/subtitles)가 개발 명령 audio.post 로 내는 대사다 — 클립의 자막 키 · 이벤트의 화자 키가 자막 서비스로 간다(키는 data/localization/playground.strings.xml).
+-->
+<AudioEventLibrary>
+	<_listEvent>
+		<AudioEventDef _name="CinematicCue" _bus="sfx" _priority="60" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/sounds/click.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="SubtitleGuideLine" _bus="sfx" _priority="70" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest" _subtitleSpeakerKey="Subtitle.Guide">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/sounds/click.ogg" _subtitleKey="Subtitle.GuideLine" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="SubtitleScoutLine" _bus="sfx" _priority="70" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest" _subtitleSpeakerKey="Subtitle.Scout">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/sounds/click.ogg" _subtitleKey="Subtitle.ScoutLine" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="SubtitleLongLine" _bus="sfx" _priority="70" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest" _subtitleSpeakerKey="Subtitle.Guide">
+			<_listClip>
+				<AudioClipEntry _path="game/playground/sounds/click.ogg" _subtitleKey="Subtitle.LongLine" />
+			</_listClip>
+		</AudioEventDef>
+	</_listEvent>
+</AudioEventLibrary>

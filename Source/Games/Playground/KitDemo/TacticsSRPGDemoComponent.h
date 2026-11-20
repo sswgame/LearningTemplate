@@ -4,7 +4,7 @@
  *        플레이어 입력(입력 맵 `Move` 로 커서, `KitDemo.Confirm` 으로 고르기 · 이동 · 공격, `KitDemo.EndTurn` 으로 차례 끝)으로 돌립니다.
  * @details 페이즈 방식이다 — 아군 페이즈는 플레이어가, 적 · 제3세력 페이즈는 AI 가 한다. 적이 모두 쓰러지면 승리, 아군이 모두 쓰러지면 패배다.
  *          전장 크기 · 지형 · 유닛 배치는 씬 데이터, 지형 · 무기 · 기체 · 파일럿 수치는 카탈로그다. 모습은 디버그 그리기다.
- *          장르 완결 루프 시나리오: `game/empty/automation/kitdemo_tactics.scenario.xml`.
+ *          장르 완결 루프 시나리오: `game/playground/automation/kitdemo_tactics.scenario.xml`.
  */
 #pragma once
 #include "Core/Container/vector.h"

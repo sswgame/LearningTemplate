@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="f3d22e6f9a7f42c8a1ddd943c05161df"?>
-<!-- 입자 정렬 시나리오(game/empty/automation/vfxsort)의 CPU 방출기 — 정렬하지 않는 바탕(_sortMode None). 퍼프가 카메라 쪽(-z)으로 날아와 오래된 것이 앞에 선다.
+<!-- 입자 정렬 시나리오(game/playground/automation/vfxsort)의 CPU 방출기 — 정렬하지 않는 바탕(_sortMode None). 퍼프가 카메라 쪽(-z)으로 날아와 오래된 것이 앞에 선다.
      풀 순서(태어난 순서)로 그리면 앞의 퍼프를 먼저 그려 뒤 것이 덮는다 — 정렬(vfxsort_cpu_sorted)과 그림이 다르다. 색은 수명에 따라 빨강 → 파랑이라 겹침 순서가 보인다.
      CPU 전용 모듈(물리 레이캐스트 충돌, 레이어 0 — 아무것에도 닿지 않는다)로 CPU 에서 돈다. -->
 <VFXEffectDef>

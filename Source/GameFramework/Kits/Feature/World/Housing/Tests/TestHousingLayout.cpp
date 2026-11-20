@@ -21,21 +21,21 @@ namespace
         static string make( bool bWithTable, int32 bedVersion, int32 bedMinLoadVersion, bool bOldCot )
         {
             string text = R"(<HousingPartCatalog currency="Gold" cellSize="1" levelHeight="3" socketSnapRadius="0.6">
-                <Part id="floor" name="Floor" prefab="game/empty/prefabs/housing/floor.prefab.xml" layer="Floor" height="0.1" cost="5" refundRatio="0.5"/>
-                <Part id="wall" name="Wall" prefab="game/empty/prefabs/housing/wall.prefab.xml" layer="Structure" height="2.8" cost="10" snapTo="wallEnd">
+                <Part id="floor" name="Floor" prefab="game/playground/prefabs/housing/floor.prefab.xml" layer="Floor" height="0.1" cost="5" refundRatio="0.5"/>
+                <Part id="wall" name="Wall" prefab="game/playground/prefabs/housing/wall.prefab.xml" layer="Structure" height="2.8" cost="10" snapTo="wallEnd">
                     <Socket kind="wallEnd" position="-0.5,0,0"/><Socket kind="wallEnd" position="0.5,0,0"/>
                 </Part>
-                <Part id="door" name="Door" prefab="game/empty/prefabs/housing/door.prefab.xml" layer="Structure" height="2.2" cost="20" snapTo="wallEnd">
+                <Part id="door" name="Door" prefab="game/playground/prefabs/housing/door.prefab.xml" layer="Structure" height="2.2" cost="20" snapTo="wallEnd">
                     <Socket kind="wallEnd" position="-0.5,0,0"/><Socket kind="wallEnd" position="0.5,0,0"/>
                 </Part>)";
             if ( bWithTable )
-                text += R"(<Part id="table" name="Table" prefab="game/empty/prefabs/housing/table.prefab.xml" sizeX="2" sizeZ="1" height="0.8" cost="30" freePlacement="true"/>)";
+                text += R"(<Part id="table" name="Table" prefab="game/playground/prefabs/housing/table.prefab.xml" sizeX="2" sizeZ="1" height="0.8" cost="30" freePlacement="true"/>)";
             if ( bOldCot )
-                text += R"(<Part id="cot" name="Cot" prefab="game/empty/prefabs/housing/bed.prefab.xml" sizeX="2" sizeZ="2" height="0.6" cost="40"/>)";
+                text += R"(<Part id="cot" name="Cot" prefab="game/playground/prefabs/housing/bed.prefab.xml" sizeX="2" sizeZ="2" height="0.6" cost="40"/>)";
             else
             {
                 StringBuilder<constant::buffer::kMax256> textPart;
-                textPart.appendFormat( R"(<Part id="bed" name="Bed" prefab="game/empty/prefabs/housing/bed.prefab.xml" sizeX="2" sizeZ="2" height="0.6" cost="60" version="%#" minLoadVersion="%#" replaces="cot"/>)",
+                textPart.appendFormat( R"(<Part id="bed" name="Bed" prefab="game/playground/prefabs/housing/bed.prefab.xml" sizeX="2" sizeZ="2" height="0.6" cost="60" version="%#" minLoadVersion="%#" replaces="cot"/>)",
                                        bedVersion, bedMinLoadVersion );
                 text += textPart.c_str();
             }

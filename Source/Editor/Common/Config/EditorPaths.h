@@ -48,7 +48,7 @@ namespace sw::editor
         static constexpr const utf8* kComponentIconTable = "editor/data/componenticons.xml";
 
         /**
-         * @brief 리소스 폴더 id(`game/empty/maps` · `editor/theme`)의 디스크 폴더를 반환합니다. 폴더가 없으면 빈 문자열입니다.
+         * @brief 리소스 폴더 id(`game/playground/maps` · `editor/theme`)의 디스크 폴더를 반환합니다. 폴더가 없으면 빈 문자열입니다.
          * @details 해석은 `AssetPaths::toDiskPath` 하나다 - 예전에는 `AssetPaths::findLooseDomainFolder` 가 `Content/<도메인>` 을 따로 이어 붙였다(붙인 디스크 도메인을 몰랐다).
          */
         static string findContentFolder( string_view folderID );

@@ -109,7 +109,7 @@ SW_TEST_CASE( MountedDiskDomainTest, ResourceEntryRefusesOSPathsInEveryContentSo
     const ScopedContentSource contentSource{ *pPacks };
     AssetPaths&               paths = engine::getSubsystem<AssetPaths>();
 
-    const string insideRoot  = FileUtil::joinPath( paths.getRootFolderPath(), "game/empty/maps/editortest.scene.xml" );
+    const string insideRoot  = FileUtil::joinPath( paths.getRootFolderPath(), "game/playground/maps/editortest.scene.xml" );
     const string outsideRoot = domain.makeDiskPath( "outside.txt" );
     SW_REQUIRE_TRUE( FileUtil::exists( insideRoot ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( outsideRoot, "OUTSIDE" ) );

@@ -1,7 +1,7 @@
 /**
  * @file VFXGPUMeshWatches.cpp
  * @brief GPU 메시 입자의 자동화 감시 값입니다 — `VFX.GPUMeshEmitters` · `VFX.GPUMeshAlive` · `VFX.GPUMeshDrawn` · `VFX.GPUMeshDrawnOverAlive`.
- * @details 시나리오(game/empty/automation/vfxgpumeshslots)만 읽는 값이라 렌더러 TU 가 아니라 이 파일에 둔다(`RenderScaleWatches.cpp` 와 같은 모양).
+ * @details 시나리오(game/playground/automation/vfxgpumeshslots)만 읽는 값이라 렌더러 TU 가 아니라 이 파일에 둔다(`RenderScaleWatches.cpp` 와 같은 모양).
  *          값은 렌더 스레드가 프레임 끝에 GPU 에서 되읽어 원자값으로 낸 것이다(`VFXGPUMeshReadback`) — 몇 프레임 늦고, 사본이 아직 없으면 값이 없다.
  */
 #include "pch.h"

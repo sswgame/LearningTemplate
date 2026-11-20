@@ -33,7 +33,7 @@ namespace sw
 
             /**
              * @brief 팩 파일 이름이 우선순위 토큰과 맞는지 대소문자를 무시하고 판별합니다(할당 없음).
-             * @param stem 마운트 도메인(예: "engine", "game/empty", "dlc/winter") 또는 패치 팩 파일 이름(확장자 제외. 예: "patch_game")
+             * @param stem 마운트 도메인(예: "engine", "game/playground", "dlc/winter") 또는 패치 팩 파일 이름(확장자 제외. 예: "patch_game")
              * @param token 검색 우선순위 토큰(예: "game", "dlc", "engine")
              */
             static bool matchesTokenCaseInsensitive( string_view stem, string_view token )
@@ -103,7 +103,7 @@ namespace sw
             }
 
             /**
-             * @brief "engine/textures/splash.dds" 나 "game/empty/maps/title.xml" 을 도메인과 나머지 경로로 나눕니다.
+             * @brief "engine/textures/splash.dds" 나 "game/playground/maps/title.xml" 을 도메인과 나머지 경로로 나눕니다.
              */
             [[nodiscard]] static bool trySplitDomainPrefix( string_view relativePath, string_view& outDomain, string_view& outSubPath )
             {
@@ -121,7 +121,7 @@ namespace sw
                     const size_t secondSlash = relativePath.find( '/', firstSlash + 1 );
                     if ( secondSlash != string_view::npos )
                     {
-                        outDomain  = relativePath.substr( 0, secondSlash ); // 예: "game/empty"
+                        outDomain  = relativePath.substr( 0, secondSlash ); // 예: "game/playground"
                         outSubPath = relativePath.substr( secondSlash + 1 );
                         return outSubPath.empty() == false;
                     }
@@ -257,7 +257,7 @@ namespace sw
 
             /**
              * @brief 경로를 가진 팩을 찾아 `visit( mounted, pathHash, pathInPack )` 을 부릅니다. 방문자가 true 를 반환하면 멈춥니다. 잠금은 부르는 쪽이 쥡니다.
-             * @details 도메인이 붙은 키(`engine/…` · `game/empty/…`)는 그대로 찾는다(`visitPacksWithFullKey`). 도메인 없는 키(`textures/x.dds`)는 도메인 팩의 우선순위 순서로
+             * @details 도메인이 붙은 키(`engine/…` · `game/playground/…`)는 그대로 찾는다(`visitPacksWithFullKey`). 도메인 없는 키(`textures/x.dds`)는 도메인 팩의 우선순위 순서로
              *          `<도메인>/<키>` 전체 키를 만들어 같은 규칙으로 찾는다 - 그래야 패치 팩(전체 경로로 담는다)의 교체와 지움 목록이 도메인 없는 읽기에도 보인다.
              *          예전에는 도메인 없는 키가 도메인 팩의 도메인을 뗀 항목에 바로 맞아, 패치가 바꾸거나 지운 파일을 옛 것으로 읽었다.
              *          방문자가 받는 `pathInPack` 은 이 호출 안에서만 유효하다(만든 키를 가리킬 수 있다).
@@ -275,7 +275,7 @@ namespace sw
                             return visitPacksWithFullKey( listMountedPack, relativePath, visit );
                     }
                 }
-                // 붙은 도메인 팩이 없는 도메인의 키(`mods/<id>/…`, 소스 구성의 `game/empty/…`)는 패치 팩(전체 경로로 담는다)에서 그대로 찾는다.
+                // 붙은 도메인 팩이 없는 도메인의 키(`mods/<id>/…`, 소스 구성의 `game/playground/…`)는 패치 팩(전체 경로로 담는다)에서 그대로 찾는다.
                 // 예전에는 이 키가 도메인 없는 키로만 다뤄져 도메인 팩이 하나도 없으면 패치 팩의 항목을 찾지 못했다. 도메인 팩은 보지 않는다 — 그 항목은 도메인을 뗀 경로라
                 // 도메인 없는 키가 다른 도메인의 항목에 맞는다.
                 if ( visitPatchPacksWithFullKey( listMountedPack, relativePath, visit ) )

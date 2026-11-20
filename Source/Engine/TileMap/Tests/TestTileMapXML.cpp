@@ -17,7 +17,7 @@ namespace
     {
         sw::TileMapXMLData data;
         data._name      = "SampleTown";
-        data._scenePath = "game/empty/maps/sample.scene.xml";
+        data._scenePath = "game/playground/maps/sample.scene.xml";
         data._role      = "town";
         data._width     = 3;
         data._height    = 2;
@@ -48,7 +48,7 @@ namespace
         sw::TileMapXMLData::Warp warp;
         warp._tileX       = 2;
         warp._tileY       = 0;
-        warp._targetMap   = "game/empty/maps/cave.tilemap.xml";
+        warp._targetMap   = "game/playground/maps/cave.tilemap.xml";
         warp._targetTileX = 5;
         warp._targetTileY = 7;
         warp._pairID      = "cave-entrance";
@@ -344,7 +344,7 @@ SW_TEST_CASE( TileMapXMLTest, EveryFlagLayerRoundTripsAlone )
  */
 SW_TEST_CASE( TileMapXMLTest, SavedBytesMatchTheExistingFormat )
 {
-    const sw::string_view kSampleXML = R"(<TileMap name="SampleTown" width="3" height="2" scene="game/empty/maps/sample.scene.xml" role="town">
+    const sw::string_view kSampleXML = R"(<TileMap name="SampleTown" width="3" height="2" scene="game/playground/maps/sample.scene.xml" role="town">
 	<spawn x="2" y="1" />
 	<tiles>
 		<t h="0" enc="1" tr="10" tg="20" tb="30">1</t>
@@ -355,7 +355,7 @@ SW_TEST_CASE( TileMapXMLTest, SavedBytesMatchTheExistingFormat )
 		<t h="5" atlas="1" tr="15" tg="25" tb="35">0</t>
 	</tiles>
 	<warps>
-		<warp x="2" y="0" map="game/empty/maps/cave.tilemap.xml" tx="5" ty="7" pair="cave-entrance" />
+		<warp x="2" y="0" map="game/playground/maps/cave.tilemap.xml" tx="5" ty="7" pair="cave-entrance" />
 	</warps>
 </TileMap>
 )";

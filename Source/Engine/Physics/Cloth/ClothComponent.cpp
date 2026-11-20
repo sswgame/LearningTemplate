@@ -38,7 +38,7 @@ namespace sw
         }
     } // namespace
 
-    // 천 LOD 감시 값(시나리오 `game/empty/automation/clothlod`) — 씬의 첫 천을 읽는다.
+    // 천 LOD 감시 값(시나리오 `game/playground/automation/clothlod`) — 씬의 첫 천을 읽는다.
     SW_AUTOMATION_GETTER_WATCH( clothIterationCount, "Cloth.IterationCount", "Solver iterations given to the first cloth's soft body (0: no soft body, e.g. suspended by LOD)", ClothComponent, &ClothComponent::getAppliedIterationCount );
     SW_AUTOMATION_GETTER_WATCH( clothLODSuspended, "Cloth.LODSuspended", "1 while the first cloth is suspended by its LOD (_maxLOD) and shows its rest grid", ClothComponent, &ClothComponent::isLODSuspended );
     SW_AUTOMATION_GETTER_WATCH( clothLODGrade, "Cloth.LODGrade", "Animation LOD grade the first cloth reads from its ancestor skeletal mesh", ClothComponent, &ClothComponent::readLODGrade );

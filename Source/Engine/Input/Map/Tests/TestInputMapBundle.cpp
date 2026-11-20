@@ -23,7 +23,7 @@ namespace
             vector<AssetID> listAsset;
             for ( const utf8* pName : listName )
             {
-                listAsset.push_back( AssetID{ FileUtil::joinPath( "game/empty/input/bundletest", string( pName ) + ".input.xml" ) } );
+                listAsset.push_back( AssetID{ FileUtil::joinPath( "game/playground/input/bundletest", string( pName ) + ".input.xml" ) } );
             }
             return listAsset;
         }
@@ -45,7 +45,7 @@ namespace
 SW_TEST_CASE( InputMapBundleTest, SettingsFileStacksMapsInOrder )
 {
     InputMap map;
-    SW_REQUIRE_TRUE( InputMapBundle::loadFromSettings( map, AssetID{ "game/empty/input/bundletest/data/gamesettings.xml" } ) );
+    SW_REQUIRE_TRUE( InputMapBundle::loadFromSettings( map, AssetID{ "game/playground/input/bundletest/data/gamesettings.xml" } ) );
 
     SW_EXPECT_EQUAL( uint32{ 3 }, map.getSourceCount() );
     SW_EXPECT_NEAR( 0.5f, map.getHoldThreshold(), 0.0001f );

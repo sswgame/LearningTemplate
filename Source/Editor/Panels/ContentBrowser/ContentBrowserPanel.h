@@ -82,7 +82,7 @@ namespace sw::editor
         bool isShowingAllPacks() const { return _model.isShowingAllPacks(); }
         /** @brief `game/` 아래 루트의 수를 반환합니다. 활성 팩만 보이면 1 입니다. */
         uint32 getGameRootCount() const { return _model.getGameRootCount(); }
-        /** @brief 루트 목록에 그 표시 이름(`game/empty`, `engine`)을 가진 루트가 있으면 true 입니다. */
+        /** @brief 루트 목록에 그 표시 이름(`game/playground`, `engine`)을 가진 루트가 있으면 true 입니다. */
         bool hasRoot( string_view displayName ) const { return _model.hasRoot( displayName ); }
         /**
          * @brief 참조 역색인이 에디터가 본 마지막 `Content/` 변경까지 반영했으면 true 입니다(`AssetReferenceTracker::isCurrent`).

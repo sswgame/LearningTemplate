@@ -26,7 +26,7 @@ namespace sw
 {
     /**
      * @brief `-gv_realtimeProbeRayCount=N`: 실시간 프로브 볼륨의 프로브당 광선 수를 N 으로 덮어씁니다(0 이면 볼륨의 `_realtimeRayCount`) — 광선 수별 GPU 시간(RealtimeProbeUpdateSweep)을 한 씬으로 잽니다.
-     * @details 프로브 수는 볼륨의 `_spacing` 이 정해서 씬 파일로 가른다(`game/empty/maps/realtimegi_dense` · `realtimegi_sparse`).
+     * @details 프로브 수는 볼륨의 `_spacing` 이 정해서 씬 파일로 가른다(`game/playground/maps/realtimegi_dense` · `realtimegi_sparse`).
      *          GI 품질 · 비용 설정이라 배포본에도 둔다 — 언리얼 Lumen 의 광선 수 · 갱신 cvar(`r.Lumen.*`, 확장성 묶음 sg.GlobalIlluminationQuality 가 고른다)와 같은 자리다.
      */
     SW_GLOBAL_VARIABLE( int32, gv_realtimeProbeRayCount, 0, "실시간 프로브 볼륨의 프로브당 광선 수 덮어쓰기(0 이면 볼륨의 값)" );

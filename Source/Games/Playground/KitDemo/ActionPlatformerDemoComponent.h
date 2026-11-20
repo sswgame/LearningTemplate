@@ -4,7 +4,7 @@
  * @details 지형은 씬 데이터(키트 글자 형식의 줄 — '#' 벽, '-' 발판, 'D' 흙, 'O' 갈고리 지점, 나머지는 빈 칸)이고, 체크포인트 · 비밀 · 골은 스테이지 정의(카탈로그)의 id 에 씬의 자리를 맞춘 것이다.
  *          아래로 떨어지거나(낙사) 개발 명령 `kitdemo.platformer.kill` 로 죽으면(목숨 하나) 공통 부활 흐름(`RespawnFlow`)이 스테이지의 `<Respawn>` 규칙대로
  *          다시 세운다 — 마지막 체크포인트 · 제자리(낭떠러지면 가까운 설 자리, `ActionPlatformerRespawnWorld`) · 시작 지점. 골에 닿으면 깨고 결과(시간 · 피격 · 수집 점수와 등급)를 남긴다. 모습은 디버그 그리기다.
- *          장르 완결 루프 시나리오: `game/empty/automation/kitdemo_actionplatformer.scenario.xml`, 부활: `game/empty/automation/kitdemo_respawn.scenario.xml`.
+ *          장르 완결 루프 시나리오: `game/playground/automation/kitdemo_actionplatformer.scenario.xml`, 부활: `game/playground/automation/kitdemo_respawn.scenario.xml`.
  */
 #pragma once
 #include "Core/Container/string.h"

@@ -1,7 +1,7 @@
 /**
  * @file InventoryShopDemoComponent.h
  * @brief 인벤토리 · 오프라인 상점 시연입니다. 같은 씬의 캐릭터(장비 컴포넌트 — 가방 · 장비 칸 · 외형)에 지갑과 가게를 붙여, 엔진 런타임 UI 의 인벤토리 화면 · 상점 화면을 엽니다.
- * @details 시나리오: `game/empty/automation/inventory.scenario.xml` · `shopoffline.scenario.xml`. 지갑 · 가게 상태는 게임 세이브에 싣고(`serializeGameState`), 가방 · 장비는 장비 컴포넌트가 싣는다.
+ * @details 시나리오: `game/playground/automation/inventory.scenario.xml` · `shopoffline.scenario.xml`. 지갑 · 가게 상태는 게임 세이브에 싣고(`serializeGameState`), 가방 · 장비는 장비 컴포넌트가 싣는다.
  *          허브 게임(Playground)으로 옮길 때 이 컴포넌트를 그대로 옮긴다.
  */
 #pragma once

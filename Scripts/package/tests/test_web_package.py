@@ -26,12 +26,12 @@ class WebPackageTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             with self.assertRaises(WebPackageError) as context:
-                make_web_package("Empty", root / "build", root / "packs", root / "out", PROJECT_ROOT)
+                make_web_package("Playground", root / "build", root / "packs", root / "out", PROJECT_ROOT)
             self.assertIn("App.js", str(context.exception))
             self.assertFalse((root / "out").exists())  # 멈춘 묶음은 폴더를 남기지 않는다
 
     def test_page_loads_canvas_then_loader_then_app(self) -> None:
-        page = INDEX_HTML.format(title="Empty", loader=PACK_LOADER_NAME, reporter="")
+        page = INDEX_HTML.format(title="Playground", loader=PACK_LOADER_NAME, reporter="")
         self.assertIn('<canvas id="canvas"', page)  # WebWindow::kCanvasSelector
         self.assertLess(page.index("var Module"), page.index(PACK_LOADER_NAME))
         self.assertLess(page.index(PACK_LOADER_NAME), page.index('src="App.js"'))
@@ -49,7 +49,7 @@ class WebPackageTest(unittest.TestCase):
 
     def test_check_page_reports_between_module_and_app(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
-            write_check_page(Path(folder), "Empty", "abc123", 5)
+            write_check_page(Path(folder), "Playground", "abc123", 5)
             page = (Path(folder) / "check.html").read_text(encoding="utf-8")
         self.assertLess(page.index("var Module"), page.index("__swcheck/"))
         self.assertLess(page.index("__swcheck/"), page.index('src="App.js"'))

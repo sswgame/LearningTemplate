@@ -20,11 +20,11 @@
 	<Scratch from="engine/automation/editor/sequencerkeys" as="scratch/undocoveragesequencer"/>
 	<Scratch from="engine/automation/editor/spriteclipregion" as="scratch/undocoveragespriteclip"/>
 	<Scratch from="engine/automation/editor/audiograph" as="scratch/undocoverageaudiograph"/>
-	<Scratch from="game/empty/data/vocabulary" as="scratch/undocoveragebehaviortree"/>
-	<Scratch from="game/empty/audio" as="scratch/undocoverageaudioevents"/>
+	<Scratch from="game/playground/data/vocabulary" as="scratch/undocoveragebehaviortree"/>
+	<Scratch from="game/playground/audio" as="scratch/undocoverageaudioevents"/>
 	<Scratch from="engine/input" as="scratch/undocoverageinputmap"/>
 	<Scratch from="engine/environment" as="scratch/undocoveragedatatable"/>
-	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>
@@ -94,7 +94,7 @@
 	<DevCommand line="panel.expectUndoRoundTrip behavior_tree"/>
 	<DevCommand line="panel.focus audioevents"/>
 	<EditorWaitStable/>
-	<DevCommand line="asset.openScratch scratch/undocoverageaudioevents/empty.audioevents.xml"/>
+	<DevCommand line="asset.openScratch scratch/undocoverageaudioevents/playground.audioevents.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.AudioEventEditCount" atLeast="1" timeoutFrames="60"/>
 	<DevCommand line="panel.expectUndoRoundTrip audioevents"/>

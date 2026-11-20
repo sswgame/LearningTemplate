@@ -2,7 +2,7 @@
  * @file VocabularyCheck.cpp
  * @brief 공통 어휘의 개발 명령 `vocabulary.check <폴더>` 와 감시 값 `Vocabulary.Flag` 입니다. 행동 트리 · 스케줄 · 대화를 한 플래그 표 위에서 차례로 돌립니다.
  * @details 폴더에는 `guard.bt.xml` · `watch.schedules.xml` · `report.dialogue.xml` 이 있다. 실행기는 합치지 않으므로 셋을 각자의 실행기로 돌리고, 문맥(플래그 칸)만 같이 넘긴다.
- *          시나리오 `game.empty.vocabulary` 가 쓴다 — 어휘가 실행기마다 따로면 앞 실행기가 쓴 값을 뒤 실행기가 읽지 못한다.
+ *          시나리오 `game.playground.vocabulary` 가 쓴다 — 어휘가 실행기마다 따로면 앞 실행기가 쓴 값을 뒤 실행기가 읽지 못한다.
  */
 #include "pch.h"
 

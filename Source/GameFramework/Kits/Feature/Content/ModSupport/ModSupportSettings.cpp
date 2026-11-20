@@ -58,7 +58,7 @@ namespace sw
     bool ModSupportSettings::readOverridable( const XMLNode& node, string_view sourceName )
     {
         const string_view prefix = node.getAttributeText( "prefix" );
-        // 접두는 정규형 폴더(끝 `/`)만 받는다 — `game/empty/data` 가 `game/empty/database/…` 까지 열지 않게.
+        // 접두는 정규형 폴더(끝 `/`)만 받는다 — `game/playground/data` 가 `game/playground/database/…` 까지 열지 않게.
         const string_view folder  = prefix.empty() ? prefix : prefix.substr( 0, prefix.size() - 1 );
         const bool        bFolder = prefix.size() > 1 && StringUtil::endsWith( prefix, "/" ) && AssetPaths::normalizeAssetID( folder ) == folder;
         if ( bFolder == false || StringUtil::startsWith( prefix, "mods/" ) )

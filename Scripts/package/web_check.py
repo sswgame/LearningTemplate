@@ -18,8 +18,8 @@
 창을 띄워(headed) 처음부터 다시 돈다 — 손으로 `--headed` 를 고를 일이 없다(`--headed` 는 처음부터 창을 띄운다).
 
 사용법:
-    py -3 -m Scripts web-check --game Empty
-    py -3 -m Scripts web-check --game Empty --skip-package --headed --seconds 30
+    py -3 -m Scripts web-check --game Playground
+    py -3 -m Scripts web-check --game Playground --skip-package --headed --seconds 30
 """
 
 from __future__ import annotations

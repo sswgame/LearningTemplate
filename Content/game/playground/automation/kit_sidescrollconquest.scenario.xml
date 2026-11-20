@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fc1f754f6b0847a4bd08b9e24dfcb7bb"?>
+<!--
+  장르 키트 시연 — 횡스크롤 정복 키트(GF_SideScrollConquest)의 판 한 바퀴: 창병 둘을 전초기지(x 20) · 적 요새(x 100)에 세움 → 고정 걸음 → 둘 다 점령 → 적 거점이 없어 승리.
+  감시 값: KitDemo.SideScrollConquest.State(0 시작 전, 1 마침) · .Victory · .Territory · .Squad.
+  실행: ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.kit_sidescrollconquest" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/kit_sidescrollconquest.scene.xml"/>
+	<WaitUntil watch="KitDemo.SideScrollConquest.State" equals="1" timeoutFrames="120"/>
+	<Expect watch="KitDemo.SideScrollConquest.Victory" equals="1"/>
+	<Expect watch="KitDemo.SideScrollConquest.Territory" equals="3"/>
+	<Expect watch="KitDemo.SideScrollConquest.Squad" equals="2"/>
+	<ExpectLog id="KitDemo.SideScrollConquestDone" count="1"/>
+	<Pass/>
+</Scenario>

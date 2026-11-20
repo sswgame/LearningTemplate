@@ -5,7 +5,7 @@
  *          런타임은 기동 때 목록에 든 팩을 마운트하지 않고(`PackManager::scanAndMountPacks`) 씬을 열 때 그 씬의 청크만 마운트한다(`PackChunkLoader`).
  *          목록에 없는 팩(엔진 · 공용 · 첫 씬이 닿는 기본 청크, 이름 붙은 패턴 청크)은 기동 필수다. 데스크톱 · Android · 웹이 같은 파일을 쓴다(한 형식).
  *          id 는 정규화한 리소스 id(소문자 · `/`)다. 목록은 이름 · id 순으로 정렬해 쓴다(같은 쿠킹이면 같은 바이트).
- *          파일은 팩 도메인마다 하나이고 그 도메인의 청크(이름이 `<도메인 줄기>.<청크>` — `game_empty.scene_empty_alpha`)와 그 도메인의 씬만 담는다 — 한 게임만 구운 쿠킹이
+ *          파일은 팩 도메인마다 하나이고 그 도메인의 청크(이름이 `<도메인 줄기>.<청크>` — `game_playground.scene_playground_alpha`)와 그 도메인의 씬만 담는다 — 한 게임만 구운 쿠킹이
  *          다른 게임의 목록을 덮지 않는다(팩 파일과 같은 단위). 씬은 다른 도메인의 청크(`common.shared`)를 가리킬 수 있어 런타임은 폴더의 목록을 모두 합친다(`merge`).
  */
 #pragma once
@@ -47,9 +47,9 @@ namespace sw
         [[nodiscard]] static bool parse( string_view xmlText, string_view sourceName, PackChunkManifest& outManifest );
         /** @brief 목록 글을 만듭니다(목록은 이미 정렬돼 있어야 한다 — 쿠커가 정렬해 넘긴다). */
         static string makeText( const PackChunkManifest& manifest );
-        /** @brief 도메인(`game/empty`)의 줄기(`game_empty` — 팩 파일 이름과 같은 납작한 이름)입니다. */
+        /** @brief 도메인(`game/playground`)의 줄기(`game_playground` — 팩 파일 이름과 같은 납작한 이름)입니다. */
         static string makeDomainStem( string_view domain );
-        /** @brief 도메인의 목록 파일 이름(`packchunks.game_empty.xml`)입니다. */
+        /** @brief 도메인의 목록 파일 이름(`packchunks.game_playground.xml`)입니다. */
         static string makeFileName( string_view domain );
         /** @brief @p fileName 이 목록 파일 이름(`packchunks.<줄기>.xml`, 대소문자 무시)이면 true 입니다. */
         [[nodiscard]] static bool isFileName( string_view fileName );

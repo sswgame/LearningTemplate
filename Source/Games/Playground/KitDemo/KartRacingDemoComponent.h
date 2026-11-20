@@ -2,7 +2,7 @@
  * @file KartRacingDemoComponent.h
  * @brief 장르 키트 시연 — 카트 레이싱(`GF_KartRacing`)의 한 바퀴 경기입니다. 세 대 중 앞에 세운 차가 결승선을 두 번 넘어 1 등으로 들어오고, 결승 시한이 지나 남은 차가 순위대로 끝나는 것을 봅니다.
  * @details 판을 여는 순간(`startGame`) 규칙을 끝까지 돌리고 결과만 쥔다 — 모습 · 입력이 없는 규칙 확인 시연이다(언리얼 Functional Test 의 규칙 단계와 같은 자리).
- *          아이템이 없는 경기라 트랙 카탈로그(`.karttracks.xml`) 하나만 쓴다. 시나리오: `game/empty/automation/kit_kartracing.scenario.xml`.
+ *          아이템이 없는 경기라 트랙 카탈로그(`.karttracks.xml`) 하나만 쓴다. 시나리오: `game/playground/automation/kit_kartracing.scenario.xml`.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

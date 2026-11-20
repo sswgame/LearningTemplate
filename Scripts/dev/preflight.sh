@@ -57,7 +57,7 @@ self_check() {
   local DIR
   DIR=$(mktemp -d) || return 1
   printf '%s\n' "[2026-11-18 10:00:00] [Info] [Scenario] per-backend failure: game.vfxsort: GoldenMismatch dx11,dx12,vk,gl - differs" \
-    "[2026-11-18 10:00:01] [Info] [Scenario] SCENARIO_RESULT=FAILED stages=8 failed=4 notRun=0" > "$DIR/Scenario.empty.log"
+    "[2026-11-18 10:00:01] [Info] [Scenario] SCENARIO_RESULT=FAILED stages=8 failed=4 notRun=0" > "$DIR/Scenario.playground.log"
   printf '%s\r\n' "TEST_RESULT=PASSED run=10 failed=0 skipped=1" "SCENARIO_RESULT=PASSED stages=2 failed=0 notRun=0" > "$DIR/verify.ctest.all.log"
   local OUT
   OUT=$(print_results "$DIR"/*.log)

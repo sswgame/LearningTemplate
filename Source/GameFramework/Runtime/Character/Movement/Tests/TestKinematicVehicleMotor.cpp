@@ -1,5 +1,5 @@
 // KinematicVehicleMotorTest — 관성 이동(경사 중력 · 구름 저항 · 공기 저항 · 질량)과 조작감 모듈(그립 · 부스트 · 공중 제어 · 호버 · 레일), 튜닝 검증. 물리 씬 없이 돈다(nogpu).
-// 같은 언덕의 내리막 가속 · 오르막 감속, 빙판이 눈보다 멀리, 무거운 썰매가 더 빠름을 값으로 본다. 실제 씬은 시나리오 game.empty.inertia 가 본다.
+// 같은 언덕의 내리막 가속 · 오르막 감속, 빙판이 눈보다 멀리, 무거운 썰매가 더 빠름을 값으로 본다. 실제 씬은 시나리오 game.playground.inertia 가 본다.
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"

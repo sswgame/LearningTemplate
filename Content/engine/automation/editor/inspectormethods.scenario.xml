@@ -2,7 +2,7 @@
 <?asset guid="b65743150b76b0daf7b7bc9248b0b7a3"?>
 <!--
   에디터 시나리오 — 인스펙터의 FUNCTION 노출 경계(S3). 기본 목록은 CallInEditor 만이다(언리얼 Details 의 CallInEditor 단추).
-  Empty 게임의 테스트 무대 컴포넌트 TypedHandleTestComponent 는 CallInEditor 인 Assign Target 과 CallInEditor 가 없는 Clear Target 을 둔다.
+  Playground 게임의 테스트 무대 컴포넌트 TypedHandleTestComponent 는 CallInEditor 인 Assign Target 과 CallInEditor 가 없는 Clear Target 을 둔다.
   ① 컴포넌트를 달면 메서드 행은 하나(Assign Target), 숨긴 것은 하나(Clear Target)다.
   ② CallInEditor 호출은 오브젝트 편집 하나다 — 값이 바뀌면 되돌리기 한 단계가 쌓이고 Ctrl+Z 로 돌아간다.
   ③ 보기 옵션의 진단 보기(Show All Functions)를 켜면 두 행이 다 그려지고 숨긴 수는 0 이다. Clear Target 을 부르면 값이 비고 되돌리기가 쌓인다.
@@ -14,7 +14,7 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/inspectormethods.scenario.xml -unattended
 -->
 <Scenario name="editor.inspectormethods" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
-	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>

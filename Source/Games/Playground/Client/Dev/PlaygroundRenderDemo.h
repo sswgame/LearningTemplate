@@ -3,7 +3,7 @@
  * @brief 모듈 렌더 확장 시연(ExtensionRenderPass M3 · M4) — 게임 모듈이 렌더 스레드 확장 객체와 씬 프록시를 등록하는 모양을 보입니다. 클라이언트 빌드에만 있습니다.
  * @details - `Playground.DrawDemo`(M4): 게임 스레드가 큐브 몇 개의 값(월드 행렬 · 색)을 프록시 갱신으로 올리고, 렌더 스레드가 프록시의 `collectDrawElements` 로 요소를 받아 그린다.
  *          - `Playground.TintDemo`(M3): 그려진 장면 색 위에 틴트를 블렌드하는 풀스크린 패스. 색은 매 프레임 확장 안에서 값으로 정한다.
- *          두 패스 모두 파이프라인 `game/empty/pipeline/extensionpasspipeline.xml` 이 셰이더를 `_listExtensionShader` 로 선언한 위에서 돈다. 그 파이프라인을 고르지 않은 실행에서는
+ *          두 패스 모두 파이프라인 `game/playground/pipeline/extensionpasspipeline.xml` 이 셰이더를 `_listExtensionShader` 로 선언한 위에서 돈다. 그 파이프라인을 고르지 않은 실행에서는
  *          셰이더가 선언되지 않았으므로 두 패스는 오류를 한 번 남기고 넣어지지 않는다(대체 셰이더 없음).
  */
 #pragma once

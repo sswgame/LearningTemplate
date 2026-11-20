@@ -661,7 +661,7 @@ namespace sw
 
     void AutomationRunner::advanceSimulation( uint32 frameCount )
     {
-        // 그리지 않고 고정 걸음만 진행한다 — 결과(게임 상태)는 그리며 진행한 것과 같아야 한다(`game.empty.advancesimulation` 이 두 길의 변환 해시를 견준다).
+        // 그리지 않고 고정 걸음만 진행한다 — 결과(게임 상태)는 그리며 진행한 것과 같아야 한다(`game.playground.advancesimulation` 이 두 길의 변환 해시를 견준다).
         // 마지막 몇 프레임은 그린다 — 렌더 프레임에 묶인 기록(TAA · 노출 적응 · GPU 입자)이 사진 전에 자리 잡게. 수는 정책 파일의 칸이고 없으면 멈춘다(기본값이 없다).
         const expected<AutomationGoldenPolicy>& policy = _evaluator.getGoldenPolicy();
         if ( policy.has_value() == false )

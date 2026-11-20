@@ -42,7 +42,7 @@ namespace sw
         [[nodiscard]] static bool waitForInitialSurface();
         /**
          * @brief 액티비티를 연 인텐트의 명령줄(문자열 추가값 `kIntentArgumentsExtra`)입니다. 없으면 빈 글입니다(오류가 아니다 — 명령줄 없이 연 것이다).
-         * @details `adb shell am start -n <패키지>/android.app.NativeActivity --es args "-scenario empty/noidlewait"` — 데스크톱 명령줄과 같은 글이고
+         * @details `adb shell am start -n <패키지>/android.app.NativeActivity --es args "-scenario playground/noidlewait"` — 데스크톱 명령줄과 같은 글이고
          *          `AndroidMain` 이 따옴표 규칙으로 나눈다(`StringUtil::splitQuotedTokens`). 언리얼 Android 도 인텐트 추가값으로 명령줄을 받는다(기억).
          */
         [[nodiscard]] static string readIntentArguments();

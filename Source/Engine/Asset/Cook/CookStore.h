@@ -82,7 +82,7 @@ namespace sw
         /**
          * @brief 출력 파일 하나를 만듭니다.
          * @param desc 작업 키의 쿠커 쪽 값입니다.
-         * @param outputID 쿠킹 폴더 기준 출력 경로입니다(예: `game/empty/maps/x.scene.bin`). 기록 파일 이름이 됩니다.
+         * @param outputID 쿠킹 폴더 기준 출력 경로입니다(예: `game/playground/maps/x.scene.bin`). 기록 파일 이름이 됩니다.
          * @param outputPath 출력 파일의 절대 경로입니다.
          * @param cook 출력 파일을 @p outputPath 에 쓰고 `CookStep` 을 돌려주는 함수입니다. 빈 에셋 캐시와 작업 범위 안에서 부릅니다.
          */

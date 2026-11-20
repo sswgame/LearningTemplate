@@ -2,7 +2,7 @@
  * @file RestaurantSimDemoComponent.h
  * @brief 장르 키트 시연 — 식당 경영(`GF_RestaurantSim`)의 하루 영업입니다. 요리사 · 서버를 두고 손님 둘을 받아 조리 · 서빙 · 계산을 마친 뒤 문을 닫고 결산합니다.
  * @details 판을 여는 순간(`startGame`) 규칙을 끝까지 돌리고 결과만 쥔다 — 모습 · 입력이 없는 규칙 확인 시연이다(언리얼 Functional Test 의 규칙 단계와 같은 자리).
- *          시나리오: `game/empty/automation/kit_restaurantsim.scenario.xml`.
+ *          시나리오: `game/playground/automation/kit_restaurantsim.scenario.xml`.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

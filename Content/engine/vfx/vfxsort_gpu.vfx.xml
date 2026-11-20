@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="9348c3aa207a463ebc4d7ac290eb8c3e"?>
-<!-- 입자 정렬 시나리오(game/empty/automation/vfxsort)의 GPU 방출기 — vfxsort_cpu 와 같은 퍼프이고 CPU 전용 모듈이 없어 GPU 에서 돈다(정렬은 vfx_particle_sort.hlsl). -->
+<!-- 입자 정렬 시나리오(game/playground/automation/vfxsort)의 GPU 방출기 — vfxsort_cpu 와 같은 퍼프이고 CPU 전용 모듈이 없어 GPU 에서 돈다(정렬은 vfx_particle_sort.hlsl). -->
 <VFXEffectDef>
 	<_listEmitter>
 		<VFXEmitterDef _name="Puffs" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Alpha" _bLooping="true"

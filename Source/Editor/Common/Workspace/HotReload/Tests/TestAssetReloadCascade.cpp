@@ -80,8 +80,8 @@ SW_TEST_CASE( AssetReloadCascadeTest, MaterialRouteInlinesReferences )
 {
     using sw::editor::AssetReferenceUse;
     using sw::editor::EditorAssetTypeRegistry;
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "game/empty/materials/child.material" )._referenceUse == AssetReferenceUse::InlinedAtLoad );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "game/empty/textures/albedo.png" )._referenceUse == AssetReferenceUse::ResolvedAtUse );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "game/playground/materials/child.material" )._referenceUse == AssetReferenceUse::InlinedAtLoad );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "game/playground/textures/albedo.png" )._referenceUse == AssetReferenceUse::ResolvedAtUse );
 }
 
 /**

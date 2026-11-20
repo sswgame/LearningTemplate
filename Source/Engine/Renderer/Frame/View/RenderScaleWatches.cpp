@@ -2,7 +2,7 @@
  * @file RenderScaleWatches.cpp
  * @brief 자동 렌더 배율 · 뷰 사각형의 자동화 감시 값입니다(`Render.AutoRenderScale` · `Render.ViewRectWidth` · `Render.ViewRectHeight` · `Render.ViewPoolWidth` ·
  *        `Render.ViewTransientRebuildCount` · `Render.OcclusionTilesBuilt`)과 2 단계 HZB 가림(`Render.OcclusionTwoPhase` · `Render.OcclusionLatePhase`)입니다.
- * @details 시나리오(game/empty/automation/renderscalestep · occlusion_twophase)만 읽는 값이라 렌더러 TU 가 아니라 이 파일에 둔다(`RenderViewWatches.cpp` 와 같은 모양).
+ * @details 시나리오(game/playground/automation/renderscalestep · occlusion_twophase)만 읽는 값이라 렌더러 TU 가 아니라 이 파일에 둔다(`RenderViewWatches.cpp` 와 같은 모양).
  *          배율은 게임 스레드의 패킷 빌더가, 사각형 · 풀 · 가림 타일은 렌더 스레드가 원자값으로 올린 것이다(`FrameRenderer::getPublished*`).
  */
 #include "pch.h"

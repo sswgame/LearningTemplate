@@ -7,7 +7,7 @@
  *          물리 마찰(`PhysicsMaterialDef::_friction`)과 게임 이동 계수(`_moveScale`)는 같은 값이라고 가정하지 않는다 — 얼음은 미끄럽지만 걷는 속도는 그대로다.
  *          지역 효과(빙판 · 용암 · 바다 · 가시덩굴)는 종류의 `_zoneProfile` 이 가리키는 지역 프로필(`*.zone.xml`, GameFramework `ZoneProfile`)이다 — 지형 레이어 · 아무 메시든
  *          콜라이더 재질이 곧 프로필을 부른다(전용 컴포넌트 없음, 언리얼 Physical Material · 유니티 PhysicMaterial 자리). 엔진은 경로만 들고 프로필을 읽지 않는다(층 방향).
- *          종류 이름이 목록의 열쇠라 게임이 덮어쓰기 층(`_listResourceLayer`)으로 종류 하나의 칸만 얹을 수 있다(Empty 가 `_zoneProfile` 을 단다).
+ *          종류 이름이 목록의 열쇠라 게임이 덮어쓰기 층(`_listResourceLayer`)으로 종류 하나의 칸만 얹을 수 있다(Playground 가 `_zoneProfile` 을 단다).
  *          모든 물리 재질은 표에 종류가 있어야 한다(테스트 `SurfaceKindTest.ShippedTableCoversPhysicsMaterials`) — 모르는 재질을 다른 종류로 대신하지 않는다.
  *
  *          발걸음 반응(`SurfaceStepResponse`)은 종류마다 한 벌 — 소리(오디오 이벤트), 튀는 효과(`*.vfx.xml` — 흙먼지 · 모래 · 눈 가루 · 물 튀김 · 진흙),

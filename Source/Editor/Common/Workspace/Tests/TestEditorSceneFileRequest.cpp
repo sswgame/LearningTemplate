@@ -21,14 +21,14 @@ SW_TEST_CASE( EditorSceneFileRequestTest, RequestsAreTakenInOrderOnce )
     SW_EXPECT_TRUE( listRequest.empty() );
 
     workspace.requestSaveSceneAs( "C:/Out/a.scene.xml" );
-    workspace.requestLoadScene( "game/empty/maps/b.scene.xml" );
+    workspace.requestLoadScene( "game/playground/maps/b.scene.xml" );
 
     SW_REQUIRE_TRUE( workspace.takeSceneFileRequests( listRequest ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listRequest.size() );
     SW_EXPECT_TRUE( listRequest[0]._kind == sw::editor::EditorSceneFileRequestKind::SaveAs );
     SW_EXPECT_TRUE( listRequest[0]._path == "C:/Out/a.scene.xml" );
     SW_EXPECT_TRUE( listRequest[1]._kind == sw::editor::EditorSceneFileRequestKind::Open );
-    SW_EXPECT_TRUE( listRequest[1]._path == "game/empty/maps/b.scene.xml" );
+    SW_EXPECT_TRUE( listRequest[1]._path == "game/playground/maps/b.scene.xml" );
 
     SW_EXPECT_FALSE( workspace.takeSceneFileRequests( listRequest ) );
     SW_EXPECT_TRUE( listRequest.empty() );
@@ -42,7 +42,7 @@ SW_TEST_CASE( EditorSceneFileRequestTest, UnsavedChoiceIsARequest )
     sw::editor::EditorWorkspace                    workspace{ nullptr };
     sw::vector<sw::editor::EditorSceneFileRequest> listRequest;
 
-    workspace.requestLoadScene( "game/empty/maps/b.scene.xml" );
+    workspace.requestLoadScene( "game/playground/maps/b.scene.xml" );
     workspace.requestUnsavedSceneChoice( sw::editor::EditorUnsavedChoice::Discard );
 
     SW_REQUIRE_TRUE( workspace.takeSceneFileRequests( listRequest ) );

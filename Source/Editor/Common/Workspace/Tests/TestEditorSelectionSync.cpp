@@ -18,15 +18,15 @@ SW_TEST_CASE( EditorSelectionSyncTest, PreviewNeverOverwritesTheMainScene )
     constexpr uint8     kMainOnly = makeSelectionContextBit( EditorSelectionContext::MainScene );
     SW_EXPECT_TRUE( sync.findLatest( kMainOnly ) == nullptr );
 
-    sync.publish( EditorSelectionContext::MainScene, "game/empty/models/crate_medium.mesh", 7 );
+    sync.publish( EditorSelectionContext::MainScene, "game/playground/models/crate_medium.mesh", 7 );
     const uint64 mainSequence = sync.getEntry( EditorSelectionContext::MainScene )._sequence;
     SW_EXPECT_TRUE( mainSequence != 0 );
 
-    sync.publish( EditorSelectionContext::PreviewScene, "game/empty/prefabs/testprop.prefab.xml", 3 );
+    sync.publish( EditorSelectionContext::PreviewScene, "game/playground/prefabs/testprop.prefab.xml", 3 );
     SW_EXPECT_EQUAL( mainSequence, sync.getEntry( EditorSelectionContext::MainScene )._sequence );
     const EditorSelectionSyncEntry* pMain = sync.findLatest( kMainOnly );
     SW_REQUIRE_TRUE( pMain != nullptr );
-    SW_EXPECT_TRUE( pMain->_assetPath == "game/empty/models/crate_medium.mesh" );
+    SW_EXPECT_TRUE( pMain->_assetPath == "game/playground/models/crate_medium.mesh" );
 
     // 모든 문맥을 따르면 가장 늦은 칸(미리보기)이다.
     const uint8                     kAll    = static_cast<uint8>( kMainOnly | makeSelectionContextBit( EditorSelectionContext::PreviewScene ) | makeSelectionContextBit( EditorSelectionContext::ContentBrowser ) );
@@ -44,7 +44,7 @@ SW_TEST_CASE( EditorSelectionSyncTest, SameValueKeepsTheSequenceAndEmptyIsSkippe
     sync.publish( EditorSelectionContext::ContentBrowser, "engine/vfx/sparks.vfx.xml", 0 );
     SW_EXPECT_EQUAL( first, sync.getEntry( EditorSelectionContext::ContentBrowser )._sequence );
 
-    sync.publish( EditorSelectionContext::MainScene, "game/empty/models/crate_medium.mesh", 7 );
+    sync.publish( EditorSelectionContext::MainScene, "game/playground/models/crate_medium.mesh", 7 );
     sync.publish( EditorSelectionContext::MainScene, "", 0 ); // 선택을 비웠다
     SW_EXPECT_TRUE( sync.getEntry( EditorSelectionContext::MainScene )._sequence > first );
     SW_EXPECT_TRUE( sync.findLatest( makeSelectionContextBit( EditorSelectionContext::MainScene ) ) == nullptr );

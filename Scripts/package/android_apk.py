@@ -24,9 +24,9 @@ dex 로 바꾸는 d8, 매니페스트를 이진 XML 로 바꾸고 자산을 담�
 — 같은 값을 두 번 적지 않는다. 값이 없으면 멈춘다(폴백 없음).
 
 사용법:
-    py -3 -m Scripts android-apk --game Empty
-    py -3 -m Scripts android-apk --game Empty --build-dir build/Android-Shipping --packs-dir build/Android-Shipping/Bin/Packs
-    py -3 -m Scripts android-apk --game Empty --preset Android-Release     # 개발 구성 — build/Android-Release 의 .so · 팩(시나리오를 담는다)
+    py -3 -m Scripts android-apk --game Playground
+    py -3 -m Scripts android-apk --game Playground --build-dir build/Android-Shipping --packs-dir build/Android-Shipping/Bin/Packs
+    py -3 -m Scripts android-apk --game Playground --preset Android-Release     # 개발 구성 — build/Android-Release 의 .so · 팩(시나리오를 담는다)
 """
 
 from __future__ import annotations

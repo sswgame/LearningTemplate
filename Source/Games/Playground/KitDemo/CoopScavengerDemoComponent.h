@@ -2,7 +2,7 @@
  * @file CoopScavengerDemoComponent.h
  * @brief 장르 키트 시연 — 협동 수집 공포(`GF_CoopScavenger`)의 원정 한 번입니다. 위성에 내려 바닥 고철을 모두 우주선에 싣고, 회사에서 팔아 할당량을 채우는 것을 봅니다.
  * @details 판을 여는 순간(`startGame`) 규칙을 끝까지 돌리고 결과만 쥔다 — 모습 · 입력이 없는 규칙 확인 시연이다(언리얼 Functional Test 의 규칙 단계와 같은 자리).
- *          시나리오: `game/empty/automation/kit_coopscavenger.scenario.xml`.
+ *          시나리오: `game/playground/automation/kit_coopscavenger.scenario.xml`.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

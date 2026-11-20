@@ -56,7 +56,7 @@ namespace
         {
             if ( _step == LifecycleTestStep::FailSettings )
                 return false;
-            return _packConfig._data.loadFromXMLText( "<GameSettings><startMap>game/empty/maps/editortest.scene.xml</startMap><defaultLanguage>ko_kr</defaultLanguage></GameSettings>", "LifecycleTestGame" );
+            return _packConfig._data.loadFromXMLText( "<GameSettings><startMap>game/playground/maps/editortest.scene.xml</startMap><defaultLanguage>ko_kr</defaultLanguage></GameSettings>", "LifecycleTestGame" );
         }
         bool onPrepareContent( const sw::ContentPreparationToken& token ) override
         {

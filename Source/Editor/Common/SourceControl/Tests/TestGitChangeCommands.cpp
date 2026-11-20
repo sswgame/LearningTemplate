@@ -14,7 +14,7 @@ using namespace sw::editor;
 SW_TEST_CASE( GitChangeCommandsTest, ParsesPorcelainStatus )
 {
     const vector<string> listLine = {
-        " M Content/game/empty/maps/editortest.scene.xml",
+        " M Content/game/playground/maps/editortest.scene.xml",
         "M  Source/Editor/a.cpp",
         "A  Source/Editor/new.h",
         " D Content/old.material",
@@ -28,7 +28,7 @@ SW_TEST_CASE( GitChangeCommandsTest, ParsesPorcelainStatus )
     SW_REQUIRE_EQUAL( static_cast<size_t>( 7 ), listChange.size() );
     SW_EXPECT_TRUE( listChange[0]._kind == SourceControlChangeKind::Modified );
     SW_EXPECT_FALSE( listChange[0]._bStaged );
-    SW_EXPECT_EQUAL( string( "Content/game/empty/maps/editortest.scene.xml" ), listChange[0]._path );
+    SW_EXPECT_EQUAL( string( "Content/game/playground/maps/editortest.scene.xml" ), listChange[0]._path );
     SW_EXPECT_TRUE( listChange[1]._bStaged );
     SW_EXPECT_TRUE( listChange[2]._kind == SourceControlChangeKind::Added );
     SW_EXPECT_TRUE( listChange[3]._kind == SourceControlChangeKind::Deleted );

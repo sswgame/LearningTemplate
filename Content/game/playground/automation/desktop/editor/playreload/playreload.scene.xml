@@ -1,0 +1,59 @@
+<?asset guid="5e3ab81b3be843c7a0172094ce7258d6"?>
+<Scene formatVersion="3" name="PlayReload">
+	<!-- 플레이 중 리로드 시나리오(desktop/editor/playreload)의 무대 — 시나리오가 <Scratch> 사본으로 연다.
+	     확인용 컴포넌트(리로드를 건너야 하는 값 42) · 생존 공포 키트 시연(체력 · 정신력 · 가방 — 카탈로그 demo.horror.xml) · 머티리얼과 텍스처를 쓰는 상자 · 프리팹 인스턴스. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="60" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Probe">
+			<GameObject _schemaVersion="0" _name="Probe" _bActive="true">
+				<_listComponent>
+					<HotReloadTestComponent _keptValue="42" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Director">
+			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
+				<_listComponent>
+					<SurvivalHorrorDemoComponent _componentName="SurvivalHorrorDemoComponent"
+					                             _bActive="true"
+					                             _catalogPath="game/playground/automation/desktop/editor/playreload/demo.horror.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Crate">
+			<GameObject _schemaVersion="0" _name="Crate" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-1.2,1,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/playground/automation/desktop/editor/playreload/probe.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="PrefabProp" prefab="game/playground/automation/desktop/editor/playreload/probe.prefab.xml">
+			<PrefabOverrides>
+				<Override key="MeshComponent#0">
+					<MeshComponent _localPosition="1.2,1,0" />
+				</Override>
+			</PrefabOverrides>
+		</entity>
+	</entities>
+</Scene>

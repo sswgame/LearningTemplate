@@ -17,8 +17,8 @@ SW_TEST_CASE( ContentBrowserCollectionStoreTest, RoundTripKeepsScopes )
     SW_EXPECT_TRUE( source.saveSearch( ContentBrowserSavedSearch{ "Crates", "Mesh", "crate", false } ) );
     SW_EXPECT_TRUE( source.saveSearch( ContentBrowserSavedSearch{ "Team Materials", "Material", "stone", true } ) );
     SW_EXPECT_TRUE( source.createCollection( "Level Kit", false ) );
-    SW_EXPECT_TRUE( source.addToCollection( "Level Kit", false, "game/empty/models/crate_medium.mesh" ) );
-    SW_EXPECT_FALSE( source.addToCollection( "Level Kit", false, "game/empty/models/crate_medium.mesh" ) ); // 같은 에셋은 한 번
+    SW_EXPECT_TRUE( source.addToCollection( "Level Kit", false, "game/playground/models/crate_medium.mesh" ) );
+    SW_EXPECT_FALSE( source.addToCollection( "Level Kit", false, "game/playground/models/crate_medium.mesh" ) ); // 같은 에셋은 한 번
     SW_EXPECT_TRUE( source.createCollection( "Empty Shared", true ) );
     SW_EXPECT_FALSE( source.createCollection( "Empty Shared", true ) ); // 같은 범위 · 같은 이름
 
@@ -30,7 +30,7 @@ SW_TEST_CASE( ContentBrowserCollectionStoreTest, RoundTripKeepsScopes )
     const ContentBrowserCollection* pKit = loaded.findCollection( "Level Kit", false );
     SW_REQUIRE_NOT_NULL( pKit );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), pKit->_listAssetID.size() );
-    SW_EXPECT_EQUAL( string( "game/empty/models/crate_medium.mesh" ), pKit->_listAssetID[0] );
+    SW_EXPECT_EQUAL( string( "game/playground/models/crate_medium.mesh" ), pKit->_listAssetID[0] );
     const ContentBrowserCollection* pShared = loaded.findCollection( "Empty Shared", true );
     SW_REQUIRE_NOT_NULL( pShared );
     SW_EXPECT_TRUE( pShared->_listAssetID.empty() );

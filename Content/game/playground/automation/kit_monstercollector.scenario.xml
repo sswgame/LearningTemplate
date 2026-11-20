@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f0817ff86e5a4f9891cd360084f78ba7"?>
+<!--
+  장르 키트 시연 — 몬스터 수집 키트(GF_MonsterCollector)의 전투 · 포획: 스피드 200 swift 가 체력 1 인 야생 normie(레벨 50 · 기본 경험치 70)를 쓰러뜨려 이기고 70 x 50 / 7 = 500 경험치,
+  포획률 255 인 야생 flamo 에 볼 x3 → 세 번 흔들리고 잡힘.
+  감시 값: KitDemo.MonsterCollector.State(0 시작 전, 1 마침) · .WonExp · .Captured · .CaptureShakes.
+  실행: ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.kit_monstercollector" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/kit_monstercollector.scene.xml"/>
+	<WaitUntil watch="KitDemo.MonsterCollector.State" equals="1" timeoutFrames="120"/>
+	<Expect watch="KitDemo.MonsterCollector.WonExp" equals="500"/>
+	<Expect watch="KitDemo.MonsterCollector.Captured" equals="1"/>
+	<Expect watch="KitDemo.MonsterCollector.CaptureShakes" equals="3"/>
+	<ExpectLog id="KitDemo.MonsterCollectorDone" count="1"/>
+	<Pass/>
+</Scenario>

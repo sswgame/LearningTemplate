@@ -13,14 +13,14 @@ SW_TEST_CASE( ShaderCookDomainsTest, DomainsComeFromTheRequests )
 {
     vector<ShaderCookRequest> listRequest( 5 );
     listRequest[0]._shaderPath = "engine/shaders/forward_lit.hlsl";
-    listRequest[1]._shaderPath = "game/empty/shaders/sub/demo.hlsl";
+    listRequest[1]._shaderPath = "game/playground/shaders/sub/demo.hlsl";
     listRequest[2]._shaderPath = "engine/shaders/sky.hlsl";
     listRequest[3]._shaderPath = "common/shaders/toon.hlsl";
     listRequest[4]._shaderPath = "not/a/shader/path.hlsl";
 
     vector<string> listDomain{ "stale" };
     ShaderCookDriver::collectCookedDomains( listRequest, listDomain );
-    const vector<string> listExpected{ "engine", "game/empty", "common" };
+    const vector<string> listExpected{ "engine", "game/playground", "common" };
     SW_EXPECT_TRUE( listDomain == listExpected );
 
     ShaderCookDriver::collectCookedDomains( {}, listDomain );

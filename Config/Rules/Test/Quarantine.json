@@ -2,7 +2,7 @@
     "_comment": "격리한 테스트(ctest 이름) — 묶음 검증이 빼고 돈다(`py -3 Scripts/dev/test_history.py quarantine --ctest-exclude`). 항목마다 사유(reason)와 만료(expires, YYYY-MM-DD)가 필수이고, 지난 만료는 검사가 실패한다 — 고쳐서 빼거나 사유와 새 만료를 적는다. 흔들림 근거는 `test_history.py report`.",
     "_quarantined": [
         {
-            "test": "Scenario.empty.desktop.editor.playreload",
+            "test": "Scenario.playground.desktop.editor.playreload",
             "reason": "w-reload 시나리오가 PIE 중 에디터 모듈 리로드에서 플레이가 이어진다고 보지만, 플레이 세션을 에디터 모듈이 소유해 EditorModuleManager::onBeforeSuspendModules 가 시뮬레이션을 멈춘다(언리얼 Live Coding 처럼 잇는 것은 세션을 호스트로 옮기는 설계 일 — NEXT). 그 뒤 게임 모듈 교체가 시계를 170 초 넘게 붙잡는다. 빌드 대상 이름 결함(SWGame → SWGame_<게임>)은 고쳤다.",
             "expires": "2026-11-27"
         }

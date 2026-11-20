@@ -169,7 +169,7 @@ namespace sw::editor
         bool isShowingAllPacks() const { return _bShowAllPacks; }
         /** @brief `game/` 아래 루트의 수입니다. 활성 팩만 보이면 1 입니다. */
         uint32 getGameRootCount() const;
-        /** @brief 그 표시 이름(`game/empty`, `engine`)을 가진 루트가 있으면 true 입니다. */
+        /** @brief 그 표시 이름(`game/playground`, `engine`)을 가진 루트가 있으면 true 입니다. */
         bool hasRoot( string_view displayName ) const;
 
         // ------------------------------------------------------------------------------

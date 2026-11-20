@@ -1,0 +1,127 @@
+<?asset guid="451c9481da1ca4d1e544edbfd659bec8"?>
+<Scene formatVersion="3" name="CutsceneTrigger">
+	<!-- 지역 진입 컷씬 무대(automation/cutscenetrigger) — 트리거 볼륨(물리 센서, 트리거 계약의 오브젝트 쌍 진입)이 SequenceTriggerComponent 로 디렉터의 시퀀스를 튼다.
+	     Landing(z 0)은 플레이어가 태어나는 자리를 덮는 다시 재생 볼륨(_bOnce false)이고 LandingDirector 의 빈 짧은 시퀀스를 튼다(입력 · 화면 그대로).
+	     Gate(z 10)는 한 번만 하는 볼륨(_bOnce true)이고 GateDirector 의 컷씬을 튼다 — 이동 막기 · HUD 숨김 · 건너뛰기 · 빨리감기, 범위 제한은 Gate 둘레 3 m.
+	     두 볼륨 모두 Player 태그만 받는다. 카메라는 cinematic 무대와 같은 조립(GameCamera 의 카메라 매니저가 GameplayView 를 보고, 컷이 덮었다가 돌려준다). -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,12,-12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="200" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+					<CameraManagerComponent _viewTarget="2" _localPlayerIndex="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="GameplayView">
+			<GameObject _schemaVersion="0" _name="GameplayView" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,10,-10" _localRotation="0.6,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="200" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Default" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="50,0.5,50" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="100,1,100" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.866" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Player">
+			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localPosition="0,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
+					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,0.9,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Capsule" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<PawnComponent _moveAction="Move" _lookAction="None" _upAction="None" _inputLayer="None" _aiControllerPrefab="" _maxPitch="80.21409" _autoPossess="Player0" _bLockMouse="false">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
+					<CharacterPawnMovementComponent _sprintButton="None" _jumpButton="None" _walkSpeed="3.5" _sprintSpeed="3.5" _acceleration="30" _deceleration="40" _jumpSpeed="5" _turnRate="12" _facingMode="MoveDirection" />
+					<TagComponent>
+						<_tags>
+							<_listTag>
+								<item>Player</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,10,0" _localRotation="0.356582,-2.138715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.85" _intensity="1.2" _ambient="0.5" _shadowExtent="20" _shadowDistance="40" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Landing">
+			<GameObject _schemaVersion="0" _name="Landing" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,1,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<SequenceTriggerComponent _activatorTag="Player" _bOnce="false" _sequence="7" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="LandingDirector">
+			<GameObject _schemaVersion="0" _name="LandingDirector" _bActive="true">
+				<_listComponent>
+					<SequencePlayerComponent _sequencePath="game/playground/data/cutscenelanding.seq.xml" _framesPerSecond="30" _loopMode="None" _playerMovement="Free" _bAutoPlay="false" _bHideHUD="false" _bSkippable="false" _bAllowFastForward="false">
+						<_listBinding />
+					</SequencePlayerComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Gate">
+			<GameObject _schemaVersion="0" _name="Gate" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,1,10" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,1,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<SequenceTriggerComponent _activatorTag="Player" _bOnce="true" _sequence="9" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="GateDirector">
+			<GameObject _schemaVersion="0" _name="GateDirector" _bActive="true">
+				<_listComponent>
+					<SequencePlayerComponent _sequencePath="game/playground/data/cutscenegate.seq.xml" _framesPerSecond="30" _loopMode="None" _playerMovement="Blocked" _confineTarget="4" _confineCenter="8" _confineRadius="3" _bAutoPlay="false" _bHideHUD="true" _bSkippable="true" _bAllowFastForward="true">
+						<_listBinding>
+							<SequenceBindingSlot _binding="1" _object="10" />
+						</_listBinding>
+					</SequencePlayerComponent>
+					<CinematicCameraComponent _localPlayerIndex="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="GateCut">
+			<GameObject _schemaVersion="0" _name="GateCut" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,3,4" _localRotation="0.2,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="200" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

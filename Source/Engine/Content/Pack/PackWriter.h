@@ -42,7 +42,7 @@ namespace sw
         PackLayoutMode        _layoutMode{ PackLayoutMode::Sorted }; ///< 페이로드 배치(파일 머리말의 "슬롯 배치")
         string                _previousPackPath{};                   ///< `Slot` 에서 앞 빌드의 팩 경로. 없는 파일이면 앞 빌드가 없는 첫 배치이고, 열 수 없으면 경고를 남기고 슬롯 없이 배치한다
         uint32                _maxHolePercent{ 25 };                 ///< `Slot` 에서 이번 빌드 페이로드 영역의 빈 자리가 이 비율(%)을 넘으면 촘촘히 다시 놓는다
-        string                _mountDomain{};                        ///< 항목 경로 앞에 붙는 리소스 도메인(`engine` · `game/empty` · `dlc/winter`). 비우면 항목이 전체 경로다(패치 팩)
+        string                _mountDomain{};                        ///< 항목 경로 앞에 붙는 리소스 도메인(`engine` · `game/playground` · `dlc/winter`). 비우면 항목이 전체 경로다(패치 팩)
         uint32                _blockSize{ 0 };                       ///< 필수. 압축 전 블록 크기 — `kPackMinBlockSize` ~ `kPackMaxBlockSize` 의 2 의 거듭제곱(PackConfig `_blockSize`)
         uint64                _writeWindowBytes{ 0 };                ///< 필수. 이만큼의 원본을 모아 병렬로 압축한다(PackConfig `_writeWindowBytes`)
         INetSecurityProvider* _pDigestProvider{ nullptr };           ///< 서명 채널(패치 팩)이면 SHA-256 제공자 — 블록 해시 표를 쓰고(`PackFlag::HasBlockHash`) 색인 요약을 결과에 담는다

@@ -1,0 +1,109 @@
+<?asset guid="88b0a19ea6a86e1e6b6720b63bc4df0b"?>
+<Scene formatVersion="3" name="ToonShowcase">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,1.05,-3.6"
+					                 _localRotation="0.05,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.845323,1.045264,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.0"
+					                           _ambient="0.25"
+					                           _shadowExtent="6"
+					                           _shadowDistance="20"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="8,1,8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="game/playground/materials/toonshowcase_ground.material"
+					               _boundsRadius="6"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="LitSphere">
+			<GameObject _schemaVersion="0" _name="LitSphere" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-1.15,0.75,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,0.8,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Sphere"
+					               _materialPath="game/playground/materials/toonshowcase_lit.material"
+					               _boundsRadius="0.5"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="ToonSphere">
+			<GameObject _schemaVersion="0" _name="ToonSphere" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="1.15,0.75,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,0.8,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Sphere"
+					               _materialPath="game/playground/materials/toonshowcase_toon.material"
+					               _boundsRadius="0.5"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10"
+		        name="AvatarSampleD"
+		        prefab="game/playground/models/avatarsample_d/avatarsample_d.prefab.xml" />
+	</entities>
+</Scene>

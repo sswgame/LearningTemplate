@@ -1,0 +1,123 @@
+<?asset guid="3fcd0f83c113a08accb7a73b7f3ca1bc"?>
+<Scene formatVersion="3" name="EditorTest">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.2,3.2"
+					                 _localRotation="0.35877067,3.1415927,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="TestMesh">
+			<GameObject _schemaVersion="0" _name="TestMesh" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID=""
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="TestSprite">
+			<GameObject _schemaVersion="0" _name="TestSprite" _bActive="true">
+				<_listComponent>
+					<SpriteComponent _localPosition="-2.5,0,0"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _meshID=""
+					                 _boundsRadius="0.866"
+					                 _gpuSpinSeed="0"
+					                 _materialPath=""
+					                 _textureName=""
+					                 _clipPath="" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="TestCollider">
+			<GameObject _schemaVersion="0" _name="TestCollider" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="2.5,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<BoxCollider2DComponent _localPosition="0,0,0"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachComponent="None"
+					                        _offsetPos="0,0"
+					                        _offsetScale="1.5,1.5"
+					                        _layer="Default" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="TestGameCamera">
+			<GameObject _schemaVersion="0" _name="TestGameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.5,-6"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="TestKeyLight">
+			<GameObject _schemaVersion="0" _name="TestKeyLight" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,4,0"
+					                           _localRotation="1.102345,-2.191046,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.35"
+					                           _ambient="0.28"
+					                           _shadowExtent="2.2222223"
+					                           _shadowDistance="2"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="TestParent">
+			<GameObject _schemaVersion="0" _name="TestParent" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,2.5,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="TestProp" prefab="game/playground/prefabs/testprop.prefab.xml" />
+	</entities>
+</Scene>

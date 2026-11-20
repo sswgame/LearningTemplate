@@ -11,7 +11,7 @@
 <Scenario name="editor.flowimport" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<!-- 가져오기 폴더를 사본으로 선언한다 — 체인은 백엔드마다 App 을 나란히 띄우므로 고정 이름이면 한 App 의 폴더 지우기가 다른 App 의 가져오기를 지웠다. 실행기가 단계의 id 를 이 프로세스의 이름(_p<pid>)으로 바꾼다(원본 폴더는 쓰지 않는다 — 처음에 지운다) -->
 	<Scratch from="engine/automation/editor/lightprobebake" as="scratch/import/editor.flowimport"/>
-	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>

@@ -2,7 +2,7 @@
  * @file MetroidvaniaDemoComponent.h
  * @brief 장르 키트 시연 — 메트로배니아(`GF_Metroidvania`)의 죽음과 휴식 한 바퀴입니다. 쉬고, 적을 쓰러뜨려 통화를 벌고, 죽어 시체에 통화를 떨어뜨린 뒤 되찾는 것을 봅니다.
  * @details 판을 여는 순간(`startGame`) 규칙을 끝까지 돌리고 결과만 쥔다 — 모습 · 입력이 없는 규칙 확인 시연이다(언리얼 Functional Test 의 규칙 단계와 같은 자리).
- *          시나리오: `game/empty/automation/kit_metroidvania.scenario.xml`.
+ *          시나리오: `game/playground/automation/kit_metroidvania.scenario.xml`.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

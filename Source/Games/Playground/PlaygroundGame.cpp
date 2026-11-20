@@ -59,7 +59,7 @@ namespace sw
         /** @brief 클라이언트 전용 개발 부분(벤치 · 렌더 확장 시연, `Client/Dev/PlaygroundClientPart.cpp`)입니다. 공장이 없는 구성(전용 서버 · 배포)에는 nullptr 이다. */
         unique_ptr<IGameClientPart> _clientPart;
 
-        /** @brief 장르 키트 시연(액션 룸 — `game/empty/maps/kitdemo_actioncombat`)의 몬스터 정의입니다. 액션 룸이 게임 서비스로 찾는다(공유 캐시의 한 벌). */
+        /** @brief 장르 키트 시연(액션 룸 — `game/playground/maps/kitdemo_actioncombat`)의 몬스터 정의입니다. 액션 룸이 게임 서비스로 찾는다(공유 캐시의 한 벌). */
         shared_ptr<const MonsterCatalog> _pMonsterCatalog;
         /** @brief 지역 효과 시연의 어빌리티 클래스(기본 — Generic · Combat 세트, ApplyEffects)입니다. */
         AbilityClassRegistry _abilityClasses;

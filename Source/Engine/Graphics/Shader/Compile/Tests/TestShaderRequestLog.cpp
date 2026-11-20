@@ -125,8 +125,8 @@ SW_TEST_CASE( ShaderRequestLogTest, ReadFolderMergesChildFiles )
     (void)vkChild.add( makeRequestDesc( "engine/shaders/decal.hlsl", ShaderTargetFormat::SPIRV_Vulkan ) );
     (void)vkChild.add( makeRequestDesc( "engine/shaders/decal.hlsl", ShaderTargetFormat::DXBC_D3D11 ) ); // 백엔드를 바꾼 자식 — 다른 자식과 겹친다
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "Scenario.empty.dx11.shaderrequests" ), dx11Child.makeText() ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "Scenario.empty.vk.shaderrequests" ), vkChild.makeText() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "Scenario.playground.dx11.shaderrequests" ), dx11Child.makeText() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "Scenario.playground.vk.shaderrequests" ), vkChild.makeText() ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "notes.txt" ), "not a request log" ) );
 
     const expected<ShaderRequestLog> merged = ShaderRequestLog::readFolder( folder );

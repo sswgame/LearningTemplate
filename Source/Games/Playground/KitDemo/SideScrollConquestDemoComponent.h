@@ -2,7 +2,7 @@
  * @file SideScrollConquestDemoComponent.h
  * @brief 장르 키트 시연 — 횡스크롤 정복(`GF_SideScrollConquest`)의 판 한 바퀴입니다. 중립 전초기지와 적 요새에 창병을 세워 점령하고 승리하는 것을 봅니다.
  * @details 판을 여는 순간(`startGame`) 규칙을 끝까지 돌리고 결과만 쥔다 — 모습 · 입력이 없는 규칙 확인 시연이다.
- *          시나리오: `game/empty/automation/kit_sidescrollconquest.scenario.xml`.
+ *          시나리오: `game/playground/automation/kit_sidescrollconquest.scenario.xml`.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

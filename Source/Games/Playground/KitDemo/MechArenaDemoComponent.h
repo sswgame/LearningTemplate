@@ -2,7 +2,7 @@
  * @file MechArenaDemoComponent.h
  * @brief 장르 키트 시연 — 기체 대전(`GF_MechArena`)의 판 한 바퀴입니다. 1 대 1 로 세우고 B 를 두 번 격추해 팀 게이지가 바닥나 판이 끝나는 것을 봅니다.
  * @details 판을 여는 순간(`startGame`) 규칙을 끝까지 돌리고 결과만 쥔다 — 모습 · 입력이 없는 규칙 확인 시연이다(언리얼 Functional Test 의 규칙 단계와 같은 자리).
- *          시나리오: `game/empty/automation/kit_mecharena.scenario.xml`.
+ *          시나리오: `game/playground/automation/kit_mecharena.scenario.xml`.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

@@ -11,7 +11,7 @@
 	<Variable name="gv_editorWatchPanel" value="materialgraph"/>
 	<DevCommand line="layout.reset"/>
 	<EditorWaitStable/>
-	<Scratch from="game/empty/materials/matgraph" as="scratch/materials/texturedrop"/> <!-- 캔버스는 열린 그래프가 있어야 그린다 — 원본을 고치지 않게 사본을 연다 -->
+	<Scratch from="game/playground/materials/matgraph" as="scratch/materials/texturedrop"/> <!-- 캔버스는 열린 그래프가 있어야 그린다 — 원본을 고치지 않게 사본을 연다 -->
 	<DevCommand line="asset.openScratch scratch/materials/texturedrop/rim_glow.matgraph.xml"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus materialgraph"/>

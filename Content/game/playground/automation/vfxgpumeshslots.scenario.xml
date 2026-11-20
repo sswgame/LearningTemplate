@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f2a9534ddbde416f893383d9407abb02"?>
+<!--
+  GPU 메시 입자의 빈 칸 스택(dead list) — 큐브 파편(engine/vfx/gpudebrisburst, 풀 64 에 24 개)이 터진 동안과 모두 죽은 뒤에 GPU 가 센 값을 본다.
+  값은 렌더 스레드가 프레임 끝에 되읽은 것이다(VFXGPUMeshReadback — 방출기 인자 버퍼의 살아 있는 수, 그 배치의 주 시점 간접 인스턴스 수). 몇 프레임 늦으므로 조건 대기로 받는다.
+  ① 살아 있는 동안: 살아 있는 수가 24 이고 그린 수가 그것을 넘지 않는다(VFX.GPUMeshDrawnOverAlive <= 0). 빈 칸을 크기 0 으로 그리던 길이면 그린 수가 풀 크기 64 다.
+     가림 컬링이 파편끼리 가린 것을 뺄 수 있어 같음이 아니라 넘지 않음을 본다. 그래도 하나는 그려야 한다.
+  ② 모두 죽은 뒤 · 재생이 끝나기 전(3 ~ 4 초): 방출기는 아직 되읽혀(VFX.GPUMeshEmitters 1) 0 이 배치에서 센 값이다 — 그린 수가 0 이다.
+  ③ 재생이 끝난 뒤: 방출기가 배치를 숨겨 되읽을 방출기가 없고 그린 수는 0 이다.
+  컬링 컴퓨트가 간접 인자를 만드는 백엔드만 돈다 — DX11 은 CPU 개수로 칸을 모두 그려 빈 칸에 크기 0 행렬을 둔다(vfx_mesh_instance.hlsl).
+  실행: ctest -R Scenario.game.playground.vfxgpumeshslots
+-->
+<Scenario name="game.playground.vfxgpumeshslots" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/vfxgpumeshslots.scene.xml"/>
+	<SkipUnless watch="RHI.GPUCulling" reason="this backend draws CPU counts without compute culling - dead slots stay as zero-size instances (vfx_mesh_instance.hlsl)"/>
+	<!-- ① 터진 동안(1 초에 24 개, 수명 1.5 ~ 2 초) -->
+	<WaitUntil watch="VFX.GPUMeshEmitters" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="VFX.GPUMeshAlive" equals="24" timeoutFrames="150"/>
+	<Expect watch="VFX.GPUMeshDrawnOverAlive" atMost="0"/>
+	<Expect watch="VFX.GPUMeshDrawn" atLeast="1"/>
+	<AdvanceSimulation frames="30"/> <!-- 바닥에 튄 뒤에도 모두 살아 있다(가장 짧은 수명 90 프레임 안) -->
+	<Expect watch="VFX.GPUMeshAlive" equals="24"/>
+	<Expect watch="VFX.GPUMeshDrawnOverAlive" atMost="0"/>
+	<Expect watch="VFX.GPUMeshDrawn" atLeast="1"/>
+	<!-- ② 모두 죽은 뒤, 재생이 끝나기 전 -->
+	<WaitUntil watch="VFX.GPUMeshAlive" equals="0" timeoutFrames="180"/>
+	<Expect watch="VFX.GPUMeshEmitters" equals="1"/>
+	<Expect watch="VFX.GPUMeshDrawn" equals="0"/>
+	<!-- ③ 재생이 끝난 뒤 -->
+	<WaitUntil watch="VFX.GPUMeshEmitters" equals="0" timeoutFrames="150"/>
+	<Expect watch="VFX.GPUMeshDrawn" equals="0"/>
+	<Pass/>
+</Scenario>

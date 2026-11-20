@@ -2,7 +2,7 @@
  * @file GhostHuntDemoComponent.h
  * @brief 장르 키트 시연 — 유령 사냥(`GF_GhostHunt`)의 싸움 한 바퀴입니다. 유령 하나를 내어 손전등으로 기절시키고 청소기 흡입 · 서지로 잡아 동전을 받는 것을 봅니다.
  * @details 판을 여는 순간(`startGame`) 규칙을 끝까지 돌리고 결과만 쥔다 — 모습 · 입력이 없는 규칙 확인 시연이다(언리얼 Functional Test 의 규칙 단계와 같은 자리).
- *          시나리오: `game/empty/automation/kit_ghosthunt.scenario.xml`.
+ *          시나리오: `game/playground/automation/kit_ghosthunt.scenario.xml`.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

@@ -2,7 +2,7 @@
 <?asset guid="6281a1c904124ff2afb0e721016d04e7"?>
 <!-- GPU 메시 입자 한 번 터지기 — gpudebris 와 같은 큐브 파편이지만 반복하지 않고 1 초에 한 번만 24 개를 낸다(풀 64). 수명 1.5 ~ 2 초라 3 초에 모두 죽고,
      방출기는 방출 구간(_duration 4 초)이 끝날 때 재생을 끝낸다 — 재생 끝은 "방출이 끝났고 마지막 입자가 가장 긴 수명을 지났다"(VFXGPUEmitter::isFinished)라
-     방출 구간이 3 초 안이면 마지막 입자와 함께(3 초) 끝나 "모두 죽었지만 아직 재생 중" 인 구간이 없다. 시나리오 game/empty/automation/vfxgpumeshslots 가 3 ~ 4 초에 빈 칸 스택(dead list)을 본다.
+     방출 구간이 3 초 안이면 마지막 입자와 함께(3 초) 끝나 "모두 죽었지만 아직 재생 중" 인 구간이 없다. 시나리오 game/playground/automation/vfxgpumeshslots 가 3 ~ 4 초에 빈 칸 스택(dead list)을 본다.
      터지기를 1 초 뒤로 둔 것은 시나리오가 장면 시작 뒤 되읽기를 받기까지의 여유다. -->
 <VFXEffectDef>
 	<_listEmitter>

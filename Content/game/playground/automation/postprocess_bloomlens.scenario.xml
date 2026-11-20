@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="41b4887db886a33f3937535e0f3e0233"?>
+<!--
+  블룸 먼지 마스크 · 렌즈 플레어(post_bloom.hlsli 의 Bloom::applyDirt · computeLensFlare) — 강한 점광(레이어 BloomLamp)으로 밝은 부분을 만든 뒤
+  먼지 마스크(BloomDirt) · 렌즈 플레어(LensFlare)를 하나씩 켠다. 켠 그림마다 점광만 켠 그림과 달라야 한다(그 효과가 돌지 않으면 같다).
+  포워드(후처리 체인 Present 의 SW_POST_BLOOM)를 본다 — 디퍼드(반해상도 밝은 부분 BloomBright)의 플레어는 postprocess_ssr 이 디퍼드로 띄운 김에 함께 본다.
+  먼지 마스크는 비동기로 읽힌다 — 레이어를 켠 뒤 에셋 대기가 끝나야 걸린다.
+  실행: ctest -R Scenario.game.playground.postprocess_bloomlens
+-->
+<Scenario name="game.playground.postprocess_bloomlens" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/postprocessvolume.scene.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="scene.layer BloomLamp on"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<Screenshot file="ppbloom_lamp.ppm"/>
+
+	<DevCommand line="scene.layer BloomDirt on"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<Screenshot file="ppbloom_dirt.ppm"/>
+	<DevCommand line="scene.layer BloomDirt off"/>
+
+	<DevCommand line="scene.layer LensFlare on"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<Screenshot file="ppbloom_flare.ppm"/>
+	<DevCommand line="scene.layer LensFlare off"/>
+
+	<ExpectImagesDiffer first="ppbloom_lamp.ppm" second="ppbloom_dirt.ppm" region="0,0,1,1" minDiffering="0.02"/>
+	<ExpectImagesDiffer first="ppbloom_lamp.ppm" second="ppbloom_flare.ppm" region="0,0,1,1" minDiffering="0.02"/>
+	<ExpectImage file="ppbloom_dirt.ppm" golden="ppbloom_dirt"/>
+	<ExpectImage file="ppbloom_flare.ppm" golden="ppbloom_flare"/>
+	<Pass/>
+</Scenario>
