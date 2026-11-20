@@ -101,7 +101,7 @@ run() {
 build_preset() {
   local P=$1
   local LOGS=build/$P/Testing/Logs
-  mkdir -p $LOGS
+  [ $DRY -eq 1 ] || mkdir -p $LOGS   # --dry-run 은 빌드 폴더를 만들지 않는다(워크트리에서 명령 순서만 볼 때)
   echo "== $P build $(date +%T)"
   # ninja 가 .ninja_deps 를 다시 쓸 때 바깥 프로세스(백신 검사)가 파일을 잡으면 "failed recompaction: Permission denied" 로 진다 — 이 문구일 때만 한 번 더 구성한다.
   run $LOGS/verify.configure.log cmake --preset $P ||
@@ -127,7 +127,7 @@ run_ctest() {
   [ -z "$QUARANTINE_EXCLUDE" ] || EXCLUDE=(-E "$QUARANTINE_EXCLUDE")
   echo "== $P ctest $NAME $(date +%T)"
   [ $DRY -eq 1 ] || { mkdir -p build/$P/Testing/Logs && touch build/$P/Testing/Logs/verify.ctest.$NAME.log.start; }   # 이번 실행이 쓴 로그를 가르는 시각 표지(print_results)
-  (cd build/$P && run Testing/Logs/verify.ctest.$NAME.log ctest -j$CTEST_JOBS --output-on-failure "${EXCLUDE[@]}" "$@")
+  ({ [ $DRY -eq 1 ] || cd build/$P; } && run Testing/Logs/verify.ctest.$NAME.log ctest -j$CTEST_JOBS --output-on-failure "${EXCLUDE[@]}" "$@")
   local RC=$?
   echo "$P ctest $NAME exit=$RC"
   [ $DRY -eq 1 ] || grep -E "tests passed|tests failed|\*\*\*Failed|Timeout|Not Run" build/$P/Testing/Logs/verify.ctest.$NAME.log | head -30
@@ -246,7 +246,7 @@ job_shader_warm() {
   return $RC
 }
 
-mkdir -p build
+[ $DRY -eq 1 ] || mkdir -p build
 if [ $STAGE -le 1 ]; then
   start_job "lint --all" job_lint
   build_preset Ninja-Release
