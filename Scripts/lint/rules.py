@@ -97,8 +97,7 @@ RULES: tuple[Rule, ...] = (
     Rule("disk-path-case", "모양", "경로 포함 · 같음 판정(isPathAtOrUnderRoot · startsWithPathComponent …)에 키로 꺼낸 접은 글(normalizePath(…).str() 을 담은 지역 변수) · toLower 의 글을 넘김", "normalizePath 의 결과(PathKey)는 형식이 막지만, 키 · id 로 꺼낸 str() 과 범용 toLower 는 string 이라 출처를 잃는다", "lint.disk_path_case:check_disk_path_case", exceptions="Config/Rules/Lint/DiskPathCase.json"),
     Rule("required-name-fields", "모양", "이름 · 경로 PROPERTY 칸(뼈 · 소켓 · 액션 · 태그 …)의 C++ 문자열 기본값 — 데이터가 안 적으면 맞지 않는 이름이 조용히 쓰인다(Required 또는 예외)", "리터럴 초기값은 합법 C++ 이고, 그 값이 형식뿐인 빈 값인지 데이터가 덮을 기본값인지 형식이 말하지 못한다(이름 전용 형식은 생성기 설계 W-R3 와 겹친다)", "lint.required_name_fields:check_required_name_fields", exceptions="Config/Rules/Lint/RequiredNameFieldExceptions.json"),
     # --- 이름 -------------------------------------------------------------------------------------------------------------
-    Rule("naming-words", "이름", "표에 없는 낱말(모든 이름 · 파일 · 폴더의 모든 낱말) · 금지 동사 · 금지 명사 · 금지 이름", "업계 용어인지는 형식이 말하지 못한다", "lint.naming_words:check_naming_words", tables=("", "Baseline", "BannedNames")),
-    Rule("acronyms", "이름", "식별자 · 파일 · 폴더의 약어 표기(모두 대문자)", "이름은 형식이 막지 못한다", "lint.acronyms:check_acronyms", tables=("",)),
+    Rule("naming-words", "이름", "표에 없는 낱말(모든 이름 · 파일 · 폴더의 모든 낱말) · 금지 동사 · 금지 명사 · 금지 이름 · 약어 표기(모두 대문자)", "업계 용어인지는 형식이 말하지 못한다", "lint.naming_words:check_naming_words", tables=("", "Baseline", "BannedNames")),
     # --- 셰이더 -----------------------------------------------------------------------------------------------------------
     Rule("shader-kill-order", "셰이더", "픽셀 버리기(clip · discard) 뒤의 미분 읽기", "HLSL 에 미분을 쓰는 함수를 적을 형식이 없다", "lint.shader_kill_order:check_shader_kill_order"),
     Rule("shader-branch-shape", "셰이더", "`if ( a && b ) … else if ( a )` 사슬(NVIDIA GL 오컴파일)", "분기 모양은 형식이 아니다", "lint.shader_branch_shape:check_shader_branch_shape"),

@@ -110,7 +110,7 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 - Functions, variables, members: capitals in the middle or at the end (`updateUI`, `entityID`, `pUISystem`), all lower case as the first word (`uiSystem`, `_gpuScene`).
 - Two capital acronyms never touch (`RHIUI…`): spell one out or put a word between.
 - Lower-case extensions and resource paths, `gv_` prefixes and third-party names keep their spelling.
-- A new acronym is added to the acronym list (`Config/Rules/Lint/Acronyms.json`, checked by the `acronyms` lint) and rewritten everywhere in one commit. Third-party spellings and serialized keys go to its `_keep` with a reason.
+- A new acronym is added to the acronym list (`_acronyms` in `Config/Rules/Lint/NamingWords.json`, checked by the `naming-words` lint) and rewritten everywhere in one commit. Third-party spellings and serialized keys go to `_acronymKeep` with a reason.
 
 #### Type suffixes
 

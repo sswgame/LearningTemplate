@@ -48,6 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.lint_scope import LintScope, is_under, make_whole_scope, read_texts  # noqa: E402
+from lint.acronyms import check_find_bad_words, find_acronym_problems  # noqa: E402
 from lint.rule_tables import get_table_path  # noqa: E402
 
 CONFIG_PATH = get_table_path("naming-words")
@@ -399,10 +400,11 @@ def collect_violations(project_root: Path, scope: LintScope) -> tuple[list[str],
 
 def check_naming_words(project_root: Path, scope: LintScope) -> list[str]:
     list_problem, ratchet = collect_violations(project_root, scope)
-    return list_problem + compare_baseline(ratchet, read_baseline(project_root), scope.whole_repo)
+    return list_problem + compare_baseline(ratchet, read_baseline(project_root), scope.whole_repo) + find_acronym_problems(project_root, scope, read_table(project_root))
 
 
 def run_self_check() -> None:
+    check_find_bad_words()   # 약어 판정(옛 acronyms 규칙)
     table = {"_banned": {"drain": "flush 또는 poll"},
              "_bannedTerms": {"Verdict": "Result", "Work": "Job"}, "_keepTerms": ["WorkArea"], "_predicateWords": ["is", "has", "uses", "starts"], "_lookupWords": ["get", "find"],
              "_keep": {"MailboxServiceResult": "이유"}}
