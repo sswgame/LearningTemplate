@@ -14,6 +14,7 @@
 #include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

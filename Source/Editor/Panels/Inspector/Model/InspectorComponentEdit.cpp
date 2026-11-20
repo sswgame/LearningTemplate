@@ -17,6 +17,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Visual/2D/SpriteComponent.h"
 
 namespace sw::editor

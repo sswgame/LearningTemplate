@@ -4,6 +4,8 @@
 
 #include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 
+#include "Engine/Reflection/TypeInfo.h"
+
 #include <imgui.h>
 #include <imgui_internal.h>
 

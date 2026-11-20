@@ -16,6 +16,8 @@
 #include "Editor/Panels/Inspector/Model/SceneObjectReferencePickerState.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Reflection/TypeInfo.h"
+
 #include <imgui.h>
 
 namespace sw::editor

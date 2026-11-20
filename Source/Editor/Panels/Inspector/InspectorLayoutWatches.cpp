@@ -12,6 +12,7 @@
 #include "Editor/Panels/Inspector/InspectorPanel.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw::editor
 {

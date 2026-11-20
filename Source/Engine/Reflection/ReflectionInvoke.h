@@ -9,8 +9,8 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/ReflectionFwd.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
 {

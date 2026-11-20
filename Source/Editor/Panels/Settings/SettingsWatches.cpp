@@ -13,6 +13,7 @@
 #include "Editor/Panels/Settings/ShortcutsPanel.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw::editor
 {
