@@ -8,6 +8,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"

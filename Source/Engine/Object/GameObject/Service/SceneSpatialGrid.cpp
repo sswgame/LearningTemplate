@@ -9,6 +9,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
 
 namespace sw
 {

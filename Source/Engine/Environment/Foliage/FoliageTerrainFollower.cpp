@@ -8,6 +8,7 @@
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
