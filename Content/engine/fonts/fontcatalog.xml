@@ -1,5 +1,12 @@
 <?asset guid="64b288a8dc8ce06ea4011e7b7e58b5f5"?>
 <FontCatalogDef _defaultFamily="Kenney Future" _glyphAtlasPageSize="1024" _glyphAtlasMaxPageCount="8" _glyphRetainFrameCount="2">
+	<!-- 모든 문화권의 마지막 대체(한글 · 한중일 · 아랍어 — 사슬 면 상한 8 이라 넷만, 기본 패밀리가 밀려나지 않게) — 영어 UI 에서도 다른 문자 이름 · IME 조합이 상자로 그려지지 않는다 -->
+	<_listGlobalFallbackFamily>
+		<item>Malgun Gothic</item>
+		<item>Noto Sans KR</item>
+		<item>Microsoft YaHei</item>
+		<item>Noto Sans Arabic</item>
+	</_listGlobalFallbackFamily>
 	<_listFamily>
 		<FontFamilyDef _name="Kenney Future">
 			<_listFace>

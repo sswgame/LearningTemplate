@@ -30,7 +30,10 @@ namespace sw
         const SceneComponent* pSelf      = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         const SceneComponent* pOther     = pActivator != nullptr ? pActivator->getPrimarySceneComponent() : nullptr;
         if ( pSelf == nullptr || pOther == nullptr )
+        {
+            _bActivatorInside = false; // 활성자가 사라졌다(파괴 · 로그아웃) — 나간 것이다. 다시 생겨 안이면 들어오는 순간이 된다
             return;
+        }
         const bool bInside  = float3::getDistance( pSelf->getWorldPosition(), pOther->getWorldPosition() ) <= _radius;
         const bool bEntered = bInside && _bActivatorInside == false;
         _bActivatorInside   = bInside;

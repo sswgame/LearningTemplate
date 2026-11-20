@@ -4,7 +4,6 @@
 
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/string_splitter.h"
 
 #include "Programs/ReflectionParser/FixedCodecBoundResolver.h"
 #include "Programs/ReflectionParser/ParserDefines.h"
@@ -13,27 +12,6 @@
 
 namespace sw
 {
-    const FixedMathTypeDef* FixedCodecValueEmitter::findMathType( const string_view typeName )
-    {
-        for ( const FixedMathTypeDef& math : fixedlayout::kArrMathType )
-        {
-            if ( typeName == math._pName )
-                return &math;
-        }
-        return nullptr;
-    }
-
-    vector<string> FixedCodecValueEmitter::splitMembers( const string_view memberList )
-    {
-        vector<string>        listMember;
-        const string_splitter parts( memberList, { "," } );
-        for ( const string_view part : parts.getSplitList() )
-        {
-            listMember.emplace_back( StringUtil::trim( part ) );
-        }
-        return listMember;
-    }
-
     const ParsedFixedType& FixedCodecValueEmitter::findLeafType( const ParsedFixedType& type )
     {
         const ParsedFixedType* pType = &type;
@@ -323,8 +301,7 @@ namespace sw
             }
             case FixedValueKind::Math:
             {
-                const FixedMathTypeDef* pMath      = findMathType( type._typeName );
-                const vector<string>    listMember = splitMembers( pMath->_pMemberList );
+                const vector<string>& listMember = type._listMathMember;
                 outCanonical += "math(" + type._typeName + ")";
                 FixedCodecNode node( "::sw::FixedFieldDesc::makeMath( " + site._offsetExpr, FixedCodecNode::ChildArgs::Group );
                 for ( size_t memberIndex = 0; memberIndex < listMember.size(); ++memberIndex )
@@ -334,7 +311,7 @@ namespace sw
                     child._typeExpr                 = "decltype( ::sw::" + type._typeName + "::" + listMember[memberIndex] + " )";
                     const FixedCodecBound& minBound = FixedCodecBoundResolver::pickBound( site._listMin, memberIndex );
                     const FixedCodecBound& maxBound = FixedCodecBoundResolver::pickBound( site._listMax, memberIndex );
-                    if ( pMath->_element == FixedMathElement::Int32 )
+                    if ( type._bIntegerMath == SW_TRUE )
                         node._listChild.push_back( makeInteger( child, minBound, maxBound ) );
                     else
                         node._listChild.push_back( makeFloat( child, FixedValueKind::Float32, minBound, maxBound ) );
@@ -397,10 +374,10 @@ namespace sw
         const int32            variable = countVariableLengthLevels( type );
         const bool             bNumeric = leafKind == FixedValueKind::Integer || leafKind == FixedValueKind::Float32 || leafKind == FixedValueKind::Float64 ||
                               leafKind == FixedValueKind::Math;
-        const bool              bHasRange    = prop._minRangeExpr._text.empty() == false || prop._maxRangeExpr._text.empty() == false;
-        const FixedMathTypeDef* pMath        = leafKind == FixedValueKind::Math ? findMathType( leaf._typeName ) : nullptr;
-        const size_t            elementCount = pMath != nullptr ? splitMembers( pMath->_pMemberList ).size() : 1;
-        const bool              bIntegerMath = pMath != nullptr && pMath->_element == FixedMathElement::Int32;
+        const bool   bHasRange    = prop._minRangeExpr._text.empty() == false || prop._maxRangeExpr._text.empty() == false;
+        const bool   bMath        = leafKind == FixedValueKind::Math;
+        const size_t elementCount = bMath ? leaf._listMathMember.size() : 1;
+        const bool   bIntegerMath = bMath && leaf._bIntegerMath == SW_TRUE;
 
         // 1) 키 검사. 생성 오류입니다
         const bool bRangeOnNonNumeric = bHasRange && bNumeric == false && leafKind != FixedValueKind::Ineligible;
@@ -443,7 +420,7 @@ namespace sw
             }
             // 각의 숫자 경계는 도로 적혀 있고 메모리는 라디안이다 — 데이터 글 `180` 이 담기는 것과 같은 식으로 바꿔야 경계 값이 경계 안에 든다.
             // 필드 이름 경계는 같은 라디안 칸을 읽으므로 그대로다.
-            if ( leaf._typeName == fixedlayout::kAngleTypeName )
+            if ( leaf._bAngle == SW_TRUE )
             {
                 for ( vector<FixedCodecBound>* pListBound : { &site._listMin, &site._listMax } )
                 {
@@ -457,7 +434,7 @@ namespace sw
         }
 
         // 압축 타입(half · unorm · snorm · OctahedralNormal · RGB10A2)은 인코딩 표에 없다. 포인터처럼 적격이 아닌 것과 달리 저장용으로 만든 타입이라
-        // 코덱 없이 등록되면 넷 · 롤백에서야 드러나므로 여기서 멈춘다. 코덱에 실으려면 표(`fixedlayout::kArrMathType`)가 아니라 새 인코딩 종류를 더한다.
+        // 코덱 없이 등록되면 넷 · 롤백에서야 드러나므로 여기서 멈춘다. 코덱에 실으려면 Layout 칸(`ReflectBuiltins.xxx`)이 성분 규칙을 갖거나 새 인코딩 종류를 더한다.
         if ( leaf._bPacked == SW_TRUE )
         {
             state.reportError( prop, "packed type '" + leaf._typeName + "' is not in the fixed layout encoding table - mark the field Transient or add a packed encoding to the generator" );

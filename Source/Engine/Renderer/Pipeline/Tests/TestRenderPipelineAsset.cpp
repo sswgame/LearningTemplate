@@ -829,6 +829,78 @@ SW_TEST_CASE( RenderPipelineAssetTest, QueueAttributeIsForFrameComputePasses )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( viewAsync ) ) );
 }
 
+/**
+ * @brief [RenderPipelineAssetTest] 프레임 패스의 접근은 규칙에서 나온다 — 버퍼 입력 = SRV, 버퍼 출력 = UAV, 텍스처(`_viewable`) 출력 = 렌더 타깃, 규칙 밖은 간접 인자 · 복사 목록
+ * @details 결함이면 그래프가 버퍼를 렌더 타깃으로 알거나(레벨 콜백이 버퍼 전이를 내지 않는다) 간접 인자로 읽는 버퍼를 SRV 로 옮긴다(DX12 · Vulkan 에서 지난 인자를 읽는다).
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, FramePassAccessesFollowTheRules )
+{
+    RenderPipelineAsset asset;
+    const string        resources = string( FrameGraphTestUtil::kResources ) + "<RenderGraphResourceDesc _name=\"DepthHistory\" _kind=\"Persistent\" _viewable=\"Texture\"/>"
+                                                                               "<RenderGraphResourceDesc _name=\"CullArgs\" _kind=\"External\"/>"
+                                                                               "<RenderGraphResourceDesc _name=\"Readback\" _kind=\"External\"/>";
+    const string        passes    = "<RenderGraphPassDesc _name=\"DepthHistory\" _type=\"DepthHistory\"><_listOutput><item>DepthHistory</item></_listOutput></RenderGraphPassDesc>"
+                                    "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listInput><item>InstanceBuffer</item><item>DepthHistory</item></_listInput>"
+                                    "<_listOutput><item>CullResults</item></_listOutput><_listIndirectArgs><item>CullArgs</item></_listIndirectArgs>"
+                                    "<_listCopySource><item>HZB</item></_listCopySource><_listCopyDest><item>Readback</item></_listCopyDest></RenderGraphPassDesc>";
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, FrameGraphTestUtil::makeXML( resources, passes ) ) );
+    SW_EXPECT_TRUE( asset.getResources()[0]._viewable == RenderGraphViewableKind::Buffer ); // 기본은 버퍼
+
+    const vector<RenderGraphResourceAccess> listHistory = asset.buildFramePassAccesses( asset.getFramePass()[0] );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listHistory.size() );
+    SW_EXPECT_TRUE( listHistory[0]._access == RenderGraphAccess::RenderTarget && listHistory[0]._viewable == RenderGraphViewableKind::Texture );
+
+    const vector<RenderGraphResourceAccess> listCull = asset.buildFramePassAccesses( asset.getFramePass()[1] );
+    SW_REQUIRE_EQUAL( size_t( 6 ), listCull.size() );
+    const auto findAccess = [&listCull]( const utf8* pName )
+    {
+        for ( const RenderGraphResourceAccess& access : listCull )
+        {
+            if ( access._resource == hashed_string( pName ) )
+                return access;
+        }
+        return RenderGraphResourceAccess{};
+    };
+    SW_EXPECT_TRUE( findAccess( "InstanceBuffer" )._access == RenderGraphAccess::ShaderRead && findAccess( "InstanceBuffer" )._viewable == RenderGraphViewableKind::Buffer );
+    SW_EXPECT_TRUE( findAccess( "DepthHistory" )._access == RenderGraphAccess::ShaderRead && findAccess( "DepthHistory" )._viewable == RenderGraphViewableKind::Texture );
+    SW_EXPECT_TRUE( findAccess( "CullResults" )._access == RenderGraphAccess::UnorderedAccess );
+    SW_EXPECT_TRUE( findAccess( "CullArgs" )._access == RenderGraphAccess::IndirectArgs );
+    SW_EXPECT_TRUE( findAccess( "HZB" )._access == RenderGraphAccess::CopySource );
+    SW_EXPECT_TRUE( findAccess( "Readback" )._access == RenderGraphAccess::CopyDest );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 한 프레임 패스가 같은 이름을 두 접근으로 적으면 읽기 오류다 — 간접 인자는 버퍼이고, 규칙 밖 목록은 프레임 패스만 받는다
+ * @details 결함이면 그래프가 그 패스를 버리거나(`Renderer.GraphDuplicateAccess`) 한 자원을 어느 상태로 둘지 정하지 못한다 — 로드에서 먼저 멈춘다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, FramePassRejectsTwoAccessesOfOneName )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.FramePassDuplicateAccess" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.FramePassIndirectArgsNotBuffer" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.FramePassAccessNotResource" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassFrameAccessList" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    using Util = FrameGraphTestUtil;
+    RenderPipelineAsset asset;
+    // 입력과 출력에 같은 이름 — 읽고 쓰는 버퍼는 출력(UAV) 하나다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load(
+        asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listInput><item>HZB</item></_listInput><_listOutput><item>HZB</item></_listOutput></RenderGraphPassDesc>" ) ) );
+    // 출력과 복사 원본에 같은 이름.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listOutput><item>CullResults</item></_listOutput>"
+                                                                                           "<_listCopySource><item>CullResults</item></_listCopySource></RenderGraphPassDesc>" ) ) );
+    // 간접 인자는 버퍼다.
+    const string textureResource = string( Util::kResources ) + "<RenderGraphResourceDesc _name=\"DepthHistory\" _kind=\"Persistent\" _viewable=\"Texture\"/>";
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load(
+        asset, Util::makeXML( textureResource, "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listIndirectArgs><item>DepthHistory</item></_listIndirectArgs></RenderGraphPassDesc>" ) ) );
+    // 규칙 밖 목록도 선언한 자원이다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load(
+        asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listCopyDest><item>Nowhere</item></_listCopyDest></RenderGraphPassDesc>" ) ) );
+    // 뷰 패스는 첨부만 읽고 쓴다.
+    const string viewList = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState + "><_listCopySource><item>SceneColor</item></_listCopySource";
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( viewList ) ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 엔진 파이프라인은 모두 프레임 패스 한 벌(framecomputerenderpass.xml)을 합쳐 컬링 · 그리드 · 스킨을 선언한다 */
 SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesDeclareFramePasses )
 {

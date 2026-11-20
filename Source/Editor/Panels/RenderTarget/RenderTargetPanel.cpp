@@ -25,7 +25,10 @@ namespace sw::editor
     namespace
     {
         /// @brief 목록 열의 너비입니다. 이름이 길어도(GBufferAlbedo) 잘리지 않을 만큼 잡습니다.
-        constexpr float32 kListColumns = 29.0f; ///< 목록 폭(글자 칸 수)
+        constexpr float32 kListColumns      = 29.0f; ///< 목록 폭(글자 칸 수)
+        constexpr float32 kMipColumns       = 16.0f; ///< 밉 슬라이더 폭(글자 칸 수)
+        constexpr float32 kExposureColumns  = 18.0f; ///< 노출 슬라이더 폭(글자 칸 수)
+        constexpr float32 kStopComboColumns = 30.0f; ///< 멈춤 지점 콤보 폭(글자 칸 수) — 패스 이름이 들어간다
 
         /** @brief 고른 타깃을 이름으로 찾습니다. 없으면 nullptr 입니다. */
         const RenderTargetInfo* findByName( const vector<RenderTargetInfo>& listTarget, const string& name )
@@ -128,6 +131,19 @@ namespace sw::editor
 
     void RenderTargetPanel::drawViewControls( const RenderTargetInfo& selected )
     {
+        // 밉이 여럿인 타깃만 밉을 고른다(읽기는 그 밉을 CPU 로 — 언리얼 `vis <RT> <mip>`).
+        if ( selected._mipCount > 1 )
+        {
+            EditorWidgets::drawInlineLabel( SW_LOCKEY( "EditorRenderTarget", "MipLabel" ) );
+            EditorChrome::setNextItemWidthColumns( kMipColumns );
+            int32 mip = static_cast<int32>( _viewState._mip );
+            if ( EditorWidgets::sliderInt( SW_WIDGET_ID( "##Mip" ), &mip, 0, static_cast<int32>( selected._mipCount ) - 1 ) )
+                _viewModel.setMip( static_cast<uint32>( mip ) );
+            EditorSelfTestMarks::record( "renderTargets.mip" );
+            ImGui::SameLine();
+            ImGui::TextDisabled( "%ux%u", RenderTargetViewSettings::getMipExtent( selected._width, _viewState._mip ),
+                                 RenderTargetViewSettings::getMipExtent( selected._height, _viewState._mip ) );
+        }
         if ( selected._bDepth != SW_FALSE )
         {
             // 깊이는 한 채널이다. 원근 깊이는 먼 쪽에 몰려 있어 그대로 보면 거의 흰색이라, 거리로 되돌리고 화면의 범위로 늘린다.
@@ -171,6 +187,43 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "ChannelTip" ) );
             EditorSelfTestMarks::recordFormat( "renderTargets.channel.%#", RenderTargetViewSettings::getChannelLabel( channel ) );
         }
+        // 노출(EV): HDR 타깃(장면 색 · HDR 장면 출력 RT)의 1 넘는 값을 내려 보고 어두운 값을 올려 본다. 0 이 아니면 CPU 스냅숏으로 보인다.
+        ImGui::SameLine();
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EditorRenderTarget", "ExposureLabel" ) );
+        EditorChrome::setNextItemWidthColumns( kExposureColumns );
+        float32 exposure = _viewState._viewSettings._exposure;
+        if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Exposure" ), &exposure, -RenderTargetViewSettings::kMaxExposure, RenderTargetViewSettings::kMaxExposure, "%+.1f EV" ) )
+            _viewModel.setExposure( exposure );
+        EditorSelfTestMarks::record( "renderTargets.exposure" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "ExposureTip" ) );
+    }
+
+    void RenderTargetPanel::drawFrameTimeControls( const RenderTargetInfo& selected )
+    {
+        // 패스 경계 고르기(프레임 디버거와 같은 우편함): 이 타깃을 쓰는 패스 가운데 하나의 끝까지 그린 그림으로 본다. 렌더 디버거 창에서 드로우 하나까지 고른 지점도 여기 보인다.
+        const FrameDebuggerSettings& stop      = _viewState._frameDebugger;
+        const bool                   bStopped  = stop._bEnabled != SW_FALSE && stop._stopPass.empty() == false;
+        string                       stopLabel = SW_LOCKEY( "EditorRenderTarget", "WholeFrame" );
+        if ( bStopped )
+            stopLabel = stop._stopDraw == MathUtil::kMaxUInt32 ? stop._stopPass : SW_LOCKEYFORMAT( "EditorRenderTarget", "StopDraw", TextArgumentList().addText( "pass", stop._stopPass.c_str() ).addInteger( "draw", static_cast<int64>( stop._stopDraw ) ) );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EditorRenderTarget", "FrameUpTo" ) );
+        EditorChrome::setNextItemWidthColumns( kStopComboColumns );
+        if ( EditorWidgets::beginCombo( "##FrameUpTo", stopLabel.c_str() ) )
+        {
+            if ( ImGui::Selectable( SW_LOCKEY( "EditorRenderTarget", "WholeFrame" ), bStopped == false ) )
+                _viewModel.setStopAfterPass( string{} );
+            for ( const string& producer : selected._listProducer )
+            {
+                // 깊이로 붙인 패스는 이름 끝에 " (depth)" 가 있다 — 멈춤은 패스 이름으로 듣는다.
+                const size_t suffix   = producer.find( " (" );
+                const string passName = suffix == string::npos ? producer : producer.substr( 0, suffix );
+                if ( ImGui::Selectable( producer.c_str(), bStopped && stop._stopPass == passName ) )
+                    _viewModel.setStopAfterPass( passName );
+            }
+            ImGui::EndCombo();
+        }
+        EditorSelfTestMarks::record( "renderTargets.frameUpTo" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "FrameUpToTip" ) );
     }
 
     void RenderTargetPanel::probeHoveredPixel( const float2& imageMin, const float2& imageSize )
@@ -249,6 +302,8 @@ namespace sw::editor
                                                         TextArgumentList().addInteger( "firstPass", static_cast<int64>( *pSelected->_firstPass ) ).addInteger( "lastPass", static_cast<int64>( *pSelected->_lastPass ) ) )
                                            .c_str() );
 
+        drawFrameTimeControls( *pSelected );
+
         const bool bDepth     = pSelected->_bDepth != SW_FALSE;
         const bool bDecodable = RenderTargetReadback::isDecodableFormat( pSelected->_format, bDepth );
         if ( bDecodable )
@@ -269,8 +324,8 @@ namespace sw::editor
             }
         }
 
-        // 색 그대로(RGBA)는 GPU 텍스처를 그대로 보인다(매 프레임 최신). 깊이 · 채널 하나는 CPU 스냅샷으로 만든 이미지다.
-        const bool bLive      = ( bDepth == false ) && ( _viewState._viewSettings._channel == RenderTargetChannel::RGBA );
+        // 색 그대로(RGBA · 노출 0 · 밉 0)는 GPU 텍스처를 그대로 보인다(매 프레임 최신). 깊이 · 채널 하나 · 노출 · 다른 밉은 CPU 스냅샷으로 만든 이미지다.
+        const bool bLive      = _viewState._viewSettings.needsSnapshotImage( bDepth ) == false && _viewState._mip == 0;
         void*      pTextureID = bLive ? _viewState._pLiveTextureID : _viewState._pSnapshotTextureID;
         if ( pTextureID == nullptr )
         {

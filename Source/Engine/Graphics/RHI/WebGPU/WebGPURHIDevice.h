@@ -108,8 +108,13 @@ namespace sw
     {
         uint64 _handle{ 0 };          ///< 버퍼 또는 텍스처 핸들(0 이면 빈 칸)
         uint8  _bTexture{ SW_FALSE }; ///< 참이면 텍스처, 거짓이면 버퍼
+        uint32 _sliceOffset{ 0 };     ///< 상수 버퍼 페이지 구간의 바인딩 오프셋(감사 R-4). 크기 0 이면 버퍼 전체
+        uint32 _sliceSize{ 0 };
 
-        bool operator==( const WebGPUBindlessEntry& other ) const { return _handle == other._handle && _bTexture == other._bTexture; }
+        bool operator==( const WebGPUBindlessEntry& other ) const
+        {
+            return _handle == other._handle && _bTexture == other._bTexture && _sliceOffset == other._sliceOffset && _sliceSize == other._sliceSize;
+        }
         /** @brief 자원을 부술 때 이 칸을 찾는 주인입니다(`RHIBindlessRegistry::releaseBuffer` · `releaseTexture`). */
         RHIBindlessOwner getBindlessOwner() const { return _bTexture != SW_FALSE ? RHIBindlessOwner{ 0, _handle } : RHIBindlessOwner{ _handle, 0 }; }
     };

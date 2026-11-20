@@ -4,6 +4,7 @@
  *        회복 물약 충전 수(쉬면 충전되고 개수와 회복량을 업그레이드할 수 있음), 적 처치(통화와 전리품), 보스 처치 플래그를 관리합니다.
  * @details 할로우 나이트의 그림자, 블라스퍼머스의 죄책감 조각, 다크 소울의 혈흔이 같은 규칙이다. 시간 개념이 없고 호출한 순서로만 바뀐다(결정적이다).
  *          전리품은 기반 `LootCatalog` 를 시드가 있는 `GameRandom` 으로 굴린다.
+ *          쉬는 지점은 공통 `CheckpointState`(다시 쓸 수 있는 체크포인트 — 화톳불)에 켠다. 시체 · 적 리셋 · 물약은 소울류 규칙이라 이 키트에 남는다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -18,6 +19,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/Respawn/CheckpointState.h"
 
 namespace sw
 {
@@ -145,10 +147,12 @@ namespace sw
         /** @brief 쌓인 알림을 꺼내 갑니다. */
         void pollEvents( vector<MetroidvaniaDeathRestEvent>& outListEvent );
 
-        int32                                 getFlaskCharges() const { return _flaskCharges; }
-        int32                                 getFlaskMaxCharges() const { return _flaskMaxCharges; }
-        const MetroidvaniaCorpse&             getCorpse() const { return _corpse; }
-        const hashed_string&                  getRespawnSite() const { return _respawnSite; }
+        int32                     getFlaskCharges() const { return _flaskCharges; }
+        int32                     getFlaskMaxCharges() const { return _flaskMaxCharges; }
+        const MetroidvaniaCorpse& getCorpse() const { return _corpse; }
+        /** @brief 되살아날 지점(마지막으로 쉰 곳)입니다. 쉰 적이 없으면 빈 이름입니다. */
+        hashed_string                         getRespawnSite() const;
+        const CheckpointState&                getCheckpoints() const { return _checkpoints; }
         int32                                 getLostCurrency() const { return _lostCurrency; }
         const vector<MetroidvaniaKillRecord>& getKills() const { return _listKill; }
 
@@ -172,8 +176,8 @@ namespace sw
         PROPERTY( RuntimeState )
         MetroidvaniaCorpse _corpse;
         PROPERTY( RuntimeState )
-        hashed_string _respawnSite;
-        Wallet*       _pWallet; ///< 빌려 온 지갑
+        CheckpointState _checkpoints; ///< 쉰 지점들(다시 쓸 수 있음)과 지금 되살아날 지점
+        Wallet*         _pWallet;     ///< 빌려 온 지갑
         PROPERTY( RuntimeState, Min = 0 )
         int32 _lostCurrency; ///< 영영 잃은 통화의 합(통계)
         PROPERTY( RuntimeState, Min = 0 )

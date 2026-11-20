@@ -333,6 +333,11 @@ namespace sw
             // 씬이 세울 때 읽는 값(스트레스 씬 · 첫 씬)은 아래에서 씬을 새로 열 때 읽힌다. 실행기의 `<Launch>` 확인(`prepare`)이 걸렸는지 본다.
             GlobalVariableManager& globalVariables = engine::getSubsystem<GlobalVariableManager>();
             string                 startScene;
+            // 이 단계의 `<Launch>` 는 이 단계의 명령줄이다 — 아래 재시작의 사용자 설정 적용(`GameInstance` → `reapplyAll`)이 설정에 묶인 변수를 기본값으로 덮지 않게 한다.
+            vector<string> listStageGlobal;
+            for ( const AutomationAttribute& variable : _pRunner->getScenario().getTestOptions()._listLaunchVariable )
+                listStageGlobal.push_back( variable._name );
+            engine::getSubsystem<CommandLineManager>().setStageGlobalVariables( std::move( listStageGlobal ) );
             for ( const AutomationAttribute& variable : _pRunner->getScenario().getTestOptions()._listLaunchVariable )
             {
                 GlobalVariableInfo* const pVariable = globalVariables.findVariable( variable._name );

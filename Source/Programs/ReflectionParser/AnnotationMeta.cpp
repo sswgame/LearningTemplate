@@ -41,7 +41,7 @@ namespace sw
         const uint64 hash = hashScopeAndKey( scope, alias );
 
         // flag 한 줄이 두 형태를 함께 맡는다. 단독 토큰 `X` 와 `X=true` 다. 두 형태를 따로 적으면 어긋나기 쉽고,
-        // 그러면 `PROPERTY( Polymorphic = true )` 가 _mapKey 에 없어 경고 없이 버려진다.
+        // 그러면 `PROPERTY( AssetPath = true )` 가 _mapKey 에 없어 경고 없이 버려진다.
         if ( binding._kind == AnnotationBinding::Kind::Flag )
         {
             _mapKey.insert_or_assign( hash, AnnotationBinding{ binding._field, AnnotationBinding::Kind::Bool } );

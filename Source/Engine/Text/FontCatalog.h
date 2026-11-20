@@ -101,6 +101,12 @@ namespace sw
         vector<FontFamilyDef> _listFamily;
         PROPERTY( Tooltip = "Families looked up in the operating system font folders" )
         vector<SystemFontFamilyDef> _listSystemFamily;
+        /**
+         * 모든 문화권의 대체 연쇄 끝(문화권 표의 `fonts` 뒤, 기본 패밀리 앞)에 붙는 마지막 대체 패밀리입니다 — UI 가 영어여도 한글 IME · 다른 문자 이름을 상자 없이 그린다
+         * (언리얼 컴포지트 폰트의 문자별 하위 폰트 · Godot 시스템 대체 · OS 의 last resort 자리). 없는 패밀리는 건너뛴다.
+         */
+        PROPERTY( Tooltip = "Families appended to every culture's fallback chain (after the culture's own fonts) so text in another script still draws" )
+        vector<string> _listGlobalFallbackFamily;
         PROPERTY( Tooltip = "Distance field the glyph atlas holds: Sdf (single channel, cheap) or MSDF (multi channel RGBA, sharp corners on large text; costs more per new glyph and 4x atlas memory)" )
         GlyphFieldKind _glyphField{ GlyphFieldKind::Sdf };
         PROPERTY( Required, Min = 64, Max = 8192, Tooltip = "Glyph atlas page side in texels (GlyphAtlasLayout). Larger pages hold more glyphs before eviction; memory is side squared per page (x4 for MSDF)" )

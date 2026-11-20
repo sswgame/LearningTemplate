@@ -86,6 +86,8 @@ namespace sw
          * @details 후보는 씬을 돌지 않고 씬 공간 색인(`ZoneOccupantIndex` → `SceneSpatialGrid`)에서 자기 수평 사각형에 든 것만 받는다 — 움직인 개체만 색인에서 옮긴다.
          */
         void updateZone( GameObjectManager& manager, float32 deltaTime );
+        /** @brief 든 대상을 모두 내보냅니다(이탈 할 일이 돈다). 꺼진 볼륨에 `ZoneSystem` 이 부른다 — 다시 켜지면 다음 `updateZone` 에서 진입한다. 대상이 없으면 할 일이 없다. */
+        void releaseOccupants( GameObjectManager& manager );
         /** @brief 월드 점 @p position(발)이 안이면 위치 값을 채우고 true 입니다. @p bodyHeight 는 잠긴 비율의 분모입니다. */
         [[nodiscard]] bool sampleAt( const float3& position, float32 bodyHeight, ZoneSample& outSample ) const;
 

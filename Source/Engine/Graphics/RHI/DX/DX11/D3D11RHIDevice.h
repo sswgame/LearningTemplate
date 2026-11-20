@@ -56,6 +56,31 @@ namespace sw
      *       없는 상태 머신이라 실제 상태가 하나뿐이다. 기준은 "리스트마다 하나" 가 아니라
      *       **"기록 스트림마다 하나"** 다.
      */
+    /**
+     * @struct D3D11ConstantBufferBindings
+     * @brief 스테이지 · 슬롯마다 지금 건 상수 버퍼와 첫 상수입니다(감사 R-4 — 페이지 구간 바인딩의 그림자).
+     * @details 같은 (버퍼, 첫 상수)면 다시 걸지 않고, 같은 버퍼를 오프셋만 바꿔 걸 때만 빈 칸을 먼저 건다(`D3D11RHICommandContext::setConstantBuffer`).
+     *          버퍼가 건 동안은 컨텍스트가 참조를 쥐어 주소가 다른 버퍼에 다시 쓰이지 않으므로 주소 비교로 충분하다.
+     *          컨텍스트 상태가 지워지는 자리(`ClearState` · `ExecuteCommandList( FALSE )` · `FinishCommandList( FALSE )`)에서 `invalidate` 한다 — 빈 칸(nullptr)은 "모름" 이라 늘 건다.
+     */
+    struct D3D11ConstantBufferBindings
+    {
+        static constexpr uint32 kStageCount  = 5;   ///< VS · PS · CS · HS · DS
+        static constexpr UINT   kWholeBuffer = ~0u; ///< 첫 상수 칸의 "버퍼 전체(`*SetConstantBuffers`)" 값
+
+        ID3D11Buffer* _arrBuffer[kStageCount][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
+        UINT          _arrFirstConstant[kStageCount][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
+        uint32        _nativeContextSerialSeen{ 0 }; ///< 즉시 컨텍스트 그림자가 마지막으로 본 `D3D11RHIDevice::_nativeContextSerial`(바깥 코드가 컨텍스트를 만지면 그림자를 버린다)
+
+        /** @brief 모든 칸을 "모름" 으로 둡니다. */
+        void invalidate()
+        {
+            const uint32 seen        = _nativeContextSerialSeen;
+            *this                    = D3D11ConstantBufferBindings{};
+            _nativeContextSerialSeen = seen;
+        }
+    };
+
     struct D3D11RecordingState
     {
         /**
@@ -86,6 +111,8 @@ namespace sw
          *          `ConditionalClearShaderResource` 에 해당한다).
          */
         RHITextureHandle _arrPixelSRVTexture[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+        /// @brief 스테이지 · 슬롯마다 건 상수 버퍼의 그림자입니다(`D3D11ConstantBufferBindings`).
+        D3D11ConstantBufferBindings _constantBuffers;
     };
 } // namespace sw
 
@@ -123,7 +150,9 @@ namespace sw
         void detachCommandRecordingInternal() override;
 
         /** @brief 스왑체인 백버퍼를 새 크기로 다시 만듭니다. */
-        void resizeInternal( uint32 width, uint32 height ) override;
+        void               resizeInternal( uint32 width, uint32 height ) override;
+        [[nodiscard]] bool setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata ) override;
+        [[nodiscard]] bool setDisplayMetadataInternal( const RHIDisplayMetadata& metadata ) override { return _swapChain.setDisplayMetadata( metadata ); }
 
         [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
         void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
@@ -192,7 +221,8 @@ namespace sw
          */
         void bindStaticSamplers( ID3D11DeviceContext* pContext ) const;
         /** @brief 스왑체인이 만든 백버퍼 포맷입니다. 백버퍼 PSO 의 렌더 타깃 포맷이 여기서 나옵니다. */
-        RHIFormat getBackBufferFormat() const override { return _backBufferFormat; }
+        RHIFormat     getBackBufferFormat() const override { return _swapChain.isValid() ? _swapChain.getFormat() : _backBufferFormat; }
+        RHIColorSpace getBackBufferColorSpace() const override { return _swapChain.getColorSpace(); }
 
         /** @brief VS 가 GPUScene 인스턴스 버퍼를 구조 버퍼 SRV(g_SwInstances, t4)로 읽을 수 있어 true 입니다. */
         bool supportsInstancedSceneDraw() const override { return true; }
@@ -211,6 +241,8 @@ namespace sw
         {
             RHICapabilities caps            = RHIAvailability::query( RHIBackend::DirectX11 );
             caps._bParallelCommandRecording = _bDriverCommandLists != SW_FALSE ? 1u : 0u;
+            caps._displayOutputSupport      = _swapChain.getDisplayOutputSupport()._mask;
+            caps._displayMaxLuminanceNits   = _swapChain.getDisplayOutputSupport()._maxLuminanceNits;
             return caps;
         }
 
@@ -486,6 +518,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 인덱스의 버퍼 핸들입니다. 범위 밖이면 0 입니다. */
         RHIBufferHandle bindlessBufferAt( RHIDescriptorIndex index ) const;
+        /** @brief 인덱스의 버퍼와 구간입니다(구간 등록이 아니면 오프셋 · 크기 0 — 버퍼 전체). 범위 밖이면 빈 구간입니다. */
+        RHIBufferSlice bindlessBufferSliceAt( RHIDescriptorIndex index ) const;
         /** @brief 인덱스의 텍스처 핸들입니다. 범위 밖이면 0 입니다. */
         RHITextureHandle bindlessTextureAt( RHIDescriptorIndex index ) const;
         /** @brief 인덱스의 UAV 입니다(참조를 하나 올려 반환합니다). 범위 밖이면 nullptr 입니다. */
@@ -549,6 +583,8 @@ namespace sw
         D3D11RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );
         /** @brief 백버퍼를 가리키는 참조(RTV · 컨텍스트 바인딩 · 기록이 끝난 커맨드 리스트)를 모두 놓고 크기를 바꿉니다. */
         void resizeSwapChainBuffers( D3D11RHISwapChain& swapChain, uint32 width, uint32 height );
+        /** @brief 백버퍼를 가리키는 참조(RTV · 컨텍스트 바인딩 · 기록이 끝난 커맨드 리스트)를 모두 놓습니다 — `ResizeBuffers` 앞(크기 · 색 공간 바꿈 공통). */
+        void releaseSwapChainReferences( D3D11RHISwapChain& swapChain );
 
     private:
         Microsoft::WRL::ComPtr<ID3D11Device>  _device;
@@ -557,7 +593,7 @@ namespace sw
         /// @details 기록 중의 상수 버퍼 갱신은 `IRHICommandList::updateConstantBuffer` 로 리스트의 Deferred Context 에 간다. 드로우마다 불리는 그 경로가
         ///          즉시 컨텍스트로 오면 병렬 기록의 워커들이 한 버퍼를 덮어써서 패스 CB 가 옆 패스 값으로 바뀐다.
         D3D11ImmediateContext _immediateContext;
-        RHIFormat             _backBufferFormat; ///< 스왑체인 백버퍼 포맷(DXGI 는 요청값 그대로)
+        RHIFormat             _backBufferFormat; ///< 요청한 SDR 백버퍼 포맷(DXGI 는 요청값 그대로) — 스왑체인이 없는 실행이 보고한다. 있으면 스왑체인의 색 공간이 정한다
         /// @brief 메인 창의 백버퍼입니다. 백버퍼 RTV, 크기, Present 가 모두 여기 모여 있습니다.
         D3D11RHISwapChain _swapChain;
         /// @brief 다른 창(`createSwapChain`)과 이 프레임에 그린 창입니다(`endFrame` 이 표시한 뒤 비운다).
@@ -589,7 +625,15 @@ namespace sw
         atomic<uint8> _bTimestampReady;
         uint8         _bTimestampFrameOpen;
         /// @brief 드라이버가 커맨드 리스트를 네이티브로 지원하면 SW_TRUE 입니다. 병렬 기록 능력을 판단하는 근거입니다.
-        uint8             _bDriverCommandLists;
+        uint8 _bDriverCommandLists;
+        /// @brief 바깥 코드(`withNativeContext` — 에디터 등)가 즉시 컨텍스트를 받은 횟수입니다. 즉시 컨텍스트의 상수 버퍼 그림자가 이 값이 바뀌면 버린다(어느 스레드든 부른다).
+        mutable atomic<uint32> _nativeContextSerial{ 0 };
+        /// @brief 즉시 컨텍스트의 D3D11.1 인터페이스입니다(구간 부분 갱신 `UpdateSubresource1`). 초기화가 한 번 받고, 쓰는 쪽은 `_immediateContext.lock()` 을 쥔다.
+        Microsoft::WRL::ComPtr<ID3D11DeviceContext1> _immediateContext1;
+        /// @brief 셰이더 상수 하나(float4)의 바이트입니다. `*SetConstantBuffers1` 의 첫 상수 · 상수 수와 부분 갱신 상자의 단위다.
+        static constexpr uint32 kShaderConstantBytes = 4u * sizeof( float );
+        /// @brief D3D11.1 상수 버퍼 구간(`*SetConstantBuffers1` 오프셋 · `UpdateSubresource1` 부분 갱신)을 드라이버가 받으면 SW_TRUE 입니다. 아니면 페이지를 만들지 않는다(감사 R-4).
+        uint8             _bConstantBufferSlices;
         RHITimestampFrame _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
         /**
          * @brief GPU 시계 읽기(`readGPUClockNanos`)용 타임스탬프 쿼리입니다. 처음 읽을 때 만듭니다.
@@ -614,7 +658,17 @@ namespace sw
             RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _sourceBuffer, _sourceTexture }; }
         };
         /// @brief 세 번호 공간(`RHIBindlessRegistry`, `_bindlessMutex` 아래). DX11 은 번호를 기록 때 뷰로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`).
-        RHIBindlessRegistry<RHIBufferHandle, RHIBindlessBufferOwnerOf>   _bufferRegistry;
+        /// @brief 버퍼 번호 하나입니다 — 버퍼와, 상수 버퍼 페이지 구간이면 그 오프셋 · 크기(크기 0 이면 버퍼 전체).
+        struct BufferEntry
+        {
+            RHIBufferHandle _buffer{ 0 };
+            uint32          _sliceOffset{ 0 };
+            uint32          _sliceSize{ 0 };
+
+            bool             operator==( const BufferEntry& other ) const { return _buffer == other._buffer && _sliceOffset == other._sliceOffset && _sliceSize == other._sliceSize; }
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _buffer, 0 }; }
+        };
+        RHIBindlessRegistry<BufferEntry>                                 _bufferRegistry;
         RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> _textureRegistry;
         RHIBindlessRegistry<UAVEntry>                                    _uavRegistry;
 

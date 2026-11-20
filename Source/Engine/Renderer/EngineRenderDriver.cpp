@@ -8,6 +8,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/DeterministicRun.h"
@@ -46,6 +47,25 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct EngineRenderDriverInternal
+        {
+            /** @brief 감시 값 `Display.SDRFallback` 입니다 — 마지막 화면 출력 요청이 HDR 인데 백엔드 · 모니터가 받지 않아 SDR 로 떨어졌으면 1 입니다. */
+            [[nodiscard]] static bool readDisplaySDRFallback( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EngineRenderDriverSubsystem* const pSubsystem = engine::areEngineServicesBound() ? engine::findSubsystem<EngineRenderDriverSubsystem>() : nullptr;
+                if ( pSubsystem == nullptr )
+                    return false;
+                outValue = pSubsystem->getRenderDriver().isDisplayOutputFallenBackToSDR() ? 1.0 : 0.0;
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_WATCH( displaySDRFallback, "Display.SDRFallback", "1 when the requested HDR display output (-gv_displayOutput, display.hdr) fell back to SDR because the backend or monitor does not take it",
+                         &EngineRenderDriverInternal::readDisplaySDRFallback );
+
     EngineRenderDriver::EngineRenderDriver( SubsystemScope& startupScope, RHISubsystem& rhiSubsystem, FrameRendererSubsystem& frameRendererSubsystem, RenderThreadSubsystem& renderThreadSubsystem )
         : _startupScope{ startupScope }
         , _rhiSubsystem{ rhiSubsystem }
@@ -64,6 +84,9 @@ namespace sw
         , _deviceLostPolicyOverride{ RHIDeviceLostPolicy::None }
         , _deviceRecreateCount{ 0 }
         , _bDeviceLostHandled{ SW_FALSE }
+        , _bDisplayOutputApplied{ SW_FALSE }
+        , _displayRequest{}
+        , _appliedDisplayOutput{}
     {
     }
 
@@ -238,6 +261,29 @@ namespace sw
             SW_LOG_ERROR_ID( "Render.SurfaceRestoreFailed", "The native surface came back but the RHI could not rebuild its swap chain - the screen stays black" );
     }
 
+    DisplayOutputDesc EngineRenderDriver::applyDisplayOutput( const DisplayOutputDesc& requested )
+    {
+        if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
+            return requested;
+        if ( _bDisplayOutputApplied != SW_FALSE && requested.isSameOutput( _displayRequest ) )
+            return _appliedDisplayOutput;
+        IRHIDevice& device = _pRHI->getDevice();
+        // SDR 요청에 SDR 장치면 스왑체인을 건드리지 않는다(기다릴 것도 능력을 물을 것도 없다).
+        const bool bTouchesSwapChain = requested._kind != DisplayOutputKind::SDR || device.getBackBufferColorSpace() != RHIColorSpace::SRGBNonLinear;
+        // 렌더 스레드를 먼저 세운다 — 능력(모니터 · 표면 포맷)은 렌더 스레드의 스왑체인 재생성이 고쳐 쓰므로 그 뒤에 읽는다(창 크기 바뀜과 같은 길).
+        if ( bTouchesSwapChain && _pRenderThread != nullptr )
+            _pRenderThread->waitIdle( RHIWaitIdleReason::DisplayOutput );
+        const uint8       supportedMask = bTouchesSwapChain ? device.getCapabilities()._displayOutputSupport : makeColorSpaceBit( RHIColorSpace::SRGBNonLinear );
+        DisplayOutputDesc resolved      = DisplayOutputDesc::resolve( requested, supportedMask );
+        // 같은 색 공간이면 장치가 HDR10 마스터링 값만 다시 알린다(스왑체인을 다시 만들지 않는다). 실패면 장치가 실제로 내는 색 공간을 따른다 — 렌더러 · 감시 값이 거짓 HDR 을 보지 않게.
+        if ( bTouchesSwapChain && device.setBackBufferColorSpace( resolved.getColorSpace(), resolved.makeDisplayMetadata() ) == false )
+            resolved._kind = DisplayOutputDesc::getKind( device.getBackBufferColorSpace() );
+        _displayRequest        = requested;
+        _appliedDisplayOutput  = resolved;
+        _bDisplayOutputApplied = SW_TRUE;
+        return resolved;
+    }
+
     void EngineRenderDriver::onMainWindowResize( const uint32 width, const uint32 height )
     {
         if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
@@ -300,6 +346,8 @@ namespace sw
         {
             SW_MEMORY_SCOPE( RenderCPU );
             RenderFramePacket& packet = _pPacketBuilder->beginPacket();
+            // 화면 출력은 패킷이 뜬 요청을 능력에 맞춰 적용한 값으로 싣는다 — 렌더러는 장치의 색 공간과 이 값(종이 흰색 · 최대 휘도)만 본다.
+            packet._settings._displayOutput = applyDisplayOutput( packet._settings._displayOutput );
             // 그리지 않는 프레임도 패킷은 똑같이 짓는다 — 짓기가 게임 상태를 건드리는 몫(LOD 뷰 · 그려진 화면비 · 컷 소비)과 GPU 장면의 고친 구간이 그리는 실행과 같아야 한다.
             packet._drawMode = drawMode;
             if ( const SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>() )
@@ -366,12 +414,14 @@ namespace sw
                     engine::getSubsystem<QuitRequest>().request( ProcessExitCode::DeviceLost ); // 잃은 장치를 되살리지 못했다 — 장치 없이 돌지 않는다
                 return false;
             }
-            _bDeviceLostHandled = SW_FALSE;         // 되돌린 장치는 새 장치다
+            _bDeviceLostHandled    = SW_FALSE;      // 되돌린 장치는 새 장치다
+            _bDisplayOutputApplied = SW_FALSE;      // 되돌린 장치도 SDR 스왑체인으로 선다
             (void)rebindSceneAfterDeviceRecreate(); // 되돌린 장치에 장면을 다시 묶는다 — 이 경로는 이미 실패로 답한다
             return false;
         }
 
         _bDeviceLostHandled               = SW_FALSE; // 새 장치다 — 다시 잃으면 정책을 다시 묻는다
+        _bDisplayOutputApplied            = SW_FALSE; // 새 장치는 SDR 스왑체인으로 선다 — 다음 프레임이 화면 출력을 다시 적용한다
         const uint64 recreateMicroseconds = swapWatch.getElapsedMicroseconds();
         string       rebindTiming;
         if ( rebindSceneAfterDeviceRecreate( &rebindTiming ) == false )

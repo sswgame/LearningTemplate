@@ -30,3 +30,62 @@ SW_TEST_CASE( DisplayOutputTest, ResolveFallsBackToSDROutsideCapabilities )
     DisplayOutputDesc sdr;
     SW_EXPECT_TRUE( DisplayOutputDesc::resolve( sdr, 0 )._kind == DisplayOutputKind::SDR ); // SDR 은 능력 비트 없이도 받는다
 }
+
+/**
+ * @brief [DisplayOutputTest] 출력 종류마다 스왑체인 색 공간 · 백버퍼 포맷 짝이 하나로 정해진다(SDR 은 요청 SDR 포맷 그대로). 결함이면 HDR10 신호를 8 비트 백버퍼에 쓰거나 scRGB 를 PQ 색 공간으로 알려 그림이 깨진다
+ */
+SW_TEST_CASE( DisplayOutputTest, ColorSpaceDecidesSwapChainFormat )
+{
+    DisplayOutputDesc desc;
+    desc._kind = DisplayOutputKind::SDR;
+    SW_EXPECT_TRUE( desc.getColorSpace() == RHIColorSpace::SRGBNonLinear );
+    SW_EXPECT_TRUE( getSwapChainFormat( desc.getColorSpace(), RHIFormat::B8G8R8A8_UNORM ) == RHIFormat::B8G8R8A8_UNORM );
+
+    desc._kind = DisplayOutputKind::HDR10;
+    SW_EXPECT_TRUE( desc.getColorSpace() == RHIColorSpace::HDR10ST2084 );
+    SW_EXPECT_TRUE( getSwapChainFormat( desc.getColorSpace(), RHIFormat::R8G8B8A8_UNORM ) == RHIFormat::R10G10B10A2_UNORM );
+
+    desc._kind = DisplayOutputKind::ScRGB;
+    SW_EXPECT_TRUE( desc.getColorSpace() == RHIColorSpace::ExtendedSRGBLinear );
+    SW_EXPECT_TRUE( getSwapChainFormat( desc.getColorSpace(), RHIFormat::R8G8B8A8_UNORM ) == RHIFormat::R16G16B16A16_FLOAT );
+
+    // 스왑체인 서술도 같은 함수로 포맷을 낸다 — 색 공간과 포맷을 따로 적을 칸이 없다.
+    RHISwapChainDesc swapChainDesc{};
+    swapChainDesc._colorSpace = RHIColorSpace::HDR10ST2084;
+    SW_EXPECT_TRUE( swapChainDesc.getFormat() == RHIFormat::R10G10B10A2_UNORM );
+}
+
+/**
+ * @brief [DisplayOutputTest] HDR10 마스터링 값은 출력의 최대 휘도와 종이 흰색에서 온다. 결함이면 TV 가 다른 최대 휘도로 톤맵해 밝은 부분이 잘리거나 눌린다
+ */
+SW_TEST_CASE( DisplayOutputTest, HDRMetadataFollowsOutputLuminance )
+{
+    DisplayOutputDesc desc;
+    desc._kind                        = DisplayOutputKind::HDR10;
+    desc._paperWhiteNits              = 240.0f;
+    desc._maxLuminanceNits            = 1400.0f;
+    const RHIDisplayMetadata metadata = desc.makeDisplayMetadata();
+    SW_EXPECT_EQUAL( 1400.0f, metadata._maxLuminanceNits );
+    SW_EXPECT_EQUAL( 240.0f, metadata._maxFrameAverageNits );
+}
+
+/**
+ * @brief [DisplayOutputTest] 종이 흰색은 최대 휘도를 넘지 않고, 장치의 색 공간에서 출력 종류를 거꾸로 정한다. 결함이면 종이 흰색이 최대 휘도보다 밝아 장면이 SDR 보다 어둡게 눌리고,
+ *        스왑체인 바꾸기가 실패했는데 렌더러가 HDR 로 그린다
+ */
+SW_TEST_CASE( DisplayOutputTest, PaperWhiteNeverExceedsPeakAndKindFollowsColorSpace )
+{
+    DisplayOutputDesc requested;
+    requested._kind                  = DisplayOutputKind::HDR10;
+    requested._paperWhiteNits        = 400.0f;
+    requested._maxLuminanceNits      = 300.0f;
+    const DisplayOutputDesc resolved = DisplayOutputDesc::resolve( requested, makeDisplayOutputBit( DisplayOutputKind::HDR10 ) );
+    SW_EXPECT_EQUAL( 300.0f, resolved._paperWhiteNits );
+
+    for ( const DisplayOutputKind kind : { DisplayOutputKind::SDR, DisplayOutputKind::HDR10, DisplayOutputKind::ScRGB } )
+    {
+        DisplayOutputDesc desc;
+        desc._kind = kind;
+        SW_EXPECT_TRUE( DisplayOutputDesc::getKind( desc.getColorSpace() ) == kind );
+    }
+}

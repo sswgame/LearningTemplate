@@ -16,6 +16,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h"
 
 namespace sw
 {
@@ -66,9 +67,17 @@ namespace sw
          */
         [[nodiscard]] static bool upgradeSavedItem( const AppearanceDatabase& database, InventorySlot& inoutItem );
 
+        /**
+         * @brief 가방 · 장비 명령 하나를 검사하고 적용합니다(인벤토리 화면 · 패드 · 서버가 받은 요청 모두 이 길). 장비가 바뀌면 외형을 다시 빌려 줍니다.
+         * @details 버리기가 꺼낸 조각은 @p outListDropped 뒤에 붙는다 — 월드에 놓는 일(`WorldItemComponent::spawn`)은 부르는 쪽이다. 시작 전이면 `InvalidSlot` 입니다.
+         */
+        [[nodiscard]] InventoryCommandResult applyCommand( const InventoryCommand& command, vector<InventorySlot>& outListDropped );
+
         const Equipment& getEquipment() const { return _equipment; }
         const Inventory& getBag() const { return _bag; }
-        bool             isStarted() const { return _bStarted == SW_TRUE; }
+        /** @brief 가방을 거래(가게 사기 · 팔기 — `LocalShopPurchaseProvider`)에 빌려 줍니다. 칸 조작은 `applyCommand` 를 거칩니다. */
+        Inventory& getBagForTrade() { return _bag; }
+        bool       isStarted() const { return _bStarted == SW_TRUE; }
 
         /** @brief `ComponentStateStore` 계약 — 장비 칸(칸 이름 + 인스턴스)과 가방입니다. 읽기는 아이템 카탈로그가 선 뒤(`onBeginPlay`)에만 된다. */
         void serializeState( StateIO& io );
@@ -87,6 +96,8 @@ namespace sw
         vector<uint8> _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`)
         PROPERTY( Category = "Equipment", DisplayName = "Bag Slots", Min = 1, Max = 256, Tooltip = "Item instances the character carries besides what it wears" )
         int32 _bagSlotCount;
-        uint8 _bStarted;
+        PROPERTY( Category = "Equipment", DisplayName = "Bag Max Weight", Min = 0.0, Tooltip = "Most weight the bag carries (0: no limit)" )
+        float32 _bagMaxWeight;
+        uint8   _bStarted;
     };
 } // namespace sw

@@ -54,4 +54,22 @@ namespace sw
         if ( name.empty() == false && PhysicsNameValidationInternal::getSettings().findMaterial( name ) == nullptr )
             context.addError( string( pFieldName ) + " names '" + name.c_str() + "', which is not in the physics materials (physicssettings.xml) - the first material is used" );
     }
+
+    void PhysicsNameValidation::collectProfileNames( vector<hashed_string>& outListName )
+    {
+        outListName.clear();
+        for ( const CollisionProfileDef& profile : PhysicsNameValidationInternal::getSettings()._listProfile )
+        {
+            outListName.push_back( profile._name );
+        }
+    }
+
+    void PhysicsNameValidation::collectChannelNames( vector<hashed_string>& outListName )
+    {
+        outListName.clear();
+        for ( const CollisionChannelDef& channel : PhysicsNameValidationInternal::getSettings()._listChannel )
+        {
+            outListName.push_back( channel._name );
+        }
+    }
 } // namespace sw

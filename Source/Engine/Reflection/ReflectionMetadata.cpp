@@ -63,7 +63,6 @@ namespace sw
         , _bReadOnly{ SW_FALSE }
         , _bXMLAttribute{ SW_FALSE }
         , _bAssetPath{ SW_FALSE }
-        , _bPolymorphic{ SW_FALSE }
         , _bTransient{ SW_FALSE }
         , _bSkipIfEmpty{ SW_FALSE }
         , _bReplicated{ SW_FALSE }

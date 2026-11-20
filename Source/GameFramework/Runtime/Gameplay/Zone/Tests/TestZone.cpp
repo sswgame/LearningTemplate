@@ -150,6 +150,37 @@ SW_TEST_CASE( ZoneTest, EnterAndExitActionsKeepTheirSource )
     SW_EXPECT_FALSE( MovementConstraint::read( fixture.hero() )._bMoveBlocked == SW_TRUE );
 }
 
+/** @brief [ZoneTest] 트리거 계약: 안에서 생긴 대상은 첫 갱신에 진입 한 번(체류는 이어서), 안에서 지운 대상은 이탈 한 번 기록되고 처리기는 부르지 않는다(대상이 없다) */
+SW_TEST_CASE( ZoneTest, SpawnInsideEntersOnceAndDestroyedExitsOnce )
+{
+    ZoneFixture fixture;
+    ZoneProfile profile;
+    profile._listModule.push_back( ZoneFixture::makeModule( "root", "Action", {
+                                                                                  {"on",                                    "Enter"},
+                                                                                  {"do", "ability.applyEffect(effect=GE_Test_Root)"}
+    } ) );
+    ZoneCompiledProfile compiled;
+    SW_REQUIRE_TRUE( compiled.compile( profile, "test", &fixture._catalog ) );
+
+    ZoneTracker tracker;
+    fixture.runInside( tracker, compiled, "volume:Swamp", 1.0f, 0.1f ); // 첫 갱신
+    fixture.runInside( tracker, compiled, "volume:Swamp", 1.0f, 0.1f );
+    vector<ZoneLogEntry> listLog;
+    tracker.collectEventLog( listLog );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listLog.size() ) );
+    SW_EXPECT_TRUE( listLog[0]._event == ZoneLogEvent::Enter );
+    SW_EXPECT_EQUAL( 1u, fixture._pHero->getActiveEffectCount() ); // 진입 할 일은 한 번
+
+    fixture._manager.destroyGameObject( &fixture.hero() ); // 로그아웃 · 죽음
+    fixture.leave( tracker, compiled, "volume:Swamp" );
+    fixture.leave( tracker, compiled, "volume:Swamp" );
+    listLog.clear();
+    tracker.collectEventLog( listLog );
+    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listLog.size() ) );
+    SW_EXPECT_TRUE( listLog[1]._event == ZoneLogEvent::Exit );
+    SW_EXPECT_TRUE( tracker.getOccupants().empty() );
+}
+
 /** @brief [ZoneTest] 조건 전환 — 안쪽으로 넘는 순간(지연 뒤) 한 번, 다시 나오거나 나가는 순간 한 번. 체류 주기는 간격마다 */
 SW_TEST_CASE( ZoneTest, ConditionTransitionsFireOnceWithDelay )
 {

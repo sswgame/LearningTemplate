@@ -309,6 +309,26 @@ namespace sw
         return SequenceItemFieldIssue::None;
     }
 
+    float32 SequenceTrackItem::computeEaseWeight( float32 frame ) const
+    {
+        if ( frame < static_cast<float32>( _start ) || frame > static_cast<float32>( _end ) )
+            return 0.0f;
+        float32 weight = 1.0f;
+        if ( _easeInFrames > 0 )
+        {
+            BlendCurveDef spec{};
+            spec._curve = _easeInCurve;
+            weight *= evaluateBlendWeight( spec, ( frame - static_cast<float32>( _start ) ) / static_cast<float32>( _easeInFrames ) );
+        }
+        if ( _easeOutFrames > 0 )
+        {
+            BlendCurveDef spec{};
+            spec._curve = _easeOutCurve;
+            weight *= evaluateBlendWeight( spec, ( static_cast<float32>( _end ) - frame ) / static_cast<float32>( _easeOutFrames ) );
+        }
+        return weight;
+    }
+
     bool SequenceTrackItem::hasField( SequenceItemField field ) const
     {
         if ( field == SequenceItemField::Binding )

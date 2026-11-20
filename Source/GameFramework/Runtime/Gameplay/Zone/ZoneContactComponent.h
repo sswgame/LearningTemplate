@@ -62,6 +62,8 @@ namespace sw
 
         /** @brief 이번 프레임을 처리합니다(`ZoneSystem` 이 틱 뒤 게임 스레드에서 부른다, 테스트도 부른다). */
         void updateContacts( GameObjectManager& manager, float32 deltaTime );
+        /** @brief 모든 표면 지역의 대상을 내보냅니다(이탈 할 일이 돈다). 꺼진 컴포넌트에 `ZoneSystem` 이 부른다 — 지역은 남겨 다시 켜지면 다음 갱신에서 진입한다. */
+        void releaseOccupants( GameObjectManager& manager );
         /** @brief 지금까지 만든 표면 지역입니다(감시 값 · 진단). */
         const vector<unique_ptr<SurfaceZone>>& getSurfaceZones() const { return _listSurfaceZone; }
 

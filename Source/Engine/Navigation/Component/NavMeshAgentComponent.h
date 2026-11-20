@@ -3,6 +3,7 @@
  * @brief 내비메시 위를 걷는 에이전트 — 목적지 → 경로 → 군중 조향(이웃 회피)으로 오브젝트를 옮기거나, 같은 오브젝트의 캐릭터 컨트롤러에 원하는 속도를 넘깁니다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -120,6 +121,18 @@ namespace sw
         /** @brief 공통 이동 창구입니다. */
         INavMover& getMover() { return _mover; }
 
+        // 스트리밍 월드의 먼 경로(`NavStreamRoute`) — 목적지 쪽 타일이 아직 오르지 않았을 때.
+        /** @brief 군중이 목적지 대신 앞선 타일 가장자리의 중간 목표(`getRouteTarget`)로 가는 중이면 true 입니다. */
+        bool isFollowingCoarseRoute() const { return _bRouteIntermediate == SW_TRUE; }
+        /** @brief 내려간 타일 위를 대략 그래프로 가상 이동하는 중이면 true 입니다(군중 · 충돌 없음). */
+        bool isInVirtualMove() const { return _bVirtualMove == SW_TRUE; }
+        /** @brief 군중에 건 중간 목표입니다. `isFollowingCoarseRoute` 일 때만 뜻이 있습니다. */
+        const float3& getRouteTarget() const { return _routeTarget; }
+        /** @brief 중간 목표 너머의 대략 점(클러스터 중심들 · 마지막은 목적지)입니다. 가상 이동은 이것을 따라간다. */
+        const vector<float3>& getCoarseRoutePoints() const { return _listRoutePoint; }
+        /** @brief 먼 경로의 중간 목표 · 가상 이동을 새로 정한 수(누적, 진단)입니다. */
+        uint32 getRouteReplanCount() const { return _routeReplanCount; }
+
         const hashed_string& getAgentType() const { return _agentType; }
         void                 setAgentType( const hashed_string& agentType ) { _agentType = agentType; }
         float32              getMaxSpeed() const { return _maxSpeed; }
@@ -136,6 +149,7 @@ namespace sw
     private:
         friend class NavAgentCrowdSync;
         friend class NavDebugView;
+        friend class NavStreamRoute;
         friend class SceneNavigation;
 
         PROPERTY( Category = "Agent", DisplayName = "Agent Type", Tooltip = "Navmesh agent kind from the navigation settings (empty = default)" )
@@ -170,19 +184,26 @@ namespace sw
         float3                 _writtenPosition; ///< 마지막으로 오브젝트에 쓴 자리(바깥의 순간이동 판정)
         NavLinkTraversal       _linkTraversal;   ///< 건너는 오프 메시 링크(`_bOnOffMeshLink`)
         hashed_string          _linkType;        ///< 건너는 링크의 종류 이름
+        vector<float3>         _listRoutePoint;  ///< 먼 경로 — 중간 목표 너머의 대략 점(`NavStreamRoute`)
+        float3                 _routeTarget;     ///< 먼 경로 — 군중에 건 중간 목표
         NavCrowdAgentID        _crowdAgentID;
         uint32                 _navIndex;                ///< `SceneNavigation` 의 목록 자리
         Subscription           _navRegistration;         ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
         uint32                 _crowdIndex;              ///< 든 군중(에이전트 종류) 자리
         uint32                 _writtenTransformVersion; ///< 마지막으로 오브젝트에 쓴 뒤의 월드 변경 번호 — 같으면 바깥이 옮기지 않았다(거리 판정을 건너뜀)
+        uint32                 _routeRevision;           ///< 먼 경로를 계획한 때의 내비메시 판 번호(바뀌면 타일이 오르내렸다 — 다시 계획)
+        uint32                 _routeReplanCount;        ///< `getRouteReplanCount`
         NavMoveStatus          _moveStatus;
-        uint8                  _bHasDestination   : 1;
-        uint8                  _bDestinationDirty : 1; ///< 다음 갱신에 군중에 넣을 목적지 · 멈춤
-        uint8                  _bWarpPending      : 1;
-        uint8                  _bOnNavMesh        : 1;
-        uint8                  _bHasWritten       : 1;
-        uint8                  _bParamsDirty      : 1;
-        uint8                  _bOnOffMeshLink    : 1;
-        [[maybe_unused]] uint8 _reserved          : 1;
+        uint8                  _bHasDestination    : 1;
+        uint8                  _bDestinationDirty  : 1; ///< 다음 갱신에 군중에 넣을 목적지 · 멈춤
+        uint8                  _bWarpPending       : 1;
+        uint8                  _bOnNavMesh         : 1;
+        uint8                  _bHasWritten        : 1;
+        uint8                  _bParamsDirty       : 1;
+        uint8                  _bOnOffMeshLink     : 1;
+        uint8                  _bRouteIntermediate : 1; ///< 군중 목표가 목적지가 아니라 중간 목표다(`NavStreamRoute`)
+        uint8                  _bVirtualMove       : 1; ///< 내려간 타일 위를 가상 이동한다(`NavStreamRoute`)
+        uint8                  _bVirtualOverLoaded : 1; ///< 가상 이동이 지난 갱신에 오른 타일 위였다(새로 든 것을 알아본다)
+        [[maybe_unused]] uint8 _reserved           : 6;
     };
 } // namespace sw

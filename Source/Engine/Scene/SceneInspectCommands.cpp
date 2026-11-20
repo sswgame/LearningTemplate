@@ -21,7 +21,7 @@
 
 /**
  * @file SceneInspectCommands.cpp
- * @brief 활성 씬을 들여다보고 고치는 개발 명령입니다(`scene.tree` · `object.dump` · `object.place`). 상태 해시 명령(`state.*`)은 `SceneObjectHash.cpp` 에 있다.
+ * @brief 활성 씬을 들여다보고 고치는 개발 명령입니다(`scene.tree` · `object.dump` · `object.place` · `object.active` · `object.destroy`). 상태 해시 명령(`state.*`)은 `SceneObjectHash.cpp` 에 있다.
  */
 namespace sw
 {
@@ -159,6 +159,40 @@ namespace sw
                 outReply = "turned " + listArgument[0];
                 return true;
             }
+
+            /** @brief 이름 붙은 오브젝트를 켜고 끕니다(`GameObject::setActive` — 시나리오가 트리거 · 지역 안에서 끈 대상의 이탈, 다시 켠 대상의 진입을 본다). */
+            static bool runObjectActive( const vector<string>& listArgument, string& outReply )
+            {
+                const bool bParsed = listArgument.size() == 2 && ( listArgument[1] == "0" || listArgument[1] == "1" );
+                if ( bParsed == false )
+                    return false;
+                GameObject* pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                if ( pObject == nullptr )
+                {
+                    outReply = "no object named '" + listArgument[0] + "' in the active scene";
+                    return false;
+                }
+                pObject->setActive( listArgument[1] == "1" );
+                outReply = ( listArgument[1] == "1" ? "activated " : "deactivated " ) + listArgument[0];
+                return true;
+            }
+
+            /** @brief 이름 붙은 오브젝트를 지웁니다(시나리오가 트리거 · 지역 안에서 지운 대상의 이탈 — 로그아웃 · 죽음 — 을 본다). */
+            static bool runObjectDestroy( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 1 )
+                    return false;
+                GameObject*        pObject  = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                GameObjectManager* pManager = pObject != nullptr ? pObject->getMutableManager() : nullptr;
+                if ( pManager == nullptr )
+                {
+                    outReply = "no object named '" + listArgument[0] + "' in the active scene";
+                    return false;
+                }
+                pManager->destroyGameObject( pObject );
+                outReply = "destroyed " + listArgument[0];
+                return true;
+            }
         };
     } // namespace
 
@@ -169,4 +203,8 @@ namespace sw
                     &SceneInspectCommandsInternal::runObjectPlace );
     SW_DEV_COMMAND( ObjectTurn, "object.turn", "object.turn <name> <yaw degrees>", "Turn a named object of the active scene about its local up axis in one frame (spring hair and cloth checks)",
                     &SceneInspectCommandsInternal::runObjectTurn );
+    SW_DEV_COMMAND( ObjectActive, "object.active", "object.active <name> <0|1>", "Deactivate or activate a named object of the active scene (trigger and zone exit and enter checks)",
+                    &SceneInspectCommandsInternal::runObjectActive );
+    SW_DEV_COMMAND( ObjectDestroy, "object.destroy", "object.destroy <name>", "Destroy a named object of the active scene (trigger and zone exit checks - logout, death)",
+                    &SceneInspectCommandsInternal::runObjectDestroy );
 } // namespace sw

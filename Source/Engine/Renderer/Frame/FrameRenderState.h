@@ -44,6 +44,7 @@
 
 namespace sw
 {
+    class RenderDebugRegistry;
     class TaskManager;
 
     /**
@@ -93,6 +94,8 @@ namespace sw
         RenderGraph _graph{};
         /** @brief 파이프라인 XML 의 `_listFramePass` 로 만든 프레임 그래프입니다. 프레임에 한 번, 뷰 그래프보다 먼저 돈다(`FramePassExecutor::recordFrameGraph`). */
         RenderGraph _frameGraph{};
+        /** @brief 렌더링 런타임 디버그 우편함(프레임 디버거 · 통계 · 그래프 사본 · 버퍼 보기)입니다. 주 렌더러만 호스트가 건다 — 화면 밖 렌더러는 nullptr 이라 기록하지 않는다. */
+        RenderDebugRegistry* _pRenderDebug{ nullptr };
         /**
          * @brief 뷰 그래프의 트랜지언트 앨리어싱 계획입니다(레벨 수명이 겹치지 않고 서술이 같은 첨부가 텍스처 하나를 나눈다 — `RenderGraphAliasPlan::make`).
          * @details 콜백을 묶을 때(`FramePassExecutor::bindPassCallbacks`) 세우고 세대를 올린다. 뷰 풀은 세대가 다르면 다시 만든다(`FrameViewResources::updateViewTransients`).

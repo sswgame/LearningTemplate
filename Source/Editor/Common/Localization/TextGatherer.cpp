@@ -406,8 +406,11 @@ namespace sw
 
             static bool isStringProperty( const PropertyInfo& property )
             {
-                // 글 타입 판정은 내장 타입 표의 자리로 한다(별칭도 같은 자리) — 이름 리터럴을 두지 않는다.
-                return property._containerKind == ContainerKind::None && ReflectedValueUtil::findBuiltinIndex( property._typeName ) == ReflectBuiltinOf<string>::kIndex;
+                // 글 타입 판정은 내장 타입 표의 자리로 한다(별칭도 같은 자리) — 이름 리터럴을 두지 않는다. 키를 드는 칸은 hashed_string 이기도 하다(오디오 자막 키).
+                if ( property._containerKind != ContainerKind::None )
+                    return false;
+                const auto builtinIndex = ReflectedValueUtil::findBuiltinIndex( property._typeName );
+                return builtinIndex == ReflectBuiltinOf<string>::kIndex || builtinIndex == ReflectBuiltinOf<hashed_string>::kIndex;
             }
 
             static string_view readPropertyValue( const XMLNode& node, const PropertyInfo& property )

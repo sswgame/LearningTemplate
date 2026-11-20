@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b9ed88f45e8f4c27b74bba743d84f0cf"?>
+<!--
+  스트리밍 월드 길찾기(maps/prairie — 16 m 셀 · 32 m 반경, 시작 카메라 뒤의 길찾기 띠). 값으로 판정한다(골든 없음).
+  ① 셀 경계(x 0)를 넘는 JumpLink 하나를 지나야 단(PlatformGoal)에 오른다 — 경로가 링크 하나를 건너고, Climber 가 단 위에 닿는다.
+  ② Herd 셋이 셀 경계 x -16 을 넘어 저마다의 목표에 닿는다(군중 회피는 타일 · 셀과 무관하다).
+  ③ Drifter 가 먼 FarPost(x 50)로 간다 — 쿠킹본(-cooked-content)에서는 카메라 둘레 32 m 밖의 내려간 셀이라 오른 구간은 중간 목표로, 내려간 구간은
+     대략 그래프로 가상 이동해 닿는다(Nav.RouteReplanCount 가 오른다). 소스 콘텐츠는 셀이 없어(모두 올라 있다) 세밀 경로 하나로 닿는다 — 판정은 두 길에서 같다.
+  실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/navstream.scenario.xml -unattended [-cooked-content]
+-->
+<Scenario name="game.wildwest.navstream" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Nav.PathLinkCount" target="Climber" key="PlatformGoal" equals="1" timeoutSeconds="5"/> <!-- 내비메시가 섰고 단으로 가는 길은 링크 하나를 건넌다 -->
+	<Expect watch="Nav.AgentCount" atLeast="5"/>
+	<Expect watch="Nav.VirtualAgents" equals="0"/>
+
+	<DevCommand line="nav.moveto Climber PlatformGoal"/>
+	<DevCommand line="nav.moveto Herd_1 HerdGoal_1"/>
+	<DevCommand line="nav.moveto Herd_2 HerdGoal_2"/>
+	<DevCommand line="nav.moveto Herd_3 HerdGoal_3"/>
+	<DevCommand line="nav.moveto Drifter FarPost"/>
+
+	<WaitUntil watch="Nav.AgentStatus" target="Climber" is="Arrived" timeoutSeconds="20"/>
+	<Expect watch="Object.Y" target="Climber" atLeast="1.5"/> <!-- 단 위(Y 2)다 — 링크를 건넜다 -->
+	<WaitUntil watch="Nav.AgentStatus" target="Herd_1" is="Arrived" timeoutSeconds="20"/>
+	<WaitUntil watch="Nav.AgentStatus" target="Herd_2" is="Arrived" timeoutSeconds="20"/>
+	<WaitUntil watch="Nav.AgentStatus" target="Herd_3" is="Arrived" timeoutSeconds="20"/>
+	<Expect watch="Object.X" target="Herd_1" atLeast="-12"/> <!-- 셀 경계 x -16 너머 -->
+	<Expect watch="Object.X" target="Herd_2" atLeast="-12"/>
+	<Expect watch="Object.X" target="Herd_3" atLeast="-12"/>
+
+	<WaitUntil watch="Nav.AgentStatus" target="Drifter" is="Arrived" timeoutSeconds="40"/>
+	<Expect watch="Object.DistanceTo" target="Drifter" key="FarPost" atMost="1.5"/>
+	<Expect watch="Nav.VirtualAgents" equals="0"/>
+	<Record watch="Nav.StreamLoadedTiles"/>
+	<Record watch="Nav.RouteReplanCount"/>
+	<Pass/>
+</Scenario>

@@ -179,7 +179,13 @@ namespace sw
          * @details 무버 캐스트(`b2World_CastMover`)는 센서를 거르지 않는다 — 무버 질의의 카테고리를 그 비트 하나로 두어 센서(트리거 · 겹침 전용 콜라이더)에 걸리지 않게 한다.
          *          레이어 비트는 0..31 이라 그 비트를 카테고리로 가진 셰이프가 없으므로 셰이프끼리의 충돌은 바뀌지 않는다.
          */
-        b2Filter          makeFilter( uint8 layer, bool bSensor ) const;
+        b2Filter makeFilter( uint8 layer, bool bSensor ) const;
+        /**
+         * @brief Box2D 사용자 거름(`b2World_SetCustomFilterCallback`)입니다 — 두 막는 셰이프의 응답이 겹침(Overlap)이면 접촉을 만들지 않는다(밀어내지 않는다).
+         * @details 마스크는 겹침 쌍도 남긴다 — 센서(트리거)가 그 상대를 봐야 하므로 마스크에서 빼지 않는다. Box2D 는 막는 셰이프끼리 겹침 이벤트를 내지 못한다(센서만 낸다):
+         *          2D 에서 겹침 이벤트를 받으려면 한쪽이 트리거여야 한다(유니티 2D 와 같다, DesignBacklog "충돌 채널 · 응답 · 프리셋").
+         */
+        static bool       filterShapePair( b2ShapeId shapeA, b2ShapeId shapeB, void* pContext );
         void              applyFilter( const BodyRecord& record );
         const BodyRecord* findBody( PhysicsBodyHandle body ) const;
         BodyRecord*       findBody( PhysicsBodyHandle body );

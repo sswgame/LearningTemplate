@@ -567,6 +567,16 @@
             "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리)."
         },
         {
+            "_path": "Source/Engine/Window/Android/AndroidJNIScope.cpp",
+            "_name": "s_detachKey",
+            "_why": "OS 바닥 — 엔진이 JVM 에 붙인 스레드를 그 스레드가 끝날 때 떼는 pthread 키(소멸자는 문맥 없이 OS 가 부른다)와 그 한 번 만들기 표지다. 프로세스에 하나다(언리얼 AndroidJavaEnv 의 TlsKey 자리)."
+        },
+        {
+            "_path": "Source/Engine/Window/Android/AndroidJNIScope.cpp",
+            "_name": "s_detachKeyOnce",
+            "_why": "OS 바닥 — 엔진이 JVM 에 붙인 스레드를 그 스레드가 끝날 때 떼는 pthread 키(소멸자는 문맥 없이 OS 가 부른다)와 그 한 번 만들기 표지다. 프로세스에 하나다(언리얼 AndroidJavaEnv 의 TlsKey 자리)."
+        },
+        {
             "_path": "Source/Engine/Window/Android/AndroidWindow.cpp",
             "_name": "s_pApp",
             "_why": "android_main · 네이티브 앱 콜백은 문맥 없이 불린다 — 프로세스에 하나인 앱 · 창 포인터다."

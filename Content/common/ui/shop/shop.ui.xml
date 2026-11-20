@@ -1,0 +1,26 @@
+<?asset guid="31d3621cede3fdd40788ddaf304c9288"?>
+<UIDocument _schemaVersion="1">
+	<!-- 상점 견본 문서(`ShopScreen`). 상품 줄 단추(명령 Pick)는 코드가 가상 목록 `Offers` 에 보이는 만큼만 만든다. 구매 확인은 엔진 확인 대화 상자(engine/ui/confirm.ui.xml)다. -->
+	<UIScreenDef _defaultFocus="Close" />
+	<SafeZonePanel>
+		<CanvasPanel>
+			<BorderPanel _name="Window" _styleClass="window">
+				<_slot _anchorMin="0.5,0.5"
+				       _anchorMax="0.5,0.5"
+				       _offsetMin="-320,-240"
+				       _offsetMax="320,240" />
+				<BoxPanel _spacing="12" _orientation="Vertical">
+					<TextWidget _name="Title" _styleClass="title" _text="Shop" />
+					<TextWidget _name="Balance" _text="" />
+					<TextWidget _name="Status" _text="" />
+					<ListViewWidget _name="Offers" _rowHeight="36">
+						<_slot _sizeRule="Fill" />
+					</ListViewWidget>
+					<ButtonWidget _name="Close" _command="Close">
+						<TextWidget _text="Close" />
+					</ButtonWidget>
+				</BoxPanel>
+			</BorderPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

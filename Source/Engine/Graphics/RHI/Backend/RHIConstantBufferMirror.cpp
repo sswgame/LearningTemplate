@@ -9,7 +9,17 @@ namespace sw
     void RHIConstantBufferMirror::remove( RHIBufferHandle buffer )
     {
         ScopedLock<mutex> lock{ _mutex };
-        _mapPendingWrite.erase( buffer );
+        // 페이지는 구간마다 열쇠가 있다 — 그 버퍼의 열쇠를 모아 지운다(대기 목록은 최근에 바뀐 자리뿐이라 짧다).
+        _listFilledScratch.clear();
+        for ( const auto& [key, pending] : _mapPendingWrite )
+        {
+            if ( key._buffer == buffer )
+                _listFilledScratch.push_back( key );
+        }
+        for ( const Key& key : _listFilledScratch )
+        {
+            _mapPendingWrite.erase( key );
+        }
     }
 
     void RHIConstantBufferMirror::clear()
@@ -25,7 +35,7 @@ namespace sw
         return static_cast<uint32>( _mapPendingWrite.size() );
     }
 
-    void RHIConstantBufferMirror::rememberWrite( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+    void RHIConstantBufferMirror::rememberWrite( const Key& key, uint32 slot, const void* pData, uint32 size )
     {
         if ( pData == nullptr || size == 0 )
             return;
@@ -35,12 +45,12 @@ namespace sw
         const uint32 staleSlotMask = kAllSlotMask & ~getSlotBitOf( slot );
         if ( staleSlotMask == 0 )
         {
-            _mapPendingWrite.erase( buffer ); // 슬롯이 하나뿐이다. 채울 것이 없다.
+            _mapPendingWrite.erase( key ); // 슬롯이 하나뿐이다. 채울 것이 없다.
             return;
         }
 
-        PendingWrite& pending = _mapPendingWrite[buffer];
-        // 쓰기는 항상 버퍼 앞에서부터다. 이번 쓰기가 지난번보다 짧으면 뒤쪽은 지난 값이 그대로 슬롯에 남아 있어야 하므로 앞부분만 덮는다.
+        PendingWrite& pending = _mapPendingWrite[key];
+        // 쓰기는 항상 그 자리(버퍼 또는 구간) 앞에서부터다. 이번 쓰기가 지난번보다 짧으면 뒤쪽은 지난 값이 그대로 슬롯에 남아 있어야 하므로 앞부분만 덮는다.
         if ( pending._bytes.size() < size )
             pending._bytes.resize( size );
         Memory::copy( pending._bytes.data(), pData, size );

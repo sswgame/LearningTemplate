@@ -32,8 +32,8 @@ namespace sw
             static constexpr size_t kFixedHeadBytes = sizeof( uint32 ) * 2 + sizeof( uint64 );
             /** @brief 머리 길이 칸의 자리입니다(쓴 뒤 채운다). */
             static constexpr size_t kHeadSizeOffset = sizeof( uint32 ) * 2;
-            /** @brief 항목 하나의 최소 바이트입니다(종류 이름 길이 · 두 해시 · 경계 · 타일 수). */
-            static constexpr size_t kMinEntryBytes = sizeof( uint32 ) + sizeof( uint64 ) * 2 + sizeof( AABB ) + sizeof( uint32 );
+            /** @brief 항목 하나의 최소 바이트입니다(종류 이름 길이 · 두 해시 · 경계 · 타일 수 · 클러스터 수 · 간선 수). */
+            static constexpr size_t kMinEntryBytes = sizeof( uint32 ) + sizeof( uint64 ) * 2 + sizeof( AABB ) + sizeof( uint32 ) * 3;
             /** @brief 타일 베이크 한 덩어리입니다. 워커는 자기 구간의 슬롯만 씁니다. */
             /** @brief 타일 하나의 굽기 결과 칸입니다(`BakeJob` 이 타일마다 하나 쓴다). */
             struct TileBake
@@ -117,6 +117,7 @@ namespace sw
                 writer.writePod( tileIndex < entry._listTileInputHash.size() ? entry._listTileInputHash[tileIndex] : uint64{ 0 } ); // 0 — 모른다
                 contentOffset += tile._bytes.size();
             }
+            entry._clusterGraph.write( writer );
         }
         writer.writePodAt( NavMeshAssetInternal::kHeadSizeOffset, static_cast<uint64>( writer.getByteCount() ) );
         // 머리 뒤에 타일 바이트를 머리의 순서대로 빈틈없이 잇는다.
@@ -190,7 +191,7 @@ namespace sw
             entry._agentType = hashed_string( agentType );
             entry._listTileRange.clear();
             entry._listTileInputHash.clear();
-            return reader.readList( entry._listTile, tileCount, NavMeshAssetInternal::kMinTileBytes, [&]( NavTileData& tile ) -> bool
+            const bool bTiles = reader.readList( entry._listTile, tileCount, NavMeshAssetInternal::kMinTileBytes, [&]( NavTileData& tile ) -> bool
                  {
                 NavTileRange range{};
                 uint64       inputHash = 0;
@@ -206,6 +207,7 @@ namespace sw
                 entry._listTileInputHash.push_back( inputHash );
                 return true;
             } );
+            return bTiles && entry._clusterGraph.read( reader );
         } );
         if ( bEntriesRead == false || reader.isFullyRead() == false || nextContentOffset != contentSize || headSizeField != headSize )
         {

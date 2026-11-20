@@ -4,13 +4,16 @@
 @file android_apk.py
 @brief Android 빌드 산출물(`lib<이름>.so` + 쿠킹한 팩)을 서명한 디버그 APK 하나로 묶는다 — 배포 구성(Android-Shipping) · 개발 구성(Android-Release, 자동화 실행기가 있다).
 
-Java 코드가 없는 NativeActivity 앱이라 Gradle · d8 을 쓰지 않는다 — 매니페스트를 이진 XML 로 바꾸고 자산을 담는 aapt2, 정렬하는 zipalign,
-서명하는 apksigner(모두 `Tools/Android/build-tools/<판>`)와 디버그 키를 만드는 keytool(`Tools/JDK`) 넷이다. NDK 샘플의 native-activity 와 같은 구성이고(기억),
-언리얼 · Godot 은 Gradle 프로젝트를 만들지만 그것은 Java 쪽(결제 · 알림 플러그인)을 붙이기 위해서다 — 붙일 Java 가 생기면 Gradle 로 옮긴다.
+NativeActivity 앱에 얇은 Java 뷰(`SWInputView` — 입력기 조합, 감사 P-4)만 얹은 구성이라 Gradle 을 쓰지 않는다 — Java 를 컴파일하는 javac(`Tools/JDK`),
+dex 로 바꾸는 d8, 매니페스트를 이진 XML 로 바꾸고 자산을 담는 aapt2, 정렬하는 zipalign, 서명하는 apksigner(넷 다 `Tools/Android/build-tools/<판>`)와
+디버그 키를 만드는 keytool(`Tools/JDK`)이다. 언리얼 · Godot 은 Gradle 프로젝트를 만들지만 그것은 Java 쪽(결제 · 알림 플러그인 · 의존 라이브러리)을 붙이기 위해서다 —
+외부 Java 라이브러리(aar)를 붙일 일이 생기면 Gradle 로 옮긴다. 도구가 하나라도 없으면 멈춘다(dex 없는 APK 는 입력 뷰 클래스를 못 찾아 창이 서지 않는다).
 
 | 단계 | 도구 | 하는 일 |
 | --- | --- | --- |
 | manifest | (이 스크립트) | `cmake/Templates/AndroidManifest.xml` 틀을 `Config/Environment/android_package.json` 값으로 채운다 |
+| java | javac | `Source/Engine/Window/Android/Java/**/*.java` 를 android.jar 위에서 Java 8 바이트코드로(d8 이 최소 API 에 맞춰 내린다) |
+| dex | d8 | 클래스 파일을 `classes.dex` 로(`--release`, `--min-api` = 프리셋 최소 API) — APK 뿌리에 넣는다 |
 | link | aapt2 | 이진 매니페스트 + `assets/Packs/*.pack`(압축하지 않는다 — AAsset 으로 바로 읽는다) |
 | native | (zipfile) | `lib/<ABI>/lib<이름>.so` 를 압축하지 않고 넣는다(`extractNativeLibs=false` — 설치가 풀지 않고 APK 에서 바로 연다) |
 | align | zipalign | 압축하지 않은 항목 4 바이트, .so 는 페이지(`page_size_kb`, Android 15 의 16KB 페이지 기기) 경계 |
@@ -52,6 +55,12 @@ from package.pack import PackageError, PACK_FOLDER_NAME, select_staged_packs  # 
 #: 패키징 값 파일과 매니페스트 틀(저장소 기준).
 PACKAGE_CONFIG_PATH = Path("Config") / "Environment" / "android_package.json"
 MANIFEST_TEMPLATE_PATH = Path("cmake/Templates/AndroidManifest.xml")   # 한 글로 적는다 — 조각으로 쪼개면 경로 옮기기(move-source)가 찾지 못한다
+#: 앱 dex 에 담는 Java 소스 뿌리(패키지 폴더가 그 아래) — 엔진의 Android 창이 액티비티 클래스 로더로 찾는 클래스(`AndroidInputView::kJavaClassName`)다.
+JAVA_SOURCE_ROOT = Path("Source/Engine/Window/Android/Java")
+#: javac 가 내는 바이트코드 판 — d8 이 받는 판이고, android.jar 를 부트 클래스 경로로 쓰려면 9 아래여야 한다(`--release` 는 JDK 의 java.* 를 쓴다).
+JAVA_LANGUAGE_LEVEL = "8"
+#: APK 뿌리의 dex 이름(첫 dex — 런타임이 이 이름부터 연다).
+DEX_FILE_NAME = "classes.dex"
 PRESET_FILE_NAME = "CMakePresets.json"
 #: 묶을 수 있는 Android 구성 프리셋 — 기본은 배포 구성이다.
 LIST_PRESET_NAME = ("Android-Shipping", "Android-Release")
@@ -197,12 +206,14 @@ class AndroidTools:
         self.aapt2 = build_tools / ("aapt2.exe" if is_windows_host() else "aapt2")
         self.zipalign = build_tools / ("zipalign.exe" if is_windows_host() else "zipalign")
         self.apksigner = build_tools / ("apksigner.bat" if is_windows_host() else "apksigner")
+        self.d8 = build_tools / ("d8.bat" if is_windows_host() else "d8")
         list_java = sorted(resolve_tools_subdir("jdk_tools_subdir", search).glob("*/bin/java*"))
         if not list_java:
             raise ApkError("no JDK under Tools/JDK - install with py -3 Scripts/setup/platform_sdk.py android")
         self.java_home = list_java[0].parents[1]
         self.keytool = self.java_home / "bin" / ("keytool.exe" if is_windows_host() else "keytool")
-        list_missing = [str(path) for path in (self.android_jar, self.aapt2, self.zipalign, self.apksigner, self.keytool) if not path.is_file()]
+        self.javac = self.java_home / "bin" / ("javac.exe" if is_windows_host() else "javac")
+        list_missing = [str(path) for path in (self.android_jar, self.aapt2, self.zipalign, self.apksigner, self.d8, self.keytool, self.javac) if not path.is_file()]
         if list_missing:
             raise ApkError("missing Android tools (py -3 Scripts/setup/platform_sdk.py android): " + ", ".join(list_missing))
 
@@ -223,6 +234,49 @@ def ensure_debug_keystore(tools: AndroidTools, keystore: Path) -> None:
     tools.run("keystore", [tools.keytool, "-genkeypair", "-keystore", keystore, "-storepass", DEBUG_KEY_PASSWORD, "-alias", DEBUG_KEY_ALIAS,
                            "-keypass", DEBUG_KEY_PASSWORD, "-keyalg", "RSA", "-keysize", "2048", "-validity", str(DEBUG_KEY_VALIDITY_DAYS),
                            "-dname", DEBUG_KEY_DISTINGUISHED_NAME])
+
+
+def collect_java_sources(project_root: Path) -> list[Path]:
+    """앱 dex 에 담을 Java 소스(`JAVA_SOURCE_ROOT` 아래, 이름 순)입니다. 없으면 ApkError — 창이 찾는 입력 뷰 클래스가 빠진 APK 를 만들지 않는다."""
+    list_source = sorted((project_root / JAVA_SOURCE_ROOT).rglob("*.java"))
+    if not list_source:
+        raise ApkError(f"no Java sources under {JAVA_SOURCE_ROOT} - the Android window needs its input view class in classes.dex")
+    return list_source
+
+
+def make_javac_command(javac: Path, android_jar: Path, classes_dir: Path, list_source: list[Path]) -> list[str | Path]:
+    """@p list_source 를 android.jar 위에서 컴파일해 @p classes_dir 에 클래스 파일을 내는 javac 명령입니다."""
+    return [javac, "-source", JAVA_LANGUAGE_LEVEL, "-target", JAVA_LANGUAGE_LEVEL, "-bootclasspath", android_jar, "-classpath", android_jar,
+            "-encoding", "UTF-8", "-Xlint:-options", "-Werror", "-d", classes_dir, *list_source]
+
+
+def make_d8_command(d8: Path, android_jar: Path, min_sdk: int, dex_dir: Path, list_class: list[Path]) -> list[str | Path]:
+    """@p list_class 를 최소 API @p min_sdk 의 `classes.dex` 하나로 @p dex_dir 에 내는 d8 명령입니다(`--release` — 디버그 정보 없이)."""
+    return [d8, "--release", "--min-api", str(min_sdk), "--lib", android_jar, "--output", dex_dir, *list_class]
+
+
+def compile_dex(tools: AndroidTools, project_root: Path, work_dir: Path, min_sdk: int) -> Path:
+    """Java 소스를 javac · d8 로 `classes.dex` 하나로 만들고 그 경로를 돌려줍니다."""
+    list_source = collect_java_sources(project_root)
+    classes_dir = work_dir / "classes"
+    dex_dir = work_dir / "dex"
+    classes_dir.mkdir(parents=True)
+    dex_dir.mkdir(parents=True)
+    tools.run("java", make_javac_command(tools.javac, tools.android_jar, classes_dir, list_source))
+    list_class = sorted(classes_dir.rglob("*.class"))
+    if not list_class:
+        raise ApkError(f"java: javac produced no class files from {len(list_source)} sources")
+    tools.run("dex", make_d8_command(tools.d8, tools.android_jar, min_sdk, dex_dir, list_class))
+    dex = dex_dir / DEX_FILE_NAME
+    if not dex.is_file():
+        raise ApkError(f"dex: d8 did not write {dex}")
+    return dex
+
+
+def add_dex(apk_path: Path, dex: Path) -> None:
+    """@p dex 를 APK 뿌리(`classes.dex`)에 더합니다. 압축해도 된다 — 런타임이 풀어 최적화한다."""
+    with zipfile.ZipFile(apk_path, "a") as archive:
+        archive.write(dex, DEX_FILE_NAME, compress_type=zipfile.ZIP_DEFLATED)
 
 
 def add_native_library(apk_path: Path, library: Path, abi: str) -> None:
@@ -260,12 +314,16 @@ def make_apk(game: str, preset_name: str, build_dir: Path, packs_dir: Path, proj
     manifest = work_dir / "AndroidManifest.xml"
     manifest.write_text(render_manifest((project_root / MANIFEST_TEMPLATE_PATH).read_text(encoding="utf-8"), settings), encoding="utf-8")
 
+    print(f"[android-apk] java + dex (min API {settings.min_sdk})")
+    dex = compile_dex(tools, project_root, work_dir, settings.min_sdk)
+
     unaligned = work_dir / "unaligned.apk"
     aligned = work_dir / "aligned.apk"
     signed = build_dir / "Apk" / f"{game}-debug.apk"
     print(f"[android-apk] link {settings.application_id} (API {settings.min_sdk}..{settings.target_sdk}, {settings.screen_orientation})")
     tools.run("link", [tools.aapt2, "link", "-o", unaligned, "-I", tools.android_jar, "--manifest", manifest, "--min-sdk-version", str(settings.min_sdk),
                        "--target-sdk-version", str(settings.target_sdk), "--debug-mode", "-A", work_dir / "assets", "-0", PACK_EXTENSION])
+    add_dex(unaligned, dex)
     add_native_library(unaligned, library, settings.abi)
     print(f"[android-apk] align ({settings.page_size_kb} KB pages)")
     tools.run("align", [tools.zipalign, "-f", "-P", str(settings.page_size_kb), "4", unaligned, aligned])

@@ -149,6 +149,18 @@ namespace sw
         RestoreState = 0, /**< 재생을 시작하기 전의 활성 상태 · 트랜스폼 · 프로퍼티 · 리그 가중치 · 렌즈로 되돌립니다(언리얼 기본값과 같다). */
         KeepState    = 1, /**< 마지막 프레임의 상태를 그대로 둡니다(문이 열린 채 남는 연출). */
     };
+
+    /**
+     * @brief 재생 범위의 끝에 닿았을 때 무엇을 할지입니다(언리얼 `FMovieSceneSequencePlaybackSettings` 의 Loop Count · `bPingPongPlayback`, 유니티 `PlayableDirector.extrapolationMode`).
+     * @details 씬 파일에는 열거자 이름으로 적힌다(`SequencePlayerComponent::_loopMode`).
+     */
+    ENUM()
+    enum class SequenceLoopMode : int32
+    {
+        None     = 0, /**< 끝에서 멈추고 재생을 끝냅니다(`SequenceFinishPolicy` 를 따른다). */
+        Loop     = 1, /**< 끝을 지나면 반대쪽 끝에서 같은 방향으로 이어 갑니다. */
+        PingPong = 2, /**< 끝에서 방향을 뒤집어 돌아옵니다(속도 값은 그대로 — 방향 표지만 뒤집는다). */
+    };
 } // namespace sw
 
 namespace sw
@@ -243,6 +255,19 @@ namespace sw
         /** @brief 카메라 흔들림: 최대 흔들림(m) 입니다. 애니메이션: 섞는 세기(0..1)입니다. */
         PROPERTY( Tooltip = "Camera shake: largest shake offset (m); Animation: blend weight (0..1)" )
         float32 _amplitude{ 1.0f };
+        /**
+         * @brief 구간 머리의 섞임 길이(프레임)입니다(언리얼 섹션 Ease In). 0 이면 바로 온전히 든다.
+         * @details 애니메이션은 이 동안 세기를 `_easeInCurve` 로 올리고, 카메라 컷은 앞 컷 화면에서 이 길이만큼 섞어 들어간다(첫 컷은 시퀀스 Blend In 이 게임 화면에서 섞는다).
+         */
+        PROPERTY( Min = 0, Tooltip = "Ease in frames at the head of the span (animation weight; camera cut: blend from the previous cut)" )
+        int32 _easeInFrames{ 0 };
+        /** @brief 구간 꼬리의 섞임 길이(프레임)입니다(언리얼 섹션 Ease Out). 애니메이션 세기를 `_easeOutCurve` 로 내린다. */
+        PROPERTY( Min = 0, Tooltip = "Ease out frames at the tail of the span (animation weight)" )
+        int32 _easeOutFrames{ 0 };
+        PROPERTY( Tooltip = "Curve of the ease in (the blend curve table)" )
+        BlendCurve _easeInCurve{ BlendCurve::SmoothStep };
+        PROPERTY( Tooltip = "Curve of the ease out (the blend curve table)" )
+        BlendCurve _easeOutCurve{ BlendCurve::SmoothStep };
         PROPERTY( Tooltip = "Editor colour (0xAABBGGRR)" )
         uint32 _color{ 0xFFAA8080 };
         PROPERTY( Tooltip = "Item kind" )
@@ -253,6 +278,11 @@ namespace sw
          * @details 규칙은 종류 표 한 곳이다 — 파일 읽기(`SequenceAsset::validateFile`)와 에디터의 필수 칸 검사가 같은 답을 본다. 바인딩 id 가 시퀀스에 있는지는 시퀀스가 본다.
          */
         [[nodiscard]] SequenceItemFieldIssue findFieldIssue( SequenceItemField* pOutField = nullptr ) const;
+        /**
+         * @brief @p frame 의 섞임 가중치(0..1)입니다 — 머리 `_easeInFrames` 동안 `_easeInCurve` 로 오르고 꼬리 `_easeOutFrames` 동안 `_easeOutCurve` 로 내린다(둘이 겹치면 곱).
+         * @details 프레임 → 값이라 재생 방향과 상관없다(역재생도 같은 프레임에 같은 값). 구간 밖은 0 이다. 언리얼 `FMovieSceneEasingSettings` 의 가중치와 같다.
+         */
+        [[nodiscard]] float32 computeEaseWeight( float32 frame ) const;
         /** @brief 칸 @p field 가 차 있는지입니다(바인딩은 0 이 아니면 찼다). */
         [[nodiscard]] bool hasField( SequenceItemField field ) const;
         /** @brief 글 칸 @p field 입니다. 바인딩 · 범위 밖이면 nullptr 입니다(에디터가 칸을 표에서 그린다). */
@@ -277,7 +307,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Track name" )
+        PROPERTY( Meta = "NotLocalizable", Tooltip = "Track name (editor label)" )
         string _name;
         /** @brief 프로퍼티 트랙의 `<컴포넌트 타입>.<프로퍼티>` 입니다(트랜스폼 · 렌즈 트랙은 비어 있다). 리그 슬롯 트랙은 슬롯 이름입니다. */
         PROPERTY( Tooltip = "Property track: <component type>.<property>; rig slot track: slot name; transform and lens tracks: empty" )

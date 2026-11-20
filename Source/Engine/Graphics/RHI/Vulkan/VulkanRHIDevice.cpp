@@ -49,6 +49,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -108,7 +109,7 @@ namespace sw
         , _bTessellationShader{ 0 }
         , _bSwapChainDirty{ SW_FALSE }
         , _bDepthHasStencil{ SW_FALSE }
-        , _reservedSwapChainBit{ 0 }
+        , _bSwapChainColorSpace{ SW_FALSE }
         , _bMemoryBudget{ SW_FALSE }
         , _bSurfaceLost{ SW_FALSE }
         , _bDeviceFault{ SW_FALSE }
@@ -121,6 +122,7 @@ namespace sw
         , _pCmdSetCheckpoint{ nullptr }
         , _pGetCheckpointData{ nullptr }
         , _pCmdWriteBufferMarker{ nullptr }
+        , _pSetHDRMetadata{ nullptr }
         , _pCmdDrawIndirectCount{ nullptr }
         , _pCmdDrawIndexedIndirectCount{ nullptr }
         , _breadcrumbBuffer{ VK_NULL_HANDLE }
@@ -138,6 +140,7 @@ namespace sw
         , _uavRegistry{ kBindlessBufferCapacity }
         , _arrBufferReadSlot{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
         , _arrUAVBufferReadSlot{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
+        , _arrBufferReadSlice{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
         , _gpuTextures{}
         , _releaseQueue{}
         , _renderPassCache{}
@@ -252,7 +255,7 @@ namespace sw
             SW_LOG_WARNING_ID( "Vulkan.ValidationSwitchWithoutLayer", "EngineConfig _rhi asks for GPU-assisted or synchronization validation, but the Vulkan validation layer is off (_rhi._validationLayer, -rhi-validation) - ignored" );
 
         // 백버퍼 포맷 · 개수는 백엔드 간 계약값이다. 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
-        _swapChain.setRequested( desc._format, desc._bufferCount, desc._bVSync );
+        _swapChain.setRequested( desc._sdrFormat, desc._bufferCount, desc._bVSync );
 
         BLOCK( "Validation Layer Setup" )
         {
@@ -323,6 +326,8 @@ namespace sw
 
         BLOCK( "Swapchain / RenderPass / Framebuffers" )
         {
+            // 색 공간 확장은 인스턴스가 정했다 — 주 스왑체인은 SDR 로 만들고 `setBackBufferColorSpace` 가 바꾼다.
+            _swapChain.setRequestedColorSpace( desc._colorSpace, _bSwapChainColorSpace != SW_FALSE );
             if ( _swapChain.create( _physicalDevice, _device, _width, _height ) == false )
                 return false;
 
@@ -380,17 +385,19 @@ namespace sw
         return true;
     }
 
-    void VulkanRHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+    void VulkanRHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
     {
         VulkanBufferRecord* pRecord                     = resolveAllocatedBuffer( buffer );
-        const bool          bCannotUpdateConstantBuffer = pRecord == nullptr || pRecord->_cbSlotSize == 0 || pRecord->_memory == VK_NULL_HANDLE || pData == nullptr || size == 0;
+        const bool          bCannotUpdateConstantBuffer = pRecord == nullptr || pRecord->_cbSlotSize == 0 || pRecord->_memory == VK_NULL_HANDLE || pData == nullptr || size == 0 ||
+                                                 offset >= pRecord->_cbSlotSize;
         if ( bCannotUpdateConstantBuffer )
             return;
         const uint32 slotSize  = pRecord->_cbSlotSize;
-        const uint32 copyBytes = MathUtil::min( size, slotSize );
+        const uint32 copyBytes = MathUtil::min( size, slotSize - offset ); // 페이지 구간이면 그 칸 안에서 자른다
         void*        pMapped{ nullptr };
         // Map 실패는 오류로 남긴다 — 조용히 건너뛰면 옛 상수로 그려 원인이 화면에서만 보인다.
-        if ( isVkSuccess( vkMapMemory( _device, pRecord->_memory, static_cast<VkDeviceSize>( slot ) * slotSize, copyBytes, 0, &pMapped ), "vkMapMemory (constant buffer slot)" ) == false || pMapped == nullptr )
+        if ( isVkSuccess( vkMapMemory( _device, pRecord->_memory, static_cast<VkDeviceSize>( slot ) * slotSize + offset, copyBytes, 0, &pMapped ), "vkMapMemory (constant buffer slot)" ) == false ||
+             pMapped == nullptr )
             return;
         Memory::copy( pMapped, pData, copyBytes );
         vkUnmapMemory( _device, pRecord->_memory );
@@ -400,8 +407,8 @@ namespace sw
     {
         // 칸 크기는 버퍼 레코드에서 락 없이 읽는다(`VulkanBufferRecord::_cbSlotSize`). 그림자 표는 제 뮤텍스가 지킨다.
         _constantBufferMirror.fillSlot( getFrameSlot() % constant::render::kMaxFrameCountInFlight,
-                                        [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
-        { writeConstantBufferSlot( buffer, slot, pData, size ); } );
+                                        [this]( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
+        { writeConstantBufferSlot( buffer, slot, offset, pData, size ); } );
     }
 
     void VulkanRHIDevice::detachCommandRecordingInternal()
@@ -1083,6 +1090,10 @@ namespace sw
 #else
     #error "Unsupported platform"
 #endif
+        // HDR10 · scRGB 표면 색 공간(선택 — 없으면 SDR 만 낸다, `RHICapabilities::_displayOutputSupport`).
+        _bSwapChainColorSpace = VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME ) ? SW_TRUE : SW_FALSE;
+        if ( _bSwapChainColorSpace != SW_FALSE )
+            listExtension.push_back( VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME );
         if ( _bEnableValidationLayers == SW_TRUE && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
             listExtension.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
         else if ( _bEnableValidationLayers == SW_TRUE )
@@ -1456,6 +1467,9 @@ namespace sw
             _bMemoryBudget = VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME ) ? SW_TRUE : SW_FALSE;
             if ( _bMemoryBudget == SW_TRUE )
                 listDeviceExtension.push_back( VK_EXT_MEMORY_BUDGET_EXTENSION_NAME );
+            // HDR10 마스터링 값 알리기(선택 — 표면 색 공간 확장을 켠 인스턴스만 쓸 일이 있다).
+            if ( _bSwapChainColorSpace != SW_FALSE && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_HDR_METADATA_EXTENSION_NAME ) )
+                listDeviceExtension.push_back( VK_EXT_HDR_METADATA_EXTENSION_NAME );
         }
         // VK_EXT_device_fault(진단 전용): 디바이스를 잃었을 때 결함 주소 · 공급사 코드를 읽는다(reportDeviceFault). 기능 비트까지 있어야 켠다.
         VkPhysicalDeviceFaultFeaturesEXT faultFeatures{};
@@ -1513,6 +1527,8 @@ namespace sw
             return false;
 
         vkGetDeviceQueue( _device, _graphicsQueueFamilyIndex, 0, &_graphicsQueue );
+        // 켜지 않았으면 nullptr 이다(장치에 없는 함수를 물으면 nullptr — 명세).
+        _pSetHDRMetadata = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkSetHdrMetadataEXT" ) );
         if ( _bDrawIndirectCount != 0 )
         {
             _pCmdDrawIndirectCount        = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkCmdDrawIndirectCount" ) );
@@ -1713,6 +1729,50 @@ namespace sw
             _bSwapChainDirty = 1;
     }
 
+    bool VulkanRHIDevice::setBackBufferColorSpaceInternal( RHIColorSpace colorSpace, const RHIDisplayMetadata& metadata )
+    {
+        // 크기 바꿈과 같은 재생성 길(GPU 대기 · 옛 스왑체인 물려주기 · 포맷이 바뀌면 렌더 패스 다시 만들기)을 지금 탄다 — 부르는 쪽이 렌더 스레드를 세웠다.
+        // shortcut: 다른 창(에디터 도구 창)은 주 창의 렌더 패스 포맷을 따르므로 HDR 인 동안 새로 열지 못한다(`createSwapChainInternal` 이 거절한다) — 도구 창을 SDR 렌더 패스로 따로 그릴 때 푼다.
+        const RHIColorSpace      previous         = _swapChain.getColorSpace();
+        const bool               bColorSpaceExt   = _bSwapChainColorSpace != SW_FALSE;
+        const RHIDisplayMetadata previousMetadata = _displayMetadata;
+        _displayMetadata                          = metadata; // 재생성 끝(`applyHDRMetadata`)이 이 값을 알린다
+        _swapChain.setRequestedColorSpace( colorSpace, bColorSpaceExt );
+        const bool bRecreated = recreateSwapChain();
+        if ( bRecreated && _swapChain.getColorSpace() == colorSpace )
+            return true;
+        // 요청을 지금 실제 색 공간(다시 만들지 못했으면 옛 값)으로 되돌린다 — 다음 재생성(창 크기 바뀜)이 실패한 요청을 다시 쓰지 않게.
+        _swapChain.setRequestedColorSpace( bRecreated ? _swapChain.getColorSpace() : previous, bColorSpaceExt );
+        _displayMetadata = previousMetadata;
+        return false;
+    }
+
+    bool VulkanRHIDevice::setDisplayMetadataInternal( const RHIDisplayMetadata& metadata )
+    {
+        _displayMetadata = metadata;
+        applyHDRMetadata();
+        return true;
+    }
+
+    void VulkanRHIDevice::applyHDRMetadata()
+    {
+        // 확장이 없으면 표시 엔진의 기본값이다(알릴 길이 없다 — 능력이 정한 길). 스왑체인을 다시 만들면 메타데이터가 사라지므로 재생성마다 부른다.
+        if ( _swapChain.getColorSpace() != RHIColorSpace::HDR10ST2084 || _pSetHDRMetadata == nullptr || _swapChain.isValid() == false )
+            return;
+        VkHdrMetadataEXT hdrMetadata{};
+        hdrMetadata.sType                     = VK_STRUCTURE_TYPE_HDR_METADATA_EXT;
+        hdrMetadata.displayPrimaryRed         = VkXYColorEXT{ RHIDisplayMetadata::kRedPrimaryX, RHIDisplayMetadata::kRedPrimaryY };
+        hdrMetadata.displayPrimaryGreen       = VkXYColorEXT{ RHIDisplayMetadata::kGreenPrimaryX, RHIDisplayMetadata::kGreenPrimaryY };
+        hdrMetadata.displayPrimaryBlue        = VkXYColorEXT{ RHIDisplayMetadata::kBluePrimaryX, RHIDisplayMetadata::kBluePrimaryY };
+        hdrMetadata.whitePoint                = VkXYColorEXT{ RHIDisplayMetadata::kWhitePointX, RHIDisplayMetadata::kWhitePointY };
+        hdrMetadata.maxLuminance              = _displayMetadata._maxLuminanceNits;
+        hdrMetadata.minLuminance              = _displayMetadata._minLuminanceNits;
+        hdrMetadata.maxContentLightLevel      = _displayMetadata._maxLuminanceNits;
+        hdrMetadata.maxFrameAverageLightLevel = _displayMetadata._maxFrameAverageNits;
+        const VkSwapchainKHR arrSwapChain[]   = { _swapChain.getSwapChain() };
+        reinterpret_cast<PFN_vkSetHdrMetadataEXT>( _pSetHDRMetadata )( _device, 1, arrSwapChain, &hdrMetadata );
+    }
+
     IRHISwapChain* VulkanRHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )
     {
         // 서피스 확장은 인스턴스를 만들 때 메인 창의 창 시스템으로 골랐다 — 다른 창 시스템의 핸들은 그 확장으로 읽지 못한다.
@@ -1720,6 +1780,11 @@ namespace sw
                                        ( desc._surfaceKind == NativeSurfaceKind::Wayland ) == ( _wsiKind == VulkanWsiKind::Wayland );
         if ( bSameWindowSystem == false || _device == nullptr || isDeviceLost() )
             return nullptr;
+        if ( _swapChain.getColorSpace() != RHIColorSpace::SRGBNonLinear )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.WindowSwapChainWhileHDR", "Another window cannot open while the main window presents %# - its UI draws with the SDR render pass", getEnumName( _swapChain.getColorSpace() ) );
+            return nullptr;
+        }
 
         unique_ptr<VulkanRHISwapChain> pSwapChain = make_unique<VulkanRHISwapChain>();
         pSwapChain->setRequested( _swapChain.getActualBackBufferFormat(), 0, isVSyncEnabled() );
@@ -1904,6 +1969,7 @@ namespace sw
         }
 
         _bSwapChainRecreateFailing = SW_FALSE;
+        applyHDRMetadata(); // 새 스왑체인은 HDR10 메타데이터가 없다
         return true;
     }
 
@@ -2365,7 +2431,8 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 펜스 대기 · 이미지 획득 · 기록 시작의 프레임 순서가 곧 의미라 나누지 않는다.
     void VulkanRHIDevice::beginFrameInternal()
     {
-        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
+        _renderThread.assumeHeld();                                                     // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
+        SW_PROFILE_COUNT( "RT.Vulkan.allocationCount", _memoryAccount.getLiveCount() ); // 살아 있는 VkDeviceMemory(maxMemoryAllocationCount 의 분자 — 감사 R-4 측정)
         // 앞 프레임이 시작되지 못해 버려진 리스트가 있었으면 그 리스트가 앞서 바꾼 레이아웃 기록부터 되돌린다.
         restoreDroppedFrameLayouts();
         _bFrameStarted = SW_FALSE;
@@ -3483,10 +3550,22 @@ namespace sw
         return index < kBindlessBufferCapacity ? _arrBufferReadSlot.get()[index].load( std::memory_order_acquire ) : 0;
     }
 
-    void VulkanRHIDevice::publishBufferReadSlot( RHIDescriptorIndex index, bool bUAV, RHIBufferHandle buffer )
+    RHIBufferSlice VulkanRHIDevice::bindlessSourceSliceAt( RHIDescriptorIndex index ) const
+    {
+        if ( index >= kBindlessBufferCapacity )
+            return RHIBufferSlice{};
+        // 버퍼 칸을 acquire 로 본 뒤 구간을 읽는다 — 등록이 구간을 먼저 쓰고 버퍼를 release 로 공개한다.
+        const RHIBufferHandle buffer = _arrBufferReadSlot.get()[index].load( std::memory_order_acquire );
+        const uint64          slice  = _arrBufferReadSlice.get()[index].load( std::memory_order_relaxed );
+        return RHIBufferSlice{ buffer, static_cast<uint32>( slice >> 32u ), static_cast<uint32>( slice & 0xFFFFFFFFull ) };
+    }
+
+    void VulkanRHIDevice::publishBufferReadSlot( RHIDescriptorIndex index, bool bUAV, RHIBufferHandle buffer, uint32 sliceOffset, uint32 sliceSize )
     {
         if ( index >= kBindlessBufferCapacity )
             SW_FATAL( "Vulkan: bindless buffer index %# is outside the read table (%#)", index, kBindlessBufferCapacity );
+        if ( bUAV == false )
+            _arrBufferReadSlice.get()[index].store( ( static_cast<uint64>( sliceOffset ) << 32u ) | sliceSize, std::memory_order_relaxed );
         ( bUAV ? _arrUAVBufferReadSlot : _arrBufferReadSlot ).get()[index].store( buffer, std::memory_order_release );
     }
 

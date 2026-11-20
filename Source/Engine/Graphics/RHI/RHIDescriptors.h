@@ -244,6 +244,46 @@ namespace sw
     } // namespace constant::render
 
     /**
+     * @brief 색 공간 @p colorSpace 의 스왑체인 백버퍼 포맷입니다. SDR 은 @p sdrFormat(EngineConfig `_rhi._backBufferFormat` 이 고른 RGBA8 · BGRA8) 그대로다.
+     * @details 포맷을 색 공간에서만 정해 맞지 않는 짝(HDR10 + RGBA8 등)을 만들 길이 없다. 언리얼 `GetDefaultBackBufferPixelFormat`(HDR 출력이면 A2B10G10R10 · FloatRGBA)과 같은 자리다.
+     */
+    constexpr RHIFormat getSwapChainFormat( RHIColorSpace colorSpace, RHIFormat sdrFormat )
+    {
+        switch ( colorSpace )
+        {
+            case RHIColorSpace::SRGBNonLinear:
+                return sdrFormat;
+            case RHIColorSpace::HDR10ST2084:
+                return RHIFormat::R10G10B10A2_UNORM;
+            case RHIColorSpace::ExtendedSRGBLinear:
+                return RHIFormat::R16G16B16A16_FLOAT;
+        }
+        return RHIFormat::Unknown;
+    }
+
+    /**
+     * @struct RHIDisplayMetadata
+     * @brief HDR10 스왑체인에 알리는 마스터링 정보입니다(DXGI `SetHDRMetaData` · Vulkan `vkSetHdrMetadataEXT`). 원색은 BT.2020 · 흰점 D65 로 백엔드가 채운다.
+     * @details 언리얼 `HDRSetMetaData` 와 같이 최대 휘도는 출력 장치 값(`DisplayOutputDesc::_maxLuminanceNits`), 프레임 평균은 종이 흰색이다.
+     */
+    struct RHIDisplayMetadata
+    {
+        float32 _maxLuminanceNits{ 1000.0f };   ///< 마스터링 최대 휘도 · MaxCLL(nits)
+        float32 _minLuminanceNits{ 0.001f };    ///< 마스터링 최소 휘도(nits)
+        float32 _maxFrameAverageNits{ 200.0f }; ///< MaxFALL(nits)
+
+        // 원색 · 흰점 색도(CIE 1931 xy) — BT.2020 원색, D65 흰점(ITU-R BT.2020 · SMPTE ST 2086). 두 백엔드가 같은 값을 알린다.
+        static constexpr float32 kRedPrimaryX   = 0.708f;
+        static constexpr float32 kRedPrimaryY   = 0.292f;
+        static constexpr float32 kGreenPrimaryX = 0.170f;
+        static constexpr float32 kGreenPrimaryY = 0.797f;
+        static constexpr float32 kBluePrimaryX  = 0.131f;
+        static constexpr float32 kBluePrimaryY  = 0.046f;
+        static constexpr float32 kWhitePointX   = 0.3127f;
+        static constexpr float32 kWhitePointY   = 0.3290f;
+    };
+
+    /**
      * @struct RHISwapChainDesc
      * @brief 창 스왑체인을 만들 때 쓰는 설정입니다.
      */
@@ -271,8 +311,10 @@ namespace sw
         PROPERTY()
         uint32 _bufferCount{ 2 }; ///< 프레임버퍼 개수 (Double/Triple Buffering)
 
-        /// @brief 백버퍼 컬러 포맷입니다. 백엔드는 이 값을 존중해야 하고, 못 내면 실제 값을 보고해야 합니다.
-        RHIFormat _format{ constant::render::kBackBufferFormat };
+        /// @brief SDR(`RHIColorSpace::SRGBNonLinear`)일 때의 백버퍼 컬러 포맷입니다. 백엔드는 이 값을 존중해야 하고, 못 내면 실제 값을 보고해야 합니다.
+        RHIFormat _sdrFormat{ constant::render::kBackBufferFormat };
+        /// @brief 화면에 내는 색 공간입니다. 백버퍼 포맷은 이것에서 정한다(`getFormat`). 주 스왑체인은 SDR 로 만들고 `IRHIDevice::setBackBufferColorSpace` 가 바꾼다.
+        RHIColorSpace _colorSpace{ RHIColorSpace::SRGBNonLinear };
 
         PROPERTY()
         bool _bVSync{ true }; ///< 수직 동기화
@@ -313,6 +355,9 @@ namespace sw
         bool _bGPUBasedValidation{ false };
         /// @brief Vulkan 동기화 검증을 켭니다(`EngineConfig::_rhi._bSynchronizationValidation`, 검증 레이어가 켜진 실행만). 리플렉션하지 않는다.
         bool _bSynchronizationValidation{ false };
+
+        /** @brief 백버퍼 포맷입니다 — 색 공간에서 정한다(`getSwapChainFormat`). */
+        [[nodiscard]] RHIFormat getFormat() const { return getSwapChainFormat( _colorSpace, _sdrFormat ); }
 
         /**
          * @brief Win32 표면의 `HWND` 를 @p outHandle 에 `void*` 로 담고 true 입니다. 창이 없으면(핸들이 nullptr, 오프스크린) @p outHandle 이 nullptr 이고 true 입니다.

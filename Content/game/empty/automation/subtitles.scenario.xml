@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4445240422534c26bda7ed9d7736cffa"?>
+<!--
+  자막 — 대사 음성(audio/empty.audioevents.xml 의 Subtitle* — 클립의 자막 키 · 이벤트의 화자 키)을 내면 자막 서비스가 띄우는지 값(UI.Subtitle*)으로 본다.
+  ① 대사 하나 → 줄 하나, 화자 이름. ② 둘이 겹치면 쌓인다(동시에 보이는 줄 수는 EngineConfig _subtitles 의 2). ③ 크기 설정(accessibility.subtitleSize)이 글 크기에 곱해진다(문서 30 × 크게 1.3).
+  ④ 읽기 시간(최소 2 초)이 지나면 내려가고 화면이 닫힌다. ⑤ 설정을 끄면 줄은 받되(시간이 흐른다) 화면이 열리지 않는다.
+  ⑥ 의사 문화권 qps-ploc(글이 늘어난다)에서 긴 대사가 최대 폭에서 접히고 넘치지 않는다 — 사진 한 장(골든은 통합이 첫 실행에서 기록).
+  설정은 옵션 메뉴와 같은 길(settings.apply)로 바꾼다. 바꾼 설정(언어 포함)은 다음 단계 앞에서 단계 되돌리기(UserSettingsManager::restoreStageBaseline)가 되돌린다.
+  실행: App -scenario=game/empty/automation/subtitles.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.subtitles" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Expect watch="UI.SubtitleLineCount" equals="0"/>
+
+	<!-- ① 대사 하나 -->
+	<DevCommand line="audio.post SubtitleGuideLine"/>
+	<WaitUntil watch="UI.SubtitleLineCount" equals="1" timeoutSeconds="1"/>
+	<AdvanceSimulation frames="2"/> <!-- 화면을 열고 배치한 뒤 -->
+	<Expect watch="UI.SubtitleShown" equals="1"/>
+	<Expect watch="UI.SubtitleSpeaker" is="Guide"/>
+	<Expect watch="UI.SubtitleTextSize" near="30" tolerance="0.01"/>
+
+	<!-- ② 겹치면 쌓인다 — 새 줄이 아래, 화자는 새 줄의 것 -->
+	<DevCommand line="audio.post SubtitleScoutLine"/>
+	<WaitUntil watch="UI.SubtitleLineCount" equals="2" timeoutSeconds="1"/>
+	<Expect watch="UI.SubtitleSpeaker" is="Scout"/>
+
+	<!-- ③ 크기 설정 -->
+	<DevCommand line="settings.apply accessibility.subtitleSize=large"/>
+	<AdvanceSimulation frames="2"/>
+	<Expect watch="UI.SubtitleTextSize" near="39" tolerance="0.01"/>
+	<DevCommand line="settings.apply accessibility.subtitleSize=medium"/>
+
+	<!-- ④ 읽기 시간 뒤 내려간다 -->
+	<WaitUntil watch="UI.SubtitleLineCount" equals="0" timeoutSeconds="6"/>
+	<AdvanceSimulation frames="1"/>
+	<Expect watch="UI.SubtitleShown" equals="0"/>
+
+	<!-- ⑤ 끄면 화면이 열리지 않는다(줄은 받아 시간이 흐른다) -->
+	<DevCommand line="settings.apply accessibility.subtitles=false"/>
+	<DevCommand line="audio.post SubtitleGuideLine"/>
+	<WaitUntil watch="UI.SubtitleLineCount" equals="1" timeoutSeconds="1"/>
+	<AdvanceSimulation frames="2"/>
+	<Expect watch="UI.SubtitleShown" equals="0"/>
+	<WaitUntil watch="UI.SubtitleLineCount" equals="0" timeoutSeconds="6"/>
+	<DevCommand line="settings.apply accessibility.subtitles=true"/>
+
+	<!-- ⑥ 의사 문화권 — 긴 대사가 접히고 넘치지 않는다 -->
+	<DevCommand line="settings.apply language.text=qps-ploc"/>
+	<DevCommand line="audio.post SubtitleLongLine"/>
+	<WaitUntil watch="UI.SubtitleLineCount" equals="1" timeoutSeconds="1"/>
+	<AdvanceSimulation frames="2"/>
+	<Expect watch="UI.SubtitleShown" equals="1"/>
+	<Expect watch="UI.SubtitleWrappedLines" atLeast="2"/>
+	<Expect watch="UI.SubtitleOverflow" equals="0"/>
+	<Screenshot file="subtitles_ploc.ppm" stability="assets"/>
+	<ExpectImage file="subtitles_ploc.ppm" golden="subtitles_ploc" region="0,0.55,1,1"/>
+	<Pass/>
+</Scenario>

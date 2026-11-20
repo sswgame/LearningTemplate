@@ -1,4 +1,4 @@
-// UTF8Util · StringUtil 의 UTF-8 — 검증기 · 디코더 · UCS-2 변환의 판정 일치, 연속 바이트, 경계로 물러나기, 한 글자 디코드, UCS-2 대체.
+// UTF8Util · StringUtil 의 UTF-8 — 검증기 · 디코더 · UCS-2 변환의 판정 일치, 연속 바이트, 경계로 물러나기, 한 글자 디코드, UCS-2 대체, UTF-16 단위 왕복(JNI 글 — 서로게이트 쌍 · 짝 없는 서로게이트).
 #include "pch.h"
 
 #include "Core/String/StringUtil.h"
@@ -182,4 +182,53 @@ SW_TEST_CASE( UTF8UtilTest, Ucs2ReplacesWhatItCannotHold )
     SW_EXPECT_EQUAL( listUnit[2], uint16{ 0xFFFD } );
     SW_EXPECT_EQUAL( listUnit[3], uint16{ 0xFFFD } );
     SW_EXPECT_EQUAL( listUnit[4], uint16{ 'b' } );
+}
+
+SW_TEST_CASE( UTF8UtilTest, UTF16UnitsRoundTripWithSurrogatePairs )
+{
+    // JNI 글 변환(`AndroidJNIString`)의 정본 — 한글(기본 평면) · 이모지 U+1F600(평면 밖, 서로게이트 쌍) · 빈 글.
+    const string   text = "a\xED\x95\x9C\xF0\x9F\x98\x80";
+    vector<uint16> listUnit;
+    StringUtil::utf8ToUTF16Units( text, listUnit );
+    SW_REQUIRE_EQUAL( size_t{ 4 }, listUnit.size() );
+    SW_REQUIRE_EQUAL( uint16{ 0x0061 }, listUnit[0] );
+    SW_REQUIRE_EQUAL( uint16{ 0xD55C }, listUnit[1] );
+    SW_REQUIRE_EQUAL( uint16{ 0xD83D }, listUnit[2] );
+    SW_REQUIRE_EQUAL( uint16{ 0xDE00 }, listUnit[3] );
+    string back;
+    StringUtil::utf16UnitsToUTF8( listUnit.data(), listUnit.size(), back );
+    SW_REQUIRE_TRUE( back == text );
+
+    StringUtil::utf8ToUTF16Units( string_view{}, listUnit );
+    SW_REQUIRE_TRUE( listUnit.empty() );
+    back = "stale";
+    StringUtil::utf16UnitsToUTF8( nullptr, 0, back );
+    SW_REQUIRE_TRUE( back.empty() );
+}
+
+SW_TEST_CASE( UTF8UtilTest, UTF16UnitsReplaceLoneSurrogatesAndBadBytes )
+{
+    const string kReplacement = "\xEF\xBF\xBD";
+    string       text;
+    const uint16 arrLoneHigh[] = { 0xD83D, 0x0041 }; // 높은 서로게이트 뒤에 낮은 것이 없다
+    StringUtil::utf16UnitsToUTF8( arrLoneHigh, 2, text );
+    SW_REQUIRE_TRUE( text == kReplacement + "A" );
+    const uint16 arrLoneLow[] = { 0xDE00 }; // 낮은 서로게이트 홀로
+    StringUtil::utf16UnitsToUTF8( arrLoneLow, 1, text );
+    SW_REQUIRE_TRUE( text == kReplacement );
+    const uint16 arrHighAtEnd[] = { 0x0041, 0xD83D }; // 끝에서 끊긴 쌍
+    StringUtil::utf16UnitsToUTF8( arrHighAtEnd, 2, text );
+    SW_REQUIRE_TRUE( text == "A" + kReplacement );
+    const uint16 arrSwapped[] = { 0xDE00, 0xD83D }; // 순서가 뒤집힌 쌍은 둘 다 대체
+    StringUtil::utf16UnitsToUTF8( arrSwapped, 2, text );
+    SW_REQUIRE_TRUE( text == kReplacement + kReplacement );
+
+    // 반대 방향: 잘못된 UTF-8 · 수정 UTF-8 의 서로게이트 3 바이트(CESU-8)는 U+FFFD 한 단위다.
+    vector<uint16> listUnit;
+    StringUtil::utf8ToUTF16Units( "\xFF", listUnit );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listUnit.size() );
+    SW_REQUIRE_EQUAL( uint16{ 0xFFFD }, listUnit[0] );
+    StringUtil::utf8ToUTF16Units( "\xED\xA0\xBD", listUnit );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listUnit.size() );
+    SW_REQUIRE_EQUAL( uint16{ 0xFFFD }, listUnit[0] );
 }

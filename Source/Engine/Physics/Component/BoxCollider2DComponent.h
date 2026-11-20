@@ -9,10 +9,16 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    class ValidationContext;
+} // namespace sw
 
 namespace sw
 {
@@ -57,9 +63,9 @@ namespace sw
         /** @brief 지금 자리를 연속 판정의 첫 출발점으로 둡니다(바디는 첫 물리 프레임에 생긴다 — 그 사이의 이동도 쓸린다). */
         void onBeginPlay() override;
 
-        /** @brief 물리 레이어 번호입니다(`CollisionLayers`). 시작한 뒤에 바꿔도 다음 물리 프레임부터 그 레이어로 걸러집니다. */
-        int32 getColliderType() const { return _colliderType; }
-        void  setColliderType( int32 type ) { _colliderType = type; }
+        /** @brief 충돌 프로필 이름입니다(`physicssettings.xml` 의 `CollisionProfileDef`). 시작한 뒤에 바꿔도 다음 물리 프레임부터 그 프로필로 걸러집니다. */
+        const hashed_string& getLayer() const { return _layer; }
+        void                 setLayer( const hashed_string& layer ) { _layer = layer; }
 
         /**
          * @brief 연속 판정인지입니다(유니티 `Rigidbody2D.collisionDetectionMode = Continuous` · 언리얼 `bUseContinuousCollision`).
@@ -124,6 +130,8 @@ namespace sw
         void sweepPassedBodies( ScenePhysics& physics, const vector<BoxCollider2DComponent*>& listMoved );
         /** @brief 이 콜라이더와 상대 바디가 지나치며 겹친 기록 하나를 만듭니다(`sweepPassedBodies`). */
         SweptOverlap2D makeSweptOverlap( PhysicsBodyHandle otherBody, uint64 otherUserData, float32 hitFraction, bool bOtherTrigger ) const;
+        /** @brief `_layer` 가 충돌 프로필 표에 있는지 봅니다(`PhysicsNameValidation`). */
+        void validateLayer( ValidationContext& context ) const;
 
         /**
          * @brief 콜라이더 오프셋 · 크기입니다.
@@ -133,8 +141,8 @@ namespace sw
         float2 _offsetPos;
         PROPERTY( Category = "Collider", DisplayName = "Offset Scale", Tooltip = "Collider box size" )
         float2 _offsetScale;
-        PROPERTY( Category = "Collider", DisplayName = "Collider Type", Tooltip = "Physics collider type index" )
-        int32 _colliderType;
+        PROPERTY( Category = "Collider", DisplayName = "Collision Profile", Tooltip = "Collision profile name from the physics settings (object channel and responses)", Validate = validateLayer, Meta = "NameSource=CollisionProfile" )
+        hashed_string _layer;
         PROPERTY( Category = "Collider", DisplayName = "Continuous", Tooltip = "Sweep the box from its last physics frame so a fast mover cannot pass through a thin collider" )
         bool _bContinuous;
         PROPERTY( Category = "Collider", DisplayName = "Is Trigger", Tooltip = "Reports overlaps but does not block - projectiles and attacks ignore it" )
@@ -147,7 +155,8 @@ namespace sw
         float2            _frameFromCenter;   ///< 이번 물리 프레임의 출발점(순간이동했거나 출발점이 없으면 도착점과 같다)
         float2            _bodyOffsetPos;     ///< 바디 상자를 잰 때의 `_offsetPos`(세터가 표시를 남기지 않아 값으로 비교한다)
         float2            _bodyOffsetScale;   ///< 바디 상자를 잰 때의 `_offsetScale`
-        int32             _bodyLayer;         ///< 바디를 만든 레이어
+        hashed_string     _bodyLayerName;     ///< 바디를 만든 프로필 이름(바뀌면 다시 만든다)
+        uint8             _bodyLayer;         ///< 바디를 만든 프로필의 레이어 번호
         bool              _bBodyTrigger;      ///< 바디를 만든 트리거 여부
         bool              _bSweepOriginValid; ///< `_sweepOrigin` 이 있는지(시작 전 · 바디를 놓은 뒤에는 없다 — 다시 켠 콜라이더는 꺼진 자리에서 쓸리지 않는다)
         uint32            _colliderIndex;     ///< 씬 물리의 콜라이더 목록 자리(`ScenePhysics::registerCollider2D`). 없으면 `kNotRegistered`

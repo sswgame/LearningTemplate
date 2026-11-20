@@ -332,6 +332,7 @@ namespace sw
             worldDef.userTaskContext = _pWorkerPool.get();
         }
         _worldID = b2CreateWorld( &worldDef );
+        b2World_SetCustomFilterCallback( _worldID, &Box2DPhysicsScene::filterShapePair, this );
 
         b2BodyDef groundDef = b2DefaultBodyDef();
         groundDef.type      = b2_staticBody;
@@ -448,6 +449,26 @@ namespace sw
         return filter;
     }
 
+    bool Box2DPhysicsScene::filterShapePair( b2ShapeId shapeA, b2ShapeId shapeB, void* pContext )
+    {
+        const Box2DPhysicsScene& scene     = *static_cast<const Box2DPhysicsScene*>( pContext );
+        const auto               findLayer = []( b2ShapeId shapeID )
+        {
+            const uint64 categoryBits = static_cast<uint64>( b2Shape_GetFilter( shapeID ).categoryBits );
+            for ( uint8 layer = 0; layer < CollisionLayers::kLayerCount; ++layer )
+            {
+                if ( ( categoryBits >> layer ) & 1u )
+                    return layer;
+            }
+            return static_cast<uint8>( CollisionLayers::kLayerCount ); // 레이어 없는 셰이프(땅 바디) — 응답은 무시로 읽혀 아래가 막지 않는다
+        };
+        const uint8 layerA = findLayer( shapeA );
+        const uint8 layerB = findLayer( shapeB );
+        if ( layerA >= CollisionLayers::kLayerCount || layerB >= CollisionLayers::kLayerCount )
+            return true; // 마스크가 이미 짝을 정했다 — 사용자 거름은 겹침 응답만 뺀다
+        return scene._layers.getResponse( layerA, layerB ) != CollisionResponse::Overlap;
+    }
+
     void Box2DPhysicsScene::applyFilter( const BodyRecord& record )
     {
         const b2Filter filter = makeFilter( record._layer, record.isSensor() );
@@ -546,9 +567,10 @@ namespace sw
         shapeDef.density                 = material._density;
         shapeDef.filter                  = makeFilter( record._layer, record.isSensor() );
         shapeDef.isSensor                = record.isSensor();
-        shapeDef.enableSensorEvents      = true;
-        shapeDef.enableContactEvents     = true;
-        shapeDef.enableHitEvents         = true;
+        // Box2D 3.1 에는 도형마다의 사용자 거르기 깃발이 없다 — 등록한 콜백(`filterShapePair`)이 모든 접촉 쌍에 불린다. 센서는 접촉 쌍을 만들지 않아(센서 이벤트는 따로) 콜백에 오지 않는다.
+        shapeDef.enableSensorEvents  = true;
+        shapeDef.enableContactEvents = true;
+        shapeDef.enableHitEvents     = true;
 
         b2ShapeId shapeID = b2_nullShapeId;
         switch ( shape._type )

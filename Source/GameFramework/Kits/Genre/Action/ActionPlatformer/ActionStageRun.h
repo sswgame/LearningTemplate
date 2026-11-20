@@ -2,6 +2,7 @@
  * @file ActionStageRun.h
  * @brief 스테이지 한 판을 진행합니다. 체크포인트(지나간 것만 인정하고 되돌아가지 않음), 목숨과 재시작, 비밀 수집품(체크포인트를 지나야 확정되고, 그 전에 죽으면 다시 놓임), 클리어 시간, 피격 수, 등급(시간, 피격, 수집의 가중 점수)을 다룹니다.
  * @details 시간은 `update` 로만 흐른다(고정 걸음이면 결정적이다). 목숨이 0이 되면 게임 오버이고, `restartStage` 로 스테이지를 처음부터 다시 시작한다(시간, 수집, 피격도 처음부터 다시 센다).
+ *          체크포인트는 공통 `CheckpointState`(앞으로만 · 한 번뿐, 순번은 스테이지 목록 자리)다 — 부활 자리 고르기(`RespawnFlow` 의 `LastCheckpoint`)가 그 기록을 그대로 읽는다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -14,6 +15,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/Respawn/CheckpointState.h"
 
 namespace sw
 {
@@ -72,8 +74,11 @@ namespace sw
         /** @brief 시간을 흘립니다(진행 중일 때만). */
         void update( float32 deltaTime );
 
-        /** @brief 체크포인트에 닿았음을 알립니다. 지금보다 뒤쪽 체크포인트면 그곳이 새 시작점이 되고, 지닌 수집품이 확정됩니다. 새로 닿았으면 true 를 반환합니다. */
-        bool reachCheckpoint( const hashed_string& checkpointID );
+        /**
+         * @brief 체크포인트에 닿았음을 알립니다. 지금보다 뒤쪽 체크포인트면 그곳이 새 시작점이 되고, 지닌 수집품이 확정됩니다. 새로 닿았으면 true 를 반환합니다.
+         * @param position 그 체크포인트의 부활 자리(세계 좌표) — 체크포인트 기록에 남아 부활 흐름이 읽는다. 자리를 쓰지 않는 쪽은 원점을 준다.
+         */
+        bool reachCheckpoint( const hashed_string& checkpointID, const float3& position = float3{} );
         /** @brief 비밀 수집품을 줍습니다(아직 확정되지 않습니다). 이 스테이지의 것이고 처음 줍는 것이면 true 를 반환합니다. */
         [[nodiscard]] bool collectSecret( const hashed_string& secretID );
         /** @brief 죽지 않고 맞았음을 알립니다. */
@@ -91,16 +96,18 @@ namespace sw
         /** @brief 비밀을 찾았는지(확정했거나 지닌 것) 반환합니다. */
         bool isSecretFound( const hashed_string& secretID ) const;
 
-        ActionStageState      getState() const { return _state; }
-        int32                 getLives() const { return _lives; }
-        float32               getElapsed() const { return _elapsed; }
-        int32                 getCheckpointIndex() const { return _checkpointIndex; }
-        int32                 getSecretCommittedCount() const { return static_cast<int32>( _listSecretCommitted.size() ); }
-        int32                 getSecretPendingCount() const { return static_cast<int32>( _listSecretPending.size() ); }
-        const ActionStageDef* getStage() const { return _pStage; }
+        ActionStageState getState() const { return _state; }
+        int32            getLives() const { return _lives; }
+        float32          getElapsed() const { return _elapsed; }
+        /** @brief 지난 마지막 체크포인트의 스테이지 목록 자리입니다(−1 이면 시작점). */
+        int32                  getCheckpointIndex() const;
+        const CheckpointState& getCheckpoints() const { return _checkpoints; }
+        int32                  getSecretCommittedCount() const { return static_cast<int32>( _listSecretCommitted.size() ); }
+        int32                  getSecretPendingCount() const { return static_cast<int32>( _listSecretPending.size() ); }
+        const ActionStageDef*  getStage() const { return _pStage; }
 
         /**
-         * @brief 스테이지 id, 판 상태, 경과 시간, 목숨, 체크포인트 인덱스, 피격, 죽은 수, 확정한 것, 지닌 비밀을 씁니다. 스테이지 정의는 카탈로그의 것이라 id 만 싣습니다.
+         * @brief 스테이지 id, 판 상태, 경과 시간, 목숨, 체크포인트 기록(`CheckpointState`), 피격, 죽은 수, 확정한 것, 지닌 비밀을 씁니다. 스테이지 정의는 카탈로그의 것이라 id 만 싣습니다.
          *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 스테이지는 연결한 카탈로그에서 id 로 찾습니다. 카탈로그가 없거나, 없는 스테이지, 비밀, 체크포인트이거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
         SW_DECLARE_STATE_IO();
@@ -119,8 +126,8 @@ namespace sw
         float32 _elapsed;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _lives;
-        PROPERTY( RuntimeState, Min = -1 )
-        int32 _checkpointIndex; ///< 지난 마지막 체크포인트 인덱스(−1이면 시작점)
+        PROPERTY( RuntimeState )
+        CheckpointState _checkpoints; ///< 지난 체크포인트(앞으로만, 순번은 스테이지 목록 자리)
         PROPERTY( RuntimeState, Min = 0 )
         int32 _hitCount;
         PROPERTY( RuntimeState, Min = 0 )

@@ -17,10 +17,13 @@
 #if defined( SW_PLATFORM_ANDROID )
 
 struct android_app;
+struct android_poll_source;
 struct AInputEvent;
 
 namespace sw
 {
+    class AndroidInputView;
+
     /** @class AndroidWindow @brief 액티비티 하나의 창입니다(주 창). */
     class SW_API AndroidWindow final : public CallbackInputWindow
     {
@@ -74,9 +77,8 @@ namespace sw
     protected:
         void* getNativeHandle() const override;
         /**
-         * @brief 화면 키보드를 올리거나 내립니다(`ANativeActivity_showSoftInput` · `hideSoftInput` — 어느 스레드에서 불러도 된다고 NDK 헤더가 적는다).
-         * @details NativeActivity 의 입력 연결은 키 이벤트만 보낸다 — 글자는 키의 유니코드(`queueKeyText`)로 받고, 입력기 조합(한글 · 일본어)은 오지 않는다.
-         *          조합까지 받으려면 GameActivity + GameTextInput 으로 옮겨야 한다(유니티 · 언리얼 Android 는 자바 쪽 입력 연결을 둔다).
+         * @brief 화면 키보드를 올리거나 내립니다 — 입력 뷰(`AndroidInputView` · Java `SWInputView`)가 포커스를 받고 `InputMethodManager.showSoftInput` 한다.
+         * @details 입력기의 조합 · 확정은 그 뷰의 `InputConnection` 으로 와서 `pollInputView` 가 글로 낸다(감사 P-4). 하드웨어 키보드의 글자는 여전히 키의 유니코드(`queueKeyText`)다.
          */
         void applyTextInputWanted( bool bWanted ) override;
         /** @brief 받지 않는다 — NativeActivity 에는 글 커서 자리를 입력기에 알리는 API 가 없다(GameTextInput 의 `setImeInsets` 자리). */
@@ -99,13 +101,18 @@ namespace sw
         [[nodiscard]] bool queueGamepadMotion( AInputEvent* pEvent );
         /** @brief 글을 원하는 동안 키 누름이 낸 글자(JNI `KeyEvent.getUnicodeChar`)를 확정 글로 모읍니다. NDK 에는 키의 유니코드를 읽는 함수가 없다. */
         void queueKeyText( AInputEvent* pEvent );
+        /** @brief 입력 뷰가 옮겨 둔 조합 · 확정 글과 지우기 키를 입력으로 모읍니다(게임 스레드 — 입력 뷰의 파이프가 ALooper 를 깨웠을 때). */
+        void pollInputView();
+
+        static void onInputViewReady( android_app* pApp, android_poll_source* pSource );
 
         static void  onAppCommand( android_app* pApp, int32 command );
         static int32 onInputEvent( android_app* pApp, AInputEvent* pEvent );
 
     private:
-        int32  _arrGamepadDeviceID[kPlatformGamepadSlotCount]; ///< 칸마다 붙은 입력 장치 번호(-1 이면 빈 칸)
-        uint32 _gamepadScanCountdown;                          ///< 다음 장치 대조까지 남은 메시지 처리 수
+        int32                        _arrGamepadDeviceID[kPlatformGamepadSlotCount]; ///< 칸마다 붙은 입력 장치 번호(-1 이면 빈 칸)
+        uint32                       _gamepadScanCountdown;                          ///< 다음 장치 대조까지 남은 메시지 처리 수
+        unique_ptr<AndroidInputView> _pInputView;                                    ///< 입력기 조합을 받는 Java 뷰의 짝(창이 선 동안)
     };
 } // namespace sw
 

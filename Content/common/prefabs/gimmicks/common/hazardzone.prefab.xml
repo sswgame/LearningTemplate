@@ -12,7 +12,7 @@
 			                        _attachComponent="None"
 			                        _offsetPos="0,0"
 			                        _offsetScale="3,1"
-			                        _colliderType="0"
+			                        _layer="Default"
 			                        _bContinuous="false"
 			                        _bTrigger="true" />
 			<GimmickSensorComponent _componentName="GimmickSensorComponent"

@@ -21,6 +21,10 @@
 		<bind source="Key" code="C"/>
 		<bind source="Gamepad" code="Back"/>
 	</action>
+	<!-- 조준 — 누르고 있는 동안 카메라 상황 Aim(shooter.cameras.xml)을 켠다. 궤도 시점의 Camera.LookHold 와 같은 버튼이지만 레이어가 달라 겹치지 않는다. -->
+	<action name="Aim" layer="Gameplay" trigger="Down">
+		<bind source="Mouse" code="Right"/>
+	</action>
 	<action name="SwitchWeapon" layer="Gameplay" trigger="Pressed">
 		<axis1d negative="Q" positive="E"/>
 	</action>

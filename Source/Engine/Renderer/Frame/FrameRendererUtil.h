@@ -455,6 +455,8 @@ namespace sw
         hashed_string _cameraGrade{ "g_CameraGrade" };
         /// @brief 카메라별 화면 틀입니다 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(화면 출력 뷰만, 렌더 텍스처는 0). post_grade.hlsli.
         hashed_string _cameraFrame{ "g_CameraFrame" };
+        /// @brief 화면 출력입니다 — x 톤 곡선 어깨(SDR 1, HDR 출력에 그리는 뷰는 `FrameDisplayEncode::getToneShoulder`). display_encode.hlsli.
+        hashed_string _displayOutput{ "g_DisplayOutput" };
         /// @brief 카메라별 피사계 심도입니다 — x 초점 거리(m), y 착란원 반지름 배율(px), z 반지름 상한(px), w 켬(1) · 끔(0, 끈 뷰는 패스를 기록하지 않아 셰이더는 읽지 않는다). depth_of_field.hlsl.
         hashed_string _cameraLens{ "g_CameraLens" };
         /// @brief 컬러 그레이딩 화이트 밸런스 행 셋입니다(`PostGradeConstants::_arrWhiteBalance`, post_grade.hlsli).

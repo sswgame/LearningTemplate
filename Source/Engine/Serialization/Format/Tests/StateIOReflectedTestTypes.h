@@ -6,8 +6,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -79,6 +81,41 @@ namespace sw
             , _reserved{ 0 }
         {
         }
+    };
+
+    /**
+     * @brief 내장 표(`ReflectBuiltins.xxx`)의 State 역할 · Layout 으로 실리는 칸을 하나씩 든 상태입니다 — num(float64 · uint64) · f32(quaternion) · i32(int2 시퀀스) ·
+     *        손 처리기(GameObjectHandle · hashed_string 시퀀스).
+     */
+    REFLECT()
+    struct StateIOReflectedTestBuiltins
+    {
+        REFLECT_BODY();
+        SW_DECLARE_REFLECTED_STATE_IO();
+
+        PROPERTY( RuntimeState )
+        float64 _clock = 0.0;
+        PROPERTY( RuntimeState )
+        uint64 _ticket = 0;
+        PROPERTY( RuntimeState )
+        quaternion _facing{ 0.0f, 0.0f, 0.0f, 1.0f };
+        PROPERTY( RuntimeState )
+        vector<int2> _listCell;
+        PROPERTY( RuntimeState )
+        GameObjectHandle _target;
+        PROPERTY( RuntimeState )
+        vector<hashed_string> _listTag;
+    };
+
+    /** @brief int2 칸 하나뿐인 상태입니다 — 성분마다 싣는 바이트가 손 함수(`StateIO::writeInt2`)와 같은지 본다. */
+    REFLECT()
+    struct StateIOReflectedTestCell
+    {
+        REFLECT_BODY();
+        SW_DECLARE_REFLECTED_STATE_IO();
+
+        PROPERTY( RuntimeState )
+        int2 _cell{ 0, 0 };
     };
 
     /** @brief 판 2 인 상태입니다. 판 1 은 체력 하나(int16)였고 `SW_TYPE_VERSION_PATCH` 가 올린다(테스트 .cpp). */
