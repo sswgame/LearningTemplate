@@ -43,8 +43,9 @@ endfunction()
 # sw_copy_vcpkg_file: bin 디렉터리의 지정 파일
 # sw_copy_vcpkg_shared_lib: 플랫폼별 .dll / .so
 # ------------------------------------------------------------------------------
-# vcpkg bin의 지정 파일을 런타임 복사 큐에 넣습니다.
+# vcpkg bin의 지정 파일을 런타임 복사 큐에 넣습니다. 못 찾으면 구성 오류 — OPTIONAL 인 것(딸린 의존이 트리플릿마다 다른 것)만 넘어간다.
 function(sw_copy_vcpkg_file TARGET_NAME FILE_NAME)
+	cmake_parse_arguments(ARG "OPTIONAL" "" "" ${ARGN})
 	sw_get_vcpkg_paths(inc_dirs bin_dirs)
 	set(found_file "")
 
@@ -57,28 +58,31 @@ function(sw_copy_vcpkg_file TARGET_NAME FILE_NAME)
 
 	if(found_file)
 		sw_queue_runtime_copy(${TARGET_NAME} "${found_file}")
+	elseif(NOT ARG_OPTIONAL)
+		message(FATAL_ERROR "sw_copy_vcpkg_file: ${FILE_NAME} for ${TARGET_NAME} not found in vcpkg bin folders (${bin_dirs}) - check vcpkg.json for ${VCPKG_TARGET_TRIPLET}")
 	endif()
 endfunction()
 
-# 플랫폼 접두사/접미사를 붙여 sw_copy_vcpkg_file에 위임합니다.
+# 플랫폼 접두사/접미사를 붙여 sw_copy_vcpkg_file에 위임합니다(OPTIONAL 도 넘긴다).
 function(sw_copy_vcpkg_shared_lib TARGET_NAME LIB_BASE_NAME)
 	set(lib_name "${CMAKE_SHARED_LIBRARY_PREFIX}${LIB_BASE_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
-	sw_copy_vcpkg_file(${TARGET_NAME} "${lib_name}")
+	sw_copy_vcpkg_file(${TARGET_NAME} "${lib_name}" ${ARGN})
 endfunction()
 
 # ------------------------------------------------------------------------------
 # 4) sw_copy_vulkan_validation_runtime — Khronos validation + vcpkg mimalloc 의존성
 # VkLayer_khronos_validation.dll 은 mimalloc.dll 에 링크되어 있음.
 # layer만 복사하면 LoadLibrary(126) → vkCreateInstance LAYER_NOT_PRESENT(-6).
+# 레이어는 vcpkg.json 이 Windows 에서만 받는다(Linux · Android · 웹은 시스템 · 없음) — 그 밖에서는 부르지 않는다.
 # ------------------------------------------------------------------------------
 function(sw_copy_vulkan_validation_runtime TARGET_NAME)
 	sw_copy_vcpkg_shared_lib(${TARGET_NAME} "VkLayer_khronos_validation")
 	sw_copy_vcpkg_file(${TARGET_NAME} "VkLayer_khronos_validation.json")
 
-	# vcpkg vulkan-validationlayers 가 mimalloc 을 쓰면 같이 배포 (없으면 no-op)
-	sw_copy_vcpkg_shared_lib(${TARGET_NAME} "mimalloc")
-	sw_copy_vcpkg_shared_lib(${TARGET_NAME} "mimalloc-redirect")
+	# vcpkg vulkan-validationlayers 가 mimalloc 을 쓰면 같이 배포 — 레이어 판에 따라 없을 수 있다
+	sw_copy_vcpkg_shared_lib(${TARGET_NAME} "mimalloc" OPTIONAL)
+	sw_copy_vcpkg_shared_lib(${TARGET_NAME} "mimalloc-redirect" OPTIONAL)
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -97,7 +101,8 @@ function(sw_copy_tracy_runtime TARGET_NAME)
 		get_target_property(tracy_dll Tracy::TracyClient IMPORTED_LOCATION_RELEASE)
 	endif()
 
-	if(tracy_dll)
-		sw_queue_runtime_copy(${TARGET_NAME} "${tracy_dll}")
+	if(NOT tracy_dll)
+		message(FATAL_ERROR "sw_copy_tracy_runtime: Tracy::TracyClient has no IMPORTED_LOCATION for ${CMAKE_BUILD_TYPE}")
 	endif()
+	sw_queue_runtime_copy(${TARGET_NAME} "${tracy_dll}")
 endfunction()

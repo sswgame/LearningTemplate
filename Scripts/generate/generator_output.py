@@ -11,9 +11,11 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import os
 import sys
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Iterator, Sequence
 
 from common.exit_code import ExitCode
 
@@ -52,6 +54,48 @@ def to_cmake_value(value: Any) -> str:
 def format_cmake_set(name: str, value: Any) -> str:
     """`set(NAME "값")` 한 줄."""
     return f'set({name} "{to_cmake_value(value)}")'
+
+
+@contextlib.contextmanager
+def record_read_files(root: Path, output_dir: Path) -> Iterator[set[Path]]:
+    """
+    이 구간에서 `root` 아래 읽은 파일(데이터 · 생성기 모듈)을 모은다 — configure 생성기의 `.deps` 목록.
+
+    CMake 가 이 목록을 CMAKE_CONFIGURE_DEPENDS 에 넣어 **생성기 코드나 그것이 읽은 표가 바뀌면** configure 가 다시 돈다. 손으로 적은
+    입력 목록은 새 입력을 빠뜨린다(층 표 · 매니페스트 · 생성기 .py). 읽기는 감사 훅의 `open` 사건으로 보고, 쓰는 출력 폴더는 뺀다.
+    """
+    root_prefix = os.path.normcase(str(root.resolve())) + os.sep
+    output_prefix = os.path.normcase(str(output_dir.resolve())) + os.sep
+    opened: set[str] = set()
+    files: set[Path] = set()
+    active = [True]
+
+    # 훅은 열 때마다 불린다(출력 껍데기 6 만여 장을 읽어 견준다) — 여기서는 글자만 모으고 경로 풀이 · 파일 확인은 끝에 한 번씩.
+    def _hook(event: str, args: tuple[Any, ...]) -> None:
+        if event != "open" or not active[0] or not isinstance(args[0], (str, Path)):
+            return
+        mode = args[1] if len(args) > 1 and isinstance(args[1], str) else "r"
+        if "w" in mode or "a" in mode or "x" in mode or "+" in mode:
+            return
+        opened.add(os.fspath(args[0]))
+
+    sys.addaudithook(_hook)   # 감사 훅은 지울 수 없다 — 구간이 끝나면 깃발로 끈다
+    try:
+        yield files
+    finally:
+        active[0] = False
+    # 이 구간 전에 import 한 생성기 모듈도 입력이다(코드가 바뀌면 출력이 바뀐다).
+    opened.update(module.__file__ for module in list(sys.modules.values()) if getattr(module, "__file__", None))
+    for text in opened:
+        normalized = os.path.normcase(os.path.abspath(text))
+        if normalized.startswith(root_prefix) and not normalized.startswith(output_prefix) and os.path.isfile(text):
+            files.add(Path(os.path.abspath(text)))
+
+
+def write_input_list(path: Path, files: set[Path], *, tag: str) -> bool:
+    """`.deps` 목록(한 줄에 절대 경로 하나, 정렬, `/` 구분자)을 바뀌었을 때만 쓴다."""
+    content = "".join(file.as_posix() + "\n" for file in sorted(files))
+    return write_generated_file(path, content, tag=tag, newline="\n", report_unchanged=False)
 
 
 class GeneratorError(Exception):

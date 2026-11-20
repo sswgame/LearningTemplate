@@ -30,7 +30,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common · generate
 
 from common.project_constants import DIR_RUNTIME_GAME_PRESET  # noqa: E402
-from generate.generator_output import run_generator  # noqa: E402
+from generate.generator_output import record_read_files, run_generator, write_input_list  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from generate.cmake_constants import generate_cmake_constants  # noqa: E402
 from generate.cook_contract import generate_cook_contract  # noqa: E402
@@ -43,8 +43,18 @@ from generate.target_layers import generate_target_layers  # noqa: E402
 TAG = "ConfigureFiles"
 
 
+INPUT_LIST_FILE_NAME = "ConfigureFiles.deps"   # GenerateConfigConstants.cmake 가 읽어 CMAKE_CONFIGURE_DEPENDS 에 넣는다
+
+
 def generate_configure_files(output_dir: Path, game_name: str) -> None:
-    """configure 산출물 넷을 `outputDir` 에 — 각 생성기를 단독으로 돌린 것과 같은 바이트."""
+    """configure 산출물을 `output_dir` 에 + 읽은 입력 목록 `ConfigureFiles.deps`."""
+    with record_read_files(get_project_root(), output_dir) as read_files:
+        _generate_all(output_dir, game_name)
+    write_input_list(output_dir / INPUT_LIST_FILE_NAME, read_files, tag=TAG)
+
+
+def _generate_all(output_dir: Path, game_name: str) -> None:
+    """각 생성기를 단독으로 돌린 것과 같은 바이트."""
     generate_cmake_constants(output_dir / "ConfigVars.cmake")
     generate_cook_contract(output_dir / "CookContract.gen.h", output_dir / "CookContract.cmake")
     generate_process_exit_codes(output_dir / "ProcessExitCodes.gen.h", output_dir / "ProcessExitCodes.cmake")

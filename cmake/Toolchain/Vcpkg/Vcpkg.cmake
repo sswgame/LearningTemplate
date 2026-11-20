@@ -121,21 +121,13 @@ endfunction()
 # 1b) sw_vcpkg_plan_manifest_install — 이 매니페스트를 공유 설치 폴더에 깔면 무엇이 바뀌는지(`vcpkg install --dry-run`)
 # 설치 폴더 · 스탬프는 워크트리 모두가 나눠 쓴다. 해시만 다르다고 설치하면 옛 매니페스트의 워크트리가 다른 워크트리가 쓰는
 # 포트를 지운다 — 그래서 설치 여부는 계획(지울 것 · 지을 것)으로 정한다.
-# OUT_STATUS: OK(계획을 얻음) · FAILED(vcpkg 를 돌리지 못함). OUT_REMOVE · OUT_BUILD: 지울 · 지을(다시 지을 포함) 포트 목록
+# 계획을 얻지 못하면 구성 오류 — 예전에는 그때 설치를 켜 공유 설치 폴더의 포트를 지울 수 있었다. OUT_REMOVE · OUT_BUILD: 지울 · 지을(다시 지을 포함) 포트 목록
 # ------------------------------------------------------------------------------
-function(sw_vcpkg_plan_manifest_install src_dir OUT_STATUS OUT_REMOVE OUT_BUILD)
-    set(${OUT_STATUS} "FAILED" PARENT_SCOPE)
-    set(${OUT_REMOVE} "" PARENT_SCOPE)
-    set(${OUT_BUILD} "" PARENT_SCOPE)
-
-    if(NOT DEFINED SW_VCPKG_ROOT OR SW_VCPKG_ROOT STREQUAL "")
-        return()
-    endif()
-
+function(sw_vcpkg_plan_manifest_install src_dir OUT_REMOVE OUT_BUILD)
     set(vcpkg_exe "${SW_VCPKG_ROOT}/vcpkg${CMAKE_HOST_EXECUTABLE_SUFFIX}")
 
-    if(NOT EXISTS "${vcpkg_exe}")
-        return()
+    if(NOT DEFINED SW_VCPKG_ROOT OR SW_VCPKG_ROOT STREQUAL "" OR NOT EXISTS "${vcpkg_exe}")
+        message(FATAL_ERROR "[vcpkg] Cannot plan the manifest install: vcpkg executable '${vcpkg_exe}' not found (SW_VCPKG_ROOT='${SW_VCPKG_ROOT}')")
     endif()
 
     set(args
@@ -146,6 +138,15 @@ function(sw_vcpkg_plan_manifest_install src_dir OUT_STATUS OUT_REMOVE OUT_BUILD)
         "--x-manifest-root=${src_dir}"
     )
 
+    # 실제 설치(vcpkg 툴체인)와 같은 기능 집합으로 계획한다 — 빼면 선택 기능의 포트가 "지울 것" 으로 잡힌다.
+    foreach(feature IN LISTS VCPKG_MANIFEST_FEATURES)
+        list(APPEND args "--x-feature=${feature}")
+    endforeach()
+
+    if(VCPKG_MANIFEST_NO_DEFAULT_FEATURES)
+        list(APPEND args "--x-no-default-features")
+    endif()
+
     foreach(overlay_port IN LISTS VCPKG_OVERLAY_PORTS)
         list(APPEND args "--overlay-ports=${overlay_port}")
     endforeach()
@@ -155,8 +156,9 @@ function(sw_vcpkg_plan_manifest_install src_dir OUT_STATUS OUT_REMOVE OUT_BUILD)
         list(APPEND args "--overlay-triplets=${overlay_triplet}")
     endforeach()
 
+    # 계획 읽기는 영어 머리 줄에 기댄다 — 언어를 고정한다(vcpkg 는 VSLANG 의 LCID 로 메시지 언어를 고른다, 1033 = en-US).
     execute_process(
-        COMMAND "${vcpkg_exe}" ${args}
+        COMMAND "${CMAKE_COMMAND}" -E env VSLANG=1033 "${vcpkg_exe}" ${args}
         WORKING_DIRECTORY "${src_dir}"
         RESULT_VARIABLE result
         OUTPUT_VARIABLE output
@@ -164,258 +166,13 @@ function(sw_vcpkg_plan_manifest_install src_dir OUT_STATUS OUT_REMOVE OUT_BUILD)
     )
 
     if(NOT result EQUAL 0)
-        message(STATUS "[vcpkg] dry-run failed (${result}): ${error}")
-        return()
+        message(FATAL_ERROR "[vcpkg] Cannot plan the manifest install (vcpkg install --dry-run exited ${result}):\n${output}\n${error}")
     endif()
 
-    # 절마다 머리 줄("The following packages will be removed:" 등) 아래에 포트가 한 줄씩 온다.
-    string(REPLACE "\r" "" output "${output}")
-    string(REPLACE "\n" ";" lines "${output}")
-    set(section "")
-    set(remove "")
-    set(build "")
-
-    foreach(line IN LISTS lines)
-        if(line MATCHES "^The following packages will be removed")
-            set(section "remove")
-        elseif(line MATCHES "^The following packages will be (built and installed|rebuilt)")
-            set(section "build")
-        elseif(line MATCHES "^The following packages")
-            set(section "")
-        elseif(line MATCHES "^ +[*]? *([^ :]+):")
-            if(section STREQUAL "remove")
-                list(APPEND remove "${CMAKE_MATCH_1}")
-            elseif(section STREQUAL "build")
-                list(APPEND build "${CMAKE_MATCH_1}")
-            endif()
-        elseif(NOT line MATCHES "^ ")
-            set(section "")
-        endif()
-    endforeach()
-
-    set(${OUT_STATUS} "OK" PARENT_SCOPE)
+    sw_vcpkg_parse_install_plan("${output}" remove build)
     set(${OUT_REMOVE} "${remove}" PARENT_SCOPE)
     set(${OUT_BUILD} "${build}" PARENT_SCOPE)
 endfunction()
-
-# ------------------------------------------------------------------------------
-# 2) sw_vcpkg_write_manifest_stamp — project() 이후 현재 해시를 스탬프에 기록
-# 다음 configure의 install gate가 스탬프와 비교해 재설치를 건너뜀
-# 경로: ${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha_<triplet>
-# ------------------------------------------------------------------------------
-function(sw_vcpkg_write_manifest_stamp)
-    if(NOT SW_USE_VCPKG)
-        return()
-    endif()
-
-    # 게이트가 정한 값을 캐시에 남기지 않는다 — 다음 구성이 캐시 값을 사용자 말로 읽는다(파일 머리 참고).
-    unset(VCPKG_MANIFEST_INSTALL CACHE)
-    set(SW_VCPKG_GATE_REV 2 CACHE INTERNAL "vcpkg 게이트 판 — 캐시의 VCPKG_MANIFEST_INSTALL 이 사용자 말인지 가른다")
-
-    if(NOT DEFINED VCPKG_INSTALLED_DIR OR NOT DEFINED VCPKG_TARGET_TRIPLET)
-        return()
-    endif()
-
-    # 읽기 전용 구성 · 설치를 거절한 configure(다른 워크트리가 쓰는 포트를 지우게 되는 옛 매니페스트)는 스탬프를 자기 해시로 덮지 않는다.
-    get_property(stamp_held GLOBAL PROPERTY SW_VCPKG_STAMP_HELD)
-
-    if(stamp_held)
-        return()
-    endif()
-
-    set(vcpkg_tree "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
-
-    if(NOT EXISTS "${vcpkg_tree}")
-        return()
-    endif()
-
-    sw_vcpkg_compute_manifest_hash(manifest_hash)
-
-    if(manifest_hash STREQUAL "")
-        return()
-    endif()
-
-    set(stamp "${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha_${VCPKG_TARGET_TRIPLET}") # triplet 마다 — 한 폴더에 triplet 이 여럿이면 한쪽 스탬프가 다른 쪽 설치를 가렸다
-    file(WRITE "${stamp}" "${manifest_hash}")
-    message(STATUS "[vcpkg] Manifest stamp updated (${VCPKG_TARGET_TRIPLET})")
-endfunction()
-
-# ------------------------------------------------------------------------------
-# 3) vcpkg 루트 탐색
-# 우선순위: vcpkg.py → VCPKG_ROOT → VCPKG_INSTALLATION_ROOT
-# ------------------------------------------------------------------------------
-if(NOT DEFINED SW_VCPKG_ROOT OR SW_VCPKG_ROOT STREQUAL "")
-    set(find_vcpkg_args "")
-
-    if(SW_VCPKG_AUTO_BOOTSTRAP)
-        list(APPEND find_vcpkg_args "--install")
-    endif()
-
-    # bootstrap 시도 중에는 QUIET 금지 — git/clone 실패가 configure 로그에 보여야 함
-    if(SW_VCPKG_AUTO_BOOTSTRAP)
-        sw_execute_python_script(
-            "${SW_SCRIPT_SETUP_VCPKG}"
-            ARGS ${find_vcpkg_args}
-            OUTPUT_VARIABLE SW_DETECTED_VCPKG_ROOT
-            RESULT_VARIABLE SW_FIND_VCPKG_RESULT
-            WARN
-        )
-    else()
-        sw_execute_python_script(
-            "${SW_SCRIPT_SETUP_VCPKG}"
-            ARGS ${find_vcpkg_args}
-            OUTPUT_VARIABLE SW_DETECTED_VCPKG_ROOT
-            RESULT_VARIABLE SW_FIND_VCPKG_RESULT
-            QUIET
-        )
-    endif()
-
-    if(SW_FIND_VCPKG_RESULT EQUAL 0 AND NOT "${SW_DETECTED_VCPKG_ROOT}" STREQUAL "")
-        # Vcpkg.py는 stdout에 경로만 출력. 상태 메시지가 섞이면 마지막 줄만 사용
-        string(STRIP "${SW_DETECTED_VCPKG_ROOT}" SW_DETECTED_VCPKG_ROOT)
-        string(REPLACE "\r\n" "\n" SW_DETECTED_VCPKG_ROOT "${SW_DETECTED_VCPKG_ROOT}")
-        string(REPLACE "\r" "\n" SW_DETECTED_VCPKG_ROOT "${SW_DETECTED_VCPKG_ROOT}")
-        string(REGEX REPLACE "\n+$" "" SW_DETECTED_VCPKG_ROOT "${SW_DETECTED_VCPKG_ROOT}")
-
-        if(SW_DETECTED_VCPKG_ROOT MATCHES "\n")
-            string(REGEX REPLACE "^.*\n([^\n]+)$" "\\1" SW_DETECTED_VCPKG_ROOT "${SW_DETECTED_VCPKG_ROOT}")
-        endif()
-
-        set(SW_VCPKG_ROOT "${SW_DETECTED_VCPKG_ROOT}" CACHE PATH "vcpkg 루트 디렉터리" FORCE)
-    endif()
-
-    if(NOT DEFINED SW_VCPKG_ROOT OR SW_VCPKG_ROOT STREQUAL "")
-        if(DEFINED ENV{VCPKG_ROOT} AND NOT "$ENV{VCPKG_ROOT}" STREQUAL "")
-            set(SW_VCPKG_ROOT "$ENV{VCPKG_ROOT}")
-        elseif(DEFINED ENV{VCPKG_INSTALLATION_ROOT} AND NOT "$ENV{VCPKG_INSTALLATION_ROOT}" STREQUAL "")
-            set(SW_VCPKG_ROOT "$ENV{VCPKG_INSTALLATION_ROOT}")
-        endif()
-    endif()
-endif()
-
-# ------------------------------------------------------------------------------
-# 4) Triplet · installed dir · overlay ports
-# VCPKG_TARGET_TRIPLET은 vcpkg.cmake include 전에 정해야 적용됨
-# 공유 VCPKG_INSTALLED_DIR은 ADDITIONAL_CLEAN_FILES에 넣지 않음
-# (한 preset의 clean이 Debug/Release/Shipping 패키지를 전부 지움)
-# overlay ports는 install 게이트 전에 보여야 함
-# ------------------------------------------------------------------------------
-# 교차 툴체인 환경(EMSDK · ANDROID_NDK_HOME) — 프리셋의 environment 는 `cmake --preset` 에만 실리고, 빌드 중 재구성(ninja 가 부르는 cmake)에는 없다.
-# 그러면 vcpkg 포트 툴체인(scripts/toolchains/android.cmake · emscripten.cmake)이 NDK · emsdk 를 못 찾아 재구성이 선다 — 구성 때 값을 캐시에 남기고 재구성에서 되살린다.
-foreach(cross_env IN ITEMS EMSDK ANDROID_NDK_HOME)
-    if(DEFINED ENV{${cross_env}} AND NOT "$ENV{${cross_env}}" STREQUAL "")
-        set(SW_CROSS_ENV_${cross_env} "$ENV{${cross_env}}" CACHE INTERNAL "configure-time ${cross_env} (restored on regeneration)")
-    elseif(DEFINED SW_CROSS_ENV_${cross_env})
-        set(ENV{${cross_env}} "${SW_CROSS_ENV_${cross_env}}")
-    endif()
-endforeach()
-
-if(NOT DEFINED VCPKG_TARGET_TRIPLET OR VCPKG_TARGET_TRIPLET STREQUAL "")
-    # 이 파일은 project() **앞**에서 include 되므로 CMAKE_SYSTEM_PROCESSOR 가 아직 비어 있다.
-    # 그 상태로 매치를 돌리면 언제나 마지막 else() 로 떨어져 **호스트가 무엇이든 x64** 가 됐다 —
-    # 아키텍처는 project() 없이도 물을 수 있으니(OS_PLATFORM: AMD64 · x86_64 · arm64 · aarch64)
-    # 프로세서가 비어 있으면 그것을 대신 본다. 대소문자는 OS 마다 달라서 낮춰서 본다.
-    set(SW_VCPKG_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR}")
-
-    if(SW_VCPKG_PROCESSOR STREQUAL "")
-        cmake_host_system_information(RESULT SW_VCPKG_PROCESSOR QUERY OS_PLATFORM)
-    endif()
-
-    string(TOLOWER "${SW_VCPKG_PROCESSOR}" SW_VCPKG_PROCESSOR)
-
-    if(SW_VCPKG_PROCESSOR MATCHES "^(aarch64|arm64)$" OR CMAKE_GENERATOR_PLATFORM MATCHES "[Aa][Rr][Mm]64")
-        set(SW_VCPKG_ARCH "arm64")
-    elseif(SW_VCPKG_PROCESSOR MATCHES "^(x86_64|amd64|x64)$" OR CMAKE_GENERATOR_PLATFORM MATCHES "[Xx]64")
-        set(SW_VCPKG_ARCH "x64")
-    elseif(SW_VCPKG_PROCESSOR MATCHES "^(x86|i[3-6]86)$")
-        set(SW_VCPKG_ARCH "x86")
-    else()
-        set(SW_VCPKG_ARCH "x64")
-    endif()
-
-    # 대상 OS 는 이름으로 고른다 — `else()` 에 Linux 를 두면 Android · Emscripten 툴체인도 조용히 linux 패키지를 받는다.
-    # `project()` 앞이라 교차 툴체인이 없으면 CMAKE_SYSTEM_NAME 이 비어 있다 — 그때는 호스트와 같은 대상이다.
-    # 정의되지 않은 변수를 따옴표 없이 비교하면 이름 글자 그대로 비교된다(`if(CMAKE_SYSTEM_NAME STREQUAL "")` 는 늘 거짓) — 값을 지역에 받아 비교한다.
-    # 그 틀린 비교가 새 빌드 폴더의 첫 구성(Linux-Debug-ASan)만 멈췄다. 있는 폴더는 캐시의 VCPKG_TARGET_TRIPLET 로 이 길을 지나지 않는다.
-    set(SW_VCPKG_TARGET_SYSTEM "${CMAKE_SYSTEM_NAME}")
-    if(WIN32 OR (SW_VCPKG_TARGET_SYSTEM STREQUAL "" AND CMAKE_HOST_WIN32))
-        set(SW_VCPKG_TRIPLET "${SW_VCPKG_ARCH}-windows")
-    elseif(SW_VCPKG_TARGET_SYSTEM STREQUAL "Linux" OR (SW_VCPKG_TARGET_SYSTEM STREQUAL "" AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux"))
-        set(SW_VCPKG_TRIPLET "${SW_VCPKG_ARCH}-linux")
-    else()
-        message(FATAL_ERROR "[vcpkg] no default triplet for target '${SW_VCPKG_TARGET_SYSTEM}' (host '${CMAKE_HOST_SYSTEM_NAME}') - set VCPKG_TARGET_TRIPLET in the preset (arm64-android, wasm32-emscripten-pthread)")
-    endif()
-
-    set(VCPKG_TARGET_TRIPLET "${SW_VCPKG_TRIPLET}" CACHE STRING "" FORCE)
-    set(VCPKG_HOST_TRIPLET "${SW_VCPKG_TRIPLET}" CACHE STRING "" FORCE)
-endif()
-
-set(src_dir "${CMAKE_CURRENT_SOURCE_DIR}")
-
-if(DEFINED CMAKE_SOURCE_DIR AND NOT CMAKE_SOURCE_DIR STREQUAL "")
-    set(src_dir "${CMAKE_SOURCE_DIR}")
-endif()
-
-if(NOT DEFINED VCPKG_INSTALLED_DIR OR VCPKG_INSTALLED_DIR STREQUAL "")
-    set(VCPKG_INSTALLED_DIR "${src_dir}/build/vcpkg_installed" CACHE PATH "vcpkg 설치 디렉터리" FORCE)
-endif()
-
-# 패키지 트리(설치 폴더/triplet)가 지난 구성과 다르면 옛 트리를 가리키는 캐시 항목(find_package · find_path 결과 — ZLIB_INCLUDE_DIR · PNG_LIBRARY · *_DIR …)을
-# 지운다. 남겨 두면 find 가 캐시 값을 믿고 다시 찾지 않아, 지워진 옛 폴더를 가리키는 IMPORTED 타깃으로 생성이 멈췄다(Android 설치 폴더 분리 · 웹 pthread triplet 때 두 번).
-set(vcpkg_tree_now "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
-if(DEFINED SW_VCPKG_LAST_TREE AND NOT SW_VCPKG_LAST_TREE STREQUAL vcpkg_tree_now)
-    set(vcpkg_tree_old "${SW_VCPKG_LAST_TREE}") # 기록 변수도 옛 트리 값이라 아래에서 함께 지워진다 — 먼저 받아 둔다
-    get_cmake_property(cache_names CACHE_VARIABLES)
-    set(cleared_count 0)
-    foreach(cache_name IN LISTS cache_names)
-        get_property(cache_value CACHE "${cache_name}" PROPERTY VALUE)
-        string(FIND "${cache_value}" "${vcpkg_tree_old}/" old_tree_at)
-        if(NOT old_tree_at EQUAL -1 OR cache_value STREQUAL vcpkg_tree_old)
-            unset("${cache_name}" CACHE)
-            math(EXPR cleared_count "${cleared_count} + 1")
-        endif()
-    endforeach()
-    message(STATUS "[vcpkg] package tree changed (${vcpkg_tree_old} -> ${vcpkg_tree_now}) - cleared ${cleared_count} cached paths into the old tree")
-endif()
-set(SW_VCPKG_LAST_TREE "${vcpkg_tree_now}" CACHE INTERNAL "지난 구성의 vcpkg 패키지 트리 — 바뀌면 옛 트리를 가리키는 캐시를 지운다")
-
-# 바이너리 캐시는 환경 변수로만 전달된다. CMakePresets.json 의 `environment` 는 `cmake --preset` 으로 구성할 때만 걸리고,
-# ninja 가 부르는 재구성(`cmake --regenerate-during-build`)과 `cmake -S -B` 에는 없다 — 그러면 vcpkg 가 기본 캐시(%LOCALAPPDATA%)를 보고
-# 포트 전체를 소스에서 다시 짓는다(35 개 포트 · 20 분, 새 결과는 저장소 캐시에 안 쌓인다). 프리셋과 같은 값을 여기서도 정한다.
-if(NOT DEFINED ENV{VCPKG_BINARY_SOURCES} OR "$ENV{VCPKG_BINARY_SOURCES}" STREQUAL "")
-    set(ENV{VCPKG_BINARY_SOURCES} "clear;files,${src_dir}/build/vcpkg_cache,readwrite")
-    message(STATUS "[vcpkg] VCPKG_BINARY_SOURCES not set in the environment — using ${src_dir}/build/vcpkg_cache")
-endif()
-
-# 오버레이 triplet 은 구성마다 빌드 폴더에 생성한다(VcpkgTriplets.cmake — 포트 ABI 가 풀린 도구 · 플래그만 보게). 재구성(ninja 의
-# `--regenerate-during-build` · `cmake -S -B`)도 이 줄을 지나 같은 폴더를 가리킨다 — 빠지면 vcpkg 가 기본 triplet(MSVC)으로 공유 설치 폴더의
-# 포트 전체를 다시 깐다(2026-10-18). 환경 변수 VCPKG_OVERLAY_TRIPLETS 는 vcpkg 실행 파일도 읽으므로 비운다(다른 오버레이가 섞이지 않게).
-sw_vcpkg_write_overlay_triplets(generated_triplet_dir)
-set(VCPKG_OVERLAY_TRIPLETS "${generated_triplet_dir}" CACHE STRING "vcpkg 오버레이 triplet 경로(생성)" FORCE)
-unset(ENV{VCPKG_OVERLAY_TRIPLETS})
-
-file(GLOB vcpkg_overlay_ports "${src_dir}/ThirdParty/*/vcpkg-port")
-
-if(vcpkg_overlay_ports)
-    set(VCPKG_OVERLAY_PORTS "${vcpkg_overlay_ports}" CACHE STRING "vcpkg 오버레이 포트 경로(들)" FORCE)
-endif()
-
-# ------------------------------------------------------------------------------
-# 5) Manifest install gate — project() 전 CACHE. vcpkg.cmake가 이를 존중
-# 트리+스탬프가 일치하면 VCPKG_MANIFEST_INSTALL=OFF
-# MANIFEST_MODE는 한 번 ON이면 OFF 전환을 거부하므로 항상 ON, INSTALL로만 제어
-# ------------------------------------------------------------------------------
-sw_vcpkg_compute_manifest_hash(manifest_hash)
-
-set(vcpkg_tree "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
-set(stamp "${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha_${VCPKG_TARGET_TRIPLET}") # triplet 마다 — 한 폴더에 triplet 이 여럿이면 한쪽 스탬프가 다른 쪽 설치를 가렸다
-set(tree_ready FALSE)
-
-# 폴더만 보지 않는다 — 매니페스트 설치가 다른 triplet 의 포트를 지우면 빈 폴더가 남아 스탬프만 맞고 헤더가 없었다(2026-11-09).
-file(GLOB vcpkg_shared_ports LIST_DIRECTORIES true "${vcpkg_tree}/share/*")
-if(EXISTS "${vcpkg_tree}" AND vcpkg_shared_ports)
-    set(tree_ready TRUE)
-endif()
 
 set(stamp_match FALSE)
 
@@ -478,12 +235,9 @@ elseif(tree_ready AND manifest_hash STREQUAL "")
 elseif(tree_ready)
     # 스탬프가 다르다(이 매니페스트가 바뀌었거나, 설치 폴더를 나눠 쓰는 다른 워크트리가 덮었다). 해시만으로 설치하지 않고 계획을 본다.
     set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg 매니페스트 모드" FORCE)
-    sw_vcpkg_plan_manifest_install("${src_dir}" plan_status plan_remove plan_build)
+    sw_vcpkg_plan_manifest_install("${src_dir}" plan_remove plan_build)
 
-    if(NOT plan_status STREQUAL "OK")
-        set(VCPKG_MANIFEST_INSTALL ON CACHE BOOL "매니페스트에서 vcpkg 자동 설치" FORCE)
-        message(STATUS "[vcpkg] Manifest changed or stamp missing — could not plan the install, install enabled")
-    elseif(plan_remove)
+    if(plan_remove)
         # 지우게 되면 멈춘다 — 다른 워크트리(최신 main)가 쓰는 포트일 수 있다. 빠진 포트는 find_package 에서 드러난다.
         set(VCPKG_MANIFEST_INSTALL OFF CACHE BOOL "매니페스트에서 vcpkg 자동 설치" FORCE)
         set_property(GLOBAL PROPERTY SW_VCPKG_STAMP_HELD TRUE)

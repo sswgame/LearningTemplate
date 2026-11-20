@@ -33,6 +33,52 @@ def read_only_reason(source_dir: Path, installed_dir: str, user_install: str) ->
     return line[len("REASON=[") : -1]
 
 
+def parse_install_plan(output: str) -> tuple[str, str]:
+    """`sw_vcpkg_parse_install_plan` 이 읽은 (지울, 지을) 포트 목록 — CMake 리스트 글 그대로."""
+    with tempfile.TemporaryDirectory() as folder:
+        plan = Path(folder) / "plan.txt"
+        plan.write_bytes(output.encode("utf-8"))
+        script = Path(folder) / "Probe.cmake"
+        script.write_text(
+            f'include("{POLICY_FILE.as_posix()}")\n'
+            f'file(READ "{plan.as_posix()}" output)\n'
+            'sw_vcpkg_parse_install_plan("${output}" remove build)\n'
+            'message(NOTICE "REMOVE=[${remove}]")\n'
+            'message(NOTICE "BUILD=[${build}]")\n',
+            encoding="utf-8",
+        )
+        result = subprocess.run([CMAKE, "-P", str(script)], capture_output=True, text=True, check=True)
+    lines = result.stderr.splitlines()
+    remove = next(text for text in lines if text.startswith("REMOVE=["))
+    build = next(text for text in lines if text.startswith("BUILD=["))
+    return remove[len("REMOVE=[") : -1], build[len("BUILD=[") : -1]
+
+
+class VcpkgInstallPlanTest(unittest.TestCase):
+    def test_sections(self) -> None:
+        output = (
+            "Computing installation plan...\n"
+            "The following packages will be removed:\n"
+            "    oldport:x64-windows@1.0\n"
+            "The following packages will be built and installed:\n"
+            "  * zlib:x64-windows@1.3.1 -- C:/overlay/zlib\n"
+            "    mimalloc:x64-windows@2.1.7\n"
+            "The following packages are already installed:\n"
+            "    fmt:x64-windows@11.0.2\n"
+            "Additional packages (*) will be modified to complete this operation.\n"
+        )
+        self.assertEqual(parse_install_plan(output), ("oldport", "zlib;mimalloc"))
+
+    def test_nothing_to_do(self) -> None:
+        output = "Computing installation plan...\nAll requested packages are currently installed.\n"
+        self.assertEqual(parse_install_plan(output), ("", ""))
+
+    def test_crlf_and_feature_list(self) -> None:
+        # 기능 목록의 `;` 가 CMake 리스트를 쪼개지 않는다(`,` 로 바꿔 읽는다).
+        output = "The following packages will be rebuilt:\r\n    imgui[core;docking-experimental]:x64-windows@1.91\r\n"
+        self.assertEqual(parse_install_plan(output), ("", "imgui[core,docking-experimental]"))
+
+
 class VcpkgInstallPolicyTest(unittest.TestCase):
     def setUp(self) -> None:
         self._folder = tempfile.TemporaryDirectory()
