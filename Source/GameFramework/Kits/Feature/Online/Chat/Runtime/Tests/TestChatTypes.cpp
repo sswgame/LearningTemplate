@@ -1,9 +1,10 @@
-// ChatTypesTest — 채널 id 규칙: 접두어마다의 종류, 이름 없는 접두어 · 모르는 접두어 · 글자 · 길이 거절, 만든 id(길드 · 파티 · 귓속말)가 규칙 안이고
+// ChatTypesTest — 채널 id 규칙: 접두어마다의 종류, 이름 없는 접두어 · 모르는 접두어 · 글자 · 길이 거절, 만든 id(길드 · 파티 · 귓속말)가 규칙 안이고 화면이 드는 채팅 기록(`ChatLog`)의 약한 참조도 본다.
 // 귓속말 키는 두 계정의 순서와 무관하다. 서버는 받은 채널 id 를 이 함수로 거른다(ChatService).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatLog.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h"
 
 using namespace sw;
@@ -50,4 +51,16 @@ SW_TEST_CASE( ChatTypesTest, MadeIDsParseBackAsTheirKind )
     SW_REQUIRE_TRUE( ChatChannelID::parseKind( whisper, kind ) );
     SW_EXPECT_TRUE( kind == ChatChannelKind::Whisper );
     SW_EXPECT_TRUE( whisper != ChatChannelID::makeWhisper( 2, 3 ) );
+}
+
+/** @brief [ChatTypesTest] 화면이 든 약한 참조는 모델이 사라지면 빈다 — 화면(엔진 UI 소유)이 게임 쪽 모델보다 오래 살아도 사라진 모델을 부르지 않는다 */
+SW_TEST_CASE( ChatTypesTest, ScreenReferenceEmptiesWhenTheModelIsDestroyed )
+{
+    WeakRef<ChatLog> reference;
+    {
+        ChatLog model;
+        reference = WeakRef<ChatLog>{ model };
+        SW_EXPECT_TRUE( reference.get() == &model );
+    }
+    SW_EXPECT_NULL( reference.get() );
 }

@@ -65,7 +65,7 @@ namespace sw
         : UIScreen{ desc, std::move( root ) }
         , _onPicked{}
         , _kind{}
-        , _pModel{ nullptr }
+        , _model{}
         , _shownRevision{ 0 }
         , _bBuilt{ SW_FALSE }
     {
@@ -80,7 +80,7 @@ namespace sw
         if ( pScreen == nullptr )
             return kInvalidUIScreenHandle;
         ServerPickerScreen& screen = static_cast<ServerPickerScreen&>( *pScreen );
-        screen._pModel             = &model;
+        screen._model              = WeakRef<ServerList>{ model };
         screen._kind               = string( kind );
         screen._onPicked           = onPicked;
         if ( model.getState() == ServerListState::Idle )
@@ -114,17 +114,18 @@ namespace sw
         }
         if ( command == hashed_string( Internal::kRefreshCommand ) )
         {
-            if ( _pModel != nullptr )
-                (void)_pModel->refresh( _kind ); // 묻는 중이면 보내지 않는다 — 상태 글이 이미 받는 중이다
+            if ( ServerList* const pModel = _model.get() )
+                (void)pModel->refresh( _kind ); // 묻는 중이면 보내지 않는다 — 상태 글이 이미 받는 중이다
             return true;
         }
-        if ( command == hashed_string( Internal::kPickCommand ) && _pModel != nullptr )
+        const ServerList* const pModel = _model.get();
+        if ( command == hashed_string( Internal::kPickCommand ) && pModel != nullptr )
         {
             const ListViewWidget*  pServers = getTree().findWidget<ListViewWidget>( hashed_string( Internal::kServersName ) );
             const optional<uint32> index    = pServers != nullptr ? pServers->findItemIndex( source ) : nullopt;
-            if ( index.has_value() == false || *index >= _pModel->getEntries().size() )
+            if ( index.has_value() == false || *index >= pModel->getEntries().size() )
                 return false;
-            const ServerListEntry server = _pModel->getEntries()[*index]; // 델리게이트가 모델을 바꿔도 안전하게 복사해 둔다
+            const ServerListEntry server = pModel->getEntries()[*index]; // 델리게이트가 모델을 바꿔도 안전하게 복사해 둔다
             if ( server._state != ServerState::Open )
                 return false; // 받지 않는 서버는 고를 수 없다(단추도 꺼져 있다)
             if ( _onPicked.isBound() )
@@ -138,14 +139,21 @@ namespace sw
     void ServerPickerScreen::onTick( float32 deltaSeconds )
     {
         UIScreen::onTick( deltaSeconds );
-        if ( _pModel != nullptr && ( _bBuilt == false || _pModel->getRevision() != _shownRevision ) )
+        const ServerList* const pModel = _model.get();
+        if ( pModel == nullptr )
+        {
+            close(); // 모델을 소유한 쪽(게임 인스턴스)이 먼저 내려갔다 — 화면도 함께 닫는다
+            return;
+        }
+        if ( _bBuilt == false || pModel->getRevision() != _shownRevision )
             rebuild();
     }
 
     void ServerPickerScreen::rebuild()
     {
-        using Internal = ServerPickerScreenInternal;
-        if ( _pModel == nullptr )
+        using Internal                 = ServerPickerScreenInternal;
+        const ServerList* const pModel = _model.get();
+        if ( pModel == nullptr )
             return;
         WidgetTree&     tree     = getTree();
         ListViewWidget* pServers = tree.findWidget<ListViewWidget>( hashed_string( Internal::kServersName ) );
@@ -160,10 +168,13 @@ namespace sw
         pServers->setRowFactory( ListViewWidget::RowFactoryDelegate::create( []()
         { return makeRow(); } ) );
         pServers->setRowBinder( ListViewWidget::RowBinderDelegate::create( [this]( Widget& row, uint32 itemIndex )
-        { bindRow( row, _pModel->getEntries()[itemIndex] ); } ) );
-        const vector<ServerListEntry>& listEntry = _pModel->getEntries();
+        {
+            if ( const ServerList* const pBound = _model.get() ) // 줄은 다음 배치에서 이어진다 — 그 사이 모델이 사라졌을 수 있다
+                bindRow( row, pBound->getEntries()[itemIndex] );
+        } ) );
+        const vector<ServerListEntry>& listEntry = pModel->getEntries();
         pServers->setItemCount( static_cast<uint32>( listEntry.size() ) );
-        switch ( _pModel->getState() )
+        switch ( pModel->getState() )
         {
             case ServerListState::Idle:
             {
@@ -183,12 +194,12 @@ namespace sw
             case ServerListState::Failed:
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "Could not load the server list (error %#)", static_cast<int32>( _pModel->getErrorCode() ) );
+                textBuilder.appendFormat( "Could not load the server list (error %#)", static_cast<int32>( pModel->getErrorCode() ) );
                 pStatus->setText( string( textBuilder.view() ) );
                 break;
             }
         }
-        _shownRevision = _pModel->getRevision();
+        _shownRevision = pModel->getRevision();
         _bBuilt        = SW_TRUE;
     }
 } // namespace sw

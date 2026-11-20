@@ -70,7 +70,7 @@ namespace sw
 
     FriendListScreen::FriendListScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
-        , _pModel{ nullptr }
+        , _model{}
         , _shownRevision{ 0 }
         , _bBuilt{ SW_FALSE }
     {
@@ -85,7 +85,7 @@ namespace sw
         if ( pScreen == nullptr )
             return kInvalidUIScreenHandle;
         FriendListScreen& screen = static_cast<FriendListScreen&>( *pScreen );
-        screen._pModel           = &model;
+        screen._model            = WeakRef<FriendList>{ model };
         if ( model.getState() == FriendListState::Idle )
             (void)model.refresh(); // 실패는 모델이 Failed 로 보이고 rebuild 가 상태 글로 적는다
         screen.rebuild();
@@ -112,8 +112,8 @@ namespace sw
         }
         if ( command == hashed_string( Internal::kRefreshCommand ) )
         {
-            if ( _pModel != nullptr )
-                (void)_pModel->refresh(); // 묻는 중이면 보내지 않는다 — 상태 글이 이미 받는 중이다
+            if ( FriendList* const pModel = _model.get() )
+                (void)pModel->refresh(); // 묻는 중이면 보내지 않는다 — 상태 글이 이미 받는 중이다
             return true;
         }
         return UIScreen::onCommand( command, source );
@@ -122,17 +122,22 @@ namespace sw
     void FriendListScreen::onTick( float32 deltaSeconds )
     {
         UIScreen::onTick( deltaSeconds );
-        if ( _pModel == nullptr )
+        FriendList* const pModel = _model.get();
+        if ( pModel == nullptr )
+        {
+            close(); // 모델을 소유한 쪽(게임 인스턴스)이 먼저 내려갔다 — 화면도 함께 닫는다
             return;
-        _pModel->update();
-        if ( _bBuilt == false || _pModel->getRevision() != _shownRevision )
+        }
+        pModel->update();
+        if ( _bBuilt == false || pModel->getRevision() != _shownRevision )
             rebuild();
     }
 
     void FriendListScreen::rebuild()
     {
-        using Internal = FriendListScreenInternal;
-        if ( _pModel == nullptr )
+        using Internal                 = FriendListScreenInternal;
+        const FriendList* const pModel = _model.get();
+        if ( pModel == nullptr )
             return;
         WidgetTree&     tree     = getTree();
         ListViewWidget* pFriends = tree.findWidget<ListViewWidget>( hashed_string( Internal::kFriendsName ) );
@@ -147,11 +152,14 @@ namespace sw
         pFriends->setRowFactory( ListViewWidget::RowFactoryDelegate::create( []()
         { return makeRow(); } ) );
         pFriends->setRowBinder( ListViewWidget::RowBinderDelegate::create( [this]( Widget& row, uint32 itemIndex )
-        { bindRow( row, _pModel->getEntries()[itemIndex] ); } ) );
-        const vector<FriendEntry>& listEntry = _pModel->getEntries();
+        {
+            if ( const FriendList* const pBound = _model.get() ) // 줄은 다음 배치에서 이어진다 — 그 사이 모델이 사라졌을 수 있다
+                bindRow( row, pBound->getEntries()[itemIndex] );
+        } ) );
+        const vector<FriendEntry>& listEntry = pModel->getEntries();
         pFriends->setItemCount( static_cast<uint32>( listEntry.size() ) );
         string statusText;
-        switch ( _pModel->getState() )
+        switch ( pModel->getState() )
         {
             case FriendListState::Idle:
             {
@@ -166,10 +174,10 @@ namespace sw
             case FriendListState::Loaded:
             {
                 statusText = listEntry.empty() ? "No friends yet" : "Friends";
-                if ( _pModel->getPendingRequestCount() > 0 )
+                if ( pModel->getPendingRequestCount() > 0 )
                 {
                     StringBuilder<constant::buffer::kMax256> statusTextPart;
-                    statusTextPart.appendFormat( "  (%# pending requests)", _pModel->getPendingRequestCount() );
+                    statusTextPart.appendFormat( "  (%# pending requests)", pModel->getPendingRequestCount() );
                     statusText += statusTextPart.c_str();
                 }
                 break;
@@ -177,13 +185,13 @@ namespace sw
             case FriendListState::Failed:
             {
                 StringBuilder<constant::buffer::kMax256> statusTextBuilder;
-                statusTextBuilder.appendFormat( "Could not load the friend list (error %#)", static_cast<uint32>( _pModel->getErrorCode() ) );
+                statusTextBuilder.appendFormat( "Could not load the friend list (error %#)", static_cast<uint32>( pModel->getErrorCode() ) );
                 statusText = string( statusTextBuilder.view() );
                 break;
             }
         }
         pStatus->setText( statusText );
-        _shownRevision = _pModel->getRevision();
+        _shownRevision = pModel->getRevision();
         _bBuilt        = SW_TRUE;
     }
 } // namespace sw

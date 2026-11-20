@@ -30,7 +30,7 @@ namespace sw
     ChatScreen::ChatScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
         , _channelID{}
-        , _pModel{ nullptr }
+        , _model{}
         , _shownRevision{ 0 }
         , _bBuilt{ SW_FALSE }
     {
@@ -45,7 +45,7 @@ namespace sw
         if ( pScreen == nullptr )
             return kInvalidUIScreenHandle;
         ChatScreen& screen = static_cast<ChatScreen&>( *pScreen );
-        screen._pModel     = &model;
+        screen._model      = WeakRef<ChatLog>{ model };
         screen._channelID  = string( channelID );
         screen.rebuild();
         return handle;
@@ -143,7 +143,8 @@ namespace sw
             close();
             return true;
         }
-        if ( command == hashed_string( Internal::kSendCommand ) && _pModel != nullptr )
+        ChatLog* const pModel = _model.get();
+        if ( command == hashed_string( Internal::kSendCommand ) && pModel != nullptr )
         {
             TextInputWidget* pInput = getTree().findWidget<TextInputWidget>( hashed_string( Internal::kInputName ) );
             if ( pInput == nullptr )
@@ -152,7 +153,7 @@ namespace sw
                 return false;
             }
             const string text = pInput->getText(); // 모델이 입력 줄을 건드리는 길은 없지만 복사해 두고 비운다
-            if ( _pModel->send( _channelID, text ) )
+            if ( pModel->send( _channelID, text ) )
                 pInput->setText( "" );
             return true;
         }
@@ -162,17 +163,22 @@ namespace sw
     void ChatScreen::onTick( float32 deltaSeconds )
     {
         UIScreen::onTick( deltaSeconds );
-        if ( _pModel == nullptr )
+        ChatLog* const pModel = _model.get();
+        if ( pModel == nullptr )
+        {
+            close(); // 모델을 소유한 쪽(게임 인스턴스)이 먼저 내려갔다 — 화면도 함께 닫는다
             return;
-        _pModel->update();
-        if ( _bBuilt == false || _pModel->getRevision() != _shownRevision )
+        }
+        pModel->update();
+        if ( _bBuilt == false || pModel->getRevision() != _shownRevision )
             rebuild();
     }
 
     void ChatScreen::rebuild()
     {
-        using Internal = ChatScreenInternal;
-        if ( _pModel == nullptr )
+        using Internal              = ChatScreenInternal;
+        const ChatLog* const pModel = _model.get();
+        if ( pModel == nullptr )
             return;
         WidgetTree&  tree    = getTree();
         PanelWidget* pLines  = tree.findWidget<PanelWidget>( hashed_string( Internal::kLinesName ) );
@@ -185,7 +191,7 @@ namespace sw
         }
         pLines->clearChildren();
         // 이 채널의 줄만, 최근 kVisibleLines 줄을 오래된 것부터 위에서 아래로 놓는다.
-        const deque<ChatMessage>& listLine = _pModel->getLines();
+        const deque<ChatMessage>& listLine = pModel->getLines();
         size_t                    shown    = 0;
         size_t                    first    = listLine.size();
         while ( first > 0 && shown < kVisibleLines )
@@ -206,8 +212,8 @@ namespace sw
             (void)pLines->addChild( std::move( row ) );
             ++rowIndex;
         }
-        pStatus->setText( makeStatusText( _pModel->getLastResult(), _pModel->getRetryAfterMs() ) );
-        _shownRevision = _pModel->getRevision();
+        pStatus->setText( makeStatusText( pModel->getLastResult(), pModel->getRetryAfterMs() ) );
+        _shownRevision = pModel->getRevision();
         _bBuilt        = SW_TRUE;
     }
 } // namespace sw

@@ -42,3 +42,15 @@ SW_TEST_CASE( ServerPickerRowTest, ReusedRowShowsTheServerItIsBoundTo )
     SW_EXPECT_FALSE( row->isEnabled() );
     SW_EXPECT_EQUAL( string( "us  95%  maintenance" ), label.getText() );
 }
+
+/** @brief [ServerPickerRowTest] 화면이 든 약한 참조는 모델이 사라지면 빈다 — 화면(엔진 UI 소유)이 게임 쪽 모델보다 오래 살아도 사라진 모델을 부르지 않는다 */
+SW_TEST_CASE( ServerPickerRowTest, ScreenReferenceEmptiesWhenTheModelIsDestroyed )
+{
+    WeakRef<ServerList> reference;
+    {
+        ServerList model;
+        reference = WeakRef<ServerList>{ model };
+        SW_EXPECT_TRUE( reference.get() == &model );
+    }
+    SW_EXPECT_NULL( reference.get() );
+}

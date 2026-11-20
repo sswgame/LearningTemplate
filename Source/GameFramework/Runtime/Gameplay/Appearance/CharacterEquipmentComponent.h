@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/WeakRef.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -78,6 +79,8 @@ namespace sw
         /** @brief 가방을 거래(가게 사기 · 팔기 — `LocalShopPurchaseProvider`)에 빌려 줍니다. 칸 조작은 `applyCommand` 를 거칩니다. */
         Inventory& getBagForTrade() { return _bag; }
         bool       isStarted() const { return _bStarted == SW_TRUE; }
+        /** @brief 화면(엔진 UI 소유 — 컴포넌트보다 오래 살 수 있다)이 이 컴포넌트를 약하게 빌리는 출처입니다(`WeakRef`). */
+        WeakRefSource& getWeakRefSource() { return _weakRefSource; }
 
         /** @brief `ComponentStateStore` 계약 — 장비 칸(칸 이름 + 인스턴스)과 가방입니다. 읽기는 아이템 카탈로그가 선 뒤(`onBeginPlay`)에만 된다. */
         void serializeState( StateIO& io );
@@ -99,5 +102,7 @@ namespace sw
         PROPERTY( Category = "Equipment", DisplayName = "Bag Max Weight", Min = 0.0, Tooltip = "Most weight the bag carries (0: no limit)" )
         float32 _bagMaxWeight;
         uint8   _bStarted;
+        // 컴포넌트 핸들(`TComponentHandle`)은 오브젝트 관리자마다의 id 공간이라 관리자가 새로 서면 같은 id 가 다른 컴포넌트를 가리킬 수 있다 — 관리자보다 오래 사는 빌림은 약한 참조다.
+        WeakRefSource _weakRefSource; ///< 맨 끝 멤버 — 먼저 닫혀, 다른 멤버가 사라지는 동안 화면이 컴포넌트를 돌려받지 않는다
     };
 } // namespace sw

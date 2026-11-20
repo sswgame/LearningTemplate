@@ -4,7 +4,7 @@
  * @details 문서(`.ui.xml`)는 호출하는 게임이 경로를 준다(코드에 기본 경로가 없다). 문서가 갖춰야 할 위젯: 친구 줄을 담을 가상 목록 `Friends`(`ListViewWidget`), 상태 글 `Status`,
  *          명령이 `Refresh` 인 단추와 `Close` 인 단추(견본: `Content/common/ui/online/friendlist.ui.xml`). 친구가 많아도 보이는 줄만 위젯이 있다.
  *          목록이 비거나 받지 못하면 이유를 `Status` 에 적는다 — 빈 화면으로 두지 않는다. 받은 신청이 있으면 `Status` 에 개수를 함께 적는다.
- *          화면은 요청을 보내지 않고 모델을 읽는다(틱마다 `FriendList::update` 로 알림을 반영한다). 모델이 화면보다 오래 살아야 한다.
+ *          화면은 요청을 보내지 않고 모델을 읽는다(틱마다 `FriendList::update` 로 알림을 반영한다). 모델이 먼저 사라지면 화면이 닫힌다(`WeakRef`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -49,8 +49,8 @@ namespace sw
     private:
         void rebuild();
 
-        FriendList* _pModel;
-        uint64      _shownRevision;
-        bool        _bBuilt;
+        WeakRef<FriendList> _model; ///< 모델은 게임 쪽이 소유한다 — 먼저 사라지면 화면이 닫힌다
+        uint64              _shownRevision;
+        bool                _bBuilt;
     };
 } // namespace sw
