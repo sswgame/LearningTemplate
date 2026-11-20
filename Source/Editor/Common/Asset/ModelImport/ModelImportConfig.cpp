@@ -8,6 +8,8 @@
 #include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 
@@ -32,12 +34,14 @@ namespace sw::editor
             text += ";materials=0"; // 켠 값(기본)은 섞지 않는다 — 이 칸이 생기기 전의 스탬프가 그대로 맞는다
         if ( _bPartialSkeleton == SW_TRUE )
             text += ";partial=1"; // 끈 값(기본)은 섞지 않는다
-        text += ";codec=" + _animationCodec + ";root=" + _rootMotionBone + ";clips=";
+        StringBuilder<constant::buffer::kMax512> partBuilder;
+        partBuilder.appendFormat( ";codec=%#;root=%#;clips=", _animationCodec, _rootMotionBone );
         for ( const string& clipName : _listClipName )
         {
-            text += clipName + ",";
+            partBuilder.appendFormat( "%#,", clipName );
         }
-        text += ";body=" + _bodySurface;
+        partBuilder.appendFormat( ";body=%#", _bodySurface );
+        text += partBuilder.view();
         // 실수는 비트 그대로 섞는다 — 글자로 반올림하면 작은 변경이 같은 해시가 된다.
         const float32 arrValue[4] = { _animationSampleRate, _animationPrecision, _animationShellDistance, _bodySurfaceDistance };
         for ( const float32 value : arrValue )
@@ -197,7 +201,8 @@ namespace sw::editor
 
     bool ModelImportConfig::parseLODKeys( const JSONValue& lodsValue, ModelImportRule& inoutRule )
     {
-        const string context = "ModelImportConfig rule '" + inoutRule._name + "' lods";
+        fixed_string<constant::buffer::kMax256> context;
+        formatstring( context.data(), context.capacity(), "ModelImportConfig rule '%#' lods", inoutRule._name );
         if ( lodsValue.isArray() == false )
         {
             SW_LOG_ERROR_ID( "ModelImportConfig.MustArrayObjects", "%#: must be an array of objects.", context.c_str() );
@@ -257,15 +262,21 @@ namespace sw::editor
         ModelImportRuleMatch match = findMatchingRule( relativePath );
         if ( match.hasError() || listOverride.empty() )
             return match;
-        const string label = "ModelImportConfig override of '" + string( relativePath ) + "'";
-        JSONDocument doc;
+        StringBuilder<constant::buffer::kMax256> labelBuilder;
+        labelBuilder.appendFormat( "ModelImportConfig override of '%#'", relativePath );
+        const string_view label = labelBuilder.view();
+        JSONDocument      doc;
         if ( const expected<void> built = AssetImportRuleUtil::makeOverrideObject( listOverride, { "name", "filter" }, doc ); built.has_value() == false )
         {
             match._error = AssetImportRuleUtil::describeOverrideError( label, built.error() );
             return match;
         }
         if ( readRuleKeys( doc.getRoot(), match._rule, label ) == false )
-            match._error = label + ": an import override in the .meta is not a model rule setting or its value cannot be read (see the error above).";
+        {
+            StringBuilder<constant::buffer::kMax512> errorBuilder;
+            errorBuilder.appendFormat( "%#: an import override in the .meta is not a model rule setting or its value cannot be read (see the error above).", label );
+            match._error = string( errorBuilder.view() );
+        }
         return match;
     }
 

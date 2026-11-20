@@ -10,6 +10,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/ImportedAssetStore.h"
@@ -169,7 +170,9 @@ namespace sw::editor
             return true;
         if ( result._listIgnoredAvatarKey.empty() == false )
             SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarValuesNot", "VRM '%#': avatar values that are not imported (ignored): %#", sourcePath, Internal::joinNames( result._listIgnoredAvatarKey ).c_str() );
-        const string avatarPath = FileUtil::joinPath( sideFolder, string( stem ) + string( VrmAvatarDef::kExtension ) );
+        StringBuilder<constant::buffer::kMax256> fileNameBuilder;
+        fileNameBuilder.appendFormat( "%#%#", stem, VrmAvatarDef::kExtension );
+        const string avatarPath = FileUtil::joinPath( sideFolder, fileNameBuilder.view() );
         if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, avatarPath, VrmAvatarDef::makeAvatarXML( result._avatar ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAvatar", "Failed to write avatar %#", avatarPath.c_str() );
@@ -182,7 +185,9 @@ namespace sw::editor
         vector<string> listNotConverted;
         if ( VrmRuntimeAssets::hasFacialRig( result._avatar ) )
         {
-            const string facialPath = FileUtil::joinPath( sideFolder, string( stem ) + string( FacialRig::kExtension ) );
+            fileNameBuilder.clear();
+            fileNameBuilder.appendFormat( "%#%#", stem, FacialRig::kExtension );
+            const string facialPath = FileUtil::joinPath( sideFolder, fileNameBuilder.view() );
             if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, facialPath, VrmRuntimeAssets::makeFacialRigXML( result._avatar, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteFacialRig", "Failed to write facial rig %#", facialPath.c_str() );
@@ -193,7 +198,9 @@ namespace sw::editor
         const bool bHasSpringRig = result._bSkinned != SW_FALSE && VrmRuntimeAssets::hasSpringRig( result._avatar, result._skeleton );
         if ( bHasSpringRig )
         {
-            const string rigPath = FileUtil::joinPath( sideFolder, string( stem ) + string( RigAsset::kExtension ) );
+            fileNameBuilder.clear();
+            fileNameBuilder.appendFormat( "%#%#", stem, RigAsset::kExtension );
+            const string rigPath = FileUtil::joinPath( sideFolder, fileNameBuilder.view() );
             if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, rigPath, VrmRuntimeAssets::makeSpringRigXML( result._avatar, result._skeleton, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSpringRig", "Failed to write spring rig %#", rigPath.c_str() );
@@ -225,7 +232,11 @@ namespace sw::editor
             return true;
         const bool bSkinned      = result._bSkinned != SW_FALSE;
         auto       getResourceOf = [&]( string_view extension )
-        { return assetPaths.toAssetID( FileUtil::joinPath( sideFolder, string( stem ) + string( extension ) ) ); };
+        {
+            StringBuilder<constant::buffer::kMax256> nameBuilder;
+            nameBuilder.appendFormat( "%#%#", stem, extension );
+            return assetPaths.toAssetID( FileUtil::joinPath( sideFolder, nameBuilder.view() ) );
+        };
         // 임포트가 쓰는 프리팹은 공유 머티리얼을 바로 가리킨다 — 같은 값의 구간이 머티리얼 객체 하나를 나눠 쓴다(인스턴스 값은 `MaterialInstance` 사본에 있어 섞이지 않는다).
         bool bMissingMaterial = false;
         auto getMaterialOf    = [&]( const ModelImportSection& section )
@@ -276,7 +287,9 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ModelImporter.SectionMaterialMissing", "Section prefab of '%#': a section material was not written", meshPath );
             return false;
         }
-        const string prefabPath = FileUtil::joinPath( sideFolder, string( stem ) + ".prefab.xml" );
+        StringBuilder<constant::buffer::kMax256> prefabNameBuilder;
+        prefabNameBuilder.appendFormat( "%#.prefab.xml", stem );
+        const string prefabPath = FileUtil::joinPath( sideFolder, prefabNameBuilder.view() );
         const bool   bWritten   = ImportedAssetStore::writeTextWithIdentity( assetPaths, prefabPath, prefabDocument.saveToString() );
         if ( bWritten == false )
         {

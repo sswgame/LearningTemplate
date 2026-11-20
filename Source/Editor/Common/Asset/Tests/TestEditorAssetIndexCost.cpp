@@ -37,13 +37,15 @@ namespace
         /** @brief 파일 @p fileIndex 의 글입니다 — 앞 파일 넷을 경로로 적는다(맨 앞 파일들은 뒤를 감아 적는다). */
         static string makeText( uint32 fileIndex, uint32 fileCount )
         {
-            string text = "<Prefab formatVersion=\"0\">\n";
+            StringBuilder<constant::buffer::kMax1024> text;
+            text.append( "<Prefab formatVersion=\"0\">\n" );
             for ( uint32 referenceIndex = 1; referenceIndex <= kReferencePerFile; ++referenceIndex )
             {
                 const uint32 target = ( fileIndex + fileCount - referenceIndex ) % fileCount;
-                text += "  <Child _prefab=\"" + makeAssetID( target ) + "\"/>\n";
+                text.appendFormat( "  <Child _prefab=\"%#\"/>\n", makeAssetID( target ) );
             }
-            return text + "</Prefab>\n";
+            text.append( "</Prefab>\n" );
+            return string( text.view() );
         }
 
         /** @brief @p root 아래 @p fileCount 개의 합성 트리를 씁니다. */
@@ -92,7 +94,9 @@ SW_TEST_CASE( EditorAssetIndexTest, ScanCostBySize, ._tags = "bench", ._disabled
         int64 refreshNanoseconds = 0;
         for ( uint32 repeat = 0; repeat < kRefreshRepeatCount; ++repeat )
         {
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( root, changedID ), Internal::makeText( fileCount / 2, fileCount ) + string( repeat + 1, ' ' ) ) );
+            string changedText = Internal::makeText( fileCount / 2, fileCount );
+            changedText.append( repeat + 1, ' ' );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( root, changedID ), changedText ) );
             const int64 refreshStart = MonotonicClock::nowNanoseconds();
             index.applyChanges( root, { changedID } );
             refreshNanoseconds += MonotonicClock::nowNanoseconds() - refreshStart;

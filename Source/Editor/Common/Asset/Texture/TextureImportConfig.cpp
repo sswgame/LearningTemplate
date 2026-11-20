@@ -6,6 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Config/ConfigManager.h"
@@ -109,7 +111,9 @@ namespace sw::editor
                 if ( applyInheritance( presetObj, rule ) == false )
                     return clearAndFail();
                 rule._name = name; // 상속이 부모 이름을 덮어썼을 수 있다. 이 프리셋의 이름이 원본이다.
-                if ( JSONFields::readProperties( presetObj, rule, "TextureImportConfig preset '" + name + "'" ) == false )
+                fixed_string<constant::buffer::kMax256> presetLabel;
+                formatstring( presetLabel.data(), presetLabel.capacity(), "TextureImportConfig preset '%#'", name );
+                if ( JSONFields::readProperties( presetObj, rule, presetLabel ) == false )
                     return clearAndFail();
                 _mapPreset[name] = rule;
             }
@@ -237,7 +241,9 @@ namespace sw::editor
                 return match;
             }
         }
-        match._error = "TextureImportConfig: shared source '" + string( relativePath ) + "' names rule '" + sharedRule + "' which is not in the config. Import its model again.";
+        StringBuilder<constant::buffer::kMax512> errorBuilder;
+        errorBuilder.appendFormat( "TextureImportConfig: shared source '%#' names rule '%#' which is not in the config. Import its model again.", relativePath, sharedRule );
+        match._error = string( errorBuilder.view() );
         return match;
     }
 
@@ -246,33 +252,44 @@ namespace sw::editor
         TextureImportRuleMatch match = findMatchingRule( relativePath );
         if ( match.hasError() || listOverride.empty() )
             return match;
-        const string label = "TextureImportConfig override of '" + string( relativePath ) + "'";
-        JSONDocument doc;
+        StringBuilder<constant::buffer::kMax256> labelBuilder;
+        labelBuilder.appendFormat( "TextureImportConfig override of '%#'", relativePath );
+        const string_view label = labelBuilder.view();
+        JSONDocument      doc;
         if ( const expected<void> built = AssetImportRuleUtil::makeOverrideObject( listOverride, { "name", "filter", "inherits" }, doc ); built.has_value() == false )
         {
             match._error = AssetImportRuleUtil::describeOverrideError( label, built.error() );
             return match;
         }
         if ( JSONFields::readProperties( doc.getRoot(), match._rule, label ) == false )
-            match._error = label + ": an import override in the .meta is not a texture rule setting or its value cannot be read (see the error above).";
+        {
+            StringBuilder<constant::buffer::kMax512> errorBuilder;
+            errorBuilder.appendFormat( "%#: an import override in the .meta is not a texture rule setting or its value cannot be read (see the error above).", label );
+            match._error = string( errorBuilder.view() );
+        }
         return match;
     }
 
     string TextureImportConfig::makeSharedSourcePath( string_view domainFolder, string_view ruleName, string_view key, string_view extension )
     {
-        const string rule = ruleName.empty() ? string( kSharedDefaultRuleName ) : StringUtil::toLower( ruleName );
-        return string( domainFolder ) + "/textures_raw/" + string( kSharedFolderName ) + "/" + rule + "/" + string( key ) + string( extension );
+        const string                             rule = ruleName.empty() ? string( kSharedDefaultRuleName ) : StringUtil::toLower( ruleName );
+        StringBuilder<constant::buffer::kMax256> pathBuilder;
+        pathBuilder.appendFormat( "%#/textures_raw/%#/%#/%#%#", domainFolder, kSharedFolderName, rule, key, extension );
+        return string( pathBuilder.view() );
     }
 
     string TextureImportConfig::findSharedRuleName( string_view relativePath )
     {
-        const string normalized = "/" + FileUtil::normalizeSeparators( relativePath );
-        const string marker     = "/textures_raw/" + string( kSharedFolderName ) + "/";
-        const size_t at         = normalized.find( marker );
+        StringBuilder<constant::buffer::kMax256> normalizedBuilder;
+        normalizedBuilder.appendFormat( "/%#", FileUtil::normalizeSeparators( relativePath ) );
+        const string_view                       normalized = normalizedBuilder.view();
+        StringBuilder<constant::buffer::kMax64> marker;
+        marker.appendFormat( "/textures_raw/%#/", kSharedFolderName );
+        const size_t at = normalized.find( marker.view() );
         if ( at == string::npos )
             return {};
         const size_t begin = at + marker.size();
         const size_t end   = normalized.find( '/', begin );
-        return end == string::npos ? string{} : normalized.substr( begin, end - begin );
+        return end == string::npos ? string{} : string( normalized.substr( begin, end - begin ) );
     }
 } // namespace sw::editor

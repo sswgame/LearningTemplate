@@ -4,6 +4,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
@@ -54,7 +55,9 @@ namespace
         bool        importSource( string_view /*sourcePath*/, string_view importedPath, string_view /*assetPath*/ ) const override
         {
             _importCount.fetch_add( 1 );
-            return writeText( string( importedPath ), "out:" + _settings ) && writeText( FileUtil::joinPath( FileUtil::removeExtension( importedPath ), "side.txt" ), "side" );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "out:%#", _settings );
+            return writeText( string( importedPath ), textBuilder.view() ) && writeText( FileUtil::joinPath( FileUtil::removeExtension( importedPath ), "side.txt" ), "side" );
         }
 
     private:

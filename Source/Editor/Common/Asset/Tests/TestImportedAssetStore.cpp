@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -292,7 +293,9 @@ SW_TEST_CASE( ImportedAssetStoreTest, ImportedTextGetsStableDistinctIdentity )
     // 슬롯 머티리얼과 공유 머티리얼 — 다른 결과라 GUID 가 다르고, 공유 파일은 같은 바이트라 다시 써도 한 벌이다.
     ModelImportMaterial::SharedMaterialText shared;
     SW_REQUIRE_TRUE( ModelImportMaterial::makeSharedMaterialText( Util::makeFull( "slot_a", "0.5", "common/textures/a.dds" ), Util::kTemplate, "engine/materials/pbrmaterial.material", shared ) );
-    const string           sharedPath = domain.makeDiskPath( "models/_shared/materials/" + shared._key + ".material" );
+    StringBuilder<constant::buffer::kMax256> sharedRelative;
+    sharedRelative.appendFormat( "models/_shared/materials/%#.material", shared._key );
+    const string           sharedPath = domain.makeDiskPath( sharedRelative.view() );
     const optional<string> sharedText = ImportedAssetStore::makeTextWithIdentity( assetPaths, sharedPath, shared._text );
     SW_REQUIRE_TRUE( sharedText.has_value() );
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( sharedPath, sharedText->data(), sharedText->size() ) );

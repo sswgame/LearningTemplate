@@ -6,6 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Asset/OutfitAtlas.h"
 #include "Editor/Common/Asset/Texture/RawImageData.h"
@@ -79,7 +81,11 @@ namespace sw::editor
                 for ( const OutfitAtlasMapSpec& map : spec._listMap )
                 {
                     if ( map._listSource.size() != spec._listPart.size() )
-                        reader.addError( "Outfit.MapSourceCount", string( "Map '" ) + map._name.c_str() + "' needs one Source per Part" );
+                    {
+                        fixed_string<constant::buffer::kMax256> errorText;
+                        formatstring( errorText.data(), errorText.capacity(), "Map '%#' needs one Source per Part", map._name.c_str() );
+                        reader.addError( "Outfit.MapSourceCount", errorText );
+                    }
                     for ( const OutfitAtlasSourceSpec& source : map._listSource )
                     {
                         bool bKnown = false;
@@ -88,7 +94,11 @@ namespace sw::editor
                             bKnown = bKnown || part._name == source._part;
                         }
                         if ( bKnown == false )
-                            reader.addError( "Outfit.MapPartUnknown", string( "Map '" ) + map._name.c_str() + "' names unknown part '" + source._part.c_str() + "'" );
+                        {
+                            fixed_string<constant::buffer::kMax256> errorText;
+                            formatstring( errorText.data(), errorText.capacity(), "Map '%#' names unknown part '%#'", map._name.c_str(), source._part.c_str() );
+                            reader.addError( "Outfit.MapPartUnknown", errorText );
+                        }
                     }
                 }
             }
@@ -274,13 +284,17 @@ namespace sw::editor
                 OutfitAtlasSpec spec;
                 if ( OutfitAtlasSpec::loadSpec( AssetID{ listArgument[0] }, spec ) == false )
                 {
-                    outReply = "outfit atlas spec '" + listArgument[0] + "' could not be read (see the log)";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "outfit atlas spec '%#' could not be read (see the log)", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 OutfitAtlasBakeResult result;
                 if ( OutfitAtlasSpec::bake( spec, result ) == false )
                 {
-                    outReply = "outfit atlas '" + listArgument[0] + "' failed (see the log) - nothing was written";
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "outfit atlas '%#' failed (see the log) - nothing was written", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
