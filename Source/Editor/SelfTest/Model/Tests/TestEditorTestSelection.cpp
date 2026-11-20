@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/SelfTest/Model/EditorTestSelection.h"
@@ -14,12 +15,12 @@ namespace
         /** @brief 묶음에 든 케이스 이름을 쉼표로 잇습니다. */
         static string joinGroup( const EditorTestSelection& selection, const EditorTestGroup& group )
         {
-            string text;
+            StringBuilder<constant::buffer::kMax256> text;
             for ( const uint32 index : group._listCaseIndex )
             {
-                text += ( text.empty() ? "" : "," ) + selection.getCases()[index];
+                text.appendFormat( "%#%#", text.size() == 0 ? "" : ",", selection.getCases()[index] );
             }
-            return text;
+            return string( text.view() );
         }
     };
     using Util = EditorTestSelectionTestUtil;

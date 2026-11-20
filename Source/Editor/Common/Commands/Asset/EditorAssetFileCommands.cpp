@@ -752,11 +752,11 @@ namespace sw::editor
             }
             else
             {
-                string stuckText;
+                StringBuilder<constant::buffer::kMax1024> stuckText;
                 for ( const string& stuck : listStuck )
-                    stuckText += ( stuckText.empty() ? "" : ", " ) + stuck;
+                    stuckText.appendFormat( "%#%#", stuckText.size() == 0 ? "" : ", ", stuck );
                 SW_LOG_ERROR_ID( "EditorAssetFileCommands.MoveIncomplete", "Move failed (%#) and %# file(s) could not be put back - fix by hand: %#", outPlan._failure, listStuck.size(),
-                                 stuckText );
+                                 stuckText.view() );
             }
             EditorContext* pContext = editor::findSubsystem<EditorContext>();
             if ( pContext != nullptr )
@@ -812,8 +812,10 @@ namespace sw::editor
         vector<EditorAssetMove> listMove;
         for ( const string& fileAbs : listFile )
         {
-            const string normalized = FileUtil::normalizeSeparators( fileAbs );
-            listMove.push_back( EditorAssetMove{ normalized, destination + normalized.substr( source.size() ) } );
+            const string                             normalized = FileUtil::normalizeSeparators( fileAbs );
+            StringBuilder<constant::buffer::kMax512> destinationBuilder;
+            destinationBuilder.appendFormat( "%#%#", destination, string_view( normalized ).substr( source.size() ) );
+            listMove.push_back( EditorAssetMove{ normalized, string( destinationBuilder.view() ) } );
         }
         if ( listMove.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the folder is empty - nothing to move", FileUtil::getFileNamePart( source ) } );

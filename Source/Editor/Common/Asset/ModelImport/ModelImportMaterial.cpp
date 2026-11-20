@@ -242,8 +242,11 @@ namespace sw::editor
                 const string baseStem = ModelImportUtil::makeFileStem( listMaterialName[materialIndex] );
                 stemIt                = mapMaterialStem.emplace( materialIndex, ModelImportUtil::makeNumberedStem( baseStem, mapStemUse[baseStem]++ ) ).first;
             }
-            section._fileStem                    = stemIt->second;
-            section._sectionName                 = section._fileStem + ( visibility == MeshPersonVisibility::ThirdPersonOnly ? "_tp" : ( visibility == MeshPersonVisibility::FirstPersonOnly ? "_fp" : "" ) );
+            section._fileStem = stemIt->second;
+            StringBuilder<constant::buffer::kMax256> sectionNameBuilder;
+            sectionNameBuilder.appendFormat( "%#%#", section._fileStem,
+                                             visibility == MeshPersonVisibility::ThirdPersonOnly ? "_tp" : ( visibility == MeshPersonVisibility::FirstPersonOnly ? "_fp" : "" ) );
+            section._sectionName                 = string( sectionNameBuilder.view() );
             section._firstIndex                  = static_cast<uint32>( begin * 3 );
             section._indexCount                  = static_cast<uint32>( ( end - begin ) * 3 );
             section._personVisibility            = visibility;
@@ -397,10 +400,10 @@ namespace sw::editor
         }
         if ( result._listIgnoredMaterialKey.empty() == false )
         {
-            string joined;
+            StringBuilder<constant::buffer::kMax1024> joined;
             for ( const string& key : result._listIgnoredMaterialKey )
             {
-                joined += ( joined.empty() ? "" : ", " ) + key;
+                joined.appendFormat( "%#%#", joined.size() == 0 ? "" : ", ", key );
             }
             SW_LOG_WARNING_ID( "ModelImporter.VRMMaterialKeysToon", "VRM '%#': material keys the toon material does not support (ignored): %#", sourcePath, joined.c_str() );
         }
@@ -467,7 +470,9 @@ namespace sw::editor
         {
             if ( pTexture == nullptr || pTexture->image == nullptr )
                 return true;
-            outTexture._fileStem = outPBR._name + pSuffix;
+            StringBuilder<constant::buffer::kMax256> stemBuilder;
+            stemBuilder.appendFormat( "%#%#", outPBR._name, pSuffix );
+            outTexture._fileStem = string( stemBuilder.view() );
             return readImageBytes( *pTexture->image, sourcePath, outTexture );
         };
         const cgltf_texture* pORM = pbr.metallic_roughness_texture.texture;
@@ -595,7 +600,9 @@ namespace sw::editor
         TextureImportConfig config{};
         if ( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
             return false; // 로드가 오류를 남겼다 — 깨진 설정을 기본 규칙으로 읽지 않는다
-        const string           logicalPath = FileUtil::joinPath( rawTextureFolder, texture._fileStem + texture._extension );
+        fixed_string<constant::buffer::kMax256> fileName;
+        formatstring( fileName.data(), fileName.capacity(), "%#%#", texture._fileStem, texture._extension );
+        const string           logicalPath = FileUtil::joinPath( rawTextureFolder, fileName );
         TextureImportRuleMatch match       = config.findMatchingRule( assetPaths.toAssetID( logicalPath ) );
         if ( match.hasError() )
         {

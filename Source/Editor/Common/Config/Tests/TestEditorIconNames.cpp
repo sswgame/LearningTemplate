@@ -123,24 +123,24 @@ SW_TEST_CASE( EditorIconNames, EveryNameCodeAndDataUseIsInTheTable )
 
 SW_TEST_CASE( EditorIconNames, BrokenTablesAreNotRead )
 {
-    const auto makeTable = []( string_view rows )
+    const auto makeTable = []( string_view firstRow, string_view secondRow )
     {
         StringBuilder<constant::buffer::kMax512> tableText;
-        tableText.appendFormat( "<EditorIconGlyphTable><_listIcon>%#</_listIcon></EditorIconGlyphTable>", rows );
+        tableText.appendFormat( "<EditorIconGlyphTable><_listIcon>%#%#</_listIcon></EditorIconGlyphTable>", firstRow, secondRow );
         return string( tableText.view() );
     };
     const string missingRow = R"(<EditorIconGlyph _name="Missing" _codepoint="U+E060" />)";
 
     EditorIconGlyphTable table;
     SW_EXPECT_LOG( "EditorIcon.Duplicate" );
-    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="U+E060" />)" ), "duplicate" ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( missingRow, R"(<EditorIconGlyph _name="Save" _codepoint="U+E060" />)" ), "duplicate" ) );
     SW_EXPECT_FALSE( hasIcon( table, "Missing" ) ); // 실패한 읽기는 아무것도 남기지 않는다
     SW_EXPECT_LOG( "EditorIcon.NoMissingIcon" );
-    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)" ), "nomissing" ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)", "" ), "nomissing" ) );
     SW_EXPECT_LOG( "EditorIcon.BadRow" );
-    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="E003" />)" ), "badcode" ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( missingRow, R"(<EditorIconGlyph _name="Save" _codepoint="E003" />)" ), "badcode" ) );
 
-    SW_REQUIRE_TRUE( table.loadFromXMLText( makeTable( missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)" ), "good" ) );
+    SW_REQUIRE_TRUE( table.loadFromXMLText( makeTable( missingRow, R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)" ), "good" ) );
     const vector<uint16> listExpected{ 0xE003, 0xE003, 0xE060, 0xE060, 0 };
     SW_EXPECT_TRUE( table.getGlyphRanges() == listExpected );
     uint16 codepoint{ 0 };

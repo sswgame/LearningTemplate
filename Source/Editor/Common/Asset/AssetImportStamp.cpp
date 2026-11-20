@@ -284,7 +284,9 @@ namespace sw::editor
                 const string base = makeCacheNameBase( importer, file );
                 for ( const Entry& entry : listEntry )
                 {
-                    const string path   = base + entry._name;
+                    StringBuilder<constant::buffer::kMax256> pathBuilder;
+                    pathBuilder.appendFormat( "%#%#", base, entry._name );
+                    const string path( pathBuilder.view() );
                     const uint8* pBytes = payload.data() + entry._offset;
                     const bool   bWritten =
                         isSharedStorePath( path ) ? ImportedAssetStore::writeIfAbsent( path, pBytes, entry._size )

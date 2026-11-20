@@ -62,12 +62,12 @@ namespace sw::editor
 
             static string joinNames( const vector<string>& listName )
             {
-                string joined;
+                StringBuilder<constant::buffer::kMax1024> joined;
                 for ( const string& name : listName )
                 {
-                    joined += ( joined.empty() ? "" : ", " ) + name;
+                    joined.appendFormat( "%#%#", joined.size() == 0 ? "" : ", ", name );
                 }
-                return joined;
+                return string( joined.view() );
             }
         };
     } // namespace

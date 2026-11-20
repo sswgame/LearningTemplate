@@ -352,8 +352,10 @@ namespace sw
                     const bool bLast = argumentIndex + 1 == literalCount;
                     if ( _position >= _text.size() || ( bLast == false && _text[_position] != ',' ) )
                     {
-                        _pGatherer->addIssue( makeLocation( callLine ),
-                                              string( macroName ) + ( bKeyOnly ? " needs ( \"Namespace\", \"Key\" )" : " needs ( \"Namespace\", \"Key\", \"Source\" )" ), true );
+                        fixed_string<constant::buffer::kMax256> issueText;
+                        formatstring( issueText.data(), issueText.capacity(), "%#%#", macroName,
+                                      bKeyOnly ? " needs ( \"Namespace\", \"Key\" )" : " needs ( \"Namespace\", \"Key\", \"Source\" )" );
+                        _pGatherer->addIssue( makeLocation( callLine ), issueText, true );
                         return;
                     }
                     if ( bLast == false )

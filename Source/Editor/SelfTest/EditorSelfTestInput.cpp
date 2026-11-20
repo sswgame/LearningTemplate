@@ -260,8 +260,10 @@ namespace sw::editor
                     const WindowPlace* pBefore = VectorUtil::findBy<&WindowPlace::_windowID>( listBefore, after._windowID );
                     if ( pBefore != nullptr && pBefore->_hash == after._hash )
                         continue;
-                    const ImGuiWindow* pWindow = ImGui::FindWindowByID( after._windowID );
-                    return string{ pWindow != nullptr ? pWindow->Name : "?" } + ( pBefore == nullptr ? " appeared" : " moved or resized" );
+                    const ImGuiWindow*                       pWindow = ImGui::FindWindowByID( after._windowID );
+                    StringBuilder<constant::buffer::kMax256> changeBuilder;
+                    changeBuilder.appendFormat( "%#%#", pWindow != nullptr ? pWindow->Name : "?", pBefore == nullptr ? " appeared" : " moved or resized" );
+                    return string( changeBuilder.view() );
                 }
                 for ( const WindowPlace& before : listBefore )
                 {
