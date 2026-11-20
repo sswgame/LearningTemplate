@@ -289,7 +289,7 @@ namespace sw
                 state._impulse          = 0.0f;
                 ++iter;
             }
-            std::sort( outListEvent.begin() + static_cast<std::ptrdiff_t>( firstNew ), outListEvent.end(), &isEarlierEvent );
+            VectorUtil::sortRange( outListEvent.begin() + static_cast<std::ptrdiff_t>( firstNew ), outListEvent.end(), &isEarlierEvent );
             // 재시작한 쌍의 끝은 이번 step 의 어떤 이벤트보다 앞선다 — 정렬(쌍 · 단계 순)에 넣으면 같은 쌍의 새 시작 뒤로 간다.
             VectorUtil::sort( _listRestartEnd, &isEarlierEvent );
             outListEvent.insert( outListEvent.begin() + static_cast<std::ptrdiff_t>( firstNew ), _listRestartEnd.begin(), _listRestartEnd.end() );

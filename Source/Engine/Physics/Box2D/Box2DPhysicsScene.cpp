@@ -1569,7 +1569,7 @@ namespace sw
         Box2DPhysicsSceneInternal::OverlapContext context{ this, &filter, &outListBody };
         b2World_OverlapShape( _worldID, &proxy, queryFilter, &Box2DPhysicsSceneInternal::overlapResult, &context );
         const vector<PhysicsBodyHandle>::iterator first = outListBody.begin() + static_cast<ptrdiff_t>( firstIndex );
-        std::sort( first, outListBody.end() );
+        VectorUtil::sortRange( first, outListBody.end() );
         outListBody.erase( std::unique( first, outListBody.end() ), outListBody.end() );
         return static_cast<uint32>( outListBody.size() - firstIndex );
     }

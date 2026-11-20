@@ -395,8 +395,8 @@ namespace sw
         }
         // 지나간 순서대로(거꾸로 재생이면 늦은 것부터).
         const bool bForward = from <= to;
-        std::stable_sort( _listPendingEvent.begin() + static_cast<ptrdiff_t>( first ), _listPendingEvent.end(),
-                          [bForward]( const PendingEvent& lhs, const PendingEvent& rhs )
+        VectorUtil::stableSortRange( _listPendingEvent.begin() + static_cast<ptrdiff_t>( first ), _listPendingEvent.end(),
+                                     [bForward]( const PendingEvent& lhs, const PendingEvent& rhs )
         { return bForward ? lhs._time < rhs._time : lhs._time > rhs._time; } );
     }
 

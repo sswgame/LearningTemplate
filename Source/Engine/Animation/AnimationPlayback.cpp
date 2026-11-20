@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/AnimationPlayback.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/PlaybackSegment.h"
 
@@ -156,7 +157,7 @@ namespace sw
             }
         }
         // 시각 순서로 정렬한다. 같은 시각이면 끝이 먼저다(앞 구간이 닫힌 뒤 다음 구간이 열린다).
-        std::stable_sort( outListFired.begin() + static_cast<ptrdiff_t>( firstAdded ), outListFired.end(),
-                          isFiredBefore );
+        VectorUtil::stableSortRange( outListFired.begin() + static_cast<ptrdiff_t>( firstAdded ), outListFired.end(),
+                                     isFiredBefore );
     }
 } // namespace sw

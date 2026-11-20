@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Backend/EditorUICapture.h"
@@ -119,7 +120,7 @@ namespace sw::editor
                             listViewport.push_back( pViewport );
                     }
                 }
-                std::sort( listViewport.begin() + 1, listViewport.end(), &EditorDrawDataSnapshotInternal::isFocusedEarlier );
+                VectorUtil::sortRange( listViewport.begin() + 1, listViewport.end(), &EditorDrawDataSnapshotInternal::isFocusedEarlier );
 
                 ImVec2 minPos = pMain->DrawData->DisplayPos;
                 ImVec2 maxPos{ minPos.x + pMain->DrawData->DisplaySize.x, minPos.y + pMain->DrawData->DisplaySize.y };
