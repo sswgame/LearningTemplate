@@ -286,6 +286,18 @@ function(sw_add_game_framework_kit KIT_NAME)
 		LINK_PUBLIC GameFramework Engine sw_public_source_includes
 		REFLECTION_EXCLUDE "/Editor/"
 	)
+	# 매니페스트의 키트 의존(`_listDependency` 가운데 Kit)을 PUBLIC 으로 링크한다 — 서버 · 클라이언트 키트(GF_Server_<X> · GF_Client_<X>)가 같은 기능의
+	# 런타임 키트(GF_<X>)와 GF_Server_OnlineCore 를 쓰는 자리. CMake 에 다시 적지 않는다(매니페스트가 원본, 에디터 확장 · 게임 모듈과 같은 방식).
+	# 일반 import 다 — 모듈 호스트가 런타임 키트의 섀도 복사본에 세대 이름을 주고 이 키트 복사본의 import 이름을 그 이름으로 바꾼다
+	# (`ModuleShadowCopy::writeShadowCopy`). 키트 폴더를 의존 순서로 들어가므로(Kits/CMakeLists.txt) 의존 키트 타깃이 먼저 서 있다.
+	sw_get_module_dependencies_of_kind(${KIT_NAME} Kit list_kit_dependency)
+	foreach(kit_dependency IN LISTS list_kit_dependency)
+		if(NOT TARGET ${kit_dependency})
+			get_property(dependency_reason GLOBAL PROPERTY SW_MODULE_${kit_dependency}_REASON)
+			message(FATAL_ERROR "sw_add_game_framework_kit(${KIT_NAME}): manifest dependency '${kit_dependency}' has no target (${dependency_reason})")
+		endif()
+		target_link_libraries(${KIT_NAME} PUBLIC ${kit_dependency})
+	endforeach()
 	# 키트의 에디터 확장(언리얼 플러그인의 <X>Editor 모듈)은 키트 폴더의 Editor/ 다. 런타임 · 서버로 나뉜 키트는 `Runtime/` 이 이 함수를 부르고
 	# 확장은 그 옆(`<기능>/Editor/`)에 있다.
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor/CMakeLists.txt")
@@ -296,21 +308,6 @@ function(sw_add_game_framework_kit KIT_NAME)
 			add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../Editor" "${CMAKE_CURRENT_BINARY_DIR}/Editor")
 		endif()
 	endif()
-endfunction()
-
-# 서버 · 클라이언트 키트(GF_Server_<X> · GF_Client_<X>)가 같은 기능의 런타임 키트(GF_<X>)를 링크합니다.
-# 일반 import 다 — 모듈 호스트가 런타임 키트의 섀도 복사본에 세대 이름을 주고 이 키트 복사본의 import 이름을 그 이름으로 바꾼다
-# (`ModuleShadowCopy::writeShadowCopy`). 그래서 의존은 매니페스트에 있어야 한다(없으면 로드가 거절된다).
-function(sw_link_runtime_kit KIT_NAME RUNTIME_KIT_NAME)
-	# 링크는 매니페스트 의존이어야 한다 — 키트 폴더를 의존 순서로 들어가므로(Kits/CMakeLists.txt) 그래야 런타임 키트 타깃이 먼저 선다.
-	get_property(list_dependency GLOBAL PROPERTY SW_MODULE_${KIT_NAME}_DEPENDENCIES)
-	if(NOT RUNTIME_KIT_NAME IN_LIST list_dependency)
-		message(FATAL_ERROR "sw_link_runtime_kit: ${KIT_NAME}.module.json must list ${RUNTIME_KIT_NAME} in _listDependency")
-	endif()
-	if(NOT TARGET ${KIT_NAME} OR NOT TARGET ${RUNTIME_KIT_NAME})
-		message(FATAL_ERROR "sw_link_runtime_kit: target '${KIT_NAME}' or '${RUNTIME_KIT_NAME}' does not exist")
-	endif()
-	target_link_libraries(${KIT_NAME} PUBLIC ${RUNTIME_KIT_NAME})
 endfunction()
 
 # ------------------------------------------------------------------------------

@@ -4,8 +4,3 @@
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Server_Account)
-if(NOT TARGET GF_Server_Account)
-	return()
-endif()
-sw_link_runtime_kit(GF_Server_Account GF_Account)
-sw_link_runtime_kit(GF_Server_Account GF_Server_OnlineCore)

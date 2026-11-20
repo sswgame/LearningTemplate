@@ -622,7 +622,7 @@ function(sw_sort_modules_by_dependency LIST_VAR)
 endfunction()
 
 # 종류가 KIND 인 모듈의 폴더를 의존 순서로(동점은 이름 순) OUT_VAR 에 — 꺼진 것도 든다(그 폴더의 팩토리가 "짓지 않는다" 로 적고 건너뛴다).
-# 의존 순서인 이유: 서버 · 클라이언트 키트가 같은 기능의 런타임 키트 타깃을 링크한다(`sw_link_runtime_kit` — 그 타깃이 먼저 있어야 한다).
+# 의존 순서인 이유: 키트가 매니페스트의 키트 의존 타깃을 링크한다(`sw_add_game_framework_kit` — 그 타깃이 먼저 있어야 한다).
 function(sw_get_module_directories_of_kind KIND OUT_VAR)
 	get_property(names GLOBAL PROPERTY SW_MODULE_NAMES)
 	set(of_kind "")

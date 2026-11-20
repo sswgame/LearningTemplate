@@ -4,8 +4,3 @@
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Server_Admin)
-if(NOT TARGET GF_Server_Admin)
-	return()
-endif()
-sw_link_runtime_kit(GF_Server_Admin GF_Admin)
-sw_link_runtime_kit(GF_Server_Admin GF_Server_OnlineCore)

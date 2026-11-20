@@ -4,8 +4,3 @@
 # ==============================================================================
 
 sw_add_game_framework_kit(GF_Server_Mailbox)
-if(NOT TARGET GF_Server_Mailbox)
-	return()
-endif()
-sw_link_runtime_kit(GF_Server_Mailbox GF_Mailbox)
-sw_link_runtime_kit(GF_Server_Mailbox GF_Server_OnlineCore)
