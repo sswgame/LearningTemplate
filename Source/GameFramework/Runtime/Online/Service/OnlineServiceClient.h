@@ -33,11 +33,11 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 
 namespace sw
 {
     class IStreamTransport;
+    class OnlineProtocolEntry;
     class OnlineServiceClient;
 
     /** @brief 받은 응답입니다. 몸은 콜백 동안만 유효합니다. */
