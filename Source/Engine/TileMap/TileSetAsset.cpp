@@ -13,6 +13,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -20,7 +21,6 @@ namespace sw
     {
         struct TileSetAssetInternal
         {
-            static constexpr string_view kFrameListSeparators = " ,\t"; ///< `frames` 정수 목록의 구분 글자
             /** @brief 패턴 글자 아홉 칸 중 이웃 여덟의 자리입니다(가운데 다섯째는 보지 않는다). */
             static constexpr uint32 kArrCellOfNeighbor[8] = { 0, 1, 2, 3, 5, 6, 7, 8 };
 
@@ -281,7 +281,7 @@ namespace sw
         outVisual = TileVisual{};
         if ( node.findAttribute( "frames" ) != nullptr )
         {
-            if ( StringUtil::parseIntList( node.getAttributeText( "frames" ), TileSetAssetInternal::kFrameListSeparators, outVisual._listFrameCell ) == false || outVisual._listFrameCell.empty() )
+            if ( StringUtil::parseIntList( node.getAttributeText( "frames" ), XMLReadUtil::kListSeparators, outVisual._listFrameCell ) == false || outVisual._listFrameCell.empty() )
             {
                 SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> frames must be cell numbers", sourceName, node.getName() );
                 return false;

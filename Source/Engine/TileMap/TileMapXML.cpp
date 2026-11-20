@@ -14,6 +14,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
 namespace sw
@@ -50,8 +51,6 @@ namespace sw
                 }
                 return textLayerCount <= 1;
             }
-
-            static constexpr string_view kValueListSeparators = " \n\r\t"; ///< 레이어 값 정수 목록의 구분 글자(공백 · 줄바꿈 · 탭)
 
             // 읽기가 보는 이름 전부다. 철자가 틀린 이름(`atlass` · `tx` 대신 `targetX`)이 조용히 기본값이 되지 않게 모르는 이름은 읽기 오류다(MaterialXML 과 같은 규칙).
             static constexpr const utf8* kArrKnownRootChild[]      = { "spawn", "tiles", "warps", "tileLayer", "dataLayers" };
@@ -302,7 +301,7 @@ namespace sw
                     layer._defaultValue = params._default;
                     const utf8* pValues = layerNode.getText();
                     const bool  bValuesValid =
-                        StringUtil::parseIntList( pValues != nullptr ? string_view( pValues ) : string_view{}, kValueListSeparators, layer._listValue ) && layer._listValue.size() == count;
+                        StringUtil::parseIntList( pValues != nullptr ? string_view( pValues ) : string_view{}, XMLReadUtil::kListSeparators, layer._listValue ) && layer._listValue.size() == count;
                     if ( bValuesValid == false )
                     {
                         SW_LOG_ERROR_ID( "TileMap.InvalidDataLayer", "TileMap '%#': data layer '%#' needs %# integer values (one per cell)", data._name, layer._name, static_cast<uint32>( count ) );

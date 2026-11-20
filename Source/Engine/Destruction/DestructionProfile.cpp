@@ -10,6 +10,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -118,7 +119,7 @@ namespace sw
                     continue;
                 }
                 _listStrainThreshold.clear();
-                for ( const string_view token : StringUtil::split( pText, CharacterDataReader::kTokenSeparators, { ._bDropEmpty = true } ) )
+                for ( const string_view token : StringUtil::split( pText, XMLReadUtil::kListSeparators, { ._bDropEmpty = true } ) )
                 {
                     float32 value = 0.0f;
                     if ( StringUtil::parseFloat( token, value ) == false || value <= 0.0f )

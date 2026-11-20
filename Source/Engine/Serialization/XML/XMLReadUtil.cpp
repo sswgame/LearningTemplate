@@ -14,14 +14,11 @@ namespace sw
     {
         struct XMLReadUtilInternal
         {
-            /** @brief 실수 묶음(`parseFloat2` …) · 실수 목록의 구분자입니다. */
-            static constexpr const utf8* kNumberSeparators = ", \t;";
-
             /** @brief @p text 가 정확히 `Count` 개의 실수로 읽힐 때만 @p outArr 를 채우고 true 입니다(규칙은 `StringUtil::parseExactFloats`). */
             template <uint32 Count>
             [[nodiscard]] static bool parseExactFloats( string_view text, float32 ( &outArr )[Count] )
             {
-                return StringUtil::parseExactFloats( text, kNumberSeparators, outArr, Count );
+                return StringUtil::parseExactFloats( text, XMLReadUtil::kListSeparators, outArr, Count );
             }
 
             /**
@@ -126,7 +123,7 @@ namespace sw
 
     bool XMLReadUtil::readFloatList( string_view text, float32* pOutValue, uint32 count )
     {
-        return StringUtil::parseExactFloats( text, ", \t\r\n", pOutValue, count );
+        return StringUtil::parseExactFloats( text, kListSeparators, pOutValue, count );
     }
 
     string XMLReadUtil::makeFloatListText( const float32* pValue, uint32 count )
@@ -207,15 +204,15 @@ namespace sw
         return false;
     }
 
-    void XMLReadUtil::parseNameList( string_view text, string_view separators, vector<hashed_string>& outListName )
+    void XMLReadUtil::parseNameList( string_view text, vector<hashed_string>& outListName )
     {
         outListName.clear();
-        appendNameList( text, separators, outListName );
+        appendNameList( text, outListName );
     }
 
-    void XMLReadUtil::appendNameList( string_view text, string_view separators, vector<hashed_string>& outListName )
+    void XMLReadUtil::appendNameList( string_view text, vector<hashed_string>& outListName )
     {
-        StringUtil::forEachToken( text, separators, [&]( string_view token )
+        StringUtil::forEachToken( text, kListSeparators, [&]( string_view token )
         {
             const hashed_string name( token );
             // 빈 이름의 철자(`none`)는 이름이 될 수 없다 — 목록에 빈 이름이 조용히 들어가지 않게 오류로 알리고 넣지 않는다.
@@ -232,7 +229,7 @@ namespace sw
     {
         vector<float32> listValue;
         bool            bValid = true;
-        StringUtil::forEachToken( text, XMLReadUtilInternal::kNumberSeparators, [&]( string_view token )
+        StringUtil::forEachToken( text, kListSeparators, [&]( string_view token )
         {
             float32 value = 0.0f;
             if ( listValue.size() >= maxCount || StringUtil::parseFloat( token, value ) == false )

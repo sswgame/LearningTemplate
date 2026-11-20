@@ -14,6 +14,7 @@
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -30,9 +31,6 @@ namespace sw
             static constexpr const utf8* kEntryBaseAttribute = "_base";
             /** @brief 목록 원소 요소의 이름입니다(`<_listX><item>id</item></_listX>`). */
             static constexpr const utf8* kItemElement = "item";
-            /** @brief id 칸의 값을 가르는 글자입니다. */
-            static constexpr string_view kIDSeparators = ",; \t\r\n";
-
             /** @brief 카탈로그 파일에 닿은 길입니다. */
             enum class CatalogReach : uint8
             {
@@ -202,10 +200,10 @@ namespace sw
                     size_t cursor = 0;
                     while ( cursor < value.size() )
                     {
-                        const size_t start = value.find_first_not_of( kIDSeparators, cursor );
+                        const size_t start = value.find_first_not_of( XMLReadUtil::kListSeparators, cursor );
                         if ( start == string_view::npos )
                             return;
-                        const size_t end = MathUtil::min( value.find_first_of( kIDSeparators, start ), value.size() );
+                        const size_t end = MathUtil::min( value.find_first_of( XMLReadUtil::kListSeparators, start ), value.size() );
                         markNamed( kind, value.substr( start, end - start ) );
                         cursor = end;
                     }

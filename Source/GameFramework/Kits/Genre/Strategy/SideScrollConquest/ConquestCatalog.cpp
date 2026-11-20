@@ -6,6 +6,7 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -51,7 +52,7 @@ namespace sw
             {
                 outListGarrison.clear();
                 bool bAllValid = true;
-                XMLReadUtil::forEachNamedNumber( text, ",; ", ConquestGarrisonDef{}._count, XMLReadUtil::MissingValue::UseDefault,
+                XMLReadUtil::forEachNamedNumber( text, ConquestGarrisonDef{}._count, XMLReadUtil::MissingValue::UseDefault,
                                                  [&]( string_view token, string_view unitName, int32 count, bool bValid )
                 {
                     if ( bValid == false || count < 0 )

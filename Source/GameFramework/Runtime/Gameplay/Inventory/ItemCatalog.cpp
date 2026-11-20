@@ -66,7 +66,7 @@ namespace sw
                 else
                 {
                     outCondition._kind = EquipmentConditionKind::BodyShape;
-                    StringUtil::forEachToken( string_view( pBodyShape ), ",; ", [&]( string_view token )
+                    StringUtil::forEachToken( string_view( pBodyShape ), XMLReadUtil::kListSeparators, [&]( string_view token )
                     {
                         text += text.empty() ? "" : ", ";
                         text += token;

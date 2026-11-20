@@ -43,6 +43,14 @@ namespace sw
     struct SW_API XMLReadUtil
     {
         /**
+         * @brief 데이터 XML 목록 값(이름 · 숫자 · 태그)의 구분자입니다 — 쉼표 · 세미콜론 · 세로줄 · 공백 · 탭 · 줄바꿈. 데이터 목록을 가르는 자리는 모두 이것을 쓴다.
+         * @details 예전에는 자리마다 달랐다(",; " · ",;| " · " ,\t\n\r") — 같은 글이 카탈로그마다 다르게 갈렸다. 그 합집합이라 이전 데이터가 모두 그대로 읽힌다.
+         *          그래서 목록 읽기(`parseNameList` · `appendNameList` · `forEachNamedNumber`)는 구분자를 받지 않는다. 언리얼 `TArray` 텍스트 가져오기는 쉼표만 받지만,
+         *          여기는 사람이 손으로 쓰는 XML 이라 공백 · 줄바꿈도 받는다. 플래그 합(`Albedo|Material`)은 목록이 아니라 열거 플래그 칸이 따로 읽는다.
+         */
+        static constexpr const utf8* kListSeparators = ",;| \t\r\n";
+
+        /**
          * @brief 경로(리소스 상대 또는 절대)의 문서를 읽고 루트 원소를 찾습니다.
          * @param pRootName 루트 원소 이름입니다(철자 그대로).
          * @param pOutAbsPath 있으면 실제로 읽은 경로를 받습니다(`XMLDocument::loadResource`).
@@ -68,7 +76,7 @@ namespace sw
          * @details 데이터가 조용히 기본값이 되지 않게 한다. 철자가 틀린 속성 · 자식은 읽히지 않은 채 지나가기 때문이다(JSON 을 읽는 모델 임포트의 `ModelImportJSONUtil::hasOnlyKnownKeys` 와 같다).
          */
         [[nodiscard]] static bool hasOnlyKnownNames( const XMLNode& node, std::initializer_list<string_view> listAttribute, std::initializer_list<string_view> listChild, string_view context );
-        /** @brief `1,2,3` 처럼 쉼표나 공백으로 가른 숫자 글을 정확히 @p count 개 읽습니다. 개수가 다르거나 숫자가 아닌 토큰이 있으면 false 이고 @p pOutValue 는 그대로입니다. */
+        /** @brief `1,2,3` 처럼 `kListSeparators` 로 가른 숫자 글을 정확히 @p count 개 읽습니다. 개수가 다르거나 숫자가 아닌 토큰이 있으면 false 이고 @p pOutValue 는 그대로입니다. */
         [[nodiscard]] static bool readFloatList( string_view text, float32* pOutValue, uint32 count );
         /** @brief 숫자 @p count 개를 `readFloatList` 가 읽는 글(쉼표로 이은 가장 짧은 표기)로 씁니다. */
         static string makeFloatListText( const float32* pValue, uint32 count );
@@ -93,20 +101,20 @@ namespace sw
         [[nodiscard]] static bool readRequiredName( const XMLNode& node, const utf8* pAttribute, string_view sourceName, hashed_string& outName );
 
         /**
-         * @brief @p separators 의 아무 글자로 나뉜 이름 목록을 @p outListName 에 채웁니다. 먼저 목록을 비웁니다.
-         * @details 데이터마다 구분자가 다르다(",; " · ",;| " · ",; \t"). 기존 항목을 두고 덧붙이려면 `appendNameList` 를 쓴다. 빈 이름의 철자(`none`)는 오류로 알리고 넣지 않는다.
+         * @brief `kListSeparators` 로 나뉜 이름 목록을 @p outListName 에 채웁니다. 먼저 목록을 비웁니다.
+         * @details 기존 항목을 두고 덧붙이려면 `appendNameList` 를 쓴다. 빈 이름의 철자(`none`)는 오류로 알리고 넣지 않는다.
          */
-        static void parseNameList( string_view text, string_view separators, vector<hashed_string>& outListName );
+        static void parseNameList( string_view text, vector<hashed_string>& outListName );
         /** @brief `parseNameList` 와 같지만 목록을 비우지 않고 뒤에 덧붙입니다. */
-        static void appendNameList( string_view text, string_view separators, vector<hashed_string>& outListName );
+        static void appendNameList( string_view text, vector<hashed_string>& outListName );
 
         /**
-         * @brief 쉼표, 공백, 탭, 세미콜론으로 나뉜 실수를 하나 이상 @p maxCount 개 이하로 읽습니다.
+         * @brief `kListSeparators` 로 나뉜 실수를 하나 이상 @p maxCount 개 이하로 읽습니다.
          * @details 하나도 없거나 @p maxCount 를 넘거나 숫자가 아닌 토큰이 있으면 false 이고 @p outListValue 는 그대로입니다. 개수가 정해져 있으면 `parseFloat2` · `parseFloat3` · `parseFloat4` 를 쓴다.
          */
         [[nodiscard]] static bool parseFloatList( string_view text, uint32 maxCount, vector<float32>& outListValue );
         /**
-         * @brief "x y" 처럼 정확히 두 실수를 읽습니다(쉼표 · 공백 · 탭 · 세미콜론). 개수가 모자라거나 남거나 숫자가 아닌 토큰이 있으면 false 이고 @p outValue 는 그대로입니다.
+         * @brief "x y" 처럼 정확히 두 실수를 읽습니다(`kListSeparators`). 개수가 모자라거나 남거나 숫자가 아닌 토큰이 있으면 false 이고 @p outValue 는 그대로입니다.
          * @details 빠진 성분을 기본값으로 메우지 않으므로 호출부가 실패를 로드 오류로 올려야 한다. `parseFloat3` · `parseFloat4` 도 같다.
          */
         [[nodiscard]] static bool parseFloat2( string_view text, float2& outValue );
@@ -147,19 +155,19 @@ namespace sw
         };
 
         /**
-         * @brief "이름:숫자" 토큰 목록("spearman:3,archer:2")을 읽어 토큰마다 @p callback( token, name, value, bValid ) 을 부릅니다. 할당하지 않습니다.
+         * @brief `kListSeparators` 로 가른 "이름:숫자" 토큰 목록("spearman:3,archer:2")을 읽어 토큰마다 @p callback( token, name, value, bValid ) 을 부릅니다. 할당하지 않습니다.
          * @details @p TValue 는 `int32` 또는 `float32` 이다(`StringUtil::parseInt` · `parseFloat`). 숫자가 읽히지 않거나 @p missing 이 `Reject` 인데 콜론이 없으면
          *          @p value 는 @p defaultValue, @p bValid 는 false 다. 경고와 범위 제한은 호출부가 한다(경고에 카탈로그 문맥이 들어가야 한다).
          * @code
-         *     XMLReadUtil::forEachNamedNumber( text, ",; ", 1, XMLReadUtil::MissingValue::UseDefault,
+         *     XMLReadUtil::forEachNamedNumber( text, 1, XMLReadUtil::MissingValue::UseDefault,
          *                                      [&]( string_view token, string_view name, int32 count, bool bValid ) { ... } );
          * @endcode
          */
         template <typename TValue, typename TCallback>
-        static void forEachNamedNumber( string_view text, string_view separators, TValue defaultValue, MissingValue missing, TCallback&& callback )
+        static void forEachNamedNumber( string_view text, TValue defaultValue, MissingValue missing, TCallback&& callback )
         {
             static_assert( std::is_same_v<TValue, int32> || std::is_same_v<TValue, float32>, "forEachNamedNumber reads int32 or float32" );
-            StringUtil::forEachToken( text, separators, [&]( string_view token )
+            StringUtil::forEachToken( text, kListSeparators, [&]( string_view token )
             {
                 const size_t      colon = token.find( ':' );
                 const string_view name  = colon == string_view::npos ? token : token.substr( 0, colon );

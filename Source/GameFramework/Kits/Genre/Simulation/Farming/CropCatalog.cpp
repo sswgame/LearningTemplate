@@ -8,6 +8,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -25,7 +26,7 @@ namespace sw
         {
             outListSeason.clear();
             bool bValid = true;
-            StringUtil::forEachToken( text, ",;| ", [&]( string_view token )
+            StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
             {
                 const hashed_string season( token );
                 const bool          bKnown = listKnown.empty() || VectorUtil::contains( listKnown, season );
@@ -99,7 +100,7 @@ namespace sw
         const utf8* pKnownSeasons = root.findAttribute( "seasons" );
         if ( pKnownSeasons != nullptr )
         {
-            StringUtil::forEachToken( string_view( pKnownSeasons ), ",;| ", [this]( string_view token )
+            StringUtil::forEachToken( string_view( pKnownSeasons ), XMLReadUtil::kListSeparators, [this]( string_view token )
             { _listKnownSeason.push_back( hashed_string( token ) ); } );
         }
         using Element                          = XMLCatalogElement<CropCatalog>;

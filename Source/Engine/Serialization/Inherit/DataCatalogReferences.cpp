@@ -11,6 +11,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include <algorithm>
 
@@ -29,7 +30,6 @@ namespace sw
             static constexpr const utf8* kKeyTypeElement   = "Element";    ///< 표: 정의 형식 ↔ 카탈로그 원소 한 줄
             static constexpr const utf8* kListItemElement  = "item";       ///< 리플렉션 XML 이 목록 원소를 적는 원소 이름(`<_listX><item>…</item></_listX>`)
             static constexpr const utf8* kDefaultTargetKey = "id";         ///< 가리키는 원소의 id 속성(적지 않으면)
-            static constexpr const utf8* kListSeparators   = ",; \t\r\n";  ///< 목록 값의 구분자 — 카탈로그 읽기(`XMLFields` · `forEachNamedNumber`)가 받는 것과 같다
 
             /** @brief 표 줄 하나의 불리언 속성을 읽습니다. 없으면 false, 틀린 글이면 오류입니다. */
             [[nodiscard]] static bool readFlag( const XMLNode& row, const utf8* pName, string_view sourceName, bool& outValue )
@@ -139,7 +139,7 @@ namespace sw
             template <typename TVisit>
             static void visitIDs( string_view value, bool bNamed, const TVisit& visit )
             {
-                for ( string_view token : StringUtil::split( value, kListSeparators, { ._bTrim = true, ._bDropEmpty = true } ) )
+                for ( string_view token : StringUtil::split( value, XMLReadUtil::kListSeparators, { ._bTrim = true, ._bDropEmpty = true } ) )
                 {
                     if ( bNamed )
                     {

@@ -6,17 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"
 
-namespace sw
-{
-    namespace
-    {
-        struct ZoneTrackerInternal
-        {
-            /** @brief 태그 문자열을 나누는 구분자입니다. 쉼표, 공백, 탭, 줄바꿈이 해당합니다. */
-            static constexpr string_view kTagSeparator = ", \t\r\n";
-        };
-    } // namespace
-} // namespace sw
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -64,7 +54,7 @@ namespace sw
         zone._bounds._max._y = height > 0 ? height - 1 : 0;
 
         // 태그는 맵 데이터가 붙인다. 경로 이름에서 역할을 짐작하지 않는다.
-        StringUtil::forEachToken( tagText, ZoneTrackerInternal::kTagSeparator, [&]( string_view tag )
+        StringUtil::forEachToken( tagText, XMLReadUtil::kListSeparators, [&]( string_view tag )
         { zone.addTag( hashed_string( tag ) ); } );
         zone._bClearGateLocked = zone.hasTag( hashed_string( kClearGateTag ) ) ? SW_TRUE : SW_FALSE;
 

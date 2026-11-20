@@ -8,6 +8,7 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -50,7 +51,7 @@ namespace sw
                 int32 arrValue[kSRPGMoveTypeCount] = {};
                 int32 count                        = 0;
                 bool  bValid                       = true;
-                StringUtil::forEachToken( text, ",; \t", [&]( string_view token )
+                StringUtil::forEachToken( text, XMLReadUtil::kListSeparators, [&]( string_view token )
                 {
                     const bool bRoom = count < kSRPGMoveTypeCount;
                     if ( bRoom == false || parse( token, arrValue[count] ) == false )
@@ -227,7 +228,7 @@ namespace sw
         SRPGUnitDef def;
         bool        bValid = XMLFields::readProperties( node, def, sourceName, { "aptitude", "developsTo" } );
         bValid             = Internal::readFour( node, "aptitude", sourceName, &SRPGCatalog::parseAptitude, def._arrAptitude ) && bValid;
-        XMLReadUtil::forEachNamedNumber( node.getAttributeText( "developsTo" ), ",; \t", SRPGDevelopTarget{}._requiredLevel, XMLReadUtil::MissingValue::UseDefault,
+        XMLReadUtil::forEachNamedNumber( node.getAttributeText( "developsTo" ), SRPGDevelopTarget{}._requiredLevel, XMLReadUtil::MissingValue::UseDefault,
                                          [&]( string_view token, string_view unitName, int32 requiredLevel, bool bLevel )
         {
             if ( bLevel == false || requiredLevel < 1 )
