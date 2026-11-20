@@ -129,6 +129,7 @@ SW_TEST_CASE_F( OnlineSessionTest, FailedReconnectKeepsTheLiveConnection )
     _settings._onlineServerAddress = "127.0.0.1:7100";
     _settings._onlineGameBuild     = "1.0.0";
     _settings._onlineTrustFile     = "Missing/OnlineSessionTest/no-such-trust.pem";
+    SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_FALSE( _session.connect().has_value() );
     SW_EXPECT_TRUE( _session.isReady() );
     _session.disconnect();

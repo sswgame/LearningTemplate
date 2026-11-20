@@ -34,7 +34,7 @@ namespace sw
 
         PROPERTY( Units = m )
         float3 _position{};
-        PROPERTY()
+        PROPERTY( Units = rad )
         float3 _rotation{};
         PROPERTY()
         float3 _scale{ 1.0f, 1.0f, 1.0f };

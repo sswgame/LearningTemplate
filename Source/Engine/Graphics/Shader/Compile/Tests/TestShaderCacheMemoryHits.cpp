@@ -147,8 +147,9 @@ SW_TEST_CASE( ShaderCacheTest, BrokenEditKeepsLastGoodVersion )
     SW_REQUIRE_TRUE( cache.getOrCompile( second )._bSuccess );
 
     // 편집이 소스를 깨뜨렸다 — 지문이 달라져 다시 읽지만 실패하니 판 1 을 그대로 쓴다.
-    pProvider->_revision           = 2;
-    pProvider->_bBroken            = SW_TRUE;
+    pProvider->_revision = 2;
+    pProvider->_bBroken  = SW_TRUE;
+    SW_EXPECT_LOG( "ShaderCache.KeptLastGoodShader" );
     const ShaderCompileResult kept = cache.getOrCompile( first );
     SW_REQUIRE_TRUE( kept._bSuccess );
     SW_EXPECT_TRUE( kept._bytecode == vector<uint8>{ 1 } );
@@ -167,6 +168,7 @@ SW_TEST_CASE( ShaderCacheTest, BrokenEditKeepsLastGoodVersion )
     // 실패한 결과로는 항목을 바꾸지 않는다.
     ShaderCompileResult failed;
     failed._bSuccess = false;
+    SW_EXPECT_LOG( "ShaderCache.ReplaceWithFailedResult" );
     SW_EXPECT_FALSE( cache.replaceCompiled( first, failed ) );
 
     // 고친 소스는 새 판으로 바뀐다.

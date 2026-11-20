@@ -181,6 +181,7 @@ namespace sw
             if ( result == Scene::CellBuildResult::InProgress )
                 break;
             subLevel._pBuild.reset();
+            includeAnchorObject( subLevel );
             if ( result == Scene::CellBuildResult::Done )
             {
                 subLevel._state = SubLevelState::Loaded;
@@ -222,16 +223,23 @@ namespace sw
                                              static_cast<float32>( static_cast<float64>( subLevel._placement._position._y ) - origin._y ),
                                              static_cast<float32>( static_cast<float64>( subLevel._placement._position._z ) - origin._z ) } );
             pRoot->setLocalRotation( subLevel._placement._rotation );
-            pAnchor->setAlwaysLoaded( true ); // 스트리밍 셀이 런타임 스폰으로 삼키지 않는다 — 하위 레벨은 자기 단위로 오르내린다
-            subLevel._anchorObjectID = pAnchor->getObjectID();
-            subLevel._listObjectID.push_back( subLevel._anchorObjectID );
+            pAnchor->setAlwaysLoaded( true );                  // 스트리밍 셀이 런타임 스폰으로 삼키지 않는다 — 하위 레벨은 자기 단위로 오르내린다
+            subLevel._anchorObjectID = pAnchor->getObjectID(); // 목록에는 짓기 뒤에 든다 — 셀 짓기는 목록을 "이 셀이 지은 것" 으로 보고 참조 대상에서 빼, 멤버가 앵커를 찾지 못한다
         }
         subLevel._pBuild = _pScene->beginCellBuild( subLevel._listNode );
         subLevel._state  = SubLevelState::Building;
     }
 
+    void SceneSubLevelSubsystem::includeAnchorObject( SubLevel& subLevel )
+    {
+        const bool bListed = std::find( subLevel._listObjectID.begin(), subLevel._listObjectID.end(), subLevel._anchorObjectID ) != subLevel._listObjectID.end();
+        if ( subLevel._anchorObjectID != 0 && bListed == false )
+            subLevel._listObjectID.insert( subLevel._listObjectID.begin(), subLevel._anchorObjectID );
+    }
+
     void SceneSubLevelSubsystem::unloadSubLevel( SubLevel& subLevel )
     {
+        includeAnchorObject( subLevel ); // 짓는 중에 빼도 앵커가 남지 않게
         for ( const uint64 objectID : subLevel._listObjectID )
         {
             _mapObjectSubLevel.erase( objectID );

@@ -146,6 +146,8 @@ namespace sw
         void pushSubLevel( string_view name, string_view scenePath, const Placement& placement, vector<SceneDocument::SceneObjectNode> listNode );
         /** @brief 앵커를 세우고 짓기를 시작합니다(`Queued` → `Building`). 앵커를 세우지 못하면 오류를 남기고 `Failed` 입니다. */
         void beginBuild( SubLevel& subLevel );
+        /** @brief 이 서비스가 세운 앵커를 id 목록 앞에 넣습니다(이미 있거나 앵커가 없으면 그대로). 짓기가 끝난 뒤 · 내리기 전에 부른다. */
+        void includeAnchorObject( SubLevel& subLevel );
         /** @brief 하위 레벨의 오브젝트를 내리고 표에서 뺍니다. */
         void unloadSubLevel( SubLevel& subLevel );
         /** @brief 오브젝트 표(`_mapObjectSubLevel`)를 하위 레벨의 id 목록으로 다시 만듭니다. */

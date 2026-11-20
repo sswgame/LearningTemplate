@@ -145,6 +145,9 @@ SW_TEST_CASE( SceneSubLevelTest, SameSceneTwiceDoesNotShareIds )
                                                                          float3{ -10.0f, 0.0f, 0.0f },
                                                                          float3{}
     } ) );
+    SW_EXPECT_LOG( "SceneSubLevels.NameTaken" );
+    SW_EXPECT_LOG( "Scene.FileNotFound" );
+    SW_EXPECT_LOG( "SceneSubLevels.SceneNotLoaded" );
     SW_EXPECT_FALSE( subLevels.addSubLevel( scene, "East", shopPath, SceneSubLevelSubsystem::Placement{} ) );
     SW_EXPECT_FALSE( subLevels.addSubLevel( scene, "Nowhere", "missing/nothing.scene.xml", SceneSubLevelSubsystem::Placement{} ) );
     subLevels.update( 0.0f );

@@ -364,6 +364,7 @@ SW_TEST_CASE( MaterialRenderStateTest, SurfaceModelCombinationsAreLoadErrors )
 {
     SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
     SW_EXPECT_LOG( "Serialization.UnknownEnumerator" );
+    SW_EXPECT_LOG( "XMLFields.ValueUnreadable" );
     SW_EXPECT_LOG( "Material.ForwardOnlyBelongsToSurfaceModel" );
     const utf8* const kForwardOnlyDefine = "<_permutations><_alwaysDefines><item>MATERIAL_FORWARD_ONLY</item></_alwaysDefines></_permutations>";
     const utf8* const kForwardOnlySwitch = "<_permutations><_staticSwitches><item name=\"Forward\" keyword=\"MATERIAL_FORWARD_ONLY\" bEnabled=\"1\"/></_staticSwitches></_permutations>";

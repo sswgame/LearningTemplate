@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/IPlayerNotificationSink.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Tutorial/TutorialHintComponent.h"
@@ -37,7 +38,7 @@ namespace
     struct HintVolumeRig
     {
         CountingNotificationSink _sink;
-        SubsystemScope           _scope; ///< 빈 게임 범위(사용자 설정 서비스가 없으면 힌트는 켜진 것으로 본다)
+        SubsystemScope           _scope; ///< 게임 범위 — 힌트 설정만 든 사용자 설정 서비스를 둔다(없으면 엔진 범위의 서비스가 보여 그 실행의 스키마에 달린다)
         GameObjectManager        _manager;
         GameObject*              _pVolumeObject{ nullptr };
         GameObject*              _pWalker{ nullptr };
@@ -46,6 +47,9 @@ namespace
         /** @brief @p walkerX 는 활성자가 처음 놓이는 자리입니다. */
         explicit HintVolumeRig( float32 walkerX )
         {
+            const bool bSchemaLoaded = _scope.emplaceSubsystem<UserSettingsManager>().loadSchemaFromXMLText(
+                "<UserSettingsSchema owner=\"engine\" version=\"1\"><Category id=\"gameplay\"/><Setting id=\"gameplay.showTutorials\" category=\"gameplay\" type=\"Bool\" default=\"true\"/></UserSettingsSchema>", "test" );
+            SW_EXPECT_TRUE( bSchemaLoaded );
             _pVolumeObject = _manager.createGameObject( hashed_string( "HintVolume" ) );
             (void)_pVolumeObject->addComponent<SceneComponent>();
             _pVolume = _pVolumeObject->addComponent<TutorialHintComponent>();
