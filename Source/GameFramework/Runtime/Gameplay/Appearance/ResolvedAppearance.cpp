@@ -48,10 +48,10 @@ namespace sw
                 void applyVariantMaterials( const AppearancePartDef& part, const AppearancePartVariantDef& variant, ResolvedPart& inoutResolved, ResolvedAppearance& out ) const
                 {
                     if ( variant._material.empty() == false )
-                        setPartMaterial( inoutResolved, variant._material );
+                        setPartMaterial( inoutResolved, variant._material.key() );
                     for ( const AppearanceSectionDef& section : variant._listSection )
                     {
-                        (void)setSectionMaterial( inoutResolved, section._name, section._material );
+                        (void)setSectionMaterial( inoutResolved, section._name, section._material.key() );
                     }
                     for ( const AppearanceMaterialValueDef& value : variant._listMaterialValue )
                     {
@@ -604,7 +604,7 @@ namespace sw
                 resolved._partName     = part._name;
                 resolved._kind         = part._kind;
                 resolved._asset        = part._asset;
-                resolved._material     = part._material;
+                resolved._material     = part._material.key();
                 resolved._listSection  = part._listSection;
                 resolved._skeleton     = part._skeleton;
                 resolved._socketSet    = part._socketSet;
@@ -667,7 +667,7 @@ namespace sw
                 }
                 for ( AppearanceSectionDef& section : inoutPart._listSection )
                 {
-                    section._material = material;
+                    section._material = material.view();
                 }
             }
 
@@ -677,7 +677,7 @@ namespace sw
                 AppearanceSectionDef* pSection = VectorUtil::findBy<&AppearanceSectionDef::_name>( inoutPart._listSection, section );
                 if ( pSection == nullptr )
                     return false;
-                pSection->_material = material;
+                pSection->_material = material.view();
                 return true;
             }
 
@@ -1181,7 +1181,7 @@ namespace sw
             for ( const AppearanceSectionDef& section : part._listSection ) // 구간 머티리얼(변형 · 규칙 반영)은 병합 메시의 구간이 된다 — 병합 캐시 키가 이 해시다
             {
                 builder.addName( section._name );
-                builder.addName( section._material );
+                builder.addName( section._material.key() );
                 builder.addFloat( section._lodDetail );
                 builder.addUint64( section._lodDropLevel );
             }

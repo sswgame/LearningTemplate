@@ -110,7 +110,7 @@ namespace sw
                 option._visual             = params._visual;
                 option._variant            = params._variant;
                 option._materialVariant    = params._materialVariant;
-                const hashed_string prefab = params._prefab;
+                const hashed_string prefab = params._prefab.key();
                 const hashed_string sprite = params._sprite;
                 option._asset              = prefab.empty() ? sprite : prefab;
                 option._offset             = params._offset;

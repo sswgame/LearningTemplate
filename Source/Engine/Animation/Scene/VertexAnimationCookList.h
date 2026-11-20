@@ -13,8 +13,10 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Animation/AnimationSet.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -44,8 +46,9 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `VertexAnimationCookList.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "VertexAnimationCookList", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        PROPERTY( AssetPath, Name = "mesh", Required )
-        string _meshPath;
+        /** @brief 굽는 메시입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). 경로 글 칸이었을 때는 다른 칸의 `AssetRef<MeshAssetFormat>` `mesh` 와 이름이 같아 GUID 이전 도구가 칸 꼴을 가르지 못했다. */
+        PROPERTY( Name = "mesh", Required )
+        AssetRef<MeshAssetFormat> _meshPath;
         PROPERTY( AssetPath, Name = "skeleton", Required )
         string _skeletonPath;
         PROPERTY( Name = "animation_set", Required )

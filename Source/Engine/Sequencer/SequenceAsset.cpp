@@ -348,7 +348,7 @@ namespace sw
         switch ( field )
         {
             case SequenceItemField::Prefab:
-                return &_prefab;
+                return &_spawnPrefab;
             case SequenceItemField::Preset:
                 return &_preset;
             case SequenceItemField::Scenario:
@@ -373,7 +373,7 @@ namespace sw
             case SequenceItemField::Binding:
                 return "_binding";
             case SequenceItemField::Prefab:
-                return "_prefab";
+                return "_spawnPrefab";
             case SequenceItemField::Preset:
                 return "_preset";
             case SequenceItemField::Scenario:

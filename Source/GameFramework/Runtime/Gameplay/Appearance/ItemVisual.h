@@ -10,7 +10,11 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -42,8 +46,9 @@ namespace sw
 
         PROPERTY( Required )
         hashed_string _name{};
-        PROPERTY( AssetPath, Required )
-        hashed_string _material{};
+        /** @brief 구간 머티리얼입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). 해석한 부품(`ResolvedPart::_listSection`)도 이 형식이라 변형 · 규칙이 바꾼 머티리얼이 여기 든다. */
+        PROPERTY( Required )
+        AssetRef<Material> _material{};
         /** @brief 합친 메시의 LOD 에서 이 구간을 늦게(> 1) 또는 빨리(< 1) 줄입니다(`CharacterLODSectionRule::_detail`). 적지 않으면 부품의 값입니다. */
         PROPERTY( Min = 0.05 )
         float32 _lodDetail{ 1.0f };
@@ -127,16 +132,16 @@ namespace sw
         vector<AppearanceMaterialValueDef> _listMaterialValue{}; ///< 이 변형을 고르면 이 부품에 거는 머티리얼 값(`<Material name value section>`)
         PROPERTY( Required )
         hashed_string _name{};
-        /** @brief 부품 종류가 고르는 에셋 칸입니다 — `Skinned` 는 `mesh`, `SocketPrefab` 은 `prefab`, `Sprite` 는 `sprite` 하나만 적는다. 읽기가 그중 하나를 `_asset` 으로 고른다. */
-        PROPERTY( AssetPath, Name = "mesh" )
-        hashed_string _meshAsset{};
-        PROPERTY( AssetPath, Name = "prefab" )
-        hashed_string _prefabAsset{};
+        /** @brief 부품 종류가 고르는 에셋 칸입니다 — `Skinned` 는 `mesh`, `SocketPrefab` 은 `prefab`, `Sprite` 는 `sprite` 하나만 적는다. 읽기가 그중 하나를 `_asset` 으로 고른다. 메시 · 프리팹은 GUID 참조로 쓴다(`AssetRef<T>` — 같은 이름의 다른 칸과 저장 꼴이 같아야 GUID 이전 도구가 칸 이름으로 가른다). */
+        PROPERTY( Name = "mesh" )
+        AssetRef<MeshAssetFormat> _meshAsset{};
+        PROPERTY( Name = "prefab" )
+        AssetRef<PrefabAsset> _prefabAsset{};
         PROPERTY( AssetPath, Name = "sprite" )
         hashed_string _spriteAsset{};
         hashed_string _asset{}; ///< 종류가 고른 에셋(읽기가 위 칸에서 채운다 — 데이터 칸이 아니다)
-        PROPERTY( AssetPath )
-        hashed_string _material{}; ///< 구간이 있는 부품이면 모든 구간의 머티리얼을 바꾼다
+        PROPERTY()
+        AssetRef<Material> _material{}; ///< 구간이 있는 부품이면 모든 구간의 머티리얼을 바꾼다
         /** @brief 스킨드 부품(`<Variant>`)이 이 변형에서 쓰는 스켈레톤입니다 — 스켈레톤 변형(`SkeletonVariant`)을 적으면 외형이 런타임에 뼈 비율을 고릅니다(꾸미기 선택 · 규칙 · 피해 단계가 고르는 변형과 같은 길). */
         PROPERTY( AssetPath )
         hashed_string _skeleton{};
@@ -183,16 +188,16 @@ namespace sw
         float3                               _breakImpulse{};        ///< 떨어져 나갈 때의 충격 힌트(부품 로컬)
         PROPERTY( Required )
         hashed_string _name{};
-        /** @brief 부품 종류가 고르는 에셋 칸입니다 — `Skinned` 는 `mesh`, `SocketPrefab` 은 `prefab`, `Sprite` 는 `sprite` 하나만 적는다. 읽기가 그중 하나를 `_asset` 으로 고른다. */
-        PROPERTY( AssetPath, Name = "mesh" )
-        hashed_string _meshAsset{};
-        PROPERTY( AssetPath, Name = "prefab" )
-        hashed_string _prefabAsset{};
+        /** @brief 부품 종류가 고르는 에셋 칸입니다 — `Skinned` 는 `mesh`, `SocketPrefab` 은 `prefab`, `Sprite` 는 `sprite` 하나만 적는다. 읽기가 그중 하나를 `_asset` 으로 고른다. 메시 · 프리팹은 GUID 참조로 쓴다(`AssetRef<T>` — 같은 이름의 다른 칸과 저장 꼴이 같아야 GUID 이전 도구가 칸 이름으로 가른다). */
+        PROPERTY( Name = "mesh" )
+        AssetRef<MeshAssetFormat> _meshAsset{};
+        PROPERTY( Name = "prefab" )
+        AssetRef<PrefabAsset> _prefabAsset{};
         PROPERTY( AssetPath, Name = "sprite" )
         hashed_string _spriteAsset{};
         hashed_string _asset{}; ///< 메시, 프리팹, 스프라이트 경로 — 종류가 위 칸에서 고른다(읽기가 채운다 — 데이터 칸이 아니다)
-        PROPERTY( AssetPath )
-        hashed_string _material{}; ///< 비어 있으면 메시의 것
+        PROPERTY()
+        AssetRef<Material> _material{}; ///< 비어 있으면 메시의 것
         PROPERTY( AssetPath )
         hashed_string _skeleton{}; ///< 자기 스켈레톤. 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
         PROPERTY( AssetPath, Name = "sockets" )

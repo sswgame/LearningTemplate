@@ -31,23 +31,6 @@ namespace sw
         string _name{};
     };
 
-    /** @brief 중첩 프리팹(`<PrefabInstance name prefab attach>`)의 칸입니다. 덮어쓰기와 그 노드에 붙는 노드는 자식 원소다. */
-    REFLECT()
-    struct SW_API PrefabInstanceParams
-    {
-        REFLECT_BODY();
-
-        PROPERTY()
-        string _name{};
-        PROPERTY( AssetPath )
-        string _prefab{};
-        PROPERTY()
-        string _attach{};
-        /** @brief 노드의 고정 지역 id 키(`#<16진>`, `ComponentStableKey::formatKey`)입니다 — 바깥 덮어쓰기의 부품 경로(`<Part path>`)가 이것을 가리킨다(감사 A-2). 비면 옛 노드(목록 인덱스). */
-        PROPERTY()
-        string _localID{};
-    };
-
     struct CookJobDesc;
     struct ObjectIdentity;
 
@@ -273,5 +256,29 @@ namespace sw
     {
         static shared_ptr<const PrefabAsset> acquire( string_view path );
         static PrefabHandle                  request( string_view path );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 중첩 프리팹(`<PrefabInstance name prefab attach>`)의 칸입니다. 덮어쓰기와 그 노드에 붙는 노드는 자식 원소다.
+     * @details `PrefabAsset` 뒤에 두는 까닭: `AssetRef<PrefabAsset>` 칸을 만드는 암시 생성자가 `PrefabAsset` 을 완전한 형식으로 요구한다(내보내는 구조체는 정의 자리에서 만들어진다).
+     */
+    REFLECT()
+    struct SW_API PrefabInstanceParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _name{};
+        /** @brief 원본 프리팹입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). 경로 글 칸이었을 때는 다른 칸의 `AssetRef<PrefabAsset>` `_prefab` 과 이름이 같아 GUID 이전 도구가 칸 꼴을 가르지 못했다. */
+        PROPERTY()
+        AssetRef<PrefabAsset> _prefab{};
+        PROPERTY()
+        string _attach{};
+        /** @brief 노드의 고정 지역 id 키(`#<16진>`, `ComponentStableKey::formatKey`)입니다 — 바깥 덮어쓰기의 부품 경로(`<Part path>`)가 이것을 가리킨다(감사 A-2). 비면 옛 노드(목록 인덱스). */
+        PROPERTY()
+        string _localID{};
     };
 } // namespace sw

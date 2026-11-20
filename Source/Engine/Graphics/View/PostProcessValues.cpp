@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Reflection/PropertyInfo.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -79,10 +80,12 @@ namespace sw
         return overrides;
     }
 
+    PostProcessBlendable::PostProcessBlendable() = default;
+
     bool PostProcessBlendable::isSameSlot( const PostProcessBlendable& other ) const
     {
-        // 읽지 않은 경로끼리는 같지 않다 — 빈 항목은 섞지 않는다.
-        return _location == other._location && _materialPath.isSet() && other._materialPath.isSet() && _materialPath == string_view( other._materialPath.get() );
+        // 빈 참조끼리는 같지 않다 — 빈 항목은 섞지 않는다.
+        return _location == other._location && _materialPath.empty() == false && _materialPath == other._materialPath;
     }
 
     bool PostProcessBlendable::hasActive( const vector<PostProcessBlendable>& listBlendable, PostProcessBlendableLocation location )
@@ -108,7 +111,7 @@ namespace sw
         // 위 목록의 항목 — 같은 (경로, 자리) 는 무게를 섞고, 없으면 무게 0 에서 섞여 들어온다.
         for ( const PostProcessBlendable& other : target )
         {
-            if ( other._materialPath.isSet() == false )
+            if ( other._materialPath.empty() )
                 continue;
             PostProcessBlendable* pExisting = nullptr;
             for ( PostProcessBlendable& entry : inoutList )

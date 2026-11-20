@@ -174,12 +174,12 @@ SW_TEST_CASE( SequencerTest, FieldIssueFollowsTheItemKind )
     item._binding = 2;
     SW_EXPECT_TRUE( item.findFieldIssue( &field ) == SequenceItemFieldIssue::MissingField );
     SW_EXPECT_TRUE( field == SequenceItemField::Prefab );
-    item._prefab = "a.prefab.xml";
+    item._spawnPrefab = "a.prefab.xml";
     SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::None );
 
     item._kind = SequenceItemKind::Appearance;
     SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::FieldNotAllowed ); // 프리팹이 남았다
-    item._prefab.clear();
+    item._spawnPrefab.clear();
     SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::MissingField );
     item._preset = "wet";
     SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::None );
@@ -263,9 +263,9 @@ SW_TEST_CASE( SequencerTest, BindingViewPrefersSpawnedObjects )
     const uint32      heroID = asset.addBinding( "Hero" );
     const uint32      propID = asset.addBinding( "Prop" );
     SequenceTrackItem spawn{};
-    spawn._kind    = SequenceItemKind::Spawn;
-    spawn._binding = propID;
-    spawn._prefab  = "a.prefab.xml";
+    spawn._kind        = SequenceItemKind::Spawn;
+    spawn._binding     = propID;
+    spawn._spawnPrefab = "a.prefab.xml";
     asset._listItem.push_back( spawn );
 
     vector<SequenceBindingSlot> listSlot( 2 );

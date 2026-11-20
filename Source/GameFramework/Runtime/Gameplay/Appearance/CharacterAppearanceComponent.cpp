@@ -129,11 +129,11 @@ namespace sw
             {
                 // 이미 같은 구간 · 머티리얼이면 그대로 둔다 — 조립은 자주(로드를 기다리는 동안 프레임마다) 다시 불리고, 새로 만들면 머티리얼을 매번 다시 잡는다.
                 bool bSame = part._listSection.empty() == false && inoutListSection.size() + 1 == part._listSection.size() && main.getSectionName() == part._listSection.front()._name &&
-                             main.getMaterialPath() == part._listSection.front()._material;
+                             main.getMaterialPath() == part._listSection.front()._material.key();
                 for ( size_t index = 0; bSame && index < inoutListSection.size(); ++index )
                 {
                     const MeshSectionComponent* pSection = manager.resolveComponent( inoutListSection[index] );
-                    bSame                                = pSection != nullptr && pSection->getSectionName() == part._listSection[index + 1]._name && pSection->getMaterialPath() == part._listSection[index + 1]._material;
+                    bSame                                = pSection != nullptr && pSection->getSectionName() == part._listSection[index + 1]._name && pSection->getMaterialPath() == part._listSection[index + 1]._material.key();
                 }
                 if ( bSame )
                     return;
@@ -147,7 +147,7 @@ namespace sw
                 if ( part._listSection.empty() )
                     return;
                 main.setSectionName( part._listSection.front()._name );
-                main.setMaterialPath( part._listSection.front()._material.view() );
+                main.setMaterialPath( part._listSection.front()._material.path() );
                 for ( size_t index = 1; index < part._listSection.size(); ++index )
                 {
                     MeshSectionComponent* pSection = owner.addComponent<MeshSectionComponent>();
@@ -157,7 +157,7 @@ namespace sw
                         continue;
                     }
                     pSection->setSectionName( part._listSection[index]._name );
-                    pSection->setMaterialPath( part._listSection[index]._material.view() );
+                    pSection->setMaterialPath( part._listSection[index]._material.path() );
                     pSection->followSourceMesh();
                     inoutListSection.push_back( TComponentHandle<MeshSectionComponent>{ pSection } );
                 }

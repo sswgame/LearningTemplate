@@ -9,7 +9,10 @@
 #include "Core/Name/TagID.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Behavior/ConditionExpr.h"
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -160,10 +163,11 @@ namespace sw
         hashed_string _region{};
         PROPERTY()
         hashed_string _name{};
-        PROPERTY( AssetPath )
-        hashed_string _mesh{};
-        PROPERTY( AssetPath )
-        hashed_string _material{};
+        /** @brief SwapMesh 의 메시 · SwapMaterial 의 머티리얼입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`, 같은 이름의 다른 칸과 저장 꼴이 같다). 읽은 뒤 행동 값(`AppearanceRuleAction::_value`)으로 옮긴다. */
+        PROPERTY()
+        AssetRef<MeshAssetFormat> _mesh{};
+        PROPERTY()
+        AssetRef<Material> _material{};
         PROPERTY()
         float32 _weight{ 1.0f }; ///< Morph — 적지 않으면 모프를 다 건다
     };

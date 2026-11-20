@@ -228,7 +228,7 @@ namespace sw
                         return false;
                     PrefabInstanceNode node{};
                     node._name        = std::move( params._name );
-                    node._prefabPath  = std::move( params._prefab );
+                    node._prefabPath  = params._prefab.path();
                     node._attachKey   = std::move( params._attach );
                     node._parentIndex = parentIndex;
                     if ( readNodeLocalID( params._localID, node, sourceName ) == false )
@@ -252,7 +252,7 @@ namespace sw
                     if ( node._parentIndex != parentIndex )
                         continue;
                     XMLNode element = parent.appendChild( kNestedInstance );
-                    XMLFields::writeProperties( element, PrefabInstanceParams{ node._name, node._prefabPath, node._attachKey,
+                    XMLFields::writeProperties( element, PrefabInstanceParams{ node._name, AssetRef<PrefabAsset>{ node._prefabPath }, node._attachKey,
                                                                                node._localID != 0 ? ComponentStableKey::formatKey( node._localID ) : string{} } );
                     if ( node._overrideXML.empty() == false )
                     {
@@ -282,9 +282,13 @@ namespace sw
                     const JSONValue element = arrayValue.at( index );
                     if ( element.isObject() == false )
                         continue;
+                    // 원본 칸은 XML 의 `PrefabInstanceParams::_prefab` 과 같은 참조 글이다(GUID 참조 · 옮기는 동안의 경로 글) — 같은 읽기(`AssetRefBase::assign`)로 경로를 푼다.
+                    AssetRef<PrefabAsset> prefab;
+                    if ( prefab.assign( element.get( kNestedPrefab ).asString() ) == false )
+                        return false;
                     PrefabInstanceNode node{};
                     node._name        = element.get( kName ).asString();
-                    node._prefabPath  = element.get( kNestedPrefab ).asString();
+                    node._prefabPath  = prefab.path();
                     node._attachKey   = element.get( kNestedAttach ).asString();
                     node._overrideXML = element.get( kNestedOverrides ).asString();
                     node._parentIndex = parentIndex;
@@ -321,7 +325,7 @@ namespace sw
                     element.setObject();
                     if ( node._name.empty() == false )
                         element.set( kName ).setString( node._name );
-                    element.set( kNestedPrefab ).setString( node._prefabPath );
+                    element.set( kNestedPrefab ).setString( AssetRef<PrefabAsset>{ node._prefabPath }.toText() );
                     if ( node._attachKey.empty() == false )
                         element.set( kNestedAttach ).setString( node._attachKey );
                     if ( node._overrideXML.empty() == false )

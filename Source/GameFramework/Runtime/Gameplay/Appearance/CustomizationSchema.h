@@ -11,6 +11,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -118,8 +120,9 @@ namespace sw
         hashed_string _variant{};
         PROPERTY()
         hashed_string _materialVariant{};
-        PROPERTY( AssetPath )
-        hashed_string _prefab{};
+        /** @brief 소켓에 붙일 프리팹입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`, 같은 이름의 다른 칸과 저장 꼴이 같다). */
+        PROPERTY()
+        AssetRef<PrefabAsset> _prefab{};
         PROPERTY()
         hashed_string _sprite{};
         PROPERTY( Units = m )

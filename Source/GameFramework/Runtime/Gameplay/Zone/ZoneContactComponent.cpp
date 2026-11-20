@@ -174,7 +174,7 @@ namespace sw
         pZone->_kind                                      = kind;
         pZone->_sourceName                                = hashed_string( string( "surface:" ) + kind.c_str() );
         const SurfaceKindDef*                    pKind    = table.findKind( kind );
-        const string                             path     = pKind != nullptr ? pKind->_zoneProfile.get() : string{};
+        const string                             path     = pKind != nullptr ? pKind->_zoneProfile.path() : string{};
         shared_ptr<const ZoneProfile>            pProfile = path.empty() ? nullptr : SharedAssetCache<ZoneProfile>::acquire( path ).snapshot();
         const GameObject* const                  pOwner   = getOwner();
         StringBuilder<constant::buffer::kMax256> sourceNameBuilder;

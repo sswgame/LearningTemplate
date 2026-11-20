@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
@@ -20,6 +21,7 @@
 
 namespace sw
 {
+    class Material;
     class SkeletalMeshComponent;
 
     /** @class PoseAfterimageComponent @brief 스켈레탈 메시 잔상입니다. 파일 머리말 참고. */
@@ -71,8 +73,8 @@ namespace sw
         SkeletalMeshComponent* findSourceMesh() const;
 
     private:
-        PROPERTY( Category = "Afterimage", DisplayName = "Material", AssetPath, AssetType = "Material", Required, Tooltip = "Translucent material that reads instance custom data 0 as its colour" )
-        string _materialPath;
+        PROPERTY( Category = "Afterimage", DisplayName = "Material", Required, Tooltip = "Translucent material that reads instance custom data 0 as its colour" )
+        AssetRef<Material> _materialPath;
         PROPERTY( Category = "Afterimage", DisplayName = "Opacity Over Life", Tooltip = "Opacity by life ratio (0 new, 1 gone); multiplied by the colour alpha" )
         FloatCurve _opacityOverLife;
         PROPERTY( Category = "Afterimage", DisplayName = "Color", Tooltip = "Tint and starting alpha" )

@@ -29,13 +29,13 @@ namespace
         return pVolume;
     }
 
-    /** @brief 경로 · 무게 · 자리의 블렌더블 하나입니다. 경로는 데이터 읽기로만 들어가므로(`DataPath`) 텍스트 처리기로 넣는다. */
+    /** @brief 경로 · 무게 · 자리의 블렌더블 하나입니다. 머티리얼 참조는 데이터 읽기와 같은 텍스트 처리기("AssetRef")로 넣는다. */
     PostProcessBlendable makeBlendable( const char* pPath, float32 weight, PostProcessBlendableLocation location )
     {
         PostProcessBlendable blendable;
         blendable._weight   = weight;
         blendable._location = location;
-        const bool bParsed  = SerializerUtil::parseTextValue( MutableValueAddress{ &blendable._materialPath }, hashed_string( "DataPath" ), pPath,
+        const bool bParsed  = SerializerUtil::parseTextValue( MutableValueAddress{ &blendable._materialPath }, hashed_string( AssetRefBase::kTypeName ), pPath,
                                                               SerializeContext::getDefault( SerializePurpose::Authoring ) );
         SW_EXPECT_TRUE( bParsed );
         return blendable;
