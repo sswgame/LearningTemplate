@@ -402,7 +402,6 @@ namespace sw
 
     void JoltPhysicsScene::step( float32 fixedDeltaTime )
     {
-        SW_MEMORY_SCOPE( Physics );
         _listContactEvent.clear();
         {
             ScopedLock<mutex> lock{ _reportMutex };

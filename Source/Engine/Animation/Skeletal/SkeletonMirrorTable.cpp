@@ -30,7 +30,6 @@ namespace sw
     bool SkeletonMirrorTable::loadFromAsset( const AssetID& assetID )
     {
         const string_view path = assetID.view();
-        SW_MEMORY_SCOPE( Animation );
         _listPair.clear();
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )

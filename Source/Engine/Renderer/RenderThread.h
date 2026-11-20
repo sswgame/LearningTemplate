@@ -47,6 +47,9 @@ namespace sw
     class SW_API RenderThread
     {
     public:
+        /** @brief 렌더 스레드의 할당 태그입니다(스레드 첫 줄이 건다 — 새 스레드는 Unknown 에서 시작한다). */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::RenderCPU;
+
         /** @brief 워커 없이 만듭니다. bind 나 start 로 붙입니다. */
         RenderThread();
         /** @brief 스레드를 멈추고 조인합니다. */

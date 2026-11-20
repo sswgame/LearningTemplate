@@ -9,6 +9,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Memory/MemoryTag.h"
 
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 
@@ -32,6 +33,8 @@ namespace sw
     class SW_API ShaderReflectionLibrary
     {
     public:
+        /** @brief 매니페스트 읽기 · 조회가 거는 할당 태그입니다. */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::Shader;
         /// @brief 매니페스트 한 개의 내용입니다(쿠킹할 때 채우고 파일로 쿠킹합니다).
         using EntryMap = unordered_map<string, ShaderReflectionData>;
 

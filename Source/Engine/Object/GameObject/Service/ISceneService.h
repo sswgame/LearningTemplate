@@ -59,7 +59,7 @@ namespace sw
     public:
         ~ISceneService() override = default;
 
-        /** @brief 이번 프레임을 진행합니다(게임 스레드, 등록 줄의 단계에서). */
+        /** @brief 이번 프레임을 진행합니다(게임 스레드, 등록 줄의 단계에서). 매니저가 서비스 형식의 할당 태그(`kSubsystemMemoryTag`)를 걸고 부른다. */
         virtual void update( float32 deltaTime ) = 0;
         /**
          * @brief `update` 가 워커에 넘긴 일을 기다리고 결과를 씁니다(게임 스레드, 등록 줄의 `_completeStep` 단계 본문 앞). 넘기는 일이 없는 서비스에는 불리지 않습니다.

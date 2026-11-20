@@ -1022,6 +1022,7 @@ namespace sw
             if ( entry._pRegistration->_completeStep != step )
                 continue;
             const ScopedFrameProfile serviceScope{ entry._completeScopeID };
+            const ScopedMemoryTag    serviceMemoryTag{ entry._pService->getSubsystemMemoryTag() };
             entry._pService->completeFrameJob();
         }
     }
@@ -1033,6 +1034,7 @@ namespace sw
             if ( entry._pRegistration->_frameStep != step )
                 continue;
             const ScopedFrameProfile serviceScope{ entry._updateScopeID };
+            const ScopedMemoryTag    serviceMemoryTag{ entry._pService->getSubsystemMemoryTag() }; // 서비스가 태그를 적지 않는다(물리 · 내비게이션은 형식이 가린다)
             entry._pService->update( deltaTime );
         }
     }

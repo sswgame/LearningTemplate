@@ -89,7 +89,6 @@ namespace sw
 
     bool AnimationSet::loadFromAsset( const AssetID& assetID )
     {
-        SW_MEMORY_SCOPE( Animation );
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {

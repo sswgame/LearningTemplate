@@ -181,13 +181,13 @@ namespace sw
 
     Scene* SceneManager::createScene( string_view name )
     {
-        SW_MEMORY_SCOPE( Scene );
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         return applyScene( sw::make_unique<Scene>( name, _services ), SceneRole::Loaded );
     }
 
     Scene* SceneManager::createEmptyActiveScene( string_view name )
     {
-        SW_MEMORY_SCOPE( Scene );
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         return applyScene( sw::make_unique<Scene>( name, _services ), SceneRole::Active );
     }
 
@@ -207,8 +207,8 @@ namespace sw
 
     Scene* SceneManager::applyScene( unique_ptr<Scene> scene, SceneRole role )
     {
-        SW_MEMORY_SCOPE( Scene );
-        Scene* const pScene = scene.get();
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
+        Scene* const          pScene = scene.get();
         pScene->finishHeldRegistration(); // 워커에서 지은 씬의 등록 · 로드 뒤 처리(게임 스레드) — 기본값 걸기 · 카메라 고르기가 레지스트리를 본다
         // 기본 머티리얼 · 기본 카메라 · 메시 기본값을 건다(디바이스가 없는 테스트는 건너뛴다). 머티리얼 없는 메시가 그려지려면 필요하다.
         if ( _pRenderBinding != nullptr )
@@ -302,7 +302,7 @@ namespace sw
 
     bool SceneManager::dispatchLoad( string_view path, TaskPromise<Scene*> promise )
     {
-        SW_MEMORY_SCOPE( Scene );
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         // 로드를 띄울 곳(태스크)과 지을 표(타입)가 없으면 띄우지 않는다. 기다리는 쪽에는 실패로 알린다.
         if ( _services._pTaskManager == nullptr || _services._pTypeRegistry == nullptr )
         {
@@ -641,7 +641,7 @@ namespace sw
 
     void SceneManager::updateTransitions()
     {
-        SW_MEMORY_SCOPE( Scene );
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         updateScenePreload();
         if ( _chunkWaitPath.empty() == false )
         {
@@ -749,7 +749,7 @@ namespace sw
      */
     void SceneManager::update( float32 deltaTime )
     {
-        SW_MEMORY_SCOPE( Scene );
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         if ( _leakCheck.isRunning() )
             _leakCheck.update( *this ); // 활성 씬이 없는 프레임에도 진행한다(로드 사이)
         if ( _pActiveScene == nullptr )
@@ -785,8 +785,8 @@ namespace sw
 
     Scene* SceneManager::createPreviewScene( string_view name, const ScenePreviewPolicy& policy )
     {
-        SW_MEMORY_SCOPE( Scene );
-        Scene* const pScene = applyScene( sw::make_unique<Scene>( name, _services ), SceneRole::Preview );
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
+        Scene* const          pScene = applyScene( sw::make_unique<Scene>( name, _services ), SceneRole::Preview );
         (void)setPreviewPolicy( pScene, policy ); // 방금 넣은 미리보기 씬이라 늘 찾는다
         return pScene;
     }
@@ -890,7 +890,7 @@ namespace sw
     {
         if ( _listPreviewScene.empty() )
             return;
-        SW_MEMORY_SCOPE( Scene );
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         for ( PreviewSceneEntry& entry : _listPreviewScene )
         {
             const bool bManagerTicks = entry._policy._tick == ScenePreviewTick::WhenDrawn;

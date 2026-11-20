@@ -116,6 +116,9 @@ namespace sw
         {
             using State = AssetPaths::State;
 
+            /** @brief 경로 캐시의 할당 태그입니다 — 캐시는 에셋 색인의 몫이라 부르는 쪽(스플래시 · 모듈 · 워커)의 태그가 아니다(재해시가 어디서 일어나든). */
+            static constexpr MemoryTag kCacheMemoryTag = MemoryTag::Asset;
+
             /** @brief 지금 경로 표입니다. 한 번 잡아 그 안에서 읽는다(칸마다 다시 잡으면 둘 사이에 표가 바뀔 수 있다). */
             static const AssetPathTable& getTable( const State& state ) { return *state._pCurrentTable.load( std::memory_order_acquire ); }
 
@@ -256,9 +259,8 @@ namespace sw
             /** @brief 푼 결과(@p path 가 비면 "없음")를 저장합니다. @p stamp 의 검색 목록 세대가 이미 낡았으면 저장하지 않습니다. */
             static void storeResolved( State& state, string&& cacheKey, const string& path, const PathCacheStamp& stamp )
             {
-                // 캐시는 에셋 색인의 몫이다 — 부르는 쪽(스플래시 · 모듈 · 워커)의 태그가 아니라 Asset 으로 센다(재해시가 어디서 일어나든).
-                SW_MEMORY_SCOPE( Asset );
-                ScopedLock<mutex> lock( state._cacheMutex );
+                const ScopedMemoryTag memoryScope{ kCacheMemoryTag };
+                ScopedLock<mutex>     lock( state._cacheMutex );
                 if ( stamp._layoutGeneration != state._layoutGeneration )
                     return;
                 const auto inserted           = state._mapResolvedPath.try_emplace( std::move( cacheKey ) );

@@ -89,8 +89,7 @@ namespace sw
     bool SkeletonBoneLOD::loadFromAsset( const AssetID& assetID )
     {
         const string_view path = assetID.view();
-        SW_MEMORY_SCOPE( Animation );
-        string text;
+        string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODCouldNot", "Bone LOD '%#' could not be read", path );

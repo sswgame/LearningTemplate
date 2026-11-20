@@ -415,7 +415,7 @@ namespace sw
 
     void RenderThread::threadMain()
     {
-        SW_MEMORY_SCOPE( RenderCPU );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명 참고).
         ThreadCrashStack::initializeCurrentThread();
         ThreadName::setCurrentThreadName( "RenderThread" );

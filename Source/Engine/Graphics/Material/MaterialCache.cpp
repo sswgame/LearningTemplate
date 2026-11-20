@@ -144,7 +144,7 @@ namespace sw
 
     Material* MaterialCache::acquire( string_view relativePath )
     {
-        SW_MEMORY_SCOPE( Material );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         if ( relativePath.empty() || _impl == nullptr )
             return nullptr;
 
@@ -232,7 +232,7 @@ namespace sw
 
     void MaterialCache::initializePending( IRHIDevice* pDevice, uint32 maxCount )
     {
-        SW_MEMORY_SCOPE( Material );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         if ( pDevice == nullptr || _impl == nullptr )
             return;
         promoteReadyPSOWarmKeys(); // 지난 프레임까지 초기화를 마친 고정 머티리얼
@@ -417,8 +417,8 @@ namespace sw
 
     ReloadResult MaterialCache::reload( const AssetID& assetID )
     {
-        const string_view relativePath = assetID.view();
-        SW_MEMORY_SCOPE( Material );
+        const string_view     relativePath = assetID.view();
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         if ( relativePath.empty() || _impl == nullptr )
             return ReloadResult::NotTracked;
 

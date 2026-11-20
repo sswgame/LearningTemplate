@@ -179,6 +179,8 @@ namespace sw
     class RegistrationList final : public RegistrationListBase
     {
     public:
+        /** @brief 목록 저장소의 할당 태그입니다 — 올리는 쪽(모듈 · 기능)의 태그가 아니라 엔진 서비스의 몫이다. */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::EngineMisc;
         /** @brief `addSubscribed` 의 구독이 풀렸을 때 부르는 주인의 함수입니다. 주인이 자기 잠금 안에서 `remove` 하고 뒷정리한다. */
         using ReleaseFunction = typename ItemSubscriptionList<T>::ReleaseFunction;
 
@@ -253,7 +255,7 @@ namespace sw
          */
         [[nodiscard]] RegistrationResult add( T* pItem, string_view name = {}, int32 order = 0 )
         {
-            SW_MEMORY_SCOPE( EngineMisc );
+            const ScopedMemoryTag memoryScope{ kMemoryTag };
             if ( pItem == nullptr )
                 return RegistrationResult::NullItem;
             if ( contains( pItem ) )

@@ -102,6 +102,8 @@ namespace sw
     class SW_API TextureCache final : public AssetCacheBase
     {
     public:
+        /** @brief 캐시 진입점(요청 · 렌더 타깃 크기 · 다시 읽기)이 거는 할당 태그입니다. */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::Texture;
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Texture";
         /// @brief 렌더 텍스처 경로의 접두사입니다.

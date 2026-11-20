@@ -345,8 +345,8 @@ namespace sw
 
     shared_ptr<Mesh> MeshUtil::createPrimitive( string_view meshID, PrimitiveVertexColor vertexColor )
     {
-        SW_MEMORY_SCOPE( Mesh );
-        const utf8* pCanonical = canonicalPrimitiveIDVal( meshID );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
+        const utf8*           pCanonical = canonicalPrimitiveIDVal( meshID );
         if ( pCanonical == nullptr )
             return {};
 
@@ -391,8 +391,8 @@ namespace sw
 
     shared_ptr<Mesh> MeshUtil::acquirePrimitive( string_view meshID )
     {
-        SW_MEMORY_SCOPE( Mesh );
-        const utf8* pCanonical = canonicalPrimitiveIDVal( meshID );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
+        const utf8*           pCanonical = canonicalPrimitiveIDVal( meshID );
         if ( pCanonical == nullptr )
             return {};
 

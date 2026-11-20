@@ -55,6 +55,8 @@ namespace sw
     class SW_API MaterialCache final : public AssetCacheBase
     {
     public:
+        /** @brief 캐시 진입점(얻기 · 올리기 · 다시 읽기)이 거는 할당 태그입니다. */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::Material;
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Material";
         /** @brief 한 프레임에 초기화하는 머티리얼 수의 상한입니다(`initializePending`). 게임 스레드의 파일 읽기라 작게 둡니다. */

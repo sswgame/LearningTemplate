@@ -1477,7 +1477,7 @@ SW_TEST_CASE( TaskManagerTest, TaskInheritsCreatorMemoryTag )
     sw::TaskHandle task;
     sw::TaskHandle group;
     {
-        SW_MEMORY_SCOPE( Texture );
+        const sw::ScopedMemoryTag textureScope{ sw::MemoryTag::Texture };
         task  = manager.emplaceTask( "TagTask", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&taskRunCount, &taskWrongTagCount]()
          {
             if ( sw::Memory::getCurrentMemoryTag() != sw::MemoryTag::Texture )
@@ -1493,7 +1493,7 @@ SW_TEST_CASE( TaskManagerTest, TaskInheritsCreatorMemoryTag )
     }
     {
         // 이 스레드가 기다리며 대신 실행해도 Mesh 가 아니라 Texture 여야 한다.
-        SW_MEMORY_SCOPE( Mesh );
+        const sw::ScopedMemoryTag meshScope{ sw::MemoryTag::Mesh };
         task.submit();
         group.submit();
         manager.waitAll( "TaskManagerTest" );
@@ -1509,7 +1509,7 @@ SW_TEST_CASE( TaskManagerTest, TaskInheritsCreatorMemoryTag )
     sw::atomic<int32>     workerChunkCount{ 0 };
     const std::thread::id callerID = std::this_thread::get_id();
     {
-        SW_MEMORY_SCOPE( Material );
+        const sw::ScopedMemoryTag materialScope{ sw::MemoryTag::Material };
         manager.runParallel( kCount, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&stackRunCount, &stackWrongTagCount, &workerChunkCount, callerID]( uint32 start, uint32 end )
         {
             if ( std::this_thread::get_id() == callerID )

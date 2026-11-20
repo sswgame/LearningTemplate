@@ -150,7 +150,6 @@ namespace sw
 
     void GameModuleManager::updateGame( float32 deltaTime )
     {
-        SW_MEMORY_SCOPE( Game );
         const bool bCanUpdate = _game != nullptr && _gameAPI.update != nullptr && _frameState._bGameplayActive == SW_TRUE;
         if ( bCanUpdate )
             _gameAPI.update( _game, deltaTime );
@@ -158,7 +157,6 @@ namespace sw
 
     void GameModuleManager::fixedUpdateGame( float32 fixedDeltaTime )
     {
-        SW_MEMORY_SCOPE( Game );
         const bool bCanFixedUpdate = _game != nullptr && _gameAPI.fixedUpdate != nullptr && _frameState._bGameplayActive == SW_TRUE;
         if ( bCanFixedUpdate )
             _gameAPI.fixedUpdate( _game, fixedDeltaTime );
@@ -175,7 +173,7 @@ namespace sw
 
     void GameModuleManager::onAfterGameReload( void* pLibraryModule )
     {
-        SW_MEMORY_SCOPE( Game );
+        const ScopedMemoryTag moduleMemoryTag{ kGameModuleMemoryTag }; // 다시 올린 모듈의 서비스 묶기(표의 `bindService`)가 모듈 코드다
         // 핸들을 받지 못했으면(기동 · RHI 교체) 리로드 매니저가 든 것을 쓴다. 배포는 정적 링크라 핸들이 없고 `bindGameAPI` 가 정적 테이블을 읽는다.
         void* const pModuleHandle = pLibraryModule != nullptr ? pLibraryModule : getLoadedModuleHandle( sw::config::kTargetGameModule );
         if ( bindGameAPI( pModuleHandle ) == false )
@@ -490,7 +488,6 @@ namespace sw
 
     bool GameModuleManager::createGameInstance()
     {
-        SW_MEMORY_SCOPE( Game );
         // RHI 를 받은 호스트(App)는 디바이스가 있어야 만든다. 전용 서버는 RHI 가 없고 게임을 디바이스 없이 만든다.
         const auto initializeGame = [this]( void* pHandle )
         { return _gameAPI.initialize( pHandle, _pWindow ); };
@@ -510,8 +507,8 @@ namespace sw
         if ( _pLiveReloadManager == nullptr )
             return true;
 
-        SW_MEMORY_SCOPE( Game );
-        vector<string> listGameModule;
+        const ScopedMemoryTag moduleMemoryTag{ kGameModuleMemoryTag }; // 라이브러리 로드가 모듈의 정적 등록자를 돌린다
+        vector<string>        listGameModule;
 
         // 로드 순서는 매니페스트의 의존이 정한다(의존이 먼저, 동점은 이름 순). 공용 모듈(GameFramework)은 그것을 링크하는 키트와 SWGame 보다 먼저
         // 로드되므로 제 이름으로 등록된다(`LiveReloadManager::loadSharedModule` 의 이유).
@@ -582,7 +579,6 @@ namespace sw
 
         BLOCK( "SWGame 인스턴스 생성" )
         {
-            SW_MEMORY_SCOPE( Game );
             holdReloadSubscription( _pLiveReloadManager->setOnAfterReload(
                 sw::config::kTargetGameModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnAfterReloadDelegate, &GameModuleManager::onAfterGameReload, this ) ) );
             if ( _pLiveReloadManager->runAfterReload( sw::config::kTargetGameModule ) == false )

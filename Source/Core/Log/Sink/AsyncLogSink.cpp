@@ -343,7 +343,7 @@ namespace sw
 
     void AsyncLogSink::workerLoop()
     {
-        SW_MEMORY_SCOPE( EngineMisc );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
         ThreadCrashStack::initializeCurrentThread();
         ThreadName::setCurrentThreadName( "Logger" );
@@ -509,8 +509,7 @@ namespace sw
             --t_reentryDepth.heldLockReport;
         }
 #endif
-        // 로그 레코드는 부른 쪽이 아니라 로거의 몫이다. 리스너(에디터 콘솔 등)는 자기 태그를 붙인다.
-        SW_MEMORY_SCOPE( EngineMisc );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         // 1단계: 타임스탬프를 계산하고 포맷한다(같은 초 안에서는 캐시한 문자열을 재사용한다)
         const Internal::DateStamp stamp = Internal::readDateStamp();
 

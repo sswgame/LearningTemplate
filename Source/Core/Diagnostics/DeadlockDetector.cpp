@@ -60,7 +60,7 @@ namespace sw
     {
         if ( _bInitialized.load() == false )
             return;
-        SW_MEMORY_SCOPE( EngineMisc ); // 장부(스레드 · 락 테이블)는 탐지기의 몫이다 — 부른 스레드가 태그를 붙이기 전(새 스레드의 첫 알림)에도 Unknown 으로 세지 않는다
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
 
         std::thread::id tid = std::this_thread::get_id();
         CallStack       currentStack;
@@ -87,7 +87,7 @@ namespace sw
     {
         if ( _bInitialized.load() == false )
             return;
-        SW_MEMORY_SCOPE( EngineMisc ); // 장부(스레드 · 락 테이블)는 탐지기의 몫이다 — 부른 스레드가 태그를 붙이기 전(새 스레드의 첫 알림)에도 Unknown 으로 세지 않는다
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
 
         const std::thread::id tid = std::this_thread::get_id();
 
@@ -125,7 +125,7 @@ namespace sw
     {
         if ( _bInitialized.load() == false )
             return;
-        SW_MEMORY_SCOPE( EngineMisc ); // 장부(스레드 · 락 테이블)는 탐지기의 몫이다 — 부른 스레드가 태그를 붙이기 전(새 스레드의 첫 알림)에도 Unknown 으로 세지 않는다
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
 
         std::thread::id tid = std::this_thread::get_id();
 

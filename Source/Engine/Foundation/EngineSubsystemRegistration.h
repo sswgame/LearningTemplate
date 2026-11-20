@@ -69,7 +69,7 @@ namespace sw
         /**
          * @brief 기동 단계 범위의 호스트별 값입니다.
          * @details `_reflection` · `_defaultAssets` 는 본문만 다른 대역을 넘기는 자리다(하네스). 비어 있으면 엔진의 클래스를 만든다.
-         *          넘기는 쪽이 제 메모리 용도(`SW_MEMORY_SCOPE`) 아래에서 만든다. 형식은 앞으로 선언만 한다 — 값을 만들고 없애는 쪽(`EngineSubsystemSet.h` 를 include 하는
+         *          넘기는 쪽(하네스)이 만든 것은 그쪽 태그로 센다 — 비어 있어 공장이 만들면 공장의 태그(`EngineSubsystemRecord::_memoryTag`) 아래다. 형식은 앞으로 선언만 한다 — 값을 만들고 없애는 쪽(`EngineSubsystemSet.h` 를 include 하는
          *          호스트)과 그 자리를 비우는 공장(그 서브시스템의 .cpp)이 완전한 형식을 본다.
          */
         struct StartupSetup
@@ -185,10 +185,11 @@ namespace sw::engine
         span<const uint64>           _listAfterHash; ///< 먼저 만들 타입의 해시(같은 단계)
         const utf8*                  _pAfterNames;   ///< 먼저 만들 타입들의 글(`( A, B )`, 오류 문구용)
         EngineSubsystemFactory       _pfnFactory;    ///< 만드는 법
+        MemoryTag                    _memoryTag;     ///< 공장이 도는 동안 거는 할당 태그(등록 줄 형식의 `kSubsystemMemoryTag` — `EngineSubsystemMemoryTag`)
         const EngineSubsystemRecord* _pNext;         ///< 목록의 다음(먼저 단 쪽)
 
         EngineSubsystemRecord( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, EngineSubsystemStage stage, span<const uint64> listAfterHash,
-                               const utf8* pAfterNames, EngineSubsystemFactory pfnFactory );
+                               const utf8* pAfterNames, EngineSubsystemFactory pfnFactory, MemoryTag memoryTag );
         EngineSubsystemRecord( const EngineSubsystemRecord& )            = delete;
         EngineSubsystemRecord& operator=( const EngineSubsystemRecord& ) = delete;
     };
@@ -339,6 +340,21 @@ namespace sw::engine
         }
     };
 
+    /**
+     * @brief 등록 줄 형식 @p T 의 할당 용도입니다 — 서브시스템이면 그 형식의 `kSubsystemMemoryTag`, 인터페이스만 거는 줄(서브시스템이 아닌 창구)은 `ISubsystem` 기본값과 같은 EngineMisc 다.
+     * @details 공장 본문이 태그를 적지 않게 등록 줄이 형식에서 읽는다(`buildSubsystems` 가 공장마다 건다). 등록 줄은 형식을 완전히 보는 .cpp 에 있다.
+     */
+    template <class T, class = void>
+    struct EngineSubsystemMemoryTag
+    {
+        static constexpr MemoryTag kValue = MemoryTag::EngineMisc;
+    };
+    template <class T>
+    struct EngineSubsystemMemoryTag<T, std::void_t<decltype( T::kSubsystemMemoryTag )>>
+    {
+        static constexpr MemoryTag kValue = T::kSubsystemMemoryTag;
+    };
+
     /** @brief 먼저 만들 타입들의 해시입니다. 타입 이름이라 철자가 틀리면 컴파일 오류다(선언만 있으면 된다). */
     template <class... TAfter>
     struct EngineSubsystemAfter
@@ -372,7 +388,8 @@ namespace sw::engine
     static const ::sw::engine::EngineSubsystemRecord s_engineSubsystemRecord_##Type                                                              \
     {                                                                                                                                            \
         ::sw::engine::EngineRegistrationList::getGlobal(), #Type, ::sw::getSubsystemTypeHash<Type>(), ::sw::engine::EngineSubsystemStage::stage, \
-            ::sw::engine::EngineSubsystemAfter<SW_ENGINE_REGISTRATION_UNPAREN after>::getHashes(), #after, Function                              \
+            ::sw::engine::EngineSubsystemAfter<SW_ENGINE_REGISTRATION_UNPAREN after>::getHashes(), #after, Function,                             \
+            ::sw::engine::EngineSubsystemMemoryTag<Type>::kValue                                                                                 \
     }
 
 /** @brief 서브시스템을 만들고 그 타입의 서비스 칸에 묶습니다(위 둘을 한 줄로). @p Function 이 넣은 것(또는 건 객체)이 @p Type 으로 찾혀야 한다. */

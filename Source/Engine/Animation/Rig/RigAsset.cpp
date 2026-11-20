@@ -145,7 +145,6 @@ namespace sw
 
     bool RigAsset::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
     {
-        SW_MEMORY_SCOPE( Animation );
         clear();
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다

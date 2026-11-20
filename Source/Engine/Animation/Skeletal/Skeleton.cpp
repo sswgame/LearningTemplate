@@ -347,8 +347,7 @@ namespace sw
     bool Skeleton::loadFromAsset( const AssetID& assetID )
     {
         const string_view path = assetID.view();
-        SW_MEMORY_SCOPE( Animation );
-        string text;
+        string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_ERROR_ID( "Skeleton.SkeletonCouldNotRead", "Skeleton '%#' could not be read", path );

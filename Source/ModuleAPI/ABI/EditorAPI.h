@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/MemoryTag.h"
 
 #include "ModuleAPI/ABI/ModuleABI.h"
 #include "ModuleAPI/ABI/ModuleHandles.h"
@@ -128,6 +129,9 @@ namespace sw
     /** @brief 에디터 모듈 경계의 스탬프입니다 — `EditorAPI` 표와 헤드리스 진입점 목록의 글. 에디터 모듈이 내보내고(`getEditorModuleABIStamp`) 호스트가 로드 전에 대조합니다. */
     inline constexpr uint64 kEditorModuleABIStamp =
         ModuleABIUtil::computeStamp( SW_EDITOR_API_ENTRIES( SW_MODULE_ABI_ENTRY_TEXT ) SW_EDITOR_HEADLESS_ENTRIES( SW_MODULE_ABI_ENTRY_TEXT ) );
+
+    /** @brief 에디터 모듈 경계의 할당 태그입니다 — 표 항목(`EditorModuleForwardUtil`)과 모듈 매니저의 로드 · 리로드가 이 값 하나를 쓴다. */
+    inline constexpr MemoryTag kEditorModuleMemoryTag = MemoryTag::Editor;
 
     /** @brief `importEditorAssets` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --import-textures` · `--import-models`). */
     inline constexpr const utf8* kImportEditorAssetsSymbol = "importEditorAssets";

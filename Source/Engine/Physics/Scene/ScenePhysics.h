@@ -108,6 +108,8 @@ namespace sw
     public:
         /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "ScenePhysics";
+        /** @brief 할당 용도입니다 — 만들 때 · 틱 · 프레임 일 동안 매니저가 건다(`ISubsystem::getSubsystemMemoryTag`). */
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Physics;
         /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
         static const SceneServiceRegistration& getSceneServiceRegistration();
         const utf8*                            getSubsystemName() const override { return kSubsystemName; }

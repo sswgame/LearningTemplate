@@ -33,10 +33,7 @@ namespace sw
         {
             _bReady = SW_FALSE;
             if ( _shaderRecompiler == nullptr )
-            {
-                SW_MEMORY_SCOPE( Shader );
                 _shaderRecompiler = make_unique<ShaderRecompiler>();
-            }
             if ( _shaderRecompiler->initialize( "Shaders" ) == false )
             {
                 SW_LOG_ERROR_ID( "LiveShader.FailedInitializeShaderRecompiler", "Failed to initialize ShaderRecompiler!" );

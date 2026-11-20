@@ -347,8 +347,8 @@ namespace sw
 
     shared_ptr<const PrefabAsset> PrefabCache::loadAndCache( string_view assetRelativePath )
     {
-        SW_MEMORY_SCOPE( Scene );
-        const string resolvedPath = string( assetRelativePath );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
+        const string          resolvedPath = string( assetRelativePath );
 
         const string cacheKey   = PrefabCache::makeCacheKey( resolvedPath );
         const uint32 generation = _cacheGeneration.load( std::memory_order_acquire );
@@ -450,7 +450,7 @@ namespace sw
 
     GameObject* PrefabCache::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName )
     {
-        SW_MEMORY_SCOPE( Scene );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         SW_PROFILE_SCOPE( "GT.Prefab.spawn" );
         // 이 함수는 나머지 포인터를 모두 검사한다(`pAsset` · `pGameObject` · `pInstanceName`).
         // 활성 씬이 없을 때 `getObjectManager()` 는 nullptr 를 반환한다.
@@ -588,7 +588,7 @@ namespace sw
         GameObjectManager*                pManager         = pRoot != nullptr ? pRoot->getMutableManager() : nullptr;
         if ( listNode.empty() || pManager == nullptr )
             return 0;
-        SW_MEMORY_SCOPE( Scene );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
 
         PrefabInstanceRegistry& registry   = pManager->getSubsystem<PrefabInstanceRegistry>();
         PrefabPathStack::List&  spawnStack = t_prefabChain._spawnStack;

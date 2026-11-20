@@ -66,7 +66,7 @@ namespace sw
     template <typename TService>
     ISceneService& createSceneService( GameObjectManager& manager, SubsystemScope& scope )
     {
-        return scope.addSubsystem( make_unique<TService>( manager ) );
+        return scope.emplaceSubsystem<TService>( manager ); // 만드는 동안 그 형식의 `kSubsystemMemoryTag` 가 걸린다
     }
 } // namespace sw
 

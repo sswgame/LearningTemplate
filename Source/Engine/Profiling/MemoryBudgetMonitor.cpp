@@ -107,8 +107,7 @@ namespace sw
 
     void MemoryBudgetMonitor::addFrameProfilerCounters( const MemoryProfiler& profiler )
     {
-        // 카운터 이름을 처음 등록할 때 이름 풀이 자란다 — 메인 루프에는 태그가 없으므로 여기서 건다(아니면 Unknown 줄로 간다).
-        SW_MEMORY_SCOPE( EngineMisc );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         if ( engine::areEngineServicesBound() == false )
             return;
         FrameProfiler& frameProfiler = engine::getSubsystem<FrameProfiler>();

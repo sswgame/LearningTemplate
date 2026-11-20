@@ -147,7 +147,6 @@ namespace sw
 
     void EditorModuleManager::updateEditorUI( float32 /*deltaTime*/ )
     {
-        SW_MEMORY_SCOPE( Editor );
         if ( hasEditor() == false )
             return;
 
@@ -177,7 +176,6 @@ namespace sw
 
     void EditorModuleManager::endEditorFrame()
     {
-        SW_MEMORY_SCOPE( Editor );
         if ( hasEditor() == false || _editorAPI.endFrame == nullptr )
             return;
         _editorAPI.endFrame( _editor );
@@ -201,7 +199,6 @@ namespace sw
 
     void EditorModuleManager::prepareRenderEditor( IRHIDevice& renderDevice )
     {
-        SW_MEMORY_SCOPE( Editor );
         if ( hasEditor() == false )
             return;
         if ( _editorAPI.prepareRender != nullptr )
@@ -210,7 +207,6 @@ namespace sw
 
     void EditorModuleManager::renderEditor( IRHIDevice& renderDevice )
     {
-        SW_MEMORY_SCOPE( Editor );
         if ( hasEditor() == false )
             return;
         if ( _editorAPI.render != nullptr )
@@ -219,7 +215,6 @@ namespace sw
 
     void EditorModuleManager::postPresentEditor( IRHIDevice& renderDevice )
     {
-        SW_MEMORY_SCOPE( Editor );
         if ( hasEditor() == false || _editorAPI.postPresent == nullptr )
             return;
         _editorAPI.postPresent( _editor, &renderDevice );
@@ -236,7 +231,7 @@ namespace sw
 
     void EditorModuleManager::onAfterEditorReload( void* pLibraryModule )
     {
-        SW_MEMORY_SCOPE( Editor );
+        const ScopedMemoryTag moduleMemoryTag{ kEditorModuleMemoryTag }; // 다시 올린 모듈의 서비스 묶기(표의 `bindService`)가 모듈 코드다
         if ( bindEditorAPI( pLibraryModule ) == false )
         {
             markReloadGraphBroken( "EditorAPI bind failed after reload" );
@@ -406,7 +401,6 @@ namespace sw
 
     bool EditorModuleManager::createEditorInstance()
     {
-        SW_MEMORY_SCOPE( Editor );
         const auto initializeEditor = [this]( void* pHandle )
         { return _editorAPI.initialize( pHandle, getWindow(), getRHI() != nullptr && getRHI()->hasDevice() ? &getRHI()->getDevice() : nullptr ); };
         const bool bCreated   = ModuleInstanceUtil::createInstance( _editorAPI, _editor, initializeEditor, getRHI(), true, "Editor" );
@@ -432,7 +426,7 @@ namespace sw
 
         BLOCK( "에디터: 뷰포트 / EditorModule 등록" )
         {
-            SW_MEMORY_SCOPE( Editor );
+            const ScopedMemoryTag moduleMemoryTag{ kEditorModuleMemoryTag }; // 라이브러리 로드가 모듈의 정적 등록자를 돌린다
             holdReloadSubscription( pLiveReloadManager->setOnBeforeReload(
                 config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnBeforeReloadDelegate, &EditorModuleManager::onBeforeEditorReload, this ) ) );
             holdReloadSubscription( pLiveReloadManager->setOnAfterReload(

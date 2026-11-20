@@ -117,8 +117,8 @@ namespace sw
 {
     bool DialogueGraphAsset::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = assetID.view();
-        SW_MEMORY_SCOPE( Script );
+        const string_view     path = assetID.view();
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         _listSpeaker.clear();
         _listNode.clear();
         _listLink.clear();
@@ -136,7 +136,7 @@ namespace sw
 
     bool DialogueGraphAsset::loadFromDiskFile( string_view diskPath )
     {
-        SW_MEMORY_SCOPE( Script );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         _listSpeaker.clear();
         _listNode.clear();
         _listLink.clear();

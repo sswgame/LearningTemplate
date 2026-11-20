@@ -65,7 +65,6 @@ namespace sw
 
         void run()
         {
-            SW_MEMORY_SCOPE( Navigation );
             _bSucceeded = _pNavMesh->bakeTile( *_pGeometry, _pVolume.get(), _tileX, _tileZ, _result );
         }
     };
@@ -171,7 +170,6 @@ namespace sw
          */
         void updateCrowd()
         {
-            SW_MEMORY_SCOPE( Navigation );
             _pCrowd->update( _crowdDeltaTime );
         }
 

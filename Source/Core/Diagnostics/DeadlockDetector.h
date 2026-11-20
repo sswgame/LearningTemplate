@@ -10,6 +10,7 @@
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/MemoryTag.h"
 
 namespace sw
 {
@@ -25,6 +26,8 @@ namespace sw
     class SW_API DeadlockDetector final : public ILockObserver
     {
     public:
+        /** @brief 장부(스레드 · 락 테이블)의 할당 태그입니다 — 부른 스레드가 태그를 붙이기 전(새 스레드의 첫 알림)에도 Unknown 으로 세지 않는다. */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::EngineMisc;
         /** @brief 빈 탐지 맵으로 시작합니다. */
         DeadlockDetector();
         /** @brief 스레드 상태 맵을 비웁니다. */
