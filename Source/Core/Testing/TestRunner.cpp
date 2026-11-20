@@ -11,6 +11,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
@@ -600,7 +601,7 @@ namespace sw::test
         }
         // 출력을 읽는 이 스레드는 자식이 말없이 멈추면 깨지 않는다 — 감시 스레드가 시한에 죽인다(`terminate` 는 다른 스레드가 읽는 중에도 안전한 계약).
         atomic<bool>   bTimedOut{ false };
-        const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( static_cast<float64>( timeoutSeconds ) * 1000.0 ) );
+        const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( static_cast<float64>( timeoutSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) ) );
         thread         watchThread( ThreadTestAccess::getKey(), [&process, &bTimedOut, deadline]( const StopToken& stopToken )
                 {
             while ( stopToken.isStopRequested() == false )

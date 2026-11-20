@@ -5,6 +5,7 @@
 #include "Core/Foundation/HexDigitUtil.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
 
 namespace sw
 {
@@ -15,13 +16,13 @@ namespace sw
             /** @brief 0~1 로 자르고 가장 가까운 바이트로 바꿉니다. */
             static uint32 toByte( const float32 channel ) noexcept
             {
-                return static_cast<uint32>( MathUtil::clamp( channel, 0.0f, 1.0f ) * 255.0f + 0.5f );
+                return static_cast<uint32>( unorm8::fromFloat( channel ).getRaw() );
             }
 
             /** @brief 바이트 값(0~255)을 0~1 로 바꿉니다. */
             static float32 fromByte( const uint32 byte ) noexcept
             {
-                return static_cast<float32>( byte ) / 255.0f;
+                return unorm8::fromRaw( static_cast<uint8>( byte ) ).toFloat();
             }
 
             static float32 srgbToLinear( const float32 value ) noexcept

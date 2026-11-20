@@ -10,7 +10,7 @@ namespace sw
     float3 OrientationUtil::computeEulerFromForwardUp( const float3& forward, const float3& up )
     {
         const float32 forwardLength = forward.getLength();
-        if ( forwardLength < 1.0e-6f )
+        if ( forwardLength < MathUtil::kEpsilon )
             return float3{ 0.0f, 0.0f, 0.0f };
         const float3  unitForward = forward * ( 1.0f / forwardLength );
         const float32 pitch       = -MathUtil::asin( MathUtil::clamp( unitForward._y, -1.0f, 1.0f ) );
@@ -47,7 +47,7 @@ namespace sw
         if ( distance > range )
             return false;
         const float32 forwardLength = forward.getLength();
-        if ( distance <= 1.0e-6f || forwardLength <= 1.0e-6f )
+        if ( distance <= MathUtil::kEpsilon || forwardLength <= MathUtil::kEpsilon )
             return true;
         return toPoint.dot( forward ) / ( distance * forwardLength ) >= DeterministicMathUtil::cos( MathUtil::toRadian( halfAngleDegree ) );
     }
