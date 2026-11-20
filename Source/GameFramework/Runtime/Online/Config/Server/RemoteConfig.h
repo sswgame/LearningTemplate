@@ -11,7 +11,7 @@
  *          - 요청한 작업의 `complete` 가 이 객체를 부르므로, 저장소의 완료를 모두 회수하거나 저장소를 먼저 종료한 뒤에 이 객체를 지운다. 서비스 스레드 하나가 쓴다.
  */
 #pragma once
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -148,19 +148,19 @@ namespace sw
 
         const Entry* findEntry( string_view key, RemoteConfigValueKind type ) const;
         void         recomputeSnapshotHash();
-        void         onReloadCompleted( ServiceStoreResult result, bool bCancelled, map<string, Entry>& inoutMapEntry );
+        void         onReloadCompleted( ServiceStoreResult result, bool bCancelled, flat_map<string, Entry>& inoutMapEntry );
         void         onSetCompleted( ServiceStoreResult result, const string& key, const RemoteConfigValue& value, uint64 version );
         /** @brief 테이블 전체를 읽습니다(저장소 스레드). */
-        static ServiceStoreRead<map<string, Entry>> readTable( IServiceStoreConnection& connection );
+        static ServiceStoreRead<flat_map<string, Entry>> readTable( IServiceStoreConnection& connection );
         /** @brief 값 하나를 버전 조건 + 감사 줄로 씁니다(저장소 스레드). 값은 커밋 버전이다. */
         static ServiceStoreRead<uint64> writeValue( IServiceStoreConnection& connection, const string& key, const RemoteConfigValue& value, const ServiceAuditEntry& audit,
                                                     uint64 expectedVersion );
 
     private:
-        map<string, Entry>  _mapEntry;
-        uint64              _snapshotHash;
-        ServiceStoreTracker _store; ///< 저장소에 맡긴 일의 앞이다(`requestReload` · `submitSet` 이 넘긴 저장소)
-        ServiceStoreResult  _lastReloadResult;
-        ServiceStoreResult  _lastSetResult;
+        flat_map<string, Entry> _mapEntry;
+        uint64                  _snapshotHash;
+        ServiceStoreTracker     _store; ///< 저장소에 맡긴 일의 앞이다(`requestReload` · `submitSet` 이 넘긴 저장소)
+        ServiceStoreResult      _lastReloadResult;
+        ServiceStoreResult      _lastSetResult;
     };
 } // namespace sw

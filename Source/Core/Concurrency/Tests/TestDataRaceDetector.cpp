@@ -5,8 +5,8 @@
 #include "Core/Concurrency/DataRaceDetector.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/map.h"
-#include "Core/Container/set.h"
+#include "Core/Container/flat_map.h"
+#include "Core/Container/flat_set.h"
 #include "Core/Container/string.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/ThreadTestAccess.h"
@@ -41,11 +41,11 @@ SW_TEST_CASE( DataRaceDetectorTest, ConcurrentReadsAreNotARace )
  */
 SW_TEST_CASE( DataRaceDetectorTest, SameThreadReentryIsNotARace )
 {
-    set<int32> values;
+    flat_set<int32> values;
     values = { 5, 17, 42 };
     SW_EXPECT_EQUAL( size_t( 3 ), values.size() );
 
-    map<string, int32> scores;
+    flat_map<string, int32> scores;
     scores = {
         { string( "hp" ), 100 }
     };

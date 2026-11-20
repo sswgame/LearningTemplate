@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/map.h"
-#include "Core/Container/set.h"
+#include "Core/Container/flat_map.h"
+#include "Core/Container/flat_set.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/StringBuilder.h"
@@ -679,12 +679,12 @@ namespace
         /** @brief 범위 목록입니다. 오름차순 `tbl, >=, <, >커서, LIMIT` · 내림차순 `tbl, >=, <, LIMIT` 입니다. */
         void runList( const string& sql, const vector<string>& listParam, Result& outResult ) const
         {
-            const bool                                  bDescending = sql.find( "DESC" ) != string::npos;
-            const string                                first       = makeRowKey( listParam[0], listParam[1] );
-            const string                                last        = makeRowKey( listParam[0], listParam[2] );
-            const string                                cursor      = bDescending ? string{} : makeRowKey( listParam[0], listParam[3] );
-            const int64                                 limit       = parseInt( bDescending ? listParam[3] : listParam[4] );
-            vector<const map<string, Row>::value_type*> listMatch;
+            const bool                                       bDescending = sql.find( "DESC" ) != string::npos;
+            const string                                     first       = makeRowKey( listParam[0], listParam[1] );
+            const string                                     last        = makeRowKey( listParam[0], listParam[2] );
+            const string                                     cursor      = bDescending ? string{} : makeRowKey( listParam[0], listParam[3] );
+            const int64                                      limit       = parseInt( bDescending ? listParam[3] : listParam[4] );
+            vector<const flat_map<string, Row>::value_type*> listMatch;
             for ( const auto& entry : _mapRow )
             {
                 const bool bInRange = entry.first >= first && entry.first < last && ( bDescending || entry.first > cursor );
@@ -694,7 +694,7 @@ namespace
             const size_t count = static_cast<size_t>( limit ) < listMatch.size() ? static_cast<size_t>( limit ) : listMatch.size();
             for ( size_t index = 0; index < count; ++index )
             {
-                const map<string, Row>::value_type& entry = *listMatch[bDescending ? listMatch.size() - 1 - index : index];
+                const flat_map<string, Row>::value_type& entry = *listMatch[bDescending ? listMatch.size() - 1 - index : index];
                 outResult._listRow.push_back( { entry.first.substr( listParam[0].size() + 1 ), entry.second._bytes, encodeInt( entry.second._version, 8 ) } );
             }
             StringBuilder<constant::buffer::kMax256> tagBuilder;
@@ -705,12 +705,12 @@ namespace
     private:
         mutable mutex                           _mutex;
         unordered_map<uint64, unique_ptr<Peer>> _mapPeer{};
-        map<string, Row>                        _mapRow{}; ///< 키 순서가 목록 순서다
-        map<string, Row>                        _mapRowAtBegin{};
-        map<int32, string>                      _mapMigration{};
-        map<int32, string>                      _mapMigrationAtBegin{};
-        set<int32>                              _setBreaking{}; ///< Breaking 으로 적용한 번호(`sw_schema_breaking`)
-        set<int32>                              _setBreakingAtBegin{};
+        flat_map<string, Row>                   _mapRow{}; ///< 키 순서가 목록 순서다
+        flat_map<string, Row>                   _mapRowAtBegin{};
+        flat_map<int32, string>                 _mapMigration{};
+        flat_map<int32, string>                 _mapMigrationAtBegin{};
+        flat_set<int32>                         _setBreaking{}; ///< Breaking 으로 적용한 번호(`sw_schema_breaking`)
+        flat_set<int32>                         _setBreakingAtBegin{};
         vector<string>                          _listScript{};
         vector<string>                          _listUnknown{};
         string                                  _password{};

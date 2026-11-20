@@ -108,7 +108,7 @@ namespace sw
         ByteReader   table{ pData + reader.getOffset(), static_cast<size_t>( tableBytes ) };
         const uint8* pBlob = pData + reader.getOffset() + tableBytes;
 
-        map<uint64, string> mapText;
+        flat_map<uint64, string> mapText;
         for ( uint32 entryIndex = 0; entryIndex < entryCount; ++entryIndex )
         {
             const uint64 hash   = table.readUint64();

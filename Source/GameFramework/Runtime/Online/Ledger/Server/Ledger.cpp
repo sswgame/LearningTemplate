@@ -213,7 +213,7 @@ namespace sw
              */
             static ServiceStoreResult stageJournalErase( IServiceStoreConnection& connection, const vector<const ServiceRecord*>& listErased, ServiceTransaction& inoutTransaction )
             {
-                map<string, LedgerSupplyStats> mapSupply;
+                flat_map<string, LedgerSupplyStats> mapSupply;
                 for ( const ServiceRecord* pRecord : listErased )
                 {
                     LedgerJournalEntry entry;
@@ -650,7 +650,7 @@ namespace sw
         return rule;
     }
 
-    void Ledger::addSupply( const LedgerJournalEntry& entry, map<string, LedgerSupplyStats>& inoutMapSupply )
+    void Ledger::addSupply( const LedgerJournalEntry& entry, flat_map<string, LedgerSupplyStats>& inoutMapSupply )
     {
         for ( const LedgerPosting& posting : entry._listPosting )
         {
@@ -667,7 +667,7 @@ namespace sw
         }
     }
 
-    ServiceStoreResult Ledger::addCarriedSupply( IServiceStoreConnection& connection, map<string, LedgerSupplyStats>& inoutMapSupply, int32& outUnreadableCount )
+    ServiceStoreResult Ledger::addCarriedSupply( IServiceStoreConnection& connection, flat_map<string, LedgerSupplyStats>& inoutMapSupply, int32& outUnreadableCount )
     {
         outUnreadableCount = 0;
         string cursor;

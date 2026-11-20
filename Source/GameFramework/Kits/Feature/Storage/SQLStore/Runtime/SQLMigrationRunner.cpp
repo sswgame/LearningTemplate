@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLMigrationRunner.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -301,7 +301,7 @@ namespace sw
             SQLMigrationRunnerInternal::rollback( connection );
             return unexpected( error );
         }
-        map<int32, string> mapAppliedChecksum;
+        flat_map<int32, string> mapAppliedChecksum;
         for ( const vector<SQLValue>& row : rowSet._listRow )
         {
             mapAppliedChecksum[static_cast<int32>( row[0]._integer )] = string( row[1].getText() );

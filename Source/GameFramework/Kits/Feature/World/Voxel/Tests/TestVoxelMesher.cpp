@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/set.h"
+#include "Core/Container/flat_set.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -67,9 +67,9 @@ namespace
     struct VoxelMesherTestUtil
     {
         /** @brief 블록마다 여섯 면을 따로 보던 옛 메셔의 드러난 면 집합입니다(정본 규칙: 공기 옆 · 불투명이 아닌 다른 블록 옆이면 드러난다). */
-        static set<VoxelFaceCell> collectExpectedFaces( const VoxelWorld& world, int32 chunkX, int32 chunkZ )
+        static flat_set<VoxelFaceCell> collectExpectedFaces( const VoxelWorld& world, int32 chunkX, int32 chunkZ )
         {
-            set<VoxelFaceCell>       setFace;
+            flat_set<VoxelFaceCell>  setFace;
             const VoxelBlockCatalog& catalog = *world.getCatalog();
             for ( int32 y = 0; y < kVoxelChunkHeight; ++y )
             {
@@ -94,7 +94,7 @@ namespace
             return setFace;
         }
 
-        static bool isSameFaces( const set<VoxelFaceCell>& expected, const set<VoxelFaceCell>& actual )
+        static bool isSameFaces( const flat_set<VoxelFaceCell>& expected, const flat_set<VoxelFaceCell>& actual )
         {
             if ( expected.size() != actual.size() )
                 return false;
@@ -121,7 +121,7 @@ namespace
          * @brief 메시 사각형(정점 여섯)마다 덮는 면을 펼쳐 @p inoutFaces 에 넣습니다. 겹쳐 덮은 면이 있으면 false 입니다.
          *        타일이 늘어나지 않았는지도 봅니다 — 면 안 블록 좌표의 폭 × 높이가 사각형 넓이와 같아야 하고, 타일 칸이 그 자리 블록의 칸이어야 한다.
          */
-        static bool collectMeshFaces( const VoxelWorld& world, int32 chunkX, int32 chunkZ, const vector<VoxelMeshVertex>& listVertex, set<VoxelFaceCell>& inoutFaces,
+        static bool collectMeshFaces( const VoxelWorld& world, int32 chunkX, int32 chunkZ, const vector<VoxelMeshVertex>& listVertex, flat_set<VoxelFaceCell>& inoutFaces,
                                       uint32& outQuadCount )
         {
             const VoxelBlockCatalog& catalog = *world.getCatalog();
@@ -205,11 +205,11 @@ SW_TEST_CASE( VoxelMesherTest, GreedyMeshCoversTheSameFacesAsPerBlockFaces )
         {
             VoxelChunkMesh mesh;
             VoxelMesher::fillChunkMesh( rig._world, chunkX, chunkZ, mesh );
-            set<VoxelFaceCell> setMeshFace;
-            uint32             quadCount = 0;
+            flat_set<VoxelFaceCell> setMeshFace;
+            uint32                  quadCount = 0;
             SW_REQUIRE_TRUE( VoxelMesherTestUtil::collectMeshFaces( rig._world, chunkX, chunkZ, mesh._listOpaqueVertex, setMeshFace, quadCount ) );
             SW_REQUIRE_TRUE( VoxelMesherTestUtil::collectMeshFaces( rig._world, chunkX, chunkZ, mesh._listTranslucentVertex, setMeshFace, quadCount ) );
-            const set<VoxelFaceCell> setExpected = VoxelMesherTestUtil::collectExpectedFaces( rig._world, chunkX, chunkZ );
+            const flat_set<VoxelFaceCell> setExpected = VoxelMesherTestUtil::collectExpectedFaces( rig._world, chunkX, chunkZ );
             SW_EXPECT_EQUAL( setExpected.size(), setMeshFace.size() );
             SW_EXPECT_TRUE( VoxelMesherTestUtil::isSameFaces( setExpected, setMeshFace ) );
             SW_EXPECT_TRUE( quadCount < setExpected.size() ); // 합친 면이 있다

@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
@@ -169,7 +169,7 @@ namespace sw::editor
         [[nodiscard]] TextureImportRuleMatch resolveRule( string_view relativePath, const vector<AssetImportOverride>& listOverride ) const;
 
         /** @brief 등록된 프리셋 맵을 반환합니다. */
-        const map<string, TextureImportRule>& getPresets() const { return _mapPreset; }
+        const flat_map<string, TextureImportRule>& getPresets() const { return _mapPreset; }
 
         /** @brief 등록된 규칙 목록을 반환합니다. */
         const vector<TextureImportRule>& getRules() const { return _listRule; }
@@ -201,7 +201,7 @@ namespace sw::editor
         bool clearAndFail();
 
     private:
-        map<string, TextureImportRule> _mapPreset;
-        vector<TextureImportRule>      _listRule;
+        flat_map<string, TextureImportRule> _mapPreset;
+        vector<TextureImportRule>           _listRule;
     };
 } // namespace sw::editor

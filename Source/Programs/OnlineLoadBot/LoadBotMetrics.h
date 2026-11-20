@@ -7,7 +7,7 @@
  *          도착률 실행기가 풀이 모자라 버린 도착 수. 서버 쪽 값은 같은 프로세스 서버(`--local-server`)만 있어 `setServerStats` 로 받는다.
  */
 #pragma once
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
@@ -95,15 +95,15 @@ namespace sw
         static int64 computePercentile( const vector<int64>& listSortedSample, int32 percentile );
 
     private:
-        vector<vector<int64>> _listSampleByAction; ///< 동작 번호 → 지연 표본
-        vector<int64>         _listErrorCountByAction;
-        vector<uint64>        _listMatchID;
-        map<string, int64>    _mapErrorKeyToCount;
-        map<uint16, int64>    _mapPushKindToCount;
-        int64                 _openedCount;
-        int64                 _failedCount;
-        int64                 _disconnectCount;
-        int64                 _droppedArrivalCount;
-        LoadBotServerStats    _serverStats;
+        vector<vector<int64>>   _listSampleByAction; ///< 동작 번호 → 지연 표본
+        vector<int64>           _listErrorCountByAction;
+        vector<uint64>          _listMatchID;
+        flat_map<string, int64> _mapErrorKeyToCount;
+        flat_map<uint16, int64> _mapPushKindToCount;
+        int64                   _openedCount;
+        int64                   _failedCount;
+        int64                   _disconnectCount;
+        int64                   _droppedArrivalCount;
+        LoadBotServerStats      _serverStats;
     };
 } // namespace sw

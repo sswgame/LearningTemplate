@@ -5,8 +5,8 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/map.h"
-#include "Core/Container/set.h"
+#include "Core/Container/flat_map.h"
+#include "Core/Container/flat_set.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -245,14 +245,14 @@ namespace sw
         /** @brief 로드한 프로젝트 하나입니다. 읽은 문서와 그 파일 경로를 가집니다. */
         struct MountedProject
         {
-            LocalizationProject                  _project;
-            string                               _projectPath;
-            vector<string>                       _listFilePath; ///< 프로젝트, 원문 테이블, 번역 테이블의 경로입니다(있든 없든 포함하며, 새로 생긴 번역 테이블도 다시 읽습니다).
-            map<string, SourceTextEntry>         _mapSource;    ///< 원문 테이블들을 합친 것입니다.
-            vector<TranslationTable>             _listTranslation;
-            LocalizationScope                    _scope{ LocalizationScope::Game };
-            vector<string>                       _listCookedCulture; ///< 쿠킹본으로 올렸으면 쿠킹된 문화권(`collectCookedCultures`), 소스로 올렸으면 비었다
-            map<string, LocalizationBinaryTable> _mapCookedTable;    ///< 쿠킹본으로 올린 프로젝트의 읽은 이진 표 — 조회 사슬에 든 문화권만
+            LocalizationProject                       _project;
+            string                                    _projectPath;
+            vector<string>                            _listFilePath; ///< 프로젝트, 원문 테이블, 번역 테이블의 경로입니다(있든 없든 포함하며, 새로 생긴 번역 테이블도 다시 읽습니다).
+            flat_map<string, SourceTextEntry>         _mapSource;    ///< 원문 테이블들을 합친 것입니다.
+            vector<TranslationTable>                  _listTranslation;
+            LocalizationScope                         _scope{ LocalizationScope::Game };
+            vector<string>                            _listCookedCulture; ///< 쿠킹본으로 올렸으면 쿠킹된 문화권(`collectCookedCultures`), 소스로 올렸으면 비었다
+            flat_map<string, LocalizationBinaryTable> _mapCookedTable;    ///< 쿠킹본으로 올린 프로젝트의 읽은 이진 표 — 조회 사슬에 든 문화권만
         };
 
         /** @brief 프로젝트 파일 세트를 읽어 @p outProject 를 채웁니다. 프로젝트나 원문 테이블을 읽지 못하면 false 입니다. */
@@ -284,26 +284,26 @@ namespace sw
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
 
     private:
-        mutable shared_mutex                                            _mutex;
-        string _currentLanguage                                         SW_GUARDED_BY( _mutex );
-        string _fallbackLanguage                                        SW_GUARDED_BY( _mutex );
-        string _startupLanguage                                         SW_GUARDED_BY( _mutex ); ///< `initialize` 가 고른 게임 기본 언어(`getStartupLanguage`)
-        CultureTable _cultureTable                                      SW_GUARDED_BY( _mutex );
-        TimeZoneTable _timeZoneTable                                    SW_GUARDED_BY( _mutex );
-        CultureInfo _currentCulture                                     SW_GUARDED_BY( _mutex ); ///< 지금 문화권의 형식 데이터(사슬을 다시 셀 때 함께)
-        vector<MountedProject> _listProject                             SW_GUARDED_BY( _mutex );
-        map<string, TranslationTable> _mapLooseTable                    SW_GUARDED_BY( _mutex );
-        map<string, LocalizationBinaryTable> _mapBinaryTable            SW_GUARDED_BY( _mutex ); ///< 문화권 코드 → 쿠킹된 이진 표
-        unique_ptr<LocalizedTextArena>                                  _pTextArena;             ///< 테이블이 문자열을 두는 저장소 — 테이블보다 먼저 서고 나중에 사라진다
-        unordered_map<string, unique_ptr<StringTable>>                  _mapLanguageTable;
-        map<string, LocalizationCultureStatistics> _mapCultureStatistic SW_GUARDED_BY( _mutex );
-        vector<string> _listLookupCulture                               SW_GUARDED_BY( _mutex );
+        mutable shared_mutex                                                 _mutex;
+        string _currentLanguage                                              SW_GUARDED_BY( _mutex );
+        string _fallbackLanguage                                             SW_GUARDED_BY( _mutex );
+        string _startupLanguage                                              SW_GUARDED_BY( _mutex ); ///< `initialize` 가 고른 게임 기본 언어(`getStartupLanguage`)
+        CultureTable _cultureTable                                           SW_GUARDED_BY( _mutex );
+        TimeZoneTable _timeZoneTable                                         SW_GUARDED_BY( _mutex );
+        CultureInfo _currentCulture                                          SW_GUARDED_BY( _mutex ); ///< 지금 문화권의 형식 데이터(사슬을 다시 셀 때 함께)
+        vector<MountedProject> _listProject                                  SW_GUARDED_BY( _mutex );
+        flat_map<string, TranslationTable> _mapLooseTable                    SW_GUARDED_BY( _mutex );
+        flat_map<string, LocalizationBinaryTable> _mapBinaryTable            SW_GUARDED_BY( _mutex ); ///< 문화권 코드 → 쿠킹된 이진 표
+        unique_ptr<LocalizedTextArena>                                       _pTextArena;             ///< 테이블이 문자열을 두는 저장소 — 테이블보다 먼저 서고 나중에 사라진다
+        unordered_map<string, unique_ptr<StringTable>>                       _mapLanguageTable;
+        flat_map<string, LocalizationCultureStatistics> _mapCultureStatistic SW_GUARDED_BY( _mutex );
+        vector<string> _listLookupCulture                                    SW_GUARDED_BY( _mutex );
         /// @brief 충돌 검사(`validateKeyHashesLocked`)의 키 해시입니다. 실행은 늘 `LocalizationKeyIndex::computeHash` 이고, 실제 64 비트 충돌은 만들 수 없어
         ///        테스트(`LocalizationManagerTestAccess`)만 바꿔 검사가 지는 길을 지나간다. 실행 표의 해시는 이것과 상관없다.
         LocalizationKeyIndex::KeyHashFunction _pCheckKeyHash;
 
-        mutable mutex                         _missingMutex;
-        mutable set<string> _uniqueMissingKey SW_GUARDED_BY( _missingMutex );
+        mutable mutex                              _missingMutex;
+        mutable flat_set<string> _uniqueMissingKey SW_GUARDED_BY( _missingMutex );
 
         atomic<uint32> _textRevision;
         /** @brief 텍스트 바뀜 콜백입니다(`registerLanguageChangedCallback`). 자기 잠금을 가진 스레드 안전 멀티캐스트라 `_mutex` 밖에서 부른다. */

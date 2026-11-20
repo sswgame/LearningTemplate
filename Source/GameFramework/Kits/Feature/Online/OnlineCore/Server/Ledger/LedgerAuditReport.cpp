@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
@@ -18,7 +18,7 @@ namespace sw
         {
             static constexpr int32 kPageSize = 256;
 
-            static LedgerAssetAudit& getOrCreate( map<string, LedgerAssetAudit>& inoutMapAsset, const string& assetID )
+            static LedgerAssetAudit& getOrCreate( flat_map<string, LedgerAssetAudit>& inoutMapAsset, const string& assetID )
             {
                 LedgerAssetAudit& audit = inoutMapAsset[assetID];
                 audit._assetID          = assetID;
@@ -50,11 +50,11 @@ namespace sw
     ServiceStoreResult LedgerAuditReport::computeReport( IServiceStoreConnection& connection, LedgerAuditReport& outReport )
     {
         outReport = LedgerAuditReport{};
-        map<string, LedgerAssetAudit> mapAsset;
+        flat_map<string, LedgerAssetAudit> mapAsset;
 
         // 공급 = 이월(보존 쓸기가 지운 분개의 합) + 남은 분개
-        map<string, LedgerSupplyStats> mapSupply;
-        const ServiceStoreResult       carried = Ledger::addCarriedSupply( connection, mapSupply, outReport._unreadableRecordCount );
+        flat_map<string, LedgerSupplyStats> mapSupply;
+        const ServiceStoreResult            carried = Ledger::addCarriedSupply( connection, mapSupply, outReport._unreadableRecordCount );
         if ( carried != ServiceStoreResult::Ok )
             return carried;
 

@@ -4,7 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/map.h"
+#include "Core/Container/flat_map.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Delegate/Delegate.h"
@@ -68,7 +68,7 @@ namespace sw::editor
             }
 
             /** @brief 스탬프를 읽습니다. 없거나 머리 줄이 다르면 빈 표입니다(= 모든 원본이 어긋남). 형식이 아닌 줄은 건너뜁니다. */
-            static void readStamp( const string& stampPath, string_view header, map<string, StampEntry>& outMapEntry )
+            static void readStamp( const string& stampPath, string_view header, flat_map<string, StampEntry>& outMapEntry )
             {
                 outMapEntry.clear();
                 string text;
@@ -100,7 +100,7 @@ namespace sw::editor
             }
 
             /** @brief 스탬프 본문입니다. 줄은 경로 순이라 같은 테이블은 같은 바이트입니다. */
-            static string makeStampText( string_view header, const map<string, StampEntry>& mapEntry )
+            static string makeStampText( string_view header, const flat_map<string, StampEntry>& mapEntry )
             {
                 StringBuilder<constant::buffer::kMax4096> text;
                 text.appendFormat( "%#\n", header );
@@ -135,7 +135,7 @@ namespace sw::editor
             }
 
             /** @brief 스탬프를 씁니다. 내용이 같으면 쓰지 않습니다 — 맞는 트리에서 임포트를 돌려도 작업 트리가 더러워지지 않습니다. */
-            static void writeStampIfChanged( const string& stampPath, string_view header, const map<string, StampEntry>& mapCurrent, AssetImportSummary& inoutSummary )
+            static void writeStampIfChanged( const string& stampPath, string_view header, const flat_map<string, StampEntry>& mapCurrent, AssetImportSummary& inoutSummary )
             {
                 const bool bStampExists = FileUtil::exists( stampPath );
                 if ( mapCurrent.empty() && bStampExists == false )
@@ -333,16 +333,16 @@ namespace sw::editor
              */
             struct ImportJob
             {
-                const IRawAssetImporter*       _pImporter{ nullptr };
-                const map<string, StampEntry>* _pMapStamped{ nullptr };
-                const vector<SourceFile>*      _pListFile{ nullptr };
-                const vector<vector<uint32>>*  _pListChain{ nullptr };
-                const vector<uint32>*          _pListRunChain{ nullptr };   ///< 이번 구간에서 돌 사슬 번호
-                FileResult*                    _pListFileResult{ nullptr }; ///< 파일 수만큼
-                atomic<uint32>                 _nextSlot{ 0 };              ///< `_pListRunChain` 에서 다음에 가져갈 칸
-                AssetImportMode                _mode{ AssetImportMode::ImportStale };
-                TaskManager*                   _pTaskManager{ nullptr };      ///< 사슬을 나눠 돌 작업 시스템(빌림). nullptr 이면 직렬
-                const DerivedDataCache*        _pDerivedDataCache{ nullptr }; ///< 임포트 전에 찾고 임포트 뒤에 넣는 DDC(빌림). nullptr 이면 쓰지 않는다(CheckOnly)
+                const IRawAssetImporter*            _pImporter{ nullptr };
+                const flat_map<string, StampEntry>* _pMapStamped{ nullptr };
+                const vector<SourceFile>*           _pListFile{ nullptr };
+                const vector<vector<uint32>>*       _pListChain{ nullptr };
+                const vector<uint32>*               _pListRunChain{ nullptr };   ///< 이번 구간에서 돌 사슬 번호
+                FileResult*                         _pListFileResult{ nullptr }; ///< 파일 수만큼
+                atomic<uint32>                      _nextSlot{ 0 };              ///< `_pListRunChain` 에서 다음에 가져갈 칸
+                AssetImportMode                     _mode{ AssetImportMode::ImportStale };
+                TaskManager*                        _pTaskManager{ nullptr };      ///< 사슬을 나눠 돌 작업 시스템(빌림). nullptr 이면 직렬
+                const DerivedDataCache*             _pDerivedDataCache{ nullptr }; ///< 임포트 전에 찾고 임포트 뒤에 넣는 DDC(빌림). nullptr 이면 쓰지 않는다(CheckOnly)
 
                 /** @brief 원본 하나를 대조하고, 어긋났고 ImportStale 이면 임포트합니다. 결과는 @p outResult 에만 씁니다. */
                 void importFile( const SourceFile& file, FileResult& outResult ) const
@@ -520,8 +520,8 @@ namespace sw::editor
             static void importRawFolder( const string& rootDir, const string& rawFolder, const IRawAssetImporter& importer, AssetImportMode mode,
                                          const unordered_set<string>* pScope, TaskManager* pTaskManager, const DerivedDataCache* pDerivedDataCache, AssetImportSummary& inoutSummary )
             {
-                const string            stampPath = FileUtil::joinPath( rawFolder, importer.getStampFileName() );
-                map<string, StampEntry> mapStamped;
+                const string                 stampPath = FileUtil::joinPath( rawFolder, importer.getStampFileName() );
+                flat_map<string, StampEntry> mapStamped;
                 readStamp( stampPath, importer.getStampHeader(), mapStamped );
 
                 vector<string> listPath;
@@ -576,7 +576,7 @@ namespace sw::editor
                 job.importChains( listParallelChain, true );
                 job.importChains( listSerialChain, false );
 
-                map<string, StampEntry> mapCurrent;
+                flat_map<string, StampEntry> mapCurrent;
                 for ( uint32 fileIndex = 0; fileIndex < static_cast<uint32>( listFile.size() ); ++fileIndex )
                 {
                     const FileResult& fileResult = listFileResult[fileIndex];

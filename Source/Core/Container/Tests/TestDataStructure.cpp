@@ -12,10 +12,10 @@
 #include "Core/Container/DynamicBitset.h"
 #include "Core/Container/array.h"
 #include "Core/Container/deque.h"
+#include "Core/Container/flat_map.h"
+#include "Core/Container/flat_set.h"
 #include "Core/Container/list.h"
-#include "Core/Container/map.h"
 #include "Core/Container/pair.h"
-#include "Core/Container/set.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
@@ -501,12 +501,12 @@ SW_TEST_CASE( DataStructureTest, ArrayOperations )
 }
 
 /**
- * @brief [DataStructureTest] sw::map 및 sw::set 정렬 컨테이너 연산 검증
+ * @brief [DataStructureTest] sw::flat_map 및 sw::flat_set 정렬 컨테이너 연산 검증
  */
 SW_TEST_CASE( DataStructureTest, MapAndSetOperations )
 {
-    // 1) sw::map
-    sw::map<sw::string, int32> mapA;
+    // 1) sw::flat_map
+    sw::flat_map<sw::string, int32> mapA;
     mapA["Bravo"]   = 20;
     mapA["Alpha"]   = 10;
     mapA["Charlie"] = 30;
@@ -525,8 +525,8 @@ SW_TEST_CASE( DataStructureTest, MapAndSetOperations )
     SW_EXPECT_EQUAL( 2u, mapA.size() );
     SW_EXPECT_FALSE( mapA.contains( "Alpha" ) );
 
-    // 2) sw::set
-    sw::set<int32> setA;
+    // 2) sw::flat_set
+    sw::flat_set<int32> setA;
     setA.insert( 30 );
     setA.insert( 10 );
     setA.insert( 20 );
@@ -1253,12 +1253,12 @@ SW_TEST_CASE( DataStructureTest, AssociativeContainersFindWithoutBuildingAKey )
     const sw::string_view probe{ stored.data(), stored.size() };
     const sw::string_view missing{ "engine/shaders/none.hlsl" };
 
-    sw::map<sw::string, int32> orderedMap;
+    sw::flat_map<sw::string, int32> orderedMap;
     orderedMap[stored] = 7;
     SW_EXPECT_TRUE( orderedMap.find( probe ) != orderedMap.end() );
     SW_EXPECT_TRUE( orderedMap.find( missing ) == orderedMap.end() );
 
-    sw::set<sw::string> orderedSet;
+    sw::flat_set<sw::string> orderedSet;
     orderedSet.insert( stored );
     SW_EXPECT_TRUE( orderedSet.find( probe ) != orderedSet.end() );
     SW_EXPECT_TRUE( orderedSet.find( missing ) == orderedSet.end() );
@@ -1586,7 +1586,7 @@ SW_TEST_CASE( DataStructureTest, TryEmplaceKeepsArgumentsAndMapUpperBound )
     mapList.try_emplace( 7, size_t{ 5 } );
     SW_EXPECT_EQUAL( 5u, static_cast<uint32>( mapList.find( 7 )->second.size() ) );
 
-    sw::map<int32, int32> mapSorted;
+    sw::flat_map<int32, int32> mapSorted;
     mapSorted.insert( { 10, 1 } );
     mapSorted.insert( { 20, 2 } );
     mapSorted.insert( { 30, 3 } );
@@ -1705,14 +1705,14 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
         {3, 7}
     };
 
-    const sw::map<int32, int32> mapBuilt( listInput.begin(), listInput.end() );
+    const sw::flat_map<int32, int32> mapBuilt( listInput.begin(), listInput.end() );
     SW_REQUIRE_EQUAL( 4u, mapBuilt.size() );
     SW_EXPECT_EQUAL( 3, mapBuilt.at( 1 ) );
     SW_EXPECT_EQUAL( 5, mapBuilt.at( 2 ) );
     SW_EXPECT_EQUAL( 1, mapBuilt.at( 3 ) );
     SW_EXPECT_EQUAL( 2, mapBuilt.at( 5 ) );
 
-    sw::map<int32, int32> mapGrown{
+    sw::flat_map<int32, int32> mapGrown{
         {5, 50},
         {4, 40}
     };
@@ -1734,7 +1734,7 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
     {
         listLong.emplace_back( ( index * 7 ) % 37, index );
     }
-    sw::map<int32, int32> mapLong{
+    sw::flat_map<int32, int32> mapLong{
         { 36, -1 }
     };
     mapLong.insert( listLong.begin(), listLong.end() );
@@ -1746,7 +1746,7 @@ SW_TEST_CASE( MapTest, RangeBuildKeepsTheFirstOfEqualKeys )
             SW_EXPECT_EQUAL( index, mapLong.at( ( index * 7 ) % 37 ) ); // 7 과 37 이 서로소라 첫 37 개가 키를 한 번씩 덮는다
     }
 
-    sw::set<int32>          setGrown{ 3, 1, 3 };
+    sw::flat_set<int32>     setGrown{ 3, 1, 3 };
     const sw::vector<int32> listMore{ 4, 0, 1, 4, 2 };
     setGrown.insert( listMore.begin(), listMore.end() );
     SW_REQUIRE_EQUAL( 5u, setGrown.size() );
