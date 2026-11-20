@@ -1,6 +1,14 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "setOnBeforeReload": "ILiveReloadManager::setModuleClient — 모듈 주인 창구 IReloadableModuleClient 하나로 칸 넷을 함께 건다(2026-11-21)",
+    "setOnAfterReload": "ILiveReloadManager::setModuleClient — 모듈 주인 창구 IReloadableModuleClient 하나로 칸 넷을 함께 건다(2026-11-21)",
+    "setOnReloadFault": "ILiveReloadManager::setModuleClient — 모듈 주인 창구 IReloadableModuleClient 하나로 칸 넷을 함께 건다(2026-11-21)",
+    "setOnValidateLibrary": "ILiveReloadManager::setModuleClient — 모듈 주인 창구 IReloadableModuleClient 하나로 칸 넷을 함께 건다(2026-11-21)",
+    "OnBeforeReloadDelegate": "IReloadableModuleClient::onBeforeReload(2026-11-21)",
+    "OnAfterReloadDelegate": "IReloadableModuleClient::onAfterReload(2026-11-21)",
+    "OnReloadFaultDelegate": "IReloadableModuleClient::onReloadFault(2026-11-21)",
+    "OnValidateLibraryDelegate": "IReloadableModuleClient::isLibraryUsable(2026-11-21)",
     "EditorModuleManager": "ClientModuleManager — 배포 게임도 쓰는 클라이언트 호스트의 모듈 관리자, 장치 재생성 순서는 GameModuleManager::applyPendingDeviceChange(2026-11-21)",
     "reinitializeAfterRHISwap": "GameModuleManager::applyPendingDeviceChange — 장치 교체 순서(DeviceChangeSequence)가 게임 → 호스트 모듈을 다시 세운다(2026-11-21)",
     "recreateEditorInstance": "ClientModuleManager::recreateHostModule — suspendHostModule 의 짝 가상(2026-11-21)",

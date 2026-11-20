@@ -44,7 +44,7 @@ namespace sw
      * @note 연쇄 교체는 의존 순서(위상 정렬)대로 합니다. 모든 모듈의 prepare 가 성공한 뒤에만 commit 합니다. 언로드는 위상 역순
      *       (의존하는 쪽 먼저)입니다.
      *       - **적용 전 실패는 옛 라이브러리를 그대로 두고 계속 돕니다**(그래프를 막지 않습니다). 엔진 ABI 스탬프 불일치, 로드 실패, 라이브러리 검사
-     *         거절(`setOnValidateLibrary`), 배치 직전 콜백의 거절(`addOnBeforeCommitBatch`)이 여기에 해당합니다. 새 라이브러리가 상태를 넘겨받기 전이라 잃는 것이 없습니다.
+     *         거절(`IReloadableModuleClient::isLibraryUsable`), 배치 직전 콜백의 거절(`addOnBeforeCommitBatch`)이 여기에 해당합니다. 새 라이브러리가 상태를 넘겨받기 전이라 잃는 것이 없습니다.
      *       - **적용 뒤 결함은 되돌리지 않습니다.** commit 중 실패, onAfter 의 결함, 그래프 막힘은 남은 commit 을 멈추고 그래프를 막습니다
      *         (재시작 안내). 이미 교체된 DLL 은 되돌릴 수 없습니다. UE Live Coding 과 Unity 의 도메인 리로드도 적용 뒤 결함을 되돌리지 않습니다.
      *       - **콜백 등록은 모두 `Subscription` 을 돌려줍니다.** 등록한 쪽(모듈 호스트 · 서버)이 멤버로 들고, 사라지면 그 등록만 풀립니다 — 다른 쪽이 건 것을
@@ -54,7 +54,7 @@ namespace sw
     class LiveReloadManager final : public ILiveReloadManager
     {
     public:
-        // 델리게이트 형식은 창구(`ILiveReloadManager`)가 정한다. 검사 콜백(`OnValidateLibraryDelegate`)은 옛 라이브러리가 아직 돌 때(prepare) 불리고,
+        // 모듈 주인 창구(`IReloadableModuleClient`)의 검사(`isLibraryUsable`)는 옛 라이브러리가 아직 돌 때(prepare) 불리고,
         // false 면 새 라이브러리를 언로드하고 옛 것을 둔다 — 호스트가 모듈 API 테이블의 ABI 처럼 "옛 것을 언로드한 뒤에야 알 수 있던 거절 사유"를 미리 본다.
         // 배치 직전 콜백의 false 는 "아무것도 언로드하지 않았다" 는 뜻이어야 한다(게임 상태 직렬화 실패).
 
@@ -99,7 +99,7 @@ namespace sw
         [[nodiscard]] bool loadSharedModule( string_view moduleName ) override;
 
         /**
-         * @brief 이미 로드한 모듈의 리로드 직후 콜백(`setOnAfterReload`)을 부릅니다. 리로드 때와 같이 `ModuleCallGuard` 로 보호합니다.
+         * @brief 이미 로드한 모듈의 리로드 직후 콜백(`IReloadableModuleClient::onAfterReload`)을 부릅니다. 리로드 때와 같이 `ModuleCallGuard` 로 보호합니다.
          * @details 기동은 라이브러리 로드(기동 단계 `ModuleLoadStage`, 타입 등록)와 인스턴스 생성(RHI 이후)을 나눕니다. 로드할 때는 이 콜백이 아직
          *          등록되지 않았으므로, 인스턴스를 만드는 쪽이 콜백을 등록한 뒤 이 함수를 부릅니다.
          * @return 모듈이 로드돼 있고, 콜백이 결함 없이 돌았고, 그래프가 깨지지 않았으면 true 입니다.
@@ -131,20 +131,12 @@ namespace sw
          */
         void update();
 
-        /** @brief 모듈이 리로드되기 직전에 호출할 델리게이트를 겁니다. 구독이 사라지면 풀립니다. */
-        [[nodiscard]] Subscription setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate ) override;
-
-        /** @brief 모듈이 리로드된 직후에 호출할 델리게이트를 겁니다. 구독이 사라지면 풀립니다. */
-        [[nodiscard]] Subscription setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate ) override;
         /**
-         * @brief 새 모듈 코드가 onAfterReload 안에서 결함(접근 위반 등)을 냈을 때 부를 콜백을 겁니다. 구독이 사라지면 풀립니다.
-         * @details onAfterReload 는 새 라이브러리의 코드가 처음 도는 지점(API 바인딩, 인스턴스 생성, 상태 복원)이라 `ModuleCallGuard` 로
-         *          보호한다. 결함이 나면 그래프를 막고 이 콜백을 부른다. 부르는 쪽은 그 모듈에서 받은 것(인스턴스, API 테이블)을 **그 모듈을
-         *          부르지 않고** 버려야 한다. 반쯤 만들어진 인스턴스를 파괴하는 코드도 같은 모듈에 있기 때문이다.
+         * @brief 모듈의 주인 창구를 겁니다(`ILiveReloadManager::setModuleClient`). 구독이 사라지면 풀립니다.
+         * @details `onAfterReload` 는 새 라이브러리의 코드가 처음 도는 지점(API 바인딩, 인스턴스 생성, 상태 복원)이라 `ModuleCallGuard` 로
+         *          보호한다. 결함이 나면 그래프를 막고 `onReloadFault` 를 부른다.
          */
-        [[nodiscard]] Subscription setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate ) override;
-        /** @brief 새 라이브러리를 옛 라이브러리가 언로드되기 전에 검사할 콜백을 겁니다(`OnValidateLibraryDelegate`). 구독이 사라지면 풀립니다. */
-        [[nodiscard]] Subscription setOnValidateLibrary( string_view moduleName, OnValidateLibraryDelegate delegate ) override;
+        [[nodiscard]] Subscription setModuleClient( string_view moduleName, IReloadableModuleClient& client ) override;
 
         /**
          * @brief 연쇄 교체 대상이 모두 prepare 된 뒤 첫 commit 직전에 부를 콜백을 목록에 더합니다. 구독이 사라지면 그 항목만 빠집니다.
@@ -203,10 +195,7 @@ namespace sw
          */
         enum class CallbackSlot : uint8
         {
-            BeforeReload,
-            AfterReload,
-            ReloadFault,
-            ValidateLibrary,
+            ModuleClient,
             FlushWorkers,
         };
         /** @brief 살아 있는 구독 하나 — 어느 모듈(배치 · 비우기는 빈 이름)의 어느 칸인지입니다. */
@@ -242,21 +231,18 @@ namespace sw
         /// @brief 등록된 모듈입니다(경로 · 핸들 · 리로드 예약). 의존 목록은 `_dependencyGraph` 에 있습니다.
         struct ModuleRecord
         {
-            OnBeforeReloadDelegate    _onBeforeReload;
-            OnAfterReloadDelegate     _onAfterReload;
-            OnReloadFaultDelegate     _onReloadFault;
-            OnValidateLibraryDelegate _onValidateLibrary;
-            string                    _moduleName;
-            string                    _originalModulePath;
-            string                    _tempModulePath;
-            ShadowLibraryNameState    _libraryName;
-            void*                     _pLibraryModule;
-            FileStamp                 _loadedSourceStamp; ///< 로드한 원본의 도장. 이것과 **다르면** 다시 빌드된 것이다(초 단위 크기 비교는 같은 초 안의 빌드를 놓쳤다)
-            FileStamp                 _debounceStamp;     ///< 조용해지기를 기다리는 동안 마지막으로 본 원본의 도장
-            GameTimer                 _debounceTimer;
-            atomic<bool>              _bPendingReload;
-            atomic<bool>              _bMtimeDebouncing;
-            atomic<bool>              _bForceReload;
+            IReloadableModuleClient* _pClient; ///< 모듈 주인 창구(없으면 교체만 하고 아무도 부르지 않는다 — 에디터 확장)
+            string                   _moduleName;
+            string                   _originalModulePath;
+            string                   _tempModulePath;
+            ShadowLibraryNameState   _libraryName;
+            void*                    _pLibraryModule;
+            FileStamp                _loadedSourceStamp; ///< 로드한 원본의 도장. 이것과 **다르면** 다시 빌드된 것이다(초 단위 크기 비교는 같은 초 안의 빌드를 놓쳤다)
+            FileStamp                _debounceStamp;     ///< 조용해지기를 기다리는 동안 마지막으로 본 원본의 도장
+            GameTimer                _debounceTimer;
+            atomic<bool>             _bPendingReload;
+            atomic<bool>             _bMtimeDebouncing;
+            atomic<bool>             _bForceReload;
 
             /**
              * @brief 원자 플래그를 끈 기본값으로 만듭니다. 복사도 이동도 없다 — 컨텍스트는 `_mapModule` 이 `unique_ptr` 로 한 번 만든 자리에서 산다.

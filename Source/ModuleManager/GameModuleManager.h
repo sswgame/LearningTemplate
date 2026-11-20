@@ -20,6 +20,7 @@
 #include "ModuleAPI/ABI/GameAPI.h"
 #include "ModuleAPI/Service/IModuleCompiler.h"
 
+#include "ModuleManager/IReloadableModuleClient.h"
 #include "ModuleManager/ModuleLibraryHandle.h"
 #include "ModuleManager/ModuleManagerAPI.h"
 
@@ -169,7 +170,7 @@ namespace sw
         /** @brief 모듈 컴파일러입니다(개발 잇기만 만든다 — 배포는 nullptr). 에디터 모듈의 서비스 범위에 `IModuleCompiler` 로 건다(`fillModuleServiceScope`). */
         IModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
 
-        // 3) LiveReload 콜백. LiveReloadManager 의 델리게이트가 부른다
+        // 3) LiveReload 콜백. 리로드 매니저에 건 주인 창구(`GameReloadClient` · `KitReloadClient`)가 부른다
         /** @brief 게임 모듈을 언로드하기 직전에 불립니다. 상태를 보존하고 인스턴스를 해제합니다. */
         void onBeforeGameReload();
         /**
@@ -331,6 +332,42 @@ namespace sw
         void restoreGameState();
 
     private:
+        /** @brief SWGame 의 주인 창구입니다. 리로드 단계를 이 호스트의 게임 콜백으로 잇는다(다중 상속 대신 멤버 객체). */
+        class GameReloadClient final : public IReloadableModuleClient
+        {
+        public:
+            explicit GameReloadClient( GameModuleManager& owner )
+                : _owner( owner ) {}
+            void               onBeforeReload() override { _owner.onBeforeGameReload(); }
+            void               onAfterReload( ModuleLibraryHandle library ) override { _owner.onAfterGameReload( library ); }
+            void               onReloadFault( uint32 faultCode ) override { _owner.onGameReloadFault( faultCode ); }
+            [[nodiscard]] bool isLibraryUsable( ModuleLibraryHandle library ) override { return _owner.isGameLibraryUsable( library ); }
+
+        private:
+            GameModuleManager& _owner;
+        };
+        /**
+         * @brief GameFramework 키트 모듈의 주인 창구입니다(키트 모두가 하나를 같이 건다).
+         * @details 키트는 API 테이블이 없어 새 라이브러리 검사는 리로드 매니저의 엔진 ABI 스탬프 · 정적 등록자 대조로 끝난다.
+         *          결함은 리로드 직후의 호스트 콜백에서만 날 수 있고 버릴 인스턴스가 없어 기록만 한다(그래프는 매니저가 막는다).
+         */
+        class KitReloadClient final : public IReloadableModuleClient
+        {
+        public:
+            explicit KitReloadClient( GameModuleManager& owner )
+                : _owner( owner ) {}
+            void               onBeforeReload() override { _owner.onBeforeGameplayDLLReload(); }
+            void               onAfterReload( ModuleLibraryHandle library ) override { _owner.onAfterGameplayDLLReload( library ); }
+            void               onReloadFault( uint32 faultCode ) override;
+            [[nodiscard]] bool isLibraryUsable( ModuleLibraryHandle library ) override;
+
+        private:
+            GameModuleManager& _owner;
+        };
+
+        GameReloadClient _gameReloadClient{ *this };
+        KitReloadClient  _kitReloadClient{ *this };
+
         unique_ptr<IModuleCompiler> _moduleCompiler; ///< 개발 잇기(`SW_WITH_DYNAMIC_MODULES` 구역)가 리로드 매니저에게서 받는다(`ILiveReloadManager::createModuleCompiler`, 구현은 DevTools) — 배포는 nullptr
 
         GameAPI    _gameAPI;

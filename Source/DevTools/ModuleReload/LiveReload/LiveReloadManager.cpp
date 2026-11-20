@@ -479,28 +479,10 @@ namespace sw
         }
     }
 
-    Subscription LiveReloadManager::setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate )
+    Subscription LiveReloadManager::setModuleClient( string_view moduleName, IReloadableModuleClient& client )
     {
-        getOrCreateRecord( moduleName )._onBeforeReload = std::move( delegate );
-        return issueSlotSubscription( moduleName, CallbackSlot::BeforeReload );
-    }
-
-    Subscription LiveReloadManager::setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate )
-    {
-        getOrCreateRecord( moduleName )._onAfterReload = std::move( delegate );
-        return issueSlotSubscription( moduleName, CallbackSlot::AfterReload );
-    }
-
-    Subscription LiveReloadManager::setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate )
-    {
-        getOrCreateRecord( moduleName )._onReloadFault = std::move( delegate );
-        return issueSlotSubscription( moduleName, CallbackSlot::ReloadFault );
-    }
-
-    Subscription LiveReloadManager::setOnValidateLibrary( string_view moduleName, OnValidateLibraryDelegate delegate )
-    {
-        getOrCreateRecord( moduleName )._onValidateLibrary = std::move( delegate );
-        return issueSlotSubscription( moduleName, CallbackSlot::ValidateLibrary );
+        getOrCreateRecord( moduleName )._pClient = &client;
+        return issueSlotSubscription( moduleName, CallbackSlot::ModuleClient );
     }
 
     Subscription LiveReloadManager::addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )
@@ -566,24 +548,9 @@ namespace sw
         ModuleRecord& record = *recordIt->second;
         switch ( registration._slot )
         {
-            case CallbackSlot::BeforeReload:
+            case CallbackSlot::ModuleClient:
             {
-                record._onBeforeReload = {};
-                break;
-            }
-            case CallbackSlot::AfterReload:
-            {
-                record._onAfterReload = {};
-                break;
-            }
-            case CallbackSlot::ReloadFault:
-            {
-                record._onReloadFault = {};
-                break;
-            }
-            case CallbackSlot::ValidateLibrary:
-            {
-                record._onValidateLibrary = {};
+                record._pClient = nullptr;
                 break;
             }
             case CallbackSlot::FlushWorkers:
@@ -774,7 +741,7 @@ namespace sw
         {
             // 옛 라이브러리가 아직 도는 동안 호스트가 새 라이브러리를 거절할 수 있는 지점이다. 거절은 적용 전 실패라 옛 라이브러리를 두고 그래프를 막지 않는다.
             // 새 라이브러리의 코드가 불리므로 onAfterReload 와 같이 지킨다.
-            if ( context._onValidateLibrary.isBound() )
+            if ( context._pClient != nullptr )
             {
                 bool        bAccepted{ false };
                 uint32      faultCode{ 0 };
@@ -782,7 +749,7 @@ namespace sw
                 const bool  bCompleted = ModuleCallGuard::run(
                     SW_DELEGATE_LAMBDA( Delegate<void()>, [&context, &bAccepted, pNewHandle]()
                  {
-                    bAccepted = context._onValidateLibrary( ModuleLibraryHandle{ pNewHandle } );
+                    bAccepted = context._pClient->isLibraryUsable( ModuleLibraryHandle{ pNewHandle } );
                 } ),
                     faultCode );
                 if ( bCompleted == false || bAccepted == false )
@@ -817,8 +784,8 @@ namespace sw
             if ( pPreviousHandle != nullptr && flushTasksBeforeUnload() == false )
                 return false;
 
-            if ( context._onBeforeReload.isBound() && pPreviousHandle != nullptr )
-                context._onBeforeReload();
+            if ( context._pClient != nullptr && pPreviousHandle != nullptr )
+                context._pClient->onBeforeReload();
 
             if ( pPreviousHandle != nullptr )
             {
@@ -858,13 +825,13 @@ namespace sw
     void LiveReloadManager::invokeAfterReload( ModuleRecord& context )
     {
         // 새 라이브러리의 코드가 처음 도는 지점이다. 여기서 죽으면 에디터째 종료되어 저장하지 않은 작업을 잃으므로 보호한다.
-        if ( context._onAfterReload.isBound() == false )
+        if ( context._pClient == nullptr )
             return;
         uint32     faultCode{ 0 };
         const bool bCompleted = ModuleCallGuard::run(
             SW_DELEGATE_LAMBDA( Delegate<void()>, [&context]()
         {
-            context._onAfterReload( ModuleLibraryHandle{ context._pLibraryModule } );
+            context._pClient->onAfterReload( ModuleLibraryHandle{ context._pLibraryModule } );
         } ),
             faultCode );
         if ( bCompleted == false )
@@ -872,8 +839,8 @@ namespace sw
             SW_LOG_ERROR_ID( "LiveReloadManager.ModuleFaultedCodeX2", "Module %# faulted (code 0x%#) while starting after the reload — dropping what it handed out; save your work and restart",
                              context._moduleName, Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
             markGraphBroken( "a module faulted in onAfterReload" );
-            if ( context._onReloadFault.isBound() )
-                context._onReloadFault( faultCode );
+            if ( context._pClient != nullptr )
+                context._pClient->onReloadFault( faultCode );
         }
     }
 
@@ -908,8 +875,8 @@ namespace sw
 
     void LiveReloadManager::unloadModule( ModuleRecord& context )
     {
-        if ( context._onBeforeReload.isBound() && context._pLibraryModule != nullptr )
-            context._onBeforeReload();
+        if ( context._pClient != nullptr && context._pLibraryModule != nullptr )
+            context._pClient->onBeforeReload();
 
         if ( context._pLibraryModule != nullptr )
         {
@@ -1106,10 +1073,7 @@ namespace sw
     }
 
     LiveReloadManager::ModuleRecord::ModuleRecord() noexcept
-        : _onBeforeReload{}
-        , _onAfterReload{}
-        , _onReloadFault{}
-        , _onValidateLibrary{}
+        : _pClient{ nullptr }
         , _moduleName{}
         , _originalModulePath{}
         , _tempModulePath{}

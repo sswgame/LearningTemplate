@@ -238,6 +238,18 @@ namespace sw
         return ModuleInstanceUtil::isLibraryUsable<GameAPI, PFN_ExportGameAPI>( library, getModuleSymbols() );
     }
 
+    void GameModuleManager::KitReloadClient::onReloadFault( uint32 faultCode )
+    {
+        // 키트에는 호스트가 받은 인스턴스 · API 표가 없어 버릴 것이 없다. 게임은 배치 앞에서 이미 내렸다(`onBeforeCommitBatch`).
+        SW_LOG_ERROR_ID( "GameModuleManager.KitModuleFaultedAfter", "Kit module faulted after the reload (code 0x%#) — restart the process",
+                         Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
+    }
+
+    bool GameModuleManager::KitReloadClient::isLibraryUsable( ModuleLibraryHandle /*library*/ )
+    {
+        return true; // 대조할 API 표가 없다 — 키트의 계약(엔진 ABI 스탬프 · 정적 등록자)은 리로드 매니저의 prepare 가 이미 본다
+    }
+
     // ======================================================================
     // 보조 함수. 비우기와 그래프 깨짐 표시.
     // ======================================================================
@@ -555,26 +567,19 @@ namespace sw
                 SW_LOG_ERROR_ID( "GameModuleManager.KitModuleRegisterFailed", "Kit module register failed (%#)", moduleName );
                 return false;
             }
-            holdReloadSubscription(
-                _pLiveReloadManager->setOnBeforeReload( moduleName, SW_DELEGATE_METHOD( ILiveReloadManager::OnBeforeReloadDelegate, &GameModuleManager::onBeforeGameplayDLLReload, this ) ) );
-            holdReloadSubscription(
-                _pLiveReloadManager->setOnAfterReload( moduleName, SW_DELEGATE_METHOD( ILiveReloadManager::OnAfterReloadDelegate, &GameModuleManager::onAfterGameplayDLLReload, this ) ) );
+            holdReloadSubscription( _pLiveReloadManager->setModuleClient( moduleName, _kitReloadClient ) );
             listGameModule.push_back( moduleName );
         }
 
-        // 게임 모듈은 라이브러리만 로드한다(타입 등록까지). 리로드 직후 콜백인 인스턴스 생성은 기동(`initializeGame`)이 등록하고 호출한다.
-        holdReloadSubscription( _pLiveReloadManager->setOnBeforeReload(
-            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnBeforeReloadDelegate, &GameModuleManager::onBeforeGameReload, this ) ) );
-        holdReloadSubscription( _pLiveReloadManager->setOnReloadFault(
-            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnReloadFaultDelegate, &GameModuleManager::onGameReloadFault, this ) ) );
-        holdReloadSubscription( _pLiveReloadManager->setOnValidateLibrary(
-            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnValidateLibraryDelegate, &GameModuleManager::isGameLibraryUsable, this ) ) );
+        // 게임 모듈은 라이브러리만 로드한다(타입 등록까지). 등록이 곧 첫 로드의 "리로드 직후" 를 부르므로 주인 창구는 등록 **뒤에** 건다 —
+        // 인스턴스 생성은 기동(`startGameInstance` 의 `runAfterReload`)이 하고, 첫 로드의 API 표 대조는 그 바인딩(`bindGameAPI`)이 같은 검사로 한다.
         _listGameScopeModule = listGameModule; // SWGame 은 이름으로 따로 본다(onBeforeCommitBatch)
         if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
         {
             SW_LOG_ERROR_ID( "GameModuleManager.SWGameModuleRegisterFailed", "SWGame module register failed" );
             return false;
         }
+        holdReloadSubscription( _pLiveReloadManager->setModuleClient( sw::config::kTargetGameModule, _gameReloadClient ) );
 
         if ( _pLiveReloadManager->isGraphBroken() )
         {
@@ -599,8 +604,6 @@ namespace sw
 
         BLOCK( "SWGame 인스턴스 생성" )
         {
-            holdReloadSubscription( _pLiveReloadManager->setOnAfterReload(
-                sw::config::kTargetGameModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnAfterReloadDelegate, &GameModuleManager::onAfterGameReload, this ) ) );
             if ( _pLiveReloadManager->runAfterReload( sw::config::kTargetGameModule ) == false )
             {
                 SW_LOG_ERROR_ID( "GameModuleManager.SWGameInstanceCouldNot", "SWGame instance could not be started" );
