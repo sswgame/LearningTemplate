@@ -7,6 +7,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"

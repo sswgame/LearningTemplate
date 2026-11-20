@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySaveState.h"
 
+#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
 
 namespace sw

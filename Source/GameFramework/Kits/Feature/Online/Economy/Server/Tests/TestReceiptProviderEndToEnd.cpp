@@ -18,6 +18,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderManager.h"

@@ -29,11 +29,11 @@
 #include "Engine/Reflection/ReflectionMetadataBox.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Reflection/TypeLookupCache.h"
-#include "Engine/Serialization/Fixed/FixedFieldDesc.h"
 
 namespace sw
 {
     class DynamicBitset;
+    struct FixedFieldDesc; // 코덱은 서술자 표를 포인터로만 든다 — 표를 짓는 생성 코드는 ReflectGenerated.h 로 FixedFieldDesc.h 를 읽는다
     class NetMessageChannel;
     struct ReplicatedLayout;
 

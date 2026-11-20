@@ -5,6 +5,7 @@
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
+#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 

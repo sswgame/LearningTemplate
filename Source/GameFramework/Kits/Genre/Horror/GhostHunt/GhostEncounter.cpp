@@ -7,6 +7,7 @@
 #include "Core/Math/OrientationUtil.h"
 #include "Core/Math/Ray.h"
 
+#include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 

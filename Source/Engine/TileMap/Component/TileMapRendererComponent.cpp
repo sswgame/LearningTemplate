@@ -6,6 +6,7 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"

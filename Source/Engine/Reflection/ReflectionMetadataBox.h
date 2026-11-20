@@ -8,11 +8,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Reflection/ReflectionConstants.h"
-#include "Engine/Reflection/ReflectionContainers.h"
-#include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Reflection/TextAddress.h"
-#include "Engine/Reflection/TypeCastHeader.h"
 
 namespace sw
 {

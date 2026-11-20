@@ -32,6 +32,7 @@
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 /**
  * @file PrefabCache.cpp

@@ -7,6 +7,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/AnimationAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw::editor

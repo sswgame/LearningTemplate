@@ -7,6 +7,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/ServerConfig.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 /**
  * @brief [ServerConfigTest] 저장소의 서버 설정이 모두 읽히고, 저장소 · 캐시 항목 배열이 값 구조체 본문으로 읽힌다

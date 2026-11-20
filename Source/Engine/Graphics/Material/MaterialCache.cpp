@@ -21,6 +21,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 #include <thread>
 

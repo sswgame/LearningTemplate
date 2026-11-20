@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Environment/Surface/GroundSurfaceComponent.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"

@@ -7,6 +7,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
 {

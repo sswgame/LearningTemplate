@@ -13,6 +13,7 @@
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Fixed/FixedFieldDesc.h"
 
 namespace sw
 {

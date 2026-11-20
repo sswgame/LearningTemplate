@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"

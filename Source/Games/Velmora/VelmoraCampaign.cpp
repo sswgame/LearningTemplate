@@ -5,6 +5,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Reflection/TypeFqn.h"
+
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"

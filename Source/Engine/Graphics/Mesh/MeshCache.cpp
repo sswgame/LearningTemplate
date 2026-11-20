@@ -21,6 +21,7 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
 {

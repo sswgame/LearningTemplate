@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

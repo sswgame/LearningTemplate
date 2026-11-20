@@ -12,6 +12,7 @@
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
 {

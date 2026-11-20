@@ -11,6 +11,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/Pack/PackConfig.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"

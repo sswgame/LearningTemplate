@@ -3,10 +3,17 @@
  * @brief 프로퍼티 하나의 리플렉션 정보입니다.
  */
 #pragma once
+#include "Engine/Reflection/ContainerKind.h"
 #include "Engine/Reflection/ReflectionMetadataBox.h"
 
 namespace sw
 {
+    // 래퍼는 포인터로만 든다 — 연산을 부르는 TU 가 ReflectionContainers.h 를 읽는다
+    struct IContainerWrapper;
+    struct ISequenceContainerWrapper;
+    // 관찰자는 기반 판정(is_base_of 는 기반이 불완전해도 된다)과 파생 형식을 통한 호출에만 쓴다 — 정의(ReflectionMacros.h)는 그 형식의 헤더가 읽는다.
+    class IPropertyObserver;
+
     /**
      * @brief 컨테이너가 중첩된 프로퍼티의 스키마입니다(`vector&lt;vector&lt;T&gt;&gt;`, `map&lt;K,vector&lt;V&gt;&gt;` 등).
      */
@@ -209,10 +216,7 @@ namespace sw
                     *pByte &= static_cast<uint8>( ~_bitMask );
 
                 if constexpr ( std::is_base_of_v<IPropertyObserver, ObjectType> )
-                {
-                    IPropertyObserver* pObserver = static_cast<IPropertyObserver*>( pInstance );
-                    pObserver->onPropertyChanged( _name );
-                }
+                    pInstance->onPropertyChanged( _name );
                 return;
             }
 
@@ -227,10 +231,7 @@ namespace sw
 
             *pPtr = newValue;
             if constexpr ( std::is_base_of_v<IPropertyObserver, ObjectType> )
-            {
-                IPropertyObserver* pObserver = static_cast<IPropertyObserver*>( pInstance );
-                pObserver->onPropertyChanged( _name );
-            }
+                pInstance->onPropertyChanged( _name );
         }
 
         /** @brief 프로퍼티 값의 포인터입니다. 비트필드는 nullptr 입니다. 위치는 `getRawPtr` 가 정합니다. */

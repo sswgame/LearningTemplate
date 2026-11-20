@@ -9,6 +9,8 @@
 
 #include "App/AppEntry.h"
 
+#include "Engine/Reflection/TypeInfo.h"
+
 #if defined( SW_PLATFORM_ANDROID )
     #include "Core/Container/vector.h"
     #include "Core/File/Android/AndroidAssetFileReader.h"

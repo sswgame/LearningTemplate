@@ -4,6 +4,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/OcclusionCullingConfig.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 using namespace sw;
 

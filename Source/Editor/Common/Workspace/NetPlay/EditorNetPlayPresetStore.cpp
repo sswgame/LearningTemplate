@@ -8,6 +8,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
 namespace sw::editor

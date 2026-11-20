@@ -10,6 +10,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 /**
  * @brief [PackEngineSettingsTest] `<Engine>` 요소의 칸을 읽고, 적지 않은 경로 칸은 "없음" 으로 남으며, 팩이 적지 않은 UI 규칙은 엔진의 값이다

@@ -13,6 +13,7 @@
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 using namespace sw;
 

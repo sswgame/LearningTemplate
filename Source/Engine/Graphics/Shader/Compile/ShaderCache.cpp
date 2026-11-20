@@ -22,6 +22,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderBytecodeProvider.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {

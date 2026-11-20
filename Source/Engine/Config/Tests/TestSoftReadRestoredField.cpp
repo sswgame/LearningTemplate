@@ -7,6 +7,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"

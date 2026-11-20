@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 

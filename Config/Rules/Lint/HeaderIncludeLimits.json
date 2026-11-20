@@ -3,14 +3,24 @@
     "_listLimit": [
         { "_header": "Engine/Object/Component/Component.h", "_limit": 10, "_reason": "틱 컨텍스트를 전방 선언으로 받는다(TickContext.h 사슬 다섯 개를 뺐다)" },
         { "_header": "Engine/Object/GameObject/Registry/TagIndex.h", "_limit": 7, "_reason": "오브젝트를 포인터로만 들어 GameObject.h 대신 ObjectFwd.h 를 포함한다" },
-        { "_header": "Engine/Reflection/EnumInfo.h", "_limit": 12, "_reason": "태스크 형식(TaskTypes.h)을 쓰지 않는다 — 함수 호출 형식이 필요한 FunctionInfo.h 만 포함한다" },
-        { "_header": "Engine/Reflection/PropertyInfo.h", "_limit": 10, "_reason": "태스크 형식(TaskTypes.h)을 쓰지 않는다" },
-        { "_header": "Engine/Reflection/ReflectionMetadataBox.h", "_limit": 9, "_reason": "태스크 형식(TaskTypes.h)을 쓰지 않는다" },
-        { "_header": "Engine/Reflection/EnumName.h", "_limit": 14, "_reason": "열거 이름은 EnumInfo 만 본다 — TypeRegistry.h 대신 EnumInfo.h · TypeFqn.h · TypeLookupCache.h 를 포함한다" },
-        { "_header": "Engine/Serialization/Fixed/FixedLayout.h", "_limit": 17, "_reason": "타입은 이름 캐시(TypeLookupCache)로 찾고 TypeInfo 는 참조로만 든다 — TypeRegistry.h 대신 ReflectionFwd.h 를 포함한다" },
+        { "_header": "Engine/Reflection/EnumInfo.h", "_limit": 4, "_reason": "태스크 형식(TaskTypes.h)을 쓰지 않는다 — 함수 호출 형식이 필요한 FunctionInfo.h 만 포함한다" },
+        { "_header": "Engine/Reflection/PropertyInfo.h", "_limit": 2, "_reason": "태스크 형식(TaskTypes.h)을 쓰지 않고, 컨테이너는 종류 열거(ContainerKind.h)와 래퍼 앞선 선언만, 관찰자(IPropertyObserver)는 앞선 선언만 쓴다" },
+        { "_header": "Engine/Reflection/ReflectionMetadataBox.h", "_limit": 0, "_reason": "상자 템플릿은 EngineMinimal 만 쓴다 — 매크로 · 컨테이너 래퍼 · 글 주소 · 캐스트 머리 포함을 지웠다" },
+        { "_header": "Engine/Reflection/EnumName.h", "_limit": 7, "_reason": "열거 이름은 EnumInfo 만 본다 — TypeRegistry.h 대신 EnumInfo.h · TypeFqn.h · TypeLookupCache.h 를 포함한다" },
+        { "_header": "Engine/Serialization/Fixed/FixedLayout.h", "_limit": 9, "_reason": "타입은 이름 캐시(TypeLookupCache)로 찾고 TypeInfo 는 참조로만 든다 — TypeRegistry.h 대신 ReflectionFwd.h 를 포함한다. 서술자 표(FixedFieldDesc)는 포인터로만 든다" },
         { "_header": "Engine/Reflection/ReflectionInvoke.h", "_limit": 10, "_reason": "TypeInfo · FunctionInfo · EventInfo 를 참조로만 받는다 — TypeInfo.h 대신 ReflectionFwd.h" },
-        { "_header": "Engine/Reflection/ReflectionMetadata.h", "_limit": 18, "_reason": "메타데이터 칸은 함수 포인터 별칭만 쓴다 — TypeInfo.h 대신 ReflectionMetadataBox.h" },
+        { "_header": "Engine/Reflection/ReflectionMetadata.h", "_limit": 9, "_reason": "메타데이터 칸은 함수 포인터 별칭만 쓴다 — TypeInfo.h 대신 ReflectionMetadataBox.h" },
         { "_header": "Engine/Object/Component/SceneComponent.h", "_limit": 12, "_reason": "인라인 접근자는 트랜스폼 페이지만 본다 — 저장소(SceneTransformStorage.h) 대신 SceneTransformPage.h" },
-        { "_header": "Engine/Renderer/Frame/FrameRendererUtil.h", "_limit": 49, "_reason": "리플렉션 레지스트리를 쓰지 않는다 — TypeRegistry.h 포함을 지웠다" }
+        { "_header": "Engine/Renderer/Frame/FrameRendererUtil.h", "_limit": 49, "_reason": "리플렉션 레지스트리를 쓰지 않는다 — TypeRegistry.h 포함을 지웠다" },
+        { "_header": "Engine/Asset/AssetRef.h", "_limit": 4, "_reason": "캐시 템플릿은 앞선 선언만 둔다 — acquire · request 를 부르는 TU 는 대상 종류의 헤더가 SharedAssetCache.h 를 읽는다" },
+        { "_header": "Engine/Asset/Cache/AssetCacheBase.h", "_limit": 1, "_reason": "리로드 함수 형식은 AssetID · ReloadResult 를 앞선 선언으로 쓰고, 등록 매크로(SW_ASSET_CACHE_RELOAD_FUNCTION · DevOnly.h)는 BuiltInAssetCache.h 에 둔다" },
+        { "_header": "Engine/Asset/Cache/SharedAssetCache.h", "_limit": 2, "_reason": "acquire 반환형 SharedAssetRef · 판 WeakInternVersion · 로드 핸들 AssetHandle 은 앞선 선언 — acquire 를 부르는 TU 가 SharedAssetRef.h, 핸들을 들거나 request 를 부르는 TU 가 SharedAssetLoadOperation.h 를 읽는다" },
+        { "_header": "Engine/Reflection/TypeInfo.h", "_limit": 10, "_reason": "캐스트 머리 · 상수는 직접 포함하고, 메타데이터 상자 사슬로 오던 컨테이너 래퍼 · 글 주소를 끌지 않는다" },
+        { "_header": "Engine/Reflection/FunctionInfo.h", "_limit": 2, "_reason": "메타데이터 상자(ReflectionMetadataBox.h)가 리플렉션 매크로 · 컨테이너 래퍼를 끌지 않는다" },
+        { "_header": "Engine/Serialization/Format/StateIO.h", "_limit": 3, "_reason": "DeterministicRandom32 · typeFqn 은 앞선 선언 — reflected · reflectedAs · writeReflectedHeader<T> 를 부르는 TU 가 TypeFqn.h 를 읽는다" },
+        { "_header": "Engine/Config/ConfigManager.h", "_limit": 11, "_reason": "TypeInfo 는 앞선 선언(ReflectionFwd.h) — 설정 템플릿(getConfig · readConfig* · load*Config)을 인스턴스화하는 TU 가 TypeInfo.h 를 읽는다" },
+        { "_header": "Engine/Serialization/Serializer/SerializerUtil.h", "_limit": 24, "_reason": "프로퍼티 · 타입 기술(TypeInfo.h)만 쓴다 — 레지스트리 · 호출 · 검증 · 값 상자를 묶은 Reflection.h 를 포함하지 않는다" },
+        { "_header": "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h", "_limit": 1, "_reason": "AssetID 는 참조로만 받는다(앞선 선언) — 캐시를 선언하는 카탈로그 헤더는 SharedAssetCache.h 를 직접 포함한다" },
+        { "_header": "Engine/Serialization/Fixed/ReplicatedLayout.h", "_limit": 11, "_reason": "타입은 이름 캐시(TypeLookupCache · typeFqn — FixedLayout.h)로 찾는다 — TypeRegistry.h 를 포함하지 않는다" }
     ]
 }

@@ -28,6 +28,7 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/ServerConfig.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"

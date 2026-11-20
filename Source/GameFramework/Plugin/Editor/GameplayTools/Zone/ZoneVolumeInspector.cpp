@@ -18,6 +18,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorObjectEdit.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 

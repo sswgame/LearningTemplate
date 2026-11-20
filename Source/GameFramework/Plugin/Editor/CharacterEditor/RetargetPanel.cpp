@@ -15,6 +15,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"

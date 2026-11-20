@@ -17,16 +17,16 @@
  */
 #pragma once
 #include "Core/Diagnostics/CacheStats.h"
-#include "Core/Foundation/DevOnly.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Content/AssetID.h"
-#include "Engine/Serialization/Serializer/ReloadResult.h"
-
 namespace sw
 {
+    // 리로드 함수 형식은 이름만 쓴다 — 캐시 계약을 읽는 TU(1000 여)가 열거 값 · AssetID 정의를 끌지 않게(값은 ReloadResult.h · AssetID.h).
+    class AssetID;
+    enum class ReloadResult : uint8;
+
     /**
      * @class CacheTracking
      * @brief 캐시가 계측(`CacheStats`)에 어떻게 서는지의 선언입니다. `AssetCacheBase` 의 생성자가 이 값을 요구해, 계측을 정하지 않은 캐시는 지을 수 없습니다.
@@ -188,20 +188,4 @@ namespace sw
      *          결과(`ReloadResult`)를 돌려준다 — 예전에는 `void` 라 파싱이 실패해도 부르는 쪽이 성공으로 적었다. 실패면 캐시는 이전 판을 지킨다(Reloaded · NotTracked · Failed).
      */
     using AssetCacheReloadFunction = ReloadResult ( * )( AssetCacheBase& cache, const AssetID& assetID );
-
-    /**
-     * @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`).
-     * @details 멤버가 `ReloadResult` 를 돌려주지 않으면(예전 `void`) 이 `return` 이 컴파일되지 않는다 — 결과를 버리는 캐시를 등록할 수 없다.
-     */
-    template <typename TCache>
-    ReloadResult reloadAssetCache( AssetCacheBase& cache, const AssetID& assetID )
-    {
-        return static_cast<TCache&>( cache ).reload( assetID );
-    }
 } // namespace sw
-
-/**
- * @brief 캐시 형식 @p Type 의 리로드 함수(`AssetCacheReloadFunction`)입니다. 배포 빌드는 리로드가 없다 — `nullptr` 이고 리로드 본문을 참조하지 않는다.
- * @details 빌드 스위치는 `SW_DEV_ONLY_FUNCTION` 한 곳이다(캐시마다 `#if` 를 두지 않는다).
- */
-#define SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) ( static_cast<::sw::AssetCacheReloadFunction>( SW_DEV_ONLY_FUNCTION( &::sw::reloadAssetCache<Type> ) ) )

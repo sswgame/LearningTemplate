@@ -5,6 +5,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 

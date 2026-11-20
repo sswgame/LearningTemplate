@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Behavior/GameplayContext.h"
 #include "Engine/Console/DevCommandRegistry.h"

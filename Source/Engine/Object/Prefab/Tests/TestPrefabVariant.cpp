@@ -8,6 +8,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 using namespace sw;

@@ -7,6 +7,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/ServerConfig.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"

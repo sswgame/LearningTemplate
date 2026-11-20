@@ -11,6 +11,7 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Tests/AnimationTestUtil.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Mesh/Mesh.h"

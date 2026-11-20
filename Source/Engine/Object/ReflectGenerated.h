@@ -18,4 +18,5 @@
 #include "Engine/Reflection/ReflectionMetadataText.h"
 #include "Engine/Reflection/ReflectionUnits.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Serialization/Fixed/FixedFieldDesc.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"

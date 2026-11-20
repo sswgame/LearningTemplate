@@ -13,6 +13,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include <algorithm>

@@ -6,18 +6,10 @@
 #include "Core/Container/EnumArray.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Reflection/ContainerKind.h"
 
 namespace sw
 {
-
-    /// @brief 컨테이너 종류입니다. 목록은 PredefinedContainerKind.xxx 에 있습니다.
-    enum class ContainerKind : uint8
-    {
-#define REGISTER_CONTAINER_KIND( Name ) Name,
-#include "Core/Predefined/PredefinedContainerKind.xxx"
-
-#undef REGISTER_CONTAINER_KIND
-    };
 
     struct IMapContainerWrapper;
     struct ISequenceContainerWrapper;

@@ -12,6 +12,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
 {

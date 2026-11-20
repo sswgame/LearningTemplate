@@ -50,6 +50,7 @@ reflectionparser = [
 	"Engine/EngineMinimal.h",
 	"Engine/Foundation/EngineDefines.h",
 	"Engine/Foundation/Foundation.h",
+	"Engine/Reflection/ContainerKind.h",
 	"Engine/Reflection/EnumInfo.h",
 	"Engine/Reflection/FunctionInfo.h",
 	"Engine/Reflection/PropertyInfo.h",

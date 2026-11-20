@@ -10,6 +10,7 @@
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Map/InputMapBundle.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 using namespace sw;
 
