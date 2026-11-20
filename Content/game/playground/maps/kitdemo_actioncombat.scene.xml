@@ -29,7 +29,8 @@
 					                           _bActive="true"
 					                           _playerMaxHP="100"
 					                           _playerSpeed="4"
-					                           _bossDelaySeconds="1">
+					                           _bossDelaySeconds="1"
+					                           _playerView="3">
 						<_listHallMonster>
 							<item>demo_grunt</item>
 							<item>demo_grunt</item>
@@ -45,6 +46,17 @@
 							<item>1.6,0</item>
 						</_listBossPosition>
 					</ActionCombatDemoComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="PlayerView">
+			<GameObject _schemaVersion="0" _name="PlayerView" _bActive="true">
+				<_listComponent>
+					<RuleHealthViewComponent _localID="10533126513480917205" />
+					<WidgetComponent _localID="11339505928329980331" _documentPath="" _space="Screen" _drawSize="64,8" _pivot="0.5,1" _worldSize="1,0.5" _screenOffset="0,0"
+					                 _worldOffset="0,1.2,0" _maxDistance="0" _referenceDistance="10" _bClampToScreenEdge="false" _bScaleWithDistance="false" />
+					<HealthBarComponent _localID="13661083042096604780" _hpRatio="1" _remainRatio="1" _targetRatio="1" _lerpSpeed="5" _fillColor="0.25,0.85,0.3,1"
+					                    _trailColor="0.95,0.8,0.25,1" _backgroundColor="0.08,0.08,0.1,0.8" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
