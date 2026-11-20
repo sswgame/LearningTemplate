@@ -483,11 +483,15 @@ namespace sw::editor
             TextureVariantRawImporter( const TextureImportConfig& config, TaskManager* pTaskManager, const TextureFormatFamily& family )
                 : TextureRawImporter{ config, pTaskManager }
                 , _family{ family }
-                , _stampFileName{}
+                , _stampFileName{ makeStampFileName( family ) }
+            {
+            }
+
+            static string makeStampFileName( const TextureFormatFamily& family )
             {
                 StringBuilder<constant::buffer::kMax64> nameBuilder;
                 nameBuilder.appendFormat( "import%#.stamp", family._suffix );
-                _stampFileName = string( nameBuilder.view() );
+                return string( nameBuilder.view() );
             }
 
             string_view getStampHeader() const override { return "SWTEXVARIANT 1"; }

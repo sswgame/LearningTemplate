@@ -1007,7 +1007,9 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( method._metadata->getEditor()._tooltip.c_str() );
         // 키는 타입 · 메서드 이름 원문이다(해시 조합은 부딪히면 다른 메서드의 인자 슬롯을 쓴다).
-        const string                    slotKey  = string( pTypeInfo->_fullyQualifiedName.c_str() ) + '\x1F' + method._hashName.c_str();
+        StringBuilder<constant::buffer::kMax512> slotKeyBuilder;
+        slotKeyBuilder.appendFormat( "%#\x1F%#", pTypeInfo->_fullyQualifiedName.c_str(), method._hashName.c_str() );
+        const string                    slotKey  = string( slotKeyBuilder.view() );
         vector<InspectorMethodArgSlot>& listSlot = _mapMethodArgSlot[slotKey];
         const bool                      bArgsOk  = InspectorBuiltinValue::prepareMethodArgs( method, listSlot );
         drawMethodArgInputs( method, listSlot );

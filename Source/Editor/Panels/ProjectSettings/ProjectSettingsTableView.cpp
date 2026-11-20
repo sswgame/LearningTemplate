@@ -252,12 +252,14 @@ namespace sw::editor
             case PendingEdit::AddItem:
                 return document.addArrayItem( _pendingNode ).has_value();
             case PendingEdit::AddMember:
+            {
                 if ( document.addObjectMember( _pendingNode, _pendingKey ) )
                     return true;
                 StringBuilder<constant::buffer::kMax512> statusBuilder;
                 statusBuilder.appendFormat( "'%#' is already a key here", _pendingKey );
                 _status = string( statusBuilder.view() );
                 return false;
+            }
             case PendingEdit::Remove:
                 _draftNode = kNoNode; // 뺀 칸의 초안을 남기지 않는다
                 return document.removeChild( _pendingNode, _pendingIndex );

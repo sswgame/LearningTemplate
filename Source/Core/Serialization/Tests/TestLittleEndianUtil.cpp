@@ -61,7 +61,7 @@ namespace
     {
     };
     template <typename T>
-    struct IsRawReadCallable<T, std::void_t<decltype( T::readUint32( std::declval<const sw::uint8*>() ) )>> : std::true_type
+    struct IsRawReadCallable<T, std::void_t<decltype( T::readUint32( std::declval<const uint8*>() ) )>> : std::true_type
     {
     };
     static_assert( IsRawReadCallable<sw::LittleEndianUtil>::value == false, "LittleEndianUtil::read* must stay private - read through ByteReader" );

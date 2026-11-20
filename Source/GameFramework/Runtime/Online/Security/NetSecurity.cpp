@@ -39,9 +39,10 @@ namespace sw
                     return {};
                 string     certificatePem;
                 string     privateKeyPem;
-                const bool bCreated = FileUtil::ensureDirectoryExists( folder ) &&
-                                      provider.createSelfSignedCertificate( "localhost", kDevCertificateValidDays, certificatePem, privateKeyPem ) &&
-                                      FileUtil::writeTextFile( outCertificateFile, certificatePem + privateKeyPem ); // 한 번의 원자적 쓰기 — 늘 한 쌍
+                const bool bMade = FileUtil::ensureDirectoryExists( folder ) &&
+                                   provider.createSelfSignedCertificate( "localhost", kDevCertificateValidDays, certificatePem, privateKeyPem );
+                certificatePem += privateKeyPem; // 한 번의 원자적 쓰기 — 늘 한 쌍
+                const bool bCreated = bMade && FileUtil::writeTextFile( outCertificateFile, certificatePem );
                 if ( bCreated == false )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "cannot create the development certificate", folder } );
                 SW_LOG_INFO_ID( "NetSecurity.CreatedDevelopmentTLSCertificate", "Created a development TLS certificate: %#", outCertificateFile.c_str() );
