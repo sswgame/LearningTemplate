@@ -4,7 +4,7 @@
      _weather 는 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather 에 묶는다 — 날씨가 값을 바꾸면 모든 지형 · 환경 머티리얼이 함께 젖고 눈이 쌓인다.
      표면 변형 층(발자국 · 바퀴 자국 · 깔때기 — 엔진 텍스처 칸 SurfaceDeform)이 정점을 내리므로 MATERIAL_VERTEX_DEFORM 이다(깊이 프리패스에서 빠지고 그림자는 같은 오프셋으로 그린다).
      프로퍼티 이름 · 타입은 terrain.hlsl 의 SW_MATERIAL 구조체와 같다. -->
-<MaterialDef formatVersion="0" name="Terrain" shaderPath="engine/shaders/terrain.hlsl" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="Terrain" shaderPath="engine/shaders/terrain.hlsl" surfaceModel="Lit" alphaMode="Opaque">
 	<_properties>
 		<item name="_layer0Color" type="Vector4" defaultValue="0.30 0.45 0.18 1.0" displayName="Layer 0 Color" group="Layers"/>
 		<item name="_layer1Color" type="Vector4" defaultValue="0.42 0.33 0.22 1.0" displayName="Layer 1 Color" group="Layers"/>

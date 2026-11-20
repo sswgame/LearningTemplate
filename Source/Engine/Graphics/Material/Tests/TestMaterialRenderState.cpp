@@ -28,11 +28,17 @@ namespace
             return RenderStateOverride::makeFromReads( overZeros, overOnes );
         }
 
-        /** @brief 머티리얼 XML 을 임시 리소스로 읽습니다. @p attributes 는 루트 속성, @p children 은 루트 자식입니다. */
+        /** @brief 표면 모델 Lit 머티리얼 XML 을 임시 리소스로 읽습니다. @p attributes 는 루트 속성, @p children 은 루트 자식입니다. */
         [[nodiscard]] static bool load( Material& material, string_view attributes, string_view children = "" )
         {
+            return loadRoot( material, string( "surfaceModel=\"Lit\" " ) + string( attributes ), children );
+        }
+
+        /** @brief 표면 모델(`surfaceModel`)까지 @p rootAttributes 에 스스로 적은 머티리얼 XML 을 임시 리소스로 읽습니다. 셰이더는 forward_lit 이다. */
+        [[nodiscard]] static bool loadRoot( Material& material, string_view rootAttributes, string_view children = "" )
+        {
             string xml = "<MaterialDef formatVersion=\"0\" name=\"StateMat\" shaderPath=\"engine/shaders/forward_lit.hlsl\" ";
-            xml.append( attributes );
+            xml.append( rootAttributes );
             xml += ">";
             xml.append( children );
             xml += "</MaterialDef>";
@@ -313,4 +319,58 @@ SW_TEST_CASE( MaterialRenderStateTest, DrawListMustMatchTheShader )
     shared_ptr<Material> glass = Material::create();
     SW_REQUIRE_TRUE( RenderStateTestUtil::load( *glass, "alphaMode=\"Blend\"", kGlass ) );
     SW_EXPECT_TRUE( glass->usesSceneColorCopy() );
+}
+
+/**
+ * @brief [MaterialRenderStateTest] 표면 모델은 셰이더 define 을 낸다 — 포워드 전용 모델(툰 · 머리카락 · 자체 조명)은 `MATERIAL_FORWARD_ONLY` 도 모델이 낸다(G버퍼 패스가 뺀다).
+ *        저장한 글을 다시 읽어도 같은 모델 · 같은 변형이다.
+ */
+SW_TEST_CASE( MaterialRenderStateTest, SurfaceModelEmitsItsDefines )
+{
+    struct ModelCase
+    {
+        const utf8* _pModel;
+        const utf8* _pDefine;
+        bool        _bForwardOnly; ///< NOLINT(sw-bool-flag): 집합체다 — 표의 한 줄
+    };
+    const ModelCase arrCase[] = {
+        {      "Lit",       "MATERIAL_SURFACE_MODEL_LIT", false},
+        {    "Unlit",     "MATERIAL_SURFACE_MODEL_UNLIT", false},
+        { "Emissive",  "MATERIAL_SURFACE_MODEL_EMISSIVE", false},
+        {     "Toon",      "MATERIAL_SURFACE_MODEL_TOON",  true},
+        {     "Hair",      "MATERIAL_SURFACE_MODEL_HAIR",  true},
+        {"CustomLit", "MATERIAL_SURFACE_MODEL_CUSTOMLIT",  true},
+    };
+    for ( const ModelCase& modelCase : arrCase )
+    {
+        shared_ptr<Material> material = Material::create();
+        SW_REQUIRE_TRUE_MSG( RenderStateTestUtil::loadRoot( *material, string( "surfaceModel=\"" ) + modelCase._pModel + "\"" ), modelCase._pModel );
+        const vector<string>& listDefine = material->getCachedShaderDefines();
+        SW_EXPECT_TRUE_MSG( VectorUtil::contains( listDefine, string( modelCase._pDefine ) ), modelCase._pModel );
+        SW_EXPECT_TRUE_MSG( VectorUtil::contains( listDefine, string( kMaterialForwardOnlyDefine ) ) == modelCase._bForwardOnly, modelCase._pModel );
+
+        shared_ptr<Material> reloaded = Material::create();
+        SW_REQUIRE_TRUE_MSG( reloaded->loadFromXML( material->saveToString() ), modelCase._pModel );
+        SW_EXPECT_TRUE_MSG( reloaded->getDesc()._surfaceModel == material->getDesc()._surfaceModel, modelCase._pModel );
+        SW_EXPECT_EQUAL( material->getPermutationHash(), reloaded->getPermutationHash() );
+    }
+}
+
+/**
+ * @brief [MaterialRenderStateTest] 표면 모델이 없거나 모르는 이름, 포워드 전용 모델에 직접 적은 `MATERIAL_FORWARD_ONLY`(define · 스위치)는 읽기 오류다.
+ *        G버퍼에 담길 수 있는 모델이 칸이 모자라 포워드 전용을 고르는 것(겹친 엽 — appearance_lit.hlsl · 기믹 표면)은 받는다.
+ */
+SW_TEST_CASE( MaterialRenderStateTest, SurfaceModelCombinationsAreLoadErrors )
+{
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
+    SW_EXPECT_LOG( "Serialization.UnknownEnumerator" );
+    SW_EXPECT_LOG( "Material.ForwardOnlyBelongsToSurfaceModel" );
+    const utf8* const kForwardOnlyDefine = "<_permutations><_alwaysDefines><item>MATERIAL_FORWARD_ONLY</item></_alwaysDefines></_permutations>";
+    const utf8* const kForwardOnlySwitch = "<_permutations><_staticSwitches><item name=\"Forward\" keyword=\"MATERIAL_FORWARD_ONLY\" bEnabled=\"1\"/></_staticSwitches></_permutations>";
+    SW_EXPECT_FALSE( RenderStateTestUtil::loadRoot( *Material::create(), "alphaMode=\"Opaque\"" ) );                      // 표면 모델을 적지 않았다
+    SW_EXPECT_FALSE( RenderStateTestUtil::loadRoot( *Material::create(), "surfaceModel=\"Cel\"" ) );                      // 값 이름 표는 enum 하나다
+    SW_EXPECT_FALSE( RenderStateTestUtil::loadRoot( *Material::create(), "surfaceModel=\"Toon\"", kForwardOnlyDefine ) ); // 모델이 낸다
+    SW_EXPECT_FALSE( RenderStateTestUtil::loadRoot( *Material::create(), "surfaceModel=\"Hair\"", kForwardOnlySwitch ) ); // 스위치로도 적지 않는다
+    SW_EXPECT_TRUE( RenderStateTestUtil::loadRoot( *Material::create(), "surfaceModel=\"Lit\"", kForwardOnlyDefine ) );   // 겹친 엽의 포워드 전용
+    SW_EXPECT_TRUE( RenderStateTestUtil::loadRoot( *Material::create(), "surfaceModel=\"Emissive\"", kForwardOnlyDefine ) );
 }

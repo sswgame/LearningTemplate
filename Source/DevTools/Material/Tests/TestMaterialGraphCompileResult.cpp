@@ -230,10 +230,12 @@ SW_TEST_CASE( MaterialGraphCompilerTest, EmissiveStaysDeferred )
     SW_REQUIRE_TRUE( MaterialGraphTestUtil::compileNodes( nodes, result ) );
     SW_EXPECT_TRUE( result._bEmissive );
     SW_EXPECT_TRUE( StringUtil::contains( result._hlsl, "#define SW_MATERIAL_GRAPH_EMISSIVE" ) );
-    SW_EXPECT_FALSE( StringUtil::contains( MaterialGraphCompileResult::makeMaterialText( result, "test", "x", "y" ), "MATERIAL_FORWARD_ONLY" ) );
+    const string text = MaterialGraphCompileResult::makeMaterialText( result, "test", "x", "y" );
+    SW_EXPECT_TRUE( StringUtil::contains( text, "surfaceModel=\"Emissive\"" ) );
+    SW_EXPECT_FALSE( StringUtil::contains( text, "MATERIAL_FORWARD_ONLY" ) );
 }
 
-/** @brief [MaterialGraphCompilerTest] 셰이딩 모델 Hair 는 머리카락 조명 스위치 · 칸 셋 · 포워드 전용을 낸다. 기본(DefaultLit)은 생성물이 그대로다 */
+/** @brief [MaterialGraphCompilerTest] 셰이딩 모델 Hair 는 머리카락 조명 스위치 · 칸 셋 · 표면 모델 Hair(포워드 전용은 모델이 낸다)를 낸다. 기본(DefaultLit)은 표면 모델 Lit 이다 */
 SW_TEST_CASE( MaterialGraphCompilerTest, HairShadingModelIsForwardOnlyWithHairProperties )
 {
     MaterialGraphCompileResult hair;
@@ -241,13 +243,15 @@ SW_TEST_CASE( MaterialGraphCompilerTest, HairShadingModelIsForwardOnlyWithHairPr
     SW_EXPECT_TRUE( hair._bHair );
     SW_EXPECT_TRUE( StringUtil::contains( hair._hlsl, "#define SW_MATERIAL_GRAPH_HAIR" ) );
     SW_EXPECT_TRUE( StringUtil::contains( hair._hlsl, "_hairShift" ) && StringUtil::contains( hair._hlsl, "_hairScatter" ) && StringUtil::contains( hair._hlsl, "_hairStrandAxis" ) );
-    SW_EXPECT_TRUE( StringUtil::contains( MaterialGraphCompileResult::makeMaterialText( hair, "test", "x", "y" ), "MATERIAL_FORWARD_ONLY" ) );
+    const string hairText = MaterialGraphCompileResult::makeMaterialText( hair, "test", "x", "y" );
+    SW_EXPECT_TRUE( StringUtil::contains( hairText, "surfaceModel=\"Hair\"" ) );
+    SW_EXPECT_FALSE( StringUtil::contains( hairText, "MATERIAL_FORWARD_ONLY" ) ); // 포워드 전용 모델에 직접 적으면 읽기 오류다(Material.ForwardOnlyBelongsToSurfaceModel)
 
     MaterialGraphCompileResult lit;
     SW_REQUIRE_TRUE( MaterialGraphTestUtil::compileNodes( MaterialGraphTestUtil::makeNode( "Out", "Output", {}, "BaseColor=0.3 0.2 0.1" ), lit ) );
     SW_EXPECT_FALSE( lit._bHair );
     SW_EXPECT_FALSE( StringUtil::contains( lit._hlsl, "SW_MATERIAL_GRAPH_HAIR" ) || StringUtil::contains( lit._hlsl, "_hairShift" ) );
-    SW_EXPECT_FALSE( StringUtil::contains( MaterialGraphCompileResult::makeMaterialText( lit, "test", "x", "y" ), "MATERIAL_FORWARD_ONLY" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( MaterialGraphCompileResult::makeMaterialText( lit, "test", "x", "y" ), "surfaceModel=\"Lit\"" ) );
 
     MaterialGraphCompileResult unknown;
     SW_EXPECT_FALSE( MaterialGraphTestUtil::compileNodes( MaterialGraphTestUtil::makeNode( "Out", "Output", {}, "BaseColor=1 1 1,ShadingModel=Toon" ), unknown ) );

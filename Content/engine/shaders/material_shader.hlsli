@@ -31,6 +31,17 @@
  *             그 패스는 머티리얼 define MATERIAL_DISTORTION 이 있는 배치만 그리므로 그 define 을 적는 셰이더만 SW_MATERIAL_CUSTOM_DISTORTION 으로 정의한다(본보기 distortion.hlsl).
  * 선택이 없거나 겹치면 이 파일의 `#error` 가 멈춘다. 훅 정의가 없는데 선택했으면 컴파일러가 미선언 식별자로 멈춘다.
  *
+ * 표면 모델 — 머티리얼 데이터(`.material` 의 필수 칸 surfaceModel, C++ `MaterialSurfaceModel`)가 정하고 define `MATERIAL_SURFACE_MODEL_<이름>` 으로 온다.
+ * 조명 훅과의 짝(어긋나면 1 절 `#error`):
+ *   | 모델      | 조명 훅                                                            | G버퍼                                        |
+ *   |-----------|--------------------------------------------------------------------|----------------------------------------------|
+ *   | Lit       | SW_MATERIAL_DEFAULT_LIGHTING, 또는 CUSTOM_LIGHTING + CUSTOM_SHADING | 기본 PBR 번호, 또는 셰이딩 훅이 고른 번호     |
+ *   | Unlit     | SW_MATERIAL_UNLIT                                                  | Unlit 번호                                   |
+ *   | Emissive  | SW_MATERIAL_DEFAULT_LIGHTING + SW_MATERIAL_EMISSIVE                | 기본 PBR 번호 + 발광 칸                      |
+ *   | Toon · Hair · CustomLit | SW_MATERIAL_CUSTOM_LIGHTING(셰이딩 훅 없음)          | 없음 — 모델이 MATERIAL_FORWARD_ONLY 를 낸다  |
+ * 표면 훅이 내는 표면 값(MaterialSurface — 언리얼 FMaterialPixelParameters 를 채운 GetMaterialPixelParameters 의 결과 · 유니티 SurfaceData 자리)은 패스와 무관하다.
+ * 패스마다의 출력(포워드 색 · G버퍼 인코딩 · 왜곡)은 뼈대의 `PixelContext::storeSurface` 한 곳이 가른다(material_shader_main.hlsli 2 절).
+ *
  * 머티리얼은 **한 단계에서만 읽는다**(GL 은 구조버퍼를 정점 · 픽셀 두 단계가 읽으면 링크를 거절한다 — binding.hlsli 9 절).
  * 읽는 단계는 형식이 정한다. 기본은 픽셀이고, `SW_MATERIAL_READ_IN_VERTEX` 를 정의하면 정점이다. 안 읽는 단계의 문맥에는 `material` 멤버가 없어서
  * 거기서 머티리얼을 읽으려는 코드는 컴파일이 안 된다. 정점에서 읽는 셰이더는 픽셀이 쓸 값을 사용자 보간 칸으로 넘긴다.
@@ -131,6 +142,35 @@
 #endif
 #if defined( SW_PASS_DISTORTION ) && !defined( SW_MATERIAL_CUSTOM_DISTORTION )
     #error "the distortion pass draws MATERIAL_DISTORTION materials only: define SW_MATERIAL_CUSTOM_DISTORTION and computeMaterialDistortion in a shader whose material lists MATERIAL_DISTORTION"
+#endif
+
+// G버퍼는 표면 값과 셰이딩 모델 번호만 싣는다 — 조명 식을 직접 정의한 셰이더가 번호를 고르는 셰이딩 훅(SW_MATERIAL_CUSTOM_SHADING)도 없으면 담을 자리가 없다.
+// 그런 표면 모델(툰 · 머리카락 · 자체 조명)은 모델이 MATERIAL_FORWARD_ONLY 를 내 G버퍼 패스가 빼므로, 이 변형을 요청한 것은 쿠킹 요청의 결함이다(기본 PBR 번호로 대신 칠하지 않는다).
+#if defined( SW_PASS_GBUFFER ) && defined( SW_MATERIAL_CUSTOM_LIGHTING ) && !defined( SW_MATERIAL_CUSTOM_SHADING )
+    #error "a custom lighting hook without SW_MATERIAL_CUSTOM_SHADING has no G-buffer encoding: its material surfaceModel must be forward-only (Toon, Hair, CustomLit)"
+#endif
+
+// 표면 모델(머티리얼 칸 surfaceModel → MATERIAL_SURFACE_MODEL_*, Material::computeShaderDefines)과 이 셰이더가 고른 조명 훅이 같은 모델을 말하는지 본다 — 언리얼 Shading Model 과
+// 머티리얼 출력 핀의 짝, 유니티 SurfaceData 와 패스 태그의 짝 자리다. 모델 define 이 없는 컴파일(머티리얼 상수 레이아웃 리플렉션 — Material::reflectMaterialSchema)은 보지 않는다.
+// 머티리얼 없는 패스 셰이더(SW_MATERIAL_NONE)는 배치 머티리얼의 define 을 받지만 자기 훅으로 그리므로 보지 않는다.
+#if !defined( SW_MATERIAL_NONE )
+    #if defined( MATERIAL_SURFACE_MODEL_LIT )
+        #if defined( SW_MATERIAL_UNLIT ) || defined( SW_MATERIAL_EMISSIVE ) || ( defined( SW_MATERIAL_CUSTOM_LIGHTING ) && !defined( SW_MATERIAL_CUSTOM_SHADING ) )
+            #error "surfaceModel Lit needs SW_MATERIAL_DEFAULT_LIGHTING, or SW_MATERIAL_CUSTOM_LIGHTING with SW_MATERIAL_CUSTOM_SHADING (no SW_MATERIAL_EMISSIVE - that is surfaceModel Emissive)"
+        #endif
+    #elif defined( MATERIAL_SURFACE_MODEL_UNLIT )
+        #if !defined( SW_MATERIAL_UNLIT )
+            #error "surfaceModel Unlit needs the SW_MATERIAL_UNLIT lighting hook"
+        #endif
+    #elif defined( MATERIAL_SURFACE_MODEL_EMISSIVE )
+        #if !defined( SW_MATERIAL_DEFAULT_LIGHTING ) || !defined( SW_MATERIAL_EMISSIVE )
+            #error "surfaceModel Emissive needs SW_MATERIAL_DEFAULT_LIGHTING with SW_MATERIAL_EMISSIVE (computeMaterialEmissive)"
+        #endif
+    #elif defined( MATERIAL_SURFACE_MODEL_TOON ) || defined( MATERIAL_SURFACE_MODEL_HAIR ) || defined( MATERIAL_SURFACE_MODEL_CUSTOMLIT )
+        #if !defined( SW_MATERIAL_CUSTOM_LIGHTING ) || defined( SW_MATERIAL_CUSTOM_SHADING )
+            #error "forward-only surfaceModel (Toon, Hair, CustomLit) needs SW_MATERIAL_CUSTOM_LIGHTING without SW_MATERIAL_CUSTOM_SHADING"
+        #endif
+    #endif
 #endif
 
 // ------------------------------------------------------------------------------

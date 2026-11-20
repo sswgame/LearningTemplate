@@ -34,7 +34,7 @@ namespace
         }
 
         static constexpr const utf8* kMaterial = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDef formatVersion="0" name="Sample" shaderPath="engine/shaders/pbr_lit.hlsl" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="Sample" shaderPath="engine/shaders/pbr_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1 1 1 1"/>
 		<item name="_roughness" type="Range" defaultValue="1" min="0.0" max="1.0"/>
@@ -43,7 +43,7 @@ namespace
 )";
 
         static constexpr const utf8* kTexturedMaterial = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDef formatVersion="0" name="Textured" shaderPath="engine/shaders/pbr_lit.hlsl" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="Textured" shaderPath="engine/shaders/pbr_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1 1 1 1"/>
 		<item name="_albedoMap" type="Texture2D"/>
@@ -157,7 +157,7 @@ namespace
     {
         /** @brief 런타임 스위치(Detail) · 에셋 전용 스위치(Wet, 끔 키워드 있음) · 멀티 컴파일(FogMode)을 선언한 부모입니다. */
         static constexpr const utf8* kSwitchMaterial = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDef formatVersion="0" name="Switches" shaderPath="engine/shaders/pbr_lit.hlsl" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="Switches" shaderPath="engine/shaders/pbr_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1 1 1 1"/>
 	</_properties>

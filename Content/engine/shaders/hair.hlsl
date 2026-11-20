@@ -14,8 +14,8 @@
  *          `_rootColor` · `_tipColor` · `_gradientPosition` · `_gradientWidth`(뿌리 → 끝 색 그라데이션), `_highlightColor`(a = 세기) · `_highlightAmount`(세기 배율) · `_highlightMap`(r = 마스크).
  *          색은 기본 텍스처 rgb 에 곱한다 — 색을 온전히 바꾸려면 회색 텍스처를 쓴다.
  *
- *          머티리얼 define: `MATERIAL_ALPHA_CUTOFF`(alphaMode="Mask" — 늘 켠다) · `MATERIAL_TWO_SIDED`(카드는 양면). `MATERIAL_FORWARD_ONLY` 는 늘 있어야 한다 —
- *          G버퍼에 머리카락 셰이딩 모델 칸이 없어 G버퍼 퍼뮤테이션은 `#error` 로 쿠킹에서 멈춘다(툰과 같은 길).
+ *          머티리얼 define: `MATERIAL_ALPHA_CUTOFF`(alphaMode="Mask" — 늘 켠다) · `MATERIAL_TWO_SIDED`(카드는 양면). 표면 모델은 Hair 다(`surfaceModel="Hair"`) —
+ *          G버퍼에 머리카락 셰이딩 모델 칸이 없어 모델이 `MATERIAL_FORWARD_ONLY` 를 내고, G버퍼 변형은 뼈대(material_shader.hlsli)의 `#error` 가 멈춘다(툰과 같은 길).
  */
 #include "lighting.hlsli"
 
@@ -44,10 +44,6 @@ SW_MATERIAL_BEGIN
     float  _highlightAmount;  // 하이라이트 세기 배율(꾸미기 슬라이더) — 원소 크기를 16 의 배수로 지키는 자리이기도 하다(ShaderBindingValidator::validateStructuredElementLayouts)
 }
 SW_MATERIAL_END
-
-#if defined( SW_PASS_GBUFFER )
-    #error "hair.hlsl is forward-only: the material must list MATERIAL_FORWARD_ONLY in _alwaysDefines (deferred draws it in ForwardOnlyOpaque)"
-#endif
 
 #define SW_MATERIAL_CUSTOM_LIGHTING
 #define SW_MATERIAL_DEFAULT_VARYINGS

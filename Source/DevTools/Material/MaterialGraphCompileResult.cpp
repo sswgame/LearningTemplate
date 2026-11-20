@@ -1078,7 +1078,12 @@ namespace sw
     {
         string text;
         text.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- Generated from " ).append( sourceName ).append( " by MaterialGraphCompiler - edit the graph; change values in a child material with _base. -->\n" );
-        text.append( "<MaterialDef formatVersion=\"0\" name=\"" ).append( materialName ).append( "\" shaderPath=\"" ).append( shaderPath ).append( "\" alphaMode=\"Opaque\">\n\t<_properties>\n" );
+        // 표면 모델은 셰이더 뼈대의 조명 훅과 짝이다(material_graph.hlsli) — 후처리는 조명이 없고, Hair 는 포워드 전용을 모델이 낸다.
+        const utf8* pSurfaceModel = result._bPostProcess ? "Unlit" : ( result._bHair ? "Hair" : ( result._bEmissive ? "Emissive" : "Lit" ) );
+        text.append( "<MaterialDef formatVersion=\"0\" name=\"" ).append( materialName ).append( "\" shaderPath=\"" ).append( shaderPath ).append( "\" surfaceModel=\"" ).append( pSurfaceModel );
+        text.append( "\" alphaMode=\"Opaque\">
+	<_properties>
+" );
         for ( const MaterialGraphField& field : result._listField )
         {
             text.append( "\t\t<item name=\"" ).append( field._name ).append( "\" type=\"" ).append( field._propertyType ).append( "\"" );
@@ -1102,10 +1107,7 @@ namespace sw
             return text;
         }
         text.append( "\t</_properties>\n\t<_permutations quality=\"High\" shaderLOD=\"300\" usage=\"StaticMesh\">\n\t\t<_alwaysDefines>\n\t\t\t<item>MATERIAL_DOMAIN_SURFACE</item>\n" );
-        // 자체 발광은 디퍼드로도 그린다 — G버퍼 패스가 장면 색에 미리 적는다(G버퍼 명세 판 3). 포워드 전용을 적지 않는다.
-        // 머리카락(Hair)은 아직 포워드 전용이다 — 다른 셰이딩 모델과 달리 G버퍼 사용자 칸 뜻을 정하지 않았다.
-        if ( result._bHair )
-            text.append( "\t\t\t<item>MATERIAL_FORWARD_ONLY</item>\n" );
+        // 자체 발광은 디퍼드로도 그린다 — G버퍼 패스가 장면 색에 미리 적는다(G버퍼 명세 판 3). 머리카락(Hair)의 포워드 전용은 표면 모델이 낸다(G버퍼 사용자 칸 뜻을 정하지 않았다).
         text.append( "\t\t</_alwaysDefines>\n\t\t<_multiCompiles>\n\t\t\t<item name=\"FogMode\" selected=\"FOG_OFF\">\n\t\t\t\t<_options>\n\t\t\t\t\t<item>FOG_OFF</item>\n\t\t\t\t\t<item>FOG_LINEAR</item>\n\t\t\t\t\t<item>FOG_EXP</item>\n\t\t\t\t</_options>\n\t\t\t</item>\n\t\t</_multiCompiles>\n" );
         text.append( "\t</_permutations>\n</MaterialDef>\n" );
         return text;

@@ -45,6 +45,13 @@ namespace sw
         static void appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine );
 
         static void appendQualityDefines( MaterialQualityLevel quality, vector<string>& outListDefine );
+        /**
+         * @brief 표면 모델의 define `MATERIAL_SURFACE_MODEL_<이름>` 을, 포워드 전용 모델이면 `MATERIAL_FORWARD_ONLY` 도 더합니다.
+         * @details 셰이더 뼈대(material_shader.hlsli)가 모델 define 과 조명 훅을 맞춰 보고, G버퍼 패스는 포워드 전용 배치를 뺀다(`RenderPassKindInfo` G버퍼 줄).
+         */
+        static void appendSurfaceModelDefines( MaterialSurfaceModel model, vector<string>& outListDefine );
+        /** @brief G버퍼에 칸이 없어 포워드로만 그리는 표면 모델이면 true 입니다(`Toon` · `Hair` · `CustomLit`). */
+        [[nodiscard]] static bool isForwardOnlySurfaceModel( MaterialSurfaceModel model );
 
         static uint64 hashDefines( const vector<string>& listDefine );
     };
