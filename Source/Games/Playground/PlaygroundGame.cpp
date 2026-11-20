@@ -9,14 +9,14 @@
  *          전용 서버와 배포 구성은 그 소스를 짓지 않아(공장이 없다) 첫 씬을 연다.
  *          장르 키트 시연(`KitDemo/`)은 씬 하나씩이고 미니게임 Experience(`experiences/*.experience.xml`)로 들어간다 — 키트 서비스 · 카탈로그(액션 룸의 몬스터 정의)는
  *          Experience 가 켜고 끈다(`SW_EXPERIENCE_KIT`, 들어갈 때 걸고 나올 때 거둔다).
- *          지역 효과 시연(`maps/zoneshowcase` · `maps/surfaceinteraction`)의 이펙트 · 세트(`data/abilities.xml`)와 기본 어빌리티 클래스도 여기서 건다 — 지역 프로필이 읽을 때 참조를 이 카탈로그로 본다.
+ *          허브(`maps/hub`)는 허브 Experience(`experiences/hub.experience.xml`, gamesettings `hubExperience`)이고 인스턴스 내내 켜진 바탕이다 — 지역 효과 시연의 이펙트 · 세트
+ *          (`data/abilities.xml`)와 기본 어빌리티 클래스는 그 키트(`PlaygroundAbilitiesExperience.cpp`)가 건다.
  */
 #include "pch.h"
 
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Config/GameConfig.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
@@ -26,7 +26,6 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
 
@@ -41,7 +40,6 @@ namespace sw
 
     protected:
         bool onPrepareContent( const ContentPreparationToken& token ) override;
-        bool onInitialize() override;
         /** @brief 클라이언트 부분(벤치)이 자기 장면을 띄웠으면 첫 씬을 열지 않습니다. */
         void startFirstScene() override;
         void onUpdate( float32 deltaTime ) override;
@@ -58,11 +56,6 @@ namespace sw
         unique_ptr<ModSession> _mods;
         /** @brief 클라이언트 전용 개발 부분(벤치 · 렌더 확장 시연, `Client/Dev/PlaygroundClientPart.cpp`)입니다. 공장이 없는 구성(전용 서버 · 배포)에는 nullptr 이다. */
         unique_ptr<IGameClientPart> _clientPart;
-
-        /** @brief 지역 효과 시연의 어빌리티 클래스(기본 — Generic · Combat 세트, ApplyEffects)입니다. */
-        AbilityClassRegistry _abilityClasses;
-        /** @brief 지역 효과 시연의 이펙트 · 어빌리티 · 세트입니다(공유 캐시의 한 벌). 어빌리티 시스템과 지역 프로필이 게임 서비스로 찾는다. */
-        SharedAssetRef<AbilityCatalog> _pAbilityCatalog;
     };
 } // namespace sw
 
@@ -71,8 +64,6 @@ namespace sw
     PlaygroundGame::PlaygroundGame()
         : _mods{ nullptr }
         , _clientPart{ nullptr }
-        , _abilityClasses{}
-        , _pAbilityCatalog{ nullptr }
     {
         // 키트 시연 디렉터(GameModeComponent 파생 — KitDemoComponent · ActionPlatformerDemoComponent …)의 판 상태를 세이브 · 핫 리로드에 싣는다. 바탕 형식 하나로 올리면
         // 파생이 모두 실린다(순회는 파생을 포함하고 상태는 가상 serializeState). 올리지 않으면 game.save · game.load 가 판을 조용히 새로 연다(kitdemo_respawn 4).
@@ -89,12 +80,6 @@ namespace sw
         _mods = make_unique<ModSession>( game::getSubsystem<AssetManager>() );
         return _mods->applyForGame( token, game::getSubsystem<const GameConfig>()._packRoot.get() ) && getGameScope().bind( _mods.get() ) &&
                getGameScope().bind<IContentConfiguration>( _mods.get() );
-    }
-
-    bool PlaygroundGame::onInitialize()
-    {
-        // 지역 효과 시연의 필수 데이터 — 지역 프로필의 할 일이 이 카탈로그의 이펙트를 건다(읽을 때 참조를 본다). 못 읽으면 게임을 띄우지 않는다.
-        return bindScopedService( &_abilityClasses ) && loadRequiredCatalog( _pAbilityCatalog );
     }
 
     void PlaygroundGame::startFirstScene()

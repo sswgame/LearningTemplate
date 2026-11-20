@@ -22,7 +22,7 @@ namespace sw
         , _pInputMap( pInputMap )
         , _definition{ definition }
         , _listCleanup{}
-        , _listHeldCatalog{}
+        , _listHeldObject{}
         , _listLoadedCatalog{}
         , _before{}
         , _activated{}
@@ -85,7 +85,7 @@ namespace sw
             _listCleanup.pop_back();
             cleanup();
         }
-        _listHeldCatalog.clear(); // 범위의 칸을 푼 뒤에 놓는다 — 찾는 쪽이 이제 없다
+        _listHeldObject.clear(); // 범위의 칸을 푼 뒤에 놓는다 — 찾는 쪽이 이제 없다
         _listLoadedCatalog.clear();
         _bDeactivated = SW_TRUE;
         return reportLeaks( captureState() );

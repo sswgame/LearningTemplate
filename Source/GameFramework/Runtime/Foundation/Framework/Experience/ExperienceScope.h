@@ -93,8 +93,23 @@ namespace sw
             }
             if ( bindService( pCatalog.get() ) == false )
                 return false;
-            _listHeldCatalog.push_back( std::move( pCatalog ) ); // 풀기(되돌릴 일)는 위에 이미 적혔다 — 놓기는 `deactivate` 끝이다
+            _listHeldObject.push_back( std::move( pCatalog ) ); // 풀기(되돌릴 일)는 위에 이미 적혔다 — 놓기는 `deactivate` 끝이다
             _listLoadedCatalog.push_back( hashed_string( TCatalog::kDataKind ) );
+            return true;
+        }
+
+        /**
+         * @brief 서비스 @p T 를 기본 생성해 이 범위가 쥐고 게임 범위에 겁니다(`game::findSubsystem<T>()`). 끌 때 풀고 지운다.
+         * @details 게임 코드가 멤버로 쥐던 레지스트리(어빌리티 클래스 등)를 Experience 수명으로 옮기는 자리다 — 언리얼 Game Feature 액션 `AddComponents` 가 켤 때 만들고 끌 때 지우는 것과 같다.
+         * @return 같은 타입이 이미 걸려 있으면 알리고 false 입니다(`bindService`).
+         */
+        template <class T>
+        [[nodiscard]] bool emplaceService()
+        {
+            shared_ptr<T> pService = make_shared<T>();
+            if ( bindService( pService.get() ) == false )
+                return false;
+            _listHeldObject.push_back( std::move( pService ) ); // 풀기는 위에 적혔다 — 지우기는 `deactivate` 끝이다
             return true;
         }
 
@@ -152,7 +167,7 @@ namespace sw
         InputMap*                      _pInputMap;         ///< 입력 레이어를 거는 입력 맵(없으면 nullptr)
         ExperienceDefinition           _definition;        ///< 켠 Experience
         vector<Delegate<void()>>       _listCleanup;       ///< 끌 때 역순으로 부를 일
-        vector<shared_ptr<const void>> _listHeldCatalog;   ///< 걸어 둔 카탈로그(끌 때 놓는다)
+        vector<shared_ptr<const void>> _listHeldObject;    ///< 걸어 둔 카탈로그 · 쥔 서비스(끌 때 놓는다)
         vector<hashed_string>          _listLoadedCatalog; ///< 읽은 카탈로그 종류
         StateSnapshot                  _before;            ///< 켜기 전 사본(만들 때)
         StateSnapshot                  _activated;         ///< 켠 뒤 사본(`finishActivation`, 아니면 끌 때)

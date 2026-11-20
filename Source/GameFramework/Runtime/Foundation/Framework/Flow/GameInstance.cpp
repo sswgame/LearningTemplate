@@ -154,7 +154,7 @@ namespace sw
         // 플레이어 통계 · 업적은 gamesettings 에 통계 카탈로그가 있을 때만 선다 - 플랫폼 서비스(지금은 로컬 구현)까지 잇는다.
         _gameScope.emplaceSubsystem<PlayerStatsSubsystem>( _packConfig._data );
         // Experience(허브의 미니게임)는 이 게임 범위에 키트 서비스를 걸고 나올 때 거둔다 — 종료가 `onShutdown` 뒤에 켜진 것을 끈다.
-        _gameScope.emplaceSubsystem<ExperienceManager>( _gameScope, _packConfig );
+        _gameScope.emplaceSubsystem<ExperienceManager>( _gameScope, _packConfig, *this );
     }
 
     GameInstance::~GameInstance()
@@ -306,6 +306,9 @@ namespace sw
             return false;
         _bDerivedEntered = SW_TRUE;
         if ( onInitialize() == false )
+            return false;
+        // 허브 Experience(gamesettings `hubExperience`)는 파생 초기화 뒤 · 첫 씬 전에 켠다 — 허브 밖 첫 씬도 그 카탈로그를 읽는다. 못 켜면 필수 데이터처럼 게임을 띄우지 않는다.
+        if ( getSubsystem<ExperienceManager>().activateHub() == false )
             return false;
         startFirstScene();
         // 개발 전용 부분은 게임이 다 선 뒤에 붙는다(게임 `Dev/` 의 공장 — 배포 구성에는 없다).
@@ -494,11 +497,12 @@ namespace sw
 
     void GameInstance::update( float32 deltaTime )
     {
-        // 프레임 순서: 다시 읽힌 카탈로그 칸 → 씬 흐름(페이드 · 로딩 화면 · 끝난 로드 알림) → 넷 세션 → 파생 프레임 훅.
+        // 프레임 순서: 다시 읽힌 카탈로그 칸 → 맡긴 Experience 진입 → 씬 흐름(페이드 · 로딩 화면 · 끝난 로드 알림) → 넷 세션 → 파생 프레임 훅.
         for ( const Delegate<void()>& follow : _listFollowedService )
         {
             follow();
         }
+        getSubsystem<ExperienceManager>().update(); // 트리거가 틱 뒤에 맡긴 진입 — 허브 스냅숏은 틱 밖에서 찍는다
         getSubsystem<GameSceneFlow>().update();
         getSubsystem<GameLocalStore>().update(); // 끝난 세이브 · 자동 저장 요청의 콜백(세이브 이벤트)
         // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다. 필수 서비스라 없으면 멈춘다.
