@@ -239,7 +239,7 @@
     "Source/Editor/Panels/Catalog/CatalogPanel.cpp": {"integer": 1},
     "Source/Editor/Panels/Catalog/CatalogPanel.h": {"float": 2},
     "Source/Editor/Panels/Catalog/CatalogTableEditor.cpp": {"float": 7},
-    "Source/Editor/Panels/Console/ConsolePanel.cpp": {"minus-one": 1, "integer": 2},
+    "Source/Editor/Panels/Console/ConsolePanel.cpp": {"minus-one": 1, "integer": 1},
     "Source/Editor/Panels/Console/Model/EditorSourceLocation.cpp": {"integer": 1},
     "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp": {"minus-one": 1, "float": 29, "integer": 19},
     "Source/Editor/Panels/ContentBrowser/Model/ContentBrowserBreadcrumb.cpp": {"minus-one": 1},

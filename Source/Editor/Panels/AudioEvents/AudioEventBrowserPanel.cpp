@@ -34,11 +34,6 @@ namespace sw::editor
     {
         struct AudioEventBrowserPanelInternal
         {
-            static void openPanel()
-            {
-                (void)EditorPanelManager::getInEditorContext().setPanelOpen<AudioEventBrowserPanel>( true ); // 패널은 이 파일에 등록되어 있다
-            }
-
             /** @brief 사용률 막대 하나를 그립니다. 상한에 닿으면 경고색입니다. */
             static void drawUsageBar( const utf8* pLabel, uint32 count, uint32 limit, float32 usage, bool bLimitReached )
             {
@@ -463,5 +458,5 @@ namespace sw::editor
                          &AudioEventBrowserPanelInternal::readEditCount );
     SW_AUTOMATION_WALL_WATCH( editorAudioEventsPlayed, "Editor.AudioEventsPlayed", "Audio events the audio thread admitted, as it last published (follows the audio thread)",
                               &AudioEventBrowserPanelInternal::readPlayedCount, &AudioEventBrowserPanelInternal::readAudioActivity );
-    SW_EDITOR_COMMAND( AudioEventBrowserOpen, "window.audioEvents", &AudioEventBrowserPanelInternal::openPanel, nullptr, NoScene );
+    SW_EDITOR_PANEL_OPEN_COMMAND( AudioEventBrowserOpen, "window.audioEvents", AudioEventBrowserPanel );
 } // namespace sw::editor

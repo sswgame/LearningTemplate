@@ -211,3 +211,24 @@ namespace sw::editor
  */
 #define SW_EDITOR_PANEL( TPanel, pID, category, order ) \
     SW_EDITOR_REGISTER( ::sw::editor::EditorPanelRegistration, Panel_##TPanel, { pID, order }, category, &::sw::editor::createEditorPanel<TPanel> )
+
+namespace sw::editor
+{
+    /** @brief 창 열기 명령의 동작입니다(`SW_EDITOR_PANEL_OPEN_COMMAND`). 모델을 바꾸지 않고 창만 연다. */
+    template <typename TPanel>
+    void openEditorPanelCommand()
+    {
+        EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+        if ( pPanels != nullptr )
+            (void)pPanels->setPanelOpen<TPanel>( true );
+    }
+} // namespace sw::editor
+
+/**
+ * @brief 창 @p TPanel 을 여는 명령(`window.*`)을 등록합니다. 모델을 바꾸지 않으므로 패널 등록(`SW_EDITOR_PANEL`) 옆 View 에 둔다.
+ * @code SW_EDITOR_PANEL_OPEN_COMMAND( AudioMixerOpen, "window.audioMixer", AudioMixerPanel ); @endcode
+ */
+#define SW_EDITOR_PANEL_OPEN_COMMAND( name, pID, TPanel )                                                                                   \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 },                                                \
+                        ::sw::editor::EditorCommandTargetUtil::toAction<&::sw::editor::openEditorPanelCommand<TPanel>>(), nullptr, nullptr, \
+                        ::sw::editor::EditorCommandEdit::NoScene, nullptr )

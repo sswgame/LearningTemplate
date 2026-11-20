@@ -85,22 +85,6 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `sourcecontrol.history <저장소 기준 경로>` — 파일 하나의 최근 커밋을 읽는다(History 단추와 같다 — 바뀌지 않은 파일도 된다). */
-            static bool runHistory( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 || SourceControlChangesViewModel::findSourceControl() == nullptr )
-                    return false;
-                if ( getSourceControl().requestHistory( listArgument[0] ) )
-                {
-                    StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "reading history of %#", listArgument[0] );
-                    outReply = string( replyBuilder.view() );
-                }
-                else
-                    outReply = "source control does not track changes (no git)";
-                return true;
-            }
-
             /** @brief 감시 값 `Editor.SourceControlDetailLines` — 지난 diff · 이력의 줄 수입니다. */
             [[nodiscard]] static bool readDetailLines( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -117,8 +101,6 @@ namespace sw::editor
                          &SourceControlChangesPanelInternal::readChangeCount );
     SW_AUTOMATION_WATCH( editorSourceControlTracksChanges, "Editor.SourceControlTracksChanges", "1 when the source control provider lists changes (git found)",
                          &SourceControlChangesPanelInternal::readTracksChanges );
-    SW_DEV_COMMAND( SourceControlHistory, "sourcecontrol.history", "sourcecontrol.history <repository path>", "Read the last commits of one file into the Changes window",
-                    &SourceControlChangesPanelInternal::runHistory );
     SW_AUTOMATION_WATCH( editorSourceControlDetailLines, "Editor.SourceControlDetailLines", "Lines of the last diff or history the Changes window read",
                          &SourceControlChangesPanelInternal::readDetailLines );
 

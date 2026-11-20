@@ -615,4 +615,20 @@ namespace sw::editor
         if ( objectID != 0 )
             HierarchyViewModel::get().requestRename( objectID );
     }
+
+    namespace
+    {
+        struct HierarchyCommandsInternal
+        {
+            static void runMoveUp( EditorTransaction& /*transaction*/ ) { HierarchyCommands::moveSelectionStep( false ); }
+            static void runMoveDown( EditorTransaction& /*transaction*/ ) { HierarchyCommands::moveSelectionStep( true ); }
+            static void runCreateFolder( EditorTransaction& /*transaction*/ ) { HierarchyCommands::createFolder(); }
+        };
+    } // namespace
+
+    SW_EDITOR_COMMAND( SceneMoveSiblingUp, "scene.moveSiblingUp", &HierarchyCommandsInternal::runMoveUp, nullptr, Scene );
+    SW_EDITOR_COMMAND( SceneMoveSiblingDown, "scene.moveSiblingDown", &HierarchyCommandsInternal::runMoveDown, nullptr, Scene );
+    SW_EDITOR_COMMAND( SceneCreateFolder, "scene.createFolder", &HierarchyCommandsInternal::runCreateFolder, nullptr, Scene );
+    // 계층 창의 오브젝트 메뉴 항목 — 같은 종류(GameObject)의 메뉴라 씬 뷰에서 열어도 나온다(R5). 이름 칸을 열고 확정할 때 기록한다.
+    SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.object.rename", &HierarchyCommands::requestRename, &HierarchyCommands::hasSingleTargetObject, SceneUnrecorded, nullptr );
 } // namespace sw::editor

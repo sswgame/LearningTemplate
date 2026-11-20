@@ -10,6 +10,7 @@
 
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserCollectionStore.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserViewModel.h"
 
@@ -34,7 +35,7 @@ namespace sw::editor
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
-        static constexpr const utf8* kPanelID = "content_browser";
+        static constexpr const utf8* kPanelID = editorpanel::kContentBrowser.c_str();
         /** @brief 창 제목입니다(ImGui 창 이름 — 자체 테스트가 창을 찾을 때 이 상수를 쓴다). */
         static constexpr const utf8* kPanelTitle = "Content Browser";
 
@@ -173,6 +174,8 @@ namespace sw::editor
         void drawListView( const vector<const AssetEntry*>& listVisible );
         /** @brief 애셋 항목을 우클릭했을 때의 컨텍스트 메뉴를 그립니다. */
         void drawAssetContextMenu( const AssetEntry& entry );
+        /** @brief 에셋 명령이 쌓은 창 요청(`ContentBrowserViewModel::takeViewRequest`)을 엽니다 — 이름 칸 · 지우기 확인 · 참조 결과 창. */
+        void applyViewRequests();
         /** @brief 삭제 확인 모달을 그립니다. `requestDeleteAsset` 이 이 모달을 엽니다. */
         void drawDeleteConfirmModal();
         /** @brief 끌어 놓은 옮기기의 확인 모달입니다 — 옮길 파일 수 · 고칠 참조 · 바깥 도메인 · 고칠 수 없는 참조를 보이고 확인을 받는다. */

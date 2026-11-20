@@ -50,6 +50,8 @@ namespace sw::editor
         void resetToDefault();
         /** @brief 바를 보이거나 숨기고 저장합니다. 그 id 의 바가 없으면 false 입니다. */
         bool setBarVisible( string_view barID, bool bVisible );
+        /** @brief @p barID 가 씬 뷰 오버레이 바 id(view · transform · display · tools)인지입니다. 요청을 넣는 명령(`SceneViewModel`)이 미리 본다. */
+        [[nodiscard]] static bool isKnownBarID( string_view barID );
 
         const EditorViewportOverlayLayout& getLayout() const { return _layout; }
         /**

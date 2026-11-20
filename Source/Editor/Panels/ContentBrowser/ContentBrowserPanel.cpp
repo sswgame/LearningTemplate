@@ -126,26 +126,6 @@ namespace sw::editor
                 return pPanel->isWaitingForReferenceIndex() ? AutomationReadiness::waiting( 0, "the reference index has not caught up with the last Content/ change" ) : AutomationReadiness::ready();
             }
 
-            /** @brief `content.open <리소스 폴더>` 명령입니다. 콘텐츠 브라우저를 열고 그 폴더로 이동합니다. 언리얼의 Sync to Content Browser 와 같습니다. */
-            static bool runContentOpen( const vector<string>& listArgument, string& outReply )
-            {
-                EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( listArgument.size() != 1 || pPanels == nullptr )
-                    return false;
-                const optional<AbsolutePath> folderPath = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
-                const string                 folderAbs  = folderPath.has_value() ? folderPath->str() : string{};
-                if ( FileUtil::isDirectory( folderAbs ) == false || pPanels->setPanelOpen<ContentBrowserPanel>( true ) == false )
-                    return false;
-                ContentBrowserPanel* pPanel = pPanels->findPanel<ContentBrowserPanel>();
-                if ( pPanel == nullptr )
-                    return false;
-                pPanel->openFolder( folderAbs );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "content browser at %#", listArgument[0] );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
             [[nodiscard]] static bool readThumbnailCacheCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const ContentBrowserPanel* pPanel = findPanel();
@@ -183,28 +163,9 @@ namespace sw::editor
                 return true;
             }
 
-            // ------------------------------------------------------------------------------
-            // 에셋 명령 — 맥락 메뉴 · 단축키(`editor.input.xml` 의 `Editor.Panel.content_browser`)가 같은 명령을 부른다.
-            // 대상 id 는 리소스 id 를 올린 에셋 페이로드 id 다(`EditorWidgets::registerAssetPayload` — 끌기와 같은 한 형식). 대상이 없으면(단축키) 이 창의 선택이다.
-            // ------------------------------------------------------------------------------
             static ContentBrowserPanel* findWritablePanel()
             {
                 return EditorPanelManager::findPanelInEditorContext<ContentBrowserPanel>();
-            }
-
-            /** @brief 대상 에셋의 절대 경로입니다. 누른 항목 → 선택 스냅숏 → 창의 지금 선택 순서로 고릅니다. 없으면 빈 문자열입니다. */
-            static string findTargetPath( const EditorCommandTarget& target )
-            {
-                string       path;
-                const uint64 targetID = target._hoveredID != 0 ? target._hoveredID : ( target._listSelectedID.empty() ? 0 : target._listSelectedID.front() );
-                if ( targetID != 0 )
-                {
-                    return findAssetDiskPath( targetID ); // 모르는 id · 디스크에 없는 에셋이면 빈 경로 — 명령이 꺼진다
-                }
-                const ContentBrowserPanel* pPanel = findPanel();
-                if ( pPanel != nullptr )
-                    path = pPanel->getSelectedAssetPath();
-                return path;
             }
 
             /** @brief 에셋 페이로드 id 의 디스크 자리(절대 경로)입니다. 모르는 id 이거나 디스크에 없으면 빈 문자열입니다. */
@@ -215,97 +176,6 @@ namespace sw::editor
                     return string{};
                 const optional<AbsolutePath> diskPath = EditorPaths::getAssetPaths().findLooseFile( resourceID );
                 return diskPath.has_value() ? string( diskPath->str() ) : string{};
-            }
-
-            static bool hasTarget( const EditorCommandTarget& target ) { return findTargetPath( target ).empty() == false; }
-
-            /** @brief 대상이 폴더가 아닌 파일이면 true 입니다(이름 바꾸기 · 복제 · 지우기 · 참조 · 잠금). */
-            static bool hasFileTarget( const EditorCommandTarget& target )
-            {
-                const string path = findTargetPath( target );
-                return path.empty() == false && FileUtil::isDirectory( path ) == false;
-            }
-
-            static bool hasTextAssetTarget( const EditorCommandTarget& target )
-            {
-                const string path = findTargetPath( target );
-                return path.empty() == false && EditorAssetIndex::isTextAsset( path );
-            }
-
-            static void showInExplorer( const EditorCommandTarget& target ) { ContentBrowserViewModel::showInFileExplorer( findTargetPath( target ) ); }
-
-            static void copyRelativePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( EditorPaths::getAssetPaths().toAssetID( findTargetPath( target ) ).c_str() ); }
-
-            static void copyAbsolutePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( findTargetPath( target ).c_str() ); }
-
-            /** @brief 대상 에셋의 폴더를 열고 그 에셋을 고릅니다(언리얼 Browse to Asset — 인스펙터 에셋 칸의 행 메뉴가 부른다). */
-            static void selectInContentBrowser( const EditorCommandTarget& target )
-            {
-                const string        path    = findTargetPath( target );
-                EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( path.empty() || pPanels == nullptr || pPanels->setPanelOpen<ContentBrowserPanel>( true ) == false )
-                    return;
-                ContentBrowserPanel* pPanel = findWritablePanel();
-                if ( pPanel == nullptr )
-                    return;
-                pPanel->openFolder( FileUtil::getDirectoryPart( path ) );
-                pPanel->selectAssetPath( path );
-            }
-
-            static void findReferences( const EditorCommandTarget& target )
-            {
-                ContentBrowserPanel* pPanel = findWritablePanel();
-                if ( pPanel != nullptr )
-                    pPanel->showReferences( findTargetPath( target ), false );
-            }
-
-            static void showDependencies( const EditorCommandTarget& target )
-            {
-                ContentBrowserPanel* pPanel = findWritablePanel();
-                if ( pPanel != nullptr )
-                    pPanel->showReferences( findTargetPath( target ), true );
-            }
-
-            static EditorSourceControl& getSourceControl() { return ContentBrowserViewModel::getSourceControl(); }
-
-            static bool canLock( const EditorCommandTarget& target )
-            {
-                return hasFileTarget( target ) && getSourceControl().getProvider().canLock() && getSourceControl().findLock( findTargetPath( target ) ) == nullptr;
-            }
-
-            static bool canUnlock( const EditorCommandTarget& target )
-            {
-                return hasFileTarget( target ) && getSourceControl().getProvider().canLock() && getSourceControl().findLock( findTargetPath( target ) ) != nullptr;
-            }
-
-            static bool canRefreshSourceControl( const EditorCommandTarget& target ) { return hasFileTarget( target ) && getSourceControl().getProvider().canLock(); }
-
-            static void lockAsset( const EditorCommandTarget& target ) { (void)getSourceControl().requestLock( findTargetPath( target ) ); } // 결과는 공급자가 알린다
-
-            static void unlockAsset( const EditorCommandTarget& target ) { (void)getSourceControl().requestUnlock( findTargetPath( target ) ); } // 결과는 공급자가 알린다
-
-            static void refreshSourceControl( const EditorCommandTarget& /*target*/ ) { getSourceControl().requestRefresh(); }
-
-            static void renameAsset( const EditorCommandTarget& target )
-            {
-                ContentBrowserPanel* pPanel = findWritablePanel();
-                if ( pPanel != nullptr )
-                    pPanel->beginRename( findTargetPath( target ) );
-            }
-
-            static void duplicateAsset( const EditorCommandTarget& target )
-            {
-                ContentBrowserPanel* pPanel = findWritablePanel();
-                if ( pPanel != nullptr )
-                    (void)pPanel->duplicateAsset( findTargetPath( target ) ); // 실패는 copyFile 이 알린다
-            }
-
-            static void deleteAsset( const EditorCommandTarget& target )
-            {
-                // 지우기 전에 확인한다. 파일은 휴지통으로 보낸다. 모달은 메뉴 밖의 창 단위에서 연다.
-                ContentBrowserPanel* pPanel = findWritablePanel();
-                if ( pPanel != nullptr )
-                    pPanel->requestDeleteAsset( findTargetPath( target ) );
             }
 
             [[nodiscard]] static bool readSavedSearchCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -361,21 +231,6 @@ namespace sw::editor
                          &ContentBrowserPanelInternal::readCollectionItemCount );
     SW_AUTOMATION_WATCH( editorReferenceCount, "Editor.ReferenceCount", "Text assets that name gv_editorWatchAsset (the reference index)",
                          &ContentBrowserPanelInternal::readReferenceCount );
-    SW_DEV_COMMAND( ContentOpen, "content.open", "content.open <resource folder>", "Show a resource folder in the Content Browser (e.g. game/playground/models)",
-                    &ContentBrowserPanelInternal::runContentOpen );
-    // 에셋 맥락 메뉴 · 단축키(R4 — 메뉴 · 키 · 팔레트가 같은 명령). 순서 칸: 100 탐색기 · 경로, 200 참조, 300 버전 관리, 900 파일 편집.
-    SW_EDITOR_CONTEXT_COMMAND( AssetShowInExplorer, "asset.showInExplorer", &ContentBrowserPanelInternal::showInExplorer, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetCopyRelativePath, "asset.copyRelativePath", &ContentBrowserPanelInternal::copyRelativePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetCopyAbsolutePath, "asset.copyAbsolutePath", &ContentBrowserPanelInternal::copyAbsolutePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetBrowseTo, "asset.browseTo", &ContentBrowserPanelInternal::selectInContentBrowser, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetFindReferences, "asset.findReferences", &ContentBrowserPanelInternal::findReferences, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetShowDependencies, "asset.showDependencies", &ContentBrowserPanelInternal::showDependencies, &ContentBrowserPanelInternal::hasTextAssetTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetLock, "asset.lock", &ContentBrowserPanelInternal::lockAsset, &ContentBrowserPanelInternal::canLock, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetUnlock, "asset.unlock", &ContentBrowserPanelInternal::unlockAsset, &ContentBrowserPanelInternal::canUnlock, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetRefreshSourceControl, "asset.refreshSourceControl", &ContentBrowserPanelInternal::refreshSourceControl, &ContentBrowserPanelInternal::canRefreshSourceControl, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetRename, "asset.rename", &ContentBrowserPanelInternal::renameAsset, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetDuplicate, "asset.duplicate", &ContentBrowserPanelInternal::duplicateAsset, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetDelete, "asset.delete", &ContentBrowserPanelInternal::deleteAsset, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
 
     void ContentBrowserPanel::drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                                   const AssetEntry& entry )
@@ -1027,6 +882,21 @@ namespace sw::editor
             (void)ContentBrowserViewModel::openAsset( openPath ); // 실패는 openPath 가 알린다
     }
 
+    void ContentBrowserPanel::applyViewRequests()
+    {
+        // 에셋 명령(`Model/ContentBrowserCommands.cpp`)이 쌓은 요청 가운데 창이 열어야 하는 것(이름 칸 · 확인 대화상자 · 결과 창)만 여기 온다.
+        ContentBrowserRequest request;
+        while ( _model.takeViewRequest( request ) )
+        {
+            if ( request._kind == ContentBrowserRequestKind::Rename )
+                beginRename( request._absolutePath );
+            else if ( request._kind == ContentBrowserRequestKind::Delete )
+                requestDeleteAsset( request._absolutePath );
+            else
+                showReferences( request._absolutePath, request._kind == ContentBrowserRequestKind::ShowDependencies );
+        }
+    }
+
     void ContentBrowserPanel::drawContent()
     {
         // 폴더 이동: 마우스 뒤로 · 앞으로 단추(창 위에서)와 창 액션(`Editor.Panel.content_browser` 의 Alt+Left · Backspace · Alt+Right).
@@ -1050,6 +920,7 @@ namespace sw::editor
         // 검색어가 있으면 하위 폴더의 파일까지 본다. 언리얼과 유니티의 프로젝트 검색과 같다.
         _model.update( EditorListFilter{ _searchBuffer.c_str() }.isActive() );
         _bContentVisible = SW_TRUE;
+        applyViewRequests();
 
         drawToolbar();
         ImGui::Separator();

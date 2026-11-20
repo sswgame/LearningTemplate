@@ -42,11 +42,6 @@ namespace sw::editor
                 return SW_THEME_COLOR( "Signal", "Success" );
             }
 
-            static void openPanel()
-            {
-                (void)EditorPanelManager::getInEditorContext().setPanelOpen<AudioMixerPanel>( true ); // 패널은 이 파일에 등록되어 있다
-            }
-
             [[nodiscard]] static bool readBusCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( AudioMixerPanel::getBusCount() );
@@ -227,7 +222,7 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( AudioMixerPanel, AudioMixerPanel::kPanelID, EditorPanelCategory::Tool, 2100 );
-    SW_EDITOR_COMMAND( AudioMixerOpen, "window.audioMixer", &AudioMixerPanelInternal::openPanel, nullptr, NoScene );
+    SW_EDITOR_PANEL_OPEN_COMMAND( AudioMixerOpen, "window.audioMixer", AudioMixerPanel );
 
     SW_AUTOMATION_WATCH( editorAudioMixerBusCount, "Editor.AudioMixerBusCount", "Mixer buses the Audio Mixer window lists", &AudioMixerPanelInternal::readBusCount );
     SW_AUTOMATION_WATCH( editorAudioMixerMutedCount, "Editor.AudioMixerMutedCount", "Mixer buses that are muted", &AudioMixerPanelInternal::readMutedCount );

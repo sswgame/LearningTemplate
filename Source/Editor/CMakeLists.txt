@@ -375,7 +375,7 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 	sw_add_editor_layer_stubs(EditorTier${tier}MVVMView ${tier})
 	sw_apply_layer_stubs(EditorTier${tier}MVVMView "${editor_panel_view_stub_root}" ${list_panel_view_stub})
 	# 화면 도구 등록 줄(`SW_EDITOR_VISUALIZER_TOOL`)은 이 표시가 있는 번역 단위에서만 컴파일된다 — 도구를 등록한 파일은 View 목록에 들어야 짓는다.
-	target_compile_definitions(EditorTier${tier}MVVMView PRIVATE SW_EDITOR_PANEL_VIEW=1)
+	target_compile_definitions(EditorTier${tier}MVVMView PRIVATE SW_EDITOR_PANEL_VIEW=1 SW_DEV_COMMAND_REGISTRATION=0) # 명령 등록 줄(`SW_EDITOR_COMMAND` · `SW_DEV_COMMAND`)도 View 에서 짓지 못한다
 	if(TARGET EditorCoreReflect)
 		add_dependencies(EditorTier${tier}MVVMView EditorCoreReflect_ReflectionGen)
 	endif()

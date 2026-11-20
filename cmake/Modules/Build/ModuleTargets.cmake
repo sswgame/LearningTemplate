@@ -471,7 +471,7 @@ function(sw_add_editor_extension TARGET_NAME)
 			LINK EditorModule Engine ModuleAPI ${list_linked_module} imgui implot imgui_nodeeditor
 		)
 		target_include_directories(${TARGET_NAME}PanelView BEFORE PRIVATE "${panel_view_stub_root}")
-		target_compile_definitions(${TARGET_NAME}PanelView PRIVATE SW_EDITOR_PANEL_VIEW=1) # 화면 도구 등록 줄(`SW_EDITOR_VISUALIZER_TOOL`)은 View 에서만 짓는다
+		target_compile_definitions(${TARGET_NAME}PanelView PRIVATE SW_EDITOR_PANEL_VIEW=1 SW_DEV_COMMAND_REGISTRATION=0) # 화면 도구 등록 줄(`SW_EDITOR_VISUALIZER_TOOL`)은 View 에서만 짓는다
 		sw_apply_editor_input_ban(${TARGET_NAME}PanelView)
 	endif()
 	add_dependencies(EditorAll ${TARGET_NAME})
