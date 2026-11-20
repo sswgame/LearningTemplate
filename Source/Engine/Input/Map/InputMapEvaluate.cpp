@@ -816,9 +816,9 @@ namespace sw
         {
             for ( auto it = _listLayerStack.rbegin(); it != _listLayerStack.rend(); ++it )
             {
-                if ( *it == layer )
+                if ( it->_name == layer )
                     return true;
-                const LayerDef* pTopLayer = findLayer( *it );
+                const LayerDef* pTopLayer = findLayer( it->_name );
                 if ( pTopLayer != nullptr && pTopLayer->_bBlockLower == SW_TRUE )
                     return false;
             }

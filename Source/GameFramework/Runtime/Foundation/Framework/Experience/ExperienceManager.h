@@ -76,7 +76,7 @@ namespace sw
         void onMapLoaded( Scene* pScene );
         /** @brief @p definition 을 켭니다 — 키트(적은 순서) → 카탈로그 맞춤 → 입력 문맥 → UI. 하나라도 지면 그때까지 건 것을 거두고(해제 검사 포함) false 입니다. */
         [[nodiscard]] bool activate( const ExperienceDefinition& definition );
-        /** @brief 입력 맵 레이어를 켜고(`InputMap::pushLayer`) 끌 때 뺍니다. 없는 레이어 · 입력 서비스가 없는 호스트에 적은 레이어는 오류입니다. */
+        /** @brief 입력 맵 레이어를 스택에 넣어 켜고(`InputMap::pushLayer`) 끌 때 빼서 넣기 전의 켬으로 되돌립니다(`popLayer` — 한 쌍). 없는 레이어 · 입력 서비스가 없는 호스트에 적은 레이어는 오류입니다. */
         [[nodiscard]] static bool pushInputLayers( ExperienceScope& scope );
 
     private:

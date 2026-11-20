@@ -317,23 +317,26 @@ namespace sw
     void InputMap::pushLayer( const hashed_string& layer, bool blockLower, bool showCursor )
     {
         const hashed_string hLayer( layer );
-        ensureLayer( hLayer, 0, true, blockLower );
-        LayerDef* pLayer = findLayer( hLayer );
-        if ( pLayer != nullptr )
-        {
-            pLayer->_bEnabled    = SW_TRUE;
-            pLayer->_bBlockLower = blockLower ? SW_TRUE : SW_FALSE;
-        }
+        const bool          bRegistered = findLayer( hLayer ) != nullptr;
+        LayerDef&           def         = ensureLayer( hLayer, 0, true, blockLower );
 
+        LayerStackEntry entry{};
+        entry._name = hLayer;
+        // push 가 만든 레이어는 pop 뒤에 꺼진다 — 등록되지 않았던 것은 켜지지 않았던 것이다.
+        entry._bEnabledBefore    = bRegistered ? def._bEnabled : SW_FALSE;
+        entry._bBlockLowerBefore = bRegistered ? def._bBlockLower : SW_FALSE;
         for ( auto it = _listLayerStack.begin(); it != _listLayerStack.end(); ++it )
         {
-            if ( *it == hLayer )
+            if ( it->_name == hLayer )
             {
+                entry = *it; // 다시 넣기 — 처음 push 전의 값을 지킨다
                 _listLayerStack.erase( it );
                 break;
             }
         }
-        _listLayerStack.push_back( hLayer );
+        def._bEnabled    = SW_TRUE;
+        def._bBlockLower = blockLower ? SW_TRUE : SW_FALSE;
+        _listLayerStack.push_back( entry );
         if ( _pInput != nullptr && showCursor )
             _pInput->setCursorVisible( true );
     }
@@ -341,27 +344,56 @@ namespace sw
     void InputMap::popLayer()
     {
         if ( _listLayerStack.empty() == false )
-            _listLayerStack.pop_back();
+            eraseLayerStackEntry( _listLayerStack.size() - 1 );
     }
 
     void InputMap::popLayer( const hashed_string& layer )
     {
         const hashed_string hLayer( layer );
-        for ( auto it = _listLayerStack.rbegin(); it != _listLayerStack.rend(); ++it )
+        for ( size_t index = _listLayerStack.size(); index > 0; --index )
         {
-            if ( *it == hLayer )
+            if ( _listLayerStack[index - 1]._name == hLayer )
             {
-                _listLayerStack.erase( std::next( it ).base() );
+                eraseLayerStackEntry( index - 1 );
                 break;
             }
         }
     }
 
+    void InputMap::eraseLayerStackEntry( size_t index )
+    {
+        const LayerStackEntry entry = _listLayerStack[index];
+        _listLayerStack.erase( _listLayerStack.begin() + static_cast<ptrdiff_t>( index ) );
+        LayerDef* pLayer = findLayer( entry._name );
+        if ( pLayer == nullptr )
+            return;
+        pLayer->_bEnabled    = entry._bEnabledBefore;
+        pLayer->_bBlockLower = entry._bBlockLowerBefore;
+    }
+
     string_view InputMap::getCurrentTopLayer() const
     {
         if ( _listLayerStack.empty() == false )
-            return _listLayerStack.back().view();
+            return _listLayerStack.back()._name.view();
         return _defaultLayerName.view();
+    }
+
+    void InputMap::collectLayerStack( vector<hashed_string>& outListLayer ) const
+    {
+        outListLayer.clear();
+        outListLayer.reserve( _listLayerStack.size() );
+        for ( const LayerStackEntry& entry : _listLayerStack )
+            outListLayer.push_back( entry._name );
+    }
+
+    void InputMap::collectEnabledLayers( vector<hashed_string>& outListLayer ) const
+    {
+        outListLayer.clear();
+        for ( const LayerDef& def : _listLayerEntry )
+        {
+            if ( def._bEnabled == SW_TRUE )
+                outListLayer.push_back( def._name );
+        }
     }
 
     void InputMap::enableOnlyLayer( const hashed_string& layer )
@@ -374,8 +406,14 @@ namespace sw
                 continue;
             def._bEnabled = ( name == hLayer ) ? SW_TRUE : SW_FALSE;
         }
+        // 켬을 통째로 다시 정한다 — 앞 칸들이 기억한 값은 버리고, 남긴 칸은 지금 값을 기억해 pop 이 아무것도 바꾸지 않는다.
+        const LayerDef* pLayer = findLayer( hLayer );
+        LayerStackEntry entry{};
+        entry._name              = hLayer;
+        entry._bEnabledBefore    = pLayer != nullptr ? pLayer->_bEnabled : SW_FALSE;
+        entry._bBlockLowerBefore = pLayer != nullptr ? pLayer->_bBlockLower : SW_FALSE;
         _listLayerStack.clear();
-        _listLayerStack.push_back( hLayer );
+        _listLayerStack.push_back( entry );
     }
 
     bool InputMap::rebindKey( const hashed_string& action, Key newKey, uint32 bindIndex )

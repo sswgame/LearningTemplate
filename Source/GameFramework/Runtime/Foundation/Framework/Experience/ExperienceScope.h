@@ -133,11 +133,12 @@ namespace sw
             string _name;
             string _value;
         };
-        /** @brief 범위 밖 상태의 한 시점 사본입니다 — 게임 범위의 칸 · 입력 레이어 스택 · 전역 변수 값(이름 순). */
+        /** @brief 범위 밖 상태의 한 시점 사본입니다 — 게임 범위의 칸 · 입력 레이어 스택 · 켜진 입력 레이어 · 전역 변수 값(이름 순). */
         struct StateSnapshot
         {
             vector<uint64>        _listServiceType{};
             vector<hashed_string> _listInputLayer{};
+            vector<hashed_string> _listEnabledInputLayer{}; ///< 스택 밖에서 켠 레이어도 빈 스택에서는 살아난다 — 켬도 따로 견준다
             vector<GlobalValue>   _listGlobalValue{};
         };
         /** @brief 지금 상태를 찍습니다. */
