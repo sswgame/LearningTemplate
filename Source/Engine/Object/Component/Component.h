@@ -708,34 +708,63 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 컴포넌트의 틱 재정의를 묻는 통로의 태그입니다(`ReflectAccess<ComponentTickAccessTag>`). */
+    struct ComponentTickAccessTag;
+
     /**
-     * @brief 타입 T(또는 그 조상 중 `Component` 가 아닌 것)가 `onTick` 을 오버라이드했는지 나타냅니다. 주 틱의 기본값이 이것입니다.
-     * @details `&T::onTick` 의 타입이 `Component` 의 것이면 아무도 오버라이드하지 않은 것이다. 볼 수 없으면(보호나 비공개 오버라이드라
-     *          접근이 막히면) 오버라이드한 것으로 취급한다. 그때는 생성자의 값을 그대로 둔다.
+     * @brief 틱 재정의 판정의 통로 — `REFLECT_BODY()` 가 친구로 여는 자리라 protected · private 재정의도 본다.
+     * @details 예전 트레이트는 바깥(친구가 아닌) 부분 특수화에서 `&T::onTick` 을 물어 protected · private 재정의에서 하드 오류였다(SFINAE 가 아니라 기반 절에서 터졌다).
+     *          멤버 포인터의 클래스 형식이 `Component` 면 아무도 재정의하지 않은 것이다. 중간 기반의 private 재정의처럼 이름이 닿지 않으면 재정의한 것으로 친다(생성자의 값을 그대로 둔다).
      */
-    template <typename T, typename = void>
-    struct HasOnTickOverride : std::true_type
+    template <>
+    struct ReflectAccess<ComponentTickAccessTag>
     {
+        template <typename T>
+        static constexpr bool hasOnTickOverride() noexcept
+        {
+            return hasOnTickOverrideImpl<T>( 0 );
+        }
+        template <typename T>
+        static constexpr bool hasOnSubTickOverride() noexcept
+        {
+            return hasOnSubTickOverrideImpl<T>( 0 );
+        }
+
+    private:
+        template <typename T>
+        static constexpr auto hasOnTickOverrideImpl( int ) noexcept -> decltype( &T::onTick, bool() )
+        {
+            return std::is_same_v<decltype( &T::onTick ), void ( Component::* )( TickContext& )> == false;
+        }
+        template <typename T>
+        static constexpr bool hasOnTickOverrideImpl( ... ) noexcept
+        {
+            return true;
+        }
+        template <typename T>
+        static constexpr auto hasOnSubTickOverrideImpl( int ) noexcept -> decltype( &T::onSubTick, bool() )
+        {
+            return std::is_same_v<decltype( &T::onSubTick ), void ( Component::* )( uint32, TickContext& )> == false;
+        }
+        template <typename T>
+        static constexpr bool hasOnSubTickOverrideImpl( ... ) noexcept
+        {
+            return true;
+        }
     };
 
+    /** @brief 타입 T(또는 그 조상 중 `Component` 가 아닌 것)가 `onTick` 을 오버라이드했는지 나타냅니다. 주 틱의 기본값이 이것입니다(`ReflectAccess<ComponentTickAccessTag>`). */
     template <typename T>
-    struct HasOnTickOverride<T, std::void_t<decltype( &T::onTick )>>
-        : std::bool_constant<std::is_same_v<decltype( &T::onTick ), void ( Component::* )( TickContext& )> == false>
+    struct HasOnTickOverride : std::bool_constant<ReflectAccess<ComponentTickAccessTag>::hasOnTickOverride<T>()>
     {
     };
 
     template <typename T>
     inline constexpr bool HasOnTickOverride_v = HasOnTickOverride<T>::value;
 
-    /** @brief 타입 T(또는 그 조상 중 `Component` 가 아닌 것)가 `onSubTick` 을 오버라이드했는지 나타냅니다. 규칙은 `HasOnTickOverride` 와 같다(볼 수 없으면 오버라이드한 것으로 친다). */
-    template <typename T, typename = void>
-    struct HasOnSubTickOverride : std::true_type
-    {
-    };
-
+    /** @brief 타입 T(또는 그 조상 중 `Component` 가 아닌 것)가 `onSubTick` 을 오버라이드했는지 나타냅니다. 규칙은 `HasOnTickOverride` 와 같다. */
     template <typename T>
-    struct HasOnSubTickOverride<T, std::void_t<decltype( &T::onSubTick )>>
-        : std::bool_constant<std::is_same_v<decltype( &T::onSubTick ), void ( Component::* )( uint32, TickContext& )> == false>
+    struct HasOnSubTickOverride : std::bool_constant<ReflectAccess<ComponentTickAccessTag>::hasOnSubTickOverride<T>()>
     {
     };
 

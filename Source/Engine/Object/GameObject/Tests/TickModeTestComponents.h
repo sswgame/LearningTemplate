@@ -186,6 +186,22 @@ namespace sw
     };
 
     /**
+     * @brief 틱을 protected 로 재정의한 컴포넌트입니다 — 재정의 트레이트(`HasOnTickOverride_v`)와 일괄 등록(`makeDeclaredTickEntry`)이 친구 통로(`ReflectAccess`)로 본다.
+     * @details 예전 트레이트는 바깥 부분 특수화에서 `&T::onTick` 을 물어 이 모양에서 하드 오류였다.
+     */
+    REFLECT( HideInMenu )
+    class TickModeProtectedTickTestComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        uint32 _tickCount = 0;
+
+    protected:
+        void onTick( TickContext& /*context*/ ) override { ++_tickCount; }
+    };
+
+    /**
      * @brief 해체될 때(`onDestroy`) 같은 매니저에 오브젝트를 하나 만드는 컴포넌트입니다(`TestObjectLifetime.cpp` — 씬을 비우는 중의 생성).
      * @details 게임 코드의 "죽을 때 파편 · 드롭을 남긴다" 와 같은 모양이다. 만든 수를 테스트가 준 칸에 센다.
      */

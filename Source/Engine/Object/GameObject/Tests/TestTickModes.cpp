@@ -196,6 +196,10 @@ static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeFollowerTes
 static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeFollowerAltTestComponent>() == false );
 static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeMainDerivedTestComponent>() == false );
 static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<LifetimeSpawnOnDestroyTestComponent>() == false );
+// 재정의 트레이트도 친구 통로로 본다 — protected 재정의가 하드 오류가 아니라 "재정의함" 이다.
+static_assert( HasOnTickOverride_v<TickModeProtectedTickTestComponent> );
+static_assert( ReflectAccess<TickAccessTag>::hasDeclaredTick<TickModeProtectedTickTestComponent>() );
+static_assert( HasOnTickOverride_v<TickModeMoverTestComponent> && HasOnTickOverride_v<LifetimeSpawnOnDestroyTestComponent> == false );
 
 /**
  * @brief [TickModesTest] 모드 없는 등록 줄(`makeDeclaredTickEntry`)은 직접 선언한 형식만 Batch 줄로 오르고, 물려받은 형식의 줄은 레지스트리가 받지 않는다
