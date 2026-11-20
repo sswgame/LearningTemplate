@@ -292,7 +292,6 @@ namespace sw
 {
     bool NavMeshAsset::bakeAllTiles( INavMeshTileStore& navMesh, NavMeshGeometry& geometry, const vector<NavConvexVolume>* pExtraVolume, NavMeshBakeStats* pOutStats )
     {
-        SW_MEMORY_SCOPE( Navigation );
         const Stopwatch    stopwatch;
         const NavTileGrid& grid      = navMesh.getTileGrid();
         const uint32       tileCount = static_cast<uint32>( grid.getTileCount() );

@@ -58,6 +58,8 @@ namespace sw
     class SW_API PrefabCache final : public AssetCacheBase
     {
     public:
+        /** @brief 캐시 진입점(읽기 · 스폰 · 중첩 인스턴스)이 거는 할당 태그입니다. */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::Scene;
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Prefab";
         /** @brief 빈 프리팹 캐시로 만듭니다. */

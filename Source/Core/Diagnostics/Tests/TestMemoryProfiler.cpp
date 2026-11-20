@@ -168,7 +168,7 @@ SW_TEST_CASE( MemoryProfilerTest, TopCallStackQueryDoesNotDriftLiveCounters )
 /**
  * @brief 태그 스코프 안의 할당은 그 태그로 세고, 스코프를 나가면 태그가 되돌아간다
  * @details 해제는 할당 헤더에 적힌 태그로 뺀다 — 스코프 밖(다른 태그 아래)에서 풀어도 같은 줄에서 빠진다.
- *          한 블록에 스코프 둘을 나란히 두는 것도 컴파일돼야 한다(변수 이름에 줄 번호가 붙는다).
+ *          스코프는 구조 자리(서브시스템 생성 · 초기화, 에셋 로더, 모듈 경계)가 거는 형식 `ScopedMemoryTag` 하나다 — 여기서는 그 형식을 직접 본다.
  */
 SW_TEST_CASE( MemoryProfilerTest, ScopedTagAttributesAllocationsAndRestores )
 {
@@ -185,12 +185,11 @@ SW_TEST_CASE( MemoryProfilerTest, ScopedTagAttributesAllocationsAndRestores )
     void* pTextureBlock{ nullptr };
     void* pMeshBlock{ nullptr };
     {
-        SW_MEMORY_SCOPE( Texture );
+        const ScopedMemoryTag textureScope{ MemoryTag::Texture };
         SW_EXPECT_TRUE( Memory::getCurrentMemoryTag() == MemoryTag::Texture );
         pTextureBlock = Memory::allocate( kBlockBytes );
         {
-            SW_MEMORY_SCOPE( Mesh );
-            SW_MEMORY_SCOPE( Mesh );
+            const ScopedMemoryTag meshScope{ MemoryTag::Mesh };
             SW_EXPECT_TRUE( Memory::getCurrentMemoryTag() == MemoryTag::Mesh );
             pMeshBlock = Memory::allocate( kBlockBytes );
         }
@@ -684,7 +683,7 @@ SW_TEST_CASE( MemoryProfilerTest, TagsFollowTheBlockAcrossThreads )
     void*         pExplicit{ nullptr };
     thread        worker( ThreadTestAccess::getKey(), [ppBlock, &pExplicit]()
            {
-        SW_MEMORY_SCOPE( UI );
+        const ScopedMemoryTag uiScope{ MemoryTag::UI };
         for ( uint32 index = 0; index < kBlockCount; ++index )
         {
             ppBlock[index] = Memory::allocate( kBlockBytes );

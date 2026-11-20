@@ -158,7 +158,8 @@ namespace
                                              stage,
                                              engine::EngineSubsystemAfter<TAfter...>::getHashes(),
                                              "(test)",
-                                             &engine::EngineRegistrationOps<T>::emplace }
+                                             &engine::EngineRegistrationOps<T>::emplace,
+                                             engine::EngineSubsystemMemoryTag<T>::kValue }
         {
         }
     };

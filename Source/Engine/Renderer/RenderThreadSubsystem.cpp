@@ -24,10 +24,7 @@ namespace sw
     SubsystemInitResult RenderThreadSubsystem::initializeSubsystem()
     {
         if ( _renderThread == nullptr )
-        {
-            SW_MEMORY_SCOPE( RenderCPU );
-            _renderThread = make_unique<RenderThread>();
-        }
+            _renderThread = make_unique<RenderThread>(); // 초기화 동안 형식의 용도 태그가 걸려 있다(`SubsystemCollection::initializeAt`)
         // 화면 밖 씬 렌더러도 디바이스 · 주 렌더러와 함께 붙인다 — 스레드가 뜬 뒤 따로 꽂으면 렌더 스레드가 읽는 포인터를 게임 스레드가 덮는 모양이다.
         if ( _renderThread->attach( &_rhiSubsystem.findRHI()->getDevice(), &_frameRendererSubsystem.getFrameRenderer(), &_frameRendererSubsystem.getOffscreenRenderers() ) == false )
         {

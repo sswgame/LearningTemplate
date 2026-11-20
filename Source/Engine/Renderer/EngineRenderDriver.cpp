@@ -349,8 +349,8 @@ namespace sw
         // 이번 프레임의 게임 상태를 싣고, 캔버스는 UI 갱신이 칠한 목록을 싣는다.
         BLOCK( "RenderFramePacket 제출" )
         {
-            SW_MEMORY_SCOPE( RenderCPU );
-            RenderFramePacket& packet = _pPacketBuilder->beginPacket();
+            const ScopedMemoryTag memoryScope{ EngineRenderDriverSubsystem::kSubsystemMemoryTag }; // 패킷은 렌더러의 CPU 측 몫이다(주인 서브시스템의 용도)
+            RenderFramePacket&    packet = _pPacketBuilder->beginPacket();
             // 화면 출력은 패킷이 뜬 요청을 능력에 맞춰 적용한 값으로 싣는다 — 렌더러는 장치의 색 공간과 이 값(종이 흰색 · 최대 휘도)만 본다.
             packet._settings._displayOutput = applyDisplayOutput( packet._settings._displayOutput );
             // 그리지 않는 프레임도 패킷은 똑같이 짓는다 — 짓기가 게임 상태를 건드리는 몫(LOD 뷰 · 그려진 화면비 · 컷 소비)과 GPU 장면의 고친 구간이 그리는 실행과 같아야 한다.

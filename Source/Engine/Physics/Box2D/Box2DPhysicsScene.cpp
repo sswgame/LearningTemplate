@@ -353,7 +353,6 @@ namespace sw
 
     void Box2DPhysicsScene::step( float32 fixedDeltaTime )
     {
-        SW_MEMORY_SCOPE( Physics );
         _listContactEvent.clear();
         _listMovedBody.clear();
         if ( fixedDeltaTime > 0.0f )
@@ -1197,7 +1196,6 @@ namespace sw
     // 그대로 넘기면 교착할 수 있다. 바디가 수천이면 설정(`PhysicsSettings::_workerCount2D`)으로 씬마다 전용 워커를 붙인다(`Box2DWorkerPool`).
     unique_ptr<IPhysicsScene2D> PhysicsBackend::createScene2D( const PhysicsSettings& settings )
     {
-        SW_MEMORY_SCOPE( Physics );
         return make_unique<Box2DPhysicsScene>( settings );
     }
 

@@ -133,9 +133,9 @@ namespace sw
 
     unique_ptr<InputMap> DebugKeyActions::createInputMap( const AssetID& assetID )
     {
-        const string_view inputMapPath = assetID.view();
-        SW_MEMORY_SCOPE( EngineMisc );
-        unique_ptr<InputMap> map = make_unique<InputMap>();
+        const string_view     inputMapPath = assetID.view();
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
+        unique_ptr<InputMap>  map = make_unique<InputMap>();
         // 셸 단축키와 개발 콘솔은 콘솔이 키보드를 쥔 동안에도 키를 받아야 한다(닫는 키 · 편집 키).
         map->setKeyboardFocusIgnored( true );
         if ( inputMapPath.empty() || map->loadFromAsset( assetID ) == false )

@@ -86,13 +86,14 @@ namespace sw::engine
     }
 
     EngineSubsystemRecord::EngineSubsystemRecord( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, EngineSubsystemStage stage, span<const uint64> listAfterHash,
-                                                  const utf8* pAfterNames, EngineSubsystemFactory pfnFactory )
+                                                  const utf8* pAfterNames, EngineSubsystemFactory pfnFactory, MemoryTag memoryTag )
         : _pTypeName{ pTypeName }
         , _typeHash{ typeHash }
         , _stage{ stage }
         , _listAfterHash{ listAfterHash }
         , _pAfterNames{ pAfterNames }
         , _pfnFactory{ pfnFactory }
+        , _memoryTag{ memoryTag }
         , _pNext{ list._pSubsystemHead }
     {
         list._pSubsystemHead = this;
@@ -314,7 +315,10 @@ namespace sw::engine
             const EngineSubsystemRecord& record     = *listOrder[recordIndex];
             const uint32                 countStart = scope.getCollection().getSubsystemCount();
             EngineSubsystemFactoryScope  factoryScope{ scope, record };
-            record._pfnFactory( factoryScope, build );
+            {
+                const ScopedMemoryTag factoryMemoryTag{ record._memoryTag }; // 공장 본문(형식 밖 객체 · 노출 칸)도 그 서브시스템의 용도로 센다 — 공장이 태그를 적지 않는다
+                record._pfnFactory( factoryScope, build );
+            }
             for ( uint32 index = countStart; index < scope.getCollection().getSubsystemCount(); ++index )
             {
                 listBuilt[recordIndex].push_back( index );

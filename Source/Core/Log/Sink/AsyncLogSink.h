@@ -39,6 +39,8 @@ namespace sw
     class SW_API AsyncLogSink final : public ILogSink
     {
     public:
+        /** @brief 로그 레코드 · 쓰기 스레드의 할당 태그입니다 — 부른 쪽이 아니라 로거의 몫이다(리스너는 자기 태그를 붙인다). */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::EngineMisc;
         /**
          * @brief 기본 출력 장치(콘솔 · 파일)를 하나씩 달고, 전역 싱크가 비어 있으면 자신을 등록합니다.
          * @param fixedLogFilePath 파일 장치가 쓸 파일 하나(`-log-file`). 비면 `Saved/Logs` 에 날짜 · 세션 이름으로 쓴다(`FileLogOutput`).

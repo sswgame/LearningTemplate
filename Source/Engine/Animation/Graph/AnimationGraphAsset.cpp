@@ -119,8 +119,8 @@ namespace sw
 
     bool AnimationGraphAsset::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = assetID.view();
-        SW_MEMORY_SCOPE( Animation );
+        const string_view     path = assetID.view();
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         clear();
         if ( path.empty() )
             return false;
@@ -133,7 +133,7 @@ namespace sw
 
     bool AnimationGraphAsset::loadFromDiskFile( string_view diskPath )
     {
-        SW_MEMORY_SCOPE( Animation );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         clear();
         if ( diskPath.empty() )
             return false;

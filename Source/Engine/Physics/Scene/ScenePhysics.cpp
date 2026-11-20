@@ -127,7 +127,6 @@ namespace sw
         if ( _manager.isPhysicsStepEnabled() == false )
             return;
         SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
-        SW_MEMORY_SCOPE( Physics );
         updateStreamingHolds();
         step( deltaTime );
     }
@@ -686,7 +685,6 @@ namespace sw
         const bool bHasJobs = getComponentCount() != 0 || _pScene3D != nullptr || _pScene2D != nullptr;
         if ( bHasJobs == false )
             return;
-        SW_MEMORY_SCOPE( Physics );
         configureOnce();
 
         // 바디 → 관절 → 캐릭터. 콜백이 컴포넌트를 더하거나 뺄 수는 없다(구조 변경은 이 밖에서 난다). 훅 사이마다 구간이 낡았는지 본다.

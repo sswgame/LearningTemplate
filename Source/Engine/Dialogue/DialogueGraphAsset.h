@@ -10,6 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/MemoryTag.h"
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Asset/GraphCommentBox.h"
@@ -180,6 +181,9 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        /** @brief 읽는 동안의 할당 태그입니다 — 대사 그래프는 공유 캐시 로더 없이 컴포넌트 · 에디터가 직접 읽는다. */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::Script;
 
         /** @brief 대화 그래프 파일의 접미사입니다. 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
         static constexpr string_view kExtension = ".dialogue.xml";

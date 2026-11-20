@@ -460,7 +460,7 @@ namespace sw
 
     NavMeshRuntime* SceneNavigation::createRuntime( const hashed_string& agentType, NavMeshArrival arrival )
     {
-        SW_MEMORY_SCOPE( Navigation );
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag }; // 틱 밖(에디터 굽기 · 경로 질의의 `ensureNavMesh`)에서도 부른다 — 내비메시는 이 서비스의 몫이다
         SW_PROFILE_SCOPE( "GT.Navigation.createNavMesh" );
         const NavAgentTypeDef* pType = resolveAgentType( agentType );
         if ( pType == nullptr || _pManager == nullptr )
@@ -768,7 +768,6 @@ namespace sw
         const bool bAnything = _listAgent.empty() == false || _listObstacle.empty() == false || _listSurface.empty() == false || _listRuntime.empty() == false ||
                                _listLink.empty() == false;
         _waitingMeshCount = 0; // 이번 갱신에 미룬 마련만 센다(사라진 표면 · 에이전트의 옛 기다림이 남지 않게)
-        SW_MEMORY_SCOPE( Navigation );
         SW_PROFILE_SCOPE( "GT.Navigation.tick" );
         // ⓪ 지난 프레임에 넘긴 경로 질의를 수확한다 — 내비메시가 없어도 돈다(요청자는 `Failed` 결과를 받아야 기다림이 끝난다).
         const NavMeshWriteAccess access = completeNavMeshReads();
@@ -1103,7 +1102,6 @@ namespace sw
     {
         if ( _bCrowdUpdateLaunched == SW_FALSE )
             return;
-        SW_MEMORY_SCOPE( Navigation );
         SW_PROFILE_SCOPE( "GT.Navigation.writeAgents" );
         waitCrowdUpdates();
         _bCrowdUpdateLaunched = SW_FALSE;

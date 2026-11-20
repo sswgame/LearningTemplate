@@ -177,9 +177,9 @@ namespace sw
 
         static void registerTypesFromHeads( string_view moduleName, const ModuleRegistrarHeads& heads, SceneSync sceneSync )
         {
-            SW_MEMORY_SCOPE( Reflection );
-            TypeRegistrar* pTypeHead = heads._pType;
-            EnumRegistrar* pEnumHead = heads._pEnum;
+            const ScopedMemoryTag memoryScope{ TypeRegistry::kSubsystemMemoryTag };
+            TypeRegistrar*        pTypeHead = heads._pType;
+            EnumRegistrar*        pEnumHead = heads._pEnum;
             // 전역 변수는 새로 뗀 것만 올린다(아래 캐시에 넣지 않는다) — 각자 찍힌 모듈 이름으로. 모듈이 자기 변수를 읽기 전에 커맨드라인 보류값이 여기서 적용된다.
             if ( heads._pVariable != nullptr )
                 getSubsystem<GlobalVariableManager>().registerPendingVariables( heads._pVariable );

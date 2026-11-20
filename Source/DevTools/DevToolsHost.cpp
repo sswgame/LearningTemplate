@@ -116,10 +116,7 @@ namespace sw
         (void)startup.emplaceSubsystem<ReloadTracker>();
         // 설정 파일 리로드는 서버에도 선다.
         if ( parts._pConfigManager != nullptr )
-        {
-            SW_MEMORY_SCOPE( EngineMisc );
             (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *parts._pConfigManager );
-        }
         // 회선 흉내 — 세션이 열기 전에 샤드 전송 데코레이터를 건다(실행 중 조건은 `net.emulation`).
         // 리슨 포트 덮어쓰기(`-gv_netListenPort`) — 세션이 기동 역할을 정하기 전에 건다.
         if ( parts._pNetSession != nullptr )

@@ -764,9 +764,8 @@ namespace sw::editor
 
     void ConsolePanel::onLogWritten( const LogEntry& entry )
     {
-        // 어느 스레드 · 어느 스코프에서 쓴 로그든 콘솔이 보관하고 있는 사본은 에디터 담당이다.
-        SW_MEMORY_SCOPE( Editor );
-        ConsoleLogEntry consoleEntry;
+        const ScopedMemoryTag memoryScope{ kMemoryTag }; // 로거 스레드가 부른다 — 모듈 경계를 지나지 않는다
+        ConsoleLogEntry       consoleEntry;
         static_cast<LogEntry&>( consoleEntry ) = entry;
         // 받는 순간 묻는다 — 선언은 케이스 · 시나리오 단계가 도는 동안만 살고, 로그는 부른 스레드에서 바로 온다. 시나리오는 로그 게이트와 같은 판정(`classify`)을 읽는다
         // (`<AllowLog>` 는 나와도 되는 줄일 뿐 기대한 줄이 아니라 경고색 그대로다). 언리얼 Automation 의 `AddExpectedError` 도 기대 오류를 로그 출력에서 따로 표시한다.

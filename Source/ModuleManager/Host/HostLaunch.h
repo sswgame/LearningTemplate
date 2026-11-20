@@ -41,6 +41,9 @@ namespace sw
     class SW_MODULEMANAGER_API HostLaunch
     {
     public:
+        /** @brief 부팅 열의 할당 태그입니다(모듈 라이브러리 올리기 — `loadModuleLibraries`). 모듈 본체는 모듈 매니저가 그 종류의 태그로 건다. */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::EngineMisc;
+
         HostLaunch();
         ~HostLaunch();
 

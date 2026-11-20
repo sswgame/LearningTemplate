@@ -16,10 +16,7 @@ namespace sw
     void HostDevTools::addToHostScope( SubsystemScope& host, Engine& engine )
     {
         // 개발 도구 — 엔진 기동 확장(델리게이트)으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
-        {
-            SW_MEMORY_SCOPE( EngineMisc );
-            _pDevTools = &host.emplaceSubsystem<DevToolsHost>();
-        }
+        _pDevTools = &host.emplaceSubsystem<DevToolsHost>();
         engine.setStartupExtension( _pDevTools->makeStartupExtension() );
         // 콘텐츠 폴더 감시 — 기능 · 게임의 데이터 다시 읽기가 범위에서 찾는다(배포에는 없다).
         const bool bFolderWatchBound = host.exposeMember<IContentFolderWatch>( *_pDevTools, _pDevTools->getContentFolderWatch() ); // 주인은 `DevToolsHost` — 함께 지워진다

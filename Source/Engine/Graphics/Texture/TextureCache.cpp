@@ -485,9 +485,9 @@ namespace sw
 
     TextureHandle TextureCache::request( string_view relativePath, AssetLoadStart start, TextureStreamingGroup group )
     {
-        SW_MEMORY_SCOPE( Texture );
-        IRHIDevice* const pDevice = _impl->_pBoundDevice.load( std::memory_order_acquire );
-        const string      key     = AssetRedirect::toCacheKey( relativePath );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
+        IRHIDevice* const     pDevice = _impl->_pBoundDevice.load( std::memory_order_acquire );
+        const string          key     = AssetRedirect::toCacheKey( relativePath );
         if ( key.empty() || pDevice == nullptr )
         {
             shared_ptr<TextureLoadOperation> pFailed = sw::make_shared<TextureLoadOperation>( key, pDevice, TextureLoadOperation::Source::File, nullptr, _impl );
@@ -1235,8 +1235,8 @@ namespace sw
 
     bool TextureCache::resizeRenderTarget( string_view relativePath, uint32 width, uint32 height, IRHIDevice* pDevice )
     {
-        SW_MEMORY_SCOPE( Texture );
-        const bool bInvalidRenderTargetRequest = _impl == nullptr || pDevice == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0;
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
+        const bool            bInvalidRenderTargetRequest = _impl == nullptr || pDevice == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0;
         if ( bInvalidRenderTargetRequest )
             return false;
         const string key = AssetRedirect::toCacheKey( relativePath );
@@ -1840,9 +1840,9 @@ namespace sw
 
     ReloadResult TextureCache::reload( const AssetID& assetID )
     {
-        const string_view relativePath = assetID.view();
-        SW_MEMORY_SCOPE( Texture );
-        IRHIDevice* const pDevice = _impl != nullptr ? _impl->_pBoundDevice.load( std::memory_order_acquire ) : nullptr;
+        const string_view     relativePath = assetID.view();
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
+        IRHIDevice* const     pDevice = _impl != nullptr ? _impl->_pBoundDevice.load( std::memory_order_acquire ) : nullptr;
         // 렌더 텍스처 · CPU 텍스처는 디스크에 없다 — 다시 읽을 것이 없다.
         const bool bNotOnDisk = relativePath.empty() || isRenderTargetPath( relativePath ) || isCPUTexturePath( relativePath );
         const bool bCanReload = _impl != nullptr && pDevice != nullptr;

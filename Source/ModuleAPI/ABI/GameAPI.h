@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/MemoryTag.h"
 
 #include "ModuleAPI/ABI/ModuleABI.h"
 #include "ModuleAPI/ABI/ModuleHandles.h"
@@ -68,6 +69,9 @@ namespace sw
 
     /** @brief `GameAPI` 표의 스탬프입니다. 게임 모듈이 내보내고(`getGameModuleABIStamp`) 호스트가 로드 전에 자기 것과 대조합니다. */
     inline constexpr uint64 kGameModuleABIStamp = ModuleABIUtil::computeStamp( SW_GAME_API_ENTRIES( SW_MODULE_ABI_ENTRY_TEXT ) );
+
+    /** @brief 게임 모듈 경계의 할당 태그입니다 — 표 항목(`GameModuleForwardUtil`)과 모듈 매니저의 로드 · 리로드가 이 값 하나를 쓴다. */
+    inline constexpr MemoryTag kGameModuleMemoryTag = MemoryTag::Game;
 
     /** @brief SWGame 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportGameAPI). */
     using PFN_ExportGameAPI = bool ( * )( GameAPI* pOutAPI );

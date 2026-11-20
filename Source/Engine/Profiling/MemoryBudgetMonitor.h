@@ -55,6 +55,8 @@ namespace sw
     class SW_API MemoryBudgetMonitor
     {
     public:
+        /** @brief 프레임 카운터 이름을 처음 등록할 때(이름 풀이 자란다)의 할당 태그입니다 — 메인 루프에는 태그가 없다. */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::EngineMisc;
         /** @brief 예산 파일의 기본 위치입니다(프로젝트 폴더 기준). */
         static constexpr const utf8* kBudgetFile = "Config/Engine/MemoryBudget.json";
 

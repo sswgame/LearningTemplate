@@ -169,7 +169,7 @@ namespace sw
      */
     [[nodiscard]] inline bool startHostServices( SubsystemCollection& outParts, vector_reference<const HostServiceID> listPart, const HostServiceStartDelegate& start, const HostServiceStopDelegate& stop )
     {
-        SW_MEMORY_SCOPE( EngineMisc );
+        const ScopedMemoryTag memoryScope{ HostService::kSubsystemMemoryTag };
         for ( const HostServiceID id : listPart )
         {
             outParts.add( make_unique<HostService>( id, start, stop ) );

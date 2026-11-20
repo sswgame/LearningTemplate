@@ -82,8 +82,8 @@ namespace sw
 
     const ShaderBindingLayout& ShaderBindingLayoutCache::getOrBuild( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat )
     {
-        SW_MEMORY_SCOPE( Shader );
-        const hashed_string key = makeCacheKey( desc, targetFormat );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
+        const hashed_string   key = makeCacheKey( desc, targetFormat );
 
         {
             ScopedLock<mutex> lock{ _mutex };

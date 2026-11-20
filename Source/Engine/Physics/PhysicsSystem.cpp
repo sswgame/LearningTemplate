@@ -42,7 +42,6 @@ namespace sw
         const string_view settingsPath = assetID.view();
         if ( _bInitialized )
             return true;
-        SW_MEMORY_SCOPE( Physics );
 
         // 설정 표는 엔진 필수 데이터다. 없거나 틀리면 코드 기본 표로 대신하지 않고 기동이 실패한다.
         PhysicsSettings settings;
@@ -75,6 +74,7 @@ namespace sw
 
     unique_ptr<IPhysicsScene3D> PhysicsSystem::createScene3D( const PhysicsSettings& settings ) const
     {
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag }; // 씬 물리가 처음 물을 때(게임 코드의 조회) 늦게 만든다 — 부른 쪽의 태그가 아니다
         if ( _bInitialized == false )
         {
             SW_LOG_ERROR_ID( "PhysicsSystem.CreateScene3DPhysicsSystemNot", "createScene3D: the physics system is not initialized" );
@@ -92,6 +92,7 @@ namespace sw
 
     unique_ptr<IPhysicsScene2D> PhysicsSystem::createScene2D( const PhysicsSettings& settings ) const
     {
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag }; // 씬 물리가 처음 물을 때(게임 코드의 조회) 늦게 만든다 — 부른 쪽의 태그가 아니다
         if ( _bInitialized == false )
         {
             SW_LOG_ERROR_ID( "PhysicsSystem.CreateScene2DPhysicsSystemNot", "createScene2D: the physics system is not initialized" );

@@ -10,6 +10,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Memory/MemoryTag.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
@@ -27,6 +28,8 @@ namespace sw
     class SW_API ShaderBindingLayoutCache
     {
     public:
+        /** @brief 레이아웃을 짓는 동안의 할당 태그입니다. */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::Shader;
         /** @brief 빈 캐시로 만듭니다. */
         ShaderBindingLayoutCache() = default;
 

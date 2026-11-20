@@ -38,6 +38,9 @@ namespace sw
      */
     struct SW_API MeshUtil
     {
+        /** @brief 메시를 짓는 동안의 할당 태그입니다(기본 도형 · 스프라이트 메시 — `SlicedSpriteDef::acquireSlicedMesh` 도 쓴다). */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::Mesh;
+
         /** @brief 원점 중심 단위 큐브입니다(범위 [-0.5,0.5], 면별 색). */
         static shared_ptr<Mesh> createUnitCube();
         /** @brief 원점 중심 단위 2D 쿼드입니다(범위 [-0.5,0.5]). XY 평면이라 화면을 마주 봅니다. */

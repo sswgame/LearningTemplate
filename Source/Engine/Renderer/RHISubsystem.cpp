@@ -33,7 +33,6 @@ namespace sw
         , _initResult{ RHIInitResult::NotStarted }
         , _bReady{ SW_FALSE }
     {
-        SW_MEMORY_SCOPE( RenderCPU );
         _rhi = make_unique<RHI>();
     }
 

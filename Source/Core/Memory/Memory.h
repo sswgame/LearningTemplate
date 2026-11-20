@@ -144,7 +144,7 @@ namespace sw
         /** @brief @p pTracker 가 걸린 기록기이면 뗍니다. */
         static void unregisterAllocationTracker( IAllocationTracker* pTracker );
 
-        /** @brief 현재 스레드의 할당 태그를 설정합니다. 보통은 `ScopedMemoryTag` · `SW_MEMORY_SCOPE` 로 겁니다. */
+        /** @brief 현재 스레드의 할당 태그를 설정합니다. 보통은 구조 자리(서브시스템 생성 · 초기화, 에셋 로더, 모듈 경계, 스레드 · 태스크 상속)가 `ScopedMemoryTag` 로 겁니다. */
         static void setCurrentMemoryTag( MemoryTag tag );
         /** @brief 현재 스레드의 할당 태그를 반환합니다. 태그를 주지 않은 할당이 이 태그로 분류됩니다. */
         static MemoryTag getCurrentMemoryTag();
@@ -493,10 +493,3 @@ namespace sw
         MemoryTag _prevTag;
     };
 } // namespace sw
-
-/** @brief 스코프 동안 할당을 `MemoryTag::tag` 로 분류합니다. `kMemoryTagScopesEnabled` 가 아닌 구성(배포본)에서는 아무 일도 하지 않습니다. */
-#if !defined( SW_SHIPPING )
-    #define SW_MEMORY_SCOPE( tag ) const sw::ScopedMemoryTag SW_CONCAT( _swMemoryScope_, __LINE__ )( sw::MemoryTag::tag )
-#else
-    #define SW_MEMORY_SCOPE( tag ) ( (void)0 )
-#endif

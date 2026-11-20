@@ -240,13 +240,13 @@ namespace sw
 
     bool ShaderCache::getReflection( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
     {
-        SW_MEMORY_SCOPE( Shader );
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         return getProvider().getReflection( *this, desc, outReflection );
     }
 
     ShaderCompileResult ShaderCache::loadOrCompile( const ShaderCompileDesc& desc, const string& inCacheKey )
     {
-        SW_MEMORY_SCOPE( Shader );
+        const ScopedMemoryTag          memoryScope{ kSubsystemMemoryTag };
         const IShaderBytecodeProvider& provider = getProvider();
         string                         cacheKey = inCacheKey;
 

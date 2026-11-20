@@ -412,7 +412,7 @@ namespace sw
 
     void IAudioService::update( float32 deltaSeconds )
     {
-        SW_MEMORY_SCOPE( Audio );
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         if ( _bInitialized == false )
             return;
         if ( _bOutputLost.load( std::memory_order_acquire ) )
@@ -436,8 +436,8 @@ namespace sw
 
     bool IAudioService::play( const AssetID& assetID, const hashed_string& bus )
     {
-        const string_view path = assetID.view();
-        SW_MEMORY_SCOPE( Audio );
+        const string_view     path = assetID.view();
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         if ( _bInitialized == false || path.empty() )
             return false;
         if ( AssetIO::hasAsset( assetID ) == false )
@@ -450,7 +450,7 @@ namespace sw
 
     bool IAudioService::preload( string_view path )
     {
-        SW_MEMORY_SCOPE( Audio );
+        const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         if ( path.empty() )
             return false;
         return _pEngine->getClipStore().loadClip( hashed_string( path ) ) != nullptr;
@@ -679,7 +679,6 @@ namespace sw
     // 전용 서버 역할(클라이언트 · 게임 구성의 `-server`)은 장치를 열지 않는다 — 소리 요청을 받아 버린다. 전용 서버 구성은 이 폴더를 짓지 않는다(`SW_EXCLUDED_ENGINE_FOLDERS`).
     SW_ENGINE_SERVICE_SUBSYSTEM( IAudioService, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        SW_MEMORY_SCOPE( Audio );
         IAudioService& audio                = scope.addSubsystem( build._pStartupSetup->_bDedicatedServer ? IAudioService::createNull() : IAudioService::create() );
         build._pStartupParts->_pAudioDriver = &audio.getEngineAudioDriver();
         const bool bExposed                 = scope.exposeMember<IEngineAudioDriver>( audio, audio.getEngineAudioDriver() ) && scope.exposeMember<ISoundPlayer>( audio, audio.getSoundPlayer() );

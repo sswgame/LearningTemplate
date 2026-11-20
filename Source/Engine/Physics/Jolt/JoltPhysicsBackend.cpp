@@ -120,7 +120,6 @@ namespace sw
     {
         if ( JoltPhysicsBackendInternal::s_bInitialized.load() )
             return true;
-        SW_MEMORY_SCOPE( Physics );
 
         JPH::Allocate        = &JoltPhysicsBackendInternal::allocate;
         JPH::Reallocate      = &JoltPhysicsBackendInternal::reallocate;
@@ -169,7 +168,6 @@ namespace sw
             SW_LOG_ERROR_ID( "JoltPhysicsBackend.CreateSceneJoltBackendNot", "createScene: the Jolt backend is not initialized (PhysicsSystem::initialize)" );
             return nullptr;
         }
-        SW_MEMORY_SCOPE( Physics );
         return make_unique<JoltPhysicsScene>( settings, JoltPhysicsBackendInternal::s_pJobSystem );
     }
 } // namespace sw

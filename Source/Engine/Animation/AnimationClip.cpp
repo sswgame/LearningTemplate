@@ -362,8 +362,7 @@ namespace sw
     bool AnimationClip::loadFromAsset( const AssetID& assetID )
     {
         const string_view path = assetID.view();
-        SW_MEMORY_SCOPE( Animation );
-        vector<uint8> bytes;
+        vector<uint8>     bytes;
         if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
         {
             SW_LOG_ERROR_ID( "AnimationClip.AnimationClipCouldNot", "Animation clip '%#' could not be read", path );

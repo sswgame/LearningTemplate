@@ -252,8 +252,8 @@ namespace sw
 
     bool ShaderReflectionLibrary::loadManifest( string_view binDirectoryRelative, EntryMap& outMapEntry )
     {
-        SW_MEMORY_SCOPE( Shader );
-        string manifestRelative( binDirectoryRelative );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
+        string                manifestRelative( binDirectoryRelative );
         if ( manifestRelative.empty() == false && manifestRelative.back() != '/' )
             manifestRelative += '/';
         return readManifestInternal( AssetID{ manifestRelative + getManifestFileName() }, outMapEntry );
@@ -261,7 +261,7 @@ namespace sw
 
     bool ShaderReflectionLibrary::loadManifestFile( string_view absManifestPath, EntryMap& outMapEntry )
     {
-        SW_MEMORY_SCOPE( Shader );
+        const ScopedMemoryTag memoryScope{ kMemoryTag };
         outMapEntry.clear();
         vector<uint8> bytes;
         if ( FileUtil::readFile( absManifestPath, bytes ) == false )
@@ -271,7 +271,7 @@ namespace sw
 
     bool ShaderReflectionLibrary::tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
     {
-        SW_MEMORY_SCOPE( Shader );
+        const ScopedMemoryTag                memoryScope{ kMemoryTag };
         const string_view                    ext      = ShaderCooker::getExtensionForFormat( desc._targetFormat );
         const optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( desc._source, desc._targetFormat );
         if ( location.has_value() == false )

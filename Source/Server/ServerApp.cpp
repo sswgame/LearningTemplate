@@ -147,10 +147,7 @@ namespace sw
         _startNanoseconds = MonotonicClock::nowNanoseconds();
         // 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 단계가 여기서 모듈 라이브러리 창구를 찾아 서버 대상 모듈을 올린다(`loadModuleLibraries`).
         // 종료 신호 처리기도 이 범위에 둔다 — 엔진 종료가 끝날 때까지 걸려 있어야 하고, 기동 중에 온 신호는 깃발로 남아 루프 첫 바퀴가 정상 종료한다.
-        {
-            SW_MEMORY_SCOPE( EngineMisc );
-            _launch.getHostScope().emplaceSubsystem<ShutdownSignalSubsystem>();
-        }
+        _launch.getHostScope().emplaceSubsystem<ShutdownSignalSubsystem>();
         // 개발 조종 · 개발 계층(핫 리로드 · 개발 도구)은 DevTools.dll 이 구현한다 — ModuleManager 는 DevTools 를 보지 않아 호스트가 만들어 넘긴다. 배포는 짓지 않는다.
         unique_ptr<IHostDevLayer> pDevLayer;
         if constexpr ( build::kShipping == false )
@@ -199,7 +196,6 @@ namespace sw
 
     bool ServerApp::loadModuleLibraries()
     {
-        SW_MEMORY_SCOPE( EngineMisc );
         // 전용 서버는 Server 대상 모듈만 로드한다. Game 빌드에서도 에디터와 RHI 모듈을 로드하지 않는다. 리로드 구동기(App 과 같은 것)가 매니페스트를 해석하고
         // 매니저를 만들어 자신을 호스트 범위에 걸며, 매니저 종료를 "씬은 사라졌고 서비스는 아직 있는" 구간의 훅에 건다(배포는 정적 링크라 아무것도 하지 않는다).
         if ( _launch.loadModuleLibraries( static_cast<uint8>( ModuleTarget::Server ), make_unique<GameModuleManager>() ) == false )

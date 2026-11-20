@@ -28,6 +28,8 @@ namespace sw::editor
     class ConsolePanel : public IEditorPanel
     {
     public:
+        /** @brief 로그 사본의 할당 태그입니다 — 어느 스레드 · 어느 스코프에서 쓴 로그든 콘솔이 보관하는 사본은 에디터 몫이다. */
+        static constexpr MemoryTag kMemoryTag = MemoryTag::Editor;
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
         static constexpr const utf8* kPanelID = "console";
 
