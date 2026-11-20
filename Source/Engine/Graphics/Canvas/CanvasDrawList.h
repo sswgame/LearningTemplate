@@ -12,6 +12,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
@@ -38,8 +39,8 @@ namespace sw
     /** @brief `CanvasQuad::_flags` 의 비트입니다. 숫자는 `canvas.hlsl` 의 `kCanvasFlag*` 와 같아야 합니다. */
     struct CanvasQuadFlag
     {
-        static constexpr uint32 kRoundedClip       = SW_BIT( 0 ); ///< `_clipRect` 와 `_params._w`(반지름)로 둥근 자르기를 셰이더가 한다. 사각 자르기는 일괄의 가위가 한다.
-        static constexpr uint32 kMultiChannelGlyph = SW_BIT( 1 ); ///< 글리프 사각형의 아틀라스 페이지가 MSDF(RGBA)다 — 셰이더가 RGB 의 중앙값을 거리값으로 쓴다(아니면 R 채널 하나).
+        static constexpr uint32 kRoundedClip       = BitUtil::bit( 0 ); ///< `_clipRect` 와 `_params._w`(반지름)로 둥근 자르기를 셰이더가 한다. 사각 자르기는 일괄의 가위가 한다.
+        static constexpr uint32 kMultiChannelGlyph = BitUtil::bit( 1 ); ///< 글리프 사각형의 아틀라스 페이지가 MSDF(RGBA)다 — 셰이더가 RGB 의 중앙값을 거리값으로 쓴다(아니면 R 채널 하나).
     };
 } // namespace sw
 
@@ -181,7 +182,7 @@ namespace sw
     enum class CanvasMarkerFlag : uint32
     {
         None  = 0,
-        Clamp = SW_BIT( 0 ), ///< 화면 밖이면 가장자리에 붙인다(끄면 숨긴다)
+        Clamp = BitUtil::bit( 0 ), ///< 화면 밖이면 가장자리에 붙인다(끄면 숨긴다)
     };
 
     /**

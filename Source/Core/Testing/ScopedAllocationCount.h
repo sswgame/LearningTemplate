@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -18,11 +19,7 @@ namespace sw::test
     class ScopedAllocationCount
     {
     public:
-#if defined( SW_SHIPPING )
-        static constexpr bool kCountsAreActive = false;
-#else
-        static constexpr bool kCountsAreActive = true;
-#endif
+        static constexpr bool kCountsAreActive = !build::kShipping;
 
         ScopedAllocationCount()
         {

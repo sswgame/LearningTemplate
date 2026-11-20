@@ -12,6 +12,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
@@ -169,7 +170,7 @@ namespace sw
      */
     struct UserSettingKindTraits
     {
-        uint32                 _globalVariableTypeMask; ///< 대상으로 받을 수 있는 전역 변수 타입 비트(`SW_BIT( GlobalVariableType )`)입니다.
+        uint32                 _globalVariableTypeMask; ///< 대상으로 받을 수 있는 전역 변수 타입 비트(`BitUtil::bit( GlobalVariableType )`)입니다.
         UserSettingKind        _type;
         UserSettingStorageKind _storageKind;
         bool                   _bNumeric; ///< min · max · step 이 있습니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -333,10 +334,10 @@ namespace sw
     /** @brief 플랫폼 비트입니다(`platforms="windows linux android web"`). */
     namespace UserSettingsPlatform
     {
-        inline constexpr uint8 kWindows = SW_BIT( 0 );
-        inline constexpr uint8 kLinux   = SW_BIT( 1 );
-        inline constexpr uint8 kAndroid = SW_BIT( 2 );
-        inline constexpr uint8 kWeb     = SW_BIT( 3 );
+        inline constexpr uint8 kWindows = BitUtil::bit( 0 );
+        inline constexpr uint8 kLinux   = BitUtil::bit( 1 );
+        inline constexpr uint8 kAndroid = BitUtil::bit( 2 );
+        inline constexpr uint8 kWeb     = BitUtil::bit( 3 );
         inline constexpr uint8 kAll     = 0xFF;
         /** @brief 이 빌드의 플랫폼 비트입니다. */
         SW_API uint8 getCurrent();

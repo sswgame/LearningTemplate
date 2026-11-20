@@ -147,13 +147,13 @@ SW_TEST_CASE( GeometryCutTest, ExtractKeepsUsedVerticesInOriginalOrder )
     SW_REQUIRE_EQUAL( 4u, out.getVertexCount() );
     SW_REQUIRE_EQUAL( 2u, out.getTriangleCount() );
     const uint32 arrExpectedRemap[] = { 0xFFFFFFFFu, 0xFFFFFFFFu, 0u, 1u, 2u, 3u, 0xFFFFFFFFu, 0xFFFFFFFFu };
-    SW_REQUIRE_EQUAL( std::size( arrExpectedRemap ), listRemap.size() );
+    SW_REQUIRE_EQUAL( SW_COUNT_OF( arrExpectedRemap ), listRemap.size() );
     for ( size_t vertex = 0; vertex < listRemap.size(); ++vertex )
     {
         SW_EXPECT_EQUAL( arrExpectedRemap[vertex], listRemap[vertex] );
     }
     const uint32 arrExpectedIndex[] = { 0u, 2u, 3u, 0u, 3u, 1u };
-    for ( size_t corner = 0; corner < std::size( arrExpectedIndex ); ++corner )
+    for ( size_t corner = 0; corner < SW_COUNT_OF( arrExpectedIndex ); ++corner )
     {
         SW_EXPECT_EQUAL( arrExpectedIndex[corner], out._listIndex[corner] );
     }

@@ -58,7 +58,7 @@ namespace sw
 
             static constexpr bool isRowWidgetInEnumOrder()
             {
-                for ( size_t index = 0; index < std::size( kArrRowWidget ); ++index )
+                for ( size_t index = 0; index < SW_COUNT_OF( kArrRowWidget ); ++index )
                 {
                     if ( static_cast<size_t>( kArrRowWidget[index]._type ) != index )
                         return false;
@@ -84,7 +84,7 @@ namespace sw
         };
 
         static_assert( OptionsMenuScreenInternal::isRowWidgetInEnumOrder(), "kArrRowWidget rows must follow UserSettingKind order" );
-        static_assert( std::size( OptionsMenuScreenInternal::kArrRowWidget ) == static_cast<size_t>( UserSettingKind::String ) + 1,
+        static_assert( SW_COUNT_OF( OptionsMenuScreenInternal::kArrRowWidget ) == static_cast<size_t>( UserSettingKind::String ) + 1,
                        "kArrRowWidget needs one row per UserSettingKind" );
     } // namespace
 

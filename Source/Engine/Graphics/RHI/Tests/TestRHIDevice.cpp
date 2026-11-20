@@ -114,7 +114,7 @@ SW_TEST_CASE( RHIDeviceTest, BackendTypeNameQuery )
         SW_EXPECT_TRUE( RHI::getShaderTargetFormat( info._backend ) == info._shaderTarget );
         SW_EXPECT_TRUE( RHIAvailability::query( info._backend )._bGPUCulling == info._capabilities._bGPUCulling );
     }
-    const RHIBackend outOfRange = static_cast<RHIBackend>( std::size( RHIBackendInfoTable::kArrInfo ) );
+    const RHIBackend outOfRange = static_cast<RHIBackend>( SW_COUNT_OF( RHIBackendInfoTable::kArrInfo ) );
     SW_EXPECT_EQUAL( string( "Unknown" ), string( RHI::getBackendTypeName( outOfRange ) ) );
     SW_EXPECT_FALSE( RHIAvailability::isAvailable( outOfRange ) );
 }
@@ -167,8 +167,8 @@ SW_TEST_CASE( RHIDeviceShutdownTest, StepsRunInContractOrder )
     device.shutdown();
 
     const utf8* const arrExpected[] = { "releaseRHI", "waitIdleInternal", "detachCommandRecordingInternal", "shutdownInternal" };
-    SW_REQUIRE_EQUAL( std::size( arrExpected ), device._listShutdownStep.size() );
-    for ( size_t index = 0; index < std::size( arrExpected ); ++index )
+    SW_REQUIRE_EQUAL( SW_COUNT_OF( arrExpected ), device._listShutdownStep.size() );
+    for ( size_t index = 0; index < SW_COUNT_OF( arrExpected ); ++index )
     {
         SW_EXPECT_EQUAL( string( arrExpected[index] ), string( device._listShutdownStep[index] ) );
     }

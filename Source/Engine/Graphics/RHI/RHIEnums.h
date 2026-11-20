@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 
 #include "Engine/Graphics/RenderState/RenderStateEnums.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -94,14 +95,14 @@ namespace sw
     enum class RHIBufferUsage : uint8
     {
         None            = 0,
-        Vertex          = SW_BIT( 0 ),
-        Index           = SW_BIT( 1 ),
-        Constant        = SW_BIT( 2 ),
-        Structured      = SW_BIT( 3 ),
-        UnorderedAccess = SW_BIT( 4 ),
-        ShaderResource  = SW_BIT( 5 ),
-        IndirectArgs    = SW_BIT( 6 ),
-        Raw             = SW_BIT( 7 ), ///< 바이트 주소 / RAW UAV (DX11 DRAWINDIRECT_ARGS 호환)
+        Vertex          = BitUtil::bit( 0 ),
+        Index           = BitUtil::bit( 1 ),
+        Constant        = BitUtil::bit( 2 ),
+        Structured      = BitUtil::bit( 3 ),
+        UnorderedAccess = BitUtil::bit( 4 ),
+        ShaderResource  = BitUtil::bit( 5 ),
+        IndirectArgs    = BitUtil::bit( 6 ),
+        Raw             = BitUtil::bit( 7 ), ///< 바이트 주소 / RAW UAV (DX11 DRAWINDIRECT_ARGS 호환)
     };
 
     /**

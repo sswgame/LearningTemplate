@@ -367,21 +367,55 @@ namespace sw
         return ( pValue != nullptr ) ? string_view( pValue ) : string_view{};
     }
 
-#define SW_XML_NODE_VALUE_READERS( Type )                                                                                                                      \
-    XMLNode::XMLValueRead XMLNode::parseAttributeValue( const utf8* pName, Type& outValue ) const                                                              \
-    {                                                                                                                                                          \
-        return static_cast<XMLValueRead>( readNodeValueText( getName(), "attribute", "Xml.AttributeTypeMismatch", pName, findAttribute( pName ), outValue ) ); \
-    }                                                                                                                                                          \
-    XMLNode::XMLValueRead XMLNode::parseChildValue( const utf8* pName, Type& outValue ) const                                                                  \
-    {                                                                                                                                                          \
-        return static_cast<XMLValueRead>( readNodeValueText( getName(), "child", "Xml.ChildTypeMismatch", pName, findChildText( pName ), outValue ) );         \
+    XMLNode::XMLValueRead XMLNode::parseAttributeValue( const utf8* pName, int32& outValue ) const
+    {
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "attribute", "Xml.AttributeTypeMismatch", pName, findAttribute( pName ), outValue ) );
     }
-    SW_XML_NODE_VALUE_READERS( int32 )
-    SW_XML_NODE_VALUE_READERS( uint32 )
-    SW_XML_NODE_VALUE_READERS( float32 )
-    SW_XML_NODE_VALUE_READERS( bool )
-    SW_XML_NODE_VALUE_READERS( string )
-#undef SW_XML_NODE_VALUE_READERS
+
+    XMLNode::XMLValueRead XMLNode::parseAttributeValue( const utf8* pName, uint32& outValue ) const
+    {
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "attribute", "Xml.AttributeTypeMismatch", pName, findAttribute( pName ), outValue ) );
+    }
+
+    XMLNode::XMLValueRead XMLNode::parseAttributeValue( const utf8* pName, float32& outValue ) const
+    {
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "attribute", "Xml.AttributeTypeMismatch", pName, findAttribute( pName ), outValue ) );
+    }
+
+    XMLNode::XMLValueRead XMLNode::parseAttributeValue( const utf8* pName, bool& outValue ) const
+    {
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "attribute", "Xml.AttributeTypeMismatch", pName, findAttribute( pName ), outValue ) );
+    }
+
+    XMLNode::XMLValueRead XMLNode::parseAttributeValue( const utf8* pName, string& outValue ) const
+    {
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "attribute", "Xml.AttributeTypeMismatch", pName, findAttribute( pName ), outValue ) );
+    }
+
+    XMLNode::XMLValueRead XMLNode::parseChildValue( const utf8* pName, int32& outValue ) const
+    {
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "child", "Xml.ChildTypeMismatch", pName, findChildText( pName ), outValue ) );
+    }
+
+    XMLNode::XMLValueRead XMLNode::parseChildValue( const utf8* pName, uint32& outValue ) const
+    {
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "child", "Xml.ChildTypeMismatch", pName, findChildText( pName ), outValue ) );
+    }
+
+    XMLNode::XMLValueRead XMLNode::parseChildValue( const utf8* pName, float32& outValue ) const
+    {
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "child", "Xml.ChildTypeMismatch", pName, findChildText( pName ), outValue ) );
+    }
+
+    XMLNode::XMLValueRead XMLNode::parseChildValue( const utf8* pName, bool& outValue ) const
+    {
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "child", "Xml.ChildTypeMismatch", pName, findChildText( pName ), outValue ) );
+    }
+
+    XMLNode::XMLValueRead XMLNode::parseChildValue( const utf8* pName, string& outValue ) const
+    {
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "child", "Xml.ChildTypeMismatch", pName, findChildText( pName ), outValue ) );
+    }
 
     void XMLNode::reportMissing( const utf8* pKind, const utf8* pName ) const
     {

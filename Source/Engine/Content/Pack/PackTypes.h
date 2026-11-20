@@ -20,6 +20,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -35,10 +36,10 @@ namespace sw
     enum class PackFlag : uint16
     {
         None          = 0,
-        HasStringPool = SW_BIT( 0 ), ///< 항목 경로 목록(스트링 풀)을 담았는지. 폴더 나열이 이 목록을 읽으므로 쿠커는 늘 담고, 리더는 없는 팩을 거절한다
-        HasCRC32      = SW_BIT( 1 ), ///< 블록별 CRC32(블록 표의 `_crc32`)를 읽을 때 검사하는지
-        Encrypted     = SW_BIT( 2 ), ///< FAT 와 페이로드를 암호화했는지
-        HasBlockHash  = SW_BIT( 3 ), ///< 블록 해시 표(블록마다 저장 바이트의 SHA-256)를 담았는지 — 서명 채널(패치 팩)의 팩. 신뢰를 받아 연 리더가 읽을 때 블록마다 견준다
+        HasStringPool = BitUtil::bit( 0 ), ///< 항목 경로 목록(스트링 풀)을 담았는지. 폴더 나열이 이 목록을 읽으므로 쿠커는 늘 담고, 리더는 없는 팩을 거절한다
+        HasCRC32      = BitUtil::bit( 1 ), ///< 블록별 CRC32(블록 표의 `_crc32`)를 읽을 때 검사하는지
+        Encrypted     = BitUtil::bit( 2 ), ///< FAT 와 페이로드를 암호화했는지
+        HasBlockHash  = BitUtil::bit( 3 ), ///< 블록 해시 표(블록마다 저장 바이트의 SHA-256)를 담았는지 — 서명 채널(패치 팩)의 팩. 신뢰를 받아 연 리더가 읽을 때 블록마다 견준다
     };
 
     /**

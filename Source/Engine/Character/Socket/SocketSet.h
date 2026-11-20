@@ -196,7 +196,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `CharacterDataCache.cpp` 의 공유 캐시 줄). 타입 있는 참조 `AssetRef<SocketSet>` 가 접미사로 가른다. */
-        static constexpr AssetTypeDef kAssetType{ "SocketSet", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "SocketSet", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /**
          * @brief XML 텍스트에서 읽습니다(현재 내용은 비웁니다). 모르는 속성이나 원소, 종류(@p kinds 에 없음), 겹친 이름은 오류입니다.

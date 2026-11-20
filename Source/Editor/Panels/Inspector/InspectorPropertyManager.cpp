@@ -962,7 +962,7 @@ namespace sw::editor
                 return make_unique<ValueProperty<T>>();
         }
 
-        static_assert( std::size( kArrDrawMethodArg ) == InspectorBuiltinValue::kBuiltinCount,
+        static_assert( SW_COUNT_OF( kArrDrawMethodArg ) == InspectorBuiltinValue::kBuiltinCount,
                        "kArrDrawMethodArg must have one entry per ReflectBuiltins.xxx type" );
 
     } // namespace
@@ -1036,7 +1036,7 @@ namespace sw::editor
     bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const PropertyGridViewModel& model,
                                                   vector<InspectorComponentChoice>& inoutListChoice )
     {
-        if ( slot._value.hasValue() == false || slot._builtinIndex >= std::size( kArrDrawMethodArg ) )
+        if ( slot._value.hasValue() == false || slot._builtinIndex >= SW_COUNT_OF( kArrDrawMethodArg ) )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "UnsupportedInUI", TextArgumentList().addText( "label", pLabel ) ).c_str() );
             return false;

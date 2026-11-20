@@ -224,7 +224,7 @@ namespace sw
 
     void FrameProfileSession::recordFrameInterval( int64 intervalMicro )
     {
-        for ( uint32 index = 0; index < static_cast<uint32>( std::size( kArrHitchThresholdMicro ) ); ++index )
+        for ( uint32 index = 0; index < static_cast<uint32>( SW_COUNT_OF( kArrHitchThresholdMicro ) ); ++index )
         {
             if ( intervalMicro > kArrHitchThresholdMicro[index] )
                 ++_arrHitchCount[index];

@@ -117,7 +117,7 @@ namespace sw
             { ".weather.xml", AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `WeatherSystem.cpp` 의 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType{ "WeatherCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "WeatherCatalog", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         float32 getTransitionTime() const { return _transitionTime; }
         /** @brief 바인딩이 쓰는 머티리얼 파라미터 묶음 경로입니다(없으면 비어 있다). */

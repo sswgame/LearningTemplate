@@ -2,6 +2,7 @@
 // 손 인코딩은 예전 생성기가 `FixedLayoutSample` 에 냈을 호출 차례를 그대로 적은 것이다 — 해석기가 이것과 한 비트라도 다르면 와이어 형식이 바뀐 것이다.
 #include "pch.h"
 
+#include "Core/Math/BitUtil.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -43,7 +44,7 @@ namespace
             sample._time          = 12.5;
             sample._position      = float3( 1.0f, -2.5f, 9.75f );
             sample._mode          = FixedLayoutSampleMode::Crouch;
-            sample._flags         = static_cast<FixedLayoutSampleFlags>( SW_BIT( 0 ) | SW_BIT( 2 ) );
+            sample._flags         = static_cast<FixedLayoutSampleFlags>( BitUtil::bit( 0 ) | BitUtil::bit( 2 ) );
             sample._name          = "pilot";
             sample._listValue     = { -5, 0, 300 };
             sample._arrByte       = { 1, 2, 255 };
@@ -213,7 +214,7 @@ SW_TEST_CASE( FixedLayoutTest, DescriptorCodecRefusesOutOfBoundValuesOnWrite )
                 bad._mode = static_cast<FixedLayoutSampleMode>( 7 );
                 break;
             case 3:
-                bad._flags = static_cast<FixedLayoutSampleFlags>( SW_BIT( 1 ) );
+                bad._flags = static_cast<FixedLayoutSampleFlags>( BitUtil::bit( 1 ) );
                 break;
             case 4:
                 bad._name = "seventeen-letters";

@@ -63,7 +63,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 진동 에셋 종류입니다(등록은 `HapticEffect.cpp` 의 공유 캐시 줄). 판 0. */
-        static constexpr AssetTypeDef kAssetType{ "HapticEffect", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "HapticEffect", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         PROPERTY( Tooltip = "Keys in time order; values between keys are interpolated linearly" )
         vector<HapticKeyDef> _listKey{};

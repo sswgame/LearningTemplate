@@ -97,7 +97,7 @@ namespace sw::editor
             EditorChrome::setNextItemWidthColumns( 6.0f );
             if ( EditorWidgets::beginCombo( "##previewSpeed", EditorPreviewPanelViewInternal::kArrSpeedLabel[_speedIndex] ) )
             {
-                for ( uint32 index = 0; index < static_cast<uint32>( std::size( EditorPreviewPanelViewInternal::kArrPreviewSpeed ) ); ++index )
+                for ( uint32 index = 0; index < static_cast<uint32>( SW_COUNT_OF( EditorPreviewPanelViewInternal::kArrPreviewSpeed ) ); ++index )
                 {
                     if ( ImGui::Selectable( EditorPreviewPanelViewInternal::kArrSpeedLabel[index], index == _speedIndex ) )
                         _speedIndex = index;

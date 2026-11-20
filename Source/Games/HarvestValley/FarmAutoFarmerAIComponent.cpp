@@ -181,7 +181,7 @@ namespace sw
         blackboard.setBool( "Tired", gameMode.getStamina() < Internal::kTiredStamina || gameMode.getHourOfDay() >= Internal::kTiredHour || gameMode.getDayStarted() < pState->getClock().getDay() );
         blackboard.setInt( "ProduceCount", Internal::countProduce( catalog, bag ) );
         blackboard.setInt( "SelectedSeedCount", listSeed.empty() ? 0 : bag.getItemCount( listSeed[static_cast<size_t>( gameMode.getSelectedSeedIndex() )] ) );
-        for ( size_t toolIndex = 0; toolIndex < std::size( Internal::kArrHoldingKey ); ++toolIndex )
+        for ( size_t toolIndex = 0; toolIndex < SW_COUNT_OF( Internal::kArrHoldingKey ); ++toolIndex )
         {
             blackboard.setBool( hashed_string{ string_view{ Internal::kArrHoldingKey[toolIndex] } }, static_cast<size_t>( gameMode.getTool() ) == toolIndex );
         }

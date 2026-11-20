@@ -73,7 +73,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `SpriteLibrary.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "SpriteLibrary", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "SpriteLibrary", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 빈 라이브러리입니다. .cpp 에 두어 헤더가 `Texture2D` 를 앞선 선언으로만 안다. */
         SpriteLibrary();

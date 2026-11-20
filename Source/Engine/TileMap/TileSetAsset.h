@@ -208,7 +208,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `TileSetAsset.cpp` 의 공유 캐시 줄). 접미사가 있어 에디터 종류 · 콘텐츠 브라우저가 타일셋 편집 창으로 연다. */
-        static constexpr AssetTypeDef kAssetType{ "TileSetAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "TileSetAsset", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief XML 본문을 읽습니다. 형식이 틀리거나 규칙 위반(`TileSetContent::collectIssues`)이 있으면 오류를 남기고 false 이며 내용은 바뀌지 않습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );

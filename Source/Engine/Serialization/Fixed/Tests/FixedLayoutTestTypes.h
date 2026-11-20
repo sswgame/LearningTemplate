@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/EngineMinimal.h"
@@ -33,8 +34,8 @@ namespace sw
     enum class FixedLayoutSampleFlags : uint8
     {
         None    = 0,
-        Visible = SW_BIT( 0 ),
-        Solid   = SW_BIT( 2 ),
+        Visible = BitUtil::bit( 0 ),
+        Solid   = BitUtil::bit( 2 ),
     };
 
     /** @brief 펼쳐지는 중첩 타입입니다. 범위가 바깥 타입의 필드(`_limit`)라 혼자서는 코덱이 없고 `FixedLayoutSample` 안에서만 풀린다. */

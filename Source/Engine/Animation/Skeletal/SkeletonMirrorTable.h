@@ -55,7 +55,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `AnimationAssetCache.cpp` 의 공유 캐시 줄 — 스켈레톤 · 본 LOD 와 같은 자리). */
-        static constexpr AssetTypeDef kAssetType{ "SkeletonMirrorTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "SkeletonMirrorTable", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief XML 본문을 읽습니다. 모르는 키 · 빠진 칸이면 오류를 남기고 false 이며 표는 빕니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );

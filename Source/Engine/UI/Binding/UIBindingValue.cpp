@@ -203,7 +203,7 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
         };
-        static_assert( std::size( UIBindingValueInternal::kArrNumberOps ) == static_cast<size_t>( ReflectBuiltinIndex::kCount ), "number table must have one row per ReflectBuiltins.xxx type" );
+        static_assert( SW_COUNT_OF( UIBindingValueInternal::kArrNumberOps ) == static_cast<size_t>( ReflectBuiltinIndex::kCount ), "number table must have one row per ReflectBuiltins.xxx type" );
 
         constexpr UIBindingValueInternal::KindOps UIBindingValueInternal::kArrKindOps[] = {
             {  UIBindingValueKind::None,   "none",       &UIBindingValueInternal::readNone,       &UIBindingValueInternal::writeNone},
@@ -212,7 +212,7 @@ namespace sw
             {  UIBindingValueKind::Text,   "text",       &UIBindingValueInternal::readText,       &UIBindingValueInternal::writeText},
             { UIBindingValueKind::Other, "struct",      &UIBindingValueInternal::readOther,      &UIBindingValueInternal::writeOther},
         };
-        static_assert( std::size( UIBindingValueInternal::kArrKindOps ) == kUIBindingValueKindCount, "kind table must have one row per UIBindingValueKind" );
+        static_assert( SW_COUNT_OF( UIBindingValueInternal::kArrKindOps ) == kUIBindingValueKindCount, "kind table must have one row per UIBindingValueKind" );
 
         constexpr bool UIBindingValueInternal::areKindRowsInOrder()
         {

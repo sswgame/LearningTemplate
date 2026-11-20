@@ -42,7 +42,7 @@ namespace sw
         {
             constexpr const utf8* kArrName[] = { "FileHeader", "TypeRegistrar", "PropertyStatics", "NestedContainerTree", "PropertyDesc", "PropertyMetadata", "EventList",
                                                  "MethodList", "MethodInvoker", "FixedCodec", "TickBatch", "PhysicsHook", "EnumRegistrar", "TypeTraits" };
-            static_assert( std::size( kArrName ) == static_cast<size_t>( CodeEmitSection::Count ), "CodeEmitSection names are out of date" );
+            static_assert( SW_COUNT_OF( kArrName ) == static_cast<size_t>( CodeEmitSection::Count ), "CodeEmitSection names are out of date" );
             return kArrName[static_cast<size_t>( section )];
         }
     };

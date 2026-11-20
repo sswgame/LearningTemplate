@@ -58,7 +58,7 @@ namespace sw
             { ".views.xml", AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `RuleViewCatalog.cpp` 의 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType{ "RuleViewCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "RuleViewCatalog", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 모든 뷰의 메시 경로입니다(겹치는 메시는 한 번). 판을 열 때 미리 읽는다. */
         vector<string> makeAllMeshPaths() const;

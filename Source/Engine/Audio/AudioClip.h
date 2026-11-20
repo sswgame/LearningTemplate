@@ -49,7 +49,7 @@ namespace sw
             {".flac", AssetSuffixRole::Plain},
         };
         /** @brief 소리 에셋 종류입니다(등록은 `AudioClip.cpp` 의 `SW_ASSET_TYPE`). 전용 서버 패키지가 빼는 묶음 `Audio` 다. */
-        static constexpr AssetTypeDef kAssetType{ "Audio", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, "Audio" };
+        static constexpr AssetTypeDef kAssetType{ "Audio", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, "Audio" };
 
         vector<float32>                     _listSample;        ///< 채널 교차 샘플([-1, 1]). 스트리밍 클립은 비어 있다.
         shared_ptr<const AudioStreamSource> _pStream{};         ///< 스트리밍 클립의 압축 바이트다(통째로 푼 클립은 nullptr).

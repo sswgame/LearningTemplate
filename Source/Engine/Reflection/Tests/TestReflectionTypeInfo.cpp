@@ -503,7 +503,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, MethodTableBuildsMethodList )
     };
 
     sw::TypeInfo info;
-    info.setMethodTable( kMethods, std::size( kMethods ) );
+    info.setMethodTable( kMethods, SW_COUNT_OF( kMethods ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, info._listMethod.size() );
     const sw::FunctionInfo& method = info._listMethod[0];
     SW_EXPECT_TRUE( method._hashName == sw::hashed_string( "addScore" ) );

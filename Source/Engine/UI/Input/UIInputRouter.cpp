@@ -86,9 +86,9 @@ namespace sw
                 hashed_string _back;
                 hashed_string _stick;
                 hashed_string _scroll;
-                hashed_string _arrNavigation[std::size( kArrNavigationAction )]; ///< `kArrNavigationAction` 과 같은 순서
-                hashed_string _arrText[std::size( kArrTextAction )];             ///< `kArrTextAction` 과 같은 순서
-                hashed_string _arrTextShadow[std::size( kArrTextAction )];       ///< 가리는 액션(없으면 빈 열쇠)
+                hashed_string _arrNavigation[SW_COUNT_OF( kArrNavigationAction )]; ///< `kArrNavigationAction` 과 같은 순서
+                hashed_string _arrText[SW_COUNT_OF( kArrTextAction )];             ///< `kArrTextAction` 과 같은 순서
+                hashed_string _arrTextShadow[SW_COUNT_OF( kArrTextAction )];       ///< 가리는 액션(없으면 빈 열쇠)
             };
 
             /** @brief 표를 만듭니다(`getActionKeys` 의 첫 부름에서 한 번). */
@@ -99,11 +99,11 @@ namespace sw
                 keys._back   = hashed_string( UIActionName::kBack );
                 keys._stick  = hashed_string( UIActionName::kNavigateStick );
                 keys._scroll = hashed_string( UIActionName::kScroll );
-                for ( size_t index = 0; index < std::size( kArrNavigationAction ); ++index )
+                for ( size_t index = 0; index < SW_COUNT_OF( kArrNavigationAction ); ++index )
                 {
                     keys._arrNavigation[index] = hashed_string( kArrNavigationAction[index]._pAction );
                 }
-                for ( size_t index = 0; index < std::size( kArrTextAction ); ++index )
+                for ( size_t index = 0; index < SW_COUNT_OF( kArrTextAction ); ++index )
                 {
                     keys._arrText[index]       = hashed_string( kArrTextAction[index]._pAction );
                     keys._arrTextShadow[index] = kArrTextAction[index]._pShadowedBy != nullptr ? hashed_string( kArrTextAction[index]._pShadowedBy ) : hashed_string{};
@@ -442,7 +442,7 @@ namespace sw
         const InputMap&                          uiMap      = *_uiInputMap;
         const UIInputRouterInternal::ActionKeys& keys       = UIInputRouterInternal::getActionKeys();
 
-        for ( size_t index = 0; index < std::size( UIInputRouterInternal::kArrNavigationAction ); ++index )
+        for ( size_t index = 0; index < SW_COUNT_OF( UIInputRouterInternal::kArrNavigationAction ); ++index )
         {
             const UIInputRouterInternal::NavigationAction& entry  = UIInputRouterInternal::kArrNavigationAction[index];
             const hashed_string&                           action = keys._arrNavigation[index];
@@ -474,7 +474,7 @@ namespace sw
         // 텍스트 입력 위젯: 지우기와 커서 이동 · 선택 · 복사 붙여넣기는 위젯이 키보드 포커스를 가진 동안만 처리한다(그 밖에서 이 키들은 UI 의 것이 아니다).
         if ( bTextFocus )
         {
-            for ( size_t index = 0; index < std::size( UIInputRouterInternal::kArrTextAction ); ++index )
+            for ( size_t index = 0; index < SW_COUNT_OF( UIInputRouterInternal::kArrTextAction ); ++index )
             {
                 const hashed_string& action = keys._arrText[index];
                 if ( uiMap.wasActionTriggered( action ) == false )

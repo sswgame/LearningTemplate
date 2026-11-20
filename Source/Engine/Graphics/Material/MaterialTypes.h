@@ -3,6 +3,8 @@
  * @brief Material 과 MaterialInstance 가 함께 쓰는 타입과 디스크립터입니다.
  */
 #pragma once
+#include "Core/Math/BitUtil.h"
+
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -105,16 +107,16 @@ namespace sw
     enum class MaterialUsageFlags : uint16
     {
         None          = 0,
-        StaticMesh    = SW_BIT( 0 ),
-        SkeletalMesh  = SW_BIT( 1 ),
-        Instanced     = SW_BIT( 2 ),
-        Particles     = SW_BIT( 3 ),
-        Decal         = SW_BIT( 4 ),
-        UI            = SW_BIT( 5 ),
-        PostProcess   = SW_BIT( 6 ),
-        LightFunction = SW_BIT( 7 ),
-        MorphTargets  = SW_BIT( 8 ),
-        SplineMesh    = SW_BIT( 9 ),
+        StaticMesh    = BitUtil::bit( 0 ),
+        SkeletalMesh  = BitUtil::bit( 1 ),
+        Instanced     = BitUtil::bit( 2 ),
+        Particles     = BitUtil::bit( 3 ),
+        Decal         = BitUtil::bit( 4 ),
+        UI            = BitUtil::bit( 5 ),
+        PostProcess   = BitUtil::bit( 6 ),
+        LightFunction = BitUtil::bit( 7 ),
+        MorphTargets  = BitUtil::bit( 8 ),
+        SplineMesh    = BitUtil::bit( 9 ),
     };
 
     /// @brief 머티리얼 enum 항목(이름과 값)입니다.

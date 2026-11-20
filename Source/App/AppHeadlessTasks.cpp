@@ -181,7 +181,7 @@ namespace sw
     {
         if ( pCommandLine == nullptr )
             return true;
-        return runTable( AppHeadlessTasksInternal::kArrHeadlessTask, static_cast<uint32>( std::size( AppHeadlessTasksInternal::kArrHeadlessTask ) ), *pCommandLine );
+        return runTable( AppHeadlessTasksInternal::kArrHeadlessTask, static_cast<uint32>( SW_COUNT_OF( AppHeadlessTasksInternal::kArrHeadlessTask ) ), *pCommandLine );
     }
 
     AppHeadlessTasks::TaskResult AppHeadlessTasks::runAfterHostServices( const CommandLineManager& commandLine, Engine& hostEngine )

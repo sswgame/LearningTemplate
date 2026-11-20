@@ -754,7 +754,7 @@ namespace sw
                 // 그래프 · 에디터 뷰에서 늘 나므로 언리얼 D3D12RHI 처럼 거른다.
                 D3D12_MESSAGE_ID        arrDeniedID[] = { D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE, D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE };
                 D3D12_INFO_QUEUE_FILTER filter{};
-                filter.DenyList.NumIDs  = static_cast<UINT>( std::size( arrDeniedID ) );
+                filter.DenyList.NumIDs  = static_cast<UINT>( SW_COUNT_OF( arrDeniedID ) );
                 filter.DenyList.pIDList = arrDeniedID;
                 if ( FAILED( infoQueue->PushStorageFilter( &filter ) ) )
                     SW_LOG_INFO_ID( "D3D12.D3D12DebugLayerStorage", "D3D12 debug layer storage filter was not applied" );

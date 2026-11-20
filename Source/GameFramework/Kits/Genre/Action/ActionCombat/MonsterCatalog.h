@@ -174,7 +174,7 @@ namespace sw
         };
         /** @brief 이 에셋 종류입니다(등록은 `MonsterCatalog.cpp` 의 줄이 로더를 더한다). 팩의 `data/monsters.xml` 은 경로 규칙으로 가른다(게임의 필수 데이터). */
         static constexpr AssetTypeDef kAssetType =
-            AssetTypeDef{ kDataKind, kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} }.withPathRule( AssetPathRule{ "game/", {}, "/data/monsters.xml" } );
+            AssetTypeDef{ kDataKind, kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} }.withPathRule( AssetPathRule{ "game/", {}, "/data/monsters.xml" } );
 
         MonsterCatalog();
         ~MonsterCatalog();

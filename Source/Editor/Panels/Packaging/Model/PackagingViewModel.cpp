@@ -70,7 +70,7 @@ namespace sw::editor
 
     uint32 PackagingViewModel::getTargetCount()
     {
-        return static_cast<uint32>( std::size( kArrTarget ) );
+        return static_cast<uint32>( SW_COUNT_OF( kArrTarget ) );
     }
 
     const utf8* PackagingViewModel::getTargetName( uint32 index )
@@ -80,7 +80,7 @@ namespace sw::editor
 
     uint32 PackagingViewModel::getBackendCount()
     {
-        return static_cast<uint32>( std::size( kArrBackend ) );
+        return static_cast<uint32>( SW_COUNT_OF( kArrBackend ) );
     }
 
     const utf8* PackagingViewModel::getBackendName( uint32 index )

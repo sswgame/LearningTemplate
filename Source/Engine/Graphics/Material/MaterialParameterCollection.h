@@ -63,7 +63,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `MaterialParameterCollection.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "MaterialParameterCollection", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "MaterialParameterCollection", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         PROPERTY( Tooltip = "Values shared by every material that binds this collection" )
         vector<MaterialCollectionParameterDef> _listParameter{};

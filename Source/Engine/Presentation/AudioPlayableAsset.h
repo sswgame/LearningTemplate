@@ -22,6 +22,6 @@ namespace sw
             {          ".flac", AssetSuffixRole::Plain},
             {".audiograph.xml", AssetSuffixRole::Plain},
         };
-        static constexpr AssetTypeDef kAssetType{ "AudioPlayable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "AudioPlayable", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
     };
 } // namespace sw

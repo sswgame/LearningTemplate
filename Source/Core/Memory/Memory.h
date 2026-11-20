@@ -232,7 +232,7 @@ namespace sw
 } // namespace sw
 
 template <typename T>
-void sw_delete_func( T* pPtr )
+void sw_delete( T* pPtr )
 {
     if ( pPtr != nullptr )
     {
@@ -266,7 +266,6 @@ void sw_delete_array_func( T* pPtr )
 // `static_cast<void*>` 를 끼운다. T 가 포인터일 때(`vector<char*>` 등) `char**` → `void*` 가 암시적 다단 포인터
 // 변환이 되어, 의도한 것인지 읽는 사람이 알 수 없기 때문이다.
 #define sw_placement_new( pPtr ) new ( static_cast<void*>( pPtr ) )
-#define sw_delete                sw_delete_func
 
 /**
  * @brief 원소 @p count 개를 값 초기화(`T{}`)한 배열을 sw 할당자로 잡습니다. **맨 포인터를 돌려주므로 `make_unique<T[]>` · `makeFixedCountArray` 안에서만 부릅니다.**
@@ -336,7 +335,7 @@ namespace sw
             // sizeof 자체가 컴파일되지 않는다.** 그것이 목적이다.
             // NOLINTNEXTLINE(bugprone-sizeof-expression)
             static_assert( sizeof( T ) > 0, "can't delete an incomplete type" );
-            sw_delete_func( pPtr );
+            sw_delete( pPtr );
         }
     };
 } // namespace sw

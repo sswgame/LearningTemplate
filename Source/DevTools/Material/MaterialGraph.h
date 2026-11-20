@@ -113,7 +113,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 머티리얼 그래프 에셋 종류입니다(등록은 `MaterialGraph.cpp` 의 `SW_ASSET_TYPE`). 판 0. */
-        static constexpr AssetTypeDef kAssetType{ "MaterialGraph", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "MaterialGraph", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         PROPERTY( Name = "formatVersion", Tooltip = "Schema version of the file" )
         uint32 _formatVersion{ 0 };

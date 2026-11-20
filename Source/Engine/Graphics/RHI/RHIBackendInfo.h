@@ -173,7 +173,7 @@ namespace sw
         static constexpr const RHIBackendInfo* find( RHIBackend backend )
         {
             const size_t index = static_cast<size_t>( backend );
-            return index < std::size( kArrInfo ) ? &kArrInfo[index] : nullptr;
+            return index < SW_COUNT_OF( kArrInfo ) ? &kArrInfo[index] : nullptr;
         }
 
         /**
@@ -186,13 +186,13 @@ namespace sw
             constexpr const utf8* kArrName[] = { SW_RHI_BACKEND_TABLE( SW_RHI_COMMAND_LINE_NAME_ROW ) };
 #undef SW_RHI_COMMAND_LINE_NAME_ROW
             const size_t index = static_cast<size_t>( backend );
-            return index < std::size( kArrName ) ? kArrName[index] : nullptr;
+            return index < SW_COUNT_OF( kArrName ) ? kArrName[index] : nullptr;
         }
 
         /** @brief 항목 순서가 열거값과 같은지 확인합니다(`find` 가 열거값을 인덱스로 쓴다). */
         static constexpr bool isOrderedByBackend()
         {
-            for ( size_t index = 0; index < std::size( kArrInfo ); ++index )
+            for ( size_t index = 0; index < SW_COUNT_OF( kArrInfo ); ++index )
             {
                 if ( static_cast<size_t>( kArrInfo[index]._backend ) != index )
                     return false;

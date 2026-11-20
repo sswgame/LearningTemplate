@@ -84,7 +84,7 @@ namespace sw
             { ".dds", AssetSuffixRole::Plain },
         };
         /** @brief 텍스처 에셋 종류입니다(등록은 `Texture2D.cpp` 의 `SW_ASSET_TYPE`). 전용 서버 패키지가 빼는 묶음 `Texture` 다. */
-        static constexpr AssetTypeDef kAssetType{ "Texture", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, "Texture" };
+        static constexpr AssetTypeDef kAssetType{ "Texture", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, "Texture" };
 
         /** @brief 빈 텍스처로 만듭니다. */
         Texture2D();

@@ -183,22 +183,38 @@ namespace sw
     }
 
     // 선택 필드: 없으면 넣어 둔 값 그대로, 깨졌으면 오류만 남기고 값은 그대로다(로드는 `finish` 에서 실패한다).
-#define SW_CHARACTER_OPTIONAL_READER( FunctionName, Type, ParseFunction )                              \
-    void CharacterDataReader::FunctionName( const XMLNode& node, const utf8* pName, Type& inoutValue ) \
-    {                                                                                                  \
-        const utf8* pText = node.findAttribute( pName );                                               \
-        if ( pText == nullptr )                                                                        \
-            return;                                                                                    \
-        const size_t errorCountBefore = _listError.size();                                             \
-        const Type   value            = ParseFunction( node, pName, pText );                           \
-        if ( _listError.size() == errorCountBefore )                                                   \
-            inoutValue = value;                                                                        \
+    template <typename T>
+    void CharacterDataReader::readOptionalValue( const XMLNode& node, const utf8* pName, T& inoutValue,
+                                                 T ( CharacterDataReader::*parseText )( const XMLNode&, const utf8*, const utf8* ) )
+    {
+        const utf8* pText = node.findAttribute( pName );
+        if ( pText == nullptr )
+            return;
+        const size_t errorCountBefore = _listError.size();
+        const T      value            = ( this->*parseText )( node, pName, pText );
+        if ( _listError.size() == errorCountBefore )
+            inoutValue = value;
     }
-    SW_CHARACTER_OPTIONAL_READER( readOptionalFloat, float32, parseFloatText )
-    SW_CHARACTER_OPTIONAL_READER( readOptionalInt, int32, parseIntText )
-    SW_CHARACTER_OPTIONAL_READER( readOptionalBool, bool, parseBoolText )
-    SW_CHARACTER_OPTIONAL_READER( readOptionalFloat3, float3, parseFloat3Text )
-#undef SW_CHARACTER_OPTIONAL_READER
+
+    void CharacterDataReader::readOptionalFloat( const XMLNode& node, const utf8* pName, float32& inoutValue )
+    {
+        readOptionalValue( node, pName, inoutValue, &CharacterDataReader::parseFloatText );
+    }
+
+    void CharacterDataReader::readOptionalInt( const XMLNode& node, const utf8* pName, int32& inoutValue )
+    {
+        readOptionalValue( node, pName, inoutValue, &CharacterDataReader::parseIntText );
+    }
+
+    void CharacterDataReader::readOptionalBool( const XMLNode& node, const utf8* pName, bool& inoutValue )
+    {
+        readOptionalValue( node, pName, inoutValue, &CharacterDataReader::parseBoolText );
+    }
+
+    void CharacterDataReader::readOptionalFloat3( const XMLNode& node, const utf8* pName, float3& inoutValue )
+    {
+        readOptionalValue( node, pName, inoutValue, &CharacterDataReader::parseFloat3Text );
+    }
 
     hashed_string CharacterDataReader::readName( const XMLNode& node, const utf8* pName, bool bRequired )
     {

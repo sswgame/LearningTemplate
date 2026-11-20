@@ -864,7 +864,7 @@ namespace sw
     {
         const WGPUInstanceFeatureName arrInstanceFeature[] = { WGPUInstanceFeatureName_TimedWaitAny }; // 어댑터 · 장치 요청을 기다린다(`waitForFuture`)
         WGPUInstanceDescriptor        instanceDesc{};
-        instanceDesc.requiredFeatureCount = std::size( arrInstanceFeature );
+        instanceDesc.requiredFeatureCount = SW_COUNT_OF( arrInstanceFeature );
         instanceDesc.requiredFeatures     = arrInstanceFeature;
         _instance                         = wgpuCreateInstance( &instanceDesc );
         if ( _instance == nullptr )

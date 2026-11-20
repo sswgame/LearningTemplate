@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/UTF8Util.h"
 
@@ -18,10 +19,10 @@ namespace sw
     namespace ModifierKey
     {
         inline constexpr uint8 None  = 0;
-        inline constexpr uint8 Ctrl  = SW_BIT( 0 );
-        inline constexpr uint8 Shift = SW_BIT( 1 );
-        inline constexpr uint8 Alt   = SW_BIT( 2 );
-        inline constexpr uint8 Super = SW_BIT( 3 );
+        inline constexpr uint8 Ctrl  = BitUtil::bit( 0 );
+        inline constexpr uint8 Shift = BitUtil::bit( 1 );
+        inline constexpr uint8 Alt   = BitUtil::bit( 2 );
+        inline constexpr uint8 Super = BitUtil::bit( 3 );
         /** @brief 아는 수정 키 비트 전부입니다. 이보다 큰 마스크는 모르는 비트를 가진 것입니다(파일에서 읽은 마스크의 범위 검사). */
         inline constexpr uint8 All = Ctrl | Shift | Alt | Super;
     } // namespace ModifierKey

@@ -242,7 +242,7 @@ namespace sw
             { kExtension, AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `CultureInfo.cpp` 의 `SW_ASSET_TYPE`). 판 1 은 문화권을 리플렉션 원소 · `_base` 상속으로 적는다. */
-        static constexpr AssetTypeDef kAssetType{ "CultureTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 1, {} };
+        static constexpr AssetTypeDef kAssetType{ "CultureTable", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 1, {} };
 
         /** @brief 언어 코드의 정규 표기입니다. 소문자로 쓰고 `-` 는 `_` 로 바꿉니다(`ko-KR` → `ko_kr`). */
         static string normalizeCode( string_view code );

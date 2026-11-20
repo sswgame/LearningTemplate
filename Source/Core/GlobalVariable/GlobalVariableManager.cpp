@@ -295,7 +295,7 @@ namespace sw
             /** @brief @p type 의 행입니다. 등록이 범위 밖 타입을 거절하므로 등록된 변수의 타입은 늘 범위 안이다. */
             static const GlobalVariableTypeOps& getRow( GlobalVariableType type ) { return kArrRow[static_cast<uint32>( type )]; }
         };
-        static_assert( std::size( GlobalVariableTypeTable::kArrRow ) == GlobalVariableTypeTable::kTypeCount, "GlobalVariableType needs one row per enumerator" );
+        static_assert( SW_COUNT_OF( GlobalVariableTypeTable::kArrRow ) == GlobalVariableTypeTable::kTypeCount, "GlobalVariableType needs one row per enumerator" );
         static_assert( GlobalVariableTypeTable::isInTypeOrder(), "GlobalVariableTypeTable rows must follow GlobalVariableType order" );
     } // namespace
 } // namespace sw

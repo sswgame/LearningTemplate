@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
@@ -21,9 +22,9 @@ namespace sw
     enum class DecalChannels : uint8
     {
         None     = 0,
-        Albedo   = SW_BIT( 0 ), ///< 알베도 rgb(셰이딩 모델 번호 알파는 건드리지 않는다)
-        Normal   = SW_BIT( 1 ), ///< 노멀(노멀 텍스처가 있을 때만 — 없으면 끈다)
-        Material = SW_BIT( 2 ), ///< 금속도 · 거칠기(반사율 · 가림은 그대로)
+        Albedo   = BitUtil::bit( 0 ), ///< 알베도 rgb(셰이딩 모델 번호 알파는 건드리지 않는다)
+        Normal   = BitUtil::bit( 1 ), ///< 노멀(노멀 텍스처가 있을 때만 — 없으면 끈다)
+        Material = BitUtil::bit( 2 ), ///< 금속도 · 거칠기(반사율 · 가림은 그대로)
         All      = Albedo | Normal | Material,
     };
 

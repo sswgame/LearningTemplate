@@ -503,15 +503,15 @@ namespace sw
 #undef SW_ANNOTATION_TARGET_Enumerator
 
         constexpr AnnotationScope<ParsedTypeInfo> kReflectScope{
-            &annotation::kReflect, kArrReflectField, static_cast<uint32>( std::size( kArrReflectField ) ) };
+            &annotation::kReflect, kArrReflectField, static_cast<uint32>( SW_COUNT_OF( kArrReflectField ) ) };
         constexpr AnnotationScope<ParsedEnumInfo> kEnumScope{
-            &annotation::kEnum, kArrEnumField, static_cast<uint32>( std::size( kArrEnumField ) ) };
+            &annotation::kEnum, kArrEnumField, static_cast<uint32>( SW_COUNT_OF( kArrEnumField ) ) };
         constexpr AnnotationScope<ParsedPropertyInfo> kPropertyScope{
-            &annotation::kProperty, kArrPropertyField, static_cast<uint32>( std::size( kArrPropertyField ) ) };
+            &annotation::kProperty, kArrPropertyField, static_cast<uint32>( SW_COUNT_OF( kArrPropertyField ) ) };
         constexpr AnnotationScope<ParsedFunctionInfo> kFunctionScope{
-            &annotation::kFunction, kArrFunctionField, static_cast<uint32>( std::size( kArrFunctionField ) ) };
+            &annotation::kFunction, kArrFunctionField, static_cast<uint32>( SW_COUNT_OF( kArrFunctionField ) ) };
         constexpr AnnotationScope<ParsedEnumeratorInfo> kEnumeratorScope{
-            &annotation::kEnumerator, kArrEnumeratorField, static_cast<uint32>( std::size( kArrEnumeratorField ) ) };
+            &annotation::kEnumerator, kArrEnumeratorField, static_cast<uint32>( SW_COUNT_OF( kArrEnumeratorField ) ) };
     } // namespace
 } // namespace sw
 

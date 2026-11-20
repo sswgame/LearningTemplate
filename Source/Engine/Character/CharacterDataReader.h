@@ -125,6 +125,9 @@ namespace sw
         [[nodiscard]] bool parseBoolText( const XMLNode& node, const utf8* pName, const utf8* pText );
         float3             parseFloat3Text( const XMLNode& node, const utf8* pName, const utf8* pText );
         quaternion         parseRotationText( const XMLNode& node, const utf8* pName, const utf8* pText );
+        /** @brief 선택 필드 하나를 @p parseText 로 풉니다. 없으면 @p inoutValue 그대로, 깨졌으면 오류만 남기고 값은 그대로입니다(`readOptionalXxx` 의 몸통). */
+        template <typename T>
+        void readOptionalValue( const XMLNode& node, const utf8* pName, T& inoutValue, T ( CharacterDataReader::*parseText )( const XMLNode&, const utf8*, const utf8* ) );
 
         void reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnown, size_t knownCount );
         /** @brief 루트 찾기 결과가 실패면 이유를 오류로 남깁니다. 찾았으면 true 입니다. */

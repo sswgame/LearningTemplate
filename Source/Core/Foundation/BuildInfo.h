@@ -8,6 +8,7 @@
  *          이름을 코드에서 `#if` 사슬로 다시 만들지 말 것 — 원본은 CMake 한 곳입니다.
  */
 #pragma once
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #if !defined( SW_BUILD_CONFIG_NAME ) || !defined( SW_PLATFORM_NAME ) || !defined( SW_TARGET_NAME )
@@ -32,10 +33,19 @@ namespace sw::build
 #else
     inline constexpr bool kShipping = false;
 #endif
+#if defined( SW_DO_CHECKS )
+    /**
+     * @brief 우리 불변식 검사(단언 · 스레드 소유 · 잠금 깊이 …)를 컴파일한 구성이면 true 입니다 — `SW_DO_CHECKS` 의 C++ 짝(배포가 아니면 켜진다).
+     * @details 검사 결과를 값으로만 읽는 자리(테스트의 기대 수 등)는 `#if` 대신 이 상수를 쓴다. 검사 코드 자체(배포에 없는 함수 · 멤버)는 그대로 `SW_DO_CHECKS` 로 가른다.
+     */
+    inline constexpr bool kDoChecks = true;
+#else
+    inline constexpr bool kDoChecks = false;
+#endif
 #if defined( SW_DEBUG )
     /**
      * @brief Debug 구성이면 true 입니다. 비용이 커서 Debug 에만 켜는 진단(프로파일 카운터 · 셰이더 라이브 리로드 · 경고 한 줄)을 `if constexpr` 로 가른다 —
-     *        두 갈래가 모든 구성에서 컴파일되어 묶음 검증이 짓지 않는 Debug 갈래가 썩지 않는다. 단언 · 검사는 이것이 아니라 `SW_DO_CHECKS`(배포가 아니면 켜진다)다.
+     *        두 갈래가 모든 구성에서 컴파일되어 묶음 검증이 짓지 않는 Debug 갈래가 썩지 않는다. 단언 · 검사는 이것이 아니라 `kDoChecks`(`SW_DO_CHECKS`, 배포가 아니면 켜진다)다.
      */
     inline constexpr bool kDebug = true;
 #else

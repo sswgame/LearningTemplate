@@ -74,7 +74,7 @@ namespace sw::editor
         const bool    bForward = bDetached && bHovered;
         if ( bForward && ( pointer._delta._x != 0.0f || pointer._delta._y != 0.0f ) )
             (void)input.postRawEvent( RawInputEvent::makeMouseMove( x, y ) ); // 큐가 차면 이 프레임의 이동만 잃는다 — 다음 이동이 위치를 다시 준다
-        for ( uint32 index = 0; index < static_cast<uint32>( std::size( kForwardedButtons ) ); ++index )
+        for ( uint32 index = 0; index < static_cast<uint32>( SW_COUNT_OF( kForwardedButtons ) ); ++index )
         {
             const ForwardedButton& button       = kForwardedButtons[index];
             const uint8            bit          = static_cast<uint8>( 1u << index );

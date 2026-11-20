@@ -260,7 +260,7 @@ namespace sw
             { ".metroidvania.xml", AssetSuffixRole::Plain },
         };
         /** @brief 이 에셋 종류입니다(등록은 `MetroidvaniaCatalog.cpp` 의 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType{ "MetroidvaniaCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType{ "MetroidvaniaCatalog", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         MetroidvaniaCatalog();
 

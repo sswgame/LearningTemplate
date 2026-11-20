@@ -68,9 +68,9 @@ namespace sw
         , _bRootSliceDirty{ SW_TRUE }
         , _reserved{ 0 }
     {
-        WebGPURHICommandContextInternal::fillInvalid( _arrConstantBuffer, std::size( _arrConstantBuffer ) );
-        WebGPURHICommandContextInternal::fillInvalid( _arrShaderResource, std::size( _arrShaderResource ) );
-        WebGPURHICommandContextInternal::fillInvalid( _arrUnorderedAccess, std::size( _arrUnorderedAccess ) );
+        WebGPURHICommandContextInternal::fillInvalid( _arrConstantBuffer, SW_COUNT_OF( _arrConstantBuffer ) );
+        WebGPURHICommandContextInternal::fillInvalid( _arrShaderResource, SW_COUNT_OF( _arrShaderResource ) );
+        WebGPURHICommandContextInternal::fillInvalid( _arrUnorderedAccess, SW_COUNT_OF( _arrUnorderedAccess ) );
     }
 
     WebGPURHICommandContext::WebGPURHICommandContext( WebGPURHIDevice* pDevice, bool bOwnEncoder )
