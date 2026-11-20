@@ -404,6 +404,12 @@ namespace sw
             return *this;
         }
 
+        basic_string& insert( size_type index, std::basic_string_view<CharT, Traits> sv )
+        {
+            SW_SCOPED_RACE_WRITE();
+            Base::insert( index, sv );
+            return *this;
+        }
         iterator insert( const_iterator pos, CharT ch )
         {
             SW_SCOPED_RACE_WRITE();
@@ -628,6 +634,12 @@ namespace sw
             return Base::find( pS, pos );
         }
 
+        /** @brief @p sv 를 pos 부터 찾습니다. 위 오버로드를 다시 선언하면 Base 의 string_view 판이 가려져 `x.c_str()` 우회가 생겨 둔다. */
+        size_type find( std::basic_string_view<CharT, Traits> sv, size_type pos = 0 ) const noexcept
+        {
+            SW_SCOPED_RACE_READ();
+            return Base::find( sv, pos );
+        }
         size_type find( CharT ch, size_type pos = 0 ) const noexcept
         {
             SW_SCOPED_RACE_READ();
@@ -645,61 +657,23 @@ namespace sw
         }
     };
 
-    // 이어 붙이기는 이 형식을 돌려준다(`substr` 과 같은 까닭) — 없으면 `std::operator+` 가 골라져 `std::basic_string` 이 나오고,
-    // 그 결과를 `sw::basic_string` 과 `==` 로 견주면 이 형식의 비교와 std 의 비교가 비겨 컴파일이 멈춘다. 왼쪽이 rvalue 면 그 버퍼를 이어 쓴다.
+    // 이어 붙이기(`+`)는 막는다 — 식마다 임시 문자열을 할당했다 버린다(사용자 지적 2026-11-20, 같은 지적이 되풀이돼 문서 규칙 대신 형식으로 막는다).
+    // 한 번 쓰는 글은 `fixed_string` + `formatstring`, 남기는 글은 `StringBuilder::appendFormat` 으로 스택에서 짓고 한 번만 할당한다(docs/agents/CppStyle.md Strings).
+    // 지운 선언이 정확 일치라 기반 변환이 필요한 `std::operator+` 보다 먼저 골라져 컴파일 오류가 된다. `+=` 로 한 조각씩 덧붙이는 것은 임시를 만들지 않아 남긴다.
     template <typename CharT, typename Traits, typename Allocator>
-    basic_string<CharT, Traits, Allocator> operator+( const basic_string<CharT, Traits, Allocator>& lhs, const basic_string<CharT, Traits, Allocator>& rhs )
-    {
-        basic_string<CharT, Traits, Allocator> result( lhs );
-        result.append( rhs );
-        return result;
-    }
+    void operator+( const basic_string<CharT, Traits, Allocator>&, const basic_string<CharT, Traits, Allocator>& ) = delete;
     template <typename CharT, typename Traits, typename Allocator>
-    basic_string<CharT, Traits, Allocator> operator+( basic_string<CharT, Traits, Allocator>&& lhs, const basic_string<CharT, Traits, Allocator>& rhs )
-    {
-        lhs.append( rhs );
-        return std::move( lhs );
-    }
+    void operator+( const basic_string<CharT, Traits, Allocator>&, const CharT* ) = delete;
     template <typename CharT, typename Traits, typename Allocator>
-    basic_string<CharT, Traits, Allocator> operator+( const basic_string<CharT, Traits, Allocator>& lhs, const CharT* pRhs )
-    {
-        basic_string<CharT, Traits, Allocator> result( lhs );
-        result.append( pRhs );
-        return result;
-    }
+    void operator+( const basic_string<CharT, Traits, Allocator>&, CharT ) = delete;
     template <typename CharT, typename Traits, typename Allocator>
-    basic_string<CharT, Traits, Allocator> operator+( basic_string<CharT, Traits, Allocator>&& lhs, const CharT* pRhs )
-    {
-        lhs.append( pRhs );
-        return std::move( lhs );
-    }
+    void operator+( const basic_string<CharT, Traits, Allocator>&, std::basic_string_view<CharT, Traits> ) = delete;
     template <typename CharT, typename Traits, typename Allocator>
-    basic_string<CharT, Traits, Allocator> operator+( const basic_string<CharT, Traits, Allocator>& lhs, const CharT ch )
-    {
-        basic_string<CharT, Traits, Allocator> result( lhs );
-        result += ch;
-        return result;
-    }
+    void operator+( const CharT*, const basic_string<CharT, Traits, Allocator>& ) = delete;
     template <typename CharT, typename Traits, typename Allocator>
-    basic_string<CharT, Traits, Allocator> operator+( basic_string<CharT, Traits, Allocator>&& lhs, const CharT ch )
-    {
-        lhs += ch;
-        return std::move( lhs );
-    }
+    void operator+( CharT, const basic_string<CharT, Traits, Allocator>& ) = delete;
     template <typename CharT, typename Traits, typename Allocator>
-    basic_string<CharT, Traits, Allocator> operator+( const CharT* pLhs, const basic_string<CharT, Traits, Allocator>& rhs )
-    {
-        basic_string<CharT, Traits, Allocator> result( pLhs );
-        result.append( rhs );
-        return result;
-    }
-    template <typename CharT, typename Traits, typename Allocator>
-    basic_string<CharT, Traits, Allocator> operator+( const CharT ch, const basic_string<CharT, Traits, Allocator>& rhs )
-    {
-        basic_string<CharT, Traits, Allocator> result( 1, ch );
-        result.append( rhs );
-        return result;
-    }
+    void operator+( std::basic_string_view<CharT, Traits>, const basic_string<CharT, Traits, Allocator>& ) = delete;
 } // namespace sw
 
 namespace sw
