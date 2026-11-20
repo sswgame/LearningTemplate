@@ -26,10 +26,12 @@ import contextlib
 import functools
 import importlib
 import io
+import json
 import re
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Sequence
 
@@ -310,12 +312,39 @@ def run_self_check(rule: Rule) -> str | None:
     return None
 
 
+VERIFY_CONFIG = "Config/Dev/Verify.json"   # `_hookBudgetMilliseconds` — 커밋 훅의 규칙 하나 · 도구 정책 훅 호출 하나의 시간 예산
+
+
+def read_hook_budget_seconds(project_root: Path) -> float:
+    """시간 예산(초) — 없으면 멈춘다(폴백 없음). 판정은 바꾸지 않고 경고만 낸다(시간은 기계 · 부하마다 달라 형식으로 지킬 것이 아니다)."""
+    value = json.loads((project_root / VERIFY_CONFIG).read_text(encoding="utf-8")).get("_hookBudgetMilliseconds")
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise SystemExit(f"[lint] {VERIFY_CONFIG} 의 _hookBudgetMilliseconds 가 수가 아니다")
+    return float(value) / 1000.0
+
+
+def format_rule_times(list_time: Sequence[tuple[float, str]], whole_repo: bool, budget_seconds: float) -> str | None:
+    """
+    규칙별 시간 줄(ESLint `TIMING=1` 꼴) — `--all` 은 느린 다섯과 합을 늘 찍고(재지 않고 줄일 수 없다), 커밋 훅은 예산을 넘은 규칙만 경고한다(없으면 None).
+    시간에는 그 규칙의 자체 검사가 든다.
+    """
+    ordered = sorted(list_time, reverse=True)
+    if whole_repo:
+        return f"[lint-time] 느린 규칙: {' · '.join(f'{rule_id} {seconds:.2f}s' for seconds, rule_id in ordered[:5])} (합 {sum(seconds for seconds, _ in ordered):.1f}s)"
+    list_slow = [(seconds, rule_id) for seconds, rule_id in ordered if seconds > budget_seconds]
+    if not list_slow:
+        return None
+    return f"[lint-time] 경고: 규칙 하나가 {budget_seconds * 1000:.0f} ms 를 넘었다 — {' · '.join(f'{rule_id} {seconds * 1000:.0f} ms' for seconds, rule_id in list_slow)}"
+
+
 def run_lint(project_root: Path, scope: LintScope) -> int:
     if not scope.list_file and not scope.list_removed:
         return ExitCode.PASSED
     has_errors = False
     list_whole: list[str] = []
+    list_time: list[tuple[float, str]] = []
     for rule in RULES:
+        started = time.perf_counter()
         rule_scope = select_rule_scope(rule, project_root, scope)
         if rule_scope.whole_repo and not scope.whole_repo:
             list_whole.append(rule.id)
@@ -323,6 +352,7 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
         if scope.whole_repo or scope.touches(roots=rule.list_inputs()):
             failure = run_self_check(rule)
             list_problem = list_problem + ([f"자체 검사 실패 — {failure}"] if failure else [])
+        list_time.append((time.perf_counter() - started, rule.id))
         if list_problem:
             has_errors = True
             where = f" — 예외 · 기준선: {rule.describe_tables()}" if rule.describe_tables() else ""
@@ -347,6 +377,9 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
         has_errors = True
         print("[format] FAIL — 'py -3 -m Scripts format' 으로 고친 뒤 다시 git add 한다.")
 
+    time_line = format_rule_times(list_time, scope.whole_repo, read_hook_budget_seconds(project_root))
+    if time_line:
+        print(time_line)
     if has_errors:
         print("\n[lint] FAIL — 고친 뒤 다시 git add 하고 커밋한다.")
         return ExitCode.VIOLATION

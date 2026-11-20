@@ -1,7 +1,7 @@
 """
 cmake 입구(`run_process.run_cmake`) — 연결된 워크트리(`.git` 이 파일)에서는 구성 · 빌드를 시작하지 않고 멈춘다.
 
-실행: python -X utf8 Scripts/common/tests/test_run_process.py (CTest `Scripts.test_run_process`). cmake 를 띄우지 않는다.
+실행: python -X utf8 Scripts/common/tests/test_run_process.py (CTest `Scripts.RunProcess`). cmake 를 띄우지 않는다.
 """
 
 from __future__ import annotations

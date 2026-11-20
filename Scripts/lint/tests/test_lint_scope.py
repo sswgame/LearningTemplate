@@ -1,7 +1,7 @@
 """
 커밋 훅 범위(`lint_scope`) — 일부만 스테이지한 파일을 찾는다(`list_staged_with_unstaged_changes`).
 
-실행: python -X utf8 Scripts/lint/tests/test_lint_scope.py (CTest `Scripts.test_lint_scope`). 임시 저장소에서 git 을 띄운다.
+실행: python -X utf8 Scripts/lint/tests/test_lint_scope.py (CTest `Scripts.LintScope`). 임시 저장소에서 git 을 띄운다.
 """
 
 from __future__ import annotations

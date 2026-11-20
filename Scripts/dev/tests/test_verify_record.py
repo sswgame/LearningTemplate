@@ -1,7 +1,7 @@
 """
 묶음 검증 기록(`verify_record.py`) — 단계 건너뛰기 판정 · pre-push 게이트(자체 검사), 그리고 설치하는 pre-push 훅이 검사 뒤 Git LFS 로 넘기는지.
 
-실행: python -X utf8 Scripts/dev/tests/test_verify_record.py (CTest `Scripts.test_verify_record`). git 을 띄우지 않는다.
+실행: python -X utf8 Scripts/dev/tests/test_verify_record.py (CTest `Scripts.VerifyRecord`). git 을 띄우지 않는다.
 """
 
 from __future__ import annotations

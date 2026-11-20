@@ -1,7 +1,7 @@
 """
 git 저장소 환경 변수 떼기(`common/__init__.py`) — 떼는 이름이 git 의 `rev-parse --local-env-vars` 와 같고, 커밋 훅 환경은 떼어 둔 값을 되돌린다.
 
-실행: python -X utf8 Scripts/common/tests/test_git_environment.py (CTest `Scripts.test_git_environment`). git 을 한 번 띄운다.
+실행: python -X utf8 Scripts/common/tests/test_git_environment.py (CTest `Scripts.GitEnvironment`). git 을 한 번 띄운다.
 """
 
 from __future__ import annotations
