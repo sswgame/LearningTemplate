@@ -202,7 +202,9 @@ namespace sw
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
         uint32                    readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
-        uint32                    getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
+        /** @brief DRED 자동 브레드크럼 · 페이지 폴트 할당을 로그로 남깁니다(손실 보고가 처음 한 번 부른다). */
+        void   reportDeviceFaultInternal() override;
+        uint32 getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
 
         /** @brief 리소스 생성과 파괴 인터페이스(D3D12RHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;

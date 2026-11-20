@@ -674,8 +674,8 @@ namespace sw
         void recordSurfaceLost( const utf8* pWhere );
         /** @brief 제출 순서에 들어간 리스트 · 프레임 세그먼트의 마지막 이벤트 마커를 적어 둡니다(디바이스 손실 로그용). 비어 있으면 그대로 둡니다. */
         void recordSubmittedEventMarker( const utf8* pMarker );
-        /** @brief VK_EXT_device_fault 로 디바이스 손실의 결함 정보를 읽어 로그로 남깁니다. 확장이 없으면 없다고 한 줄 남깁니다. */
-        void reportDeviceFault();
+        /** @brief VK_EXT_device_fault 로 디바이스 손실의 결함 정보를 읽어 로그로 남깁니다(손실 보고가 처음 한 번 부른다). 확장이 없으면 없다고 한 줄 남깁니다. */
+        void reportDeviceFaultInternal() override;
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
         [[nodiscard]] bool initializePipelineCache();

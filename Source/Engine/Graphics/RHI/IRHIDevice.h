@@ -249,10 +249,19 @@ namespace sw
          */
         [[nodiscard]] bool isDeviceLost() const;
         /**
+         * @brief 장치 손실을 표시하고 보고합니다 — 다섯 백엔드가 손실을 처음 본 자리(Present · 펜스 · 큐 결과 · 제거 사유 · 개발 명령)에서 부르는 한 입구다.
+         * @details 처음 표시한 호출만 보고한다: 오류 한 줄(`RHI.DeviceLost`, 원인 @p pCause), GPU 브레드크럼(`readLastBreadcrumbs` → `GPUBreadcrumbs::reportDeviceLost` — 표지가 없는 DX11 · GL · WebGPU 는
+         *          CPU 가 마지막으로 기록한 패스), 백엔드 결함 상세(`reportDeviceFaultInternal` — DX12 DRED · Vulkan `VK_EXT_device_fault`). 뒤 호출은 아무것도 하지 않는다.
+         *          예전에는 표시와 보고가 백엔드마다 따로였다(GL · WebGPU 는 브레드크럼 보고가 없었고 DX12 는 디버그 메시지 비우기에서만 보고했다). 어느 스레드에서 불러도 된다.
+         */
+        void reportDeviceLost( const utf8* pCause );
+        /**
          * @brief 장치를 잃은 뒤 GPU 가 마지막으로 닿은 브레드크럼 id 들을 읽습니다(`IRHICommandList::writeBreadcrumb` 가 남긴 값). DX12 는 [시작 칸, 끝 칸] 둘, Vulkan 은 파이프라인 단계마다 하나씩이다. 끝 표지는 `GPUBreadcrumbs::kEndMarkerBit` 을 가진다(푸는 일은 `GPUBreadcrumbs::parse`).
          * @param pOutID   id 를 받을 배열입니다. 0 이 아닌 값만 채운다.
          * @return 채운 개수입니다. GPU 표지를 쓰지 않는 백엔드(DX11 · OpenGL — `RHICapabilities::_bGPUBreadcrumbs` 가 거짓)와 표지가 없었으면 0 입니다.
          */
+        /** @brief 손실 보고(`reportDeviceLost`)가 처음 한 번 부르는 백엔드 결함 상세 훅입니다(DX12 DRED · Vulkan `VK_EXT_device_fault`). 기본은 없다. */
+        virtual void   reportDeviceFaultInternal() {}
         virtual uint32 readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
         {
             (void)pOutID;

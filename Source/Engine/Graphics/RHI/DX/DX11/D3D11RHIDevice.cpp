@@ -7,6 +7,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
@@ -819,11 +820,10 @@ namespace sw
 
     void D3D11RHIDevice::markDeviceLost( const utf8* pCause, HRESULT hr )
     {
-        if ( _transferSerials.markLost() )
-        {
-            SW_LOG_ERROR_ID( "D3D11.D3D11DeviceLostHr", "The D3D11 device was lost (%#, hr=0x%#) - later transfer submits are rejected and GPU waits stop", pCause, static_cast<uint32>( hr ) );
-            GPUBreadcrumbs::reportDeviceLost( "Direct3D 11", nullptr, 0 ); // GPU 쪽 표지가 없다 - CPU 가 마지막으로 기록한 패스만 싣는다
-        }
+        // 표시 · 보고는 공통 입구 하나다(`IRHIDevice::reportDeviceLost` — DX11 은 GPU 표지가 없어 CPU 가 마지막으로 기록한 패스만 싣는다). HRESULT 는 원인 글에 붙인다.
+        StringBuilder<constant::buffer::kMax128> cause;
+        cause.appendFormat( "%#, hr=0x%#", pCause, static_cast<uint32>( hr ) );
+        reportDeviceLost( cause.c_str() );
     }
 
     bool D3D11RHIDevice::isDeviceRemoved()
@@ -848,7 +848,7 @@ namespace sw
             return false;
         SW_LOG_WARNING_ID( "D3D11.MarkingD3D11DeviceLost", "Marking the D3D11 device lost on request (rhi.removeDevice) - D3D11 cannot remove a device, so this is the state after the first "
                                                            "DXGI_ERROR_DEVICE_REMOVED: later transfer submits are rejected" );
-        _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
+        reportDeviceLost( "rhi.removeDevice" ); // 이미 잃은 장치여도 같은 상태다
         return true;
     }
 

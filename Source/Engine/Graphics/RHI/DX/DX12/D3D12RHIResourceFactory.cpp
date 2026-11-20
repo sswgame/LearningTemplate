@@ -538,7 +538,7 @@ namespace sw
         const bool bDeviceGone = _pDevice->_commandQueue == nullptr || _pDevice->_transferFence == nullptr || _pDevice->isDeviceRemoved();
         if ( bDeviceGone )
         {
-            _pDevice->_transferSerials.markLost();
+            _pDevice->reportDeviceLost( "pollTransfer: no queue, fence or device" );
             return _pDevice->_transferSerials.classify( ticket );
         }
         _pDevice->retireCompletedTransfers();

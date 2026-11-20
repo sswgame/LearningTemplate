@@ -1429,6 +1429,6 @@ namespace sw
         if ( reason == WGPUDeviceLostReason_Destroyed || pThis == nullptr )
             return;
         SW_LOG_ERROR_ID( "WebGPU.DeviceLost", "WebGPU device lost (reason %#): %#", static_cast<uint32>( reason ), WebGPURHIUtil::fromStringView( message ) );
-        (void)pThis->_transferSerials.markLost();
+        pThis->reportDeviceLost( "WGPUDeviceLostCallback" );
     }
 } // namespace sw

@@ -1193,7 +1193,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return false;
         SW_LOG_WARNING_ID( "OpenGL.MarkingDeviceLost", "Marking the GL device lost on request (rhi.removeDevice) - GL cannot lose its context on demand, so this is the state after the first failed fence: later transfer submits are rejected" );
-        _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
+        reportDeviceLost( "rhi.removeDevice" ); // 이미 잃은 장치여도 같은 상태다
         return true;
     }
 
@@ -1203,8 +1203,8 @@ namespace sw
         void* pSync = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
         glFlush();
         // 펜스가 없으면 이 전송이 끝났는지 알 길이 없다 — 끝난 것으로 치지 않고 장치 손실로 둔다(티켓은 Failed, 이후 제출은 Rejected).
-        if ( pSync == nullptr && _transferSerials.markLost() )
-            SW_LOG_ERROR_ID( "OpenGL.EndTransferGlFenceSyncReturnedNo", "endTransfer: glFenceSync returned no fence; treating the GL device as lost" );
+        if ( pSync == nullptr )
+            reportDeviceLost( "endTransfer: glFenceSync returned no fence" );
         const uint64 serial = _transferQueue.enqueue( pSync );
         retireFinishedTransfers(); // 앞서 낸 전송 가운데 끝난 것을 모은다(이 스레드가 컨텍스트를 쥐고 있다)
         return serial;
@@ -1220,8 +1220,7 @@ namespace sw
             if ( waitResult == GL_WAIT_FAILED )
             {
                 // 실패한 항목은 큐 맨 앞에 남아 매 프레임 다시 여기로 온다 — 처음 표시한 때만 로그를 남긴다.
-                if ( _transferSerials.markLost() )
-                    SW_LOG_ERROR_ID( "OpenGL.PollTransferGlClientWaitSyncFailedTransfer", "pollTransfer: glClientWaitSync failed on a transfer fence" );
+                reportDeviceLost( "pollTransfer: glClientWaitSync failed on a transfer fence" );
                 return false;
             }
             return waitResult != GL_TIMEOUT_EXPIRED;

@@ -560,61 +560,62 @@ namespace sw
         if ( bAlreadyDeviceRemoved )
             return;
 
+        // 손실을 처음 본 쪽이 `reportDeviceLost` 로 보고했다(브레드크럼 · DRED 는 `reportDeviceFaultInternal`). 여기서는 반복 로그만 막는다.
         if ( isDeviceRemoved() )
-        {
             _bDeviceRemovedLogged.store( SW_TRUE, std::memory_order_relaxed );
-            // 마지막으로 GPU 가 닿은 패스 - 우리 표지(WriteBufferImmediate)를 이름으로 풀어 로그 · 크래시 문맥 · 빵부스러기에 싣는다.
-            uint32       arrBreadcrumb[GPUBreadcrumbs::kMaxReported]{};
-            const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GPUBreadcrumbs::kMaxReported );
-            GPUBreadcrumbs::reportDeviceLost( "Direct3D 12", arrBreadcrumb, breadcrumbCount );
-            Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedData> dred;
-            if ( SUCCEEDED( _device.As( &dred ) ) && dred != nullptr )
-            {
-                D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT autoBreadcrumbsOutput{};
-                if ( SUCCEEDED( dred->GetAutoBreadcrumbsOutput( &autoBreadcrumbsOutput ) ) )
-                {
-                    const D3D12_AUTO_BREADCRUMB_NODE* pNode = autoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
-                    while ( pNode != nullptr )
-                    {
-                        const uint32 executed = ( pNode->pCommandHistory != nullptr && pNode->pLastBreadcrumbValue != nullptr )
-                                                  ? *pNode->pLastBreadcrumbValue
-                                                  : 0;
-                        SW_LOG_ERROR_ID( "D3D12.CommandListTotalExecuted", "CommandList='%#', Total=%#, Executed=%#",
-                                         pNode->pCommandListDebugNameA ? pNode->pCommandListDebugNameA : "unnamed",
-                                         pNode->BreadcrumbCount, executed );
-                        const bool bHasCompletedBreadcrumb = pNode->pCommandHistory != nullptr && 0 < executed && executed <= pNode->BreadcrumbCount;
-                        if ( bHasCompletedBreadcrumb )
-                        {
-                            SW_LOG_ERROR_ID( "D3D12.LastCompletedOpIndex", "Last completed Op index=%#, OpType=%#",
-                                             executed - 1, static_cast<uint32>( pNode->pCommandHistory[executed - 1] ) );
-                            if ( executed < pNode->BreadcrumbCount )
-                            {
-                                SW_LOG_ERROR_ID( "D3D12.FailedFlightOpIndex", "Failed/In-Flight Op index=%#, OpType=%#",
-                                                 executed, static_cast<uint32>( pNode->pCommandHistory[executed] ) );
-                            }
-                        }
-                        pNode = pNode->pNext;
-                    }
-                }
+    }
 
-                D3D12_DRED_PAGE_FAULT_OUTPUT pageFaultOutput{};
-                if ( SUCCEEDED( dred->GetPageFaultAllocationOutput( &pageFaultOutput ) ) )
+    void D3D12RHIDevice::reportDeviceFaultInternal()
+    {
+        if ( _device == nullptr )
+            return;
+        Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedData> dred;
+        if ( SUCCEEDED( _device.As( &dred ) ) && dred != nullptr )
+        {
+            D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT autoBreadcrumbsOutput{};
+            if ( SUCCEEDED( dred->GetAutoBreadcrumbsOutput( &autoBreadcrumbsOutput ) ) )
+            {
+                const D3D12_AUTO_BREADCRUMB_NODE* pNode = autoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
+                while ( pNode != nullptr )
                 {
-                    SW_LOG_ERROR_ID( "D3D12.PageFaultVAX", "PageFault VA=0x%#", Fmt( static_cast<uint64>( pageFaultOutput.PageFaultVA ), Format( 16, Format::Padding::Zero ).hexUpper() ) );
-                    // 폴트 주소를 덮는 할당을 이름으로 되짚는다 — 살아 있는 것과 최근에 해제된 것(해제 뒤 사용이면 여기 나온다).
-                    // 이름은 storeBuffer · storeTexture 가 붙인다(nameResourceForDiagnostics, `SW Buffer <핸들>`).
-                    for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadExistingAllocationNode; pAllocation != nullptr;
-                          pAllocation                                   = pAllocation->pNext )
+                    const uint32 executed = ( pNode->pCommandHistory != nullptr && pNode->pLastBreadcrumbValue != nullptr )
+                                              ? *pNode->pLastBreadcrumbValue
+                                              : 0;
+                    SW_LOG_ERROR_ID( "D3D12.CommandListTotalExecuted", "CommandList='%#', Total=%#, Executed=%#",
+                                     pNode->pCommandListDebugNameA ? pNode->pCommandListDebugNameA : "unnamed",
+                                     pNode->BreadcrumbCount, executed );
+                    const bool bHasCompletedBreadcrumb = pNode->pCommandHistory != nullptr && 0 < executed && executed <= pNode->BreadcrumbCount;
+                    if ( bHasCompletedBreadcrumb )
                     {
-                        SW_LOG_ERROR_ID( "D3D12.PageFaultVAInsideLive", "  PageFault VA is inside live allocation '%#' (type %#)",
-                                         pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
+                        SW_LOG_ERROR_ID( "D3D12.LastCompletedOpIndex", "Last completed Op index=%#, OpType=%#",
+                                         executed - 1, static_cast<uint32>( pNode->pCommandHistory[executed - 1] ) );
+                        if ( executed < pNode->BreadcrumbCount )
+                        {
+                            SW_LOG_ERROR_ID( "D3D12.FailedFlightOpIndex", "Failed/In-Flight Op index=%#, OpType=%#",
+                                             executed, static_cast<uint32>( pNode->pCommandHistory[executed] ) );
+                        }
                     }
-                    for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadRecentFreedAllocationNode; pAllocation != nullptr;
-                          pAllocation                                   = pAllocation->pNext )
-                    {
-                        SW_LOG_ERROR_ID( "D3D12.PageFaultVAInsideRecently", "  PageFault VA is inside recently freed allocation '%#' (type %#) — use after free",
-                                         pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
-                    }
+                    pNode = pNode->pNext;
+                }
+            }
+
+            D3D12_DRED_PAGE_FAULT_OUTPUT pageFaultOutput{};
+            if ( SUCCEEDED( dred->GetPageFaultAllocationOutput( &pageFaultOutput ) ) )
+            {
+                SW_LOG_ERROR_ID( "D3D12.PageFaultVAX", "PageFault VA=0x%#", Fmt( static_cast<uint64>( pageFaultOutput.PageFaultVA ), Format( 16, Format::Padding::Zero ).hexUpper() ) );
+                // 폴트 주소를 덮는 할당을 이름으로 되짚는다 — 살아 있는 것과 최근에 해제된 것(해제 뒤 사용이면 여기 나온다).
+                // 이름은 storeBuffer · storeTexture 가 붙인다(nameResourceForDiagnostics, `SW Buffer <핸들>`).
+                for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadExistingAllocationNode; pAllocation != nullptr;
+                      pAllocation                                   = pAllocation->pNext )
+                {
+                    SW_LOG_ERROR_ID( "D3D12.PageFaultVAInsideLive", "  PageFault VA is inside live allocation '%#' (type %#)",
+                                     pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
+                }
+                for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadRecentFreedAllocationNode; pAllocation != nullptr;
+                      pAllocation                                   = pAllocation->pNext )
+                {
+                    SW_LOG_ERROR_ID( "D3D12.PageFaultVAInsideRecently", "  PageFault VA is inside recently freed allocation '%#' (type %#) — use after free",
+                                     pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
                 }
             }
         }
@@ -1453,7 +1454,7 @@ namespace sw
             return false;
         SW_LOG_WARNING_ID( "D3D12.RemovingD3D12DeviceRequest", "Removing the D3D12 device on request (rhi.removeDevice) - every later GPU call fails as after a TDR" );
         device5->RemoveDevice();
-        _transferSerials.markLost(); // 제거 직후부터 제출 진입이 Rejected 를 준다(다음 질의를 기다리지 않는다)
+        reportDeviceLost( "rhi.removeDevice" ); // 제거 직후부터 제출 진입이 Rejected 를 준다(다음 질의를 기다리지 않는다)
         return true;
     }
 
@@ -1461,7 +1462,7 @@ namespace sw
     {
         if ( _device == nullptr || SUCCEEDED( _device->GetDeviceRemovedReason() ) )
             return false;
-        _transferSerials.markLost();
+        reportDeviceLost( "GetDeviceRemovedReason" );
         return true;
     }
 
@@ -1985,7 +1986,7 @@ namespace sw
                 // Present 가 장치 제거 · 리셋으로 실패하면(DXGI_ERROR_DEVICE_REMOVED / DEVICE_RESET) 전송 손실로 표시한다. 디버그 전용인 flushDebugMessages 에 맡기지 않는다.
                 const bool bPresentLostDevice = presentHr == DXGI_ERROR_DEVICE_REMOVED || presentHr == DXGI_ERROR_DEVICE_RESET || FAILED( removed );
                 if ( bPresentLostDevice )
-                    _transferSerials.markLost();
+                    reportDeviceLost( "Present" );
                 // 디바이스 제거는 자동 복구가 없어서 한 번 일어나면 이후 매 프레임 여기로 들어온다.
                 // 첫 발견 때만 로그를 남기고 그 뒤로는 조용히 건너뛰어 로그 폭주를 막는다.
                 if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
@@ -2441,9 +2442,9 @@ namespace sw
         if ( FAILED( signalHr ) )
         {
             // 리스트는 이미 큐에 났지만 끝났는지 알 방법이 없다. 작업은 돌려놓지 않고 버린다(재사용하면 실행 중인 얼로케이터를 Reset 할 수 있다).
-            if ( _transferSerials.markLost() )
-                SW_LOG_ERROR_ID( "D3D12.TransferFenceSignalFailed", "%#: transfer fence Signal failed hr=0x%# (DeviceRemoved=0x%#)", pWhere, static_cast<uint32>( signalHr ),
-                                 static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
+            reportDeviceLost( "transfer fence Signal" );
+            SW_LOG_ERROR_ONCE_ID( "D3D12.TransferFenceSignalFailed", "%#: transfer fence Signal failed hr=0x%# (DeviceRemoved=0x%#)", pWhere, static_cast<uint32>( signalHr ),
+                                  static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
             return 0;
         }
         _transferFenceValue = fenceToSignal;

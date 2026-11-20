@@ -126,6 +126,7 @@ namespace sw::test
         vector<RHIResourceReleaseDelegate> _listGPURelease;                                                            /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */
         vector<RHIFrameCompletionDelegate> _listFrameCompletion;                                                       /**< `notifyFrameCompletion` 으로 받은 통지(받은 순서) */
         uint32                             _pendingReleaseCount{ 0 };                                                  /**< `getPendingReleaseCount` 가 답할 값 — 종료 단언 테스트가 정한다 */
+        uint32                             _deviceFaultReportCount{ 0 };                                               /**< `reportDeviceFaultInternal` 이 불린 횟수 — 손실 보고가 처음 한 번만 부르는지 본다 */
         vector<RHIDescriptorIndex>         _listLiveTextureIndex;                                                      /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
         vector<RHIDescriptorIndex>         _listLiveBufferIndex;                                                       /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
         vector<RHIFormat>                  _listUnsupportedFormat;                                                     /**< `supportsTextureFormat` 이 거짓으로 답할 형식(나머지는 참) */
@@ -209,6 +210,7 @@ namespace sw::test
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override { _listGPURelease.push_back( releaseDelegate ); }
         void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override { _listFrameCompletion.push_back( completionDelegate ); }
         uint32 getPendingReleaseCount() const override { return _pendingReleaseCount; }
+        void   reportDeviceFaultInternal() override { ++_deviceFaultReportCount; }
         /** @brief 손실 표시만 세운다(실제 백엔드의 `debugRemoveDevice` 와 같은 상태 — 전송 거절 · `isDeviceLost`). */
         bool debugRemoveDevice() override
         {

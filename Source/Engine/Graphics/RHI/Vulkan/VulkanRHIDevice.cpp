@@ -1473,7 +1473,7 @@ namespace sw
             if ( _bSwapChainColorSpace != SW_FALSE && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_HDR_METADATA_EXTENSION_NAME ) )
                 listDeviceExtension.push_back( VK_EXT_HDR_METADATA_EXTENSION_NAME );
         }
-        // VK_EXT_device_fault(진단 전용): 디바이스를 잃었을 때 결함 주소 · 공급사 코드를 읽는다(reportDeviceFault). 기능 비트까지 있어야 켠다.
+        // VK_EXT_device_fault(진단 전용): 디바이스를 잃었을 때 결함 주소 · 공급사 코드를 읽는다(reportDeviceFaultInternal). 기능 비트까지 있어야 켠다.
         VkPhysicalDeviceFaultFeaturesEXT faultFeatures{};
         faultFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
         if ( build::kShipping == false && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME ) )
@@ -2109,7 +2109,7 @@ namespace sw
             return;
         // 장치 손실은 처음 본 쪽만 알린다. 그 뒤의 호출은 모두 같은 값을 돌려주므로 프레임마다 로그가 쌓인다.
         const bool bDeviceLost = vkResult == VK_ERROR_DEVICE_LOST;
-        if ( bDeviceLost && _transferSerials.markLost() == false )
+        if ( bDeviceLost && isDeviceLost() )
             return;
 
         fixed_string<constant::buffer::kMax64> lastMarker;
@@ -2121,12 +2121,8 @@ namespace sw
                          VulkanRHIDeviceInternal::getResultName( vkResult ), lastMarker.empty() ? "<none>" : lastMarker.c_str() );
         if ( bDeviceLost == false )
             return;
-        SW_LOG_ERROR_ID( "Vulkan.VulkanDeviceLostSubmits", "Vulkan device lost - submits, waits and presents stop; frames are skipped until shutdown" );
-        // 마지막으로 GPU 가 닿은 패스 - 체크포인트를 이름으로 풀어 로그 · 크래시 문맥 · 빵부스러기에 싣는다(없으면 CPU 가 마지막으로 기록한 패스만).
-        uint32       arrBreadcrumb[GPUBreadcrumbs::kMaxReported]{};
-        const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GPUBreadcrumbs::kMaxReported );
-        GPUBreadcrumbs::reportDeviceLost( "Vulkan", arrBreadcrumb, breadcrumbCount );
-        reportDeviceFault();
+        // 표시 · 브레드크럼 · VK_EXT_device_fault 보고는 공통 입구 하나다(`IRHIDevice::reportDeviceLost` → `reportDeviceFaultInternal`).
+        reportDeviceLost( pWhere != nullptr ? pWhere : "VK_ERROR_DEVICE_LOST" );
     }
 
     bool VulkanRHIDevice::debugRemoveDevice()
@@ -2135,7 +2131,7 @@ namespace sw
             return false;
         SW_LOG_WARNING_ID( "Vulkan.MarkingVulkanDeviceLost", "Marking the Vulkan device lost on request (rhi.removeDevice) - Vulkan cannot remove a device, so this is the state after the first "
                                                              "VK_ERROR_DEVICE_LOST: no more submits, waits or presents" );
-        _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
+        reportDeviceLost( "rhi.removeDevice" ); // 이미 잃은 장치여도 같은 상태다
         return true;
     }
 
@@ -2193,7 +2189,7 @@ namespace sw
         _lastSubmittedEventMarker = pMarker;
     }
 
-    void VulkanRHIDevice::reportDeviceFault()
+    void VulkanRHIDevice::reportDeviceFaultInternal()
     {
         PFN_vkGetDeviceFaultInfoEXT pfnGetFaultInfo =
             ( _bDeviceFault != SW_FALSE && _device != VK_NULL_HANDLE )
