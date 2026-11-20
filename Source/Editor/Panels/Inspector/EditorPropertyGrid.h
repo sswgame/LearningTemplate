@@ -74,11 +74,15 @@ namespace sw::editor
         void drawProperties( const EditorPropertyGridTarget& target, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName );
         /** @brief 대상 타입의 메서드(FUNCTION)를 그립니다. @p bEvents 가 true 이면 이벤트도 그립니다. 인스펙터의 Methods 영역입니다. */
         void drawMethodsAndEvents( const EditorPropertyGridTarget& target, bool bEvents );
+        /** @brief 목록에 오를 메서드가 있을 때만 "Methods" 머리와 메서드를 그립니다. 다중 선택의 공통 컴포넌트마다 부른다(메서드 없는 컴포넌트에 빈 절을 쌓지 않는다). */
+        void drawListedMethods( const EditorPropertyGridTarget& target );
         /**
          * @brief 즐겨찾기 집합을 연결합니다. 연결하면 프로퍼티 행의 우클릭 메뉴에 즐겨찾기 토글이 생기고 즐겨찾기 행 이름 앞에 별을 그립니다. nullptr 이면 끕니다.
          * @details 집합의 주인은 인스펙터 패널이다. 환경설정 창처럼 즐겨찾기가 없는 그리드는 연결하지 않는다. 토글하면 저장 파일에 바로 쓴다.
          */
         void setFavorites( InspectorFavorites* pFavorites ) { _model.setFavorites( pFavorites ); }
+        /** @brief 메서드 액션 즐겨찾기 집합을 연결합니다 — 별을 켠 메서드는 목록 맨 위에 선다(반복 작업용 액션 목록). 집합의 주인은 인스펙터 패널이다. */
+        void setActionFavorites( InspectorFavorites* pActionFavorites ) { _model.setActionFavorites( pActionFavorites ); }
         /**
          * @brief 대상의 프로퍼티 중 즐겨찾기한 것만 타입 이름 머리 아래에 그립니다. 그릴 것이 없으면 아무것도 그리지 않습니다.
          * @details 인스펙터 맨 위 Favorites 구역이 쓴다. 키는 대상 타입 이름과 프로퍼티 이름이다(`InspectorFavorites::makeKey`).
@@ -91,6 +95,10 @@ namespace sw::editor
         uint32 getMethodRowCount() const { return _methodRowCount; }
         /** @brief 마지막으로 그린 프레임에 `CallInEditor` 가 없어 숨긴 메서드 수입니다(감시 값 `Editor.InspectorHiddenMethods`). 진단 보기를 켜면 0 입니다. */
         uint32 getHiddenMethodCount() const { return _hiddenMethodCount; }
+        /** @brief 마지막으로 그린 프레임에 목록 맨 위에 그린 액션 즐겨찾기 메서드 행 수입니다(감시 값 `Editor.InspectorFavoriteMethodRows`). */
+        uint32 getFavoriteMethodRowCount() const { return _favoriteMethodRowCount; }
+        /** @brief 마지막 호출의 결과입니다(감시 값 `Editor.InspectorCallTargets` · `Editor.InspectorCallFailures`). */
+        const InspectorInvokeResult& getLastInvokeResult() const { return _model.getLastInvokeResult(); }
         /** @brief 마지막으로 그린 프레임에 값을 채운 프로퍼티 행 수입니다(감시 값 `Editor.InspectorFilledRows` — 화면 밖 행은 세지 않는다). */
         uint32 getFilledRowCount() const { return _filledRowCount; }
         /** @brief 마지막으로 그린 프레임에 화면 밖이라 높이만 둔 깊이 0 행 수입니다(감시 값 `Editor.InspectorSkippedRows`). */
@@ -167,6 +175,8 @@ namespace sw::editor
         void drawTypeMethod( const TypeInfo* pTypeInfo, const FunctionInfo& method );
         /** @brief 마지막 호출의 결과 한 줄을 그립니다 — 성공이면 반환값(없으면 대시), 실패면 오류 아이콘 · 첫 실패 갈래 · 실패 수/대상 수입니다. */
         void drawLastInvokeResult();
+        /** @brief 메서드 줄 앞의 별(액션 즐겨찾기 토글)을 그리고 같은 줄을 잇습니다. 액션 즐겨찾기를 쓰지 않는 그리드는 그리지 않습니다. */
+        void drawMethodFavoriteToggle( const TypeInfo* pTypeInfo, const FunctionInfo& method );
         /** @brief 이 메서드를 목록에 그리면 true 입니다 — `CallInEditor` 이거나 진단 보기가 켜져 있을 때입니다. */
         [[nodiscard]] bool isMethodListed( const FunctionInfo& method ) const;
         /** @brief 메서드의 인자 입력란을 인자 슬롯마다 그립니다. */
@@ -190,28 +200,29 @@ namespace sw::editor
             AddKeyedElement,
         };
 
-        fixed_string<constant::buffer::kMax64>                         _propertyFilter;      ///< 프로퍼티 검색 필터
-        unordered_map<string, vector<InspectorMethodArgSlot>>          _mapMethodArgSlot;    ///< FUNCTION() 인자 슬롯. 키는 타입과 메서드 이름 원문
-        unordered_map<uint32, fixed_string<constant::buffer::kMax256>> _mapContainerAddText; ///< 컨테이너 "추가" 입력란의 텍스트. 키는 그 입력란의 ImGui id
-        vector<InspectorComponentChoice>                               _listMethodArgChoice; ///< 메서드 인자 핸들 선택기의 선택지 — 콤보가 열린 프레임에만 채운다
-        PropertyGridViewModel                                          _model;               ///< 편집 모델 — 대상 · 값 행 · 배치 캐시 · 즐겨찾기 · 명령
-        PropertyGridViewState                                          _viewState;           ///< 그리는 대상의 값 행(저장 공간을 다시 쓴다)
-        vector<OpenRowScope>                                           _listOpenScope;       ///< 지금 열린 행 범위(바깥에서 안쪽 순서)
-        string                                                         _pendingEditText;     ///< 미룬 편집의 글(붙여넣기 · 키 · 원소)
-        PendingRowEdit                                                 _pendingEdit;         ///< 미룬 편집
-        uint32                                                         _pendingEditRowID;    ///< 미룬 편집의 행(컨테이너 편집은 컨테이너 행)
-        uint32                                                         _pendingEditIndex;    ///< 미룬 편집의 원소 · 항목 자리
-        uint32                                                         _measureRowID;        ///< 높이를 재는 중인 깊이 0 행. `constant::invalid_index::kUint32` 면 없다
-        float32                                                        _measureStartY;       ///< 그 행이 시작한 높이(칸 여백 안)
-        OpenAllRequest                                                 _openAllRequest;      ///< 이번 프레임의 모두 펼치기 · 접기 요청
-        uint8                                                          _bFavoritesOnly  : 1; ///< 다음 `drawTargetProperties` 한 번만 즐겨찾기 프로퍼티로 거른다
-        uint8                                                          _bShowAllMethods : 1; ///< 진단 보기: `CallInEditor` 가 없는 메서드도 그린다(보기 옵션). 기본은 꺼져 있다
-        uint8                                                          _bTableOpen      : 1; ///< 카테고리 표가 열려 있다
-        bool                                                           _bShowModifiedOnly;   ///< 기본값과 다른 프로퍼티만 그린다(언리얼 Show Only Modified Properties) NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
-        int32                                                          _countFrame;          ///< 아래 수를 센 ImGui 프레임 번호. 프레임이 바뀌면 처음 그릴 때 다시 센다
-        uint32                                                         _methodRowCount;      ///< 그 프레임에 그린 메서드 행 수
-        uint32                                                         _hiddenMethodCount;   ///< 그 프레임에 숨긴(`CallInEditor` 없는) 메서드 수
-        uint32                                                         _filledRowCount;      ///< 그 프레임에 값을 채운 행 수
-        uint32                                                         _skippedRowCount;     ///< 그 프레임에 화면 밖이라 높이만 둔 깊이 0 행 수
+        fixed_string<constant::buffer::kMax64>                         _propertyFilter;         ///< 프로퍼티 검색 필터
+        unordered_map<string, vector<InspectorMethodArgSlot>>          _mapMethodArgSlot;       ///< FUNCTION() 인자 슬롯. 키는 타입과 메서드 이름 원문
+        unordered_map<uint32, fixed_string<constant::buffer::kMax256>> _mapContainerAddText;    ///< 컨테이너 "추가" 입력란의 텍스트. 키는 그 입력란의 ImGui id
+        vector<InspectorComponentChoice>                               _listMethodArgChoice;    ///< 메서드 인자 핸들 선택기의 선택지 — 콤보가 열린 프레임에만 채운다
+        PropertyGridViewModel                                          _model;                  ///< 편집 모델 — 대상 · 값 행 · 배치 캐시 · 즐겨찾기 · 명령
+        PropertyGridViewState                                          _viewState;              ///< 그리는 대상의 값 행(저장 공간을 다시 쓴다)
+        vector<OpenRowScope>                                           _listOpenScope;          ///< 지금 열린 행 범위(바깥에서 안쪽 순서)
+        string                                                         _pendingEditText;        ///< 미룬 편집의 글(붙여넣기 · 키 · 원소)
+        PendingRowEdit                                                 _pendingEdit;            ///< 미룬 편집
+        uint32                                                         _pendingEditRowID;       ///< 미룬 편집의 행(컨테이너 편집은 컨테이너 행)
+        uint32                                                         _pendingEditIndex;       ///< 미룬 편집의 원소 · 항목 자리
+        uint32                                                         _measureRowID;           ///< 높이를 재는 중인 깊이 0 행. `constant::invalid_index::kUint32` 면 없다
+        float32                                                        _measureStartY;          ///< 그 행이 시작한 높이(칸 여백 안)
+        OpenAllRequest                                                 _openAllRequest;         ///< 이번 프레임의 모두 펼치기 · 접기 요청
+        uint8                                                          _bFavoritesOnly  : 1;    ///< 다음 `drawTargetProperties` 한 번만 즐겨찾기 프로퍼티로 거른다
+        uint8                                                          _bShowAllMethods : 1;    ///< 진단 보기: `CallInEditor` 가 없는 메서드도 그린다(보기 옵션). 기본은 꺼져 있다
+        uint8                                                          _bTableOpen      : 1;    ///< 카테고리 표가 열려 있다
+        bool                                                           _bShowModifiedOnly;      ///< 기본값과 다른 프로퍼티만 그린다(언리얼 Show Only Modified Properties) NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        int32                                                          _countFrame;             ///< 아래 수를 센 ImGui 프레임 번호. 프레임이 바뀌면 처음 그릴 때 다시 센다
+        uint32                                                         _methodRowCount;         ///< 그 프레임에 그린 메서드 행 수
+        uint32                                                         _hiddenMethodCount;      ///< 그 프레임에 숨긴(`CallInEditor` 없는) 메서드 수
+        uint32                                                         _favoriteMethodRowCount; ///< 그 프레임에 맨 위에 그린 액션 즐겨찾기 메서드 행 수
+        uint32                                                         _filledRowCount;         ///< 그 프레임에 값을 채운 행 수
+        uint32                                                         _skippedRowCount;        ///< 그 프레임에 화면 밖이라 높이만 둔 깊이 0 행 수
     };
 } // namespace sw::editor

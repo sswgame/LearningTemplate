@@ -2040,6 +2040,11 @@
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.LastResultTargets" source="Last result: {lastInvokeResult} ({targetCount} objects)">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.LeftTrigger" source="Left Trigger:  {leftTrigger}">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
@@ -3048,6 +3053,7 @@
 		</entry>
 		<entry key="EdSection.Methods" source="Methods">
 			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
@@ -6846,6 +6852,11 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorInspector.AddToActions" source="Pin to the top of the function list (saved)">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorInspector.AddToFavorites" source="Add to Favorites">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
@@ -6932,6 +6943,11 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorInspector.MultiCallHint" source="Calls run on every selected object as one undo step.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorInspector.MultipleValues" source="Multiple values">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
@@ -7013,6 +7029,11 @@
 		<entry key="EditorInspector.PresetNameHint" source="Preset Name...">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.RemoveFromActions" source="Unpin from the top of the function list">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.RemoveFromFavorites" source="Remove from Favorites">

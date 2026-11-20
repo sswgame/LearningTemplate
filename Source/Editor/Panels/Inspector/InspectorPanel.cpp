@@ -80,6 +80,7 @@ namespace sw::editor
     {
         _viewModel.gather( _state );
         _propertyGrid.setFavorites( &_viewModel.editFavorites() );
+        _propertyGrid.setActionFavorites( &_viewModel.editActionFavorites() );
         EditorWidgets::pushInspectorStyle();
         drawSelectionSection();
         _propertyGrid.endFrame(); // 모두 펼치기 · 접기 요청은 이번 프레임의 머리에만 적용하고, 닫힌 편집 구간을 되돌리기에 남긴다
@@ -214,6 +215,8 @@ namespace sw::editor
                 target._isMixed                 = SW_DELEGATE_METHOD( Delegate<bool( const PropertyInfo& )>, &InspectorViewModel::isMultiEditMixed, &_viewModel );
                 target._collectEditTargets      = SW_DELEGATE_METHOD( Delegate<void( vector<Component*>& )>, &InspectorViewModel::collectMultiEditTargets, &_viewModel );
                 _propertyGrid.drawProperties( target, nullptr, {} );
+                // 메서드도 공통 컴포넌트마다 그린다 — 부르면 선택한 오브젝트 전부의 그 컴포넌트에 한 거래로 간다(언리얼 Details 의 CallInEditor 와 같다).
+                _propertyGrid.drawListedMethods( target );
                 _viewModel.setCurrentMultiComponent( InspectorViewModel::kNoMultiComponent );
             }
             ImGui::PopID();

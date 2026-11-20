@@ -45,6 +45,7 @@ namespace sw
 namespace sw::editor
 {
     struct EditorAssetIndexEntry;
+    struct PropertyEditTarget;
 
     class InspectorFavorites;
     class InspectorPropertyManager;
@@ -157,6 +158,14 @@ namespace sw::editor
         bool hasFavorites() const { return _pFavorites != nullptr; }
         /** @brief 키 @p favoriteKey 의 즐겨찾기를 켜고 끄고 바로 저장합니다(언리얼 Details 의 Add to Favorites · Remove from Favorites). */
         void toggleFavorite( string_view favoriteKey );
+        /** @brief 메서드 액션 즐겨찾기 집합을 연결합니다. nullptr 이면 끕니다(별을 그리지 않는다). 집합의 주인은 인스펙터 패널이다. */
+        void setActionFavorites( InspectorFavorites* pActionFavorites ) { _pActionFavorites = pActionFavorites; }
+        /** @brief 메서드 액션 즐겨찾기를 쓰는 그리드이면 true 입니다. */
+        bool hasActionFavorites() const { return _pActionFavorites != nullptr; }
+        /** @brief @p type 의 메서드 @p method 가 액션 즐겨찾기(목록 맨 위 고정)이면 true 입니다. */
+        bool isActionFavorite( const TypeInfo& type, const FunctionInfo& method ) const;
+        /** @brief @p type 의 메서드 @p method 의 액션 즐겨찾기를 켜고 끄고 바로 저장합니다(에디터 상태 폴더 `InspectorActionFavorites.txt`). */
+        void toggleActionFavorite( const TypeInfo& type, const FunctionInfo& method );
 
         // ------------------------------------------------------------------------------
         // 명령 — 값을 바꾸는 한 길. 행 번호로 받아 편집 요청(`PropertyEditRequest` — 경로 · 종류 · 새 값)으로 바꾼다. 씬 대상은 요청을 게임 단계에 넘기고
@@ -216,6 +225,7 @@ namespace sw::editor
         /**
          * @brief 묶은 대상의 FUNCTION @p method 를 인자 @p listArg 로 부르고 결과(갈래 · 반환값 글)를 `getLastInvokeResult` 에 둡니다. 인자 없는 Run 단추와 Invoke 단추가 같은 길을 씁니다.
          *        부르기는 이름으로 그때 다시 찾는다(`ReflectionInvoke::callByName`) — 모듈을 다시 올려 함수가 사라졌으면 `NotBound`, 인자를 못 바꾸면 `ArgumentMismatch` 다.
+         *        다중 선택(`_collectEditTargets`)이면 같은 타입 컴포넌트 전부에 같은 인자로 부르고 되돌리기는 한 단계다(언리얼 Details 의 CallInEditor 와 같다).
          * @details 주인 오브젝트가 있으면 호출을 오브젝트 편집 하나로 감싼다 — 바뀐 것이 있으면 되돌리기 한 단계와 씬 dirty, 없으면 아무것도 남기지 않는다.
          *          Play 중에는 기록 없이 호출한다(`InspectorObjectEdit::applyObjectEdit` 와 같은 규칙). 씬 대상의 호출은 게임 단계가 한다(쓰기 명령과 같은 줄 — 결과 글은
          *          같은 프레임의 게임 단계 뒤에 오른다). 씬 밖 대상은 바로 부른다.
@@ -335,6 +345,8 @@ namespace sw::editor
          * @details 값을 쓰는 명령은 모두 이것을 먼저 부른다("명령 한 길"). 씬 밖 대상 · 플레이 중에는 아무것도 하지 않는다.
          */
         void ensureEditSpan( const RowBinding& binding, string_view label );
+        /** @brief 다중 선택에서 주 대상 말고 편집 · 호출이 닿는 대상들과 그 씬 키입니다(`_collectEditTargets`). 씬 밖 대상 · 단일 선택이면 비워 둡니다. */
+        void collectOtherEditTargets( vector<PropertyEditTarget>& outListOther, uint32& outSceneKey ) const;
         /** @brief 행 @p rowID 의 값 자리까지의 경로(깊이 0 프로퍼티 + 필드 · 원소 · 맵 항목 마디)를 @p outPath 에 채웁니다. 값 행이 아니면 false 입니다. */
         bool buildEditPath( uint32 rowID, PropertyEditPath& outPath ) const;
         /**
@@ -355,6 +367,7 @@ namespace sw::editor
         Delegate<void( vector<Component*>& )> _collectEditTargets; ///< 묶은 대상의 `_collectEditTargets`
         PropertyEditSpanSet                   _editSpans;          ///< 이 그리드의 편집 구간(인스펙터 창마다 따로 닫힌다)
         InspectorFavorites*                   _pFavorites;         ///< 즐겨찾기 집합. nullptr 이면 즐겨찾기를 쓰지 않는다
+        InspectorFavorites*                   _pActionFavorites;   ///< 메서드 액션 즐겨찾기 집합. nullptr 이면 쓰지 않는다
         InspectorLayoutCache                  _layoutCache;        ///< 타입 · 확장이 그린 이름 · 검색 글 · 레지스트리 세대마다 지은 묶음과 프로퍼티별 표시 정보
         InspectorPropertyDisplay              _scratchDisplay;     ///< 묶음 밖 임시 프로퍼티(컨테이너 원소)의 표시 정보 — 주소가 매번 달라 캐시하지 않고 부를 때마다 다시 채운다
         vector<InspectorPropertyGroup>        _listFilteredGroup;  ///< 즐겨찾기 · 바뀐 것만 보기로 거른 묶음 사본(저장 공간을 다시 쓴다)

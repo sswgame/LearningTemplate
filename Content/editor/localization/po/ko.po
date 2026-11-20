@@ -2048,6 +2048,11 @@ msgctxt "EdFormat.LastResult"
 msgid "Last result: {lastInvokeResult}"
 msgstr "마지막 결과: {lastInvokeResult}"
 
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdFormat.LastResultTargets"
+msgid "Last result: {lastInvokeResult} ({targetCount} objects)"
+msgstr "마지막 결과: {lastInvokeResult}(오브젝트 {targetCount} 개)"
+
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdFormat.LeftTrigger"
 msgid "Left Trigger:  {leftTrigger}"
@@ -3032,6 +3037,7 @@ msgctxt "EdSection.Memory"
 msgid "Memory"
 msgstr "메모리"
 
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdSection.Methods"
 msgid "Methods"
@@ -6665,6 +6671,11 @@ msgid "Waiting for input..."
 msgstr "입력을 기다리는 중..."
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.AddToActions"
+msgid "Pin to the top of the function list (saved)"
+msgstr "함수 목록 맨 위에 고정합니다(저장됨)"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.AddToFavorites"
 msgid "Add to Favorites"
 msgstr "즐겨찾기에 추가"
@@ -6750,6 +6761,11 @@ msgid "Locked to this object - click to follow the selection"
 msgstr "이 오브젝트에 고정되어 있습니다 - 클릭하면 선택을 따라갑니다"
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.MultiCallHint"
+msgid "Calls run on every selected object as one undo step."
+msgstr "선택한 오브젝트 모두에 부르고, 되돌리기는 한 단계입니다."
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EditorInspector.MultipleValues"
 msgid "Multiple values"
@@ -6829,6 +6845,11 @@ msgstr "프리팹 인스턴스입니다"
 msgctxt "EditorInspector.PresetNameHint"
 msgid "Preset Name..."
 msgstr "프리셋 이름..."
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.RemoveFromActions"
+msgid "Unpin from the top of the function list"
+msgstr "함수 목록 맨 위 고정을 풉니다"
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.RemoveFromFavorites"

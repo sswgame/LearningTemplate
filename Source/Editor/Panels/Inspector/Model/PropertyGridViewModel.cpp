@@ -159,17 +159,30 @@ namespace sw::editor
              *        `InspectorObjectEdit::applyObjectEdit`). 선언으로 고르지 않는다 — 모든 호출이 기록 대상이라 "선언을 빠뜨린 변경 호출" 이 없다(언리얼 CallInEditor 의
              *        `FScopedTransaction` 과 같다). 결과는 @p pResult 칸(그리드가 가진 결과 칸 — 다음 UI 프레임이 읽는다)에 둔다. 람다는 id · 이름 · 인자 값만 붙잡는다.
              */
-            static void requestInvoke( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const hashed_string& methodName, const string& label,
-                                       const vector<ReflectedValue>& listArg, const shared_ptr<InspectorInvokeResult>& pResult )
+            static void requestInvoke( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, uint32 sceneKey, vector<PropertyEditTarget>&& listOther,
+                                       const hashed_string& methodName, const string& label, const vector<ReflectedValue>& listArg,
+                                       const shared_ptr<InspectorInvokeResult>& pResult )
             {
                 EditorCommandRegistry::getInEditorContext().requestSceneEdit( Delegate<void( EditorTransaction& )>::create(
-                    [scope, objectID, componentID, methodName, label, listArg, pResult]( EditorTransaction& transaction )
+                    [scope, objectID, componentID, sceneKey, listOther = std::move( listOther ), methodName, label, listArg, pResult]( EditorTransaction& transaction )
                 {
                     pResult->begin( methodName.c_str() );
                     SceneTarget target;
                     if ( resolveSceneTarget( scope, objectID, componentID, target ) == false )
                         return;
                     invokeOn( transaction, target._pObject, *target._pType, target._pInstance, methodName, label, listArg, *pResult );
+                    // 다중 선택의 나머지 — 한 거래라 되돌리기는 한 단계다. 그 사이 사라진 대상은 건너뛴다(세지 않는다).
+                    for ( const PropertyEditTarget& other : listOther )
+                    {
+                        GameObject* pOther = PropertyEditTarget::findObject( sceneKey, other._objectID );
+                        if ( pOther == nullptr )
+                            continue;
+                        Component*      pComponent = nullptr;
+                        const TypeInfo* pType      = nullptr;
+                        void*           pInstance  = other.findInstance( *pOther, pComponent, pType );
+                        if ( pInstance != nullptr && pType != nullptr )
+                            invokeOn( transaction, pOther, *pType, pInstance, methodName, label, listArg, *pResult );
+                    }
                 } ) );
             }
 
@@ -293,6 +306,7 @@ namespace sw::editor
         , _collectEditTargets{}
         , _editSpans{}
         , _pFavorites{ nullptr }
+        , _pActionFavorites{ nullptr }
         , _layoutCache{}
         , _scratchDisplay{}
         , _listFilteredGroup{}
@@ -950,7 +964,20 @@ namespace sw::editor
         if ( _pFavorites == nullptr )
             return;
         (void)_pFavorites->toggle( favoriteKey );
-        (void)_pFavorites->saveToFile( InspectorFavorites::getDefaultFilePath() ); // 실패는 saveToFile 이 경고한다
+        (void)_pFavorites->saveToFile( _pFavorites->getFilePath() ); // 실패는 saveToFile 이 경고한다
+    }
+
+    bool PropertyGridViewModel::isActionFavorite( const TypeInfo& type, const FunctionInfo& method ) const
+    {
+        return _pActionFavorites != nullptr && _pActionFavorites->contains( InspectorFavorites::makeMethodKey( type, method ) );
+    }
+
+    void PropertyGridViewModel::toggleActionFavorite( const TypeInfo& type, const FunctionInfo& method )
+    {
+        if ( _pActionFavorites == nullptr )
+            return;
+        (void)_pActionFavorites->toggle( InspectorFavorites::makeMethodKey( type, method ) );
+        (void)_pActionFavorites->saveToFile( _pActionFavorites->getFilePath() ); // 실패는 saveToFile 이 경고한다
     }
 
     void PropertyGridViewModel::removeDefaultValued( const ObjectAddress instance, const ObjectAddress defaultInstance, vector<InspectorPropertyGroup>& inoutListGroup )
@@ -1222,18 +1249,22 @@ namespace sw::editor
         ensureEditSpan( *pBinding, undoLabel );
         vector<PropertyEditTarget> listOther;
         uint32                     sceneKey = 0;
-        if ( _collectEditTargets.isBound() )
-        {
-            sceneKey = PropertyEditTarget::findSceneKey( *_pObject );
-            vector<Component*> listComponent;
-            _collectEditTargets( listComponent );
-            for ( const Component* pEdited : listComponent )
-            {
-                if ( pEdited != nullptr && pEdited != _pComponent && pEdited->getOwner() != nullptr )
-                    listOther.push_back( PropertyEditTarget::make( *pEdited->getOwner(), pEdited ) );
-            }
-        }
+        collectOtherEditTargets( listOther, sceneKey );
         PropertyGridViewModelInternal::requestSceneEdit( _targetScope, _targetObjectID, _targetComponentID, sceneKey, std::move( listOther ), std::move( request ) );
+    }
+
+    void PropertyGridViewModel::collectOtherEditTargets( vector<PropertyEditTarget>& outListOther, uint32& outSceneKey ) const
+    {
+        if ( _pObject == nullptr || _collectEditTargets.isBound() == false )
+            return;
+        outSceneKey = PropertyEditTarget::findSceneKey( *_pObject );
+        vector<Component*> listComponent;
+        _collectEditTargets( listComponent );
+        for ( const Component* pEdited : listComponent )
+        {
+            if ( pEdited != nullptr && pEdited != _pComponent && pEdited->getOwner() != nullptr )
+                outListOther.push_back( PropertyEditTarget::make( *pEdited->getOwner(), pEdited ) );
+        }
     }
 
     void PropertyGridViewModel::ensureEditSpan( const RowBinding& binding, string_view label )
@@ -1313,8 +1344,11 @@ namespace sw::editor
         // 씬 대상 — UI 프레임은 씬을 바꾸는 호출을 하지 않는다. 게임 단계가 부르고 결과 칸에 둔다.
         StringBuilder<constant::buffer::kMax256> textBuilder;
         textBuilder.appendFormat( "Call %#", method._name.c_str() );
-        PropertyGridViewModelInternal::requestInvoke( _targetScope, _targetObjectID, _targetComponentID, method._hashName, string{ textBuilder.view() }, listArg,
-                                                      _pLastInvokeResult );
+        vector<PropertyEditTarget> listOther;
+        uint32                     sceneKey = 0;
+        collectOtherEditTargets( listOther, sceneKey );
+        PropertyGridViewModelInternal::requestInvoke( _targetScope, _targetObjectID, _targetComponentID, sceneKey, std::move( listOther ), method._hashName,
+                                                      string{ textBuilder.view() }, listArg, _pLastInvokeResult );
     }
 
     bool PropertyGridViewModel::isEventBound( const EventInfo& event ) const

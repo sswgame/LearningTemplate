@@ -158,6 +158,7 @@ namespace sw::editor
         , _countFrame{ -1 }
         , _methodRowCount{ 0 }
         , _hiddenMethodCount{ 0 }
+        , _favoriteMethodRowCount{ 0 }
         , _filledRowCount{ 0 }
         , _skippedRowCount{ 0 }
     {
@@ -239,16 +240,39 @@ namespace sw::editor
         _model.endTarget();
     }
 
+    void EditorPropertyGrid::drawListedMethods( const EditorPropertyGridTarget& target )
+    {
+        if ( _model.beginTarget( target ) == false )
+            return;
+        const TypeInfo* pType = _model.getType();
+        bool            bAny  = false;
+        for ( const FunctionInfo& method : pType->_listMethod )
+        {
+            if ( method._metadata->_bConstructor == SW_FALSE && isMethodListed( method ) )
+            {
+                bAny = true;
+                break;
+            }
+        }
+        if ( bAny )
+        {
+            ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Methods" ) );
+            drawTypeMethods( pType );
+        }
+        _model.endTarget();
+    }
+
     void EditorPropertyGrid::resetFrameCounts()
     {
         const int32 frame = ImGui::GetFrameCount();
         if ( frame == _countFrame )
             return;
-        _countFrame        = frame;
-        _methodRowCount    = 0;
-        _hiddenMethodCount = 0;
-        _filledRowCount    = 0;
-        _skippedRowCount   = 0;
+        _countFrame             = frame;
+        _methodRowCount         = 0;
+        _hiddenMethodCount      = 0;
+        _favoriteMethodRowCount = 0;
+        _filledRowCount         = 0;
+        _skippedRowCount        = 0;
     }
 
     PropertyGridRowWindow EditorPropertyGrid::makeRowWindow()
@@ -850,14 +874,37 @@ namespace sw::editor
         }
 
         drawLastInvokeResult();
+        if ( _model.isMultiEdit() )
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInspector", "MultiCallHint" ) );
 
-        for ( const FunctionInfo& method : pTypeInfo->_listMethod )
+        // 액션 즐겨찾기(별)를 먼저, 나머지를 선언 순서로 — 반복 작업에 쓰는 메서드가 목록 길이와 상관없이 맨 위에 있다.
+        for ( const bool bFavoritePass : { true, false } )
         {
-            if ( method._metadata->_bConstructor != SW_FALSE || isMethodListed( method ) == false )
-                continue;
-            ++_methodRowCount;
-            drawTypeMethod( pTypeInfo, method );
+            for ( const FunctionInfo& method : pTypeInfo->_listMethod )
+            {
+                if ( method._metadata->_bConstructor != SW_FALSE || isMethodListed( method ) == false )
+                    continue;
+                if ( _model.isActionFavorite( *pTypeInfo, method ) != bFavoritePass )
+                    continue;
+                ++_methodRowCount;
+                if ( bFavoritePass )
+                    ++_favoriteMethodRowCount;
+                drawTypeMethod( pTypeInfo, method );
+            }
         }
+    }
+
+    void EditorPropertyGrid::drawMethodFavoriteToggle( const TypeInfo* pTypeInfo, const FunctionInfo& method )
+    {
+        if ( _model.hasActionFavorites() == false )
+            return;
+        // 행마다 같은 아이콘이라 꺼진 별은 흐린 글자색, 켜진 별만 본문 색이다(`drawRowIconToggle` — 강조색은 쓰지 않는다).
+        const bool bFavorite = _model.isActionFavorite( *pTypeInfo, method );
+        if ( EditorWidgets::drawRowIconToggle( "##actionFavorite", bFavorite, false, SW_EDITOR_ICON( "Star" ), SW_EDITOR_ICON( "Star" ),
+                                               SW_LOCKEY( "EditorInspector", "RemoveFromActions" ), SW_LOCKEY( "EditorInspector", "AddToActions" ) ) )
+            _model.toggleActionFavorite( *pTypeInfo, method );
+        EditorSelfTestMarks::recordFormat( "inspector.method.favorite.%#", method._name.c_str() );
+        ImGui::SameLine();
     }
 
     void EditorPropertyGrid::drawLastInvokeResult()
@@ -869,7 +916,14 @@ namespace sw::editor
         {
             // 반환값이 없으면(void) 빈 값 표시는 회색 대시다(앱 화면 규칙: 없는 값은 대시).
             const string_view returnText = result._returnText.empty() ? string_view( "-" ) : string_view( result._returnText );
-            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "LastResult", TextArgumentList().addText( "lastInvokeResult", returnText ) ).c_str() );
+            if ( result._targetCount > 1 )
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "LastResultTargets",
+                                                            TextArgumentList()
+                                                                .addText( "lastInvokeResult", returnText )
+                                                                .addInteger( "targetCount", static_cast<int64>( result._targetCount ) ) )
+                                               .c_str() );
+            else
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "LastResult", TextArgumentList().addText( "lastInvokeResult", returnText ) ).c_str() );
             return;
         }
         // 실패는 그 블록 안의 한 문장이고 신호색은 작은 아이콘에만 둔다(앱 화면 규칙: 오류 상태). 글은 본문 색 — 흐린 글이면 지나친다.
@@ -922,6 +976,7 @@ namespace sw::editor
         {
             // 강조색을 쓰지 않는다 — 앱 화면 규칙상 강조는 데이터 · 선택에만 둔다(전에는 패널 전용 파란 단추였다).
             ImGui::PushID( method._hashName.c_str() );
+            drawMethodFavoriteToggle( pTypeInfo, method );
             fixed_string<constant::buffer::kMax128> buttonLabel;
             formatstring( buttonLabel.data(), buttonLabel.capacity(), "Run %#", pLabelName );
             if ( ImGui::Button( buttonLabel.c_str(), ImVec2{ -FLT_MIN, 0.0f } ) )
@@ -935,6 +990,7 @@ namespace sw::editor
         }
 
         ImGui::PushID( method._hashName.c_str() );
+        drawMethodFavoriteToggle( pTypeInfo, method );
         ImGui::Text( "%s (%s)", pLabelName,
                      method._returnTypeName.empty() ? "?" : method._returnTypeName.c_str() );
         if ( method._metadata->getEditor()._bCallInEditor == SW_FALSE )
