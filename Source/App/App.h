@@ -5,7 +5,7 @@
  * 소유권: App 은 최상위 창 콜백과 부팅 열(`HostLaunch` — Engine · 모듈 관리자 · 호스트 서비스)만 들고, 나머지 엔진 핵심 로직은 모두 Engine 에 맡깁니다.
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
- *          시간 정책은 FixedTimestep, 장치 교체 · 다시 만들기는 모듈 관리자(`GameModuleManager::applyPendingDeviceChange` — 교체 요청은 개발 도구의 RHIBackendSwitcher), 모듈 수명은 EditorModuleManager(공통 GameModuleManager 위의 App 전용 층),
+ *          시간 정책은 FixedTimestep, 장치 교체 · 다시 만들기는 모듈 관리자(`GameModuleManager::applyPendingDeviceChange` — 교체 요청은 개발 도구의 RHIBackendSwitcher), 모듈 수명은 ClientModuleManager(공통 GameModuleManager 위의 App 전용 층),
  *          핫 리로드 · 개발 콘솔 · 표준 입력 명령은 개발 계층(`IHostDevLayer` — Server 와 같이 쓴다, 배포에는 없다), 헤드리스 작업은 AppHeadlessTasks 가 각자 맡습니다.
  *          자동화가 찾아야 하는 호스트 객체(리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`HostLaunch::getHostScope`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
  *          런타임 UI 에 끼우는 것(일시정지 메뉴의 "끝내기", 운영체제 클립보드, 스크린 리더)은 엔진의 `UIPlatformBinding` 이 맡습니다.
@@ -32,7 +32,7 @@ namespace sw
     struct RenderFramePacket;
 
     class CommandLineManager;
-    class EditorModuleManager;
+    class ClientModuleManager;
     class FramePacer;
     class IRHIDevice;
     class IWindow;
@@ -78,8 +78,8 @@ namespace sw
             int64 _modulesEndMicro{ 0 };
         };
 
-        /** @brief 모듈 관리자를 이 App 이 만든 형식으로 읽습니다(`loadModuleLibraries` 가 `EditorModuleManager` 로 만든다). 호스트 로더가 돌기 전과 `shutdown` 뒤에는 nullptr 입니다. */
-        EditorModuleManager* getModuleManager() const;
+        /** @brief 모듈 관리자를 이 App 이 만든 형식으로 읽습니다(`loadModuleLibraries` 가 `ClientModuleManager` 로 만든다). 호스트 로더가 돌기 전과 `shutdown` 뒤에는 nullptr 입니다. */
+        ClientModuleManager* getModuleManager() const;
 
         // 부팅 단계. initialize() 가 차례로 부른다.
         /**
@@ -96,7 +96,7 @@ namespace sw
         [[nodiscard]] bool loadModuleLibraries();
         /**
          * @brief 호스트 서비스 하나를 세웁니다(`kArrClientHostService` — 순서는 `HostService` 의 의존 선언이 정한다).
-         * @details `Game` 은 EditorModuleManager 로 게임과 에디터 인스턴스를 만든다(모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했다).
+         * @details `Game` 은 ClientModuleManager 로 게임과 에디터 인스턴스를 만든다(모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했다).
          */
         [[nodiscard]] bool startHostService( HostServiceID id );
         /** @brief `startHostService` 가 세운 서비스 하나를 내립니다. 호스트 서비스 집합이 역순으로 부릅니다. */
@@ -128,9 +128,9 @@ namespace sw
         void onAppLifecycle( WindowLifecycleEvent event );
         /** @brief 창의 모달 루프(Win32 끌기 · 크기 조절) 동안 메인 루프 대신 프레임 하나를 돌립니다. 메인 루프 밖이거나 표면이 멈췄으면 아무것도 하지 않는다. */
         void onWindowModalLoopUpdate();
-        /** @brief 에디터 준비 훅 콜백입니다(렌더 스레드, 백버퍼 패스를 열기 전 — UI 업로드). EditorModuleManager 로 넘깁니다. */
+        /** @brief 에디터 준비 훅 콜백입니다(렌더 스레드, 백버퍼 패스를 열기 전 — UI 업로드). ClientModuleManager 로 넘깁니다. */
         void onEditorPrepareRender( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
-        /** @brief 에디터 렌더 훅 콜백입니다(렌더 스레드, 열린 백버퍼 패스 안 — 그리기만). EditorModuleManager 로 넘깁니다. */
+        /** @brief 에디터 렌더 훅 콜백입니다(렌더 스레드, 열린 백버퍼 패스 안 — 그리기만). ClientModuleManager 로 넘깁니다. */
         void onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
         /** @brief 에디터 멀티 뷰포트 · 플랫폼 창 훅 콜백입니다(Present 뒤에 실행됩니다). */
         void onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
@@ -146,6 +146,8 @@ namespace sw
          * @details 엔진이 선 뒤 `startAutomation` 이 찾고, 엔진 종료 전에 놓는다(실행기는 엔진 범위와 함께 내려간다).
          */
         IAutomationRuntime* _pAutomation;
+        /** @brief 부팅 열(`_launch`)이 소유한 모듈 관리자를 만든 형식으로 보는 관찰 포인터입니다. `loadModuleLibraries` 가 채우고 호스트 서비스 `Game` 이 내려가며 비운다. */
+        ClientModuleManager* _pModuleManager;
         /** @brief 주 창입니다(관찰 포인터). 소유자는 엔진 범위의 `MainWindowSubsystem` 이라 엔진 종료 때 창이 파괴된다. `acquireMainWindow` 가 채운다. */
         IWindow* _pWindow;
 

@@ -48,7 +48,7 @@
 | 12 | 온라인 소도우미 복사 | 닫음 — `encodeID` 는 저장 형식이, `isTransientStatus` 는 제공자마다 뜻이 다르다 |
 | 14 | Runtime 에 장르 기믹 | 닫음 — 공용 프리팹 라이브러리(`common/prefabs/gimmicks/`)를 여러 게임이 쓴다. 키트로 쪼개면 결합이 는다 |
 | 16 | 큰 패널 | 닫음 — 상태는 Model 이 들고 패널은 그리기만 한다. 탭이 독립된 상태 · 수명을 가질 때만 뗀다 |
-| 17 | 큰 인터페이스(`EditorAPI` · `IEditor`) | 닫음 — 호스트 ↔ 에디터 모듈 C ABI 표 하나, 호출자는 `EditorModuleManager` 뿐이다 |
+| 17 | 큰 인터페이스(`EditorAPI` · `IEditor`) | 닫음 — 호스트 ↔ 에디터 모듈 C ABI 표 하나, 호출자는 `ClientModuleManager` 뿐이다 |
 | 18 | 계약 층(ModuleAPI)이 `SW_GF_API` · `SW_KIT_API` 를 알았다 | 끝 — 정의는 `GameFramework/GameFrameworkExports.h`, 계약 층의 게임 서비스 선언은 자기 빌드 정의(`SW_GAMESERVICE_API`) |
 
 - 폴더 뜻: `GameFramework/Runtime` · `Kits/` · `Plugin/` 은 언리얼 플러그인의 `Source/Runtime` 과 같다. `Plugin/Editor/GameplayTools` 는 기반이 아니라 내용 이름이다. 자동 플레이 되돌리기는 조종 영역(`ControlSystem`)에, 소리 그래프는 그래프 문서 템플릿이 아니라 문서 기반에(링크 표가 없다).

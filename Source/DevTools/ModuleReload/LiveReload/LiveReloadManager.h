@@ -3,7 +3,7 @@
  * @brief 모듈 공유 라이브러리를 섀도 복사해 핫 리로드합니다(의존 모듈까지 연쇄로 교체합니다).
  *
  * @note **이 클래스는 Engine 이 아니라 개발 도구(DevTools.dll)에 있습니다.** 모듈을 로드하고 교체하는 것은 런처(App, Server)의 일이고, Engine 은 모듈이라는 개념
- *       자체를 몰라야 합니다. 모듈 관리자(GameModuleManager · EditorModuleManager)는 창구 `ILiveReloadManager`(ModuleManager)로만 보고, 이 구현을 만드는 것은
+ *       자체를 몰라야 합니다. 모듈 관리자(GameModuleManager · ClientModuleManager)는 창구 `ILiveReloadManager`(ModuleManager)로만 보고, 이 구현을 만드는 것은
  *       리로드 구동기(`ModuleReloadDriver`)입니다. 배포는 DevTools 를 짓지 않아 함께 빠집니다(언리얼 HotReload 가 Developer 모듈인 자리).
  *
  *       이 클래스는 리로드 **순서**(prepare → 배치 콜백 → commit, 언로드 구간, 정적 등록 헤드, `RegistrationReloadScope`)를 정하고, 그 밖의 일은

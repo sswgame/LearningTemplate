@@ -1,6 +1,6 @@
 /**
  * @file ModuleManager/ModuleInstanceUtil.h
- * @brief 모듈 라이브러리에서 API 표를 받고 인스턴스를 만들고 내리는 절차입니다. 게임(`GameModuleManager`)과 에디터(`EditorModuleManager`)가 같은 절차를 씁니다.
+ * @brief 모듈 라이브러리에서 API 표를 받고 인스턴스를 만들고 내리는 절차입니다. 게임(`GameModuleManager`)과 에디터(`ClientModuleManager`)가 같은 절차를 씁니다.
  */
 #pragma once
 #include "Core/Foundation/StdHeaders.h"

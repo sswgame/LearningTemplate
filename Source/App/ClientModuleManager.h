@@ -1,10 +1,11 @@
 /**
- * @file App/EditorModuleManager.h
- * @brief App 전용 모듈 호스트입니다. 공통 `GameModuleManager`(게임 모듈) 위에 에디터 인스턴스, 에디터 리로드, 에디터 UI · Present 훅, 장치 교체 뒤 에디터 재생성(`recreateHostModule`)을 구현합니다.
- *        인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 `EditorModuleManager.cpp` 의 개발 전용 구역 에 있습니다.
+ * @file App/ClientModuleManager.h
+ * @brief 클라이언트 호스트(App — 개발 · 배포 모두)의 모듈 관리자입니다. 공통 `GameModuleManager`(게임 모듈 · 장치 교체 순서) 위에 호스트 모듈(에디터)의 인스턴스, 리로드,
+ *        UI · Present 훅, 장치 교체 뒤 재생성(`recreateHostModule`)을 구현합니다. 에디터를 켜지 않은 실행(배포 게임 포함)에서는 에디터 몫이 아무 일도 하지 않는다.
+ *        인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 모듈 관리자의 일이 아니라 `EditorModuleHeadlessTasks` 에 있다.
  * @note 의존은 이쪽에서 `GameModuleManager` 로 한 방향입니다. 전용 서버(`Server`)는 이 클래스를 링크하지 않습니다.
- * @note 개발 전용 함수(에디터 모듈 등록 · 개발 도구 서비스 `EditorModuleManager.cpp` 의 개발 전용 구역, 헤드리스 작업 `EditorModuleManager.cpp` 의 개발 전용 구역)는 배포가 짓지 않는다 —
- *       부르는 자리가 `build::kShipping` 으로 가른다.
+ * @note 개발 전용 함수(에디터 모듈 등록 — `ClientModuleManager.cpp` 의 동적 모듈 구역)는 정적 모듈 구성이 짓지 않는다 — 부르는 자리가 `build::kStaticModules` 로 가른다.
+ *       배포 게임도 이 매니저로 장치 분실 재생성을 탄다(언리얼 `FEngineLoop` 이 에디터 · 게임 공통으로 모듈을 드는 자리).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -23,15 +24,15 @@ namespace sw
     class IRHIDevice;
 
     /**
-     * @class EditorModuleManager
-     * @brief 에디터 모듈의 수명 주기와 API 바인딩을 게임 모듈 호스트 위에 구현합니다. App 이 unique_ptr 로 소유합니다.
+     * @class ClientModuleManager
+     * @brief 호스트 모듈(에디터)의 수명 주기와 API 바인딩을 게임 모듈 호스트 위에 구현합니다. App 이 unique_ptr 로 소유합니다.
      * @details 에디터를 켜지 않으면(`initialize` 의 bEnableEditor) 에디터 쪽은 모두 아무 일도 하지 않고, 공통 호스트와 같게 동작합니다.
      */
-    class EditorModuleManager final : public GameModuleManager
+    class ClientModuleManager final : public GameModuleManager
     {
     public:
-        EditorModuleManager();
-        ~EditorModuleManager() override;
+        ClientModuleManager();
+        ~ClientModuleManager() override;
 
         /** @brief 매니페스트가 에디터 모듈을 켰는지 기억하고 공통 `GameModuleManager::loadModuleLibraries` 를 부릅니다. */
         [[nodiscard]] bool loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution ) override;
@@ -46,28 +47,8 @@ namespace sw
          * @param bEnableEditor 에디터 모드 여부
          */
         [[nodiscard]] bool initialize( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor );
-
-        /**
-         * @brief 에디터 인스턴스 없이 에디터 모듈만 로드해 @p kind 원본을 임포트하거나 대조합니다(`App --import-textures`, `--import-models` 와 `--check-*`).
-         * @details 헤드리스 부팅(창과 RHI 없음)에서 부릅니다. 모듈 ABI 를 대조하고, 모듈 타입을 등록했다가 해제한 뒤 모듈을 언로드합니다.
-         *          Shipping 에는 에디터 모듈이 없어 실패합니다. 인스턴스 상태를 쓰지 않아 구현은 `EditorModuleManager.cpp` 의 개발 전용 구역 에 따로 둡니다
-         *          (모듈 라이브러리를 직접 올리고 내리는 의존이 인스턴스 경로에 섞이지 않게).
-         * @return 원본과 임포트 결과가 맞으면(임포트는 모두 성공하면) true 를 반환합니다.
-         */
-        [[nodiscard]] static bool importAssetsWithEditorModule( EditorImportKind kind, bool bCheckOnly );
-        /**
-         * @brief 에디터 인스턴스 없이 에디터 모듈만 로드해 로컬라이제이션 작업 @p task 를 실행합니다(`App --gather-text`, `--check-text`, `--import-po`, `--export-po`).
-         * @details 임포트와 같은 경로입니다(`importAssetsWithEditorModule`). 타입 공급자 모듈이 모두 로드된 헤드리스 부팅에서 부릅니다. Shipping 에서는 실패합니다.
-         * @param poPath `ImportPo` 가 읽을 PO 파일
-         * @param projectArgument `-loc-project` 값(비면 기본 대상 전부)
-         * @return 작업이 성공하면(확인 모드는 테이블이 최신이면) true 를 반환합니다.
-         */
-        [[nodiscard]] static bool runLocalizationWithEditorModule( EditorLocalizationTask task, string_view poPath, string_view projectArgument );
-        /**
-         * @brief 에디터 인스턴스 없이 에디터 모듈만 로드해 에셋 참조를 검사합니다(`App --check-asset-refs`). 임포트와 같은 경로이고 Shipping 에서는 실패합니다.
-         * @return 끊어진 참조 · 목록에 없는 `AssetPath` 프로퍼티가 하나도 없으면 true 를 반환합니다.
-         */
-        [[nodiscard]] static bool validateAssetReferencesWithEditorModule();
+        /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로와 헤드리스 작업(`EditorModuleHeadlessTasks`)이 같이 씁니다. */
+        [[nodiscard]] static const ModuleAPISymbols& getModuleSymbols();
 
         // 프레임 단위 처리
         /**
@@ -146,8 +127,6 @@ namespace sw
         void onBeforeFlushWorkers( FlushReason reason ) override;
 
     private:
-        /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로와 헤드리스 경로(`EditorModuleManager.cpp` 의 개발 전용 구역)가 같이 씁니다. */
-        static const ModuleAPISymbols& getModuleSymbols();
         /** @brief 에디터를 실제로 호출할 수 있는 상태인지 확인합니다(모드가 켜져 있고 인스턴스가 살아 있음). */
         bool hasEditor() const { return _bEnableEditor == SW_TRUE && _editor != nullptr; }
         /** @brief 에디터가 월드를 틱해야 하는지 묻습니다. Pause 이면서 Step 이 아니면 false 입니다. */

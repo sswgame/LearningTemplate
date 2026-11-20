@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "App/EditorModuleManager.h"
+#include "App/ClientModuleManager.h"
 
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/DynamicModules.h"
@@ -18,9 +18,6 @@
 #include "sw/config/ConfigConstants.h"
 
 #if SW_WITH_DYNAMIC_MODULES
-    #include "Core/File/FileUtil.h"
-    #include "Core/Module/ModuleLibraryUtil.h"
-    #include "Core/Path/AbsolutePath.h"
     #include "ModuleManager/ILiveReloadManager.h"
 #endif
 
@@ -29,7 +26,7 @@ namespace sw
     namespace
     {
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
-        struct EditorModuleManagerInternal
+        struct ClientModuleManagerInternal
         {
             static constexpr ModuleAPISymbols kEditorSymbols{ kEditorModuleABIStamp, "getEditorModuleABIStamp", "exportEditorAPI", "Editor" };
         };
@@ -38,7 +35,7 @@ namespace sw
 
 namespace sw
 {
-    EditorModuleManager::EditorModuleManager()
+    ClientModuleManager::ClientModuleManager()
         : GameModuleManager{}
         , _editorAPI{}
         , _editor{ nullptr }
@@ -51,13 +48,13 @@ namespace sw
     {
     }
 
-    EditorModuleManager::~EditorModuleManager()
+    ClientModuleManager::~ClientModuleManager()
     {
         // 공통 호스트의 소멸자 안에서는 가상 함수가 이 클래스로 오지 않는다. 그래서 에디터를 여기서 먼저 종료한다.
         shutdown();
     }
 
-    bool EditorModuleManager::loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
+    bool ClientModuleManager::loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _bEditorModuleActive = resolution.isActive( config::kTargetEditorModule ) ? SW_TRUE : SW_FALSE;
         // 에디터 확장은 에디터를 켤 때만 로드한다(initialize 의 에디터 블록). 여기서는 이름과 의존만 적어 둔다. 카탈로그는 initialize 에 없다.
@@ -75,7 +72,7 @@ namespace sw
         return GameModuleManager::loadModuleLibraries( pLiveReloadManager, catalog, resolution );
     }
 
-    bool EditorModuleManager::initialize( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor )
+    bool ClientModuleManager::initialize( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor )
     {
         _bEnableEditor = bEnableEditor ? SW_TRUE : SW_FALSE;
 
@@ -84,12 +81,12 @@ namespace sw
         if ( initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderDriver ) == false )
             return false;
 
-        // 에디터 모듈을 리로드 그래프에 올리는 일은 동적 모듈 구성에만 있다(`EditorModuleManager.cpp` 의 `SW_WITH_DYNAMIC_MODULES` 구역 — 정적 구성은 짓지 않는다).
+        // 에디터 모듈을 리로드 그래프에 올리는 일은 동적 모듈 구성에만 있다(`ClientModuleManager.cpp` 의 `SW_WITH_DYNAMIC_MODULES` 구역 — 정적 구성은 짓지 않는다).
         if constexpr ( build::kStaticModules )
         {
             // 에디터를 켜 달라는 실행을 에디터 없이 조용히 시작하지 않는다.
             if ( bEnableEditor )
-                SW_LOG_ERROR_ID( "EditorModuleManager.EnableEditorNeedsEditorModule", "-EnableEditor needs the editor module, which a build with statically linked modules (Shipping, Web-Release, Android-Release) does not have - run it from a desktop Dev build." );
+                SW_LOG_ERROR_ID( "ClientModuleManager.EnableEditorNeedsEditorModule", "-EnableEditor needs the editor module, which a build with statically linked modules (Shipping, Web-Release, Android-Release) does not have - run it from a desktop Dev build." );
             return bEnableEditor == false;
         }
         else
@@ -98,7 +95,7 @@ namespace sw
         }
     }
 
-    bool EditorModuleManager::isEditorReloadHeld() const
+    bool ClientModuleManager::isEditorReloadHeld() const
     {
         return _editorAPI.isReloadHeld != nullptr && _editorAPI.isReloadHeld();
     }
@@ -107,14 +104,14 @@ namespace sw
     // 프레임 단위 처리
     // ======================================================================
 
-    bool EditorModuleManager::queryGameplayActive() const
+    bool ClientModuleManager::queryGameplayActive() const
     {
         if ( hasEditor() == false || _editorAPI.isPlaying == nullptr )
             return true;
         return _editorAPI.isPlaying( _editor );
     }
 
-    bool EditorModuleManager::queryTickScene() const
+    bool ClientModuleManager::queryTickScene() const
     {
         if ( hasEditor() == false )
             return true;
@@ -126,7 +123,7 @@ namespace sw
         return true;
     }
 
-    void EditorModuleManager::sampleViewTargets()
+    void ClientModuleManager::sampleViewTargets()
     {
         ModuleFrameState& frameState = getMutableFrameState();
         frameState._views            = FrameViewports{};
@@ -142,7 +139,7 @@ namespace sw
             frameState._views._previewViewCount = _editorAPI.getPreviewSceneViews( _editor, frameState._views._arrPreviewView, kMaxPreviewSceneView );
     }
 
-    void EditorModuleManager::updateEditorUI( float32 /*deltaTime*/ )
+    void ClientModuleManager::updateEditorUI( float32 /*deltaTime*/ )
     {
         if ( hasEditor() == false )
             return;
@@ -171,14 +168,14 @@ namespace sw
         getMutableFrameState()._bEditorQuiet = bQuiet ? SW_TRUE : SW_FALSE;
     }
 
-    void EditorModuleManager::endEditorFrame()
+    void ClientModuleManager::endEditorFrame()
     {
         if ( hasEditor() == false || _editorAPI.endFrame == nullptr )
             return;
         _editorAPI.endFrame( _editor );
     }
 
-    bool EditorModuleManager::onWindowMessage( const NativeWindowEvent& event )
+    bool ClientModuleManager::onWindowMessage( const NativeWindowEvent& event )
     {
         if ( hasEditor() == false || _editorAPI.processEvent == nullptr )
             return false;
@@ -187,14 +184,14 @@ namespace sw
         return _editorAPI.processEvent( _editor, &event );
     }
 
-    CameraComponent* EditorModuleManager::getSceneViewCamera() const
+    CameraComponent* ClientModuleManager::getSceneViewCamera() const
     {
         if ( hasEditor() == false || _editorAPI.getSceneViewCamera == nullptr )
             return nullptr;
         return static_cast<CameraComponent*>( _editorAPI.getSceneViewCamera( _editor ) );
     }
 
-    void EditorModuleManager::prepareRenderEditor( IRHIDevice& renderDevice )
+    void ClientModuleManager::prepareRenderEditor( IRHIDevice& renderDevice )
     {
         if ( hasEditor() == false )
             return;
@@ -202,7 +199,7 @@ namespace sw
             _editorAPI.prepareRender( _editor, &renderDevice );
     }
 
-    void EditorModuleManager::renderEditor( IRHIDevice& renderDevice )
+    void ClientModuleManager::renderEditor( IRHIDevice& renderDevice )
     {
         if ( hasEditor() == false )
             return;
@@ -210,7 +207,7 @@ namespace sw
             _editorAPI.render( _editor, &renderDevice );
     }
 
-    void EditorModuleManager::postPresentEditor( IRHIDevice& renderDevice )
+    void ClientModuleManager::postPresentEditor( IRHIDevice& renderDevice )
     {
         if ( hasEditor() == false || _editorAPI.postPresent == nullptr )
             return;
@@ -221,12 +218,12 @@ namespace sw
     // LiveReload 콜백. 에디터.
     // ======================================================================
 
-    void EditorModuleManager::onBeforeEditorReload()
+    void ClientModuleManager::onBeforeEditorReload()
     {
-        suspendModules( ModuleScope::Editor, true, FlushReason::Reload );
+        suspendModules( ModuleScope::Host, true, FlushReason::Reload );
     }
 
-    void EditorModuleManager::onAfterEditorReload( ModuleLibraryHandle library )
+    void ClientModuleManager::onAfterEditorReload( ModuleLibraryHandle library )
     {
         const ScopedMemoryTag moduleMemoryTag{ kEditorModuleMemoryTag }; // 다시 올린 모듈의 서비스 묶기(표의 `bindService`)가 모듈 코드다
         if ( bindEditorAPI( library ) == false )
@@ -243,15 +240,15 @@ namespace sw
         }
     }
 
-    bool EditorModuleManager::isEditorLibraryUsable( ModuleLibraryHandle library ) const
+    bool ClientModuleManager::isEditorLibraryUsable( ModuleLibraryHandle library ) const
     {
         return ModuleInstanceUtil::isLibraryUsable<EditorAPI, PFN_ExportEditorAPI>( library, getModuleSymbols() );
     }
 
-    void EditorModuleManager::onEditorReloadFault( uint32 faultCode )
+    void ClientModuleManager::onEditorReloadFault( uint32 faultCode )
     {
         // 반쯤 만든 인스턴스를 부수는 코드도 결함을 낸 그 모듈이다. 부르지 않고 잊는다(새는 것은 재시작이 치운다).
-        SW_LOG_ERROR_ID( "EditorModuleManager.EditorModuleFaultedAfter", "Editor module faulted after the reload (code 0x%#) — the editor is off until restart",
+        SW_LOG_ERROR_ID( "ClientModuleManager.EditorModuleFaultedAfter", "Editor module faulted after the reload (code 0x%#) — the editor is off until restart",
                          Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
         _editor    = nullptr;
         _editorAPI = {};
@@ -261,7 +258,7 @@ namespace sw
     // 공통 호스트가 부르는 지점. 언로드와 비우기.
     // ======================================================================
 
-    bool EditorModuleManager::onBeforeSuspendModules( FlushReason reason )
+    bool ClientModuleManager::onBeforeSuspendModules( FlushReason reason )
     {
         if ( hasEditor() == false )
             return false;
@@ -273,25 +270,25 @@ namespace sw
         // 종료(다시 설 인스턴스가 없다)는 Stop 해 편집 씬을 되돌리고 월드를 멈춘다.
         if ( _editorAPI.stopSimulation != nullptr )
         {
-            SW_LOG_INFO_ID( "EditorModuleManager.StoppingEditorSimulationBefore", "Stopping editor simulation before module suspend." );
+            SW_LOG_INFO_ID( "ClientModuleManager.StoppingEditorSimulationBefore", "Stopping editor simulation before module suspend." );
             _editorAPI.stopSimulation( _editor );
         }
         return false;
     }
 
-    void EditorModuleManager::suspendHostModule( bool bReleaseAPITable )
+    void ClientModuleManager::suspendHostModule( bool bReleaseAPITable )
     {
         destroyEditorInstance( bReleaseAPITable );
     }
 
-    void EditorModuleManager::onBeforeFlushWorkers( FlushReason reason )
+    void ClientModuleManager::onBeforeFlushWorkers( FlushReason reason )
     {
         const bool bStopJobs = reason == FlushReason::Shutdown && hasEditor() && _editorAPI.requestBackgroundStop != nullptr;
         if ( bStopJobs )
             _editorAPI.requestBackgroundStop( _editor );
     }
 
-    void EditorModuleManager::onRenderWorkersFlushed()
+    void ClientModuleManager::onRenderWorkersFlushed()
     {
         // 렌더 워커를 비웠다고 해서 에디터가 낸 프레임의 in-flight 표시를 풀면 안 된다. 게임 모듈만 리로드할 때 그 표시는 **아직 렌더 스레드에 제출되기 전인** 프레임의 것이다
         // (게임 스레드가 리로드하느라 제출하지 못했다). 풀어 버리면 UI 스레드가 풀려 다음 `updateUI` 에서 보조 뷰포트를 그리는 동안 렌더 스레드가 그 프레임의 메인 스냅샷을 그려
@@ -302,12 +299,12 @@ namespace sw
     // API 바인딩 · 인스턴스
     // ======================================================================
 
-    const ModuleAPISymbols& EditorModuleManager::getModuleSymbols()
+    const ModuleAPISymbols& ClientModuleManager::getModuleSymbols()
     {
-        return EditorModuleManagerInternal::kEditorSymbols;
+        return ClientModuleManagerInternal::kEditorSymbols;
     }
 
-    bool EditorModuleManager::bindEditorAPI( ModuleLibraryHandle library )
+    bool ClientModuleManager::bindEditorAPI( ModuleLibraryHandle library )
     {
         if ( ModuleInstanceUtil::exportAPIFromLibrary<EditorAPI, PFN_ExportEditorAPI>( library, getModuleSymbols(), _editorAPI ) == false )
             return false;
@@ -319,7 +316,7 @@ namespace sw
         return _editorAPI.create != nullptr && _editorAPI.destroy != nullptr;
     }
 
-    bool EditorModuleManager::recreateHostModule()
+    bool ClientModuleManager::recreateHostModule()
     {
         if ( _bEnableEditor == SW_FALSE )
             return true;
@@ -335,7 +332,7 @@ namespace sw
         return createEditorInstance();
     }
 
-    void EditorModuleManager::destroyEditorInstance( bool bReleaseAPITable )
+    void ClientModuleManager::destroyEditorInstance( bool bReleaseAPITable )
     {
         // 인스턴스가 사라지면 그 프레임을 렌더할 쪽도 없다(렌더 워커는 이미 비웠다). 남은 in-flight 표시를 풀지 않으면 종료 단계의 `waitForDrawSnapshotIdle` 이 영원히 반환하지 않는다.
         if ( _editor != nullptr && _editorAPI.abandonPendingDraw != nullptr )
@@ -346,7 +343,7 @@ namespace sw
         ModuleInstanceUtil::destroyInstance( _editorAPI, _editor, bReleaseAPITable, sw::config::kTargetEditorModule );
     }
 
-    bool EditorModuleManager::createEditorInstance()
+    bool ClientModuleManager::createEditorInstance()
     {
         const auto initializeEditor = [this]( void* pHandle )
         { return _editorAPI.initialize( pHandle, getWindow(), getRHI() != nullptr && getRHI()->hasDevice() ? &getRHI()->getDevice() : nullptr ); };
@@ -357,15 +354,15 @@ namespace sw
 
 #if SW_WITH_DYNAMIC_MODULES
     // ----------------------------------------------------------------------------------------------------------------------
-    // 동적 모듈 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload), 인스턴스 없는 헤드리스 작업(동적 모듈 올리고 내리기).
+    // 동적 모듈 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload). 인스턴스 없는 헤드리스 작업은 `EditorModuleHeadlessTasks.cpp` 다.
     // 정적 구성(배포 · 웹 · Android 개발)은 이 헤더 · 라이브러리를 짓지 않아 여기만 `#if` 로 가른다(docs/agents/BuildConfigSwitch.md 둘째 줄). 부르는 자리는 `build::kStaticModules` 로 가른다.
     // ----------------------------------------------------------------------------------------------------------------------
-    bool EditorModuleManager::registerEditorModule( ILiveReloadManager* pLiveReloadManager )
+    bool ClientModuleManager::registerEditorModule( ILiveReloadManager* pLiveReloadManager )
     {
         if ( _bEnableEditor == SW_TRUE && _bEditorModuleActive == SW_FALSE )
         {
             // -EnableEditor 를 줬는데 매니페스트가 에디터 모듈을 껐다(프로젝트나 구성 때문이다). 에디터 없이 조용히 시작하지 않는다.
-            SW_LOG_ERROR_ID( "EditorModuleManager.EnableEditorGivenButModule", "-EnableEditor was given, but the module manifests turn %# off for this project", config::kTargetEditorModule );
+            SW_LOG_ERROR_ID( "ClientModuleManager.EnableEditorGivenButModule", "-EnableEditor was given, but the module manifests turn %# off for this project", config::kTargetEditorModule );
             return false;
         }
         if ( _bEnableEditor == SW_FALSE || pLiveReloadManager == nullptr )
@@ -375,18 +372,18 @@ namespace sw
         {
             const ScopedMemoryTag moduleMemoryTag{ kEditorModuleMemoryTag }; // 라이브러리 로드가 모듈의 정적 등록자를 돌린다
             holdReloadSubscription( pLiveReloadManager->setOnBeforeReload(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnBeforeReloadDelegate, &EditorModuleManager::onBeforeEditorReload, this ) ) );
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnBeforeReloadDelegate, &ClientModuleManager::onBeforeEditorReload, this ) ) );
             holdReloadSubscription( pLiveReloadManager->setOnAfterReload(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnAfterReloadDelegate, &EditorModuleManager::onAfterEditorReload, this ) ) );
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnAfterReloadDelegate, &ClientModuleManager::onAfterEditorReload, this ) ) );
             holdReloadSubscription( pLiveReloadManager->setOnReloadFault(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnReloadFaultDelegate, &EditorModuleManager::onEditorReloadFault, this ) ) );
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnReloadFaultDelegate, &ClientModuleManager::onEditorReloadFault, this ) ) );
             holdReloadSubscription( pLiveReloadManager->setOnValidateLibrary(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnValidateLibraryDelegate, &EditorModuleManager::isEditorLibraryUsable, this ) ) );
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( ILiveReloadManager::OnValidateLibraryDelegate, &ClientModuleManager::isEditorLibraryUsable, this ) ) );
             // 편집기 코드가 다른 스레드에서 돌고 있으면(열린 파일 대화상자) 닫힐 때까지 리로드를 기다린다 — 변경은 버리지 않는다.
-            holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( ILiveReloadManager::ReloadHoldDelegate, &EditorModuleManager::isEditorReloadHeld, this ) ) );
+            holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( ILiveReloadManager::ReloadHoldDelegate, &ClientModuleManager::isEditorReloadHeld, this ) ) );
             if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
             {
-                SW_LOG_ERROR_ID( "EditorModuleManager.FailedLoadEditorModule", "Failed to load the Editor Module." );
+                SW_LOG_ERROR_ID( "ClientModuleManager.FailedLoadEditorModule", "Failed to load the Editor Module." );
                 return false;
             }
 
@@ -397,98 +394,19 @@ namespace sw
                 if ( pLiveReloadManager->registerModule( extension._name, extension._listDependency ) == false )
                 {
                     // 언리얼도 에디터 모듈 하나가 실패하면 그 플러그인만 끈다. 에디터는 시작한다.
-                    SW_LOG_ERROR_ID( "EditorModuleManager.EditorExtensionModuleCould", "Editor extension module %# could not be loaded - the editor runs without it", extension._name.c_str() );
+                    SW_LOG_ERROR_ID( "ClientModuleManager.EditorExtensionModuleCould", "Editor extension module %# could not be loaded - the editor runs without it", extension._name.c_str() );
                     continue;
                 }
-                SW_LOG_INFO_ID( "EditorModuleManager.EditorExtensionModuleLoaded", "Editor extension module %# loaded", extension._name.c_str() );
+                SW_LOG_INFO_ID( "ClientModuleManager.EditorExtensionModuleLoaded", "Editor extension module %# loaded", extension._name.c_str() );
             }
 
             if ( pLiveReloadManager->isGraphBroken() )
             {
-                SW_LOG_ERROR_ID( "EditorModuleManager.LiveReloadGraphBrokenDuring", "LiveReload graph broken during module registration — aborting initialize" );
+                SW_LOG_ERROR_ID( "ClientModuleManager.LiveReloadGraphBrokenDuring", "LiveReload graph broken during module registration — aborting initialize" );
                 return false;
             }
         }
         return true;
-    }
-
-    namespace
-    {
-        /** @brief 이 TU 전용 도우미 모음입니다. 인스턴스 없이 에디터 모듈을 올려 부르는 헤드리스 경로입니다. */
-        struct EditorModuleManagerHeadlessInternal
-        {
-            /**
-             * @brief 에디터 인스턴스 없이 에디터 모듈만 올려 진입점 @p pSymbol 하나를 부르고 내립니다(헤드리스 임포트 · 로컬라이제이션 공통).
-             * @details 모듈 ABI 를 대조하고, 모듈 타입을 등록했다가 걷습니다. @p call 은 `( TEntryFn, const ISubsystemLocator& ) -> bool` 이고 엔진 서비스 범위를 받습니다.
-             * @param symbols 에디터 모듈의 ABI 심볼 이름(`EditorModuleManager::getModuleSymbols`)입니다.
-             * @param pPurpose 로그에 쓰는 작업 이름입니다(`"Asset importing"`).
-             */
-            template <typename TEntryFn, typename TCall>
-            [[nodiscard]] static bool callEditorModuleEntry( const ModuleAPISymbols& symbols, const utf8* pSymbol, const utf8* pPurpose, TCall&& call )
-            {
-                const string                 modulePath  = ModuleLibraryUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
-                const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( modulePath );
-                const ModuleLibraryHandle    library{ libraryPath.has_value() && FileUtil::exists( modulePath ) ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr };
-                if ( library.isValid() == false )
-                {
-                    SW_LOG_ERROR_ID( "EditorModuleManager.NeedsEditorModuleBin", "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );
-                    return false;
-                }
-
-                // 로드하는 순간 모듈의 정적 등록기가 전역 헤드에 매달린다. 모듈 이름으로 등록해 두어야 언로드하기 전에 해제할 수 있다.
-                bool bSucceeded = false;
-                if ( engine::registerModuleTypes( sw::config::kTargetEditorModule ) == false )
-                    SW_LOG_ERROR_ID( "EditorModuleManager.CannotRegisterEditorModule", "%# cannot register the editor module types", pPurpose );
-                else if ( ModuleInstanceUtil::matchesModuleABI( library, symbols ) )
-                {
-                    const TEntryFn pfnEntry = reinterpret_cast<TEntryFn>( library.findSymbol( pSymbol ) );
-                    if ( pfnEntry == nullptr )
-                        SW_LOG_ERROR_ID( "EditorModuleManager.EditorModuleDoesNot", "The editor module does not export %#", pSymbol );
-                    else
-                    {
-                        SubsystemScope service;
-                        engine::bindModuleServices( service, false );
-                        bSucceeded = call( pfnEntry, static_cast<const ISubsystemLocator&>( service ) );
-                    }
-                }
-
-                engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
-                // 언로드하지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 로드된 채로 남을 뿐이다. 이유는 경고로 남는다.
-                (void)ModuleLibraryUtil::unloadModuleLibrary( sw::config::kTargetEditorModule, library.getOSHandle() );
-                return bSucceeded;
-            }
-        };
-    } // namespace
-
-    bool EditorModuleManager::importAssetsWithEditorModule( EditorImportKind kind, bool bCheckOnly )
-    {
-        // 인스턴스 없이 부르므로 엔진 서비스 범위를 직접 넘긴다. 임포터가 작업 시스템으로 압축을 나눈다.
-        return EditorModuleManagerHeadlessInternal::callEditorModuleEntry<PFN_ImportEditorAssets>(
-            getModuleSymbols(), kImportEditorAssetsSymbol, "Asset importing", [kind, bCheckOnly]( PFN_ImportEditorAssets pfnImport, const ISubsystemLocator& service )
-        {
-            return pfnImport( static_cast<uint32>( kind ), bCheckOnly ? 1u : 0u, &service ) == 0;
-        } );
-    }
-
-    bool EditorModuleManager::runLocalizationWithEditorModule( EditorLocalizationTask task, string_view poPath, string_view projectArgument )
-    {
-        const string poPathText( poPath );
-        const string projectText( projectArgument );
-        return EditorModuleManagerHeadlessInternal::callEditorModuleEntry<PFN_RunEditorLocalizationTask>(
-            getModuleSymbols(), kRunEditorLocalizationTaskSymbol, "Localization tools",
-            [task, &poPathText, &projectText]( PFN_RunEditorLocalizationTask pfnRun, const ISubsystemLocator& service )
-        {
-            return pfnRun( static_cast<uint32>( task ), poPathText.c_str(), projectText.c_str(), &service ) == 0;
-        } );
-    }
-
-    bool EditorModuleManager::validateAssetReferencesWithEditorModule()
-    {
-        return EditorModuleManagerHeadlessInternal::callEditorModuleEntry<PFN_CheckEditorAssetReferences>(
-            getModuleSymbols(), kCheckEditorAssetReferencesSymbol, "Asset reference check", []( PFN_CheckEditorAssetReferences pfnCheck, const ISubsystemLocator& service )
-        {
-            return pfnCheck( &service ) == 0;
-        } );
     }
 #endif // SW_WITH_DYNAMIC_MODULES
 } // namespace sw

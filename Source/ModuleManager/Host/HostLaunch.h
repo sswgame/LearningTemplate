@@ -62,7 +62,7 @@ namespace sw
         [[nodiscard]] HostEngineStart initializeEngine( int32 argc, utf8* pArgv[], EngineHostRole role );
         /**
          * @brief 호스트 로더의 본체입니다 — 매니페스트를 @p targetMask 로 해석해 리로드 구동기를 세우고(개발 구성만), @p moduleManager 를 받아 타입 공급자 모듈의 라이브러리를 올립니다.
-         * @details 어느 형식의 관리자를 쓸지는 호스트가 정한다(App 은 `EditorModuleManager`). 호스트는 `getModuleManager` 를 자기가 만든 형식으로 읽는다.
+         * @details 어느 형식의 관리자를 쓸지는 호스트가 정한다(App 은 `ClientModuleManager`). 호스트는 `getModuleManager` 를 자기가 만든 형식으로 읽는다.
          */
         [[nodiscard]] bool loadModuleLibraries( uint8 targetMask, unique_ptr<GameModuleManager> moduleManager );
         /**

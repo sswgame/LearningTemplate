@@ -3,7 +3,7 @@
     "_quarantined": [
         {
             "test": "Scenario.playground.desktop.editor.playreload",
-            "reason": "w-reload 시나리오가 PIE 중 에디터 모듈 리로드에서 플레이가 이어진다고 보지만, 플레이 세션을 에디터 모듈이 소유해 EditorModuleManager::onBeforeSuspendModules 가 시뮬레이션을 멈춘다(언리얼 Live Coding 처럼 잇는 것은 세션을 호스트로 옮기는 설계 일 — NEXT). 그 뒤 게임 모듈 교체가 시계를 170 초 넘게 붙잡는다. 빌드 대상 이름 결함(SWGame → SWGame_<게임>)은 고쳤다.",
+            "reason": "w-reload 시나리오가 PIE 중 에디터 모듈 리로드에서 플레이가 이어진다고 보지만, 플레이 세션을 에디터 모듈이 소유해 ClientModuleManager::onBeforeSuspendModules 가 시뮬레이션을 멈춘다(언리얼 Live Coding 처럼 잇는 것은 세션을 호스트로 옮기는 설계 일 — NEXT). 그 뒤 게임 모듈 교체가 시계를 170 초 넘게 붙잡는다. 빌드 대상 이름 결함(SWGame → SWGame_<게임>)은 고쳤다.",
             "expires": "2026-11-27"
         }
     ]

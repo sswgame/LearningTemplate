@@ -2,7 +2,7 @@
 
 #include "App/AppHeadlessTasks.h"
 
-#include "App/EditorModuleManager.h"
+#include "App/EditorModuleHeadlessTasks.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -56,14 +56,14 @@ namespace sw
                 commandLine.getArgument( kCheckArgument, bCheck );
                 if ( bImport == false && bCheck == false )
                     return TaskResult::NotRequested;
-                if constexpr ( build::kStaticModules ) // 에디터 모듈의 일이다 — 정적 구성에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 동적 모듈 구역)도 없다
+                if constexpr ( build::kStaticModules ) // 에디터 모듈의 일이다 — 정적 구성에는 에디터 모듈도 그 경로(`EditorModuleHeadlessTasks.cpp`)도 없다
                 {
                     SW_LOG_ERROR_ID( "App.AssetImportingNeedsEditor", "Asset importing needs the editor module, which a build with statically linked modules does not have - run it from a desktop Dev build." );
                     return TaskResult::Failed;
                 }
                 else
                 {
-                    return EditorModuleManager::importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
+                    return importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
                 }
             }
 
@@ -87,7 +87,7 @@ namespace sw
                 if ( bNoLocalizationTask )
                     return TaskResult::NotRequested;
 
-                if constexpr ( build::kStaticModules ) // 에디터 모듈의 일이다 — 정적 구성에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 동적 모듈 구역)도 없다
+                if constexpr ( build::kStaticModules ) // 에디터 모듈의 일이다 — 정적 구성에는 에디터 모듈도 그 경로(`EditorModuleHeadlessTasks.cpp`)도 없다
                 {
                     SW_LOG_ERROR_ID( "App.LocalizationToolsNeedEditor", "Localization tools need the editor module, which a build with statically linked modules does not have - run them from a desktop Dev build." );
                     return TaskResult::Failed;
@@ -98,12 +98,12 @@ namespace sw
                     if ( bGatherText || bCheckText )
                     {
                         const EditorLocalizationTask gatherTask = bCheckText ? EditorLocalizationTask::CheckText : EditorLocalizationTask::GatherText;
-                        bSucceeded                              = EditorModuleManager::runLocalizationWithEditorModule( gatherTask, {}, projectPath ) && bSucceeded;
+                        bSucceeded                              = runLocalizationWithEditorModule( gatherTask, {}, projectPath ) && bSucceeded;
                     }
                     if ( importPoPath.empty() == false )
-                        bSucceeded = EditorModuleManager::runLocalizationWithEditorModule( EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
+                        bSucceeded = runLocalizationWithEditorModule( EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
                     if ( bExportPo )
-                        bSucceeded = EditorModuleManager::runLocalizationWithEditorModule( EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
+                        bSucceeded = runLocalizationWithEditorModule( EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
                     return bSucceeded ? TaskResult::Succeeded : TaskResult::Failed;
                 }
             }
@@ -118,14 +118,14 @@ namespace sw
                 commandLine.getArgument( CommandLineArgument::CHECK_ASSET_REFS, bCheck );
                 if ( bCheck == false )
                     return TaskResult::NotRequested;
-                if constexpr ( build::kStaticModules ) // 에디터 모듈의 일이다 — 정적 구성에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 동적 모듈 구역)도 없다
+                if constexpr ( build::kStaticModules ) // 에디터 모듈의 일이다 — 정적 구성에는 에디터 모듈도 그 경로(`EditorModuleHeadlessTasks.cpp`)도 없다
                 {
                     SW_LOG_ERROR_ID( "App.AssetReferenceCheckNeedsEditor", "The asset reference check needs the editor module, which a build with statically linked modules does not have - run it from a desktop Dev build." );
                     return TaskResult::Failed;
                 }
                 else
                 {
-                    return EditorModuleManager::validateAssetReferencesWithEditorModule() ? TaskResult::Succeeded : TaskResult::Failed;
+                    return validateAssetReferencesWithEditorModule() ? TaskResult::Succeeded : TaskResult::Failed;
                 }
             }
 

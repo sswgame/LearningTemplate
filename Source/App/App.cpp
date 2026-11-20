@@ -3,7 +3,7 @@
 #include "App/App.h"
 
 #include "App/AppHeadlessTasks.h"
-#include "App/EditorModuleManager.h"
+#include "App/ClientModuleManager.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/PlatformFileUtil.h"
@@ -118,6 +118,7 @@ namespace sw
     App::App()
         : _launch{}
         , _pAutomation{ nullptr }
+        , _pModuleManager{ nullptr }
         , _pWindow{ nullptr }
         , _fixedTimestep{}
         , _userSettingsHost{}
@@ -142,9 +143,9 @@ namespace sw
 
     App::~App() = default;
 
-    EditorModuleManager* App::getModuleManager() const
+    ClientModuleManager* App::getModuleManager() const
     {
-        return static_cast<EditorModuleManager*>( _launch.getModuleManager() ); // 만든 쪽이 형식을 안다(`loadModuleLibraries`)
+        return _pModuleManager;
     }
 
     // 길이를 나누지 않는다: 호스트 범위 → 엔진 → 헤드리스 작업 → 자동화 → 설정 감시 순의 시동 열이라 순서가 곧 뜻이다.
@@ -317,7 +318,12 @@ namespace sw
     bool App::loadModuleLibraries()
     {
         // App 은 빌드가 담은 모든 대상을 로드한다(Game 은 클라이언트와 리슨 서버용 서버 모듈, Client 는 클라이언트). 전용 서버는 Server 실행 파일이 Server 대상으로 같은 해석을 한다.
-        return _launch.loadModuleLibraries( ModuleCatalog::getBuildTargetMask(), make_unique<EditorModuleManager>() );
+        // 형식을 아는 것은 만든 이쪽이다 — 부팅 열은 공통 형식(`GameModuleManager`)으로 소유하고 App 은 만든 형식의 관찰 포인터를 든다(내려 쓰는 형 변환을 두지 않는다).
+        unique_ptr<ClientModuleManager> pModuleManager = make_unique<ClientModuleManager>();
+        ClientModuleManager* const      pCreated       = pModuleManager.get();
+        const bool                      bLoaded        = _launch.loadModuleLibraries( ModuleCatalog::getBuildTargetMask(), std::move( pModuleManager ) );
+        _pModuleManager                                = _launch.getModuleManager() == pCreated ? pCreated : nullptr; // 부팅 열이 받기 전에 실패하면 매니저는 이미 사라졌다
+        return bLoaded;
     }
 
     bool App::startHostService( HostServiceID id )
@@ -378,6 +384,7 @@ namespace sw
                 getModuleManager()->shutdown();
                 // 렌더 스레드가 받은 패킷을 끝낸 뒤 훅을 뗀다(`RenderThread::setPresentHook`) — 그 뒤에 매니저를 지운다.
                 bindEditorRenderHooks( false );
+                _pModuleManager = nullptr;
                 _launch.releaseModuleManager();
                 return;
             }
@@ -441,7 +448,7 @@ namespace sw
         if ( _bEnableEditor == SW_TRUE )
         {
             // 모듈 매니저는 루프가 도는 동안 산다(호스트 서비스 Game 이 세우고 루프 뒤 `shutdown` 이 내린다) — App 이 중계하지 않고 바로 묶는다.
-            _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &EditorModuleManager::getSceneViewCamera, static_cast<const EditorModuleManager*>( getModuleManager() ) );
+            _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &ClientModuleManager::getSceneViewCamera, static_cast<const ClientModuleManager*>( getModuleManager() ) );
             // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다(언리얼 메인 프레임과 유니티 에디터 창도 최소 크기를 둔다).
             _pWindow->setMinimumClientSize( AppInternal::kEditorMinClientWidth, AppInternal::kEditorMinClientHeight );
             // 대화형 에디터 실행의 단언 대화상자는 개발 도구가 스스로 건다(`AssertDialog` — 배포는 DevTools 를 링크하지 않는다).
@@ -706,7 +713,7 @@ namespace sw
         }
 
         // 이벤트를 GameModuleManager(ImGui 등)에 먼저 보낸다.
-        EditorModuleManager* const pModuleManager    = getModuleManager();
+        ClientModuleManager* const pModuleManager    = getModuleManager();
         const bool                 bConsumedByEditor = ( pModuleManager != nullptr && pModuleManager->onWindowMessage( event ) );
 
         // 에디터가 가로채지 않았을 때만 게임 InputManager 로 전달한다.

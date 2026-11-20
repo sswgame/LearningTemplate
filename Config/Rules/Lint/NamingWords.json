@@ -1821,7 +1821,15 @@
     "isRHIFormatTableInOrder": "RHIFormatUtil::isTableInOrder — 열거 RHIFormat 의 자유 함수를 RHIFormatUtil 로 묶었다(2026-11-20)",
     "isRenderViewModeIndex": "RenderViewModeUtil::isIndex — 열거 RenderViewMode 의 자유 함수를 RenderViewModeUtil 로 묶었다(2026-11-20)",
     "getRenderViewModeInfo": "RenderViewModeUtil::getInfo — 열거 RenderViewMode 의 자유 함수를 RenderViewModeUtil 로 묶었다(2026-11-20)",
-    "getRenderViewModePipelineMode": "RenderViewModeUtil::getPipelineMode — 열거 RenderViewMode 의 자유 함수를 RenderViewModeUtil 로 묶었다(2026-11-20)"
+    "getRenderViewModePipelineMode": "RenderViewModeUtil::getPipelineMode — 열거 RenderViewMode 의 자유 함수를 RenderViewModeUtil 로 묶었다(2026-11-20)",
+    "EditorModuleManager": "ClientModuleManager — 배포 게임도 쓰는 클라이언트 호스트의 모듈 관리자, 장치 재생성 순서는 GameModuleManager::applyPendingDeviceChange(2026-11-21)",
+    "reinitializeAfterRHISwap": "GameModuleManager::applyPendingDeviceChange — 장치 교체 순서(DeviceChangeSequence)가 게임 → 호스트 모듈을 다시 세운다(2026-11-21)",
+    "recreateEditorInstance": "ClientModuleManager::recreateHostModule — suspendHostModule 의 짝 가상(2026-11-21)",
+    "applyIfPending": "GameModuleManager::applyPendingDeviceChange — App 이 프레임 경계에서 호출 하나로 부른다, 교체기는 요청만 예약한다(2026-11-21)",
+    "getFailedSwapCount": "IEngineRenderDriver::getFailedBackendChangeCount — 실패 집계는 교체를 하는 렌더러가 든다(2026-11-21)",
+    "InteractiveAssertDialog": "AssertDialog::installForInteractiveRun — 개발 도구 클라이언트가 첫 프레임 끝에 스스로 건다(App/Dev 폴더 폐지, 2026-11-21)",
+    "findRHIBackendSwitcherVariable": "RHIBackendSwitcherInternal::findBackendVariable(2026-11-21)",
+    "kBackendSwitcher": "호스트 서비스 BackendSwitcher 폐지 — 교체기는 DevTools 기동 단계 서브시스템으로 스스로 선다(2026-11-21)"
   },
   "_keep": {
     "DummyType": "리플렉션 테스트의 형식 이름 표본(열거형 끝말 kind 규칙의 예외)",

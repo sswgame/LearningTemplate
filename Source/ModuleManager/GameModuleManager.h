@@ -3,7 +3,7 @@
  * @brief 게임 모듈의 수명 주기를 관리합니다. 라이브러리 로드, 게임 API 바인딩, 게임 업데이트, 게임 쪽 핫 리로드를 맡으며 App 과 Server 가 함께 씁니다.
  *
  * @note 호스트와 모듈 사이 계약(ModuleAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
- *       재초기화의 호스트 몫은 App 전용 `EditorModuleManager`(Source/App)가 이 클래스 위에 구현합니다(장치 교체의 순서는 이 클래스 — `applyPendingDeviceChange`). 의존은 그쪽에서 여기로 한 방향입니다.
+ *       재초기화의 호스트 몫은 App 전용 `ClientModuleManager`(Source/App)가 이 클래스 위에 구현합니다(장치 교체의 순서는 이 클래스 — `applyPendingDeviceChange`). 의존은 그쪽에서 여기로 한 방향입니다.
  * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 배포는 정적 링크)에 따라 다른 함수는 `GameModuleManager.cpp` 의 `SW_WITH_DYNAMIC_MODULES` 구역 한 파일이
  *       `SW_WITH_DYNAMIC_MODULES` 로 가른다. 나머지는 `GameModuleManager.cpp` 하나다.
  */
@@ -37,10 +37,10 @@ namespace sw
     class SceneManager;
     class IEngineUIDriver;
 
-    /** @brief 모듈 인스턴스를 종료할 범위입니다. `Editor` 는 호스트 모듈(App 의 에디터)이고, 그것이 없는 호스트(전용 서버)에서는 종료할 것이 없습니다. */
+    /** @brief 모듈 인스턴스를 종료할 범위입니다. `Host` 는 호스트 모듈(App 의 에디터)이고, 그것이 없는 호스트(전용 서버)에서는 종료할 것이 없습니다. */
     enum class ModuleScope : uint8
     {
-        Editor,
+        Host,
         Game,
         Both
     };
@@ -95,7 +95,7 @@ namespace sw
      * @brief 게임 모듈의 수명 주기와 게임 API 바인딩을 감쌉니다(App 과 Server 공통).
      *
      * @details
-     *   실행 파일이 unique_ptr 로 소유합니다. 전용 서버는 이 클래스를 그대로(`initializeDedicatedServer`), App 은 파생 클래스 `EditorModuleManager` 를 씁니다.
+     *   실행 파일이 unique_ptr 로 소유합니다. 전용 서버는 이 클래스를 그대로(`initializeDedicatedServer`), App 은 파생 클래스 `ClientModuleManager` 를 씁니다.
      *   - 핫 리로드 때 onBefore/onAfter 콜백이 자동으로 불립니다.
      *   - 모듈을 언로드하는 경로는 `suspendModules` 하나입니다. 호스트 모듈(에디터)이 끼어드는 지점은 아래 보호 가상 함수들입니다.
      *
@@ -121,7 +121,7 @@ namespace sw
         /**
          * @brief 타입 공급자 모듈(GameFramework, 키트, SWGame)의 라이브러리를 로드해 그 타입을 등록합니다. 인스턴스는 만들지 않습니다.
          * @details 기동 단계 `ModuleLoadStage` 의 호스트 로더(`App`, `Server`)가 부릅니다. 이것이 끝나야 엔진이 씬을 읽습니다. 게임 인스턴스는
-         *          그 뒤 기동 함수(`initializeDedicatedServer`, `EditorModuleManager::initialize`)가 만듭니다. Shipping 은 모듈이 정적 링크라 로드할 것이 없습니다.
+         *          그 뒤 기동 함수(`initializeDedicatedServer`, `ClientModuleManager::initialize`)가 만듭니다. Shipping 은 모듈이 정적 링크라 로드할 것이 없습니다.
          *          무엇을 어떤 순서로 로드할지는 모듈 매니페스트의 해석 결과(@p resolution)가 정합니다. 켜진 GameFramework, 키트, SWGame 을 로드 순서대로
          *          (의존이 먼저) 로드합니다. 키트의 리로드 의존은 매니페스트의 `_listDependency` 입니다.
          * @param pLiveReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
@@ -278,7 +278,7 @@ namespace sw
             (void)reason;
             return false;
         }
-        /** @brief `ModuleScope::Editor` 와 `Both` 를 종료할 때 게임보다 먼저 불립니다(에디터 인스턴스 파괴). */
+        /** @brief `ModuleScope::Host` 와 `Both` 를 종료할 때 게임보다 먼저 불립니다(에디터 인스턴스 파괴). */
         virtual void suspendHostModule( bool bReleaseAPITable ) { (void)bReleaseAPITable; }
         /**
          * @brief 장치를 다시 만든 뒤 게임 다음에 불립니다(`applyPendingDeviceChange` — `suspendHostModule( false )` 의 짝). 호스트 모듈 인스턴스를 같은 API 표로 다시 세운다.
