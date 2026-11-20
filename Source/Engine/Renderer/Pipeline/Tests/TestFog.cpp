@@ -6,6 +6,7 @@
 #include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Environment/Fog/FogSettings.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

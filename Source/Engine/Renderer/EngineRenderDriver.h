@@ -15,13 +15,13 @@
 #include "Engine/Graphics/Display/DisplayOutput.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
-#include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/Presentation/IEngineRenderDriver.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"
 
 namespace sw
 {
+    struct FrameViewports;
     enum class RHIBackend : uint32;
     enum class RHIDeviceLostPolicy : uint8;
     enum class WindowLifecycleEvent : uint8;

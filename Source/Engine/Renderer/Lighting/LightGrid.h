@@ -15,11 +15,12 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
 {
+    struct GPULight;
+
     /**
      * @struct LightGridSlicing
      * @brief 뷰 하나의 깊이 조각 상수입니다. 그리드 헤더에 실리고, GPU 생산자에게는 뷰 정보로 넘어갑니다.

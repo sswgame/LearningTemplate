@@ -13,6 +13,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimeRollover.h"
 
+#include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Environment/Surface/SurfaceDeformBinding.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Debug/GPUMessage.h"

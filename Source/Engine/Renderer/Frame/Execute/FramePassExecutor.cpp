@@ -50,6 +50,8 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
+#include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
+#include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
@@ -160,6 +162,7 @@ namespace sw
         , _mapFramePassNameToIndex{}
         , _frameGraphContext{}
         , _pActiveView{ &state._mainView }
+        , _pMainView{ &state._mainView }
         , _pCmdOwnerDevice{ nullptr }
         , _frameCmd{}
         , _asyncComputeCmd{}

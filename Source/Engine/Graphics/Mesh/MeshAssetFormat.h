@@ -9,13 +9,14 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 
 namespace sw
 {
+    class AssetID;
+
     /**
      * @struct MeshAssetData
      * @brief `.mesh` 하나의 내용입니다. 고유 정점과 인덱스(삼각형마다 셋), 스킨드 메시면 정점별 스킨 가중치와 역 바인드를 담습니다.

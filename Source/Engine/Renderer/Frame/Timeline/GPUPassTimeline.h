@@ -12,11 +12,11 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimelineExporter.h"
 
 namespace sw
 {
+    struct RHITimestampFrame;
     struct RenderGraphPassDesc;
 
     class FrameProfiler;

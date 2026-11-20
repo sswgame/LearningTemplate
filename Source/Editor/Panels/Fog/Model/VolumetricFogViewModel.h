@@ -10,6 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
 
 namespace sw::editor

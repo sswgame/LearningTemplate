@@ -10,12 +10,12 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    struct RenderDiagnosticsPolicy;
     struct FogSettings;
     struct FramePassContext;
     struct FrameViewTarget;

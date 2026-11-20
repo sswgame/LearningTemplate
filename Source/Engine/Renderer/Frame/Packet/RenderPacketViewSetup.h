@@ -8,11 +8,12 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/View/FrameViewports.h"
+#include "Engine/Graphics/View/RenderViewMode.h"
 #include "Engine/Renderer/Frame/Packet/PostProcessMaterialSet.h"
 
 namespace sw
 {
+    struct FrameViewports;
     struct RenderFramePacket;
 
     class CameraComponent;

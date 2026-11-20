@@ -15,6 +15,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Config/OcclusionCullingConfig.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
