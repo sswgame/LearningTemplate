@@ -13,7 +13,13 @@ namespace sw
     {
         struct ColorInternal
         {
-            /** @brief 0~1 로 자르고 가장 가까운 바이트로 바꿉니다. */
+            /** @brief 색상환의 구간 수입니다(빨강 → 노랑 → 초록 → 청록 → 파랑 → 자홍). */
+            static constexpr float32 kHueSectorCount = 6.0f;
+            /** @brief 초록 · 파랑이 가장 큰 채널일 때 색상이 시작하는 구간입니다. */
+            static constexpr float32 kGreenSector = 2.0f;
+            static constexpr float32 kBlueSector  = 4.0f;
+
+            /** @brief 0~1 로 자르고 가장 가까운 바이트로 바꿉니다. NaN 은 0 입니다 — `clamp` 는 NaN 을 그대로 넘겨 정수 변환이 정의되지 않았다. */
             static uint32 toByte( const float32 channel ) noexcept
             {
                 return static_cast<uint32>( unorm8::fromFloat( channel ).getRaw() );
@@ -30,6 +36,62 @@ namespace sw
                 if ( value <= 0.04045f )
                     return value / 12.92f;
                 return std::pow( ( value + 0.055f ) / 1.055f, 2.4f );
+            }
+
+            /**
+             * @brief 색상(0~1) · 채도 폭(span — 가장 큰 채널 − 가장 작은 채널) · 밝기 바닥(@p minimum)에서 RGB 를 만듭니다 — HSV 는 폭 = 명도 × 채도, 바닥 = 명도 − 폭이다.
+             * @details 색상환은 여섯 구간(빨강 → 노랑 → 초록 → 청록 → 파랑 → 자홍)이고, 구간마다 가장 큰 채널이 폭, 둘째 채널이 구간 안 위치만큼이다.
+             */
+            static Color makeFromHueSpan( const float32 hue, const float32 span, const float32 minimum, const float32 alpha ) noexcept
+            {
+                const float32 sector = MathUtil::repeat( hue, 1.0f ) * kHueSectorCount;
+                const float32 second = span * ( 1.0f - MathUtil::abs( MathUtil::fmod( sector, 2.0f ) - 1.0f ) );
+                float32       red    = 0.0f;
+                float32       green  = 0.0f;
+                float32       blue   = 0.0f;
+                switch ( static_cast<uint32>( sector ) )
+                {
+                    case 0:
+                        red   = span;
+                        green = second;
+                        break;
+                    case 1:
+                        red   = second;
+                        green = span;
+                        break;
+                    case 2:
+                        green = span;
+                        blue  = second;
+                        break;
+                    case 3:
+                        green = second;
+                        blue  = span;
+                        break;
+                    case 4:
+                        red  = second;
+                        blue = span;
+                        break;
+                    default:
+                        red  = span;
+                        blue = second;
+                        break;
+                }
+                return Color{ red + minimum, green + minimum, blue + minimum, alpha };
+            }
+
+            /** @brief RGB 의 색상(0~1)입니다. @p maximum · @p span 는 세 채널의 최댓값과 (최댓값 − 최솟값)이고, 폭이 0 이면 0 입니다. */
+            static float32 computeHue( const Color& color, const float32 maximum, const float32 span ) noexcept
+            {
+                if ( span <= 0.0f )
+                    return 0.0f;
+                float32 sector = 0.0f;
+                if ( maximum == color._r )
+                    sector = ( color._g - color._b ) / span;
+                else if ( maximum == color._g )
+                    sector = ( color._b - color._r ) / span + kGreenSector;
+                else
+                    sector = ( color._r - color._g ) / span + kBlueSector;
+                return MathUtil::repeat( sector / kHueSectorCount, 1.0f );
             }
 
             static float32 linearToSRGB( const float32 value ) noexcept
@@ -114,6 +176,25 @@ namespace sw
     uint32 Color::toAbgr() const noexcept
     {
         return BitUtil::packBytes( ColorInternal::toByte( _a ), ColorInternal::toByte( _b ), ColorInternal::toByte( _g ), ColorInternal::toByte( _r ) );
+    }
+
+    Color Color::fromHueSaturationValue( const float32 hue, const float32 saturation, const float32 value, const float32 alpha ) noexcept
+    {
+        const float32 span = value * saturation;
+        return ColorInternal::makeFromHueSpan( hue, span, value - span, alpha );
+    }
+
+    float3 Color::toHueSaturationValue() const noexcept
+    {
+        const float32 maximum = MathUtil::max( _r, MathUtil::max( _g, _b ) );
+        const float32 span    = maximum - MathUtil::min( _r, MathUtil::min( _g, _b ) );
+        return float3{ ColorInternal::computeHue( *this, maximum, span ), maximum > 0.0f ? span / maximum : 0.0f, maximum };
+    }
+
+    bool Color::nearEqual( const Color& other, const float32 tolerance ) const noexcept
+    {
+        return MathUtil::nearEqual( _r, other._r, tolerance ) && MathUtil::nearEqual( _g, other._g, tolerance ) && MathUtil::nearEqual( _b, other._b, tolerance ) &&
+               MathUtil::nearEqual( _a, other._a, tolerance );
     }
 
     void Color::toHex( utf8 ( &outText )[10] ) const noexcept

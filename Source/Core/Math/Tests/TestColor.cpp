@@ -1,4 +1,4 @@
-// Color — 패킹 순서 · 왕복 · 자르기와 반올림, 16진 글자, sRGB ↔ 선형, 알파 · 밝기 가공, saturate.
+// Color — 패킹 순서 · 왕복 · 자르기와 반올림, 16진 글자, sRGB ↔ 선형, 알파 · 밝기 가공, saturate, HSV, 허용치 비교.
 #include "pch.h"
 
 #include "Core/Math/Color.h"
@@ -120,4 +120,39 @@ SW_TEST_CASE( ColorTest, SaturateClampsEveryChannel )
     SW_EXPECT_NEAR( 1.0f, clamped._a, 1e-6f );
     const Color inside( 0.2f, 0.4f, 0.6f, 0.8f );
     SW_EXPECT_TRUE( inside.saturate() == inside );
+}
+
+/**
+ * @brief [ColorTest] HSV(fromHueSaturationValue) — 색상환의 여섯 꼭짓점이 순수 색이고(색상 1 은 한 바퀴라 빨강), toHueSaturationValue 는 그 역, 무채색은 색상 · 채도 0 이다
+ */
+SW_TEST_CASE( ColorTest, HueSaturationValueRoundTripsAndHitsPrimaryColors )
+{
+    SW_EXPECT_TRUE( Color::fromHueSaturationValue( 0.0f, 1.0f, 1.0f ).nearEqual( Color::kRed, 1e-6f ) );
+    SW_EXPECT_TRUE( Color::fromHueSaturationValue( 1.0f / 3.0f, 1.0f, 1.0f ).nearEqual( Color::kGreen, 1e-5f ) );
+    SW_EXPECT_TRUE( Color::fromHueSaturationValue( 2.0f / 3.0f, 1.0f, 1.0f ).nearEqual( Color::kBlue, 1e-5f ) );
+    SW_EXPECT_TRUE( Color::fromHueSaturationValue( 1.0f / 6.0f, 1.0f, 1.0f ).nearEqual( Color::kYellow, 1e-5f ) );
+    SW_EXPECT_TRUE( Color::fromHueSaturationValue( 1.0f, 1.0f, 1.0f ).nearEqual( Color::kRed, 1e-6f ) );
+    SW_EXPECT_TRUE( Color::fromHueSaturationValue( 0.3f, 0.0f, 0.5f ).nearEqual( Color::kGray, 1e-6f ) );
+    SW_EXPECT_NEAR( 0.25f, Color::fromHueSaturationValue( 0.0f, 1.0f, 1.0f, 0.25f )._a, 1e-6f );
+
+    const Color  warm   = Color::fromBytes( 255, 128, 32 );
+    const float3 values = warm.toHueSaturationValue();
+    SW_EXPECT_TRUE( Color::fromHueSaturationValue( values._x, values._y, values._z ).nearEqual( warm, 1e-5f ) );
+    const float3 grayValues = Color::kGray.toHueSaturationValue();
+    SW_EXPECT_EQUAL( 0.0f, grayValues._x );
+    SW_EXPECT_EQUAL( 0.0f, grayValues._y );
+    SW_EXPECT_NEAR( 0.5f, grayValues._z, 1e-6f );
+    const float3 redBlueValues = Color( 1.0f, 0.0f, 0.5f ).toHueSaturationValue(); // 빨강이 가장 크고 파랑이 초록보다 크면 색상이 1 쪽(음수를 감는다)
+    SW_EXPECT_NEAR( 11.0f / 12.0f, redBlueValues._x, 1e-5f );
+}
+
+/**
+ * @brief [ColorTest] nearEqual 은 허용치로 비교한다, 패킹은 NaN 채널을 0 으로 담는다(예전에는 clamp 가 NaN 을 넘겨 정수 변환이 정의되지 않았다)
+ */
+SW_TEST_CASE( ColorTest, NearEqualAndNanPacking )
+{
+    const Color color( 0.2f, 0.4f, 0.6f, 0.5f );
+    SW_EXPECT_TRUE( color.nearEqual( Color( 0.21f, 0.4f, 0.6f, 0.5f ), 0.02f ) );
+    SW_EXPECT_FALSE( color.nearEqual( Color( 0.25f, 0.4f, 0.6f, 0.5f ), 0.02f ) );
+    SW_EXPECT_EQUAL( 0x00FF00FFu, Color( std::numeric_limits<float32>::quiet_NaN(), 1.0f, 0.0f, 1.0f ).toRGBA() );
 }

@@ -23,11 +23,7 @@ namespace sw::editor
         /** @brief 액센트 색을 0xRRGGBB 정수로 반환합니다. 채널마다 0..255 로 반올림하므로 `equals` 로 정확히 비교할 수 있습니다. */
         [[nodiscard]] bool readAccentColor( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const Color& accent = SW_THEME_COLOR( "Base", "Accent" );
-            const uint32 red    = static_cast<uint32>( accent._r * 255.0f + 0.5f );
-            const uint32 green  = static_cast<uint32>( accent._g * 255.0f + 0.5f );
-            const uint32 blue   = static_cast<uint32>( accent._b * 255.0f + 0.5f );
-            outValue            = static_cast<float64>( ( red << 16 ) | ( green << 8 ) | blue );
+            outValue = static_cast<float64>( SW_THEME_COLOR( "Base", "Accent" ).toRGBA() >> 8 ); // 0xRRGGBBAA 에서 알파를 뺀다
             return true;
         }
 

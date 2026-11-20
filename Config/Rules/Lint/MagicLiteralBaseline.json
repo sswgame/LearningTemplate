@@ -194,7 +194,6 @@
     "Source/Editor/Common/GUI/Status/EditorNotificationView.cpp": {"float": 8},
     "Source/Editor/Common/GUI/Status/EditorReflectionProbeBakeStatus.cpp": {"integer": 1},
     "Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp": {"float": 42, "integer": 1},
-    "Source/Editor/Common/GUI/Theme/EditorThemeWatches.cpp": {"float": 3},
     "Source/Editor/Common/Input/CommandPalettePopup.cpp": {"float": 2, "integer": 1},
     "Source/Editor/Common/Input/QuickLauncherPopup.cpp": {"float": 4, "integer": 1},
     "Source/Editor/Common/Localization/LocalizationTools.cpp": {"integer": 1},

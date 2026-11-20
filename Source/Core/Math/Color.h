@@ -5,6 +5,8 @@
  *          **저장 값은 입력 그대로입니다**(감마 · 선형 가정을 하지 않는다) — 이 값이 sRGB 인지 선형인지는 쓰는 쪽이 알고, `toLinear` · `toSRGB` 로 바꿉니다.
  *          패킹 이름은 **가장 높은 바이트부터** 채널 순서로 읽습니다: `toRGBA` 는 `0xRRGGBBAA`, `toArgb` 는 `0xAARRGGBB`, `toAbgr` 는 `0xAABBGGRR` 입니다.
  *          `toAbgr` 는 리틀엔디안 메모리에서 바이트가 R, G, B, A 순으로 놓이는 값이라 `DXGI_FORMAT_R8G8B8A8_UNORM` 텍스처 · ImGui `IM_COL32` 와 같습니다.
+ *          언리얼은 선형 float(`FLinearColor`)과 sRGB 8 비트(`FColor`)를 형식으로 가른다. 여기서는 `Color` 를 쓰는 곳이 에디터 UI(테마 토큰 · ImGui — 모두 sRGB 값)뿐이고
+ *          엔진의 선형 색은 리플렉션 · 셰이더 상수 레이아웃에 묶인 `float4` 라 섞이는 자리가 없어 형식을 하나로 둔다 — 선형 색을 이 형식으로 옮기는 날 sRGB 8 비트 형식을 따로 둔다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -55,6 +57,10 @@ namespace sw
          * @return 글자가 형식에 맞지 않으면 false 이고 @p outColor 는 바뀌지 않습니다.
          */
         [[nodiscard]] static bool fromHex( string_view text, Color& outColor ) noexcept;
+        /**
+         * @brief 색상(@p hue, 0~1 — 1 이 한 바퀴, 밖은 감는다) · 채도 · 명도(HSV)에서 만듭니다. ImGui `ColorConvertHSVtoRGB` · 유니티 `Color.HSVToRGB` 와 같은 범위입니다.
+         */
+        [[nodiscard]] static Color fromHueSaturationValue( float32 hue, float32 saturation, float32 value, float32 alpha = 1.0f ) noexcept;
 
         // ------------------------------------------------------------------------------
         // 2) 내보내기
@@ -69,6 +75,8 @@ namespace sw
         [[nodiscard]] constexpr float4 toFloat4() const noexcept { return float4{ _r, _g, _b, _a }; }
         /** @brief `#RRGGBBAA` 글자를 @p outText 에 씁니다(끝의 NUL 까지 10 칸, `fromHex` 로 되돌릴 수 있다). */
         void toHex( utf8 ( &outText )[10] ) const noexcept;
+        /** @brief HSV (색상 0~1, 채도, 명도)입니다. 무채색(채도 0)이면 색상은 0 입니다. `fromHueSaturationValue` 의 역이고 알파는 담지 않습니다(유니티 `Color.RGBToHSV`). */
+        [[nodiscard]] float3 toHueSaturationValue() const noexcept;
 
         // ------------------------------------------------------------------------------
         // 3) 가공 — 알파 · 보간 · 밝기 · 색 공간
@@ -94,6 +102,9 @@ namespace sw
         [[nodiscard]] Color toSRGB() const noexcept;
         /** @brief 지각 밝기(Rec.709 가중치, RGB 가 같은 색 공간일 때)입니다. */
         [[nodiscard]] constexpr float32 getLuminance() const noexcept { return _r * 0.2126f + _g * 0.7152f + _b * 0.0722f; }
+
+        /** @brief 네 채널의 차이가 모두 @p tolerance 보다 작으면 true 입니다(언리얼 `FLinearColor::Equals`). `==` 는 정확히 같아야 한다. */
+        [[nodiscard]] bool nearEqual( const Color& other, float32 tolerance ) const noexcept;
 
         constexpr bool operator==( const Color& other ) const noexcept { return _r == other._r && _g == other._g && _b == other._b && _a == other._a; }
         constexpr bool operator!=( const Color& other ) const noexcept { return !( *this == other ); }

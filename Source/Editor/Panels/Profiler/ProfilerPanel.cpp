@@ -79,11 +79,7 @@ namespace sw::editor
                 constexpr uint32 kHueStepDegrees = 47;
                 constexpr uint32 kDegreesPerTurn = 360;
                 const float32    hue             = static_cast<float32>( ( slot * kHueStepDegrees ) % kDegreesPerTurn ) / static_cast<float32>( kDegreesPerTurn );
-                float32          red{ 0.0f };
-                float32          green{ 0.0f };
-                float32          blue{ 0.0f };
-                ImGui::ColorConvertHSVtoRGB( hue, 0.55f, 0.85f, red, green, blue );
-                return ImGui::GetColorU32( EditorColorUtil::toImVec4( Color{ red, green, blue, 1.0f } ) );
+                return ImGui::GetColorU32( EditorColorUtil::toImVec4( Color::fromHueSaturationValue( hue, 0.55f, 0.85f ) ) );
             }
 
 #if !defined( SW_SHIPPING )
