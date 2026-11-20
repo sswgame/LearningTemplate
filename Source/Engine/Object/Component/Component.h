@@ -429,6 +429,11 @@ namespace sw
          */
         virtual void onRegister( GameObjectManager& manager ) { (void)manager; }
         /**
+         * @brief 필요 컴포넌트 멤버(`Required<T>` — `RequiredComponent.h`)를 묶습니다. `onRegister` 바로 앞에, 등록 · 다시 등록(모듈 리로드)마다 불립니다.
+         * @return 모두 묶였으면 true 입니다. 못 찾은 것은 `Required<T>::bind` 가 오류로 남긴다. 필요 컴포넌트가 없는 형식은 재정의하지 않는다.
+         */
+        [[nodiscard]] virtual bool bindRequiredComponents() { return true; }
+        /**
          * @brief 아직 등록하지 않았으면 `onRegister` 를 부르고 "등록됨" 으로 기록합니다(게임 스레드). 직접 부르지 말고 매니저(`GameObjectManager::registerComponent`)를 거친다.
          * @details 씬을 짓는 배치(`Scene::instantiate`) 안에서는 매니저가 배치 끝까지 미룬다 — 비동기 로드는 씬을 받는 게임 스레드까지(언리얼: 로딩 스레드는
          *          직렬화만, `OnRegister` · `PostLoad` 는 게임 스레드). 훅은 늘 게임 스레드에서 돈다.
