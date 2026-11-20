@@ -3,7 +3,7 @@
 """
 Scripts/dev/shipping_check.py
 
-배포 구성 확인 — 배포 프리셋 셋(클라이언트 + 서버 · 클라이언트 전용 · 전용 서버)을 구성 · 빌드하고, 산출물을 잠깐 띄워 기동 · 종료를 본다.
+배포 구성 확인 — 배포 프리셋 둘(클라이언트 · 전용 서버)을 구성 · 빌드하고, 산출물을 잠깐 띄워 기동 · 종료를 본다.
 배포 구성에는 테스트 장치(자동화 실행기 · 테스트용 전역 변수)가 없다 — 그래서 실행 인자로 조종하지 않고 운영과 같은 길(창 닫기 · 종료 신호)로 끝낸다.
 통합 단계에서 한 번 돌린다(일상 개발 빌드는 Dev 프리셋이라 배포 구성의 컴파일 · 링크 · 쿠킹 결함이 여기서만 드러난다).
 
@@ -11,8 +11,10 @@ Scripts/dev/shipping_check.py
 | --- | --- | --- |
 | `Ninja-Shipping` | `App -unattended` 를 `APP_RUN_SECONDS` 동안 돌린 뒤 창을 닫는다(WM_CLOSE) | 그동안 살아 있고 0 으로 끝난다 |
 | `Ninja-Shipping` | `App -unattended` + 배포가 받지 않는 인자 전부(`ArgumentList.xxx` 의 쓰는 구성 Dev · Test · AndroidDev — `-test` · `-scenario=x` · `-EnableEditor` …) | 0 이 아닌 코드로 곧 끝나고, 표준 오류에 그 인자마다 모르는 인자 오류가 있다(배포 구성은 그 철자를 등록하지 않는다) |
-| `Ninja-Shipping-Client` | 클라이언트 전용 `App`(Server 폴더를 짓지 않는다)을 같은 길로 띄우고 닫는다 | 그동안 살아 있고 0 으로 끝난다 |
 | `Ninja-Shipping-Server` | `Server` 를 `SERVER_RUN_SECONDS` 동안 돌린 뒤 종료 신호(Windows Ctrl+Break · POSIX SIGTERM) | 그동안 살아 있고 0 으로 끝난다 |
+
+`Ninja-Shipping-Client` 는 띄우지 않는다 — `Ninja-Shipping` 이 대상 종류를 비워 두면 정적 모듈 구성(배포는 늘 정적)은 Client 로 풀려
+(`cmake/Modules/Config/BuildOptions.cmake` 의 SW_TARGET_TYPE), `SW_TARGET_TYPE=Client` 하나만 더한 그 프리셋은 같은 구성을 두 번 짓는다(병합 뒤 build 단계 29 분).
 
 배포 실행 파일에 테스트용 전역 변수 이름(`SW_TEST_GLOBAL_VARIABLE` 의 `gv_…`)이 하나라도 남아 있으면 실패다 — 배포 구성에서 그 변수는 상수라
 등록(이름 글)도 읽는 분기도 접혀 사라져야 한다. 남았다면 상수 접기가 안 되는 자리(주소를 넘기는 곳 · 쓰는 곳)이니 그 자리를 배포 구성에서 뺀다.
@@ -42,7 +44,7 @@ from common import app_arguments  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 from common.host_platform import executable_name, is_windows_host  # noqa: E402
 from common.paths import get_bin_dir, get_build_dir, get_project_root  # noqa: E402
-from common.run_process import run_process  # noqa: E402
+from common.run_process import run_cmake, run_process  # noqa: E402
 
 #: 배포 App 을 살려 두는 시간(초) — 기동 · 첫 씬 · 몇 프레임이 지나기에 넉넉하다.
 APP_RUN_SECONDS = 8.0
@@ -94,10 +96,10 @@ def make_log_path(project_root: Path, preset: str, name: str) -> Path:
 
 def build_preset(project_root: Path, preset: str) -> bool:
     """프리셋 하나를 구성하고 빌드한다(빌드에 쿠킹이 든다)."""
-    for command in (["cmake", "--preset", preset], ["cmake", "--build", "--preset", preset]):
-        print(f"[shipping-check] {' '.join(command)}", flush=True)
-        if run_process(command, cwd=project_root, capture=False).return_code != 0:
-            print(f"[shipping-check] FAILED {' '.join(command)}", flush=True)
+    for command in (["--preset", preset], ["--build", "--preset", preset]):
+        print(f"[shipping-check] cmake {' '.join(command)}", flush=True)
+        if run_cmake(command, cwd=project_root, capture=False).return_code != 0:
+            print(f"[shipping-check] FAILED cmake {' '.join(command)}", flush=True)
             return False
     return True
 
@@ -137,11 +139,6 @@ def send_shutdown_signal(process: subprocess.Popen) -> None:
         os.kill(process.pid, signal.CTRL_BREAK_EVENT)
     else:
         process.send_signal(signal.SIGTERM)
-
-
-def run_client_app(project_root: Path) -> SmokeResult:
-    """클라이언트 전용 배포 App(Server 폴더 · 서버 서비스 구현이 없다)을 같은 길로 띄우고 닫는다."""
-    return run_app(project_root, "Ninja-Shipping-Client")
 
 
 def run_server(project_root: Path) -> SmokeResult:
@@ -204,7 +201,7 @@ def check_no_test_variables(project_root: Path) -> SmokeResult:
     # 이름 모두를 한 정규식(긴 이름 먼저)으로 실행 파일을 한 번만 훑는다 — 이름마다 실행 파일 전체를 훑으면 이름 수 × 실행 파일 크기다.
     # 하나라도 남았는지(통과 · 실패)는 이름마다 찾던 것과 같다. 다른 이름을 품은 긴 이름이 남으면 긴 이름만 적힌다.
     name_pattern = re.compile(b"|".join(re.escape(name.encode("ascii")) for name in sorted(list_name, key=len, reverse=True))) if list_name else None
-    for preset, stem in (("Ninja-Shipping", "App"), ("Ninja-Shipping-Client", "App"), ("Ninja-Shipping-Server", "Server")):
+    for preset, stem in (("Ninja-Shipping", "App"), ("Ninja-Shipping-Server", "Server")):
         executable = get_bin_dir(preset, project_root) / executable_name(stem)
         if executable.is_file() is False:
             return SmokeResult("NoTestVariables", executable, False, f"{executable} is missing")
@@ -239,7 +236,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     project_root = get_project_root()
 
-    list_run = ((run_app, "Ninja-Shipping"), (run_client_app, "Ninja-Shipping-Client"), (run_server, "Ninja-Shipping-Server"), (run_dev_arguments_rejected, "Ninja-Shipping"))
+    list_run = ((run_app, "Ninja-Shipping"), (run_server, "Ninja-Shipping-Server"), (run_dev_arguments_rejected, "Ninja-Shipping"))
     if args.skip_build is False:
         list_failed_build = [preset for preset in dict.fromkeys(preset for _, preset in list_run) if build_preset(project_root, preset) is False]
         if list_failed_build:

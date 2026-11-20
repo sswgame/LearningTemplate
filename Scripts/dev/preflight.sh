@@ -7,7 +7,7 @@
 # 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 #
 # 단계(시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을 판정하므로 GPU 단계는 혼자 돈다):
-#   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 → (바뀐 파일 clang-tidy, 뒤에서) → 서버 빌드 ‖ 배포 프리셋 셋 빌드 · 쿠킹). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
+#   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 → (바뀐 파일 clang-tidy, 뒤에서) → 서버 빌드 ‖ 배포 프리셋 둘 빌드 · 쿠킹). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
 #               Debug 는 짓지 않는다 — 단언 · 검사는 SW_DO_CHECKS 로 Release 에 있고, CPU 단위는 ASan(Release + clang-cl ASan)이 돈다(사용자 결정 2026-11-18).
 #   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed — DesignBacklog D4). 돈 적 없는 테스트 · 기준 파일의 실패를
 #               전체 실행 중간이 아니라 빌드 직후에 갈래 이름과 함께 낸다. 없는 골든 · 스냅숏만 쓰고(MissingBaseline) 쓴 것이 있으면 멈춘다 — 보고 커밋한 뒤 --from changed.
@@ -200,10 +200,11 @@ job_sanitizer_cpu() {
   return 0
 }
 
-# 배포 프리셋 셋(shipping-check 가 띄우는 것과 같은 목록)을 짓는다 — 쿠킹이 Content 를 읽으므로 임포트 뒤에 띄운다.
+# 배포 프리셋 둘(shipping-check 가 띄우는 것과 같은 목록)을 짓는다 — 쿠킹이 Content 를 읽으므로 임포트 뒤에 띄운다.
+# Ninja-Shipping-Client 는 짓지 않는다: Ninja-Shipping 이 대상 종류를 비워 두면 배포(늘 정적 모듈)는 Client 로 풀려(BuildOptions.cmake SW_TARGET_TYPE) 같은 구성이다.
 job_shipping_build() {
   local P
-  for P in Ninja-Shipping Ninja-Shipping-Client Ninja-Shipping-Server; do
+  for P in Ninja-Shipping Ninja-Shipping-Server; do
     build_preset $P || return 1
   done
 }
