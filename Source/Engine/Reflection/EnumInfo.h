@@ -6,6 +6,7 @@
 #include "Core/Container/span.h"
 #include "Core/String/EnumNameTable.h"
 
+#include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionMetadataBox.h"
 
 namespace sw

@@ -9,6 +9,8 @@
 #include "Engine/Reflection/EnumInfo.h"
 #include "Engine/Reflection/FunctionInfo.h"
 #include "Engine/Reflection/PropertyInfo.h"
+#include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/TypeCastHeader.h"
 
 namespace sw
 {

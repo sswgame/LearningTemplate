@@ -3,10 +3,16 @@
  * @brief 프로퍼티 하나의 리플렉션 정보입니다.
  */
 #pragma once
+#include "Engine/Reflection/ContainerKind.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionMetadataBox.h"
 
 namespace sw
 {
+    // 래퍼는 포인터로만 든다 — 연산을 부르는 TU 가 ReflectionContainers.h 를 읽는다
+    struct IContainerWrapper;
+    struct ISequenceContainerWrapper;
+
     /**
      * @brief 컨테이너가 중첩된 프로퍼티의 스키마입니다(`vector&lt;vector&lt;T&gt;&gt;`, `map&lt;K,vector&lt;V&gt;&gt;` 등).
      */
