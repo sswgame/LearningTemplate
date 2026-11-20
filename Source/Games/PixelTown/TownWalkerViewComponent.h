@@ -7,7 +7,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

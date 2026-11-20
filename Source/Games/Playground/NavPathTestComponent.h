@@ -10,7 +10,6 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Navigation/NavigationTypes.h"
 #include "Engine/Navigation/Scene/NavPathSolver.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
