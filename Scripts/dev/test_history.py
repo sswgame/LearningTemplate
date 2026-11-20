@@ -441,13 +441,20 @@ def make_scenario_command(item: CtestItem, scenario: str, content_root: Path, ou
 
 
 def make_scenario_runs(list_item: Sequence[CtestItem], map_scenario: dict[str, list[ChangedFile]], content_root: Path, build_dir: Path,
-                       output: Path, find_branch: Callable[[str], str]) -> tuple[list[ChangedRun], list[ChangedRow]]:
+                       output: Path, find_branch: Callable[[str], str],
+                       map_quarantine: dict[str, QuarantineEntry] | None = None) -> tuple[list[ChangedRun], list[ChangedRow]]:
     """시나리오마다 실행 하나. 두 번 기동 쌍은 ctest 항목 그대로(기록 없이) 돌고, ctest 항목에 없는 시나리오(조건이 붙은 하위 폴더)는 표에 그렇다고 적는다."""
     list_run: list[ChangedRun] = []
     list_row: list[ChangedRow] = []
     for scenario, list_changed in sorted(map_scenario.items()):
         folder = output / "scenario" / scenario.replace("/", ".")
         item = next((item for item in list_item if scenario in (get_argument(item.command, "scenario") or "").split(",")), None)
+        quarantine = (map_quarantine or {}).get(item.name) if item is not None else None
+        if quarantine is not None:
+            # 격리한 ctest 의 시나리오는 묶음 검증이 빼고 돈다(gpu 단계의 `-E` 와 같은 표) — 표에 사유 · 만료를 남기고 돌리지 않는다.
+            list_row.append(ChangedRow(scenario, describe_change(list_changed), "", f"격리 `{item.name}` — {quarantine.reason} (만료 {quarantine.expires.isoformat()})",
+                                       find_branch(list_changed[0].path)))
+            continue
         if item is not None:
             alone = len((get_argument(item.command, "scenario") or "").split(",")) == 1   # 시나리오 하나짜리 항목(부하 등)은 제 시한 그대로다
             list_run.append(ChangedRun(scenario, list_changed, make_scenario_command(item, scenario, content_root, folder), item.working_directory, folder,
@@ -616,7 +623,14 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
     output.mkdir(parents=True)
     find_branch = make_find_branch(project_root, base)
     list_unit_run = make_unit_runs(list_item, map_folder, output)
-    list_scenario_run, list_row = make_scenario_runs(list_item, map_scenario, project_root / "Content", build_dir, output, find_branch)
+    list_quarantine, list_quarantine_problem = read_quarantine(project_root, datetime.date.today())
+    if list_quarantine_problem:
+        for problem in list_quarantine_problem:
+            print(f"[Changed] {problem}")
+        print("CHANGED_FAILED")
+        return ExitCode.VIOLATION
+    map_quarantine = {entry.test: entry for entry in list_quarantine}
+    list_scenario_run, list_row = make_scenario_runs(list_item, map_scenario, project_root / "Content", build_dir, output, find_branch, map_quarantine)
 
     def execute(run: ChangedRun) -> None:
         print(f"[Changed] run {run.item}: {' '.join(run.command)}", flush=True)   # `run ` 머리 — preflight.sh 가 이 줄을 빼고 표만 찍는다
@@ -707,6 +721,11 @@ def run_changed_self_check() -> None:
     assert any(run.command[0] == "ctest" and "^Scenario\\.g\\.sequence\\.pair$" in run.command and run.timeout_seconds == 600 for run in list_scenario_run), "쌍은 ctest 항목 그대로"
     assert next(run.timeout_seconds for run in list_scenario_run if run.item == "game/g/automation/new.scenario.xml") == SINGLE_SCENARIO_TIMEOUT_SECONDS, "체인에서 꺼낸 하나"
     assert [row.item for row in list_row] == ["engine/automation/rhiswap/x.scenario.xml"] and list_row[0].kind == "", "체인 밖은 실패가 아니다"
+    chain_item = next(item for item in list_item if "game/g/automation/new.scenario.xml" in (get_argument(item.command, "scenario") or "").split(","))
+    quarantined = {chain_item.name: QuarantineEntry(chain_item.name, "흔들림", datetime.date(2099, 1, 1))}
+    list_scenario_run_q, list_row_q = make_scenario_runs(list_item, {key: value for key, value in map_scenario.items() if key == "game/g/automation/new.scenario.xml"}, Path("C"),
+                                                         Path("B"), Path("O"), lambda path: "w-x", quarantined)
+    assert not list_scenario_run_q and len(list_row_q) == 1 and list_row_q[0].kind == "" and "격리" in list_row_q[0].reason, "격리한 항목은 돌지 않고 표에 사유를 남긴다"
 
     def make_report(backend: str, result: str, kind: str = "", step: str = "", reason: str = "") -> dict:
         return {"name": "s", "backend": backend, "result": result, "startedAtUnixMs": 1, "failure": {"kind": kind, "step": step, "reason": reason}}
