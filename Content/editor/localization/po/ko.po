@@ -284,6 +284,12 @@ msgstr "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명�
 
 #. Context: EditorPanelText._label
 #: editor/panels/editor.panels.xml
+msgctxt "Collision Responses"
+msgid "Collision Responses"
+msgstr "충돌 응답"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
 msgctxt "Command Palette"
 msgid "Command Palette"
 msgstr "명령 팔레트"
@@ -944,27 +950,27 @@ msgctxt "EdCommon.LayoutNameHint"
 msgid "layout name"
 msgstr "레이아웃 이름"
 
-#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+#: Source/Editor/Common/GUI/Model/EditorMenuBarViewModel.cpp
 msgctxt "EdCommon.LiveCodingAllModules"
 msgid "All Modules"
 msgstr "모든 모듈"
 
-#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+#: Source/Editor/Common/GUI/Model/EditorMenuBarViewModel.cpp
 msgctxt "EdCommon.LiveCodingFailed"
 msgid "{target} build failed (exit code {code}). See the Output Log."
 msgstr "{target} 빌드에 실패했습니다(종료 코드 {code}). Output Log 를 확인하십시오."
 
-#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+#: Source/Editor/Common/GUI/Model/EditorMenuBarViewModel.cpp
 msgctxt "EdCommon.LiveCodingFailedTitle"
 msgid "Live Coding Failed"
 msgstr "라이브 코딩 실패"
 
-#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+#: Source/Editor/Common/GUI/Model/EditorMenuBarViewModel.cpp
 msgctxt "EdCommon.LiveCodingSucceeded"
 msgid "{target} compiled and reloaded in {seconds}s"
 msgstr "{target} 을(를) {seconds}초 만에 컴파일하고 다시 불러왔습니다"
 
-#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+#: Source/Editor/Common/GUI/Model/EditorMenuBarViewModel.cpp
 msgctxt "EdCommon.LiveCodingSucceededTitle"
 msgid "Live Coding Succeeded"
 msgstr "라이브 코딩 성공"
@@ -1067,7 +1073,7 @@ msgctxt "EdCommon.NotifyBugReportTitle"
 msgid "Bug report"
 msgstr "버그 리포트"
 
-#: Source/Editor/Common/Input/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorDefaultCommands.cpp
 msgctxt "EdCommon.NotifyClipboardEmpty"
 msgid "Clipboard is empty"
 msgstr "클립보드가 비어 있습니다"
@@ -1082,12 +1088,12 @@ msgctxt "EdCommon.NotifyEditorTitle"
 msgid "Editor"
 msgstr "에디터"
 
-#: Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp
+#: Source/Editor/Common/Workspace/EditorUICommandQueue.cpp
 msgctxt "EdCommon.NotifyKeepSimulation"
 msgid "The selected objects keep their state after Stop"
 msgstr "선택한 오브젝트는 Stop 뒤에도 상태를 유지합니다"
 
-#: Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp
+#: Source/Editor/Common/Workspace/EditorUICommandQueue.cpp
 msgctxt "EdCommon.NotifyKeepSimulationTitle"
 msgid "Keep Simulation Changes"
 msgstr "시뮬레이션 변경 유지"
@@ -1097,7 +1103,7 @@ msgctxt "EdCommon.NotifyNewScene"
 msgid "New scene"
 msgstr "새 씬"
 
-#: Source/Editor/Common/Input/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorDefaultCommands.cpp
 msgctxt "EdCommon.NotifyPasteTitle"
 msgid "Paste"
 msgstr "붙여넣기"
@@ -1117,12 +1123,12 @@ msgctxt "EdCommon.NotifyPlayNewWindowUnsaved"
 msgid "Unsaved scene edits are not in the new window"
 msgstr "저장하지 않은 씬 편집은 새 창에 없습니다"
 
-#: Source/Editor/Common/Input/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorDefaultCommands.cpp
 msgctxt "EdCommon.NotifyPlayTitle"
 msgid "Play"
 msgstr "플레이"
 
-#: Source/Editor/Common/Input/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorDefaultCommands.cpp
 msgctxt "EdCommon.NotifyPlayUnsaved"
 msgid "The scene has unsaved changes. Use Play on the toolbar to confirm."
 msgstr "씬에 저장하지 않은 변경이 있습니다. 툴바의 Play 로 확인하십시오."
@@ -1142,17 +1148,17 @@ msgctxt "EdCommon.NotifyPrefabTitle"
 msgid "Prefab"
 msgstr "프리팹"
 
-#: Source/Editor/Common/Input/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorDefaultCommands.cpp
 msgctxt "EdCommon.NotifyPresetApplyFailed"
 msgid "Failed to apply the preset to this component"
 msgstr "이 컴포넌트에 프리셋을 적용하지 못했습니다"
 
-#: Source/Editor/Common/Input/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorDefaultCommands.cpp
 msgctxt "EdCommon.NotifyPresetTitle"
 msgid "Preset"
 msgstr "프리셋"
 
-#: Source/Editor/Common/Input/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorDefaultCommands.cpp
 msgctxt "EdCommon.NotifyPresetWriteFailed"
 msgid "Failed to write the preset file"
 msgstr "프리셋 파일을 쓰지 못했습니다"
@@ -1168,11 +1174,13 @@ msgid "Saved"
 msgstr "저장했습니다"
 
 #: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
+#: Source/Editor/Common/Input/EditorDefaultCommands.cpp
 msgctxt "EdCommon.NotifySceneOpenFailed"
 msgid "Failed to open the scene"
 msgstr "씬을 열지 못했습니다"
 
 #: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
+#: Source/Editor/Common/Input/EditorDefaultCommands.cpp
 msgctxt "EdCommon.NotifySceneTitle"
 msgid "Scene"
 msgstr "씬"
@@ -1197,12 +1205,12 @@ msgctxt "EdCommon.NotifyScreenshotTitle"
 msgid "Screenshot"
 msgstr "스크린샷"
 
-#: Source/Editor/Common/Input/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorDefaultCommands.cpp
 msgctxt "EdCommon.NotifySelectComponent"
 msgid "Select a component first"
 msgstr "먼저 컴포넌트를 고르십시오"
 
-#: Source/Editor/Common/Input/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorDefaultCommands.cpp
 msgctxt "EdCommon.NotifySelectObject"
 msgid "Select an object first"
 msgstr "먼저 오브젝트를 고르십시오"
@@ -4414,6 +4422,7 @@ msgstr "새로 고침"
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 #: Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp
+#: Source/Editor/Panels/Physics/CollisionResponsePanel.cpp
 #: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
 #: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
 #: Source/Editor/Panels/TileSet/TileSetPanel.cpp
@@ -4461,6 +4470,7 @@ msgstr "되돌리기"
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 #: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+#: Source/Editor/Panels/Physics/CollisionResponsePanel.cpp
 #: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
 #: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
@@ -4568,62 +4578,62 @@ msgctxt "EdViewMode.Wireframe"
 msgid "Wireframe"
 msgstr "와이어프레임"
 
-#: Source/Editor/Viewport/EditorViewportBillboardItem.cpp
+#: Source/Editor/Viewport/Model/Visualizers/BillboardVisualizer.cpp
 msgctxt "EdVisualizer.BillboardLabel"
 msgid "Icons"
 msgstr "아이콘"
 
-#: Source/Editor/Viewport/EditorViewportBillboardItem.cpp
+#: Source/Editor/Viewport/Model/Visualizers/BillboardVisualizer.cpp
 msgctxt "EdVisualizer.BillboardTip"
 msgid "Shows components without a mesh (lights, cameras, audio) as icons you can click to select"
 msgstr "빛 · 카메라 · 오디오처럼 메시가 없는 컴포넌트를 아이콘으로 표시하고 눌러 고르게 합니다"
 
-#: Source/Editor/Viewport/Visualizers/BoxCollider2DVisualizer.cpp
+#: Source/Editor/Viewport/Model/Visualizers/BoxCollider2DVisualizer.cpp
 msgctxt "EdVisualizer.BoxCollider2DLabel"
 msgid "Col"
 msgstr "충돌"
 
-#: Source/Editor/Viewport/Visualizers/BoxCollider2DVisualizer.cpp
+#: Source/Editor/Viewport/Model/Visualizers/BoxCollider2DVisualizer.cpp
 msgctxt "EdVisualizer.BoxCollider2DTip"
 msgid "Shows BoxCollider2D rectangles as wireframe"
 msgstr "BoxCollider2D 사각형을 와이어프레임으로 표시합니다"
 
-#: Source/Editor/Viewport/Visualizers/CameraFrustumVisualizer.cpp
+#: Source/Editor/Viewport/Model/Visualizers/CameraFrustumVisualizer.cpp
 msgctxt "EdVisualizer.CameraFrustumLabel"
 msgid "Cam"
 msgstr "카메라"
 
-#: Source/Editor/Viewport/Visualizers/CameraFrustumVisualizer.cpp
+#: Source/Editor/Viewport/Model/Visualizers/CameraFrustumVisualizer.cpp
 msgctxt "EdVisualizer.CameraFrustumTip"
 msgid "Shows the frustum of every camera except the active one"
 msgstr "활성 카메라를 제외한 카메라의 프러스텀을 표시합니다"
 
-#: Source/Editor/Viewport/Visualizers/DebugDrawVisualizer.cpp
+#: Source/Editor/Viewport/Model/Visualizers/DebugDrawVisualizer.cpp
 msgctxt "EdVisualizer.DebugDrawLabel"
 msgid "Dbg"
 msgstr "디버그"
 
-#: Source/Editor/Viewport/Visualizers/DebugDrawVisualizer.cpp
+#: Source/Editor/Viewport/Model/Visualizers/DebugDrawVisualizer.cpp
 msgctxt "EdVisualizer.DebugDrawTip"
 msgid "Shows the lines, spheres, boxes, arrows and text game code put into DebugDrawQueue"
 msgstr "게임 코드가 DebugDrawQueue 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 표시합니다"
 
-#: Source/Editor/Viewport/Visualizers/NavMeshVisualizer.cpp
+#: Source/Editor/Viewport/Model/Visualizers/NavMeshVisualizer.cpp
 msgctxt "EdVisualizer.NavMeshLabel"
 msgid "Nav"
 msgstr "내비"
 
-#: Source/Editor/Viewport/Visualizers/NavMeshVisualizer.cpp
+#: Source/Editor/Viewport/Model/Visualizers/NavMeshVisualizer.cpp
 msgctxt "EdVisualizer.NavMeshTip"
 msgid "Shows the polygon edges of the baked navmesh (bake with Build > Bake Navigation)"
 msgstr "베이크한 내비메시의 폴리곤 테두리를 표시합니다(빌드 > 내비게이션 굽기로 굽는다)"
 
-#: Source/Editor/Viewport/Visualizers/PhysicsShapeVisualizer.cpp
+#: Source/Editor/Viewport/EditorColliderHandleTool.cpp
 msgctxt "EdVisualizer.PhysicsShapesLabel"
 msgid "Phys"
 msgstr "물리"
 
-#: Source/Editor/Viewport/Visualizers/PhysicsShapeVisualizer.cpp
+#: Source/Editor/Viewport/EditorColliderHandleTool.cpp
 msgctxt "EdVisualizer.PhysicsShapesTip"
 msgid "Shows RigidBody and RigidBody2D collision shapes as wireframe (static grey, kinematic blue, dynamic green, trigger yellow)"
 msgstr "RigidBody · RigidBody2D 의 충돌 셰이프를 와이어프레임으로 표시합니다(정적 회색 · 키네마틱 파랑 · 동적 초록 · 트리거 노랑)"
@@ -4648,12 +4658,12 @@ msgctxt "EdVisualizer.RigTargetGizmoTip"
 msgid "Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset"
 msgstr "리그 디버그 창에서 고른 리그 대상의 기즈모입니다. 끌기를 놓으면 대상 오프셋을 리그 에셋에 씁니다"
 
-#: Source/Editor/Viewport/Visualizers/SelectionBoundsVisualizer.cpp
+#: Source/Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.cpp
 msgctxt "EdVisualizer.SelectionBoundsLabel"
 msgid "Sel"
 msgstr "선택"
 
-#: Source/Editor/Viewport/Visualizers/SelectionBoundsVisualizer.cpp
+#: Source/Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.cpp
 msgctxt "EdVisualizer.SelectionBoundsTip"
 msgid "Shows the bounding box of the selected objects in accent-colored lines"
 msgstr "고른 오브젝트의 경계 상자를 강조색 선으로 표시합니다"
@@ -5773,6 +5783,41 @@ msgstr "리소스를 훑는 중..."
 msgctxt "EditorCatalog.UseInherited"
 msgid "Use inherited"
 msgstr "물려받기"
+
+#: Source/Editor/Panels/Physics/CollisionResponsePanel.cpp
+msgctxt "EditorCollision.Block"
+msgid "Block"
+msgstr "막기"
+
+#: Source/Editor/Panels/Physics/CollisionResponsePanel.cpp
+msgctxt "EditorCollision.Ignore"
+msgid "Ignore"
+msgstr "무시"
+
+#: Source/Editor/Panels/Physics/CollisionResponsePanel.cpp
+msgctxt "EditorCollision.Overlap"
+msgid "Overlap"
+msgstr "겹침"
+
+#: Source/Editor/Panels/Physics/CollisionResponsePanel.cpp
+msgctxt "EditorCollision.PairsTitle"
+msgid "Resulting response between profiles"
+msgstr "프로필 사이의 결과 응답"
+
+#: Source/Editor/Panels/Physics/CollisionResponsePanel.cpp
+msgctxt "EditorCollision.Profile"
+msgid "Profile"
+msgstr "프로필"
+
+#: Source/Editor/Panels/Physics/CollisionResponsePanel.cpp
+msgctxt "EditorCollision.ResponsesTip"
+msgid "Click a cell to cycle Block, Overlap and Ignore. Two bodies use the weaker of the responses they give each other. Dim cells use the channel default."
+msgstr "칸을 누르면 막기 · 겹침 · 무시가 차례로 바뀝니다. 두 바디는 서로에게 준 응답 가운데 약한 쪽을 씁니다. 흐린 칸은 채널 기본값입니다."
+
+#: Source/Editor/Panels/Physics/CollisionResponsePanel.cpp
+msgctxt "EditorCollision.ResponsesTitle"
+msgid "Responses by profile and channel"
+msgstr "프로필 · 채널별 응답"
 
 #: Source/Editor/Panels/Console/ConsolePanel.cpp
 msgctxt "EditorConsole.AllLevelsHidden"

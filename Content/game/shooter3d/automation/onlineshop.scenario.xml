@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8cc0019cce65c2874f16bbbece196418"?>
+<!--
+  Shooter3D 온라인 상점 — 프로세스 안 서버(Config/Server/Online/Shooter3D.json, 전용 서버와 같은 파일)에 붙어 로그인 → 금화 우편 250 받기 → 상점 화면(ShopScreen +
+  EconomyShopPurchaseProvider, 상품 data/shooter3d.offers.xml: Offer0 gem_from_gold 100 · Offer1 gem_starter 50 계정당 1 · Offer2 gem_bundle 500).
+  ⑴ 구매 성공(서버 답의 잔액이 값 · 지급과 맞아 Succeeded, 영수증 = 멱등 키), ⑵ 계정당 한도 — 두 번째는 서버가 LimitReached 로 거절하고 재화는 그대로(클라이언트가 되돌리지 않는다),
+  ⑶ 잔액 부족(500 > 100) — 서버 원장 사본으로 확인 창 없이 알린다, ⑷ 서버 오류 — 세션을 끊은 뒤의 구매는 ServerError 이고 사본 잔액은 그대로다.
+  실행: ctest -R Scenario.shooter3d (체인)
+-->
+<Scenario name="game.shooter3d.onlineshop" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive" requiresModule="GF_Server_Mailbox,GF_Server_Economy">
+	<AllowLog id="LoginTicketKey.AccountKitNoTicketKeySecretEnvironment" reason="프로세스 안 개발 서버는 티켓 주 키 없이 개발 키를 쓴다 - 게임 접속 티켓을 쓰지 않는다"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<DevCommand line="online.local.start Config/Server/Online/Shooter3D.json"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
+	<DevCommand line="shooter.online.login"/>
+	<WaitUntil watch="Shooter3D.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
+	<DevCommand line="shooter.online.sendmail 250"/>
+	<WaitUntil watch="Shooter3D.OnlineSelfMailSent" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="shooter.online.listmail"/>
+	<WaitUntil watch="Shooter3D.OnlineMailCount" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="shooter.online.claimall"/>
+	<WaitUntil watch="Shooter3D.OnlineGold" equals="250" timeoutSeconds="10"/>
+	<Expect watch="Shooter3D.OnlineGem" equals="0"/>
+
+	<DevCommand line="shooter.online.shop"/>
+	<WaitUntil watch="UI.ActiveScreen" is="common/ui/shop/shop.ui.xml" timeoutFrames="30"/>
+
+	<!-- ⑴ gem_from_gold: 첫 패드 입력은 기본 포커스(Close), 위로 셋 → Offer0 -->
+	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Close" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer2" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer0" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="Shop.PurchaseCount" equals="1" timeoutSeconds="10"/>
+	<Expect watch="Shop.LastStatus" is="Succeeded"/>
+	<Expect watch="Shooter3D.OnlineGold" equals="150"/>
+	<Expect watch="Shooter3D.OnlineGem" equals="1"/>
+	<ExpectLog id="ShopScreen.PurchaseFinished" count="1"/>
+	<ExpectLog id="EconomyShop.PurchaseReplyMismatch" count="0"/>
+
+	<!-- ⑵ gem_starter 두 번 — 두 번째는 서버의 계정당 한도. 확인 창이 닫히면 덮였던 줄로 포커스가 돌아온다(구매 중에도 줄은 켜져 있다) -->
+	<WaitUntil watch="UI.FocusedWidget" is="Offer0" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="Shop.PurchaseCount" equals="2" timeoutSeconds="10"/>
+	<Expect watch="Shop.LastStatus" is="Succeeded"/>
+	<Expect watch="Shooter3D.OnlineGold" equals="100"/>
+	<Expect watch="Shooter3D.OnlineGem" equals="3"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="Shop.PurchaseCount" equals="3" timeoutSeconds="10"/>
+	<Expect watch="Shop.LastStatus" is="LimitReached"/>
+	<Expect watch="Shooter3D.OnlineGold" equals="100"/>
+	<Expect watch="Shooter3D.OnlineGem" equals="3"/>
+
+	<!-- ⑶ 잔액 부족 — gem_bundle 500 > 100: 확인 창 없이 알린다 -->
+	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer2" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<AdvanceSimulation frames="10"/> <!-- 확인 창이 뜨지 않는다(일어나지 않음 — 시간이 내용) -->
+	<ExpectUI screen="common/ui/shop/shop.ui.xml"/>
+	<ExpectLog id="ShopScreen.NotEnoughMoney" count="1"/>
+	<Expect watch="Shop.PurchaseCount" equals="3"/>
+
+	<!-- ⑷ 서버 오류 — 세션을 끊은 뒤 gem_from_gold: ServerError, 사본 잔액은 그대로(되돌리지도 깎지도 않는다) -->
+	<DevCommand line="online.disconnect"/>
+	<Expect watch="Online.SessionState" equals="0"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer0" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="Shop.PurchaseCount" equals="4" timeoutSeconds="20"/>
+	<Expect watch="Shop.LastStatus" is="ServerError"/>
+	<Expect watch="Shooter3D.OnlineGold" equals="100"/>
+	<Expect watch="Shooter3D.OnlineGem" equals="3"/>
+	<Pass/>
+</Scenario>

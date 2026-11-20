@@ -27,4 +27,6 @@
   <Item id="heels_high" name="High Heels" category="Armor" slot="Feet" visual="heels_high" tags="Cloth"/>
   <Item id="boots_low" name="Low Boots" category="Armor" slot="Feet" visual="boots_low" tags="Cloth"/>
   <Item id="helmet_knight_tinted" _base="helmet_knight" name="Knight Helmet (Tintable)" visual="helmet_knight_tinted"/>
+  <!-- 겹치는 소모품 — 인벤토리 · 상점 시연(game/empty maps/inventorydemo)의 겹치기 · 나누기 · 사용. 외형이 없다(장비가 아니다). -->
+  <Item id="potion_health" name="Health Potion" description="Restores a little health." category="Consumable" maxStack="10" weight="0.5" value="20" useEffect="Heal"/>
 </ItemCatalog>

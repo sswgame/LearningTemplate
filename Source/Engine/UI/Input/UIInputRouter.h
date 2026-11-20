@@ -73,6 +73,11 @@ namespace sw
         /** @brief 이번 프레임의 소비 기록과 UI 액션 맵을 갱신하고 프레임 시간을 기억합니다(액션 이벤트에 싣습니다). */
         void update( float32 deltaSeconds );
         /**
+         * @brief 이번 프레임의 탐색 입력이 포커스를 옮기지 않게 합니다 — 입력 방식이 탐색으로 바뀌며 기본 포커스를 잡은 프레임(`UISystem::setInputMode`).
+         * @details 첫 탐색 입력은 기본 포커스를 보이는 데만 쓴다(`handleNavigation` 규칙). 방식 전환이 먼저 포커스를 잡으면 같은 프레임의 그 입력이 한 칸 더 옮겼다. 다음 `update` 가 푼다.
+         */
+        void holdNavigationThisFrame() { _bFocusOnlyThisFrame = SW_TRUE; }
+        /**
          * @brief 이번 프레임 원시 이벤트에서 마지막으로 쓴 장치로 입력 방식을 정합니다(커서는 위치가 실제로 바뀐 이동만 인정합니다).
          * @return 방식을 가리키는 이벤트가 있었으면 true 이고 @p outMode 에 그 방식을 넣습니다. 지금 방식과 같을 수 있습니다.
          */
@@ -97,7 +102,10 @@ namespace sw
         void processActions( UIScreen* pActive, float32 deltaSeconds );
         /** @brief 포커스 위젯이 텍스트 입력 위젯이면 키보드 포커스 `UI` 를 잡고, 아니면 놓습니다. */
         void updateKeyboardFocus( const UIViewport& viewport );
-        /** @brief @p screen 이 활성이 될 때의 포커스를 돌려줍니다. 기억한 위젯이 있으면 그것이고, 없고 탐색 방식이면 기본 포커스(없으면 첫 위젯)입니다. */
+        /**
+         * @brief @p screen 이 활성이 될 때의 포커스를 돌려줍니다. 기억한 위젯이 있으면 그것이고, 꺼졌거나 지워졌으면 대체(`UINavigationSolver::findRestoreFocus` — 가까운 켜진 이웃
+         *        → 기본 포커스 → 첫 위젯 → 화면 자체)입니다. 기억한 위젯이 없고 탐색 방식이면 기본 포커스(없으면 첫 위젯)입니다.
+         */
         void restoreFocus( UIScreen& screen );
         /** @brief UI 맵 레이어를 맞춥니다. `UI` 는 활성 화면이 있을 때 켜고, `UIGlobal`(일시정지)은 활성 화면이 없고 일시정지 메뉴가 있을 때 켭니다. */
         void syncInputLayers( const UIScreen* pActive, bool bHasPauseMenu );
@@ -160,9 +168,10 @@ namespace sw
         float32                      _inputDeltaSeconds;  ///< 이번 `processInput` 의 프레임 시간입니다(액션 이벤트에 싣습니다).
         UINavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향입니다(기울이지 않았으면 Next 이며 쓰지 않는 값입니다).
         UIInputMode                  _inputMode;
-        uint8                        _bPointerKnown    : 1; ///< 마우스 위치를 한 번 읽었는지 나타냅니다(첫 프레임의 Move 기준).
-        uint8                        _bTouchActive     : 1; ///< 첫 손가락이 닿아 있습니다(`processTouch` — 끌기 Move 를 보낸다).
-        uint8                        _bStickHeld       : 1; ///< 스틱이 탐색 임계값을 넘어 기울어 있는지 나타냅니다.
-        uint8                        _bMousePixelKnown : 1; ///< `_lastMousePixel` 을 한 번 읽었는지 나타냅니다.
+        uint8                        _bPointerKnown       : 1; ///< 마우스 위치를 한 번 읽었는지 나타냅니다(첫 프레임의 Move 기준).
+        uint8                        _bTouchActive        : 1; ///< 첫 손가락이 닿아 있습니다(`processTouch` — 끌기 Move 를 보낸다).
+        uint8                        _bStickHeld          : 1; ///< 스틱이 탐색 임계값을 넘어 기울어 있는지 나타냅니다.
+        uint8                        _bMousePixelKnown    : 1; ///< `_lastMousePixel` 을 한 번 읽었는지 나타냅니다.
+        uint8                        _bFocusOnlyThisFrame : 1; ///< 이번 프레임에 탐색 방식으로 바뀌며 기본 포커스를 잡았다 — 이 프레임의 탐색 입력은 옮기지 않는다(`holdNavigationThisFrame`).
     };
 } // namespace sw

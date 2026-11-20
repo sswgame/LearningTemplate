@@ -6,4 +6,13 @@
     <Price currency="cur.gold" amount="100"/>
     <Grant asset="cur.gem" amount="1"/>
   </Offer>
+  <!-- 상점 화면 시나리오(automation/onlineshop): 계정당 한 번(limit) · 비싼 묶음(잔액 부족) -->
+  <Offer id="gem_starter" limit="1">
+    <Price currency="cur.gold" amount="50"/>
+    <Grant asset="cur.gem" amount="2"/>
+  </Offer>
+  <Offer id="gem_bundle">
+    <Price currency="cur.gold" amount="500"/>
+    <Grant asset="cur.gem" amount="6"/>
+  </Offer>
 </OfferCatalog>

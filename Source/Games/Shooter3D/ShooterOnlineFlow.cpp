@@ -8,6 +8,8 @@
 #include "Engine/Console/DevCommandRegistry.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyClient.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyShopPurchaseProvider.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardClient.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingClient.h"
@@ -210,6 +212,16 @@ namespace sw
                 return true;
             }
 
+            [[nodiscard]] static bool readGem( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                const OnlineSession* const pSession = game::findSubsystem<OnlineSession>();
+                if ( pSession == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pSession->get<EconomyClient>().getBalance( ShooterOnlineFlow::kAssetGem ) );
+                return true;
+            }
+
             [[nodiscard]] static bool readSelfMailSent( const GameObjectManager* pManager, float64& outValue )
             {
                 (void)pManager;
@@ -237,11 +249,29 @@ namespace sw
         : _listReplyScratch{}
         , _listAssignmentScratch{}
         , _listTopKills{}
+        , _offers{}
+        , _shopProvider{}
         , _matchLease{}
         , _matchID{ 0 }
         , _submittedScoreCount{ 0 }
         , _selfMailSentCount{ 0 }
     {
+    }
+
+    ShooterOnlineFlow::~ShooterOnlineFlow() = default;
+
+    EconomyShopPurchaseProvider* ShooterOnlineFlow::findShopProvider( OnlineSession& session )
+    {
+        if ( _shopProvider != nullptr )
+            return _shopProvider.get();
+        _offers = SharedAssetCache<OfferCatalog>::acquire( kOfferCatalog ).snapshot();
+        if ( _offers == nullptr )
+        {
+            SW_LOG_ERROR_ID( "Shooter.OnlineShopNoOffers", "[Shooter] the shop offer catalog '%#' could not be read", kOfferCatalog );
+            return nullptr;
+        }
+        _shopProvider = make_unique<EconomyShopPurchaseProvider>( session.get<EconomyClient>(), *_offers );
+        return _shopProvider.get();
     }
 
     void ShooterOnlineFlow::update( OnlineSession& session )
@@ -366,6 +396,7 @@ namespace sw
     SW_AUTOMATION_WATCH( shooterOnlineLoggedIn, "Shooter3D.OnlineLoggedIn", "1 while the account kit client is logged in", &ShooterOnlineFlowInternal::readLoggedIn );
     SW_AUTOMATION_WATCH( shooterOnlineMailCount, "Shooter3D.OnlineMailCount", "Mails in the mailbox kit client's first page cache", &ShooterOnlineFlowInternal::readMailCount );
     SW_AUTOMATION_WATCH( shooterOnlineGold, "Shooter3D.OnlineGold", "Gold balance in the economy kit client's cache", &ShooterOnlineFlowInternal::readGold );
+    SW_AUTOMATION_WATCH( shooterOnlineGem, "Shooter3D.OnlineGem", "Gem balance in the economy kit client's cache", &ShooterOnlineFlowInternal::readGem );
     SW_AUTOMATION_WATCH( shooterOnlineMatchFound, "Shooter3D.OnlineMatchFound", "1 once the matchmaking kit assigned this player a match", &ShooterOnlineFlowInternal::readMatchFound );
     SW_AUTOMATION_WATCH( shooterOnlineTopKillsScore, "Shooter3D.OnlineTopKillsScore", "Best score in the last arena_kills top list", &ShooterOnlineFlowInternal::readTopKillsScore );
     SW_AUTOMATION_WATCH( shooterOnlineSubmittedScoreCount, "Shooter3D.OnlineSubmittedScoreCount", "Leaderboard score submits the server has applied", &ShooterOnlineFlowInternal::readSubmittedCount );

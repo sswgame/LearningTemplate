@@ -236,7 +236,14 @@ namespace sw
                 FontServiceInternal::appendFace( chain, openFamilyFace( fallbackFamily, spec._weight, spec._slant, bUnusedBold, bUnusedItalic ) );
             }
         }
-        // 3) 카탈로그 기본 패밀리: 항상 열린다(initialize 가 확인했다).
+        // 3) 모든 문화권의 마지막 대체 패밀리 — 영어 UI 에서 한글 IME 를 넣어도 상자로 그리지 않는다(카탈로그 `_listGlobalFallbackFamily`).
+        for ( const string& globalFallbackFamily : _catalog._listGlobalFallbackFamily )
+        {
+            uint8 bUnusedBold   = SW_FALSE;
+            uint8 bUnusedItalic = SW_FALSE;
+            FontServiceInternal::appendFace( chain, openFamilyFace( globalFallbackFamily, spec._weight, spec._slant, bUnusedBold, bUnusedItalic ) );
+        }
+        // 4) 카탈로그 기본 패밀리: 항상 열린다(initialize 가 확인했다).
         uint8            bDefaultBold   = SW_FALSE;
         uint8            bDefaultItalic = SW_FALSE;
         const FontFaceID defaultFace    = openFamilyFace( _catalog._defaultFamily, spec._weight, spec._slant, bDefaultBold, bDefaultItalic );
@@ -264,7 +271,7 @@ namespace sw
                 return chain._arrFace[index];
             }
         }
-        if ( TextItemizer::isFormatControl( codepoint ) == false && markWarnedOnce( FontServiceInternal::makeCodepointWarningKey( codepoint ) ) )
+        if ( TextItemizer::isFormatControl( codepoint ) == false && TextItemizer::isLineTerminator( codepoint ) == false && markWarnedOnce( FontServiceInternal::makeCodepointWarningKey( codepoint ) ) )
             SW_LOG_WARNING_ID( "Text.GlyphMissing", "[Text] No font in the fallback chain has a glyph for codepoint %# - it draws as a box (install a system font that covers it)",
                                codepoint );
         return chain._arrFace[0];

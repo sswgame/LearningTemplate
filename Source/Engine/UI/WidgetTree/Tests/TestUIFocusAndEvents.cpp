@@ -251,6 +251,41 @@ SW_TEST_CASE( UINavigationTest, SkipsWhatCannotTakeFocus )
     SW_EXPECT_TRUE( UINavigationSolver::findFirstFocusable( *grid._pCanvas ) == grid._pA->getID() );
 }
 
+/** @brief [UINavigationTest] 다시 활성이 될 때 기억한 위젯이 꺼졌으면 같은 컨테이너의 가까운 켜진 이웃(뒤 먼저, 그다음 앞)으로 간다 */
+SW_TEST_CASE( UINavigationTest, RestoreFocusFallsBackToTheNearestEnabledSibling )
+{
+    UIFocusGrid grid;
+    SW_EXPECT_TRUE( UINavigationSolver::findRestoreFocus( grid._tree, grid._pB->getID(), kInvalidWidgetID ) == grid._pB->getID() ); // 켜져 있으면 그대로
+    grid._pB->setEnabled( false );
+    SW_EXPECT_TRUE( UINavigationSolver::findRestoreFocus( grid._tree, grid._pB->getID(), kInvalidWidgetID ) == grid._pC->getID() ); // 뒤 형제 먼저
+    grid._pC->setVisibility( WidgetVisibility::Hidden );
+    SW_EXPECT_TRUE( UINavigationSolver::findRestoreFocus( grid._tree, grid._pB->getID(), kInvalidWidgetID ) == grid._pA->getID() ); // 거리 1 의 앞 형제가 거리 2 의 뒤 형제보다 가깝다
+    grid._pA->setEnabled( false );
+    SW_EXPECT_TRUE( UINavigationSolver::findRestoreFocus( grid._tree, grid._pB->getID(), kInvalidWidgetID ) == grid._pD->getID() );
+}
+
+/** @brief [UINavigationTest] 기억한 위젯이 접힌 컨테이너 안이면 한 단계 위 컨테이너의 이웃으로, 지워졌으면 기본 포커스로, 모두 꺼졌으면 화면 자체(무효 번호)다 */
+SW_TEST_CASE( UINavigationTest, RestoreFocusClimbsThenUsesTheDefaultThenTheScreen )
+{
+    UIFocusGrid  grid;
+    CanvasPanel& menu   = UITestUtil::addPanel<CanvasPanel>( *grid._pCanvas, UITestUtil::makeCanvasSlot( 0.0f, 150.0f, 200.0f, 50.0f ) );
+    UITestLeaf&  action = UITestUtil::addFocusable( menu, "action", 0.0f, 0.0f );
+    grid.layout();
+    menu.setVisibility( WidgetVisibility::Collapsed );                                                                           // 동작 메뉴를 접었다 — 그 안의 단추를 기억하고 있었다
+    SW_EXPECT_TRUE( UINavigationSolver::findRestoreFocus( grid._tree, action.getID(), kInvalidWidgetID ) == grid._pD->getID() ); // 메뉴 바로 앞 형제
+
+    // 지워진 위젯(트리에 없는 번호)은 기본 포커스로, 기본 포커스가 꺼졌으면 문서 순서의 첫 위젯으로.
+    const WidgetID gone = action.getID();
+    (void)grid._pCanvas->removeChild( &menu );
+    SW_EXPECT_TRUE( UINavigationSolver::findRestoreFocus( grid._tree, gone, grid._pC->getID() ) == grid._pC->getID() );
+    grid._pC->setEnabled( false );
+    SW_EXPECT_TRUE( UINavigationSolver::findRestoreFocus( grid._tree, gone, grid._pC->getID() ) == grid._pA->getID() );
+
+    // 모두 꺼졌으면 화면 자체.
+    grid._pCanvas->setEnabled( false );
+    SW_EXPECT_TRUE( UINavigationSolver::findRestoreFocus( grid._tree, grid._pB->getID(), grid._pC->getID() ) == kInvalidWidgetID );
+}
+
 // 자르는 패널 밖으로 나간 위젯은 후보가 아니다. 스크롤 패널이 자른 것은 옮겨 보이게 하므로 후보다.
 SW_TEST_CASE( UINavigationTest, ClippedOutWidgetsAreNotCandidates )
 {

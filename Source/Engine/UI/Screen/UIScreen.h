@@ -166,7 +166,7 @@ namespace sw
          */
         virtual bool onBack();
         /**
-         * @brief 화면 단위 액션 @p action(`UI.TabNext`, `UI.TabPrevious`)을 포커스 경로의 위젯이 처리하지 않았을 때 불립니다. 처리했으면 true 입니다.
+         * @brief 화면 단위 액션 @p action(`UI.TabNext`, `UI.TabPrevious`, `UI.ContextMenu`)을 포커스 경로의 위젯이 처리하지 않았을 때 불립니다. 처리했으면 true 입니다.
          * @details 탭 줄 옮기기처럼 포커스와 무관한 화면의 액션이다(CommonUI 화면이 묶는 액션). 기본 구현은 처리하지 않는다.
          */
         virtual bool onUnhandledAction( const hashed_string& action );

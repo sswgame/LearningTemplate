@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/ConsumerLock.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
@@ -22,6 +23,8 @@
 
 namespace sw
 {
+    class EconomyShopPurchaseProvider;
+    class OfferCatalog;
     class OnlineSession;
 
     /**
@@ -31,13 +34,16 @@ namespace sw
     class ShooterOnlineFlow final
     {
     public:
-        static constexpr const utf8* kAssetGold   = "cur.gold";
-        static constexpr const utf8* kMatchMode   = "arena_solo";  ///< `game/shooter3d/data/shooter3d.matchmodes.xml`
-        static constexpr const utf8* kMatchRegion = "local";       ///< 서버 온라인 설정의 `_region` 기본값
-        static constexpr const utf8* kBoardKills  = "arena_kills"; ///< `game/shooter3d/data/shooter3d.leaderboards.xml`
-        static constexpr int32       kTopCount    = 10;
+        static constexpr const utf8* kAssetGold    = "cur.gold";
+        static constexpr const utf8* kAssetGem     = "cur.gem";
+        static constexpr const utf8* kMatchMode    = "arena_solo";                               ///< `game/shooter3d/data/shooter3d.matchmodes.xml`
+        static constexpr const utf8* kMatchRegion  = "local";                                    ///< 서버 온라인 설정의 `_region` 기본값
+        static constexpr const utf8* kBoardKills   = "arena_kills";                              ///< `game/shooter3d/data/shooter3d.leaderboards.xml`
+        static constexpr const utf8* kOfferCatalog = "game/shooter3d/data/shooter3d.offers.xml"; ///< 상점 화면의 상품(서버 경제 키트와 같은 파일 — `Config/Server/Online/Shooter3D.online.json`)
+        static constexpr int32       kTopCount     = 10;
 
         ShooterOnlineFlow();
+        ~ShooterOnlineFlow();
 
         /** @brief 계정 응답을 꺼내 실패를 알리고 매칭 배정 알림을 받습니다. 게임이 프레임마다 부릅니다. */
         void update( OnlineSession& session );
@@ -54,6 +60,11 @@ namespace sw
         /** @brief 프로세스 안 서버의 저장소에 넣은 금화 우편이 끝났을 때 부릅니다. 넣기는 서버 코드(`Server/ShooterSelfMail.cpp`)의 개발 명령이라 클라이언트 구성에는 없습니다. */
         void  recordSelfMailSent() { ++_selfMailSentCount; }
         int32 getSelfMailSentCount() const { return _selfMailSentCount; }
+        /**
+         * @brief 상점 화면(`ShopScreen`)에 꽂을 온라인 구매 공급자입니다. 처음 부를 때 세션의 경제 클라이언트와 상품 카탈로그(`kOfferCatalog`)로 세운다. 카탈로그를 읽지 못하면 nullptr 입니다.
+         * @details 공급자는 이 흐름(게임 범위)이 든다 — 화면은 빌려 쓰고, 게임이 내려가면 늦게 온 답은 공급자의 약한 참조가 버린다.
+         */
+        EconomyShopPurchaseProvider* findShopProvider( OnlineSession& session );
         /** @brief 받은 배정의 경기 id 입니다. 아직 없으면 0 입니다. */
         uint64 getMatchID() const { return _matchID; }
         /** @brief 마지막으로 받은 순위표 상위 목록입니다. */
@@ -69,12 +80,14 @@ namespace sw
         void pollMatches( OnlineSession& session );
 
     private:
-        vector<AccountClientReply> _listReplyScratch;
-        vector<MatchAssignment>    _listAssignmentScratch;
-        vector<LeaderboardEntry>   _listTopKills;
-        ConsumerLease              _matchLease; ///< 매칭 클라이언트의 알림 표(세션의 클라이언트가 먼저 사라지면 게이트가 표를 놓는다)
-        uint64                     _matchID;
-        int32                      _submittedScoreCount;
-        int32                      _selfMailSentCount;
+        vector<AccountClientReply>              _listReplyScratch;
+        vector<MatchAssignment>                 _listAssignmentScratch;
+        vector<LeaderboardEntry>                _listTopKills;
+        shared_ptr<const OfferCatalog>          _offers;       ///< 상점 상품(처음 상점을 열 때 읽는다)
+        unique_ptr<EconomyShopPurchaseProvider> _shopProvider; ///< 상점 화면의 온라인 공급자(`findShopProvider`)
+        ConsumerLease                           _matchLease;   ///< 매칭 클라이언트의 알림 표(세션의 클라이언트가 먼저 사라지면 게이트가 표를 놓는다)
+        uint64                                  _matchID;
+        int32                                   _submittedScoreCount;
+        int32                                   _selfMailSentCount;
     };
 } // namespace sw
