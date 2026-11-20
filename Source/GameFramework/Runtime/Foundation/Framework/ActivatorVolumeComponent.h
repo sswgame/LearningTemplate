@@ -16,6 +16,18 @@
 namespace sw
 {
     class GameFlags;
+    class GameObjectManager;
+
+    /**
+     * @brief 볼륨의 진입을 어느 월드가 판정하는지입니다. 파생이 생성자 인자로 반드시 고른다(기본값이 없다 — 새 볼륨이 "월드마다 판정" 을 모르고 물려받지 않게).
+     * @details 언리얼은 트리거 오버랩이 서버 · 클라이언트 양쪽에서 나고 게임 로직이 `HasAuthority()` 뒤에서 서버만 돈다 — 그 갈림을 볼륨 형식마다의 값으로 둔다.
+     *          넷 링크가 없는 월드(혼자 하는 게임)는 어느 쪽이든 판정한다.
+     */
+    enum class ActivatorAuthority : uint8
+    {
+        Server = 0, ///< 서버(와 혼자 하는 게임)만 판정한다 — 게임 상태를 바꾸는 일(컷씬 시작 · 저장 · 진행 플래그). 클라이언트 월드는 진입을 받아도 일하지 않는다
+        Local       ///< 월드마다 판정한다 — 그 월드의 로컬 플레이어 화면 일(힌트). 원격 플레이어의 진입을 거르는 것은 파생의 몫이다
+    };
 
     /**
      * @brief 이미 안에 있는 채로 나타난 활성자(스폰 · 로그인 · 부활 · 불러오기, 볼륨이 스트리밍으로 올라옴 · 다시 켜짐)를 어떻게 셀지입니다.
@@ -30,6 +42,32 @@ namespace sw
     };
 
     /**
+     * @class ActivatorSpawnWindow
+     * @brief "안에서 나타남" 판정 한 벌입니다 — 진입이 나타남(활성자가 막 생겼거나 볼륨이 막 생겼거나 켜짐)에서 왔는지 가립니다. 활성자 볼륨과 지역 볼륨(`ZoneVolumeComponent`)이 같이 쓴다.
+     * @details 오브젝트 id 는 만든 차례로 오른다 — 창 전에 적어 둔 다음 id 보다 크거나 같으면 그 뒤에 생긴 오브젝트다. 불러오기는 저장된 id 를 되살리지만 볼륨도 함께 다시 서므로 볼륨 쪽 창이 덮는다.
+     *          shortcut: 물리 스텝이 창(`kFrames`)보다 늦게 오면(아주 높은 프레임률 · 낮은 물리 주기) 걸어 들어온 것으로 센다 — 그런 구성이 생기면 물리가 겹침에 "막 더한 바디" 표시를 싣는다.
+     */
+    class SW_GF_API ActivatorSpawnWindow
+    {
+    public:
+        /** @brief 나타남 판정의 프레임 창입니다. 안에서 생긴 겹침의 진입은 다음 물리 스텝에 오므로 그 사이를 덮는다. */
+        static constexpr uint64 kFrames = 8;
+
+        /** @brief 볼륨이 나타났다(시작 · 다시 켜짐) — 창을 다시 연다. */
+        void markAppeared( const GameObjectManager& manager );
+        /** @brief 창을 민다 — 나타남을 거르는 볼륨이 프레임마다 부른다. */
+        void advance( const GameObjectManager& manager );
+        /** @brief @p activator 의 진입이 나타남에서 왔으면 true 입니다. 이미 있던 활성자를 끄고 켠 것은 나타남이 아니다(걸어 들어온 것과 같다). */
+        [[nodiscard]] bool isSpawnEntry( const GameObjectManager& manager, const GameObject& activator ) const;
+
+    private:
+        uint64 _appearedFrame{ 0 };     ///< 볼륨이 나타난(시작 · 다시 켜짐) 씬 프레임
+        uint64 _watermarkFrame{ 0 };    ///< `_watermarkCurrent` 를 적은 씬 프레임
+        uint64 _watermarkPrevious{ 0 }; ///< 창 하나 전에 적은 다음 오브젝트 id — 이보다 크거나 같은 id 는 그 뒤에 생겼다
+        uint64 _watermarkCurrent{ 0 };  ///< 마지막에 적은 다음 오브젝트 id
+    };
+
+    /**
      * @class ActivatorVolumeComponent
      * @brief 활성자가 들어오는 길은 둘입니다. 같은 오브젝트의 트리거 콜라이더에 겹치거나(`onOverlapBegin`), `_activator` 가 `_radius` 안에 들어옵니다.
      * @details 거리 판정을 함께 두는 까닭: 말에 탄 기수(말은 물리 몸이 없다)나 격자로 걷는 농부처럼 물리 몸이 없는 활성자는 겹침을 내지 못한다. 언리얼 `ATriggerSphere` 와 유니티 `OnTriggerEnter` 는 몸을 요구하고
@@ -41,6 +79,7 @@ namespace sw
      *          진행 플래그(`_progressFlag`)를 적으면 발동 기록은 판 상태(`SessionStateComponent` — 이 층에서는 `GameFlagsOwnerComponent` 로 찾는다)의 플래그다 — 세이브 슬롯에 실리고, 같은 플래그를 적은 볼륨끼리
      *          나누며(마을 입구 둘에 도착 컷씬 하나), 대화 · 퀘스트 조건식이 같은 이름으로 읽는다. 언리얼 `USaveGame` 의 진행 bool, 유니티 저장 데이터의 "봤음" 칸 자리다.
      *          플래그를 적었는데 열린 판 상태가 없으면 오류를 남기고 일하지 않는다(볼륨의 발동 수로 대신하지 않는다).
+     *          판정 자리(`ActivatorAuthority`)는 파생이 생성자 인자로 반드시 고른다 — 서버만(시퀀스 트리거 · 자동 저장) 또는 월드마다(튜토리얼 힌트).
      */
     REFLECT( Abstract, Category = "Gameplay", DisplayName = "Activator Volume", Tooltip = "Base of the volumes that do something when an activator enters (trigger overlap or distance)" )
     class SW_GF_API ActivatorVolumeComponent : public Component
@@ -48,7 +87,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        ActivatorVolumeComponent();
+        /** @param authority 진입을 어느 월드가 판정하는지 — 볼륨 형식의 성질이라 파생이 고르고 배치 데이터로 바꾸지 않는다. */
+        explicit ActivatorVolumeComponent( ActivatorAuthority authority );
         ~ActivatorVolumeComponent() override = default;
 
         void onTick( TickContext& context ) override;
@@ -83,20 +123,13 @@ namespace sw
         [[nodiscard]] virtual GameFlags* findProgressFlags( const GameObject* pActivator ) const;
         /**
          * @brief 이 월드가 이 볼륨의 진입을 판정하는지입니다(언리얼 `HasAuthority`). 거짓이면 `activate` 가 일하지 않고 진행 플래그도 찾지 않는다(발동 아님, 로그 없음).
-         * @details 바탕은 늘 참이다(튜토리얼 힌트 · 자동 저장은 월드마다 제 일을 한다). 서버만 판정하는 볼륨(시퀀스 트리거)이 덮는다.
+         * @details `Server` 볼륨은 넷 링크가 클라이언트인 월드에서 거짓, `Local` 볼륨은 늘 참이다.
          */
-        [[nodiscard]] virtual bool hasActivationAuthority() const { return true; }
-        const hashed_string&       getProgressFlag() const { return _progressFlag; }
+        [[nodiscard]] bool   hasActivationAuthority() const;
+        const hashed_string& getProgressFlag() const { return _progressFlag; }
 
     private:
-        /** @brief 나타남 판정의 프레임 창입니다. 안에서 생긴 겹침의 진입은 다음 물리 스텝에 오므로 그 사이를 덮는다. */
-        static constexpr uint64 kSpawnWindowFrames = 8;
-
-        /**
-         * @brief 진입(겹침 · 거리)이 나타남(@p activator 가 막 생겼거나, 이 볼륨이 막 생겼거나 켜짐)에서 왔으면 true 입니다. 이미 있던 활성자를 끄고 켠 것은 나타남이 아니다(걸어 들어온 것과 같다).
-         * @details 오브젝트 id 는 만든 차례로 오른다 — 창 전에 적어 둔 다음 id 보다 크거나 같으면 그 뒤에 생긴 오브젝트다. 불러오기는 저장된 id 를 되살리지만 볼륨도 함께 다시 서므로 볼륨 쪽 창이 덮는다.
-         *          shortcut: 물리 스텝이 창(`kSpawnWindowFrames`)보다 늦게 오면(아주 높은 프레임률 · 낮은 물리 주기) 걸어 들어온 것으로 센다 — 그런 구성이 생기면 물리가 겹침에 "막 더한 바디" 표시를 싣는다.
-         */
+        /** @brief 진입(겹침 · 거리)이 나타남에서 왔으면 true 입니다(`ActivatorSpawnWindow::isSpawnEntry`). */
         bool isSpawnEntry( const GameObject& activator ) const;
         /** @brief 볼륨이 나타났다(시작 · 다시 켜짐) — 나타남 창을 다시 연다. */
         void markAppeared();
@@ -110,11 +143,9 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Volume", DisplayName = "Fire Count", Tooltip = "Runtime" )
         int32 _fireCount;
         PROPERTY( Category = "Volume", DisplayName = "Progress Flag", Tooltip = "Session flag that records the activation (saved with the session, shared by volumes with the same flag, read by conditions); empty: this volume's fire count" )
-        hashed_string _progressFlag;
-        uint64        _appearedFrame;          ///< 볼륨이 나타난(시작 · 다시 켜짐) 씬 프레임
-        uint64        _spawnWatermarkFrame;    ///< `_spawnWatermarkCurrent` 를 적은 씬 프레임
-        uint64        _spawnWatermarkPrevious; ///< 창 하나 전에 적은 다음 오브젝트 id — 이보다 크거나 같은 id 는 그 뒤에 생겼다
-        uint64        _spawnWatermarkCurrent;  ///< 마지막에 적은 다음 오브젝트 id
+        hashed_string        _progressFlag;
+        ActivatorSpawnWindow _spawnWindow; ///< 나타남 판정(`_spawnInside` 가 Ignore 일 때 쓴다)
+        ActivatorAuthority   _authority;   ///< 판정 자리(파생이 정한다)
         PROPERTY( Category = "Volume", DisplayName = "Once", Tooltip = "Fire only the first time" )
         bool _bOnce;
         PROPERTY( Category = "Volume", DisplayName = "Spawn Inside", Tooltip = "An activator that appears already inside (spawn, login, respawn, load, the volume streaming in or turning on): Activate counts it as entering, Ignore waits until it leaves and comes back" )

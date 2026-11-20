@@ -7,7 +7,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerStateComponent.h"
@@ -16,7 +15,8 @@
 namespace sw
 {
     SequenceTriggerComponent::SequenceTriggerComponent()
-        : _sequence{}
+        : ActivatorVolumeComponent( ActivatorAuthority::Server ) // 서버가 틀고 넷 키트(`GF_NetSequence`)가 `_audience` 대로 보낸다
+        , _sequence{}
         , _audience{ SequenceTriggerAudience::Everyone }
         , _lastActivator{}
         , _activationCount{ 0 }
@@ -57,13 +57,6 @@ namespace sw
         _lastActivator = activator.getHandle();
         ++_activationCount;
         return true;
-    }
-
-    bool SequenceTriggerComponent::hasActivationAuthority() const
-    {
-        // 판정은 서버만 한다 — 클라이언트 월드도 같은 트리거 계약으로 진입을 내지만 틀지 않는다(서버가 보낸 재생을 넷 키트가 튼다).
-        const NetLinkValue* pLink = SceneNetLink::findBoundFor( *this );
-        return pLink == nullptr || pLink->_role != NetLinkRole::Client;
     }
 
     GameFlags* SequenceTriggerComponent::findProgressFlags( const GameObject* pActivator ) const

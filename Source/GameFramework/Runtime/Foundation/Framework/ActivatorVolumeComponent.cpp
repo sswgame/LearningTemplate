@@ -8,22 +8,46 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/ObjectIDAllocator.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlagsOwnerComponent.h"
 
 namespace sw
 {
-    ActivatorVolumeComponent::ActivatorVolumeComponent()
+    void ActivatorSpawnWindow::markAppeared( const GameObjectManager& manager )
+    {
+        _appearedFrame     = manager.getUpdateCount();
+        _watermarkFrame    = _appearedFrame;
+        _watermarkPrevious = manager.getObjectIDAllocator().peekNextObjectID();
+        _watermarkCurrent  = _watermarkPrevious;
+    }
+
+    void ActivatorSpawnWindow::advance( const GameObjectManager& manager )
+    {
+        // 창 하나 전에 적은 다음 id 보다 크거나 같은 오브젝트는 창 둘 안에 생겼다.
+        if ( manager.getUpdateCount() < _watermarkFrame + kFrames )
+            return;
+        _watermarkPrevious = _watermarkCurrent;
+        _watermarkCurrent  = manager.getObjectIDAllocator().peekNextObjectID();
+        _watermarkFrame    = manager.getUpdateCount();
+    }
+
+    bool ActivatorSpawnWindow::isSpawnEntry( const GameObjectManager& manager, const GameObject& activator ) const
+    {
+        const bool bVolumeAppeared = manager.getUpdateCount() <= _appearedFrame + kFrames;
+        const bool bActivatorNew   = activator.getObjectID() >= _watermarkPrevious;
+        return bVolumeAppeared || bActivatorNew;
+    }
+
+    ActivatorVolumeComponent::ActivatorVolumeComponent( ActivatorAuthority authority )
         : _activatorTag{}
         , _activator{}
         , _radius{ 0.0f }
         , _fireCount{ 0 }
         , _progressFlag{}
-        , _appearedFrame{ 0 }
-        , _spawnWatermarkFrame{ 0 }
-        , _spawnWatermarkPrevious{ 0 }
-        , _spawnWatermarkCurrent{ 0 }
+        , _spawnWindow{}
+        , _authority{ authority }
         , _bOnce{ true }
         , _spawnInside{ ActivatorSpawnInside::Activate }
         , _bActivatorInside{ false }
@@ -46,13 +70,8 @@ namespace sw
             return;
         }
         const GameObjectManager& manager = context.getManager();
-        if ( _spawnInside == ActivatorSpawnInside::Ignore && manager.getUpdateCount() >= _spawnWatermarkFrame + kSpawnWindowFrames )
-        {
-            // 나타남 창을 민다 — 창 하나 전에 적은 다음 id 보다 크거나 같은 오브젝트는 창 둘 안에 생겼다(겹침 진입의 나타남 판정, `isSpawnEntry`).
-            _spawnWatermarkPrevious = _spawnWatermarkCurrent;
-            _spawnWatermarkCurrent  = manager.getObjectIDAllocator().peekNextObjectID();
-            _spawnWatermarkFrame    = manager.getUpdateCount();
-        }
+        if ( _spawnInside == ActivatorSpawnInside::Ignore )
+            _spawnWindow.advance( manager );                                              // 겹침 진입의 나타남 판정(`isSpawnEntry`)도 이 창을 읽는다
         const bool bSpentHere        = _bOnce && _progressFlag.empty() && _fireCount > 0; // 플래그로 적는 볼륨은 활성자마다 다를 수 있어(플레이어별 기록) 계속 잰다
         const bool bNothingToMeasure = _radius <= 0.0f || bSpentHere;
         if ( bNothingToMeasure )
@@ -153,11 +172,16 @@ namespace sw
     bool ActivatorVolumeComponent::isSpawnEntry( const GameObject& activator ) const
     {
         const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return false;
-        const bool bVolumeAppeared = pManager->getUpdateCount() <= _appearedFrame + kSpawnWindowFrames;
-        const bool bActivatorNew   = activator.getObjectID() >= _spawnWatermarkPrevious;
-        return bVolumeAppeared || bActivatorNew;
+        return pManager != nullptr && _spawnWindow.isSpawnEntry( *pManager, activator );
+    }
+
+    bool ActivatorVolumeComponent::hasActivationAuthority() const
+    {
+        if ( _authority == ActivatorAuthority::Local )
+            return true;
+        // 서버 판정 — 클라이언트 월드도 같은 트리거 계약으로 진입을 내지만 일하지 않는다(서버가 낸 결과를 복제로 받는다).
+        const NetLinkValue* pLink = SceneNetLink::findBoundFor( *this );
+        return pLink == nullptr || pLink->_role != NetLinkRole::Client;
     }
 
     GameFlags* ActivatorVolumeComponent::findProgressFlags( const GameObject* pActivator ) const
@@ -176,11 +200,7 @@ namespace sw
     void ActivatorVolumeComponent::markAppeared()
     {
         const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
-        _appearedFrame          = pManager->getUpdateCount();
-        _spawnWatermarkFrame    = _appearedFrame;
-        _spawnWatermarkPrevious = pManager->getObjectIDAllocator().peekNextObjectID();
-        _spawnWatermarkCurrent  = _spawnWatermarkPrevious;
+        if ( pManager != nullptr )
+            _spawnWindow.markAppeared( *pManager );
     }
 } // namespace sw

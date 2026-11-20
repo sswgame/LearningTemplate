@@ -13,8 +13,9 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
+#include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
 
-// ActivatorVolumeTest — 볼륨 바탕(한 번 · 거리로 들어오기, 안에 있는 동안 되풀이하지 않기)을 자동 저장 볼륨으로 본다. 슬롯은 메모리 저장소다(nogpu, 물리 없음).
+// ActivatorVolumeTest — 볼륨 바탕(한 번 · 거리로 들어오기, 안에 있는 동안 되풀이하지 않기, 판정 자리)을 자동 저장 볼륨으로 본다. 슬롯은 메모리 저장소다(nogpu, 물리 없음).
 
 using namespace sw;
 
@@ -110,5 +111,23 @@ SW_TEST_CASE( ActivatorVolumeTest, ProximityFiresWhenTheActivatorEnters )
     SW_EXPECT_FALSE( rig._pVolume->hasFired() );
     rig.moveWalkerAndTick( 1.5f );
     SW_EXPECT_TRUE( rig._pVolume->hasFired() );
+    SW_EXPECT_TRUE( rig._autosave.getLastCheckpointID() == hashed_string( "gate" ) );
+}
+
+/** @brief [ActivatorVolumeTest] 자동 저장 볼륨은 서버 판정이다 — 클라이언트 넷 월드는 진입을 받아도 저장을 부르지 않고(발동 아님), 서버 넷 월드는 부른다 */
+SW_TEST_CASE( ActivatorVolumeTest, AutosaveJudgesOnlyOnTheServer )
+{
+    AutosaveVolumeRig     rig;
+    game::ScopedGameScope scopedScope( rig._scope );
+    {
+        SceneNetLinkTestBinding client( rig._manager, NetLinkRole::Client );
+        SW_EXPECT_FALSE( rig._pVolume->activate( rig._pWalker ) );
+        rig._pVolume->setProximity( rig._pWalker->getHandle(), 2.0f );
+        rig.moveWalkerAndTick( 1.0f ); // 거리로 들어와도 같다
+        SW_EXPECT_FALSE( rig._pVolume->hasFired() );
+        SW_EXPECT_FALSE( rig._autosave.getLastCheckpointID() == hashed_string( "gate" ) );
+    }
+    SceneNetLinkTestBinding server( rig._manager, NetLinkRole::Server );
+    SW_EXPECT_TRUE( rig._pVolume->activate( rig._pWalker ) );
     SW_EXPECT_TRUE( rig._autosave.getLastCheckpointID() == hashed_string( "gate" ) );
 }

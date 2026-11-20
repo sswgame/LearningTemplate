@@ -8,6 +8,8 @@
  *          **세 층**: 프리셋 · 변형은 프로필 파일이, 이 자리의 차이는 `_listModuleOverride`(같은 형식, 이름 열쇠 · `_op`)가 맡는다 — 같은 사구라도 빠지는 속도 · NPC 반응을 자리마다.
  *          S6 의 `AbilityEffectVolumeComponent` 를 대신한다 — 이펙트 하나 · 진입/체류/이탈 정책이던 것이 프로필의 할 일 모듈이 됐다. 언리얼 `APhysicsVolume` · GAS 이펙트 볼륨, 유니티 트리거 + Effector 자리(기억).
  *          모양 · 당김 중심 · 흐름 점은 오너 로컬 공간이다 — 회전 · 배율을 따른다(언리얼 볼륨 브러시 · 유니티 트리거 콜라이더와 같다). 기울인 늪 · 돌린 상자 영역이 그대로 맞는다.
+ *          **나타남** `_spawnInside`: 트리거 계약대로 안에서 생긴 대상은 진입이다(Activate — 언리얼 `APhysicsVolume` 도 안에서 스폰한 폰에 `ActorEnteredVolume` 을 낸다, 늪 · 독가스는 이대로).
+ *          지역 이름 알림 · 도착 할 일처럼 부활 · 불러오기 자리에서 다시 돌지 않을 영역은 Ignore — 활성자 볼륨과 같은 판정으로 나타난 대상을 나갈 때까지 세지 않는다(`ZoneTracker`).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -81,12 +83,14 @@ namespace sw
         [[nodiscard]] bool composeProfile( ZoneProfile& outProfile ) const;
         /** @brief 코드로 만든 볼륨 · 테스트가 칸을 정합니다. 씬에 놓은 볼륨은 PROPERTY 가 채운다. */
         void configure( string_view profilePath, ZoneVolumeShape shape, const float3& halfExtents );
+        /** @brief 이미 안에 있는 채로 나타난 대상을 셀지 정합니다. 코드로 만든 볼륨 · 테스트가 쓴다. 씬에 놓은 볼륨은 PROPERTY 가 채운다. */
+        void setSpawnInside( ActivatorSpawnInside spawnInside );
         /**
          * @brief 이번 프레임을 처리합니다 — 안에 든 대상을 고르고 위치 값을 내 `ZoneTracker` 에 넘깁니다(`ZoneSystem` 이 틱 뒤 게임 스레드에서 부른다). 준비되지 않았으면 할 일이 없다.
          * @details 후보는 씬을 돌지 않고 씬 공간 색인(`ZoneOccupantIndex` → `SceneSpatialGrid`)에서 자기 수평 사각형에 든 것만 받는다 — 움직인 개체만 색인에서 옮긴다.
          */
         void updateZone( GameObjectManager& manager, float32 deltaTime );
-        /** @brief 든 대상을 모두 내보냅니다(이탈 할 일이 돈다). 꺼진 볼륨에 `ZoneSystem` 이 부른다 — 다시 켜지면 다음 `updateZone` 에서 진입한다. 대상이 없으면 할 일이 없다. */
+        /** @brief 든 대상을 모두 내보냅니다(이탈 할 일이 돈다). 꺼진 볼륨에 `ZoneSystem` 이 프레임마다 부른다 — 다시 켜지면 다음 `updateZone` 에서 진입한다(다시 켜짐은 나타남이다). */
         void releaseOccupants( GameObjectManager& manager );
         /** @brief 월드 점 @p position(발)이 안이면 위치 값을 채우고 true 입니다. @p bodyHeight 는 잠긴 비율의 분모입니다. */
         [[nodiscard]] bool sampleAt( const float3& position, float32 bodyHeight, ZoneSample& outSample ) const;
@@ -114,6 +118,8 @@ namespace sw
         float3 _pullCenterOffset;
         PROPERTY( Category = "Shape", DisplayName = "Flow Points", Units = m, Tooltip = "Path of the flow relative to the owner (Flow fields follow the nearest segment)" )
         vector<float3> _listFlowPoint;
+        PROPERTY( Category = "Zone", DisplayName = "Spawn Inside", Tooltip = "A body that appears already inside (spawn, login, respawn, load, the volume turning on): Activate counts it as entering, Ignore waits until it leaves and comes back" )
+        ActivatorSpawnInside _spawnInside;
         PROPERTY( Category = "Runtime", DisplayName = "Lifetime", Min = 0.0, Units = s, Tooltip = "Seconds before the volume's object is destroyed (0: stays) - spread gas, temporary fields" )
         float32 _lifetime;
         PROPERTY( Category = "Runtime", DisplayName = "Growth Rate", Min = 0.0, Units = "m/s", Tooltip = "How fast the size grows (added to the half extents and radius)" )

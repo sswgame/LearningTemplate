@@ -9,7 +9,8 @@
 namespace sw
 {
     AutosaveTriggerComponent::AutosaveTriggerComponent()
-        : _trigger{ AutosaveTrigger::Checkpoint }
+        : ActivatorVolumeComponent( ActivatorAuthority::Server ) // 저장은 권위 있는 판 상태를 싣는다 — 클라이언트 월드의 복제본을 저장하지 않는다(언리얼 `USaveGame` 은 서버 · 호스트가 쓴다)
+        , _trigger{ AutosaveTrigger::Checkpoint }
         , _label{}
     {
     }

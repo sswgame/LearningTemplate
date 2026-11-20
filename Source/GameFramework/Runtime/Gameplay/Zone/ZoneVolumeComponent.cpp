@@ -42,6 +42,7 @@ namespace sw
         , _halfExtents{ 2.0f, 1.0f, 2.0f }
         , _pullCenterOffset{}
         , _listFlowPoint{}
+        , _spawnInside{ ActivatorSpawnInside::Activate }
         , _lifetime{ 0.0f }
         , _growthRate{ 0.0f }
         , _maxGrowth{ 0.0f }
@@ -76,6 +77,9 @@ namespace sw
     void ZoneVolumeComponent::onBeginPlay()
     {
         Component::onBeginPlay();
+        _tracker.setSpawnInside( _spawnInside );
+        if ( const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr )
+            _tracker.markAppeared( *pManager );
         activateZone();
     }
 
@@ -94,6 +98,7 @@ namespace sw
 
     void ZoneVolumeComponent::releaseOccupants( GameObjectManager& manager )
     {
+        _tracker.markAppeared( manager ); // 꺼진 동안 프레임마다 불린다 — 다시 켜지는 프레임까지 나타남 창을 열어 둔다(다시 켜짐은 나타남이다)
         GameObject* const pOwner = getOwner();
         if ( pOwner == nullptr || _bReady == SW_FALSE || _tracker.getOccupants().empty() )
             return;
@@ -148,6 +153,12 @@ namespace sw
         }
         outProfile = *pProfile;
         return outProfile.applyOverrides( _listModuleOverride, sourceName );
+    }
+
+    void ZoneVolumeComponent::setSpawnInside( ActivatorSpawnInside spawnInside )
+    {
+        _spawnInside = spawnInside;
+        _tracker.setSpawnInside( spawnInside );
     }
 
     void ZoneVolumeComponent::configure( string_view profilePath, ZoneVolumeShape shape, const float3& halfExtents )

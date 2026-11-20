@@ -576,3 +576,68 @@ SW_TEST_CASE( ZoneTest, SurfaceStampChecksContextParamsWhenStamping )
     fixture.runInside( tracker, compiled, "volume:test", 0.0f, 0.1f ); // 같은 체류 — 거절을 기억해 다시 평가하지 않는다
     fixture.leave( tracker, compiled, "volume:test" );
 }
+
+/**
+ * @brief [ZoneTest] 나타남 Ignore: 볼륨이 설 때 이미 안에 있던 대상은 창이 지나도 안에 있는 동안 대상이 아니고(진입 · 할 일 없음), 나갔다 다시 들어오면 진입한다
+ * @details 판정은 활성자 볼륨과 같은 `ActivatorSpawnWindow` 다. 변이: `touch` 의 빠짐 검사를 지우면 첫 단언이 진다.
+ */
+SW_TEST_CASE( ZoneTest, SpawnInsideIgnoreWaitsForTheWalkIn )
+{
+    ZoneFixture fixture;
+    ZoneProfile profile;
+    profile._listModule.push_back( ZoneFixture::makeModule( "root", "Action", {
+                                                                                  {"on",                                    "Enter"},
+                                                                                  {"do", "ability.applyEffect(effect=GE_Test_Root)"}
+    } ) );
+    ZoneCompiledProfile compiled;
+    SW_REQUIRE_TRUE( compiled.compile( profile, "test", &fixture._catalog ) );
+
+    ZoneTracker tracker;
+    tracker.setSpawnInside( ActivatorSpawnInside::Ignore );
+    tracker.markAppeared( fixture._manager ); // 볼륨이 막 섰다(시작 · 셀 올라옴 · 다시 켜짐) — 대상은 이미 안이다
+    for ( uint32 frame = 0; frame < 2 * static_cast<uint32>( ActivatorSpawnWindow::kFrames ); ++frame )
+    {
+        fixture.runInside( tracker, compiled, "volume:Arrival", 1.0f, 1.0f / 60.0f );
+        fixture._manager.update( 1.0f / 60.0f );
+    }
+    SW_EXPECT_TRUE( tracker.findOccupancy( fixture.hero().getHandle() ) == nullptr );
+    SW_EXPECT_EQUAL( 0u, fixture._pHero->getActiveEffectCount() );
+
+    fixture.leave( tracker, compiled, "volume:Arrival" );
+    fixture.runInside( tracker, compiled, "volume:Arrival", 1.0f, 1.0f / 60.0f ); // 걸어 들어왔다
+    SW_EXPECT_TRUE( tracker.findOccupancy( fixture.hero().getHandle() ) != nullptr );
+    SW_EXPECT_EQUAL( 1u, fixture._pHero->getActiveEffectCount() );
+    vector<ZoneLogEntry> listLog;
+    tracker.collectEventLog( listLog );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listLog.size() ) );
+    SW_EXPECT_TRUE( listLog[0]._event == ZoneLogEvent::Enter );
+}
+
+/** @brief [ZoneTest] 나타남 Ignore: 창이 지난 뒤 걸어 들어온 대상은 진입하고, 안에서 태어난 오브젝트(스폰 · 부활)는 대상이 아니다. 기본(Activate)은 태어난 것도 진입한다 */
+SW_TEST_CASE( ZoneTest, SpawnInsideIgnoreSkipsABodyBornInside )
+{
+    ZoneFixture         fixture;
+    ZoneCompiledProfile compiled; // 빈 프로필 — 대상 기록만 본다
+    ZoneTracker         ignoreTracker;
+    ZoneTracker         activateTracker;
+    ignoreTracker.setSpawnInside( ActivatorSpawnInside::Ignore );
+    ignoreTracker.markAppeared( fixture._manager );
+    activateTracker.markAppeared( fixture._manager );
+    for ( uint32 frame = 0; frame <= static_cast<uint32>( ActivatorSpawnWindow::kFrames ) + 1; ++frame )
+    {
+        fixture._manager.update( 1.0f / 60.0f );
+        fixture.leave( ignoreTracker, compiled, "volume:Arrival" ); // 밖에 있는 동안 창이 지난다
+    }
+    GameObject* pBorn = fixture._manager.createGameObject( hashed_string( "Born" ) );
+    for ( ZoneTracker* pTracker : { &ignoreTracker, &activateTracker } )
+    {
+        ZoneSample sample;
+        pTracker->beginFrame();
+        pTracker->touch( fixture.hero(), sample ); // 걸어 들어왔다(창 전에 있던 오브젝트)
+        pTracker->touch( *pBorn, sample );         // 안에서 태어났다
+        pTracker->dispatchOverlapEvents( fixture._manager, compiled, ActionSource{ hashed_string( "volume:Arrival" ), GameObjectHandle{} }, 1.0f / 60.0f );
+    }
+    SW_EXPECT_TRUE( ignoreTracker.findOccupancy( fixture.hero().getHandle() ) != nullptr );
+    SW_EXPECT_TRUE( ignoreTracker.findOccupancy( pBorn->getHandle() ) == nullptr );
+    SW_EXPECT_TRUE( activateTracker.findOccupancy( pBorn->getHandle() ) != nullptr );
+}

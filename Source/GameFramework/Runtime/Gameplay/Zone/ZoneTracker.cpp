@@ -60,10 +60,33 @@ namespace sw
 
     ZoneTracker::ZoneTracker()
         : _listOccupancy{}
+        , _listSpawnHeld{}
+        , _listSpawnHeldNext{}
+        , _spawnWindow{}
         , _arrLog{}
         , _logCount{ 0 }
         , _stamp{ 0 }
+        , _spawnInside{ ActivatorSpawnInside::Activate }
     {
+    }
+
+    void ZoneTracker::markAppeared( const GameObjectManager& manager )
+    {
+        _spawnWindow.markAppeared( manager );
+        _listSpawnHeld.clear();
+        _listSpawnHeldNext.clear();
+    }
+
+    bool ZoneTracker::holdSpawnedInside( const GameObject& target )
+    {
+        const GameObjectHandle   handle   = target.getHandle();
+        const GameObjectManager* pManager = target.getManager();
+        bool                     bHeld    = std::find( _listSpawnHeld.begin(), _listSpawnHeld.end(), handle ) != _listSpawnHeld.end();
+        // 이미 대상인 것(걸어 들어와 안에 있다)은 빼지 않는다 — 새로 안에 든 것만 나타남인지 본다.
+        bHeld = bHeld || ( findOccupancy( handle ) == nullptr && pManager != nullptr && _spawnWindow.isSpawnEntry( *pManager, target ) );
+        if ( bHeld )
+            _listSpawnHeldNext.push_back( handle );
+        return bHeld;
     }
 
     void ZoneTracker::beginFrame()
@@ -73,6 +96,8 @@ namespace sw
 
     void ZoneTracker::touch( const GameObject& target, const ZoneSample& sample )
     {
+        if ( _spawnInside == ActivatorSpawnInside::Ignore && holdSpawnedInside( target ) )
+            return;
         const GameObjectHandle handle = target.getHandle();
         for ( OccupantRecord& occupancy : _listOccupancy )
         {
@@ -94,6 +119,11 @@ namespace sw
 
     void ZoneTracker::dispatchOverlapEvents( GameObjectManager& manager, const ZoneCompiledProfile& profile, const ActionSource& source, float32 deltaTime )
     {
+        // 나타남으로 빠진 대상 중 이번에 알리지 않은 것(나갔다)은 풀린다 — 다시 들어오면 진입이다.
+        _listSpawnHeld.swap( _listSpawnHeldNext );
+        _listSpawnHeldNext.clear();
+        if ( _spawnInside == ActivatorSpawnInside::Ignore )
+            _spawnWindow.advance( manager );
         // 알리지 않은 대상은 나갔다. 사라진 대상(파괴 · 씬 전환)도 나간 것으로 친다 — 대상이 없으면 처리기는 부르지 않고 기록만 버린다.
         for ( size_t index = _listOccupancy.size(); index > 0; --index )
         {
