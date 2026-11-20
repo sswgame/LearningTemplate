@@ -30,7 +30,9 @@ namespace sw
                 request._method    = method;
                 request._url       = url;
                 request._timeoutMs = timeoutMs;
-                request._listHeader.push_back( HTTPHeader{ "Authorization", "Bearer " + token } );
+                StringBuilder<constant::buffer::kMax2048> authorization;
+                authorization.appendFormat( "Bearer %#", token );
+                request._listHeader.push_back( HTTPHeader{ "Authorization", string( authorization.view() ) } );
                 request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
                 if ( method == HTTPMethod::Post )
                 {
@@ -85,24 +87,27 @@ namespace sw
 
     string GoogleReceiptValidator::makeProductURL( string_view productID, string_view purchaseToken ) const
     {
-        return _settings._baseURL + "/androidpublisher/v3/applications/" + HTTPUtil::encodePercent( _settings._packageName ) + "/purchases/products/" +
-               HTTPUtil::encodePercent( productID ) + "/tokens/" + HTTPUtil::encodePercent( purchaseToken );
+        StringBuilder<constant::buffer::kMax1024> url;
+        url.appendFormat( "%#/androidpublisher/v3/applications/%#/purchases/products/%#/tokens/%#", _settings._baseURL, HTTPUtil::encodePercent( _settings._packageName ),
+                          HTTPUtil::encodePercent( productID ), HTTPUtil::encodePercent( purchaseToken ) );
+        return string( url.view() );
     }
 
     string GoogleReceiptValidator::makeAcknowledgeURL( string_view productID, string_view purchaseToken ) const
     {
-        return makeProductURL( productID, purchaseToken ) + ":acknowledge";
+        StringBuilder<constant::buffer::kMax1024> url;
+        url.appendFormat( "%#:acknowledge", makeProductURL( productID, purchaseToken ) );
+        return string( url.view() );
     }
 
     string GoogleReceiptValidator::makeVoidedURL( int64 sinceUnixMs, string_view pageToken ) const
     {
-        StringBuilder<constant::buffer::kMax256> textBuilder;
-        textBuilder.appendFormat( "/purchases/voidedpurchases?startTime=%#&maxResults=%#&type=0", sinceUnixMs, kVoidedMaxResults );
-        string url = _settings._baseURL + "/androidpublisher/v3/applications/" + HTTPUtil::encodePercent( _settings._packageName ) +
-                     string( textBuilder.view() );
+        StringBuilder<constant::buffer::kMax1024> url;
+        url.appendFormat( "%#/androidpublisher/v3/applications/%#/purchases/voidedpurchases?startTime=%#&maxResults=%#&type=0", _settings._baseURL,
+                          HTTPUtil::encodePercent( _settings._packageName ), sinceUnixMs, kVoidedMaxResults );
         if ( pageToken.empty() == false )
-            url += "&token=" + HTTPUtil::encodePercent( pageToken );
-        return url;
+            url.appendFormat( "&token=%#", HTTPUtil::encodePercent( pageToken ) );
+        return string( url.view() );
     }
 
     expected<void> GoogleReceiptValidator::readPayload( string_view payload, ReceiptQuery& outQuery ) const

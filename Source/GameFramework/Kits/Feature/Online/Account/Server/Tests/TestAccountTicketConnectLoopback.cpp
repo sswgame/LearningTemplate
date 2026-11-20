@@ -139,8 +139,9 @@ namespace
         {
             if ( result.has_value() )
                 return false;
-            const sw::string text = sw::string( result.error().message() ) + " " + sw::string( result.error().detail() );
-            return text.find( pExpectedPart ) != string::npos;
+            StringBuilder<constant::buffer::kMax512> text;
+            text.appendFormat( "%# %#", result.error().message(), result.error().detail() );
+            return text.view().find( pExpectedPart ) != string_view::npos;
         }
     };
 } // namespace

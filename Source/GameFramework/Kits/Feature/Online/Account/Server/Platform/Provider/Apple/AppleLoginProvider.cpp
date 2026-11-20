@@ -136,11 +136,14 @@ namespace sw
         string code;
         splitTicket( string_view( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() ), idToken, nonce, code );
         // 안쪽 OIDC 구현은 `ID 토큰|nonce` 를 읽는다. 인가 코드는 이 제공자가 들고 있다.
-        const string         innerTicket = nonce.empty() ? idToken : idToken + "|" + nonce;
-        PendingVerification& pending     = _listPending.emplace_back();
-        pending._outerID                 = _verificationIDAllocator.allocate();
-        pending._code                    = std::move( code );
-        pending._innerID                 = _oidc.submitVerification( StringUtil::toBytes( innerTicket ), nowMs );
+        StringBuilder<constant::buffer::kMax2048> innerTicket;
+        innerTicket.appendFormat( "%#", idToken );
+        if ( nonce.empty() == false )
+            innerTicket.appendFormat( "|%#", nonce );
+        PendingVerification& pending = _listPending.emplace_back();
+        pending._outerID             = _verificationIDAllocator.allocate();
+        pending._code                = std::move( code );
+        pending._innerID             = _oidc.submitVerification( StringUtil::toBytes( innerTicket.view() ), nowMs );
         return pending._outerID;
     }
 

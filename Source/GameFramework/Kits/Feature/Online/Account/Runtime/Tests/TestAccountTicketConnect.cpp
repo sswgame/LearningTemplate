@@ -33,7 +33,9 @@ namespace
             NetConnectCredentials  credentials;
             const auto             failed1 = connector.acquire( std::move( request ), credentials );
             SW_REQUIRE_FALSE( failed1.has_value() );
-            const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+            StringBuilder<constant::buffer::kMax512> error1Builder;
+            error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );
+            const sw::string error1( error1Builder.view() );
             SW_EXPECT_TRUE( error1.find( pExpectedPart ) != string::npos );
         }
     };

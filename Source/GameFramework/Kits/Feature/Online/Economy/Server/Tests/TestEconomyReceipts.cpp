@@ -165,7 +165,9 @@ namespace
         {
             LedgerTransferRequest request;
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeAccount( accountID ), LedgerHolder::makeSink(), string( assetID ), amount } );
-            request._journalKey = "test/spend/" + to_string( accountID ) + "/" + to_string( amount );
+            StringBuilder<constant::buffer::kMax128> journalKey;
+            journalKey.appendFormat( "test/spend/%#/%#", accountID, amount );
+            request._journalKey = string( journalKey.view() );
             request._reason     = "test.spend";
             LedgerTransferResult serviceResult;
             SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, serviceResult ) == LedgerResult::Ok );
@@ -272,12 +274,14 @@ namespace
             result._storeName               = "fake";
             result._transactionID           = request._payload;
             result._productID               = "com.x.gem100";
-            result._deliveryKey             = "key." + request._payload;
-            result._deliveryDeadlineMs      = _deadlineMs;
-            result._storeBuyerID            = _storeBuyerID;
-            result._buyerRule               = _buyerRule;
-            result._ticket                  = request._ticket;
-            result._status                  = ReceiptStatus::Valid;
+            StringBuilder<constant::buffer::kMax256> deliveryKey;
+            deliveryKey.appendFormat( "key.%#", request._payload );
+            result._deliveryKey        = string( deliveryKey.view() );
+            result._deliveryDeadlineMs = _deadlineMs;
+            result._storeBuyerID       = _storeBuyerID;
+            result._buyerRule          = _buyerRule;
+            result._ticket             = request._ticket;
+            result._status             = ReceiptStatus::Valid;
         }
         void update( UnixMilliseconds now ) override { (void)now; }
         void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override
