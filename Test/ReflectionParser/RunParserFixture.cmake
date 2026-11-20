@@ -47,6 +47,16 @@ foreach(line IN LISTS list_expect_line)
 		message(FATAL_ERROR "${FIXTURE}: unknown expectation: ${line}")
 	endif()
 endforeach()
+get_filename_component(fixture_dir "${FIXTURE}" DIRECTORY)
+set(batch_header "${fixture_dir}/Batch/Companion.h")
+file(STRINGS "${FIXTURE}" list_batch_line REGEX "^// BATCH-WITH: ")
+foreach(line IN LISTS list_batch_line)
+	string(REGEX MATCH "^// BATCH-WITH: (.+)$" matched "${line}")
+	set(batch_header "${fixture_dir}/${CMAKE_MATCH_1}")
+endforeach()
+if(NOT EXISTS "${batch_header}")
+	message(FATAL_ERROR "${FIXTURE}: batch header '${batch_header}' does not exist")
+endif()
 if(NOT list_expect_error AND NOT list_expect_gen AND NOT list_expect_type)
 	message(FATAL_ERROR "${FIXTURE}: no expectation - a fixture must say what it checks")
 endif()
@@ -62,6 +72,7 @@ endforeach()
 execute_process(
 	COMMAND "${PARSER}"
 		--input "${FIXTURE}"
+		--input "${batch_header}"
 		--output "${WORK_DIR}"
 		--builtins "${BUILTINS}"
 		--annotation-meta "${ANNOTATION_META}"

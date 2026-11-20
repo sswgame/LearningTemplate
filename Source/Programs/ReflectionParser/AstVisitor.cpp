@@ -63,9 +63,25 @@ namespace sw
         return _bHasError == SW_FALSE;
     }
 
+    bool AstVisitor::startsWithReflectMacro( const string_view line )
+    {
+        // 줄 머리에 오는 매크로 전부다(ENUMERATOR 는 열거자 이름 뒤에 온다). `REFLECT_BODY` 도 — 구성마다 StaticType() 이 있다 없다 한다.
+        constexpr const utf8* kArrMacroName[] = { annotation::kReflectMacro, annotation::kEnumMacro, annotation::kPropertyMacro,
+                                                  annotation::kFunctionMacro, annotation::kReflectContainerMacro, annotation::kReflectBodyPrefix };
+        for ( const utf8* pMacroName : kArrMacroName )
+        {
+            if ( StringUtil::startsWith( line, pMacroName ) == false )
+                continue;
+            const string_view rest = StringUtil::trim( line.substr( string_view( pMacroName ).size() ) );
+            if ( StringUtil::startsWith( rest, "(" ) )
+                return true;
+        }
+        return false;
+    }
+
     bool AstVisitor::validateConditionalReflectMacros( CXFile file, const string& path ) const
     {
-        // 파서는 한 구성(정의 한 벌)만 본다 — `#if` 아래의 PROPERTY · FUNCTION · REFLECT 는 그 구성에서 꺼져 있으면 오류 없이 빠지고, 켜져 있으면
+        // 파서는 한 구성(정의 한 벌)만 본다 — `#if` 아래의 REFLECT · ENUM · PROPERTY · FUNCTION · REFLECT_CONTAINER · REFLECT_BODY 는 그 구성에서 꺼져 있으면 오류 없이 빠지고, 켜져 있으면
         // 구성마다 레이아웃이 달라진다. 조건부 멤버는 리플렉션 밖에 두고, 리플렉션 멤버는 조건 없이 선언한다. 지금 트리에는 0 건이다.
         size_t            size  = 0;
         const char* const pText = clang_getFileContents( _translationUnit, file, &size );
@@ -91,9 +107,7 @@ namespace sw
                     --depth;
                 continue;
             }
-            const bool bReflectMacro = StringUtil::startsWith( line, "PROPERTY(" ) || StringUtil::startsWith( line, "PROPERTY (" ) || StringUtil::startsWith( line, "FUNCTION(" ) ||
-                                       StringUtil::startsWith( line, "FUNCTION (" ) || StringUtil::startsWith( line, "REFLECT(" ) || StringUtil::startsWith( line, "REFLECT (" );
-            if ( depth > 0 && bReflectMacro )
+            if ( depth > 0 && startsWithReflectMacro( line ) )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORReflectMacroUnderIf", "ERROR: %#(%#): a reflection macro is under #if - the parser sees one configuration, so it would be "
                                                                         "silently dropped or change the layout per configuration. Declare reflected members unconditionally.",
