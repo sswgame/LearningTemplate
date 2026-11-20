@@ -6,6 +6,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/SliderWidget.h"

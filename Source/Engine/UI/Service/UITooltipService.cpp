@@ -9,6 +9,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/UIWidgetPath.h"
 #include "Engine/UI/WidgetTree/Widget.h"

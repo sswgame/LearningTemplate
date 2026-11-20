@@ -14,6 +14,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
+#include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"

@@ -24,6 +24,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
+#include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/CheckBoxWidget.h"

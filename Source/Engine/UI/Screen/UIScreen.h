@@ -37,29 +37,6 @@ namespace sw
 
 namespace sw
 {
-    /** @struct UIScreenDef @brief 화면 하나의 성질입니다(문서의 루트 요소 속성으로도 적습니다). */
-    REFLECT()
-    struct SW_API UIScreenDef
-    {
-        REFLECT_BODY();
-
-        PROPERTY( DisplayName = "Layer" )
-        UILayer _layer{ UILayer::Menu };
-        PROPERTY( DisplayName = "Modal", Tooltip = "Blocks input to screens below and to the game" )
-        bool _bModal{ false };
-        PROPERTY( DisplayName = "Takes Focus", Tooltip = "Receives focus and UI actions (never on the HUD and Overlay layers)" )
-        bool _bTakesFocus{ true };
-        PROPERTY( DisplayName = "Show Cursor", Tooltip = "Show the OS cursor while this screen is the active screen" )
-        bool _bShowCursor{ true };
-        PROPERTY( DisplayName = "Pauses Game", Tooltip = "Pause game time while this screen is open" )
-        bool _bPausesGame{ false };
-        PROPERTY( DisplayName = "Default Focus", Tooltip = "Widget to focus when the screen opens in navigation mode" )
-        hashed_string _defaultFocus{};
-    };
-} // namespace sw
-
-namespace sw
-{
     /**
      * @class UIScreen
      * @brief 활성화할 수 있는 화면 하나입니다(언리얼 CommonUI 의 `UCommonActivatableWidget`). 위젯 트리 하나를 소유합니다.
