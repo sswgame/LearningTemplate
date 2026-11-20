@@ -61,11 +61,13 @@
 	<!-- ④ 일시정지 메뉴 → 옵션 → 닫기. 사람의 누름처럼 여러 프레임 누른다(한 프레임 누름은 같은 Esc 의 뒤로가 메뉴를 닫는 결함을 가린다 — nilecity pause) -->
 	<Tap slot="Key.Escape" hold="6"/>
 	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/pause.ui.xml" timeoutFrames="30"/>
+	<WaitUntil watch="Time.Paused" equals="1" timeoutFrames="10"/> <!-- 정지는 화면이 선 뒤에 걸린다 — 걸린 뒤의 프레임을 잰다 -->
 	<Store watch="Sequence.Frame" target="GateDirector" as="pausedFrame"/>
 	<AdvanceSimulation frames="10"/>
 	<Expect watch="Sequence.Frame" target="GateDirector" sameAs="pausedFrame"/>
-	<Tap slot="Key.Down" hold="1"/> <!-- Resume → Options -->
-	<AdvanceSimulation frames="2"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Resume" timeoutFrames="10"/> <!-- 키보드로 열었다 — 기본 포커스(pausemenu 와 같은 길) -->
+	<Tap slot="Key.Down" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Options" timeoutFrames="10"/>
 	<Tap slot="Key.Enter" hold="1"/>
 	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/options.ui.xml" timeoutFrames="30"/>
 	<Expect watch="Sequence.Frame" target="GateDirector" sameAs="pausedFrame"/>
@@ -74,6 +76,7 @@
 	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/pause.ui.xml" timeoutFrames="30"/>
 	<Tap slot="Key.Escape" hold="6"/>
 	<WaitUntil watch="UI.ActiveScreen" is="none" timeoutFrames="30"/>
+	<WaitUntil watch="Time.Paused" equals="0" timeoutFrames="30"/> <!-- 닫기 애니메이션이 끝나야 정지 요청이 풀린다 -->
 	<WaitUntil watch="Sequence.Frame" target="GateDirector" differsFrom="pausedFrame" timeoutFrames="10"/>
 	<Expect watch="Sequence.Frame" target="GateDirector" increaseFrom="pausedFrame" increaseBy="1"/>
 
