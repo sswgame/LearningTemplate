@@ -29,7 +29,7 @@ namespace sw
          * @class AccountGameConnectOnlineServerKit
          * @brief 게임 포트의 접속 티켓 확인 조립입니다. 인증기는 네트워크 스레드에서 불리므로 시각만 서버 루프가 넣는다.
          */
-        class AccountGameConnectOnlineServerKit final : public IOnlineServerKit
+        class AccountGameConnectOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<const IConnectAdmission>>
         {
         public:
             AccountGameConnectOnlineServerKit()
@@ -42,7 +42,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 (void)context;
                 AccountGameConnectKitConfig kitConfig;
@@ -59,10 +59,10 @@ namespace sw
                 return {};
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& ) override
             {
                 // 받아들이기 정책은 매칭 키트(`gameServer`)가 `initialize` 에서 내놓는다 — 없으면 티켓이 맞는 계정은 모두 받는 서버다(배정 없는 상시 서버).
-                const IConnectAdmission* pAdmission = context._kits.find<const IConnectAdmission>();
+                const IConnectAdmission* pAdmission = interfaces.find<const IConnectAdmission>();
                 const IConnectAdmission& admission  = pAdmission != nullptr ? *pAdmission : static_cast<const IConnectAdmission&>( _allowEveryAccount );
                 _pAuthenticator                     = make_unique<AccountConnectAuthenticator>( &_ticketAuthority, hashed_string( _serverName.c_str() ), admission );
                 _pAuthenticator->setNowMs( context._nowMs );
@@ -99,12 +99,6 @@ namespace sw
                     _pSecurity->unbindAuthenticator( _pAuthenticator.get() );
                 _pSecurity = nullptr;
                 _pAuthenticator.reset();
-            }
-
-            span<const utf8* const> getOptionalKits() const override
-            {
-                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kMatchmaking }; // 받아들이기 정책(gameServer)
-                return kArrKit;
             }
 
         private:

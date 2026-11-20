@@ -13,6 +13,7 @@
 
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
 
 namespace sw
 {
@@ -23,6 +24,8 @@ namespace sw
     class IBalanceChangedListener
     {
     public:
+        static constexpr const utf8* kProviderKit = OnlineServerKitName::kEconomy; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+
         IBalanceChangedListener()          = default;
         virtual ~IBalanceChangedListener() = default;
 

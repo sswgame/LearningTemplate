@@ -10,6 +10,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
@@ -37,8 +38,28 @@ namespace
         getKitEventLog().push_back( string( line.view() ) );
     }
 
+    /** @brief 테스트 제공 키트가 내놓는 디렉터리입니다. 제공 키트 상수가 테스트 키트 이름이라 받는 쪽의 의존 이름이 그것이 된다. */
+    class ITestDirectory : public IAccountDirectory
+    {
+    public:
+        static constexpr const utf8* kProviderKit = "test.provider";
+    };
+
+    /** @brief 이름은 제공 키트와 같지만 아무것도 걸지 않는 키트가 낼 것으로 적힌 인터페이스입니다. */
+    class ITestSilent
+    {
+    public:
+        static constexpr const utf8* kProviderKit = "test.silent";
+
+        ITestSilent()          = default;
+        virtual ~ITestSilent() = default;
+
+        ITestSilent( const ITestSilent& )            = delete;
+        ITestSilent& operator=( const ITestSilent& ) = delete;
+    };
+
     /** @brief 가짜 계정 디렉터리 — 앞 키트가 문맥에 내놓는 인터페이스 역할입니다. */
-    class TestDirectory final : public IAccountDirectory
+    class TestDirectory final : public ITestDirectory
     {
     public:
         [[nodiscard]] bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override
@@ -55,17 +76,17 @@ namespace
     };
 
     /** @brief 신원을 내놓는 키트입니다. */
-    class ProviderTestKit final : public IOnlineServerKit
+    class ProviderTestKit final : public OnlineServerKit<>
     {
     public:
-        static constexpr const utf8* kName = "test.provider";
+        static constexpr const utf8* kName = ITestDirectory::kProviderKit;
 
-        [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+        [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
         {
             addKitEvent( kName, context._pHost != nullptr && context._pStore != nullptr ? "init" : "init-without-base" );
-            return exposeInterface<IAccountDirectory>( context, entry, _directory );
+            return exposeInterface<ITestDirectory>( context, entry, _directory );
         }
-        expected<void> start( OnlineServerKitContext& context ) override
+        expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
         {
             addKitEvent( kName, context._pRouter != nullptr ? "start" : "start-without-router" );
             return {};
@@ -79,7 +100,7 @@ namespace
     };
 
     /** @brief 앞 키트의 신원을 받아 쓰는 키트입니다(필수 의존). 설정 `_failStage` 가 `init` · `start` 이면 그 단계에 실패합니다. */
-    class ConsumerTestKit final : public IOnlineServerKit
+    class ConsumerTestKit final : public OnlineServerKit<OnlineKitRequired<ITestDirectory>>
     {
     public:
         static constexpr const utf8* kName = "test.consumer";
@@ -88,7 +109,7 @@ namespace
             : _bFailStart{ SW_FALSE }
         {
         }
-        [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+        [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
         {
             (void)context;
             OnlineRuntimeTestKitConfig kitConfig;
@@ -101,25 +122,111 @@ namespace
             addKitEvent( kName, "init" );
             return {};
         }
-        expected<void> start( OnlineServerKitContext& context ) override
+        expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& ) override
         {
+            (void)context;
             if ( _bFailStart )
                 return sw::unexpected( Error{ ErrorKind::InvalidArgument, "test start failure" } );
-            addKitEvent( kName, context._kits.get<IAccountDirectory>().isAccountOnline( 7 ) ? "start" : "start-without-directory" );
+            addKitEvent( kName, interfaces.get<ITestDirectory>().isAccountOnline( 7 ) ? "start" : "start-without-directory" );
             return {};
         }
         const sw::IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; } // 테스트 키트는 표가 없다
         void                           stop() override { addKitEvent( kName, isStarted() ? "stop" : "stop-unstarted" ); }
         void                           shutdown() override { addKitEvent( kName, "shutdown" ); }
 
-        span<const utf8* const> getRequiredKits() const override
-        {
-            static constexpr const utf8* kArrKit[] = { ProviderTestKit::kName };
-            return kArrKit;
-        }
-
     private:
         uint8 _bFailStart : 1;
+    };
+
+    /** @brief 제공 키트 이름(`test.silent`)으로 서지만 그 인터페이스를 걸지 않는 키트입니다. */
+    class SilentTestKit final : public OnlineServerKit<>
+    {
+    public:
+        static constexpr const utf8* kName = ITestSilent::kProviderKit;
+
+        [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
+        {
+            (void)context;
+            (void)entry;
+            addKitEvent( kName, "init" );
+            return {};
+        }
+        expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
+        {
+            (void)context;
+            return {};
+        }
+        const sw::IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; } // 테스트 키트는 표가 없다
+        void                           stop() override { addKitEvent( kName, "stop" ); }
+        void                           shutdown() override { addKitEvent( kName, "shutdown" ); }
+    };
+
+    /** @brief 걸리지 않은 인터페이스를 필수로 받는 키트입니다. 런타임이 이 키트의 `initialize` 를 부르면 안 된다. */
+    class NeedsSilentTestKit final : public OnlineServerKit<OnlineKitRequired<ITestSilent>>
+    {
+    public:
+        static constexpr const utf8* kName = "test.needsSilent";
+
+        [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
+        {
+            (void)context;
+            (void)entry;
+            addKitEvent( kName, "init" );
+            return {};
+        }
+        expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
+        {
+            (void)context;
+            return {};
+        }
+        const sw::IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; } // 테스트 키트는 표가 없다
+        void                           stop() override { addKitEvent( kName, "stop" ); }
+    };
+
+    /** @brief 디렉터리를 순서 없이 받는 키트입니다. 의존이 아니어도 `start` 는 모든 키트의 `initialize` 뒤라 찾는다. */
+    class UnorderedTestKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<>, OnlineKitUnordered<ITestDirectory>>
+    {
+    public:
+        static constexpr const utf8* kName = "test.unordered";
+
+        [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
+        {
+            (void)context;
+            (void)entry;
+            addKitEvent( kName, "init" );
+            return {};
+        }
+        expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& unordered ) override
+        {
+            (void)context;
+            addKitEvent( kName, unordered.find<ITestDirectory>() != nullptr ? "start" : "start-without-directory" );
+            return {};
+        }
+        const sw::IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; } // 테스트 키트는 표가 없다
+        void                           stop() override {}
+    };
+
+    /**
+     * @brief 의존 이름이 형식 목록에서만 나오는지 보는 키트입니다(조립에 올리지 않는다).
+     * @details 선언하지 않은 형식을 꺼내면(`interfaces.find<IAccountPresence>()`) `static_assert` 로 컴파일이 멈추므로 실행 테스트로는 재지 않는다.
+     */
+    class TypeListTestKit final
+        : public OnlineServerKit<OnlineKitRequired<ITestDirectory, IAccountDirectory>, OnlineKitOptional<const IAccountBlockList, IOfflinePushSender>, OnlineKitUnordered<const ILedgerPolicy>>
+    {
+    public:
+        [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
+        {
+            (void)context;
+            (void)entry;
+            return {};
+        }
+        expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
+        {
+            (void)context;
+            return {};
+        }
+        const sw::IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; } // 테스트 키트는 표가 없다
+        void                           stop() override {}
     };
 
     /** @brief 서버 색인 읽기의 답을 받아 둡니다(라우터 델리게이트는 멤버 함수다). */
@@ -218,6 +325,68 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, MissingRequiredKitStopsStartup )
         runtime.shutdown();
     }
     SW_EXPECT_TRUE( getKitEventLog().empty() );
+}
+
+/** @brief [OnlineServerRuntimeTest] 의존 키트 이름은 받는 인터페이스 형식의 제공 키트 상수에서만 나온다 — 필수 · 선택은 형식 순서대로, 순서 없는 목록은 이름에 들지 않는다 */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, ProviderKitNamesComeFromTheInterfaceTypeList )
+{
+    TypeListTestKit               kit; // 조립에 올리지 않고 이름 목록만 본다
+    const span<const utf8* const> listRequired = kit.getRequiredKits();
+    SW_REQUIRE_EQUAL( listRequired.size(), size_t( 2 ) );
+    SW_EXPECT_EQUAL( string_view( listRequired[0] ), string_view( "test.provider" ) );
+    SW_EXPECT_EQUAL( string_view( listRequired[1] ), string_view( OnlineServerKitName::kAccount ) );
+    const span<const utf8* const> listOptional = kit.getOptionalKits();
+    SW_REQUIRE_EQUAL( listOptional.size(), size_t( 2 ) );
+    SW_EXPECT_EQUAL( string_view( listOptional[0] ), string_view( OnlineServerKitName::kSocial ) );
+    SW_EXPECT_EQUAL( string_view( listOptional[1] ), string_view( OnlineServerKitName::kLiveOps ) );
+
+    ProviderTestKit noDependency;
+    SW_EXPECT_EQUAL( noDependency.getRequiredKits().size(), size_t( 0 ) );
+    SW_EXPECT_EQUAL( noDependency.getOptionalKits().size(), size_t( 0 ) );
+}
+
+/** @brief [OnlineServerRuntimeTest] 제공 키트가 설정에 있어도 필수 인터페이스를 걸지 않았으면 받는 키트의 initialize 를 부르지 않고 기동 오류다(null 로 돌지 않는다) */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, RequiredInterfaceTheProviderDidNotExposeStopsStartup )
+{
+    const OnlineServerKitRegistrar<SilentTestKit>      silent{ SilentTestKit::kName };
+    const OnlineServerKitRegistrar<NeedsSilentTestKit> needsSilent{ NeedsSilentTestKit::kName };
+    {
+        OnlineServerRuntime runtime;
+        const auto          failed1 = runtime.initialize( makeSettings( { NeedsSilentTestKit::kName, SilentTestKit::kName } ), UnixMilliseconds{ 1000 } );
+        SW_REQUIRE_FALSE( failed1.has_value() );
+        StringBuilder<constant::buffer::kMax512> error1Builder;
+        error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );
+        const sw::string error1( error1Builder.view() );
+        SW_EXPECT_TRUE( error1.find( "did not expose" ) != string::npos && error1.find( "test.silent" ) != string::npos );
+        runtime.shutdown();
+    }
+    const vector<string>& listLine = getKitEventLog();
+    SW_REQUIRE_EQUAL( listLine.size(), size_t( 3 ) ); // 받는 키트는 init 을 받지 않았으므로 stop 도 받지 않는다
+    SW_EXPECT_EQUAL( listLine[0], string( "test.silent:init" ) );
+    SW_EXPECT_EQUAL( listLine[1], string( "test.silent:stop" ) );
+    SW_EXPECT_EQUAL( listLine[2], string( "test.silent:shutdown" ) );
+}
+
+/** @brief [OnlineServerRuntimeTest] 순서 없는 목록은 의존이 아니어서 이름 역순으로 제공 키트보다 먼저 서도 start 에서는 그 인터페이스를 받는다 */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, UnorderedInterfaceIsFoundAtStartWithoutOrdering )
+{
+    const OnlineServerKitRegistrar<UnorderedTestKit> unordered{ UnorderedTestKit::kName };
+    OnlineServerRuntimeConfig                        settings = makeSettings( { ProviderTestKit::kName, UnorderedTestKit::kName } );
+    settings._bReverseIndependentKitOrder                     = SW_TRUE; // test.unordered 가 test.provider 보다 먼저 선다
+    {
+        OnlineServerRuntime runtime;
+        {
+            const auto result = runtime.initialize( settings, UnixMilliseconds{ 1000 } );
+            SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+        }
+        runtime.shutdown();
+    }
+    const vector<string>& listLine = getKitEventLog();
+    SW_REQUIRE_TRUE( listLine.size() >= size_t( 4 ) );
+    SW_EXPECT_EQUAL( listLine[0], string( "test.unordered:init" ) );
+    SW_EXPECT_EQUAL( listLine[1], string( "test.provider:init" ) );
+    SW_EXPECT_EQUAL( listLine[2], string( "test.unordered:start" ) );
+    SW_EXPECT_EQUAL( listLine[3], string( "test.provider:start" ) );
 }
 
 /** @brief [OnlineServerRuntimeTest] 초기화에 실패한 키트는 스스로 되돌리므로 종료를 받지 않고, 먼저 선 키트만 역순으로 내린다 */

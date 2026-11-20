@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatServer.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/GroupChannelMembership.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
@@ -73,7 +74,7 @@ namespace sw
          * @class ChatOnlineServerKit
          * @brief 채팅 키트의 서버 조립입니다.
          */
-        class ChatOnlineServerKit final : public IOnlineServerKit
+        class ChatOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<IAccountDirectory>, OnlineKitOptional<const IAccountBlockList, IAccountPresence>>
         {
         public:
             ChatOnlineServerKit()
@@ -86,7 +87,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 ChatKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
@@ -110,16 +111,16 @@ namespace sw
                 { return addTTLRule( context, entry, ChatService::makeSenderTTLRule( kitConfig._historyTTL.getExpireAfterMs() ), kitConfig._historyTTL ); } );
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& ) override
             {
-                const IAccountBlockList* pBlockList = context._kits.find<const IAccountBlockList>();
+                const IAccountBlockList* pBlockList = interfaces.find<const IAccountBlockList>();
                 if ( pBlockList != nullptr )
                     _policy = make_unique<ChatBlockPolicy>( pBlockList );
                 ChatServiceDependencies dependencies;
                 dependencies._pStore     = context._pStore;
                 dependencies._pBus       = context._pBus;
-                dependencies._pPresence  = context._kits.find<IAccountPresence>();
-                dependencies._pDirectory = &context._kits.get<IAccountDirectory>(); // 필수 키트라 정렬이 없으면 기동 오류로 막았다
+                dependencies._pPresence  = interfaces.find<IAccountPresence>();
+                dependencies._pDirectory = &interfaces.get<IAccountDirectory>(); // 필수 키트라 정렬이 없으면 기동 오류로 막았다
                 dependencies._pPolicy    = _policy.get();
                 dependencies._serverID   = context._serverID;
                 if ( _service.initialize( dependencies, _settings ) == false )
@@ -142,17 +143,6 @@ namespace sw
                 _groupChannels.setService( nullptr );
                 _server.shutdown();
                 _service.shutdown();
-            }
-
-            span<const utf8* const> getRequiredKits() const override
-            {
-                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount }; // 표시 이름과 접속 여부
-                return kArrKit;
-            }
-            span<const utf8* const> getOptionalKits() const override
-            {
-                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kSocial }; // 차단 목록
-                return kArrKit;
             }
 
         private:

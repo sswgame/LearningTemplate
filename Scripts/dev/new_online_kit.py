@@ -294,24 +294,24 @@ namespace sw
 {{
     namespace
     {{
-        /** @class {name}OnlineServerKit @brief {name} 키트의 서버 조립입니다. */
-        class {name}OnlineServerKit final : public IOnlineServerKit
+        /** @class {name}OnlineServerKit @brief {name} 키트의 서버 조립입니다. 다른 키트의 인터페이스를 받으면 형식 목록(`OnlineServerKit<OnlineKitRequired<…>, OnlineKitOptional<…>>`)에 적는다. */
+        class {name}OnlineServerKit final : public OnlineServerKit<>
         {{
         public:
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {{
-                return registerServerService( context, entry, &_service, outError );
+                return registerServerService( context, entry, &_service );
             }}
 
-            bool start( OnlineServerKitContext& context, string& outError ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
             {{
                 if ( _service.initialize( context._pStore, context._pMetricRegistry ) == false )
-                {{
-                    outError = "the {lower} service needs a store";
-                    return false;
-                }}
-                return true;
+                    return unexpected( Error{{ ErrorKind::InvalidArgument, "the {lower} service needs a store" }} );
+                return {{}};
             }}
+
+            /** @brief 계정 id 를 두는 표가 없으면 nullptr 다. 표가 생기면 탈퇴 정리를 정한다. */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override {{ return nullptr; }}
 
             int32 getOpenJobCount() const override {{ return _service.getOpenJobCount(); }}
 

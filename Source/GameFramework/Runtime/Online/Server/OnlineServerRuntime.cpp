@@ -124,7 +124,7 @@ namespace sw
 
             SubsystemInitResult initializeSubsystem() override
             {
-                const expected<void> result = _kit->initialize( _context, _entry );
+                const expected<void> result = _kit->initializeKit( _context, _entry );
                 if ( result.has_value() )
                 {
                     if ( const IAfterDeleteAccount* pHook = _kit->getAfterDeleteAccount(); pHook != nullptr )
@@ -546,7 +546,17 @@ namespace sw
             unique_ptr<IOnlineServerKit> kit = listFactory[factoryIndex]->_pCreate();
             if ( kit == nullptr )
                 return unexpected( Error{ ErrorKind::ExternalFailure, "the online kit could not be created", pEntry->_name } );
+            // 이름은 키트의 형식 목록에서 나온다(`OnlineServerKit`) — 한 키트가 인터페이스 여럿을 내면 같은 이름이 거듭되므로 한 번만 넣는다.
             vector<const utf8*> listDependency{ OnlineServerKitName::kBase };
+            const auto          addDependency = [&listDependency]( const utf8* pName )
+            {
+                for ( const utf8* pListed : listDependency )
+                {
+                    if ( string_view( pListed ) == pName )
+                        return;
+                }
+                listDependency.push_back( pName );
+            };
             for ( const utf8* pRequired : kit->getRequiredKits() )
             {
                 if ( OnlineServerRuntimeInternal::isKitListed( parts._config, pRequired ) == false )
@@ -555,12 +565,12 @@ namespace sw
                     error.appendDetail( " needs " ).appendDetail( pRequired );
                     return unexpected( error );
                 }
-                listDependency.push_back( pRequired );
+                addDependency( pRequired );
             }
             for ( const utf8* pOptional : kit->getOptionalKits() )
             {
                 if ( OnlineServerRuntimeInternal::isKitListed( parts._config, pOptional ) )
-                    listDependency.push_back( pOptional );
+                    addDependency( pOptional );
             }
             listNode.push_back(
                 make_unique<OnlineServerKitNode>( std::move( kit ), listFactory[factoryIndex]->_pName, *pEntry, std::move( listDependency ), parts._context, parts._startupError ) );
@@ -761,5 +771,12 @@ namespace sw
         if ( _parts == nullptr )
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         return _parts->_context;
+    }
+
+    SubsystemScope& OnlineServerRuntime::getKitScope() const
+    {
+        if ( _parts == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+        return _parts->_kitScope;
     }
 } // namespace sw

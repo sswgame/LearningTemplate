@@ -36,7 +36,7 @@ namespace sw
          * @class AccountOnlineServerKit
          * @brief 계정 키트의 서버 조립입니다. 로그인 서비스는 저장소 완료가 부르므로 저장소를 종료한 뒤(`shutdown`)에 종료합니다.
          */
-        class AccountOnlineServerKit final : public IOnlineServerKit
+        class AccountOnlineServerKit final : public OnlineServerKit<>
         {
         public:
             AccountOnlineServerKit()
@@ -51,7 +51,7 @@ namespace sw
             {
             }
 
-            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& ) override
             {
                 AccountKitConfig kitConfig;
                 if ( expected<void> settings = entry.readSettings( kitConfig ); settings.has_value() == false )
@@ -106,7 +106,7 @@ namespace sw
                 return assembled;
             }
 
-            expected<void> start( OnlineServerKitContext& context ) override
+            expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
             {
                 // 바인딩이 첫 틱에 호스트의 캐시 · 버스를 잇는다(접속 상태 · account.revoke). 탈퇴 정리에는 모든 키트의 훅을 넘긴다 — 모든 키트의 initialize 뒤다.
                 _loginService.setAfterDeleteAccount( context._listAfterDeleteAccount );

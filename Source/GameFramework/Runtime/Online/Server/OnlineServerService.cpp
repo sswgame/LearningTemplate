@@ -33,7 +33,7 @@ namespace sw
             void                         shutdown() override
             {
                 if ( _pKitDirectory != nullptr )
-                    _pKitDirectory->withdraw( &_runtime.getContext()._kits ); // 키트가 내려가기 전에 게임 모듈의 창구에서 거둔다
+                    _pKitDirectory->withdraw( &_runtime.getKitScope() ); // 키트가 내려가기 전에 게임 모듈의 창구에서 거둔다
                 _pKitDirectory = nullptr;
                 _runtime.shutdown();
             }
@@ -106,7 +106,7 @@ namespace sw
             return started;
         _pKitDirectory = context._pKitDirectory;
         if ( _pKitDirectory != nullptr )
-            _pKitDirectory->publish( &_runtime.getContext()._kits ); // 게임 서버 코드가 키트 인터페이스(백필 …)를 찾는다
+            _pKitDirectory->publish( &_runtime.getKitScope() ); // 게임 서버 코드가 키트 인터페이스(백필 …)를 찾는다
         return {};
     }
 
