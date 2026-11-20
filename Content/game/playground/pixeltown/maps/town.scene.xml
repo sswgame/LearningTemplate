@@ -47,7 +47,7 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<TileMapRendererComponent _tileMapPath="game/pixeltown/maps/town.tilemap.xml"
+					<TileMapRendererComponent _tileMapPath="game/playground/pixeltown/maps/town.tilemap.xml"
 					                          _materialPath="engine/materials/sprite2dpixel.material"
 					                          _sortingLayer="Default"
 					                          _orderInLayer="-20"
@@ -64,7 +64,7 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<TileMapRendererComponent _tileMapPath="game/pixeltown/maps/townprops.tilemap.xml"
+					<TileMapRendererComponent _tileMapPath="game/playground/pixeltown/maps/townprops.tilemap.xml"
 					                          _materialPath="engine/materials/sprite2dpixel.material"
 					                          _sortingLayer="Default"
 					                          _orderInLayer="-10"
@@ -81,7 +81,7 @@
 					                 _localScale="1,2,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _clipPath="game/pixeltown/sprites/hero.sprite.xml"
+					                 _clipPath="game/playground/pixeltown/sprites/hero.sprite.xml"
 					                 _materialPath="engine/materials/sprite2dpixel.material"
 					                 _sortingLayer="Default"
 					                 _orderInLayer="0" />
@@ -91,7 +91,7 @@
 					                         _attachOwner="None"
 					                         _attachComponent="None"
 					                         _bRepeat="true" />
-					<TownWalkerViewComponent _gameMode="6" _spriteOffset="0,0.6" _depthPerUnitY="0.01" />
+					<OverworldWalkerViewComponent _gameMode="6" _spriteOffset="0,0.6" _depthPerUnitY="0.01" />
 					<PawnComponent _moveAction="Move"
 					               _lookAction="None"
 					               _upAction="None"
@@ -115,7 +115,7 @@
 					                 _localScale="2,2,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _clipPath="game/pixeltown/sprites/elder.sprite.xml"
+					                 _clipPath="game/playground/pixeltown/sprites/elder.sprite.xml"
 					                 _materialPath="engine/materials/sprite2dpixel.material"
 					                 _sortingLayer="Default"
 					                 _orderInLayer="0" />
@@ -126,7 +126,7 @@
 					                         _attachComponent="None"
 					                         _currentAnimation="idle_down"
 					                         _bRepeat="true" />
-					<DialogueRunnerComponent _graphPath="game/pixeltown/dialogue/elder.dialogue.xml" _bPostSubtitles="true">
+					<DialogueRunnerComponent _graphPath="game/playground/pixeltown/dialogue/elder.dialogue.xml" _bPostSubtitles="true">
 						<_listSpeakerSlot>
 							<DialogueSpeakerSlot _speaker="1" _object="5" />
 						</_listSpeakerSlot>
@@ -137,7 +137,7 @@
 		<entity id="6" name="TownGameMode">
 			<GameObject _schemaVersion="0" _name="TownGameMode" _bActive="true">
 				<_listComponent>
-					<TownGameModeComponent _ground="2" _props="3" _hero="4" _interactButton="Interact" _stepSeconds="0.18" />
+					<OverworldGameModeComponent _ground="2" _props="3" _hero="4" _interactButton="Interact" _stepSeconds="0.18" />
 				</_listComponent>
 			</GameObject>
 		</entity>

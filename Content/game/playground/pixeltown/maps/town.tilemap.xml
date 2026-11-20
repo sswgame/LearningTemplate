@@ -3,7 +3,7 @@
 	<spawn x="7" y="7" />
 	<tiles />
 	<warps />
-	<tileLayer tileSet="game/pixeltown/tilesets/town.tileset.xml">
+	<tileLayer tileSet="game/playground/pixeltown/tilesets/town.tileset.xml">
 		<palette>
 			<b name="grass" />
 			<b name="path" />

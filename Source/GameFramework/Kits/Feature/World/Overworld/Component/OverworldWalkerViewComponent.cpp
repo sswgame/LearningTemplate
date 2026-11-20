@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Games/PixelTown/TownWalkerViewComponent.h"
+#include "GameFramework/Kits/Feature/World/Overworld/Component/OverworldWalkerViewComponent.h"
 
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Games/PixelTown/TownGameModeComponent.h"
+#include "GameFramework/Kits/Feature/World/Overworld/Component/OverworldGameModeComponent.h"
 
 namespace sw
 {
@@ -31,7 +31,7 @@ namespace sw
         }
     } // namespace
 
-    TownWalkerViewComponent::TownWalkerViewComponent()
+    OverworldWalkerViewComponent::OverworldWalkerViewComponent()
         : _spriteOffset{ 0.0f, 0.0f }
         , _depthPerUnitY{ 0.01f }
         , _playingAnimation{}
@@ -39,7 +39,7 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void TownWalkerViewComponent::onBeginPlay()
+    void OverworldWalkerViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         // 디렉터(PrePhysics)가 이 프레임의 걸음을 끝낸 뒤에 읽는다.
@@ -47,14 +47,14 @@ namespace sw
         _playingAnimation.clear();
     }
 
-    void TownWalkerViewComponent::onTick( TickContext& context )
+    void OverworldWalkerViewComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
         GameObject*     pOwner = getOwner();
         SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr )
             return;
-        const TownGameModeComponent* pGameMode = findGameMode<TownGameModeComponent>();
+        const OverworldGameModeComponent* pGameMode = findGameMode<OverworldGameModeComponent>();
         if ( pGameMode == nullptr || pGameMode->isStarted() == false )
             return;
         const float3& feet = pGameMode->getHeroPosition();

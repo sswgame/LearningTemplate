@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="ee39fcccdd08a05f1f1a28d702608172"?>
 <!--
-  에디터 시나리오 — 스프라이트 클립 창의 불규칙 프레임: PixelTown 주인공 시트(hero.sprite.xml 이 쓰는 zelda_like/character.dds, 272 × 256 px)를 쓰는 테스트 클립 사본
+  에디터 시나리오 — 스프라이트 클립 창의 불규칙 프레임: 타일 걸음 마을 미니게임(Experience pixeltown) 주인공 시트(hero.sprite.xml 이 쓰는 zelda_like/character.dds, 272 × 256 px)를 쓰는 테스트 클립 사본
   (scratch/spriteclipregion — 프레임 둘)을 연다. 원본은 건드리지 않는다.
   아틀라스 위를 끌면 격자와 상관없는 사각형이 고른 프레임이 되고 가장자리는 아틀라스 픽셀 경계에 맞는다(Editor.SpriteClipSelectedFrameOnPixels = 1, 폭 약 42 px).
   고른 프레임의 오른쪽 가장자리를 끌면 폭이 는다(약 +21 px). 저장 · 다시 읽기 뒤에도 같은 폭이고 프레임 수는 그대로다 — 미리보기와 런타임이 같은 uv 를 쓴다.

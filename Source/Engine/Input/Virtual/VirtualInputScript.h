@@ -71,7 +71,7 @@ namespace sw
          * @brief @p firstFrameIndex 이후(포함)의 이벤트를 @p frameCount 프레임 뒤로 밉니다. 이미 낸 이벤트는 그대로입니다.
          * @details 시나리오가 조건을 기다리며 시계를 멈춰 두는 동안(`WaitUntil`) 입력 단계가 시나리오 프레임과 같은 프레임에 나도록 쓴다.
          *          누르기가 이미 나간 탭의 떼기는 밀지 않는다 — 누름 길이는 실제 프레임이다. 밀면 `<Tap>` 바로 뒤의 조건 대기 내내 키가 눌린 채였다
-         *          (pixeltown 의 걸음이 대기 동안 멈추지 않았다).
+         *          (타일 걸음 마을 미니게임 pixeltown 의 걸음이 대기 동안 멈추지 않았다).
          */
         void delayEventsFrom( uint32 firstFrameIndex, uint32 frameCount );
         /** @brief 이벤트를 모두 지웁니다. */
