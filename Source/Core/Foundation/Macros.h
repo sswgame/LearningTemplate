@@ -223,8 +223,7 @@ namespace sw::internal
     /** @brief 대화상자 함수입니다. @p pMessage 는 `SW_LOG_ASSERT` 의 메시지이며, 없으면 nullptr 입니다. */
     using AssertDialogFunc = AssertAction ( * )( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line );
 
-    /** @brief 대화상자를 설치합니다. nullptr 이면 해제하며, 이후 단언은 항상 멈춥니다. "항상 무시"로 고른 위치도 함께 잊습니다. */
-    SW_API void setAssertDialog( AssertDialogFunc pfnDialog ) noexcept;
+    // 대화상자를 거는 함수(`bindAssertDialog`, 등록 토큰)는 `Core/Foundation/AssertDialogSlot.h` 에 있다.
     /** @brief 대화상자가 설치돼 있으면 true 를 반환합니다. */
     [[nodiscard]] SW_API bool hasAssertDialog() noexcept;
     /** @brief "늘 무시" 로 기억한 자리 수입니다(최대 256). */

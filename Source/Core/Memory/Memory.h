@@ -3,8 +3,8 @@
  * @brief OS 수준 정렬 할당과 memcpy · memset · memcmp 래퍼입니다.
  */
 #pragma once
-#include "Core/Concurrency/ObserverSlot.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/ObserverSlot.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryTag.h"

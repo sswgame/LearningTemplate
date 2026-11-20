@@ -5,8 +5,8 @@
  */
 #include "pch.h"
 
-#include "Core/Concurrency/ObserverSlot.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/ObserverSlot.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/ScopedAllocationCount.h"

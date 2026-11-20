@@ -3,9 +3,9 @@
  * @brief 컨테이너 래퍼에 붙이는 런타임 데이터 레이스 탐지기입니다(디버그 빌드 전용).
  */
 #pragma once
-#include "Core/Concurrency/ObserverSlot.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/ObserverSlot.h"
 
 namespace sw
 {

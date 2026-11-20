@@ -2,6 +2,8 @@
 
 #include "Core/Foundation/Macros.h"
 
+#include "Core/Foundation/AssertDialogSlot.h"
+
 #include <array>
 #include <atomic>
 #include <cstdlib>
@@ -126,11 +128,11 @@ namespace sw::internal
             std::mutex                                          _mutex;
             std::array<IgnoredAssertSite, kMaxIgnoredSiteCount> _arrIgnoredSite{};
             uint32                                              _ignoredSiteCount{ 0 };
-            std::atomic<AssertDialogFunc>                       _pfnDialog{ nullptr };
+            ObserverSlot<AssertDialogSignature>                 _dialogSlot{}; ///< 대화상자 하나(`bindAssertDialog`) — 둘째 등록은 단언
         };
 
         /**
-         * @brief 단언 대화상자의 설치 칸과 "항상 무시" 자리입니다. 프로세스에 하나이고 `setAssertDialog` 가 설치 · 해제(nullptr)합니다.
+         * @brief 단언 대화상자의 설치 칸과 "항상 무시" 자리입니다. 프로세스에 하나이고 `bindAssertDialog` 가 겁니다(토큰이 사라지면 뗀다).
          * @details 단언은 서비스 범위보다 아래 층이라 범위에 맡길 수 없고, 단언 안에서 할당하면 안 되어 지연 생성도 못 한다. 그래서 위의 `s_pfnLowLevelReporter` 와
          *          같은 모양 — 이름공간의 이 한 변수(상수 초기화라 정적 초기화 순서를 타지 않는다)가 소유자이고, 접근자 함수를 두지 않는다.
          */
@@ -166,17 +168,22 @@ namespace sw::internal
         return s_capturedAssertCount.load( std::memory_order_acquire );
     }
 
-    void setAssertDialog( AssertDialogFunc pfnDialog ) noexcept
+    AssertDialogRegistration bindAssertDialog( AssertDialogFunc pfnDialog ) noexcept
     {
-        AssertDialogState&                state = s_dialogState;
-        const std::lock_guard<std::mutex> lock{ state._mutex };
-        state._pfnDialog.store( pfnDialog, std::memory_order_release );
-        state._ignoredSiteCount = 0;
+        // 잠금 밖에서 건다 — 이중 등록 단언이 `shouldBreakOnAssert` 를 지나며 같은 잠금을 잡는다.
+        AssertDialogState&       state        = s_dialogState;
+        AssertDialogRegistration registration = state._dialogSlot.bind( pfnDialog );
+        if ( registration.isActive() )
+        {
+            const std::lock_guard<std::mutex> lock{ state._mutex };
+            state._ignoredSiteCount = 0; // 새 주인의 대화상자는 앞 실행의 "항상 무시" 를 물려받지 않는다
+        }
+        return registration;
     }
 
     bool hasAssertDialog() noexcept
     {
-        return s_dialogState._pfnDialog.load( std::memory_order_acquire ) != nullptr;
+        return s_dialogState._dialogSlot.get() != nullptr;
     }
 
     uint32 getIgnoredAssertSiteCount() noexcept
@@ -197,7 +204,7 @@ namespace sw::internal
     {
         AssertDialogState&                state = s_dialogState;
         const std::lock_guard<std::mutex> lock{ state._mutex };
-        const AssertDialogFunc            pfnDialog = state._pfnDialog.load( std::memory_order_acquire );
+        const AssertDialogFunc            pfnDialog = state._dialogSlot.get();
         if ( pfnDialog == nullptr )
             return true;
         const uint32 storedCount = state._ignoredSiteCount < AssertDialogState::kMaxIgnoredSiteCount ? state._ignoredSiteCount : AssertDialogState::kMaxIgnoredSiteCount;
