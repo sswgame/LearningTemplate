@@ -24,8 +24,6 @@ namespace sw
     {
         struct CodeGeneratorInternal
         {
-            static constexpr int32 kMaxNestedContainerDepth = 3;
-
             /**
              * @brief 범위 경계 하나를 float32 글(`1.5f`)로 냅니다. 등록 단위의 허용 범위와 개발 전용 단위의 슬라이더 범위가 함께 쓴다.
              * @details 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가 **생성된 파일마다** 난다.
@@ -532,7 +530,8 @@ namespace sw
         int32                      depth    = 1;
         if ( node != nullptr && node->_bIsContainer )
             emit.linef( "using NestC%#_0 = decltype( std::declval<%#>().%# );", propIndex, typeInfo._fullyQualifiedName, prop._memberName );
-        while ( node != nullptr && node->_bIsContainer && depth < CodeGeneratorInternal::kMaxNestedContainerDepth )
+        // 깊이 한도는 두지 않는다 — 단계마다 앞 단계의 원소 형식 별칭(`NestC<프로퍼티>_<깊이>`)을 잇는 반복이라 몇 겹이든 같다. 예전 한도(3)는 넘는 단계를 조용히 잘랐다.
+        while ( node != nullptr && node->_bIsContainer )
         {
             emit.linef( "using NestC%#_%# = typename NestC%#_%#::%#;", propIndex, depth, propIndex, depth - 1, containerElementTypeMember( prevKind ) );
             StringBuilder<constant::buffer::kMax128> wrapperType;
