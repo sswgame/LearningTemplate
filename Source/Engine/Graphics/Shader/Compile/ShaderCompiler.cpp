@@ -235,9 +235,9 @@ namespace sw
                 string& text = slot._description;
                 text.append( "source=" ).append( desc._source.str() ).append( "\nentry=" ).append( desc._entryPoint );
                 text.append( "\nstage=" ).append( to_string( static_cast<uint32>( desc._stage ) ) ).append( "\nformat=" ).append( to_string( static_cast<uint32>( desc._targetFormat ) ) );
-                for ( const auto& def : desc._listDefine )
+                for ( const string& define : ShaderCooker::makeCanonicalDefines( desc._listDefine ) )
                 {
-                    text.append( "\ndefine=" ).append( def._name ).append( "=" ).append( def._value );
+                    text.append( "\ndefine=" ).append( define );
                 }
                 text.append( "\nsourceHash=" ).append( to_string( sourceBytes.empty() ? uint64( 0 ) : ContentHash::computeBytes( sourceBytes ) ) );
                 // 주 소스 바이트만 키에 넣으면 **include 된 .hlsli 는 키에 없다**. common.hlsli 의 상수버퍼 바인딩을 고쳐도

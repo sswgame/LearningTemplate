@@ -163,9 +163,9 @@ namespace sw
         StringBuilder<constant::buffer::kMax256> sb;
         sb.append( desc._source.str() ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
         sb.append( desc._bDebugCodegen != SW_FALSE ? "_dbg" : "_opt" );
-        for ( const auto& def : desc._listDefine )
+        for ( const string& define : ShaderCooker::makeCanonicalDefines( desc._listDefine ) )
         {
-            sb.append( '_' ).append( def._name ).append( '=' ).append( def._value );
+            sb.append( '_' ).append( define );
         }
         return string( sb.c_str(), sb.size() );
     }

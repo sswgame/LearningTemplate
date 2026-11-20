@@ -5,6 +5,7 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderBytecodeProvider.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 
 using namespace sw;
 
@@ -173,4 +174,33 @@ SW_TEST_CASE( ShaderCacheTest, BrokenEditKeepsLastGoodVersion )
     const ShaderCompileResult fixed = cache.getOrCompile( first );
     SW_REQUIRE_TRUE( fixed._bSuccess );
     SW_EXPECT_TRUE( fixed._bytecode == vector<uint8>{ 2 } );
+}
+
+/**
+ * @brief [ShaderCacheTest] define 차례만 다른 같은 조합은 같은 캐시 항목이다 — 둘째 요청이 메모리 캐시에 맞고 정본 목록 · 퍼뮤테이션 해시가 같다
+ * @details 예전에는 메모리 캐시 키와 셰이더 DDC 키가 define 을 받은 차례로 적어, 같은 조합이 차례만 달라 헛 미스가 나고 DDC 에 두 벌이 쌓였다(쿠킹 파일 이름의 해시만 정렬했다).
+ */
+SW_TEST_CASE( ShaderCacheTest, DefineOrderDoesNotSplitEntries )
+{
+    ShaderCache cache;
+    SW_REQUIRE_TRUE( cache.initializeWithProvider( make_unique<CookedRuleFakeProvider>() ) );
+
+    ShaderCompileDesc forward = makeDesc( "PSMain" );
+    forward._listDefine.push_back( ShaderMacroDefine::parse( "MATERIAL_WET" ) );
+    forward._listDefine.push_back( ShaderMacroDefine::parse( "SW_FORWARD=1" ) );
+    ShaderCompileDesc reversed = makeDesc( "PSMain" );
+    reversed._listDefine.push_back( ShaderMacroDefine::parse( "SW_FORWARD=1" ) );
+    reversed._listDefine.push_back( ShaderMacroDefine::parse( "MATERIAL_WET=1" ) );
+
+    const vector<string> canonical = ShaderCooker::makeCanonicalDefines( forward._listDefine );
+    SW_REQUIRE_EQUAL( size_t( 2 ), canonical.size() );
+    SW_EXPECT_EQUAL( string( "MATERIAL_WET=1" ), canonical[0] );
+    SW_EXPECT_EQUAL( string( "SW_FORWARD=1" ), canonical[1] );
+    SW_EXPECT_TRUE( canonical == ShaderCooker::makeCanonicalDefines( reversed._listDefine ) );
+    SW_EXPECT_EQUAL( ShaderCooker::computePermutationHash( forward._listDefine ), ShaderCooker::computePermutationHash( reversed._listDefine ) );
+
+    SW_REQUIRE_TRUE( cache.getOrCompile( forward )._bSuccess );
+    SW_REQUIRE_TRUE( cache.getOrCompile( reversed )._bSuccess );
+    SW_EXPECT_EQUAL( uint64( 1 ), cache.getProviderLoadCount() );
+    SW_EXPECT_EQUAL( uint64( 1 ), cache.getMemoryHitCount() );
 }
