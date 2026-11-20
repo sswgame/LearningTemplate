@@ -647,7 +647,7 @@ namespace sw
     inline typename vector<T, Allocator>::reference vector<T, Allocator>::at( size_type pos )
     {
         SW_SCOPED_RACE_WRITE();
-        SW_ASSERT( pos < _size );
+        SW_CHECK_INDEX( pos, _size );
         return _pData[pos];
     }
 
@@ -655,7 +655,7 @@ namespace sw
     inline typename vector<T, Allocator>::const_reference vector<T, Allocator>::at( size_type pos ) const
     {
         SW_SCOPED_RACE_READ();
-        SW_ASSERT( pos < _size );
+        SW_CHECK_INDEX( pos, _size );
         return _pData[pos];
     }
 
@@ -663,7 +663,7 @@ namespace sw
     inline typename vector<T, Allocator>::reference vector<T, Allocator>::operator[]( size_type pos )
     {
         SW_SCOPED_RACE_WRITE();
-        SW_ASSERT( pos < _size );
+        SW_CHECK_INDEX( pos, _size );
         return _pData[pos];
     }
 
@@ -671,7 +671,7 @@ namespace sw
     inline typename vector<T, Allocator>::const_reference vector<T, Allocator>::operator[]( size_type pos ) const
     {
         SW_SCOPED_RACE_READ();
-        SW_ASSERT( pos < _size );
+        SW_CHECK_INDEX( pos, _size );
         return _pData[pos];
     }
 
@@ -679,7 +679,7 @@ namespace sw
     inline typename vector<T, Allocator>::reference vector<T, Allocator>::front()
     {
         SW_SCOPED_RACE_WRITE();
-        SW_ASSERT( _size > 0 );
+        SW_CHECK_INDEX( 0, _size );
         return _pData[0];
     }
 
@@ -687,7 +687,7 @@ namespace sw
     inline typename vector<T, Allocator>::const_reference vector<T, Allocator>::front() const
     {
         SW_SCOPED_RACE_READ();
-        SW_ASSERT( _size > 0 );
+        SW_CHECK_INDEX( 0, _size );
         return _pData[0];
     }
 
@@ -695,7 +695,7 @@ namespace sw
     inline typename vector<T, Allocator>::reference vector<T, Allocator>::back()
     {
         SW_SCOPED_RACE_WRITE();
-        SW_ASSERT( _size > 0 );
+        SW_CHECK_INDEX( 0, _size );
         return _pData[_size - 1];
     }
 
@@ -703,7 +703,7 @@ namespace sw
     inline typename vector<T, Allocator>::const_reference vector<T, Allocator>::back() const
     {
         SW_SCOPED_RACE_READ();
-        SW_ASSERT( _size > 0 );
+        SW_CHECK_INDEX( 0, _size );
         return _pData[_size - 1];
     }
 
@@ -907,8 +907,8 @@ namespace sw
     {
         SW_SCOPED_RACE_WRITE();
         const size_t offset = static_cast<size_t>( pos - _pData );
-        SW_ASSERT( offset <= _size );
-        // `SW_ASSERT` 는 Release 에서 통째로 사라진다. `erase` 가 같은 이유로 실제 가드를 따로 두고 있다.
+        SW_CHECK_INDEX_OR_END( offset, _size );
+        // `SW_CHECK_INDEX*` 는 배포(Shipping)에서 통째로 사라진다. `erase` 가 같은 이유로 실제 가드를 따로 두고 있다.
         if ( offset > _size )
             return _pData + _size;
 
@@ -943,8 +943,8 @@ namespace sw
     {
         SW_SCOPED_RACE_WRITE();
         const size_t offset = static_cast<size_t>( pos - _pData );
-        SW_ASSERT( offset <= _size );
-        // `erase` 와 같은 이유다. Release 에서는 위 단언이 없으므로 아래 `_size - offset` 이 언더플로한다.
+        SW_CHECK_INDEX_OR_END( offset, _size );
+        // `erase` 와 같은 이유다. 배포에서는 위 검사가 없으므로 아래 `_size - offset` 이 언더플로한다.
         if ( offset > _size )
             return _pData + _size;
 
@@ -1001,7 +1001,7 @@ namespace sw
     {
         using Category      = typename std::iterator_traits<InputIt>::iterator_category;
         const size_t offset = static_cast<size_t>( pos - _pData );
-        SW_ASSERT( offset <= _size );
+        SW_CHECK_INDEX_OR_END( offset, _size );
         if ( offset > _size )
             return _pData + _size;
 
@@ -1089,8 +1089,8 @@ namespace sw
     {
         SW_SCOPED_RACE_WRITE();
         size_t offset = static_cast<size_t>( pos - _pData );
-        SW_ASSERT( offset < _size );
-        // `SW_ASSERT` 는 Release 에서 통째로 사라진다. 그 뒤의 `_size - 1` 은 빈 벡터에서 언더플로하므로,
+        SW_CHECK_INDEX( offset, _size );
+        // `SW_CHECK_INDEX*` 는 배포(Shipping)에서 통째로 사라진다. 그 뒤의 `_size - 1` 은 빈 벡터에서 언더플로하므로,
         // 배포본에서만 범위 밖을 훑게 된다.
         if ( offset >= _size )
             return _pData + _size;
@@ -1109,7 +1109,9 @@ namespace sw
         SW_SCOPED_RACE_WRITE();
         size_t offset = static_cast<size_t>( first - _pData );
         size_t count  = static_cast<size_t>( last - first );
-        SW_ASSERT( offset + count <= _size );
+        SW_CHECK_INDEX_OR_END( offset, _size );
+        if ( offset <= _size )
+            SW_CHECK_INDEX_OR_END( count, _size - offset );
         // 뺄셈으로 비교한다. `offset + count` 는 `size_t` 범위에서 오버플로할 수 있다. `last < first` 인 반복자 쌍이면
         // `last - first` 가 음수라 `count` 가 거대한 값이 되고, 그 합이 작은 수로 돌아와 이 가드를 그냥 통과한다. 그러면
         // 아래 `_size - count` 도 언더플로해 루프가 범위 밖에 쓴다. `fixed_string::erase` 도 같은 가드를 둔다.
@@ -1184,8 +1186,8 @@ namespace sw
     inline void vector<T, Allocator>::pop_back()
     {
         SW_SCOPED_RACE_WRITE();
-        SW_ASSERT( _size > 0 );
-        // 단언은 Release 에서 사라진다. 그 뒤의 `_size - 1` 은 빈 벡터에서 언더플로해 `_pData[SIZE_MAX]` 의 소멸자를
+        SW_CHECK_INDEX( 0, _size );
+        // 검사는 배포(Shipping)에서 사라진다. 그 뒤의 `_size - 1` 은 빈 벡터에서 언더플로해 `_pData[SIZE_MAX]` 의 소멸자를
         // 부른다. `erase` 가 막아 둔 것과 같은 문제다.
         if ( _size == 0 )
             return;

@@ -433,7 +433,13 @@ SW_TEST_CASE( VectorTest, ReversedRangeAndHugeCountDoNotWrap )
             list.push_back( sw::string( 1, static_cast<utf8>( 'a' + index ) ) );
         }
 
-        list.erase( list.begin() + 3, list.begin() + 1 );
+        {
+            // 뒤집힌 쌍은 범위 검사(`SW_CHECK_INDEX_OR_END`)가 알린다 — 가로채기 안에서 그 뒤의 가드까지 지나가게 한다
+            test::ScopedAssertCapture assertCapture;
+            list.erase( list.begin() + 3, list.begin() + 1 );
+            if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+                SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+        }
 
         SW_EXPECT_EQUAL( size_t( 5 ), list.size() );
         SW_EXPECT_EQUAL( sw::string( "a" ), list[0] );

@@ -64,8 +64,8 @@ namespace sw
 
             bool      operator==( const iterator& other ) const { return _index == other._index; }
             bool      operator!=( const iterator& other ) const { return _index != other._index; }
-            reference operator*() const { return std::as_const( _pSet->_listDenseData ).data()[_index]._key; }
-            pointer   operator->() const { return &std::as_const( _pSet->_listDenseData ).data()[_index]._key; }
+            reference operator*() const { return std::as_const( _pSet->_listDenseData )[_index]._key; }
+            pointer   operator->() const { return &std::as_const( _pSet->_listDenseData )[_index]._key; }
         };
 
         using const_iterator = iterator; // 집합의 이터레이터는 언제나 const 다

@@ -18,6 +18,7 @@
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 
 namespace sw
@@ -56,6 +57,7 @@ namespace sw
         array( std::initializer_list<T> list )
         {
             size_t index{ 0 };
+            SW_CHECK_INDEX_OR_END( list.size(), N ); // 넘치는 항목은 조용히 버려졌다 — 개발 구성에서 알린다
             for ( const auto& item : list )
             {
                 if ( index < N )
@@ -89,31 +91,37 @@ namespace sw
 
         [[nodiscard]] constexpr reference operator[]( size_type pos ) noexcept
         {
+            SW_CHECK_INDEX( pos, N );
             return _elems[pos];
         }
 
         [[nodiscard]] constexpr const_reference operator[]( size_type pos ) const noexcept
         {
+            SW_CHECK_INDEX( pos, N );
             return _elems[pos];
         }
 
         [[nodiscard]] constexpr reference front() noexcept
         {
+            SW_CHECK_INDEX( 0, N );
             return _elems[0];
         }
 
         [[nodiscard]] constexpr const_reference front() const noexcept
         {
+            SW_CHECK_INDEX( 0, N );
             return _elems[0];
         }
 
         [[nodiscard]] constexpr reference back() noexcept
         {
+            SW_CHECK_INDEX( 0, N );
             return _elems[N > 0 ? N - 1 : 0];
         }
 
         [[nodiscard]] constexpr const_reference back() const noexcept
         {
+            SW_CHECK_INDEX( 0, N );
             return _elems[N > 0 ? N - 1 : 0];
         }
 

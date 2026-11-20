@@ -79,6 +79,10 @@ namespace sw
         void writePodAt( size_t offset, const T& value )
         {
             static_assert( std::is_trivially_copyable_v<T>, "writePodAt copies bytes - T must be trivially copyable" );
+            // 자리는 이 버퍼가 앞서 쓴 길이 · 오프셋 표 칸이다(외부 입력이 아니다) — 개발 구성에서 알리고, 배포는 아래 가드로 아무것도 하지 않는다
+            SW_CHECK_INDEX_OR_END( offset, _bytes.size() );
+            if ( offset <= _bytes.size() )
+                SW_CHECK_INDEX_OR_END( sizeof( T ), _bytes.size() - offset );
             if ( offset <= _bytes.size() && sizeof( T ) <= _bytes.size() - offset )
                 Memory::copy( _bytes.data() + offset, &value, sizeof( T ) );
         }

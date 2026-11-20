@@ -84,8 +84,8 @@ namespace sw
 
             bool      operator==( const iterator& other ) const { return _index == other._index; }
             bool      operator!=( const iterator& other ) const { return _index != other._index; }
-            reference operator*() const { return *reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ) ); }
-            pointer   operator->() const { return reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ) ); }
+            reference operator*() const { return *reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair ) ); }
+            pointer   operator->() const { return reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair ) ); }
         };
 
         /** @brief 밀집 배열을 순회하는 상수 이터레이터입니다. */
@@ -117,8 +117,8 @@ namespace sw
 
             bool      operator==( const const_iterator& other ) const { return _index == other._index; }
             bool      operator!=( const const_iterator& other ) const { return _index != other._index; }
-            reference operator*() const { return *reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ); }
-            pointer   operator->() const { return reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ); }
+            reference operator*() const { return *reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair ); }
+            pointer   operator->() const { return reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData )[_index]._keyValuePair ); }
         };
 
         // ------------------------------------------------------------------------------

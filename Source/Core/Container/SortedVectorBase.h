@@ -392,18 +392,22 @@ namespace sw::internal
         iterator erase( iterator pos )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX( pos - _data.begin(), _data.size() );
             return _data.erase( pos );
         }
 
         iterator erase( const_iterator pos )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX( pos - _data.cbegin(), _data.size() );
             return _data.erase( pos );
         }
 
         iterator erase( const_iterator first, const_iterator last )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX_OR_END( last - _data.cbegin(), _data.size() );
+            SW_CHECK_INDEX_OR_END( first - _data.cbegin(), last - _data.cbegin() );
             return _data.erase( first, last );
         }
 

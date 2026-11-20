@@ -385,6 +385,52 @@ namespace sw::internal
         } while ( false )
 #endif
 
+// ------------------------------------------------------------------------------
+// 10-1) 컨테이너 범위 검사(SW_CHECK_INDEX · SW_CHECK_INDEX_OR_END). 자체 컨테이너의 원소 접근 입구(`operator[]` · `front` · `back` · `pop_*` ·
+//       `erase( pos )` · `insert( pos )` · `subspan` …)가 쓴다. 언리얼 `TArray::RangeCheck`(메시지에 인덱스와 크기)와 MSVC `_ITERATOR_DEBUG_LEVEL` 의
+//       자리다. `SW_ASSERT` 와 같은 길(검사 구성에서 stderr · 가로채기 · 대화상자 · 멈춤, 배포에서 식째 사라짐)에 인덱스와 크기를 더해 남긴다 —
+//       로그를 남기지 않는 것도 `SW_ASSERT` 와 같다(로그보다 아래 티어이고, 단언 가로채기 테스트가 기대 로그를 따로 적지 않게).
+//       C++17 `constexpr` · `noexcept` 함수 안에서 쓸 수 있다: 실패 분기만 상수 식이 아닌 호출이라, 상수 평가에서 범위를 넘으면 컴파일 오류가 된다.
+//       인자는 정수(부호 있는 것도 됨 — 음수는 `size_t` 로 바뀌어 아주 큰 수가 되어 걸린다)와 열거형이며 한 번씩만 평가한다.
+// ------------------------------------------------------------------------------
+#if defined( SW_DO_CHECKS )
+namespace sw::internal
+{
+    /**
+     * @brief 범위 검사 실패 하나를 stderr 에 남기고(식 · 인덱스 · 크기 · 위치) 멈춰야 하면 true 를 반환합니다.
+     * @details 가로채기(`test::ScopedAssertCapture`)가 걸려 있으면 세기만 하고 false, 대화상자가 있으면 묻는다(`shouldBreakOnAssert`).
+     *          실패 쪽만 함수로 빼 호출하는 쪽(핫 루프)에는 비교 한 번과 드문 분기만 남긴다.
+     */
+    [[nodiscard]] SW_API bool reportIndexOutOfRange( const utf8* pExpression, size_t index, size_t size, const utf8* pFile, int32 line ) noexcept;
+} // namespace sw::internal
+
+    /** @brief `SW_CHECK_INDEX` · `SW_CHECK_INDEX_OR_END` 의 몸통입니다. @p compare 는 `<` 또는 `<=` 입니다. */
+    #define SW_CHECK_INDEX_INTERNAL( index, compare, size )                                                                         \
+        do                                                                                                                          \
+        {                                                                                                                           \
+            const size_t swCheckedIndex = static_cast<size_t>( index );                                                             \
+            const size_t swCheckedSize  = static_cast<size_t>( size );                                                              \
+            if ( !( swCheckedIndex compare swCheckedSize ) )                                                                        \
+            {                                                                                                                       \
+                if ( ::sw::internal::reportIndexOutOfRange( #index " " #compare " " #size, swCheckedIndex, swCheckedSize, __FILE__, \
+                                                            static_cast<int32>( __LINE__ ) ) )                                      \
+                    SW_DEBUG_BREAK();                                                                                               \
+            }                                                                                                                       \
+        } while ( false )
+#else
+    /** @brief 배포(Shipping)에서는 범위 검사를 없앱니다(식도 평가하지 않는다 — `SW_ASSERT` 와 같다). */
+    #define SW_CHECK_INDEX_INTERNAL( index, compare, size )                                   \
+        do                                                                                    \
+        {                                                                                     \
+            (void)sizeof( static_cast<size_t>( index ) compare static_cast<size_t>( size ) ); \
+        } while ( false )
+#endif
+
+/** @brief 원소 하나를 가리키는 @p index 가 `[0, size)` 안이어야 합니다(`operator[]` · `front` · `back` · `pop_*` · `erase( pos )`). */
+#define SW_CHECK_INDEX( index, size ) SW_CHECK_INDEX_INTERNAL( index, <, size )
+/** @brief 끝 자리까지 허용하는 위치 · 개수 @p index 가 `[0, size]` 안이어야 합니다(`insert( pos )` · `first( n )` · `subspan` 의 시작). */
+#define SW_CHECK_INDEX_OR_END( index, size ) SW_CHECK_INDEX_INTERNAL( index, <=, size )
+
 /** @brief 코드 블록을 명시적으로 구분할 때 사용합니다 (세미콜론 없이: BLOCK( "..." )). */
 #define BLOCK( message )
 

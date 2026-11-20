@@ -385,6 +385,7 @@ namespace sw::internal
         template <typename K>
         SW_INLINE uint32 findInChain( const K& key, uint32 tag, size_t bucketIndex ) const
         {
+            // 무검사 접근: 버킷 번호는 표 크기로 접은 값이고 체인 번호는 이 표가 쓴 값이다 — 조회 핫 루프에 범위 검사를 두지 않는다
             const uint32* pBucketData  = std::as_const( _listBucket ).data();
             const Node*   pDenseData   = std::as_const( _listDenseData ).data();
             uint32        currentIndex = pBucketData[bucketIndex];
