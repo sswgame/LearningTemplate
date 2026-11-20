@@ -24,8 +24,9 @@ endforeach()
 # 단위 테스트 — 헤드리스(창 · GPU 없음)라 nogpu. 순서는 매번 섞이고 씨앗을 찍는다. JSON 보고(판 번호 `TestRunner::kReportSchemaVersion` · 케이스 이름 · 파일 · 줄 · 결과 · 시간 · 실패 위치)는
 # 항목마다 빌드 폴더의 고정 경로 `Testing/Reports/<항목>.json` 에 통과한 실행도 남는다 — 실패 추적과 케이스 시간 추세(샤드 균형을 정할 자료)를 남긴다.
 # 몫(SW_UNIT_TEST_SHARDS)이 1 보다 크면 케이스를 이름 해시로 나눠 몫마다 프로세스 하나(`UnitTests.<i>`)가 돈다 — `ctest -j` 가 나란히 돌린다.
-# 몫마다 엔진 기동(약 1 초)이 붙으므로 케이스 시간이 기동보다 커질 때 올린다. 지금(케이스 수십 개 · 합계 수십 ms)은 1 이다.
-set(SW_UNIT_TEST_SHARDS 1 CACHE STRING "단위 테스트를 나눠 돌릴 프로세스 수(App --test --test-shard=i/n)")
+# 몫마다 엔진 기동(약 1 초)이 붙는다. 케이스가 5 천 개를 넘어 한 프로세스 합계가 ASan 에서 약 4 분(2026-11-21, 247 초)이 되자, 묶음 검증이 CPU 일을 겹쳐 돌 때
+# 600 초 시한을 넘겼다 — 시한을 늘리지 않고 몫으로 나눠 `ctest -j` 가 나란히 돌게 한다(GoogleTest 샤딩). 값은 프리셋(base-vcpkg)이 준다 — 캐시 기본값만 바꾸면 이미 있는 빌드 폴더는 옛 1 을 쥔다.
+set(SW_UNIT_TEST_SHARDS 4 CACHE STRING "단위 테스트를 나눠 돌릴 프로세스 수(App --test --test-shard=i/n)")
 if(SW_UNIT_TEST_SHARDS LESS_EQUAL 1)
 	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/Testing/Reports")
 	add_test(NAME UnitTests

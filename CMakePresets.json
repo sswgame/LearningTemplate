@@ -9,7 +9,8 @@
       "cacheVariables": {
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "SW_UNIT_TEST_SHARDS": "4"
       },
       "environment": {
         "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"

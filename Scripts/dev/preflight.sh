@@ -191,7 +191,8 @@ job_tidy() {
 job_sanitizer_cpu() {
   run_ctest Ninja-Release-ASan nogpu -L nogpu || return 1
   # App --test 의 케이스 수(보고에 적는다) — 보고 JSON 에서 읽는다(엔진 로그 파일에는 요약 줄이 없다). 보고 줄은 판정을 바꾸지 않는다.
-  [ $DRY -eq 1 ] || py -3 -c "import json; d=json.load(open('build/Ninja-Release-ASan/Testing/Reports/UnitTests.json', encoding='utf-8')); print(f\"App --test: {d['runCount']} case run(s), {d['failedCount']} failed, {d.get('skippedCount', 0)} skipped\")" || true
+  # 단위 테스트는 몫(`UnitTests.<i>`, SW_UNIT_TEST_SHARDS)으로 나눠 돌므로 몫 보고를 모두 더한다(게임 항목 `UnitTests.<게임>` 은 뺀다).
+  [ $DRY -eq 1 ] || py -3 -c "import glob, json; ds=[json.load(open(p, encoding='utf-8')) for p in glob.glob('build/Ninja-Release-ASan/Testing/Reports/UnitTests*.json') if p.split('UnitTests')[-1] in ('.json',) or p.split('UnitTests.')[-1][:-5].isdigit()]; print(f\"App --test: {sum(d['runCount'] for d in ds)} case run(s), {sum(d['failedCount'] for d in ds)} failed, {sum(d.get('skippedCount', 0) for d in ds)} skipped ({len(ds)} report(s))\")" || true
   return 0
 }
 
