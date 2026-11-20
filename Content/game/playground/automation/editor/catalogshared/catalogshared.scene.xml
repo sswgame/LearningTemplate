@@ -8,7 +8,7 @@
 		<entity id="1" name="Left">
 			<GameObject _schemaVersion="0" _name="Left" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-1.5,0.5,1"
+					<MeshComponent _localID="163493842152903304" _localPosition="-1.5,0.5,1"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
@@ -16,7 +16,7 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_orange.material"
 					               _boundsRadius="0.9" />
-					<InteractableComponent _componentName="InteractableComponent"
+					<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
 					                       _bActive="true"
 					                       _interactionID="Use"
 					                       _catalogPath="game/playground/automation/editor/catalogshared/table.interactions.xml"
@@ -28,7 +28,7 @@
 		<entity id="2" name="Right">
 			<GameObject _schemaVersion="0" _name="Right" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="1.5,0.5,1"
+					<MeshComponent _localID="163493842152903304" _localPosition="1.5,0.5,1"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
@@ -36,7 +36,7 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_orange.material"
 					               _boundsRadius="0.9" />
-					<InteractableComponent _componentName="InteractableComponent"
+					<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
 					                       _bActive="true"
 					                       _interactionID="Use"
 					                       _catalogPath="game/playground/automation/editor/catalogshared/table.interactions.xml"

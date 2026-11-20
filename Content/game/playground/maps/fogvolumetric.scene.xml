@@ -6,7 +6,7 @@
 		<entity id="6" name="Fog">
 			<GameObject _schemaVersion="0" _name="Fog" _bActive="true">
 				<_listComponent>
-					<FogComponent _color="0.75,0.82,0.9"
+					<FogComponent _localID="10756143758068416081" _color="0.75,0.82,0.9"
 					              _density="0.03"
 					              _heightFalloff="0.05"
 					              _baseHeight="0"
@@ -25,7 +25,7 @@
 		<entity id="7" name="FogLamp">
 			<GameObject _schemaVersion="0" _name="FogLamp" _bActive="true">
 				<_listComponent>
-					<PointLightComponent _localPosition="0,3,10"
+					<PointLightComponent _localID="6048688584444471341" _localPosition="0,3,10"
 					                     _localRotation="0,0,0"
 					                     _localScale="1,1,1"
 					                     _attachOwner="None"

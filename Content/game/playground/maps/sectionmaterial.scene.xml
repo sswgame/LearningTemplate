@@ -9,30 +9,30 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,1.1,-4.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="60" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.1,-4.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="60" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0.310517,-2.045455,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _color="1,0.95,0.9" _intensity="1.8" _ambient="0.45" _shadowExtent="8" _shadowDistance="16" _bCastShadow="false" />
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0.310517,-2.045455,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _color="1,0.95,0.9" _intensity="1.8" _ambient="0.45" _shadowExtent="8" _shadowDistance="16" _bCastShadow="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="Parts">
 			<GameObject _schemaVersion="0" _name="Parts" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="-1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
-					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="SectionShowcase" _seed="0" _bMergeParts="false" />
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="-1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="SectionShowcase" _seed="0" _bMergeParts="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="Merged">
 			<GameObject _schemaVersion="0" _name="Merged" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
-					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="SectionShowcase" _seed="0" _bMergeParts="true" />
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="SectionShowcase" _seed="0" _bMergeParts="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -4,14 +4,14 @@
 <Prefab formatVersion="1" name="ZoneGas">
 	<GameObject _schemaVersion="0" _name="ZoneGas" _bActive="true">
 		<_listComponent>
-			<SceneComponent _componentName="SceneComponent"
+			<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 			                _bActive="true"
 			                _localPosition="0,0,0"
 			                _localRotation="0,0,0"
 			                _localScale="1,1,1"
 			                _attachOwner="None"
 			                _attachComponent="None" />
-			<ZoneVolumeComponent _componentName="ZoneVolumeComponent"
+			<ZoneVolumeComponent _localID="4170813354090212695" _componentName="ZoneVolumeComponent"
 			                     _bActive="true"
 			                     _zoneProfile="game/playground/zones/poisonspread.zone.xml"
 			                     _shape="Cylinder"

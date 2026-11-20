@@ -15,29 +15,29 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="2,6,-12" _localRotation="0.42,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localID="17709685451340727998" _localPosition="2,6,-12" _localRotation="0.42,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="12" _shadowDistance="30" _bCastShadow="true" />
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="12" _shadowDistance="30" _bCastShadow="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="Weather">
 			<GameObject _schemaVersion="0" _name="Weather" _bActive="true">
 				<_listComponent>
-					<SessionStateComponent />
-					<WeatherDirectorComponent _weatherDataPath="game/playground/data/surfacedemo.weather.xml" _startWeather="clear" _seed="7" />
+					<SessionStateComponent _localID="6673597520240684436" />
+					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="game/playground/data/surfacedemo.weather.xml" _startWeather="clear" _seed="7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="StonePad">
 			<GameObject _schemaVersion="0" _name="StonePad" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="-4,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-4,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
 								<_listPoint />
@@ -45,14 +45,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="SnowPad">
 			<GameObject _schemaVersion="0" _name="SnowPad" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="0,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Snow" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Snow" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Snow">
 								<_listPoint />
@@ -60,14 +60,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,-0.04,0" _localRotation="0,0,0" _localScale="4,0.42,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.04,0" _localRotation="0,0,0" _localScale="4,0.42,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="6" name="PoolShallow">
 			<GameObject _schemaVersion="0" _name="PoolShallow" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="3,-0.55,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="3,-0.55,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="1,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
 								<_listPoint />
@@ -75,14 +75,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="7" name="PoolDeep">
 			<GameObject _schemaVersion="0" _name="PoolDeep" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="5,-1.75,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="5,-1.75,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="1,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
 								<_listPoint />
@@ -90,14 +90,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="8" name="SandPad">
 			<GameObject _schemaVersion="0" _name="SandPad" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="8,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Sand" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="8,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Sand" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Sand">
 								<_listPoint />
@@ -105,14 +105,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,-0.08,0" _localRotation="0,0,0" _localScale="4,0.34,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.08,0" _localRotation="0,0,0" _localScale="4,0.34,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="9" name="Roof">
 			<GameObject _schemaVersion="0" _name="Roof" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="-5,3,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Wood" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-5,3,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Wood" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="1,0.1,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Wood">
 								<_listPoint />
@@ -120,22 +120,22 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.2,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.2,6" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="10" name="Pool">
 			<GameObject _schemaVersion="0" _name="Pool" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _localPosition="4,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _materialPath="engine/materials/water.material" _size="4,6" _cellSize="0.5" />
+					<WaterBodyComponent _localID="5729965392566960456" _localPosition="4,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _materialPath="engine/materials/water.material" _size="4,6" _cellSize="0.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="11" name="Quicksand">
 			<GameObject _schemaVersion="0" _name="Quicksand" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="8,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<ZoneVolumeComponent _zoneProfile="game/playground/zones/sand.zone.xml" _shape="Box" _halfExtents="1.5,1,2.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0">
+					<SceneComponent _localID="12574257654564749349" _localPosition="8,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<ZoneVolumeComponent _localID="4170813354090212695" _zoneProfile="game/playground/zones/sand.zone.xml" _shape="Box" _halfExtents="1.5,1,2.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0">
 						<_listModuleOverride>
 							<ZoneModuleDef _name="rim" _kind="SurfaceStamp">
 								<_listParam>
@@ -155,39 +155,39 @@
 		<entity id="12" name="Walker">
 			<GameObject _schemaVersion="0" _name="Walker" _bActive="true">
 				<_listComponent>
-					<CharacterControllerComponent _localPosition="-3,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
-					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
-					<SkeletalAnimatorComponent _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Walking_A" _bPlayOnBegin="true" />
-					<CharacterAppearanceComponent _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
-					<AnimationNotifyComponent _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
-					<GroundSurfaceComponent _probeLength="0.6" />
-					<SurfaceExposureComponent _wetChannel="Wet" _precipitationValue="wetness" _rainWetPerSecond="0.2" _shelterDistance="20" _immersionWetPerSecond="0.5" _bodyHeight="1.8" />
-					<AbilityComponent _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
-					<ZoneContactComponent _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
-					<VisualSinkReactionComponent _attribute="SinkDepth" _scale="1" />
-					<JumpEscapeReactionComponent _effect="GE_Sink" _stacksPerJump="3" _blockedTag="State.Engulfed" />
+					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="-3,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
+					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Walking_A" _bPlayOnBegin="true" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
+					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
+					<SurfaceExposureComponent _localID="11376761862312545975" _wetChannel="Wet" _precipitationValue="wetness" _rainWetPerSecond="0.2" _shelterDistance="20" _immersionWetPerSecond="0.5" _bodyHeight="1.8" />
+					<AbilityComponent _localID="2238906797121419031" _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
+					<ZoneContactComponent _localID="15473475357700291463" _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
+					<VisualSinkReactionComponent _localID="12540341874576279047" _attribute="SinkDepth" _scale="1" />
+					<JumpEscapeReactionComponent _localID="5849550536987586871" _effect="GE_Sink" _stacksPerJump="3" _blockedTag="State.Engulfed" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="13" name="SnowGround">
 			<GameObject _schemaVersion="0" _name="SnowGround" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_snow.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_snow.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="14" name="SandGround">
 			<GameObject _schemaVersion="0" _name="SandGround" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="8,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_sand.material" _boundsRadius="4" />
+					<MeshComponent _localID="163493842152903304" _localPosition="8,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_sand.material" _boundsRadius="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="15" name="Whirl">
 			<GameObject _schemaVersion="0" _name="Whirl" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="8.6,0,1.6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<SurfaceStampComponent _mode="Hold" _trailStep="0.1" _trailBreak="2">
+					<SceneComponent _localID="12574257654564749349" _localPosition="8.6,0,1.6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SurfaceStampComponent _localID="15240485055355734893" _mode="Hold" _trailStep="0.1" _trailBreak="2">
 						<_stamp _shape="Funnel" _size="1.6,0" _depth="0.14" _rimHeight="0.03" _rimWidth="0.2" _fillSpeed="0.05" _spinSpeed="1.5" _armCount="3" />
 					</SurfaceStampComponent>
 				</_listComponent>
@@ -196,8 +196,8 @@
 		<entity id="16" name="Dragger">
 			<GameObject _schemaVersion="0" _name="Dragger" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="6.6,0,-2.2" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<SurfaceStampComponent _mode="Trail" _trailStep="0.1" _trailBreak="1">
+					<SceneComponent _localID="12574257654564749349" _localPosition="6.6,0,-2.2" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SurfaceStampComponent _localID="15240485055355734893" _mode="Trail" _trailStep="0.1" _trailBreak="1">
 						<_stamp _shape="Trail" _size="0.25,0.25" _depth="0.05" _rimHeight="0.015" _rimWidth="0.06" _fillSpeed="0.004" />
 					</SurfaceStampComponent>
 				</_listComponent>

@@ -8,14 +8,14 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,0,-4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="60" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,0,-4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="60" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Probe">
 			<GameObject _schemaVersion="0" _name="Probe" _bActive="true">
 				<_listComponent>
-					<HotReloadTestComponent _keptValue="42" />
+					<HotReloadTestComponent _localID="2911901900305039031" _keptValue="42" />
 				</_listComponent>
 			</GameObject>
 		</entity>

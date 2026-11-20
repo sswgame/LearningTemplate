@@ -7,7 +7,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="26,98.29825,-54.829178"
 					                 _localRotation="0.9599311,0,0"
@@ -22,7 +22,7 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="true" />
-					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
 					                         _catalogPath="game/nilecity/data/nile.cameras.xml"
 					                         _initialPreset="city"
@@ -36,7 +36,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.310517,-2.145455,0"
@@ -59,7 +59,7 @@
 		<entity id="3" name="BuildCursor">
 			<GameObject _schemaVersion="0" _name="BuildCursor" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,-5,0"
 					               _localRotation="0,0,0"
@@ -72,7 +72,7 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
-					<NileCursorComponent _componentName="NileCursorComponent"
+					<NileCursorComponent _localID="14598015409775632575" _componentName="NileCursorComponent"
 					                     _bActive="true"
 					                     _gameMode="4"
 					                     _height="0.1"
@@ -83,7 +83,7 @@
 		<entity id="4" name="NileGameMode">
 			<GameObject _schemaVersion="0" _name="NileGameMode" _bActive="true">
 				<_listComponent>
-					<NileGameModeComponent _componentName="NileGameModeComponent"
+					<NileGameModeComponent _localID="3793514620491349462" _componentName="NileGameModeComponent"
 					                       _bActive="true"
 					                       _cityDataPath="game/nilecity/data/city.xml"
 					                       _buildingViewPath="game/nilecity/data/buildings.views.xml"
@@ -102,7 +102,7 @@
 		<entity id="5" name="Cc0.building_type_a">
 			<GameObject _schemaVersion="0" _name="Cc0.building_type_a" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-30,0,-30"
 					               _localRotation="0,0,0"
@@ -121,7 +121,7 @@
 		<entity id="6" name="Cc0.building_type_b">
 			<GameObject _schemaVersion="0" _name="Cc0.building_type_b" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-26,0,-30"
 					               _localRotation="0,0,0"
@@ -140,7 +140,7 @@
 		<entity id="7" name="Cc0.building_type_c">
 			<GameObject _schemaVersion="0" _name="Cc0.building_type_c" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-22,0,-30"
 					               _localRotation="0,0,0"
@@ -159,7 +159,7 @@
 		<entity id="8" name="Cc0.building_type_d">
 			<GameObject _schemaVersion="0" _name="Cc0.building_type_d" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-18,0,-30"
 					               _localRotation="0,0,0"
@@ -178,7 +178,7 @@
 		<entity id="9" name="Cc0.building_type_e">
 			<GameObject _schemaVersion="0" _name="Cc0.building_type_e" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-14,0,-30"
 					               _localRotation="0,0,0"
@@ -197,7 +197,7 @@
 		<entity id="10" name="Cc0.building_type_f">
 			<GameObject _schemaVersion="0" _name="Cc0.building_type_f" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-10,0,-30"
 					               _localRotation="0,0,0"
@@ -216,7 +216,7 @@
 		<entity id="11" name="Cc0.building_type_g">
 			<GameObject _schemaVersion="0" _name="Cc0.building_type_g" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-6,0,-30"
 					               _localRotation="0,0,0"
@@ -235,7 +235,7 @@
 		<entity id="12" name="Cc0.crops_dirt_row">
 			<GameObject _schemaVersion="0" _name="Cc0.crops_dirt_row" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-30,0,-36"
 					               _localRotation="0,0,0"
@@ -254,7 +254,7 @@
 		<entity id="13" name="Cc0.crops_wheat_stage_a">
 			<GameObject _schemaVersion="0" _name="Cc0.crops_wheat_stage_a" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-27,0,-36"
 					               _localRotation="0,0,0"
@@ -273,7 +273,7 @@
 		<entity id="14" name="Cc0.crops_wheat_stage_b">
 			<GameObject _schemaVersion="0" _name="Cc0.crops_wheat_stage_b" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-24,0,-36"
 					               _localRotation="0,0,0"
@@ -292,7 +292,7 @@
 		<entity id="15" name="Cc0.fence_low">
 			<GameObject _schemaVersion="0" _name="Cc0.fence_low" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-21,0,-36"
 					               _localRotation="0,0,0"
@@ -311,7 +311,7 @@
 		<entity id="16" name="Cc0.planter">
 			<GameObject _schemaVersion="0" _name="Cc0.planter" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-18,0,-36"
 					               _localRotation="0,0,0"
@@ -330,7 +330,7 @@
 		<entity id="17" name="Cc0.statue_block">
 			<GameObject _schemaVersion="0" _name="Cc0.statue_block" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-36"
 					               _localRotation="0,0,0"
@@ -349,7 +349,7 @@
 		<entity id="18" name="Cc0.statue_column">
 			<GameObject _schemaVersion="0" _name="Cc0.statue_column" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-12,0,-36"
 					               _localRotation="0,0,0"
@@ -368,7 +368,7 @@
 		<entity id="19" name="Cc0.statue_head">
 			<GameObject _schemaVersion="0" _name="Cc0.statue_head" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,-36"
 					               _localRotation="0,0,0"
@@ -387,7 +387,7 @@
 		<entity id="20" name="Cc0.statue_obelisk">
 			<GameObject _schemaVersion="0" _name="Cc0.statue_obelisk" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-6,0,-36"
 					               _localRotation="0,0,0"
@@ -406,7 +406,7 @@
 		<entity id="21" name="Cc0.tree_large">
 			<GameObject _schemaVersion="0" _name="Cc0.tree_large" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-36"
 					               _localRotation="0,0,0"
@@ -420,9 +420,9 @@
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="bark_normaltree" />
-					<MeshSectionComponent _componentName="MeshSectionComponent"
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
-					                      _attachComponent="MeshComponent#0"
+					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/nature/commontree_5/materials/leaves_normaltree.material"
 					                      _sectionName="leaves_normaltree" />
 				</_listComponent>

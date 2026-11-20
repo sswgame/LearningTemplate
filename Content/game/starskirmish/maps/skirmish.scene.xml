@@ -7,7 +7,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="14,129.90382,-60.999992"
 					                 _localRotation="1.0471976,0,0"
@@ -22,7 +22,7 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="true" />
-					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
 					                         _catalogPath="game/starskirmish/data/skirmish.cameras.xml"
 					                         _initialPreset="play"
@@ -36,7 +36,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.310517,-2.245455,0"
@@ -59,7 +59,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="32,-0.1,32"
 					               _localRotation="0,0,0"
@@ -78,7 +78,7 @@
 		<entity id="4" name="DragBox">
 			<GameObject _schemaVersion="0" _name="DragBox" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,-5,0"
 					               _localRotation="0,0,0"
@@ -91,14 +91,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
-					<SkirmishDragComponent _componentName="SkirmishDragComponent" _bActive="true" _gameMode="5" />
+					<SkirmishDragComponent _localID="18101054600040769725" _componentName="SkirmishDragComponent" _bActive="true" _gameMode="5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="SkirmishGameMode">
 			<GameObject _schemaVersion="0" _name="SkirmishGameMode" _bActive="true">
 				<_listComponent>
-					<SkirmishGameModeComponent _componentName="SkirmishGameModeComponent"
+					<SkirmishGameModeComponent _localID="8311947226649749812" _componentName="SkirmishGameModeComponent"
 					                           _bActive="true"
 					                           _unitDataPath="game/starskirmish/data/units.xml"
 					                           _unitModelPath="game/starskirmish/data/units.views.xml"
@@ -178,7 +178,7 @@
 		<entity id="6" name="Cc0.rock_a">
 			<GameObject _schemaVersion="0" _name="Cc0.rock_a" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-24,0,-40"
 					               _localRotation="0,0,0"
@@ -197,7 +197,7 @@
 		<entity id="7" name="Cc0.rock_b">
 			<GameObject _schemaVersion="0" _name="Cc0.rock_b" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-20,0,-40"
 					               _localRotation="0,0,0"
@@ -216,7 +216,7 @@
 		<entity id="8" name="Cc0.rocks_a">
 			<GameObject _schemaVersion="0" _name="Cc0.rocks_a" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-16,0,-40"
 					               _localRotation="0,0,0"
@@ -235,7 +235,7 @@
 		<entity id="9" name="Cc0.rocks_b">
 			<GameObject _schemaVersion="0" _name="Cc0.rocks_b" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-12,0,-40"
 					               _localRotation="0,0,0"
@@ -254,7 +254,7 @@
 		<entity id="10" name="Cc0.terrain_low">
 			<GameObject _schemaVersion="0" _name="Cc0.terrain_low" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-8,0,-40"
 					               _localRotation="0,0,0"
@@ -273,7 +273,7 @@
 		<entity id="11" name="Cc0.terrain_slope">
 			<GameObject _schemaVersion="0" _name="Cc0.terrain_slope" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-4,0,-40"
 					               _localRotation="0,0,0"
@@ -292,7 +292,7 @@
 		<entity id="12" name="Cc0.terrain_slope_inner_corner">
 			<GameObject _schemaVersion="0" _name="Cc0.terrain_slope_inner_corner" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,-40"
 					               _localRotation="0,0,0"
@@ -311,7 +311,7 @@
 		<entity id="13" name="Cc0.terrain_slope_outer_corner">
 			<GameObject _schemaVersion="0" _name="Cc0.terrain_slope_outer_corner" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="4,0,-40"
 					               _localRotation="0,0,0"
@@ -330,7 +330,7 @@
 		<entity id="14" name="Cc0.terrain_tall">
 			<GameObject _schemaVersion="0" _name="Cc0.terrain_tall" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="8,0,-40"
 					               _localRotation="0,0,0"
@@ -349,7 +349,7 @@
 		<entity id="15" name="Cc0.craft_cargo_a">
 			<GameObject _schemaVersion="0" _name="Cc0.craft_cargo_a" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-30,0,-48"
 					               _localRotation="0,0,0"
@@ -368,7 +368,7 @@
 		<entity id="16" name="Cc0.craft_racer">
 			<GameObject _schemaVersion="0" _name="Cc0.craft_racer" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-26,0,-48"
 					               _localRotation="0,0,0"
@@ -387,7 +387,7 @@
 		<entity id="17" name="Cc0.craft_speeder_a">
 			<GameObject _schemaVersion="0" _name="Cc0.craft_speeder_a" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-22,0,-48"
 					               _localRotation="0,0,0"
@@ -406,7 +406,7 @@
 		<entity id="18" name="Cc0.craft_speeder_b">
 			<GameObject _schemaVersion="0" _name="Cc0.craft_speeder_b" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-18,0,-48"
 					               _localRotation="0,0,0"
@@ -425,7 +425,7 @@
 		<entity id="19" name="Cc0.crater">
 			<GameObject _schemaVersion="0" _name="Cc0.crater" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-14,0,-48"
 					               _localRotation="0,0,0"
@@ -444,7 +444,7 @@
 		<entity id="20" name="Cc0.hangar_large_a">
 			<GameObject _schemaVersion="0" _name="Cc0.hangar_large_a" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-10,0,-48"
 					               _localRotation="0,0,0"
@@ -463,7 +463,7 @@
 		<entity id="21" name="Cc0.hangar_round_a">
 			<GameObject _schemaVersion="0" _name="Cc0.hangar_round_a" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-6,0,-48"
 					               _localRotation="0,0,0"
@@ -482,7 +482,7 @@
 		<entity id="22" name="Cc0.hangar_small_a">
 			<GameObject _schemaVersion="0" _name="Cc0.hangar_small_a" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-2,0,-48"
 					               _localRotation="0,0,0"
@@ -501,7 +501,7 @@
 		<entity id="23" name="Cc0.machine_generator">
 			<GameObject _schemaVersion="0" _name="Cc0.machine_generator" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="2,0,-48"
 					               _localRotation="0,0,0"
@@ -520,7 +520,7 @@
 		<entity id="24" name="Cc0.machine_wireless">
 			<GameObject _schemaVersion="0" _name="Cc0.machine_wireless" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="6,0,-48"
 					               _localRotation="0,0,0"
@@ -539,7 +539,7 @@
 		<entity id="25" name="Cc0.platform_large">
 			<GameObject _schemaVersion="0" _name="Cc0.platform_large" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="10,0,-48"
 					               _localRotation="0,0,0"
@@ -558,7 +558,7 @@
 		<entity id="26" name="Cc0.rock_crystals">
 			<GameObject _schemaVersion="0" _name="Cc0.rock_crystals" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="14,0,-48"
 					               _localRotation="0,0,0"
@@ -577,7 +577,7 @@
 		<entity id="27" name="Cc0.structure">
 			<GameObject _schemaVersion="0" _name="Cc0.structure" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="18,0,-48"
 					               _localRotation="0,0,0"
@@ -596,7 +596,7 @@
 		<entity id="28" name="Cc0.turret_double">
 			<GameObject _schemaVersion="0" _name="Cc0.turret_double" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="22,0,-48"
 					               _localRotation="0,0,0"
@@ -615,7 +615,7 @@
 		<entity id="29" name="Cc0.turret_single">
 			<GameObject _schemaVersion="0" _name="Cc0.turret_single" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="26,0,-48"
 					               _localRotation="0,0,0"

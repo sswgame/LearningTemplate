@@ -9,7 +9,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,1.5,-8"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.5,-8"
 					                 _localRotation="0,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -27,7 +27,7 @@
 		<entity id="2" name="PipCamera">
 			<GameObject _schemaVersion="0" _name="PipCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,1.5,12"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.5,12"
 					                 _localRotation="0,3.14159265,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -47,7 +47,7 @@
 		<entity id="3" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="0.628882,0.93002,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -64,7 +64,7 @@
 		<entity id="4" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,2"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,2"
 					               _localRotation="0,0,0"
 					               _localScale="16,1,16"
 					               _attachOwner="None"
@@ -78,7 +78,7 @@
 		<entity id="5" name="CpuPuffs">
 			<GameObject _schemaVersion="0" _name="CpuPuffs" _bActive="true">
 				<_listComponent>
-					<VFXComponent _localPosition="-1.5,1.5,4"
+					<VFXComponent _localID="7647927963071728401" _localPosition="-1.5,1.5,4"
 					              _localRotation="0,0,0"
 					              _localScale="1,1,1"
 					              _attachOwner="None"
@@ -92,7 +92,7 @@
 		<entity id="6" name="GpuPuffs">
 			<GameObject _schemaVersion="0" _name="GpuPuffs" _bActive="true">
 				<_listComponent>
-					<VFXComponent _localPosition="1.5,1.5,4"
+					<VFXComponent _localID="7647927963071728401" _localPosition="1.5,1.5,4"
 					              _localRotation="0,0,0"
 					              _localScale="1,1,1"
 					              _attachOwner="None"

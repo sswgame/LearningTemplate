@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="SqueakyFloor3D">
 	<GameObject _schemaVersion="0" _name="SqueakyFloor3D" _bActive="true">
 		<_listComponent>
-			<RigidBodyComponent _componentName="RigidBodyComponent"
+			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 			                    _bActive="true"
 			                    _localPosition="0,0,0"
 			                    _localRotation="0,0,0"
@@ -34,7 +34,7 @@
 					</PhysicsShapeDesc3D>
 				</_listShape>
 			</RigidBodyComponent>
-			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			<GimmickSensorComponent _localID="5906677949702648734" _componentName="GimmickSensorComponent"
 			                        _bActive="true"
 			                        _defaultWeight="1"
 			                        _bCountTriggers="false">
@@ -43,7 +43,7 @@
 				</_requiredTags>
 				<_listOccupant />
 			</GimmickSensorComponent>
-			<NoiseEmitterComponent _componentName="NoiseEmitterComponent"
+			<NoiseEmitterComponent _localID="3368014348673673199" _componentName="NoiseEmitterComponent"
 			                       _bActive="true"
 			                       _radius="8"
 			                       _interval="0"

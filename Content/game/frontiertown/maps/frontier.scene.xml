@@ -7,7 +7,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="16,32,-8"
 					                 _localRotation="0.9272952,0,0"
@@ -22,7 +22,7 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="true" />
-					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
 					                         _catalogPath="game/frontiertown/data/frontier.cameras.xml"
 					                         _initialPreset="frontier"
@@ -36,7 +36,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.356582,-2.138715,0"
@@ -56,8 +56,8 @@
 		<entity id="3" name="TownState">
 			<GameObject _schemaVersion="0" _name="TownState" _bActive="true">
 				<_listComponent>
-					<SessionStateComponent _componentName="SessionStateComponent" _bActive="true" />
-					<FrontierCityGameModeComponent _componentName="FrontierCityGameModeComponent"
+					<SessionStateComponent _localID="6673597520240684436" _componentName="SessionStateComponent" _bActive="true" />
+					<FrontierCityGameModeComponent _localID="3335784716462595506" _componentName="FrontierCityGameModeComponent"
 					                               _bActive="true"
 					                               _bAutoPlay="false"
 					                               _tilePrefab="game/frontiertown/prefabs/tile.prefab.xml"
@@ -68,7 +68,7 @@
 					                               _roadFromY="10"
 					                               _roadToX="15"
 					                               _roadToY="10" />
-					<FrontierSkirmishGameModeComponent _componentName="FrontierSkirmishGameModeComponent"
+					<FrontierSkirmishGameModeComponent _localID="2994829835520867295" _componentName="FrontierSkirmishGameModeComponent"
 					                                   _bActive="true"
 					                                   _bAutoPlay="false"
 					                                   _unitPrefab="game/frontiertown/prefabs/tile.prefab.xml"

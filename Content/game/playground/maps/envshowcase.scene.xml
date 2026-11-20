@@ -7,7 +7,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="85,18.5,-28"
 					                 _localRotation="0.16,-0.76,0"
@@ -28,7 +28,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.926635,-1.883255,0"
@@ -52,7 +52,7 @@
 		<entity id="3" name="Wind">
 			<GameObject _schemaVersion="0" _name="Wind" _bActive="true">
 				<_listComponent>
-					<WindComponent _componentName="WindComponent"
+					<WindComponent _localID="486898894148715097" _componentName="WindComponent"
 					               _bActive="true"
 					               _direction="34.37747"
 					               _strength="0.25"
@@ -65,7 +65,7 @@
 		<entity id="4" name="Terrain">
 			<GameObject _schemaVersion="0" _name="Terrain" _bActive="true">
 				<_listComponent>
-					<TerrainComponent _componentName="TerrainComponent"
+					<TerrainComponent _localID="1728601763249011038" _componentName="TerrainComponent"
 					                  _bActive="true"
 					                  _localPosition="-128,0,-128"
 					                  _localRotation="0,0,0"
@@ -96,7 +96,7 @@
 		<entity id="5" name="Lake">
 			<GameObject _schemaVersion="0" _name="Lake" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _componentName="WaterBodyComponent"
+					<WaterBodyComponent _localID="5729965392566960456" _componentName="WaterBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="38,8,22"
 					                    _localRotation="0,0,0"
@@ -131,7 +131,7 @@
 		<entity id="6" name="River">
 			<GameObject _schemaVersion="0" _name="River" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _componentName="WaterBodyComponent"
+					<WaterBodyComponent _localID="5729965392566960456" _componentName="WaterBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="0,0,0"
 					                    _localRotation="0,0,0"
@@ -169,7 +169,7 @@
 		<entity id="7" name="Foliage">
 			<GameObject _schemaVersion="0" _name="Foliage" _bActive="true">
 				<_listComponent>
-					<FoliageComponent _componentName="FoliageComponent"
+					<FoliageComponent _localID="17998239760615883236" _componentName="FoliageComponent"
 					                  _bActive="true"
 					                  _localPosition="0,0,0"
 					                  _localRotation="0,0,0"

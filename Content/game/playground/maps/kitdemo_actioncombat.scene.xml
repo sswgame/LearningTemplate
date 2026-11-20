@@ -7,7 +7,7 @@
 		<entity id="1" name="Camera">
 			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,9,-7"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,9,-7"
 					                 _localRotation="0.9,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -25,7 +25,7 @@
 		<entity id="2" name="Director">
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
-					<ActionCombatDemoComponent _componentName="ActionCombatDemoComponent"
+					<ActionCombatDemoComponent _localID="4983187070023613512" _componentName="ActionCombatDemoComponent"
 					                           _bActive="true"
 					                           _playerMaxHP="100"
 					                           _playerSpeed="4"

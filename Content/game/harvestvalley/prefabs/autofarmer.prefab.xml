@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="FarmAutoFarmer">
 	<GameObject _schemaVersion="0" _name="FarmAutoFarmer" _bActive="true">
 		<_listComponent>
-			<FarmAutoFarmerAIComponent _componentName="FarmAutoFarmerAIComponent"
+			<FarmAutoFarmerAIComponent _localID="11352697028849582381" _componentName="FarmAutoFarmerAIComponent"
 			                           _bActive="true"
 			                           _possessAtStart="0"
 			                           _turnRate="20"

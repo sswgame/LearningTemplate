@@ -8,21 +8,21 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="85,18.5,-28" _localRotation="0.16,-0.76,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="600" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localID="17709685451340727998" _localPosition="85,18.5,-28" _localRotation="0.16,-0.76,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="600" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.926635,-1.883255,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.88" _intensity="1.5" _ambient="0.32" _shadowExtent="150" _shadowDistance="220" _bCastShadow="true" />
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.926635,-1.883255,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.88" _intensity="1.5" _ambient="0.32" _shadowExtent="150" _shadowDistance="220" _bCastShadow="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="Terrain">
 			<GameObject _schemaVersion="0" _name="Terrain" _bActive="true">
 				<_listComponent>
-					<TerrainComponent _localPosition="-128,0,-128" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None"
+					<TerrainComponent _localID="1728601763249011038" _localPosition="-128,0,-128" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None"
 					                  _heightfieldPath="game/playground/heightfields/valley.heightfield"
 					                  _materialPath="engine/materials/terrain.material"
 					                  _layerWeightsPath="game/playground/heightfields/valley.layerweights"

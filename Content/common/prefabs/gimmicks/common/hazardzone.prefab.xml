@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="HazardZone">
 	<GameObject _schemaVersion="0" _name="HazardZone" _bActive="true">
 		<_listComponent>
-			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
 			                        _bActive="true"
 			                        _localPosition="0,0,0"
 			                        _localRotation="0,0,0"
@@ -15,7 +15,7 @@
 			                        _layer="Default"
 			                        _bContinuous="false"
 			                        _bTrigger="true" />
-			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			<GimmickSensorComponent _localID="5906677949702648734" _componentName="GimmickSensorComponent"
 			                        _bActive="true"
 			                        _defaultWeight="1"
 			                        _bCountTriggers="false">
@@ -24,7 +24,7 @@
 				</_requiredTags>
 				<_listOccupant />
 			</GimmickSensorComponent>
-			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+			<GimmickCircuitComponent _localID="12667660158642495557" _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
 				<_listNode>
 					<GimmickNodeDesc _id="hazard" _kind="Hazard" _params="onTime=2; offTime=2; damage=10; damageInterval=0.5" />
 				</_listNode>

@@ -7,7 +7,7 @@
 		<entity id="1" name="Camera">
 			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,14,-22"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,14,-22"
 					                 _localRotation="0.5,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -25,22 +25,22 @@
 		<entity id="2" name="LeadTurret">
 			<GameObject _schemaVersion="0" _name="LeadTurret" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="0,1,-10"
+					<SceneComponent _localID="12574257654564749349" _localPosition="0,1,-10"
 					                _localRotation="0,0,0"
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<MeshComponent _localPosition="0,0,0"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.8,0.8,0.8"
 					               _attachOwner="None"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<TurretComponent _range="40"
+					<TurretComponent _localID="209058562689039049" _range="40"
 					                 _viewAngle="0"
 					                 _turnSpeed="3.1415927"
 					                 _aimTolerance="5"
@@ -61,35 +61,35 @@
 		<entity id="3" name="Runner">
 			<GameObject _schemaVersion="0" _name="Runner" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-20,1,10"
+					<SceneComponent _localID="12574257654564749349" _localPosition="-20,1,10"
 					                _localRotation="0,0,0"
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<MeshComponent _localPosition="0,0,0"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<TagComponent>
+					<TagComponent _localID="5249839963692551013">
 						<_tags>
 							<_listTag>
 								<item>Player</item>
 							</_listTag>
 						</_tags>
 					</TagComponent>
-					<SplineComponent _samplesPerSegment="16" _type="Linear" _bClosed="false">
+					<SplineComponent _localID="1299529188794216424" _samplesPerSegment="16" _type="Linear" _bClosed="false">
 						<_listControlPoint>
 							<item>0,0,0</item>
 							<item>40,0,0</item>
 						</_listControlPoint>
 					</SplineComponent>
-					<GimmickCircuitComponent _stepTime="0.016666668">
+					<GimmickCircuitComponent _localID="12667660158642495557" _stepTime="0.016666668">
 						<_listNode>
 							<GimmickNodeDesc _id="move" _kind="Mover" _params="speed=6; mode=PingPong; pause=0" />
 						</_listNode>

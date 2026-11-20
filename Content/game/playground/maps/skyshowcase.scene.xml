@@ -10,7 +10,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,1.6,0"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.6,0"
 					                 _localRotation="-0.9,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -28,7 +28,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="0.803281,-2.084012,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -45,7 +45,7 @@
 		<entity id="3" name="Sky">
 			<GameObject _schemaVersion="0" _name="Sky" _bActive="true">
 				<_listComponent>
-					<SkyComponent _intensity="1"
+					<SkyComponent _localID="14376368575749838118" _intensity="1"
 					              _groundColor="0.3,0.27,0.24"
 					              _mode="Atmosphere"
 					              _rayleighScale="1"

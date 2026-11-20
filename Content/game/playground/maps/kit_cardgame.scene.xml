@@ -7,7 +7,7 @@
 		<entity id="1" name="Camera">
 			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,3,-20"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,3,-20"
 					                 _localRotation="0,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -25,7 +25,7 @@
 		<entity id="2" name="Director">
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
-					<CardGameDemoComponent _componentName="CardGameDemoComponent"
+					<CardGameDemoComponent _localID="4780454299701779862" _componentName="CardGameDemoComponent"
 					                       _bActive="true"
 					                       _catalogPath="game/playground/data/kitdemo/demo.deckbattle.xml" />
 				</_listComponent>

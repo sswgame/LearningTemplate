@@ -10,41 +10,41 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,3,-6" _localRotation="0.3,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="45.836624" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,3,-6" _localRotation="0.3,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="45.836624" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="Floor">
 			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="20,1,20" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="15" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="20,1,20" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="15" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="Lead">
 			<GameObject _schemaVersion="0" _name="Lead" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" />
-					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="false" _bPlayOnBegin="true" />
-					<PairedAnimationComponent _pairedAnimationPath="game/playground/data/anim/cheer_warp.pairedanim.xml" _role="Lead" _bStartOnPlay="true" />
+					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="false" _bPlayOnBegin="true" />
+					<PairedAnimationComponent _localID="4756347524451515510" _pairedAnimationPath="game/playground/data/anim/cheer_warp.pairedanim.xml" _role="Lead" _bStartOnPlay="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="Partner">
 			<GameObject _schemaVersion="0" _name="Partner" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _localPosition="0.8,0,2.6" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" />
-					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="true" _bPlayOnBegin="true" />
-					<PairedAnimationComponent _pairedAnimationPath="game/playground/data/anim/cheer_warp.pairedanim.xml" _role="Partner" _bStartOnPlay="false" />
-					<MotionWarpingComponent />
-					<LocomotionWarpingComponent _bStrideWarping="true" _speedCurve="Speed" _minPlayRate="0.5" _maxPlayRate="2" _bOrientationWarping="false" _maxOrientationAngle="45.836624">
+					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0.8,0,2.6" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="true" _bPlayOnBegin="true" />
+					<PairedAnimationComponent _localID="4756347524451515510" _pairedAnimationPath="game/playground/data/anim/cheer_warp.pairedanim.xml" _role="Partner" _bStartOnPlay="false" />
+					<MotionWarpingComponent _localID="6388732832709467081" />
+					<LocomotionWarpingComponent _localID="6418306591196946006" _bStrideWarping="true" _speedCurve="Speed" _minPlayRate="0.5" _maxPlayRate="2" _bOrientationWarping="false" _maxOrientationAngle="45.836624">
 						<_listOrientationBone />
 					</LocomotionWarpingComponent>
 				</_listComponent>
@@ -53,16 +53,16 @@
 		<entity id="6" name="LeadFront">
 			<GameObject _schemaVersion="0" _name="LeadFront" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="0,0,1.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,1.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="7" name="Mimic">
 			<GameObject _schemaVersion="0" _name="Mimic" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _localPosition="-1.5,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="Lead" _attachOwnerID="4" _attachComponent="SkeletalMeshComponent#0" _meshID="" _materialPath="" _boundsRadius="2" _skeletonPath="" _bFollowParentPose="false" />
-					<CharacterAppearanceComponent _presetID="SkeletonMinion" _seed="0" _bMergeParts="true" />
-					<PoseRetargetComponent _profilePath="common/rigs/knight_to_minion.retarget.xml" _bSourceFromParent="true" />
+					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="-1.5,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="Lead" _attachOwnerID="4" _attachComponent="#d1f150ab12997489" _meshID="" _materialPath="" _boundsRadius="2" _skeletonPath="" _bFollowParentPose="false" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonMinion" _seed="0" _bMergeParts="true" />
+					<PoseRetargetComponent _localID="8222920885469673764" _profilePath="common/rigs/knight_to_minion.retarget.xml" _bSourceFromParent="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

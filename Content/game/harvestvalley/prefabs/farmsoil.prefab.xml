@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="FarmSoil">
 	<GameObject _schemaVersion="0" _name="FarmSoil" _bActive="true">
 		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
@@ -15,7 +15,7 @@
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<FarmSoilComponent _componentName="FarmSoilComponent" _bActive="true" _gameMode="0" _tileIndex="-1" />
+			<FarmSoilComponent _localID="14498667114458941894" _componentName="FarmSoilComponent" _bActive="true" _gameMode="0" _tileIndex="-1" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

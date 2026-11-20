@@ -11,14 +11,14 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,4,-8" _localRotation="0.4,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,4,-8" _localRotation="0.4,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Probe">
 			<GameObject _schemaVersion="0" _name="Probe" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0.5,0"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.5,0"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
@@ -26,7 +26,7 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_orange.material"
 					               _boundsRadius="0.9" />
-					<InteractableComponent _componentName="InteractableComponent"
+					<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
 					                       _bActive="true"
 					                       _interactionID="Use"
 					                       _catalogPath="game/playground/automation/resourcecondition/table.interactions.xml"

@@ -3,7 +3,7 @@
 <Prefab formatVersion="1" name="MeadowTree">
 	<GameObject _schemaVersion="0" _name="MeadowTree" _bActive="true">
 		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
@@ -17,9 +17,9 @@
 			               _gpuSpinSeed="0"
 			               _bVisible="true"
 			               _sectionName="bark_normaltree" />
-			<MeshSectionComponent _componentName="MeshSectionComponent"
+			<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 			                      _bActive="true"
-			                      _attachComponent="MeshComponent#0"
+			                      _attachComponent="#0244d8c8807cd288"
 			                      _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material"
 			                      _sectionName="leaves_normaltree" />
 		</_listComponent>

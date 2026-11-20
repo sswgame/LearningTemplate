@@ -3,7 +3,7 @@
 	<!-- 플레이 중 리로드 시나리오의 프리팹 — probe_edited.prefab.xml(크기만 다르다)을 덮으면 캐시가 다시 읽는다(놓인 인스턴스는 다음 스폰부터 바뀐다). -->
 	<GameObject _schemaVersion="0" _name="PlayReloadProp" _bActive="true">
 		<_listComponent>
-			<MeshComponent _localPosition="0,0,0"
+			<MeshComponent _localID="163493842152903304" _localPosition="0,0,0"
 			               _localRotation="0,0,0"
 			               _localScale="0.8,0.8,0.8"
 			               _attachOwner="None"

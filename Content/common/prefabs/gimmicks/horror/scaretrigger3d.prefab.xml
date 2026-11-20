@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="ScareTrigger3D">
 	<GameObject _schemaVersion="0" _name="ScareTrigger3D" _bActive="true">
 		<_listComponent>
-			<RigidBodyComponent _componentName="RigidBodyComponent"
+			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 			                    _bActive="true"
 			                    _localPosition="0,0,0"
 			                    _localRotation="0,0,0"
@@ -34,7 +34,7 @@
 					</PhysicsShapeDesc3D>
 				</_listShape>
 			</RigidBodyComponent>
-			<ScareTriggerComponent _componentName="ScareTriggerComponent"
+			<ScareTriggerComponent _localID="13286275202855313659" _componentName="ScareTriggerComponent"
 			                       _bActive="true"
 			                       _cue="Scare"
 			                       _sound=""

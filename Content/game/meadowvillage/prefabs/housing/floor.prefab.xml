@@ -2,16 +2,16 @@
 <Prefab formatVersion="1" name="HousingFloor">
 	<GameObject _schemaVersion="0" _name="HousingFloor" _bActive="true">
 		<_listComponent>
-			<SceneComponent _localPosition="0,0,0"
+			<SceneComponent _localID="12574257654564749349" _localPosition="0,0,0"
 			                _localRotation="0,0,0"
 			                _localScale="1,1,1"
 			                _attachOwner="None"
 			                _attachComponent="None" />
-			<MeshComponent _localPosition="0,0.05,0"
+			<MeshComponent _localID="163493842152903304" _localPosition="0,0.05,0"
 			               _localRotation="0,0,0"
 			               _localScale="1,0.1,1"
 			               _attachOwner="None"
-			               _attachComponent="SceneComponent#0"
+			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_light.material"
 			               _boundsRadius="0.866"

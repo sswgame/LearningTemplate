@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="MovingPlatform">
 	<GameObject _schemaVersion="0" _name="MovingPlatform" _bActive="true">
 		<_listComponent>
-			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
 			                        _bActive="true"
 			                        _localPosition="0,0,0"
 			                        _localRotation="0,0,0"
@@ -15,20 +15,20 @@
 			                        _layer="Default"
 			                        _bContinuous="false"
 			                        _bTrigger="false" />
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
 			               _localScale="3,0.5,3"
 			               _attachOwner="None"
 			               _attachOwnerID="0"
-			               _attachComponent="BoxCollider2DComponent#0"
+			               _attachComponent="#edcbb43a3dfead50"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/defaultmaterial.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<SplineComponent _componentName="SplineComponent"
+			<SplineComponent _localID="1299529188794216424" _componentName="SplineComponent"
 			                 _bActive="true"
 			                 _samplesPerSegment="16"
 			                 _type="Linear"
@@ -38,7 +38,7 @@
 					<item>6,0,0</item>
 				</_listControlPoint>
 			</SplineComponent>
-			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+			<GimmickCircuitComponent _localID="12667660158642495557" _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
 				<_listNode>
 					<GimmickNodeDesc _id="move" _kind="Mover" _params="speed=2; mode=PingPong; pause=0.5" />
 				</_listNode>

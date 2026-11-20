@@ -7,7 +7,7 @@
 		<entity id="2" name="Floor">
 			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
@@ -26,7 +26,7 @@
 		<entity id="3" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.310517,-2.045455,0"
@@ -46,7 +46,7 @@
 		<entity id="4" name="ViewCamera">
 			<GameObject _schemaVersion="0" _name="ViewCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="0,1.3,-3.5"
 					                 _localRotation="0,0,0"
@@ -67,7 +67,7 @@
 		<entity id="5" name="Archer">
 			<GameObject _schemaVersion="0" _name="Archer" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 					                       _bActive="true"
 					                       _localPosition="0,0,0"
 					                       _localRotation="0,1.5707964,0"
@@ -84,7 +84,7 @@
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
 					                       _visibilityBasedTickOption="AlwaysTickPose" />
-					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
 					                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"
@@ -97,11 +97,11 @@
 					                           _syncWeight="1"
 					                           _bExtractRootMotion="false"
 					                           _bPlayOnBegin="true" />
-					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
+					<CharacterAppearanceComponent _localID="13827364293183997314" _componentName="CharacterAppearanceComponent"
 					                              _bActive="true"
 					                              _presetID="ShooterArcher"
 					                              _seed="0" />
-					<PairedAnimationComponent _componentName="PairedAnimationComponent"
+					<PairedAnimationComponent _localID="4756347524451515510" _componentName="PairedAnimationComponent"
 					                          _bActive="true"
 					                          _pairedAnimationPath="common/data/anim/bow_shoot.pairedanim.xml"
 					                          _role="Archer"

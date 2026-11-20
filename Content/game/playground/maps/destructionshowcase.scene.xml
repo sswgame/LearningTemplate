@@ -7,7 +7,7 @@
 		<entity id="1" name="ShowcaseCamera">
 			<GameObject _schemaVersion="0" _name="ShowcaseCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="0,2.8,-9.5"
 					                 _localRotation="0.16,0,0"
@@ -39,7 +39,7 @@
 		<entity id="2" name="ShowcaseSun">
 			<GameObject _schemaVersion="0" _name="ShowcaseSun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,10,0"
 					                           _localRotation="0.356582,-2.238715,0"
@@ -59,7 +59,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="0,-0.5,0"
 					                    _localRotation="0,0,0"
@@ -91,14 +91,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Cube"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
@@ -110,7 +110,7 @@
 		<entity id="4" name="BrickWall">
 			<GameObject _schemaVersion="0" _name="BrickWall" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="0,0,0"
 					                    _localRotation="0,0,0"
@@ -142,27 +142,27 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="game/playground/models/brick_wall.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<FractureComponent _componentName="FractureComponent"
+					<FractureComponent _localID="8281087357134413789" _componentName="FractureComponent"
 					                   _bActive="true"
 					                   _localPosition="0,0,0"
 					                   _localRotation="0,0,0"
 					                   _localScale="1,1,1"
 					                   _attachOwner="None"
 					                   _attachOwnerID="0"
-					                   _attachComponent="RigidBodyComponent#0"
+					                   _attachComponent="#63e709ac676dd304"
 					                   _profilePath=""
 					                   _interiorMaterialPath=""
 					                   _staticLayer="Static"
@@ -181,7 +181,7 @@
 		<entity id="5" name="CrateLeft">
 			<GameObject _schemaVersion="0" _name="CrateLeft" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="-2.9,0,-1.2"
 					                    _localRotation="0,0,0"
@@ -213,27 +213,27 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="game/playground/models/crate_medium.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<FractureComponent _componentName="FractureComponent"
+					<FractureComponent _localID="8281087357134413789" _componentName="FractureComponent"
 					                   _bActive="true"
 					                   _localPosition="0,0,0"
 					                   _localRotation="0,0,0"
 					                   _localScale="1,1,1"
 					                   _attachOwner="None"
 					                   _attachOwnerID="0"
-					                   _attachComponent="RigidBodyComponent#0"
+					                   _attachComponent="#63e709ac676dd304"
 					                   _profilePath="engine/destruction/wood.destruction.xml"
 					                   _interiorMaterialPath=""
 					                   _staticLayer="Static"
@@ -252,7 +252,7 @@
 		<entity id="6" name="CrateRight">
 			<GameObject _schemaVersion="0" _name="CrateRight" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="2.8,0,-1.2"
 					                    _localRotation="0,0,0"
@@ -284,27 +284,27 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="game/playground/models/crate_medium.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<FractureComponent _componentName="FractureComponent"
+					<FractureComponent _localID="8281087357134413789" _componentName="FractureComponent"
 					                   _bActive="true"
 					                   _localPosition="0,0,0"
 					                   _localRotation="0,0,0"
 					                   _localScale="1,1,1"
 					                   _attachOwner="None"
 					                   _attachOwnerID="0"
-					                   _attachComponent="RigidBodyComponent#0"
+					                   _attachComponent="#63e709ac676dd304"
 					                   _profilePath="engine/destruction/wood.destruction.xml"
 					                   _interiorMaterialPath=""
 					                   _staticLayer="Static"
@@ -323,7 +323,7 @@
 		<entity id="7" name="CrateStacked">
 			<GameObject _schemaVersion="0" _name="CrateStacked" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="2.8,0.36,-1.2"
 					                    _localRotation="0,0,0"
@@ -355,27 +355,27 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="game/playground/models/crate_medium.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<FractureComponent _componentName="FractureComponent"
+					<FractureComponent _localID="8281087357134413789" _componentName="FractureComponent"
 					                   _bActive="true"
 					                   _localPosition="0,0,0"
 					                   _localRotation="0,0,0"
 					                   _localScale="1,1,1"
 					                   _attachOwner="None"
 					                   _attachOwnerID="0"
-					                   _attachComponent="RigidBodyComponent#0"
+					                   _attachComponent="#63e709ac676dd304"
 					                   _profilePath="engine/destruction/wood.destruction.xml"
 					                   _interiorMaterialPath=""
 					                   _staticLayer="Static"
@@ -394,7 +394,7 @@
 		<entity id="8" name="BarrelFuse">
 			<GameObject _schemaVersion="0" _name="BarrelFuse" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="-0.7,0,-0.9"
 					                    _localRotation="0,0,0"
@@ -426,27 +426,27 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="game/playground/models/barrel.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<FractureComponent _componentName="FractureComponent"
+					<FractureComponent _localID="8281087357134413789" _componentName="FractureComponent"
 					                   _bActive="true"
 					                   _localPosition="0,0,0"
 					                   _localRotation="0,0,0"
 					                   _localScale="1,1,1"
 					                   _attachOwner="None"
 					                   _attachOwnerID="0"
-					                   _attachComponent="RigidBodyComponent#0"
+					                   _attachComponent="#63e709ac676dd304"
 					                   _profilePath=""
 					                   _interiorMaterialPath=""
 					                   _staticLayer="Static"
@@ -459,7 +459,7 @@
 					                   _fracturePath="">
 						<_listAnchorVolume />
 					</FractureComponent>
-					<GimmickSensorComponent _componentName="GimmickSensorComponent"
+					<GimmickSensorComponent _localID="5906677949702648734" _componentName="GimmickSensorComponent"
 					                        _bActive="true"
 					                        _defaultWeight="1"
 					                        _bCountTriggers="false">
@@ -468,7 +468,7 @@
 						</_requiredTags>
 						<_listOccupant />
 					</GimmickSensorComponent>
-					<ExplosiveBarrelComponent _componentName="ExplosiveBarrelComponent"
+					<ExplosiveBarrelComponent _localID="2817874053379422564" _componentName="ExplosiveBarrelComponent"
 					                          _bActive="true"
 					                          _health="30"
 					                          _radius="3"
@@ -482,7 +482,7 @@
 		<entity id="9" name="BarrelChain">
 			<GameObject _schemaVersion="0" _name="BarrelChain" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="0.7,0,-1.3"
 					                    _localRotation="0,0,0"
@@ -514,27 +514,27 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="game/playground/models/barrel.mesh"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<FractureComponent _componentName="FractureComponent"
+					<FractureComponent _localID="8281087357134413789" _componentName="FractureComponent"
 					                   _bActive="true"
 					                   _localPosition="0,0,0"
 					                   _localRotation="0,0,0"
 					                   _localScale="1,1,1"
 					                   _attachOwner="None"
 					                   _attachOwnerID="0"
-					                   _attachComponent="RigidBodyComponent#0"
+					                   _attachComponent="#63e709ac676dd304"
 					                   _profilePath=""
 					                   _interiorMaterialPath=""
 					                   _staticLayer="Static"
@@ -547,7 +547,7 @@
 					                   _fracturePath="">
 						<_listAnchorVolume />
 					</FractureComponent>
-					<GimmickSensorComponent _componentName="GimmickSensorComponent"
+					<GimmickSensorComponent _localID="5906677949702648734" _componentName="GimmickSensorComponent"
 					                        _bActive="true"
 					                        _defaultWeight="1"
 					                        _bCountTriggers="false">
@@ -556,7 +556,7 @@
 						</_requiredTags>
 						<_listOccupant />
 					</GimmickSensorComponent>
-					<ExplosiveBarrelComponent _componentName="ExplosiveBarrelComponent"
+					<ExplosiveBarrelComponent _localID="2817874053379422564" _componentName="ExplosiveBarrelComponent"
 					                          _bActive="true"
 					                          _health="30"
 					                          _radius="3"
@@ -570,7 +570,7 @@
 		<entity id="10" name="NavigationSurface">
 			<GameObject _schemaVersion="0" _name="NavigationSurface" _bActive="true">
 				<_listComponent>
-					<NavMeshSurfaceComponent _componentName="NavMeshSurfaceComponent"
+					<NavMeshSurfaceComponent _localID="4521272121032625094" _componentName="NavMeshSurfaceComponent"
 					                         _bActive="true"
 					                         _geometrySource="Both"
 					                         _boundsHalfExtents="0,0,0">

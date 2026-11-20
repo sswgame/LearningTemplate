@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="ArrowProjectile">
 	<GameObject _schemaVersion="0" _name="ArrowProjectile" _bActive="true">
 		<_listComponent>
-			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+			<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 			                       _bActive="true"
 			                       _localPosition="0,0,0"
 			                       _localRotation="0,0,0"
@@ -19,7 +19,7 @@
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
 			                       _visibilityBasedTickOption="AlwaysTickPose" />
-			<RigidBodyComponent _componentName="RigidBodyComponent"
+			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 			                    _bActive="true"
 			                    _localPosition="0,0,0"
 			                    _localRotation="0,0,0"
@@ -51,7 +51,7 @@
 					</PhysicsShapeDesc3D>
 				</_listShape>
 			</RigidBodyComponent>
-			<LaunchVelocityComponent _componentName="LaunchVelocityComponent"
+			<LaunchVelocityComponent _localID="4321671468974136411" _componentName="LaunchVelocityComponent"
 			                         _bActive="true"
 			                         _speed="30"
 			                         _localDirection="0,0,1"

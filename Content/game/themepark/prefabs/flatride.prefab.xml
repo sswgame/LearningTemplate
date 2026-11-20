@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="FlatRide">
 	<GameObject _schemaVersion="0" _name="FlatRide" _bActive="true">
 		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
@@ -15,7 +15,7 @@
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<FlatRideComponent _componentName="FlatRideComponent" _bActive="true" _gameMode="0" _rideIndex="-1" _spin="0" />
+			<FlatRideComponent _localID="4375837424966998620" _componentName="FlatRideComponent" _bActive="true" _gameMode="0" _rideIndex="-1" _spin="0" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

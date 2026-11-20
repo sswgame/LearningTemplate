@@ -3,7 +3,7 @@
 <Prefab formatVersion="1" name="ZoneAsh">
 	<GameObject _schemaVersion="0" _name="ZoneAsh" _bActive="true">
 		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0.05,0"
 			               _localRotation="0,0,0"

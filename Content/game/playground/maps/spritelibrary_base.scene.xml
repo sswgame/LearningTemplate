@@ -8,7 +8,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,0,-10"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,0,-10"
 					                 _localRotation="0,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -26,7 +26,7 @@
 		<entity id="2" name="Sprite">
 			<GameObject _schemaVersion="0" _name="Sprite" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="0,0,0"
+					<SpriteComponent _localID="9079621422701466312" _localPosition="0,0,0"
 					                 _localRotation="0,0,0"
 					                 _localScale="6,6,1"
 					                 _attachOwner="None"

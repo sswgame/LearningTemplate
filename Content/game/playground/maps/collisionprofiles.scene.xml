@@ -9,14 +9,14 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="-4,6,-14" _localRotation="0.35,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localID="17709685451340727998" _localPosition="-4,6,-14" _localRotation="0.35,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="0,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Stone" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Stone" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="20,0.25,20" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
 								<_listPoint />
@@ -30,7 +30,7 @@
 		<entity id="3" name="Gate">
 			<GameObject _schemaVersion="0" _name="Gate" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="-6,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Stone" _mass="0" _bTrigger="true">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-6,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Stone" _mass="0" _bTrigger="true">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,1,1" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
 								<_listPoint />
@@ -44,7 +44,7 @@
 		<entity id="4" name="Guard">
 			<GameObject _schemaVersion="0" _name="Guard" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Character" _material="Stone" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Character" _material="Stone" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,1,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
 								<_listPoint />
@@ -58,7 +58,7 @@
 		<entity id="5" name="Bolt">
 			<GameObject _schemaVersion="0" _name="Bolt" _bActive="false">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="-10,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Projectile" _material="Stone" _mass="1" _gravityFactor="0" _bContinuous="true">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-10,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Projectile" _material="Stone" _mass="1" _gravityFactor="0" _bContinuous="true">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.1,0.1,0.1" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
 								<_listPoint />
@@ -66,21 +66,21 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<LaunchVelocityComponent _speed="10" _localDirection="1,0,0" _alignGain="0" />
+					<LaunchVelocityComponent _localID="4321671468974136411" _speed="10" _localDirection="1,0,0" _alignGain="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="6" name="Eye">
 			<GameObject _schemaVersion="0" _name="Eye" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-3,1,4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-3,1,4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="7" name="Watcher">
 			<GameObject _schemaVersion="0" _name="Watcher" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="0,1,4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Character" _material="Stone" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,1,4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Character" _material="Stone" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,1,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
 								<_listPoint />
@@ -94,7 +94,7 @@
 		<entity id="8" name="Wall">
 			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="5,1,4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Stone" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="5,1,4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Stone" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,2,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
 								<_listPoint />

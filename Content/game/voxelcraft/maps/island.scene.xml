@@ -7,7 +7,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.402503,-2.230821,0"
@@ -27,7 +27,7 @@
 		<entity id="3" name="Player">
 			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="64.5,40,64.5"
 					                 _localRotation="0,0,0"
@@ -42,7 +42,7 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="false" />
-					<PawnComponent _componentName="PawnComponent"
+					<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
 					               _bActive="true"
 					               _moveAction="Move"
 					               _lookAction="Look"
@@ -71,7 +71,7 @@
 							<item>Voxel.HotbarScroll</item>
 						</_listAnalog>
 					</PawnComponent>
-					<FirstPersonCameraComponent _componentName="FirstPersonCameraComponent"
+					<FirstPersonCameraComponent _localID="17347683538408078309" _componentName="FirstPersonCameraComponent"
 					                            _bActive="true"
 					                            _yaw="34.37747"
 					                            _pitch="-11.459156"
@@ -88,7 +88,7 @@
 						          _referenceSpeed="4"
 						          _blendTime="0.15" />
 					</FirstPersonCameraComponent>
-					<VoxelPlayerComponent _componentName="VoxelPlayerComponent"
+					<VoxelPlayerComponent _localID="14680213321896483494" _componentName="VoxelPlayerComponent"
 					                      _bActive="true"
 					                      _gameMode="5"
 					                      _reachDistance="6"
@@ -127,7 +127,7 @@
 		<entity id="4" name="BlockHighlight">
 			<GameObject _schemaVersion="0" _name="BlockHighlight" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
@@ -140,14 +140,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
-					<VoxelHighlightComponent _componentName="VoxelHighlightComponent" _bActive="true" _player="3" />
+					<VoxelHighlightComponent _localID="15788862186009154187" _componentName="VoxelHighlightComponent" _bActive="true" _player="3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="VoxelGameMode">
 			<GameObject _schemaVersion="0" _name="VoxelGameMode" _bActive="true">
 				<_listComponent>
-					<VoxelGameModeComponent _componentName="VoxelGameModeComponent"
+					<VoxelGameModeComponent _localID="6698898816640166858" _componentName="VoxelGameModeComponent"
 					                        _bActive="true"
 					                        _chunkPrefab="game/voxelcraft/prefabs/chunk.prefab.xml"
 					                        _autoPlayPrefab="game/voxelcraft/prefabs/autoplay_ai.prefab.xml"

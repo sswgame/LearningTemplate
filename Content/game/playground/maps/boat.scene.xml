@@ -11,7 +11,7 @@
 		<entity id="1" name="Camera">
 			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="22,14,-52"
+					<CameraComponent _localID="17709685451340727998" _localPosition="22,14,-52"
 					                 _localRotation="0.35,0.6,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -29,7 +29,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,10,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,10,0"
 					                           _localRotation="0.448254,-2.221679,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -46,22 +46,22 @@
 		<entity id="3" name="Weather">
 			<GameObject _schemaVersion="0" _name="Weather" _bActive="true">
 				<_listComponent>
-					<SessionStateComponent />
-					<WeatherDirectorComponent _weatherDataPath="game/playground/data/boat.weather.xml" _startWeather="calm" _seed="11" />
+					<SessionStateComponent _localID="6673597520240684436" />
+					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="game/playground/data/boat.weather.xml" _startWeather="calm" _seed="11" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="Wind">
 			<GameObject _schemaVersion="0" _name="Wind" _bActive="true">
 				<_listComponent>
-					<WindComponent _direction="0" _strength="0.3" _gustStrength="0.2" _gustFrequency="0.25" _swayFrequency="1.2" _speed="10" />
+					<WindComponent _localID="486898894148715097" _direction="0" _strength="0.3" _gustStrength="0.2" _gustFrequency="0.25" _swayFrequency="1.2" _speed="10" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="Sea">
 			<GameObject _schemaVersion="0" _name="Sea" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _localPosition="0,0,0"
+					<WaterBodyComponent _localID="5729965392566960456" _localPosition="0,0,0"
 					                    _localRotation="0,0,0"
 					                    _localScale="1,1,1"
 					                    _attachOwner="None"
@@ -87,14 +87,14 @@
 							<GerstnerWave _direction="108.86198" _wavelength="9" _amplitude="0.08" _steepness="0.4" />
 						</_listWave>
 					</WaterBodyComponent>
-					<WeatherWaveComponent _weatherValue="wind" _stormScale="4" />
+					<WeatherWaveComponent _localID="6309414266344956226" _weatherValue="wind" _stormScale="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="6" name="Strait">
 			<GameObject _schemaVersion="0" _name="Strait" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _localPosition="0,0,0"
+					<WaterBodyComponent _localID="5729965392566960456" _localPosition="0,0,0"
 					                    _localRotation="0,0,0"
 					                    _localScale="1,1,1"
 					                    _attachOwner="None"
@@ -126,28 +126,28 @@
 		</entity>
 		<entity id="10" name="Rowboat" prefab="game/playground/prefabs/vehicles/rowboat.prefab.xml">
 			<PrefabOverrides>
-				<Override key="RigidBodyComponent#0">
+				<Override key="#63e709ac676dd304">
 					<RigidBodyComponent _localPosition="0,0.3,-40" _localRotation="0,0,0" />
 				</Override>
 			</PrefabOverrides>
 		</entity>
 		<entity id="11" name="Downwind" prefab="game/playground/prefabs/vehicles/sailboat.prefab.xml">
 			<PrefabOverrides>
-				<Override key="RigidBodyComponent#0">
+				<Override key="#63e709ac676dd304">
 					<RigidBodyComponent _localPosition="-60,0.3,40" _localRotation="0,1.5708,0" />
 				</Override>
 			</PrefabOverrides>
 		</entity>
 		<entity id="12" name="Upwind" prefab="game/playground/prefabs/vehicles/sailboat.prefab.xml">
 			<PrefabOverrides>
-				<Override key="RigidBodyComponent#0">
+				<Override key="#63e709ac676dd304">
 					<RigidBodyComponent _localPosition="60,0.3,-10" _localRotation="0,-1.5708,0" />
 				</Override>
 			</PrefabOverrides>
 		</entity>
 		<entity id="13" name="Drifter" prefab="game/playground/prefabs/vehicles/rowboat.prefab.xml">
 			<PrefabOverrides>
-				<Override key="RigidBodyComponent#0">
+				<Override key="#63e709ac676dd304">
 					<RigidBodyComponent _localPosition="-80,0.3,130" _localRotation="0,1.5708,0" />
 				</Override>
 			</PrefabOverrides>
@@ -155,7 +155,7 @@
 		<entity id="20" name="Sailor">
 			<GameObject _schemaVersion="0" _name="Sailor" _bActive="true">
 				<_listComponent>
-					<CharacterControllerComponent _localPosition="0,0.75,-39"
+					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.75,-39"
 					                              _localRotation="0,0,0"
 					                              _localScale="1,1,1"
 					                              _attachOwner="None"
@@ -167,17 +167,17 @@
 					                              _gravityScale="1"
 					                              _mass="70"
 					                              _layer="Character" />
-					<MeshComponent _localPosition="0,0.9,0"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.6,1.8,0.6"
 					               _attachOwner="None"
-					               _attachComponent="CharacterControllerComponent#0"
+					               _attachComponent="#19b3407eb1f9cd74"
 					               _meshID="Capsule"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="1"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
+					<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
@@ -187,7 +187,7 @@
 		<entity id="21" name="Helmsman">
 			<GameObject _schemaVersion="0" _name="Helmsman" _bActive="true">
 				<_listComponent>
-					<CharacterControllerComponent _localPosition="0,0.75,-42.2"
+					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.75,-42.2"
 					                              _localRotation="0,0,0"
 					                              _localScale="1,1,1"
 					                              _attachOwner="None"
@@ -199,17 +199,17 @@
 					                              _gravityScale="1"
 					                              _mass="70"
 					                              _layer="Character" />
-					<MeshComponent _localPosition="0,0.9,0"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.6,1.8,0.6"
 					               _attachOwner="None"
-					               _attachComponent="CharacterControllerComponent#0"
+					               _attachComponent="#19b3407eb1f9cd74"
 					               _meshID="Capsule"
 					               _materialPath="engine/materials/prototypegrid_light.material"
 					               _boundsRadius="1"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
+					<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
@@ -219,7 +219,7 @@
 		<entity id="22" name="Captain">
 			<GameObject _schemaVersion="0" _name="Captain" _bActive="true">
 				<_listComponent>
-					<IntentTrackControllerComponent _trackFile="" _trackName="None" _bReleaseWhenDone="false" />
+					<IntentTrackControllerComponent _localID="9773794673377413042" _trackFile="" _trackName="None" _bReleaseWhenDone="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -7,7 +7,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="0,30,-24"
 					                 _localRotation="0.9,0,0"
@@ -28,7 +28,7 @@
 		<entity id="2" name="Moon">
 			<GameObject _schemaVersion="0" _name="Moon" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.356582,-2.138715,0"
@@ -50,7 +50,7 @@
 				<_listComponent>
 					<!-- 골짜기 규칙 — 짐승 100000 · 100001 은 나는 자리 곁(사거리 3 m 안), 버섯 100002 는 채집 거리 2 m 안, 나머지는 걸어가야 닿는다.
 					     단계표: 레벨 2 는 경험 100(짐승 둘), 3 은 250, 4 는 450, 5 는 700. -->
-					<ValeWorldComponent _componentName="ValeWorldComponent"
+					<ValeWorldComponent _localID="18207458685461171959" _componentName="ValeWorldComponent"
 					                    _bActive="true">
 						<_rules _attackRange="3"
 						        _attackCooldownSeconds="0.5"
