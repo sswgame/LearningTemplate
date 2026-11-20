@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Input/InputManager.h"
@@ -38,6 +39,21 @@ namespace sw
                 else
                     replyBuilder.appendFormat( "experience.enter: %# '%#'", pManager->enter( listArgument[0] ) ? "entering" : "refused", listArgument[0].c_str() );
                 outReply = string( replyBuilder.view() );
+                return true;
+            }
+
+            /** @brief 감시 값 `Experience.Active` 입니다. 켜진 Experience 이름이고, 없으면 `none` 입니다(맵을 기다리는 중도 `none`). */
+            [[nodiscard]] static bool readActive( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                (void)query;
+                const ExperienceManager* const pManager = game::findSubsystem<ExperienceManager>();
+                if ( pManager == nullptr )
+                {
+                    outValue.setText( "no game is running" );
+                    return false;
+                }
+                const ExperienceDefinition* const pActive = pManager->findActiveDefinition();
+                outValue.setText( pActive != nullptr ? pActive->_name.c_str() : "none" );
                 return true;
             }
         };
@@ -201,4 +217,6 @@ namespace sw
     // 허브의 진입 자리(사물 상호작용 · 트리거)가 서기 전의 개발 입구 — 시나리오가 미니게임으로 바로 들어간다.
     SW_DEV_COMMAND( ExperienceEnter, "experience.enter", "experience.enter <name>", "Enter an experience (<pack>/experiences/<name>.experience.xml): open its map, then activate its kits",
                     &ExperienceManagerInternal::runEnterCommand );
+    SW_AUTOMATION_QUERY_WATCH( experienceActive, "Experience.Active", "Name of the active experience; none without one (also while an entered experience waits for its map)",
+                               &ExperienceManagerInternal::readActive, false, false );
 } // namespace sw
