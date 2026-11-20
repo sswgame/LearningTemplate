@@ -206,7 +206,7 @@ SW_TEST_CASE( MinigameTest, ResultReachesSubscribers )
 {
     MinigameFlow::FinishedDelegate finished;
     vector<MinigameResult>         listReceived;
-    Subscription                   subscription = finished.add( MinigameFlow::FinishedDelegate::delegate_type::create( [&listReceived]( const MinigameResult& result )
+    Subscription                   subscription = finished.add( Delegate<void( const MinigameResult& )>::create( [&listReceived]( const MinigameResult& result )
     { listReceived.push_back( result ); } ) );
     MinigameStack                  stack;
     stack.push( MinigameFrame{ makeMinigame( "fishing", MinigameEntry::SceneSwitch ), MinigameReturnPoint{ MinigameEntranceReturn{} } } );

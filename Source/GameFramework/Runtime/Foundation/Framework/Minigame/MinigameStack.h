@@ -64,6 +64,13 @@ namespace sw
     class SW_GF_API MinigameStack
     {
     public:
+        // 칸은 돌아올 씬의 소유를 들고 있어 복사할 수 없다 — 내보낸 클래스가 복사를 만들지 않게 막는다.
+        MinigameStack()                                  = default;
+        MinigameStack( const MinigameStack& )            = delete;
+        MinigameStack& operator=( const MinigameStack& ) = delete;
+        MinigameStack( MinigameStack&& )                 = default;
+        MinigameStack& operator=( MinigameStack&& )      = default;
+
         /** @brief 칸이 없으면 true 입니다. */
         bool isEmpty() const { return _listFrame.empty(); }
         /** @brief 칸 수입니다(쌓인 깊이). */
