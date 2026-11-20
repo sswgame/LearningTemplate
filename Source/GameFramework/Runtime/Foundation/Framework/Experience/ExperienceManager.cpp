@@ -91,15 +91,16 @@ namespace sw
             SW_LOG_ERROR_ID( "ExperienceManager.SubLevelUnsupported", "%#: entry=\"SubLevel\" needs the hub sub-level loader (hub migration step 2) - use SceneSwitch until then", assetPath.c_str() );
             return false;
         }
-        leave(); // 앞 Experience 를 맵을 바꾸기 전에 끈다 — 그 서비스를 찾는 앞 맵의 컴포넌트가 아직 산 동안 칸이 비어도, 다음 Experience 와 섞이지는 않는다
         const string mapPath = definition._map.get();
         _pending             = std::move( definition );
         if ( game::getSubsystem<GameSceneFlow>().requestSceneThen( mapPath, GameSceneFlow::SceneLoadedFunction::create<&ExperienceManager::onMapLoaded>( this ) ) == false )
         {
             SW_LOG_ERROR_ID( "ExperienceManager.MapRequestRefused", "Experience '%#': the map '%#' could not be requested", name, mapPath.c_str() );
             _pending = nullopt;
-            return false;
+            return false; // 거절된 진입은 켜진 Experience 를 건드리지 않는다
         }
+        // 요청이 받아들여진 뒤, 맵이 바뀌기 전에 앞 Experience 를 끈다(완료 알림은 다음 프레임 이후다) — 그 서비스를 찾는 앞 맵의 컴포넌트가 아직 산 동안 칸이 비어도, 다음 Experience 와 섞이지는 않는다
+        leave();
         return true;
     }
 
