@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Log/ParsedLogLine.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -150,14 +151,28 @@ namespace sw::editor
 
     vector<string> EditorTestOutputParser::makeScenarioArguments( string_view scenarioPath, string_view backendFlag )
     {
-        const bool     bEditor = ( "/" + string( scenarioPath ) ).find( "/automation/editor/" ) != string::npos;
+        StringBuilder<constant::buffer::kMax256> argumentBuilder;
+        argumentBuilder.appendFormat( "/%#", scenarioPath );
+        const bool     bEditor = argumentBuilder.view().find( "/automation/editor/" ) != string_view::npos;
         vector<string> listArgument;
         if ( backendFlag.empty() == false )
-            listArgument.push_back( "-" + string( backendFlag ) );
+        {
+            argumentBuilder.clear();
+            argumentBuilder.appendFormat( "-%#", backendFlag );
+            listArgument.push_back( string( argumentBuilder.view() ) );
+        }
         if ( bEditor )
-            listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::ENABLE_EDITOR ) ) );
-        listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::SCENARIO ) ) + "=" + string( scenarioPath ) );
-        listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) ) );
+        {
+            argumentBuilder.clear();
+            argumentBuilder.appendFormat( "-%#", getCommandLineArgumentSpelling( CommandLineArgument::ENABLE_EDITOR ) );
+            listArgument.push_back( string( argumentBuilder.view() ) );
+        }
+        argumentBuilder.clear();
+        argumentBuilder.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::SCENARIO ), scenarioPath );
+        listArgument.push_back( string( argumentBuilder.view() ) );
+        argumentBuilder.clear();
+        argumentBuilder.appendFormat( "-%#", getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) );
+        listArgument.push_back( string( argumentBuilder.view() ) );
         return listArgument;
     }
 
@@ -194,7 +209,10 @@ namespace sw::editor
 
     vector<string> EditorTestOutputParser::makeUnitTestArguments( string_view filter )
     {
-        return { "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::TEST ) ),
-                 "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::TEST_FILTER ) ) + "=" + string( filter ) };
+        StringBuilder<constant::buffer::kMax64> testArgument;
+        testArgument.appendFormat( "-%#", getCommandLineArgumentSpelling( CommandLineArgument::TEST ) );
+        StringBuilder<constant::buffer::kMax256> filterArgument;
+        filterArgument.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::TEST_FILTER ), filter );
+        return { string( testArgument.view() ), string( filterArgument.view() ) };
     }
 } // namespace sw::editor

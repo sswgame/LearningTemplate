@@ -89,7 +89,14 @@ namespace sw::editor
                         return false;
                 }
                 const bool bStarted = pSession->start( pSession->getSettings(), firstScenePath );
-                outReply            = bStarted ? "multiplayer session started on UDP port " + to_string( pSession->getPort() ) : "multiplayer session did not start (see the log)";
+                if ( bStarted )
+                {
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "multiplayer session started on UDP port %#", pSession->getPort() );
+                    outReply = string( replyBuilder.view() );
+                }
+                else
+                    outReply = "multiplayer session did not start (see the log)";
                 return true;
             }
 
@@ -166,7 +173,14 @@ namespace sw::editor
                 }
                 EditorNetPlaySession* pSession = MultiplayerSessionViewModel::findSession();
                 const bool            bSent    = pSession != nullptr && pSession->sendServerCommand( command );
-                outReply                       = bSent ? "sent to the server: " + command : string( "no server to send to" );
+                if ( bSent )
+                {
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "sent to the server: %#", command );
+                    outReply = string( replyBuilder.view() );
+                }
+                else
+                    outReply = "no server to send to";
                 return true;
             }
         };

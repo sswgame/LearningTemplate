@@ -67,7 +67,7 @@ namespace sw::editor
         const string                            normalized = FileUtil::normalizeSeparators( sourcePath );
         StringBuilder<constant::buffer::kMax64> segmentBuilder;
         segmentBuilder.appendFormat( "/%#/", ModelImportUtil::kRawModelFolder );
-        const size_t at = normalized.find( segmentBuilder.c_str() );
+        const size_t at = normalized.find( segmentBuilder.view() );
         return at == string::npos ? string{} : normalized.substr( 0, at );
     }
 
@@ -130,7 +130,7 @@ namespace sw::editor
             const string                             domain = reference.substr( 0, reference.find( marker ) );
             StringBuilder<constant::buffer::kMax256> rootBuilder;
             rootBuilder.appendFormat( "/%#/%#/", domain, kModelFolderName );
-            const size_t rootEnd  = normalized.find( rootBuilder.c_str() );
+            const size_t rootEnd  = normalized.find( rootBuilder.view() );
             uint64       fileHash = 0;
             if ( rootEnd != string::npos )
             {
@@ -155,7 +155,7 @@ namespace sw::editor
             const string                             domain = reference.substr( 0, reference.find( marker ) );
             StringBuilder<constant::buffer::kMax256> rootBuilder;
             rootBuilder.appendFormat( "/%#/%#/", domain, kModelFolderName );
-            const size_t rootEnd = normalized.find( rootBuilder.c_str() );
+            const size_t rootEnd = normalized.find( rootBuilder.view() );
             if ( rootEnd != string::npos )
             {
                 StringBuilder<constant::buffer::kMax512> fileBuilder;

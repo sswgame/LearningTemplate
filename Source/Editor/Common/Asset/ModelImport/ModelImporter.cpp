@@ -656,7 +656,7 @@ namespace sw::editor
                 const string                            normalized = FileUtil::normalizeSeparators( outputPath );
                 StringBuilder<constant::buffer::kMax64> marker;
                 marker.appendFormat( "/%#/", ModelImportUtil::kImportedModelFolder );
-                const size_t folderEnd = normalized.rfind( marker.c_str() );
+                const size_t folderEnd = normalized.rfind( marker.view() );
                 if ( folderEnd == string::npos )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.ImportedMeshOutsideModels", "Imported mesh '%#' is not under a '%#' folder - the shared skeleton has no place", outputPath, ModelImportUtil::kImportedModelFolder );

@@ -168,7 +168,7 @@ SW_TEST_CASE( EditorThemeKeys, EveryThemeKeyIsUsedAndEveryThemeHasTheSameKeys )
     {
         fixed_string<constant::buffer::kMax128> quotedKey;
         formatstring( quotedKey.data(), quotedKey.capacity(), "\"%#\"", key );
-        return setMacroKey.count( key ) > 0 || scan._allText.find( quotedKey.c_str() ) != string::npos;
+        return setMacroKey.count( key ) > 0 || scan._allText.find( quotedKey.view() ) != string::npos;
     };
     for ( const auto& [key, color] : listTheme.front()._mapColor )
     {

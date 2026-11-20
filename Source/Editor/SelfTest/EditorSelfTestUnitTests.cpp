@@ -7,6 +7,7 @@
 #include "pch.h"
 
 #include "Core/Diagnostics/CrashHandler.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestRunner.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
@@ -33,16 +34,17 @@ namespace sw::editor
                 vector<string> listFailure;
                 if ( test::TestRunner::run( options, &listFailure ) )
                     return EditorSelfTestStep::Done;
-                string message = "an editor unit test failed:";
+                StringBuilder<constant::buffer::kMax4096> message;
+                message.append( "an editor unit test failed:" );
                 for ( size_t index = 0; index < listFailure.size() && index < kMaxReportedFailure; ++index )
                 {
-                    message += "\n  " + listFailure[index];
+                    message.appendFormat( "\n  %#", listFailure[index] );
                 }
                 if ( listFailure.size() > kMaxReportedFailure )
                 {
                     StringBuilder<constant::buffer::kMax256> messagePart;
                     messagePart.appendFormat( "\n  ... and %# more", listFailure.size() - kMaxReportedFailure );
-                    message += messagePart.c_str();
+                    message.append( messagePart.view() );
                 }
                 (void)context.expect( false, message.c_str() );
                 return EditorSelfTestStep::Done;

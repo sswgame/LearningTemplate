@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/Console/Model/ConsoleLogRows.h"
@@ -17,8 +18,10 @@ SW_TEST_CASE( ConsoleLogLineTest, SourceIsAppendedOnlyWhenKnown )
     const string plain = ConsoleLogRows::formatEntryLine( entry );
     SW_EXPECT_TRUE( plain.find( "hello" ) != string::npos );
     SW_EXPECT_TRUE( ConsoleLogRows::formatEntryLineWithSource( entry ) == plain );
-    entry._file           = "a.cpp";
-    entry._line           = 7;
-    const string expected = plain + " (a.cpp:7)";
+    entry._file = "a.cpp";
+    entry._line = 7;
+    StringBuilder<constant::buffer::kMax256> expectedBuilder;
+    expectedBuilder.appendFormat( "%# (a.cpp:7)", plain );
+    const string expected( expectedBuilder.view() );
     SW_EXPECT_TRUE( ConsoleLogRows::formatEntryLineWithSource( entry ) == expected );
 }

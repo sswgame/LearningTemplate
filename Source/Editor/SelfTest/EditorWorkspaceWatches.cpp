@@ -380,9 +380,11 @@ namespace sw::editor
             const CameraComponent* pCamera = pObject->getComponent<CameraComponent>();
             if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport )
                 return;
-            const GameObject*      pParent = pObject->getParent();
-            string                 key     = string( pObject->getName().c_str() ) + "|" + ( pParent != nullptr ? string( pParent->getName().c_str() ) : string() );
-            const expected<string> state   = ObjectStateSerializer::saveToXMLString( pObject, options );
+            const GameObject*                        pParent = pObject->getParent();
+            StringBuilder<constant::buffer::kMax256> keyBuilder;
+            keyBuilder.appendFormat( "%#|%#", pObject->getName().c_str(), pParent != nullptr ? pParent->getName().c_str() : "" );
+            string                 key( keyBuilder.view() );
+            const expected<string> state = ObjectStateSerializer::saveToXMLString( pObject, options );
             if ( state.has_value() == false )
             {
                 // 저장하지 못한 오브젝트는 0 으로 접는다 — 해시가 같아 보이지 않게 오류를 남긴다.

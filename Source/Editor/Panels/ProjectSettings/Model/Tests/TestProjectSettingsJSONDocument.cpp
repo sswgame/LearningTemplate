@@ -3,6 +3,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
@@ -26,7 +28,8 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, EveryConfigFileRoundTrips )
         SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
         ProjectSettingsJSONDocument document;
         SW_EXPECT_TRUE_MSG( document.openText( path, text ).has_value(), path.c_str() );
-        const string message = path + " does not round-trip";
+        fixed_string<constant::buffer::kMax512> message;
+        formatstring( message.data(), message.capacity(), "%# does not round-trip", path );
         SW_EXPECT_TRUE_MSG( document.getReadOnlyReason() != ProjectSettingsReadOnlyReason::LayoutNotPreserved, message.c_str() );
         SW_EXPECT_TRUE_MSG( document.makeText() == text, message.c_str() );
         SW_EXPECT_FALSE( document.isModified() );

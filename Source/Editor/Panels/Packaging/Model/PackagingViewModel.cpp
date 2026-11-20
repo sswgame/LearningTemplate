@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
@@ -112,8 +114,10 @@ namespace sw::editor
         {
             if ( StringUtil::endsWith( filePath, ".json", true ) == false )
                 continue;
-            string     text;
-            const bool bGameUsesPackRoot = FileUtil::readTextFile( filePath, text ) && packRoot.empty() == false && StringUtil::contains( text, "\"" + packRoot + "\"", true );
+            string                                  text;
+            fixed_string<constant::buffer::kMax256> quotedRoot;
+            formatstring( quotedRoot.data(), quotedRoot.capacity(), "\"%#\"", packRoot );
+            const bool bGameUsesPackRoot = FileUtil::readTextFile( filePath, text ) && packRoot.empty() == false && StringUtil::contains( text, quotedRoot, true );
             if ( bGameUsesPackRoot )
                 _gameIndex = static_cast<uint32>( _listGame.size() );
             _listGame.push_back( FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) ) );

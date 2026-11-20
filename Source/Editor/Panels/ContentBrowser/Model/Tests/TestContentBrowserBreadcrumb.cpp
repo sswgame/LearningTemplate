@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserBreadcrumb.h"
@@ -206,7 +208,9 @@ SW_TEST_CASE( ContentBrowserHistoryTest, OldestVisitsFallOffTheEnd )
     ContentBrowserHistory history;
     for ( size_t index = 0; index < ContentBrowserHistory::kMaxEntryCount + 10; ++index )
     {
-        history.record( "D:/f" + to_string( static_cast<uint64>( index ) ), {} );
+        fixed_string<constant::buffer::kMax32> folderPath;
+        formatstring( folderPath.data(), folderPath.capacity(), "D:/f%#", static_cast<uint64>( index ) );
+        history.record( folderPath, {} );
     }
     size_t                            backCount = 0;
     const ContentBrowserHistoryEntry* pEntry    = nullptr;

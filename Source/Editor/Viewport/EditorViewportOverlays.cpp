@@ -5,6 +5,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
@@ -246,7 +248,8 @@ namespace sw::editor
         ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2{ 4.0f * scale, 3.0f * scale } );
         ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2{ 4.0f * scale, 3.0f * scale } );
         ImGui::PushStyleVar( ImGuiStyleVar_ChildRounding, 4.0f * scale );
-        const string childID = "##overlay." + state._id;
+        fixed_string<constant::buffer::kMax128> childID;
+        formatstring( childID.data(), childID.capacity(), "##overlay.%#", state._id );
         ImGui::BeginChild( childID.c_str(), ImVec2{ 0.0f, 0.0f },
                            ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding,
                            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings );

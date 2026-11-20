@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
 
@@ -168,8 +170,11 @@ namespace sw::editor
             }
             // 목록에는 형식 이름(`PackEngineSettings`)이 아닌 읽는 이름("Pack Engine Settings")을 보인다. 형식 이름은 표식 · 툴팁에 남는다. 표는 `Config/` 아래 경로다.
             string label = page._entry.isTable() ? page._entry._page : EditorDisplayNameUtil::makeDisplayName( page._entry._typeName );
-            if ( page._entry._gameName.empty() == false )
-                label += " - " + page._entry._gameName; // 게임마다 프리셋이 하나다(`Config/Game/<게임>.json`)
+            if ( page._entry._gameName.empty() == false ) // 게임마다 프리셋이 하나다(`Config/Game/<게임>.json`)
+            {
+                label += " - ";
+                label += page._entry._gameName;
+            }
             if ( page._bDirty )
                 label += " *";
             ImGui::PushID( static_cast<int32>( index ) );

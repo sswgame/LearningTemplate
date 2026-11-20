@@ -5,6 +5,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -58,7 +59,11 @@ namespace sw::editor
             /** @brief 개발 명령 답 글로 씁니다(`<문장>: <대상>`). */
             static string makeReply( const Error& error )
             {
-                return error.detail().empty() ? string( error.message() ) : string( error.message() ) + ": " + string( error.detail() );
+                StringBuilder<constant::buffer::kMax512> textBuilder;
+                textBuilder.append( error.message() );
+                if ( error.detail().empty() == false )
+                    textBuilder.appendFormat( ": %#", error.detail() );
+                return string( textBuilder.view() );
             }
 
             /** @brief 비교 결과 한 줄입니다(탭 · 명령 답). */
@@ -185,7 +190,11 @@ namespace sw::editor
                 {
                     EditorStateHashCompare& channelCompare = getCompare();
                     if ( channelCompare.setHashChannel( listArgument[1] ) )
-                        outReply = "netplay sync reads the hash line '" + channelCompare.getHashChannel() + "'";
+                    {
+                        StringBuilder<constant::buffer::kMax256> replyBuilder;
+                        replyBuilder.appendFormat( "netplay sync reads the hash line '%#'", channelCompare.getHashChannel() );
+                        outReply = string( replyBuilder.view() );
+                    }
                     else
                         outReply = channelCompare.getLastError();
                     return true;
@@ -205,9 +214,13 @@ namespace sw::editor
                 }
                 if ( bSave )
                 {
-                    const bool bSaved = compare.saveToFile( 0, filePath );
-                    outReply          = bSaved ? "netplay sync saved " + to_string( compare.getSource( 0 )._listSample.size() ) + " tick(s) to " + filePath
-                                               : "netplay sync could not write " + filePath;
+                    const bool                               bSaved = compare.saveToFile( 0, filePath );
+                    StringBuilder<constant::buffer::kMax512> replyBuilder;
+                    if ( bSaved )
+                        replyBuilder.appendFormat( "netplay sync saved %# tick(s) to %#", compare.getSource( 0 )._listSample.size(), filePath );
+                    else
+                        replyBuilder.appendFormat( "netplay sync could not write %#", filePath );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 if ( compare.loadFromFile( 1, filePath ) == false || compare.compare() == false )
@@ -215,7 +228,9 @@ namespace sw::editor
                     outReply = compare.getLastError();
                     return true;
                 }
-                outReply = "netplay sync " + describeComparison( compare.getComparison() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "netplay sync %#", describeComparison( compare.getComparison() ) );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

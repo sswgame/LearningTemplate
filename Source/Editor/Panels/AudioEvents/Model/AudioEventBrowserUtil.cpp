@@ -158,11 +158,14 @@ namespace sw::editor
         if ( pSource == nullptr )
             return hashed_string{};
         // 겹치지 않는 이름을 찾는다 — 이름이 겹치면 라이브러리 검사가 저장을 막는다.
-        const string  baseName = string{ source.view() } + "_Copy";
-        hashed_string newName  = hashed_string( baseName );
+        fixed_string<constant::buffer::kMax128> baseName;
+        formatstring( baseName.data(), baseName.capacity(), "%#_Copy", source.view() );
+        hashed_string newName = hashed_string( baseName.view() );
         for ( uint32 suffix = 2; inoutLibrary.findEvent( newName ) != nullptr; ++suffix )
         {
-            newName = hashed_string( baseName + to_string( suffix ) );
+            fixed_string<constant::buffer::kMax128> candidate;
+            formatstring( candidate.data(), candidate.capacity(), "%#%#", baseName, suffix );
+            newName = hashed_string( candidate.view() );
         }
         AudioEventDef copy = *pSource; // 넣기 전에 복사한다 — 넣으면 목록이 다시 잡혀 pSource 가 무효가 될 수 있다
         copy._name         = newName;

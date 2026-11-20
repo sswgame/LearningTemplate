@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
@@ -292,7 +293,7 @@ namespace sw::editor
                 for ( const string& typeName : listTypeName )
                 {
                     if ( ImGui::MenuItem( typeName.c_str(), nullptr, StringUtil::equals( activeType, typeName ) ) )
-                        _filterBuffer = string_view{ "t:" + typeName };
+                        formatstring( _filterBuffer.data(), _filterBuffer.capacity(), "t:%#", typeName );
                     EditorSelfTestMarks::recordFormat( "hierarchy.typeFilter.%#", typeName );
                 }
                 EditorCompactControls::endViewOptions();

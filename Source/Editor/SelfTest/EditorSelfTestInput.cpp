@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Input/EditorFileDrop.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -266,8 +267,10 @@ namespace sw::editor
                 {
                     if ( VectorUtil::findBy<&WindowPlace::_windowID>( listAfter, before._windowID ) != nullptr )
                         continue;
-                    const ImGuiWindow* pWindow = ImGui::FindWindowByID( before._windowID );
-                    return string{ pWindow != nullptr ? pWindow->Name : "?" } + " disappeared";
+                    const ImGuiWindow*                       pWindow = ImGui::FindWindowByID( before._windowID );
+                    StringBuilder<constant::buffer::kMax256> changeBuilder;
+                    changeBuilder.appendFormat( "%# disappeared", pWindow != nullptr ? pWindow->Name : "?" );
+                    return string( changeBuilder.view() );
                 }
                 return "the main viewport size or the open popup count changed";
             }

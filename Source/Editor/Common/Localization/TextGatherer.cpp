@@ -634,9 +634,11 @@ namespace sw
                     const SourceTextEntry* pEntry   = pTable != nullptr ? pTable->findEntry( text._key ) : nullptr;
                     const bool             bDiffers = pEntry != nullptr && text._kind == GatheredTextKind::Keyed && pEntry->_source != text._source;
                     if ( bDiffers )
+                    {
                         StringBuilder<constant::buffer::kMax256> issueBuilder;
-                    issueBuilder.appendFormat( "key '%#' is defined by another string table with a different source - the table wins", text._key );
-                    report._listIssue.push_back( { text._listOrigin.empty() ? string{} : text._listOrigin.front(), string( issueBuilder.view() ), false } );
+                        issueBuilder.appendFormat( "key '%#' is defined by another string table with a different source - the table wins", text._key );
+                        report._listIssue.push_back( { text._listOrigin.empty() ? string{} : text._listOrigin.front(), string( issueBuilder.view() ), false } );
+                    }
                 }
                 continue;
             }

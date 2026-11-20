@@ -4,6 +4,7 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw::editor
 {
@@ -18,7 +19,9 @@ namespace sw::editor
 
     string ConsoleLogRows::formatEntryLine( const LogEntry& entry )
     {
-        return "[" + entry._timeStamp + "] [" + entry._tag + "] [" + levelName( entry._level ) + "] - " + entry._message;
+        StringBuilder<constant::buffer::kMax1024> lineBuilder;
+        lineBuilder.appendFormat( "[%#] [%#] [%#] - %#", entry._timeStamp, entry._tag, levelName( entry._level ), entry._message );
+        return string( lineBuilder.view() );
     }
 
     string ConsoleLogRows::formatEntryLineWithSource( const LogEntry& entry )

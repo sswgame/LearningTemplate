@@ -2,6 +2,10 @@
 
 #include "Editor/SelfTest/EditorStabilityWait.h"
 
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
+
 #include "DevTools/Client/Automation/Scenario/AutomationEnvironmentSteps.h"
 
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
@@ -32,13 +36,17 @@ namespace sw::editor
         const EditorDockLayout* pDockLayout   = editor::findSubsystem<EditorDockLayout>();
         const bool              bScreenStable = AutomationEnvironmentSteps::isWindowResizeApplied() && pDockLayout != nullptr && pDockLayout->isApplyPending() == false &&
                                    EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isLayoutStableAfter( _waitSerial );
-        const bool                               bSceneStable  = editor::getSubsystem<SceneManager>().isTransitioning() == false;
-        const bool                               bAssetsStable = CaptureReadiness::countPendingJobs( pActiveManager ) == 0;
-        const AutomationWaitingCondition         pendingJob    = AutomationStepRegistry::findFinishBlocker(); // 뒤에 끝날 일(저장 · 스크린샷 · 캡처 쓰기) — 모듈이 제 일을 등록한다
-        const AutomationReadiness                readiness     = _stability.advance( bScreenStable, bSceneStable && bAssetsStable && pendingJob.isWaiting() == false );
+        const bool                              bSceneStable  = editor::getSubsystem<SceneManager>().isTransitioning() == false;
+        const bool                              bAssetsStable = CaptureReadiness::countPendingJobs( pActiveManager ) == 0;
+        const AutomationWaitingCondition        pendingJob    = AutomationStepRegistry::findFinishBlocker(); // 뒤에 끝날 일(저장 · 스크린샷 · 캡처 쓰기) — 모듈이 제 일을 등록한다
+        const AutomationReadiness               readiness     = _stability.advance( bScreenStable, bSceneStable && bAssetsStable && pendingJob.isWaiting() == false );
+        fixed_string<constant::buffer::kMax256> screenState;
+        if ( bScreenStable )
+            screenState = "settled";
+        else
+            formatstring( screenState.data(), screenState.capacity(), "moving: %#", EditorSelfTestInput::describeLastLayoutChange() );
         StringBuilder<constant::buffer::kMax256> waitingForBuilder;
-        waitingForBuilder.appendFormat( "the editor to settle (screen %#, scene %#, assets %#, work %#; progress %#, idle moving %# frame(s))",
-                                        bScreenStable ? "settled" : ( "moving: " + EditorSelfTestInput::describeLastLayoutChange() ).c_str(),
+        waitingForBuilder.appendFormat( "the editor to settle (screen %#, scene %#, assets %#, work %#; progress %#, idle moving %# frame(s))", screenState,
                                         bSceneStable ? "settled" : "transitioning", bAssetsStable ? "settled" : "pending", pendingJob.isWaiting() ? pendingJob._pName : "none",
                                         readiness.getProgress(), _stability.getIdleMovingFrames() );
         _waitingFor = string( waitingForBuilder.view() );

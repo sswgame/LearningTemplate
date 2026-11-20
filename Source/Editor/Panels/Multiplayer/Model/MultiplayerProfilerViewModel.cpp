@@ -63,9 +63,9 @@ namespace sw::editor
                     return false; // 시한까지 모은다
                 } );
                 StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( " process(es), peak sent %# B/s", static_cast<int64>( history.computePeak( EditorNetProfilerChannel::SentBytesPerSecond ) ) );
-                outReply = "netplay profile has " + to_string( history.computeSampleCount() ) + " sample(s) from " + to_string( history.getTrackCount() ) +
-                           string( textBuilder.view() );
+                textBuilder.appendFormat( "netplay profile has %# sample(s) from %# process(es), peak sent %# B/s", history.computeSampleCount(), history.getTrackCount(),
+                                          static_cast<int64>( history.computePeak( EditorNetProfilerChannel::SentBytesPerSecond ) ) );
+                outReply = string( textBuilder.view() );
                 return true;
             }
         };

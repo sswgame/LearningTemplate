@@ -8,6 +8,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -279,10 +281,11 @@ namespace sw::editor
                 continue;
             for ( const uint32 rowIndex : group._listRow )
             {
-                const CatalogFileRow& file      = _fileList.getRows()[rowIndex];
-                const bool            bSelected = file._assetID == _session.getAssetID();
-                const string          fileName  = FileUtil::getFileNamePart( file._assetID );
-                const string          label     = fileName + "##" + file._assetID;
+                const CatalogFileRow&                   file      = _fileList.getRows()[rowIndex];
+                const bool                              bSelected = file._assetID == _session.getAssetID();
+                const string                            fileName  = FileUtil::getFileNamePart( file._assetID );
+                fixed_string<constant::buffer::kMax512> label;
+                formatstring( label.data(), label.capacity(), "%###%#", fileName, file._assetID );
                 if ( ImGui::Selectable( label.c_str(), bSelected ) && bSelected == false )
                 {
                     if ( _session.getDocument().isDirty() )

@@ -513,7 +513,7 @@ namespace sw::editor
             // 원본이 이미 텍스처 원본 폴더의 파일이면 그대로 가리킨다(같은 이미지를 두 벌 두지 않는다 — 내려받은 에셋은 이미지를 textures_raw 에 둔다).
             StringBuilder<constant::buffer::kMax64> rawMarker;
             rawMarker.appendFormat( "/%#/", ModelImportUtil::kRawTextureFolder );
-            if ( texture._sourcePath.find( rawMarker.c_str() ) != string::npos )
+            if ( texture._sourcePath.find( rawMarker.view() ) != string::npos )
             {
                 outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( texture._sourcePath ) );
                 return true;
@@ -604,7 +604,7 @@ namespace sw::editor
         }
         StringBuilder<constant::buffer::kMax64> rawMarker;
         rawMarker.appendFormat( "/%#/", ModelImportUtil::kRawTextureFolder );
-        const string domain  = logicalPath.substr( 0, logicalPath.find( rawMarker.c_str() ) );
+        const string domain  = logicalPath.substr( 0, logicalPath.find( rawMarker.view() ) );
         const string key     = ImportedAssetStore::makeKey( texture._bytes.data(), texture._bytes.size(), string_view{} );
         const string rawPath = TextureImportConfig::makeSharedSourcePath( domain, match._rule._name, key, texture._extension );
         if ( ImportedAssetStore::writeIfAbsent( rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
@@ -686,7 +686,7 @@ namespace sw::editor
         const string                            normalized = FileUtil::normalizeSeparators( sourcePath );
         StringBuilder<constant::buffer::kMax64> marker;
         marker.appendFormat( "/%#/", ModelImportUtil::kRawModelFolder );
-        const size_t at = normalized.find( marker.c_str() );
+        const size_t at = normalized.find( marker.view() );
         if ( at == string::npos )
             return {};
         const string                             domain   = normalized.substr( 0, at );

@@ -3,6 +3,7 @@
 #include "Editor/Panels/TileSet/Model/TileSetEditModel.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
@@ -55,7 +56,9 @@ namespace sw::editor
         collectIssues( listIssue );
         if ( listIssue.empty() == false )
         {
-            _status = "Not saved: " + listIssue.front()._message;
+            StringBuilder<constant::buffer::kMax256> statusBuilder;
+            statusBuilder.appendFormat( "Not saved: %#", listIssue.front()._message );
+            _status = string( statusBuilder.view() );
             return false;
         }
         if ( EditorToolAssetCommands::saveTileSet( path, _content ) == false )
