@@ -179,7 +179,7 @@ namespace sw
                 const RenderPassKindInfo& info = getRenderPassKindInfo( pass._type );
                 if ( info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && ( settings.usesPostProcess() == false || pass._minPostQuality > frameSettings._postQuality ) )
                     return false;
-                const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( settings._viewMode );
+                const RenderViewModeInfo& viewModeInfo = RenderViewModeUtil::getInfo( settings._viewMode );
                 // 값 보기(노멀 · 깊이 · 오버드로)와 와이어프레임은 장면 색을 덮지 않는다(안개와 같은 판정).
                 const bool bShowsScene = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
                 switch ( pass._type )

@@ -45,7 +45,7 @@ namespace sw
             }
             const float32 normalLength   = skinnedNormal.getLength();
             outListPosition[vertexIndex] = skinnedPosition;
-            outListNormal[vertexIndex]   = normalLength > 1e-6f ? skinnedNormal * ( 1.0f / normalLength ) : normal;
+            outListNormal[vertexIndex]   = normalLength > MathUtil::kEpsilon ? skinnedNormal * ( 1.0f / normalLength ) : normal;
         }
     }
 

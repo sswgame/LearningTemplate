@@ -19,7 +19,7 @@ namespace sw
      */
     inline bool computeRHITextureMipLayout( RHIFormat format, uint32 width, uint32 height, uint32 mip, RHITextureMipSpan& outSpan )
     {
-        const RHIFormatBlockInfo info                = getRHIFormatBlockInfo( format );
+        const RHIFormatBlockInfo info                = RHIFormatUtil::getBlockInfo( format );
         const bool               bInvalidBlockLayout = info._blockBytes == 0 || width == 0 || height == 0;
         if ( bInvalidBlockLayout )
             return false;

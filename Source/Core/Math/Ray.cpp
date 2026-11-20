@@ -48,7 +48,7 @@ namespace sw
         const float3  axis         = segmentEnd - segmentStart;
         const float32 axisLength   = axis.getLength();
         const float32 radiusSquare = radius * radius;
-        if ( axisLength < 1.0e-6f )
+        if ( axisLength < MathUtil::kEpsilon )
             return intersectSphere( ray, segmentStart, radius, maxDistance, outDistance );
         const float3  unitAxis   = axis * ( 1.0f / axisLength );
         const float3  fromStart  = ray._origin - segmentStart;
@@ -166,7 +166,7 @@ namespace sw
 
     bool Ray::intersectHorizontalPlane( const Ray& ray, float32 height, float32 maxDistance, float32& outDistance )
     {
-        if ( MathUtil::abs( ray._direction._y ) < 1.0e-6f )
+        if ( MathUtil::abs( ray._direction._y ) < MathUtil::kEpsilon )
             return false;
         const float32 distance = ( height - ray._origin._y ) / ray._direction._y;
         if ( distance < 0.0f || distance > maxDistance )

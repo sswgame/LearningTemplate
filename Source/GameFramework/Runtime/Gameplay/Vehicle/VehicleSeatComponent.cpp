@@ -39,7 +39,7 @@ namespace sw
             {
                 const float3  axis   = row == 0 ? float3{ matrix._11, matrix._12, matrix._13 } : ( row == 1 ? float3{ matrix._21, matrix._22, matrix._23 } : float3{ matrix._31, matrix._32, matrix._33 } );
                 const float32 length = MathUtil::sqrt( axis.dot( axis ) );
-                return length > 1.0e-6f ? axis * ( 1.0f / length ) : float3{};
+                return length > MathUtil::kEpsilon ? axis * ( 1.0f / length ) : float3{};
             }
         };
     } // namespace

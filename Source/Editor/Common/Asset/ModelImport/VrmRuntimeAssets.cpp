@@ -165,7 +165,7 @@ namespace sw::editor
             for ( const VrmExpressionBind& bind : pExpression->_listBind )
             {
                 VectorUtil::addUnique( listBlinkTarget, bind._morphTarget );
-                if ( MathUtil::abs( bind._weight - 1.0f ) > 1e-4f )
+                if ( MathUtil::abs( bind._weight - 1.0f ) > MathUtil::kLooseEpsilon )
                     Internal::addIgnored( pOutListIgnored, "expression '" + string( name ) + "' weights (blink targets are weight 1)" );
             }
         };

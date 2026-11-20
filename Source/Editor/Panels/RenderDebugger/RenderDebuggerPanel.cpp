@@ -290,14 +290,14 @@ namespace sw::editor
                 ImGui::Text( "%u transitions", pass._transitionCount );
             _nodeGraph.endNode();
             if ( bPlace )
-                ed::SetNodePosition( toNodeID( RenderGraphLayout::getNodeID( node._pass ) ), ImVec2( node._position._x, node._position._y ) );
+                ed::SetNodePosition( EditorNodeGraphID::toNodeID( RenderGraphLayout::getNodeID( node._pass ) ), ImVec2( node._position._x, node._position._y ) );
             ++drawn;
         }
         for ( uint32 linkIndex = 0; linkIndex < static_cast<uint32>( layout._listLink.size() ); ++linkIndex )
         {
             const RenderGraphLayoutLink& link = layout._listLink[linkIndex];
-            ed::Link( toLinkID( RenderGraphLayout::getLinkID( linkIndex ) ), toPinID( RenderGraphLayout::getOutputPinID( link._fromPass ) ),
-                      toPinID( RenderGraphLayout::getInputPinID( link._toPass ) ) );
+            ed::Link( EditorNodeGraphID::toLinkID( RenderGraphLayout::getLinkID( linkIndex ) ), EditorNodeGraphID::toPinID( RenderGraphLayout::getOutputPinID( link._fromPass ) ),
+                      EditorNodeGraphID::toPinID( RenderGraphLayout::getInputPinID( link._toPass ) ) );
         }
         if ( bPlace )
         {

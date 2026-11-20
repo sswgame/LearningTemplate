@@ -60,7 +60,7 @@ namespace sw
             const float32 spanLength   = endDistance - fromDistance;
             span._index                = lowIndex;
             span._nextIndex            = bWrapSegment ? ( bClosed ? 0 : lowIndex ) : lowIndex + 1;
-            span._alpha                = spanLength > 1.0e-6f ? MathUtil::clamp( ( wrapped - fromDistance ) / spanLength, 0.0f, 1.0f ) : 0.0f;
+            span._alpha                = spanLength > MathUtil::kEpsilon ? MathUtil::clamp( ( wrapped - fromDistance ) / spanLength, 0.0f, 1.0f ) : 0.0f;
             return span;
         }
     };

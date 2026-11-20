@@ -53,9 +53,9 @@ namespace sw
         /** @brief 사각형이 출력 전체인지 나타냅니다. */
         bool isFullRect() const { return _screenRect._x <= 0.0f && _screenRect._y <= 0.0f && _screenRect._z >= 1.0f && _screenRect._w >= 1.0f; }
         /** @brief 효과 후처리(블룸, 외곽선, SSAO, TAA)를 적용하는지 나타냅니다. 끈 뷰와 표면 값을 보이는 보기 모드는 원본을 넘깁니다. */
-        bool usesPostProcess() const { return _bPostProcess == SW_TRUE && getRenderViewModeInfo( _viewMode )._bShowsBuffer == false; }
+        bool usesPostProcess() const { return _bPostProcess == SW_TRUE && RenderViewModeUtil::getInfo( _viewMode )._bShowsBuffer == false; }
         /** @brief 톤맵을 적용하는지 나타냅니다. 표면 값을 보이는 보기 모드(Normals, Depth, Overdraw)는 색을 바꾸지 않습니다. */
-        bool usesTonemap() const { return getRenderViewModeInfo( _viewMode )._bShowsBuffer == false; }
+        bool usesTonemap() const { return RenderViewModeUtil::getInfo( _viewMode )._bShowsBuffer == false; }
         /** @brief @p location 자리에 그릴 후처리 머티리얼이 있는지 나타냅니다. 후처리를 끈 뷰는 없다고 답한다(효과 패스와 같은 규칙). */
         bool shouldDrawPostProcessMaterial( PostProcessBlendableLocation location ) const
         {

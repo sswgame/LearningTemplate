@@ -308,7 +308,7 @@ namespace sw::editor
             const BehaviorTreeEditNode* pNode = _model.find( id );
             if ( pNode == nullptr || pNode->_parent < 0 )
                 continue;
-            ed::Link( toLinkID( id ), toPinID( BehaviorTreePanelInternal::makeOutputPin( pNode->_parent ) ), toPinID( BehaviorTreePanelInternal::makeInputPin( id ) ) );
+            ed::Link( EditorNodeGraphID::toLinkID( id ), EditorNodeGraphID::toPinID( BehaviorTreePanelInternal::makeOutputPin( pNode->_parent ) ), EditorNodeGraphID::toPinID( BehaviorTreePanelInternal::makeInputPin( id ) ) );
         }
 
         if ( _bLayoutPending )
@@ -316,14 +316,14 @@ namespace sw::editor
             layoutTree();
             for ( const Placement& placement : _listPlacement )
             {
-                ed::SetNodePosition( toNodeID( placement._id ), ImVec2{ placement._position._x, placement._position._y } );
+                ed::SetNodePosition( EditorNodeGraphID::toNodeID( placement._id ), ImVec2{ placement._position._x, placement._position._y } );
             }
             _bLayoutPending = SW_FALSE;
             _nodeGraph.requestContentFit();
         }
         if ( _bSelectPending )
         {
-            ed::SelectNode( toNodeID( _selectedID ), false );
+            ed::SelectNode( EditorNodeGraphID::toNodeID( _selectedID ), false );
             _bSelectPending = SW_FALSE;
         }
 

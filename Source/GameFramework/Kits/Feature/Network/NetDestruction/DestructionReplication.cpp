@@ -261,7 +261,7 @@ namespace sw
                 sendPoses( entry, *pComponent, serverTick );
         }
         _hashTime += _settings._tickInterval;
-        if ( _hashTime + 1.0e-4f >= _settings._hashInterval )
+        if ( _hashTime + MathUtil::kLooseEpsilon >= _settings._hashInterval )
         {
             _hashTime = 0.0f;
             for ( const Entry& entry : _listEntry )
@@ -333,7 +333,7 @@ namespace sw
             return;
         const float32 period = Internal::computePosePeriod( component );
         entry._poseTime += _settings._tickInterval;
-        const bool bDue = entry._poseTime + 1.0e-4f >= period;
+        const bool bDue = entry._poseTime + MathUtil::kLooseEpsilon >= period;
         if ( bDue )
             entry._poseTime = 0.0f;
 

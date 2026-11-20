@@ -58,7 +58,7 @@ namespace sw
          */
         uint64 computeCopyOffsetAlignment( RHIFormat format )
         {
-            const uint32 blockBytes = getRHIFormatBlockInfo( format )._blockBytes;
+            const uint32 blockBytes = RHIFormatUtil::getBlockInfo( format )._blockBytes;
             return ( blockBytes != 0 && blockBytes % 4 == 0 ) ? blockBytes : 4;
         }
 
@@ -522,7 +522,7 @@ namespace sw
             return false;
         }
         // 이 장치가 샘플링하지 못하는 압축 형식(데스크톱의 ASTC · ETC2)은 드라이버에 넘기지 않는다 — 넘기면 D3D12 는 실패, Vulkan 드라이버는 0 나누기로 죽었다.
-        if ( isRHIFormatBlockCompressed( desc._format ) && _pDevice->supportsTextureFormat( desc._format ) == false )
+        if ( RHIFormatUtil::isBlockCompressed( desc._format ) && _pDevice->supportsTextureFormat( desc._format ) == false )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DFormatUnsupported", "createTexture2D: this device cannot sample format %# (%#x%#) - the texture is not created", static_cast<uint32>( desc._format ), desc._width, desc._height );
             return false;

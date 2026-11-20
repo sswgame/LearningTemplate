@@ -123,7 +123,7 @@ namespace sw::editor
                 case RenderViewMode::Count:
                     break;
             }
-            return getRenderViewModeInfo( mode )._pName;
+            return RenderViewModeUtil::getInfo( mode )._pName;
         }
     } // namespace
 
@@ -145,7 +145,7 @@ namespace sw::editor
                 for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
                 {
                     const RenderViewMode mode  = static_cast<RenderViewMode>( modeIndex );
-                    const utf8*          pName = getRenderViewModeInfo( mode )._pName;
+                    const utf8*          pName = RenderViewModeUtil::getInfo( mode )._pName;
                     if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( getViewModeDisplayName( mode ), pName ), mode == currentMode ) && bHasRenderer )
                         settings._requestedViewMode = mode;
                     EditorSelfTestMarks::recordFormat( "viewport.viewMode.%#", StringUtil::toLower( pName ) );

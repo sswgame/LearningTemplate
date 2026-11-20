@@ -156,7 +156,7 @@ namespace sw
         const HRESULT   resizeHr = buffers._pSwapChain->ResizeBuffers( buffers._bufferCount, buffers._width, buffers._height, toDXGIFormat( format ), buffers._flags );
         if ( FAILED( resizeHr ) )
         {
-            SW_LOG_ERROR_ID( "DXGI.ColorSpaceResizeBuffersFailed", "ResizeBuffers to %# failed (HRESULT 0x%#)", getRHIFormatName( format ), static_cast<uint32>( resizeHr ) );
+            SW_LOG_ERROR_ID( "DXGI.ColorSpaceResizeBuffersFailed", "ResizeBuffers to %# failed (HRESULT 0x%#)", RHIFormatUtil::getName( format ), static_cast<uint32>( resizeHr ) );
             return from;
         }
         if ( applyDXGIColorSpace( buffers._pSwapChain, to, toMetadata ) )

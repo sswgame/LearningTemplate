@@ -165,7 +165,7 @@ namespace sw
             _poise                = MathUtil::max( 0.0f, _poise - poiseDamage );
             if ( _poise <= 0.0f )
             {
-                _poiseBreak.start( MathUtil::max( _settings._poiseBreakDuration, 1.0e-6f ) );
+                _poiseBreak.start( MathUtil::max( _settings._poiseBreakDuration, MathUtil::kEpsilon ) );
                 result._bPoiseBroken = SW_TRUE;
                 pushEvent( HealthEventKind::PoiseBroken, poiseDamage, instigatorID );
             }

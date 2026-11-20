@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -76,7 +77,7 @@ namespace sw
         summary._p50Milliseconds        = percentile( 0.50 );
         summary._p95Milliseconds        = percentile( 0.95 );
         summary._p99Milliseconds        = percentile( 0.99 );
-        summary._averageFramesPerSecond = summary._averageMilliseconds > 0.0 ? 1000.0 / summary._averageMilliseconds : 0.0;
+        summary._averageFramesPerSecond = summary._averageMilliseconds > 0.0 ? static_cast<float64>( constant::time::kMillisecondsPerSecond ) / summary._averageMilliseconds : 0.0;
         return summary;
     }
 

@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -104,7 +105,7 @@ namespace sw
                     }
                     const float32   top      = listModel[lower].getTranslation()._y;
                     const float32   bottom   = listModel[lower + 1].getTranslation()._y;
-                    const float32   fraction = MathUtil::saturate( ( top - y ) / MathUtil::max( top - bottom, 1e-4f ) );
+                    const float32   fraction = MathUtil::saturate( ( top - y ) / MathUtil::max( top - bottom, MathUtil::kLooseEpsilon ) );
                     MeshSkinVertex& skin     = listSkin[index];
                     skin._arrJoint[0]        = static_cast<uint16>( lower );
                     skin._arrJoint[1]        = static_cast<uint16>( lower + 1 );
@@ -856,7 +857,7 @@ namespace sw
             {
                 // 결정적 해시를 씁니다. 실행마다 같은 이미지여야 비교할 수 있습니다.
                 const uint32 hash = ( index + 1u ) * 2654435761u;
-                pAnimator->setInitialTime( static_cast<float32>( hash >> 16 ) / 65535.0f * _settings._characterStaggerSeconds );
+                pAnimator->setInitialTime( unorm16::fromRaw( static_cast<uint16>( hash >> 16 ) ).toFloat() * _settings._characterStaggerSeconds );
             }
             _listBenchExtra.push_back( pMesh->getHandle() );
             spawnCharacterParts( *pObjects, index, pMesh );
@@ -1270,9 +1271,9 @@ namespace sw
         // 결정적 해시를 씁니다. 실행마다 같은 이미지가 나와야 스크린샷 비교가 의미를 갖습니다.
         uint32 hash = index * 2654435761u;
         hash ^= hash >> 15;
-        const float32 r = static_cast<float32>( ( hash >> 0 ) & 0xFFu ) / 255.0f;
-        const float32 g = static_cast<float32>( ( hash >> 8 ) & 0xFFu ) / 255.0f;
-        const float32 b = static_cast<float32>( ( hash >> 16 ) & 0xFFu ) / 255.0f;
+        const float32 r = unorm8::fromRaw( static_cast<uint8>( ( hash >> 0 ) & 0xFFu ) ).toFloat();
+        const float32 g = unorm8::fromRaw( static_cast<uint8>( ( hash >> 8 ) & 0xFFu ) ).toFloat();
+        const float32 b = unorm8::fromRaw( static_cast<uint8>( ( hash >> 16 ) & 0xFFu ) ).toFloat();
         // 너무 어두우면 조명을 확인하기 어려우므로 아래쪽 값을 끌어올립니다.
         return float4{ 0.35f + r * 0.65f, 0.35f + g * 0.65f, 0.35f + b * 0.65f, 1.0f };
     }
@@ -1719,7 +1720,7 @@ namespace sw
         }
         else
         {
-            const float32 roughness = static_cast<float32>( _churnRandom.nextUint() & 0xFFFFu ) / 65535.0f;
+            const float32 roughness = unorm16::fromRaw( static_cast<uint16>( _churnRandom.nextUint() & 0xFFFFu ) ).toFloat();
             pInstance->setScalarParameter( hashed_string( "_roughness" ), roughness );
         }
     }

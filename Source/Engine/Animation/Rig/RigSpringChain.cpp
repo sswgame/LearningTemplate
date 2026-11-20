@@ -175,7 +175,7 @@ namespace sw
             _lastRootPosition     = root;
         }
 
-        const float32 step      = MathUtil::max( settings._fixedStep, 1e-4f );
+        const float32 step      = MathUtil::max( settings._fixedStep, MathUtil::kLooseEpsilon );
         const uint32  stepCount = RigSpringChainInternal::consumeSubSteps( _accumulator, deltaSeconds, step, settings._maxSubStep );
 
         const float3 planeNormal = ( space._bPlanar == SW_TRUE ) ? float3::transformVector( space._planeNormal, worldFromModel ).normalize() : float3::Zero;

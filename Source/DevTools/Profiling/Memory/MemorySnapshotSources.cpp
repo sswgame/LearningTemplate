@@ -214,7 +214,7 @@ namespace sw
             else
                 resource.appendFormat( "%s %llu", Internal::getKeySpaceName( entry._key._space ), entry._key._id );
             const bool        bTexture = entry._key._space == RHIMemoryKeySpace::Texture;
-            const string_view format   = bTexture ? string_view{ getRHIFormatName( entry._shape._format ) } : string_view{};
+            const string_view format   = bTexture ? string_view{ RHIFormatUtil::getName( entry._shape._format ) } : string_view{};
             outSheet._listRow.push_back( MemoryRow{
                 { Internal::text( resource.view() ), Internal::text( entry._label ), Internal::text( RHIMemoryTracker::getKindName( entry._kind ) ),
                  Internal::text( format ), Internal::number( entry._shape._width ), Internal::number( entry._shape._height ),

@@ -98,7 +98,7 @@ namespace sw
         // 커맨드라인이 주 출력의 보기 모드를 정했으면 여기서 받는다(에디터 씬 뷰는 툴바가 따로 정한다).
         // 모드가 아닌 값(`Count` 표식, 에디터 · 콘솔이 숫자로 넣은 범위 밖 값)은 Lit 으로 바꾸지 않고 기동을 멈춘다 — 검증 실행이 다른 모드를 찍고 통과하면 안 된다.
         const RenderViewMode viewMode = gv_viewMode;
-        if ( isRenderViewModeIndex( static_cast<int32>( viewMode ) ) == false )
+        if ( RenderViewModeUtil::isIndex( static_cast<int32>( viewMode ) ) == false )
         {
             SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: -gv_viewMode=%# is not a view mode (0 .. %#)", static_cast<int64>( viewMode ), static_cast<int64>( RenderViewMode::Count ) - 1 );
             return SubsystemInitResult::Failed;

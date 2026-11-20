@@ -2,6 +2,8 @@
 
 #include "Engine/Audio/AudioSpatial.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Audio/AudioTypes.h"
 
 namespace sw
@@ -94,7 +96,7 @@ namespace sw
         const float32     side       = offset.dot( right );
         const float32     front      = offset.dot( listener._forward );
         const float32     horizontal = MathUtil::sqrt( side * side + front * front );
-        const float32     radius     = MathUtil::max( horizontal, MathUtil::max( 1e-4f, centerRadius ) );
+        const float32     radius     = MathUtil::max( horizontal, MathUtil::max( MathUtil::kLooseEpsilon, centerRadius ) );
         AudioPanDirection direction;
         direction._right = MathUtil::clamp( side / radius, -1.0f, 1.0f );
         direction._front = MathUtil::clamp( front / radius, -1.0f, 1.0f );
@@ -108,7 +110,7 @@ namespace sw
             return 1.0f;
         float3        toListener = listener._position - emitter._position;
         const float32 distance   = toListener.getLength();
-        if ( distance < 1e-4f )
+        if ( distance < MathUtil::kLooseEpsilon )
             return 1.0f;
         toListener /= distance;
         // 다가오는 속도(+)를 소리 속도의 절반 안으로 제한한다. 분모가 0 이나 음수가 되지 않게 하려는 것이다.
@@ -138,7 +140,7 @@ namespace sw
             {
                 const float3  offset   = point - center;
                 const float32 distance = offset.getLength();
-                if ( distance <= radius || distance <= 1e-6f )
+                if ( distance <= radius || distance <= MathUtil::kEpsilon )
                     return point;
                 return center + offset * ( radius / distance );
             }

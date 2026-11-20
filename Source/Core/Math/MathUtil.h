@@ -44,6 +44,12 @@ namespace sw
          *       묻는 것이라 넉넉한 `kEpsilon` 이 오히려 맞습니다.
          */
         static constexpr float32 kEpsilonSquared = kEpsilon * kEpsilon;
+        /**
+         * @brief `kEpsilon` 보다 넉넉한 허용치(1e-4)입니다. 언리얼 `UE_KINDA_SMALL_NUMBER` 와 같은 값입니다.
+         * @details 오차가 쌓인 값(시간 누적 · 끌기 · 여러 단계를 거친 길이)을 비교하거나 0 나누기를 막는 하한에 쓴다. 예전에는 같은 `1e-4f` 가
+         *          이름 없이 쉰 곳 넘게 적혀 있었다. 뜻이 다른 값(패딩 · 바이어스 · 최소 크기)은 그 자리의 이름 붙은 상수로 둔다.
+         */
+        static constexpr float32 kLooseEpsilon = 1e-4f;
         /** @brief float64 비교용 머신 엡실론(DBL_EPSILON)입니다. */
         static constexpr float64 kEpsilon64 = std::numeric_limits<float64>::epsilon();
 

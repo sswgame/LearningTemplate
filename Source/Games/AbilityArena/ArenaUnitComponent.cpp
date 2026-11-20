@@ -66,7 +66,7 @@ namespace sw
     {
         const float3  flat   = float3{ direction._x, 0.0f, direction._z };
         const float32 length = flat.getLength();
-        if ( length < 1.0e-4f )
+        if ( length < MathUtil::kLooseEpsilon )
             return fallback;
         return float3{ flat._x / length, 0.0f, flat._z / length };
     }
@@ -160,7 +160,7 @@ namespace sw
             const float3  apart    = inoutPosition - other._position;
             const float32 distance = apart.getLength();
             const float32 overlap  = _unitRadius * 2.0f - distance;
-            if ( overlap <= 0.0f || distance < 1.0e-4f )
+            if ( overlap <= 0.0f || distance < MathUtil::kLooseEpsilon )
                 continue;
             inoutPosition = inoutPosition + apart * ( 0.5f * overlap / distance );
         }

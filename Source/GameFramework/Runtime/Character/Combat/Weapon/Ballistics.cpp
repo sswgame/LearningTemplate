@@ -15,10 +15,10 @@ namespace sw
         const float32 gravity    = PhysicsSystem::getConfiguredGravityMagnitude() * gravityScale;
         if ( speed <= 0.0f )
             return false;
-        if ( gravity <= 1.0e-6f || horizontal < 1.0e-6f )
+        if ( gravity <= MathUtil::kEpsilon || horizontal < MathUtil::kEpsilon )
         {
             const float32 length = delta.getLength();
-            if ( length < 1.0e-6f || ( gravity > 1.0e-6f && delta._y > 0.0f && speed * speed < 2.0f * gravity * delta._y ) )
+            if ( length < MathUtil::kEpsilon || ( gravity > MathUtil::kEpsilon && delta._y > 0.0f && speed * speed < 2.0f * gravity * delta._y ) )
                 return false;
             outDirection = delta * ( 1.0f / length );
             return true;
@@ -43,9 +43,9 @@ namespace sw
         const float32 b      = 2.0f * ( offset._x * targetVelocity._x + offset._y * targetVelocity._y + offset._z * targetVelocity._z );
         const float32 c      = offset.getLengthSquared();
         float32       time   = -1.0f;
-        if ( MathUtil::abs( a ) < 1.0e-6f )
+        if ( MathUtil::abs( a ) < MathUtil::kEpsilon )
         {
-            if ( MathUtil::abs( b ) > 1.0e-6f )
+            if ( MathUtil::abs( b ) > MathUtil::kEpsilon )
                 time = -c / b;
         }
         else

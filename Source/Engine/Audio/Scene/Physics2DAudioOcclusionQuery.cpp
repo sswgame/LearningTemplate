@@ -40,7 +40,7 @@ namespace sw
         const float2 from( listener._x, listener._y );
         const float2 to( emitter._x, emitter._y );
         float2       forward = to - from;
-        if ( forward.getLengthSquared() <= 1e-6f )
+        if ( forward.getLengthSquared() <= MathUtil::kEpsilon )
             return AudioPropagation::makeOcclusion( 0.0f );
         forward.normalize();
         const float2 offset = float2( -forward._y, forward._x ) * kSideOffset;

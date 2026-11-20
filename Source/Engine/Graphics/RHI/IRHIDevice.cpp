@@ -684,7 +684,7 @@ namespace sw
                              getEnumName( getBackBufferColorSpace() ) );
             return false;
         }
-        SW_LOG_INFO_ID( "RHI.BackBufferColorSpace", "Back buffer color space: %# (format %#)", getEnumName( getBackBufferColorSpace() ), getRHIFormatName( getBackBufferFormat() ) );
+        SW_LOG_INFO_ID( "RHI.BackBufferColorSpace", "Back buffer color space: %# (format %#)", getEnumName( getBackBufferColorSpace() ), RHIFormatUtil::getName( getBackBufferFormat() ) );
         return true;
     }
 

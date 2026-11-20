@@ -14,7 +14,7 @@ namespace sw
         // 방향에 직교하는 두 축.
         const float3 helper = MathUtil::abs( direction._y ) < 0.99f ? float3{ 0.0f, 1.0f, 0.0f } : float3{ 1.0f, 0.0f, 0.0f };
         float3       axisA  = helper.cross( direction );
-        axisA               = axisA * ( 1.0f / MathUtil::max( 1.0e-6f, axisA.getLength() ) );
+        axisA               = axisA * ( 1.0f / MathUtil::max( MathUtil::kEpsilon, axisA.getLength() ) );
         const float3 axisB  = direction.cross( axisA );
 
         const float32 cosMax   = MathUtil::cos( coneHalfAngle );

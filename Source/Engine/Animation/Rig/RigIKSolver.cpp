@@ -2,6 +2,8 @@
 
 #include "Engine/Animation/Rig/RigIKSolver.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 
 namespace sw
@@ -19,7 +21,7 @@ namespace sw
                 if ( space._bPlanar == SW_TRUE )
                     return space._planeNormal.cross( direction ).normalize();
                 float3 perpendicular = direction.cross( float3::Up );
-                if ( perpendicular.getLengthSquared() < 1e-6f )
+                if ( perpendicular.getLengthSquared() < MathUtil::kEpsilon )
                     perpendicular = direction.cross( float3::Right );
                 return perpendicular.normalize();
             }
@@ -113,7 +115,7 @@ namespace sw
         const float32 reach     = upperLength + lowerLength;
         const bool    bReached  = goalDistance <= reach;
         // 곧게 펴진 무릎은 굽힘 방향을 잃는다. 아주 조금 남겨 다음 프레임도 같은 쪽으로 굽게 한다.
-        const float32 minDistance = MathUtil::abs( upperLength - lowerLength ) + 1e-4f;
+        const float32 minDistance = MathUtil::abs( upperLength - lowerLength ) + MathUtil::kLooseEpsilon;
         const float32 distance    = MathUtil::clamp( goalDistance, minDistance, reach * 0.9999f );
 
         const float3 bendHint      = space.projectVector( ( pPole != nullptr ) ? ( *pPole - rootPosition ) : ( midPosition - rootPosition ) );
@@ -252,7 +254,7 @@ namespace sw
         {
             // 반대 방향이다. 아무 수직 축으로 180° 돈다.
             float3 axis = fromUnit.cross( float3::Right );
-            if ( axis.getLengthSquared() < 1e-6f )
+            if ( axis.getLengthSquared() < MathUtil::kEpsilon )
                 axis = fromUnit.cross( float3::Up );
             return quaternion::makeFromAxisAngle( axis.normalize(), MathUtil::kPi );
         }

@@ -3,6 +3,7 @@
 #include "DevTools/Client/Automation/Scenario/AutomationTimeline.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
 #include <algorithm>
@@ -77,7 +78,7 @@ namespace sw
     {
         static constexpr size_t kStepKindKeep  = 4;
         const auto              toMilliseconds = []( float64 seconds )
-        { return static_cast<uint32>( seconds * 1000.0 + 0.5 ); };
+        { return static_cast<uint32>( seconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ) + 0.5 ); };
         string line;
         for ( uint32 kindIndex = 0; kindIndex < kFrameKindCount; ++kindIndex )
         {

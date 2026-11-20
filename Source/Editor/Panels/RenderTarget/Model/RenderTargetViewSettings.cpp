@@ -3,6 +3,7 @@
 #include "Editor/Panels/RenderTarget/Model/RenderTargetViewSettings.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
@@ -19,7 +20,7 @@ namespace sw::editor
                 // NaN 은 saturate 를 그대로 지나가므로 먼저 0 으로 둔다.
                 if ( MathUtil::isFinite( value ) == false )
                     return value > 0.0f ? 255 : 0;
-                return static_cast<uint8>( MathUtil::round( MathUtil::saturate( value ) * 255.0f ) );
+                return unorm8::fromFloat( value ).getRaw();
             }
 
             static float32 selectChannel( const float4& value, RenderTargetChannel channel )

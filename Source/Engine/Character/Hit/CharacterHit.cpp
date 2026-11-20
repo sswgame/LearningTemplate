@@ -58,7 +58,7 @@ namespace sw
             {
                 const float2  planar{ direction._x, direction._y };
                 const float32 length = planar.getLength();
-                if ( length <= 1.0e-6f )
+                if ( length <= MathUtil::kEpsilon )
                     return false;
                 outDirection = planar * ( 1.0f / length );
                 return true;
@@ -180,7 +180,7 @@ namespace sw
         }
         const IPhysicsQueryScene3D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
         const float32               length = delta.getLength();
-        if ( pScene == nullptr || length <= 1.0e-6f )
+        if ( pScene == nullptr || length <= MathUtil::kEpsilon )
             return 0;
         const float3             direction = delta * ( 1.0f / length );
         vector<PhysicsCastHit3D> listHit;

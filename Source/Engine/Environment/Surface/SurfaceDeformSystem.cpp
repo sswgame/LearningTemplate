@@ -311,7 +311,7 @@ namespace sw
         // 땅을 내려다보는 카메라는 앞의 수평 성분이 작다 — 수평 방향만 쓰고 길이는 창 너비로 정한다.
         const float32 flatLength = MathUtil::sqrt( forward._x * forward._x + forward._z * forward._z );
         const float32 ahead      = extent * kFocusAheadRatio;
-        const float32 scale      = flatLength > 1.0e-4f ? ahead / flatLength : 0.0f;
+        const float32 scale      = flatLength > MathUtil::kLooseEpsilon ? ahead / flatLength : 0.0f;
         outFocus                 = float2{ position._x + forward._x * scale, position._z + forward._z * scale };
         return true;
     }

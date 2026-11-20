@@ -430,7 +430,7 @@ namespace sw::editor
         float3        direction = ray._direction;
         float3        origin    = ray._origin;
         const float32 dirAxis   = EditorViewportRayPickInternal::getAxisOf( direction, axisIndex );
-        if ( MathUtil::abs( dirAxis ) <= 1e-4f )
+        if ( MathUtil::abs( dirAxis ) <= MathUtil::kLooseEpsilon )
             return false;
 
         const float32 t                                                 = -EditorViewportRayPickInternal::getAxisOf( origin, axisIndex ) / dirAxis;

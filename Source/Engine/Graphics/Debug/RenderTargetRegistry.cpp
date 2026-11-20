@@ -35,7 +35,7 @@ namespace sw
     bool RenderTargetReadback::isDecodableFormat( RHIFormat format, bool bDepth )
     {
         // 깊이는 bDepth 로 온다 — 깊이 배치가 아닌 D24 바이트는 풀지 않는다(표의 바이트가 0 이다). 압축 · Unknown 도 0 이다.
-        return bDepth || getRHIFormatBytesPerPixel( format ) != 0;
+        return bDepth || RHIFormatUtil::getBytesPerPixel( format ) != 0;
     }
 
     uint32 RenderTargetReadback::getChannelCount( RHIFormat format, bool bDepth )
@@ -83,7 +83,7 @@ namespace sw
         if ( bTexelUnreadable )
             return false;
         const RHIFormat sourceFormat  = bDepth ? kRHIDepthReadbackFormat : format;
-        const uint32    bytesPerPixel = getRHIFormatBytesPerPixel( sourceFormat );
+        const uint32    bytesPerPixel = RHIFormatUtil::getBytesPerPixel( sourceFormat );
         const size_t    offset        = static_cast<size_t>( y ) * layout._rowBytes + static_cast<size_t>( x ) * bytesPerPixel;
         if ( bytesPerPixel == 0 || offset + bytesPerPixel > byte.size() )
             return false;

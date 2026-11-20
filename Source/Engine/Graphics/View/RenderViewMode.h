@@ -18,7 +18,7 @@ namespace sw
      *          뷰마다 갖는 설정(`RenderViewSettings::_viewMode`)이고, 배치 PSO 를 고를 때 머티리얼 퍼뮤테이션과 **같은 단계**에서 적용된다.
      *          그래서 와이어프레임이 머티리얼 변형을 잃지 않는다. 언리얼 뷰포트(뷰 패밀리)마다의 View Mode, 유니티 Scene 뷰의 Draw Mode 와 같다.
      * @note 에디터 전용이 아니다. 헤드리스에서도 `-gv_viewMode=<이름>`(예: `Wireframe`)으로 주 출력의 모드를 골라 스크린샷으로 검증한다. 리플렉션 enum 이라
-     *       이름으로 고르고 숫자는 받지 않는다. `Count` 는 개수 표식이라 모드가 아니다(`isRenderViewModeIndex` 가 거른다).
+     *       이름으로 고르고 숫자는 받지 않는다. `Count` 는 개수 표식이라 모드가 아니다(`RenderViewModeUtil::isIndex` 가 거른다).
      */
     ENUM()
     enum class RenderViewMode : uint8
@@ -106,31 +106,33 @@ namespace sw
     } ); // 보기 모드를 늘리고 줄을 잊으면 makeEnumTable 이 컴파일을 멈춘다
 
     /**
-     * @brief 배치 PSO 를 고르는 데 쓰는 보기 모드입니다. 셰이더 define 도 채우기 · 블렌드 변경도 없는 모드(`MarkerSlots`)는 Lit 과 같은 PSO 이므로 Lit 으로 접습니다.
-     * @details 접지 않으면 같은 PSO 를 키만 달리해 하나 더 만들었다(`FrameRenderer::collectFrameViewModeMask` · `psoForBatch` 가 이 값으로 키를 만든다).
+     * @struct RenderViewModeUtil
+     * @brief 보기 모드 번호 검사와 표 조회입니다. 열거라 멤버를 둘 수 없어 `RHIFormatUtil` 과 같은 꼴로 둔다.
      */
-    inline RenderViewMode getRenderViewModePipelineMode( RenderViewMode viewMode );
-
-    /** @brief 정수가 보기 모드 번호(0 .. Count - 1)인지 봅니다. 번호로 들어온 값(`Count` 표식, 에디터 · 콘솔이 넣은 `gv_viewMode`)은 이것으로 거른 뒤에만 `RenderViewMode` 로 바꿉니다. */
-    inline bool isRenderViewModeIndex( int32 value )
+    struct RenderViewModeUtil
     {
-        return value >= 0 && value < static_cast<int32>( RenderViewMode::Count );
-    }
+        /** @brief 정수가 보기 모드 번호(0 .. Count - 1)인지 봅니다. 번호로 들어온 값(`Count` 표식, 에디터 · 콘솔이 넣은 `gv_viewMode`)은 이것으로 거른 뒤에만 `RenderViewMode` 로 바꿉니다. */
+        [[nodiscard]] static bool isIndex( int32 value ) { return value >= 0 && value < static_cast<int32>( RenderViewMode::Count ); }
 
-    /**
-     * @brief 보기 모드의 테이블 항목을 반환합니다.
-     * @details 범위 밖 값을 Lit 으로 바꾸지 않는다 — 들어오는 곳(`isRenderViewModeIndex`, `FrameRenderer::setViewMode`)이 거르므로 여기 닿으면 결함이다.
-     */
-    inline const RenderViewModeInfo& getRenderViewModeInfo( RenderViewMode viewMode )
-    {
-        SW_ASSERT( viewMode < RenderViewMode::Count );
-        return kArrRenderViewModeInfo[viewMode];
-    }
+        /**
+         * @brief 보기 모드의 테이블 항목을 반환합니다.
+         * @details 범위 밖 값을 Lit 으로 바꾸지 않는다 — 들어오는 곳(`isIndex`, `FrameRenderer::setViewMode`)이 거르므로 여기 닿으면 결함이다.
+         */
+        [[nodiscard]] static const RenderViewModeInfo& getInfo( RenderViewMode viewMode )
+        {
+            SW_ASSERT( viewMode < RenderViewMode::Count );
+            return kArrRenderViewModeInfo[viewMode];
+        }
 
-    inline RenderViewMode getRenderViewModePipelineMode( RenderViewMode viewMode )
-    {
-        const RenderViewModeInfo& info               = getRenderViewModeInfo( viewMode );
-        const bool                bSamePipelineAsLit = info._pShaderDefine == nullptr && info._bWireframe == false && info._bAdditiveNoDepth == false && info._bOverlay == false;
-        return bSamePipelineAsLit ? RenderViewMode::Lit : viewMode;
-    }
+        /**
+         * @brief 배치 PSO 를 고르는 데 쓰는 보기 모드입니다. 셰이더 define 도 채우기 · 블렌드 변경도 없는 모드(`MarkerSlots`)는 Lit 과 같은 PSO 이므로 Lit 으로 접습니다.
+         * @details 접지 않으면 같은 PSO 를 키만 달리해 하나 더 만들었다(`FrameRenderer::collectFrameViewModeMask` · `psoForBatch` 가 이 값으로 키를 만든다).
+         */
+        [[nodiscard]] static RenderViewMode getPipelineMode( RenderViewMode viewMode )
+        {
+            const RenderViewModeInfo& info               = getInfo( viewMode );
+            const bool                bSamePipelineAsLit = info._pShaderDefine == nullptr && info._bWireframe == false && info._bAdditiveNoDepth == false && info._bOverlay == false;
+            return bSamePipelineAsLit ? RenderViewMode::Lit : viewMode;
+        }
+    };
 } // namespace sw

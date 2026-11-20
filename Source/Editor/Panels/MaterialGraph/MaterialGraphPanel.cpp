@@ -184,7 +184,7 @@ namespace sw::editor
         _nodeGraph.endNode();
 
         if ( _nodeGraph.needsContentFit() || _model.isPlacingNode( nodeIndex ) )
-            ed::SetNodePosition( toNodeID( nodeID ), ImVec2( node._position._x, node._position._y ) );
+            ed::SetNodePosition( EditorNodeGraphID::toNodeID( nodeID ), ImVec2( node._position._x, node._position._y ) );
     }
 
     void MaterialGraphPanel::applyCanvasDeletions()
@@ -240,7 +240,7 @@ namespace sw::editor
                     if ( listOutput[outputSlot]._name != pLink->_fromPin )
                         continue;
                     const int32 inputPin = MaterialGraphViewModel::makeInputPinID( readerIndex, slot );
-                    ed::Link( toLinkID( inputPin ), toPinID( MaterialGraphViewModel::makeOutputPinID( *from, outputSlot ) ), toPinID( inputPin ) );
+                    ed::Link( EditorNodeGraphID::toLinkID( inputPin ), EditorNodeGraphID::toPinID( MaterialGraphViewModel::makeOutputPinID( *from, outputSlot ) ), EditorNodeGraphID::toPinID( inputPin ) );
                 }
             }
         }

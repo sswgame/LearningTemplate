@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Encoding/Base64Util.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/NormalizedInt.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
@@ -649,7 +650,7 @@ namespace sw
             writer.writeUint32( Internal::toHash32( request._itemID ) );
             writer.writeUint32( Internal::toHash32( request._visibleVisual ) );
             writer.writeUint32( Internal::toHash32( request._state ) );
-            writer.writeBits( static_cast<uint32>( ResolvedAppearance::snapDamage( request._damage ) * 255.0f + 0.5f ), Internal::kDamageBits );
+            writer.writeBits( unorm8::fromFloat( request._damage ).getRaw(), Internal::kDamageBits );
             writer.writeBool( request._bSuppressed == SW_TRUE );
             if ( version >= 3 )
                 writer.writeBool( request._bHiddenByPlayer == SW_TRUE );
@@ -751,7 +752,7 @@ namespace sw
             request._itemID              = Internal::findByHash( reader.readUint32(), listItemID );
             request._visibleVisual       = Internal::findByHash( reader.readUint32(), listVisualID );
             const uint32 stateHash       = reader.readUint32();
-            request._damage              = static_cast<float32>( reader.readBits( Internal::kDamageBits ) ) / 255.0f;
+            request._damage              = unorm8::fromRaw( static_cast<uint8>( reader.readBits( Internal::kDamageBits ) ) ).toFloat();
             request._bSuppressed         = reader.readBool() ? SW_TRUE : SW_FALSE;
             request._bHiddenByPlayer     = formatVersion >= 3 && reader.readBool() ? SW_TRUE : SW_FALSE; // 판 1 · 2 에는 없다
             const ItemVisualDef*  pShown = Internal::findShownVisual( database, request._itemID, request._visibleVisual );

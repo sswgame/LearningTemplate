@@ -1024,14 +1024,14 @@ namespace sw
         uint64 totalBytes = 0;
         for ( const auto& [name, attachment] : _state._mainView._transientPool.getAll() )
         {
-            totalBytes += static_cast<uint64>( attachment._width ) * attachment._height * getRHIFormatBytesPerPixel( attachment._format );
+            totalBytes += static_cast<uint64>( attachment._width ) * attachment._height * RHIFormatUtil::getBytesPerPixel( attachment._format );
         }
         const uint64 totalKilobytes = totalBytes / 1024u;
         SW_LOG_INFO_ID( "FrameRenderer.MainViewXKB", "[RenderTargets] main view %#x%#: %# KB in %# attachments", _state._mainView._transientPool.getWidth(), _state._mainView._transientPool.getHeight(),
                         totalKilobytes, _state._mainView._transientPool.getAll().size() );
         for ( const auto& [name, attachment] : _state._mainView._transientPool.getAll() )
         {
-            const uint64 kilobytes = static_cast<uint64>( attachment._width ) * attachment._height * getRHIFormatBytesPerPixel( attachment._format ) / 1024u;
+            const uint64 kilobytes = static_cast<uint64>( attachment._width ) * attachment._height * RHIFormatUtil::getBytesPerPixel( attachment._format ) / 1024u;
             SW_LOG_INFO_ID( "FrameRenderer.XKB", "[RenderTargets]   %#  %#x%#  %# KB", name.c_str(), attachment._width, attachment._height, kilobytes );
         }
 #endif
@@ -1462,8 +1462,8 @@ namespace sw
         // 겹침 모드(ShadedWireframe)는 배치를 Lit 으로 한 번 더 그리므로 Lit 변형도 모은다.
         auto viewModeBits = []( RenderViewMode viewMode ) -> uint32
         {
-            const uint32 bit = 1u << static_cast<uint32>( getRenderViewModePipelineMode( viewMode ) );
-            return getRenderViewModeInfo( viewMode )._bOverlay ? ( bit | ( 1u << static_cast<uint32>( RenderViewMode::Lit ) ) ) : bit;
+            const uint32 bit = 1u << static_cast<uint32>( RenderViewModeUtil::getPipelineMode( viewMode ) );
+            return RenderViewModeUtil::getInfo( viewMode )._bOverlay ? ( bit | ( 1u << static_cast<uint32>( RenderViewMode::Lit ) ) ) : bit;
         };
         uint32 viewModeMask = viewModeBits( _state._mainView._settings._viewMode );
         for ( const unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
@@ -1477,17 +1477,17 @@ namespace sw
     bool FrameRenderer::supportsViewMode( RenderViewMode viewMode ) const
     {
         // 와이어프레임 채우기가 없는 디바이스(Vulkan fillModeNonSolid 없음)는 와이어프레임 모드를 받지 않는다 — 솔리드 그림이 와이어프레임으로 통과하지 않게.
-        const bool bNeedsWireframe = getRenderViewModeInfo( viewMode )._bWireframe;
+        const bool bNeedsWireframe = RenderViewModeUtil::getInfo( viewMode )._bWireframe;
         const bool bDrawable       = bNeedsWireframe == false || _pDevice == nullptr || _pDevice->getCapabilities()._bWireframeFill != SW_FALSE;
         if ( bDrawable )
             return true;
-        SW_LOG_ERROR_ID( "FrameRenderer.ViewModeNeedsWireframe", "View mode %# needs wireframe fill, which this device does not support - the mode is not applied", getRenderViewModeInfo( viewMode )._pName );
+        SW_LOG_ERROR_ID( "FrameRenderer.ViewModeNeedsWireframe", "View mode %# needs wireframe fill, which this device does not support - the mode is not applied", RenderViewModeUtil::getInfo( viewMode )._pName );
         return false;
     }
 
     void FrameRenderer::setViewMode( RenderViewMode viewMode )
     {
-        // 범위 밖 값을 Lit 으로 바꾸지 않는다 — 들어오는 번호는 부르는 쪽이 거른다(isRenderViewModeIndex).
+        // 범위 밖 값을 Lit 으로 바꾸지 않는다 — 들어오는 번호는 부르는 쪽이 거른다(RenderViewModeUtil::isIndex).
         if ( viewMode >= RenderViewMode::Count )
         {
             SW_LOG_ERROR_ID( "FrameRenderer.SetViewModeNotViewMode", "setViewMode: %# is not a view mode - the main output keeps its mode", static_cast<uint32>( viewMode ) );
@@ -1501,7 +1501,7 @@ namespace sw
             return;
 
         // 바뀔 때만 남긴다. 뷰 모드는 화면 전체를 바꾸는 상태다. 로그가 없으면 "왜 와이어프레임인가" 를 화면만 보고 되짚어야 한다.
-        SW_LOG_INFO_ID( "FrameRenderer.MainOutputViewMode", "Main output view mode: %#", getRenderViewModeInfo( viewMode )._pName );
+        SW_LOG_INFO_ID( "FrameRenderer.MainOutputViewMode", "Main output view mode: %#", RenderViewModeUtil::getInfo( viewMode )._pName );
     }
 
     RenderViewMode FrameRenderer::getViewMode() const
@@ -1523,7 +1523,7 @@ namespace sw
         const uint8 previous = _sceneViewMode.exchange( static_cast<uint8>( viewMode ), std::memory_order_relaxed );
         if ( previous == static_cast<uint8>( viewMode ) )
             return;
-        SW_LOG_INFO_ID( "FrameRenderer.SceneViewMode", "Scene view mode: %#", getRenderViewModeInfo( viewMode )._pName );
+        SW_LOG_INFO_ID( "FrameRenderer.SceneViewMode", "Scene view mode: %#", RenderViewModeUtil::getInfo( viewMode )._pName );
     }
 
     RenderViewMode FrameRenderer::getSceneViewMode() const

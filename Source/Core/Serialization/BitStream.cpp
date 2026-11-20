@@ -20,7 +20,7 @@ namespace sw
             static constexpr uint32 kLastVarUintOverBits = 0x7Eu;          ///< 그 묶음에서 켜지면 64 비트를 넘는 비트들
 
             /** @brief 양자화 간격입니다. 0 이하의 간격으로 나누지 않게 아래를 막습니다. */
-            static float32 computeQuantizeStep( float32 resolution ) { return MathUtil::max( 1.0e-6f, resolution ); }
+            static float32 computeQuantizeStep( float32 resolution ) { return MathUtil::max( MathUtil::kEpsilon, resolution ); }
 
             /** @brief 양자화 단계의 마지막 번호입니다. 단계는 0 부터 이 번호까지입니다. */
             static uint32 computeQuantizeMaxIndex( float32 minValue, float32 maxValue, float32 step )

@@ -31,7 +31,7 @@ namespace sw
 
     float32 NetClock::getTickInterval() const
     {
-        return MathUtil::max( 1.0e-4f, _settings._tickInterval );
+        return MathUtil::max( MathUtil::kLooseEpsilon, _settings._tickInterval );
     }
 
     float32 NetClock::computeInterpolationDelay() const

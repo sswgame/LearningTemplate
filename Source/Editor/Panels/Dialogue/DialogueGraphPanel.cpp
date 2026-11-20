@@ -212,7 +212,7 @@ namespace sw::editor
         // 링크 렌더링
         for ( const DialogueLink& link : _graph._listLink )
         {
-            ed::Link( toLinkID( link._id ), toPinID( link._fromPin ), toPinID( link._toPin ) );
+            ed::Link( EditorNodeGraphID::toLinkID( link._id ), EditorNodeGraphID::toPinID( link._fromPin ), EditorNodeGraphID::toPinID( link._toPin ) );
         }
 
         updateNodeIssues();
@@ -235,7 +235,7 @@ namespace sw::editor
         // 노드 렌더링
         for ( DialogueNode& node : _graph._listNode )
         {
-            const ed::NodeId nodeID = toNodeID( node._id );
+            const ed::NodeId nodeID = EditorNodeGraphID::toNodeID( node._id );
             _nodeGraph.beginNode( node._id );
 
             drawNodeBody( node );

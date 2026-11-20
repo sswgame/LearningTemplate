@@ -274,7 +274,7 @@ namespace sw
             const float3  offset   = position - pSpot->getLightPosition();
             const float32 distance = offset.getLength();
             const float32 falloff  = MathUtil::max( 0.0f, 1.0f - distance / pSpot->getRadius() );
-            const bool    bInCone  = distance <= 1.0e-4f || pSpot->getLightDirection().normalize().dot( offset / distance ) >= MathUtil::cos( pSpot->getOuterConeAngle() );
+            const bool    bInCone  = distance <= MathUtil::kLooseEpsilon || pSpot->getLightDirection().normalize().dot( offset / distance ) >= MathUtil::cos( pSpot->getOuterConeAngle() );
             const bool    bBlocked = bOcclusion && falloff > 0.0f && Internal::isOccluded( manager, position, pSpot->getLightPosition(), ignoreObjectID, pSpot->getOwner()->getObjectID() );
             if ( bInCone && bBlocked == false )
                 exposure += pSpot->getIntensity() * falloff * falloff;

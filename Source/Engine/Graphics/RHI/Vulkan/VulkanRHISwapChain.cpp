@@ -337,7 +337,7 @@ namespace sw
         {
             if ( availableFormat.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR )
                 continue;
-            const optional<RHIFormat> mapped = findRHIFormatOfNative( VulkanRHIUtil::kArrTextureFormatRow, &VulkanRHIUtil::TextureFormatRow::_vkFormat, availableFormat.format );
+            const optional<RHIFormat> mapped = RHIFormatUtil::findOfNative( VulkanRHIUtil::kArrTextureFormatRow, &VulkanRHIUtil::TextureFormatRow::_vkFormat, availableFormat.format );
             if ( mapped.has_value() == false )
                 continue;
             listCandidate.push_back( *mapped );
@@ -355,7 +355,7 @@ namespace sw
             listCandidateSurface.push_back( hdrFormat );
         }
         const RHIFormat           requestedRHIFormat = getSwapChainFormat( colorSpace, _requestedFormat );
-        const optional<RHIFormat> picked             = pickRHISwapChainFormat( requestedRHIFormat, span<const RHIFormat>{ listCandidate } );
+        const optional<RHIFormat> picked             = RHIFormatUtil::pickSwapChainFormat( requestedRHIFormat, span<const RHIFormat>{ listCandidate } );
         if ( picked.has_value() == false )
         {
             SW_LOG_ERROR_ID( "Vulkan.SwapChainNoMappedFormat", "The surface offers no sRGB-nonlinear format the RHI can map (%# formats) - swap chain creation fails.", static_cast<uint32>( listFormat.size() ) );

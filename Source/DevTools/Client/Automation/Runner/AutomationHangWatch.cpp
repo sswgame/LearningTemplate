@@ -5,6 +5,7 @@
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -254,7 +255,7 @@ namespace sw
             {
                 uint32 expected = static_cast<uint32>( State::Running );
                 if ( _state.compare_exchange_strong( expected, static_cast<uint32>( State::Fired ) ) )
-                    handleHang( static_cast<uint32>( elapsedSeconds * 1000.0 ) );
+                    handleHang( static_cast<uint32>( elapsedSeconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ) ) );
                 return;
             }
             MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + Internal::kPollNanoseconds );

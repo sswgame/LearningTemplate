@@ -24,7 +24,7 @@ namespace sw
                 const float32* pRhs = rhs.data();
                 for ( uint32 element = 0; element < 16; ++element )
                 {
-                    if ( MathUtil::abs( pLhs[element] - pRhs[element] ) > 1.0e-6f )
+                    if ( MathUtil::abs( pLhs[element] - pRhs[element] ) > MathUtil::kEpsilon )
                         return false;
                 }
                 return true;

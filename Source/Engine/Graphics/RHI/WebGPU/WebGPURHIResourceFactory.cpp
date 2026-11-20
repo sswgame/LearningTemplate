@@ -641,7 +641,7 @@ namespace sw
             SW_LOG_ERROR_ID( "WebGPU.UploadRejected", "WebGPU: submitTextureUpload rejected (format %#, %# bytes, slice %#)", static_cast<uint32>( textureDesc._format ), desc._sizeBytes, desc._arraySlice );
             return RHITransferSubmit::rejected();
         }
-        const RHIFormatBlockInfo block = getRHIFormatBlockInfo( textureDesc._format );
+        const RHIFormatBlockInfo block = RHIFormatUtil::getBlockInfo( textureDesc._format );
         for ( uint32 spanIndex = 0; spanIndex < spanCount; ++spanIndex )
         {
             const RHITextureMipSpan& span = arrSpan[spanIndex];
@@ -730,7 +730,7 @@ namespace sw
         target.layout.bytesPerRow      = paddedRowBytes;
         target.layout.rowsPerImage     = rowCount;
         target.buffer                  = buffer;
-        const RHIFormatBlockInfo block = getRHIFormatBlockInfo( textureDesc._format );
+        const RHIFormatBlockInfo block = RHIFormatUtil::getBlockInfo( textureDesc._format );
         const WGPUExtent3D       extent{ Internal::toPhysicalExtent( outLayout._width, block._blockWidth ), Internal::toPhysicalExtent( outLayout._height, block._blockHeight ), 1 };
         wgpuCommandEncoderCopyTextureToBuffer( encoder, &source, &target, &extent );
         WGPUCommandBufferDescriptor commandDesc{};

@@ -65,7 +65,7 @@ namespace sw
             return result;
         if ( pDef->_kind == MonsterHuntAlchemyKind::Decoction && isEffectActive( itemID ) )
             return MonsterHuntUseResult::AlreadyActive;
-        if ( getToxicity() + pDef->_toxicity > getMaxToxicity() + 1.0e-4f )
+        if ( getToxicity() + pDef->_toxicity > getMaxToxicity() + MathUtil::kLooseEpsilon )
             return MonsterHuntUseResult::TooToxic;
         return MonsterHuntUseResult::Ok;
     }

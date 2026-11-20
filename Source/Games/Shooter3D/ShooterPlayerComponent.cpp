@@ -758,7 +758,7 @@ namespace sw
                 nearest = distance;
         }
         // 바닥
-        if ( ray._direction._y < -1.0e-4f )
+        if ( ray._direction._y < -MathUtil::kLooseEpsilon )
             nearest = MathUtil::min( nearest, -ray._origin._y / ray._direction._y );
         return nearest;
     }

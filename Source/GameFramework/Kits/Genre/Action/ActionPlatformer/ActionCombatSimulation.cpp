@@ -134,7 +134,7 @@ namespace sw
         if ( _bGunEquipped == SW_FALSE )
             return WeaponFireResult::OutOfAmmo;
         const float32 aimLength = aim.getLength();
-        const float2  direction = aimLength > 1.0e-4f ? aim * ( 1.0f / aimLength ) : float2{ 1.0f, 0.0f };
+        const float2  direction = aimLength > MathUtil::kLooseEpsilon ? aim * ( 1.0f / aimLength ) : float2{ 1.0f, 0.0f };
         Ray           ray;
         ray._origin    = float3{ origin._x, origin._y, 0.0f };
         ray._direction = float3{ direction._x, direction._y, 0.0f };
@@ -147,7 +147,7 @@ namespace sw
             // 퍼짐 원뿔은 3D 이므로 화면 평면(z = 0)으로 눌러서 2D 방향으로 쓴다. 중력은 플랫포머 탄이 받지 않는다(받는 탄은 쓰는 쪽이 정한다).
             float2        pelletDirection{ pellet._direction._x, pellet._direction._y };
             const float32 length = pelletDirection.getLength();
-            pelletDirection      = length > 1.0e-4f ? pelletDirection * ( 1.0f / length ) : direction;
+            pelletDirection      = length > MathUtil::kLooseEpsilon ? pelletDirection * ( 1.0f / length ) : direction;
             ProjectileState projectile =
                 ProjectileState::launch( _gun.getShot(), float3{ origin._x, origin._y, 0.0f }, float3{ pelletDirection._x, pelletDirection._y, 0.0f }, 0.0f );
             projectile._team = static_cast<int32>( ActionTeam::Player );

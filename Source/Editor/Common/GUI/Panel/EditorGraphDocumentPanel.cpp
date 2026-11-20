@@ -47,8 +47,8 @@ namespace sw::editor
             const PendingPlacement placement = _listPendingPlacement[index];
             if ( placement._nodeID != nodeID )
                 continue;
-            ed::SetNodePosition( toNodeID( nodeID ), ImVec2( placement._position._x, placement._position._y ) );
-            ed::SelectNode( toNodeID( nodeID ), true ); // 새로 넣거나 붙인 노드를 고른다(언리얼 붙여 넣기 · 유니티 복제처럼 바로 옮길 수 있게)
+            ed::SetNodePosition( EditorNodeGraphID::toNodeID( nodeID ), ImVec2( placement._position._x, placement._position._y ) );
+            ed::SelectNode( EditorNodeGraphID::toNodeID( nodeID ), true ); // 새로 넣거나 붙인 노드를 고른다(언리얼 붙여 넣기 · 유니티 복제처럼 바로 옮길 수 있게)
             _listPendingPlacement.erase( _listPendingPlacement.begin() + static_cast<std::ptrdiff_t>( index ) );
             return;
         }
@@ -56,7 +56,7 @@ namespace sw::editor
 
     float2 EditorGraphDocumentPanelBase::getCanvasNodePosition( int32 nodeID ) const
     {
-        const ImVec2 position = ed::GetNodePosition( toNodeID( nodeID ) );
+        const ImVec2 position = ed::GetNodePosition( EditorNodeGraphID::toNodeID( nodeID ) );
         return float2{ position.x, position.y };
     }
 

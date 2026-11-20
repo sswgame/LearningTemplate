@@ -29,7 +29,7 @@ namespace sw
             {
                 const float3  toPoint  = point - eye;
                 const float32 distance = toPoint.getLength();
-                if ( distance <= 1.0e-4f )
+                if ( distance <= MathUtil::kLooseEpsilon )
                     return true;
                 Ray ray;
                 ray._origin    = eye;

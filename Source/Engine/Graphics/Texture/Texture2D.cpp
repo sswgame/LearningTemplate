@@ -143,7 +143,7 @@ namespace sw
     Texture2DMipDrop Texture2D::computeMipDrop( RHIFormat format, uint32 width, uint32 height, uint32 mipCount, int32 requestedDrop )
     {
         Texture2DMipDrop         drop{};
-        const RHIFormatBlockInfo block = getRHIFormatBlockInfo( format );
+        const RHIFormatBlockInfo block = RHIFormatUtil::getBlockInfo( format );
         while ( static_cast<int32>( drop._mipCount ) < requestedDrop && drop._mipCount + 1 < mipCount )
         {
             const uint32 nextWidth     = width >> ( drop._mipCount + 1 );
@@ -590,7 +590,7 @@ namespace sw
         }
         // 그려지기 전에 샘플링될 수 있다(그 타깃을 그릴 패킷보다 먼저 줄 선 프레임 · 에디터 그리기). 0 으로 채워 셰이더 읽기 상태로 둔다 — Vulkan 은 UNDEFINED 레이아웃
         // 샘플링이 검증 Error 다. 렌더 텍스처를 쓰는 모든 쪽(카메라 · 에디터 뷰)이 이 한 곳의 보호를 받는다(예전에는 에디터가 제 타깃만 따로 채웠다).
-        const vector<uint8>  listZero( static_cast<size_t>( width ) * height * getRHIFormatBytesPerPixel( format ), 0u );
+        const vector<uint8>  listZero( static_cast<size_t>( width ) * height * RHIFormatUtil::getBytesPerPixel( format ), 0u );
         RHITextureUploadDesc upload{};
         upload._pData     = listZero.data();
         upload._sizeBytes = static_cast<uint32>( listZero.size() );

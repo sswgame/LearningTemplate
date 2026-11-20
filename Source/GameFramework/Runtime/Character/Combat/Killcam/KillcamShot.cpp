@@ -41,7 +41,7 @@ namespace sw
             static KillcamPose makeHoldPose( const KillcamShot& shot, const KillcamSettings& settings, int32 hitIndex )
             {
                 const KillcamHit& hit  = shot.getHits()[static_cast<size_t>( hitIndex )];
-                const float3      side = float3::Up.cross( shot.getDirection() ).normalizeOr( float3::Right, 1e-4f );
+                const float3      side = float3::Up.cross( shot.getDirection() ).normalizeOr( float3::Right, MathUtil::kLooseEpsilon );
                 KillcamPose       pose;
                 pose._bullet   = hit._position;
                 pose._position = hit._position - shot.getDirection() * ( settings._closeUpDistance * 0.7f ) + side * ( settings._closeUpDistance * 0.7f ) + float3::Up * settings._followHeight;
@@ -83,7 +83,7 @@ namespace sw
     {
         _listHit.clear();
         _origin    = origin;
-        _direction = direction.normalizeOr( float3::Forward, 1e-6f );
+        _direction = direction.normalizeOr( float3::Forward, MathUtil::kEpsilon );
         _end       = origin;
         _time      = time;
     }

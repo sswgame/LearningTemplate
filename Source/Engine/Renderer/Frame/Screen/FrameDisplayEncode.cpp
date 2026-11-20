@@ -114,7 +114,7 @@ namespace sw
             outSRV = pFactory->registerBindlessTexture( outTexture );
         }
         if ( outSRV == kInvalidDescriptorIndex )
-            SW_FATAL( "Failed to create the HDR display target %# (%#x%#, format %#) - the HDR back buffer cannot be presented", pDebugName, _width, _height, getRHIFormatName( format ) );
+            SW_FATAL( "Failed to create the HDR display target %# (%#x%#, format %#) - the HDR back buffer cannot be presented", pDebugName, _width, _height, RHIFormatUtil::getName( format ) );
     }
 
     float32 FrameDisplayEncode::getToneShoulder() const

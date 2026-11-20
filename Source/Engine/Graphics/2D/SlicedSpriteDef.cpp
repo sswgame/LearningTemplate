@@ -59,9 +59,9 @@ namespace sw
                 const float32 centerEnd    = half - worldEnd;
                 const float32 centerLength = centerEnd - cursor;
                 const float32 naturalTile  = 1.0f - borderStart - borderEnd;
-                if ( centerLength > 1e-6f )
+                if ( centerLength > MathUtil::kEpsilon )
                 {
-                    if ( bTiled == false || naturalTile <= 1e-4f )
+                    if ( bTiled == false || naturalTile <= MathUtil::kLooseEpsilon )
                     {
                         outListSpan.push_back( Span{ cursor, centerEnd, toUV( bFlipUV, borderStart ), toUV( bFlipUV, 1.0f - borderEnd ) } );
                     }
@@ -69,10 +69,10 @@ namespace sw
                     {
                         // 자연 크기 타일로 반복한다. 마지막 타일은 남은 길이만큼 잘라 UV 도 그만큼만 쓴다. 타일 수가 상한을 넘으면 타일 크기를 키워 상한에 맞춘다.
                         float32      tileLength = naturalTile;
-                        const uint32 tileCount  = static_cast<uint32>( MathUtil::ceil( centerLength / tileLength - 1e-4f ) );
+                        const uint32 tileCount  = static_cast<uint32>( MathUtil::ceil( centerLength / tileLength - MathUtil::kLooseEpsilon ) );
                         if ( tileCount > SlicedSpriteDef::kMaxTileCountPerAxis )
                             tileLength = centerLength / static_cast<float32>( SlicedSpriteDef::kMaxTileCountPerAxis );
-                        while ( centerEnd - cursor > 1e-6f )
+                        while ( centerEnd - cursor > MathUtil::kEpsilon )
                         {
                             const float32 step     = MathUtil::min( tileLength, centerEnd - cursor );
                             const float32 fraction = step / tileLength;

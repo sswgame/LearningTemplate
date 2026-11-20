@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/DependencyGraph.h"
+#include "Core/Foundation/Constants.h"
 
 namespace sw
 {
@@ -228,7 +229,7 @@ namespace sw
             const int64               startNanos = _pClockNanos != nullptr ? _pClockNanos() : 0;
             const SubsystemInitResult result     = initializeAt( index );
             if ( _pClockNanos != nullptr )
-                _listInitTiming.push_back( { _listEntry[index]._pSubsystem->getSubsystemName(), ( _pClockNanos() - startNanos ) / 1000 } );
+                _listInitTiming.push_back( { _listEntry[index]._pSubsystem->getSubsystemName(), ( _pClockNanos() - startNanos ) / constant::time::kNanosecondsPerMicrosecond } );
             if ( result == SubsystemInitResult::Failed )
             {
                 _error = string( "Subsystem '" ) + _listEntry[index]._pSubsystem->getSubsystemName() + "' failed to initialize" + ( _error.empty() ? string{} : string( ": " ) + _error );
@@ -254,7 +255,7 @@ namespace sw
             const int64       startNanos = _pClockNanos != nullptr ? _pClockNanos() : 0;
             pSubsystem->stopSubsystem();
             if ( _pClockNanos != nullptr )
-                _listShutdownTiming[order - 1] = { pSubsystem->getSubsystemName(), ( _pClockNanos() - startNanos ) / 1000 };
+                _listShutdownTiming[order - 1] = { pSubsystem->getSubsystemName(), ( _pClockNanos() - startNanos ) / constant::time::kNanosecondsPerMicrosecond };
         }
         while ( _listInitialized.empty() == false )
         {
@@ -263,7 +264,7 @@ namespace sw
             const int64 startNanos = _pClockNanos != nullptr ? _pClockNanos() : 0;
             _listEntry[index]._pSubsystem->shutdownSubsystem();
             if ( _pClockNanos != nullptr )
-                _listShutdownTiming[_listInitialized.size()]._micros += ( _pClockNanos() - startNanos ) / 1000;
+                _listShutdownTiming[_listInitialized.size()]._micros += ( _pClockNanos() - startNanos ) / constant::time::kNanosecondsPerMicrosecond;
         }
     }
 

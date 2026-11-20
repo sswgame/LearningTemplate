@@ -150,7 +150,7 @@ namespace sw
         const float32 moveX       = position._x - _lastPosition._x;
         const float32 moveZ       = position._z - _lastPosition._z;
         const bool    bMovingUnit = _bPlaced == SW_TRUE && pUnit->isBuilding() == false && pUnit->isResource() == false;
-        if ( bMovingUnit && moveX * moveX + moveZ * moveZ > 1.0e-6f )
+        if ( bMovingUnit && moveX * moveX + moveZ * moveZ > MathUtil::kEpsilon )
             _yaw = MathUtil::atan2( moveX, moveZ );
         _lastPosition = position;
         pMesh->setLocalPosition( position );

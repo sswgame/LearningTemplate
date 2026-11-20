@@ -264,7 +264,7 @@ namespace sw
         /**
          * @brief 2D 텍스처에 픽셀을 올리도록 제출합니다. 밉 0 부터 차례로, 행은 빈틈없이(DDS 배치) 받습니다.
          * @details createTexture2D 가 _bIsShaderResource 로 만든 컬러 포맷(비압축, BC)만 받고, 깊이와 Unknown 은
-         *          받지 않는다(getRHIFormatBlockInfo 참고). 밉 크기와 오프셋 규칙은 resolveTextureUploadMips 한 곳이 정한다.
+         *          받지 않는다(RHIFormatUtil::getBlockInfo 참고). 밉 크기와 오프셋 규칙은 resolveTextureUploadMips 한 곳이 정한다.
          *          매 프레임 갱신하는 용도가 아니다.
          * @return `Accepted` 면 티켓으로 `pollTransfer` 한다. 포맷이 업로드할 수 없는 것이거나 데이터가 모자라면 `Rejected` 다.
          */

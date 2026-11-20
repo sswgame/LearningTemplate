@@ -1316,7 +1316,7 @@ namespace sw::editor
         float3 lo{};
         float3 hi{};
         MeshFractureInternal::collectBounds( listVertex, lo, hi );
-        const float32 epsilon = MathUtil::max( ( hi - lo ).getLength(), 1.0e-3f ) * 1.0e-6f;
+        const float32 epsilon = MathUtil::max( ( hi - lo ).getLength(), 1.0e-3f ) * MathUtil::kEpsilon;
         uint32        arrStart[4];
         if ( MeshFractureInternal::pickSeedTetrahedron( listPoint, epsilon, arrStart ) == false )
             return;

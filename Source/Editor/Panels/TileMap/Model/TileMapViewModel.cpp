@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
@@ -30,7 +31,7 @@ namespace sw::editor
             /** @brief 0..1 틴트를 바이트로 반올림합니다. 내리면 스포이트로 집어 칠할 때마다 값이 한 단계씩 줄어든다. */
             [[nodiscard]] static uint8 toTintByte( float32 value )
             {
-                return static_cast<uint8>( MathUtil::round( MathUtil::saturate( value ) * 255.0f ) );
+                return unorm8::fromFloat( value ).getRaw();
             }
 
             [[nodiscard]] static bool isSameVisual( const TileMapXMLData::Visual& first, const TileMapXMLData::Visual& second )
@@ -301,9 +302,9 @@ namespace sw::editor
                 const TileMapXMLData::Visual& visual = _map._listVisual[tileIndex];
                 _paintHeight                         = visual._height;
                 _atlasID                             = visual._atlasID;
-                _arrTint[0]                          = static_cast<float32>( visual._tintR ) / 255.0f;
-                _arrTint[1]                          = static_cast<float32>( visual._tintG ) / 255.0f;
-                _arrTint[2]                          = static_cast<float32>( visual._tintB ) / 255.0f;
+                _arrTint[0]                          = unorm8::fromRaw( visual._tintR ).toFloat();
+                _arrTint[1]                          = unorm8::fromRaw( visual._tintG ).toFloat();
+                _arrTint[2]                          = unorm8::fromRaw( visual._tintB ).toFloat();
                 _bErase                              = false;
                 break;
             }

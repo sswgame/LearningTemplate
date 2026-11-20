@@ -23,7 +23,7 @@ namespace sw
             {
                 const float3  toTarget = position - eye;
                 const float32 length   = toTarget.getLength() * forward.getLength();
-                if ( length < 1.0e-6f )
+                if ( length < MathUtil::kEpsilon )
                     return 0.0f;
                 const float32 cosine = MathUtil::clamp( toTarget.dot( forward ) / length, -1.0f, 1.0f );
                 return DeterministicMathUtil::acos( cosine ) * MathUtil::kRadianToDegree;

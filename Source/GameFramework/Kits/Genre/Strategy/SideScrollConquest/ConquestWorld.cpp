@@ -936,7 +936,7 @@ namespace sw
                 continue;
             const float32 stopX = computeGateX( site, team ) - direction * ConquestWorldInternal::kGateStandOff;
             // 성문 앞(공격하는 쪽)에 있던 것만 막는다. 이미 안쪽에 있는 것은 그대로 둔다.
-            if ( ( stopX - fromX ) * direction >= -1.0e-4f && ( result - stopX ) * direction > 0.0f )
+            if ( ( stopX - fromX ) * direction >= -MathUtil::kLooseEpsilon && ( result - stopX ) * direction > 0.0f )
                 result = stopX;
         }
         return result;

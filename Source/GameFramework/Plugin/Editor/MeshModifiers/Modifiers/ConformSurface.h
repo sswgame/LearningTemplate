@@ -197,7 +197,7 @@ namespace sw::editor
             _nodeCount = 0;
             if ( _triangleCount == 0 )
                 return;
-            const float3   padding( 1.0e-4f );
+            const float3   padding( MathUtil::kLooseEpsilon );
             vector<float3> listCentroid( _triangleCount );
             vector<uint32> listOrder( _triangleCount );
             for ( uint32 index = 0; index < _triangleCount; ++index )

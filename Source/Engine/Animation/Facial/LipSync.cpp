@@ -436,7 +436,7 @@ namespace sw
 
     float32 VisemeTrack::computeOpenness( float32 rms, const LipSyncSettings& settings )
     {
-        return MathUtil::saturate( ( rms - settings._silenceRms ) / MathUtil::max( settings._fullRms - settings._silenceRms, 1e-6f ) );
+        return MathUtil::saturate( ( rms - settings._silenceRms ) / MathUtil::max( settings._fullRms - settings._silenceRms, MathUtil::kEpsilon ) );
     }
 
     float32 VisemeTrack::computeRms( const vector<float32>& listSample, uint32 sampleRate, float32 time, float32 windowSeconds )

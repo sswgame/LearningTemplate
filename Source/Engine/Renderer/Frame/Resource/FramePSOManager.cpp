@@ -50,7 +50,7 @@ namespace sw
         [[nodiscard]] bool applyViewModeToDesc( RHIPipelineStateDesc& desc, RenderViewMode viewMode )
         {
             bool                      bChanged{ false };
-            const RenderViewModeInfo& info = getRenderViewModeInfo( viewMode );
+            const RenderViewModeInfo& info = RenderViewModeUtil::getInfo( viewMode );
             if ( info._bWireframe )
             {
                 desc._renderState._fillMode = FillMode::Wireframe;
@@ -84,7 +84,7 @@ namespace sw
 
             // 셰이딩을 바꾸는 모드(Unlit, Normals, Depth, Overdraw)는 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이다.
             // define 은 쿠커와 같은 원본(findViewModeDefine)에서 얻는다. 쿠커가 쿠킹하지 않은 define 은 Shipping 에서 PSO 를 만들 수 없다.
-            const utf8* pViewModeDefine = getRenderViewModeInfo( viewMode )._pShaderDefine;
+            const utf8* pViewModeDefine = RenderViewModeUtil::getInfo( viewMode )._pShaderDefine;
             if ( pViewModeDefine == nullptr )
                 return bChanged;
             for ( const string& existing : desc._listShaderDefine )
@@ -1024,7 +1024,7 @@ namespace sw
         {
             // 컴파일 실패다. 패스 PSO(다른 셰이더 · 다른 보기 모드)로 그리면 틀린 그림이 통과하므로 이 조합은 그리지 않고 오류를 남긴다.
             SW_LOG_ERROR_ID( "FramePSOManager.MaterialPSOVariantView", "Material PSO variant '%#' (view mode %#) failed to build - these batches are not drawn", desc._vertexShaderPath,
-                             getRenderViewModeInfo( viewMode )._pName );
+                             RenderViewModeUtil::getInfo( viewMode )._pName );
             return RenderPSOCache::MaterialPSOEntry::failed();
         }
         registerLayout( handle, desc );
@@ -1264,7 +1264,7 @@ namespace sw
         // 적용할 것이 하나도 없는 조합이다. ensureMaterialPSOs 도 이 키를 만들지 않는다.
         // (해시 0은 퍼뮤테이션 없음을 뜻한다. 실제 퍼뮤테이션 해시가 0이 되더라도 같은 키로
         //  떨어지는데, 그 둘이 만드는 디스크립터는 어차피 같으므로 해롭지 않다.)
-        viewMode                                  = getRenderViewModePipelineMode( viewMode ); // Lit 과 같은 PSO 인 모드(MarkerSlots)는 Lit 변형을 그대로 쓴다
+        viewMode                                  = RenderViewModeUtil::getPipelineMode( viewMode ); // Lit 과 같은 PSO 인 모드(MarkerSlots)는 Lit 변형을 그대로 쓴다
         const bool                bReverseCulling = ( batch._bReverseCulling != SW_FALSE );
         const RHIMeshVertexFormat vertexFormat    = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
         const bool                bDefaultPassPSO = permutationHash == 0 && viewMode == RenderViewMode::Lit && bReverseCulling == false && vertexFormat == RHIMeshVertexFormat::Packed;

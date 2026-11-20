@@ -554,7 +554,7 @@ namespace sw
         if ( weightSum <= 0.0f )
             return;
         movedPosition = movedPosition * ( 1.0f / weightSum );
-        movedNormal   = movedNormal.normalizeOr( normal, 1e-6f );
+        movedNormal   = movedNormal.normalizeOr( normal, MathUtil::kEpsilon );
         for ( uint32 axis = 0; axis < 3; ++axis )
         {
             inoutVertex._arrPosition[axis] = ( &movedPosition._x )[axis];

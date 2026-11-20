@@ -182,7 +182,7 @@ namespace sw
     bool validateTextureRegionUpload( RHIFormat format, uint32 textureWidth, uint32 textureHeight, uint32 mipLevels, uint32 arraySize,
                                       const RHITextureRegionUploadDesc& desc, uint32& outRowBytes )
     {
-        const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
+        const uint32 bytesPerPixel = RHIFormatUtil::getBytesPerPixel( format );
         if ( bytesPerPixel == 0 )
         {
             SW_LOG_ERROR_ID( "RHI.RegionUploadRejected", "submitTextureRegionUpload: format %# is compressed, depth or unknown", static_cast<uint32>( format ) );

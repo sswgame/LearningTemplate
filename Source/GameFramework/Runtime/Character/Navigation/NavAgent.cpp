@@ -21,7 +21,7 @@ namespace sw
             static float3 clampLength( const float3& value, float32 maxLength )
             {
                 const float32 length = value.getLength();
-                return length > maxLength && length > 1.0e-6f ? value * ( maxLength / length ) : value;
+                return length > maxLength && length > MathUtil::kEpsilon ? value * ( maxLength / length ) : value;
             }
         };
     } // namespace
@@ -36,14 +36,14 @@ namespace sw
     {
         const float3  toTarget = NavAgentInternal::flatten( target - position );
         const float32 distance = toTarget.getLength();
-        return distance > 1.0e-6f ? toTarget * ( maxSpeed / distance ) : float3{ 0.0f, 0.0f, 0.0f };
+        return distance > MathUtil::kEpsilon ? toTarget * ( maxSpeed / distance ) : float3{ 0.0f, 0.0f, 0.0f };
     }
 
     float3 Steering::arrive( const float3& position, const float3& target, float32 maxSpeed, float32 slowDistance )
     {
         const float3  toTarget = NavAgentInternal::flatten( target - position );
         const float32 distance = toTarget.getLength();
-        if ( distance < 1.0e-6f )
+        if ( distance < MathUtil::kEpsilon )
             return float3{ 0.0f, 0.0f, 0.0f };
         const float32 speed = slowDistance > 0.0f ? maxSpeed * MathUtil::min( 1.0f, distance / slowDistance ) : maxSpeed;
         return toTarget * ( speed / distance );
@@ -57,7 +57,7 @@ namespace sw
         {
             const float3  away     = NavAgentInternal::flatten( position - neighbor );
             const float32 distance = away.getLength();
-            if ( distance < 1.0e-4f || distance >= reach )
+            if ( distance < MathUtil::kLooseEpsilon || distance >= reach )
                 continue;
             push = push + away * ( ( reach - distance ) / ( reach * distance ) ); // 겹칠수록 1 에 가까운 세기 × 방향
         }
@@ -178,7 +178,7 @@ namespace sw
             if ( NavAgentInternal::getFlatDistance( _position, _target ) < _settings._slowDistance + grid.getCellSize() )
                 return Steering::arrive( _position, _target, _settings._maxSpeed, _settings._slowDistance );
             const float3 direction = _pFlowField->sampleDirection( grid, _position );
-            if ( direction.getLengthSquared() < 1.0e-6f )
+            if ( direction.getLengthSquared() < MathUtil::kEpsilon )
                 return Steering::arrive( _position, _target, _settings._maxSpeed, _settings._slowDistance );
             return direction * _settings._maxSpeed;
         }

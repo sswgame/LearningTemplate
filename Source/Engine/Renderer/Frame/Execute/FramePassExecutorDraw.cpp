@@ -824,7 +824,7 @@ namespace sw
         // 겹침 모드(ShadedWireframe)는 배치를 두 번 그린다 — Lit PSO 로 한 번, 그 모드의 PSO(선 · 깊이 바이어스)로 한 번. 입자는 첫 번째에만 끼운다.
         // 보기 모드는 지금 그리는 뷰의 설정이다(씬 뷰만 ShadedWireframe 이고 게임 뷰는 Lit 일 수 있다).
         const RenderViewMode viewMode       = _pActiveView->_settings._viewMode;
-        const bool           bOverlayDraw   = getRenderViewModeInfo( viewMode )._bOverlay && getRenderPassKindInfo( state._passType ).shouldApplyViewMode();
+        const bool           bOverlayDraw   = RenderViewModeUtil::getInfo( viewMode )._bOverlay && getRenderPassKindInfo( state._passType ).shouldApplyViewMode();
         const RenderViewMode arrDrawMode[]  = { bOverlayDraw ? RenderViewMode::Lit : viewMode, viewMode };
         const uint32         drawRoundCount = bOverlayDraw ? 2u : 1u;
         for ( uint32 drawRound = 0; drawRound < drawRoundCount; ++drawRound )

@@ -4,6 +4,7 @@
 
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"
@@ -171,8 +172,8 @@ namespace sw
 
         // 트리거는 `setAxis`(4, 5)를 거쳐 데드존을 적용한다. 리눅스 조이스틱, 원시 이벤트, 에디터 시뮬레이터와 같은 경로다.
         // 곧바로 대입하면 Windows 에서만 `setTriggerDeadzone` 이 아무 효과가 없다.
-        setAxis( 4, static_cast<float32>( state.Gamepad.bLeftTrigger ) / 255.0f );
-        setAxis( 5, static_cast<float32>( state.Gamepad.bRightTrigger ) / 255.0f );
+        setAxis( 4, unorm8::fromRaw( static_cast<uint8>( state.Gamepad.bLeftTrigger ) ).toFloat() );
+        setAxis( 5, unorm8::fromRaw( static_cast<uint8>( state.Gamepad.bRightTrigger ) ).toFloat() );
     }
 
     bool XInputGamepadDevice::setVibration( float32 leftMotor, float32 rightMotor )

@@ -126,7 +126,7 @@ namespace sw
     int32 GhostEncounter::releaseStrobe( const float3& eye, const float3& forward )
     {
         const float32 chargeTime = _pCatalog != nullptr ? _pCatalog->getFlashlight()._strobeChargeTime : 0.0f;
-        const bool    bCharged   = _strobeCharge >= chargeTime - 1.0e-4f;
+        const bool    bCharged   = _strobeCharge >= chargeTime - MathUtil::kLooseEpsilon;
         _strobeCharge            = 0.0f;
         if ( bCharged == false )
             return 0;
@@ -211,7 +211,7 @@ namespace sw
     bool GhostEncounter::triggerSurge()
     {
         GhostInstance* pGhost = findGhostMutable( _suctionTarget );
-        if ( pGhost == nullptr || _surgeGauge < 1.0f - 1.0e-4f )
+        if ( pGhost == nullptr || _surgeGauge < 1.0f - MathUtil::kLooseEpsilon )
             return false;
         _surgeGauge          = 0.0f;
         const float32 damage = _pCatalog->getVacuum()._surgeDamage;

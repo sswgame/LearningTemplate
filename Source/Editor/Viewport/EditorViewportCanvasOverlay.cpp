@@ -266,7 +266,7 @@ namespace sw::editor
         const bool    bOrtho     = MathUtil::abs( pProj[15] - 1.0f ) < 0.001f;
         const float32 centerU    = cameraPosition._x;
         const float32 centerV    = b2D ? cameraPosition._y : cameraPosition._z;
-        const float32 viewHeight = bOrtho && MathUtil::abs( pProj[5] ) > 1e-6f ? 2.0f / MathUtil::abs( pProj[5] ) : ( b2D ? cameraPosition._z : cameraPosition._y );
+        const float32 viewHeight = bOrtho && MathUtil::abs( pProj[5] ) > MathUtil::kEpsilon ? 2.0f / MathUtil::abs( pProj[5] ) : ( b2D ? cameraPosition._z : cameraPosition._y );
 
         const EditorGridLevel level = EditorGridLevel::selectLevel( viewHeight );
 

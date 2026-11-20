@@ -47,7 +47,7 @@ namespace sw
         {      RHIFormat::R16G16_FLOAT,       DXGI_FORMAT_R16G16_FLOAT},
         { RHIFormat::R10G10B10A2_UNORM,  DXGI_FORMAT_R10G10B10A2_UNORM},
     };
-    static_assert( isRHIFormatTableInOrder( kArrDXGIFormatRow ), "kArrRHIDxgiFormatRow needs one row per RHIFormat, in enumerator order" );
+    static_assert( RHIFormatUtil::isTableInOrder( kArrDXGIFormatRow ), "kArrRHIDxgiFormatRow needs one row per RHIFormat, in enumerator order" );
 
     /** @brief RHIFormat 을 DXGI_FORMAT 으로 변환합니다. 범위 밖 값이면 assert 뒤 DXGI_FORMAT_UNKNOWN 을 반환합니다. */
     inline DXGI_FORMAT toDXGIFormat( RHIFormat format )

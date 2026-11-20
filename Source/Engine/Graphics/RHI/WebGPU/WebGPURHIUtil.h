@@ -235,5 +235,5 @@ namespace sw
 
         static WGPUStoreOp toStoreOp( RHIRenderPassStoreOp op ) { return op == RHIRenderPassStoreOp::Store ? WGPUStoreOp_Store : WGPUStoreOp_Discard; }
     };
-    static_assert( isRHIFormatTableInOrder( WebGPURHIUtil::kArrTextureFormatRow ), "WebGPURHIUtil::kArrTextureFormatRow needs one row per RHIFormat, in enumerator order" );
+    static_assert( RHIFormatUtil::isTableInOrder( WebGPURHIUtil::kArrTextureFormatRow ), "WebGPURHIUtil::kArrTextureFormatRow needs one row per RHIFormat, in enumerator order" );
 } // namespace sw

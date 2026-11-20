@@ -152,7 +152,7 @@ namespace sw
         if ( _maxWeight <= 0.0f || weight <= 0.0f )
             return count;
         const float32 room = _maxWeight - computeWeight();
-        return MathUtil::clamp( static_cast<int32>( ( room + 1.0e-4f ) / weight ), 0, count );
+        return MathUtil::clamp( static_cast<int32>( ( room + MathUtil::kLooseEpsilon ) / weight ), 0, count );
     }
 
     int32 Inventory::addItem( const hashed_string& itemID, int32 count )
