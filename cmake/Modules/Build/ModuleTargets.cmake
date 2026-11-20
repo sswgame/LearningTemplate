@@ -198,14 +198,16 @@ endfunction()
 # 그 헤더를 include 하면 "file not found" 로 멈춘다. 정적 라이브러리 · 별도 DLL 이 아닌 까닭: 확장 모듈이 따로 링크하면 정적 상태가
 # 두 벌이 되고 export 가 빠질 수 있다(언리얼이 모듈을 쪼개지 않고 Private 폴더 의존만 가르는 것과 같은 자리).
 # 정의 · 컴파일 옵션 · 자기 include 자리(내보내기 매크로 · 로그 태그 · 리플렉션 산출물 · FlagOps 강제 포함)는 모듈 타깃에서 그대로 받아
-# 같은 값을 두 곳에 적지 않는다. 모듈의 sw_add_module_library 다음에 부른다(리플렉션 산출 단계에 의존을 건다).
+# 같은 값을 두 곳에 적지 않는다. 받는 때는 이 디렉터리의 CMakeLists 가 끝날 때다(`cmake_language(DEFER)` — sw_copy_owner_compile_settings) —
+# 그래서 모듈에 설정을 더하는 줄이 부분을 만든 줄보다 뒤에 있어도 부분에 간다(예전에는 "모든 설정 뒤에 부분" 이라는 순서 규칙이었다).
 #
-#   OWNER    모듈 타깃(sw_add_module_library 로 만든 것)
-#   SOURCES  부분의 소스(모듈 SOURCES 에서는 부르는 쪽이 뺀다)
-#   LINK     부분이 쓰는 라이브러리(모듈의 LINK_PRIVATE 보다 좁게)
+#   OWNER       모듈 타깃(sw_add_module_library 로 만든 것)
+#   SOURCES     부분의 소스(모듈 SOURCES 에서는 부르는 쪽이 뺀다)
+#   LINK        부분이 쓰는 라이브러리(모듈의 LINK_PRIVATE 보다 좁게)
+#   LINK_OWNER  모듈의 링크 목록을 그대로 받는다(층 부분 — 좁힐 것이 없을 때). 다른 부분은 빼고 받는다.
 # ------------------------------------------------------------------------------
 function(sw_add_module_part PART_NAME)
-	cmake_parse_arguments(ARG "" "OWNER" "SOURCES;LINK" ${ARGN})
+	cmake_parse_arguments(ARG "LINK_OWNER" "OWNER" "SOURCES;LINK" ${ARGN})
 	if(NOT TARGET ${ARG_OWNER})
 		message(FATAL_ERROR "sw_add_module_part(${PART_NAME}): OWNER '${ARG_OWNER}' is not a target")
 	endif()
@@ -223,16 +225,14 @@ function(sw_add_module_part PART_NAME)
 	else()
 		set(part_pic OFF)
 	endif()
-	set_target_properties(${PART_NAME} PROPERTIES FOLDER "${owner_folder}" POSITION_INDEPENDENT_CODE ${part_pic})
+	set_target_properties(${PART_NAME} PROPERTIES FOLDER "${owner_folder}" POSITION_INDEPENDENT_CODE ${part_pic} SW_MODULE_PART_OWNER ${ARG_OWNER})
 	target_link_libraries(${PART_NAME} PRIVATE ${ARG_LINK} sw_global_options)
-	# 생성식(`$<TARGET_PROPERTY:…>`)으로 받으면 모듈이 링크한 라이브러리의 사용 요구까지 따라와(imgui include 자리) 경계가 사라진다.
-	# 구성 때 모듈 자신의 값만 읽는다.
-	foreach(property COMPILE_DEFINITIONS COMPILE_OPTIONS INCLUDE_DIRECTORIES)
-		get_target_property(list_owner_value ${ARG_OWNER} ${property})
-		if(list_owner_value)
-			set_property(TARGET ${PART_NAME} APPEND PROPERTY ${property} ${list_owner_value})
-		endif()
-	endforeach()
+	set(copy_link OFF)
+	if(ARG_LINK_OWNER)
+		set(copy_link ON)
+	endif()
+	# DEFER 의 인자는 실행할 때 풀리므로 지금 값을 글로 박아 넘긴다.
+	cmake_language(EVAL CODE "cmake_language(DEFER CALL sw_copy_owner_compile_settings [[${PART_NAME}]] [[${ARG_OWNER}]] ${copy_link})")
 	if(TARGET ${ARG_OWNER}_ReflectionGen)
 		add_dependencies(${PART_NAME} ${ARG_OWNER}_ReflectionGen)
 	endif()
@@ -240,6 +240,46 @@ function(sw_add_module_part PART_NAME)
 	sw_set_unity_build(${PART_NAME})
 	# OBJECT 라이브러리를 직접 링크하면 오브젝트가 모듈 라이브러리에 들어간다(CMake 3.12+). 확장 모듈은 모듈의 export 로 그대로 쓴다.
 	target_link_libraries(${ARG_OWNER} PRIVATE ${PART_NAME})
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_copy_owner_compile_settings — 모듈(OWNER)의 정의 · 컴파일 옵션 · include 자리와 손으로 더한 빌드 의존을 TARGET_NAME 에 더한다.
+#   부분(sw_add_module_part)과 Engine 의 Jolt 오브젝트가 디렉터리 끝에(DEFER) 부른다 — 모듈 설정이 다 붙은 뒤다.
+#   생성식(`$<TARGET_PROPERTY:…>`)으로 받으면 모듈이 링크한 라이브러리의 사용 요구까지 따라와(imgui include 자리) 경계가 사라진다 — 모듈 자신의 값만 읽는다.
+#   COPY_LINK 가 켜져 있으면 링크 목록도 받는다(다른 부분은 뺀다 — 부분끼리 서로 링크하지 않는다).
+# ------------------------------------------------------------------------------
+function(sw_copy_owner_compile_settings TARGET_NAME OWNER COPY_LINK)
+	set(list_property COMPILE_DEFINITIONS COMPILE_OPTIONS INCLUDE_DIRECTORIES)
+	foreach(property IN LISTS list_property)
+		get_target_property(list_owner_value ${OWNER} ${property})
+		if(list_owner_value)
+			set_property(TARGET ${TARGET_NAME} APPEND PROPERTY ${property} ${list_owner_value})
+		endif()
+	endforeach()
+	if(COPY_LINK)
+		get_target_property(list_owner_link ${OWNER} LINK_LIBRARIES)
+		set(list_link "")
+		foreach(library IN LISTS list_owner_link)
+			if(TARGET ${library})
+				get_target_property(library_owner ${library} SW_MODULE_PART_OWNER)
+				if(library_owner)
+					continue()
+				endif()
+			endif()
+			list(APPEND list_link "${library}")
+		endforeach()
+		if(list_link)
+			set_property(TARGET ${TARGET_NAME} APPEND PROPERTY LINK_LIBRARIES ${list_link})
+		endif()
+	endif()
+	# 모듈이 기다리는 코드젠을 같이 기다린다 — 자기 자신(Engine 이 Jolt 오브젝트를 기다린다)은 뺀다.
+	get_target_property(list_owner_dependency ${OWNER} MANUALLY_ADDED_DEPENDENCIES)
+	if(list_owner_dependency)
+		list(REMOVE_ITEM list_owner_dependency ${TARGET_NAME})
+	endif()
+	if(list_owner_dependency)
+		add_dependencies(${TARGET_NAME} ${list_owner_dependency})
+	endif()
 endfunction()
 
 # RHI 그래픽스 백엔드 MODULE — 표(CookContract.json rhi_backends)의 이름 하나를 받는다. Dev 만 짓는다(배포는 Source/Engine/CMakeLists.txt 가

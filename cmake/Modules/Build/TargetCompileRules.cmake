@@ -317,7 +317,7 @@ endfunction()
 # 타깃 경계 게이트 — 위 층 껍데기와 같은 틀을 타깃 단위로 넓힌다. `Source/` 가 모든 타깃의 include 루트라 층 표 밖(Core → Engine, Engine → GameFramework, 키트 → 매니페스트 밖 키트)은
 # 헤더만 쓰면 컴파일 · 링크가 되었다. 껍데기는 configure 의 `Scripts/generate/target_layers.py` 가 표(`Config/Rules/Layers/TargetLayers.toml`)와 매니페스트로 쓴다.
 #
-# sw_apply_target_layer_guard: 타깃의 include 자리 맨 앞에 게이트 폴더들을 둔다. 부분(`sw_add_module_part`)은 소유 타깃의 include 자리를 복사하므로 부분을 만들기 전에 부른다.
+# sw_apply_target_layer_guard: 타깃의 include 자리 맨 앞에 게이트 폴더들을 둔다. 부분(`sw_add_module_part`)은 디렉터리 끝에 소유 타깃의 include 자리를 받는다(DEFER).
 # sw_apply_module_layer_guard: 모듈 종류의 공통 게이트와 모듈별 게이트(`module/<이름>` — 매니페스트 전이 폐쇄 밖 모듈의 헤더)를 건다.
 # ------------------------------------------------------------------------------
 include("${CMAKE_BINARY_DIR}/generated/sw/config/TargetLayers.cmake")
@@ -342,7 +342,7 @@ endfunction()
 # sw_require_template_definitions: 정의를 보지 못한 템플릿 함수를 부르면 컴파일이 멈춘다(clang `-Werror=undefined-func-template`).
 # 템플릿 몸체를 `.inl` 로 뺀 헤더(`GameObjectManager.inl` — 헤더를 읽는 TU 400 여 개 중 부르는 TU 만 읽게)는 `.inl` 를 빠뜨리면 링크에서야 정의 없는 심볼로 섰고,
 # 같은 이미지의 다른 TU 가 같은 인자로 실체화하면 링크도 지나 숨었다(W-S4). 다른 TU 에 실체화가 있는 템플릿은 `extern template` 선언으로 알린다(`SharedAssetCache`).
-# 엔진 · GameFramework · 키트 · 게임만 건다 — 부분(`sw_add_module_part`)과 Jolt 오브젝트는 소유 타깃의 옵션을 복사하므로 그 전에 부른다. MSVC 에는 같은 진단이 없다.
+# 엔진 · GameFramework · 키트 · 게임만 건다 — 부분(`sw_add_module_part`)과 Jolt 오브젝트는 디렉터리 끝에 소유 타깃의 옵션을 받는다(DEFER). MSVC 에는 같은 진단이 없다.
 # ------------------------------------------------------------------------------
 function(sw_require_template_definitions TARGET_NAME)
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

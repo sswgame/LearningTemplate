@@ -341,7 +341,7 @@ sw_add_reflect_builtins_gen(Engine)
 # Jolt 백엔드 소스는 Jolt 의 대상 기능(-mavx2 ...)으로 컴파일되므로 Engine PCH 를 쓸 수 없다(대상 기능이 다른 PCH 는 clang 이 거부한다).
 # PCH 없이 지으면 TU 마다 엔진 `pch.h` 를 다시 파싱한다 — 그 파싱이 TU 시간의 절반이다. 그래서 이 소스만 따로 묶어 `pch.h` + Jolt
 # 래퍼 헤더로 PCH 를 하나 만든다. 컴파일 설정은 Engine 의 것을 그대로 옮기고 Jolt 의 정의 ·
-# 옵션만 더한다. 그래서 이 블록은 Engine 설정이 모두 끝난 뒤(파일 끝)에 둔다 — 이 뒤에 Engine 에 더한 설정은 Jolt 소스에 가지 않는다.
+# 옵션만 더한다. 옮기기는 이 파일이 끝날 때라(DEFER) 이 블록 뒤에 Engine 에 더한 설정도 Jolt 소스에 간다.
 # 유니티 묶음에는 넣지 않는다. 코드젠 산출물(`FlagOps.gen.h` 등)을 읽으므로 Engine 이 기다리는 대상을 같이 기다린다.
 # ------------------------------------------------------------------------------
 sw_glob_source_tree(jolt_backend_sources "${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/*.cpp")
@@ -350,16 +350,13 @@ set_target_properties(EngineJolt_objects PROPERTIES
 	POSITION_INDEPENDENT_CODE ON
 	FOLDER "Source/Engine"
 )
-# Engine 에 직접 적은 값과 링크 목록을 그대로 옮긴다 — 링크 목록이 인터페이스 라이브러리의 include(SYSTEM 표시 포함) · 정의 · 옵션을 다시 실어 온다.
+# Engine 에 직접 적은 값과 링크 목록을 이 파일이 끝날 때 그대로 옮긴다(DEFER — 모듈 부분과 같은 sw_copy_owner_compile_settings) — 링크 목록이
+# 인터페이스 라이브러리의 include(SYSTEM 표시 포함) · 정의 · 옵션을 다시 실어 온다. 층 부분은 빼고 받는다.
 # ($<TARGET_PROPERTY:Engine,INCLUDE_DIRECTORIES> 로 한 번에 읽으면 서드파티 경로의 SYSTEM 표시가 빠져 그 헤더의 경고가 나온다.)
-foreach(property IN ITEMS COMPILE_DEFINITIONS INCLUDE_DIRECTORIES COMPILE_OPTIONS LINK_LIBRARIES)
-	get_target_property(engine_value Engine ${property})
-	if(engine_value)
-		set_property(TARGET EngineJolt_objects APPEND PROPERTY ${property} ${engine_value})
-	endif()
-endforeach()
-target_compile_definitions(EngineJolt_objects PRIVATE $<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_DEFINITIONS>)
-target_compile_options(EngineJolt_objects PRIVATE $<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_OPTIONS>)
+# Jolt 의 정의 · 옵션은 Engine 값 뒤에 와야 한다(대상 기능 깃발이 나중 것을 따른다) — DEFER 는 건 차례대로 돈다.
+cmake_language(DEFER CALL sw_copy_owner_compile_settings EngineJolt_objects Engine ON)
+cmake_language(DEFER CALL target_compile_definitions EngineJolt_objects PRIVATE "$<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_DEFINITIONS>")
+cmake_language(DEFER CALL target_compile_options EngineJolt_objects PRIVATE "$<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_OPTIONS>")
 if(SW_ENABLE_PCH)
 	target_precompile_headers(EngineJolt_objects PRIVATE
 		"${CMAKE_CURRENT_SOURCE_DIR}/pch.h"
@@ -368,21 +365,14 @@ if(SW_ENABLE_PCH)
 		"${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/JoltUtil.h"
 	)
 endif()
-get_target_property(engine_dependency Engine MANUALLY_ADDED_DEPENDENCIES)
-if(engine_dependency)
-	add_dependencies(EngineJolt_objects ${engine_dependency})
-endif()
 target_sources(Engine PRIVATE $<TARGET_OBJECTS:EngineJolt_objects>)
 add_dependencies(Engine EngineJolt_objects)
 
 # ------------------------------------------------------------------------------
 # 10) 층 부분 — 층마다 OBJECT 라이브러리 `EngineLayer<N>`(오브젝트는 Engine 이미지 안, `sw_add_module_part`). 부분 N 은 N 보다 위 층의 헤더마다 같은 경로의
 #     `#error` 껍데기를 자기 include 자리 맨 앞에 둔다 — 아래 층이 위 층 헤더를 include 하면(전이 include 도) 컴파일이 멈춘다. 에디터 층과 같은 방식이다.
-#     Engine 설정이 모두 끝난 뒤(Jolt 블록과 같은 자리)에 둔다 — 부분은 Engine 의 정의 · 옵션 · include · 링크 목록을 구성 때 복사한다.
+#     부분은 Engine 의 정의 · 옵션 · include · 링크 목록을 이 파일이 끝날 때 받는다(`LINK_OWNER`, DEFER — 놓는 자리 순서에 기대지 않는다).
 # ------------------------------------------------------------------------------
-# 링크 목록은 부분을 만들기 전에 한 번 읽는다 — `sw_add_module_part` 가 부분을 Engine 에 링크하므로 뒤에 읽으면 앞 부분이 섞인다.
-get_target_property(engine_link_libraries Engine LINK_LIBRARIES)
-get_target_property(engine_dependency Engine MANUALLY_ADDED_DEPENDENCIES)
 foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
 	if(NOT engine_tier_source_${tier})
 		continue()   # 이 구성이 짓지 않는 층(전용 서버의 렌더러)
@@ -390,14 +380,11 @@ foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
 	sw_add_module_part(EngineLayer${tier}
 		OWNER Engine
 		SOURCES ${engine_tier_source_${tier}}
-		LINK ${engine_link_libraries}
+		LINK_OWNER
 	)
 	sw_add_layer_stubs(EngineLayer${tier} ${tier} SW_ENGINE_TIER Engine)
 	target_include_directories(EngineLayer${tier} PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
 	add_dependencies(EngineLayer${tier} SwCookCodeFingerprint)
-	if(engine_dependency)
-		add_dependencies(EngineLayer${tier} ${engine_dependency})
-	endif()
 endforeach()
 
 # ------------------------------------------------------------------------------

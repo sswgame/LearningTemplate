@@ -314,7 +314,7 @@ sw_add_module_library(EditorModule
 	REFLECTION_EXCLUDE "${editor_core_reflect_regex}"
 )
 
-# EditorCore 의 오브젝트와 FlagOps 우산을 받는다. View 부분이 아래에서 이 타깃의 컴파일 옵션을 복사하므로 부분을 만들기 전에 부른다.
+# EditorCore 의 오브젝트와 FlagOps 우산을 받는다. View 부분은 이 파일이 끝날 때 이 타깃의 컴파일 옵션을 받는다(sw_add_module_part — DEFER).
 sw_link_editor_core(EditorModule PUBLIC)
 
 set(list_editor_part "")
