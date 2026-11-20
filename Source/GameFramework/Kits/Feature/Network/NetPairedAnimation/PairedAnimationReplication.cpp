@@ -62,7 +62,8 @@ namespace sw
         PairedAnimationSessionStateBody body;
         body._assetPath     = _assetPath;
         body._listRoleNetID = _listRoleNetID;
-        _snapshot.writeBytes( body._snapshotBytes );
+        if ( _snapshot.writeBytes( body._snapshotBytes ) == false )
+            return false;
         return ReplicatedLayout::writeFull( body, writer ); // 상한(`MaxCount`)은 선언이 본다
     }
 

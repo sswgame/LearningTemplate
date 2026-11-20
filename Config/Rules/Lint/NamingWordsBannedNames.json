@@ -1793,6 +1793,8 @@
     "kQuaternionResolution": "DestructionMovingPoseNetState::_rotation 의 Step — 회전 양자화 간격은 칸 선언이 정한다(복제 칸 선언, 2026-11-21)",
     "canWriteQuantizedPose": "canWriteMovingPose — 움직이는 자세는 칸 선언(DestructionMovingPoseNetState)으로 쓴다(복제 칸 선언, 2026-11-21)",
     "writeQuantizedPose": "writeMovingPose(DestructionMovingPoseNetState 칸 선언, 2026-11-21)",
-    "readQuantizedPose": "readMovingPose(DestructionMovingPoseNetState 칸 선언, 2026-11-21)"
+    "readQuantizedPose": "readMovingPose(DestructionMovingPoseNetState 칸 선언, 2026-11-21)",
+    "kPairedSnapshotRoleBits": "PairedAnimationSessionSnapshot::kMaxRoleCount — 스냅숏 바이트는 칸 선언(Replicated · MaxCount)이 정한다(복제 칸 선언, 2026-11-21)",
+    "kPairedSnapshotStageBits": "PairedAnimationRoleSnapshot::_stage 의 열거 범위 비트 — 칸 선언이 정한다(복제 칸 선언, 2026-11-21)"
   }
 }

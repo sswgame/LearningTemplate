@@ -45,6 +45,13 @@ SW_TEST_CASE( PairedAnimationNetStateTest, StateRoundTripsAndRejectsOverLimits )
     BitWriter crowdedWriter;
     SW_EXPECT_FALSE( crowded.write( crowdedWriter ) );
 
+    // 스냅숏도 칸 선언이다 — 역할 상한을 넘거나 시각이 유한하지 않으면 바이트를 내지 않는다.
+    PairedAnimationSessionSnapshot crowdedSnapshot = sent._snapshot;
+    crowdedSnapshot._listRole.resize( static_cast<size_t>( PairedAnimationSessionSnapshot::kMaxRoleCount ) + 1 );
+    vector<uint8> snapshotBytes;
+    SW_EXPECT_FALSE( crowdedSnapshot.writeBytes( snapshotBytes ) );
+    SW_EXPECT_TRUE( snapshotBytes.empty() );
+
     const vector<uint8>     truncated( writer.getBytes().begin(), writer.getBytes().begin() + static_cast<std::ptrdiff_t>( writer.getBytes().size() / 2 ) );
     BitReader               truncatedReader( truncated.data(), static_cast<int32>( truncated.size() ) );
     PairedAnimationNetState cleared = sent;

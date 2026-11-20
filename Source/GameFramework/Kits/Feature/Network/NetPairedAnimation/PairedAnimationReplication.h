@@ -48,13 +48,13 @@ namespace sw
     struct PairedAnimationNetLimit
     {
         static constexpr int32 kMaxAssetPathBytes = static_cast<int32>( constant::file::kMaxPathSize ) - 1; ///< 에셋 경로 바이트 상한(끝 0 자리 제외)
-        static constexpr int32 kMaxRoleCount      = 64;                                                     ///< 역할 수 상한. 깨진 바이트가 큰 수를 말해도 그만큼 잡지 않는다
+        static constexpr int32 kMaxRoleCount      = PairedAnimationSessionSnapshot::kMaxRoleCount;          ///< 역할 수 상한 — 스냅숏의 역할 상한과 같다
         static constexpr int32 kMaxSnapshotBytes  = 2048;                                                   ///< 스냅숏 바이트 상한(역할 하나가 9 바이트 남짓 — 역할 수백 개까지)
     };
 
     /**
      * @brief 세션 상태 메시지(`NetPairedAnimationMessage::SessionState`) · 롤백 소유 상태의 바이트입니다. 칸 선언(`Replicated` · `MaxCount`)이 곧 바이트다(`ReplicatedLayout`).
-     * @details 예전에는 `PairedAnimationNetState::write` · `read` 가 같은 차례 · 상한을 손으로 맞췄다. 스냅숏은 엔진 형식(`PairedAnimationSessionSnapshot::writeBytes`)의 바이트로 싣는다.
+     * @details 예전에는 `PairedAnimationNetState::write` · `read` 가 같은 차례 · 상한을 손으로 맞췄다. 스냅숏은 엔진 형식(`PairedAnimationSessionSnapshot::writeBytes` — 그쪽도 칸 선언)의 바이트로 싣는다.
      *          칸을 바꾸면 `SessionState` 의 본문 판을 올린다 — 손 본문이라 판이 스키마 해시를 따라가지 않는다.
      */
     REFLECT()
