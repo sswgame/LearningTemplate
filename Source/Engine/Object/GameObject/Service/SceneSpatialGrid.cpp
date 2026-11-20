@@ -378,4 +378,21 @@ namespace sw
     {
         waitBackBufferRebuild();
     }
+
+    void SceneSpatialGrid::onWorldOriginShifted( const float3& /*delta*/ ) // 자리는 소스에서 다시 읽는다 — 씬이 루트를 옮기고 트랜스폼을 펼친 뒤 부른다
+    {
+        waitBackBufferRebuild();
+        for ( Layer& layer : _listLayer )
+        {
+            if ( layer._arrBuiltCell[_frontIndex] <= 0.0f )
+                continue;
+            for ( const uint32 entryIndex : layer._listEntryIndex )
+            {
+                uint32       version{ 0 };
+                const Change change = makeInsertChange( entryIndex, version );
+                layer._arrGrid[_frontIndex].update( change._handle, change._minX, change._minY, change._maxX, change._maxY );
+                _listEntry[entryIndex]._arrSeenVersion[_frontIndex] = version;
+            }
+        }
+    }
 } // namespace sw

@@ -12,7 +12,7 @@
  *            버퍼마다 자기가 본 번호를 들므로 두 버퍼에 같은 바뀜을 따로 기록하지 않는다.
  *          - **바로 보임:** 항목을 더하거나 빼면(게임 스레드, 틱 밖) 앞 버퍼에 그 자리에서 넣고 뺀다 — 같은 프레임의 질의가 새 항목을 보고 지운 컴포넌트를 받지 않는다.
  *          - **자리:** 맞춘 자리는 `SpatialIndex` 단계의 월드 자리다(이번 물리 · 접촉 처리 뒤). 그 뒤에 옮긴 항목은 다음 프레임에 격자에서 옮겨 간다 — 읽는 쪽은 격자로 고르기만
- *            하고 판정은 지금 자리로 한다.
+ *            하고 판정은 지금 자리로 한다. 원점 이동은 모든 항목을 한꺼번에 멀리 옮기므로 앞 버퍼를 그 자리에서 고친다(`onWorldOriginShifted`).
  *          - **층:** 층 서술자는 항목을 올리는 쪽이 정적 상수로 하나 두고, 읽는 쪽이 같은 상수를 쓴다. 층은 사용자 수가 `_minUserCount` 이상이고 셀이 0 보다 크면 격자를 맞춘다.
  *            셀은 `requireCellSize` 로 받은 값과 항목 반 크기의 두 배 중 큰 값이고 커지기만 한다(커지면 그 층을 다시 짓는다).
  *          - **순서:** 질의 결과는 항목을 올린 순서다(격자 칸 번호를 다시 쓰므로 번호 순서는 뜻이 없다).
@@ -100,6 +100,11 @@ namespace sw
         void completeFrameJob() override;
         /** @brief 넘긴 일을 기다립니다. 항목은 컴포넌트의 해제가 뺀다. */
         void onSceneCleared() override;
+        /**
+         * @brief 원점 이동 뒤 앞 버퍼를 지금 자리로 고쳐 넣습니다(`Scene::shiftWorldOrigin` 이 루트를 옮긴 뒤). 뒤 버퍼는 월드 변경 번호가 바뀌어 다음 일이 고친다.
+         * @details 다음 `SpatialIndex` 단계까지 두면 그 사이 질의(지역 볼륨 — `ApplyPrePhysics`)가 옛 자리 격자로 골라 안의 대상이 모두 나갔다 다음 프레임에 다시 든다(가짜 이탈 · 진입).
+         */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 지금까지 뒤 버퍼에 고쳐 넣은 항목 수입니다(증분을 보는 테스트 · 진단). */
         uint64 getAppliedChangeCount() const { return _appliedChangeCount; }

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/span.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -7,7 +8,12 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
+#include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/SceneStreamingSubsystem.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
@@ -680,4 +686,72 @@ SW_TEST_CASE( ZoneTest, ServerModulesRunOnlyOnTheServerWorld )
         SW_EXPECT_TRUE( tracker.findOccupancy( fixture.hero().getHandle() ) != nullptr ); // 겹침 · 대상 기록은 양쪽
         SW_EXPECT_EQUAL( role == NetLinkRole::Server ? 1u : 0u, fixture._pHero->getActiveEffectCount() );
     }
+}
+
+/**
+ * @brief [ZoneTest] 바닥 셀이 내려가 물리가 쥔 몸(`isStreamingHeld`)은 지역 후보가 아니다 — 물리 트리거가 바디를 놓아 이탈을 내는 것과 같은 규칙이고, 셀이 올라 풀리면 다시 후보다
+ * @details 변이: `ZoneOccupantIndex` 의 거름을 `isPendingDestroy` 로 되돌리면 쥔 동안에도 후보로 남아 지역과 물리 트리거가 엇갈린다.
+ */
+SW_TEST_CASE( ZoneTest, StreamingHeldBodyIsNotAnOccupant )
+{
+    // 셀 (0,0)(한 변 10 m, 반경 6 m)에 표시 엔티티 하나 — 그 셀에 문서의 조각이 있어 내려가 있으면 바닥이 없다.
+    SceneDocument doc{};
+    doc._name                                        = "ZoneHold";
+    doc._sceneSettings._bStreaming                   = true;
+    doc._sceneSettings._cellGrid._cellSize           = 10.0f;
+    doc._sceneSettings._cellGrid._loadingRadius      = 6.0f;
+    doc._sceneSettings._unloadMargin                 = 0.0f;
+    doc._sceneSettings._maxCellLoadsPerFrame         = 4;
+    doc._sceneSettings._addToWorldBudgetMicroseconds = 1'000'000'000u;
+    doc._bValid                                      = true;
+    SceneDocument::StreamingCell cell{};
+    cell._cell = StreamingCellCoord{ 0, 0 };
+    SceneDocument::SceneObjectNode node{};
+    node._fileID      = 1;
+    node._name        = "Marker";
+    node._embeddedXML = "<GameObject _schemaVersion=\"0\" _name=\"Marker\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"2,0,2\" /></_listComponent></GameObject>";
+    cell._listSceneObjectNode.push_back( node );
+    doc._listStreamingCell.push_back( std::move( cell ) );
+
+    Scene scene{ "ZoneHold" };
+    SW_REQUIRE_TRUE( scene.instantiate( doc ) );
+    GameObjectManager&       objects   = *scene.getObjectManager();
+    SceneStreamingSubsystem& streaming = objects.getSubsystem<SceneStreamingSubsystem>();
+    const auto               setSource = [&streaming]( const float3& position )
+    {
+        const StreamingSource source{ position, streaming.getLoadingRadius(), StreamingSourcePriority::Normal };
+        SW_EXPECT_TRUE( streaming.setExternalSources( span<const StreamingSource>( &source, 1 ) ) );
+    };
+    setSource( float3{ 500.0f, 0.0f, 500.0f } ); // 셀 (0,0) 은 반경 밖이다
+
+    GameObject* pObject = objects.createGameObject( hashed_string( "Crate" ) );
+    SW_REQUIRE_NOT_NULL( pObject );
+    pObject->setAlwaysLoaded( true );
+    RigidBodyComponent* pCrate = pObject->addComponent<RigidBodyComponent>();
+    SW_REQUIRE_NOT_NULL( pCrate );
+    PhysicsShapeDesc3D box;
+    box._halfExtents = float3{ 0.25f, 0.25f, 0.25f };
+    pCrate->setShape( box );
+    pCrate->setBodyType( PhysicsBodyType::Dynamic );
+    pCrate->setMass( 1.0f );
+    pCrate->setLocalPosition( float3{ 5.0f, 5.0f, 5.0f } ); // 받쳐 줄 것이 없다
+    ZoneOccupantIndex::addLayerReader( objects );           // 볼륨 하나가 읽는 자리
+    objects.beginPlay();
+    for ( uint32 frame = 0; frame < 60; ++frame )
+        objects.update( 1.0f / 60.0f );
+
+    vector<Component*>            listKey;
+    vector<ZoneOccupantCandidate> listCandidate;
+    SW_REQUIRE_TRUE( pCrate->isStreamingHeld() );
+    ZoneOccupantIndex::queryCandidates( objects, 4.0f, 4.0f, 4.0f, 6.0f, 6.0f, listKey, listCandidate );
+    SW_EXPECT_TRUE( listCandidate.empty() );
+
+    setSource( float3{ 5.0f, 0.0f, 5.0f } ); // 셀이 올라 풀린다
+    for ( uint32 frame = 0; frame < 60; ++frame )
+        objects.update( 1.0f / 60.0f );
+    SW_REQUIRE_FALSE( pCrate->isStreamingHeld() );
+    ZoneOccupantIndex::queryCandidates( objects, 4.0f, 4.0f, 4.0f, 6.0f, 6.0f, listKey, listCandidate );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listCandidate.size() );
+    SW_EXPECT_TRUE( listCandidate[0]._pBody == pCrate );
+    ZoneOccupantIndex::removeLayerReader( objects );
 }

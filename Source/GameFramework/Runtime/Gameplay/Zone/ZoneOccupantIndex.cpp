@@ -45,8 +45,8 @@ namespace sw
         {
             const CharacterControllerComponent* pController = static_cast<const CharacterControllerComponent*>( pKey );
             GameObject*                         pObject     = pController->getOwner();
-            // 지워질 개체는 이번 프레임부터 안에 없다 — 지역이 곧바로 이탈을 낸다(꺼진 열쇠는 격자 질의가 이미 뺀다).
-            if ( pObject != nullptr && pController->isPendingDestroy() == false )
+            // 시뮬레이션 밖(지워질 개체 · 바닥 없는 셀 위라 쥔 개체)은 이번 프레임부터 안에 없다 — 물리 트리거가 바디를 놓아 내는 이탈과 같은 규칙이다(꺼진 열쇠는 격자 질의가 이미 뺀다).
+            if ( pObject != nullptr && pController->isSimulated() )
                 outListCandidate.push_back( ZoneOccupantCandidate{ pObject, pController, nullptr } );
         }
         grid.query( bodyLayer, minX, minZ, maxX, maxZ, inoutListKey );
@@ -55,7 +55,7 @@ namespace sw
             const RigidBodyComponent* pBody    = static_cast<const RigidBodyComponent*>( pKey );
             GameObject*               pObject  = pBody->getOwner();
             const bool                bDynamic = pBody->getBodyType() == PhysicsBodyType::Dynamic && pBody->isTrigger() == false;
-            if ( bDynamic == false || pBody->isPendingDestroy() || pObject == nullptr || pObject->getComponent<CharacterControllerComponent>() != nullptr )
+            if ( bDynamic == false || pBody->isSimulated() == false || pObject == nullptr || pObject->getComponent<CharacterControllerComponent>() != nullptr )
                 continue;
             outListCandidate.push_back( ZoneOccupantCandidate{ pObject, nullptr, pBody } );
         }

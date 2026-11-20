@@ -105,10 +105,13 @@ namespace sw
          *          다음 물리 프레임에 바디를 놓고, 풀면 지금 트랜스폼에서 다시 만든다 — 운동은 0 에서 다시 시작한다.
          */
         bool isStreamingHeld() const { return _bStreamingHeld; }
+        /**
+         * @brief 시뮬레이션에 들 상태인지입니다 — 시작했고, 켜졌고, 지워지는 중이 아니고, 바닥 없는 스트리밍 셀 위라 쥐지 않았다(`isStreamingHeld`).
+         * @details 물리 아닌 공간 판정(지역 볼륨 후보 `ZoneOccupantIndex`)도 이것으로 고른다 — 바디를 놓은 물체는 물리 트리거에서 나가므로 지역에서도 같이 나간다(트리거 계약 한 규칙).
+         */
+        bool isSimulated() const;
 
     protected:
-        /** @brief 시뮬레이션에 들 상태인지입니다 — 시작했고, 켜졌고, 지워지는 중이 아니고, 바닥 없는 스트리밍 셀 위라 쥐지 않았다(`isStreamingHeld`). */
-        bool isSimulated() const;
         /** @brief 바닥(스트리밍 셀)이 없으면 떨어지는 물체면 true 입니다 — 물리가 그 동안 쥔다(`isStreamingHeld`). 기본은 false(정적 · 키네마틱 · 관절은 떨어지지 않는다). */
         virtual bool needsStreamingFloor() const { return false; }
         /** @brief `TeleportType::ResetPhysics` 순간이동이 부릅니다 — 이어받은 운동을 다음 물리 프레임에 지운다(틱 워커에서도 불리므로 입력 칸에 넘긴다). 기본은 할 일 없음. */

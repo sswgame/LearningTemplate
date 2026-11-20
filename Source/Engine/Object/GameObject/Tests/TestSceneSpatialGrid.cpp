@@ -159,3 +159,34 @@ SW_TEST_CASE( SceneSpatialGridTest, InactiveOwnerIsLeftOutOfQueries )
     grid.query( kTestLayer, -1.0f, -1.0f, 1.0f, 1.0f, listKey );
     SW_EXPECT_TRUE( contains( listKey, pPooled ) );
 }
+
+/**
+ * @brief [SceneSpatialGridTest] 원점 이동은 모든 항목을 한꺼번에 멀리 옮긴다 — 알림을 받으면 앞 버퍼가 그 자리에서 새 자리를 보고, 다음 프레임들의 뒤 버퍼도 새 자리다
+ * @details 변이: `onWorldOriginShifted` 를 비우면 다음 `SpatialIndex` 단계까지 질의가 옛 자리를 봐 지역 볼륨의 대상이 모두 나갔다 다시 든다(가짜 이탈 · 진입).
+ */
+SW_TEST_CASE( SceneSpatialGridTest, OriginShiftRefreshesTheFrontBuffer )
+{
+    GameObjectManager manager;
+    SceneSpatialGrid  grid{ manager };
+    SceneComponent*   pOccupant = makePoint( manager, "Occupant", float3{ 1000.0f, 0.0f, 500.0f } );
+    (void)grid.add( kTestLayer, *pOccupant, *pOccupant, 0.0f );
+    grid.addLayerReader( kTestLayer );
+    grid.requireCellSize( kTestLayer, 4.0f );
+    (void)runGridFrame( grid );
+    (void)runGridFrame( grid ); // 두 버퍼 모두 옛 자리다
+
+    pOccupant->setLocalPosition( float3{ 0.0f, 0.0f, 0.0f } ); // 씬이 루트를 (−1000, 0, −500) 옮겼다
+    grid.onWorldOriginShifted( float3{ -1000.0f, 0.0f, -500.0f } );
+    vector<Component*> listKey;
+    grid.query( kTestLayer, -1.0f, -1.0f, 1.0f, 1.0f, listKey );
+    SW_EXPECT_TRUE( contains( listKey, pOccupant ) ); // 같은 프레임의 질의가 새 자리를 본다
+    grid.query( kTestLayer, 999.0f, 499.0f, 1001.0f, 501.0f, listKey );
+    SW_EXPECT_TRUE( listKey.empty() );
+
+    for ( uint32 frame = 0; frame < 2; ++frame ) // 앞뒤가 두 번 바뀌어도 새 자리다(뒤 버퍼는 바뀐 월드 변경 번호로 다음 일이 고친다)
+    {
+        (void)runGridFrame( grid );
+        grid.query( kTestLayer, -1.0f, -1.0f, 1.0f, 1.0f, listKey );
+        SW_EXPECT_TRUE( contains( listKey, pOccupant ) );
+    }
+}

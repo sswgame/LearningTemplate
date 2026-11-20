@@ -8,7 +8,8 @@
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -152,4 +153,35 @@ SW_TEST_CASE( WorldOriginTest, SubLevelPlacementIsAbsolute )
     const SceneComponent* pBox = Util::findScene( objects, "Shop/Box" );
     SW_REQUIRE_NOT_NULL( pBox );
     SW_EXPECT_EQUAL( 10.0f, pBox->getWorldPosition()._x ); // 절대 1010 − 원점 1000
+}
+
+/**
+ * @brief [WorldOriginTest] 원점을 옮기면 씬 공간 색인도 같은 프레임에 새 자리를 본다 — 지역 볼륨이 다음 `SpatialIndex` 단계 전에 옛 자리 격자로 골라 대상을 내보냈다 다시 들이지 않는다
+ * @details `Scene::shiftWorldOrigin` → `ISceneService::onWorldOriginShifted` → `SceneSpatialGrid` 의 길을 잇는다(격자 자체는 `SceneSpatialGridTest.OriginShiftRefreshesTheFrontBuffer`).
+ */
+SW_TEST_CASE( WorldOriginTest, ShiftRefreshesTheSceneSpatialGrid )
+{
+    static const SpatialGridLayerDesc kLayer{ "WorldOriginTest", SpatialGridPlane::XZ, 1 };
+    Scene                             scene{ "Origin" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeDocument() ) );
+    GameObjectManager& objects = *scene.getObjectManager();
+    GameObject*        pObject = objects.findGameObjectByName( hashed_string( "Ground" ) );
+    SW_REQUIRE_NOT_NULL( pObject );
+    SceneComponent* pGround = pObject->getPrimarySceneComponent();
+    SW_REQUIRE_NOT_NULL( pGround );
+    SceneSpatialGrid& grid  = objects.getSubsystem<SceneSpatialGrid>();
+    SlotHandle        entry = grid.add( kLayer, *pGround, *pGround, 0.0f );
+    grid.addLayerReader( kLayer );
+    grid.requireCellSize( kLayer, 4.0f );
+    vector<Component*> listKey;
+    grid.query( kLayer, 999.0f, 499.0f, 1001.0f, 501.0f, listKey );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listKey.size() );
+
+    SW_REQUIRE_TRUE( scene.shiftWorldOrigin( double3{ 1000.0, 0.0, 500.0 } ) );
+    grid.query( kLayer, -1.0f, -1.0f, 1.0f, 1.0f, listKey ); // Ground 는 이제 (0, 0, 0)
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listKey.size() );
+    grid.query( kLayer, 999.0f, 499.0f, 1001.0f, 501.0f, listKey );
+    SW_EXPECT_TRUE( listKey.empty() );
+    grid.removeLayerReader( kLayer );
+    grid.remove( entry );
 }
