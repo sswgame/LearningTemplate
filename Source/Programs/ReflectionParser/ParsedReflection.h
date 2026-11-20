@@ -455,10 +455,12 @@ namespace sw
         /** @brief `parsing.physics_hook_base_types`(`sw::PhysicsComponent`) 파생입니다(추상 포함). 물리 훅 등록(`requiresPhysicsHookRegistration`)이 본다. */
         uint8 _bPhysicsComponent : 1;
         /** @brief 이 타입이 직접 선언한 재정의입니다(`MemberCollector::collectTraits`). 코드젠이 `TypeMetadata` 의 특성 비트와 일괄 틱 등록을 낸다. */
-        uint8                  _bOverridesTick           : 1;
-        uint8                  _bOverridesSubTick        : 1;
-        uint8                  _bOverridesSerializeState : 1;
-        [[maybe_unused]] uint8 _reservedTraits           : 4;
+        uint8 _bOverridesTick           : 1;
+        uint8 _bOverridesSubTick        : 1;
+        uint8 _bOverridesSerializeState : 1;
+        /** @brief 바깥 형식 사슬에 public 이 아닌 고리가 있습니다(private · protected 중첩). 생성 코드는 이름공간 범위에서 이 이름을 쓰지 않는다(`CodeGenerator::makeRegistrarKey`). */
+        uint8                  _bHidden        : 1;
+        [[maybe_unused]] uint8 _reservedTraits : 3;
 
         ParsedTypeInfo() noexcept
             : _name{}
@@ -491,6 +493,7 @@ namespace sw
             , _bOverridesTick{ SW_FALSE }
             , _bOverridesSubTick{ SW_FALSE }
             , _bOverridesSerializeState{ SW_FALSE }
+            , _bHidden{ SW_FALSE }
             , _reservedTraits{ 0 }
         {
         }
@@ -537,8 +540,10 @@ namespace sw
         /** @brief `ENUM( Flags )` 입니다. 레지스트리의 비트플래그 표시와 비트 연산자 트레이트 코드젠을 함께 켭니다. */
         uint8 _bIsBitFlag : 1;
         /** @brief 클래스 · 구조체 **안에** 선언된 열거형이면 1 입니다. 그러면 밖에서 전방 선언할 수 없습니다. */
-        uint8                  _bNestedInType : 1;
-        [[maybe_unused]] uint8 _reserved      : 6;
+        uint8 _bNestedInType : 1;
+        /** @brief 바깥 형식 사슬에 public 이 아닌 고리가 있습니다(`ParsedTypeInfo::_bHidden` 과 같다). */
+        uint8                  _bHidden  : 1;
+        [[maybe_unused]] uint8 _reserved : 5;
 
         ParsedEnumInfo() noexcept
             : _name{}
@@ -553,6 +558,7 @@ namespace sw
             , _underlyingType{}
             , _bIsBitFlag{ SW_FALSE }
             , _bNestedInType{ SW_FALSE }
+            , _bHidden{ SW_FALSE }
             , _reserved{ 0 }
         {
         }

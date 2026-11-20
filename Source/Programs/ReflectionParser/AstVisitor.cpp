@@ -206,6 +206,36 @@ namespace sw
         return CXChildVisit_Continue;
     }
 
+    bool AstVisitor::resolveHiddenNested( const CXCursor cursor, const string& fqn, bool& outHidden ) const
+    {
+        outHidden   = false;
+        bool bValid = true;
+        for ( CXCursor current = cursor;; )
+        {
+            const CXCursor     parent     = clang_getCursorSemanticParent( current );
+            const CXCursorKind parentKind = clang_getCursorKind( parent );
+            const bool         bInType    = parentKind == CXCursor_ClassDecl || parentKind == CXCursor_StructDecl || parentKind == CXCursor_UnionDecl || parentKind == CXCursor_ClassTemplate;
+            if ( bInType == false )
+                break;
+            if ( clang_getCXXAccessSpecifier( current ) != CX_CXXPublic )
+            {
+                outHidden = true;
+                // 숨은 이름은 그 바깥 형식의 `REFLECT_BODY()` friend 로만 닿는다(언리얼은 중첩 UCLASS · USTRUCT 자체를 막는다 — 여기서는 바깥이 REFLECT 면 허용한다).
+                const bool bReflectedOwner = parentKind != CXCursor_ClassTemplate && AnnotationLookup::hasAnnotation( parent, annotation::kReflect, _pSession->_config );
+                if ( bReflectedOwner == false )
+                {
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORHiddenNestedOwnerNotReflected",
+                                     "ERROR: '%#' is a private or protected nested type, but its owner '%#' is not REFLECT - the generated registrar reaches hidden names only through the owner's REFLECT_BODY(). "
+                                     "Add REFLECT() and REFLECT_BODY() to the owner or make the nested type public.",
+                                     fqn, CursorReader::makeFullyQualifiedName( parent ) );
+                    bValid = false;
+                }
+            }
+            current = parent;
+        }
+        return bValid;
+    }
+
     /**
      * @brief `REFLECT(...)` 매크로가 붙은 struct/class 선언을 파싱합니다.
      *
@@ -221,6 +251,13 @@ namespace sw
         ParsedTypeInfo typeInfo;
         typeInfo._name               = CursorReader::getCursorSpelling( cursor );
         typeInfo._fullyQualifiedName = CursorReader::makeFullyQualifiedName( cursor );
+        bool bHidden                 = false;
+        if ( resolveHiddenNested( cursor, typeInfo._fullyQualifiedName, bHidden ) == false )
+        {
+            markHeaderError( outHeader );
+            return;
+        }
+        typeInfo._bHidden = bHidden ? SW_TRUE : SW_FALSE;
 
         BLOCK( "Parse REFLECT Annotation" )
         {
@@ -264,6 +301,15 @@ namespace sw
                 markHeaderError( outHeader );
                 return;
             }
+        }
+
+        // 컴포넌트 등록(틱 · 물리 훅 · 팩토리 이름)은 이름공간 범위 줄이 타입 이름을 쓴다 — 숨은 중첩 컴포넌트는 그 줄을 낼 수 없다. 씬 · 프리팹이 이름으로 찾는 타입이라 숨길 까닭도 없다.
+        if ( typeInfo._bHidden == SW_TRUE && typeInfo._bComponent == SW_TRUE )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORHiddenNestedComponent", "ERROR: component '%#' is a private or protected nested type - components are found by name (scenes, prefabs), make it public.",
+                             typeInfo._fullyQualifiedName );
+            markHeaderError( outHeader );
+            return;
         }
 
         // REFLECT() 를 붙였으면 REFLECT_BODY() 도 있어야 한다. 없으면 그 타입만 StaticType() 이
@@ -347,6 +393,14 @@ namespace sw
                                  parentKind == CXCursor_ClassTemplate || parentKind == CXCursor_UnionDecl;
             enumInfo._bNestedInType = bNested ? SW_TRUE : SW_FALSE;
         }
+
+        bool bHidden = false;
+        if ( resolveHiddenNested( cursor, enumInfo._fullyQualifiedName, bHidden ) == false )
+        {
+            markHeaderError( outHeader );
+            return;
+        }
+        enumInfo._bHidden = bHidden ? SW_TRUE : SW_FALSE;
 
         // 모든 열거자 항목(이름, 정수값) 수집
         CursorReader::collectEnumerators( cursor, enumInfo._listEnumerator );

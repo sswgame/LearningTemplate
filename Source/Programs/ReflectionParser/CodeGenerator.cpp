@@ -353,7 +353,9 @@ namespace sw
 
         for ( const ParsedTypeInfo& typeInfo : _header._listType )
         {
-            emitReflectTypeTraits( buffer, typeInfo );
+            // 숨은 중첩 형식은 이름공간 범위 특수화를 내지 않는다(접근 오류). 그 형식은 `REFLECT_BODY()` 의 `StaticType()` 으로 찾는다(`TypeRegistry::findType` 이 먼저 본다).
+            if ( typeInfo._bHidden == SW_FALSE )
+                emitReflectTypeTraits( buffer, typeInfo );
             if ( typeInfo.requiresTypeAPI() )
                 emitTypeInfoAccessors( buffer, typeInfo );
         }
@@ -884,9 +886,13 @@ namespace sw
             }
         }
 
+        string       keyDeclaration;
+        const string registrarKey = makeRegistrarKey( typeInfo._bHidden == SW_TRUE, registrarName, typeInfo._fullyQualifiedName, keyDeclaration );
+        outBuffer.append( keyDeclaration );
         appendTemplate( outBuffer, EmitTemplate::TypeRegistrarBegin, {
                                                                          {        templatekey::kID,                registrarName},
                                                                          {       templatekey::kFqn, typeInfo._fullyQualifiedName},
+                                                                         {       templatekey::kKey,                 registrarKey},
                                                                          {      templatekey::kName,               typeInfo._name},
                                                                          { templatekey::kParentFqn,          typeInfo._parentFQN},
                                                                          {templatekey::kModuleName,                  _moduleName},
@@ -944,6 +950,7 @@ namespace sw
                         {
                             { templatekey::kID, registrarName },
                             { templatekey::kFqn, typeInfo._fullyQualifiedName },
+                            { templatekey::kKey, registrarKey },
                             { templatekey::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) +
                                   CodeGeneratorInternal::emitRetiredTypeLines( typeInfo._listRemovedType ) },
@@ -1046,9 +1053,13 @@ namespace sw
             } );
         }
 
+        string       keyDeclaration;
+        const string registrarKey = makeRegistrarKey( enumInfo._bHidden == SW_TRUE, registrarName, enumInfo._fullyQualifiedName, keyDeclaration );
+        outBuffer.append( keyDeclaration );
         appendTemplate( outBuffer, EmitTemplate::EnumRegistrarBegin, {
                                                                          {           templatekey::kID,                                                                     registrarName},
                                                                          {          templatekey::kFqn,                                                      enumInfo._fullyQualifiedName},
+                                                                         {          templatekey::kKey,                                                                      registrarKey},
                                                                          {         templatekey::kName,                                                                    enumInfo._name},
                                                                          {   templatekey::kModuleName,                                                                       _moduleName},
                                                                          {    templatekey::kIsBitFlag,                                           enumInfo._bIsBitFlag ? "true" : "false"},
@@ -1068,10 +1079,23 @@ namespace sw
                         {
                             { templatekey::kID, registrarName },
                             { templatekey::kFqn, enumInfo._fullyQualifiedName },
+                            { templatekey::kKey, registrarKey },
                             { templatekey::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) },
                             { templatekey::kTables, tableBuffer.view() },
         } );
+    }
+
+    string CodeGenerator::makeRegistrarKey( const bool bHidden, const string& registrarName, const string& fqn, string& outKeyDeclaration )
+    {
+        outKeyDeclaration.clear();
+        if ( bHidden == false )
+            return fqn;
+        const string key  = "RegistrarKey_" + registrarName;
+        outKeyDeclaration = "	// " + fqn + " 는 숨은 중첩 형식이다 — 특수화 열쇠로 이름을 대신한다(본문은 바깥 형식의 REFLECT_BODY friend 안이다)
+                            struct " + key + ";
+        ";
+            return key;
     }
 
     const ParsedEnumeratorInfo* CodeGenerator::findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec )

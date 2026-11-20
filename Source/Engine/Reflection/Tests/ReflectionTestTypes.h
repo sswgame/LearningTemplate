@@ -902,6 +902,36 @@ namespace sw
                 OptionC = 4,
             };
         };
+
+        /** @brief 바깥 형식만 쓰는 private 중첩 구조체 · 열거형 샘플입니다 — 생성 등록기가 바깥의 `REFLECT_BODY()` friend 로 닿는다(`ReflectionInnerTypesTest`). */
+        REFLECT()
+        class HiddenNestedOwner
+        {
+        public:
+            REFLECT_BODY();
+
+        private:
+            ENUM()
+            enum class HiddenNestedMode : uint8
+            {
+                Idle = 0,
+                Busy
+            };
+
+            REFLECT()
+            struct HiddenNestedRecord
+            {
+                REFLECT_BODY();
+
+                PROPERTY()
+                int32 _count = 7;
+                PROPERTY()
+                HiddenNestedMode _mode = HiddenNestedMode::Busy;
+            };
+
+            PROPERTY()
+            HiddenNestedRecord _record{};
+        };
     } // namespace InnerNamespaceForTest
 } // namespace sw
 

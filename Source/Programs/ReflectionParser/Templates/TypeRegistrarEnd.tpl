@@ -6,5 +6,5 @@ $AliasRegs
 			static ::sw::TypeRegistrar reg{ &RegisterType };
 		}
 	};
-	static Registrar<$FQN> s_${ID}_registrar{};
+	static Registrar<$Key> s_${ID}_registrar{};
 

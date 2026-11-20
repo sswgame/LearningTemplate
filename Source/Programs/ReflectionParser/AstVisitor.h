@@ -48,8 +48,14 @@ namespace sw
         int32 findTargetIndex( CXCursor cursor ) const;
         /** @brief 그 헤더를 실패로 표시합니다(산출물을 쓰지 않는다). 순회는 계속합니다. */
         void markHeaderError( ParsedHeader& header );
-        void onStructDeclaration( CXCursor cursor, ParsedHeader& outHeader );
-        void onEnumDeclaration( CXCursor cursor, ParsedHeader& outHeader );
+        /**
+         * @brief @p cursor 의 바깥 형식 사슬에 public 이 아닌 고리가 있는지 @p outHidden 에 적습니다.
+         * @details 생성 등록기(`sw::generated::Registrar<…>`)는 바깥 형식의 `REFLECT_BODY()` 가 주는 friend 로만 숨은 이름에 닿는다. 그래서 public 이 아닌 고리의 바깥 형식은
+         *          REFLECT 여야 한다 — 아니면 알리고 false 입니다(생성 코드가 컴파일에서야 접근 오류로 멈추지 않게).
+         */
+        [[nodiscard]] bool resolveHiddenNested( CXCursor cursor, const string& fqn, bool& outHidden ) const;
+        void               onStructDeclaration( CXCursor cursor, ParsedHeader& outHeader );
+        void               onEnumDeclaration( CXCursor cursor, ParsedHeader& outHeader );
         /** @brief 열거자마다 이름 뒤의 `ENUMERATOR( … )` 를 읽어 @p inoutEnum 의 열거자에 넣습니다. 모르는 키가 있으면 false 입니다(알림은 이미 했다). */
         [[nodiscard]] bool applyEnumeratorAnnotation( CXCursor enumCursor, ParsedEnumInfo& inoutEnum ) const;
         /** @brief 열거형의 열거자 커서를 선언 순서로 모읍니다(`CursorReader::collectEnumerators` 와 같은 순서). */

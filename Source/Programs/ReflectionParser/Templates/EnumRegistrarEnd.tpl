@@ -3,5 +3,5 @@ $AliasRegs
 		}
 $Tables
 	};
-	static ::sw::EnumRegistrar s_${ID}_registrar{ &Registrar<$FQN>::registerEnum };
+	static ::sw::EnumRegistrar s_${ID}_registrar{ &Registrar<$Key>::registerEnum };
 

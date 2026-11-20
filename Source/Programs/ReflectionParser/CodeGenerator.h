@@ -97,6 +97,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) maps — enumerator·식별자 표기
         // ------------------------------------------------------------------------------
+        /**
+         * @brief 등록기 특수화(`Registrar<열쇠>`)의 열쇠입니다. 보통 FQN 이고, 숨은 중첩 형식이면 `RegistrarKey_<ID>` 를 @p outKeyDeclaration 의 전방 선언과 함께 돌려줍니다.
+         * @details 이름공간 범위의 특수화 머리 · 등록 변수는 바깥 형식의 friend 가 아니라 private 이름을 쓰면 C++17 에서 접근 오류다. 열쇠 구조체로 특수화하면 숨은 이름은
+         *          `Registrar` 본문 안(바깥 형식의 `REFLECT_BODY()` 가 주는 template friend)에서만 쓰인다.
+         */
+        static string makeRegistrarKey( bool bHidden, const string& registrarName, const string& fqn, string& outKeyDeclaration );
         /** @brief 이름 또는 FQN으로 enumerator 를 찾습니다. */
         static const ParsedEnumeratorInfo* findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec );
 
