@@ -6,7 +6,6 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
