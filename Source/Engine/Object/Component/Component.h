@@ -726,4 +726,19 @@ namespace sw
 
     template <typename T>
     inline constexpr bool HasOnTickOverride_v = HasOnTickOverride<T>::value;
+
+    /** @brief 타입 T(또는 그 조상 중 `Component` 가 아닌 것)가 `onSubTick` 을 오버라이드했는지 나타냅니다. 규칙은 `HasOnTickOverride` 와 같다(볼 수 없으면 오버라이드한 것으로 친다). */
+    template <typename T, typename = void>
+    struct HasOnSubTickOverride : std::true_type
+    {
+    };
+
+    template <typename T>
+    struct HasOnSubTickOverride<T, std::void_t<decltype( &T::onSubTick )>>
+        : std::bool_constant<std::is_same_v<decltype( &T::onSubTick ), void ( Component::* )( uint32, TickContext& )> == false>
+    {
+    };
+
+    template <typename T>
+    inline constexpr bool HasOnSubTickOverride_v = HasOnSubTickOverride<T>::value;
 } // namespace sw

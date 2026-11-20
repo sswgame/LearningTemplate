@@ -32,8 +32,9 @@ namespace sw
          */
         uint32 _version;
         /**
-         * @brief 이 타입이 **직접 선언한** 재정의입니다(생성기가 선언에서 모은다 — 손 등록 매크로가 빠뜨리는 타입이 없게). 기반에서 물려받은 것은 세지 않는다.
-         * @details `onTick` 은 일괄 등록(`TickBatchOf`)을, `onSubTick` 은 서브틱 일괄(5-3 1b)을, `serializeState` 는 상태 해시 · 롤백 대상(W-R4)을 정한다.
+         * @brief 이 타입(또는 조상)이 틱 함수 · 상태 함수를 가졌는지입니다. 생성 코드가 컴파일 타임 트레이트로 대입한다 — 엔진의 판정과 같은 답이다.
+         * @details `onTick` 은 `HasOnTickOverride_v`(주 틱을 켜는 판정과 같다), `onSubTick` 은 `HasOnSubTickOverride_v` 이고 컴포넌트만 켠다.
+         *          `serializeState` 는 `generated::HasSerializeState`(상태 해시 · 롤백 대상, W-R4)다. 일괄 틱 등록은 **직접 선언** 여부를 따로 컴파일에서 본다(`makeDeclaredTickEntry`).
          */
         uint8                  _bOverridesTick           : 1;
         uint8                  _bOverridesSubTick        : 1;

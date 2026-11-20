@@ -25,6 +25,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Module/ModuleEntryRegistrar.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -103,6 +104,59 @@ namespace sw
     /** @brief 물리 훅 줄 하나의 정적 등록자입니다. 링크 때 목록에 달리는 객체라 정적 객체로만 둔다. */
     using PhysicsHookRegistrar = ModuleEntryRegistrar<PhysicsHookRegistry, PhysicsHookRegistry::Entry>;
 
+    /** @brief 물리 훅 일괄 함수가 리플렉트 형식의 훅에 닿는 통로의 태그입니다(`ReflectAccess<PhysicsHookAccessTag>`). */
+    struct PhysicsHookAccessTag;
+
+    /**
+     * @brief 물리 훅의 통로 — 훅을 한정 이름으로(비가상) 부르고, 재정의 여부를 `&T::훅` 의 클래스 형식으로 답한다. `REFLECT_BODY()` 가 친구로 연다.
+     * @details `PhysicsComponent` 의 멤버 포인터면 물려받은 기본 구현이다. 중간 기반이 재정의했으면 그 기반의 형식이라 "재정의함" 이고, 한정 호출은 그 기반의 구현을 부른다.
+     */
+    template <>
+    struct ReflectAccess<PhysicsHookAccessTag>
+    {
+        template <typename TComponent>
+        static constexpr bool hasBeginFrameOverride() noexcept
+        {
+            return std::is_same_v<decltype( &TComponent::beginPhysicsFrame ), void ( PhysicsComponent::* )( ScenePhysics& )> == false;
+        }
+        template <typename TComponent>
+        static constexpr bool hasPreStepOverride() noexcept
+        {
+            return std::is_same_v<decltype( &TComponent::prePhysicsStep ), void ( PhysicsComponent::* )( ScenePhysics&, float32, uint32, uint32 )> == false;
+        }
+        template <typename TComponent>
+        static constexpr bool hasPostStepOverride() noexcept
+        {
+            return std::is_same_v<decltype( &TComponent::postPhysicsStep ), void ( PhysicsComponent::* )( ScenePhysics& )> == false;
+        }
+        template <typename TComponent>
+        static constexpr bool hasEndFrameOverride() noexcept
+        {
+            return std::is_same_v<decltype( &TComponent::endPhysicsFrame ), void ( PhysicsComponent::* )( ScenePhysics&, float32 )> == false;
+        }
+
+        template <typename TComponent>
+        static void beginPhysicsFrame( TComponent& comp, ScenePhysics& physics )
+        {
+            comp.TComponent::beginPhysicsFrame( physics );
+        }
+        template <typename TComponent>
+        static void prePhysicsStep( TComponent& comp, ScenePhysics& physics, const float32 fixedDeltaTime, const uint32 stepIndex, const uint32 stepCount )
+        {
+            comp.TComponent::prePhysicsStep( physics, fixedDeltaTime, stepIndex, stepCount );
+        }
+        template <typename TComponent>
+        static void postPhysicsStep( TComponent& comp, ScenePhysics& physics )
+        {
+            comp.TComponent::postPhysicsStep( physics );
+        }
+        template <typename TComponent>
+        static void endPhysicsFrame( TComponent& comp, ScenePhysics& physics, const float32 alpha )
+        {
+            comp.TComponent::endPhysicsFrame( physics, alpha );
+        }
+    };
+
     /**
      * @brief 타입 @p TComponent 의 물리 훅 일괄 함수와 등록 줄입니다. `SW_REGISTER_PHYSICS_HOOKS` 가 그 타입의 등록 TU 에서 인스턴스화합니다.
      * @details 재정의 여부는 `&TComponent::훅` 의 클래스 형식으로 컴파일에서 정한다 — `PhysicsComponent` 의 멤버 포인터면 물려받은 기본 구현이다.
@@ -111,38 +165,38 @@ namespace sw
     template <typename TComponent>
     struct PhysicsHooksOf
     {
-        static constexpr bool kOverridesBeginFrame = std::is_same_v<decltype( &TComponent::beginPhysicsFrame ), void ( PhysicsComponent::* )( ScenePhysics& )> == false;
-        static constexpr bool kOverridesPreStep =
-            std::is_same_v<decltype( &TComponent::prePhysicsStep ), void ( PhysicsComponent::* )( ScenePhysics&, float32, uint32, uint32 )> == false;
-        static constexpr bool kOverridesPostStep = std::is_same_v<decltype( &TComponent::postPhysicsStep ), void ( PhysicsComponent::* )( ScenePhysics& )> == false;
-        static constexpr bool kOverridesEndFrame = std::is_same_v<decltype( &TComponent::endPhysicsFrame ), void ( PhysicsComponent::* )( ScenePhysics&, float32 )> == false;
+        using Access                               = ReflectAccess<PhysicsHookAccessTag>;
+        static constexpr bool kOverridesBeginFrame = Access::hasBeginFrameOverride<TComponent>();
+        static constexpr bool kOverridesPreStep    = Access::hasPreStepOverride<TComponent>();
+        static constexpr bool kOverridesPostStep   = Access::hasPostStepOverride<TComponent>();
+        static constexpr bool kOverridesEndFrame   = Access::hasEndFrameOverride<TComponent>();
 
         static void beginFrame( ScenePhysics& physics, PhysicsComponent* const* ppComponent, const uint32 count, const PhysicsHookArgs& )
         {
             for ( uint32 index = 0; index < count; ++index )
             {
-                static_cast<TComponent*>( ppComponent[index] )->TComponent::beginPhysicsFrame( physics );
+                Access::beginPhysicsFrame( *static_cast<TComponent*>( ppComponent[index] ), physics );
             }
         }
         static void preStep( ScenePhysics& physics, PhysicsComponent* const* ppComponent, const uint32 count, const PhysicsHookArgs& args )
         {
             for ( uint32 index = 0; index < count; ++index )
             {
-                static_cast<TComponent*>( ppComponent[index] )->TComponent::prePhysicsStep( physics, args._fixedDeltaTime, args._stepIndex, args._stepCount );
+                Access::prePhysicsStep( *static_cast<TComponent*>( ppComponent[index] ), physics, args._fixedDeltaTime, args._stepIndex, args._stepCount );
             }
         }
         static void postStep( ScenePhysics& physics, PhysicsComponent* const* ppComponent, const uint32 count, const PhysicsHookArgs& )
         {
             for ( uint32 index = 0; index < count; ++index )
             {
-                static_cast<TComponent*>( ppComponent[index] )->TComponent::postPhysicsStep( physics );
+                Access::postPhysicsStep( *static_cast<TComponent*>( ppComponent[index] ), physics );
             }
         }
         static void endFrame( ScenePhysics& physics, PhysicsComponent* const* ppComponent, const uint32 count, const PhysicsHookArgs& args )
         {
             for ( uint32 index = 0; index < count; ++index )
             {
-                static_cast<TComponent*>( ppComponent[index] )->TComponent::endPhysicsFrame( physics, args._alpha );
+                Access::endPhysicsFrame( *static_cast<TComponent*>( ppComponent[index] ), physics, args._alpha );
             }
         }
 

@@ -923,9 +923,13 @@ namespace sw
         {
             emit.linef( "info._listRemovedField.push_back( ::sw::hashed_string( \"%#\" ) );", CodeEmit::escapeCppString( removedField ) );
         }
-        emit.flagIf( typeInfo._bOverridesTick, "info._metadata.edit()._bOverridesTick" );
-        emit.flagIf( typeInfo._bOverridesSubTick, "info._metadata.edit()._bOverridesSubTick" );
-        emit.flagIf( typeInfo._bOverridesSerializeState, "info._metadata.edit()._bOverridesSerializeState" );
+        // 틱 · 상태 함수의 특성 비트는 컴파일러가 아는 사실이라 트레이트를 대입한다(엔진이 주 틱을 켜는 판정 `HasOnTickOverride_v` 와 같은 답).
+        if ( typeInfo._bComponent == SW_TRUE )
+        {
+            emit.linef( "info._metadata.edit()._bOverridesTick = ::sw::HasOnTickOverride_v<%#> ? SW_TRUE : SW_FALSE;", typeInfo._fullyQualifiedName );
+            emit.linef( "info._metadata.edit()._bOverridesSubTick = ::sw::HasOnSubTickOverride_v<%#> ? SW_TRUE : SW_FALSE;", typeInfo._fullyQualifiedName );
+        }
+        emit.linef( "info._metadata.edit()._bOverridesSerializeState = ::sw::generated::HasSerializeState<%#>::value ? SW_TRUE : SW_FALSE;", typeInfo._fullyQualifiedName );
         // 타입의 저장 판(`REFLECT( Version = … )`) — 상수 이름이면 그 이름을 그대로 쓴다(값은 컴파일러가 푼다)
         if ( typeInfo._versionName.empty() == false )
             emit.linef( "info._metadata.edit()._version = static_cast<::uint32>( %# );", typeInfo._versionName );
@@ -977,25 +981,32 @@ namespace sw
     void CodeGenerator::emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
     {
         const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::TickBatch };
-        // 등록 줄 모양은 틱 런타임(5-3)이 정한 `SW_REGISTER_TICK_TYPE( 타입, 모드 )` 하나다 — 손 등록과 같은 줄. 메타데이터가 없으면 Batch.
+        // 등록 줄 모양은 틱 런타임(5-3)이 정한 `SW_REGISTER_TICK_TYPE( 타입, 모드 )` 하나다 — 손 등록과 같은 줄. 모드를 적지 않은 형식은 `makeDeclaredTickEntry` 줄이고,
+        // 틱 함수를 직접 선언했는지는 그 줄이 컴파일에서 정한다(생성기는 메서드 이름 · 인자 수를 보지 않는다).
         if ( typeInfo.requiresTickRegistration() == false )
             return;
-        const string mode = typeInfo._tickMode.empty() ? string( "Batch" ) : typeInfo._tickMode;
-        CodeEmit     emit( outBuffer );
+        CodeEmit emit( outBuffer );
         emit.push( 1 );
+        const string id = sanitizeIdentifier( typeInfo._fullyQualifiedName );
+        if ( typeInfo._tickMode.empty() )
+        {
+            emit.linef( "static constexpr utf8 kTickBatchScopeName_%#[] = \"GT.Scene.tickBatch.%#\";", id, typeInfo._name );
+            emit.linef( "static ::sw::TickBatchRegistrar s_%#_tickBatch{ ::sw::makeDeclaredTickEntry<%#, kTickBatchScopeName_%#>() };", id, typeInfo._fullyQualifiedName, id );
+            emit.line( "" );
+            return;
+        }
         // 생성 이름공간(`sw::generated`)은 `sw` 안이라 `sw` 바로 아래 타입은 짧은 이름으로 닿는다. 다른 이름공간의 타입은 매크로가 이름을 붙여 쓰지 못해(토큰 붙이기) 같은 줄을 펼쳐 쓴다.
         const string_view qualifiedName = typeInfo._fullyQualifiedName;
         const string_view swPrefix      = "sw::";
         if ( StringUtil::startsWith( qualifiedName, swPrefix ) && qualifiedName.substr( swPrefix.size() ) == string_view( typeInfo._name ) )
         {
-            emit.linef( "SW_REGISTER_TICK_TYPE( %#, %# );", typeInfo._name, mode );
+            emit.linef( "SW_REGISTER_TICK_TYPE( %#, %# );", typeInfo._name, typeInfo._tickMode );
         }
         else
         {
-            const string id = sanitizeIdentifier( typeInfo._fullyQualifiedName );
             emit.linef( "static constexpr utf8 kTickBatchScopeName_%#[] = \"GT.Scene.tickBatch.%#\";", id, typeInfo._name );
             emit.linef( "static ::sw::TickBatchRegistrar s_%#_tickBatch{ ::sw::TickBatchRegistry::Entry{ &%#::StaticType, &::sw::TickBatchOf<%#, kTickBatchScopeName_%#>::tickRange, ::sw::TickMode::%# } };",
-                        id, typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, id, mode );
+                        id, typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, id, typeInfo._tickMode );
         }
         emit.line( "" );
     }

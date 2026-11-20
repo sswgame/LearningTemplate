@@ -467,10 +467,6 @@ namespace sw
         uint8 _bComponent : 1;
         /** @brief `parsing.physics_hook_base_types`(`sw::PhysicsComponent`) 파생입니다(추상 포함). 물리 훅 등록(`requiresPhysicsHookRegistration`)이 본다. */
         uint8 _bPhysicsComponent : 1;
-        /** @brief 이 타입이 직접 선언한 재정의입니다(`MemberCollector::collectTraits`). 코드젠이 `TypeMetadata` 의 특성 비트와 일괄 틱 등록을 낸다. */
-        uint8 _bOverridesTick           : 1;
-        uint8 _bOverridesSubTick        : 1;
-        uint8 _bOverridesSerializeState : 1;
         /** @brief 바깥 형식 사슬에 public 이 아닌 고리가 있습니다(private · protected 중첩). 생성 코드는 이름공간 범위에서 이 이름을 쓰지 않는다(`CodeGenerator::makeRegistrarKey`). */
         uint8                  _bHidden        : 1;
         [[maybe_unused]] uint8 _reservedTraits : 3;
@@ -503,9 +499,6 @@ namespace sw
             , _bParentReflected{ SW_FALSE }
             , _bComponent{ SW_FALSE }
             , _bPhysicsComponent{ SW_FALSE }
-            , _bOverridesTick{ SW_FALSE }
-            , _bOverridesSubTick{ SW_FALSE }
-            , _bOverridesSerializeState{ SW_FALSE }
             , _bHidden{ SW_FALSE }
             , _reservedTraits{ 0 }
         {
@@ -514,16 +507,15 @@ namespace sw
         bool requiresTypeAPI() const noexcept { return _bReflectBody == SW_TRUE; }
         bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
         /**
-         * @brief 이 타입에 틱 모드 등록(`SW_REGISTER_TICK_TYPE`)을 낸다 — 컴포넌트가 `onTick` · `onSubTick` 을 직접 재정의했거나 `REFLECT( TickMode = … )` 를 달았을 때다.
-         * @details 추상 타입은 `TickMode` 를 적었을 때만 낸다(파생이 물려받는 모드 — 재정의만으로는 그 타입의 인스턴스가 없다).
+         * @brief 이 타입에 틱 등록 줄을 낸다 — `REFLECT( TickMode = … )` 를 단 컴포넌트, 그리고 추상이 아닌 모든 컴포넌트다.
+         * @details 모드를 적지 않은 컴포넌트는 `makeDeclaredTickEntry` 줄이고, 틱 함수를 **직접 선언했는지**는 그 줄이 컴파일에서 정한다(생성기는 이름 · 인자 수를 보지 않는다).
+         *          추상 타입은 `TickMode` 를 적었을 때만 낸다(파생이 물려받는 모드 — 재정의만으로는 그 타입의 인스턴스가 없다).
          */
         bool requiresTickRegistration() const noexcept
         {
             if ( _bComponent == SW_FALSE )
                 return false;
-            if ( _tickMode.empty() == false )
-                return true;
-            return _bAbstract == SW_FALSE && ( _bOverridesTick == SW_TRUE || _bOverridesSubTick == SW_TRUE );
+            return _tickMode.empty() == false || _bAbstract == SW_FALSE;
         }
 
         /**

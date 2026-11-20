@@ -22,12 +22,14 @@
 namespace sw
 {
     struct TypeInfo;
-    /** @brief 타입별 일괄 틱 함수(`TickBatchRegistry.h`)입니다. `onTick` · `onSubTick` 을 한정 이름으로 부르므로 REFLECT_BODY 가 친구로 연다(protected 재정의도 일괄 경로를 탄다). */
-    template <typename TComponent, const utf8* TScopeName>
-    struct TickBatchOf;
-    /** @brief 타입별 물리 훅 일괄 함수(`PhysicsHookRegistry.h`)입니다. 훅을 한정 이름으로 부르고 `&T::훅` 을 보므로 REFLECT_BODY 가 친구로 연다. */
-    template <typename TComponent>
-    struct PhysicsHooksOf;
+    /**
+     * @brief 리플렉트 형식의 숨은 멤버에 닿는 엔진 쪽 통로입니다. `REFLECT_BODY()` 가 이 템플릿을 통째로 친구로 연다.
+     * @details 쓰는 쪽이 태그마다 특수화한다 — 일괄 틱(`TickAccessTag`, `TickBatchRegistry.h`) · 물리 훅(`PhysicsHookAccessTag`, `PhysicsHookRegistry.h`).
+     *          서브시스템이 늘어도 REFLECT_BODY 의 친구 줄이 늘지 않는다(boost.serialization · cereal 의 `access` 와 같은 꼴). 특수화는 한정 이름 호출
+     *          (`comp.T::onTick( … )`)로 비가상 호출을 그대로 둔다 — 멤버 포인터로 넘기면 가상 디스패치가 된다.
+     */
+    template <typename TTag>
+    struct ReflectAccess;
 } // namespace sw
 
 namespace sw::generated
@@ -75,10 +77,8 @@ namespace sw::generated
     #define REFLECT_BODY()                                                               \
         template <typename>                                                              \
         friend struct ::sw::generated::Registrar;                                        \
-        template <typename, const utf8*>                                                 \
-        friend struct ::sw::TickBatchOf;                                                 \
         template <typename>                                                              \
-        friend struct ::sw::PhysicsHooksOf;                                              \
+        friend struct ::sw::ReflectAccess;                                               \
         void        __sw_reflect_body() __attribute__( ( annotate( "REFLECT_BODY" ) ) ); \
         const void* swReflectSelf() const
 #else
@@ -100,10 +100,8 @@ namespace sw::generated
     #define REFLECT_BODY()                                                                           \
         template <typename>                                                                          \
         friend struct ::sw::generated::Registrar;                                                    \
-        template <typename, const utf8*>                                                             \
-        friend struct ::sw::TickBatchOf;                                                             \
         template <typename>                                                                          \
-        friend struct ::sw::PhysicsHooksOf;                                                          \
+        friend struct ::sw::ReflectAccess;                                                           \
         static const ::sw::TypeInfo* StaticType()                                                    \
         {                                                                                            \
             const ::sw::TypeInfo* pCachedType = nullptr;                                             \
