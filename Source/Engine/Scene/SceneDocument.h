@@ -19,6 +19,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/SceneSettings.h"
+#include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 namespace sw
 {
@@ -123,6 +124,12 @@ namespace sw
             string _instancePartPath;
             /** @brief **저작 칸.** 맨 위 앵커의 `<Part>` 가 이 멤버에 적은 것입니다. 안 올린 레이어의 멤버는 살아 있는 값이 없어 저장이 이것을 그대로 다시 적습니다. */
             string _instanceTopOverrideXML;
+            /**
+             * @brief **런타임 칸.** 글 · 바이너리 상태를 읽을 목적입니다. 씬 파일 · 쿠킹본에서 읽은 엔티티는 `Authoring` 이고 파일에는 쓰지 않습니다.
+             * @details 스트리밍이 셀을 내릴 때 떠 둔 엔티티(`Scene::captureCellNodes`)는 `Snapshot` 이다 — 런타임 칸(`RuntimeState`)까지 실려 있어 저작 목적으로 읽으면 로드 오류다.
+             *          세이브에 실을 때는 스트리밍이 엔티티마다 따로 적는다(`SceneStreamingSubsystem::writeSaveState`).
+             */
+            SerializePurpose _statePurpose{ SerializePurpose::Authoring };
         };
 
         /**
@@ -148,7 +155,13 @@ namespace sw
         SceneSettings           _sceneSettings{};     ///< 씬 파일의 `<SceneSettings>`(형식 판 2부터 필수)
         vector<SceneObjectNode> _listSceneObjectNode; ///< 늘 올라 있는 엔티티. 스트리밍하지 않는 씬은 모든 엔티티다
         vector<StreamingCell>   _listStreamingCell;   ///< 셀로 나눈 엔티티(쿠킹본에만, z · x 오름차순). XML 로는 쓰지 않는다
-        bool                    _bValid{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        /**
+         * @brief 셀 엔티티(인스턴스 멤버 제외)의 가장 큰 파일 id 입니다 — 쿠킹본 머리에 실린다(`saveBinary` 가 셀 내용에서 세고 `loadBinary` 가 읽는다).
+         * @details 색인만 읽은 셀은 내용을 모른다. 씬이 새 오브젝트에 줄 파일 id(`Scene::computeNextFileID`)가 내려간 셀의 엔티티와 겹치지 않게 이 값 위에서 고른다.
+         *          메모리에 든 셀(쿠커가 나눈 문서 · 테스트)은 0 이어도 된다 — 스트리밍이 내용에서 다시 센다(`SceneStreamingSubsystem::getMaxCellFileID`).
+         */
+        uint64 _maxCellFileID{ 0 };
+        bool   _bValid{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief 빌드(Shipping/Dev)와 파일 존재 여부에 따라 알맞은 포맷(바이너리 우선)으로 로드합니다. */
         [[nodiscard]] SW_API bool load( const AssetID& assetID );
@@ -188,6 +201,17 @@ namespace sw
          * @return 구간이 엔티티 목록으로 읽히지 않으면(잘림 · 손상) 오류를 남기고 false 입니다. @p sourcePath 는 로그용입니다.
          */
         [[nodiscard]] SW_API static bool readStreamingCellContent( const uint8* pData, uint64 size, vector<SceneObjectNode>& outListNode, string_view sourcePath );
+        /** @brief 엔티티 목록을 셀 내용 형식으로 씁니다(`readStreamingCellContent` 의 짝 — 비우고 채운다). 읽을 목적(`_statePurpose`)은 쓰지 않습니다. */
+        SW_API static void writeStreamingCellContent( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );
+        /**
+         * @brief 세이브에 싣는 엔티티 목록을 씁니다(비우고 채운다) — 셀 내용 형식에 엔티티마다 읽을 목적(`_statePurpose`)을 더한다. 떠 둔 상태(스냅숏)와 문서 내용(저작)이 섞여도 제 목적으로 읽힌다.
+         * @details 스트리밍 셀(`SceneStreamingSubsystem::writeSaveState`)과 데이터 레이어 묶음(`SceneDataLayerSubsystem::writeSaveState`)이 같은 형식을 쓴다.
+         */
+        SW_API static void writeSavedNodes( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );
+        /** @brief `writeSavedNodes` 의 짝입니다. 잘렸거나 목적 수 · 값이 틀리면 오류를 남기고 false 입니다(@p sourcePath 는 로그용). */
+        [[nodiscard]] SW_API static bool readSavedNodes( const uint8* pData, uint64 size, vector<SceneObjectNode>& outListNode, string_view sourcePath );
+        /** @brief 엔티티 목록에서 인스턴스 멤버(넓은 평평한 id)를 뺀 가장 큰 파일 id 입니다(없으면 0). 셀 머리 값(`_maxCellFileID`)과 씬의 다음 파일 id 가 같은 규칙으로 센다. */
+        [[nodiscard]] SW_API static uint64 computeMaxFileID( const vector<SceneObjectNode>& listNode );
         /** @brief 셀까지 메모리에 든 엔티티 수입니다(색인만 읽은 셀의 엔티티는 세지 않는다). */
         SW_API size_t computeTotalEntityCount() const;
 

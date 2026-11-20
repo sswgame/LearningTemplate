@@ -1,4 +1,4 @@
-// SceneAssemblyTest — 씬 인스턴스 · 씬 상속 · 데이터 레이어: 펼쳐 읽기, id 가 겹치지 않음, 차이로 저장, 레이어 켜고 끄기, 쿠킹본 왕복.
+// SceneAssemblyTest — 씬 인스턴스 · 씬 상속 · 데이터 레이어: 펼쳐 읽기, id 가 겹치지 않음, 차이로 저장, 레이어 켜고 끄기(끌 때 상태 보존), 레이어 세이브 몫, 쿠킹본 왕복.
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -6,6 +6,7 @@
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/Tests/StateHashTestComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
@@ -309,4 +310,87 @@ SW_TEST_CASE( SceneAssemblyTest, RemapAssetPathsFollowsTheMove )
     SW_EXPECT_TRUE( scene.getSceneInstancePath( 7 ) == "scratch/moved/inner.scene.xml" );
     SW_EXPECT_TRUE( scene.getSceneInstancePath( 8 ) == "scratch/remap/kept.scene.xml" );
     SW_EXPECT_TRUE( scene.getEntityPrefabPath( 9 ) == "scratch/moved/crate.prefab.xml" );
+}
+
+/**
+ * @brief [SceneAssemblyTest] 레이어를 껐다 켜면 묶음 오브젝트는 끌 때의 상태(자리 · 런타임 칸)로 다시 선다 — 스트리밍 셀과 같이 내릴 때 떠 둔다. 저장은 문서 그대로다
+ */
+SW_TEST_CASE( SceneAssemblyTest, DataLayerKeepsStateWhenTurnedOffAndOn )
+{
+    const test::ScopedScratchDomain domain;
+    Util::write( domain, "layerstate.scene.xml",
+                 Util::makeScene( "LayerState", Util::makeEntity( "1", "Always", "0,0,0" ) + Util::makeEntity( "2", "Snow", "1,0,0", "layers=\"Winter\"" ),
+                                  "<_listDataLayer><SceneDataLayerDef _name=\"Winter\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
+    SceneDocument doc{};
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "layerstate.scene.xml" ) ) );
+    Scene scene{ "LayerState" };
+    SW_REQUIRE_TRUE( scene.instantiate( doc ) );
+    GameObjectManager&       objects = *scene.getObjectManager();
+    SceneDataLayerSubsystem& layers  = objects.getSubsystem<SceneDataLayerSubsystem>();
+
+    GameObject* pSnow = objects.findGameObjectByName( hashed_string( "Snow" ) );
+    SW_REQUIRE_TRUE( pSnow != nullptr && pSnow->getPrimarySceneComponent() != nullptr );
+    SW_EXPECT_TRUE( layers.isGroupObject( pSnow->getObjectID() ) );
+    pSnow->getPrimarySceneComponent()->setLocalPosition( float3{ 5.0f, 0.0f, 0.0f } );
+    StateHashTestComponent* pState = pSnow->addComponent<StateHashTestComponent>();
+    SW_REQUIRE_NOT_NULL( pState );
+    pState->_steps = 3;
+
+    SW_REQUIRE_TRUE( layers.setLayerActive( "Winter", false ) );
+    layers.update( 0.0f );
+    objects.processDeferredDestruction();
+    SW_EXPECT_TRUE( objects.findGameObjectByName( hashed_string( "Snow" ) ) == nullptr );
+    SceneDocument written{};
+    SW_REQUIRE_TRUE( scene.serializeToDocument( written ) );
+    const SceneDocument::SceneObjectNode* pWritten = Util::findNode( written, "Snow" );
+    SW_REQUIRE_TRUE( pWritten != nullptr );
+    SW_EXPECT_TRUE( pWritten->_statePurpose == SerializePurpose::Authoring ); // 끈 묶음은 문서 그대로 다시 쓴다 — 떠 둔 스냅숏을 저작 파일에 쓰지 않는다
+
+    SW_REQUIRE_TRUE( layers.setLayerActive( "Winter", true ) );
+    layers.update( 0.0f );
+    const GameObject* pBack = objects.findGameObjectByName( hashed_string( "Snow" ) );
+    SW_REQUIRE_TRUE( pBack != nullptr && pBack->getPrimarySceneComponent() != nullptr );
+    SW_EXPECT_EQUAL( 5.0f, pBack->getPrimarySceneComponent()->getLocalPosition()._x );
+    const StateHashTestComponent* pBackState = pBack->getComponent<StateHashTestComponent>();
+    SW_REQUIRE_NOT_NULL( pBackState );
+    SW_EXPECT_EQUAL( 3, pBackState->_steps );
+}
+
+/**
+ * @brief [SceneAssemblyTest] 데이터 레이어 세이브 몫은 켜진 레이어와 묶음 상태를 싣고, 비운 매니저(복원) 위에서 묶음이 그 상태로 다시 선다 — 비워도 켜진 레이어 · 묶음은 남는다
+ */
+SW_TEST_CASE( SceneAssemblyTest, DataLayerSaveStateRestoresOverAClearedManager )
+{
+    const test::ScopedScratchDomain domain;
+    Util::write( domain, "layersave.scene.xml",
+                 Util::makeScene( "LayerSave", Util::makeEntity( "1", "Always", "0,0,0" ) + Util::makeEntity( "2", "Snow", "1,0,0", "layers=\"Winter\"" ),
+                                  "<_listDataLayer><SceneDataLayerDef _name=\"Winter\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
+    SceneDocument doc{};
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "layersave.scene.xml" ) ) );
+    Scene scene{ "LayerSave" };
+    SW_REQUIRE_TRUE( scene.instantiate( doc ) );
+    GameObjectManager&       objects = *scene.getObjectManager();
+    SceneDataLayerSubsystem& layers  = objects.getSubsystem<SceneDataLayerSubsystem>();
+
+    GameObject* pSnow = objects.findGameObjectByName( hashed_string( "Snow" ) );
+    SW_REQUIRE_TRUE( pSnow != nullptr && pSnow->getPrimarySceneComponent() != nullptr );
+    pSnow->getPrimarySceneComponent()->setLocalPosition( float3{ 5.0f, 0.0f, 0.0f } );
+
+    vector<uint8> bytes;
+    layers.writeSaveState( bytes );
+    SceneDataLayerSubsystem::SaveState state;
+    SW_REQUIRE_TRUE( SceneDataLayerSubsystem::readSaveState( bytes.data(), bytes.size(), state ) );
+    pSnow->getPrimarySceneComponent()->setLocalPosition( float3{ 9.0f, 0.0f, 0.0f } ); // 저장 뒤에 바꾼다 — 복원이 덮는다
+
+    objects.clear();
+    scene.rebindRestoredFileIDs( {} );
+    SW_EXPECT_TRUE( layers.isLayerActive( "Winter" ) ); // 비워도 켜진 레이어는 남는다
+    layers.applySaveState( std::move( state ) );
+    layers.update( 0.0f );
+    vector<GameObject*> listSnow;
+    objects.findGameObjectsByBaseName( "Snow", listSnow );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listSnow.size() );
+    SW_REQUIRE_TRUE( listSnow[0]->getPrimarySceneComponent() != nullptr );
+    SW_EXPECT_EQUAL( 5.0f, listSnow[0]->getPrimarySceneComponent()->getLocalPosition()._x );
+    SW_EXPECT_TRUE( layers.isGroupObject( listSnow[0]->getObjectID() ) );
 }

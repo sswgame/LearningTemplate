@@ -142,7 +142,11 @@ namespace
             return pAsset;
         }
 
-        static void setSource( SceneStreamingSubsystem& streaming, const float3& source ) { streaming.setExternalSources( span<const float3>( &source, 1 ) ); }
+        static void setSource( SceneStreamingSubsystem& streaming, const float3& position )
+        {
+            const StreamingSource source{ position, streaming.getLoadingRadius(), StreamingSourcePriority::Normal };
+            SW_EXPECT_TRUE( streaming.setExternalSources( span<const StreamingSource>( &source, 1 ) ) );
+        }
 
         /** @brief 고정 걸음(초)입니다. */
         static constexpr float32 kDeltaTime = 1.0f / 30.0f;
@@ -407,11 +411,12 @@ SW_TEST_CASE( NavTileStreamingTest, ServerObserversLeaveGapsTheAgentCrossesVirtu
     NavMeshAgentComponent* pAgent     = Util::spawnAgent( world.getObjects(), "Courier", float3{ 0.0f, 0.5f, 0.0f }, 10.0f );
     SW_REQUIRE_NOT_NULL( pAgent );
     world.getObjects().beginPlay();
-    const float3 arrObserver[2] = {
-        float3{ 0.0f, 0.0f, 0.0f},
-        float3{45.0f, 0.0f, 0.0f}
+    const float32         radius         = world.getStreaming().getLoadingRadius();
+    const StreamingSource arrObserver[2] = {
+        StreamingSource{ float3{ 0.0f, 0.0f, 0.0f }, radius, StreamingSourcePriority::Normal},
+        StreamingSource{float3{ 45.0f, 0.0f, 0.0f }, radius, StreamingSourcePriority::Normal}
     };
-    world.getStreaming().setExternalSources( span<const float3>( arrObserver, 2 ) );
+    SW_REQUIRE_TRUE( world.getStreaming().setExternalSources( span<const StreamingSource>( arrObserver, 2 ) ) );
     Util::step( navigation );
 
     pAgent->setDestination( float3{ 90.0f, 0.5f, 0.0f } );

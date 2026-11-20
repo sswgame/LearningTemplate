@@ -148,7 +148,7 @@ SW_TEST_CASE( PhysicsScene3DTest, MissingCapacityIsLoadError )
         <_listChannel><CollisionChannelDef _name="WorldDynamic" /></_listChannel><_listProfile><CollisionProfileDef _name="Default" _objectChannel="WorldDynamic" /></_listProfile>
         <_listMaterial><PhysicsMaterialDef _name="Default" /></_listMaterial>
     </PhysicsSettings>)" ) );
-    SW_EXPECT_TRUE( settings.loadFromXMLText( R"(<PhysicsSettings _maxBodyCount="1024" _maxBodyPairCount="1024" _maxContactCount="1024" _tempAllocatorBytes="65536" _maxDebrisBodyCount="64">
+    SW_EXPECT_TRUE( settings.loadFromXMLText( R"(<PhysicsSettings _maxBodyCount="1024" _maxBodyPairCount="1024" _maxContactCount="1024" _tempAllocatorBytes="65536" _maxDebrisBodyCount="64" _streamingFloorProbeDistance="1">
         <_listChannel><CollisionChannelDef _name="WorldDynamic" /></_listChannel><_listProfile><CollisionProfileDef _name="Default" _objectChannel="WorldDynamic" /></_listProfile>
         <_listMaterial><PhysicsMaterialDef _name="Default" /></_listMaterial>
         <_listGroundQueryLayer><item>Default</item></_listGroundQueryLayer>

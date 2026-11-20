@@ -99,10 +99,18 @@ namespace sw
         ScenePhysics* getScenePhysics() const { return _pScenePhysics; }
         /** @brief 이 컴포넌트의 단계입니다. */
         PhysicsComponentPhase getPhysicsPhase() const { return _phase; }
+        /**
+         * @brief 이 물체 밑의 스트리밍 셀이 올라 있지 않고 몸 아래 받쳐 줄 충돌도 없어 시뮬레이션에서 뺐으면 true 입니다. 저장하지 않는 실행 상태입니다.
+         * @details 쥐고 푸는 것은 물리 서비스 한 곳이다(`ScenePhysics` 가 프레임마다 `SceneStreamingSubsystem::isFloorMissing` 을 묻는다). 쥔 동안은 시뮬레이션 밖이라(`isSimulated`)
+         *          다음 물리 프레임에 바디를 놓고, 풀면 지금 트랜스폼에서 다시 만든다 — 운동은 0 에서 다시 시작한다.
+         */
+        bool isStreamingHeld() const { return _bStreamingHeld; }
 
     protected:
-        /** @brief 시뮬레이션에 들 상태인지입니다 — 시작했고, 켜졌고, 지워지는 중이 아니다. */
+        /** @brief 시뮬레이션에 들 상태인지입니다 — 시작했고, 켜졌고, 지워지는 중이 아니고, 바닥 없는 스트리밍 셀 위라 쥐지 않았다(`isStreamingHeld`). */
         bool isSimulated() const;
+        /** @brief 바닥(스트리밍 셀)이 없으면 떨어지는 물체면 true 입니다 — 물리가 그 동안 쥔다(`isStreamingHeld`). 기본은 false(정적 · 키네마틱 · 관절은 떨어지지 않는다). */
+        virtual bool needsStreamingFloor() const { return false; }
         /** @brief `TeleportType::ResetPhysics` 순간이동이 부릅니다 — 이어받은 운동을 다음 물리 프레임에 지운다(틱 워커에서도 불리므로 입력 칸에 넘긴다). 기본은 할 일 없음. */
         virtual void resetMotion() {}
         /** @brief 순간이동 표시를 읽고 지웁니다. */
@@ -171,6 +179,7 @@ namespace sw
         float3                _shapeScale;             ///< 백엔드 셰이프를 지은 월드 배율(`isShapeScaleStale`). 바디 · 캐릭터가 없으면 뜻이 없다
         PhysicsComponentPhase _phase;
         bool                  _bRebuildPending;  ///< 게임 스레드에서만 읽고 쓴다(속성 변경 → 다음 물리 프레임)
+        bool                  _bStreamingHeld;   ///< 물리 서비스만 쓴다(`ScenePhysics::updateStreamingHolds`, 게임 스레드 — 단계 훅보다 앞)
         atomic<bool>          _bTeleportPending; ///< 틱 중 다른 워커가 세울 수 있어 원자값이다
         SlotHandle            _spatialEntry;     ///< 씬 공간 색인 항목(3D 캐릭터 · 강체만, 등록 ~ 해제)
     };

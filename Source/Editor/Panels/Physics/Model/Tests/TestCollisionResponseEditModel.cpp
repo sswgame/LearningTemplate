@@ -16,7 +16,7 @@ namespace
         {
             return R"(<?asset guid="00000000000000000000000000000001"?>
 <!-- 시험 표 -->
-<PhysicsSettings _maxBodyCount="64" _maxBodyPairCount="64" _maxContactCount="64" _tempAllocatorBytes="65536" _maxDebrisBodyCount="8">
+<PhysicsSettings _maxBodyCount="64" _maxBodyPairCount="64" _maxContactCount="64" _tempAllocatorBytes="65536" _maxDebrisBodyCount="8" _streamingFloorProbeDistance="1">
 	<_listChannel>
 		<CollisionChannelDef _name="Solid" _kind="Object" _defaultResponse="Block" />
 		<CollisionChannelDef _name="Look" _kind="Trace" _defaultResponse="Ignore" />

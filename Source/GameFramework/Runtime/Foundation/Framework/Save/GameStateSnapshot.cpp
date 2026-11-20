@@ -11,7 +11,9 @@
 #include "Engine/Reflection/ReflectedInstance.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneStreamingSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
@@ -29,12 +31,12 @@ namespace sw
             /**
              * @brief 스냅샷 봉투의 버전입니다. 읽을 때도 이 버전만 받습니다.
              * @details 봉투 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실린다.
-             *          섹션은 씬 오브젝트, 파생의 리플렉션 상태, 컴포넌트 상태(`ComponentStateStore`) 셋이다.
+             *          섹션은 씬 오브젝트, 파생의 리플렉션 상태, 컴포넌트 상태(`ComponentStateStore`), 씬 몫(늘 올라 있는 오브젝트의 파일 id · 스트리밍 셀 상태 · 데이터 레이어 상태) 넷이다.
              *          토큰이 지금 프로세스와 같으면(핫 리로드) id 를 복원하고, 다르면(다른 실행의 세이브 파일) id 를 읽고 버린다.
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
              *          머리의 씬 정체는 찍을 때 활성 씬의 리소스 id(`Scene::getSourcePath`)다 — 읽을 때 지금 활성 씬과 다르면 섞지 않고 거절한다.
              */
-            static constexpr uint32 kVersion = 6; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다
+            static constexpr uint32 kVersion = 7; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다, 7: 넷째 섹션 씬 몫(파일 id · 스트리밍 셀)
 
             /** @brief 봉투 머리(매직 · 판 뒤의 칸)입니다. */
             struct Header
@@ -108,6 +110,82 @@ namespace sw
             }
         };
 
+        /** @brief 봉투 넷째 섹션(씬 몫)을 푼 것입니다. */
+        struct ScenePart
+        {
+            vector<Scene::SavedFileID>         _listFileID; ///< 찍은 오브젝트 id → 파일 id(`_objectID` 는 찍은 실행의 id)
+            SceneStreamingSubsystem::SaveState _streaming;
+            SceneDataLayerSubsystem::SaveState _dataLayers;
+        };
+
+        struct ScenePartInternal
+        {
+            /** @brief 씬 몫을 씁니다 — 실은 오브젝트(@p listObjectID)의 파일 id 와 스트리밍 셀 상태. 씬이 없으면 빈 바이트입니다. */
+            static void write( const Scene* pScene, const vector<uint64>& listObjectID, vector<uint8>& outBytes )
+            {
+                outBytes.clear();
+                if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+                    return;
+                Archive                    arch;
+                vector<Scene::SavedFileID> listFileID;
+                for ( const uint64 objectID : listObjectID )
+                {
+                    const uint64 fileID = pScene->findFileID( objectID );
+                    if ( fileID != 0 )
+                        listFileID.push_back( Scene::SavedFileID{ objectID, fileID } );
+                }
+                arch << static_cast<uint32>( listFileID.size() );
+                for ( const Scene::SavedFileID& entry : listFileID )
+                {
+                    arch << entry._objectID << entry._fileID;
+                }
+                vector<uint8> bytesStreaming;
+                pScene->getObjectManager()->getSubsystem<SceneStreamingSubsystem>().writeSaveState( bytesStreaming );
+                arch.writeSection( bytesStreaming.data(), static_cast<uint32>( bytesStreaming.size() ) );
+                vector<uint8> bytesDataLayers;
+                pScene->getObjectManager()->getSubsystem<SceneDataLayerSubsystem>().writeSaveState( bytesDataLayers );
+                arch.writeSection( bytesDataLayers.data(), static_cast<uint32>( bytesDataLayers.size() ) );
+                outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
+            }
+
+            /** @brief `write` 의 짝입니다(검증 — 씬을 건드리지 않는다). 잘렸거나 셀 상태를 풀지 못하면 false 입니다. */
+            [[nodiscard]] static bool read( const vector<uint8>& bytes, ScenePart& outPart )
+            {
+                Archive arch( bytes.data(), bytes.size() );
+                uint32  fileIDCount{ 0 };
+                if ( arch.readCount( sizeof( uint64 ) * 2, fileIDCount ) == false )
+                    return false;
+                outPart._listFileID.resize( fileIDCount );
+                for ( Scene::SavedFileID& entry : outPart._listFileID )
+                {
+                    arch >> entry._objectID >> entry._fileID;
+                }
+                vector<uint8> bytesStreaming;
+                vector<uint8> bytesDataLayers;
+                if ( arch.readSection( bytesStreaming ) == false || arch.readSection( bytesDataLayers ) == false || arch.isError() )
+                    return false;
+                return SceneStreamingSubsystem::readSaveState( bytesStreaming.data(), bytesStreaming.size(), outPart._streaming ) &&
+                       SceneDataLayerSubsystem::readSaveState( bytesDataLayers.data(), bytesDataLayers.size(), outPart._dataLayers );
+            }
+
+            /** @brief 교체한 활성 씬에 씬 몫을 얹습니다 — 다시 만든 오브젝트에 파일 id 를 다시 붙이고(@p mapObjectID 찍은 id → 이번 id) 스트리밍 셀에 세이브의 상태를 얹는다. */
+            static void apply( Scene& scene, ScenePart part, const unordered_map<uint64, uint64>& mapObjectID )
+            {
+                vector<Scene::SavedFileID> listFileID;
+                listFileID.reserve( part._listFileID.size() );
+                for ( const Scene::SavedFileID& entry : part._listFileID )
+                {
+                    const auto liveIt = mapObjectID.find( entry._objectID );
+                    if ( liveIt != mapObjectID.end() )
+                        listFileID.push_back( Scene::SavedFileID{ liveIt->second, entry._fileID } );
+                }
+                scene.rebindRestoredFileIDs( listFileID );
+                // 켜진 레이어가 먼저다 — 스트리밍 셀 조각도 레이어로 오른다.
+                scene.getObjectManager()->getSubsystem<SceneDataLayerSubsystem>().applySaveState( std::move( part._dataLayers ) );
+                scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>().applySaveState( std::move( part._streaming ) );
+            }
+        };
+
         struct GameStateSnapshotInternal
         {
             /** @brief 게임 창구로 찾은 씬 매니저의 활성 씬 오브젝트 매니저입니다. 씬 매니저가 없거나 활성 씬이 없으면 nullptr 입니다. */
@@ -124,6 +202,12 @@ namespace sw
             {
                 const ISnapshotFaultHook* const pFaultHook = ISnapshotFaultHook::find();
                 return pFaultHook != nullptr && pFaultHook->shouldBreakReplace();
+            }
+            /** @brief 게임 창구로 찾은 씬 매니저의 활성 씬입니다. 없으면 nullptr 입니다. */
+            static Scene* findActiveScene()
+            {
+                SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+                return pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
             }
             /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
             static string findActiveSceneID()
@@ -194,8 +278,9 @@ namespace sw
         // (GameFrameworkTest.GameInstanceSnapshotAndFileRoundTrip 이 그렇게 쓴다). 그러니 여기서 끊으면 안 된다.
         // 다만 반환값을 흔적 없이 버리면, 씬이 있어야 할 상황에서 오브젝트가 하나도 없는 세이브가 나와도
         // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 단서는 남긴다(지원하는 사용법이라 Warning 이 아니라 Info).
-        vector<uint8> bytesScene;
-        if ( serializeSceneObjects( purpose, bytesScene ) == false )
+        vector<uint8>  bytesScene;
+        vector<uint64> listSceneObjectID;
+        if ( serializeSceneObjects( purpose, bytesScene, listSceneObjectID ) == false )
             SW_LOG_INFO_ID( "GameStateSnapshot.SceneObjectSnapshotEmpty", "The scene object snapshot is empty - there is no active scene or the game service is not bound. Only the custom state is saved." );
         arch.writeSection( bytesScene.data(), static_cast<uint32>( bytesScene.size() ) );
 
@@ -222,6 +307,12 @@ namespace sw
         arch.writeSection( componentArch.getData(), static_cast<uint32>( componentArch.getSize() ) );
         _pComponentStateStore->clear();
 
+        // 4) 씬 몫 — 실은 오브젝트의 파일 id(다른 실행에서 새 id 를 받아도 스트리밍 셀이 파일 id 로 찾는다)와 스트리밍 셀 상태(셀에 든 오브젝트는 씬 섹션 대신 여기).
+        vector<uint8> bytesScenePart;
+        if ( bytesScene.empty() == false )
+            ScenePartInternal::write( GameStateSnapshotInternal::findActiveScene(), listSceneObjectID, bytesScenePart );
+        arch.writeSection( bytesScenePart.data(), static_cast<uint32>( bytesScenePart.size() ) );
+
         // 봉투는 한 번 써서 그대로 넘긴다.
         outBytes.assign( arch.getData(), arch.getData() + arch.getSize() );
         return true;
@@ -244,12 +335,20 @@ namespace sw
         const bool              bSameProcess = ( header._processToken == ObjectStateSerializer::getProcessToken() );
         const SceneObjectFormat format       = bSameProcess ? SceneObjectFormat::RestoreIdentity : SceneObjectFormat::WithIdentity;
 
-        // 섹션 셋(씬 오브젝트 · 파생의 리플렉션 상태 · 컴포넌트 상태)을 모두 읽은 뒤에 푼다 — 끝이 잘린 봉투가 씬을 비운 뒤에 지지 않게 한다.
+        // 섹션 넷(씬 오브젝트 · 파생의 리플렉션 상태 · 컴포넌트 상태 · 씬 몫)을 모두 읽은 뒤에 푼다 — 끝이 잘린 봉투가 씬을 비운 뒤에 지지 않게 한다.
         vector<uint8> bytesScene;
         vector<uint8> bytesState;
         vector<uint8> bytesComponent;
-        if ( arch.readSection( bytesScene ) == false || arch.readSection( bytesState ) == false || arch.readSection( bytesComponent ) == false || arch.isError() )
+        vector<uint8> bytesScenePart;
+        if ( arch.readSection( bytesScene ) == false || arch.readSection( bytesState ) == false || arch.readSection( bytesComponent ) == false ||
+             arch.readSection( bytesScenePart ) == false || arch.isError() )
             return rejected;
+        ScenePart scenePart;
+        if ( bytesScenePart.empty() == false && ScenePartInternal::read( bytesScenePart, scenePart ) == false )
+        {
+            SW_LOG_ERROR_ID( "GameStateSnapshot.ScenePartNotRead", "State snapshot scene part (file ids, streaming cells) could not be read - the save is not used" );
+            return rejected;
+        }
 
         GameObjectManager* const pLiveManager = GameStateSnapshotInternal::findActiveObjectManager();
         if ( bytesScene.empty() == false )
@@ -262,7 +361,8 @@ namespace sw
             // 분리된 매니저 — 같은 엔진 서비스를 받되 활성 씬과 오브젝트를 나누지 않는다(프리팹 원형이 쓰는 손수 만든 매니저와 같다). 풀어 본 것은 여기서 버린다.
             GameObjectManager                             probeManager( pLiveManager->getSceneEngineServices() );
             vector<ComponentStateStore::SavedComponentID> listProbeRemap;
-            if ( deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, probeManager, listProbeRemap ) == false )
+            unordered_map<uint64, uint64>                 mapProbeObjectID;
+            if ( deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, probeManager, listProbeRemap, mapProbeObjectID ) == false )
                 return rejected;
         }
 
@@ -295,14 +395,20 @@ namespace sw
         // ---- 2 단계: 교체. 검증을 지난 봉투만 씬을 비우고 채운다. 같은 바이트 · 같은 코드라 여기서 지는 것은 검증이 못 본 결함이다 — 씬이 깨졌다고 알린다. ----
         const unexpected<SnapshotRestoreFailure>      broken{ SnapshotRestoreFailure::SceneBroken };
         vector<ComponentStateStore::SavedComponentID> listComponentIDRemap;
+        unordered_map<uint64, uint64>                 mapObjectID;
         if ( bytesScene.empty() == false )
         {
+            // 비우면 스트리밍 셀이 문서 내용으로 돌아간다(월드는 남는다) — 오브젝트를 다시 만든 뒤 씬 몫을 얹으면 다음 갱신이 세이브의 상태로 셀을 짓는다.
             pLiveManager->clear();
-            if ( GameStateSnapshotInternal::shouldBreakReplace() || deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, *pLiveManager, listComponentIDRemap ) == false )
+            if ( GameStateSnapshotInternal::shouldBreakReplace() ||
+                 deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, *pLiveManager, listComponentIDRemap, mapObjectID ) == false )
             {
                 _pComponentStateStore->clear();
                 return broken;
             }
+            Scene* const pActiveScene = GameStateSnapshotInternal::findActiveScene();
+            if ( pActiveScene != nullptr && pActiveScene->getObjectManager() == pLiveManager )
+                ScenePartInternal::apply( *pActiveScene, std::move( scenePart ), mapObjectID );
         }
         if ( bHasState && BinarySerializer::deserialize( pStateInstance, *pStateType, bytesState.data(), bytesState.size(), SerializeContext::getDefault( purpose ) ) == false )
         {
@@ -344,21 +450,31 @@ namespace sw
         }
     }
 
-    bool GameStateSnapshot::serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes )
+    bool GameStateSnapshot::serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes, vector<uint64>& outListObjectID )
     {
+        outListObjectID.clear();
         GameObjectManager* pObjectManager = GameStateSnapshotInternal::findActiveObjectManager();
         if ( pObjectManager == nullptr )
             return false;
 
         // 살아 있는 것만 담는다. `forEachGameObject` 가 파괴 대기 오브젝트를 이미 건너뛴다. 실행 중에 세운 파생 오브젝트(`isTransient`)는 세운 쪽이 다시 세운다.
-        vector<GameObject*> listValidObject;
-        pObjectManager->forEachGameObject( SceneIterationKey{}, [&listValidObject]( GameObject* pObj )
+        // 스트리밍 셀 · 데이터 레이어 묶음에 든 오브젝트는 그 상태로 따로 싣는다(씬 몫) — 여기에 실으면 복원 뒤 셀 · 묶음이 다시 지을 때 겹친다.
+        const SceneStreamingSubsystem& streaming  = pObjectManager->getSubsystem<SceneStreamingSubsystem>();
+        const SceneDataLayerSubsystem& dataLayers = pObjectManager->getSubsystem<SceneDataLayerSubsystem>();
+        vector<GameObject*>            listValidObject;
+        pObjectManager->forEachGameObject( SceneIterationKey{}, [&listValidObject, &streaming, &dataLayers]( GameObject* pObj )
         {
-            if ( pObj->isTransient() == false )
+            const bool bPartOwned = streaming.isCellObject( pObj->getObjectID() ) || dataLayers.isGroupObject( pObj->getObjectID() );
+            if ( pObj->isTransient() == false && bPartOwned == false )
                 listValidObject.push_back( pObj );
         } );
 
         outBytes.clear();
+        outListObjectID.reserve( listValidObject.size() );
+        for ( const GameObject* pObj : listValidObject )
+        {
+            outListObjectID.push_back( pObj->getObjectID() );
+        }
 
         // 게임오브젝트 개수를 맨 앞에 쓴다.
         const uint32 count   = static_cast<uint32>( listValidObject.size() );
@@ -382,9 +498,10 @@ namespace sw
     }
 
     bool GameStateSnapshot::deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format, GameObjectManager& manager,
-                                                     vector<ComponentStateStore::SavedComponentID>& outListRemap )
+                                                     vector<ComponentStateStore::SavedComponentID>& outListRemap, unordered_map<uint64, uint64>& outMapObjectID )
     {
         outListRemap.clear();
+        outMapObjectID.clear();
         if ( pData == nullptr || size < sizeof( uint32 ) )
             return false;
 
@@ -441,6 +558,7 @@ namespace sw
                 break;
             }
             listRestoredObject.push_back( pObj );
+            outMapObjectID[identity._objectID] = pObj->getObjectID();
             offset += readBytes;
             if ( bRestoreIdentity == false )
                 ComponentStateStore::appendComponentIDRemap( identity, *pObj, outListRemap );

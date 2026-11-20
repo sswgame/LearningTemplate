@@ -7,7 +7,7 @@
  *          자리는 씬 공간 색인(`SceneSpatialGrid`), 씬 전체 집계는 프레임 시스템이다.
  *          - **틀이 인자로 넘긴다:** 감시 값(`SW_AUTOMATION_SCENE_WATCH`), 개발 명령(`SW_DEV_SCENE_COMMAND`), 디버그 HUD 섹션(`DebugHUDSectionWriter::getSceneIterationKey` — 글쓴이를 만드는 HUD 틀은 개발 도구 · 에디터 공급자나 `hud.print` 명령의 열쇠를 쓴다),
  *            저장(`StatefulComponentRegistrar` 의 캡처 · 복원 함수)이 받는다 — 그 틀만 열쇠를 만든다.
- *          - **엔진 주인:** 씬 저장 · 로드 · 쿡 · 틱 등록 · 렌더 묶기 · 넷 세션 시작(번호표) · 내비 기하 · 초상 스튜디오 — 아래 친구 목록, 줄마다 까닭.
+ *          - **엔진 주인:** 씬 저장 · 로드 · 쿡 · 틱 등록 · 렌더 묶기 · 넷 세션 시작(번호표) · 내비 기하 · 스트리밍 셀 경계 · 초상 스튜디오 — 아래 친구 목록, 줄마다 까닭.
  *          - **공용 공급자는 위층에만:** 에디터(`editor::EditorSceneIterationAccess`)와 개발 도구(`DevSceneIterationAccess`)는 누구나 열쇠를 꺼내 쓰는 공급자다. 게임 · 키트 · 런타임
  *            타깃은 그 층을 include 할 수 없다(`Config/Rules/Layers/TargetLayers.toml`).
  *          - **테스트:** `Engine/Object/GameObject/Tests/SceneIterationTestAccess.h`(배포 구성에서 include 하면 `#error`).
@@ -28,6 +28,7 @@ namespace sw
     class SceneRHISubsystem;                // 씬 렌더 기본값 묶기(씬을 받을 때 한 번)
     class PortraitStudio;                   // 초상 스튜디오 씬 전체의 경계(찍을 때 한 번)
     class SceneNavigation;                  // 내비 메시 기하 모으기(굽기)
+    class SceneStreamingSubsystem;          // 셀 경계 — 내릴 때 셀 밖 런타임 스폰 찾기, 바닥 셀이 없는 물리 쥐기
     class NavTileRebaker;                   // 내비 타일 다시 굽기(더러운 영역)
     struct SceneNavigationCooker;           // 내비 쿡 — 표면 컴포넌트 모으기
     struct SceneObjectReference;            // 에디터의 "이 오브젝트를 가리키는 곳" 찾기
@@ -58,6 +59,7 @@ namespace sw
         friend class SceneRHISubsystem;
         friend class PortraitStudio;
         friend class SceneNavigation;
+        friend class SceneStreamingSubsystem;
         friend class NavTileRebaker;
         friend struct SceneNavigationCooker;
         friend struct SceneObjectReference;
