@@ -2,6 +2,9 @@
 
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 // 네트워크 흉내 — 지연 · 흔들림, 손실 · 중복 비율, 일부러 늦춘 패킷이 앞지르기를 당함, 대역폭 줄과 큐 넘침, 연결별 덮어쓰기, 깨짐(한 바이트), 꺼지면 그대로.
@@ -255,7 +258,9 @@ SW_TEST_CASE( NetEmulationTest, ReportLineRoundTripsThroughALogLine )
     report._resentMessageCount  = 41;
     report._measuredLossPercent = 29.5f;
     report._rttMilliseconds     = 12.25f;
-    const string line           = "[12:00:01.234] [Info] [DevConsole] > net.emulation stats : " + report.makeLine();
+    StringBuilder<constant::buffer::kMax1024> lineBuilder;
+    lineBuilder.appendFormat( "[12:00:01.234] [Info] [DevConsole] > net.emulation stats : %#", report.makeLine() );
+    const string_view line = lineBuilder.view();
 
     NetEmulationReport parsed;
     SW_REQUIRE_TRUE( NetEmulationReport::tryParseLine( line, parsed ) );
@@ -269,7 +274,9 @@ SW_TEST_CASE( NetEmulationTest, ReportLineRoundTripsThroughALogLine )
     NetEmulationReport untouched;
     untouched._resentMessageCount = 7;
     SW_EXPECT_FALSE( NetEmulationReport::tryParseLine( "net session: Client, connected 1", untouched ) );
-    SW_EXPECT_FALSE( NetEmulationReport::tryParseLine( string( NetEmulationReport::kLinePrefix ) + " resent=many", untouched ) );
+    fixed_string<constant::buffer::kMax128> brokenLine;
+    formatstring( brokenLine.data(), brokenLine.capacity(), "%# resent=many", NetEmulationReport::kLinePrefix );
+    SW_EXPECT_FALSE( NetEmulationReport::tryParseLine( brokenLine.view(), untouched ) );
     SW_EXPECT_EQUAL( untouched._resentMessageCount, uint64{ 7 } );
 }
 

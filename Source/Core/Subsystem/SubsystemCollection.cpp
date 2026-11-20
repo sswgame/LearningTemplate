@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/DependencyGraph.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw
 {
@@ -104,7 +105,9 @@ namespace sw
         expected<SubsystemGraph> result = computeGraph( listNode );
         if ( result.has_value() == false )
         {
-            _error = string( result.error().message() ) + ": " + string( result.error().detail() );
+            StringBuilder<constant::buffer::kMax512> errorBuilder;
+            errorBuilder.appendFormat( "%#: %#", result.error().message(), result.error().detail() );
+            _error = string( errorBuilder.view() );
             return false;
         }
         SubsystemGraph graph = std::move( result ).value();
@@ -117,7 +120,9 @@ namespace sw
             {
                 if ( SubsystemCollectionInternal::isHostCovered( selfHost, _listEntry[dependencyIndex]._pSubsystem->getSubsystemHost() ) )
                     continue;
-                _error = string( "Subsystem '" ) + listNode[index]._pName + "' runs on a host where its dependency '" + listNode[dependencyIndex]._pName + "' does not";
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "Subsystem '%#' runs on a host where its dependency '%#' does not", listNode[index]._pName, listNode[dependencyIndex]._pName );
+                _error = string( errorBuilder.view() );
                 return false;
             }
         }
@@ -142,7 +147,9 @@ namespace sw
             subsystem.stopSubsystem();
             subsystem.shutdownSubsystem();
         }
-        _error = string( "looked up '" ) + frame._pUndeclared->getSubsystemName() + "' without declaring it as a dependency";
+        StringBuilder<constant::buffer::kMax256> errorBuilder;
+        errorBuilder.appendFormat( "looked up '%#' without declaring it as a dependency", frame._pUndeclared->getSubsystemName() );
+        _error = string( errorBuilder.view() );
         return SubsystemInitResult::Failed;
     }
 
@@ -232,7 +239,11 @@ namespace sw
                 _listInitTiming.push_back( { _listEntry[index]._pSubsystem->getSubsystemName(), ( _pClockNanos() - startNanos ) / constant::time::kNanosecondsPerMicrosecond } );
             if ( result == SubsystemInitResult::Failed )
             {
-                _error = string( "Subsystem '" ) + _listEntry[index]._pSubsystem->getSubsystemName() + "' failed to initialize" + ( _error.empty() ? string{} : string( ": " ) + _error );
+                StringBuilder<constant::buffer::kMax512> errorBuilder;
+                errorBuilder.appendFormat( "Subsystem '%#' failed to initialize", _listEntry[index]._pSubsystem->getSubsystemName() );
+                if ( _error.empty() == false )
+                    errorBuilder.appendFormat( ": %#", _error );
+                _error = string( errorBuilder.view() );
                 return false;
             }
             _listInitialized.push_back( index );
@@ -339,7 +350,11 @@ namespace sw
         {
             if ( initializeAt( index ) == SubsystemInitResult::Failed )
             {
-                _error     = string( "Subsystem '" ) + _listEntry[index]._pSubsystem->getSubsystemName() + "' failed to restart" + ( _error.empty() ? string{} : string( ": " ) + _error );
+                StringBuilder<constant::buffer::kMax512> errorBuilder;
+                errorBuilder.appendFormat( "Subsystem '%#' failed to restart", _listEntry[index]._pSubsystem->getSubsystemName() );
+                if ( _error.empty() == false )
+                    errorBuilder.appendFormat( ": %#", _error );
+                _error     = string( errorBuilder.view() );
                 bRestarted = false;
                 break;
             }

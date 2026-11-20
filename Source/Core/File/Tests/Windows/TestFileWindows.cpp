@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 // Windows 전용 파일 케이스 — 플랫폼 폴더(`Windows/`)라 Windows 에서만 짓는다(파일 안 `#if` 를 두지 않는다).
@@ -27,7 +28,9 @@ SW_TEST_CASE( FileTest, LongPathBeyondMaxPathIsWrittenAndRead )
     while ( dir.size() < 300 )
         dir += "/segment_padding_for_long_path";
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( dir ) );
-    const sw::string filePath = dir + "/long.txt";
+    sw::StringBuilder<sw::constant::buffer::kMax1024> filePathBuilder;
+    filePathBuilder.appendFormat( "%#/long.txt", dir );
+    const sw::string filePath( filePathBuilder.view() );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "long path" ) );
     sw::string text;
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( filePath, text ) );

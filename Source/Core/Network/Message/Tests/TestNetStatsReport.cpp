@@ -2,6 +2,9 @@
 
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/Network/Message/NetStatsReport.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;
@@ -22,7 +25,9 @@ SW_TEST_CASE( NetStatsReportTest, ReportLineRoundTripsThroughALogLine )
     report._lossPercent            = 29.5f;
     report._listKindEntry.push_back( NetStatsKindEntry{ 100, 102400, 0x0F } );
     report._listKindEntry.push_back( NetStatsKindEntry{ 3, 90, 0x81 } );
-    const string line = "[12:00:01.234] [Info] [DevConsole] > net.stats : " + report.makeLine();
+    StringBuilder<constant::buffer::kMax1024> lineBuilder;
+    lineBuilder.appendFormat( "[12:00:01.234] [Info] [DevConsole] > net.stats : %#", report.makeLine() );
+    const string_view line = lineBuilder.view();
 
     NetStatsReport parsed;
     SW_REQUIRE_TRUE( NetStatsReport::tryParseLine( line, parsed ) );
@@ -54,11 +59,13 @@ SW_TEST_CASE( NetStatsReportTest, RejectsOtherLinesAndBrokenProperties )
     NetStatsReport untouched;
     untouched._resentMessageCount = 7;
     SW_EXPECT_FALSE( NetStatsReport::tryParseLine( "Net emulation stats connections=1 sent=3 dropped=0 resent=0 lossPercent=0 rttMs=0", untouched ) );
-    SW_EXPECT_FALSE( NetStatsReport::tryParseLine( string( NetStatsReport::kLinePrefix ) + " resent=many", untouched ) );
-    SW_EXPECT_FALSE( NetStatsReport::tryParseLine( string( NetStatsReport::kLinePrefix ) + " kinds=15:3", untouched ) );
-    SW_EXPECT_FALSE( NetStatsReport::tryParseLine( string( NetStatsReport::kLinePrefix ) + " kinds=300:1:1", untouched ) );
-    SW_EXPECT_FALSE( NetStatsReport::tryParseLine( string( NetStatsReport::kLinePrefix ) + " replicas=Bad Name:1:2", untouched ) );
-    SW_EXPECT_FALSE( NetStatsReport::tryParseLine( string( NetStatsReport::kLinePrefix ) + " replicas=entities:1", untouched ) );
+    constexpr const utf8* kArrBrokenTail[] = { " resent=many", " kinds=15:3", " kinds=300:1:1", " replicas=Bad Name:1:2", " replicas=entities:1" };
+    for ( const utf8* pBrokenTail : kArrBrokenTail )
+    {
+        fixed_string<constant::buffer::kMax128> brokenLine;
+        formatstring( brokenLine.data(), brokenLine.capacity(), "%#%#", NetStatsReport::kLinePrefix, pBrokenTail );
+        SW_EXPECT_FALSE( NetStatsReport::tryParseLine( brokenLine.view(), untouched ) );
+    }
     SW_EXPECT_EQUAL( untouched._resentMessageCount, uint64{ 7 } );
 }
 
@@ -99,7 +106,9 @@ SW_TEST_CASE( NetStatsReportTest, OverlongLineIsCappedAndMarkedTruncated )
     const string   longName( 400, 'a' );
     for ( int32 index = 0; index < 20; ++index )
     {
-        report._listReplicaEntry.push_back( NetStatsReplicaEntry{ longName + to_string( index ), 1, 1 } );
+        StringBuilder<constant::buffer::kMax512> nameBuilder;
+        nameBuilder.appendFormat( "%#%#", longName, index );
+        report._listReplicaEntry.push_back( NetStatsReplicaEntry{ string( nameBuilder.view() ), 1, 1 } );
     }
     const string line = report.makeLine();
     SW_EXPECT_TRUE( line.size() <= DebugReplyLine::kMaxBytes );

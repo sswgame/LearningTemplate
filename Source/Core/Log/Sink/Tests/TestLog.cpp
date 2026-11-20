@@ -18,6 +18,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ProcessSession.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
@@ -614,7 +615,9 @@ namespace
         /** @brief 그 시각에 쓰는 파일의 경로(`LOG_<연>-<월>-<일>-<시>_<세션>.txt`)입니다. */
         static sw::string makeProbeLogPath( const sw::FileLogOutput& output, int32 hour )
         {
-            return sw::FileUtil::joinPath( output.getLogFolderPath(), "LOG_2099-1-2-" + sw::to_string( hour ) + "_" + sw::ProcessSession::getID() + ".txt" );
+            sw::fixed_string<sw::constant::buffer::kMax256> fileName;
+            sw::formatstring( fileName.data(), fileName.capacity(), "LOG_2099-1-2-%#_%#.txt", hour, sw::ProcessSession::getID() );
+            return sw::FileUtil::joinPath( output.getLogFolderPath(), fileName.view() );
         }
     };
 } // namespace
@@ -815,7 +818,9 @@ SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
     }
     else
     {
-        SW_EXPECT_TRUE_MSG( false, "unknown deadlock scenario " + scenario );
+        sw::fixed_string<sw::constant::buffer::kMax256> message;
+        sw::formatstring( message.data(), message.capacity(), "unknown deadlock scenario %#", scenario );
+        SW_EXPECT_TRUE_MSG( false, message.view() );
     }
 }
 
@@ -893,7 +898,9 @@ SW_TEST_CHILD_ROLE( LogTest, StderrChildWritesMarkers )
     }
     else
     {
-        SW_EXPECT_TRUE_MSG( false, "unknown stderr role " + role );
+        sw::fixed_string<sw::constant::buffer::kMax256> message;
+        sw::formatstring( message.data(), message.capacity(), "unknown stderr role %#", role );
+        SW_EXPECT_TRUE_MSG( false, message.view() );
     }
 }
 
