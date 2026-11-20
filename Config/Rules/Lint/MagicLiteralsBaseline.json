@@ -662,7 +662,6 @@
     "Source/GameFramework/Kits/Feature/Network/NetDestruction/DestructionNetSession.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.cpp": {"float": 1, "integer": 3},
     "Source/GameFramework/Kits/Feature/Network/NetKitMessageRange.h": {"hex": 7},
-    "Source/GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h": {"float": 1},
     "Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp": {"integer": 1},
