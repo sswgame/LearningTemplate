@@ -167,6 +167,11 @@ namespace sw
         void completeFrameJob() override;
         /** @brief 씬 원본 경로를 받아 쿠킹한 내비메시(`<씬>.navmesh`)를 찾는 이름으로 둡니다(`setSourcePath`). */
         void onSceneLoading( string_view sourcePath ) override { setSourcePath( sourcePath ); }
+        /**
+         * @brief 내비메시가 하나라도 있으면 월드 원점 옮기기를 막습니다(false) — 타일 · 군중은 절대 좌표(쿠킹 · 베이크한 자리)라 옮기면 에이전트와 어긋난다.
+         * @details Detour 의 타일 원점은 옮길 수 없다(언리얼은 엔진 사본의 `dtNavMesh::applyWorldOffset` 으로 옮긴다). 길찾기 질의를 원점 기준으로 옮겨 받는 길이 서면 풀린다.
+         */
+        bool canShiftWorldOrigin() const override { return _listRuntime.empty(); }
         /** @brief `gv_navDebugDraw` 의 비트대로 디버그 뷰를 맞추고 선을 그립니다. */
         void drawDebug( DebugDrawQueue& queue ) override;
 

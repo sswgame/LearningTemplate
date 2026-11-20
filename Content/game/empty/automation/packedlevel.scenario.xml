@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="70e055a5cdac4a4496f96c059e6fc2bb"?>
+<!--
+  Packed Level — 정적 메시를 묶는 씬(packedlevel_props.scene.xml, _packing="StaticMeshes")을 하위 레벨로 더한다(언리얼 Packed Level Actor).
+  소스 실행(기본)은 원본 엔티티를 짓는다 — Rock1 · Rock2 · Lamp 가 엔티티로 서고 묶은 엔티티는 없다. 쿠킹본(-cooked-content)에서는 쿠커가 정적 Rock1 · Rock2 를 인스턴스 메시
+  Props/Packed0 하나로 묶는다(단위 InstancedMeshPackingTest 가 판정한다). 두 길 모두 움직이는 Lamp 와 손으로 놓은 인스턴스 메시 Fence 는 엔티티 그대로 앵커 자리에 선다. 값으로 판정한다(골든 없음).
+  실행: ctest -R Scenario.game.empty.packedlevel
+-->
+<Scenario name="game.empty.packedlevel" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/datalayer.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="scene.sublevel add Props game/empty/maps/packedlevel_props.scene.xml 0 0 4"/>
+	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutFrames="60"/>
+	<Expect watch="Object.Exists" target="Props/Lamp" equals="1"/>
+	<Expect watch="Object.X" target="Props/Lamp" equals="1.5"/>
+	<Expect watch="Object.Z" target="Props/Lamp" equals="4"/>
+	<Expect watch="Object.Exists" target="Props/Fence" equals="1"/>    <!-- 손으로 놓은 인스턴스 메시(기둥 셋 한 배치)도 앵커 아래에 선다 -->
+	<Expect watch="Object.Z" target="Props/Fence" equals="2.5"/>
+	<Expect watch="Object.Exists" target="Props/Rock1" equals="1"/>    <!-- 소스 실행은 원본을 짓는다(에디터 편집 대상) -->
+	<Expect watch="Object.Exists" target="Props/Packed0" equals="0"/>
+	<DevCommand line="scene.sublevel remove Props"/>
+	<WaitUntil watch="Scene.SubLevelCount" equals="0" timeoutFrames="30"/>
+	<Expect watch="Object.Exists" target="Props/Lamp" equals="0"/>
+	<Pass/>
+</Scenario>

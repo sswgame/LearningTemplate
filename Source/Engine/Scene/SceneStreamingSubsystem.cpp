@@ -214,7 +214,7 @@ namespace sw
 
     void SceneStreamingSubsystem::setCameraSource( const float3& position )
     {
-        _cameraSource._position      = position;
+        _cameraSource._position      = toAbsolute( position ); // 격자는 절대 좌표다 — 원점을 옮긴 클라이언트의 카메라도 같은 셀을 본다
         _cameraSource._loadingRadius = _settings._cellGrid._loadingRadius;
         _bCameraSourceSet            = SW_TRUE;
     }
@@ -536,12 +536,21 @@ namespace sw
         return true;
     }
 
+    float3 SceneStreamingSubsystem::toAbsolute( const float3& local ) const
+    {
+        if ( _pScene == nullptr )
+            return local;
+        const double3& origin = _pScene->getWorldOrigin();
+        return float3{ static_cast<float32>( static_cast<float64>( local._x ) + origin._x ), static_cast<float32>( static_cast<float64>( local._y ) + origin._y ),
+                       static_cast<float32>( static_cast<float64>( local._z ) + origin._z ) };
+    }
+
     bool SceneStreamingSubsystem::computeObjectCell( const GameObject& object, StreamingCellCoord& outCell ) const
     {
         const SceneComponent* pRoot = object.getPrimarySceneComponent();
         if ( pRoot == nullptr )
             return false;
-        outCell = _grid.computeCell( pRoot->getWorldPosition() );
+        outCell = _grid.computeCell( toAbsolute( pRoot->getWorldPosition() ) );
         return true;
     }
 
@@ -676,7 +685,7 @@ namespace sw
     bool SceneStreamingSubsystem::isFloorMissing( const float3& position ) const
     {
         // 셀 상태 질의는 하나다(`isCellStreamingCompleted`) — 물리의 바닥 쥐기와 클라이언트 복제 보류가 같은 판정을 본다.
-        return _pScene != nullptr && isCellStreamingCompleted( _grid.computeCell( position ) ) == false;
+        return _pScene != nullptr && isCellStreamingCompleted( _grid.computeCell( toAbsolute( position ) ) ) == false;
     }
 
     void SceneStreamingSubsystem::requestCellContent( CellSlot& slot )

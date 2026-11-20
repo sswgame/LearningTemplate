@@ -66,6 +66,27 @@ namespace sw
         uint32 _addToWorldBudgetMicroseconds{ 0 };
         PROPERTY( SkipIfEmpty, Tooltip = "Data layers objects of this scene can belong to (seasons, events, night)" )
         vector<SceneDataLayerDef> _listDataLayer{};
+        /**
+         * @brief 이 씬을 씬 인스턴스로 넣거나 하위 레벨로 더할 때 쿠킹이 무엇을 묶는지입니다(언리얼 Packed Level Actor). 비면 묶지 않는다 — 이미 있는 씬은 그대로 읽힌다.
+         * @details `StaticMeshes`(`kPackStaticMeshes`) 면 쿠커가 이 씬의 정적 메시 엔티티(메시 컴포넌트 하나뿐 · `_bStatic` · 아무도 가리키지 않음)를 메시 · 머티리얼 · 구간마다
+         *          인스턴스 메시 하나로 묶는다(`SceneCooker::packStaticMeshes`). 에디터 · 소스 실행은 원본 엔티티를 그대로 짓는다. 스트리밍하는 씬은 묶지 않는다(`validate` 가 막는다).
+         *          글 칸인 까닭: 빈 값만 쓰지 않는 칸(`SkipIfEmpty`)이라야 묶지 않는 씬 파일이 바뀌지 않는다 — 모르는 값은 `validate` 가 오류로 멈춘다.
+         */
+        PROPERTY( SkipIfEmpty, Tooltip = "What the cooker packs when this scene is placed as an instance or added as a sub-level: empty (nothing) or StaticMeshes" )
+        string _packing{};
+
+        /**
+         * @brief 게임 카메라가 월드 원점에서 이만큼(XZ, m) 멀어지면 원점을 카메라 쪽으로 옮깁니다(언리얼 World Origin Rebasing · 유니티 floating origin). 0 이면 옮기지 않는다.
+         * @details 옮기는 거리는 이 값의 배수다 — 셀 격자 · 정적 그림자 캐시가 덜 흔들린다. 바깥 원점으로 스트리밍하는 씬(서버 — 관찰자가 여럿)은 옮기지 않는다(서버 좌표는 절대).
+         *          월드 설정에 두는 까닭: 월드 크기마다 맞는 거리가 다르다(격자 · 여유 반경과 같은 자리).
+         */
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "The world origin moves to the game camera once it is this far away (XZ); 0 never moves it" )
+        float32 _originRebaseDistance{ 0.0f };
+
+        /** @brief `_packing` 이 정적 메시를 묶는다는 값입니다. */
+        static constexpr const utf8* kPackStaticMeshes = "StaticMeshes";
+        /** @brief 쿠킹이 정적 메시를 묶으면 true 입니다. */
+        bool usesStaticMeshPacking() const { return _packing == kPackStaticMeshes; }
 
         /**
          * @brief 설정이 쓸 수 있는지 봅니다.

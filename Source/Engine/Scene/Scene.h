@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/SceneSubLevelTypes.h"
 
 namespace sw
 {
@@ -124,6 +125,11 @@ namespace sw
          * @details 다른 실행의 세이브는 오브젝트가 새 id 를 받는다 — 다시 붙이지 않으면 스트리밍 셀이 늘 올라 있는 오브젝트를 파일 id 로 찾지 못한다(셀의 참조가 빈다).
          */
         void rebindRestoredFileIDs( const vector<SavedFileID>& listFileID );
+        /**
+         * @brief 오브젝트 @p objectID 에 바깥이 정한 파일 id @p fileID 를 붙입니다(런타임 하위 레벨의 앵커 — `SceneSubLevelSubsystem`, 이름에서 정한 넓은 id).
+         * @return id 가 0 이거나 다른 살아 있는 오브젝트가 그 id 를 쓰면 false 입니다(붙이지 않는다). 막 만든(병합 전) 오브젝트에도 붙일 수 있다.
+         */
+        [[nodiscard]] bool assignFileID( uint64 objectID, uint64 fileID );
         /** @brief 파일 id 의 살아 있는 오브젝트 id 입니다. 이 씬에 없으면(지운 오브젝트 · 내려간 스트리밍 셀) 0 입니다. */
         [[nodiscard]] uint64 findObjectIDByFileID( uint64 fileID ) const;
 
@@ -162,6 +168,20 @@ namespace sw
         void setEntityPrefabPath( uint64 objectID, string_view prefabPath );
         /** @brief 엔티티의 데이터 레이어를 바꿉니다(에디터). 다음 저장에 적힙니다. 인스턴스 멤버는 바꾸지 않고 false 입니다 — 레이어는 파일의 엔티티에 붙는다. */
         [[nodiscard]] bool setEntityDataLayers( uint64 objectID, vector<string> listLayer );
+
+        /**
+         * @brief 월드 원점입니다 — 오브젝트의 자리는 이 원점 기준 로컬이다(절대 = 로컬 + 원점). 처음은 0 이다. 서버 · 세이브 · 쿠킹본 · 셀 격자는 절대 좌표다.
+         * @details 언리얼 World Origin Rebasing(`UWorld::OriginLocation`)과 같은 모델 — 큰 월드에서 카메라 둘레의 float 정밀도를 지킨다.
+         */
+        const double3& getWorldOrigin() const { return _worldOrigin; }
+        /**
+         * @brief 월드 원점을 @p newOrigin 으로 옮깁니다(XZ 만 — Y 는 그대로 둔다). 모든 루트 오브젝트를 (옛 원점 − 새 원점)만큼 순간이동(속도는 잇는다)하고 씬 서비스에 알린다(`ISceneService::onWorldOriginShifted`).
+         * @details 게임 스레드 · 틱 밖에서 부른다(`Scene::update` 의 앞 — 자동 옮기기, 개발 명령 `world.origin`). 떠 둔 상태 · 세이브는 엔티티마다 적힌 원점을 들어 지을 때 맞춘다(`finishNodeBuild`).
+         * @return 옮길 수 없는 서비스가 있으면(`ISceneService::canShiftWorldOrigin`) 경고를 남기고 false 이며 아무것도 옮기지 않는다. 오브젝트 매니저가 없어도 false 입니다.
+         */
+        [[nodiscard]] bool shiftWorldOrigin( const double3& newOrigin );
+        /** @brief 세이브 복원이 다시 만든 오브젝트가 적힌 원점을 그대로 들입니다(오브젝트는 옮기지 않는다 — 복원된 자리가 이미 그 원점 기준이다). */
+        void restoreWorldOrigin( const double3& origin ) { _worldOrigin = origin; }
 
         /** @brief 월드 설정을 바꿉니다(에디터). 다음 저장에 적힙니다 — 이미 지은 씬의 스트리밍은 바뀌지 않습니다(셀은 쿠킹이 나눈다). */
         void setSceneSettings( const SceneSettings& settings ) { _sceneSettings = settings; }
@@ -221,6 +241,8 @@ namespace sw
             ObjectSavedIDMap                       _mapObjectIDToFileID;
             vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;
             SceneDataLayerSubsystem::State         _dataLayers;
+            SceneSubLevelCapture                   _subLevels;
+            double3                                _worldOrigin{};
         };
         /** @brief 지금 조립 기록을 찍습니다. */
         [[nodiscard]] AssemblySnapshot captureAssembly() const;
@@ -235,6 +257,8 @@ namespace sw
         size_t getUnresolvedEntityCount() const { return _listUnresolvedEntity.size(); }
 
     private:
+        /** @brief 게임 카메라가 원점에서 월드 설정의 거리(`SceneSettings::_originRebaseDistance`)보다 멀면 원점을 카메라 쪽으로 옮깁니다(`update` 의 앞). */
+        void updateOriginRebase();
         /** @brief 붙들고 있던 GPU · 머티리얼 자원과 오브젝트를 놓습니다. 소멸자만 부릅니다(내리는 길을 소멸 하나로 둔다). */
         void shutdown();
         /** @brief 기본 머티리얼 참조를 해제합니다. */
@@ -279,6 +303,7 @@ namespace sw
         string                        _sourcePath;
         string                        _defaultMaterialPath;
         SceneSettings                 _sceneSettings; ///< 씬 파일의 월드 설정(`instantiate` 가 읽고 `serializeToDocument` 가 쓴다)
+        double3                       _worldOrigin;   ///< 월드 원점(`getWorldOrigin` — 절대 = 로컬 + 원점)
         SceneEngineServices           _services;      ///< 만들 때 받은 엔진 서비스(빌림). 오브젝트 매니저도 같은 묶음으로 만든다
         unique_ptr<GameObjectManager> _objectManager;
         Material*                     _pMaterial;
@@ -293,10 +318,11 @@ namespace sw
          * @details 저장이 const 라 mutable 입니다 — 새 오브젝트에 id 를 주는 것은 씬의 보이는 상태를 바꾸지 않습니다.
          */
         mutable ObjectSavedIDMap               _mapObjectIDToFileID;
-        vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;    ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
-        uint8                                  _bRegistrationHeld   : 1; ///< `holdRegistration` 이 쥔 미루기가 남았다(`finishHeldRegistration` 이 놓는다)
-        uint8                                  _bBuildAllDataLayers : 1; ///< `setBuildAllDataLayers` — 쿠커의 씬
-        TComponentHandle<CameraComponent>      _activeGameCamera;        ///< 마지막 `pickActiveGameCamera` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
-        TComponentHandle<CameraComponent>      _gameCameraOverride;      ///< `setActiveGameCamera` 로 직접 고른 카메라
+        vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;     ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
+        uint8                                  _bRegistrationHeld    : 1; ///< `holdRegistration` 이 쥔 미루기가 남았다(`finishHeldRegistration` 이 놓는다)
+        uint8                                  _bBuildAllDataLayers  : 1; ///< `setBuildAllDataLayers` — 쿠커의 씬
+        uint8                                  _bOriginRebaseBlocked : 1; ///< 자동 원점 옮기기가 막혀 경고했다(`updateOriginRebase` — 풀릴 때까지 다시 경고하지 않는다)
+        TComponentHandle<CameraComponent>      _activeGameCamera;         ///< 마지막 `pickActiveGameCamera` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
+        TComponentHandle<CameraComponent>      _gameCameraOverride;       ///< `setActiveGameCamera` 로 직접 고른 카메라
     };
 } // namespace sw

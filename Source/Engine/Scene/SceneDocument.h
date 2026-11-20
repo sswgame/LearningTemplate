@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
@@ -58,6 +59,13 @@ namespace sw
 
     class AssetLoadScope;
     class XMLDocument;
+
+    /** @brief 씬 인스턴스의 멤버를 쿠킹이 묶는지입니다(`SceneObjectNode::_instancePacking`). */
+    enum class SceneInstancePacking : uint8
+    {
+        Separate,     ///< 멤버를 엔티티 그대로 싣는다
+        StaticMeshes, ///< 정적 메시 멤버를 인스턴스 메시로 묶는다(언리얼 Packed Level Actor)
+    };
 
     // ------------------------------------------------------------------------------
     // SceneDocument: 씬 메타데이터와 엔티티 노드 목록
@@ -118,6 +126,22 @@ namespace sw
              *          쿠킹된 바이너리 상태(`_embeddedStateBytes`)는 이미 평평한 id 라 이 값을 쓰지 않습니다.
              */
             uint64 _idScope{ 0 };
+            /**
+             * @brief **런타임 칸.** 쿠킹된 바이너리 상태(`_embeddedStateBytes`)의 참조 id 에 XOR 하는 값입니다. 씬 파일 · 쿠킹본에서 읽은 엔티티는 0 이다(바이너리 상태는 이미 평평한 id).
+             * @details 런타임 하위 레벨이 쿠킹본을 자기 앵커 범위로 옮길 때 이 칸에 그 범위를 얹는다(`SceneSubLevelSubsystem::makeMemberNodes`) — 글 상태는 `_idScope` 가 같은 일을 한다. 파일에는 쓰지 않는다.
+             */
+            uint64 _cookedStateIDScope{ 0 };
+            /**
+             * @brief **런타임 칸.** 씬 인스턴스 앵커면 넣은 씬이 쿠킹에서 정적 메시를 묶는지입니다(내부 씬의 `SceneSettings::_packing`, 펼칠 때 정한다 — `expandSceneInstances`).
+             * @details 쿠커만 읽는다(`SceneCooker::packStaticMeshes`). 파일에는 쓰지 않는다 — 정하는 곳은 내부 씬 하나다.
+             */
+            SceneInstancePacking _instancePacking{ SceneInstancePacking::Separate };
+            /**
+             * @brief **런타임 칸.** 상태에 적힌 자리가 어느 월드 원점 기준인지입니다(절대 = 로컬 + 원점, `Scene::getWorldOrigin`). 씬 파일 · 쿠킹본의 엔티티는 0 이다.
+             * @details 떠 둔 상태(`Scene::captureCellNodes`)는 뜬 때의 원점을 적는다. 지을 때 루트 오브젝트를 (이 값 − 지금 원점)만큼 옮겨 지금 원점 기준으로 맞춘다(`Scene::finishNodeBuild`) —
+             *          목록이 섞여도(셀에 들어온 엔티티) 엔티티마다 맞는다. 세이브에 싣는다(`writeSavedNodes`).
+             */
+            double3 _worldOrigin{};
             /** @brief 멤버가 위에서부터 차례로 받은 덮어쓰기(`<PrefabOverrides>`)입니다. 안쪽 인스턴스의 것이 먼저입니다. 프리팹 상태 · 글 상태 위에 차례로 얹습니다. */
             vector<string> _listInstanceOverrideXML;
             /** @brief **저작 칸.** 문서 뿌리에서 멤버까지의 경로입니다(`5/7/3` — 앵커 파일 id 들 / 내부 파일 id). 앞 칸이 이 문서의 앵커이고 나머지가 그 앵커의 `<Part path>` 입니다. */
@@ -204,7 +228,7 @@ namespace sw
         /** @brief 엔티티 목록을 셀 내용 형식으로 씁니다(`readStreamingCellContent` 의 짝 — 비우고 채운다). 읽을 목적(`_statePurpose`)은 쓰지 않습니다. */
         SW_API static void writeStreamingCellContent( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );
         /**
-         * @brief 세이브에 싣는 엔티티 목록을 씁니다(비우고 채운다) — 셀 내용 형식에 엔티티마다 읽을 목적(`_statePurpose`)을 더한다. 떠 둔 상태(스냅숏)와 문서 내용(저작)이 섞여도 제 목적으로 읽힌다.
+         * @brief 세이브에 싣는 엔티티 목록을 씁니다(비우고 채운다) — 셀 내용 형식에 엔티티마다 런타임 칸(읽을 목적 `_statePurpose` · 쿠킹 상태 범위 · 월드 원점)을 더한다. 떠 둔 상태(스냅숏)와 문서 내용(저작)이 섞여도 제 목적으로 읽힌다.
          * @details 스트리밍 셀(`SceneStreamingSubsystem::writeSaveState`)과 데이터 레이어 묶음(`SceneDataLayerSubsystem::writeSaveState`)이 같은 형식을 쓴다.
          */
         SW_API static void writeSavedNodes( const vector<SceneObjectNode>& listNode, vector<uint8>& outBytes );

@@ -661,6 +661,24 @@ namespace sw
         }
     }
 
+    void GameObjectManager::notifyWorldOriginShifted( const float3& delta )
+    {
+        for ( SceneServiceEntry& entry : _pState->_listSceneService )
+        {
+            entry._pService->onWorldOriginShifted( delta );
+        }
+    }
+
+    const utf8* GameObjectManager::findWorldOriginShiftBlocker() const
+    {
+        for ( const SceneServiceEntry& entry : _pState->_listSceneService )
+        {
+            if ( entry._pService->canShiftWorldOrigin() == false )
+                return entry._pService->getSubsystemName();
+        }
+        return nullptr;
+    }
+
     void GameObjectManager::applyPreviewPolicy( const ScenePreviewPolicy& policy )
     {
         for ( SceneServiceEntry& entry : _pState->_listSceneService )
