@@ -51,6 +51,22 @@ endif()
 if(SW_SHIPPING_BUILD)
 	list(APPEND cook_args --pack-for-shipping)
 endif()
+# 정적 모듈 구성은 CookAssets 가 기본 빌드에 든다(ExecutableTargets.cmake) — 쿠킹 명령을 입력 지문 도구로 감싸 바뀐 것이 없으면 건너뛴다.
+# 입력: 콘텐츠 · 설정 폴더, 쿠커가 든 실행 파일 폴더와 그 Modules(바로 아래 파일만 — 교차 빌드는 호스트 빌드의 것). 출력(스테이징 · 팩 폴더)을 지우거나 고쳐도 다시 돈다.
+# 지문 파일은 출력 폴더 밖에 둔다(안에 두면 쓴 파일이 다음 지문을 바꾼다). 동적 Dev 는 손으로 부르는 타깃이라 늘 돈다.
+# 꾸미기 대조와 호스트 빌드는 감싸지 않는다 — 앞은 싸고, 뒤는 쿠커 실행 파일을 지문 전에 새로 지어야 한다.
+function(sw_cook_command_prefix COOKER_DIR OUT_VAR)
+	if(NOT SW_STATIC_MODULES)
+		set(${OUT_VAR} "" PARENT_SCOPE)
+		return()
+	endif()
+	set(${OUT_VAR} "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/cook_if_inputs_changed.py"
+		--stamp "${CMAKE_BINARY_DIR}/CookAssets.inputs"
+		--input "${CMAKE_SOURCE_DIR}/Content" --input "${CMAKE_SOURCE_DIR}/Config"
+		--binaries "${COOKER_DIR}" --binaries "${COOKER_DIR}/Modules"
+		--output "${CMAKE_BINARY_DIR}/Cooked" --output "${pack_output_dir}"
+		-- PARENT_SCOPE)
+endfunction()
 
 if(CMAKE_CROSSCOMPILING)
 	# 교차 빌드(Android · 웹)의 App 은 이 기계에서 돌지 않는다 — 호스트 개발 빌드의 App 이 굽는다(ReflectionParser 와 같은 호스트 도구, cmake/Modules/Build/HostTools.cmake).
@@ -75,13 +91,17 @@ if(CMAKE_CROSSCOMPILING)
 	unset(host_cook_app_name)
 	sw_check_rhi_backend_name("${SW_SHIPPING_RHI_BACKEND}")
 	set(cross_backend_flag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
+	if(NOT SW_STATIC_MODULES)
+		message(FATAL_ERROR "[Cook] cross builds link modules statically (SW_STATIC_MODULES) - the cook command chain below needs the input fingerprint wrapper")
+	endif()
+	sw_cook_command_prefix("${SW_HOST_BUILD_DIR}/Bin" cook_prefix)
 	add_custom_target(CookAssets
 		COMMAND "${CMAKE_COMMAND}" --build "${SW_HOST_BUILD_DIR}"
 		COMMAND ${customization_release_check}
 		# 원본(`textures_raw/`)을 `textures/*.dds` 로 먼저 임포트한다(바뀐 것만 — 내용 해시). 임포트 산출물은 저장소에 없어(.gitignore) 깨끗한 트리에서는 팩이 참조를 못 찾고 멈춘다.
-		COMMAND "${host_cook_app}" --import-textures
-		COMMAND "${host_cook_app}" --cook-texture-variants
-		COMMAND "${host_cook_app}" ${cook_args} ${cross_backend_flag}
+		COMMAND ${cook_prefix} "${host_cook_app}" --import-textures
+			--then "${host_cook_app}" --cook-texture-variants
+			--then "${host_cook_app}" ${cook_args} ${cross_backend_flag}
 		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 		COMMENT "Cooking texture variants and Resource packs for ${SW_SHIPPING_RHI_BACKEND} with the host App (${host_cook_app} --cook-all ${cross_backend_flag})..."
 		VERBATIM
@@ -89,15 +109,17 @@ if(CMAKE_CROSSCOMPILING)
 	unset(cross_backend_flag)
 	unset(host_cook_app)
 else()
+	sw_cook_command_prefix("$<TARGET_FILE_DIR:${SW_COOK_HOST_TARGET}>" cook_prefix)
 	add_custom_target(CookAssets
 		COMMAND ${customization_release_check}
-		COMMAND "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>" ${cook_args}
+		COMMAND ${cook_prefix} "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>" ${cook_args}
 		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 		COMMENT "Cooking scenes, prefabs (XML/JSON) and Resource packs to binary (${SW_COOK_HOST_TARGET} --cook-all)..."
 		VERBATIM
 	)
 endif()
 unset(customization_release_check)
+unset(cook_prefix)
 set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
 
 # 서드파티 고지 — 배포물(Bin · Shipping 패키지)에 함께 놓는다. vcpkg 설치 트리의 `share/<포트>/copyright` 를 이 매니페스트가
