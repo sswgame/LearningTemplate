@@ -15,6 +15,11 @@
 				<item>game/empty/data/cinematic.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="GateCut" source="GateCut" context="SequenceBinding._name">
+			<origins>
+				<item>game/empty/data/cutscenegate.seq.xml</item>
+			</origins>
+		</entry>
 		<entry key="Subtitle.Guide" source="Guide" context="Subtitle speaker (audio event SubtitleGuideLine)">
 			<origins>
 				<item>game/empty/audio/empty.audioevents.xml</item>

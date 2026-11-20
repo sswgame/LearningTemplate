@@ -140,6 +140,11 @@
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
+		<entry key="Browse to Asset" source="Browse to Asset" context="EditorCommandText._label">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
 		<entry key="Bug Report" source="Bug Report" context="EditorPanelText._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
@@ -7234,12 +7239,14 @@
 				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorMemory.CaptureRemoteTip" source="Ask the server attached in Multiplayer &gt; Inspector for its snapshot (memory.snapshot)">
+		<entry key="EditorMemory.CaptureRemoteTip"
+		       source="Ask the server attached in Multiplayer > Inspector for its snapshot (memory.snapshot)">
 			<origins>
 				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorMemory.CaptureTip" source="Record this process now: memory tags, allocation sites, assets, GPU resources, object types and caches (Play in Editor included)">
+		<entry key="EditorMemory.CaptureTip"
+		       source="Record this process now: memory tags, allocation sites, assets, GPU resources, object types and caches (Play in Editor included)">
 			<origins>
 				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
 			</origins>
@@ -7269,7 +7276,8 @@
 				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorMemory.ExportTip" source="Write CSV files (UTF-8, opens in Excel) under Saved/MemorySnapshots/&lt;time&gt;/">
+		<entry key="EditorMemory.ExportTip"
+		       source="Write CSV files (UTF-8, opens in Excel) under Saved/MemorySnapshots/&lt;time>/">
 			<origins>
 				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
 			</origins>
@@ -7299,7 +7307,8 @@
 				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorMemory.NoSnapshots" source="No snapshots yet. Take Snapshot records this process, editor and Play in Editor included.">
+		<entry key="EditorMemory.NoSnapshots"
+		       source="No snapshots yet. Take Snapshot records this process, editor and Play in Editor included.">
 			<origins>
 				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
 			</origins>
@@ -11176,6 +11185,13 @@
 			</origins>
 		</entry>
 		<entry key="Show in Explorer" source="Show in Explorer" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Show the asset in the Content Browser"
+		       source="Show the asset in the Content Browser"
+		       context="EditorCommandText._tooltip">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>

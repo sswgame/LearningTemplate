@@ -26,6 +26,12 @@ msgctxt "CutB"
 msgid "CutB"
 msgstr "컷 B"
 
+#. Context: SequenceBinding._name
+#: game/empty/data/cutscenegate.seq.xml
+msgctxt "GateCut"
+msgid "GateCut"
+msgstr ""
+
 #. Context: Subtitle speaker (audio event SubtitleGuideLine)
 #: game/empty/audio/empty.audioevents.xml
 msgctxt "Subtitle.Guide"

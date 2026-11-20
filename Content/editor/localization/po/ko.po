@@ -161,6 +161,12 @@ msgctxt "Behavior Tree"
 msgid "Behavior Tree"
 msgstr "비헤이비어 트리"
 
+#. Context: EditorCommandText._label
+#: editor/commands/editor.commands.xml
+msgctxt "Browse to Asset"
+msgid "Browse to Asset"
+msgstr "에셋 위치로 이동"
+
 #. Context: EditorPanelText._label
 #: editor/panels/editor.panels.xml
 msgctxt "Bug Report"
@@ -7022,6 +7028,106 @@ msgctxt "EditorMaterialGraph.SubgraphStatus"
 msgid "Subgraph - it compiles inside the graphs that use it"
 msgstr "하위 그래프 - 쓰는 그래프 안에서 컴파일됩니다"
 
+#: Source/Editor/Panels/Memory/Model/MemoryViewModel.cpp
+msgctxt "EditorMemory.AllKinds"
+msgid "All"
+msgstr "전부"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.Capture"
+msgid "Take Snapshot"
+msgstr "스냅숏 찍기"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.CaptureRemote"
+msgid "Take Remote Snapshot"
+msgstr "원격 스냅숏 찍기"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.CaptureRemoteTip"
+msgid "Ask the server attached in Multiplayer > Inspector for its snapshot (memory.snapshot)"
+msgstr "멀티플레이어 > 인스펙터에 붙은 서버에 그 스냅숏을 청합니다(memory.snapshot)"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.CaptureTip"
+msgid "Record this process now: memory tags, allocation sites, assets, GPU resources, object types and caches (Play in Editor included)"
+msgstr "이 프로세스를 지금 기록합니다: 메모리 태그 · 할당 사이트 · 에셋 · GPU 자원 · 오브젝트 타입 · 캐시(에디터에서 플레이 포함)"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.ComparePrevious"
+msgid "Compare with Previous"
+msgstr "이전과 비교"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.CompareWithTip"
+msgid "Snapshot to compare against - rows that grew come first"
+msgstr "비교할 스냅숏 — 늘어난 줄이 먼저 옵니다"
+
+#: Source/Editor/Panels/Memory/Model/MemoryViewModel.cpp
+msgctxt "EditorMemory.ExportFailedStatus"
+msgid "Export failed: {reason}"
+msgstr "내보내기 실패: {reason}"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.ExportSnapshot"
+msgid "Export Snapshot as CSV"
+msgstr "스냅숏을 CSV 로 내보내기"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.ExportTable"
+msgid "Export Table as CSV"
+msgstr "표를 CSV 로 내보내기"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.ExportTip"
+msgid "Write CSV files (UTF-8, opens in Excel) under Saved/MemorySnapshots/<time>/"
+msgstr "CSV 파일(UTF-8, Excel 에서 열린다)을 Saved/MemorySnapshots/<시각>/ 아래에 씁니다"
+
+#: Source/Editor/Panels/Memory/Model/MemoryViewModel.cpp
+msgctxt "EditorMemory.ExportedStatus"
+msgid "Exported {fileCount} file(s) to {folder}"
+msgstr "파일 {fileCount} 개를 {folder} 에 내보냈습니다"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.FilterHint"
+msgid "Filter by name"
+msgstr "이름으로 거르기"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.NoComparison"
+msgid "No comparison"
+msgstr "비교 안 함"
+
+#: Source/Editor/Panels/Memory/Model/MemoryViewModel.cpp
+msgctxt "EditorMemory.NoPolicyStatus"
+msgid "The memory snapshot settings could not be read: {reason}"
+msgstr "메모리 스냅숏 설정을 읽지 못했습니다: {reason}"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.NoRows"
+msgid "No rows match the filters"
+msgstr "거르기에 맞는 줄이 없습니다"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.NoSnapshots"
+msgid "No snapshots yet. Take Snapshot records this process, editor and Play in Editor included."
+msgstr "아직 스냅숏이 없습니다. 스냅숏 찍기는 에디터와 에디터에서 플레이를 포함해 이 프로세스를 기록합니다."
+
+#: Source/Editor/Panels/Memory/Model/MemoryViewModel.cpp
+msgctxt "EditorMemory.RemoteFailedStatus"
+msgid "Remote snapshot failed: {reason}"
+msgstr "원격 스냅숏 실패: {reason}"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.ShowInContentBrowser"
+msgid "Show in Content Browser"
+msgstr "콘텐츠 브라우저에서 보기"
+
+#: Source/Editor/Panels/Memory/MemoryPanel.cpp
+msgctxt "EditorMemory.TotalsLine"
+msgid "CPU {cpu}   GPU {gpu}   ({source})"
+msgstr "CPU {cpu}   GPU {gpu}   ({source})"
+
 #: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.ArrangeWindows"
 msgid "Place the client windows side by side (window size and position per App process) instead of letting them overlap"
@@ -10078,6 +10184,12 @@ msgctxt "Material Graph"
 msgid "Material Graph"
 msgstr "머티리얼 그래프"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Memory"
+msgid "Memory"
+msgstr "메모리"
+
 #. Context: Editor command name
 #: editor/commands/meshmodifiers.commands.xml
 #: editor/panels/editor.panels.xml
@@ -10740,6 +10852,12 @@ msgstr "의존 보기"
 msgctxt "Show in Explorer"
 msgid "Show in Explorer"
 msgstr "탐색기에서 보기"
+
+#. Context: EditorCommandText._tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Show the asset in the Content Browser"
+msgid "Show the asset in the Content Browser"
+msgstr "콘텐츠 브라우저에서 에셋을 보입니다"
 
 #. Context: Editor command palette detail
 #: editor/commands/editor.commands.xml

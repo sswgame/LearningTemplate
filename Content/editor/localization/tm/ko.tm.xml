@@ -276,6 +276,7 @@
 		<entry source="Bring the camera back to the preview subject (F)"
 		       text="카메라를 미리보기 대상으로 되돌립니다(F)" />
 		<entry source="Broadcast" text="방송" />
+		<entry source="Browse to Asset" text="에셋 위치로 이동" />
 		<entry source="Brushes" text="브러시" />
 		<entry source="Budget: {budgetBuf}" text="예산: {budgetBuf}" />
 		<entry source="Buffers" text="버퍼" />
@@ -2205,6 +2206,7 @@
 		       text="게임 안 디버그 HUD 의 이 구역을 보이거나 숨깁니다. 회색 글자는 구역의 등록 이름입니다." />
 		<entry source="Show the Debug HUD box in this view (view size and HUD sections). Right-click to choose sections."
 		       text="이 뷰에 디버그 HUD 상자(뷰 크기 · HUD 섹션)를 보입니다. 오른쪽 클릭으로 섹션을 고릅니다." />
+		<entry source="Show the asset in the Content Browser" text="콘텐츠 브라우저에서 에셋을 보입니다" />
 		<entry source="Show the edited material on the selected object in the viewport without saving, to judge it with the real shader and lighting."
 		       text="저장하지 않고 편집한 머티리얼을 뷰포트의 선택한 오브젝트에 입혀, 실제 셰이더와 라이팅으로 판단할 수 있게 합니다." />
 		<entry source="Show the in-game Debug HUD in the game view, with the sections chosen below (Ctrl+F3)"

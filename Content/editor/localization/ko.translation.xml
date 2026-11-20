@@ -43,6 +43,7 @@
 		       text="선택한(없으면 모든) 라이트 프로브 볼륨의 간접광을 베이크합니다(씬 옆 .probes)"
 		       sourceHash="040436a00551199e" />
 		<entry key="Behavior Tree" text="비헤이비어 트리" sourceHash="3f6463bb30f6ab55" />
+		<entry key="Browse to Asset" text="에셋 위치로 이동" sourceHash="16a19724a4df2f44" />
 		<entry key="Bug Report" text="버그 보고" sourceHash="64ea85be872df491" />
 		<entry key="Build" text="빌드" sourceHash="3fe3ff490adaaa63" />
 		<entry key="Build the engine and every module"
@@ -4056,6 +4057,9 @@
 		       sourceHash="7080e1da8d9c257b" />
 		<entry key="Show Dependencies" text="의존 보기" sourceHash="177ed66a13428561" />
 		<entry key="Show in Explorer" text="탐색기에서 보기" sourceHash="7582a6273577e9c6" />
+		<entry key="Show the asset in the Content Browser"
+		       text="콘텐츠 브라우저에서 에셋을 보입니다"
+		       sourceHash="9b4535ef179707c8" />
 		<entry key="Snap selected objects onto the ground plane"
 		       text="선택한 오브젝트를 바닥 평면에 붙입니다"
 		       sourceHash="2381d6ed11c97f3e" />
