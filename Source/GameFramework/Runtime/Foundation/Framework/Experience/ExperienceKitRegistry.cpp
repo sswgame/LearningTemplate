@@ -45,6 +45,9 @@ namespace sw
         return _registration.findByName( name );
     }
 
-    /** 키트 모듈의 등록자(`SW_EXPERIENCE_KIT`)가 붙는 곳 — GameFramework 가 키트보다 먼저 올라 엔진 범위 아래 자기 자식 범위에 세운다. */
-    SW_MODULE_SUBSYSTEM( Engine, ExperienceKitRegistry, ExperienceKitRegistry );
+    /**
+     * 키트 모듈의 등록자(`SW_EXPERIENCE_KIT`)가 붙는 곳 — 프로세스 범위다. 등록은 다른 모듈(키트)의 이미지와 수명이 같아, 엔진 범위(기동 단계와 함께 모듈 내리기보다
+     * 먼저 내려간다)에 두면 키트가 내려가며 뗄 때 레지스트리가 이미 없어 멈췄다(`--check-text` 종료).
+     */
+    SW_MODULE_SUBSYSTEM( Process, ExperienceKitRegistry, ExperienceKitRegistry );
 } // namespace sw
