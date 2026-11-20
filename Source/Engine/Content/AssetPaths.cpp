@@ -311,7 +311,9 @@ namespace sw
                     string relative;
                     if ( FileUtil::tryMakePathUnderRoot( mounted._folder, absolutePath, relative ) == false ) // 대소문자는 OS 규칙
                         continue;
-                    outID = mounted._domain + "/" + FileUtil::normalizePath( relative ).str(); // id 는 소문자다
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "%#/%#", mounted._domain, FileUtil::normalizePath( relative ).str() ); // id 는 소문자다
+                    outID = string( builder.view() );
                     return true;
                 }
                 return false;
@@ -345,7 +347,9 @@ namespace sw
                 JSONDocument document;
                 if ( document.parse( composed, "EngineConfig.json (configure-time copy)" ) == false )
                 {
-                    result._error = string( "EngineConfig.json (configure-time copy) could not be parsed: " ) + document.getLastError();
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "EngineConfig.json (configure-time copy) could not be parsed: %#", document.getLastError() );
+                    result._error = string( builder.view() );
                     return result;
                 }
                 const JSONValue priority = document.getRoot().get( "_listResourcePriority" );
@@ -533,8 +537,10 @@ namespace sw
         string relative;
         if ( FileUtil::tryMakePathUnderRoot( ProcessRoots::get()._content.str(), diskPath, relative ) == false )
             return false; // 리소스 트리 밖(Saved · 빌드 · 임시 폴더)의 읽기 전용은 잠금이 아니다
-        const string_view relativeView{ relative };
-        return relativeView != kScratchDomain && StringUtil::startsWith( relativeView, string( kScratchDomain ) + "/" ) == false;
+        const string_view                      relativeView{ relative };
+        fixed_string<constant::buffer::kMax32> scratchPrefix;
+        formatstring( scratchPrefix.data(), scratchPrefix.capacity(), "%#/", kScratchDomain );
+        return relativeView != kScratchDomain && StringUtil::startsWith( relativeView, scratchPrefix ) == false;
     }
 
     bool AssetPaths::initialize()
@@ -695,7 +701,11 @@ namespace sw
         // 작업 도메인이 먼저다 — 그 폴더는 실행 산출물 폴더 아래라 시나리오가 붙인 `saved` 도메인(`Saved/`)도 품는다.
         string underScratch;
         if ( FileUtil::tryMakePathUnderRoot( getScratchFolderPath(), absolutePath, underScratch ) )
-            return normalizeAssetID( string( kScratchDomain ) + "/" + underScratch );
+        {
+            StringBuilder<constant::buffer::kMax256> builder;
+            builder.appendFormat( "%#/%#", kScratchDomain, underScratch );
+            return normalizeAssetID( builder.view() );
+        }
         string domainID;
         // 붙인 디스크 도메인(시나리오의 `Saved/` 등) 아래면 그 도메인의 id 다 — 리소스 입구는 OS 경로를 받지 않는다.
         if ( AssetPathsInternal::findDiskDomainID( *_pState, absolutePath, domainID ) )
@@ -990,8 +1000,10 @@ namespace sw
     {
         if ( FileUtil::collectFiles( contentRoot, extension, outListFile, true ) == false )
             return false;
-        const string scratchPrefix = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( contentRoot ) ) + "/" + kScratchDomain + "/";
-        const auto   isScratch     = [&scratchPrefix]( const string& path )
+        StringBuilder<constant::buffer::kMax512> scratchPrefixBuilder;
+        scratchPrefixBuilder.appendFormat( "%#/%#/", FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( contentRoot ) ), kScratchDomain );
+        const string_view scratchPrefix = scratchPrefixBuilder.view();
+        const auto        isScratch     = [scratchPrefix]( const string& path )
         { return StringUtil::startsWith( FileUtil::normalizeSeparators( path ), scratchPrefix, true ); };
         outListFile.erase( std::remove_if( outListFile.begin(), outListFile.end(), isScratch ), outListFile.end() );
         return true;

@@ -118,12 +118,13 @@ namespace
         }
 
         /** @brief 노드 한 줄을 읽어 묶습니다. 읽기나 묶기가 실패하면 false 입니다. */
-        [[nodiscard]] bool load( const string& nodeLine, const string& extraTargets = string{} )
+        [[nodiscard]] bool load( string_view nodeLine, string_view extraTargets = {} )
         {
-            const string xml = string( R"(<RigAsset><targets><item name="Goal" bone="goal" /><item name="Pole" bone="pole" /><item name="Anchor" bone="anchor" />)" ) + extraTargets +
-                               "</targets><nodes>" + nodeLine + "</nodes></RigAsset>";
+            StringBuilder<constant::buffer::kMax1024> xml;
+            xml.appendFormat( R"(<RigAsset><targets><item name="Goal" bone="goal" /><item name="Pole" bone="pole" /><item name="Anchor" bone="anchor" />%#</targets><nodes>%#</nodes></RigAsset>)", extraTargets,
+                              nodeLine );
             shared_ptr<RigAsset> asset = make_shared<RigAsset>();
-            if ( asset->loadFromXMLText( xml, "test.rig.xml" ) == false )
+            if ( asset->loadFromXMLText( xml.view(), "test.rig.xml" ) == false )
                 return false;
             return _instance.initialize( asset, _skeleton, nullptr, "test" );
         }
@@ -185,19 +186,25 @@ namespace
     /** @brief 발 디딤 노드 한 줄입니다. */
     string makeFootPlacement( const utf8* pExtra )
     {
-        return string( R"(<item type="FootPlacement" name="Feet" pelvis="pelvis" trace_up="0.5" trace_down="0.5" max_pelvis_drop="0.3" max_raise="0.2" )" ) + pExtra + ">" + kLegs + "</item>";
+        StringBuilder<constant::buffer::kMax512> builder;
+        builder.appendFormat( R"(<item type="FootPlacement" name="Feet" pelvis="pelvis" trace_up="0.5" trace_down="0.5" max_pelvis_drop="0.3" max_raise="0.2" %#>%#</item>)", pExtra, kLegs );
+        return string( builder.view() );
     }
 
     /** @brief 보폭 워핑 노드 한 줄입니다(배율 0.5 ~ 1.5, 골반 내림 0.3). */
     string makeStride()
     {
-        return string( R"(<item type="StrideWarping" name="Stride" pelvis="pelvis" min_scale="0.5" max_scale="1.5" max_pelvis_drop="0.3">)" ) + kLegs + "</item>";
+        StringBuilder<constant::buffer::kMax512> builder;
+        builder.appendFormat( R"(<item type="StrideWarping" name="Stride" pelvis="pelvis" min_scale="0.5" max_scale="1.5" max_pelvis_drop="0.3">%#</item>)", kLegs );
+        return string( builder.view() );
     }
 
     /** @brief 팔 사슬 하나의 전신 IK 노드 한 줄입니다(팔 뒤에 @p pExtraChain 을 잇습니다). */
     string makeFullBody( const utf8* pExtraChain = "" )
     {
-        return string( R"(<item type="FullBodyIK" name="Body" pelvis="pelvis" pelvis_iterations="8" max_pelvis_offset="0.5" iterations="32" tolerance="0.0005"><chains><item target="Goal">)" ) + kArmBones + "</item>" + pExtraChain + "</chains></item>";
+        StringBuilder<constant::buffer::kMax512> builder;
+        builder.appendFormat( R"(<item type="FullBodyIK" name="Body" pelvis="pelvis" pelvis_iterations="8" max_pelvis_offset="0.5" iterations="32" tolerance="0.0005"><chains><item target="Goal">%#</item>%#</chains></item>)", kArmBones, pExtraChain );
+        return string( builder.view() );
     }
 } // namespace
 
@@ -348,8 +355,10 @@ SW_TEST_CASE( RigIKChainTest, ChainsReachAndKeepSegmentLengths )
 {
     for ( const utf8* pType : { "FABRIKChain", "CCDChain" } )
     {
-        RigIKTest rig;
-        SW_REQUIRE_TRUE( rig.load( string( R"(<item type=")" ) + pType + R"(" name="Arm" target="Goal" iterations="64" tolerance="0.0005">)" + kArmBones + "</item>" ) );
+        RigIKTest                                rig;
+        StringBuilder<constant::buffer::kMax512> xml;
+        xml.appendFormat( R"(<item type="%#" name="Arm" target="Goal" iterations="64" tolerance="0.0005">%#</item>)", pType, kArmBones );
+        SW_REQUIRE_TRUE( rig.load( xml.view() ) );
         const float32 foreLength = rig.segment( kFore, kHand );
         const float3  goal{ 0.3f, 1.7f, 0.2f };
         rig.setBone( kGoal, goal );
@@ -365,8 +374,10 @@ SW_TEST_CASE( RigIKChainTest, ChainsDoNotStretch )
 {
     for ( const utf8* pType : { "FABRIKChain", "CCDChain" } )
     {
-        RigIKTest rig;
-        SW_REQUIRE_TRUE( rig.load( string( R"(<item type=")" ) + pType + R"(" name="Arm" target="Goal" iterations="64">)" + kArmBones + "</item>" ) );
+        RigIKTest                                rig;
+        StringBuilder<constant::buffer::kMax512> xml;
+        xml.appendFormat( R"(<item type="%#" name="Arm" target="Goal" iterations="64">%#</item>)", pType, kArmBones );
+        SW_REQUIRE_TRUE( rig.load( xml.view() ) );
         rig.setBone( kGoal, float3{ 3.0f, 1.5f, 0.0f } );
         rig.run();
         SW_EXPECT_TRUE( rig.segment( kArm, kTip ) <= 0.8f + 1.0e-3f );
@@ -377,15 +388,19 @@ SW_TEST_CASE( RigIKChainTest, ChainsDoNotStretch )
 // 관절 제한: 한 관절의 원뿔을 넘지 않고, 사슬 밖 본의 제한은 묶을 때 오류다.
 SW_TEST_CASE_F( RigIKTest, ChainLimitsHoldAndForeignBoneFails )
 {
-    SW_REQUIRE_TRUE( load( string( R"(<item type="CCDChain" name="Arm" target="Goal" iterations="32">)" ) + kArmBones + R"(<limits><item bone="arm" type="Cone" swing_degrees="10" /></limits></item>)" ) );
+    StringBuilder<constant::buffer::kMax512> xml;
+    xml.appendFormat( R"(<item type="CCDChain" name="Arm" target="Goal" iterations="32">%#<limits><item bone="arm" type="Cone" swing_degrees="10" /></limits></item>)", kArmBones );
+    SW_REQUIRE_TRUE( load( xml.view() ) );
     setBone( kGoal, float3{ 0.7f, 1.5f, 0.0f } );
     run();
     SW_EXPECT_TRUE( angleToDirection( rotation( kArm ), float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f } ) <= 10.5f );
 
     SW_EXPECT_LOG( "RigIKNodes.RigLimitBoneNot" );
     SW_EXPECT_LOG( "RigInstance.RigNodeCouldNot" );
-    RigIKTest foreign;
-    SW_EXPECT_FALSE( foreign.load( string( R"(<item type="CCDChain" name="Arm" target="Goal">)" ) + kArmBones + R"(<limits><item bone="pelvis" type="Cone" swing_degrees="10" /></limits></item>)" ) );
+    RigIKTest                                foreign;
+    StringBuilder<constant::buffer::kMax512> foreignXML;
+    foreignXML.appendFormat( R"(<item type="CCDChain" name="Arm" target="Goal">%#<limits><item bone="pelvis" type="Cone" swing_degrees="10" /></limits></item>)", kArmBones );
+    SW_EXPECT_FALSE( foreign.load( foreignXML.view() ) );
     SW_EXPECT_FALSE( foreign._instance.isInitialized() );
 }
 
@@ -802,9 +817,10 @@ SW_TEST_CASE_F( RigIKTest, FullBodyChainMustStartBelowThePelvis )
 // 노드 복제는 인스턴스마다 상태를 따로 가진다 - 한 에셋을 두 유닛이 쓴다.
 SW_TEST_CASE( RigIKChainTest, InstancesSharingAnAssetKeepTheirOwnState )
 {
-    const string         xml   = string( R"(<RigAsset><nodes>)" ) + makeFootPlacement( R"(interp_speed="5")" ) + "</nodes></RigAsset>";
+    StringBuilder<constant::buffer::kMax512> xml;
+    xml.appendFormat( "<RigAsset><nodes>%#</nodes></RigAsset>", makeFootPlacement( R"(interp_speed="5")" ) );
     shared_ptr<RigAsset> asset = make_shared<RigAsset>();
-    SW_REQUIRE_TRUE( asset->loadFromXMLText( xml, "shared.rig.xml" ) );
+    SW_REQUIRE_TRUE( asset->loadFromXMLText( xml.view(), "shared.rig.xml" ) );
 
     RigIKTest first;
     RigIKTest second;
@@ -825,15 +841,23 @@ SW_TEST_CASE( RigIKChainTest, InstancesSharingAnAssetKeepTheirOwnState )
 SW_TEST_CASE( RigIKChainTest, ParseRefusesBadShapes )
 {
     SW_EXPECT_LOG( "Rig.Rig" );
-    const auto parses = []( const string& line )
+    const auto parses = []( string_view line )
     {
         RigIKTest rig;
         return rig.load( line );
     };
     SW_EXPECT_FALSE( parses( R"(<item type="FABRIKChain" name="A" target="Goal"><bones><item>arm</item></bones></item>)" ) );
     SW_EXPECT_FALSE( parses( R"(<item type="FootPlacement" name="A" pelvis="pelvis" trace_up="1" trace_down="1" max_pelvis_drop="1" max_raise="1"><feet /></item>)" ) );
-    SW_EXPECT_FALSE( parses( string( R"(<item type="StrideWarping" name="A" pelvis="pelvis" min_scale="2" max_scale="1" max_pelvis_drop="0">)" ) + kLegs + "</item>" ) );
-    SW_EXPECT_FALSE( parses( string( R"(<item type="StrideWarping" name="A" pelvis="pelvis" min_scale="0" max_scale="1" max_pelvis_drop="0">)" ) + kLegs + "</item>" ) );
+    {
+        StringBuilder<constant::buffer::kMax512> xml;
+        xml.appendFormat( R"(<item type="StrideWarping" name="A" pelvis="pelvis" min_scale="2" max_scale="1" max_pelvis_drop="0">%#</item>)", kLegs );
+        SW_EXPECT_FALSE( parses( xml.view() ) );
+    }
+    {
+        StringBuilder<constant::buffer::kMax512> xml;
+        xml.appendFormat( R"(<item type="StrideWarping" name="A" pelvis="pelvis" min_scale="0" max_scale="1" max_pelvis_drop="0">%#</item>)", kLegs );
+        SW_EXPECT_FALSE( parses( xml.view() ) );
+    }
     SW_EXPECT_FALSE( parses( R"(<item type="Aim" name="A" bone="hand" target="Goal" aim_axis="0,0,0" />)" ) );
     SW_EXPECT_FALSE( parses( R"(<item type="Aim" name="A" bone="hand" target="Goal"><chain><item bone="arm" weight="2" /></chain></item>)" ) );
     SW_EXPECT_FALSE( parses( R"(<item type="FullBodyIK" name="A" pelvis="pelvis" max_pelvis_offset="1"><chains /></item>)" ) );

@@ -164,7 +164,11 @@ namespace sw
 
     string AutomationTarget::describe( const Error& error )
     {
-        return error.detail().empty() ? string( error.message() ) : string( error.message() ) + ": " + string( error.detail() );
+        if ( error.detail().empty() )
+            return string( error.message() );
+        StringBuilder<constant::buffer::kMax512> text;
+        text.appendFormat( "%#: %#", error.message(), error.detail() );
+        return string( text.view() );
     }
 
     string AutomationWatchQuery::describeMissing( const utf8* pWhat ) const

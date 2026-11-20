@@ -81,10 +81,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "XMLFields.ValueOutOfRange", "%#", text );
         };
         // 오류 줄에 원소 이름과 id 를 함께 적는다(같은 원소가 여럿이면 어느 것인지 알아야 고친다).
-        const utf8* const pID = node.findAttribute( "id" );
-        string            element( node.getName() != nullptr ? node.getName() : "?" );
+        const utf8* const                        pID = node.findAttribute( "id" );
+        StringBuilder<constant::buffer::kMax256> element;
+        element.append( node.getName() != nullptr ? node.getName() : "?" );
         if ( pID != nullptr )
-            element += string( " id=\"" ) + pID + "\"";
+            element.appendFormat( " id=\"%#\"", pID );
         const utf8* const       pElement     = element.c_str();
         const SerializeContext& context      = SerializeContext::getDefault( SerializePurpose::Authoring );
         const auto&             listProperty = typeInfo.getPropertiesWithBase();

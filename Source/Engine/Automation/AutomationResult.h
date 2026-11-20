@@ -6,7 +6,10 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -94,10 +97,11 @@ namespace sw
         {
             if ( _result != AutomationResult::Passed || listUnhandled.empty() )
                 return *this;
-            string reason = listUnhandled.front();
+            StringBuilder<constant::buffer::kMax256> reason;
+            reason.append( listUnhandled.front() );
             if ( listUnhandled.size() > 1 )
-                reason += " (+" + to_string( listUnhandled.size() - 1 ) + ")";
-            return failed( AutomationFailureKind::UnhandledLog, reason, {} );
+                reason.appendFormat( " (+%#)", listUnhandled.size() - 1 );
+            return failed( AutomationFailureKind::UnhandledLog, reason.view(), {} );
         }
 
         /**
@@ -126,7 +130,13 @@ namespace sw
         /** @brief 끝 줄에 붙이는 한 줄입니다 — 진 판정은 `<종류> - <까닭>`, 건너뜀은 까닭, 통과는 빈 글. 줄바꿈은 공백으로 바꾼다(끝 줄이 한 줄이게). */
         string describe() const
         {
-            string text = isFailure() ? string( string( getEnumName( _kind ) ) + " - " + _reason ) : _reason;
+            string text = _reason;
+            if ( isFailure() )
+            {
+                StringBuilder<constant::buffer::kMax256> failureText;
+                failureText.appendFormat( "%# - %#", getEnumName( _kind ), _reason );
+                text = string( failureText.view() );
+            }
             for ( utf8& character : text )
             {
                 if ( character == '\n' || character == '\r' )

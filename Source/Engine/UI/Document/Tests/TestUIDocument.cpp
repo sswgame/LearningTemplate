@@ -36,7 +36,11 @@ namespace
     template <typename T>
     string describeFailure( const expected<T>& result )
     {
-        return result.has_value() ? string() : string( result.error().message().data(), result.error().message().size() ) + ": " + string( result.error().detail().data(), result.error().detail().size() );
+        if ( result.has_value() )
+            return string();
+        StringBuilder<constant::buffer::kMax256> text;
+        text.appendFormat( "%#: %#", result.error().message(), result.error().detail() );
+        return string( text.view() );
     }
 
     /** @brief 문서 @p pXML 이 @p pExpected 를 담은 오류로 거절되는지 봅니다. */
@@ -50,7 +54,9 @@ namespace
 
     string makeDocument( const utf8* pBody )
     {
-        return string( "<UIDocument _schemaVersion=\"1\">" ) + pBody + "</UIDocument>";
+        StringBuilder<constant::buffer::kMax1024> document;
+        document.appendFormat( "<UIDocument _schemaVersion=\"1\">%#</UIDocument>", pBody );
+        return string( document.view() );
     }
 } // namespace
 

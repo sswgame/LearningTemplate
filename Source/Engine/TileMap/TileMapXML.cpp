@@ -382,18 +382,19 @@ namespace sw
                 {
                     XMLFields::writeProperties( palette.appendChild( "b" ), TilePaletteEntryParams{ name } );
                 }
-                string cells = "\n";
+                StringBuilder<constant::buffer::kMax4096> cells;
+                cells.append( '\n' );
                 for ( int32 y = 0; y < data._height; ++y )
                 {
                     for ( int32 x = 0; x < data._width; ++x )
                     {
                         const size_t cellIndex     = static_cast<size_t>( y ) * static_cast<size_t>( data._width ) + static_cast<size_t>( x );
                         const uint16 paletteNumber = ( cellIndex < data._listTileCell.size() ) ? data._listTileCell[cellIndex] : 0;
-                        cells += to_string( static_cast<uint32>( paletteNumber ) );
-                        cells += ( x + 1 < data._width ) ? " " : "\n";
+                        cells.appendFormat( "%#", static_cast<uint32>( paletteNumber ) );
+                        cells.append( ( x + 1 < data._width ) ? ' ' : '\n' );
                     }
                 }
-                tileLayer.appendChild( "cells", string_view{ cells } );
+                tileLayer.appendChild( "cells", cells.view() );
             }
 
             /** @brief 데이터 레이어를 씁니다. 있을 때만 쓴다(없는 맵은 이전과 바이트까지 같다). 값은 한 행씩 줄을 바꿔 적고, 배열이 짧으면 모자란 칸은 그 레이어의 기본값이다(`appendTiles` 와 같은 규칙). */
@@ -404,17 +405,18 @@ namespace sw
                 const XMLNode dataLayers = root.appendChild( "dataLayers" );
                 for ( const TileMapXMLData::DataLayer& layer : data._listDataLayer )
                 {
-                    string values = "\n";
+                    StringBuilder<constant::buffer::kMax4096> values;
+                    values.append( '\n' );
                     for ( int32 y = 0; y < data._height; ++y )
                     {
                         for ( int32 x = 0; x < data._width; ++x )
                         {
                             const size_t cellIndex = static_cast<size_t>( y ) * static_cast<size_t>( data._width ) + static_cast<size_t>( x );
-                            values += to_string( cellIndex < layer._listValue.size() ? layer._listValue[cellIndex] : layer._defaultValue );
-                            values += ( x + 1 < data._width ) ? " " : "\n";
+                            values.appendFormat( "%#", cellIndex < layer._listValue.size() ? layer._listValue[cellIndex] : layer._defaultValue );
+                            values.append( ( x + 1 < data._width ) ? ' ' : '\n' );
                         }
                     }
-                    const XMLNode layerNode = dataLayers.appendChild( "layer", string_view{ values } );
+                    const XMLNode layerNode = dataLayers.appendChild( "layer", values.view() );
                     XMLFields::writeProperties( layerNode, TileDataLayerParams{ layer._name, layer._defaultValue } );
                 }
             }

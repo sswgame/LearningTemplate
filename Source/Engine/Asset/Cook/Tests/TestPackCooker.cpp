@@ -228,13 +228,18 @@ SW_TEST_CASE( PackCookerTest, RealPackRulesExcludeLocalizationAuthoringTables )
 {
     PackConfig config;
     SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
-    const string stringTable      = string( "localization/engine" ) + SourceStringTable::kExtension;
-    const string translationTable = string( "localization/ko" ) + TranslationTable::kExtension;
-    const string project          = string( "localization/engine" ) + LocalizationProject::kExtension;
-    const string cookedTable      = string( "localization/engine.ko" ) + LocalizationBinaryTable::kExtension;
+    fixed_string<constant::buffer::kMax128> stringTable;
+    formatstring( stringTable.data(), stringTable.capacity(), "localization/engine%#", SourceStringTable::kExtension );
+    fixed_string<constant::buffer::kMax128> translationTable;
+    formatstring( translationTable.data(), translationTable.capacity(), "localization/ko%#", TranslationTable::kExtension );
+    fixed_string<constant::buffer::kMax128> project;
+    formatstring( project.data(), project.capacity(), "localization/engine%#", LocalizationProject::kExtension );
+    fixed_string<constant::buffer::kMax128> cookedTable;
+    formatstring( cookedTable.data(), cookedTable.capacity(), "localization/engine.ko%#", LocalizationBinaryTable::kExtension );
     for ( const utf8* pBuildTarget : { "Game", "Client", "Server" } )
     {
-        const string label = string( "build target " ) + pBuildTarget;
+        fixed_string<constant::buffer::kMax64> label;
+        formatstring( label.data(), label.capacity(), "build target %#", pBuildTarget );
         SW_EXPECT_FALSE_MSG( includes( config, stringTable, pBuildTarget ), label );
         SW_EXPECT_FALSE_MSG( includes( config, translationTable, pBuildTarget ), label );
         SW_EXPECT_TRUE_MSG( includes( config, project, pBuildTarget ), label );

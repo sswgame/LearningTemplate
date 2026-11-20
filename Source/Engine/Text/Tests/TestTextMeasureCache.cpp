@@ -221,7 +221,8 @@ SW_TEST_CASE( TextMeasureCacheTest, MeasureDoesNotRecomputeEarlierTextWhenTheCac
     const sw::CacheStatsSnapshot before = TextMeasureCacheTestInternal::readSnapshot( "TextMeasure" );
     for ( uint32 index = 0; index < kTextCount; ++index )
     {
-        const sw::string text = "w" + sw::to_string( index );
+        sw::fixed_string<sw::constant::buffer::kMax32> text;
+        sw::formatstring( text.data(), text.capacity(), "w%#", index );
         (void)layout.measure( text, style, 0.0f );
     }
     const sw::CacheStatsSnapshot filled = TextMeasureCacheTestInternal::readSnapshot( "TextMeasure" );

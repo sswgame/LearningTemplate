@@ -148,8 +148,9 @@ namespace sw
                 }
                 if ( SceneObjectHash::writeObjectReportLine( *tick, listObject, outReply ) == false )
                 {
-                    outReply = "the object report does not fit one line (" + to_string( listObject.size() ) + " objects, limit " + to_string( DebugReplyLine::kMaxBytes ) +
-                               " bytes) - use state.objects";
+                    StringBuilder<constant::buffer::kMax256> reply;
+                    reply.appendFormat( "the object report does not fit one line (%# objects, limit %# bytes) - use state.objects", listObject.size(), DebugReplyLine::kMaxBytes );
+                    outReply = string( reply.view() );
                     return false;
                 }
                 return true;
@@ -183,7 +184,9 @@ namespace sw
             /** @brief 그 이름의 줄이 없을 때의 답입니다. */
             [[nodiscard]] static string makeNoChannelReply( string_view channelName )
             {
-                return "no state hash channel '" + string( channelName ) + "' - state.hashnames lists them";
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "no state hash channel '%#' - state.hashnames lists them", channelName );
+                return string( reply.view() );
             }
 
             static bool runStateHashes( const vector<string>& listArgument, string& outReply )
@@ -399,7 +402,7 @@ namespace sw
     {
         outLine = kObjectReportLinePrefix;
         outLine += ' ';
-        outLine += to_string( tick );
+        StringUtil::appendNumber( outLine, tick );
         outLine += ' ';
         if ( listObject.empty() )
         {

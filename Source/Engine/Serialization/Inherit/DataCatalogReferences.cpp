@@ -181,7 +181,9 @@ namespace sw
             /** @brief 글 @p text 에 원소 `<name` 이 적혔으면 true 입니다(뒤가 이름의 끝인 자리만). */
             static bool isElementMentioned( string_view text, const string& name )
             {
-                const string opening = "<" + name;
+                StringBuilder<constant::buffer::kMax128> openingBuilder;
+                openingBuilder.appendFormat( "<%#", name );
+                const string_view opening = openingBuilder.view();
                 for ( size_t at = text.find( opening ); at != string_view::npos; at = text.find( opening, at + 1 ) )
                 {
                     const size_t after = at + opening.size();

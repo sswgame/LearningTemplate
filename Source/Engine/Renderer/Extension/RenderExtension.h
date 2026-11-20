@@ -137,7 +137,8 @@ namespace sw
         string createTexture( const ExtensionTextureDesc& desc )
         {
             ExtensionTextureDesc stored = desc;
-            stored._name                = string( "Extension." ) + desc._name;
+            stored._name                = "Extension.";
+            stored._name += desc._name;
             for ( ExtensionTextureDesc& existing : _listTexture )
             {
                 if ( existing._name == stored._name )

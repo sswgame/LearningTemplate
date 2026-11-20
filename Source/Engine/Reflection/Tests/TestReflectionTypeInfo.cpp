@@ -1342,15 +1342,18 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryBitFieldLiesBetweenItsNeighbours )
                 continue;
             ++bitFieldCount;
 
-            const sw::string where = sw::string( typeInfo._fullyQualifiedName.c_str() ) + "::" + bitField._name.c_str() + " @" +
-                                     sw::to_string( static_cast<uint64>( bitField.getOffset() ) );
+            sw::StringBuilder<sw::constant::buffer::kMax256> where;
+            where.appendFormat( "%#::%# @%#", typeInfo._fullyQualifiedName.c_str(), bitField._name.c_str(), static_cast<uint64>( bitField.getOffset() ) );
             for ( size_t previous = index; previous-- > 0; )
             {
                 if ( isPlainProperty( listProperty[previous] ) == false )
                     continue;
                 if ( bitField.getOffset() <= listProperty[previous].getOffset() )
-                    listViolation.push_back( where + " is not after " + listProperty[previous]._name.c_str() + " @" +
-                                             sw::to_string( static_cast<uint64>( listProperty[previous].getOffset() ) ) );
+                {
+                    sw::StringBuilder<sw::constant::buffer::kMax256> violation;
+                    violation.appendFormat( "%# is not after %# @%#", where.view(), listProperty[previous]._name.c_str(), static_cast<uint64>( listProperty[previous].getOffset() ) );
+                    listViolation.push_back( sw::string( violation.view() ) );
+                }
                 break;
             }
             for ( size_t next = index + 1; next < listProperty.size(); ++next )
@@ -1358,8 +1361,11 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryBitFieldLiesBetweenItsNeighbours )
                 if ( isPlainProperty( listProperty[next] ) == false )
                     continue;
                 if ( bitField.getOffset() >= listProperty[next].getOffset() )
-                    listViolation.push_back( where + " is not before " + listProperty[next]._name.c_str() + " @" +
-                                             sw::to_string( static_cast<uint64>( listProperty[next].getOffset() ) ) );
+                {
+                    sw::StringBuilder<sw::constant::buffer::kMax256> violation;
+                    violation.appendFormat( "%# is not before %# @%#", where.view(), listProperty[next]._name.c_str(), static_cast<uint64>( listProperty[next].getOffset() ) );
+                    listViolation.push_back( sw::string( violation.view() ) );
+                }
                 break;
             }
         }
@@ -1368,7 +1374,8 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryBitFieldLiesBetweenItsNeighbours )
     sw::string report;
     for ( const sw::string& violation : listViolation )
     {
-        report += "\n  " + violation;
+        report += "\n  ";
+        report += violation;
     }
     SW_EXPECT_TRUE( bitFieldCount > 0 ); // 엔진 타입이 등록돼 있어야 이 검사가 무엇을 본다
     SW_EXPECT_TRUE_MSG( listViolation.empty(), report.c_str() );
@@ -1412,7 +1419,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DescribeTypeShowsTheRegisteredLayout )
     for ( const utf8* pExpected : { "TYPE sw::CameraComponent", "parents:", "sw::SceneComponent", "[sw::CameraComponent]", "PROPERTY _fovY : Radians",
                                     "@offset", "Min=5.7", "Max=179.9" } )
     {
-        SW_EXPECT_TRUE_MSG( camera.find( pExpected ) != sw::string::npos, ( sw::string( "missing: " ) + pExpected + "\n" + camera ).c_str() );
+        sw::StringBuilder<sw::constant::buffer::kMax4096> message;
+        message.appendFormat( "missing: %#\n%#", pExpected, camera );
+        SW_EXPECT_TRUE_MSG( camera.find( pExpected ) != sw::string::npos, message.c_str() );
     }
 
     const sw::string light = registry.describeType( sw::hashed_string( "sw::DirectionalLightComponent" ) );
@@ -1436,9 +1445,15 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryReflectedParentIsRegistered )
     registry.forEachType( [&registry, &report]( const sw::TypeInfo& typeInfo )
     {
         if ( typeInfo._parentFQN.empty() == false && registry.findType( typeInfo._parentFQN ) == nullptr )
-            report += sw::string( "\n  " ) + typeInfo._fullyQualifiedName.c_str() + " : " + typeInfo._parentFQN.c_str();
+        {
+            sw::StringBuilder<sw::constant::buffer::kMax256> line;
+            line.appendFormat( "\n  %# : %#", typeInfo._fullyQualifiedName.c_str(), typeInfo._parentFQN.c_str() );
+            report += line.view();
+        }
     } );
-    SW_EXPECT_TRUE_MSG( report.empty(), ( "unregistered parents:" + report ).c_str() );
+    sw::StringBuilder<sw::constant::buffer::kMax256> message;
+    message.appendFormat( "unregistered parents:%#", report );
+    SW_EXPECT_TRUE_MSG( report.empty(), message.c_str() );
 }
 
 /**
@@ -1607,18 +1622,24 @@ namespace
 
         sw::TypeInfo makeType( const utf8* pNamespace ) const
         {
-            sw::TypeInfo info;
-            info._name               = sw::hashed_string( ( "TwinType" + _suffix ).c_str() );
-            info._fullyQualifiedName = sw::hashed_string( ( sw::string( pNamespace ) + "::TwinType" + _suffix ).c_str() );
+            sw::TypeInfo                                    info;
+            sw::fixed_string<sw::constant::buffer::kMax128> name;
+            sw::formatstring( name.data(), name.capacity(), "TwinType%#", _suffix );
+            info._name = sw::hashed_string( name.c_str() );
+            sw::formatstring( name.data(), name.capacity(), "%#::TwinType%#", pNamespace, _suffix );
+            info._fullyQualifiedName = sw::hashed_string( name.c_str() );
             info._moduleName         = sw::hashed_string( "TestShortNameCollision" );
             return info;
         }
 
         sw::EnumInfo makeEnum( const utf8* pNamespace ) const
         {
-            sw::EnumInfo info;
-            info._name               = sw::hashed_string( ( "TwinEnum" + _suffix ).c_str() );
-            info._fullyQualifiedName = sw::hashed_string( ( sw::string( pNamespace ) + "::TwinEnum" + _suffix ).c_str() );
+            sw::EnumInfo                                    info;
+            sw::fixed_string<sw::constant::buffer::kMax128> name;
+            sw::formatstring( name.data(), name.capacity(), "TwinEnum%#", _suffix );
+            info._name = sw::hashed_string( name.c_str() );
+            sw::formatstring( name.data(), name.capacity(), "%#::TwinEnum%#", pNamespace, _suffix );
+            info._fullyQualifiedName = sw::hashed_string( name.c_str() );
             info._moduleName         = sw::hashed_string( "TestShortNameCollision" );
             info._size               = 1;
             return info;
@@ -1645,7 +1666,9 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ReregisteringTheSameTypeIsSilent )
     registry.registerClass( factory.makeType( "swtest::left" ) );
     registry.registerEnum( factory.makeEnum( "swtest::left" ) );
     registry.registerEnum( factory.makeEnum( "swtest::left" ) );
-    SW_EXPECT_NOT_NULL( registry.findType( sw::hashed_string( ( "TwinType" + factory._suffix ).c_str() ) ) );
+    sw::fixed_string<sw::constant::buffer::kMax128> twinName;
+    sw::formatstring( twinName.data(), twinName.capacity(), "TwinType%#", factory._suffix );
+    SW_EXPECT_NOT_NULL( registry.findType( sw::hashed_string( twinName.c_str() ) ) );
 }
 
 /**
@@ -1667,9 +1690,12 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ShortNameCollisionIsReported )
     registry.registerEnum( factory.makeEnum( "swtest::right" ) );
 
     // 동작은 그대로 — 나중 것이 이긴다.
-    const sw::TypeInfo* pByShortName = registry.findType( sw::hashed_string( ( "TwinType" + factory._suffix ).c_str() ) );
+    sw::fixed_string<sw::constant::buffer::kMax128> twinName;
+    sw::formatstring( twinName.data(), twinName.capacity(), "TwinType%#", factory._suffix );
+    const sw::TypeInfo* pByShortName = registry.findType( sw::hashed_string( twinName.c_str() ) );
     SW_REQUIRE_NOT_NULL( pByShortName );
-    SW_EXPECT_TRUE( pByShortName->_fullyQualifiedName == sw::hashed_string( ( "swtest::right::TwinType" + factory._suffix ).c_str() ) );
+    sw::formatstring( twinName.data(), twinName.capacity(), "swtest::right::TwinType%#", factory._suffix );
+    SW_EXPECT_TRUE( pByShortName->_fullyQualifiedName == sw::hashed_string( twinName.c_str() ) );
 }
 
 namespace

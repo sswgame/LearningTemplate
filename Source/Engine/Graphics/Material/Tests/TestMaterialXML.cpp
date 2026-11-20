@@ -20,8 +20,10 @@ namespace
 {
     bool findProperty( const sw::string& relativePath, const utf8* pName, sw::MaterialProperty& outProp )
     {
-        sw::string text;
-        if ( sw::FileUtil::readTextFile( sw::ProcessRoots::get()._project.str() + "/" + relativePath, text ) == false )
+        sw::string                                       text;
+        sw::StringBuilder<sw::constant::buffer::kMax256> path;
+        path.appendFormat( "%#/%#", sw::ProcessRoots::get()._project.str(), relativePath );
+        if ( sw::FileUtil::readTextFile( path.view(), text ) == false )
             return false;
         sw::XMLDocument doc;
         if ( doc.parse( text ) == false )
@@ -90,16 +92,17 @@ SW_TEST_CASE( MaterialXMLTest, ShaderTypeIsNotAFileField )
  */
 SW_TEST_CASE( MaterialXMLTest, AssetFormatAcceptsCurrentMaterialXML )
 {
-    const sw::string shaderPath = sw::engine::getSubsystem<sw::EngineDefaultAssets>()._shaderForwardLit.get();
-    const sw::string current    = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDef formatVersion="0" name="CurrentMat" shaderPath=")" +
-                               shaderPath +
-                               R"(" surfaceModel="Lit" alphaMode="Opaque">
+    const sw::string                                 shaderPath = sw::engine::getSubsystem<sw::EngineDefaultAssets>()._shaderForwardLit.get();
+    sw::StringBuilder<sw::constant::buffer::kMax512> currentBuilder;
+    currentBuilder.appendFormat( R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialDef formatVersion="0" name="CurrentMat" shaderPath="%#" surfaceModel="Lit" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1 0 0 1"/>
 	</_properties>
 </MaterialDef>
-)";
+)",
+                                 shaderPath );
+    const sw::string_view current = currentBuilder.view();
 
     sw::XMLDocument doc;
     SW_REQUIRE_TRUE( doc.parse( current ) );
@@ -141,16 +144,16 @@ SW_TEST_CASE( MaterialXMLTest, ChildInheritsParentAndOverridesOnlyWrittenValues 
 {
     const sw::test::ScopedScratchDomain domain;
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "parent.material" ), kParentMaterial ) );
-    const sw::string child = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDef formatVersion="0" name="ChildMat" _base=")" +
-                             sw::test::ScopedScratchDomain::makeID( "parent.material" ).str() +
-                             R"(">
+    sw::StringBuilder<sw::constant::buffer::kMax512> child;
+    child.appendFormat( R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialDef formatVersion="0" name="ChildMat" _base="%#">
 	<_properties>
 		<item name="_color" defaultValue="0.2 0.4 0.6 1" />
 	</_properties>
 </MaterialDef>
-)";
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "child.material" ), child ) );
+)",
+                        sw::test::ScopedScratchDomain::makeID( "parent.material" ).str() );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "child.material" ), child.view() ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_REQUIRE_TRUE( material->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "child.material" ) ) );
@@ -183,17 +186,22 @@ SW_TEST_CASE( MaterialXMLTest, ChildInheritsParentAndOverridesOnlyWrittenValues 
  */
 SW_TEST_CASE( MaterialXMLTest, MissingOrCyclicParentFailsToLoad )
 {
-    const sw::test::ScopedScratchDomain domain;
-    const sw::string                    idA = sw::test::ScopedScratchDomain::makeID( "a.material" ).str();
-    const sw::string                    idB = sw::test::ScopedScratchDomain::makeID( "b.material" ).str();
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "a.material" ), "<MaterialDef formatVersion=\"0\" name=\"A\" _base=\"" + idB + "\"/>" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "b.material" ), "<MaterialDef formatVersion=\"0\" name=\"B\" _base=\"" + idA + "\"/>" ) );
+    const sw::test::ScopedScratchDomain              domain;
+    const sw::string                                 idA = sw::test::ScopedScratchDomain::makeID( "a.material" ).str();
+    const sw::string                                 idB = sw::test::ScopedScratchDomain::makeID( "b.material" ).str();
+    sw::StringBuilder<sw::constant::buffer::kMax256> xml;
+    xml.appendFormat( "<MaterialDef formatVersion=\"0\" name=\"A\" _base=\"%#\"/>", idB );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "a.material" ), xml.view() ) );
+    xml.clear();
+    xml.appendFormat( "<MaterialDef formatVersion=\"0\" name=\"B\" _base=\"%#\"/>", idA );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "b.material" ), xml.view() ) );
     sw::shared_ptr<sw::Material> cyclic = sw::Material::create();
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
     SW_EXPECT_FALSE( cyclic->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "a.material" ) ) );
 
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "orphan.material" ),
-                                                  "<MaterialDef formatVersion=\"0\" name=\"Orphan\" _base=\"" + sw::test::ScopedScratchDomain::makeID( "missing.material" ).str() + "\"/>" ) );
+    xml.clear();
+    xml.appendFormat( "<MaterialDef formatVersion=\"0\" name=\"Orphan\" _base=\"%#\"/>", sw::test::ScopedScratchDomain::makeID( "missing.material" ).str() );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "orphan.material" ), xml.view() ) );
     sw::shared_ptr<sw::Material> orphan = sw::Material::create();
     SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
     SW_EXPECT_FALSE( orphan->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "orphan.material" ) ) );
@@ -221,9 +229,11 @@ SW_TEST_CASE( MaterialXMLTest, AssetFormatRejectsLegacyMaterialXML )
  */
 SW_TEST_CASE( MaterialXMLTest, RuntimeSwitchVariantsMatchSetStaticSwitch )
 {
-    const sw::shared_ptr<sw::Material> pMaterial = sw::Material::create();
-    sw::Material&                      material  = *pMaterial;
-    SW_REQUIRE_TRUE( material.loadFromDiskFile( sw::ProcessRoots::get()._project.str() + "/Content/engine/materials/toon.material" ) );
+    const sw::shared_ptr<sw::Material>               pMaterial = sw::Material::create();
+    sw::Material&                                    material  = *pMaterial;
+    sw::StringBuilder<sw::constant::buffer::kMax256> toonPath;
+    toonPath.appendFormat( "%#/Content/engine/materials/toon.material", sw::ProcessRoots::get()._project.str() );
+    SW_REQUIRE_TRUE( material.loadFromDiskFile( toonPath.view() ) );
     sw::vector<sw::vector<sw::string>> listDefine;
     sw::vector<uint64>                 listHash;
     material.collectRuntimeSwitchVariants( listDefine, listHash );
@@ -244,9 +254,11 @@ SW_TEST_CASE( MaterialXMLTest, RuntimeSwitchVariantsMatchSetStaticSwitch )
  */
 SW_TEST_CASE( MaterialXMLTest, SetStaticSwitchRejectsUndeclaredSwitch )
 {
-    const sw::shared_ptr<sw::Material> pMaterial = sw::Material::create();
-    sw::Material&                      material  = *pMaterial;
-    SW_REQUIRE_TRUE( material.loadFromDiskFile( sw::ProcessRoots::get()._project.str() + "/Content/engine/materials/toon.material" ) );
+    const sw::shared_ptr<sw::Material>               pMaterial = sw::Material::create();
+    sw::Material&                                    material  = *pMaterial;
+    sw::StringBuilder<sw::constant::buffer::kMax256> toonPath;
+    toonPath.appendFormat( "%#/Content/engine/materials/toon.material", sw::ProcessRoots::get()._project.str() );
+    SW_REQUIRE_TRUE( material.loadFromDiskFile( toonPath.view() ) );
     const uint64 assetHash = material.getPermutationHash();
     SW_EXPECT_LOG( "Material.StaticSwitchUnknown" );
     SW_EXPECT_FALSE( material.setStaticSwitch( sw::hashed_string( "NoSuchSwitch" ), true ) );

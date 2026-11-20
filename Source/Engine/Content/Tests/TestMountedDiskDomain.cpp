@@ -44,11 +44,15 @@ namespace
  */
 SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFolders )
 {
-    const ScopedScratchDomain domain;
-    const AssetPaths&         paths     = engine::getSubsystem<AssetPaths>();
-    const string              directory = domain.getFolder();
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( directory + "/Saved/Automation" ) );
-    const string diskFile = directory + "/Saved/Automation/Out.txt";
+    const ScopedScratchDomain                domain;
+    const AssetPaths&                        paths     = engine::getSubsystem<AssetPaths>();
+    const string                             directory = domain.getFolder();
+    StringBuilder<constant::buffer::kMax512> automationFolder;
+    automationFolder.appendFormat( "%#/Saved/Automation", directory );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( automationFolder.view() ) );
+    StringBuilder<constant::buffer::kMax512> diskFileBuilder;
+    diskFileBuilder.appendFormat( "%#/Saved/Automation/Out.txt", directory );
+    const string diskFile = string( diskFileBuilder.view() );
     const string diskID   = ScopedScratchDomain::toID( diskFile ).str();
     SW_REQUIRE_TRUE( diskID.empty() == false );
 
@@ -57,12 +61,16 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
     const optional<AbsolutePath> writePath = paths.toDiskPath( lowerID );
     SW_REQUIRE_TRUE( writePath.has_value() );
     // 기대 경로는 대소문자를 구분하는 표기로 적는다 — isSameDiskPath 는 Linux 에서 정확히 같아야, Windows 에서는 같은 파일이면 참이다.
-    SW_EXPECT_TRUE( FileUtil::isSameDiskPath( directory + "/Saved/Automation/out.txt", writePath->str() ) );
+    StringBuilder<constant::buffer::kMax512> expectedWritePath;
+    expectedWritePath.appendFormat( "%#/Saved/Automation/out.txt", directory );
+    SW_EXPECT_TRUE( FileUtil::isSameDiskPath( expectedWritePath.view(), writePath->str() ) );
 
     // 없는 폴더부터는 id 의 표기를 쓴다 — 리소스 id 는 소문자로 접히므로(`normalizeAssetID`) 새 성분은 소문자다. Windows 는 대소문자를 가리지 않아 같은 폴더다.
     const optional<AbsolutePath> freshPath = paths.toDiskPath( ScopedScratchDomain::makeID( "Saved/Fresh/Deep/New.txt" ).str() );
     SW_REQUIRE_TRUE( freshPath.has_value() );
-    SW_EXPECT_TRUE( FileUtil::isSameDiskPath( directory + "/Saved/fresh/deep/new.txt", freshPath->str() ) );
+    StringBuilder<constant::buffer::kMax512> expectedFreshPath;
+    expectedFreshPath.appendFormat( "%#/Saved/fresh/deep/new.txt", directory );
+    SW_EXPECT_TRUE( FileUtil::isSameDiskPath( expectedFreshPath.view(), freshPath->str() ) );
 
     // 쓴 뒤에는 같은 id 를 대소문자만 다르게 물어도 같은 파일이다(둘째 쓰기가 옆 폴더를 만들지 않는다).
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( writePath->str(), "first" ) );

@@ -46,13 +46,22 @@ namespace sw
     void PhysicsNameValidation::validateLayer( ValidationContext& context, const utf8* pFieldName, const hashed_string& name )
     {
         if ( name.empty() == false && PhysicsNameValidationInternal::getSettings().findLayerIndex( name ).has_value() == false )
-            context.addError( string( pFieldName ) + " names '" + name.c_str() + "', which is not in the physics layers (physicssettings.xml) - layer 0 is used" );
+        {
+            fixed_string<constant::buffer::kMax512> message;
+            formatstring( message.data(), message.capacity(), "%# names '%#', which is not in the physics layers (physicssettings.xml) - layer 0 is used", pFieldName, name.c_str() );
+            context.addError( message );
+        }
     }
 
     void PhysicsNameValidation::validateMaterial( ValidationContext& context, const utf8* pFieldName, const hashed_string& name )
     {
         if ( name.empty() == false && PhysicsNameValidationInternal::getSettings().findMaterial( name ) == nullptr )
-            context.addError( string( pFieldName ) + " names '" + name.c_str() + "', which is not in the physics materials (physicssettings.xml) - the first material is used" );
+        {
+            fixed_string<constant::buffer::kMax512> message;
+            formatstring( message.data(), message.capacity(), "%# names '%#', which is not in the physics materials (physicssettings.xml) - the first material is used", pFieldName,
+                          name.c_str() );
+            context.addError( message );
+        }
     }
 
     void PhysicsNameValidation::collectProfileNames( vector<hashed_string>& outListName )

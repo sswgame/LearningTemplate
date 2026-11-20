@@ -1182,10 +1182,9 @@ namespace sw
 
     string TextureCache::makeUniqueCPUTexturePath( string_view stem )
     {
-        string path{ kCPUTexturePrefix };
-        path += stem;
-        path += to_string( _cpuTextureSerial.fetch_add( 1u, std::memory_order_relaxed ) );
-        return path;
+        StringBuilder<constant::buffer::kMax256> path;
+        path.appendFormat( "%#%#%#", kCPUTexturePrefix, stem, _cpuTextureSerial.fetch_add( 1u, std::memory_order_relaxed ) );
+        return string( path.view() );
     }
 
     bool TextureCache::createCPUTexture( string_view relativePath, uint32 width, uint32 height, vector<uint8> rgbaBytes )
@@ -1613,7 +1612,9 @@ namespace sw
             const expected<uint64> bytesRead = readHeadAndTail();
             if ( bytesRead.has_value() == false )
             {
-                _loadError = string{ bytesRead.error().message() } + " - " + string{ bytesRead.error().detail() };
+                StringBuilder<constant::buffer::kMax256> loadError;
+                loadError.appendFormat( "%# - %#", bytesRead.error().message(), bytesRead.error().detail() );
+                _loadError = loadError.view();
                 return {};
             }
             loadScope.setBytes( bytesRead.value() );

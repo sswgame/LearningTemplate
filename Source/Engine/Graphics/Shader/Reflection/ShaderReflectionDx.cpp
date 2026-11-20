@@ -85,7 +85,9 @@ namespace sw
                 {
                     if ( columns <= 1 )
                         return string( pBase );
-                    return string( pBase ) + to_string( columns );
+                    StringBuilder<constant::buffer::kMax64> resultBuilder;
+                    resultBuilder.appendFormat( "%#%#", pBase, columns );
+                    return string( resultBuilder.view() );
                 }
                 return string( pBase );
             }

@@ -108,10 +108,12 @@ namespace sw
             if ( it != _mapRemoteStat.end() )
                 return it->second;
         }
-        RemoteStat    stat{};
-        vector<uint8> body;
-        bool          bMissing = false;
-        if ( fetch( _baseURL + "/stat?path=" + encodeQueryValue( relative ), body, bMissing ) )
+        RemoteStat                               stat{};
+        vector<uint8>                            body;
+        bool                                     bMissing = false;
+        StringBuilder<constant::buffer::kMax512> url;
+        url.appendFormat( "%#/stat?path=%#", _baseURL, encodeQueryValue( relative ) );
+        if ( fetch( string( url.view() ), body, bMissing ) )
         {
             const vector<string_view> listToken = StringUtil::split( StringUtil::trim( FileServeContentSourceInternal::toText( body ) ), " " );
             if ( listToken.size() == 1 && listToken[0] == "folder" )
@@ -135,13 +137,11 @@ namespace sw
         vector<uint8> chunk;
         for ( uint64 offset = 0; offset < sizeBytes; offset += kChunkBytes )
         {
-            const uint64 size     = sizeBytes - offset < kChunkBytes ? sizeBytes - offset : kChunkBytes;
-            bool         bMissing = false;
-            string       url      = _baseURL + "/file?path=" + encodeQueryValue( relative ) + "&offset=";
-            StringUtil::appendNumber( url, offset );
-            url += "&size=";
-            StringUtil::appendNumber( url, size );
-            if ( fetch( url, chunk, bMissing ) == false || chunk.size() != size || writer.append( chunk.data(), chunk.size() ).has_value() == false )
+            const uint64                             size     = sizeBytes - offset < kChunkBytes ? sizeBytes - offset : kChunkBytes;
+            bool                                     bMissing = false;
+            StringBuilder<constant::buffer::kMax512> url;
+            url.appendFormat( "%#/file?path=%#&offset=%#&size=%#", _baseURL, encodeQueryValue( relative ), offset, size );
+            if ( fetch( string( url.view() ), chunk, bMissing ) == false || chunk.size() != size || writer.append( chunk.data(), chunk.size() ).has_value() == false )
                 return false; // writer 가 소멸하며 임시 파일을 지운다 — 반쯤 받은 거울은 남지 않는다
             _receivedChunkCount.fetch_add( 1 );
         }
@@ -166,8 +166,11 @@ namespace sw
         if ( stat._kind != RemoteKind::File )
             return false;
         // shortcut: 같은 파일을 두 스레드가 처음 함께 열면 둘 다 받는다(원자 교체라 결과는 같다) — 받는 중 표를 두는 것은 겹침이 측정에 보일 때.
-        const string mirrorPath = _mirrorRoot + "/" + relative;
-        const string stampPath  = mirrorPath + kStampExtension;
+        StringBuilder<constant::buffer::kMax512> pathBuilder;
+        pathBuilder.appendFormat( "%#/%#", _mirrorRoot, relative );
+        const string mirrorPath( pathBuilder.view() );
+        pathBuilder.append( kStampExtension );
+        const string stampPath{ pathBuilder.view() };
         string       stampText;
         StringUtil::appendNumber( stampText, stat._sizeBytes );
         stampText += " ";
@@ -214,9 +217,11 @@ namespace sw
         string relative;
         if ( tryMapToRelative( folder, relative ) == false )
             return false;
-        vector<uint8> body;
-        bool          bMissing = false;
-        if ( fetch( _baseURL + "/list?path=" + encodeQueryValue( relative ), body, bMissing ) == false )
+        vector<uint8>                            body;
+        bool                                     bMissing = false;
+        StringBuilder<constant::buffer::kMax512> url;
+        url.appendFormat( "%#/list?path=%#", _baseURL, encodeQueryValue( relative ) );
+        if ( fetch( string( url.view() ), body, bMissing ) == false )
             return false;
         const string              folderKey = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folder ) );
         const vector<string_view> listName  = StringUtil::split( FileServeContentSourceInternal::toText( body ), "\n" );
@@ -230,7 +235,9 @@ namespace sw
                 SW_LOG_WARNING_ID( "FileServe.BadListName", "Fileserve listed '%#' under '%#' - the listing is refused", name, folderKey );
                 return false;
             }
-            listPath.push_back( folderKey + "/" + string( name ) );
+            StringBuilder<constant::buffer::kMax512> path;
+            path.appendFormat( "%#/%#", folderKey, name );
+            listPath.emplace_back( path.view() );
         }
         outListPath.insert( outListPath.end(), listPath.begin(), listPath.end() );
         return true;
@@ -253,7 +260,11 @@ namespace sw
         // shortcut: 처음 받는 파일은 부른 스레드에서 받는다(개발 전용 — 팩은 기동 때 대부분 열린다). 막는 시간이 보이면 받기를 AsyncFileIO 워커로 옮긴다.
         string mirrorPath;
         if ( ensureMirrored( path, mirrorPath ) == false )
-            mirrorPath = _mirrorRoot + "/.fileserve-missing"; // 디스크 소스가 없는 파일로 끝낸다 — 완료 콜백은 늘 한 번 온다
+        {
+            StringBuilder<constant::buffer::kMax512> missingPath;
+            missingPath.appendFormat( "%#/.fileserve-missing", _mirrorRoot ); // 디스크 소스가 없는 파일로 끝낸다 — 완료 콜백은 늘 한 번 온다
+            mirrorPath.assign( missingPath.view() );
+        }
         return _disk.readFileAsync( io, mirrorPath, priority, onComplete );
     }
 
@@ -262,7 +273,11 @@ namespace sw
     {
         string mirrorPath;
         if ( ensureMirrored( path, mirrorPath ) == false )
-            mirrorPath = _mirrorRoot + "/.fileserve-missing";
+        {
+            StringBuilder<constant::buffer::kMax512> missingPath;
+            missingPath.appendFormat( "%#/.fileserve-missing", _mirrorRoot );
+            mirrorPath.assign( missingPath.view() );
+        }
         return _disk.readRangeAsync( io, mirrorPath, offset, size, priority, onComplete );
     }
 } // namespace sw

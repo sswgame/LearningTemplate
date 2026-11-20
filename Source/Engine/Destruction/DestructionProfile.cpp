@@ -123,7 +123,11 @@ namespace sw
                 {
                     float32 value = 0.0f;
                     if ( StringUtil::parseFloat( token, value ) == false || value <= 0.0f )
-                        reader.addError( "Destruction.ThresholdInvalid", child, string( "threshold '" ) + string( token ) + "' is not a positive number" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "threshold '%#' is not a positive number", token );
+                        reader.addError( "Destruction.ThresholdInvalid", child, message );
+                    }
                     else
                         _listStrainThreshold.push_back( value );
                 }

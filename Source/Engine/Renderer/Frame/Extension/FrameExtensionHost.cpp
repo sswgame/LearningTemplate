@@ -130,7 +130,9 @@ namespace sw
             const ExtensionPassParams&         params = entry._params;
             auto                               fail   = [&]( const char* pReason )
             {
-                logFailureOnce( string( "pass:" ) + params._name + ":" + pReason, pReason, params._name );
+                StringBuilder<constant::buffer::kMax256> failureKey;
+                failureKey.appendFormat( "pass:%#:%#", params._name, pReason );
+                logFailureOnce( failureKey.view(), pReason, params._name );
             };
             if ( params._name.empty() )
             {
@@ -186,8 +188,10 @@ namespace sw
                 pass._pso = _psoManager.getOrCreateExtensionProgramPSO( params._program, accepted._colorFormat, params._depthAttachment.empty() == false );
                 if ( pass._pso == 0 )
                 {
-                    const char* const pReason = "pass program PSO could not be created";
-                    logFailureOnce( string( "pass:" ) + params._name + ":" + pReason, pReason, params._name );
+                    const char* const                        pReason = "pass program PSO could not be created";
+                    StringBuilder<constant::buffer::kMax256> failureKey;
+                    failureKey.appendFormat( "pass:%#:%#", params._name, pReason );
+                    logFailureOnce( failureKey.view(), pReason, params._name );
                     continue;
                 }
             }
@@ -262,8 +266,10 @@ namespace sw
     {
         // 차례는 예전 검사와 같다 — 첫 어긋남이 이유다. 이름 · 중복 · 실행 콜백은 부르는 쪽이 본다(다른 패스 · 이번 프레임 콜백에 기댄다).
         PassDeclarationCheck check{};
-        check._params          = params;
-        check._graphName       = hashed_string( ( string( "Extension." ) + params._name ).c_str() );
+        check._params = params;
+        StringBuilder<constant::buffer::kMax256> graphName;
+        graphName.appendFormat( "Extension.%#", params._name );
+        check._graphName       = hashed_string( graphName.c_str() );
         check._declarationHash = HashUtil::combine( HashUtil::combine( uint64{ 0 }, check._graphName.getHash() ), static_cast<uint64>( params._stage ) );
         for ( const ExtensionPassRead& read : params._listRead )
         {
@@ -378,7 +384,9 @@ namespace sw
             _mapMeshLoad.erase( loadIt );
             if ( pMesh == nullptr )
             {
-                logFailureOnce( string( "mesh:" ) + string( meshID.view() ), "draw element mesh could not be loaded - the element is not drawn", meshID.view() );
+                StringBuilder<constant::buffer::kMax256> failureKey;
+                failureKey.appendFormat( "mesh:%#", meshID.view() );
+                logFailureOnce( failureKey.view(), "draw element mesh could not be loaded - the element is not drawn", meshID.view() );
                 return nullptr;
             }
             _mapMesh.insert_or_assign( meshID, pMesh );
@@ -389,14 +397,18 @@ namespace sw
             pMesh = MeshUtil::acquirePrimitive( meshID.view() );
             if ( pMesh == nullptr )
             {
-                logFailureOnce( string( "mesh:" ) + string( meshID.view() ), "draw element mesh could not be loaded - the element is not drawn", meshID.view() );
+                StringBuilder<constant::buffer::kMax256> failureKey;
+                failureKey.appendFormat( "mesh:%#", meshID.view() );
+                logFailureOnce( failureKey.view(), "draw element mesh could not be loaded - the element is not drawn", meshID.view() );
                 return nullptr;
             }
             _mapMesh.insert_or_assign( meshID, pMesh );
         }
         if ( pMesh->getRenderData().initRHI( _pDevice ) == false )
         {
-            logFailureOnce( string( "meshgpu:" ) + string( meshID.view() ), "draw element mesh could not be uploaded - the element is not drawn", meshID.view() );
+            StringBuilder<constant::buffer::kMax256> failureKey;
+            failureKey.appendFormat( "meshgpu:%#", meshID.view() );
+            logFailureOnce( failureKey.view(), "draw element mesh could not be uploaded - the element is not drawn", meshID.view() );
             return nullptr;
         }
         return pMesh.get();

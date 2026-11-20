@@ -15,20 +15,23 @@ using namespace sw;
 // 다른 게임의 씬은 그 게임의 키트 컴포넌트를 쓰므로 그 게임이 활성일 때 본다(ScenarioFilesTest 와 같은 범위).
 SW_TEST_CASE( ContentScenesTest, EngineAndActiveGameScenesLoad )
 {
-    const string& contentRoot  = engine::getSubsystem<AssetPaths>().getRootFolderPath();
-    const string  listFolder[] = { FileUtil::joinPath( contentRoot, "engine" ),
-                                   FileUtil::joinPath( contentRoot, "game/" + StringUtil::toLower( GameSelection::getName().c_str() ) ) };
-    uint32        sceneCount   = 0;
+    const string&                           contentRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
+    fixed_string<constant::buffer::kMax256> gameFolder;
+    formatstring( gameFolder.data(), gameFolder.capacity(), "game/%#", StringUtil::toLower( GameSelection::getName().c_str() ) );
+    const string listFolder[] = { FileUtil::joinPath( contentRoot, "engine" ), FileUtil::joinPath( contentRoot, gameFolder ) };
+    uint32       sceneCount   = 0;
     for ( const string& folder : listFolder )
     {
         vector<string> listPath;
         SW_EXPECT_TRUE( FileUtil::collectFiles( folder, ".scene.xml", listPath, true ) );
         for ( const string& path : listPath )
         {
-            SceneDocument document;
-            const bool    bLoaded = document.loadXMLFromDiskFile( path );
-            const string  failure = bLoaded ? string() : string( path + ": could not be loaded (see the log)" );
-            SW_EXPECT_EQUAL( string(), failure );
+            SceneDocument                            document;
+            const bool                               bLoaded = document.loadXMLFromDiskFile( path );
+            StringBuilder<constant::buffer::kMax512> failure;
+            if ( bLoaded == false )
+                failure.appendFormat( "%#: could not be loaded (see the log)", path );
+            SW_EXPECT_EQUAL( string(), string( failure.view() ) );
             ++sceneCount;
         }
     }

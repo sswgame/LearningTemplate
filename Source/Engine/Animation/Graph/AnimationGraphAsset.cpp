@@ -497,9 +497,10 @@ namespace sw
                 continue;
             }
             AnimationBoneMaskDef mask{};
-            mask._name           = params._name;
-            const string context = string( "Animation graph bone mask '" ) + mask._name.c_str() + "'";
-            const bool   bLoaded = bFromFile ? mask.loadFromAsset( AssetID{ params._file } ) : mask.parseObject( maskXML, context );
+            mask._name = params._name;
+            fixed_string<constant::buffer::kMax256> context;
+            formatstring( context.data(), context.capacity(), "Animation graph bone mask '%#'", mask._name.c_str() );
+            const bool bLoaded = bFromFile ? mask.loadFromAsset( AssetID{ params._file } ) : mask.parseObject( maskXML, context );
             if ( bLoaded == false )
             {
                 bValid = false;

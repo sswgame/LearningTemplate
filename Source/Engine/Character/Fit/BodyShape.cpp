@@ -55,7 +55,9 @@ namespace sw
                 if ( bUnknownMorphName )
                 {
                     bValid = false;
-                    outIssues.add( "BodyShape.AxisMorphUnknown", string( "body shape axis '" ) + axis._name.c_str() + "' names unknown morph '" + side._morph.c_str() + "'" );
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "body shape axis '%#' names unknown morph '%#'", axis._name.c_str(), side._morph.c_str() );
+                    outIssues.add( "BodyShape.AxisMorphUnknown", string( builder.view() ) );
                 }
                 if ( pBones == nullptr )
                     return bValid;
@@ -64,7 +66,9 @@ namespace sw
                     if ( pBones->findBone( entry._bone ).has_value() )
                         continue;
                     bValid = false;
-                    outIssues.add( "BodyShape.AxisBoneUnknown", string( "body shape axis '" ) + axis._name.c_str() + "' names unknown bone '" + entry._bone.c_str() + "'" );
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "body shape axis '%#' names unknown bone '%#'", axis._name.c_str(), entry._bone.c_str() );
+                    outIssues.add( "BodyShape.AxisBoneUnknown", string( builder.view() ) );
                 }
                 return bValid;
             }
@@ -228,7 +232,9 @@ namespace sw
                 continue;
             if ( findAxis( axis._name ) != nullptr )
             {
-                reader.addError( "Character.BodyAxisRepeated", axisNode, string( "repeats axis '" ) + axis._name.c_str() + "'" );
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "repeats axis '%#'", axis._name.c_str() );
+                reader.addError( "Character.BodyAxisRepeated", axisNode, message );
                 continue;
             }
             _listAxis.push_back( std::move( axis ) );
@@ -236,10 +242,18 @@ namespace sw
         for ( const hashed_string& unsupported : _listUnsupported )
         {
             if ( findAxis( unsupported ) != nullptr )
-                reader.addError( "Character.BodyUnsupportedInvalid", root, string( "declares mapped axis '" ) + unsupported.c_str() + "' as unsupported" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "declares mapped axis '%#' as unsupported", unsupported.c_str() );
+                reader.addError( "Character.BodyUnsupportedInvalid", root, message );
+            }
         }
         if ( _params._footLiftAxis.empty() == false && findAxis( _params._footLiftAxis ) == nullptr )
-            reader.addError( "Character.BodyFootLiftAxisUnknown", root, string( "footLiftAxis names unknown axis '" ) + _params._footLiftAxis.c_str() + "'" );
+        {
+            fixed_string<constant::buffer::kMax256> message;
+            formatstring( message.data(), message.capacity(), "footLiftAxis names unknown axis '%#'", _params._footLiftAxis.c_str() );
+            reader.addError( "Character.BodyFootLiftAxisUnknown", root, message );
+        }
     }
 
     void BodyShapeSet::readSide( const XMLNode& node, BodyShapeAxisSide& outSide, CharacterDataReader& reader )
@@ -286,7 +300,9 @@ namespace sw
             if ( findAxis( value._axis ) != nullptr || isUnsupported( value._axis ) )
                 continue;
             bValid = false;
-            outIssues.add( "BodyShape.AxisUnknown", string( "unknown body shape axis '" ) + value._axis.c_str() + "'" );
+            StringBuilder<constant::buffer::kMax256> builder;
+            builder.appendFormat( "unknown body shape axis '%#'", value._axis.c_str() );
+            outIssues.add( "BodyShape.AxisUnknown", string( builder.view() ) );
         }
         for ( const BodyShapeAxis& axis : _listAxis )
         {

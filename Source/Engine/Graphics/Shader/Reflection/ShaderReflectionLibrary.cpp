@@ -252,11 +252,13 @@ namespace sw
 
     bool ShaderReflectionLibrary::loadManifest( string_view binDirectoryRelative, EntryMap& outMapEntry )
     {
-        const ScopedMemoryTag memoryScope{ kMemoryTag };
-        string                manifestRelative( binDirectoryRelative );
-        if ( manifestRelative.empty() == false && manifestRelative.back() != '/' )
-            manifestRelative += '/';
-        return readManifestInternal( AssetID{ manifestRelative + getManifestFileName() }, outMapEntry );
+        const ScopedMemoryTag                    memoryScope{ kMemoryTag };
+        StringBuilder<constant::buffer::kMax256> manifestRelative;
+        manifestRelative.append( binDirectoryRelative );
+        if ( binDirectoryRelative.empty() == false && binDirectoryRelative.back() != '/' )
+            manifestRelative.append( '/' );
+        manifestRelative.append( getManifestFileName() );
+        return readManifestInternal( AssetID{ manifestRelative.view() }, outMapEntry );
     }
 
     bool ShaderReflectionLibrary::loadManifestFile( string_view absManifestPath, EntryMap& outMapEntry )
@@ -279,7 +281,8 @@ namespace sw
             SW_LOG_ERROR_ID( "ShaderReflectionLibrary.ShaderSourceNotInside", "Shader source is not inside a domain 'shaders' folder: '%#'", desc._source.c_str() );
             return false;
         }
-        const string binDirRel = location->_binDirectory + "/";
+        string binDirRel = location->_binDirectory;
+        binDirRel += '/';
 
         // 키는 쿠커가 만든 바이너리 파일 이름 그대로다. 진입점과 퍼뮤테이션 해시가 반영된다.
         const uint64 permutationHash = ShaderCooker::computePermutationHash( desc._listDefine );
@@ -295,8 +298,10 @@ namespace sw
         if ( manifestIter == mapManifest.end() )
         {
             // 없거나 망가진 파일도 빈 채로 캐시한다 — 매번 다시 열지 않는다.
-            EntryMap loaded;
-            if ( readManifestInternal( AssetID{ binDirRel + getManifestFileName() }, loaded ) == false )
+            EntryMap                                 loaded;
+            StringBuilder<constant::buffer::kMax256> manifestRelative;
+            manifestRelative.appendFormat( "%#%#", binDirRel, getManifestFileName() );
+            if ( readManifestInternal( AssetID{ manifestRelative.view() }, loaded ) == false )
                 loaded.clear();
             manifestIter = mapManifest.emplace( binDirRel, std::move( loaded ) ).first;
         }

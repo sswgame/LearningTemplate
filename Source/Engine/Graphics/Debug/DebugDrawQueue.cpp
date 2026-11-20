@@ -68,7 +68,9 @@ namespace sw
             if ( StringUtil::tryParseBool( listArgument[1], bOn ) == false )
                 return false;
             queue.setCategoryEnabled( hashed_string( listArgument[0] ), bOn );
-            outReply = listArgument[0] + ( bOn ? " on" : " off" );
+            StringBuilder<constant::buffer::kMax256> builder;
+            builder.appendFormat( "%# %#", listArgument[0], bOn ? "on" : "off" );
+            outReply = builder.view();
             return true;
         }
     } // namespace

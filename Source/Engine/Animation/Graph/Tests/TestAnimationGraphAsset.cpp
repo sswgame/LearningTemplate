@@ -39,8 +39,10 @@ namespace
         static bool parseChild( sw::AnimationGraphAsset& outGraph, const sw::test::ScopedScratchDomain& domain, const utf8* pChildBody )
         {
             SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "base.animgraph.xml" ), sw::string{ kBaseGraph } ) );
-            const sw::string baseID = sw::test::ScopedScratchDomain::makeID( "base.animgraph.xml" ).str();
-            return outGraph.loadFromXMLText( "<AnimationGraphAsset _base=\"" + baseID + "\">" + pChildBody + "</AnimationGraphAsset>" );
+            const sw::string                                 baseID = sw::test::ScopedScratchDomain::makeID( "base.animgraph.xml" ).str();
+            sw::StringBuilder<sw::constant::buffer::kMax256> xml;
+            xml.appendFormat( "<AnimationGraphAsset _base=\"%#\">%#</AnimationGraphAsset>", baseID, pChildBody );
+            return outGraph.loadFromXMLText( xml.view() );
         }
     };
 } // namespace

@@ -55,9 +55,10 @@ namespace
     /** @brief 노드 한 줄을 리그로 읽습니다(대상 `Grip` 은 늘 있다). */
     bool loadNodeFromXML( const utf8* pNodeLine )
     {
-        RigAsset     asset;
-        const string xml = string( R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes>)" ) + pNodeLine + "</nodes></RigAsset>";
-        return asset.loadFromXMLText( xml, "bad.rig.xml" );
+        RigAsset                                 asset;
+        StringBuilder<constant::buffer::kMax256> xml;
+        xml.appendFormat( R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes>%#</nodes></RigAsset>)", pNodeLine );
+        return asset.loadFromXMLText( xml.view(), "bad.rig.xml" );
     }
 } // namespace
 
@@ -143,11 +144,11 @@ SW_TEST_CASE( RigAssetTest, ChildMergesNodesByName )
         <item type="Position" name="Follow" bone="weapon" target="Grip" />
         <item type="Position" name="Extra" bone="extra" target="Grip" />
     </nodes></RigAsset>)" ) );
-    const string baseID = test::ScopedScratchDomain::makeID( "base.rig.xml" ).str();
-    RigAsset     asset;
-    SW_REQUIRE_TRUE( asset.loadFromXMLText( "<RigAsset _base=\"" + baseID + "\"><nodes><item name=\"Arm\" weight=\"0.25\" /><item name=\"Extra\" _op=\"Remove\" />"
-                                                                            "<item type=\"Position\" name=\"First\" bone=\"first\" target=\"Grip\" _before=\"Arm\" /></nodes></RigAsset>",
-                                            "child.rig.xml" ) );
+    const string                             baseID = test::ScopedScratchDomain::makeID( "base.rig.xml" ).str();
+    RigAsset                                 asset;
+    StringBuilder<constant::buffer::kMax256> xml;
+    xml.appendFormat( "<RigAsset _base=\"%#\"><nodes><item name=\"Arm\" weight=\"0.25\" /><item name=\"Extra\" _op=\"Remove\" /><item type=\"Position\" name=\"First\" bone=\"first\" target=\"Grip\" _before=\"Arm\" /></nodes></RigAsset>", baseID );
+    SW_REQUIRE_TRUE( asset.loadFromXMLText( xml.view(), "child.rig.xml" ) );
     SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( asset.getNodes().size() ) );
     SW_EXPECT_TRUE( asset.getNodes()[0]->getName() == hashed_string( "First" ) );
     SW_EXPECT_TRUE( asset.getNodes()[1]->getName() == hashed_string( "Arm" ) );
@@ -170,11 +171,11 @@ SW_TEST_CASE( RigAssetTest, RetargetChildMergesByKeys )
         </chains>
         <bone_map><item source="head" target="head" /></bone_map>
     </RetargetProfile>)" ) );
-    const string    baseID = test::ScopedScratchDomain::makeID( "base.retarget.xml" ).str();
-    RetargetProfile profile;
-    SW_REQUIRE_TRUE( profile.loadFromXMLText( "<RetargetProfile _base=\"" + baseID + "\"><pelvis target=\"pelvis_b\" /><chains><item name=\"RightArm\"><target><item>e</item></target></item></chains>"
-                                                                                     "<bone_map><item source=\"head\" target=\"head_b\" /></bone_map></RetargetProfile>",
-                                              "child.retarget.xml" ) );
+    const string                             baseID = test::ScopedScratchDomain::makeID( "base.retarget.xml" ).str();
+    RetargetProfile                          profile;
+    StringBuilder<constant::buffer::kMax256> xml;
+    xml.appendFormat( "<RetargetProfile _base=\"%#\"><pelvis target=\"pelvis_b\" /><chains><item name=\"RightArm\"><target><item>e</item></target></item></chains><bone_map><item source=\"head\" target=\"head_b\" /></bone_map></RetargetProfile>", baseID );
+    SW_REQUIRE_TRUE( profile.loadFromXMLText( xml.view(), "child.retarget.xml" ) );
     const string written = profile.toXML();
     SW_EXPECT_TRUE( written.find( "pelvis_b" ) != string::npos );
     SW_EXPECT_TRUE( written.find( "source=\"pelvis\"" ) != string::npos ); // 물려받음
@@ -197,9 +198,11 @@ SW_TEST_CASE( RigAssetTest, RetargetChildSavesOnlyItsDifference )
             <item name="RightArm"><source><item>c</item></source><target><item>d</item></target></item>
         </chains>
     </RetargetProfile>)" ) );
-    const string    baseID = test::ScopedScratchDomain::makeID( "base.retarget.xml" ).str();
-    RetargetProfile profile;
-    SW_REQUIRE_TRUE( profile.loadFromXMLText( "<RetargetProfile _base=\"" + baseID + "\"><pelvis target=\"pelvis_b\" /></RetargetProfile>", "child.retarget.xml" ) );
+    const string                             baseID = test::ScopedScratchDomain::makeID( "base.retarget.xml" ).str();
+    RetargetProfile                          profile;
+    StringBuilder<constant::buffer::kMax256> xml;
+    xml.appendFormat( "<RetargetProfile _base=\"%#\"><pelvis target=\"pelvis_b\" /></RetargetProfile>", baseID );
+    SW_REQUIRE_TRUE( profile.loadFromXMLText( xml.view(), "child.retarget.xml" ) );
     SW_EXPECT_EQUAL( baseID, profile.getBaseID() );
     profile.addBonePair( RetargetBonePair{ hashed_string( "head" ), hashed_string( "head_b" ) } );
 

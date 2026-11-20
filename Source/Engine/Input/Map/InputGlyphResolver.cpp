@@ -96,22 +96,32 @@ namespace sw
                         if ( isKeyboardOrMouseSlot( binding._arrSlot[0] ) == false )
                             return {};
                         const string glyph = slotToGlyph( binding._arrSlot[0], device );
-                        return glyph != "?" ? string( "[ " ) + glyph + " ]" : string{};
+                        if ( glyph == "?" )
+                            return {};
+                        StringBuilder<constant::buffer::kMax128> builder;
+                        builder.appendFormat( "[ %# ]", glyph );
+                        return string( builder.view() );
                     }
                     case BindingKind::Axis1DComposite:
                     {
                         if ( isKeyboardOrMouseSlot( binding._arrSlot[0] ) == false )
                             return {};
-                        return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " / " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
+                        StringBuilder<constant::buffer::kMax128> builder;
+                        builder.appendFormat( "[ %# / %# ]", slotToGlyph( binding._arrSlot[0], device ), slotToGlyph( binding._arrSlot[1], device ) );
+                        return string( builder.view() );
                     }
                     case BindingKind::Vector2DComposite:
                     {
-                        return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + slotToGlyph( binding._arrSlot[1], device ) +
-                               slotToGlyph( binding._arrSlot[2], device ) + slotToGlyph( binding._arrSlot[3], device ) + " ]";
+                        StringBuilder<constant::buffer::kMax128> builder;
+                        builder.appendFormat( "[ %#%#%#%# ]", slotToGlyph( binding._arrSlot[0], device ), slotToGlyph( binding._arrSlot[1], device ),
+                                              slotToGlyph( binding._arrSlot[2], device ), slotToGlyph( binding._arrSlot[3], device ) );
+                        return string( builder.view() );
                     }
                     case BindingKind::Chord:
                     {
-                        return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " + " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
+                        StringBuilder<constant::buffer::kMax128> builder;
+                        builder.appendFormat( "[ %# + %# ]", slotToGlyph( binding._arrSlot[0], device ), slotToGlyph( binding._arrSlot[1], device ) );
+                        return string( builder.view() );
                     }
                     case BindingKind::MouseDelta2D:
                     {
@@ -123,20 +133,24 @@ namespace sw
                     }
                     case BindingKind::VirtualJoystick2D:
                     {
-                        return string( "[ Drag " ) + slotToGlyph( binding._arrSlot[0], device ) + " ]";
+                        StringBuilder<constant::buffer::kMax128> builder;
+                        builder.appendFormat( "[ Drag %# ]", slotToGlyph( binding._arrSlot[0], device ) );
+                        return string( builder.view() );
                     }
                     case BindingKind::Shortcut:
                     {
-                        string modifierText;
+                        StringBuilder<constant::buffer::kMax128> builder;
+                        builder.append( "[ " );
                         if ( ( binding._modifierMask & ModifierKey::Ctrl ) != 0 )
-                            modifierText += "Ctrl + ";
+                            builder.append( "Ctrl + " );
                         if ( ( binding._modifierMask & ModifierKey::Shift ) != 0 )
-                            modifierText += "Shift + ";
+                            builder.append( "Shift + " );
                         if ( ( binding._modifierMask & ModifierKey::Alt ) != 0 )
-                            modifierText += "Alt + ";
+                            builder.append( "Alt + " );
                         if ( ( binding._modifierMask & ModifierKey::Super ) != 0 )
-                            modifierText += "Win + ";
-                        return string( "[ " ) + modifierText + slotToGlyph( binding._arrSlot[0], device ) + " ]";
+                            builder.append( "Win + " );
+                        builder.appendFormat( "%# ]", slotToGlyph( binding._arrSlot[0], device ) );
+                        return string( builder.view() );
                     }
                     case BindingKind::AnyKey:
                     {
@@ -163,7 +177,11 @@ namespace sw
                         if ( binding._arrSlot[0]._deviceKind != InputDeviceKind::Gamepad )
                             return {};
                         const string glyph = slotToGlyph( binding._arrSlot[0], device );
-                        return glyph != "?" ? string( "[ " ) + glyph + " ]" : string{};
+                        if ( glyph == "?" )
+                            return {};
+                        StringBuilder<constant::buffer::kMax128> builder;
+                        builder.appendFormat( "[ %# ]", glyph );
+                        return string( builder.view() );
                     }
                     case BindingKind::GamepadStick2D:
                     {
@@ -171,7 +189,9 @@ namespace sw
                     }
                     case BindingKind::Chord:
                     {
-                        return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " + " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
+                        StringBuilder<constant::buffer::kMax128> builder;
+                        builder.appendFormat( "[ %# + %# ]", slotToGlyph( binding._arrSlot[0], device ), slotToGlyph( binding._arrSlot[1], device ) );
+                        return string( builder.view() );
                     }
                     case BindingKind::AnyKey:
                     {
@@ -181,7 +201,9 @@ namespace sw
                     {
                         if ( binding._arrSlot[0]._deviceKind != InputDeviceKind::Gamepad )
                             return {};
-                        return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " / " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
+                        StringBuilder<constant::buffer::kMax128> builder;
+                        builder.appendFormat( "[ %# / %# ]", slotToGlyph( binding._arrSlot[0], device ), slotToGlyph( binding._arrSlot[1], device ) );
+                        return string( builder.view() );
                     }
                     case BindingKind::Vector2DComposite: // 키보드와 마우스 전용 종류라 게임패드 표기가 없다
                     case BindingKind::MouseDelta2D:
@@ -223,6 +245,8 @@ namespace sw
 
     string InputGlyphResolver::makeSlotGlyph( const InputSlot& slot, InputGlyphStyle style )
     {
-        return string( "[ " ) + InputGlyphResolverInternal::slotToGlyph( slot, style ) + " ]";
+        StringBuilder<constant::buffer::kMax128> builder;
+        builder.appendFormat( "[ %# ]", InputGlyphResolverInternal::slotToGlyph( slot, style ) );
+        return string( builder.view() );
     }
 } // namespace sw

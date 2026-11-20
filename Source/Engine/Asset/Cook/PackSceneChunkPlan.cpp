@@ -54,7 +54,11 @@ namespace sw
             const string name              = makeSceneChunkName( scene._sceneID );
             const auto [itName, bInserted] = mapNameScene.try_emplace( name, scene._sceneID );
             if ( bInserted == false && itName->second != scene._sceneID )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "two scenes make the same pack chunk name - rename one", itName->second + " / " + scene._sceneID } );
+            {
+                StringBuilder<constant::buffer::kMax512> detail;
+                detail.appendFormat( "%# / %#", itName->second, scene._sceneID );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "two scenes make the same pack chunk name - rename one", detail.view() } );
+            }
         }
 
         // 에셋마다 쓰는 씬을 센다(기동 필수는 셈하지 않는다).

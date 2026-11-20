@@ -115,7 +115,9 @@ namespace sw
 
     string PackChunkManifest::makeFileName( string_view domain )
     {
-        return string( kFilePrefix ) + makeDomainStem( domain ) + string( kFileSuffix );
+        StringBuilder<constant::buffer::kMax128> builder;
+        builder.appendFormat( "%#%#%#", kFilePrefix, makeDomainStem( domain ), kFileSuffix );
+        return string( builder.view() );
     }
 
     bool PackChunkManifest::isFileName( string_view fileName )

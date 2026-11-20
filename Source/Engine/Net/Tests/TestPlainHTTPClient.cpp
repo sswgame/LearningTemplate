@@ -128,24 +128,31 @@ SW_TEST_CASE( PlainHTTPClientTest, ChunkedBodyIsJoinedAndChecked )
 SW_TEST_CASE( PlainHTTPClientTest, LimitsRejectOversizedResponses )
 {
     // 머리말: 끝 줄이 오기 전에 상한을 넘으면 기다리지 않고 거절한다.
-    const string longHeader = "HTTP/1.1 200 OK\r\nX-Fill: " + string( kHeaderLimit, 'a' );
+    string longHeader = "HTTP/1.1 200 OK\r\nX-Fill: ";
+    longHeader.append( kHeaderLimit, 'a' );
     SW_REQUIRE_TRUE( parse( longHeader, false ) == HTTPResponseParseStatus::Rejected );
     // 본문: 알린 길이가 상한 위면 본문을 받기 전에 거절한다.
     SW_REQUIRE_TRUE( parse( "HTTP/1.1 200 OK\r\nContent-Length: 65\r\n\r\n", false ) == HTTPResponseParseStatus::Rejected );
     SW_REQUIRE_TRUE( parse( "HTTP/1.1 200 OK\r\nContent-Length: 64\r\n\r\n", false ) == HTTPResponseParseStatus::Incomplete );
     // 길이 없는 본문 · chunked 합.
-    SW_REQUIRE_TRUE( parse( "HTTP/1.1 200 OK\r\n\r\n" + string( kBodyLimit + 1, 'b' ), false ) == HTTPResponseParseStatus::Rejected );
+    string longBody = "HTTP/1.1 200 OK\r\n\r\n";
+    longBody.append( kBodyLimit + 1, 'b' );
+    SW_REQUIRE_TRUE( parse( longBody, false ) == HTTPResponseParseStatus::Rejected );
     string chunked = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n";
     for ( uint32 index = 0; index < 3; ++index )
     {
-        chunked += "20\r\n" + string( 32, 'c' ) + "\r\n"; // 32 × 3 > 64
+        chunked += "20\r\n"; // 32 × 3 > 64
+        chunked.append( 32, 'c' );
+        chunked += "\r\n";
     }
     SW_REQUIRE_TRUE( parse( chunked, false ) == HTTPResponseParseStatus::Rejected );
     // 원시 바이트: 1 바이트 구간에 긴 확장을 붙여 본문은 작아도 받은 바이트가 커지면 거절한다.
     string padded = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n";
     while ( padded.size() <= kHeaderLimit + kBodyLimit * 2 )
     {
-        padded += "1;" + string( 100, 'e' ) + "\r\nx\r\n";
+        padded += "1;";
+        padded.append( 100, 'e' );
+        padded += "\r\nx\r\n";
     }
     SW_REQUIRE_TRUE( parse( padded, false ) == HTTPResponseParseStatus::Rejected );
 }

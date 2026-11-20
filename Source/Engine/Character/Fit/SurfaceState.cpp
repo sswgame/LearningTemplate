@@ -64,7 +64,11 @@ namespace sw
             if ( channel._name.empty() )
                 continue;
             if ( findChannelIndex( channel._name ).has_value() )
-                reader.addError( "Character.SurfaceChannelRepeated", child, string( "repeats channel '" ) + channel._name.c_str() + "'" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "repeats channel '%#'", channel._name.c_str() );
+                reader.addError( "Character.SurfaceChannelRepeated", child, message );
+            }
             else
                 _listChannel.push_back( channel );
         }

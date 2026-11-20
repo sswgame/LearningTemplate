@@ -43,10 +43,14 @@ namespace
                 SceneDocument::StreamingCell cell{};
                 cell._cell = StreamingCellCoord{ x, 0 };
                 SceneDocument::SceneObjectNode node{};
-                node._fileID      = static_cast<uint64>( x + 1 );
-                node._name        = "Crate" + sw::to_string( static_cast<int64>( x ) );
-                node._embeddedXML = "<GameObject _schemaVersion=\"0\" _name=\"" + node._name + "\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"" +
-                                    sw::to_string( static_cast<int64>( x * 10 + 5 ) ) + ",0,5\" /></_listComponent></GameObject>";
+                node._fileID = static_cast<uint64>( x + 1 );
+                StringBuilder<constant::buffer::kMax512> text;
+                text.appendFormat( "Crate%#", static_cast<int64>( x ) );
+                node._name = string( text.view() );
+                text.clear();
+                text.appendFormat( "<GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"%#,0,5\" /></_listComponent></GameObject>", node._name,
+                                   static_cast<int64>( x * 10 + 5 ) );
+                node._embeddedXML = string( text.view() );
                 cell._listSceneObjectNode.push_back( std::move( node ) );
                 doc._listStreamingCell.push_back( std::move( cell ) );
             }

@@ -155,7 +155,11 @@ namespace sw
         {
             _status = FrameRendererStatus::Failed;
             if ( _statusMessage.empty() )
-                _statusMessage = string( "pipeline load failed: " ) + string( resolvedPipeline );
+            {
+                StringBuilder<constant::buffer::kMax256> message;
+                message.appendFormat( "pipeline load failed: %#", resolvedPipeline );
+                _statusMessage = message.view();
+            }
             SW_LOG_ERROR_ID( "FrameRenderer.NotReady", "Not ready — %#", _statusMessage );
             return false;
         }
@@ -226,14 +230,18 @@ namespace sw
 
         if ( _pipelineResource.loadFromXMLFile( assetID ) == false )
         {
-            _statusMessage = string( "failed to load pipeline XML: " ) + string( pipelineXMLPath );
+            StringBuilder<constant::buffer::kMax256> message;
+            message.appendFormat( "failed to load pipeline XML: %#", pipelineXMLPath );
+            _statusMessage = message.view();
             return false;
         }
 
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         if ( listPass.empty() )
         {
-            _statusMessage = string( "no graph passes in pipeline: " ) + string( pipelineXMLPath );
+            StringBuilder<constant::buffer::kMax256> message;
+            message.appendFormat( "no graph passes in pipeline: %#", pipelineXMLPath );
+            _statusMessage = message.view();
             SW_LOG_ERROR_ID( "FrameRenderer.PipelineLoadFailed", "%#", _statusMessage );
             return false;
         }
@@ -1141,7 +1149,9 @@ namespace sw
             {
                 if ( RenderTargetInfo* pInfo = findTarget( pass._depthAttachment ); pInfo != nullptr )
                 {
-                    pInfo->_listProducer.push_back( pass._name + " (depth)" );
+                    StringBuilder<constant::buffer::kMax128> producer;
+                    producer.appendFormat( "%# (depth)", pass._name );
+                    pInfo->_listProducer.emplace_back( producer.view() );
                     markUse( *pInfo, passIndex );
                 }
             }

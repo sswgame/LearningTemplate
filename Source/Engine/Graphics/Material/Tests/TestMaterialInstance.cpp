@@ -122,7 +122,8 @@ SW_TEST_CASE( MaterialInstanceTest, TextureSlotCountReachesShaderDefine )
     shared_ptr<Material> textured = Material::create();
     SW_REQUIRE_TRUE( textured->loadFromXML( MaterialInstanceTestUtil::kTexturedMaterial ) );
     SW_EXPECT_EQUAL( 3u, textured->getTextureSlotCount() );
-    const string expected = string( kMaterialTextureCountDefine ) + "=3";
+    fixed_string<constant::buffer::kMax64> expected;
+    formatstring( expected.data(), expected.capacity(), "%#=3", kMaterialTextureCountDefine );
     SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( textured->getCachedShaderDefines(), expected ) );
     shared_ptr<MaterialInstance> instance = MaterialInstance::create( textured.get() );
     SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), expected ) );
@@ -130,7 +131,9 @@ SW_TEST_CASE( MaterialInstanceTest, TextureSlotCountReachesShaderDefine )
     shared_ptr<Material> plain = Material::create();
     SW_REQUIRE_TRUE( plain->loadFromXML( MaterialInstanceTestUtil::kMaterial ) );
     SW_EXPECT_EQUAL( 0u, plain->getTextureSlotCount() );
-    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( plain->getCachedShaderDefines(), string( kMaterialTextureCountDefine ) + "=0" ) );
+    fixed_string<constant::buffer::kMax64> expectedPlain;
+    formatstring( expectedPlain.data(), expectedPlain.capacity(), "%#=0", kMaterialTextureCountDefine );
+    SW_EXPECT_TRUE( MaterialInstanceTestUtil::hasDefine( plain->getCachedShaderDefines(), expectedPlain ) );
     SW_EXPECT_TRUE( plain->getPermutationHash() != textured->getPermutationHash() );
 
     SW_EXPECT_TRUE( textured->getTextureSlotCount() <= shaderslot::wgpu::kMaterialTextureBudget );

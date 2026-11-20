@@ -488,13 +488,20 @@ namespace sw
                 MaterialCache* const pCache = MaterialCache::findBound();
                 if ( pCache == nullptr || pCache->isCached( listArgument[0] ) == false )
                 {
-                    outReply = "material " + listArgument[0] + " is not loaded";
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "material %# is not loaded", listArgument[0] );
+                    outReply = builder.view();
                     return false;
                 }
                 Material* const pMaterial = pCache->acquire( listArgument[0] );
                 const bool      bSet      = pMaterial != nullptr && pMaterial->setStaticSwitch( hashed_string( string_view( listArgument[1] ) ), listArgument[2] == "1" );
                 pCache->release( listArgument[0] );
-                outReply = bSet ? "set " + listArgument[1] : "could not set " + listArgument[1] + " of " + listArgument[0];
+                StringBuilder<constant::buffer::kMax256> builder;
+                if ( bSet )
+                    builder.appendFormat( "set %#", listArgument[1] );
+                else
+                    builder.appendFormat( "could not set %# of %#", listArgument[1], listArgument[0] );
+                outReply = builder.view();
                 return bSet;
             }
         };

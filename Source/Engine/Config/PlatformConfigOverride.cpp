@@ -76,7 +76,8 @@ namespace sw
             outJSON = shipping_host::kEngineConfigJSON;
             return true;
         }
-        const string label = makeEngineConfigPath() + " (configure-time copy)";
+        StringBuilder<constant::buffer::kMax256> label;
+        label.appendFormat( "%# (configure-time copy)", makeEngineConfigPath() );
         return apply( shipping_host::kEngineConfigJSON, shipping_host::kEngineConfigPlatformOverrideJSON, label.c_str(), outJSON );
     }
 } // namespace sw

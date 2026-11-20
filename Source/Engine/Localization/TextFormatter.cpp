@@ -282,7 +282,11 @@ namespace sw
                 ++_position;
                 const bool bKnownType = type == "number" || type == "date" || type == "time";
                 if ( bKnownType == false )
-                    return fail( "unknown argument type '" + string( type ) + "'" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "unknown argument type '%#'", type );
+                    return fail( message );
+                }
                 if ( bEmit && _mode == TextParseMode::Rebuild )
                     outText.append( _pattern.substr( openPos, _position - openPos ) );
                 else if ( bEmit && _mode == TextParseMode::Format )
@@ -299,7 +303,11 @@ namespace sw
                 const bool          bRebuild  = _mode == TextParseMode::Rebuild && bEmit;
                 const TextArgument* pArgument = ( bFormat && _pArguments != nullptr ) ? _pArguments->findArgument( name ) : nullptr;
                 if ( bFormat && pArgument == nullptr )
-                    recordArgumentError( "missing argument '" + string( name ) + "'" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "missing argument '%#'", name );
+                    recordArgumentError( message );
+                }
 
                 skipSpace();
                 if ( bRebuild )
@@ -343,10 +351,18 @@ namespace sw
                     PluralCategory category{ PluralCategory::Other };
                     const bool     bUnknownPluralKeyword = bPlural && bExact == false && CultureInfo::tryParsePluralKeyword( selector, category ) == false;
                     if ( bUnknownPluralKeyword )
-                        return fail( "unknown plural keyword '" + string( selector ) + "'" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "unknown plural keyword '%#'", selector );
+                        return fail( message );
+                    }
                     skipSpace();
                     if ( _position >= _pattern.size() || _pattern[_position] != '{' )
-                        return fail( "'{' expected after keyword '" + string( selector ) + "'" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "'{' expected after keyword '%#'", selector );
+                        return fail( message );
+                    }
                     ++_position;
                     listSelector.push_back( string( selector ) );
                     listBodyStart.push_back( _position );
@@ -404,7 +420,11 @@ namespace sw
                     else if ( argument._kind == TextArgumentKind::Decimal )
                         outValue = argument._decimal;
                     else
-                        recordArgumentError( "plural argument '" + argument._name + "' must be a number" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "plural argument '%#' must be a number", argument._name );
+                        recordArgumentError( message );
+                    }
                     for ( size_t index = 0; index < listSelector.size(); ++index )
                     {
                         float64    exactValue{ 0.0 };
@@ -417,7 +437,11 @@ namespace sw
                 else if ( argument._kind == TextArgumentKind::Text || argument._kind == TextArgumentKind::Integer )
                     wanted = argument._text;
                 else
-                    recordArgumentError( "select argument '" + argument._name + "' must be text" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "select argument '%#' must be text", argument._name );
+                    recordArgumentError( message );
+                }
 
                 size_t otherIndex = listSelector.size();
                 for ( size_t index = 0; index < listSelector.size(); ++index )
@@ -457,7 +481,9 @@ namespace sw
                 const TextArgument* pArgument = _pArguments != nullptr ? _pArguments->findArgument( name ) : nullptr;
                 if ( pArgument == nullptr )
                 {
-                    recordArgumentError( "missing argument '" + string( name ) + "'" );
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "missing argument '%#'", name );
+                    recordArgumentError( message );
                     outText.append( "{" ).append( name ).append( "}" );
                     return;
                 }
@@ -491,7 +517,9 @@ namespace sw
                 const TextArgument* pArgument = _pArguments != nullptr ? _pArguments->findArgument( name ) : nullptr;
                 if ( pArgument == nullptr )
                 {
-                    recordArgumentError( "missing argument '" + string( name ) + "'" );
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "missing argument '%#'", name );
+                    recordArgumentError( message );
                     outText.append( "{" ).append( name ).append( "}" );
                     return;
                 }
@@ -500,7 +528,9 @@ namespace sw
                     const bool bNumber = pArgument->_kind == TextArgumentKind::Integer || pArgument->_kind == TextArgumentKind::Decimal;
                     if ( bNumber == false )
                     {
-                        recordArgumentError( "number argument '" + string( name ) + "' is not a number" );
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "number argument '%#' is not a number", name );
+                        recordArgumentError( message );
                         outText.append( pArgument->_text );
                         return;
                     }
@@ -516,18 +546,26 @@ namespace sw
                     else if ( style.empty() )
                         outText.append( pArgument->_kind == TextArgumentKind::Integer ? _pCulture->formatInteger( pArgument->_integer ) : _pCulture->formatDecimal( value, pArgument->_minFraction, pArgument->_maxFraction ) );
                     else
-                        recordArgumentError( "unknown number style '" + string( style ) + "'" );
+                    {
+                        fixed_string<constant::buffer::kMax256> message;
+                        formatstring( message.data(), message.capacity(), "unknown number style '%#'", style );
+                        recordArgumentError( message );
+                    }
                     return;
                 }
                 if ( pArgument->_kind != TextArgumentKind::DateTime )
                 {
-                    recordArgumentError( "date/time argument '" + string( name ) + "' is not a date" );
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "date/time argument '%#' is not a date", name );
+                    recordArgumentError( message );
                     return;
                 }
                 const string_view pattern = type == "date" ? _pCulture->findDatePattern( style ) : _pCulture->findTimePattern( style );
                 if ( pattern.empty() )
                 {
-                    recordArgumentError( "unknown date/time style '" + string( style ) + "'" );
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "unknown date/time style '%#'", style );
+                    recordArgumentError( message );
                     return;
                 }
                 outText.append( _pCulture->formatDateTime( pArgument->_dateTime, pattern ) );

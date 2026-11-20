@@ -119,7 +119,8 @@ namespace sw
                 if ( setNamed.count( ( static_cast<uint64>( structID ) << 32 ) | member ) != 0 )
                     continue;
                 // 문자열은 널로 끝나고 단어 경계까지 0 으로 채운다(SPIR-V 리터럴 문자열).
-                const string   name        = "_m" + to_string( member );
+                fixed_string<constant::buffer::kMax16> name;
+                formatstring( name.data(), name.capacity(), "_m%#", member );
                 const uint32   stringWords = static_cast<uint32>( name.size() / 4u + 1u );
                 const uint32   length      = 3u + stringWords;
                 vector<uint32> listString( stringWords, 0u );

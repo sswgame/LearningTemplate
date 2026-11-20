@@ -308,7 +308,9 @@ namespace sw
                 const PhysicsAsset*     pAsset   = pRagdoll != nullptr ? pRagdoll->getPhysicsAsset() : nullptr;
                 if ( pAsset == nullptr )
                 {
-                    outReply = "no object named '" + objectName + "' with a ragdoll physics asset in the active scene";
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "no object named '%#' with a ragdoll physics asset in the active scene", objectName );
+                    outReply = string( builder.view() );
                     return false;
                 }
                 const hashed_string bone( boneName );
@@ -323,10 +325,14 @@ namespace sw
                     hit._impulse   = 40.0f;
                     hit._bFatal    = bFatal;
                     CharacterRayHit::deliverHit( *pObject, hit );
-                    outReply = ( bFatal ? "fatal hit on " : "hit on " ) + boneName;
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "%#%#", bFatal ? "fatal hit on " : "hit on ", boneName );
+                    outReply = string( builder.view() );
                     return true;
                 }
-                outReply = "the ragdoll has no body on bone '" + boneName + "'";
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "the ragdoll has no body on bone '%#'", boneName );
+                outReply = string( builder.view() );
                 return false;
             }
 

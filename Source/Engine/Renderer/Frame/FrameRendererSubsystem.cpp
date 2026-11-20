@@ -127,7 +127,9 @@ namespace sw
     {
         // 렌더 쪽 객체(렌더러 · PSO 캐시)는 렌더 스레드가 다음 프레임 기록 전에 고친다 — 렌더 스레드와 GPU 를 세우지 않는다(셰이더 리로드 `LiveShaderSubsystem` 과 같은 길).
         // 옛 패스 자원은 디바이스가 그것을 쓴 프레임의 GPU 완료 뒤로 미뤄 놓는다(백엔드 해제 큐).
-        const string                change         = pVariable->_name + "=" + pVariable->getValueAsString();
+        StringBuilder<constant::buffer::kMax256> changeBuilder;
+        changeBuilder.appendFormat( "%#=%#", pVariable->_name, pVariable->getValueAsString() );
+        const string                change         = string( changeBuilder.view() );
         const RenderPipelineRequest request        = FrameRendererSubsystemInternal::makePipelineRequest(); // 렌더 스레드는 변수를 읽지 않는다 — 여기(게임 스레드)서 뜬 사본을 넘긴다
         RenderThreadSubsystem*      pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>();
         RenderThread* const         pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;

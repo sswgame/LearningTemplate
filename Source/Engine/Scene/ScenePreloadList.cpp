@@ -39,7 +39,11 @@ namespace sw
         for ( const string_view suffix : { ScenePreloadListInternal::kSceneXML, ScenePreloadListInternal::kSceneBin } )
         {
             if ( StringUtil::endsWith( scenePath, suffix, true ) )
-                return string( scenePath.substr( 0, scenePath.size() - suffix.size() ) ) + string( kExtension );
+            {
+                StringBuilder<constant::buffer::kMax512> builder;
+                builder.appendFormat( "%#%#", scenePath.substr( 0, scenePath.size() - suffix.size() ), kExtension );
+                return string( builder.view() );
+            }
         }
         return {};
     }

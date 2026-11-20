@@ -267,8 +267,9 @@ SW_TEST_CASE( SharedAssetCacheTest, RedirectedAndCanonicalIdsShareOneEntry )
     const string                    oldID = test::ScopedScratchDomain::makeID( "old.txt" ).str();
     const string                    newID = test::ScopedScratchDomain::makeID( "new.txt" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "new.txt" ), "moved" ) );
-    SW_REQUIRE_TRUE( AssetRedirect::loadFromXMLTexts( vector<string>{ "<Redirects><Redirect from=\"" + oldID + "\" to=\"" + newID + "\"/></Redirects>" },
-                                                      vector<string>{ "test/redirects.xml" } ) );
+    StringBuilder<constant::buffer::kMax512> redirectXML;
+    redirectXML.appendFormat( "<Redirects><Redirect from=\"%#\" to=\"%#\"/></Redirects>", oldID, newID );
+    SW_REQUIRE_TRUE( AssetRedirect::loadFromXMLTexts( vector<string>{ string( redirectXML.view() ) }, vector<string>{ "test/redirects.xml" } ) );
     {
         const Util::ScopedModuleCache                     scope;
         const shared_ptr<const SharedAssetCacheTestAsset> byOld = Util::Cache::acquire( oldID ).snapshot();

@@ -63,7 +63,9 @@ namespace sw
                 return true;
             }
             RenderThread::requestScreenshot( *absolutePath );
-            outReply = "screenshot requested: " + path;
+            StringBuilder<constant::buffer::kMax512> reply;
+            reply.appendFormat( "screenshot requested: %#", path );
+            outReply = reply.view();
             return true;
         }
     } // namespace

@@ -88,7 +88,9 @@ namespace sw
                 GameObject* pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
                 if ( pObject == nullptr )
                 {
-                    outReply = "no object named '" + listArgument[0] + "' in the active scene";
+                    StringBuilder<constant::buffer::kMax256> reply;
+                    reply.appendFormat( "no object named '%#' in the active scene", listArgument[0] );
+                    outReply = string( reply.view() );
                     return false;
                 }
                 outReply = "object ";
@@ -125,18 +127,21 @@ namespace sw
                                      StringUtil::parseFloat( listArgument[3], position._z );
                 if ( bParsed == false )
                     return false;
-                GameObject*     pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+                GameObject*                              pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                SceneComponent*                          pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+                StringBuilder<constant::buffer::kMax256> reply;
                 if ( pScene == nullptr )
                 {
-                    outReply = "no object named '" + listArgument[0] + "' with a scene component in the active scene";
+                    reply.appendFormat( "no object named '%#' with a scene component in the active scene", listArgument[0] );
+                    outReply = string( reply.view() );
                     return false;
                 }
                 // 결정: "그 자리에 멈춰 놓기" 다(언리얼 `SetActorLocation( …, ETeleportType::ResetPhysics )` · 고도 `teleport`) — 순간이동으로 경로를 쓸지 않고,
                 // 옮기기 전 운동(내려앉던 캐릭터 · 떨어지던 강체의 속도)을 잇지 않는다. 인자는 로컬 위치라 부모가 있으면 월드로 바꿔 넘긴다.
                 const SceneComponent* pParent = pScene->getParent();
                 pScene->teleportTo( pParent != nullptr ? float3::transform( position, pParent->getWorldMatrix() ) : position, TeleportType::ResetPhysics );
-                outReply = "placed " + listArgument[0];
+                reply.appendFormat( "placed %#", listArgument[0] );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -146,17 +151,20 @@ namespace sw
                 float32 degrees = 0.0f;
                 if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], degrees ) == false )
                     return false;
-                GameObject*     pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+                GameObject*                              pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                SceneComponent*                          pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+                StringBuilder<constant::buffer::kMax256> reply;
                 if ( pScene == nullptr )
                 {
-                    outReply = "no object named '" + listArgument[0] + "' with a scene component in the active scene";
+                    reply.appendFormat( "no object named '%#' with a scene component in the active scene", listArgument[0] );
+                    outReply = string( reply.view() );
                     return false;
                 }
                 float3 rotation = pScene->getLocalRotation();
                 rotation._y += degrees * MathUtil::kDegreeToRadian;
                 pScene->setLocalRotation( rotation );
-                outReply = "turned " + listArgument[0];
+                reply.appendFormat( "turned %#", listArgument[0] );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -166,14 +174,17 @@ namespace sw
                 const bool bParsed = listArgument.size() == 2 && ( listArgument[1] == "0" || listArgument[1] == "1" );
                 if ( bParsed == false )
                     return false;
-                GameObject* pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                GameObject*                              pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                StringBuilder<constant::buffer::kMax256> reply;
                 if ( pObject == nullptr )
                 {
-                    outReply = "no object named '" + listArgument[0] + "' in the active scene";
+                    reply.appendFormat( "no object named '%#' in the active scene", listArgument[0] );
+                    outReply = string( reply.view() );
                     return false;
                 }
                 pObject->setActive( listArgument[1] == "1" );
-                outReply = ( listArgument[1] == "1" ? "activated " : "deactivated " ) + listArgument[0];
+                reply.appendFormat( "%#%#", listArgument[1] == "1" ? "activated " : "deactivated ", listArgument[0] );
+                outReply = string( reply.view() );
                 return true;
             }
 
@@ -182,15 +193,18 @@ namespace sw
             {
                 if ( listArgument.size() != 1 )
                     return false;
-                GameObject*        pObject  = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                GameObjectManager* pManager = pObject != nullptr ? pObject->getMutableManager() : nullptr;
+                GameObject*                              pObject  = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                GameObjectManager*                       pManager = pObject != nullptr ? pObject->getMutableManager() : nullptr;
+                StringBuilder<constant::buffer::kMax256> reply;
                 if ( pManager == nullptr )
                 {
-                    outReply = "no object named '" + listArgument[0] + "' in the active scene";
+                    reply.appendFormat( "no object named '%#' in the active scene", listArgument[0] );
+                    outReply = string( reply.view() );
                     return false;
                 }
                 pManager->destroyGameObject( pObject );
-                outReply = "destroyed " + listArgument[0];
+                reply.appendFormat( "destroyed %#", listArgument[0] );
+                outReply = string( reply.view() );
                 return true;
             }
         };

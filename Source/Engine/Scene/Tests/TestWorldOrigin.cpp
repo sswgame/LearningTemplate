@@ -21,13 +21,14 @@ namespace
 {
     struct WorldOriginTestUtil
     {
-        static SceneDocument::SceneObjectNode makeNode( uint64 fileID, const string& name, const string& position, const string& attach = {} )
+        static SceneDocument::SceneObjectNode makeNode( uint64 fileID, string_view name, string_view position, string_view attach = {} )
         {
             SceneDocument::SceneObjectNode node{};
-            node._fileID      = fileID;
-            node._name        = name;
-            node._embeddedXML = "<GameObject _schemaVersion=\"0\" _name=\"" + name + "\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"" + position + "\" " + attach +
-                                " /></_listComponent></GameObject>";
+            node._fileID = fileID;
+            node._name   = string( name );
+            StringBuilder<constant::buffer::kMax512> xml;
+            xml.appendFormat( "<GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"%#\" %# /></_listComponent></GameObject>", name, position, attach );
+            node._embeddedXML = string( xml.view() );
             return node;
         }
 

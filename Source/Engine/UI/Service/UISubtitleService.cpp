@@ -28,7 +28,12 @@ namespace sw
             static constexpr float32 kOverflowSlack = 0.5f;
 
             /** @brief 줄 슬롯 @p slot 의 위젯 이름 `<prefix><slot>` 입니다. */
-            static hashed_string makeSlotName( const utf8* pPrefix, uint32 slot ) { return hashed_string( string( pPrefix ) + to_string( slot ) ); }
+            static hashed_string makeSlotName( const utf8* pPrefix, uint32 slot )
+            {
+                StringBuilder<constant::buffer::kMax64> name;
+                name.appendFormat( "%#%#", pPrefix, slot );
+                return hashed_string( name.c_str() );
+            }
         };
     } // namespace
 } // namespace sw

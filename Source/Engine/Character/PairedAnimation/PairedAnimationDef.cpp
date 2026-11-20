@@ -36,7 +36,11 @@ namespace sw
             static void requireFinite( CharacterDataReader& reader, const XMLNode& node, const utf8* pName, float32 value )
             {
                 if ( MathUtil::isFinite( value ) == false )
-                    reader.addError( "Character.PairedNotFinite", node, string( "attribute '" ) + pName + "' is not finite" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "attribute '%#' is not finite", pName );
+                    reader.addError( "Character.PairedNotFinite", node, message );
+                }
             }
 
             /** @brief 유한하지 않거나 음수면 오류를 남깁니다. */
@@ -44,7 +48,11 @@ namespace sw
             {
                 requireFinite( reader, node, pName, value );
                 if ( value < 0.0f )
-                    reader.addError( "Character.PairedNegative", node, string( "attribute '" ) + pName + "' is negative" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "attribute '%#' is negative", pName );
+                    reader.addError( "Character.PairedNegative", node, message );
+                }
             }
 
             /**
@@ -66,7 +74,9 @@ namespace sw
                     return PairedAnimationAlign::Snap;
                 if ( text == "warp" )
                     return PairedAnimationAlign::Warp;
-                reader.addError( "Character.PairedAlignInvalid", node, string( "attribute 'align' must be none, snap or warp: '" ) + pText + "'" );
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "attribute 'align' must be none, snap or warp: '%#'", pText );
+                reader.addError( "Character.PairedAlignInvalid", node, message );
                 return PairedAnimationAlign::None;
             }
 
@@ -273,7 +283,11 @@ namespace sw
             for ( const utf8* pName : { "offset", "maxAlignDistance" } )
             {
                 if ( node.hasAttribute( pName ) == false )
-                    reader.addError( "Character.AttributeMissing", node, string( "needs attribute '" ) + pName + "'" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "needs attribute '%#'", pName );
+                    reader.addError( "Character.AttributeMissing", node, message );
+                }
             }
             role._offset           = params._offset;
             role._yaw              = params._yaw;
@@ -290,7 +304,11 @@ namespace sw
             for ( const utf8* pName : PairedAnimationDefInternal::kArrAlignOnlyAttribute )
             {
                 if ( node.hasAttribute( pName ) )
-                    reader.addError( "Character.PairedAlignOnlyAttribute", node, string( "has '" ) + pName + "' but does not align (align is snap or warp)" );
+                {
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "has '%#' but does not align (align is snap or warp)", pName );
+                    reader.addError( "Character.PairedAlignOnlyAttribute", node, message );
+                }
             }
         }
         if ( role._align == PairedAnimationAlign::Warp )
@@ -309,7 +327,9 @@ namespace sw
         }
         if ( role._name.empty() == false && findRoleIndex( role._name ).has_value() )
         {
-            reader.addError( "Character.PairedRoleRepeated", node, string( "repeats role '" ) + role._name.c_str() + "'" );
+            fixed_string<constant::buffer::kMax256> message;
+            formatstring( message.data(), message.capacity(), "repeats role '%#'", role._name.c_str() );
+            reader.addError( "Character.PairedRoleRepeated", node, message );
             return;
         }
         _content._listRole.push_back( std::move( role ) );
@@ -358,9 +378,17 @@ namespace sw
             ++anchorCount;
             _anchorRoleIndex = static_cast<uint32>( roleIndex );
             if ( role._bRequired == false )
-                reader.addError( "Character.PairedAnchorNotRequired", string( "anchor role '" ) + role._name.c_str() + "' must be required" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "anchor role '%#' must be required", role._name.c_str() );
+                reader.addError( "Character.PairedAnchorNotRequired", message );
+            }
             if ( role._startSeconds != 0.0f )
-                reader.addError( "Character.PairedAnchorStart", string( "anchor role '" ) + role._name.c_str() + "' must start at 0" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "anchor role '%#' must start at 0", role._name.c_str() );
+                reader.addError( "Character.PairedAnchorStart", message );
+            }
         }
         if ( anchorCount != 1 )
             reader.addError( "Character.PairedAnchorCount", anchorCount == 0 ? "has no anchor role (exactly one role needs anchor=\"true\")" : "has more than one anchor role" );
@@ -368,14 +396,26 @@ namespace sw
         for ( const PairedAnimationRoleDef& role : _content._listRole )
         {
             if ( role._startSeconds >= _content._duration )
-                reader.addError( "Character.PairedRoleAfterEnd", string( "role '" ) + role._name.c_str() + "' starts at or after the end of the timeline" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "role '%#' starts at or after the end of the timeline", role._name.c_str() );
+                reader.addError( "Character.PairedRoleAfterEnd", message );
+            }
         }
         for ( const PairedAnimationNotifyDef& notify : _content._listNotify )
         {
             if ( notify._time > _content._duration )
-                reader.addError( "Character.PairedNotifyAfterEnd", string( "notify '" ) + notify._name.c_str() + "' is after the end of the timeline" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "notify '%#' is after the end of the timeline", notify._name.c_str() );
+                reader.addError( "Character.PairedNotifyAfterEnd", message );
+            }
             if ( notify._role.empty() == false && findRoleIndex( notify._role ).has_value() == false )
-                reader.addError( "Character.PairedNotifyRoleUnknown", string( "notify '" ) + notify._name.c_str() + "' names unknown role '" + notify._role.c_str() + "'" );
+            {
+                fixed_string<constant::buffer::kMax256> message;
+                formatstring( message.data(), message.capacity(), "notify '%#' names unknown role '%#'", notify._name.c_str(), notify._role.c_str() );
+                reader.addError( "Character.PairedNotifyRoleUnknown", message );
+            }
         }
         // 고르기 조건은 앵커 밖의 역할을 앵커에서 본다.
         if ( _content._bHasSelect && _content._select._role.empty() == false )

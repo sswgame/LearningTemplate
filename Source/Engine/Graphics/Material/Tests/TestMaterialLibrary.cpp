@@ -45,10 +45,11 @@ namespace
         /** @brief 라이브러리의 .material 을 모두 리소스 id 로 읽습니다(`_base` 를 펼친 결과). 하나라도 못 읽으면 실패를 남긴다. */
         [[nodiscard]] static vector<LoadedMaterial> loadAll()
         {
-            vector<LoadedMaterial> listLoaded;
-            vector<string>         listPath;
-            const string           folder = ProcessRoots::get()._project.str() + "/" + kLibraryFolder;
-            SW_EXPECT_TRUE( FileUtil::collectFiles( folder, ".material", listPath, true ) );
+            vector<LoadedMaterial>                   listLoaded;
+            vector<string>                           listPath;
+            StringBuilder<constant::buffer::kMax256> folder;
+            folder.appendFormat( "%#/%#", ProcessRoots::get()._project.str(), kLibraryFolder );
+            SW_EXPECT_TRUE( FileUtil::collectFiles( folder.view(), ".material", listPath, true ) );
             for ( const string& path : listPath )
             {
                 const size_t contentAt = path.find( "Content/" );
@@ -116,9 +117,11 @@ SW_TEST_CASE( MaterialLibraryTest, FeatureCombinationsMatchTheirRenderState )
  */
 SW_TEST_CASE( MaterialLibraryTest, TerrainMaterialsDeformVertices )
 {
-    static constexpr const utf8* kTerrainShader = "engine/shaders/terrain.hlsl";
-    vector<string>               listPath;
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( ProcessRoots::get()._project.str() + "/Content/engine/materials", ".material", listPath, true ) );
+    static constexpr const utf8*             kTerrainShader = "engine/shaders/terrain.hlsl";
+    vector<string>                           listPath;
+    StringBuilder<constant::buffer::kMax256> folder;
+    folder.appendFormat( "%#/Content/engine/materials", ProcessRoots::get()._project.str() );
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( folder.view(), ".material", listPath, true ) );
     uint32 terrainCount = 0;
     for ( const string& path : listPath )
     {
@@ -154,10 +157,12 @@ SW_TEST_CASE( MaterialLibraryTest, RootDeclaresSkinLayerSurfaceMap )
  */
 SW_TEST_CASE( MaterialLibraryTest, LayeredShadingModelMatchesLobeValues )
 {
-    static constexpr const utf8* kEnvironmentShader = "engine/shaders/environment_surface.hlsl";
-    static constexpr const utf8* kAppearanceShader  = "engine/shaders/appearance_lit.hlsl";
-    vector<string>               listPath;
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( ProcessRoots::get()._project.str() + "/Content/engine/materials", ".material", listPath, true ) );
+    static constexpr const utf8*             kEnvironmentShader = "engine/shaders/environment_surface.hlsl";
+    static constexpr const utf8*             kAppearanceShader  = "engine/shaders/appearance_lit.hlsl";
+    vector<string>                           listPath;
+    StringBuilder<constant::buffer::kMax256> folder;
+    folder.appendFormat( "%#/Content/engine/materials", ProcessRoots::get()._project.str() );
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( folder.view(), ".material", listPath, true ) );
     uint32 coatCount        = 0;
     uint32 anisotropicCount = 0;
     for ( const string& path : listPath )

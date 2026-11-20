@@ -77,20 +77,23 @@ namespace
             { return entry._assetID == id.str(); } );
         }
 
-        static void write( const ScopedScratchDomain& domain, const utf8* pFile, const string& text )
+        static void write( const ScopedScratchDomain& domain, const utf8* pFile, string_view text )
         {
             SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( pFile ), text ) );
         }
 
         static string makeMaterial( const utf8* pName, const string& inner )
         {
-            return string( R"(<MaterialDef formatVersion="0" name=")" ) + pName + R"(" shaderPath="engine/shaders/forward_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">)" + inner + "</MaterialDef>";
+            StringBuilder<constant::buffer::kMax512> builder;
+            builder.appendFormat( R"(<MaterialDef formatVersion="0" name="%#" shaderPath="engine/shaders/forward_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">%#</MaterialDef>)", pName, inner );
+            return string( builder.view() );
         }
 
         static string makeScene( const utf8* pName, const string& inner )
         {
-            return string( R"(<Scene formatVersion="2" name=")" ) + pName +
-                   R"("><SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0"><_cellGrid _cellSize="0" _loadingRadius="0" /></SceneSettings>)" + inner + "</Scene>";
+            StringBuilder<constant::buffer::kMax512> builder;
+            builder.appendFormat( R"(<Scene formatVersion="2" name="%#"><SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0"><_cellGrid _cellSize="0" _loadingRadius="0" /></SceneSettings>%#</Scene>)", pName, inner );
+            return string( builder.view() );
         }
     };
     using Util = XEntranceTestUtil;
@@ -102,17 +105,23 @@ SW_TEST_CASE( ResourceEntranceTest, ReadingByIDRecordsTheComposition )
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
 
-    Util::write( domain, "a.retarget.xml", string( R"(<RetargetProfile><root source="root" target="root" /><pelvis source="pelvis" target="hips" /><chains><item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item></chains>)" ) + Util::kWhen + "</RetargetProfile>" );
+    StringBuilder<constant::buffer::kMax512> retargetXML;
+    retargetXML.appendFormat( R"(<RetargetProfile><root source="root" target="root" /><pelvis source="pelvis" target="hips" /><chains><item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item></chains>%#</RetargetProfile>)", Util::kWhen );
+    Util::write( domain, "a.retarget.xml", retargetXML.view() );
     const AssetID retargetID = ScopedScratchDomain::makeID( "a.retarget.xml" );
     SW_REQUIRE_TRUE( SharedAssetCache<RetargetProfile>::acquire( retargetID.str() ).snapshot() != nullptr );
     SW_EXPECT_TRUE( Util::isRecorded( retargetID ) );
 
-    Util::write( domain, "a.rig.xml", string( R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes><item type="Position" name="Follow" bone="weapon" target="Grip" /></nodes>)" ) + Util::kWhen + "</RigAsset>" );
+    StringBuilder<constant::buffer::kMax512> rigXML;
+    rigXML.appendFormat( R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes><item type="Position" name="Follow" bone="weapon" target="Grip" /></nodes>%#</RigAsset>)", Util::kWhen );
+    Util::write( domain, "a.rig.xml", rigXML.view() );
     const AssetID rigID = ScopedScratchDomain::makeID( "a.rig.xml" );
     SW_REQUIRE_TRUE( SharedAssetCache<RigAsset>::acquire( rigID.str() ).snapshot() != nullptr );
     SW_EXPECT_TRUE( Util::isRecorded( rigID ) );
 
-    Util::write( domain, "a.physics.xml", string( "<PhysicsAsset>" ) + Util::kWhen + "</PhysicsAsset>" );
+    StringBuilder<constant::buffer::kMax256> physicsXML;
+    physicsXML.appendFormat( "<PhysicsAsset>%#</PhysicsAsset>", Util::kWhen );
+    Util::write( domain, "a.physics.xml", physicsXML.view() );
     const AssetID physicsID = ScopedScratchDomain::makeID( "a.physics.xml" );
     SW_REQUIRE_TRUE( SharedAssetCache<PhysicsAsset>::acquire( physicsID.str() ).snapshot() != nullptr );
     SW_EXPECT_TRUE( Util::isRecorded( physicsID ) );
@@ -139,19 +148,25 @@ SW_TEST_CASE( ResourceEntranceTest, SettingsAndRootFormatsRecordTheComposition )
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
 
-    Util::write( domain, "a.meshlod.xml", string( R"(<MeshLODSettings _refineHysteresis="0.1" _skinnedBoundsScale="1.2">)" ) + Util::kWhen + "</MeshLODSettings>" );
+    StringBuilder<constant::buffer::kMax256> meshLODText;
+    meshLODText.appendFormat( R"(<MeshLODSettings _refineHysteresis="0.1" _skinnedBoundsScale="1.2">%#</MeshLODSettings>)", Util::kWhen );
+    Util::write( domain, "a.meshlod.xml", meshLODText.view() );
     const AssetID   meshLODID = ScopedScratchDomain::makeID( "a.meshlod.xml" );
     MeshLODSettings meshLOD;
     SW_REQUIRE_TRUE( meshLOD.loadFromAsset( meshLODID ) );
     SW_EXPECT_TRUE( Util::isRecorded( meshLODID ) );
 
-    Util::write( domain, "a.livelinkface.xml", string( R"(<LiveLinkFaceLayout _packetVersion="6"><_listChannel><item>JawOpen</item></_listChannel>)" ) + Util::kWhen + "</LiveLinkFaceLayout>" );
+    StringBuilder<constant::buffer::kMax256> liveLinkXML;
+    liveLinkXML.appendFormat( R"(<LiveLinkFaceLayout _packetVersion="6"><_listChannel><item>JawOpen</item></_listChannel>%#</LiveLinkFaceLayout>)", Util::kWhen );
+    Util::write( domain, "a.livelinkface.xml", liveLinkXML.view() );
     const AssetID      layoutID = ScopedScratchDomain::makeID( "a.livelinkface.xml" );
     LiveLinkFaceLayout layout;
     SW_REQUIRE_TRUE( layout.loadFromAsset( layoutID ) );
     SW_EXPECT_TRUE( Util::isRecorded( layoutID ) );
 
-    Util::write( domain, "a.visemes.xml", string( R"(<VisemeTrack _frameRate="30"><_listViseme><item>AA</item></_listViseme><_listFrame><Frame>0.5</Frame></_listFrame>)" ) + Util::kWhen + "</VisemeTrack>" );
+    StringBuilder<constant::buffer::kMax256> visemeXML;
+    visemeXML.appendFormat( R"(<VisemeTrack _frameRate="30"><_listViseme><item>AA</item></_listViseme><_listFrame><Frame>0.5</Frame></_listFrame>%#</VisemeTrack>)", Util::kWhen );
+    Util::write( domain, "a.visemes.xml", visemeXML.view() );
     const AssetID trackID = ScopedScratchDomain::makeID( "a.visemes.xml" );
     VisemeTrack   track;
     SW_REQUIRE_TRUE( track.loadFromAsset( trackID ) );
@@ -165,9 +180,11 @@ SW_TEST_CASE( ResourceEntranceTest, SettingsAndRootFormatsRecordTheComposition )
  */
 SW_TEST_CASE( ResourceEntranceTest, TileMapLoadRecordsTheComposition )
 {
-    const ScopedScratchDomain domain;
-    const XEntranceScope      scope;
-    Util::write( domain, "a.tilemap.xml", string( R"(<TileMap width="2" height="1">)" ) + Util::kWhen + "</TileMap>" );
+    const ScopedScratchDomain                domain;
+    const XEntranceScope                     scope;
+    StringBuilder<constant::buffer::kMax256> tileMapXML;
+    tileMapXML.appendFormat( R"(<TileMap width="2" height="1">%#</TileMap>)", Util::kWhen );
+    Util::write( domain, "a.tilemap.xml", tileMapXML.view() );
     const AssetID  tileMapID = ScopedScratchDomain::makeID( "a.tilemap.xml" );
     TileMapXMLData tileMap;
     SW_REQUIRE_TRUE( tileMap.load( tileMapID ) );
@@ -178,9 +195,11 @@ SW_TEST_CASE( ResourceEntranceTest, TileMapLoadRecordsTheComposition )
 /** @brief [ResourceEntranceTest] 글 입구는 id 가 없어 기록을 남기지 않는다 — 같은 글을 id 로 읽은 것과 갈린다 */
 SW_TEST_CASE( ResourceEntranceTest, ReadingTextRecordsNothing )
 {
-    const XEntranceScope scope;
-    PhysicsAsset         physics;
-    SW_REQUIRE_TRUE( physics.loadFromXMLText( string( "<PhysicsAsset>" ) + Util::kWhen + "</PhysicsAsset>", "testproject/text-only.physics.xml" ) );
+    const XEntranceScope                     scope;
+    PhysicsAsset                             physics;
+    StringBuilder<constant::buffer::kMax256> xml;
+    xml.appendFormat( "<PhysicsAsset>%#</PhysicsAsset>", Util::kWhen );
+    SW_REQUIRE_TRUE( physics.loadFromXMLText( xml.view(), "testproject/text-only.physics.xml" ) );
     SW_EXPECT_FALSE( Util::isRecorded( AssetID{ "testproject/text-only.physics.xml" } ) );
 }
 
@@ -213,8 +232,10 @@ SW_TEST_CASE( ResourceEntranceTest, SceneKeepsItsBaseIDThroughTheRule )
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
     Util::write( domain, "base.scene.xml", Util::makeScene( "Base", "<entities />" ) );
-    const string baseID = ScopedScratchDomain::makeID( "base.scene.xml" ).str();
-    Util::write( domain, "child.scene.xml", string( R"(<Scene _base=")" ) + baseID + R"(" name="Child" />)" );
+    const string                             baseID = ScopedScratchDomain::makeID( "base.scene.xml" ).str();
+    StringBuilder<constant::buffer::kMax256> sceneXML;
+    sceneXML.appendFormat( R"(<Scene _base="%#" name="Child" />)", baseID );
+    Util::write( domain, "child.scene.xml", sceneXML.view() );
 
     SceneDocument scene{};
     SW_REQUIRE_TRUE( scene.loadXML( ScopedScratchDomain::makeID( "child.scene.xml" ) ) );

@@ -537,8 +537,12 @@ namespace sw
                         listValue.push_back( request._shaderPath );
                         break;
                     case ShaderCookSampleAxis::EntryPoint:
-                        listValue.push_back( request._shaderPath + "|" + request._entryPoint );
-                        break;
+                    {
+                        StringBuilder<constant::buffer::kMax256> valueBuilder;
+                        valueBuilder.appendFormat( "%#|%#", request._shaderPath, request._entryPoint );
+                        listValue.emplace_back( valueBuilder.view() );
+                    }
+                    break;
                     case ShaderCookSampleAxis::Stage:
                         listValue.push_back( to_string( static_cast<uint32>( request._stage ) ) );
                         break;

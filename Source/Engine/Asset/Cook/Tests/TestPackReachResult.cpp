@@ -79,7 +79,9 @@ namespace
         static void addGame( PackReachFiles& ioFiles, MemorySource& ioSource, string_view requiredData )
         {
             ioFiles._listGameDomain.push_back( "game/x" );
-            addText( ioFiles, ioSource, "game/x/data/gamesettings.xml", string( "<GameSettings><startMap>game/x/maps/a.scene.xml</startMap>" ) + string( requiredData ) + "</GameSettings>" );
+            StringBuilder<constant::buffer::kMax512> text;
+            text.appendFormat( "<GameSettings><startMap>game/x/maps/a.scene.xml</startMap>%#</GameSettings>", requiredData );
+            addText( ioFiles, ioSource, "game/x/data/gamesettings.xml", string( text.view() ) );
         }
     };
     using Util = PackReachabilityTestUtil;
@@ -590,6 +592,8 @@ SW_TEST_CASE( PackReachabilityTest, RealPackRulesKeepRedirectTables )
     SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
     for ( const utf8* pBuildTarget : { "Game", "Client", "Server" } )
     {
-        SW_EXPECT_TRUE_MSG( PackCooker::shouldIncludeFile( AssetRedirect::kFileName, config, "dx12", pBuildTarget ), string( "build target " ) + pBuildTarget );
+        fixed_string<constant::buffer::kMax64> label;
+        formatstring( label.data(), label.capacity(), "build target %#", pBuildTarget );
+        SW_EXPECT_TRUE_MSG( PackCooker::shouldIncludeFile( AssetRedirect::kFileName, config, "dx12", pBuildTarget ), label );
     }
 }

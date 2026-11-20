@@ -34,7 +34,9 @@ namespace sw
                     float32 component{ 0.0f };
                     if ( StringUtil::parseFloat( listArgument[index], component ) == false )
                     {
-                        outReply = "not a number: " + listArgument[index];
+                        StringBuilder<constant::buffer::kMax256> builder;
+                        builder.appendFormat( "not a number: %#", listArgument[index] );
+                        outReply = builder.view();
                         return false;
                     }
                     ( index == 2 ? value._x : index == 3 ? value._y
@@ -44,10 +46,14 @@ namespace sw
                 const shared_ptr<MaterialParameterCollection> pCollection = MaterialParameterCollection::acquire( AssetID{ listArgument[0] } );
                 if ( pCollection == nullptr || pCollection->setValue( hashed_string( string_view( listArgument[1] ) ), value ) == false )
                 {
-                    outReply = "could not set " + listArgument[1] + " of " + listArgument[0];
+                    StringBuilder<constant::buffer::kMax256> builder;
+                    builder.appendFormat( "could not set %# of %#", listArgument[1], listArgument[0] );
+                    outReply = builder.view();
                     return false;
                 }
-                outReply = "set " + listArgument[1];
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "set %#", listArgument[1] );
+                outReply = builder.view();
                 return true;
             }
         };
@@ -130,15 +136,15 @@ namespace sw
 
     string MaterialParameterCollection::makePropertyText( const float4& value, uint32 componentCount )
     {
-        const float32 arrComponent[] = { value._x, value._y, value._z, value._w };
-        string        text;
+        const float32                            arrComponent[] = { value._x, value._y, value._z, value._w };
+        StringBuilder<constant::buffer::kMax128> builder;
         for ( uint32 index = 0; index < componentCount && index < 4u; ++index )
         {
             if ( index > 0 )
-                text += " ";
-            text += to_string( arrComponent[index] );
+                builder.append( ' ' );
+            builder.appendFormat( "%#", arrComponent[index] );
         }
-        return text;
+        return string( builder.view() );
     }
 } // namespace sw
 

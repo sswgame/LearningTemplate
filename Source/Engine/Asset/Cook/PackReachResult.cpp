@@ -55,12 +55,19 @@ namespace sw
             /** @brief 원본 표의 열쇠(`<폴더 id>/<줄기>`)입니다. */
             static string makeSourceStemKey( string_view assetID )
             {
-                const string_view fileName = getFileName( assetID );
-                return string( assetID.substr( 0, assetID.size() - fileName.size() ) ) + string( getFirstStem( fileName ) );
+                const string_view                        fileName = getFileName( assetID );
+                StringBuilder<constant::buffer::kMax512> builder;
+                builder.appendFormat( "%#%#", assetID.substr( 0, assetID.size() - fileName.size() ), getFirstStem( fileName ) );
+                return string( builder.view() );
             }
 
             /** @brief 두 낱말의 열쇠(`<앞>\t<뒤>` — 셰이더 표의 도메인 · 줄기, 불린 항목의 이름 공간 · id)입니다. */
-            static string makeTabKey( string_view domain, string_view stem ) { return string( domain ) + "\t" + string( stem ); }
+            static string makeTabKey( string_view domain, string_view stem )
+            {
+                StringBuilder<constant::buffer::kMax256> builder;
+                builder.appendFormat( "%#\t%#", domain, stem );
+                return string( builder.view() );
+            }
 
             /** @brief 항목 하나입니다 — 글 안 자리 [_start, _end) 와 노드. */
             struct CatalogEntry
@@ -175,7 +182,9 @@ namespace sw
                 {
                     for ( const PackEntryCatalog& rule : _rules._listEntryCatalog )
                     {
-                        if ( StringUtil::endsWith( assetID, string( "/" ) + rule._path ) )
+                        StringBuilder<constant::buffer::kMax256> suffix;
+                        suffix.appendFormat( "/%#", rule._path );
+                        if ( StringUtil::endsWith( assetID, suffix.view() ) )
                             return &rule;
                     }
                     return nullptr;
@@ -499,7 +508,9 @@ namespace sw
                     uint32 rootCount = 0;
                     for ( const string& gameDomain : _files._listGameDomain )
                     {
-                        const string settingsID = FileUtil::normalizePath( gameDomain + "/" + _rules._gameSettingsPath ).str();
+                        StringBuilder<constant::buffer::kMax512> settingsPath;
+                        settingsPath.appendFormat( "%#/%#", gameDomain, _rules._gameSettingsPath );
+                        const string settingsID = FileUtil::normalizePath( settingsPath.view() ).str();
                         if ( _files._setPackable.contains( settingsID ) == false )
                         {
                             SW_LOG_ERROR_ID( "PackReachability.GameSettingsMissing", "Pack cook: game pack %# has no game settings '%#' - its start map and required data cannot be found", gameDomain, settingsID );

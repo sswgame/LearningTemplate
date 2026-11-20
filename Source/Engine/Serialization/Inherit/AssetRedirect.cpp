@@ -241,11 +241,13 @@ namespace sw
             listKept.push_back( Internal::Entry{ from, to } );
             listEntry = std::move( listKept );
         }
-        string text = string( "<" ) + kRootElement + ">\n";
+        StringBuilder<constant::buffer::kMax4096> textBuilder;
+        textBuilder.appendFormat( "<%#>\n", kRootElement );
         for ( const Internal::Entry& entry : listEntry )
-            text += string( "\t<" ) + ( entry._kind == Internal::EntryKind::Prefix ? Internal::kPrefixRedirectElement : Internal::kRedirectElement ) + " from=\"" + entry._from + "\" to=\"" + entry._to +
-                    "\" />\n";
-        text += string( "</" ) + kRootElement + ">\n";
+            textBuilder.appendFormat( "\t<%# from=\"%#\" to=\"%#\" />\n", entry._kind == Internal::EntryKind::Prefix ? Internal::kPrefixRedirectElement : Internal::kRedirectElement, entry._from,
+                                      entry._to );
+        textBuilder.appendFormat( "</%#>\n", kRootElement );
+        string text( textBuilder.view() );
         // 쓸 글을 런타임과 같은 규칙으로 다시 읽는다 — 맞춤 꼴이 아닌 id · 자기 자신으로 · 순환이면 쓰지 않는다.
         unordered_map<string, string> mapResult;
         vector<Internal::Entry>       listPrefixResult;
@@ -308,7 +310,8 @@ namespace sw
         {
             if ( assetID.size() <= entry._from.size() || assetID[entry._from.size()] != '/' || assetID.substr( 0, entry._from.size() ) != string_view{ entry._from } )
                 continue;
-            outAssetID        = entry._to + string{ assetID.substr( entry._from.size() ) };
+            outAssetID = entry._to;
+            outAssetID.append( assetID.substr( entry._from.size() ) );
             const auto itNext = state._mapOldToNew.find( outAssetID );
             if ( itNext != state._mapOldToNew.end() )
                 outAssetID = itNext->second;

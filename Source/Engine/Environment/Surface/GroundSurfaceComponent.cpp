@@ -72,13 +72,17 @@ namespace sw
                 GameObject* pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
                 if ( pObject == nullptr )
                 {
-                    outReply = "surface.probe: no object named '" + listArgument[0] + "' in the active scene";
+                    StringBuilder<constant::buffer::kMax256> missingReply;
+                    missingReply.appendFormat( "surface.probe: no object named '%#' in the active scene", listArgument[0] );
+                    outReply.assign( missingReply.view() );
                     return true;
                 }
                 SurfaceSample sample;
                 if ( sampleUnder( *pObject, length, sample ) == false )
                 {
-                    outReply = "surface.probe: nothing with a surface kind under '" + listArgument[0] + "' (see Surface.KindMissing in the log)";
+                    StringBuilder<constant::buffer::kMax256> missingReply;
+                    missingReply.appendFormat( "surface.probe: nothing with a surface kind under '%#' (see Surface.KindMissing in the log)", listArgument[0] );
+                    outReply.assign( missingReply.view() );
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;

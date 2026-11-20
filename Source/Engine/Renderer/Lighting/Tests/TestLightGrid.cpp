@@ -88,9 +88,9 @@ SW_TEST_CASE( LightGridTest, PointsInsideALightSphereSeeThatLight )
                         continue;
                     const sw::float3 point = sw::float3{ sphere._x, sphere._y, sphere._z } + scaled;
                     grid.collectLights( point, listFound );
-                    SW_EXPECT_TRUE_MSG( Internal::containsLight( listFound, lightIndex ), ( "light " + sw::to_string( lightIndex ) + " missing at cluster " +
-                                                                                            sw::to_string( grid.computeClusterIndex( point ) ) )
-                                                                                              .c_str() );
+                    sw::fixed_string<sw::constant::buffer::kMax128> message;
+                    sw::formatstring( message.data(), message.capacity(), "light %# missing at cluster %#", lightIndex, grid.computeClusterIndex( point ) );
+                    SW_EXPECT_TRUE_MSG( Internal::containsLight( listFound, lightIndex ), message );
                     SW_EXPECT_TRUE( Internal::containsLight( listFound, 0u ) );
                 }
             }
@@ -123,7 +123,9 @@ SW_TEST_CASE( LightGridTest, FarClustersAndHiddenLightsAreCulled )
         entryCount += grid.getClusterLightCount( cluster );
     }
     SW_EXPECT_TRUE( entryCount > 0u );
-    SW_EXPECT_TRUE_MSG( entryCount < sw::LightGrid::kClusterCount / 8u, ( "작은 점광 하나가 클러스터 " + sw::to_string( entryCount ) + " 개를 덮는다" ).c_str() );
+    sw::fixed_string<sw::constant::buffer::kMax128> message;
+    sw::formatstring( message.data(), message.capacity(), "작은 점광 하나가 클러스터 %# 개를 덮는다", entryCount );
+    SW_EXPECT_TRUE_MSG( entryCount < sw::LightGrid::kClusterCount / 8u, message );
     const sw::vector<uint32>& listWord  = grid.getWords();
     const uint32              indexBase = listWord[sw::shaderslot::lightgrid::kWordIndexBase];
     for ( uint32 entry = 0; entry < entryCount; ++entry )

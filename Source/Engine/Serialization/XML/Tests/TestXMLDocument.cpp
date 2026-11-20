@@ -24,8 +24,11 @@ SW_TEST_CASE( XMLDocumentTest, WrappedLinesRoundTrip )
     sw::vector<sw::string> listName;
     for ( int32 index = 0; index < 24; ++index )
     {
-        listName.push_back( "_attribute" + sw::to_string( index ) );
-        child.setAttribute( listName.back().c_str(), index == 7 ? sw::string( kTrickyValue ) : "value_number_" + sw::to_string( index ) );
+        sw::fixed_string<sw::constant::buffer::kMax32> text;
+        sw::formatstring( text.data(), text.capacity(), "_attribute%#", index );
+        listName.push_back( sw::string( text.view() ) );
+        sw::formatstring( text.data(), text.capacity(), "value_number_%#", index );
+        child.setAttribute( listName.back().c_str(), index == 7 ? sw::string_view( kTrickyValue ) : text.view() );
     }
     const sw::string text = document.saveToString();
     SW_EXPECT_TRUE( text.find( "\n" ) != sw::string::npos );
@@ -36,7 +39,9 @@ SW_TEST_CASE( XMLDocumentTest, WrappedLinesRoundTrip )
     SW_REQUIRE_TRUE( readChild.isValid() );
     for ( int32 index = 0; index < 24; ++index )
     {
-        const sw::string expected = index == 7 ? sw::string( kTrickyValue ) : "value_number_" + sw::to_string( index );
+        sw::fixed_string<sw::constant::buffer::kMax32> numbered;
+        sw::formatstring( numbered.data(), numbered.capacity(), "value_number_%#", index );
+        const sw::string expected = index == 7 ? sw::string( kTrickyValue ) : sw::string( numbered.view() );
         SW_EXPECT_EQUAL( expected, sw::string( readChild.getAttributeText( listName[static_cast<size_t>( index )].c_str() ) ) );
     }
     SW_EXPECT_EQUAL( text, reread.saveToString() ); // 접은 글은 다시 저장해도 같다(diff 가 흔들리지 않는다)

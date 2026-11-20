@@ -999,7 +999,11 @@ namespace sw
     {
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            const string      path       = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+            StringBuilder<constant::buffer::kMax256> pathBuilder;
+            if ( prefix.empty() == false )
+                pathBuilder.appendFormat( "%#.", prefix );
+            pathBuilder.append( prop._name.c_str() );
+            const string      path       = string( pathBuilder.view() );
             const XMLNode     child      = element.findChild( prop._name.c_str() );
             const utf8* const pAttribute = element.findAttribute( prop._name.c_str() );
             const bool        bWritten   = pAttribute != nullptr || child.isValid();

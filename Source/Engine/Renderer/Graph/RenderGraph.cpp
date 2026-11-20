@@ -924,22 +924,22 @@ namespace sw
 
     string RenderGraph::exportToMermaid() const
     {
-        string result = "graph TD\n";
-        result.reserve( _listNode.size() * 128 );
+        StringBuilder<constant::buffer::kMax4096> builder;
+        builder.append( "graph TD\n" );
         for ( const RenderGraphNode& node : _listNode )
         {
-            string passLabel = node._name.c_str();
+            const utf8* pPassLabel = node._name.c_str();
 
             for ( const hashed_string& input : node._listInput )
             {
-                result += "    " + string( input.c_str() ) + " --> " + passLabel + "\n";
+                builder.appendFormat( "    %# --> %#\n", input.c_str(), pPassLabel );
             }
             for ( const hashed_string& output : node._listOutput )
             {
-                result += "    " + passLabel + " --> " + string( output.c_str() ) + "\n";
+                builder.appendFormat( "    %# --> %#\n", pPassLabel, output.c_str() );
             }
         }
-        return result;
+        return string( builder.view() );
     }
 
     /**
@@ -947,23 +947,23 @@ namespace sw
      */
     string RenderGraph::exportToDot() const
     {
-        string result = "digraph RenderGraph {\n";
-        result.reserve( _listNode.size() * 128 );
+        StringBuilder<constant::buffer::kMax4096> builder;
+        builder.append( "digraph RenderGraph {\n" );
         for ( const RenderGraphNode& node : _listNode )
         {
-            string passName = node._name.c_str();
+            const utf8* pPassName = node._name.c_str();
 
             for ( const hashed_string& input : node._listInput )
             {
-                result += "    \"" + string( input.c_str() ) + "\" -> \"" + passName + "\";\n";
+                builder.appendFormat( "    \"%#\" -> \"%#\";\n", input.c_str(), pPassName );
             }
             for ( const hashed_string& output : node._listOutput )
             {
-                result += "    \"" + passName + "\" -> \"" + string( output.c_str() ) + "\";\n";
+                builder.appendFormat( "    \"%#\" -> \"%#\";\n", pPassName, output.c_str() );
             }
         }
-        result += "}\n";
-        return result;
+        builder.append( "}\n" );
+        return string( builder.view() );
     }
 
     void RenderGraph::appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node )
