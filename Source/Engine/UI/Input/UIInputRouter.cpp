@@ -142,6 +142,7 @@ namespace sw
         , _bTouchActive{ SW_FALSE }
         , _bStickHeld{ SW_FALSE }
         , _bMousePixelKnown{ SW_FALSE }
+        , _bFocusOnlyThisFrame{ SW_FALSE }
     {
     }
 
@@ -188,7 +189,8 @@ namespace sw
 
     void UIInputRouter::update( float32 deltaSeconds )
     {
-        _inputDeltaSeconds = deltaSeconds;
+        _inputDeltaSeconds   = deltaSeconds;
+        _bFocusOnlyThisFrame = SW_FALSE;
         _listFramePointerEvent.clear();
         _consumption.update( *_pInput );
         if ( _uiInputMap != nullptr )
@@ -504,6 +506,8 @@ namespace sw
             restoreFocus( screen );
             return _focus.getFocusedTree() == &tree;
         }
+        if ( _bFocusOnlyThisFrame == SW_TRUE )
+            return true; // 이 입력이 탐색 방식으로 바꾸며 기본 포커스를 잡았다 — 옮기지 않는다
         if ( routeAction( screen, action, float2{} ) )
             return true;
         return _focus.navigate( tree, direction );

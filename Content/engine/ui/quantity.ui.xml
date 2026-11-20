@@ -16,6 +16,10 @@
 					<BoxPanel _spacing="12">
 						<SliderWidget _name="Amount" _accessibleName="Amount">
 							<_slot _widthOverride="240" />
+							<!-- 아래는 확인 단추로 — 공간 탐색은 가운데 거리로 취소를 골랐다(확인이 기본 동작) -->
+							<_navigation>
+								<_down _rule="Explicit" _target="Accept" />
+							</_navigation>
 						</SliderWidget>
 						<TextWidget _name="Count" _text="{bind:_count}" />
 					</BoxPanel>

@@ -38,7 +38,7 @@ namespace sw
      * @struct UIScenarioSteps
      * @brief `<ExpectUI focus="이름|none" screen="문서 경로|none" screens="수"/>` 입니다. 적은 속성만 확인하며 하나 이상 적어야 합니다.
      * @details `focus` 는 포커스 위젯의 이름(조각 안이면 `조각.이름`)이고 `none` 은 포커스 없음이다. `screen` 은 활성 화면(입력과 포커스를 받는 맨 위 화면)의 문서 경로
-     *          (`normalizePath` 를 쓰며 대소문자 무시)이고, 코드 화면이거나 없으면 `none` 이다. `screens` 는 스택의 화면 수(닫는 중인 화면 포함)다.
+     *          (`normalizePath` 를 쓰며 대소문자 무시)이고, 코드 화면이거나 없으면 `none` 이다. `screens` 는 메뉴 스택 깊이(`UISystem::getMenuStackDepth` — 포커스를 받는 열린 화면, HUD · Overlay · 닫는 중 제외)다.
      */
     struct UIScenarioSteps
     {
@@ -325,9 +325,9 @@ namespace sw
                 outFailure += "screens '" + *pCount + "' is not a number. "; // 검사 뒤 단계가 바뀌었다(핫 리로드)
                 bPassed = false;
             }
-            else if ( ui.getGameScreenCount() != static_cast<uint32>( expected ) )
+            else if ( ui.getMenuStackDepth() != static_cast<uint32>( expected ) )
             {
-                outFailure += "screen count is " + to_string( ui.getGameScreenCount() ) + ", expected " + *pCount + ". ";
+                outFailure += "menu stack depth is " + to_string( ui.getMenuStackDepth() ) + ", expected " + *pCount + ". ";
                 bPassed = false;
             }
         }

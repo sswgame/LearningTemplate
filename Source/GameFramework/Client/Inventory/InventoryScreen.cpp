@@ -138,14 +138,13 @@ namespace sw
             SW_LOG_ERROR_ID( "InventoryScreen.CharacterNotStarted", "Inventory screen needs a started character equipment - '%#' was not opened", string( documentPath ).c_str() );
             return kInvalidUIScreenHandle;
         }
-        const UIScreenHandle handle  = ui.openScreen<InventoryScreen>( documentPath );
-        UIScreen*            pScreen = ui.findScreen( handle );
-        if ( pScreen == nullptr )
-            return kInvalidUIScreenHandle;
-        InventoryScreen& screen = static_cast<InventoryScreen&>( *pScreen );
-        screen._pCharacter      = &character;
-        screen.buildWidgets();
-        return handle;
+        // 칸은 올리기 전에 짓는다 — 탐색 방식으로 열면 올리는 순간 기본 포커스(`Slot0`)가 서야 한다.
+        return ui.openScreen<InventoryScreen>( documentPath, [&character]( InventoryScreen& screen )
+        {
+            screen._pCharacter = &character;
+            screen.buildWidgets();
+            return true;
+        } );
     }
 
     void InventoryScreen::buildWidgets()
