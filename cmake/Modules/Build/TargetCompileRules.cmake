@@ -116,29 +116,47 @@ function(sw_add_shared_pch_owner OWNER_NAME HEADER_PATH)
 	if(ARG_DEFINITIONS)
 		target_compile_definitions(${OWNER_NAME} PRIVATE ${ARG_DEFINITIONS}) # 쓰는 타깃 모두가 같은 정의를 가질 때만(게임 팩의 `SW_LOG_TAG` · `SW_MODULE_EXPORTS`)
 	endif()
-	set_target_properties(${OWNER_NAME} PROPERTIES FOLDER "Build/PCH" EXCLUDE_FROM_ALL ON)
+	# clang 은 PIC 수준이 다른 PCH 를 거부한다 — 쓰는 쪽(동적 구성의 키트 SHARED · 게임 MODULE)이 PIC 이므로 소유자도 같게 짓는다.
+	# 정적 모듈 구성은 쓰는 쪽이 STATIC 이라 플랫폼 값(CMAKE_POSITION_INDEPENDENT_CODE — Android 는 켬)을 따른다. COFF(Windows)는 무관하다.
+	if(NOT SW_STATIC_MODULES OR CMAKE_POSITION_INDEPENDENT_CODE)
+		set(owner_pic ON)
+	else()
+		set(owner_pic OFF)
+	endif()
+	set_target_properties(${OWNER_NAME} PROPERTIES FOLDER "Build/PCH" EXCLUDE_FROM_ALL ON POSITION_INDEPENDENT_CODE ${owner_pic})
 	sw_require_template_definitions(${OWNER_NAME}) # 쓰는 쪽(키트 · 게임)과 같은 옵션으로 PCH 를 굽는다
 	target_precompile_headers(${OWNER_NAME} PRIVATE "${HEADER_PATH}")
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_use_shared_pch — 타깃이 `sw_add_shared_pch_owner` 의 PCH 를 쓴다(clang-cl 만 — 그 밖은 PCH 없이 짓는다).
+# sw_use_shared_pch — 타깃이 `sw_add_shared_pch_owner` 의 PCH 를 쓴다(clang-cl · GNU 드라이버 clang 둘 다 — 언리얼 UBT SharedPCH 자리).
 #   CMake 의 `REUSE_PRECOMPILE_HEADERS_FROM` 을 쓰지 않는 까닭 둘:
 #   - 속성만 세우면(`set_target_properties`) CMake 4.4 는 조용히 무시한다 — `target_precompile_headers( REUSE_FROM )` 이어야 붙는다.
 #   - CMake 는 PCH 플래그(`/Yu` · `/FI<cmake_pch.hxx>`)를 명령줄 맨 끝에 둔다. clang-cl 은 PCH 헤더보다 **앞에** 강제 포함한 파일을 건너뛰므로
 #     타깃 고유 정의 헤더(`sw_set_target_defs_header`)가 사라진다. 그래서 PCH 플래그를 타깃 옵션 맨 앞(`BEFORE`)에 직접 넣어 정의 헤더 ·
 #     의존 타깃의 `FlagOps.gen.h` 가 PCH **뒤에** 읽히게 한다.
-#   PCH 안 헤더는 `/showIncludes` 에 나오지 않으므로 소유자의 PCH 오브젝트를 모든 C++ 소스의 `OBJECT_DEPENDS` 로 건다 —
-#   소스가 다 붙은 뒤(리플렉션 단계 뒤) 부른다. `SKIP_PRECOMPILE_HEADERS` 소스는 `/Y-` 로 PCH 를 끈다.
+#   GNU 드라이버(Linux · Android)는 `-include-pch <소유자>/cmake_pch.hxx.pch`(CMake Compiler/Clang.cmake 의 USE_PCH 와 같은 파일)다 — clang 은 이 PCH 를
+#     어떤 `-include` 보다 먼저 싣는다. 명령줄에서 소스 하나만 뺄 수 없으므로 `SKIP_PRECOMPILE_HEADERS` 소스(ABI 스탬프 · 서버 전용 표시 TU)도
+#     PCH 를 싣는다 — 같은 정의 · 옵션이라 결과는 같고 의존만 하나 는다. 소스별 옵션은 유니티 묶음에서 그 소스를 빼므로 쓰지 않는다.
+#   PCH 안 헤더는 `/showIncludes` · depfile 에 나오지 않으므로 소유자의 PCH 산출물을 C++ 소스의 `OBJECT_DEPENDS` 로 건다 —
+#   소스가 다 붙은 뒤(리플렉션 단계 뒤) 부른다. clang-cl 의 `SKIP_PRECOMPILE_HEADERS` 소스는 `/Y-` 로 PCH 를 끈다.
 # ------------------------------------------------------------------------------
 function(sw_use_shared_pch TARGET_NAME OWNER_NAME)
-	if(NOT SW_ENABLE_PCH OR NOT MSVC OR NOT TARGET ${OWNER_NAME})
+	if(NOT SW_ENABLE_PCH OR NOT TARGET ${OWNER_NAME})
 		return()
 	endif()
 	get_target_property(owner_binary_dir ${OWNER_NAME} BINARY_DIR)
 	set(pch_dir "${owner_binary_dir}/CMakeFiles/${OWNER_NAME}.dir")
-	set(pch_header "${pch_dir}/cmake_pch.hxx")
-	target_compile_options(${TARGET_NAME} BEFORE PRIVATE "/Yu${pch_header}" "/Fp${pch_dir}/cmake_pch.cxx.pch" "/FI${pch_header}")
+	if(MSVC)
+		set(pch_header "${pch_dir}/cmake_pch.hxx")
+		set(pch_output "${pch_dir}/cmake_pch.cxx.obj")
+		target_compile_options(${TARGET_NAME} BEFORE PRIVATE "/Yu${pch_header}" "/Fp${pch_dir}/cmake_pch.cxx.pch" "/FI${pch_header}")
+	elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		set(pch_output "${pch_dir}/cmake_pch.hxx.pch")
+		target_compile_options(${TARGET_NAME} BEFORE PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-include-pch>" "$<$<COMPILE_LANGUAGE:CXX>:${pch_output}>")
+	else()
+		message(FATAL_ERROR "sw_use_shared_pch(${TARGET_NAME}): shared PCH needs clang (clang-cl or the GNU driver), got ${CMAKE_CXX_COMPILER_ID}")
+	endif()
 	add_dependencies(${TARGET_NAME} ${OWNER_NAME})
 	get_target_property(list_source ${TARGET_NAME} SOURCES)
 	foreach(src IN LISTS list_source)
@@ -146,10 +164,10 @@ function(sw_use_shared_pch TARGET_NAME OWNER_NAME)
 			continue()
 		endif()
 		get_source_file_property(skip_pch "${src}" TARGET_DIRECTORY ${TARGET_NAME} SKIP_PRECOMPILE_HEADERS)
-		if(skip_pch)
+		if(skip_pch AND MSVC)
 			set_property(SOURCE "${src}" TARGET_DIRECTORY ${TARGET_NAME} APPEND PROPERTY COMPILE_OPTIONS "/Y-")
 		else()
-			set_property(SOURCE "${src}" TARGET_DIRECTORY ${TARGET_NAME} APPEND PROPERTY OBJECT_DEPENDS "${pch_dir}/cmake_pch.cxx.obj")
+			set_property(SOURCE "${src}" TARGET_DIRECTORY ${TARGET_NAME} APPEND PROPERTY OBJECT_DEPENDS "${pch_output}")
 		endif()
 	endforeach()
 endfunction()

@@ -14,6 +14,11 @@ add_library(sw_platform_android INTERFACE)
 target_compile_definitions(sw_platform_android INTERFACE SW_PLATFORM_ANDROID SW_PLATFORM_POSIX SW_PLATFORM_NAME="Android")  # 이름은 sw::build::kPlatformName
 target_link_libraries(sw_platform_android INTERFACE android log aaudio)  # aaudio — 오디오 장치 백엔드(Audio/Android, API 26+)
 list(APPEND SW_FLAG_LIBRARIES sw_platform_android)
+# 배포본은 같은 기계어 함수를 합친다(Windows 의 /OPT:ICF) — NDK 툴체인은 섹션 GC(-ffunction-sections · --gc-sections)는 주지만 ICF 는 주지 않는다
+# (ndk/<판>/build/cmake/flags.cmake). `safe` 는 주소를 비교하는 함수를 합치지 않는다(clang 이 ELF 에 늘 내는 주소 중요 표 `.llvm_addrsig` 를 본다).
+if(SW_SHIPPING_BUILD)
+	target_link_options(sw_platform_android INTERFACE $<$<CONFIG:Release>:LINKER:--icf=safe>)
+endif()
 # 앱이 공유 라이브러리(libApp.so — NativeActivity 가 연다)라 거기 묶이는 정적 라이브러리 · 오브젝트가 모두 PIC 여야 한다. 대상마다 켜지 않고 이 플랫폼 전체에 건다(빠뜨린 타깃이 링크에서 R_AARCH64_* 로 섰다).
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
