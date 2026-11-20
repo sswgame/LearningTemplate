@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketSceneCollector.h"
 
 namespace sw

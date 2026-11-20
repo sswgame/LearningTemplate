@@ -11,6 +11,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Foundation/RHIDescriptorIndex.h"
 #include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 
 namespace sw

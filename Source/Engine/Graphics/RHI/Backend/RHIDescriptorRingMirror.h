@@ -8,7 +8,6 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
-#include "Engine/Graphics/RHI/RHIHandles.h"
 
 namespace sw
 {

@@ -18,7 +18,6 @@
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Presentation/InstanceCustomData.h"
 #include "Engine/Renderer/VFX/VFXParticleOrder.h"
 #include "Engine/VFX/VFXParticle.h"

@@ -19,7 +19,6 @@
 #include "Engine/Config/OcclusionCullingConfig.h"
 #include "Engine/Graphics/RHI/RHIBufferTransitionBatch.h"
 #include "Engine/Graphics/RHI/RHIConstantBuffer.h"
-#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Frame/Execute/HZBOcclusion.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"

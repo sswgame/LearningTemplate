@@ -4,6 +4,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
