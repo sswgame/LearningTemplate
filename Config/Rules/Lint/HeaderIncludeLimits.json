@@ -20,6 +20,7 @@
         { "_header": "Engine/Serialization/Format/StateIO.h", "_limit": 3, "_reason": "DeterministicRandom32 · typeFqn 은 앞선 선언 — reflected · reflectedAs · writeReflectedHeader<T> 를 부르는 TU 가 TypeFqn.h 를 읽는다" },
         { "_header": "Engine/Config/ConfigManager.h", "_limit": 11, "_reason": "TypeInfo 는 앞선 선언(ReflectionFwd.h) — 설정 템플릿(getConfig · readConfig* · load*Config)을 인스턴스화하는 TU 가 TypeInfo.h 를 읽는다" },
         { "_header": "Engine/Serialization/Serializer/SerializerUtil.h", "_limit": 24, "_reason": "프로퍼티 · 타입 기술(TypeInfo.h)만 쓴다 — 레지스트리 · 호출 · 검증 · 값 상자를 묶은 Reflection.h 를 포함하지 않는다" },
-        { "_header": "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h", "_limit": 1, "_reason": "AssetID 는 참조로만 받는다(앞선 선언) — 캐시를 선언하는 카탈로그 헤더는 SharedAssetCache.h 를 직접 포함한다" }
+        { "_header": "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h", "_limit": 1, "_reason": "AssetID 는 참조로만 받는다(앞선 선언) — 캐시를 선언하는 카탈로그 헤더는 SharedAssetCache.h 를 직접 포함한다" },
+        { "_header": "Engine/Serialization/Fixed/ReplicatedLayout.h", "_limit": 11, "_reason": "타입은 이름 캐시(TypeLookupCache · typeFqn — FixedLayout.h)로 찾는다 — TypeRegistry.h 를 포함하지 않는다" }
     ]
 }
