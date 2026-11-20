@@ -886,7 +886,9 @@ namespace sw
             }
         }
 
-        string       keyDeclaration;
+        string keyDeclaration;
+        // 부모는 리플렉션된 형식일 때만 적는다 — 리플렉션 밖 기반(`ISubsystem` 같은 Core 인터페이스)은 등록부 사슬에 없어 끊긴 고리가 된다(언리얼 UCLASS 사슬도 UObject 계열 기반만 잇는다).
+        const string parentFQN    = typeInfo._bParentReflected == SW_TRUE ? typeInfo._parentFQN : string{};
         const string registrarKey = makeRegistrarKey( typeInfo._bHidden == SW_TRUE, registrarName, typeInfo._fullyQualifiedName, keyDeclaration );
         outBuffer.append( keyDeclaration );
         appendTemplate( outBuffer, EmitTemplate::TypeRegistrarBegin, {
@@ -894,7 +896,7 @@ namespace sw
                                                                          {       templatekey::kFqn, typeInfo._fullyQualifiedName},
                                                                          {       templatekey::kKey,                 registrarKey},
                                                                          {      templatekey::kName,               typeInfo._name},
-                                                                         { templatekey::kParentFqn,          typeInfo._parentFQN},
+                                                                         { templatekey::kParentFqn,                    parentFQN},
                                                                          {templatekey::kModuleName,                  _moduleName},
                                                                          {     templatekey::kFlags,    string( flagsBuf.view() )},
         } );
