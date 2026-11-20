@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Diagnostics/NanDiagnostic.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/DualQuaternion.h"
 #include "Core/Math/MathUtil.h"
@@ -52,9 +53,10 @@ namespace sw
          * @details 선형이면 행 벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(mesh_skin.hlsl). 듀얼 쿼터니언이면 본 하나가
          *          실수부 · 허수부 · 스케일(xyz) 세 행이다 — 행렬을 `스케일 * 회전 * 이동` 으로 나눠 싣고, 셰이더가 스케일을 따로 섞어 회전 앞에 곱한다.
          *          모프 가중치는 [0, 1] 로 제한해 싣는다.
+         * @param pOwner 팔레트의 유닛입니다(군중 묶음이면 nullptr) — NaN 을 알릴 때 이름만 읽는다.
          */
         void appendPalette( GPUSceneSnapshot& inoutSnapshot, vector<float4>& inoutListRow, vector<float32>& inoutListWeight, const shared_ptr<Mesh>& mesh, AnimationSkinSlotKey skinSlot,
-                            uint32 lodIndex, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight, SkinningMethod method )
+                            uint32 lodIndex, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight, SkinningMethod method, [[maybe_unused]] const Component* pOwner )
         {
             GPUSkinPalette entry{};
             entry._bDualQuaternion = method == SkinningMethod::DualQuaternion ? SW_TRUE : SW_FALSE;
@@ -97,6 +99,17 @@ namespace sw
                     *pRow++ = float4{ matrix._13, matrix._23, matrix._33, matrix._43 };
                 }
             }
+#if defined( SW_DO_CHECKS )
+            // GPU 로 가기 전 마지막 자리 — 실은 행을 한 번에 훑는다(듀얼 쿼터니언 변환이 낸 NaN 도 여기서 걸린다). 셰이더는 NaN 정점을 조용히 버린다.
+            const size_t rowCount = listPalette.size() * 3;
+            const size_t firstRow = NanDiagnostic::findFirstNonFinite( inoutListRow.data() + entry._firstRow, rowCount );
+            if ( firstRow < rowCount )
+            {
+                const hashed_string owner = pOwner != nullptr ? pOwner->getOwnerName() : hashed_string{};
+                SW_LOG_ERROR_ONCE_FOR_ID( "GPUSkinPalette.NonFiniteUpload", owner.view(), "Skin palette of '%#' uploads a non-finite row for bone %# (%#) - the skinned mesh disappears or explodes",
+                                          pOwner != nullptr ? owner.c_str() : "crowd bucket", firstRow / 3, entry._bDualQuaternion == SW_TRUE ? "dual quaternion" : "linear" );
+            }
+#endif
             inoutSnapshot._listSkinPalette.push_back( entry );
         }
     } // namespace
@@ -125,14 +138,14 @@ namespace sw
             if ( skinSlot == AnimationSkinSlot::kNone || skinSlot != pSkeletalMesh->getOwnSkinSlot() )
                 continue;
             appendPalette( inoutSnapshot, *listRow, *listWeight, pSkeletalMesh->getMesh(), pSkeletalMesh->getOwnSkinSlotKey(), pSkeletalMesh->getLODIndex(), pSkeletalMesh->getSkinPalette(), &pSkeletalMesh->getMorphWeights(),
-                           pSkeletalMesh->getSkinningMethod() );
+                           pSkeletalMesh->getSkinningMethod(), pSkeletalMesh );
         }
         // 군중 묶음은 묶음 하나가 메시 하나, 결과 구간 하나, 팔레트 하나다(멤버가 몇이든). 가리키는 유닛이 있는 묶음만 그려진다.
         for ( const unique_ptr<AnimationCrowdBucket>& bucket : animation.getCrowd().getBuckets() )
         {
             if ( bucket->getReferenceCount() > 0 && bucket->getMesh() != nullptr )
                 appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh(), bucket->getSkinSlotKey(), constant::invalid_index::kUint32, bucket->getSkinPalette(), nullptr,
-                               bucket->getSkinningMethod() ); // 멤버마다 단계가 다르다 — 모든 단계. 방식은 열쇠라 멤버가 같다
+                               bucket->getSkinningMethod(), nullptr ); // 멤버마다 단계가 다르다 — 모든 단계. 방식은 열쇠라 멤버가 같다
         }
         _paletteRowCountHint               = listRow->size();
         _morphWeightCountHint              = listWeight->size();

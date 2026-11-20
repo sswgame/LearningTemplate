@@ -3,6 +3,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Diagnostics/NanDiagnostic.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
@@ -17,6 +18,22 @@
 
 namespace sw
 {
+#if defined( SW_DO_CHECKS )
+    namespace
+    {
+        struct SceneComponentInternal
+        {
+            /** @brief 로컬 값 칸(`SceneTransformPage::kLocal*`)의 이름입니다. */
+            static const utf8* getLocalValueName( uint8 bit )
+            {
+                if ( bit == SceneTransformPage::kLocalPosition )
+                    return "position";
+                return bit == SceneTransformPage::kLocalRotation ? "rotation" : "scale";
+            }
+        };
+    } // namespace
+#endif
+
     SceneComponent::SceneComponent()
         : _attachOwner{}
         , _attachOwnerID{ 0 }
@@ -153,6 +170,10 @@ namespace sw
 
     void SceneComponent::setLocalValue( uint8 bit, const float3& value )
     {
+        // NaN 은 자식 · 본 · 스키닝으로 번진다 — 들어온 자리에서 이름과 함께 한 번 알린다(값은 그대로 쓴다 — 고칠 곳은 값을 계산한 쪽이다).
+        SW_DIAGNOSTIC_CHECK_NAN_ID( "SceneComponent.NonFiniteTransform", value, getOwnerName().view(),
+                                    "'%#' got a non-finite local %# (%#, %#, %#) - it spreads to children, bones and skinning; fix the code that computed it",
+                                    getOwnerName().c_str(), SceneComponentInternal::getLocalValueName( bit ), value._x, value._y, value._z );
         if ( isInParallelTick() )
         {
             writeTickTransform( bit, value );

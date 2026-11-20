@@ -158,6 +158,17 @@ namespace sw
 
     void PhysicsComponent::writeWorldPose( SceneComponent& component, const float3& position, const quaternion& rotation, const float3& scale )
     {
+#if defined( SW_DO_CHECKS )
+        // 시뮬레이션이 낸 NaN(벌어진 구속 · 0 질량)을 트랜스폼 탓으로 보지 않게 물리 이름으로 먼저 알린다(언리얼 `DiagnosticCheckNaN`).
+        if ( position.isFinite() == false || rotation.isFinite() == false || scale.isFinite() == false )
+        {
+            const GameObject*   pOwner = component.getOwner();
+            const hashed_string name   = pOwner != nullptr ? pOwner->getName() : hashed_string{};
+            SW_LOG_ERROR_ONCE_FOR_ID( "PhysicsComponent.NonFiniteBodyPose", name.view(),
+                                      "Physics wrote a non-finite pose to '%#' (position %#, %#, %#; rotation %#, %#, %#, %#) - check the body's mass, constraints and applied forces",
+                                      name.c_str(), position._x, position._y, position._z, rotation._x, rotation._y, rotation._z, rotation._w );
+        }
+#endif
         // 부모가 없으면 월드가 곧 로컬이다 — 행렬을 만들어 다시 분해하지 않는다(동적 바디 대부분이 루트에 있다).
         if ( component.getParent() == nullptr )
         {

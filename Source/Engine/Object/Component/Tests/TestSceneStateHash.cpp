@@ -78,6 +78,9 @@ SW_TEST_CASE( SceneStateHashTest, RotationChangesTheHash )
  */
 SW_TEST_CASE( SceneStateHashTest, NanPositionIsIndependentOfCreationOrder )
 {
+#if defined( SW_DO_CHECKS )
+    SW_EXPECT_LOG( "SceneComponent.NonFiniteTransform" ); // NaN 위치를 넣는 것이 이 테스트다 — 트랜스폼 입구의 NaN 진단이 이름("CrateB")과 함께 알린다
+#endif
     const float32     nan = std::numeric_limits<float32>::quiet_NaN();
     GameObjectManager first;
     addStateHashTestObject( first, "CrateA", float3{ 1.0f, 0.0f, 0.0f } );

@@ -571,6 +571,11 @@ namespace sw
         return ( pTypeInfo != nullptr ) ? pTypeInfo->_name : _componentName;
     }
 
+    hashed_string Component::getOwnerName() const
+    {
+        return _pOwner != nullptr ? _pOwner->getName() : hashed_string{};
+    }
+
     bool Component::isActive() const
     {
         if ( _bActive.load( std::memory_order_relaxed ) == false )

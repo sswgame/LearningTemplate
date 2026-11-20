@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/CameraComponent.h"
 
+#include "Core/Diagnostics/NanDiagnostic.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -199,7 +200,11 @@ namespace sw
         const float3   forward  = float3::transformVector( float3( 0.0f, 0.0f, 1.0f ), worldMat );
         const float3   up       = float3::transformVector( float3( 0.0f, 1.0f, 0.0f ), worldMat );
         const float3   target   = eye + forward;
-        return float4x4::makeLookAt( eye, target, up );
+        const float4x4 view     = float4x4::makeLookAt( eye, target, up );
+        SW_DIAGNOSTIC_CHECK_NAN_ID( "CameraComponent.NonFiniteViewMatrix", view, getOwnerName().view(),
+                                    "Camera '%#' has a non-finite view matrix (eye %#, %#, %#) - the scene renders blank or garbage; check the camera transform and view offset",
+                                    getOwnerName().c_str(), eye._x, eye._y, eye._z );
+        return view;
     }
 
     float3 CameraComponent::getCameraForward() const
@@ -235,7 +240,11 @@ namespace sw
         // 렌즈 시프트 — 클립 공간에서 x · y 를 w 만큼 옮긴다(clip.xy -= 2 · shift · clip.w). NDC 가 -1..1 이라 화면 비율 shift 는 NDC 2 · shift 다.
         // 원근 · 직교 모두 같은 식이다(직교는 w = 1). 행 벡터 규약(`p · M`)이라 이동 행렬을 오른쪽에 곱하고, 시프트가 0 이면 행렬이 그대로다.
         const float4x4 shift{ 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -2.0f * _lensShift._x, -2.0f * _lensShift._y, 0.0f, 1.0f };
-        return projection * shift;
+        const float4x4 result = projection * shift;
+        SW_DIAGNOSTIC_CHECK_NAN_ID( "CameraComponent.NonFiniteProjectionMatrix", result, getOwnerName().view(),
+                                    "Camera '%#' has a non-finite projection matrix (aspect %#, near %#, far %#, lens shift %#, %#) - check the camera settings",
+                                    getOwnerName().c_str(), aspect, nearZ, farZ, _lensShift._x, _lensShift._y );
+        return result;
     }
 
     float4x4 CameraComponent::getViewProjectionMatrix( float32 aspectRatio ) const

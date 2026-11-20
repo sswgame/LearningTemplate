@@ -591,6 +591,8 @@ namespace sw
         const TypeInfo* findCachedTypeInfo() const { return _pTypeInfo != nullptr && TypeCastHeader::of( _pTypeInfo ).isAlive() ? _pTypeInfo : getTypeInfo(); }
         /** @brief 소유자 GameObject 를 반환합니다. */
         GameObject* getOwner() const { return _pOwner; }
+        /** @brief 소유자 GameObject 의 이름입니다. 소유자가 없으면 빈 이름입니다 — 로그 · 진단이 "어느 오브젝트" 를 적을 때 씁니다. */
+        hashed_string getOwnerName() const;
         /** @brief 활성 상태이면 true 입니다(자기 활성 비트와 소유자 활성을 모두 봅니다). */
         bool isActive() const;
         /** @brief 자기 활성 비트만 봅니다. 소유자 활성을 이미 확인한 곳(오브젝트 단위 틱 디스패치)에서 씁니다. */

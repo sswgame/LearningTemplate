@@ -3,6 +3,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Diagnostics/NanDiagnostic.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
@@ -62,6 +63,42 @@ namespace sw
                 hash        = HashUtil::appendBytes64( hash, pose.getRotations().data(), pose.getRotations().size() * sizeof( quaternion ) );
                 hash        = HashUtil::appendBytes64( hash, pose.getScales().data(), pose.getScales().size() * sizeof( float3 ) );
                 return HashUtil::appendBytes64( hash, listMorphWeight.data(), listMorphWeight.size() * sizeof( float32 ) );
+            }
+
+            /** @brief 본 @p boneIndex 의 이름입니다(로그용). 스켈레톤 밖이면 빈 글입니다. */
+            static const utf8* getBoneName( const SkeletalMeshComponent& component, uint32 boneIndex )
+            {
+                const Skeleton& skeleton = component.getSkeleton();
+                return boneIndex < skeleton.getBoneCount() ? skeleton.getBone( boneIndex )._name.c_str() : "";
+            }
+
+            /**
+             * @brief 로컬 포즈에 NaN · 무한대가 든 첫 본을 이름과 함께 한 번 알립니다(언리얼 `DiagnosticCheckNaN`). 단계의 작업이 모두 돈 뒤 배열 셋을 한 번씩 훑는다 — 본마다 검사하지 않는다.
+             */
+            static void reportNonFinitePose( const SkeletalMeshComponent& component, const Pose& pose, const utf8* pStage )
+            {
+                const uint32 boneCount = pose.getBoneCount();
+                const size_t firstBone = MathUtil::min( NanDiagnostic::findFirstNonFinite( pose.getTranslations().data(), boneCount ),
+                                                        MathUtil::min( NanDiagnostic::findFirstNonFinite( pose.getRotations().data(), boneCount ),
+                                                                       NanDiagnostic::findFirstNonFinite( pose.getScales().data(), boneCount ) ) );
+                if ( firstBone >= boneCount )
+                    return;
+                const uint32 boneIndex = static_cast<uint32>( firstBone );
+                SW_LOG_ERROR_ONCE_FOR_ID( "SkeletalMeshComponent.NonFinitePose", component.getOwnerName().view(),
+                                          "'%#' has a non-finite %# at bone '%#' (index %#) - check this phase's animation tasks (clip data, blend weights, IK targets)",
+                                          component.getOwnerName().c_str(), pStage, getBoneName( component, boneIndex ), boneIndex );
+            }
+
+            /** @brief 스킨 팔레트(본 행렬)에 NaN · 무한대가 든 첫 본을 한 번 알립니다. 포즈가 유한한데 걸리면 메시의 역 바인드 행렬이 깨진 것이다. */
+            static void reportNonFinitePalette( const SkeletalMeshComponent& component, const vector<float4x4>& listPalette )
+            {
+                const size_t firstBone = NanDiagnostic::findFirstNonFinite( listPalette.data(), listPalette.size() );
+                if ( firstBone >= listPalette.size() )
+                    return;
+                const uint32 boneIndex = static_cast<uint32>( firstBone );
+                SW_LOG_ERROR_ONCE_FOR_ID( "SkeletalMeshComponent.NonFiniteSkinPalette", component.getOwnerName().view(),
+                                          "'%#' has a non-finite skinning matrix at bone '%#' (index %#) - the pose or the mesh's inverse bind matrix is broken",
+                                          component.getOwnerName().c_str(), getBoneName( component, boneIndex ), boneIndex );
             }
 #endif
         };
@@ -515,8 +552,12 @@ namespace sw
     void SkeletalMeshComponent::refreshSkinPalette()
     {
         const shared_ptr<Mesh>& mesh = getMesh();
-        if ( mesh != nullptr && mesh->hasSkin() )
-            Pose::computeSkinPalette( mesh->getSkinBinding()._listInverseBind, _listModelSpace, _listSkinPalette );
+        if ( mesh == nullptr || mesh->hasSkin() == false )
+            return;
+        Pose::computeSkinPalette( mesh->getSkinBinding()._listInverseBind, _listModelSpace, _listSkinPalette );
+#if defined( SW_DO_CHECKS )
+        SkeletalMeshComponentInternal::reportNonFinitePalette( *this, _listSkinPalette );
+#endif
     }
 
     void SkeletalMeshComponent::refreshSkinBinding()
@@ -1004,6 +1045,9 @@ namespace sw
                 if ( pLeader != nullptr )
                     copyLeaderPose( *pLeader );
                 runTasks( phase );
+#if defined( SW_DO_CHECKS )
+                SkeletalMeshComponentInternal::reportNonFinitePose( *this, _localPose, "base pose" );
+#endif
                 _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
                 break;
             }
@@ -1018,6 +1062,9 @@ namespace sw
                 if ( bPoseNeeded == false || _listTask.empty() )
                     break;
                 runTasks( phase );
+#if defined( SW_DO_CHECKS )
+                SkeletalMeshComponentInternal::reportNonFinitePose( *this, _localPose, "post-process pose" );
+#endif
                 _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
                 break;
             }
