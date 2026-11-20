@@ -43,3 +43,29 @@ SW_TEST_CASE( CameraSystemTest, SystemRunsRegisteredCameraComponents )
     CameraSystem::find( manager )->runFramePass( manager ); // 미룬 것이 없으면 아무것도 하지 않고 지난다
     SW_EXPECT_FALSE( pCameraManager->isResolvePending() );
 }
+
+/** @brief [CameraSystemTest] 화면 시점을 모는 디렉터(게임 시점 카메라 또는 뷰 타깃)는 씬에 하나다 — 캡처 카메라의 디렉터는 세지 않고, 화면을 모는 것이 둘이면 오류와 nullptr 이다 */
+SW_TEST_CASE( CameraSystemTest, ViewDirectorIsUnique )
+{
+    SW_EXPECT_LOG( "ComponentRegistry.DuplicateUnique" );
+    GameObjectManager manager;
+    SW_EXPECT_NULL( CameraDirectorComponent::findViewDirector( manager ) );
+
+    GameObject* pGameRig = manager.createGameObject( hashed_string( "GameRig" ) );
+    SW_REQUIRE_NOT_NULL( pGameRig );
+    pGameRig->addComponent<CameraComponent>()->setRole( CameraRole::Game );
+    CameraDirectorComponent* pGameDirector = pGameRig->addComponent<CameraDirectorComponent>();
+    SW_REQUIRE_NOT_NULL( pGameDirector );
+
+    GameObject* pCaptureRig = manager.createGameObject( hashed_string( "CaptureRig" ) );
+    SW_REQUIRE_NOT_NULL( pCaptureRig );
+    pCaptureRig->addComponent<CameraComponent>()->setRole( CameraRole::Capture );
+    SW_REQUIRE_NOT_NULL( pCaptureRig->addComponent<CameraDirectorComponent>() );
+    SW_EXPECT_TRUE( CameraDirectorComponent::findViewDirector( manager ) == pGameDirector ); // 캡처 카메라는 화면을 몰지 않는다
+
+    GameObject* pSecondRig = manager.createGameObject( hashed_string( "SecondGameRig" ) );
+    SW_REQUIRE_NOT_NULL( pSecondRig );
+    pSecondRig->addComponent<CameraComponent>()->setRole( CameraRole::Game );
+    SW_REQUIRE_NOT_NULL( pSecondRig->addComponent<CameraDirectorComponent>() );
+    SW_EXPECT_NULL( CameraDirectorComponent::findViewDirector( manager ) );
+}

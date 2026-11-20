@@ -131,6 +131,12 @@ namespace sw
         /** @brief `ComponentStateStore` 계약입니다. 시작 전이면 보관했다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
         void restoreState( vector<uint8>&& bytes );
 
+        /**
+         * @brief @p manager 에서 화면 시점을 모는 디렉터입니다 — 게임 시점 카메라(`CameraRole::Game`)에 있거나 카메라 매니저의 뷰 타깃인 것(씬에 하나). 없으면 nullptr 입니다.
+         * @details 둘 이상이면 오류를 남기고 nullptr 이다 — 포토 모드 · 개발 명령이 어느 화면을 잡을지 등록 순서로 고르지 않는다(`ComponentRegistry::findUnique`).
+         */
+        static CameraDirectorComponent* findViewDirector( const GameObjectManager& manager );
+
         /** @brief 카메라가 따라갈 오브젝트입니다. 비우면 초점은 `_focusPoint` 이고 요와 피치는 0 입니다. */
         void                    setTarget( const GameObjectHandle& target ) { _target = target; }
         const GameObjectHandle& getTarget() const { return _target; }
