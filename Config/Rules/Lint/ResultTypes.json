@@ -1,6 +1,6 @@
 {
-    "_comment": "결과 형식 린트(Scripts/lint/result_types.py)의 Core 0 규칙 예외 — `경로|종류` → 까닭. Core 밖 파일마다의 수는 기계가 쓰는 기준선 ResultTypesBaseline.json 이다.",
-    "_coreExemptions": {
+    "_comment": "결과 형식 린트(Scripts/lint/result_types.py)의 예외 — `경로|종류` → 까닭. 모든 파일이 0 이어야 한다(기준선 래칫은 0 에 닿아 2026-11-21 은퇴).",
+    "_exemptions": {
         "Source/Core/GlobalVariable/GlobalVariableManager.cpp|out-text-on-failure": "readCommandLineArgument 가 아직 적용 못 한 열거자 글을 false 갈래로 넘긴다(규칙 전 코드) — sw::expected<bool, string> 류로 옮길 때 지운다"
     }
 }

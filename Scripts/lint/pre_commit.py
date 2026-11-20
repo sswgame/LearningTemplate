@@ -249,7 +249,7 @@ def check_merge_scope() -> list[str]:
     return [] if (scope.list_file, scope.list_removed) == (("c.txt",), ()) else [f"병합 범위가 손으로 푼 c.txt 하나가 아니다: {scope.list_file} · 지움 {scope.list_removed}"]
 
 
-def check_fact_store() -> list[str]:
+def check_index_cache() -> list[str]:
     """사실 저장소(`index_cache.open_facts`) — 임시 폴더에서 짓고, 한 파일 고치기 · 지우기 · 더하기 뒤 요약이 처음부터 접은 것과 같은지, 물은 사실이 맞는지,
     조각을 망가뜨리면 다시 지어 같은 답을 내는지 본다."""
     from lint.index_cache import open_facts
@@ -332,7 +332,7 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
 
     # 린트 코드(규칙 · 도우미 · 이 파일 · 하위 명령 표) · 린트 표 폴더가 바뀌면 커밋 훅의 모양(스테이지 비례 읽기 · 병합 범위)과 안내가 시키는 고치는 명령, 린트 표마다 읽는 규칙이 하나인지를 다시 본다 — 시간을 재지 않고 연 파일을 센다.
     if scope.whole_repo or scope.touches(roots=("Scripts/lint/", "Scripts/__main__.py", "Config/Rules/Lint/", *sorted({path for rule in RULES for path in rule.list_inputs() if path.startswith("Scripts/")}))):
-        list_shape = (check_read_bound(project_root) + check_merge_scope() + check_rule_row_diff() + check_fact_store()
+        list_shape = (check_read_bound(project_root) + check_merge_scope() + check_rule_row_diff() + check_index_cache()
                       + find_orphan_tables(project_root))
         if list_shape:
             has_errors = True

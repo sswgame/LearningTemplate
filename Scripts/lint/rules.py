@@ -92,7 +92,7 @@ RULES: tuple[Rule, ...] = (
     Rule("common-shapes", "모양", "공통 기반을 두고 손으로 적은 모양(열거 이름 표 · id 를 버리는 입구 · 손으로 짝지은 writeState · readState( Archive& ) · 프레임 함수 안의 리터럴 hashed_string …)", "칸 이름 · switch 글자 · 부른 함수는 형식이 말하지 못한다", "lint.common_shapes:check_common_shapes", tables=("",)),
     Rule("mutable-statics", "모양", "주인 객체 밖의 가변 정적 저장소(감춘 싱글턴)", "함수 정적 · 이름공간 범위 변수는 합법 C++ 이다", "lint.mutable_statics:check_mutable_statics", tables=("",)),
     # --- 이름 -------------------------------------------------------------------------------------------------------------
-    Rule("naming-words", "이름", "표에 없는 낱말(모든 이름 · 파일 · 폴더의 모든 낱말) · 금지 동사 · 금지 명사 · 금지 이름 · 약어 표기(모두 대문자)", "업계 용어인지는 형식이 말하지 못한다", "lint.naming_words:check_naming_words", tables=("", "Baseline", "BannedNames")),
+    Rule("naming-words", "이름", "표에 없는 낱말(모든 이름 · 파일 · 폴더의 모든 낱말) · 금지 동사 · 금지 명사 · 금지 이름 · 약어 표기(모두 대문자)", "업계 용어인지는 형식이 말하지 못한다", "lint.naming_words:check_naming_words", tables=("", "BannedNames")),
     # --- 셰이더 -----------------------------------------------------------------------------------------------------------
     Rule("shader-kill-order", "셰이더", "픽셀 버리기(clip · discard) 뒤의 미분 읽기", "HLSL 에 미분을 쓰는 함수를 적을 형식이 없다", "lint.shader_kill_order:check_shader_kill_order"),
     Rule("shader-branch-shape", "셰이더", "`if ( a && b ) … else if ( a )` 사슬(NVIDIA GL 오컴파일)", "분기 모양은 형식이 아니다", "lint.shader_branch_shape:check_shader_branch_shape"),
@@ -102,7 +102,7 @@ RULES: tuple[Rule, ...] = (
     Rule("asset-ids", "참조", "에셋 정체성 결함 — 머리 `<?asset guid?>` 없음 · 깨짐, 짝 없는 .meta · .meta 없는 원본, GUID 겹침, HEAD 경로의 GUID 바뀜", "정체성은 파일 글(머리 · 곁 .meta)이라 형식이 말하지 못한다(고치는 것은 `py -3 -m Scripts asset-ids --fix`)", "lint.asset_identity:check_asset_identity", inputs=("Config/Dev/AssetIdentity.json",)),
     # --- 래칫(늘지 않게만, 줄이면 `--accept`) -----------------------------------------------------------------------------
     Rule("magic-literals", "래칫", "일반 코드의 이름 없는 숫자 리터럴이 파일마다 늘어남", "리터럴이 매직인지는 형식이 가르지 못한다", "lint.magic_literals:check_magic_literals", tables=("Baseline",)),
-    Rule("result-types", "래칫", "std::optional · string& outError 모양(Core 0, 그 밖은 늘지 않게)", "언어가 주는 모양이다", "lint.result_types:check_result_types", tables=("", "Baseline")),
+    Rule("result-types", "모양", "std::optional · string& outError 모양(어디서나 0 — 예외는 까닭과 함께 표에)", "언어가 주는 모양이다", "lint.result_types:check_result_types", tables=("",)),
     Rule("header-include-limits", "래칫", "다이어트한 헤더가 pch 밖에서 끌어오는 헤더 수가 상한 표보다 늘어남(줄면 표를 낮춘다)", "포함 사슬이 다시 길어지는 것을 막는 형식이 C++17 에 없다 — 측정 숫자(`header-fanin`)의 문턱이다", "lint.header_include_limits:check_header_include_limits", tables=("",)),
 )
 
