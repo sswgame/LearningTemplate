@@ -9,7 +9,8 @@
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 

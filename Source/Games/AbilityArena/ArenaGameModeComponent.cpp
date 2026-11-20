@@ -11,6 +11,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Visual/Component/MeshComponent.h"

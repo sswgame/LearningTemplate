@@ -21,7 +21,7 @@
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

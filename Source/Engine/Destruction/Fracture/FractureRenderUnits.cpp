@@ -11,7 +11,7 @@
 #include "Engine/Destruction/Fracture/FractureRenderUtil.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
