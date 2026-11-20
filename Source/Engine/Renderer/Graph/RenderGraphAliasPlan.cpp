@@ -2,6 +2,8 @@
 
 #include "Engine/Renderer/Graph/RenderGraphAliasPlan.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+
 #include <algorithm>
 
 namespace sw
@@ -62,7 +64,7 @@ namespace sw
         {
             listOrder[index] = index;
         }
-        std::stable_sort( listOrder.begin(), listOrder.end(), [&listCandidate]( size_t left, size_t right )
+        VectorUtil::stableSort( listOrder, [&listCandidate]( size_t left, size_t right )
         {
             const RenderGraphAliasCandidate& a = listCandidate[left];
             const RenderGraphAliasCandidate& b = listCandidate[right];

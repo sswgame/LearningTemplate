@@ -2,7 +2,7 @@
 
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 
-#include <algorithm>
+#include "Core/Algorithm/VectorUtil.h"
 
 namespace sw
 {
@@ -154,7 +154,7 @@ namespace sw
                 entry._pressFrameIndex += frameCount;
         }
         if ( bKeptRelease )
-            std::stable_sort( _listEntry.begin(), _listEntry.end(), []( const VirtualInputScriptEntry& lhs, const VirtualInputScriptEntry& rhs )
+            VectorUtil::stableSort( _listEntry, []( const VirtualInputScriptEntry& lhs, const VirtualInputScriptEntry& rhs )
             { return lhs._frameIndex < rhs._frameIndex; } );
     }
 

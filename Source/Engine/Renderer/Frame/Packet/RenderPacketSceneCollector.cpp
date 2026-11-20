@@ -176,7 +176,7 @@ namespace sw
             pDecal->writeDrawData( data );
         }
         // 겹친 데칼은 차례가 큰 것이 위다(언리얼 Sort Order). 같은 차례는 등록 순서(안정 정렬).
-        std::stable_sort( packet._listDecal.begin(), packet._listDecal.end(), []( const DecalDrawData& left, const DecalDrawData& right )
+        VectorUtil::stableSort( packet._listDecal, []( const DecalDrawData& left, const DecalDrawData& right )
         { return left._sortOrder < right._sortOrder; } );
     }
 

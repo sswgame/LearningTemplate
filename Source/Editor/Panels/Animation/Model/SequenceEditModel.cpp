@@ -313,7 +313,7 @@ namespace sw::editor
             if ( pInfo != nullptr && pInfo->_bCutsCamera )
                 outListItemIndex.push_back( itemIndex );
         }
-        std::stable_sort( outListItemIndex.begin(), outListItemIndex.end(), [this]( int32 left, int32 right )
+        VectorUtil::stableSort( outListItemIndex, [this]( int32 left, int32 right )
         { return _asset._listItem[static_cast<size_t>( left )]._start < _asset._listItem[static_cast<size_t>( right )]._start; } );
     }
 

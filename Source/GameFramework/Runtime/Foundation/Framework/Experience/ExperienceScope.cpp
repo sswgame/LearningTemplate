@@ -116,7 +116,7 @@ namespace sw
         for ( const GlobalVariableInfo* pVariable : listVariable )
             snapshot._listGlobalValue.push_back( GlobalValue{ pVariable->_name, pVariable->getValueAsString() } );
         // 이름 순 — 사이에 모듈이 변수를 더하거나 빼도 이름으로 맞춰 본다
-        std::sort( snapshot._listGlobalValue.begin(), snapshot._listGlobalValue.end(), []( const GlobalValue& left, const GlobalValue& right )
+        VectorUtil::sort( snapshot._listGlobalValue, []( const GlobalValue& left, const GlobalValue& right )
         { return left._name < right._name; } );
         return snapshot;
     }

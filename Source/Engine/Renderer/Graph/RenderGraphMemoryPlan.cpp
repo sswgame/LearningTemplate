@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Graph/RenderGraphMemoryPlan.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -38,7 +39,7 @@ namespace sw
                 listOrder.push_back( index );
             plan._sumBytes += listItem[index]._sizeBytes;
         }
-        std::stable_sort( listOrder.begin(), listOrder.end(), [&listItem]( uint32 left, uint32 right )
+        VectorUtil::stableSort( listOrder, [&listItem]( uint32 left, uint32 right )
         {
             if ( listItem[left]._sizeBytes != listItem[right]._sizeBytes )
                 return listItem[left]._sizeBytes > listItem[right]._sizeBytes;

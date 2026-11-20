@@ -2,6 +2,7 @@
 
 #include "Engine/Visual/Component/PostProcessVolumeComponent.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 
@@ -122,7 +123,7 @@ namespace sw
                 listContribution.push_back( Contribution{ pVolume, weight } );
         }
         // 우선순위가 낮은 것부터 섞어 높은 것이 마지막에 덮는다. 같은 우선순위는 등록 순서다(안정 정렬).
-        std::stable_sort( listContribution.begin(), listContribution.end(), []( const Contribution& left, const Contribution& right )
+        VectorUtil::stableSort( listContribution, []( const Contribution& left, const Contribution& right )
         { return left._pVolume->_priority < right._pVolume->_priority; } );
         for ( const Contribution& contribution : listContribution )
         {
