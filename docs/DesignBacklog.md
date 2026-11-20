@@ -2224,6 +2224,14 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 - 원자적 진입(설계 검토 (1)): 읽기 · 검사 뒤 앞 미니게임의 범위만 끄고(같은 서비스를 둘이 걸 수 없다) 새 것을 켜며, 켜기 · 맵 · 하위 레벨 요청이 지면 앞 것을 다시 켜고 여기서 찍은 돌아올 자리를 버린다. 앞 하위 레벨은 새 것이 선 뒤에 뺀다.
 - 테스트 게임: 마을(`maps/hub`)이 팩의 시작 맵이다(`startMap`). 기본 첫 씬(editortest)에 기대던 그림 시나리오 9 개(bonelod · kaykit 셋 · lightculling · riglod · scanprops · shippingframe · subtitles)는 `gv_firstScene` 으로 editortest 를 고정, `frontend` 의 "시작" 은 마을을 기대고, `hub` 는 `gv_firstScene` 으로 마을을 연다.
 
+**새 동작(`w-minigame` 2 단계, 2026-11-21).**
+- 칸 스택(`MinigameStack`): `enter` 는 쌓고 `switchTo` 는 맨 위를 바꾼다(돌아올 자리를 그대로 두고 다음 씬 전환 미니게임으로 — 마리오 파티식. 하위 레벨이 낀 교체는 나간 뒤 들어간다). 칸 = 미니게임 정의 + 돌아올 자리 `std::variant`{씬 전환: 찍은 씬 + 저장 막기 구독, 하위 레벨: 얹은 씬 + 하위 레벨 이름, 입구: 돌아올 씬 없음}. 다시 켤 정의는 아래 칸이 든다(따로 적지 않는다). "세션 이동" 갈래는 이 형식에 더할 자리다 — 갈래를 더하면 `leave` 의 `std::visit` 이 빠진 갈래를 컴파일 오류로 알린다. 덮인 미니게임 범위는 끄고, 돌아올 때 씬 복원 **전에** 다시 켠다(컴포넌트가 `beginPlay` 에서 서비스를 찾는다). 깊이 한도는 엔진 설정 `_minigame._stackDepthLimit`(`MinigameConfig` — 게임에 보이는 조각, `CharacterMeshCacheConfig` 와 같은 길, 없으면 진입이 진다).
+- 결과 통로: `leave( 결과 )` 가 돌아올 자리를 복원한 뒤 `MinigameFlow::onFinished` 로 `MinigameResult`{미니게임 이름, 결과 이름}를 넘긴다 — 복원이 파생 인스턴스 상태까지 되감으므로 번 것은 그 뒤에 얹는다. 감시 값 `Minigame.LastResult` · `Minigame.Depth`, 개발 명령 `minigame.leave [결과]` · `minigame.switch <이름>`.
+- 하위 레벨 자리: 진입을 건 사물(트리거)의 변환(`MinigameFlow::makeAnchorPlacement` — 언리얼 레벨 인스턴스 액터)에 얹고, 자리 없이는 들어가지 않는다(`MinigameFlow.SubLevelNeedsAnchor` — 허브가 없어져 사라진 `SubLevelNeedsHub` 자리). 개발 명령은 `minigame.enter <이름> <얹을 사물>`. `maps/hub_cardtable` 은 CardTableGate 기준 좌표로 옮겼다.
+- 넷: 넷 세션이 열린 인스턴스에서 씬 전환 진입은 `MinigameFlow.SceneSwitchInNetSession` 오류로 거절(폴백 없음 — 한 피어만 씬을 바꾸면 세션이 갈린다).
+- 월드 상태는 씬에 하나(설계 검토 (2)): `SessionStateComponent::initialize` 가 같은 씬의 둘째 판 상태를 `SessionState.SecondInScene` 으로 거절하고, `findFirstOpen` · `collectOpen` 을 `findOpen` 하나로 바꿨다 — 하위 레벨 미니게임이 바탕 씬에 판 상태를 열어 어느 시계 · 날씨를 읽을지가 등록 순서에 달리던 틈. SessionState 전체 재편은 범위 밖.
+- 시나리오 `automation/minigamestack`(쌓기 · 결과 · 교체), 단위 테스트 `MinigameTest.*`(스택 · 저장 막기 · 비우기 · 결과 · 넷 거절) · `SessionStateOpenTest.SecondStateInSceneIsRefused`.
+
 **겹치는 진행 중 갈래(main 대비 diff, 2026-11-20).** 이름 바꾸기(단계 1)는 아래가 합쳐진 뒤에 시작한다.
 - `w-reload` — `Content/game/empty/automation/desktop/editor/{playreload,shaderreload}` 새 파일 24 · `Source/Games/Empty/{CMakeLists.txt,HotReloadTestComponent.*}` · `Test/Scenario/CMakeLists.txt` · `AutomationRunner.cpp`(`game.empty.` 주석) · `Test/README.md`. 가장 크게 겹친다 — 반드시 먼저 합친다.
 - `w-cutscene` — `Content/game/empty/{automation/cutscenetrigger.scenario.xml,data/cutscenegate.seq.xml,data/cutscenelanding.seq.xml,data/gamesettings.xml,maps/cutscenetrigger.scene.xml}`.

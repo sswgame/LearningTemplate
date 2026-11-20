@@ -327,6 +327,7 @@ namespace sw
         (void)scope.exposeMember( configManager, configManager.getHostEngineConfig() );                     // 새 범위 - 겹치지 않는다
         (void)scope.exposeMember( configManager, configManager.getHostGameConfig() );                       // 새 범위 - 겹치지 않는다
         (void)scope.exposeMember( configManager, configManager.getHostEngineConfig()._characterMeshCache ); // 게임에 보이는 조각 - 엔진 설정 안의 자리라 다시 읽어도 주소가 같다
+        (void)scope.exposeMember( configManager, configManager.getHostEngineConfig()._minigame );           // 게임에 보이는 조각 - 같은 자리
     } );
 
     // 위 공장이 건 호스트 설정 둘의 서비스 칸(읽기 전용). 정적 활성본(`EngineConfig::getActive()` 따위)을 대신한다 — 다시 읽기는 같은 자리에서 일어나 칸의 주소가 바뀌지 않는다.
@@ -334,4 +335,5 @@ namespace sw
     SW_ENGINE_SERVICE( EngineConfig, HostOnly );
     SW_ENGINE_SERVICE( GameConfig, GameVisible );
     SW_ENGINE_SERVICE( CharacterMeshCacheConfig, GameVisible ); // 게임 모듈의 캐릭터 메시 캐시가 예산을 읽는다(엔진 설정 전체는 호스트 전용)
+    SW_ENGINE_SERVICE( MinigameConfig, GameVisible );           // 게임 모듈의 미니게임 흐름이 쌓기 깊이 한도를 읽는다
 } // namespace sw

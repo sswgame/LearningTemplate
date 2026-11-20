@@ -204,6 +204,15 @@ namespace sw
             SW_LOG_ERROR_ID( "SessionState.SessionStateRefusedOpenSettings", "SessionState: refused to open - settings '%#'", rangeError.c_str() );
             return SessionStateInitResult::Refused;
         }
+        // 월드 상태는 씬에 하나다 — 둘째가 열리면 시계 · 날씨를 읽는 쪽(`findOpen`)이 등록 순서에 따라 다른 판을 본다(하위 레벨 미니게임이 바탕 씬에 판 상태를 연 경우).
+        const GameObject* const            pOwner  = getOwner();
+        const SessionStateComponent* const pOpened = pOwner != nullptr ? findOpen( pOwner->getManager() ) : nullptr;
+        if ( pOpened != nullptr )
+        {
+            SW_LOG_ERROR_ID( "SessionState.SecondInScene", "SessionState: refused to open on '%#' - '%#' already holds the world state of this scene (one per scene)", pOwner->getName().c_str(),
+                             pOpened->getOwner() != nullptr ? pOpened->getOwner()->getName().c_str() : "?" );
+            return SessionStateInitResult::Refused;
+        }
         if ( _clock.initialize( settings._clock ) == false )
             return SessionStateInitResult::Refused;
         _wallet.clear();
@@ -414,26 +423,14 @@ namespace sw
         return pOwner != nullptr ? pOwner->getComponent<SessionStateComponent>() : nullptr;
     }
 
-    void SessionStateComponent::collectOpen( const GameObjectManager* pManager, vector<SessionStateComponent*>& outListState )
-    {
-        outListState.clear();
-        if ( pManager == nullptr )
-            return;
-        for ( SessionStateComponent* pState : pManager->getComponentRegistry().getAll<SessionStateComponent>() )
-        {
-            if ( pState->isInitialized() )
-                outListState.push_back( pState );
-        }
-    }
-
-    const SessionStateComponent* SessionStateComponent::findFirstOpen( const GameObjectManager* pManager )
+    SessionStateComponent* SessionStateComponent::findOpen( const GameObjectManager* pManager )
     {
         if ( pManager == nullptr )
             return nullptr;
-        for ( const SessionStateComponent* pState : pManager->getComponentRegistry().getAll<SessionStateComponent>() )
+        for ( SessionStateComponent* pState : pManager->getComponentRegistry().getAll<SessionStateComponent>() )
         {
             if ( pState->isInitialized() )
-                return pState;
+                return pState; // 씬에 하나다(`initialize` 가 둘째를 거절한다)
         }
         return nullptr;
     }

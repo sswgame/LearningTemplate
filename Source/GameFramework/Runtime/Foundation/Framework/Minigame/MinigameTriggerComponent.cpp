@@ -28,7 +28,12 @@ namespace sw
                              _minigame.empty() ? "has no minigame name" : "is in a world without a running game" );
             return false;
         }
-        pFlow->requestEnter( _minigame.view() ); // 틱 뒤 작업이다 — 스냅숏 · 씬 요청은 다음 게임 프레임 앞에서 한다
+        // 하위 레벨 미니게임은 이 볼륨의 변환에 얹는다(언리얼 레벨 인스턴스 액터 자리) — 씬 전환 미니게임은 자리를 보지 않는다.
+        const GameObject* const     pOwner    = getOwner();
+        optional<SubLevelPlacement> placement = nullopt;
+        if ( pOwner != nullptr )
+            placement = MinigameFlow::makeAnchorPlacement( *pOwner );
+        pFlow->requestEnter( _minigame.view(), placement ); // 틱 뒤 작업이다 — 스냅숏 · 씬 요청은 다음 게임 프레임 앞에서 한다
         return true;
     }
 } // namespace sw

@@ -20,7 +20,7 @@ namespace sw
     {
         [[nodiscard]] bool readClockHour( const GameObjectManager* pManager, float64& outValue )
         {
-            const SessionStateComponent* pState = SessionStateComponent::findFirstOpen( pManager );
+            const SessionStateComponent* pState = SessionStateComponent::findOpen( pManager );
             if ( pState == nullptr )
                 return false;
             outValue = static_cast<float64>( pState->getClock().getHour() );
@@ -29,7 +29,7 @@ namespace sw
 
         [[nodiscard]] bool readClockDay( const GameObjectManager* pManager, float64& outValue )
         {
-            const SessionStateComponent* pState = SessionStateComponent::findFirstOpen( pManager );
+            const SessionStateComponent* pState = SessionStateComponent::findOpen( pManager );
             if ( pState == nullptr )
                 return false;
             outValue = static_cast<float64>( pState->getClock().getDay() );
@@ -39,7 +39,7 @@ namespace sw
         /** @brief 감시 값 `Session.Money` 입니다. 활성 씬의 첫 판 상태 지갑의 기본 화폐 잔액입니다. */
         [[nodiscard]] bool readSessionMoney( const GameObjectManager* pManager, float64& outValue )
         {
-            const SessionStateComponent* pState = SessionStateComponent::findFirstOpen( pManager );
+            const SessionStateComponent* pState = SessionStateComponent::findOpen( pManager );
             if ( pState == nullptr )
                 return false;
             outValue = static_cast<float64>( pState->getWallet().getBalance( Wallet::getDefaultCurrency() ) );
@@ -49,7 +49,7 @@ namespace sw
         /** @brief 감시 값 `Session.Flag` 입니다. 첫 판 상태의 플래그(key) 값이고, 적은 적 없으면 0 입니다(규칙 신호 — 지역 · 대화 · 행동 트리의 `flag.set` · `flag.add`). */
         [[nodiscard]] bool readSessionFlag( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const SessionStateComponent* pState = SessionStateComponent::findFirstOpen( query._pManager );
+            const SessionStateComponent* pState = SessionStateComponent::findOpen( query._pManager );
             if ( pState == nullptr )
             {
                 outValue.setText( "the active scene has no open SessionStateComponent (flags)" );
@@ -62,7 +62,7 @@ namespace sw
         /** @brief 감시 값 `Quest.Status` 입니다. 첫 판 상태의 퀘스트 일지에서 퀘스트 id `target` 의 상태(`NotStarted` · `Active` · `Completed` · `Failed`)입니다. */
         [[nodiscard]] bool readQuestStatus( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const SessionStateComponent* pState = SessionStateComponent::findFirstOpen( query._pManager );
+            const SessionStateComponent* pState = SessionStateComponent::findOpen( query._pManager );
             if ( pState == nullptr )
             {
                 outValue.setText( "the active scene has no open SessionStateComponent (quest log)" );

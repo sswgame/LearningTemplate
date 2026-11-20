@@ -30,7 +30,7 @@ namespace sw
     ENUM()
     enum class MinigameEntry : uint8
     {
-        SubLevel,    ///< 들어갈 때의 활성 씬에 하위 레벨로 더한다(바탕 씬이 보이고 그대로 돈다 — 언리얼 레벨 인스턴스 · 유니티 Additive 씬, `MinigameFlow`)
+        SubLevel,    ///< 들어갈 때의 활성 씬에, 진입을 건 사물의 변환으로 하위 레벨을 더한다(바탕 씬이 보이고 그대로 돈다 — 언리얼 레벨 인스턴스 액터 · 유니티 Additive 씬, `MinigameFlow`)
         SceneSwitch, ///< 맵 씬으로 바꾼다(들어갈 때의 활성 씬을 `GameStateSnapshot` 으로 찍어 두고 나올 때 복원 — `MinigameFlow`)
     };
 

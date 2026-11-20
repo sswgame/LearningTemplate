@@ -1,6 +1,6 @@
 <?asset guid="cbc0674ef5fe44cbab0bb485c97e8107"?>
 <Scene formatVersion="3" name="HubCardTable">
-	<!-- 마을의 카드 탁자 하위 레벨(minigames/cardtable, entry SubLevel) — 마을 씬(maps/hub)에 원점 자리로 더하므로 마을 좌표로 놓는다(CardTableGate 뒤 x -6, z 3).
+	<!-- 마을의 카드 탁자 하위 레벨(minigames/cardtable, entry SubLevel) — 마을의 CardTableGate(월드 -6, 1, 0)의 변환에 얹으므로 그 입구 기준 좌표로 놓는다(입구 뒤 z 3, 바닥 y -1).
 	     하위 레벨은 스트리밍 · 데이터 레이어를 쓰지 않는다(SceneSubLevelSubsystem 이 받지 않는다). 카메라 · 해 · 플레이어는 마을의 것을 쓴다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -9,21 +9,21 @@
 		<entity id="1" name="Table">
 			<GameObject _schemaVersion="0" _name="Table" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-6,0.4,3" _localRotation="0,0,0" _localScale="2.4,0.8,1.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
+					<MeshComponent _localPosition="0,-0.6,3" _localRotation="0,0,0" _localScale="2.4,0.8,1.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Deck">
 			<GameObject _schemaVersion="0" _name="Deck" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-6.5,0.85,3" _localRotation="0,0,0" _localScale="0.3,0.1,0.45" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
+					<MeshComponent _localPosition="-0.5,-0.15,3" _localRotation="0,0,0" _localScale="0.3,0.1,0.45" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="Hand">
 			<GameObject _schemaVersion="0" _name="Hand" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-5.5,0.82,3" _localRotation="0,0,0" _localScale="0.6,0.04,0.45" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
+					<MeshComponent _localPosition="0.5,-0.18,3" _localRotation="0,0,0" _localScale="0.6,0.04,0.45" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.866" />
 				</_listComponent>
 			</GameObject>
 		</entity>

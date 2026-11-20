@@ -38,6 +38,9 @@
     "_characterMeshCache": {
         "_budgetMegabytes": 128
     },
+    "_minigame": {
+        "_stackDepthLimit": 4
+    },
     "_fileServe": {
         "_maxResponseHeaderBytes": 16384,
         "_maxResponseBodyBytes": 1048576,
