@@ -16,25 +16,27 @@ namespace sw
      * @brief 쌓기(`push`)는 어느 스레드에서나 하고, 가져가기(`takeAll`)는 빈 목록과 저장소를 맞바꿔 잠금을 짧게 쥡니다.
      * @details 가져가는 쪽이 같은 목록을 비워 다시 쓰면 두 저장소가 번갈아 돌아 프레임마다 할당하지 않는다(언리얼 렌더 명령 큐의 이중 버퍼와 같은 모양).
      *          잠금과 목록을 한 곳에 묶어, 목록을 잠금 없이 만지는 모양을 쓸 수 없게 한다 — 예전에는 쓰는 쪽마다 `mutex` 와 `vector` 를 따로 들었다.
+     * @tparam TLock 잠금 타입. 기본은 교착 검출 · 잠금 추적이 걸리는 `mutex` 이고, `SpinLock` 으로 바꿀지는 `LockKindBenchTest.LockedSwapQueuePush` 로 재고 정한다
+     *               (DesignBacklog "잠금 종류 감사(2026-11-20)").
      */
-    template <typename T>
+    template <typename T, typename TLock = mutex>
     class LockedSwapQueue
     {
     public:
         /** @brief 쌓는 쪽 저장소를 미리 잡습니다(프레임마다 할당하지 않게). */
         void reserve( size_t count )
         {
-            ScopedLock<mutex> lock{ _mutex };
+            ScopedLock<TLock> lock{ _lock };
             _listPending.reserve( count );
         }
         void push( const T& item )
         {
-            ScopedLock<mutex> lock{ _mutex };
+            ScopedLock<TLock> lock{ _lock };
             _listPending.push_back( item );
         }
         void push( T&& item )
         {
-            ScopedLock<mutex> lock{ _mutex };
+            ScopedLock<TLock> lock{ _lock };
             _listPending.push_back( std::move( item ) );
         }
         /**
@@ -44,7 +46,7 @@ namespace sw
         template <typename TStamp>
         auto pushStamped( T&& item, TStamp&& stamp )
         {
-            ScopedLock<mutex> lock{ _mutex };
+            ScopedLock<TLock> lock{ _lock };
             auto              result = stamp( item );
             _listPending.push_back( std::move( item ) );
             return result;
@@ -52,30 +54,30 @@ namespace sw
         /** @brief 여럿을 한 번의 잠금으로 쌓습니다(복사). */
         void pushRange( const vector<T>& listItem )
         {
-            ScopedLock<mutex> lock{ _mutex };
+            ScopedLock<TLock> lock{ _lock };
             _listPending.insert( _listPending.end(), listItem.begin(), listItem.end() );
         }
         /** @brief 쌓인 것을 비어 있는 @p outList 와 맞바꿉니다. 받은 것이 있으면 true 입니다. @p outList 가 비어 있지 않으면 어서션입니다(그 항목을 잃는다). */
         bool takeAll( vector<T>& outList )
         {
             SW_ASSERT( outList.empty() && "takeAll swaps storage - drain the previous batch first" );
-            ScopedLock<mutex> lock{ _mutex };
+            ScopedLock<TLock> lock{ _lock };
             outList.swap( _listPending );
             return outList.empty() == false;
         }
         bool isEmpty() const
         {
-            ScopedLock<mutex> lock{ _mutex };
+            ScopedLock<TLock> lock{ _lock };
             return _listPending.empty();
         }
         void clear()
         {
-            ScopedLock<mutex> lock{ _mutex };
+            ScopedLock<TLock> lock{ _lock };
             _listPending.clear();
         }
 
     private:
-        vector<T> _listPending SW_GUARDED_BY( _mutex );
-        mutable mutex          _mutex;
+        vector<T> _listPending SW_GUARDED_BY( _lock );
+        mutable TLock          _lock;
     };
 } // namespace sw

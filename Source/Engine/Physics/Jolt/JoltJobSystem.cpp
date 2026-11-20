@@ -32,8 +32,7 @@ namespace sw
         : JPH::JobSystemWithBarrier{ maxBarrierCount }
         , _arrExecutorSlot{}
         , _jobs{}
-        , _listQueuedJob{}
-        , _queueMutex{}
+        , _queuedJob{ maxJobCount }
         , _pTaskManager{ nullptr }
         , _jobTaskStage{}
         , _maxConcurrency{ 1 }
@@ -90,9 +89,12 @@ namespace sw
     {
         // 큐가 참조 하나를 가진다. 태스크가 실행한 뒤에 해제한다.
         pJob->AddRef();
+        while ( _queuedJob.enqueue( pJob ) == false )
         {
-            ScopedLock<mutex> lock{ _queueMutex };
-            _listQueuedJob.push_back( pJob );
+            // 용량이 살아 있는 잡 상한이라 정말 가득 찼다면 잡 수 계약이 깨진 것이다 — 조용히 버리거나 그 자리에서 돌리지 않고 멈춘다.
+            if ( _queuedJob.size() >= _queuedJob.capacity() )
+                SW_FATAL( "JoltJobSystem: the job queue is full (%# slots) - more queued jobs than maxJobCount", _queuedJob.capacity() );
+            ThreadUtil::yield(); // 꺼내는 쪽이 칸을 되돌리는 중(잠깐)
         }
         if ( _pTaskManager == nullptr )
         {
@@ -175,11 +177,15 @@ namespace sw
 
     JPH::JobSystem::Job* JoltJobSystem::popQueuedJob()
     {
-        ScopedLock<mutex> lock{ _queueMutex };
-        if ( _listQueuedJob.empty() )
-            return nullptr;
-        Job* pJob = _listQueuedJob.front();
-        _listQueuedJob.pop_front();
+        // 잡마다 태스크 하나가 꺼내므로 "넣은 잡이 남았는데 비었다" 로 돌아가면 그 잡을 꺼낼 태스크가 없어진다. 앞 칸을 예약만 한 생산자가
+        // 있으면(남은 수가 0 이 아니면) 그 생산자가 쓰기를 마칠 때까지 기다린다.
+        Job* pJob = nullptr;
+        while ( _queuedJob.dequeue( pJob ) == false )
+        {
+            if ( _queuedJob.empty() )
+                return nullptr;
+            ThreadUtil::yield();
+        }
         return pJob;
     }
 } // namespace sw

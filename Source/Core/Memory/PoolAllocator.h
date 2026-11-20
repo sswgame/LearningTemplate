@@ -3,7 +3,7 @@
  * @brief O(1) 고정 크기 블록 할당자입니다(스레드 안전 여부를 고를 수 있습니다).
  */
 #pragma once
-#include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/SpinLock.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -80,12 +80,12 @@ namespace sw
         void allocateChunk();
 
     private:
-        // 크기 · 잠금 여부는 생성 뒤 바뀌지 않는다(const — 잠금 없이 읽는다). 목록 둘은 `_bThreadSafe` 면 `_mutex` 아래이고 아니면 한 스레드 전용이라
+        // 크기 · 잠금 여부는 생성 뒤 바뀌지 않는다(const — 잠금 없이 읽는다). 목록 둘은 `_bThreadSafe` 면 `_spinLock` 아래이고 아니면 한 스레드 전용이라
         // 잠금 여부가 값으로 정해져 SW_GUARDED_BY 로 적을 수 없다(조건부 잠금).
         const size_t _blockSize;
         Chunk*       _pChunkList;
         FreeNode*    _pFreeList;
-        sw::mutex    _mutex;
+        SpinLock     _spinLock; ///< 자유 목록 넣기 · 빼기가 포인터 교체라 스핀(청크 할당은 드물고 잠금이 그때 잠든다, 교착 검출 밖)
         const uint32 _blocksPerChunk;
         const bool   _bThreadSafe;
     };

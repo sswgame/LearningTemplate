@@ -635,7 +635,7 @@ namespace sw
         , _batchGeneration{ 0 } // 처음에는 어차피 모두 다시 훑는다(`_bAllDirty`)
         , _listDirtyObjectID{}
         , _listProcessingObjectID{}
-        , _dirtyMutex{}
+        , _dirtyLock{}
         , _bAllDirty{ SW_TRUE }
         , _prerequisiteCount{ 0 }
         , _stageItemCount{ 0 }
@@ -654,7 +654,7 @@ namespace sw
     {
         if ( pObj == nullptr || pObj->_bTickDirty.exchange( SW_TRUE, std::memory_order_acq_rel ) != SW_FALSE )
             return;
-        ScopedLock<mutex> lock{ _dirtyMutex };
+        ScopedLock<SpinLock> lock{ _dirtyLock };
         _listDirtyObjectID.push_back( pObj->getObjectID() );
     }
 
@@ -676,7 +676,7 @@ namespace sw
         }
         const bool bAll = _bAllDirty.exchange( SW_FALSE, std::memory_order_acq_rel ) != SW_FALSE;
         {
-            ScopedLock<mutex> lock{ _dirtyMutex };
+            ScopedLock<SpinLock> lock{ _dirtyLock };
             _listProcessingObjectID.swap( _listDirtyObjectID );
         }
         bool bRefreshedAny = false;
@@ -1239,7 +1239,7 @@ namespace sw
         }
         _mapTypeDispatch.clear();
         {
-            ScopedLock<mutex> lock{ _dirtyMutex };
+            ScopedLock<SpinLock> lock{ _dirtyLock };
             _listDirtyObjectID.clear();
         }
         _listProcessingObjectID.clear();

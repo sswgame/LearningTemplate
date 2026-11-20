@@ -981,6 +981,104 @@ SW_TEST_CASE( DataStructureTest, ConcurrentQueueMPMCStress )
 }
 
 /**
+ * @brief [DataStructureTest] 실행 때 용량 ConcurrentQueue 는 받은 개수를 2 의 거듭제곱으로 올리고, 가득 차면 컴파일 상수 판과 같이 false 다
+ * @details 원소는 소멸자가 있는 문자열이다 — 버퍼를 풀 때 남은 원소의 소멸자가 불려야 한다(ASan 이 새는 것을 본다).
+ */
+SW_TEST_CASE( DataStructureTest, RuntimeCapacityConcurrentQueueRoundsUpAndStopsWhenFull )
+{
+    sw::ConcurrentQueue<sw::string, sw::kRuntimeQueueCapacity> queue{ 3 };
+    SW_REQUIRE_EQUAL( 4u, queue.capacity() );
+    for ( uint32 index = 0; index < 4; ++index )
+    {
+        SW_EXPECT_TRUE( queue.enqueue( sw::string( "a long string that does not fit the small buffer" ) ) );
+    }
+    SW_EXPECT_FALSE( queue.enqueue( sw::string( "overflow" ) ) );
+    SW_EXPECT_EQUAL( 4u, queue.size() );
+
+    sw::string item;
+    SW_EXPECT_TRUE( queue.dequeue( item ) );
+    SW_EXPECT_TRUE( queue.enqueue( sw::string( "after wrap" ) ) );
+    SW_EXPECT_EQUAL( 4u, queue.size() );
+
+    const sw::ConcurrentQueue<int32, sw::kRuntimeQueueCapacity> tiny{ 0 };
+    SW_EXPECT_EQUAL( 2u, tiny.capacity() ); // 최소 2 — 칸 하나면 시퀀스 번호가 "빔" 과 "참" 을 가르지 못한다
+    const sw::ConcurrentQueue<int32, sw::kRuntimeQueueCapacity> exact{ 1024 };
+    SW_EXPECT_EQUAL( 1024u, exact.capacity() );
+}
+
+/**
+ * @brief [DataStructureTest] 실행 때 용량 ConcurrentQueue 의 MPMC 스트레스(생산 4 · 소비 4, 10만 건) — 컴파일 상수 판과 같은 알고리즘이 버퍼 위치만 달리해 돈다
+ */
+SW_TEST_CASE( DataStructureTest, RuntimeCapacityConcurrentQueueMPMCStress )
+{
+    constexpr int32 kProducers        = 4;
+    constexpr int32 kConsumers        = 4;
+    constexpr int32 kItemsPerProducer = 25000;
+    constexpr int32 kTotalItems       = kProducers * kItemsPerProducer;
+
+    sw::ConcurrentQueue<int32, sw::kRuntimeQueueCapacity> queue{ 1000 };
+    SW_REQUIRE_EQUAL( 1024u, queue.capacity() );
+    sw::atomic<int32> activeProducers{ kProducers };
+    sw::atomic<int64> sumConsumed{ 0 };
+    sw::atomic<int32> countConsumed{ 0 };
+
+    sw::vector<sw::thread> listConsumer;
+    listConsumer.reserve( kConsumers );
+    for ( int32 consumerIndex = 0; consumerIndex < kConsumers; ++consumerIndex )
+    {
+        listConsumer.emplace_back( ThreadTestAccess::getKey(), [&queue, &activeProducers, &sumConsumed, &countConsumed]()
+        {
+            int32 item = 0;
+            while ( activeProducers.load( std::memory_order_acquire ) > 0 || queue.empty() == false )
+            {
+                if ( queue.dequeue( item ) )
+                {
+                    sumConsumed.fetch_add( item, std::memory_order_relaxed );
+                    countConsumed.fetch_add( 1, std::memory_order_relaxed );
+                }
+                else
+                {
+                    std::this_thread::yield();
+                }
+            }
+        } );
+    }
+
+    sw::vector<sw::thread> listProducer;
+    listProducer.reserve( kProducers );
+    int64 expectedSum = 0;
+    for ( int32 producerIndex = 0; producerIndex < kProducers; ++producerIndex )
+    {
+        const int32 baseVal = producerIndex * kItemsPerProducer;
+        for ( int32 index = 1; index <= kItemsPerProducer; ++index )
+        {
+            expectedSum += ( baseVal + index );
+        }
+        listProducer.emplace_back( ThreadTestAccess::getKey(), [&queue, &activeProducers, baseVal]()
+        {
+            for ( int32 index = 1; index <= kItemsPerProducer; ++index )
+            {
+                while ( queue.enqueue( baseVal + index ) == false )
+                {
+                    std::this_thread::yield();
+                }
+            }
+            activeProducers.fetch_sub( 1, std::memory_order_release );
+        } );
+    }
+    for ( auto& producer : listProducer )
+    {
+        producer.join();
+    }
+    for ( auto& consumer : listConsumer )
+    {
+        consumer.join();
+    }
+    SW_EXPECT_EQUAL( kTotalItems, countConsumed.load() );
+    SW_EXPECT_EQUAL( expectedSum, sumConsumed.load() );
+}
+
+/**
  * @brief [DataStructureTest] DynamicBitset::parse 는 '0' · '1' 이 아닌 글자가 있으면 실패하고 값을 바꾸지 않는다
  * @details 예전 문자열 생성자는 잘못된 글자를 로그만 남기고 0 으로 읽었다(폴백). 맨 왼쪽 글자가 가장 높은 비트다.
  */

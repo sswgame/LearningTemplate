@@ -2244,3 +2244,131 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 - **`RigCopyTransformNode::Mode`(`RigConstraintNodes.cpp`).** `getTypeName` 의 switch 가 열거자 이름과 같다. 다만 노드 클래스 전체가 `.cpp` 에 있어 열거형만 꺼낼 주인이 없다 — 노드 클래스를 헤더로 옮길 일이 생길 때 함께.
 - **헤더 열거형의 손 이름 표(DevTools).** `ReloadSource`(`ReloadTracker::getSourceName`) · `MemoryDiffStatus`(`getMemoryDiffStatusName`)는 "DevTools 는 리플렉션 코드젠을 하지 않는다" 는 주석으로 `EnumNameTable` 을 둔다 — 2026-11-17 부터 DevTools 에 리플렉션 단계가 있어 낡은 이유다. `ENUM()` + DevTools `HEADERS` 에 그 헤더를 더하면 표가 사라지지만 `ReflectionMacros.h` 를 끌어와 팬인 점수가 는다(각 팬인 8 · 11). 같은 낡은 주석이 `AutomationRunnerParams.h` 머리말에도 있다.
 - **손으로 두는 것으로 판단:** `DialogBackend`(명령줄 백엔드 이름 — "손으로 두는 것" 절), `ShaderBindingValidatorInternal::RegisterClass` · `GlNamespace`(글이 열거자 이름이 아닌 `b` · `UBO`), `TextChoiceKind`(ICU 철자), `RichTextParser::TagKind`(`b` · `i`), `StageReportResult`(다른 쪽이 쓴 보고의 일부 키만 읽는다), `WaterBodyComponent::MaterialNames` · `FoliageComponent::ViewMaterialNames`(머티리얼 매개변수 이름 표).
+
+## 잠금 종류 감사(2026-11-20)
+
+> 질문: `sw::mutex` 자리 가운데 읽기/쓰기 락 · 스핀락(`SpinLock`) · 이미 있는 락프리 구조가 더 맞는 곳은 어디인가?
+> 결론: 판단이 명확한 넷만 `SpinLock` 으로 바꿨다(아래 1). 나머지 후보는 측정 없이 바꾸지 않는다 — 통합 담당이 아래 3 의 표로 재고 정한다.
+
+판정 기준(언리얼과 견줌): RW 락은 `FRWLock` 처럼 프레임마다 여러 스레드가 읽고 드물게 쓰며 **읽기 구간이 짧지 않은** 곳. 해시 조회 한 번 같은 짧은 읽기는
+`std::shared_mutex`(SRWLOCK · pthread_rwlock) 의 공유 획득도 원자 연산 하나라 이득이 측정에 달렸다. 스핀은 `FSpinLock` · `UE::FMutex` 자리 — 이 저장소의
+`SpinLock` 은 순수 스핀이 아니라 64 번 돌고 주소 대기로 잠드는 적응형이라(`SpinLock.h`), 일꾼이 코어보다 많거나 드물게 할당이 끼어도 CPU 를 태우지 않는다.
+대가: `SpinLock` 은 교착 검출기(`ILockObserver`) · 쥔 잠금 수(`mutex::getHeldLockDepth`)를 거치지 않는다. 그래서 **안에서 다른 `sw::` 잠금을 잡지 않는 잎 잠금**만 바꿨다.
+락프리 구조는 있는 것만 쓰고(새로 만들지 않음), 고정 용량 큐(`ConcurrentQueue` · `SpscQueue`)는 가득 차면 `enqueue` 가 false 라 무한 목록 자리를 바로 옮기지 않는다.
+
+### 1) 바꾼 곳
+
+| 자리 | 옛 → 새 | 보호 대상 · 구간 | 다투는 스레드 | 근거 | 테스트 |
+| --- | --- | --- | --- | --- | --- |
+| `Box2DWorkerPool::_spinLock` | `mutex` → `SpinLock` | 조각 대기열 꺼내기(값 복사 + 색인 하나), 넣기는 용량을 남긴 `push_back` | 2D 일꾼(≤16) + 스텝 스레드, 빈 대기열을 양보하며 계속 두드림 | 머리말이 잎 · 할당 없음을 약속. 폴링 꼴이라 독점 잠금의 커널 대기가 낭비 | 새 `Box2DWorkerCountTest.StepIsDeterministicAcrossWorkerCounts`(일꾼 1 vs 4 비트 비교 — 머리말이 가리키던 테스트가 없었다, 기본값이 일꾼 1 이라 워커를 띄우는 테스트가 없었다) |
+| `JoltJobSystem::_queuedJob` | `mutex` + `deque` → (`SpinLock` 을 거쳐) 실행 때 용량 `ConcurrentQueue<Job*, kRuntimeQueueCapacity>` | 잡 포인터 넣기 · 꺼내기 | 태스크 일꾼 + `WaitForJobs` 의 돕기 루프(빈 큐를 양보하며 두드림) | 용량 = 살아 있는 잡 상한(`kMaxJobCount` 2048) — 큐에 든 잡은 참조로 잡 칸을 쥐어 넘칠 수 없다. 진짜 가득 참(`size() >= capacity()`)은 `SW_FATAL`, Vyukov 링의 잠깐 false 는 다시 시도. 꺼내기는 앞 칸을 예약만 한 생산자가 있으면 기다린다(잡 하나당 태스크 하나라 "남았는데 비었다" 로 돌아가면 그 잡을 꺼낼 태스크가 없다). Jolt `JobSystemThreadPool` 도 락프리 큐 | 기존 3D 물리 테스트 + 새 `DataStructureTest.RuntimeCapacityConcurrentQueue*` 둘(올림 · 가득 참 · MPMC 스트레스) |
+| `TickRegistry::_dirtyLock` | `mutex` → `SpinLock` | `_listDirtyObjectID` 넣기 · 맞바꾸기 | 워커의 `markObjectDirty`(오브젝트마다 원자 플래그로 한 번) + 게임 스레드 | `NavTileRebaker::_dirtyLock` · `EventDispatcher::_queueSpinLock` 과 같은 모양 | 기존 `TestTickModes` — 동작(상호 배제)은 같다 |
+| `PoolAllocator::_spinLock` | `mutex` → `SpinLock` | 자유 목록 머리 포인터 교체. 청크 할당은 `blocksPerChunk` 번에 한 번, Debug 는 반납 검사로 청크를 훑음 | `GameObjectStore` 풀(게임 스레드 + 비동기 씬 로드 워커) | 언리얼 `TLockFreeFixedSizeAllocator` 자리. 드문 청크 할당은 적응형 잠금이 잠들어 받는다 | 기존 `ThreadSafePoolNeverHandsOutTheSameBlockTwice` + 새 `ThreadSafePoolSurvivesInterleavedAllocateAndFree`(할당 · 반납 섞기) |
+
+### 2) 이미 있는 락프리 · 원자 구조
+
+| 구조 | 꼴 | 용량 | 쓰는 곳에 맞는 자리 |
+| --- | --- | --- | --- |
+| `ConcurrentQueue<T, N>` | MPMC, Vyukov 시퀀스 링 | 컴파일 때 고정, 가득 차면 false | 생산 · 소비 수 상한이 정해진 큐(`LockFreeObjectPool` 이 씀) |
+| `SpscQueue<T, N>` | SPSC 링 | 고정 | 스레드 하나 → 하나 |
+| `WorkStealingDeque<T>` | Chase-Lev(주인 LIFO, 도둑 FIFO) | 늘어남 | 태스크 일꾼 |
+| `LockedSwapQueue<T>` | **잠금**(`mutex`) MPSC, 통째 맞바꿈 | 무한 | 명령 · 완료 큐(락프리 아님) |
+| `SharedVectorPool<T>` | 한 스레드 전용 재사용 풀 | 무한 | 게임 → 렌더 발행 배열 |
+| `ShardedCounter<T>` · `ShardArray` | 스레드별 칸 + 읽을 때 합 | — | 여러 스레드가 더하는 카운터 |
+| `AtomicSlot<T>` | 원자 포인터 칸 + 구독(비교 교환 비우기) | — | 드물게 걸고 자주 읽는 훅 포인터 |
+| `OnceInit<T>` | 한 번 정하고 잠금 없이 읽기 | — | 설정 · 의존 포인터 |
+| `LockFreeObjectPool<T>` | `ConcurrentQueue` 위 객체 풀 | 고정 | 고정 상한 객체 |
+
+### 3) 측정 후보(바꾸지 않음)
+
+| # | 자리 | 지금 | 후보 | 바꾸지 않은 까닭 · 잴 것 |
+| --- | --- | --- | --- | --- |
+| 1 | `LockedSwapQueue::_mutex`(쓰는 곳 6) | `mutex` | `SpinLock` | 넣기 · 맞바꾸기는 짧지만 `T` 의 이동 생성자가 쓰는 쪽마다 다르다. 한 번에 여섯 자리가 바뀌어 교착 검출에서 빠진다 — 명령 큐 넣기 경합을 재고 정한다 |
+| 2 | `RenderPSOCache::_materialPSOMutex` · `_layoutMutex` | `mutex` | `shared_mutex` | 읽기(`findMaterialPSO` · `findLayout`)가 드로우마다, 쓰기는 PSO 완성 때. 읽기 구간이 해시 조회 하나라 짧다 — 병렬 기록 워커 수만큼 경합하는지 잰다 |
+| 3 | `CompressionCodecRegistry::_mutex` | `mutex` | `shared_mutex` | 쓰기는 시작 · 등록뿐, 읽기는 팩 · 스트리밍 디코드(IO 워커). 구간이 맵 조회 하나 — 스트리밍 부하에서 잰다 |
+| 4 | `ShaderBindingLayoutCache::_mutex` | `mutex` | `shared_mutex` | 적중 경로가 조회 하나, 실패 때만 쓰기. #2 와 함께 잰다 |
+| 5 | `AudioClip::_mutex`(`_mapPathToEntry`) | `mutex` | `shared_mutex` | 재생마다 조회, 로드 때 쓰기. 병렬 틱 재생 수에 달림 |
+| 6 | `PrimitiveRegistry::_mutex`(잠금 14 곳) | `mutex` | `shared_mutex` 일부 | 등록 · 해제 · 변경 기록 · 에셋 대기가 섞여 읽기 비율 근거가 없다 — 프로파일러 잠금 대기로 먼저 본다 |
+| 7 | `TransientAttachmentPool::_clearedMutex` | `mutex` | `SpinLock` | `contains` + `push_back` 이 프레임 안에서 길어지는 선형 탐색. 병렬 패스 수를 재고 정한다 |
+| 8 | `ConstantBufferPagePool::_mutex` | `mutex` | `SpinLock` | 장치 호출(페이지 만들기 · 핸들 반납)은 이미 잠금 밖이고 잠금 안은 슬롯 할당기와 페이지 표(드문 `resize`)뿐 — 꼴은 스핀감이지만 호출 빈도 · 스레드 수 근거가 없다. 상수 버퍼 갱신 경합을 재고 정한다 |
+| 9 | D3D12 · Vulkan `_cmdListPoolMutex` · `_liveCmdListMutex` | `mutex` | `SpinLock` | 작은 자유 목록이지만 프레임당 몇 번뿐이라 이득이 측정에 안 잡힐 것. 종료 경로가 쥔 채 COM · Vulkan 객체를 푼다 |
+| 10 | D3D12 · Vulkan `_transferJobMutex` | `mutex` | `SpinLock` | 펜스 회수 콜백 안에서 잡는다 — `RHIReleaseQueue::_spinLock` 과 순서가 얽히는지 교착 검출로 먼저 확인해야 하므로 추적을 남긴다 |
+| 11 | `JoltJobSystem` 잡 큐 | 실행 때 용량 `ConcurrentQueue`(적용함) | `SpinLock` + `deque` 로 되돌림 | `ConcurrentQueue` 가 실행 때 용량 판을 갖게 넓혀(`kRuntimeQueueCapacity`, 같은 알고리즘) 적용했다. 벤치 `JoltJobQueue` 가 문턱을 넘으면 되돌린다 |
+| 12 | `Box2DWorkerPool` 대기열 | `SpinLock`(이번) | 원자 색인(`fetch_add`) | 일꾼이 꺼내는 동안 스텝 스레드가 칸을 더하고, 다 꺼내면 목록을 비워 처음으로 되돌린다 — 색인만 원자로 하면 비우기와 꺼내기가 겹쳐 ABA · 수명 문제. 바꾸지 않는다 |
+| 13 | `TickRegistry` 더러움 목록 | `SpinLock`(이번) | `ConcurrentQueue` | 무한 목록이어야 한다(대량 생성 프레임). 고정 용량 큐는 넘침 폴백이 필요 |
+| 14 | `OcclusionTileMailbox::_mutex` | `mutex` | 원자 `shared_ptr` 교체 | C++17 의 `std::atomic_load( shared_ptr )` 은 구현 안에서 잠금(전역 스핀 풀)이라 이득이 없고, C++20 `atomic<shared_ptr>` 은 못 쓴다. 수명 규칙상 유지 |
+| 15 | `RHIMemoryTracker::_arrStat` | `mutex` 아래 합계 | `ShardedCounter` | 합계는 항목 맵과 한 잠금으로 함께 고친다(두 번 기록 경고 · 형태 기록) — 합계만 떼면 맵과 어긋난다. 기록 빈도를 재고 정한다 |
+| 16 | `CameraRegistry::_pCutCamera` | `mutex` | 원자 포인터 | 해제 때 목록 제거와 함께 비운다. 게임 스레드 위주라 이득 없음 — 유지 |
+
+### 4) 전수(테스트 제외, M = `mutex` 220 · RW = `shared_mutex` 20 · S = `SpinLock` 19)
+
+표에 없는 자리는 "유지" 다 — 대부분 등록 · 설정 · 로그 · 네트워크 · 파일 · 장치 잠금으로 쓰기가 잦거나(목록 등록 · 해제), 쥔 채 할당 · 로그 장치 IO · 조건 변수 대기를 하거나(`TaskFuture` · `AsyncLogSink` · `DedicatedWorker`)
+프레임마다 경합하지 않는다. 자리마다의 읽기 비율 · 구간 길이는 위 표의 후보만 코드로 확인했다(나머지는 이름 · 주석 · 잠금 꼴로 분류).
+
+| 영역 | 수 | 자리(파일.멤버(종류)) |
+| --- | --- | --- |
+| `Core/Compression` | 1 | CompressionCodecRegistry._mutex(M) |
+| `Core/Concurrency` | 1 | LockedSwapQueue._mutex(M) |
+| `Core/Container` | 1 | SlotHandleTable._mutex(M) |
+| `Core/Delegate` | 2 | LockedMulticastDelegate._mutex(M) · Subscription._lock(S) |
+| `Core/Diagnostics` | 7 | CacheStats._mutex(M) · DeadlockDetector._mutex(M) · MemoryProfiler._mutex(M) · MemoryProfiler._stackMapMutex(M) · PosixCallStackCapture.s_symbolMutex(M) · ScopedProgressReport._mutex(M) · WindowsCallStackCapture.s_symbolMutex(M) |
+| `Core/Event` | 2 | EventDispatcher._busSpinLock(S) · EventDispatcher._queueSpinLock(S) |
+| `Core/File` | 1 | AsyncFileIOBackend._mutex(M) |
+| `Core/GlobalVariable` | 2 | GlobalVariableManager._mutex(RW) · GlobalVariableManager._mutex(RW) |
+| `Core/Log` | 7 | Logger.s_backlogMutex(M) · LogOnce._mutex(M) · AsyncLogSink._mutex(M) · AsyncLogSink._cvMutex(M) · ConsoleLogOutput._mutex(M) · FileLogOutput._mutex(M) · JSONLinesLogOutput._mutex(M) |
+| `Core/Memory` | 4 | LifetimeScope._lock(S) · LifetimeScope._createLock(S) · LinearAllocator._mutex(M) · PoolAllocator._spinLock(S) |
+| `Core/Name` | 2 | hashed_string._mutex(RW) · hashed_string._globalAppendMutex(M) |
+| `Core/Network` | 20 | NetEndpoint._mutex(M) · NetRequest._mutex(M) · NetRequest._mutex(M) · NetRequest._writerMutex(M) · StreamMessageEndpoint._mutex(M) · StreamMessageEndpoint._tableMutex(M) · StreamMessageEndpoint._inboxMutex(M) · DelayedStreamTransport._mutex(M) · EpollStreamTransport._mutex(M) · EpollStreamTransport._commandMutex(M) · EpollStreamTransport._tableMutex(M) · LoopbackStreamTransport._mutex(M) · NetEmulation._mutex(M) · NetTransport._mutex(M) · ProxyProtocolAcceptTransport._mutex(M) · WebSocketStreamTransport._mutex(M) · WebSocketAcceptTransport._sendMutex(M) · WebSocketAcceptTransport._mutex(M) · IocpStreamTransport._mutex(M) · IocpStreamTransport._tableMutex(M) |
+| `Core/Process` | 1 | StandardInputReader._mutex(M) |
+| `Core/Registry` | 1 | RegistrationList._mutex(M) |
+| `Core/Task` | 7 | DedicatedWorker._mutex(M) · TaskFuture._mutex(M) · TaskFuture._mutex(M) · TaskNode._lock(S) · TaskNodePool._slabMutex(M) · TaskNodePool._stageMutex(M) · TaskNodePool._dependencyMutex(M) |
+| `Core/Testing` | 2 | TestRunner._mutex(M) · TestRunner._mutex(M) |
+| `Core/Time` | 1 | BusyClock._mutex(M) |
+| `DevTools/AssetReload` | 1 | ReloadTracker._mutex(M) |
+| `DevTools/Client` | 3 | AutomationLogCapture._mutex(M) · AutomationLogPolicy._mutex(M) · ShaderRecompiler._mutex(RW) |
+| `DevTools/FileWatch` | 2 | IFileWatcher._eventMutex(M) · LinuxFileWatcher._watchMutex(M) |
+| `DevTools/ModuleReload` | 2 | LiveReloadManager._buildMutex(M) · ModuleCompiler._mutex(M) |
+| `DevTools/ServerPose` | 1 | ServerPoseOverlay._mutex(M) |
+| `Editor/Common` | 13 | DrawSnapshotHandoff._mutex(M) · EditorUICapture._resultMutex(M) · ImGuiRenderer._textureMutex(M) · EditorDrawReleaseQueue._mutex(M) · EditorCommandRegistry._requestMutex(M) · EditorBackgroundTask._mutex(M) · EditorExternalToolJob._mutex(M) · EditorRenderViews._targetStatesMutex(M) · EditorRenderViews._publishedMutex(M) · EditorStateStore._mutex(M) · EditorWorkspace._pendingSceneMutex(M) · EditorNetPlaySession._mutex(M) · EditorPlaySession._stateMutex(M) |
+| `Editor/Panels` | 2 | CatalogPanel._mutex(M) · ConsolePanel._entriesMutex(M) |
+| `Engine/Animation` | 1 | AnimationSkinSlot._spinLock(S) |
+| `Engine/Asset` | 7 | AssetLoadProfiler._mutex(M) · AssetManager._loadStageMutex(M) · AssetStreamingQueue._mutex(M) · AssetStreamingQueue._completedMutex(M) · SharedAssetTable._loadingMutex(M) · WeakInternTable._mutex(M) · WeakInternTable._mutex(M) |
+| `Engine/Audio` | 4 | AudioClip._mutex(M) · AudioEngine._libraryMutex(M) · AudioEngineState._mutex(M) · SceneAudio._mutex(M) |
+| `Engine/Behavior` | 1 | ActionRegistry._mutex(M) |
+| `Engine/Console` | 2 | DebugHUDRegistry._mutex(M) · DevCommandRegistry._mutex(M) |
+| `Engine/Content` | 8 | AssetPaths._cacheMutex(M) · AssetPaths._publishMutex(M) · AssetPaths._diskDomainMutex(M) · AssetRegistry._mutex(RW) · ContentHash._mutex(M) · PackChunkLoader._mutex(M) · PackManager._vfsMutex(M) · PackReader._fileMutex(M) |
+| `Engine/Destruction` | 1 | FractureNetworkSync._driveMutex(M) |
+| `Engine/Graphics` | 68 | DebugDrawQueue._mutex(M) · GPUBreadcrumbs._mutex(M) · GPUPixelInspector._mutex(M) · RenderTargetRegistry._mutex(M) · RenderTargetRegistry._readbackMutex(M) · VisualLogger._mutex(M) · MaterialCache._mutex(RW) · MaterialChangeLog._lock(S) · MaterialChangeLog._lock(S) · Mesh._deformProgramMutex(M) · MeshCache._mutex(M) · AsyncBufferReadback._mutex(M) · RHIConstantBufferMirror._mutex(M) · RHIReleaseQueue._spinLock(S) · RHITrackedState._lock(S) · ConstantBufferPagePool._mutex(M) · BindlessIndexValidator._mutex(M) · RHIConstantBufferWriteLog._mutex(M) · RHIMemoryTracker._mutex(M) · RHIRenderPassRegistry._mutex(M) · D3D11RHIDevice._bindlessMutex(RW) · D3D11RHIDevice._liveCmdListMutex(M) · D3D12RHIDevice._soloMutex(M) · D3D12RHIDevice._uploadSlotMutex(M) · D3D12RHIDevice._cmdListPoolMutex(M) · D3D12RHIDevice._liveCmdListMutex(M) · D3D12RHIDevice._onlineBlockMutex(M) · D3D12RHIDevice._offscreenViewMutex(M) · D3D12RHIDevice._bindlessMutex(RW) · D3D12RHIDevice._transferSubmitMutex(M) · D3D12RHIDevice._transferJobMutex(M) · D3D12RHIDevice._textureTransferMutex(M) · D3D12RHISwapChain._stateMutex(M) · OpenGLRHIDevice._bindlessMutex(RW) · IRHIDevice._mutex(M) · IRHIDevice._mutex(M) · RHIRenderResource._mutex(M) · RHIStagingAllocator._mutex(M) · RHITransferSerials._mutex(M) · RHITransferSerials._mutex(M) · VulkanRHIDevice._soloMutex(M) · VulkanRHIDevice._oneShotMutex(M) · VulkanRHIDevice._uploadMutex(M) · VulkanRHIDevice._queueMutex(M) · VulkanRHIDevice._droppedLayoutMutex(M) · VulkanRHIDevice._cmdListPoolMutex(M) · VulkanRHIDevice._liveCmdListMutex(M) · VulkanRHIDevice._bindlessMutex(RW) · VulkanRHIDevice._transferMutex(M) · VulkanRHIDevice._transferJobMutex(M) · VulkanRHIDevice._submittedMarkerMutex(M) · VulkanRHIRenderPassCache._compositeMutex(M) · VulkanRHIRenderPassCache._pipelineMutex(M) · VulkanRHIRenderPassCache._recordMutex(M) · WebGPURHIDevice._bindlessMutex(RW) · WebGPURHIDevice._liveCommandListMutex(M) · ShaderBindingLayoutCache._mutex(M) · ShaderCache._mutexCache(M) · ShaderCookStamp._mutex(M) · ShaderReflectionLibrary._mutex(M) · TextureCache._mutex(M) · TextureCache._regionMutex(M) · TextureCache._bakeMutex(M) · TextureCache._mutex(RW) · TextureCache._standInMutex(M) · TextureCache._awaitingMutex(M) · TextureCache._streamingMutex(M) · ScreenshotRequestQueue._mutex(M) |
+| `Engine/Input` | 1 | InputMapBundle._mutex(M) |
+| `Engine/Localization` | 4 | LocalizationManager._mutex(RW) · LocalizationManager._missingMutex(M) · StringTable._mutex(M) · StringTable._mutex(RW) |
+| `Engine/Navigation` | 3 | PathRequestQueue._lock(S) · RecastNavMesh._sharedQueryMutex(M) · NavTileRebaker._dirtyLock(S) |
+| `Engine/Net` | 2 | FileServeContentSource._mutex(M) · GameConnectSecurity._mutex(M) |
+| `Engine/Object` | 12 | ComponentDataStore._mutex(M) · ComponentDefaults._resolvedMutex(RW) · ComponentDefaults._defaultsMutex(M) · GameObjectStore._mutex(RW) · GameObjectStore._beginPlayMutex(M) · CameraRegistry._mutex(M) · ComponentRegistry._mutex(M) · PrimitiveRegistry._mutex(M) · TagIndex._mutex(RW) · TickBatchRegistry._mutex(M) · TickRegistry._dirtyLock(S) · PrefabCache._mapCacheMutex(RW) |
+| `Engine/Observability` | 3 | DebugChannel._mutex(M) · DebugChannel._mutex(M) · MetricRegistry._mutex(M) |
+| `Engine/Physics` | 7 | Box2DWorkerPool._spinLock(S) · PhysicsMeshShapeCache._mutex(M) · JoltJobSystem._queueSpinLock(S) · JoltPhysicsScene._reportMutex(M) · PhysicsHookRegistry._mutex(M) · PhysicsPoseStore._arrCommandLock(S) · PhysicsPoseStore._arrCommandLock(S) |
+| `Engine/Profiling` | 1 | ProfilerBackend.ProfilerBackendInternal(M) |
+| `Engine/Reflection` | 2 | ReflectionValidation._mutex(M) · TypeRegistry._mutex(RW) |
+| `Engine/Renderer` | 12 | RenderDebugRegistry._mutex(M) · RenderDebugRegistry._frameMutex(M) · RenderExtensionRegistry._runMutex(M) · RenderExtensionRegistry._mutex(M) · MaterialPSOBuilder._mutex(M) · RenderPSOCache._layoutMutex(M) · RenderPSOCache._materialPSOMutex(M) · TransientAttachmentPool._clearedMutex(M) · OcclusionTileSnapshot._mutex(M) · RenderThread._scenePendingMutex(M) · RenderThread._mutex(M) · RenderThread._queuedCommandMutex(M) |
+| `Engine/Scene` | 1 | SceneManager._mutex(M) |
+| `Engine/Serialization` | 4 | AssetRedirect._mutex(M) · ResourceComposition._mutex(M) · ResourceRemap._mutex(M) · ResourceTags._mutex(M) |
+| `Engine/Server` | 2 | OpsHTTPEndpoint._mutex(M) · ServiceHealthRegistry._mutex(M) |
+| `Engine/Telemetry` | 2 | TelemetryService._mutex(M) · TelemetryService._spoolMutex(M) |
+| `Engine/Text` | 1 | SystemFontLocator._mutex(M) |
+| `Engine/Window` | 3 | AndroidInputView._mutex(M) · LinuxSplashThread._mutex(M) · Win32SplashWindow._paintMutex(M) |
+| `GameFramework/Kits` | 5 | PasswordHashQueue._finishedMutex(M) · MatchServerAgent._mutex(M) · HTTP2Client._mutex(M) · RESPEphemeralStore._mutex(M) · SQLConnectionPool._mutex(M) |
+| `GameFramework/Plugin` | 1 | MeshModifierTextureSampler._mutex(RW) |
+| `GameFramework/Runtime` | 14 | ScheduleSystem._mutex(M) · ExperienceKitRegistry._mutex(M) · LocalDeviceKeyProvider._mutex(M) · MemoryLocalStore._mutex(M) · ThreadedLocalStore._mutex(M) · AppearanceMeshPart._mutex(M) · SmartObjectComponent._mutex(M) · LocalServerBus._mutex(M) · MemoryEphemeralStore._mutex(M) · BlockingHTTPClient._sendMutex(M) · HTTPClient._mutex(M) · HTTPServer._mutex(M) · MemoryServiceStore._mutex(M) · MemoryServiceStore._mutex(M) |
+| `Games/LanternVale` | 1 | ValeProfileStore._mutex(M) |
+
+### 5) 전후 비교 벤치(통합이 잰다)
+
+재는 법: Release `App --test --test-run-disabled --test-filter=LockKindBenchTest.*` 5 번, 줄마다 중앙값(`Source/Core/Concurrency/Tests/TestLockKindBench.cpp`).
+실제 자리의 잠금은 그대로 두고 같은 모양(자료 구조 · 구간 · 읽기/쓰기 비율)을 따로 만들어 잠금만 갈아 끼운다. 값은 한 연산의 평균 ns, 스레드 2 · 4 · 8.
+
+| 벤치 | 자리(후보 #) | 견주는 것 | 판정 문턱 |
+| --- | --- | --- | --- |
+| `LockKindBenchTest.RenderPSOCacheLookup` | `RenderPSOCache` 두 잠금(#2) — 4096 항목, 쓰기 없음 · 1/1000 · 1/100 | `mutex` · `shared_mutex` · `SpinLock` | 1/1000 · 1/100 에서 4 · 8 스레드 `shared_mutex` 가 `mutex` 보다 20 % 이상 빠르고 2 스레드에서 5 % 넘게 느리지 않으면 `shared_mutex` 로. `SpinLock` 이 둘보다 20 % 이상 빠르면 그쪽(잎 잠금일 때만) |
+| `LockKindBenchTest.CodecRegistryLookup` | `CompressionCodecRegistry`(#3) — 8 항목, 쓰기 없음 | 같음 | 같은 문턱(쓰기 없음 칸) |
+| `LockKindBenchTest.ShaderBindingLayoutLookup` | `ShaderBindingLayoutCache`(#4) — 512 항목, 쓰기 없음 · 1/100 · 1/10 | 같음 | 같은 문턱(1/100 칸). 1/10 칸은 리로드 폭주 때 `shared_mutex` 가 느려지는지 보는 칸 — 30 % 넘게 느리면 바꾸지 않는다 |
+| `LockKindBenchTest.LockedSwapQueuePush` | `LockedSwapQueue`(#1) — 생산자 2 · 4 · 8 + 소비자 하나, 64 B 원소 | `LockedSwapQueue<T, mutex>`(기본) · `LockedSwapQueue<T, SpinLock>` | 4 · 8 생산자에서 `SpinLock` 이 10 % 이상 빠르고 2 생산자에서 느리지 않으면 기본 잠금 인자를 `SpinLock` 으로(잠금 인자는 이 감사에서 더했다) |
+| `LockKindBenchTest.JoltJobQueue` | Jolt 잡 큐(#11, 적용함) — 스레드마다 넣고 곧 꺼냄, 용량 2048 | `SpinLock` + `deque`(이전) · 실행 때 용량 `ConcurrentQueue`(지금) | 어느 스레드 수에서든 `ConcurrentQueue` 가 10 % 넘게 느리면 `SpinLock` + `deque` 로 되돌린다 |
