@@ -20,8 +20,6 @@ namespace sw
 {
     struct PropertyInfo;
 
-    class AudioEngine;
-    class IAudioService;
 } // namespace sw
 
 namespace sw::editor
@@ -73,7 +71,7 @@ namespace sw::editor
         /** @brief 되돌리기가 준 글로 사본을 다시 읽습니다. */
         void applyDocumentText( string_view text ) override;
         void drawEventList();
-        void drawEventDetail( IAudioService& audio );
+        void drawEventDetail();
         /**
          * @brief 고치는 라이브러리 사본을 그립니다 — 저장 · 그만두기, 고칠 이벤트 고르기 · 복제 · 지우기, 이벤트 속성 그리드, 라이브러리의 파라미터 · 감쇠 프리셋 그리드.
          * @details 고칠 이벤트(`AudioEventEditModel::getEventName`)는 사본에서 고른다. 복제 · 지운 이벤트는 저장 뒤 핫 리로드가 엔진 목록에 올리기 전까지 사본에만 있다.
@@ -98,7 +96,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax128> _filter;
         bool                                    _bOnlySelectedEvent;     ///< 재생 중 목록을 고른 이벤트로 거른다. NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         uint8                                   _bVisibleEventStale : 1; ///< 이름 목록이 바뀌어 다시 걸러야 한다
-        const AudioEngine*                      _pEventNameEngine;       ///< `_listEventName` 을 모은 엔진(엔진이 새로 뜨면 세대가 다시 1 부터라 함께 본다)
+        const void*                             _pEventNameEngine;       ///< `_listEventName` 을 모은 엔진의 표지(비교만 — 엔진이 새로 뜨면 세대가 다시 1 부터라 함께 본다)
         uint32                                  _eventNameGeneration;    ///< `_listEventName` 을 모은 때의 `AudioEngine::getEventLibraryGeneration`
         string                                  _visibleEventFilter;     ///< `_listVisibleEvent` 를 거른 검색 글
     };

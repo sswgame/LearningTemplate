@@ -15,8 +15,6 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/IAudioService.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 
@@ -98,10 +96,8 @@ namespace sw::editor
         return AudioMixerViewModel::getWatchValues()._watchedBusVolume;
     }
 
-    void AudioMixerPanel::drawPreviewBar( IAudioService& audio )
+    void AudioMixerPanel::drawPreviewBar()
     {
-        AudioEngine& engine = audio.getEngine();
-        _model.refreshEventNames( engine );
         const vector<hashed_string>& listEventName = _model.getEventNames();
 
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Event" ) );
@@ -120,7 +116,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "PostEvent" ), "Post Event" ) ) );
         ImGui::BeginDisabled( listEventName.empty() );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "PostEvent" ), "Post Event" ) ) )
-            _model.postSelectedEvent( engine );
+            _model.postSelectedEvent();
         EditorSelfTestMarks::record( "audiomixer.postEvent" );
         ImGui::EndDisabled();
 
@@ -132,16 +128,15 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "PlayClip" ), "Play Clip" ) ) );
         ImGui::BeginDisabled( _clipPath.empty() );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "PlayClip" ), "Play Clip" ) ) )
-            (void)audio.play( AssetID{ _clipPath } ); // 파일이 없으면 false 이고 엔진이 로그를 남긴다
+            (void)_model.playClip( _clipPath.c_str() ); // 파일이 없으면 false 이고 엔진이 로그를 남긴다
         EditorSelfTestMarks::record( "audiomixer.playClip" );
         ImGui::EndDisabled();
     }
 
-    void AudioMixerPanel::drawBusStrip( IAudioService& audio, uint32 busIndex )
+    void AudioMixerPanel::drawBusStrip( uint32 busIndex )
     {
         using Internal               = AudioMixerPanelInternal;
         const AudioBusStatus& status = _model.getBusStatuses()[busIndex];
-        AudioEngine&          engine = audio.getEngine();
         const float32         dpi    = EditorThemeUtil::getDPIScale();
         const string          name   = status._name.c_str();
 
@@ -158,7 +153,7 @@ namespace sw::editor
 
         float32 volume = status._userVolume;
         if ( EditorWidgets::vSliderFloat( SW_WIDGET_ID( "##Volume" ), ImVec2{ 28.0f * dpi, Internal::kStripHeight * dpi }, &volume, 0.0f, 1.0f, "" ) )
-            audio.setBusVolume( status._name, volume );
+            _model.setBusVolume( busIndex, volume );
         EditorSelfTestMarks::recordFormat( "audiomixer.volume.%#", name );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "UserVolumeTheOptionsMenuValueCtrl" ) );
 
@@ -179,14 +174,14 @@ namespace sw::editor
 
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bMuted ? SW_THEME_COLOR( "Signal", "Error" ) : SW_THEME_COLOR( "Base", "ToggleInactive" ) ) );
         if ( ImGui::Button( "M", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
-            engine.setBusMuted( status._name, status._bMuted == false );
+            _model.setBusMuted( busIndex, status._bMuted == false );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::recordFormat( "audiomixer.mute.%#", name );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "Mute" ) );
         ImGui::SameLine();
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bSolo ? SW_THEME_COLOR( "Signal", "Warning" ) : SW_THEME_COLOR( "Base", "ToggleInactive" ) ) );
         if ( ImGui::Button( "S", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
-            engine.setBusSolo( status._name, status._bSolo == false );
+            _model.setBusSolo( busIndex, status._bSolo == false );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::recordFormat( "audiomixer.solo.%#", name );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "SoloOnlyThisBusItsAncestorsAnd" ) );
@@ -195,26 +190,26 @@ namespace sw::editor
 
     void AudioMixerPanel::drawContent()
     {
-        IAudioService& audio = AudioMixerViewModel::getAudioService();
-        if ( audio.isInitialized() == false )
+        const AudioMixerStatus status = _model.refresh(); // 서비스 · 엔진은 ViewModel 이 찾는다 — 이 창은 값과 명령만 본다
+        if ( status == AudioMixerStatus::ServiceStopped )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "TheAudioServiceIsNotRunning" ) );
             return;
         }
-        if ( _model.refreshBuses( audio.getEngine() ) == false )
+        if ( status == AudioMixerStatus::NoMixerGraph )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "NoMixerGraphHasBeenPublishedYet" ) );
             return;
         }
 
-        drawPreviewBar( audio );
+        drawPreviewBar();
         ImGui::Separator();
         ImGui::BeginChild( "##AudioMixerStrips", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar );
         const uint32 busCount = static_cast<uint32>( _model.getBusStatuses().size() );
         for ( uint32 busIndex = 0; busIndex < busCount; ++busIndex )
         {
             ImGui::PushID( static_cast<int32>( busIndex ) );
-            drawBusStrip( audio, busIndex );
+            drawBusStrip( busIndex );
             ImGui::PopID();
             ImGui::SameLine( 0.0f, 18.0f * EditorThemeUtil::getDPIScale() );
         }

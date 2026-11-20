@@ -12,6 +12,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
+
 namespace sw
 {
     class FrameProfiler;
@@ -38,6 +40,21 @@ namespace sw::editor
         uint8                        _bHasScene{ SW_FALSE }; ///< 편집 중인 씬이 있다
     };
 
+    /** @brief GPU Memory 탭의 종류 한 줄입니다(값만 — 바이트가 큰 순서). */
+    struct ProfilerGPUMemoryRow
+    {
+        RHIMemoryKind      _kind{};
+        RHIMemoryKindStats _stats{};
+    };
+
+    /** @brief GPU Memory 탭이 한 프레임 그릴 값입니다. 장치에 닿지 않는다(MVVM 계약). */
+    struct ProfilerGPUMemoryViewState
+    {
+        string                       _backendName;
+        RHIMemorySummary             _summary{};
+        vector<ProfilerGPUMemoryRow> _listRow;
+    };
+
     /**
      * @class ProfilerViewModel
      * @brief 프로파일러 창의 모델 접근 창구입니다. 파일 머리말 참고.
@@ -51,8 +68,8 @@ namespace sw::editor
         [[nodiscard]] static FrameProfiler& getFrameProfiler();
         /** @brief 메모리 프로파일러입니다. 이 빌드에 없으면 nullptr 입니다. */
         [[nodiscard]] static MemoryProfiler* findMemoryProfiler();
-        /** @brief 에디터가 그리는 RHI 장치입니다. 아직 없으면 nullptr 입니다(GPU Memory 탭). */
-        [[nodiscard]] static IRHIDevice* findRHIDevice();
+        /** @brief 에디터가 그리는 RHI 장치의 메모리 추적 값을 @p outState 에 채웁니다(벡터는 재사용한다). 장치가 아직 없으면 false 입니다. */
+        [[nodiscard]] static bool gatherGPUMemory( ProfilerGPUMemoryViewState& outState );
         /** @brief 작업 관리자의 작업 스레드 수입니다. */
         [[nodiscard]] static uint32 getWorkerCount();
 #if !defined( SW_SHIPPING )
@@ -67,6 +84,10 @@ namespace sw::editor
         void openTracyViewer();
         /** @brief 마지막 "Open Tracy" 가 실패했으면 그 이유 한 줄, 누른 적이 없거나 성공했으면 빈 글입니다. */
         const string& getTracyError() const { return _tracyError; }
+
+    private:
+        /** @brief 에디터가 그리는 RHI 장치입니다. 아직 없으면 nullptr 입니다. Model 안에서만 쓴다. */
+        [[nodiscard]] static IRHIDevice* findRHIDevice();
 
     private:
         string _tracyError; ///< 마지막 "Open Tracy" 의 실패 이유(성공 · 누르기 전이면 빈 글)

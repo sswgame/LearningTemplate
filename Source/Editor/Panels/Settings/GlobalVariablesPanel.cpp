@@ -209,7 +209,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::revertDocument()
     {
-        GlobalVariablesViewModel::getVariableManager().resetAllToDefault();
+        GlobalVariablesViewModel::resetAllToDefault();
     }
 
     void GlobalVariablesPanel::markSessionDirty()
@@ -219,16 +219,14 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawContent()
     {
-        GlobalVariableManager& gvm = GlobalVariablesViewModel::getVariableManager();
-
-        drawVariableToolbar( gvm );
+        drawVariableToolbar(); // 관리자는 ViewModel 이 찾는다 — 이 창은 변수 줄 값과 명령만 본다
 
         // 2) 변수 목록 — 등록 세대나 검색 글이 바뀐 프레임에만 다시 짓는다.
-        const vector<GlobalVariableInfo*>& listFiltered = _model.refreshVariableList( gvm, _searchFilter.c_str() );
+        const vector<GlobalVariableInfo*>& listFiltered = _model.refreshVariableList( _searchFilter.c_str() );
 
         EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), _model.getTotalVariableCount(), SW_LOCKEY( "EdWidget", "Variables" ) );
 
-        drawPinnedSection( gvm );
+        drawPinnedSection();
 
         // 필터에 걸러져서 0건인 것과 애초에 없는 것은 다르게 안내한다.
         if ( listFiltered.empty() )
@@ -244,7 +242,7 @@ namespace sw::editor
         drawVariableTable( listFiltered );
     }
 
-    void GlobalVariablesPanel::drawVariableToolbar( GlobalVariableManager& gvm )
+    void GlobalVariablesPanel::drawVariableToolbar()
     {
         // 1) 상단 툴바. 검색, 모듈 그룹화, 기본값 리셋, 프리셋 메뉴가 있다
         if ( EditorChrome::beginToolbar( "##GvToolbar" ) )
@@ -258,7 +256,7 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ResetAll" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetAll" ) ) )
             {
-                gvm.resetAllToDefault();
+                GlobalVariablesViewModel::resetAllToDefault();
                 markSessionDirty();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetAllVariables" ) );
@@ -318,7 +316,7 @@ namespace sw::editor
         ImGui::EndPopup();
     }
 
-    void GlobalVariablesPanel::drawPinnedSection( GlobalVariableManager& gvm )
+    void GlobalVariablesPanel::drawPinnedSection()
     {
         // 3) 핀으로 고정한 즐겨찾기 변수 섹션
         if ( _model.getPinnedVariables().empty() == false )
@@ -331,7 +329,7 @@ namespace sw::editor
                 {
                     for ( const string& pinnedName : _model.getPinnedVariables() )
                     {
-                        GlobalVariableInfo* pInfo = gvm.findVariable( pinnedName );
+                        GlobalVariableInfo* pInfo = GlobalVariablesViewModel::findVariable( pinnedName );
                         if ( pInfo != nullptr )
                         {
                             fixed_string<constant::buffer::kMax256> pinnedID;

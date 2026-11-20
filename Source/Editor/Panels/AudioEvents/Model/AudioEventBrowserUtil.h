@@ -60,10 +60,24 @@ namespace sw::editor
     {
         /** @brief @p listName 에서 @p filter 를 (대소문자 무시) 품은 이름만 사전순으로 @p outListName 에 담습니다. 필터가 비면 전부입니다. */
         static void filterEventNames( const vector<hashed_string>& listName, string_view filter, vector<hashed_string>& outListName );
-        /** @brief 에디터의 오디오 서비스입니다. 없으면(에디터 밖) nullptr 입니다. View 가 서비스 창구(`EditorService.h`)를 보지 않게 여기서 찾는다. */
-        static IAudioService* findAudioService();
-        /** @brief 에디터의 오디오 서비스입니다(에디터는 오디오를 짓는 구성이라 늘 있다 — 전용 서버 구성만 오디오를 짓지 않는다). 없으면 멈춘다. */
-        static IAudioService& getAudioService();
+        /**
+         * @brief 오디오 서비스가 돌면 그 엔진이 게시한 통계를 @p outStats 에 담고 true 입니다. 서비스가 없거나 서지 않았으면 false 입니다.
+         * @details 서비스 · 엔진은 여기(Model)서만 찾는다 — 창과 감시 값은 값만 받는다(MVVM 계약).
+         */
+        [[nodiscard]] static bool readStats( AudioEngineStats& outStats );
+        /**
+         * @brief 이벤트 라이브러리가 바뀌었으면(엔진이 새로 떴거나 세대가 바뀜) 이벤트 이름을 @p outListName 에 다시 모으고 true 입니다.
+         * @param inoutEngineKey 지난번에 모은 엔진의 표지(비교에만 쓴다 — 창이 값으로 든다)
+         * @param inoutGeneration 지난번에 모은 때의 라이브러리 세대
+         */
+        [[nodiscard]] static bool collectEventNamesIfChanged( const void*& inoutEngineKey, uint32& inoutGeneration, vector<hashed_string>& outListName );
+        /** @brief 재생 중인 인스턴스 상태를 @p outListStatus 에 담습니다(비우고 채운다). */
+        static void collectInstanceStatuses( vector<AudioInstanceStatus>& outListStatus );
+        /** @brief 이벤트 @p eventName 의 설명자 · 감쇠 · 그것을 가진 라이브러리 경로를 찾습니다. 없으면(라이브러리가 언로드됨) false 입니다. */
+        [[nodiscard]] static bool findEventDesc( const hashed_string& eventName, AudioEventDef& outEventDesc, hashed_string& outLibrary, AudioAttenuationDef& outAttenuation );
+        /** @brief 이벤트 @p eventName 을 한 번 보냅니다(Post Event — 재생 id 는 쓰지 않는다, 끝나면 저절로 멈춘다). */
+        static void postEvent( const hashed_string& eventName );
+
         /** @brief 데이터 파일 @p path 를 연결된 도구로 엽니다(`EditorAssetCommands::openPath`). 여는 도구가 없으면 false 입니다. */
         [[nodiscard]] static bool openDataFile( string_view path );
         /** @brief 이벤트 설명자와 감쇠 프리셋에서 속성 테이블 행을 만듭니다(비우고 채웁니다). 감쇠 이름이 비면 반경 줄은 "2D" 입니다. */
@@ -86,5 +100,11 @@ namespace sw::editor
         static hashed_string duplicateEvent( AudioEventLibrary& inoutLibrary, const hashed_string& source );
         /** @brief 라이브러리 사본에서 이벤트 @p name 을 지웁니다. 없으면 false 입니다. */
         [[nodiscard]] static bool removeEvent( AudioEventLibrary& inoutLibrary, const hashed_string& name );
+
+    private:
+        /** @brief 에디터의 오디오 서비스입니다. 없으면(에디터 밖) nullptr 입니다. Model 안에서만 찾는다. */
+        static IAudioService* findAudioService();
+        /** @brief 에디터의 오디오 서비스입니다(에디터는 오디오를 짓는 구성이라 늘 있다 — 전용 서버 구성만 오디오를 짓지 않는다). 없으면 멈춘다. */
+        static IAudioService& getAudioService();
     };
 } // namespace sw::editor

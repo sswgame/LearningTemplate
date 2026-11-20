@@ -17,9 +17,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"
-#include "Engine/Audio/IAudioService.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
@@ -85,18 +83,18 @@ namespace sw::editor
             /** @brief 오디오 스레드가 마지막으로 게시한 받아들인 이벤트 수입니다. 오디오 서비스가 없거나 시작하지 않았으면 값을 내지 않는다. */
             [[nodiscard]] static bool readPlayedCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                IAudioService* pAudio = AudioEventBrowserUtil::findAudioService();
-                if ( pAudio == nullptr || pAudio->isInitialized() == false )
+                AudioEngineStats stats;
+                if ( AudioEventBrowserUtil::readStats( stats ) == false )
                     return false;
-                outValue = static_cast<float64>( pAudio->getEngine().getStats()._playedEventCount );
+                outValue = static_cast<float64>( stats._playedEventCount );
                 return true;
             }
 
             /** @brief `Editor.AudioEventsPlayed` 의 활동 수 — 오디오 스레드가 지금까지 렌더한 프레임 수입니다(게시가 멈추면 값도 멈춘다). */
             [[nodiscard]] static uint64 readAudioActivity( const GameObjectManager* /*pManager*/ )
             {
-                IAudioService* pAudio = AudioEventBrowserUtil::findAudioService();
-                return pAudio != nullptr && pAudio->isInitialized() ? pAudio->getEngine().getStats()._renderedFrameCount : 0u;
+                AudioEngineStats stats;
+                return AudioEventBrowserUtil::readStats( stats ) ? stats._renderedFrameCount : 0u;
             }
         };
     } // namespace
@@ -262,9 +260,8 @@ namespace sw::editor
         EditorSelfTestMarks::record( "audioevents.list" );
     }
 
-    void AudioEventBrowserPanel::drawEventDetail( IAudioService& audio )
+    void AudioEventBrowserPanel::drawEventDetail()
     {
-        AudioEngine& engine = audio.getEngine();
         if ( _selectedEvent.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "SelectEvent" ) );
@@ -272,7 +269,7 @@ namespace sw::editor
         }
         AudioEventDef       eventDesc;
         AudioAttenuationDef attenuation;
-        if ( engine.findEventDesc( _selectedEvent, eventDesc, _selectedLibrary, &attenuation ) == false )
+        if ( AudioEventBrowserUtil::findEventDesc( _selectedEvent, eventDesc, _selectedLibrary, attenuation ) == false )
         {
             // 라이브러리가 언로드됐거나 다시 읽혀 이벤트가 사라졌다.
             _selectedEvent   = hashed_string{};
@@ -284,7 +281,7 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", _selectedLibrary.c_str() );
 
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EditorAudioEvents", "PostEvent" ) ) ) )
-            (void)engine.postEvent( _selectedEvent, 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
+            AudioEventBrowserUtil::postEvent( _selectedEvent );
         EditorSelfTestMarks::record( "audioevents.postEvent" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) )
@@ -405,23 +402,16 @@ namespace sw::editor
     {
         updateFocusedDocument();
         ensureDocumentLoaded();
-        IAudioService& audio = AudioEventBrowserUtil::getAudioService();
-        if ( audio.isInitialized() == false )
+        // 서비스 · 엔진은 Model(`AudioEventBrowserUtil`)이 찾는다 — 이 창은 값과 명령만 본다.
+        AudioEngineStats stats;
+        if ( AudioEventBrowserUtil::readStats( stats ) == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "NoService" ) );
             return;
         }
-        AudioEngine& engine          = audio.getEngine();
-        const bool   bEventNameStale = _pEventNameEngine != &engine || _eventNameGeneration != engine.getEventLibraryGeneration();
-        if ( bEventNameStale )
-        {
-            _pEventNameEngine    = &engine;
-            _eventNameGeneration = engine.getEventLibraryGeneration();
-            engine.collectEventNames( _listEventName );
+        if ( AudioEventBrowserUtil::collectEventNamesIfChanged( _pEventNameEngine, _eventNameGeneration, _listEventName ) )
             _bVisibleEventStale = SW_TRUE;
-        }
-        engine.getInstanceStatuses( _listInstanceStatus );
-        const AudioEngineStats stats = engine.getStats();
+        AudioEventBrowserUtil::collectInstanceStatuses( _listInstanceStatus );
 
         ImGui::BeginChild( "##AudioEventList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 29.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX );
         drawEventList();
@@ -432,7 +422,7 @@ namespace sw::editor
         {
             if ( ImGui::BeginTabItem( SW_LOCKEY( "EditorAudioEvents", "TabProperties" ) ) )
             {
-                drawEventDetail( audio );
+                drawEventDetail();
                 ImGui::EndTabItem();
             }
             if ( ImGui::BeginTabItem( SW_LOCKEY( "EditorAudioEvents", "TabPlaying" ) ) )

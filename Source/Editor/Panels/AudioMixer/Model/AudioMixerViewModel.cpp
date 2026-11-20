@@ -11,6 +11,7 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/Content/AssetID.h"
 
 namespace sw::editor
 {
@@ -97,11 +98,45 @@ namespace sw::editor
             _selectedEvent = 0;
     }
 
-    void AudioMixerViewModel::postSelectedEvent( AudioEngine& engine ) const
+    AudioMixerStatus AudioMixerViewModel::refresh()
+    {
+        IAudioService& audio = getAudioService();
+        if ( audio.isInitialized() == false )
+            return AudioMixerStatus::ServiceStopped;
+        if ( refreshBuses( audio.getEngine() ) == false )
+            return AudioMixerStatus::NoMixerGraph;
+        refreshEventNames( audio.getEngine() );
+        return AudioMixerStatus::Ready;
+    }
+
+    void AudioMixerViewModel::postSelectedEvent() const
     {
         if ( _selectedEvent >= _listEventName.size() )
             return;
-        (void)engine.postEvent( _listEventName[_selectedEvent], 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
+        (void)getAudioService().getEngine().postEvent( _listEventName[_selectedEvent], 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
+    }
+
+    bool AudioMixerViewModel::playClip( string_view clipPath ) const
+    {
+        return getAudioService().play( AssetID{ clipPath } );
+    }
+
+    void AudioMixerViewModel::setBusVolume( uint32 busIndex, float32 volume ) const
+    {
+        if ( busIndex < _listBusStatus.size() )
+            getAudioService().setBusVolume( _listBusStatus[busIndex]._name, volume );
+    }
+
+    void AudioMixerViewModel::setBusMuted( uint32 busIndex, bool bMuted ) const
+    {
+        if ( busIndex < _listBusStatus.size() )
+            getAudioService().getEngine().setBusMuted( _listBusStatus[busIndex]._name, bMuted );
+    }
+
+    void AudioMixerViewModel::setBusSolo( uint32 busIndex, bool bSolo ) const
+    {
+        if ( busIndex < _listBusStatus.size() )
+            getAudioService().getEngine().setBusSolo( _listBusStatus[busIndex]._name, bSolo );
     }
 
     const AudioMixerWatchValues& AudioMixerViewModel::getWatchValues()

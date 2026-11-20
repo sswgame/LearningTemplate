@@ -1096,8 +1096,7 @@ namespace sw::editor
         using Internal = UIPreviewPanelInternal;
         updateFocusedDocument();
         ensureDocumentLoaded();
-        UISystem* pUI = UIPreviewViewModel::findUISystem();
-        if ( pUI == nullptr || pUI->isInitialized() == false )
+        if ( UIPreviewViewModel::isUIRunning() == false ) // UI 시스템은 ViewModel 이 찾는다
         {
             _model.resetWatchValues();
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorUIPreview", "UINotRunning" ) );
@@ -1105,7 +1104,7 @@ namespace sw::editor
         }
         drawToolbar( UIPreviewViewModel::getThemeController() );
         UIOffscreenScreens& offscreen = UIPreviewViewModel::getOffscreenScreens();
-        _model.syncPreview( *pUI, offscreen ); // 렌더 텍스처를 바꾸면 그 전에 releaseTexture 를 부른다
+        _model.syncPreview( offscreen ); // 렌더 텍스처를 바꾸면 그 전에 releaseTexture 를 부른다
         _model.syncLanguage( offscreen );
         syncTexture();
         UIScreen* pScreen = _model.findPreviewScreen();

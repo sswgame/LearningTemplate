@@ -11,6 +11,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/IAudioService.h"
@@ -192,6 +193,42 @@ namespace sw::editor
     IAudioService& AudioEventBrowserUtil::getAudioService()
     {
         return editor::getSubsystem<IAudioService>();
+    }
+
+    bool AudioEventBrowserUtil::readStats( AudioEngineStats& outStats )
+    {
+        IAudioService* const pAudio = findAudioService();
+        if ( pAudio == nullptr || pAudio->isInitialized() == false )
+            return false;
+        outStats = pAudio->getEngine().getStats();
+        return true;
+    }
+
+    bool AudioEventBrowserUtil::collectEventNamesIfChanged( const void*& inoutEngineKey, uint32& inoutGeneration, vector<hashed_string>& outListName )
+    {
+        AudioEngine& engine   = getAudioService().getEngine();
+        const bool   bChanged = inoutEngineKey != &engine || inoutGeneration != engine.getEventLibraryGeneration();
+        if ( bChanged == false )
+            return false;
+        inoutEngineKey  = &engine;
+        inoutGeneration = engine.getEventLibraryGeneration();
+        engine.collectEventNames( outListName );
+        return true;
+    }
+
+    void AudioEventBrowserUtil::collectInstanceStatuses( vector<AudioInstanceStatus>& outListStatus )
+    {
+        getAudioService().getEngine().getInstanceStatuses( outListStatus );
+    }
+
+    bool AudioEventBrowserUtil::findEventDesc( const hashed_string& eventName, AudioEventDef& outEventDesc, hashed_string& outLibrary, AudioAttenuationDef& outAttenuation )
+    {
+        return getAudioService().getEngine().findEventDesc( eventName, outEventDesc, outLibrary, &outAttenuation );
+    }
+
+    void AudioEventBrowserUtil::postEvent( const hashed_string& eventName )
+    {
+        (void)getAudioService().getEngine().postEvent( eventName, 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
     }
 
     bool AudioEventBrowserUtil::openDataFile( string_view path )
