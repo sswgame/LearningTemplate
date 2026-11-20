@@ -116,27 +116,25 @@ namespace sw
         , _cachePath{}
         , _hashedByteCount{ 0 }
         , _writeObserver{ *this }
-        , _bObserving{ SW_FALSE }
+        , _writeObserverRegistration{}
     {
     }
 
     SubsystemInitResult ContentHashCache::initializeSubsystem()
     {
         // 관찰자는 하나다 — 이미 걸려 있으면 다른 서비스 범위가 살아 있는 것이다(같은 프로세스의 두 엔진). 자기 쓰기를 놓치는 캐시로 돌지 않고 멈춘다.
-        if ( PlatformFileUtil::registerWriteObserver( &_writeObserver ) == false )
+        _writeObserverRegistration = PlatformFileUtil::bindWriteObserver( &_writeObserver );
+        if ( _writeObserverRegistration.isActive() == false )
         {
             SW_LOG_ERROR_ID( "ContentHashCache.WriteObserverTaken", "Another file write observer is registered - the content hash cache would miss this process's writes" );
             return SubsystemInitResult::Failed;
         }
-        _bObserving = SW_TRUE;
         return SubsystemInitResult::Succeeded;
     }
 
     void ContentHashCache::shutdownSubsystem()
     {
-        if ( _bObserving == SW_TRUE )
-            PlatformFileUtil::unregisterWriteObserver( &_writeObserver );
-        _bObserving = SW_FALSE;
+        _writeObserverRegistration.reset();
     }
 
     string ContentHashCache::makeKey( string_view path )

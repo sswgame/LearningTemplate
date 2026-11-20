@@ -37,10 +37,10 @@ namespace sw
         {
             /** @brief 읽으려고 연 파일 수입니다(`recordFileOpenedForRead`). */
             inline static atomic<uint64> s_fileOpenCount{ 0 };
-            /** @brief 걸린 읽기 관찰자입니다(`registerReadObserver`). 없으면 nullptr 입니다. */
-            inline static atomic<IFileReadObserver*> s_pReadObserver{ nullptr };
-            /** @brief 걸린 쓰기 관찰자입니다(`registerWriteObserver`). 없으면 nullptr 입니다. */
-            inline static atomic<IFileWriteObserver*> s_pWriteObserver{ nullptr };
+            /** @brief 걸린 읽기 관찰자입니다(`bindReadObserver`). */
+            inline static ObserverSlot<IFileReadObserver> s_readObserverSlot{};
+            /** @brief 걸린 쓰기 관찰자입니다(`bindWriteObserver`). */
+            inline static ObserverSlot<IFileWriteObserver> s_writeObserverSlot{};
 
 #if defined( SW_PLATFORM_LINUX )
             /** @brief freedesktop 휴지통 폴더입니다(`$XDG_DATA_HOME/Trash`, 없으면 `~/.local/share/Trash`). 홈을 모르면 빈 글입니다. */
@@ -227,45 +227,41 @@ namespace sw
 {
     void PlatformFileUtil::recordDeviceRead( size_t byteCount )
     {
-        if ( IFileReadObserver* const pObserver = PlatformFileUtilInternal::s_pReadObserver.load( std::memory_order_acquire ) )
+        if ( IFileReadObserver* const pObserver = PlatformFileUtilInternal::s_readObserverSlot.get() )
             pObserver->recordDeviceRead( byteCount );
     }
 
     void PlatformFileUtil::recordFileOpenedForRead( string_view filePath, size_t byteCount )
     {
         PlatformFileUtilInternal::s_fileOpenCount.fetch_add( 1, std::memory_order_relaxed );
-        if ( IFileReadObserver* const pObserver = PlatformFileUtilInternal::s_pReadObserver.load( std::memory_order_acquire ) )
+        if ( IFileReadObserver* const pObserver = PlatformFileUtilInternal::s_readObserverSlot.get() )
             pObserver->recordFileOpenedForRead( filePath, byteCount );
     }
 
-    bool PlatformFileUtil::registerReadObserver( IFileReadObserver* pObserver )
+    PlatformFileUtil::ReadObserverRegistration PlatformFileUtil::bindReadObserver( IFileReadObserver* pObserver )
     {
-        IFileReadObserver* pExpected{ nullptr };
-        return PlatformFileUtilInternal::s_pReadObserver.compare_exchange_strong( pExpected, pObserver, std::memory_order_acq_rel, std::memory_order_relaxed );
+        return PlatformFileUtilInternal::s_readObserverSlot.bind( pObserver );
     }
 
-    void PlatformFileUtil::unregisterReadObserver( IFileReadObserver* pObserver )
+    PlatformFileUtil::ReadObserverSuspension PlatformFileUtil::suspendReadObserver()
     {
-        IFileReadObserver* pExpected = pObserver;
-        (void)PlatformFileUtilInternal::s_pReadObserver.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
+        return ReadObserverSuspension{ PlatformFileUtilInternal::s_readObserverSlot };
     }
 
     void PlatformFileUtil::recordFileWritten( string_view filePath )
     {
-        if ( IFileWriteObserver* const pObserver = PlatformFileUtilInternal::s_pWriteObserver.load( std::memory_order_acquire ) )
+        if ( IFileWriteObserver* const pObserver = PlatformFileUtilInternal::s_writeObserverSlot.get() )
             pObserver->recordFileWritten( filePath );
     }
 
-    bool PlatformFileUtil::registerWriteObserver( IFileWriteObserver* pObserver )
+    PlatformFileUtil::WriteObserverRegistration PlatformFileUtil::bindWriteObserver( IFileWriteObserver* pObserver )
     {
-        IFileWriteObserver* pExpected{ nullptr };
-        return PlatformFileUtilInternal::s_pWriteObserver.compare_exchange_strong( pExpected, pObserver, std::memory_order_acq_rel, std::memory_order_relaxed );
+        return PlatformFileUtilInternal::s_writeObserverSlot.bind( pObserver );
     }
 
-    void PlatformFileUtil::unregisterWriteObserver( IFileWriteObserver* pObserver )
+    PlatformFileUtil::WriteObserverSuspension PlatformFileUtil::suspendWriteObserver()
     {
-        IFileWriteObserver* pExpected = pObserver;
-        (void)PlatformFileUtilInternal::s_pWriteObserver.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
+        return WriteObserverSuspension{ PlatformFileUtilInternal::s_writeObserverSlot };
     }
 
     bool PlatformFileUtil::canAcceptPathInput( string_view path )

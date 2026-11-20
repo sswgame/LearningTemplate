@@ -130,13 +130,13 @@ namespace sw
         /** @brief 캐시 열쇠입니다(구분자를 맞춘 경로 — 쓰기 입구와 조회가 같은 열쇠를 쓴다). */
         static string makeKey( string_view path );
 
-        mutable mutex                          _mutex;
-        unordered_map<string, Entry> _mapEntry SW_GUARDED_BY( _mutex );
-        uint64 _writeSerial                    SW_GUARDED_BY( _mutex ); ///< 자기 쓰기 알림마다 오른다
-        string _cachePath                      SW_GUARDED_BY( _mutex ); ///< `load` 가 정한 영속 파일 경로(빈 글이면 `save` 할 곳이 없다)
-        atomic<uint64>                         _hashedByteCount;        ///< 해시하려고 읽은 바이트 누적(워커가 함께 더한다)
-        WriteObserver                          _writeObserver;          ///< 파일 계층에 건 쓰기 관찰자
-        uint8                                  _bObserving : 1;         ///< 쓰기 관찰자를 걸었다(내릴 때 뗀다)
+        mutable mutex                               _mutex;
+        unordered_map<string, Entry> _mapEntry      SW_GUARDED_BY( _mutex );
+        uint64 _writeSerial                         SW_GUARDED_BY( _mutex );    ///< 자기 쓰기 알림마다 오른다
+        string _cachePath                           SW_GUARDED_BY( _mutex );    ///< `load` 가 정한 영속 파일 경로(빈 글이면 `save` 할 곳이 없다)
+        atomic<uint64>                              _hashedByteCount;           ///< 해시하려고 읽은 바이트 누적(워커가 함께 더한다)
+        WriteObserver                               _writeObserver;             ///< 파일 계층에 건 쓰기 관찰자
+        PlatformFileUtil::WriteObserverRegistration _writeObserverRegistration; ///< 쓰기 관찰자 등록 — 내릴 때 뗀다(관찰자는 하나라 둘째는 단언)
 
         SW_SERVICE_SLOT( ContentHashCache, Required );
     };

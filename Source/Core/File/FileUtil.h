@@ -10,6 +10,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/ObserverSlot.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
@@ -283,9 +284,16 @@ namespace sw
          *          이 클래스 밖에서 경로를 스스로 여는 서드파티 저장 함수(DDS 저장 · SQLite)는 쓰기 전에 `isWriteAllowed` 를 직접 부른다 —
          *          그런 호출과 OS · C 런타임의 직접 쓰기는 이 쓰기 경로를 우회한 것이다.
          */
-        using WriteFilter = expected<void> ( * )( string_view path );
-        /** @brief 쓰기 게이트를 바꿉니다. nullptr 이면 게이트가 없습니다. 거절된 쓰기는 이유를 오류로 남기고 false 입니다(원본은 그대로). */
-        static void setWriteFilter( WriteFilter filter );
+        using WriteFilterSignature = expected<void>( string_view path );
+        /** @brief 쓰기 게이트 · 이름 규칙 함수 포인터입니다(`WriteFilterSignature`). */
+        using WriteFilter = WriteFilterSignature*;
+        /** @brief 쓰기 게이트 등록 토큰입니다. 토큰이 사라지면 게이트를 걷습니다. */
+        using WriteFilterRegistration = ObserverSlot<WriteFilterSignature>::Registration;
+        /**
+         * @brief 쓰기 게이트를 겁니다. 거절된 쓰기는 이유를 오류로 남기고 false 입니다(원본은 그대로). 게이트는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다
+         *        (예전 쓰기 게이트 설정 함수는 말없이 덮고 nullptr 로 걷는 짝을 부르는 쪽이 맞춰야 했다 — 앞 주인이 걷으며 뒤 주인의 게이트를 지울 수 있었다).
+         */
+        [[nodiscard]] static WriteFilterRegistration bindWriteFilter( WriteFilter filter );
         /**
          * @brief 새로 만드는 자리의 이름 규칙을 겁니다(있는 파일을 덮어쓰거나 지우는 것은 보지 않는다). 자동화 쓰기 게이트와 따로 늘 선다. nullptr 이면 규칙이 없습니다.
          * @details 리소스 트리(`Content/`)의 새 파일은 소문자다 — 엔진의 `AssetPaths` 가 건다(Core 는 리소스 루트를 모른다). 입구마다 이름을 접는 대신(`toDiskPath` · 임포트 · 새 에셋)

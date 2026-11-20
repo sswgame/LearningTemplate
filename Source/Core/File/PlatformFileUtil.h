@@ -14,6 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/ObserverSlot.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 
@@ -29,7 +30,7 @@ namespace sw
     inline constexpr NativeFileHandle kInvalidNativeFileHandle = -1;
 
     /**
-     * @brief 파일 읽기를 듣는 쪽입니다 — 개발 도구가 디스크 흉내 · 읽기 기록으로 붙는다(`PlatformFileUtil::registerReadObserver`). 파일 계층은 이 인터페이스만 안다.
+     * @brief 파일 읽기를 듣는 쪽입니다 — 개발 도구가 디스크 흉내 · 읽기 기록으로 붙는다(`PlatformFileUtil::bindReadObserver`). 파일 계층은 이 인터페이스만 안다.
      * @details 부르는 스레드(게임 · 워커 · 비동기 IO 스레드)에서 불리므로 구현은 스레드 안전해야 합니다. 언리얼이 `IPlatformFile` 장식 층
      *          (`FLoggedPlatformFile` · 지연 흉내)을 개발 모듈에서 끼우는 모양과 같다 — 배포본에는 관찰자가 없어 읽기 길은 원자 읽기 하나다.
      */
@@ -53,7 +54,7 @@ namespace sw
 
     /**
      * @brief 이 프로세스가 파일 내용 · 도장을 바꾼 것을 듣는 쪽입니다 — 파일 내용에서 뽑은 값을 (크기, 쓰기 시각) 도장으로 캐시하는 쪽(`ContentHashCache`)이 붙는다
-     *        (`PlatformFileUtil::registerWriteObserver`). 파일 계층은 이 인터페이스만 안다.
+     *        (`PlatformFileUtil::bindWriteObserver`). 파일 계층은 이 인터페이스만 안다.
      * @details 쓰기 시각은 시계 틱(Windows 약 16 ms) 단위라 같은 틱 안에 같은 크기로 다시 쓰면 도장이 같다. 자기 쓰기는 쓰기 경로가 이 알림으로 캐시를 그 자리에서 고치고,
      *          시간 창(막 쓴 파일은 캐시하지 않는다)은 바깥 도구(git · 외부 편집기 · 자식 프로세스)의 쓰기에만 남는다 — 언리얼 `FFileManagerGeneric` 위의 DDC 해시 캐시가
      *          자기 저장을 무효화 사건으로 받는 것과 같은 자리. 부르는 스레드에서 불리므로 구현은 스레드 안전해야 합니다. 관찰자가 없으면 쓰기 길은 원자 읽기 하나다.
@@ -190,23 +191,32 @@ namespace sw
          */
         static void recordFileOpenedForRead( string_view filePath, size_t byteCount );
 
+        /** @brief 읽기 관찰자 등록 토큰입니다. 토큰이 사라지면 관찰자를 뗍니다. */
+        using ReadObserverRegistration = ObserverSlot<IFileReadObserver>::Registration;
+        /** @brief 쓰기 관찰자 등록 토큰입니다. 토큰이 사라지면 관찰자를 뗍니다. */
+        using WriteObserverRegistration = ObserverSlot<IFileWriteObserver>::Registration;
+        /** @brief 걸린 읽기 관찰자를 범위 동안 떼어 두는 범위입니다(테스트가 호스트의 관찰자를 비우고 자기 것을 걸 때). */
+        using ReadObserverSuspension = ObserverSlot<IFileReadObserver>::Suspension;
+        /** @brief 걸린 쓰기 관찰자를 범위 동안 떼어 두는 범위입니다(테스트만). */
+        using WriteObserverSuspension = ObserverSlot<IFileWriteObserver>::Suspension;
+        /** @brief 걸린 읽기 관찰자를 범위 동안 떼어 둡니다 — 테스트만 쓴다. */
+        [[nodiscard]] static ReadObserverSuspension suspendReadObserver();
+        /** @brief 걸린 쓰기 관찰자를 범위 동안 떼어 둡니다 — 테스트만 쓴다. */
+        [[nodiscard]] static WriteObserverSuspension suspendWriteObserver();
+
         /**
-         * @brief 읽기 관찰자를 겁니다. 이미 다른 관찰자가 걸려 있으면 거절하고 false 입니다(관찰자는 하나다).
-         * @param pObserver 뗄 때까지 살아 있어야 합니다.
+         * @brief 읽기 관찰자를 겁니다. 관찰자는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다(`isActive()` 가 false).
+         * @param pObserver 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
          */
-        [[nodiscard]] static bool registerReadObserver( IFileReadObserver* pObserver );
-        /** @brief @p pObserver 가 걸린 관찰자이면 뗍니다. */
-        static void unregisterReadObserver( IFileReadObserver* pObserver );
+        [[nodiscard]] static ReadObserverRegistration bindReadObserver( IFileReadObserver* pObserver );
 
         /** @brief 이 프로세스가 @p filePath 를 바꾼 뒤 부릅니다 — 걸린 쓰기 관찰자(`IFileWriteObserver::recordFileWritten`)에 알린다. `FileUtil` 의 쓰기 입구가 부릅니다. */
         static void recordFileWritten( string_view filePath );
         /**
-         * @brief 쓰기 관찰자를 겁니다. 이미 다른 관찰자가 걸려 있으면 거절하고 false 입니다(관찰자는 하나다 — 읽기 관찰자와 같은 모양).
-         * @param pObserver 뗄 때까지 살아 있어야 합니다.
+         * @brief 쓰기 관찰자를 겁니다. 관찰자는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다(읽기 관찰자와 같은 모양).
+         * @param pObserver 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
          */
-        [[nodiscard]] static bool registerWriteObserver( IFileWriteObserver* pObserver );
-        /** @brief @p pObserver 가 걸린 관찰자이면 뗍니다. */
-        static void unregisterWriteObserver( IFileWriteObserver* pObserver );
+        [[nodiscard]] static WriteObserverRegistration bindWriteObserver( IFileWriteObserver* pObserver );
 
         /**
          * @brief OS 경계에 들어온 경로가 엄격한 절대 경로인지 봅니다(R2 - 디스크 I/O 는 절대 경로만). 아니면 오류(`File.RelativePath`)를 남기고 false - 부르는 OS 호출은 실패한다.
