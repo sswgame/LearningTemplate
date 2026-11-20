@@ -229,6 +229,7 @@ namespace sw::test
 
     protected:
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
         void                      waitIdleInternal() override { _listShutdownStep.push_back( "waitIdleInternal" ); }
         void                      detachCommandRecordingInternal() override { _listShutdownStep.push_back( "detachCommandRecordingInternal" ); }
 

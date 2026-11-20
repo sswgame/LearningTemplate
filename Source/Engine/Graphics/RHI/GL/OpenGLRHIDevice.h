@@ -170,6 +170,7 @@ namespace sw
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
 
         /** @brief 백엔드 타입(OpenGL)을 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }

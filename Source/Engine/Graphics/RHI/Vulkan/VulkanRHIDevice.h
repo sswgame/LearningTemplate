@@ -219,6 +219,7 @@ namespace sw
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
         uint32                    readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
 
         /** @brief 크기를 기록하고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */

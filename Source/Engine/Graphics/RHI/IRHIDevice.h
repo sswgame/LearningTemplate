@@ -674,6 +674,8 @@ namespace sw
     protected:
         /** @brief 이 장치의 전송 시리얼입니다. 장치 손실 표시의 유일한 저장소라 `isDeviceLost` 가 읽는다(백엔드는 멤버 하나를 돌려준다). */
         [[nodiscard]] virtual const RHITransferSerials& getTransferSerials() const = 0;
+        /** @brief 같은 전송 시리얼의 쓰기 접근자입니다 — 손실 표시(`reportDeviceLost`)가 이 길로만 쓴다. 읽기 판과 같은 멤버를 돌려준다. */
+        [[nodiscard]] virtual RHITransferSerials& getTransferSerials() = 0;
         /** @brief 백엔드의 실제 GPU 대기와 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2단계로 부릅니다. */
         virtual void waitIdleInternal() = 0;
         /**

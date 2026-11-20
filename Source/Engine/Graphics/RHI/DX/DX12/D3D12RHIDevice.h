@@ -201,6 +201,7 @@ namespace sw
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
         uint32                    readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
         /** @brief DRED 자동 브레드크럼 · 페이지 폴트 할당을 로그로 남깁니다(손실 보고가 처음 한 번 부른다). */
         void   reportDeviceFaultInternal() override;

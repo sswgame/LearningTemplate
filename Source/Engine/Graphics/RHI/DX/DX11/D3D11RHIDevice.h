@@ -193,6 +193,7 @@ namespace sw
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
         const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
         /**
          * @brief 런타임에 장치 제거 이유(`GetDeviceRemovedReason`)를 묻고, 제거됐으면 전송 손실로 표시합니다(`RHITransferSerials::markLost`). 어느 스레드에서나 부릅니다.
          * @details DXGI_ERROR_DEVICE_REMOVED · DEVICE_RESET · DEVICE_HUNG 등 제거 이유가 실패인 모든 경우가 이 한 곳으로 표시된다 — 호출 결과를 보는 자리마다 따로 표시하면 빠뜨린 자리의 티켓이

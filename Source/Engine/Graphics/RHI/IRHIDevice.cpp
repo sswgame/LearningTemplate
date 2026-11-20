@@ -276,8 +276,7 @@ namespace sw
 
     void IRHIDevice::reportDeviceLost( const utf8* pCause )
     {
-        // 표시 저장소는 백엔드가 든 제 멤버다(`getTransferSerials` 가 그 참조를 돌려준다) — 원래 const 가 아닌 객체라 const 를 벗겨도 정의된 동작이다.
-        RHITransferSerials& serials = const_cast<RHITransferSerials&>( getTransferSerials() );
+        RHITransferSerials& serials = getTransferSerials(); // 쓰기 접근자 — 표시 저장소는 백엔드가 든 멤버 하나다
         if ( serials.markLost() == false )
             return; // 이미 표시했다 — 보고는 처음 한 번
         SW_LOG_ERROR_ID( "RHI.DeviceLost", "%# device lost (%#) - later transfer submits are rejected and GPU waits stop", getBackendName(), pCause != nullptr ? pCause : "unknown" );
