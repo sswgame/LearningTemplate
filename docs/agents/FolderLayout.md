@@ -93,7 +93,7 @@
 | 키트 폴더는 평평하게: 장르 키트(`Kits/Genre/<장르>/<키트>`)는 카탈로그 · 규칙 파일을 키트 바로 아래에 두고 하위 폴더는 `Component/` · `Editor/` · `Tests/` 와 하위 게임(CardGame)만. 온라인 키트는 `Runtime/` · `Server/` 바로 아래(`<이름>Protocol` · `<이름>Client`, 뼈대 `new-online-kit`) | 키트는 파일 10 ~ 20 개라 종류별 하위 폴더(`Catalog/` · `Rule/` · `API/` · `Protocol/`)가 include 경로만 갈랐다(언리얼 플러그인 모듈) |
 | 개발 기능은 `Source/DevTools/`. `Dev/` 폴더는 `Config/Rules/Layers/DevFolders.json` 에 까닭과 함께 적은 자리만(DevTools 가 볼 수 없는 게임 · App · ModuleManager · GF 내부) — 표 밖 `Dev/` 는 configure 가 멈춘다(배포가 빼는 폴더도 이 표, `SW_DEV_ONLY_SOURCE_PATTERNS`) | DevTools 는 Engine 을 보지만 GF · 게임 · ModuleManager · App 은 못 본다. 엔진 내부를 봐야 하면 엔진이 확장점(등록 목록 · 인터페이스 · 프레임 훅)을 내고 DevTools 가 붙는다 |
 | 실행 중 바꾸기 · 핫스왑은 개발, 기동 때 고르기는 제품 | 언리얼도 RHI · 모듈 교체는 재시작 |
-| 약어는 파일 · 폴더 · 식별자 모두 대문자(`FourCCUtil` · `HPACKDecoder`) — 린트 `acronyms` | [NamingCpp](NamingCpp.md) Acronyms |
+| 약어는 파일 · 폴더 · 식별자 모두 대문자(`FourCCUtil` · `HPACKDecoder`) — 린트 `naming-words`(약어) | [NamingCpp](NamingCpp.md) Acronyms |
 
 ## 판정해 그대로 두는 것
 

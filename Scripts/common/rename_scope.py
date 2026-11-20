@@ -11,9 +11,11 @@ import json
 import re
 from typing import Callable, Mapping
 
+from lint.rule_tables import get_table_path
+
 KEEP_OLD_NAME_MARKER = "keep-old-name"
-NAMING_WORDS_PATH = "Config/Rules/Lint/NamingWords.json"     # `_bannedNames` 의 키가 옛 이름이다
-NAMING_BASELINE_PATH = "Config/Rules/Lint/NamingBaseline.json"   # 남은 위반 이름 — `--lower-baseline` 만 줄인다(새 이름이 또 위반이면 린트가 지게)
+BANNED_NAMES_PATH = get_table_path("naming-words", "BannedNames")     # 이름 이력 — `_bannedNames` 의 키가 옛 이름이다
+NAMING_BASELINE_PATH = get_table_path("naming-words", "Baseline")   # 남은 위반 이름 — `--lower-baseline` 만 줄인다(새 이름이 또 위반이면 린트가 지게)
 RENAME_PAIRS_FOLDER = "Config/Rules/Renames/"   # 병합 뒤 다시 돌릴 쌍 표(`rename_identifier.py --reapply`) — 옛 이름이 열쇠다
 
 
@@ -28,13 +30,10 @@ def rewrite_rename_target(relative_path: str, text: str, rewrite: Callable[[str]
     """
     if relative_path == NAMING_BASELINE_PATH or relative_path.startswith(RENAME_PAIRS_FOLDER):
         return text
-    if relative_path == NAMING_WORDS_PATH:
+    if relative_path == BANNED_NAMES_PATH:
         data = json.loads(text)
-        banned = data.get("_bannedNames", {})
-        data["_bannedNames"] = {}
-        rewritten = json.loads(rewrite_unmarked_lines(dump_naming_table(data), rewrite))
-        rewritten["_bannedNames"] = {old: rewrite_unmarked_lines(advice, rewrite) for old, advice in banned.items()}   # 키(옛 이름)는 지키고 안내의 새 이름은 따라간다
-        return dump_naming_table(rewritten)
+        data["_bannedNames"] = {old: rewrite_unmarked_lines(advice, rewrite) for old, advice in data["_bannedNames"].items()}   # 키(옛 이름)는 지키고 안내의 새 이름은 따라간다
+        return dump_naming_table(data)
     return rewrite_unmarked_lines(text, rewrite)
 
 
@@ -180,8 +179,9 @@ def check_rewrite_unmarked_lines() -> None:
     text = "use `OldName`\nnot `OldName` <!-- keep-old-name -->\n`OldName` again\n"
     assert rewrite_unmarked_lines(text, rename) == "use `NewName`\nnot `OldName` <!-- keep-old-name -->\n`NewName` again\n"
     assert rewrite_unmarked_lines("`OldName`", rename) == "`NewName`"
-    table = dump_naming_table({"_bannedNames": {"OldName": "NewName — x"}, "_keep": {"OldName": "y"}})
-    assert json.loads(rewrite_rename_target(NAMING_WORDS_PATH, table, rename)) == {"_bannedNames": {"OldName": "NewName — x"}, "_keep": {"NewName": "y"}}
+    table = dump_naming_table({"_comment": "OldName", "_bannedNames": {"OldName": "OldName — x"}})
+    assert json.loads(rewrite_rename_target(BANNED_NAMES_PATH, table, rename)) == {"_comment": "OldName", "_bannedNames": {"OldName": "NewName — x"}}
+    assert rewrite_rename_target("Config/Rules/Lint/NamingWords.json", '{"_keep": {"OldName": "y"}}', rename) == '{"_keep": {"NewName": "y"}}'
     assert rewrite_rename_target(NAMING_BASELINE_PATH, "OldName", rename) == "OldName"
-    assert rewrite_rename_target(RENAME_PAIRS_FOLDER + "CMakeFunctions.json", "OldName", rename) == "OldName"
+    assert rewrite_rename_target(RENAME_PAIRS_FOLDER + "Example.json", "OldName", rename) == "OldName"
     assert rewrite_rename_target("Config/Rules/Lint/ThreadOwners.json", "OldName", rename) == "NewName"

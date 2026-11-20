@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from lint.feature_references import Exceptions, Sources, find_problems, run_self_check  # noqa: E402
+from lint.feature_references import Sources, find_problems, make_table, run_self_check  # noqa: E402
 
 
 def make_sources() -> Sources:
@@ -32,7 +32,7 @@ def make_sources() -> Sources:
 
 
 def log_problems(sources: Sources, dict_log_id: dict[str, str]) -> list[str]:
-    return [line for line in find_problems(sources, Exceptions({}, {}, {}, {}, dict_log_id)) if "로그 id" in line]
+    return [line for line in find_problems(sources, make_table(_logIDs=dict_log_id)) if "로그 id" in line or "_logIDs" in line]
 
 
 class StaleLogIDTest(unittest.TestCase):
@@ -50,8 +50,8 @@ class StaleLogIDTest(unittest.TestCase):
     def test_stale_exception_rows_are_problems(self) -> None:
         list_problem = log_problems(make_sources(), {"A.Gone": "", "A.Direct": "x", "A.Unused": "x", "A.InComment": "x", "A.TableOnly": "x"})
         self.assertEqual(sum("까닭이 비었다" in line for line in list_problem), 1, list_problem)
-        self.assertEqual(sum("이제 정의 리터럴이 있다" in line for line in list_problem), 1, list_problem)
-        self.assertEqual(sum("참조가 없다" in line for line in list_problem), 1, list_problem)
+        # 이제 정의 리터럴이 있는 줄(A.Direct) · 참조가 없는 줄(A.Unused)은 낡은 예외다
+        self.assertEqual(sorted(line.split("'")[1] for line in list_problem if "낡은 예외" in line), ["A.Direct", "A.Unused"], list_problem)
 
     def test_self_check_still_passes(self) -> None:
         run_self_check()

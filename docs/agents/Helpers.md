@@ -7,7 +7,7 @@
 Ask in this order; stop at the first yes. Reviews check step 1 first.
 
 1. **Does one type own it?** A function that reads or keeps one type's data or invariants is that type's member — `static` if it needs no instance, `private` if only the type calls it (`JSONFields::hasOnlyKnownKeys`, not a `JSONFieldsUtil`; crash-report steps are `CrashHandler` members). A closely related record is the owner even when not every signature takes it (`PackBuildRecord::parse`, `TimeZoneInfo::computeOffsetMinutes`). Split a mixed `Util` among its owners.
-   - **The name does not decide.** A static-only type next to a data type in the same header is the same shape whatever it is called (`Util` · `Scanner` · `Rules` · `Parser` · `Codec` …): a tag scanner beside `MarkupToken` is `MarkupToken::read`. Functions over `vector<T>` belong to `T`. Lint `cpp-shape` rule 4 flags it; a real exception (a registry over many registrations, an algorithm across several types) goes in `Config/Rules/Lint/CppShapeExceptions.json` `staticOwner` with its reason.
+   - **The name does not decide.** A static-only type next to a data type in the same header is the same shape whatever it is called (`Util` · `Scanner` · `Rules` · `Parser` · `Codec` …): a tag scanner beside `MarkupToken` is `MarkupToken::read`. Functions over `vector<T>` belong to `T`. Lint `cpp-shape` rule 4 flags it; a real exception (a registry over many registrations, an algorithm across several types) goes in `Config/Rules/Lint/CppShape.json` `_staticOwner` with its reason.
    - **State and the logic that changes it are one type.** A `.cpp` state struct whose public fields static functions change in sequence becomes a class with private fields and those functions as members (`EditorWindowTitleState::update`, `TerrainBrushToolState`, `IocpConnection::postSendLocked`). A record a parser fills once stays a plain record — the parser is its static (`PackagingProgress::parseLine`).
 2. **No owner, several translation units use it** → a `XxxUtil` static struct in a header (`SerializerUtil`, `MeshUtil`). Typical: an enum (no members — `TextureImportFormatUtil`), an algorithm across types, an external type. Never call these `Internal`.
 3. **No owner, one `.cpp` uses it** → that file's anonymous namespace (below).
@@ -21,7 +21,7 @@ Ask in this order; stop at the first yes. Reviews check step 1 first.
 ## Helpers used by one `.cpp`
 
 - **One class or struct definition per named `namespace` block**: close the block after each `};` and reopen, so each class folds on its own (specializations of one name stay together).
-- Mutable `s_*` state is a hidden singleton and belongs to an owner ([CppStyle](CppStyle.md) "No mutable statics"); listed exceptions (`Config/Rules/Lint/MutableStaticExceptions.json`) stay in the anonymous namespace.
+- Mutable `s_*` state is a hidden singleton and belongs to an owner ([CppStyle](CppStyle.md) "No mutable statics"); listed exceptions (`Config/Rules/Lint/MutableStatics.json`) stay in the anonymous namespace.
 - **Don't split what has one user.** A helper exactly one `.cpp` uses stays in that `.cpp`, not a new `.h`/`.cpp` pair. It gets a header only when a second user appears, reflection or a registration macro needs one, or a test target compiles the file directly. Small headers many files include are fine — merging them slows incremental builds.
 
 The anonymous namespace is a **separate** `namespace sw` block above the implementation:

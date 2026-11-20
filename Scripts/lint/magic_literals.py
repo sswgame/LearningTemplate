@@ -8,7 +8,7 @@ Scripts/lint/magic_literals.py
 방향 · 이름 붙은 표지)를 이름과 문맥으로 첫 분류한다. 정본 규칙은 `docs/agents/Constants.md`, 판단은 `docs/DesignBacklog.md` "데이터 기반 값 · 매직 리터럴".
 
 **왜 래칫인가.** 리터럴 하나가 매직인지는 형식이 가르지 못한다(`0.5f` 는 절반이고 `0.35f` 는 튜닝이다). 그래서 모든 줄을 막지 않고, **일반 코드**
-(`code` 장소)에서 흔한 수학 값이 아닌 리터럴의 **파일마다 종류별 수**를 기준선(`Config/Rules/Lint/MagicLiteralBaseline.json`)에 두고:
+(`code` 장소)에서 흔한 수학 값이 아닌 리터럴의 **파일마다 종류별 수**를 기준선(`Config/Rules/Lint/MagicLiteralsBaseline.json`)에 두고:
 - 수가 기준선보다 **늘면** 커밋이 멈춘다 — 새 값에 이름을 붙이거나(`XxxInternal::k…`) 데이터(PROPERTY · 카탈로그)로 옮긴다.
 - 수가 **줄면** 기준선도 같이 낮춰야 커밋이 선다(`--ratchet` 이 낮추기만 한다) — 옮긴 자리에 다시 리터럴이 들어오지 못한다.
 - 기준선을 **올리는** 길은 `--accept <파일…>` 하나다(통합에서 합친 브랜치가 규칙 전 코드를 가져올 때). diff 에 그대로 보인다.
@@ -30,7 +30,6 @@ from __future__ import annotations
 import argparse
 import collections
 import functools
-import json
 import re
 import sys
 from dataclasses import dataclass
@@ -45,9 +44,12 @@ from lint.cpp_shape import strip_code  # noqa: E402
 from lint.format import get_modified_cpp_files  # noqa: E402
 from lint.lint_scope import LintScope, read_text  # noqa: E402
 from lint.parallel import flat_map_in_processes  # noqa: E402
+from lint.rule_tables import Baseline  # noqa: E402
 
 
-BASELINE_PATH = "Config/Rules/Lint/MagicLiteralBaseline.json"
+RULE_ID = "magic-literals"
+GROWN_ADVICE = "이름 붙은 상수(XxxInternal · 소유 타입)나 데이터(PROPERTY · 카탈로그)로 옮긴다"
+RATCHET_COMMAND = "py -3 -m Scripts lint magic-literals --ratchet"
 SOURCE_EXTENSIONS = (".h", ".cpp", ".inl")
 KINDS = ("minus-one", "float", "integer", "hex")
 
@@ -232,34 +234,6 @@ def count_by_file(list_row: Iterable[LiteralRow]) -> dict[str, dict[str, int]]:
     return {path: {kind: counter[kind] for kind in KINDS if counter[kind] > 0} for path, counter in counts.items()}
 
 
-def read_baseline(project_root: Path) -> dict[str, dict[str, int]]:
-    """기준선입니다. 파일이 없으면 오류로 멈춘다(빈 기준선으로 돌면 모든 수가 '늘었다' 가 아니라 검사 없이 지나갈 수 있다)."""
-    return json.loads((project_root / BASELINE_PATH).read_text(encoding="utf-8"))["_files"]
-
-
-def write_baseline(project_root: Path, baseline: dict[str, dict[str, int]]) -> None:
-    comment = ("매직 리터럴 래칫 기준선(Scripts/lint/magic_literals.py). 파일마다 일반 코드의 이름 없는 리터럴 수 — 늘면 커밋이 멈추고, 줄면 "
-               "`py -3 -m Scripts lint magic-literals --ratchet` 로 낮춘다. 손으로 올리지 않는다(올리는 길은 --accept 하나, docs/agents/Constants.md).")
-    # 파일 하나가 한 줄이고 합계 줄은 두지 않는다 — 병렬 브랜치가 다른 파일을 낮출 때 병합이 부딪히지 않는다(합계는 보고가 찍는다).
-    list_line = [f"    {json.dumps(path)}: {json.dumps(baseline[path])}" for path in sorted(baseline) if baseline[path]]
-    text = (f"{{\n  \"_comment\": {json.dumps(comment, ensure_ascii=False)},\n"
-            "  \"_files\": {\n" + ",\n".join(list_line) + "\n  }\n}\n")
-    (project_root / BASELINE_PATH).write_text(text, encoding="utf-8", newline="\n")
-
-
-def compare_counts(path: str, actual: dict[str, int], allowed: dict[str, int]) -> tuple[list[str], list[str]]:
-    """(늘어난 종류, 줄어든 종류) 설명입니다."""
-    list_grown: list[str] = []
-    list_shrunk: list[str] = []
-    for kind in KINDS:
-        have, limit = actual.get(kind, 0), allowed.get(kind, 0)
-        if have > limit:
-            list_grown.append(f"{path}: {kind} {limit} -> {have}")
-        elif have < limit:
-            list_shrunk.append(f"{path}: {kind} {limit} -> {have}")
-    return list_grown, list_shrunk
-
-
 def read_staged_renames(project_root: Path) -> dict[str, str]:
     """staged 이름 바꾸기의 새 경로 → 옛 경로입니다(옮긴 파일은 옛 경로의 기준선을 이어받는다)."""
     result = run_git_in_hook_repository(["diff", "--cached", "--name-status", "-M"], cwd=project_root)
@@ -273,39 +247,21 @@ def read_staged_renames(project_root: Path) -> dict[str, str]:
     return map_old
 
 
-def find_ratchet_problems(actual: dict[str, dict[str, int]], baseline: dict[str, dict[str, int]], list_path: Iterable[str], map_old: dict[str, str]) -> list[str]:
-    """`listPath` 파일마다 수를 기준선과 대조합니다. 늘었으면 이름 붙이기를, 줄었으면 기준선 낮추기를 요구한다."""
-    list_problem: list[str] = []
-    for path in sorted(set(list_path)):
-        allowed = baseline.get(path, baseline.get(map_old.get(path, ""), {}))
-        list_grown, list_shrunk = compare_counts(path, actual.get(path, {}), allowed)
-        list_problem += [f"{line} — 늘었다: 이름 붙은 상수(XxxInternal · 소유 타입)나 데이터(PROPERTY · 카탈로그)로 옮긴다" for line in list_grown]
-        list_problem += [f"{line} — 줄었다: `py -3 -m Scripts lint magic-literals --ratchet` 로 기준선을 낮추고 함께 커밋한다" for line in list_shrunk]
-    return list_problem
-
-
 def check_magic_literals(project_root: Path, scope: LintScope) -> list[str]:
     """scope 의 C++ 파일의 래칫 검사입니다. 없는 파일의 기준선은 저장소 전체일 때만 센다."""
     list_relative = [relative for relative in scope.select() if is_source_file(relative)]
     list_problem: list[str] = []
     if list_relative:
         actual = count_by_file(collect_rows(project_root, [project_root / relative for relative in list_relative]))
-        list_problem = find_ratchet_problems(actual, read_baseline(project_root), list_relative, read_staged_renames(project_root))
+        list_problem = compare_baseline(Baseline.load(project_root, RULE_ID), actual, list_relative, read_staged_renames(project_root))
     if scope.whole_repo:
-        set_existing = set(scope.list_file)
-        list_problem += [f"{path}: 없는 파일의 기준선 — `--ratchet` 으로 지운다" for path in sorted(read_baseline(project_root)) if path not in set_existing]
+        list_problem += Baseline.load(project_root, RULE_ID).list_missing(set(scope.list_file))
     return list_problem
 
 
-def lower_baseline(baseline: dict[str, dict[str, int]], actual: dict[str, dict[str, int]], list_existing: set[str]) -> dict[str, dict[str, int]]:
-    """줄어든 수만 낮춘다(늘어난 수는 기준선을 지킨다). 없어진 파일은 지운다."""
-    lowered: dict[str, dict[str, int]] = {}
-    for path, allowed in baseline.items():
-        if path not in list_existing:
-            continue
-        have = actual.get(path, {})
-        lowered[path] = {kind: min(allowed[kind], have.get(kind, 0)) for kind in allowed if min(allowed[kind], have.get(kind, 0)) > 0}
-    return lowered
+def compare_baseline(baseline: Baseline, actual: dict[str, dict[str, int]], list_path: Iterable[str], map_old: dict[str, str]) -> list[str]:
+    """늘었으면 이름 붙이기를, 줄었으면 기준선 낮추기를 요구한다(옮긴 파일은 옛 경로의 기준선을 잇는다)."""
+    return baseline.compare(actual, list_path, map_old, KINDS, lambda _: GROWN_ADVICE, RATCHET_COMMAND)
 
 
 # --- 보고 ------------------------------------------------------------------------------------------
@@ -388,16 +344,7 @@ def run_self_check() -> int:
     expect(counted_values("        pilot._heat = 3.5f;") == ["3.5f"], "assigning a member in a body is code")
     expect(counted_values("        return _speed = 3.5f;") == ["3.5f"], "return is not a type")
     expect(counted_values("return a < b ? -1 : 1;") == [], "a sign ternary is arithmetic")
-
-    # 래칫 판정 — 늘면 · 줄면 모두 멈추고, 옮긴 파일은 옛 기준선을 잇는다.
-    baseline = {"Source/A.cpp": {"float": 2}, "Source/Old.cpp": {"hex": 1}}
-    expect(find_ratchet_problems({"Source/A.cpp": {"float": 2}}, baseline, ["Source/A.cpp"], {}) == [], "equal counts pass")
-    expect(len(find_ratchet_problems({"Source/A.cpp": {"float": 3}}, baseline, ["Source/A.cpp"], {})) == 1, "a grown count fails")
-    expect(len(find_ratchet_problems({"Source/A.cpp": {"float": 1}}, baseline, ["Source/A.cpp"], {})) == 1, "a shrunk count asks to lower the baseline")
-    expect(len(find_ratchet_problems({"Source/New.cpp": {"integer": 1}}, baseline, ["Source/New.cpp"], {})) == 1, "a new file starts at zero")
-    expect(find_ratchet_problems({"Source/Moved.cpp": {"hex": 1}}, baseline, ["Source/Moved.cpp"], {"Source/Moved.cpp": "Source/Old.cpp"}) == [], "a moved file keeps its baseline")
-    lowered = lower_baseline({"Source/A.cpp": {"float": 2, "hex": 1}, "Source/Gone.cpp": {"float": 1}}, {"Source/A.cpp": {"float": 3}}, {"Source/A.cpp"})
-    expect(lowered == {"Source/A.cpp": {"float": 2}}, f"--ratchet lowers only and drops missing files: {lowered}")
+    # 래칫 판정(늘면 · 줄면 · 옮긴 파일 · --ratchet)은 표 형식 테스트(Scripts/lint/tests/test_rule_tables.py)가 본다.
     print(f"[MagicLiterals] self-check {'OK' if failures == 0 else 'FAIL'}")
     return ExitCode.PASSED if failures == 0 else ExitCode.VIOLATION
 
@@ -422,31 +369,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         list_file = list_source_files(project_root) if args.all else get_modified_cpp_files(project_root)
         list_relative = [path.relative_to(project_root).as_posix() for path in list_file]
         actual = count_by_file(collect_rows(project_root, [path for path, relative in zip(list_file, list_relative) if is_source_file(relative)]))
-        baseline = read_baseline(project_root)
-        list_problem = find_ratchet_problems(actual, baseline, [relative for relative in list_relative if is_source_file(relative)], {})
+        baseline = Baseline.load(project_root, RULE_ID)
+        list_problem = compare_baseline(baseline, actual, [relative for relative in list_relative if is_source_file(relative)], {})
         if args.all:
-            set_existing = set(list_relative)
-            list_problem += [f"{path}: 없는 파일의 기준선 — `--ratchet` 으로 지운다" for path in sorted(baseline) if path not in set_existing]
+            list_problem += baseline.list_missing(set(list_relative))
         for problem in list_problem:
             print(f"  - {problem}")
         print(f"[MagicLiterals] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
         return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
     if args.ratchet or args.accept is not None:
-        list_file = list_source_files(project_root)
-        list_existing = {path.relative_to(project_root).as_posix() for path in list_file}
-        baseline_path = project_root / BASELINE_PATH
-        baseline = read_baseline(project_root) if baseline_path.is_file() else {}
-        if args.accept is not None:
-            list_accept = [Path(path).resolve() for path in args.accept]
-            actual = count_by_file(collect_rows(project_root, [path for path in list_accept if path.is_file()]))
-            for path in list_accept:
-                relative = path.relative_to(project_root).as_posix()
-                print(f"[MagicLiterals] accept {relative}: {baseline.get(relative, {})} -> {actual.get(relative, {})}")
-                baseline[relative] = actual.get(relative, {})
-        else:
-            baseline = lower_baseline(baseline, count_by_file(collect_rows(project_root, list_file)), list_existing)
-        write_baseline(project_root, baseline)
-        print(f"[MagicLiterals] baseline -> {BASELINE_PATH}")
+        Baseline.load(project_root, RULE_ID).update(project_root, "MagicLiterals", list_source_files(project_root),
+                                                    lambda list_file: count_by_file(collect_rows(project_root, list_file)), args.accept)
         return ExitCode.PASSED
 
     list_row = collect_rows(project_root)

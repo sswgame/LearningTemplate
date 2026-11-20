@@ -1,8 +1,8 @@
 {
-    "_comment": "표준 · OS 함수(std::thread · std::async · CreateThread · pthread_create)로 스레드를 바로 만드는 파일과 그 까닭(Scripts/lint/thread_owners.py). _path 는 확장자 없는 경로(.h · .cpp 둘 다). 엔진 스레드(sw::thread · DedicatedWorker)의 주인은 형식이 막는다 — Core/Concurrency/thread.h 의 ThreadCreationKey 친구 목록.",
-    "_listOwner": [
-        { "_path": "Source/Core/Concurrency/thread", "_reason": "엔진 스레드 형식 자신이다(std::thread 를 감싸 정지 요청 · 소멸자 합류 · 교착 관찰자를 붙인다)" },
-        { "_path": "Source/DevTools/Diagnostics/CrashInjection", "_reason": "일부러 죽는 개발 기능 — 작업 스레드 스택 넘침 재현 · 보고 중 stderr 붙잡기는 엔진 스레드의 관찰자 · 합류를 믿을 수 없는 때다" },
-        { "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler", "_reason": "크래시 보고 스레드 — 넘친 스택에서도 덤프를 쓰려고 스택 크기를 정해 OS 함수로 띄운다" }
-    ]
+    "_comment": "표준 · OS 함수(std::thread · std::async · CreateThread · pthread_create)로 스레드를 바로 만드는 파일과 그 까닭(Scripts/lint/thread_owners.py). _owners 의 키는 확장자 없는 경로(.h · .cpp 둘 다). 엔진 스레드(sw::thread · DedicatedWorker)의 주인은 형식이 막는다 — Core/Concurrency/thread.h 의 ThreadCreationKey 친구 목록.",
+    "_owners": {
+        "Source/Core/Concurrency/thread": "엔진 스레드 형식 자신이다(std::thread 를 감싸 정지 요청 · 소멸자 합류 · 교착 관찰자를 붙인다)",
+        "Source/DevTools/Diagnostics/CrashInjection": "일부러 죽는 개발 기능 — 작업 스레드 스택 넘침 재현 · 보고 중 stderr 붙잡기는 엔진 스레드의 관찰자 · 합류를 믿을 수 없는 때다",
+        "Source/Core/Diagnostics/Windows/WindowsCrashHandler": "크래시 보고 스레드 — 넘친 스택에서도 덤프를 쓰려고 스택 크기를 정해 OS 함수로 띄운다"
+    }
 }
