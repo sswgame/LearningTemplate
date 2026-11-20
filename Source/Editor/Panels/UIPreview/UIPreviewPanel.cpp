@@ -30,7 +30,6 @@
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/Style/UIThemeController.h"
-#include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetNavigation.h"

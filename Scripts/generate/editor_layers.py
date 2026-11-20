@@ -62,6 +62,21 @@ def _list_actual_layers(editor_dir: Path) -> list[str]:
     return list_layer
 
 
+def read_panel_view_default_ban(data: dict, root: Path) -> tuple[list[str], list[str]]:
+    """`[panelViewBan] defaultBan`(기본 금지 폴더 정규식)과 `[panelViewAllowedFolders]`(폴더 접두) — 허용 목록 방식. 표가 낡으면 멈춘다."""
+    list_default: list[str] = data["panelViewBan"].get("defaultBan", [])
+    map_folder: dict[str, str] = data.get("panelViewAllowedFolders", {})
+    for pattern in list_default:
+        if not re.match(r"^\^[A-Za-z0-9_]+/$", pattern):
+            raise GeneratorError(f"[panelViewBan] defaultBan 의 '{pattern}' 은 `^<Source 아래 최상위 폴더>/` 꼴이어야 한다")
+    for folder, reason in map_folder.items():
+        if not folder.endswith("/") or not (root / "Source" / folder).is_dir():
+            raise GeneratorError(f"[panelViewAllowedFolders] 의 '{folder}' 가 Source 아래 폴더가 아니거나 '/' 로 끝나지 않는다 — 표를 고치세요")
+        if not reason or not any(re.search(pattern, folder) for pattern in list_default):
+            raise GeneratorError(f"[panelViewAllowedFolders] 의 {folder}: 까닭이 비었거나 기본 금지 폴더 밖이다(낡은 줄) — 표에서 지우세요")
+    return list_default, list(map_folder)
+
+
 def read_panel_view_ban(data: dict, root: Path, list_actual: list[str]) -> tuple[list[str], list[str], list[str]]:
     """`[panelViewBan]` 의 View 경로 · 정규식과 `[panelViewAllowed]` 의 헤더 — CMake 가 티어마다 MVVM View 부분에 껍데기를 놓는다. 표가 낡으면 멈춘다."""
     try:
@@ -84,7 +99,8 @@ def read_panel_view_ban(data: dict, root: Path, list_actual: list[str]) -> tuple
     for header, reason in map_allowed.items():
         if not (root / "Source" / header).is_file():
             raise GeneratorError(f"[panelViewAllowed] 의 파일이 없습니다: {header} — 표에서 지우거나 경로를 고치세요")
-        if not reason or not any(re.search(pattern, header) for pattern in list_pattern):
+        list_any_ban = list_pattern + data["panelViewBan"].get("defaultBan", [])
+        if not reason or not any(re.search(pattern, header) for pattern in list_any_ban):
             raise GeneratorError(f"[panelViewAllowed] 의 {header}: 까닭이 비었거나 금지 폴더 밖이다(낡은 줄) — 표에서 지우세요")
     return list_view, list_pattern, list(map_allowed)
 
@@ -108,6 +124,7 @@ def generate_editor_layers(output_path: Path) -> None:
         if not include.startswith("Editor/") or not (root / "Source" / include).is_file():
             raise GeneratorError(f"[prelude] 의 파일이 없습니다: {include}")
     list_view, list_ban_pattern, list_allowed = read_panel_view_ban(data, root, list_actual)
+    list_default_ban, list_allowed_folder = read_panel_view_default_ban(data, root)
 
     list_tier = sorted(set(map_tier.values()))
     list_line = [HEADER.rstrip("\n"), "", f'set(SW_EDITOR_TIER_LIST "{";".join(str(tier) for tier in list_tier)}")']
@@ -118,6 +135,8 @@ def generate_editor_layers(output_path: Path) -> None:
     list_line.append(f'set(SW_EDITOR_MVVM_VIEW_PATHS "{";".join(list_view)}")')
     list_line.append(f'set(SW_EDITOR_PANEL_VIEW_BAN_REGEX "{";".join(list_ban_pattern)}")')
     list_line.append(f'set(SW_EDITOR_PANEL_VIEW_ALLOWED_HEADERS "{";".join(list_allowed)}")')
+    list_line.append(f'set(SW_EDITOR_PANEL_VIEW_DEFAULT_BAN_REGEX "{";".join(list_default_ban)}")')
+    list_line.append(f'set(SW_EDITOR_PANEL_VIEW_ALLOWED_FOLDERS "{";".join(list_allowed_folder)}")')
     list_line.append("")
     write_generated_file(output_path, "\n".join(list_line), tag=TAG, summary=f"{len(list_actual)} layers · {len(list_tier)} tiers")
 
