@@ -97,7 +97,11 @@ namespace sw
             if ( define.empty() )
                 continue;
             if ( define.find( '=' ) == string::npos )
-                listSorted.push_back( define + "=1" );
+            {
+                StringBuilder<constant::buffer::kMax128> defineBuilder;
+                defineBuilder.appendFormat( "%#=1", define );
+                listSorted.push_back( string( defineBuilder.view() ) );
+            }
             else
                 listSorted.push_back( define );
         }
@@ -130,7 +134,9 @@ namespace sw
             if ( define._name.empty() )
                 continue;
             // `FOO` 와 `FOO=1` 은 컴파일러에게 같은 것이다(문자열 판 `computePermutationHash` 와 같은 규칙).
-            listCanonical.push_back( define._name + "=" + ( define._value.empty() ? string( "1" ) : define._value ) );
+            StringBuilder<constant::buffer::kMax128> defineBuilder;
+            defineBuilder.appendFormat( "%#=%#", define._name, define._value.empty() ? string_view( "1" ) : string_view( define._value ) );
+            listCanonical.push_back( string( defineBuilder.view() ) );
         }
         VectorUtil::sort( listCanonical );
         return listCanonical;
@@ -143,21 +149,19 @@ namespace sw
         const string_view defaultEntryPoint = getShaderStageInfo( stage )._pEntryPoint;
         const bool        bStdEntry         = entryPoint.empty() || StringUtil::equals( entryPoint, defaultEntryPoint );
 
-        string basePart = string( stemLower ) + "_";
+        StringBuilder<constant::buffer::kMax128> basePart;
+        basePart.append( stemLower );
+        basePart.append( '_' );
         if ( bStdEntry )
-            basePart += string( stageTag );
+            basePart.append( stageTag );
         else
-            basePart += StringUtil::toLower( entryPoint );
+            basePart.append( StringUtil::toLower( entryPoint ) );
 
         if ( permutationHash != 0 )
-        {
-            StringBuilder<constant::buffer::kMax16> sb;
-            sb.appendFormat( "_%#", Fmt( static_cast<uint32>( permutationHash & 0xFFFFFFFFu ), Format( 8, Format::Padding::Zero ).hex() ) );
-            basePart += sb.view();
-        }
+            basePart.appendFormat( "_%#", Fmt( static_cast<uint32>( permutationHash & 0xFFFFFFFFu ), Format( 8, Format::Padding::Zero ).hex() ) );
 
-        basePart += string( ext );
-        return basePart;
+        basePart.append( ext );
+        return string( basePart.view() );
     }
 
     string_view ShaderCooker::getSubfolderForFormat( ShaderTargetFormat format )

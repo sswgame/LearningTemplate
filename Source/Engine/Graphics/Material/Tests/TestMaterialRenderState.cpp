@@ -31,7 +31,9 @@ namespace
         /** @brief 표면 모델 Lit 머티리얼 XML 을 임시 리소스로 읽습니다. @p attributes 는 루트 속성, @p children 은 루트 자식입니다. */
         [[nodiscard]] static bool load( Material& material, string_view attributes, string_view children = "" )
         {
-            return loadRoot( material, string( "surfaceModel=\"Lit\" " ) + string( attributes ), children );
+            StringBuilder<constant::buffer::kMax256> rootAttributes;
+            rootAttributes.appendFormat( "surfaceModel=\"Lit\" %#", attributes );
+            return loadRoot( material, rootAttributes.view(), children );
         }
 
         /** @brief 표면 모델(`surfaceModel`)까지 @p rootAttributes 에 스스로 적은 머티리얼 XML 을 임시 리소스로 읽습니다. 셰이더는 forward_lit 이다. */
@@ -343,8 +345,10 @@ SW_TEST_CASE( MaterialRenderStateTest, SurfaceModelEmitsItsDefines )
     };
     for ( const ModelCase& modelCase : arrCase )
     {
-        shared_ptr<Material> material = Material::create();
-        SW_REQUIRE_TRUE_MSG( RenderStateTestUtil::loadRoot( *material, string( "surfaceModel=\"" ) + modelCase._pModel + "\"" ), modelCase._pModel );
+        shared_ptr<Material>                    material = Material::create();
+        StringBuilder<constant::buffer::kMax64> rootAttributes;
+        rootAttributes.appendFormat( "surfaceModel=\"%#\"", modelCase._pModel );
+        SW_REQUIRE_TRUE_MSG( RenderStateTestUtil::loadRoot( *material, rootAttributes.view() ), modelCase._pModel );
         const vector<string>& listDefine = material->getCachedShaderDefines();
         SW_EXPECT_TRUE_MSG( VectorUtil::contains( listDefine, string( modelCase._pDefine ) ), modelCase._pModel );
         SW_EXPECT_TRUE_MSG( VectorUtil::contains( listDefine, string( kMaterialForwardOnlyDefine ) ) == modelCase._bForwardOnly, modelCase._pModel );

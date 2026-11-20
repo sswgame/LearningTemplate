@@ -53,8 +53,9 @@ SW_TEST_CASE( VFXParticleRendererTest, ShaderReadsOrderRangeFromFlags )
     SW_REQUIRE_FALSE( projectRoot.empty() );
     string particleText;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::joinPath( projectRoot, "Content/engine/shaders/particle.hlsl" ), particleText ) );
-    const string declaration = string( "SW_DECLARE_STRUCTURED_BUFFER( uint, " ) + shaderslot::resname::kParticleOrder + ", SW_SLOT_PARTICLE_ORDER_SRV );";
-    SW_EXPECT_TRUE( particleText.find( declaration ) != string::npos );
+    fixed_string<constant::buffer::kMax128> declaration;
+    formatstring( declaration.data(), declaration.capacity(), "SW_DECLARE_STRUCTURED_BUFFER( uint, %#, SW_SLOT_PARTICLE_ORDER_SRV );", shaderslot::resname::kParticleOrder );
+    SW_EXPECT_TRUE( particleText.find( declaration.c_str() ) != string::npos );
     // 정렬 공백은 포매터가 바꾸므로 이름 뒤 `=` 다음 값만 본다.
     const size_t namePosition = particleText.find( "static const uint kParticleOrderShift" );
     SW_REQUIRE_TRUE( namePosition != string::npos );
@@ -63,7 +64,9 @@ SW_TEST_CASE( VFXParticleRendererTest, ShaderReadsOrderRangeFromFlags )
     SW_REQUIRE_TRUE( equalPosition != string::npos && endPosition != string::npos && equalPosition < endPosition );
     string value = particleText.substr( equalPosition + 1, endPosition - equalPosition - 1 );
     value.erase( 0, value.find_first_not_of( ' ' ) );
-    SW_EXPECT_TRUE_MSG( value == string( to_string( VFXParticleRenderer::kRootFlagOrderShift ) + "u" ), "particle.hlsl kParticleOrderShift must equal VFXParticleRenderer::kRootFlagOrderShift" );
+    fixed_string<constant::buffer::kMax32> expected;
+    formatstring( expected.data(), expected.capacity(), "%#u", VFXParticleRenderer::kRootFlagOrderShift );
+    SW_EXPECT_TRUE_MSG( value == expected.view(), "particle.hlsl kParticleOrderShift must equal VFXParticleRenderer::kRootFlagOrderShift" );
 }
 
 /** @brief [VFXParticleRendererTest] GPU 정렬 한도(C++ 로드 검사)와 정렬 셰이더의 워크그룹 크기가 같고, 셰이더의 모드 값이 VFXSortMode 와 같다(PS-3 계약). */
@@ -72,9 +75,13 @@ SW_TEST_CASE( VFXParticleRendererTest, GPUSortLimitMatchesShader )
     const string sortText = readEngineShader( "vfx_particle_sort.hlsl" );
     SW_REQUIRE_FALSE( sortText.empty() );
     SW_EXPECT_TRUE( findTokenAfter( sortText, "#define SW_SORT_MAX_ELEMENTS" ) == to_string( VFXEmitterDef::kMaxGPUSortedParticles ) );
-    SW_EXPECT_TRUE( findTokenAfter( sortText, "static const uint kVFXSortViewDepth" ) == string( to_string( static_cast<uint32>( VFXSortMode::ViewDepth ) ) + "u" ) );
-    SW_EXPECT_TRUE( findTokenAfter( sortText, "static const uint kVFXSortOldestFirst" ) == string( to_string( static_cast<uint32>( VFXSortMode::OldestFirst ) ) + "u" ) );
-    SW_EXPECT_TRUE( findTokenAfter( sortText, "static const uint kVFXSortYoungestFirst" ) == string( to_string( static_cast<uint32>( VFXSortMode::YoungestFirst ) ) + "u" ) );
+    fixed_string<constant::buffer::kMax32> expected;
+    formatstring( expected.data(), expected.capacity(), "%#u", static_cast<uint32>( VFXSortMode::ViewDepth ) );
+    SW_EXPECT_TRUE( findTokenAfter( sortText, "static const uint kVFXSortViewDepth" ) == expected.view() );
+    formatstring( expected.data(), expected.capacity(), "%#u", static_cast<uint32>( VFXSortMode::OldestFirst ) );
+    SW_EXPECT_TRUE( findTokenAfter( sortText, "static const uint kVFXSortOldestFirst" ) == expected.view() );
+    formatstring( expected.data(), expected.capacity(), "%#u", static_cast<uint32>( VFXSortMode::YoungestFirst ) );
+    SW_EXPECT_TRUE( findTokenAfter( sortText, "static const uint kVFXSortYoungestFirst" ) == expected.view() );
     // 입자 번호 칸(9 비트)이 한도를 담는다.
     SW_EXPECT_TRUE( VFXEmitterDef::kMaxGPUSortedParticles <= ( 1u << 9u ) );
 }

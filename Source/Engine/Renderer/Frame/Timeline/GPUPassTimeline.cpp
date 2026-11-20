@@ -60,8 +60,9 @@ namespace sw
 
         // 프로파일러는 이름 **포인터**를 가지고 있으므로 제자리에 머무는 곳에 둔다. intern 아레나는 프로세스가 끝날 때까지 그대로다.
         // 패스 이름은 유한한 집합이라 intern 이 늘어나지 않는다.
-        const string        scopeText = string( "GPU." ) + passName;
-        const hashed_string scopeName{ string_view( scopeText ) };
+        StringBuilder<constant::buffer::kMax128> scopeText;
+        scopeText.appendFormat( "GPU.%#", passName );
+        const hashed_string scopeName{ scopeText.view() };
         scope._passName     = passName;
         scope._profilerSlot = _pProfiler->registerScope( scopeName.c_str() );
 #if SW_PROFILER_BACKEND_COMPILED
@@ -79,8 +80,9 @@ namespace sw
         if ( scope._profilerSlot != FrameProfiler::kInvalidSlot && scope._passName == passName )
             return scope._profilerSlot;
         // 이름 포인터를 프로파일러가 쥐므로 intern 아레나에 둔다(getOrCreateScopeSlot 과 같다).
-        const string        scopeText = string( "GPU." ) + passName;
-        const hashed_string scopeName{ string_view( scopeText ) };
+        StringBuilder<constant::buffer::kMax128> scopeText;
+        scopeText.appendFormat( "GPU.%#", passName );
+        const hashed_string scopeName{ scopeText.view() };
         scope._passName     = passName;
         scope._profilerSlot = _pProfiler->registerScope( scopeName.c_str() );
 #if SW_PROFILER_BACKEND_COMPILED

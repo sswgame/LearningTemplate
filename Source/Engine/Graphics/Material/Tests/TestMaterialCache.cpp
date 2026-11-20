@@ -15,9 +15,11 @@ using namespace sw;
  */
 SW_TEST_CASE( MaterialCacheTest, RedirectedAndCanonicalIdsShareOneEntry )
 {
-    const string oldID = "engine/test/a20/old.material.xml";
-    const string newID = "engine/test/a20/new.material.xml";
-    SW_REQUIRE_TRUE( AssetRedirect::loadFromXMLTexts( vector<string>{ "<Redirects><Redirect from=\"" + oldID + "\" to=\"" + newID + "\"/></Redirects>" },
+    const string                             oldID = "engine/test/a20/old.material.xml";
+    const string                             newID = "engine/test/a20/new.material.xml";
+    StringBuilder<constant::buffer::kMax256> redirectXML;
+    redirectXML.appendFormat( "<Redirects><Redirect from=\"%#\" to=\"%#\"/></Redirects>", oldID, newID );
+    SW_REQUIRE_TRUE( AssetRedirect::loadFromXMLTexts( vector<string>{ string( redirectXML.view() ) },
                                                       vector<string>{ "test/redirects.xml" } ) );
     MaterialCache& cache       = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
     const size_t   countBefore = cache.getCachedCount();

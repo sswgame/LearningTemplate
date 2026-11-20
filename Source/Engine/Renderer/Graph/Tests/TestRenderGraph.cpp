@@ -225,7 +225,9 @@ SW_TEST_CASE( RenderGraphTest, DescribeCompiledOrderListsLevelsAndResources )
     const string text = graph.describeCompiledOrder();
     for ( const utf8* pExpected : { "2 passes in 2 levels", "level 0", "Geometry  reads [] writes [SceneColor]", "level 1", "Bloom  reads [SceneColor] writes [BloomOut]" } )
     {
-        SW_EXPECT_TRUE_MSG( text.find( pExpected ) != string::npos, ( string( "missing: " ) + pExpected + "\n" + text ).c_str() );
+        StringBuilder<constant::buffer::kMax1024> message;
+        message.appendFormat( "missing: %#\n%#", pExpected, text );
+        SW_EXPECT_TRUE_MSG( text.find( pExpected ) != string::npos, message.view() );
     }
 }
 

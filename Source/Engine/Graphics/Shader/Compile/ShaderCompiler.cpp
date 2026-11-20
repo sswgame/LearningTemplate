@@ -189,7 +189,12 @@ namespace sw
 
                 DerivedDataCache makeCache() const { return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ _directory, DerivedDataAccess::ReadWrite } } }; }
                 /** @brief 의존 기록(연 헤더와 내용 해시) 파일 — 항목 옆이다. */
-                string makeRecordPath() const { return makeCache().makePath( 0, _key ) + ShaderCookStamp::kIncludeRecordSuffix; }
+                string makeRecordPath() const
+                {
+                    string path = makeCache().makePath( 0, _key );
+                    path += ShaderCookStamp::kIncludeRecordSuffix;
+                    return path;
+                }
             };
 
             /** @brief 셰이더 DDC 폴더가 DDC 항목 배치로 옮겨졌다는 표지 파일 이름입니다(폴더 맨 위). 있으면 옛 `<키>.bin` 을 찾지 않는다. */
@@ -444,10 +449,12 @@ namespace sw
             {
                 // 타깃 버전은 디바이스가 요구하는 최소 버전과 같은 값이다(constant::render::kVulkanRequiredMajor · kVulkanRequiredMinor). 이 타깃(1.2)에서 DXC 는 HLSL `discard` 를
                 // OpKill 로 낸다 — 셰이더는 미분 읽기를 다 마친 뒤 버린다(binding.hlsli 8-1 절).
-                static const wstring s_targetEnv = StringUtil::utf8ToUTF16(
-                    ( string( "-fspv-target-env=vulkan" ) + to_string( constant::render::kVulkanRequiredMajor ) + "." +
-                      to_string( constant::render::kVulkanRequiredMinor ) )
-                        .c_str() );
+                static const wstring s_targetEnv = []()
+                {
+                    fixed_string<constant::buffer::kMax64> text;
+                    formatstring( text.data(), text.capacity(), "-fspv-target-env=vulkan%#.%#", constant::render::kVulkanRequiredMajor, constant::render::kVulkanRequiredMinor );
+                    return StringUtil::utf8ToUTF16( text.c_str() );
+                }();
                 listArgument.push_back( L"-spirv" );
                 listArgument.push_back( s_targetEnv.c_str() );
                 listArgument.push_back( L"-fvk-use-dx-position-w" );
@@ -548,11 +555,15 @@ namespace sw
                     return unexpected( Error{ ErrorKind::NotFound, "Tint (SPIR-V -> WGSL) is not next to the executable - the WebGPU shader target needs it (docs/agents/Platform.md)", tintText } );
                 // 이름은 부를 때마다 새로 잡는다 — 같은 바이트(같은 해시)를 병렬 작업 둘이 같은 이름으로 쓰면 먼저 끝난 쪽이 지운 파일을 다른 쪽이 못 열었다
                 // ("Failed to open sw_tint_<해시>.spv"). 만들기가 곧 자리 잡기(`reserveUniquePath`)라 두 작업이 같은 이름을 갖지 않는다.
-                const uint64 hash      = HashUtil::appendBytes64( HashUtil::kFNVOffset64, inoutBytecode.data(), inoutBytecode.size() );
-                const string spirvPath = FileUtil::reserveUniquePath( FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_tint_" + to_string( hash ) ), ".spv", false );
+                const uint64                           hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, inoutBytecode.data(), inoutBytecode.size() );
+                fixed_string<constant::buffer::kMax32> tintStem;
+                formatstring( tintStem.data(), tintStem.capacity(), "sw_tint_%#", hash );
+                const string spirvPath = FileUtil::reserveUniquePath( FileUtil::joinPath( FileUtil::getTempDirectory(), tintStem ), ".spv", false );
                 if ( spirvPath.empty() )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not reserve a temporary SPIR-V file for Tint", FileUtil::getTempDirectory() } );
-                const string wgslPath = string( FileUtil::removeExtension( spirvPath ) ) + ".wgsl"; // 잡은 이름에서 나온다 — 다른 작업과 겹치지 않는다
+                StringBuilder<constant::buffer::kMax512> wgslBuilder;
+                wgslBuilder.appendFormat( "%#.wgsl", FileUtil::removeExtension( spirvPath ) );
+                const string wgslPath( wgslBuilder.view() ); // 잡은 이름에서 나온다 — 다른 작업과 겹치지 않는다
                 if ( FileUtil::writeFile( spirvPath, inoutBytecode.data(), inoutBytecode.size() ) == false )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the SPIR-V for Tint", spirvPath } );
                 string                toolOutput;
@@ -569,7 +580,11 @@ namespace sw
                 if ( exitCode.has_value() == false )
                     return unexpected( exitCode.error() );
                 if ( bRead == false )
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "Tint failed", "exit " + to_string( *exitCode ) + ": " + toolOutput } );
+                {
+                    StringBuilder<constant::buffer::kMax256> detailBuilder;
+                    detailBuilder.appendFormat( "exit %#: %#", *exitCode, toolOutput );
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "Tint failed", detailBuilder.view() } );
+                }
                 vector<uint8> container;
                 WebGPUShaderContainer::pack( inoutBytecode, string_view( reinterpret_cast<const utf8*>( wgslBytes.data() ), wgslBytes.size() ), container );
                 inoutBytecode = std::move( container );
@@ -698,10 +713,9 @@ namespace sw
                 {
                     if ( def._name.empty() )
                         continue;
-                    string defineStr = def._name;
-                    defineStr += "=";
-                    defineStr += def._value;
-                    listDefineArg.push_back( StringUtil::utf8ToUTF16( defineStr.c_str() ) );
+                    StringBuilder<constant::buffer::kMax256> defineBuilder;
+                    defineBuilder.appendFormat( "%#=%#", def._name, def._value );
+                    listDefineArg.push_back( StringUtil::utf8ToUTF16( defineBuilder.c_str() ) );
                     listArgument.push_back( L"-D" );
                     listArgument.push_back( listDefineArg.back().c_str() );
                 }
@@ -755,8 +769,9 @@ namespace sw
                 const expected<void> postProcessed  = pfnPostProcess != nullptr ? pfnPostProcess( outResult._bytecode ) : expected<void>{};
                 if ( postProcessed.has_value() == false )
                 {
-                    outResult._errorMessage = string( postProcessed.error().message().data(), postProcessed.error().message().size() ) + ": " +
-                                              string( postProcessed.error().detail().data(), postProcessed.error().detail().size() );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "%#: %#", postProcessed.error().message(), postProcessed.error().detail() );
+                    outResult._errorMessage = string( errorBuilder.view() );
                     SW_LOG_ERROR_ID( "ShaderCompiler.PostProcessFailed", "%# (%#)", outResult._errorMessage.c_str(), desc._source.c_str() );
                     outResult._bytecode.clear();
                     return DxcResult::Rejected;
@@ -789,14 +804,20 @@ namespace sw
         // 엔진 텍스처 칸 표(shaderslot::emulated) — binding.hlsli 가 PassCB 의 g_<이름>Index 필드와 Bindless::emulatedSlot 을 이 매크로로 펼친다.
         for ( uint32 ordinal = 0; ordinal < shaderslot::kEngineTextureCount; ++ordinal )
         {
-            const utf8*       pName = shaderslot::emulated::kEngineTextureNames[ordinal];
-            ShaderMacroDefine slotDefine;
-            slotDefine._name  = string( shaderslot::emulated::kSlotMacroPrefix ) + pName;
+            const utf8*                             pName = shaderslot::emulated::kEngineTextureNames[ordinal];
+            ShaderMacroDefine                       slotDefine;
+            StringBuilder<constant::buffer::kMax64> slotNameBuilder;
+            slotNameBuilder.appendFormat( "%#%#", shaderslot::emulated::kSlotMacroPrefix, pName );
+            slotDefine._name  = string( slotNameBuilder.view() );
             slotDefine._value = to_string( ordinal );
             inoutList.push_back( std::move( slotDefine ) );
-            ShaderMacroDefine indexDefine;
-            indexDefine._name  = string( shaderslot::emulated::kIndexMacroPrefix ) + to_string( ordinal );
-            indexDefine._value = string( "g_" ) + pName + "Index";
+            ShaderMacroDefine                       indexDefine;
+            StringBuilder<constant::buffer::kMax64> indexNameBuilder;
+            indexNameBuilder.appendFormat( "%#%#", shaderslot::emulated::kIndexMacroPrefix, ordinal );
+            indexDefine._name = string( indexNameBuilder.view() );
+            StringBuilder<constant::buffer::kMax64> indexValueBuilder;
+            indexValueBuilder.appendFormat( "g_%#Index", pName );
+            indexDefine._value = string( indexValueBuilder.view() );
             inoutList.push_back( std::move( indexDefine ) );
         }
         // 렌더 정책(셰이더가 읽는 몫) — 설정 파일이 정본이고 셰이더는 기본값을 두지 않는다(없으면 #error). 도구 지문에 섞여 값이 바뀌면 셰이더 캐시가 함께 낡는다.
@@ -870,7 +891,9 @@ namespace sw
         const expected<ShaderCompileInput> input = resolver->resolve( desc._source );
         if ( input.has_value() == false )
         {
-            result._errorMessage = string( input.error().message().data(), input.error().message().size() ) + ": " + string( input.error().detail().data(), input.error().detail().size() );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "%#: %#", input.error().message(), input.error().detail() );
+            result._errorMessage = string( errorBuilder.view() );
             SW_LOG_ERROR_ID( "ShaderCompiler.SourceUnresolved", "%#", result._errorMessage );
             return result;
         }
@@ -904,7 +927,8 @@ namespace sw
         {
             for ( const string& problem : listShadowed )
             {
-                result._errorMessage += problem + "\n";
+                result._errorMessage += problem;
+                result._errorMessage += '\n';
             }
             if ( result._errorMessage.empty() )
                 result._errorMessage = "Shader headers could not be checked for shadowing (see the error above).";
@@ -924,7 +948,9 @@ namespace sw
                                 ( MonotonicClock::nowNanoseconds() - compileStartNanos ) / constant::time::kNanosecondsPerMillisecond );
         };
         // 위 줄은 컴파일이 끝나야 찍힌다 — 한 번이 정지 시한보다 긴 컴파일(fxc 의 mesh_morph)도 일하는 중임을 간격마다 알린다.
-        const ScopedProgressReport progress{ string( desc._source.c_str() ) + " " + desc._entryPoint + " (" + profile + ") compile" };
+        StringBuilder<constant::buffer::kMax256> progressBuilder;
+        progressBuilder.appendFormat( "%# %# (%#) compile", desc._source.c_str(), desc._entryPoint, profile );
+        const ScopedProgressReport progress{ string( progressBuilder.view() ) };
 
         const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatTable::find( desc._targetFormat );
         const bool                          bFxcTarget  = pTargetInfo != nullptr && pTargetInfo->_tool == ShaderCompilerTool::Fxc;

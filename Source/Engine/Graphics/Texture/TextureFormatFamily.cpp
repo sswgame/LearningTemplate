@@ -189,7 +189,9 @@ namespace sw
         constexpr string_view kExtension = TextureFormatSelectionInternal::kDDSExtension;
         if ( StringUtil::endsWith( ddsPath, kExtension ) == false )
             return {};
-        return string( ddsPath.substr( 0, ddsPath.size() - kExtension.size() ) ) + string( suffix ) + string( kExtension );
+        StringBuilder<constant::buffer::kMax256> path;
+        path.appendFormat( "%#%#%#", ddsPath.substr( 0, ddsPath.size() - kExtension.size() ), suffix, kExtension );
+        return string( path.view() );
     }
 } // namespace sw
 
