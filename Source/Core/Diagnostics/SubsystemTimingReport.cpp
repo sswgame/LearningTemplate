@@ -6,14 +6,13 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Time/MonotonicClock.h"
 
 namespace sw
 {
     void SubsystemTimingReport::enableTiming( SubsystemCollection& collection )
     {
         if constexpr ( build::kShipping == false )
-            collection.setTimingClock( &MonotonicClock::nowNanoseconds );
+            collection.setTimingEnabled( true );
         else
             (void)collection;
     }

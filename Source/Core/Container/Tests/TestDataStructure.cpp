@@ -826,28 +826,26 @@ SW_TEST_CASE( DataStructureTest, PairBasicAndStructuredBinding )
 }
 
 /**
- * @brief [DataStructureTest] pair EBO (Empty Base Optimization) 압축 검증
+ * @brief [DataStructureTest] pair 는 빈 형식이 들어가도 늘 데이터 멤버 first · second 를 두고(구조적 바인딩 포함), 빈 함수 객체 압축은 CompressedPair 가 한다
  */
-SW_TEST_CASE( DataStructureTest, PairEmptyBaseOptimization )
+SW_TEST_CASE( DataStructureTest, PairAlwaysHasMembersAndCompressedPairPacksEmpty )
 {
-    // 1) 일반 타입 쌍: 8 바이트
     static_assert( sizeof( sw::pair<int32, int32> ) == 8, "pair<int, int> must be 8 bytes" );
-    // 2) 빈 클래스 1개 + 포인터: EBO 압축으로 8 바이트
-    static_assert( sizeof( sw::pair<EmptyTestHasher, int32*> ) == sizeof( int32* ), "Empty + pointer must be pointer size (EBO)" );
-    // 3) 빈 클래스 2개: EBO 압축으로 최소 크기 1 바이트
-    static_assert( sizeof( sw::pair<EmptyTestHasher, EmptyTestEqual> ) == 1, "Empty + Empty must be 1 byte (EBO)" );
 
     sw::pair<EmptyTestHasher, int32> pEmptyFirst{ EmptyTestHasher{}, 1234 };
     SW_EXPECT_EQUAL( 1234, pEmptyFirst.second );
-    SW_EXPECT_EQUAL( static_cast<size_t>( 10 * 2654435761u ), pEmptyFirst.first()( 10 ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 10 * 2654435761u ), pEmptyFirst.first( 10 ) ); // first 는 함수 객체 멤버다
 
-    sw::pair<int32, EmptyTestEqual> pEmptySecond{ 5678, EmptyTestEqual{} };
-    SW_EXPECT_EQUAL( 5678, pEmptySecond.first );
-    SW_EXPECT_TRUE( pEmptySecond.second()( 10, 10 ) );
-    SW_EXPECT_FALSE( pEmptySecond.second()( 10, 20 ) );
+    const auto& [hasher, value] = pEmptyFirst;
+    SW_EXPECT_EQUAL( 1234, value );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 10 * 2654435761u ), hasher( 10 ) );
 
-    sw::pair<EmptyTestHasher, EmptyTestEqual> pBothEmpty{};
-    SW_EXPECT_TRUE( pBothEmpty.second()( 5, 5 ) );
+    // 압축은 CompressedPair 의 몫 — 접근자가 늘 함수라 원소가 비었는지에 흔들리지 않는다.
+    static_assert( sizeof( sw::CompressedPair<EmptyTestHasher, int32*> ) == sizeof( int32* ), "Empty + pointer must be pointer size (EBO)" );
+    static_assert( sizeof( sw::CompressedPair<EmptyTestHasher, EmptyTestEqual> ) == 1, "Empty + Empty must be 1 byte (EBO)" );
+    sw::CompressedPair<EmptyTestHasher, EmptyTestEqual> both{};
+    SW_EXPECT_TRUE( both.second()( 5, 5 ) );
+    SW_EXPECT_FALSE( both.second()( 10, 20 ) );
 }
 
 /**

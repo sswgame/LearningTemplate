@@ -4,12 +4,12 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Diagnostics/ScopedTimer.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Time/GameTimer.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"

@@ -286,8 +286,7 @@ SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )
 
 /**
  * @brief 주지 않은 단독 플래그를 "주었다" 로 읽지 않는다
- * @details 단독 플래그에 `bUseDefaultValue` 를 켜면 기본값이 `false` 라 값 자체는 맞아도 `getArgument` 가
- *          **주지 않은 인자에도 true** 를 돌려줘, 반환값만으로는 어느 백엔드를 고르라는 것인지 알 수 없다.
+ * @details 주지 않은 인자에도 true 를 돌려주면(옛 "기본값으로 true" 칸) 반환값만으로는 어느 백엔드를 고르라는 것인지 알 수 없다 — 그 칸은 지웠다.
  */
 SW_TEST_CASE( CommandLineTest, UnprovidedFlagIsNotReadable )
 {

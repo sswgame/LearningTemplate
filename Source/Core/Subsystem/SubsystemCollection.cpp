@@ -6,6 +6,7 @@
 #include "Core/Container/DependencyGraph.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Time/MonotonicClock.h"
 
 namespace sw
 {
@@ -74,7 +75,7 @@ namespace sw
         , _listShutdownTiming{}
         , _error{}
         , _bSorted{ SW_FALSE }
-        , _pClockNanos{ nullptr }
+        , _bTimingEnabled{ SW_FALSE }
     {
     }
 
@@ -233,10 +234,10 @@ namespace sw
                 continue;
             }
 
-            const int64               startNanos = _pClockNanos != nullptr ? _pClockNanos() : 0;
+            const int64               startNanos = _bTimingEnabled ? MonotonicClock::nowNanoseconds() : 0;
             const SubsystemInitResult result     = initializeAt( index );
-            if ( _pClockNanos != nullptr )
-                _listInitTiming.push_back( { _listEntry[index]._pSubsystem->getSubsystemName(), ( _pClockNanos() - startNanos ) / constant::time::kNanosecondsPerMicrosecond } );
+            if ( _bTimingEnabled )
+                _listInitTiming.push_back( { _listEntry[index]._pSubsystem->getSubsystemName(), ( MonotonicClock::nowNanoseconds() - startNanos ) / constant::time::kNanosecondsPerMicrosecond } );
             if ( result == SubsystemInitResult::Failed )
             {
                 StringBuilder<constant::buffer::kMax512> errorBuilder;
@@ -258,24 +259,24 @@ namespace sw
         // 모두를 멈춘 뒤에 놓는다 — 한 서브시스템이 비우는 남은 일(완료 콜백)이 먼저 놓인 다른 서브시스템을 부르지 않게.
         // 시계가 없는 범위(코어)는 재지 않고 목록도 잡지 않는다 — 코어 범위의 소멸이 종료 누수 보고를 하므로 그때 산 목록이 보고에 찍힌다.
         _listShutdownTiming.clear();
-        if ( _pClockNanos != nullptr )
+        if ( _bTimingEnabled )
             _listShutdownTiming.resize( _listInitialized.size() );
         for ( size_t order = _listInitialized.size(); order > 0; --order )
         {
             ISubsystem* const pSubsystem = _listEntry[_listInitialized[order - 1]]._pSubsystem;
-            const int64       startNanos = _pClockNanos != nullptr ? _pClockNanos() : 0;
+            const int64       startNanos = _bTimingEnabled ? MonotonicClock::nowNanoseconds() : 0;
             pSubsystem->stopSubsystem();
-            if ( _pClockNanos != nullptr )
-                _listShutdownTiming[order - 1] = { pSubsystem->getSubsystemName(), ( _pClockNanos() - startNanos ) / constant::time::kNanosecondsPerMicrosecond };
+            if ( _bTimingEnabled )
+                _listShutdownTiming[order - 1] = { pSubsystem->getSubsystemName(), ( MonotonicClock::nowNanoseconds() - startNanos ) / constant::time::kNanosecondsPerMicrosecond };
         }
         while ( _listInitialized.empty() == false )
         {
             const uint32 index = _listInitialized.back();
             _listInitialized.pop_back();
-            const int64 startNanos = _pClockNanos != nullptr ? _pClockNanos() : 0;
+            const int64 startNanos = _bTimingEnabled ? MonotonicClock::nowNanoseconds() : 0;
             _listEntry[index]._pSubsystem->shutdownSubsystem();
-            if ( _pClockNanos != nullptr )
-                _listShutdownTiming[_listInitialized.size()]._micros += ( _pClockNanos() - startNanos ) / constant::time::kNanosecondsPerMicrosecond;
+            if ( _bTimingEnabled )
+                _listShutdownTiming[_listInitialized.size()]._micros += ( MonotonicClock::nowNanoseconds() - startNanos ) / constant::time::kNanosecondsPerMicrosecond;
         }
     }
 
