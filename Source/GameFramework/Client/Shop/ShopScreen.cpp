@@ -142,7 +142,17 @@ namespace sw
     {
     }
 
-    ShopScreen::~ShopScreen() = default;
+    ShopScreen::~ShopScreen()
+    {
+        if ( _pProvider != nullptr )
+            _pProvider->unbindScreen();
+    }
+
+    void ShopScreen::onProviderReleased()
+    {
+        _pProvider = nullptr;
+        close();
+    }
 
     UIScreenHandle ShopScreen::open( UISystem& ui, string_view documentPath, IShopPurchaseProvider& provider )
     {
@@ -152,6 +162,8 @@ namespace sw
             return kInvalidUIScreenHandle;
         ShopScreen& screen = static_cast<ShopScreen&>( *pScreen );
         screen._pProvider  = &provider;
+        provider.bindScreen( Delegate<void()>::create( [pScreen = &screen]()
+        { pScreen->onProviderReleased(); } ) );
         screen.rebuild();
         return handle;
     }

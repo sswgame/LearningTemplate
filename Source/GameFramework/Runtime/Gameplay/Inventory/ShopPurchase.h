@@ -85,8 +85,13 @@ namespace sw
     class IShopPurchaseProvider
     {
     public:
-        IShopPurchaseProvider()          = default;
-        virtual ~IShopPurchaseProvider() = default;
+        IShopPurchaseProvider() = default;
+        /** @brief 화면이 묶여 있으면 공급자가 사라진다고 알립니다 — 화면은 공급자를 놓고 닫힌다(화면이 공급자보다 오래 살아 날 포인터로 부르지 않게). */
+        virtual ~IShopPurchaseProvider()
+        {
+            if ( _onReleased.isBound() )
+                _onReleased();
+        }
 
         IShopPurchaseProvider( const IShopPurchaseProvider& )            = delete;
         IShopPurchaseProvider& operator=( const IShopPurchaseProvider& ) = delete;
@@ -104,6 +109,17 @@ namespace sw
          * @details 기다리는 구매가 있으면 시작하지 않고 `Busy` 로 바로 답한다(중복 누름). 수량 · 합계 검사(`ShopOffer::computeTotal`)를 먼저 한다.
          */
         virtual void beginPurchase( const ShopOffer& offer, int32 count, const ShopPurchaseDelegate& onFinished ) = 0;
+
+        /**
+         * @brief 이 공급자를 쓰는 화면을 겁니다. 공급자가 먼저 사라지면 @p onReleased 가 불린다. 화면은 하나 — 다시 걸면 앞 화면의 묶기를 갈아 끼운다.
+         * @details 공급자를 소유한 쪽(게임 인스턴스의 서비스)은 화면 시스템보다 먼저 내려갈 수 있다(인스턴스 재시작 · 레벨 이동). 화면은 닫힐 때 `unbindScreen` 을 부른다.
+         */
+        void bindScreen( Delegate<void()> onReleased ) { _onReleased = std::move( onReleased ); }
+        /** @brief 화면 묶기를 풉니다(화면이 먼저 닫힐 때). */
+        void unbindScreen() { _onReleased = Delegate<void()>{}; }
+
+    private:
+        Delegate<void()> _onReleased{}; ///< 묶인 화면에 공급자가 사라짐을 알린다
     };
 } // namespace sw
 

@@ -64,7 +64,9 @@ namespace sw
         /** @brief 확인 대화 상자의 답입니다. 확인이면 공급자에 구매를 맡깁니다. */
         static void onConfirmed( UISystem& ui, UIScreenHandle shop, uint32 offerIndex, ConfirmDialogResult result );
         /** @brief 공급자의 구매 답입니다. 화면이 남아 있으면 결과를 보입니다. */
-        static void   onPurchased( UISystem& ui, UIScreenHandle shop, const ShopPurchaseReceipt& receipt );
+        static void onPurchased( UISystem& ui, UIScreenHandle shop, const ShopPurchaseReceipt& receipt );
+        /** @brief 공급자가 먼저 사라졌습니다(`IShopPurchaseProvider::bindScreen`) — 공급자를 놓고 화면을 닫습니다. */
+        void          onProviderReleased();
         void          applyReceipt( const ShopPurchaseReceipt& receipt );
         void          rebuild();
         void          setStatus( const string& text );

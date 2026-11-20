@@ -137,3 +137,23 @@ SW_TEST_CASE( ShopPurchaseTest, LocalBuyMovesMoneyAndItems )
     SW_EXPECT_TRUE( fixture.buy( sword, 1 )._status == sw::ShopPurchaseStatus::OutOfStock );
     SW_EXPECT_TRUE( fixture.buy( fixture.findOffer( "potion" ), 11 )._status == sw::ShopPurchaseStatus::Rejected ); // 겹침 수(10) 위
 }
+
+// 화면이 공급자보다 오래 살지 않는다 — 공급자가 먼저 사라지면 묶인 화면에 알리고, 화면이 먼저 풀면 알리지 않는다(게임 인스턴스 재시작 뒤 날 포인터 호출 결함).
+SW_TEST_CASE( ShopPurchaseTest, ProviderReleaseNotifiesTheBoundScreenOnce )
+{
+    int32 releasedCount = 0;
+    {
+        sw::unique_ptr<LocalShopFixture> pFixture = sw::make_unique<LocalShopFixture>();
+        pFixture->_provider.bindScreen( sw::Delegate<void()>::create( [&releasedCount]()
+        { ++releasedCount; } ) );
+    }
+    SW_EXPECT_EQUAL( releasedCount, 1 );
+
+    {
+        sw::unique_ptr<LocalShopFixture> pFixture = sw::make_unique<LocalShopFixture>();
+        pFixture->_provider.bindScreen( sw::Delegate<void()>::create( [&releasedCount]()
+        { ++releasedCount; } ) );
+        pFixture->_provider.unbindScreen();
+    }
+    SW_EXPECT_EQUAL( releasedCount, 1 );
+}
