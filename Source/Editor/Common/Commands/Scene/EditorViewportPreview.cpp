@@ -119,7 +119,7 @@ namespace sw::editor
     {
         GameObjectManager* pManager = editor::getActiveObjectManager();
         SequenceTimelineUtil::applyFrame( pManager, asset, bindings, frame );
-        SequenceTimelineUtil::applySpans( pManager, asset, bindings, frame, framesPerSecond, inoutListSpan );
+        SequenceTimelineUtil::applySpans( pManager, asset, bindings, frame, framesPerSecond, 1.0f, inoutListSpan ); // 미리보기는 지금 프레임만 맞춘다(속도 없음)
     }
 
     void EditorViewportPreview::applyDialogueLine( string_view graphPath, uint32 speakerID, string_view text )

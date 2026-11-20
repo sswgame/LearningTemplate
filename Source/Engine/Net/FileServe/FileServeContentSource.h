@@ -5,7 +5,7 @@
  *          받은 파일은 앱 전용 폴더의 거울(`mirrorRoot`)에 두고 디스크 소스로 읽는다. 거울 곁 도장(`<파일>.fsstamp` — 크기와 PC 의 수정 시각)이 서버의 것과 같으면 다시 받지 않는다.
  *          파일은 1 MiB 이하 구간으로 나눠 받아(`/file?offset=&size=` — 장치 HTTP 클라이언트의 본문 상한) 임시 파일 + 원자 교체로 쓴다. 걸린 폴더 밖 경로는 없는 파일이다.
  *          서버 응답은 믿지 않는다: 목록 이름에 구분자 · `..` 가 있으면 그 목록을 거절하고(거울 밖에 쓰지 않는다), 숫자 칸이 틀리면 없는 파일로 본다.
- *          전송은 엔진의 `IHTTPClient` 계약이다(장치는 GameFramework `BlockingHTTPClient`, 테스트는 가짜). 기동이 `-fileserve=<주소>` 일 때만 건다(배포 구성에는 없다).
+ *          전송은 엔진의 `IHTTPClient` 계약이다(장치는 개발 전용 평문 클라이언트 `PlainHTTPClient` — `Net/Dev`, 테스트는 가짜). 기동(`AndroidMain`)이 `-fileserve=<주소>` 일 때만 건다(배포 구성에는 없다).
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -36,7 +36,7 @@ namespace sw
         static constexpr const utf8* kStampExtension = ".fsstamp";
 
         /**
-         * @param client 호출자가 소유한다. 이 소스보다 오래 살아야 한다. 여러 스레드가 불러도 되는 것이어야 한다(`BlockingHTTPClient` 는 잠금 하나로 하나씩 보낸다).
+         * @param client 호출자가 소유한다. 이 소스보다 오래 살아야 한다. 여러 스레드가 불러도 되는 것이어야 한다(`PlainHTTPClient` 는 요청마다 연결 하나라 상태가 없다).
          * @param baseURL 서버 주소(`http://127.0.0.1:1112` — 끝 `/` 없음)입니다.
          * @param mountRoot 엔진이 묻는 폴더 경로(`ProcessRoots::_packs`)입니다.
          * @param mirrorRoot 받은 파일을 둘 쓰기 가능한 폴더(앱 전용 폴더 아래)입니다.

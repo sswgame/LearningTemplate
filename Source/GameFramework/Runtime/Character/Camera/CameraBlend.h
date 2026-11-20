@@ -1,12 +1,12 @@
 /**
  * @file CameraBlend.h
- * @brief 두 카메라 포즈를 섞습니다(`blendPoses`). 곡선, 길이, 가중치는 엔진의 `BlendCurveDef` 와 `evaluateBlendWeight`(`Engine/Animation/Graph/BlendCurve.h`)를 씁니다.
+ * @brief 두 카메라 포즈를 섞습니다(`blendPoses`). 곡선, 길이, 가중치는 엔진의 `BlendCurveDef` 와 `evaluateBlendWeight`(`Engine/Curve/BlendCurve.h`)를 씁니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Animation/Graph/BlendCurve.h"
+#include "Engine/Curve/BlendCurve.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"

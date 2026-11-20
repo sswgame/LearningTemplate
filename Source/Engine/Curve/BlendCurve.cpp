@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/Graph/BlendCurve.h"
+#include "Engine/Curve/BlendCurve.h"
 
 #include "Core/Math/MathUtil.h"
 

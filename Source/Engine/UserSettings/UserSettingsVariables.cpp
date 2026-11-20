@@ -12,6 +12,7 @@ SW_GLOBAL_VARIABLE( float32, gv_renderScale, 1.0f, "3D 렌더 해상도 배율 0
 SW_GLOBAL_VARIABLE( float32, gv_cameraFieldOfView, 70.0f, "카메라 시야각(도) (사용자 설정 gameplay.fieldOfView)" );
 SW_GLOBAL_VARIABLE( float32, gv_cameraShakeScale, 1.0f, "카메라 흔들림 배율 0~1 (사용자 설정 gameplay.cameraShake)" );
 SW_GLOBAL_VARIABLE( bool, gv_cameraHeadBob, true, "걷기 머리 흔들림 (사용자 설정 gameplay.headBob)" );
+SW_GLOBAL_VARIABLE( sw::GlobalString, gv_cameraPreset, "", "플레이어가 순환 키로 고른 카메라 프리셋 id, 비면 장면의 시작 프리셋 (사용자 설정 gameplay.cameraPreset)" );
 
 SW_GLOBAL_VARIABLE( int32, gv_colorVisionMode, 0, "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스와 화면 출력 뷰의 톤맵 — post_grade.hlsli)" );
 SW_GLOBAL_VARIABLE( float32, gv_uiScale, 1.0f, "게임 UI 배율 (사용자 설정 accessibility.uiScale)" );

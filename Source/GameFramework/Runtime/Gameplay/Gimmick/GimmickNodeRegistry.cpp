@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Animation/Graph/BlendCurve.h"
+#include "Engine/Curve/BlendCurve.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"

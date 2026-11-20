@@ -17,7 +17,7 @@ namespace sw
 
     /**
      * @brief 리플렉트 값을 (typeFqn + BinarySerializer 페이로드)로 저장합니다.
-     * @details PROPERTY(Polymorphic)과 함께 씁니다. C# dynamic이 아니라 구체 TypeInfo만 허용합니다.
+     * @details C# dynamic이 아니라 구체 TypeInfo만 허용합니다.
      */
     struct SW_API ReflectedAny
     {

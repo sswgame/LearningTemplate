@@ -59,6 +59,8 @@ namespace sw
         void                     uavBarrierNative( RHIBufferHandle buffer ) override;
 
     private:
+        /** @brief 번호 @p index 의 상수 버퍼를 UBO 바인딩 @p slot 에 겁니다. 페이지 구간이면 `glBindBufferRange`, 아니면 `glBindBufferBase` 입니다(감사 R-4). */
+        void bindUniformBuffer( RHIDescriptorIndex index, uint32 slot );
         /**
          * @brief 건 PSO 가 읽는 정점 슬롯만 VAO 로 겁니다(정점 입력이 없으면 빈 VAO). 읽는 슬롯에 버퍼가 없거나 건 버퍼가 부서졌으면 알리고 false 이며, 드로우를 버립니다(네 백엔드가 같다).
          * @details 모든 드로우 진입점이 이것을 씁니다. draw 뒤의 언바인드는 부르는 쪽이 각자 맡습니다.

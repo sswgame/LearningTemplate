@@ -17,8 +17,7 @@ SW_TEST_CASE( ScreenSpaceReflectionTest, PassTypeRowDeclaresBlendedDrawOverScene
 {
     const RenderPassKindInfo& info = getRenderPassKindInfo( RenderPassKind::ScreenSpaceReflection );
     SW_EXPECT_TRUE( isPipelinePassType( RenderPassKind::ScreenSpaceReflection ) );
-    SW_EXPECT_TRUE( info.hasFlag( RenderPassTraitFlag::kBlend ) );
-    SW_EXPECT_TRUE( info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) );
+    SW_EXPECT_TRUE( info._blend == RenderPassBlend::Premultiplied );
     SW_EXPECT_FALSE( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) );
     SW_EXPECT_FALSE( info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) );
     SW_EXPECT_TRUE( info._inputContract.hasRole( RenderPassInputRole::SceneColorCopy ) );

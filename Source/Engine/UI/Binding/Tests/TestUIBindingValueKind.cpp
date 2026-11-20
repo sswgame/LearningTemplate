@@ -4,6 +4,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/UI/Binding/UIBindingValue.h"
 
 using namespace sw;
@@ -35,4 +36,25 @@ SW_TEST_CASE( UIBindingValueKindTest, KindFollowsTheBuiltinClass )
     SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "float32" ) ) == UIBindingValueKind::Number );
     SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "bool" ) ) == UIBindingValueKind::Bool );
     SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "string" ) ) == UIBindingValueKind::Text );
+}
+
+/**
+ * @brief [UIBindingValueKindTest] 종류는 줄 차례가 아니라 줄마다의 갈래에서 나온다 — 표의 모든 줄에서 바인딩 종류가 그 줄의 갈래와 같고, Layout 이 num 인 줄은 숫자다
+ * @details 숫자 줄(int8 .. float64)이 이어져 있다고 가정하던 때는 그 사이에 줄을 끼우면 숫자 바인딩이 엉뚱한 줄을 읽었다.
+ */
+SW_TEST_CASE( UIBindingValueKindTest, EveryRowKindComesFromItsOwnClass )
+{
+    for ( size_t index = 0; index < static_cast<size_t>( ReflectBuiltinIndex::kCount ); ++index )
+    {
+        const ReflectBuiltinIndex builtinIndex = static_cast<ReflectBuiltinIndex>( index );
+        const hashed_string&      typeName     = ReflectedValueUtil::getBuiltinTypeName( builtinIndex );
+        const UIBindingValueKind  kind         = UIBindingValue::classifyType( typeName );
+        const ReflectBuiltinClass builtinClass = ReflectedValueUtil::getBuiltinClass( builtinIndex );
+        const bool                bSameKind    = ( builtinClass == ReflectBuiltinClass::Number ) == ( kind == UIBindingValueKind::Number ) &&
+                               ( builtinClass == ReflectBuiltinClass::Bool ) == ( kind == UIBindingValueKind::Bool ) &&
+                               ( builtinClass == ReflectBuiltinClass::Text ) == ( kind == UIBindingValueKind::Text );
+        SW_EXPECT_TRUE_MSG( bSameKind, typeName.c_str() );
+        if ( ReflectBuiltinTraitTable::get( builtinIndex )._layout == ReflectBuiltinLayout::Number )
+            SW_EXPECT_TRUE_MSG( kind == UIBindingValueKind::Number, typeName.c_str() );
+    }
 }

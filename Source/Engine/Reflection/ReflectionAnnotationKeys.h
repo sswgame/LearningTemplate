@@ -152,10 +152,6 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey AssetPath{};
         /** @brief flag.AssetPath — 단독 토큰 `assetPath` 또는 `assetPath = true`. 같은 필드의 철자: AssetPath, assetPath. */
         static constexpr AnnotationKey assetPath{};
-        /** @brief flag.Polymorphic — 단독 토큰 `Polymorphic` 또는 `Polymorphic = true`. 같은 필드의 철자: Polymorphic, polymorphic. */
-        static constexpr AnnotationKey Polymorphic{};
-        /** @brief flag.Polymorphic — 단독 토큰 `polymorphic` 또는 `polymorphic = true`. 같은 필드의 철자: Polymorphic, polymorphic. */
-        static constexpr AnnotationKey polymorphic{};
         /** @brief flag.Transient — 단독 토큰 `Transient` 또는 `Transient = true`. 같은 필드의 철자: Transient, transient, NonSerialized, nonSerialized. */
         static constexpr AnnotationKey Transient{};
         /** @brief flag.Transient — 단독 토큰 `transient` 또는 `transient = true`. 같은 필드의 철자: Transient, transient, NonSerialized, nonSerialized. */
@@ -292,8 +288,6 @@ namespace sw::reflect::attr
         "xmlAttribute",
         "AssetPath",
         "assetPath",
-        "Polymorphic",
-        "polymorphic",
         "Transient",
         "transient",
         "NonSerialized",

@@ -41,6 +41,7 @@ namespace sw::editor
         _typeName             = hashed_string{};
         _propName             = hashed_string{};
         _handleTargetTypeName = hashed_string{};
+        _nameSource           = hashed_string{};
         _enumValue            = 0;
         _key                  = 0;
         _height               = 0.0f;

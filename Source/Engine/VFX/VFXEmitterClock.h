@@ -27,7 +27,8 @@ namespace sw
      * @brief 프레임 시간을 고정 단계로 나누고, 단계마다 버스트와 생성률로 만들 입자 수와 첫 번호를 냅니다.
      * @details 일정은 방출기 데이터와 단계 수로만 정해진다(입자 상태와 무관하다). 그래서 GPU 방출기는 게임 스레드(끝났는지)와 렌더 스레드(디스패치마다의 일정)가
      *          같은 시계를 따로 돌려도 같은 일정을 얻는다 — 렌더 스레드가 프레임을 건너뛰어도 단계 수만 맞추면 된다(`VFXGPUSimulation`).
-     *          생성률은 방출 시간(0.._duration) 안에서만 쌓고, 반복 방출기는 시간을 되감아 버스트를 다시 켠다.
+     *          생성률은 방출 시간(0.._duration) 안에서만 쌓고, 반복 방출기는 시간을 되감아 버스트를 다시 켠다. 끝을 넘은 단계의 남는 몫은 다음 바퀴의 시간이다 —
+     *          그 몫에 든 버스트(0 초 버스트 포함)와 생성률을 같은 단계에 센다(예전에는 몫을 버려 바퀴마다 생성이 모자라고 0 초 버스트가 한 단계 늦었다).
      */
     class SW_API VFXEmitterClock
     {
@@ -75,13 +76,19 @@ namespace sw
         float32 getSpawnScale() const { return _spawnScale; }
 
     private:
+        /** @brief 이번 바퀴의 시간(`_emitterSeconds`)까지 온 버스트 가운데 아직 켜지 않은 것을 생성 몫에 더합니다(바퀴마다 한 번). */
+        void accumulateDueBurst();
+        /** @brief 방출 시간 @p emitSeconds 동안의 생성률을 생성 몫에 더합니다. */
+        void accumulateEmission( float64 emitSeconds );
+
+    private:
         shared_ptr<const VFXEmitterDef> _pDef;
         vector<uint8>                   _listBurstFired;
         uint64                          _spawnedCount;
-        float32                         _emitterSeconds;
+        float64                         _emitterSeconds; ///< 이번 바퀴의 방출기 시간 — 배정밀도라 단계를 오래 더해도 반복 경계 · 버스트 시각이 단계 하나씩 흔들리지 않는다
         float32                         _spawnCarry;
-        float32                         _spawnScale; ///< 생성률 · 버스트 수에 곱한다(이펙트 품질)
-        float32                         _pendingSeconds;
+        float32                         _spawnScale;     ///< 생성률 · 버스트 수에 곱한다(이펙트 품질)
+        float64                         _pendingSeconds; ///< 아직 단계가 되지 않은 프레임 시간(배정밀도 — 남는 몫이 쌓여도 단계 수가 어긋나지 않는다)
         uint8                           _bEmitting        : 1;
         uint8                           _bWarnedStepLimit : 1;
     };

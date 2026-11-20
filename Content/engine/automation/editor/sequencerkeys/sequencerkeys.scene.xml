@@ -37,7 +37,7 @@
 		<entity id="5" name="Director">
 			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
 				<_listComponent>
-					<SequencePlayerComponent _sequencePath="engine/automation/editor/sequencerkeys/sequencerkeys.seq.xml" _framesPerSecond="30" _bLoop="false" _bAutoPlay="false">
+					<SequencePlayerComponent _sequencePath="engine/automation/editor/sequencerkeys/sequencerkeys.seq.xml" _framesPerSecond="30" _loopMode="None" _bAutoPlay="false">
 						<_listBinding>
 							<SequenceBindingSlot _binding="1" _object="2" />
 						</_listBinding>

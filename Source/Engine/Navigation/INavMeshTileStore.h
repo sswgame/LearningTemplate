@@ -15,6 +15,7 @@ namespace sw
     struct NavAgentTypeDef;
     struct NavConvexVolume;
 
+    class NavClusterGraph;
     class NavMeshGeometry;
 
     /** @brief 타일 하나의 베이크 결과입니다. 격자 위치와 백엔드의 불투명 바이트를 담습니다(바이트가 비면 그 타일에 걸을 곳이 없습니다). */
@@ -79,6 +80,11 @@ namespace sw
         [[nodiscard]] virtual bool replaceTile( const NavTileData& tile ) = 0;
         /** @brief 든 타일을 모두 베껴 냅니다(쿠킹). */
         virtual void collectTiles( vector<NavTileData>& outListTile ) const = 0;
+        /**
+         * @brief 든 타일에서 대략 그래프(`NavClusterGraph` — 타일 안 이어진 덩어리 · 타일 경계와 오프 메시 링크의 이음)를 짓습니다(쿠킹 — 모든 타일을 끼운 뒤).
+         * @details 끼우지 않은 타일 쪽 이음은 없다 — 스트리밍 런타임이 아니라 다 끼운 쿠킹이 부른다.
+         */
+        virtual void collectClusterGraph( NavClusterGraph& outGraph ) const = 0;
         /** @brief 든 타일 수입니다. */
         virtual uint32 getLoadedTileCount() const = 0;
         /** @brief 걸을 폴리곤 수입니다(진단). */

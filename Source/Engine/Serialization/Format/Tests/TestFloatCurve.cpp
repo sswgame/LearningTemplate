@@ -67,7 +67,7 @@ SW_TEST_CASE( FloatCurveTest, CubicIsHermite )
 }
 
 /**
- * @brief [FloatCurveTest] 가운데 키의 자동 접선은 이웃 기울기, 끝 키는 평평하다 · addKey 는 시각 순 자리에 넣는다
+ * @brief [FloatCurveTest] 가운데 키의 자동 접선은 이웃 기울기를 넘침 한도(양옆 구간 기울기의 3 배)로 묶은 값, 끝 키는 평평하다 · addKey 는 시각 순 자리에 넣는다
  */
 SW_TEST_CASE( FloatCurveTest, AutoTangentsAndKeyOrder )
 {
@@ -77,8 +77,9 @@ SW_TEST_CASE( FloatCurveTest, AutoTangentsAndKeyOrder )
     const uint32 middle = curve.addKey( 2.0f, 1.0f );
     SW_REQUIRE_EQUAL( middle, 1u );
     SW_REQUIRE_EQUAL( curve._listKey.size(), size_t{ 3 } );
-    SW_EXPECT_NEAR( 2.0f, curve._listKey[1]._leaveTangent, TestFloatCurveInternal::kTolerance );
-    SW_EXPECT_NEAR( 2.0f, curve._listKey[1]._arriveTangent, TestFloatCurveInternal::kTolerance );
+    // 이웃 기울기는 (8 - 0) / 4 = 2 지만 앞 구간 기울기가 0.5 라 3 × 0.5 = 1.5 로 묶인다 — 2 면 첫 구간이 0 아래로 넘친다
+    SW_EXPECT_NEAR( 1.5f, curve._listKey[1]._leaveTangent, TestFloatCurveInternal::kTolerance );
+    SW_EXPECT_NEAR( 1.5f, curve._listKey[1]._arriveTangent, TestFloatCurveInternal::kTolerance );
     SW_EXPECT_NEAR( 0.0f, curve._listKey[0]._leaveTangent, TestFloatCurveInternal::kTolerance );
     SW_EXPECT_NEAR( 0.0f, curve._listKey[2]._arriveTangent, TestFloatCurveInternal::kTolerance );
 }

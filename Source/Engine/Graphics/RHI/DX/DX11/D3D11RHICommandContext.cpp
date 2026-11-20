@@ -25,7 +25,9 @@ namespace sw
         , _pContext{ pContext }
         , _pState{ pDevice != nullptr ? &pDevice->_recordingState : nullptr }
         , _bAnnotationQueried{ SW_FALSE }
+        , _bNullBeforeOffsetRebind{ SW_FALSE }
     {
+        initializeConstantBufferBinding();
     }
 
     D3D11RHICommandContext::D3D11RHICommandContext( D3D11RHIDevice* pDevice, ID3D11DeviceContext* pContext,
@@ -34,7 +36,19 @@ namespace sw
         , _pContext{ pContext }
         , _pState{ pState }
         , _bAnnotationQueried{ SW_FALSE }
+        , _bNullBeforeOffsetRebind{ SW_FALSE }
     {
+        initializeConstantBufferBinding();
+    }
+
+    void D3D11RHICommandContext::initializeConstantBufferBinding()
+    {
+        if ( _pContext == nullptr )
+            return;
+        // 장치 초기화가 D3D11.1 구간 능력을 요구하므로 Windows 8+ 런타임이다 — 실패는 오류로 남기고 구간 바인딩만 건너뛴다.
+        (void)isHrSuccess( _pContext->QueryInterface( IID_PPV_ARGS( _context1.GetAddressOf() ) ), "QueryInterface (ID3D11DeviceContext1)" );
+        const bool bEmulatedDeferred = _pContext->GetType() == D3D11_DEVICE_CONTEXT_DEFERRED && _pDevice != nullptr && _pDevice->_bDriverCommandLists == SW_FALSE;
+        _bNullBeforeOffsetRebind     = bEmulatedDeferred ? SW_TRUE : SW_FALSE;
     }
 
     void D3D11RHICommandContext::blitTextureNative( RHITextureHandle src, RHITextureHandle dst )
@@ -478,18 +492,86 @@ namespace sw
 
     void D3D11RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        const bool bInvalidConstantBufferIndex = _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex;
+        bindConstantBufferAt( constantBufferIndex, slot, false );
+    }
+
+    void D3D11RHICommandContext::bindConstantBufferAt( RHIDescriptorIndex index, uint32 slot, bool bCompute )
+    {
+        const bool bInvalidConstantBufferIndex = _pContext == nullptr || index == kInvalidDescriptorIndex;
         if ( bInvalidConstantBufferIndex )
             return;
-        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( constantBufferIndex ) );
+        const RHIBufferSlice source = _pDevice->bindlessBufferSliceAt( index );
+        ID3D11Buffer*        pCb    = _pDevice->resolveBuffer( source._buffer );
         if ( pCb == nullptr )
             return;
-        _pContext->VSSetConstantBuffers( slot, 1, &pCb );
-        _pContext->PSSetConstantBuffers( slot, 1, &pCb );
-        _pContext->CSSetConstantBuffers( slot, 1, &pCb );
-        // 변위 머티리얼의 헐 · 도메인이 패스 상수(뷰-투영)를 읽는다 — 다른 세 백엔드는 모든 스테이지가 본다.
-        _pContext->HSSetConstantBuffers( slot, 1, &pCb );
-        _pContext->DSSetConstantBuffers( slot, 1, &pCb );
+        // 상수 버퍼 페이지의 구간이면 첫 상수 · 상수 수(16 B 단위, 16 의 배수)로 건다(D3D11.1). 변위 머티리얼의 헐 · 도메인도 패스 상수를 읽어 다섯 스테이지에 건다.
+        const bool bSlice        = source._size != 0;
+        const UINT firstConstant = bSlice ? source._offset / D3D11RHIDevice::kShaderConstantBytes : D3D11ConstantBufferBindings::kWholeBuffer;
+        const UINT constantCount = source._size / D3D11RHIDevice::kShaderConstantBytes;
+        setConstantBuffer( kCSStage, slot, pCb, firstConstant, constantCount );
+        if ( bCompute )
+            return;
+        for ( const uint32 stage : { kVSStage, kPSStage, kHSStage, kDSStage } )
+        {
+            setConstantBuffer( stage, slot, pCb, firstConstant, constantCount );
+        }
+    }
+
+    void D3D11RHICommandContext::setConstantBuffer( const uint32 stage, const uint32 slot, ID3D11Buffer* pCb, const UINT firstConstant, const UINT constantCount )
+    {
+        const bool bWhole    = firstConstant == D3D11ConstantBufferBindings::kWholeBuffer;
+        const bool bShadowed = _pState != nullptr && slot < D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT;
+        if ( bShadowed && _pState == &_pDevice->_recordingState )
+        {
+            const uint32 serial = _pDevice->_nativeContextSerial.load();
+            if ( serial != _pState->_constantBuffers._nativeContextSerialSeen )
+            {
+                _pState->_constantBuffers.invalidate();
+                _pState->_constantBuffers._nativeContextSerialSeen = serial;
+            }
+        }
+        ID3D11Buffer* const shadowBuffer = bShadowed ? _pState->_constantBuffers._arrBuffer[stage][slot] : nullptr;
+        if ( bShadowed && shadowBuffer == pCb && pCb != nullptr && _pState->_constantBuffers._arrFirstConstant[stage][slot] == firstConstant )
+            return;
+        if ( bWhole == false && _context1 == nullptr )
+            return; // QueryInterface 실패는 만들 때 오류로 남겼다
+        // 그림자를 모르면(nullptr) 같은 버퍼일 수 있으니 빈 칸을 먼저 건다.
+        const bool          bRebindSameBuffer = bShadowed == false || shadowBuffer == nullptr || shadowBuffer == pCb;
+        ID3D11Buffer* const pNull             = nullptr;
+        const bool          bNullFirst        = bWhole == false && _bNullBeforeOffsetRebind != SW_FALSE && bRebindSameBuffer;
+        switch ( stage )
+        {
+            case kVSStage:
+                if ( bNullFirst )
+                    _pContext->VSSetConstantBuffers( slot, 1, &pNull );
+                bWhole ? _pContext->VSSetConstantBuffers( slot, 1, &pCb ) : _context1->VSSetConstantBuffers1( slot, 1, &pCb, &firstConstant, &constantCount );
+                break;
+            case kPSStage:
+                if ( bNullFirst )
+                    _pContext->PSSetConstantBuffers( slot, 1, &pNull );
+                bWhole ? _pContext->PSSetConstantBuffers( slot, 1, &pCb ) : _context1->PSSetConstantBuffers1( slot, 1, &pCb, &firstConstant, &constantCount );
+                break;
+            case kCSStage:
+                if ( bNullFirst )
+                    _pContext->CSSetConstantBuffers( slot, 1, &pNull );
+                bWhole ? _pContext->CSSetConstantBuffers( slot, 1, &pCb ) : _context1->CSSetConstantBuffers1( slot, 1, &pCb, &firstConstant, &constantCount );
+                break;
+            case kHSStage:
+                if ( bNullFirst )
+                    _pContext->HSSetConstantBuffers( slot, 1, &pNull );
+                bWhole ? _pContext->HSSetConstantBuffers( slot, 1, &pCb ) : _context1->HSSetConstantBuffers1( slot, 1, &pCb, &firstConstant, &constantCount );
+                break;
+            default:
+                if ( bNullFirst )
+                    _pContext->DSSetConstantBuffers( slot, 1, &pNull );
+                bWhole ? _pContext->DSSetConstantBuffers( slot, 1, &pCb ) : _context1->DSSetConstantBuffers1( slot, 1, &pCb, &firstConstant, &constantCount );
+                break;
+        }
+        if ( bShadowed )
+        {
+            _pState->_constantBuffers._arrBuffer[stage][slot]        = pCb;
+            _pState->_constantBuffers._arrFirstConstant[stage][slot] = firstConstant;
+        }
     }
 
     ID3D11ShaderResourceView* D3D11RHICommandContext::findBindlessBufferSRV( RHIDescriptorIndex index ) const
@@ -521,13 +603,7 @@ namespace sw
 
     void D3D11RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        const bool bInvalidConstantBufferIndex = _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex;
-        if ( bInvalidConstantBufferIndex )
-            return;
-        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( constantBufferIndex ) );
-        if ( pCb == nullptr )
-            return;
-        _pContext->CSSetConstantBuffers( slot, 1, &pCb );
+        bindConstantBufferAt( constantBufferIndex, slot, true );
     }
 
     void D3D11RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
@@ -603,18 +679,19 @@ namespace sw
         _pContext->Unmap( _pState->_rootConstantCb.Get(), 0 );
 
         // 루트 상수는 계약 슬롯(b SW_SLOT_ROOT_CB_EMUL, SW_ROOT_CONSTANTS_BEGIN)에 건다.
+        // 동적 버퍼의 WRITE_DISCARD 이름 바꾸기는 건 바인딩에 그대로 보이므로 같은 버퍼면 그림자가 다시 걸기를 건너뛴다.
         ID3D11Buffer* pCb = _pState->_rootConstantCb.Get();
         if ( bCompute )
         {
-            _pContext->CSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
+            setConstantBuffer( kCSStage, shaderslot::kRootConstantEmulationSlot, pCb, D3D11ConstantBufferBindings::kWholeBuffer, 0 );
         }
         else
         {
-            _pContext->VSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
-            _pContext->PSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
             // 머티리얼 원소 수(SW_MATERIAL 의 클램프)를 헐 · 도메인도 읽는다.
-            _pContext->HSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
-            _pContext->DSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
+            for ( const uint32 stage : { kVSStage, kPSStage, kHSStage, kDSStage } )
+            {
+                setConstantBuffer( stage, shaderslot::kRootConstantEmulationSlot, pCb, D3D11ConstantBufferBindings::kWholeBuffer, 0 );
+            }
         }
     }
 

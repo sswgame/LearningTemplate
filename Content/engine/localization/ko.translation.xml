@@ -1,6 +1,7 @@
 <TranslationTable culture="ko">
 	<entries>
 		<entry key="Already used by" text="이미 사용 중:" sourceHash="cbdae832bc5ce48d" />
+		<entry key="Amount" text="양" sourceHash="ba98a7152d80b949" />
 		<entry key="Apply" text="적용" sourceHash="b8f855b49234b81b" />
 		<entry key="Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
 		<entry key="Close" text="닫기" sourceHash="5e8250fb85d64c23" />
@@ -659,11 +660,14 @@
 		<entry key="Revert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
 		<entry key="Reverting in" text="되돌리기까지" sourceHash="9cef80c4c43e7e14" />
 		<entry key="Sections" text="섹션" sourceHash="0337d90cf703df0d" />
+		<entry key="Shop.ConfirmCancel" text="취소" sourceHash="2ceb11be2290bb1b" />
 		<entry key="Show HUD (Ctrl+F3)" text="HUD 표시 (Ctrl+F3)" sourceHash="8f553b077c9a458d" />
 		<entry key="Some changes take effect after a restart."
 		       text="일부 변경은 다시 시작한 뒤 적용됩니다."
 		       sourceHash="14441b823018dda4" />
 		<entry key="Swap" text="맞바꾸기" sourceHash="cf28302518a72dee" />
+		<entry key="UIMenu.Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
+		<entry key="UIMenu.QuitTitle" text="게임 종료" sourceHash="92aee0b2e93f7fd0" />
 		<entry key="You have changes that are not applied."
 		       text="적용하지 않은 변경이 있습니다."
 		       sourceHash="9ea9ff2b01f83378" />
@@ -714,11 +718,17 @@
 		<entry key="settings.controls.sprintMode" text="달리기" sourceHash="f3b65f24b2611635" />
 		<entry key="settings.controls.stickDeadzone" text="스틱 데드존" sourceHash="7b03bd1e88a3ce47" />
 		<entry key="settings.controls.toggle" text="전환" sourceHash="2729d39ee6c0cca5" />
+		<entry key="settings.display.hdr" text="HDR" sourceHash="49c36419cdfbbf41" />
+		<entry key="settings.display.hdr.hdr10" text="HDR10" sourceHash="66d835bfb6f21420" />
+		<entry key="settings.display.hdr.scrgb" text="scRGB" sourceHash="ec2461fc004da69a" />
+		<entry key="settings.display.hdrMaxLuminance" text="HDR 최대 밝기" sourceHash="7b387e2dcf3466cb" />
+		<entry key="settings.display.hdrPaperWhite" text="HDR 페이퍼 화이트" sourceHash="acea316368f8ef1e" />
 		<entry key="settings.display.resolution" text="해상도" sourceHash="f74160a9dc86ab8f" />
 		<entry key="settings.display.vsync" text="수직 동기화" sourceHash="b08b0fa02c4c669e" />
 		<entry key="settings.display.windowMode" text="창 모드" sourceHash="74e7a95114592520" />
 		<entry key="settings.display.windowMode.borderless" text="테두리 없음" sourceHash="60c26ddb9c7ef1fa" />
 		<entry key="settings.display.windowMode.windowed" text="창" sourceHash="c73eba7da7d67b64" />
+		<entry key="settings.gameplay.cameraPreset" text="카메라 시점" sourceHash="66c7042fa9ddfce3" />
 		<entry key="settings.gameplay.cameraShake" text="카메라 흔들림" sourceHash="0d4412b117d8c5c4" />
 		<entry key="settings.gameplay.fieldOfView" text="시야각" sourceHash="cfc03af4e2ec2dd9" />
 		<entry key="settings.gameplay.headBob" text="걸음 흔들림" sourceHash="6b009c84219aa0f8" />

@@ -56,7 +56,7 @@ namespace sw
         if ( PhysicsBackend::initialize3D() == false )
             return false;
         _bInitialized = SW_TRUE;
-        SW_LOG_INFO_ID( "PhysicsSystem.PhysicsReadyLayersMaterials", "Physics ready: %# layers, %# materials, %# sub-steps per fixed step", _settings._listLayer.size(), _settings._listMaterial.size(), _settings._subStepCount );
+        SW_LOG_INFO_ID( "PhysicsSystem.PhysicsReadyLayersMaterials", "Physics ready: %# collision channels, %# materials, %# sub-steps per fixed step", _settings._listChannel.size(), _settings._listMaterial.size(), _settings._subStepCount );
         return true;
     }
 

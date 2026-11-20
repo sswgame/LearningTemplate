@@ -139,6 +139,11 @@ namespace sw
         UIScreen* getActiveScreen() const;
         /** @brief 게임 화면 수입니다 — 개발 겹치기 화면(`UIScreen::isDevOverlay`)은 세지 않아 HUD 를 띄운 실행과 아닌 실행의 값이 같다(`<ExpectUI screens>`). */
         uint32 getGameScreenCount() const;
+        /**
+         * @brief 메뉴 스택 깊이 — 닫히는 중이 아니고 포커스를 받을 수 있는 화면(`UIScreen::canTakeFocus` — HUD · Overlay 제외) 수입니다. 시나리오 단언(`ExpectUI screens`)이 쓴다.
+         * @details HUD · 알림 · 로딩 뒤 검은 페이드(Overlay)와 닫기 애니메이션 중인 화면을 세면 값이 게임 · 프레임 타이밍에 달린다(일시정지 → 옵션이 2 가 아니라 3 이었다).
+         */
+        uint32 getMenuStackDepth() const;
         /** @brief 스택의 화면들입니다(그리기 순서 — 레이어, 쌓인 순서. 입력은 역순). 화면 스택 위의 서비스가 읽기만 합니다(접근성 트리 뽑기). */
         const vector<unique_ptr<UIScreen>>& getScreens() const { return _listScreen; }
 
@@ -152,13 +157,26 @@ namespace sw
         template <typename ScreenType>
         [[nodiscard]] UIScreenHandle openScreen( string_view documentPath )
         {
+            return openScreen<ScreenType>( documentPath, []( ScreenType& )
+            { return true; } );
+        }
+        /**
+         * @brief @p ScreenType 화면을 만들고, 올리기 전에 @p prepare( 화면 ) 을 부릅니다 — 코드가 위젯을 짓는 화면(가방 칸 · 상품 줄)은 여기서 짓는다(언리얼 CommonUI `PushWidget` 의 올리기 전 람다 자리).
+         * @details 올리는 순간 탐색 방식이면 기본 포커스가 선다 — 그때 기본 포커스 위젯이 아직 없으면 첫 위젯으로 튄다(가방이 `Slot0` 대신 `Sort`). @p prepare 가 false 면 올리지 않고 무효 핸들이다.
+         */
+        template <typename ScreenType, typename PrepareFunc>
+        [[nodiscard]] UIScreenHandle openScreen( string_view documentPath, PrepareFunc&& prepare )
+        {
             UIScreenDef          desc{};
             vector<UIBindingDef> listBinding{};
             vector<string>       listStyleSheet{};
             unique_ptr<Widget>   root = instantiateDocument( documentPath, ResourceTagSet{}, desc, listBinding, listStyleSheet );
             if ( root == nullptr )
                 return kInvalidUIScreenHandle;
-            return pushDocumentScreen( sw::make_unique<ScreenType>( desc, std::move( root ) ), documentPath, std::move( listBinding ), std::move( listStyleSheet ) );
+            unique_ptr<ScreenType> screen = sw::make_unique<ScreenType>( desc, std::move( root ) );
+            if ( prepare( *screen ) == false )
+                return kInvalidUIScreenHandle;
+            return pushDocumentScreen( std::move( screen ), documentPath, std::move( listBinding ), std::move( listStyleSheet ) );
         }
 
         // --- 엔진 기본 메뉴(옵션, 일시정지) ---------------------------------------------------

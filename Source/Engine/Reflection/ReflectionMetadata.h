@@ -134,8 +134,6 @@ namespace sw
         /** @brief 부모 엘리먼트의 XML attribute 로 직렬화합니다(`PROPERTY( XMLAttribute )`). */
         uint8 _bXMLAttribute : 1;
         uint8 _bAssetPath    : 1;
-        /** @brief 값이 `ReflectedAny` 이거나, 타입과 blob 으로 이루어진 다형 페이로드입니다. */
-        uint8 _bPolymorphic : 1;
         /** @brief 직렬화(JSON, XML, 바이너리, Diff)의 저장과 로드 대상에서 뺍니다(`Transient`, `NonSerialized`). */
         uint8 _bTransient : 1;
         /**

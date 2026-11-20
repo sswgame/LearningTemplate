@@ -56,6 +56,8 @@ namespace sw
         hashed_string _visualID{}; ///< 아이템 외형 id(`ItemVisualCatalog`). 게임플레이 정의와 따로 둔 외형이며, 비어 있으면 보이지 않는다
         PROPERTY()
         string _name{};
+        PROPERTY()
+        string _description{}; ///< 툴팁 설명(현지화 키이거나 원문). 비면 툴팁은 이름과 수치만 보인다
         PROPERTY( Name = "tags" )
         vector<hashed_string>      _listTag{};
         StatBlock                  _stats{};

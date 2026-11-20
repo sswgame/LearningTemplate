@@ -127,3 +127,68 @@ SW_TEST_CASE( CameraCollisionProbeTest, MissingLayersIsAnError )
     SW_REQUIRE_NOT_NULL( pLayered );
     SW_EXPECT_EQUAL( size_t( 2 ), pLayered->_collision._listLayer.size() );
 }
+
+namespace CameraDirectorTestUtil
+{
+    /** @brief 선택 프리셋 둘과 조준 · 실내 상황(실내가 우선순위가 높고 `*` 줄을 가진다)입니다. */
+    constexpr const utf8* kContextCatalogXML = R"(<CameraPresetCatalog>
+    <DefaultBlend curve="SmoothStep" duration="0.5"/>
+    <Context name="Aim" priority="10" action="Aim">
+        <Map from="orbit" to="orbit_aim"/>
+    </Context>
+    <Preset id="orbit"><View mode="Orbit" pitch="24.999867" yaw="0" distance="12" offset="0,1.5,0"/></Preset>
+    <Preset id="follow"><View mode="Follow" pitch="15.000035" yaw="0" distance="6" offset="0,1.6,0"/></Preset>
+    <Preset id="orbit_aim"><View mode="Orbit" pitch="10.000004" yaw="0" distance="4" offset="0,1.5,0"/></Preset>
+    <Preset id="indoor"><View mode="Follow" pitch="5.000002" yaw="0" distance="3" offset="0,1.6,0"/></Preset>
+    <Context name="Indoor" priority="20">
+        <Map from="*" to="indoor"/>
+    </Context>
+</CameraPresetCatalog>)";
+} // namespace CameraDirectorTestUtil
+
+/** @brief [CameraContextTest] 켜진 상황은 선택 프리셋의 줄이 있을 때만 바꾸고, 여럿이면 우선순위가 큰 쪽이 이기며, 상황 프리셋은 순환 대상이 아니다 */
+SW_TEST_CASE( CameraContextTest, ResolvesByPriorityAndSelectedPreset )
+{
+    CameraPresetCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( CameraDirectorTestUtil::kContextCatalogXML, "test.cameras.xml" ) ); // 상황이 프리셋보다 앞에 적혀도 된다
+    const hashed_string orbit( "orbit" );
+    const hashed_string follow( "follow" );
+    const hashed_string aim( "Aim" );
+    const hashed_string indoor( "Indoor" );
+
+    SW_EXPECT_TRUE( orbit == catalog.resolveContextPreset( orbit, {} ) );
+    SW_EXPECT_TRUE( hashed_string( "orbit_aim" ) == catalog.resolveContextPreset( orbit, { aim } ) );
+    SW_EXPECT_TRUE( follow == catalog.resolveContextPreset( follow, { aim } ) ); // follow 에는 조준 줄이 없다
+    SW_EXPECT_TRUE( hashed_string( "indoor" ) == catalog.resolveContextPreset( orbit, { aim, indoor } ) );
+    SW_EXPECT_TRUE( hashed_string( "indoor" ) == catalog.resolveContextPreset( follow, { indoor } ) );
+
+    SW_EXPECT_TRUE( catalog.isContextPreset( hashed_string( "orbit_aim" ) ) );
+    SW_EXPECT_FALSE( catalog.isContextPreset( orbit ) );
+    SW_REQUIRE_NOT_NULL( catalog.findContext( aim ) );
+    SW_EXPECT_TRUE( hashed_string( "Aim" ) == catalog.findContext( aim )->_action );
+    SW_EXPECT_NULL( catalog.findContext( hashed_string( "Vehicle" ) ) );
+}
+
+/** @brief [CameraContextTest] 없는 프리셋을 부르는 줄 · 줄 없는 상황 · 두 번 적은 상황은 오류이고 넣지 않는다 — 켜는 순간 조용히 아무 일도 없게 두지 않는다 */
+SW_TEST_CASE( CameraContextTest, UnknownPresetAndEmptyContextAreErrors )
+{
+    SW_EXPECT_LOG( "CameraPreset.ContextUnknownPreset" );
+    SW_EXPECT_LOG( "CameraPreset.ContextNeedsMaps" );
+    SW_EXPECT_LOG( "CameraPreset.ContextDefinedTwice" );
+    CameraPresetCatalog catalog;
+    (void)catalog.loadFromXMLText( R"(<CameraPresetCatalog>
+    <Preset id="orbit"><View mode="Orbit" pitch="24.999867" yaw="0" distance="12" offset="0,1.5,0"/></Preset>
+    <Context name="Aim" priority="10">
+        <Map from="orbit" to="missing"/>
+        <Map from="orbit" to="orbit"/>
+    </Context>
+    <Context name="Aim" priority="5"><Map from="orbit" to="orbit"/></Context>
+    <Context name="Empty" priority="1"/>
+</CameraPresetCatalog>)",
+                                   "test.cameras.xml" );
+    const CameraContextDef* pAim = catalog.findContext( hashed_string( "Aim" ) );
+    SW_REQUIRE_NOT_NULL( pAim );
+    SW_EXPECT_EQUAL( 10, pAim->_priority );
+    SW_EXPECT_EQUAL( size_t( 1 ), pAim->_listMap.size() );
+    SW_EXPECT_NULL( catalog.findContext( hashed_string( "Empty" ) ) );
+}

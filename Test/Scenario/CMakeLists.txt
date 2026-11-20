@@ -152,7 +152,7 @@ foreach(game IN LISTS list_built_game)
 	# 게임 체인 — 활성 게임의 체인에는 엔진 시나리오도 든다(엔진 시나리오는 게임 하나로 한 번 돈다).
 	set(list_chain_glob "${automation_dir}/*.scenario.xml")
 	if(game STREQUAL SW_ACTIVE_GAME)
-		list(APPEND list_chain_glob "${scenario_root}/engine/automation/*.scenario.xml")
+		list(APPEND list_chain_glob "${scenario_root}/engine/automation/*.scenario.xml" "${scenario_root}/engine/automation/render/*.scenario.xml") # render/ — 렌더 출력 시나리오(HDR 출력 떨어짐 등)
 	endif()
 	sw_glob_source_tree(list_scenario RELATIVE "${scenario_root}" ${list_chain_glob})
 	# GPU 가 무거운 체인은 백엔드를 차례로 돌린다 — 넷을 함께 돌려도 빨라지지 않고(Shooter3D 225 초 대 차례로 227 초) 프레임만 7 → 100 ms 로 느려져

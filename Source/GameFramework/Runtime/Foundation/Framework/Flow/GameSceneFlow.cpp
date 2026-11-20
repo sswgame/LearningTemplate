@@ -32,7 +32,7 @@ namespace sw
         , _saveLock{ saveLock }
         , _listPendingSceneLoad{}
         , _sceneLoadRequestedSubscription{}
-        , _returnToTitleRegistration{}
+        , _listSessionCommandRegistration{}
         , _bResumingWorld{ SW_FALSE }
     {
     }
@@ -125,18 +125,24 @@ namespace sw
 
     void GameSceneFlow::holdSessionCommand( Subscription registration )
     {
-        _returnToTitleRegistration = std::move( registration );
+        _listSessionCommandRegistration.push_back( std::move( registration ) );
     }
 
     void GameSceneFlow::unregisterSessionCommands()
     {
-        _returnToTitleRegistration.reset(); // 핫 리로드의 새 인스턴스가 그 사이 교체했으면 그 등록은 지우지 않는다
+        _listSessionCommandRegistration.clear(); // 핫 리로드의 새 인스턴스가 그 사이 교체했으면 그 등록은 지우지 않는다
     }
 
     void GameSceneFlow::onReturnToTitleCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
     {
         if ( requestTitleScene() == false )
             SW_LOG_ERROR_ID( "GameSceneFlow.ReturnTitleTitleScene", "Return to title: the title scene '%#' was not requested", _settings._titleScene.c_str() );
+    }
+
+    void GameSceneFlow::onStartGameCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
+    {
+        if ( requestEntranceScene() == false )
+            SW_LOG_ERROR_ID( "GameSceneFlow.StartGameEntranceScene", "Start game: the entrance scene '%#' was not requested", getEntranceScene().c_str() );
     }
 
     bool GameSceneFlow::requestLoadScene( const string& scenePath, const utf8* pWhich )

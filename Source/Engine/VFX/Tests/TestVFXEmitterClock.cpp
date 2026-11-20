@@ -67,3 +67,37 @@ SW_TEST_CASE( VFXEmitterClockTest, SkipExpiredStepsKeepsStepsInsideWindow )
     SW_EXPECT_EQUAL( clock.skipExpiredSteps( 100u, 100u + window, step ), 0u );
     SW_EXPECT_EQUAL( clock.getSpawnedCount(), 0u );
 }
+
+/**
+ * @brief [VFXEmitterClockTest] 단계의 배수가 아닌 반복(0.025 초 = 1.5 단계)도 끝을 넘은 몫을 다음 바퀴에 센다 — 1 초 동안 생성률 몫은 정확히 초당 개수이고, 0 초 버스트는 바퀴마다 한 번(처음 + 40 바퀴)이다.
+ * @details 예전에는 되감을 때 넘은 몫을 버려 바퀴가 두 단계(0.033 초)로 늘었다 — 생성이 모자라고 버스트가 31 번이었다.
+ */
+SW_TEST_CASE( VFXEmitterClockTest, LoopRemainderCarriesIntoTheNextLoop )
+{
+    auto pDef          = make_shared<VFXEmitterDef>();
+    pDef->_name        = "Sparks";
+    pDef->_duration    = 0.025f;
+    pDef->_bLooping    = true;
+    pDef->_spawnRate   = 400.0f;
+    pDef->_lifetimeMin = 0.5f;
+    pDef->_lifetimeMax = 0.5f;
+    VFXBurstDef burst;
+    burst._time  = 0.0f;
+    burst._count = 1;
+    pDef->_listBurst.push_back( burst );
+    VFXEmitterClock clock( pDef, 1.0f );
+    for ( int32 stepIndex = 0; stepIndex < 60; ++stepIndex )
+        (void)clock.spawnStep( constant::time::kDefaultFixedStepSeconds );
+    // 400(생성률 1 초) + 41(버스트) — 실수 나머지가 마지막 하나를 다음 단계로 넘길 수 있어 하나를 봐준다
+    SW_EXPECT_TRUE( clock.getSpawnedCount() >= 440u && clock.getSpawnedCount() <= 441u );
+}
+
+/** @brief [VFXEmitterClockTest] 프레임 시간을 오래 쌓아도 단계 수가 어긋나지 않는다 — 144 Hz 프레임 8640 번(60 초)은 3600 단계다(단계의 배수가 아닌 프레임 시간). */
+SW_TEST_CASE( VFXEmitterClockTest, DueStepsDoNotDriftOverLongRuns )
+{
+    VFXEmitterClock clock( VFXEmitterClockTestUtil::makeLoopingDef(), 1.0f );
+    uint64          stepCount = 0;
+    for ( int32 frameIndex = 0; frameIndex < 8640; ++frameIndex )
+        stepCount += clock.takeDueSteps( 1.0f / 144.0f );
+    SW_EXPECT_TRUE( stepCount >= 3599u && stepCount <= 3600u );
+}

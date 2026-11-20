@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraPreset.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -223,6 +224,7 @@ namespace sw
 
     CameraPresetCatalog::CameraPresetCatalog()
         : _listBlendRule{}
+        , _listContext{}
         , _defaultBlend{}
     {
     }
@@ -236,7 +238,53 @@ namespace sw
     {
         GameCatalog<CameraPresetDef, XMLCatalog<CameraPresetCatalog>>::clear();
         _listBlendRule.clear();
+        _listContext.clear();
         _defaultBlend = BlendCurveDef{};
+    }
+
+    const CameraContextDef* CameraPresetCatalog::findContext( const hashed_string& name ) const
+    {
+        for ( const CameraContextDef& context : _listContext )
+        {
+            if ( context._name == name )
+                return &context;
+        }
+        return nullptr;
+    }
+
+    hashed_string CameraPresetCatalog::resolveContextPreset( const hashed_string& selected, const vector<hashed_string>& listActive ) const
+    {
+        const hashed_string     any( CameraPresetInternal::kAnyPreset );
+        const CameraContextDef* pWinner = nullptr;
+        const hashed_string*    pTo     = nullptr;
+        for ( const CameraContextDef& context : _listContext )
+        {
+            const bool bLowerPriority = pWinner != nullptr && context._priority <= pWinner->_priority;
+            if ( bLowerPriority || VectorUtil::contains( listActive, context._name ) == false )
+                continue;
+            for ( const CameraContextMap& map : context._listMap )
+            {
+                if ( map._from != selected && map._from != any )
+                    continue;
+                pWinner = &context;
+                pTo     = &map._to;
+                break;
+            }
+        }
+        return pTo != nullptr ? *pTo : selected;
+    }
+
+    bool CameraPresetCatalog::isContextPreset( const hashed_string& id ) const
+    {
+        for ( const CameraContextDef& context : _listContext )
+        {
+            for ( const CameraContextMap& map : context._listMap )
+            {
+                if ( map._to == id )
+                    return true;
+            }
+        }
+        return false;
     }
 
     const BlendCurveDef& CameraPresetCatalog::getBlend( const hashed_string& from, const hashed_string& to ) const
@@ -273,8 +321,11 @@ namespace sw
             Element::of<&CameraPresetCatalog::loadDefaultBlend>( "DefaultBlend" ).uncounted(),
             Element::of<&CameraPresetCatalog::loadPreset>( "Preset" ),
             Element::of<&CameraPresetCatalog::loadBlendRule>( "Blend" ).uncounted(),
+            Element::of<&CameraPresetCatalog::loadContext>( "Context" ).uncounted(),
         };
-        return XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        const uint32 loadedCount = XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        validateContextList( sourceName );
+        return loadedCount;
     }
 
     bool CameraPresetCatalog::loadDefaultBlend( const XMLNode& node, string_view sourceName )
@@ -324,6 +375,55 @@ namespace sw
         }
         addBlendRule( rule );
         return true;
+    }
+
+    bool CameraPresetCatalog::loadContext( const XMLNode& node, string_view sourceName )
+    {
+        CameraContextParams head;
+        if ( XMLFields::readProperties( node, head, sourceName ) == false )
+            return false;
+        if ( findContext( head._name ) != nullptr )
+        {
+            SW_LOG_ERROR_ID( "CameraPreset.ContextDefinedTwice", "%#: context '%#' is defined twice - skipped", sourceName, head._name.c_str() );
+            return false;
+        }
+        CameraContextDef context;
+        context._name     = head._name;
+        context._action   = head._action;
+        context._priority = head._priority;
+        bool bValid       = true;
+        for ( XMLNode mapNode = node.findChild( "Map" ); mapNode; mapNode = mapNode.findNextSibling( "Map" ) )
+        {
+            CameraContextMap map;
+            if ( XMLFields::readProperties( mapNode, map, sourceName ) )
+                context._listMap.push_back( map );
+            else
+                bValid = false;
+        }
+        if ( bValid == false || context._listMap.empty() )
+        {
+            SW_LOG_ERROR_ID( "CameraPreset.ContextNeedsMaps", "%#: context '%#' needs one or more valid <Map from to> - skipped", sourceName, head._name.c_str() );
+            return false;
+        }
+        _listContext.push_back( std::move( context ) );
+        return true;
+    }
+
+    void CameraPresetCatalog::validateContextList( string_view sourceName )
+    {
+        const hashed_string any( CameraPresetInternal::kAnyPreset );
+        for ( CameraContextDef& context : _listContext )
+        {
+            VectorUtil::removeIf( context._listMap, [&]( const CameraContextMap& map )
+            {
+                const bool bUnknownFrom = map._from != any && find( map._from ) == nullptr;
+                const bool bUnknownTo   = find( map._to ) == nullptr;
+                if ( bUnknownFrom || bUnknownTo )
+                    SW_LOG_ERROR_ID( "CameraPreset.ContextUnknownPreset", "%#: context '%#' maps '%#' -> '%#', which is not a preset here - line skipped", sourceName, context._name.c_str(),
+                                     map._from.c_str(), map._to.c_str() );
+                return bUnknownFrom || bUnknownTo;
+            } );
+        }
     }
 } // namespace sw
 

@@ -72,6 +72,8 @@ namespace sw::editor
         void drawPreview();
         /** @brief 채널과 깊이 보기 행을 그립니다. */
         void drawViewControls( const RenderTargetInfo& selected );
+        /** @brief 이 그림을 어느 패스 끝까지 그린 시점으로 볼지(프레임 디버거 멈춤 지점) 고르는 행을 그립니다. */
+        void drawFrameTimeControls( const RenderTargetInfo& selected );
         /** @brief 그려진 미리보기 위에서 마우스가 가리키는 픽셀 값을 읽어 툴팁으로 보여 줍니다. */
         void probeHoveredPixel( const float2& imageMin, const float2& imageSize );
 

@@ -28,7 +28,7 @@ namespace sw
             return FileUtil::joinPath( outputDir, fileName );
         }
 
-        /** @brief `<>` 밖의 `,` 만 분할하고 각 토큰을 trim 합니다. */
+        /** @brief `<>` · `()` 밖의 `,` 만 분할하고 각 토큰을 trim 합니다(`map<K, V>` · builtins 의 Layout 칸 `f32(_x,_y)` 가 한 토큰). */
         static vector<string> splitCommaRespectingAngles( string_view inner )
         {
             vector<string> listResult;
@@ -38,9 +38,9 @@ namespace sw
             for ( size_t index = 0; index < inner.size(); ++index )
             {
                 const utf8 character = inner[index];
-                if ( character == '<' )
+                if ( character == '<' || character == '(' )
                     ++depth;
-                else if ( character == '>' )
+                else if ( character == '>' || character == ')' )
                     --depth;
 
                 if ( character == ',' && depth == 0 )

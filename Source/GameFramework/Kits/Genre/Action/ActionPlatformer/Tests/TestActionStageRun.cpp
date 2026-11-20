@@ -7,6 +7,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionStageRun.h"
+#include "GameFramework/Runtime/Gameplay/Respawn/CheckpointState.h"
 
 // ActionStageRunTest — 스테이지 한 판: 시간 · 피격 · 수집 점수와 등급 경계, 체크포인트 순서, 죽으면 다시 놓이는 비밀, 게임 오버 뒤 멈춤, 깨진 상태 바이트 거절(스테이지 없는 진행 판 · 겹친 비밀).
 // ActionPlatformerCatalogTest — 카탈로그 거절: 등급표 없음 · 가중치 0 · 겹친 이름 · 모르는 상태. 키트 GF_ActionPlatformer(nogpu).
@@ -34,6 +35,25 @@ namespace
     struct ActionStageRunTestUtil
     {
         /**
+         * @brief 체크포인트 기록(`CheckpointState`, 안쪽 반사 구조체 — 머리 없이 칸만)을 씁니다. −1 이면 지난 것이 없고, 그 밖은 그 순번의 기록 하나입니다(스테이지 `s1` 의 cp1 · cp2, 밖이면 목록에 없는 이름).
+         * @details 바이트 모양은 정상 `writeState` 에서 머리만 떼어 가져온다 — 칸 배치가 바뀌어도 손 바이트가 따라간다. 체크포인트가 순번 int 하나였을 때의 손 바이트 자리다.
+         */
+        static void writeCheckpointBytes( sw::Archive& outArchive, int32 checkpointIndex )
+        {
+            sw::CheckpointState checkpoints;
+            if ( checkpointIndex != -1 )
+            {
+                sw::CheckpointDef def;
+                def._id    = checkpointIndex == 0 ? kCheckpoint1 : ( checkpointIndex == 1 ? kCheckpoint2 : sw::hashed_string( "elsewhere" ) );
+                def._order = checkpointIndex;
+                (void)checkpoints.activate( def, sw::float3{}, 0.0f );
+            }
+            sw::Archive written;
+            checkpoints.writeState( written );
+            outArchive.writeBytes( written.getData() + sw::StateIO::kReflectedHeaderBytes, written.getSize() - sw::StateIO::kReflectedHeaderBytes );
+        }
+
+        /**
          * @brief `ActionStageRun::writeState` 와 같은 모양의 바이트를 씁니다. 정상 경로로 만들 수 없는 판을 읽기에 넣을 때 씁니다.
          * @details 리플렉션 머리(타입 판 + 칸 배치 해시)는 정상 `writeState` 바이트에서 그대로 가져온다 — 손으로 짜면 머리가 달라 다른 이유로 거절되어 거짓 통과한다.
          */
@@ -46,7 +66,7 @@ namespace
             outArchive.writeBytes( blankBytes.getData(), sw::StateIO::kReflectedHeaderBytes );
             outArchive << 1.0f;                    // 경과 시간
             outArchive << static_cast<int32>( 1 ); // 목숨
-            outArchive << checkpointIndex;
+            writeCheckpointBytes( outArchive, checkpointIndex );
             outArchive << static_cast<int32>( 0 );     // 피격
             outArchive << static_cast<int32>( 0 );     // 죽은 수
             outArchive << static_cast<int64>( state ); // 리플렉션 열거는 int64 로 놓인다

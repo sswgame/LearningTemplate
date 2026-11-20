@@ -728,8 +728,8 @@ namespace sw
     {
         if ( bindingIndex >= shaderslot::vk::kSlotBindingCount || index == kInvalidDescriptorIndex )
             return;
-        const RHIBufferHandle                      handle  = bUAV ? _pDevice->uavSourceBufferAt( index ) : _pDevice->bindlessSourceBufferAt( index );
-        const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( handle );
+        const RHIBufferSlice                       source  = bUAV ? RHIBufferSlice{ _pDevice->uavSourceBufferAt( index ), 0, 0 } : _pDevice->bindlessSourceSliceAt( index );
+        const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( source._buffer );
         if ( pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE )
             return;
 
@@ -751,6 +751,12 @@ namespace sw
                 candidate._range  = slotSize;
                 candidate._offset = static_cast<uint64>( _pDevice->getFrameSlot() % constant::render::kMaxFrameCountInFlight ) * slotSize;
             }
+        }
+        // 상수 버퍼 페이지의 구간이면 그 칸 안의 구간만 건다(감사 R-4 — 디스크립터 offset · range).
+        if ( source._size != 0 )
+        {
+            candidate._offset += source._offset;
+            candidate._range = source._size;
         }
 
         const uint64 slotBit        = ( uint64{ 1 } << bindingIndex );

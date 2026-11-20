@@ -166,7 +166,7 @@ SW_TEST_CASE( FogTest, PassTypeRowDeclaresDepthOnlyBlendedDraw )
 {
     const RenderPassKindInfo& info = getRenderPassKindInfo( RenderPassKind::Fog );
     SW_EXPECT_TRUE( isPipelinePassType( RenderPassKind::Fog ) );
-    SW_EXPECT_TRUE( info.hasFlag( RenderPassTraitFlag::kBlend ) );
+    SW_EXPECT_TRUE( info._blend == RenderPassBlend::Premultiplied );
     SW_EXPECT_FALSE( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) ); // 전용 실행 — 일반 길의 복사 · 지우기를 타면 장면이 지워진다
     SW_EXPECT_TRUE( info._inputContract.hasRole( RenderPassInputRole::SceneDepth ) );
     SW_EXPECT_FALSE( info._inputContract.hasRole( RenderPassInputRole::SourceColor ) ); // 색을 읽지 않는다 — 읽으면서 쓰는 첨부가 없다

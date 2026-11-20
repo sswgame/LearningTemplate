@@ -1,5 +1,6 @@
 #include "binding.hlsli"
 #include "fullscreen.hlsli"
+#include "display_encode.hlsli"
 #include "post_grade.hlsli"
 
 float4 PSMain( PSInput input ) : SV_TARGET
@@ -12,7 +13,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const bool   bSkipPost = ( g_Flags & SW_PASS_FLAG_SKIP_POST ) != 0u;
     const float3 lensed    = bSkipPost ? source : CameraGrade::applyLens( input._uv, g_SourceTexel.xy, source );
     const float3 exposed   = bSkipPost ? source : CameraGrade::applyColorGrading( CameraGrade::applyExposure( lensed ) );
-    const float3 mapped    = exposed / ( exposed + 1.0f );
+    const float3 mapped    = DisplayEncode::applyToneCurve( exposed ); // 출력 휘도를 아는 곡선 — SDR 은 x / (x + 1) 그대로
     const float3 graded    = bSkipPost ? mapped : CameraGrade::apply( input._uv, CameraGrade::applyFilmGrain( input._position.xy, CameraGrade::applyLUT( mapped ) ) );
     return float4( bSkipTonemap ? source : graded, 1.0f );
 }

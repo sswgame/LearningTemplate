@@ -62,6 +62,33 @@ namespace sw
         return false;
     }
 
+    vector<RenderGraphResourceAccess> RenderPipelineAsset::buildFramePassAccesses( const RenderGraphPassDesc& pass ) const
+    {
+        // 규칙은 여기 한 곳이다 — 입력은 읽기(SRV), 출력은 버퍼면 UAV · 텍스처면 렌더 타깃(깊이 히스토리 복사 같은 그리기), 규칙 밖은 세 목록(언리얼 RDG 패스 파라미터의 접근 하나).
+        vector<RenderGraphResourceAccess> listAccess;
+        listAccess.reserve( pass._listInput.size() + pass._listOutput.size() + pass._listIndirectArgs.size() + pass._listCopySource.size() + pass._listCopyDest.size() );
+        const auto append = [this, &listAccess]( const vector<string>& listName, RenderGraphAccess bufferAccess, RenderGraphAccess textureAccess )
+        {
+            for ( const string& name : listName )
+            {
+                RenderGraphViewableKind viewable = RenderGraphViewableKind::Buffer; // 로드 검증이 선언한 자원만 받는다 — 여기 닿는 이름은 늘 찾는다
+                for ( const RenderGraphResourceDesc& resource : _desc._listResource )
+                {
+                    if ( StringUtil::equals( resource._name, name, true ) )
+                        viewable = resource._viewable;
+                }
+                const RenderGraphAccess access = viewable == RenderGraphViewableKind::Texture ? textureAccess : bufferAccess;
+                listAccess.push_back( RenderGraphResourceAccess{ hashed_string( name.c_str() ), access, viewable } );
+            }
+        };
+        append( pass._listInput, RenderGraphAccess::ShaderRead, RenderGraphAccess::ShaderRead );
+        append( pass._listOutput, RenderGraphAccess::UnorderedAccess, RenderGraphAccess::RenderTarget );
+        append( pass._listIndirectArgs, RenderGraphAccess::IndirectArgs, RenderGraphAccess::IndirectArgs );
+        append( pass._listCopySource, RenderGraphAccess::CopySource, RenderGraphAccess::CopySource );
+        append( pass._listCopyDest, RenderGraphAccess::CopyDest, RenderGraphAccess::CopyDest );
+        return listAccess;
+    }
+
     bool RenderPipelineAsset::mergeRenderPassRefs( string_view sourcePath )
     {
         // 묶음의 원소가 앞, 이 파이프라인의 원소가 뒤다 — 세 목록이 같은 규칙이다. 이름이 겹치면 덮어쓰지 않고 검증이 알린다.
@@ -305,7 +332,7 @@ namespace sw
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassRenderStateInvalid", "[%#] pass '%#': %#", sourcePath, pass._name, pStateReason );
                         ++issueCount;
                     }
-                    if ( pass._resolvedRenderState.isAnyBlendEnabled() == false && info.hasFlag( RenderPassTraitFlag::kBlend ) )
+                    if ( pass._resolvedRenderState.isAnyBlendEnabled() == false && info._blend != RenderPassBlend::None )
                         SW_LOG_WARNING_ID( "RenderPipelineAsset.PassBlendOff", "[%#] pass '%#': blending is off on a %# pass - its colors overwrite the scene", sourcePath, pass._name, getEnumName( pass._type ) );
                 }
                 return issueCount;
@@ -379,6 +406,36 @@ namespace sw
                     {
                         if ( findResource( desc, name ) == nullptr )
                             report( "RenderPipelineAsset.FramePassOutputNotResource", pass._name, "an output is not in _listResource" );
+                    }
+                    // 규칙 밖 접근(간접 인자 · 복사)도 선언한 자원이고, 간접 인자는 버퍼다.
+                    for ( const vector<string>* pListName : { &pass._listIndirectArgs, &pass._listCopySource, &pass._listCopyDest } )
+                    {
+                        for ( const string& name : *pListName )
+                        {
+                            const RenderGraphResourceDesc* pResource = findResource( desc, name );
+                            if ( pResource == nullptr )
+                                report( "RenderPipelineAsset.FramePassAccessNotResource", pass._name, "an indirect-args or copy name is not in _listResource" );
+                            else if ( pListName == &pass._listIndirectArgs && pResource->_viewable != RenderGraphViewableKind::Buffer )
+                                report( "RenderPipelineAsset.FramePassIndirectArgsNotBuffer", pass._name, "_listIndirectArgs names a texture - indirect arguments are a buffer" );
+                        }
+                    }
+                    // 한 패스의 한 이름은 접근 하나다 — 둘이면 어느 상태로 둘지 정할 수 없다(그래프의 `Renderer.GraphDuplicateAccess` 와 같은 규칙을 로드에서 먼저 막는다).
+                    {
+                        vector<const string*> listSeen;
+                        for ( const vector<string>* pListName : { &pass._listInput, &pass._listOutput, &pass._listIndirectArgs, &pass._listCopySource, &pass._listCopyDest } )
+                        {
+                            for ( const string& name : *pListName )
+                            {
+                                bool bSeen = false;
+                                for ( const string* pSeen : listSeen )
+                                {
+                                    bSeen = bSeen || StringUtil::equals( *pSeen, name, true );
+                                }
+                                if ( bSeen )
+                                    report( "RenderPipelineAsset.FramePassDuplicateAccess", pass._name, "a resource is named twice in one frame pass (input, output, indirect args, copy) - one pass has one access per resource" );
+                                listSeen.push_back( &name );
+                            }
+                        }
                     }
                     for ( size_t otherIndex = 0; otherIndex < passIndex; ++otherIndex )
                     {
@@ -523,6 +580,13 @@ namespace sw
                 if ( bPostMaterialPass && pass._shaderPath.empty() == false )
                 {
                     SW_LOG_ERROR_ID( "RenderPipelineAsset.PassPostMaterialShader", "[%#] pass '%#': a PostProcessMaterial pass draws the shaders of its blendable materials - leave _shaderPath empty", sourcePath, pass._name );
+                    ++issueCount;
+                }
+                // 간접 인자 · 복사 목록은 프레임 자원의 접근이다 — 뷰 패스의 입출력은 첨부라 규칙 밖 접근이 없다.
+                if ( pass._listIndirectArgs.empty() == false || pass._listCopySource.empty() == false || pass._listCopyDest.empty() == false )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassFrameAccessList", "[%#] pass '%#': _listIndirectArgs, _listCopySource and _listCopyDest are only for frame passes (_listFramePass)", sourcePath,
+                                     pass._name );
                     ++issueCount;
                 }
                 // 뷰 그래프는 뷰마다 다시 돌고 병렬로 기록한다 — 비동기 큐는 프레임 패스만 받는다(포크 · 조인을 뷰마다 되풀이할 자리가 없다).

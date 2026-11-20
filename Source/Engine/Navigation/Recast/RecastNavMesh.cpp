@@ -6,6 +6,7 @@
 #include "Core/Memory/MemoryTag.h"
 
 #include "Engine/Foundation/EngineParallel.h"
+#include "Engine/Navigation/NavClusterGraph.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/Recast/DetourNavCrowd.h"
 #include "Engine/Navigation/Recast/RecastAreaUtil.h"
@@ -250,8 +251,19 @@ namespace sw
                 {
                     const bool bStartInTile = tileBounds._min._x <= link._start._x && link._start._x < tileBounds._max._x && tileBounds._min._z <= link._start._z &&
                                               link._start._z < tileBounds._max._z;
-                    if ( bStartInTile )
-                        listLinkInTile.push_back( link );
+                    if ( bStartInTile == false )
+                        continue;
+                    // Detour 는 링크의 끝을 이 타일과 여덟 이웃에서만 찾는다(`connectExtOffMeshLinks`) — 더 먼 끝은 조용히 이어지지 않는다. 스트리밍 월드의 다리 · 문도 같은 규칙이다.
+                    const float32 tileSize    = tileBounds._max._x - tileBounds._min._x;
+                    const bool    bEndInReach = link._end._x >= tileBounds._min._x - tileSize && link._end._x < tileBounds._max._x + tileSize && link._end._z >= tileBounds._min._z - tileSize &&
+                                             link._end._z < tileBounds._max._z + tileSize;
+                    if ( bEndInReach == false )
+                    {
+                        SW_LOG_ERROR_ID( "RecastNavMesh.OffMeshLinkSpansTiles", "Off-mesh link %# from (%#, %#) to (%#, %#) reaches past the neighbouring navmesh tile (%# m) - Detour cannot join it; split it or raise the tile size",
+                                         link._userID, link._start._x, link._start._z, link._end._x, link._end._z, tileSize );
+                        continue;
+                    }
+                    listLinkInTile.push_back( link );
                 }
                 return listLinkInTile;
             }
@@ -693,6 +705,170 @@ namespace sw
                 outListTile.push_back( std::move( tile ) );
             }
         }
+    }
+
+    void RecastNavMesh::collectClusterGraph( NavClusterGraph& outGraph ) const
+    {
+        outGraph.clear();
+        if ( _pNavMesh == nullptr )
+            return;
+        const dtNavMesh* const pConst    = _pNavMesh;
+        const uint32           kNoIndex  = NavClusterGraph::kNoCluster;
+        const int32            maxTiles  = pConst->getMaxTiles();
+        const int32            maxLayers = static_cast<int32>( RecastTileCache::kMaxLayerCount * 2 );
+        // ① 폴리곤마다 전역 자리를 매긴다 — 타일 자리(Z, X) 순, 한 자리의 층들은 함께(장애물 캐시는 자리 하나에 층 여럿).
+        vector<uint32>            listTileBase( static_cast<size_t>( maxTiles ), kNoIndex );
+        vector<const dtMeshTile*> listOrderedTile;
+        vector<const dtMeshTile*> listLayer( static_cast<size_t>( maxLayers ), nullptr );
+        uint32                    polyCount = 0;
+        for ( int32 tileZ = 0; tileZ < _grid._tileCountZ; ++tileZ )
+        {
+            for ( int32 tileX = 0; tileX < _grid._tileCountX; ++tileX )
+            {
+                const int32 layerCount = pConst->getTilesAt( tileX, tileZ, listLayer.data(), maxLayers );
+                for ( int32 layerIndex = 0; layerIndex < layerCount; ++layerIndex )
+                {
+                    const dtMeshTile* pTile = listLayer[static_cast<size_t>( layerIndex )];
+                    if ( pTile == nullptr || pTile->header == nullptr || pTile->header->polyCount == 0 )
+                        continue;
+                    unsigned int salt      = 0;
+                    unsigned int tileIndex = 0;
+                    unsigned int polyIndex = 0;
+                    pConst->decodePolyId( pConst->getPolyRefBase( pTile ), salt, tileIndex, polyIndex );
+                    listTileBase[tileIndex] = polyCount;
+                    listOrderedTile.push_back( pTile );
+                    polyCount += static_cast<uint32>( pTile->header->polyCount );
+                }
+            }
+        }
+        // 폴리 참조 → 전역 자리(끼운 타일이 아니면 없음)와 그 타일입니다.
+        const auto toGlobal = [&]( dtPolyRef ref, const dtMeshTile*& outTile ) -> uint32
+        {
+            unsigned int salt      = 0;
+            unsigned int tileIndex = 0;
+            unsigned int polyIndex = 0;
+            pConst->decodePolyId( ref, salt, tileIndex, polyIndex );
+            outTile = static_cast<int32>( tileIndex ) < maxTiles ? pConst->getTile( static_cast<int32>( tileIndex ) ) : nullptr;
+            if ( outTile == nullptr || outTile->header == nullptr || listTileBase[tileIndex] == kNoIndex || static_cast<int32>( polyIndex ) >= outTile->header->polyCount )
+                return kNoIndex;
+            return listTileBase[tileIndex] + polyIndex;
+        };
+        // ② 같은 타일 자리 안의 이음(내부 이음 · 같은 자리의 링크)으로 덩어리를 묶는다(합집합 찾기).
+        vector<uint32> listParent( polyCount );
+        for ( uint32 polyIndex = 0; polyIndex < polyCount; ++polyIndex )
+        {
+            listParent[polyIndex] = polyIndex;
+        }
+        const auto findRoot = [&listParent]( uint32 polyIndex ) -> uint32
+        {
+            while ( listParent[polyIndex] != polyIndex )
+            {
+                listParent[polyIndex] = listParent[listParent[polyIndex]];
+                polyIndex             = listParent[polyIndex];
+            }
+            return polyIndex;
+        };
+        vector<NavClusterLink> listCrossLink; // 다른 타일 자리로 가는 이음 — 아직 폴리곤 자리다. 덩어리를 매긴 뒤 클러스터 자리로 바꾼다
+        uint32                 base = 0;
+        for ( const dtMeshTile* pTile : listOrderedTile )
+        {
+            for ( int32 polyIndex = 0; polyIndex < pTile->header->polyCount; ++polyIndex )
+            {
+                const dtPoly& poly = pTile->polys[polyIndex];
+                for ( unsigned int linkIndex = poly.firstLink; linkIndex != DT_NULL_LINK; linkIndex = pTile->links[linkIndex].next )
+                {
+                    const dtMeshTile* pTarget = nullptr;
+                    const uint32      target  = toGlobal( pTile->links[linkIndex].ref, pTarget );
+                    if ( target == kNoIndex )
+                        continue;
+                    const uint32 source = base + static_cast<uint32>( polyIndex );
+                    if ( pTarget->header->x == pTile->header->x && pTarget->header->y == pTile->header->y )
+                        listParent[findRoot( source )] = findRoot( target );
+                    else
+                        listCrossLink.push_back( NavClusterLink{ source, target } );
+                }
+            }
+            base += static_cast<uint32>( pTile->header->polyCount );
+        }
+        // ③ 타일 자리마다 덩어리를 클러스터로 — 중심은 덩어리의 걷는 폴리곤 중심 평균에 가장 가까운 걷는 폴리곤 중심이다(오목한 덩어리에서도 내비메시 위 점).
+        vector<uint32>     listRootCluster( polyCount, kNoIndex );
+        vector<uint32>     listPolyCluster( polyCount, kNoIndex );
+        vector<float3>     listPolyCenter( polyCount );
+        vector<uint8>      listPolyWalkable( polyCount, 0 );
+        vector<NavCluster> listCluster;
+        vector<float3>     listSum;
+        vector<uint32>     listWalkableCount;
+        size_t             groupBegin = 0;
+        base                          = 0;
+        while ( groupBegin < listOrderedTile.size() )
+        {
+            const int32  tileX        = listOrderedTile[groupBegin]->header->x;
+            const int32  tileZ        = listOrderedTile[groupBegin]->header->y;
+            const uint32 groupBase    = base;
+            const size_t firstCluster = listCluster.size();
+            size_t       groupEnd     = groupBegin;
+            for ( ; groupEnd < listOrderedTile.size() && listOrderedTile[groupEnd]->header->x == tileX && listOrderedTile[groupEnd]->header->y == tileZ; ++groupEnd )
+            {
+                const dtMeshTile* pTile = listOrderedTile[groupEnd];
+                for ( int32 polyIndex = 0; polyIndex < pTile->header->polyCount; ++polyIndex )
+                {
+                    const dtPoly& poly   = pTile->polys[polyIndex];
+                    const uint32  global = base + static_cast<uint32>( polyIndex );
+                    const uint32  root   = findRoot( global );
+                    if ( listRootCluster[root] == kNoIndex )
+                    {
+                        listRootCluster[root] = static_cast<uint32>( listCluster.size() );
+                        NavCluster cluster{};
+                        cluster._tileX = tileX;
+                        cluster._tileZ = tileZ;
+                        listCluster.push_back( cluster );
+                        listSum.push_back( float3{} );
+                        listWalkableCount.push_back( 0 );
+                    }
+                    const uint32 clusterIndex = listRootCluster[root];
+                    listPolyCluster[global]   = clusterIndex;
+                    float3 center{};
+                    for ( uint32 vertexIndex = 0; vertexIndex < poly.vertCount; ++vertexIndex )
+                    {
+                        center = center + float3( &pTile->verts[poly.verts[vertexIndex] * 3] );
+                    }
+                    listPolyCenter[global] = center * ( 1.0f / static_cast<float32>( poly.vertCount > 0 ? poly.vertCount : 1 ) );
+                    if ( poly.getType() == DT_POLYTYPE_OFFMESH_CONNECTION )
+                        continue; // 링크 폴리곤은 걷는 면이 아니다 — 중심을 고르는 데 넣지 않는다
+                    listPolyWalkable[global]        = 1;
+                    listSum[clusterIndex]           = listSum[clusterIndex] + listPolyCenter[global];
+                    listWalkableCount[clusterIndex] = listWalkableCount[clusterIndex] + 1u;
+                }
+                base += static_cast<uint32>( pTile->header->polyCount );
+            }
+            for ( size_t clusterIndex = firstCluster; clusterIndex < listCluster.size(); ++clusterIndex )
+            {
+                const bool   bHasWalkable = listWalkableCount[clusterIndex] > 0;
+                const float3 average      = bHasWalkable ? listSum[clusterIndex] * ( 1.0f / static_cast<float32>( listWalkableCount[clusterIndex] ) ) : float3{};
+                float32      best         = MathUtil::kMaxFloat;
+                for ( uint32 global = groupBase; global < base; ++global )
+                {
+                    // 걷는 폴리곤이 없는 덩어리(링크 폴리곤뿐)는 그 링크 폴리곤 중심을 쓴다.
+                    const bool bCandidate = listPolyCluster[global] == clusterIndex && ( bHasWalkable == false || listPolyWalkable[global] != 0 );
+                    if ( bCandidate == false )
+                        continue;
+                    const float32 distanceSquared = float3::getDistanceSquared( listPolyCenter[global], average );
+                    if ( distanceSquared < best )
+                    {
+                        best                              = distanceSquared;
+                        listCluster[clusterIndex]._center = listPolyCenter[global];
+                    }
+                }
+            }
+            groupBegin = groupEnd;
+        }
+        // ④ 다른 타일 자리로 가는 이음을 클러스터 사이 간선으로.
+        for ( NavClusterLink& link : listCrossLink )
+        {
+            link._from = listPolyCluster[link._from];
+            link._to   = listPolyCluster[link._to];
+        }
+        (void)outGraph.build( std::move( listCluster ), listCrossLink );
     }
 
     uint32 RecastNavMesh::getLoadedTileCount() const

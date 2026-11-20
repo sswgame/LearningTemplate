@@ -72,7 +72,7 @@ namespace sw
         _state._vfxMeshReadback.release( _pDevice );
     }
 
-    void FrameGraphExecutor::beginFrame()
+    void FrameGraphExecutor::beginFrame( FrameBufferTable& table )
     {
         _bGPUCullingActive = 0;
         _state._gpuMessages.poll();
@@ -90,11 +90,20 @@ namespace sw
             pView->_bOcclusionTilesThisFrame = SW_FALSE;
             pView->_bHZBValid                = SW_FALSE;
         }
+        // 이번 프레임에 짓는 뷰의 피라미드 · 가림 타일 — 그래프가 짓기 앞(UAV) · 컬링 앞(SRV) 전이를 낸다. 칸 번호는 `recordFrameHZBs` 와 같다.
+        if ( shouldBuildFrameHZB( _state._mainView ) )
+            HZBOcclusion::registerFrameResources( table, 0, _state._mainView );
+        for ( uint32 extraIndex = 0; extraIndex < static_cast<uint32>( _state._listExtraView.size() ); ++extraIndex )
+        {
+            const FrameViewTarget& view = *_state._listExtraView[extraIndex];
+            if ( view._bRenderThisFrame == SW_TRUE && shouldBuildFrameHZB( view ) )
+                HZBOcclusion::registerFrameResources( table, extraIndex + 1, view );
+        }
     }
 
-    void FrameGraphExecutor::executePass( RenderPassKind type, IRHICommandList& cmd )
+    void FrameGraphExecutor::executePass( RenderPassKind type, const RenderGraphPassContext& graphContext )
     {
-        _pCmd = &cmd;
+        _pCmd = graphContext._pCmdList;
         switch ( type )
         {
             case RenderPassKind::DepthHistory:
@@ -104,7 +113,7 @@ namespace sw
             }
             case RenderPassKind::HZBBuild:
             {
-                recordFrameHZBs();
+                recordFrameHZBs( graphContext );
                 break;
             }
             case RenderPassKind::VFXSimulation:
@@ -613,30 +622,38 @@ namespace sw
         }
     }
 
-    void FrameGraphExecutor::recordFrameHZBs()
+    bool FrameGraphExecutor::shouldBuildFrameHZB( const FrameViewTarget& view ) const
+    {
+        // 컬링이 없는 백엔드(DX11)는 읽을 쪽이 없다. 기록을 버리는 프레임은 지난 깊이가 다른 장면이라 짓지 않는다. 깊이 히스토리 복사가 없으면 읽을 사본이 없다
+        // (복사 PSO 는 파이프라인이 DepthHistory 패스를 선언했을 때만 있다 — 그 패스가 같은 판정으로 이번 프레임에 사본을 RW 상태로 채웠다).
+        const bool bEnabled = _pDevice != nullptr && _state._settings._bOcclusionCulling != SW_FALSE && _pDevice->getCapabilities()._bGPUCulling != SW_FALSE;
+        return bEnabled && view._bHistoryReset == SW_FALSE && canCopyDepthHistory( view );
+    }
+
+    void FrameGraphExecutor::recordFrameHZBs( const RenderGraphPassContext& graphContext )
     {
         if ( _pCmd == nullptr || _pDevice == nullptr )
             return;
-        // HZB 는 옮긴 깊이 히스토리(지난 장면 깊이)에서 짓는다 — 컬링(GPUCull 패스)이 `HZB` 를 읽어 이 뒤에 온다. 컬링이 없는 백엔드(DX11)는 읽을 쪽이 없다.
+        // HZB 는 옮긴 깊이 히스토리(지난 장면 깊이)에서 짓는다 — 컬링(GPUCull 패스)이 `HZB` 를 읽어 이 뒤에 온다. 전이는 그래프가 냈다(`beginFrame` 이 등록한 칸).
         const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassKind::HZBBuild );
         const bool                   bEnabled = _state._settings._bOcclusionCulling != SW_FALSE && _pDevice->getCapabilities()._bGPUCulling != SW_FALSE;
-        // 지난 프레임 사각형만 읽는다(자동 렌더 배율 — 사각형 밖은 옛 깊이다). 기록을 버리는 프레임은 지난 깊이가 다른 장면이라 짓지 않는다.
-        const auto recordView = [this, pso, bEnabled]( FrameViewTarget& view, bool bWriteTiles )
+        // 지난 프레임 사각형만 읽는다(자동 렌더 배율 — 사각형 밖은 옛 깊이다).
+        const auto recordView = [this, &graphContext, pso]( FrameViewTarget& view, uint32 viewSlot, bool bWriteTiles )
         {
-            const bool bBuilds = bEnabled && view._bHistoryReset == SW_FALSE && canCopyDepthHistory( view );
-            if ( bBuilds == false )
+            if ( shouldBuildFrameHZB( view ) == false )
                 return false;
             const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
-            return _occlusion.record( *_pCmd, *_pDevice, pso, view.scaleToPreviousRect( depth._width, true ), view.scaleToPreviousRect( depth._height, false ), view._depthHistoryViewProj,
-                                      bWriteTiles, view );
+            return _occlusion.record( graphContext, viewSlot, *_pDevice, pso, view.scaleToPreviousRect( depth._width, true ), view.scaleToPreviousRect( depth._height, false ),
+                                      view._depthHistoryViewProj, bWriteTiles, view );
         };
         // 주 시점만 가림 타일(16 px 밉)도 쓴다 — 게임 스레드의 가림 질의가 되읽는다.
-        _state._mainView._bOcclusionTilesThisFrame = recordView( _state._mainView, true ) ? SW_TRUE : SW_FALSE;
+        _state._mainView._bOcclusionTilesThisFrame = recordView( _state._mainView, 0, true ) ? SW_TRUE : SW_FALSE;
         _occlusion.requestReadback( _pCmd, _pDevice, bEnabled, _state._mainView );
-        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
+        for ( uint32 extraIndex = 0; extraIndex < static_cast<uint32>( _state._listExtraView.size() ); ++extraIndex )
         {
-            if ( pView->_bRenderThisFrame == SW_TRUE )
-                std::ignore = recordView( *pView, false );
+            FrameViewTarget& view = *_state._listExtraView[extraIndex];
+            if ( view._bRenderThisFrame == SW_TRUE )
+                std::ignore = recordView( view, extraIndex + 1, false );
         }
     }
 
@@ -901,8 +918,8 @@ namespace sw
         copySceneDepth( view );
         // 이번 프레임 사각형만 읽는다(자동 렌더 배율 — 사각형 밖은 옛 깊이다).
         const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
-        return _occlusion.record( *_pCmd, *_pDevice, _psoManager.getEnginePSO( RenderPassKind::HZBBuild ), view.scaleToRect( depth, true ), view.scaleToRect( depth, false ),
-                                  findViewProj( view ), false, view );
+        return _occlusion.recordInViewPass( *_pCmd, *_pDevice, _psoManager.getEnginePSO( RenderPassKind::HZBBuild ), view.scaleToRect( depth, true ), view.scaleToRect( depth, false ),
+                                            findViewProj( view ), view );
     }
 
     bool FrameGraphExecutor::recordSceneDepthHZB( IRHICommandList& cmd, FrameViewTarget& view )

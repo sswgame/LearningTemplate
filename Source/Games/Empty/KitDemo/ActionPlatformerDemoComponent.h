@@ -2,8 +2,9 @@
  * @file ActionPlatformerDemoComponent.h
  * @brief 장르 키트 시연 — 액션 플랫포머(`GF_ActionPlatformer`)의 스테이지 한 판입니다. 키트의 몸(`ActionPlatformerBody`)과 진행(`ActionStageRun`)을 플레이어 입력(입력 맵 `Move` · `KitDemo.Jump`)으로 돌립니다.
  * @details 지형은 씬 데이터(키트 글자 형식의 줄 — '#' 벽, '-' 발판, 'D' 흙, 'O' 갈고리 지점, 나머지는 빈 칸)이고, 체크포인트 · 비밀 · 골은 스테이지 정의(카탈로그)의 id 에 씬의 자리를 맞춘 것이다.
- *          아래로 떨어지면 죽고(목숨 하나) 지난 체크포인트에서 다시 선다. 골에 닿으면 깨고 결과(시간 · 피격 · 수집 점수와 등급)를 남긴다. 모습은 디버그 그리기다.
- *          장르 완결 루프 시나리오: `game/empty/automation/kitdemo_actionplatformer.scenario.xml`.
+ *          아래로 떨어지거나(낙사) 개발 명령 `kitdemo.platformer.kill` 로 죽으면(목숨 하나) 공통 부활 흐름(`RespawnFlow`)이 스테이지의 `<Respawn>` 규칙대로
+ *          다시 세운다 — 마지막 체크포인트 · 제자리(낭떠러지면 가까운 설 자리, `ActionPlatformerRespawnWorld`) · 시작 지점. 골에 닿으면 깨고 결과(시간 · 피격 · 수집 점수와 등급)를 남긴다. 모습은 디버그 그리기다.
+ *          장르 완결 루프 시나리오: `game/empty/automation/kitdemo_actionplatformer.scenario.xml`, 부활: `game/empty/automation/kitdemo_respawn.scenario.xml`.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -23,6 +24,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionStageRun.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
 
 namespace sw
 {
@@ -49,6 +51,14 @@ namespace sw
         float32 getScore() const { return _run.computeResult()._score; }
         float32 getPlayerX() const { return _body.getPosition()._x; }
         float32 getPlayerY() const { return _body.getPosition()._y; }
+        int32   getRespawnPhase() const { return static_cast<int32>( _respawn.getPhase() ); }
+        int32   getRespawnCount() const { return _respawnCount; }
+        int32   getLastRespawnPolicy() const { return _lastRespawnPolicy; }
+        float32 getLastRespawnShift() const { return _lastRespawnShift; }
+        int32   getInPlaceUses() const { return _respawn.getPolicyUses( RespawnPolicyKind::InPlace ); }
+
+        /** @brief 플레이어를 그 자리에서 죽입니다(목숨 하나, 부활 흐름 시작). 진행 중이 아니거나 이미 죽어 있으면 false 입니다. 낙사와 개발 명령이 부릅니다. */
+        bool killPlayer();
 
     protected:
         [[nodiscard]] bool startGame() override;
@@ -65,6 +75,8 @@ namespace sw
         void placeBody( const float2& position );
         /** @brief 몸의 자리로 체크포인트 · 비밀 · 낙사 · 골을 진행에 알립니다. */
         void applyMarkers();
+        /** @brief 죽어 있는 동안 부활 흐름을 돌리고, 스폰하면 몸을 그 자리에 세웁니다. */
+        void updateRespawn( float32 deltaTime );
         void drawStage() const;
 
     private:
@@ -92,6 +104,14 @@ namespace sw
         ActionTerrainGrid                       _terrain;
         ActionPlatformerBody                    _body;
         ActionStageRun                          _run;
+        RespawnFlow                             _respawn;        ///< 규칙은 스테이지의 `<Respawn>`
+        vector<RespawnSpawnPoint>               _listSpawnPoint; ///< 시작 지점 하나(`start`)
+        PROPERTY( RuntimeState )
+        int32 _respawnCount;
+        PROPERTY( RuntimeState )
+        int32 _lastRespawnPolicy; ///< 마지막 부활의 정책(`RespawnPolicyKind`, −1 이면 아직 없음)
+        PROPERTY( RuntimeState )
+        float32 _lastRespawnShift; ///< 마지막 부활에서 죽은 자리와 선 자리의 거리(m)
         PROPERTY( RuntimeState )
         uint8 _bJumpHeldLastFrame : 1;
     };

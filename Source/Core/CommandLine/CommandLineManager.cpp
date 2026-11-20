@@ -98,7 +98,7 @@ namespace sw
         }
     }
 
-    bool CommandLineManager::isFlagGivenBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument )
+    optional<string_view> CommandLineManager::findLineBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument )
     {
         const string_view spelling = getCommandLineArgumentSpelling( argument );
         for ( int32 argIndex = 1; argIndex < argc && pPpArgv != nullptr; ++argIndex )
@@ -106,15 +106,35 @@ namespace sw
             if ( pPpArgv[argIndex] == nullptr )
                 continue;
             const string_view line = StringUtil::trim( string_view{ pPpArgv[argIndex] } );
-            if ( getArgumentName( line ) != spelling )
-                continue;
-            string_view key;
-            string_view value;
-            const bool  bHasValue = StringUtil::trySplitKeyValue( line, key, value );
-            bool        bValue    = true;
-            return bHasValue == false || ( StringUtil::tryParseBool( value, bValue ) && bValue );
+            if ( getArgumentName( line ) == spelling )
+                return line;
         }
-        return false;
+        return nullopt;
+    }
+
+    bool CommandLineManager::isFlagGivenBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument )
+    {
+        const optional<string_view> line = findLineBeforeParse( argc, pPpArgv, argument );
+        if ( line.has_value() == false )
+            return false;
+        string_view key;
+        string_view value;
+        const bool  bHasValue = StringUtil::trySplitKeyValue( *line, key, value );
+        bool        bValue    = true;
+        return bHasValue == false || ( StringUtil::tryParseBool( value, bValue ) && bValue );
+    }
+
+    bool CommandLineManager::findValueBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument, string& outValue )
+    {
+        const optional<string_view> line = findLineBeforeParse( argc, pPpArgv, argument );
+        if ( line.has_value() == false )
+            return false;
+        string_view key;
+        string_view value;
+        outValue.clear();
+        if ( StringUtil::trySplitKeyValue( *line, key, value ) )
+            outValue.assign( value.data(), value.size() );
+        return true;
     }
 
     string_view CommandLineManager::getArgumentName( string_view argumentLine )
@@ -289,6 +309,8 @@ namespace sw
         // 등록된 변수(Engine 전역 변수 — registerToCommandLine 이 인자로 넣었다)는 표에서, 아직 없는 변수(모듈 것)는 보류표에서 찾는다.
         if ( name.empty() )
             return false;
+        if ( std::find( _listStageGlobal.begin(), _listStageGlobal.end(), name ) != _listStageGlobal.end() )
+            return true;
         return _mapPendingGlobal.find( name ) != _mapPendingGlobal.end() || isArgumentProvided( name );
     }
 

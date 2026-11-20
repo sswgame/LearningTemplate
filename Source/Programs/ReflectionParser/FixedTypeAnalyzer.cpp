@@ -112,19 +112,25 @@ namespace sw
             result->_kind = FixedValueKind::Bitset;
             return result;
         }
-        for ( const FixedMathTypeDef& math : fixedlayout::kArrMathType )
+        // 성분 규칙은 `ReflectBuiltins.xxx` 의 Layout 칸이 정본이다 — 핸들처럼 모양이 같아도 뜻이 다른 타입은 Layout 이 none 이라 섞이지 않는다.
+        // `int2` 는 `packed` 줄이지만 메모리는 int32 둘이라(Layout i32) 압축 타입 판정보다 먼저 잡혀 정수 칸 둘로 실린다(언리얼 `FIntPoint` 복제와 같은 꼴).
+        if ( const BuiltinTypeTraits* pTraits = session._typeNameMap.findTraits( result->_typeName ) )
         {
-            if ( result->_typeName == math._pName )
+            const bool bMath = pTraits->_layout == BuiltinLayoutKind::Float32 || pTraits->_layout == BuiltinLayoutKind::Int32;
+            if ( bMath )
             {
-                result->_kind = FixedValueKind::Math;
+                result->_kind           = FixedValueKind::Math;
+                result->_listMathMember = pTraits->_listMember;
+                result->_bIntegerMath   = pTraits->_layout == BuiltinLayoutKind::Int32 ? SW_TRUE : SW_FALSE;
                 return result;
             }
-        }
-        // 각은 메모리가 라디안 float32 하나다 — 압축 타입 표시보다 먼저 float32 칸으로 분류한다(경계 변환은 `FixedCodecValueEmitter::emitProperty`).
-        if ( result->_typeName == fixedlayout::kAngleTypeName )
-        {
-            result->_kind = FixedValueKind::Float32;
-            return result;
+            // 각은 메모리가 라디안 float32 하나다 — 압축 타입 표시보다 먼저 float32 칸으로 분류한다(경계 변환은 `FixedCodecValueEmitter::emitProperty`).
+            if ( pTraits->_layout == BuiltinLayoutKind::Angle )
+            {
+                result->_kind   = FixedValueKind::Float32;
+                result->_bAngle = SW_TRUE;
+                return result;
+            }
         }
         // 압축 타입은 인코딩 표 밖이다. 적격이 아닌 것으로 조용히 넘기지 않도록 표시를 달아 코덱 생성기가 오류로 멈추게 한다.
         if ( session._typeNameMap.isPacked( result->_typeName ) )

@@ -1,0 +1,30 @@
+<?asset guid="bf80ccef202c6b984f26e57be78425bd"?>
+<UIDocument _schemaVersion="1">
+	<!-- 메인 메뉴(`MainMenuScreen`, 타이틀 씬의 `TitleMenuComponent` 가 연다). 시작 · 끝내기는 전역 명령 표(`StartGame` · `QuitGame`)로 넘기고, 끝내기는 확인 대화 상자를 먼저 띄운다. -->
+	<UIScreenDef _defaultFocus="StartGame" />
+	<SafeZonePanel>
+		<CanvasPanel>
+			<BorderPanel _name="Window" _styleClass="window">
+				<_slot _anchorMin="0.5,0.5"
+				       _anchorMax="0.5,0.5"
+				       _offsetMax="0,0"
+				       _bAutoSize="true"
+				       _growHorizontal="Both"
+				       _growVertical="Both" />
+				<BoxPanel _spacing="12" _orientation="Vertical">
+					<TextWidget _name="Title" _styleClass="title" _text="Main Menu" />
+					<ButtonWidget _name="StartGame" _command="StartGame">
+						<TextWidget _text="Start Game" />
+					</ButtonWidget>
+					<ButtonWidget _name="Options" _command="OpenOptions">
+						<TextWidget _text="Options" />
+					</ButtonWidget>
+					<ButtonWidget _name="QuitGame" _visibility="Collapsed" _command="QuitGame">
+						<TextWidget _text="Quit Game" />
+					</ButtonWidget>
+					<UserWidget _name="Hint" _document="engine/ui/parts/inputhint.ui.xml" />
+				</BoxPanel>
+			</BorderPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

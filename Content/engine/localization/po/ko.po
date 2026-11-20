@@ -2657,6 +2657,41 @@ msgstr "전환"
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
+msgctxt "settings.display.hdr"
+msgid "HDR"
+msgstr "HDR"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.hdr.hdr10"
+msgid "HDR10"
+msgstr "HDR10"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.hdr.scrgb"
+msgid "scRGB"
+msgstr "scRGB"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.hdrMaxLuminance"
+msgid "HDR Peak Brightness"
+msgstr "HDR 최대 밝기"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.hdrPaperWhite"
+msgid "HDR Paper White"
+msgstr "HDR 페이퍼 화이트"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
 msgctxt "settings.display.resolution"
 msgid "Resolution"
 msgstr "해상도"
@@ -2688,6 +2723,13 @@ msgstr "테두리 없음"
 msgctxt "settings.display.windowMode.windowed"
 msgid "Windowed"
 msgstr "창"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.gameplay.cameraPreset"
+msgid "Camera View"
+msgstr "카메라 시점"
 
 #. Context: Options menu label
 #. Max length: 32

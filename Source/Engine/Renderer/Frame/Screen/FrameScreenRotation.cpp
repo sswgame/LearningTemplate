@@ -70,7 +70,7 @@ namespace sw
                 release();
             return;
         }
-        const RHIFormat format = _pDevice->getBackBufferFormat();
+        const RHIFormat format = _pDevice->getUITargetFormat(); // 회전하는 기기는 SDR 만이라 백버퍼 포맷과 같다
         if ( _texture != 0 && _width == logicalWidth && _height == logicalHeight && _format == format )
             return;
         release();

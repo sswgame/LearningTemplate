@@ -29,8 +29,19 @@
         "_reopenMaxDelayMs": 30000,
         "_clipCacheMegabytes": 192
     },
+    "_subtitles": {
+        "_maxVisibleLineCount": 2,
+        "_minDisplaySeconds": 2.0,
+        "_readingSecondsPerCharacter": 0.06,
+        "_arrSizeScale": [ 0.85, 1.0, 1.3 ]
+    },
     "_characterMeshCache": {
         "_budgetMegabytes": 128
+    },
+    "_fileServe": {
+        "_maxResponseHeaderBytes": 16384,
+        "_maxResponseBodyBytes": 1048576,
+        "_requestTimeoutMs": 30000
     },
     "_render": {
         "_psoBuildBudgetMicroseconds": 2000,
@@ -92,5 +103,8 @@
         "_bGPUBasedValidation": false,
         "_bSynchronizationValidation": false
     },
-    "_shaderTimeRolloverSeconds": 3600.0
+    "_shaderTimeRolloverSeconds": 3600.0,
+    "_sequencer": {
+        "_fastForwardRate": 4.0
+    }
 }

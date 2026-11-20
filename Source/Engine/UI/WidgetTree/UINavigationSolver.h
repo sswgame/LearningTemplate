@@ -39,5 +39,13 @@ namespace sw
         static WidgetID findNextWidget( const WidgetTree& tree, WidgetID from, UINavigationDirection direction );
         /** @brief @p scope 아래(자기 포함)에서 문서 순서로 처음 받을 수 있는 위젯을 반환합니다. 없으면 무효 번호입니다. */
         static WidgetID findFirstFocusable( const Widget& scope );
+        /**
+         * @brief 화면이 다시 활성이 될 때 포커스를 줄 위젯입니다. 기억한 위젯 @p stored 가 받을 수 있으면 그것이고, 꺼졌거나(비활성 · 숨김) 지워졌으면 대체를 고릅니다.
+         * @details 대체 순서(언리얼 CommonUI 의 desired focus 대체 자리): (1) 기억한 위젯이 트리에 남아 있으면 같은 컨테이너(부모)의 가장 가까운 켜진 이웃 — 뒤 형제 먼저, 그다음 앞 형제,
+         *          형제의 안쪽이면 문서 순서 처음 — 을 찾고, 없으면 한 단계 위 컨테이너로 올라가 같은 규칙. (2) 화면의 처음 포커스 위젯 @p preferred(문서의 기본 포커스, 받을 수 있을 때)
+         *          → 문서 순서의 첫 위젯. (3) 모두 없으면 무효 번호 — 포커스는 화면 자체(위젯 없음)다.
+         *          덮인 동안 위젯을 끄는 화면(구매 중인 상점 줄, 확인 대기 중인 옵션 행)이 따로 피할 일이 없게 대체를 이 한 곳에 둔다.
+         */
+        static WidgetID findRestoreFocus( const WidgetTree& tree, WidgetID stored, WidgetID preferred );
     };
 } // namespace sw
