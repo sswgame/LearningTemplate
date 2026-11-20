@@ -41,7 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.exit_code import ExitCode  # noqa: E402
 from common.host_platform import is_windows_host  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.paths import get_build_dir, get_project_root  # noqa: E402
 from package.pack import PACK_FOLDER_NAME  # noqa: E402
 from package.web_package import IsolatedRequestHandler, WebPackageError, INDEX_HTML, PACK_LOADER_NAME, PRESET_NAME, make_web_package  # noqa: E402
 from setup.browser_mcp import find_browser  # noqa: E402
@@ -197,7 +197,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--headed", action="store_true", help="처음부터 브라우저 창을 띄운다(헤드리스가 어댑터를 못 받으면 알아서 창으로 다시 돈다)")
     args = parser.parse_args(argv)
     project_root = get_project_root()
-    build_dir = (project_root / "build" / PRESET_NAME).resolve()
+    build_dir = get_build_dir(PRESET_NAME, project_root).resolve()
     folder = build_dir / "Web" / args.game
     if args.skip_package is False:
         try:

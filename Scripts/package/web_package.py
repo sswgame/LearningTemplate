@@ -27,7 +27,6 @@ import functools
 import http.server
 import os
 import shutil
-import subprocess
 import sys
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
@@ -35,7 +34,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.exit_code import ExitCode  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.paths import get_build_dir, get_project_root  # noqa: E402
+from common.run_process import run_process  # noqa: E402
 from package.pack import is_chunk_manifest, PackageError, PACK_FOLDER_NAME, select_staged_packs  # noqa: E402
 
 PRESET_NAME = "Web-Shipping"
@@ -111,9 +111,9 @@ def make_web_package(game: str, build_dir: Path, packs_dir: Path, out_dir: Path,
     list_deferred = [pack for pack in list_pack if pack.name.lower() in set_deferred]
     list_preload = [f"{pack.as_posix()}@{VIRTUAL_PACK_FOLDER}/{pack.name}" for pack in list_pack if pack.name.lower() not in set_deferred]
     command = [sys.executable, str(file_packager), str(out_dir / PACK_DATA_NAME), "--preload", *list_preload, f"--js-output={out_dir / PACK_LOADER_NAME}", "--no-node"]
-    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
-    if result.returncode != 0:
-        raise WebPackageError(f"file_packager failed ({result.returncode}): {result.stderr.strip() or result.stdout.strip()}")
+    result = run_process(command)
+    if not result.succeeded:
+        raise WebPackageError(f"file_packager failed ({result.return_code}): {result.stderr.strip() or result.stdout.strip()}")
     for app_file in list_app_file:
         shutil.copy2(app_file, out_dir / app_file.name)
     if list_deferred:
@@ -148,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--serve", action="store_true", help="묶은 뒤 교차 출처 격리 헤더를 주는 로컬 서버로 띄운다")
     args = parser.parse_args(argv)
     project_root = get_project_root()
-    build_dir = (project_root / "build" / PRESET_NAME).resolve()
+    build_dir = get_build_dir(PRESET_NAME, project_root).resolve()
     try:
         folder = make_web_package(args.game, build_dir, build_dir / "Bin" / PACK_FOLDER_NAME, build_dir / "Web" / args.game, project_root)
     except WebPackageError as error:

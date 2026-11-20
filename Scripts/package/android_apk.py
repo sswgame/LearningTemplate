@@ -36,7 +36,6 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 import zipfile
 from dataclasses import dataclass
@@ -46,8 +45,9 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.exit_code import ExitCode  # noqa: E402
-from common.host_platform import is_windows_host  # noqa: E402
+from common.host_platform import executable_name, is_windows_host  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
+from common.run_process import run_process  # noqa: E402
 from common.tool_download import resolve_tools_subdir  # noqa: E402
 from common.toolchain_config import ConfigError, load_search_paths, require_config  # noqa: E402
 from package.pack import PackageError, PACK_FOLDER_NAME, select_staged_packs  # noqa: E402
@@ -203,16 +203,16 @@ class AndroidTools:
         build_tools = sdk_root / "build-tools" / build_tools_version
         self.target_sdk = int(platform)
         self.android_jar = sdk_root / "platforms" / f"android-{platform}" / "android.jar"
-        self.aapt2 = build_tools / ("aapt2.exe" if is_windows_host() else "aapt2")
-        self.zipalign = build_tools / ("zipalign.exe" if is_windows_host() else "zipalign")
+        self.aapt2 = build_tools / executable_name("aapt2")
+        self.zipalign = build_tools / executable_name("zipalign")
         self.apksigner = build_tools / ("apksigner.bat" if is_windows_host() else "apksigner")
         self.d8 = build_tools / ("d8.bat" if is_windows_host() else "d8")
         list_java = sorted(resolve_tools_subdir("jdk_tools_subdir", search).glob("*/bin/java*"))
         if not list_java:
             raise ApkError("no JDK under Tools/JDK - install with py -3 Scripts/setup/platform_sdk.py android")
         self.java_home = list_java[0].parents[1]
-        self.keytool = self.java_home / "bin" / ("keytool.exe" if is_windows_host() else "keytool")
-        self.javac = self.java_home / "bin" / ("javac.exe" if is_windows_host() else "javac")
+        self.keytool = self.java_home / "bin" / executable_name("keytool")
+        self.javac = self.java_home / "bin" / executable_name("javac")
         list_missing = [str(path) for path in (self.android_jar, self.aapt2, self.zipalign, self.apksigner, self.d8, self.keytool, self.javac) if not path.is_file()]
         if list_missing:
             raise ApkError("missing Android tools (py -3 Scripts/setup/platform_sdk.py android): " + ", ".join(list_missing))
@@ -221,9 +221,9 @@ class AndroidTools:
         """@p command 를 JDK 를 잡은 환경으로 돌립니다(apksigner 는 java 를 찾는다). 0 이 아니면 ApkError."""
         environment = dict(os.environ, JAVA_HOME=str(self.java_home))
         environment["PATH"] = str(self.java_home / "bin") + os.pathsep + environment.get("PATH", "")
-        completed = subprocess.run([str(part) for part in command], env=environment, capture_output=True, encoding="utf-8", errors="replace", check=False)
-        if completed.returncode != 0:
-            raise ApkError(f"{step}: {Path(str(command[0])).name} exited {completed.returncode}: {(completed.stderr or completed.stdout).strip()}")
+        completed = run_process(command, environment=environment)
+        if not completed.succeeded:
+            raise ApkError(f"{step}: {Path(str(command[0])).name} exited {completed.return_code}: {(completed.stderr or completed.stdout).strip()}")
 
 
 def ensure_debug_keystore(tools: AndroidTools, keystore: Path) -> None:
