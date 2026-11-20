@@ -163,7 +163,9 @@ namespace sw
 #endif
 
             /**
-             * @brief 셰이더 DDC 폴더입니다 — 실행 파일 폴더의 `Saved/ShaderCompileCache`(이 기계의 파생 데이터, 언리얼 DerivedDataCache). 셰이더 디스크 캐시는 이것 하나다.
+             * @brief 셰이더 DDC 폴더입니다 — 구성이 함께 쓰는 파생물 자리(`ProcessRoots::_derivedData` = `<프로젝트>/Saved`)의 `ShaderCompileCache`(언리얼 공유 DerivedDataCache). 셰이더 디스크 캐시는 이것 하나다.
+             * @details 예전에는 실행 파일 폴더의 `Saved`(빌드 폴더마다 하나)라 Release · ASan · 배포 쿠킹이 같은 셰이더 약 2 만 개를 각자 처음부터 컴파일했다(배포 쿠킹 한 번 15 분).
+             *          키에 소스 · define · 형식 · 도구 지문(엔진 define 포함) · 코드젠이 들어 있어 구성끼리 나눠도 엉뚱한 바이트를 돌려주지 않는다 — 쿠킹 DDC(`<프로젝트>/Saved/DDC`)와 같은 자리 규칙이다.
              * @details 콘텐츠 트리(`Content/`)에 두지 않는다 — 올리는 단위가 아니고, 자동화 실행은 콘텐츠 아래 쓰기를 막아 캐시를 채우지 못한 채 매번 다시 컴파일했다.
              *          예전에는 실행 중 컴파일 결과를 따로 담는 둘째 캐시(`Saved/ShaderCache`)가 있어 같은 바이트를 두 번 쓰고 낡음 판정도 두 벌이었다.
              */
@@ -173,7 +175,7 @@ namespace sw
                 string ddcDir;
                 if ( engine::areEngineServicesBound() && engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SHADER_DDC_DIR, ddcDir ) && ddcDir.empty() == false )
                     return FileUtil::normalizeSeparators( ddcDir );
-                return FileUtil::normalizeSeparators( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "ShaderCompileCache" ) );
+                return FileUtil::normalizeSeparators( FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "ShaderCompileCache" ) );
             }
 
             /**

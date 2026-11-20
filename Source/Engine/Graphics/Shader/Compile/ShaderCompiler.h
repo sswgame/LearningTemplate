@@ -274,7 +274,7 @@ namespace sw
     {
     public:
         /**
-         * @brief HLSL 셰이더를 컴파일합니다. 이 기계의 셰이더 DDC(`Saved/ShaderCompileCache` — 셰이더 디스크 캐시는 이것 하나다)에 맞으면 컴파일하지 않습니다.
+         * @brief HLSL 셰이더를 컴파일합니다. 이 기계의 셰이더 DDC(`<프로젝트>/Saved/ShaderCompileCache` — 구성이 함께 쓰는 셰이더 디스크 캐시는 이것 하나다)에 맞으면 컴파일하지 않습니다.
          * @param desc 컴파일 디스크립터. `_enginePolicy` 가 없으면 컴파일하지 않고 실패를 돌려준다(엔진 설정을 이 스레드에서 읽지 않는다).
          * @return 컴파일 결과(성공 여부와 바이트코드)
          * @details 스레드 계약: 워커에서 동시에 불린다(병렬 쿠킹). 공유 상태는 읽기 전용(`AssetPaths` 읽기)이거나 원자값이다.

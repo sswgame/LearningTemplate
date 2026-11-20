@@ -155,12 +155,15 @@
     },
     {
       "name": "Ninja-Shipping",
-      "displayName": "Windows Ninja Shipping (Clang-cl)",
-      "description": "Windows Shipping build using Ninja + Clang-cl",
+      "displayName": "Windows Ninja Shipping - Client (Clang-cl)",
+      "description": "플레이어 배포본(SW_TARGET_TYPE=Client, 정적 링크 한 실행 파일) — 이름이 Server 인 폴더(전용 서버 · 온라인 서비스 구현)를 짓지 않고 그 헤더를 게이트가 막는다(언리얼 Client 타깃). 예전의 Ninja-Shipping-Client 는 이것과 같은 구성이라(정적 구성은 대상 종류가 비면 Client) 지웠다 — 배포 빌드 · 쿠킹을 두 번 했다",
       "inherits": [
         "base-windows",
         "base-shipping"
-      ]
+      ],
+      "cacheVariables": {
+        "SW_TARGET_TYPE": "Client"
+      }
     },
     {
       "name": "Ninja-Release-Server",
@@ -180,15 +183,6 @@
       "inherits": "Ninja-Shipping",
       "cacheVariables": {
         "SW_TARGET_TYPE": "Server"
-      }
-    },
-    {
-      "name": "Ninja-Shipping-Client",
-      "displayName": "Windows Ninja Shipping - Client only (Clang-cl)",
-      "description": "클라이언트 전용 배포본(SW_TARGET_TYPE=Client) — 이름이 Server 인 폴더(전용 서버 · 온라인 서비스 구현)를 짓지 않고 그 헤더를 게이트가 막는다(언리얼 Client 타깃). Ninja-Shipping 은 클라이언트 + 서버(Game)다",
-      "inherits": "Ninja-Shipping",
-      "cacheVariables": {
-        "SW_TARGET_TYPE": "Client"
       }
     },
     {
@@ -288,10 +282,6 @@
     {
       "name": "Ninja-Shipping-Server",
       "configurePreset": "Ninja-Shipping-Server"
-    },
-    {
-      "name": "Ninja-Shipping-Client",
-      "configurePreset": "Ninja-Shipping-Client"
     },
     {
       "name": "Linux-Debug",

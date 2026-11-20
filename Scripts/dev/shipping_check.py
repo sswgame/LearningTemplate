@@ -9,9 +9,8 @@ Scripts/dev/shipping_check.py
 
 | 프리셋 | 띄우는 것 | 통과 |
 | --- | --- | --- |
-| `Ninja-Shipping` | `App -unattended` 를 `APP_RUN_SECONDS` 동안 돌린 뒤 창을 닫는다(WM_CLOSE) | 그동안 살아 있고 0 으로 끝난다 |
+| `Ninja-Shipping`(플레이어 Client 배포본) | `App -unattended` 를 `APP_RUN_SECONDS` 동안 돌린 뒤 창을 닫는다(WM_CLOSE) | 그동안 살아 있고 0 으로 끝난다 |
 | `Ninja-Shipping` | `App -unattended` + 배포가 받지 않는 인자 전부(`ArgumentList.xxx` 의 쓰는 구성 Dev · Test · AndroidDev — `-test` · `-scenario=x` · `-EnableEditor` …) | 0 이 아닌 코드로 곧 끝나고, 표준 오류에 그 인자마다 모르는 인자 오류가 있다(배포 구성은 그 철자를 등록하지 않는다) |
-| `Ninja-Shipping-Client` | 클라이언트 전용 `App`(Server 폴더를 짓지 않는다)을 같은 길로 띄우고 닫는다 | 그동안 살아 있고 0 으로 끝난다 |
 | `Ninja-Shipping-Server` | `Server` 를 `SERVER_RUN_SECONDS` 동안 돌린 뒤 종료 신호(Windows Ctrl+Break · POSIX SIGTERM) | 그동안 살아 있고 0 으로 끝난다 |
 
 배포 실행 파일에 테스트용 전역 변수 이름(`SW_TEST_GLOBAL_VARIABLE` 의 `gv_…`)이 하나라도 남아 있으면 실패다 — 배포 구성에서 그 변수는 상수라
@@ -139,11 +138,6 @@ def send_shutdown_signal(process: subprocess.Popen) -> None:
         process.send_signal(signal.SIGTERM)
 
 
-def run_client_app(project_root: Path) -> SmokeResult:
-    """클라이언트 전용 배포 App(Server 폴더 · 서버 서비스 구현이 없다)을 같은 길로 띄우고 닫는다."""
-    return run_app(project_root, "Ninja-Shipping-Client")
-
-
 def run_server(project_root: Path) -> SmokeResult:
     """배포 서버를 띄우고, 살아 있는지 본 뒤 종료 신호를 보내 정상 종료를 본다."""
     preset = "Ninja-Shipping-Server"
@@ -204,7 +198,7 @@ def check_no_test_variables(project_root: Path) -> SmokeResult:
     # 이름 모두를 한 정규식(긴 이름 먼저)으로 실행 파일을 한 번만 훑는다 — 이름마다 실행 파일 전체를 훑으면 이름 수 × 실행 파일 크기다.
     # 하나라도 남았는지(통과 · 실패)는 이름마다 찾던 것과 같다. 다른 이름을 품은 긴 이름이 남으면 긴 이름만 적힌다.
     name_pattern = re.compile(b"|".join(re.escape(name.encode("ascii")) for name in sorted(list_name, key=len, reverse=True))) if list_name else None
-    for preset, stem in (("Ninja-Shipping", "App"), ("Ninja-Shipping-Client", "App"), ("Ninja-Shipping-Server", "Server")):
+    for preset, stem in (("Ninja-Shipping", "App"), ("Ninja-Shipping-Server", "Server")):
         executable = get_bin_dir(preset, project_root) / executable_name(stem)
         if executable.is_file() is False:
             return SmokeResult("NoTestVariables", executable, False, f"{executable} is missing")
@@ -239,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     project_root = get_project_root()
 
-    list_run = ((run_app, "Ninja-Shipping"), (run_client_app, "Ninja-Shipping-Client"), (run_server, "Ninja-Shipping-Server"), (run_dev_arguments_rejected, "Ninja-Shipping"))
+    list_run = ((run_app, "Ninja-Shipping"), (run_server, "Ninja-Shipping-Server"), (run_dev_arguments_rejected, "Ninja-Shipping"))
     if args.skip_build is False:
         list_failed_build = [preset for preset in dict.fromkeys(preset for _, preset in list_run) if build_preset(project_root, preset) is False]
         if list_failed_build:

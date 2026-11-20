@@ -76,7 +76,7 @@ SW_REGISTER_ARGUMENT( COOK_ALL, All, false, false, "cook-all" )
 // `-cook-scenes` · `-cook-packs` · `-cook-all` 이 쿠킹 결과를 쓸 스테이징 폴더
 SW_REGISTER_ARGUMENT( COOKED_DIR, All, CommandLineDiskPath{}, false, "cooked-dir" )
 
-// 셰이더 DDC 폴더(기본은 실행 파일 폴더의 `Saved/ShaderCompileCache`) — 빈 캐시에서 굽기를 보는 테스트가 빌드 폴더가 함께 쓰는 DDC 를 지우지 않게 제 폴더를 준다
+// 셰이더 DDC 폴더(기본은 구성이 함께 쓰는 `<프로젝트>/Saved/ShaderCompileCache`) — 빈 캐시에서 굽기를 보는 테스트가 빌드 폴더가 함께 쓰는 DDC 를 지우지 않게 제 폴더를 준다
 SW_REGISTER_ARGUMENT( SHADER_DDC_DIR, Dev, CommandLineDiskPath{}, false, "shader-ddc-dir" )
 
 // 이 실행이 컴파일 · 캐시에서 얻은 셰이더 요청을 끝날 때 이 파일(`*.shaderrequests`)에 적는다 — 다음 묶음 검증이 시간을 재기 전에 그 목록만 컴파일한다(언리얼 Shader Pipeline Cache 기록). 백엔드별 부모는 자식마다 `.<백엔드>` 를 붙여 넘긴다
