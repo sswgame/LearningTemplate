@@ -840,3 +840,36 @@ SW_TEST_CASE( AbilityTest, RemovalDuringCallbacksIsDeferred )
     SW_EXPECT_TRUE( pAbilities->findAbility( secondHandle ) == nullptr );
     SW_EXPECT_EQUAL( 1u, pAbilities->getAbilityCount() );
 }
+
+/**
+ * @brief [AbilityTest] 쉬는 틱: 시간으로 움직일 것이 없으면 주 틱이 꺼지고, 기간 이펙트 · 켜진 어빌리티가 생기면 켜졌다가 끝나면 다시 꺼진다. 무한 이펙트는 틱을 켜지 않고, 수동 시간이면 늘 꺼진다
+ */
+SW_TEST_CASE( AbilityTest, IdleComponentStopsTicking )
+{
+    Rig rig;
+    SW_EXPECT_FALSE( rig._pAbilities->canEverTick() );
+
+    (void)rig.apply( Rig::makeEffect( EffectDurationPolicy::Infinite ) );
+    SW_EXPECT_FALSE( rig._pAbilities->canEverTick() ); // 시간으로 움직이지 않는다
+
+    const auto               pTimed = Rig::makeEffect( EffectDurationPolicy::HasDuration, 1.0f );
+    const ActiveEffectHandle handle = rig.apply( pTimed );
+    SW_EXPECT_TRUE( rig._pAbilities->canEverTick() );
+    rig._pAbilities->advanceTime( 1.1f );
+    SW_EXPECT_FALSE( rig._pAbilities->isActiveEffect( handle ) );
+    SW_EXPECT_FALSE( rig._pAbilities->canEverTick() );
+
+    ProbeAbility& ability = rig.give();
+    SW_EXPECT_FALSE( rig._pAbilities->canEverTick() ); // 받기만 한 어빌리티는 돌지 않는다
+    SW_REQUIRE_TRUE( rig._pAbilities->tryActivateAbility( ability.getSpecHandle() ) == AbilityActivationResult::Activated );
+    SW_EXPECT_TRUE( rig._pAbilities->canEverTick() );
+    ability.endAbility();
+    SW_EXPECT_FALSE( rig._pAbilities->canEverTick() );
+
+    rig._pAbilities->setManualTime( true );
+    const ActiveEffectHandle manualHandle = rig.apply( pTimed );
+    SW_EXPECT_TRUE( rig._pAbilities->isActiveEffect( manualHandle ) );
+    SW_EXPECT_FALSE( rig._pAbilities->canEverTick() );
+    rig._pAbilities->setManualTime( false );
+    SW_EXPECT_TRUE( rig._pAbilities->canEverTick() );
+}

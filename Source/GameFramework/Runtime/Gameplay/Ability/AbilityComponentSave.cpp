@@ -293,6 +293,7 @@ namespace sw
 
                 ActiveGameplayEffect* pActiveEffect = pNewEffect.get();
                 _activeEffects.add( std::move( pNewEffect ) );
+                refreshTickEnabled();
                 if ( pActiveEffect->_bInhibited == SW_FALSE )
                     engageActiveEffect( *pActiveEffect );
                 dispatchCues( pActiveEffect->_spec, AbilityPresentationPhase::Added, static_cast<float32>( pActiveEffect->_stackCount ) );

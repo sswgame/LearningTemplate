@@ -532,6 +532,7 @@ namespace sw
 
         ActiveGameplayEffect* pActiveEffect = pNewEffect.get();
         _activeEffects.add( std::move( pNewEffect ) );
+        refreshTickEnabled();
 
         if ( pActiveEffect->_bInhibited == SW_FALSE )
             engageActiveEffect( *pActiveEffect );
@@ -557,6 +558,7 @@ namespace sw
         if ( activeEffect._bInhibited == SW_FALSE )
             disengageActiveEffect( activeEffect );
         dispatchCues( activeEffect._spec, AbilityPresentationPhase::Removed, 0.0f );
+        refreshTickEnabled();
         _effectRemovedMulticast.broadcast( activeEffect );
     }
 

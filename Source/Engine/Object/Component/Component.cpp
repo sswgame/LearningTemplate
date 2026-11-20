@@ -524,12 +524,13 @@ namespace sw
 
     void Component::setCanEverTick( bool bCanEverTick )
     {
-        const uint8 newValue = bCanEverTick ? SW_TRUE : SW_FALSE;
-        if ( _bCanEverTick == newValue )
-            return;
         // 틱 중이면 틱 뒤로 — 이 비트는 다른 워커가 읽는 비트(`_bIsSceneComponent` · `_bHasBegunPlay`)와 한 바이트다.
+        // 지금 값과 견주기 **전에** 미룬다: 앞서 미룬 반대 값(끄기 → 다시 켜기)이 큐에 있으면 지금 값과 같다고 버려 마지막 요청을 잃는다. 큐는 부른 순서대로 돈다.
         if ( deferIfStructureFrozen( Delegate<void( Component& )>( [bCanEverTick]( Component& self )
         { self.setCanEverTick( bCanEverTick ); } ) ) )
+            return;
+        const uint8 newValue = bCanEverTick ? SW_TRUE : SW_FALSE;
+        if ( _bCanEverTick == newValue )
             return;
         _bCanEverTick = newValue;
         if ( _pOwner != nullptr )
