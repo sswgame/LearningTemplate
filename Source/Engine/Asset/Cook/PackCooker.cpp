@@ -33,6 +33,7 @@
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"

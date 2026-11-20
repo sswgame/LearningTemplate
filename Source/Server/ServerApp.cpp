@@ -32,6 +32,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/ProcessMetrics.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneObjectHash.h"

@@ -10,6 +10,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/PlatformConfigOverride.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 using namespace sw;
 using namespace sw::editor;

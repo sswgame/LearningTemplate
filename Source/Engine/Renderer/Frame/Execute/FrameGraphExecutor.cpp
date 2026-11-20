@@ -24,6 +24,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"

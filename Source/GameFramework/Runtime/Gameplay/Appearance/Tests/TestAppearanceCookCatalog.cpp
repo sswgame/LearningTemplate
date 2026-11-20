@@ -7,6 +7,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/Pack/PackConfig.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"

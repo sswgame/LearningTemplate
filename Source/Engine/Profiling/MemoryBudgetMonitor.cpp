@@ -17,6 +17,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {

@@ -6,6 +6,7 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw
 {

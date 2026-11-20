@@ -25,6 +25,7 @@
 #include "Engine/Content/Pack/PackPatchTrustSource.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 namespace sw

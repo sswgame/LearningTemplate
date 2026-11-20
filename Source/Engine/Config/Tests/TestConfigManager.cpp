@@ -11,6 +11,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PlatformConfigOverride.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

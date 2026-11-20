@@ -22,7 +22,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Config/IConfig.h"
-#include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/ReflectionFwd.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw

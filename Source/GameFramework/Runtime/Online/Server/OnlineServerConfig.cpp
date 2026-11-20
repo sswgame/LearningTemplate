@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 

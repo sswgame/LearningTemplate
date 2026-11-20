@@ -12,6 +12,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Content/Pack/PackConfig.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 using namespace sw;
