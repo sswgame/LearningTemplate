@@ -82,6 +82,7 @@ namespace sw
         static constexpr utf8 kBack[]          = "UI.Back";
         static constexpr utf8 kTabNext[]       = "UI.TabNext";
         static constexpr utf8 kTabPrevious[]   = "UI.TabPrevious";
+        static constexpr utf8 kContextMenu[]   = "UI.ContextMenu";   ///< 포커스 위젯의 동작 메뉴(사용 · 장착 · 버리기)를 엽니다 — 패드 X · 키보드 메뉴 키. 마우스 오른쪽 · 길게 누르기는 위젯이 직접 받는다
         static constexpr utf8 kScroll[]        = "UI.Scroll";        ///< 패드 오른쪽 스틱이며 값을 가집니다.
         static constexpr utf8 kTextBackspace[] = "UI.TextBackspace"; ///< 텍스트 입력 위젯이 키보드 포커스를 가진 동안만 쓰며, 커서 앞 글자 하나를 지웁니다.
         static constexpr utf8 kPause[]         = "UI.Pause";         ///< 화면이 없을 때만 쓰며(레이어 `UIGlobal`) 일시정지 메뉴를 엽니다.

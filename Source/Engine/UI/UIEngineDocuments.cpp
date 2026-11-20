@@ -19,6 +19,9 @@ namespace sw
         documents._optionsRowString     = assets._uiOptionsRowString.get();
         documents._settingsConfirm      = assets._uiSettingsConfirm.get();
         documents._settingsUnsaved      = assets._uiSettingsUnsaved.get();
+        documents._confirmDialog        = assets._uiConfirmDialog.get();
+        documents._quantityDialog       = assets._uiQuantityDialog.get();
+        documents._mainMenu             = assets._uiMainMenu.get();
         documents._keyRebind            = assets._uiKeyRebind.get();
         documents._notifications        = assets._uiNotifications.get();
         documents._notificationEntry    = assets._uiNotificationEntry.get();

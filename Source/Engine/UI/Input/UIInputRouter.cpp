@@ -458,12 +458,12 @@ namespace sw
 
         // 일시정지(Esc)가 메뉴를 열면 UI 층이 켜지는데, 그 Esc 를 아직 누르고 있어도 입력 맵이 눌린 채 켜진 입력을 Held 로 시작시키므로(`InputMap::update`) Back 은 발화하지 않는다.
         static const hashed_string s_arrRoutedAction[] = { hashed_string( UIActionName::kAccept ), hashed_string( UIActionName::kTabNext ),
-                                                           hashed_string( UIActionName::kTabPrevious ) };
+                                                           hashed_string( UIActionName::kTabPrevious ), hashed_string( UIActionName::kContextMenu ) };
         for ( const hashed_string& action : s_arrRoutedAction )
         {
             if ( bTextFocus || uiMap.wasActionTriggered( action ) == false )
                 continue;
-            // 위젯이 먼저 처리하고, 아무도 소비하지 않은 탭 액션은 화면이 처리한다(옵션 메뉴의 탭 줄).
+            // 위젯이 먼저 처리하고, 아무도 소비하지 않은 탭 · 동작 메뉴 액션은 화면이 처리한다(옵션 메뉴의 탭 줄, 인벤토리의 칸 메뉴).
             const bool bScreenAction = action != s_arrRoutedAction[0];
             if ( routeAction( *pActive, action, float2{} ) || ( bScreenAction && pActive->onUnhandledAction( action ) ) )
                 consumeAction( uiMap, action );
@@ -631,12 +631,11 @@ namespace sw
     void UIInputRouter::restoreFocus( UIScreen& screen )
     {
         WidgetTree& tree = screen.getTree();
-        if ( screen._lastFocused != kInvalidWidgetID && _focus.setFocus( tree, screen._lastFocused ) )
-            return;
-        if ( _inputMode != UIInputMode::Navigation || tree.getRoot() == nullptr )
+        // 기억한 위젯이 없으면 포인터 방식은 포커스를 세우지 않는다(마우스 사용자에게 테두리를 보이지 않는다). 있었으면 방식과 무관하게 돌려준다 — 꺼졌으면 대체로.
+        if ( screen._lastFocused == kInvalidWidgetID && ( _inputMode != UIInputMode::Navigation || tree.getRoot() == nullptr ) )
             return;
         const Widget*  pDefault = screen.getDesc()._defaultFocus.empty() ? nullptr : tree.findWidgetByName( screen.getDesc()._defaultFocus );
-        const WidgetID target   = pDefault != nullptr ? pDefault->getID() : UINavigationSolver::findFirstFocusable( *tree.getRoot() );
+        const WidgetID target   = UINavigationSolver::findRestoreFocus( tree, screen._lastFocused, pDefault != nullptr ? pDefault->getID() : kInvalidWidgetID );
         if ( target != kInvalidWidgetID )
             (void)_focus.setFocus( tree, target );
     }

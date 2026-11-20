@@ -31,6 +31,9 @@ namespace sw
         string _optionsRowString;     ///< 옵션 메뉴 행 견본: 글
         string _settingsConfirm;      ///< 되돌리기 전 카운트다운 확인 창
         string _settingsUnsaved;      ///< 저장하지 않고 닫을 때의 확인 창
+        string _confirmDialog;        ///< 공통 확인 대화 상자(`ConfirmDialogScreen`)
+        string _quantityDialog;       ///< 수량 대화 상자(`QuantityDialogScreen`)
+        string _mainMenu;             ///< 메인 메뉴(`MainMenuScreen`)
         string _keyRebind;            ///< 키 바인딩을 받는 창
         string _notifications;        ///< 알림 화면
         string _notificationEntry;    ///< 알림 한 줄 견본
