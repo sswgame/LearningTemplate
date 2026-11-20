@@ -95,11 +95,21 @@ namespace sw
         return bOpened;
     }
 
-    void ConstantBufferPagePool::update( const ConstantBufferPoolSlice& slice, const void* pData, const uint32 size )
+    bool ConstantBufferPagePool::update( const ConstantBufferPoolSlice& slice, const void* pData, const uint32 size )
     {
         if ( slice.isValid() == false || slice._pDevice == nullptr || pData == nullptr )
-            return;
-        slice._pDevice->getResourceFactory()->updateConstantBuffer( slice._range, pData, MathUtil::min( size, slice._range._size ) );
+        {
+            SW_LOG_ERROR_ID( "ConstantBufferPagePool.UpdateInvalid", "Constant buffer slice update without a slice, device or data (%# bytes)", size );
+            return false;
+        }
+        // 자르지 않는다 — 잘라 쓰면 `fit` 을 거치지 않고 커진 레이아웃의 뒤쪽이 조용히 0 으로 남는다.
+        if ( size > slice._range._size )
+        {
+            SW_LOG_ERROR_ID( "ConstantBufferPagePool.UpdateOverflow", "Constant buffer update of %# bytes does not fit the %#-byte slice (call fit first)", size, slice._range._size );
+            return false;
+        }
+        slice._pDevice->getResourceFactory()->updateConstantBuffer( slice._range, pData, size );
+        return true;
     }
 
     void ConstantBufferPagePool::releaseSlice( IRHIDevice& device, const ConstantBufferPoolSlice& slice )

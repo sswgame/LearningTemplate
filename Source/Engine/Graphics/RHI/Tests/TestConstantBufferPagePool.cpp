@@ -37,6 +37,7 @@ namespace
         bool                 _bFailPage{ false };     ///< NOLINT(sw-bool-flag): 테스트의 실패 주입 스위치
         bool                 _bFailRegister{ false }; ///< NOLINT(sw-bool-flag): 테스트의 실패 주입 스위치
         RHIBufferSlice       _lastRegistered;
+        vector<uint32>       _listUpdateSize; ///< 구간 갱신으로 받은 크기(받은 순서)
 
         RHIBufferHandle createConstantBufferPage( uint32 size ) override
         {
@@ -55,7 +56,7 @@ namespace
         }
         void unregisterBindlessResource( RHIDescriptorIndex index ) override { _listEvent.push_back( FactoryEvent{ 'U', index } ); }
         void destroyBuffer( RHIBufferHandle buffer ) override { _listEvent.push_back( FactoryEvent{ 'D', buffer } ); }
-        void updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 ) override {}
+        void updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 size ) override { _listUpdateSize.push_back( size ); }
 
         RHIBufferHandle        createVertexBuffer( const void*, uint32 ) override { return 0; }
         RHIBufferHandle        createGPUVertexBuffer( uint32 ) override { return 0; }
@@ -277,4 +278,30 @@ SW_TEST_CASE( ConstantBufferPagePoolTest, ReleaseAllPagesReturnsOpenPages )
                                             { 'D', 100 }
     } ) );
     SW_EXPECT_EQUAL( 0u, pool.getOpenPageCount() );
+}
+
+/**
+ * @brief [ConstantBufferPagePoolTest] 구간보다 큰 갱신은 자르지 않고 false 다 — 맞는 크기만 팩토리에 간다
+ * @details 변이: 옛 `min( size, 구간 크기 )` 자르기로 되돌리면 넘친 갱신이 256 B 로 팩토리에 가 단언이 진다(커진 레이아웃 뒤쪽이 조용히 0).
+ */
+SW_TEST_CASE( ConstantBufferPagePoolTest, OversizedUpdateFailsInsteadOfTruncating )
+{
+    SW_EXPECT_LOG( "ConstantBufferPagePool.UpdateOverflow" );
+    SW_EXPECT_LOG( "ConstantBufferPagePool.UpdateInvalid" );
+    FakePageFactory     factory;
+    test::FakeRHIDevice device;
+    device._pResourceFactory     = &factory;
+    ConstantBufferPagePool& pool = device.getConstantBufferPagePool();
+
+    ConstantBufferPoolSlice slice;
+    SW_REQUIRE_TRUE( pool.fit( device, 200, slice ) );
+    SW_REQUIRE_EQUAL( 256u, slice.getRange()._size );
+    const vector<uint8> bytes( 512, 0x5A );
+    SW_EXPECT_FALSE( ConstantBufferPagePool::update( slice, bytes.data(), 512 ) );
+    SW_EXPECT_TRUE( factory._listUpdateSize.empty() );
+    SW_EXPECT_FALSE( ConstantBufferPagePool::update( slice, nullptr, 16 ) );
+    SW_EXPECT_TRUE( ConstantBufferPagePool::update( slice, bytes.data(), 256 ) );
+    SW_REQUIRE_EQUAL( factory._listUpdateSize.size(), static_cast<size_t>( 1 ) );
+    SW_EXPECT_EQUAL( 256u, factory._listUpdateSize[0] );
+    slice.reset();
 }
