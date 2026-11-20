@@ -6,7 +6,7 @@
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/BoatHelmComponent.h"
 
-// BoatHelmTest — 의도(가고 싶은 월드 방향)를 배의 추진 · 키로 바꾸는 규칙. 물리 씬 없이 돈다. 실제 항해는 BoatTest(엔진)와 시나리오 game.empty.boat 가 본다.
+// BoatHelmTest — 의도(가고 싶은 월드 방향)를 배의 추진 · 키로 바꾸는 규칙. 물리 씬 없이 돈다. 실제 항해는 BoatTest(엔진)와 시나리오 game.playground.boat 가 본다.
 
 using namespace sw;
 

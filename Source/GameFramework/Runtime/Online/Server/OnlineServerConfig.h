@@ -1,7 +1,7 @@
 /**
  * @file OnlineServerConfig.h
  * @brief 전용 서버가 띄우는 온라인 서비스(로그인, 채팅, 디렉터리, 매칭 …)의 운영 설정입니다. 서버 설정 파일 옆의 `<이름>.online.json` 에서 읽습니다.
- * @details - 서버 설정이 `Config/Server/Empty.json` 이면 온라인 설정은 `Config/Server/Empty.online.json` 입니다. 파일이 없으면 온라인 서비스를 띄우지 않습니다.
+ * @details - 서버 설정이 `Config/Server/Playground.json` 이면 온라인 설정은 `Config/Server/Playground.online.json` 입니다. 파일이 없으면 온라인 서비스를 띄우지 않습니다.
  *            서비스 포트는 서버 설정의 `_servicePort`, 저장소와 캐시 항목은 서버 설정의 `_listStore` · `_listCache` 를 이름으로 가리킵니다.
  *          - 키트 항목(`_listKit`)은 이름과 키트 설정 객체(`_settings`)입니다. 띄울 키트는 모두 적어야 합니다(비우면 기동 실패). 칸의 뜻과 범위는 키트의 설정 구조체(`<키트>KitConfig`)의 `PROPERTY` 가 정본입니다.
  *            언리얼 ini 의 서브시스템 섹션, Nakama 설정 파일의 런타임 항목에 해당합니다.

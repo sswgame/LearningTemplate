@@ -8,7 +8,7 @@
 namespace sw
 {
     /**
-     * @brief `gv_saveRestoreBreakReplace`: 모든 스냅샷 복원의 교체 단계를 활성 씬을 비운 뒤 지게 합니다(시나리오 game/empty/automation/savetravel 이 `<Variable>` 로 켜고 끈다).
+     * @brief `gv_saveRestoreBreakReplace`: 모든 스냅샷 복원의 교체 단계를 활성 씬을 비운 뒤 지게 합니다(시나리오 game/playground/automation/savetravel 이 `<Variable>` 로 켜고 끈다).
      * @details 교체 단계는 검증을 지난 같은 바이트 · 같은 코드라 실제로는 드물어, 깨진 복원 뒤 세이브 막기 · 씬 다시 열기를 밟을 다른 길이 없다.
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_saveRestoreBreakReplace, false, "Fail the replace step of every snapshot restore after the scene is cleared (fault injection for the broken-restore path)" );

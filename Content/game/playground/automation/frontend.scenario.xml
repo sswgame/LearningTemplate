@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="110d9cc37658b5f9b92fe4e222ad3cf5"?>
+<!--
+  메인 메뉴 → 게임 시작을 패드만으로 끝까지 — 포커스 이동 순서, 끝내기 확인 대화 상자(아니오 · 뒤로 가기), 뒤로 가기 무시(첫 화면), 키보드 ↔ 패드 버튼 글리프 전환,
+  안전 영역 · 글자 배율 · 의사 현지화(qps-ploc)에서 글 넘침 없음을 본다(docs/DesignBacklog.md "런타임 UI 공통 장치").
+  무대: maps/mainmenu(TitleMenuComponent 가 engine/ui/mainmenu.ui.xml 을 연다). "시작" 은 전역 명령 StartGame → 팩의 시작 맵(editortest)이다.
+  첫 패드 입력은 기본 포커스(StartGame)만 잡고 옮기지 않는다(UIInputRouter::handleNavigation). 메뉴 그림은 골든 한 장(mainmenu — 통합이 첫 실행에서 기록).
+  실행: ctest -R Scenario.playground (체인)
+-->
+<Scenario name="game.playground.frontend" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/mainmenu.scene.xml"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/mainmenu.ui.xml" timeoutFrames="60"/> <!-- 타이틀 컴포넌트가 메뉴를 열었다 -->
+	<Expect watch="Time.Paused" equals="0"/>
+
+	<!-- 패드: 첫 입력은 기본 포커스, 다음부터 아래로 한 칸씩 -->
+	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="StartGame" timeoutFrames="10"/>
+	<WaitUntil watch="Input.GlyphStyle" atLeast="1" timeoutFrames="10"/> <!-- 마지막 장치가 패드다 — 버튼 표시가 패드 글리프 -->
+	<Store watch="UI.ActionGlyph" key="UI.Accept" as="padAccept"/>
+	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Options" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="QuitGame" timeoutFrames="10"/> <!-- 호스트가 QuitGame 을 걸어 단추가 보인다 -->
+	<Screenshot file="mainmenu.ppm"/>
+
+	<!-- 끝내기 → 확인 대화 상자(포커스는 확인) → 오른쪽 취소 → A: 메뉴로 돌아오고 포커스는 QuitGame 으로 돌아온다 -->
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Accept" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadRight" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Cancel" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/mainmenu.ui.xml" timeoutFrames="30"/>
+	<WaitUntil watch="UI.FocusedWidget" is="QuitGame" timeoutFrames="10"/>
+	<ExpectLog id="App.QuitRequested" count="0"/>
+
+	<!-- 확인 대화 상자의 뒤로 가기(B)도 취소다 -->
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
+	<Tap slot="Gamepad.B" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/mainmenu.ui.xml" timeoutFrames="30"/>
+	<!-- 첫 화면의 뒤로 가기는 아무것도 하지 않는다(일어나지 않음 — 시간이 내용) -->
+	<Tap slot="Gamepad.B" hold="1"/>
+	<AdvanceSimulation frames="10"/>
+	<ExpectUI screen="engine/ui/mainmenu.ui.xml" focus="QuitGame"/>
+	<ExpectLog id="App.QuitRequested" count="0"/>
+
+	<!-- 키보드로 바꾸면 버튼 글리프가 키보드 것이 된다 -->
+	<Tap slot="Key.Up" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Options" timeoutFrames="10"/>
+	<WaitUntil watch="Input.GlyphStyle" equals="0" timeoutFrames="10"/>
+	<Expect watch="UI.ActionGlyph" key="UI.Accept" differsFrom="padAccept"/>
+
+	<!-- 안전 영역 5 % · 글자 1.5 배 · 의사 현지화(글이 30~40 % 늘어난다)에서 메뉴와 대화 상자의 글이 제 칸을 넘지 않는다 -->
+	<Variable name="gv_uiSafeZone" value="0.05"/>
+	<Variable name="gv_uiTextScale" value="1.5"/>
+	<DevCommand line="settings.apply language.text=qps_ploc"/>
+	<AdvanceSimulation frames="2"/> <!-- 다시 배치한 프레임 뒤에 센다 -->
+	<Expect watch="UI.TextOverflowCount" equals="0"/>
+	<Tap slot="Key.Down" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="QuitGame" timeoutFrames="10"/>
+	<Tap slot="Key.Enter" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
+	<AdvanceSimulation frames="12"/> <!-- 여는 애니메이션(0.12 초) 뒤의 배치 -->
+	<Expect watch="UI.TextOverflowCount" equals="0"/>
+	<Tap slot="Key.Escape" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/mainmenu.ui.xml" timeoutFrames="30"/>
+	<DevCommand line="settings.apply language.text=ko_kr"/> <!-- 체인의 다음 단계가 의사 문화권을 물려받지 않게 팩의 기본 언어(gamesettings defaultLanguage)로 — 빈 값은 언어를 바꾸지 않는다 -->
+	<Variable name="gv_uiTextScale" value="1"/>
+	<Variable name="gv_uiSafeZone" value="0"/>
+
+	<!-- 패드로 시작: 위로 둘 → StartGame → A. 새 씬이 서면 타이틀 씬이 내려가며 메뉴도 닫힌다 -->
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Options" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="StartGame" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/editortest.scene.xml"/>
+	<WaitUntil watch="UI.ActiveScreen" is="none" timeoutFrames="60"/>
+	<ExpectLog id="App.QuitRequested" count="0"/>
+	<ExpectImage file="mainmenu.ppm" golden="mainmenu" region="0.25,0.2,0.75,0.8"/>
+	<Pass/>
+</Scenario>

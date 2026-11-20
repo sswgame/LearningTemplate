@@ -68,7 +68,7 @@ namespace sw
         /** @brief 도메인 하나의 표 줄입니다. */
         struct Entry
         {
-            string _name;     ///< 소문자 이름(`common` · `game/empty` · `dlc/winter`)
+            string _name;     ///< 소문자 이름(`common` · `game/playground` · `dlc/winter`)
             int32  _priority; ///< 작을수록 먼저 찾는다
             bool   _bCooked;  ///< 쿠킹 대상이면 true(scratch · 임시는 false) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };

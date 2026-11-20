@@ -164,7 +164,7 @@ namespace sw
                 return PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) && AssetCookPath::isCookedOutput( relativePath ) == false;
             }
 
-            /** @brief 도메인 기준 상대 경로의 정규화 리소스 id(`game/empty/maps/a.scene.xml`)입니다. */
+            /** @brief 도메인 기준 상대 경로의 정규화 리소스 id(`game/playground/maps/a.scene.xml`)입니다. */
             static string makeAssetID( string_view domain, string_view relativePath ) { return FileUtil::normalizePath( FileUtil::joinPath( domain, relativePath ) ).str(); }
 
             /** @brief 고르기 요약입니다 — 도메인마다 담은 파일 수 · 바이트와 후보 수 · 바이트, 그리고 합계(보고 · 크기 추적용). */

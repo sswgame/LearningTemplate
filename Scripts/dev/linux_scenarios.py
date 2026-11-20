@@ -53,7 +53,7 @@ FONT_FILE = 'LiberationSans-Regular.ttf'  # 카탈로그가 찾는 Linux 글꼴(
 XVFB_DEBS = ('git-lfs xvfb xserver-common x11-xkb-utils xkb-data libxfont2 libfontenc1 libunwind8 libxkbfile1 libxtst6 libgl1 libgl1-mesa-dri '
              'libtirpc3t64 libxshmfence1 libpixman-1-0 libxcvt0 libglvnd0 libgbm1 libepoxy0 libxau6 libxdmcp6').split()
 SCREEN = '2560x1440x24'  # 체인의 큰 창이 화면 안에 들어오고, 실제 포인터가 창 밖 가운데에 머문다
-ALL_CHAINS = ('editor empty abilityarena frontiertown harvestvalley lanternvale meadowvillage nilecity pixeltown shooter3d starskirmish themepark velmora voxelcraft wildwest '
+ALL_CHAINS = ('editor playground abilityarena frontiertown harvestvalley lanternvale meadowvillage nilecity pixeltown shooter3d starskirmish themepark velmora voxelcraft wildwest '
               'abilityarena.editor harvestvalley.editor shooter3d.editor themepark.editor').split()
 PARALLEL_CHAINS = 4  # --gpu software(lavapipe)는 코어를 나눠 쓰므로 많이 띄우면 벽시계 시한을 넘긴다
 WALL_SCALE = '4'  # 소프트웨어 렌더링이라 벽시계 시한을 늘린다(gv_scenarioWallScale)
@@ -356,7 +356,7 @@ def chain(arguments):
 
 def run_stage_set(names, env, log_name, record=False, extra=()):
     """단계 이름 묶음을 부분 체인으로 돌린다. 건너뜀 · 실패가 있어도 끝까지 간다 - 없으면 뒤 단계가 돌지 않아 통과로 착각한다."""
-    # 이름은 에디터 단계, `/` 가 든 것은 리소스 경로 그대로(게임 단계 — 예: game/empty/automation/gpumessages.scenario.xml). 에디터는 에디터 단계만 있을 때 켠다.
+    # 이름은 에디터 단계, `/` 가 든 것은 리소스 경로 그대로(게임 단계 — 예: game/playground/automation/gpumessages.scenario.xml). 에디터는 에디터 단계만 있을 때 켠다.
     listed = ','.join(n if '/' in n else f'engine/automation/editor/{n}.scenario.xml' for n in names)
     editor = [app_arguments.flag('EnableEditor')] if all('/' not in n for n in names) else []
     return subprocess.run(['timeout', '1200', './App', *editor, app_arguments.option('scenario', listed), app_arguments.flag('scenario-keep-going'),
@@ -635,8 +635,8 @@ def self_check():
     assert evaluate_fuzz_log('INFO: Loaded 1 modules   (10 inline 8-bit counters)').startswith('coverage reaches only')
     assert evaluate_fuzz_log('INFO: Loaded 4 modules   (99 inline 8-bit counters)\nDone 2000 runs') is None
     # 체인 단계 끝 줄 — 앞머리는 그대로, 진 단계는 판정 값 한 줄(`<종류> - <까닭>`)이 붙는다. `: <Pass/>` 로 끝나는 실패 줄은 없다.
-    failed = '[Error] [Scenario] chain stage 12/94 Failed (game.empty.vfxsort): UnhandledLog - [Warning] (id=Shadow.AtlasFull) atlas full (+2) - 3 later stage(s) skipped'
-    assert parse_chain_stage(failed) == (12, 94, 'Failed', 'game.empty.vfxsort', 'UnhandledLog - [Warning] (id=Shadow.AtlasFull) atlas full (+2)'), parse_chain_stage(failed)
+    failed = '[Error] [Scenario] chain stage 12/94 Failed (game.playground.vfxsort): UnhandledLog - [Warning] (id=Shadow.AtlasFull) atlas full (+2) - 3 later stage(s) skipped'
+    assert parse_chain_stage(failed) == (12, 94, 'Failed', 'game.playground.vfxsort', 'UnhandledLog - [Warning] (id=Shadow.AtlasFull) atlas full (+2)'), parse_chain_stage(failed)
     assert parse_chain_stage('[Info] [Scenario] chain stage 1/2 Passed (editor.focus)') == (1, 2, 'Passed', 'editor.focus', '')
     assert parse_chain_stage('chain stage 3/3 Skipped (a.b): no window manager') == (3, 3, 'Skipped', 'a.b', 'no window manager')
     assert parse_chain_stage('[Scenario] chain Failed (3 stage(s), 1 failed, 0 skipped, 1 not run)') is None

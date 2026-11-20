@@ -493,7 +493,7 @@ def check_working_tree(project_root: Path) -> list[str]:
 
 def run_self_check() -> None:
     """리다이렉트 표 쓰기 규칙 — C++ `AssetRedirectTest.MovesAddLinesAndMovingBackReplacesThem` 과 같은 사례 · 같은 글."""
-    assert make_redirect_table_id("game/empty/maps/a.scene.xml") == "game/empty/redirects.xml"
+    assert make_redirect_table_id("game/playground/maps/a.scene.xml") == "game/playground/redirects.xml"
     assert make_redirect_table_id("common/data/a.xml") == "common/redirects.xml"
     first = add_redirects(None, [("common/data/a.xml", "common/data/b.xml")])
     assert first == '<Redirects>\n\t<Redirect from="common/data/a.xml" to="common/data/b.xml" />\n</Redirects>\n', first

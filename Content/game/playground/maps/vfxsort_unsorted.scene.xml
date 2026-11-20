@@ -1,0 +1,107 @@
+<?asset guid="925e951f50604dd6883fc540e35813ac"?>
+<Scene formatVersion="2" name="VfxSortUnsorted">
+	<!-- 입자 정렬 시나리오(game/playground/automation/vfxsort)의 정렬하지 않는 무대(풀 순서) — 왼쪽 CPU 방출기(CpuPuffs) · 오른쪽 GPU 방출기(GpuPuffs)가 카메라 쪽(-z)으로 퍼프를 날린다.
+	     주 시점은 -z 쪽에서 +z 를 보고, PiP(화면 오른쪽 위)는 +z 쪽에서 반대로 본다 — 뷰 깊이 정렬은 두 뷰가 서로 다른 순서다. 정렬한 무대는 vfxsort 다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.5,-8"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="51.5662"
+					                 _nearZ="0.1"
+					                 _farZ="60"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="PipCamera">
+			<GameObject _schemaVersion="0" _name="PipCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.5,12"
+					                 _localRotation="0,3.14159265,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="51.5662"
+					                 _nearZ="0.1"
+					                 _farZ="60"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Capture"
+					                 _bOrthographic="false">
+						<_renderOutput _screenRect="0.6,0.05,0.35,0.35" _target="ScreenRect" />
+					</CameraComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.628882,0.93002,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1"
+					                           _ambient="0.3"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,2"
+					               _localRotation="0,0,0"
+					               _localScale="16,1,16"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _boundsRadius="12" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="CpuPuffs">
+			<GameObject _schemaVersion="0" _name="CpuPuffs" _bActive="true">
+				<_listComponent>
+					<VFXComponent _localPosition="-1.5,1.5,4"
+					              _localRotation="0,0,0"
+					              _localScale="1,1,1"
+					              _attachOwner="None"
+					              _attachComponent="None"
+					              _effectPath="engine/vfx/vfxsort_cpu.vfx.xml"
+					              _seed="1"
+					              _bPlayOnBegin="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="GpuPuffs">
+			<GameObject _schemaVersion="0" _name="GpuPuffs" _bActive="true">
+				<_listComponent>
+					<VFXComponent _localPosition="1.5,1.5,4"
+					              _localRotation="0,0,0"
+					              _localScale="1,1,1"
+					              _attachOwner="None"
+					              _attachComponent="None"
+					              _effectPath="engine/vfx/vfxsort_gpu.vfx.xml"
+					              _seed="1"
+					              _bPlayOnBegin="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

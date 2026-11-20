@@ -210,7 +210,7 @@ namespace
 
         static string withShader( string_view extra = "" )
         {
-            string attributes = "_shaderPath=\"game/empty/shaders/compute_channelswap.hlsl\" ";
+            string attributes = "_shaderPath=\"game/playground/shaders/compute_channelswap.hlsl\" ";
             attributes.append( kNoState );
             attributes += " ";
             attributes.append( extra );
@@ -251,7 +251,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputePassRejectsBadDeclarations )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::withShader(), "<item>A</item><item>A</item><item>A</item>", "<item>B</item>" ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::withShader(), "<item>D</item>", "<item>B</item>" ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::withShader(), "<item>B</item>", "<item>B</item>" ) ) );
-    const string blended = "_shaderPath=\"game/empty/shaders/compute_channelswap.hlsl\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _blendPreset=\"Transparent\"";
+    const string blended = "_shaderPath=\"game/playground/shaders/compute_channelswap.hlsl\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _blendPreset=\"Transparent\"";
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( blended, "", "<item>B</item>" ) ) );
     const string passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _computeEntryPoint=\"CSMain\" " ) + RenderPipelineTestUtil::kOpaqueState;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes ) ) );
@@ -265,7 +265,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, OptionalStagesFollowTheRules )
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
     RenderPipelineAsset stages;
-    SW_REQUIRE_TRUE( stages.loadFromXMLFile( AssetID{ string_view( "game/empty/pipeline/tessellationstagepipeline.xml" ) } ) );
+    SW_REQUIRE_TRUE( stages.loadFromXMLFile( AssetID{ string_view( "game/playground/pipeline/tessellationstagepipeline.xml" ) } ) );
     bool bFoundHull = false;
     for ( const RenderGraphPassDesc& pass : stages.getGraphPass() )
     {
@@ -289,7 +289,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, OptionalStagesFollowTheRules )
 SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesLoad )
 {
     for ( const utf8* pPath : { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/forwardpipelinestaged.xml", "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forwardtoonpipeline.xml",
-                                "engine/pipeline/forward2dpipeline.xml", "engine/pipeline/deferredpipeline.xml", "game/empty/pipeline/computepasspipeline.xml", "game/empty/pipeline/extensionpasspipeline.xml" } )
+                                "engine/pipeline/forward2dpipeline.xml", "engine/pipeline/deferredpipeline.xml", "game/playground/pipeline/computepasspipeline.xml", "game/playground/pipeline/extensionpasspipeline.xml" } )
     {
         RenderPipelineAsset asset;
         SW_EXPECT_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( pPath ) } ), pPath );
@@ -328,7 +328,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
     const string&   contentRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
     const TypeInfo& typeInfo    = *RenderPipelineDesc::StaticType();
     for ( const utf8* pID : { "engine/pipeline/forwardtoonpipeline.xml", "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forward2dpipeline.xml", "engine/pipeline/forwardpipelinestaged.xml",
-                              "game/empty/pipeline/extensionpasspipeline.xml", "game/empty/pipeline/geometrystagepipeline.xml", "game/empty/pipeline/computepasspipeline.xml" } )
+                              "game/playground/pipeline/extensionpasspipeline.xml", "game/playground/pipeline/geometrystagepipeline.xml", "game/playground/pipeline/computepasspipeline.xml" } )
     {
         string sourceText;
         SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ pID }, sourceText ) );

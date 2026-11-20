@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="351562eeaa774679bd92f394619411d1"?>
+<!--
+  장르 키트 시연 — 카트 레이싱 키트(GF_KartRacing)의 한 바퀴 경기: 세 대 → 2 번을 결승선 2 m 뒤, 1 번을 3 m 뒤에 세움 → 2 번이 결승선을 두 번 넘어 1 등 → 결승 시한이 지나 1 번 2 등, 0 번 3 등.
+  감시 값: KitDemo.KartRacing.State(0 시작 전, 1 마침) · .Winner · .RunnerUp · .Last(차 번호).
+  실행: ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.kit_kartracing" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/kit_kartracing.scene.xml"/>
+	<WaitUntil watch="KitDemo.KartRacing.State" equals="1" timeoutFrames="120"/>
+	<Expect watch="KitDemo.KartRacing.Winner" equals="2"/>
+	<Expect watch="KitDemo.KartRacing.RunnerUp" equals="1"/>
+	<Expect watch="KitDemo.KartRacing.Last" equals="0"/>
+	<ExpectLog id="KitDemo.KartRacingDone" count="1"/>
+	<Pass/>
+</Scenario>

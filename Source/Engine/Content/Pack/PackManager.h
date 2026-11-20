@@ -29,7 +29,7 @@ namespace sw
      */
     struct MountedPack
     {
-        string                 _domainName{};          ///< 팩이 적은 마운트 도메인(`engine` · `game/empty` · `dlc/winter`). 패치 팩은 빈 글이다(항목이 전체 경로)
+        string                 _domainName{};          ///< 팩이 적은 마운트 도메인(`engine` · `game/playground` · `dlc/winter`). 패치 팩은 빈 글이다(항목이 전체 경로)
         int32                  _priority{ 0 };         ///< 높을수록 우선 탐색
         shared_ptr<PackReader> _pReader;               ///< 읽는 쪽이 잠금 밖에서 쓰는 동안 언마운트돼도 살아 있게 함께 든다
         vector<uint64>         _listRemovedPathHash{}; ///< 패치 팩이 지운 전체 경로의 해시(정렬). 이 팩보다 낮은 우선순위의 같은 경로를 가린다(`mountPatchPack`)
@@ -151,7 +151,7 @@ namespace sw
         /** @brief 현재 마운트된 팩 개수를 반환합니다. */
         size_t getMountedPackCount() const;
         /**
-         * @brief 마운트된 도메인 팩의 도메인(`engine` · `game/empty` · `dlc/winter`)을 낮은 우선순위부터 겹침 없이 돌려줍니다. 패치 팩(도메인 없음)은 빠진다.
+         * @brief 마운트된 도메인 팩의 도메인(`engine` · `game/playground` · `dlc/winter`)을 낮은 우선순위부터 겹침 없이 돌려줍니다. 패치 팩(도메인 없음)은 빠진다.
          * @details 런타임 에셋 색인(`AssetRegistry`)이 도메인마다 `<도메인>/assetindex.xml` 을 이 순서로 읽어 합친다 — 뒤(높은 우선순위)의 줄이 이긴다.
          *          그 파일을 패치 팩이 덮었으면 읽기(`readTextFile`)가 패치의 것을 준다.
          */

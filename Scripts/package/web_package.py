@@ -16,8 +16,8 @@
 첫 화면은 기동 필수 팩만 받는다 — 나머지는 언리얼 청크 pak · 유니티 Addressables 처럼 씬을 열 때 받는다(쿠커가 씬 단위로 나눈다 — `PackSceneChunkPlan`).
 
 사용법:
-    py -3 -m Scripts web-package --game Empty
-    py -3 -m Scripts web-package --game Empty --serve        # 묶은 뒤 http://localhost:8080 으로 띄운다
+    py -3 -m Scripts web-package --game Playground
+    py -3 -m Scripts web-package --game Playground --serve        # 묶은 뒤 http://localhost:8080 으로 띄운다
 """
 
 from __future__ import annotations

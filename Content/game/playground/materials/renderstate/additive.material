@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2da60aa1538205d6cc68d7a920baac03"?>
+<MaterialDef formatVersion="0" name="additive" _base="game/playground/materials/renderstate/glass.material" blendPreset="Additive" enableDepthWrite="false">
+</MaterialDef>

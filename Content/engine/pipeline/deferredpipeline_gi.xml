@@ -4,7 +4,7 @@
 	  SSAO 패스의 셰이더를 GTAO(gtao.hlsl — 지평선 기반 가림 + 굽은 노멀, 같은 AOColor 출력)로 바꾼다.
 	  ScreenSpaceGI 패스(ssgi.hlsl)가 장면 색 사본을 반구로 걸어 가까운 면이 튕긴 빛을 조명 첨부에 더한다(가산). 먼 빛은 조명 패스의 프로브 GI 가 이미 그렸다.
 	값(반경 · 조각 · 걸음 · 세기)은 아래 퍼뮤테이션이 정본이다 — 셰이더에 기본값이 없다.
-	고르는 법: `-gv_renderPipeline=engine/pipeline/deferredpipeline_gi.xml`. 시나리오: game/empty/automation/screenspacegi.
+	고르는 법: `-gv_renderPipeline=engine/pipeline/deferredpipeline_gi.xml`. 시나리오: game/playground/automation/screenspacegi.
 -->
 <RenderPipelineDesc _base="engine/pipeline/deferredpipeline.xml" _name="DeferredPipelineGI">
 	<_listPass>

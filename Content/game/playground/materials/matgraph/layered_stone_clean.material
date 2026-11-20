@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9c6a3d21de4caaa78fc686877fa8ccf6"?>
+<!-- 층을 끈 변형 — 셰이더는 부모 그대로이고 층 무게 칸만 0 이다(외형 변형이 층을 켜고 끄는 자리). -->
+<MaterialDef formatVersion="0" name="layered_stone_clean" _base="game/playground/materials/matgraph/layered_stone.gen.material">
+	<_properties>
+		<item name="_DirtWeight" defaultValue="0"/>
+	</_properties>
+</MaterialDef>

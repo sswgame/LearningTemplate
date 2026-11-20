@@ -26,13 +26,13 @@ SW_TEST_CASE( DomainTableTest, SplitUsesLongestRegisteredDomain )
 {
     DomainTable table;
     SW_REQUIRE_TRUE( table.add( "engine", 2, true ) );
-    SW_REQUIRE_TRUE( table.add( "game/empty", 0, true ) );
+    SW_REQUIRE_TRUE( table.add( "game/playground", 0, true ) );
     SW_REQUIRE_TRUE( table.add( "game", 5, true ) );
     SW_EXPECT_FALSE( table.add( "Engine", 9, true ) ); // 글자만 다른 같은 이름
 
-    const optional<ResourcePath> deep = table.split( "Game/Empty/maps/a.scene" );
+    const optional<ResourcePath> deep = table.split( "Game/Playground/maps/a.scene" );
     SW_REQUIRE_TRUE( deep.has_value() );
-    SW_EXPECT_EQUAL( string( "game/empty" ), deep->domain() );
+    SW_EXPECT_EQUAL( string( "game/playground" ), deep->domain() );
     SW_EXPECT_EQUAL( string( "maps/a.scene" ), deep->relative() );
 
     const optional<ResourcePath> shallow = table.split( "game/other/x" );
@@ -44,5 +44,5 @@ SW_TEST_CASE( DomainTableTest, SplitUsesLongestRegisteredDomain )
     SW_REQUIRE_TRUE( none.has_value() );
     SW_EXPECT_FALSE( none->hasDomain() );
 
-    SW_EXPECT_EQUAL( string( "game/empty" ), table.listByPriority().front()->_name );
+    SW_EXPECT_EQUAL( string( "game/playground" ), table.listByPriority().front()->_name );
 }

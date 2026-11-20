@@ -200,7 +200,7 @@ namespace sw
         static constexpr int32 kMaxDigestIDBytes = GameNetSessionLimit::kMaxDigestIDBytes; ///< `kResourceDigest` 의 리소스 id 길이 상한(넘는 id 는 보내지 않고 오류를 남긴다)
         /**
          * @brief `net.traffic` 부하 메시지입니다. 처리기가 없어 받는 쪽 라우터가 버린다.
-         * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Empty)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
+         * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Playground)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
          *          0x0F 는 라우터의 판 알림 종류다(`NetMessageRange::kRouterWireVersionKind`) — 예전에 여기 있어 받는 라우터가 부하 메시지를 판 알림으로 읽었다(표가 이제 컴파일 오류로 막는다).
          */
         using Traffic = NetMessageDef<0x0E, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;

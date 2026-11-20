@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d27a6114e931de895eeaef57cd70c619"?>
+<!--
+  체크포인트 · 리스폰 공통 장치(GameFramework Runtime/Gameplay/Respawn — CheckpointState · RespawnFlow)를 액션 플랫포머 시연으로 끝까지 돈다.
+  스테이지 respawn-1 의 <Respawn delay="0.5">: 제자리(두 번까지, 낭떠러지면 5 m 안 가장 가까운 설 자리) → 지난 체크포인트 → 시작 지점.
+  1) 땅 위에서 죽으면(개발 명령 kitdemo.platformer.kill) 그 자리에 선다(옮긴 거리 0).
+  2) 구덩이 1(x 10..12)에 떨어지면 제자리 두 번째 — 구덩이 바닥이 아니라 가까운 땅 위(몸 가운데 높이 1.45)에 선다.
+  3) 구덩이를 넘어 체크포인트(x 15)를 지나 구덩이 2(x 25..27)에 떨어지면 제자리를 다 썼으므로 체크포인트에 선다.
+  4) 세이브 → 한 번 더 죽어 상태를 바꾼 뒤 불러오기 → 체크포인트 · 제자리 횟수 · 부활 셈이 세이브 때로 돌아오고, 다시 떨어지면 그 체크포인트에 선다.
+  씬: 바닥 윗면 y 1, 시작 (1.5, 1.6), 골 x 37. 감시 값: KitDemo.Platformer.Respawns · .LastRespawnPolicy(0 체크포인트, 1 제자리) · .LastRespawnShift · .InPlaceUses · .RespawnPhase · .Checkpoint.
+  실행: ctest -R Scenario.game.playground (체인의 한 단계)
+-->
+<Scenario name="game.playground.kitdemo_respawn" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/kitdemo_respawn.scene.xml"/>
+	<WaitUntil watch="KitDemo.Platformer.State" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="KitDemo.Platformer.PlayerY" near="1.45" tolerance="0.05" timeoutFrames="60"/>
+	<Expect watch="KitDemo.Platformer.Respawns" equals="0"/>
+	<Expect watch="KitDemo.Platformer.RespawnPhase" equals="0"/>
+
+	<!-- 1) 땅 위에서 죽는다 — 0.5 초 대기 뒤 그 자리 -->
+	<Press slot="Key.D"/>
+	<WaitUntil watch="KitDemo.Platformer.PlayerX" atLeast="5" timeoutFrames="120"/>
+	<Release slot="Key.D"/>
+	<DevCommand line="kitdemo.platformer.kill"/>
+	<WaitUntil watch="KitDemo.Platformer.RespawnPhase" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="KitDemo.Platformer.Respawns" equals="1" timeoutSeconds="2"/>
+	<Expect watch="KitDemo.Platformer.LastRespawnPolicy" equals="1"/>
+	<Expect watch="KitDemo.Platformer.LastRespawnShift" near="0" tolerance="0.01"/>
+	<Expect watch="KitDemo.Platformer.PlayerY" near="1.45" tolerance="0.05"/>
+	<Expect watch="KitDemo.Platformer.InPlaceUses" equals="1"/>
+
+	<!-- 2) 구덩이 1 에 떨어진다 — 제자리지만 낭떠러지라 가까운 설 자리(구덩이 양쪽 땅 위) -->
+	<Press slot="Key.D"/>
+	<WaitUntil watch="KitDemo.Platformer.PlayerY" atMost="0" timeoutFrames="180"/>
+	<Release slot="Key.D"/>
+	<WaitUntil watch="KitDemo.Platformer.Respawns" equals="2" timeoutSeconds="4"/>
+	<Expect watch="KitDemo.Platformer.LastRespawnPolicy" equals="1"/>
+	<Expect watch="KitDemo.Platformer.LastRespawnShift" atLeast="1"/>
+	<Expect watch="KitDemo.Platformer.InPlaceUses" equals="2"/>
+	<WaitUntil watch="KitDemo.Platformer.PlayerY" near="1.45" tolerance="0.05" timeoutFrames="10"/>
+
+	<!-- 3) 구덩이 1 을 뛰어넘어(어느 쪽에 섰든) 체크포인트를 지나 구덩이 2 에 떨어진다 — 제자리를 다 써서 체크포인트 -->
+	<Press slot="Key.D"/>
+	<Press slot="Key.Space"/>
+	<AdvanceSimulation frames="21"/> <!-- 점프 키를 누른 채인 0.35 초(시간이 내용) -->
+	<Release slot="Key.Space"/>
+	<WaitUntil watch="KitDemo.Platformer.Checkpoint" equals="0" timeoutFrames="240"/>
+	<WaitUntil watch="KitDemo.Platformer.PlayerY" atMost="0" timeoutFrames="240"/>
+	<Release slot="Key.D"/>
+	<WaitUntil watch="KitDemo.Platformer.Respawns" equals="3" timeoutSeconds="4"/>
+	<Expect watch="KitDemo.Platformer.LastRespawnPolicy" equals="0"/>
+	<Expect watch="KitDemo.Platformer.PlayerX" near="15" tolerance="0.05"/>
+	<Expect watch="KitDemo.Platformer.InPlaceUses" equals="2"/>
+	<WaitUntil watch="KitDemo.Platformer.PlayerY" near="1.45" tolerance="0.05" timeoutFrames="60"/>
+
+	<!-- 4) 세이브 → 한 번 더 죽어 상태를 바꾼다 → 불러오면 세이브 때(체크포인트 · 제자리 횟수 · 부활 셈)로 돌아온다 -->
+	<Store watch="Save.Written" as="writtenBefore"/>
+	<DevCommand line="game.save kitdemo/respawn"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
+	<Press slot="Key.D"/>
+	<WaitUntil watch="KitDemo.Platformer.PlayerY" atMost="0" timeoutFrames="240"/>
+	<Release slot="Key.D"/>
+	<WaitUntil watch="KitDemo.Platformer.Respawns" equals="4" timeoutSeconds="4"/>
+	<Store watch="Save.Loaded" as="loadedBefore"/>
+	<DevCommand line="game.load kitdemo/respawn"/>
+	<WaitUntil watch="Save.Loaded" differsFrom="loadedBefore" timeoutWallSeconds="60"/>
+	<WaitUntil watch="KitDemo.Platformer.Respawns" equals="3" timeoutFrames="10"/>
+	<Expect watch="KitDemo.Platformer.Checkpoint" equals="0"/>
+	<Expect watch="KitDemo.Platformer.InPlaceUses" equals="2"/>
+	<Expect watch="KitDemo.Platformer.RespawnPhase" equals="0"/>
+	<Expect watch="KitDemo.Platformer.PlayerX" near="15" tolerance="0.05"/>
+	<!-- 불러온 체크포인트가 부활 지점이다 -->
+	<Press slot="Key.D"/>
+	<WaitUntil watch="KitDemo.Platformer.PlayerY" atMost="0" timeoutFrames="240"/>
+	<Release slot="Key.D"/>
+	<WaitUntil watch="KitDemo.Platformer.Respawns" equals="4" timeoutSeconds="4"/>
+	<Expect watch="KitDemo.Platformer.LastRespawnPolicy" equals="0"/>
+	<Expect watch="KitDemo.Platformer.PlayerX" near="15" tolerance="0.05"/>
+	<Expect watch="KitDemo.Platformer.State" equals="1"/>
+	<ExpectLog id="KitDemo.PlatformerCheckpoint" count="1"/>
+	<ExpectLog id="KitDemo.PlatformerDied" count="5"/>
+	<ExpectLog id="KitDemo.PlatformerRespawned" count="5"/>
+	<Record watch="KitDemo.Platformer.Respawns"/>
+	<Record watch="KitDemo.Platformer.PlayerX"/>
+	<Pass/>
+</Scenario>

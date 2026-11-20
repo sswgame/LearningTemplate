@@ -66,7 +66,7 @@
 	<DevCommand line="panel.close sequencer"/>
 	<!-- 지역 볼륨 인스펙터(8 차 T1) — 모래 함몰 구역(Quicksand, 프로필 sand.zone.xml)의 모듈 구역: 줄마다 출처(물려받음 · 바꿈 · 더함 · 뺌)가 흐린 글로, 강조색 없이 보이는지 눈으로 본다 -->
 	<EditorWaitStable/>
-	<DevCommand line="scene.open game/empty/maps/surfaceinteraction.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/surfaceinteraction.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ObjectCount" atLeast="5" timeoutFrames="600"/>
 	<EditorWaitStable/>

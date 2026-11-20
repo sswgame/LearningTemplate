@@ -17,14 +17,14 @@
 	<EditorWaitStable/>
 	<DevCommand line="panel.resetOptional"/>
 	<EditorWaitStable/>
-	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="600"/>
 	<DevCommand line="panel.focus content_browser"/>
 	<EditorWaitStable/>
-	<DevCommand line="content.open game/empty/models"/>
+	<DevCommand line="content.open game/playground/models"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.search"/>
 	<EditorWaitStable/>
@@ -80,7 +80,7 @@
 	<ExpectLog id="EditorViewportAssetPlacement.NoSurface" atLeast="1"/>
 	<!-- ④ 놓을 수 없는 종류는 연다 -->
 	<EditorWaitStable/>
-	<DevCommand line="content.open game/empty/materials/matgraph"/>
+	<DevCommand line="content.open game/playground/materials/matgraph"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.search"/>
 	<EditorWaitStable/>

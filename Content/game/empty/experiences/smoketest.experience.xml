@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<?asset guid="5a4b3be3349d402183e9caa88ca1af86"?>
-<!--
-  가장 작은 Experience — 키트 · 입력 문맥 · UI · 게임 모드 없이 맵만 연다. 개발 명령 experience.enter 의 길(읽기 → 검사 → 맵 요청 → 맵이 서면 켜기)을
-  시나리오 automation/experience.scenario.xml 이 본다. 장르 미니게임 Experience(허브 이전 ①)가 들어오면 그것들이 같은 길을 쓴다.
--->
-<Experience name="smoketest" map="game/empty/maps/editortest.scene.xml" entry="SceneSwitch"/>

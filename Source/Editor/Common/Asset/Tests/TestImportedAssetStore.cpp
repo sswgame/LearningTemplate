@@ -111,8 +111,8 @@ SW_TEST_CASE( ImportedAssetStoreTest, WriteIfAbsentSharesAndRefusesOtherBytes )
  */
 SW_TEST_CASE( ImportedAssetStoreTest, DomainFolderIsBeforeRawFolder )
 {
-    SW_EXPECT_EQUAL( string( "D:/c/Content/game/empty" ), ImportedAssetStore::findDomainFolder( "D:/c/Content/game/empty/models_raw/a/b.glb" ) );
-    SW_EXPECT_TRUE( ImportedAssetStore::findDomainFolder( "D:/c/Content/game/empty/other/b.glb" ).empty() );
+    SW_EXPECT_EQUAL( string( "D:/c/Content/game/playground" ), ImportedAssetStore::findDomainFolder( "D:/c/Content/game/playground/models_raw/a/b.glb" ) );
+    SW_EXPECT_TRUE( ImportedAssetStore::findDomainFolder( "D:/c/Content/game/playground/other/b.glb" ).empty() );
 }
 
 /**

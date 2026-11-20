@@ -12,7 +12,7 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_occlusionCulling" value="1"/>
 	<EditorWaitStable/>
-	<DevCommand line="scene.open game/empty/maps/fogshowcase.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/fogshowcase.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="panel.focus game_view"/>

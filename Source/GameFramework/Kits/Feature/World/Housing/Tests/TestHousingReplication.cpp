@@ -142,8 +142,8 @@ namespace
             , _listClient{}
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( R"(<HousingPartCatalog currency="Gold" cellSize="1" levelHeight="3" socketSnapRadius="0.6">
-                <Part id="floor" name="Floor" prefab="game/empty/prefabs/housing/floor.prefab.xml" layer="Floor" height="0.1" cost="5" refundRatio="0.5"/>
-                <Part id="wall" name="Wall" prefab="game/empty/prefabs/housing/wall.prefab.xml" layer="Structure" height="2.8" cost="10" snapTo="wallEnd">
+                <Part id="floor" name="Floor" prefab="game/playground/prefabs/housing/floor.prefab.xml" layer="Floor" height="0.1" cost="5" refundRatio="0.5"/>
+                <Part id="wall" name="Wall" prefab="game/playground/prefabs/housing/wall.prefab.xml" layer="Structure" height="2.8" cost="10" snapTo="wallEnd">
                     <Socket kind="wallEnd" position="-0.5,0,0"/><Socket kind="wallEnd" position="0.5,0,0"/>
                 </Part></HousingPartCatalog>)",
                                                        "test" ) );

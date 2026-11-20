@@ -353,7 +353,7 @@ class LaunchArgumentController {
         return state;
     }
 
-    /** @brief 프로필 `status` 로 머리글에 보일 빌드 문맥 글(예: `Dev` · `게임 Empty`)을 만듭니다. */
+    /** @brief 프로필 `status` 로 머리글에 보일 빌드 문맥 글(예: `Dev` · `게임 Playground`)을 만듭니다. */
     _makeStatusTextList(context) {
         const listText = [];
         for (const status of this._profile.listStatus) {

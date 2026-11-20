@@ -9,7 +9,7 @@
 #include "GameFramework/Runtime/Gameplay/Vehicle/KinematicVehicleComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/PhysicsCarComponent.h"
 
-// VehicleInputTest — 의도(가고 싶은 월드 방향)를 페달 · 조향으로 바꾸는 규칙(물리 차 · 키네마틱 차(바디 없는 차))과 바퀴 차 서술자. 물리 씬 없이 돈다(nogpu). 실제 주행은 시나리오 game.empty.vehicles 가 본다.
+// VehicleInputTest — 의도(가고 싶은 월드 방향)를 페달 · 조향으로 바꾸는 규칙(물리 차 · 키네마틱 차(바디 없는 차))과 바퀴 차 서술자. 물리 씬 없이 돈다(nogpu). 실제 주행은 시나리오 game.playground.vehicles 가 본다.
 
 using namespace sw;
 

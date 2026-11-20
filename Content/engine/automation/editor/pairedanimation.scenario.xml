@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="e8fc9247f2679f44875c5ce249d28314"?>
 <!--
-  에디터 시나리오 — 페어드 애니메이션 창(GF_EditorPlugin_CharacterEditor 확장): 창을 열고 Quick Open 으로 Empty 게임의 환호 짝(cheer_pair.pairedanim.xml, 역할 둘)을 고르면
+  에디터 시나리오 — 페어드 애니메이션 창(GF_EditorPlugin_CharacterEditor 확장): 창을 열고 Quick Open 으로 Playground 게임의 환호 짝(cheer_pair.pairedanim.xml, 역할 둘)을 고르면
   창이 파일을 읽어 두 역할을 한 시계로 미리보기 씬에 세우고, 렌더러가 그 씬을 그린다. 편집 없이 연 파일은 저장할 것이 없다(창을 닫아도 확인을 묻지 않는다).
   감시 값: Editor.PairedAnimationRoleCount(파일을 읽었다) → Editor.PairedAnimationSceneFrames(그렸다).
   실행: App -EnableEditor -scenario=engine/automation/editor/pairedanimation.scenario.xml -unattended

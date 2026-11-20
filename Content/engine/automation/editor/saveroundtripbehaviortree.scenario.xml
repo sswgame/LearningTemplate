@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="84ac3e4b5defb42c9f38a8afcd9e1f91"?>
 <!--
-  에디터 시나리오 — 행동 트리 패널(behavior_tree, GameFramework 에디터 확장) 저장 왕복: Empty 의 경비 트리(game/empty/data/vocabulary/guard.bt.xml)의 실행마다 새 사본(scratch/saveroundtripbehaviortree — <Scratch>)을 연다.
+  에디터 시나리오 — 행동 트리 패널(behavior_tree, GameFramework 에디터 확장) 저장 왕복: Playground 의 경비 트리(game/playground/data/vocabulary/guard.bt.xml)의 실행마다 새 사본(scratch/saveroundtripbehaviortree — <Scratch>)을 연다.
   고치지 않고 저장(panel.saveDocument) → 글 붙잡기(asset.snapshotScratch) → 디스크에서 다시 읽기(panel.reloadDocument) → 다시 저장 → 같은 바이트(asset.expectScratchUnchanged).
   저장이 실패하면(문서를 읽지 못했다) panel.saveDocument 가 진다. 원본은 건드리지 않는다.
   실행: App -EnableEditor -scenario=engine/automation/editor/saveroundtripbehaviortree.scenario.xml -unattended
 -->
 <Scenario name="editor.saveroundtripbehaviortree" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
-	<Scratch from="game/empty/data/vocabulary" as="scratch/saveroundtripbehaviortree"/>
+	<Scratch from="game/playground/data/vocabulary" as="scratch/saveroundtripbehaviortree"/>
 	<Variable name="gv_editorWatchPanel" value="behavior_tree"/>
 	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>

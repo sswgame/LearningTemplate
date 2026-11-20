@@ -32,7 +32,7 @@ namespace sw
             rest.remove_prefix( Internal::kGamePrefix.size() );
         if ( StringUtil::endsWith( rest, Internal::kSceneSuffix ) )
             rest.remove_suffix( Internal::kSceneSuffix.size() );
-        // `empty/maps/level2` → `empty_level2` — 맵 폴더는 모든 씬에 같아 이름에서 뺀다.
+        // `playground/maps/level2` → `playground_level2` — 맵 폴더는 모든 씬에 같아 이름에서 뺀다.
         string       body{ rest };
         const size_t maps = body.find( Internal::kMapsFolder.data(), 0, Internal::kMapsFolder.size() );
         if ( maps != string::npos )

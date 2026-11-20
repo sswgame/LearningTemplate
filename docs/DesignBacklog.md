@@ -268,7 +268,7 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 3. **옮김.** `ActionStageRun` · `MetroidvaniaDeathRestState` 는 체크포인트를 `CheckpointState` 로(앞으로만 · 다시 쓰기는 데이터), `ConquestWorld` 지휘관은 `RespawnFlow`(`TeamBase`, 대기 = `commanderRespawn`)로 옮긴다. `MechArenaWorld` 는 결정성 키트라 비트 동일을 지키려 옮기지 않고, `TrampolineArena` 는 대기 · 비용이 이미 공통 `MatchState` 이고 자리가 판 고정이라 옮길 몫이 무적 타이머 하나라 두며, 카트 관문은 부활이 아니다. 아레나형 게임은 `MatchState` 가 "언제 · 돈" 을, `RespawnFlow` 가 "어디" 를 맡는다(흐름 대기 0).
 4. **차례.** ① 키트 + 단위 · 서버 단위 테스트 ② 장르 키트 옮김(바뀐 상태 바이트는 해당 테스트의 손 바이트를 같이 고침) ③ Empty 플랫포머 시연이 흐름을 쓰고 시나리오.
 
-**확인.** 단위: `CheckpointStateTest` · `RespawnRulesTest` · `RespawnFlowTest`(정책 고르기 · 제자리 안전 지점 · 체크포인트 저장 왕복 · 대기 · 자리 준비 · 무적 · 벌칙 · 동료 부활), 칸 지형 설 자리 `ActionPlatformerRespawnWorldTest`. 서버: `RespawnServerAuthorityTest`(서버 결정 · 잘못된 요청 거절), 루프백 서버 · 클라이언트 짝 `RespawnRemoteCallTest`(선을 지난 요청 → 서버 판정 → 회신, 꼴 틀린 호출 · 함수 상한). 옮긴 키트 테스트 그대로(바이트 모양이 바뀐 손 바이트 도우미만 고침). 시나리오 `game.empty.kitdemo_respawn`: 제자리, 낭떠러지 제자리 → 안전 지점, 체크포인트 → 사망 → 그 체크포인트, 세이브 · 로드 뒤 체크포인트 유지. 두 프로세스 시나리오는 아바타가 죽는 게임(LanternVale 에 아바타 사망 규칙)이 생길 때 그 게임의 `netpair/` 에 더한다.
+**확인.** 단위: `CheckpointStateTest` · `RespawnRulesTest` · `RespawnFlowTest`(정책 고르기 · 제자리 안전 지점 · 체크포인트 저장 왕복 · 대기 · 자리 준비 · 무적 · 벌칙 · 동료 부활), 칸 지형 설 자리 `ActionPlatformerRespawnWorldTest`. 서버: `RespawnServerAuthorityTest`(서버 결정 · 잘못된 요청 거절), 루프백 서버 · 클라이언트 짝 `RespawnRemoteCallTest`(선을 지난 요청 → 서버 판정 → 회신, 꼴 틀린 호출 · 함수 상한). 옮긴 키트 테스트 그대로(바이트 모양이 바뀐 손 바이트 도우미만 고침). 시나리오 `game.playground.kitdemo_respawn`: 제자리, 낭떠러지 제자리 → 안전 지점, 체크포인트 → 사망 → 그 체크포인트, 세이브 · 로드 뒤 체크포인트 유지. 두 프로세스 시나리오는 아바타가 죽는 게임(LanternVale 에 아바타 사망 규칙)이 생길 때 그 게임의 `netpair/` 에 더한다.
 
 ## 통합 담당 판단(2026-11-08)
 
@@ -290,11 +290,11 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 - **프로필:** `*.zone.xml`(이름 붙은 모듈 목록, `_base` 하나) · 재사용 `*.zonemodule.xml`, 세 층(프리셋 · 변형 · 배치 덮어쓰기 `_listModuleOverride`)을 데이터 상속이 합치고 합친 결과를 로드 때 검사한다(모르는 종류 · 매개변수 · 식 · 동작 · 참조는 로드 실패). 수치 칸은 조건식(`zoneDepth01` · `distanceToCenter` · `immersion` · `timeInside` · `impactSpeed`), 사건은 진입 · 체류 · 이탈 · 조건 전환(`Became` · `Lost`, `delay`), 경우 목록은 처음 맞는 하나, 저항 · 면역은 이펙트 계산이 깎는다.
 - **모듈**(서로를 모른다 — 새 효과는 `SW_ZONE_MODULE` 한 줄): `Action` · `PhysicsField`(중력 배율 · 방향 × 세기 · 유체 저항 · 부력 · 마찰, 캐릭터 · 강체 공통) · `Blackboard` · `NavArea` · `SurfaceChannel` · `SurfaceStamp`.
 - **반응**은 태그 · 속성만 읽는 컴포넌트다: `VisualSinkReactionComponent` · `JumpEscapeReactionComponent` · `ScreenReactionComponent`(`CameraDirector::setPostProcessOverlay` 페이드).
-- 데이터 `Content/game/empty/zones/`, 시나리오 `game.empty.zone*` · `sinkingsand`. 비교: 언리얼 GAS 이펙트 Component · PhysicsVolume, 유니티 Volume Override · Effector, Godot `Area3D` 를 한 프로필의 모듈로 합쳤다(영역마다 컴포넌트를 늘리지 않는다).
+- 데이터 `Content/game/playground/zones/`, 시나리오 `game.playground.zone*` · `sinkingsand`. 비교: 언리얼 GAS 이펙트 Component · PhysicsVolume, 유니티 Volume Override · Effector, Godot `Area3D` 를 한 프로필의 모듈로 합쳤다(영역마다 컴포넌트를 늘리지 않는다).
 
 ### 표면 변형 층(사용자 2026-11-08 — 지나온 길 · 파묻힘 · 빨려드는 구멍)
 
-**정한 것.** 씬 서비스 `SurfaceDeformSystem` 하나가 카메라 앞 창의 CPU 높이 격자에 도장(`SurfaceStampDef` — Print · Trail · Funnel)을 찍고 바뀐 칸만 텍스처로 보낸다. 렌더 패킷(`SurfaceDeformBinding`)이 엔진 텍스처 칸 `SurfaceDeform` 과 패스 상수 `g_SurfaceDeformParams` 로 모든 씬 지오메트리 패스(그림자 포함)에 걸고, 지면 · 지형 셰이더가 같은 함수(`surface_deform_layer.hlsli`)로 정점을 내린다(언리얼 RVT · 유니티 `SetGlobalTexture` 자리, 2026-11-11). 충돌 · 내비 · 높이장은 그대로다. 도장을 내는 길은 셋이고 모두 데이터다: 표면 종류 발자국(`SurfaceKindDef::_footprint`), 오브젝트 도장(`SurfaceStampComponent` Hold · Trail), 지역 모듈 `SurfaceStamp`. GPU 렌더 타깃이 아니라 CPU 격자인 것은 도장이 프레임에 몇 개뿐이고 값 시나리오가 깊이를 그대로 읽으며 백엔드 코드가 늘지 않아서다 — 수백 개로 늘면 컴퓨트로 옮긴다. 시나리오 `game.empty.surfacedeform` · `surfacefootprint` · `sinkingsand` · `terraindeform`.
+**정한 것.** 씬 서비스 `SurfaceDeformSystem` 하나가 카메라 앞 창의 CPU 높이 격자에 도장(`SurfaceStampDef` — Print · Trail · Funnel)을 찍고 바뀐 칸만 텍스처로 보낸다. 렌더 패킷(`SurfaceDeformBinding`)이 엔진 텍스처 칸 `SurfaceDeform` 과 패스 상수 `g_SurfaceDeformParams` 로 모든 씬 지오메트리 패스(그림자 포함)에 걸고, 지면 · 지형 셰이더가 같은 함수(`surface_deform_layer.hlsli`)로 정점을 내린다(언리얼 RVT · 유니티 `SetGlobalTexture` 자리, 2026-11-11). 충돌 · 내비 · 높이장은 그대로다. 도장을 내는 길은 셋이고 모두 데이터다: 표면 종류 발자국(`SurfaceKindDef::_footprint`), 오브젝트 도장(`SurfaceStampComponent` Hold · Trail), 지역 모듈 `SurfaceStamp`. GPU 렌더 타깃이 아니라 CPU 격자인 것은 도장이 프레임에 몇 개뿐이고 값 시나리오가 깊이를 그대로 읽으며 백엔드 코드가 늘지 않아서다 — 수백 개로 늘면 컴퓨트로 옮긴다. 시나리오 `game.playground.surfacedeform` · `surfacefootprint` · `sinkingsand` · `terraindeform`.
 
 ### 관성 이동과 탑승 가속감(사용자 2026-11-08 — 썰매처럼 경사에서 빨라지고 느려지고, 타면 가속이 느껴지게)
 
@@ -304,7 +304,7 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 - 바깥 힘은 `InertiaSettings::computeAlongAcceleration` 한 벌(경사 중력 − 구름 저항 − 공기 저항 v², 질량으로)을 키네마틱 탈것 · 말(`MountMovementComponent`) · 롤러코스터가 함께 쓰고, 구동은 출력 한계(`_maxPower`, P / (m·v))로 자른다 — 언리얼 Chaos Vehicle 토크 곡선 · 유니티 motorTorque 자리를 바디 없는 모델에서는 일률 한 칸으로.
 - 조작감은 모듈(`Grip` · `Drift` · `Boost` · `AirControl` · `Hover` · `Rail`), 튜닝은 `*.vehicle.xml`(`_base` 상속). 탑승 가속감은 좌석(`VehicleSeatComponent::_rideFeel`)이 탈것 가속도로 탑승자 기울임 · 시야각 킥 · 흔들림 · 소리 매개변수를 낸다.
 - **배**는 새 물리 없이 선체 강체 + 폰툰 부력 · 키 · 돛 · 방향별 저항의 조합이다(`BoatComponent` · `BoatHelmComponent` · `WeatherWaveComponent`).
-- 시나리오 `game.empty.inertia`(골든 `inertia_sled`) · `mountslope` · `boat`. 카트 트랙 전용 시나리오는 두지 않는다(같은 모터 · 표면 종류라 `inertia` 와 겹친다). 비행은 범위 밖.
+- 시나리오 `game.playground.inertia`(골든 `inertia_sled`) · `mountslope` · `boat`. 카트 트랙 전용 시나리오는 두지 않는다(같은 모터 · 표면 종류라 `inertia` 와 겹친다). 비행은 범위 밖.
 
 ### 에셋 정체성: 경로 id → 무작위 GUID (사용자 결정 2026-11-11)
 
@@ -427,7 +427,7 @@ public:
 
 | 무엇 | 시나리오 · 지표 | 판정 |
 |---|---|---|
-| 머티리얼 다시 묶기 | `game/empty/automation/load/*` · Shooter3D 첫 진입, 새 카운터 `GT.Material.textureResyncs`(프레임마다) | 밉이 오르는 동안 0(구조상 정확히 0 — 아니면 결함) |
+| 머티리얼 다시 묶기 | `game/playground/automation/load/*` · Shooter3D 첫 진입, 새 카운터 `GT.Material.textureResyncs`(프레임마다) | 밉이 오르는 동안 0(구조상 정확히 0 — 아니면 결함) |
 | 스트리밍 구간 프레임 | 같은 실행의 `GT.Frame` · `RT.Frame` p95, `RT.TextureStreaming` | ④ 뒤 p95 가 앞보다 흔들림 밖으로 나쁘지 않다 |
 | 링 사본 비용 | 새 카운터 `RT.Bindless.mirrorWrites`, 등록 한 번의 시간(`AssetLoadScope` `TextureUpload`) | 쓰기 수 ≤ 3 × (등록 + rebind), 등록 시간 증가 1 µs 아래 |
 | 유효성 | dx12 디버그 레이어 · vk 검증 레이어로 shooter3d · load 체인 | 디스크립터 관련 메시지 0 |
@@ -585,7 +585,7 @@ struct RenderViewRect
 | 무엇 | 시나리오 · 지표 | 판정 |
 |---|---|---|
 | 배율 복귀 | 단위 `RenderScaleAdjusterTest`(아래), Shooter3D `benchmark` vsync 켬 + 자동 배율, `RenderPacketBuilder.AutoRenderScale` 로그 | 부하가 걷힌 뒤 `_upFrames` × 단계 수 프레임 안에 1.0 |
-| 한 쌍의 비용 | `game/empty/automation/benchmark` dx12 · vk · gl, 시계 켬 · 끔 5 번, `RT.Frame` p50 | 차이가 흔들림 안(밖이면 값을 S8 에 적는다 — 시계는 자동 배율이 켜졌을 때만 켜지므로 결정은 그대로다) |
+| 한 쌍의 비용 | `game/playground/automation/benchmark` dx12 · vk · gl, 시계 켬 · 끔 5 번, `RT.Frame` p50 | 차이가 흔들림 안(밖이면 값을 S8 에 적는다 — 시계는 자동 배율이 켜졌을 때만 켜지므로 결정은 그대로다) |
 | 단계 프레임 | 개발 변수로 배율을 0.7 ↔ 1.0 으로 바꾸는 새 시나리오 `renderscalestep`, 새 카운터 `RT.Frame.transientAllocations`, 그 프레임의 `RT.Frame` | 할당 0, 프레임 시간이 중앙값의 1.2 배 아래 |
 | 그림 | `renderscalestep` 의 0.7 그림을 `gv_renderScale=0.7`(다시 만드는 길)의 그림과 견준다, 다섯 백엔드 | 차이 1 % 아래, 화면 가장자리에 사각형 밖 텍셀이 번지지 않는다 |
 
@@ -652,7 +652,7 @@ public:
 
 | 무엇 | 시나리오 · 지표 | 판정 |
 |---|---|---|
-| 그림 | 새 시나리오 `game/empty/automation/vfxsort` — 알파 연기 방출기(CPU 하나 · GPU 하나)를 주 시점과 180° 반대편 PiP 로 한 프레임에 본다, 다섯 백엔드 골든 | 두 뷰 모두 먼 입자가 먼저 그려진다. 정렬을 끈 그림과 5 % 넘게 달라야 한다(같으면 장면이 정렬을 드러내지 못한 것) |
+| 그림 | 새 시나리오 `game/playground/automation/vfxsort` — 알파 연기 방출기(CPU 하나 · GPU 하나)를 주 시점과 180° 반대편 PiP 로 한 프레임에 본다, 다섯 백엔드 골든 | 두 뷰 모두 먼 입자가 먼저 그려진다. 정렬을 끈 그림과 5 % 넘게 달라야 한다(같으면 장면이 정렬을 드러내지 못한 것) |
 | CPU 정렬 비용 | 방출기 32 × 입자 256 의 합성 장면, 새 스코프 `RT.VFX.sortParticles` | 프레임당 0.2 ms 아래(넘으면 깊이를 16 비트로 양자화한 기수 정렬로) |
 | GPU 정렬 비용 | 같은 장면 GPU 대상, `GPU.VFXSort` | 0.1 ms 아래 |
 | `None` 의 비용 | `benchmark` · VFX 표본 장면의 투명 패스 GPU 시간, 이 일 앞뒤 | 흔들림 안(밖이면 `None` 을 간접 읽기 없는 PSO 변형으로) |
@@ -1220,7 +1220,7 @@ struct SW_API ReplicatedLayout
 
 **확인.** 단위 `PhysicsOverlapTrackerTest.*`(물리 없음 — 여러 바디 한 번, 끝 먼저, 들고 남, 다시 짓기, 트리거 열쇠 분리, 유지), `TriggerOverlapContractTest.*`(Jolt · Box2D 씬 — 안에서 생성 · 파괴 · 비활성 · 트리거 끄고 켜기 · 순간 이동 · 몸 둘), `ZoneTest.*`(꺼진 볼륨 이탈 · 안에서 생성 첫 프레임 진입 · 파괴 이탈 기록) — 서버 단위(`Server --test`)에도 같은 케이스가 돈다. 시나리오 `triggercontract`(감시 값 `Physics.OverlapCount`).
 
-**소비자 — 지역 진입 컷씬(2026-11-20).** `SequenceTriggerComponent` 는 이 계약의 오브젝트 쌍 진입(`onOverlapBegin`)만 받는다(유지 · 이탈 안 씀 — 진입이 이탈 뒤에만 오므로 다시 재생의 재무장이 따로 없다). 한 번만 · 다시 재생은 바탕의 `_bOnce`(블루프린트 `DoOnce` 자리 — 언리얼 Level Sequence Actor 에는 트리거가 없다), 발동 수는 상태 칸이라 세이브 · 재접속 뒤에도 다시 틀지 않는다. 재생 중 재진입은 다시 틀지 않고(언리얼 `Play` 와 같다), 플레이어가 데이터 결함으로 틀지 못하면 발동이 아니다. 시나리오 `game.empty.cutscenetrigger`(안에서 태어남 · 유지 · 재진입 · 폰 재생성).
+**소비자 — 지역 진입 컷씬(2026-11-20).** `SequenceTriggerComponent` 는 이 계약의 오브젝트 쌍 진입(`onOverlapBegin`)만 받는다(유지 · 이탈 안 씀 — 진입이 이탈 뒤에만 오므로 다시 재생의 재무장이 따로 없다). 한 번만 · 다시 재생은 바탕의 `_bOnce`(블루프린트 `DoOnce` 자리 — 언리얼 Level Sequence Actor 에는 트리거가 없다), 발동 수는 상태 칸이라 세이브 · 재접속 뒤에도 다시 틀지 않는다. 재생 중 재진입은 다시 틀지 않고(언리얼 `Play` 와 같다), 플레이어가 데이터 결함으로 틀지 못하면 발동이 아니다. 시나리오 `game.playground.cutscenetrigger`(안에서 태어남 · 유지 · 재진입 · 폰 재생성).
 
 ### 충돌 채널 · 응답 · 프리셋(설계 2026-11-20)
 
@@ -1236,7 +1236,7 @@ struct SW_API ReplicatedLayout
 5. 이전: 프로필 이름 · 차례를 옛 레이어(Default · Static · Character · Ragdoll · Debris · Trigger · Projectile)와 같게 두고, 응답을 옛 행렬 그대로 적었다(테스트가 옛 표와 견준다) — 이름으로 적은 씬 · 프리팹(`_layer`)은 그대로 같은 동작이다. 일부러 바꾼 칸은 둘이다: Projectile 은 Pawn 에 막히고 Trigger 와 겹친다(옛 표는 무시 — Projectile 프로필을 쓰는 콘텐츠가 없다). 오브젝트 채널은 WorldStatic · WorldDynamic · Pawn · Ragdoll · Debris · Trigger · Projectile, 트레이스 채널은 Visibility(기본 막음) · Camera(기본 무시, 세상만 막음). 2D 콜라이더의 번호 칸 `_colliderType` 은 이름 칸 `_layer` 로 바꾸고 콘텐츠 20 파일을 옮겼다(모두 0 → Default). 인스펙터 표시 이름은 "Collision Profile".
 6. 에디터: 응답 격자는 "Collision Responses" 창(`CollisionResponsePanel` — 프로필 × 채널 칸을 눌러 막음 → 겹침 → 무시, 아래에 프로필 쌍 결과 표, 문서 원문 단계로 되돌리기, 주석 · 자산 줄을 지키는 원문 편집 `CatalogXMLText`, 기본과 같은 값은 줄을 빼 적힌 줄은 늘 기본과 다른 값). 채널 · 프로필 더하기 · 지우기는 카탈로그 편집기다. 이름 칸은 `PROPERTY( Meta = "NameSource=CollisionProfile" )` · `"NameSource=CollisionChannel"` 메타로 인스펙터가 고르기 목록을 그린다(`InspectorNameSource` — 언리얼 `GetOptions` 자리, 목록에 없는 지금 값은 끝 항목으로 남겨 보인다).
 
-**확인.** 단위 `CollisionProfileTest.*`(응답 표 대칭 · 약한 쪽, 프로필 해석 · 트레이스 마스크, 나쁜 데이터 오류, 배포 설정이 옛 표와 같음, Jolt · Box2D 막음 · 겹침 · 무시, 트레이스 채널 광선 거르기) — 서버 단위에도 돈다. 시나리오 `game/empty/automation/collisionprofiles`(투사체가 트리거는 겹치며 지나가고 Pawn 에 막힌다, 감시 값 `Physics.TraceDistance` 로 Camera 채널이 Pawn 을 무시하고 Visibility 는 맞는다).
+**확인.** 단위 `CollisionProfileTest.*`(응답 표 대칭 · 약한 쪽, 프로필 해석 · 트레이스 마스크, 나쁜 데이터 오류, 배포 설정이 옛 표와 같음, Jolt · Box2D 막음 · 겹침 · 무시, 트레이스 채널 광선 거르기) — 서버 단위에도 돈다. 시나리오 `game/playground/automation/collisionprofiles`(투사체가 트리거는 겹치며 지나가고 Pawn 에 막힌다, 감시 값 `Physics.TraceDistance` 로 Camera 채널이 Pawn 을 무시하고 Visibility 는 맞는다).
 ### 스트리밍 월드 길찾기(설계 2026-11-20)
 
 **문제.** 내비 타일은 셀과 같은 원점 · 반경으로 오르내린다(`SceneNavigation::updateTileStreaming`). 그런데 경로 · 군중은 끼운 타일만 안다 — 목적지 쪽 타일이 아직 오르지 않았으면 `requestMoveTarget` 이 목적지를 못 찾아 `Failed` 이고(오픈월드에서 먼 마을로 가는 NPC 가 출발조차 못 한다), 서 있던 타일이 내렸다 다시 오르면 Detour 군중 에이전트는 `INVALID` 상태로 남아 스스로 되살아나지 않는다. Detour 는 오프 메시 링크의 끝을 시작 타일과 여덟 이웃에서만 찾아(`connectExtOffMeshLinks`) 그보다 긴 다리 · 문 링크는 조용히 이어지지 않는다.
@@ -1279,7 +1279,7 @@ struct SW_API ReplicatedLayout
 3. 보조 액션 `UI.ContextMenu`(패드 X · 메뉴 키) — 탭 액션처럼 위젯 다음 화면(`onUnhandledAction`)이 받는다. 마우스 오른쪽 · 길게 누르기(입력 맵 hold 문턱)는 위젯이 직접 받는다.
 4. 시나리오 감시 값: `UI.FocusedWidget` · `UI.FocusedText` · `UI.FocusedComposition` · `UI.ActionGlyph` · `Input.GlyphStyle` · `UI.TextOverflowCount`(글 위젯의 원하는 크기 > 배치 크기) · `Time.Paused`, IME 조합은 `<Text composition="true">`.
 
-**확인.** 단위 `ConfirmDialogTest` · `GameFlowTest`. 시나리오 `game.empty.frontend` · `pausemenu` · `textinput` · `inventory` · `shopoffline`.
+**확인.** 단위 `ConfirmDialogTest` · `GameFlowTest`. 시나리오 `game.playground.frontend` · `pausemenu` · `textinput` · `inventory` · `shopoffline`.
 
 **남은 것.** 화면 전환 애니메이션은 문서 애니메이션(`Open` · `Close`)으로 화면마다 둔다(스택 공통 전환은 두지 않는다 — CommonUI 도 위젯마다 전환을 단다).
 
@@ -1296,7 +1296,7 @@ struct SW_API ReplicatedLayout
 4. 중복 누름은 두 겹: 화면(`_bBusy`) · 공급자(`Busy`). 재시도는 같은 멱등 키만 — 영수증 id 가 그 키다.
 5. 인벤토리 화면과 같은 가방: 산 것은 캐릭터 가방(`CharacterEquipmentComponent`)에 들고, 칸 · 무게가 모자라면 가게가 `NoRoom` 으로 거절한다. 가방 · 장비 조작은 `InventoryCommand` 하나(서버가 받은 요청을 같은 `validate` 로 거른다 — 복제 수량 · 음수 · 범위 밖 거절).
 
-**확인.** 단위 `ShopPurchaseTest` · `EconomyShopProviderTest`(UnitTests.OnlineKits) · `InventoryCommandTest`. 시나리오 `game.empty.shopoffline`(사기 · 잔액 부족 · 무게 가득 · 세이브 왕복) · `game.shooter3d.onlineshop`(성공 · 서버 한도 거절 · 잔액 부족 · 서버 오류).
+**확인.** 단위 `ShopPurchaseTest` · `EconomyShopProviderTest`(UnitTests.OnlineKits) · `InventoryCommandTest`. 시나리오 `game.playground.shopoffline`(사기 · 잔액 부족 · 무게 가득 · 세이브 왕복) · `game.shooter3d.onlineshop`(성공 · 서버 한도 거절 · 잔액 부족 · 서버 오류).
 
 **남은 것.** 인벤토리 명령의 네트워크 전송(클라이언트 요청 → 서버 적용 → 복제)은 인벤토리 복제 키트가 생길 때 — 요청 모양과 검사는 이미 `InventoryCommand` 다. 결제 상품(`<Product>`)은 `StorePurchaseFlow` 길이라 이 화면에 싣지 않는다.
 
@@ -1505,7 +1505,7 @@ public:
 
 **결정.** 표시 규칙은 `EngineConfig::_subtitles`(`SubtitleConfig` — `_maxVisibleLineCount` 2 · `_minDisplaySeconds` 2 · `_readingSecondsPerCharacter` 0.06 · `_arrSizeScale[3]` 0.85 · 1 · 1.3), 없거나 0 이면 기동 오류. 자막 문서에 그 줄 수만큼 `Line<n>` 이 없으면 오류. 보이는 시간은 max( 읽기 시간, 음성 길이 ) — 음성이 낸 줄은 그 음성이 나는 동안 남는다(`refreshVoiceState`). `ISubtitleSink` 는 `postSubtitle` 이 줄 번호를 돌려주고 `removeSubtitle` · `clearSubtitles` 를 갖는다 — 시퀀서 자막 트랙(다른 갈래)이 구간을 나갈 때 쓴다. 사용자 설정은 기존 `accessibility.subtitles` · `subtitleSize` · `subtitleBackground` 그대로(옵션 메뉴에 이미 있다). 화자 색은 스타일 변수(`subtitles.uistyle.xml` 의 `speaker`)로 둔다. 긴 언어는 문서의 최대 폭(1000)에서 접힌다. 언어 빈 값은 기동 때 고른 언어로 돌아간다(`LocalizationManager::getStartupLanguage`).
 
-**확인.** 단위 `UIScreenServicesTest`(설정 검사 · 줄 번호로 내리기 · 차례). 시나리오 `game.empty.subtitles`: 개발 명령 `audio.post` 로 대사를 내면 뜨고 화자가 맞고, 둘이 쌓이고, 크기 설정이 글 크기에 곱해지고, 읽기 시간 뒤 내려가고, 끄면 화면이 열리지 않고, qps-ploc 에서 접히고 넘치지 않는다(감시 값 `UI.Subtitle*`, 사진 한 장 — 골든은 통합이 첫 실행에서 기록).
+**확인.** 단위 `UIScreenServicesTest`(설정 검사 · 줄 번호로 내리기 · 차례). 시나리오 `game.playground.subtitles`: 개발 명령 `audio.post` 로 대사를 내면 뜨고 화자가 맞고, 둘이 쌓이고, 크기 설정이 글 크기에 곱해지고, 읽기 시간 뒤 내려가고, 끄면 화면이 열리지 않고, qps-ploc 에서 접히고 넘치지 않는다(감시 값 `UI.Subtitle*`, 사진 한 장 — 골든은 통합이 첫 실행에서 기록).
 ### 시퀀서 재생 · 컷씬 · 카메라(설계 2026-11-20)
 
 **문제.** 재생기(`SequencePlayer`)는 정방향 1 배속 · 반복 켜기/끄기(`bool`)뿐이다. 시간은 `float32` 초를 더해 쌓아(누적 오차로 긴 시퀀스 · 반복에서 프레임이 어긋날 수 있다) 프레임으로 잘랐고, 역재생 · 재생 속도 · 왕복 · 재생 범위 · 끝으로 건너뛰기 · 끝 알림이 없다. 컷씬 중 플레이어 입력 · HUD 를 그대로 두고, 건너뛰기 입력이 없다. 컷과 컷 사이는 프리셋 블렌드로만 섞인다.
@@ -1529,7 +1529,7 @@ public:
 12. **이징 · 보간.** 키 보간은 `FloatCurve` 의 Constant · Linear · Cubic(들어오는 · 나가는 접선, 자동 · 사용자)에 `Eased` 하나를 더했다 — 다음 키까지 `BlendCurve` 표(카메라 · UI · 애니메이션 블렌드와 같은 곡선)로 섞는다(언리얼 `ERichCurveInterpMode` + 섹션 Easing, 이징 표를 시퀀서에 따로 두지 않는다). `BlendCurve` 는 기반 층(`Engine/Curve`)으로 옮겼다(커브 층이 애니메이션 층을 읽을 수 없다). 자동 접선은 넘치지 않게 바꿨다(극값 키는 평평, 기울기는 양옆 구간의 3 배 이하 — 언리얼 Smart Auto · 유니티 Clamped Auto). 넘치는 이징(Back · Elastic · Bounce)은 언리얼 내장 이징에도 없고 블렌드 가중치 계약("단조 · 0→0 · 1→1")을 깨므로 들이지 않는다. 가중 접선(언리얼 Weighted Tangent)은 키 칸 둘(길이)이 더 들어 다음으로 미룬다. 구간 섞임은 항목 칸 `_easeInFrames` · `_easeOutFrames` · 곡선 둘 — 애니메이션 세기와 카메라 컷 사이 섞임이 쓴다(역방향으로 들어오면 꼬리). 자막 · 소리는 창구(`ISubtitleSink` · `ISoundPlayer`)에 세기 칸이 없어 아직 섞지 않는다. 시퀀스 파일에 키가 든 것이 지금 없어(검색) 옛 파일 업그레이드는 필요 없다 — 리플렉션이 모든 칸을 쓰므로 새 칸(`_easing`)만 기본값으로 읽힌다.
 13. **이번에 하지 않음.** CineCamera Rig Rail · Crane(레일 위 위치 0..1 키 트랙 + 크레인 팔 길이 · 각 키 트랙 — 리그 컴포넌트가 카메라를 자식으로 몬다), 표식 프레임(`JumpToMarkedFrame` — 에셋에 표식 표가 먼저), 반복 횟수(`LoopCount`).
 
-**확인.** 단위: `TestSequencePlayback`(틱 · 속도 · 범위 · 왕복 · 건너뛰기 · 발화 수). 시나리오: `game.empty.cinematicplayback`(역재생 컷 순서 · 속도 2 배 · 0.5 배 끝 프레임 · 왕복 · 범위 · 건너뛰기 뒤 게임 카메라), `game.empty.cinematiccamera`(키 사이 위치 · 화각 보간), `game.wildwest.arrivalskip`(입력 막힘 · HUD 숨김 · 건너뛰기 · 조작 복귀), `game.empty.cutscenetrigger`(물리 트리거 진입으로 한 번 · 다시 재생, 막기 · 범위 제한 · 빨리감기 · 재생 중 일시정지 메뉴와 옵션 — UI 맵이라 컷씬 레이어가 막지 않는다 — · 건너뛰기, Empty 는 이 때문에 `_bUIPauseMenu` 를 켰다), `editor.sequencerplayback`(재생 · 일시정지 · 역재생 · 스크럽).
+**확인.** 단위: `TestSequencePlayback`(틱 · 속도 · 범위 · 왕복 · 건너뛰기 · 발화 수). 시나리오: `game.playground.cinematicplayback`(역재생 컷 순서 · 속도 2 배 · 0.5 배 끝 프레임 · 왕복 · 범위 · 건너뛰기 뒤 게임 카메라), `game.playground.cinematiccamera`(키 사이 위치 · 화각 보간), `game.wildwest.arrivalskip`(입력 막힘 · HUD 숨김 · 건너뛰기 · 조작 복귀), `game.playground.cutscenetrigger`(물리 트리거 진입으로 한 번 · 다시 재생, 막기 · 범위 제한 · 빨리감기 · 재생 중 일시정지 메뉴와 옵션 — UI 맵이라 컷씬 레이어가 막지 않는다 — · 건너뛰기, Empty 는 이 때문에 `_bUIPauseMenu` 를 켰다), `editor.sequencerplayback`(재생 · 일시정지 · 역재생 · 스크럽).
 
 ### 공유 DDC(설계 2026-11-17, NEXT 5 에셋 GUID 3 단계)
 
@@ -1761,7 +1761,7 @@ public:
 1. 형식: `AssetCacheReloadFunction` 이 `ReloadResult` 를 돌려주고 `reloadAssetCache<T>` 가 멤버 결과를 `return` 한다 — `void` 를 돌려주는 캐시는 등록이 컴파일되지 않는다. 결과를 적는 곳은 `AssetHotReload::reloadCaches` 한 곳이다.
 2. 집계: `ReloadTracker` 에 길 `Module` 과 길마다 결과 수 · 실패 수 · 마지막 시간(감시 값 `Reload.Count.<길>` · `Reload.FailedCount` · `Reload.StaleCount` · `Reload.LastMs.<길>`). 모듈 결과는 `LiveReloadManager`(빌드 실패 · 연쇄 교체)가 적는다.
 3. 단계: `<RebuildModule name variant>`(빌드 트리의 판 머리를 덮고 `ModuleCompiler` 로 다시 짓기 — 추적 소스는 고치지 않는다, 판 표 `Config/Dev/ModuleRebuildVariants.json`), `<OverwriteConfig configFile from>`(쓰기 게이트가 연 `Config/Editor` 만), `<RestoreOverwrites/>`. 바꾼 파일은 `AutomationStepContext::restoreFileAtEnd` 에 맡기고 실행기가 `endRun` · 소멸자에서 되돌린다. 셰이더 · 에셋은 `<Scratch>` 사본을 `asset.overwriteScratch` 로 덮는다(원본은 게이트가 막는다).
-4. 시나리오: `game/empty/automation/desktop/editor/playreload`(편집기 · 혼자 · RUN_SERIAL — 빌드 트리 · 모듈 DLL · `Config/Editor` 를 바꾸므로 백엔드 넷 체인에 넣지 않는다), `shaderreload`(재컴파일기가 Debug 클라이언트만이라 `<SkipUnless Shader.LiveRecompile>`). 허브 게임(Playground)으로 옮겨도 같은 단계 · 감시 값을 쓴다.
+4. 시나리오: `game/playground/automation/desktop/editor/playreload`(편집기 · 혼자 · RUN_SERIAL — 빌드 트리 · 모듈 DLL · `Config/Editor` 를 바꾸므로 백엔드 넷 체인에 넣지 않는다), `shaderreload`(재컴파일기가 Debug 클라이언트만이라 `<SkipUnless Shader.LiveRecompile>`). 허브 게임(Playground)으로 옮겨도 같은 단계 · 감시 값을 쓴다.
 
 **PIE 를 리로드 너머로 잇는다(판단 2026-11-20).** 월드 · 씬 오브젝트 · 게임 인스턴스와 그 연결은 처음부터 호스트(엔진 `SceneManager` · App `GameModuleManager`) 것이고, 에디터 모듈이 쥔 것은 플레이 세션(`PlaySessionData` — 상태 · Step · 시작 위치 · 플래그 · 플레이 전 편집 씬의 롤백 스냅샷 · 남길 변경)뿐이다. 그래서 호스트로 통째 옮기지 않고 리로드 동안만 맡긴다: 작은 값은 `IModuleStateStore` 에 바이트로(`EditorPlaySession::carryOut` · `carryIn`, 키 `editor.playSession`), 롤백 스냅샷은 엔진 형 `ScenePlaySnapshot` 으로 묶어 씬 관리자가 맡는다(`SceneManager::holdPlaySnapshot` — 조립 기록 `Scene::AssemblySnapshot` 은 바이트로 옮기기에 크고, 엔진은 리로드하지 않아 형의 모양이 옛 이미지와 함께 바뀌지 않는다). 호스트 훅 `onBeforeSuspendModules( reason )` 은 리로드 · 백엔드 교체에 세션을 잇고(월드를 끄지 않는다 — 끄면 `endPlay` 가 돌아 상태 해시가 바뀐다) 종료에만 Stop 한다. 게임 모듈 리로드도 같은 길이라 PIE 가 멈추지 않고 게임 상태는 원래대로 `serializeState` 로 넘어간다. 편집 막기 수 · 거절 기록은 맡기지 않는다(쥔 작업이 옛 인스턴스와 사라진다). 되돌리기 기록의 보관분(플레이 동안 맡긴 편집 내역)은 이미 `EditorUndoHistory` 가 맡긴다. 대조: 언리얼 Live Coding 은 이미지를 바꾸지 않고 함수를 고쳐 PIE 가 그대로 이어지고, 유니티의 플레이 중 도메인 리로드는 상태를 직렬화해 되살린다 — 우리는 DLL 을 내리므로 유니티 모양(맡겼다 되찾기)으로 언리얼과 같은 결과(PIE 유지)를 낸다.
 
@@ -1904,7 +1904,7 @@ public:
 };
 ```
 
-   통과로 끝맺었는데 실패 줄이 있으면 첫 실패 줄이, 처리하지 않은 로그면 그 첫 줄(과 남은 수)이 까닭이다 — 끝 단계 이름이 까닭이 되는 길이 없다. `Automation.Finished` · `chain stage i/n` · 체인 끝 표 · 부모의 백엔드 요약 · 보고 JSON(`verdict`) · HUD 가 이 값 하나를 찍는다. `chain stage 12/94 Failed (game.empty.vfxsort)` 뒤에 `: UnhandledLog - [Warning] (id=Shadow.AtlasFull) … (+2)` 가 붙는다(앞머리는 그대로 — `linux_scenarios.py` 의 정규식이 읽는다).
+   통과로 끝맺었는데 실패 줄이 있으면 첫 실패 줄이, 처리하지 않은 로그면 그 첫 줄(과 남은 수)이 까닭이다 — 끝 단계 이름이 까닭이 되는 길이 없다. `Automation.Finished` · `chain stage i/n` · 체인 끝 표 · 부모의 백엔드 요약 · 보고 JSON(`verdict`) · HUD 가 이 값 하나를 찍는다. `chain stage 12/94 Failed (game.playground.vfxsort)` 뒤에 `: UnhandledLog - [Warning] (id=Shadow.AtlasFull) … (+2)` 가 붙는다(앞머리는 그대로 — `linux_scenarios.py` 의 정규식이 읽는다).
 4. **부모 요약.** 백엔드별 실행 끝에 (단계 · 종류 · 까닭)이 같은 줄을 백엔드로 접은 표를 낸다 — `vfxsort: GoldenMismatch dx11,dx12,vk,gl` 과 `…: vk` 가 한눈에 갈린다. `preflight.sh` 가 단계 끝마다 이 표를 찍는다.
 5. **단위 테스트 실패 종류.** 보고 판 4 에 케이스의 `failureKind`(Assertion · NoAssertion · UndeclaredLog · ExpectedLogMissing · SnapshotMissing · SnapshotDiffers · Timeout · Crashed)와 종류별 수. `UndeclaredLog` 줄은 붙일 글을 그대로 낸다(`add SW_EXPECT_LOG( "Shadow.AtlasFull" )` + 케이스 파일 · 줄).
 
@@ -2074,7 +2074,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 **플레이 중 리로드 시나리오(사용자 요청).** 허브 · 미니게임을 플레이하는 도중에 게임 모듈 핫 리로드 · 에디터 모듈 리로드(PIE) · 에셋 리로드(텍스처 · 머티리얼 · 메시 · 프리팹 · 카탈로그) · 설정 리로드 · 셰이더 다시 컴파일(실패 하나 섞기)을 일으켜, 플레이 상태 보존 · 화면 안 깨짐 · 실패는 이전 판 유지 + 실패로 기록(`AssetCacheReloadFunction` void 결함 — 전수 조사 판단 1 절) · 소요 시간 감시 값을 확인한다. 키트가 많이 살아 있는 허브 지점에서 돈다.
 
 **결정(전수 조사 2026-11-20 — 게임 14 개, Empty 골든 613 · Shooter3D 510 · ThemePark 25 · WildWest 14 · Meadow 8).**
-- Experience 데이터 `Content/game/playground/experiences/<이름>.experience.xml`: `name` · `map` · `entry`(`SubLevel` | `SceneSwitch`) · `gameMode`(컴포넌트 형식 · 설정) · `kits[]` · `inputContexts[]` · `ui[]` · `catalogs[]`(지금 `EmptyGame::onInitialize` 에 박힌 필수 데이터를 옮김) · `net`(`None` | `ClientServer` | `Lockstep` | `Rollback` | `MMO`) · `results[]`(허브로 돌려줄 감시 값 → 경제 · 진행 매핑) · `returnTo`. 맵이 기본 Experience 를 가리킨다(Lyra World Settings 자리). 실행 인자 `-experience=<이름>` 은 `gv_firstScene` 의 상위.
+- Experience 데이터 `Content/game/playground/experiences/<이름>.experience.xml`: `name` · `map` · `entry`(`SubLevel` | `SceneSwitch`) · `gameMode`(컴포넌트 형식 · 설정) · `kits[]` · `inputContexts[]` · `ui[]` · `catalogs[]`(지금 `PlaygroundGame::onInitialize` 에 박힌 필수 데이터를 옮김) · `net`(`None` | `ClientServer` | `Lockstep` | `Rollback` | `MMO`) · `results[]`(허브로 돌려줄 감시 값 → 경제 · 진행 매핑) · `returnTo`. 맵이 기본 Experience 를 가리킨다(Lyra World Settings 자리). 실행 인자 `-experience=<이름>` 은 `gv_firstScene` 의 상위.
 - 키트 켜기: 모두 링크하고 Experience 가 등록 · 서비스 바인딩만 켜고 끈다(정적 구성 · 결정성 · 핫 리로드와 맞음). 런타임 모듈 로드 · 언로드는 기각(정적 구성 불가, 미니게임마다 언로드 절차).
 - **Experience 범위 서비스(구조로 먼저):** 키트 23 개 이상이 한 인스턴스에 등록되면 전역 레지스트리 · 게임 서비스 · GV 가 Experience 사이로 샌다(지금은 체인 단계마다 인스턴스를 다시 세워 감춰짐). 들어갈 때 등록하고 나올 때 해제하는 범위 형식을 두고, 나온 뒤 남은 등록 · 입력 문맥 · 전역 값을 검사(시나리오 판정)한다. 락스텝 · 롤백 미니게임은 허브 틱 · 난수를 섞지 않는다. 넷 구성 해시는 Experience 마다.
 - 진입: 허브 사물 상호작용 · 트리거가 `experience.enter <이름>`. 하위 레벨 더하기(허브가 보임) — 농사 · 도시 · 테마파크 · 식당 · 카드 · 리듬, 씬 전환 — 격투 · 카트 · RTS · 복셀 · 2D · 플랫포머 · 메트로배니아 · 배틀로얄 · 호러. 씬 전환 전 허브를 `GameStateSnapshot` 으로 찍고 돌아올 때 복원, 하위 레벨은 허브 틱만 멈춤.
@@ -2124,7 +2124,7 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 | --- | --- | --- |
 | 0 `w-assetmovepack` | 도구 틈 ①–③(`move-asset` 팩 단위 옮기기 — 골든 이름 · `<Scenario name>` · 문자열 접두, 리다이렉트 표 규칙) + Python 테스트 | `py -3 -m Scripts lint`, 스크립트 단위 테스트, 작은 팩(PixelTown)에 `--dry-run` |
 | 1 `w-playground` | (가) `move-source` 소스 · 설정 + `rename-symbol` 식별자 (나) `move-asset game/empty game/playground`(골든 이름 · 시나리오 이름 · 문자열 접두) (다) 게임 이름 값(CMake 기본값 · 스크립트 · 테스트 · Linux 체인 목록 · 생성물 다시 생성) (라) `_bannedNames` | `Scenario.playground`(엔진 시나리오 포함 전체 — 그림은 안 바뀌고 골든 이름만), `Scenario.playground.editor`, `Scenario.editor`(편집기 시나리오 38 이 `game/empty` 를 씀), `Scenario.playground.load.*` 목록 확인(`ctest -N`), `Pack.*`(RunCookedContent), `UnitTests`, `net-pair` · `destruction-net-pair`, Linux 는 `.linux` 골든 이름까지 바꿨으니 모아 돌릴 때 |
-| 2 `w-kitexperience` | KitDemo 21(`kit_*` 17 · `kitdemo_*` 4)을 `experiences/*.experience.xml` + `-experience=` 로, `EmptyGame::onInitialize` 의 필수 데이터(몬스터 · 카탈로그)를 Experience `catalogs[]` 로, Experience 범위 서비스 해제 검사 | 그 21 시나리오 단독 목록(`-scenario=a,b,…`), 이어서 `Scenario.playground` |
+| 2 `w-kitexperience` | KitDemo 21(`kit_*` 17 · `kitdemo_*` 4)을 `experiences/*.experience.xml` + `-experience=` 로, `PlaygroundGame::onInitialize` 의 필수 데이터(몬스터 · 카탈로그)를 Experience `catalogs[]` 로, Experience 범위 서비스 해제 검사 | 그 21 시나리오 단독 목록(`-scenario=a,b,…`), 이어서 `Scenario.playground` |
 | 3 허브 맵 | `w-cellstate` · `w-netstream` · 씬 스트리밍 (가) 위에 허브 맵 · 하위 레벨 진입 | 새 허브 시나리오 + `Scenario.playground` |
 | 4 `w-absorb-pixeltown` | 오락실 RPG Experience(Overworld, 씬 전환) → 폴더 · 프리셋 · Linux 체인 줄 삭제 | 옮긴 2 시나리오 + `Scenario.playground` |
 | 5 `w-absorb-wildwest` | 허브 맵 바탕(OpenWorldWestern · 말 · 날씨 · 도착 컷씬), 골든 14 이름 재기록 | 옮긴 9 + 날씨 · 자동 저장 시나리오 |

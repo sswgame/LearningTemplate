@@ -959,14 +959,14 @@ SW_TEST_CASE( FightingTest, CatalogFailsWhenTheMovesFileLacksAMove )
     MoveCatalog moves;
     SW_REQUIRE_TRUE( moves.loadFromXMLText( kFightingMoveXML, "FightingTest" ) );
     FighterCatalog clean;
-    SW_EXPECT_TRUE( clean.loadFromXMLText( R"(<FighterCatalog moves="game/empty/data/kitdemo/demo.moves.xml">
+    SW_EXPECT_TRUE( clean.loadFromXMLText( R"(<FighterCatalog moves="game/playground/data/kitdemo/demo.moves.xml">
   <Fighter id="kaz" name="Kaz" sidestep="u" sidestepDown="d,n" jump="u/f"><Move id="low" command="3"/><Move id="lowAgain" frames="low" command="2"/></Fighter>
 </FighterCatalog>)",
                                            moves, "FightingTest" ) );
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     FighterCatalog broken;
-    SW_EXPECT_FALSE( broken.loadFromXMLText( R"(<FighterCatalog moves="game/empty/data/kitdemo/demo.moves.xml">
+    SW_EXPECT_FALSE( broken.loadFromXMLText( R"(<FighterCatalog moves="game/playground/data/kitdemo/demo.moves.xml">
   <Fighter id="kaz" name="Kaz" sidestep="u" sidestepDown="d,n" jump="u/f"><Move id="jab" command="1"/><Move id="jabby" frames="jab2" command="2"/></Fighter>
 </FighterCatalog>)",
                                              moves, "FightingTest" ) );

@@ -26,7 +26,7 @@ SW_TEST_CASE( AutomationTestOptionsTest, LaunchVariablesBecomeCommandLineArgumen
  */
 SW_TEST_CASE( AutomationTestOptionsTest, ScenarioStemIsTheFileNameBeforeItsFirstDot )
 {
-    SW_EXPECT_EQUAL( string( "fog" ), getAutomationScenarioStem( "game/empty/automation/fog.scenario.xml" ) );
+    SW_EXPECT_EQUAL( string( "fog" ), getAutomationScenarioStem( "game/playground/automation/fog.scenario.xml" ) );
     SW_EXPECT_EQUAL( string( "fog" ), getAutomationScenarioStem( "fog.scenario.xml" ) );
     SW_EXPECT_EQUAL( string( "fog" ), getAutomationScenarioStem( "game/v1.2/fog" ) );
     SW_EXPECT_TRUE( getAutomationScenarioStem( "" ).empty() );

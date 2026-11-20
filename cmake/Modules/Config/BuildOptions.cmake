@@ -174,7 +174,7 @@ if(SW_MEMORY_BACKEND STREQUAL "mimalloc" AND NOT "mimalloc" IN_LIST VCPKG_MANIFE
 endif()
 
 # 활성화할 대상 게임 팩 선택 (Source/Games/ 하위 디렉터리 이름)
-set(SW_ACTIVE_GAME "Empty" CACHE STRING "활성 게임(Source/Games 폴더 이름) — Bin/Modules/SWGame · Shipping 이 굽는 게임. Dev 는 실행할 때 -game=<게임> 으로 다른 게임도 고른다")
+set(SW_ACTIVE_GAME "Playground" CACHE STRING "활성 게임(Source/Games 폴더 이름) — Bin/Modules/SWGame · Shipping 이 굽는 게임. Dev 는 실행할 때 -game=<게임> 으로 다른 게임도 고른다")
 file(GLOB game_preset_files RELATIVE "${CMAKE_SOURCE_DIR}/Config/Game" "${CMAKE_SOURCE_DIR}/Config/Game/*.json")
 string(REPLACE ".json" "" game_names "${game_preset_files}")
 set_property(CACHE SW_ACTIVE_GAME PROPERTY STRINGS ${game_names})

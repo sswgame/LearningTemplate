@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="30bc7b40a7fb46439bde0e6261c9fbc5"?>
+<!--
+  장르 키트 시연 — 생존 공포 키트(GF_SurvivalHorror)의 세션 한 바퀴: 좀비를 두 번 목격(20 + 10) → 피해 50 → 격자 가방의 약초(25) 사용.
+  감시 값: KitDemo.SurvivalHorror.State(0 시작 전, 1 마침) · .Sanity · .Health.
+  실행: ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.kit_survivalhorror" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/kit_survivalhorror.scene.xml"/>
+	<WaitUntil watch="KitDemo.SurvivalHorror.State" equals="1" timeoutFrames="120"/>
+	<Expect watch="KitDemo.SurvivalHorror.Sanity" equals="70"/>
+	<Expect watch="KitDemo.SurvivalHorror.Health" equals="75"/>
+	<ExpectLog id="KitDemo.SurvivalHorrorDone" count="1"/>
+	<Pass/>
+</Scenario>

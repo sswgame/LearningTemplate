@@ -5,7 +5,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/CharacterPawnMovement2DComponent.h"
 
-// PawnMovement2DTest — 의도에서 수평 속도로 가는 규칙(가감속 · 끝 맞춤). 실제 2D 물리 위의 걷기 · 점프는 시나리오 game.empty.twodphysics 가 본다(nogpu).
+// PawnMovement2DTest — 의도에서 수평 속도로 가는 규칙(가감속 · 끝 맞춤). 실제 2D 물리 위의 걷기 · 점프는 시나리오 game.playground.twodphysics 가 본다(nogpu).
 
 using namespace sw;
 

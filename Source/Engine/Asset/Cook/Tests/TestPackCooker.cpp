@@ -55,8 +55,8 @@ namespace
 SW_TEST_CASE( PackCookerTest, PackFileNameFlattensTheDomain )
 {
     SW_EXPECT_EQUAL( string( "engine.pack" ), PackCooker::makePackFileName( "engine" ) );
-    SW_EXPECT_EQUAL( string( "game_empty.pack" ), PackCooker::makePackFileName( "game/empty" ) );
-    SW_EXPECT_EQUAL( string( "game_empty.pack" ), PackCooker::makePackFileName( "Game\\Empty/" ) );
+    SW_EXPECT_EQUAL( string( "game_playground.pack" ), PackCooker::makePackFileName( "game/playground" ) );
+    SW_EXPECT_EQUAL( string( "game_playground.pack" ), PackCooker::makePackFileName( "Game\\Playground/" ) );
 }
 
 /**
@@ -81,16 +81,16 @@ SW_TEST_CASE( PackCookerTest, RecordIDSeparatesStagingFolders )
 SW_TEST_CASE( PackCookerTest, DroppedShaderIsNeededOnlyWhenAnOriginIsReached )
 {
     const unordered_map<string, vector<vector<string>>> mapRequested = {
-        {  "engine/shaders/bin/dx12/gtao_ps.dxil",                           { { "engine/pipeline/deferredpipeline_gi.xml" } }},
-        {   "engine/shaders/bin/dx12/lit_ps.dxil", { { "engine/pipeline/forward.xml", "game/empty/materials/rock.material" } }},
-        {"engine/shaders/bin/dx12/sprite_ps.dxil",                                                                      { {} }}
+        {  "engine/shaders/bin/dx12/gtao_ps.dxil",                                { { "engine/pipeline/deferredpipeline_gi.xml" } }},
+        {   "engine/shaders/bin/dx12/lit_ps.dxil", { { "engine/pipeline/forward.xml", "game/playground/materials/rock.material" } }},
+        {"engine/shaders/bin/dx12/sprite_ps.dxil",                                                                           { {} }}
     };
     const unordered_set<string> setIncluded = { "engine/pipeline/forward.xml" };
     SW_EXPECT_FALSE( PackCooker::isRequestedByReachedOrigin( mapRequested, setIncluded, "engine/shaders/bin/dx12/gtao_ps.dxil" ) );    // 출처가 닿지 않았다
     SW_EXPECT_FALSE( PackCooker::isRequestedByReachedOrigin( mapRequested, setIncluded, "engine/shaders/bin/dx12/lit_ps.dxil" ) );     // 머티리얼이 닿지 않았다
     SW_EXPECT_TRUE( PackCooker::isRequestedByReachedOrigin( mapRequested, setIncluded, "engine/shaders/bin/dx12/sprite_ps.dxil" ) );   // 늘 필요하다
     SW_EXPECT_FALSE( PackCooker::isRequestedByReachedOrigin( mapRequested, setIncluded, "engine/shaders/bin/dx12/unknown_ps.dxil" ) ); // 요청 밖
-    const unordered_set<string> setBoth = { "engine/pipeline/forward.xml", "game/empty/materials/rock.material" };
+    const unordered_set<string> setBoth = { "engine/pipeline/forward.xml", "game/playground/materials/rock.material" };
     SW_EXPECT_TRUE( PackCooker::isRequestedByReachedOrigin( mapRequested, setBoth, "engine/shaders/bin/dx12/lit_ps.dxil" ) );
 }
 
@@ -214,9 +214,9 @@ SW_TEST_CASE( PackCookerTest, SplitIsDeterministicAndBounded )
     badName._listChunkRule.front()._name = "music.hd";
     SW_EXPECT_FALSE( PackCooker::splitIntoParts( listEntry, badName, {} ).has_value() );
 
-    SW_EXPECT_EQUAL( string( "game_empty.pack" ), PackCooker::makePackFileName( "game/empty" ) );
-    SW_EXPECT_EQUAL( string( "game_empty.2.pack" ), PackCooker::makePackFileName( "game/empty", "", 2 ) );
-    SW_EXPECT_EQUAL( string( "game_empty.music.0.pack" ), PackCooker::makePackFileName( "game/empty", "music", 0 ) );
+    SW_EXPECT_EQUAL( string( "game_playground.pack" ), PackCooker::makePackFileName( "game/playground" ) );
+    SW_EXPECT_EQUAL( string( "game_playground.2.pack" ), PackCooker::makePackFileName( "game/playground", "", 2 ) );
+    SW_EXPECT_EQUAL( string( "game_playground.music.0.pack" ), PackCooker::makePackFileName( "game/playground", "music", 0 ) );
 }
 
 /**

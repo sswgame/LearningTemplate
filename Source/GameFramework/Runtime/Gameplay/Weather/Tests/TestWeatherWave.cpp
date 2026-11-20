@@ -8,7 +8,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Weather/WeatherWaveComponent.h"
 
-// WeatherWaveTest — 날씨 값 → 파도 진폭 배율(잔잔 1 · 폭풍 stormScale), 날씨가 없는 씬은 배율 1. 폭풍 속 배의 롤 · 피치는 시나리오 game.empty.boat 가 본다.
+// WeatherWaveTest — 날씨 값 → 파도 진폭 배율(잔잔 1 · 폭풍 stormScale), 날씨가 없는 씬은 배율 1. 폭풍 속 배의 롤 · 피치는 시나리오 game.playground.boat 가 본다.
 
 using namespace sw;
 

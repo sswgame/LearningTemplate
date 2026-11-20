@@ -55,7 +55,7 @@
   <!-- 염색하는 투구 — 아이템 인스턴스마다 색(스키마 ArmorDye)이 다르다. 메시 · 머티리얼은 helmet_knight 그대로다. -->
   <ItemVisual id="helmet_knight_tinted" _base="helmet_knight" customization="ArmorDye"/>
   <!-- 굽 신발 — 메시 없이 몸 채널 층만 올린다(Heel.Height, 섞기 Max — 여러 층 중 가장 높은 굽). 체형 축 데이터가 발목을 굽히고 발 디딤 IK 가 골반을 든다(footLiftAxis).
-       시나리오 game/empty/automation/customizeheels. -->
+       시나리오 game/playground/automation/customizeheels. -->
   <ItemVisual id="heels_high"><BodyChannel name="Heel.Height" value="0.1" blend="Max"/></ItemVisual>
   <ItemVisual id="boots_low"><BodyChannel name="Heel.Height" value="0.03" blend="Max"/></ItemVisual>
   <ItemVisual id="helmet_skeleton" _base="helmet_knight">

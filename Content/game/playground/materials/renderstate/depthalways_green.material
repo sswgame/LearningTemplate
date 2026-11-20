@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="720dc003188906901273e6d61c2d2a32"?>
+<MaterialDef formatVersion="0" name="depthalways_green" _base="game/playground/materials/renderstate/plain_green.material" depthCompare="Always">
+</MaterialDef>

@@ -368,7 +368,7 @@ endif()
 
 # 쿠킹본 실행 — 개발 구성의 `--cook-all` → `-cooked-content` 기동 → 셀 스트리밍 시나리오(`Pack/RunCookedContent.cmake`). 어떤 테스트도 이 길을 돌지 않아 낡았다
 # (상대 `--cooked-dir` 의 스테이징이 팩에서 빠졌다 — 감사 A-13). 배포 쿠킹(shipping-check)은 절대 경로 · 배포 구성이라 이 길을 지나지 않는다.
-# Release 하나 · 게임 하나(Empty) · 백엔드 하나(DX12 — Windows)다: 셰이더 굽기가 길어 구성 · 백엔드를 늘릴 일이 아니다. 시나리오가 그림을 그려 hostgpu 다.
+# Release 하나 · 게임 하나(Playground) · 백엔드 하나(DX12 — Windows)다: 셰이더 굽기가 길어 구성 · 백엔드를 늘릴 일이 아니다. 시나리오가 그림을 그려 hostgpu 다.
 # 굽기는 CPU 를 다 써서 Release 의 CPU 무거운 항목(`SW_CPU_HEAVY_TEST`)이다 — 시간 판정이 있는 시나리오는 이것 뒤에 돈다.
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT SW_ENABLE_SANITIZER AND WIN32)
 	add_test(NAME Pack.CookedContent

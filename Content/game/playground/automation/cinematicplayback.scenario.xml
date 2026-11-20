@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="74413c1f86304f9cbab47df3510870fd"?>
+<!--
+  시네마틱 재생 방식(SequencePlayerComponent · SequencePlayer) — 같은 씬(maps/cinematic.scene.xml)과 시퀀스(data/cinematic.seq.xml: CutA 30..59 · CutB 60..86 · 끝 100, 30 fps)를
+  재생 방식만 바꿔 다시 튼다. 고정 60 Hz 라 1 배속은 시퀀스 한 프레임이 틱 둘이다. 판정은 감시 값이다(사진 없음).
+  ① 역재생(rate -1): 끝에서 들어와 컷이 CutB → CutA 차례로 뒤집히고, 외형 이벤트(60)는 거꾸로 지나도 한 번 쏘며, 처음 프레임에서 끝난다.
+  ② 2 배속: 40 틱에 약 40 프레임, 자막 구간(72..86)에 자막이 떴다가 구간 끝에서 사라진다(보이는 시간은 구간 ÷ 속도).
+  ③ 0.5 배속: 40 틱에 약 10 프레임. CutA 가 화면일 때 건너뛰면(SkipSequence — 언리얼 GoToEndAndStop) 바로 끝 프레임이고, 게임 카메라로 0.5 초 섞여 돌아온다(Blend Out).
+  ④ 재생 범위 25..35: 그 안만 돌고 35 에서 끝난다. ⑤ 왕복(PingPong, 범위 0..20, 2 배속): 끝에서 꺾여 거꾸로 가다 처음에서 다시 꺾인다.
+  실행: App -scenario=game/playground/automation/cinematicplayback.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.cinematicplayback" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/cinematic.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Camera.FrameObject" is="GameCamera" timeoutFrames="10"/>
+	<AdvanceSimulation frames="1"/> <!-- 판정과 재생 시작을 다른 프레임에 둔다(프레임 경계) -->
+
+	<!-- ① 역재생 -->
+	<PlaySequence object="Director" rate="-1"/>
+	<Expect watch="Sequence.Reversed" target="Director" equals="1"/>
+	<Expect watch="Sequence.Frame" target="Director" atLeast="98"/>
+	<WaitUntil watch="Camera.FrameObject" is="CutB" timeoutFrames="60"/>
+	<Expect watch="Cinematic.CutCamera" target="Director" is="CutB"/>
+	<WaitUntil watch="Camera.FrameObject" is="CutA" timeoutFrames="80"/>
+	<Expect watch="Cinematic.CutCamera" target="Director" is="CutA"/>
+	<WaitUntil watch="Camera.FrameObject" is="GameCamera" timeoutFrames="80"/>
+	<WaitSequence object="Director" timeoutFrames="120"/>
+	<Expect watch="Sequence.Frame" target="Director" equals="0"/>
+	<Expect watch="Sequence.History" target="Director" key="Event" equals="1"/> <!-- 외형(60)은 거꾸로 지나도 한 번 -->
+	<Expect watch="Sequence.History" target="Director" key="Finished" equals="1"/>
+
+	<!-- ② 2 배속 — 1 틱에 1 프레임 -->
+	<PlaySequence object="Director" rate="2"/>
+	<Expect watch="Sequence.PlayRate" target="Director" equals="2"/>
+	<AdvanceSimulation frames="40"/>
+	<Expect watch="Sequence.Frame" target="Director" atLeast="36"/>
+	<Expect watch="Sequence.Frame" target="Director" atMost="44"/>
+	<WaitUntil watch="UI.SubtitleShown" equals="1" timeoutFrames="60"/> <!-- 자막 구간 72..86 에 들었다 -->
+	<WaitUntil watch="UI.SubtitleShown" equals="0" timeoutFrames="40"/> <!-- 구간 끝(벽시계 0.25 초)에서 사라진다 -->
+	<WaitSequence object="Director" timeoutFrames="60"/>
+	<Expect watch="Sequence.Frame" target="Director" equals="100"/>
+	<Expect watch="Sequence.History" target="Director" key="Finished" equals="2"/>
+
+	<!-- ③ 0.5 배속 — 4 틱에 1 프레임. 컷 A 에서 건너뛴다 -->
+	<PlaySequence object="Director" rate="0.5"/>
+	<AdvanceSimulation frames="40"/>
+	<Expect watch="Sequence.Frame" target="Director" atLeast="8"/>
+	<Expect watch="Sequence.Frame" target="Director" atMost="12"/>
+	<WaitUntil watch="Camera.FrameObject" is="CutA" timeoutFrames="120"/>
+	<SkipSequence object="Director"/>
+	<Expect watch="Sequence.Frame" target="Director" equals="100"/>
+	<Expect watch="Sequence.History" target="Director" key="Finished" equals="3"/>
+	<WaitUntil watch="Camera.FrameObject" is="GameCamera" timeoutFrames="4"/>
+	<Expect watch="Cinematic.CutCamera" target="Director" is="none"/>
+	<Expect watch="CameraManager.Blending" target="GameCamera" equals="1"/>
+	<WaitUntil watch="CameraManager.Blending" target="GameCamera" equals="0" timeoutSeconds="1"/>
+	<Expect watch="Object.DistanceTo" target="GameCamera" key="GameplayView" atMost="0.01"/>
+
+	<!-- ④ 재생 범위 25..35 -->
+	<PlaySequence object="Director" rate="1" rangeStart="25" rangeEnd="35"/>
+	<Expect watch="Sequence.Frame" target="Director" atLeast="25"/>
+	<Expect watch="Sequence.Frame" target="Director" atMost="26"/>
+	<WaitSequence object="Director" timeoutFrames="40"/>
+	<Expect watch="Sequence.Frame" target="Director" equals="35"/>
+	<Expect watch="Sequence.History" target="Director" key="Finished" equals="4"/>
+
+	<!-- ⑤ 왕복 — 범위 0..20 을 2 배속으로: 20 틱에 끝에서 꺾이고 다시 20 틱에 처음에서 꺾인다 -->
+	<PlaySequence object="Director" rate="2" loop="PingPong" rangeStart="0" rangeEnd="20"/>
+	<Expect watch="Sequence.Reversed" target="Director" equals="0"/>
+	<WaitUntil watch="Sequence.Reversed" target="Director" equals="1" timeoutFrames="30"/>
+	<Expect watch="Sequence.Frame" target="Director" atLeast="16"/>
+	<WaitUntil watch="Sequence.Reversed" target="Director" equals="0" timeoutFrames="30"/>
+	<Expect watch="Sequence.Frame" target="Director" atMost="4"/>
+	<Expect watch="Sequence.History" target="Director" key="Finished" equals="4"/> <!-- 왕복은 끝나지 않는다 -->
+	<Pass/>
+</Scenario>

@@ -1,0 +1,43 @@
+<?asset guid="cad602545c93469880cd832472b027e1"?>
+<Scene formatVersion="3" name="PackedLevelProps">
+	<!-- 시나리오 automation/packedlevel 의 하위 레벨 — 정적 메시를 묶는 씬(_packing="StaticMeshes"). 쿠킹본에서는 정적 Rock1 · Rock2 가 인스턴스 메시 Packed0 하나로 묶이고, 움직이는 Lamp 와 손으로 놓은 인스턴스 메시 Fence(기둥 셋)는 그대로다. 소스 실행 · 에디터는 원본을 짓는다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0" _packing="StaticMeshes">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Rock1">
+			<GameObject _schemaVersion="0" _name="Rock1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.5,0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.9" _bStatic="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Rock2">
+			<GameObject _schemaVersion="0" _name="Rock2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0.5,0" _localRotation="0,0.7,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.9" _bStatic="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Lamp">
+			<GameObject _schemaVersion="0" _name="Lamp" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.5,0.5,0" _localRotation="0,0,0" _localScale="0.5,1,0.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="0.9" _bStatic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Fence">
+			<GameObject _schemaVersion="0" _name="Fence" _bActive="true">
+				<_listComponent>
+					<InstancedMeshComponent _localPosition="0,0,-1.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material">
+						<_listInstance>
+							<InstancedMeshTransform _position="-1.5,0.25,0" _rotation="0,0,0" _scale="0.2,0.5,0.2" />
+							<InstancedMeshTransform _position="0,0.25,0" _rotation="0,0,0" _scale="0.2,0.5,0.2" />
+							<InstancedMeshTransform _position="1.5,0.25,0" _rotation="0,0,0" _scale="0.2,0.5,0.2" />
+						</_listInstance>
+					</InstancedMeshComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

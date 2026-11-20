@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="aeccb45638de6aafcf3304a665f5ca94"?>
+<MaterialDef formatVersion="0" name="twosided_red" _base="game/playground/materials/renderstate/plain_red.material" cullMode="None" twoSidedLighting="true">
+</MaterialDef>

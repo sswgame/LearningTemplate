@@ -1,0 +1,7 @@
+<?asset guid="2cf478491ca6de29712500cd8400ed63"?>
+<Redirects>
+	<PrefixRedirect from="game/empty" to="game/playground" />
+	<Redirect from="game/playground/audio/empty.audioevents.xml" to="game/playground/audio/playground.audioevents.xml" />
+	<Redirect from="game/playground/data/localization/empty.locproject.xml" to="game/playground/data/localization/playground.locproject.xml" />
+	<Redirect from="game/playground/data/localization/empty.strings.xml" to="game/playground/data/localization/playground.strings.xml" />
+</Redirects>

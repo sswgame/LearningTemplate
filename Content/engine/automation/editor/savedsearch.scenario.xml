@@ -16,7 +16,7 @@
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus content_browser"/>
 	<EditorWaitStable/>
-	<DevCommand line="content.open game/empty/models"/>
+	<DevCommand line="content.open game/playground/models"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.ContentSavedSearchCount" equals="0"/>
 	<!-- ① 저장 검색 -->

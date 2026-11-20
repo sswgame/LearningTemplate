@@ -5,7 +5,7 @@
 
 #include "Engine/Renderer/Lighting/ShadowFilter.h"
 
-// PCSS 커널 크기 식(셰이더 lighting.hlsli 의 Shadow::sampleCascade · LightData::sampleLocalShadow 와 같은 식)을 GPU 없이 본다. 픽셀은 시나리오 game.empty.shadow_pcss 가 본다.
+// PCSS 커널 크기 식(셰이더 lighting.hlsli 의 Shadow::sampleCascade · LightData::sampleLocalShadow 와 같은 식)을 GPU 없이 본다. 픽셀은 시나리오 game.playground.shadow_pcss 가 본다.
 
 /**
  * @brief [ShadowFilterTest] 방향광 반그림자 배율은 깊이 구간 × 2 tan(시직경 / 2) ÷ 텍셀 길이다 — 원천이 없으면 0 이다

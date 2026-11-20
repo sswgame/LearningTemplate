@@ -93,8 +93,8 @@ namespace sw
     struct SW_API PackCooker
     {
         /**
-         * @brief 도메인(`engine` · `common` · `game/empty`)의 팩 파일 이름입니다. 도메인은 이름이 아니라 팩 안(마운트 도메인)에 적는다.
-         * @details 기본 청크의 0 번은 `<도메인>.pack`(`engine.pack` · `game_empty.pack` — 배포 스크립트 · 도구가 아는 이름 그대로), 그 뒤 번호는 `<도메인>.<번호>.pack`,
+         * @brief 도메인(`engine` · `common` · `game/playground`)의 팩 파일 이름입니다. 도메인은 이름이 아니라 팩 안(마운트 도메인)에 적는다.
+         * @details 기본 청크의 0 번은 `<도메인>.pack`(`engine.pack` · `game_playground.pack` — 배포 스크립트 · 도구가 아는 이름 그대로), 그 뒤 번호는 `<도메인>.<번호>.pack`,
          *          이름 붙은 청크는 `<도메인>.<청크>.<번호>.pack` 이다(언리얼 IoStore 의 청크 컨테이너 이름 자리).
          */
         static string makePackFileName( string_view domain, string_view chunk = {}, uint32 number = 0 );

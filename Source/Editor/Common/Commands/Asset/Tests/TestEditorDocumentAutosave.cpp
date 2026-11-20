@@ -19,7 +19,7 @@ namespace
         static sw::editor::EditorDocumentAutosaveEntry makeEntry( sw::string_view projectRoot )
         {
             sw::editor::EditorDocumentAutosaveEntry entry{};
-            entry._documentPath      = "game/empty/materials/probe.material";
+            entry._documentPath      = "game/playground/materials/probe.material";
             entry._text              = "<Material roughness=\"0.7\"/>";
             entry._projectRoot       = sw::string{ projectRoot };
             entry._sourceContentHash = kSourceHash;

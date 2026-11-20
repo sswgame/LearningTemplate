@@ -134,7 +134,7 @@ namespace sw
         /** @brief 연 .pack 파일의 실제 경로의 사본입니다(잠금 아래에서 복사한다). */
         string getPackPath() const;
 
-        /** @brief 팩이 적은 마운트 도메인의 사본입니다(`engine` · `game/empty` · `dlc/winter`). 패치 팩은 빈 글이다(항목이 전체 경로). */
+        /** @brief 팩이 적은 마운트 도메인의 사본입니다(`engine` · `game/playground` · `dlc/winter`). 패치 팩은 빈 글이다(항목이 전체 경로). */
         string getMountDomain() const;
 
     private:

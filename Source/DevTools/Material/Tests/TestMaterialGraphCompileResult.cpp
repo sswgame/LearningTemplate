@@ -410,7 +410,7 @@ SW_TEST_CASE( MaterialGraphCompilerTest, GeneratedPathsFollowGraphPath )
 SW_TEST_CASE( MaterialGraphCompilerTest, SampleGeneratedAssetsAreCurrent )
 {
     // 하위 그래프 견본(rim_glow)과 층 견본(layered_stone)
-    for ( const utf8* const pGraphID : { "game/empty/materials/matgraph/rim_glow.matgraph.xml", "game/empty/materials/matgraph/layered_stone.matgraph.xml" } )
+    for ( const utf8* const pGraphID : { "game/playground/materials/matgraph/rim_glow.matgraph.xml", "game/playground/materials/matgraph/layered_stone.matgraph.xml" } )
     {
         MaterialGraphDef graph;
         SW_REQUIRE_TRUE( graph.loadFromAsset( AssetID{ pGraphID } ) );

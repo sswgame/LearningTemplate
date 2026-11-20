@@ -133,7 +133,7 @@ namespace sw
         [[nodiscard]] static bool isUnderSourceControl( string_view diskPath );
 
         /**
-         * @brief **디스크 경로**를 리소스 id(전역 id. 예: `game/empty/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
+         * @brief **디스크 경로**를 리소스 id(전역 id. 예: `game/playground/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
          * @param diskPath 절대 디스크 경로입니다(상대 경로는 OS 경계가 거절한다 - `File.RelativePath`).
          * @return 리소스 id 입니다. 붙인 디스크 도메인(`mountDiskDomain`) 폴더 아래면 `<도메인>/…`, 리소스 루트 아래면 루트 기준입니다. 그 밖이면 빈 문자열입니다.
          * @details 예전에는 한 함수가 디스크 경로 · 프로젝트 기준 경로(`Content/…`) · 리소스 id 를 모두 받고 상대 글이 무엇인지 추측했다 — 작업 폴더 기준 디스크

@@ -1,6 +1,6 @@
 """핫 리로드 뒤 디버거 브레이크포인트가 새 모듈에서 잡히는지 자동으로 본다(py -3 Scripts/dev/hot_reload_debug_check.py [--preset 프리셋] [--variant code|layout]).
 
-lldb(Tools/LLVM — `Scripts/setup/llvm.py` 가 둔다) 아래에서 Empty 의 확인 시나리오(`game/empty/automation/debugger/hotreload<변형>.scenario.xml`)를 띄우고:
+lldb(Tools/LLVM — `Scripts/setup/llvm.py` 가 둔다) 아래에서 Playground 의 확인 시나리오(`game/playground/automation/debugger/hotreload<변형>.scenario.xml`)를 띄우고:
 1. `HotReloadTestComponent::computeVersion` 브레이크포인트가 처음 멈추면(리로드 전 모듈) 소스를 바꿔 SWGame 만 다시 짓는다 — 디버거가 PDB 를 쥔 채 링크가 되는지.
    변형 code 는 `.cpp` 의 판 숫자만, layout 은 헤더에 PROPERTY 칸 하나와 그 생성자 값 7 을 더한다(리로드가 리플렉션 칸으로 상태를 옮기는지 — 시나리오가 본다).
 2. 이어서 시나리오가 `module.reload SWGame` 을 하고, 같은 브레이크포인트가 **다른 모듈 파일**(새 섀도 복사본)에서 멈추고 소스 줄이 풀리는지 본다.
@@ -17,8 +17,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import app_arguments  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-PROBE_H = REPO / 'Source/Games/Empty/HotReloadTestComponent.h'
-PROBE_CPP = REPO / 'Source/Games/Empty/HotReloadTestComponent.cpp'
+PROBE_H = REPO / 'Source/Games/Playground/HotReloadTestComponent.h'
+PROBE_CPP = REPO / 'Source/Games/Playground/HotReloadTestComponent.cpp'
 FUNCTION = 'sw::HotReloadTestComponent::computeVersion'
 
 # lldb 안에서 도는 쪽(lldb 의 Python — 임베드 3.10). 결과는 JSON 한 줄로 낸다.
@@ -76,9 +76,9 @@ def main():
     lldb = REPO / 'Tools/LLVM/bin/lldb.exe'
     if not lldb.is_file():
         sys.exit(f'{lldb} 이 없다 — py -3 Scripts/setup/llvm.py 로 둔다')
-    scenario = 'game/empty/automation/debugger/hotreloadbreakpoint.scenario.xml' if options.variant == 'code' else 'game/empty/automation/debugger/hotreloadlayout.scenario.xml'
+    scenario = 'game/playground/automation/debugger/hotreloadbreakpoint.scenario.xml' if options.variant == 'code' else 'game/playground/automation/debugger/hotreloadlayout.scenario.xml'
     log_path = REPO / 'build' / options.preset / 'Testing' / 'Logs' / f'HotReloadDebug.{options.variant}.log'
-    build = ['cmake', '--build', '--preset', options.preset, '--target', 'SWGame_Empty']
+    build = ['cmake', '--build', '--preset', options.preset, '--target', 'SWGame_Playground']
     originals = {path: path.read_bytes() for path in (PROBE_H, PROBE_CPP)}
     # 리로드 전 모듈이 지금 소스와 같아야 한다(확인 컴포넌트가 없는 옛 SWGame 으로 띄우면 씬이 읽히지 않는다).
     if subprocess.run(build, cwd=REPO).returncode != 0:

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="05d09666eca6f1a479e88af7914c79bb"?>
 <!--
-  ThemeParkTycoon 에디터 시나리오 — 오디오 이벤트 창(audioevents). 엔진 에디터 체인(Empty)에는 이벤트 라이브러리가 없어 이 게임의 라이브러리(themepark.audioevents.xml)로 본다.
+  ThemeParkTycoon 에디터 시나리오 — 오디오 이벤트 창(audioevents). 엔진 에디터 체인(Playground)에는 이벤트 라이브러리가 없어 이 게임의 라이브러리(themepark.audioevents.xml)로 본다.
   ① 창을 열면 이벤트 셋이 목록에 뜨고 Built 를 고른다. ② Post Event 를 누르면 오디오 스레드가 이벤트를 받아들인다(받은 수가 는다 — 벽시계로 기다린다).
   ③ Edit 은 라이브러리 파일을 사본으로 읽는다(이벤트 셋). Duplicate 는 사본에 하나를 더하고 창이 저장 안 된 상태가 되며, Delete 가 그 복제를 지운다.
   Stop Editing 은 사본을 버린다 — 저장하지 않으므로 저장소의 라이브러리를 바꾸지 않는다.

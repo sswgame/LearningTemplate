@@ -99,7 +99,7 @@ namespace sw::editor
             ProjectSettingsEntry entry{};
             entry._relativePath = FileUtil::normalizeSeparators( relativePath );
             entry._absolutePath = FileUtil::normalizeSeparators( absolutePath );
-            // 목록 이름은 `Config/` 아래 경로에서 `.json` 을 뗀 것이다(`Rules/Lint/NamingWords`) — 줄기 이름만이면 `Game/Empty` 와 `Server/Empty` 가 겹친다.
+            // 목록 이름은 `Config/` 아래 경로에서 `.json` 을 뗀 것이다(`Rules/Lint/NamingWords`) — 줄기 이름만이면 `Game/Playground` 와 `Server/Playground` 가 겹친다.
             entry._page = entry._relativePath.substr( string_view( kTableFolder ).size() + 1 );
             entry._page.resize( entry._page.size() - string_view( ".json" ).size() );
             outListEntry.push_back( std::move( entry ) );

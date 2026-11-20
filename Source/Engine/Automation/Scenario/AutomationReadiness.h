@@ -2,7 +2,7 @@
  * @file AutomationReadiness.h
  * @brief 시나리오를 붙잡는 조건(시작 · 시계 · 캡처 · 끝 · 렌더 정착)이 내는 세 값(`AutomationReadiness`)과 진척 없음을 세는 시계(`AutomationStallClock` · 벽시계판 `AutomationWallStallClock`)입니다.
  * @details 예전 조건은 `bool()` 이라 "이 구성에는 그 일이 없다"(TAA 패스가 없는 Forward 뷰)와 "아직" 이 같은 값이었고, 대기는 시한까지 기다린 뒤에야 졌다(DesignBacklog 실패 1 —
- *          Empty 체인 74 분). 세 값이면 해당 없음은 막지 않고, 진행 중은 진척 수를 함께 내 그 수가 정지 시한 동안 그대로면 바로 진다(`WaitStalled`).
+ *          Playground 체인 74 분). 세 값이면 해당 없음은 막지 않고, 진행 중은 진척 수를 함께 내 그 수가 정지 시한 동안 그대로면 바로 진다(`WaitStalled`).
  *          상용 엔진 비교: 언리얼 Gauntlet 의 하트비트(활동이 없으면 진다), 에디터 `<EditorWaitStable/>` 의 "할 일이 없는데 움직인다" 판정과 같은 자리다.
  */
 #pragma once

@@ -15,7 +15,7 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/previewreopen.scenario.xml -unattended (백엔드 vk · dx11 · gl 도 같다)
 -->
 <Scenario name="editor.previewreopen" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="Immediately" input="exclusive">
-	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>
@@ -178,7 +178,7 @@
 	<Variable name="gv_editorWatchPanel" value="prefab_window"/>
 	<DevCommand line="panel.focus content_browser"/>
 	<EditorWaitStable/>
-	<DevCommand line="content.open game/empty/prefabs"/>
+	<DevCommand line="content.open game/playground/prefabs"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml" count="2"/>
 	<EditorWaitStable/>

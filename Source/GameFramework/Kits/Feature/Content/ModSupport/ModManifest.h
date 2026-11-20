@@ -8,8 +8,8 @@
  *          <Mod id="demo_lantern" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0">
  *              <Dependency id="base_pack" minVersion="1.0.0" optional="false"/>
  *              <Conflict id="other_mod"/>
- *              <Override path="game/empty/data/welcome.xml"/>
- *              <Layer path="game/empty/data/quests.xml"/>
+ *              <Override path="game/playground/data/welcome.xml"/>
+ *              <Layer path="game/playground/data/quests.xml"/>
  *          </Mod>
  *
  *          `<Override>` 는 기본 리소스를 통째로 바꾸고(팩 우선순위 — 두 모드가 같은 파일을 덮으면 충돌이다), `<Layer>` 는 기본 리소스 위에 차이를 얹는다

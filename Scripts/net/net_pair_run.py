@@ -31,7 +31,7 @@ from common.exit_code import ExitCode
 from common.host_platform import executable_name
 from common.paths import get_project_root
 
-_GAME = "Empty"
+_GAME = "Playground"
 _SERVER_NAME = "netpair"
 _ACCOUNT = "netpair_bot"
 _PASSWORD = "netpair_pw_1"

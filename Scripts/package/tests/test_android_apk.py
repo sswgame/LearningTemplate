@@ -38,10 +38,10 @@ CONFIG = {
 
 class AndroidApkTest(unittest.TestCase):
     def test_manifest_template_is_fully_filled(self) -> None:
-        settings = resolve_settings(CONFIG, "Empty", 29, 36, "arm64-v8a", PROJECT_ROOT)
+        settings = resolve_settings(CONFIG, "Playground", 29, 36, "arm64-v8a", PROJECT_ROOT)
         text = render_manifest((PROJECT_ROOT / MANIFEST_TEMPLATE_PATH).read_text(encoding="utf-8"), settings)
         self.assertNotIn("${", text)
-        self.assertIn('package="com.swengine.empty"', text)
+        self.assertIn('package="com.swengine.playground"', text)
         self.assertIn('android:screenOrientation="sensorLandscape"', text)
         self.assertIn('android:value="App"', text)
         self.assertIn('android:version="0x402000"', text)
@@ -55,12 +55,12 @@ class AndroidApkTest(unittest.TestCase):
 
     def test_invalid_values_stop(self) -> None:
         with self.assertRaises(ApkError):
-            resolve_settings(dict(CONFIG, screen_orientation="sideways"), "Empty", 29, 36, "arm64-v8a", PROJECT_ROOT)
+            resolve_settings(dict(CONFIG, screen_orientation="sideways"), "Playground", 29, 36, "arm64-v8a", PROJECT_ROOT)
         with self.assertRaises(ApkError):
-            resolve_settings(CONFIG, "Empty", 30, 29, "arm64-v8a", PROJECT_ROOT)
+            resolve_settings(CONFIG, "Playground", 30, 29, "arm64-v8a", PROJECT_ROOT)
         with self.assertRaises(ApkError):
-            resolve_settings({key: value for key, value in CONFIG.items() if key != "label"}, "Empty", 29, 36, "arm64-v8a", PROJECT_ROOT)
-        settings = resolve_settings(CONFIG, "Empty", 29, 36, "arm64-v8a", PROJECT_ROOT)
+            resolve_settings({key: value for key, value in CONFIG.items() if key != "label"}, "Playground", 29, 36, "arm64-v8a", PROJECT_ROOT)
+        settings = resolve_settings(CONFIG, "Playground", 29, 36, "arm64-v8a", PROJECT_ROOT)
         with self.assertRaises(ApkError):
             render_manifest("<manifest package=\"${unknownName}\"/>", settings)
 

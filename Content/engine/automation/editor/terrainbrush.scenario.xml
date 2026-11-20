@@ -19,7 +19,7 @@
 	<DevCommand line="panel.resetOptional"/>
 	<DevCommand line="layout.reset"/>
 	<EditorWaitStable/>
-	<DevCommand line="scene.open game/empty/maps/envshowcase.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/envshowcase.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>

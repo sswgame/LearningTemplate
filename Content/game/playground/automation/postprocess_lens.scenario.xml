@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a5b98f8538f10546e63b3dfd3ce93d4d"?>
+<!--
+  렌즈 · 필름(post_grade.hlsli 의 CameraGrade::applyLens · applyFilmGrain) — 렌즈 왜곡 · 색수차 · 선명화 · 필름 그레인을 레이어(무한 볼륨) 하나씩 켜고 끈다.
+  켠 그림마다 끈 그림과 달라야 한다(그 효과가 돌지 않으면 같다). 마지막에 모두 끄면 처음 그림으로 돌아와야 한다(세기 0 은 원본을 다시 읽지 않는 값 선택이다).
+  그레인은 머티리얼 시계로 프레임마다 바뀌지만 고정 프레임 시간이라 같은 프레임이 같은 그림이다.
+  실행: ctest -R Scenario.game.playground.postprocess_lens
+-->
+<Scenario name="game.playground.postprocess_lens" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/postprocessvolume.scene.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Screenshot file="pplens_off.ppm" stability="assets"/>
+
+	<DevCommand line="scene.layer LensDistortion on"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<Screenshot file="pplens_distortion.ppm"/>
+	<DevCommand line="scene.layer LensDistortion off"/>
+
+	<DevCommand line="scene.layer ChromaticAberration on"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<Screenshot file="pplens_fringe.ppm"/>
+	<DevCommand line="scene.layer ChromaticAberration off"/>
+
+	<DevCommand line="scene.layer Sharpen on"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<Screenshot file="pplens_sharpen.ppm"/>
+	<DevCommand line="scene.layer Sharpen off"/>
+
+	<DevCommand line="scene.layer FilmGrain on"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<Screenshot file="pplens_grain.ppm"/>
+	<DevCommand line="scene.layer FilmGrain off"/>
+
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<Screenshot file="pplens_back.ppm"/>
+
+	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_distortion.ppm" region="0,0,1,1" minDiffering="0.1"/>
+	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_fringe.ppm" region="0,0,1,1" minDiffering="0.02"/>
+	<!-- 선명화는 가장자리만 바꾸고 평균을 지킨다 — 화면 전체를 줄여 견주면 줄이는 평균이 지운다(0.03%). 줄이지 않는 폭(160 px 이하)의 왼쪽 상자 격자 칸에서 본다. -->
+	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_sharpen.ppm" region="0.12,0.3,0.24,0.5" minDiffering="0.03"/>
+	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_grain.ppm" region="0,0,1,1" minDiffering="0.2"/>
+	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_back.ppm" region="0,0,1,1" minDiffering="0" maxDiffering="0.001"/>
+	<ExpectImage file="pplens_distortion.ppm" golden="pplens_distortion"/>
+	<ExpectImage file="pplens_fringe.ppm" golden="pplens_fringe"/>
+	<ExpectImage file="pplens_grain.ppm" golden="pplens_grain"/>
+	<Pass/>
+</Scenario>

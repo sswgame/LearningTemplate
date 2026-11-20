@@ -28,7 +28,7 @@
 	<EditorClick mark="sceneView.canvas" anchor="0.5,0.68"/>
 	<WaitUntil watch="Editor.SelectedNames" is="TestMesh" timeoutFrames="60"/>
 	<EditorWaitStable/>
-	<DevCommand line="scene.open game/empty/maps/pickpillar.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/pickpillar.scene.xml"/>
 	<EditorWaitStable/>
 	<DevCommand line="camera.reset"/>
 	<EditorWaitStable/>
@@ -38,7 +38,7 @@
 	<EditorClick mark="sceneView.canvas" anchor="0.5,0.68"/>
 	<WaitUntil watch="Editor.SelectedNames" is="Pillar" timeoutFrames="60"/>
 	<EditorWaitStable/>
-	<DevCommand line="scene.open game/empty/maps/pickfloor.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/pickfloor.scene.xml"/>
 	<EditorWaitStable/>
 	<DevCommand line="camera.reset"/>
 	<EditorWaitStable/>
@@ -48,7 +48,7 @@
 	<EditorClick mark="sceneView.canvas" anchor="0.5,0.9"/>
 	<WaitUntil watch="Editor.SelectedNames" is="Floor" timeoutFrames="60"/>
 	<EditorWaitStable/>
-	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<DevCommand line="camera.reset"/>
 	<EditorWaitStable/>

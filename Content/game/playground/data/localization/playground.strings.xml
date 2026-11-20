@@ -1,0 +1,56 @@
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="Actor" source="Actor" context="SequenceBinding._name">
+			<origins>
+				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="CutA" source="CutA" context="SequenceBinding._name">
+			<origins>
+				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="CutB" source="CutB" context="SequenceBinding._name">
+			<origins>
+				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="GateCut" source="GateCut" context="SequenceBinding._name">
+			<origins>
+				<item>game/playground/data/cutscenegate.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Subtitle.Guide" source="Guide" context="Subtitle speaker (audio event SubtitleGuideLine)">
+			<origins>
+				<item>game/playground/audio/playground.audioevents.xml</item>
+			</origins>
+		</entry>
+		<entry key="Subtitle.GuideLine" source="Follow the lantern path to the old bridge." context="Subtitle line">
+			<origins>
+				<item>game/playground/audio/playground.audioevents.xml</item>
+			</origins>
+		</entry>
+		<entry key="Subtitle.LongLine"
+		       source="The ford is gone after the storm; take the long road past the mill and wait for the bell."
+		       context="Subtitle line long enough to wrap at the maximum width">
+			<origins>
+				<item>game/playground/audio/playground.audioevents.xml</item>
+			</origins>
+		</entry>
+		<entry key="Subtitle.Scout" source="Scout" context="Subtitle speaker (audio event SubtitleScoutLine)">
+			<origins>
+				<item>game/playground/audio/playground.audioevents.xml</item>
+			</origins>
+		</entry>
+		<entry key="Subtitle.ScoutLine" source="Movement on the ridge. Stay low." context="Subtitle line">
+			<origins>
+				<item>game/playground/audio/playground.audioevents.xml</item>
+			</origins>
+		</entry>
+		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">
+			<origins>
+				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

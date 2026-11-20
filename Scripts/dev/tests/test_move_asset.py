@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.git import run_git_or_raise  # noqa: E402
 from dev.move_asset import (PackRename, get_pack_rename, is_domain_root, is_pack_string_file, list_golden_renames, rewrite_pack_strings,  # noqa: E402
                             rewrite_table_targets, write_redirects)
+from lint.asset_identity import FOUND, read_header  # noqa: E402
 from lint.asset_references import add_redirects  # noqa: E402
 
 RENAME = PackRename("oldpack", "newpack")
@@ -58,11 +59,29 @@ class MoveAssetPackRenameTest(unittest.TestCase):
         self.assertEqual(rewritten, code.replace('"game/oldpack/data', '"game/newpack/data', 1))
         self.assertEqual((count.scenario_name, count.other_name, count.path), (0, 0, 1))
 
+    def test_chain_names_domains_and_pack_file_names_change_but_longer_names_do_not(self) -> None:
+        text = ('"test": "Scenario.oldpack.desktop.editor.playreload"; ctest -R Scenario.oldpack; Scenario.oldpackish; Scenario.oldpack_x\n'
+                '"_packRoot": "game/oldpack"; `game/oldpack`; game/oldpack.mesh; "game_oldpack.pack"; mygame_oldpack; game_oldpackish\n')
+        rewritten, count = rewrite_pack_strings(text, RENAME)
+        self.assertEqual(rewritten, ('"test": "Scenario.newpack.desktop.editor.playreload"; ctest -R Scenario.newpack; Scenario.oldpackish; Scenario.oldpack_x\n'
+                                     '"_packRoot": "game/newpack"; `game/newpack`; game/oldpack.mesh; "game_newpack.pack"; mygame_oldpack; game_oldpackish\n'))
+        self.assertEqual((count.chain, count.domain), (2, 3))
+
+    def test_folded_paths_content_folders_and_scene_chunks_change(self) -> None:
+        text = ('"Game/Oldpack/Maps/A.scene.xml" "Game\\\\Oldpack/" "GAME/OLDPACK/x" "D:/c/Content/game/oldpack" "scene_oldpack_alpha"\n'
+                '"Game/Oldpackish/x" "MyGame/Oldpack/x" "subscene_oldpack_alpha"\n')
+        rewritten, count = rewrite_pack_strings(text, RENAME)
+        self.assertEqual(rewritten, ('"Game/Newpack/Maps/A.scene.xml" "Game\\\\Newpack/" "GAME/NEWPACK/x" "D:/c/Content/game/newpack" "scene_newpack_alpha"\n'
+                                     '"Game/Oldpackish/x" "MyGame/Oldpack/x" "subscene_oldpack_alpha"\n'))   # 대소문자 꼴을 옮기고, 더 긴 이름 · 앞 낱말이 붙은 것은 두지 않는다
+        self.assertEqual((count.path, count.domain), (3, 2))
+
     def test_string_files_are_code_and_data_but_not_redirect_tables_or_docs(self) -> None:
         self.assertTrue(is_pack_string_file("Source/Engine/Content/Pack/Tests/TestPack.cpp"))
         self.assertTrue(is_pack_string_file("Scripts/net/net_pair_run.py"))
         self.assertTrue(is_pack_string_file("Test/Scenario/CMakeLists.txt"))
-        self.assertTrue(is_pack_string_file("Config/Game/Empty.json"))
+        self.assertTrue(is_pack_string_file("Config/Game/Playground.json"))
+        self.assertTrue(is_pack_string_file("Content/game/oldpack/data/localization/po/ko.po"))
+        self.assertTrue(is_pack_string_file(".gitignore"))
         self.assertFalse(is_pack_string_file("Content/game/oldpack/redirects.xml"))
         self.assertFalse(is_pack_string_file("docs/NEXT.md"))
 
@@ -88,8 +107,12 @@ class MoveAssetRedirectTest(unittest.TestCase):
             run_git_or_raise(["init", "-q"], cwd=root)
             written = write_redirects(root, [], ("game/oldpack", "game/newpack"))
             self.assertEqual(written, ["Content/game/newpack/redirects.xml"])
-            self.assertEqual((root / "Content/game/newpack/redirects.xml").read_text(encoding="utf-8"),
-                             '<Redirects>\n\t<PrefixRedirect from="game/oldpack" to="game/newpack" />\n</Redirects>\n')
+            text = (root / "Content/game/newpack/redirects.xml").read_text(encoding="utf-8")
+            state, guid = read_header(text)
+            self.assertEqual(state, FOUND)   # 새 표도 정체성 머리를 단다(asset-ids 검사)
+            self.assertEqual(text, f'<?asset guid="{guid}"?>\n<Redirects>\n\t<PrefixRedirect from="game/oldpack" to="game/newpack" />\n</Redirects>\n')
+            write_redirects(root, [("game/newpack/a.xml", "game/newpack/b.xml")])
+            self.assertEqual(read_header((root / "Content/game/newpack/redirects.xml").read_text(encoding="utf-8")), (FOUND, guid))   # 있던 표는 머리를 지킨다
             self.assertFalse((root / "Content/game/oldpack").exists())   # 옛 팩 폴더를 표 하나로 되살리지 않는다
 
 

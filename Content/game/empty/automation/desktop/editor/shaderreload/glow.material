@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<?asset guid="5fcbef4850dc4b1494b691aadeb1dea6"?>
-<!-- 셰이더 리로드 시나리오의 머티리얼 — 그래프 머티리얼(rim_glow)의 칸을 물려받고 셰이더만 이 폴더의 사본(glow.hlsl)으로 바꾼다. 사본 폴더에서 셰이더를 깨뜨리고 되돌린다. -->
-<MaterialDef formatVersion="0" name="ShaderReloadGlow" _base="game/empty/materials/matgraph/rim_glow.gen.material" shaderPath="game/empty/automation/desktop/editor/shaderreload/shaders/glow.hlsl" />

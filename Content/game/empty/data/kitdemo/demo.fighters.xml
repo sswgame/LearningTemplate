@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<?asset guid="a125daf825f240b6a835de0e448f71b4"?>
-<!--
-  장르 키트 시연 — 3D 격투 대전 하나(maps/kit_fighting)의 캐릭터. 체력 10 이라 하단(피해 10, demo.moves.xml) 한 방에 쓰러진다.
-  버튼 이름 1, 2, 3, 4 가 비트 0 .. 3 이다.
--->
-<FighterCatalog moves="game/empty/data/kitdemo/demo.moves.xml" buttons="1,2,3,4">
-	<Fighter id="basic" name="Basic" health="10" sidestep="u" sidestepDown="d,n" jump="u/f"><Move id="low" command="3"/></Fighter>
-</FighterCatalog>

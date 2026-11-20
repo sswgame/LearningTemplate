@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f799b15ee02b95022d7062f1e404849c"?>
+<!--
+  반사 프로브(ReflectionProbeComponent, lighting.hlsli LightData::sampleReflectionProbe) — 거울 판이 프로브 없이는 앰비언트만 받고, 프로브를 켜면 프로브의 색을 받아 다른 그림이 되며, 끄면 처음 그림으로 돌아온다.
+  프로브 데이터 · 그리드 · 셰이더 소비 · 시차 보정 어느 하나가 끊기면 첫 판정이 진다(같은 실행의 두 장, 골든 없음). 시차 보정의 식은 단위 테스트(ReflectionProbeAssetTest.ParallaxDirectionPointsAtTheBoxHit)가 본다.
+  실행: App -scenario=game/playground/automation/reflectionprobe.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.reflectionprobe" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/reflectionprobe.scene.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Screenshot file="probe_off.ppm"/>
+	<DevCommand line="scene.layer Probe on"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<Screenshot file="probe_on.ppm"/>
+	<DevCommand line="scene.layer Probe off"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<Screenshot file="probe_off_again.ppm"/>
+	<ExpectImagesDiffer first="probe_off.ppm" second="probe_on.ppm" region="0.2,0.4,0.8,0.95" minDiffering="0.5"/>
+	<ExpectImagesDiffer first="probe_off.ppm" second="probe_off_again.ppm" region="0.2,0.4,0.8,0.95" minDiffering="0" maxDiffering="0.01"/>
+	<Pass/>
+</Scenario>

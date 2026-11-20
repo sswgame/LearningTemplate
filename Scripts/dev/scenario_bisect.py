@@ -44,7 +44,7 @@ def build_preset_or_exit(preset: str) -> None:
 
 
 def resolve_target(names: dict[int, str], target: str) -> tuple[int, str]:
-    """@p target 은 전체 이름(`game.empty.surfacefootprint`)이나 끝 조각(`surfacefootprint`)."""
+    """@p target 은 전체 이름(`game.playground.surfacefootprint`)이나 끝 조각(`surfacefootprint`)."""
     matches = sorted({(index, name) for index, name in names.items() if name == target or name.endswith('.' + target)})
     if len(matches) != 1:
         sys.exit(f'단계 {target!r} 를 체인 목록에서 {"찾지 못했다" if not matches else "하나로 정하지 못했다: " + ", ".join(n for _, n in matches)}')

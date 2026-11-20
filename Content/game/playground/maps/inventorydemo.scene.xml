@@ -1,0 +1,72 @@
+<?asset guid="5e4824070a8d6dfc5280c9330cd91a9b"?>
+<Scene formatVersion="3" name="InventoryDemo">
+	<!-- 인벤토리 · 오프라인 상점 시연(시나리오 automation/inventory · shopoffline). Player 는 마을 사람 프리셋에 장비 컴포넌트(가방 4 칸 · 무게 3)를 단다.
+	     바닥에 포션 더미(3 개) · 장화 · 투구 · 망토가 놓여 있다(WorldItemComponent). InventoryDemo 의 개발 명령(demo.inventory · demo.shop)이 화면을 연다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0.310517,-2.045455,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _color="1,0.95,0.9" _intensity="1.8" _ambient="0.45" _shadowExtent="8" _shadowDistance="16" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="ViewCamera">
+			<GameObject _schemaVersion="0" _name="ViewCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent" _bActive="true" _localPosition="0,1.1,-4.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _fovY="51.5662" _nearZ="0.05" _farZ="60" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Player">
+			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _visibilityBasedTickOption="AlwaysTickPose" />
+					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="CustomizeTownsfolk" _seed="0" _bMergeParts="true" />
+					<CharacterEquipmentComponent _componentName="CharacterEquipmentComponent" _bActive="true" _bagSlotCount="4" _bagMaxWeight="3" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="PotionPile">
+			<GameObject _schemaVersion="0" _name="PotionPile" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent" _bActive="true" _localPosition="1.2,0.15,0.5" _localRotation="0,0,0" _localScale="0.3,0.3,0.3" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Cube" _materialPath="" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<WorldItemComponent _componentName="WorldItemComponent" _bActive="true" _itemID="potion_health" _count="3" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="BootsDrop">
+			<GameObject _schemaVersion="0" _name="BootsDrop" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent" _bActive="true" _localPosition="-1.2,0.15,0.5" _localRotation="0,0,0" _localScale="0.3,0.3,0.3" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Cube" _materialPath="" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<WorldItemComponent _componentName="WorldItemComponent" _bActive="true" _itemID="boots_low" _count="1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="HelmetDrop">
+			<GameObject _schemaVersion="0" _name="HelmetDrop" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent" _bActive="true" _localPosition="0.6,0.15,1.2" _localRotation="0,0,0" _localScale="0.3,0.3,0.3" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Cube" _materialPath="" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<WorldItemComponent _componentName="WorldItemComponent" _bActive="true" _itemID="helmet_knight" _count="1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="CapeDrop">
+			<GameObject _schemaVersion="0" _name="CapeDrop" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent" _bActive="true" _localPosition="-0.6,0.15,1.2" _localRotation="0,0,0" _localScale="0.3,0.3,0.3" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="Cube" _materialPath="" _boundsRadius="0.866" _gpuSpinSeed="0" _bVisible="true" />
+					<WorldItemComponent _componentName="WorldItemComponent" _bActive="true" _itemID="cape_rogue" _count="1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="InventoryDemo">
+			<GameObject _schemaVersion="0" _name="InventoryDemo" _bActive="true">
+				<_listComponent>
+					<InventoryShopDemoComponent _componentName="InventoryShopDemoComponent" _bActive="true" _shopsPath="game/playground/data/inventorydemo.shops.xml" _shopID="general" _startingGold="100" _characterName="Player" _inventoryDocument="common/ui/inventory/inventory.ui.xml" _shopDocument="common/ui/shop/shop.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

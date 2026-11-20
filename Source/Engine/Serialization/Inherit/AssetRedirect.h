@@ -1,8 +1,8 @@
 /**
  * @file AssetRedirect.h
  * @brief 에셋 리다이렉터 — 옮기거나 이름을 바꾼 에셋의 옛 id 를 새 id 로 풉니다(NEXT 5-5 R1).
- * @details 표는 도메인 뿌리마다 `redirects.xml` 하나다: `<Redirects><Redirect from="game/empty/maps/old.scene.xml" to="game/empty/maps/new.scene.xml" /></Redirects>`.
- *          팩 · 폴더를 통째로 옮기면 파일마다가 아니라 접두 한 줄 `<PrefixRedirect from="game/empty" to="game/playground" />` 을 새 도메인 표에 둔다
+ * @details 표는 도메인 뿌리마다 `redirects.xml` 하나다: `<Redirects><Redirect from="game/playground/maps/old.scene.xml" to="game/playground/maps/new.scene.xml" /></Redirects>`.
+ *          팩 · 폴더를 통째로 옮기면 파일마다가 아니라 접두 한 줄 `<PrefixRedirect from="game/<옛>" to="game/<새>" />` 을 새 도메인 표에 둔다
  *          (언리얼 `[CoreRedirects]` PackageRedirects 의 접두 꼴 — 옛 도메인 폴더는 사라지므로 검색 순서가 읽는 새 도메인 표에 산다). 정확한 줄이 먼저다.
  *          리소스 입구(`AssetIO`)가 찾기 전에 한 번 풀므로, 세이브 · 서버 · 다른 에셋에 적힌 옛 경로가 그대로 산다. 경로 교체(`ResourceRemap`, 조건부)보다 먼저 푼다.
  *          GUID 전환은 기각했다 — 경로 id 가 언리얼 SoftObjectPath 자리이고, 언리얼도 옮긴 에셋을 리다이렉터(`UObjectRedirector` · `[CoreRedirects]`)로 잇는다.

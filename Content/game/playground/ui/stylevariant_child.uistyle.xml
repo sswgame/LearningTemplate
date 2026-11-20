@@ -1,0 +1,5 @@
+<?asset guid="d26738e2a352b1787a32613957483500"?>
+<UIStyleSheet _base="game/playground/ui/stylevariant_base.uistyle.xml">
+	<!-- 테마는 변수만 적은 시트다 — 규칙과 형식 변형은 부모의 것이다(Godot Theme 상속 · 유니티 USS 변수). -->
+	<Variable _name="accent" _value="0.9,0.35,0.1,1" />
+</UIStyleSheet>

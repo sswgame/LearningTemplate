@@ -27,8 +27,8 @@ from common.host_platform import executable_name
 from common.paths import get_project_root
 
 _HASH_LINE = re.compile(r"\[DestructionHash\]\s+side=(?P<side>server|client)\s+id=(?P<id>\d+)\s+events=(?P<events>\d+)\s+hash=(?P<hash>[0-9a-fA-F]+)\s+name=(?P<name>.*)$")
-_SCENE = "game/empty/maps/destructionnet.scene.xml"
-_GAME = "Empty"
+_SCENE = "game/playground/maps/destructionnet.scene.xml"
+_GAME = "Playground"
 _PORT = 7777  # 서버 UDP 포트
 _SERVER_TICKS = 1800  # 서버가 이 틱 수를 돈 뒤 끝난다(30 틱/초 기준 60 초)
 _CLIENT_DELAY_SECONDS = 2.0  # 서버를 띄운 뒤 클라이언트를 띄울 때까지

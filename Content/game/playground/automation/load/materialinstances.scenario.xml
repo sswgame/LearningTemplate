@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ebd5d5a70e2b4628b126d90c702051bb"?>
+<!--
+  부하 시나리오 — 머티리얼 인스턴스 5000(감사 R-4 자원 구간 할당의 측정 씬, DesignBacklog "자원 구간 할당" 측정). 큐브 5000 개가 저마다 머티리얼 인스턴스를 든다
+  (-gv_stressTestMaterialInstances=1). 값은 바꾸지 않는다 — 상수 버퍼 할당 수와 프레임 시간만 본다.
+  감시 값: RT.RHI.liveBuffers(살아 있는 버퍼 — DX12 는 버퍼마다 커밋 자원), RT.RHI.constantBufferPages(머티리얼 상수 버퍼 페이지),
+           RT.Vulkan.allocationCount(살아 있는 VkDeviceMemory — maxMemoryAllocationCount 의 분자), 프레임 시간 p50.
+  판정(설계): 구간 할당 전후로 할당 수가 1/10 아래로 줄고 프레임 시간이 흔들림 안이면 둔다. 짝: materialparams(값을 바꾸는 512 개).
+  측정 창(<Load>)이 끝내므로 <Pass/> 가 없다. 하위 폴더라 게임 체인이 줍지 않는다.
+  실행: ctest -L load (항목 Scenario.playground.load.materialinstances) · 백엔드별로 -vulkan · -dx12 를 붙여 따로 잰다.
+-->
+<Scenario name="game.playground.load.materialinstances" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
+	<Launch variable="gv_stressTestMeshes" value="5000"/>
+	<Launch variable="gv_stressTestMaterialInstances" value="1"/>
+	<Launch variable="gv_stressTestTransparent" value="0"/>
+	<Launch variable="gv_stressTestAnimate" value="0"/>
+	<Launch variable="gv_stressTestMaterialChurn" value="0"/>
+	<Load durationSeconds="15"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Scene.ObjectCount" atLeast="5000"/>
+</Scenario>

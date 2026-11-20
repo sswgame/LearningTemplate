@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="960cdb99cbfdfa15198a3f0318fb602f"?>
+<!--
+  배(BoatComponent · BoatHelmComponent · BuoyancyComponent 폰툰 · WeatherWaveComponent) — 무대 maps/boat. 값으로 판정하고, 폭풍 속 배 사진 한 장을 남긴다.
+  ① 잔잔한 바다: 서 있는 Upwind 의 롤 · 피치 최댓값이 작다. ② 조타륜 좌석: Captain 이 쥔 Helmsman 이 Rowboat 운전석에 타면 Captain 이 배를 쥔다.
+  ③ 직진(노 1500 N): 앞 속도 ≈ 4.4 m/s(1500 / (앞 저항 150 + 폰툰 저항 ≈ 187)), 갑판의 Sailor 는 배와의 거리(≈ 1.06 m)를 지킨다 — 미끄러지지 않는다.
+  ④ 선회(추진 0.7 · 키 0.7): 선회 반경 ≈ 37 m(실측). ⑤ 순풍 · 역풍(바람 +x 10 m/s, 돛 30 m²): 바람을 등진 Downwind 는 ≈ 2.8 m/s, 마주한 Upwind 는 돛 힘 0 으로 서 있다.
+  ⑥ 해협(+x 1.5 m/s): 입력 없는 Drifter 가 흐름 속도로 밀리고, 시작 자리(-80)에서 적어도 12 m 밀렸다(시나리오가 여기까지 10 초 넘게 흐른다).
+  ⑦ 폭풍(cheat.weather storm → 파도 진폭 4 배): Upwind 의 롤 · 피치 최댓값이 커지되 뒤집히지 않는다. 사진 boat_storm.ppm — 큰 파도 속 배(골든 boat_storm).
+  ⑧ 내리기: Helmsman 이 갑판(하차 위치)에 선다.
+  판정값의 범위는 2026-11-08 통합에서 실측으로 맞췄다. 실행: App -scenario=game/playground/automation/boat.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.boat" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/boat.scene.xml"/>
+	<Launch variable="gv_environmentAnimate" value="0"/> <!-- 시작 전 · 에셋 대기(벽시계) 프레임 수는 실행마다 달라 그동안 흐른 파도 시간이 사진(boat_storm)의 위상을 흔든다 — 그동안 멈춘다 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Variable name="gv_environmentAnimate" value="1"/> <!-- 여기부터 파도 시간은 결정적 프레임으로만 흐른다 -->
+	<WaitUntil watch="Buoyancy.SubmergedPontoons" atLeast="1" timeoutFrames="120"/>
+	<AdvanceSimulation frames="300"/> <!-- 배가 물에 자리 잡는 5 초(최근 4~8 초 흔들림 최대를 본다 — 시간이 내용) -->
+	<Expect watch="Object.Y" target="Upwind" near="0.25" tolerance="0.2"/>
+	<Expect watch="Boat.RollPeak" target="Upwind" atMost="0.1"/>
+	<Expect watch="Boat.PitchPeak" target="Upwind" atMost="0.1"/>
+	<Expect watch="Boat.ForwardSpeed" target="Rowboat" near="0" tolerance="0.3"/>
+
+
+	<!-- 조타륜 좌석 -->
+	<Possess controller="Captain" pawn="Helmsman"/>
+	<AdvanceSimulation frames="1"/> <!-- 빙의가 먹은 뒤에 탄다(프레임 경계) -->
+	<Mount rider="Helmsman" vehicle="Rowboat"/>
+	<WaitUntil watch="Pawn.Seat" target="Helmsman" is="Rowboat" timeoutFrames="30"/>
+	<Expect watch="Pawn.Controller" target="Rowboat" is="Captain"/>
+
+	<!-- 직진 -->
+	<Intent pawn="Rowboat" move="0,1" frames="720"/>
+	<WaitUntil watch="Boat.ForwardSpeed" target="Rowboat" atLeast="3.5" timeoutFrames="600"/>
+	<AdvanceSimulation frames="180"/> <!-- 정속 3 초 동안 곧게 간다(시간이 내용) -->
+	<Expect watch="Boat.ForwardSpeed" target="Rowboat" atLeast="3.5"/>
+	<Expect watch="Boat.ForwardSpeed" target="Rowboat" atMost="6"/>
+	<Expect watch="Object.X" target="Rowboat" near="0" tolerance="2"/> <!-- 약 20 m 가는 동안 파도에 1.59 m 밀린다(실측 2026-11-18, 네 백엔드 같은 값 — 시작 전 게임 시간을 멈춘 뒤) -->
+	<Expect watch="Object.DistanceTo" target="Sailor" key="Rowboat" near="1.06" tolerance="0.3"/>
+
+	<!-- 선회(오른쪽 = +x 쪽) -->
+	<Intent pawn="Rowboat" move="0.7,0.7" frames="360"/>
+	<AdvanceSimulation frames="240"/> <!-- 선회 4 초(시간이 내용) -->
+	<Expect watch="Boat.TurnRadius" target="Rowboat" atLeast="5"/>
+	<Expect watch="Boat.TurnRadius" target="Rowboat" atMost="45"/> <!-- 실측 37 m(2026-11-08, Debug dx12) -->
+	<Expect watch="Object.X" target="Rowboat" atLeast="2"/>
+	<Expect watch="Object.DistanceTo" target="Sailor" key="Rowboat" near="1.06" tolerance="0.3"/>
+
+	<!-- 순풍 · 역풍: 의도의 조종 요를 선수 쪽으로 두어 둘 다 "앞으로" 돛을 편다 -->
+	<Intent pawn="Downwind" move="0,1" yaw="1.5708" frames="900"/>
+	<Intent pawn="Upwind" move="0,1" yaw="-1.5708" frames="900"/>
+	<AdvanceSimulation frames="720"/> <!-- 순풍 · 역풍 12 초(시간이 내용) -->
+	<Expect watch="Boat.SailForce" target="Downwind" atLeast="100"/>
+	<Expect watch="Boat.ForwardSpeed" target="Downwind" atLeast="1.5"/>
+	<Expect watch="Boat.SailForce" target="Upwind" atMost="25"/> <!-- 파도에 선수가 조금 돌아 바람을 비스듬히 받는다 — 실측 15 N, 순풍 배의 1/7 아래 -->
+	<Expect watch="Boat.ForwardSpeed" target="Upwind" atMost="0.3"/>
+
+	<!-- 해협의 흐름 -->
+	<Expect watch="Boat.ForwardSpeed" target="Drifter" near="1.5" tolerance="0.25"/>
+	<Expect watch="Object.X" target="Drifter" atLeast="-68"/>
+	<Expect watch="Object.Z" target="Drifter" near="130" tolerance="3"/>
+	<AdvanceSimulation frames="200"/>
+
+	<!-- 폭풍 -->
+	<DevCommand line="cheat.weather storm"/>
+	<AdvanceSimulation frames="600"/> <!-- 폭풍 10 초(결정적 시뮬레이션 시각이 사진 내용) -->
+	<Expect watch="Boat.RollPeak" target="Upwind" atLeast="0.1"/>
+	<Expect watch="Boat.PitchPeak" target="Upwind" atLeast="0.1"/>
+	<Expect watch="Boat.RollPeak" target="Upwind" atMost="1"/> <!-- 실측 0.76 rad — 뒤집힘(≈ 1.5)에 한참 못 미친다 -->
+	<Expect watch="Boat.PitchPeak" target="Upwind" atMost="0.7"/>
+	<Expect watch="Buoyancy.SubmergedPontoons" atLeast="1"/>
+	<Screenshot file="empty/boat_storm.ppm" stability="assets"/>
+	<ExpectImage file="empty/boat_storm.ppm" golden="boat_storm"/>
+
+	<!-- 내리기 -->
+	<Dismount rider="Helmsman"/>
+	<WaitUntil watch="Pawn.Seat" target="Helmsman" is="none" timeoutFrames="30"/>
+	<Expect watch="Pawn.Controller" target="Helmsman" is="Captain"/>
+	<AdvanceSimulation frames="60"/> <!-- 내린 뒤 1 초가 지나도 배 곁에 있다(시간이 내용) -->
+	<Expect watch="Object.DistanceTo" target="Helmsman" key="Rowboat" atMost="3"/>
+	<Pass/>
+</Scenario>

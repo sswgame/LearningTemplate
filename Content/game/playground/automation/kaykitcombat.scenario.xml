@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="36a2cd6ff24f1920be51e07d2218b9f0"?>
+<!--
+  KayKit 전투 벤치의 아틀라스 색 — 전투 연출(-gv_stressTestCombat=1)의 스켈레톤 적(_combatEnemyMaterial)과 칼(_combatSwordMaterial)이 KayKit 머티리얼로 그려지는지 눈으로 본다.
+  사진 한 장은 서 있는 적(맞기 전), 한 장은 쓰러진 뒤(180 프레임에 치명적인 피격 → 래그돌, 칼 떨어뜨리기)다.
+  실행: ctest -R Scenario.game.playground.kaykitcombat (Shipping 은 벤치 변수가 없어 건너뛴다)
+-->
+<Scenario name="game.playground.kaykitcombat" fixedDelta="0.0166667" timeoutFrames="500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_stressTestCombat" value="1"/>
+	<AdvanceSimulation frames="60"/> <!-- 서 있는 60 프레임 장면(결정적 시뮬레이션 시각이 사진 내용) -->
+	<Screenshot file="empty/kaykit_combat_standing.ppm" stability="assets"/>
+	<AdvanceSimulation frames="200"/> <!-- 쓰러진 260 프레임 장면 -->
+	<Screenshot file="empty/kaykit_combat_down.ppm" stability="assets"/>
+	<!-- 그림을 골든과 견준다 — 사진만 남기면 화면이 틀려도 통과다(시점이 경사면에 막힌 view2 가 그렇게 지나갔다). -->
+	<ExpectImage file="empty/kaykit_combat_standing.ppm" golden="kaykit_combat_standing"/>
+	<ExpectImage file="empty/kaykit_combat_down.ppm" golden="kaykit_combat_down"/>
+	<Pass/>
+</Scenario>

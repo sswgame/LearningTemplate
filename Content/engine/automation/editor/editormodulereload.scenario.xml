@@ -11,7 +11,7 @@
 <Scenario name="engine.editormodulereload" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<EditorWaitStable/>
 	<!-- 자동 저장: dirty 씬의 사본 하나 -->
-	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>
@@ -41,7 +41,7 @@
 	<Expect watch="Editor.ObjectCount" atLeast="1"/>
 	<EditorExpectDockLayout/>
 	<!-- 고친 씬을 열어 둔 채 끝내지 않는다 -->
-	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<DevCommand line="scene.open game/playground/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<Pass/>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3927f8f7d3514096966b01d5bd10c0c7"?>
+<!--
+  입자 정렬 모드(VFXSortMode, 감사 RN-15 · PS-2 · PS-3) — 알파 퍼프가 카메라 쪽으로 날아와 오래된 것이 앞에 선다. 왼쪽은 CPU 방출기(게임 스레드 정렬), 오른쪽은 GPU 방출기(정렬 컴퓨트).
+  ① 같은 입자를 정렬하지 않은 무대(vfxsort_unsorted — 풀 순서라 앞 퍼프를 먼저 그려 뒤 것이 덮는다)와 정렬한 무대(vfxsort — 먼 것부터)에서 찍는다.
+  ② 두 장이 정말 다르다(ExpectImagesDiffer — 같으면 장면이 정렬을 드러내지 못한 것). 주 시점 왼쪽 반(CPU) · 오른쪽 반(GPU)을 따로 견준다. PiP(반대편)는 견주지 않는다 — 풀 순서(생성 순서)가 마침 반대편 시점의 먼 것부터와 같아, 시점마다 정렬이 맞으면 두 장의 PiP 가 같아야 한다. PiP 의 순서는 ③ 골든이 지킨다(시점마다 정렬이 아니면 PiP 가 주 시점 순서로 뒤집혀 골든과 갈린다).
+  ③ 정렬한 그림은 골든(통합이 기록)과 견준다 — 두 뷰 모두 먼 퍼프가 먼저 그려졌는지 사람이 한 번 본다.
+  결정적: 고정 프레임 시간 · 시드 고정 · 같은 진행 프레임 수, 찍기 전에 시간을 멈춘다(gv_timeScale 0 — 사진 안정 대기 동안 입자가 움직이지 않는다).
+  실행: ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.vfxsort" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/vfxsort_unsorted.scene.xml"/>
+	<!-- 정렬하지 않은 무대 -->
+	<LoadScene path="game/playground/maps/vfxsort_unsorted.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Variable name="gv_timeScale" value="1"/>
+	<AdvanceSimulation frames="150"/>
+	<Variable name="gv_timeScale" value="0"/>
+	<Screenshot file="vfxsort_unsorted.ppm" stability="assets"/>
+	<!-- 정렬한 무대 — 같은 입자(시드 · 진행 프레임 수가 같다) -->
+	<Variable name="gv_timeScale" value="1"/>
+	<LoadScene path="game/playground/maps/vfxsort.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<AdvanceSimulation frames="150"/>
+	<Variable name="gv_timeScale" value="0"/>
+	<Screenshot file="vfxsort_sorted.ppm" stability="assets"/>
+	<ExpectImagesDiffer first="vfxsort_unsorted.ppm" second="vfxsort_sorted.ppm" region="0,0.3,0.5,1" minDiffering="0.01"/>
+	<ExpectImagesDiffer first="vfxsort_unsorted.ppm" second="vfxsort_sorted.ppm" region="0.5,0.45,1,1" minDiffering="0.01"/>
+	<ExpectImage file="vfxsort_sorted.ppm" golden="vfxsort_sorted"/>
+	<Variable name="gv_timeScale" value="1"/>
+	<Pass/>
+</Scenario>

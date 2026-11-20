@@ -2,7 +2,7 @@
 에셋 파일 · 폴더를 옮기고(이름 바꾸기 포함) 그것을 가리키는 참조를 한 번에 고친다 — 언리얼 Fix Up Redirectors 를 옮기면서 바로 하는 것과 같다.
 
   py -3 -m Scripts move-asset common/prefabs/props/bow.prefab.xml common/prefabs/weapons/bow.prefab.xml [--dry-run]
-  py -3 -m Scripts move-asset game/empty/materials game/empty/surfaces
+  py -3 -m Scripts move-asset game/playground/materials game/playground/surfaces
 
 경로는 리소스 id(`Content/` 뒤 — 앞에 `Content/` 를 붙여도 된다)다. 하는 일:
   1. `git mv` — 원본 곁의 정체성 서술(`<파일>.meta`)도 함께 옮기고 그 안의 원본 이름을 새 이름으로 쓴다(GUID 는 그대로 — 옮겨도 정체성은 같다).
@@ -11,12 +11,15 @@
      칸 밖의 글(주석 · 문서 · 출처 표)은 고치지 않는다 — 끝에 남은 옛 경로를 찍는다.
   3. 옛 id 도메인의 리다이렉트 표(`Content/<도메인>/redirects.xml`)에 옮긴 파일마다 줄을 더한다 — 저장소 밖(세이브 · 서버 · 배포된 팩)에 적힌 옛 id 가 산다
      (언리얼이 옮긴 자리에 리다이렉터를 남기는 것과 같다). 규칙은 에디터 옮기기와 같다(`add_redirects` = C++ `AssetRedirect::addToXMLText`).
-     도메인 뿌리를 통째로 옮기면(`game/empty` → `game/playground`) 옛 도메인 폴더가 사라지므로 새 도메인 표에 접두 한 줄(`<PrefixRedirect>`)만 둔다
+     도메인 뿌리를 통째로 옮기면(`game/<옛>` → `game/<새>`) 옛 도메인 폴더가 사라지므로 새 도메인 표에 접두 한 줄(`<PrefixRedirect>`)만 둔다
      — 언리얼 `[CoreRedirects]` PackageRedirects 의 접두 꼴. 함께 옮겨진 표의 `to` 는 새 팩 아래로 고친다.
   4. 팩 이름 바꾸기(`game/<옛>` → `game/<새>`)면 팩 이름이 든 이름도 함께: 골든 파일(`<Scenario name>.<이름>.<백엔드>…` — `AutomationGoldenUtil::makeGoldenID`)의
-     `game.<옛>.` 접두, 글 파일(C++ · 파이썬 · CMake · JSON · XML) 속 시나리오 이름 `game.<옛>.` 과 콘텐츠 경로 문자열 `game/<옛>/`.
+     `game.<옛>.` 접두, 글 파일(C++ · 파이썬 · CMake · JSON · XML) 속 시나리오 이름 `game.<옛>.`, 콘텐츠 경로 문자열 `game/<옛>/`, CTest 체인 이름
+     `Scenario.<옛>`(`Test/Scenario/CMakeLists.txt` 가 팩 이름으로 짓는다 — 격리 표 · 로그 이름), 따옴표로 끝나는 도메인 `"game/<옛>"`(게임 프리셋 `_packRoot`), 팩 줄기 `game_<옛>`,
+     씬 청크 이름 `scene_<옛>_`, 대소문자 · 구분자가 다른 경로 `Game/<Old>/` · `Game\\<Old>/`(옛 이름의 대소문자 꼴을 새 이름에 옮긴다).
      정확한 접두만 바꾼다(앞 글자가 낱말 글자면 다른 낱말이다) — 일반 낱말 `Empty` 는 건드리지 않는다. 리다이렉트 표는 옛 id 를 적으려고 있어 건너뛴다.
   5. 작업 트리 전체를 검사해 끊어진 참조가 남았으면 알린다(실패 코드).
+`--resume` 은 파일 옮기기를 건너뛰고 2–5 만 다시 돈다 — 규칙을 넓힌 뒤 이미 옮긴 자리에 적용한다(바꾸기는 모두 정확한 접두라 두 번 돌아도 같다).
 임포트 산출물은 커밋하지 않으므로 원본을 옮긴 뒤에는 `App --import-models` 등으로 다시 임포트한다.
 """
 
@@ -31,7 +34,7 @@ from pathlib import Path
 from common.exit_code import ExitCode
 from common.git import run_git
 from common.paths import get_project_root
-from lint.asset_identity import META_EXTENSION, make_meta_text, parse_meta
+from lint.asset_identity import META_EXTENSION, create_guid, make_meta_text, parse_meta, write_header, write_keeping_identity
 from lint.asset_references import (FieldConfig, add_redirects, check_working_tree, extract_references, is_referrer, CONTENT_FOLDER, REDIRECT_FILE_NAME, list_index_files, load_config,
                                   make_redirect_table_id)
 
@@ -39,8 +42,9 @@ NAME_CHARACTERS = set("abcdefghijklmnopqrstuvwxyz0123456789_.-/")
 # 옮긴 뒤 옛 경로가 칸 밖에 남았는지 훑는 글 파일 — 경로 칸의 글 에셋 · 문서 · 출처 표 · 테스트 CMake.
 LEFTOVER_SUFFIX = (".xml", ".json", ".material", ".md", ".txt", ".cpp", ".h")
 # 팩 이름 바꾸기에서 팩 이름 문자열(시나리오 이름 · 콘텐츠 경로)을 고치는 글 파일 — 문서(.md)는 사람이 읽고 고친다(남은 목록에 찍힌다).
-PACK_STRING_SUFFIX = (".cpp", ".h", ".hpp", ".inl", ".py", ".cmake", ".json", ".xml")
-PACK_STRING_FILE_NAME = ("CMakeLists.txt",)
+# 번역 팩(.po 의 `#:` 출처 줄) · 셰이더 · 머티리얼 · 셸 스크립트 · .gitignore 예외 줄도 팩 경로를 적는다.
+PACK_STRING_SUFFIX = (".cpp", ".h", ".hpp", ".inl", ".py", ".cmake", ".json", ".xml", ".po", ".hlsl", ".hlsli", ".material", ".sh")
+PACK_STRING_FILE_NAME = ("CMakeLists.txt", ".gitignore")
 GOLDEN_FOLDER = "golden"
 
 
@@ -64,6 +68,8 @@ class PackStringCount:
     scenario_name: int = 0   # `<Scenario name="game.<옛>.…">`
     other_name: int = 0      # 그 밖의 `game.<옛>.` (시나리오 목록 · 체인 · 주석)
     path: int = 0            # `game/<옛>/`
+    chain: int = 0           # CTest 체인 이름 `Scenario.<옛>`(뒤에 `.<하위>` 가 붙어도)
+    domain: int = 0          # 따옴표 속 도메인 `"game/<옛>"` · 팩 줄기 `game_<옛>`
 
 
 def get_pack_rename(old_id: str, new_id: str) -> PackRename | None:
@@ -90,7 +96,30 @@ def rewrite_pack_strings(text: str, rename: PackRename) -> tuple[str, PackString
     count.other_name = name_total - count.scenario_name
     path_pattern = re.compile(r"(?<![A-Za-z0-9_.])" + re.escape(f"game/{rename.old_pack}/"))
     text, count.path = path_pattern.subn(f"game/{rename.new_pack}/", text)
+    chain_pattern = re.compile(r"(?<![A-Za-z0-9_.])Scenario\." + re.escape(rename.old_pack) + r"(?![A-Za-z0-9_])")
+    text, count.chain = chain_pattern.subn(f"Scenario.{rename.new_pack}", text)
+    domain_pattern = re.compile(r"(?<![A-Za-z0-9_.])game/" + re.escape(rename.old_pack) + r"(?=[\"'`])")   # `"game/<옛>"` · `".../Content/game/<옛>"`
+    text, domain_count = domain_pattern.subn(f"game/{rename.new_pack}", text)
+    stem_pattern = re.compile(r"(?<![A-Za-z0-9_])game_" + re.escape(rename.old_pack) + r"(?![A-Za-z0-9_])")
+    text, stem_count = stem_pattern.subn(f"game_{rename.new_pack}", text)
+    chunk_pattern = re.compile(r"(?<![A-Za-z0-9_])scene_" + re.escape(rename.old_pack) + "_")   # 씬 청크 이름 `scene_<팩>_<씬>`(`PackSceneChunkPlan::makeSceneChunkName`)
+    text, chunk_count = chunk_pattern.subn(f"scene_{rename.new_pack}_", text)
+    count.domain = domain_count + stem_count + chunk_count
+    # 대소문자 · 구분자가 다른 경로(`Game/Old/Maps` · `Game\\Old/` — 경로를 맞춤 꼴로 접는 테스트 자료)는 옛 이름의 대소문자 꼴을 새 이름에 옮긴다.
+    folded_pattern = re.compile(r"(?<![A-Za-z0-9_.])((?i:game)[/\\]+)(" + "".join(f"[{c.lower()}{c.upper()}]" if c.isalpha() else re.escape(c) for c in rename.old_pack)
+                                + r")(?=[/\\\"'`])")
+    text, folded_count = folded_pattern.subn(lambda match: match.group(1) + match_case(match.group(2), rename.new_pack), text)
+    count.path += folded_count
     return text, count
+
+
+def match_case(sample: str, name: str) -> str:
+    """@p name 을 @p sample 의 대소문자 꼴(모두 소문자 · 모두 대문자 · 첫 글자만 대문자)로."""
+    if sample.isupper():
+        return name.upper()
+    if sample[:1].isupper():
+        return name[:1].upper() + name[1:]
+    return name
 
 
 def is_pack_string_file(relative_path: str) -> bool:
@@ -210,8 +239,9 @@ def write_redirects(root: Path, list_move: list[tuple[str, str]], prefix_move: t
     for table_id, (list_table_move, list_prefix_move) in map_move_by_table.items():
         table_path = root / CONTENT_FOLDER / table_id
         text = add_redirects(table_path.read_text(encoding="utf-8") if table_path.is_file() else None, list_table_move, list_prefix_move)
-        table_path.parent.mkdir(parents=True, exist_ok=True)
-        table_path.write_text(text, encoding="utf-8", newline="\n")
+        if not table_path.is_file():
+            text = write_header(text, create_guid())   # 새 표도 우리 형식 글이라 정체성 머리를 단다 — 있던 표는 아래가 머리를 옮겨 쓴다
+        write_keeping_identity(table_path, text)
         result = run_git(["add", f"{CONTENT_FOLDER}/{table_id}"], cwd=root)
         if not result.succeeded:
             raise RuntimeError(f"git add {CONTENT_FOLDER}/{table_id} 실패: {result.stderr.strip()}")
@@ -237,6 +267,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("old", help="옛 리소스 id(파일 또는 폴더)")
     parser.add_argument("new", help="새 리소스 id")
     parser.add_argument("--dry-run", action="store_true", help="고칠 파일만 찍는다")
+    parser.add_argument("--resume", action="store_true", help="파일은 이미 옮겼다 — 이름 · 참조 · 리다이렉트 고치기만 다시 돈다(도구 규칙을 넓힌 뒤 같은 옮기기에 적용)")
     args = parser.parse_args(argv)
 
     root = get_project_root()
@@ -246,18 +277,19 @@ def main(argv: list[str]) -> int:
     if not set(new_id) <= NAME_CHARACTERS:
         print(f"[move-asset] '{new_id}' 는 리소스 이름 규칙(소문자 · 숫자 · '_' · '-' · '.' · '/')에 맞지 않습니다")
         return ExitCode.CHECK_INVALID
-    if not (root / old_path).exists():
-        print(f"[move-asset] '{old_path}' 가 없습니다")
+    moved_path = new_path if args.resume else old_path   # 다시 돌기면 옮긴 자리가 있고 옛 자리가 없어야 한다
+    if not (root / moved_path).exists() or (args.resume and (root / old_path).exists()):
+        print(f"[move-asset] '{moved_path}' 가 없습니다" + (f"(또는 옛 자리 '{old_path}' 가 아직 있습니다)" if args.resume else "") + " — 아무것도 바꾸지 않았습니다")
         return ExitCode.CHECK_INVALID
-    if (root / new_path).exists() or (root / (new_path + META_EXTENSION)).exists():
+    if not args.resume and ((root / new_path).exists() or (root / (new_path + META_EXTENSION)).exists()):
         print(f"[move-asset] '{new_path}'(또는 그 .meta)가 이미 있습니다 — 아무것도 옮기지 않았습니다")
         return ExitCode.CHECK_INVALID
-    is_folder = (root / old_path).is_dir()
+    is_folder = (root / moved_path).is_dir()
     list_rule = make_rules(old_id, new_id, is_folder, config)
     rename = get_pack_rename(old_id, new_id)
     is_root_move = is_folder and is_domain_root(old_id) and is_domain_root(new_id)
 
-    if not args.dry_run:
+    if not args.dry_run and not args.resume:
         git_move(root, old_path, new_path)
         if not is_folder:
             move_sidecar(root, old_path, new_path)   # 폴더는 안의 .meta 가 함께 간다
@@ -278,12 +310,15 @@ def main(argv: list[str]) -> int:
         rewritten, edit_count = rewrite_references(relative_path, text, list_rule, config) if is_field_file else (text, 0)
         if is_string_file:
             rewritten, count = rewrite_pack_strings(rewritten, rename)
-            if count.scenario_name + count.other_name + count.path:
+            if count.scenario_name + count.other_name + count.path + count.chain + count.domain:
                 string_file_count += 1
                 string_count.scenario_name += count.scenario_name
                 string_count.other_name += count.other_name
                 string_count.path += count.path
-                print(f"  [팩 이름 문자열] {relative_path}: 시나리오 이름 {count.scenario_name} · 그 밖 이름 {count.other_name} · 경로 {count.path}")
+                string_count.chain += count.chain
+                string_count.domain += count.domain
+                print(f"  [팩 이름 문자열] {relative_path}: 시나리오 이름 {count.scenario_name} · 그 밖 이름 {count.other_name} · 경로 {count.path} · "
+                      f"체인 {count.chain} · 도메인 {count.domain}")
         if edit_count:
             fixed_count += 1
             print(f"  {relative_path}: {edit_count}")
@@ -292,7 +327,7 @@ def main(argv: list[str]) -> int:
     print(f"[move-asset] {old_id} -> {new_id}: 참조 파일 {fixed_count} 개{' (dry run — 아무것도 바꾸지 않았다)' if args.dry_run else ''}")
     if rename is not None:
         print(f"[move-asset] 팩 이름 {rename.old_pack} -> {rename.new_pack}: 골든 {len(list_golden)} 개, 문자열 파일 {string_file_count} 개 — "
-              f"시나리오 이름 {string_count.scenario_name} · 그 밖 이름 {string_count.other_name} · 경로 {string_count.path}")
+              f"시나리오 이름 {string_count.scenario_name} · 그 밖 이름 {string_count.other_name} · 경로 {string_count.path} · 체인 {string_count.chain} · 도메인 {string_count.domain}")
     if is_root_move:
         print(f"[move-asset] 도메인 뿌리 옮기기 — 리다이렉트는 {make_redirect_table_id(new_id)} 에 접두 한 줄(<PrefixRedirect from=\"{old_id}\" to=\"{new_id}\" />)")
     if not args.dry_run:

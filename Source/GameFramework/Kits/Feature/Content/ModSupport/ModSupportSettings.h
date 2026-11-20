@@ -4,7 +4,7 @@
  * @details 정책 값은 코드 표가 아니라 데이터다(데이터 종류 `kDataKind`). 모든 칸이 필수이고 빠지면 읽기가 실패한다(기본값으로 물러나지 않는다).
  *
  *          <ModSupportSettings contentVersion="1" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216" packBlockSize="131072">
- *              <Overridable prefix="game/empty/data/"/>
+ *              <Overridable prefix="game/playground/data/"/>
  *          </ModSupportSettings>
  */
 #pragma once
