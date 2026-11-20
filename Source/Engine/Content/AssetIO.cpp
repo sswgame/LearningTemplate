@@ -118,7 +118,11 @@ namespace sw
                     if ( pPackManager->hasPatchFile( patchedKey ) && readFromPack( *pPackManager, patchedKey, patchedPackPath ) )
                     {
                         if ( pOutAbsPath != nullptr )
-                            *pOutAbsPath = "[" + FileUtil::getFileNamePart( patchedPackPath ) + "]:" + patchedKey;
+                        {
+                            StringBuilder<constant::buffer::kMax512> builder;
+                            builder.appendFormat( "[%#]:%#", FileUtil::getFileNamePart( patchedPackPath ), patchedKey );
+                            pOutAbsPath->assign( builder.view() );
+                        }
                         return true;
                     }
                 }
@@ -140,7 +144,11 @@ namespace sw
             if ( pPackManager != nullptr && readFromPack( *pPackManager, normalizedKey, mountedPackPath ) )
             {
                 if ( pOutAbsPath != nullptr )
-                    *pOutAbsPath = "[" + FileUtil::getFileNamePart( mountedPackPath ) + "]:" + normalizedKey;
+                {
+                    StringBuilder<constant::buffer::kMax512> builder;
+                    builder.appendFormat( "[%#]:%#", FileUtil::getFileNamePart( mountedPackPath ), normalizedKey );
+                    pOutAbsPath->assign( builder.view() );
+                }
                 return true;
             }
             return false;

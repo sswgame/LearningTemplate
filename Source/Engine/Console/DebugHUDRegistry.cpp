@@ -63,18 +63,22 @@ namespace sw
                 const DebugHUDSectionRegistration* const pSection = engine::getSubsystem<DebugHUDRegistry>().findSection( listArgument[0] );
                 if ( pSection == nullptr )
                 {
-                    outReply = "hud.print: no section '" + listArgument[0] + "' (hud list)";
+                    StringBuilder<constant::buffer::kMax256> reply;
+                    reply.appendFormat( "hud.print: no section '%#' (hud list)", listArgument[0] );
+                    outReply.assign( reply.view() );
                     return false;
                 }
                 DebugHUDSectionWriter writer{ key };
                 pSection->_pFunc( writer );
-                outReply = string( "[" ) + pSection->_pTitle + "]";
+                StringBuilder<constant::buffer::kMax2048> reply;
+                reply.appendFormat( "[%#]", pSection->_pTitle );
                 for ( uint32 index = 0; index < writer.getLineCount(); ++index )
                 {
                     const DebugHUDLine& line = writer.getLineAt( index );
                     SW_LOG_INFO_ID( "DebugHUD.PrintLine", "[%#] %#: %#", pSection->_pName, line._label, line._value );
-                    outReply += "\n  " + line._label + ": " + line._value;
+                    reply.appendFormat( "\n  %#: %#", line._label, line._value );
                 }
+                outReply.assign( reply.view() );
                 return true;
             }
         };

@@ -41,25 +41,38 @@ SW_TEST_CASE( WriteIDTest, MixedCaseIDWritesLowercaseInTheResourceTree )
  */
 SW_TEST_CASE( WriteIDTest, NewNamesUnderContentMustBeLowercase )
 {
-    const string content = ProcessRoots::get()._content.str();
-    SW_EXPECT_FALSE( AssetPaths::validateLowercaseResourceName( content + "/engine/write_id_test_not_yet/Upper.txt" ).has_value() );
-    SW_EXPECT_TRUE( AssetPaths::validateLowercaseResourceName( content + "/engine/write_id_test_not_yet/lower.txt" ).has_value() );
-    SW_EXPECT_TRUE( AssetPaths::validateLowercaseResourceName( ProcessRoots::get()._saved.str() + "/Automation/Upper.txt" ).has_value() );
+    const string                             content = ProcessRoots::get()._content.str();
+    StringBuilder<constant::buffer::kMax512> engineUpper;
+    engineUpper.appendFormat( "%#/engine/write_id_test_not_yet/Upper.txt", content );
+    SW_EXPECT_FALSE( AssetPaths::validateLowercaseResourceName( engineUpper.view() ).has_value() );
+    StringBuilder<constant::buffer::kMax512> engineLower;
+    engineLower.appendFormat( "%#/engine/write_id_test_not_yet/lower.txt", content );
+    SW_EXPECT_TRUE( AssetPaths::validateLowercaseResourceName( engineLower.view() ).has_value() );
+    StringBuilder<constant::buffer::kMax512> savedUpper;
+    savedUpper.appendFormat( "%#/Automation/Upper.txt", ProcessRoots::get()._saved.str() );
+    SW_EXPECT_TRUE( AssetPaths::validateLowercaseResourceName( savedUpper.view() ).has_value() );
 
     // 쓰기 경로가 그 규칙을 지난다(엔진이 선 프로세스는 규칙이 걸려 있다) — 파일이 생기지 않는다.
-    const string upperFile = content + "/scratch/write_id_test_not_yet/Upper.txt";
+    StringBuilder<constant::buffer::kMax512> upperFileBuilder;
+    upperFileBuilder.appendFormat( "%#/scratch/write_id_test_not_yet/Upper.txt", content );
+    const string upperFile = string( upperFileBuilder.view() );
     SW_EXPECT_LOG( "File.CreateRefused" );
     SW_EXPECT_FALSE( FileUtil::writeTextFile( upperFile, "x" ) );
     SW_EXPECT_FALSE( FileUtil::exists( upperFile ) );
 
     // 폴더를 만드는 입구도 같은 규칙이다 — 대문자 이름의 빈 폴더가 생기지 않는다. 소문자 폴더는 만든다.
-    const string upperFolder = content + "/scratch/write_id_test_not_yet/UpperFolder";
+    StringBuilder<constant::buffer::kMax512> upperFolderBuilder;
+    upperFolderBuilder.appendFormat( "%#/scratch/write_id_test_not_yet/UpperFolder", content );
+    const string upperFolder = string( upperFolderBuilder.view() );
     SW_EXPECT_LOG( "File.CreateRefused" );
     SW_EXPECT_FALSE( FileUtil::ensureDirectoryExists( upperFolder ) );
     SW_EXPECT_FALSE( FileUtil::isDirectory( upperFolder ) );
-    const string lowerFolder = content + "/scratch/write_id_test_not_yet/lower_folder";
-    SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( lowerFolder ) );
-    (void)FileUtil::removeDirectory( content + "/scratch/write_id_test_not_yet" ); // 못 지우면 경고만 남는다 — 다음 실행이 같은 이름을 다시 쓴다
+    StringBuilder<constant::buffer::kMax512> lowerFolder;
+    lowerFolder.appendFormat( "%#/scratch/write_id_test_not_yet/lower_folder", content );
+    SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( lowerFolder.view() ) );
+    StringBuilder<constant::buffer::kMax512> testFolder;
+    testFolder.appendFormat( "%#/scratch/write_id_test_not_yet", content );
+    (void)FileUtil::removeDirectory( testFolder.view() ); // 못 지우면 경고만 남는다 — 다음 실행이 같은 이름을 다시 쓴다
 }
 
 SW_TEST_CASE( WriteIDTest, RelativeKeyWritesTheFileReadingPicked )

@@ -23,7 +23,8 @@ namespace sw
 
     expected<void> AutomationScratchFolder::validate() const
     {
-        const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
+        fixed_string<constant::buffer::kMax64> scratchPrefix;
+        formatstring( scratchPrefix.data(), scratchPrefix.capacity(), "%#/", AutomationScratch::kScratchDomain );
         if ( _sourceID.empty() || _scratchID.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch> needs from=\"<resource id>\" and as=\"scratch/<name>\"" } );
         const bool bLeavesTree = AssetPaths::hasParentDirectoryComponent( _sourceID ) || AssetPaths::hasParentDirectoryComponent( _scratchID );

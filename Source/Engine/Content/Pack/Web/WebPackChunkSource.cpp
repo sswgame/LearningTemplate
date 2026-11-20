@@ -29,9 +29,11 @@ namespace sw
 
             void fetch( const string& packFileName, const string& localPath, PackChunkFetchDoneDelegate onDone ) override
             {
+                StringBuilder<constant::buffer::kMax256> url;
+                url.appendFormat( "%#%#", kRemoteFolder, packFileName );
                 // 소유는 콜백(finish)이 userData 로 돌려받는다 — 받기가 끝날 때까지 맨 포인터로 넘긴다.
                 WebPackChunkRequest* const pRequest = make_unique<WebPackChunkRequest>.createWith( [&]( void* pMem )
-                { return sw_placement_new( pMem ) WebPackChunkRequest{ string( kRemoteFolder ) + packFileName, localPath, std::move( onDone ) }; } )
+                { return sw_placement_new( pMem ) WebPackChunkRequest{ string( url.view() ), localPath, std::move( onDone ) }; } )
                                                           .release();
                 emscripten_fetch_attr_t attributes;
                 emscripten_fetch_attr_init( &attributes );

@@ -83,8 +83,10 @@ namespace sw
                             SW_LOG_ERROR_ID( "PackPatchBuilder.PackCouldNotRead", "Pack '%#' could not read '%#'", outListPackPath[packIndex], pathInPack );
                             return false;
                         }
-                        Source source;
-                        source._fullPath    = domain + "/" + pathInPack;
+                        Source                                   source;
+                        StringBuilder<constant::buffer::kMax256> fullPath;
+                        fullPath.appendFormat( "%#/%#", domain, pathInPack );
+                        source._fullPath    = string( fullPath.view() );
                         source._contentHash = PackContentEntry::computeHash( bytes );
                         source._packIndex   = packIndex;
                         source._pathInPack  = pathInPack;
@@ -220,12 +222,16 @@ namespace sw
 
     string PackPatchBuilder::makePatchPackFileName( string_view build )
     {
-        return string( PackPatchBuilderInternal::kPatchPackPrefix ) + string( build ) + string( PackPatchBuilderInternal::kPackExtension );
+        StringBuilder<constant::buffer::kMax128> builder;
+        builder.appendFormat( "%#%#%#", PackPatchBuilderInternal::kPatchPackPrefix, build, PackPatchBuilderInternal::kPackExtension );
+        return string( builder.view() );
     }
 
     string PackPatchBuilder::makeManifestFileName( string_view build )
     {
-        return string( PackPatchBuilderInternal::kPatchPackPrefix ) + string( build ) + string( PackPatchManifest::kManifestExtension );
+        StringBuilder<constant::buffer::kMax128> builder;
+        builder.appendFormat( "%#%#%#", PackPatchBuilderInternal::kPatchPackPrefix, build, PackPatchManifest::kManifestExtension );
+        return string( builder.view() );
     }
 
     bool PackPatchBuilder::isValidBuildName( string_view build )
@@ -310,13 +316,15 @@ namespace sw
         }
 
         PackPatchManifest manifest;
-        manifest._fromBuild          = previous._build;
-        manifest._toBuild            = params._newBuild;
-        manifest._packFileName       = makePatchPackFileName( params._newBuild );
-        manifest._listRemovedPath    = delta._listRemovedPath;
-        const string    packPath     = FileUtil::joinPath( params._outputDirectory, manifest._packFileName );
-        const string    manifestPath = FileUtil::joinPath( params._outputDirectory, makeManifestFileName( params._newBuild ) );
-        const string    recordPath   = FileUtil::joinPath( params._outputDirectory, params._newBuild + string( PackBuildRecord::kExtension ) );
+        manifest._fromBuild                                   = previous._build;
+        manifest._toBuild                                     = params._newBuild;
+        manifest._packFileName                                = makePatchPackFileName( params._newBuild );
+        manifest._listRemovedPath                             = delta._listRemovedPath;
+        const string                             packPath     = FileUtil::joinPath( params._outputDirectory, manifest._packFileName );
+        const string                             manifestPath = FileUtil::joinPath( params._outputDirectory, makeManifestFileName( params._newBuild ) );
+        StringBuilder<constant::buffer::kMax128> recordFileName;
+        recordFileName.appendFormat( "%#%#", params._newBuild, PackBuildRecord::kExtension );
+        const string    recordPath = FileUtil::joinPath( params._outputDirectory, recordFileName.view() );
         PackWriteResult writeResult;
         if ( Internal::writeChangedFiles( params, listPackPath, listSource, delta, packPath, writeResult ) == false )
             return false;

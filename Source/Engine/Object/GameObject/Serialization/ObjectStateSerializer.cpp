@@ -419,8 +419,10 @@ namespace sw
                 /** @brief 컴포넌트 핸들의 런타임 id 글(`오브젝트:컴포넌트`)입니다. 같은 실행의 스냅샷이 쓰고, 읽기 처리기의 숫자 분기가 읽는다. */
                 static string writeRuntimeComponentText( const void* pValue )
                 {
-                    const ComponentHandle& handle = *static_cast<const ComponentHandle*>( pValue );
-                    return sw::to_string( handle.objectID() ) + ":" + sw::to_string( handle.componentID() );
+                    const ComponentHandle&                  handle = *static_cast<const ComponentHandle*>( pValue );
+                    StringBuilder<constant::buffer::kMax64> builder;
+                    builder.appendFormat( "%#:%#", handle.objectID(), handle.componentID() );
+                    return string( builder.view() );
                 }
 
                 /**
@@ -510,7 +512,12 @@ namespace sw
                     if ( reference._keyHash == 0 )
                         return string{ "0:0" };
                     // 키 글을 모르는 남긴 참조(바이너리에서 읽음)는 해시를 숫자로 적는다. 읽기가 표지 비트로 키 해시임을 알아봐 같은 값으로 돌아온다 — 값을 잃지 않는다.
-                    return sw::to_string( reference._objectID ) + ":" + ( reference._key.empty() ? sw::to_string( reference._keyHash ) : reference._key );
+                    StringBuilder<constant::buffer::kMax128> builder;
+                    if ( reference._key.empty() )
+                        builder.appendFormat( "%#:%#", reference._objectID, reference._keyHash );
+                    else
+                        builder.appendFormat( "%#:%#", reference._objectID, reference._key );
+                    return string( builder.view() );
                 }
 
                 /** @brief 기본 바이너리 처리기와 같은 형태(핸들 하나, 16 바이트)로 씁니다. 파일 형태에서는 컴포넌트 자리에 키 해시가 들어갑니다. */

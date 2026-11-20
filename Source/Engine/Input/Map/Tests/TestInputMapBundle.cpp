@@ -24,7 +24,9 @@ namespace
             vector<AssetID> listAsset;
             for ( const utf8* pName : listName )
             {
-                listAsset.push_back( AssetID{ FileUtil::joinPath( "game/playground/input/bundletest", string( pName ) + ".input.xml" ) } );
+                fixed_string<constant::buffer::kMax64> fileName;
+                formatstring( fileName.data(), fileName.capacity(), "%#.input.xml", pName );
+                listAsset.push_back( AssetID{ FileUtil::joinPath( "game/playground/input/bundletest", fileName ) } );
             }
             return listAsset;
         }
@@ -255,7 +257,9 @@ SW_TEST_CASE( InputMapBundleTest, CommonActionTableMatchesTheCommonFiles )
     vector<AssetID> listAsset;
     for ( const utf8* pName : { "base", "move", "traversal", "look", "camera", "camerapan", "cameraorbit", "menu", "time", "fastforward", "interact" } )
     {
-        listAsset.push_back( AssetID{ FileUtil::joinPath( "common/input", string( pName ) + ".input.xml" ) } );
+        fixed_string<constant::buffer::kMax64> fileName;
+        formatstring( fileName.data(), fileName.capacity(), "%#.input.xml", pName );
+        listAsset.push_back( AssetID{ FileUtil::joinPath( "common/input", fileName ) } );
     }
     InputMap map;
     SW_REQUIRE_TRUE( map.loadBundle( listAsset ) );

@@ -312,9 +312,11 @@ namespace sw
         if ( socketHandle == PlatformSocketUtil::kInvalidSocket )
             return Internal::fail( "could not connect" );
 
-        string       requestBytes = "GET " + target + " HTTP/1.1\r\nHost: " + hostAndPort + "\r\nConnection: close\r\nAccept-Encoding: identity\r\n\r\n";
-        HTTPResponse response;
-        size_t       sentBytes = 0;
+        StringBuilder<constant::buffer::kMax512> requestBuilder;
+        requestBuilder.appendFormat( "GET %# HTTP/1.1\r\nHost: %#\r\nConnection: close\r\nAccept-Encoding: identity\r\n\r\n", target, hostAndPort );
+        const string_view requestBytes = requestBuilder.view();
+        HTTPResponse      response;
+        size_t            sentBytes = 0;
         while ( sentBytes < requestBytes.size() )
         {
             const int32 sent = PlatformSocketUtil::sendStream( socketHandle, reinterpret_cast<const uint8*>( requestBytes.data() + sentBytes ), static_cast<int32>( requestBytes.size() - sentBytes ) );

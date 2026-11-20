@@ -61,7 +61,12 @@ namespace
         }
 
         /** @brief 오류를 `문장 (대상)` 글로 잇습니다(문장 · 대상 어느 쪽의 낱말이든 찾게). */
-        static string describe( const Error& error ) { return string( error.message().data(), error.message().size() ) + " (" + string( error.detail().data(), error.detail().size() ) + ")"; }
+        static string describe( const Error& error )
+        {
+            StringBuilder<constant::buffer::kMax512> builder;
+            builder.appendFormat( "%# (%#)", string_view( error.message().data(), error.message().size() ), string_view( error.detail().data(), error.detail().size() ) );
+            return string( builder.view() );
+        }
 
         /** @brief 실패한 결과의 글입니다. 성공이면 빈 글입니다. */
         static string describe( const expected<void>& result ) { return result.has_value() ? string() : describe( result.error() ); }
@@ -151,32 +156,46 @@ SW_TEST_CASE( ModuleCatalogTest, BrokenManifestsNameTheProblem )
     // 오타는 조용히 지나가지 않는다.
     Util::expectParseError( R"({ "_name": "M", "_versoin": "1.0.0" })", "_versoin" );
 
-    const string common = R"("_version": "1.0.0", "_listConfiguration": ["Dev"], "_listTarget": ["Client"])";
-    Util::expectParseError( R"({ "_name": "M", "_kind": "Kit", "_listDependency": [ { "_name": "M" } ], )" + common + " }", "names the module itself" );
-    Util::expectParseError( R"({ "_name": "M", "_kind": "Kit", "_listDependency": [ { "_name": "" } ], )" + common + " }", "has no name" );
-    Util::expectParseError( R"({ "_name": "M", "_kind": "Kit", "_listDependency": [ { "_name": "D", "_minVersion": "x" } ], )" + common + " }", "bad _minVersion" );
-    Util::expectParseError( R"({ "_name": "M", "_kind": "Kit", "_listModuleOverride": [ { "_name": "D" } ], )" + common + " }", "only a Game module" );
-    Util::expectParseError( R"({ "_name": "M", "_kind": "Game", "_listModuleOverride": [ { "_name": "" } ], )" + common + " }", "module override" );
+    const string_view                        common = R"("_version": "1.0.0", "_listConfiguration": ["Dev"], "_listTarget": ["Client"])";
+    StringBuilder<constant::buffer::kMax256> json;
+    json.appendFormat( R"({ "_name": "M", "_kind": "Kit", "_listDependency": [ { "_name": "M" } ], %# })", common );
+    Util::expectParseError( json.view(), "names the module itself" );
+    json.clear();
+    json.appendFormat( R"({ "_name": "M", "_kind": "Kit", "_listDependency": [ { "_name": "" } ], %# })", common );
+    Util::expectParseError( json.view(), "has no name" );
+    json.clear();
+    json.appendFormat( R"({ "_name": "M", "_kind": "Kit", "_listDependency": [ { "_name": "D", "_minVersion": "x" } ], %# })", common );
+    Util::expectParseError( json.view(), "bad _minVersion" );
+    json.clear();
+    json.appendFormat( R"({ "_name": "M", "_kind": "Kit", "_listModuleOverride": [ { "_name": "D" } ], %# })", common );
+    Util::expectParseError( json.view(), "only a Game module" );
+    json.clear();
+    json.appendFormat( R"({ "_name": "M", "_kind": "Game", "_listModuleOverride": [ { "_name": "" } ], %# })", common );
+    Util::expectParseError( json.view(), "module override" );
 }
 
 // 플랫폼은 "기본 전부 + 뺄 것" 이다. 에디터 종류는 적지 않아도 데스크톱 전용이다(CMake `sw_read_manifest_platforms` 와 같다).
 SW_TEST_CASE( ModuleCatalogTest, PlatformMaskIsEveryPlatformMinusExcluded )
 {
-    const auto parseMask = []( const string& text )
+    const auto parseMask = []( string_view text )
     {
         ModuleManifest       manifest;
         const expected<void> parsed = ModuleCatalog::parseManifest( text, {}, manifest );
         SW_EXPECT_TRUE_MSG( parsed.has_value(), Util::describe( parsed ).c_str() );
         return static_cast<int32>( manifest._platformMask );
     };
-    const string common   = R"("_version": "1.0.0", "_listConfiguration": ["Dev"], "_listTarget": ["Client"])";
-    const int32  kDesktop = static_cast<int32>( ModulePlatform::Windows ) | static_cast<int32>( ModulePlatform::Linux );
+    const string_view common   = R"("_version": "1.0.0", "_listConfiguration": ["Dev"], "_listTarget": ["Client"])";
+    const int32       kDesktop = static_cast<int32>( ModulePlatform::Windows ) | static_cast<int32>( ModulePlatform::Linux );
 
-    SW_EXPECT_EQUAL( static_cast<int32>( ModulePlatform::Windows ),
-                     parseMask( R"({ "_name": "RHI_DX", "_kind": "RHI", "_listExcludedPlatform": ["Linux", "Android", "Web"], )" + common + " }" ) );
-    SW_EXPECT_EQUAL( kDesktop, parseMask( R"({ "_name": "EditorModule", "_kind": "Editor", )" + common + " }" ) );
-    SW_EXPECT_EQUAL( kDesktop | static_cast<int32>( ModulePlatform::Android ) | static_cast<int32>( ModulePlatform::Web ),
-                     parseMask( R"({ "_name": "GF_Kit", "_kind": "Kit", )" + common + " }" ) );
+    StringBuilder<constant::buffer::kMax256> json;
+    json.appendFormat( R"({ "_name": "RHI_DX", "_kind": "RHI", "_listExcludedPlatform": ["Linux", "Android", "Web"], %# })", common );
+    SW_EXPECT_EQUAL( static_cast<int32>( ModulePlatform::Windows ), parseMask( json.view() ) );
+    json.clear();
+    json.appendFormat( R"({ "_name": "EditorModule", "_kind": "Editor", %# })", common );
+    SW_EXPECT_EQUAL( kDesktop, parseMask( json.view() ) );
+    json.clear();
+    json.appendFormat( R"({ "_name": "GF_Kit", "_kind": "Kit", %# })", common );
+    SW_EXPECT_EQUAL( kDesktop | static_cast<int32>( ModulePlatform::Android ) | static_cast<int32>( ModulePlatform::Web ), parseMask( json.view() ) );
 }
 
 // 에디터 확장은 Dev 전용이고 에디터에 의존한다(CMake 검사와 같다).

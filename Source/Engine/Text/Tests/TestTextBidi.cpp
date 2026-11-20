@@ -58,7 +58,9 @@ SW_TEST_CASE( TextBidiTest, HebrewRunIsReversedVisually )
 {
     const sw::string word = "\xD7\xA9\xD7\x9C\xD7\x95\xD7\x9D"; // שלום
     SW_EXPECT_EQUAL( sw::string( "\xD7\x9D\xD7\x95\xD7\x9C\xD7\xA9" ), makeVisualText( word, sw::TextDirection::RightToLeft ) );
-    SW_EXPECT_EQUAL( sw::string( "abc \xD7\x9D\xD7\x95\xD7\x9C\xD7\xA9 def" ), makeVisualText( sw::string( "abc " ) + word + " def", sw::TextDirection::LeftToRight ) );
+    sw::fixed_string<sw::constant::buffer::kMax64> embedded;
+    sw::formatstring( embedded.data(), embedded.capacity(), "abc %# def", word );
+    SW_EXPECT_EQUAL( sw::string( "abc \xD7\x9D\xD7\x95\xD7\x9C\xD7\xA9 def" ), makeVisualText( embedded, sw::TextDirection::LeftToRight ) );
 
     sw::vector<uint32> listCodepoint{ 'a', 0x05D0u, 'b' };
     sw::vector<uint8>  listLevel;

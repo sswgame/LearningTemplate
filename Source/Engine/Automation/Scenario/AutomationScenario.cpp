@@ -36,12 +36,17 @@ namespace sw
              */
             [[nodiscard]] static string describeReadFailure( string_view path )
             {
-                const optional<AbsolutePath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( path );
-                const string                 loosePath = looseFile.has_value() ? looseFile->str() : string{};
-                const bool                   bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
-                return "[read] not found (content root '" + engine::getSubsystem<AssetPaths>().getRootFolderPath() + "', working folder '" + FileUtil::getCurrentPath() + "', " +
-                       ( loosePath.empty() ? string( "loose file unresolved" ) : "loose file '" + loosePath + "' is not a file" ) +
-                       ( bPackOnly ? ", this build reads packs only and the id is in none of them)" : ", the id is in none of the mounted packs)" );
+                const optional<AbsolutePath>             looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( path );
+                const string                             loosePath = looseFile.has_value() ? looseFile->str() : string{};
+                const bool                               bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
+                StringBuilder<constant::buffer::kMax512> reason;
+                reason.appendFormat( "[read] not found (content root '%#', working folder '%#', ", engine::getSubsystem<AssetPaths>().getRootFolderPath(), FileUtil::getCurrentPath() );
+                if ( loosePath.empty() )
+                    reason.append( "loose file unresolved" );
+                else
+                    reason.appendFormat( "loose file '%#' is not a file", loosePath );
+                reason.append( bPackOnly ? ", this build reads packs only and the id is in none of them)" : ", the id is in none of the mounted packs)" );
+                return string( reason.view() );
             }
 
             /** @brief 속성 값이 틀렸다는 오류입니다. 대상은 `이름='값'` 입니다. */
@@ -174,7 +179,9 @@ namespace sw
 
     string AutomationStep::describeError( const Error& error ) const
     {
-        return describe() + ": " + describeReason( error );
+        StringBuilder<constant::buffer::kMax512> resultBuilder;
+        resultBuilder.appendFormat( "%#: %#", describe(), describeReason( error ) );
+        return string( resultBuilder.view() );
     }
 
     string AutomationStep::describeReason( const Error& error )
@@ -581,12 +588,13 @@ namespace sw
             return lhs._frameIndex < rhs._frameIndex;
         } );
         // 부하 시나리오는 측정 창이 끝낸다 — `<Pass/>` 가 있으면 창이 닫히기 전에 프로세스가 끝나 보고가 없다.
-        const string outputFolderText = string( kAutomationOutputFolder ) + "/"; // 시나리오 글 안의 직접 표기를 찾는다(디스크 경로가 아니다)
+        fixed_string<constant::buffer::kMax64> outputFolderText; // 시나리오 글 안의 직접 표기를 찾는다(디스크 경로가 아니다)
+        formatstring( outputFolderText.data(), outputFolderText.capacity(), "%#/", kAutomationOutputFolder );
         for ( const AutomationStep& step : _listStep )
         {
             for ( const AutomationAttribute& attribute : step._listAttribute )
             {
-                if ( attribute._value.find( outputFolderText ) != string::npos )
+                if ( attribute._value.find( outputFolderText.c_str() ) != string::npos )
                     return unexpected( Error{ ErrorKind::InvalidArgument,
                                               "write the run's output folder as {out} (kAutomationOutputToken) - a literal path has no process suffix, so runs side by side (one per backend) "
                                               "overwrite each other's files",
@@ -610,12 +618,12 @@ namespace sw
 
     string AutomationTestOptions::makeLaunchArguments() const
     {
-        string arguments;
+        StringBuilder<constant::buffer::kMax256> arguments;
         for ( const AutomationAttribute& variable : _listLaunchVariable )
         {
-            arguments += ( arguments.empty() ? "-" : " -" ) + variable._name + "=" + variable._value;
+            arguments.appendFormat( "%#%#=%#", arguments.size() == 0 ? "-" : " -", variable._name, variable._value );
         }
-        return arguments;
+        return string( arguments.view() );
     }
 
     expected<void> AutomationScenario::parseLoad( const XMLNode& node )

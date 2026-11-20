@@ -31,48 +31,41 @@ namespace sw
             /** @brief (패밀리, 굵기, 기울기) 키입니다. 패밀리 이름은 대소문자를 무시합니다. */
             static string makeFamilyFaceKey( string_view family, FontWeight weight, FontSlant slant )
             {
-                string key = StringUtil::toLower( family );
-                key += kKeySeparator;
-                key += to_string( static_cast<uint32>( weight ) );
-                key += kKeySeparator;
-                key += to_string( static_cast<uint32>( slant ) );
-                return key;
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%#%#%#%#%#", StringUtil::toLower( family ), kKeySeparator, static_cast<uint32>( weight ), kKeySeparator, static_cast<uint32>( slant ) );
+                return string( key.view() );
             }
 
             /** @brief (문화권, 패밀리 면) 연쇄 키입니다. */
             static string makeChainKey( string_view culture, string_view familyFaceKey )
             {
-                string key = StringUtil::toLower( culture );
-                key += kKeySeparator;
-                key += familyFaceKey;
-                return key;
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%#%#%#", StringUtil::toLower( culture ), kKeySeparator, familyFaceKey );
+                return string( key.view() );
             }
 
             /** @brief (소문자 경로, 면 번호) 키입니다. */
             static string makeFileKey( string_view lowerPath, uint32 faceIndex )
             {
-                string key( lowerPath );
-                key += kKeySeparator;
-                key += to_string( faceIndex );
-                return key;
+                StringBuilder<constant::buffer::kMax512> key;
+                key.appendFormat( "%#%#%#", lowerPath, kKeySeparator, faceIndex );
+                return string( key.view() );
             }
 
             /** @brief 한 번만 남기는 경고의 키(패밀리 이름, 대소문자 무시)입니다. 원문이라 부딪혀 다른 경고를 삼키지 않는다. */
             static string makeFamilyWarningKey( string_view family )
             {
-                string key = "family";
-                key += kKeySeparator;
-                key += StringUtil::toLower( family );
-                return key;
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "family%#%#", kKeySeparator, StringUtil::toLower( family ) );
+                return string( key.view() );
             }
 
             /** @brief 한 번만 남기는 경고의 키(글리프 없는 코드 포인트)입니다. */
             static string makeCodepointWarningKey( uint32 codepoint )
             {
-                string key = "codepoint";
-                key += kKeySeparator;
-                key += to_string( codepoint );
-                return key;
+                StringBuilder<constant::buffer::kMax32> key;
+                key.appendFormat( "codepoint%#%#", kKeySeparator, codepoint );
+                return string( key.view() );
             }
 
             /** @brief 굵기 차이입니다(무게 짝짓기에서 작은 쪽이 이기고, 같으면 무거운 쪽이 이깁니다). */

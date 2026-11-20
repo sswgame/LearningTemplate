@@ -41,8 +41,10 @@ SW_TEST_CASE( PhysicsAssetTest, ChildSavesOnlyItsDifference )
     SW_REQUIRE_TRUE( base.saveToFile( *basePath ) );
     const string baseID = test::ScopedScratchDomain::makeID( "base.physics.xml" ).str();
 
-    PhysicsAsset child;
-    SW_REQUIRE_TRUE( child.loadFromXMLText( "<PhysicsAsset _base=\"" + baseID + "\" />", "child.physics.xml" ) );
+    PhysicsAsset                             child;
+    StringBuilder<constant::buffer::kMax256> childXML;
+    childXML.appendFormat( "<PhysicsAsset _base=\"%#\" />", baseID );
+    SW_REQUIRE_TRUE( child.loadFromXMLText( childXML.view(), "child.physics.xml" ) );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( child._listBody.size() ) );
     SW_EXPECT_EQUAL( baseID, child._baseID );
     child._listBody[1]._mass = 4.0f;
