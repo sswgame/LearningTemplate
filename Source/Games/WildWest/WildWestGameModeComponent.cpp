@@ -251,7 +251,7 @@ namespace sw
         const WesternOutlaw* pOutlaw = findOutlaw();
         if ( pOutlaw == nullptr )
             return string{};
-        const FactionDef*      pHonor         = _pWesternCatalog->getHonorReputation().find( hashed_string( WesternCatalog::kHonorFactionID ) );
+        const FactionDef*      pHonor         = _pWesternCatalog->getHonorReputation().find( WesternCatalog::getHonorFactionKey() );
         const int32            startHonor     = pHonor != nullptr ? pHonor->_startValue : 0;
         const WesternSurvival& survival       = pOutlaw->getSurvival();
         const bool             bLowCore       = survival.getCore( WesternCore::Health ) < _lowCoreWarning || survival.getCore( WesternCore::Stamina ) < _lowCoreWarning;

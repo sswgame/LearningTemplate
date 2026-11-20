@@ -224,4 +224,7 @@
 	<Field owner="BattleRoyaleLootSpotDef" field="table" tag="LootTableDef"/>
 	<Element type="BattleRoyaleSupplyDropDef" catalog="BattleRoyaleCatalog" path="SupplyDrop"/>
 	<Field owner="BattleRoyaleSupplyDropDef" field="table" tag="LootTableDef"/>
+	<CatalogKey tag="CoasterLayoutDef" catalog="CoasterLayoutCatalog" entry="Layout"/>
+	<Element type="ParkCoasterDef" catalog="ParkLayout" path="Coaster"/>
+	<Field owner="ParkCoasterDef" field="_layout" tag="CoasterLayoutDef"/>
 </DataCatalogReferenceTable>
