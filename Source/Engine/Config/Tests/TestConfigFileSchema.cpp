@@ -151,7 +151,6 @@ namespace
             {                 "Config/Engine/NetSendThrottle.json",                                                                                     "",   &loadBaseLayer<sw::NetSendThrottleSettings>},
             {                   "Config/Engine/RenderQuality.json",                                                                                     "",                            &loadRenderQuality},
             {                    "Config/Engine/CookContract.json",                                      "Scripts/generate/configure_files.py (configure)",                                       nullptr},
-            {       "Config/Engine/ClientOnlyTypes.generated.json",           "Scripts/generate/client_only_types.py (py -3 -m Scripts client-only-types)",                                       nullptr},
             {                "Config/Engine/ProcessExitCodes.json",                                   "Scripts/generate/process_exit_codes.py (configure)",                                       nullptr},
             {                                       "Config/Game/",                                                                                     "",                   &loadStrict<sw::GameConfig>},
             {                "Config/Server/chat_banned_words.txt",                                               "chat word filter (word list, not keys)",                                       nullptr},
