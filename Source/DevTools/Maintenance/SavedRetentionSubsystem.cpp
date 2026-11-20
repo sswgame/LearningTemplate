@@ -10,7 +10,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 namespace sw
 {
@@ -23,64 +23,27 @@ namespace sw
             /** @brief 지우려고 차지한 더미의 이름 머리입니다(`claimed-<프로세스>-<시각>-<번호>`). */
             static constexpr const utf8* kClaimPrefix = "claimed-";
 
-            /** @brief 폴더 하나의 보존 규칙입니다. `_bPerChild` 면 그 아래 폴더마다(시나리오마다) 따로 센다. */
-            struct Rule
-            {
-                string         _folder;
-                uint32         _keepCount{ 0 };
-                bool           _bPerChild{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                vector<string> _listSkipChild;      ///< 실행 산출물이 아니라 상태인 하위 폴더(`_bPerChild` 일 때)
-            };
-            struct Settings
-            {
-                int64        _minAgeSeconds{ 0 }; ///< 이보다 최근에 바뀐 것은 지우지 않는다 — 나란히 도는 프로세스의 것일 수 있다
-                string       _trashFolder;        ///< 버릴 것을 먼저 옮기는 자리 — 지우기는 뒤에서, 다음 기동이 남은 것을 이어 지운다
-                vector<Rule> _listRule;
-            };
+            using Rule     = SavedRetentionSubsystem::RetentionRule;
+            using Settings = SavedRetentionSubsystem::RetentionSettings;
 
             /** @brief 규칙 파일을 읽습니다. 없거나 칸이 빠졌거나 틀리면 오류를 남기고 false 입니다(기본값으로 지우지 않는다). */
             [[nodiscard]] static bool readSettings( Settings& outSettings )
             {
                 const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kConfigFile );
-                JSONDocument document;
-                if ( document.loadFromFile( path ) == false )
+                string       text;
+                if ( FileUtil::readTextFile( path, text ) == false )
                 {
                     SW_LOG_ERROR_ID( "SavedRetention.ConfigUnreadable", "Saved retention rules %# could not be read - nothing is removed", path );
                     return false;
                 }
-                const JSONValue        root   = document.getRoot();
-                const optional<int64>  minAge = root.readRequired<int64>( "_minAgeSeconds" );
-                const optional<string> trash  = root.readRequired<string>( "_trashFolder" );
-                const JSONValue        rules  = root.get( "_listRule" );
-                if ( minAge.has_value() == false || trash.has_value() == false || trash->empty() || rules.isArray() == false )
+                // 빠진 칸 · 모르는 키 · 틀린 값은 직렬화기가 칸 이름과 함께 알린다. 빈 글은 스키마로 막지 못해 여기서 본다.
+                const bool bRead  = JSONSerializer::deserialize( &outSettings, *Settings::StaticType(), text );
+                const bool bEmpty = outSettings._trashFolder.empty() || VectorUtil::containsIf( outSettings._listRule, []( const Rule& rule )
+                { return rule._folder.empty(); } );
+                if ( bRead == false || bEmpty )
                 {
-                    SW_LOG_ERROR_ID( "SavedRetention.ConfigInvalid", "Saved retention rules %# need _minAgeSeconds, a non-empty _trashFolder and a _listRule array - nothing is removed", path );
+                    SW_LOG_ERROR_ID( "SavedRetention.ConfigInvalid", "Saved retention rules %# need _minAgeSeconds, a non-empty _trashFolder and a _listRule array of non-empty _folder, _keepCount, _bPerChild, _listSkipChild - nothing is removed", path );
                     return false;
-                }
-                outSettings._minAgeSeconds = *minAge;
-                outSettings._trashFolder   = *trash;
-                for ( size_t index = 0; index < rules.size(); ++index )
-                {
-                    const JSONValue        entry     = rules.at( index );
-                    const optional<string> folder    = entry.readRequired<string>( "_folder" );
-                    const optional<uint32> keepCount = entry.readRequired<uint32>( "_keepCount" );
-                    const optional<bool>   bPerChild = entry.readRequired<bool>( "_bPerChild" );
-                    const JSONValue        skip      = entry.get( "_listSkipChild" );
-                    if ( folder.has_value() == false || folder->empty() || keepCount.has_value() == false || bPerChild.has_value() == false || skip.isArray() == false )
-                    {
-                        SW_LOG_ERROR_ID( "SavedRetention.RuleInvalid", "Saved retention rule %# in %# needs _folder, _keepCount, _bPerChild and a _listSkipChild array - nothing is removed",
-                                         static_cast<uint32>( index ), path );
-                        return false;
-                    }
-                    Rule rule;
-                    rule._folder    = *folder;
-                    rule._keepCount = *keepCount;
-                    rule._bPerChild = *bPerChild;
-                    for ( size_t skipIndex = 0; skipIndex < skip.size(); ++skipIndex )
-                    {
-                        rule._listSkipChild.push_back( skip.at( skipIndex ).asString() );
-                    }
-                    outSettings._listRule.push_back( std::move( rule ) );
                 }
                 return true;
             }

@@ -7,10 +7,14 @@
  */
 #pragma once
 #include "Core/Concurrency/thread.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -18,6 +22,37 @@ namespace sw
     class SW_DEVTOOLS_API SavedRetentionSubsystem final : public ISubsystem
     {
     public:
+        // 규칙 파일(`Config/Dev/SavedRetention.json`)의 스키마다 — 키는 칸 이름 그대로(`JSONSerializer`). 리플렉션 등록기가 이름으로 닿아야 해서 public 이다(private 중첩 형식은 생성 코드의 이름공간 범위 등록 변수가 접근하지 못한다).
+        // 짧은 이름은 레지스트리 전역에서 하나여야 해서 `Retention` 을 붙인다.
+        /** @brief 폴더 하나의 보존 규칙입니다. `_bPerChild` 면 그 아래 폴더마다(시나리오마다) 따로 센다. */
+        REFLECT()
+        struct RetentionRule
+        {
+            REFLECT_BODY();
+
+            PROPERTY( Required )
+            string _folder;
+            PROPERTY( Required )
+            uint32 _keepCount{ 0 };
+            PROPERTY( Required )
+            bool _bPerChild{ false }; ///< 그 아래 폴더마다 따로 센다
+            PROPERTY( Required )
+            vector<string> _listSkipChild; ///< 실행 산출물이 아니라 상태인 하위 폴더(`_bPerChild` 일 때)
+        };
+        /** @brief 규칙 파일 전체입니다. */
+        REFLECT()
+        struct RetentionSettings
+        {
+            REFLECT_BODY();
+
+            PROPERTY( Required )
+            int64 _minAgeSeconds{ 0 }; ///< 이보다 최근에 바뀐 것은 지우지 않는다 — 나란히 도는 프로세스의 것일 수 있다
+            PROPERTY( Required )
+            string _trashFolder; ///< 버릴 것을 먼저 옮기는 자리 — 지우기는 뒤에서, 다음 기동이 남은 것을 이어 지운다
+            PROPERTY( Required )
+            vector<RetentionRule> _listRule;
+        };
+
         static constexpr const utf8* kSubsystemName = "SavedRetention";
 
         SubsystemInitResult initializeSubsystem() override;
