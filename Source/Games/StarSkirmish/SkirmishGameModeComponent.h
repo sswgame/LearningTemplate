@@ -68,6 +68,9 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
 
+        /** @brief @p manager 의 스커미시 디렉터(씬에 하나)입니다. 없으면 nullptr, 둘 이상이면 오류를 남기고 nullptr 입니다(감시 값 · 개발 명령이 등록 순서로 고르지 않는다). */
+        static SkirmishGameModeComponent* findInScene( const GameObjectManager& manager );
+
         /** @brief 판을 열고 패드 가상 커서를 켭니다(왼쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽, 오른쪽 스틱 = 카메라 이동). 패드만으로 고르기 · 명령을 씁니다. */
         void onBeginPlay() override;
         /** @brief 가상 커서를 끄고 판을 닫습니다. */

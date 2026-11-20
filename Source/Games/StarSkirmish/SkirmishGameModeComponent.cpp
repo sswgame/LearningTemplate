@@ -124,10 +124,8 @@ namespace sw
         /** @brief 감시 값 `Skirmish.AITask` 입니다. 플레이어 `key`(0 · 1)를 맡은 컴퓨터 상대의 행동 트리가 도는 잎(`GatherIdle` · `TrainWorkers` · `Defend` …)입니다. */
         [[nodiscard]] bool readAITask( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const SkirmishGameModeComponent* pGameMode = nullptr;
-            if ( query._pManager != nullptr && query._pManager->getComponentRegistry().getAll<SkirmishGameModeComponent>().empty() == false )
-                pGameMode = query._pManager->getComponentRegistry().getAll<SkirmishGameModeComponent>()[0];
-            int32 player = -1;
+            const SkirmishGameModeComponent* pGameMode = query._pManager != nullptr ? SkirmishGameModeComponent::findInScene( *query._pManager ) : nullptr;
+            int32                            player    = -1;
             if ( pGameMode == nullptr || StringUtil::parseInt( query._key, player ) == false )
             {
                 fixed_string<constant::buffer::kMax256> text;
@@ -159,15 +157,7 @@ namespace sw
                 const SceneManager* const  pScenes   = game::findSubsystem<SceneManager>();
                 const Scene* const         pScene    = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
                 GameObjectManager* const   pManager  = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-                SkirmishGameModeComponent* pDirector = nullptr;
-                if ( pManager != nullptr )
-                {
-                    for ( SkirmishGameModeComponent* pFound : pManager->getComponentRegistry().getAll<SkirmishGameModeComponent>() )
-                    {
-                        if ( pDirector == nullptr )
-                            pDirector = pFound;
-                    }
-                }
+                SkirmishGameModeComponent* pDirector = pManager != nullptr ? SkirmishGameModeComponent::findInScene( *pManager ) : nullptr;
                 if ( pDirector == nullptr )
                     outReply = "skirmish: no skirmish director in the active scene";
                 return pDirector;
@@ -999,6 +989,11 @@ namespace sw
     {
         GameModeComponent::onRegister( manager );
         manager.getComponentRegistry().add<SkirmishGameModeComponent>( this );
+    }
+
+    SkirmishGameModeComponent* SkirmishGameModeComponent::findInScene( const GameObjectManager& manager )
+    {
+        return manager.getComponentRegistry().findUnique<SkirmishGameModeComponent>();
     }
 
     void SkirmishGameModeComponent::onUnregister( GameObjectManager& manager )

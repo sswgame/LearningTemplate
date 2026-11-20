@@ -855,17 +855,12 @@ namespace sw
             /** @brief 감시 값 `Shooter3D.EffectCreatedCount` 입니다. 판의 효과 풀이 지금까지 새로 만든 인스턴스 수입니다. */
             [[nodiscard]] static bool readEffectCreatedCount( const GameObjectManager* pManager, float64& outValue )
             {
-                bool bFound = false;
-                if ( pManager == nullptr )
+                // 게임 모드는 씬에 하나다 — 둘이면 오류로 값이 없다(등록 순서로 고르지 않는다).
+                const ShooterGameModeComponent* pGameMode = pManager != nullptr ? pManager->getComponentRegistry().findUnique<ShooterGameModeComponent>() : nullptr;
+                if ( pGameMode == nullptr )
                     return false;
-                for ( const ShooterGameModeComponent* pGameMode : pManager->getComponentRegistry().getAll<ShooterGameModeComponent>() )
-                {
-                    if ( bFound )
-                        break;
-                    bFound   = true;
-                    outValue = static_cast<float64>( pGameMode->getEffectCreatedCount() );
-                }
-                return bFound;
+                outValue = static_cast<float64>( pGameMode->getEffectCreatedCount() );
+                return true;
             }
         };
     } // namespace

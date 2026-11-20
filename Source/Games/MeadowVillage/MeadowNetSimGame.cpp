@@ -61,7 +61,7 @@ namespace sw
             }
 
             /**
-             * @brief 이 월드의 첫 하우징 부지 값입니다. `PlacementCount` · `ViewCount` · `Funds` · `Owned`(이 월드의 플레이어가 주인이면 1) · `PendingRequests` ·
+             * @brief 이 월드의 열린 하우징 부지(월드에 하나) 값입니다. `PlacementCount` · `ViewCount` · `Funds` · `Owned`(이 월드의 플레이어가 주인이면 1) · `PendingRequests` ·
              *        `LastResult`(`HousingPlaceResult` 의 수 — 열린 부지가 없으면 값이 없다).
              */
             bool readValue( string_view key, float64& outValue ) const override
@@ -89,12 +89,9 @@ namespace sw
         private:
             const HousingPlotComponent* findPlot() const
             {
-                for ( const HousingPlotComponent* pPlot : _pManager->getComponentRegistry().getAll<HousingPlotComponent>() )
-                {
-                    if ( pPlot->isStarted() )
-                        return pPlot;
-                }
-                return nullptr;
+                // 마을 씬의 열린 부지는 월드에 하나다 — 둘이면 오류로 값이 없다(등록 순서로 고르지 않는다).
+                return _pManager->getComponentRegistry().findUnique<HousingPlotComponent>( []( const HousingPlotComponent& plot )
+                { return plot.isStarted(); } );
             }
 
         private:

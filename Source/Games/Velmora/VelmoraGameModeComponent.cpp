@@ -36,12 +36,11 @@ namespace sw
             /** @brief 디버그 그리기의 높이(m) — 땅 위에 뜬 구 · 룸이 같은 높이다(액션 룸 시연과 같다). */
             static constexpr float32 kDrawHeight = 0.5f;
 
-            /** @brief 첫 열린 디렉터의 지금 지역 이름입니다(감시 값 `Velmora.Region`). */
+            /** @brief 디렉터(씬에 하나)의 지금 지역 이름입니다(감시 값 `Velmora.Region`). */
             [[nodiscard]] static bool readRegion( const AutomationWatchQuery& query, AutomationWatchValue& outValue, bool bRespawn )
             {
-                const VelmoraGameModeComponent* pDirector = nullptr;
-                if ( query._pManager != nullptr && query._pManager->getComponentRegistry().getAll<VelmoraGameModeComponent>().empty() == false )
-                    pDirector = query._pManager->getComponentRegistry().getAll<VelmoraGameModeComponent>()[0];
+                // 디렉터는 씬에 하나다 — 둘이면 오류로 값이 없다(등록 순서로 고르지 않는다).
+                const VelmoraGameModeComponent* pDirector = query._pManager != nullptr ? query._pManager->getComponentRegistry().findUnique<VelmoraGameModeComponent>() : nullptr;
                 if ( pDirector == nullptr )
                 {
                     outValue.setText( "no Velmora director in the scene" );

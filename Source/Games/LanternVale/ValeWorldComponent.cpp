@@ -35,16 +35,10 @@ namespace sw
                 const SceneManager* const pScenes  = game::findSubsystem<SceneManager>();
                 const Scene* const        pScene   = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
                 GameObjectManager* const  pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-                ValeWorldComponent*       pVale    = nullptr;
-                if ( pManager != nullptr )
-                {
-                    for ( ValeWorldComponent* pFound : pManager->getComponentRegistry().getAll<ValeWorldComponent>() )
-                    {
-                        if ( pVale == nullptr )
-                            pVale = pFound;
-                    }
-                }
-                return pVale != nullptr && pVale->getClient().isActive() ? pVale : nullptr;
+                // 연결된 골짜기 클라이언트는 씬에 하나다 — 둘이면 오류로 명령을 보내지 않는다(등록 순서로 고르지 않는다).
+                return pManager != nullptr ? pManager->getComponentRegistry().findUnique<ValeWorldComponent>( []( const ValeWorldComponent& vale )
+                { return vale.getClient().isActive(); } )
+                                           : nullptr;
             }
 
             [[nodiscard]] static bool parseID( const string& text, uint32& outID )

@@ -132,16 +132,13 @@ namespace sw
             GameObjectHandle   _pawnObject; ///< 이 월드의 플레이어 몸(넷 폰 컴포넌트가 달린 오브젝트)
         };
 
-        /** @brief 이 매니저에서 넷 폰 컴포넌트가 달린 오브젝트를 찾습니다. 없으면 빈 핸들입니다. */
+        /** @brief 이 매니저에서 넷 폰 컴포넌트가 달린 오브젝트(아레나 씬에 하나 — 이 월드의 플레이어 몸)를 찾습니다. 없거나 둘 이상이면(오류) 빈 핸들입니다. */
         GameObjectHandle findPawnObject( GameObjectManager& manager )
         {
-            for ( const ShooterNetPawnComponent* pPawn : manager.getComponentRegistry().getAll<ShooterNetPawnComponent>() )
-            {
-                const GameObject* pObject = pPawn->getOwner();
-                if ( pObject != nullptr )
-                    return pObject->getHandle();
-            }
-            return GameObjectHandle{};
+            const ShooterNetPawnComponent* pPawn   = manager.getComponentRegistry().findUnique<ShooterNetPawnComponent>( []( const ShooterNetPawnComponent& pawn )
+            { return pawn.getOwner() != nullptr; } );
+            const GameObject*              pObject = pPawn != nullptr ? pPawn->getOwner() : nullptr;
+            return pObject != nullptr ? pObject->getHandle() : GameObjectHandle{};
         }
     } // namespace
 
