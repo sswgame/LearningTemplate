@@ -13,6 +13,7 @@
 
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -105,7 +106,7 @@ namespace sw::editor
 
             // 키는 `Editor.Panel.scene_view` 레이어의 액션이다(씬 뷰가 포커스이고 글을 치는 중이 아닐 때만 발화한다).
             _camera.processBookmarkKeys();
-            if ( EditorInputGUI::wasActionTriggered( "viewport.frameSelected" ) )
+            if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportFrameSelected ) )
                 _camera.frameSelected();
             if ( bFlying == false )
                 processShortcutKeys();
@@ -141,24 +142,24 @@ namespace sw::editor
     {
         // 기즈모 모드는 유니티, 언리얼, Godot 모두 W, E, R 이다. Q 와 Space 는 다음 모드로 순환한다(Space 는 언리얼). Shift+Space 는 씬 뷰 최대화다.
         // 키는 `Editor.Panel.scene_view` 레이어가 정한다 — 수정 키는 정확히 맞아야 발화하므로 Ctrl+R 이 R 이 되지 않는다.
-        if ( EditorInputGUI::wasActionTriggered( "viewport.gizmoTranslate" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportGizmoTranslate ) )
             EditorViewportClientScene::setGizmoOperation( 0 );
-        if ( EditorInputGUI::wasActionTriggered( "viewport.gizmoRotate" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportGizmoRotate ) )
             EditorViewportClientScene::setGizmoOperation( 1 );
-        if ( EditorInputGUI::wasActionTriggered( "viewport.gizmoScale" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportGizmoScale ) )
             EditorViewportClientScene::setGizmoOperation( 2 );
-        if ( EditorInputGUI::wasActionTriggered( "viewport.gizmoCycle" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportGizmoCycle ) )
             EditorViewportClientScene::setGizmoOperation( ( EditorViewportClientScene::getGizmoOperation() + 1 ) % 3 );
-        if ( EditorInputGUI::wasActionTriggered( "viewport.toggleMaximize" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportToggleMaximize ) )
             toggleMaximize();
         // 직교 보기(Blender, Godot 키패드). 7 은 위, 1 은 앞, 3 은 오른쪽이고, 5 는 직교와 원근을 전환한다.
-        if ( EditorInputGUI::wasActionTriggered( "viewport.viewTop" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportViewTop ) )
             _camera.setOrthographicView( 89.9f, 0.0f );
-        if ( EditorInputGUI::wasActionTriggered( "viewport.viewFront" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportViewFront ) )
             _camera.setOrthographicView( 0.0f, 0.0f );
-        if ( EditorInputGUI::wasActionTriggered( "viewport.viewRight" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportViewRight ) )
             _camera.setOrthographicView( 0.0f, -90.0f );
-        if ( EditorInputGUI::wasActionTriggered( "viewport.toggleOrthographic" ) )
+        if ( EditorInputGUI::wasActionTriggered( editorinput::kViewportToggleOrthographic ) )
             _camera.toggleOrthographic();
     }
 

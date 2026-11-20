@@ -2,6 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.h"
 
+#include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -92,7 +93,7 @@ namespace sw::editor
         {
             // 안내 아래에 그 다음 할 일(Play) 단추를 둔다 — 도구줄까지 눈을 옮기지 않는다(Godot 빈 독의 할 일 단추).
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdAbilityDebug", "HintPlayOnly" ) );
-            (void)EditorCommandGUI::drawCommandButton( "play.start" );
+            (void)EditorCommandGUI::drawCommandButton( editorcommand::kPlayStart );
             return;
         }
         if ( _state._bHasSnapshot == SW_FALSE )

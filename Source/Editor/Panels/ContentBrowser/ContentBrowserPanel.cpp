@@ -18,6 +18,7 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorFileDrop.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -81,8 +82,8 @@ namespace sw::editor
             /** @brief 참조 찾기 결과 창의 팝업 이름입니다. */
             static constexpr const utf8* kReferenceResultsPopupName = "References##ContentBrowserReferences";
             /** @brief 폴더 이동 액션입니다. 키는 `editor.input.xml` 의 `Editor.Panel.content_browser` 레이어가 정한다. */
-            static constexpr string_view kActionNavigateBack    = "contentBrowser.navigateBack";
-            static constexpr string_view kActionNavigateForward = "contentBrowser.navigateForward";
+            static constexpr string_view kActionNavigateBack    = editorinput::kContentBrowserNavigateBack;
+            static constexpr string_view kActionNavigateForward = editorinput::kContentBrowserNavigateForward;
             /** @brief 이미지 썸네일이 없는 종류의 아이콘 크기입니다. 썸네일 짧은 변에 대한 비율입니다. */
             static constexpr float32 kFallbackGlyphSizeRatio = 0.5f;
             /** @brief 참조 결과 테이블이 스크롤 없이 보이는 최대 행 수입니다. */

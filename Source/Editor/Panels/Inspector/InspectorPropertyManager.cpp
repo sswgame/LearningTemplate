@@ -11,6 +11,8 @@
 #include "Core/Name/TagID.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndexEntry.h"
+#include "Editor/Common/Commands/EditorCommandIDs.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -19,7 +21,6 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
@@ -221,19 +222,16 @@ namespace sw::editor
                 return false;
             }
 
-            /** @brief 리소스 id 의 폴더를 콘텐츠 브라우저로 엽니다. */
+            /** @brief 그 에셋을 콘텐츠 브라우저에서 보입니다(명령 `asset.browseTo` — 창은 그 명령이 연다. 이 그리드는 패널을 모른다). */
             static void revealInContentBrowser( string_view assetPath )
             {
-                EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
-                if ( pPanels == nullptr || pPanels->setPanelOpen<ContentBrowserPanel>( true ) == false )
+                EditorCommandRegistry* pCommands = EditorCommandRegistry::findInEditorContext();
+                if ( pCommands == nullptr )
                     return;
-                ContentBrowserPanel* pPanel = pPanels->findPanel<ContentBrowserPanel>();
-                if ( pPanel == nullptr )
-                    return;
-                const optional<AbsolutePath> fileAbs = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( assetPath ).str() );
-                if ( fileAbs.has_value() == false )
-                    return;
-                pPanel->openFolder( FileUtil::getDirectoryPart( fileAbs->str() ) );
+                EditorCommandTarget target;
+                target._kind      = EditorCommandTargetKind::Asset;
+                target._hoveredID = EditorWidgets::registerAssetPayload( FileUtil::normalizePath( assetPath ).str() );
+                (void)pCommands->execute( editorcommand::kAssetBrowseTo, target ); // 디스크에 없는 에셋이면 명령이 꺼져 있다
             }
 
         protected:

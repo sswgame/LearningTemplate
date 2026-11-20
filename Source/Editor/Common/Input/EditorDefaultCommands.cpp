@@ -13,6 +13,7 @@
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
@@ -431,25 +432,25 @@ namespace sw::editor
              *          Exit 는 단축키를 적지 않는다 — Alt+F4 는 OS 가 창 닫기로 먼저 가로채는 조합이라 입력 맵이 처리하지 않는다.
              */
             inline static const CommandRow _s_arrCommandRow[] = {
-                {                "scene.new",                                  &commandNewScene,               nullptr,         EditorCommandEdit::NoScene},
-                {               "scene.open",                                 &commandOpenScene,               nullptr,         EditorCommandEdit::NoScene},
-                {               "asset.save",      &EditorSceneFileCommands::saveFocusedOrScene,               nullptr,         EditorCommandEdit::NoScene},
-                {          "scene.saveScene", &EditorSceneFileCommands::saveActiveSceneOrPrompt,               nullptr,         EditorCommandEdit::NoScene},
-                {         "editor.quickOpen",                       &QuickLauncherPopup::toggle,               nullptr,         EditorCommandEdit::NoScene},
-                {    "editor.commandPalette",                      &CommandPalettePopup::toggle,               nullptr,         EditorCommandEdit::NoScene},
-                {              "editor.exit",             &EditorSceneFileCommands::requestExit,               nullptr,         EditorCommandEdit::NoScene},
-                {                "edit.undo",                                      &commandUndo,               nullptr,         EditorCommandEdit::History},
-                {                "edit.redo",                                      &commandRedo,               nullptr,         EditorCommandEdit::History},
-                {     "editor.themeSettings",                   &EditorMenuBar::openThemeDialog,               nullptr,         EditorCommandEdit::NoScene},
-                {        "build.compileGame",                               &commandCompileGame,       &isCompilerIdle,         EditorCommandEdit::NoScene},
-                {      "build.compileEditor",                             &commandCompileEditor,       &isCompilerIdle,         EditorCommandEdit::NoScene},
-                {         "build.compileAll",                                &commandCompileAll,       &isCompilerIdle,         EditorCommandEdit::NoScene},
-                {             "build.cancel",                               &commandCancelBuild,       &isCompilerBusy,         EditorCommandEdit::NoScene},
-                {               "play.start",                                      &commandPlay,               nullptr,         EditorCommandEdit::NoScene},
-                {      "viewport.screenshot",     &EditorScreenshotCommands::captureFocusedView,               nullptr,         EditorCommandEdit::NoScene},
-                {"viewport.renderDocCapture",                          &commandRenderDocCapture, &isRenderDocAvailable,         EditorCommandEdit::NoScene},
-                {     "preset.loadComponent",                       &commandLoadComponentPreset,               nullptr, EditorCommandEdit::SceneUnrecorded}, // 파일 창을 연다 — 고르면 그때 기록한다
-                {     "preset.saveComponent",                       &commandSaveComponentPreset,               nullptr,         EditorCommandEdit::NoScene},
+                {                    "scene.new",                                  &commandNewScene,               nullptr,         EditorCommandEdit::NoScene},
+                {                   "scene.open",                                 &commandOpenScene,               nullptr,         EditorCommandEdit::NoScene},
+                {                   "asset.save",      &EditorSceneFileCommands::saveFocusedOrScene,               nullptr,         EditorCommandEdit::NoScene},
+                {              "scene.saveScene", &EditorSceneFileCommands::saveActiveSceneOrPrompt,               nullptr,         EditorCommandEdit::NoScene},
+                {             "editor.quickOpen",                       &QuickLauncherPopup::toggle,               nullptr,         EditorCommandEdit::NoScene},
+                {        "editor.commandPalette",                      &CommandPalettePopup::toggle,               nullptr,         EditorCommandEdit::NoScene},
+                {                  "editor.exit",             &EditorSceneFileCommands::requestExit,               nullptr,         EditorCommandEdit::NoScene},
+                {       editorcommand::kEditUndo,                                      &commandUndo,               nullptr,         EditorCommandEdit::History},
+                {       editorcommand::kEditRedo,                                      &commandRedo,               nullptr,         EditorCommandEdit::History},
+                {         "editor.themeSettings",                   &EditorMenuBar::openThemeDialog,               nullptr,         EditorCommandEdit::NoScene},
+                {            "build.compileGame",                               &commandCompileGame,       &isCompilerIdle,         EditorCommandEdit::NoScene},
+                {          "build.compileEditor",                             &commandCompileEditor,       &isCompilerIdle,         EditorCommandEdit::NoScene},
+                {editorcommand::kBuildCompileAll,                                &commandCompileAll,       &isCompilerIdle,         EditorCommandEdit::NoScene},
+                {                 "build.cancel",                               &commandCancelBuild,       &isCompilerBusy,         EditorCommandEdit::NoScene},
+                {      editorcommand::kPlayStart,                                      &commandPlay,               nullptr,         EditorCommandEdit::NoScene},
+                {          "viewport.screenshot",     &EditorScreenshotCommands::captureFocusedView,               nullptr,         EditorCommandEdit::NoScene},
+                {    "viewport.renderDocCapture",                          &commandRenderDocCapture, &isRenderDocAvailable,         EditorCommandEdit::NoScene},
+                {         "preset.loadComponent",                       &commandLoadComponentPreset,               nullptr, EditorCommandEdit::SceneUnrecorded}, // 파일 창을 연다 — 고르면 그때 기록한다
+                {         "preset.saveComponent",                       &commandSaveComponentPreset,               nullptr,         EditorCommandEdit::NoScene},
             };
 
             /** @brief 씬을 바꾸는 명령의 표입니다. 한 번 실행이 되돌리기 한 단계다(`EditorCommandRegistry::executeDesc` 가 거래를 연다). */
@@ -546,6 +547,14 @@ namespace sw::editor
             if ( desc._inputAction.empty() == false && inputMap.hasAction( hashed_string( desc._inputAction.c_str() ) ) == false )
                 SW_LOG_ERROR_ID( "Editor.CommandNamesInputAction", "Command '%#' names input action '%#' that the editor input map does not have", desc._id.c_str(), desc._inputAction.c_str() );
         }
+        // 단축키 데이터의 액션은 명령의 액션이거나 코드 액션이어야 한다 — 둘 다 아니면 오타 · 지운 명령의 남은 줄이라 그 키가 조용히 아무 일도 하지 않는다.
+        vector<string> listUnknownAction;
+        vector<string> listMissingAction;
+        EditorShortcutMap::collectActionMismatches( inputMap.getActionNames(), registry.getCommands(), listUnknownAction, listMissingAction );
+        for ( const string& action : listUnknownAction )
+            SW_LOG_ERROR_ID( "Editor.InputActionNotCommand", "editor.input.xml action '%#' is neither a command's input action nor a code action (EditorInputActionNames.h)", action.c_str() );
+        for ( const string& action : listMissingAction )
+            SW_LOG_ERROR_ID( "Editor.CodeActionNotInInputMap", "Code input action '%#' (EditorInputActionNames.h) is missing from editor.input.xml", action.c_str() );
         // 코드가 그리는 메뉴 경로에 테이블의 항목이 하나도 없으면 그 메뉴(툴바 팝업)가 비어 있는 채로 뜬다.
         for ( const utf8* pHostedPath : commandmenu::kArrHostedMenuPath )
         {

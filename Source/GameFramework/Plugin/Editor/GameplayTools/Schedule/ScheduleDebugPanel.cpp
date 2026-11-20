@@ -2,6 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleDebugPanel.h"
 
+#include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
@@ -60,7 +61,7 @@ namespace sw::editor
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdSchedule", "EmptyHint" ) );
             if ( _state._bPlayStopped != SW_FALSE )
-                (void)EditorCommandGUI::drawCommandButton( "play.start" ); // 다음 할 일 단추(Ability Debugger 와 같은 자리)
+                (void)EditorCommandGUI::drawCommandButton( editorcommand::kPlayStart ); // 다음 할 일 단추(Ability Debugger 와 같은 자리)
             return;
         }
         if ( _state._systemCount > 1 )

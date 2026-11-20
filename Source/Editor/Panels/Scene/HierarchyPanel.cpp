@@ -14,6 +14,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -37,9 +38,9 @@ namespace sw::editor
             static constexpr const utf8* kPrefabAssetExtension = ".prefab.xml";
 
             // 이 창만의 액션(행 목록을 아는 것). 키는 `editor.input.xml` 의 `Editor.Panel.hierarchy` 레이어가 정한다.
-            static constexpr string_view kActionSelectAll      = "hierarchy.selectAll";
-            static constexpr string_view kActionSelectPrevious = "hierarchy.selectPrevious";
-            static constexpr string_view kActionSelectNext     = "hierarchy.selectNext";
+            static constexpr string_view kActionSelectAll      = editorinput::kHierarchySelectAll;
+            static constexpr string_view kActionSelectPrevious = editorinput::kHierarchySelectPrevious;
+            static constexpr string_view kActionSelectNext     = editorinput::kHierarchySelectNext;
 
             /** @brief 끌어 놓을 위치를 행 위에 그립니다 — 앞 · 뒤는 선, 자식으로 넣기는 행 테두리입니다. */
             static void drawDropIndicator( HierarchyDropZone zone, const ImVec2& rowMin, const ImVec2& rowMax )

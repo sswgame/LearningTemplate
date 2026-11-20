@@ -11,6 +11,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorClipboard.h"
@@ -133,7 +134,7 @@ namespace sw::editor
     SW_EDITOR_CONTEXT_COMMAND( AssetShowInExplorer, "asset.showInExplorer", &ContentBrowserCommandsInternal::showInExplorer, &ContentBrowserCommandsInternal::hasTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetCopyRelativePath, "asset.copyRelativePath", &ContentBrowserCommandsInternal::copyRelativePath, &ContentBrowserCommandsInternal::hasTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetCopyAbsolutePath, "asset.copyAbsolutePath", &ContentBrowserCommandsInternal::copyAbsolutePath, &ContentBrowserCommandsInternal::hasTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetBrowseTo, "asset.browseTo", &ContentBrowserCommandsInternal::revealAsset, &ContentBrowserCommandsInternal::hasFileTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetBrowseTo, editorcommand::kAssetBrowseTo, &ContentBrowserCommandsInternal::revealAsset, &ContentBrowserCommandsInternal::hasFileTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetFindReferences, "asset.findReferences", &ContentBrowserCommandsInternal::findReferences, &ContentBrowserCommandsInternal::hasFileTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetShowDependencies, "asset.showDependencies", &ContentBrowserCommandsInternal::showDependencies, &ContentBrowserCommandsInternal::hasTextAssetTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetLock, "asset.lock", &ContentBrowserCommandsInternal::lockAsset, &ContentBrowserCommandsInternal::canLock, NoScene, nullptr );

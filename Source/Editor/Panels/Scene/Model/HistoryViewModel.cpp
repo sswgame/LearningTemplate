@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Scene/Model/HistoryViewModel.h"
 
+#include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorCommandTarget.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -46,12 +47,12 @@ namespace sw::editor
 
     void HistoryViewModel::undo()
     {
-        (void)EditorCommandRegistry::getInEditorContext().request( "edit.undo", EditorCommandTarget::none() ); // Ctrl+Z 와 같은 명령 — 게임 단계가 실행한다
+        (void)EditorCommandRegistry::getInEditorContext().request( editorcommand::kEditUndo, EditorCommandTarget::none() ); // Ctrl+Z 와 같은 명령 — 게임 단계가 실행한다
     }
 
     void HistoryViewModel::redo()
     {
-        (void)EditorCommandRegistry::getInEditorContext().request( "edit.redo", EditorCommandTarget::none() );
+        (void)EditorCommandRegistry::getInEditorContext().request( editorcommand::kEditRedo, EditorCommandTarget::none() );
     }
 
     void HistoryViewModel::clear()

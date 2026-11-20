@@ -21,6 +21,7 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -479,7 +480,7 @@ namespace sw::editor
         }
 
         // Ctrl+C 는 `Editor.Panel.console` 레이어의 액션이다(이 창이 포커스일 때만 켜진다).
-        const bool bCopyShortcutPressed = _selection.hasSelection() && EditorInputGUI::wasActionTriggered( "console.copySelection" );
+        const bool bCopyShortcutPressed = _selection.hasSelection() && EditorInputGUI::wasActionTriggered( editorinput::kConsoleCopySelection );
         if ( bCopyShortcutPressed )
             copySelectedRows();
 

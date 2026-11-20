@@ -13,6 +13,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
@@ -36,9 +37,9 @@ namespace sw::editor
     {
     public:
         /** @brief 칸 위 Ctrl+C 의 입력 맵 액션입니다(`editor.input.xml` 의 `Editor.Global` — 행 메뉴의 Copy Value 와 같다. 그리드 창이 포커스일 때만 읽는다). */
-        static constexpr string_view kActionCopyValue = "property.copyValue";
+        static constexpr string_view kActionCopyValue = editorinput::kPropertyCopyValue;
         /** @brief 칸 위 Ctrl+V 의 입력 맵 액션입니다(행 메뉴의 Paste Value 와 같다 — 형식 검사를 지난 글만 붙인다). */
-        static constexpr string_view kActionPasteValue = "property.pasteValue";
+        static constexpr string_view kActionPasteValue = editorinput::kPropertyPasteValue;
 
         EditorPropertyGrid();
         EditorPropertyGrid( const EditorPropertyGrid& )            = delete;
