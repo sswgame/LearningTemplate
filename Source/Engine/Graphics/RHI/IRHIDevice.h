@@ -14,9 +14,9 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIInitPhaseTimings.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/RHI/RHISurfaceTransform.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 
 namespace sw

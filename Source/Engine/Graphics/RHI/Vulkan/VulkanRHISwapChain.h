@@ -7,8 +7,9 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHISurfaceTransform.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
 
 namespace sw

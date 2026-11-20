@@ -15,7 +15,6 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 #include "Engine/Graphics/View/RenderViewMode.h"
 #include "Engine/Renderer/Frame/Resource/MaterialPSOBuilder.h"

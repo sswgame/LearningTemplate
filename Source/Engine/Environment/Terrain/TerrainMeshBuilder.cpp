@@ -6,7 +6,6 @@
 
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {

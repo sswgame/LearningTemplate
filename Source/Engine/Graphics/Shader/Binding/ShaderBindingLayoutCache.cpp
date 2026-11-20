@@ -7,7 +7,6 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"

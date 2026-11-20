@@ -9,7 +9,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 

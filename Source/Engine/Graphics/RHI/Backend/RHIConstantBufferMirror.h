@@ -10,7 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw

@@ -4,8 +4,8 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {

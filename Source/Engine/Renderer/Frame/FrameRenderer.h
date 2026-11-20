@@ -14,7 +14,6 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
 #include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"

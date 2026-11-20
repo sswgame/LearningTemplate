@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Renderer/Frame/Timeline/GPUFrameClock.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 

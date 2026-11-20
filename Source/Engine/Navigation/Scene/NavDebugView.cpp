@@ -3,7 +3,6 @@
 #include "Engine/Navigation/Scene/NavDebugView.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Navigation/Component/NavMeshModifierComponent.h"
 #include "Engine/Navigation/Component/NavMeshObstacleComponent.h"

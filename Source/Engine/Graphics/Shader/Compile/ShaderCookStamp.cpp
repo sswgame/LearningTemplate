@@ -27,7 +27,7 @@
 #include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"

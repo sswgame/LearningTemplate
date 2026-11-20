@@ -7,7 +7,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 

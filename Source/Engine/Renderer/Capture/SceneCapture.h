@@ -17,7 +17,6 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketSceneCollector.h"
 

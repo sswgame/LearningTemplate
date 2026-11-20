@@ -23,7 +23,7 @@
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"

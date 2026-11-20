@@ -12,7 +12,6 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Scene/GPUInstanceMotionHistory.h"

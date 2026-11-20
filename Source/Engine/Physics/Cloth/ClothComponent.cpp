@@ -6,7 +6,6 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/PhysicsNameValidation.h"

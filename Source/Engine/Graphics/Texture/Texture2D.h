@@ -10,8 +10,8 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {
