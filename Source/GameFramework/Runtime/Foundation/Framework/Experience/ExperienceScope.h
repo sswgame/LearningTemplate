@@ -18,6 +18,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/Experience/ExperienceDefinition.h"
@@ -76,7 +77,8 @@ namespace sw
         /**
          * @brief 카탈로그 @p TCatalog(종류 `TCatalog::kDataKind`)를 공유 캐시에서 받아 게임 범위에 const 로 겁니다(`game::findSubsystem<const TCatalog>()`). 끌 때 풀고 놓습니다.
          * @details 종류는 Experience 의 `catalogs` 에 적혀 있어야 한다 — 데이터가 무엇을 읽는지 정의 한 곳에 보이게. 경로는 게임 인스턴스의 필수 데이터와 같은 규칙이다
-         *          (`GamePackConfig::makeRequiredDataPath`). shortcut: 받은 때의 판(스냅숏)을 쥔다 — 핫 리로드를 따라가야 하는 카탈로그가 생기면 `SharedAssetRef` 를 쥐고 다시 건다.
+         *          (`GamePackConfig::makeRequiredDataPath`). 공유 캐시의 `SharedAssetRef` 를 쥐고 다시 읽히면 `followReloadedCatalogs` 가 칸을 새 판으로 바꿔 건다 — 게임 인스턴스의
+         *          필수 카탈로그(`GameInstance::loadRequiredCatalog` · `followScopedService`)와 같은 길이다. 스냅숏 사본은 두지 않는다(찾는 쪽이 옛 판을 계속 보지 않게).
          * @return 적지 않은 종류이거나 경로를 못 만들거나 못 읽거나 이미 걸려 있으면 알리고 false 입니다.
          */
         template <class TCatalog>
@@ -85,18 +87,32 @@ namespace sw
             string path;
             if ( resolveCatalogPath( TCatalog::kDataKind, path ) == false )
                 return false;
-            shared_ptr<const TCatalog> pCatalog = SharedAssetCache<TCatalog>::acquire( path ).snapshot();
+            // 참조는 범위가 쥔 블록에 둔다 — 따라가기 일이 그 주소를 쥐고, 블록은 `deactivate` 가 따라가기를 지운 뒤에 놓는다.
+            shared_ptr<SharedAssetRef<TCatalog>> pRef     = make_shared<SharedAssetRef<TCatalog>>( SharedAssetCache<TCatalog>::acquire( path ) );
+            const TCatalog* const                pCatalog = pRef->get();
             if ( pCatalog == nullptr )
             {
                 reportCatalogFailure( TCatalog::kDataKind, path );
                 return false;
             }
-            if ( bindService( pCatalog.get() ) == false )
+            if ( bindService( pCatalog ) == false ) // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()`
                 return false;
-            _listHeldObject.push_back( std::move( pCatalog ) ); // 풀기(되돌릴 일)는 위에 이미 적혔다 — 놓기는 `deactivate` 끝이다
+            const SharedAssetRef<TCatalog>* const pFollowed = pRef.get();
+            _listFollow.push_back( Delegate<void()>::create( [this, pFollowed]()
+            {
+                const TCatalog* const pLatest = pFollowed->get();
+                if ( pLatest == nullptr || _gameScope.find<const TCatalog>() == pLatest )
+                    return;
+                _gameScope.unbind<const TCatalog>();
+                (void)_gameScope.bind( pLatest ); // 방금 푼 칸이라 겹치지 않는다 — 끌 때의 풀기(위 `bindService` 의 되돌릴 일)는 타입으로 푼다
+            } ) );
+            _listHeldObject.push_back( std::move( pRef ) ); // 풀기(되돌릴 일)는 위에 이미 적혔다 — 놓기는 `deactivate` 끝이다
             _listLoadedCatalog.push_back( hashed_string( TCatalog::kDataKind ) );
             return true;
         }
+
+        /** @brief 다시 읽힌 카탈로그(`loadCatalog`)의 칸을 새 판으로 바꿔 겁니다 — 관리자의 `update`(게임 프레임 앞, 틱 밖)가 부른다. 끈 범위는 할 일이 없다. */
+        void followReloadedCatalogs();
 
         /**
          * @brief 서비스 @p T 를 기본 생성해 이 범위가 쥐고 게임 범위에 겁니다(`game::findSubsystem<T>()`). 끌 때 풀고 지운다.
@@ -167,6 +183,7 @@ namespace sw
         InputMap*                      _pInputMap;         ///< 입력 레이어를 거는 입력 맵(없으면 nullptr)
         ExperienceDefinition           _definition;        ///< 켠 Experience
         vector<Delegate<void()>>       _listCleanup;       ///< 끌 때 역순으로 부를 일
+        vector<Delegate<void()>>       _listFollow;        ///< 다시 읽힌 카탈로그를 칸에 다시 거는 일(`loadCatalog`)
         vector<shared_ptr<const void>> _listHeldObject;    ///< 걸어 둔 카탈로그 · 쥔 서비스(끌 때 놓는다)
         vector<hashed_string>          _listLoadedCatalog; ///< 읽은 카탈로그 종류
         StateSnapshot                  _before;            ///< 켜기 전 사본(만들 때)

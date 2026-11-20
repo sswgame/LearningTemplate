@@ -22,6 +22,7 @@ namespace sw
         , _pInputMap( pInputMap )
         , _definition{ definition }
         , _listCleanup{}
+        , _listFollow{}
         , _listHeldObject{}
         , _listLoadedCatalog{}
         , _before{}
@@ -66,6 +67,14 @@ namespace sw
         _listCleanup.push_back( std::move( cleanup ) );
     }
 
+    void ExperienceScope::followReloadedCatalogs()
+    {
+        for ( const Delegate<void()>& follow : _listFollow )
+        {
+            follow();
+        }
+    }
+
     void ExperienceScope::finishActivation()
     {
         _activated  = captureState();
@@ -78,6 +87,7 @@ namespace sw
             return 0;
         if ( _bActivated == SW_FALSE )
             finishActivation(); // 켜기 도중에 진 범위 — 그때까지 건 것이 켠 몫이다
+        _listFollow.clear();    // 칸을 풀기 전에 따라가기를 멈춘다 — 푼 칸을 다시 걸지 않게
         // 되돌릴 일이 또 되돌릴 일을 더하지 않는다 — 그래도 끝에서부터 하나씩 빼며 부른다(도중에 늘어도 새 것부터 거둔다).
         while ( _listCleanup.empty() == false )
         {

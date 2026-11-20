@@ -153,6 +153,8 @@ namespace sw
         const string& hubName = _packConfig._data._hubExperience;
         if ( hubName.empty() )
             return true;
+        // 게임 모듈의 키트(`SW_EXPERIENCE_KIT`)는 인스턴스를 만들기 전에 붙는다(`GameModuleManager::bindGameAPI` → `registerModuleTypes` → 등록자 붙이기 → `createGameInstance`).
+        // 그래도 없으면 `validate` 가 모르는 키트로 알리고 여기서 진다 — 게임을 띄우지 않는다(키트 없이 켜지 않는다).
         ExperienceDefinition definition;
         if ( loadDefinition( hubName, definition ) == false )
             return false;
@@ -306,6 +308,11 @@ namespace sw
 
     void ExperienceManager::update()
     {
+        // 다시 읽힌 카탈로그를 먼저 건다 — 이 프레임의 진입 · 컴포넌트가 새 판을 찾는다.
+        if ( _pHub != nullptr )
+            _pHub->followReloadedCatalogs();
+        if ( _pActive != nullptr )
+            _pActive->followReloadedCatalogs();
         if ( _pendingEnter.empty() )
             return;
         const string name = std::move( _pendingEnter );

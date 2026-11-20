@@ -80,7 +80,7 @@ namespace sw
          * @details 씬 전환의 허브 스냅숏은 씬을 도는 동안 찍지 않는다(자동 저장과 같은 자리 — `GameInstance::update`).
          */
         void requestEnter( string_view name );
-        /** @brief 맡긴 진입을 처리합니다 — `GameInstance::update` 앞머리(틱 밖)가 부른다. */
+        /** @brief 켜진 범위의 다시 읽힌 카탈로그를 새 판으로 걸고(`ExperienceScope::followReloadedCatalogs`) 맡긴 진입을 처리합니다 — `GameInstance::update` 앞머리(틱 밖)가 부른다. */
         void update();
         /**
          * @brief 실행 전역 변수 `gv_firstExperience` 가 있으면 그 Experience 로 들어갑니다 — 게임 인스턴스의 첫 씬 자리(`GameInstance::startFirstScene`)가 부른다.
