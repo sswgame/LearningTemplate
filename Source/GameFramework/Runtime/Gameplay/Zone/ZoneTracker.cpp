@@ -161,7 +161,8 @@ namespace sw
     {
         for ( const ZoneCompiledModule& module : profile.getModules() )
         {
-            module._pProcessor->onSourceBegin( manager, module );
+            if ( ActivatorAuthorityRule::hasAuthority( module._pProcessor->getAuthority(), manager ) )
+                module._pProcessor->onSourceBegin( manager, module );
         }
     }
 
@@ -210,6 +211,8 @@ namespace sw
             const ZoneCompiledModule& module = listModule[moduleIndex];
             if ( pOccupant->isPendingDestroy() )
                 return; // 앞 모듈의 할 일이 지웠다(재로 바뀜 · 파괴) — 남은 모듈은 할 대상이 없다
+            if ( ActivatorAuthorityRule::hasAuthority( module._pProcessor->getAuthority(), manager ) == false )
+                continue; // 이 월드가 판정하지 않는 효과(클라이언트의 Server 모듈) — 대상 기록은 같이 두고 결과는 복제로 받는다
             listTarget.clear();
             resolveRoleTargets( manager, module, *pOccupant, listTarget );
             for ( GameObject* pTarget : listTarget )

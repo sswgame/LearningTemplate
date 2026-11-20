@@ -69,8 +69,6 @@ namespace sw
 
         /** @brief 이 조종자의 의도가 오는 네트워크 연결입니다. 0 이면 로컬이며, 쥔 폰의 `getInputPeer` 가 이것을 따라갑니다. 탈것은 운전석 조종자의 연결이 됩니다. */
         uint32 getInputPeer() const { return _inputPeer; }
-        /** @brief 연결을 바꿉니다. 원격 조종자에 씁니다. 쥔 폰이 있으면 그 폰의 연결도 바뀝니다. */
-        void setInputPeer( uint32 inputPeer );
 
         float32 getControlYaw() const { return _controlYaw; }
         float32 getControlPitch() const { return _controlPitch; }
@@ -104,6 +102,9 @@ namespace sw
         bool isSwitchingPawn() const { return _bSwitchingPawn == SW_TRUE; }
 
     private:
+        /** @brief 입력 피어를 바꾸고 쥔 폰에도 옮깁니다. `setInputConnection` 만 부른다 — 바깥은 `RemoteControllerComponent::spawnForConnection` · `transferToConnection` 으로만 연결을 정한다(연결 id + 1 해석이 한 곳). */
+        void setInputPeer( uint32 inputPeer );
+
         PROPERTY( Category = "Control", DisplayName = "Possess At Start", Tooltip = "Object whose pawn this controller takes when play starts" )
         GameObjectHandle _possessAtStart;
 

@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
@@ -640,4 +641,44 @@ SW_TEST_CASE( ZoneTest, SpawnInsideIgnoreSkipsABodyBornInside )
     SW_EXPECT_TRUE( ignoreTracker.findOccupancy( fixture.hero().getHandle() ) != nullptr );
     SW_EXPECT_TRUE( ignoreTracker.findOccupancy( pBorn->getHandle() ) == nullptr );
     SW_EXPECT_TRUE( activateTracker.findOccupancy( pBorn->getHandle() ) != nullptr );
+}
+
+/**
+ * @brief [ZoneTest] 판정 자리: 넷 월드마다 대상은 같이 기록하지만 Server 모듈(할 일 — 이펙트)은 서버 월드만 부른다. 종류마다의 판정 자리를 고정한다
+ * @details 변이: `ZoneTracker::dispatch` 의 판정 자리 거름을 지우면 클라이언트 월드의 이펙트 수 단언이 진다.
+ */
+SW_TEST_CASE( ZoneTest, ServerModulesRunOnlyOnTheServerWorld )
+{
+    const std::pair<const utf8*, ActivatorAuthority> arrKind[] = {
+        {        "Action", ActivatorAuthority::Server},
+        {    "Blackboard", ActivatorAuthority::Server},
+        {       "NavArea", ActivatorAuthority::Server},
+        {  "PhysicsField",  ActivatorAuthority::Local},
+        {"SurfaceChannel",  ActivatorAuthority::Local},
+        {  "SurfaceStamp",  ActivatorAuthority::Local},
+    };
+    for ( const auto& kind : arrKind )
+    {
+        const ZoneModuleProcessor* pProcessor = ZoneModuleRegistry::find( kind.first );
+        SW_REQUIRE_NOT_NULL( pProcessor );
+        SW_EXPECT_TRUE_MSG( pProcessor->getAuthority() == kind.second, kind.first );
+    }
+
+    for ( const NetLinkRole role : { NetLinkRole::Client, NetLinkRole::Server } )
+    {
+        ZoneFixture             fixture;
+        SceneNetLinkTestBinding link( fixture._manager, role ); // 매니저보다 먼저 사라진다
+        ZoneProfile             profile;
+        profile._listModule.push_back( ZoneFixture::makeModule( "root", "Action", {
+                                                                                      {"on",                                    "Enter"},
+                                                                                      {"do", "ability.applyEffect(effect=GE_Test_Root)"}
+        } ) );
+        ZoneCompiledProfile compiled;
+        SW_REQUIRE_TRUE( compiled.compile( profile, "test", &fixture._catalog ) );
+
+        ZoneTracker tracker;
+        fixture.runInside( tracker, compiled, "volume:Swamp", 1.0f, 0.1f );
+        SW_EXPECT_TRUE( tracker.findOccupancy( fixture.hero().getHandle() ) != nullptr ); // 겹침 · 대상 기록은 양쪽
+        SW_EXPECT_EQUAL( role == NetLinkRole::Server ? 1u : 0u, fixture._pHero->getActiveEffectCount() );
+    }
 }

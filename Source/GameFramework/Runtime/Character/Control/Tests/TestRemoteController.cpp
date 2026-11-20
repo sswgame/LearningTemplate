@@ -4,10 +4,14 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+
+#include <algorithm>
 
 using namespace sw;
 
@@ -105,4 +109,28 @@ SW_TEST_CASE( RemoteControllerTest, ClearReceivedStopsTheRepeat )
     rig.update();
     SW_EXPECT_FALSE( rig._pPawn->isButtonDown( 0 ) );
     SW_EXPECT_NEAR( 0.0f, rig._pPawn->getIntent()._move._y, 1e-5f );
+}
+
+/**
+ * @brief [RemoteControllerTest] 데이터로 놓지 못한다(`REFLECT( NotPlaceable )`) — 이름 생성 함수가 없어 "Add Component" 목록에 없고, 씬 읽기는 오류를 남기고 만들지 않는다(연결 없는 원격 조종자가 서지 않는다)
+ * @details 변이: `NotPlaceable` 을 지우면 생성 함수 단언과 읽은 오브젝트에 조종자가 없다는 단언이 진다.
+ */
+SW_TEST_CASE( RemoteControllerTest, DataCannotPlaceIt )
+{
+    SW_EXPECT_LOG( "ObjectStateSerializer.ComponentNotPlaceable" );
+    const TypeInfo* pType = RemoteControllerComponent::StaticType();
+    SW_REQUIRE_NOT_NULL( pType );
+    SW_EXPECT_TRUE( pType->_addComponent == nullptr );
+    const vector<hashed_string> listPlaceable = GameObjectManager::getRegisteredComponentTypeNames();
+    SW_EXPECT_TRUE( std::find( listPlaceable.begin(), listPlaceable.end(), pType->_name ) == listPlaceable.end() );
+
+    RemoteControllerTestRig rig; // 코드의 정본 길(`spawnForConnection`)로 선 조종자를 글로 적어 씬 데이터처럼 읽힌다
+    const expected<string>  saved = ObjectStateSerializer::saveToXMLString( rig._pRemote->getOwner(), ObjectSaveOptions{ SerializePurpose::Authoring } );
+    SW_REQUIRE_TRUE( saved.has_value() );
+    SW_REQUIRE_TRUE( saved->find( pType->_name.c_str() ) != string::npos );
+    GameObjectManager placed;
+    GameObject*       pPlaced = placed.createGameObject( hashed_string( "Placed" ) );
+    SW_REQUIRE_NOT_NULL( pPlaced );
+    SW_EXPECT_TRUE( ObjectStateSerializer::loadFromXMLString( pPlaced, *saved, ObjectLoadContext{ SerializePurpose::Authoring } ) );
+    SW_EXPECT_NULL( pPlaced->getComponent<RemoteControllerComponent>() );
 }

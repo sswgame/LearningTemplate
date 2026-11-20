@@ -24,6 +24,7 @@
 #include "Engine/Physics/PhysicsField.h"
 
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
+#include "GameFramework/Runtime/Foundation/Framework/ActivatorVolumeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
 
@@ -72,8 +73,9 @@ namespace sw
         class ZoneActionProcessor final : public ZoneModuleProcessor
         {
         public:
-            const utf8* getKindName() const override { return "Action"; }
-            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*        getKindName() const override { return "Action"; }
+            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Server; } // 이펙트 · 피해 · 스킬 · 즉사 · 규칙 신호는 게임 상태다 — 서버가 걸고 복제로 보낸다(클라이언트가 따로 걸면 두 번 걸린다)
+            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "on", ZoneParamKind::Text, "Enter" } );
                 outListSpec.push_back( ZoneParamSpec{ "interval", ZoneParamKind::Number, "0" } );
@@ -166,8 +168,9 @@ namespace sw
         class ZonePhysicsFieldProcessor final : public ZoneModuleProcessor
         {
         public:
-            const utf8* getKindName() const override { return "PhysicsField"; }
-            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*        getKindName() const override { return "PhysicsField"; }
+            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Local; } // 이동 시뮬레이션이다 — 바디를 모는 월드마다 같은 힘을 받는다(언리얼 `APhysicsVolume` 은 서버와 조종 클라이언트의 이동 컴포넌트가 함께 읽는다)
+            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "direction", ZoneParamKind::Text, "Uniform" } );
                 outListSpec.push_back( ZoneParamSpec{ "axis", ZoneParamKind::Vector, "0,0,0" } );
@@ -234,8 +237,9 @@ namespace sw
         class ZoneBlackboardProcessor final : public ZoneModuleProcessor
         {
         public:
-            const utf8* getKindName() const override { return "Blackboard"; }
-            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*        getKindName() const override { return "Blackboard"; }
+            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Server; } // AI 판단은 서버가 돈다(클라이언트에는 AI 가 돌지 않는다)
+            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "key", ZoneParamKind::Text, nullptr } );
                 outListSpec.push_back( ZoneParamSpec{ "value", ZoneParamKind::Number, "1" } );
@@ -269,8 +273,9 @@ namespace sw
         class ZoneNavAreaProcessor final : public ZoneModuleProcessor
         {
         public:
-            const utf8* getKindName() const override { return "NavArea"; }
-            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*        getKindName() const override { return "NavArea"; }
+            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Server; } // 길 찾기는 서버의 AI 가 쓴다
+            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "area", ZoneParamKind::Text, nullptr } );
                 outListSpec.push_back( ZoneParamSpec{ "agents", ZoneParamKind::Text, "" } );
@@ -302,8 +307,9 @@ namespace sw
         class ZoneSurfaceChannelProcessor final : public ZoneModuleProcessor
         {
         public:
-            const utf8* getKindName() const override { return "SurfaceChannel"; }
-            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*        getKindName() const override { return "SurfaceChannel"; }
+            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Local; } // 젖음 · 진흙은 겉모습이다 — 월드마다 제 화면에 그린다(복제하지 않는다)
+            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "channel", ZoneParamKind::Text, nullptr } );
                 outListSpec.push_back( ZoneParamSpec{ "rate", ZoneParamKind::Number, nullptr } );
@@ -338,8 +344,9 @@ namespace sw
         class ZoneSurfaceStampProcessor final : public ZoneModuleProcessor
         {
         public:
-            const utf8* getKindName() const override { return "SurfaceStamp"; }
-            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            const utf8*        getKindName() const override { return "SurfaceStamp"; }
+            ActivatorAuthority getAuthority() const override { return ActivatorAuthority::Local; } // 보이는 것만 고친다(충돌 · 내비 아님) — 월드마다 제 화면에 찍는다
+            void               collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "shape", ZoneParamKind::Text, "Print" } );
                 outListSpec.push_back( ZoneParamSpec{ "size", ZoneParamKind::Vector, nullptr } );

@@ -225,6 +225,14 @@ namespace sw
                 if ( pMissing == nullptr )
                     return false;
                 pMissing->setOriginalElement( element );
+                // 아는 타입인데 이름으로 만들지 못한다 — 데이터로 놓을 수 없는 컴포넌트(`REFLECT( NotPlaceable )` · 추상)다. 데이터가 틀렸으니 오류다(원문은 남겨 저장이 지우지 않는다).
+                const TypeInfo* pKnownType = engine::areEngineServicesBound() ? engine::getSubsystem<TypeRegistry>().findType( hashed_string( element._typeName ) ) : nullptr;
+                if ( pKnownType != nullptr )
+                {
+                    SW_LOG_ERROR_ID( "ObjectStateSerializer.ComponentNotPlaceable", "'%#' has a component '%#' that data cannot place (not placeable or abstract - code spawns it) - not created, kept as MissingComponent",
+                                     pGameObject->getName().c_str(), element._typeName );
+                    return true;
+                }
                 SW_LOG_WARNING_ID( "ObjectStateSerializer.ComponentUnknownTypeKept", "'%#' has a component of unknown type '%#' - kept as MissingComponent, saving writes its data back unchanged",
                                    pGameObject->getName().c_str(), element._typeName );
                 return true;

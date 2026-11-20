@@ -446,6 +446,8 @@ namespace sw
         uint8                        _bReflectBody      : 1;
         uint8                        _bComponentFactory : 1;
         uint8                        _bHideInMenu       : 1;
+        /** @brief `REFLECT( NotPlaceable )` — 이름 생성 함수(팩토리)를 내지 않는다. 데이터(씬 · 프리팹 · "Add Component")로 놓지 못하고 코드의 `addComponent<T>()` 로만 선다. */
+        uint8 _bNotPlaceable : 1;
         /** @brief 첫 기반 클래스에 `REFLECT()` 가 있습니다. 없으면 기반의 필드는 프로퍼티가 아니므로 고정 배치형 코덱도 기반을 건너뜁니다. */
         uint8 _bParentReflected : 1;
         /** @brief `Component` 파생입니다(추상 포함). 틱 모드 등록(`requiresTickRegistration`)과 `TickMode` 검사가 본다. */
@@ -456,7 +458,7 @@ namespace sw
         uint8                  _bOverridesTick           : 1;
         uint8                  _bOverridesSubTick        : 1;
         uint8                  _bOverridesSerializeState : 1;
-        [[maybe_unused]] uint8 _reservedTraits           : 5;
+        [[maybe_unused]] uint8 _reservedTraits           : 4;
 
         ParsedTypeInfo() noexcept
             : _name{}
@@ -482,6 +484,7 @@ namespace sw
             , _bReflectBody{ SW_FALSE }
             , _bComponentFactory{ SW_FALSE }
             , _bHideInMenu{ SW_FALSE }
+            , _bNotPlaceable{ SW_FALSE }
             , _bParentReflected{ SW_FALSE }
             , _bComponent{ SW_FALSE }
             , _bPhysicsComponent{ SW_FALSE }

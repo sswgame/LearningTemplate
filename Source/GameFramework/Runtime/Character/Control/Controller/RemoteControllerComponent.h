@@ -25,8 +25,10 @@ namespace sw
      *            여러 틱이 쌓였으면 마지막 틱의 값에 그 사이의 발동 비트를 모아 낸다(발동이 사라지지 않게). 읽을 범위 안에 빠진 틱만 "못 받은 틱" 으로 센다.
      *          - 네트워크 형식은 의도 하나(`ControlIntent::write`, 양자화)라서 로컬 조종자가 낸 값(조종 시스템이 `quantize` 한 값)과 같은 값으로 움직인다.
      *          언리얼 서버의 `ServerMove` 가 받은 `FSavedMove` 로 폰을 움직이는 것, 유니티 Netcode 에서 서버가 `ICommandData` 를 읽는 것에 해당합니다.
+     *          - 데이터로 놓지 못한다(`NotPlaceable` — 이름 생성 함수가 없어 "Add Component" 메뉴에 없고 씬 · 프리팹 읽기는 오류 `ObjectStateSerializer.ComponentNotPlaceable` 로 만들지 않는다).
+     *            연결 id 가 필수라 `spawnForConnection` 한 길로만 선다(언리얼도 `PlayerController` 는 레벨에 놓지 않고 접속이 세운다).
      */
-    REFLECT( Category = "Control", DisplayName = "Remote Controller", Tooltip = "Drives the pawn with control intents received over the network" )
+    REFLECT( NotPlaceable, Category = "Control", DisplayName = "Remote Controller", Tooltip = "Drives the pawn with control intents received over the network" )
     class SW_GF_API RemoteControllerComponent : public ControllerComponent
     {
     public:
@@ -46,7 +48,7 @@ namespace sw
         [[nodiscard]] static RemoteControllerComponent* spawnForConnection( GameObjectManager& manager, const hashed_string& objectName, int32 connectionID, PawnComponent& pawn );
         /** @brief 이 조종자를 다른 연결이 맡습니다(조종 연결이 끊겨 다음 클라이언트가 맡음). 음수 id 는 오류를 남기고 거절합니다. */
         void transferToConnection( int32 connectionID ) { setInputConnection( connectionID ); }
-        /** @brief 정본 길(`spawnForConnection`)을 지나지 않고 붙어 연결이 없는 원격 조종자면 오류를 남깁니다(데이터로 붙인 경우 — 소유가 없으면 그 폰의 연결 대상 기능이 멈춘다). */
+        /** @brief 정본 길(`spawnForConnection`)을 지나지 않고 코드가 `addComponent` 로 바로 붙여 연결이 없는 원격 조종자면 오류를 남깁니다(데이터로 놓는 길은 `NotPlaceable` 이 막는다 — 소유가 없으면 그 폰의 연결 대상 기능이 멈춘다). */
         void onBeginPlay() override;
 
         void produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent ) final;
