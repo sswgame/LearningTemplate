@@ -192,7 +192,7 @@ namespace sw::editor
         _pEditSpan->resetBaseline( restoredText );
         syncStackInteraction();
         if ( before != restoredText )
-            recordDocumentEdit( DocumentEdit{ before, restoredText, "Restore Autosave Copy" } );
+            recordDocumentEdit( DocumentEdit::make( before, restoredText, "Restore Autosave Copy" ) );
     }
 
     DocumentAutosaveResult EditorDocumentPanel::takeAutosaveCopy( string& outDocumentPath, string& outText )
@@ -323,7 +323,7 @@ namespace sw::editor
         const string                           documentPath = _loadedAssetPath;
         const shared_ptr<EditorDocumentPanel*> pTarget      = _pUndoTarget;
         transaction.recordDocumentText(
-            edit._before, edit._after, edit._label, *_pUndoOwner,
+            *edit._pBefore, *edit._pAfter, edit._label, *_pUndoOwner,
             SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [pTarget, documentPath]( string_view snapshot )
         {
             EditorDocumentPanel* pPanel = *pTarget;
