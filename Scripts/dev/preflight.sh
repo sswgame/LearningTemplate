@@ -7,6 +7,8 @@
 # --self-check 는 판정 요약(print_results)의 자체 검사만 하고 끝난다(빌드 · 테스트 없이). 끝 줄 SELF_CHECK_OK.
 # --from build|changed|cpu|gpu-release|linux 는 앞 단계를 건너뛴다(linux 는 Windows 가 이미 통과했고 그 뒤 고친 것이 Linux 쪽 스크립트 · 환경뿐일 때). 앞 단계가 통과한 뒤
 # 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
+# 단계 기록: 단계가 통과하면 그 sha 를 build/verify.stages.json 에 적고(Scripts/dev/verify_record.py), 다음 실행에서 그 sha 뒤 바뀐 파일이 모두 입력이 아닌 경로
+# (Config/Dev/Verify.json 의 _nonInputPaths — 문서 · 스킬)면 그 단계를 건너뛴다. 거꾸로 적는 목록이라 빠뜨리면 더 돌 뿐이다. lint --all 은 문서 · 스킬도 읽어 build 범위면 늘 돈다.
 #
 # 단계(시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을 판정하므로 GPU 단계는 혼자 돈다):
 #   build       lint --all(뒤에서) ‖ Release 빌드 → 임포트 → (ASan 빌드 → (바뀐 파일 clang-tidy, 뒤에서) → 서버 빌드 ‖ 배포 프리셋 둘 빌드 · 쿠킹 → shipping-check 기동 · 종료). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
@@ -275,6 +277,19 @@ job_shader_warm() {
   return $RC
 }
 
+# 단계 기록(verify_record.py) — 건너뛸 단계면 기록을 이 sha 로 옮기고 1 을, 돌 단계면 0 을 돌려준다. --dry-run 도 판정은 찍는다(기록은 남기지 않는다).
+should_run_stage() {   # <단계 번호> <이름>
+  [ $STAGE -le "$1" ] || return 1
+  if py -3 Scripts/dev/verify_record.py skip "$2" "$SHA"; then
+    stage_passed "$2"
+    return 1
+  fi
+  return 0
+}
+stage_passed() {
+  [ $DRY -eq 1 ] || py -3 Scripts/dev/verify_record.py pass "$1" "$SHA" || windows_failed "$1 통과 기록"
+}
+
 # Windows 끝 검사 — HEAD 가 시작 때 그대로이고 트리가 깨끗한가.
 check_tree_at_end() {
   [ $DRY -eq 1 ] && return 0
@@ -286,8 +301,15 @@ check_tree_at_end() {
 }
 
 [ $DRY -eq 1 ] || mkdir -p build
-if [ $STAGE -le 1 ]; then
-  start_job "lint --all" job_lint
+RUN_BUILD=0; RUN_CHANGED=0; RUN_CPU=0; RUN_GPU=0; RUN_LINUX=0
+should_run_stage 1 build && RUN_BUILD=1
+should_run_stage 2 changed && RUN_CHANGED=1
+should_run_stage 3 cpu && RUN_CPU=1
+should_run_stage 4 gpu-release && RUN_GPU=1
+[ $NO_LINUX -eq 1 ] || { should_run_stage 5 linux && RUN_LINUX=1; }
+
+[ $STAGE -le 1 ] && start_job "lint --all" job_lint
+if [ $RUN_BUILD -eq 1 ]; then
   build_preset Ninja-Release
   # 임포트를 먼저 끝낸다 — 낡은 산출물을 Content 에 다시 쓰는 일이라 배포 빌드의 쿠킹이 그 파일을 읽는 동안 돌지 않게(ctest 의 고정 단계 ImportedAssets 는 아래에서 곧바로 끝난다).
   # 최적화 App 으로 임포트한다 — Debug 의 BC7 · BC6H 압축기는 큰 텍스처 하나에 몇 분이다(AssetImportEntry.TextureImportDebugBuild). 산출물은 구성과 무관하게 Content 하나다.
@@ -297,28 +319,33 @@ if [ $STAGE -le 1 ]; then
   start_job "clang-tidy" job_tidy
   build_preset Ninja-Release-Server
   wait_jobs
+  stage_passed build
 else
-  # --from 으로 build 를 건너뛰어도 뒤 단계가 돌릴 프리셋은 증분 빌드한다 — 짓지 않으면 고친 커밋 대신 옛 바이너리가 돌아 고친 테스트가 다시 진다
-  # (2026-11-13 --from cpu 의 Release 단위). 바뀐 것이 없으면 몇 초다. 배포 프리셋은 --from cpu 의 shipping-check 가 직접 짓는다.
-  [ $STAGE -le 4 ] && build_preset Ninja-Release
-  [ $STAGE -le 3 ] && { build_preset Ninja-Release-ASan; build_preset Ninja-Release-Server; }
-  # 임포트는 build 단계가 했다 — 거기서 시작하지 않았으면 첫 테스트 단계 앞에서 한다(changed 는 ctest 고정 단계 없이 App 을 바로 띄운다).
-  [ $STAGE -le 3 ] && { run_ctest Ninja-Release import -L import || windows_failed "Ninja-Release import"; }
+  # build 를 건너뛰어도(--from · 단계 기록) 뒤 단계가 돌릴 프리셋은 증분 빌드한다 — 짓지 않으면 고친 커밋 대신 옛 바이너리가 돌아 고친 테스트가 다시 진다
+  # (2026-11-13 --from cpu 의 Release 단위). 바뀐 것이 없으면 몇 초다. 배포 프리셋은 --from 의 cpu 단계 shipping-check 가 직접 짓는다.
+  [ $((RUN_CHANGED + RUN_CPU + RUN_GPU)) -gt 0 ] && build_preset Ninja-Release
+  [ $RUN_CPU -eq 1 ] && { build_preset Ninja-Release-ASan; build_preset Ninja-Release-Server; }
+  # 임포트는 build 단계가 했다 — 거기서 돌지 않았으면 첫 테스트 단계 앞에서 한다(changed 는 ctest 고정 단계 없이 App 을 바로 띄운다).
+  [ $((RUN_CHANGED + RUN_CPU)) -gt 0 ] && { run_ctest Ninja-Release import -L import || windows_failed "Ninja-Release import"; }
+  wait_jobs   # lint --all
 fi
 
-if [ $STAGE -le 2 ]; then
+if [ $RUN_CHANGED -eq 1 ]; then
   run_changed
+  stage_passed changed
 fi
 
-if [ $STAGE -le 3 ]; then
+if [ $RUN_CPU -eq 1 ]; then
   start_job "ASan nogpu" job_sanitizer_cpu
   start_job "server · tools · shipping" job_server_tools
   start_job "shader warm" job_shader_warm
   wait_jobs
+  stage_passed cpu
 fi
 
-if [ $STAGE -le 4 ]; then
+if [ $RUN_GPU -eq 1 ]; then
   run_ctest Ninja-Release all || windows_failed "Ninja-Release ctest"
+  stage_passed gpu-release
 fi
 
 check_tree_at_end
@@ -330,6 +357,10 @@ else
 fi
 if [ $NO_LINUX -eq 1 ]; then
   echo "Linux 를 돌리지 않았다(--no-linux)"
+  exit 0
+fi
+if [ $RUN_LINUX -eq 0 ]; then
+  [ $DRY -eq 1 ] || echo "VERIFIED=$SHA (시작 단계 $FROM, linux 는 단계 기록으로 건너뜀)"
   exit 0
 fi
 echo "== linux 시작 $(date +%T)"
@@ -354,4 +385,5 @@ echo "== done $(date +%T)"
 [ $RC -eq 0 ] && { [ "$SAN_RC" = 0 ] || [ "$SAN_RC" = skip ]; } || exit 1
 SAN_NOTE=""
 [ "$SAN_RC" = skip ] && SAN_NOTE=", sanitize 건너뜀"
+[ "$SAN_RC" = skip ] || stage_passed linux   # --record 실행은 골든을 쓰는 실행이라 통과 기록을 남기지 않는다
 [ $DRY -eq 1 ] || echo "VERIFIED=$SHA (시작 단계 $FROM$SAN_NOTE)"
