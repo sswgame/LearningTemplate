@@ -60,7 +60,7 @@ namespace sw
     {
         string _name;             ///< 스폰한 오브젝트의 이름. 비면 원본 프리팹의 이름
         string _prefabPath;       ///< 원본 프리팹 경로
-        string _attachKey;        ///< 부모 오브젝트에서 붙을 씬 컴포넌트의 키(`이름#n`, `ComponentStableKey`). 비면 부모의 primary 씬 컴포넌트
+        string _attachKey;        ///< 부모 오브젝트에서 붙을 씬 컴포넌트의 지역 id 키(`#<16진>`, `ComponentStableKey`). 비면 부모의 primary 씬 컴포넌트
         string _overrideXML;      ///< 원본과 다른 점(`<PrefabOverrides>`). 비면 원본 그대로
         string _resolvedStateXML; ///< 쿠킹본만: 오버라이드를 얹은 최종 오브젝트 상태. 있으면 원본을 읽지 않고, 원본의 중첩 인스턴스는 뒤 노드로 펼쳐져 있다
         string _partPath;         ///< 쿠킹본만: 펼치기 전 이 노드의 부품 경로(`2/0`, `PrefabPartOverride`). 저작본 노드의 경로는 목록 인덱스다
@@ -68,14 +68,12 @@ namespace sw
         static constexpr int32 kRootParent = -1;
 
         int32  _parentIndex{ kRootParent }; ///< 부모 노드의 목록 인덱스(자기보다 앞). `kRootParent` 면 이 프리팹의 루트 오브젝트
-        uint64 _localID{ 0 };               ///< 고정 지역 id(감사 A-2). 부품 키가 이것이다 — 앞 노드를 지우거나 끼워도 바깥 덮어쓰기가 같은 부품을 가리킨다. 0 이면 옛 노드(키는 목록 인덱스)
+        uint64 _localID{ 0 };               ///< 고정 지역 id(감사 A-2). 부품 키가 이것이다 — 앞 노드를 지우거나 끼워도 바깥 덮어쓰기가 같은 부품을 가리킨다. 읽은 노드는 늘 적혀 있다(없으면 로드 오류)
 
         /** @brief 쿠킹본 형식(펼친 상태)이면 true 입니다. */
         bool isResolved() const { return _resolvedStateXML.empty() == false; }
-        /** @brief 이 노드가 스폰한 부품의 키입니다(`PrefabNestedPart::_partKey`) — 펼친 노드는 `_partPath`, 저작본 노드는 지역 id 키(`#<16진>`), 옛 노드(id 없음)는 목록 인덱스 @p index 입니다. */
-        string makePartKey( size_t index ) const;
-        /** @brief 옮기는 동안 이 노드를 가리키는 옛 부품 키(목록 인덱스 @p index)입니다. 지역 id 가 없거나 펼친 노드면 빈 글입니다(옛 키가 곧 키다). */
-        string makeLegacyPartKey( size_t index ) const;
+        /** @brief 이 노드가 스폰한 부품의 키입니다(`PrefabNestedPart::_partKey`) — 펼친 노드는 `_partPath`, 저작본 노드는 지역 id 키(`#<16진>`)입니다. */
+        string makePartKey() const;
     };
 } // namespace sw
 

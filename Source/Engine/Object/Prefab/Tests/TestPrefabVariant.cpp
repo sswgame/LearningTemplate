@@ -20,7 +20,7 @@ namespace
         static string makeBase( const utf8* pPosition )
         {
             string text = "<Prefab formatVersion=\"0\" name=\"Base\"><GameObject _schemaVersion=\"0\" _name=\"Base\" _bActive=\"true\"><_listComponent>"
-                          "<SceneComponent _componentName=\"Root\" _bActive=\"true\" _localScale=\"2,2,2\" _localPosition=\"";
+                          "<SceneComponent _componentName=\"Root\" _localID=\"1\" _bActive=\"true\" _localScale=\"2,2,2\" _localPosition=\"";
             text += pPosition;
             text += "\" /></_listComponent></GameObject></Prefab>";
             return text;
@@ -31,7 +31,7 @@ namespace
             return "<Prefab formatVersion=\"0\" _base=\"" + baseID + "\" name=\"Child\">" + pOverrides + "</Prefab>";
         }
 
-        static constexpr const utf8* kMoveRoot = "<PrefabOverrides><Override key=\"Root#0\"><SceneComponent _localPosition=\"9,9,9\" /></Override></PrefabOverrides>";
+        static constexpr const utf8* kMoveRoot = "<PrefabOverrides><Override key=\"#0000000000000001\"><SceneComponent _localPosition=\"9,9,9\" /></Override></PrefabOverrides>";
 
         /** @brief 부모 `base.prefab.xml` 과 자식 `child.prefab.xml` 을 씁니다. */
         static void writePair( const test::ScopedScratchDomain& domain, const utf8* pOverrides = kMoveRoot )
@@ -160,7 +160,7 @@ SW_TEST_CASE( PrefabVariantTest, BadVariantsFailToLoad )
         SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "a.prefab.xml" ) ) );
     }
     {
-        Util::writePair( domain, "<PrefabOverrides><Remove key=\"Nope#0\" /></PrefabOverrides>" );
+        Util::writePair( domain, "<PrefabOverrides><Remove key=\"#00000000000000ff\" /></PrefabOverrides>" );
         PrefabAsset asset;
         SW_EXPECT_LOG( "PrefabOverrides.VariantTargetMissing" );
         SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "child.prefab.xml" ) ) );
@@ -184,7 +184,7 @@ SW_TEST_CASE( PrefabVariantTest, ReloadOfBaseReachesCachedVariant )
     SW_REQUIRE_TRUE( cache.loadPrefab( childID.view() ) != nullptr );
 
     const string edited = "<Prefab formatVersion=\"0\" name=\"Base\"><GameObject _schemaVersion=\"0\" _name=\"Base\" _bActive=\"true\"><_listComponent>"
-                          "<SceneComponent _componentName=\"Root\" _bActive=\"true\" _localScale=\"5,5,5\" _localPosition=\"1,2,3\" /></_listComponent></GameObject></Prefab>";
+                          "<SceneComponent _componentName=\"Root\" _localID=\"1\" _bActive=\"true\" _localScale=\"5,5,5\" _localPosition=\"1,2,3\" /></_listComponent></GameObject></Prefab>";
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.prefab.xml" ), edited ) );
     SW_EXPECT_TRUE( cache.reload( baseID ) != ReloadResult::Failed ); // 부모가 캐시에 없을 수도 있다(변형이 합쳐 읽었다) — 실패만 아니면 된다
 
@@ -202,8 +202,8 @@ SW_TEST_CASE( PrefabVariantTest, FieldOriginFollowsTheChain )
     const string baseID  = test::ScopedScratchDomain::makeID( "base.prefab.xml" ).str();
     const string childID = test::ScopedScratchDomain::makeID( "child.prefab.xml" ).str();
     PrefabCache  cache;
-    SW_EXPECT_EQUAL( childID, cache.findFieldOrigin( childID, "Root#0", "_localPosition" ) );
-    SW_EXPECT_EQUAL( baseID, cache.findFieldOrigin( childID, "Root#0", "_localScale" ) );
+    SW_EXPECT_EQUAL( childID, cache.findFieldOrigin( childID, "#0000000000000001", "_localPosition" ) );
+    SW_EXPECT_EQUAL( baseID, cache.findFieldOrigin( childID, "#0000000000000001", "_localScale" ) );
     SW_EXPECT_EQUAL( baseID, cache.findFieldOrigin( childID, "", "_bActive" ) );
 }
 
@@ -215,9 +215,9 @@ SW_TEST_CASE( PrefabVariantTest, NestedInstancesAreInherited )
     const string                    baseID = test::ScopedScratchDomain::makeID( "nestedbase.prefab.xml" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "part.prefab.xml" ), Util::makeBase( "0,0,0" ) ) );
     string baseText = Util::makeBase( "1,2,3" );
-    baseText.insert( baseText.rfind( "</Prefab>" ), "<PrefabInstance name=\"Inherited\" prefab=\"" + partID + "\" />" );
+    baseText.insert( baseText.rfind( "</Prefab>" ), "<PrefabInstance name=\"Inherited\" prefab=\"" + partID + "\" localID=\"#0000000000000001\" />" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "nestedbase.prefab.xml" ), baseText ) );
-    const string ownNode = "<PrefabInstance name=\"Own\" prefab=\"" + partID + "\" />";
+    const string ownNode = "<PrefabInstance name=\"Own\" prefab=\"" + partID + "\" localID=\"#0000000000000002\" />";
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "child.prefab.xml" ), Util::makeVariant( baseID, ownNode.c_str() ) ) );
 
     PrefabAsset asset;

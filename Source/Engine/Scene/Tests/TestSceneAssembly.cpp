@@ -27,7 +27,7 @@ namespace
         static string makeEntity( const utf8* pID, const utf8* pName, const utf8* pPosition, const utf8* pExtraAttributes = "", const utf8* pExtraChildren = "", const utf8* pAttach = "" )
         {
             string text = string( "<entity id=\"" ) + pID + "\" name=\"" + pName + "\" " + pExtraAttributes + ">" + pExtraChildren;
-            text += string( "<GameObject _schemaVersion=\"0\" _name=\"" ) + pName + "\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"" + pPosition + "\" " + pAttach + " /></_listComponent></GameObject></entity>";
+            text += string( "<GameObject _schemaVersion=\"0\" _name=\"" ) + pName + "\" _bActive=\"true\"><_listComponent><SceneComponent _localID=\"1\" _localPosition=\"" + pPosition + "\" " + pAttach + " /></_listComponent></GameObject></entity>";
             return text;
         }
 
@@ -39,7 +39,7 @@ namespace
         /** @brief 부모(1) 와 부모에 붙은 자식(2) 을 가진 내부 씬입니다. */
         static string makeInnerScene()
         {
-            return makeScene( "Inner", makeEntity( "1", "Box", "0,1,0" ) + makeEntity( "2", "Lid", "0,2,0", "", "", "_attachOwner=\"Box\" _attachOwnerID=\"1\" _attachComponent=\"SceneComponent#0\"" ) );
+            return makeScene( "Inner", makeEntity( "1", "Box", "0,1,0" ) + makeEntity( "2", "Lid", "0,2,0", "", "", "_attachOwner=\"Box\" _attachOwnerID=\"1\" _attachComponent=\"#0000000000000001\"" ) );
         }
 
         static void write( const test::ScopedScratchDomain& domain, const utf8* pFile, const string& text )
@@ -111,7 +111,7 @@ SW_TEST_CASE( SceneAssemblyTest, PartOverridesApplyAndSaveAsDifference )
     const string attribute = Util::instanceAttribute( "inner.scene.xml" );
     Util::write( domain, "outer.scene.xml",
                  Util::makeScene( "Outer", Util::makeEntity( "1", "House", "0,0,0", attribute.c_str(),
-                                                             "<PrefabOverrides><Part path=\"1\"><PrefabOverrides><Override key=\"SceneComponent#0\"><SceneComponent _localPosition=\"7,7,7\" /></Override></PrefabOverrides></Part></PrefabOverrides>" ) ) );
+                                                             "<PrefabOverrides><Part path=\"1\"><PrefabOverrides><Override key=\"#0000000000000001\"><SceneComponent _localPosition=\"7,7,7\" /></Override></PrefabOverrides></Part></PrefabOverrides>" ) ) );
 
     SceneDocument doc{};
     SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) );

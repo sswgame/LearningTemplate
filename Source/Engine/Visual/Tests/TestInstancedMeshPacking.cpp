@@ -23,7 +23,7 @@ namespace
         static string makeMesh( const utf8* pID, const utf8* pName, const utf8* pPosition, const utf8* pStatic, const utf8* pAttach = "_attachOwner=\"None\" _attachComponent=\"None\"" )
         {
             return string( "<entity id=\"" ) + pID + "\" name=\"" + pName + "\"><GameObject _schemaVersion=\"0\" _name=\"" + pName +
-                   "\" _bActive=\"true\"><_listComponent><MeshComponent _localPosition=\"" + pPosition + "\" _localRotation=\"0,0,0\" _localScale=\"1,1,1\" " + pAttach +
+                   "\" _bActive=\"true\"><_listComponent><MeshComponent _localID=\"1\" _localPosition=\"" + pPosition + "\" _localRotation=\"0,0,0\" _localScale=\"1,1,1\" " + pAttach +
                    " _meshID=\"Cube\" _bStatic=\"" + pStatic + "\" /></_listComponent></GameObject></entity>";
         }
 
@@ -40,7 +40,7 @@ namespace
             const string inner = makeScene( "Props", "_packing=\"StaticMeshes\"",
                                             makeMesh( "1", "Rock1", "1,0,0", "true" ) + makeMesh( "2", "Rock2", "2,0,0", "true" ) + makeMesh( "3", "Lamp", "3,0,0", "false" ) +
                                                 makeMesh( "4", "Base", "4,0,0", "true" ) +
-                                                makeMesh( "5", "Lid", "0,1,0", "true", "_attachOwner=\"Base\" _attachOwnerID=\"4\" _attachComponent=\"MeshComponent#0\"" ) );
+                                                makeMesh( "5", "Lid", "0,1,0", "true", "_attachOwner=\"Base\" _attachOwnerID=\"4\" _attachComponent=\"#0000000000000001\"" ) );
             SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "props.scene.xml" ), inner ) );
             const string anchor = string( "<entity id=\"1\" name=\"Village\" scene=\"" ) + test::ScopedScratchDomain::makeID( "props.scene.xml" ).str() +
                                   "\"><GameObject _schemaVersion=\"0\" _name=\"Village\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"10,0,0\" /></_listComponent></GameObject></entity>";

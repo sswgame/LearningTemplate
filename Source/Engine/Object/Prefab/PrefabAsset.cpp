@@ -54,11 +54,17 @@ namespace sw
             static constexpr const utf8* kNestedList        = "_listPrefabInstance";
             static constexpr const utf8* kNestedLocalID     = "localID";
 
-            /** @brief 노드의 지역 id 키 글 @p text 를 @p outNode 에 읽습니다. 빈 글은 옛 노드(id 없음)다. 꼴이 틀리면 오류로 false 입니다(다른 노드로 대신하지 않는다). */
+            /**
+             * @brief 노드의 지역 id 키 글 @p text 를 @p outNode 에 읽습니다. 비었거나 꼴이 틀리면 오류로 false 입니다(다른 노드로 대신하지 않는다).
+             * @details 옛 노드(id 없음 — 부품 키가 목록 인덱스)는 받지 않는다. 인덱스는 앞 노드를 지우거나 끼우면 바깥 덮어쓰기가 다른 부품을 가리킨다.
+             */
             [[nodiscard]] static bool readNodeLocalID( const string& text, PrefabInstanceNode& outNode, string_view sourceName )
             {
                 if ( text.empty() )
-                    return true;
+                {
+                    SW_LOG_ERROR_ID( "PrefabAsset.NestedLocalIDMissing", "Nested prefab instance '%#' in '%#' has no localID - old index-keyed nodes are no longer read", outNode._name, sourceName );
+                    return false;
+                }
                 const optional<uint64> localID = ComponentStableKey::parseKey( text );
                 if ( localID.has_value() == false )
                 {
@@ -252,8 +258,7 @@ namespace sw
                     if ( node._parentIndex != parentIndex )
                         continue;
                     XMLNode element = parent.appendChild( kNestedInstance );
-                    XMLFields::writeProperties( element, PrefabInstanceParams{ node._name, AssetRef<PrefabAsset>{ node._prefabPath }, node._attachKey,
-                                                                               node._localID != 0 ? ComponentStableKey::formatKey( node._localID ) : string{} } );
+                    XMLFields::writeProperties( element, PrefabInstanceParams{ node._name, AssetRef<PrefabAsset>{ node._prefabPath }, node._attachKey, ComponentStableKey::formatKey( node._localID ) } );
                     if ( node._overrideXML.empty() == false )
                     {
                         XMLDocument overrideDoc;
@@ -330,8 +335,7 @@ namespace sw
                         element.set( kNestedAttach ).setString( node._attachKey );
                     if ( node._overrideXML.empty() == false )
                         element.set( kNestedOverrides ).setString( node._overrideXML );
-                    if ( node._localID != 0 )
-                        element.set( kNestedLocalID ).setString( ComponentStableKey::formatKey( node._localID ) );
+                    element.set( kNestedLocalID ).setString( ComponentStableKey::formatKey( node._localID ) );
                     writeNodesToJSON( element, listNode, static_cast<int32>( index ) );
                 }
             }
@@ -485,7 +489,7 @@ namespace sw
                         node._attachKey = ComponentStableKey::makeKey( pAttachedTo );
                     node._name       = pPart->getName().c_str();
                     node._prefabPath = pRecord->_prefabPath;
-                    // 노드의 고정 지역 id — 이 부품을 스폰한 노드의 id 키를 잇고, 옛 노드(인덱스 키) · 노드 없이 들인 부품은 새 id 를 받는다. 옛 인덱스 경로는 그 자리에서 이 id 로 맞춘다(`PrefabCache`).
+                    // 노드의 고정 지역 id — 이 부품을 스폰한 노드의 id 키를 잇고, 노드 없이 들인 부품은 새 id 를 받는다.
                     const optional<uint64> spawnedID = ComponentStableKey::parseKey( pRecord->_partKey );
                     node._localID                    = spawnedID.has_value() ? *spawnedID : ComponentStableKey::makeRandomLocalID();
 
@@ -563,16 +567,9 @@ namespace sw
     // 판 1: 형제 순서 칸 `_siblingIndex` → `_siblingOrder`(분수 색인 키, 설계 E-6)
     SW_ASSET_FORMAT_UPGRADE( prefabSiblingOrder, "Prefab", 0, 1, &GameObjectFormatUpgrade::renameSiblingIndex );
 
-    string PrefabInstanceNode::makePartKey( size_t index ) const
+    string PrefabInstanceNode::makePartKey() const
     {
-        if ( isResolved() )
-            return _partPath;
-        return _localID != 0 ? ComponentStableKey::formatKey( _localID ) : to_string( static_cast<uint64>( index ) );
-    }
-
-    string PrefabInstanceNode::makeLegacyPartKey( size_t index ) const
-    {
-        return isResolved() || _localID == 0 ? string{} : to_string( static_cast<uint64>( index ) );
+        return isResolved() ? _partPath : ComponentStableKey::formatKey( _localID );
     }
 
     PrefabAsset::PrefabAsset()

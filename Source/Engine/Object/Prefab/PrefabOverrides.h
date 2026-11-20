@@ -39,14 +39,14 @@ namespace sw
      *
      *          형식(`<PrefabOverrides>`)은 네 종류의 자식을 둡니다.
      *          - `<Object _bActive="false"/>` — 오브젝트 자기 칸 가운데 프리팹과 다른 것. 이름(`_name`)은 엔티티가 들고 있어 넣지 않습니다.
-     *          - `<Remove key="BoxCollider2DComponent#0"/>` — 프리팹에 있는데 인스턴스가 지운 컴포넌트.
-     *          - `<Override key="SpriteComponent#0"><SpriteComponent _localPosition="1,0,0"/></Override>` — 프리팹 컴포넌트 가운데 값이 다른 칸만.
-     *          - `<Add after="SceneComponent#0"><TagComponent .../></Add>` — 인스턴스가 더한 컴포넌트(전체 상태). `after` 는 인스턴스 목록에서 바로 앞에 있던
+     *          - `<Remove key="#9db080fc534fcdd9"/>` — 프리팹에 있는데 인스턴스가 지운 컴포넌트.
+     *          - `<Override key="#edcbb43a3dfead50"><SpriteComponent _localPosition="1,0,0"/></Override>` — 프리팹 컴포넌트 가운데 값이 다른 칸만.
+     *          - `<Add after="#0244d8c8807cd288"><TagComponent _localID="…" .../></Add>` — 인스턴스가 더한 컴포넌트(전체 상태). `after` 는 인스턴스 목록에서 바로 앞에 있던
      *            물려받은 컴포넌트의 키이고, 얹을 때 그 뒤에 들어갑니다. 앞에 물려받은 것이 없으면 `after` 가 없고 맨 앞에, 그 키가 프리팹에서 사라졌으면 끝에 붙습니다.
-     *          - `<Part path="2/0"><PrefabOverrides>…</PrefabOverrides></Part>` — 인스턴스 안 중첩 부품에 덮어쓴 것(`PrefabPartOverride`). 루트 상태를 만드는
+     *          - `<Part path="#<노드 id>/#<노드 id>"><PrefabOverrides>…</PrefabOverrides></Part>` — 인스턴스 안 중첩 부품에 덮어쓴 것(`PrefabPartOverride`). 루트 상태를 만드는
      *            `makeInstanceState` 는 읽지 않고, 부품을 스폰하는 `PrefabCache::spawnNestedInstances` 가 읽습니다. 씬 엔티티와 프리팹의 중첩 노드가 같은 형식을 씁니다.
      *
-     *          키는 **프리팹 쪽** 컴포넌트의 키(`이름#n` — `ComponentStableKey` 와 같은 규칙, 이름이 없으면 타입 이름)입니다. 프리팹 컴포넌트의
+     *          키는 **프리팹 쪽** 컴포넌트의 지역 id 키(`#<16진>` — `ComponentStableKey`)입니다. 옛 순번 키(`이름#n`)는 오류로 남기고 받지 않습니다. 프리팹 컴포넌트의
      *          이름을 바꾼 인스턴스는 그 컴포넌트를 지우고 새로 더한 것으로 적힙니다(언리얼도 상속한 컴포넌트의 이름은 바꾸지 못한다).
      *          비교는 같은 직렬화기가 쓴 두 상태 XML 의 칸 글(속성 값 · 자식 원소)을 비교합니다 — 저장될 값 그대로를 비교하므로 부착 · 핸들 PROPERTY 도
      *          저장할 id 로 비교합니다(`ObjectSaveOptions`).
@@ -75,7 +75,7 @@ namespace sw
          * @param instanceName 비어 있지 않으면 루트의 `_name` 을 이것으로 씁니다(엔티티 이름).
          * @details 프리팹에서 사라진 컴포넌트를 가리키는 덮어쓴 값은 버리고 엔티티 이름과 함께 경고합니다 — 다음 저장에서 빠집니다(언리얼 · 유니티도 원형에 없는
          *          오버라이드는 버린다). 읽지 못하면 false 입니다.
-         *          합치기를 공통 구현(`DataInheritance`)으로 옮기지 않은 까닭: 컴포넌트 목록의 열쇠가 칸 값이 아니라 `이름#n` 이고 원소 이름이 타입이며, 씬 인스턴스는 프리팹에서 사라진 대상을 오류가 아니라 경고로
+         *          합치기를 공통 구현(`DataInheritance`)으로 옮기지 않은 까닭: 컴포넌트 목록의 열쇠가 칸 값이 아니라 지역 id 키이고 원소 이름이 타입이며, 씬 인스턴스는 프리팹에서 사라진 대상을 오류가 아니라 경고로
          *          넘겨야 한다(프리팹을 고쳤다고 씬이 읽히지 않으면 안 된다). 프리팹 변형은 같은 형식을 쓰되 `validateOverrideTargets` 로 엄격하게 먼저 본다.
          */
         [[nodiscard]] static bool makeInstanceState( string_view baseStateXML, string_view overrideXML, string_view instanceName, string& outStateXML );

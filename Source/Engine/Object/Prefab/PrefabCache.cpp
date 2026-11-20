@@ -86,30 +86,22 @@ namespace sw
                     SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstanceCould", "Nested prefab instance '%#' could not be attached to '%#'", pChild->getName().c_str(), pParent->getName().c_str() );
             }
 
-            /**
-             * @brief 옮기는 동안: @p listPartOverride 가운데 옛 인덱스 경로(`<부모>/<인덱스>`)로 이 단계의 노드를 가리키는 것을 지역 id 경로로 바꾼 사본입니다(감사 A-2).
-             * @details 바깥 프리팹 · 씬은 아직 옛 부품 경로를 적고 있다 — 원본 노드가 id 를 받아도(다시 저장) 그 자리의 노드에 그대로 맞는다. 이전 도구(`migrate-component-ids`)가
-             *          경로를 id 로 바꿔 쓰면 이 일이 없어진다.
-             */
-            static vector<PrefabPartOverride> remapLegacyPartPaths( const vector<PrefabPartOverride>& listPartOverride, string_view parentPath, const vector<PrefabInstanceNode>& listNode )
+            /** @brief 부품 경로 @p partPath 의 토막이 모두 노드 지역 id 키(`#<16진>`)면 true 입니다 — 옛 목록 인덱스 토막(`1/0`)은 받지 않는다. */
+            static bool isNodeKeyPath( string_view partPath )
             {
-                vector<PrefabPartOverride> listRemapped = listPartOverride;
-                for ( size_t index = 0; index < listNode.size(); ++index )
+                if ( partPath.empty() )
+                    return false;
+                size_t start = 0;
+                while ( start <= partPath.size() )
                 {
-                    const string legacyKey = listNode[index].makeLegacyPartKey( index );
-                    if ( legacyKey.empty() )
-                        continue;
-                    const string legacyPath = PrefabPartOverride::joinPath( parentPath, legacyKey );
-                    const string idPath     = PrefabPartOverride::joinPath( parentPath, listNode[index].makePartKey( index ) );
-                    for ( PrefabPartOverride& part : listRemapped )
-                    {
-                        const bool bSamePart  = part._partPath == legacyPath;
-                        const bool bInnerPart = part._partPath.size() > legacyPath.size() && StringUtil::startsWith( part._partPath, legacyPath ) && part._partPath[legacyPath.size()] == '/';
-                        if ( bSamePart || bInnerPart )
-                            part._partPath = idPath + part._partPath.substr( legacyPath.size() );
-                    }
+                    const size_t end = partPath.find( '/', start );
+                    if ( ComponentStableKey::parseKey( partPath.substr( start, end == string_view::npos ? string_view::npos : end - start ) ).has_value() == false )
+                        return false;
+                    if ( end == string_view::npos )
+                        return true;
+                    start = end + 1;
                 }
-                return listRemapped;
+                return false;
             }
 
             /** @brief 부품 @p partPath 에 덮어쓴 것이 하나라도 있으면 true 입니다. */
@@ -140,6 +132,13 @@ namespace sw
              */
             static void prependInnerParts( string_view partPath, vector<PrefabPartOverride>& inoutListInner, const vector<PrefabPartOverride>& listEnclosingPart )
             {
+                VectorUtil::removeIf( inoutListInner, [partPath]( const PrefabPartOverride& inner )
+                {
+                    if ( isNodeKeyPath( inner._partPath ) )
+                        return false;
+                    SW_LOG_ERROR_ID( "Prefab.NestedPartPathNotKeyed", "Override of nested prefab part '%#' under '%#' is not a path of node id keys (#<16 hex>) - old index paths are no longer read", inner._partPath, partPath );
+                    return true;
+                } );
                 for ( PrefabPartOverride& inner : inoutListInner )
                 {
                     inner._partPath = PrefabPartOverride::joinPath( partPath, inner._partPath );
@@ -573,6 +572,12 @@ namespace sw
         const uint32   createdCount = spawnNestedInstancesUnder( pRoot, asset, {}, listAllPart, listSpawnedPath );
         for ( const PrefabPartOverride& part : listAllPart )
         {
+            if ( PrefabCacheInternal::isNodeKeyPath( part._partPath ) == false )
+            {
+                SW_LOG_ERROR_ID( "Prefab.NestedPartPathNotKeyed", "Override of nested prefab part '%#' in '%#' is not a path of node id keys (#<16 hex>) - old index paths are no longer read", part._partPath,
+                                 pRoot != nullptr ? pRoot->getName().c_str() : "?" );
+                continue;
+            }
             if ( VectorUtil::contains( listSpawnedPath, part._partPath ) == false )
                 SW_LOG_WARNING_ID( "Prefab.NestedPartOverrideDropped", "Override of nested prefab part '%#' in '%#' is dropped - '%#' no longer spawns that part", part._partPath,
                                    pRoot != nullptr ? pRoot->getName().c_str() : "?", asset.getName() );
@@ -580,12 +585,11 @@ namespace sw
         return createdCount;
     }
 
-    uint32 PrefabCache::spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listGivenPartOverride,
+    uint32 PrefabCache::spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listPartOverride,
                                                    vector<string>& inoutListSpawnedPath )
     {
-        const vector<PrefabInstanceNode>& listNode         = asset.getNestedInstances();
-        const vector<PrefabPartOverride>  listPartOverride = PrefabCacheInternal::remapLegacyPartPaths( listGivenPartOverride, rootPath, listNode );
-        GameObjectManager*                pManager         = pRoot != nullptr ? pRoot->getMutableManager() : nullptr;
+        const vector<PrefabInstanceNode>& listNode = asset.getNestedInstances();
+        GameObjectManager*                pManager = pRoot != nullptr ? pRoot->getMutableManager() : nullptr;
         if ( listNode.empty() || pManager == nullptr )
             return 0;
         const ScopedMemoryTag memoryScope{ kMemoryTag };
@@ -613,7 +617,7 @@ namespace sw
                 }
             }
 
-            const string partKey  = node.makePartKey( index );
+            const string partKey  = node.makePartKey();
             const string partPath = PrefabPartOverride::joinPath( rootPath, partKey );
             // 덮어쓴 것이 없는 펼친 노드는 로드 때 지은 원형으로 읽는다(스폰마다 글을 파싱하지 않는다). 덮어쓴 것이 있거나 저작본 노드면 글을 합쳐 읽는다.
             const bool                    bUseTemplate = node.isResolved() && PrefabCacheInternal::hasPartOverride( listPartOverride, partPath ) == false;
@@ -647,8 +651,6 @@ namespace sw
             PrefabCacheInternal::attachNestedInstance( pPart, pParent, node._attachKey );
             registry.registerNestedPart( pPart->getObjectID(), pRoot->getObjectID(), node._prefabPath, partKey );
             inoutListSpawnedPath.push_back( partPath );
-            if ( node.makeLegacyPartKey( index ).empty() == false )
-                inoutListSpawnedPath.push_back( PrefabPartOverride::joinPath( rootPath, node.makeLegacyPartKey( index ) ) ); // 옛 경로로 적은 덮어쓰기도 버려진 것이 아니다
             listCreated[index] = pPart;
             ++createdCount;
 
@@ -744,18 +746,17 @@ namespace sw
         return inoutAsset.setNestedInstances( std::move( listFlat ) );
     }
 
-    bool PrefabCache::appendFlattenedNodes( const PrefabAsset& asset, int32 parentIndex, string_view parentPath, const vector<PrefabPartOverride>& listGivenPartOverride,
+    bool PrefabCache::appendFlattenedNodes( const PrefabAsset& asset, int32 parentIndex, string_view parentPath, const vector<PrefabPartOverride>& listPartOverride,
                                             vector<PrefabInstanceNode>& inoutListNode )
     {
-        const vector<PrefabInstanceNode>& listNode         = asset.getNestedInstances();
-        const vector<PrefabPartOverride>  listPartOverride = PrefabCacheInternal::remapLegacyPartPaths( listGivenPartOverride, parentPath, listNode );
+        const vector<PrefabInstanceNode>& listNode = asset.getNestedInstances();
         vector<int32>                     listFlatIndex( listNode.size(), PrefabInstanceNode::kRootParent );
         PrefabPathStack::List&            spawnStack = t_prefabChain._spawnStack;
         for ( size_t index = 0; index < listNode.size(); ++index )
         {
             const PrefabInstanceNode& node       = listNode[index];
             const int32               flatParent = node._parentIndex < 0 ? parentIndex : listFlatIndex[static_cast<size_t>( node._parentIndex )];
-            const string              partPath   = PrefabPartOverride::joinPath( parentPath, node.makePartKey( index ) );
+            const string              partPath   = PrefabPartOverride::joinPath( parentPath, node.makePartKey() );
             if ( node.isResolved() )
             {
                 PrefabInstanceNode copied = node;

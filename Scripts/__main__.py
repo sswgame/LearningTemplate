@@ -68,7 +68,6 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("move-asset", "dev.move_asset", "에셋 파일 · 폴더를 옮기고 경로 칸(Config/Dev/AssetReferenceFields.json)의 참조를 고친다(리소스 id old new)"),
     Subcommand("asset-ids", "lint.asset_identity", "에셋 정체성(GUID — 우리 형식 글의 머리 <?asset guid?> · 원본 곁 .meta) 검사, --fix 로 없는 GUID 만들기 · 짝 잃은 .meta 다시 붙이기 · 복사본 새 GUID"),
     Subcommand("migrate-asset-refs", "dev.migrate_asset_refs", "AssetRef<T> 칸의 옛 경로 글을 GUID 참조(guid:<32자>)로 바꿔 쓴다 — 에셋 GUID 2 단계 전수 이전(--fix 로 쓴다)"),
-    Subcommand("migrate-component-ids", "dev.migrate_component_ids", "씬 · 프리팹 컴포넌트에 고정 지역 id(_localID)를 적고 같은 오브젝트의 옛 부착 키를 지역 id 키로 바꿔 쓴다 — 감사 A-2 전수 이전(--fix 로 쓴다)"),
     Subcommand("asset-refs", "lint.asset_references", "작업 트리의 에셋 참조가 모두 있는지 본다(커밋 전 검사 · App --check-asset-refs 와 같은 칸 목록)"),
     Subcommand("rename-symbol", "dev.move_source:main_rename", "C++ 이름을 낱말 경계로 바꾼다(Old=New, 새 이름이 이미 쓰이면 멈춘다)"),
     Subcommand("android-apk", "package.android_apk", "Android 빌드(lib<이름>.so + 쿠킹한 팩)를 서명한 디버그 APK 로 묶는다(--game, --preset Android-Shipping|Android-Release, aapt2 · zipalign · apksigner — Tools/Android)"),

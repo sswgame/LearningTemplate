@@ -107,7 +107,7 @@ namespace sw
             const hashed_string typeFqn = pComponent->getTypeInfo()->_fullyQualifiedName;
             for ( const ObjectIdentity::ComponentEntry& saved : identity._listComponent )
             {
-                // 지역 id 키 — 옛 세이브의 `이름#n` 도 옮기는 동안 맞춰 본다(`ComponentStableKey::matchesKey`).
+                // 지역 id 키로 맞춘다(`ComponentStableKey::matchesKey`) — 옛 세이브의 `이름#n` 은 맞지 않아 표에 들지 않는다.
                 if ( saved._typeFqn != typeFqn || ComponentStableKey::matchesKey( pComponent, saved._stableKey ) == false )
                     continue;
                 outListRemap.push_back( SavedComponentID{ saved._componentID, pComponent->getComponentID() } );

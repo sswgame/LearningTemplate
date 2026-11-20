@@ -3,10 +3,8 @@
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -43,16 +41,15 @@ namespace sw
 
             static constexpr const utf8* kLocalID = "_localID";
 
-            /** @brief 컴포넌트 원소 하나와 그 키입니다 — 지역 id 키(`#<16진>`, `ComponentStableKey`)와, 옮기는 동안 옛 덮어쓰기 글을 맞춰 볼 옛 키(`이름#n`). */
+            /** @brief 컴포넌트 원소 하나와 그 키(지역 id 키 `#<16진>`, `ComponentStableKey`)입니다. */
             struct KeyedComponent
             {
                 XMLNode _node;
                 string  _key;
-                string  _legacyKey;
                 bool    _bUsed{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
-                /** @brief 덮어쓰기 글의 키 @p key 가 이 컴포넌트를 가리키면 true 입니다(지역 id 키, 또는 옮기는 동안 옛 키). */
-                bool isKey( string_view key ) const { return key.empty() == false && ( _key == key || _legacyKey == key ); }
+                /** @brief 덮어쓰기 글의 키 @p key 가 이 컴포넌트를 가리키면 true 입니다. */
+                bool isKey( string_view key ) const { return key.empty() == false && _key == key; }
             };
 
             /** @brief 이름이 정확히 같은 첫 자식 원소입니다. 없으면 무효 노드입니다. */
@@ -80,8 +77,8 @@ namespace sw
             }
 
             /**
-             * @brief 컴포넌트 목록 원소의 컴포넌트마다 키를 붙여 모읍니다. 키는 `ComponentStableKey` 와 같은 규칙입니다 — 적힌 지역 id(`_localID`), 없으면 옛 키
-             *        (이름 `_componentName`, 없거나 비었으면 원소 이름(타입), 그 뒤에 같은 이름 가운데 몇 번째인지)에서 정한 id(`ComponentStableKey::resolveLocalIDs`).
+             * @brief 컴포넌트 목록 원소의 컴포넌트마다 키를 붙여 모읍니다. 키는 `ComponentStableKey` 와 같은 규칙입니다 — 적힌 지역 id(`_localID`), 없으면
+             *        이름(`_componentName`, 없거나 비었으면 원소 이름(타입))과 같은 이름 가운데 순번에서 정한 id(`ComponentStableKey::resolveLocalIDs`).
              */
             static void collectComponents( const XMLNode& listNode, vector<KeyedComponent>& outListComponent )
             {
@@ -89,24 +86,19 @@ namespace sw
                 if ( listNode.isValid() == false )
                     return;
                 vector<ComponentLocalIDSlot> listSlot;
-                unordered_map<string, int32> mapCount;
                 for ( XMLNode child = listNode.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     if ( child.isElement() == false )
                         continue;
-                    const utf8*                              pLabel     = child.findAttribute( kComponentName );
-                    const bool                               bNoLabel   = StringUtil::isNullOrEmpty( pLabel ) || StringUtil::equals( pLabel, "None" );
-                    const string                             baseName   = bNoLabel ? string{ child.getName() } : string{ pLabel };
-                    int32&                                   occurrence = mapCount[baseName];
-                    StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "%##%#", baseName, occurrence );
-                    uint64      storedID = 0;
-                    const utf8* pStored  = child.findAttribute( kLocalID );
+                    const utf8*  pLabel   = child.findAttribute( kComponentName );
+                    const bool   bNoLabel = StringUtil::isNullOrEmpty( pLabel ) || StringUtil::equals( pLabel, "None" );
+                    const string baseName = bNoLabel ? string{ child.getName() } : string{ pLabel };
+                    uint64       storedID = 0;
+                    const utf8*  pStored  = child.findAttribute( kLocalID );
                     if ( StringUtil::isNullOrEmpty( pStored ) == false && StringUtil::parseUint64( pStored, storedID ) == false )
                         storedID = 0; // 읽지 못한 id 는 적히지 않은 것과 같다 — 상태 읽기도 그 칸을 거절한다
                     listSlot.push_back( ComponentLocalIDSlot{ baseName, storedID, 0 } );
-                    outListComponent.push_back( KeyedComponent{ child, string{}, string( textBuilder.view() ), false } );
-                    ++occurrence;
+                    outListComponent.push_back( KeyedComponent{ child, string{}, false } );
                 }
                 ComponentStableKey::resolveLocalIDs( listSlot );
                 for ( size_t index = 0; index < listSlot.size(); ++index )
@@ -229,6 +221,7 @@ namespace sw
                     vector<KeyedComponent> listBase;
                     collectComponents( baseList, listBase );
                     XMLNode outList = outRoot.appendChild( kComponentList );
+                    reportLegacyKeys();
 
                     vector<string> listRemovedKey;
                     for ( XMLNode entry = _overrideRoot.findChild( kRemove ); entry.isValid(); entry = entry.findNextSibling( kRemove ) )
@@ -321,6 +314,28 @@ namespace sw
                 }
 
                 /** @brief 프리팹에서 사라진(또는 타입이 바뀐) 컴포넌트를 가리키는 항목을 알립니다 — 버려지고 다음 저장에서 빠진다. */
+                /**
+                 * @brief 컴포넌트를 지역 id 키(`#<16진>`)가 아닌 글로 가리키는 항목마다 오류를 남깁니다.
+                 * @details 옛 순번 키(`이름#n`)는 받지 않는다 — 저장소의 데이터는 모두 id 키로 옮겼고, 순번은 앞 형제를 지우면 다른 컴포넌트를 가리킨다.
+                 */
+                void reportLegacyKeys() const
+                {
+                    const auto reportEntries = [this]( const utf8* pElement, const utf8* pAttribute )
+                    {
+                        for ( XMLNode entry = _overrideRoot.findChild( pElement ); entry.isValid(); entry = entry.findNextSibling( pElement ) )
+                        {
+                            const utf8* pKey = entry.findAttribute( pAttribute );
+                            if ( StringUtil::isNullOrEmpty( pKey ) || ComponentStableKey::parseKey( pKey ).has_value() )
+                                continue;
+                            SW_LOG_ERROR_ID( "PrefabOverrides.LegacyComponentKey", "'%#': <%# %#=\"%#\"> is not a component id key (#<16 hex>) - old index keys (Name#n) are no longer read",
+                                             _instanceName.empty() ? string_view( "?" ) : _instanceName, pElement, pAttribute, pKey );
+                        }
+                    };
+                    reportEntries( kOverride, kKey );
+                    reportEntries( kRemove, kKey );
+                    reportEntries( kAdd, kAfter );
+                }
+
                 void warnDroppedEntries( const vector<KeyedComponent>& listBase, const vector<string>& listRemovedKey ) const
                 {
                     for ( XMLNode entry = _overrideRoot.findChild( kOverride ); entry.isValid(); entry = entry.findNextSibling( kOverride ) )
@@ -573,9 +588,11 @@ namespace sw
         }
         for ( XMLNode entry = root.findChild( PrefabOverridesInternal::kAdd ); entry.isValid(); entry = entry.findNextSibling( PrefabOverridesInternal::kAdd ) )
         {
-            const XMLNode     added = PrefabOverridesInternal::findFirstElement( entry );
-            const string_view label = added.isValid() && added.hasAttribute( PrefabOverridesInternal::kComponentName ) ? added.getAttributeText( PrefabOverridesInternal::kComponentName ) : string_view( added.isValid() ? added.getName() : "" );
-            if ( added.isValid() && StringUtil::startsWith( componentKey, label ) && hasField( added ) )
+            // 더한 컴포넌트는 자기 지역 id(`_localID`)가 키다.
+            const XMLNode added    = PrefabOverridesInternal::findFirstElement( entry );
+            uint64        storedID = 0;
+            const bool    bKeyed   = added.isValid() && StringUtil::parseUint64( added.getAttributeText( PrefabOverridesInternal::kLocalID ), storedID ) && storedID != 0;
+            if ( bKeyed && ComponentStableKey::formatKey( storedID ) == componentKey && hasField( added ) )
                 return true;
         }
         return false;
