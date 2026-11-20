@@ -31,7 +31,6 @@ POSIX 계열은 `UNIX` · `CMAKE_HOST_UNIX` 로 이름을 적는다. 다른 변�
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from pathlib import Path
@@ -42,9 +41,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.lint_scope import LintScope, make_whole_scope, read_texts  # noqa: E402
-from lint.rule_tables import get_table_path  # noqa: E402
+from lint.rule_tables import ExceptionTable, get_table_path, read_rule_table  # noqa: E402
 
-CONFIG_PATH = get_table_path("platform-chains")
+RULE_ID = "platform-chains"
 EXTENSIONS = (".h", ".cpp", ".inl")
 DIRECTIVE = re.compile(r"^\s*#\s*(if|ifdef|ifndef|elif|else|endif)\b(.*)$")
 PLATFORM_ONLY = re.compile(r"^!?defined\( SW_PLATFORM_\w+ \)(?: \|\| !?defined\( SW_PLATFORM_\w+ \))*$")
@@ -81,16 +80,16 @@ def find_problems_in_text(path: str, text: str) -> list[str]:
     return list_problem
 
 
-def is_exempt(path: str, table: dict) -> bool:
-    if any(path.startswith(prefix) for prefix in table["_exemptPaths"]):
+def is_exempt(path: str, table: ExceptionTable, platform_folders: Sequence[str]) -> bool:
+    if table.allows_prefix("_exemptPaths", path):
         return True
-    return any(part in table["_platformFolders"] for part in path.split("/")[:-1])
+    return any(part in platform_folders for part in path.split("/")[:-1])
 
 
-def find_problems(list_source: Iterable[tuple[str, str]], table: dict) -> list[str]:
+def find_problems(list_source: Iterable[tuple[str, str]], table: ExceptionTable, platform_folders: Sequence[str]) -> list[str]:
     list_problem: list[str] = []
     for path, text in list_source:
-        if not is_exempt(path, table):
+        if not is_exempt(path, table, platform_folders):
             list_problem.extend(find_problems_in_text(path, text))
     return list_problem
 
@@ -214,12 +213,15 @@ def find_build_problems(list_source: Iterable[tuple[str, str]]) -> list[str]:
 
 
 def check_platform_chains(project_root: Path, scope: LintScope) -> list[str]:
-    table = json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))
-    return find_problems(read_sources(project_root, scope), table) + find_build_problems(read_build_sources(project_root, scope))
+    data = read_rule_table(project_root, RULE_ID)
+    table = ExceptionTable(get_table_path(RULE_ID), data, ("_exemptPaths",))
+    list_problem = find_problems(read_sources(project_root, scope), table, data["_platformFolders"]) + find_build_problems(read_build_sources(project_root, scope))
+    return list_problem + table.list_problems(scope.whole_repo, stale_sections=())   # 앞머리 예외는 낡은 줄을 세지 않는다(예전 판정 그대로)
 
 
 def run_self_check() -> None:
-    table = {"_exemptPaths": {"Source/Editor/": "이유"}, "_platformFolders": ["Linux"]}
+    table = ExceptionTable.make(RULE_ID, _exemptPaths={"Source/Editor/": "이유"})
+    folders = ["Linux"]
     error = '#else\n    #error "Unsupported platform"\n#endif\n'
     clean = (
         "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#endif\n"
@@ -227,12 +229,12 @@ def run_self_check() -> None:
         + "#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_WAYLAND )\nint a;\n#else\nint b;\n#endif\n"
         + "#if defined( SW_DEBUG )\nint a;\n#else\nint b;\n#endif\n"
     )
-    assert find_problems([("Source/a.cpp", clean)], table) == [], "허용 모양은 통과해야 한다"
-    assert len(find_problems([("Source/a.cpp", "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#else\nint b;\n#endif\n")], table)) == 1, "#else 몸"
-    assert len(find_problems([("Source/a.cpp", "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#elif defined( SW_PLATFORM_LINUX )\nint b;\n#endif\n")], table)) == 1, "#else 없음"
-    assert len(find_problems([("Source/a.cpp", "#if !defined( SW_PLATFORM_WINDOWS )\nint a;\n#endif\n")], table)) == 1, "부정"
+    assert find_problems([("Source/a.cpp", clean)], table, folders) == [], "허용 모양은 통과해야 한다"
+    assert len(find_problems([("Source/a.cpp", "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#else\nint b;\n#endif\n")], table, folders)) == 1, "#else 몸"
+    assert len(find_problems([("Source/a.cpp", "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#elif defined( SW_PLATFORM_LINUX )\nint b;\n#endif\n")], table, folders)) == 1, "#else 없음"
+    assert len(find_problems([("Source/a.cpp", "#if !defined( SW_PLATFORM_WINDOWS )\nint a;\n#endif\n")], table, folders)) == 1, "부정"
     bad = "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#else\nint b;\n#endif\n"
-    assert find_problems([("Source/Editor/a.cpp", bad), ("Source/Engine/Linux/a.cpp", bad)], table) == [], "예외 폴더"
+    assert find_problems([("Source/Editor/a.cpp", bad), ("Source/Engine/Linux/a.cpp", bad)], table, folders) == [], "예외 폴더"
     fatal = 'else()\n\tmessage(FATAL_ERROR "x")\nendif()\n'
     clean_cmake = (
         "if(WIN32)\n\tset(a 1)\nendif()\n"

@@ -14,7 +14,6 @@ Scripts/lint/folder_layout.py
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -23,13 +22,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.lint_scope import LintScope, make_whole_scope  # noqa: E402
-from lint.rule_tables import get_table_path  # noqa: E402
+from lint.rule_tables import read_rule_table  # noqa: E402
 
-CONFIG_PATH = get_table_path("folder-layout")
+RULE_ID = "folder-layout"
 
 
 def check_folder_layout(project_root: Path, scope: LintScope) -> list[str]:
-    return find_problems(scope.select(("Source",)), json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8")))
+    return find_problems(scope.select(("Source",)), read_rule_table(project_root, RULE_ID))
 
 
 def find_problems(list_path: list[str], table: dict) -> list[str]:

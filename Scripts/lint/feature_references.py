@@ -17,7 +17,7 @@ Scripts/lint/feature_references.py
   `Tests/` 안에서는 `SW_*_ID( "X"` 의 첫 인자. 로그 매크로만 보지 않는 까닭: id 는 `addErrorWithID` · `report` · `parseBoolToken` · `#define SW_LOG_ID_…` 같은 도우미를 거쳐
   매크로에 닿아(`"" id` 이어 붙이기) 매크로 자리에는 이름만 남는다. 실행 중에 이어 붙인 id 는 리터럴이 없으니 예외 표(`_logIDs`)에 까닭과 함께 둔다.
 
-예외는 데이터 한 곳(`Config/Rules/Lint/FeatureRefs.json`)에 까닭과 함께 둔다. 까닭이 비었거나, 이제 참조가 생겼거나, 정의가 사라진 예외도 위반이다 — 표가 낡지 않게.
+예외는 데이터 한 곳(`Config/Rules/Lint/FeatureRefs.json`, 칸마다 이름 → 까닭)에 둔다. 까닭이 비었거나, 이제 참조가 생겼거나, 정의가 사라진 예외도 위반이다 — 표 형식(`rule_tables.ExceptionTable`)이 판정이 묻지 않은 줄을 낡은 예외로 낸다.
 
 `py -3 -m Scripts lint feature-refs [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
 """
@@ -25,7 +25,6 @@ Scripts/lint/feature_references.py
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from dataclasses import dataclass, field
@@ -39,9 +38,10 @@ from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.index_cache import open_facts  # noqa: E402
 from lint.lint_scope import LintScope, list_repo_files, make_whole_scope  # noqa: E402
-from lint.rule_tables import get_table_path  # noqa: E402
+from lint.rule_tables import ExceptionTable  # noqa: E402
 
-CONFIG_PATH = get_table_path("feature-refs")
+RULE_ID = "feature-refs"
+SECTIONS = ("_folders", "_components", "_watches", "_devCommands", "_logIDs")
 CPP_EXTENSIONS = (".h", ".cpp", ".inl", ".xxx")
 CONTENT_EXTENSIONS = (".xml", ".json")
 SCRIPT_EXTENSIONS = (".py", ".cmake", ".sh", ".txt")
@@ -72,17 +72,6 @@ class Sources:
     dict_test_code: dict[str, str] = field(default_factory=dict)    # 경로 → 글(`Tests/` 안 C++)
     dict_content: dict[str, str] = field(default_factory=dict)     # 경로 → 글(Content 글 파일)
     dict_script: dict[str, str] = field(default_factory=dict)      # 경로 → 글(Scripts · Test · CMake)
-
-
-@dataclass(frozen=True)
-class Exceptions:
-    """`Config/Rules/Lint/FeatureRefs.json` 의 내용."""
-
-    dict_folder: dict[str, str]        # 폴더 → 까닭(그 안의 컴포넌트 모두)
-    dict_component: dict[str, str]
-    dict_watch: dict[str, str]
-    dict_command: dict[str, str]
-    dict_log_id: dict[str, str]        # 기대 로그 id → 까닭(정의 리터럴이 없는 것 — 실행 중에 이어 붙인 id)
 
 
 def classify_path(relative: str) -> str | None:
@@ -131,20 +120,6 @@ def extract_facts(bucket: str, path: str, text: str) -> dict[str, list[str]]:
     return facts
 
 
-def check_exceptions_table(kind: str, dict_defined: dict[str, str], set_reference: set[str], dict_exception: dict[str, str],
-                           gone: str = "정의가 없다", satisfied: str = "이제 참조가 있다") -> list[str]:
-    """표의 줄이 살아 있는지 — 까닭이 있고, 판정할 이름(`dict_defined`)이 있고, 아직 짝(`set_reference`)이 없어야 한다."""
-    list_problem: list[str] = []
-    for name, reason in dict_exception.items():
-        if not reason.strip():
-            list_problem.append(f"{CONFIG_PATH}: {kind} '{name}' 의 까닭이 비었다")
-        elif name not in dict_defined:
-            list_problem.append(f"{CONFIG_PATH}: {kind} '{name}' 의 {gone} — 줄을 지운다")
-        elif name in set_reference:
-            list_problem.append(f"{CONFIG_PATH}: {kind} '{name}' 는 {satisfied} — 줄을 지운다")
-    return list_problem
-
-
 DEFINE_KEYS = ("component", "watch", "command", "logReference")   # 짝이 있어야 하는 이름(경로와 함께) — 로그 id 는 참조 쪽이 정의를 요구한다
 COLLECT_KEYS = ("componentReference", "literal", "scenarioWatch", "commandWord", "logID")
 
@@ -157,12 +132,12 @@ def fold_tokens(path: str, facts: dict[str, list[str]]) -> list[str]:
     return list_token
 
 
-def evaluate_facts(map_fact: dict[str, dict[str, list[str]]], exceptions: Exceptions) -> list[str]:
+def evaluate_facts(map_fact: dict[str, dict[str, list[str]]], table: ExceptionTable) -> list[str]:
     """저장소 전체 사실(경로 → 사실, 경로 순)로 참조 0 을 가린다 — 자체 검사의 입구. 커밋 훅은 접은 요약(`evaluate_summary`)을 쓴다."""
-    return evaluate_summary([token for path, facts in sorted(map_fact.items()) for token in fold_tokens(path, facts)], exceptions)
+    return evaluate_summary([token for path, facts in sorted(map_fact.items()) for token in fold_tokens(path, facts)], table)
 
 
-def evaluate_summary(list_token: Iterable[str], exceptions: Exceptions) -> list[str]:
+def evaluate_summary(list_token: Iterable[str], table: ExceptionTable) -> list[str]:
     """요약 토큰으로 참조 0 을 가린다 — 참조는 어느 파일에서 와도 되므로 판정은 늘 전체(의 요약)로 낸다."""
     map_define: dict[str, dict[str, str]] = {key: {} for key in DEFINE_KEYS}
     map_collect: dict[str, set[str]] = {key: set() for key in COLLECT_KEYS}
@@ -187,10 +162,9 @@ def evaluate_summary(list_token: Iterable[str], exceptions: Exceptions) -> list[
     dict_component = define("component")
     set_component_reference = collect("componentReference")
     for name, path in sorted(dict_component.items()):
-        folder_excepted = any(path.startswith(folder + "/") for folder in exceptions.dict_folder)
-        if name not in set_component_reference and not folder_excepted and name not in exceptions.dict_component:
-            list_problem.append(f"{path}: 컴포넌트 {name} 를 콘텐츠도 코드도 쓰지 않는다 — 배치하거나 {CONFIG_PATH} 에 까닭을 적는다")
-    list_problem += check_exceptions_table("컴포넌트", dict_component, set_component_reference, exceptions.dict_component)
+        if name in set_component_reference or table.allows("_components", name) or any(path.startswith(folder + "/") for folder in table.get("_folders")):
+            continue
+        list_problem.append(f"{path}: 컴포넌트 {name} 를 콘텐츠도 코드도 쓰지 않는다 — 배치하거나 {table.hint('_components')}")
 
     dict_watch = define("watch")
     dict_command = define("command")
@@ -198,33 +172,31 @@ def evaluate_summary(list_token: Iterable[str], exceptions: Exceptions) -> list[
     set_watch_reference = collect("scenarioWatch") | set_literal
     set_command_reference = collect("commandWord") | set_literal
     for name, path in sorted(dict_watch.items()):
-        if name not in set_watch_reference and name not in exceptions.dict_watch:
-            list_problem.append(f"{path}: 감시 값 {name} 를 아무도 읽지 않는다 — 판정에 쓰거나 지우거나 {CONFIG_PATH} 에 까닭을 적는다")
-    list_problem += check_exceptions_table("감시 값", dict_watch, set_watch_reference, exceptions.dict_watch)
+        if name not in set_watch_reference and not table.allows("_watches", name):
+            list_problem.append(f"{path}: 감시 값 {name} 를 아무도 읽지 않는다 — 판정에 쓰거나 지우거나 {table.hint('_watches')}")
     for name, path in sorted(dict_command.items()):
-        if name not in set_command_reference and name not in exceptions.dict_command:
-            list_problem.append(f"{path}: 개발 명령 {name} 를 자동화가 부르지 않는다 — 시나리오로 잇거나 {CONFIG_PATH} 에 까닭을 적는다")
-    list_problem += check_exceptions_table("개발 명령", dict_command, set_command_reference, exceptions.dict_command)
+        if name not in set_command_reference and not table.allows("_devCommands", name):
+            list_problem.append(f"{path}: 개발 명령 {name} 를 자동화가 부르지 않는다 — 시나리오로 잇거나 {table.hint('_devCommands')}")
     dict_log_reference = define("logReference")
     set_log_id = collect("logID")
     for name, path in sorted(dict_log_reference.items()):
-        if name not in set_log_id and name not in exceptions.dict_log_id:
-            list_problem.append(f"{path}: 기대 로그 id {name} 를 내는 코드가 없다(바꿨거나 지웠다) — 지금 id 로 고치거나 기대를 지우거나 {CONFIG_PATH} 에 까닭을 적는다")
-    list_problem += check_exceptions_table("기대 로그 id", dict_log_reference, set_log_id, exceptions.dict_log_id, gone="참조가 없다", satisfied="이제 정의 리터럴이 있다")
+        if name not in set_log_id and not table.allows("_logIDs", name):
+            list_problem.append(f"{path}: 기대 로그 id {name} 를 내는 코드가 없다(바꿨거나 지웠다) — 지금 id 로 고치거나 기대를 지우거나 {table.hint('_logIDs')}")
     for path, _, name in sorted(list_lost):
         list_problem.append(f"{path}: 명령 함수 {name} 를 등록(SW_DEV_COMMAND)도 호출도 하지 않는다 — 등록 줄을 되살리거나 함수를 지운다")
-    return list_problem
+    # 참조는 어느 파일에서 와도 되므로 판정은 늘 전체 요약이다 — 낡은 줄(이제 참조 · 정의가 생겼거나 이름이 사라진 줄)도 늘 센다. 폴더 줄은 예전처럼 세지 않는다.
+    return list_problem + table.list_problems(whole_repo=True, stale_sections=("_components", "_watches", "_devCommands", "_logIDs"))
 
 
-def find_problems(sources: Sources, exceptions: Exceptions) -> list[str]:
+def find_problems(sources: Sources, table: ExceptionTable) -> list[str]:
     map_fact = {path: extract_facts(bucket, path, text) for bucket in ("dict_header", "dict_test_code", "dict_content", "dict_script")
                for path, text in getattr(sources, bucket).items()}
-    return evaluate_facts(map_fact, exceptions)
+    return evaluate_facts(map_fact, table)
 
 
-def read_exceptions(project_root: Path) -> Exceptions:
-    data = json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))
-    return Exceptions(data["_folders"], data["_components"], data["_watches"], data["_devCommands"], data["_logIDs"])
+def make_table(**sections: dict[str, str]) -> ExceptionTable:
+    """판정 테스트의 표 — 빠진 칸은 빈 칸이다."""
+    return ExceptionTable.make(RULE_ID, **{**{section: {} for section in SECTIONS}, **sections})
 
 
 def read_summary(project_root: Path) -> list[str]:
@@ -238,7 +210,7 @@ def check_feature_references(project_root: Path, scope: LintScope) -> list[str]:
     """커밋 훅은 훑는 파일이 바뀌었을 때만 돈다(지운 파일 포함 — 참조를 지우면 참조 0 이 생긴다)."""
     if not scope.whole_repo and not any(classify_path(path) for path in (*scope.list_file, *scope.list_removed)):
         return []
-    return evaluate_summary(read_summary(project_root), read_exceptions(project_root))
+    return evaluate_summary(read_summary(project_root), ExceptionTable.load(project_root, RULE_ID, SECTIONS))
 
 
 def run_self_check() -> None:
@@ -259,7 +231,7 @@ def run_self_check() -> None:
     sources.dict_content["Content/x.scene.xml"] = "<UsedComponent/>\n"
     sources.dict_content["Content/x.scenario.xml"] = '<Expect watch="A.Read" equals="1"/>\n<DevCommand line="netplay.command clients cmd.used 3"/>\n<DevCommand line="cmd.kept"/>\n'
 
-    empty = Exceptions({}, {}, {}, {}, {})
+    empty = make_table()
     list_problem = find_problems(sources, empty)
     assert len(list_problem) == 4, list_problem
     assert any("runLost" in line for line in list_problem)
@@ -268,11 +240,10 @@ def run_self_check() -> None:
     assert any("cmd.alone" in line for line in list_problem)
 
     # 예외: 까닭과 함께면 받고, 낡은 줄은 위반이다.
-    assert [line for line in find_problems(sources, Exceptions({"Source/A": "x"}, {}, {"A.Unread": "x"}, {"cmd.alone": "x"}, {})) if "runLost" not in line] == []
-    list_stale = find_problems(sources, Exceptions({}, {"LonelyComponent": "", "UsedComponent": "x", "GoneComponent": "x"}, {"A.Unread": "x"}, {"cmd.alone": "x"}, {}))
+    assert [line for line in find_problems(sources, make_table(_folders={"Source/A": "x"}, _watches={"A.Unread": "x"}, _devCommands={"cmd.alone": "x"})) if "runLost" not in line] == []
+    list_stale = find_problems(sources, make_table(_components={"LonelyComponent": "", "UsedComponent": "x", "GoneComponent": "x"}, _watches={"A.Unread": "x"}, _devCommands={"cmd.alone": "x"}))
     assert sum("까닭이 비었다" in line for line in list_stale) == 1, list_stale
-    assert sum("이제 참조가 있다" in line for line in list_stale) == 1, list_stale
-    assert sum("정의가 없다" in line for line in list_stale) == 1, list_stale
+    assert sorted(line.split("'")[1] for line in list_stale if "낡은 예외" in line) == ["GoneComponent", "UsedComponent"], list_stale   # 이제 참조가 있다 · 정의가 없다
 
 
 def main(argv: Sequence[str] | None = None) -> int:

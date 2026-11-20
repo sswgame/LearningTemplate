@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import argparse
 import collections
-import json
 import re
 import sys
 from pathlib import Path
@@ -41,11 +40,11 @@ from lint.cpp_shape import find_param_list_end, BODY_OPEN, match_brace, strip_co
 from lint.format import get_modified_cpp_files  # noqa: E402
 from lint.lint_scope import LintScope, read_text  # noqa: E402
 from lint.magic_literals import is_source_file, list_source_files, read_staged_renames  # noqa: E402
-from lint.rule_tables import get_table_path  # noqa: E402
+from lint.rule_tables import Baseline, ExceptionTable  # noqa: E402
 
 
-BASELINE_PATH = get_table_path("result-types", "Baseline")
-CONFIG_PATH = get_table_path("result-types")
+RULE_ID = "result-types"
+RATCHET_COMMAND = "py -3 -m Scripts lint result-types --ratchet"
 KINDS = ("std-optional", "out-error", "out-error-pointer", "out-text-on-failure")
 PATTERN = {
     "std-optional": re.compile(r"\bstd\s*::\s*(?:optional\b|nullopt\b|nullopt_t\b)"),
@@ -111,44 +110,20 @@ def count_files(project_root: Path, list_file: Iterable[Path]) -> dict[str, dict
     return result
 
 
-def read_baseline(project_root: Path) -> dict[str, dict[str, int]]:
-    """기준선입니다. 파일이 없으면 오류로 멈춘다(빈 기준선으로 돌면 검사 없이 지나갈 수 있다)."""
-    return json.loads((project_root / BASELINE_PATH).read_text(encoding="utf-8"))["_files"]
-
-
-def read_core_exemptions(project_root: Path) -> dict[str, dict[str, str]]:
-    """Core 0 규칙의 예외 `경로` → `종류` → 까닭입니다. 칸이 없으면 오류로 멈춘다."""
-    return json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))["_coreExemptions"]
-
-
-def write_baseline(project_root: Path, baseline: dict[str, dict[str, int]]) -> None:
-    comment = ("결과 형식 래칫 기준선(Scripts/lint/result_types.py). Core 밖 파일마다 std::optional · string& outError · string* pOutError · 실패 때만 쓰는 글 출력 인자의 수 — "
-               "늘면 커밋이 멈추고, 줄면 `py -3 -m Scripts lint result-types --ratchet` 로 낮춘다. 손으로 올리지 않는다(올리는 길은 --accept 하나, docs/agents/Errors.md). "
-               "Core 0 규칙의 예외는 ResultTypes.json 이다.")
-    list_line = [f"    {json.dumps(path)}: {json.dumps(baseline[path])}" for path in sorted(baseline) if baseline[path]]
-    text = (f"{{\n  \"_comment\": {json.dumps(comment, ensure_ascii=False)},\n"
-            "  \"_files\": {\n" + ",\n".join(list_line) + "\n  }\n}\n")
-    (project_root / BASELINE_PATH).write_text(text, encoding="utf-8", newline="\n")
-
-
-def find_problems(actual: dict[str, dict[str, int]], baseline: dict[str, dict[str, int]], list_path: Iterable[str], map_old: dict[str, str],
-                 core_exemptions: dict[str, dict[str, str]]) -> list[str]:
-    """`listPath` 파일마다: Core 는 0(예외 종류 말고), 그 밖은 기준선과 같아야 한다(늘면 옮기기, 줄면 기준선 낮추기)."""
+def find_problems(actual: dict[str, dict[str, int]], baseline: Baseline, list_path: Iterable[str], map_old: dict[str, str], table: ExceptionTable) -> list[str]:
+    """`listPath` 파일마다: Core 는 0(예외 `경로|종류` 말고), 그 밖은 기준선과 같아야 한다(늘면 옮기기, 줄면 기준선 낮추기)."""
     list_problem: list[str] = []
-    for path in sorted(set(list_path)):
-        have = actual.get(path, {})
-        if path.startswith(STRICT_PREFIX):
-            exempt = core_exemptions.get(path, {})
-            list_problem += [f"{path}: {kind} {count} — Core 는 0 이어야 한다: {ADVICE[kind]}" for kind, count in have.items() if kind not in exempt]
-            continue
-        allowed = baseline.get(path, baseline.get(map_old.get(path, ""), {}))
-        for kind in KINDS:
-            count, limit = have.get(kind, 0), allowed.get(kind, 0)
-            if count > limit:
-                list_problem.append(f"{path}: {kind} {limit} -> {count} — 늘었다: {ADVICE[kind]}")
-            elif count < limit:
-                list_problem.append(f"{path}: {kind} {limit} -> {count} — 줄었다: `py -3 -m Scripts lint result-types --ratchet` 로 기준선을 낮추고 함께 커밋한다")
-    return list_problem
+    set_strict = {path for path in list_path if path.startswith(STRICT_PREFIX)}
+    for path in sorted(set_strict):
+        list_problem += [f"{path}: {kind} {count} — Core 는 0 이어야 한다: {ADVICE[kind]}" for kind, count in actual.get(path, {}).items()
+                         if not table.allows("_coreExemptions", f"{path}|{kind}")]
+    list_problem += baseline.compare(actual, set(list_path) - set_strict, map_old, KINDS, ADVICE.__getitem__, RATCHET_COMMAND)
+    return list_problem + table.list_problems(whole_repo=False)   # Core 예외의 낡은 줄은 예전처럼 세지 않는다
+
+
+def load_core_exemptions(project_root: Path) -> ExceptionTable:
+    """Core 0 규칙의 예외 `경로|종류` → 까닭(`ResultTypes.json`)."""
+    return ExceptionTable.load(project_root, RULE_ID, ("_coreExemptions",))
 
 
 def check_result_types(project_root: Path, scope: LintScope) -> list[str]:
@@ -157,22 +132,10 @@ def check_result_types(project_root: Path, scope: LintScope) -> list[str]:
     list_problem: list[str] = []
     if list_relative:
         actual = count_files(project_root, [project_root / relative for relative in list_relative])
-        list_problem = find_problems(actual, read_baseline(project_root), list_relative, read_staged_renames(project_root), read_core_exemptions(project_root))
+        list_problem = find_problems(actual, Baseline.load(project_root, RULE_ID), list_relative, read_staged_renames(project_root), load_core_exemptions(project_root))
     if scope.whole_repo:
-        set_existing = set(scope.list_file)
-        list_problem += [f"{path}: 없는 파일의 기준선 — `--ratchet` 으로 지운다" for path in sorted(read_baseline(project_root)) if path not in set_existing]
+        list_problem += Baseline.load(project_root, RULE_ID).list_missing(set(scope.list_file))
     return list_problem
-
-
-def lower_baseline(baseline: dict[str, dict[str, int]], actual: dict[str, dict[str, int]], list_existing: set[str]) -> dict[str, dict[str, int]]:
-    """줄어든 수만 낮춘다(늘어난 수는 기준선을 지킨다). 없어진 파일은 지운다."""
-    lowered: dict[str, dict[str, int]] = {}
-    for path, allowed in baseline.items():
-        if path not in list_existing:
-            continue
-        have = actual.get(path, {})
-        lowered[path] = {kind: min(allowed[kind], have.get(kind, 0)) for kind in allowed if min(allowed[kind], have.get(kind, 0)) > 0}
-    return lowered
 
 
 def print_summary(actual: dict[str, dict[str, int]]) -> None:
@@ -215,19 +178,18 @@ def run_self_check() -> int:
     expect(count_text(both_sides) == {}, "a text output also written on success is not counted")
     expect(count_text("bool run( string& outReply ) { if ( a ) { outReply = \"no\"; return false; } return inner( outReply ); }") == {}, "a text output passed on is not counted")
     expect(count_text("bool run( string& outReply );") == {}, "a declaration is not counted")
-    baseline = {"Source/Engine/A.cpp": {"std-optional": 2}, "Source/Engine/Old.cpp": {"out-error": 1}}
-    core_exemptions = {"Source/Core/Foundation/Expected.h": {"std-optional": "bridge"}}
+    baseline = Baseline("t.json", {"_comment": "테스트", "_files": {"Source/Engine/A.cpp": {"std-optional": 2}, "Source/Engine/Old.cpp": {"out-error": 1}}})
+    core_exemptions = ExceptionTable.make(RULE_ID, _coreExemptions={"Source/Core/Foundation/Expected.h|std-optional": "bridge"})
     expect(find_problems({"Source/Engine/A.cpp": {"std-optional": 2}}, baseline, ["Source/Engine/A.cpp"], {}, core_exemptions) == [], "equal counts pass")
     expect(len(find_problems({"Source/Engine/A.cpp": {"std-optional": 3}}, baseline, ["Source/Engine/A.cpp"], {}, core_exemptions)) == 1, "a grown count fails")
     expect(len(find_problems({"Source/Engine/A.cpp": {"std-optional": 1}}, baseline, ["Source/Engine/A.cpp"], {}, core_exemptions)) == 1, "a shrunk count asks to lower the baseline")
     expect(len(find_problems({"Source/Engine/New.cpp": {"out-error": 1}}, baseline, ["Source/Engine/New.cpp"], {}, core_exemptions)) == 1, "a new file starts at zero")
     expect(len(find_problems({"Source/Engine/A.cpp": {"std-optional": 2, "out-error-pointer": 1}}, baseline, ["Source/Engine/A.cpp"], {}, core_exemptions)) == 1, "a new pointer out-error fails")
     expect(find_problems({"Source/Engine/Moved.cpp": {"out-error": 1}}, baseline, ["Source/Engine/Moved.cpp"], {"Source/Engine/Moved.cpp": "Source/Engine/Old.cpp"}, core_exemptions) == [], "a moved file keeps its baseline")
-    expect(len(find_problems({"Source/Core/X.h": {"std-optional": 1}}, {"Source/Core/X.h": {"std-optional": 1}}, ["Source/Core/X.h"], {}, core_exemptions)) == 1, "Core must be zero even with a baseline")
-    expect(find_problems({"Source/Core/Foundation/Expected.h": {"std-optional": 4}}, {}, ["Source/Core/Foundation/Expected.h"], {}, core_exemptions) == [], "an exempt kind in Core passes")
-    expect(len(find_problems({"Source/Core/Foundation/Expected.h": {"out-error": 1}}, {}, ["Source/Core/Foundation/Expected.h"], {}, core_exemptions)) == 1, "a Core exemption covers only its kind")
-    lowered = lower_baseline({"Source/Engine/A.cpp": {"std-optional": 2, "out-error": 1}, "Source/Engine/Gone.cpp": {"out-error": 1}}, {"Source/Engine/A.cpp": {"std-optional": 3}}, {"Source/Engine/A.cpp"})
-    expect(lowered == {"Source/Engine/A.cpp": {"std-optional": 2}}, f"--ratchet lowers only and drops missing files: {lowered}")
+    expect(len(find_problems({"Source/Core/X.h": {"std-optional": 1}}, Baseline("t.json", {"_comment": "테스트", "_files": {"Source/Core/X.h": {"std-optional": 1}}}), ["Source/Core/X.h"], {}, core_exemptions)) == 1, "Core must be zero even with a baseline")
+    expect(find_problems({"Source/Core/Foundation/Expected.h": {"std-optional": 4}}, baseline, ["Source/Core/Foundation/Expected.h"], {}, core_exemptions) == [], "an exempt kind in Core passes")
+    expect(len(find_problems({"Source/Core/Foundation/Expected.h": {"out-error": 1}}, baseline, ["Source/Core/Foundation/Expected.h"], {}, core_exemptions)) == 1, "a Core exemption covers only its kind")
+    # 래칫 자체(늘면 · 줄면 · 옮긴 파일 · --ratchet)는 표 형식 테스트(Scripts/lint/tests/test_rule_tables.py)가 본다.
     print(f"[ResultTypes] self-check {'OK' if failures == 0 else 'FAIL'}")
     return ExitCode.PASSED if failures == 0 else ExitCode.VIOLATION
 
@@ -249,34 +211,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         list_file = list_source_files(project_root) if args.all else get_modified_cpp_files(project_root)
         list_relative = [path.relative_to(project_root).as_posix() for path in list_file]
         list_source = [path for path, relative in zip(list_file, list_relative) if is_source_file(relative)]
-        baseline = read_baseline(project_root)
-        list_problem = find_problems(count_files(project_root, list_source), baseline, [relative for relative in list_relative if is_source_file(relative)], {}, read_core_exemptions(project_root))
+        baseline = Baseline.load(project_root, RULE_ID)
+        list_problem = find_problems(count_files(project_root, list_source), baseline, [relative for relative in list_relative if is_source_file(relative)], {}, load_core_exemptions(project_root))
         if args.all:
-            set_existing = set(list_relative)
-            list_problem += [f"{path}: 없는 파일의 기준선 — `--ratchet` 으로 지운다" for path in sorted(baseline) if path not in set_existing]
+            list_problem += baseline.list_missing(set(list_relative))
         for problem in list_problem:
             print(f"  - {problem}")
         print(f"[ResultTypes] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
         return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
     if args.ratchet or args.accept is not None:
-        list_file = list_source_files(project_root)
-        list_existing = {path.relative_to(project_root).as_posix() for path in list_file}
-        baseline_path = project_root / BASELINE_PATH
-        baseline = read_baseline(project_root) if baseline_path.is_file() else {}
-        if args.accept is not None:
-            list_accept = [Path(path).resolve() for path in args.accept]
-            actual = count_files(project_root, [path for path in list_accept if path.is_file()])
-            for path in list_accept:
-                relative = path.relative_to(project_root).as_posix()
-                if relative.startswith(STRICT_PREFIX):
-                    print(f"[ResultTypes] {relative}: Core 는 기준선이 없다(0 이어야 한다) — 받지 않는다")
-                    return ExitCode.VIOLATION
-                print(f"[ResultTypes] accept {relative}: {baseline.get(relative, {})} -> {actual.get(relative, {})}")
-                baseline[relative] = actual.get(relative, {})
-        else:
-            baseline = lower_baseline(baseline, count_files(project_root, list_file), list_existing)
-        write_baseline(project_root, baseline)
-        print(f"[ResultTypes] baseline -> {BASELINE_PATH}")
+        for path in args.accept or ():
+            relative = Path(path).resolve().relative_to(project_root).as_posix()
+            if relative.startswith(STRICT_PREFIX):
+                print(f"[ResultTypes] {relative}: Core 는 기준선이 없다(0 이어야 한다) — 받지 않는다")
+                return ExitCode.VIOLATION
+        Baseline.load(project_root, RULE_ID).update(project_root, "ResultTypes", list_source_files(project_root), lambda list_file: count_files(project_root, list_file), args.accept)
         return ExitCode.PASSED
 
     print_summary(count_files(project_root, list_source_files(project_root)))

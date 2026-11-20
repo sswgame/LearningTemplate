@@ -41,14 +41,13 @@ Scripts/lint/common_shapes.py
    글자 → FNV → 샤드 뮤텍스를 지난다 — 함수 안 `static const hashed_string` 이나 데이터 칸으로 옮긴다(`.cpp` 만 본다). 예외 열쇠는 `경로|함수`.
    형식으로 못 막는 까닭: 리터럴 암시적 생성은 정상 코드이고, 자리마다 한 번 만드는 형식(C++20 고정 문자열 템플릿 인자)은 표준이 C++17 이라 미뤘다(2026-11-12).
 
-예외는 `Config/Rules/Lint/CommonShapes.json` 에 까닭과 함께 적는다. 낡은 예외(더는 없는 자리)도 위반이다.
+예외는 `Config/Rules/Lint/CommonShapes.json` 의 판정 칸(`_<판정>`)에 까닭과 함께 적는다. 까닭 빈 줄 · 낡은 예외(더는 없는 자리)는 표 형식(`rule_tables`)이 낸다.
 `py -3 -m Scripts lint common-shapes [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from pathlib import Path
@@ -61,9 +60,11 @@ from common.paths import get_project_root  # noqa: E402
 from lint.cpp_shape import is_target, strip_code  # noqa: E402
 from lint.function_spans import find_closing_brace, find_function_spans, run_self_check as run_function_spans_self_check  # noqa: E402
 from lint.lint_scope import LintScope, make_whole_scope, read_texts  # noqa: E402
-from lint.rule_tables import get_table_path  # noqa: E402
+from lint.rule_tables import ExceptionTable  # noqa: E402
 
-CONFIG_PATH = get_table_path("common-shapes")
+RULE_ID = "common-shapes"
+SECTIONS = ("_enumNameSwitch", "_firstComponent", "_oneLineValidator", "_savedText", "_makeDelta", "_assetEntrance", "_engineChildCommand", "_nameHashKey",
+            "_editorContentScan", "_statePair", "_frameIntern")   # 판정(`collect_violations` 의 규칙)마다 예외 칸 하나
 EXTENSIONS = (".h", ".cpp", ".inl")
 SKIP_PARTS = ("ThirdParty", "Tests")
 COMMENT_PATTERN = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
@@ -181,21 +182,13 @@ def collect_violations(path: str, text: str) -> list[tuple[str, str, str]]:
     return list_violation
 
 
-def find_problems(list_source: Iterable[tuple[str, str]], exceptions: dict, whole_repo: bool = True) -> list[str]:
+def find_problems(list_source: Iterable[tuple[str, str]], table: ExceptionTable, whole_repo: bool = True) -> list[str]:
     list_problem: list[str] = []
-    seen_key: set[tuple[str, str]] = set()
     for path, text in list_source:
         for rule, key, message in collect_violations(path, text):
-            seen_key.add(("_" + rule, key))
-            if key not in exceptions.get("_" + rule, {}):
-                list_problem.append(f"{path}: {message} (예외는 {CONFIG_PATH} 의 _{rule} 에 '{key}' 와 까닭)")
-    for rule, table in exceptions.items() if whole_repo else ():   # 낡은 예외는 저장소 전체를 봐야 안다
-        if rule == "_comment":
-            continue
-        for key in table:
-            if (rule, key) not in seen_key:
-                list_problem.append(f"{CONFIG_PATH}: 낡은 예외 {rule} '{key}' — 그 모양이 더는 없다, 지운다")
-    return list_problem
+            if not table.allows("_" + rule, key):
+                list_problem.append(f"{path}: {message} (예외는 {table.path} 의 _{rule} 에 '{key}' 와 까닭)")
+    return list_problem + table.list_problems(whole_repo)
 
 
 def read_sources(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
@@ -203,8 +196,11 @@ def read_sources(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
 
 
 def check_common_shapes(project_root: Path, scope: LintScope) -> list[str]:
-    exceptions = json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))
-    return find_problems(read_sources(project_root, scope), exceptions, scope.whole_repo)
+    return find_problems(read_sources(project_root, scope), ExceptionTable.load(project_root, RULE_ID, SECTIONS), scope.whole_repo)
+
+
+def make_table(**sections: dict[str, str]) -> ExceptionTable:
+    return ExceptionTable.make(RULE_ID, **{**{section: {} for section in SECTIONS}, **sections})
 
 
 def run_self_check() -> None:
@@ -215,10 +211,10 @@ def run_self_check() -> None:
     assert find_same_spelling_switches(same) == ["Kind"]
     assert find_same_spelling_switches(other) == []
     assert find_same_spelling_switches(filtered) == []
-    assert len(find_problems([("Source/A/a.cpp", same)], {})) == 1
-    assert find_problems([("Source/Core/a.cpp", same)], {}) == []
-    assert find_problems([("Source/A/a.cpp", same)], {"_enumNameSwitch": {"Source/A/a.cpp|Kind": "이유"}}) == []
-    stale = find_problems([("Source/A/a.cpp", "int x;")], {"_enumNameSwitch": {"Source/A/a.cpp|Kind": "이유"}})
+    assert len(find_problems([("Source/A/a.cpp", same)], make_table())) == 1
+    assert find_problems([("Source/Core/a.cpp", same)], make_table()) == []
+    assert find_problems([("Source/A/a.cpp", same)], make_table(_enumNameSwitch={"Source/A/a.cpp|Kind": "이유"})) == []
+    stale = find_problems([("Source/A/a.cpp", "int x;")], make_table(_enumNameSwitch={"Source/A/a.cpp|Kind": "이유"}))
     assert len(stale) == 1 and "낡은" in stale[0], stale
     validator = "static expected<void> validateX( const AutomationStep& step )\n{\n    MyParams params;\n    return step.readProperties( params );\n}"
     assert [v[0] for v in collect_violations("Source/A/a.cpp", validator)] == ["oneLineValidator"]
@@ -260,7 +256,7 @@ def run_self_check() -> None:
     # 프레임 함수 안의 리터럴 이름(옛 frame-intern)
     tick = 'void Foo::onTick( float32 deltaTime )\n{\n    use( hashed_string( "A" ) );\n}\n'
     assert [v[1] for v in collect_violations("Source/A/a.cpp", tick)] == ["Source/A/a.cpp|onTick"], "틱 안의 리터럴은 잡아야 한다"
-    assert find_problems([("Source/A/a.cpp", tick)], {"_frameIntern": {"Source/A/a.cpp|onTick": "까닭"}}) == [], "예외는 통과해야 한다"
+    assert find_problems([("Source/A/a.cpp", tick)], make_table(_frameIntern={"Source/A/a.cpp|onTick": "까닭"})) == [], "예외는 통과해야 한다"
     assert collect_violations("Source/A/a.h", tick) == [], "머리는 보지 않는다"
     clean = 'void Foo::onTick( float32 deltaTime )\n{\n    static const hashed_string s_name( "A" );\n    use( s_name );\n}\nvoid Foo::load()\n{\n    use( hashed_string( "B" ) );\n}\n'
     assert collect_violations("Source/A/a.cpp", clean) == [], "static 과 프레임 밖 함수는 통과해야 한다"

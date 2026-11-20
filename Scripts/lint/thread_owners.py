@@ -3,7 +3,7 @@
 """
 Scripts/lint/thread_owners.py
 
-엔진 스레드 형식(`sw::thread` · `DedicatedWorker`)을 거치지 않고 표준 · OS 함수로 스레드를 바로 만드는 파일을 허용 목록(`Config/Rules/Lint/ThreadOwners.json`)과 맞춘다.
+엔진 스레드 형식(`sw::thread` · `DedicatedWorker`)을 거치지 않고 표준 · OS 함수로 스레드를 바로 만드는 파일을 허용 목록(`Config/Rules/Lint/ThreadOwners.json` 의 `_owners`)과 맞춘다.
 
 **왜 린트인가.** 엔진 스레드를 누가 만드는지는 형식이 막는다 — `sw::thread` 생성자와 `DedicatedWorker::start` 는 열쇠(`ThreadCreationKey`,
 `Core/Concurrency/thread.h`)를 받고 열쇠는 그 헤더의 친구(주인)만 만든다. 남은 틈은 표준 · OS 이름(`std::thread` · `std::async` · `CreateThread` ·
@@ -11,7 +11,7 @@ Scripts/lint/thread_owners.py
 뒤에 오는 표준 헤더(`<thread>` 의 gthr)까지 멈춘다. 그래서 이 모양만 목록과 맞춘다.
 
 - 모양: `std::thread`(형식으로 쓰는 곳 — `std::thread::id` 는 아니다) · `std::jthread` · `std::async` · `CreateThread` · `_beginthreadex` · `pthread_create`. 주석 · 문자열은 보지 않는다.
-- 목록 항목 `_path` 는 확장자 없는 경로(`.h` · `.cpp` 둘 다 맞는다)다. 더는 그 모양을 쓰지 않는 항목은 낡은 예외로 멈춘다.
+- 목록의 키는 확장자 없는 경로(`.h` · `.cpp` 둘 다 맞는다)다. 까닭 빈 줄 · 더는 그 모양을 쓰지 않는 줄은 표 형식(`rule_tables.ExceptionTable`)이 낸다.
 - 테스트(`/Tests/`)는 경합을 일부러 만들므로 보지 않는다.
 
 `py -3 -m Scripts lint thread-owners [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
@@ -20,7 +20,6 @@ Scripts/lint/thread_owners.py
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from pathlib import Path
@@ -32,9 +31,9 @@ from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.lint_scope import LintScope, make_whole_scope, read_texts  # noqa: E402
 from lint.cpp_shape import strip_code  # noqa: E402
-from lint.rule_tables import get_table_path  # noqa: E402
+from lint.rule_tables import ExceptionTable  # noqa: E402
 
-CONFIG_PATH = get_table_path("thread-owners")
+RULE_ID = "thread-owners"
 THREAD_SHAPE = re.compile(r"\bstd::thread\b(?!\s*::)|\bstd::jthread\b|\bstd::async\s*\(|\bCreateThread\s*\(|\b_beginthreadex\s*\(|\bpthread_create\s*\(")
 PREFILTER = ("std::thread", "std::jthread", "std::async", "CreateThread", "_beginthreadex", "pthread_create")
 
@@ -52,55 +51,42 @@ def to_owner_key(relative: str) -> str:
     return relative.rsplit(".", 1)[0]
 
 
-def find_problems(list_source: Iterable[tuple[str, str]], set_owner: frozenset[str], whole_repo: bool = True) -> list[str]:
+def find_problems(list_source: Iterable[tuple[str, str]], table: ExceptionTable, whole_repo: bool = True) -> list[str]:
     list_problem: list[str] = []
-    set_used_owner: set[str] = set()
     for relative, text in list_source:
         list_line = find_thread_lines(text)
-        if not list_line:
-            continue
-        owner = to_owner_key(relative)
-        if owner in set_owner:
-            set_used_owner.add(owner)
+        if not list_line or table.allows("_owners", to_owner_key(relative)):
             continue
         list_problem.append(f"{relative}:{list_line[0]}: 표준 · OS 함수로 스레드를 바로 만든다 — 계산 · 짧은 IO 는 `engine::runParallelByCost` · 태스크 · 스테이지로,"
-                           f" OS 를 막고 기다려야 하면 `sw::thread`(주인은 `ThreadCreationKey` 의 친구)로 만든다(그래도 표준 형식이 꼭 있어야 하면 {CONFIG_PATH} 에 까닭과 함께)")
-    for owner in sorted(set_owner - set_used_owner) if whole_repo else ():   # 낡은 항목은 저장소 전체를 봐야 안다
-        list_problem.append(f"{CONFIG_PATH}: `{owner}` 는 더는 스레드를 만들지 않는다 — 목록에서 뺀다")
-    return list_problem
+                           f" OS 를 막고 기다려야 하면 `sw::thread`(주인은 `ThreadCreationKey` 의 친구)로 만든다(그래도 표준 형식이 꼭 있어야 하면 {table.hint('_owners')})")
+    return list_problem + table.list_problems(whole_repo)
 
 
 def read_sources(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
     return read_texts(project_root, scope.select(("Source",), (".h", ".cpp"), ("Tests",)))
 
 
-def load_owners(project_root: Path) -> frozenset[str]:
-    """허용 목록입니다. 없거나 까닭이 빈 항목이 있으면 예외로 멈춘다(빈 목록으로 대신하지 않는다)."""
-    data = json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))
-    for entry in data["_listOwner"]:
-        if not entry["_reason"].strip():
-            raise ValueError(f"{CONFIG_PATH}: `{entry['_path']}` 에 까닭이 없다")
-    return frozenset(entry["_path"] for entry in data["_listOwner"])
-
-
 def check_thread_owners(project_root: Path, scope: LintScope) -> list[str]:
-    return find_problems(read_sources(project_root, scope), load_owners(project_root), scope.whole_repo)
+    return find_problems(read_sources(project_root, scope), ExceptionTable.load(project_root, RULE_ID, ("_owners",)), scope.whole_repo)
 
 
 def run_self_check() -> None:
+    def owners(*list_owner: str) -> ExceptionTable:
+        return ExceptionTable.make(RULE_ID, _owners={owner: "까닭" for owner in list_owner})
+
     bad = "void A::start()\n{\n    std::thread worker( &A::run, this );\n}\n"
-    assert len(find_problems([("Source/A.cpp", bad)], frozenset())) == 1, "목록 밖 스레드는 잡아야 한다"
-    assert find_problems([("Source/A.cpp", bad)], frozenset({"Source/A"})) == [], "목록의 주인은 통과해야 한다"
+    assert len(find_problems([("Source/A.cpp", bad)], owners())) == 1, "목록 밖 스레드는 잡아야 한다"
+    assert find_problems([("Source/A.cpp", bad)], owners("Source/A")) == [], "목록의 주인은 통과해야 한다"
     keyed = "void A::start()\n{\n    _thread = sw::thread( ThreadCreationKey{}, &A::run, this );\n}\n"
-    assert find_problems([("Source/A.cpp", keyed)], frozenset()) == [], "엔진 스레드 형식은 열쇠가 막는다(린트가 보지 않는다)"
+    assert find_problems([("Source/A.cpp", keyed)], owners()) == [], "엔진 스레드 형식은 열쇠가 막는다(린트가 보지 않는다)"
     raw = "HANDLE h = CreateThread( nullptr, 0, &run, nullptr, 0, nullptr );\n"
-    assert len(find_problems([("Source/A.cpp", raw)], frozenset())) == 1, "OS 함수도 스레드를 만든다"
+    assert len(find_problems([("Source/A.cpp", raw)], owners())) == 1, "OS 함수도 스레드를 만든다"
     identity = "bool A::isOwner() const { return _owner == std::this_thread::get_id(); }\natomic<std::thread::id> _owner;\n"
-    assert find_problems([("Source/A.cpp", identity)], frozenset()) == [], "스레드 번호만 쓰는 곳은 스레드를 만들지 않는다"
+    assert find_problems([("Source/A.cpp", identity)], owners()) == [], "스레드 번호만 쓰는 곳은 스레드를 만들지 않는다"
     comment = "// std::thread( &A::run, this ) 는 쓰지 않는다\nconst char* p = \"std::thread\";\n"
-    assert find_problems([("Source/A.cpp", comment)], frozenset()) == [], "주석 · 문자열은 통과해야 한다"
-    stale = find_problems([("Source/A.cpp", "void f();\n")], frozenset({"Source/A"}))
-    assert len(stale) == 1 and "더는" in stale[0], "더는 스레드를 만들지 않는 항목은 낡은 예외다"
+    assert find_problems([("Source/A.cpp", comment)], owners()) == [], "주석 · 문자열은 통과해야 한다"
+    stale = find_problems([("Source/A.cpp", "void f();\n")], owners("Source/A"))
+    assert len(stale) == 1 and "낡은 예외 _owners 'Source/A'" in stale[0], "더는 스레드를 만들지 않는 항목은 낡은 예외다"
 
 
 def main(argv: Sequence[str] | None = None) -> int:

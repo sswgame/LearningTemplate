@@ -90,6 +90,11 @@ class ExceptionTable:
         path = get_table_path(rule_id)
         return cls(path, read_table(project_root, path), sections)
 
+    @classmethod
+    def make(cls, rule_id: str, **sections: Mapping[str, object]) -> "ExceptionTable":
+        """파일 없이 만든 표 — 규칙 모듈의 판정 테스트가 쓴다."""
+        return cls(get_table_path(rule_id), {"_comment": "테스트 표", **sections}, tuple(sections))
+
     def get(self, section: str) -> dict[str, object]:
         return self._map_section[section]
 

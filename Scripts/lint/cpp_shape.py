@@ -41,7 +41,6 @@ from __future__ import annotations
 
 import argparse
 import functools
-import json
 import re
 import sys
 from pathlib import Path
@@ -51,7 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from lint.lint_scope import LintScope, make_file_scope, make_whole_scope, read_text  # noqa: E402
 from lint.parallel import flat_map_in_processes  # noqa: E402
-from lint.rule_tables import get_table_path  # noqa: E402
+from lint.rule_tables import ExceptionTable, get_table_path, read_rule_table  # noqa: E402
 
 
 SKIP_FOLDERS = ("ThirdParty", "Generated", ".gen.")
@@ -60,7 +59,8 @@ ONLINE_KIT_FOLDER = "Source/GameFramework/Kits/Feature/Online/"
 ONLINE_CORE_FOLDER = "Source/GameFramework/Kits/Feature/Online/OnlineCore/"  # 프로토콜 표의 기반(OnlineProtocolService)이 사는 곳 — 기반은 인터페이스를 잇는다
 ONLINE_INTERFACE_PATTERN = re.compile(r"public\s+(IOnlineServerService|IOnlineClientService)\b")
 ACCESS_KEYWORDS = ("public", "protected", "private")
-EXCEPTIONS_PATH = get_table_path("cpp-shape")
+RULE_ID = "cpp-shape"
+EXCEPTION_SECTIONS = ("_stateMutator", "_multipleBase", "_staticOwner")
 UNCOUNTED_BASES = ("enable_shared_from_this",)  # 표준 믹스인 — 상속 계층이 아니다
 
 
@@ -519,7 +519,7 @@ def collect_static_only_types(code: str) -> tuple[dict[str, tuple[int, list[str]
     return static_only, owners
 
 
-def check_static_owner(code: str, relative: str, exceptions: dict[str, str]) -> list[tuple[int, str]]:
+def check_static_owner(code: str, relative: str, table: ExceptionTable) -> list[tuple[int, str]]:
     """
     주인 우선(`docs/agents/Helpers.md`): 헤더의 static 함수만 든 타입이 같은 헤더의 타입 하나를 함수 서명 절반 이상에서 받으면 그 함수들은 그 타입의 (static) 멤버다.
     이름(`XUtil` · `XScanner` · `XRules` …)은 보지 않는다 — 2026-11-08 `MarkupTagScanner`(데이터 `MarkupToken` 옆)처럼 Util 이 아닌 이름으로 같은 모양이 남았다.
@@ -531,7 +531,7 @@ def check_static_owner(code: str, relative: str, exceptions: dict[str, str]) -> 
     static_only, owners = collect_static_only_types(code)
     problems = []
     for name, (line, statics) in static_only.items():
-        if f"{relative}|{name}" in exceptions:
+        if table.allows("_staticOwner", f"{relative}|{name}"):
             continue
         counts: dict[str, int] = {}
         for signature in statics:
@@ -542,14 +542,8 @@ def check_static_owner(code: str, relative: str, exceptions: dict[str, str]) -> 
         owner, count = max(sorted(counts.items()), key=lambda item: item[1])   # 같은 수면 이름 순 첫 것 — 집합 순서(해시)로 메시지가 실행마다 바뀌었다
         if count * 2 >= len(statics):
             problems.append((line, f"`{name}` 는 static 함수만 들고 그 함수 대부분({count}/{len(statics)})이 같은 헤더의 `{owner}` 를 다룬다 — `{owner}` 의 (static) 멤버로 합친다"
-                                   f"(Helpers.md 주인 우선). 주인이 정말 없으면 {EXCEPTIONS_PATH} 의 _staticOwner 에 까닭과 함께 적는다"))
+                                   f"(Helpers.md 주인 우선). 주인이 정말 없으면 {table.hint('_staticOwner')} 적는다"))
     return problems
-
-
-@functools.lru_cache(maxsize=1)
-def load_static_owner_exceptions(project_root: str) -> dict[str, str]:
-    """`경로|타입` → 까닭(주인 우선 예외). 파일이나 칸이 없으면 오류로 멈춘다."""
-    return json.loads((Path(project_root) / EXCEPTIONS_PATH).read_text(encoding="utf-8"))["_staticOwner"]
 
 
 INCLUDE_LINE = re.compile(r'^[ \t]*#[ \t]*include[ \t]*[<"]([^>"]+)[>"]', re.M)
@@ -629,18 +623,23 @@ def check_net_message_table(code: str, relative: str) -> list[tuple[int, str]]:
 
 
 @functools.lru_cache(maxsize=1)
-def load_multiple_base_exceptions(project_root: str) -> dict[str, str]:
-    """`경로|클래스` → 까닭. 파일이 없으면 오류로 멈춘다(예외 목록은 필수 데이터다)."""
-    return json.loads((Path(project_root) / EXCEPTIONS_PATH).read_text(encoding="utf-8"))["_multipleBase"]
+def load_rules(project_root: str) -> tuple[ExceptionTable, int]:
+    """예외 표(`경로|타입` → 까닭 칸 셋)와 규칙 10 의 문턱 `_stateMutatorMinFunctions`. 프로세스마다 한 번 읽는다 — 파일 · 칸이 없으면 멈춘다."""
+    data = read_rule_table(Path(project_root), RULE_ID)
+    return ExceptionTable(get_table_path(RULE_ID), data, EXCEPTION_SECTIONS), int(data["_stateMutatorMinFunctions"])
 
 
-def check_multiple_bases(info: ClassInfo, relative: str, exceptions: dict[str, str]) -> list[tuple[int, str]]:
+def count_bases(info: ClassInfo) -> list[str]:
+    return [base for base in info.bases if not base.endswith(UNCOUNTED_BASES)]
+
+
+def check_multiple_bases(info: ClassInfo, relative: str, table: ExceptionTable) -> list[tuple[int, str]]:
     """기반이 둘 이상인 클래스를 찾는다 — 서브시스템 · 구현은 창구를 멤버로 들어 건다(`exposeMember` · `SW_MODULE_PART`)."""
-    counted = [base for base in info.bases if not base.endswith(UNCOUNTED_BASES)]
-    if len(counted) < 2 or f"{relative}|{info.name}" in exceptions:
+    counted = count_bases(info)
+    if len(counted) < 2 or table.allows("_multipleBase", f"{relative}|{info.name}"):
         return []
     return [(info.line, f"`{info.name}` 의 기반이 {len(counted)} 개다({', '.join(counted)}) — 기반은 하나다. 창구 인터페이스는 구현을 멤버로 들어 건다"
-                        f"(`SubsystemScope::exposeMember` · `SW_MODULE_PART`). 불가피하면 {EXCEPTIONS_PATH} 의 _multipleBase 에 까닭과 함께 적는다")]
+                        f"(`SubsystemScope::exposeMember` · `SW_MODULE_PART`). 불가피하면 {table.hint('_multipleBase')} 적는다")]
 
 
 FIELD_MUTATION = (r"\s*(?:\.|->)\s*(?:{fields})\b\s*(?:\[[^\]]*\]\s*)*(?:[-+*/%|&^]?=(?!=)|\+\+|--|"
@@ -692,55 +691,37 @@ def find_state_mutators(code: str) -> dict[str, tuple[int, str, int]]:
     return result
 
 
-def check_state_mutators(code: str, relative: str, rules: dict) -> list[tuple[int, str]]:
+def check_state_mutators(code: str, relative: str, minimum: int, table: ExceptionTable) -> list[tuple[int, str]]:
     """
     상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/Helpers.md` 주인 우선): `.cpp` 의 상태 구조체 공개 칸을 따로 선 `…Internal` 의 static 함수 여럿이
     차례로 바꾸면, 상태를 비공개 칸 + 그 함수들을 멤버로 든 클래스로 합친다(`TerrainBrushToolState`). 규칙 4 는 헤더만 보아 이 모양이 `.cpp` 에 남았다(2026-11-09).
-    형식으로는 막을 수 없다(어느 함수가 어느 상태의 일인지 C++ 이 모른다). 문턱(`_stateMutatorMinFunctions`)과 예외(`_stateMutator`, `경로|타입` → 까닭)는 데이터다.
+    형식으로는 막을 수 없다(어느 함수가 어느 상태의 일인지 C++ 이 모른다). 문턱(`_stateMutatorMinFunctions` → @p minimum)과 예외(`_stateMutator`, `경로|타입` → 까닭)는 데이터다.
     """
     if not relative.endswith(".cpp"):
         return []
     problems = []
     for state, (line, helper, count) in find_state_mutators(code).items():
-        if count >= rules["stateMutatorMinFunctions"] and f"{relative}|{state}" not in rules["stateMutator"]:
+        if count >= minimum and not table.allows("_stateMutator", f"{relative}|{state}"):
             problems.append((line, f"`{state}` 의 공개 칸을 `{helper}` 의 static 함수 {count} 개가 바꾼다 — 상태와 그것을 바꾸는 논리는 한 타입이다: 칸을 비공개로, 그 함수들을 `{state}` 의 멤버로"
-                                   f"(Helpers.md). 불가피하면 {EXCEPTIONS_PATH} 의 _stateMutator 에 까닭과 함께 적는다"))
+                                   f"(Helpers.md). 불가피하면 {table.hint('_stateMutator')} 적는다"))
     return problems
 
 
-@functools.lru_cache(maxsize=1)
-def load_state_mutator_rules(project_root: str) -> dict:
-    """규칙 10 의 문턱 · 예외입니다. 칸이 없으면 오류로 멈춘다."""
-    data = json.loads((Path(project_root) / EXCEPTIONS_PATH).read_text(encoding="utf-8"))
-    return {"stateMutatorMinFunctions": data["_stateMutatorMinFunctions"], "stateMutator": data["_stateMutator"]}
-
-
-def find_stale_state_mutator_exceptions(project_root: Path) -> list[str]:
-    """더는 걸리지 않는(또는 사라진) 규칙 10 예외 자리 — 전체 실행에서만 센다."""
-    rules = load_state_mutator_rules(str(project_root))
-    list_problem = []
-    for key in rules["stateMutator"]:
+def mark_live_exceptions(project_root: Path, table: ExceptionTable, minimum: int) -> None:
+    """규칙 10 · 기반 하나 예외 가운데 아직 걸리는 자리를 쓴 것으로 적는다 — 파일마다 도는 판정은 다른 프로세스라 쓴 키가 돌아오지 않아,
+    전체 실행에서 그 자리만 다시 본다. 쓰이지 않은 줄은 표 형식이 낡은 예외로 낸다."""
+    for key in table.get("_stateMutator"):
         relative, state = key.split("|", 1)
         path = project_root / relative
         hit = find_state_mutators(strip_code(path.read_text(encoding="utf-8-sig", errors="ignore"))).get(state) if path.exists() else None
-        if hit is None or hit[2] < rules["stateMutatorMinFunctions"]:
-            list_problem.append(f"{EXCEPTIONS_PATH}: 예외 `{key}` 는 더는 걸리지 않는다 — 줄을 지운다")
-    return list_problem
-
-
-def find_stale_multiple_base_exceptions(project_root: Path) -> list[str]:
-    """더는 다중 기반이 아닌(또는 사라진) 예외 자리 — 전체 실행에서만 센다."""
-    list_problem = []
-    for key in load_multiple_base_exceptions(str(project_root)):
+        if hit is not None and hit[2] >= minimum:
+            table.mark_used("_stateMutator", key)
+    for key in table.get("_multipleBase"):
         relative, class_name = key.split("|", 1)
         path = project_root / relative
-        found = False
-        if path.exists():
-            code = strip_code(path.read_text(encoding="utf-8-sig", errors="ignore"))
-            found = any(info.name == class_name and len([b for b in info.bases if not b.endswith(UNCOUNTED_BASES)]) >= 2 for info in collect_classes(code))
-        if not found:
-            list_problem.append(f"{EXCEPTIONS_PATH}: 예외 `{key}` 는 더는 다중 기반이 아니다 — 줄을 지운다")
-    return list_problem
+        code = strip_code(path.read_text(encoding="utf-8-sig", errors="ignore")) if path.exists() else ""
+        if any(info.name == class_name and len(count_bases(info)) >= 2 for info in collect_classes(code)):
+            table.mark_used("_multipleBase", key)
 
 
 def inspect_file(path: Path, relative: str) -> list[str]:
@@ -750,16 +731,16 @@ def inspect_file(path: Path, relative: str) -> list[str]:
     code = strip_code(raw)
     raw_lines = raw.splitlines()
     list_problem: list[tuple[int, str]] = []
-    exceptions = load_multiple_base_exceptions(str(Path(__file__).resolve().parents[2]))
+    table, minimum = load_rules(str(Path(__file__).resolve().parents[2]))
     for info in collect_classes(code):
-        list_problem += check_multiple_bases(info, relative, exceptions)
+        list_problem += check_multiple_bases(info, relative, table)
         list_problem += check_declaration_order(info)
         list_problem += check_bool_flags(info, raw_lines)
         list_problem += check_bit_field_runs(info, raw_lines)
     if relative.endswith(".cpp"):
         list_problem += check_anonymous_namespaces(code)
-        list_problem += check_state_mutators(code, relative, load_state_mutator_rules(str(Path(__file__).resolve().parents[2])))
-    list_problem += check_static_owner(code, relative, load_static_owner_exceptions(str(Path(__file__).resolve().parents[2])))
+        list_problem += check_state_mutators(code, relative, minimum, table)
+    list_problem += check_static_owner(code, relative, table)
     list_problem += check_includes_inside_braces(raw, code)
     list_problem += check_shared_temp_in_tests(code, relative)
     list_problem += check_manual_depletion(code, relative)
@@ -787,9 +768,11 @@ def check_cpp_shape(project_root: Path, scope: LintScope) -> list[str]:
     """scope 가운데 Source 의 C++ 파일을 보고 어긋남을 `경로:줄: 설명` 으로 돌려준다. 파일마다 정규식이 오래 돌아 프로세스로 나눈다.
     저장소 전체일 때만 더는 없는 예외 자리를 센다(바뀐 파일만 보고 "쓰이지 않는다" 고 말할 수 없다)."""
     list_violation = flat_map_in_processes(functools.partial(inspect_listed_file, project_root), scope.list_absolute(project_root, (".h", ".cpp")))
+    data = read_rule_table(project_root, RULE_ID)   # 프로세스 캐시(`load_rules`)와 따로 — 쓴 키를 이 실행에서만 센다
+    table = ExceptionTable(get_table_path(RULE_ID), data, EXCEPTION_SECTIONS)
     if scope.whole_repo:
-        list_violation += find_stale_multiple_base_exceptions(project_root) + find_stale_state_mutator_exceptions(project_root)
-    return list_violation
+        mark_live_exceptions(project_root, table, int(data["_stateMutatorMinFunctions"]))
+    return list_violation + table.list_problems(scope.whole_repo, stale_sections=("_stateMutator", "_multipleBase"))   # 주인 우선 예외는 낡은 줄을 세지 않는다(예전 판정 그대로)
 
 
 def run_self_check() -> int:
@@ -802,22 +785,22 @@ def run_self_check() -> int:
             print(f"[CppShape] self-check: {message}")
             failures += 1
 
-    rules = {"stateMutatorMinFunctions": 2, "stateMutator": {}}
+    table = ExceptionTable.make(RULE_ID, _stateMutator={}, _multipleBase={}, _staticOwner={})
     helper = ("struct CapState\n{\n    vector<int32> _listGroup;\n    int32 _count = 0;\n};\n"
               "struct FooInternal\n{\n    static void group( CapState& inoutState ) { inoutState._listGroup.push_back( 1 ); }\n"
               "    static void count( CapState* pState ) { pState->_count += 1; }\n"
               "    static int32 read( const CapState& state ) { return state._count; }\n};\n")
-    expect(len(check_state_mutators(helper, "Source/Engine/Foo.cpp", rules)) == 1, "two Internal statics mutating a .cpp state's public fields are flagged")
-    expect(check_state_mutators(helper, "Source/Engine/Foo.h", rules) == [], "headers are rule 4's job")
-    expect(check_state_mutators(helper, "Source/Engine/Foo.cpp", {"stateMutatorMinFunctions": 2, "stateMutator": {"Source/Engine/Foo.cpp|CapState": "why"}}) == [], "an exception passes")
-    expect(check_state_mutators(helper, "Source/Engine/Foo.cpp", {"stateMutatorMinFunctions": 3, "stateMutator": {}}) == [], "the threshold is data")
+    expect(len(check_state_mutators(helper, "Source/Engine/Foo.cpp", 2, table)) == 1, "two Internal statics mutating a .cpp state's public fields are flagged")
+    expect(check_state_mutators(helper, "Source/Engine/Foo.h", 2, table) == [], "headers are rule 4's job")
+    expect(check_state_mutators(helper, "Source/Engine/Foo.cpp", 2, ExceptionTable.make(RULE_ID, _stateMutator={"Source/Engine/Foo.cpp|CapState": "why"})) == [], "an exception passes")
+    expect(check_state_mutators(helper, "Source/Engine/Foo.cpp", 3, table) == [], "the threshold is data")
     readers = helper.replace("CapState& inoutState ) { inoutState._listGroup.push_back( 1 ); }", "const CapState& state ) { use( state._listGroup ); }")
-    expect(check_state_mutators(readers, "Source/Engine/Foo.cpp", rules) == [], "const readers are not counted")
+    expect(check_state_mutators(readers, "Source/Engine/Foo.cpp", 2, table) == [], "const readers are not counted")
     factory = helper.replace("CapState& inoutState ) { inoutState.", "CapState& outState ) { outState.")
-    expect(check_state_mutators(factory, "Source/Engine/Foo.cpp", rules) == [], "an outX fill (parser · factory record) is not counted")
+    expect(check_state_mutators(factory, "Source/Engine/Foo.cpp", 2, table) == [], "an outX fill (parser · factory record) is not counted")
     owned = ("class CapState\n{\npublic:\n    void group();\nprivate:\n    vector<int32> _listGroup;\n};\n"
              "struct FooInternal\n{\n    static void a( CapState& s ) { s._listGroup.clear(); }\n    static void b( CapState& s ) { s._listGroup.clear(); }\n};\n")
-    expect(check_state_mutators(owned, "Source/Engine/Foo.cpp", rules) == [], "private fields are not counted")
+    expect(check_state_mutators(owned, "Source/Engine/Foo.cpp", 2, table) == [], "private fields are not counted")
     stripped = {
         'a // c\nb': 'a     \nb', 'x /* c\nd */ y': 'x     \n     y', 's = "q\\"w";': 's = "    ";', "c = 'x'; it's": "c = ' '; it's",
         'r = R"d(a)"b\n)d";': 'r = R       \n   ;', 'fooR"x"': 'fooR" "', '#define A \\\n  B\nint q;': '           \n   \nint q;',

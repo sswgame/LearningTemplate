@@ -13,7 +13,7 @@ Scripts/lint/mutable_statics.py
 같은 자리). 그 매크로들은 함수 정적을 `#define` 안에 두므로 이 검사에 잡히지 않는다 — 다른 매크로가 같은 일을 하지 않게 매크로 본문은 `MACRO_ALLOWED_FILES` 만 허용한다.
 
 허용(가변이 아니다): `const` · `constexpr` 값(포인터면 포인터 자체가 const), 참조, `thread_local`(스레드 자기 칸 — 공유 상태가 아니다), 함수 선언, `extern` 선언(정의 쪽을 본다).
-예외 표는 까닭(`_why`)이 필수다 — 할당 · 엔진보다 먼저 도는 침입형 등록 머리도 틀(`SW_DEFINE_REGISTRATION_CHAIN`)로 두므로, 정말 프로세스 수명인 바닥(크래시 처리기 버퍼 ·
+예외 표(`_statics` — `경로|이름` → 까닭)는 까닭이 필수다 — 할당 · 엔진보다 먼저 도는 침입형 등록 머리도 틀(`SW_DEFINE_REGISTRATION_CHAIN`)로 두므로, 정말 프로세스 수명인 바닥(크래시 처리기 버퍼 ·
 퓨텍스 버킷 · 플랫폼 진입점의 앱 자리)만 적는다. 항목은 `파일` + `이름`(변수 이름)이고, 이름이 소스에서 사라진 항목도 오류다(표가 썩지 않게).
 
 `py -3 -m Scripts lint mutable-statics [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
@@ -22,7 +22,6 @@ Scripts/lint/mutable_statics.py
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from pathlib import Path
@@ -33,12 +32,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.lint_scope import LintScope, make_whole_scope, read_text  # noqa: E402
-from lint.rule_tables import get_table_path  # noqa: E402
+from lint.rule_tables import ExceptionTable  # noqa: E402
 
 EXTENSIONS = (".h", ".cpp", ".inl")
 # 함수 정적을 매크로 본문에 둘 수 있는 곳(세 틀의 정의 매크로)
 MACRO_ALLOWED_FILES = ("Source/Core/Registry/RegistrationList.h", "Source/Core/Registry/RegistrationSlot.h", "Source/Core/Registry/RegistrationChain.h")
-EXCEPTION_FILE = get_table_path("mutable-statics")
+RULE_ID = "mutable-statics"
 NAMESPACE_HEAD = re.compile(r"(?:\bnamespace\b[^;{}()]*|extern\s+\"C\"\s*)$")
 CLASS_HEAD = re.compile(r"\b(?:class|struct|union)\b[^;{}()]*$")
 ENUM_HEAD = re.compile(r"\benum\b[^;{}()]*$")
@@ -217,22 +216,9 @@ def iter_sources(project_root: Path, scope: LintScope) -> list[str]:
     return scope.select(("Source",), EXTENSIONS, ("ThirdParty",))
 
 
-def load_exceptions(project_root: Path) -> tuple[dict[tuple[str, str], str], list[str]]:
-    """예외 표를 (파일, 이름) → 까닭 으로 읽습니다. 까닭이 빈 항목은 문제로 돌려준다(폴백 없음 — 표가 없으면 오류)."""
-    data = json.loads((project_root / EXCEPTION_FILE).read_text(encoding="utf-8"))
-    table: dict[tuple[str, str], str] = {}
-    list_problem: list[str] = []
-    for entry in data["_listEntry"]:
-        why = entry.get("_why", "").strip()
-        if why == "":
-            list_problem.append(f"{EXCEPTION_FILE}: {entry['_path']} `{entry['_name']}` — 까닭(_why)이 비었다")
-        table[(entry["_path"], entry["_name"])] = why
-    return table, list_problem
-
-
 def check_mutable_statics(project_root: Path, scope: LintScope) -> list[str]:
-    table, list_problem = load_exceptions(project_root)
-    used: set[tuple[str, str]] = set()
+    table = ExceptionTable.load(project_root, RULE_ID, ("_statics",))
+    list_problem: list[str] = []
     for rel_path in iter_sources(project_root, scope):
         if "/Tests/" in rel_path or rel_path.startswith("Source/Core/Testing/"):
             continue  # 테스트 고정물은 프로세스 수명 상태를 흉내 낸다 — 엔진 범위가 아니다
@@ -240,19 +226,16 @@ def check_mutable_statics(project_root: Path, scope: LintScope) -> list[str]:
         if text is None:
             raise FileNotFoundError(project_root / rel_path)   # scope 의 파일은 있다 — 예전 read_text 처럼 멈춘다
         for line, where, name, statement in find_mutable_statics(text):
-            if (rel_path, name) in table:
-                used.add((rel_path, name))
+            if table.allows("_statics", f"{rel_path}|{name}"):
                 continue
-            list_problem.append(f"{rel_path}:{line}: {WHERE_TEXT[where]} 가변 변수 `{statement}` — 주인 객체(서비스 · 매니저 · 디바이스 · 레지스트리)의 멤버로, 정적 등록이면 SW_DEFINE_REGISTRATION_LIST · SLOT · CHAIN 으로, 정말 프로세스 바닥이면 {EXCEPTION_FILE} 에 까닭과 함께")
+            list_problem.append(f"{rel_path}:{line}: {WHERE_TEXT[where]} 가변 변수 `{statement}` — 주인 객체(서비스 · 매니저 · 디바이스 · 레지스트리)의 멤버로, 정적 등록이면 SW_DEFINE_REGISTRATION_LIST · SLOT · CHAIN 으로, 정말 프로세스 바닥이면 {table.hint('_statics')}")
         if rel_path not in MACRO_ALLOWED_FILES:
             for m in re.finditer(r"(?m)^[ \t]*#\s*define\b(?:.*\\\n)*.*", text):
                 if re.search(r"\bstatic\b(?!_assert|_cast)\s+(?!constexpr|const\b|inline\b)[\w:<>]+[^;\\]*\bs_\w+", m.group(0)) and "{" in m.group(0):
                     line = text.count("\n", 0, m.start()) + 1
                     if re.search(r"\)\s*\\?\s*\{", m.group(0)):
                         list_problem.append(f"{rel_path}:{line}: 매크로 본문의 함수 정적 가변 변수 — 정적 등록은 공통 틀 매크로(SW_DEFINE_REGISTRATION_LIST · SLOT · CHAIN)를 감싼다")
-    for key in sorted(set(table) - used) if scope.whole_repo else ():   # 낡은 예외는 저장소 전체를 봐야 안다
-        list_problem.append(f"{EXCEPTION_FILE}: {key[0]} `{key[1]}` — 소스에 없는 예외 항목(지운다)")
-    return list_problem
+    return list_problem + table.list_problems(scope.whole_repo)
 
 
 def run_self_check() -> bool:
