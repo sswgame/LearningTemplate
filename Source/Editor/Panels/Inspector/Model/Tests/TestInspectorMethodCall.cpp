@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
+#include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
 #include "Editor/Panels/Inspector/Model/InspectorInvokeResult.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewModel.h"
 
@@ -131,4 +132,31 @@ SW_TEST_CASE( InspectorMethodCallTest, ResultAggregatesTargets )
     SW_EXPECT_EQUAL( 0u, result._targetCount );
     SW_EXPECT_FALSE( result.hasFailure() );
     SW_EXPECT_TRUE( result._returnText.empty() );
+}
+
+/**
+ * @brief [InspectorMethodCallTest] 액션 즐겨찾기 키는 메서드를 선언한 타입 이름 + 메서드 이름이고, 그리드는 그 집합으로 별 · 맨 위 정렬을 판정한다
+ */
+SW_TEST_CASE( InspectorMethodCallTest, ActionFavoriteKeyAndLookup )
+{
+    const sw::TypeInfo*     pType = sw::InvokeDemoActor::StaticType();
+    const sw::FunctionInfo* pHeal = InspectorMethodCallTestInternal::findMethod( "heal" );
+    SW_REQUIRE_NOT_NULL( pType );
+    SW_REQUIRE_NOT_NULL( pHeal );
+    const sw::string key = sw::editor::InspectorFavorites::makeMethodKey( *pType, *pHeal );
+    SW_EXPECT_EQUAL( sw::editor::InspectorFavorites::makeKey( pType->_name.c_str(), "heal" ), key );
+
+    // 프로퍼티 즐겨찾기와 다른 파일이다 — 섞으면 메서드만 즐겨찾은 타입에 빈 프로퍼티 구역이 선다.
+    SW_EXPECT_FALSE( sw::string_view( sw::editor::InspectorFavorites::kPropertyFileName ) == sw::string_view( sw::editor::InspectorFavorites::kActionFileName ) );
+
+    sw::editor::InspectorFavorites    actions( sw::editor::InspectorFavorites::kActionFileName );
+    sw::editor::PropertyGridViewModel model;
+    SW_EXPECT_FALSE( model.hasActionFavorites() );
+    SW_EXPECT_FALSE( model.isActionFavorite( *pType, *pHeal ) );
+    model.setActionFavorites( &actions );
+    SW_EXPECT_TRUE( model.hasActionFavorites() );
+    SW_EXPECT_FALSE( model.isActionFavorite( *pType, *pHeal ) );
+    SW_EXPECT_TRUE( actions.add( key ) );
+    SW_EXPECT_TRUE( model.isActionFavorite( *pType, *pHeal ) );
+    model.setActionFavorites( nullptr );
 }
