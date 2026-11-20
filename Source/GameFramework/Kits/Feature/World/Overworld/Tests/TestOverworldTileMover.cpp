@@ -6,8 +6,8 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Overworld/OverworldTileMover.h"
+#include "GameFramework/Kits/Feature/World/Overworld/OverworldZoneTracker.h"
 #include "GameFramework/Kits/Feature/World/Overworld/TileMap.h"
-#include "GameFramework/Kits/Feature/World/Overworld/ZoneTracker.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 
 using namespace sw;
@@ -340,7 +340,7 @@ SW_TEST_CASE( OverworldTileMapTest, EdgePresetStampsOneEdge )
 
 SW_TEST_CASE( OverworldZoneTrackerTest, MapMakesOneActiveZoneWithItsTags )
 {
-    ZoneTracker tracker;
+    OverworldZoneTracker tracker;
     SW_EXPECT_TRUE( tracker.getActiveZone() == nullptr );
     SW_EXPECT_TRUE( tracker.getActiveZoneID().empty() );
     SW_EXPECT_FALSE( tracker.isClearGateLocked() );

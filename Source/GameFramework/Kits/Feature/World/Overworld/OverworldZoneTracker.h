@@ -1,5 +1,5 @@
 ﻿/**
- * @file ZoneTracker.h
+ * @file OverworldZoneTracker.h
  * @brief 맵이 붙인 태그, 카메라 경계, 클리어 게이트로 활성 존(룸 개념)을 고릅니다.
  */
 #pragma once
@@ -47,18 +47,18 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ZoneTracker
+     * @class OverworldZoneTracker
      * @brief 런타임 존 상태(경계, 태그, 클리어 게이트)를 관리합니다. 맵 하나가 기본 존 하나가 됩니다(`setFromMap`).
      * @details 존이 마을, 체육관, 던전 중 무엇인지는 열거형이 아니라 맵이 붙인 태그로 구분한다. UE 의 GameplayTag 컨테이너와 비슷한 구조이다.
      *          장르 코드는 `hasActiveZoneTag( "dungeon" )` 으로 확인한다.
      */
-    class SW_KIT_API ZoneTracker
+    class SW_KIT_API OverworldZoneTracker
     {
     public:
         /** @brief 이 태그가 붙은 존은 들어갈 때 클리어 게이트가 잠깁니다. 체육관, 던전, 보스 방이 해당하며 맵 데이터가 태그를 붙입니다. */
         static constexpr const utf8* kClearGateTag = "clear_gate";
 
-        ZoneTracker();
+        OverworldZoneTracker();
 
         /** @brief 존 목록과 활성 인덱스를 비웁니다. */
         void clear();

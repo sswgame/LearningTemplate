@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/World/Overworld/ZoneTracker.h"
+#include "GameFramework/Kits/Feature/World/Overworld/OverworldZoneTracker.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
@@ -19,7 +19,7 @@ namespace sw
     {
     }
 
-    ZoneTracker::ZoneTracker()
+    OverworldZoneTracker::OverworldZoneTracker()
         : _listZone{}
         , _activeIndex{}
     {
@@ -37,13 +37,13 @@ namespace sw
         _listTag.push_back( tag );
     }
 
-    void ZoneTracker::clear()
+    void OverworldZoneTracker::clear()
     {
         _listZone.clear();
         _activeIndex.reset();
     }
 
-    void ZoneTracker::setFromMap( string_view mapPath, string_view mapName, int32 width, int32 height, string_view tagText )
+    void OverworldZoneTracker::setFromMap( string_view mapPath, string_view mapName, int32 width, int32 height, string_view tagText )
     {
         clear();
         ZoneDef zone{};
@@ -62,7 +62,7 @@ namespace sw
         _activeIndex = 0u;
     }
 
-    void ZoneTracker::activate( string_view zoneID )
+    void OverworldZoneTracker::activate( string_view zoneID )
     {
         for ( size_t zoneIndex = 0; zoneIndex < _listZone.size(); ++zoneIndex )
         {
@@ -74,39 +74,39 @@ namespace sw
         }
     }
 
-    void ZoneTracker::setClearGateLocked( bool bLocked )
+    void OverworldZoneTracker::setClearGateLocked( bool bLocked )
     {
         if ( _activeIndex.has_value() == false || *_activeIndex >= _listZone.size() )
             return;
         _listZone[*_activeIndex]._bClearGateLocked = bLocked ? SW_TRUE : SW_FALSE;
     }
 
-    bool ZoneTracker::isClearGateLocked() const
+    bool OverworldZoneTracker::isClearGateLocked() const
     {
         const ZoneDef* pZone = getActiveZone();
         return pZone != nullptr && pZone->_bClearGateLocked != SW_FALSE;
     }
 
-    bool ZoneTracker::hasActiveZoneTag( const hashed_string& tag ) const
+    bool OverworldZoneTracker::hasActiveZoneTag( const hashed_string& tag ) const
     {
         const ZoneDef* pZone = getActiveZone();
         return pZone != nullptr && pZone->hasTag( tag );
     }
 
-    const ZoneDef* ZoneTracker::getActiveZone() const
+    const ZoneDef* OverworldZoneTracker::getActiveZone() const
     {
         if ( _activeIndex.has_value() == false || *_activeIndex >= _listZone.size() )
             return nullptr;
         return &_listZone[*_activeIndex];
     }
 
-    string ZoneTracker::getActiveZoneID() const
+    string OverworldZoneTracker::getActiveZoneID() const
     {
         const ZoneDef* pZone = getActiveZone();
         return pZone != nullptr ? pZone->_id : string{};
     }
 
-    const ZoneBounds& ZoneTracker::getCameraBounds() const
+    const ZoneBounds& OverworldZoneTracker::getCameraBounds() const
     {
         static const ZoneBounds s_empty{};
         const ZoneDef*          pZone = getActiveZone();

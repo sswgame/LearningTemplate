@@ -12,7 +12,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Asset/PrefabAssetKind.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"

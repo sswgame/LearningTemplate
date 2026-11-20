@@ -32,7 +32,7 @@ namespace sw
      * @details 맵 데이터는 파일 스키마 `TileMapXMLData` 를 그대로 가지고 있으므로 플래그 레이어, 비주얼, 워프를 필드마다 복사하지 않습니다.
      *          타일 속성은 Engine 레이어 테이블(`kArrTileFlagLayerInfo`)의 레이어로 조회합니다(`isFlagSet`).
      *          조우가 **일어나는 타일**은 `TileFlagLayer::Encounter` 이고, 무엇을 만나는지는 장르 키트의 지역 테이블이 정합니다.
-     *          지역은 존 id 와 태그로 구분합니다(`ZoneTracker`).
+     *          지역은 존 id 와 태그로 구분합니다(`OverworldZoneTracker`).
      */
     class SW_KIT_API TileMap
     {
@@ -76,7 +76,7 @@ namespace sw
         const string& getScenePath() const { return _data._scenePath; }
         /** @brief 이 맵에 해당하는 씬 경로를 설정합니다. */
         void setScenePath( string_view path ) { _data._scenePath = path; }
-        /** @brief 존 태그 문자열(`<role>`)을 반환합니다. 쉼표나 공백으로 나눈 태그이며 `ZoneTracker::setFromMap` 이 읽습니다. */
+        /** @brief 존 태그 문자열(`<role>`)을 반환합니다. 쉼표나 공백으로 나눈 태그이며 `OverworldZoneTracker::setFromMap` 이 읽습니다. */
         const string& getRole() const { return _data._role; }
         /** @brief 존 태그 문자열을 설정합니다. */
         void setRole( string_view role ) { _data._role = role; }
