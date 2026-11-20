@@ -17,10 +17,10 @@
 	<EditorWaitStable/>
 	<DevCommand line="content.open scratch/osfiledrop/target"/>
 	<EditorWaitStable/>
-	<ExpectLog id="ContentBrowser.FileDropRejected" contains="payload.unknownkind" count="1"/>
-	<ExpectLog id="ContentBrowser.FileDropImported" contains="Imported 1 of 2" count="1"/>
 	<EditorDropFiles mark="contentBrowser.assetView" files="engine/automation/editor/osfiledrop/notes.txt;engine/automation/editor/osfiledrop/payload.unknownkind"/>
 	<EditorWaitStable/>
+	<ExpectLog id="ContentBrowser.FileDropRejected" contains="payload.unknownkind" count="1"/>
+	<ExpectLog id="ContentBrowser.FileDropImported" contains="Imported 1 of 2" count="1"/>
 	<DevCommand line="asset.expectScratchContains scratch/osfiledrop/target/notes.txt osfiledropprobe"/>
 	<DevCommand line="asset.expectScratchMissing scratch/osfiledrop/target/payload.unknownkind"/>
 	<EditorWaitStable/>

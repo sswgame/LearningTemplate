@@ -44,6 +44,11 @@ namespace sw::editor
          * @details 이미지가 아직 없거나 읽지 못하면 `drawThumbnail` 로 넘어간다. 언리얼의 텍스처 썸네일과 같다.
          */
         virtual bool hasImagePreview() const { return false; }
+        /**
+         * @brief 이미지 미리보기로 읽을 엔진 에셋 경로입니다(`hasImagePreview` 일 때). 빈 문자열이면 미리보기가 없다.
+         * @details 저작 원본(`textures_raw/*.png`)은 엔진이 읽지 못한다 — 원본을 텍스처 캐시에 넣으면 DDS 로더가 PNG 바이트를 읽고 실패했다. 원본은 그 산출물을 가리킨다.
+         */
+        virtual string findImagePreviewPath( string_view path ) const { return string( path ); }
         /** @brief 전용 도구 패널이 없는 종류를 엽니다. 이 종류가 열기를 하지 않거나 열지 못했으면 false 입니다. */
         [[nodiscard]] virtual bool open( string_view relativePath ) const;
         /**

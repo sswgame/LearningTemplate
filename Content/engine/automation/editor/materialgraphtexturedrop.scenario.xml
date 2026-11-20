@@ -11,8 +11,13 @@
 	<Variable name="gv_editorWatchPanel" value="materialgraph"/>
 	<DevCommand line="layout.reset"/>
 	<EditorWaitStable/>
+	<Scratch from="game/empty/materials/matgraph" as="scratch/materials/texturedrop"/> <!-- 캔버스는 열린 그래프가 있어야 그린다 — 원본을 고치지 않게 사본을 연다 -->
+	<DevCommand line="asset.openScratch scratch/materials/texturedrop/rim_glow.matgraph.xml"/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus materialgraph"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutSeconds="10"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus content_browser"/> <!-- 출력 로그와 같은 탭 묶음이라 앞으로 꺼내야 타일이 그려진다 -->
 	<EditorWaitStable/>
 	<DevCommand line="content.open engine/textures_raw/particles/kenney_particle"/>
 	<EditorWaitStable/>
@@ -21,7 +26,9 @@
 	<EditorDrag mark="contentBrowser.asset.circle_01.png" toMark="materialGraph.canvas"/>
 	<WaitUntil watch="Editor.GraphNodeCount" differsFrom="nodesBefore" timeoutFrames="120"/>
 	<EditorWaitStable/>
-	<!-- ② 한 단계 되돌리기 -->
+	<!-- ② 한 단계 되돌리기 — 되돌리기는 포커스 문서(그래프)의 것이다 -->
+	<DevCommand line="panel.focus materialgraph"/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.GraphNodeCount" sameAs="nodesBefore" timeoutFrames="60"/>
 	<EditorWaitStable/>

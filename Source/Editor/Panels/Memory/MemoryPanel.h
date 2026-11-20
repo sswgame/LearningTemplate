@@ -34,6 +34,7 @@ namespace sw::editor
 
         /** @brief 들고 있는 스냅숏 수입니다(감시 값 `Editor.MemorySnapshotCount`). */
         uint32 getSnapshotCount() const { return _viewModel.getSnapshotCount(); }
+        uint32 getFinishedExportCount() const { return _viewModel.getFinishedExportCount(); }
         /** @brief 마지막으로 그린 표의 줄 수입니다(감시 값 `Editor.MemoryTableRows`). */
         uint32 getVisibleRowCount() const { return _viewModel.getVisibleRowCount(); }
         /** @brief 비교 중이면 true 입니다(감시 값 `Editor.MemoryCompareMode`). */

@@ -398,7 +398,8 @@ namespace sw::editor
             bool                           bDrawn   = false;
             if ( pActions != nullptr && pActions->hasImagePreview() )
             {
-                void* pTextureID = _thumbnailCache.findTexture( entry._relativePath );
+                const string previewPath = pActions->findImagePreviewPath( entry._relativePath );
+                void*        pTextureID  = previewPath.empty() ? nullptr : _thumbnailCache.findTexture( previewPath );
                 if ( pTextureID != nullptr )
                 {
                     // 정사각형으로 가운데에 그린다. 썸네일 영역은 가로가 길다. 텍스처 비율은 보지 않으며, 정사각형이 아니면 늘어난 채 보인다.

@@ -33,6 +33,15 @@ namespace sw::editor
                 return true;
             }
 
+            [[nodiscard]] static bool readFinishedExportCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const MemoryPanel* pPanel = findOpenPanel( __func__ );
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getFinishedExportCount() );
+                return true;
+            }
+
             [[nodiscard]] static bool readTableRows( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const MemoryPanel* pPanel = findOpenPanel( __func__ );
@@ -55,5 +64,6 @@ namespace sw::editor
 
     SW_AUTOMATION_WATCH( editorMemorySnapshotCount, "Editor.MemorySnapshotCount", "Snapshots the Memory panel holds", &MemoryWatchesInternal::readSnapshotCount );
     SW_AUTOMATION_WATCH( editorMemoryTableRows, "Editor.MemoryTableRows", "Rows of the Memory panel table drawn last (after filters)", &MemoryWatchesInternal::readTableRows );
+    SW_AUTOMATION_WATCH( editorMemoryExportCount, "Editor.MemoryExportCount", "Finished CSV exports of the Memory panel (written or failed)", &MemoryWatchesInternal::readFinishedExportCount );
     SW_AUTOMATION_WATCH( editorMemoryCompareMode, "Editor.MemoryCompareMode", "1 while the Memory panel compares two snapshots", &MemoryWatchesInternal::readCompareMode );
 } // namespace sw::editor

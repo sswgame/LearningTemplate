@@ -144,6 +144,8 @@ namespace sw::editor
 
         /** @brief 들고 있는 스냅숏 수입니다(감시 값). */
         uint32 getSnapshotCount() const { return static_cast<uint32>( _listSnapshot.size() ); }
+        /** @brief 끝난 내보내기 수(성공 · 실패)입니다 — 시나리오가 비동기 CSV 쓰기를 기다리는 값입니다. */
+        uint32 getFinishedExportCount() const { return _finishedExportCount; }
         /** @brief 마지막 `gather` 의 표 줄 수입니다(감시 값). */
         uint32 getVisibleRowCount() const { return _visibleRowCount; }
         /** @brief 비교 중이면 true 입니다. */
@@ -179,6 +181,7 @@ namespace sw::editor
         uint32                                   _filterIndex;
         string                                   _statusLine;
         uint32                                   _visibleRowCount;
+        uint32                                   _finishedExportCount;
         MemoryExportJob                          _exportJob;
         uint8                                    _bSortDescending : 1;
         [[maybe_unused]] uint8                   _reserved        : 7;

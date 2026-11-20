@@ -140,6 +140,7 @@ namespace sw::editor
         , _filterIndex{ 0 }
         , _statusLine{}
         , _visibleRowCount{ 0 }
+        , _finishedExportCount{ 0 }
         , _exportJob{}
         , _bSortDescending{ SW_TRUE }
         , _reserved{ 0 }
@@ -304,6 +305,7 @@ namespace sw::editor
         const EditorTaskPoll    poll = _exportJob.take( jobResult );
         if ( poll == EditorTaskPoll::Ready )
         {
+            ++_finishedExportCount;
             if ( jobResult._error.empty() )
             {
                 SW_LOG_INFO_ID( "MemoryPanel.Exported", "Memory panel exported %# file(s) to %#", jobResult._fileCount, jobResult._folder );
