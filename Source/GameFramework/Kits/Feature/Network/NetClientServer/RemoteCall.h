@@ -172,7 +172,16 @@ namespace sw
     class SW_KIT_API RemoteCallServer : public NetTableHandler<RemoteCallServer, NetRemoteCallMessage::Table, NetRemoteCallMessage::Call>
     {
     public:
+        /** @brief 호출률 버킷이 읽는 단조 시계(밀리초)입니다. */
+        using ClockFunction = int64 ( * )();
+
         RemoteCallServer();
+
+        /**
+         * @brief 호출률 버킷의 시계를 바꿉니다(기본은 `MonotonicClock`). 테스트는 고정 시계를 넣어 실행 속도(ASan · 부하)가 버킷 판정을 바꾸지 않게 한다.
+         *        nullptr 은 받지 않는다(`SW_ASSERT`).
+         */
+        void setClock( ClockFunction pClock );
 
         /** @brief 보낼 창구와 호출률 상한을 받습니다. 상한이 0 이하면 오류를 남기고 false 입니다(기본값으로 대신하지 않는다). */
         [[nodiscard]] bool initialize( INetPeers* pPeers, const RemoteCallServerConfig& config );
@@ -229,6 +238,7 @@ namespace sw
         vector<string>                                  _listReceivedScratch; ///< 받은 호출의 인자 글. 함수 몸이 다시 보내도(`callSession` · `callServer`) 덮이지 않게 보내기와 따로 둔다
         vector<string>                                  _listSendScratch;
         INetPeers*                                      _pPeers;
+        ClockFunction                                   _pClock;
     };
 } // namespace sw
 

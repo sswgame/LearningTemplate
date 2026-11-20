@@ -33,14 +33,14 @@ class FindLatestPerBackendFolderTest(unittest.TestCase):
             now = time.time()
             write_reports(root / 'kitmodulereload' / 'per-backend-1', ['editor.bugreport', 'kitmodulereload'], now - 100)
             write_reports(root / 'kitmodulereload' / 'per-backend-2', ['game.empty.boat', 'kitmodulereload'], now)
-            chosen = find_latest_per_backend_folder(root, {'editor.bugreport', 'kitmodulereload'})
+            chosen = find_latest_per_backend_folder(root, 'editor/kitmodulereload.scenario.xml', {'editor.bugreport', 'kitmodulereload'}, root / 'no-chain.log')
             self.assertEqual(chosen, root / 'kitmodulereload' / 'per-backend-1')
 
     def test_no_matching_folder_is_none(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             write_reports(root / 'x' / 'per-backend-1', ['game.empty.boat'], time.time())
-            self.assertIsNone(find_latest_per_backend_folder(root, {'editor.bugreport'}))
+            self.assertIsNone(find_latest_per_backend_folder(root, 'x/x.scenario.xml', {'editor.bugreport'}, root / 'no-chain.log'))
 
 
 if __name__ == '__main__':

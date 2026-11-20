@@ -236,7 +236,15 @@ namespace sw
         , _listReceivedScratch{}
         , _listSendScratch{}
         , _pPeers{ nullptr }
+        , _pClock{ []() -> int64
+    { return MonotonicClock::nowNanoseconds() / constant::time::kNanosecondsPerMillisecond; } }
     {
+    }
+
+    void RemoteCallServer::setClock( ClockFunction pClock )
+    {
+        SW_ASSERT( pClock != nullptr );
+        _pClock = pClock;
     }
 
     bool RemoteCallServer::initialize( INetPeers* pPeers, const RemoteCallServerConfig& config )
@@ -366,7 +374,7 @@ namespace sw
         if ( RemoteCallInternal::readCall( body, call, _listReceivedScratch ) == false )
             return NetHandleResult::Malformed;
         // 상한은 대상 · 함수 찾기 앞에서 본다 — 없는 대상 · 함수를 쏟아붓는 호출도 같은 버킷을 쓴다.
-        const int64 nowMs = MonotonicClock::nowNanoseconds() / constant::time::kNanosecondsPerMillisecond;
+        const int64 nowMs = _pClock();
         if ( tryConsumeCall( context._connectionID, nowMs ) == false )
         {
             ++_stats._rateLimitedCount;

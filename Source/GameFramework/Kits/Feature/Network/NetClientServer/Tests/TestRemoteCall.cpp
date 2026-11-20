@@ -36,6 +36,8 @@ namespace
             (void)_cluster.addEndpoint( 4400, settings );
             SW_EXPECT_TRUE( _cluster.connectClients( 30 ) );
             SW_EXPECT_TRUE( _server.initialize( &_cluster.getServer(), callLimit ) );
+            _server.setClock( []() -> int64
+            { return 0; } ); // 버킷이 다시 차지 않는다 — 상한 판정이 실행 속도(ASan)에 달리지 않게
             _client.initialize( &_cluster.getClient( 0 ) );
             vector<int32> listConnection;
             _cluster.getServer().collectConnected( listConnection );

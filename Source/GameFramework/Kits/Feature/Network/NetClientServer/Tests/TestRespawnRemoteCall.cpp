@@ -64,6 +64,8 @@ namespace
             (void)_cluster.addEndpoint( 4600, settings );
             SW_EXPECT_TRUE( _cluster.connectClients( 30 ) );
             SW_EXPECT_TRUE( _server.initialize( &_cluster.getServer(), kRoomyCallLimit ) );
+            _server.setClock( []() -> int64
+            { return 0; } ); // 버킷이 다시 차지 않는다 — 몰아 보낸 호출의 판정이 실행 속도에 달리지 않게
             _client.initialize( &_cluster.getClient( 0 ) );
             vector<int32> listConnection;
             _cluster.getServer().collectConnected( listConnection );
