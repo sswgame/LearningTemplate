@@ -74,7 +74,7 @@ namespace sw::editor
             void   reset() override
             {
                 _value.~TState();
-                new ( &_value ) TState{};
+                sw_placement_new( &_value ) TState{};
             }
         };
 
