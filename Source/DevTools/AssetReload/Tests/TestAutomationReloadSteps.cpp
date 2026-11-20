@@ -31,7 +31,7 @@ namespace
         const AutomationStep&                   step          = scenario.getSteps().front();
         const AutomationStepRegistration* const pRegistration = AutomationStepRegistry::find( step._kind );
         if ( pRegistration == nullptr || pRegistration->_pValidate == nullptr )
-            return unexpected( Error{ ErrorKind::NotFound, "no registered step validator", step._kind } );
+            return sw::unexpected( Error{ ErrorKind::NotFound, "no registered step validator", step._kind } );
         return pRegistration->_pValidate( step );
     }
 } // namespace

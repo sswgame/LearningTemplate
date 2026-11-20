@@ -6,6 +6,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Reflection/TypeRegistry.h"
 

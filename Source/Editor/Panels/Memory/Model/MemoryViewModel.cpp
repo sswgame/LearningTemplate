@@ -185,7 +185,7 @@ namespace sw::editor
         outListColumn.clear();
         for ( uint32 column = 0; column < schema._columnCount; ++column )
         {
-            outListColumn.push_back( MemoryTableColumn{ schema._pColumn[column]._pName, schema._pColumn[column]._kind != MemoryColumnKind::Text ? SW_TRUE : SW_FALSE } );
+            outListColumn.push_back( MemoryTableColumn{ schema._pColumn[column]._pName, static_cast<uint8>( schema._pColumn[column]._kind != MemoryColumnKind::Text ? SW_TRUE : SW_FALSE ) } );
         }
         vector<Internal::SortRow> listRow;
         listRow.reserve( snapshot.getSheet( sheet )._listRow.size() );

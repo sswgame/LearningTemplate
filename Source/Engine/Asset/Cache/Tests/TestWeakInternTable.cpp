@@ -126,10 +126,10 @@ SW_TEST_CASE( WeakInternTableTest, ForEachLiveVisitsHeldValuesOnce )
     sw::shared_ptr<FakeValue> pDropped     = table.insertOrGetLive( 3, sw::make_shared<FakeValue>( FakeValue{ 3 } ) );
     pDropped.reset();
 
-    sw::uint32 visitCount{ 0 };
-    sw::uint32 firstReferences{ 0 };
-    sw::uint32 secondReferences{ 0 };
-    table.forEachLive( [&]( const sw::int32& key, const FakeValue& value, sw::uint32 referenceCount )
+    uint32 visitCount{ 0 };
+    uint32 firstReferences{ 0 };
+    uint32 secondReferences{ 0 };
+    table.forEachLive( [&]( const int32& key, const FakeValue& value, uint32 referenceCount )
     {
         ++visitCount;
         SW_EXPECT_EQUAL( key, value._id );
