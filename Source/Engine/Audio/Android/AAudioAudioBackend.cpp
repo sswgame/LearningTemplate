@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Audio/AudioEngine.h"
+#include "Engine/Audio/AudioService.h"
 
 #include <aaudio/AAudio.h>
 
@@ -36,24 +37,25 @@ namespace sw
             return AAUDIO_CALLBACK_RESULT_CONTINUE;
         }
 
-        /** @brief 오류 콜백 — 장치가 사라지면(헤드폰 뽑기 · 블루투스 끊김) 스트림이 멈춘다. 서비스에 알린다(`IAudioService::notifyOutputLost`). */
+        /** @brief 오류 콜백 — 장치가 사라지면(헤드폰 뽑기 · 블루투스 끊김) 스트림이 멈춘다. 서비스에 알린다(`AudioService::notifyOutputLost`). */
         static void onError( AAudioStream* pStream, void* pUserData, aaudio_result_t error )
         {
             (void)pStream;
             AAudioAudioBackend* const pBackend = static_cast<AAudioAudioBackend*>( pUserData );
             SW_LOG_WARNING_ID( "AAudioAudioBackend.StreamLost", "AAudio output stream stopped (%#)", AAudio_convertResultToText( error ) );
-            pBackend->notifyOutputLost(); // 서비스가 오프라인으로 넘기고 기본 장치를 다시 연다
+            pBackend->_service.notifyOutputLost(); // 서비스가 오프라인으로 넘기고 기본 장치를 다시 연다
         }
     };
 
-    AAudioAudioBackend::AAudioAudioBackend()
-        : _impl{ make_unique<AAudioAudioBackendImpl>() }
+    AAudioAudioBackend::AAudioAudioBackend( AudioService& service )
+        : _service{ service }
+        , _impl{ make_unique<AAudioAudioBackendImpl>() }
     {
     }
 
     AAudioAudioBackend::~AAudioAudioBackend()
     {
-        shutdown();
+        // 서비스가 소멸자에서 출력 · 장치를 먼저 내린다(`AudioService::~AudioService`) — 여기서는 남은 것을 놓기만 한다.
     }
 
     bool AAudioAudioBackend::openDevice( AudioOutputDevice& outDevice )
@@ -117,7 +119,7 @@ namespace sw
 
     void AAudioAudioBackend::renderCallback( float32* pOutput, uint32 frameCount )
     {
-        getEngine().render( pOutput, frameCount );
+        _service.getEngine().render( pOutput, frameCount );
     }
 
     void AAudioAudioBackend::stopOutput()
@@ -135,5 +137,5 @@ namespace sw
         stopOutput();
     }
 
-    SW_REGISTER_AUDIO_BACKEND( AAudioAudioBackend ); // Android 클라이언트의 장치 백엔드(`IAudioService::create` 가 등록표에서 고른다)
+    SW_REGISTER_AUDIO_BACKEND( AAudioAudioBackend ); // Android 클라이언트의 장치 백엔드(`AudioService::create` 가 등록표에서 고른다)
 } // namespace sw

@@ -92,7 +92,7 @@ namespace sw
         /**
          * @brief 주 창의 수명 이벤트입니다 — 표면이 사라지기 전에 렌더 스레드가 받은 패킷을 끝내게 합니다(창 스레드).
          * @details 표면을 잃으면 렌더 스레드를 쉬게 한 뒤 스왑체인 · 표면을 놓고(`IRHIDevice::releaseSurface`), 돌아오면 새 표면으로 다시 짓는다(`restoreSurface`).
-         *          앱 멈춤의 오디오 출력 닫기 · 입력 리셋은 앱 몫이다(`App::onAppLifecycle` → `IAudioService::suspendOutput`).
+         *          앱 멈춤의 오디오 출력 닫기 · 입력 리셋은 앱 몫이다(`App::onAppLifecycle` → `AudioService::suspendOutput`).
          */
         void onMainWindowLifecycle( WindowLifecycleEvent event );
         /**

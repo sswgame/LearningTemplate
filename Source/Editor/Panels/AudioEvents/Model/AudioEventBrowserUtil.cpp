@@ -12,8 +12,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Audio/AudioEvent.h"
+#include "Engine/Audio/AudioService.h"
 #include "Engine/Audio/AudioSpatial.h"
-#include "Engine/Audio/IAudioService.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/EnumName.h"
 
@@ -184,14 +184,14 @@ namespace sw::editor
         return true;
     }
 
-    IAudioService* AudioEventBrowserUtil::findAudioService()
+    AudioService* AudioEventBrowserUtil::findAudioService()
     {
-        return editor::findSubsystem<IAudioService>();
+        return editor::findSubsystem<AudioService>();
     }
 
-    IAudioService& AudioEventBrowserUtil::getAudioService()
+    AudioService& AudioEventBrowserUtil::getAudioService()
     {
-        return editor::getSubsystem<IAudioService>();
+        return editor::getSubsystem<AudioService>();
     }
 
     bool AudioEventBrowserUtil::openDataFile( string_view path )

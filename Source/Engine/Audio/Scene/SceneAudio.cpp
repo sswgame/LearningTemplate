@@ -6,10 +6,10 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Audio/AudioEngine.h"
+#include "Engine/Audio/AudioService.h"
 #include "Engine/Audio/Component/AudioEmitterComponent.h"
 #include "Engine/Audio/Component/AudioListenerComponent.h"
 #include "Engine/Audio/Component/AudioReverbZoneComponent.h"
-#include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/Scene/Physics2DAudioOcclusionQuery.h"
 #include "Engine/Audio/Scene/PhysicsAudioOcclusionQuery.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -141,7 +141,7 @@ namespace sw
         , _listZoneValue{}
         , _listZoneCurrent{}
         , _manager{ manager }
-        , _pAudioService{ locateSubsystem<IAudioService>( manager.getSceneEngineServices()._pEngineSubsystems ) }
+        , _pAudioService{ locateSubsystem<AudioService>( manager.getSceneEngineServices()._pEngineSubsystems ) }
         , _pEngineOverride{ nullptr }
         , _pOcclusionOverride{ nullptr }
         , _primaryListenerPosition{}

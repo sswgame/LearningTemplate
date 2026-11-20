@@ -7,6 +7,7 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioPCM.h"
+#include "Engine/Audio/AudioService.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 
@@ -231,7 +232,7 @@ namespace sw
             struct StreamCallback : public IXAudio2VoiceCallback
             {
                 AudioEngine*         _pEngine{ nullptr };
-                IAudioService*       _pService{ nullptr }; ///< 보이스 오류를 알릴 곳(`notifyOutputLost`)
+                AudioService*        _pService{ nullptr }; ///< 보이스 오류를 알릴 곳(`notifyOutputLost`)
                 IXAudio2SourceVoice* _pVoice{ nullptr };
                 uint32               _channelCount{ 0 }; ///< 엔진 레이아웃의 채널 수다. 장치로 보내는 교차 버퍼의 프레임 크기다.
                 vector<float32>      _listBuffer{};      ///< 버퍼 `kStreamBufferCount` 개를 이어 붙인 것이다.
@@ -273,7 +274,7 @@ namespace sw
              */
             struct EngineCallback : public IXAudio2EngineCallback
             {
-                IAudioService* _pService{ nullptr };
+                AudioService* _pService{ nullptr };
 
                 virtual ~EngineCallback() = default;
                 void STDMETHODCALLTYPE OnProcessingPassStart() noexcept override {}
@@ -318,15 +319,16 @@ namespace sw
         }
     };
 
-    XAudio2AudioBackend::XAudio2AudioBackend()
-        : _impl{ make_unique<XAudio2AudioBackendImpl>() }
+    XAudio2AudioBackend::XAudio2AudioBackend( AudioService& service )
+        : _service{ service }
+        , _impl{ make_unique<XAudio2AudioBackendImpl>() }
     {
-        getEngine().getClipStore().setFallbackDecoder( &XAudio2AudioBackendInternal::decodeWithMediaFoundation );
+        _service.getEngine().getClipStore().setFallbackDecoder( &XAudio2AudioBackendInternal::decodeWithMediaFoundation );
     }
 
     XAudio2AudioBackend::~XAudio2AudioBackend()
     {
-        shutdown();
+        // 서비스가 소멸자에서 출력 · 장치를 먼저 내린다(`AudioService::~AudioService`) — 여기서는 남은 것을 놓기만 한다.
     }
 
     bool XAudio2AudioBackend::openDevice( AudioOutputDevice& outDevice )
@@ -363,7 +365,7 @@ namespace sw
             closeDevice();
             return false;
         }
-        _impl->_engineCallback._pService = this;
+        _impl->_engineCallback._pService = &_service;
         if ( FAILED( _impl->_pXAudio->RegisterForCallbacks( &_impl->_engineCallback ) ) )
             SW_LOG_WARNING_ID( "XAudio2AudioBackend.EngineCallbackFailed", "XAudio2 engine callbacks could not be registered - a lost device is not noticed" );
         // 마스터링 보이스는 장치의 채널 수 그대로 연다. 엔진 레이아웃은 그 채널 수와 마스크를 보고 서비스가 정한다(협상).
@@ -416,8 +418,8 @@ namespace sw
         }
 
         XAudio2AudioBackendInternal::StreamCallback& callback = _impl->_callback;
-        callback._pEngine                                     = &getEngine();
-        callback._pService                                    = this;
+        callback._pEngine                                     = &_service.getEngine();
+        callback._pService                                    = &_service;
         callback._pVoice                                      = _impl->_pStreamVoice;
         callback._channelCount                                = channelCount;
         callback._nextBuffer                                  = 0;
@@ -430,7 +432,7 @@ namespace sw
         {
             callback.submitNext();
         }
-        getEngine().releaseAudioThread(); // 처음 버퍼는 이 스레드가 렌더했다 — 이후 렌더는 XAudio2 콜백 스레드가 맡는다(첫 호출이 역할을 받는다)
+        _service.getEngine().releaseAudioThread(); // 처음 버퍼는 이 스레드가 렌더했다 — 이후 렌더는 XAudio2 콜백 스레드가 맡는다(첫 호출이 역할을 받는다)
         hr = _impl->_pStreamVoice->Start( 0 );
         if ( FAILED( hr ) )
         {
@@ -486,5 +488,5 @@ namespace sw
         }
     }
 
-    SW_REGISTER_AUDIO_BACKEND( XAudio2AudioBackend ); // Windows 클라이언트의 장치 백엔드(`IAudioService::create` 가 등록표에서 고른다)
+    SW_REGISTER_AUDIO_BACKEND( XAudio2AudioBackend ); // Windows 클라이언트의 장치 백엔드(`AudioService::create` 가 등록표에서 고른다)
 } // namespace sw

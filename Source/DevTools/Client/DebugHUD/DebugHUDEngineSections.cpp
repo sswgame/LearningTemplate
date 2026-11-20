@@ -14,7 +14,7 @@
 #include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/AudioService.h"
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"
@@ -233,7 +233,7 @@ namespace sw
 
             static void writeAudio( DebugHUDSectionWriter& writer )
             {
-                const IAudioService* pAudio = engine::findSubsystem<IAudioService>();
+                const AudioService* pAudio = engine::findSubsystem<AudioService>();
                 if ( pAudio == nullptr || pAudio->isInitialized() == false )
                 {
                     writer.addLine( "service", "none" );

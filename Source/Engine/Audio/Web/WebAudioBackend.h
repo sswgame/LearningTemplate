@@ -14,25 +14,25 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/IAudioOutputDevice.h"
 
 namespace sw
 {
+    class AudioService;
     struct WebAudioBackendImpl;
 
     /**
      * @class WebAudioBackend
      * @brief 웹 오디오 백엔드입니다.
      */
-    class SW_API WebAudioBackend : public IAudioService
+    class SW_API WebAudioBackend final : public IAudioOutputDevice
     {
     public:
         /** @brief 장치를 잡지 않은 채로 만듭니다. */
-        WebAudioBackend();
+        explicit WebAudioBackend( AudioService& service );
         /** @brief 장치를 닫고 엔진을 내립니다. */
         ~WebAudioBackend() override;
 
-    protected:
         /** @brief 브라우저에 Web Audio(AudioContext · AudioWorklet)가 있는지 봅니다. 스테레오를 알립니다. */
         [[nodiscard]] bool openDevice( AudioOutputDevice& outDevice ) override;
         /** @brief 링 버퍼를 만들고 48 kHz AudioContext · 워클릿 노드를 연 뒤 믹서 스레드를 시작합니다. */
@@ -47,6 +47,7 @@ namespace sw
         void runMixer( StopToken stopToken );
 
     private:
-        unique_ptr<WebAudioBackendImpl> _impl; /**< 웹 전용 상태입니다. */
+        AudioService&                   _service; ///< 이 장치가 당기는 서비스(엔진 · 유실 알림) — 서비스가 장치를 들고 먼저 내린다
+        unique_ptr<WebAudioBackendImpl> _impl;    /**< 웹 전용 상태입니다. */
     };
 } // namespace sw

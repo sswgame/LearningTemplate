@@ -19,7 +19,7 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/AudioService.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
@@ -90,7 +90,7 @@ namespace sw::editor
             /** @brief 오디오 스레드가 마지막으로 게시한 받아들인 이벤트 수입니다. 오디오 서비스가 없거나 시작하지 않았으면 값을 내지 않는다. */
             [[nodiscard]] static bool readPlayedCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                IAudioService* pAudio = AudioEventBrowserUtil::findAudioService();
+                AudioService* pAudio = AudioEventBrowserUtil::findAudioService();
                 if ( pAudio == nullptr || pAudio->isInitialized() == false )
                     return false;
                 outValue = static_cast<float64>( pAudio->getEngine().getStats()._playedEventCount );
@@ -100,7 +100,7 @@ namespace sw::editor
             /** @brief `Editor.AudioEventsPlayed` 의 활동 수 — 오디오 스레드가 지금까지 렌더한 프레임 수입니다(게시가 멈추면 값도 멈춘다). */
             [[nodiscard]] static uint64 readAudioActivity( const GameObjectManager* /*pManager*/ )
             {
-                IAudioService* pAudio = AudioEventBrowserUtil::findAudioService();
+                AudioService* pAudio = AudioEventBrowserUtil::findAudioService();
                 return pAudio != nullptr && pAudio->isInitialized() ? pAudio->getEngine().getStats()._renderedFrameCount : 0u;
             }
         };
@@ -267,7 +267,7 @@ namespace sw::editor
         EditorSelfTestMarks::record( "audioevents.list" );
     }
 
-    void AudioEventBrowserPanel::drawEventDetail( IAudioService& audio )
+    void AudioEventBrowserPanel::drawEventDetail( AudioService& audio )
     {
         AudioEngine& engine = audio.getEngine();
         if ( _selectedEvent.empty() )
@@ -410,7 +410,7 @@ namespace sw::editor
     {
         updateFocusedDocument();
         ensureDocumentLoaded();
-        IAudioService& audio = AudioEventBrowserUtil::getAudioService();
+        AudioService& audio = AudioEventBrowserUtil::getAudioService();
         if ( audio.isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "NoService" ) );

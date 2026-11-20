@@ -10,7 +10,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/AudioService.h"
 
 namespace sw::editor
 {
@@ -109,8 +109,8 @@ namespace sw::editor
         return AudioMixerViewModelInternal::editWatchValues();
     }
 
-    IAudioService& AudioMixerViewModel::getAudioService()
+    AudioService& AudioMixerViewModel::getAudioService()
     {
-        return editor::getSubsystem<IAudioService>();
+        return editor::getSubsystem<AudioService>();
     }
 } // namespace sw::editor

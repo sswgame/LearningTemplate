@@ -21,7 +21,7 @@ namespace sw
     struct PropertyInfo;
 
     class AudioEngine;
-    class IAudioService;
+    class AudioService;
 } // namespace sw
 
 namespace sw::editor
@@ -32,7 +32,7 @@ namespace sw::editor
      * @details 이벤트 속성은 기본이 읽기 보기다. "고치기" 를 누르면 그 이벤트가 있는 라이브러리 파일을 사본(`AudioEventEditModel`)으로 다시 읽어 속성 그리드로 고치고
      *          (이벤트 복제 · 지우기, 라이브러리의 파라미터 · 감쇠 프리셋 포함 — FMOD Studio 의 이벤트 · 파라미터 편집에 해당),
      *          "저장" 은 검사를 통과할 때만 파일에 쓴다(`AudioEventLibrary::saveToAsset`). 엔진에 올라간 라이브러리는 저장한 파일을 에셋 핫 리로드
-     *          (`IAudioService` 의 라이브러리 다시 읽기)가 바꾼다 — 창은 엔진 사본을 직접 고치지 않는다(오디오 스레드가 설명자를 참조한다).
+     *          (`AudioService` 의 라이브러리 다시 읽기)가 바꾼다 — 창은 엔진 사본을 직접 고치지 않는다(오디오 스레드가 설명자를 참조한다).
      *          재생 중 인스턴스와 보이스 수는 오디오 스레드가 블록마다 게시한 사본이다.
      *          고치는 라이브러리 파일이 이 창의 문서다(`EditorDocumentPanel`, Data 종류 가운데 `*.audioevents.xml`) — "고치기" · 콘텐츠 브라우저 · `asset.openScratch` 가 모두 워크스페이스 포커스로 연다.
      *          예전에는 "고치기" 만 여는 자체 길이라 시나리오가 사본(`scratch/…`)을 가리킬 수 없었다.
@@ -73,7 +73,7 @@ namespace sw::editor
         /** @brief 되돌리기가 준 글로 사본을 다시 읽습니다. */
         void applyDocumentText( string_view text ) override;
         void drawEventList();
-        void drawEventDetail( IAudioService& audio );
+        void drawEventDetail( AudioService& audio );
         /**
          * @brief 고치는 라이브러리 사본을 그립니다 — 저장 · 그만두기, 고칠 이벤트 고르기 · 복제 · 지우기, 이벤트 속성 그리드, 라이브러리의 파라미터 · 감쇠 프리셋 그리드.
          * @details 고칠 이벤트(`AudioEventEditModel::getEventName`)는 사본에서 고른다. 복제 · 지운 이벤트는 저장 뒤 핫 리로드가 엔진 목록에 올리기 전까지 사본에만 있다.

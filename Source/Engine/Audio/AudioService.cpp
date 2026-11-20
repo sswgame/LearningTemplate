@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/AudioService.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -33,7 +33,7 @@ namespace sw
 {
     namespace
     {
-        struct IAudioServiceInternal
+        struct AudioServiceInternal
         {
             /** @brief 곡을 바꿀 때의 크로스페이드 길이(초)입니다. */
             static constexpr float32 kMusicCrossfadeSeconds = 0.25f;
@@ -45,40 +45,24 @@ namespace sw
             /** @brief 장치 백엔드 등록자 사슬입니다(상수 초기화 — 정적 초기화 순서와 무관하다). */
             static SW_DEFINE_REGISTRATION_CHAIN( getRegistrarChain, AudioBackendRegistrar )
         };
-
-        /**
-         * @class NullAudioBackend
-         * @brief 출력 장치를 열지 않는 오디오 시스템입니다(전용 서버, 테스트). 엔진은 그대로 돌고, `update` 가 흐른 시간만큼 버퍼에 렌더합니다.
-         * @details 장치를 열지 않으므로(`openDevice` 가 false) 재생 상태는 `update` 의 오프라인 렌더로 진행한다. 명시 스피커 모드(`setSpeakerMode`)는 그 레이아웃 그대로 렌더한다.
-         *          5.1 · 7.1 의 결정적 오프라인 렌더와 그 출력을 보는 리스너(`SW_AUDIO_RENDER_LISTENER`)가 이 길을 쓴다. `createNull` 만 만들어 이 파일에 둔다.
-         *          클라이언트(Windows XAudio2 · 리눅스 ALSA)에서도 `createNull` 이 쓰므로 **항상 컴파일한다** — 한 번도 컴파일되지 않는 구현은 조용히 썩는다.
-         */
-        class NullAudioBackend final : public IAudioService
-        {
-        public:
-            /** @brief 출력 장치 없이 만듭니다. */
-            NullAudioBackend() = default;
-            /** @brief 내립니다. */
-            ~NullAudioBackend() override { shutdown(); }
-        };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    AudioBackendRegistrar::AudioBackendRegistrar( const utf8* pName, CreateFunction pCreate )
+    AudioBackendRegistrar::AudioBackendRegistrar( const utf8* pName, AudioOutputDeviceCreateFunction pCreate )
         : _pName{ pName }
         , _pCreate{ pCreate }
-        , _pNext{ IAudioServiceInternal::getRegistrarChain().pushFront( this ) }
+        , _pNext{ AudioServiceInternal::getRegistrarChain().pushFront( this ) }
     {
     }
 
     const AudioBackendRegistrar* AudioBackendRegistrar::getHead()
     {
-        return IAudioServiceInternal::getRegistrarChain().getHead();
+        return AudioServiceInternal::getRegistrarChain().getHead();
     }
 
-    unique_ptr<IAudioService> IAudioService::create()
+    unique_ptr<AudioService> AudioService::create()
     {
         // 플랫폼 클라이언트 빌드는 백엔드 하나를 담는다 — 구성 단계가 먼저 막는다(Source/Engine/CMakeLists.txt). 여기 닿으면 링크가 등록자를 버린 것이다(장치 없는 오디오로 몰래 바꾸지 않는다).
         const AudioBackendRegistrar* pRegistrar = AudioBackendRegistrar::getHead();
@@ -86,16 +70,17 @@ namespace sw
             SW_FATAL( "No audio device backend is registered in this build (%#) - a client build links Audio/Windows, Audio/Linux, Audio/Android or Audio/Web", build::kTargetName );
         if ( pRegistrar->_pNext != nullptr )
             SW_FATAL( "Two audio device backends are registered (%#, %#) - one platform build links one", pRegistrar->_pName, pRegistrar->_pNext->_pName );
-        return pRegistrar->_pCreate();
+        return make_unique<AudioService>( pRegistrar->_pCreate );
     }
 
-    unique_ptr<IAudioService> IAudioService::createNull()
+    unique_ptr<AudioService> AudioService::createNull()
     {
-        return make_unique<NullAudioBackend>();
+        return make_unique<AudioService>( nullptr ); // 장치 없음 — 소리 요청은 받아 오프라인으로 렌더한다(5.1 · 7.1 결정적 렌더 · 리스너가 이 길을 쓴다)
     }
 
-    IAudioService::IAudioService()
+    AudioService::AudioService( AudioOutputDeviceCreateFunction pCreateDevice )
         : _pEngine{ make_unique<AudioEngine>() }
+        , _pOutputDevice{ pCreateDevice != nullptr ? pCreateDevice( *this ) : nullptr }
         , _soundPlayer{ *this }
         , _engineAudioDriver{ *this }
         , _listBusVolume{}
@@ -121,14 +106,17 @@ namespace sw
     {
     }
 
-    IAudioService::~IAudioService() = default;
+    AudioService::~AudioService()
+    {
+        shutdown();
+    }
 
-    SubsystemInitResult IAudioService::initializeSubsystem()
+    SubsystemInitResult AudioService::initializeSubsystem()
     {
         return initialize( engine::getSubsystem<EngineConfig>()._audio ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
     }
 
-    bool IAudioService::initialize( const AudioConfig& config )
+    bool AudioService::initialize( const AudioConfig& config )
     {
         if ( _bInitialized )
             return true;
@@ -208,9 +196,9 @@ namespace sw
         return true;
     }
 
-    bool IAudioService::tryParseSpeakerMode( string_view text, AudioSpeakerMode& outMode )
+    bool AudioService::tryParseSpeakerMode( string_view text, AudioSpeakerMode& outMode )
     {
-        using Internal = IAudioServiceInternal;
+        using Internal = AudioServiceInternal;
         for ( uint32 modeIndex = 0; modeIndex < SW_COUNT_OF( Internal::kArrSpeakerModeName ); ++modeIndex )
         {
             if ( StringUtil::equals( text, Internal::kArrSpeakerModeName[modeIndex] ) )
@@ -222,7 +210,7 @@ namespace sw
         return false;
     }
 
-    bool IAudioService::resolveLayout( AudioSpeakerMode mode, const AudioOutputDevice& device, AudioChannelLayout& outLayout )
+    bool AudioService::resolveLayout( AudioSpeakerMode mode, const AudioOutputDevice& device, AudioChannelLayout& outLayout )
     {
         using Util                   = AudioChannelLayoutUtil;
         const bool       bHasDevice  = device._channelCount > 0;
@@ -275,7 +263,7 @@ namespace sw
         return true;
     }
 
-    bool IAudioService::setSpeakerMode( AudioSpeakerMode mode )
+    bool AudioService::setSpeakerMode( AudioSpeakerMode mode )
     {
         if ( _bInitialized == false )
         {
@@ -320,7 +308,7 @@ namespace sw
         return bChanged;
     }
 
-    void IAudioService::shutdown()
+    void AudioService::shutdown()
     {
         if ( _bInitialized == false )
             return;
@@ -345,7 +333,7 @@ namespace sw
         SW_LOG_INFO_ID( "AudioService.ShutDown", "Shut down." );
     }
 
-    void IAudioService::closeOutput()
+    void AudioService::closeOutput()
     {
         if ( _bOutputOpen )
             stopOutput();
@@ -358,7 +346,7 @@ namespace sw
         _offlineFrameDebt = 0.0;
     }
 
-    void IAudioService::closeLostOutput()
+    void AudioService::closeLostOutput()
     {
         _bOutputLost.store( false, std::memory_order_release );
         closeOutput();
@@ -366,7 +354,7 @@ namespace sw
         SW_LOG_WARNING_ID( "AudioService.OutputLost", "The audio output device was lost - rendering offline and reopening the default device" );
     }
 
-    void IAudioService::suspendOutput()
+    void AudioService::suspendOutput()
     {
         if ( _bInitialized == false || _bOutputSuspended != 0 )
             return;
@@ -375,7 +363,7 @@ namespace sw
         SW_LOG_INFO_ID( "AudioService.OutputSuspended", "Audio output closed while the app is suspended" );
     }
 
-    void IAudioService::resumeOutput()
+    void AudioService::resumeOutput()
     {
         if ( _bOutputSuspended == 0 )
             return;
@@ -384,7 +372,7 @@ namespace sw
         _reopenBackoff.reset();
     }
 
-    void IAudioService::retryOpenOutput( float32 deltaSeconds )
+    void AudioService::retryOpenOutput( float32 deltaSeconds )
     {
         _reopenSecondsLeft -= static_cast<float64>( deltaSeconds );
         if ( _reopenSecondsLeft > 0.0 )
@@ -410,7 +398,7 @@ namespace sw
         SW_LOG_INFO_ID( "AudioService.OutputReopened", "Audio output reopened (%# channels)", AudioChannelLayoutUtil::getChannelCount( layout ) );
     }
 
-    void IAudioService::update( float32 deltaSeconds )
+    void AudioService::update( float32 deltaSeconds )
     {
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         if ( _bInitialized == false )
@@ -420,7 +408,7 @@ namespace sw
         if ( _bOutputOpen || _bOutputSuspended != 0 )
             return; // 멈춘 동안은 오프라인으로도 렌더하지 않는다 — 게임 시간이 서 있다
         // 장치가 없으면 흐른 시간만큼 바로 렌더한다. 끝남, 박자, 가상 보이스가 장치가 있을 때와 같이 진행한다.
-        const float64 seconds = MathUtil::clamp( static_cast<float64>( deltaSeconds ), 0.0, IAudioServiceInternal::kMaxOfflineSecondsPerUpdate );
+        const float64 seconds = MathUtil::clamp( static_cast<float64>( deltaSeconds ), 0.0, AudioServiceInternal::kMaxOfflineSecondsPerUpdate );
         _offlineFrameDebt += seconds * static_cast<float64>( audio::kSampleRate );
         const bool               bListened = AudioRenderListenerRegistry::getCount() > 0; // 배포본에는 리스너 등록이 없다
         const AudioChannelLayout layout    = _pEngine->getChannelLayout();
@@ -434,7 +422,7 @@ namespace sw
         retryOpenOutput( deltaSeconds );
     }
 
-    bool IAudioService::play( const AssetID& assetID, const hashed_string& bus )
+    bool AudioService::play( const AssetID& assetID, const hashed_string& bus )
     {
         const string_view     path = assetID.view();
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
@@ -448,7 +436,7 @@ namespace sw
         return _pEngine->playClip( hashed_string( path ), bus, AudioClipPlayParams{} ) != 0;
     }
 
-    bool IAudioService::preload( string_view path )
+    bool AudioService::preload( string_view path )
     {
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         if ( path.empty() )
@@ -456,7 +444,7 @@ namespace sw
         return _pEngine->getClipStore().loadClip( hashed_string( path ) ) != nullptr;
     }
 
-    bool IAudioService::playMusic( const AssetID& assetID )
+    bool AudioService::playMusic( const AssetID& assetID )
     {
         const string_view path = assetID.view();
         if ( _bInitialized == false || path.empty() )
@@ -472,19 +460,19 @@ namespace sw
         const bool bCrossfade = _musicPlayingID != 0;
         if ( bCrossfade )
         {
-            _pEngine->stop( _musicPlayingID, IAudioServiceInternal::kMusicCrossfadeSeconds );
-            _pEngine->stopMusic( IAudioServiceInternal::kMusicCrossfadeSeconds );
+            _pEngine->stop( _musicPlayingID, AudioServiceInternal::kMusicCrossfadeSeconds );
+            _pEngine->stopMusic( AudioServiceInternal::kMusicCrossfadeSeconds );
         }
 
         AudioClipPlayParams params;
         params._bLoop         = SW_TRUE;
-        params._fadeInSeconds = bCrossfade ? IAudioServiceInternal::kMusicCrossfadeSeconds : 0.0f;
+        params._fadeInSeconds = bCrossfade ? AudioServiceInternal::kMusicCrossfadeSeconds : 0.0f;
         _musicPath            = string( path );
         _musicPlayingID       = _pEngine->playClip( hashed_string( path ), hashed_string( AudioBusNames::kMusic ), params );
         return _musicPlayingID != 0;
     }
 
-    bool IAudioService::playAdaptiveMusic( const AssetID& assetID )
+    bool AudioService::playAdaptiveMusic( const AssetID& assetID )
     {
         const string_view path = assetID.view();
         if ( _bInitialized == false || path.empty() )
@@ -495,13 +483,13 @@ namespace sw
         if ( pMusic->loadFromAsset( assetID ) == false )
             return false;
         if ( _musicPlayingID != 0 )
-            _pEngine->stop( _musicPlayingID, IAudioServiceInternal::kMusicCrossfadeSeconds );
+            _pEngine->stop( _musicPlayingID, AudioServiceInternal::kMusicCrossfadeSeconds );
         _musicPath      = string( path );
-        _musicPlayingID = _pEngine->startMusic( std::move( pMusic ), IAudioServiceInternal::kMusicCrossfadeSeconds );
+        _musicPlayingID = _pEngine->startMusic( std::move( pMusic ), AudioServiceInternal::kMusicCrossfadeSeconds );
         return _musicPlayingID != 0;
     }
 
-    void IAudioService::stopMusic()
+    void AudioService::stopMusic()
     {
         if ( _musicPlayingID != 0 )
             _pEngine->stop( _musicPlayingID, 0.0f );
@@ -510,19 +498,19 @@ namespace sw
         _musicPath.clear();
     }
 
-    void IAudioService::pauseMusic()
+    void AudioService::pauseMusic()
     {
         if ( _musicPlayingID != 0 )
             _pEngine->setPaused( _musicPlayingID, true );
     }
 
-    void IAudioService::resumeMusic()
+    void AudioService::resumeMusic()
     {
         if ( _musicPlayingID != 0 )
             _pEngine->setPaused( _musicPlayingID, false );
     }
 
-    bool IAudioService::loadMixer( const AssetID& assetID )
+    bool AudioService::loadMixer( const AssetID& assetID )
     {
         const string_view assetPath = assetID.view();
         AudioMixerDef     mixerDesc;
@@ -534,25 +522,25 @@ namespace sw
         return true;
     }
 
-    void IAudioService::setMasterVolume( float32 volume )
+    void AudioService::setMasterVolume( float32 volume )
     {
         _masterVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kMaster ), _masterVolume );
     }
 
-    void IAudioService::setMusicVolume( float32 volume )
+    void AudioService::setMusicVolume( float32 volume )
     {
         _musicVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kMusic ), _musicVolume );
     }
 
-    void IAudioService::setSFXVolume( float32 volume )
+    void AudioService::setSFXVolume( float32 volume )
     {
         _sfxVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kSFX ), _sfxVolume );
     }
 
-    void IAudioService::setBusVolume( const hashed_string& bus, float32 volume )
+    void AudioService::setBusVolume( const hashed_string& bus, float32 volume )
     {
         if ( bus == hashed_string( AudioBusNames::kMaster ) )
         {
@@ -583,7 +571,7 @@ namespace sw
         _listBusVolume.push_back( AudioBusVolume{ bus, clamped } );
     }
 
-    float32 IAudioService::getBusVolume( const hashed_string& bus ) const
+    float32 AudioService::getBusVolume( const hashed_string& bus ) const
     {
         if ( bus == hashed_string( AudioBusNames::kMaster ) )
             return _masterVolume;
@@ -599,7 +587,7 @@ namespace sw
         return 1.0f;
     }
 
-    void IAudioService::setMute( bool bMute )
+    void AudioService::setMute( bool bMute )
     {
         _bMuted = bMute;
         _pEngine->setBusMuted( hashed_string( AudioBusNames::kMaster ), bMute );
@@ -608,20 +596,20 @@ namespace sw
 
 namespace sw
 {
-    span<const utf8* const> IAudioService::getSubsystemDependencies() const
+    span<const utf8* const> AudioService::getSubsystemDependencies() const
     {
         // 다시 열기 간격을 엔진 설정에서 읽고, 믹서 그래프를 에셋으로 읽는다(팩 매니저 — 에셋 매니저가 마운트한 뒤라야 한다).
         static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName, ConfigManager::kSubsystemName, AssetManager::kSubsystemName };
         return kArrDependency;
     }
 
-    span<const utf8* const> IAudioService::getSubsystemDependents() const
+    span<const utf8* const> AudioService::getSubsystemDependents() const
     {
         static constexpr const utf8* kArrDependent[] = { SceneManager::kSubsystemName, UserSettingsManager::kSubsystemName };
         return kArrDependent;
     }
 
-    bool IAudioService::isDataFile( string_view assetPath ) const
+    bool AudioService::isDataFile( string_view assetPath ) const
     {
         if ( _bInitialized == false || assetPath.empty() )
             return false;
@@ -633,13 +621,13 @@ namespace sw
         return bMixer || bLibrary || bGraph;
     }
 
-    bool IAudioService::findLoadedGraphPath( string_view assetPath, hashed_string& outGraphPath ) const
+    bool AudioService::findLoadedGraphPath( string_view assetPath, hashed_string& outGraphPath ) const
     {
         // 소리 그래프는 이벤트가 클립처럼 고르므로 클립 캐시가 읽어 둔 것만 다시 읽는다(아직 재생하지 않은 그래프는 처음 재생할 때 새로 읽힌다).
         return StringUtil::endsWith( assetPath, AudioGraphDef::kExtension, true ) && _pEngine->getClipStore().findReadyPath( assetPath, outGraphPath );
     }
 
-    bool IAudioService::reloadDataFile( const AssetID& assetID )
+    bool AudioService::reloadDataFile( const AssetID& assetID )
     {
         const string_view assetPath = assetID.view();
         if ( _bInitialized == false || assetPath.empty() )
@@ -677,9 +665,9 @@ namespace sw
 namespace sw
 {
     // 전용 서버 역할(클라이언트 · 게임 구성의 `-server`)은 장치를 열지 않는다 — 소리 요청을 받아 버린다. 전용 서버 구성은 이 폴더를 짓지 않는다(`SW_EXCLUDED_ENGINE_FOLDERS`).
-    SW_ENGINE_SERVICE_SUBSYSTEM( IAudioService, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( AudioService, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        IAudioService& audio                = scope.addSubsystem( build._pStartupSetup->_bDedicatedServer ? IAudioService::createNull() : IAudioService::create() );
+        AudioService& audio                 = scope.addSubsystem( build._pStartupSetup->_bDedicatedServer ? AudioService::createNull() : AudioService::create() );
         build._pStartupParts->_pAudioDriver = &audio.getEngineAudioDriver();
         const bool bExposed                 = scope.exposeMember<IEngineAudioDriver>( audio, audio.getEngineAudioDriver() ) && scope.exposeMember<ISoundPlayer>( audio, audio.getSoundPlayer() );
         SW_ASSERT( bExposed );
@@ -701,7 +689,7 @@ namespace sw
             {
                 if ( listArgument.size() != 1 )
                     return false;
-                IAudioService* const pAudio = engine::findSubsystem<IAudioService>();
+                AudioService* const pAudio = engine::findSubsystem<AudioService>();
                 if ( pAudio == nullptr || pAudio->isInitialized() == false )
                 {
                     outReply = "audio.post: no audio service";
@@ -721,4 +709,4 @@ namespace sw
 } // namespace sw
 
 // 기본 믹서 그래프는 상수로 읽는다 - 쓰는 것만 담는 팩 쿠킹의 뿌리다(`AssetCookRoot.h`).
-SW_ASSET_COOK_ROOT( DefaultAudioMixer, ::sw::IAudioService::kDefaultMixerPath );
+SW_ASSET_COOK_ROOT( DefaultAudioMixer, ::sw::AudioService::kDefaultMixerPath );

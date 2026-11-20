@@ -2,7 +2,7 @@
 
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/AudioService.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 
@@ -22,7 +22,7 @@ namespace sw
                 float32 volume{ 0.0f };
                 if ( StringUtil::parseFloat( context._value, volume ) == false )
                     return false;
-                if ( IAudioService* pAudio = engine::findSubsystem<IAudioService>() )
+                if ( AudioService* pAudio = engine::findSubsystem<AudioService>() )
                     pAudio->setBusVolume( hashed_string( context._param ), volume );
                 return true;
             }
@@ -32,7 +32,7 @@ namespace sw
                 bool bMute{ false };
                 if ( StringUtil::tryParseBool( context._value, bMute ) == false )
                     return false;
-                if ( IAudioService* pAudio = engine::findSubsystem<IAudioService>() )
+                if ( AudioService* pAudio = engine::findSubsystem<AudioService>() )
                     pAudio->setMute( bMute );
                 return true;
             }
@@ -40,9 +40,9 @@ namespace sw
             static bool applySpeakerMode( const UserSettingApplyParams& context )
             {
                 AudioSpeakerMode mode{ AudioSpeakerMode::Auto };
-                if ( IAudioService::tryParseSpeakerMode( context._value, mode ) == false )
+                if ( AudioService::tryParseSpeakerMode( context._value, mode ) == false )
                     return false;
-                IAudioService* pAudio = engine::findSubsystem<IAudioService>();
+                AudioService* pAudio = engine::findSubsystem<AudioService>();
                 // 장치가 그만큼의 채널을 갖지 않으면 서비스가 오류를 남기고 거절한다(지금 구성을 그대로 쓴다).
                 return pAudio == nullptr || pAudio->setSpeakerMode( mode );
             }
@@ -50,7 +50,7 @@ namespace sw
             static bool isSpeakerModeName( string_view value )
             {
                 AudioSpeakerMode mode{ AudioSpeakerMode::Auto };
-                return IAudioService::tryParseSpeakerMode( value, mode );
+                return AudioService::tryParseSpeakerMode( value, mode );
             }
 
             static void registerHandlers( UserSettingsHandlerRegistry& registry, vector<Subscription>& outListRegistration )

@@ -11,25 +11,25 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/IAudioOutputDevice.h"
 
 namespace sw
 {
+    class AudioService;
     struct XAudio2AudioBackendImpl;
 
     /**
      * @class XAudio2AudioBackend
      * @brief Windows 오디오 백엔드입니다.
      */
-    class SW_API XAudio2AudioBackend : public IAudioService
+    class SW_API XAudio2AudioBackend final : public IAudioOutputDevice
     {
     public:
         /** @brief 장치를 잡지 않은 채로 만듭니다(대체 디코더만 겁니다). */
-        XAudio2AudioBackend();
+        explicit XAudio2AudioBackend( AudioService& service );
         /** @brief 장치를 닫고 엔진을 내립니다. */
         ~XAudio2AudioBackend() override;
 
-    protected:
         /** @brief COM, Media Foundation, XAudio2 를 초기화하고 장치 채널 수의 마스터링 보이스를 엽니다. 장치가 없으면 false 를 반환합니다. */
         [[nodiscard]] bool openDevice( AudioOutputDevice& outDevice ) override;
         /** @brief @p layout 형식(채널 마스크 포함)의 스트리밍 보이스를 열고 시작합니다. */
@@ -40,6 +40,7 @@ namespace sw
         void closeDevice() override;
 
     private:
-        unique_ptr<XAudio2AudioBackendImpl> _impl; /**< Windows 전용 상태입니다. 헤더에서 XAudio2 를 가립니다. */
+        AudioService&                       _service; ///< 이 장치가 당기는 서비스(엔진 · 유실 알림) — 서비스가 장치를 들고 먼저 내린다
+        unique_ptr<XAudio2AudioBackendImpl> _impl;    /**< Windows 전용 상태입니다. 헤더에서 XAudio2 를 가립니다. */
     };
 } // namespace sw

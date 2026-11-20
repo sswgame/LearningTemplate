@@ -91,7 +91,7 @@ namespace sw
             FrameRendererSubsystem*   _pFrameRendererSubsystem{ nullptr };
             RenderThreadSubsystem*    _pRenderThread{ nullptr };
             InputManager*             _pInputManager{ nullptr };
-            IEngineAudioDriver*       _pAudioDriver{ nullptr }; ///< 엔진 루프의 오디오 창구(`IAudioService`). 서버는 오디오를 짓지 않아 비어 있다
+            IEngineAudioDriver*       _pAudioDriver{ nullptr }; ///< 엔진 루프의 오디오 창구(`AudioService`). 서버는 오디오를 짓지 않아 비어 있다
             SceneManager*             _pSceneManager{ nullptr };
             UserSettingsManager*      _pUserSettings{ nullptr };
             FontService*              _pFontService{ nullptr };

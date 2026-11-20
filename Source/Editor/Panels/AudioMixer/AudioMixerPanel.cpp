@@ -16,7 +16,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/AudioService.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 
@@ -103,7 +103,7 @@ namespace sw::editor
         return AudioMixerViewModel::getWatchValues()._watchedBusVolume;
     }
 
-    void AudioMixerPanel::drawPreviewBar( IAudioService& audio )
+    void AudioMixerPanel::drawPreviewBar( AudioService& audio )
     {
         AudioEngine& engine = audio.getEngine();
         _model.refreshEventNames( engine );
@@ -142,7 +142,7 @@ namespace sw::editor
         ImGui::EndDisabled();
     }
 
-    void AudioMixerPanel::drawBusStrip( IAudioService& audio, uint32 busIndex )
+    void AudioMixerPanel::drawBusStrip( AudioService& audio, uint32 busIndex )
     {
         using Internal               = AudioMixerPanelInternal;
         const AudioBusStatus& status = _model.getBusStatuses()[busIndex];
@@ -200,7 +200,7 @@ namespace sw::editor
 
     void AudioMixerPanel::drawContent()
     {
-        IAudioService& audio = AudioMixerViewModel::getAudioService();
+        AudioService& audio = AudioMixerViewModel::getAudioService();
         if ( audio.isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "TheAudioServiceIsNotRunning" ) );

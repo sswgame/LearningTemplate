@@ -13,25 +13,25 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/IAudioOutputDevice.h"
 
 namespace sw
 {
+    class AudioService;
     struct AlsaAudioBackendImpl;
 
     /**
      * @class AlsaAudioBackend
      * @brief 리눅스 오디오 백엔드입니다.
      */
-    class SW_API AlsaAudioBackend : public IAudioService
+    class SW_API AlsaAudioBackend final : public IAudioOutputDevice
     {
     public:
         /** @brief 장치를 잡지 않은 채로 만듭니다. */
-        AlsaAudioBackend();
+        explicit AlsaAudioBackend( AudioService& service );
         /** @brief 장치를 닫고 엔진을 내립니다. */
         ~AlsaAudioBackend() override;
 
-    protected:
         /** @brief `libasound` 를 열고 기본 재생 장치를 엽니다. 최대 채널 수를 알립니다. 라이브러리나 장치가 없으면 false 입니다. */
         [[nodiscard]] bool openDevice( AudioOutputDevice& outDevice ) override;
         /** @brief @p layout 의 채널 수 · 48 kHz · float 로 장치를 맞추고 스트림 스레드를 시작합니다. */
@@ -46,6 +46,7 @@ namespace sw
         void runStream( StopToken stopToken );
 
     private:
-        unique_ptr<AlsaAudioBackendImpl> _impl; /**< 리눅스 전용 상태입니다. 헤더에서 ALSA 형식을 가립니다. */
+        AudioService&                    _service; ///< 이 장치가 당기는 서비스(엔진 · 유실 알림) — 서비스가 장치를 들고 먼저 내린다
+        unique_ptr<AlsaAudioBackendImpl> _impl;    /**< 리눅스 전용 상태입니다. 헤더에서 ALSA 형식을 가립니다. */
     };
 } // namespace sw

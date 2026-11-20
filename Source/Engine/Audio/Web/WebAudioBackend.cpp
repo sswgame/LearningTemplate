@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Audio/AudioEngine.h"
+#include "Engine/Audio/AudioService.h"
 #include "Engine/Audio/CircularAudioBuffer.h"
 
 #include <emscripten/atomic.h>
@@ -81,14 +82,15 @@ namespace sw
         }
     };
 
-    WebAudioBackend::WebAudioBackend()
-        : _impl{ make_unique<WebAudioBackendImpl>() }
+    WebAudioBackend::WebAudioBackend( AudioService& service )
+        : _service{ service }
+        , _impl{ make_unique<WebAudioBackendImpl>() }
     {
     }
 
     WebAudioBackend::~WebAudioBackend()
     {
-        shutdown();
+        // 서비스가 소멸자에서 출력 · 장치를 먼저 내린다(`AudioService::~AudioService`) — 여기서는 남은 것을 놓기만 한다.
     }
 
     bool WebAudioBackend::openDevice( AudioOutputDevice& outDevice )
@@ -138,7 +140,7 @@ namespace sw
         {
             if ( state._status.load( std::memory_order_acquire ) != 0 )
             {
-                notifyOutputLost(); // 서비스가 스트림을 닫고 오프라인으로 넘긴 뒤 다시 연다
+                _service.notifyOutputLost(); // 서비스가 스트림을 닫고 오프라인으로 넘긴 뒤 다시 연다
                 return;
             }
             const uint32 readIndex = emscripten_atomic_load_u32( ring.getReadIndexAddress() );
@@ -148,7 +150,7 @@ namespace sw
                 (void)emscripten_atomic_wait_u32( ring.getReadIndexAddress(), readIndex, Internal::kWaitNanoseconds );
                 continue;
             }
-            getEngine().render( _impl->_listRender.data(), Internal::kMixFrameCount );
+            _service.getEngine().render( _impl->_listRender.data(), Internal::kMixFrameCount );
             const uint32 pushed = ring.push( _impl->_listRender );
             SW_ASSERT( pushed == samples ); // 소비자는 자리를 늘리기만 하므로 위에서 본 자리가 그대로 있다
             (void)pushed;
@@ -173,5 +175,5 @@ namespace sw
         stopOutput();
     }
 
-    SW_REGISTER_AUDIO_BACKEND( WebAudioBackend ); // 웹 클라이언트의 장치 백엔드(`IAudioService::create` 가 등록표에서 고른다)
+    SW_REGISTER_AUDIO_BACKEND( WebAudioBackend ); // 웹 클라이언트의 장치 백엔드(`AudioService::create` 가 등록표에서 고른다)
 } // namespace sw
