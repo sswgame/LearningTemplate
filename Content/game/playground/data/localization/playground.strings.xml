@@ -15,9 +15,19 @@
 				<item>game/playground/data/cinematic.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="Elder" source="Elder" context="Dialogue speaker name">
+			<origins>
+				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
 		<entry key="GateCut" source="GateCut" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cutscenegate.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Mind the pond - nobody swims in it." source="Mind the pond - nobody swims in it." context="Dialogue line">
+			<origins>
+				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
 			</origins>
 		</entry>
 		<entry key="Subtitle.Guide" source="Guide" context="Subtitle speaker (audio event SubtitleGuideLine)">
@@ -50,6 +60,11 @@
 		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Welcome to Pixel Town, traveller." source="Welcome to Pixel Town, traveller." context="Dialogue line">
+			<origins>
+				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
 			</origins>
 		</entry>
 	</entries>
