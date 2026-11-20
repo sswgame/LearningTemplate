@@ -30,8 +30,7 @@ namespace sw
     {
         // 설정 로드가 범위(Min)를 이미 본다. 다른 값으로 몰래 바꾸면 틀린 설정이 조용히 다른 정책이 된다 — 계약 위반은 단언한다.
         const bool bValid = params._maxFrameDeltaTime > 0.0f && params._fixedDeltaTime > 0.0f && params._maxFixedStepPerFrame > 0;
-        SW_LOG_ASSERT( bValid, "FixedTimestep needs positive time policy values (EngineConfig range checks should have rejected these)" );
-        if ( bValid == false )
+        if ( !SW_ENSURE( bValid, "FixedTimestep needs positive time policy values (EngineConfig range checks should have rejected these)" ) )
             return;
         _params = params;
         // 한 프레임에 받는 시간을 스텝 상한만큼에서 자른다 — 넘친 시간을 남겨 다음 프레임이 더 많은 스텝을 요구하는 악순환(고정 스텝 스파이럴)을 막는다.

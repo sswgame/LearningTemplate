@@ -395,6 +395,36 @@ SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
 }
 
 /**
+ * @brief [LogTest] `SW_ENSURE` 는 조건의 참 · 거짓을 돌려주고, 거짓이면 단언 줄(`SW_ASSERT_LOG_ID`)을 남긴다 · 참이면 아무것도 남기지 않는다
+ */
+SW_TEST_CASE( LogTest, EnsureReturnsConditionAndReportsFailure )
+{
+    // 단언 줄은 "[TestLog] " 접두로 시작하지 않아 LogCapture 가 거른다 — 메시지에 든 탐침 글자로 직접 모은다.
+    uint32                 failedLineCount = 0;
+    const sw::Subscription subscription    = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
+        sw::LogWrittenDelegate,
+        [&failedLineCount]( const sw::LogEntry& entry )
+    {
+        if ( sw::StringUtil::contains( entry._message, "ensure probe" ) && sw::StringUtil::contains( entry._message, "ASSERT failed" ) )
+            ++failedLineCount;
+    } ) );
+    SW_REQUIRE_TRUE( subscription.isActive() );
+    [[maybe_unused]] sw::test::ScopedAssertCapture assertCapture;
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 거짓 조건의 Error 줄은 이 테스트가 보려는 대상이다
+
+    int32 evaluated = 0;
+    SW_EXPECT_TRUE( SW_ENSURE( ++evaluated == 1, "ensure probe holds %#", 1 ) );
+    SW_EXPECT_EQUAL( 0u, failedLineCount );
+
+    const bool bProbe = false;
+    SW_EXPECT_FALSE( SW_ENSURE( bProbe, "ensure probe failed %#", 7 ) );
+    SW_EXPECT_EQUAL( 1, evaluated ); // 식은 한 번만 평가한다
+    SW_EXPECT_EQUAL( 1u, failedLineCount );
+    if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+}
+
+/**
  * @brief [LogTest] 비-UTF8(ANSI/CP949) 문자열 전달 시에도 안전하게 처리됨
  */
 SW_TEST_CASE( LogTest, NonUTF8FallbackSafety )

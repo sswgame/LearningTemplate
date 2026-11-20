@@ -135,6 +135,50 @@ namespace sw
         std::fflush( stderr );
     }
 
+    bool Logger::reportAssertFailure( const utf8* pTag, const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept
+    {
+#if defined( SW_DO_CHECKS )
+        printAssertFailureToStderr( pExpression, pMessage, pFile, line, pFunction != nullptr ? pFunction : "" );
+#endif
+        if ( shouldLog( LogLevel::Error ) )
+        {
+            utf8 arrLine[constant::buffer::kMax8192];
+#if defined( SW_DO_CHECKS )
+            formatstring( arrLine, constant::buffer::kMax8192,
+                          "ASSERT failed
+                          "
+                          "Expression : %#
+                          "
+                          "Message    : %#
+                          "
+                          "FileName   : %#
+                          "
+                          "Function   : %#
+                          "
+                          "Line       : %#",
+                          pExpression, pMessage, pFile, pFunction != nullptr ? pFunction : "", line );
+#else
+            formatstring( arrLine, constant::buffer::kMax8192,
+                          "ASSERT failed
+                          "
+                          "Expression : %#
+                          "
+                          "Message    : %#
+                          "
+                          "FileName   : %#
+                          "
+                          "Line       : %#",
+                          pExpression, pMessage, pFile, line );
+#endif
+            writeLogGlobal( LogLevel::Error, pTag, arrLine, pFile, line, SW_ASSERT_LOG_ID );
+        }
+#if defined( SW_DO_CHECKS )
+        return internal::tryCaptureAssert() == false && internal::shouldBreakOnAssert( pExpression, pMessage, pFile, line );
+#else
+        return false;
+#endif
+    }
+
     void Logger::writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
     {
         ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );

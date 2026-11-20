@@ -122,6 +122,12 @@ namespace sw
          */
         static void printAssertFailureToStderr( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept;
         /**
+         * @brief `SW_LOG_ASSERT` · `SW_ENSURE` 실패 한 건의 줄 밖 몸통입니다. 검사 구성은 stderr 에 동기로 쓰고 Error 줄(`SW_ASSERT_LOG_ID`)을 남긴 뒤 멈출지 정합니다(가로채기 · 대화상자).
+         * @return 부른 자리에서 멈춰야 하면 true. 배포(Shipping)에서는 Error 줄만 남기고 늘 false 입니다. @p pFunction 은 배포에서 nullptr 입니다.
+         */
+        [[nodiscard]] static bool reportAssertFailure( const utf8* pTag, const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line,
+                                                       const utf8* pFunction ) noexcept;
+        /**
          * @brief 전역 싱크에 리스너를 붙이고 그 구독을 돌려줍니다. 싱크가 없으면 순서 위반이라 `SW_LOW_LEVEL_ASSERT` 로 보고하고(Debug 는 멈춘다) 빈 구독을 돌려줍니다.
          * @details 구독은 붙인 싱크를 가리킨다 — 그 뒤 전역 싱크가 바뀌어도 붙인 곳에서 떼고, 싱크가 먼저 사라지면 무효가 된다(종료 순서에서 정상).
          *          구독을 풀면 진행 중인 방송이 끝날 때까지 기다린다(최대 2 초). 그래서 리스너 콜백이 얻는 락을 **쥔 채** 풀지 않는다 — 콜백이 그 락을 기다리면
@@ -211,20 +217,56 @@ namespace sw
 /// @brief 컴파일에서 빠진 SW_LOG_* 의 본문입니다. 인자를 평가하지 않지만 이름은 쓴 것으로 셉니다(`LogDiscardUtil`).
 #define SW_LOG_DISCARDED( ... ) ( (void)sizeof( ::sw::LogDiscardUtil::consume( __VA_ARGS__ ) ) )
 
+namespace sw::internal
+{
+    /**
+     * @brief 서식을 8KB 칸에 짓고 `Logger::writeLogGlobal` 로 넘깁니다. `SW_LOG_WRITE` 의 몸통입니다.
+     * @details **줄 밖(noinline)에 둡니다.** 매크로 안에 8KB 배열을 두면 로그 줄이 있는 함수마다 그 배열이 프레임에 들어가 로그가 나가지 않는 호출에도
+     *          스택 탐침(`__chkstk`) · 스택 보호 쿠키 비용을 치르고, 줄이 여럿이면 프레임이 수십 KB 가 된다. 버퍼는 이 함수 프레임에만 있고 부르는 쪽에는
+     *          상세도 검사와 호출 하나가 남는다(언리얼 `UE_LOG` 가 `FMsg::Logf_Internal` 을 줄 밖으로 부르는 것과 같은 자리).
+     */
+    template <typename... Args>
+    SW_NOINLINE void writeFormattedLog( LogLevel level, const utf8* pTag, const utf8* pFile, int32 line, const utf8* pID, string_view format, Args&&... args ) noexcept
+    {
+        utf8 arrBuffer[constant::buffer::kMax8192];
+        formatstring( arrBuffer, constant::buffer::kMax8192, format, std::forward<Args>( args )... );
+        Logger::writeLogGlobal( level, pTag, arrBuffer, pFile, line, pID );
+    }
+
+    /**
+     * @brief `SW_LOG_ASSERT` · `SW_ENSURE` 의 실패 한 건을 보고하고, 부른 자리에서 멈춰야 하면 true 를 돌려줍니다(멈춤은 매크로가 부른 자리에서 한다).
+     * @details 메시지를 짓고 나머지(stderr · 로그 · 가로채기 · 대화상자)는 줄 밖 `Logger::reportAssertFailure` 에 맡긴다 — 서식 인자마다 생기는 사본을 작게 둔다.
+     *          배포(Shipping)에서는 로그만 남기고 false 다. @p pFunction 은 검사 구성에서만 넘긴다(배포본에 함수 서명 글이 남지 않게, 그러면 nullptr).
+     */
+    template <typename... Args>
+    SW_NOINLINE bool reportFormattedAssert( const utf8* pTag, const utf8* pExpression, const utf8* pFile, int32 line, const utf8* pFunction, string_view format,
+                                            Args&&... args ) noexcept
+    {
+        utf8 arrMessage[constant::buffer::kMax8192];
+        formatstring( arrMessage, constant::buffer::kMax8192, format, std::forward<Args>( args )... );
+        return Logger::reportAssertFailure( pTag, pExpression, arrMessage, pFile, line, pFunction );
+    }
+
+    /** @brief `SW_FATAL` 의 몸통입니다. 서식을 줄 밖 프레임에서 짓고 `reportFatal` 로 멈춥니다(`writeFormattedLog` 와 같은 까닭). */
+    template <typename... Args>
+    [[noreturn]] SW_NOINLINE void reportFormattedFatal( const utf8* pFile, int32 line, string_view format, Args&&... args ) noexcept
+    {
+        utf8 arrMessage[constant::buffer::kMax8192];
+        formatstring( arrMessage, constant::buffer::kMax8192, format, std::forward<Args>( args )... );
+        reportFatal( pFile, line, arrMessage );
+    }
+} // namespace sw::internal
+
 /**
  * @brief 포맷 문자열(과 인자)을 포맷해 Logger::writeLogGlobal 로 넘기는 핵심 매크로입니다.
- * @details **런타임 상세도를 먼저 확인합니다.** 버려질 줄은 8KB 버퍼 포맷 비용도 치르지 않습니다.
+ * @details **런타임 상세도를 먼저 확인합니다.** 버려질 줄은 포맷 비용도 치르지 않습니다. 버퍼는 줄 밖 함수(`internal::writeFormattedLog`)의 프레임에만 있습니다.
  * @note 메시지 문자열을 __VA_ARGS__ 의 첫 인자로 받으므로, 가변 인자 생략(C++20) 확장을 쓰지 않습니다.
  */
-#define SW_LOG_WRITE( level, pID, ... )                                                            \
-    do                                                                                             \
-    {                                                                                              \
-        if ( ::sw::Logger::shouldLog( level ) )                                                    \
-        {                                                                                          \
-            ::utf8 arrBuffer[::sw::constant::buffer::kMax8192];                                    \
-            ::sw::formatstring( arrBuffer, ::sw::constant::buffer::kMax8192, __VA_ARGS__ );        \
-            ::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, arrBuffer, __FILE__, __LINE__, pID ); \
-        }                                                                                          \
+#define SW_LOG_WRITE( level, pID, ... )                                                                                         \
+    do                                                                                                                          \
+    {                                                                                                                           \
+        if ( ::sw::Logger::shouldLog( level ) )                                                                                 \
+            ::sw::internal::writeFormattedLog( level, SW_LOG_TAG, __FILE__, static_cast<int32>( __LINE__ ), pID, __VA_ARGS__ ); \
     } while ( false )
 
 /**
@@ -232,13 +274,7 @@ namespace sw
  * @details 서식은 `SW_LOG_*` 와 같은 `formatstring`(`%#`)입니다. 줄은 stderr 에 먼저 동기로 쓰이고 로그로도 가며, 비동기 싱크를 비운 뒤
  *          `std::abort` 합니다(`sw::internal::reportFatal`, `[[noreturn]]`). 로그 수준 필터 · 컴파일 제외를 타지 않습니다. 로그보다 아래 티어는 `SW_LOW_LEVEL_FATAL`.
  */
-#define SW_FATAL( ... )                                                                           \
-    do                                                                                            \
-    {                                                                                             \
-        ::utf8 arrFatalMessage[::sw::constant::buffer::kMax8192];                                 \
-        ::sw::formatstring( arrFatalMessage, ::sw::constant::buffer::kMax8192, __VA_ARGS__ );     \
-        ::sw::internal::reportFatal( __FILE__, static_cast<int32>( __LINE__ ), arrFatalMessage ); \
-    } while ( false )
+#define SW_FATAL( ... ) ::sw::internal::reportFormattedFatal( __FILE__, static_cast<int32>( __LINE__ ), __VA_ARGS__ )
 
 // 로그 줄은 모두 종류 id 를 단다 — id 없는 매크로(`SW_LOG_ERROR` …)는 없다. 테스트 · 시나리오 · 로그 게이트 · 자식 프로세스 중계가 줄을 문장이 아니라 id 로 가리키므로,
 // id 없는 줄이 생길 수 있으면 그 줄을 셀 때마다 문구에 기대게 된다(문구를 고친 커밋이 시나리오를 조용히 깼다). 언리얼 `UE_LOG` 가 범주를 필수 인자로 받는 것과 같은 자리다.
@@ -275,52 +311,36 @@ namespace sw
 #endif
 
 #if defined( SW_DO_CHECKS )
-
-    /**
-     * @brief 조건이 거짓이면 메시지 · 식 · 파일 · 함수 · 줄을 Error 로 남기고 디버거에서 멈춥니다.
-     * @note 테스트가 단언 가로채기(`test::ScopedAssertCapture`)를 걸어 두었으면 멈추지 않고 세기만 합니다.
-     * @note Debug 에서만 멈춥니다. 그 밖의 빌드는 아래에서 **로그만** 남깁니다. 배포본에서 단언이 통째로 사라지면 무엇이
-     *       어긋났는지 알 길이 없기 때문입니다.
-     */
-    #define SW_LOG_ASSERT( expr, ... )                                                                                                          \
-        do                                                                                                                                      \
-        {                                                                                                                                       \
-            if ( !( expr ) )                                                                                                                    \
-            {                                                                                                                                   \
-                utf8 _assertMsg[sw::constant::buffer::kMax8192];                                                                                \
-                sw::formatstring( _assertMsg, sw::constant::buffer::kMax8192, __VA_ARGS__ );                                                    \
-                ::sw::Logger::printAssertFailureToStderr( #expr, _assertMsg, __FILE__, static_cast<int32>( __LINE__ ), SW_FUNCTION_SIGNATURE ); \
-                SW_LOG_WRITE( sw::LogLevel::Error, SW_ASSERT_LOG_ID,                                                                            \
-                              "ASSERT failed\n"                                                                                                 \
-                              "Expression : %#\n"                                                                                               \
-                              "Message    : %#\n"                                                                                               \
-                              "FileName   : %#\n"                                                                                               \
-                              "Function   : %#\n"                                                                                               \
-                              "Line       : %#",                                                                                                \
-                              #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ );                                                   \
-                if ( ::sw::internal::tryCaptureAssert() == false &&                                                                             \
-                     ::sw::internal::shouldBreakOnAssert( #expr, _assertMsg, __FILE__, __LINE__ ) )                                             \
-                    SW_DEBUG_BREAK();                                                                                                           \
-            }                                                                                                                                   \
-        } while ( false )
+    /** @brief 단언 보고에 넘길 함수 서명입니다. 배포본은 서명 글을 바이너리에 남기지 않게 nullptr 입니다. */
+    #define SW_ASSERT_FUNCTION_SIGNATURE SW_FUNCTION_SIGNATURE
 #else
-    /**
-     * @brief 배포(Shipping)에서는 **멈추지 않고 Error 로그만** 남깁니다.
-     * @details no-op 으로 두지 않습니다 — 배포본에서 계약이 깨진 순간을 놓치게 됩니다.
-     */
-    #define SW_LOG_ASSERT( expr, ... )                                                       \
-        do                                                                                   \
-        {                                                                                    \
-            if ( !( expr ) )                                                                 \
-            {                                                                                \
-                utf8 _assertMsg[sw::constant::buffer::kMax8192];                             \
-                sw::formatstring( _assertMsg, sw::constant::buffer::kMax8192, __VA_ARGS__ ); \
-                SW_LOG_ERROR_ID( SW_ASSERT_LOG_ID, "ASSERT failed\n"                         \
-                                                   "Expression : %#\n"                       \
-                                                   "Message    : %#\n"                       \
-                                                   "FileName   : %#\n"                       \
-                                                   "Line       : %#",                        \
-                                 #expr, _assertMsg, __FILE__, __LINE__ );                    \
-            }                                                                                \
-        } while ( false )
+    #define SW_ASSERT_FUNCTION_SIGNATURE nullptr
 #endif
+
+/**
+ * @brief 조건이 거짓이면 메시지 · 식 · 파일 · 함수 · 줄을 Error 로 남기고, 검사 구성에서는 디버거에서 멈춥니다(배포에서는 로그만).
+ * @note 테스트가 단언 가로채기(`test::ScopedAssertCapture`)를 걸어 두었으면 멈추지 않고 세기만 합니다.
+ * @note 배포본에서도 식을 평가하고 로그를 남깁니다 — 단언이 통째로 사라지면 무엇이 어긋났는지 알 길이 없기 때문입니다. 실패한 뒤 빠져나가야 하면 `SW_ENSURE` 를 씁니다.
+ */
+#define SW_LOG_ASSERT( expr, ... )                                                                                                                 \
+    do                                                                                                                                             \
+    {                                                                                                                                              \
+        if ( !( expr ) )                                                                                                                           \
+        {                                                                                                                                          \
+            if ( ::sw::internal::reportFormattedAssert( SW_LOG_TAG, #expr, __FILE__, static_cast<int32>( __LINE__ ), SW_ASSERT_FUNCTION_SIGNATURE, \
+                                                        __VA_ARGS__ ) )                                                                            \
+                SW_DEBUG_BREAK();                                                                                                                  \
+        }                                                                                                                                          \
+    } while ( false )
+
+/**
+ * @brief `SW_LOG_ASSERT` 와 같이 보고하고 **조건의 참 · 거짓을 돌려주는 식**입니다(언리얼 `ensureMsgf` 자리). `if ( !SW_ENSURE( p != nullptr, "…" ) ) return;`
+ * @details 단언한 뒤 같은 조건을 다시 적어 빠져나가는 두 줄(`SW_LOG_ASSERT( x, … ); if ( !x ) return;`)은 두 조건이 어긋날 수 있다 — 한 식으로 묶는다.
+ *          모든 구성에서 식을 평가하고 실패를 로그로 남긴다. 검사 구성에서는 부른 자리에서 멈춘다(가로채기 · 대화상자는 `SW_LOG_ASSERT` 와 같다).
+ */
+#define SW_ENSURE( expr, ... )                                                                                                                       \
+    ( ( expr ) ? true                                                                                                                                \
+               : ( ::sw::internal::reportFormattedAssert( SW_LOG_TAG, #expr, __FILE__, static_cast<int32>( __LINE__ ), SW_ASSERT_FUNCTION_SIGNATURE, \
+                                                          __VA_ARGS__ )                                                                              \
+                       ? ( SW_DEBUG_BREAK(), false )                                                                                                 \
+                       : false ) )
