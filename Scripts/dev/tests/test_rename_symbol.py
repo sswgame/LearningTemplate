@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -26,28 +25,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.git import run_git_or_raise  # noqa: E402
 from common.rename_scope import NAMING_WORDS_PATH  # noqa: E402
-from dev import rename_identifier  # noqa: E402
-from dev import move_source  # noqa: E402
-
-
-_REAL_RUN = subprocess.run
-
-
-def skip_lower_baseline(command, *args, **kwargs):
-    """이름 기준선 낮추기(`naming_words.py --lower-baseline`)는 이 저장소의 린트라 임시 저장소에서는 건너뛴다. 나머지(git)는 그대로 돈다."""
-    if any("naming_words.py" in str(part) for part in command):
-        return subprocess.CompletedProcess(command, 0)
-    return _REAL_RUN(command, *args, **kwargs)
+from dev import rename_symbol  # noqa: E402
 
 
 def run_rename(root: Path, list_argument: list[str]) -> int:
-    """도구를 @p root 저장소에서 돌린다. 쌍 표(`--pairs`)가 있으면 표 도구, 아니면 `Old=New` 도구."""
-    with mock.patch.object(move_source, "get_project_root", return_value=root), mock.patch.object(move_source, "format_changed", return_value=0), \
-            mock.patch.object(rename_identifier, "get_project_root", return_value=root), mock.patch("subprocess.run", side_effect=skip_lower_baseline):
-        if "--pairs" in list_argument:
-            index = list_argument.index("--pairs")
-            return rename_identifier.main([list_argument[index + 1], *list_argument[:index], *list_argument[index + 2:]])
-        return int(move_source.main_rename(list_argument))
+    """도구를 @p root 저장소에서 돌린다. 이름 기준선 낮추기 · clang-format 은 이 저장소의 린트라 건너뛴다."""
+    with mock.patch.object(rename_symbol, "get_project_root", return_value=root), mock.patch.object(rename_symbol, "format_changed", return_value=0),             mock.patch.object(rename_symbol, "lower_naming_baseline"):
+        return int(rename_symbol.main(list_argument))
 
 
 class RenameSymbolTest(unittest.TestCase):

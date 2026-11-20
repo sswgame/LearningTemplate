@@ -19,7 +19,7 @@
 Why: CMake's own commands are lowercase `snake_case` and projects prefix theirs (Qt `qt_add_executable`, KDE ECM `ecm_add_test`, Abseil `absl_cc_library`) — `sw_` says "ours", the casing says "CMake". `naming-words` enforces the function form (also in `Source` · `Test` · `ThirdParty` wrapper CMake).
 
 - **No `macro()`.** A macro expands in the caller's scope and leaks every local. Write a `function()` and hand results back with `set(<name> … PARENT_SCOPE)` (`return(PROPAGATE)` needs 3.25; we require 3.24). Only a body that must run in the caller's scope may stay a macro, with a one-line reason on that line.
-- Renames go through a pair table and the tool, so a merged branch can be caught up: `py -3 Scripts/dev/rename_identifier.py Config/Rules/Renames/<table>.json --reapply` (`"scope": "cmake"` for locals, `"ban": false` to keep them off `_bannedNames`). Folder layout: [FolderLayout](FolderLayout.md) 3-2.
+- Renames go through a pair table and the tool, so a merged branch can be caught up: `py -3 -m Scripts rename-symbol --pairs Config/Rules/Renames/<table>.json --reapply` (`"scope": "cmake"` for locals, `"ban": false` to keep them off `_bannedNames`). Folder layout: [FolderLayout](FolderLayout.md) 3-2.
 
 ### Python
 
