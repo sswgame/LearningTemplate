@@ -83,6 +83,7 @@ namespace sw
         hashed_string     _lookupKey; ///< 레지스트리 조회 키(canonical 이름)
         uint32            _registerIndex{ 0 };
         ShaderBindingKind _kind{ ShaderBindingKind::Unknown };
+        uint32            _elementStride{ 0 }; ///< 구조 버퍼 슬롯의 셰이더 원소 크기(`ShaderBindingSlot::_elementStride`, 모르면 0)
     };
 } // namespace sw
 

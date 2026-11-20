@@ -251,6 +251,8 @@ namespace sw
                     if ( pBuffer != nullptr && pBuffer->_index != kInvalidDescriptorIndex )
                     {
                         validateIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Buffer, pBuffer->_index, bind._lookupKey );
+                        if ( bCheckIndex )
+                            (void)BindlessIndexValidator::validateStride( pIndexCheck->_pDevice, pIndexCheck->_passName, bind._lookupKey, bind._elementStride, pBuffer->_elementStride ); // 어긋남은 검사가 로그로 남긴다
                         cmd.bindStructuredBuffer( pBuffer->_index, bind._registerIndex );
                     }
                 }

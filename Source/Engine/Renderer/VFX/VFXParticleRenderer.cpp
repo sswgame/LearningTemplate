@@ -18,11 +18,11 @@ namespace sw
     {
         struct VFXParticleRendererInternal
         {
-            /** @brief 루트 상수 칸입니다 — particle.hlsl 의 SwRootConstants 순서(시작 · 텍스처 · 플래그 · 크기 배율 · 방출기 행렬의 열 0..2). */
+            /** @brief 루트 상수 칸입니다 — particle.hlsl 의 SwRootConstants 순서(시작 · 텍스처 · 플래그 · 입자 수 · 방출기 행렬의 열 0..2). 크기 배율은 셰이더가 열에서 구한다. */
             static constexpr uint32 kRootParticleBase  = 0;
             static constexpr uint32 kRootTexture       = 1;
             static constexpr uint32 kRootFlags         = 2;
-            static constexpr uint32 kRootSizeScale     = 3;
+            static constexpr uint32 kRootParticleCount = 3;
             static constexpr uint32 kRootColumn0       = 4;
             static constexpr uint32 kColumnCount       = 3;
             static constexpr uint32 kFloatsPerColumn   = 4;
@@ -180,7 +180,8 @@ namespace sw
                 arrRoot[Root::kRootFlags] |= ( slot._order._first + 1u ) << kRootFlagOrderShift;
             else if ( bOrdered )
                 SW_LOG_ERROR_ONCE_ID( "VFXParticleRenderer.OrderRangeTooFar", "Particle order list is too long for the root flags (%# entries) - an emitter draws unsorted", slot._order._first );
-            arrRoot[Root::kRootSizeScale] = BitUtil::floatToBits( batch._sizeScale );
+            // 셰이더가 이 구간 밖의 입자를 읽지 않는다(particle.hlsl loadParticle). CPU 방출기는 공유 버퍼 안 자기 입자 수, GPU 방출기는 자기 렌더 입력 버퍼의 원소 수다.
+            arrRoot[Root::kRootParticleCount] = bGPUBatch ? pGPUSource->_particleCount : static_cast<uint32>( batch.findCPUParticles()->size() );
             if ( bNativeBindless )
             {
                 arrRoot[Root::kRootTexture] = srv; // 전역 번호

@@ -1064,26 +1064,34 @@ namespace sw
         }
         if ( beginColorPassMrt( context, arrColor, arrClear, arrLoad, colorCount, hashed_string{}, RHIRenderPassLoadOp::Load ) == false )
             return;
-        for ( const FrameRenderState::FrameDecalDraw& decal : listDecal )
+        // 데칼 원소는 셋업이 구조 버퍼 하나에 올렸다(`FrameRenderer::uploadFrameDecals`) — 묶음마다 인스턴스 그리기 하나다. 인스턴스는 차례대로 래스터되므로
+        // 프리멀티플라이 쌓기의 순서가 데칼마다 그리던 때와 같다. 에뮬 백엔드는 텍스처를 머티리얼 칸에 걸어야 해서 텍스처가 같은 이웃끼리만 묶는다(네이티브 bindless 는 모두 하나).
+        const uint32 decalCount   = static_cast<uint32>( listDecal.size() );
+        const bool   bDecalBuffer = _state._decalBuffer._buffer != 0 && _state._decalBuffer._srv != kInvalidDescriptorIndex;
+        if ( pso != 0 && bDecalBuffer && decalCount > 0 )
         {
-            if ( pso == 0 )
-                break;
-            // 상자 월드 행렬은 g_World(bindForDraw 가 context._world 로 건다), 나머지는 그리기마다의 패스 상수다.
-            context._world = decal._world;
-            context._passValues.setMatrix( passConstantNames()._decalWorldToLocal, decal._worldToLocal );
-            context._passValues.setFloat4( passConstantNames()._decalColor, decal._color );
-            context._passValues.setFloat4( passConstantNames()._decalSurface, decal._surface );
-            context._passValues.setUint( passConstantNames()._decalChannels, decal._channels );
-            context._passValues.setUint( passConstantNames()._decalAlbedoTexture, decal._albedoTexture );
-            context._passValues.setUint( passConstantNames()._decalNormalTexture, decal._normalTexture );
-            commitBindlessTextureBindings( context );
-            context._pCmd->setPipelineState( pso );
-            // 상자 하나 = 삼각형 12 개(정점 버퍼 없이 SV_VertexID — decal.hlsl VSMain). 앞면은 XML 의 컬(Front)이 버린다.
-            // shortcut: 거울 상자(월드 행렬식 < 0)는 감김이 뒤집혀 앞면이 남는다 — 그런 데칼이 생기면 FramePSOManager::reverseCullMode 처럼 컬을 뒤집은 PSO 를 고른다.
-            if ( bindForDraw( context, pso, kInvalidDescriptorIndex, decal._arrTextureSRV ) )
+            const bool bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+            context._resourceRegistry.registerBuffer( passConstantNames()._swDecals, _state._decalBuffer );
+            context._passValues.setUint( passConstantNames()._decalCount, decalCount );
+            uint32 first = 0;
+            while ( first < decalCount )
             {
-                context._pCmd->draw( kDecalBoxVertexCount, 0 );
-                SW_PROFILE_COUNT( "RT.Draw.decalDraws", 1 ); // CPU 직접 그리기(데칼마다 상수 · 바인딩) — 인스턴스 버퍼 + 그리기 하나로 옮길지 재는 수
+                uint32 end = first + 1u;
+                while ( end < decalCount && ( bNativeBindless || Memory::compare( listDecal[first]._arrTextureSRV, listDecal[end]._arrTextureSRV, sizeof( listDecal[first]._arrTextureSRV ) ) == 0 ) )
+                {
+                    ++end;
+                }
+                context._passValues.setUint( passConstantNames()._decalFirst, first );
+                commitBindlessTextureBindings( context );
+                context._pCmd->setPipelineState( pso );
+                // 상자 하나 = 삼각형 12 개(정점 버퍼 없이 SV_VertexID — decal.hlsl VSMain), 인스턴스 하나 = 데칼 하나. 앞면은 XML 의 컬(Front)이 버린다.
+                // shortcut: 거울 상자(월드 행렬식 < 0)는 감김이 뒤집혀 앞면이 남는다 — 그런 데칼이 생기면 FramePSOManager::reverseCullMode 처럼 컬을 뒤집은 PSO 를 고른다.
+                if ( bindForDraw( context, pso, kInvalidDescriptorIndex, listDecal[first]._arrTextureSRV ) )
+                {
+                    context._pCmd->drawInstanced( kDecalBoxVertexCount, end - first, 0, 0 );
+                    SW_PROFILE_COUNT( "RT.Draw.decalDraws", 1 ); // 데칼 인스턴스 그리기 묶음 수(네이티브 bindless 는 패스에 하나)
+                }
+                first = end;
             }
         }
         context._pCmd->endRenderPass();

@@ -227,6 +227,7 @@ namespace sw
                 planned._lookupKey     = hashed_string( canonicalResourceView( slot._name.c_str(), false ) );
                 planned._registerIndex = slot._registerIndex;
                 planned._kind          = slot._kind;
+                planned._elementStride = slot._elementStride;
                 _listResourceBindOp.push_back( planned );
             }
         }

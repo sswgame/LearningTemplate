@@ -2309,3 +2309,9 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 | 그리기당 값 | 루트 상수(DX12) · 푸시 상수(Vulkan) · b2 에뮬(DX11 · GL), 머티리얼 원소 수 하나 | 맞음(SRP Batcher PerDraw · 언리얼 느슨한 파라미터 자리) | — |
 
 레지스터 공간: 텍스처 bindless 배열은 space1, 엔진 고정 슬롯 · PassCB(패스) · 머티리얼 CB(머티리얼) · 루트 상수(그리기)가 나뉘어 있어 빈도 분할은 언리얼 Uniform Buffer 빈도(View · Material · Primitive)와 같은 축이다. 업로드는 `RHIStructuredBuffer::upload` 가 default 버퍼에 복사로 쓰는 꼴이라 프레임당 이하 빈도에 맞다.
+
+### 5. 구현한 것(같은 날, 뒤 커밋)
+
+- 원소 수가 없던 틈 넷: PassCB `g_SwLightElementCount` · `g_SwLightGridWordCount` · `g_SwLightProbeElementCount`(C++ `registerLightBuffer` 가 버퍼 용량을 싣는다)와 입자 루트 상수 `g_SwParticleCount`(크기 배율 칸을 비웠다 — 셰이더가 방출기 열에서 `getMaximumAxisScale` 과 같은 식으로 다시 구한다). 읽기 함수 한 곳(`LightBuffer::loadElement` · `LightGrid::loadWord` · `LightProbe::loadFromXML` · `loadParticle`)이 검사하고 범위 밖이면 0 을 돌려주며, 메시지 변형에서는 `SW_GPU_CHECK`(id 60 ~ 63)로 남긴다. 삼항은 양쪽을 평가하므로 읽기는 `if` 로 막는다.
+- stride 검사: `BindlessIndexValidator::validateStride` — 바인더가 리플렉션 원소 크기(`ShaderResourceBindOp::_elementStride`)와 등록한 버퍼의 원소 크기(`RegisteredBuffer::_elementStride`, `FrameResourceRegistry::registerBuffer( name, const RHIStructuredBuffer& )`)를 견준다. 원소 크기를 모르는 핸들 등록은 묻지 않는다 — 지금은 빛 · 그리드 · 프로브 · 데칼만 구조 버퍼로 등록한다. 나머지(인스턴스 · 배치 · 모프 · 머티리얼)를 옮기면 검사 범위가 넓어진다.
+- 데칼 인스턴스화: 데칼 값은 `FrameRenderState::_decalBuffer`(원소 `GPUDecal`, 176 B)에 셋업이 한 번 올리고, Decal 패스는 묶음마다 `drawInstanced( 36, n )` 하나다(네이티브 bindless 는 패스에 하나, 에뮬은 텍스처가 같은 이웃끼리). PassCB 의 데칼 필드 여섯은 `g_DecalFirst` · `g_DecalCount` 둘이 되었다.

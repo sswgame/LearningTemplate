@@ -97,6 +97,28 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, AbsentNotesAreCountedApart )
 }
 
 /**
+ * @brief [BindlessIndexValidatorTest] 구조 버퍼 원소 크기가 셰이더 선언과 다를 때만 걸리고, 자리마다 한 번 보고한다
+ * @details 0 은 "모름"(리플렉션이 크기를 못 줬거나 크기를 모르는 등록)이라 묻지 않는다. 죽은 번호 보고 수에 섞이지 않는다.
+ */
+SW_TEST_CASE_F( BindlessIndexValidatorTest, StrideMismatchReportsEachSiteOnce )
+{
+    SW_EXPECT_LOG( "RHI.StructuredStrideMismatch" );
+    test::FakeRHIDevice device;
+    const hashed_string passName{ "ForwardOpaque" };
+    const hashed_string field{ "SwLights" };
+
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 80 ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 0, 64 ) );
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 0 ) );
+    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 64 ) );
+    SW_EXPECT_FALSE( BindlessIndexValidator::validateStride( &device, passName, field, 80, 64 ) );
+    SW_EXPECT_EQUAL( 1u, device.getBindlessIndexReportLog().getStrideReportCount() );
+    SW_EXPECT_EQUAL( 0u, device.getBindlessIndexReportLog().getReportCount() );
+
+    SW_EXPECT_TRUE( BindlessIndexValidator::validateStride( nullptr, passName, field, 80, 64 ) );
+}
+
+/**
  * @brief [BindlessIndexValidatorTest] 병렬 기록 스레드가 같은 자리를 동시에 보고해도 로그는 한 줄이다
  * @details 패스는 여러 워커에서 동시에 기록된다. 보고 기록이 경합하면 같은 줄이 여러 번 나오거나 기록이 깨진다.
  */

@@ -22,11 +22,11 @@ SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwParticleOrder, SW_SLOT_PARTICLE_ORDER_SR
 // 칸 순서는 C++ VFXParticleRenderer 의 kRoot* 와 같다. 스칼라만 둔다 — float4 를 두면 DX12 루트 상수 · Vulkan 푸시 상수 · UBO 에뮬의 채움 규칙이 갈린다.
 SW_ROOT_CONSTANTS_BEGIN
 {
-    uint  g_SwParticleBase;      // 이 방출기의 첫 입자 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않아 시작을 여기로 받는다
-    uint  g_SwParticleTexture;   // DX12/Vulkan 은 bindless 전역 번호, DX11/GL 은 서수 0(머티리얼 텍스처 슬롯 t16)
-    uint  g_SwParticleFlags;     // 아래 두 비트는 kParticleFlag*(C++ VFXParticleRenderer 의 kFlag*), 위 비트는 순서 구간의 첫 칸 + 1(0 = 순서 없음, kParticleOrderShift)
-    float g_SwParticleSizeScale; // 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다
-    float g_SwParticleColumn0X;  // 방출기 행렬(행벡터 규약)의 열 0..2 — 월드 = dot( float4( 로컬, 1 ), 열 )
+    uint  g_SwParticleBase;     // 이 방출기의 첫 입자 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않아 시작을 여기로 받는다
+    uint  g_SwParticleTexture;  // DX12/Vulkan 은 bindless 전역 번호, DX11/GL 은 서수 0(머티리얼 텍스처 슬롯 t16)
+    uint  g_SwParticleFlags;    // 아래 두 비트는 kParticleFlag*(C++ VFXParticleRenderer 의 kFlag*), 위 비트는 순서 구간의 첫 칸 + 1(0 = 순서 없음, kParticleOrderShift)
+    uint  g_SwParticleCount;    // 이 방출기 구간의 입자 수(g_SwParticleBase 부터) — 범위 밖 입자를 막는다(loadParticle). GPU 방출기는 렌더 입력 버퍼의 원소 수
+    float g_SwParticleColumn0X; // 방출기 행렬(행벡터 규약)의 열 0..2 — 월드 = dot( float4( 로컬, 1 ), 열 )
     float g_SwParticleColumn0Y;
     float g_SwParticleColumn0Z;
     float g_SwParticleColumn0W;
@@ -45,12 +45,39 @@ static const uint kParticleFlagAdditive = 1u; // 더하기 — 알파를 0 으�
 static const uint kParticleFlagRibbon   = 2u; // 띠 — 인스턴스가 이웃 입자 둘을 잇는 마디다
 static const uint kParticleOrderShift   = 2u; // 순서 구간이 시작하는 비트(C++ VFXParticleRenderer::kRootFlagOrderShift) — 루트 상수 16 칸이 다 차서 플래그와 함께 싣는다
 
-// 인스턴스 번호 → 이 방출기의 입자 번호(공유 버퍼 안). 순서 구간이 있으면 그 구간의 칸을, 없으면 인스턴스 번호를 그대로 쓴다.
+// 인스턴스 번호 → 이 방출기 구간 안의 입자 번호. 순서 구간이 있으면 그 구간의 칸을, 없으면 인스턴스 번호를 그대로 쓴다.
+// 순서 구간은 방출기 입자 수만큼이라 인스턴스 번호가 입자 수 안일 때만 읽는다 — 밖이면 그 번호를 그대로 돌려 loadParticle 이 거른다.
 uint resolveParticleIndex( uint instanceId )
 {
     const uint orderStart = SW_ROOT( g_SwParticleFlags ) >> kParticleOrderShift;
-    const uint particle   = orderStart != 0u ? g_SwParticleOrder[orderStart - 1u + instanceId] : instanceId;
-    return SW_ROOT( g_SwParticleBase ) + particle;
+    uint       particle   = instanceId;
+    if ( orderStart != 0u && instanceId < SW_ROOT( g_SwParticleCount ) )
+        particle = g_SwParticleOrder[orderStart - 1u + instanceId];
+    return particle;
+}
+
+// 이 방출기 구간의 입자 하나(@p local — 구간 기준 번호). 범위 밖이면 크기 0 입자다(넓이 없는 사각형) — 검사와 읽기가 한 곳이다(DX12 루트 SRV 는 경계 검사가 없다).
+GPUParticle loadParticle( uint local )
+{
+    const bool bValid = local < SW_ROOT( g_SwParticleCount );
+    SW_GPU_CHECK( bValid, SW_GPU_ASSERT_ID_PARTICLE_RANGE, local );
+    GPUParticle particle;
+    particle._positionSize = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    particle._color        = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    particle._rotationLife = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    if ( bValid )
+        particle = g_SwParticles[SW_ROOT( g_SwParticleBase ) + local];
+    return particle;
+}
+
+// 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다(C++ float4x4::getMaximumAxisScale 과 같은 식). 행벡터 규약이라 축 i 는 세 열의 i 번째 성분이다.
+// 루트 상수 16 칸이 다 차서 배율을 칸으로 받지 않고 열에서 다시 구한다 — 그 칸이 입자 수(g_SwParticleCount)다.
+float computeEmitterSizeScale()
+{
+    const float3 axisX = float3( SW_ROOT( g_SwParticleColumn0X ), SW_ROOT( g_SwParticleColumn1X ), SW_ROOT( g_SwParticleColumn2X ) );
+    const float3 axisY = float3( SW_ROOT( g_SwParticleColumn0Y ), SW_ROOT( g_SwParticleColumn1Y ), SW_ROOT( g_SwParticleColumn2Y ) );
+    const float3 axisZ = float3( SW_ROOT( g_SwParticleColumn0Z ), SW_ROOT( g_SwParticleColumn1Z ), SW_ROOT( g_SwParticleColumn2Z ) );
+    return sqrt( max( dot( axisX, axisX ), max( dot( axisY, axisY ), dot( axisZ, axisZ ) ) ) );
 }
 
 struct PSInput
@@ -87,8 +114,8 @@ PSInput ribbonVertex( uint vertexID, uint instanceId )
     PSInput           output;
     const float2      corner    = kCornerTable[vertexID % 6u];
     const uint        endIndex  = corner.x < 0.0f ? 0u : 1u;
-    const GPUParticle particle  = g_SwParticles[SW_ROOT( g_SwParticleBase ) + instanceId + endIndex];
-    const GPUParticle neighbour = g_SwParticles[SW_ROOT( g_SwParticleBase ) + instanceId + 1u - endIndex];
+    const GPUParticle particle  = loadParticle( instanceId + endIndex );
+    const GPUParticle neighbour = loadParticle( instanceId + 1u - endIndex );
     const float3      center    = toWorld( particle._positionSize.xyz );
     const float3      other     = toWorld( neighbour._positionSize.xyz );
     const float4      clip      = mul( float4( center, 1.0f ), g_ViewProj );
@@ -109,7 +136,7 @@ PSInput ribbonVertex( uint vertexID, uint instanceId )
     const float  sideSize = length( side );
     // 마디가 시선과 나란하면 폭 방향이 없다 — 화면 x 축으로 편다(넓이가 0 이 되지 않게).
     side             = sideSize > 1e-6f ? side / sideSize : normalize( unprojectNdc( ndc + float2( kAxisProbeNdc, 0.0f ), depth ) - origin );
-    const float size = particle._positionSize.w * SW_ROOT( g_SwParticleSizeScale );
+    const float size = particle._positionSize.w * computeEmitterSizeScale();
     output._position = mul( float4( center + side * ( corner.y * size ), 1.0f ), g_ViewProj );
     return output;
 }
@@ -117,7 +144,7 @@ PSInput ribbonVertex( uint vertexID, uint instanceId )
 PSInput billboardVertex( uint vertexID, uint instanceId )
 {
     PSInput           output;
-    const GPUParticle particle   = g_SwParticles[resolveParticleIndex( instanceId )];
+    const GPUParticle particle   = loadParticle( resolveParticleIndex( instanceId ) );
     const float3      center     = toWorld( particle._positionSize.xyz );
     const float4      centerClip = mul( float4( center, 1.0f ), g_ViewProj );
     const float2      corner     = kCornerTable[vertexID % 6u];
@@ -136,7 +163,7 @@ PSInput billboardVertex( uint vertexID, uint instanceId )
     const float3 up          = normalize( unprojectNdc( centerNdc + float2( 0.0f, kAxisProbeNdc ), centerDepth ) - origin );
     const float  angle       = particle._rotationLife.x;
     const float2 rotated     = float2( corner.x * cos( angle ) - corner.y * sin( angle ), corner.x * sin( angle ) + corner.y * cos( angle ) );
-    const float  size        = particle._positionSize.w * SW_ROOT( g_SwParticleSizeScale );
+    const float  size        = particle._positionSize.w * computeEmitterSizeScale();
     const float3 world       = center + ( right * rotated.x + up * rotated.y ) * size;
     output._position         = mul( float4( world, 1.0f ), g_ViewProj );
     return output;

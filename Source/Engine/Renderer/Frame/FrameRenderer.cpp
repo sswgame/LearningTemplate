@@ -472,23 +472,45 @@ namespace sw
             if ( ( decal._albedoTexture.isSet() && pAlbedo == nullptr ) || ( decal._normalTexture.isSet() && pNormal == nullptr ) )
                 continue;
             FrameRenderState::FrameDecalDraw draw;
-            draw._world        = decal._world;
-            draw._worldToLocal = decal._worldToLocal;
-            draw._color        = decal._color;
-            draw._surface      = decal._surface;
-            draw._channels     = decal._channels;
+            draw._element._world        = decal._world;
+            draw._element._worldToLocal = decal._worldToLocal;
+            draw._element._color        = decal._color;
+            draw._element._surface      = decal._surface;
+            draw._element._channels     = decal._channels;
             if ( pAlbedo != nullptr )
             {
-                draw._arrTextureSRV[0] = pAlbedo->getSRV();
-                draw._albedoTexture    = bNativeBindless ? pAlbedo->getSRV() : 0u;
+                draw._arrTextureSRV[0]       = pAlbedo->getSRV();
+                draw._element._albedoTexture = bNativeBindless ? pAlbedo->getSRV() : 0u;
             }
             if ( pNormal != nullptr )
             {
-                draw._arrTextureSRV[1] = pNormal->getSRV();
-                draw._normalTexture    = bNativeBindless ? pNormal->getSRV() : 1u;
+                draw._arrTextureSRV[1]       = pNormal->getSRV();
+                draw._element._normalTexture = bNativeBindless ? pNormal->getSRV() : 1u;
             }
             _state._listFrameDecalDraw.push_back( draw );
         }
+        uploadFrameDecals();
+    }
+
+    void FrameRenderer::uploadFrameDecals()
+    {
+        // 데칼 원소는 객체 빈도 데이터라 패스 상수(그리기마다 슬롯)가 아니라 구조 버퍼 하나로 프레임에 한 번 올린다 — Decal 패스는 인스턴스 그리기로 읽는다(유니티 URP 데칼 인스턴싱과 같은 꼴).
+        const uint32 decalCount = static_cast<uint32>( _state._listFrameDecalDraw.size() );
+        if ( decalCount == 0 || _pDevice == nullptr )
+            return;
+        _state._listDecalUploadScratch.clear();
+        for ( const FrameRenderState::FrameDecalDraw& draw : _state._listFrameDecalDraw )
+        {
+            _state._listDecalUploadScratch.push_back( draw._element );
+        }
+        constexpr RHIBufferUsage kDecalUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+        if ( _state._decalBuffer.ensureCapacity( _pDevice, static_cast<uint32>( sizeof( FrameRenderState::GPUDecal ) ), decalCount, kDecalUsage, true, false, nullptr ) == false )
+        {
+            // ensureCapacity 가 크기와 usage 를 오류로 남겼다 — 원소 없이 그리지 않는다(Decal 패스가 버퍼가 없으면 데칼을 건너뛴다).
+            _state._listFrameDecalDraw.clear();
+            return;
+        }
+        _state._decalBuffer.upload( _pDevice, _state._listDecalUploadScratch.data(), decalCount * static_cast<uint32>( sizeof( FrameRenderState::GPUDecal ) ) );
     }
 
     void FrameRenderer::updateLightBuffer( IRHIDevice* pDevice )
@@ -873,6 +895,7 @@ namespace sw
         _fog.release();
         _state._probeUpdater.release( _pDevice );
         _state._lensFlare.release( _pDevice );
+        _state._decalBuffer.release( _pDevice );
         _state._cookieAtlas.release( _pDevice );
         _state._pathTextures.release();
         _postProcessMaterials.release();
@@ -897,7 +920,7 @@ namespace sw
         const uint32 shadowTileCount = MathUtil::max( _passExecutor.computeShadowTileCountPerView(), 1u );
         // 모듈 프록시의 요소는 요소마다 슬롯을 하나씩 쓴다(`drawExtensionElements`) — 그리는 패스 · 뷰 수를 모르므로 넉넉히 네 배로 어림한다(모자라면 링이 알리고 다음 프레임이 키운다).
         const uint32 moduleElementCount = static_cast<uint32>( _extensionHost.getDrawElements().size() ) * 4u;
-        // 데칼은 데칼마다 상수가 달라 슬롯을 하나씩 쓴다(`bindForDraw` 가 바뀐 값마다 새 슬롯을 받는다) — 데칼 패스를 그리는 뷰 수를 모르므로 두 배로 어림한다.
+        // 데칼은 텍스처가 같은 이웃 묶음마다 슬롯 하나다(에뮬 백엔드 — 네이티브 bindless 는 패스에 하나, `executeDecalPass`). 묶음 수 상한은 데칼 수다 — 그리는 뷰 수를 모르므로 두 배로 어림한다.
         const uint32 decalCount = static_cast<uint32>( _state._listFrameDecalDraw.size() ) * 2u;
         const uint32 estimate   = batchCount * ( _s_kDrawCbPassEstimate - 1u + shadowTileCount ) + PassConstantRing::kInitialSlotCount + moduleElementCount + decalCount;
         _state._passCbRing.ensureCapacity( _pDevice, MathUtil::max( estimate, _state._passCbRing.getHighWater() + PassConstantRing::kInitialSlotCount ) );

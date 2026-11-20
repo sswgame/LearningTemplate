@@ -29,6 +29,7 @@ static float2 g_SurfaceDistortion = float2( 0.0f, 0.0f );
 // 시맨틱이 사라져 DXC 가 "Semantic must be defined for all outputs" 로 거절한다 — 그러면 머티리얼
 // 셰이더가 통째로 컴파일되지 않아 화면이 빈다(실제로 한 번 그랬다).
 #include "shading_model_ids.hlsli"
+#include "gpu_message.hlsli" // 읽기 도우미의 범위 검사(SW_GPU_CHECK) — 메시지 변형이 아니면 매크로가 비어 코드가 없다
 
 /**
  * @brief G버퍼에 싣는 셰이딩 값 — 셰이딩 모델 번호 · 반사율 · 가림 · 사용자 칸 · 자체 발광(G버퍼 명세 판 3). 포워드 출력은 읽지 않는다.
@@ -94,7 +95,14 @@ static uint LightGrid::computeLightCount()
  */
 static uint LightGrid::loadWord( uint wordIndex )
 {
-    return g_SwLightGrid[g_SwLightGridBase + wordIndex];
+    // 검사와 읽기가 한 곳이다 — 범위 밖이면 0(DX12 루트 SRV 는 경계 검사가 없다). 삼항은 양쪽을 다 평가하므로 if 로 읽기를 막는다.
+    const uint word   = g_SwLightGridBase + wordIndex;
+    const bool bValid = word < g_SwLightGridWordCount;
+    SW_GPU_CHECK( bValid, SW_GPU_ASSERT_ID_LIGHT_GRID_RANGE, word );
+    uint value = 0u;
+    if ( bValid )
+        value = g_SwLightGrid[word];
+    return value;
 }
 
 /** @brief 지금 뷰에 라이트 그리드가 있는지 — 버퍼가 걸려 있고 이 뷰의 그리드 첫 단어가 있어야 한다. 없으면 커서는 목록 전체를 돈다. */

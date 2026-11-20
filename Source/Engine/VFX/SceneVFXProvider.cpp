@@ -36,8 +36,7 @@ namespace sw
             const bool bHidden = pVFX->isPendingDestroy() || pVFX->isActive() == false;
             if ( bHidden )
                 continue;
-            const float4x4 world     = pVFX->getWorldMatrix();
-            const float32  sizeScale = world.getMaximumAxisScale();
+            const float4x4 world = pVFX->getWorldMatrix();
             for ( uint32 emitterIndex = 0; emitterIndex < pVFX->getEmitterCount(); ++emitterIndex )
             {
                 // 메시 방출기는 메시 인스턴스 배치로 메시 경로를 탄다(`VFXComponent`). 띠는 이웃 둘이 있어야 한 마디다.
@@ -57,7 +56,6 @@ namespace sw
                 SceneParticleBatchDesc desc{};
                 desc._world       = world;
                 desc._texturePath = hashed_string( def._texturePath.c_str() );
-                desc._sizeScale   = sizeScale;
                 desc._bAdditive   = def._blendMode == VFXBlendMode::Additive ? SW_TRUE : SW_FALSE;
                 desc._bRibbon     = bRibbon ? SW_TRUE : SW_FALSE;
                 desc._sortMode    = def._sortMode;

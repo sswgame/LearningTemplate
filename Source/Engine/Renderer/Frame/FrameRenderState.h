@@ -157,29 +157,43 @@ namespace sw
         /** @brief 이번 프레임의 데칼입니다(패킷 `_listDecal` — 그리는 차례). 셋업(`FrameRenderer::prepareFrameDecals`)이 텍스처를 풀어 `_listFrameDecalDraw` 를 만든다. */
         vector<DecalDrawData> _listFrameDecal{};
         /**
-         * @brief 이번 프레임에 그릴 데칼 하나(값 · 텍스처 번호)입니다. Decal 패스가 데칼마다 풀스크린 하나로 그린다(`FramePassExecutor::executeDecalPass`).
-         * @details 텍스처 번호는 네이티브 bindless 면 SRV 번호, 에뮬(DX11 · GL)이면 머티리얼 텍스처 칸 순번(0 · 1 — `_arrTextureSRV` 를 그 칸에 건다)이다(MaterialTexture::sampleIndex 와 같은 뜻).
+         * @brief 데칼 구조 버퍼(decal.hlsl `g_SwDecals`)의 원소 하나입니다 — 셰이더 `DecalData` 와 같은 배치(176 바이트, 행렬은 행 우선 -Zpr).
+         * @details 텍스처 번호는 네이티브 bindless 면 SRV 번호, 에뮬(DX11 · GL · WebGPU)이면 머티리얼 텍스처 칸 순번(0 · 1 — 그리기의 `_arrTextureSRV` 를 그 칸에 건다)이다(MaterialTexture::sampleIndex 와 같은 뜻).
+         */
+        struct GPUDecal
+        {
+            float4x4 _world{};        ///< 상자 월드 행렬(행 = 축)
+            float4x4 _worldToLocal{}; ///< 월드 → 상자 공간
+            float4   _color{};        ///< rgb 알베도 곱, a 불투명도
+            float4   _surface{};      ///< x 거칠기, y 금속도, z 노멀 세기, w 각도 페이드 시작(cos)
+            uint32   _channels{ 0 };  ///< 덮는 칸(DecalChannels 비트)
+            uint32   _albedoTexture{ kInvalidDescriptorIndex };
+            uint32   _normalTexture{ kInvalidDescriptorIndex };
+            uint32   _padding{};
+        };
+        static constexpr uint32 kGPUDecalShaderBytes = 176; ///< decal.hlsl DecalData 의 크기(행렬 둘 + float4 셋)
+        static_assert( sizeof( GPUDecal ) == kGPUDecalShaderBytes, "GPUDecal must match decal.hlsl DecalData" );
+        /**
+         * @brief 이번 프레임에 그릴 데칼 하나입니다. 값은 데칼 구조 버퍼(`_decalBuffer`)의 같은 번호 원소이고, Decal 패스가 텍스처가 같은 이웃끼리 인스턴스 그리기 하나로 그린다
+         *        (`FramePassExecutor::executeDecalPass` — 네이티브 bindless 는 모두 하나).
+         * @details `_arrTextureSRV` 는 에뮬 백엔드가 머티리얼 텍스처 칸에 거는 SRV 이고, 네이티브 bindless 는 검사에만 쓴다.
          */
         struct FrameDecalDraw
         {
-            float4x4           _world{};
-            float4x4           _worldToLocal{};
-            float4             _color{};
-            float4             _surface{};
-            uint32             _channels{ 0 };
-            uint32             _albedoTexture{ kInvalidDescriptorIndex };
-            uint32             _normalTexture{ kInvalidDescriptorIndex };
+            GPUDecal           _element{};
             RHIDescriptorIndex _arrTextureSRV[shaderslot::kMaterialTextureCount] = {
                 kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
                 kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
                 kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
         };
         vector<FrameDecalDraw> _listFrameDecalDraw{};
-        LensFlareSpriteBuffer  _lensFlare{};      ///< 주 시점 렌즈 플레어 스프라이트의 버퍼(`FrameRenderer` 가 기록 전에 채우고 `FramePassExecutor::executeLensFlarePass` 가 그린다)
-        SkyGradient            _frameSkySource{}; ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
-        hashed_string          _skyHdriPath{};    ///< 지금 쥔 HDRI 하늘 텍스처의 경로입니다(`FrameRenderer::applyFrameSky`). 비었으면 쥔 것이 없다
-        TextureHandle          _skyHdriLoad{};    ///< HDRI 하늘 텍스처의 로드 핸들입니다(참조를 쥔다). 스카이 패스가 준비된 것만 읽는다
-        SurfaceDeformBinding   _surfaceDeform{};  ///< 이번 프레임의 표면 변형 층(패킷에서 — 핸들이 참조를 쥔다). 준비된 텍스처는 모든 패스가 건다(`FramePassExecutor::registerSurfaceDeformLayer`), 창은 프레임 시드(`FrameRenderer::updatePassConstants`)
+        vector<GPUDecal>       _listDecalUploadScratch{}; ///< 데칼 원소를 이어 올리는 자리(`FrameRenderer::prepareFrameDecals`) — 프레임마다 다시 잡지 않는다
+        RHIStructuredBuffer    _decalBuffer{};            ///< 이번 프레임 데칼 원소(decal.hlsl `g_SwDecals`) — 셋업이 기록 전에 한 번 올리고 Decal 패스가 읽는다(객체 빈도 데이터를 패스 상수에서 뺐다)
+        LensFlareSpriteBuffer  _lensFlare{};              ///< 주 시점 렌즈 플레어 스프라이트의 버퍼(`FrameRenderer` 가 기록 전에 채우고 `FramePassExecutor::executeLensFlarePass` 가 그린다)
+        SkyGradient            _frameSkySource{};         ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
+        hashed_string          _skyHdriPath{};            ///< 지금 쥔 HDRI 하늘 텍스처의 경로입니다(`FrameRenderer::applyFrameSky`). 비었으면 쥔 것이 없다
+        TextureHandle          _skyHdriLoad{};            ///< HDRI 하늘 텍스처의 로드 핸들입니다(참조를 쥔다). 스카이 패스가 준비된 것만 읽는다
+        SurfaceDeformBinding   _surfaceDeform{};          ///< 이번 프레임의 표면 변형 층(패킷에서 — 핸들이 참조를 쥔다). 준비된 텍스처는 모든 패스가 건다(`FramePassExecutor::registerSurfaceDeformLayer`), 창은 프레임 시드(`FrameRenderer::updatePassConstants`)
         /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
         Light2DCookieAtlas _cookieAtlas{};
         /** @brief 셋업이 경로로 빌리는 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크 · 데칼 · 렌즈 플레어 스프라이트)의 로드 핸들입니다. 셋업이 뷰마다 묻고 프레임 시작에 안 쓰인 것을 놓는다. */

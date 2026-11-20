@@ -2,6 +2,8 @@
 
 #include "Engine/Renderer/Frame/Resource/FrameResourceRegistry.h"
 
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
+
 namespace sw
 {
     void FrameResourceRegistry::reset()
@@ -29,6 +31,12 @@ namespace sw
             return;
         entry = RegisteredBuffer{ handle, index };
         ++_version;
+    }
+
+    void FrameResourceRegistry::registerBuffer( hashed_string name, const RHIStructuredBuffer& buffer )
+    {
+        registerBuffer( name, buffer._buffer, buffer._srv );
+        _mapBuffer[name]._elementStride = buffer._elementSize; // 진단 값이라 버전을 올리지 않는다(CB 내용이 바뀌지 않는다)
     }
 
     const RegisteredTexture* FrameResourceRegistry::findTexture( hashed_string name ) const
