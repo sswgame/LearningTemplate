@@ -18,6 +18,7 @@
         { "_header": "Engine/Reflection/TypeInfo.h", "_limit": 14, "_reason": "캐스트 머리 · 상수는 직접 포함하고, 메타데이터 상자 사슬로 오던 컨테이너 래퍼 · 글 주소를 끌지 않는다" },
         { "_header": "Engine/Reflection/FunctionInfo.h", "_limit": 2, "_reason": "메타데이터 상자(ReflectionMetadataBox.h)가 리플렉션 매크로 · 컨테이너 래퍼를 끌지 않는다" },
         { "_header": "Engine/Serialization/Format/StateIO.h", "_limit": 3, "_reason": "DeterministicRandom32 · typeFqn 은 앞선 선언 — reflected · reflectedAs · writeReflectedHeader<T> 를 부르는 TU 가 TypeFqn.h 를 읽는다" },
-        { "_header": "Engine/Config/ConfigManager.h", "_limit": 11, "_reason": "TypeInfo 는 앞선 선언(ReflectionFwd.h) — 설정 템플릿(getConfig · readConfig* · load*Config)을 인스턴스화하는 TU 가 TypeInfo.h 를 읽는다" }
+        { "_header": "Engine/Config/ConfigManager.h", "_limit": 11, "_reason": "TypeInfo 는 앞선 선언(ReflectionFwd.h) — 설정 템플릿(getConfig · readConfig* · load*Config)을 인스턴스화하는 TU 가 TypeInfo.h 를 읽는다" },
+        { "_header": "Engine/Serialization/Serializer/SerializerUtil.h", "_limit": 28, "_reason": "프로퍼티 · 타입 기술(TypeInfo.h)만 쓴다 — 레지스트리 · 호출 · 검증 · 값 상자를 묶은 Reflection.h 를 포함하지 않는다" }
     ]
 }
