@@ -17,7 +17,8 @@ namespace sw
      *          법선 길이가 0 인 퇴화 평면 처리가 갈라집니다).
      *          엔진은 행벡터 규약(`mul( v, M )`)이라 클립 좌표는 M 의 **열**과의 내적입니다. 그래서 열을 더하고 뺍니다.
      *          행 우선으로 저장하므로 col( i ) = ( _1i, _2i, _3i, _4i ) 입니다. 깊이는 D3D 규약 [0,1] 이라 near 평면은 열 2 하나입니다
-     *          (GL 도 glClipControl 로 같은 규약에 맞춰 둡니다). `_arrPlane` 은 float4 여섯 개가 빈틈없이 이어져 GPU 상수버퍼에
+     *          (GL 도 glClipControl 로 같은 규약에 맞춰 둡니다). reversed-Z 투영(가까운 면이 깊이 1)이어도 0 ≤ z ≤ w 의 두 평면이 자리만 바뀌어 같은 집합이고,
+     *          무한 먼 면이면 먼 평면 법선이 0 이 되어 그 평면만 거르지 않는다(`makePlane`) — 어느 쪽도 가짜 컬링을 만들지 않는다(`TestFrustum`). `_arrPlane` 은 float4 여섯 개가 빈틈없이 이어져 GPU 상수버퍼에
      *          그대로 복사됩니다. 셰이더는 `dot( plane.xyz, center ) + plane.w < -radius` 이면 바깥으로 봅니다.
      */
     struct Frustum
@@ -41,6 +42,7 @@ namespace sw
          * @brief 상자가 절두체와 겹치면(일부라도 안쪽이면) true 입니다.
          * @details 평면마다 법선 쪽으로 가장 먼 꼭짓점(p-vertex) 하나만 봅니다. 그것마저 바깥이면 상자 전체가 바깥입니다.
          *          보수적인 판정이라 모서리 근처의 상자는 실제로는 바깥이어도 겹친다고 답할 수 있습니다(컬링에는 그것으로 충분합니다).
+         *          언리얼 `FConvexVolume::IntersectBox`(중심 거리 < -|법선|·반 크기 이면 바깥)와 같은 판정이고, GPU 의 `isBoxVisible`(gpu_cull.hlsl)도 그 꼴입니다.
          */
         bool overlapsBox( const float3& boxMin, const float3& boxMax ) const noexcept
         {

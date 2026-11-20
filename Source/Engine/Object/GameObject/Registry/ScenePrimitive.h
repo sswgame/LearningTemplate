@@ -23,6 +23,7 @@
 
 namespace sw
 {
+    class GameObject;
     class MeshComponent;
     class MeshInstanceBatch;
     class PrimitiveRegistry;
@@ -51,6 +52,13 @@ namespace sw
 
         /** @brief 레지스트리 번호입니다(읽기 전용 — 적는 것은 `PrimitiveRegistry` 뿐). 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. GPUScene 인스턴스 칸을 찾는 마커 투영이 읽습니다. */
         uint32 getPrimitiveIndex() const { return _primitiveIndex; }
+
+        /**
+         * @brief 오브젝트의 렌더 경계 구입니다 — 활성 프리미티브마다의 경계 구(`getWorldBounds`, GPU 컬링이 쓰는 그 구)를 모두 덮는 구입니다. 프리미티브가 없으면 false 입니다.
+         * @details 언리얼 `AActor::GetComponentsBoundingBox`(렌더 컴포넌트만), 유니티 `Renderer.bounds` 를 오브젝트에 모은 자리다. 카메라 질의(`CameraComponent::isObjectInFrustum`)와
+         *          추가 뷰 보임 판정이 함께 쓴다.
+         */
+        [[nodiscard]] static bool computeObjectRenderBounds( const GameObject& object, float3& outCenter, float32& outRadius );
 
     private:
         /** @brief 등록되지 않은 상태로 만듭니다. `MeshComponent` 만 부릅니다. */

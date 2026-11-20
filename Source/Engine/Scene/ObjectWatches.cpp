@@ -1,6 +1,6 @@
 /**
  * @file ObjectWatches.cpp
- * @brief 활성 씬의 오브젝트를 이름(`target`)으로 읽는 자동화 감시 값입니다 — `Object.X` · `Object.Y` · `Object.Z` · `Object.Exists` · `Object.Property` · `Object.DistanceTo` · `Camera.FrameObject` · `Camera.DrawnAspect`.
+ * @brief 활성 씬의 오브젝트를 이름(`target`)으로 읽는 자동화 감시 값입니다 — `Object.X` · `Object.Y` · `Object.Z` · `Object.Exists` · `Object.Property` · `Object.DistanceTo` · `Camera.FrameObject` · `Camera.DrawnAspect` · `Camera.ObjectInFrustum` · `Camera.ObjectScreenSize`.
  * @details 대상 고르기 규칙은 `AutomationTarget`(`Engine/Automation/Watch/AutomationWatch.h`)이 정한다.
  */
 #include "pch.h"
@@ -10,6 +10,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
+#include "Engine/Graphics/View/SceneViewQuery.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -165,6 +166,40 @@ namespace sw
             outValue.setNumber( static_cast<float64>( pCamera->getDrawnAspect() ) );
             return true;
         }
+
+        /**
+         * @brief 이번 프레임에 화면을 그리는 카메라(`Camera.FrameObject` 와 같은 카메라)로 대상 오브젝트의 렌더 경계를 묻는 감시 값들의 몸통입니다.
+         * @details 카메라가 그린 가로세로 비(`getDrawnAspect`)로 묻는다 — 아직 그린 적이 없으면 화면이 없으니 값이 없다(가짜 비율로 답하지 않는다).
+         */
+        template <typename Fn>
+        [[nodiscard]] bool readFrameCameraObjectQuery( const AutomationWatchQuery& query, AutomationWatchValue& outValue, Fn&& readValue )
+        {
+            const CameraComponent* pCamera = query._pManager != nullptr ? query._pManager->getFrameCamera() : nullptr;
+            if ( pCamera == nullptr || pCamera->getDrawnAspect() <= 0.0f )
+            {
+                outValue.setText( "no drawn game camera this frame" );
+                return false;
+            }
+            const GameObject* pTarget = query.findTargetObject( outValue );
+            if ( pTarget == nullptr )
+                return false;
+            outValue.setNumber( static_cast<float64>( readValue( pCamera->makeViewQuery( pCamera->getDrawnAspect() ), *pTarget ) ) );
+            return true;
+        }
+
+        /** @brief 감시 값 `Camera.ObjectInFrustum` 입니다. 대상의 렌더 경계가 화면 카메라의 절두체에 걸치면 1, 아니면(렌더 경계가 없어도) 0 입니다. 가림은 보지 않습니다. */
+        [[nodiscard]] bool readCameraObjectInFrustum( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            return readFrameCameraObjectQuery( query, outValue, []( const SceneViewQuery& view, const GameObject& object )
+            { return CameraComponent::isObjectInFrustum( view, object ) ? 1.0f : 0.0f; } );
+        }
+
+        /** @brief 감시 값 `Camera.ObjectScreenSize` 입니다. 대상 렌더 경계의 화면 크기(지름 / 화면 높이, LOD 와 같은 식)이고 절두체 밖이면 0 입니다. */
+        [[nodiscard]] bool readCameraObjectScreenSize( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            return readFrameCameraObjectQuery( query, outValue, []( const SceneViewQuery& view, const GameObject& object )
+            { return CameraComponent::computeObjectScreenSize( view, object ); } );
+        }
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( objectX, "Object.X", "World X of the target object (m)", &readObjectX, true, false );
@@ -175,5 +210,11 @@ namespace sw
                                &readObjectProperty, true, true );
     SW_AUTOMATION_QUERY_WATCH( objectDistanceTo, "Object.DistanceTo", "World distance from the target object to the object named key (m)", &readObjectDistanceTo, true, true );
     SW_AUTOMATION_QUERY_WATCH( cameraDrawnAspect, "Camera.DrawnAspect", "Width over height of the view the target object's camera drew last (0 = never drawn)", &readCameraDrawnAspect, true, false );
+    SW_AUTOMATION_QUERY_WATCH( cameraObjectInFrustum, "Camera.ObjectInFrustum",
+                               "1 when the target object's render bounds touch the frustum of the camera drawing this frame (geometry only - occlusion is not checked)",
+                               &readCameraObjectInFrustum, true, false );
+    SW_AUTOMATION_QUERY_WATCH( cameraObjectScreenSize, "Camera.ObjectScreenSize",
+                               "On-screen size (bounds diameter / screen height, as LOD uses) of the target object for the camera drawing this frame; 0 outside the frustum",
+                               &readCameraObjectScreenSize, true, false );
     SW_AUTOMATION_QUERY_WATCH( cameraFrameObject, "Camera.FrameObject", "Name of the object whose camera draws this frame (a sequencer cut camera while one covers the frame)", &readFrameCameraObject, false, false );
 } // namespace sw

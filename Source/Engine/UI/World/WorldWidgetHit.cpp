@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Ray.h"
 
+#include "Engine/Graphics/View/SceneViewQuery.h"
+
 namespace sw
 {
     namespace
@@ -17,15 +19,6 @@ namespace sw
             static constexpr float32 kMinDeterminant = 1e-7f;
             /** @brief 광선이 평면과 이만큼 평행에 가까우면 맞히지 않은 것으로 봅니다. */
             static constexpr float32 kMinParallel = 1e-8f;
-
-            static bool unproject( const float4x4& inverseViewProjection, float32 ndcX, float32 ndcY, float32 ndcZ, float3& outWorld )
-            {
-                const float4 world = float4::transform( float4{ ndcX, ndcY, ndcZ, 1.0f }, inverseViewProjection );
-                if ( MathUtil::abs( world._w ) < MathUtil::kEpsilon )
-                    return false;
-                outWorld = float3{ world._x / world._w, world._y / world._w, world._z / world._w };
-                return true;
-            }
         };
     } // namespace
 } // namespace sw
@@ -34,22 +27,7 @@ namespace sw
 {
     bool WorldWidgetHit::makeRay( const float4x4& inverseViewProjection, const float2& uiPoint, const float2& viewportSize, Ray& outRay )
     {
-        if ( viewportSize._x <= 0.0f || viewportSize._y <= 0.0f )
-            return false;
-        const float32 ndcX = uiPoint._x / viewportSize._x * 2.0f - 1.0f;
-        const float32 ndcY = 1.0f - uiPoint._y / viewportSize._y * 2.0f;
-        float3        nearPoint{};
-        float3        farPoint{};
-        if ( WorldWidgetPickInternal::unproject( inverseViewProjection, ndcX, ndcY, 0.0f, nearPoint ) == false ||
-             WorldWidgetPickInternal::unproject( inverseViewProjection, ndcX, ndcY, 1.0f, farPoint ) == false )
-            return false;
-        const float3  direction = farPoint - nearPoint;
-        const float32 length    = direction.getLength();
-        if ( length < MathUtil::kEpsilon )
-            return false;
-        outRay._origin    = nearPoint;
-        outRay._direction = direction * ( 1.0f / length );
-        return true;
+        return SceneViewQuery::unprojectScreenToRay( inverseViewProjection, uiPoint, viewportSize, outRay );
     }
 
     bool WorldWidgetHit::intersectQuad( const float4x4& quadWorld, const Ray& ray, const float2& textureSize, bool bRequireInside, WorldWidgetHit& outHit )

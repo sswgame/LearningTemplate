@@ -16,7 +16,9 @@
 
 namespace sw
 {
+    class GameObject;
     class GameObjectManager;
+    struct SceneViewQuery;
 
     /**
      * @brief 카메라 역할(용도)입니다. `Game` 은 플레이어 시점 후보이고, `Custom` 은 직접 고르거나 뷰 타깃으로 바꿀 때만 쓰는 보조 카메라입니다.
@@ -175,6 +177,19 @@ namespace sw
         float4x4 getProjectionMatrix( float32 aspectRatio ) const;
         /** @brief 뷰-투영 행렬을 반환합니다. */
         float4x4 getViewProjectionMatrix( float32 aspectRatio ) const;
+
+        /**
+         * @brief 이 카메라의 질의(절두체 안인가 · 화면 크기 · 월드 ↔ 화면)를 만듭니다. 그린 뷰와 같게 물으려면 @p aspectRatio 에 `getDrawnAspect()` 를 넘깁니다.
+         * @details 언리얼 `FSceneView` · 유니티 `Camera.WorldToScreenPoint` 자리다. 한 프레임 안에서 여러 번 물을 때는 하나를 만들어 다시 쓴다(역행렬을 한 번 구한다).
+         */
+        SceneViewQuery makeViewQuery( float32 aspectRatio ) const;
+        /**
+         * @brief 오브젝트의 렌더 경계(`ScenePrimitive::computeObjectRenderBounds`)가 @p view 의 절두체에 걸치면 true 입니다. 렌더 경계가 없으면 false 입니다.
+         * @details **기하만** 본다 — 가림 · 렌더러가 실제로 그렸는지(언리얼 `WasRecentlyRendered`, 유니티 `Renderer.isVisible`)는 보지 않는다. GPU 컬링과 같은 평면 · 같은 구다.
+         */
+        [[nodiscard]] static bool isObjectInFrustum( const SceneViewQuery& view, const GameObject& object );
+        /** @brief 오브젝트 렌더 경계의 화면 크기(지름 / 화면 높이)입니다. 절두체 밖이거나 렌더 경계가 없으면 0 — LOD 와 같은 식입니다. */
+        [[nodiscard]] static float32 computeObjectScreenSize( const SceneViewQuery& view, const GameObject& object );
 
         /** @brief 카메라가 그리는 눈의 월드 위치입니다. 월드 위치에 그리기 전용 오프셋(`setViewOffset`)을 더한 것이며, 뷰 행렬이 이 점을 씁니다. */
         float3 getCameraPosition() const { return getWorldPosition() + _viewOffset; }

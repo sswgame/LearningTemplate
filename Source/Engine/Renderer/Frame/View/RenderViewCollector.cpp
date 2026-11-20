@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -105,7 +106,8 @@ namespace sw
 
             /**
              * @brief 보임 오브젝트(모니터)가 화면들 중 가장 크게 보이는 크기(경계 구 지름 / 화면 높이, 애니메이션 LOD 와 같은 식)입니다. 어느 화면에도 없으면 0 입니다.
-             * @details 메시가 없으면 오브젝트 위치(반지름 1)로 봅니다. 오브젝트가 없으면(파괴됐다) 볼 것이 없으니 0 입니다.
+             * @details 경계는 오브젝트의 렌더 경계(`ScenePrimitive::computeObjectRenderBounds` — 카메라 질의와 같은 구)다. 그릴 것이 없으면 오브젝트 위치(반지름 1)로 봅니다.
+             *          오브젝트가 없으면(파괴됐다) 볼 것이 없으니 0 입니다.
              *          @p pMainOcclusion 이 있고 첫 화면(주 시점)에서 경계 구가 가림 타일 뒤에 가려졌으면 그 화면은 세지 않는다.
              */
             static float32 computeVisibleScreenSize( const GameObjectManager& manager, const GameObjectHandle& handle, const LODView* pView, uint32 viewCount,
@@ -114,17 +116,17 @@ namespace sw
                 const GameObject* pObject = manager.resolveGameObject( handle );
                 if ( pObject == nullptr )
                     return 0.0f;
-                const MeshComponent*  pMesh  = pObject->getComponent<MeshComponent>();
-                const SceneComponent* pScene = pMesh != nullptr ? static_cast<const SceneComponent*>( pMesh ) : pObject->getComponent<SceneComponent>();
-                if ( pScene == nullptr )
-                    return 0.0f;
-                const float4x4 world      = pScene->getWorldMatrix();
-                const float32  scaleX     = float3{ world._11, world._12, world._13 }.getLength();
-                const float32  scaleY     = float3{ world._21, world._22, world._23 }.getLength();
-                const float32  scaleZ     = float3{ world._31, world._32, world._33 }.getLength();
-                const float32  radius     = ( pMesh != nullptr ? pMesh->getBoundsRadius() : 1.0f ) * MathUtil::max( scaleX, MathUtil::max( scaleY, scaleZ ) );
-                const float3   center     = pMesh != nullptr ? float3::transform( pMesh->getLocalBoundsCenter(), world ) : world.getTranslation();
-                float32        screenSize = 0.0f;
+                float3  center{};
+                float32 radius = 0.0f;
+                if ( ScenePrimitive::computeObjectRenderBounds( *pObject, center, radius ) == false )
+                {
+                    const SceneComponent* pScene = pObject->getPrimarySceneComponent();
+                    if ( pScene == nullptr )
+                        return 0.0f;
+                    center = pScene->getWorldPosition();
+                    radius = 1.0f;
+                }
+                float32 screenSize = 0.0f;
                 for ( uint32 viewIndex = 0; viewIndex < viewCount; ++viewIndex )
                 {
                     // 첫 화면이 주 시점이다. 가림 타일은 주 시점의 깊이에서 지었으므로 다른 화면에는 쓰지 않는다.

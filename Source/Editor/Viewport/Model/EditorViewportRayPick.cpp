@@ -19,6 +19,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
+#include "Engine/Graphics/View/SceneViewQuery.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -36,17 +37,6 @@ namespace sw::editor
     {
         struct EditorViewportRayPickInternal
         {
-            /** @brief NDC 점을 월드 좌표로 옮깁니다. w 가 0 이면(퇴화 행렬) false 입니다. */
-            static bool unproject( const float4x4& invViewProj, float32 ndcX, float32 ndcY, float32 ndcZ, float3& outWorld )
-            {
-                const float4 clip{ ndcX, ndcY, ndcZ, 1.0f };
-                const float4 world = float4::transform( clip, invViewProj );
-                if ( MathUtil::abs( world._w ) < MathUtil::kEpsilon )
-                    return false;
-                outWorld = float3{ world._x / world._w, world._y / world._w, world._z / world._w };
-                return true;
-            }
-
             /** @brief float3 의 축 성분입니다(0 · 1 · 2 = X · Y · Z). */
             static float32& getAxisOf( float3& v, uint32 axisIndex )
             {
@@ -402,24 +392,8 @@ namespace sw::editor
 
     bool EditorViewportRayPick::makeRay( const float4x4& invViewProj, float32 u, float32 v, Ray& outRay )
     {
-        const float32 ndcX = u * 2.0f - 1.0f;
-        const float32 ndcY = 1.0f - v * 2.0f;
-
-        float3 nearPt{};
-        float3 farPt{};
-        if ( EditorViewportRayPickInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) == false )
-            return false;
-        if ( EditorViewportRayPickInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) == false )
-            return false;
-
-        const float3  dir    = farPt - nearPt;
-        const float32 dirLen = dir.getLength();
-        if ( dirLen < 1e-8f )
-            return false;
-
-        outRay._origin    = nearPt;
-        outRay._direction = dir * ( 1.0f / dirLen );
-        return true;
+        // u · v 는 0..1 화면 비율이라 화면 크기 (1, 1) 로 정본 역투영을 쓴다.
+        return SceneViewQuery::unprojectScreenToRay( invViewProj, float2{ u, v }, float2{ 1.0f, 1.0f }, outRay );
     }
 
     bool EditorViewportRayPick::rayHitsAxisPlane( const Ray& ray, uint32 axisIndex, float3& outPoint )
