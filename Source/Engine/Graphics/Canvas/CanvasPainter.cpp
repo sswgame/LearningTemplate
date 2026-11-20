@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphAtlas.h"

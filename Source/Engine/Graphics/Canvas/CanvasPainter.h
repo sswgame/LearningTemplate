@@ -14,11 +14,14 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Text/TextTypes.h"
 
 namespace sw
 {
+    struct CanvasDrawList;
+    struct CanvasQuad;
+    struct CanvasScissorRect;
+    struct CanvasTextureRef;
     class FontService;
     class GlyphCache;
     class Texture2D;
