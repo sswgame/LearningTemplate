@@ -102,6 +102,10 @@
 		<action name="UI.FocusPrevious" trigger="Repeat">
 			<bind source="Key" modifier="Shift" code="Tab"/>
 		</action>
+		<action name="UI.ContextMenu" trigger="Pressed">
+			<bind source="Key" code="Menu"/>
+			<bind source="Gamepad" code="X"/>
+		</action>
 		<action name="UI.TabNext" trigger="Pressed">
 			<bind source="Gamepad" code="RightShoulder"/>
 		</action>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fe4bddc565d85343326f2bd3f5be8b06"?>
+<!--
+  오프라인 상점(ShopScreen + LocalShopPurchaseProvider) — 무대 maps/inventorydemo, 가게 data/inventorydemo.shops.xml(포션 20 · 투구 60 재고 1 · 장화 30), 시작 돈 100.
+  패드만으로: 목록 → 구매 확인(확인 대화 상자) → 결과 · 잔액 · 가방 반영. ⑴ 포션 사기, ⑵ 장화 사기, ⑶ 잔액 부족(투구 60 > 50) — 확인 창 없이 알린다,
+  ⑷ 가방 무게가 차면(포션 6 개 = 3.0) 가게가 NoRoom 으로 거절하고 돈이 그대로다, ⑸ 세이브 → 새 무대 → 불러오기 뒤 돈 · 가방 · 재고가 남는다.
+  줄 이름은 상품 순번(Offer0 …), 닫기 단추에서 위로 가면 마지막 줄이다.
+  실행: ctest -R Scenario.empty (체인)
+-->
+<Scenario name="game.empty.shopoffline" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/inventorydemo.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Player" equals="1" timeoutFrames="300"/>
+	<Expect watch="Demo.Gold" target="InventoryDemo" equals="100"/>
+	<DevCommand line="demo.shop InventoryDemo"/>
+	<WaitUntil watch="UI.ActiveScreen" is="common/ui/shop/shop.ui.xml" timeoutFrames="30"/>
+	<Expect watch="Shop.LastStatus" is="none"/>
+
+	<!-- ⑴ 포션: 첫 입력은 기본 포커스(Close), 위로 셋 → Offer0 -->
+	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Close" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer2" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer0" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
+	<Expect watch="Shop.Busy" equals="1"/> <!-- 확인 창 아래의 상점은 줄을 끄고 고르기를 버린다(감시 값은 맨 위의 상점 화면을 읽는다) -->
+	<WaitUntil watch="UI.FocusedWidget" is="Accept" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="Shop.PurchaseCount" equals="1" timeoutFrames="30"/>
+	<Expect watch="Shop.LastStatus" is="Succeeded"/>
+	<Expect watch="Demo.Gold" target="InventoryDemo" equals="80"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="1"/>
+	<ExpectLog id="ShopScreen.PurchaseFinished" count="1"/>
+
+	<!-- ⑵ 장화 -->
+	<WaitUntil watch="UI.ActiveScreen" is="common/ui/shop/shop.ui.xml" timeoutFrames="30"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer0" timeoutFrames="10"/> <!-- 확인 창이 닫히면 덮였던 줄로 포커스가 돌아온다 -->
+	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadDown" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer2" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="Shop.PurchaseCount" equals="2" timeoutFrames="30"/>
+	<Expect watch="Shop.LastStatus" is="Succeeded"/>
+	<Expect watch="Demo.Gold" target="InventoryDemo" equals="50"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="boots_low" equals="1"/>
+
+	<!-- ⑶ 잔액 부족 — 투구 60 > 50: 확인 창을 띄우지 않고 상태 글로 알린다, 돈 · 가방 그대로 -->
+	<WaitUntil watch="UI.ActiveScreen" is="common/ui/shop/shop.ui.xml" timeoutFrames="30"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer2" timeoutFrames="10"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<AdvanceSimulation frames="10"/> <!-- 확인 창이 뜨지 않는다(일어나지 않음 — 시간이 내용) -->
+	<ExpectUI screen="common/ui/shop/shop.ui.xml"/>
+	<ExpectLog id="ShopScreen.NotEnoughMoney" count="1"/>
+	<Expect watch="Shop.PurchaseCount" equals="2"/>
+	<Expect watch="Demo.Gold" target="InventoryDemo" equals="50"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="helmet_knight" equals="0"/>
+
+	<!-- ⑷ 가방 무게가 차면(포션 6 개 × 0.5 = 3.0) 포션 사기를 가게가 거절한다(NoRoom) — 돈은 그대로 -->
+	<DevCommand line="equipment.give Player potion_health"/>
+	<DevCommand line="equipment.give Player potion_health"/>
+	<DevCommand line="equipment.give Player potion_health"/>
+	<DevCommand line="equipment.give Player potion_health"/>
+	<DevCommand line="equipment.give Player potion_health"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="6"/>
+	<Tap slot="Gamepad.DPadUp" hold="1"/>
+	<WaitUntil watch="UI.FocusedWidget" is="Offer0" timeoutFrames="10"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/confirm.ui.xml" timeoutFrames="20"/>
+	<Tap slot="Gamepad.A" hold="1"/>
+	<WaitUntil watch="Shop.PurchaseCount" equals="3" timeoutFrames="30"/>
+	<Expect watch="Shop.LastStatus" is="NoRoom"/>
+	<Expect watch="Demo.Gold" target="InventoryDemo" equals="50"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="6"/>
+
+	<!-- ⑸ 세이브 → 새 무대(돈 100) → 불러오기: 돈 · 가방이 남는다 -->
+	<WaitUntil watch="UI.ActiveScreen" is="common/ui/shop/shop.ui.xml" timeoutFrames="30"/>
+	<Tap slot="Gamepad.B" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="none" timeoutFrames="30"/>
+	<Store watch="Save.Written" as="writtenBefore"/>
+	<DevCommand line="game.save empty/shopoffline"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
+	<LoadScene path="game/empty/maps/inventorydemo.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Appearance.Idle" target="Player" equals="1" timeoutFrames="300"/>
+	<Expect watch="Demo.Gold" target="InventoryDemo" equals="100"/> <!-- 새 판 — 불러오기가 정말 되돌리는지 가린다 -->
+	<Store watch="Save.Loaded" as="loadedBefore"/>
+	<DevCommand line="game.load empty/shopoffline"/>
+	<WaitUntil watch="Save.Loaded" differsFrom="loadedBefore" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.Idle" target="Player" equals="1" timeoutFrames="300"/>
+	<Expect watch="Demo.Gold" target="InventoryDemo" equals="50"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="potion_health" equals="6"/>
+	<Expect watch="Equipment.ItemCount" target="Player" key="boots_low" equals="1"/>
+	<Pass/>
+</Scenario>

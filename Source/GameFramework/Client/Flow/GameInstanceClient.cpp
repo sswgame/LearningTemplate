@@ -17,6 +17,8 @@ namespace sw
 {
     void GameSessionCommands::bind( GameSceneFlow& flow, UIGlobalCommandRegistry& commands )
     {
+        // "시작" 은 늘 건다 — 메인 메뉴는 타이틀 씬이 아닌 씬(시나리오의 첫 씬)에서도 열릴 수 있고, 입구 씬은 시작 맵으로 떨어진다(`getEntranceScene`).
+        flow.holdSessionCommand( commands.registerCommand( hashed_string( UIGlobalCommandRegistry::kStartGame ), SW_DELEGATE_METHOD( UICommandDelegate, &GameSceneFlow::onStartGameCommand, &flow ) ) );
         // 타이틀 씬이 없는 게임은 "타이틀로" 를 걸지 않는다(단추가 접힌 채다).
         if ( flow.hasTitleScene() == false )
             return;

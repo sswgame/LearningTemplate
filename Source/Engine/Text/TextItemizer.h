@@ -32,6 +32,11 @@ namespace sw
         /** @brief 폭 없는 문자(ZWSP..RLM, 줄/문단 구분, 방향 제어 U+202A..U+202E, 변이 선택자, 결합 분음 U+0300..U+036F)인지 확인합니다. */
         /** @brief 형식 문자(방향 · 폭 없는 이음 · 이체 선택자)이면 true 입니다. 글꼴에 글리프가 없는 것이 정상이라 빠졌다고 알리지 않습니다(`FontService`). */
         [[nodiscard]] static bool isFormatControl( uint32 codepoint );
+        /**
+         * @brief 줄 끝 문자(LF · CR)면 true 입니다. 글리프가 없다 — 줄 나누기는 강제 끊기(BreakKind::Mandatory)로 쓰고 배치는 그리지 않으므로(`isLineBreakCharacter`) 대체 연쇄가 "글리프 없음" 으로 경고하지 않는다.
+         * @details 폭 0 문자(`isZeroWidth`)에 넣지 않는다 — 폭 0 문자는 끊기 금지로 분류되어 강제 줄바꿈이 사라진다.
+         */
+        [[nodiscard]] static bool isLineTerminator( uint32 codepoint );
         static bool               isZeroWidth( uint32 codepoint );
 
         /**
