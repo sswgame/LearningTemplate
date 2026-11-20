@@ -45,7 +45,8 @@ namespace sw
             // 구간의 시작은 머리 끝에서 센 값으로 적는다(머리 길이가 레이어 이름에 달려 쓰기 전에 절대 위치를 모른다).
             // 판 10 부터 셀 색인 뒤에 셀 엔티티의 가장 큰 파일 id(`_maxCellFileID`)가 온다 — 색인만 읽은 씬이 새 파일 id 를 내려간 셀과 겹치지 않게 고른다.
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
-            static constexpr uint32 kBinVersion = 10;
+            // 판 11 부터 셀 색인의 구간 뒤에 그 조각의 HLOD 대리 파일 id(`StreamingCell::_hlodFileID`, 0 이면 없음)가 온다.
+            static constexpr uint32 kBinVersion = 11;
             // 고정 머리: 매직 · 판 · 머리 길이 · 내용 길이.
             static constexpr uint64 kFixedHeadBytes = 2u * sizeof( uint32 ) + 2u * sizeof( uint64 );
             // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯, 목록 수 둘, 파일 id · id 범위 · 앵커 id(8바이트씩)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
@@ -712,7 +713,7 @@ namespace sw
         {
             arch >> cell._cell._x >> cell._cell._z;
             const bool bLayersRead = SceneDocumentInternal::readTextList( arch, cell._listDataLayer );
-            arch >> cell._contentOffset >> cell._contentSize;
+            arch >> cell._contentOffset >> cell._contentSize >> cell._hlodFileID;
             if ( bLayersRead == false || arch.isError() )
             {
                 SW_LOG_ERROR_ID( "SceneDocument.BinarySceneStreamCorrupted", "Binary scene stream corrupted in %#", absPath );
@@ -783,7 +784,7 @@ namespace sw
             SceneDocumentInternal::writeEntities( content, cell._listSceneObjectNode );
             arch << cell._cell._x << cell._cell._z;
             SceneDocumentInternal::writeTextList( arch, cell._listDataLayer );
-            arch << contentOffset << static_cast<uint64>( content.getSize() - contentOffset );
+            arch << contentOffset << static_cast<uint64>( content.getSize() - contentOffset ) << cell._hlodFileID;
         }
         // 셀 엔티티의 가장 큰 파일 id(판 10) — 런타임은 셀 내용을 읽지 않고도 새 파일 id 를 이 위에서 고른다.
         uint64 maxCellFileID = 0;

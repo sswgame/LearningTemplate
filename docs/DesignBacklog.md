@@ -2084,6 +2084,26 @@ ezEngine(MIT) · Adria(MIT) · VQEngine(GPL-3.0 — 설계만) · Taskflow(MIT, 
 
 **남은 위험.** 우선순위는 읽기 차례만 정한다(언리얼처럼 소스마다 목표 상태 Loaded · Activated 를 두지 않는다). 부모(붙은 오브젝트)를 기다리는 보류는 없다 — MMO 엔티티에 부모 칸이 없다. 두 프로세스 짝 시나리오는 스트리밍 씬을 쓰는 게임이 생길 때(LanternVale 은 격자만) — 그때까지 같은 경로를 루프백 끝단 두 클라이언트 · 서버 · 클라이언트 씬 셋으로 단위 테스트가 돈다(`NetMMOStreamingTest`).
 
+### 씬 스트리밍 (라) HLOD · 우선순위 공유 · 로드 큐 디버그(설계 2026-11-20)
+
+> 질문: 셀이 내려간 먼 영역을 무엇으로 그리고, 셀 로드와 텍스처 · 메시 스트리밍은 어떤 차례를 함께 쓰며, 로드 큐는 어디서 보는가?
+> 결론: HLOD 는 셀 조각마다 정적 메시를 인스턴스 메시로 모은 대리(언리얼 HLOD 레이어 `Instancing`)를 쿠커가 굽고, 조각이 올라 있지 않을 때만 켠다. 우선순위는 스트리밍 소스 우선순위 하나(`StreamingSourcePriority`)를 셀 읽기 · 텍스처 밉 줄 · 두 쪽 IO 큐가 함께 쓴다. 로드 큐는 감시 값과 개발 명령 `world.streamqueue` 로 본다.
+
+**대조.**
+- 언리얼 World Partition HLOD: HLOD 레이어 종류 `Instancing`(원본 메시를 인스턴스로 — 굽기 없음) · `MeshMerge`(합친 메시 + 머티리얼 굽기) · `MeshSimplify` · `MeshApproximate`(임포스터에 가까운 근사). 런타임 셀마다 HLOD 액터 하나가 있고 그 셀이 오르면(Activated) 숨긴다. HLOD 액터는 데이터 레이어를 따른다. 텍스처 스트리머는 화면 크기(wanted mip)로 차례를 정하고 World Partition 은 스트리밍 소스 우선순위로 셀 차례를 정한다.
+- 유니티: HLOD 는 패키지(`com.unity.hlod`)로 셀이 아닌 공간 분할 노드마다 합친 메시를 굽는다. Mipmap Streaming 은 카메라 거리 · 화면 크기로 차례를 정한다.
+- Godot: HLOD 가 없다(visibility range 로 손으로 갈음).
+
+**결정.**
+1. **대리 = 인스턴스 메시(Instancing).** 쿠커가 셀을 나눌 때(`SceneCooker::splitStreamingCells` — 쿠킹과 소스 셀 나누기 `gv_sceneStreamSourceCells` 가 같은 길) 조각마다 정적(`_bStatic`) · 보이는 `MeshComponent` 를 (메시, 머티리얼, 구간)마다 `InstancedMeshComponent` 하나로 모아 대리 엔티티 하나(원점의 씬 컴포넌트 아래, 인스턴스 자리는 월드 자리, `_bAlwaysLoaded`, 조각의 레이어)를 기본 목록에 더하고 조각에 그 파일 id 를 적는다(`StreamingCell::_hlodFileID`, 쿠킹본 판 11). 이름은 `HLOD_<x>_<z>[_레이어]`. 합친 메시 · 임포스터는 머티리얼 굽기(텍스처 아틀라스)가 필요해 지금 들지 않는다 — 인스턴스 대리는 Packed Level 의 인스턴스 메시를 그대로 써 새 굽기가 없고, 드로우는 (메시, 머티리얼)마다 하나다. 그리기 수가 문제가 되면 `MeshMerge` 를 다음 단계로 더한다(같은 `_hlodFileID` 자리).
+2. **켜고 끄기.** `SceneStreamingSubsystem` 이 갱신 끝(짓기 뒤)에 조각마다 대리를 조각이 `Loaded` 가 아닐 때만 켠다(`GameObject::setActive`, 바뀐 것만). 내린 조각 · 읽는 중 · 짓는 중 · 실패한 조각은 대리가 그린다 — 짓기가 여러 프레임에 걸쳐도 구멍이 나지 않는다. 대리는 거리로 따로 전환하지 않는다 — 셀 반경이 곧 전환 거리다(언리얼도 셀 Activated 가 HLOD 를 숨긴다). 대리는 충돌 · 내비 입력이 없다(그리기만).
+3. **우선순위 공유.** 형식은 `Engine/Asset/StreamingSourcePriority.h`(텍스처 캐시가 씬보다 아래 층이라 둘이 함께 보는 에셋 층에 둔다). 셀: 읽기 차례 = 덮는 원점 중 가장 급한 우선순위 → 거리(전과 같다), 셀 내용 읽기의 IO 우선순위 = `toAsyncIOPriority( 그 우선순위 )`. 텍스처: `TextureStreamingSystem` 이 메시마다 화면 크기와 함께 그 자리의 우선순위(`SceneStreamingSubsystem::computePriorityAt` — 그 자리 셀의 셀 우선순위, 같은 함수)를 `TextureCache::recordStreamingDemand` 로 알리고, 위쪽 밉 줄은 내리기 → 우선순위 → 화면 크기 차례이며 밉 구간 읽기의 IO 우선순위도 같은 변환이다. 원점 반경 밖 메시(대리가 그리는 먼 영역)는 `Lowest` 라 뒤에 선다. 스트리밍하지 않는 씬은 모두 `Normal` 이라 전과 같다. 메시: 메시 LOD 스트리밍은 없다 — 메시 읽기는 셀을 지을 때 컴포넌트가 걸므로 셀 짓기 차례(같은 키)를 따른다.
+4. **로드 큐 디버그.** 감시 값 `Scene.PendingCellCount`(원점 반경 안인데 아직 오르지 않은 조각 — 갱신의 정렬 키를 그대로 읽는다) · `Scene.HLODCount` · `Scene.HLODShownCount` · `Texture.StreamingQueueCount`(기다림 + 읽는 중 + 업로드 중), 개발 명령 `world.streamqueue`(셀 줄: 좌표 · 레이어 · 우선순위 · 거리 · 단계, 텍스처 줄: 키 · 우선순위 · 밉, 앞 16 개). 에디터 패널은 두지 않는다 — Streaming Cells 창은 쿠킹 전 나누기 미리보기이고 큐는 실행 중 값이라 개발 명령 · HUD 자리다.
+
+**확인.** 단위 `SceneStreamingHLODTest`(조각이 오르면 대리 꺼짐 · 내리면 켜짐 · 다 짓기 전에는 켜진 채 · `computePriorityAt` 가 셀 우선순위와 같음 · 로드 큐 차례 · 단계), `StreamingHLODCookTest`(정적 메시 조각만 대리 · 움직이는/숨긴/늘 올라 있는 메시 제외 · 인스턴스 월드 자리 · 스케일), `TextureStreamingDemandTest`(요구 합치기 · IO 우선순위 접기). 시나리오 `game.playground.streaminghlod`(소스 셀 나누기, 카메라가 셀 사이를 오가며 대리 수 · 큐가 빔을 감시 값으로 — 골든 없음).
+
+**남은 위험.** 대리 인스턴스는 원본의 가장 높은 LOD 그대로다(언리얼 Instancing 은 최소 LOD 를 고른다 — 인스턴스 메시에 LOD 고정 칸이 생기면 쓴다). 중첩 행렬의 비균일 스케일 + 회전(전단)은 TRS 로 나눌 때 잃는다. 대리는 XML 상태로 쿠킹본에 실린다(바이너리 상태 쿠킹 뒤에 만든다). 데이터 레이어 조각마다 대리가 따로라 같은 좌표의 여러 레이어 조각은 대리도 여럿이다. 쿠킹 판 11 이라 다시 쿠킹하기 전의 쿠킹본은 읽지 않는다(기존 규칙).
+
 ### 허브 게임 · 미니게임 Experience(사용자 결정 2026-11-20)
 
 **결정(사용자).** `Source/Games/*` 의 게임들은 키트를 시험하려고 만든 것이라 폐기하고 게임 하나로 합친다. 플레이어가 허브 월드에 입장해 장소 · 사물과 상호작용으로 장르 미니게임을 실행한다(심즈의 집 · 동네에서 활동을 고르는 꼴). 허브는 여러 키트를 함께 쓰고(스트리밍 오픈월드 · 길찾기 · 하우징 · 농사 · 생물 · 상점 · 채팅 · 소셜 · 트리거 → 컷씬 · 리스폰 · 카메라 프리셋 · 자막 · 런타임 UI), 장르 키트는 미니게임 Experience 로 들어간다.

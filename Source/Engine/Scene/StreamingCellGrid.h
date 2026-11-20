@@ -23,6 +23,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Asset/StreamingSourcePriority.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -61,16 +62,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 스트리밍 소스의 우선순위입니다. 앞 값일수록 그 소스가 덮는 셀을 먼저 읽습니다(언리얼 `EStreamingSourcePriority` 와 같은 다섯 단계 · 같은 차례). */
-    enum class StreamingSourcePriority : uint8
-    {
-        Highest,
-        High,
-        Normal,
-        Low,
-        Lowest,
-    };
-
     /**
      * @struct StreamingSource
      * @brief 스트리밍 소스 하나 — 위치와 그 둘레에서 올릴 반경, 읽기 차례입니다(언리얼 World Partition 의 `FWorldPartitionStreamingSource` 자리).

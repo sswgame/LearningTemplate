@@ -11,6 +11,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Asset/StreamingSourcePriority.h"
 #include "Engine/EngineMinimal.h"
 
 namespace sw
@@ -51,5 +52,7 @@ namespace sw
         string _key;
         uint32 _firstMip{ 0 };
         uint32 _mipCount{ 0 };
+        /// 읽기 차례 · IO 우선순위(`TextureCache::updateStreaming` 이 줄을 정렬할 때 그 프레임의 알림으로 적는다 — 알림이 없으면 `Lowest`). 셀 로드와 같은 값이다
+        StreamingSourcePriority _priority{ StreamingSourcePriority::Lowest };
     };
 } // namespace sw

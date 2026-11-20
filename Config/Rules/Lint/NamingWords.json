@@ -97,6 +97,7 @@
     "should"
   ],
   "_bannedNames": {
+    "recordScreenSizes": "recordStreamingDemand — 텍스처 스트리밍 요구가 화면 크기와 스트리밍 우선순위(셀 로드와 같은 값)를 함께 싣는다(DesignBacklog 씬 스트리밍 (라), 2026-11-20)",
     "LaunchSelection": "gv_firstExperience — 실행 인자 -experience= 를 실행 전역 변수로 바꿨다(시나리오 <Launch> 가 체인 단계마다 바꾸고 되돌린다, DesignBacklog 허브 게임 · 미니게임 Experience 2 단계)",
     "EmptyGame": "PlaygroundGame — 게임 Empty → Playground 이름 바꾸기 — 빈 시작 게임이 아니라 장르 미니게임을 들어가 해 보는 허브(DesignBacklog 허브 게임 · 미니게임 Experience, 2026-11-20)",
     "EmptyClientPart": "PlaygroundClientPart — 게임 Empty → Playground 이름 바꾸기 — 빈 시작 게임이 아니라 장르 미니게임을 들어가 해 보는 허브(DesignBacklog 허브 게임 · 미니게임 Experience, 2026-11-20)",
@@ -4632,6 +4633,7 @@
       "hitter",
       "hitting",
       "hkdfsha",
+      "hlod",
       "hlsl",
       "hoe",
       "hold",

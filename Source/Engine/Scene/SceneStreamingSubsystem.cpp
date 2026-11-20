@@ -181,6 +181,7 @@ namespace sw
             pSlot->_listDataLayer      = cell._listDataLayer;
             pSlot->_contentOffset      = cell._contentOffset;
             pSlot->_contentSize        = cell._contentSize;
+            pSlot->_hlodFileID         = cell._hlodFileID;
             pSlot->_bFromDocument      = SW_TRUE;
             // 메모리 문서의 셀(쿠커 · 테스트)은 내용이 이미 있다 — 읽지 않고 짓는다.
             if ( cell.hasFileContent() == false )
@@ -431,8 +432,15 @@ namespace sw
             collectCellContent( *pSlot );
         }
 
-        // 5. 셀을 가까운 순으로 시간 예산 안에서 엔티티 단위로 짓는다(언리얼 AddToWorld 시간 예산). 짓는 중인 셀을 먼저 잇고(반쯤 지은 셀이 쌓이지 않게) 그다음 내용이 온 셀을 시작한다.
-        //    엔티티 하나는 예산과 상관없이 짓는다 — 엔티티 하나가 예산보다 커도 멈추지 않게. 결정적 실행은 예산 없이 끝까지 짓는다.
+        // 5. 셀을 지은 뒤 HLOD 대리를 맞춘다 — 이번 프레임에 내린 조각은 대리가 켜지고 다 지은 조각은 꺼진다(같은 프레임, 구멍 · 겹침 없이).
+        buildQueuedCells( bFinishEachFrame );
+        updateHLODVisibility();
+    }
+
+    void SceneStreamingSubsystem::buildQueuedCells( const bool bFinishEachFrame )
+    {
+        // 셀을 가까운 순으로 시간 예산 안에서 엔티티 단위로 짓는다(언리얼 AddToWorld 시간 예산). 짓는 중인 셀을 먼저 잇고(반쯤 지은 셀이 쌓이지 않게) 그다음 내용이 온 셀을 시작한다.
+        // 엔티티 하나는 예산과 상관없이 짓는다 — 엔티티 하나가 예산보다 커도 멈추지 않게. 결정적 실행은 예산 없이 끝까지 짓는다.
         const int64     budgetNanoseconds = bFinishEachFrame ? 0 : static_cast<int64>( _settings._addToWorldBudgetMicroseconds ) * constant::time::kNanosecondsPerMicrosecond;
         const Stopwatch stopwatch;
         bool            bProgressed = false;
@@ -451,6 +459,106 @@ namespace sw
                     return; // 예산에 닿았다
             }
         }
+    }
+
+    void SceneStreamingSubsystem::updateHLODVisibility()
+    {
+        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
+        {
+            GameObject* pProxy = resolveHLODObject( *pSlot );
+            if ( pProxy == nullptr )
+                continue;
+            // 올라 있지 않은 조각(내려감 · 읽는 중 · 짓는 중 · 실패)은 대리가 그린다 — 실패한 조각도 구멍보다 대리가 낫다.
+            const bool bShow = pSlot->_state != CellState::Loaded;
+            if ( pProxy->isActive() != bShow )
+                pProxy->setActive( bShow );
+        }
+    }
+
+    GameObject* SceneStreamingSubsystem::resolveHLODObject( CellSlot& slot )
+    {
+        if ( slot._hlodFileID == 0 || _pScene == nullptr )
+            return nullptr;
+        GameObjectManager& objects = *_pScene->getObjectManager();
+        if ( slot._hlodObjectID != 0 )
+        {
+            GameObject* pProxy = objects.findGameObjectByID( slot._hlodObjectID );
+            if ( pProxy != nullptr )
+                return pProxy;
+            slot._hlodObjectID = 0; // 사라졌다(레이어를 껐거나 매니저를 비웠다) — 다시 서면 아래에서 다시 푼다
+        }
+        // 대리는 조각의 레이어를 따른다 — 레이어가 꺼져 있으면 대리가 없으니 파일 id 를 찾지 않는다(프레임마다 헛찾기 없이).
+        if ( areSlotLayersActive( slot ) == false )
+            return nullptr;
+        slot._hlodObjectID = _pScene->findObjectIDByFileID( slot._hlodFileID );
+        return slot._hlodObjectID != 0 ? objects.findGameObjectByID( slot._hlodObjectID ) : nullptr;
+    }
+
+    const GameObject* SceneStreamingSubsystem::findResolvedHLODObject( const CellSlot& slot ) const
+    {
+        return slot._hlodObjectID != 0 && _pScene != nullptr ? _pScene->getObjectManager()->findGameObjectByID( slot._hlodObjectID ) : nullptr;
+    }
+
+    uint32 SceneStreamingSubsystem::getHLODCount() const
+    {
+        uint32 count = 0;
+        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
+        {
+            count += pSlot->_hlodFileID != 0 ? 1u : 0u;
+        }
+        return count;
+    }
+
+    uint32 SceneStreamingSubsystem::getShownHLODCount() const
+    {
+        uint32 count = 0;
+        for ( const unique_ptr<CellSlot>& pSlot : _listCell )
+        {
+            const GameObject* pProxy = findResolvedHLODObject( *pSlot );
+            count += pProxy != nullptr && pProxy->isActive() ? 1u : 0u;
+        }
+        return count;
+    }
+
+    StreamingSourcePriority SceneStreamingSubsystem::computePriorityAt( const float3& position ) const
+    {
+        if ( _pScene == nullptr )
+            return StreamingSourcePriority::Normal; // 스트리밍하지 않는다 — 모두 같은 차례(화면 크기만 본다)
+        return computeCellPriority( _grid.computeCell( toAbsolute( position ) ) );
+    }
+
+    bool SceneStreamingSubsystem::isSlotPending( const CellSlot& slot ) const
+    {
+        return slot._state != CellState::Loaded && slot._state != CellState::Failed && areSlotLayersActive( slot );
+    }
+
+    void SceneStreamingSubsystem::collectLoadQueue( vector<LoadQueueEntry>& outListEntry ) const
+    {
+        outListEntry.clear();
+        if ( _pScene == nullptr )
+            return;
+        // 지난 갱신의 정렬 키를 그대로 읽는다 — 줄 차례 · 우선순위 · 거리가 갱신이 쓴 값과 같다.
+        for ( const LoadOrderKey& key : _listScratchLoadKey )
+        {
+            if ( key._slotIndex >= _listCell.size() )
+                continue; // 그 뒤 월드를 바꿨다(복원이 조각을 다시 만들었다)
+            const CellSlot& slot = getSlot( key._slotIndex );
+            if ( isSlotPending( slot ) == false )
+                continue;
+            outListEntry.push_back( LoadQueueEntry{ slot._cell, slot._listDataLayer, key._priority, MathUtil::sqrt( key._distanceSquared ), slot._state } );
+        }
+    }
+
+    uint32 SceneStreamingSubsystem::getPendingCellCount() const
+    {
+        if ( _pScene == nullptr )
+            return 0;
+        uint32 count = 0;
+        for ( const LoadOrderKey& key : _listScratchLoadKey )
+        {
+            count += key._slotIndex < _listCell.size() && isSlotPending( getSlot( key._slotIndex ) ) ? 1u : 0u;
+        }
+        return count;
     }
 
     void SceneStreamingSubsystem::collectCellsChangedSince( const uint64 serial, vector<StreamingCellCoord>& outListCell ) const
@@ -691,11 +799,12 @@ namespace sw
     void SceneStreamingSubsystem::requestCellContent( CellSlot& slot )
     {
         // 읽기는 IO 스레드가, 풀기는 완료를 받은 태스크 워커가 한다 — 게임 스레드는 결과의 상태만 본다(`collectCellContent`).
-        const shared_ptr<CellContentRead> pRead      = sw::make_shared<CellContentRead>();
-        const string                      sourcePath = _contentPath;
-        slot._readHandle                             = AssetIO::readBinaryAssetRangeAsync( AssetID{ _contentPath }, slot._contentOffset, slot._contentSize, AsyncIOPriority::Normal,
-                                                                                           SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [pRead, sourcePath]( bool bSuccess, vector<uint8>& bytes )
-                                    {
+        const shared_ptr<CellContentRead> pRead = sw::make_shared<CellContentRead>();
+        // IO 우선순위는 읽기 차례와 같은 값이다 — 텍스처 밉 구간 읽기와 한 큐에서 같은 규칙으로 앞선다(`toAsyncIOPriority`).
+        const string sourcePath = _contentPath;
+        slot._readHandle        = AssetIO::readBinaryAssetRangeAsync( AssetID{ _contentPath }, slot._contentOffset, slot._contentSize, toAsyncIOPriority( computeCellPriority( slot._cell ) ),
+                                                                      SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [pRead, sourcePath]( bool bSuccess, vector<uint8>& bytes )
+               {
             const bool                   bParsed = bSuccess && SceneDocument::readStreamingCellContent( bytes.data(), bytes.size(), pRead->_listNode, sourcePath );
             const CellContentRead::State state   = bParsed ? CellContentRead::State::Read : CellContentRead::State::Failed;
             pRead->_state.store( static_cast<uint8>( state ), std::memory_order_release );

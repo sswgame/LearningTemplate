@@ -1,6 +1,6 @@
 /**
  * @file SceneWatches.cpp
- * @brief 씬의 자동화 감시 값입니다(`Scene.*` — 오브젝트 수 · 올라 있는 스트리밍 셀 수 · 전환 중 · 트랜스폼 해시 · 게임 카메라 요). 감시 값 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 씬이 자기 감시 값을 등록합니다 — 실행기가 대신 정의하지 않습니다.
+ * @brief 씬의 자동화 감시 값입니다(`Scene.*` — 오브젝트 수 · 올라 있는 스트리밍 셀 수 · 로드 큐 · HLOD 대리 · 전환 중 · 트랜스폼 해시 · 게임 카메라 요). 감시 값 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 씬이 자기 감시 값을 등록합니다 — 실행기가 대신 정의하지 않습니다.
  * @details 감시 값과 결정성 진단 스위치(`gv_automationHashDump`)만 든 개발 장치라 DevTools 에 둔다 — 배포 구성은 이 파일을 짓지 않는다(`SW_DEV_ONLY_SOURCE_PATTERNS`).
  */
 #include "pch.h"
@@ -99,6 +99,33 @@ namespace sw
             return readSceneWorldOrigin( true, outValue );
         }
 
+        /** @brief 감시 값 `Scene.PendingCellCount` 입니다. 원점 반경 안이라 올리려는데 아직 오르지 않은 셀 조각 수(로드 큐 — `SceneStreamingSubsystem::getPendingCellCount`)입니다. */
+        [[nodiscard]] bool readScenePendingCellCount( const GameObjectManager* pManager, float64& outValue )
+        {
+            if ( pManager == nullptr )
+                return false;
+            outValue = static_cast<float64>( pManager->getSubsystem<SceneStreamingSubsystem>().getPendingCellCount() );
+            return true;
+        }
+
+        /** @brief 감시 값 `Scene.HLODCount` 입니다. HLOD 대리가 있는 셀 조각 수입니다(쿠커 · 소스 셀 나누기가 정적 메시로 굽는다). */
+        [[nodiscard]] bool readSceneHLODCount( const GameObjectManager* pManager, float64& outValue )
+        {
+            if ( pManager == nullptr )
+                return false;
+            outValue = static_cast<float64>( pManager->getSubsystem<SceneStreamingSubsystem>().getHLODCount() );
+            return true;
+        }
+
+        /** @brief 감시 값 `Scene.HLODShownCount` 입니다. 셀 조각이 올라 있지 않아 대신 그리는(켜진) HLOD 대리 수입니다. */
+        [[nodiscard]] bool readSceneHLODShownCount( const GameObjectManager* pManager, float64& outValue )
+        {
+            if ( pManager == nullptr )
+                return false;
+            outValue = static_cast<float64>( pManager->getSubsystem<SceneStreamingSubsystem>().getShownHLODCount() );
+            return true;
+        }
+
         /**
          * @brief 감시 값 `Scene.Transitioning` 입니다. 비동기 씬 로드나 전환이 진행 중이면 1 입니다.
          * @details 씬 열기(`scene.open`)는 요청만 하고 돌아온다. 이미 같은 상태의 씬이 열려 있으면 다른 감시 값에 차이가 나타나지 않으므로, 열기가 끝났는지는 이 감시 값이 0 인 것으로 본다.
@@ -158,6 +185,10 @@ namespace sw
     SW_AUTOMATION_WATCH( sceneObjectCount, "Scene.ObjectCount", "Objects in the active scene", &readSceneObjectCount );
     SW_AUTOMATION_WATCH( sceneLoadedCellCount, "Scene.LoadedCellCount", "Streaming cell fragments of the active scene that are loaded (built and shown) - 0 when it does not stream cells",
                          &readSceneLoadedCellCount );
+    SW_AUTOMATION_WATCH( scenePendingCellCount, "Scene.PendingCellCount", "Streaming cell fragments within a source radius that are not loaded yet (the load queue; world.streamqueue lists them)",
+                         &readScenePendingCellCount );
+    SW_AUTOMATION_WATCH( sceneHLODCount, "Scene.HLODCount", "Streaming cell fragments that have an HLOD proxy (static meshes merged into instanced meshes at cook time)", &readSceneHLODCount );
+    SW_AUTOMATION_WATCH( sceneHLODShownCount, "Scene.HLODShownCount", "HLOD proxies drawn in place of a cell fragment that is not loaded", &readSceneHLODShownCount );
     SW_AUTOMATION_WATCH( sceneSubLevelCount, "Scene.SubLevelCount", "Runtime sub-levels of the active scene, including ones still building or being removed", &readSceneSubLevelCount );
     SW_AUTOMATION_WATCH( sceneLoadedSubLevelCount, "Scene.LoadedSubLevelCount", "Runtime sub-levels of the active scene that are built and shown", &readSceneLoadedSubLevelCount );
     SW_AUTOMATION_WATCH( sceneWorldOriginX, "Scene.WorldOriginX", "Absolute X of the active scene's world origin (m) - object positions are local to it", &readSceneWorldOriginX );

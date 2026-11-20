@@ -46,6 +46,15 @@
  * 원점마다 반경 · 우선순위가 있다(`StreamingSource`, 언리얼 World Partition 스트리밍 소스). 올리는 셀은 원점 반경의 합집합이고, 읽기 차례는 셀을 덮는 원점 중
  * 가장 급한 우선순위 → 가까운 거리, 내리기는 모든 원점에서 (그 원점 반경 + 여유) 밖이다. 카메라 원점은 월드 설정의 로딩 반경 · `Normal` 이다(바깥 원점은 반경을 늘 함께 준다).
  *
+ * [HLOD — 설계 `docs/DesignBacklog.md` "씬 스트리밍 (라) HLOD · 우선순위 공유 · 로드 큐 디버그"]
+ * 쿠커가 셀 조각마다 정적 메시를 인스턴스 메시로 모은 대리 엔티티(늘 올라 있음, 조각의 레이어)를 굽고 조각에 그 파일 id 를 적는다(`SceneDocument::StreamingCell::_hlodFileID`).
+ * 조각이 올라 있지 않으면(내려감 · 읽는 중 · 짓는 중 · 실패) 대리를 켜 두고, 다 지어 드러나면 끈다(`updateHLODVisibility` — 갱신 끝, 짓기 뒤). 짓는 동안은 대리가 남아 구멍이 나지 않는다.
+ *
+ * [우선순위 공유] 셀 읽기 차례 · IO 우선순위와 텍스처 밉 차례 · IO 우선순위가 같은 값이다(`computePriorityAt` — 그 자리 셀을 덮는 원점 중 가장 급한 것, `toAsyncIOPriority`).
+ * 메시는 셀을 지을 때 컴포넌트가 읽기를 거므로 셀 짓기 차례(같은 키)를 따른다 — 메시 LOD 스트리밍은 없다.
+ *
+ * [로드 큐 디버그] 지난 갱신의 올릴 셀 줄(우선순위 → 거리 차례)을 `collectLoadQueue` 가 돌려준다 — 개발 명령 `world.streamqueue` · 감시 값 `Scene.PendingCellCount` 가 읽는다.
+ *
  * [셀 내용]
  * 쿠킹본에서 읽은 셀은 색인(좌표 · 레이어 · 내용 구간)만 들고(`SceneDocument::StreamingCell::hasFileContent`), 지은 뒤에는 읽은 엔티티를 버린다 — 다시 올리면 다시 읽는다.
  * 내린 적이 있는 셀은 떠 둔 상태를 들고 그것으로 짓는다(읽지 않는다). 쿠커가 메모리에서 나눈 문서(쿠커 · 테스트)는 셀 내용이 이미 메모리에 있어 읽기 없이 짓기로 간다.
@@ -63,6 +72,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneSettings.h"
@@ -73,6 +83,18 @@ namespace sw
     class GameObject;
     class GameObjectManager;
     class Scene;
+
+    /** @brief 셀 조각 하나의 단계입니다(언리얼 World Partition 셀의 Unloaded → Loading → Loaded → Activated 자리). 이름은 `getEnumName` 으로 읽는다(로드 큐 디버그). */
+    ENUM()
+    enum class StreamingCellState : uint8
+    {
+        Unloaded, ///< 오브젝트가 없다. 내용은 `_bContentHeld` 이면 `_listNode` 에 있다
+        Loading,  ///< 쿠킹본의 구간을 읽는 중이다(`_pRead`)
+        Ready,    ///< 내용(`_listNode`)이 있고 짓기를 기다린다
+        Building, ///< 엔티티 단위로 짓는 중이다(`_pBuild`) — 지은 오브젝트는 아직 드러나지 않았다
+        Loaded,   ///< 오브젝트를 지었다(`_listObjectID`)
+        Failed,   ///< 읽기 · 짓기가 실패했다 — 다시 시도하지 않는다(프레임마다 같은 오류를 내지 않게)
+    };
 
     /**
      * @class SceneStreamingSubsystem
@@ -190,17 +212,36 @@ namespace sw
         /** @brief 원점마다 (그 원점 반경 + 이 여유)보다 멀면 내립니다(`StreamingSource::_loadingRadius` 가 원점마다 다를 때). */
         float32 getUnloadMargin() const { return _settings._unloadMargin; }
 
-    private:
-        /** @brief 셀 하나의 단계입니다(언리얼 World Partition 셀의 Unloaded → Loading → Loaded → Activated 자리). */
-        enum class CellState : uint8
+        /**
+         * @brief 씬의 로컬 자리 @p position 의 스트리밍 우선순위입니다 — 그 자리 셀을 반경으로 덮는 원점 가운데 가장 급한 것(셀 읽기 차례와 같은 값)이고, 덮는 원점이 없으면 `Lowest` 입니다.
+         * @details 텍스처 밉 스트리밍(`TextureStreamingSystem`)이 메시 자리로 묻는다. 스트리밍하지 않으면 모두 `Normal` 입니다. 읽기만 하므로 원점을 바꾸지 않는 단계의 워커에서 불러도 된다.
+         */
+        StreamingSourcePriority computePriorityAt( const float3& position ) const;
+
+        /** @brief HLOD 대리가 있는 조각 수입니다. */
+        uint32 getHLODCount() const;
+        /** @brief 지금 켜진(조각이 올라 있지 않아 대신 그리는) HLOD 대리 수입니다. 레이어가 꺼져 대리가 없는 조각은 세지 않습니다. */
+        uint32 getShownHLODCount() const;
+
+        /** @brief 로드 큐의 한 줄입니다(`collectLoadQueue`). */
+        struct LoadQueueEntry
         {
-            Unloaded, ///< 오브젝트가 없다. 내용은 `_bContentHeld` 이면 `_listNode` 에 있다
-            Loading,  ///< 쿠킹본의 구간을 읽는 중이다(`_pRead`)
-            Ready,    ///< 내용(`_listNode`)이 있고 짓기를 기다린다
-            Building, ///< 엔티티 단위로 짓는 중이다(`_pBuild`) — 지은 오브젝트는 아직 드러나지 않았다
-            Loaded,   ///< 오브젝트를 지었다(`_listObjectID`)
-            Failed,   ///< 읽기 · 짓기가 실패했다 — 다시 시도하지 않는다(프레임마다 같은 오류를 내지 않게)
+            StreamingCellCoord      _cell{};
+            vector<string>          _listDataLayer;
+            StreamingSourcePriority _priority{ StreamingSourcePriority::Lowest };
+            float32                 _distance{ 0.0f };                      ///< 가장 가까운 원점까지 셀 거리(m)
+            StreamingCellState      _state{ StreamingCellState::Unloaded }; ///< Unloaded · Loading · Ready · Building 가운데 하나
         };
+        /**
+         * @brief 지난 갱신에서 원점 반경 안이라 올리려는 조각 가운데 아직 오르지 않은 것을 줄 차례(우선순위 → 거리)로 @p outListEntry 에 채웁니다(비우고 채운다).
+         * @details 다 지었거나 실패한 조각 · 그 뒤 레이어가 꺼진 조각은 뺀다. 개발 명령 · 감시 값용이다 — 갱신이 쓰는 줄을 그대로 읽으므로 따로 재지 않는다.
+         */
+        void collectLoadQueue( vector<LoadQueueEntry>& outListEntry ) const;
+        /** @brief `collectLoadQueue` 의 줄 수입니다(채우지 않고 센다). */
+        uint32 getPendingCellCount() const;
+
+    private:
+        using CellState = StreamingCellState;
 
         /** @brief 워커와 나누는 읽기 결과입니다(정의는 .cpp). 워커가 엔티티를 채운 뒤 상태를 올리고, 게임 스레드는 상태를 본 뒤에만 엔티티를 가져간다. */
         struct CellContentRead;
@@ -218,6 +259,8 @@ namespace sw
             AsyncReadHandle                        _readHandle;         ///< 읽기 요청(취소 · 결정적 실행의 기다림). 결과와 따로 든다 — 요청의 완료 콜백이 결과를 쥐어 결과가 요청을 쥐면 고리가 된다
             vector<SceneDocument::SceneObjectNode> _listArrivedNode;    ///< 다른 셀에서 들어온 엔티티(떠 둔 상태) — 다음 짓기에서 내용 뒤에 붙여 같은 배치로 짓는다
             vector<uint64>                         _listObjectID;       ///< 든 오브젝트(지은 엔티티 · 옮겨 온 오브젝트, 엔티티마다 하나, 부품 제외). 내릴 때 자식까지 지운다
+            uint64                                 _hlodFileID{ 0 };    ///< 이 조각의 HLOD 대리 엔티티(늘 올라 있음)의 파일 id — 0 이면 대리가 없다(`SceneDocument::StreamingCell::_hlodFileID`)
+            uint64                                 _hlodObjectID{ 0 };  ///< 풀어 둔 대리 오브젝트 id(`resolveHLODObject` 만 쓴다) — 0 이거나 그 오브젝트가 사라졌으면 파일 id 로 다시 푼다
             CellState                              _state{ CellState::Unloaded };
             uint64                                 _changeSerial{ 0 };         ///< 마지막으로 오르거나 내려간 때의 `SceneStreamingSubsystem::_changeSerial`
             bool                                   _bContentHeld{ SW_FALSE };  ///< `_listNode` 를 짓고 나서도 든다(메모리 문서의 셀 · 떠 둔 상태) — 아니면 지은 뒤 버리고 다시 올릴 때 다시 읽는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -274,6 +317,19 @@ namespace sw
         [[nodiscard]] bool buildCell( uint32 slotIndex, const Stopwatch& stopwatch, int64 budgetNanoseconds, bool bForceProgress );
         /** @brief 셀을 내립니다 — 읽기는 취소하고, 든 오브젝트는 @p bKeepState 면 상태를 떠 둔 뒤 지웁니다(`Unloaded`). */
         void unloadCell( CellSlot& slot, bool bKeepState );
+        /** @brief 올릴 셀 줄(`_listScratchLoad`)을 시간 예산 안에서 엔티티 단위로 짓습니다(파일 머리말의 갱신 3). 예산에 닿으면 남은 셀은 다음 프레임에 잇습니다. */
+        void buildQueuedCells( bool bFinishEachFrame );
+        /** @brief 조각마다 HLOD 대리를 조각이 올라 있지 않을 때만 켭니다(바뀐 것만 `GameObject::setActive`). */
+        void updateHLODVisibility();
+        /**
+         * @brief 조각의 HLOD 대리 오브젝트입니다 — 풀어 둔 id(`CellSlot::_hlodObjectID`)를 쓰고, 없거나 사라졌으면(레이어를 껐다 켬 · 세이브 복원) 파일 id 로 한 번 다시 풀어 듭니다.
+         * @details 대리가 없거나(파일 id 0) 레이어가 꺼져 대리가 없으면 nullptr 이고 풀지 않는다 — 파일 id 찾기는 대리가 다시 설 때만 돈다.
+         */
+        GameObject* resolveHLODObject( CellSlot& slot );
+        /** @brief 풀어 둔 대리 오브젝트입니다(풀지 않는다 — 감시 값 · 개발 명령). 아직 풀지 않았거나 사라졌으면 nullptr 입니다. */
+        const GameObject* findResolvedHLODObject( const CellSlot& slot ) const;
+        /** @brief 조각이 로드 큐에 남아 있으면(오르지 않았고 실패하지 않았고 레이어가 켜졌다) true 입니다. */
+        bool isSlotPending( const CellSlot& slot ) const;
         /** @brief 조각의 데이터 레이어가 모두 켜져 있으면 true 입니다. */
         bool areSlotLayersActive( const CellSlot& slot ) const;
         /** @brief 같은 좌표에서 @p slotIndex 앞의 조각 가운데 켜진 것이 모두 지어졌으면(또는 실패했으면) true 입니다 — 뒤 조각은 앞 조각을 가리킬 수 있다. */
