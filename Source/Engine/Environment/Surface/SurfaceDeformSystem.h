@@ -3,7 +3,7 @@
  * @brief 씬 하나의 표면 변형 층입니다 — 카메라가 보는 앞 둘레의 높이 격자(`SurfaceDeformGrid`)에 도장을 찍고, 그 격자를 텍스처 하나로 렌더러에 냅니다.
  * @details 지나온 길(발자국 · 끌린 자국 · 바퀴 자국), 파묻힘 테두리, 빨려드는 깔때기가 모두 도장(`SurfaceStampDef`)이고 이 서비스 하나가 받는다.
  *          지면 · 지형 머티리얼(`surface_deform.hlsl` · `terrain.hlsl`)이 텍스처를 읽어 정점을 내리고 법선을 기울인다 — 충돌 · 내비 · 높이장은 고치지 않는다(보이는 것만,
- *          높이장 충돌을 다시 짓지 않는다). 텍스처와 창은 렌더 패킷(`contributeSurfaceDeform` → `SurfaceDeformBinding`)이 엔진 텍스처 칸 `SurfaceDeform` 과 패스 상수
+ *          높이장 충돌을 다시 짓지 않는다). 텍스처와 창은 렌더 패킷(환경 칸 `SceneEnvironment` 의 값 `SurfaceDeformBinding`)이 엔진 텍스처 칸 `SurfaceDeform` 과 패스 상수
  *          `g_SurfaceDeformParams` 로 모든 씬 지오메트리 패스에 건다 — 머티리얼 인스턴스마다 싣지 않는다(언리얼 런타임 가상 텍스처 · 유니티 `SetGlobalTexture` 자리).
  *
  *          도장 API(지역 프로필의 반응 · 발걸음 · 도장 컴포넌트가 부른다, 모두 게임 스레드):
@@ -59,8 +59,8 @@ namespace sw
         void update( float32 deltaTime ) override;
         /** @brief 씬을 비울 때 격자 · 붙잡은 도장 · 텍스처를 버립니다. */
         void onSceneCleared() override;
-        /** @brief 텍스처를 만든 뒤면 그 핸들과 창(`makeShaderParams`)을 쓰고 true 입니다. 찍은 적이 없으면 false — 셰이더는 층이 없는 것으로 읽는다. */
-        [[nodiscard]] bool contributeSurfaceDeform( SurfaceDeformBinding& outBinding ) const override;
+        /** @brief 텍스처를 쓰는 환경 칸(`SceneEnvironment`)이 먼저 서야 한다 — 이 서비스가 그 칸에 값을 쓴다. */
+        span<const utf8* const> getSubsystemDependencies() const override;
 
         /** @brief 도장 @p def 를 @p point 에 요 @p yaw(라디안, +Z 앞)로 한 번 찍습니다. 빈 도장(`SurfaceStampDef::isSet`)은 아무것도 하지 않는다. */
         void stamp( const SurfaceStampDef& def, const float3& point, float32 yaw );
@@ -117,7 +117,7 @@ namespace sw
         SlotHandleTable<PersistentStamp, SlotTableSync::External> _persistentStampTable; ///< 붙잡은 도장(칸 번호 + 세대) — 게임 스레드만 쓴다. 비워도 세대를 이어 가 옛 핸들이 새 도장에 닿지 않는다
         vector<uint8>                                             _listTexelByte;        ///< 보낼 칸의 RGBA8(다시 쓰는 버퍼)
         string                                                    _texturePath;
-        TextureHandle                                             _texture; ///< 렌더러에 거는 핸들(`contributeSurfaceDeform`) — 텍스처의 참조 하나를 쥔다
+        TextureHandle                                             _texture; ///< 렌더러에 거는 핸들(`update` 가 환경 칸 `SceneEnvironment` 에 쓴다) — 텍스처의 참조 하나를 쥔다
         float32                                                   _depthRange;
         uint32                                                    _stampCount;
     };

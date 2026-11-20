@@ -84,12 +84,9 @@ namespace sw
     class TagIndex;
     class TickRegistry;
     struct ComponentPoolEntry;
-    struct FogSettings;
     struct GPULight;
     struct ScenePreviewPolicy;
     struct SceneTransformWrite;
-    struct SkyGradient;
-    struct SurfaceDeformBinding;
     struct TypeInfo;
     enum class SceneLightPhase : uint8; ///< 정의는 `Service/ISceneService.h`(바탕 형식이 같아야 한다)
 
@@ -566,12 +563,6 @@ namespace sw
         void collectServiceLights( SceneLightPhase phase, vector<GPULight>& inoutList ) const;
         /** @brief 모든 씬 서비스가 입자 그리기를 냅니다(`ISceneService::contributeParticles`). */
         void collectServiceParticles( ISceneParticleSink& sink ) const;
-        /** @brief 이 씬의 하늘입니다. 맡은 서비스가 없거나 하늘이 없으면 false 입니다(`ISceneService::contributeSky`). */
-        [[nodiscard]] bool findServiceSky( SkyGradient& outGradient ) const;
-        /** @brief @p viewPosition 에서 보는 안개입니다. 없으면 false 입니다(`ISceneService::contributeFog`). */
-        [[nodiscard]] bool findServiceFog( const float3& viewPosition, FogSettings& outSettings ) const;
-        /** @brief 이 씬의 표면 변형 층입니다. 맡은 서비스가 없거나 아직 텍스처가 없으면 false 입니다(`ISceneService::contributeSurfaceDeform`). */
-        [[nodiscard]] bool findServiceSurfaceDeform( SurfaceDeformBinding& outBinding ) const;
 
         /**
          * @brief GameObject 를 지연 삭제 큐에 넣습니다.

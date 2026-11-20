@@ -711,36 +711,6 @@ namespace sw
         }
     }
 
-    bool GameObjectManager::findServiceSky( SkyGradient& outGradient ) const
-    {
-        for ( const SceneServiceEntry& entry : _pState->_listSceneService )
-        {
-            if ( entry._pService->contributeSky( outGradient ) )
-                return true;
-        }
-        return false;
-    }
-
-    bool GameObjectManager::findServiceFog( const float3& viewPosition, FogSettings& outSettings ) const
-    {
-        for ( const SceneServiceEntry& entry : _pState->_listSceneService )
-        {
-            if ( entry._pService->contributeFog( viewPosition, outSettings ) )
-                return true;
-        }
-        return false;
-    }
-
-    bool GameObjectManager::findServiceSurfaceDeform( SurfaceDeformBinding& outBinding ) const
-    {
-        for ( const SceneServiceEntry& entry : _pState->_listSceneService )
-        {
-            if ( entry._pService->contributeSurfaceDeform( outBinding ) )
-                return true;
-        }
-        return false;
-    }
-
     ISceneFrameSystem* GameObjectManager::findFrameSystem( const hashed_string& key ) const
     {
         for ( const FrameSystemEntry& entry : _listFrameSystem )

@@ -1,6 +1,13 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "SceneEnvironmentProvider": "SceneEnvironment — 씬에 하나뿐인 하늘 · 안개 · 표면 변형의 칸(Godot Environment 자리, 2026-11-21)",
+    "contributeSky": "SceneEnvironment::bindSkySource — 묻는 칸 하나, 둘째 묶기는 오류(먼저 true 낸 서비스가 이기던 순회 폐지, 2026-11-21)",
+    "contributeFog": "SceneEnvironment::bindFogSource — 묻는 칸 하나, 둘째 묶기는 오류(2026-11-21)",
+    "contributeSurfaceDeform": "SceneEnvironment::setSurfaceDeform — 값 칸(2026-11-21)",
+    "findServiceSky": "SceneEnvironment::findSky(2026-11-21)",
+    "findServiceFog": "SceneEnvironment::findFog(2026-11-21)",
+    "findServiceSurfaceDeform": "SceneEnvironment::findSurfaceDeform(2026-11-21)",
     "HostServiceID": "호스트 서비스 감싸개 폐지 — App · Server 가 서비스마다 자기 ISubsystem(App::GameHostService 등)을 HostLaunch::addHostService 로 더한다(2026-11-21)",
     "HostServiceSet": "HostLaunch::addHostService — 엔진이 호스트의 서비스 목록을 열거형 · 이름 · 분기 넷으로 알던 헤더를 지웠다(2026-11-21)",
     "HostServiceName": "각 서비스 형식의 kSubsystemName(2026-11-21)",
