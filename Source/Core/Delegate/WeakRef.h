@@ -30,7 +30,7 @@ namespace sw
     class WeakRefSource final
     {
     public:
-        WeakRefSource() noexcept = default;
+        WeakRefSource() = default;
 
         WeakRefSource( const WeakRefSource& )            = delete;
         WeakRefSource& operator=( const WeakRefSource& ) = delete;
@@ -59,7 +59,7 @@ namespace sw
     {
     public:
         /** @brief 빈 참조입니다. */
-        WeakRef() noexcept = default;
+        WeakRef() = default;
 
         /** @brief @p target 을 가리킵니다. */
         explicit WeakRef( T& target ) noexcept
