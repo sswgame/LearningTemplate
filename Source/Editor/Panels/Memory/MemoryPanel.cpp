@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -307,13 +308,12 @@ namespace sw::editor
             pSortSpecs->SpecsDirty = false;
         }
 
-        const bool       bCompareMode = _viewState._bCompareMode != SW_FALSE;
-        const size_t     columnCount  = listColumn.size();
-        ImGuiListClipper clipper;
-        clipper.Begin( static_cast<int32>( _viewState._listRow.size() ) );
-        while ( clipper.Step() )
+        const bool        bCompareMode = _viewState._bCompareMode != SW_FALSE;
+        const size_t      columnCount  = listColumn.size();
+        EditorVirtualList virtualList( static_cast<int32>( _viewState._listRow.size() ) );
+        while ( virtualList.step() )
         {
-            for ( int32 rowIndex = clipper.DisplayStart; rowIndex < clipper.DisplayEnd; ++rowIndex )
+            for ( int32 rowIndex = virtualList.getBegin(); rowIndex < virtualList.getEnd(); ++rowIndex )
             {
                 const MemoryTableRow& row = _viewState._listRow[static_cast<size_t>( rowIndex )];
                 ImGui::PushID( rowIndex );

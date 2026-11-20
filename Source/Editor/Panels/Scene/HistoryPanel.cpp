@@ -13,6 +13,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -95,42 +96,47 @@ namespace sw::editor
                     EditorSelfTestMarks::record( "history.step.0" );
 
                     // 각 명령 엔트리 (1..cmdCount)
-                    for ( size_t cmdIndex = 0; cmdIndex < cmdCount; ++cmdIndex )
+                    // 줄 수는 되돌리기 한도까지라 묶여 있지만 그 한도가 설정 값이다 — 보이는 줄만 그린다(공용 가상화 위젯)
+                    EditorVirtualList virtualList( static_cast<int32>( cmdCount ) );
+                    while ( virtualList.step() )
                     {
-                        const size_t stepNum       = cmdIndex + 1;
-                        const bool   bIsActiveHead = ( stepNum == currIndex );
-                        const bool   bIsUndone     = ( stepNum > currIndex );
+                        for ( size_t cmdIndex = static_cast<size_t>( virtualList.getBegin() ); cmdIndex < static_cast<size_t>( virtualList.getEnd() ); ++cmdIndex )
+                        {
+                            const size_t stepNum       = cmdIndex + 1;
+                            const bool   bIsActiveHead = ( stepNum == currIndex );
+                            const bool   bIsUndone     = ( stepNum > currIndex );
 
-                        ImGui::TableNextRow();
-                        ImGui::TableNextColumn();
-                        if ( bIsUndone )
-                            ImGui::TextDisabled( "#%zu", stepNum );
-                        else
-                            ImGui::Text( "#%zu", stepNum );
+                            ImGui::TableNextRow();
+                            ImGui::TableNextColumn();
+                            if ( bIsUndone )
+                                ImGui::TextDisabled( "#%zu", stepNum );
+                            else
+                                ImGui::Text( "#%zu", stepNum );
 
-                        ImGui::TableNextColumn();
-                        if ( bIsActiveHead )
-                            ImGui::TextColored( EditorColorUtil::toImVec4( HistoryPanelInternal::getCurrentMarker() ), ">" );
-                        else
-                            ImGui::TextUnformatted( "" );
+                            ImGui::TableNextColumn();
+                            if ( bIsActiveHead )
+                                ImGui::TextColored( EditorColorUtil::toImVec4( HistoryPanelInternal::getCurrentMarker() ), ">" );
+                            else
+                                ImGui::TextUnformatted( "" );
 
-                        ImGui::TableNextColumn();
-                        // 명령 이름은 ImGui 라벨로 쓰지 않는다 — "##" 가 포함된 이름은 그 뒤가 숨겨진다. 라벨 없는 줄 위에 글을 따로 그린다.
-                        const utf8* pCmdLabel = state._listLabel[cmdIndex].c_str(); // 이름이 없는 명령은 ViewModel 이 "Command" 로 채운다
+                            ImGui::TableNextColumn();
+                            // 명령 이름은 ImGui 라벨로 쓰지 않는다 — "##" 가 포함된 이름은 그 뒤가 숨겨진다. 라벨 없는 줄 위에 글을 따로 그린다.
+                            const utf8* pCmdLabel = state._listLabel[cmdIndex].c_str(); // 이름이 없는 명령은 ViewModel 이 "Command" 로 채운다
 
-                        if ( bIsUndone )
-                            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( HistoryPanelInternal::getUndoneText() ) );
+                            if ( bIsUndone )
+                                ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( HistoryPanelInternal::getUndoneText() ) );
 
-                        ImGui::PushID( static_cast<int32>( stepNum ) );
-                        if ( ImGui::Selectable( "##step", bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns ) )
-                            viewModel.jumpTo( stepNum );
-                        EditorSelfTestMarks::recordFormat( "history.step.%#", stepNum ); // 시나리오가 그 시점으로 되돌린다
-                        ImGui::SameLine( 0.0f, 0.0f );
-                        ImGui::TextUnformatted( pCmdLabel );
-                        ImGui::PopID();
+                            ImGui::PushID( static_cast<int32>( stepNum ) );
+                            if ( ImGui::Selectable( "##step", bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns ) )
+                                viewModel.jumpTo( stepNum );
+                            EditorSelfTestMarks::recordFormat( "history.step.%#", stepNum ); // 시나리오가 그 시점으로 되돌린다
+                            ImGui::SameLine( 0.0f, 0.0f );
+                            ImGui::TextUnformatted( pCmdLabel );
+                            ImGui::PopID();
 
-                        if ( bIsUndone )
-                            ImGui::PopStyleColor();
+                            if ( bIsUndone )
+                                ImGui::PopStyleColor();
+                        }
                     }
 
                     ImGui::EndTable();

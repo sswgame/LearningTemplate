@@ -21,6 +21,7 @@
 #include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -1336,11 +1337,10 @@ namespace sw::editor
         const float32 rowHeight = cell + ImGui::GetTextLineHeight() * static_cast<float32>( ContentBrowserPanelInternal::kTileLabelLineCount ) +
                                   ImGui::GetStyle().ItemSpacing.y + paddingY;
 
-        ImGuiListClipper clipper;
-        clipper.Begin( rowCount, rowHeight );
-        while ( clipper.Step() )
+        EditorVirtualList virtualList( rowCount, rowHeight );
+        while ( virtualList.step() )
         {
-            for ( int32 row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row )
+            for ( int32 row = virtualList.getBegin(); row < virtualList.getEnd(); ++row )
             {
                 for ( int32 column = 0; column < columns; ++column )
                 {
@@ -1414,11 +1414,10 @@ namespace sw::editor
             ImGui::TableSetupColumn( "Path", ImGuiTableColumnFlags_WidthStretch );
             ImGui::TableHeadersRow();
 
-            ImGuiListClipper clipper;
-            clipper.Begin( static_cast<int32>( listVisible.size() ) );
-            while ( clipper.Step() )
+            EditorVirtualList virtualList( static_cast<int32>( listVisible.size() ) );
+            while ( virtualList.step() )
             {
-                for ( int32 itemIndex = clipper.DisplayStart; itemIndex < clipper.DisplayEnd; ++itemIndex )
+                for ( int32 itemIndex = virtualList.getBegin(); itemIndex < virtualList.getEnd(); ++itemIndex )
                 {
                     const AssetEntry& entry = *listVisible[static_cast<size_t>( itemIndex )];
                     ImGui::PushID( entry._absolutePath.c_str() );

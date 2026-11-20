@@ -15,6 +15,7 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
@@ -382,11 +383,16 @@ namespace sw::editor
                     formatstring( tableID.data(), tableID.capacity(), "GvTable_%#", currentModule );
                     if ( GlobalVariablesPanelInternal::beginVariableTable( tableID.c_str(), GlobalVariablesPanelInternal::kGroupedTableFlags, 0.0f ) )
                     {
-                        for ( size_t rowIndex = varIndex; rowIndex < rangeEnd; ++rowIndex )
+                        EditorVirtualList virtualList( static_cast<int32>( rangeEnd - varIndex ) ); // 모듈 하나의 변수 줄 — 보이는 줄만 그린다
+                        while ( virtualList.step() )
                         {
-                            ImGui::PushID( listFiltered[rowIndex]->_name.c_str() );
-                            drawVariableRow( *listFiltered[rowIndex], true );
-                            ImGui::PopID();
+                            for ( int32 rowOffset = virtualList.getBegin(); rowOffset < virtualList.getEnd(); ++rowOffset )
+                            {
+                                GlobalVariableInfo& info = *listFiltered[varIndex + static_cast<size_t>( rowOffset )];
+                                ImGui::PushID( info._name.c_str() );
+                                drawVariableRow( info, true );
+                                ImGui::PopID();
+                            }
                         }
                         ImGui::EndTable();
                     }
@@ -399,11 +405,16 @@ namespace sw::editor
         {
             if ( GlobalVariablesPanelInternal::beginVariableTable( "GlobalVarsTable", kGlobalVarTableFlags, -1.0f ) )
             {
-                for ( GlobalVariableInfo* pInfo : listFiltered )
+                EditorVirtualList virtualList( static_cast<int32>( listFiltered.size() ) ); // 등록된 전역 변수 전부 — 보이는 줄만 그린다
+                while ( virtualList.step() )
                 {
-                    ImGui::PushID( pInfo->_name.c_str() );
-                    drawVariableRow( *pInfo, true );
-                    ImGui::PopID();
+                    for ( int32 rowIndex = virtualList.getBegin(); rowIndex < virtualList.getEnd(); ++rowIndex )
+                    {
+                        GlobalVariableInfo& info = *listFiltered[static_cast<size_t>( rowIndex )];
+                        ImGui::PushID( info._name.c_str() );
+                        drawVariableRow( info, true );
+                        ImGui::PopID();
+                    }
                 }
                 ImGui::EndTable();
             }

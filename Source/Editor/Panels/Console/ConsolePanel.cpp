@@ -23,6 +23,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Panels/Console/Model/ConsoleViewModel.h"
@@ -469,11 +470,10 @@ namespace sw::editor
         const bool    bListHovered = ImGui::IsWindowHovered();
         const float32 rowWidth     = ImGui::GetContentRegionAvail().x;
 
-        ImGuiListClipper clipper;
-        clipper.Begin( static_cast<int32>( _listRow.size() ) );
-        while ( clipper.Step() )
+        EditorVirtualList virtualList( static_cast<int32>( _listRow.size() ) );
+        while ( virtualList.step() )
         {
-            for ( int32 rowIndex = clipper.DisplayStart; rowIndex < clipper.DisplayEnd; ++rowIndex )
+            for ( int32 rowIndex = virtualList.getBegin(); rowIndex < virtualList.getEnd(); ++rowIndex )
             {
                 drawLogRow( rowIndex, rowWidth, lineHeight, bListHovered );
             }
