@@ -195,13 +195,9 @@ namespace sw
             if ( pPawn == nullptr || world.isServer() == false )
                 continue;
             // 언리얼 서버가 접속마다 PlayerController 를 세우는 자리 — 원격 조종자가 플레이어 상태를 들고 그 연결의 폰을 쥔다.
-            GameObject*                pController = manager.createGameObject( hashed_string( makeControllerName( playerNumber ) ) );
-            RemoteControllerComponent* pRemote     = pController != nullptr ? pController->addComponent<RemoteControllerComponent>() : nullptr;
-            if ( pRemote == nullptr )
-                continue;
-            (void)pController->addComponent<PlayerStateComponent>();
-            pRemote->setInputConnection( playerNumber - 1 );
-            pRemote->possess( *pPawn );
+            RemoteControllerComponent* pRemote = RemoteControllerComponent::spawnForConnection( manager, hashed_string( makeControllerName( playerNumber ) ), playerNumber - 1, *pPawn );
+            if ( pRemote != nullptr )
+                (void)pRemote->getOwner()->addComponent<PlayerStateComponent>();
         }
         if ( world.isServer() == false )
         {

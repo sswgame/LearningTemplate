@@ -25,12 +25,11 @@ SW_TEST_CASE( LocalControlTest, PlayerControllerPawnIsLocalAndRemotePawnNamesIts
     PawnComponent*             pRemotePawn = manager.createGameObject( hashed_string( "RemotePawn" ) )->addComponent<PawnComponent>();
     PawnComponent*             pLoosePawn  = manager.createGameObject( hashed_string( "LoosePawn" ) )->addComponent<PawnComponent>();
     PlayerControllerComponent* pPlayer     = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
-    RemoteControllerComponent* pRemote     = manager.createGameObject( hashed_string( "Remote" ) )->addComponent<RemoteControllerComponent>();
+    RemoteControllerComponent* pRemote     = RemoteControllerComponent::spawnForConnection( manager, hashed_string( "Remote" ), 2, *pRemotePawn );
+    SW_REQUIRE_NOT_NULL( pRemote );
     manager.beginPlay();
 
     pPlayer->possess( *pLocalPawn );
-    pRemote->setInputConnection( 2 );
-    pRemote->possess( *pRemotePawn );
 
     SW_EXPECT_TRUE( ControlSystem::isLocallyControlled( manager, *pLocalPawn ) );
     SW_EXPECT_FALSE( pLocalPawn->findInputConnection().has_value() );
@@ -44,14 +43,21 @@ SW_TEST_CASE( LocalControlTest, PlayerControllerPawnIsLocalAndRemotePawnNamesIts
     SW_EXPECT_FALSE( pRemotePawn->findInputConnection().has_value() );
 }
 
-/** @brief [LocalControlTest] 음수 연결 id 는 오류를 남기고 입력 피어를 바꾸지 않는다 */
-SW_TEST_CASE( LocalControlTest, NegativeConnectionIsRefused )
+/** @brief [LocalControlTest] 원격 조종자는 연결 id 없이 세울 수 없다 — 음수 id 는 오류를 남기고 아무것도 세우지 않으며, 맡은 연결은 옮길 수 있다 */
+SW_TEST_CASE( LocalControlTest, RemoteControllerNeedsAConnection )
 {
-    SW_EXPECT_LOG( "Controller.InputConnectionNegative" );
-    GameObjectManager          manager;
-    RemoteControllerComponent* pRemote = manager.createGameObject( hashed_string( "Remote" ) )->addComponent<RemoteControllerComponent>();
-    pRemote->setInputConnection( -1 );
-    SW_EXPECT_EQUAL( 0u, pRemote->getInputPeer() );
+    SW_EXPECT_LOG( "RemoteController.SpawnNegativeConnection" );
+    GameObjectManager manager;
+    PawnComponent*    pPawn = manager.createGameObject( hashed_string( "Pawn" ) )->addComponent<PawnComponent>();
+    SW_EXPECT_NULL( RemoteControllerComponent::spawnForConnection( manager, hashed_string( "Remote" ), -1, *pPawn ) );
+    SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "Remote" ) ) );
+    SW_EXPECT_FALSE( pPawn->findInputConnection().has_value() );
+
+    RemoteControllerComponent* pRemote = RemoteControllerComponent::spawnForConnection( manager, hashed_string( "Remote" ), 0, *pPawn );
+    SW_REQUIRE_NOT_NULL( pRemote );
+    SW_EXPECT_EQUAL( 0, pPawn->findInputConnection().value_or( -1 ) );
+    pRemote->transferToConnection( 3 ); // 조종 연결이 끊겨 다음 클라이언트가 맡는다
+    SW_EXPECT_EQUAL( 3, pPawn->findInputConnection().value_or( -1 ) );
 }
 
 /** @brief [LocalControlTest] 플레이어 상태는 폰을 쥔 조종자 오브젝트에서 찾히고, 진행 플래그가 상태 저장 왕복을 넘는다 */
@@ -61,12 +67,12 @@ SW_TEST_CASE( LocalControlTest, PlayerStateIsFoundFromThePawnAndRoundTripsItsFla
     GameObject*                pPawnObject = manager.createGameObject( hashed_string( "Pawn" ) );
     PawnComponent*             pPawn       = pPawnObject->addComponent<PawnComponent>();
     GameObject*                pController = manager.createGameObject( hashed_string( "Controller" ) );
-    RemoteControllerComponent* pRemote     = pController->addComponent<RemoteControllerComponent>();
     PlayerStateComponent*      pState      = pController->addComponent<PlayerStateComponent>();
+    PlayerControllerComponent* pPlayer     = pController->addComponent<PlayerControllerComponent>();
     manager.beginPlay();
 
     SW_EXPECT_NULL( PlayerStateComponent::findForPawnObject( manager, *pPawnObject ) ); // 아직 쥐지 않았다
-    pRemote->possess( *pPawn );
+    pPlayer->possess( *pPawn );
     SW_EXPECT_TRUE( PlayerStateComponent::findForPawnObject( manager, *pPawnObject ) == pState );
 
     pState->getProgressFlags().setFlag( hashed_string( "town.arrivalSeen" ) );

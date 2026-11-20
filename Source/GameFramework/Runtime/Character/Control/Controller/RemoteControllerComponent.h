@@ -38,6 +38,17 @@ namespace sw
         RemoteControllerComponent();
         ~RemoteControllerComponent() override = default;
 
+        /**
+         * @brief 연결 @p connectionID 의 원격 조종자를 오브젝트 @p objectName 로 세워 @p pawn 을 쥐게 합니다 — 원격 조종자를 세우는 정본 길이다(언리얼 서버가 접속마다
+         *        `PlayerController` 를 세워 `NetConnection` 을 주는 자리). 연결 id 가 필수 인자라 소유(`PawnComponent::findInputConnection`)가 늘 잡힌다.
+         * @return 세운 조종자입니다. 연결 id 가 음수거나 오브젝트를 세우지 못하면 오류를 남기고 nullptr 입니다(오브젝트를 남기지 않는다). 게임 스레드 · 틱 밖에서 부른다.
+         */
+        [[nodiscard]] static RemoteControllerComponent* spawnForConnection( GameObjectManager& manager, const hashed_string& objectName, int32 connectionID, PawnComponent& pawn );
+        /** @brief 이 조종자를 다른 연결이 맡습니다(조종 연결이 끊겨 다음 클라이언트가 맡음). 음수 id 는 오류를 남기고 거절합니다. */
+        void transferToConnection( int32 connectionID ) { setInputConnection( connectionID ); }
+        /** @brief 정본 길(`spawnForConnection`)을 지나지 않고 붙어 연결이 없는 원격 조종자면 오류를 남깁니다(데이터로 붙인 경우 — 소유가 없으면 그 폰의 연결 대상 기능이 멈춘다). */
+        void onBeginPlay() override;
+
         void produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent ) final;
 
         /** @brief 상대 틱 @p tick 의 의도를 넣습니다(사본). 이미 읽은 틱(`_nextInputTick` 앞)은 버립니다. 같은 틱을 다시 넣으면 나중 값이 남습니다. */

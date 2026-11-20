@@ -23,9 +23,9 @@ namespace
         RemoteControllerTestRig()
         {
             _pPawn   = _manager.createGameObject( hashed_string( "Hero" ) )->addComponent<PawnComponent>();
-            _pRemote = _manager.createGameObject( hashed_string( "Remote" ) )->addComponent<RemoteControllerComponent>();
+            _pRemote = RemoteControllerComponent::spawnForConnection( _manager, hashed_string( "Remote" ), 0, *_pPawn );
+            SW_REQUIRE_NOT_NULL( _pRemote );
             _manager.beginPlay();
-            _pRemote->possess( *_pPawn );
         }
 
         void update() { _manager.update( 1.0f / 60.0f ); }
