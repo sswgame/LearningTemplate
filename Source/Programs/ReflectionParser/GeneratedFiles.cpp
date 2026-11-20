@@ -8,6 +8,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Programs/ReflectionParser/CursorReader.h"
 #include "Programs/ReflectionParser/ParserConfig.h"
 #include "Programs/ReflectionParser/ParserOptions.h"
 #include "Programs/ReflectionParser/ParserUtil.h"
@@ -232,6 +233,8 @@ namespace sw
         hash           = Internal::combineText( hash, options._builtinsPath );
         hash           = Internal::combineText( hash, options._configPath );
         hash           = Internal::combineText( hash, options._emitTemplatesDir );
+        // libclang 판이 바뀌면(LLVM 올림) 같은 헤더도 AST · 형식 철자가 달라질 수 있다 — 파서 실행 파일 시각만으로는 공유 라이브러리 교체를 모른다.
+        hash = Internal::combineText( hash, CursorReader::takeString( clang_getClangVersion() ) );
         // 목록은 개수부터 섞는다 — 인자가 다른 목록으로 옮겨 가도(`--include X` → `--target-arg X`) 같은 해시가 되지 않게.
         hash = HashUtil::combine( hash, static_cast<uint64>( options._listIncludePath.size() ) );
         for ( const string& includePath : options._listIncludePath )

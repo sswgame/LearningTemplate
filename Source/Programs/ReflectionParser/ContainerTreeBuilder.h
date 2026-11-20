@@ -35,12 +35,13 @@ namespace sw
          */
         static CXType resolvePropertyAlias( CXType type, const ParserSession& session );
 
-        /** @brief 필드 타입의 컨테이너 트리를 프로퍼티에 복사합니다. */
-        static void fillContainerDetails( ParsedPropertyInfo& prop, CXType fieldType, const ParserSession& session );
+        /**
+         * @brief 필드 타입의 컨테이너 트리를 프로퍼티에 복사합니다.
+         * @return 컨테이너인데 인자를 clang 형식으로 읽지 못했으면(인자 수 부족 · 형식이 아닌 인자) 알리고 false 입니다 — 철자로 이어 가지 않습니다.
+         */
+        [[nodiscard]] static bool fillContainerDetails( ParsedPropertyInfo& prop, CXType fieldType, const ParserSession& session );
 
     private:
-        /** @brief `T<A,B>` 에서 최외곽 템플릿 인자를 나눕니다. */
-        static vector<string> extractTemplateArgs( string_view typeStr );
         /** @brief 컨테이너 어노테이션을 찾을 기본 템플릿 · 레코드 커서입니다. 선언이 없으면 null 커서입니다. */
         static CXCursor findContainerDeclaration( CXType type );
         /**
@@ -50,19 +51,20 @@ namespace sw
         [[nodiscard]] static bool findReflectContainer( CXType type, ContainerKind& outKind, string& outWrapperStem );
         /** @brief 노드를 그 종류 · 래퍼의 컨테이너로 표시합니다. */
         static void markContainer( ParsedContainerNode& node, ContainerKind kind, const string& wrapperStem );
-        /** @brief 맵/시퀀스 템플릿 인자로 키·원소·중첩 노드를 채웁니다. */
-        static shared_ptr<ParsedContainerNode> makeNestedContainer( CXType type, int32 numClangArgs, int32 index, const string& spellingFallback, const ParserSession& session );
+        /** @brief 원소 · 값 인자 형식이 컨테이너면 그 중첩 노드, 아니면 nullptr 입니다(인자를 읽지 못한 노드는 그대로 돌려 오류가 트리에 남는다). */
+        static shared_ptr<ParsedContainerNode> makeNestedContainer( CXType argType, const ParserSession& session );
         /**
          * @brief 템플릿 인자 하나(원소 · 키)의 타입 이름입니다. 인자 안의 사용자 별칭을 벗깁니다(`tryResolveAliasSpelling`).
          * @details 적힌 이름만 쓰면 `vector<AccountID>` 의 원소가 모르는 이름 `AccountID` 로 등록되고, 자기 기술형 바이너리가 그 원소를 읽지 못합니다.
-         *          별칭이 없는 인자는 적힌 이름 그대로입니다. clang 타입이 없으면(표기만으로 만든 노드) 적힌 이름을 씁니다.
+         *          별칭이 없는 인자는 clang 의 철자 그대로입니다.
          */
-        static string resolveTemplateArgName( CXType type, int32 numClangArgs, int32 index, const string& spelling, const ParserSession& session );
-        static void   fillContainerArgs( ParsedContainerNode& node, const string& typeSpelling, CXType type, const ParserSession& session );
-        /** @brief 표기 문자열만으로 컨테이너 노드를 만듭니다 (clang 타입 없음). */
-        static shared_ptr<ParsedContainerNode> makeContainerFromSpelling( const string& typeSpelling, const ParserSession& session );
+        static string resolveTemplateArgName( CXType argType, const ParserSession& session );
+        /** @brief 맵 · 시퀀스의 키 · 원소 · 중첩 노드를 clang 형식 인자로 채웁니다. 인자를 읽지 못하면 알리고 노드를 무효로 둡니다. */
+        static void fillContainerArgs( ParsedContainerNode& node, CXType type, const ParserSession& session );
+        /** @brief 트리 어디에도 무효 노드가 없으면 true 입니다. */
+        static bool isTreeValid( const ParsedContainerNode& node );
         /**
-         * @brief clang 타입(또는 표기 폴백)으로 컨테이너 트리를 만듭니다.
+         * @brief clang 타입으로 컨테이너 트리를 만듭니다.
          * @details 타입 선언의 `REFLECT_CONTAINER` 가 이기고, 없으면 ReflectBuiltins 의 표기 규칙을 봅니다.
          */
         static shared_ptr<ParsedContainerNode> makeContainerFromType( CXType type, const ParserSession& session );

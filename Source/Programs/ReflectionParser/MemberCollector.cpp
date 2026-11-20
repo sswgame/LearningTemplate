@@ -135,14 +135,18 @@ namespace sw
             if ( StringUtil::startsWith( canonical, "const " ) )
                 canonical.erase( 0, 6 );
             parameter._canonicalTypeName = std::move( canonical );
+            // 타입 핸들은 형식의 정체로 가른다 — 한 값이면 대상 `T` 를 읽고, 컨테이너 안에 들었으면 `_bHoldsTypedHandle` 만 켜 두어 오류가 된다.
+            const CXType valueType       = clang_getNonReferenceType( clang_getCursorType( argCursor ) );
+            parameter._bHoldsTypedHandle = CursorReader::containsTypeIdentity( valueType, typeidentity::kTypedComponentHandle );
+            if ( CursorReader::getTypeIdentity( valueType ) == typeidentity::kTypedComponentHandle )
+                parameter._handleTargetTypeName = session._typeNameMap.normalize( CursorReader::getTemplateArgumentSpelling( valueType, 0 ) );
             method._listParameter.push_back( std::move( parameter ) );
         }
     }
 
     bool MemberCollector::isEventType( const CXType fieldType )
     {
-        const string canonical = CursorReader::takeString( clang_getTypeSpelling( clang_getCanonicalType( fieldType ) ) );
-        return StringUtil::startsWith( canonical, annotation::kEventTemplatePrefix );
+        return CursorReader::getTypeIdentity( fieldType ) == typeidentity::kMulticastDelegate;
     }
 
     CXType MemberCollector::findEventFunctionType( const CXType fieldType )
@@ -273,9 +277,14 @@ namespace sw
         if ( bNameCheckSkipped == false && SourceTokens::hasStringLiteralDefault( cursor, prop._memberName ) &&
              session._config.isNameFieldType( SourceTokens::readFieldTypeText( cursor, prop._memberName ) ) )
             prop._bHasNameLiteralDefault = SW_TRUE;
-        ContainerTreeBuilder::fillContainerDetails( prop, fieldType, session );
-        if ( PropertyResolver::resolveComponentHandleProperty( prop, owner ) == false || PropertyResolver::resolveAssetRefProperty( prop, owner ) == false ||
-             PropertyResolver::resolveCatalogKeyProperty( prop, owner ) == false )
+        if ( ContainerTreeBuilder::fillContainerDetails( prop, fieldType, session ) == false )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYContainerType", "ERROR: PROPERTY() '%#' - its container type could not be read (see above).", owner );
+            _bHasError = SW_TRUE;
+            return;
+        }
+        if ( PropertyResolver::resolveComponentHandleProperty( prop, fieldType, session, owner ) == false ||
+             PropertyResolver::resolveAssetRefProperty( prop, fieldType, session, owner ) == false || PropertyResolver::resolveCatalogKeyProperty( prop, fieldType, session, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;
@@ -320,15 +329,14 @@ namespace sw
             _bHasError = SW_TRUE;
             return;
         }
-        ContainerTreeBuilder::fillContainerDetails( prop, valueType, session );
-        if ( prop._bIsContainer == SW_TRUE )
+        if ( ContainerTreeBuilder::fillContainerDetails( prop, valueType, session ) == false || prop._bIsContainer == SW_TRUE )
         {
             SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYMethodReturns", "ERROR: PROPERTY() on method '%#' returns a container. Accessor properties support single values only.", owner );
             _bHasError = SW_TRUE;
             return;
         }
-        if ( PropertyResolver::resolveComponentHandleProperty( prop, owner ) == false || PropertyResolver::resolveAssetRefProperty( prop, owner ) == false ||
-             PropertyResolver::resolveCatalogKeyProperty( prop, owner ) == false )
+        if ( PropertyResolver::resolveComponentHandleProperty( prop, valueType, session, owner ) == false ||
+             PropertyResolver::resolveAssetRefProperty( prop, valueType, session, owner ) == false || PropertyResolver::resolveCatalogKeyProperty( prop, valueType, session, owner ) == false )
         {
             _bHasError = SW_TRUE;
             return;

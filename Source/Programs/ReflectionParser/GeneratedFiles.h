@@ -118,7 +118,7 @@ namespace sw
         /** @brief 이번 실행의 명령줄 해시입니다. 스탬프를 쓰는 쪽이 `GeneratedStamp::_argsHash` 에 적는다. */
         uint64 getArgsHash() const { return _argsHash; }
 
-        /** @brief 산출물을 정하는 명령줄(입력 목록 · 출력 폴더 · `--dump` · `--depfile` 을 뺀 모두)의 해시입니다. 순서도 본다(`--include` 순서는 찾는 순서다). */
+        /** @brief 산출물을 정하는 명령줄(입력 목록 · 출력 폴더 · `--dump` · `--depfile` 을 뺀 모두)과 libclang 판(`clang_getClangVersion`)의 해시입니다. 순서도 본다(`--include` 순서는 찾는 순서다). */
         static uint64 makeArgsHash( const ParserOptions& options );
 
     private:

@@ -30,6 +30,27 @@ namespace sw
         static string makeMemberOwnerName( string_view ownerFQN, string_view memberName );
 
         /**
+         * @brief 형식의 정체 — 별칭 · 한정자를 벗긴 정규 형식의 선언 FQN 이고, 템플릿 특수화면 기본 템플릿의 FQN(`sw::AssetRef`)입니다. 레코드 · 열거형이 아니면 빈 문자열입니다.
+         * @details 인라인 이름공간(`std::__1`)은 넣지 않는다 — 표(`typeidentity`)가 표준 라이브러리 구현과 무관하게 같은 이름을 쓰게.
+         */
+        static string getTypeIdentity( CXType type );
+        /** @brief @p identity 가 표 @p arrIdentity 의 하나면 true 입니다. */
+        template <size_t N>
+        static bool isAnyIdentity( const string_view identity, const utf8* const ( &arrIdentity )[N] ) noexcept
+        {
+            for ( const utf8* pIdentity : arrIdentity )
+            {
+                if ( identity == pIdentity )
+                    return true;
+            }
+            return false;
+        }
+        /** @brief 형식이나 그 템플릿 형식 인자 · 배열 원소(끝까지)의 정체가 @p identity 면 true 입니다(`vector<AssetRef<T>>` 은 AssetRef 를 든다). */
+        static bool containsTypeIdentity( CXType type, string_view identity );
+        /** @brief 템플릿 특수화 @p type 의 @p index 번째 형식 인자를 **적힌 철자 그대로**(별칭 유지) 돌려줍니다. 없으면 빈 문자열입니다. */
+        static string getTemplateArgumentSpelling( CXType type, uint32 index );
+
+        /**
          * @brief 베이스 지정자(`: public X`)가 가리키는 **클래스** 선언입니다. 별칭(`using` · `typedef`)은 풀어 냅니다.
          * @details 적힌 타입의 선언을 바로 물으면 `using Base = Component; struct X : Base` 의 답은 별칭 선언이다 — 그러면 부모 FQN 이
          *          별칭 이름(`sw::Base`)이 되어 실행 중에 부모를 못 찾고(상속 병합 · 캐스트가 사슬 중간에서 멈춘다), 컴포넌트 판별도 별칭에서

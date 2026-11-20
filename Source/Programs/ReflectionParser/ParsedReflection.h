@@ -25,7 +25,8 @@ namespace sw
         shared_ptr<ParsedContainerNode> _elementNested;
         ContainerKind                   _containerKind;
         uint8                           _bIsContainer : 1;
-        [[maybe_unused]] uint8          _reserved     : 7;
+        uint8                           _bInvalid     : 1; ///< 컨테이너인데 인자를 clang 형식으로 읽지 못했다(알림은 이미 했다) — 프로퍼티가 실패한다
+        [[maybe_unused]] uint8          _reserved     : 6;
         [[maybe_unused]] uint16         _padding;
 
         ParsedContainerNode() noexcept
@@ -36,6 +37,7 @@ namespace sw
             , _elementNested{ nullptr }
             , _containerKind{ ContainerKind::None }
             , _bIsContainer{ SW_FALSE }
+            , _bInvalid{ SW_FALSE }
             , _reserved{ 0 }
             , _padding{ 0 }
         {
@@ -357,6 +359,8 @@ namespace sw
         string _handleTargetTypeName;
         /** @brief 인자의 C++ 타입 전체 이름(클랭 정규 철자, `sw::TComponentHandle<sw::LightComponent>`)이며 const · 참조는 뗐다. 타입 핸들 인자의 호출 썽크가 이 타입의 지역 변수를 만든다. */
         string _canonicalTypeName;
+        /** @brief 인자 형식이 어디든(템플릿 인자 안 포함) 타입 핸들을 든다 — clang 형식의 정체로 읽었다(`CursorReader::containsTypeIdentity`). */
+        bool _bHoldsTypedHandle{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

@@ -6,6 +6,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Reflection/ReflectionEnumNames.h"
+
 #include "Programs/ReflectionParser/AnnotationLookup.h"
 #include "Programs/ReflectionParser/CursorReader.h"
 #include "Programs/ReflectionParser/DeclarationValidator.h"
@@ -226,7 +228,9 @@ namespace sw
                                  CursorReader::makeFullyQualifiedName( cursor ) );
                 self->markHeaderError( header );
             }
-            else if ( bContainerMarker == false )
+            else if ( bContainerMarker )
+                self->validateContainerMarker( marker, cursor );
+            else
                 self->reportUnpairedMarker( marker, cursor );
             return CXChildVisit_Continue;
         }
@@ -235,6 +239,8 @@ namespace sw
         {
             if ( bEnumMarker )
                 self->reportUnpairedMarker( marker, cursor );
+            else if ( bContainerMarker )
+                self->validateContainerMarker( marker, cursor );
             self->onRecordDeclaration( cursor, bReflectMarker ? &marker._spelling : nullptr, header );
             return CXChildVisit_Recurse;
         }
@@ -289,6 +295,20 @@ namespace sw
         SW_LOG_ERROR_ID( "AstVisitor.ERRORMarkerNotBeforeType", "ERROR: %#(%#): %#() %# - write it right before the %# it marks.", CursorReader::takeString( clang_getFileName( file ) ), line,
                          marker._pDesc->_pMacroName, reason, marker._pDesc == &annotation::kEnum ? "enum" : "class or struct" );
         markHeaderError( _listHeader[static_cast<size_t>( marker._targetIndex )] );
+    }
+
+    void AstVisitor::validateContainerMarker( const PendingMarker& marker, const CXCursor declaration )
+    {
+        // 종류가 틀린 REFLECT_CONTAINER 는 칸에서 읽을 때 "컨테이너가 아님" 으로 조용히 바뀐다 — 선언한 헤더에서 한 번 멈춘다.
+        const vector<string> listToken = AnnotationApply::splitAnnotationArgs( AnnotationApply::annotationArgumentText( marker._spelling, annotation::kReflectContainerPrefix ) );
+        ContainerKind        kind      = ContainerKind::None;
+        const bool           bValid    = listToken.empty() == false && listToken.size() <= 2 && tryParseContainerKind( listToken[0], kind ) && kind != ContainerKind::None;
+        if ( bValid )
+            return;
+        StringBuilder<constant::buffer::kMax256> reason;
+        reason.appendFormat( "on '%#' needs a container kind (Sequence or Map) and at most a wrapper name - got '%#'", CursorReader::makeFullyQualifiedName( declaration ),
+                             AnnotationApply::annotationArgumentText( marker._spelling, annotation::kReflectContainerPrefix ) );
+        reportMarker( marker, reason.view() );
     }
 
     void AstVisitor::onRecordDeclaration( const CXCursor cursor, const string* pReflectSpelling, ParsedHeader& outHeader )

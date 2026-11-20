@@ -3,7 +3,6 @@
 #include "Programs/ReflectionParser/FixedTypeAnalyzer.h"
 
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
 #include "Programs/ReflectionParser/AnnotationApply.h"
 #include "Programs/ReflectionParser/AnnotationLookup.h"
@@ -34,10 +33,13 @@ namespace sw
                kind == CXType_BlockPointer || kind == CXType_ObjCObjectPointer;
     }
 
-    bool FixedTypeAnalyzer::isFixedStringType( const string_view normalizedName, const string_view canonicalSpelling ) noexcept
+    bool FixedTypeAnalyzer::isFixedStringType( const CXType canonical, const string_view identity )
     {
-        return normalizedName == "string" || StringUtil::startsWith( canonicalSpelling, "sw::basic_string<char>" ) ||
-               StringUtil::startsWith( canonicalSpelling, "std::basic_string<char," ) || canonicalSpelling == "std::basic_string<char>";
+        // 글은 문자 원소가 `char` 인 문자열 템플릿이다 — 넓은 문자(`wchar_t` · `char16_t`) 문자열은 인코딩 표 밖이다.
+        if ( CursorReader::isAnyIdentity( identity, typeidentity::kArrStringTemplate ) == false )
+            return false;
+        const CXTypeKind characterKind = clang_getCanonicalType( clang_Type_getTemplateArgumentAsType( canonical, 0 ) ).kind;
+        return characterKind == CXType_Char_S || characterKind == CXType_Char_U;
     }
 
     shared_ptr<ParsedFixedEnum> FixedTypeAnalyzer::collectFixedEnum( const CXCursor declaration, const ParserSession& session )
@@ -62,10 +64,9 @@ namespace sw
 
     shared_ptr<ParsedFixedType> FixedTypeAnalyzer::classifyFixedType( const CXType type, const ParserSession& session, const int32 depth )
     {
-        shared_ptr<ParsedFixedType> result            = make_shared<ParsedFixedType>();
-        const CXType                canonical         = clang_getCanonicalType( type );
-        const string                canonicalSpelling = CursorReader::takeString( clang_getTypeSpelling( canonical ) );
-        result->_typeName                             = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( type ) ) );
+        shared_ptr<ParsedFixedType> result    = make_shared<ParsedFixedType>();
+        const CXType                canonical = clang_getCanonicalType( type );
+        result->_typeName                     = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( type ) ) );
         if ( depth > kMaxFixedTypeDepth )
             return makeIneligibleFixedType( result, "containers nested too deeply" );
 
@@ -106,12 +107,14 @@ namespace sw
             return makeIneligibleFixedType( result, reason.view() );
         }
 
-        if ( isFixedStringType( result->_typeName, canonicalSpelling ) )
+        // 형식의 정체는 선언의 FQN(템플릿이면 기본 템플릿)으로 가른다 — 정규 철자의 머리를 견주면 표준 라이브러리 구현(인라인 이름공간 · 기본 인자)마다 철자가 다르다.
+        const string identity = CursorReader::getTypeIdentity( canonical );
+        if ( isFixedStringType( canonical, identity ) )
         {
             result->_kind = FixedValueKind::String;
             return result;
         }
-        if ( canonicalSpelling == "sw::DynamicBitset" )
+        if ( identity == typeidentity::kDynamicBitset )
         {
             result->_kind = FixedValueKind::Bitset;
             return result;
@@ -144,9 +147,9 @@ namespace sw
             reason.appendFormat( "packed type '%#' has no fixed layout encoding", result->_typeName );
             return makeIneligibleFixedType( result, reason.view() );
         }
-        // `sw::vector` 는 자체 클래스라 정규 이름이 `sw::vector<…>` 입니다(`SW_ENABLE_STL_CONTAINER` 면 `std::vector` 별칭입니다).
-        const bool bVector = StringUtil::startsWith( canonicalSpelling, "std::vector<" ) || StringUtil::startsWith( canonicalSpelling, "sw::vector<" );
-        const bool bArray  = StringUtil::startsWith( canonicalSpelling, "std::array<" ) || StringUtil::startsWith( canonicalSpelling, "sw::array<" );
+        // `sw::vector` 는 자체 클래스입니다(`SW_ENABLE_STL_CONTAINER` 면 `std::vector` 별칭입니다).
+        const bool bVector = CursorReader::isAnyIdentity( identity, typeidentity::kArrVectorTemplate );
+        const bool bArray  = CursorReader::isAnyIdentity( identity, typeidentity::kArrArrayTemplate );
         if ( bVector || bArray )
         {
             result->_kind    = bVector ? FixedValueKind::Vector : FixedValueKind::FixedArray;
@@ -154,7 +157,7 @@ namespace sw
             return result;
         }
         // `EnumArray<E, T>` 의 본문은 `T[열거자 수]` 와 같다(개수 없이 원소 N 개). 스키마 해시는 칸 철자를 섞어 C 배열과 다르다. 원소는 두 번째 인자다.
-        if ( StringUtil::startsWith( canonicalSpelling, "sw::EnumArray<" ) )
+        if ( identity == typeidentity::kEnumArray )
         {
             result->_kind    = FixedValueKind::FixedArray;
             result->_element = classifyFixedType( clang_Type_getTemplateArgumentAsType( canonical, 1 ), session, depth + 1 );

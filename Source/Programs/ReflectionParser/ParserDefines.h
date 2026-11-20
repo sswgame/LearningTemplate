@@ -67,10 +67,9 @@ namespace sw
 
         /**
          * @brief 리플렉션 이벤트가 되는 필드 타입입니다 — `PROPERTY()` 가 붙은 멀티캐스트 델리게이트는 값이 아니라 이벤트로 수집합니다.
-         * @details 판정은 정규 타입 철자의 머리(`kEventTemplatePrefix`)로, 인자 이름은 소스 토큰의 템플릿 이름(`kEventTemplateLeaf`)부터 읽습니다.
+         * @details 판정은 형식의 정체(`typeidentity::kMulticastDelegate`)로, 인자 이름은 소스 토큰의 템플릿 이름(`kEventTemplateLeaf`)부터 읽습니다.
          */
-        inline constexpr const utf8* kEventTemplatePrefix = "sw::MulticastDelegate<";
-        inline constexpr const utf8* kEventTemplateLeaf   = "MulticastDelegate";
+        inline constexpr const utf8* kEventTemplateLeaf = "MulticastDelegate";
 
         /** @brief 검증 함수(`Validate = fn`)의 인자 타입 — 정규 이름(`sw::` 와 참조를 벗긴 것)입니다. */
         inline constexpr const utf8* kValidationContextTypeName = "ValidationContext";
@@ -78,6 +77,27 @@ namespace sw
         /** @brief C 고정 배열(`T _arr[N]`)이 타는 `ReflectBuiltins.xxx` CONTAINER 줄의 이름입니다 — 래퍼 줄기 · 종류 · 역할은 그 줄이 정한다(`std::array` 와 같다). */
         inline constexpr const utf8* kFixedArrayTypeName = "array";
     } // namespace annotation
+
+    /**
+     * @brief 생성기가 정체로 가르는 형식의 FQN 표입니다 — 형식 철자(`find( "AssetRef<" )`)가 아니라 clang 이 준 선언의 FQN(템플릿이면 기본 템플릿)과 견준다(`CursorReader::getTypeIdentity`).
+     * @details 철자로 가르면 별칭 · 이름공간 생략 · 템플릿 인자 안의 같은 낱말에 속는다. 인라인 이름공간(`std::__1` · `std::__cxx11`)은 FQN 에 넣지 않는다.
+     */
+    namespace typeidentity
+    {
+        inline constexpr const utf8* kAssetRef             = "sw::AssetRef";
+        inline constexpr const utf8* kCatalogKey           = "sw::CatalogKey";
+        inline constexpr const utf8* kTypedComponentHandle = "sw::TComponentHandle";
+        inline constexpr const utf8* kComponentHandle      = "sw::ComponentHandle";
+        inline constexpr const utf8* kDynamicBitset        = "sw::DynamicBitset";
+        inline constexpr const utf8* kEnumArray            = "sw::EnumArray";
+        inline constexpr const utf8* kMulticastDelegate    = "sw::MulticastDelegate";
+        /** @brief 글(문자 원소가 `char`)로 싣는 문자열 템플릿입니다(`sw::string` 은 자체 클래스, `SW_ENABLE_STL_CONTAINER` 면 `std` 별칭). */
+        inline constexpr const utf8* kArrStringTemplate[] = { "sw::basic_string", "std::basic_string" };
+        /** @brief 가변 길이 시퀀스로 싣는 템플릿입니다. */
+        inline constexpr const utf8* kArrVectorTemplate[] = { "sw::vector", "std::vector" };
+        /** @brief 고정 길이 시퀀스로 싣는 템플릿입니다. */
+        inline constexpr const utf8* kArrArrayTemplate[] = { "sw::array", "std::array" };
+    } // namespace typeidentity
 
     namespace fixedlayout
     {

@@ -77,6 +77,8 @@ namespace sw
         /** @brief 표식이 있는데 @p next 가 그 표식이 가리킬 선언이 아니면 알리고 그 헤더를 실패로 둡니다. 표식이 없으면 아무것도 하지 않습니다. */
         void reportUnpairedMarker( const PendingMarker& marker, CXCursor next );
         void reportMarker( const PendingMarker& marker, string_view reason );
+        /** @brief `REFLECT_CONTAINER( 종류[, 래퍼] )` 의 인자가 맞는지 봅니다. 틀리면 알리고 그 헤더를 실패로 둡니다. */
+        void validateContainerMarker( const PendingMarker& marker, CXCursor declaration );
         /** @brief struct · class 하나 — REFLECT 표식이 있으면 수집하고, 없는데 REFLECT_BODY 만 있으면 오류입니다. */
         void onRecordDeclaration( CXCursor cursor, const string* pReflectSpelling, ParsedHeader& outHeader );
         void onStructDeclaration( CXCursor cursor, const string& spelling, ParsedHeader& outHeader );
