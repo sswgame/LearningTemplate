@@ -600,6 +600,10 @@ namespace sw
         _initPhaseTimings.begin();
         if ( initializeInternal( swapChainDesc ) == false )
             return false;
+        // PSO 앞단은 셰이더 형식과 능력을 기동 때 한 번 받는다 — 백엔드 초기화가 끝나 런타임 능력(네이티브 bindless · 선택 스테이지)이 정해진 뒤다.
+        _startupCapabilities = getCapabilities();
+        if ( IRHIResourceFactory* const pFactory = getResourceFactory() )
+            pFactory->bindPipelineFront( getShaderTargetFormat(), _startupCapabilities );
         _initResult          = RHIInitResult::Succeeded;
         _sdrBackBufferFormat = getBackBufferFormat(); // 주 스왑체인은 SDR 로 선다 — UI 포맷의 첫 값
         // 기동 요약(`App.StartupPhasesHostScopeMs`)의 RHI 몫을 단계로 나눈 줄이다. 로그 중앙값을 시나리오 전체에서 모아 비교한다.

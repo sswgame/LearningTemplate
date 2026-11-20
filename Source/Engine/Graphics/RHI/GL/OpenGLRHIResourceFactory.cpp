@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
+#include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/RHITextureMipLayout.h"
@@ -1065,7 +1066,7 @@ namespace sw
         (void)_pDevice->_uavRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
-    RHIPipelineStateHandle OpenGLRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle OpenGLRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
@@ -1073,14 +1074,11 @@ namespace sw
         ScopedOpenGLContext                        contextScope( _pDevice );
         OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
-        // 디스크립터 해석(진입점 기본값, define, 깊이 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
-        const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_OpenGL );
-        const ShaderCompileDesc&       vsDesc          = request._vertex;
-        const ShaderCompileDesc&       psDesc          = request._pixel;
-        const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
-        ShaderCompileResult            vsResult{};
-        ShaderCompileResult            psResult{};
-        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
+        // 셰이더 컴파일 · 정점 리플렉션은 앞단(`IRHIResourceFactory::createPipelineState`)이 끝냈다. 여기서는 SPIR-V 를 특수화하고 링크만 한다.
+        const RHICompiledShaderStage& vsStage         = stages._vertex;
+        const RHICompiledShaderStage& psStage         = stages._pixel;
+        const bool                    bHasPixelShader = stages._bHasPixelShader != SW_FALSE;
+        if ( stages._bHasVertexShader != SW_FALSE )
         {
             if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
             {
@@ -1091,34 +1089,23 @@ namespace sw
             GLuint vertexShader = glCreateShader( GL_VERTEX_SHADER );
             GLuint pixelShader  = bHasPixelShader ? glCreateShader( GL_FRAGMENT_SHADER ) : 0;
 
-            glShaderBinary( 1, &vertexShader, GL_SHADER_BINARY_FORMAT_SPIR_V, vsResult._bytecode.data(), static_cast<GLsizei>( vsResult._bytecode.size() ) );
-            glSpecializeShader( vertexShader, vsDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+            glShaderBinary( 1, &vertexShader, GL_SHADER_BINARY_FORMAT_SPIR_V, vsStage._bytecode.data(), static_cast<GLsizei>( vsStage._bytecode.size() ) );
+            glSpecializeShader( vertexShader, vsStage._entryPoint.c_str(), 0, nullptr, nullptr );
 
             if ( bHasPixelShader )
             {
-                glShaderBinary( 1, &pixelShader, GL_SHADER_BINARY_FORMAT_SPIR_V, psResult._bytecode.data(), static_cast<GLsizei>( psResult._bytecode.size() ) );
-                glSpecializeShader( pixelShader, psDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+                glShaderBinary( 1, &pixelShader, GL_SHADER_BINARY_FORMAT_SPIR_V, psStage._bytecode.data(), static_cast<GLsizei>( psStage._bytecode.size() ) );
+                glSpecializeShader( pixelShader, psStage._entryPoint.c_str(), 0, nullptr, nullptr );
             }
 
             // 선택 스테이지(지오메트리 · 헐 · 도메인)는 같은 SPIR-V 경로로 프로그램에 붙인다.
-            ShaderCompileResult gsResult{};
-            ShaderCompileResult hsResult{};
-            ShaderCompileResult dsResult{};
-            if ( RHIShaderRequest::compileOptionalStages( request, gsResult, hsResult, dsResult ) == false )
-            {
-                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.OptionalStageCompileFailed", "Optional stage compile failed (%#)", desc._vertexShaderPath.c_str() );
-                glDeleteShader( vertexShader );
-                if ( pixelShader != 0 )
-                    glDeleteShader( pixelShader );
-                return 0;
-            }
             GLuint     arrOptionalShader[3]{ 0, 0, 0 };
             uint32     optionalCount{ 0 };
             bool       bOptionalReady   = true;
-            const auto addOptionalStage = [&]( GLenum stage, const ShaderCompileResult& result, const ShaderCompileDesc& stageDesc )
+            const auto addOptionalStage = [&]( GLenum stage, const RHICompiledShaderStage& stageDesc )
             {
                 const GLuint shader = glCreateShader( stage );
-                glShaderBinary( 1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, result._bytecode.data(), static_cast<GLsizei>( result._bytecode.size() ) );
+                glShaderBinary( 1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, stageDesc._bytecode.data(), static_cast<GLsizei>( stageDesc._bytecode.size() ) );
                 glSpecializeShader( shader, stageDesc._entryPoint.c_str(), 0, nullptr, nullptr );
                 GLint compiled = GL_FALSE;
                 glGetShaderiv( shader, GL_COMPILE_STATUS, &compiled );
@@ -1131,12 +1118,12 @@ namespace sw
                 }
                 arrOptionalShader[optionalCount++] = shader;
             };
-            if ( request._bHasGeometryShader != SW_FALSE )
-                addOptionalStage( GL_GEOMETRY_SHADER, gsResult, request._geometry );
-            if ( request._bHasTessellation != SW_FALSE )
+            if ( stages._bHasGeometryShader != SW_FALSE )
+                addOptionalStage( GL_GEOMETRY_SHADER, stages._geometry );
+            if ( stages._bHasTessellation != SW_FALSE )
             {
-                addOptionalStage( GL_TESS_CONTROL_SHADER, hsResult, request._hull );
-                addOptionalStage( GL_TESS_EVALUATION_SHADER, dsResult, request._domain );
+                addOptionalStage( GL_TESS_CONTROL_SHADER, stages._hull );
+                addOptionalStage( GL_TESS_EVALUATION_SHADER, stages._domain );
             }
 
             GLint vsCompiled = GL_FALSE;
@@ -1160,8 +1147,7 @@ namespace sw
                 if ( linkProgram( program, linkLabel.c_str() ) )
                 {
                     record._program      = program;
-                    record._vertexLayout = RHIVertexLayout{
-                        RHIShaderRequest::toVertexSlotMask( RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_OpenGL ) ), desc._meshVertexFormat };
+                    record._vertexLayout = RHIVertexLayout{ stages._vertexSlotMask, desc._meshVertexFormat };
                 }
             }
             else
@@ -1190,24 +1176,19 @@ namespace sw
         if ( record._program == 0 )
             return 0;
 
-        record._topology    = request._bHasTessellation != SW_FALSE ? RHIPrimitiveTopology::PatchList3 : desc._topology;
+        record._topology    = stages._bHasTessellation != SW_FALSE ? RHIPrimitiveTopology::PatchList3 : desc._topology;
         record._renderState = desc._renderState;
 
         return _pDevice->_pipelineStates.insert( record );
     }
 
-    RHIPipelineStateHandle OpenGLRHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle OpenGLRHIResourceFactory::createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
 
         ScopedOpenGLContext                        contextScope( _pDevice );
         OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
-
-        const ShaderCompileDesc csDesc   = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::SPIRV_OpenGL );
-        ShaderCompileResult     csResult = RHIShaderRequest::compile( csDesc );
-
-        if ( csResult._bSuccess )
         {
             if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
             {
@@ -1217,8 +1198,8 @@ namespace sw
 
             GLuint computeShader = glCreateShader( GL_COMPUTE_SHADER );
 
-            glShaderBinary( 1, &computeShader, GL_SHADER_BINARY_FORMAT_SPIR_V, csResult._bytecode.data(), static_cast<GLsizei>( csResult._bytecode.size() ) );
-            glSpecializeShader( computeShader, csDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+            glShaderBinary( 1, &computeShader, GL_SHADER_BINARY_FORMAT_SPIR_V, computeStage._bytecode.data(), static_cast<GLsizei>( computeStage._bytecode.size() ) );
+            glSpecializeShader( computeShader, computeStage._entryPoint.c_str(), 0, nullptr, nullptr );
 
             GLint csCompiled = GL_FALSE;
             glGetShaderiv( computeShader, GL_COMPILE_STATUS, &csCompiled );
@@ -1234,7 +1215,7 @@ namespace sw
             {
                 GLchar infoLog[constant::buffer::kMax1024];
                 glGetShaderInfoLog( computeShader, sizeof( infoLog ), nullptr, infoLog );
-                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.ComputeShaderSpecializeCompile", "Compute shader specialize/compile failed: %#", infoLog );
+                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.ComputeShaderSpecializeCompile", "Compute shader specialize/compile failed (%#): %#", label, infoLog );
             }
             glDeleteShader( computeShader );
         }

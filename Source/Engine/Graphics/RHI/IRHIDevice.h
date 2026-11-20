@@ -747,6 +747,8 @@ namespace sw
         ThreadRole _renderThread;
         /// @brief SDR 이던 마지막 백버퍼 포맷입니다 — HDR 인 동안의 `getUITargetFormat` 이다(`initialize` 와 `setBackBufferColorSpace` 가 SDR 을 떠나기 전에 적는다).
         RHIFormat _sdrBackBufferFormat{ constant::render::kBackBufferFormat };
+        /// @brief 기동 끝(`initialize`)에 채운 능력입니다 — PSO 앞단이 참조로 읽는다(`IRHIResourceFactory::bindPipelineFront`). 화면 출력 칸처럼 실행 중 바뀌는 값은 `getCapabilities` 로 묻는다.
+        RHICapabilities _startupCapabilities{};
         /// @brief 타임스탬프 계측 능력입니다(findTimestampProvider 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.
         IRHITimestampProvider* _pTimestampProvider;
         /// @brief 컨텍스트 스레드 바인딩 능력입니다(findContextThreadBinding 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.

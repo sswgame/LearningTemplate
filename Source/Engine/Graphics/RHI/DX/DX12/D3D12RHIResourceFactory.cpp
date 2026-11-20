@@ -16,6 +16,7 @@
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxRenderState.h"
+#include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
@@ -1527,46 +1528,33 @@ namespace sw
         releaseBindlessRecord( BindlessRegistry::UnorderedAccess, index );
     }
 
-    RHIPipelineStateHandle D3D12RHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle D3D12RHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages )
     {
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
-        uint32                                      vertexSlotMask{ 0 };
+        const uint32                                vertexSlotMask = stages._vertexSlotMask;
 
-        // 디스크립터 해석(진입점 기본값, define, 뎁스 전용 판정, RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
-        const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXIL_D3D12 );
-        const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
-        ShaderCompileResult            vsResult{};
-        ShaderCompileResult            psResult{};
-        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
+        // 셰이더 컴파일 · 정점 리플렉션은 앞단(`IRHIResourceFactory::createPipelineState`)이 끝냈다. 여기서는 바이트코드로 PSO 서술만 채운다.
+        const bool bHasPixelShader = stages._bHasPixelShader != SW_FALSE;
+        if ( stages._bHasVertexShader != SW_FALSE )
         {
             // 입력 레이아웃은 메시 정점 형식의 공용 테이블에서 셰이더가 읽는 속성만 골라 만든다(`fillDXGIInputElements` — DX11 과 같은 함수, Vulkan · GL 도 같은 규칙).
             // 정점 입력이 없는 셰이더(SV_VertexID 로 정점을 만든다)는 빈 레이아웃이라 정점 버퍼 없이 그린다.
-            const uint32             consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::DXIL_D3D12 );
             D3D12_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
-            const uint32             elementCount = fillDXGIInputElements<D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA>( desc._meshVertexFormat, consumedMask, arrInputElement );
-            vertexSlotMask                        = RHIShaderRequest::toVertexSlotMask( consumedMask );
+            const uint32             elementCount = fillDXGIInputElements<D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA>( desc._meshVertexFormat, stages._consumedAttributeMask, arrInputElement );
 
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
             psoDesc.InputLayout    = { elementCount > 0 ? arrInputElement : nullptr, elementCount };
             psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
-            psoDesc.VS             = { vsResult._bytecode.data(), vsResult._bytecode.size() };
-            ShaderCompileResult gsResult{};
-            ShaderCompileResult hsResult{};
-            ShaderCompileResult dsResult{};
-            if ( RHIShaderRequest::compileOptionalStages( request, gsResult, hsResult, dsResult ) == false )
+            psoDesc.VS             = { stages._vertex._bytecode.data(), stages._vertex._bytecode.size() };
+            if ( stages._bHasGeometryShader != SW_FALSE )
+                psoDesc.GS = { stages._geometry._bytecode.data(), stages._geometry._bytecode.size() };
+            if ( stages._bHasTessellation != SW_FALSE )
             {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreatePipelineStateOptionalStageFailed", "createPipelineState: optional stage compile failed (%#)", desc._vertexShaderPath.c_str() );
-                return 0;
-            }
-            if ( request._bHasGeometryShader != SW_FALSE )
-                psoDesc.GS = { gsResult._bytecode.data(), gsResult._bytecode.size() };
-            if ( request._bHasTessellation != SW_FALSE )
-            {
-                psoDesc.HS = { hsResult._bytecode.data(), hsResult._bytecode.size() };
-                psoDesc.DS = { dsResult._bytecode.data(), dsResult._bytecode.size() };
+                psoDesc.HS = { stages._hull._bytecode.data(), stages._hull._bytecode.size() };
+                psoDesc.DS = { stages._domain._bytecode.data(), stages._domain._bytecode.size() };
             }
             if ( bHasPixelShader )
-                psoDesc.PS = { psResult._bytecode.data(), psResult._bytecode.size() };
+                psoDesc.PS = { stages._pixel._bytecode.data(), stages._pixel._bytecode.size() };
             const RenderState& renderState = desc._renderState;
             // 다른 백엔드와 같이 채우기 모드를 읽는다. SOLID 로 고정하면 Wireframe 요청이 DX12 에서만 조용히 솔리드가 된다.
             psoDesc.RasterizerState.FillMode              = ( renderState._fillMode == FillMode::Wireframe )
@@ -1583,9 +1571,9 @@ namespace sw
             psoDesc.RasterizerState.DepthBias            = renderState._depthBias;
             psoDesc.RasterizerState.SlopeScaledDepthBias = renderState._slopeScaledDepthBias;
             psoDesc.SampleMask                           = MathUtil::kMaxUInt32;
-            psoDesc.PrimitiveTopologyType                = request._bHasTessellation != SW_FALSE ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH : D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            psoDesc.PrimitiveTopologyType                = stages._bHasTessellation != SW_FALSE ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH : D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             // 뎁스 전용은 RT 가 0 개다. 1 로 두고 R8G8B8A8 을 선언하면 실제로는 DSV 만 바인딩되는 것과 어긋난다.
-            psoDesc.NumRenderTargets = request._numRenderTargets;
+            psoDesc.NumRenderTargets = stages._numRenderTargets;
             if ( psoDesc.NumRenderTargets > 8 )
                 psoDesc.NumRenderTargets = 8;
             psoDesc.BlendState.IndependentBlendEnable = TRUE; // 꺼 두면 0 번 값이 모든 타깃에 간다
@@ -1659,36 +1647,28 @@ namespace sw
             return 0;
         return _pDevice->_pipelineStates.insert( {
             pso, RHIVertexLayout{ vertexSlotMask, desc._meshVertexFormat },
-            request._bHasTessellation != SW_FALSE ? D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+            stages._bHasTessellation != SW_FALSE ? D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
             desc._renderState._stencilRef
         } );
     }
 
-    RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label )
     {
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
-        if ( shaderPath.empty() == false )
         {
-            const ShaderCompileDesc csDesc = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::DXIL_D3D12 );
-            ShaderCompileResult     res    = RHIShaderRequest::compile( csDesc );
-            if ( res._bSuccess )
-            {
-                D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};
-                psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
-                psoDesc.CS             = { res._bytecode.data(), res._bytecode.size() };
+            D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};
+            psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
+            psoDesc.CS             = { computeStage._bytecode.data(), computeStage._bytecode.size() };
 
-                const HRESULT hr = _pDevice->_device->CreateComputePipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
-                if ( FAILED( hr ) )
-                {
-                    SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreateComputePipelineStateFailedHrX", "CreateComputePipelineState failed hr=0x%#", static_cast<uint32>( hr ) );
-                    _pDevice->flushDebugMessages( "CreateComputePipelineState" );
-                    return 0;
-                }
-            }
-            else
+            const HRESULT hr = _pDevice->_device->CreateComputePipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
+            if ( FAILED( hr ) )
+            {
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreateComputePipelineStateFailedHrX", "CreateComputePipelineState failed hr=0x%# '%#'", static_cast<uint32>( hr ), label );
+                _pDevice->flushDebugMessages( "CreateComputePipelineState" );
                 return 0;
+            }
         }
-        if ( pso == nullptr ) // 셰이더 경로가 비었다 — 빈 레코드를 등록하지 않는다
+        if ( pso == nullptr )
             return 0;
         return _pDevice->_pipelineStates.insert( { pso, RHIVertexLayout{} } ); // 컴퓨트는 정점 입력이 없다
     }

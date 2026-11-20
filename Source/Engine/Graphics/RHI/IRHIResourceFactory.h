@@ -8,7 +8,11 @@
 
 namespace sw
 {
+    struct RHICapabilities;
+    struct RHICompiledGraphicsStages;
+    struct RHICompiledShaderStage;
     struct RHIPipelineStateDesc;
+    enum class ShaderTargetFormat : uint8;
 
     /**
      * @class IRHIResourceFactory
@@ -28,7 +32,9 @@ namespace sw
         /**
          * @brief 그래픽스 파이프라인 상태(PSO)를 만듭니다.
          * @details 모든 PSO 생성이 지나는 한 입구다 — 셰이더 컴파일과 드라이버 링크 · 특수화(GL 은 프레임 하나에 수십 초)를 컴파일 바쁜 시계
-         *          (`ShaderCache::getCompileBusyClock`)에 센다. 자동화 시한이 그 시간을 뺀다. 백엔드는 `createPipelineStateNative` 를 구현한다.
+         *          (`ShaderCache::getCompileBusyClock`)에 센다. 자동화 시한이 그 시간을 뺀다.
+         *          **셰이더는 여기서 한 번 컴파일한다**: 서술체 해석 → 기동 능력으로 선택 스테이지 거절 → 컴파일 → 정점 리플렉션(실패면 끊는다) → 정점 속성 마스크.
+         *          백엔드는 그 바이트코드 서술(`RHICompiledGraphicsStages`)만 받는다(`createPipelineStateNative`). 실패는 오류 로그와 핸들 0 이다.
          */
         RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc );
 
@@ -37,6 +43,13 @@ namespace sw
          * @param listDefine 컴파일 매크로("NAME" 또는 "NAME=VALUE")입니다 — 그래픽스 PSO 의 `RHIPipelineStateDesc::_listShaderDefine` 과 같은 퍼뮤테이션입니다(셰이더 assert 변형이 쓴다).
          */
         RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {}, const vector<string>& listDefine = {} );
+
+        /**
+         * @brief PSO 앞단이 읽을 셰이더 형식과 능력을 묶습니다. 장치 기동이 백엔드 초기화 뒤 한 번 부른다(`IRHIDevice::initialize`).
+         * @details 능력은 장치가 기동 때 채워 든 값(`IRHIDevice` 의 기동 능력)을 참조로 든다 — PSO 마다 값 반환 가상(`IRHIDevice::getCapabilities`)을 부르지 않는다.
+         *          장치가 팩토리를 소유하므로 참조가 팩토리보다 오래 산다. 묶기 전의 PSO 생성은 오류다.
+         */
+        void bindPipelineFront( ShaderTargetFormat shaderTargetFormat, const RHICapabilities& startupCapabilities );
 
         /** @brief 파이프라인 상태 객체를 해제합니다. */
         virtual void destroyPipelineState( RHIPipelineStateHandle pso ) = 0;
@@ -398,10 +411,18 @@ namespace sw
         virtual void unregisterBindlessUAV( RHIDescriptorIndex index ) = 0;
 
     protected:
-        /** @brief 백엔드의 그래픽스 PSO 생성입니다 — 부르는 쪽은 `createPipelineState` 를 쓴다(컴파일 시계). */
-        [[nodiscard]] virtual RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc ) = 0;
+        /**
+         * @brief 백엔드의 그래픽스 PSO 생성입니다 — 부르는 쪽은 `createPipelineState` 를 쓴다(컴파일 시계).
+         * @param desc   렌더 상태 · RT 형식 · 정점 형식을 읽는다. 셰이더 경로는 라벨 · 로그에만 쓴다(컴파일하지 않는다).
+         * @param stages 앞단이 컴파일한 스테이지 바이트코드와 판정(픽셀 스테이지 유무 · RT 수 · 선택 스테이지 · 정점 속성 마스크)입니다.
+         */
+        [[nodiscard]] virtual RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) = 0;
 
-        /** @brief 백엔드의 컴퓨트 PSO 생성입니다 — 부르는 쪽은 `createComputePipelineState` 를 쓴다(컴파일 시계). */
-        [[nodiscard]] virtual RHIPipelineStateHandle createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine ) = 0;
+        /** @brief 백엔드의 컴퓨트 PSO 생성입니다 — 부르는 쪽은 `createComputePipelineState` 를 쓴다(컴파일 시계). @p label 은 셰이더 경로(라벨 · 로그)입니다. */
+        [[nodiscard]] virtual RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) = 0;
+
+    private:
+        const RHICapabilities* _pStartupCapabilities{ nullptr }; ///< 장치가 기동 때 채운 능력(`bindPipelineFront`) — null 이면 아직 묶지 않았다
+        ShaderTargetFormat     _shaderTargetFormat{};            ///< 기동 때 묶은 셰이더 형식
     };
 } // namespace sw

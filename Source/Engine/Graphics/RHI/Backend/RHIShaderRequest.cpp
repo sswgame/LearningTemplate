@@ -5,6 +5,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -138,16 +140,88 @@ namespace sw
         return bSuccess;
     }
 
-    uint32 RHIShaderRequest::computeConsumedVertexAttributeMask( const vector<uint8>& vertexBytecode, ShaderTargetFormat targetFormat )
+    bool RHIShaderRequest::buildGraphicsStages( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat, const RHICapabilities& capabilities, RHICompiledGraphicsStages& outStages )
+    {
+        const RHIGraphicsShaderRequest request = resolveGraphics( desc, targetFormat );
+        outStages                              = RHICompiledGraphicsStages{};
+        outStages._numRenderTargets            = request._numRenderTargets;
+        outStages._bDepthOnly                  = request._bDepthOnly;
+        outStages._bHasPixelShader             = request._bHasPixelShader;
+        outStages._bHasGeometryShader          = request._bHasGeometryShader;
+        outStages._bHasTessellation            = request._bHasTessellation;
+        outStages._bHasVertexShader            = desc._vertexShaderPath.empty() ? SW_FALSE : SW_TRUE;
+        if ( outStages._bHasVertexShader != SW_FALSE )
+        {
+            // 장치에 없는 선택 스테이지는 컴파일하기 전에 거절한다(WebGPU 는 단계 자체가 없고, Vulkan 은 장치 기능이 없을 수 있다 — 기동 때 채운 능력).
+            const bool bOptionalUnsupported = ( request._bHasGeometryShader != SW_FALSE && capabilities._bGeometryStage == SW_FALSE ) ||
+                                              ( request._bHasTessellation != SW_FALSE && capabilities._bTessellationStages == SW_FALSE );
+            if ( bOptionalUnsupported )
+            {
+                SW_LOG_ERROR_ID( "RHI.PipelineOptionalStageUnsupported", "createPipelineState: the device has no geometry or tessellation stage - PSO '%#' is not created", desc._vertexShaderPath );
+                return false;
+            }
+            ShaderCompileResult vsResult{};
+            ShaderCompileResult psResult{};
+            if ( compileGraphics( request, vsResult, psResult ) == false )
+            {
+                SW_LOG_WARNING_ID( "RHI.PipelineShaderCompileFailed", "createPipelineState: shader compile failed (vs=%# ps=%#) '%#'", vsResult._bSuccess, psResult._bSuccess, desc._vertexShaderPath );
+                return false;
+            }
+            ShaderCompileResult gsResult{};
+            ShaderCompileResult hsResult{};
+            ShaderCompileResult dsResult{};
+            if ( compileOptionalStages( request, gsResult, hsResult, dsResult ) == false )
+            {
+                SW_LOG_ERROR_ID( "RHI.PipelineOptionalStageCompileFailed", "createPipelineState: optional stage compile failed '%#'", desc._vertexShaderPath );
+                return false;
+            }
+            // 정점 리플렉션이 실패하면 끊는다 — 빈 결과로 물러나면 속성 마스크가 0 이라 정점 입력 없는 PSO 가 조용히 선다.
+            const expected<ShaderReflectionData> reflected = ShaderReflectionData::reflect( vsResult._bytecode, targetFormat );
+            if ( reflected.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "RHI.PipelineVertexReflectionFailed", "createPipelineState: vertex shader reflection failed '%#': %# (%#)", desc._vertexShaderPath, reflected.error().message(),
+                                 reflected.error().detail() );
+                return false;
+            }
+            outStages._consumedAttributeMask = computeConsumedVertexAttributeMask( *reflected );
+            outStages._vertexSlotMask        = toVertexSlotMask( outStages._consumedAttributeMask );
+            outStages._vertex                = RHICompiledShaderStage{ std::move( vsResult._bytecode ), request._vertex._entryPoint };
+            if ( request._bHasPixelShader != SW_FALSE )
+                outStages._pixel = RHICompiledShaderStage{ std::move( psResult._bytecode ), request._pixel._entryPoint };
+            if ( request._bHasGeometryShader != SW_FALSE )
+                outStages._geometry = RHICompiledShaderStage{ std::move( gsResult._bytecode ), request._geometry._entryPoint };
+            if ( request._bHasTessellation != SW_FALSE )
+            {
+                outStages._hull   = RHICompiledShaderStage{ std::move( hsResult._bytecode ), request._hull._entryPoint };
+                outStages._domain = RHICompiledShaderStage{ std::move( dsResult._bytecode ), request._domain._entryPoint };
+            }
+        }
+        if ( desc._computeShaderPath.empty() == false )
+        {
+            if ( buildComputeStage( desc._computeShaderPath, desc._computeEntryPoint, desc._listShaderDefine, targetFormat, outStages._compute ) == false )
+                return false;
+            outStages._bHasComputeShader = SW_TRUE;
+        }
+        return true;
+    }
+
+    bool RHIShaderRequest::buildComputeStage( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine, ShaderTargetFormat targetFormat, RHICompiledShaderStage& outStage )
+    {
+        const ShaderCompileDesc csDesc   = resolveCompute( shaderPath, entryPoint, listDefine, targetFormat );
+        ShaderCompileResult     csResult = compile( csDesc );
+        if ( csResult._bSuccess == false || csResult._bytecode.empty() )
+        {
+            SW_LOG_ERROR_ID( "RHI.ComputeShaderCompileFailed", "createComputePipelineState: compute shader compile failed '%#'", shaderPath );
+            return false;
+        }
+        outStage = RHICompiledShaderStage{ std::move( csResult._bytecode ), csDesc._entryPoint };
+        return true;
+    }
+
+    uint32 RHIShaderRequest::computeConsumedVertexAttributeMask( const ShaderReflectionData& vertexReflection )
     {
         static_assert( constant::render::kVertexAttributeCount <= 32u, "정점 속성 마스크가 uint32 를 넘는다" );
-        const expected<ShaderReflectionData> reflected = ShaderReflectionData::reflect( vertexBytecode, targetFormat );
-        if ( reflected.has_value() == false )
-        {
-            SW_LOG_ERROR_ID( "RHI.VertexReflectionFailed", "Vertex shader reflection failed: %# (%#)", reflected.error().message(), reflected.error().detail() );
-            return 0;
-        }
-        const ShaderReflectionData& reflection = *reflected;
+        const ShaderReflectionData& reflection = vertexReflection;
         uint32                      mask{ 0 };
         for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
         {

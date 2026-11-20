@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxRenderState.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
+#include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
@@ -1011,64 +1012,50 @@ namespace sw
         (void)_pDevice->_uavRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
-    RHIPipelineStateHandle D3D11RHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc )
+    RHIPipelineStateHandle D3D11RHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages )
     {
-        // 디스크립터 해석(진입점 기본값, define, 뎁스 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
-        // (그래픽스 요청에는 컴퓨트 스테이지가 없다. 컴퓨트 경로는 아래에서 define 을 직접 푼다.)
-        const RHIGraphicsShaderRequest request = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXBC_D3D11 );
-
+        // 셰이더 컴파일 · 정점 리플렉션은 앞단(`IRHIResourceFactory::createPipelineState`)이 끝냈다. 여기서는 바이트코드로 셰이더 객체만 만든다.
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
-        if ( desc._vertexShaderPath.empty() == false )
+        if ( stages._bHasVertexShader != SW_FALSE )
         {
-            // 셰이더를 만들지 못하면 PSO 도 만들지 않는다(핸들 0). 다른 세 백엔드와 같은 규칙이다. 주의: 실패를 그릴 때 "PS 가 없으면
-            // 건너뛴다" 로 삼키면 **원래 PS 가 없는** 깊이 전용 PSO(그림자, 깊이 프리패스)의 드로우까지 버려진다(bindGraphicsPipelineForDraw
-            // 참고). 뎁스 전용(RT 0 개)이면 경로가 있어도 PS 를 붙이지 않는다.
-            ShaderCompileResult vsResult{};
-            ShaderCompileResult psResult{};
-            const bool          bShaderCreationFailed = RHIShaderRequest::compileGraphics( request, vsResult, psResult ) == false ||
-                                               isHrSuccess( _pDevice->_device->CreateVertexShader( vsResult._bytecode.data(), vsResult._bytecode.size(), nullptr, pso._vs.GetAddressOf() ), "CreateVertexShader" ) == false ||
-                                               ( request._bHasPixelShader != SW_FALSE &&
-                                                 isHrSuccess( _pDevice->_device->CreatePixelShader( psResult._bytecode.data(), psResult._bytecode.size(), nullptr, pso._ps.GetAddressOf() ), "CreatePixelShader" ) == false );
+            // 셰이더 객체를 만들지 못하면 PSO 도 만들지 않는다(핸들 0). 주의: 실패를 그릴 때 "PS 가 없으면 건너뛴다" 로 삼키면 **원래 PS 가 없는**
+            // 깊이 전용 PSO(그림자, 깊이 프리패스)의 드로우까지 버려진다(bindGraphicsPipelineForDraw 참고).
+            const vector<uint8>& vsBytecode            = stages._vertex._bytecode;
+            const bool           bShaderCreationFailed = isHrSuccess( _pDevice->_device->CreateVertexShader( vsBytecode.data(), vsBytecode.size(), nullptr, pso._vs.GetAddressOf() ), "CreateVertexShader" ) == false ||
+                                               ( stages._bHasPixelShader != SW_FALSE &&
+                                                 isHrSuccess( _pDevice->_device->CreatePixelShader( stages._pixel._bytecode.data(), stages._pixel._bytecode.size(), nullptr, pso._ps.GetAddressOf() ), "CreatePixelShader" ) == false );
             if ( bShaderCreationFailed )
             {
-                SW_LOG_WARNING_ID( "D3D11.CreatePipelineStateShaderCompileCreate", "createPipelineState: shader compile/create failed (vs=%# ps=%#) %#", vsResult._bSuccess, psResult._bSuccess,
-                                   desc._vertexShaderPath.c_str() );
+                SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateShaderCreateFailed", "createPipelineState: shader object creation failed '%#'", desc._vertexShaderPath.c_str() );
                 return 0;
             }
-            ShaderCompileResult gsResult{};
-            ShaderCompileResult hsResult{};
-            ShaderCompileResult dsResult{};
-            const bool          bOptionalFailed =
-                RHIShaderRequest::compileOptionalStages( request, gsResult, hsResult, dsResult ) == false ||
-                ( request._bHasGeometryShader != SW_FALSE && isHrSuccess( _pDevice->_device->CreateGeometryShader( gsResult._bytecode.data(), gsResult._bytecode.size(), nullptr, pso._gs.GetAddressOf() ), "CreateGeometryShader" ) == false ) ||
-                ( request._bHasTessellation != SW_FALSE && ( isHrSuccess( _pDevice->_device->CreateHullShader( hsResult._bytecode.data(), hsResult._bytecode.size(), nullptr, pso._hs.GetAddressOf() ), "CreateHullShader" ) == false ||
-                                                             isHrSuccess( _pDevice->_device->CreateDomainShader( dsResult._bytecode.data(), dsResult._bytecode.size(), nullptr, pso._ds.GetAddressOf() ), "CreateDomainShader" ) == false ) );
+            const bool bOptionalFailed =
+                ( stages._bHasGeometryShader != SW_FALSE && isHrSuccess( _pDevice->_device->CreateGeometryShader( stages._geometry._bytecode.data(), stages._geometry._bytecode.size(), nullptr, pso._gs.GetAddressOf() ), "CreateGeometryShader" ) == false ) ||
+                ( stages._bHasTessellation != SW_FALSE && ( isHrSuccess( _pDevice->_device->CreateHullShader( stages._hull._bytecode.data(), stages._hull._bytecode.size(), nullptr, pso._hs.GetAddressOf() ), "CreateHullShader" ) == false ||
+                                                            isHrSuccess( _pDevice->_device->CreateDomainShader( stages._domain._bytecode.data(), stages._domain._bytecode.size(), nullptr, pso._ds.GetAddressOf() ), "CreateDomainShader" ) == false ) );
             if ( bOptionalFailed )
             {
-                SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateOptionalStageFailed", "createPipelineState: optional stage compile/create failed (%#)", desc._vertexShaderPath.c_str() );
+                SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateOptionalStageFailed", "createPipelineState: optional stage create failed (%#)", desc._vertexShaderPath.c_str() );
                 return 0;
             }
-            pso._topology = request._bHasTessellation != SW_FALSE ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+            pso._topology = stages._bHasTessellation != SW_FALSE ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
             // 입력 레이아웃은 메시 정점 형식의 공용 테이블에서 셰이더가 읽는 속성만 골라 만든다(`fillDXGIInputElements` — DX12 와 같은 함수, Vulkan · GL 도 같은 규칙).
             // 정점 입력이 없는 셰이더(SV_VertexID 로 정점을 만든다)는 빈 레이아웃이라 정점 버퍼 없이 그린다.
-            const uint32             consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::DXBC_D3D11 );
             D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
-            const uint32             elementCount = fillDXGIInputElements<D3D11_INPUT_PER_VERTEX_DATA, D3D11_INPUT_PER_INSTANCE_DATA>( desc._meshVertexFormat, consumedMask, arrInputElement );
-            pso._vertexLayout                     = RHIVertexLayout{ RHIShaderRequest::toVertexSlotMask( consumedMask ), desc._meshVertexFormat };
+            const uint32             elementCount = fillDXGIInputElements<D3D11_INPUT_PER_VERTEX_DATA, D3D11_INPUT_PER_INSTANCE_DATA>( desc._meshVertexFormat, stages._consumedAttributeMask, arrInputElement );
+            pso._vertexLayout                     = RHIVertexLayout{ stages._vertexSlotMask, desc._meshVertexFormat };
             if ( elementCount > 0 &&
-                 isHrSuccess( _pDevice->_device->CreateInputLayout( arrInputElement, elementCount, vsResult._bytecode.data(), vsResult._bytecode.size(), pso._inputLayout.GetAddressOf() ), "CreateInputLayout" ) == false )
+                 isHrSuccess( _pDevice->_device->CreateInputLayout( arrInputElement, elementCount, vsBytecode.data(), vsBytecode.size(), pso._inputLayout.GetAddressOf() ), "CreateInputLayout" ) == false )
             {
                 SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateCreateInputLayoutFailed", "createPipelineState: CreateInputLayout failed '%#'", desc._vertexShaderPath.c_str() );
                 return 0;
             }
         }
-        if ( desc._computeShaderPath.empty() == false )
+        if ( stages._bHasComputeShader != SW_FALSE )
         {
-            const ShaderCompileDesc csDesc = RHIShaderRequest::resolveCompute( desc._computeShaderPath, desc._computeEntryPoint, desc._listShaderDefine, ShaderTargetFormat::DXBC_D3D11 );
-            ShaderCompileResult     res    = RHIShaderRequest::compile( csDesc );
-            if ( res._bSuccess == false || isHrSuccess( _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() ), "CreateComputeShader" ) == false )
+            if ( isHrSuccess( _pDevice->_device->CreateComputeShader( stages._compute._bytecode.data(), stages._compute._bytecode.size(), nullptr, pso._cs.GetAddressOf() ), "CreateComputeShader" ) == false )
             {
-                SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateComputeShaderCompile", "createPipelineState: compute shader compile/create failed '%#'", desc._computeShaderPath.c_str() );
+                SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateComputeShaderCompile", "createPipelineState: compute shader create failed '%#'", desc._computeShaderPath.c_str() );
                 return 0;
             }
         }
@@ -1139,16 +1126,13 @@ namespace sw
         return _pDevice->_pipelineStates.insert( std::move( pso ) );
     }
 
-    RHIPipelineStateHandle D3D11RHIResourceFactory::createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    RHIPipelineStateHandle D3D11RHIResourceFactory::createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label )
     {
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
-        if ( shaderPath.empty() ) // 빈 레코드를 등록하지 않는다(다른 백엔드와 같다)
-            return 0;
+        if ( isHrSuccess( _pDevice->_device->CreateComputeShader( computeStage._bytecode.data(), computeStage._bytecode.size(), nullptr, pso._cs.GetAddressOf() ), "CreateComputeShader" ) == false )
         {
-            const ShaderCompileDesc csDesc = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::DXBC_D3D11 );
-            ShaderCompileResult     res    = RHIShaderRequest::compile( csDesc );
-            if ( res._bSuccess == false || isHrSuccess( _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() ), "CreateComputeShader" ) == false )
-                return 0;
+            SW_LOG_ERROR_ID( "D3D11.CreateComputePipelineStateFailed", "createComputePipelineState: CreateComputeShader failed '%#'", label );
+            return 0;
         }
         return _pDevice->_pipelineStates.insert( std::move( pso ) );
     }

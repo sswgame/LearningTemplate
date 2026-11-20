@@ -15,6 +15,10 @@
 namespace sw
 {
     struct RHIPipelineStateDesc;
+    struct RHICapabilities;
+    struct RHICompiledGraphicsStages;
+    struct RHICompiledShaderStage;
+    struct ShaderReflectionData;
 
     /**
      * @struct RHIGraphicsShaderRequest
@@ -72,12 +76,20 @@ namespace sw
         [[nodiscard]] static bool compileGraphics( const RHIGraphicsShaderRequest& request, ShaderCompileResult& outVertex, ShaderCompileResult& outPixel );
 
         /**
+         * @brief PSO 앞단의 본문입니다 — 서술체를 해석하고, 기동 능력(@p capabilities)에 없는 선택 스테이지면 거절하고, 모든 스테이지를 컴파일하고, 정점 리플렉션으로 속성 마스크를 채웁니다.
+         * @return 하나라도 실패하면(능력 없음 · 컴파일 · 리플렉션) 오류 로그를 남기고 false 입니다. 백엔드는 이 결과만 받는다(`IRHIResourceFactory::createPipelineStateNative`).
+         */
+        [[nodiscard]] static bool buildGraphicsStages( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat, const RHICapabilities& capabilities, RHICompiledGraphicsStages& outStages );
+        /** @brief 컴퓨트 PSO 앞단의 본문입니다(`resolveCompute` → 컴파일). 실패면 오류 로그와 false 입니다. */
+        [[nodiscard]] static bool buildComputeStage( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine, ShaderTargetFormat targetFormat, RHICompiledShaderStage& outStage );
+
+        /**
          * @brief 정점 셰이더가 실제로 읽는 정점 속성을 `constant::render::getMeshVertexAttributes` 의 인덱스 비트로 반환합니다(리플렉션의 시맨틱 이름으로 대조합니다).
          * @details 셰이더는 모두 `VertexInput` 을 선언하지만 컴파일러가 쓰지 않는 입력을 제거하므로(풀스크린 셰이더의 노멀, UV), PSO 가 테이블 전체를
          *          바인딩하면 Vulkan 검증 레이어가 "Vertex attribute at location N not consumed" 를 낸다. 셰이더가 읽는데 PSO 가 빼면 미정의라
          *          빼는 쪽만 이 마스크로 한다. 리플렉션은 SPIR-V, DXIL, DXBC 모두 된다.
          */
-        static uint32 computeConsumedVertexAttributeMask( const vector<uint8>& vertexBytecode, ShaderTargetFormat targetFormat );
+        static uint32 computeConsumedVertexAttributeMask( const ShaderReflectionData& vertexReflection );
 
         /**
          * @brief 속성 마스크(`computeConsumedVertexAttributeMask`)가 읽는 정점 버퍼 슬롯을 비트(1 << 슬롯)로 반환합니다. 0 이면 정점 입력이 없는 셰이더입니다.
