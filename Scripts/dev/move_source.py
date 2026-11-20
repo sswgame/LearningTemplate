@@ -183,7 +183,28 @@ def rewrite_bare_includes(text: str, old_folder: str, new_folder: str, source: P
     return BARE_INCLUDE.sub(replace, text)
 
 
-def make_path_rule(map_file: dict[str, str], list_folder_prefix: list[tuple[str, str]], root_base: bool = False) -> tuple[re.Pattern[str], object]:
+def list_renamed_file_stem(source: Path, map_file: dict[str, str]) -> list[tuple[str, str]]:
+    """이름을 바꾼 설정 · 데이터 파일(C 계열 · 파이썬 밖)의 줄기 쌍 — `Config/Server/Old.json` → `Config/Server/New.json` 이면 (`Config/Server/Old`, `Config/Server/New`).
+    곁 이름(`Old.online.json` — `OnlineServerConfig::makeConfigPath`)과 확장자 없는 이름(`"Config/Server/Old"`)이 같은 줄기로 적힌다.
+    옛 폴더에 같은 줄기로 시작하는 옮기지 않는 파일이 있으면 그 파일을 가리키는 글이라 두지 않는다. 옮기기 전에 잰다."""
+    list_stem = []
+    moved_set = set(map_file)
+    for old, new in map_file.items():
+        old_folder, _, old_name = old.rpartition("/")
+        new_folder, _, new_name = new.rpartition("/")
+        old_stem, _, old_rest = old_name.partition(".")
+        new_stem, _, new_rest = new_name.partition(".")
+        if Path(old).suffix.lower() in C_LIKE_SUFFIX | {".py"} or old_stem == new_stem or old_rest != new_rest or not old_folder:
+            continue
+        list_sibling = [f"{old_folder}/{path.name}" for path in (source / old_folder).glob(f"{old_stem}.*") if path.is_file()]
+        if any(sibling not in moved_set for sibling in list_sibling):
+            continue
+        list_stem.append((f"{old_folder}/{old_stem}", f"{new_folder}/{new_stem}"))
+    return list_stem
+
+
+def make_path_rule(map_file: dict[str, str], list_folder_prefix: list[tuple[str, str]], root_base: bool = False,
+                   list_stem: list[tuple[str, str]] = ()) -> tuple[re.Pattern[str], object]:
     """파일 경로 · 폴더 접두어를 **한 번 훑기** 규칙 하나로 묶는다(긴 것 먼저).
     차례로 적용하면 앞 규칙이 바꾼 글을 뒤 규칙이 다시 바꿨다 — 폴더를 자기 아래로 옮기면(`A=A/Server`) 파일 규칙이 만든 `A/Server/X.h` 를
     폴더 규칙 `A/` 가 다시 `A/Server/Server/X.h` 로 바꿨다. 정규식 하나의 sub 는 바꾼 자리를 다시 보지 않는다.
@@ -196,6 +217,13 @@ def make_path_rule(map_file: dict[str, str], list_folder_prefix: list[tuple[str,
     for old, new in list_folder_prefix:
         map_new[old] = new
         list_alternative.append((len(old), re.escape(old)))
+        bare_old = old.rstrip("/")
+        if "/" in bare_old:   # 끝 `/` 없는 폴더 이름(`<item>Source/Games/Old</item>` — 로컬라이제이션 codeRoots). 한 낱말 폴더(`Engine`)는 일반 낱말과 겹쳐 두지 않는다
+            map_new[bare_old] = new.rstrip("/")
+            list_alternative.append((len(bare_old), re.escape(bare_old) + r"(?![\w./-])"))
+    for old, new in list_stem:
+        map_new[old] = new
+        list_alternative.append((len(old), re.escape(old) + r"(?=\.[\w-]|[^\w./-]|$)"))   # 곁 이름 · 확장자 없는 이름 — 같은 줄기의 파일 경로 자체는 위의 긴 규칙이 먼저 받는다
     list_alternative.sort(key=lambda item: -item[0])
     # 루트 기준 경로(`cmake/Modules/…`)는 바깥 경로 가운데(`emscripten/cmake/Modules/Platform/`)와 겹친다 — `낱말/` 뒤는 받지 않고 `${ROOT}/` 뒤만 받는다.
     # Source 기준은 `Source/Engine/…` 처럼 앞에 폴더가 붙는 것이 정상이라 그대로 둔다.
@@ -214,6 +242,14 @@ def check_path_rule_single_pass() -> None:
     text = "${CMAKE_SOURCE_DIR}/cmake/Modules/X.cmake emsdk/cmake/Modules/Platform/E.cmake cmake/Modules/Y.cmake"
     expected = "${CMAKE_SOURCE_DIR}/cmake/Toolchain/X.cmake emsdk/cmake/Modules/Platform/E.cmake cmake/Toolchain/Y.cmake"
     assert pattern.sub(replacement, text) == expected, pattern.sub(replacement, text)
+    pattern, replacement = make_path_rule({"Games/Old/G.cpp": "Games/New/G.cpp"}, [("Games/Old/", "Games/New/")])
+    text = "<item>Source/Games/Old</item> Games/Oldish Games/Old/G.cpp Engine Games/Old."
+    expected = "<item>Source/Games/New</item> Games/Oldish Games/New/G.cpp Engine Games/Old."   # 끝 `/` 없는 폴더 이름도, 더 긴 이름 · 문장 끝 점은 아니다
+    assert pattern.sub(replacement, text) == expected, pattern.sub(replacement, text)
+    pattern, replacement = make_path_rule({"Config/Server/Old.json": "Config/Server/New.json"}, [], root_base=True, list_stem=[("Config/Server/Old", "Config/Server/New")])
+    text = '"Config/Server/Old.json" "Config/Server/Old.online.json" "Config/Server/Old" Config/Server/Older.json'
+    expected = '"Config/Server/New.json" "Config/Server/New.online.json" "Config/Server/New" Config/Server/Older.json'   # 곁 이름 · 확장자 없는 이름
+    assert pattern.sub(replacement, text) == expected, pattern.sub(replacement, text)
 
 
 def main_move(argv: list[str]) -> int:
@@ -230,6 +266,7 @@ def main_move(argv: list[str]) -> int:
     map_file = expand_moves(source, args.pair)
     # 폴더 접두어는 옮기기 전에 잰다 — 옮긴 뒤에는 옛 폴더가 없어 규칙이 비고, 폴더 이동의 설정 · 문서 경로(`Source/X/Old/`)가 그대로 남았다.
     list_folder_prefix = folder_prefixes(args.pair, source)
+    list_stem = list_renamed_file_stem(source, map_file)
     if args.dry_run:
         for old, new in map_file.items():
             print(f"{old} -> {new}")
@@ -272,7 +309,7 @@ def main_move(argv: list[str]) -> int:
             folder.rmdir()
             folder = folder.parent
 
-    list_rule = [make_path_rule(map_file, list_folder_prefix, root_base=base_prefix == "")]
+    list_rule = [make_path_rule(map_file, list_folder_prefix, root_base=base_prefix == "", list_stem=list_stem)]
     # `@file` 은 최상위 폴더 없이 적은 곳도 있다(`@file Utility/X.h`).
     list_rule += [(re.compile(r"(@file\s+)" + re.escape(old.partition("/")[2]) + r"\b"), lambda match, new=new: match.group(1) + new) for old, new in map_file.items() if "/" in old]
     changed_cpp_set = {source / new for new in map_moved_text} | set(list_neighbour_text)

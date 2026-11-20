@@ -15,7 +15,8 @@
      — 언리얼 `[CoreRedirects]` PackageRedirects 의 접두 꼴. 함께 옮겨진 표의 `to` 는 새 팩 아래로 고친다.
   4. 팩 이름 바꾸기(`game/<옛>` → `game/<새>`)면 팩 이름이 든 이름도 함께: 골든 파일(`<Scenario name>.<이름>.<백엔드>…` — `AutomationGoldenUtil::makeGoldenID`)의
      `game.<옛>.` 접두, 글 파일(C++ · 파이썬 · CMake · JSON · XML) 속 시나리오 이름 `game.<옛>.`, 콘텐츠 경로 문자열 `game/<옛>/`, CTest 체인 이름
-     `Scenario.<옛>`(`Test/Scenario/CMakeLists.txt` 가 팩 이름으로 짓는다 — 격리 표 · 로그 이름), 따옴표로 감싼 도메인 `"game/<옛>"`(게임 프리셋 `_packRoot`)과 팩 줄기 `game_<옛>`.
+     `Scenario.<옛>`(`Test/Scenario/CMakeLists.txt` 가 팩 이름으로 짓는다 — 격리 표 · 로그 이름), 따옴표로 끝나는 도메인 `"game/<옛>"`(게임 프리셋 `_packRoot`), 팩 줄기 `game_<옛>`,
+     씬 청크 이름 `scene_<옛>_`, 대소문자 · 구분자가 다른 경로 `Game/<Old>/` · `Game\\<Old>/`(옛 이름의 대소문자 꼴을 새 이름에 옮긴다).
      정확한 접두만 바꾼다(앞 글자가 낱말 글자면 다른 낱말이다) — 일반 낱말 `Empty` 는 건드리지 않는다. 리다이렉트 표는 옛 id 를 적으려고 있어 건너뛴다.
   5. 작업 트리 전체를 검사해 끊어진 참조가 남았으면 알린다(실패 코드).
 `--resume` 은 파일 옮기기를 건너뛰고 2–5 만 다시 돈다 — 규칙을 넓힌 뒤 이미 옮긴 자리에 적용한다(바꾸기는 모두 정확한 접두라 두 번 돌아도 같다).
@@ -97,12 +98,28 @@ def rewrite_pack_strings(text: str, rename: PackRename) -> tuple[str, PackString
     text, count.path = path_pattern.subn(f"game/{rename.new_pack}/", text)
     chain_pattern = re.compile(r"(?<![A-Za-z0-9_.])Scenario\." + re.escape(rename.old_pack) + r"(?![A-Za-z0-9_])")
     text, count.chain = chain_pattern.subn(f"Scenario.{rename.new_pack}", text)
-    domain_pattern = re.compile(r"(?<=[\"'`])game/" + re.escape(rename.old_pack) + r"(?=[\"'`])")
+    domain_pattern = re.compile(r"(?<![A-Za-z0-9_.])game/" + re.escape(rename.old_pack) + r"(?=[\"'`])")   # `"game/<옛>"` · `".../Content/game/<옛>"`
     text, domain_count = domain_pattern.subn(f"game/{rename.new_pack}", text)
     stem_pattern = re.compile(r"(?<![A-Za-z0-9_])game_" + re.escape(rename.old_pack) + r"(?![A-Za-z0-9_])")
     text, stem_count = stem_pattern.subn(f"game_{rename.new_pack}", text)
-    count.domain = domain_count + stem_count
+    chunk_pattern = re.compile(r"(?<![A-Za-z0-9_])scene_" + re.escape(rename.old_pack) + "_")   # 씬 청크 이름 `scene_<팩>_<씬>`(`PackSceneChunkPlan::makeSceneChunkName`)
+    text, chunk_count = chunk_pattern.subn(f"scene_{rename.new_pack}_", text)
+    count.domain = domain_count + stem_count + chunk_count
+    # 대소문자 · 구분자가 다른 경로(`Game/Old/Maps` · `Game\\Old/` — 경로를 맞춤 꼴로 접는 테스트 자료)는 옛 이름의 대소문자 꼴을 새 이름에 옮긴다.
+    folded_pattern = re.compile(r"(?<![A-Za-z0-9_.])((?i:game)[/\\]+)(" + "".join(f"[{c.lower()}{c.upper()}]" if c.isalpha() else re.escape(c) for c in rename.old_pack)
+                                + r")(?=[/\\\"'`])")
+    text, folded_count = folded_pattern.subn(lambda match: match.group(1) + match_case(match.group(2), rename.new_pack), text)
+    count.path += folded_count
     return text, count
+
+
+def match_case(sample: str, name: str) -> str:
+    """@p name 을 @p sample 의 대소문자 꼴(모두 소문자 · 모두 대문자 · 첫 글자만 대문자)로."""
+    if sample.isupper():
+        return name.upper()
+    if sample[:1].isupper():
+        return name[:1].upper() + name[1:]
+    return name
 
 
 def is_pack_string_file(relative_path: str) -> bool:

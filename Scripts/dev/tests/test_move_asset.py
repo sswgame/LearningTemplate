@@ -67,6 +67,14 @@ class MoveAssetPackRenameTest(unittest.TestCase):
                                      '"_packRoot": "game/newpack"; `game/newpack`; game/oldpack.mesh; "game_newpack.pack"; mygame_oldpack; game_oldpackish\n'))
         self.assertEqual((count.chain, count.domain), (2, 3))
 
+    def test_folded_paths_content_folders_and_scene_chunks_change(self) -> None:
+        text = ('"Game/Oldpack/Maps/A.scene.xml" "Game\\\\Oldpack/" "GAME/OLDPACK/x" "D:/c/Content/game/oldpack" "scene_oldpack_alpha"\n'
+                '"Game/Oldpackish/x" "MyGame/Oldpack/x" "subscene_oldpack_alpha"\n')
+        rewritten, count = rewrite_pack_strings(text, RENAME)
+        self.assertEqual(rewritten, ('"Game/Newpack/Maps/A.scene.xml" "Game\\\\Newpack/" "GAME/NEWPACK/x" "D:/c/Content/game/newpack" "scene_newpack_alpha"\n'
+                                     '"Game/Oldpackish/x" "MyGame/Oldpack/x" "subscene_oldpack_alpha"\n'))   # 대소문자 꼴을 옮기고, 더 긴 이름 · 앞 낱말이 붙은 것은 두지 않는다
+        self.assertEqual((count.path, count.domain), (3, 2))
+
     def test_string_files_are_code_and_data_but_not_redirect_tables_or_docs(self) -> None:
         self.assertTrue(is_pack_string_file("Source/Engine/Content/Pack/Tests/TestPack.cpp"))
         self.assertTrue(is_pack_string_file("Scripts/net/net_pair_run.py"))
