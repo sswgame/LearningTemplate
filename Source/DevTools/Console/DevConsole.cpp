@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/DebugReplyLine.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
@@ -69,30 +70,37 @@ namespace sw
 
             static DevConsoleResult readVariable( GlobalVariableManager* pVariables, string_view name, string& outReply )
             {
-                GlobalVariableInfo* pInfo = pVariables != nullptr ? pVariables->findVariable( name ) : nullptr;
+                GlobalVariableInfo*                      pInfo = pVariables != nullptr ? pVariables->findVariable( name ) : nullptr;
+                StringBuilder<constant::buffer::kMax256> reply;
                 if ( pInfo == nullptr )
                 {
-                    outReply = "unknown variable: " + string( name );
+                    reply.appendFormat( "unknown variable: %#", name );
+                    outReply = string( reply.view() );
                     return DevConsoleResult::Failed;
                 }
-                outReply = string( name ) + " = " + pInfo->getValueAsString();
+                reply.appendFormat( "%# = %#", name, pInfo->getValueAsString() );
+                outReply = string( reply.view() );
                 return DevConsoleResult::Ok;
             }
 
             static DevConsoleResult writeVariable( GlobalVariableManager* pVariables, string_view name, string_view value, string& outReply )
             {
-                GlobalVariableInfo* pInfo = pVariables != nullptr ? pVariables->findVariable( name ) : nullptr;
+                GlobalVariableInfo*                      pInfo = pVariables != nullptr ? pVariables->findVariable( name ) : nullptr;
+                StringBuilder<constant::buffer::kMax256> reply;
                 if ( pInfo == nullptr )
                 {
-                    outReply = "unknown variable: " + string( name );
+                    reply.appendFormat( "unknown variable: %#", name );
+                    outReply = string( reply.view() );
                     return DevConsoleResult::Failed;
                 }
                 if ( pInfo->setValueFromString( value ) == false )
                 {
-                    outReply = "could not set " + string( name ) + " to '" + string( value ) + "'";
+                    reply.appendFormat( "could not set %# to '%#'", name, value );
+                    outReply = string( reply.view() );
                     return DevConsoleResult::Failed;
                 }
-                outReply = string( name ) + " = " + pInfo->getValueAsString();
+                reply.appendFormat( "%# = %#", name, pInfo->getValueAsString() );
+                outReply = string( reply.view() );
                 return DevConsoleResult::Ok;
             }
 
@@ -184,7 +192,9 @@ namespace sw
             return DevConsoleInternal::writeVariable( pVariables, head, DevConsoleInternal::joinFrom( listToken, 1 ), outReply );
         }
 
-        outReply = "unknown command: " + head + " (help lists the commands)";
+        StringBuilder<constant::buffer::kMax256> reply;
+        reply.appendFormat( "unknown command: %# (help lists the commands)", head );
+        outReply = string( reply.view() );
         return DevConsoleResult::UnknownCommand;
     }
 
@@ -207,7 +217,9 @@ namespace sw
             return DevConsoleResult::Ok;
         }
 
-        appendOutput( string( "> " ) + string( trimmed ), false );
+        StringBuilder<constant::buffer::kMax256> echo;
+        echo.appendFormat( "> %#", trimmed );
+        appendOutput( echo.view(), false );
         string                 reply;
         const DevConsoleResult result = execute( trimmed, reply );
         const bool             bError = result != DevConsoleResult::Ok;

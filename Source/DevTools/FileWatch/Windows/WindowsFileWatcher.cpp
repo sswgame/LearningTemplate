@@ -12,6 +12,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 namespace sw
 {
@@ -167,7 +169,11 @@ namespace sw
             if ( bResult == false )
             {
                 if ( _bIsWatching )
-                    reportWatchLost( string( "ReadDirectoryChangesW failed, error " ) + to_string( static_cast<uint32>( GetLastError() ) ) );
+                {
+                    fixed_string<constant::buffer::kMax128> reason;
+                    formatstring( reason.data(), reason.capacity(), "ReadDirectoryChangesW failed, error %#", static_cast<uint32>( GetLastError() ) );
+                    reportWatchLost( reason.view() );
+                }
                 _bIsWatching = false;
                 return;
             }
@@ -189,7 +195,9 @@ namespace sw
             // 멈추는 중이 아닌데 완료가 실패했다 — 감시 디렉터리가 지워졌거나 핸들이 무효다. 다시 걸어도 같은 실패가 되풀이된다.
             if ( bWait == false )
             {
-                reportWatchLost( string( "directory change completion failed, error " ) + to_string( static_cast<uint32>( GetLastError() ) ) );
+                fixed_string<constant::buffer::kMax128> reason;
+                formatstring( reason.data(), reason.capacity(), "directory change completion failed, error %#", static_cast<uint32>( GetLastError() ) );
+                reportWatchLost( reason.view() );
                 _bIsWatching = false;
                 return;
             }

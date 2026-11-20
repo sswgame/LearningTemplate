@@ -8,6 +8,7 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
@@ -72,13 +73,9 @@ namespace sw
                 return 2.0f * std::acos( cosHalf ) * MathUtil::kRadianToDegree;
             }
 
-            static void appendFloat3( string& outText, const float3& value )
+            static void appendFloat3( StringBuilder<constant::buffer::kMax4096>& outText, const float3& value )
             {
-                StringUtil::appendNumber( outText, value._x );
-                outText += ' ';
-                StringUtil::appendNumber( outText, value._y );
-                outText += ' ';
-                StringUtil::appendNumber( outText, value._z );
+                outText.append( value._x ).append( ' ' ).append( value._y ).append( ' ' ).append( value._z );
             }
 
             /** @brief 루트 씬 컴포넌트의 월드 위치 · 회전 · 히트박스(`getWorldBox`, 있으면)를 @p outPose 에 씁니다. */
@@ -187,28 +184,27 @@ namespace sw
 
     void ServerPoseOverlay::writePoses( const vector<AuthorityPose>& listPose, string& outText )
     {
-        outText.clear();
+        StringBuilder<constant::buffer::kMax4096> text;
         for ( const AuthorityPose& pose : listPose )
         {
-            outText += pose._name;
-            outText += ' ';
-            ServerPoseOverlayInternal::appendFloat3( outText, pose._position );
+            text.append( pose._name ).append( ' ' );
+            ServerPoseOverlayInternal::appendFloat3( text, pose._position );
             if ( pose._bHasRotation )
             {
-                outText += " rot ";
-                ServerPoseOverlayInternal::appendFloat3( outText, float3{ pose._rotation._x, pose._rotation._y, pose._rotation._z } );
-                outText += ' ';
-                StringUtil::appendNumber( outText, pose._rotation._w );
+                text.append( " rot " );
+                ServerPoseOverlayInternal::appendFloat3( text, float3{ pose._rotation._x, pose._rotation._y, pose._rotation._z } );
+                text.append( ' ' ).append( pose._rotation._w );
             }
             if ( pose._bHasBox )
             {
-                outText += " box ";
-                ServerPoseOverlayInternal::appendFloat3( outText, pose._boxCenter );
-                outText += ' ';
-                ServerPoseOverlayInternal::appendFloat3( outText, pose._boxHalfExtent );
+                text.append( " box " );
+                ServerPoseOverlayInternal::appendFloat3( text, pose._boxCenter );
+                text.append( ' ' );
+                ServerPoseOverlayInternal::appendFloat3( text, pose._boxHalfExtent );
             }
-            outText += '\n';
+            text.append( '\n' );
         }
+        outText = string( text.view() );
     }
 
     void ServerPoseOverlay::collectPoses( const GameObjectManager& manager, vector<AuthorityPose>& outListPose )
@@ -261,30 +257,16 @@ namespace sw
 
     void ServerPoseOverlay::writeReport( const vector<AuthorityDelta>& listDelta, string& outText )
     {
-        outText.clear();
+        StringBuilder<constant::buffer::kMax4096> text;
         for ( const AuthorityDelta& delta : listDelta )
         {
-            outText += delta._name;
-            outText += ' ';
-            StringUtil::appendNumber( outText, delta._distance );
-            outText += " local ";
-            StringUtil::appendNumber( outText, delta._local._x );
-            outText += ' ';
-            StringUtil::appendNumber( outText, delta._local._y );
-            outText += ' ';
-            StringUtil::appendNumber( outText, delta._local._z );
-            outText += " server ";
-            StringUtil::appendNumber( outText, delta._server._x );
-            outText += ' ';
-            StringUtil::appendNumber( outText, delta._server._y );
-            outText += ' ';
-            StringUtil::appendNumber( outText, delta._server._z );
-            outText += " angle ";
-            StringUtil::appendNumber( outText, delta._angleDegrees );
-            outText += " box ";
-            StringUtil::appendNumber( outText, delta._boxCenterDistance );
-            outText += '\n';
+            text.append( delta._name ).append( ' ' ).append( delta._distance ).append( " local " );
+            ServerPoseOverlayInternal::appendFloat3( text, delta._local );
+            text.append( " server " );
+            ServerPoseOverlayInternal::appendFloat3( text, delta._server );
+            text.append( " angle " ).append( delta._angleDegrees ).append( " box " ).append( delta._boxCenterDistance ).append( '\n' );
         }
+        outText = string( text.view() );
     }
 
     void ServerPoseOverlay::schedulePoll()
@@ -405,17 +387,11 @@ namespace sw
             if ( delta._distance <= ServerPoseOverlayInternal::kVisibleDistance && bAngleOff == false )
                 continue;
             queue.drawLine( delta._local, delta._server, errorColor, 0.0f, category );
-            string label = delta._name;
-            label += ' ';
-            StringUtil::appendNumber( label, delta._distance );
-            label += " m";
+            StringBuilder<constant::buffer::kMax256> label;
+            label.append( delta._name ).append( ' ' ).append( delta._distance ).append( " m" );
             if ( bAngleOff )
-            {
-                label += ' ';
-                StringUtil::appendNumber( label, delta._angleDegrees );
-                label += " deg";
-            }
-            queue.drawText( delta._server, label, errorColor, 0.0f, category );
+                label.append( ' ' ).append( delta._angleDegrees ).append( " deg" );
+            queue.drawText( delta._server, label.view(), errorColor, 0.0f, category );
         }
         ScopedLock<mutex> lock{ _mutex };
         _listDelta = listDelta;
@@ -433,16 +409,12 @@ namespace sw
             maxDistance = delta._distance > maxDistance ? delta._distance : maxDistance;
             maxAngle    = delta._angleDegrees > maxAngle ? delta._angleDegrees : maxAngle;
         }
-        outText = "authority ghost: ";
-        StringUtil::appendNumber( outText, static_cast<float32>( _listDelta.size() ) );
-        outText += " matched objects, max difference ";
-        StringUtil::appendNumber( outText, maxDistance );
-        outText += " m, max rotation difference ";
-        StringUtil::appendNumber( outText, maxAngle );
-        outText += " deg\n";
         string report;
         writeReport( _listDelta, report );
-        outText += report;
+        StringBuilder<constant::buffer::kMax4096> text;
+        text.append( "authority ghost: " ).append( static_cast<float32>( _listDelta.size() ) ).append( " matched objects, max difference " );
+        text.append( maxDistance ).append( " m, max rotation difference " ).append( maxAngle ).append( " deg\n" ).append( report );
+        outText = string( text.view() );
         return true;
     }
 

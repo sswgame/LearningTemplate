@@ -9,6 +9,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
@@ -29,7 +32,9 @@ namespace sw
             {
                 if ( path.empty() || AbsolutePath::isStrictAbsolute( path ) || path.front() == '/' || path.front() == '\\' )
                     return false;
-                return ( "/" + FileUtil::normalizeSeparators( path ) + "/" ).find( "/../" ) == string::npos;
+                StringBuilder<constant::buffer::kMax1024> wrapped;
+                wrapped.appendFormat( "/%#/", FileUtil::normalizeSeparators( path ) );
+                return wrapped.view().find( "/../" ) == string_view::npos;
             }
 
             static expected<void> validateOverwriteConfig( const AutomationStep& step )
@@ -48,7 +53,9 @@ namespace sw
                 string                                original;
                 if ( FileUtil::readTextFile( configPath, original ) == false )
                 {
-                    context.recordFailure( step, "no config file '" + configPath + "' to overwrite" );
+                    fixed_string<constant::buffer::kMax2048> message;
+                    formatstring( message.data(), message.capacity(), "no config file '%#' to overwrite", configPath );
+                    context.recordFailure( step, message.view() );
                     return true;
                 }
                 string text = original; // from 이 비면 바꾸지 않은 저장이다 — 감시가 같은 글을 다시 읽는다
@@ -57,14 +64,20 @@ namespace sw
                     const optional<AbsolutePath> sourcePath = engine::getSubsystem<AssetPaths>().findLooseFile( params._from );
                     if ( sourcePath.has_value() == false || FileUtil::readTextFile( sourcePath->str(), text ) == false )
                     {
-                        context.recordFailure( step, "no resource '" + params._from + "' to copy over the config" );
+                        fixed_string<constant::buffer::kMax2048> message;
+                        formatstring( message.data(), message.capacity(), "no resource '%#' to copy over the config", params._from );
+                        context.recordFailure( step, message.view() );
                         return true;
                     }
                 }
                 context.restoreFileAtEnd( configPath, std::move( original ) );
                 // 쓰기 게이트가 허락한 폴더(`Config/Editor`)만 써진다 — 그 밖은 게이트가 까닭을 남기고 쓰기가 진다.
                 if ( FileUtil::writeTextFile( configPath, text ) == false )
-                    context.recordFailure( step, "could not write '" + configPath + "' (the automation write gate opens only Config/Editor)" );
+                {
+                    fixed_string<constant::buffer::kMax2048> message;
+                    formatstring( message.data(), message.capacity(), "could not write '%#' (the automation write gate opens only Config/Editor)", configPath );
+                    context.recordFailure( step, message.view() );
+                }
                 return true;
             }
 

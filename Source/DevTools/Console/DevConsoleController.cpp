@@ -3,6 +3,7 @@
 #include "DevTools/Console/DevConsoleController.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/UTF8Util.h"
 
@@ -212,7 +213,9 @@ namespace sw
             outListLine.push_back( listOutput[index]._text );
             outListErrorFlag.push_back( listOutput[index]._bError );
         }
-        outListLine.push_back( "] " + _inputLine + "_" );
+        StringBuilder<constant::buffer::kMax256> inputLine;
+        inputLine.appendFormat( "] %#_", _inputLine );
+        outListLine.push_back( string( inputLine.view() ) );
         outListErrorFlag.push_back( SW_FALSE );
     }
 } // namespace sw

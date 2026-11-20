@@ -3,6 +3,7 @@
 #include "DevTools/AssetReload/ReloadTracker.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "DevTools/AssetReload/ReloadSource.h"
@@ -240,21 +241,21 @@ namespace sw
             if ( entry.isStale() )
                 ++stale;
         }
-        string text = "reload.status: " + to_string( static_cast<uint64>( listEntry.size() ) ) + " path(s), " + to_string( stale ) + " stale (running on previous values)";
+        StringBuilder<constant::buffer::kMax1024> text;
+        text.appendFormat( "reload.status: %# path(s), %# stale (running on previous values)", static_cast<uint64>( listEntry.size() ), stale );
         for ( const ReloadTrackerEntry& entry : listEntry )
         {
             if ( bStaleOnly && entry.isStale() == false )
                 continue;
-            text += "\n  ";
-            text += getSourceName( entry._source );
-            text += entry.isStale() ? " STALE " : " OK    ";
-            text += entry._path;
-            text += " attempts=" + to_string( entry._attemptCount ) + " failures=" + to_string( entry._failureCount );
-            text += entry._appliedSequence == 0 ? string( " applied=never" ) : " applied=#" + to_string( entry._appliedSequence );
+            text.appendFormat( "\n  %#%#%# attempts=%# failures=%#", getSourceName( entry._source ), entry.isStale() ? " STALE " : " OK    ", entry._path, entry._attemptCount, entry._failureCount );
+            if ( entry._appliedSequence == 0 )
+                text.append( " applied=never" );
+            else
+                text.appendFormat( " applied=#%#", entry._appliedSequence );
             if ( entry._reason.empty() == false )
-                text += " - " + entry._reason;
+                text.appendFormat( " - %#", entry._reason );
         }
-        return text;
+        return string( text.view() );
     }
 
     const utf8* ReloadTracker::getSourceName( ReloadSource source )

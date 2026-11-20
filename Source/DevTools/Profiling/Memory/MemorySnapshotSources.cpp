@@ -55,8 +55,8 @@ namespace sw
             /** @brief 기호를 푼 콜스택 여러 줄을 한 줄로 접습니다(표 칸 · CSV 칸 하나). 빈 줄과 앞뒤 공백은 버린다. */
             static string foldStackText( string_view stackText )
             {
-                string folded;
-                size_t start = 0;
+                StringBuilder<constant::buffer::kMax1024> folded;
+                size_t                                    start = 0;
                 while ( start <= stackText.size() )
                 {
                     size_t end = stackText.find( '\n', start );
@@ -65,13 +65,13 @@ namespace sw
                     const string_view line = StringUtil::trim( stackText.substr( start, end - start ) );
                     if ( line.empty() == false )
                     {
-                        if ( folded.empty() == false )
-                            folded += " < ";
-                        folded += line;
+                        if ( folded.view().empty() == false )
+                            folded.append( " < " );
+                        folded.append( line );
                     }
                     start = end + 1;
                 }
-                return folded;
+                return string( folded.view() );
             }
 
             /** @brief 형식 이름 하나의 수 · 바이트입니다(형식 시트의 한 줄). */
@@ -127,10 +127,9 @@ namespace sw
         }
         if ( _pGPUTracker != nullptr )
         {
-            snapshot._gpuDescription = _gpuBackendName;
-            snapshot._gpuDescription += " (";
-            snapshot._gpuDescription += RHIMemoryTracker::getSizeBasisName( _pGPUTracker->getSizeBasis() );
-            snapshot._gpuDescription += " size)";
+            StringBuilder<constant::buffer::kMax256> description;
+            description.appendFormat( "%# (%# size)", _gpuBackendName, RHIMemoryTracker::getSizeBasisName( _pGPUTracker->getSizeBasis() ) );
+            snapshot._gpuDescription = string( description.view() );
         }
         return snapshot;
     }

@@ -6,6 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -220,8 +222,9 @@ namespace sw
         for ( int32 npcIndex = 0; npcIndex < _schedule.getNPCCount(); ++npcIndex )
         {
             // 이름은 `Villager.<NPC id>` — 시나리오가 `Object.*` 감시 값의 target 으로 쓴다.
-            const string name      = "Villager." + string( _schedule.getNPCID( npcIndex ).c_str() );
-            GameObject*  pVillager = spawnPrefab( manager, _villagerPrefab, name.c_str() );
+            fixed_string<constant::buffer::kMax128> name;
+            formatstring( name.data(), name.capacity(), "Villager.%#", _schedule.getNPCID( npcIndex ).c_str() );
+            GameObject* pVillager = spawnPrefab( manager, _villagerPrefab, name.c_str() );
             if ( pVillager == nullptr )
                 continue;
             // 일정 NPC 정체는 이름이 아니라 칸으로 잇는다(디버그 HUD · 상호작용 끼어들기가 읽는다).

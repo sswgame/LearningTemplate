@@ -5,7 +5,10 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Programs/OnlineLoadBot/LoadBotRunner.h"
 
@@ -581,7 +584,9 @@ namespace sw
             }
             case LoadBotGameSession::State::Failed:
             {
-                finishStep( string( "game." ) + toString( _gameSession.getFailReason() ) );
+                fixed_string<constant::buffer::kMax64> errorKey;
+                formatstring( errorKey.data(), errorKey.capacity(), "game.%#", toString( _gameSession.getFailReason() ) );
+                finishStep( errorKey.view() );
                 return;
             }
             case LoadBotGameSession::State::Idle:
@@ -645,8 +650,12 @@ namespace sw
             {
                 if ( _tradeID != 0 )
                     (void)_tradeClient.cancel( _tradeID ); // 짝이 시한까지 기다리지 않게 닫는다
-                finishStep( reply._errorCode != 0 ? "code" + to_string( reply._errorCode )
-                                                  : "trade.result" + to_string( static_cast<int64>( reply._result ) ) );
+                fixed_string<constant::buffer::kMax64> errorKey;
+                if ( reply._errorCode != 0 )
+                    formatstring( errorKey.data(), errorKey.capacity(), "code%#", reply._errorCode );
+                else
+                    formatstring( errorKey.data(), errorKey.capacity(), "trade.result%#", static_cast<int64>( reply._result ) );
+                finishStep( errorKey.view() );
                 return;
             }
             if ( _tradeID == 0 )
@@ -660,7 +669,10 @@ namespace sw
         const bool bThisTrade = _tradeID != 0 && snapshot._tradeID == _tradeID && sideIndex.has_value();
         if ( bThisTrade && snapshot.isClosed() )
         {
-            finishStep( snapshot._state == TradeState::Settled ? string{} : "trade.closed" + to_string( static_cast<int64>( snapshot._closeReason ) ) );
+            fixed_string<constant::buffer::kMax64> errorKey;
+            if ( snapshot._state != TradeState::Settled )
+                formatstring( errorKey.data(), errorKey.capacity(), "trade.closed%#", static_cast<int64>( snapshot._closeReason ) );
+            finishStep( errorKey.view() );
             return;
         }
         if ( nowMs >= _waitUntilMs )
@@ -717,21 +729,25 @@ namespace sw
 
     string LoadBot::makeLoginName() const
     {
-        return "bot" + to_string( _pRunner->getScenario()._seed ) + "_" + to_string( _botIndex );
+        StringBuilder<constant::buffer::kMax64> name;
+        name.appendFormat( "bot%#_%#", _pRunner->getScenario()._seed, _botIndex );
+        return string( name.view() );
     }
 
     string LoadBot::makeGuildName() const
     {
-        return "lb" + to_string( _pRunner->getScenario()._seed ) + "_" + to_string( _botIndex );
+        StringBuilder<constant::buffer::kMax64> name;
+        name.appendFormat( "lb%#_%#", _pRunner->getScenario()._seed, _botIndex );
+        return string( name.view() );
     }
 
     string LoadBot::makeReceiptPayload( const string& productID )
     {
         // 가짜 스토어 영수증 `fake|<상품>|<거래 id>|ok` — 거래 id 는 실행마다(`getRunID`) · 봇마다 · 순번마다 달라 같은 계정이 다시 돌려도 새 지급이다
-        const string transactionID = "lb" + to_string( _pRunner->getRunID() ) + "." + to_string( _pRunner->getScenario()._seed ) + "." +
-                                     to_string( _botIndex ) + "." + to_string( _sendSequence );
+        StringBuilder<constant::buffer::kMax256> payload;
+        payload.appendFormat( "%#|%#|lb%#.%#.%#.%#|ok", LoadBotInternal::kFakeStoreName, productID, _pRunner->getRunID(), _pRunner->getScenario()._seed, _botIndex, _sendSequence );
         ++_sendSequence;
-        return string( LoadBotInternal::kFakeStoreName ) + "|" + productID + "|" + transactionID + "|ok";
+        return string( payload.view() );
     }
 
     void LoadBot::finishStep( string_view errorKey )
@@ -748,12 +764,16 @@ namespace sw
             return; // 내리는 중 · 늦게 온 응답
         if ( errorCode != 0 )
         {
-            finishStep( "code" + to_string( errorCode ) );
+            fixed_string<constant::buffer::kMax64> errorKey;
+            formatstring( errorKey.data(), errorKey.capacity(), "code%#", errorCode );
+            finishStep( errorKey.view() );
             return;
         }
         if ( result != 0 )
         {
-            finishStep( string( toString( _pendingAction ) ) + ".result" + to_string( result ) );
+            fixed_string<constant::buffer::kMax64> errorKey;
+            formatstring( errorKey.data(), errorKey.capacity(), "%#.result%#", toString( _pendingAction ), static_cast<int32>( result ) );
+            finishStep( errorKey.view() );
             return;
         }
         finishStep( string_view{} );
@@ -838,7 +858,9 @@ namespace sw
                 finishStep( string_view{} );
                 return;
             }
-            finishStep( "wait_match.outcome" + to_string( static_cast<int64>( assignment._result ) ) );
+            fixed_string<constant::buffer::kMax64> errorKey;
+            formatstring( errorKey.data(), errorKey.capacity(), "wait_match.outcome%#", static_cast<int64>( assignment._result ) );
+            finishStep( errorKey.view() );
             return;
         }
         if ( nowMs >= _waitUntilMs )

@@ -3,6 +3,9 @@
 #include "Games/Playground/KitDemo/TacticsSRPGDemoComponent.h"
 
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -207,7 +210,7 @@ namespace sw
     {
         _listEvent.clear();
         _field.pollEvents( _eventLease, _listEvent );
-        string cause; // 레벨 오름의 출처 — 같은 이벤트 묶음에서 그 앞의 명중 · 격파다(전장은 경험치를 그 자리에서 준다)
+        fixed_string<constant::buffer::kMax64> cause; // 레벨 오름의 출처 — 같은 이벤트 묶음에서 그 앞의 명중 · 격파다(전장은 경험치를 그 자리에서 준다)
         for ( const SRPGEvent& event : _listEvent )
         {
             if ( event._kind == SRPGEvent::Kind::Destroyed )
@@ -215,12 +218,16 @@ namespace sw
             else if ( event._kind == SRPGEvent::Kind::PhaseStarted )
                 SW_LOG_INFO_ID( "KitDemo.TacticsPhase", "[KitDemo] tactics: turn %# - %# phase", _field.getTurn(), static_cast<int32>( event._team ) );
             if ( event._kind == SRPGEvent::Kind::Hit )
-                cause = "hit unit " + to_string( event._other.value() );
+                formatstring( cause.data(), cause.capacity(), "hit unit %#", event._other.value() );
             else if ( event._kind == SRPGEvent::Kind::Destroyed )
-                cause = "destroyed unit " + to_string( event._unit.value() );
+                formatstring( cause.data(), cause.capacity(), "destroyed unit %#", event._unit.value() );
             const bool bLevelUp = event._kind == SRPGEvent::Kind::PilotLevelUp || event._kind == SRPGEvent::Kind::UnitLevelUp;
             if ( bLevelUp )
-                _growthLog.record( GrowthEventKind::LevelUp, "unit " + to_string( event._unit.value() ), event._kind == SRPGEvent::Kind::PilotLevelUp ? "pilot" : "unit", event._value, cause );
+            {
+                fixed_string<constant::buffer::kMax32> subject;
+                formatstring( subject.data(), subject.capacity(), "unit %#", event._unit.value() );
+                _growthLog.record( GrowthEventKind::LevelUp, subject.view(), event._kind == SRPGEvent::Kind::PilotLevelUp ? "pilot" : "unit", event._value, cause.view() );
+            }
         }
         if ( _field.countAlive( SRPGTeam::Enemy ) == 0 )
         {
@@ -325,16 +332,19 @@ namespace sw
         const vector<SRPGUnit>& listUnit = _field.getUnits();
         for ( size_t unitIndex = 0; unitIndex < listUnit.size(); ++unitIndex )
         {
-            const SRPGUnit& unit  = listUnit[unitIndex];
-            string          value = unit._pDef != nullptr ? string( unit._pDef->_id.c_str() ) : string( "?" );
-            value += unit._bAlive == SW_TRUE ? "" : " (down)";
-            value += " pilot Lv " + to_string( unit._pilotLevel.getLevel() ) + " xp " + to_string( unit._pilotLevel.getXP() );
+            const SRPGUnit&                          unit = listUnit[unitIndex];
+            StringBuilder<constant::buffer::kMax256> value;
+            value.append( unit._pDef != nullptr ? unit._pDef->_id.c_str() : "?" );
+            value.append( unit._bAlive == SW_TRUE ? "" : " (down)" );
+            value.appendFormat( " pilot Lv %# xp %#", unit._pilotLevel.getLevel(), unit._pilotLevel.getXP() );
             if ( _pCatalog != nullptr )
-                value += "/" + to_string( _pCatalog->getPilotCurve().getXPToNext( unit._pilotLevel.getLevel() ) );
-            value += ", unit Lv " + to_string( unit._unitLevel.getLevel() ) + " xp " + to_string( unit._unitLevel.getXP() );
+                value.appendFormat( "/%#", _pCatalog->getPilotCurve().getXPToNext( unit._pilotLevel.getLevel() ) );
+            value.appendFormat( ", unit Lv %# xp %#", unit._unitLevel.getLevel(), unit._unitLevel.getXP() );
             if ( _pCatalog != nullptr )
-                value += "/" + to_string( _pCatalog->getUnitCurve().getXPToNext( unit._unitLevel.getLevel() ) );
-            writer.addLine( "unit " + to_string( unitIndex ), value );
+                value.appendFormat( "/%#", _pCatalog->getUnitCurve().getXPToNext( unit._unitLevel.getLevel() ) );
+            fixed_string<constant::buffer::kMax32> label;
+            formatstring( label.data(), label.capacity(), "unit %#", unitIndex );
+            writer.addLine( label.view(), value.view() );
         }
         const uint32 used = static_cast<uint32>( listUnit.size() );
         _growthLog.writeDebugLines( writer, GameplayDebugTarget::kMaxLines > used ? GameplayDebugTarget::kMaxLines - used : 0u );

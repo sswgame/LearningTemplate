@@ -4,6 +4,7 @@
 
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
@@ -35,7 +36,11 @@ namespace sw
                 GameObject*                 pObject = engine::findActiveObject( hashed_string( objectName ) );
                 InventoryShopDemoComponent* pDemo   = pObject != nullptr ? pObject->getComponent<InventoryShopDemoComponent>() : nullptr;
                 if ( pDemo == nullptr || pDemo->isStarted() == false )
-                    outReply = "no object named '" + objectName + "' with a started InventoryShopDemoComponent";
+                {
+                    StringBuilder<constant::buffer::kMax256> reply;
+                    reply.appendFormat( "no object named '%#' with a started InventoryShopDemoComponent", objectName );
+                    outReply = string( reply.view() );
+                }
                 return pDemo != nullptr && pDemo->isStarted() ? pDemo : nullptr;
             }
 
