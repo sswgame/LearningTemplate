@@ -47,9 +47,22 @@ namespace sw
             {
             }
 
-            reference operator*() const { return *_pOwner->slotAt( _index ); }
-            pointer   operator->() const { return _pOwner->slotAt( _index ); }
-            reference operator[]( difference_type offset ) const { return *_pOwner->slotAt( _index + offset ); }
+            // 끝 · 앞을 넘은 반복자를 역참조하면 링이 마스크로 감겨 남의 원소를 조용히 읽는다 — 개발 구성에서 알린다
+            reference operator*() const
+            {
+                SW_CHECK_INDEX( _index, _pOwner->_size );
+                return *_pOwner->slotAt( _index );
+            }
+            pointer operator->() const
+            {
+                SW_CHECK_INDEX( _index, _pOwner->_size );
+                return _pOwner->slotAt( _index );
+            }
+            reference operator[]( difference_type offset ) const
+            {
+                SW_CHECK_INDEX( static_cast<difference_type>( _index ) + offset, _pOwner->_size );
+                return *_pOwner->slotAt( _index + offset );
+            }
 
             Iterator& operator++()
             {
@@ -239,56 +252,58 @@ namespace sw
         reference at( size_type pos )
         {
             SW_SCOPED_RACE_WRITE();
-            SW_ASSERT( pos < _size );
+            SW_CHECK_INDEX( pos, _size );
             return *slotAt( pos );
         }
 
         const_reference at( size_type pos ) const
         {
             SW_SCOPED_RACE_READ();
-            SW_ASSERT( pos < _size );
+            SW_CHECK_INDEX( pos, _size );
             return *slotAt( pos );
         }
 
-        /** @brief pos 위치의 원소를 반환합니다(범위 검사 없음). */
+        /** @brief pos 위치의 원소를 반환합니다(범위는 개발 구성에서만 확인). */
         reference operator[]( size_type pos )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX( pos, _size );
             return *slotAt( pos );
         }
 
-        /** @brief pos 위치의 원소를 반환합니다(범위 검사 없음). */
+        /** @brief pos 위치의 원소를 반환합니다(범위는 개발 구성에서만 확인). */
         const_reference operator[]( size_type pos ) const
         {
             SW_SCOPED_RACE_READ();
+            SW_CHECK_INDEX( pos, _size );
             return *slotAt( pos );
         }
 
         reference front()
         {
             SW_SCOPED_RACE_WRITE();
-            SW_ASSERT( _size > 0 );
+            SW_CHECK_INDEX( 0, _size );
             return *slotAt( 0 );
         }
 
         const_reference front() const
         {
             SW_SCOPED_RACE_READ();
-            SW_ASSERT( _size > 0 );
+            SW_CHECK_INDEX( 0, _size );
             return *slotAt( 0 );
         }
 
         reference back()
         {
             SW_SCOPED_RACE_WRITE();
-            SW_ASSERT( _size > 0 );
+            SW_CHECK_INDEX( 0, _size );
             return *slotAt( _size - 1 );
         }
 
         const_reference back() const
         {
             SW_SCOPED_RACE_READ();
-            SW_ASSERT( _size > 0 );
+            SW_CHECK_INDEX( 0, _size );
             return *slotAt( _size - 1 );
         }
 
@@ -397,7 +412,7 @@ namespace sw
         void pop_back()
         {
             SW_SCOPED_RACE_WRITE();
-            SW_ASSERT( _size > 0 );
+            SW_CHECK_INDEX( 0, _size );
             if ( _size == 0 )
                 return;
             --_size;
@@ -407,7 +422,7 @@ namespace sw
         void pop_front()
         {
             SW_SCOPED_RACE_WRITE();
-            SW_ASSERT( _size > 0 );
+            SW_CHECK_INDEX( 0, _size );
             if ( _size == 0 )
                 return;
             AllocTraits::destroy( _allocator, _pData + _head );
@@ -442,7 +457,7 @@ namespace sw
         iterator emplace( const_iterator pos, Args&&... args )
         {
             const size_t index = pos._index;
-            SW_ASSERT( index <= _size );
+            SW_CHECK_INDEX_OR_END( index, _size );
             if ( index == 0 )
             {
                 emplace_front( std::forward<Args>( args )... );
@@ -465,7 +480,8 @@ namespace sw
             SW_SCOPED_RACE_WRITE();
             const size_t index = first._index;
             const size_t count = last._index - first._index;
-            SW_ASSERT( index <= _size && last._index <= _size && first._index <= last._index );
+            SW_CHECK_INDEX_OR_END( last._index, _size );        // erase( end() ) 는 last 가 끝 + 1 이 되어 여기서 걸린다
+            SW_CHECK_INDEX_OR_END( first._index, last._index ); // 뒤집힌 쌍
             if ( index > _size || last._index > _size || last._index < first._index || count == 0 )
                 return iterator( this, index );
 
@@ -525,7 +541,7 @@ namespace sw
         }
 
     private:
-        /** @brief 앞에서 @p index 번째 슬롯입니다. 용량은 2 의 거듭제곱이라 나머지 대신 마스크다. */
+        /** @brief 앞에서 @p index 번째 슬롯입니다(무검사 — 공개 입구가 `SW_CHECK_INDEX` 로 확인한 뒤, 또는 끝 너머 빈 슬롯을 만들 때 부른다). 용량은 2 의 거듭제곱이라 나머지 대신 마스크다. */
         T*       slotAt( size_t index ) { return _pData + ( ( _head + index ) & ( _capacity - 1 ) ); }
         const T* slotAt( size_t index ) const { return _pData + ( ( _head + index ) & ( _capacity - 1 ) ); }
 
@@ -565,7 +581,7 @@ namespace sw
         iterator insertGap( size_t index, size_t count, TSource&& source )
         {
             SW_SCOPED_RACE_WRITE();
-            SW_ASSERT( index <= _size );
+            SW_CHECK_INDEX_OR_END( index, _size );
             if ( index > _size )
                 index = _size;
             if ( count == 0 )

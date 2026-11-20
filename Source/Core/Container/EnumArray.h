@@ -7,6 +7,7 @@
  *          열거자 수는 끝 열거자 `Count` 에서 읽는다(리플렉션도 같은 끝 열거자를 센티널로 본다). `Count` 가 없는 열거형은 `EnumCount<E>` 를 특수화한다.
  */
 #pragma once
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include <type_traits>
@@ -98,8 +99,16 @@ namespace sw
 
         constexpr EnumArray() = default;
 
-        [[nodiscard]] constexpr T&       operator[]( E key ) noexcept { return _arrValue[static_cast<size_t>( key )]; }
-        [[nodiscard]] constexpr const T& operator[]( E key ) const noexcept { return _arrValue[static_cast<size_t>( key )]; }
+        [[nodiscard]] constexpr T& operator[]( E key ) noexcept
+        {
+            SW_CHECK_INDEX( key, kSize ); // `Count` 같은 끝 표식 · 정수에서 바꾼 값이 칸을 넘는다
+            return _arrValue[static_cast<size_t>( key )];
+        }
+        [[nodiscard]] constexpr const T& operator[]( E key ) const noexcept
+        {
+            SW_CHECK_INDEX( key, kSize );
+            return _arrValue[static_cast<size_t>( key )];
+        }
 
         [[nodiscard]] static constexpr size_t size() noexcept { return kSize; }
         [[nodiscard]] constexpr T*            data() noexcept { return _arrValue; }

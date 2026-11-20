@@ -233,6 +233,16 @@ namespace sw::internal
         }
         return true;
     }
+
+    bool reportIndexOutOfRange( const utf8* pExpression, size_t index, size_t size, const utf8* pFile, int32 line ) noexcept
+    {
+        utf8 arrMessage[kLowLevelMessageCapacity];
+        formatLowLevelMessage( arrMessage, kLowLevelMessageCapacity, "index %zu out of range (size %zu)", index, size );
+        // `printAssertFailure` 와 같은 꼴로 stderr 에만 동기로 남긴다 — 멈추기 전에 글이 남아야 하고, 로그로 보내지 않는 것도 `SW_ASSERT` 와 같다.
+        std::fprintf( stderr, "\n[SW_CHECK_INDEX] %s: %s\n  at %s:%d\n", pExpression, arrMessage, pFile, line );
+        std::fflush( stderr );
+        return tryCaptureAssert() == false && shouldBreakOnAssert( pExpression, arrMessage, pFile, line );
+    }
 } // namespace sw::internal
 #endif
 

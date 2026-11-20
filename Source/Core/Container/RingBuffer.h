@@ -65,7 +65,7 @@ namespace sw
         /** @brief 가장 오래된 값을 뺍니다. 비어 있으면 부르지 않습니다. */
         void popFront()
         {
-            SW_ASSERT( _count > 0 );
+            SW_CHECK_INDEX( 0, _count );
             _head = ( _head + 1 ) & kMask;
             --_count;
         }
@@ -80,12 +80,12 @@ namespace sw
         /** @brief @p index 번째 값입니다. 0 이 가장 오래된 값, `size() - 1` 이 가장 새 값입니다. */
         T& operator[]( uint32 index )
         {
-            SW_ASSERT( index < _count );
+            SW_CHECK_INDEX( index, _count );
             return _arrItem[( _head + index ) & kMask];
         }
         const T& operator[]( uint32 index ) const
         {
-            SW_ASSERT( index < _count );
+            SW_CHECK_INDEX( index, _count );
             return _arrItem[( _head + index ) & kMask];
         }
         T&       front() { return ( *this )[0]; }

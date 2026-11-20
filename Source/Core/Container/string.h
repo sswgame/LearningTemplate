@@ -181,41 +181,47 @@ namespace sw
             return Base::at( pos );
         }
 
-        /** @brief pos 위치의 문자를 반환합니다(범위 검사 없음). */
+        /** @brief pos 위치의 문자를 반환합니다(범위는 개발 구성에서만 확인). */
         reference operator[]( size_type pos )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX_OR_END( pos, Base::size() ); // 끝 자리(널 문자)까지 읽을 수 있다(std 와 같다)
             return Base::operator[]( pos );
         }
 
-        /** @brief pos 위치의 문자를 반환합니다(범위 검사 없음). */
+        /** @brief pos 위치의 문자를 반환합니다(범위는 개발 구성에서만 확인). */
         const_reference operator[]( size_type pos ) const
         {
             SW_SCOPED_RACE_READ();
+            SW_CHECK_INDEX_OR_END( pos, Base::size() ); // 끝 자리(널 문자)까지 읽을 수 있다(std 와 같다)
             return Base::operator[]( pos );
         }
 
         reference front()
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX( 0, Base::size() );
             return Base::front();
         }
 
         const_reference front() const
         {
             SW_SCOPED_RACE_READ();
+            SW_CHECK_INDEX( 0, Base::size() );
             return Base::front();
         }
 
         reference back()
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX( 0, Base::size() );
             return Base::back();
         }
 
         const_reference back() const
         {
             SW_SCOPED_RACE_READ();
+            SW_CHECK_INDEX( 0, Base::size() );
             return Base::back();
         }
 
@@ -401,12 +407,14 @@ namespace sw
         iterator insert( const_iterator pos, CharT ch )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX_OR_END( pos - Base::cbegin(), Base::size() );
             return Base::insert( pos, ch );
         }
 
         iterator insert( const_iterator pos, size_type count, CharT ch )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX_OR_END( pos - Base::cbegin(), Base::size() );
             return Base::insert( pos, count, ch );
         }
 
@@ -414,12 +422,14 @@ namespace sw
         iterator insert( const_iterator pos, InputIt first, InputIt last )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX_OR_END( pos - Base::cbegin(), Base::size() );
             return Base::insert( pos, first, last );
         }
 
         iterator insert( const_iterator pos, std::initializer_list<CharT> ilist )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX_OR_END( pos - Base::cbegin(), Base::size() );
             return Base::insert( pos, ilist );
         }
 
@@ -433,12 +443,15 @@ namespace sw
         iterator erase( const_iterator pos )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX( pos - Base::cbegin(), Base::size() );
             return Base::erase( pos );
         }
 
         iterator erase( const_iterator first, const_iterator last )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX_OR_END( last - Base::cbegin(), Base::size() );
+            SW_CHECK_INDEX_OR_END( first - Base::cbegin(), last - Base::cbegin() );
             return Base::erase( first, last );
         }
 
@@ -451,6 +464,7 @@ namespace sw
         void pop_back()
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX( 0, Base::size() );
             Base::pop_back();
         }
 

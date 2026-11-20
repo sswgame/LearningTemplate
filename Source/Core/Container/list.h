@@ -145,24 +145,28 @@ namespace sw
         reference front()
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX( 0, Base::size() );
             return Base::front();
         }
 
         const_reference front() const
         {
             SW_SCOPED_RACE_READ();
+            SW_CHECK_INDEX( 0, Base::size() );
             return Base::front();
         }
 
         reference back()
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX( 0, Base::size() );
             return Base::back();
         }
 
         const_reference back() const
         {
             SW_SCOPED_RACE_READ();
+            SW_CHECK_INDEX( 0, Base::size() );
             return Base::back();
         }
 
@@ -308,6 +312,7 @@ namespace sw
         iterator erase( const_iterator pos )
         {
             SW_SCOPED_RACE_WRITE();
+            SW_ASSERT( pos != Base::cend() ); // 양방향 반복자라 위치 번호 대신 끝만 막는다
             return Base::erase( pos );
         }
 
@@ -339,6 +344,7 @@ namespace sw
         void pop_back()
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX( 0, Base::size() );
             Base::pop_back();
         }
 
@@ -364,6 +370,7 @@ namespace sw
         void pop_front()
         {
             SW_SCOPED_RACE_WRITE();
+            SW_CHECK_INDEX( 0, Base::size() );
             Base::pop_front();
         }
 

@@ -107,6 +107,7 @@ namespace sw
             : _pData{ pFirst }
             , _size{ static_cast<size_type>( pLast - pFirst ) }
         {
+            SW_ASSERT( pFirst <= pLast ); // 뒤집힌 쌍은 음수 차가 거대한 크기로 바뀐다
         }
 
         /** @brief C 배열 전체를 가리킵니다. */
@@ -150,24 +151,24 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 원소 접근
         // ------------------------------------------------------------------------------
-        /** @brief `index` 번째 원소입니다. 범위는 Debug 에서만 확인합니다. */
+        /** @brief `index` 번째 원소입니다. 범위는 개발 구성(SW_DO_CHECKS)에서만 확인합니다. */
         [[nodiscard]] constexpr reference operator[]( size_type index ) const noexcept
         {
-            SW_ASSERT( index < _size );
+            SW_CHECK_INDEX( index, _size );
             return _pData[index];
         }
 
         /** @brief 첫 원소입니다. 빈 뷰에 부르면 안 됩니다. */
         [[nodiscard]] constexpr reference front() const noexcept
         {
-            SW_ASSERT( _size > 0 );
+            SW_CHECK_INDEX( 0, _size );
             return _pData[0];
         }
 
         /** @brief 마지막 원소입니다. 빈 뷰에 부르면 안 됩니다. */
         [[nodiscard]] constexpr reference back() const noexcept
         {
-            SW_ASSERT( _size > 0 );
+            SW_CHECK_INDEX( 0, _size );
             return _pData[_size - 1];
         }
 
@@ -198,22 +199,23 @@ namespace sw
         /** @brief 앞의 `count` 개입니다. */
         [[nodiscard]] constexpr span first( size_type count ) const noexcept
         {
-            SW_ASSERT( count <= _size );
+            SW_CHECK_INDEX_OR_END( count, _size );
             return span( _pData, count );
         }
 
         /** @brief 뒤의 `count` 개입니다. */
         [[nodiscard]] constexpr span last( size_type count ) const noexcept
         {
-            SW_ASSERT( count <= _size );
+            SW_CHECK_INDEX_OR_END( count, _size );
             return span( _pData + ( _size - count ), count );
         }
 
         /** @brief `offset` 부터 `count` 개입니다. `count` 가 `dynamic_extent` 면 끝까지입니다. */
         [[nodiscard]] constexpr span subspan( size_type offset, size_type count = dynamic_extent ) const noexcept
         {
-            SW_ASSERT( offset <= _size );
-            SW_ASSERT( count == dynamic_extent || count <= _size - offset );
+            SW_CHECK_INDEX_OR_END( offset, _size );
+            if ( count != dynamic_extent )
+                SW_CHECK_INDEX_OR_END( count, _size - offset );
             return span( _pData + offset, ( count == dynamic_extent ) ? ( _size - offset ) : count );
         }
 
