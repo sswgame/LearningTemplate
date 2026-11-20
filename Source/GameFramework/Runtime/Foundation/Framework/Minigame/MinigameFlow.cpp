@@ -2,10 +2,13 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -171,6 +174,28 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `Minigame.LeaveAssetCacheBytes` 입니다 — 마지막으로 나온 순간의 에셋 캐시 바이트 추정 합(되풀이해 느는지 본다). */
+            [[nodiscard]] static bool readLeaveAssetCacheBytes( const GameObjectManager* pObjects, float64& outValue )
+            {
+                (void)pObjects;
+                const MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
+                if ( pFlow == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pFlow->getLeaveAssetCacheBytes() );
+                return true;
+            }
+
+            /** @brief 감시 값 `Minigame.LeaveHeapBytes` 입니다 — 마지막으로 나온 순간의 힙 바이트(되풀이해 느는지 본다). */
+            [[nodiscard]] static bool readLeaveHeapBytes( const GameObjectManager* pObjects, float64& outValue )
+            {
+                (void)pObjects;
+                const MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
+                if ( pFlow == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pFlow->getLeaveHeapBytes() );
+                return true;
+            }
+
             /** @brief 감시 값 `Minigame.Depth` 입니다 — 쌓인 칸 수(켜진 미니게임 + 덮인 미니게임). */
             [[nodiscard]] static bool readDepth( const GameObjectManager* pObjects, float64& outValue )
             {
@@ -198,6 +223,8 @@ namespace sw
         , _sceneLoadRequested{}
         , _leakCount{ 0 }
         , _restoreCount{ 0 }
+        , _leaveAssetCacheBytes{ 0 }
+        , _leaveHeapBytes{ 0 }
         , _bEntering{ SW_FALSE }
         , _bRequestingScene{ SW_FALSE }
     {
@@ -573,8 +600,31 @@ namespace sw
             (void)subLevels.removeSubLevel( returnPoint._subLevelName.view() ); // 방금 찾은 이름이다
     }
 
+    void MinigameFlow::sampleLeaveMemory()
+    {
+        // 나올 때마다 한 번 — 캐시마다 에셋 줄을 모아 더한다(프레임 길이 아니다).
+        uint64              cacheBytes    = 0;
+        const AssetManager* pAssetManager = game::findSubsystem<AssetManager>();
+        if ( pAssetManager != nullptr )
+        {
+            vector<AssetMemoryEntry> listEntry;
+            for ( const AssetCacheBase* pCache : pAssetManager->getAllAssetCache() )
+            {
+                pCache->collectMemoryEntries( listEntry );
+            }
+            for ( const AssetMemoryEntry& entry : listEntry )
+            {
+                cacheBytes += entry._cpuBytes + entry._gpuBytes;
+            }
+        }
+        _leaveAssetCacheBytes           = cacheBytes;
+        const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+        _leaveHeapBytes                 = pProfiler != nullptr ? pProfiler->getLiveAllocatedBytes() : MemoryProfiler::getPlatformHeapBytes();
+    }
+
     void MinigameFlow::deliverResult( const MinigameResult& result )
     {
+        sampleLeaveMemory(); // 끈 범위 · 뺀 하위 레벨 · 돌아간 씬이 선 뒤다 — 모든 나오기 길이 여기를 지난다
         _lastResult = result;
         SW_LOG_INFO_ID( "MinigameFlow.Finished", "Minigame '%#' finished (result '%#')", result._minigame.c_str(), result._resultName.c_str() );
         _onFinished.broadcast( result );
@@ -707,4 +757,9 @@ namespace sw
                          &MinigameFlowInternal::readLeakCount );
     SW_AUTOMATION_WATCH( minigameRestoreCount, "Minigame.RestoreCount", "Times the scene captured before a scene-switch minigame was restored on leaving", &MinigameFlowInternal::readRestoreCount );
     SW_AUTOMATION_WATCH( minigameDepth, "Minigame.Depth", "Stacked minigames (the active one and the ones it covers)", &MinigameFlowInternal::readDepth );
+    SW_AUTOMATION_WATCH( minigameLeaveAssetCacheBytes, "Minigame.LeaveAssetCacheBytes",
+                         "Estimated bytes held by the asset caches when the last minigame was left (repeat enter and leave to see whether it grows)", &MinigameFlowInternal::readLeaveAssetCacheBytes );
+    SW_AUTOMATION_WATCH( minigameLeaveHeapBytes, "Minigame.LeaveHeapBytes",
+                         "Heap bytes when the last minigame was left: live sw allocator bytes with the memory profiler, else the platform heap (0 where it cannot be measured)",
+                         &MinigameFlowInternal::readLeaveHeapBytes );
 } // namespace sw
