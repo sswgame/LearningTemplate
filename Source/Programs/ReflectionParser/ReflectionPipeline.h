@@ -16,6 +16,15 @@ namespace sw
     struct ParserOptions;
     struct ParserSession;
 
+    /** @brief 파서 실행의 단계입니다(단계별 시간 로그 `ReflectionParser.PhaseTime`). */
+    enum class ParsePhase : uint8
+    {
+        Parse, ///< clang 이 번역 단위를 만든다(공통 include 가 거의 전부)
+        Visit, ///< AST 를 돌며 리플렉션 사실을 모은다
+        Emit,  ///< 코드젠 · 산출물 쓰기 · 스탬프
+        Count,
+    };
+
     class ReflectionPipeline
     {
     public:
@@ -78,6 +87,13 @@ namespace sw
         [[nodiscard]] bool writeAssetFieldList() const;
         /** @brief 이번 실행이 만든 `.gen.cpp` 바이트를 방출 함수 구역마다 로그 `ReflectionParser.EmitBytes` 한 줄로 남깁니다(만든 것이 없으면 남기지 않는다). */
         void logEmitBytes() const;
+        /**
+         * @brief 단계마다 걸린 시간을 로그 `ReflectionParser.PhaseTime` 한 줄로 남깁니다(파싱한 입력이 없으면 남기지 않는다).
+         * @details 재는 장치만이다 — 공통 include 의 PCH(파서 시간이 문턱을 넘을 때)를 판정할 근거다. 헤더마다 다시 파싱하는 길은 워커 시간을 더한 값이다.
+         */
+        void logPhaseTimes( size_t parsedCount ) const;
+        /** @brief @p phase 에 걸린 시간을 더합니다(워커가 함께 부른다). */
+        void addPhaseTime( ParsePhase phase, float32 seconds ) const;
         /** @brief 대상의 `.gen.cpp` 들에서 고정 배치형 정규 문자열 줄을 모아 `FixedSchemas.gen.txt` 를 씁니다. */
         [[nodiscard]] bool writeFixedSchemaList() const;
 
@@ -89,5 +105,7 @@ namespace sw
         vector<string>       _listIncludePath; ///< 출력 디렉터리가 맨 앞이다(생성 헤더를 include 하는 원본이 있다)
         /// @brief 방출 함수 구역마다 낸 바이트의 합입니다. 헤더마다 워커가 더한다(`parseEachInParallel`).
         mutable std::array<atomic<uint64>, static_cast<size_t>( CodeEmitSection::Count )> _arrEmitBytes;
+        /// @brief 단계마다 걸린 시간의 합(마이크로초)입니다.
+        mutable std::array<atomic<uint64>, static_cast<size_t>( ParsePhase::Count )> _arrPhaseMicroseconds;
     };
 } // namespace sw
