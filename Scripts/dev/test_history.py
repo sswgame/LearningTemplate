@@ -52,7 +52,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.exit_code import ExitCode  # noqa: E402
 from common.git import run_git, run_git_or_raise  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.paths import get_build_dir, get_project_root  # noqa: E402
 from common.run_process import ProcessResult, run_process  # noqa: E402
 
 DEFAULT_DATABASE = Path("Saved") / "TestHistory" / "history.sqlite"
@@ -608,7 +608,7 @@ def decide_changed(list_row: Sequence[ChangedRow], list_recorded: Sequence[str],
 
 
 def run_changed(project_root: Path, preset: str, base: str) -> int:
-    build_dir = project_root / "build" / preset
+    build_dir = get_build_dir(preset, project_root)
     if not build_dir.is_dir():
         print(f"[Changed] {build_dir} 가 없다 — 빌드 뒤에 돈다")
         print("CHANGED_FAILED")

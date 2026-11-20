@@ -35,7 +35,25 @@ namespace sw::editor
         const GameObject* pOwner = component.getOwner();
         string            label  = pOwner != nullptr ? string( pOwner->getName().c_str() ) : string();
         label += " / ";
-        label += ComponentStableKey::makeLegacyKey( &component ); // 표시 글이다 — 사람이 읽는 "타입#순번"(유니티 "이름 (타입)"). 정체는 핸들이 맡고, 고정 지역 id 키(`#16진`)는 읽을 수 없다
+        // 표시 글이다 — 사람이 읽는 "이름#순번"(유니티 "이름 (타입)"). 정체는 핸들이 맡고, 고정 지역 id 키(`#16진`)는 읽을 수 없다.
+        const string_view baseName   = ComponentStableKey::getBaseName( &component );
+        int32             occurrence = 0;
+        bool              bFound     = false;
+        if ( pOwner != nullptr )
+        {
+            pOwner->forEachComponent( [&]( const Component* pOther )
+            {
+                if ( bFound || pOther == nullptr || ComponentStableKey::getBaseName( pOther ) != baseName )
+                    return;
+                if ( pOther == &component )
+                    bFound = true;
+                else
+                    ++occurrence;
+            } );
+        }
+        label.append( baseName.data(), baseName.size() );
+        label += '#';
+        label += to_string( occurrence );
         return label;
     }
 

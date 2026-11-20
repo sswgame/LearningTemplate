@@ -127,7 +127,7 @@ namespace sw
         [[nodiscard]] ReloadResult reload( const AssetID& assetID );
         /**
          * @brief 프리팹 @p assetRelativePath 의 칸이 어디서 왔는지 변형 사슬을 따라 찾습니다. "이 칸이 어디서 왔나" 의 답이고 인스펙터 같은 도구가 묻습니다.
-         * @param componentKey 컴포넌트 키(`이름#n`)입니다. 비면 오브젝트 자기 칸입니다.
+         * @param componentKey 컴포넌트 지역 id 키(`#<16진>`)입니다. 비면 오브젝트 자기 칸입니다.
          * @return 그 칸을 마지막으로 적은 프리팹 경로입니다(변형이 아니거나 어느 변형도 적지 않았으면 사슬 맨 위 프리팹). 읽지 못하면 빈 글입니다.
          */
         [[nodiscard]] string findFieldOrigin( string_view assetRelativePath, string_view componentKey, string_view fieldName );

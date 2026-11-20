@@ -9,7 +9,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,1.6,-6"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.6,-6"
 					                 _localRotation="0,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -27,7 +27,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="0.628882,0.93002,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -45,7 +45,7 @@
 		<entity id="3" name="Wall">
 			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,1.6,3"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.6,3"
 					               _localRotation="-1.5708,0,0"
 					               _localScale="12,1,12"
 					               _attachOwner="None"
@@ -60,7 +60,7 @@
 		<entity id="4" name="Lens">
 			<GameObject _schemaVersion="0" _name="Lens" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,1.6,-2"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.6,-2"
 					               _localRotation="0,0,0"
 					               _localScale="1.5,1.5,1.5"
 					               _attachOwner="None"

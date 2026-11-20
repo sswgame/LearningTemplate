@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="SkeletonAxe">
 	<GameObject _schemaVersion="0" _name="SkeletonAxe" _bActive="true">
 		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
@@ -15,7 +15,7 @@
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<RigidBodyComponent _componentName="RigidBodyComponent"
+			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 			                    _bActive="true"
 			                    _localPosition="0,0,0"
 			                    _localRotation="0,0,0"

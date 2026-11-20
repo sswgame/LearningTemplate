@@ -30,7 +30,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,1.6,-6"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.6,-6"
 					                 _localRotation="0.15,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -48,7 +48,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="0.628882,0.93002,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -65,7 +65,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,2"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,2"
 					               _localRotation="0,0,0"
 					               _localScale="16,1,16"
 					               _attachOwner="None"
@@ -79,7 +79,7 @@
 		<entity id="4" name="LeftCube">
 			<GameObject _schemaVersion="0" _name="LeftCube" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-2.6,0.75,1.5"
+					<MeshComponent _localID="163493842152903304" _localPosition="-2.6,0.75,1.5"
 					               _localRotation="0,0.5,0"
 					               _localScale="1.5,1.5,1.5"
 					               _attachOwner="None"
@@ -93,7 +93,7 @@
 		<entity id="5" name="RightCube">
 			<GameObject _schemaVersion="0" _name="RightCube" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="2.6,1,3"
+					<MeshComponent _localID="163493842152903304" _localPosition="2.6,1,3"
 					               _localRotation="0,-0.4,0"
 					               _localScale="2,2,2"
 					               _attachOwner="None"
@@ -107,7 +107,7 @@
 		<entity id="6" name="DitherCube">
 			<GameObject _schemaVersion="0" _name="DitherCube" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,1,0"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1,0"
 					               _localRotation="0,0,0"
 					               _localScale="2,2,2"
 					               _attachOwner="None"
@@ -121,7 +121,7 @@
 		<entity id="7" name="GrayBox" layers="Volume">
 			<GameObject _schemaVersion="0" _name="GrayBox" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,1.6,-6"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,1.6,-6"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -141,7 +141,7 @@
 		<entity id="8" name="VividWorld" layers="Volume">
 			<GameObject _schemaVersion="0" _name="VividWorld" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -161,7 +161,7 @@
 		<entity id="9" name="GradingWorld" layers="Grading">
 			<GameObject _schemaVersion="0" _name="GradingWorld" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -189,7 +189,7 @@
 		<entity id="10" name="LensDistortionWorld" layers="LensDistortion">
 			<GameObject _schemaVersion="0" _name="LensDistortionWorld" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -209,7 +209,7 @@
 		<entity id="11" name="ChromaticAberrationWorld" layers="ChromaticAberration">
 			<GameObject _schemaVersion="0" _name="ChromaticAberrationWorld" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -229,7 +229,7 @@
 		<entity id="12" name="SharpenWorld" layers="Sharpen">
 			<GameObject _schemaVersion="0" _name="SharpenWorld" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -249,7 +249,7 @@
 		<entity id="13" name="FilmGrainWorld" layers="FilmGrain">
 			<GameObject _schemaVersion="0" _name="FilmGrainWorld" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -269,7 +269,7 @@
 		<entity id="14" name="BloomLamp" layers="BloomLamp">
 			<GameObject _schemaVersion="0" _name="BloomLamp" _bActive="true">
 				<_listComponent>
-					<PointLightComponent _localPosition="0.6,2.4,-1.2"
+					<PointLightComponent _localID="6048688584444471341" _localPosition="0.6,2.4,-1.2"
 					                     _localRotation="0,0,0"
 					                     _localScale="1,1,1"
 					                     _attachOwner="None"
@@ -283,7 +283,7 @@
 		<entity id="15" name="BloomDirtWorld" layers="BloomDirt">
 			<GameObject _schemaVersion="0" _name="BloomDirtWorld" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -303,7 +303,7 @@
 		<entity id="16" name="LensFlareWorld" layers="LensFlare">
 			<GameObject _schemaVersion="0" _name="LensFlareWorld" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -323,7 +323,7 @@
 		<entity id="17" name="ReflectionWorld" layers="SSR">
 			<GameObject _schemaVersion="0" _name="ReflectionWorld" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -343,7 +343,7 @@
 		<entity id="18" name="PostMaterialBeforeVolume" layers="PostMaterialBefore">
 			<GameObject _schemaVersion="0" _name="PostMaterialBeforeVolume" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -367,7 +367,7 @@
 		<entity id="19" name="PostMaterialAfterVolume" layers="PostMaterialAfter">
 			<GameObject _schemaVersion="0" _name="PostMaterialAfterVolume" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"
@@ -391,7 +391,7 @@
 		<entity id="20" name="PostMaterialReplaceVolume" layers="PostMaterialReplace">
 			<GameObject _schemaVersion="0" _name="PostMaterialReplaceVolume" _bActive="true">
 				<_listComponent>
-					<PostProcessVolumeComponent _localPosition="0,0,0"
+					<PostProcessVolumeComponent _localID="9120528315743371094" _localPosition="0,0,0"
 					                            _localRotation="0,0,0"
 					                            _localScale="1,1,1"
 					                            _attachOwner="None"

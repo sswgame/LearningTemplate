@@ -40,8 +40,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common import app_arguments  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
-from common.host_platform import is_windows_host, HOST  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.host_platform import executable_name, is_windows_host  # noqa: E402
+from common.paths import get_bin_dir, get_build_dir, get_project_root  # noqa: E402
 from common.run_process import run_process  # noqa: E402
 
 #: 배포 App 을 살려 두는 시간(초) — 기동 · 첫 씬 · 몇 프레임이 지나기에 넉넉하다.
@@ -55,7 +55,6 @@ UNKNOWN_ARGUMENT_ERROR = "No argument matches"
 LOG_LINE_PATTERN = re.compile(r"\[(Error|Warning)\]")
 #: 테스트용 전역 변수 정의(`SW_TEST_GLOBAL_VARIABLE( 형, gv_이름, …)`) — 배포 실행 파일에 이 이름이 남으면 안 된다.
 TEST_VARIABLE_PATTERN = re.compile(r"SW_TEST_GLOBAL_VARIABLE\(\s*[^,]+?,\s*(gv_\w+)")
-EXECUTABLE_SUFFIX = HOST.executable_suffix
 
 
 @dataclass
@@ -74,7 +73,7 @@ COOK_LOG_NAME = "Cook.log"
 
 
 def find_cook_log_path(project_root: Path, preset: str) -> Path:
-    return project_root / "build" / preset / "Testing" / "Logs" / COOK_LOG_NAME
+    return get_build_dir(preset, project_root) / "Testing" / "Logs" / COOK_LOG_NAME
 
 
 def report_cook_log(project_root: Path, preset: str) -> None:
@@ -84,12 +83,8 @@ def report_cook_log(project_root: Path, preset: str) -> None:
     report_log_lines(SmokeResult(f"Cook ({preset})", cook_log, True, ""))
 
 
-def find_bin_dir(project_root: Path, preset: str) -> Path:
-    return project_root / "build" / preset / "Bin"
-
-
 def make_log_path(project_root: Path, preset: str, name: str) -> Path:
-    log_dir = project_root / "build" / preset / "Testing" / "Logs"
+    log_dir = get_build_dir(preset, project_root) / "Testing" / "Logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / f"ShippingCheck.{name}.log"
     # 지난 실행의 로그를 지운다 — 배포 로거는 경고 이상만 쓰고 쓸 줄이 없으면 파일을 만들지 않아, 남은 파일을 이번 결과로 읽게 된다.
@@ -118,7 +113,7 @@ def close_process_window(process: subprocess.Popen[bytes]) -> None:
 def run_app(project_root: Path, preset: str = "Ninja-Shipping") -> SmokeResult:
     """배포 App 을 띄우고, 살아 있는지 본 뒤 창을 닫아 정상 종료를 본다."""
     log_path = make_log_path(project_root, preset, "App")
-    executable = find_bin_dir(project_root, preset) / f"App{EXECUTABLE_SUFFIX}"
+    executable = get_bin_dir(preset, project_root) / executable_name("App")
     if executable.is_file() is False:
         return SmokeResult(f"App ({preset})", log_path, False, f"{executable} is missing")
     process = subprocess.Popen([str(executable), app_arguments.flag("unattended"), app_arguments.option("log-file", log_path)], cwd=project_root)
@@ -153,7 +148,7 @@ def run_server(project_root: Path) -> SmokeResult:
     """배포 서버를 띄우고, 살아 있는지 본 뒤 종료 신호를 보내 정상 종료를 본다."""
     preset = "Ninja-Shipping-Server"
     log_path = make_log_path(project_root, preset, "Server")
-    executable = find_bin_dir(project_root, preset) / f"Server{EXECUTABLE_SUFFIX}"
+    executable = get_bin_dir(preset, project_root) / executable_name("Server")
     if executable.is_file() is False:
         return SmokeResult("Server", log_path, False, f"{executable} is missing")
     creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP if is_windows_host() else 0
@@ -176,7 +171,7 @@ def run_dev_arguments_rejected(project_root: Path) -> SmokeResult:
     """배포 App 이 개발 · 테스트 인자(쓰는 구성 Dev · Test · AndroidDev) 철자를 모두 모르는 인자로 거절해 기동을 멈추는지 본다 — 조용히 받아 무시하지 않는다."""
     preset = "Ninja-Shipping"
     log_path = make_log_path(project_root, preset, "DevArguments")
-    executable = find_bin_dir(project_root, preset) / f"App{EXECUTABLE_SUFFIX}"
+    executable = get_bin_dir(preset, project_root) / executable_name("App")
     if executable.is_file() is False:
         return SmokeResult("DevArguments", log_path, False, f"{executable} is missing")
     list_rejected = app_arguments.read_shipping_rejected_arguments()
@@ -210,13 +205,13 @@ def check_no_test_variables(project_root: Path) -> SmokeResult:
     # 하나라도 남았는지(통과 · 실패)는 이름마다 찾던 것과 같다. 다른 이름을 품은 긴 이름이 남으면 긴 이름만 적힌다.
     name_pattern = re.compile(b"|".join(re.escape(name.encode("ascii")) for name in sorted(list_name, key=len, reverse=True))) if list_name else None
     for preset, stem in (("Ninja-Shipping", "App"), ("Ninja-Shipping-Client", "App"), ("Ninja-Shipping-Server", "Server")):
-        executable = find_bin_dir(project_root, preset) / f"{stem}{EXECUTABLE_SUFFIX}"
+        executable = get_bin_dir(preset, project_root) / executable_name(stem)
         if executable.is_file() is False:
             return SmokeResult("NoTestVariables", executable, False, f"{executable} is missing")
         if name_pattern is not None:
             list_left += [f"{stem}:{name}" for name in sorted({match.decode("ascii") for match in name_pattern.findall(executable.read_bytes())})]
     reason = f"{len(list_name)} test variable names checked" if not list_left else f"left in the shipping binaries: {', '.join(list_left[:20])}"
-    return SmokeResult("NoTestVariables", find_bin_dir(project_root, "Ninja-Shipping"), not list_left, reason)
+    return SmokeResult("NoTestVariables", get_bin_dir("Ninja-Shipping", project_root), not list_left, reason)
 
 
 def report_log_lines(result: SmokeResult) -> int:

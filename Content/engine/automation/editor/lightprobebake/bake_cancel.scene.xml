@@ -7,7 +7,7 @@
 		<entity id="1" name="Floor">
 			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="0,-0.5,0"
 					                    _localRotation="0,0,0"
@@ -46,7 +46,7 @@
 			<GameObject _schemaVersion="0" _name="ProbeVolume" _bActive="true">
 				<_listComponent>
 					<!-- 일부러 큰 볼륨(41 × 5 × 41 프로브, 프로브마다 레이 4096) — 시나리오가 끝나기 전에 굽기가 끝나지 않게 한다(끝나면 .probes 를 쓴다) -->
-					<LightProbeVolumeComponent _componentName="LightProbeVolumeComponent"
+					<LightProbeVolumeComponent _localID="14252109924225017819" _componentName="LightProbeVolumeComponent"
 					                           _bActive="true"
 					                           _localPosition="0,2,0"
 					                           _localRotation="0,0,0"

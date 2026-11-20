@@ -14,21 +14,15 @@ from __future__ import annotations
 import argparse
 import re
 import socket
-import subprocess
-import sys
 import time
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 
 from common import app_arguments
 from common.exit_code import ExitCode
-from common.host_platform import executable_name
-from common.paths import get_project_root
-from net.net_pair_run import _stop, _wait_for_text
+from common.process_group import CheckResult, ProcessGroup, problem_lines, report
 
 _OPENED = re.compile(r"\[Skirmish\] lockstep match - you are player (\d)")
 _STATUS = re.compile(r"skirmish lockstep: player (\d) tick (\d+) stalls (\d+) desynced (\d) applied (\d+) (\d+)")
-_PROBLEM_LINE = re.compile(r"\[(Error|Warning)\]")
 _PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 App 을 쓴다
 _GAME = "StarSkirmish"
 _TIMEOUT_SECONDS = 90.0  # 락스텝 시작 줄을 기다리는 최대 초
@@ -40,15 +34,6 @@ class LockstepStatus:
     tick: int
     desynced: int
     applied: tuple[int, int]
-
-
-@dataclass
-class CheckResult:
-    problems: list[str] = field(default_factory=list)
-
-    @property
-    def ok(self) -> bool:
-        return not self.problems
 
 
 def _find_status(text: str) -> LockstepStatus | None:
@@ -76,9 +61,7 @@ def check_logs(host_text: str, client_text: str, min_ticks: int) -> CheckResult:
             result.problems.append(f"{name} advanced only {status.tick} ticks (< {min_ticks}) - the lockstep stalled")
         if status.desynced != 0:
             result.problems.append(f"{name} reports a desync - the two matches differ")
-        for line in text.splitlines():
-            if _PROBLEM_LINE.search(line):
-                result.problems.append(f"{name} log: {line.strip()}")
+        result.problems += problem_lines(name, text)
     if len(list_status) == 2:
         host, client = list_status
         if host.applied[1] != client.applied[1]:
@@ -94,55 +77,35 @@ def _free_port() -> int:
         return probe.getsockname()[1]
 
 
-def _send(process: subprocess.Popen, line: str) -> None:
-    process.stdin.write((line + "\n").encode("utf-8"))
-    process.stdin.flush()
-
-
 def _run(argument: argparse.Namespace) -> int:
-    root = get_project_root()
-    bin_dir = root / "build" / _PRESET / "Bin"
-    client_exe = bin_dir / executable_name("App")
-    if not client_exe.exists():
-        print(f"[lockstep-pair] FAIL: {client_exe} does not exist - build the '{_PRESET}' preset first")
-        return int(ExitCode.CHECK_INVALID)
-    out_dir = root / "Saved" / "LockstepPairRun"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    port = _free_port()
-    # -unattended: 무인 실행이라 세이브 · 사용자 데이터는 프로세스마다 Saved/Automation/UserData 아래로 간다(사람의 폴더를 쓰지 않는다 — AutomationUserDataRoot).
-    common = [app_arguments.option("game", _GAME), app_arguments.flag("unattended"), app_arguments.variable("gv_standardInputCommands", "1"), app_arguments.variable("gv_skirmishAutoPlay", "1")]
-    host_args = [str(client_exe), *common, app_arguments.variable("gv_netListenPort", port), app_arguments.variable("gv_userSettingsFile", out_dir / 'host.usersettings.json')]
-    client_args = [str(client_exe), *common, app_arguments.variable("gv_netConnectAddress", f"127.0.0.1:{port}"), app_arguments.variable("gv_userSettingsFile", out_dir / 'client.usersettings.json')]
-    host_log = out_dir / "host.log"
-    client_log = out_dir / "client.log"
-    print(f"[lockstep-pair] host: {' '.join(host_args)}")
-    print(f"[lockstep-pair] client: {' '.join(client_args)}")
-    with host_log.open("wb") as host_out, client_log.open("wb") as client_out:
-        host = subprocess.Popen(host_args, cwd=str(bin_dir), stdin=subprocess.PIPE, stdout=host_out, stderr=subprocess.STDOUT)
-        client = subprocess.Popen(client_args, cwd=str(bin_dir), stdin=subprocess.PIPE, stdout=client_out, stderr=subprocess.STDOUT)
+    with ProcessGroup("lockstep-pair", _PRESET, "LockstepPairRun") as group:
+        list_exe = group.require("App")
+        if list_exe is None:
+            return int(ExitCode.CHECK_INVALID)
+        app_exe = list_exe[0]
+        port = _free_port()
+        # -unattended: 무인 실행이라 세이브 · 사용자 데이터는 프로세스마다 Saved/Automation/UserData 아래로 간다(사람의 폴더를 쓰지 않는다 — AutomationUserDataRoot).
+        common = [app_exe, app_arguments.option("game", _GAME), app_arguments.flag("unattended"), app_arguments.variable("gv_standardInputCommands", "1"),
+                  app_arguments.variable("gv_skirmishAutoPlay", "1")]
+        host = group.start("host", [*common, app_arguments.variable("gv_netListenPort", port),
+                                    app_arguments.variable("gv_userSettingsFile", group.out_dir / "host.usersettings.json")])
+        client = group.start("client", [*common, app_arguments.variable("gv_netConnectAddress", f"127.0.0.1:{port}"),
+                                        app_arguments.variable("gv_userSettingsFile", group.out_dir / "client.usersettings.json")])
         try:
-            is_opened = _wait_for_text(host_log, _OPENED, _TIMEOUT_SECONDS, host) and _wait_for_text(client_log, _OPENED, _TIMEOUT_SECONDS, client)
-            if is_opened:
+            if host.wait_for(_OPENED, _TIMEOUT_SECONDS) and client.wait_for(_OPENED, _TIMEOUT_SECONDS):
                 time.sleep(argument.seconds / 2)  # AI 가 병력을 모을 때까지
-                _send(client, "skirmish.order 32 32")
+                client.send("skirmish.order 32 32")
                 time.sleep(argument.seconds / 2)
-                _send(host, "skirmish.lockstep")
-                _send(client, "skirmish.lockstep")
+                host.send("skirmish.lockstep")
+                client.send("skirmish.lockstep")
                 time.sleep(2.0)
         except OSError:
             print("[lockstep-pair] FAIL: a process exited before it took the commands")
-        _stop(client, True, 20)
-        _stop(host, True, 20)
-    host_text = host_log.read_text(encoding="utf-8", errors="replace")
-    client_text = client_log.read_text(encoding="utf-8", errors="replace")
-    result = check_logs(host_text, client_text, argument.min_ticks)
-    for problem in result.problems:
-        print(f"[lockstep-pair] FAIL: {problem}")
-    print(f"[lockstep-pair] logs: {host_log} {client_log}")
-    if result.ok:
-        print("[lockstep-pair] OK: both processes advanced the same lockstep match with no desync and the same player 1 commands")
-        return int(ExitCode.PASSED)
-    return int(ExitCode.VIOLATION)
+        client.stop()
+        host.stop()
+    result = check_logs(host.text(), client.text(), argument.min_ticks)
+    return report("lockstep-pair", result.problems, [host.log, client.log],
+                  "both processes advanced the same lockstep match with no desync and the same player 1 commands")
 
 
 def main(list_argument: list[str]) -> int:

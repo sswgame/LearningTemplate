@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="TestKnight">
 	<GameObject _schemaVersion="0" _name="TestKnight" _bActive="true">
 		<_listComponent>
-			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+			<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 			                       _bActive="true"
 			                       _localPosition="0,0,0"
 			                       _localRotation="0,0,0"
@@ -19,7 +19,7 @@
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
 			                       _visibilityBasedTickOption="AlwaysTickPose" />
-			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+			<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
 			                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"
@@ -32,7 +32,7 @@
 			                           _syncWeight="1"
 			                           _bExtractRootMotion="false"
 			                           _bPlayOnBegin="true" />
-			<PoseModifierComponent _componentName="PoseModifierComponent"
+			<PoseModifierComponent _localID="8397761042515027675" _componentName="PoseModifierComponent"
 			                       _bActive="true"
 			                       _rigPath="engine/automation/editor/knight/knight.rig.xml"
 			                       _socketSetPath=""

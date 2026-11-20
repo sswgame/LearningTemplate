@@ -8,7 +8,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,1.0,-3.4"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.0,-3.4"
 					                 _localRotation="0.05,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -26,7 +26,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="0.628882,0.93002,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -43,7 +43,7 @@
 		<entity id="3" name="Knight">
 			<GameObject _schemaVersion="0" _name="Knight" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 					                       _bActive="true"
 					                       _localPosition="0,0,0"
 					                       _localRotation="0,3.1415927,0"
@@ -60,7 +60,7 @@
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
 					                       _visibilityBasedTickOption="AlwaysTickPose" />
-					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="game/playground/data/anim/animvariant_base.animgraph.xml"
 					                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"

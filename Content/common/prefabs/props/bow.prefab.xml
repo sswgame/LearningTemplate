@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="Bow">
 	<GameObject _schemaVersion="0" _name="Bow" _bActive="true">
 		<_listComponent>
-			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+			<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 			                       _bActive="true"
 			                       _localPosition="0,0,0"
 			                       _localRotation="0,0,0"
@@ -19,7 +19,7 @@
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
 			                       _visibilityBasedTickOption="AlwaysTickPose" />
-			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+			<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath=""
 			                           _animationSetPath="common/models/props/bow/bow.animset.xml"
@@ -32,10 +32,10 @@
 			                           _syncWeight="1"
 			                           _bExtractRootMotion="false"
 			                           _bPlayOnBegin="true" />
-			<AnimationNotifyComponent _componentName="AnimationNotifyComponent"
+			<AnimationNotifyComponent _localID="3803990792213876096" _componentName="AnimationNotifyComponent"
 			                          _bActive="true"
 			                          _notifyTablePath="common/characters/bow/bow.notifies.xml" />
-			<PairedAnimationComponent _componentName="PairedAnimationComponent"
+			<PairedAnimationComponent _localID="4756347524451515510" _componentName="PairedAnimationComponent"
 			                          _bActive="true"
 			                          _pairedAnimationPath="common/data/anim/bow_shoot.pairedanim.xml"
 			                          _role="Bow"

@@ -7,7 +7,7 @@
 		<entity id="1" name="ZeroRadiusLight">
 			<GameObject _schemaVersion="0" _name="ZeroRadiusLight" _bActive="true">
 				<_listComponent>
-					<PointLightComponent _componentName="PointLightComponent"
+					<PointLightComponent _localID="6048688584444471341" _componentName="PointLightComponent"
 					                     _bActive="true"
 					                     _localPosition="0,1,0"
 					                     _localRotation="0,0,0"
@@ -24,7 +24,7 @@
 		<entity id="2" name="FineLight">
 			<GameObject _schemaVersion="0" _name="FineLight" _bActive="true">
 				<_listComponent>
-					<PointLightComponent _componentName="PointLightComponent"
+					<PointLightComponent _localID="6048688584444471341" _componentName="PointLightComponent"
 					                     _bActive="true"
 					                     _localPosition="3,1,0"
 					                     _localRotation="0,0,0"

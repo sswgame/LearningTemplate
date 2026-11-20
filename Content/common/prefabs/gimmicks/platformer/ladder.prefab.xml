@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="Ladder">
 	<GameObject _schemaVersion="0" _name="Ladder" _bActive="true">
 		<_listComponent>
-			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
 			                        _bActive="true"
 			                        _localPosition="0,0,0"
 			                        _localRotation="0,0,0"
@@ -15,7 +15,7 @@
 			                        _layer="Default"
 			                        _bContinuous="false"
 			                        _bTrigger="true" />
-			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			<GimmickSensorComponent _localID="5906677949702648734" _componentName="GimmickSensorComponent"
 			                        _bActive="true"
 			                        _defaultWeight="1"
 			                        _bCountTriggers="false">
@@ -24,7 +24,7 @@
 				</_requiredTags>
 				<_listOccupant />
 			</GimmickSensorComponent>
-			<ClimbZoneComponent _componentName="ClimbZoneComponent"
+			<ClimbZoneComponent _localID="9868195776723156160" _componentName="ClimbZoneComponent"
 			                    _bActive="true"
 			                    _axis="0,1,0"
 			                    _climbSpeed="3"

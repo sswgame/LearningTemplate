@@ -255,7 +255,7 @@ namespace sw
         {
             if ( pOwner == nullptr )
                 return nullptr;
-            // 이름으로 만드는 길(직렬화 · 에디터)은 지역 id 를 주지 않는다 — 읽을 상태가 id 를 적고, 없으면(옛 파일) 옛 키에서 정한다(`ComponentStableKey`).
+            // 이름으로 만드는 길(직렬화 · 에디터)은 지역 id 를 주지 않는다 — 읽을 상태가 id 를 적고, 없으면 이름과 순번에서 정한다(`ComponentStableKey`).
             return pOwner->addComponentWithLocalID<T>( false );
         }
         /** @brief 리플렉션 표의 생성 칸(`TypeInfo::_addComponent`, 불투명 형식)이 가리키는 연결 함수입니다. 코드젠만 씁니다. */

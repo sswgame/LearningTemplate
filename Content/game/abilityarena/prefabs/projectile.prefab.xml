@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="ArenaProjectile">
 	<GameObject _schemaVersion="0" _name="ArenaProjectile" _bActive="true">
 		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
@@ -15,11 +15,11 @@
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<ArenaProjectileComponent _componentName="ArenaProjectileComponent"
+			<ArenaProjectileComponent _localID="5117889535985267137" _componentName="ArenaProjectileComponent"
 			                          _bActive="true"
 			                          _gameMode="0"
 			                          _visualLift="0.9" />
-			<NavMeshModifierComponent _componentName="NavMeshModifierComponent"
+			<NavMeshModifierComponent _localID="7476001263293725082" _componentName="NavMeshModifierComponent"
 			                          _bActive="true"
 			                          _areaName=""
 			                          _bIgnoreFromBuild="true" />

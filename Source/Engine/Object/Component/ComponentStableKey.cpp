@@ -25,8 +25,8 @@ namespace sw
             static constexpr uint32      kNibbleBits = 4;
             static constexpr uint64      kNibbleMask = 0xF;
 
-            /** @brief 옛 키 글(`이름#n`)입니다. */
-            static string makeLegacyText( string_view baseName, int32 occurrence )
+            /** @brief id 를 적지 않은 컴포넌트의 id 를 섞을 글(`이름#순번`)입니다. */
+            static string makeOccurrenceText( string_view baseName, int32 occurrence )
             {
                 StringBuilder<constant::buffer::kMax128> key;
                 key.appendFormat( "%##%#", baseName, occurrence );
@@ -93,19 +93,19 @@ namespace sw
         unordered_map<string, int32> mapOccurrence;
         for ( ComponentLocalIDSlot& slot : inoutListSlot )
         {
-            int32& occurrence = mapOccurrence[slot._baseName]; // 옛 키처럼 같은 이름을 모두 센다(적힌 id 가 있어도)
+            int32& occurrence = mapOccurrence[slot._baseName]; // 같은 이름을 모두 센다(적힌 id 가 있어도) — 적힌 형제가 있어도 순번이 그대로다
             if ( slot._storedID != 0 )
             {
                 slot._resolved = slot._storedID;
                 ++occurrence;
                 continue;
             }
-            const string legacy = ComponentStableKeyInternal::makeLegacyText( slot._baseName, occurrence );
+            const string occurrenceText = ComponentStableKeyInternal::makeOccurrenceText( slot._baseName, occurrence );
             ++occurrence;
-            uint64 id = HashUtil::computeStringHash64( legacy.data(), legacy.size(), false );
+            uint64 id = HashUtil::computeStringHash64( occurrenceText.data(), occurrenceText.size(), false );
             while ( id == 0 || setTaken.contains( id ) )
             {
-                id = HashUtil::computeStringHash64( legacy.data(), legacy.size(), false, id ); // 결정적으로 다시 섞는다 — 같은 목록은 같은 답
+                id = HashUtil::computeStringHash64( occurrenceText.data(), occurrenceText.size(), false, id ); // 결정적으로 다시 섞는다 — 같은 목록은 같은 답
             }
             setTaken.insert( id );
             slot._resolved = id;
@@ -142,7 +142,7 @@ namespace sw
     {
         if ( pComp == nullptr || pComp->getOwner() == nullptr )
             return;
-        // 형제를 굳히지 않는다 — 로드 중(모르는 타입 보관 `MissingComponent`)에도 불리고, 끝에 붙은 컴포넌트는 앞 형제의 옛 키 순번을 바꾸지 않는다.
+        // 형제를 굳히지 않는다 — 로드 중(모르는 타입 보관 `MissingComponent`)에도 불리고, 끝에 붙은 컴포넌트는 앞 형제의 순번을 바꾸지 않는다.
         const GameObject&     owner = *pComp->getOwner();
         unordered_set<uint64> setTaken;
         for ( const Component* pOther : owner.getComponents() )
@@ -196,37 +196,12 @@ namespace sw
         return localID != 0 ? formatKey( localID ) : string{};
     }
 
-    string ComponentStableKey::makeLegacyKey( const Component* pComp )
-    {
-        if ( pComp == nullptr || pComp->getOwner() == nullptr )
-            return {};
-
-        const string_view targetBase = getBaseName( pComp );
-        int32             occurrence = 0;
-        bool              bFound     = false;
-        pComp->getOwner()->forEachComponent( [&]( const Component* pOther )
-        {
-            const bool bSkipOtherComponent = bFound || pOther == nullptr || getBaseName( pOther ) != targetBase;
-            if ( bSkipOtherComponent )
-                return;
-            if ( pOther == pComp )
-                bFound = true;
-            else
-                ++occurrence;
-        } );
-        if ( bFound == false )
-            return {};
-        return ComponentStableKeyInternal::makeLegacyText( targetBase, occurrence );
-    }
-
     bool ComponentStableKey::matchesKey( const Component* pComp, string_view key )
     {
         if ( pComp == nullptr || key.empty() )
             return false;
         const optional<uint64> localID = parseKey( key );
-        if ( localID.has_value() )
-            return getLocalID( pComp ) == *localID;
-        return makeLegacyKey( pComp ) == key; // 옮기는 동안의 옛 키(`이름#n`)
+        return localID.has_value() && getLocalID( pComp ) == *localID;
     }
 
     Component* ComponentStableKey::findComponent( GameObject* pOwner, string_view key )
@@ -234,46 +209,19 @@ namespace sw
         if ( pOwner == nullptr || key.empty() )
             return nullptr;
         const optional<uint64> localID = parseKey( key );
-        if ( localID.has_value() )
-        {
-            size_t                             unused   = 0;
-            const vector<ComponentLocalIDSlot> listSlot = ComponentStableKeyInternal::collectSlots( *pOwner, nullptr, unused );
-            size_t                             index    = 0;
-            for ( Component* pComp : pOwner->getComponents() )
-            {
-                if ( pComp == nullptr )
-                    continue;
-                if ( listSlot[index]._resolved == *localID && pComp->isPendingDestroy() == false )
-                    return pComp;
-                ++index;
-            }
+        if ( localID.has_value() == false )
             return nullptr;
-        }
-
-        // 옮기는 동안의 옛 키(`이름#n`) — 이름과 같은 이름 가운데 순번.
-        const size_t hashPos = key.rfind( '#' );
-        if ( hashPos == string_view::npos || hashPos == 0 || hashPos + 1 == key.size() )
-            return nullptr;
-        const string_view requestedBase       = key.substr( 0, hashPos );
-        int32             requestedOccurrence = 0;
-        for ( size_t index = hashPos + 1; index < key.size(); ++index )
+        size_t                             unused   = 0;
+        const vector<ComponentLocalIDSlot> listSlot = ComponentStableKeyInternal::collectSlots( *pOwner, nullptr, unused );
+        size_t                             index    = 0;
+        for ( Component* pComp : pOwner->getComponents() )
         {
-            if ( key[index] < '0' || key[index] > '9' )
-                return nullptr;
-            requestedOccurrence = requestedOccurrence * 10 + ( key[index] - '0' );
+            if ( pComp == nullptr )
+                continue;
+            if ( listSlot[index]._resolved == *localID && pComp->isPendingDestroy() == false )
+                return pComp;
+            ++index;
         }
-        int32      occurrence = 0;
-        Component* pFound     = nullptr;
-        pOwner->forEachComponent( [&]( Component* pComp )
-        {
-            const bool bSkipComponent = pFound != nullptr || pComp == nullptr || getBaseName( pComp ) != requestedBase;
-            if ( bSkipComponent )
-                return;
-            if ( occurrence == requestedOccurrence )
-                pFound = pComp;
-            else
-                ++occurrence;
-        } );
-        return pFound;
+        return nullptr;
     }
 } // namespace sw

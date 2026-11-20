@@ -2,26 +2,26 @@
 <Prefab formatVersion="1" name="HousingDoor">
 	<GameObject _schemaVersion="0" _name="HousingDoor" _bActive="true">
 		<_listComponent>
-			<SceneComponent _localPosition="0,0,0"
+			<SceneComponent _localID="12574257654564749349" _localPosition="0,0,0"
 			                _localRotation="0,0,0"
 			                _localScale="1,1,1"
 			                _attachOwner="None"
 			                _attachComponent="None" />
-			<MeshComponent _localPosition="0,2.5,0"
+			<MeshComponent _localID="163493842152903304" _localPosition="0,2.5,0"
 			               _localRotation="0,0,0"
 			               _localScale="1,0.6,0.2"
 			               _attachOwner="None"
-			               _attachComponent="SceneComponent#0"
+			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_dark.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<MeshComponent _localPosition="0,1.1,0"
+			<MeshComponent _localID="163494941664531515" _localPosition="0,1.1,0"
 			               _localRotation="0,0,0"
 			               _localScale="0.8,2.2,0.08"
 			               _attachOwner="None"
-			               _attachComponent="SceneComponent#0"
+			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_orange.material"
 			               _boundsRadius="0.866"

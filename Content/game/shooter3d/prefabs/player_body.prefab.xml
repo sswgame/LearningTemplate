@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="PlayerBody">
 	<GameObject _schemaVersion="0" _name="PlayerBody" _bActive="true">
 		<_listComponent>
-			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+			<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 			                       _bActive="true"
 			                       _localPosition="0,0,0"
 			                       _localRotation="0,0,0"
@@ -19,7 +19,7 @@
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
 			                       _visibilityBasedTickOption="AlwaysTickPose" />
-			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+			<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/ubc_shooter.animgraph.xml"
 			                           _animationSetPath="common/models/quaternius/animations/ual1_standard/ual1_standard.animset.xml"
@@ -32,20 +32,20 @@
 			                           _syncWeight="1"
 			                           _bExtractRootMotion="false"
 			                           _bPlayOnBegin="true" />
-			<AnimationNotifyComponent _componentName="AnimationNotifyComponent"
+			<AnimationNotifyComponent _localID="3803990792213876096" _componentName="AnimationNotifyComponent"
 			                          _bActive="true"
 			                          _notifyTablePath="common/characters/ubc/ubc_body.notifies.xml" />
-			<PoseModifierComponent _componentName="PoseModifierComponent"
+			<PoseModifierComponent _localID="8397761042515027675" _componentName="PoseModifierComponent"
 			                       _bActive="true"
 			                       _rigPath="common/rigs/ubc_player_body.rig.xml"
 			                       _socketSetPath=""
 			                       _physicsAssetPath=""
 			                       _bRigEnabled="true" />
-			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
+			<CharacterAppearanceComponent _localID="13827364293183997314" _componentName="CharacterAppearanceComponent"
 			                              _bActive="true"
 			                              _presetID="ShooterPlayer"
 			                              _seed="0" />
-			<ShooterAvatarComponent _componentName="ShooterAvatarComponent"
+			<ShooterAvatarComponent _localID="4707964792541610014" _componentName="ShooterAvatarComponent"
 			                        _bActive="true"
 			                        _player="0"
 			                        _walkThreshold="0.4"

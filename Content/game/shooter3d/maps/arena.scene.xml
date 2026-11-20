@@ -7,7 +7,7 @@
 		<entity id="2" name="Floor">
 			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
@@ -20,7 +20,7 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="0,0,0"
 					                    _localRotation="0,0,0"
@@ -58,7 +58,7 @@
 		<entity id="3" name="Wall">
 			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,2,-20.5"
 					               _localRotation="0,0,0"
@@ -71,14 +71,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="21,2,0.5" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="21,2,0.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="Wall_2">
 			<GameObject _schemaVersion="0" _name="Wall_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,2,20.5"
 					               _localRotation="0,0,0"
@@ -91,14 +91,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="21,2,0.5" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="21,2,0.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="Wall_3">
 			<GameObject _schemaVersion="0" _name="Wall_3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-20.5,2,0"
 					               _localRotation="0,0,0"
@@ -111,14 +111,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.5,2,20" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.5,2,20" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="6" name="Wall_4">
 			<GameObject _schemaVersion="0" _name="Wall_4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="20.5,2,0"
 					               _localRotation="0,0,0"
@@ -131,14 +131,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.5,2,20" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.5,2,20" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="7" name="Cover">
 			<GameObject _schemaVersion="0" _name="Cover" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-8,1,-6"
 					               _localRotation="0,0,0"
@@ -151,14 +151,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.2,1,1.2" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.2,1,1.2" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="10" name="Cover_2">
 			<GameObject _schemaVersion="0" _name="Cover_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,1,5"
 					               _localRotation="0,0,0"
@@ -171,14 +171,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.5,1,1" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.5,1,1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="13" name="Cover_3">
 			<GameObject _schemaVersion="0" _name="Cover_3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,1.5,9"
 					               _localRotation="0,0,0"
@@ -191,14 +191,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="3,1.5,0.6" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="3,1.5,0.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="18" name="Cover_4">
 			<GameObject _schemaVersion="0" _name="Cover_4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-10,0.75,8"
 					               _localRotation="0,0,0"
@@ -211,14 +211,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1,0.75,1" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1,0.75,1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="21" name="Cover_5">
 			<GameObject _schemaVersion="0" _name="Cover_5" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="10,1,-9"
 					               _localRotation="0,0,0"
@@ -231,14 +231,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1,1,2" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1,1,2" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="23" name="Cover_6">
 			<GameObject _schemaVersion="0" _name="Cover_6" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="4,0.6,-4"
 					               _localRotation="0,0,0"
@@ -251,14 +251,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.6,0.6,0.6" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.6,0.6,0.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="27" name="Cover_7">
 			<GameObject _schemaVersion="0" _name="Cover_7" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-4,1,3"
 					               _localRotation="0,0,0"
@@ -271,14 +271,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.8,1,2.5" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.8,1,2.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="30" name="Cover_8">
 			<GameObject _schemaVersion="0" _name="Cover_8" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="12,1.25,12"
 					               _localRotation="0,0,0"
@@ -291,14 +291,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.2,1.25,1.2" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.2,1.25,1.2" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="34" name="Cover_9">
 			<GameObject _schemaVersion="0" _name="Cover_9" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,1,-12"
 					               _localRotation="0,0,0"
@@ -311,14 +311,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.5,1,1.5" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.5,1,1.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="37" name="Cover_10">
 			<GameObject _schemaVersion="0" _name="Cover_10" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,1,-12"
 					               _localRotation="0,0,0"
@@ -331,14 +331,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="4,1,0.5" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="4,1,0.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="41" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.310517,-2.045455,0"
@@ -358,7 +358,7 @@
 		<entity id="42" name="EnemySpawn">
 			<GameObject _schemaVersion="0" _name="EnemySpawn" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="3.576048,0,17.6412"
 					                _localRotation="0,0,0"
@@ -372,7 +372,7 @@
 		<entity id="43" name="EnemySpawn_2">
 			<GameObject _schemaVersion="0" _name="EnemySpawn_2" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="15.002859,0,9.945563"
 					                _localRotation="0,0,0"
@@ -386,7 +386,7 @@
 		<entity id="44" name="EnemySpawn_3">
 			<GameObject _schemaVersion="0" _name="EnemySpawn_3" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="17.641197,0,-3.5760496"
 					                _localRotation="0,0,0"
@@ -400,7 +400,7 @@
 		<entity id="45" name="EnemySpawn_4">
 			<GameObject _schemaVersion="0" _name="EnemySpawn_4" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="9.945562,0,-15.002859"
 					                _localRotation="0,0,0"
@@ -414,7 +414,7 @@
 		<entity id="46" name="EnemySpawn_5">
 			<GameObject _schemaVersion="0" _name="EnemySpawn_5" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="-3.5760503,0,-17.641197"
 					                _localRotation="0,0,0"
@@ -428,7 +428,7 @@
 		<entity id="47" name="EnemySpawn_6">
 			<GameObject _schemaVersion="0" _name="EnemySpawn_6" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="-15.002859,0,-9.945563"
 					                _localRotation="0,0,0"
@@ -442,7 +442,7 @@
 		<entity id="48" name="EnemySpawn_7">
 			<GameObject _schemaVersion="0" _name="EnemySpawn_7" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="-17.6412,0,3.5760448"
 					                _localRotation="0,0,0"
@@ -456,7 +456,7 @@
 		<entity id="49" name="EnemySpawn_8">
 			<GameObject _schemaVersion="0" _name="EnemySpawn_8" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="-9.945561,0,15.00286"
 					                _localRotation="0,0,0"
@@ -470,7 +470,7 @@
 		<entity id="50" name="Player">
 			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="0,0,0"
 					                 _localRotation="0,0,0"
@@ -485,35 +485,35 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="false" />
-					<AudioListenerComponent _componentName="AudioListenerComponent"
+					<AudioListenerComponent _localID="1103268144467300195" _componentName="AudioListenerComponent"
 					                        _bActive="true"
 					                        _localPosition="0,0,0"
 					                        _localRotation="0,0,0"
 					                        _localScale="1,1,1"
 					                        _attachOwner="None"
 					                        _attachOwnerID="0"
-					                        _attachComponent="CameraComponent#0"
+					                        _attachComponent="#f5c571168b1146be"
 					                        _screenHalfWidth="10"
 					                        _listenerIndex="0"
 					                        _mode="World3D" />
-					<MeshComponent _componentName="ViewWeapon"
+					<MeshComponent _localID="18226351309133183543" _componentName="ViewWeapon"
 					               _bActive="true"
 					               _localPosition="0.16,-0.15,0.42"
 					               _localRotation="0,3.1415927,0"
 					               _localScale="0.5,0.5,0.5"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="CameraComponent#0"
+					               _attachComponent="#f5c571168b1146be"
 					               _meshID="common/models/quaternius/scifi/gun_rifle.mesh"
 					               _materialPath="common/models/quaternius/scifi/gun_rifle/materials/mi_guns_batch1.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<NavMeshModifierComponent _componentName="NavMeshModifierComponent"
+					<NavMeshModifierComponent _localID="7476001263293725082" _componentName="NavMeshModifierComponent"
 					                          _bActive="true"
 					                          _areaName=""
 					                          _bIgnoreFromBuild="true" />
-					<PawnComponent _componentName="PawnComponent"
+					<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
 					               _bActive="true"
 					               _moveAction="Move"
 					               _lookAction="Look"
@@ -539,7 +539,7 @@
 							<item>SwitchWeapon</item>
 						</_listAnalog>
 					</PawnComponent>
-					<ShooterBodyMovementComponent _componentName="ShooterBodyMovementComponent"
+					<ShooterBodyMovementComponent _localID="10555112802505069990" _componentName="ShooterBodyMovementComponent"
 					                              _bActive="true"
 					                              _sprintButton="Sprint"
 					                              _jumpButton="Jump"
@@ -548,7 +548,7 @@
 					                              _jumpSpeed="6"
 					                              _gravity="18"
 					                              _radius="0.35" />
-					<ShooterNetPawnComponent _componentName="ShooterNetPawnComponent"
+					<ShooterNetPawnComponent _localID="11501936812592707388" _componentName="ShooterNetPawnComponent"
 					                         _bActive="true"
 					                         _tickInterval="0.033333335"
 					                         _smoothingHalfLife="0.05"
@@ -557,7 +557,7 @@
 					                         _interestCellSize="16"
 					                         _interestEnterRadius="60"
 					                         _interestLeaveRadius="70" />
-					<FirstPersonCameraComponent _componentName="FirstPersonCameraComponent"
+					<FirstPersonCameraComponent _localID="17347683538408078309" _componentName="FirstPersonCameraComponent"
 					                            _bActive="true"
 					                            _yaw="0"
 					                            _pitch="0"
@@ -574,10 +574,10 @@
 						          _referenceSpeed="4.5"
 						          _blendTime="0.15" />
 					</FirstPersonCameraComponent>
-					<HUDControllerComponent _componentName="HUDControllerComponent"
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
 					                        _bActive="true"
 					                        _documentPath="game/shooter3d/ui/hud.ui.xml" />
-					<ShooterPlayerComponent _componentName="ShooterPlayerComponent"
+					<ShooterPlayerComponent _localID="4923146993261169814" _componentName="ShooterPlayerComponent"
 					                        _bActive="true"
 					                        _gameMode="51"
 					                        _spawnPosition="0,0,-16"
@@ -598,7 +598,7 @@
 		<entity id="51" name="ShooterGameMode">
 			<GameObject _schemaVersion="0" _name="ShooterGameMode" _bActive="true">
 				<_listComponent>
-					<ShooterGameModeComponent _componentName="ShooterGameModeComponent"
+					<ShooterGameModeComponent _localID="13246353635651928858" _componentName="ShooterGameModeComponent"
 					                          _bActive="true"
 					                          _effectPrefab="game/shooter3d/prefabs/effect.prefab.xml"
 					                          _tracerPrefab="game/shooter3d/prefabs/tracer.prefab.xml"
@@ -651,7 +651,7 @@
 		<entity id="120" name="PlayerCamera">
 			<GameObject _schemaVersion="0" _name="PlayerCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="0,1.6,-16"
 					                 _localRotation="0,0,0"
@@ -666,21 +666,21 @@
 					                 _priority="10"
 					                 _role="Game"
 					                 _bOrthographic="false" />
-					<CameraManagerComponent _componentName="CameraManagerComponent" _bActive="true" _viewTarget="52" _localPlayerIndex="0" />
+					<CameraManagerComponent _localID="3555541265262269731" _componentName="CameraManagerComponent" _bActive="true" _viewTarget="52" _localPlayerIndex="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="121" name="PlayerController">
 			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true">
 				<_listComponent>
-					<PlayerControllerComponent _componentName="PlayerControllerComponent" _bActive="true" _playerIndex="0" _bManageViewTarget="false" />
+					<PlayerControllerComponent _localID="4811566279812111972" _componentName="PlayerControllerComponent" _bActive="true" _playerIndex="0" _bManageViewTarget="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="52" name="ViewCamera">
 			<GameObject _schemaVersion="0" _name="ViewCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="0,1.6,-16"
 					                 _localRotation="0,0,0"
@@ -695,7 +695,7 @@
 					                 _priority="0"
 					                 _role="Custom"
 					                 _bOrthographic="false" />
-					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
 					                         _catalogPath="game/shooter3d/data/shooter.cameras.xml"
 					                         _initialPreset="firstperson"
@@ -710,7 +710,7 @@
 		<entity id="53" name="CctvCamera">
 			<GameObject _schemaVersion="0" _name="CctvCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="-17,8,-17"
 					                 _localRotation="0,0,0"
@@ -736,7 +736,7 @@
 						               _bShadows="false"
 						               _bPostProcess="false" />
 					</CameraComponent>
-					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
 					                         _catalogPath="game/shooter3d/data/cctv.cameras.xml"
 					                         _initialPreset="cctv_sweep"
@@ -749,7 +749,7 @@
 		<entity id="54" name="CctvMonitor">
 			<GameObject _schemaVersion="0" _name="CctvMonitor" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,2.1,19.85"
 					               _localRotation="0,0,0"
@@ -768,7 +768,7 @@
 		<entity id="55" name="NavigationSurface">
 			<GameObject _schemaVersion="0" _name="NavigationSurface" _bActive="true">
 				<_listComponent>
-					<NavMeshSurfaceComponent _componentName="NavMeshSurfaceComponent"
+					<NavMeshSurfaceComponent _localID="4521272121032625094" _componentName="NavMeshSurfaceComponent"
 					                         _bActive="true"
 					                         _geometrySource="RenderMeshes"
 					                         _boundsHalfExtents="0,0,0">
@@ -783,7 +783,7 @@
 		<entity id="56" name="Cc0.barrel_large">
 			<GameObject _schemaVersion="0" _name="Cc0.barrel_large" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-27,0,-30"
 					               _localRotation="0,0,0"
@@ -802,7 +802,7 @@
 		<entity id="57" name="Cc0.barrel_small">
 			<GameObject _schemaVersion="0" _name="Cc0.barrel_small" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-24,0,-30"
 					               _localRotation="0,0,0"
@@ -821,7 +821,7 @@
 		<entity id="58" name="Cc0.barrier">
 			<GameObject _schemaVersion="0" _name="Cc0.barrier" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-21,0,-30"
 					               _localRotation="0,0,0"
@@ -840,7 +840,7 @@
 		<entity id="59" name="Cc0.barrier_column">
 			<GameObject _schemaVersion="0" _name="Cc0.barrier_column" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-18,0,-30"
 					               _localRotation="0,0,0"
@@ -859,7 +859,7 @@
 		<entity id="60" name="Cc0.barrier_corner">
 			<GameObject _schemaVersion="0" _name="Cc0.barrier_corner" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-30"
 					               _localRotation="0,0,0"
@@ -878,7 +878,7 @@
 		<entity id="61" name="Cc0.barrier_half">
 			<GameObject _schemaVersion="0" _name="Cc0.barrier_half" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-12,0,-30"
 					               _localRotation="0,0,0"
@@ -897,7 +897,7 @@
 		<entity id="62" name="Cc0.box_large">
 			<GameObject _schemaVersion="0" _name="Cc0.box_large" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,-30"
 					               _localRotation="0,0,0"
@@ -916,7 +916,7 @@
 		<entity id="63" name="Cc0.box_small">
 			<GameObject _schemaVersion="0" _name="Cc0.box_small" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-6,0,-30"
 					               _localRotation="0,0,0"
@@ -935,7 +935,7 @@
 		<entity id="64" name="Cc0.column">
 			<GameObject _schemaVersion="0" _name="Cc0.column" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-30"
 					               _localRotation="0,0,0"
@@ -954,7 +954,7 @@
 		<entity id="65" name="Cc0.crates_stacked">
 			<GameObject _schemaVersion="0" _name="Cc0.crates_stacked" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,-30"
 					               _localRotation="0,0,0"
@@ -973,7 +973,7 @@
 		<entity id="66" name="Cc0.floor_tile_large">
 			<GameObject _schemaVersion="0" _name="Cc0.floor_tile_large" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,-30"
 					               _localRotation="0,0,0"
@@ -992,7 +992,7 @@
 		<entity id="67" name="Cc0.floor_tile_small">
 			<GameObject _schemaVersion="0" _name="Cc0.floor_tile_small" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="6,0,-30"
 					               _localRotation="0,0,0"
@@ -1011,7 +1011,7 @@
 		<entity id="68" name="Cc0.keg">
 			<GameObject _schemaVersion="0" _name="Cc0.keg" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,-30"
 					               _localRotation="0,0,0"
@@ -1030,7 +1030,7 @@
 		<entity id="69" name="Cc0.pillar">
 			<GameObject _schemaVersion="0" _name="Cc0.pillar" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="12,0,-30"
 					               _localRotation="0,0,0"
@@ -1049,7 +1049,7 @@
 		<entity id="70" name="Cc0.wall">
 			<GameObject _schemaVersion="0" _name="Cc0.wall" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,-30"
 					               _localRotation="0,0,0"
@@ -1068,7 +1068,7 @@
 		<entity id="71" name="Cc0.wall_broken">
 			<GameObject _schemaVersion="0" _name="Cc0.wall_broken" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="18,0,-30"
 					               _localRotation="0,0,0"
@@ -1087,7 +1087,7 @@
 		<entity id="72" name="Cc0.wall_corner">
 			<GameObject _schemaVersion="0" _name="Cc0.wall_corner" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="21,0,-30"
 					               _localRotation="0,0,0"
@@ -1106,7 +1106,7 @@
 		<entity id="73" name="Cc0.wall_doorway">
 			<GameObject _schemaVersion="0" _name="Cc0.wall_doorway" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="24,0,-30"
 					               _localRotation="0,0,0"
@@ -1125,7 +1125,7 @@
 		<entity id="74" name="Cc0.wall_half">
 			<GameObject _schemaVersion="0" _name="Cc0.wall_half" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="27,0,-30"
 					               _localRotation="0,0,0"
@@ -1144,7 +1144,7 @@
 		<entity id="75" name="Ph.concrete_road_barrier">
 			<GameObject _schemaVersion="0" _name="Ph.concrete_road_barrier" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-6,0,13"
 					               _localRotation="0,0,0"
@@ -1157,14 +1157,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.78,0.83,0.34" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.78,0.83,0.34" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="76" name="Ph.concrete_road_barrier_2">
 			<GameObject _schemaVersion="0" _name="Ph.concrete_road_barrier_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="14.5,0,-15.5"
 					               _localRotation="0,0,0"
@@ -1177,14 +1177,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.78,0.83,0.34" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.78,0.83,0.34" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="77" name="Ph.concrete_road_barrier_3">
 			<GameObject _schemaVersion="0" _name="Ph.concrete_road_barrier_3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="14,0,4"
 					               _localRotation="0,1.5708,0"
@@ -1197,14 +1197,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.34,0.83,0.78" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.34,0.83,0.78" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="78" name="Ph.concrete_road_barrier_4">
 			<GameObject _schemaVersion="0" _name="Ph.concrete_road_barrier_4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,0"
 					               _localRotation="0,1.5708,0"
@@ -1217,14 +1217,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.34,0.83,0.78" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.34,0.83,0.78" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="79" name="Ph.barrel_03">
 			<GameObject _schemaVersion="0" _name="Ph.barrel_03" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9.9,0,-7.9"
 					               _localRotation="0,0,0"
@@ -1237,14 +1237,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="80" name="Ph.barrel_03_2">
 			<GameObject _schemaVersion="0" _name="Ph.barrel_03_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9.2,0,-8.5"
 					               _localRotation="0,0.698132,0"
@@ -1257,14 +1257,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="81" name="Ph.barrel_03_3">
 			<GameObject _schemaVersion="0" _name="Ph.barrel_03_3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11.8,0,-11.5"
 					               _localRotation="0,0.174533,0"
@@ -1277,14 +1277,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="82" name="Ph.barrel_03_4">
 			<GameObject _schemaVersion="0" _name="Ph.barrel_03_4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="12.5,0,-10.9"
 					               _localRotation="0,1.22173,0"
@@ -1297,14 +1297,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="83" name="Ph.barrel_03_5">
 			<GameObject _schemaVersion="0" _name="Ph.barrel_03_5" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="12.4,0,-11.9"
 					               _localRotation="0,0,0"
@@ -1317,14 +1317,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="84" name="Ph.barrel_03_6">
 			<GameObject _schemaVersion="0" _name="Ph.barrel_03_6" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="18.6,0,-18.6"
 					               _localRotation="0,0,0"
@@ -1337,14 +1337,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="85" name="Ph.barrel_03_7">
 			<GameObject _schemaVersion="0" _name="Ph.barrel_03_7" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17.9,0,-18.7"
 					               _localRotation="0,0.436332,0"
@@ -1357,14 +1357,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="86" name="Ph.wooden_crate_01">
 			<GameObject _schemaVersion="0" _name="Ph.wooden_crate_01" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,6.6"
 					               _localRotation="0,0,0"
@@ -1377,14 +1377,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.42,0.35,0.22" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.42,0.35,0.22" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="87" name="Ph.wooden_crate_01_2">
 			<GameObject _schemaVersion="0" _name="Ph.wooden_crate_01_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7.1,0.35,6.6"
 					               _localRotation="0,0.10472,0"
@@ -1397,14 +1397,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.42,0.35,0.22" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.42,0.35,0.22" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="88" name="Ph.wooden_crate_01_3">
 			<GameObject _schemaVersion="0" _name="Ph.wooden_crate_01_3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-4,0,-0.2"
 					               _localRotation="0,1.5708,0"
@@ -1417,14 +1417,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.22,0.35,0.42" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.22,0.35,0.42" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="89" name="Ph.propane_tank">
 			<GameObject _schemaVersion="0" _name="Ph.propane_tank" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11.4,0,9.4"
 					               _localRotation="0,0,0"
@@ -1437,14 +1437,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.55,0.18" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.55,0.18" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="90" name="Ph.propane_tank_2">
 			<GameObject _schemaVersion="0" _name="Ph.propane_tank_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,9.7"
 					               _localRotation="0,0.523599,0"
@@ -1457,14 +1457,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.55,0.18" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.55,0.18" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="91" name="Ph.metal_jerrycan">
 			<GameObject _schemaVersion="0" _name="Ph.metal_jerrycan" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7.5,0,-4.6"
 					               _localRotation="0,0,0"
@@ -1477,14 +1477,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.46,0.1" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.46,0.1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="92" name="Ph.metal_jerrycan_2">
 			<GameObject _schemaVersion="0" _name="Ph.metal_jerrycan_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="12.7,0,10.6"
 					               _localRotation="0,0.261799,0"
@@ -1497,14 +1497,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.46,0.1" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.46,0.1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="93" name="Ph.industrial_pastic_container">
 			<GameObject _schemaVersion="0" _name="Ph.industrial_pastic_container" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1.5,0,-13.2"
 					               _localRotation="0,0,0"
@@ -1517,14 +1517,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.24,0.42,0.33" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.24,0.42,0.33" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="94" name="Ph.industrial_pastic_container_2">
 			<GameObject _schemaVersion="0" _name="Ph.industrial_pastic_container_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-12.5,0,-9.8"
 					               _localRotation="0,1.5708,0"
@@ -1537,14 +1537,14 @@
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.42,0.24" />
+					<ShooterBlockerComponent _localID="8974887080687513345" _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.42,0.24" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="95" name="Ph.power_box_01">
 			<GameObject _schemaVersion="0" _name="Ph.power_box_01" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,1.4,-19.95"
 					               _localRotation="0,0,0"
@@ -1563,7 +1563,7 @@
 		<entity id="96" name="Ph.power_box_01_2">
 			<GameObject _schemaVersion="0" _name="Ph.power_box_01_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-19.95,1.4,6"
 					               _localRotation="0,1.5708,0"
@@ -1584,7 +1584,7 @@
 		<entity id="97" name="ArenaReverbZone">
 			<GameObject _schemaVersion="0" _name="ArenaReverbZone" _bActive="true">
 				<_listComponent>
-					<AudioReverbZoneComponent _componentName="AudioReverbZoneComponent"
+					<AudioReverbZoneComponent _localID="6298669574973380205" _componentName="AudioReverbZoneComponent"
 					                          _bActive="true"
 					                          _localPosition="-15,2,15"
 					                          _localRotation="0,0,0"
@@ -1603,7 +1603,7 @@
 		<entity id="98" name="ArenaAmbience">
 			<GameObject _schemaVersion="0" _name="ArenaAmbience" _bActive="true">
 				<_listComponent>
-					<AudioAmbientEmitterComponent _componentName="AudioAmbientEmitterComponent"
+					<AudioAmbientEmitterComponent _localID="11224089459702654729" _componentName="AudioAmbientEmitterComponent"
 					                              _bActive="true"
 					                              _localPosition="15,2,15"
 					                              _localRotation="0,0,0"
@@ -1624,7 +1624,7 @@
 		<entity id="99" name="PowerBoxHum">
 			<GameObject _schemaVersion="0" _name="PowerBoxHum" _bActive="true">
 				<_listComponent>
-					<AudioEmitterComponent _componentName="AudioEmitterComponent"
+					<AudioEmitterComponent _localID="12336158627652288615" _componentName="AudioEmitterComponent"
 					                       _bActive="true"
 					                       _localPosition="-19.95,1.4,6"
 					                       _localRotation="0,0,0"
@@ -1642,7 +1642,7 @@
 		<entity id="100" name="Killcam">
 			<GameObject _schemaVersion="0" _name="Killcam" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="0,2,-10"
 					                 _localRotation="0,0,0"
@@ -1657,7 +1657,7 @@
 					                 _priority="0"
 					                 _role="Custom"
 					                 _bOrthographic="false" />
-					<KillcamComponent _componentName="KillcamComponent" _bActive="true" _shotCapacity="8">
+					<KillcamComponent _localID="10692615545484929260" _componentName="KillcamComponent" _bActive="true" _shotCapacity="8">
 						<_settings _bulletSpeed="12" _followDistance="1.2" _followHeight="0.25" _hitHoldSeconds="0.6" _closeUpDistance="2" _maxSeconds="4" />
 					</KillcamComponent>
 				</_listComponent>

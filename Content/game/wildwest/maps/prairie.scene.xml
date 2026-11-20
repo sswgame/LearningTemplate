@@ -9,7 +9,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="0,20,-15"
 					                 _localRotation="0.9272952,0,0"
@@ -24,7 +24,7 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="true" />
-					<CameraManagerComponent _componentName="CameraManagerComponent" _bActive="true" _viewTarget="114" _localPlayerIndex="0" />
+					<CameraManagerComponent _localID="3555541265262269731" _componentName="CameraManagerComponent" _bActive="true" _viewTarget="114" _localPlayerIndex="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -32,7 +32,7 @@
 		<entity id="116" name="SupplyCrate">
 			<GameObject _schemaVersion="0" _name="SupplyCrate" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="48,0.25,-4"
 					                    _localRotation="0,0,0"
@@ -51,20 +51,20 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.5,0.5,0.5"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/wood.material"
 					               _boundsRadius="0.45"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<TagComponent>
+					<TagComponent _localID="5249839963692551013">
 						<_tags>
 							<_listTag>
 								<item>West.Carryable</item>
@@ -77,7 +77,7 @@
 		<entity id="114" name="GameplayView">
 			<GameObject _schemaVersion="0" _name="GameplayView" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="0,20,-15"
 					                 _localRotation="0.9272952,0,0"
@@ -92,7 +92,7 @@
 					                 _priority="0"
 					                 _role="Custom"
 					                 _bOrthographic="true" />
-					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
 					                         _catalogPath="game/wildwest/data/prairie.cameras.xml"
 					                         _initialPreset="prairie"
@@ -106,14 +106,14 @@
 		<entity id="115" name="PlayerController">
 			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<PlayerControllerComponent _componentName="PlayerControllerComponent" _bActive="true" _playerIndex="0" _bManageViewTarget="false" />
+					<PlayerControllerComponent _localID="4811566279812111972" _componentName="PlayerControllerComponent" _bActive="true" _playerIndex="0" _bManageViewTarget="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.493804,-1.811174,0"
@@ -133,7 +133,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="0,-0.5,0"
 					                    _localRotation="0,0,0"
@@ -165,14 +165,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0.5,0"
 					               _localRotation="0,0,0"
 					               _localScale="160,1,160"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Plane"
 					               _materialPath="game/wildwest/materials/sand.material"
 					               _boundsRadius="0.866"
@@ -184,7 +184,7 @@
 		<entity id="4" name="Player">
 			<GameObject _schemaVersion="0" _name="Player" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<CharacterControllerComponent _componentName="CharacterControllerComponent"
+					<CharacterControllerComponent _localID="1851894784675401076" _componentName="CharacterControllerComponent"
 					                              _bActive="true"
 					                              _localPosition="0,0.05,0"
 					                              _localRotation="0,0,0"
@@ -199,46 +199,46 @@
 					                              _gravityScale="1"
 					                              _mass="70"
 					                              _layer="Character" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.6,0.9,0.6"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="CharacterControllerComponent#0"
+					               _attachComponent="#19b3407eb1f9cd74"
 					               _meshID="Capsule"
 					               _materialPath="game/wildwest/materials/rider.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163494941664531515" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,1.85,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.75,0.08,0.75"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="CharacterControllerComponent#0"
+					               _attachComponent="#19b3407eb1f9cd74"
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/hat.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163496041176159726" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,1.97,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.42,0.2,0.42"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="CharacterControllerComponent#0"
+					               _attachComponent="#19b3407eb1f9cd74"
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/hat.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<PawnComponent _componentName="PawnComponent"
+					<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
 					               _bActive="true"
 					               _moveAction="Move"
 					               _lookAction="None"
@@ -256,7 +256,7 @@
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
-					<CharacterPawnMovementComponent _componentName="CharacterPawnMovementComponent"
+					<CharacterPawnMovementComponent _localID="14594004469458933705" _componentName="CharacterPawnMovementComponent"
 					                                _bActive="true"
 					                                _sprintButton="None"
 					                                _jumpButton="None"
@@ -267,10 +267,10 @@
 					                                _jumpSpeed="5"
 					                                _turnRate="12"
 					                                _facingMode="MoveDirection" />
-					<MountInteractionComponent _componentName="MountInteractionComponent"
+					<MountInteractionComponent _localID="2913885659885966394" _componentName="MountInteractionComponent"
 					                           _bActive="true"
 					                           _interactButton="Interact" />
-					<GrabberComponent _componentName="GrabberComponent"
+					<GrabberComponent _localID="11770648949639198024" _componentName="GrabberComponent"
 					                  _bActive="true"
 					                  _holdOffset="0,1.2,0.8"
 					                  _grabButton="West.Carry"
@@ -288,7 +288,7 @@
 		<entity id="5" name="Bessie">
 			<GameObject _schemaVersion="0" _name="Bessie" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="1.6,0,0"
 					                _localRotation="0,0,0"
@@ -296,14 +296,14 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 					                       _bActive="true"
 					                       _localPosition="0,0,0"
 					                       _localRotation="0,0,0"
 					                       _localScale="0.4,0.4,0.4"
 					                       _attachOwner="None"
 					                       _attachOwnerID="0"
-					                       _attachComponent="SceneComponent#0"
+					                       _attachComponent="#ae80bcb72e918025"
 					                       _meshID="game/wildwest/models/horse.mesh"
 					                       _materialPath="game/wildwest/materials/morgan.material"
 					                       _boundsRadius="2.4"
@@ -313,7 +313,7 @@
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
 					                       _visibilityBasedTickOption="AlwaysTickPose" />
-					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="game/wildwest/data/horse.animgraph.xml"
 					                           _animationSetPath="game/wildwest/models/horse/horse.animset.xml"
@@ -326,20 +326,20 @@
 					                           _syncWeight="1"
 					                           _bExtractRootMotion="false"
 					                           _bPlayOnBegin="true" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,1.72,-0.05"
 					               _localRotation="0,0,0"
 					               _localScale="0.74,0.06,0.6"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/hat.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<PawnComponent _componentName="PawnComponent"
+					<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
 					               _bActive="true"
 					               _moveAction="Move"
 					               _lookAction="None"
@@ -355,7 +355,7 @@
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
-					<MountMovementComponent _componentName="MountMovementComponent"
+					<MountMovementComponent _localID="89252748912182509" _componentName="MountMovementComponent"
 					                        _bActive="true"
 					                        _sprintButton="Sprint"
 					                        _gaitParameter="Gait"
@@ -372,7 +372,7 @@
 					                        _canterTurnRate="1.5"
 					                        _gallopTurnRate="1.2"
 					                        _bUseRootMotion="false" />
-					<VehicleSeatComponent _componentName="VehicleSeatComponent"
+					<VehicleSeatComponent _localID="9451712765012233414" _componentName="VehicleSeatComponent"
 					                      _bActive="true"
 					                      _socketName="None"
 					                      _riderPoseParameter="None"
@@ -380,12 +380,12 @@
 					                      _exitOffset="-1.6,0,0"
 					                      _enterDistance="2.5"
 					                      _bDriverSeat="true" />
-					<VehicleExitComponent _componentName="VehicleExitComponent" _bActive="true" _exitButton="Interact" />
-					<WesternHorseMountComponent _componentName="WesternHorseMountComponent"
+					<VehicleExitComponent _localID="14315915080128068609" _componentName="VehicleExitComponent" _bActive="true" _exitButton="Interact" />
+					<WesternHorseMountComponent _localID="4244165761428969897" _componentName="WesternHorseMountComponent"
 					                            _bActive="true"
 					                            _gallopAbility="None"
 					                            _resumeGallopRatio="0.3" />
-					<WesternHorseComponent _componentName="WesternHorseComponent"
+					<WesternHorseComponent _localID="11367541497917455430" _componentName="WesternHorseComponent"
 					                        _bActive="true"
 					                        _gameMode="9"
 					                        _breed="morgan"
@@ -397,7 +397,7 @@
 		<entity id="6" name="Shadow">
 			<GameObject _schemaVersion="0" _name="Shadow" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="-6,0,3.5"
 					                _localRotation="0,0.6,0"
@@ -405,14 +405,14 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 					                       _bActive="true"
 					                       _localPosition="0,0,0"
 					                       _localRotation="0,0,0"
 					                       _localScale="0.4,0.4,0.4"
 					                       _attachOwner="None"
 					                       _attachOwnerID="0"
-					                       _attachComponent="SceneComponent#0"
+					                       _attachComponent="#ae80bcb72e918025"
 					                       _meshID="game/wildwest/models/horse.mesh"
 					                       _materialPath="game/wildwest/materials/mustang.material"
 					                       _boundsRadius="2.4"
@@ -422,7 +422,7 @@
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
 					                       _visibilityBasedTickOption="AlwaysTickPose" />
-					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="game/wildwest/data/horse.animgraph.xml"
 					                           _animationSetPath="game/wildwest/models/horse/horse.animset.xml"
@@ -435,20 +435,20 @@
 					                           _syncWeight="1"
 					                           _bExtractRootMotion="false"
 					                           _bPlayOnBegin="true" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,1.72,-0.05"
 					               _localRotation="0,0,0"
 					               _localScale="0.74,0.06,0.6"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/hat.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<PawnComponent _componentName="PawnComponent"
+					<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
 					               _bActive="true"
 					               _moveAction="Move"
 					               _lookAction="None"
@@ -464,7 +464,7 @@
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
-					<MountMovementComponent _componentName="MountMovementComponent"
+					<MountMovementComponent _localID="89252748912182509" _componentName="MountMovementComponent"
 					                        _bActive="true"
 					                        _sprintButton="Sprint"
 					                        _gaitParameter="Gait"
@@ -481,7 +481,7 @@
 					                        _canterTurnRate="1.5"
 					                        _gallopTurnRate="1.2"
 					                        _bUseRootMotion="false" />
-					<VehicleSeatComponent _componentName="VehicleSeatComponent"
+					<VehicleSeatComponent _localID="9451712765012233414" _componentName="VehicleSeatComponent"
 					                      _bActive="true"
 					                      _socketName="None"
 					                      _riderPoseParameter="None"
@@ -489,12 +489,12 @@
 					                      _exitOffset="-1.6,0,0"
 					                      _enterDistance="2.5"
 					                      _bDriverSeat="true" />
-					<VehicleExitComponent _componentName="VehicleExitComponent" _bActive="true" _exitButton="Interact" />
-					<WesternHorseMountComponent _componentName="WesternHorseMountComponent"
+					<VehicleExitComponent _localID="14315915080128068609" _componentName="VehicleExitComponent" _bActive="true" _exitButton="Interact" />
+					<WesternHorseMountComponent _localID="4244165761428969897" _componentName="WesternHorseMountComponent"
 					                            _bActive="true"
 					                            _gallopAbility="None"
 					                            _resumeGallopRatio="0.3" />
-					<WesternHorseComponent _componentName="WesternHorseComponent"
+					<WesternHorseComponent _localID="11367541497917455430" _componentName="WesternHorseComponent"
 					                        _bActive="true"
 					                        _gameMode="9"
 					                        _breed="mustang"
@@ -506,7 +506,7 @@
 		<entity id="7" name="BessieAI">
 			<GameObject _schemaVersion="0" _name="BessieAI" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<HorseFollowAIController _componentName="HorseFollowAIController"
+					<HorseFollowAIController _localID="5534389168816619034" _componentName="HorseFollowAIController"
 					                         _bActive="true"
 					                         _possessAtStart="5"
 					                         _turnRate="6"
@@ -519,7 +519,7 @@
 		<entity id="8" name="ShadowAI">
 			<GameObject _schemaVersion="0" _name="ShadowAI" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<HorseFollowAIController _componentName="HorseFollowAIController"
+					<HorseFollowAIController _localID="5534389168816619034" _componentName="HorseFollowAIController"
 					                         _bActive="true"
 					                         _possessAtStart="6"
 					                         _turnRate="6"
@@ -532,8 +532,8 @@
 		<entity id="9" name="Ranch">
 			<GameObject _schemaVersion="0" _name="Ranch" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SessionStateComponent _componentName="SessionStateComponent" _bActive="true" />
-					<WildWestGameModeComponent _componentName="WildWestGameModeComponent"
+					<SessionStateComponent _localID="6673597520240684436" _componentName="SessionStateComponent" _bActive="true" />
+					<WildWestGameModeComponent _localID="17445800879317630793" _componentName="WildWestGameModeComponent"
 					                           _bActive="true"
 					                           _bAutoPlay="false"
 					                           _westernDataPath="game/wildwest/data/western.xml"
@@ -548,7 +548,7 @@
 					                           _witnessSightRange="12"
 					                           _lowCoreWarning="30"
 					                           _startingMoney="20" />
-					<HUDControllerComponent _componentName="HUDControllerComponent"
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
 					                        _bActive="true"
 					                        _documentPath="game/wildwest/ui/hud.ui.xml" />
 				</_listComponent>
@@ -557,7 +557,7 @@
 		<entity id="10" name="Cactus_1">
 			<GameObject _schemaVersion="0" _name="Cactus_1" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,9"
 					               _localRotation="0,0,0"
@@ -576,7 +576,7 @@
 		<entity id="11" name="Cactus_2">
 			<GameObject _schemaVersion="0" _name="Cactus_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,12"
 					               _localRotation="0,0,0"
@@ -595,7 +595,7 @@
 		<entity id="12" name="Cactus_3">
 			<GameObject _schemaVersion="0" _name="Cactus_3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="14,0,-4"
 					               _localRotation="0,0,0"
@@ -614,7 +614,7 @@
 		<entity id="13" name="Cactus_4">
 			<GameObject _schemaVersion="0" _name="Cactus_4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-6"
 					               _localRotation="0,0,0"
@@ -633,7 +633,7 @@
 		<entity id="14" name="Cactus_5">
 			<GameObject _schemaVersion="0" _name="Cactus_5" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,22"
 					               _localRotation="0,0,0"
@@ -652,7 +652,7 @@
 		<entity id="15" name="Cactus_6">
 			<GameObject _schemaVersion="0" _name="Cactus_6" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-4,0,-14"
 					               _localRotation="0,0,0"
@@ -671,7 +671,7 @@
 		<entity id="16" name="Cactus_7">
 			<GameObject _schemaVersion="0" _name="Cactus_7" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="18,0,16"
 					               _localRotation="0,0,0"
@@ -690,7 +690,7 @@
 		<entity id="17" name="Cactus_8">
 			<GameObject _schemaVersion="0" _name="Cactus_8" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-20,0,14"
 					               _localRotation="0,0,0"
@@ -709,7 +709,7 @@
 		<entity id="18" name="Rock_1">
 			<GameObject _schemaVersion="0" _name="Rock_1" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,6"
 					               _localRotation="0,0.4,0"
@@ -728,7 +728,7 @@
 		<entity id="19" name="Rock_2">
 			<GameObject _schemaVersion="0" _name="Rock_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,2"
 					               _localRotation="0,0.4,0"
@@ -747,7 +747,7 @@
 		<entity id="20" name="Rock_3">
 			<GameObject _schemaVersion="0" _name="Rock_3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="10,0,-10"
 					               _localRotation="0,0.4,0"
@@ -766,7 +766,7 @@
 		<entity id="21" name="Rock_4">
 			<GameObject _schemaVersion="0" _name="Rock_4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-6,0,18"
 					               _localRotation="0,0.4,0"
@@ -785,7 +785,7 @@
 		<entity id="22" name="Rock_5">
 			<GameObject _schemaVersion="0" _name="Rock_5" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="16,0,6"
 					               _localRotation="0,0.4,0"
@@ -804,7 +804,7 @@
 		<entity id="23" name="Fence_1">
 			<GameObject _schemaVersion="0" _name="Fence_1" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-6"
 					               _localRotation="0,0,0"
@@ -823,7 +823,7 @@
 		<entity id="24" name="Fence_2">
 			<GameObject _schemaVersion="0" _name="Fence_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-3.5"
 					               _localRotation="0,0,0"
@@ -842,7 +842,7 @@
 		<entity id="25" name="Fence_3">
 			<GameObject _schemaVersion="0" _name="Fence_3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-1"
 					               _localRotation="0,0,0"
@@ -861,7 +861,7 @@
 		<entity id="26" name="Fence_4">
 			<GameObject _schemaVersion="0" _name="Fence_4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,1.5"
 					               _localRotation="0,0,0"
@@ -880,7 +880,7 @@
 		<entity id="27" name="Fence_5">
 			<GameObject _schemaVersion="0" _name="Fence_5" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,4"
 					               _localRotation="0,0,0"
@@ -899,7 +899,7 @@
 		<entity id="28" name="Fence_6">
 			<GameObject _schemaVersion="0" _name="Fence_6" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,6.5"
 					               _localRotation="0,0,0"
@@ -918,7 +918,7 @@
 		<entity id="29" name="Fence_7">
 			<GameObject _schemaVersion="0" _name="Fence_7" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,9"
 					               _localRotation="0,0,0"
@@ -938,7 +938,7 @@
 		<entity id="100" name="Strongbox">
 			<GameObject _schemaVersion="0" _name="Strongbox" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="44,0,0"
 					                _localRotation="0,0,0"
@@ -946,20 +946,20 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.8,1.8,0.8"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/wood.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<WesternDeedComponent _componentName="WesternDeedComponent"
+					<WesternDeedComponent _localID="13701282418047745045" _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="Crime"
 					                      _crime="theft" _reach="2.5" _bOnce="true" />
@@ -969,7 +969,7 @@
 		<entity id="101" name="Clerk">
 			<GameObject _schemaVersion="0" _name="Clerk" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="44,0,4"
 					                _localRotation="0,3.1415927,0"
@@ -977,27 +977,27 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.8,1.8,0.8"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Capsule"
 					               _materialPath="game/wildwest/materials/rider.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<WesternWitnessComponent _componentName="WesternWitnessComponent" _bActive="true" _bLawman="false" />
+					<WesternWitnessComponent _localID="4364234661719889896" _componentName="WesternWitnessComponent" _bActive="true" _bLawman="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="102" name="Sheriff">
 			<GameObject _schemaVersion="0" _name="Sheriff" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="70,0,0"
 					                _localRotation="0,0,0"
@@ -1005,21 +1005,21 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.8,1.8,0.8"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Capsule"
 					               _materialPath="game/wildwest/materials/rider.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<WesternWitnessComponent _componentName="WesternWitnessComponent" _bActive="true" _bLawman="true" />
-					<WesternDeedComponent _componentName="WesternDeedComponent"
+					<WesternWitnessComponent _localID="4364234661719889896" _componentName="WesternWitnessComponent" _bActive="true" _bLawman="true" />
+					<WesternDeedComponent _localID="13701282418047745045" _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="PayBounty"
 					                      _reach="2.5" />
@@ -1029,7 +1029,7 @@
 		<entity id="103" name="Stranger">
 			<GameObject _schemaVersion="0" _name="Stranger" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="52,0,0"
 					                _localRotation="0,0,0"
@@ -1037,20 +1037,20 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.8,1.8,0.8"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Capsule"
 					               _materialPath="game/wildwest/materials/rider.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<WesternDeedComponent _componentName="WesternDeedComponent"
+					<WesternDeedComponent _localID="13701282418047745045" _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="HonorAction"
 					                      _honorAction="help_stranger" _reach="2.5" _bOnce="true" />
@@ -1060,7 +1060,7 @@
 		<entity id="104" name="Deer">
 			<GameObject _schemaVersion="0" _name="Deer" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="60,0,10"
 					                _localRotation="0,0,0"
@@ -1068,20 +1068,20 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.8,1.8,0.8"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/mustang.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<WesternDeedComponent _componentName="WesternDeedComponent"
+					<WesternDeedComponent _localID="13701282418047745045" _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="Hunt"
 					                      _animal="deer" _weapon="rifle" _zone="head" _hitCount="1" _reach="2.5" _bOnce="true" _bHideWhenUsed="true" />
@@ -1091,7 +1091,7 @@
 		<entity id="105" name="SkinningRack">
 			<GameObject _schemaVersion="0" _name="SkinningRack" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="60,0,16"
 					                _localRotation="0,0,0"
@@ -1099,20 +1099,20 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.8,1.8,0.8"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/wood.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<WesternDeedComponent _componentName="WesternDeedComponent"
+					<WesternDeedComponent _localID="13701282418047745045" _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="Skin"
 					                      _reach="2.5" />
@@ -1122,7 +1122,7 @@
 		<entity id="106" name="TradingPost">
 			<GameObject _schemaVersion="0" _name="TradingPost" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="60,0,22"
 					                _localRotation="0,0,0"
@@ -1130,20 +1130,20 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.8,1.8,0.8"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/wood.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<WesternDeedComponent _componentName="WesternDeedComponent"
+					<WesternDeedComponent _localID="13701282418047745045" _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="SellPelts"
 					                      _reach="2.5" />
@@ -1153,7 +1153,7 @@
 		<entity id="107" name="Campfire">
 			<GameObject _schemaVersion="0" _name="Campfire" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="60,0,28"
 					                _localRotation="0,0,0"
@@ -1161,20 +1161,20 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.8,1.8,0.8"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/sand.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<WesternDeedComponent _componentName="WesternDeedComponent"
+					<WesternDeedComponent _localID="13701282418047745045" _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="Eat"
 					                      _food="jerky" _reach="2.5" />
@@ -1184,7 +1184,7 @@
 		<entity id="108" name="Wardrobe">
 			<GameObject _schemaVersion="0" _name="Wardrobe" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="60,0,34"
 					                _localRotation="0,0,0"
@@ -1192,20 +1192,20 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0.9,0"
 					               _localRotation="0,0,0"
 					               _localScale="0.8,1.8,0.8"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="SceneComponent#0"
+					               _attachComponent="#ae80bcb72e918025"
 					               _meshID="Cube"
 					               _materialPath="game/wildwest/materials/hat.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<WesternDeedComponent _componentName="WesternDeedComponent"
+					<WesternDeedComponent _localID="13701282418047745045" _componentName="WesternDeedComponent"
 					                      _bActive="true"
 					                      _kind="ChangeClothes"
 					                      _clothing="duster" _reach="2.5" />
@@ -1215,7 +1215,7 @@
 		<entity id="109" name="TownGate">
 			<GameObject _schemaVersion="0" _name="TownGate" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="36,0,0"
 					                _localRotation="0,0,0"
@@ -1223,7 +1223,7 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<AutosaveTriggerComponent _componentName="AutosaveTriggerComponent"
+					<AutosaveTriggerComponent _localID="9754248446264375363" _componentName="AutosaveTriggerComponent"
 					                          _bActive="true"
 					                          _activator="4"
 					                          _radius="3"
@@ -1240,7 +1240,7 @@
 		<entity id="110" name="ArrivalCutA">
 			<GameObject _schemaVersion="0" _name="ArrivalCutA" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="38,2.2,-7"
 					                 _localRotation="0.12,0.55,0"
@@ -1261,7 +1261,7 @@
 		<entity id="111" name="ArrivalCutB">
 			<GameObject _schemaVersion="0" _name="ArrivalCutB" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="58,16,-16"
 					                 _localRotation="0.75,0,0"
@@ -1282,7 +1282,7 @@
 		<entity id="112" name="ArrivalDirector">
 			<GameObject _schemaVersion="0" _name="ArrivalDirector" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SequencePlayerComponent _componentName="SequencePlayerComponent"
+					<SequencePlayerComponent _localID="7060533932593436227" _componentName="SequencePlayerComponent"
 					                         _bActive="true"
 					                         _sequencePath="game/wildwest/data/arrival.seq.xml"
 					                         _framesPerSecond="30"
@@ -1300,14 +1300,14 @@
 							<SequenceBindingSlot _binding="2" _object="111" />
 						</_listBinding>
 					</SequencePlayerComponent>
-					<CinematicCameraComponent _componentName="CinematicCameraComponent" _bActive="true" _localPlayerIndex="0" />
+					<CinematicCameraComponent _localID="9401995068095844899" _componentName="CinematicCameraComponent" _bActive="true" _localPlayerIndex="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="113" name="TownArrival">
 			<GameObject _schemaVersion="0" _name="TownArrival" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="40,0,0"
 					                _localRotation="0,0,0"
@@ -1315,7 +1315,7 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<SequenceTriggerComponent _componentName="SequenceTriggerComponent"
+					<SequenceTriggerComponent _localID="15862126103743289456" _componentName="SequenceTriggerComponent"
 					                          _bActive="true"
 					                          _activator="4"
 					                          _radius="2.5"
@@ -1332,8 +1332,8 @@
 		<entity id="117" name="NavigationSurface">
 			<GameObject _schemaVersion="0" _name="NavigationSurface" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="10,0,-40" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<NavMeshSurfaceComponent _geometrySource="Both" _boundsHalfExtents="45,4,12">
+					<SceneComponent _localID="12574257654564749349" _localPosition="10,0,-40" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshSurfaceComponent _localID="4521272121032625094" _geometrySource="Both" _boundsHalfExtents="45,4,12">
 						<_listAgentType />
 						<_listExcludeTag />
 					</NavMeshSurfaceComponent>
@@ -1343,7 +1343,7 @@
 		<entity id="118" name="NavPlatform">
 			<GameObject _schemaVersion="0" _name="NavPlatform" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="3,1,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="3,1,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,1,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
 								<_listPoint />
@@ -1357,83 +1357,83 @@
 		<entity id="119" name="JumpLink">
 			<GameObject _schemaVersion="0" _name="JumpLink" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-1.5,0,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<NavMeshLinkComponent _startOffset="0,0,0" _endOffset="3,2,0" _width="1" _areaName="" _linkType="Jump" _bBidirectional="true" _bLinkEnabled="true" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-1.5,0,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshLinkComponent _localID="14248982297297280337" _startOffset="0,0,0" _endOffset="3,2,0" _width="1" _areaName="" _linkType="Jump" _bBidirectional="true" _bLinkEnabled="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="120" name="PlatformGoal">
 			<GameObject _schemaVersion="0" _name="PlatformGoal" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="3.5,2,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="3.5,2,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="121" name="Climber">
 			<GameObject _schemaVersion="0" _name="Climber" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-6,0,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<NavMeshAgentComponent _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-6,0,-42" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _localID="1184447121065519204" _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="122" name="Drifter">
 			<GameObject _schemaVersion="0" _name="Drifter" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-30,0,-46" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<NavMeshAgentComponent _agentType="" _maxSpeed="6" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-30,0,-46" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _localID="1184447121065519204" _agentType="" _maxSpeed="6" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="123" name="FarPost">
 			<GameObject _schemaVersion="0" _name="FarPost" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="50,0,-46" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="50,0,-46" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="124" name="Herd_1">
 			<GameObject _schemaVersion="0" _name="Herd_1" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-22,0,-34" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<NavMeshAgentComponent _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-22,0,-34" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _localID="1184447121065519204" _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="125" name="Herd_2">
 			<GameObject _schemaVersion="0" _name="Herd_2" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-22,0,-32" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<NavMeshAgentComponent _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-22,0,-32" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _localID="1184447121065519204" _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="126" name="Herd_3">
 			<GameObject _schemaVersion="0" _name="Herd_3" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-22,0,-30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<NavMeshAgentComponent _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-22,0,-30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _localID="1184447121065519204" _agentType="" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="Transform" _bUpdateRotation="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="127" name="HerdGoal_1">
 			<GameObject _schemaVersion="0" _name="HerdGoal_1" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-10,0,-34" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-10,0,-34" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="128" name="HerdGoal_2">
 			<GameObject _schemaVersion="0" _name="HerdGoal_2" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-10,0,-32" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-10,0,-32" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="129" name="HerdGoal_3">
 			<GameObject _schemaVersion="0" _name="HerdGoal_3" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-10,0,-30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-10,0,-30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 				</_listComponent>
 			</GameObject>
 		</entity>

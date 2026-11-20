@@ -16,7 +16,9 @@ import pathlib
 import re
 import sys
 
-REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
+from common.paths import get_build_dir  # noqa: E402
+
 GENERATED_MARKER = '/generated/'
 OBJECT_SUFFIXES = ('.obj', '.o')
 
@@ -87,7 +89,7 @@ def main() -> int:
     if args.self_check:
         self_check()
         return 0
-    log_path = REPO / 'build' / args.preset / '.ninja_log'
+    log_path = get_build_dir(args.preset) / '.ninja_log'
     manifest_path = log_path.with_name('build.ninja')
     if not log_path.is_file() or not manifest_path.is_file():
         sys.exit(f'{log_path} 나 {manifest_path} 가 없다 — 그 프리셋을 먼저 짓는다')

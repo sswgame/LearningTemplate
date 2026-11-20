@@ -18,6 +18,7 @@
 #include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/MissingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -514,13 +515,19 @@ namespace sw
                     root.setAttribute( "_name", string_view( proxy._name ) );
                     root.setAttribute( "_bActive", "true" );
                     root.setAttribute( "_bAlwaysLoaded", "true" ); // 셀에 들지 않는다 — 원점 자리라 런타임 스폰으로 셀에 넣지 않게(`SceneStreamingSubsystem::regroupObjects`)
-                    XMLNode listComponent = root.appendChild( "_listComponent" );
-                    (void)listComponent.appendChild( "SceneComponent" );
+                    // 지역 id 를 적는다 — 루트 씬 컴포넌트는 1, 묶음 컴포넌트는 2 부터. 부착은 루트의 id 키다(`ComponentStableKey`).
+                    constexpr uint32 kRootLocalID  = 1;
+                    uint32           nextLocalID   = kRootLocalID + 1;
+                    const string     rootKey       = ComponentStableKey::formatKey( kRootLocalID );
+                    XMLNode          listComponent = root.appendChild( "_listComponent" );
+                    XMLNode          rootComponent = listComponent.appendChild( "SceneComponent" );
+                    rootComponent.setAttribute( "_localID", kRootLocalID );
                     for ( const HLODGroup& group : listGroup )
                     {
                         XMLNode component = listComponent.appendChild( kInstancedTypeName );
+                        component.setAttribute( "_localID", nextLocalID++ );
                         component.setAttribute( "_attachOwner", "None" );
-                        component.setAttribute( "_attachComponent", "SceneComponent#0" );
+                        component.setAttribute( "_attachComponent", string_view( rootKey ) );
                         component.setAttribute( "_meshID", string_view( group._meshText ) );
                         component.setAttribute( "_materialPath", string_view( group._materialText ) );
                         component.setAttribute( "_sectionName", string_view( group._sectionText ) );

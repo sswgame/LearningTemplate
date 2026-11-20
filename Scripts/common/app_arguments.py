@@ -10,11 +10,11 @@ from __future__ import annotations
 import functools
 import re
 import shlex
-import subprocess
 from pathlib import Path
 from typing import Mapping, Sequence
 
 from common.paths import get_project_root
+from common.run_process import run_process
 
 ARGUMENT_TABLE = Path('Source') / 'Core' / 'Predefined' / 'ArgumentList.xxx'
 ARGUMENT_LINE = re.compile(r'^SW_REGISTER_ARGUMENT\(\s*\w+\s*,\s*(\w+)\s*,\s*([^,]+?)\s*,\s*\w+\s*,\s*(.+?)\s*\)\s*$', re.MULTILINE)
@@ -124,8 +124,7 @@ def read_value(command: Sequence[str], name: str) -> str | None:
 
 def find_chain_command(build_dir: Path, chain: str, env: Mapping[str, str] | None = None) -> list[str]:
     """`Scenario.<chain>` 의 ctest 명령(인자 목록). 없으면 멈춘다."""
-    listing = subprocess.run(['ctest', '-V', '-N', '-R', f'^Scenario\\.{re.escape(chain)}$'], cwd=build_dir, env=env, capture_output=True, text=True,
-                             encoding='utf-8', errors='replace').stdout
+    listing = run_process(['ctest', '-V', '-N', '-R', f'^Scenario\\.{re.escape(chain)}$'], cwd=build_dir, environment=env).stdout
     for line in listing.splitlines():
         if 'Test command:' in line:
             command = shlex.split(re.sub(r'.*Test command: ', '', line).replace('\\', '/'))

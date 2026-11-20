@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="QuadShell">
 	<GameObject _schemaVersion="0" _name="QuadShell" _bActive="true">
 		<_listComponent>
-			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+			<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 			                       _bActive="true"
 			                       _localPosition="0,0,0"
 			                       _localRotation="0,0,0"
@@ -20,7 +20,7 @@
 			                       _bFollowParentPose="false"
 			                       _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones"
 			                       _bShareCrowdPose="true" />
-			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+			<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/quadshell.animgraph.xml"
 			                           _animationSetPath="common/models/quaternius/scifi/enemy_quadshell/enemy_quadshell.animset.xml"
@@ -33,19 +33,19 @@
 			                           _syncWeight="1"
 			                           _bExtractRootMotion="false"
 			                           _bPlayOnBegin="true" />
-			<AnimationNotifyComponent _componentName="AnimationNotifyComponent"
+			<AnimationNotifyComponent _localID="3803990792213876096" _componentName="AnimationNotifyComponent"
 			                          _bActive="true"
 			                          _notifyTablePath="common/characters/quadshell/quadshell.notifies.xml" />
-			<RagdollComponent _componentName="RagdollComponent"
+			<RagdollComponent _localID="3882491709238727780" _componentName="RagdollComponent"
 			                  _bActive="true"
 			                  _physicsAssetPath="common/characters/quadshell/quadshell.physics.xml"
 			                  _bRagdollOnFatalHit="true"
 			                  _bAutoGetUp="false" />
-			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
+			<CharacterAppearanceComponent _localID="13827364293183997314" _componentName="CharacterAppearanceComponent"
 			                              _bActive="true"
 			                              _presetID="QuadShell"
 			                              _seed="0" />
-			<WidgetComponent _componentName="WidgetComponent"
+			<WidgetComponent _localID="11339505928329980331" _componentName="WidgetComponent"
 			                 _bActive="true"
 			                 _documentPath=""
 			                 _space="Screen"
@@ -58,7 +58,7 @@
 			                 _referenceDistance="10"
 			                 _bClampToScreenEdge="false"
 			                 _bScaleWithDistance="false" />
-			<HealthBarComponent _componentName="HealthBarComponent"
+			<HealthBarComponent _localID="13661083042096604780" _componentName="HealthBarComponent"
 			                    _bActive="true"
 			                    _hpRatio="1"
 			                    _remainRatio="1"
@@ -70,7 +70,7 @@
 			                    _bVisible="false"
 			                    _bShowWhenHurt="true"
 			                    _bHideWhenDead="true" />
-			<ShooterEnemyComponent _componentName="ShooterEnemyComponent"
+			<ShooterEnemyComponent _localID="5737623410309423083" _componentName="ShooterEnemyComponent"
 			                       _bActive="true"
 			                       _gameMode="0"
 			                       _radius="1.39"
@@ -85,7 +85,7 @@
 			                       _corpseTime="3"
 			                       _runSpeed="3.2"
 			                       _turnRate="6" />
-			<NavMeshAgentComponent _componentName="NavMeshAgentComponent"
+			<NavMeshAgentComponent _localID="1184447121065519204" _componentName="NavMeshAgentComponent"
 			                       _bActive="true"
 			                       _agentType="Humanoid"
 			                       _maxSpeed="3"
@@ -97,7 +97,7 @@
 			                       _turnRate="8"
 			                       _driveMode="SteerOnly"
 			                       _bUpdateRotation="false" />
-			<PawnComponent _componentName="PawnComponent"
+			<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
 			               _bActive="true"
 			               _moveAction="None"
 			               _lookAction="None"
@@ -112,7 +112,7 @@
 				</_listButton>
 				<_listAnalog />
 			</PawnComponent>
-			<ShooterBodyMovementComponent _componentName="ShooterBodyMovementComponent"
+			<ShooterBodyMovementComponent _localID="10555112802505069990" _componentName="ShooterBodyMovementComponent"
 			                              _bActive="true"
 			                              _sprintButton="None"
 			                              _jumpButton="None"

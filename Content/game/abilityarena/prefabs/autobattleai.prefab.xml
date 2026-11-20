@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="ArenaAutoBattleAI">
 	<GameObject _schemaVersion="0" _name="ArenaAutoBattleAI" _bActive="true">
 		<_listComponent>
-			<ArenaAutoBattleAIComponent _componentName="ArenaAutoBattleAIComponent"
+			<ArenaAutoBattleAIComponent _localID="4041145210292639849" _componentName="ArenaAutoBattleAIComponent"
 			                            _bActive="true"
 			                            _possessAtStart="0"
 			                            _turnRate="20"

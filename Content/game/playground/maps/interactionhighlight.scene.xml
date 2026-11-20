@@ -10,7 +10,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,1.6,-6"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.6,-6"
 					                 _localRotation="0.15,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -28,7 +28,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="0.628882,0.93002,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -45,7 +45,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,2"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,2"
 					               _localRotation="0,0,0"
 					               _localScale="16,1,16"
 					               _attachOwner="None"
@@ -59,14 +59,14 @@
 		<entity id="4" name="Player">
 			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="0,0.5,-14"
 					                _localRotation="0,0,0"
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<InteractorComponent _componentName="InteractorComponent"
+					<InteractorComponent _localID="16055325405208558630" _componentName="InteractorComponent"
 					                     _bActive="true"
 					                     _eyeOffset="0,0,0"
 					                     _bUseLineOfSight="false" />
@@ -76,7 +76,7 @@
 		<entity id="5" name="PickCube">
 			<GameObject _schemaVersion="0" _name="PickCube" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-1.5,0.5,1"
+					<MeshComponent _localID="163493842152903304" _localPosition="-1.5,0.5,1"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
@@ -84,7 +84,7 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_orange.material"
 					               _boundsRadius="0.9" />
-					<InteractableComponent _componentName="InteractableComponent"
+					<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
 					                       _bActive="true"
 					                       _interactionID="PickUp"
 					                       _catalogPath="game/playground/data/interactionhighlight.interactions.xml"
@@ -96,7 +96,7 @@
 		<entity id="6" name="Wall">
 			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="2,1,1.3"
+					<MeshComponent _localID="163493842152903304" _localPosition="2,1,1.3"
 					               _localRotation="0,0,0"
 					               _localScale="2,2,0.2"
 					               _attachOwner="None"
@@ -110,7 +110,7 @@
 		<entity id="7" name="HideCube">
 			<GameObject _schemaVersion="0" _name="HideCube" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="2,0.5,2"
+					<MeshComponent _localID="163493842152903304" _localPosition="2,0.5,2"
 					               _localRotation="0,0,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"
@@ -118,7 +118,7 @@
 					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_orange.material"
 					               _boundsRadius="0.9" />
-					<InteractableComponent _componentName="InteractableComponent"
+					<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
 					                       _bActive="true"
 					                       _interactionID="Hide"
 					                       _catalogPath="game/playground/data/interactionhighlight.interactions.xml"

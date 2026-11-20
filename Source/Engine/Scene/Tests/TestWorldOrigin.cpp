@@ -27,7 +27,7 @@ namespace
             node._fileID = fileID;
             node._name   = string( name );
             StringBuilder<constant::buffer::kMax512> xml;
-            xml.appendFormat( "<GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"><_listComponent><SceneComponent _localPosition=\"%#\" %# /></_listComponent></GameObject>", name, position, attach );
+            xml.appendFormat( "<GameObject _schemaVersion=\"0\" _name=\"%#\" _bActive=\"true\"><_listComponent><SceneComponent _localID=\"1\" _localPosition=\"%#\" %# /></_listComponent></GameObject>", name, position, attach );
             node._embeddedXML = string( xml.view() );
             return node;
         }
@@ -39,7 +39,7 @@ namespace
             doc._name   = "Origin";
             doc._bValid = true;
             doc._listSceneObjectNode.push_back( makeNode( 1, "Ground", "1000,0,500" ) );
-            doc._listSceneObjectNode.push_back( makeNode( 2, "Lid", "0,2,0", "_attachOwner=\"Ground\" _attachOwnerID=\"1\" _attachComponent=\"SceneComponent#0\"" ) );
+            doc._listSceneObjectNode.push_back( makeNode( 2, "Lid", "0,2,0", "_attachOwner=\"Ground\" _attachOwnerID=\"1\" _attachComponent=\"#0000000000000001\"" ) );
             SceneDocument::SceneObjectNode snow = makeNode( 3, "Snow", "5,0,0" );
             snow._listDataLayer.push_back( "Winter" );
             doc._listSceneObjectNode.push_back( std::move( snow ) );

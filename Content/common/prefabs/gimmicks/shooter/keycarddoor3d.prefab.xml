@@ -1,10 +1,10 @@
 <?asset guid="308e0f591f0edeefc4844bfadfea63fa"?>
 <Prefab formatVersion="1" _base="common/prefabs/gimmicks/adventure/lockeddoor3d.prefab.xml" name="KeycardDoor3D">
 	<PrefabOverrides>
-		<Override key="InteractableComponent#0">
+		<Override key="#93b8f1000cacd0ad">
 			<InteractableComponent _interactionID="SwipeKeycard" />
 		</Override>
-		<Override key="GimmickCircuitComponent#0">
+		<Override key="#afcc91cc53412045">
 			<GimmickCircuitComponent>
 				<_listNode>
 					<GimmickNodeDesc _id="swipe" _kind="Interaction" _params="" />

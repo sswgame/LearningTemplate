@@ -8,7 +8,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="0,14,-10"
 					                 _localRotation="0.9505468,0,0"
@@ -23,7 +23,7 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="false" />
-					<FollowCameraComponent _componentName="FollowCameraComponent"
+					<FollowCameraComponent _localID="15357652970512560881" _componentName="FollowCameraComponent"
 					                      _bActive="true"
 					                      _gameMode="10"
 					                      _offset="0,14,-10"
@@ -34,7 +34,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.448254,-2.121679,0"
@@ -55,7 +55,7 @@
 		<entity id="3" name="Ground_Hearth">
 			<GameObject _schemaVersion="0" _name="Ground_Hearth" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
@@ -74,7 +74,7 @@
 		<entity id="4" name="Ground_Fernwood">
 			<GameObject _schemaVersion="0" _name="Ground_Fernwood" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="20,0,0"
 					               _localRotation="0,0,0"
@@ -93,7 +93,7 @@
 		<entity id="5" name="Ground_Cinderhold">
 			<GameObject _schemaVersion="0" _name="Ground_Cinderhold" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="40,0,0"
 					               _localRotation="0,0,0"
@@ -113,8 +113,8 @@
 		<entity id="10" name="Valley">
 			<GameObject _schemaVersion="0" _name="Valley" _bActive="true">
 				<_listComponent>
-					<SessionStateComponent _componentName="SessionStateComponent" _bActive="true" />
-					<VelmoraGameModeComponent _componentName="VelmoraGameModeComponent"
+					<SessionStateComponent _localID="6673597520240684436" _componentName="SessionStateComponent" _bActive="true" />
+					<VelmoraGameModeComponent _localID="1556202676166432652" _componentName="VelmoraGameModeComponent"
 					                          _bActive="true"
 					                          _startRegion="hearth"
 					                          _moveSpeed="6"

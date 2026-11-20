@@ -12,9 +12,9 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import app_arguments  # noqa: E402
+from common.paths import get_build_dir  # noqa: E402
 from dev import scenario_bisect  # noqa: E402
 
-REPO = pathlib.Path(__file__).resolve().parents[2]
 
 
 def main():
@@ -28,7 +28,7 @@ def main():
     if options.speed < 1:
         parser.error('--speed 는 1 이상이다')
     scenario_bisect.build_preset_or_exit(options.preset)   # 옛 바이너리를 눈으로 보지 않게
-    build_dir = REPO / 'build' / options.preset
+    build_dir = get_build_dir(options.preset)
     code = 0
     for chain in options.chains if options.stages is None else ['editor']:
         command = app_arguments.without(app_arguments.find_chain_command(build_dir, chain), 'unattended', 'scenario-backend-split', 'scenario-backends', 'log-file')

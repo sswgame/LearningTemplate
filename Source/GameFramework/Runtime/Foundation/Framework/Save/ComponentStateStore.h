@@ -39,7 +39,7 @@ namespace sw
      *
      *          짝짓기는 언제나 컴포넌트 id 다. 같은 프로세스(핫 리로드)에서는 컴포넌트 id 가 복원된다.
      *          다른 실행의 세이브는 id 가 새로 나가므로, 씬 섹션을 읽은 쪽이 "저장된 id → 새 id" 표를 만들어 `remapComponentIDs` 로 바꾼다
-     *          (오브젝트마다 저장된 컴포넌트와 다시 만든 컴포넌트를 안정 키 `이름#n` 과 타입으로 짝짓는다. 같은 타입 둘의 순서가 바뀌어도 이름으로 맞는다).
+     *          (오브젝트마다 저장된 컴포넌트와 다시 만든 컴포넌트를 안정 키(지역 id 키 `#<16진>`)와 타입으로 짝짓는다. 같은 타입 둘의 순서가 바뀌어도 맞는다).
      *          예전에는 같은 타입 안의 전역 순회 순서로 맞췄는데, 그 순서는 실행마다 달라 두 디렉터의 상태가 서로 바뀔 수 있었다.
      */
     class SW_GF_API ComponentStateStore
@@ -78,8 +78,8 @@ namespace sw
         void remapComponentIDs( const vector<SavedComponentID>& listRemap );
         /**
          * @brief 다른 실행의 세이브에서 오브젝트 하나의 저장된 컴포넌트 id(@p identity)를 다시 만든 @p object 의 컴포넌트 id 에 연결하는 매핑을 더합니다.
-         * @details 안정 키(`ComponentStableKey`, `이름#n`)와 타입이 같은 것끼리 짝짓는다. 키는 씬 파일의 부착 대상과 에디터 선택 복원이 쓰는 규칙이라, 같은 타입
-         *          컴포넌트 둘의 순서가 바뀌어도 이름으로 맞는다(타입 차례로 이으면 두 상태가 서로 바뀐다). 키가 맞지 않는 저장 항목은 표에 넣지 않아 `remapComponentIDs` 가 지운다.
+         * @details 안정 키(`ComponentStableKey`, 지역 id 키 `#<16진>`)와 타입이 같은 것끼리 짝짓는다. 키는 씬 파일의 부착 대상과 에디터 선택 복원이 쓰는 규칙이라, 같은 타입
+         *          컴포넌트 둘의 순서가 바뀌어도 맞는다(타입 차례로 이으면 두 상태가 서로 바뀐다). 키가 맞지 않는 저장 항목은 표에 넣지 않아 `remapComponentIDs` 가 지운다.
          */
         static void          appendComponentIDRemap( const ObjectIdentity& identity, const GameObject& object, vector<SavedComponentID>& outListRemap );
         const vector<Entry>& getEntries() const { return _listEntry; }

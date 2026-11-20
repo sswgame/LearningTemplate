@@ -13,21 +13,21 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,3,-5" _localRotation="0.55,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="300" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,3,-5" _localRotation="0.55,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="300" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.4" _shadowExtent="12" _shadowDistance="30" _bCastShadow="true" />
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.4" _shadowExtent="12" _shadowDistance="30" _bCastShadow="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="Terrain">
 			<GameObject _schemaVersion="0" _name="Terrain" _bActive="true">
 				<_listComponent>
-					<TerrainComponent _localPosition="-128,0,-128" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None"
+					<TerrainComponent _localID="1728601763249011038" _localPosition="-128,0,-128" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None"
 					                  _heightfieldPath="game/playground/heightfields/valley.heightfield"
 					                  _materialPath="engine/materials/terrain.material"
 					                  _layerWeightsPath="game/playground/heightfields/valley.layerweights"
@@ -55,8 +55,8 @@
 		<entity id="4" name="Stamper" layers="Stamp">
 			<GameObject _schemaVersion="0" _name="Stamper" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<SurfaceStampComponent _mode="Hold" _trailStep="0.1" _trailBreak="2">
+					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SurfaceStampComponent _localID="15240485055355734893" _mode="Hold" _trailStep="0.1" _trailBreak="2">
 						<_stamp _shape="Funnel" _size="3,0" _depth="0.14" _rimHeight="0.03" _rimWidth="0.3" _fillSpeed="0.05" _spinSpeed="0" _armCount="3" />
 					</SurfaceStampComponent>
 				</_listComponent>

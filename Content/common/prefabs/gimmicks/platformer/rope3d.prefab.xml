@@ -1,7 +1,7 @@
 <?asset guid="d3e9132bce60ecb6ca5bb5395afb87df"?>
 <Prefab formatVersion="1" _base="common/prefabs/gimmicks/platformer/ladder3d.prefab.xml" name="Rope3D">
 	<PrefabOverrides>
-		<Override key="RigidBodyComponent#0">
+		<Override key="#63e709ac676dd304">
 			<RigidBodyComponent>
 				<_listShape>
 					<PhysicsShapeDesc3D _type="Box" _halfExtents="0.25,3,0.25" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
@@ -11,7 +11,7 @@
 				</_listShape>
 			</RigidBodyComponent>
 		</Override>
-		<Override key="ClimbZoneComponent#0">
+		<Override key="#88f2dfc66597fcc0">
 			<ClimbZoneComponent _bSwing="true" />
 		</Override>
 	</PrefabOverrides>

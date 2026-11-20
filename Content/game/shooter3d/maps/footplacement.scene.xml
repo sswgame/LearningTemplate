@@ -8,7 +8,7 @@
 		<entity id="200" name="FootStepLow">
 			<GameObject _schemaVersion="0" _name="FootStepLow" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="0,0.06,-13.5"
 					                    _localRotation="0,0,0"
@@ -40,14 +40,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="1.6,0.12,2.2"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/wall.material"
 					               _boundsRadius="0.866"
@@ -59,7 +59,7 @@
 		<entity id="201" name="FootStepHigh">
 			<GameObject _schemaVersion="0" _name="FootStepHigh" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _componentName="RigidBodyComponent"
+					<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="0,0.12,-11.3"
 					                    _localRotation="0,0,0"
@@ -91,14 +91,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="1.6,0.24,2.2"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Cube"
 					               _materialPath="game/shooter3d/materials/wall.material"
 					               _boundsRadius="0.866"

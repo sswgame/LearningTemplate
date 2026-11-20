@@ -8,7 +8,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,1.3,-6"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.3,-6"
 					                 _localRotation="0.05,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -26,7 +26,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="0.628882,0.93002,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -43,7 +43,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,2"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,2"
 					               _localRotation="0,0,0"
 					               _localScale="16,1,16"
 					               _attachOwner="None"
@@ -57,7 +57,7 @@
 		<entity id="4" name="BaseKnight">
 			<GameObject _schemaVersion="0" _name="BaseKnight" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 					                       _bActive="true"
 					                       _localPosition="-1.6,0,0"
 					                       _localRotation="0,3.1415927,0"
@@ -74,7 +74,7 @@
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
 					                       _visibilityBasedTickOption="AlwaysTickPose" />
-					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
 					                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"
@@ -93,7 +93,7 @@
 		<entity id="5" name="LongLegsKnight">
 			<GameObject _schemaVersion="0" _name="LongLegsKnight" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 					                       _bActive="true"
 					                       _localPosition="0,0,0"
 					                       _localRotation="0,3.1415927,0"
@@ -110,7 +110,7 @@
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
 					                       _visibilityBasedTickOption="AlwaysTickPose" />
-					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
 					                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"
@@ -129,7 +129,7 @@
 		<entity id="6" name="SmallHeadTailKnight">
 			<GameObject _schemaVersion="0" _name="SmallHeadTailKnight" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"
 					                       _bActive="true"
 					                       _localPosition="1.6,0,0"
 					                       _localRotation="0,3.1415927,0"
@@ -146,7 +146,7 @@
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
 					                       _visibilityBasedTickOption="AlwaysTickPose" />
-					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
 					                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"

@@ -7,7 +7,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="-133.0931,125,-133.0931"
 					                 _localRotation="0.5235988,0.7853982,0"
@@ -22,7 +22,7 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="true" />
-					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
 					                         _catalogPath="game/themepark/data/park.cameras.xml"
 					                         _initialPreset="park"
@@ -36,7 +36,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.356582,-1.938715,0"
@@ -59,7 +59,7 @@
 		<entity id="3" name="Grass">
 			<GameObject _schemaVersion="0" _name="Grass" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="20,-0.02,110"
 					               _localRotation="0,0,0"
@@ -78,7 +78,7 @@
 		<entity id="4" name="ParkGate">
 			<GameObject _schemaVersion="0" _name="ParkGate" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="20,0,-40"
 					               _localRotation="0,0,0"
@@ -97,7 +97,7 @@
 		<entity id="5" name="FoodStall">
 			<GameObject _schemaVersion="0" _name="FoodStall" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,-34"
 					               _localRotation="0,-1.5707964,0"
@@ -116,7 +116,7 @@
 		<entity id="6" name="StressTest1">
 			<GameObject _schemaVersion="0" _name="StressTest1" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="16,0,-31.5"
 					               _localRotation="0,-1.5708,0"
@@ -130,9 +130,9 @@
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="mi_trim_furniture" />
-					<MeshSectionComponent _componentName="MeshSectionComponent"
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
-					                      _attachComponent="MeshComponent#0"
+					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
 					                      _sectionName="mi_trim_metal" />
 				</_listComponent>
@@ -141,7 +141,7 @@
 		<entity id="7" name="TrashCan1">
 			<GameObject _schemaVersion="0" _name="TrashCan1" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="16,0,-35.5"
 					               _localRotation="0,0,0"
@@ -160,7 +160,7 @@
 		<entity id="8" name="DrinksStall">
 			<GameObject _schemaVersion="0" _name="DrinksStall" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="27,0,-34"
 					               _localRotation="0,1.5707964,0"
@@ -179,7 +179,7 @@
 		<entity id="9" name="StressTest2">
 			<GameObject _schemaVersion="0" _name="StressTest2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="24,0,-31.5"
 					               _localRotation="0,1.5708,0"
@@ -193,9 +193,9 @@
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="mi_trim_furniture" />
-					<MeshSectionComponent _componentName="MeshSectionComponent"
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
-					                      _attachComponent="MeshComponent#0"
+					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
 					                      _sectionName="mi_trim_metal" />
 				</_listComponent>
@@ -204,7 +204,7 @@
 		<entity id="10" name="TrashCan2">
 			<GameObject _schemaVersion="0" _name="TrashCan2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="24,0,-35.5"
 					               _localRotation="0,0,0"
@@ -223,7 +223,7 @@
 		<entity id="11" name="InformationStall">
 			<GameObject _schemaVersion="0" _name="InformationStall" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,-29"
 					               _localRotation="0,-1.5707964,0"
@@ -242,7 +242,7 @@
 		<entity id="12" name="StressTest3">
 			<GameObject _schemaVersion="0" _name="StressTest3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="16,0,-26.5"
 					               _localRotation="0,-1.5708,0"
@@ -256,9 +256,9 @@
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="mi_trim_furniture" />
-					<MeshSectionComponent _componentName="MeshSectionComponent"
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
-					                      _attachComponent="MeshComponent#0"
+					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
 					                      _sectionName="mi_trim_metal" />
 				</_listComponent>
@@ -267,7 +267,7 @@
 		<entity id="13" name="TrashCan3">
 			<GameObject _schemaVersion="0" _name="TrashCan3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="16,0,-30.5"
 					               _localRotation="0,0,0"
@@ -286,7 +286,7 @@
 		<entity id="14" name="ToiletStall">
 			<GameObject _schemaVersion="0" _name="ToiletStall" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="27,0,-29"
 					               _localRotation="0,1.5707964,0"
@@ -305,7 +305,7 @@
 		<entity id="15" name="StressTest4">
 			<GameObject _schemaVersion="0" _name="StressTest4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="24,0,-26.5"
 					               _localRotation="0,1.5708,0"
@@ -319,9 +319,9 @@
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="mi_trim_furniture" />
-					<MeshSectionComponent _componentName="MeshSectionComponent"
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
-					                      _attachComponent="MeshComponent#0"
+					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
 					                      _sectionName="mi_trim_metal" />
 				</_listComponent>
@@ -330,7 +330,7 @@
 		<entity id="16" name="TrashCan4">
 			<GameObject _schemaVersion="0" _name="TrashCan4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="24,0,-30.5"
 					               _localRotation="0,0,0"
@@ -349,7 +349,7 @@
 		<entity id="17" name="EdgeTrees">
 			<GameObject _schemaVersion="0" _name="EdgeTrees" _bActive="true">
 				<_listComponent>
-					<PropScatterComponent _componentName="PropScatterComponent"
+					<PropScatterComponent _localID="13818770567693632230" _componentName="PropScatterComponent"
 					                      _bActive="true"
 					                      _materialPath=""
 					                      _propName="ParkTree"
@@ -405,7 +405,7 @@
 		<entity id="18" name="ParkGameMode">
 			<GameObject _schemaVersion="0" _name="ParkGameMode" _bActive="true">
 				<_listComponent>
-					<ParkGameModeComponent _componentName="ParkGameModeComponent"
+					<ParkGameModeComponent _localID="7846510615290749096" _componentName="ParkGameModeComponent"
 					                       _bActive="true"
 					                       _parkDataPath="game/themepark/data/rides.xml"
 					                       _guestPrefab="game/themepark/prefabs/guest.prefab.xml"

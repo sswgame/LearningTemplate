@@ -7,7 +7,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="0,15,-11"
 					                 _localRotation="0.9380474,0,0"
@@ -22,7 +22,7 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="false" />
-					<FollowCameraComponent _componentName="FollowCameraComponent"
+					<FollowCameraComponent _localID="15357652970512560881" _componentName="FollowCameraComponent"
 					                      _bActive="true"
 					                      _gameMode="334"
 					                      _offset="0,15,-11"
@@ -33,7 +33,7 @@
 		<entity id="2" name="Floor">
 			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-15"
 					               _localRotation="0,1.5707964,0"
@@ -52,7 +52,7 @@
 		<entity id="3" name="Floor_2">
 			<GameObject _schemaVersion="0" _name="Floor_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,-15"
 					               _localRotation="0,3.1415927,0"
@@ -71,7 +71,7 @@
 		<entity id="4" name="Floor_3">
 			<GameObject _schemaVersion="0" _name="Floor_3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,-15"
 					               _localRotation="0,3.1415927,0"
@@ -90,7 +90,7 @@
 		<entity id="5" name="Floor_4">
 			<GameObject _schemaVersion="0" _name="Floor_4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,-15"
 					               _localRotation="0,1.5707964,0"
@@ -109,7 +109,7 @@
 		<entity id="6" name="Floor_5">
 			<GameObject _schemaVersion="0" _name="Floor_5" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,-15"
 					               _localRotation="0,4.712389,0"
@@ -128,7 +128,7 @@
 		<entity id="7" name="Floor_6">
 			<GameObject _schemaVersion="0" _name="Floor_6" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,-15"
 					               _localRotation="0,4.712389,0"
@@ -147,7 +147,7 @@
 		<entity id="8" name="Floor_7">
 			<GameObject _schemaVersion="0" _name="Floor_7" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-15"
 					               _localRotation="0,0,0"
@@ -166,7 +166,7 @@
 		<entity id="9" name="Floor_8">
 			<GameObject _schemaVersion="0" _name="Floor_8" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,-15"
 					               _localRotation="0,4.712389,0"
@@ -185,7 +185,7 @@
 		<entity id="10" name="Floor_9">
 			<GameObject _schemaVersion="0" _name="Floor_9" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,-15"
 					               _localRotation="0,1.5707964,0"
@@ -204,7 +204,7 @@
 		<entity id="11" name="Floor_10">
 			<GameObject _schemaVersion="0" _name="Floor_10" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,-15"
 					               _localRotation="0,0,0"
@@ -223,7 +223,7 @@
 		<entity id="12" name="Floor_11">
 			<GameObject _schemaVersion="0" _name="Floor_11" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,-15"
 					               _localRotation="0,3.1415927,0"
@@ -242,7 +242,7 @@
 		<entity id="13" name="Floor_12">
 			<GameObject _schemaVersion="0" _name="Floor_12" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,-15"
 					               _localRotation="0,0,0"
@@ -261,7 +261,7 @@
 		<entity id="14" name="Floor_13">
 			<GameObject _schemaVersion="0" _name="Floor_13" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,-15"
 					               _localRotation="0,4.712389,0"
@@ -280,7 +280,7 @@
 		<entity id="15" name="Floor_14">
 			<GameObject _schemaVersion="0" _name="Floor_14" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,-15"
 					               _localRotation="0,0,0"
@@ -299,7 +299,7 @@
 		<entity id="16" name="Floor_15">
 			<GameObject _schemaVersion="0" _name="Floor_15" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,-15"
 					               _localRotation="0,0,0"
@@ -318,7 +318,7 @@
 		<entity id="17" name="Floor_16">
 			<GameObject _schemaVersion="0" _name="Floor_16" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,-15"
 					               _localRotation="0,4.712389,0"
@@ -337,7 +337,7 @@
 		<entity id="18" name="Floor_17">
 			<GameObject _schemaVersion="0" _name="Floor_17" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-13"
 					               _localRotation="0,3.1415927,0"
@@ -356,7 +356,7 @@
 		<entity id="19" name="Floor_18">
 			<GameObject _schemaVersion="0" _name="Floor_18" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,-13"
 					               _localRotation="0,3.1415927,0"
@@ -375,7 +375,7 @@
 		<entity id="20" name="Floor_19">
 			<GameObject _schemaVersion="0" _name="Floor_19" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,-13"
 					               _localRotation="0,1.5707964,0"
@@ -394,7 +394,7 @@
 		<entity id="21" name="Floor_20">
 			<GameObject _schemaVersion="0" _name="Floor_20" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,-13"
 					               _localRotation="0,4.712389,0"
@@ -413,7 +413,7 @@
 		<entity id="22" name="Floor_21">
 			<GameObject _schemaVersion="0" _name="Floor_21" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,-13"
 					               _localRotation="0,4.712389,0"
@@ -432,7 +432,7 @@
 		<entity id="23" name="Floor_22">
 			<GameObject _schemaVersion="0" _name="Floor_22" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,-13"
 					               _localRotation="0,3.1415927,0"
@@ -451,7 +451,7 @@
 		<entity id="24" name="Floor_23">
 			<GameObject _schemaVersion="0" _name="Floor_23" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-13"
 					               _localRotation="0,0,0"
@@ -470,7 +470,7 @@
 		<entity id="25" name="Floor_24">
 			<GameObject _schemaVersion="0" _name="Floor_24" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,-13"
 					               _localRotation="0,3.1415927,0"
@@ -489,7 +489,7 @@
 		<entity id="26" name="Floor_25">
 			<GameObject _schemaVersion="0" _name="Floor_25" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,-13"
 					               _localRotation="0,0,0"
@@ -508,7 +508,7 @@
 		<entity id="27" name="Floor_26">
 			<GameObject _schemaVersion="0" _name="Floor_26" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,-13"
 					               _localRotation="0,1.5707964,0"
@@ -527,7 +527,7 @@
 		<entity id="28" name="Floor_27">
 			<GameObject _schemaVersion="0" _name="Floor_27" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,-13"
 					               _localRotation="0,3.1415927,0"
@@ -546,7 +546,7 @@
 		<entity id="29" name="Floor_28">
 			<GameObject _schemaVersion="0" _name="Floor_28" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,-13"
 					               _localRotation="0,3.1415927,0"
@@ -565,7 +565,7 @@
 		<entity id="30" name="Floor_29">
 			<GameObject _schemaVersion="0" _name="Floor_29" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,-13"
 					               _localRotation="0,1.5707964,0"
@@ -584,7 +584,7 @@
 		<entity id="31" name="Floor_30">
 			<GameObject _schemaVersion="0" _name="Floor_30" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,-13"
 					               _localRotation="0,0,0"
@@ -603,7 +603,7 @@
 		<entity id="32" name="Floor_31">
 			<GameObject _schemaVersion="0" _name="Floor_31" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,-13"
 					               _localRotation="0,3.1415927,0"
@@ -622,7 +622,7 @@
 		<entity id="33" name="Floor_32">
 			<GameObject _schemaVersion="0" _name="Floor_32" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,-13"
 					               _localRotation="0,3.1415927,0"
@@ -641,7 +641,7 @@
 		<entity id="34" name="Floor_33">
 			<GameObject _schemaVersion="0" _name="Floor_33" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-11"
 					               _localRotation="0,4.712389,0"
@@ -660,7 +660,7 @@
 		<entity id="35" name="Floor_34">
 			<GameObject _schemaVersion="0" _name="Floor_34" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,-11"
 					               _localRotation="0,1.5707964,0"
@@ -679,7 +679,7 @@
 		<entity id="36" name="Floor_35">
 			<GameObject _schemaVersion="0" _name="Floor_35" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,-11"
 					               _localRotation="0,4.712389,0"
@@ -698,7 +698,7 @@
 		<entity id="37" name="Floor_36">
 			<GameObject _schemaVersion="0" _name="Floor_36" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,-11"
 					               _localRotation="0,3.1415927,0"
@@ -717,7 +717,7 @@
 		<entity id="38" name="Floor_37">
 			<GameObject _schemaVersion="0" _name="Floor_37" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,-11"
 					               _localRotation="0,3.1415927,0"
@@ -736,7 +736,7 @@
 		<entity id="39" name="Floor_38">
 			<GameObject _schemaVersion="0" _name="Floor_38" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,-11"
 					               _localRotation="0,3.1415927,0"
@@ -755,7 +755,7 @@
 		<entity id="40" name="Floor_39">
 			<GameObject _schemaVersion="0" _name="Floor_39" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-11"
 					               _localRotation="0,3.1415927,0"
@@ -774,7 +774,7 @@
 		<entity id="41" name="Floor_40">
 			<GameObject _schemaVersion="0" _name="Floor_40" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,-11"
 					               _localRotation="0,4.712389,0"
@@ -793,7 +793,7 @@
 		<entity id="42" name="Floor_41">
 			<GameObject _schemaVersion="0" _name="Floor_41" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,-11"
 					               _localRotation="0,1.5707964,0"
@@ -812,7 +812,7 @@
 		<entity id="43" name="Floor_42">
 			<GameObject _schemaVersion="0" _name="Floor_42" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,-11"
 					               _localRotation="0,4.712389,0"
@@ -831,7 +831,7 @@
 		<entity id="44" name="Floor_43">
 			<GameObject _schemaVersion="0" _name="Floor_43" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,-11"
 					               _localRotation="0,1.5707964,0"
@@ -850,7 +850,7 @@
 		<entity id="45" name="Floor_44">
 			<GameObject _schemaVersion="0" _name="Floor_44" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,-11"
 					               _localRotation="0,0,0"
@@ -869,7 +869,7 @@
 		<entity id="46" name="Floor_45">
 			<GameObject _schemaVersion="0" _name="Floor_45" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,-11"
 					               _localRotation="0,3.1415927,0"
@@ -888,7 +888,7 @@
 		<entity id="47" name="Floor_46">
 			<GameObject _schemaVersion="0" _name="Floor_46" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,-11"
 					               _localRotation="0,1.5707964,0"
@@ -907,7 +907,7 @@
 		<entity id="48" name="Floor_47">
 			<GameObject _schemaVersion="0" _name="Floor_47" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,-11"
 					               _localRotation="0,1.5707964,0"
@@ -926,7 +926,7 @@
 		<entity id="49" name="Floor_48">
 			<GameObject _schemaVersion="0" _name="Floor_48" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,-11"
 					               _localRotation="0,3.1415927,0"
@@ -945,7 +945,7 @@
 		<entity id="50" name="Floor_49">
 			<GameObject _schemaVersion="0" _name="Floor_49" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-9"
 					               _localRotation="0,4.712389,0"
@@ -964,7 +964,7 @@
 		<entity id="51" name="Floor_50">
 			<GameObject _schemaVersion="0" _name="Floor_50" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,-9"
 					               _localRotation="0,0,0"
@@ -983,7 +983,7 @@
 		<entity id="52" name="Floor_51">
 			<GameObject _schemaVersion="0" _name="Floor_51" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,-9"
 					               _localRotation="0,3.1415927,0"
@@ -1002,7 +1002,7 @@
 		<entity id="53" name="Floor_52">
 			<GameObject _schemaVersion="0" _name="Floor_52" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,-9"
 					               _localRotation="0,1.5707964,0"
@@ -1021,7 +1021,7 @@
 		<entity id="54" name="Floor_53">
 			<GameObject _schemaVersion="0" _name="Floor_53" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,-9"
 					               _localRotation="0,1.5707964,0"
@@ -1040,7 +1040,7 @@
 		<entity id="55" name="Floor_54">
 			<GameObject _schemaVersion="0" _name="Floor_54" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,-9"
 					               _localRotation="0,0,0"
@@ -1059,7 +1059,7 @@
 		<entity id="56" name="Floor_55">
 			<GameObject _schemaVersion="0" _name="Floor_55" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-9"
 					               _localRotation="0,4.712389,0"
@@ -1078,7 +1078,7 @@
 		<entity id="57" name="Floor_56">
 			<GameObject _schemaVersion="0" _name="Floor_56" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,-9"
 					               _localRotation="0,0,0"
@@ -1097,7 +1097,7 @@
 		<entity id="58" name="Floor_57">
 			<GameObject _schemaVersion="0" _name="Floor_57" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,-9"
 					               _localRotation="0,4.712389,0"
@@ -1116,7 +1116,7 @@
 		<entity id="59" name="Floor_58">
 			<GameObject _schemaVersion="0" _name="Floor_58" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,-9"
 					               _localRotation="0,1.5707964,0"
@@ -1135,7 +1135,7 @@
 		<entity id="60" name="Floor_59">
 			<GameObject _schemaVersion="0" _name="Floor_59" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,-9"
 					               _localRotation="0,1.5707964,0"
@@ -1154,7 +1154,7 @@
 		<entity id="61" name="Floor_60">
 			<GameObject _schemaVersion="0" _name="Floor_60" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,-9"
 					               _localRotation="0,0,0"
@@ -1173,7 +1173,7 @@
 		<entity id="62" name="Floor_61">
 			<GameObject _schemaVersion="0" _name="Floor_61" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,-9"
 					               _localRotation="0,0,0"
@@ -1192,7 +1192,7 @@
 		<entity id="63" name="Floor_62">
 			<GameObject _schemaVersion="0" _name="Floor_62" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,-9"
 					               _localRotation="0,0,0"
@@ -1211,7 +1211,7 @@
 		<entity id="64" name="Floor_63">
 			<GameObject _schemaVersion="0" _name="Floor_63" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,-9"
 					               _localRotation="0,3.1415927,0"
@@ -1230,7 +1230,7 @@
 		<entity id="65" name="Floor_64">
 			<GameObject _schemaVersion="0" _name="Floor_64" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,-9"
 					               _localRotation="0,0,0"
@@ -1249,7 +1249,7 @@
 		<entity id="66" name="Floor_65">
 			<GameObject _schemaVersion="0" _name="Floor_65" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-7"
 					               _localRotation="0,4.712389,0"
@@ -1268,7 +1268,7 @@
 		<entity id="67" name="Floor_66">
 			<GameObject _schemaVersion="0" _name="Floor_66" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,-7"
 					               _localRotation="0,4.712389,0"
@@ -1287,7 +1287,7 @@
 		<entity id="68" name="Floor_67">
 			<GameObject _schemaVersion="0" _name="Floor_67" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,-7"
 					               _localRotation="0,3.1415927,0"
@@ -1306,7 +1306,7 @@
 		<entity id="69" name="Floor_68">
 			<GameObject _schemaVersion="0" _name="Floor_68" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,-7"
 					               _localRotation="0,0,0"
@@ -1325,7 +1325,7 @@
 		<entity id="70" name="Floor_69">
 			<GameObject _schemaVersion="0" _name="Floor_69" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,-7"
 					               _localRotation="0,0,0"
@@ -1344,7 +1344,7 @@
 		<entity id="71" name="Floor_70">
 			<GameObject _schemaVersion="0" _name="Floor_70" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,-7"
 					               _localRotation="0,4.712389,0"
@@ -1363,7 +1363,7 @@
 		<entity id="72" name="Floor_71">
 			<GameObject _schemaVersion="0" _name="Floor_71" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-7"
 					               _localRotation="0,0,0"
@@ -1382,7 +1382,7 @@
 		<entity id="73" name="Floor_72">
 			<GameObject _schemaVersion="0" _name="Floor_72" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,-7"
 					               _localRotation="0,1.5707964,0"
@@ -1401,7 +1401,7 @@
 		<entity id="74" name="Floor_73">
 			<GameObject _schemaVersion="0" _name="Floor_73" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,-7"
 					               _localRotation="0,4.712389,0"
@@ -1420,7 +1420,7 @@
 		<entity id="75" name="Floor_74">
 			<GameObject _schemaVersion="0" _name="Floor_74" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,-7"
 					               _localRotation="0,4.712389,0"
@@ -1439,7 +1439,7 @@
 		<entity id="76" name="Floor_75">
 			<GameObject _schemaVersion="0" _name="Floor_75" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,-7"
 					               _localRotation="0,4.712389,0"
@@ -1458,7 +1458,7 @@
 		<entity id="77" name="Floor_76">
 			<GameObject _schemaVersion="0" _name="Floor_76" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,-7"
 					               _localRotation="0,0,0"
@@ -1477,7 +1477,7 @@
 		<entity id="78" name="Floor_77">
 			<GameObject _schemaVersion="0" _name="Floor_77" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,-7"
 					               _localRotation="0,4.712389,0"
@@ -1496,7 +1496,7 @@
 		<entity id="79" name="Floor_78">
 			<GameObject _schemaVersion="0" _name="Floor_78" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,-7"
 					               _localRotation="0,4.712389,0"
@@ -1515,7 +1515,7 @@
 		<entity id="80" name="Floor_79">
 			<GameObject _schemaVersion="0" _name="Floor_79" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,-7"
 					               _localRotation="0,3.1415927,0"
@@ -1534,7 +1534,7 @@
 		<entity id="81" name="Floor_80">
 			<GameObject _schemaVersion="0" _name="Floor_80" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,-7"
 					               _localRotation="0,1.5707964,0"
@@ -1553,7 +1553,7 @@
 		<entity id="82" name="Floor_81">
 			<GameObject _schemaVersion="0" _name="Floor_81" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-5"
 					               _localRotation="0,1.5707964,0"
@@ -1572,7 +1572,7 @@
 		<entity id="83" name="Floor_82">
 			<GameObject _schemaVersion="0" _name="Floor_82" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,-5"
 					               _localRotation="0,4.712389,0"
@@ -1591,7 +1591,7 @@
 		<entity id="84" name="Floor_83">
 			<GameObject _schemaVersion="0" _name="Floor_83" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,-5"
 					               _localRotation="0,4.712389,0"
@@ -1610,7 +1610,7 @@
 		<entity id="85" name="Floor_84">
 			<GameObject _schemaVersion="0" _name="Floor_84" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,-5"
 					               _localRotation="0,0,0"
@@ -1629,7 +1629,7 @@
 		<entity id="86" name="Floor_85">
 			<GameObject _schemaVersion="0" _name="Floor_85" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,-5"
 					               _localRotation="0,0,0"
@@ -1648,7 +1648,7 @@
 		<entity id="87" name="Floor_86">
 			<GameObject _schemaVersion="0" _name="Floor_86" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,-5"
 					               _localRotation="0,0,0"
@@ -1667,7 +1667,7 @@
 		<entity id="88" name="Floor_87">
 			<GameObject _schemaVersion="0" _name="Floor_87" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-5"
 					               _localRotation="0,3.1415927,0"
@@ -1686,7 +1686,7 @@
 		<entity id="89" name="Floor_88">
 			<GameObject _schemaVersion="0" _name="Floor_88" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,-5"
 					               _localRotation="0,0,0"
@@ -1705,7 +1705,7 @@
 		<entity id="90" name="Floor_89">
 			<GameObject _schemaVersion="0" _name="Floor_89" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,-5"
 					               _localRotation="0,4.712389,0"
@@ -1724,7 +1724,7 @@
 		<entity id="91" name="Floor_90">
 			<GameObject _schemaVersion="0" _name="Floor_90" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,-5"
 					               _localRotation="0,0,0"
@@ -1743,7 +1743,7 @@
 		<entity id="92" name="Floor_91">
 			<GameObject _schemaVersion="0" _name="Floor_91" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,-5"
 					               _localRotation="0,1.5707964,0"
@@ -1762,7 +1762,7 @@
 		<entity id="93" name="Floor_92">
 			<GameObject _schemaVersion="0" _name="Floor_92" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,-5"
 					               _localRotation="0,1.5707964,0"
@@ -1781,7 +1781,7 @@
 		<entity id="94" name="Floor_93">
 			<GameObject _schemaVersion="0" _name="Floor_93" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,-5"
 					               _localRotation="0,0,0"
@@ -1800,7 +1800,7 @@
 		<entity id="95" name="Floor_94">
 			<GameObject _schemaVersion="0" _name="Floor_94" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,-5"
 					               _localRotation="0,1.5707964,0"
@@ -1819,7 +1819,7 @@
 		<entity id="96" name="Floor_95">
 			<GameObject _schemaVersion="0" _name="Floor_95" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,-5"
 					               _localRotation="0,4.712389,0"
@@ -1838,7 +1838,7 @@
 		<entity id="97" name="Floor_96">
 			<GameObject _schemaVersion="0" _name="Floor_96" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,-5"
 					               _localRotation="0,0,0"
@@ -1857,7 +1857,7 @@
 		<entity id="98" name="Floor_97">
 			<GameObject _schemaVersion="0" _name="Floor_97" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-3"
 					               _localRotation="0,4.712389,0"
@@ -1876,7 +1876,7 @@
 		<entity id="99" name="Floor_98">
 			<GameObject _schemaVersion="0" _name="Floor_98" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,-3"
 					               _localRotation="0,0,0"
@@ -1895,7 +1895,7 @@
 		<entity id="100" name="Floor_99">
 			<GameObject _schemaVersion="0" _name="Floor_99" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,-3"
 					               _localRotation="0,1.5707964,0"
@@ -1914,7 +1914,7 @@
 		<entity id="101" name="Floor_100">
 			<GameObject _schemaVersion="0" _name="Floor_100" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,-3"
 					               _localRotation="0,1.5707964,0"
@@ -1933,7 +1933,7 @@
 		<entity id="102" name="Floor_101">
 			<GameObject _schemaVersion="0" _name="Floor_101" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,-3"
 					               _localRotation="0,3.1415927,0"
@@ -1952,7 +1952,7 @@
 		<entity id="103" name="Floor_102">
 			<GameObject _schemaVersion="0" _name="Floor_102" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,-3"
 					               _localRotation="0,1.5707964,0"
@@ -1971,7 +1971,7 @@
 		<entity id="104" name="Floor_103">
 			<GameObject _schemaVersion="0" _name="Floor_103" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-3"
 					               _localRotation="0,1.5707964,0"
@@ -1990,7 +1990,7 @@
 		<entity id="105" name="Floor_104">
 			<GameObject _schemaVersion="0" _name="Floor_104" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,-3"
 					               _localRotation="0,3.1415927,0"
@@ -2009,7 +2009,7 @@
 		<entity id="106" name="Floor_105">
 			<GameObject _schemaVersion="0" _name="Floor_105" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,-3"
 					               _localRotation="0,1.5707964,0"
@@ -2028,7 +2028,7 @@
 		<entity id="107" name="Floor_106">
 			<GameObject _schemaVersion="0" _name="Floor_106" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,-3"
 					               _localRotation="0,0,0"
@@ -2047,7 +2047,7 @@
 		<entity id="108" name="Floor_107">
 			<GameObject _schemaVersion="0" _name="Floor_107" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,-3"
 					               _localRotation="0,3.1415927,0"
@@ -2066,7 +2066,7 @@
 		<entity id="109" name="Floor_108">
 			<GameObject _schemaVersion="0" _name="Floor_108" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,-3"
 					               _localRotation="0,4.712389,0"
@@ -2085,7 +2085,7 @@
 		<entity id="110" name="Floor_109">
 			<GameObject _schemaVersion="0" _name="Floor_109" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,-3"
 					               _localRotation="0,1.5707964,0"
@@ -2104,7 +2104,7 @@
 		<entity id="111" name="Floor_110">
 			<GameObject _schemaVersion="0" _name="Floor_110" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,-3"
 					               _localRotation="0,1.5707964,0"
@@ -2123,7 +2123,7 @@
 		<entity id="112" name="Floor_111">
 			<GameObject _schemaVersion="0" _name="Floor_111" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,-3"
 					               _localRotation="0,0,0"
@@ -2142,7 +2142,7 @@
 		<entity id="113" name="Floor_112">
 			<GameObject _schemaVersion="0" _name="Floor_112" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,-3"
 					               _localRotation="0,1.5707964,0"
@@ -2161,7 +2161,7 @@
 		<entity id="114" name="Floor_113">
 			<GameObject _schemaVersion="0" _name="Floor_113" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-1"
 					               _localRotation="0,4.712389,0"
@@ -2180,7 +2180,7 @@
 		<entity id="115" name="Floor_114">
 			<GameObject _schemaVersion="0" _name="Floor_114" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,-1"
 					               _localRotation="0,4.712389,0"
@@ -2199,7 +2199,7 @@
 		<entity id="116" name="Floor_115">
 			<GameObject _schemaVersion="0" _name="Floor_115" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,-1"
 					               _localRotation="0,4.712389,0"
@@ -2218,7 +2218,7 @@
 		<entity id="117" name="Floor_116">
 			<GameObject _schemaVersion="0" _name="Floor_116" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,-1"
 					               _localRotation="0,0,0"
@@ -2237,7 +2237,7 @@
 		<entity id="118" name="Floor_117">
 			<GameObject _schemaVersion="0" _name="Floor_117" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,-1"
 					               _localRotation="0,4.712389,0"
@@ -2256,7 +2256,7 @@
 		<entity id="119" name="Floor_118">
 			<GameObject _schemaVersion="0" _name="Floor_118" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,-1"
 					               _localRotation="0,1.5707964,0"
@@ -2275,7 +2275,7 @@
 		<entity id="120" name="Floor_119">
 			<GameObject _schemaVersion="0" _name="Floor_119" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-1"
 					               _localRotation="0,4.712389,0"
@@ -2294,7 +2294,7 @@
 		<entity id="121" name="Floor_120">
 			<GameObject _schemaVersion="0" _name="Floor_120" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,-1"
 					               _localRotation="0,4.712389,0"
@@ -2313,7 +2313,7 @@
 		<entity id="122" name="Floor_121">
 			<GameObject _schemaVersion="0" _name="Floor_121" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,-1"
 					               _localRotation="0,3.1415927,0"
@@ -2332,7 +2332,7 @@
 		<entity id="123" name="Floor_122">
 			<GameObject _schemaVersion="0" _name="Floor_122" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,-1"
 					               _localRotation="0,4.712389,0"
@@ -2351,7 +2351,7 @@
 		<entity id="124" name="Floor_123">
 			<GameObject _schemaVersion="0" _name="Floor_123" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,-1"
 					               _localRotation="0,0,0"
@@ -2370,7 +2370,7 @@
 		<entity id="125" name="Floor_124">
 			<GameObject _schemaVersion="0" _name="Floor_124" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,-1"
 					               _localRotation="0,4.712389,0"
@@ -2389,7 +2389,7 @@
 		<entity id="126" name="Floor_125">
 			<GameObject _schemaVersion="0" _name="Floor_125" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,-1"
 					               _localRotation="0,1.5707964,0"
@@ -2408,7 +2408,7 @@
 		<entity id="127" name="Floor_126">
 			<GameObject _schemaVersion="0" _name="Floor_126" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,-1"
 					               _localRotation="0,1.5707964,0"
@@ -2427,7 +2427,7 @@
 		<entity id="128" name="Floor_127">
 			<GameObject _schemaVersion="0" _name="Floor_127" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,-1"
 					               _localRotation="0,1.5707964,0"
@@ -2446,7 +2446,7 @@
 		<entity id="129" name="Floor_128">
 			<GameObject _schemaVersion="0" _name="Floor_128" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,-1"
 					               _localRotation="0,1.5707964,0"
@@ -2465,7 +2465,7 @@
 		<entity id="130" name="Floor_129">
 			<GameObject _schemaVersion="0" _name="Floor_129" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,1"
 					               _localRotation="0,1.5707964,0"
@@ -2484,7 +2484,7 @@
 		<entity id="131" name="Floor_130">
 			<GameObject _schemaVersion="0" _name="Floor_130" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,1"
 					               _localRotation="0,0,0"
@@ -2503,7 +2503,7 @@
 		<entity id="132" name="Floor_131">
 			<GameObject _schemaVersion="0" _name="Floor_131" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,1"
 					               _localRotation="0,1.5707964,0"
@@ -2522,7 +2522,7 @@
 		<entity id="133" name="Floor_132">
 			<GameObject _schemaVersion="0" _name="Floor_132" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,1"
 					               _localRotation="0,0,0"
@@ -2541,7 +2541,7 @@
 		<entity id="134" name="Floor_133">
 			<GameObject _schemaVersion="0" _name="Floor_133" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,1"
 					               _localRotation="0,3.1415927,0"
@@ -2560,7 +2560,7 @@
 		<entity id="135" name="Floor_134">
 			<GameObject _schemaVersion="0" _name="Floor_134" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,1"
 					               _localRotation="0,0,0"
@@ -2579,7 +2579,7 @@
 		<entity id="136" name="Floor_135">
 			<GameObject _schemaVersion="0" _name="Floor_135" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,1"
 					               _localRotation="0,3.1415927,0"
@@ -2598,7 +2598,7 @@
 		<entity id="137" name="Floor_136">
 			<GameObject _schemaVersion="0" _name="Floor_136" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,1"
 					               _localRotation="0,1.5707964,0"
@@ -2617,7 +2617,7 @@
 		<entity id="138" name="Floor_137">
 			<GameObject _schemaVersion="0" _name="Floor_137" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,1"
 					               _localRotation="0,3.1415927,0"
@@ -2636,7 +2636,7 @@
 		<entity id="139" name="Floor_138">
 			<GameObject _schemaVersion="0" _name="Floor_138" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,1"
 					               _localRotation="0,1.5707964,0"
@@ -2655,7 +2655,7 @@
 		<entity id="140" name="Floor_139">
 			<GameObject _schemaVersion="0" _name="Floor_139" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,1"
 					               _localRotation="0,4.712389,0"
@@ -2674,7 +2674,7 @@
 		<entity id="141" name="Floor_140">
 			<GameObject _schemaVersion="0" _name="Floor_140" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,1"
 					               _localRotation="0,1.5707964,0"
@@ -2693,7 +2693,7 @@
 		<entity id="142" name="Floor_141">
 			<GameObject _schemaVersion="0" _name="Floor_141" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,1"
 					               _localRotation="0,0,0"
@@ -2712,7 +2712,7 @@
 		<entity id="143" name="Floor_142">
 			<GameObject _schemaVersion="0" _name="Floor_142" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,1"
 					               _localRotation="0,0,0"
@@ -2731,7 +2731,7 @@
 		<entity id="144" name="Floor_143">
 			<GameObject _schemaVersion="0" _name="Floor_143" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,1"
 					               _localRotation="0,1.5707964,0"
@@ -2750,7 +2750,7 @@
 		<entity id="145" name="Floor_144">
 			<GameObject _schemaVersion="0" _name="Floor_144" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,1"
 					               _localRotation="0,0,0"
@@ -2769,7 +2769,7 @@
 		<entity id="146" name="Floor_145">
 			<GameObject _schemaVersion="0" _name="Floor_145" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,3"
 					               _localRotation="0,0,0"
@@ -2788,7 +2788,7 @@
 		<entity id="147" name="Floor_146">
 			<GameObject _schemaVersion="0" _name="Floor_146" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,3"
 					               _localRotation="0,1.5707964,0"
@@ -2807,7 +2807,7 @@
 		<entity id="148" name="Floor_147">
 			<GameObject _schemaVersion="0" _name="Floor_147" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,3"
 					               _localRotation="0,3.1415927,0"
@@ -2826,7 +2826,7 @@
 		<entity id="149" name="Floor_148">
 			<GameObject _schemaVersion="0" _name="Floor_148" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,3"
 					               _localRotation="0,0,0"
@@ -2845,7 +2845,7 @@
 		<entity id="150" name="Floor_149">
 			<GameObject _schemaVersion="0" _name="Floor_149" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,3"
 					               _localRotation="0,4.712389,0"
@@ -2864,7 +2864,7 @@
 		<entity id="151" name="Floor_150">
 			<GameObject _schemaVersion="0" _name="Floor_150" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,3"
 					               _localRotation="0,3.1415927,0"
@@ -2883,7 +2883,7 @@
 		<entity id="152" name="Floor_151">
 			<GameObject _schemaVersion="0" _name="Floor_151" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,3"
 					               _localRotation="0,1.5707964,0"
@@ -2902,7 +2902,7 @@
 		<entity id="153" name="Floor_152">
 			<GameObject _schemaVersion="0" _name="Floor_152" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,3"
 					               _localRotation="0,0,0"
@@ -2921,7 +2921,7 @@
 		<entity id="154" name="Floor_153">
 			<GameObject _schemaVersion="0" _name="Floor_153" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,3"
 					               _localRotation="0,4.712389,0"
@@ -2940,7 +2940,7 @@
 		<entity id="155" name="Floor_154">
 			<GameObject _schemaVersion="0" _name="Floor_154" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,3"
 					               _localRotation="0,4.712389,0"
@@ -2959,7 +2959,7 @@
 		<entity id="156" name="Floor_155">
 			<GameObject _schemaVersion="0" _name="Floor_155" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,3"
 					               _localRotation="0,3.1415927,0"
@@ -2978,7 +2978,7 @@
 		<entity id="157" name="Floor_156">
 			<GameObject _schemaVersion="0" _name="Floor_156" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,3"
 					               _localRotation="0,3.1415927,0"
@@ -2997,7 +2997,7 @@
 		<entity id="158" name="Floor_157">
 			<GameObject _schemaVersion="0" _name="Floor_157" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,3"
 					               _localRotation="0,3.1415927,0"
@@ -3016,7 +3016,7 @@
 		<entity id="159" name="Floor_158">
 			<GameObject _schemaVersion="0" _name="Floor_158" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,3"
 					               _localRotation="0,0,0"
@@ -3035,7 +3035,7 @@
 		<entity id="160" name="Floor_159">
 			<GameObject _schemaVersion="0" _name="Floor_159" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,3"
 					               _localRotation="0,1.5707964,0"
@@ -3054,7 +3054,7 @@
 		<entity id="161" name="Floor_160">
 			<GameObject _schemaVersion="0" _name="Floor_160" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,3"
 					               _localRotation="0,3.1415927,0"
@@ -3073,7 +3073,7 @@
 		<entity id="162" name="Floor_161">
 			<GameObject _schemaVersion="0" _name="Floor_161" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,5"
 					               _localRotation="0,1.5707964,0"
@@ -3092,7 +3092,7 @@
 		<entity id="163" name="Floor_162">
 			<GameObject _schemaVersion="0" _name="Floor_162" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,5"
 					               _localRotation="0,0,0"
@@ -3111,7 +3111,7 @@
 		<entity id="164" name="Floor_163">
 			<GameObject _schemaVersion="0" _name="Floor_163" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,5"
 					               _localRotation="0,4.712389,0"
@@ -3130,7 +3130,7 @@
 		<entity id="165" name="Floor_164">
 			<GameObject _schemaVersion="0" _name="Floor_164" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,5"
 					               _localRotation="0,1.5707964,0"
@@ -3149,7 +3149,7 @@
 		<entity id="166" name="Floor_165">
 			<GameObject _schemaVersion="0" _name="Floor_165" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,5"
 					               _localRotation="0,0,0"
@@ -3168,7 +3168,7 @@
 		<entity id="167" name="Floor_166">
 			<GameObject _schemaVersion="0" _name="Floor_166" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,5"
 					               _localRotation="0,0,0"
@@ -3187,7 +3187,7 @@
 		<entity id="168" name="Floor_167">
 			<GameObject _schemaVersion="0" _name="Floor_167" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,5"
 					               _localRotation="0,4.712389,0"
@@ -3206,7 +3206,7 @@
 		<entity id="169" name="Floor_168">
 			<GameObject _schemaVersion="0" _name="Floor_168" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,5"
 					               _localRotation="0,0,0"
@@ -3225,7 +3225,7 @@
 		<entity id="170" name="Floor_169">
 			<GameObject _schemaVersion="0" _name="Floor_169" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,5"
 					               _localRotation="0,3.1415927,0"
@@ -3244,7 +3244,7 @@
 		<entity id="171" name="Floor_170">
 			<GameObject _schemaVersion="0" _name="Floor_170" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,5"
 					               _localRotation="0,4.712389,0"
@@ -3263,7 +3263,7 @@
 		<entity id="172" name="Floor_171">
 			<GameObject _schemaVersion="0" _name="Floor_171" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,5"
 					               _localRotation="0,0,0"
@@ -3282,7 +3282,7 @@
 		<entity id="173" name="Floor_172">
 			<GameObject _schemaVersion="0" _name="Floor_172" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,5"
 					               _localRotation="0,3.1415927,0"
@@ -3301,7 +3301,7 @@
 		<entity id="174" name="Floor_173">
 			<GameObject _schemaVersion="0" _name="Floor_173" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,5"
 					               _localRotation="0,3.1415927,0"
@@ -3320,7 +3320,7 @@
 		<entity id="175" name="Floor_174">
 			<GameObject _schemaVersion="0" _name="Floor_174" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,5"
 					               _localRotation="0,0,0"
@@ -3339,7 +3339,7 @@
 		<entity id="176" name="Floor_175">
 			<GameObject _schemaVersion="0" _name="Floor_175" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,5"
 					               _localRotation="0,1.5707964,0"
@@ -3358,7 +3358,7 @@
 		<entity id="177" name="Floor_176">
 			<GameObject _schemaVersion="0" _name="Floor_176" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,5"
 					               _localRotation="0,4.712389,0"
@@ -3377,7 +3377,7 @@
 		<entity id="178" name="Floor_177">
 			<GameObject _schemaVersion="0" _name="Floor_177" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,7"
 					               _localRotation="0,4.712389,0"
@@ -3396,7 +3396,7 @@
 		<entity id="179" name="Floor_178">
 			<GameObject _schemaVersion="0" _name="Floor_178" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,7"
 					               _localRotation="0,1.5707964,0"
@@ -3415,7 +3415,7 @@
 		<entity id="180" name="Floor_179">
 			<GameObject _schemaVersion="0" _name="Floor_179" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,7"
 					               _localRotation="0,0,0"
@@ -3434,7 +3434,7 @@
 		<entity id="181" name="Floor_180">
 			<GameObject _schemaVersion="0" _name="Floor_180" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,7"
 					               _localRotation="0,4.712389,0"
@@ -3453,7 +3453,7 @@
 		<entity id="182" name="Floor_181">
 			<GameObject _schemaVersion="0" _name="Floor_181" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,7"
 					               _localRotation="0,1.5707964,0"
@@ -3472,7 +3472,7 @@
 		<entity id="183" name="Floor_182">
 			<GameObject _schemaVersion="0" _name="Floor_182" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,7"
 					               _localRotation="0,3.1415927,0"
@@ -3491,7 +3491,7 @@
 		<entity id="184" name="Floor_183">
 			<GameObject _schemaVersion="0" _name="Floor_183" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,7"
 					               _localRotation="0,3.1415927,0"
@@ -3510,7 +3510,7 @@
 		<entity id="185" name="Floor_184">
 			<GameObject _schemaVersion="0" _name="Floor_184" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,7"
 					               _localRotation="0,4.712389,0"
@@ -3529,7 +3529,7 @@
 		<entity id="186" name="Floor_185">
 			<GameObject _schemaVersion="0" _name="Floor_185" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,7"
 					               _localRotation="0,3.1415927,0"
@@ -3548,7 +3548,7 @@
 		<entity id="187" name="Floor_186">
 			<GameObject _schemaVersion="0" _name="Floor_186" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,7"
 					               _localRotation="0,1.5707964,0"
@@ -3567,7 +3567,7 @@
 		<entity id="188" name="Floor_187">
 			<GameObject _schemaVersion="0" _name="Floor_187" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,7"
 					               _localRotation="0,1.5707964,0"
@@ -3586,7 +3586,7 @@
 		<entity id="189" name="Floor_188">
 			<GameObject _schemaVersion="0" _name="Floor_188" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,7"
 					               _localRotation="0,3.1415927,0"
@@ -3605,7 +3605,7 @@
 		<entity id="190" name="Floor_189">
 			<GameObject _schemaVersion="0" _name="Floor_189" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,7"
 					               _localRotation="0,4.712389,0"
@@ -3624,7 +3624,7 @@
 		<entity id="191" name="Floor_190">
 			<GameObject _schemaVersion="0" _name="Floor_190" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,7"
 					               _localRotation="0,3.1415927,0"
@@ -3643,7 +3643,7 @@
 		<entity id="192" name="Floor_191">
 			<GameObject _schemaVersion="0" _name="Floor_191" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,7"
 					               _localRotation="0,1.5707964,0"
@@ -3662,7 +3662,7 @@
 		<entity id="193" name="Floor_192">
 			<GameObject _schemaVersion="0" _name="Floor_192" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,7"
 					               _localRotation="0,1.5707964,0"
@@ -3681,7 +3681,7 @@
 		<entity id="194" name="Floor_193">
 			<GameObject _schemaVersion="0" _name="Floor_193" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,9"
 					               _localRotation="0,3.1415927,0"
@@ -3700,7 +3700,7 @@
 		<entity id="195" name="Floor_194">
 			<GameObject _schemaVersion="0" _name="Floor_194" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,9"
 					               _localRotation="0,3.1415927,0"
@@ -3719,7 +3719,7 @@
 		<entity id="196" name="Floor_195">
 			<GameObject _schemaVersion="0" _name="Floor_195" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,9"
 					               _localRotation="0,0,0"
@@ -3738,7 +3738,7 @@
 		<entity id="197" name="Floor_196">
 			<GameObject _schemaVersion="0" _name="Floor_196" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,9"
 					               _localRotation="0,1.5707964,0"
@@ -3757,7 +3757,7 @@
 		<entity id="198" name="Floor_197">
 			<GameObject _schemaVersion="0" _name="Floor_197" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,9"
 					               _localRotation="0,4.712389,0"
@@ -3776,7 +3776,7 @@
 		<entity id="199" name="Floor_198">
 			<GameObject _schemaVersion="0" _name="Floor_198" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,9"
 					               _localRotation="0,3.1415927,0"
@@ -3795,7 +3795,7 @@
 		<entity id="200" name="Floor_199">
 			<GameObject _schemaVersion="0" _name="Floor_199" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,9"
 					               _localRotation="0,3.1415927,0"
@@ -3814,7 +3814,7 @@
 		<entity id="201" name="Floor_200">
 			<GameObject _schemaVersion="0" _name="Floor_200" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,9"
 					               _localRotation="0,0,0"
@@ -3833,7 +3833,7 @@
 		<entity id="202" name="Floor_201">
 			<GameObject _schemaVersion="0" _name="Floor_201" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,9"
 					               _localRotation="0,0,0"
@@ -3852,7 +3852,7 @@
 		<entity id="203" name="Floor_202">
 			<GameObject _schemaVersion="0" _name="Floor_202" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,9"
 					               _localRotation="0,3.1415927,0"
@@ -3871,7 +3871,7 @@
 		<entity id="204" name="Floor_203">
 			<GameObject _schemaVersion="0" _name="Floor_203" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,9"
 					               _localRotation="0,0,0"
@@ -3890,7 +3890,7 @@
 		<entity id="205" name="Floor_204">
 			<GameObject _schemaVersion="0" _name="Floor_204" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,9"
 					               _localRotation="0,1.5707964,0"
@@ -3909,7 +3909,7 @@
 		<entity id="206" name="Floor_205">
 			<GameObject _schemaVersion="0" _name="Floor_205" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,9"
 					               _localRotation="0,1.5707964,0"
@@ -3928,7 +3928,7 @@
 		<entity id="207" name="Floor_206">
 			<GameObject _schemaVersion="0" _name="Floor_206" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,9"
 					               _localRotation="0,0,0"
@@ -3947,7 +3947,7 @@
 		<entity id="208" name="Floor_207">
 			<GameObject _schemaVersion="0" _name="Floor_207" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,9"
 					               _localRotation="0,3.1415927,0"
@@ -3966,7 +3966,7 @@
 		<entity id="209" name="Floor_208">
 			<GameObject _schemaVersion="0" _name="Floor_208" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,9"
 					               _localRotation="0,3.1415927,0"
@@ -3985,7 +3985,7 @@
 		<entity id="210" name="Floor_209">
 			<GameObject _schemaVersion="0" _name="Floor_209" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,11"
 					               _localRotation="0,3.1415927,0"
@@ -4004,7 +4004,7 @@
 		<entity id="211" name="Floor_210">
 			<GameObject _schemaVersion="0" _name="Floor_210" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,11"
 					               _localRotation="0,3.1415927,0"
@@ -4023,7 +4023,7 @@
 		<entity id="212" name="Floor_211">
 			<GameObject _schemaVersion="0" _name="Floor_211" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,11"
 					               _localRotation="0,3.1415927,0"
@@ -4042,7 +4042,7 @@
 		<entity id="213" name="Floor_212">
 			<GameObject _schemaVersion="0" _name="Floor_212" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,11"
 					               _localRotation="0,0,0"
@@ -4061,7 +4061,7 @@
 		<entity id="214" name="Floor_213">
 			<GameObject _schemaVersion="0" _name="Floor_213" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,11"
 					               _localRotation="0,1.5707964,0"
@@ -4080,7 +4080,7 @@
 		<entity id="215" name="Floor_214">
 			<GameObject _schemaVersion="0" _name="Floor_214" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,11"
 					               _localRotation="0,4.712389,0"
@@ -4099,7 +4099,7 @@
 		<entity id="216" name="Floor_215">
 			<GameObject _schemaVersion="0" _name="Floor_215" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,11"
 					               _localRotation="0,3.1415927,0"
@@ -4118,7 +4118,7 @@
 		<entity id="217" name="Floor_216">
 			<GameObject _schemaVersion="0" _name="Floor_216" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,11"
 					               _localRotation="0,1.5707964,0"
@@ -4137,7 +4137,7 @@
 		<entity id="218" name="Floor_217">
 			<GameObject _schemaVersion="0" _name="Floor_217" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,11"
 					               _localRotation="0,1.5707964,0"
@@ -4156,7 +4156,7 @@
 		<entity id="219" name="Floor_218">
 			<GameObject _schemaVersion="0" _name="Floor_218" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,11"
 					               _localRotation="0,3.1415927,0"
@@ -4175,7 +4175,7 @@
 		<entity id="220" name="Floor_219">
 			<GameObject _schemaVersion="0" _name="Floor_219" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,11"
 					               _localRotation="0,0,0"
@@ -4194,7 +4194,7 @@
 		<entity id="221" name="Floor_220">
 			<GameObject _schemaVersion="0" _name="Floor_220" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,11"
 					               _localRotation="0,3.1415927,0"
@@ -4213,7 +4213,7 @@
 		<entity id="222" name="Floor_221">
 			<GameObject _schemaVersion="0" _name="Floor_221" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,11"
 					               _localRotation="0,0,0"
@@ -4232,7 +4232,7 @@
 		<entity id="223" name="Floor_222">
 			<GameObject _schemaVersion="0" _name="Floor_222" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,11"
 					               _localRotation="0,4.712389,0"
@@ -4251,7 +4251,7 @@
 		<entity id="224" name="Floor_223">
 			<GameObject _schemaVersion="0" _name="Floor_223" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,11"
 					               _localRotation="0,4.712389,0"
@@ -4270,7 +4270,7 @@
 		<entity id="225" name="Floor_224">
 			<GameObject _schemaVersion="0" _name="Floor_224" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,11"
 					               _localRotation="0,3.1415927,0"
@@ -4289,7 +4289,7 @@
 		<entity id="226" name="Floor_225">
 			<GameObject _schemaVersion="0" _name="Floor_225" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,13"
 					               _localRotation="0,0,0"
@@ -4308,7 +4308,7 @@
 		<entity id="227" name="Floor_226">
 			<GameObject _schemaVersion="0" _name="Floor_226" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,13"
 					               _localRotation="0,0,0"
@@ -4327,7 +4327,7 @@
 		<entity id="228" name="Floor_227">
 			<GameObject _schemaVersion="0" _name="Floor_227" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,13"
 					               _localRotation="0,0,0"
@@ -4346,7 +4346,7 @@
 		<entity id="229" name="Floor_228">
 			<GameObject _schemaVersion="0" _name="Floor_228" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,13"
 					               _localRotation="0,3.1415927,0"
@@ -4365,7 +4365,7 @@
 		<entity id="230" name="Floor_229">
 			<GameObject _schemaVersion="0" _name="Floor_229" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,13"
 					               _localRotation="0,3.1415927,0"
@@ -4384,7 +4384,7 @@
 		<entity id="231" name="Floor_230">
 			<GameObject _schemaVersion="0" _name="Floor_230" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,13"
 					               _localRotation="0,0,0"
@@ -4403,7 +4403,7 @@
 		<entity id="232" name="Floor_231">
 			<GameObject _schemaVersion="0" _name="Floor_231" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,13"
 					               _localRotation="0,4.712389,0"
@@ -4422,7 +4422,7 @@
 		<entity id="233" name="Floor_232">
 			<GameObject _schemaVersion="0" _name="Floor_232" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,13"
 					               _localRotation="0,3.1415927,0"
@@ -4441,7 +4441,7 @@
 		<entity id="234" name="Floor_233">
 			<GameObject _schemaVersion="0" _name="Floor_233" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,13"
 					               _localRotation="0,0,0"
@@ -4460,7 +4460,7 @@
 		<entity id="235" name="Floor_234">
 			<GameObject _schemaVersion="0" _name="Floor_234" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,13"
 					               _localRotation="0,0,0"
@@ -4479,7 +4479,7 @@
 		<entity id="236" name="Floor_235">
 			<GameObject _schemaVersion="0" _name="Floor_235" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,13"
 					               _localRotation="0,1.5707964,0"
@@ -4498,7 +4498,7 @@
 		<entity id="237" name="Floor_236">
 			<GameObject _schemaVersion="0" _name="Floor_236" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,13"
 					               _localRotation="0,3.1415927,0"
@@ -4517,7 +4517,7 @@
 		<entity id="238" name="Floor_237">
 			<GameObject _schemaVersion="0" _name="Floor_237" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,13"
 					               _localRotation="0,0,0"
@@ -4536,7 +4536,7 @@
 		<entity id="239" name="Floor_238">
 			<GameObject _schemaVersion="0" _name="Floor_238" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,13"
 					               _localRotation="0,1.5707964,0"
@@ -4555,7 +4555,7 @@
 		<entity id="240" name="Floor_239">
 			<GameObject _schemaVersion="0" _name="Floor_239" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,13"
 					               _localRotation="0,1.5707964,0"
@@ -4574,7 +4574,7 @@
 		<entity id="241" name="Floor_240">
 			<GameObject _schemaVersion="0" _name="Floor_240" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,13"
 					               _localRotation="0,0,0"
@@ -4593,7 +4593,7 @@
 		<entity id="242" name="Floor_241">
 			<GameObject _schemaVersion="0" _name="Floor_241" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,15"
 					               _localRotation="0,4.712389,0"
@@ -4612,7 +4612,7 @@
 		<entity id="243" name="Floor_242">
 			<GameObject _schemaVersion="0" _name="Floor_242" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,15"
 					               _localRotation="0,3.1415927,0"
@@ -4631,7 +4631,7 @@
 		<entity id="244" name="Floor_243">
 			<GameObject _schemaVersion="0" _name="Floor_243" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,15"
 					               _localRotation="0,0,0"
@@ -4650,7 +4650,7 @@
 		<entity id="245" name="Floor_244">
 			<GameObject _schemaVersion="0" _name="Floor_244" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,15"
 					               _localRotation="0,1.5707964,0"
@@ -4669,7 +4669,7 @@
 		<entity id="246" name="Floor_245">
 			<GameObject _schemaVersion="0" _name="Floor_245" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,15"
 					               _localRotation="0,1.5707964,0"
@@ -4688,7 +4688,7 @@
 		<entity id="247" name="Floor_246">
 			<GameObject _schemaVersion="0" _name="Floor_246" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,15"
 					               _localRotation="0,3.1415927,0"
@@ -4707,7 +4707,7 @@
 		<entity id="248" name="Floor_247">
 			<GameObject _schemaVersion="0" _name="Floor_247" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,15"
 					               _localRotation="0,4.712389,0"
@@ -4726,7 +4726,7 @@
 		<entity id="249" name="Floor_248">
 			<GameObject _schemaVersion="0" _name="Floor_248" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,15"
 					               _localRotation="0,3.1415927,0"
@@ -4745,7 +4745,7 @@
 		<entity id="250" name="Floor_249">
 			<GameObject _schemaVersion="0" _name="Floor_249" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,15"
 					               _localRotation="0,1.5707964,0"
@@ -4764,7 +4764,7 @@
 		<entity id="251" name="Floor_250">
 			<GameObject _schemaVersion="0" _name="Floor_250" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,15"
 					               _localRotation="0,1.5707964,0"
@@ -4783,7 +4783,7 @@
 		<entity id="252" name="Floor_251">
 			<GameObject _schemaVersion="0" _name="Floor_251" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,15"
 					               _localRotation="0,0,0"
@@ -4802,7 +4802,7 @@
 		<entity id="253" name="Floor_252">
 			<GameObject _schemaVersion="0" _name="Floor_252" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,15"
 					               _localRotation="0,3.1415927,0"
@@ -4821,7 +4821,7 @@
 		<entity id="254" name="Floor_253">
 			<GameObject _schemaVersion="0" _name="Floor_253" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,15"
 					               _localRotation="0,3.1415927,0"
@@ -4840,7 +4840,7 @@
 		<entity id="255" name="Floor_254">
 			<GameObject _schemaVersion="0" _name="Floor_254" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,15"
 					               _localRotation="0,0,0"
@@ -4859,7 +4859,7 @@
 		<entity id="256" name="Floor_255">
 			<GameObject _schemaVersion="0" _name="Floor_255" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,15"
 					               _localRotation="0,3.1415927,0"
@@ -4878,7 +4878,7 @@
 		<entity id="257" name="Floor_256">
 			<GameObject _schemaVersion="0" _name="Floor_256" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,15"
 					               _localRotation="0,4.712389,0"
@@ -4897,7 +4897,7 @@
 		<entity id="258" name="Wall">
 			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,17"
 					               _localRotation="0,0,0"
@@ -4916,7 +4916,7 @@
 		<entity id="259" name="Wall_2">
 			<GameObject _schemaVersion="0" _name="Wall_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-17"
 					               _localRotation="0,0,0"
@@ -4935,7 +4935,7 @@
 		<entity id="260" name="Wall_3">
 			<GameObject _schemaVersion="0" _name="Wall_3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,-15"
 					               _localRotation="0,0,0"
@@ -4954,7 +4954,7 @@
 		<entity id="261" name="Wall_4">
 			<GameObject _schemaVersion="0" _name="Wall_4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,-15"
 					               _localRotation="0,0,0"
@@ -4973,7 +4973,7 @@
 		<entity id="262" name="Wall_5">
 			<GameObject _schemaVersion="0" _name="Wall_5" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,17"
 					               _localRotation="0,0,0"
@@ -4992,7 +4992,7 @@
 		<entity id="263" name="Wall_6">
 			<GameObject _schemaVersion="0" _name="Wall_6" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-13,0,-17"
 					               _localRotation="0,0,0"
@@ -5011,7 +5011,7 @@
 		<entity id="264" name="Wall_7">
 			<GameObject _schemaVersion="0" _name="Wall_7" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,-13"
 					               _localRotation="0,0,0"
@@ -5030,7 +5030,7 @@
 		<entity id="265" name="Wall_8">
 			<GameObject _schemaVersion="0" _name="Wall_8" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,-13"
 					               _localRotation="0,0,0"
@@ -5049,7 +5049,7 @@
 		<entity id="266" name="Wall_9">
 			<GameObject _schemaVersion="0" _name="Wall_9" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,17"
 					               _localRotation="0,0,0"
@@ -5068,7 +5068,7 @@
 		<entity id="267" name="Wall_10">
 			<GameObject _schemaVersion="0" _name="Wall_10" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,-17"
 					               _localRotation="0,0,0"
@@ -5087,7 +5087,7 @@
 		<entity id="268" name="Wall_11">
 			<GameObject _schemaVersion="0" _name="Wall_11" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,-11"
 					               _localRotation="0,0,0"
@@ -5106,7 +5106,7 @@
 		<entity id="269" name="Wall_12">
 			<GameObject _schemaVersion="0" _name="Wall_12" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,-11"
 					               _localRotation="0,0,0"
@@ -5125,7 +5125,7 @@
 		<entity id="270" name="Wall_13">
 			<GameObject _schemaVersion="0" _name="Wall_13" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,17"
 					               _localRotation="0,0,0"
@@ -5144,7 +5144,7 @@
 		<entity id="271" name="Wall_14">
 			<GameObject _schemaVersion="0" _name="Wall_14" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-9,0,-17"
 					               _localRotation="0,0,0"
@@ -5163,7 +5163,7 @@
 		<entity id="272" name="Wall_15">
 			<GameObject _schemaVersion="0" _name="Wall_15" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,-9"
 					               _localRotation="0,0,0"
@@ -5182,7 +5182,7 @@
 		<entity id="273" name="Wall_16">
 			<GameObject _schemaVersion="0" _name="Wall_16" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,-9"
 					               _localRotation="0,0,0"
@@ -5201,7 +5201,7 @@
 		<entity id="274" name="Wall_17">
 			<GameObject _schemaVersion="0" _name="Wall_17" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,17"
 					               _localRotation="0,0,0"
@@ -5220,7 +5220,7 @@
 		<entity id="275" name="Wall_18">
 			<GameObject _schemaVersion="0" _name="Wall_18" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-7,0,-17"
 					               _localRotation="0,0,0"
@@ -5239,7 +5239,7 @@
 		<entity id="276" name="Wall_19">
 			<GameObject _schemaVersion="0" _name="Wall_19" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,-7"
 					               _localRotation="0,0,0"
@@ -5258,7 +5258,7 @@
 		<entity id="277" name="Wall_20">
 			<GameObject _schemaVersion="0" _name="Wall_20" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,-7"
 					               _localRotation="0,0,0"
@@ -5277,7 +5277,7 @@
 		<entity id="278" name="Wall_21">
 			<GameObject _schemaVersion="0" _name="Wall_21" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,17"
 					               _localRotation="0,0,0"
@@ -5296,7 +5296,7 @@
 		<entity id="279" name="Wall_22">
 			<GameObject _schemaVersion="0" _name="Wall_22" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-5,0,-17"
 					               _localRotation="0,0,0"
@@ -5315,7 +5315,7 @@
 		<entity id="280" name="Wall_23">
 			<GameObject _schemaVersion="0" _name="Wall_23" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,-5"
 					               _localRotation="0,0,0"
@@ -5334,7 +5334,7 @@
 		<entity id="281" name="Wall_24">
 			<GameObject _schemaVersion="0" _name="Wall_24" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,-5"
 					               _localRotation="0,0,0"
@@ -5353,7 +5353,7 @@
 		<entity id="282" name="Wall_25">
 			<GameObject _schemaVersion="0" _name="Wall_25" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,17"
 					               _localRotation="0,0,0"
@@ -5372,7 +5372,7 @@
 		<entity id="283" name="Wall_26">
 			<GameObject _schemaVersion="0" _name="Wall_26" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-3,0,-17"
 					               _localRotation="0,0,0"
@@ -5391,7 +5391,7 @@
 		<entity id="284" name="Wall_27">
 			<GameObject _schemaVersion="0" _name="Wall_27" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,-3"
 					               _localRotation="0,0,0"
@@ -5410,7 +5410,7 @@
 		<entity id="285" name="Wall_28">
 			<GameObject _schemaVersion="0" _name="Wall_28" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,-3"
 					               _localRotation="0,0,0"
@@ -5429,7 +5429,7 @@
 		<entity id="286" name="Wall_29">
 			<GameObject _schemaVersion="0" _name="Wall_29" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,17"
 					               _localRotation="0,0,0"
@@ -5448,7 +5448,7 @@
 		<entity id="287" name="Wall_30">
 			<GameObject _schemaVersion="0" _name="Wall_30" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-1,0,-17"
 					               _localRotation="0,0,0"
@@ -5467,7 +5467,7 @@
 		<entity id="288" name="Wall_31">
 			<GameObject _schemaVersion="0" _name="Wall_31" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,-1"
 					               _localRotation="0,0,0"
@@ -5486,7 +5486,7 @@
 		<entity id="289" name="Wall_32">
 			<GameObject _schemaVersion="0" _name="Wall_32" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,-1"
 					               _localRotation="0,0,0"
@@ -5505,7 +5505,7 @@
 		<entity id="290" name="Wall_33">
 			<GameObject _schemaVersion="0" _name="Wall_33" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,17"
 					               _localRotation="0,0,0"
@@ -5524,7 +5524,7 @@
 		<entity id="291" name="Wall_34">
 			<GameObject _schemaVersion="0" _name="Wall_34" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="1,0,-17"
 					               _localRotation="0,0,0"
@@ -5543,7 +5543,7 @@
 		<entity id="292" name="Wall_35">
 			<GameObject _schemaVersion="0" _name="Wall_35" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,1"
 					               _localRotation="0,0,0"
@@ -5562,7 +5562,7 @@
 		<entity id="293" name="Wall_36">
 			<GameObject _schemaVersion="0" _name="Wall_36" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,1"
 					               _localRotation="0,0,0"
@@ -5581,7 +5581,7 @@
 		<entity id="294" name="Wall_37">
 			<GameObject _schemaVersion="0" _name="Wall_37" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,17"
 					               _localRotation="0,0,0"
@@ -5600,7 +5600,7 @@
 		<entity id="295" name="Wall_38">
 			<GameObject _schemaVersion="0" _name="Wall_38" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="3,0,-17"
 					               _localRotation="0,0,0"
@@ -5619,7 +5619,7 @@
 		<entity id="296" name="Wall_39">
 			<GameObject _schemaVersion="0" _name="Wall_39" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,3"
 					               _localRotation="0,0,0"
@@ -5638,7 +5638,7 @@
 		<entity id="297" name="Wall_40">
 			<GameObject _schemaVersion="0" _name="Wall_40" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,3"
 					               _localRotation="0,0,0"
@@ -5657,7 +5657,7 @@
 		<entity id="298" name="Wall_41">
 			<GameObject _schemaVersion="0" _name="Wall_41" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,17"
 					               _localRotation="0,0,0"
@@ -5676,7 +5676,7 @@
 		<entity id="299" name="Wall_42">
 			<GameObject _schemaVersion="0" _name="Wall_42" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="5,0,-17"
 					               _localRotation="0,0,0"
@@ -5695,7 +5695,7 @@
 		<entity id="300" name="Wall_43">
 			<GameObject _schemaVersion="0" _name="Wall_43" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,5"
 					               _localRotation="0,0,0"
@@ -5714,7 +5714,7 @@
 		<entity id="301" name="Wall_44">
 			<GameObject _schemaVersion="0" _name="Wall_44" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,5"
 					               _localRotation="0,0,0"
@@ -5733,7 +5733,7 @@
 		<entity id="302" name="Wall_45">
 			<GameObject _schemaVersion="0" _name="Wall_45" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,17"
 					               _localRotation="0,0,0"
@@ -5752,7 +5752,7 @@
 		<entity id="303" name="Wall_46">
 			<GameObject _schemaVersion="0" _name="Wall_46" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="7,0,-17"
 					               _localRotation="0,0,0"
@@ -5771,7 +5771,7 @@
 		<entity id="304" name="Wall_47">
 			<GameObject _schemaVersion="0" _name="Wall_47" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,7"
 					               _localRotation="0,0,0"
@@ -5790,7 +5790,7 @@
 		<entity id="305" name="Wall_48">
 			<GameObject _schemaVersion="0" _name="Wall_48" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,7"
 					               _localRotation="0,0,0"
@@ -5809,7 +5809,7 @@
 		<entity id="306" name="Wall_49">
 			<GameObject _schemaVersion="0" _name="Wall_49" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,17"
 					               _localRotation="0,0,0"
@@ -5828,7 +5828,7 @@
 		<entity id="307" name="Wall_50">
 			<GameObject _schemaVersion="0" _name="Wall_50" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="9,0,-17"
 					               _localRotation="0,0,0"
@@ -5847,7 +5847,7 @@
 		<entity id="308" name="Wall_51">
 			<GameObject _schemaVersion="0" _name="Wall_51" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,9"
 					               _localRotation="0,0,0"
@@ -5866,7 +5866,7 @@
 		<entity id="309" name="Wall_52">
 			<GameObject _schemaVersion="0" _name="Wall_52" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,9"
 					               _localRotation="0,0,0"
@@ -5885,7 +5885,7 @@
 		<entity id="310" name="Wall_53">
 			<GameObject _schemaVersion="0" _name="Wall_53" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,17"
 					               _localRotation="0,0,0"
@@ -5904,7 +5904,7 @@
 		<entity id="311" name="Wall_54">
 			<GameObject _schemaVersion="0" _name="Wall_54" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="11,0,-17"
 					               _localRotation="0,0,0"
@@ -5923,7 +5923,7 @@
 		<entity id="312" name="Wall_55">
 			<GameObject _schemaVersion="0" _name="Wall_55" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,11"
 					               _localRotation="0,0,0"
@@ -5942,7 +5942,7 @@
 		<entity id="313" name="Wall_56">
 			<GameObject _schemaVersion="0" _name="Wall_56" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,11"
 					               _localRotation="0,0,0"
@@ -5961,7 +5961,7 @@
 		<entity id="314" name="Wall_57">
 			<GameObject _schemaVersion="0" _name="Wall_57" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,17"
 					               _localRotation="0,0,0"
@@ -5980,7 +5980,7 @@
 		<entity id="315" name="Wall_58">
 			<GameObject _schemaVersion="0" _name="Wall_58" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,-17"
 					               _localRotation="0,0,0"
@@ -5999,7 +5999,7 @@
 		<entity id="316" name="Wall_59">
 			<GameObject _schemaVersion="0" _name="Wall_59" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,13"
 					               _localRotation="0,0,0"
@@ -6018,7 +6018,7 @@
 		<entity id="317" name="Wall_60">
 			<GameObject _schemaVersion="0" _name="Wall_60" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,13"
 					               _localRotation="0,0,0"
@@ -6037,7 +6037,7 @@
 		<entity id="318" name="Wall_61">
 			<GameObject _schemaVersion="0" _name="Wall_61" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,17"
 					               _localRotation="0,0,0"
@@ -6056,7 +6056,7 @@
 		<entity id="319" name="Wall_62">
 			<GameObject _schemaVersion="0" _name="Wall_62" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,-17"
 					               _localRotation="0,0,0"
@@ -6075,7 +6075,7 @@
 		<entity id="320" name="Wall_63">
 			<GameObject _schemaVersion="0" _name="Wall_63" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="17,0,15"
 					               _localRotation="0,0,0"
@@ -6094,7 +6094,7 @@
 		<entity id="321" name="Wall_64">
 			<GameObject _schemaVersion="0" _name="Wall_64" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-17,0,15"
 					               _localRotation="0,0,0"
@@ -6113,7 +6113,7 @@
 		<entity id="322" name="Column">
 			<GameObject _schemaVersion="0" _name="Column" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,15"
 					               _localRotation="0,0,0"
@@ -6132,7 +6132,7 @@
 		<entity id="323" name="Column_2">
 			<GameObject _schemaVersion="0" _name="Column_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,15"
 					               _localRotation="0,0,0"
@@ -6151,7 +6151,7 @@
 		<entity id="324" name="Column_3">
 			<GameObject _schemaVersion="0" _name="Column_3" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,-15"
 					               _localRotation="0,0,0"
@@ -6170,7 +6170,7 @@
 		<entity id="325" name="Column_4">
 			<GameObject _schemaVersion="0" _name="Column_4" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-15"
 					               _localRotation="0,0,0"
@@ -6189,7 +6189,7 @@
 		<entity id="326" name="Banner">
 			<GameObject _schemaVersion="0" _name="Banner" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-6,0,15"
 					               _localRotation="0,3.1416,0"
@@ -6203,14 +6203,14 @@
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="mi_trim_furniture" />
-					<MeshSectionComponent _componentName="MeshSectionComponent"
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
-					                      _attachComponent="MeshComponent#0"
+					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/banner_1/materials/mi_trim_metal.material"
 					                      _sectionName="mi_trim_metal" />
-					<MeshSectionComponent _componentName="MeshSectionComponent"
+					<MeshSectionComponent _localID="2542658349904449754" _componentName="MeshSectionComponent"
 					                      _bActive="true"
-					                      _attachComponent="MeshComponent#0"
+					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/banner_1/materials/mi_banner.material"
 					                      _sectionName="mi_banner" />
 				</_listComponent>
@@ -6219,7 +6219,7 @@
 		<entity id="327" name="Banner_2">
 			<GameObject _schemaVersion="0" _name="Banner_2" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="6,0,15"
 					               _localRotation="0,3.1416,0"
@@ -6233,14 +6233,14 @@
 					               _gpuSpinSeed="0"
 					               _bVisible="true"
 					               _sectionName="mi_trim_furniture" />
-					<MeshSectionComponent _componentName="MeshSectionComponent"
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
-					                      _attachComponent="MeshComponent#0"
+					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/banner_1/materials/mi_trim_metal.material"
 					                      _sectionName="mi_trim_metal" />
-					<MeshSectionComponent _componentName="MeshSectionComponent"
+					<MeshSectionComponent _localID="2542658349904449754" _componentName="MeshSectionComponent"
 					                      _bActive="true"
-					                      _attachComponent="MeshComponent#0"
+					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/banner_1/materials/mi_banner.material"
 					                      _sectionName="mi_banner" />
 				</_listComponent>
@@ -6249,7 +6249,7 @@
 		<entity id="328" name="Chest">
 			<GameObject _schemaVersion="0" _name="Chest" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _componentName="MeshComponent"
+					<SkeletalMeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					                       _bActive="true"
 					                       _localPosition="13.2,0,15"
 					                       _localRotation="0,3.927,0"
@@ -6263,9 +6263,9 @@
 					                       _gpuSpinSeed="0"
 					                       _bVisible="true"
 					                       _sectionName="mi_trim_furniture" />
-					<MeshSectionComponent _componentName="MeshSectionComponent"
+					<MeshSectionComponent _localID="2542659449416077965" _componentName="MeshSectionComponent"
 					                      _bActive="true"
-					                      _attachComponent="MeshComponent#0"
+					                      _attachComponent="#0244d8c8807cd288"
 					                      _materialPath="common/models/quaternius/props/chest_wood/materials/mi_trim_metal.material"
 					                      _sectionName="mi_trim_metal" />
 				</_listComponent>
@@ -6274,7 +6274,7 @@
 		<entity id="329" name="Potion">
 			<GameObject _schemaVersion="0" _name="Potion" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="15,0,13"
 					               _localRotation="0,0,0"
@@ -6293,7 +6293,7 @@
 		<entity id="330" name="Coin">
 			<GameObject _schemaVersion="0" _name="Coin" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="13,0,13.4"
 					               _localRotation="0,0.4,0"
@@ -6312,7 +6312,7 @@
 		<entity id="331" name="Rocks">
 			<GameObject _schemaVersion="0" _name="Rocks" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-15,0,-12.8"
 					               _localRotation="0,0,0"
@@ -6331,7 +6331,7 @@
 		<entity id="332" name="Trap">
 			<GameObject _schemaVersion="0" _name="Trap" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-12.8,0,-15"
 					               _localRotation="0,0,0"
@@ -6350,7 +6350,7 @@
 		<entity id="333" name="ArenaSun">
 			<GameObject _schemaVersion="0" _name="ArenaSun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="1.102345,-2.191046,0"
@@ -6370,7 +6370,7 @@
 		<entity id="334" name="ArenaGameMode">
 			<GameObject _schemaVersion="0" _name="ArenaGameMode" _bActive="true">
 				<_listComponent>
-					<ArenaGameModeComponent _componentName="ArenaGameModeComponent"
+					<ArenaGameModeComponent _localID="2358713137147008199" _componentName="ArenaGameModeComponent"
 					                        _bActive="true"
 					                        _playerAbilitySet="Player"
 					                        _gruntAbilitySet="Grunt"
@@ -6396,7 +6396,7 @@
 		<entity id="335" name="NavigationSurface">
 			<GameObject _schemaVersion="0" _name="NavigationSurface" _bActive="true">
 				<_listComponent>
-					<NavMeshSurfaceComponent _componentName="NavMeshSurfaceComponent"
+					<NavMeshSurfaceComponent _localID="4521272121032625094" _componentName="NavMeshSurfaceComponent"
 					                         _bActive="true"
 					                         _geometrySource="RenderMeshes"
 					                         _boundsHalfExtents="0,0,0">

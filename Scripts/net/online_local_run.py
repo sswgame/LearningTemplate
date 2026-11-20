@@ -17,17 +17,13 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
-import sys
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from common import app_arguments
 from common.exit_code import ExitCode
-from common.host_platform import executable_name
 from common.paths import get_project_root
-from net.net_pair_run import _stop, _wait_for_text
+from common.process_group import CheckResult, ProcessGroup, problem_lines, read_log, report
 
 _DEFAULT_CONFIG = "Config/Server/Online/Shooter3D.json"
 _PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 Server · App 을 쓴다
@@ -40,17 +36,7 @@ _MAIL_LIST = re.compile(r"online mail list: \d+ mails")
 _MATCH_FOUND = re.compile(r"online match found")
 _SCORE_SUBMITTED = re.compile(r"online score submitted")
 _TOP_SCORES = re.compile(r"online top scores: 1 entries")
-_PROBLEM_LINE = re.compile(r"\[(Error|Warning)\]")
 _ALLOWED_PROBLEM = re.compile(r"no ticketKeySecretEnvironment")
-
-
-@dataclass
-class CheckResult:
-    problems: list[str] = field(default_factory=list)
-
-    @property
-    def ok(self) -> bool:
-        return not self.problems
 
 
 def check_logs(server_text: str, client_text: str) -> CheckResult:
@@ -66,79 +52,50 @@ def check_logs(server_text: str, client_text: str) -> CheckResult:
         result.problems.append("the client log has no score submitted line - the leaderboard kit did not take the score")
     if _TOP_SCORES.search(client_text) is None:
         result.problems.append("the client log has no top scores line with one entry - the leaderboard kit did not return the submitted score")
-    for name, text in (("server", server_text), ("client", client_text)):
-        for line in text.splitlines():
-            if _PROBLEM_LINE.search(line) and _ALLOWED_PROBLEM.search(line) is None:
-                result.problems.append(f"{name} log: {line.strip()}")
+    result.problems += problem_lines("server", server_text, _ALLOWED_PROBLEM) + problem_lines("client", client_text, _ALLOWED_PROBLEM)
     return result
 
 
-def _send(process: subprocess.Popen, line: str) -> None:
-    process.stdin.write((line + "\n").encode("utf-8"))
-    process.stdin.flush()
-
-
 def _run(argument: argparse.Namespace) -> int:
-    root = get_project_root()
-    bin_dir = root / "build" / _PRESET / "Bin"
-    server_exe = bin_dir / executable_name("Server")
-    client_exe = bin_dir / executable_name("App")
-    for exe in (server_exe, client_exe):
-        if not exe.exists():
-            print(f"[online-local] FAIL: {exe} does not exist - build the '{_PRESET}' preset first")
+    with ProcessGroup("online-local", _PRESET, "OnlineLocalRun") as group:
+        list_exe = group.require("Server", "App")
+        if list_exe is None:
             return int(ExitCode.CHECK_INVALID)
-    server_config = (root / argument.server_config).resolve()
-    service_port = json.loads(server_config.read_text(encoding="utf-8"))["_servicePort"]
-    out_dir = root / "Saved" / "OnlineLocalRun"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    server_log = out_dir / "server.log"
-    client_log = out_dir / "client.log"
-    server_args = [str(server_exe), app_arguments.option("game", _GAME), app_arguments.option("server-config", server_config)]
-    client_args = [str(client_exe), app_arguments.option("game", _GAME), app_arguments.variable("gv_standardInputCommands", "1"), app_arguments.variable("gv_onlineServerAddress", f"127.0.0.1:{service_port}")]
-    print(f"[online-local] server: {' '.join(server_args)}")
-    print(f"[online-local] client: {' '.join(client_args)}")
-    with server_log.open("wb") as server_out, client_log.open("wb") as client_out:
-        server = subprocess.Popen(server_args, cwd=str(bin_dir), stdin=subprocess.PIPE, stdout=server_out, stderr=subprocess.STDOUT)
-        if not _wait_for_text(server_log, _LISTENING, _TIMEOUT_SECONDS, server):
-            print(f"[online-local] FAIL: the server never opened its service port (log: {server_log})")
-            _stop(server, False, 5)
-            return int(ExitCode.VIOLATION)
-        client = subprocess.Popen(client_args, cwd=str(bin_dir), stdin=subprocess.PIPE, stdout=client_out, stderr=subprocess.STDOUT)
+        server_exe, client_exe = list_exe
+        server_config = (get_project_root() / argument.server_config).resolve()
+        service_port = json.loads(server_config.read_text(encoding="utf-8"))["_servicePort"]
+        server = group.start("server", [server_exe, app_arguments.option("game", _GAME), app_arguments.option("server-config", server_config)])
+        if not server.wait_for(_LISTENING, _TIMEOUT_SECONDS):
+            return group.fail(f"the server never opened its service port (log: {server.log})")
+        client = group.start("client", [client_exe, app_arguments.option("game", _GAME), app_arguments.variable("gv_standardInputCommands", "1"),
+                                        app_arguments.variable("gv_onlineServerAddress", f"127.0.0.1:{service_port}")])
         time.sleep(_CLIENT_DELAY_SECONDS)  # 클라이언트가 게임 인스턴스를 세우고 표준 입력 명령을 받을 때까지
         try:
-            _send(client, "online.connect")
+            client.send("online.connect")
             time.sleep(2.0)  # Hello 앞의 요청은 세션이 모았다가 보내지만, 연결 실패를 로그인 실패와 가르기 위해 잠깐 둔다
-            _send(client, "shooter.online.login")
-            if _wait_for_text(client_log, _LOGGED_IN, _TIMEOUT_SECONDS, client):
-                _send(client, "shooter.online.listmail")
-                _wait_for_text(client_log, _MAIL_LIST, _TIMEOUT_SECONDS, client)
-                _send(client, "shooter.online.match")
-                _wait_for_text(client_log, _MATCH_FOUND, _TIMEOUT_SECONDS, client)
-                _send(client, "shooter.online.submitkills 5")
-                if _wait_for_text(client_log, _SCORE_SUBMITTED, _TIMEOUT_SECONDS, client):
-                    _send(client, "shooter.online.topkills")
-                    _wait_for_text(client_log, _TOP_SCORES, _TIMEOUT_SECONDS, client)
+            client.send("shooter.online.login")
+            if client.wait_for(_LOGGED_IN, _TIMEOUT_SECONDS):
+                client.send("shooter.online.listmail")
+                client.wait_for(_MAIL_LIST, _TIMEOUT_SECONDS)
+                client.send("shooter.online.match")
+                client.wait_for(_MATCH_FOUND, _TIMEOUT_SECONDS)
+                client.send("shooter.online.submitkills 5")
+                if client.wait_for(_SCORE_SUBMITTED, _TIMEOUT_SECONDS):
+                    client.send("shooter.online.topkills")
+                    client.wait_for(_TOP_SCORES, _TIMEOUT_SECONDS)
             time.sleep(1.0)  # 늦게 나는 경고도 잡는다
         except OSError:
-            print(f"[online-local] FAIL: the client exited before it took the commands (log: {client_log})")
-        _stop(client, True, 10)
-        _stop(server, True, 20)
-    if server.returncode != 0:
-        print(f"[online-local] FAIL: the server exited with code {server.returncode} (log: {server_log})")
-        return int(ExitCode.VIOLATION)
-    server_text = server_log.read_text(encoding="utf-8", errors="replace")
-    client_text = client_log.read_text(encoding="utf-8", errors="replace")
-    return _print(check_logs(server_text, client_text), server_log, client_log)
+            print(f"[online-local] FAIL: the client exited before it took the commands (log: {client.log})")
+        client.stop(timeout_seconds=10)
+        server.stop(timeout_seconds=20)
+    if server.return_code != 0:
+        return group.fail(f"the server exited with code {server.return_code} (log: {server.log})")
+    return _print(check_logs(server.text(), client.text()), server.log, client.log)
 
 
 def _print(result: CheckResult, server_log: Path, client_log: Path) -> int:
-    for problem in result.problems:
-        print(f"[online-local] FAIL: {problem}")
-    print(f"[online-local] logs: {server_log} {client_log}")
-    if result.ok:
-        print("[online-local] OK: TLS service connection -> login -> mailbox -> match -> leaderboard finished with no unexpected errors or warnings")
-        return int(ExitCode.PASSED)
-    return int(ExitCode.VIOLATION)
+    return report("online-local", result.problems, [server_log, client_log],
+                  "TLS service connection -> login -> mailbox -> match -> leaderboard finished with no unexpected errors or warnings")
 
 
 def main(list_argument: list[str]) -> int:
@@ -152,7 +109,5 @@ def main(list_argument: list[str]) -> int:
     argument = parser.parse_args(list_argument)
     if argument.mode == "check":
         server_log, client_log = Path(argument.server_log), Path(argument.client_log)
-        server_text = server_log.read_text(encoding="utf-8", errors="replace")
-        client_text = client_log.read_text(encoding="utf-8", errors="replace")
-        return _print(check_logs(server_text, client_text), server_log, client_log)
+        return _print(check_logs(read_log(server_log), read_log(client_log)), server_log, client_log)
     return _run(argument)

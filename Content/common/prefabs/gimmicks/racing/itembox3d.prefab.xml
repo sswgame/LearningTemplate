@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="ItemBox3D">
 	<GameObject _schemaVersion="0" _name="ItemBox3D" _bActive="true">
 		<_listComponent>
-			<RigidBodyComponent _componentName="RigidBodyComponent"
+			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 			                    _bActive="true"
 			                    _localPosition="0,0,0"
 			                    _localRotation="0,0,0"
@@ -34,20 +34,20 @@
 					</PhysicsShapeDesc3D>
 				</_listShape>
 			</RigidBodyComponent>
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
 			               _localScale="1,1,1"
 			               _attachOwner="None"
 			               _attachOwnerID="0"
-			               _attachComponent="RigidBodyComponent#0"
+			               _attachComponent="#63e709ac676dd304"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/defaultmaterial.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<ItemBoxComponent _componentName="ItemBoxComponent" _bActive="true" _respawnDelay="3" _seed="1">
+			<ItemBoxComponent _localID="811355330383306693" _componentName="ItemBoxComponent" _bActive="true" _respawnDelay="3" _seed="1">
 				<_listChoice>
 					<GimmickItemChoice _item="Banana" _weight="3" _count="1" />
 					<GimmickItemChoice _item="Shell" _weight="2" _count="1" />

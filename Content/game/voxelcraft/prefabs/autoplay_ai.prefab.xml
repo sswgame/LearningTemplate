@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="VoxelAutoPlay">
 	<GameObject _schemaVersion="0" _name="VoxelAutoPlay" _bActive="true">
 		<_listComponent>
-			<VoxelAutoPlayControllerComponent _componentName="VoxelAutoPlayControllerComponent"
+			<VoxelAutoPlayControllerComponent _localID="8199746220104088750" _componentName="VoxelAutoPlayControllerComponent"
 			                                  _bActive="true"
 			                                  _behaviorTree="game/voxelcraft/data/ai/autoplay.bt.xml" />
 		</_listComponent>

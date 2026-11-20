@@ -8,7 +8,7 @@
 		<entity id="1" name="Camera2D">
 			<GameObject _schemaVersion="0" _name="Camera2D" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,3,-10"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,3,-10"
 					                 _localRotation="0,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -26,7 +26,7 @@
 		<entity id="2" name="Wall">
 			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="0,3,2"
+					<SpriteComponent _localID="9079621422701466312" _localPosition="0,3,2"
 					                 _localRotation="0,0,0"
 					                 _localScale="24,14,1"
 					                 _attachOwner="None"
@@ -41,7 +41,7 @@
 		<entity id="3" name="Ambient">
 			<GameObject _schemaVersion="0" _name="Ambient" _bActive="true">
 				<_listComponent>
-					<GlobalLight2DComponent _localPosition="0,0,0"
+					<GlobalLight2DComponent _localID="4005188986196261016" _localPosition="0,0,0"
 					                        _localRotation="0,0,0"
 					                        _localScale="1,1,1"
 					                        _attachOwner="None"
@@ -54,7 +54,7 @@
 		<entity id="4" name="WindowLight">
 			<GameObject _schemaVersion="0" _name="WindowLight" _bActive="true">
 				<_listComponent>
-					<FreeformLight2DComponent _localPosition="6,5,0"
+					<FreeformLight2DComponent _localID="3620369059176371515" _localPosition="6,5,0"
 					                          _localRotation="0,0,0"
 					                          _localScale="1,1,1"
 					                          _attachOwner="None"
@@ -78,7 +78,7 @@
 		<entity id="5" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<RigidBody2DComponent _localPosition="0,-0.5,0"
+					<RigidBody2DComponent _localID="16928963239031648910" _localPosition="0,-0.5,0"
 					                      _localRotation="0,0,0"
 					                      _localScale="1,1,1"
 					                      _attachOwner="None"
@@ -99,7 +99,7 @@
 		<entity id="6" name="Hero">
 			<GameObject _schemaVersion="0" _name="Hero" _bActive="true">
 				<_listComponent>
-					<CharacterController2DComponent _localPosition="-8,2,0"
+					<CharacterController2DComponent _localID="17067313868497496670" _localPosition="-8,2,0"
 					                                _localRotation="0,0,0"
 					                                _localScale="1,1,1"
 					                                _attachOwner="None"
@@ -109,20 +109,20 @@
 					                                _maxSlopeAngle="45"
 					                                _gravityScale="1"
 					                                _layer="Character" />
-					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
+					<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton>
 							<item>Jump</item>
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
-					<CharacterPawnMovement2DComponent _jumpButton="Jump" _walkSpeed="5" _acceleration="40" _deceleration="50" _jumpSpeed="7" />
+					<CharacterPawnMovement2DComponent _localID="4029798149376496327" _jumpButton="Jump" _walkSpeed="5" _acceleration="40" _deceleration="50" _jumpSpeed="7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="7" name="Plank">
 			<GameObject _schemaVersion="0" _name="Plank" _bActive="true">
 				<_listComponent>
-					<RigidBody2DComponent _localPosition="0,4,0"
+					<RigidBody2DComponent _localID="16928963239031648910" _localPosition="0,4,0"
 					                      _localRotation="0,0,0"
 					                      _localScale="1,1,1"
 					                      _attachOwner="None"
@@ -144,7 +144,7 @@
 							</PhysicsShapeDesc2D>
 						</_listShape>
 					</RigidBody2DComponent>
-					<Joint2DComponent _localPosition="-1.5,0,0"
+					<Joint2DComponent _localID="5299188361001153383" _localPosition="-1.5,0,0"
 					                  _localRotation="0,0,0"
 					                  _localScale="1,1,1"
 					                  _attachOwner="None"
@@ -159,7 +159,7 @@
 		<entity id="8" name="Crate">
 			<GameObject _schemaVersion="0" _name="Crate" _bActive="true">
 				<_listComponent>
-					<RigidBody2DComponent _localPosition="7,0,0"
+					<RigidBody2DComponent _localID="16928963239031648910" _localPosition="7,0,0"
 					                      _localRotation="0,0,0"
 					                      _localScale="1,1,1"
 					                      _attachOwner="None"
@@ -174,11 +174,11 @@
 							</PhysicsShapeDesc2D>
 						</_listShape>
 					</RigidBody2DComponent>
-					<Fracture2DComponent _localPosition="0,0,0"
+					<Fracture2DComponent _localID="6417571625465336947" _localPosition="0,0,0"
 					                     _localRotation="0,0,0"
 					                     _localScale="1,1,1"
 					                     _attachOwner="None"
-					                     _attachComponent="RigidBody2DComponent#0"
+					                     _attachComponent="#eaefc25f5620b28e"
 					                     _size="2,2"
 					                     _pieceCount="8"
 					                     _fractureSeed="7"
@@ -189,18 +189,18 @@
 		<entity id="9" name="Bomb">
 			<GameObject _schemaVersion="0" _name="Bomb" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="5.5,0.5,0"
+					<SceneComponent _localID="12574257654564749349" _localPosition="5.5,0.5,0"
 					                _localRotation="0,0,0"
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<GimmickSensorComponent _defaultWeight="1" _bCountTriggers="false">
+					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false">
 						<_requiredTags>
 							<_listTag />
 						</_requiredTags>
 						<_listOccupant />
 					</GimmickSensorComponent>
-					<ExplosiveBarrelComponent _health="30" _radius="5" _damage="80" _fuseTime="1.5" _fractureStrain="200" _blastImpulse="400" />
+					<ExplosiveBarrelComponent _localID="2817874053379422564" _health="30" _radius="5" _damage="80" _fuseTime="1.5" _fractureStrain="200" _blastImpulse="400" />
 				</_listComponent>
 			</GameObject>
 		</entity>

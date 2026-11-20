@@ -19,7 +19,6 @@ import os
 import json
 import shutil
 import sys
-import subprocess
 import tarfile
 from pathlib import Path
 from typing import Sequence
@@ -45,6 +44,7 @@ from common.host_platform import is_windows_host
 from common.file_collect import find_first_existing_file, find_first_existing_file_recursive
 from setup.toolchain_detect import ToolSpec, find_tool_root
 from common.exit_code import ExitCode  # noqa: E402
+from common.run_process import run_process  # noqa: E402
 
 # llvm-lib / llvm-ar 는 **LTO 때문에** 필요하다. clang 이 -flto 로 내는 .obj 는 LLVM 비트코드라
 # MSVC lib.exe 가 못 읽고(LNK1107), 그러면 CMake 의 `check_ipo_supported` 가 실패해 IPO 가 통째로
@@ -463,9 +463,9 @@ def _ensure_debugger(root: Path, search: dict) -> None:
                 shutil.copy2(path, bin_dir / path.name)
         shutil.rmtree(staging, ignore_errors=True)
 
-    result = subprocess.run([str(bin_dir / "lldb.exe"), "--version"], capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"[Llvm] {bin_dir / 'lldb.exe'} does not run ({result.returncode}): {result.stderr.strip()} — "
+    result = run_process([bin_dir / "lldb.exe", "--version"])
+    if not result.succeeded:
+        raise RuntimeError(f"[Llvm] {bin_dir / 'lldb.exe'} does not run ({result.return_code}): {result.stderr.strip()} — "
                            f"liblldb.dll needs {python_dll} ({KEY_LLDB_PYTHON_VERSION} in search_paths)")
     print(f"[Llvm] Debugger ready: {result.stdout.strip()}")
 

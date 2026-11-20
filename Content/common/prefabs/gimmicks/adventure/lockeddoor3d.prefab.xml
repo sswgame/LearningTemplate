@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="LockedDoor3D">
 	<GameObject _schemaVersion="0" _name="LockedDoor3D" _bActive="true">
 		<_listComponent>
-			<RigidBodyComponent _componentName="RigidBodyComponent"
+			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
 			                    _bActive="true"
 			                    _localPosition="0,0,0"
 			                    _localRotation="0,0,0"
@@ -34,20 +34,20 @@
 					</PhysicsShapeDesc3D>
 				</_listShape>
 			</RigidBodyComponent>
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
 			               _localScale="2,3,0.3"
 			               _attachOwner="None"
 			               _attachOwnerID="0"
-			               _attachComponent="RigidBodyComponent#0"
+			               _attachComponent="#63e709ac676dd304"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/defaultmaterial.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<InteractableComponent _componentName="InteractableComponent"
+			<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
 			                       _bActive="true"
 			                       _interactionID="Unlock"
 			                       _catalogPath="common/data/interactions/default.interactions.xml"
@@ -55,7 +55,7 @@
 			                       _cooldownRemaining="0"
 			                       _priority="0"
 			                       _bEnabled="true" />
-			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			<GimmickSensorComponent _localID="5906677949702648734" _componentName="GimmickSensorComponent"
 			                        _bActive="true"
 			                        _defaultWeight="1"
 			                        _bCountTriggers="false">
@@ -64,7 +64,7 @@
 				</_requiredTags>
 				<_listOccupant />
 			</GimmickSensorComponent>
-			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+			<GimmickCircuitComponent _localID="12667660158642495557" _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
 				<_listNode>
 					<GimmickNodeDesc _id="use" _kind="Interaction" _params="" />
 					<GimmickNodeDesc _id="unlocked" _kind="Latch" _params="" />

@@ -8,14 +8,14 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,1.5,-4" _localRotation="0.1,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="60" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.5,-4" _localRotation="0.1,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="51.5662" _nearZ="0.1" _farZ="60" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Effect">
 			<GameObject _schemaVersion="0" _name="Effect" _bActive="true">
 				<_listComponent>
-					<VFXComponent _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _effectPath="engine/vfx/sparks_tinted.vfx.xml" _seed="1" _bPlayOnBegin="true">
+					<VFXComponent _localID="7647927963071728401" _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _effectPath="engine/vfx/sparks_tinted.vfx.xml" _seed="1" _bPlayOnBegin="true">
 						<_listUserParameter>
 							<VFXUserParameterDef _name="Tint" _value="0.1, 0.4, 3, 1" />
 							<VFXUserParameterDef _name="SizeScale" _value="2.5, 1, 1, 1" />

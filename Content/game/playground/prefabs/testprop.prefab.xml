@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="TestProp">
 	<GameObject _schemaVersion="0" _name="TestProp" _bActive="true">
 		<_listComponent>
-			<SpriteComponent _localPosition="3,0.5,0"
+			<SpriteComponent _localID="9079621422701466312" _localPosition="3,0.5,0"
 			                 _localRotation="0,0,0"
 			                 _localScale="1,1,1"
 			                 _attachOwner="None"
@@ -13,7 +13,7 @@
 			                 _materialPath=""
 			                 _textureName=""
 			                 _clipPath="" />
-			<BoxCollider2DComponent _localPosition="0,0,0"
+			<BoxCollider2DComponent _localID="17134987369502387536" _localPosition="0,0,0"
 			                        _localRotation="0,0,0"
 			                        _localScale="1,1,1"
 			                        _attachOwner="None"

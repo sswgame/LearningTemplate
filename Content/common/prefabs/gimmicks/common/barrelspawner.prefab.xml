@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="BarrelSpawner">
 	<GameObject _schemaVersion="0" _name="BarrelSpawner" _bActive="true">
 		<_listComponent>
-			<SceneComponent _componentName="SceneComponent"
+			<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 			                _bActive="true"
 			                _localPosition="0,0,0"
 			                _localRotation="0,0,0"
@@ -10,7 +10,7 @@
 			                _attachOwner="None"
 			                _attachOwnerID="0"
 			                _attachComponent="None" />
-			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+			<GimmickCircuitComponent _localID="12667660158642495557" _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
 				<_listNode>
 					<GimmickNodeDesc _id="every" _kind="Timer" _params="interval=5" />
 					<GimmickNodeDesc _id="spawn"

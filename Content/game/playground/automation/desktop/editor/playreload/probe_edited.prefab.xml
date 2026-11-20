@@ -3,7 +3,7 @@
 	<!-- probe.prefab.xml 에 덮는 고친 판 — 크기만 다르다(플레이 중 리로드 시나리오). -->
 	<GameObject _schemaVersion="0" _name="PlayReloadProp" _bActive="true">
 		<_listComponent>
-			<MeshComponent _localPosition="0,0,0"
+			<MeshComponent _localID="163493842152903304" _localPosition="0,0,0"
 			               _localRotation="0,0,0"
 			               _localScale="0.5,0.5,0.5"
 			               _attachOwner="None"

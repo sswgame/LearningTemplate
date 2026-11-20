@@ -1,7 +1,9 @@
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
@@ -22,6 +24,18 @@ namespace
             </_listComponent>
             <Extra value="1"/>
         </GameObject>)";
+
+        /** @brief `kBase` 의 @p index 번째 컴포넌트 키입니다 — id 를 적지 않은 컴포넌트는 이름과 순번에서 정한다(`ComponentStableKey::resolveLocalIDs`). */
+        static string keyOfBase( size_t index )
+        {
+            vector<ComponentLocalIDSlot> listSlot{
+                {          "Body", 0, 0},
+                {          "Body", 0, 0},
+                {"LightComponent", 0, 0}
+            };
+            ComponentStableKey::resolveLocalIDs( listSlot );
+            return ComponentStableKey::formatKey( listSlot[index]._resolved );
+        }
 
         static string makeOverrides( string_view instance, string_view base )
         {
@@ -186,7 +200,7 @@ SW_TEST_CASE( PrefabOverridesTest, AddedComponentKeepsItsPlace )
 SW_TEST_CASE( PrefabOverridesTest, OverrideOfAGoneComponentIsWarnedAndDropped )
 {
     SW_EXPECT_LOG( "Prefab.OverrideComponentDropped" );
-    const string overrides = R"(<PrefabOverrides><Override key="Ghost#0"><MeshComponent _mesh="x"/></Override></PrefabOverrides>)";
+    const string overrides = R"(<PrefabOverrides><Override key="#00000000000000ff"><MeshComponent _mesh="x"/></Override></PrefabOverrides>)";
     XMLDocument  doc;
     Util::build( doc, overrides );
     SW_EXPECT_EQUAL( 3u, Util::countComponents( doc ) );
@@ -196,16 +210,17 @@ SW_TEST_CASE( PrefabOverridesTest, OverrideOfAGoneComponentIsWarnedAndDropped )
 SW_TEST_CASE( PrefabOverridesTest, OverrideOfAnotherTypeIsDropped )
 {
     SW_EXPECT_LOG( "Prefab.OverrideComponentDropped" );
-    const string overrides = R"(<PrefabOverrides><Override key="Body#0"><LightComponent _mesh="x"/></Override></PrefabOverrides>)";
-    XMLDocument  doc;
-    Util::build( doc, overrides );
+    StringBuilder<constant::buffer::kMax256> overrides;
+    overrides.appendFormat( "<PrefabOverrides><Override key=\"%#\"><LightComponent _mesh=\"x\"/></Override></PrefabOverrides>", Util::keyOfBase( 0 ) );
+    XMLDocument doc;
+    Util::build( doc, overrides.view() );
     SW_EXPECT_TRUE( string_view( Util::findComponent( doc, 0 ).findAttribute( "_mesh" ) ) == "body.mesh" );
 }
 
 // 앞의 컴포넌트가 사라져도 더한 컴포넌트는 버리지 않고 끝에 둔다.
 SW_TEST_CASE( PrefabOverridesTest, AddedComponentSurvivesALostAnchor )
 {
-    const string overrides = R"(<PrefabOverrides><Add after="Ghost#0"><AudioComponent _componentName="Kept"/></Add></PrefabOverrides>)";
+    const string overrides = R"(<PrefabOverrides><Add after="#00000000000000ff"><AudioComponent _componentName="Kept"/></Add></PrefabOverrides>)";
     XMLDocument  doc;
     Util::build( doc, overrides );
     SW_REQUIRE_EQUAL( 4u, Util::countComponents( doc ) );
@@ -214,27 +229,41 @@ SW_TEST_CASE( PrefabOverridesTest, AddedComponentSurvivesALostAnchor )
 
 SW_TEST_CASE( PrefabOverridesTest, RemovingAGoneComponentIsHarmless )
 {
-    const string overrides = R"(<PrefabOverrides><Remove key="Ghost#0"/></PrefabOverrides>)";
+    const string overrides = R"(<PrefabOverrides><Remove key="#00000000000000ff"/></PrefabOverrides>)";
     XMLDocument  doc;
     Util::build( doc, overrides );
     SW_EXPECT_EQUAL( 3u, Util::countComponents( doc ) );
+}
+
+/**
+ * @brief [PrefabOverridesTest] 옛 순번 키(`이름#n`)는 받지 않는다 — 오류로 남기고 그 항목은 어느 컴포넌트에도 얹지 않는다
+ * @details 순번은 앞 형제를 지우면 다른 컴포넌트를 가리킨다. 저장소의 데이터는 모두 지역 id 키로 옮겼다.
+ */
+SW_TEST_CASE( PrefabOverridesTest, LegacyIndexKeyIsAnError )
+{
+    SW_EXPECT_LOG( "PrefabOverrides.LegacyComponentKey" );
+    SW_EXPECT_LOG( "Prefab.OverrideComponentDropped" );
+    const string overrides = R"(<PrefabOverrides><Override key="Body#0"><MeshComponent _mesh="x"/></Override></PrefabOverrides>)";
+    XMLDocument  doc;
+    Util::build( doc, overrides );
+    SW_EXPECT_TRUE( string_view( Util::findComponent( doc, 0 ).findAttribute( "_mesh" ) ) == "body.mesh" );
 }
 
 // ---------------------------------------------------------------------- 중첩 파트
 
 SW_TEST_CASE( PrefabOverridesTest, PartOverridesRoundTrip )
 {
-    string overrides = R"(<PrefabOverrides><Remove key="Body#1"/></PrefabOverrides>)";
+    string overrides = R"(<PrefabOverrides><Remove key="#0000000000000002"/></PrefabOverrides>)";
     SW_REQUIRE_TRUE( PrefabOverrides::appendPartOverrides( overrides, {
-                                                                          PrefabPartOverride{ "Arm/Hand", R"(<PrefabOverrides><Remove key="Body#0"/></PrefabOverrides>)" }
+                                                                          PrefabPartOverride{ "Arm/Hand", R"(<PrefabOverrides><Remove key="#0000000000000001"/></PrefabOverrides>)" }
     } ) );
-    SW_EXPECT_TRUE( overrides.find( "Body#1" ) != string::npos ); // 있던 것은 그대로다
+    SW_EXPECT_TRUE( overrides.find( "#0000000000000002" ) != string::npos ); // 있던 것은 그대로다
 
     vector<PrefabPartOverride> listPart;
     SW_REQUIRE_TRUE( PrefabOverrides::collectPartOverrides( overrides, listPart ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listPart.size() );
     SW_EXPECT_TRUE( listPart[0]._partPath == "Arm/Hand" );
-    SW_EXPECT_TRUE( listPart[0]._overrideXML.find( "Body#0" ) != string::npos );
+    SW_EXPECT_TRUE( listPart[0]._overrideXML.find( "#0000000000000001" ) != string::npos );
 
     string fromEmpty;
     SW_REQUIRE_TRUE( PrefabOverrides::appendPartOverrides( fromEmpty, {

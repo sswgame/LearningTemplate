@@ -27,6 +27,8 @@ from typing import Callable, Sequence
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import app_arguments  # noqa: E402
+from common.paths import get_bin_dir, get_build_dir  # noqa: E402
+from common.run_process import run_process  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 
@@ -38,8 +40,8 @@ def build_preset_or_exit(preset: str) -> None:
     고치기 전 결함을 다시 찾는다(preflight.sh --from 과 같은 틈). 지면 멈춘다 — 반쯤 지은 바이너리로 돌리지 않는다.
     """
     print(f'{preset} 증분 빌드', flush=True)
-    result = subprocess.run(['cmake', '--build', '--preset', preset], cwd=REPO, capture_output=True, text=True, encoding='utf-8', errors='replace')
-    if result.returncode != 0:
+    result = run_process(['cmake', '--build', '--preset', preset], cwd=REPO)
+    if not result.succeeded:
         sys.exit('\n'.join([line for line in result.stdout.splitlines() if 'error' in line or 'FAILED' in line][:30] + [f'{preset} 빌드 실패 — 고친 뒤 다시 돌린다']))
 
 
@@ -292,7 +294,7 @@ def summarize_golden_margins(list_report: Sequence[dict]) -> list[dict]:
 
 def print_golden_margins(folders: Sequence[str], preset: str) -> int:
     import json
-    roots = [pathlib.Path(folder) for folder in folders] or [REPO / 'build' / preset / 'Bin' / 'Saved' / 'Automation']
+    roots = [pathlib.Path(folder) for folder in folders] or [get_bin_dir(preset) / 'Saved' / 'Automation']
     list_report = []
     for root in roots:
         for path in sorted(root.rglob('*.json')) if root.is_dir() else [root]:
@@ -466,7 +468,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not options.chain or (not options.stage and not chain_mode):
         parser.error('체인과 단계를 적는다 (예: empty surfacefootprint) — 또는 체인과 --rerun-failed · --from-stage · --advances')
 
-    build_dir = REPO / 'build' / options.preset
+    build_dir = get_build_dir(options.preset)
     log_dir = build_dir / 'Testing' / 'Logs'
     command = app_arguments.find_chain_command(build_dir, options.chain)
     paths = app_arguments.read_chain_stages(command)

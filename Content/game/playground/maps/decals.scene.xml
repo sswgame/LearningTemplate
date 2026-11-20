@@ -13,7 +13,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,3,-6"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,3,-6"
 					                 _localRotation="0.45,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -31,7 +31,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="0.448254,0.678321,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -48,7 +48,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,2"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,2"
 					               _localRotation="0,0,0"
 					               _localScale="16,1,16"
 					               _attachOwner="None"
@@ -62,7 +62,7 @@
 		<entity id="4" name="WallCube">
 			<GameObject _schemaVersion="0" _name="WallCube" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="2.2,1,2.5"
+					<MeshComponent _localID="163493842152903304" _localPosition="2.2,1,2.5"
 					               _localRotation="0,0,0"
 					               _localScale="2,2,2"
 					               _attachOwner="None"
@@ -76,7 +76,7 @@
 		<entity id="5" name="RoadDecal" layers="Decals">
 			<GameObject _schemaVersion="0" _name="RoadDecal" _bActive="true">
 				<_listComponent>
-					<DecalComponent _localPosition="-0.8,0,3"
+					<DecalComponent _localID="10502648713637692926" _localPosition="-0.8,0,3"
 					                _localRotation="0,0.15,0"
 					                _localScale="2.2,1,10"
 					                _attachOwner="None"
@@ -96,7 +96,7 @@
 		<entity id="6" name="MudDecal" layers="Decals">
 			<GameObject _schemaVersion="0" _name="MudDecal" _bActive="true">
 				<_listComponent>
-					<DecalComponent _localPosition="-0.6,0,1.2"
+					<DecalComponent _localID="10502648713637692926" _localPosition="-0.6,0,1.2"
 					                _localRotation="0,0.8,0"
 					                _localScale="2,1,2"
 					                _attachOwner="None"
@@ -115,7 +115,7 @@
 		<entity id="7" name="DamageDecal" layers="Decals">
 			<GameObject _schemaVersion="0" _name="DamageDecal" _bActive="true">
 				<_listComponent>
-					<DecalComponent _localPosition="1.15,1.1,2.4"
+					<DecalComponent _localID="10502648713637692926" _localPosition="1.15,1.1,2.4"
 					                _localRotation="0,0,1.5707964"
 					                _localScale="1.2,0.6,1"
 					                _attachOwner="None"

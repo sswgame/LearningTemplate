@@ -10,7 +10,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,1.6,-4"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.6,-4"
 					                 _localRotation="0.1,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -28,7 +28,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="1.4,0,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -45,7 +45,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,3"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,3"
 					               _localRotation="0,0,0"
 					               _localScale="20,1,20"
 					               _attachOwner="None"
@@ -59,7 +59,7 @@
 		<entity id="4" name="Cube">
 			<GameObject _schemaVersion="0" _name="Cube" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,1,3"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1,3"
 					               _localRotation="0,0,0"
 					               _localScale="2,2,2"
 					               _attachOwner="None"
@@ -73,7 +73,7 @@
 		<entity id="5" name="ProbeVolume">
 			<GameObject _schemaVersion="0" _name="ProbeVolume" _bActive="true">
 				<_listComponent>
-					<LightProbeVolumeComponent _componentName="LightProbeVolumeComponent"
+					<LightProbeVolumeComponent _localID="14252109924225017819" _componentName="LightProbeVolumeComponent"
 					                           _bActive="true"
 					                           _localPosition="0,1.5,3"
 					                           _localRotation="0,0,0"

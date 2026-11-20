@@ -6,7 +6,7 @@
 		<entity id="4" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,3"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,3"
 					               _localRotation="0,0,0"
 					               _localScale="16,1,16"
 					               _attachOwner="None"
@@ -21,7 +21,7 @@
 		<entity id="5" name="Pillar">
 			<GameObject _schemaVersion="0" _name="Pillar" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-1.5,1.5,2"
+					<MeshComponent _localID="163493842152903304" _localPosition="-1.5,1.5,2"
 					               _localRotation="0,0.3,0"
 					               _localScale="0.4,3,0.4"
 					               _attachOwner="None"

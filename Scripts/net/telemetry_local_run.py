@@ -16,11 +16,8 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import shutil
-import subprocess
-import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -29,13 +26,10 @@ from pathlib import Path
 
 from common import app_arguments
 from common.exit_code import ExitCode
-from common.host_platform import executable_name
-from common.paths import get_project_root
-from net.net_pair_run import _USER_DATA_ROOT_ENVIRONMENT, _stop, _wait_for_text
+from common.process_group import USER_DATA_ROOT_ENVIRONMENT, CheckResult, ProcessGroup, problem_lines, report
 
 _TELEMETRY_LINKED = re.compile(r"\[TelemetryUpload\] telemetry uploads go to")
 _CRASH_SENT = re.compile(r"\[TelemetryUpload\] crash reports: (\d+) sent from '([^']+)'")
-_PROBLEM_LINE = re.compile(r"\[(Error|Warning)\]")
 _FAKE_SESSION = "telemetrylocalrun"
 _PRESET = "Ninja-Debug"  # build/<프리셋>/Bin 의 App 을 쓴다
 _CLIENT_DELAY_SECONDS = 8.0  # 기동 줄을 본 뒤 명령을 보낼 때까지
@@ -80,15 +74,6 @@ def _make_handler(sink: Sink) -> type[BaseHTTPRequestHandler]:
     return Handler
 
 
-@dataclass
-class CheckResult:
-    problems: list[str] = field(default_factory=list)
-
-    @property
-    def ok(self) -> bool:
-        return not self.problems
-
-
 def check_run(sink: Sink, list_log_text: list[str]) -> CheckResult:
     """받은 요청과 두 로그를 판정한다. 규칙은 파일 머리말을 본다."""
     result = CheckResult()
@@ -103,15 +88,8 @@ def check_run(sink: Sink, list_log_text: list[str]) -> CheckResult:
     for index, text in enumerate(list_log_text):
         if _TELEMETRY_LINKED.search(text) is None:
             result.problems.append(f"run {index + 1}: no telemetry link line - TelemetryUploadLink did not take the endpoint")
-        for line in text.splitlines():
-            if _PROBLEM_LINE.search(line):
-                result.problems.append(f"run {index + 1} log: {line.strip()}")
+        result.problems += problem_lines(f"run {index + 1}", text)
     return result
-
-
-def _send(process: subprocess.Popen, line: str) -> None:
-    process.stdin.write((line + "\n").encode("utf-8"))
-    process.stdin.flush()
 
 
 def _write_fake_bundle(reports_folder: Path) -> Path:
@@ -133,76 +111,60 @@ def _write_fake_bundle(reports_folder: Path) -> Path:
     return bundle
 
 
-def _run_once(argument: argparse.Namespace, client_exe: Path, out_dir: Path, port: int, index: int, consent: bool, environment: dict[str, str]) -> Path:
-    log = out_dir / f"run{index}.log"
-    client_args = [
-        str(client_exe),
+def _run_once(argument: argparse.Namespace, group: ProcessGroup, app_exe: Path, port: int, index: int, consent: bool, environment: dict[str, str]) -> Path:
+    client = group.start(f"run{index}", [
+        app_exe,
         app_arguments.option("game", argument.game),
         app_arguments.flag("unattended"),
         app_arguments.variable("gv_standardInputCommands", "1"),
-        app_arguments.variable("gv_userSettingsFile", out_dir / 'usersettings.json'),
+        app_arguments.variable("gv_userSettingsFile", group.out_dir / "usersettings.json"),
         app_arguments.variable("gv_telemetryUploadEndpoint", f"http://127.0.0.1:{port}/telemetry"),
         app_arguments.variable("gv_crashUploadEndpoint", f"http://127.0.0.1:{port}/crash"),
-    ]
-    print(f"[telemetry-local] run {index}: {' '.join(client_args)}")
-    with log.open("wb") as client_out:
-        client = subprocess.Popen(client_args, cwd=str(client_exe.parent), stdin=subprocess.PIPE, stdout=client_out, stderr=subprocess.STDOUT, env=environment)
-        _wait_for_text(log, _CRASH_SENT, _TIMEOUT_SECONDS, client)
-        time.sleep(_CLIENT_DELAY_SECONDS)  # 게임 인스턴스가 서고 표준 입력 명령을 받을 때까지
-        try:
-            if consent:
-                _send(client, "settings.apply telemetry.enabled=true")
-                time.sleep(2.0)  # 동의가 session.start 를 남길 때까지
-        except OSError:
-            print(f"[telemetry-local] FAIL: run {index} exited before it took the commands (log: {log})")
-        _stop(client, True, 20)
-    return log
+    ], environment=environment)
+    client.wait_for(_CRASH_SENT, _TIMEOUT_SECONDS)
+    time.sleep(_CLIENT_DELAY_SECONDS)  # 게임 인스턴스가 서고 표준 입력 명령을 받을 때까지
+    try:
+        if consent:
+            client.send("settings.apply telemetry.enabled=true")
+            time.sleep(2.0)  # 동의가 session.start 를 남길 때까지
+    except OSError:
+        print(f"[telemetry-local] FAIL: run {index} exited before it took the commands (log: {client.log})")
+    client.stop()
+    return client.log
 
 
 def _run(argument: argparse.Namespace) -> int:
-    root = get_project_root()
-    client_exe = root / "build" / _PRESET / "Bin" / executable_name("App")
-    if not client_exe.exists():
-        print(f"[telemetry-local] FAIL: {client_exe} does not exist - build the '{_PRESET}' preset first")
-        return int(ExitCode.CHECK_INVALID)
-    out_dir = root / "Saved" / "TelemetryLocalRun"
-    if out_dir.exists():
-        shutil.rmtree(out_dir)
-    out_dir.mkdir(parents=True)
-    # 무인 실행(-unattended)의 사용자 데이터 뿌리 — 두 실행이 같은 크래시 묶음 폴더를 봐야 하므로 프로세스마다 새 폴더(기본)가 아니라 하나를 함께 쓴다.
-    # 뿌리는 `<Bin>/Saved/Automation/UserData/` 아래여야 한다(App 이 밖이면 거절한다 `AutomationUserDataRoot`, 순서 시나리오의 `RunStateDirPair.cmake` 와 같다).
-    user_data_root = client_exe.parent / "Saved" / "Automation" / "UserData" / "telemetry-local"
-    if user_data_root.exists():
-        shutil.rmtree(user_data_root)
-    user_data_root.mkdir(parents=True)
-    environment = {**os.environ, _USER_DATA_ROOT_ENVIRONMENT: str(user_data_root)}
-    sink = Sink()
-    server = ThreadingHTTPServer(("127.0.0.1", 0), _make_handler(sink))
-    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
-    server_thread.start()
-    port = server.server_address[1]
-    list_log: list[Path] = []
-    bundle: Path | None = None
-    try:
-        list_log.append(_run_once(argument, client_exe, out_dir, port, 1, True, environment))
-        match = _CRASH_SENT.search(list_log[0].read_text(encoding="utf-8", errors="replace"))
-        if match is None:
-            print(f"[telemetry-local] FAIL: run 1 logged no crash report line - the crash uploader was not linked (log: {list_log[0]})")
-            return int(ExitCode.VIOLATION)
-        bundle = _write_fake_bundle(Path(match.group(2)))
-        list_log.append(_run_once(argument, client_exe, out_dir, port, 2, False, environment))
-    finally:
-        server.shutdown()
-        if bundle is not None:
-            shutil.rmtree(bundle, ignore_errors=True)
+    with ProcessGroup("telemetry-local", _PRESET, "TelemetryLocalRun", clean=True) as group:
+        list_exe = group.require("App")
+        if list_exe is None:
+            return int(ExitCode.CHECK_INVALID)
+        app_exe = list_exe[0]
+        # 무인 실행(-unattended)의 사용자 데이터 뿌리 — 두 실행이 같은 크래시 묶음 폴더를 봐야 하므로 프로세스마다 새 폴더(기본)가 아니라 하나를 함께 쓴다.
+        # 뿌리는 `<Bin>/Saved/Automation/UserData/` 아래여야 한다(App 이 밖이면 거절한다 `AutomationUserDataRoot`, 순서 시나리오의 `RunStateDirPair.cmake` 와 같다).
+        user_data_root = group.bin_dir / "Saved" / "Automation" / "UserData" / "telemetry-local"
+        if user_data_root.exists():
+            shutil.rmtree(user_data_root)
+        user_data_root.mkdir(parents=True)
+        environment = {USER_DATA_ROOT_ENVIRONMENT: str(user_data_root)}
+        sink = Sink()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), _make_handler(sink))
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        port = server.server_address[1]
+        list_log: list[Path] = []
+        bundle: Path | None = None
+        try:
+            list_log.append(_run_once(argument, group, app_exe, port, 1, True, environment))
+            match = _CRASH_SENT.search(list_log[0].read_text(encoding="utf-8", errors="replace"))
+            if match is None:
+                return group.fail(f"run 1 logged no crash report line - the crash uploader was not linked (log: {list_log[0]})")
+            bundle = _write_fake_bundle(Path(match.group(2)))
+            list_log.append(_run_once(argument, group, app_exe, port, 2, False, environment))
+        finally:
+            server.shutdown()
+            if bundle is not None:
+                shutil.rmtree(bundle, ignore_errors=True)
     result = check_run(sink, [log.read_text(encoding="utf-8", errors="replace") for log in list_log])
-    for problem in result.problems:
-        print(f"[telemetry-local] FAIL: {problem}")
-    print(f"[telemetry-local] logs: {' '.join(str(log) for log in list_log)}")
-    if result.ok:
-        print("[telemetry-local] OK: telemetry spool file and queued crash bundle reached the loopback sink over HTTP")
-        return int(ExitCode.PASSED)
-    return int(ExitCode.VIOLATION)
+    return report("telemetry-local", result.problems, list_log, "telemetry spool file and queued crash bundle reached the loopback sink over HTTP")
 
 
 def main(list_argument: list[str]) -> int:

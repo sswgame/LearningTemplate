@@ -15,6 +15,8 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import app_arguments  # noqa: E402
+from common.paths import get_bin_dir, get_build_dir  # noqa: E402
+from common.run_process import run_process  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PROBE_H = REPO / 'Source/Games/Playground/HotReloadTestComponent.h'
@@ -72,12 +74,12 @@ def main():
     parser.add_argument('--preset', default='Ninja-Debug')
     parser.add_argument('--variant', choices=('code', 'layout'), default='code')
     options = parser.parse_args()
-    bin_dir = REPO / 'build' / options.preset / 'Bin'
+    bin_dir = get_bin_dir(options.preset)
     lldb = REPO / 'Tools/LLVM/bin/lldb.exe'
     if not lldb.is_file():
         sys.exit(f'{lldb} 이 없다 — py -3 Scripts/setup/llvm.py 로 둔다')
     scenario = 'game/playground/automation/debugger/hotreloadbreakpoint.scenario.xml' if options.variant == 'code' else 'game/playground/automation/debugger/hotreloadlayout.scenario.xml'
-    log_path = REPO / 'build' / options.preset / 'Testing' / 'Logs' / f'HotReloadDebug.{options.variant}.log'
+    log_path = get_build_dir(options.preset) / 'Testing' / 'Logs' / f'HotReloadDebug.{options.variant}.log'
     build = ['cmake', '--build', '--preset', options.preset, '--target', 'SWGame_Playground']
     originals = {path: path.read_bytes() for path in (PROBE_H, PROBE_CPP)}
     # 리로드 전 모듈이 지금 소스와 같아야 한다(확인 컴포넌트가 없는 옛 SWGame 으로 띄우면 씬이 읽히지 않는다).
@@ -89,10 +91,10 @@ def main():
         'build': build, 'probe_h': str(PROBE_H), 'probe_cpp': str(PROBE_CPP),
         'patch': PATCH_CODE if options.variant == 'code' else PATCH_LAYOUT,
     }
-    driver_path = REPO / 'build' / options.preset / 'HotReloadDebugDriver.py'
+    driver_path = get_build_dir(options.preset) / 'HotReloadDebugDriver.py'
     driver_path.write_text(f'CONFIG = {json.dumps(json.dumps(config))}\n' + DRIVER, encoding='utf-8')
     try:
-        run = subprocess.run([str(lldb), '--batch', '-o', f'command script import "{driver_path}"'], capture_output=True, text=True, encoding='utf-8', errors='replace')
+        run = run_process([lldb, '--batch', '-o', f'command script import "{driver_path}"'])
     finally:
         for path, data in originals.items():
             path.write_bytes(data)

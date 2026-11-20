@@ -9,7 +9,7 @@
 		<entity id="1" name="Camera2D">
 			<GameObject _schemaVersion="0" _name="Camera2D" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,0,-10"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,0,-10"
 					                 _localRotation="0,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -27,7 +27,7 @@
 		<entity id="2" name="Wall">
 			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="0,0,2"
+					<SpriteComponent _localID="9079621422701466312" _localPosition="0,0,2"
 					                 _localRotation="0,0,0"
 					                 _localScale="20,12,1"
 					                 _attachOwner="None"
@@ -42,7 +42,7 @@
 		<entity id="3" name="CookieLight">
 			<GameObject _schemaVersion="0" _name="CookieLight" _bActive="true">
 				<_listComponent>
-					<PointLight2DComponent _localPosition="-4.5,0,0"
+					<PointLight2DComponent _localID="4720189430416931043" _localPosition="-4.5,0,0"
 					                       _localRotation="0,0,0"
 					                       _localScale="1,1,1"
 					                       _attachOwner="None"
@@ -63,7 +63,7 @@
 		<entity id="4" name="PlainLight">
 			<GameObject _schemaVersion="0" _name="PlainLight" _bActive="true">
 				<_listComponent>
-					<PointLight2DComponent _localPosition="4.5,0,0"
+					<PointLight2DComponent _localID="4720189430416931043" _localPosition="4.5,0,0"
 					                       _localRotation="0,0,0"
 					                       _localScale="1,1,1"
 					                       _attachOwner="None"
@@ -83,7 +83,7 @@
 		<entity id="5" name="Ambient">
 			<GameObject _schemaVersion="0" _name="Ambient" _bActive="true">
 				<_listComponent>
-					<GlobalLight2DComponent _localPosition="0,0,0"
+					<GlobalLight2DComponent _localID="4005188986196261016" _localPosition="0,0,0"
 					                        _localRotation="0,0,0"
 					                        _localScale="1,1,1"
 					                        _attachOwner="None"

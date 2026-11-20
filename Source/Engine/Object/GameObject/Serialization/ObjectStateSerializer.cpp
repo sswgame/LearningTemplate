@@ -299,8 +299,7 @@ namespace sw
             }
 
             /**
-             * @brief @p pObject 의 컴포넌트 가운데 안정 키(지역 id 키 `#<16진>`)의 해시가 @p keyHash 인 것입니다. 없으면 nullptr 입니다.
-             * @details 옮기는 동안: 지역 id 키가 맞는 것이 없으면 옛 키(`이름#n`)의 해시로 한 번 더 본다 — 옛 세이브 · 쿠킹본의 핸들이 산다(감사 A-2).
+             * @brief @p pObject 의 컴포넌트 가운데 안정 키(지역 id 키 `#<16진>`)의 해시가 @p keyHash 인 것입니다. 없으면 nullptr 입니다(옛 키 `이름#n` 의 해시는 맞지 않는다).
              */
             static Component* findComponentByKeyHash( GameObject* pObject, uint64 keyHash )
             {
@@ -310,15 +309,6 @@ namespace sw
                     if ( pFound != nullptr || pComp == nullptr )
                         return;
                     if ( hashComponentKey( ComponentStableKey::makeKey( pComp ) ) == keyHash )
-                        pFound = pComp;
-                } );
-                if ( pFound != nullptr )
-                    return pFound;
-                pObject->forEachComponent( [&]( Component* pComp )
-                {
-                    if ( pFound != nullptr || pComp == nullptr )
-                        return;
-                    if ( hashComponentKey( ComponentStableKey::makeLegacyKey( pComp ) ) == keyHash )
                         pFound = pComp;
                 } );
                 return pFound;
@@ -1138,6 +1128,13 @@ namespace sw
             SceneAttachReference reference = pScene->getLoadedAttachReference();
             if ( reference._componentKey.empty() )
                 continue; // 루트
+            if ( ComponentStableKey::parseKey( reference._componentKey.view() ).has_value() == false )
+            {
+                // 옛 순번 키(`이름#n`)는 받지 않는다 — 앞 형제를 지우면 다른 컴포넌트에 붙는다. 저장소의 씬 · 프리팹은 id 키로 옮겼다.
+                SW_LOG_ERROR_ID( "ObjectStateSerializer.AttachKeyNotKeyed", "'%#' attaches to component '%#', which is not a component id key (#<16 hex>) - old index keys (Name#n) are no longer read",
+                                 pObject->getName().c_str(), reference._componentKey.c_str() );
+                continue;
+            }
             reference._idSpace = _idSpace;
             if ( reference._ownerID != 0 )
                 reference._ownerID ^= entry._savedIDScope; // 내부 씬의 파일 id → 이 배치의 평평한 id

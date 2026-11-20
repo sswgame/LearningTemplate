@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="ArenaCaster">
 	<GameObject _schemaVersion="0" _name="ArenaCaster" _bActive="true">
 		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
@@ -15,14 +15,14 @@
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<AbilityComponent _componentName="AbilityComponent"
+			<AbilityComponent _localID="2238906797121419031" _componentName="AbilityComponent"
 			                        _bActive="true"
 			                        _abilitySetID=""
 			                        _healthAttribute="Health"
 			                        _maxHealthAttribute="MaxHealth"
 			                        _damageNumberOffset="0,0.6,0"
 			                        _bShowDamageNumbers="true" />
-			<WidgetComponent _componentName="WidgetComponent"
+			<WidgetComponent _localID="11339505928329980331" _componentName="WidgetComponent"
 			                 _bActive="true"
 			                 _documentPath=""
 			                 _space="Screen"
@@ -35,7 +35,7 @@
 			                 _referenceDistance="10"
 			                 _bClampToScreenEdge="false"
 			                 _bScaleWithDistance="false" />
-			<HealthBarComponent _componentName="HealthBarComponent"
+			<HealthBarComponent _localID="13661083042096604780" _componentName="HealthBarComponent"
 			                    _bActive="true"
 			                    _hpRatio="0"
 			                    _remainRatio="0"
@@ -46,7 +46,7 @@
 			                    _backgroundColor="0.08,0.08,0.1,0.8"
 			                    _bVisible="false"
 			                    _bShowWhenHurt="true" />
-			<PawnComponent _componentName="PawnComponent"
+			<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
 			               _bActive="true"
 			               _moveAction="Move"
 			               _lookAction="None"
@@ -63,7 +63,7 @@
 				</_listButton>
 				<_listAnalog />
 			</PawnComponent>
-			<NavMeshAgentComponent _componentName="NavMeshAgentComponent"
+			<NavMeshAgentComponent _localID="1184447121065519204" _componentName="NavMeshAgentComponent"
 			                       _bActive="true"
 			                       _agentType="Humanoid"
 			                       _maxSpeed="4"
@@ -75,11 +75,11 @@
 			                       _turnRate="8"
 			                       _driveMode="SteerOnly"
 			                       _bUpdateRotation="false" />
-			<NavMeshModifierComponent _componentName="NavMeshModifierComponent"
+			<NavMeshModifierComponent _localID="7476001263293725082" _componentName="NavMeshModifierComponent"
 			                          _bActive="true"
 			                          _areaName=""
 			                          _bIgnoreFromBuild="true" />
-			<ArenaUnitComponent _componentName="ArenaUnitComponent"
+			<ArenaUnitComponent _localID="13572843437497516486" _componentName="ArenaUnitComponent"
 			                    _bActive="true"
 			                    _gameMode="0"
 			                    _kind="Caster"

@@ -8,7 +8,7 @@
 		<entity id="1" name="Camera">
 			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="3,8,-12"
+					<CameraComponent _localID="17709685451340727998" _localPosition="3,8,-12"
 					                 _localRotation="0.5,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -26,7 +26,7 @@
 		<entity id="2" name="Floor">
 			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="0,0,0"
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0"
 					                    _localRotation="0,0,0"
 					                    _localScale="1,1,1"
 					                    _attachOwner="None"
@@ -49,17 +49,17 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0"
 					               _localRotation="0,0,0"
 					               _localScale="4,0.5,4"
 					               _attachOwner="None"
-					               _attachComponent="RigidBodyComponent#0"
+					               _attachComponent="#63e709ac676dd304"
 					               _meshID="Cube"
 					               _materialPath="engine/materials/defaultmaterial.material"
 					               _boundsRadius="0.866"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<TickedPathMoverComponent _segmentSeconds="2" _tickSeconds="0.0166667" _bPingPong="true">
+					<TickedPathMoverComponent _localID="1626856420196830213" _segmentSeconds="2" _tickSeconds="0.0166667" _bPingPong="true">
 						<_listWaypoint>
 							<item>6,0,0</item>
 						</_listWaypoint>
@@ -70,7 +70,7 @@
 		<entity id="3" name="Rider">
 			<GameObject _schemaVersion="0" _name="Rider" _bActive="true">
 				<_listComponent>
-					<CharacterControllerComponent _localPosition="0,0.4,0"
+					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.4,0"
 					                              _localRotation="0,0,0"
 					                              _localScale="1,1,1"
 					                              _attachOwner="None"
@@ -82,7 +82,7 @@
 					                              _gravityScale="1"
 					                              _mass="70"
 					                              _layer="Character" />
-					<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
+					<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>

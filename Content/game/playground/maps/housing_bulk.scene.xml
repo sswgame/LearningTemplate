@@ -11,7 +11,7 @@
 		<entity id="1" name="Camera">
 			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="12,22,-8"
+					<CameraComponent _localID="17709685451340727998" _localPosition="12,22,-8"
 					                 _localRotation="0.785,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -29,7 +29,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="0.356582,-0.138715,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -46,7 +46,7 @@
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="12,-0.05,12"
+					<MeshComponent _localID="163493842152903304" _localPosition="12,-0.05,12"
 					               _localRotation="0,0,0"
 					               _localScale="30,0.1,30"
 					               _attachOwner="None"
@@ -62,12 +62,12 @@
 		<entity id="4" name="HousingPlot">
 			<GameObject _schemaVersion="0" _name="HousingPlot" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="0,0,0"
+					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,0"
 					                _localRotation="0,0,0"
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<HousingPlotComponent _bAutoPlay="false"
+					<HousingPlotComponent _localID="9951375036076253157" _bAutoPlay="false"
 					                      _partCatalog="game/playground/data/housingparts.xml"
 					                      _startingFunds="20000"
 					                      _ghostPlaceablePrefab="game/playground/prefabs/housing/ghost_placeable.prefab.xml"

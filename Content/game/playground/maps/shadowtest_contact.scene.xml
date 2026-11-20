@@ -6,7 +6,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="0.717128,0.767598,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -27,7 +27,7 @@
 		<entity id="3" name="Lamp">
 			<GameObject _schemaVersion="0" _name="Lamp" _bActive="true">
 				<_listComponent>
-					<PointLightComponent _localPosition="2.5,2.2,2"
+					<PointLightComponent _localID="6048688584444471341" _localPosition="2.5,2.2,2"
 					                     _localRotation="0,0,0"
 					                     _localScale="1,1,1"
 					                     _attachOwner="None"

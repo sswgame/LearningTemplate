@@ -7,7 +7,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,0,-6"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,0,-6"
 					                 _localRotation="0,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -25,13 +25,13 @@
 		<entity id="2" name="AnimatedSprite">
 			<GameObject _schemaVersion="0" _name="AnimatedSprite" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="-1.8,0.6,0"
+					<SpriteComponent _localID="9079621422701466312" _localPosition="-1.8,0.6,0"
 					                 _localRotation="0,0,0"
 					                 _localScale="1.2,1.2,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
 					                 _clipPath="engine/textures/test/quadrants.sprite.xml" />
-					<SpriteAnimatorComponent _localPosition="0,0,0"
+					<SpriteAnimatorComponent _localID="6519445003455735703" _localPosition="0,0,0"
 					                         _localRotation="0,0,0"
 					                         _localScale="1,1,1"
 					                         _attachOwner="None"
@@ -43,34 +43,34 @@
 		<entity id="3" name="Enemy">
 			<GameObject _schemaVersion="0" _name="Enemy" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="1.6,0.3,0"
+					<SpriteComponent _localID="9079621422701466312" _localPosition="1.6,0.3,0"
 					                 _localRotation="0,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
 					                 _textureName="engine/textures/test/checker.dds" />
-					<WidgetComponent _drawSize="96,10" _worldOffset="0,0.85,0" />
-					<HealthBarComponent _hpRatio="0.4" _bVisible="true" />
+					<WidgetComponent _localID="11339505928329980331" _drawSize="96,10" _worldOffset="0,0.85,0" />
+					<HealthBarComponent _localID="13661083042096604780" _hpRatio="0.4" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="DamageNumber">
 			<GameObject _schemaVersion="0" _name="DamageNumber" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="1.6,-1.1,0"
+					<SceneComponent _localID="12574257654564749349" _localPosition="1.6,-1.1,0"
 					                _localRotation="0,0,0"
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<WidgetComponent _pivot="0.5,0.5" />
-					<DamageNumberComponent _damageValue="123" _lifeTime="0" _floatSpeed="0" />
+					<WidgetComponent _localID="11339505928329980331" _pivot="0.5,0.5" />
+					<DamageNumberComponent _localID="9739220881735957719" _damageValue="123" _lifeTime="0" _floatSpeed="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="5" name="EffectReference">
 			<GameObject _schemaVersion="0" _name="EffectReference" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="-1.2,-1.1,0"
+					<SpriteComponent _localID="9079621422701466312" _localPosition="-1.2,-1.1,0"
 					                 _localRotation="0,0,0"
 					                 _localScale="0.9,0.9,1"
 					                 _attachOwner="None"
@@ -84,7 +84,7 @@
 		<entity id="6" name="FadingEffect">
 			<GameObject _schemaVersion="0" _name="FadingEffect" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="-2.4,-1.1,0"
+					<SpriteComponent _localID="9079621422701466312" _localPosition="-2.4,-1.1,0"
 					                 _localRotation="0,0,0"
 					                 _localScale="0.9,0.9,1"
 					                 _attachOwner="None"
@@ -92,7 +92,7 @@
 					                 _textureName="engine/textures/test/quadrants.dds"
 					                 _uvRect="0.5,0.5,0.5,0.5"
 					                 _tint="1,0.55,0.1,1" />
-					<FadeOutComponent _duration="3.6" />
+					<FadeOutComponent _localID="8724306910464882795" _duration="3.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="ScareTrigger">
 	<GameObject _schemaVersion="0" _name="ScareTrigger" _bActive="true">
 		<_listComponent>
-			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
 			                        _bActive="true"
 			                        _localPosition="0,0,0"
 			                        _localRotation="0,0,0"
@@ -15,7 +15,7 @@
 			                        _layer="Default"
 			                        _bContinuous="false"
 			                        _bTrigger="true" />
-			<ScareTriggerComponent _componentName="ScareTriggerComponent"
+			<ScareTriggerComponent _localID="13286275202855313659" _componentName="ScareTriggerComponent"
 			                       _bActive="true"
 			                       _cue="Scare"
 			                       _sound=""

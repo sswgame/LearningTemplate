@@ -40,7 +40,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.toolchain_config import ConfigError, require_config  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.paths import get_bin_dir, get_project_root  # noqa: E402
 from common.project_constants import DIR_RUNTIME_GAME_PRESET  # noqa: E402
 from common.run_process import run_process  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
@@ -290,7 +290,7 @@ def resolve_bin_dir(request: PackageRequest, project_root: Path) -> Path:
     """`--bin-dir` 이 있으면 그것, 없으면 타깃 프리셋의 빌드 폴더 `Bin` 입니다."""
     if request.bin_dir is not None:
         return request.bin_dir if request.bin_dir.is_absolute() else project_root / request.bin_dir
-    return project_root / "build" / MAP_TARGET_PRESET[request.target] / "Bin"
+    return get_bin_dir(MAP_TARGET_PRESET[request.target], project_root)
 
 
 def make_package(request: PackageRequest, project_root: Path) -> Path:

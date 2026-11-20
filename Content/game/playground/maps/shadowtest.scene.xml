@@ -10,7 +10,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,3,-7"
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,3,-7"
 					                 _localRotation="0.35,0,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
@@ -28,7 +28,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0"
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
 					                           _localRotation="0.717128,0.767598,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
@@ -49,7 +49,7 @@
 		<entity id="3" name="Lamp">
 			<GameObject _schemaVersion="0" _name="Lamp" _bActive="true">
 				<_listComponent>
-					<PointLightComponent _localPosition="2.5,2.2,2"
+					<PointLightComponent _localID="6048688584444471341" _localPosition="2.5,2.2,2"
 					                     _localRotation="0,0,0"
 					                     _localScale="1,1,1"
 					                     _attachOwner="None"
@@ -66,7 +66,7 @@
 		<entity id="4" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="0,0,3"
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,3"
 					               _localRotation="0,0,0"
 					               _localScale="16,1,16"
 					               _attachOwner="None"
@@ -80,7 +80,7 @@
 		<entity id="5" name="Pillar">
 			<GameObject _schemaVersion="0" _name="Pillar" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-1.5,1.5,2"
+					<MeshComponent _localID="163493842152903304" _localPosition="-1.5,1.5,2"
 					               _localRotation="0,0.3,0"
 					               _localScale="0.4,3,0.4"
 					               _attachOwner="None"
@@ -94,7 +94,7 @@
 		<entity id="6" name="Crate">
 			<GameObject _schemaVersion="0" _name="Crate" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="1.2,0.5,2.6"
+					<MeshComponent _localID="163493842152903304" _localPosition="1.2,0.5,2.6"
 					               _localRotation="0,-0.4,0"
 					               _localScale="1,1,1"
 					               _attachOwner="None"

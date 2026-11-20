@@ -14,7 +14,7 @@
 		<entity id="51" name="ShooterGameMode">
 			<GameObject _schemaVersion="0" _name="ShooterGameMode" _bActive="true">
 				<_listComponent>
-					<ShooterGameModeComponent _componentName="ShooterGameModeComponent"
+					<ShooterGameModeComponent _localID="13246353635651928858" _componentName="ShooterGameModeComponent"
 					                          _bActive="true"
 					                          _effectPrefab="game/shooter3d/prefabs/effect.prefab.xml"
 					                          _tracerPrefab="game/shooter3d/prefabs/tracer.prefab.xml"
@@ -65,7 +65,7 @@
 		<entity id="300" name="DirtPad">
 			<GameObject _schemaVersion="0" _name="DirtPad" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="0,0.01,-12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Dirt" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0.01,-12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Dirt" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.5,0.01,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Dirt">
 								<_listPoint />
@@ -73,28 +73,28 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0.011,0" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="PlaneDense" _materialPath="game/shooter3d/materials/surfacedeform_dirt.material" _boundsRadius="3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.011,0" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="PlaneDense" _materialPath="game/shooter3d/materials/surfacedeform_dirt.material" _boundsRadius="3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="301" name="StoneGround">
 			<GameObject _schemaVersion="0" _name="StoneGround" _bActive="true">
 				<_listComponent>
-					<MeshComponent _localPosition="-3.5,0.004,-12" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="game/shooter3d/materials/surfacedeform_stone.material" _boundsRadius="3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-3.5,0.004,-12" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="game/shooter3d/materials/surfacedeform_stone.material" _boundsRadius="3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="302" name="Puddle">
 			<GameObject _schemaVersion="0" _name="Puddle" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _localPosition="0,0.04,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _materialPath="engine/materials/water.material" _size="3,4" _cellSize="0.5" _shallowColor="0.22,0.26,0.26,0.25" _deepColor="0.1,0.14,0.16,0.6" _deepDepth="2" />
+					<WaterBodyComponent _localID="5729965392566960456" _localPosition="0,0.04,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _materialPath="engine/materials/water.material" _size="3,4" _cellSize="0.5" _shallowColor="0.22,0.26,0.26,0.25" _deepColor="0.1,0.14,0.16,0.6" _deepDepth="2" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="303" name="MudPad">
 			<GameObject _schemaVersion="0" _name="MudPad" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="0,0.01,-4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Mud" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0.01,-4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Static" _material="Mud" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="1.5,0.01,2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Mud">
 								<_listPoint />
@@ -102,34 +102,34 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0.011,0" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="PlaneDense" _materialPath="game/shooter3d/materials/surfacedeform_mud.material" _boundsRadius="3" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0.011,0" _localRotation="0,0,0" _localScale="3,1,4" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="PlaneDense" _materialPath="game/shooter3d/materials/surfacedeform_mud.material" _boundsRadius="3" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="304" name="Walker">
 			<GameObject _schemaVersion="0" _name="Walker" _bActive="true">
 				<_listComponent>
-					<CharacterControllerComponent _localPosition="16,0.05,-18" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
-					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
-					<SkeletalAnimatorComponent _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Walking_A" _bPlayOnBegin="true" />
-					<CharacterAppearanceComponent _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
-					<AnimationNotifyComponent _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
-					<GroundSurfaceComponent _probeLength="0.6" />
+					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="16,0.05,-18" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
+					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
+					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Walking_A" _bPlayOnBegin="true" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
+					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="305" name="Weather">
 			<GameObject _schemaVersion="0" _name="Weather" _bActive="true">
 				<_listComponent>
-					<SessionStateComponent />
-					<WeatherDirectorComponent _weatherDataPath="game/shooter3d/data/rainyard.weather.xml" _startWeather="clear" _seed="7" />
+					<SessionStateComponent _localID="6673597520240684436" />
+					<WeatherDirectorComponent _localID="3377167033740769073" _weatherDataPath="game/shooter3d/data/rainyard.weather.xml" _startWeather="clear" _seed="7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="306" name="Sky">
 			<GameObject _schemaVersion="0" _name="Sky" _bActive="true">
 				<_listComponent>
-					<SkyComponent _zenithColor="0.42,0.45,0.5" _horizonColor="0.78,0.8,0.82" _groundColor="0.16,0.15,0.14" _intensity="1" _horizonExponent="2" _mode="Gradient" />
+					<SkyComponent _localID="14376368575749838118" _zenithColor="0.42,0.45,0.5" _horizonColor="0.78,0.8,0.82" _groundColor="0.16,0.15,0.14" _intensity="1" _horizonExponent="2" _mode="Gradient" />
 				</_listComponent>
 			</GameObject>
 		</entity>

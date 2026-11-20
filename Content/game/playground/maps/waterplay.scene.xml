@@ -8,7 +8,7 @@
 		<entity id="4" name="Terrain">
 			<GameObject _schemaVersion="0" _name="Terrain" _bActive="true">
 				<_listComponent>
-					<TerrainComponent _componentName="TerrainComponent"
+					<TerrainComponent _localID="1728601763249011038" _componentName="TerrainComponent"
 					                  _bActive="true"
 					                  _localPosition="-128,0,-128"
 					                  _localRotation="0,0,0"
@@ -33,14 +33,14 @@
 							<TerrainLayer _name="Sand" _color="0.66,0.58,0.4,1" _detailStrength="0.4" _bTriplanar="false" />
 						</_listLayer>
 					</TerrainComponent>
-					<TerrainColliderComponent _componentName="TerrainColliderComponent" _bActive="true" _layer="Default" _material="" />
+					<TerrainColliderComponent _localID="13188084309070950590" _componentName="TerrainColliderComponent" _bActive="true" _layer="Default" _material="" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="6" name="River">
 			<GameObject _schemaVersion="0" _name="River" _bActive="true">
 				<_listComponent>
-					<WaterBodyComponent _componentName="WaterBodyComponent"
+					<WaterBodyComponent _localID="5729965392566960456" _componentName="WaterBodyComponent"
 					                    _bActive="true"
 					                    _localPosition="0,0,0"
 					                    _localRotation="0,0,0"
@@ -72,7 +72,7 @@
 							<GerstnerWave _direction="45.836624" _wavelength="3" _amplitude="0.03" _steepness="0.4" />
 						</_listWave>
 					</WaterBodyComponent>
-					<SplineComponent _samplesPerSegment="16" _type="CatmullRom" _bClosed="false">
+					<SplineComponent _localID="1299529188794216424" _samplesPerSegment="16" _type="CatmullRom" _bClosed="false">
 						<_listControlPoint>
 							<item>-104,16,-88</item>
 							<item>-58,13,-50</item>
@@ -80,14 +80,14 @@
 							<item>4,8,8</item>
 						</_listControlPoint>
 					</SplineComponent>
-					<SplineRiverPathComponent _sampleSpacing="4" />
+					<SplineRiverPathComponent _localID="8342539082839150571" _sampleSpacing="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="20" name="Floater">
 			<GameObject _schemaVersion="0" _name="Floater" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="40,12,30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="20">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="40,12,30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="20">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
 								<_listPoint />
@@ -95,8 +95,8 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
-					<BuoyancyComponent _waterDensity="1000" _linearDrag="200">
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
+					<BuoyancyComponent _localID="14871376986610601733" _waterDensity="1000" _linearDrag="200">
 						<_listPontoon>
 							<BuoyancyPontoon _localPosition="0.4,-0.3,0.4" _radius="0.35" />
 							<BuoyancyPontoon _localPosition="-0.4,-0.3,0.4" _radius="0.35" />
@@ -110,15 +110,15 @@
 		<entity id="21" name="WaterTank">
 			<GameObject _schemaVersion="0" _name="WaterTank" _bActive="true">
 				<_listComponent>
-					<BuoyancyVolumeComponent _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _halfExtents="3,2,3" _buoyancy="2" _linearDrag="1" _angularDrag="1" _flowVelocity="0.3,0,0" _layerMask="4294967295" />
-					<MeshComponent _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="6,4,6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/water.material" _boundsRadius="5" />
+					<BuoyancyVolumeComponent _localID="8700096275853675763" _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _halfExtents="3,2,3" _buoyancy="2" _linearDrag="1" _angularDrag="1" _flowVelocity="0.3,0,0" _layerMask="4294967295" />
+					<MeshComponent _localID="163493842152903304" _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="6,4,6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/water.material" _boundsRadius="5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="22" name="Bobber">
 			<GameObject _schemaVersion="0" _name="Bobber" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="-60,55,60" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="10">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-60,55,60" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="10">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
 								<_listPoint />
@@ -126,14 +126,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="23" name="Roller">
 			<GameObject _schemaVersion="0" _name="Roller" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="-20,45,-40" _localRotation="0.3,0.2,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="20">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-20,45,-40" _localRotation="0.3,0.2,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="20">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
 								<_listPoint />
@@ -141,22 +141,22 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
-					<FoliageInfluencerComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _radius="1.5" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" />
+					<FoliageInfluencerComponent _localID="8452882449997777425" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _radius="1.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="24" name="SignHook">
 			<GameObject _schemaVersion="0" _name="SignHook" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-40,49,20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-40,49,20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="25" name="Sign">
 			<GameObject _schemaVersion="0" _name="Sign" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="-40,48,20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="5">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-40,48,20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="5">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.6,0.4,0.05" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
 								<_listPoint />
@@ -164,8 +164,8 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.8,0.1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="1" />
-					<JointComponent _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _jointType="Hinge" _axis="1,0,0" _normalAxis="0,1,0" _minLimit="0" _maxLimit="0" _swingLimitNormal="0" _swingLimitPlane="0" _motorMode="Off" _motorTarget="0" _motorMaxForce="0" _bLimitsEnabled="false" _bCollideConnectedBodies="false" _bConnectToWorld="true" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.8,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="1" />
+					<JointComponent _localID="17555290165949469737" _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _jointType="Hinge" _axis="1,0,0" _normalAxis="0,1,0" _minLimit="0" _maxLimit="0" _swingLimitNormal="0" _swingLimitPlane="0" _motorMode="Off" _motorTarget="0" _motorMaxForce="0" _bLimitsEnabled="false" _bCollideConnectedBodies="false" _bConnectToWorld="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

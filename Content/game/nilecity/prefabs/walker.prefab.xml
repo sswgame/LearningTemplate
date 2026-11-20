@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="NileWalker">
 	<GameObject _schemaVersion="0" _name="NileWalker" _bActive="true">
 		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,-5,0"
 			               _localRotation="0,0,0"
@@ -15,7 +15,7 @@
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="false" />
-			<NileWalkerComponent _componentName="NileWalkerComponent"
+			<NileWalkerComponent _localID="17769358192364824167" _componentName="NileWalkerComponent"
 			                     _bActive="true"
 			                     _gameMode="0"
 			                     _walkerIndex="-1"

@@ -5,7 +5,7 @@
 	     돛 효율: 겉보기 바람이 선수와 이루는 각 0(순풍) 1 · π/2(옆바람) 0.8 · 3π/4 0.3 · π(역풍) 0. 노 젓는 배는 이 프리팹의 변형(rowboat.prefab.xml)이다. -->
 	<GameObject _schemaVersion="0" _name="Sailboat" _bActive="true">
 		<_listComponent>
-			<RigidBodyComponent _localPosition="0,0.3,0"
+			<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0.3,0"
 			                    _localRotation="0,0,0"
 			                    _localScale="1,1,1"
 			                    _attachOwner="None"
@@ -34,47 +34,47 @@
 					</PhysicsShapeDesc3D>
 				</_listShape>
 			</RigidBodyComponent>
-			<MeshComponent _localPosition="0,0,0"
+			<MeshComponent _localID="163493842152903304" _localPosition="0,0,0"
 			               _localRotation="0,0,0"
 			               _localScale="2,0.7,6"
 			               _attachOwner="None"
-			               _attachComponent="RigidBodyComponent#0"
+			               _attachComponent="#63e709ac676dd304"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_orange.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<MeshComponent _localPosition="0,2.35,0.8"
+			<MeshComponent _localID="163494941664531515" _localPosition="0,2.35,0.8"
 			               _localRotation="0,0,0"
 			               _localScale="0.12,4,0.12"
 			               _attachOwner="None"
-			               _attachComponent="RigidBodyComponent#0"
+			               _attachComponent="#63e709ac676dd304"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_dark.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<MeshComponent _localPosition="0,2.5,-0.3"
+			<MeshComponent _localID="163496041176159726" _localPosition="0,2.5,-0.3"
 			               _localRotation="0,0,0"
 			               _localScale="0.04,3,2.1"
 			               _attachOwner="None"
-			               _attachComponent="RigidBodyComponent#0"
+			               _attachComponent="#63e709ac676dd304"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_light.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<MeshComponent _localPosition="0,0.75,-2.3"
+			<MeshComponent _localID="163497140687787937" _localPosition="0,0.75,-2.3"
 			               _localRotation="0,0,0"
 			               _localScale="0.7,0.7,0.08"
 			               _attachOwner="None"
-			               _attachComponent="RigidBodyComponent#0"
+			               _attachComponent="#63e709ac676dd304"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/prototypegrid_dark.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<BuoyancyComponent _waterDensity="1000" _linearDrag="120">
+			<BuoyancyComponent _localID="14871376986610601733" _waterDensity="1000" _linearDrag="120">
 				<_listPontoon>
 					<BuoyancyPontoon _localPosition="0.7,-0.1,2.2" _radius="0.45" />
 					<BuoyancyPontoon _localPosition="-0.7,-0.1,2.2" _radius="0.45" />
@@ -84,7 +84,7 @@
 					<BuoyancyPontoon _localPosition="-0.7,-0.1,-2.2" _radius="0.45" />
 				</_listPontoon>
 			</BuoyancyComponent>
-			<BoatComponent _maxRudderAngle="34.37747"
+			<BoatComponent _localID="14504696826149092525" _maxRudderAngle="34.37747"
 			               _rudderForce="150"
 			               _rudderPosition="0,-0.3,-2.8"
 			               _engineThrust="0"
@@ -100,20 +100,20 @@
 					</_listKey>
 				</_sailEfficiency>
 			</BoatComponent>
-			<PawnComponent _maxPitch="80.21409" _bLockMouse="false">
+			<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _bLockMouse="false">
 				<_listButton>
 					<item>Interact</item>
 				</_listButton>
 				<_listAnalog />
 			</PawnComponent>
-			<BoatHelmComponent />
-			<VehicleSeatComponent _socketName="None"
+			<BoatHelmComponent _localID="16042771949554270337" />
+			<VehicleSeatComponent _localID="9451712765012233414" _socketName="None"
 			                      _riderPoseParameter="None"
 			                      _seatOffset="0,0.35,-2.7"
 			                      _exitOffset="0,0.4,-1.4"
 			                      _enterDistance="2.5"
 			                      _bDriverSeat="true" />
-			<VehicleExitComponent _exitButton="Interact" />
+			<VehicleExitComponent _localID="14315915080128068609" _exitButton="Interact" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

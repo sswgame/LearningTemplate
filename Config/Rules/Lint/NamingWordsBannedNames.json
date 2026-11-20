@@ -1,5 +1,5 @@
 {
-  "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(Scripts/dev/rename_identifier.py)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
+  "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
     "refuseWhileLoading": "ExperienceManager::rejectIfLoadPending — 거절을 알리고 bool 을 돌려준다는 것이 이름에 보이게(2026-11-20 preflight 이름 검토)",
     "followReloadedCatalogs": "ExperienceScope::rebindReloadedCatalogs — 다시 읽힌 카탈로그를 새 판으로 다시 건다(rebind)(2026-11-20 preflight 이름 검토)",
@@ -1725,6 +1725,27 @@
     "isRHIFormatTableInOrder": "RHIFormatUtil::isTableInOrder — 열거 RHIFormat 의 자유 함수를 RHIFormatUtil 로 묶었다(2026-11-20)",
     "isRenderViewModeIndex": "RenderViewModeUtil::isIndex — 열거 RenderViewMode 의 자유 함수를 RenderViewModeUtil 로 묶었다(2026-11-20)",
     "getRenderViewModeInfo": "RenderViewModeUtil::getInfo — 열거 RenderViewMode 의 자유 함수를 RenderViewModeUtil 로 묶었다(2026-11-20)",
-    "getRenderViewModePipelineMode": "RenderViewModeUtil::getPipelineMode — 열거 RenderViewMode 의 자유 함수를 RenderViewModeUtil 로 묶었다(2026-11-20)"
+    "getRenderViewModePipelineMode": "RenderViewModeUtil::getPipelineMode — 열거 RenderViewMode 의 자유 함수를 RenderViewModeUtil 로 묶었다(2026-11-20)",
+    "migrate-screenshot-stability": "지운 명령 — 사진 앞 렌더 정착 대기 이전이 끝났다(옛 꼴 0)(Scripts 감사, 2026-11-21)",
+    "migrate_screenshot_stability": "지운 스크립트 — 사진 앞 렌더 정착 대기 이전이 끝났다(옛 꼴 0)(Scripts 감사, 2026-11-21)",
+    "migrate-component-ids": "지운 명령 — 컴포넌트 지역 id 이전이 끝났고 옛 순번 키는 오류다(감사 A-2)(Scripts 감사, 2026-11-21)",
+    "migrate_component_ids": "지운 스크립트 — 컴포넌트 지역 id 이전이 끝났다(감사 A-2)(Scripts 감사, 2026-11-21)",
+    "migrate_prefab_links": "지운 스크립트 — 프리팹 부품 · 덮어쓰기 키 이전이 끝났다(감사 A-2)(Scripts 감사, 2026-11-21)",
+    "rename_identifier": "rename-symbol(Scripts/dev/rename_symbol.py) — 이름 바꾸기 도구 둘을 하나로 합쳤다(Scripts 감사, 2026-11-21)",
+    "main_rename": "dev.rename_symbol.main — 이름 바꾸기는 move_source 에서 뗐다(Scripts 감사, 2026-11-21)",
+    "find_bin_dir": "common.paths.get_bin_dir — 빌드 폴더 경로는 한 곳에서(Scripts 감사, 2026-11-21)",
+    "_wait_for_text": "common.process_group.ChildProcess.wait_for — 네트워크 실행기 공통 묶음 실행기(Scripts 감사, 2026-11-21)",
+    "_USER_DATA_ROOT_ENVIRONMENT": "common.process_group.USER_DATA_ROOT_ENVIRONMENT(Scripts 감사, 2026-11-21)",
+    "makeLegacyKey": "ComponentStableKey::makeKey — 옛 순번 키(이름#n)는 받지 않는다(감사 A-2 이전 끝)(Scripts 감사, 2026-11-21)",
+    "makeLegacyPartKey": "PrefabInstanceNode::makePartKey — 옛 인덱스 부품 키는 받지 않는다(Scripts 감사, 2026-11-21)",
+    "remapLegacyPartPaths": "없앴다 — 옛 인덱스 부품 경로는 오류(Prefab.NestedPartPathNotKeyed)(Scripts 감사, 2026-11-21)",
+    "_legacyKey": "PrefabOverrides KeyedComponent::_key — 지역 id 키 하나(Scripts 감사, 2026-11-21)",
+    "makeLegacyText": "ComponentStableKeyInternal::makeOccurrenceText — id 를 적지 않은 컴포넌트의 id 를 섞는 글(Scripts 감사, 2026-11-21)",
+    "kLegacyKeyDigitReserve": "없앴다 — 순번 글은 StringBuilder 로 만든다(Scripts 감사, 2026-11-21)",
+    "rewrite_outside_strings": "dev.rename_symbol.rename_in_text — 지킬 구간 방식(Scripts 감사, 2026-11-21)",
+    "rewrite_python_code": "dev.rename_symbol.rename_in_text — 지킬 구간 방식(Scripts 감사, 2026-11-21)",
+    "rewrite_code": "dev.rename_symbol.rename_in_text(Scripts 감사, 2026-11-21)",
+    "NAMING_PATH": "common.rename_scope.BANNED_NAMES_PATH — 이름 이력 표 경로는 한 곳(Scripts 감사, 2026-11-21)",
+    "NAMING_WORDS_PATH": "common.rename_scope.BANNED_NAMES_PATH — _bannedNames 는 NamingWordsBannedNames.json 으로 옮겼다(Scripts 감사, 2026-11-21)"
   }
 }

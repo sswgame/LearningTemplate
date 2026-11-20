@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="Torch">
 	<GameObject _schemaVersion="0" _name="Torch" _bActive="true">
 		<_listComponent>
-			<SceneComponent _componentName="SceneComponent"
+			<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 			                _bActive="true"
 			                _localPosition="0,0,0"
 			                _localRotation="0,0,0"
@@ -10,20 +10,20 @@
 			                _attachOwner="None"
 			                _attachOwnerID="0"
 			                _attachComponent="None" />
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
 			               _localScale="0.2,1.2,0.2"
 			               _attachOwner="None"
 			               _attachOwnerID="0"
-			               _attachComponent="SceneComponent#0"
+			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/defaultmaterial.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			<GimmickSensorComponent _localID="5906677949702648734" _componentName="GimmickSensorComponent"
 			                        _bActive="true"
 			                        _defaultWeight="1"
 			                        _bCountTriggers="false">
@@ -32,24 +32,24 @@
 				</_requiredTags>
 				<_listOccupant />
 			</GimmickSensorComponent>
-			<ElementStatusComponent _componentName="ElementStatusComponent"
+			<ElementStatusComponent _localID="11244445018458652199" _componentName="ElementStatusComponent"
 			                        _bActive="true"
 			                        _tablePath="common/data/elements/default.elements.xml"
 			                        _material="Torch"
 			                        _signalStatus="Burning"
 			                        _startStimulus="None" />
-			<PointLightComponent _componentName="PointLightComponent"
+			<PointLightComponent _localID="6048688584444471341" _componentName="PointLightComponent"
 			                     _bActive="true"
 			                     _localPosition="0,1.4,0"
 			                     _localRotation="0,0,0"
 			                     _localScale="1,1,1"
 			                     _attachOwner="None"
 			                     _attachOwnerID="0"
-			                     _attachComponent="SceneComponent#0"
+			                     _attachComponent="#ae80bcb72e918025"
 			                     _color="0.55,0.75,1"
 			                     _intensity="2"
 			                     _radius="6" />
-			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+			<GimmickCircuitComponent _localID="12667660158642495557" _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
 				<_listNode>
 					<GimmickNodeDesc _id="flame" _kind="Signal" _params="" />
 					<GimmickNodeDesc _id="light" _kind="Light" _params="intensity=1" />

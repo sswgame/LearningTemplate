@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="GatheringNode">
 	<GameObject _schemaVersion="0" _name="GatheringNode" _bActive="true">
 		<_listComponent>
-			<SceneComponent _componentName="SceneComponent"
+			<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 			                _bActive="true"
 			                _localPosition="0,0,0"
 			                _localRotation="0,0,0"
@@ -10,20 +10,20 @@
 			                _attachOwner="None"
 			                _attachOwnerID="0"
 			                _attachComponent="None" />
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
 			               _localScale="0.8,0.6,0.8"
 			               _attachOwner="None"
 			               _attachOwnerID="0"
-			               _attachComponent="SceneComponent#0"
+			               _attachComponent="#ae80bcb72e918025"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/defaultmaterial.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<InteractableComponent _componentName="InteractableComponent"
+			<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
 			                       _bActive="true"
 			                       _interactionID="Gather"
 			                       _catalogPath="common/data/interactions/default.interactions.xml"
@@ -31,7 +31,7 @@
 			                       _cooldownRemaining="0"
 			                       _priority="0"
 			                       _bEnabled="true" />
-			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			<GimmickSensorComponent _localID="5906677949702648734" _componentName="GimmickSensorComponent"
 			                        _bActive="true"
 			                        _defaultWeight="1"
 			                        _bCountTriggers="false">
@@ -40,7 +40,7 @@
 				</_requiredTags>
 				<_listOccupant />
 			</GimmickSensorComponent>
-			<GatheringNodeComponent _componentName="GatheringNodeComponent"
+			<GatheringNodeComponent _localID="17749173230493077954" _componentName="GatheringNodeComponent"
 			                        _bActive="true"
 			                        _item="Herb"
 			                        _count="1"

@@ -2,7 +2,7 @@
 <Prefab formatVersion="1" name="Spring">
 	<GameObject _schemaVersion="0" _name="Spring" _bActive="true">
 		<_listComponent>
-			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
 			                        _bActive="true"
 			                        _localPosition="0,0,0"
 			                        _localRotation="0,0,0"
@@ -15,20 +15,20 @@
 			                        _layer="Default"
 			                        _bContinuous="false"
 			                        _bTrigger="true" />
-			<MeshComponent _componentName="MeshComponent"
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
 			               _localRotation="0,0,0"
 			               _localScale="1,0.3,1"
 			               _attachOwner="None"
 			               _attachOwnerID="0"
-			               _attachComponent="BoxCollider2DComponent#0"
+			               _attachComponent="#edcbb43a3dfead50"
 			               _meshID="Cube"
 			               _materialPath="engine/materials/defaultmaterial.material"
 			               _boundsRadius="0.866"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<LaunchPadComponent _componentName="LaunchPadComponent" _bActive="true" _launchVelocity="0,14,0">
+			<LaunchPadComponent _localID="11362723681073614297" _componentName="LaunchPadComponent" _bActive="true" _launchVelocity="0,14,0">
 				<_requiredTags>
 					<_listTag />
 				</_requiredTags>

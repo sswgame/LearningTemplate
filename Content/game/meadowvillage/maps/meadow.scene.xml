@@ -7,7 +7,7 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _componentName="CameraComponent"
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
 					                 _bActive="true"
 					                 _localPosition="6,16,-10.08"
 					                 _localRotation="0.9272952,0,0"
@@ -22,7 +22,7 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="true" />
-					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
 					                         _bActive="true"
 					                         _catalogPath="game/meadowvillage/data/meadow.cameras.xml"
 					                         _initialPreset="meadow"
@@ -36,7 +36,7 @@
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
 					                           _bActive="true"
 					                           _localPosition="0,0,0"
 					                           _localRotation="0.356582,-2.138715,0"
@@ -56,7 +56,7 @@
 		<entity id="3" name="VillageState">
 			<GameObject _schemaVersion="0" _name="VillageState" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
 					                _bActive="true"
 					                _localPosition="0,0,-7"
 					                _localRotation="0,0,0"
@@ -64,12 +64,12 @@
 					                _attachOwner="None"
 					                _attachOwnerID="0"
 					                _attachComponent="None" />
-					<SessionStateComponent _componentName="SessionStateComponent" _bActive="true" />
-					<MeadowFarmGameModeComponent _componentName="MeadowFarmGameModeComponent"
+					<SessionStateComponent _localID="6673597520240684436" _componentName="SessionStateComponent" _bActive="true" />
+					<MeadowFarmGameModeComponent _localID="8448271495034838971" _componentName="MeadowFarmGameModeComponent"
 					                             _bActive="true"
 					                             _bAutoPlay="false"
 					                             _tilePrefab="game/meadowvillage/prefabs/tile.prefab.xml" />
-					<MeadowTownGameModeComponent _componentName="MeadowTownGameModeComponent"
+					<MeadowTownGameModeComponent _localID="5244519647496677059" _componentName="MeadowTownGameModeComponent"
 					                             _bActive="true"
 					                             _bAutoPlay="false">
 						<_listObjectView>
@@ -80,7 +80,7 @@
 							<MeadowTownCreatureView _species="sprout" _prefab="game/meadowvillage/prefabs/sprout.prefab.xml" />
 						</_listCreatureView>
 					</MeadowTownGameModeComponent>
-					<HousingPlotComponent _componentName="HousingPlotComponent"
+					<HousingPlotComponent _localID="9951375036076253157" _componentName="HousingPlotComponent"
 					                      _bActive="true"
 					                      _bAutoPlay="false"
 					                      _partCatalog="game/meadowvillage/data/housingparts.xml"
@@ -89,7 +89,7 @@
 					                      _ghostBlockedPrefab="game/meadowvillage/prefabs/housing/ghost_blocked.prefab.xml">
 						<_settings _plotID="meadow_home" _sizeX="6" _sizeZ="6" _levelCount="2" _historyLimit="64" _bFreePlacement="false" _maxReach="0" />
 					</HousingPlotComponent>
-					<MeadowHomeGameModeComponent _componentName="MeadowHomeGameModeComponent"
+					<MeadowHomeGameModeComponent _localID="10875432985987803690" _componentName="MeadowHomeGameModeComponent"
 					                             _bActive="true"
 					                             _bAutoPlay="false"
 					                             _stepInterval="0.25">
@@ -105,14 +105,14 @@
 							<MeadowBuildStep _partID="table" _position="2,0.5" _level="0" _yaw="0" />
 						</_listStep>
 					</MeadowHomeGameModeComponent>
-					<HousingNetSessionComponent _componentName="HousingNetSessionComponent" _bActive="true" _maxRequestsPerTick="8" />
+					<HousingNetSessionComponent _localID="9837538470771312631" _componentName="HousingNetSessionComponent" _bActive="true" _maxRequestsPerTick="8" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="Cc0.crops_dirt_single">
 			<GameObject _schemaVersion="0" _name="Cc0.crops_dirt_single" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-20,0,-20"
 					               _localRotation="0,0,0"
@@ -131,7 +131,7 @@
 		<entity id="5" name="Cc0.ground_grass">
 			<GameObject _schemaVersion="0" _name="Cc0.ground_grass" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="6,0,1"
 					               _localRotation="0,0,0"
@@ -150,7 +150,7 @@
 		<entity id="6" name="Cc0.ground_path_tile">
 			<GameObject _schemaVersion="0" _name="Cc0.ground_path_tile" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-14,0,-20"
 					               _localRotation="0,0,0"
@@ -169,7 +169,7 @@
 		<entity id="7" name="Cc0.ground_river_tile">
 			<GameObject _schemaVersion="0" _name="Cc0.ground_river_tile" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="-11,0,-20"
 					               _localRotation="0,0,0"
@@ -188,13 +188,13 @@
 		<entity id="8" name="OrchardSite">
 			<GameObject _schemaVersion="0" _name="OrchardSite" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="9,0,1.5"
+					<SceneComponent _localID="12574257654564749349" _localPosition="9,0,1.5"
 					                _localRotation="0,0,0"
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
 					<!-- 부탁(meadow_request)의 목표 자리 — 과수원 서식지가 열린 동안만 화면 마커가 뜬다(받으면 뜨고 끝나면 사라진다). -->
-					<QuestObjectiveMarkerComponent _quest="meadow_request" _kind="Habitat" _target="orchard" />
+					<QuestObjectiveMarkerComponent _localID="56469045843044874" _quest="meadow_request" _kind="Habitat" _target="orchard" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -1,15 +1,15 @@
 <?asset guid="b383cf42bc4dfff16ba2281561b8874f"?>
 <Prefab formatVersion="1" _base="common/prefabs/gimmicks/platformer/spring.prefab.xml" name="BoostPad">
 	<PrefabOverrides>
-		<Remove key="LaunchPadComponent#0" />
-		<Override key="BoxCollider2DComponent#0">
+		<Remove key="#9db080fc534fcdd9" />
+		<Override key="#edcbb43a3dfead50">
 			<BoxCollider2DComponent _offsetScale="3,0.5" />
 		</Override>
-		<Override key="MeshComponent#0">
+		<Override key="#0244d8c8807cd288">
 			<MeshComponent _localScale="3,0.05,4" />
 		</Override>
-		<Add after="MeshComponent#0">
-			<BoostPadComponent _componentName="BoostPadComponent" _bActive="true" _duration="1" _strength="1.5">
+		<Add after="#0244d8c8807cd288">
+			<BoostPadComponent _localID="12634495917081935575" _componentName="BoostPadComponent" _bActive="true" _duration="1" _strength="1.5">
 				<_requiredTags>
 					<_listTag />
 				</_requiredTags>

@@ -86,7 +86,7 @@
 
 - **통합 검증에서 볼 것(1 단계):** 단위 `AssetGUIDTest` · `AssetDatabaseTest` · `AssetPackIndexTest`, 시나리오 `editor.assetidentity`(가져오기가 새 GUID, `asset.replaceContent` 가 GUID 유지), `editor.assetmove` · `editor.flowimport` · `contentbrowser`(`.meta` 가 브라우저 · 빠른 열기 · 참조 색인에 안 보이는지), 모든 쿠킹(팩마다 색인, `PackCooker.PackCookNoIdentity` 없음), `--check-text` · 머티리얼 그래프 생성 검사(머리 때문에 "낡았다" 가 안 나오는지), Content XML 을 바이트로 다시 쓰고 견주는 테스트. `asset-ids` 는 린트 규칙이다(`lint --all`).
 - **2 단계 — 참조를 GUID 로:**
-  - Content 전수 이전: `migrate-asset-refs --fix` 로 `AssetRef<T>` 칸을 `guid:<32자>` 로(지금 0). 그 뒤 `AssetRefBase::assign` 의 옛 경로 글 읽기를 걷는다. `_base` · `DataPath` 칸과 임포트 산출물 참조는 산출물 줄 뒤.
+  - Content 전수 이전: `migrate-asset-refs --fix` 로 `AssetRef<T>` 칸을 `guid:<32자>` 로(지금 0 — 바꿀 4003 개). 도구가 멈추는 까닭: 같은 칸 이름이 다른 모듈에서 경로를 담은 글 칸이다(`GameFramework` 의 `_material` · `_sound`, `GF_ThemePark` 의 `_shape`, `GF_Server_Leaderboard` · `GF_Server_Matchmaking` 의 `_catalog` — 값 59 개, `Content/common/data/appearance/*.xml` · `game/playground/data/benchscene.xml` · `kit_restaurantsim.scene.xml`). 그 글 칸을 `AssetRef<T>` 로 바꾸고 빌드로 `Config/Dev/AssetReferenceFields.generated.json` 을 다시 낸 뒤 돌린다. 임포트 산출물 참조 898 개는 산출물 줄 전까지 경로 글이라 `AssetRefBase::assign` 의 경로 글 읽기는 그 뒤에 걷는다. `_base` · `DataPath` 칸도 산출물 줄 뒤.
   - 세이브(`SW_SAVE_FORMAT_UPGRADE`)와 서버 기록(`Content/common/sql/*/migrations.xml`)의 경로를 GUID 로 — 배포된 팩 색인 + 마지막 리다이렉트 표로 한 번 풀어 쓴다.
   - 설정의 경로 칸(`enginedefaultassets.xml`), 게임 설정 · 카탈로그 `_base` 의 파일 부분. 경로 캐시 키는 `AssetRedirect::toCacheKey` 한 곳을 GUID 로.
   - 임포트 산출물 줄: 원본 GUID → 산출물 경로를 임포트 기록에서 팩 색인에. 내용 주소 공유 파일(`textures_raw/_shared/`)은 저장소 경로 해시 GUID 로 `.meta` 를 함께.

@@ -10,21 +10,21 @@
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="0,4,-8" _localRotation="0.4,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,4,-8" _localRotation="0.4,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="40.107045" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Sun">
 			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
 				<_listComponent>
-					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.356582,-2.338715,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="3" name="Ground">
 			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="30,1,30" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="30,1,30" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
 								<_listPoint />
@@ -32,14 +32,14 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="4" name="Plate">
 			<GameObject _schemaVersion="0" _name="Plate" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="2,0.2,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0" _bTrigger="true">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="2,0.2,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0" _bTrigger="true">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.6,0.2,0.6" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
 								<_listPoint />
@@ -47,8 +47,8 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,-0.15,0" _localRotation="0,0,0" _localScale="1.2,0.1,1.2" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.9" />
-					<GimmickSensorComponent _defaultWeight="1" _bCountTriggers="false">
+					<MeshComponent _localID="163493842152903304" _localPosition="0,-0.15,0" _localRotation="0,0,0" _localScale="1.2,0.1,1.2" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.9" />
+					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false">
 						<_requiredTags>
 							<_listTag />
 						</_requiredTags>
@@ -60,7 +60,7 @@
 		<entity id="5" name="Crate">
 			<GameObject _schemaVersion="0" _name="Crate" _bActive="true">
 				<_listComponent>
-					<RigidBodyComponent _localPosition="-2,0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="5">
+					<RigidBodyComponent _localID="7198733165449302788" _localPosition="-2,0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="5">
 						<_listShape>
 							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.25,0.25,0.25" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
 								<_listPoint />
@@ -68,24 +68,24 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="0.45" />
-					<GimmickWeightComponent _weight="40" />
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="game/playground/materials/renderstate/plain_red.material" _boundsRadius="0.45" />
+					<GimmickWeightComponent _localID="861614548064773020" _weight="40" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="6" name="Hand">
 			<GameObject _schemaVersion="0" _name="Hand" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="-2,1.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<GrabberComponent _holdOffset="0,0,0" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="-2,1.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<GrabberComponent _localID="11770648949639198024" _holdOffset="0,0,0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="7" name="Keeper">
 			<GameObject _schemaVersion="0" _name="Keeper" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="0,0,3" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<PersistAcrossScenesComponent _bPersistent="true" />
+					<SceneComponent _localID="12574257654564749349" _localPosition="0,0,3" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<PersistAcrossScenesComponent _localID="4489489511313325489" _bPersistent="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

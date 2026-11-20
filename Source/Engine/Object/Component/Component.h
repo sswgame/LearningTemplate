@@ -667,7 +667,7 @@ namespace sw
         /**
          * @brief 오브젝트 안에서 이 컴포넌트를 가리키는 고정 지역 id 입니다(감사 A-2). 저장되고, 형제를 지우거나 끼우거나 순서를 바꿔도 그대로다.
          * @details 유니티 fileID · 언리얼 SCS 노드의 변수 GUID 자리다. 덮어쓰기 · 부착 대상 · 세이브 핸들의 키(`ComponentStableKey`)가 이 값이다.
-         *          0 은 "아직 정하지 않음"(옛 파일 · 막 붙인 컴포넌트)이고 그동안의 값은 옛 키 `이름#n` 에서 정해진다 — 형제 구조를 바꾸기 전에 굳힌다(`ComponentStableKey::freezeLocalIDs`).
+         *          0 은 "아직 정하지 않음"(코드가 막 붙인 컴포넌트)이고 그동안의 값은 이름과 순번에서 정해진다 — 형제 구조를 바꾸기 전에 굳힌다(`ComponentStableKey::freezeLocalIDs`).
          */
         PROPERTY( HideInInspector )
         uint64          _localID;
