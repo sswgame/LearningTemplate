@@ -54,6 +54,9 @@ namespace sw
                 return engine::areEngineServicesBound() ? engine::getSubsystem<LocalizationManager>().getMountedProjectNames().size() : 0u;
             }
 
+            /** @brief 데이터는 `LocalizationManager` 가 쥐어 덧붙일 줄이 없습니다(그 몫은 메모리 태그 표에 있다). */
+            void collectMemoryEntries( vector<AssetMemoryEntry>& /*outListEntry*/ ) const override {}
+
             /** @brief 아무것도 하지 않습니다(파일 설명). */
             void clear() override {}
         };

@@ -66,6 +66,20 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @struct AssetMemoryEntry
+     * @brief 캐시가 쥔 에셋 한 줄의 메모리입니다(`AssetCacheBase::collectMemoryEntries`). 메모리 스냅숏의 에셋 표가 읽는다(언리얼 `obj list` · `ListTextures` 의 줄).
+     * @details 바이트는 캐시가 아는 만큼의 추정이다 — 텍스처 · 메시는 픽셀 · 정점 버퍼까지, 나머지는 객체 크기(`sizeof`)다. 에셋 안 컨테이너의 정확한 합은
+     *          메모리 태그 표(`MemoryProfiler`)가 종류별 줄로 센다. 종류 이름은 캐시의 것(`getAssetKindName`)이라 줄에 두지 않는다.
+     */
+    struct AssetMemoryEntry
+    {
+        string _path{};              ///< 리소스 id. 경로가 키가 아닌 캐시(지어 나누는 값)는 `<종류>#<번호>` 다
+        uint64 _cpuBytes{ 0 };       ///< CPU 쪽 추정 바이트(객체 + 쥔 버퍼)
+        uint64 _gpuBytes{ 0 };       ///< GPU 쪽 논리 바이트(텍스처 밉 · 메시 정점 · 인덱스). GPU 자원이 없으면 0
+        uint32 _referenceCount{ 0 }; ///< 쥔 쪽 수(캐시 자신과 이 질의의 사본은 뺀다)
+    };
+
     class AssetLoadOperation;
 
     /**
@@ -112,6 +126,13 @@ namespace sw
 
         /** @brief 지금 들고 있는 항목 수입니다. */
         virtual size_t getCachedCount() const = 0;
+
+        /**
+         * @brief 지금 쥔 에셋마다 한 줄(`AssetMemoryEntry`)을 @p outListEntry 뒤에 덧붙입니다. 어느 스레드에서 불러도 됩니다(캐시가 자기 잠금을 잠깐 잡는다).
+         * @details 순수 가상이라 새 캐시는 이 질의를 빠뜨리고 지을 수 없다 — 에셋 표에 줄이 없는 캐시가 생기지 않는다(`getCachedCount` 와 같은 진단 계약).
+         *          스스로 데이터를 쥐지 않는 어댑터(데이터는 서비스가 쥔다)는 아무것도 덧붙이지 않는다 — 그 몫은 메모리 태그 표에 있다.
+         */
+        virtual void collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const = 0;
 
         /**
          * @brief @p relativePath 가 이 캐시가 다루는 종류의 경로면 로드를 걸고(워커), 그 에셋을 붙드는 토큰과 로드를 돌려줍니다. 이 캐시의 종류가 아니면 빈 토큰입니다.

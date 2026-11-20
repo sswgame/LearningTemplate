@@ -7219,6 +7219,106 @@
 				<item>Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorMemory.AllKinds" source="All">
+			<origins>
+				<item>Source/Editor/Panels/Memory/Model/MemoryViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.Capture" source="Take Snapshot">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.CaptureRemote" source="Take Remote Snapshot">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.CaptureRemoteTip" source="Ask the server attached in Multiplayer &gt; Inspector for its snapshot (memory.snapshot)">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.CaptureTip" source="Record this process now: memory tags, allocation sites, assets, GPU resources, object types and caches (Play in Editor included)">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.ComparePrevious" source="Compare with Previous">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.CompareWithTip" source="Snapshot to compare against - rows that grew come first">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.ExportFailedStatus" source="Export failed: {reason}">
+			<origins>
+				<item>Source/Editor/Panels/Memory/Model/MemoryViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.ExportSnapshot" source="Export Snapshot as CSV">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.ExportTable" source="Export Table as CSV">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.ExportTip" source="Write CSV files (UTF-8, opens in Excel) under Saved/MemorySnapshots/&lt;time&gt;/">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.ExportedStatus" source="Exported {fileCount} file(s) to {folder}">
+			<origins>
+				<item>Source/Editor/Panels/Memory/Model/MemoryViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.FilterHint" source="Filter by name">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.NoComparison" source="No comparison">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.NoPolicyStatus" source="The memory snapshot settings could not be read: {reason}">
+			<origins>
+				<item>Source/Editor/Panels/Memory/Model/MemoryViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.NoRows" source="No rows match the filters">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.NoSnapshots" source="No snapshots yet. Take Snapshot records this process, editor and Play in Editor included.">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.RemoteFailedStatus" source="Remote snapshot failed: {reason}">
+			<origins>
+				<item>Source/Editor/Panels/Memory/Model/MemoryViewModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.ShowInContentBrowser" source="Show in Content Browser">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMemory.TotalsLine" source="CPU {cpu}   GPU {gpu}   ({source})">
+			<origins>
+				<item>Source/Editor/Panels/Memory/MemoryPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorMultiplayer.ArrangeWindows"
 		       source="Place the client windows side by side (window size and position per App process) instead of letting them overlap">
 			<origins>
@@ -10437,6 +10537,11 @@
 		<entry key="Material Graph" source="Material Graph" context="EditorCommandText._label">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Memory" source="Memory" context="EditorPanelText._label">
+			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>

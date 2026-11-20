@@ -104,6 +104,8 @@ namespace sw
         [[nodiscard]] ReloadResult reload( const AssetID& assetID );
         /** @brief 지금 사용 중인 메시 수입니다. */
         size_t getCachedCount() const override;
+        /** @brief 쥔 에셋마다 한 줄입니다(`AssetCacheBase::collectMemoryEntries`). */
+        void collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const override;
         /** @brief 캐시와 경고 기록, 물리 셰이프 캐시를 비웁니다. 사용 중인 메시는 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
         void clear() override;
         /** @brief `.mesh` 경로면 `request` 의 로드 작업(곧 메시)을 토큰 겸 로드로 내줍니다. 아니면 빈 토큰입니다. */

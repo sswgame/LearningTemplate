@@ -135,6 +135,8 @@ namespace sw
         bool isCached( string_view assetRelativePath ) const override;
         /** @brief 지금 보관 중인 항목 수입니다. */
         size_t getCachedCount() const override;
+        /** @brief 쥔 에셋마다 한 줄입니다(`AssetCacheBase::collectMemoryEntries`). */
+        void collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const override;
         /** @brief 캐시를 통째로 비웁니다. 다음 `loadPrefab` 이 디스크를 다시 읽습니다. */
         void clear() override;
         /** @brief 프리팹 경로(`kAssetType` 의 접미사)면 `request` 의 로드 작업(곧 프리팹)을 토큰 겸 로드로 내줍니다. 아니면 빈 토큰입니다. */

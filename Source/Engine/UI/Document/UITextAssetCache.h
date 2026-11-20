@@ -70,6 +70,15 @@ namespace sw
         /** @brief 리소스 태그 · 층이 바뀌어 다시 읽습니다(`AssetManager` 의 합성 다시 읽기 — 배포 구성에도 있다). 들고 있지 않으면 false 입니다. */
         bool   reloadComposed( string_view relativePath ) override;
         size_t getCachedCount() const override { return _mapKeyToEntry.size(); }
+        /** @brief 읽어 둔 에셋마다 한 줄입니다. 파싱한 형식을 모르는 칸(`shared_ptr<const void>`)이라 CPU 바이트는 0 이다 — 그 몫은 메모리 태그(UI) 줄에 있다. */
+        void collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const override
+        {
+            for ( const auto& [key, entry] : _mapKeyToEntry )
+            {
+                const auto useCount = entry._asset.use_count(); // 표가 쥔 하나를 뺀다
+                outListEntry.push_back( AssetMemoryEntry{ key, 0, 0, static_cast<uint32>( useCount > 1 ? useCount - 1 : 0 ) } );
+            }
+        }
         /** @brief 읽어 둔 에셋과 메모리 글을 모두 비웁니다. */
         void clear() override;
 

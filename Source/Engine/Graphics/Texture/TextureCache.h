@@ -263,6 +263,8 @@ namespace sw
         bool isCached( string_view relativePath ) const override;
         /** @brief 지금 보관 중인 항목 수입니다. */
         size_t getCachedCount() const override;
+        /** @brief 쥔 에셋마다 한 줄입니다(`AssetCacheBase::collectMemoryEntries`). */
+        void collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const override;
         /** @brief 캐시를 비웁니다(GPU 자원은 이미 해제되어 있어야 합니다). 종료 때만 부르며, 그 뒤 `acquire`, `find` 로 받은 포인터는 모두 무효입니다. */
         void clear() override;
 

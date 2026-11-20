@@ -2456,6 +2456,42 @@
 		<entry key="EditorMaterialGraph.SubgraphStatus"
 		       text="하위 그래프 - 쓰는 그래프 안에서 컴파일됩니다"
 		       sourceHash="cd23dde134a6f226" />
+		<entry key="EditorMemory.AllKinds" text="전부" sourceHash="f993bb199fefbe04" />
+		<entry key="EditorMemory.Capture" text="스냅숏 찍기" sourceHash="710833e9ca691f8e" />
+		<entry key="EditorMemory.CaptureRemote" text="원격 스냅숏 찍기" sourceHash="73d2df739b9b688c" />
+		<entry key="EditorMemory.CaptureRemoteTip"
+		       text="멀티플레이어 > 인스펙터에 붙은 서버에 그 스냅숏을 청합니다(memory.snapshot)"
+		       sourceHash="540367c902868fa9" />
+		<entry key="EditorMemory.CaptureTip"
+		       text="이 프로세스를 지금 기록합니다: 메모리 태그 · 할당 사이트 · 에셋 · GPU 자원 · 오브젝트 타입 · 캐시(에디터에서 플레이 포함)"
+		       sourceHash="99b2a09d9f502238" />
+		<entry key="EditorMemory.ComparePrevious" text="이전과 비교" sourceHash="b914ce39988dcf31" />
+		<entry key="EditorMemory.CompareWithTip"
+		       text="비교할 스냅숏 — 늘어난 줄이 먼저 옵니다"
+		       sourceHash="6ceb906019dbe516" />
+		<entry key="EditorMemory.ExportFailedStatus" text="내보내기 실패: {reason}" sourceHash="d47d3367ea290b86" />
+		<entry key="EditorMemory.ExportSnapshot" text="스냅숏을 CSV 로 내보내기" sourceHash="b5b4124630b34f5f" />
+		<entry key="EditorMemory.ExportTable" text="표를 CSV 로 내보내기" sourceHash="bacb846adb64c6dd" />
+		<entry key="EditorMemory.ExportTip"
+		       text="CSV 파일(UTF-8, Excel 에서 열린다)을 Saved/MemorySnapshots/&lt;시각>/ 아래에 씁니다"
+		       sourceHash="1065453344492362" />
+		<entry key="EditorMemory.ExportedStatus"
+		       text="파일 {fileCount} 개를 {folder} 에 내보냈습니다"
+		       sourceHash="74c94f566e4a89ca" />
+		<entry key="EditorMemory.FilterHint" text="이름으로 거르기" sourceHash="52d81506be796d67" />
+		<entry key="EditorMemory.NoComparison" text="비교 안 함" sourceHash="02e9dd5801086c8f" />
+		<entry key="EditorMemory.NoPolicyStatus"
+		       text="메모리 스냅숏 설정을 읽지 못했습니다: {reason}"
+		       sourceHash="f2c3b0a517202c2b" />
+		<entry key="EditorMemory.NoRows" text="거르기에 맞는 줄이 없습니다" sourceHash="238433a60e273206" />
+		<entry key="EditorMemory.NoSnapshots"
+		       text="아직 스냅숏이 없습니다. 스냅숏 찍기는 에디터와 에디터에서 플레이를 포함해 이 프로세스를 기록합니다."
+		       sourceHash="c264062427d02d41" />
+		<entry key="EditorMemory.RemoteFailedStatus" text="원격 스냅숏 실패: {reason}" sourceHash="69ac4059e2a39cfc" />
+		<entry key="EditorMemory.ShowInContentBrowser"
+		       text="콘텐츠 브라우저에서 보기"
+		       sourceHash="34310c5248569ca6" />
+		<entry key="EditorMemory.TotalsLine" text="CPU {cpu}   GPU {gpu}   ({source})" sourceHash="5ca18f4ce9bd64b7" />
 		<entry key="EditorMultiplayer.ArrangeWindows"
 		       text="클라이언트 창을 겹치지 않게 나란히 놓습니다(App 프로세스마다 창 크기와 위치를 줍니다)"
 		       sourceHash="a5d0ffde56d21ff0" />
@@ -3819,6 +3855,7 @@
 		<entry key="Map Check" text="맵 검사" sourceHash="56e1a696a129d005" />
 		<entry key="Material" text="머티리얼" sourceHash="b19c9290038389c0" />
 		<entry key="Material Graph" text="머티리얼 그래프" sourceHash="1bb691816e07ba24" />
+		<entry key="Memory" text="메모리" sourceHash="16e1bead7b9c95ce" />
 		<entry key="Mesh Modifiers" text="메시 모디파이어" sourceHash="bc2dcfa204061802" />
 		<entry key="Mesh Preview" text="메시 미리보기" sourceHash="9b1369a9bb3788b0" />
 		<entry key="Modules" text="모듈" sourceHash="3d45160c8fa41e0a" />

@@ -130,6 +130,8 @@ namespace sw
         [[nodiscard]] static const WeakInternVersion<const AssetType>* findVersion( const shared_ptr<const AssetType>& pAsset );
         /** @brief 지금 누가 쥔 에셋 수입니다. */
         size_t getCachedCount() const override;
+        /** @brief 쥔 에셋마다 경로 · 객체 크기 · 쥔 쪽 수 한 줄입니다(`AssetCacheBase::collectMemoryEntries`). */
+        void collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const override;
         /** @brief 표를 비웁니다. 쥔 쪽의 에셋은 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
         void clear() override;
 

@@ -315,8 +315,7 @@ namespace sw
         if ( record._texture == nullptr )
             return 0;
         const RHITextureHandle handle = _gpuTextures.insert( std::move( record ) );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryTracker::classifyTexture( desc ),
-                                             RHIMemoryTracker::computeTextureLogicalBytes( desc ) );
+        getMemoryTracker().recordTexture( handle, desc, RHIMemoryTracker::computeTextureLogicalBytes( desc ) );
         return handle;
     }
 

@@ -175,6 +175,14 @@ namespace sw
     }
 
     template <typename AssetType>
+    void SharedAssetCache<AssetType>::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
+    {
+        // shortcut: 객체 크기(sizeof)만 센다 — 에셋 안 컨테이너는 메모리 태그 표가 종류별로 센다. 종류가 크기 질의를 가지면 그때 그것을 부른다.
+        _pTable->forEachLive( [&outListEntry]( const string& key, const AssetType& /*asset*/, uint32 referenceCount )
+        { outListEntry.push_back( AssetMemoryEntry{ key, sizeof( AssetType ), 0, referenceCount } ); } );
+    }
+
+    template <typename AssetType>
     void SharedAssetCache<AssetType>::clear()
     {
         _pTable->clear(); // 자기 표를 비운다 — 매니저 종료 때도 불려 서비스 칸을 거치지 않는다

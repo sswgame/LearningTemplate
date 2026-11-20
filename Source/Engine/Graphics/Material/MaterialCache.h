@@ -103,6 +103,8 @@ namespace sw
         void initializePending( IRHIDevice* pDevice, uint32 maxCount = 0xFFFFFFFFu );
         /** @brief 지금 보관 중인 항목 수입니다. */
         size_t getCachedCount() const override;
+        /** @brief 쥔 에셋마다 한 줄입니다(`AssetCacheBase::collectMemoryEntries`). */
+        void collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const override;
         /**
          * @brief 그 경로를 지금 캐시가 보관하고 있는지 반환합니다.
          * @details 참조가 0 이 되면 항목이 지워지므로, 이것이 곧 "아직 참조가 남아 있는가" 입니다.

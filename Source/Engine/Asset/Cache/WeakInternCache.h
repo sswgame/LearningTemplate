@@ -10,6 +10,7 @@
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Asset/Cache/WeakInternTable.h"
@@ -62,6 +63,18 @@ namespace sw
         }
         /** @brief 지금 누가 쥔 값의 수입니다. */
         size_t getCachedCount() const override { return _table.countLive(); }
+        /** @brief 쥔 값마다 `<종류>#<번호>`(키가 경로가 아니다) · 객체 크기 · 쥔 쪽 수 한 줄입니다. */
+        void collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const override
+        {
+            uint32 index{ 0 };
+            _table.forEachLive( [this, &outListEntry, &index]( const KeyType& /*key*/, const ValueType& /*value*/, uint32 referenceCount )
+            {
+                string path{ _pKindName };
+                path += '#';
+                StringUtil::appendNumber( path, index++ );
+                outListEntry.push_back( AssetMemoryEntry{ std::move( path ), sizeof( ValueType ), 0, referenceCount } );
+            } );
+        }
         /** @brief 표를 비웁니다. 쥔 쪽의 값은 그대로이고, 다음 요청은 새로 짓습니다. */
         void clear() override
         {
