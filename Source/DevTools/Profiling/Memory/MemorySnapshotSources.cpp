@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -15,12 +16,10 @@
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Presentation/IEngineRenderDriver.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -282,13 +281,6 @@ namespace sw
                 sources._listAssetCache.push_back( pCache );
             }
         }
-        // 장치는 렌더 이음매로 읽는다 — 렌더러 헤더는 전용 서버가 짓지 않는다(서버에는 이음매가 없어 GPU 표가 빈다).
-        const IEngineRenderDriver* const pRenderDriver = engine::findSubsystem<IEngineRenderDriver>();
-        if ( const IRHIDevice* pDevice = pRenderDriver != nullptr ? pRenderDriver->findDevice() : nullptr; pDevice != nullptr )
-        {
-            sources._pGPUTracker    = &pDevice->getMemoryTracker();
-            sources._gpuBackendName = pDevice->getBackendName();
-        }
         if ( const SceneManager* pScenes = engine::findSubsystem<SceneManager>(); pScenes != nullptr )
         {
             vector<const Scene*> listScene;
@@ -299,6 +291,37 @@ namespace sw
                     sources._listObjectManager.push_back( pScene->getObjectManager() );
             }
         }
+        MemorySnapshotSourceRegistration::fillAll( sources ); // 구성마다 다른 원천(클라이언트의 GPU 자원)은 그 구성의 파일이 등록한다
         return sources;
+    }
+
+    namespace
+    {
+        struct MemorySnapshotSourceInternal
+        {
+            /** @brief 등록된 원천 채우기(등록 순서). DevTools 이미지의 함수 정적이다. */
+            static SW_DEFINE_REGISTRATION_LIST( getRegistrations, const MemorySnapshotSourceRegistration, "MemorySnapshotSourceRegistry", RegistrationOrder::Insertion, true )
+        };
+    } // namespace
+
+    bool MemorySnapshotSourceRegistration::registerSource( const MemorySnapshotSourceRegistration* pRegistration )
+    {
+        if ( pRegistration == nullptr || pRegistration->_pName == nullptr || pRegistration->_pFunction == nullptr )
+            return false;
+        return MemorySnapshotSourceInternal::getRegistrations().addLogged( pRegistration, "Memory snapshot source", pRegistration->_pName ) == RegistrationResult::Added;
+    }
+
+    void MemorySnapshotSourceRegistration::unregisterSource( const MemorySnapshotSourceRegistration* pRegistration )
+    {
+        (void)MemorySnapshotSourceInternal::getRegistrations().remove( pRegistration ); // 등록되어 있지 않은 항목을 빼는 것은 할 일이 없다
+    }
+
+    void MemorySnapshotSourceRegistration::fillAll( MemorySnapshotSources& inoutSources )
+    {
+        const RegistrationList<const MemorySnapshotSourceRegistration>& registrations = MemorySnapshotSourceInternal::getRegistrations();
+        for ( uint32 index = 0; index < registrations.getCount(); ++index )
+        {
+            registrations.getAt( index )->_pFunction( inoutSources );
+        }
     }
 } // namespace sw
