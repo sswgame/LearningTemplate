@@ -102,7 +102,7 @@ namespace sw
             static const PlayerProgressComponent* findDebugTarget( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const pManager  = GameplayDebugTarget::findActiveObjectManager();
-                const PlayerProgressComponent* pProgress = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<PlayerProgressComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
+                const PlayerProgressComponent* pProgress = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<PlayerProgressComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 if ( pProgress == nullptr || pProgress->isInitialized() == false )
                 {
                     writer.addLine( "target", "none (no open player progress in the active scene)" );

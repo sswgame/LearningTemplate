@@ -76,7 +76,7 @@ namespace sw
         bool                   hasGraph() const { return _listGraph.empty() == false; }
         const vector<float32>& getGraph() const { return _listGraph; }
         float32                getGraphMax() const { return _graphMax; }
-        /** @brief 씬 전체를 도는 섹션이 쓰는 순회 열쇠입니다(`GameplayDebugTarget::findTargetComponent`) — HUD 틀이 넘긴 것이다. */
+        /** @brief 씬 전체를 도는 섹션이 쓰는 순회 열쇠입니다(`GameplayDebugTarget::findTargetOrLowestIDComponent`) — HUD 틀이 넘긴 것이다. */
         SceneIterationKey getSceneIterationKey() const { return _sceneIterationKey; }
 
     private:

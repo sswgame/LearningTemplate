@@ -27,7 +27,7 @@ namespace sw
             static void writeAbility( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
-                const AbilityComponent* const  pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<AbilityComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
+                const AbilityComponent* const  pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<AbilityComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 if ( pAbility == nullptr )
                 {
                     writer.addLine( "target", "none (no ability component in the active scene)" );
@@ -84,7 +84,7 @@ namespace sw
                 if ( listArgument.size() != 1 )
                     return false;
                 const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
-                AbilityComponent* const        pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<AbilityComponent>( key, *pManager ) : nullptr;
+                AbilityComponent* const        pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<AbilityComponent>( key, *pManager ) : nullptr;
                 if ( pAbility == nullptr )
                 {
                     outReply = "ability.apply: no ability component in the active scene";
