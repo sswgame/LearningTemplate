@@ -58,6 +58,14 @@ class ToolPolicyTest(unittest.TestCase):
         print(f"\n[tool-policy] 훅 호출 p95 {p95:.0f} ms (예산 {budget} ms){' - 경고: 예산을 넘었다' if p95 > budget else ''}")
         self.assertGreater(p95, 0.0)
 
+    def test_tool_rules_anchor_on_the_command_position(self):
+        for command in ("py -3 -m Scripts linux-scenarios all", "cd x && py -3 Scripts/dev/linux_scenarios.py chain a", "python3 Scripts/dev/linux_scenarios.py build"):
+            self.assertIn("linux-verify-before-linux", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
+        for command in ("git -C D:/P push origin abc:main", "cd x && bash Scripts/dev/preflight.sh --no-linux"):
+            self.assertIn("preflight-before-push", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
+        for command in ("git grep -n run_in_wsl Scripts/dev/linux_scenarios.py", "git show HEAD:Scripts/dev/preflight.sh", "grep -n push Scripts/dev/preflight.sh"):
+            self.assertIsNone(self.pre("Bash", {"command": command}))
+
     def test_polling_loop_is_refused(self):
         for command in ('until grep -q "x" f; do sleep 5; done; cat f', "until ! tasklist | grep -q git; do :; done", "while true; do sleep 1; done"):
             self.assertIn("no-polling-wait", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])

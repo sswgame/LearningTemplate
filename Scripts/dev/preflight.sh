@@ -4,7 +4,7 @@
 # 시작에 작업 트리가 깨끗해야 하고(검증한 것이 커밋 그 자체), 끝에 HEAD 가 그대로이고 추적 파일이 바뀌지 않았어야 한다. Windows 가 모두 통과하면 build/verify.ok 에 sha 를 적고
 # 끝 줄 WINDOWS_OK=<sha> 를 찍는다 — git pre-push 훅(Scripts/dev/verify_record.py)이 main 으로 가는 sha 가 그것인지 본다. Linux 까지 돌면 VERIFIED=<sha> 가 마지막 줄이다.
 # --show 는 게임 · 에디터 테스트 창을 화면에 띄우고 테스트를 하나씩 돌린다(사람이 지켜볼 때). --dry-run 은 돌릴 명령만 차례대로 찍는다(스크립트를 고친 뒤 확인).
-# --self-check 는 판정 요약(print_results)의 자체 검사만 하고 끝난다(빌드 · 테스트 없이). 끝 줄 SELF_CHECK_OK.
+# --self-check 는 판정 요약(print_results)의 자체 검사만 하고 끝난다(빌드 · 테스트 없이). 끝 줄 SELF_CHECK_OK. --help 는 이 머리말을 찍는다(단계 목록의 정본 — 스킬은 여기를 가리킨다).
 # --from build|changed|cpu|gpu-release|linux 는 앞 단계를 건너뛴다(linux 는 Windows 가 이미 통과했고 그 뒤 고친 것이 Linux 쪽 스크립트 · 환경뿐일 때). 앞 단계가 통과한 뒤
 # 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 # 단계 기록: 단계가 통과하면 그 sha 를 build/verify.stages.json 에 적고(Scripts/dev/verify_record.py), 다음 실행에서 그 sha 뒤 바뀐 파일이 모두 입력이 아닌 경로
@@ -24,6 +24,8 @@
 #               컴파일해 그 빌드 폴더의 셰이더 DDC 를 네 백엔드 모두 채운다(`App --cook-shaders -shader-request-dir=`). 셰이더 · 공용 hlsli 를 고친 묶음도 GPU 단계가 캐시 미스 컴파일을
 #               떠안지 않는다(2026-11-19: dx11 empty 체인 19 분 중 FXC 559 개 — 캐시가 차면 74 초). 기록이 없으면(첫 실행) 할 일이 없다고 찍고 끝난다. 전체 굽기는 5 만 개를 넘어 넣지 않는다.
 #   gpu-release Release ctest 전체 — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드). 체인이 다음 묶음의 shader warm 이 읽을 요청 기록을 남긴다.
+#               체인(부하 측정 제외)은 그래픽 API 검증 층(-rhi-validation) · 교착 탐지(-deadlock-detection) · bindless 죽은 번호 검사를 켠다 — 검증 층 오류 · 경고는 로그 게이트에서 진다.
+#   ctest 는 격리 표(Config/Rules/Test/Quarantine.json)를 -E 로 빼고 돈다(만료가 지났으면 처음에 진다). 슬롯 수는 Config/Dev/Verify.json 의 _ctestJobs.
 #   (없앤 gpu-debug: Debug 로 같은 체인을 한 번 더 돌던 단계 14.6 분 — 단언 · 검사가 SW_DO_CHECKS 로 Release 에도 들어 Release 체인이 지난다. Core/Foundation/Macros.h 4-1)
 # 예전(2026-11-13 측정 53 분)은 단계가 모두 차례였고, 같은 체인을 두 구성에서 네 백엔드로 다 돌았고, 셰이더 다시 굽기가 두 구성에서 혼자(RUN_SERIAL) 돌았고, Debug 단위를 ctest 밖에서 한 번 더 돌았다.
 cd "$(dirname "$0")/../.." || exit 2
@@ -46,9 +48,10 @@ while true; do
     --no-linux) NO_LINUX=1; shift ;;
     --record) RECORD=(--record); shift ;;
     --self-check) SELF_CHECK=1; shift ;;
+    --help) sed -n '2,/^cd /p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'; exit 0 ;;
     "") break ;;
     # 인자 순서와 무관하게 모두 여기서 읽는다 — 예전에는 모르는 인자에서 멈춰 `--no-linux --from gpu-release` 의 --from 을 버리고 처음부터 돌았다.
-    *) echo "모르는 인자: $1 (--from · --show · --dry-run · --no-linux · --record · --self-check)"; exit 2 ;;
+    *) echo "모르는 인자: $1 (--from · --show · --dry-run · --no-linux · --record · --self-check · --help)"; exit 2 ;;
   esac
 done
 
@@ -113,7 +116,7 @@ begin_stage() { CURRENT_STAGE=$1; STAGE_STARTED=$SECONDS; }
 record_stage_time() {   # <이름> <passed|failed|skipped>
   [ $DRY -eq 1 ] && return 0
   [ "$BASHPID" = "$$" ] || return 0
-  py -3 Scripts/dev/test_history.py stage "$1" --commit "$SHA" --result "$2" --seconds $((SECONDS - STAGE_STARTED)) || echo "단계 시간을 쌓지 못했다($1)"
+  py -3 -m Scripts test-history stage "$1" --commit "$SHA" --result "$2" --seconds $((SECONDS - STAGE_STARTED)) || echo "단계 시간을 쌓지 못했다($1)"
 }
 
 windows_failed() {
@@ -152,7 +155,7 @@ build_preset() {
 }
 
 # 격리 표(Config/Rules/Test/Quarantine.json)의 테스트를 ctest -E 로 뺀다. 만료가 지났거나 칸이 빠진 표는 검증 실패다(격리가 말없이 늘어지지 않게).
-QUARANTINE_EXCLUDE=$(py -3 Scripts/dev/test_history.py quarantine --ctest-exclude) || { echo "$QUARANTINE_EXCLUDE"; windows_failed "quarantine table"; }
+QUARANTINE_EXCLUDE=$(py -3 -m Scripts test-history quarantine --ctest-exclude) || { echo "$QUARANTINE_EXCLUDE"; windows_failed "quarantine table"; }
 QUARANTINE_EXCLUDE=${QUARANTINE_EXCLUDE//$'\r'/}   # Windows 파이썬의 print 는 CRLF 를 쓴다 — 정규식 끝에 CR 이 붙으면 아무것도 빼지 못한다
 [ -z "$QUARANTINE_EXCLUDE" ] || echo "격리로 뺀다: $QUARANTINE_EXCLUDE"
 
@@ -171,7 +174,7 @@ run_ctest() {
   # 진 실행의 판정 요약(끝 줄 · 백엔드로 접은 진 단계) — 단계 끝마다 찍는다. 이번 실행이 쓴 로그만 본다(앞 실행이 남긴 로그를 섞지 않게 ctest 로그보다 새 것).
   [ $DRY -eq 1 ] || [ $RC -eq 0 ] || print_results build/$P/Testing/Logs/verify.ctest.$NAME.log $(find build/$P/Testing/Logs -maxdepth 1 -name "Scenario.*.log" -newer build/$P/Testing/Logs/verify.ctest.$NAME.log.start 2>/dev/null)
   # 표지(.log.start) 앞에 시작한 보고는 손 실행 · 다시 돌리기가 남긴 것이라 sha 없이 manual 로 들어간다(흔들림 판정은 verify 만 본다).
-  run "" py -3 Scripts/dev/test_history.py ingest build/$P/Bin/Saved/Automation --commit "$SHA" --kind verify --since build/$P/Testing/Logs/verify.ctest.$NAME.log.start ||
+  run "" py -3 -m Scripts test-history ingest build/$P/Bin/Saved/Automation --commit "$SHA" --kind verify --since build/$P/Testing/Logs/verify.ctest.$NAME.log.start ||
     { echo "$P test history ingest 실패"; return 1; }
   return $RC
 }
@@ -209,7 +212,7 @@ job_lint() {
 # 새로 들어온 · 바뀐 테스트 · 시나리오만 먼저(DesignBacklog D4). 표와 끝 줄을 찍고, 지면 뒤 단계를 시작하지 않는다 — 끝 줄은 CHANGED_FAILED 다.
 run_changed() {
   echo "== changed $(date +%T)"
-  run build/verify.changed.log py -3 Scripts/dev/test_history.py changed --preset Ninja-Release
+  run build/verify.changed.log py -3 -m Scripts test-history changed --preset Ninja-Release
   local RC=$?
   [ $DRY -eq 1 ] || grep -v "^\[Changed\] run " build/verify.changed.log | tr -d '\r'
   [ $RC -eq 0 ] && return 0
@@ -295,7 +298,7 @@ job_shader_warm() {
 # 단계 기록(verify_record.py) — 건너뛸 단계면 기록을 이 sha 로 옮기고 1 을, 돌 단계면 0 을 돌려준다. --dry-run 도 판정은 찍는다(기록은 남기지 않는다).
 should_run_stage() {   # <단계 번호> <이름>
   [ $STAGE -le "$1" ] || return 1
-  if py -3 Scripts/dev/verify_record.py skip "$2" "$SHA"; then
+  if py -3 -m Scripts verify-record skip "$2" "$SHA"; then
     STAGE_STARTED=$SECONDS
     stage_passed "$2" skipped
     return 1
@@ -305,7 +308,7 @@ should_run_stage() {   # <단계 번호> <이름>
 stage_passed() {   # <이름> [skipped]
   record_stage_time "$1" "${2:-passed}"
   CURRENT_STAGE=""
-  [ $DRY -eq 1 ] || py -3 Scripts/dev/verify_record.py pass "$1" "$SHA" || windows_failed "$1 통과 기록"
+  [ $DRY -eq 1 ] || py -3 -m Scripts verify-record pass "$1" "$SHA" || windows_failed "$1 통과 기록"
 }
 
 # Windows 끝 검사 — HEAD 가 시작 때 그대로이고 트리가 깨끗한가.
@@ -372,7 +375,7 @@ fi
 
 # 흔들림 판정 — 최근 검증 커밋에서 같은 커밋에 통과 · 실패가 함께 있는 (테스트, 백엔드)가 격리 표 밖에서 문턱(Verify.json)을 넘으면 진다. 끝 줄 FLAKY=.
 echo "== flaky $(date +%T)"
-run build/verify.flaky.log py -3 Scripts/dev/test_history.py flaky
+run build/verify.flaky.log py -3 -m Scripts test-history flaky
 FLAKY_RC=$?
 [ $DRY -eq 1 ] || tail -n 20 build/verify.flaky.log
 [ $FLAKY_RC -eq 0 ] || windows_failed "흔들림이 문턱을 넘었다 - build/verify.flaky.log"
@@ -381,7 +384,7 @@ check_tree_at_end
 if [ $DRY -eq 1 ]; then
   echo "[dry] 통과 기록(build/verify.ok)과 WINDOWS_OK 줄은 실제 실행만 남긴다"
 else
-  py -3 Scripts/dev/verify_record.py ok "$SHA" || windows_failed "build/verify.ok 쓰기"
+  py -3 -m Scripts verify-record ok "$SHA" || windows_failed "build/verify.ok 쓰기"
   echo "WINDOWS_OK=$SHA (시작 단계 $FROM)"
 fi
 if [ $NO_LINUX -eq 1 ]; then
@@ -394,7 +397,7 @@ if [ $RUN_LINUX -eq 0 ]; then
 fi
 echo "== linux 시작 $(date +%T)"
 begin_stage linux
-PYTHONUTF8=1 run build/verify.linux.log py -3 Scripts/dev/linux_scenarios.py all "${RECORD[@]}"
+PYTHONUTF8=1 run build/verify.linux.log py -3 -m Scripts linux-scenarios all "${RECORD[@]}"
 RC=$?
 [ $DRY -eq 1 ] || tail -n 40 build/verify.linux.log
 # 새니타이저(ASan + UBSan, Linux-Debug-ASan 단위 테스트) — 묶음마다 한 번(linux-verify 스킬). 체인과 CPU 를 다투지 않게 all 뒤에 차례로 돌고, 지면 끝 줄에 적는다(push 는 WINDOWS_OK 로 이미 정해졌다).
@@ -404,7 +407,7 @@ case " ${RECORD[*]} " in
   *" --record "*) echo "== sanitize 건너뜀(--record — goldens 로 옮긴 뒤 linux_scenarios.py sanitize 를 따로 돌린다)"; SAN_RC=skip ;;
   *)
     echo "== sanitize address $(date +%T)"
-    PYTHONUTF8=1 run build/verify.sanitize.log py -3 Scripts/dev/linux_scenarios.py sanitize address
+    PYTHONUTF8=1 run build/verify.sanitize.log py -3 -m Scripts linux-scenarios sanitize address
     SAN_RC=$?
     [ $DRY -eq 1 ] || tail -n 20 build/verify.sanitize.log
     ;;
