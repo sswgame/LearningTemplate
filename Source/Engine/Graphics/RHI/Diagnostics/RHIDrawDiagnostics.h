@@ -47,6 +47,12 @@ namespace sw
         void reportRenderPassInterrupted( const utf8* pOperation ) const;
         /** @brief 기록 경로가 이번 프레임에 이미 쓴 상수 버퍼를 다시 썼음을 알립니다(앞 드로우도 마지막 값을 읽는다 — 드로우마다 다른 값이면 버퍼를 나눈다, `PassConstantRing`). */
         void reportConstantBufferRewrite( RHIBufferHandle handle ) const;
+        /**
+         * @brief 텍스처를 받는 호출(@p pOperation — 렌더 패스 컬러 타깃 · 전이 · 블릿)이 핸들 0 을 받아 그 일을 버렸음을 알립니다(`IRHICommandContext` 가 판정한다).
+         * @details 0 은 무효 핸들이다 — 백버퍼는 `kRHIBackBufferTexture` 로 따로 적는다. 0 이 오는 길은 만들지 못한 첨부 · 선언하지 않은 그래프 접근 같은 부르는 쪽의 결함이라
+         *          부른 자리를 함께 남긴다. 예전에는 같은 0 이 화면 그리기로 읽혔다.
+         */
+        void reportNullTexture( const utf8* pOperation ) const;
         /** @brief 인덱스 드로우에 인덱스 버퍼를 걸지 않아 그 드로우를 버렸음을 알립니다(네 백엔드가 같다 — 앞 드로우의 인덱스 버퍼로 그리지 않는다). */
         void reportIndexBufferUnbound() const;
         /** @brief 인덱스 드로우에 건 인덱스 버퍼가 해제돼 핸들로 찾을 수 없어 그 드로우를 버렸음을 알립니다. */

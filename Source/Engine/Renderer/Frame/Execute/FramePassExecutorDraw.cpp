@@ -108,11 +108,11 @@ namespace sw
                 beginInfo._width  = target._width;
                 beginInfo._height = target._height;
             }
-            // 핸들 0은 백버퍼다. 없는 첨부를 그대로 열면 패스가 화면에 그린다. 열지 않고 알린다(패스 경로라 한 번만).
+            // 핸들 0 은 무효다(RHI 가 패스를 열지 않는다). 어느 첨부가 없는지 여기서 이름으로 알리고 패스를 건너뛴다(패스 경로라 한 번만).
             if ( beginInfo._arrColorTarget[colorTargetIndex] == 0 )
             {
                 if ( _bMissingColorTargetLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
-                    SW_LOG_ERROR_ID( "FramePassExecutor.ColorTargetDoesNot", "Color target '%#' does not exist this frame - skipping the pass (handle 0 of a missing attachment is the back buffer, so opening it as is would draw to the screen). "
+                    SW_LOG_ERROR_ID( "FramePassExecutor.ColorTargetDoesNot", "Color target '%#' does not exist this frame - skipping the pass (a missing attachment has handle 0, which is invalid). "
                                                                              "Check _listOutput and _listAttachment of the pipeline.",
                                      pColorNames[colorTargetIndex].c_str() );
                 return false;
@@ -383,7 +383,7 @@ namespace sw
     {
         // 회전(Android)과 HDR 출력(데스크톱)은 함께 오지 않는다 — HDR 은 SDR 만 내는 Android 에 없다(RHICapabilities::_displayOutputSupport).
         const RHITextureHandle rotationTarget = _screenRotation.getScreenTarget();
-        return rotationTarget != 0 ? rotationTarget : _displayEncode.getUITarget();
+        return rotationTarget != kRHIBackBufferTexture || _displayEncode.isActive() == false ? rotationTarget : _displayEncode.getUITarget();
     }
 
     FramePassExecutor::PresentTarget FramePassExecutor::resolvePresentTarget( const bool bSceneLayer ) const
@@ -406,7 +406,7 @@ namespace sw
         const bool bCaptureFromOutput = bOwnOutput == false && _state._outputRenderTarget != 0 && _capture.isPresentActive();
 
         PresentTarget target{};
-        // 주 출력이 화면이면 화면 대상이다 — 회전한 휴대 기기 화면이면 논리 크기 대기 텍스처(끝에 FrameScreenRotation 이 스왑체인으로 돌려 옮긴다), 아니면 0(스왑체인).
+        // 주 출력이 화면이면 화면 대상이다 — 회전한 휴대 기기 화면이면 논리 크기 대기 텍스처(끝에 FrameScreenRotation 이 스왑체인으로 돌려 옮긴다), 아니면 `kRHIBackBufferTexture`(스왑체인).
         // HDR 출력이면 장면(Present)은 장면 출력 RT, 나머지(Canvas)는 UI RT 다 — 끝에 FrameDisplayEncode 가 합성 · 인코딩해 스왑체인으로 옮긴다.
         const RHITextureHandle sceneTarget = bSceneLayer ? _displayEncode.getSceneTarget() : RHITextureHandle{ 0 };
         const RHITextureHandle mainOutput  = _state._outputRenderTarget != 0 ? _state._outputRenderTarget : sceneTarget != 0 ? sceneTarget
@@ -416,7 +416,7 @@ namespace sw
         target._width                      = bOwnOutput ? activeView._outputWidth : _state._outputWidth;
         target._height                     = bOwnOutput ? activeView._outputHeight : _state._outputHeight;
         // 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과)이고, 텍스처는 그 텍스처가 기록한 포맷이다.
-        target._format             = ( target._texture == 0 ) ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( target._texture );
+        target._format             = ( target._texture == kRHIBackBufferTexture ) ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( target._texture );
         target._bOwnOutput         = bOwnOutput ? SW_TRUE : SW_FALSE;
         target._bCapture           = bCapture ? SW_TRUE : SW_FALSE;
         target._bCaptureToBack     = bCaptureToBack ? SW_TRUE : SW_FALSE;

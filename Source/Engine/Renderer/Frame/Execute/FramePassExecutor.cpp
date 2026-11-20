@@ -688,7 +688,7 @@ namespace sw
     float4 FramePassExecutor::getTargetClearColor( const hashed_string& attachmentName ) const
     {
         // 첨부의 클리어 색은 파이프라인 XML 의 선언 하나가 원본이다(풀이 할당할 때 선언 값을 든다). 패스마다 코드가 따로 적던
-        // 기본값(뎁스 1, 노멀 0.5 · 0.5 · 1, SSAO 흰색)은 선언과 갈라질 수 있어 지웠다. 풀에 없는 이름은 백버퍼(핸들 0)이고,
+        // 기본값(뎁스 1, 노멀 0.5 · 0.5 · 1, SSAO 흰색)은 선언과 갈라질 수 있어 지웠다. 풀에 없는 이름은 백버퍼(`kRHIBackBufferTexture`)이고,
         // 백버퍼의 클리어 색은 렌더러의 클리어 색(SceneColor 선언에서 온다) 하나다.
         const TransientAttachmentPool::Attachment attachment = activePool().find( attachmentName );
         return attachment._texture != 0 ? attachment._ops._clearColor : _state._clearColor;
@@ -1157,10 +1157,10 @@ namespace sw
             const bool bShaderRead      = barrier._access == RenderGraphAccess::ShaderRead || barrier._access == RenderGraphAccess::DepthRead;
             if ( bAttachmentWrite )
             {
-                // 스왑체인은 전용 경로가 있다(핸들 0). 이름으로는 트랜지언트에서 찾을 수 없다.
+                // 스왑체인은 전용 핸들(`kRHIBackBufferTexture`)이다. 이름으로는 트랜지언트에서 찾을 수 없다.
                 if ( barrier._resource == attachmentNames()._swapchain )
                 {
-                    listTransition.push_back( RHITextureTransition{ 0, RHITextureState::RenderTarget } );
+                    listTransition.push_back( RHITextureTransition{ kRHIBackBufferTexture, RHITextureState::RenderTarget } );
                     continue;
                 }
                 const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource );

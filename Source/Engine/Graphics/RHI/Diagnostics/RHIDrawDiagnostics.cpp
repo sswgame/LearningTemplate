@@ -68,6 +68,18 @@ namespace sw
                          getBackendName(), pOperation, CallStackCapture::symbolize( stack ).c_str() );
     }
 
+    void RHIDrawDiagnostics::reportNullTexture( const utf8* pOperation ) const
+    {
+        const uint32 count = countReport();
+        if ( count >= kMaxReportedDraw )
+            return;
+        // 부른 자리를 함께 남긴다 — 0 을 만든 쪽(없는 첨부 · 선언하지 않은 접근)이 곧 그 호출자다.
+        CallStack stack{};
+        CallStackCapture::capture( stack, 2 );
+        SW_LOG_ERROR_ID( "RHI.NullTextureHandle", "%# %#: texture handle 0 is invalid - the call was dropped. The back buffer is kRHIBackBufferTexture; 0 comes from a missing attachment or an undeclared graph access\n%#",
+                         getBackendName(), pOperation, CallStackCapture::symbolize( stack ).c_str() );
+    }
+
     void RHIDrawDiagnostics::reportConstantBufferRewrite( RHIBufferHandle handle ) const
     {
         const uint32 count = countReport();

@@ -2,8 +2,11 @@
 
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 
 namespace sw
 {
@@ -13,9 +16,34 @@ namespace sw
     {
     }
 
+    namespace
+    {
+        /** @brief 이 패스가 거는 컬러 타깃 중 핸들 0 이 있으면 true 입니다. 컬러 수 0 에 컬러를 걸면 0 번 하나를 건다(백엔드 다섯이 같은 규칙). */
+        bool hasNullColorTarget( const RHIRenderPassBeginInfo& beginInfo )
+        {
+            if ( beginInfo._bBindColor == SW_FALSE )
+                return false;
+            const uint32 colorCount = beginInfo._colorTargetCount > 0 ? MathUtil::min( beginInfo._colorTargetCount, kMaxColorAttachments ) : 1u;
+            for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
+            {
+                if ( beginInfo._arrColorTarget[colorIndex] == 0 )
+                    return true;
+            }
+            return false;
+        }
+    } // namespace
+
     void IRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
     {
         endRenderPassBefore( "beginRenderPass" ); // 패스는 겹치지 않는다 — 닫지 않고 새로 열면 알린다
+        // 컬러 타깃 0 은 무효다(백버퍼는 `kRHIBackBufferTexture`) — 열지 않고 알린다. 이 패스의 드로우는 `isDrawAllowed` 가 알리고 버린다.
+        if ( hasNullColorTarget( beginInfo ) )
+        {
+            getContextDevice().getDrawDiagnostics().reportNullTexture( "beginRenderPass" );
+            _bRenderPassOpen         = SW_FALSE;
+            _bRenderPassNoBackBuffer = SW_FALSE;
+            return;
+        }
         const RHIRenderPassBeginResult result = beginRenderPassNative( beginInfo );
         _bRenderPassOpen                      = result == RHIRenderPassBeginResult::Begun;
         _bRenderPassNoBackBuffer              = result == RHIRenderPassBeginResult::NoBackBuffer;
@@ -102,20 +130,34 @@ namespace sw
         dispatchIndirectNative( argumentBuffer, argumentBufferOffset );
     }
 
+    bool IRHICommandContext::isTextureHandleValid( RHITextureHandle texture, const utf8* pOperation ) const
+    {
+        if ( texture != 0 )
+            return true;
+        getContextDevice().getDrawDiagnostics().reportNullTexture( pOperation );
+        return false;
+    }
+
     void IRHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
     {
+        if ( isTextureHandleValid( texture, "prepareTextureForShaderRead" ) == false )
+            return;
         endRenderPassBefore( "prepareTextureForShaderRead" );
         prepareTextureForShaderReadNative( texture );
     }
 
     void IRHICommandContext::prepareTextureForRenderTarget( RHITextureHandle texture )
     {
+        if ( isTextureHandleValid( texture, "prepareTextureForRenderTarget" ) == false )
+            return;
         endRenderPassBefore( "prepareTextureForRenderTarget" );
         prepareTextureForRenderTargetNative( texture );
     }
 
     void IRHICommandContext::prepareTextureForUnorderedAccess( RHITextureHandle texture )
     {
+        if ( isTextureHandleValid( texture, "prepareTextureForUnorderedAccess" ) == false )
+            return;
         endRenderPassBefore( "prepareTextureForUnorderedAccess" );
         prepareTextureForUnorderedAccessNative( texture );
     }
@@ -125,7 +167,18 @@ namespace sw
         if ( pTransition == nullptr || count == 0 )
             return;
         endRenderPassBefore( "transitionTextures" );
-        transitionTexturesNative( pTransition, count );
+        // 핸들 0 원소는 알리고 그 원소만 뺀다 — 앞뒤의 정상 원소는 원래 차례대로 묶음째 낸다(복사 없이 0 사이 구간마다).
+        uint32 runBegin = 0;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            if ( isTextureHandleValid( pTransition[index]._texture, "transitionTextures" ) )
+                continue;
+            if ( index > runBegin )
+                transitionTexturesNative( pTransition + runBegin, index - runBegin );
+            runBegin = index + 1;
+        }
+        if ( count > runBegin )
+            transitionTexturesNative( pTransition + runBegin, count - runBegin );
     }
 
     void IRHICommandContext::transitionTexturesNative( const RHITextureTransition* pTransition, uint32 count )
@@ -150,6 +203,8 @@ namespace sw
 
     void IRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
+        if ( isTextureHandleValid( src, "blitTexture(src)" ) == false || isTextureHandleValid( dst, "blitTexture(dst)" ) == false )
+            return;
         endRenderPassBefore( "blitTexture" );
         blitTextureNative( src, dst );
     }

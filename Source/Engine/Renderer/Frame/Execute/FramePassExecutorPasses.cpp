@@ -201,7 +201,7 @@ namespace sw
 
         // 컬러 타깃은 파이프라인이 선언한 컬러 출력이다(로드 때 해석한 `_listResolvedColorOutput`, 선언 순서). 컬러를 그리는 패스(kDrawsDeclaredColor)는
         // 로드가 선언을 요구하므로 비어 있지 않다. 이름(SceneColor · GBufferAlbedo · TAAColor 등)으로 짐작하지 않는다 — 다른 이름을 쓰는
-        // 파이프라인에서 없는 첨부(핸들 0 은 백버퍼)를 열었다. 뎁스 로드 연산은 바인딩한 뎁스의 클리어 기록으로 정한다.
+        // 파이프라인에서 없는 첨부(핸들 0 — 무효)를 열었다. 뎁스 로드 연산은 바인딩한 뎁스의 클리어 기록으로 정한다.
         const vector<RenderGraphPassDesc::ResolvedAttachment>& declaredColor = passDesc._listResolvedColorOutput;
 
         const RenderPassKindInfo& info = getRenderPassKindInfo( passType );
@@ -1270,7 +1270,7 @@ namespace sw
         {
             // 원본이 없으면 PSO 없이(백엔드 기본 파이프라인으로) 대신 그리지 않는다. 출력 대상은 상태만 렌더 타깃으로 맞춘다.
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.PresentSourceColorNo", "Present source color has no transient (its allocation failed) - the output is not drawn" );
-            if ( dstTarget != 0 ) // 백버퍼(0)는 백엔드가 Present 쪽에서 상태를 맞춘다
+            if ( dstTarget != kRHIBackBufferTexture ) // 백버퍼는 백엔드가 Present 쪽에서 상태를 맞춘다
                 context._pCmd->prepareTextureForRenderTarget( dstTarget );
         }
         if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( passDesc ) )
@@ -1314,7 +1314,7 @@ namespace sw
         // 순서가 계약이다: 사진 캡처(캡처 텍스처에 그리기 · 출력에서 복사)가 끝난 뒤, 화면에 나가는 대상에만 그린다 — 사진 · 골든에 개발 겹치기가 들지 않는다.
         const CanvasDrawList&  list        = _state._canvasFrame.getDevOverlay();
         const bool             bOnScreen   = target._bCapture == SW_FALSE || target._bCaptureToBack == SW_TRUE; // 크기를 덮어쓴 캡처는 화면에 나가지 않는다
-        const RHITextureHandle screen      = getScreenTarget();                                                 // 0 = 스왑체인, 회전한 화면이면 대기 텍스처, HDR 출력이면 UI RT
+        const RHITextureHandle screen      = getScreenTarget();                                                 // `kRHIBackBufferTexture` = 스왑체인, 회전한 화면이면 대기 텍스처, HDR 출력이면 UI RT
         const RHITextureHandle sceneTarget = _displayEncode.getSceneTarget();
         // 호스트 타깃(에디터 게임 뷰)에는 그리지 않는다. HDR 출력의 Present 는 장면 출력 RT 에 그렸어도 화면에 나가는 대상이다(겹치기는 UI RT 에 그린다).
         const bool bBackBuffer  = target._bCaptureToBack == SW_TRUE || target._texture == screen || ( sceneTarget != 0 && target._texture == sceneTarget );

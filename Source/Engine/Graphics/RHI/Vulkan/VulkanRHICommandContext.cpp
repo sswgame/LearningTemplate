@@ -134,7 +134,7 @@ namespace sw
     void VulkanRHICommandContext::blitTextureNative( RHITextureHandle src, RHITextureHandle dst )
     {
         VkCommandBuffer cmd = commandBuffer();
-        if ( cmd == VK_NULL_HANDLE || ( src == 0 && dst == 0 ) )
+        if ( cmd == VK_NULL_HANDLE || ( src == kRHIBackBufferTexture && dst == kRHIBackBufferTexture ) )
             return;
 
         if ( _pState->_bRenderPassActive == SW_TRUE )
@@ -143,7 +143,7 @@ namespace sw
             _pState->_bRenderPassActive = SW_FALSE;
         }
 
-        if ( src == 0 )
+        if ( src == kRHIBackBufferTexture )
         {
             // 백버퍼 → 텍스처. 스왑체인 이미지는 PRESENT_SRC 로 끝나 있다(Present 패스 · 캡처 블릿). 블릿이라 포맷(BGRA ↔ RGBA)을 바꿔 준다.
             const VkImage                         backImage              = _pDevice->_swapChain.getCurrentImage();
@@ -180,7 +180,7 @@ namespace sw
         uint32  dstW     = _pDevice->_swapChain.getExtentWidth();
         uint32  dstH     = _pDevice->_swapChain.getExtentHeight();
 
-        if ( dst == 0 )
+        if ( dst == kRHIBackBufferTexture )
         {
             if ( _pDevice->_swapChain.getCurrentImage() == VK_NULL_HANDLE )
                 return;
@@ -215,7 +215,7 @@ namespace sw
         vkCmdBlitImage( cmd, srcRecord._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                         dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR );
 
-        if ( dst == 0 )
+        if ( dst == kRHIBackBufferTexture )
         {
             _pDevice->transitionImageLayout( cmd, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                              VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
@@ -270,8 +270,8 @@ namespace sw
         for ( uint32 index = 0; index < count; ++index )
         {
             const RHITextureTransition& transition = pTransition[index];
-            // 스왑체인(0)은 렌더패스의 initialLayout 이 담당한다.
-            VulkanRHIDevice::VulkanTextureRecord* const pResolved = transition._texture != 0 ? _pDevice->resolveTexture( transition._texture ) : nullptr;
+            // 스왑체인(`kRHIBackBufferTexture`)은 렌더패스의 initialLayout 이 담당한다.
+            VulkanRHIDevice::VulkanTextureRecord* const pResolved = transition._texture != kRHIBackBufferTexture ? _pDevice->resolveTexture( transition._texture ) : nullptr;
             if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE )
                 continue;
             const bool bDepth = pResolved->_bDepthStencil != SW_FALSE;
@@ -378,8 +378,8 @@ namespace sw
         // MRT · 컬러+깊이 · 깊이 전용은 합성 프레임버퍼를 쓴다. 그 밖에는 단일 RT · 스왑체인 경로를 그대로 쓴다.
         // 주의: 텍스처 하나짜리 프레임버퍼의 렌더 패스는 지우기(CLEAR)로 고정이다 — 지우지 않는 패스(Load · DontCare)는 load op 을 키로 드는
         // 합성 경로로 보낸다. 그러지 않으면 Load 로 연 패스가 앞 패스의 그림을 지운다(Present 가 그린 캡처 위의 Canvas).
-        const bool bSingleTextureKeepsContent = colorCount == 1 && colorHandles[0] != 0 && ( beginInfo._arrLoadOp[0] != RHIRenderPassLoadOp::Clear || beginInfo._arrStoreOp[0] != RHIRenderPassStoreOp::Store );
-        const bool bUseComposite              = ( colorCount > 1 ) || ( colorCount == 1 && colorHandles[0] != 0 && bHasDepth ) ||
+        const bool bSingleTextureKeepsContent = colorCount == 1 && colorHandles[0] != kRHIBackBufferTexture && ( beginInfo._arrLoadOp[0] != RHIRenderPassLoadOp::Clear || beginInfo._arrStoreOp[0] != RHIRenderPassStoreOp::Store );
+        const bool bUseComposite              = ( colorCount > 1 ) || ( colorCount == 1 && colorHandles[0] != kRHIBackBufferTexture && bHasDepth ) ||
                                    ( colorCount == 0 && bHasDepth ) || bSingleTextureKeepsContent;
 
         VkRenderPass  renderPass  = _pDevice->_renderPass;
@@ -452,8 +452,8 @@ namespace sw
         else
         {
             // 단일 RT 경로(스왑체인 또는 텍스처별 오프스크린 프레임버퍼).
-            RHITextureHandle colorTarget = ( colorCount > 0 ) ? colorHandles[0] : 0;
-            if ( colorTarget != 0 )
+            RHITextureHandle colorTarget = ( colorCount > 0 ) ? colorHandles[0] : kRHIBackBufferTexture;
+            if ( colorTarget != kRHIBackBufferTexture )
             {
                 VulkanRHIDevice::VulkanTextureRecord* pTex                      = _pDevice->resolveTexture( colorTarget );
                 const uint32                          mip                       = beginInfo._arrColorTargetMip[0];

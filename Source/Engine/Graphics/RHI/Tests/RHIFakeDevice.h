@@ -257,9 +257,11 @@ namespace sw::test
     class FakeRHICommandContext final : public IRHICommandContext
     {
     public:
-        uint32 _beginNativeCount{ 0 }; /**< `beginRenderPassNative` 횟수 */
-        uint32 _endNativeCount{ 0 };   /**< `endRenderPassNative` 횟수 — 기반이 열린 패스가 있을 때만 부른다 */
-        uint32 _drawNativeCount{ 0 };  /**< 나간 드로우 수(패스가 없어 버린 드로우는 세지 않는다) */
+        uint32                   _beginNativeCount{ 0 }; /**< `beginRenderPassNative` 횟수 */
+        uint32                   _endNativeCount{ 0 };   /**< `endRenderPassNative` 횟수 — 기반이 열린 패스가 있을 때만 부른다 */
+        uint32                   _drawNativeCount{ 0 };  /**< 나간 드로우 수(패스가 없어 버린 드로우는 세지 않는다) */
+        uint32                   _blitNativeCount{ 0 };  /**< 백엔드에 닿은 블릿 수 */
+        vector<RHITextureHandle> _listTransitionTexture; /**< 백엔드에 닿은 텍스처 전이의 핸들(차례대로) */
 
         /** @brief 진단을 낼 디바이스와 함께 만듭니다. */
         explicit FakeRHICommandContext( FakeRHIDevice& device )
@@ -301,10 +303,10 @@ namespace sw::test
         void setComputePipelineStateNative( RHIPipelineStateHandle ) override {}
         void dispatchComputeNative( uint32, uint32, uint32 ) override {}
         void dispatchIndirectNative( RHIBufferHandle, uint32 ) override {}
-        void prepareTextureForShaderReadNative( RHITextureHandle ) override {}
-        void prepareTextureForRenderTargetNative( RHITextureHandle ) override {}
-        void prepareTextureForUnorderedAccessNative( RHITextureHandle ) override {}
-        void blitTextureNative( RHITextureHandle, RHITextureHandle ) override {}
+        void prepareTextureForShaderReadNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void blitTextureNative( RHITextureHandle, RHITextureHandle ) override { ++_blitNativeCount; }
         void transitionBufferNative( RHIBufferHandle, RHIBufferState ) override {}
         void copyBufferToReadbackNative( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
         void copyBufferRegionNative( RHIBufferHandle, uint64, RHIBufferHandle, uint64, uint64 ) override {}

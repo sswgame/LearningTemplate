@@ -119,6 +119,8 @@ namespace sw
         void endRenderPassBefore( const utf8* pOperation );
         /** @brief 드로우를 내도 되는지 봅니다. 패스가 없으면 백버퍼가 없던 패스면 조용히, 아니면 알리고 false 입니다. */
         [[nodiscard]] bool isDrawAllowed() const;
+        /** @brief 텍스처 핸들이 0 이 아니면 true 입니다. 0 이면 @p pOperation 이름으로 알리고 false 입니다(백버퍼는 `kRHIBackBufferTexture`). */
+        [[nodiscard]] bool isTextureHandleValid( RHITextureHandle texture, const utf8* pOperation ) const;
 
     private:
         uint8 _bRenderPassOpen         : 1;

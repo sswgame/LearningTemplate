@@ -635,7 +635,7 @@ namespace sw
         }
 
         // 프레임 수명주기는 경로와 무관하게 항상 여기서, 어떤 기록보다 먼저 한 번 연다. `beginFrame` 은 렌더 타깃을
-        // 바인딩하지 않는다. 백버퍼를 잡는 것은 아래 명시적 백버퍼 렌더 패스(핸들 0) 하나뿐이다. 이 둘은 반드시
+        // 바인딩하지 않는다. 백버퍼를 잡는 것은 아래 명시적 백버퍼 렌더 패스(`kRHIBackBufferTexture`) 하나뿐이다. 이 둘은 반드시
         // 같이 있어야 한다(백버퍼 렌더 패스를 빼면 UI 가 직전 타깃과 상태에 그려지고 DX12 는 DEVICE_HUNG 이 난다).
         // 제출 정책은 매 프레임 갱신한다. 런타임에 gv 를 토글해도 다음 프레임부터 바로 적용된다.
         // 즉시 모드는 제출 횟수가 늘어 성능이 크게 떨어지므로, 모르고 그 상태로 측정하는 일이 없도록
@@ -697,13 +697,13 @@ namespace sw
         // 명시적으로 백버퍼로 되돌린다. 그래프가 백버퍼에 그린 경우도 있으므로 Load 여야 한다.
         // 회전한 휴대 기기 화면이면 화면은 렌더러의 논리 크기 대기 텍스처다(UI 도 그곳에 쓰고 표시 앞에 스왑체인으로 돌려 옮긴다 — `FrameScreenRotation`).
         const bool             bRendererReady = _pFrameRenderer != nullptr && _pFrameRenderer->isReady();
-        const RHITextureHandle screenTarget   = bRendererReady ? _pFrameRenderer->getScreenTarget() : 0;
+        const RHITextureHandle screenTarget   = bRendererReady ? _pFrameRenderer->getScreenTarget() : kRHIBackBufferTexture;
         if ( pFrameStream != nullptr )
         {
             RHIRenderPassBeginInfo backbufferPass{};
             backbufferPass._bBindColor        = SW_TRUE;
             backbufferPass._colorTargetCount  = 1;
-            backbufferPass._arrColorTarget[0] = screenTarget; // 0 = 백버퍼
+            backbufferPass._arrColorTarget[0] = screenTarget; // `kRHIBackBufferTexture` = 백버퍼
             // 오프스크린 경로에서는 그래프가 게임 RT 에만 그렸으므로 백버퍼는 아직 아무도 건드리지 않았다.
             // 그래서 여기서 클리어한다. 백버퍼 경로에서는 그래프가 이미 그렸으므로 보존해야 한다.
             // 그래프가 그리지 않은 프레임도 백버퍼는 받은 그대로(Vulkan 은 레이아웃 UNDEFINED)라 Load 로 열 수 없다 — 클리어한다.

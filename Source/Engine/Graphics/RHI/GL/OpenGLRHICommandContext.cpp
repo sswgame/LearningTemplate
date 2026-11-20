@@ -235,11 +235,11 @@ namespace sw
 
     void OpenGLRHICommandContext::blitTextureNative( RHITextureHandle src, RHITextureHandle dst )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || ( src == 0 && dst == 0 ) )
+        if ( _pDevice->_bInitialized == SW_FALSE || ( src == kRHIBackBufferTexture && dst == kRHIBackBufferTexture ) )
             return;
 
         const ScopedScissorTestOff scissorOff{ _pDevice->_recordingState };
-        if ( src == 0 )
+        if ( src == kRHIBackBufferTexture )
         {
             // 창(기본 프레임버퍼) → 텍스처. 창의 0 행은 **아래**라 원본 y 를 뒤집어 읽는다 — 결과 텍스처의 0 행이 화면 위(D3D 와 같은 뜻)다.
             const OpenGLRHIDevice::OpenGLTextureRecord* pDstRecord                = _pDevice->resolveTexture( dst );
@@ -264,7 +264,7 @@ namespace sw
         GLuint dstFbo{ 0 };
         uint32 dstW = _pDevice->_width;
         uint32 dstH = _pDevice->_height;
-        if ( dst != 0 )
+        if ( dst != kRHIBackBufferTexture )
         {
             const OpenGLRHIDevice::OpenGLTextureRecord* pDstRecord                = _pDevice->resolveTexture( dst );
             const bool                                  bInvalidDestinationRecord = pDstRecord == nullptr || pDstRecord->_fbo == 0 || pDstRecord->_bDepthStencil != SW_FALSE;
@@ -325,8 +325,8 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return RHIRenderPassBeginResult::Failed;
 
-        // 백버퍼(컬러 핸들 0)면 그 창에 컨텍스트를 건다 — 기본 프레임버퍼(fbo 0)는 걸린 창의 것이다.
-        const bool                bBackBufferTarget = beginInfo._bBindColor != SW_FALSE && beginInfo._arrColorTarget[0] == 0;
+        // 백버퍼(컬러 `kRHIBackBufferTexture`)면 그 창에 컨텍스트를 건다 — 기본 프레임버퍼(fbo 0)는 걸린 창의 것이다.
+        const bool                bBackBufferTarget = beginInfo._bBindColor != SW_FALSE && beginInfo._arrColorTarget[0] == kRHIBackBufferTexture;
         const OpenGLRHISwapChain* pSwapChain        = bBackBufferTarget ? _pDevice->useSwapChain( beginInfo._pSwapChain ) : &_pDevice->_swapChain;
         if ( pSwapChain == nullptr )
             return RHIRenderPassBeginResult::Failed;
@@ -343,7 +343,7 @@ namespace sw
         }
 
         bool       bDepthOnly         = ( bBindColor == false );
-        const bool bSingleColorTarget = bDepthOnly == false && colorCount == 1 && colorHandles[0] != 0;
+        const bool bSingleColorTarget = bDepthOnly == false && colorCount == 1 && colorHandles[0] != kRHIBackBufferTexture;
         if ( bSingleColorTarget )
         {
             const OpenGLRHIDevice::OpenGLTextureRecord* pColorRecord = _pDevice->resolveTexture( colorHandles[0] );
@@ -354,7 +354,7 @@ namespace sw
         // 프레임버퍼는 합성 FBO 하나로만 만든다. 만들지 못하면 텍스처별 FBO 로 대신하지 않고 멈춘다 — 대신하면 깊이 · 나머지 컬러 첨부가
         // 조용히 빠진 채 그려진다(다른 백엔드도 패스를 열지 못한 대상에는 그리지 않는다).
         GLuint     fbo{ 0 };
-        const bool bUseColorComposite = bBindColor && bDepthOnly == false && colorCount > 0 && colorHandles[0] != 0;
+        const bool bUseColorComposite = bBindColor && bDepthOnly == false && colorCount > 0 && colorHandles[0] != kRHIBackBufferTexture;
         const bool bDepthAsColor      = bSingleColorTarget && bDepthOnly; // 깊이 텍스처를 컬러 자리로 건 경우 — 그 텍스처를 깊이 첨부로 쓴다
         if ( bUseColorComposite )
             fbo = _pDevice->ensureCompositeFboMrt( colorHandles, beginInfo._arrColorTargetSlice, beginInfo._arrColorTargetMip, colorCount, beginInfo._depthTarget,

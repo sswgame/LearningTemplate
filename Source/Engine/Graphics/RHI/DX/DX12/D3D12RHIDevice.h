@@ -283,7 +283,7 @@ namespace sw
         /** @brief 등록을 해제합니다. */
         void unregisterCommandList( D3D12RHICommandList* pCmdList );
 
-        /** @brief 프레임을 엽니다. 링 슬롯이 풀릴 때까지 기다리고 프레임 스트림 리스트를 엽니다. 백버퍼 클리어는 beginRenderPass(핸들 0)가 합니다. */
+        /** @brief 프레임을 엽니다. 링 슬롯이 풀릴 때까지 기다리고 프레임 스트림 리스트를 엽니다. 백버퍼 클리어는 beginRenderPass(`kRHIBackBufferTexture`)가 합니다. */
         void beginFrameInternal() override;
         void endFrameInternal( bool vsync, bool bPresent ) override;
 
@@ -936,7 +936,7 @@ namespace sw
         DWORD          _validationCallbackCookie; ///< `RegisterMessageCallback` 이 준 번호입니다. 0 이면 등록하지 않았다.
 
         /// @brief 디바이스 프레임 스트림(스왑체인 begin/endFrame 과 백버퍼 패스)의 기록 상태입니다.
-        /// @details RenderThread 가 백버퍼 렌더 패스(beginRenderPass 핸들 0)를 여는 정식 경로입니다. 패스별
+        /// @details RenderThread 가 백버퍼 렌더 패스(beginRenderPass `kRHIBackBufferTexture`)를 여는 정식 경로입니다. 패스별
         ///          D3D12RHICommandList 와는 다른 스트림이라는 뜻일 뿐입니다.
         D3D12RecordingState _frameStreamState;
 

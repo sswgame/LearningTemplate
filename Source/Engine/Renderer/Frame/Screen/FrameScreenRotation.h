@@ -2,7 +2,7 @@
  * @file FrameScreenRotation.h
  * @brief 화면 회전 출력(pre-rotation)입니다 — 회전한 휴대 기기 화면에서 화면에 쓰는 모든 것을 논리 크기 대기 텍스처로 모으고, 프레임 끝에 스왑체인 이미지로 돌려 옮깁니다.
  * @details 화면(백버퍼)에 쓰는 곳은 넷이 넘는다(Present · Canvas · 캡처 → 화면 블릿 · 개발 겹치기 · 렌더 스레드의 UI 패스). 패스마다 회전 변형을 두지 않고 그들은 모두
- *          `getScreenTarget()` 에 쓴다 — 돌리지 않으면 0(스왑체인 그대로), 돌리면 이 클래스의 대기 텍스처다. 끝의 `recordToSwapchain` 한 번이 회전을 맡는다.
+ *          `getScreenTarget()` 에 쓴다 — 돌리지 않으면 `kRHIBackBufferTexture`(스왑체인 그대로), 돌리면 이 클래스의 대기 텍스처다. 끝의 `recordToSwapchain` 한 번이 회전을 맡는다.
  *          데스크톱(회전 없음)은 대기 텍스처 · PSO · 패스 모두 없다. 언리얼 모바일도 백버퍼 앞 마지막 패스에서 돌리고, Godot 은 스왑체인을 currentTransform 으로 만들어
  *          화면 블릿에서 돌린다(기억에 의존한 비교).
  */
@@ -39,7 +39,7 @@ namespace sw
         /** @brief 대기 텍스처를 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
         void release();
         /** @brief 화면에 쓰는 쪽이 쓸 대상입니다 — 0 이면 스왑체인(백버퍼) 그대로, 아니면 논리 크기 대기 텍스처(형식은 백버퍼 형식)입니다. */
-        RHITextureHandle getScreenTarget() const { return _texture; }
+        RHITextureHandle getScreenTarget() const { return _texture != 0 ? _texture : kRHIBackBufferTexture; }
         /**
          * @brief 대기 텍스처를 스왑체인 이미지로 돌려 그립니다. 프레임의 마지막 화면 쓰기(렌더 스레드의 UI 패스) 뒤, 표시 앞에 부릅니다. 대기 텍스처가 없으면 아무것도 하지 않습니다.
          * @details 끝나면 대기 텍스처를 다시 렌더 타깃 상태로 둔다 — 다음 프레임의 첫 쓰기(Present)가 그 상태를 믿는다.

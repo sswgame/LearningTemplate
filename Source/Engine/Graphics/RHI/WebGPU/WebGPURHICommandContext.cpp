@@ -195,7 +195,7 @@ namespace sw
             {
                 WGPUTextureView        view   = nullptr;
                 const RHITextureHandle handle = beginInfo._arrColorTarget[attachment];
-                if ( handle == 0 && attachment == 0 )
+                if ( handle == kRHIBackBufferTexture && attachment == 0 )
                 {
                     // 백버퍼 — 이 프레임에 받은 스왑체인 텍스처다(`acquireSwapChainImage`). 없으면(최소화 · 다시 구성) 이 패스의 그리기를 알리지 않고 버린다.
                     const WebGPURHISwapChain* pSwapChain = beginInfo._pSwapChain != nullptr ? static_cast<const WebGPURHISwapChain*>( beginInfo._pSwapChain ) : &_pDevice->_swapChain;
@@ -646,12 +646,12 @@ namespace sw
     {
         endComputePass();
         const WGPUCommandEncoder encoder = getEncoder();
-        if ( encoder == nullptr || ( src == 0 && dst == 0 ) )
+        if ( encoder == nullptr || ( src == kRHIBackBufferTexture && dst == kRHIBackBufferTexture ) )
             return;
-        // 0 은 백버퍼다. 표면 텍스처는 CopySrc | CopyDst 로 구성한다(`WebGPURHISwapChain::configure`). 모양(형식 · 크기)이 같아야 한다 — 다르면 검증 오류로 드러난다.
+        // `kRHIBackBufferTexture` 는 백버퍼다. 표면 텍스처는 CopySrc | CopyDst 로 구성한다(`WebGPURHISwapChain::configure`). 모양(형식 · 크기)이 같아야 한다 — 다르면 검증 오류로 드러난다.
         const auto resolve = [this]( RHITextureHandle handle, uint32& outWidth, uint32& outHeight ) -> WGPUTexture
         {
-            if ( handle == 0 )
+            if ( handle == kRHIBackBufferTexture )
             {
                 outWidth  = _pDevice->_swapChain.getWidth();
                 outHeight = _pDevice->_swapChain.getHeight();
@@ -672,7 +672,7 @@ namespace sw
         const WGPUTexture dstTexture = resolve( dst, dstWidth, dstHeight );
         if ( srcTexture == nullptr || dstTexture == nullptr )
             return;
-        WebGPUTextureRecord* const pDstRecord = dst != 0 ? _pDevice->findTexture( dst ) : nullptr;
+        WebGPUTextureRecord* const pDstRecord = dst != kRHIBackBufferTexture ? _pDevice->findTexture( dst ) : nullptr;
         if ( pDstRecord != nullptr )
             ++pDstRecord->_depthWriteCount; // 깊이로 복사하면 그 R32 사본이 낡는다
         WGPUTexelCopyTextureInfo source{};

@@ -540,7 +540,7 @@ namespace sw
          *        XML 로드 시 RenderPipelineAsset 가 채웁니다.
          * @details 지오메트리 패스(ForwardOpaque, GBuffer, Transparent)는 이 목록에서 컬러 타깃을 고른다. GBuffer 는 역할(GBufferAlbedo,
          *          GBufferNormal, GBufferMaterial)로 고르고, 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼)로 고른다. 주의: 첨부 이름(SceneColor, GBufferAlbedo 등)을 코드에
-         *          박으면 다른 이름을 쓰는 파이프라인에서 없는 첨부를 열고, 없는 첨부의 핸들 0은 백버퍼라 화면에 그린다.
+         *          박으면 다른 이름을 쓰는 파이프라인에서 없는 첨부를 열고, 없는 첨부의 핸들 0 은 무효라 그 패스가 빠진다.
          */
         vector<ResolvedAttachment> _listResolvedColorOutput;
 

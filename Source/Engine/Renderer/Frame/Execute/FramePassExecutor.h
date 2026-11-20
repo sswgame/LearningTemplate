@@ -300,7 +300,7 @@ namespace sw
         void executeCanvasPass( const PassExecuteInput& input );
         /**
          * @brief 개발 겹치기 목록(`CanvasFrameData::getDevOverlay` — 디버그 HUD)을 **사진 캡처를 읽은 뒤** 화면에 나가는 대상에 그립니다. 주 출력의 마지막 쓰기 패스 끝에서만 부른다.
-         * @details 캡처 실행이면 캡처를 백버퍼로 옮긴 뒤 백버퍼(0)에, 아니면 출력(백버퍼)에 그린다 — 캡처 텍스처에는 쓰지 않으므로 스크린샷 · `<ExpectImage>` 골든에 들지 않는다.
+         * @details 캡처 실행이면 캡처를 백버퍼로 옮긴 뒤 백버퍼(`kRHIBackBufferTexture`)에, 아니면 출력(백버퍼)에 그린다 — 캡처 텍스처에는 쓰지 않으므로 스크린샷 · `<ExpectImage>` 골든에 들지 않는다.
          *          출력이 호스트 렌더 타깃(에디터 게임 뷰)이면 그리지 않는다 — 그 타깃은 사진이 읽고 에디터 UI 캡처에 든다(수집기가 겹치기를 자기 렌더 텍스처로 실었다).
          *          화면에 나가지 않는 캡처(크기를 덮어쓴 출력)와 렌더 텍스처 · 호스트 타깃 뷰도 그리지 않는다. 언리얼이 디버그 캔버스를 하이레스 스크린샷 뒤 뷰포트에 그리는 순서와 같다.
          */
@@ -341,7 +341,7 @@ namespace sw
         /**
          * @brief MRT 컬러 패스를 시작합니다.
          * @return 열었으면 true 입니다. 컬러 타깃 이름 중 이번 프레임에 없는 것이 있으면 **열지 않고** false 를 반환하며 오류를 한 번 남깁니다.
-         *         없는 첨부의 핸들 0 은 백버퍼를 가리키므로, 그대로 열면 패스가 화면에 그립니다.
+         *         없는 첨부의 핸들 0 은 무효라 RHI 가 패스를 열지 않고 알리지만, 어느 첨부가 없는지는 여기서 알린다.
          */
         bool beginColorPassMrt( FramePassContext& context, const hashed_string* pColorNames, const float4* pTargetClearColor,
                                 const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, const hashed_string& depthName,
@@ -368,7 +368,7 @@ namespace sw
          * @param bSceneLayer Present(장면)면 true 다 — HDR 출력이면 화면 대신 장면 출력 RT 에 쓴다(`FrameDisplayEncode`). Canvas 는 false(화면 = HDR 이면 UI RT)다.
          */
         PresentTarget resolvePresentTarget( bool bSceneLayer ) const;
-        /** @brief 화면에 쓰는 대상입니다 — 0 이면 스왑체인, 회전한 화면이면 회전 대기 텍스처, HDR 출력이면 UI RT 입니다(`FrameRenderer::getScreenTarget` 과 같은 판단). */
+        /** @brief 화면에 쓰는 대상입니다 — `kRHIBackBufferTexture` 이면 스왑체인, 회전한 화면이면 회전 대기 텍스처, HDR 출력이면 UI RT 입니다(`FrameRenderer::getScreenTarget` 과 같은 판단). */
         RHITextureHandle getScreenTarget() const;
         /** @brief 이 패스가 Swapchain 을 쓰는 마지막 패스면 true 입니다. 스크린샷 캡처를 백버퍼로 복사하는 일을 이 패스 끝에서 합니다. */
         bool isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const;
@@ -535,7 +535,7 @@ namespace sw
         FrameFog&                  _fog;
         FrameExtensionHost&        _extensionHost;
         FrameCapture&              _capture;
-        const FrameScreenRotation& _screenRotation; ///< 화면에 쓰는 대상(0 = 스왑체인, 회전한 화면이면 논리 크기 대기 텍스처)
+        const FrameScreenRotation& _screenRotation; ///< 화면에 쓰는 대상(`kRHIBackBufferTexture` = 스왑체인, 회전한 화면이면 논리 크기 대기 텍스처)
         const FrameDisplayEncode&  _displayEncode;  ///< HDR 출력이면 Present 는 장면 출력 RT, 화면에 쓰는 나머지는 UI RT 에 쓴다
         /// @brief 프레임 패스 종류마다의 실행(깊이 히스토리 · 가림 타일 · 입자 · 변형 · 컬링 · 라이트 그리드 · 볼륨 안개 · 프로브 · 마커)입니다. 순서는 프레임 그래프가 정한다.
         FrameGraphExecutor _frameGraphExecutor;

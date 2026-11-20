@@ -53,10 +53,10 @@ namespace sw
 
     void D3D11RHICommandContext::blitTextureNative( RHITextureHandle src, RHITextureHandle dst )
     {
-        if ( _pContext == nullptr || ( src == 0 && dst == 0 ) )
+        if ( _pContext == nullptr || ( src == kRHIBackBufferTexture && dst == kRHIBackBufferTexture ) )
             return;
 
-        if ( src == 0 )
+        if ( src == kRHIBackBufferTexture )
         {
             // 백버퍼 → 텍스처. CopyResource 는 포맷 · 크기가 같아야 한다(받는 쪽은 getBackBufferFormat 으로 만든다).
             const Microsoft::WRL::ComPtr<ID3D11Texture2D> backTex                = _pDevice->_swapChain.getBackBufferTexture();
@@ -85,7 +85,7 @@ namespace sw
             return;
 
         Microsoft::WRL::ComPtr<ID3D11Texture2D> dstTex;
-        if ( dst == 0 )
+        if ( dst == kRHIBackBufferTexture )
         {
             dstTex = _pDevice->_swapChain.getBackBufferTexture();
             if ( dstTex == nullptr )
@@ -159,7 +159,7 @@ namespace sw
 
         ID3D11RenderTargetView* arrRTV[kMaxColorAttachments]{};
         uint32                  rtCount{ 0 };
-        const bool              bBackBuffer = beginInfo._bBindColor != SW_FALSE && beginInfo._arrColorTarget[0] == 0;
+        const bool              bBackBuffer = beginInfo._bBindColor != SW_FALSE && beginInfo._arrColorTarget[0] == kRHIBackBufferTexture;
         D3D11RHISwapChain&      swapChain   = bBackBuffer ? _pDevice->useSwapChain( beginInfo._pSwapChain ) : _pDevice->_swapChain;
         if ( beginInfo._bBindColor != SW_FALSE )
         {
@@ -168,7 +168,7 @@ namespace sw
             {
                 const RHITextureHandle  colorHandle = beginInfo._arrColorTarget[attachmentIndex];
                 ID3D11RenderTargetView* pRTV{ nullptr };
-                if ( colorHandle == 0 )
+                if ( colorHandle == kRHIBackBufferTexture )
                     pRTV = ( attachmentIndex == 0 ) ? swapChain.getBackBufferRTV() : nullptr;
                 else
                 {
@@ -813,8 +813,8 @@ namespace sw
     void D3D11RHICommandContext::prepareTextureForRenderTargetNative( RHITextureHandle texture )
     {
         // D3D11 은 상태를 전이하지 않는다. 대신 같은 리소스가 입력과 출력에 함께 걸리면 OMSetRenderTargets 가 SRV 쪽을 NULL 로
-        // 강제한다(해저드 경고). 첨부로 쓰기 전에 이 텍스처가 걸린 PS SRV 슬롯만 뗀다. 백버퍼(0)는 SRV 로 걸리지 않는다.
-        const bool bNoSRVToRelease = _pContext == nullptr || _pState == nullptr || texture == 0;
+        // 강제한다(해저드 경고). 첨부로 쓰기 전에 이 텍스처가 걸린 PS SRV 슬롯만 뗀다. 백버퍼는 SRV 로 걸리지 않는다.
+        const bool bNoSRVToRelease = _pContext == nullptr || _pState == nullptr || texture == kRHIBackBufferTexture;
         if ( bNoSRVToRelease )
             return;
         ID3D11ShaderResourceView* pNull{ nullptr };

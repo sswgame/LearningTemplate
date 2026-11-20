@@ -330,7 +330,7 @@ namespace sw
         /**
          * @brief 프레임 기록을 엽니다. 프레임당 정확히 한 번, 그 프레임의 어떤 기록보다 먼저 부릅니다.
          * @details **수명주기 전용**이다. 펜스 대기(GPU 백프레셔), 스왑체인 이미지 획득, 기록 시작만 하고 렌더 타깃은 바인딩하지 않는다.
-         *          백버퍼 바인딩과 클리어는 `IRHICommandList::beginRenderPass`(타깃 핸들 0)가 명시적으로 한다(`RenderThread::executeFrameBody`).
+         *          백버퍼 바인딩과 클리어는 `IRHICommandList::beginRenderPass`(타깃 `kRHIBackBufferTexture`)가 명시적으로 한다(`RenderThread::executeFrameBody`).
          *          프레임 수명주기(beginFrame, endFrame, resize)는 디바이스의 일이다. 스왑체인 쪽에 두면 디바이스의 private 상태를 건드려야 한다.
          * @note 스왑체인 자체(백버퍼, 이미지 인덱스, 동기화, present)는 `IRHISwapChain` 의 백엔드 구현이 소유합니다. 메인 창도 그 가운데 하나이고,
          *       `endFrame` 은 그 프레임에 그린 스왑체인을 모두 표시합니다(`createSwapChain`).
