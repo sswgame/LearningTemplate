@@ -17,26 +17,36 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
+from typing import Iterable
 
 from common.paths import get_project_root
 
 _INCLUDE = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.M)
-_SUFFIXES = (".h", ".hpp", ".inl", ".cpp")
+SUFFIXES = (".h", ".hpp", ".inl", ".cpp")
 _PCH_HEADERS = ("Engine/pch.h", "Core/pch.h")
 
 
 def collect_edges(source_root: Path) -> dict[str, list[str]]:
     """Source 기준 상대 경로 → 그 파일이 포함하는 저장소 파일들."""
-    files = {path.relative_to(source_root).as_posix(): path for path in source_root.rglob("*") if path.suffix in _SUFFIXES and "ThirdParty" not in path.parts}
+    files = {path.relative_to(source_root).as_posix(): path for path in source_root.rglob("*") if path.suffix in SUFFIXES and "ThirdParty" not in path.parts}
+    return resolve_edges({relative: find_includes(path.read_text(encoding="utf-8", errors="replace")) for relative, path in files.items()})
+
+
+def find_includes(text: str) -> list[str]:
+    """`#include "..."` 의 글(경로를 풀기 전)."""
+    return _INCLUDE.findall(text)
+
+
+def resolve_edges(map_include: dict[str, list[str]]) -> dict[str, list[str]]:
+    """Source 기준 상대 경로 → include 글 목록을 저장소 파일 목록으로 푼다(Source 기준 경로, 없으면 같은 폴더 기준 — 저장소 밖 헤더는 뺀다)."""
     edges: dict[str, list[str]] = {}
-    for relative, path in files.items():
-        text = path.read_text(encoding="utf-8", errors="replace")
+    for relative, list_include in map_include.items():
         targets = []
-        for include in _INCLUDE.findall(text):
+        for include in list_include:
             sibling = (Path(relative).parent / include).as_posix()
-            if include in files:
+            if include in map_include:
                 targets.append(include)
-            elif sibling in files:
+            elif sibling in map_include:
                 targets.append(sibling)
         edges[relative] = targets
     return edges
@@ -64,14 +74,27 @@ def compute_closures(edges: dict[str, list[str]]) -> dict[str, frozenset[str]]:
     return closures
 
 
-def measure(source_root: Path) -> list[dict[str, object]]:
-    """헤더마다 {header, fan_in, non_pch, score} — 점수 내림차순."""
-    edges = collect_edges(source_root)
-    closures = compute_closures(edges)
+def collect_pch_closure(closures: dict[str, frozenset[str]]) -> set[str]:
+    """pch 가 끄는 헤더(pch 자신 포함) — TU 마다 이미 읽혀 점수에서 뺀다."""
     pch_closure: set[str] = set()
     for pch in _PCH_HEADERS:
         if pch in closures:
             pch_closure |= closures[pch] | {pch}
+    return pch_closure
+
+
+def measure_non_pch(edges: dict[str, list[str]], headers: Iterable[str]) -> dict[str, int | None]:
+    """헤더마다 pch 밖에서 끌어오는 헤더 수(`non_pch` 칸) — 없는 헤더는 None. 헤더 포함 상한 래칫(`lint.header_include_limits`)이 쓴다."""
+    closures = compute_closures(edges)
+    pch_closure = collect_pch_closure(closures)
+    return {header: (len(closures[header] - pch_closure) if header in closures else None) for header in headers}
+
+
+def measure(source_root: Path) -> list[dict[str, object]]:
+    """헤더마다 {header, fan_in, non_pch, score} — 점수 내림차순."""
+    edges = collect_edges(source_root)
+    closures = compute_closures(edges)
+    pch_closure = collect_pch_closure(closures)
     fan_in: dict[str, int] = defaultdict(int)
     for node, closure in closures.items():
         if node.endswith(".cpp"):

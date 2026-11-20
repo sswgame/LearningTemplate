@@ -20,6 +20,7 @@
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"

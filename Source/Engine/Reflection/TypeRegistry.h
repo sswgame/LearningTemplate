@@ -12,7 +12,6 @@
 #include "Core/Name/NameHashIndex.h"
 #include "Core/Registry/RegistrationChain.h"
 #include "Core/Subsystem/ServiceSlot.h"
-#include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionCast.h"

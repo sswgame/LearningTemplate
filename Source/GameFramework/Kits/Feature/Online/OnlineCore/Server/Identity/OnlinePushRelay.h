@@ -17,6 +17,7 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"

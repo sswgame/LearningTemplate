@@ -24,6 +24,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include <imgui.h>
 

@@ -32,6 +32,7 @@
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/SceneManager.h"

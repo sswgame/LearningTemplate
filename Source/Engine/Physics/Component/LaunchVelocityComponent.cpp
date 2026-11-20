@@ -6,6 +6,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
 namespace sw

@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Physics/Component/CharacterController2DComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"

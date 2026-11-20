@@ -7,6 +7,7 @@
 
 #include "Engine/Animation/Component/FacialAnimationComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 namespace sw
 {

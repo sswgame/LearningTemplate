@@ -9,6 +9,8 @@
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
+#include "Engine/Reflection/TypeInfo.h"
+
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreeEditModel.h"
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.h"
 

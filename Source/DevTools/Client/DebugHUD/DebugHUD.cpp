@@ -21,6 +21,7 @@
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/UISystem.h"

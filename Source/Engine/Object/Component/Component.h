@@ -14,7 +14,6 @@
 #include "Engine/Foundation/AnimationNotifyPhase.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/PhysicsHandle.h"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/TypeCastHeader.h"
 
@@ -26,6 +25,7 @@ namespace sw
     class GameObject;
     class GameObjectManager;
     class StateHashBuilder;
+    class TickContext; // 틱 콜백은 참조로만 받는다 — 정의(`TickContext.h`)는 몸체를 쓰는 .cpp 가 include 한다(헤더 팬인 다이어트)
     /**
      * @enum TickGroup
      * @brief 한 프레임 안에서 컴포넌트 틱이 도는 순서 슬롯입니다.

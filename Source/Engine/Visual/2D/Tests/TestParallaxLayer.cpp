@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Visual/2D/ParallaxLayerComponent.h"
 

@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include <thread>

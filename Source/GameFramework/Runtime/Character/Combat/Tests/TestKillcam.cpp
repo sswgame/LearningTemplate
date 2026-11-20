@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Character/Combat/Killcam/KillcamComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Killcam/KillcamShot.h"

@@ -10,6 +10,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include "sw/config/ConfigConstants.h"

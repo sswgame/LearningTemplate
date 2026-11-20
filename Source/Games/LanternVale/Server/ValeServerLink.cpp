@@ -5,6 +5,8 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Reflection/TypeRegistry.h"
+
 namespace sw
 {
     // ------------------------------------------------------------------------------

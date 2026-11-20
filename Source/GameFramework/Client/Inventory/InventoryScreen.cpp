@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UI/Menu/QuantityDialogScreen.h"
 #include "Engine/UI/UISystem.h"

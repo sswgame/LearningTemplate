@@ -30,7 +30,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Object/Component/TagSystem.h"
-#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/ObjectFwd.h"
 
 namespace sw
 {

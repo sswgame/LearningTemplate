@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"

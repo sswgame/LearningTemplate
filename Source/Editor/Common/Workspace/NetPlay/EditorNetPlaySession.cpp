@@ -28,6 +28,7 @@
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Net/GameNetSession.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 #include <thread>
 

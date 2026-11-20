@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 namespace sw
 {

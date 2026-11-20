@@ -6,6 +6,8 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Reflection/TypeRegistry.h"
+
 namespace sw
 {
     // ------------------------------------------------------------------------------

@@ -13,7 +13,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Reflection/EnumInfo.h"
+#include "Engine/Reflection/TypeFqn.h"
+#include "Engine/Reflection/TypeLookupCache.h"
 
 namespace sw
 {

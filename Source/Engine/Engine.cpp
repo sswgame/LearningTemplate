@@ -82,6 +82,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDebugDraw.h"

@@ -7,6 +7,7 @@
 
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"

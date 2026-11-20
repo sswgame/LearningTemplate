@@ -11,7 +11,7 @@
 #pragma once
 #include "Core/Math/PackedValueTraits.h"
 
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/ReflectionMetadataBox.h"
 
 namespace sw
 {
