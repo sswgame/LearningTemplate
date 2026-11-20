@@ -20,7 +20,7 @@
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw::editor
 {

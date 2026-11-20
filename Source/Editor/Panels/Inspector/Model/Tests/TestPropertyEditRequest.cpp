@@ -10,7 +10,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeInfo.h"
 
 // PropertyEditRequestTest — 인스펙터 프로퍼티 칸 편집 요청(경로 · 종류 · 새 값): 값만 들고 적용할 때 대상 인스턴스에 경로를 풀어 쓴다. 끌기는 프레임마다 요청이고

@@ -22,7 +22,6 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Foundation/EngineScope.h"
-#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 #include <type_traits>
 
@@ -32,6 +31,8 @@
 
 namespace sw
 {
+    struct EngineServiceBindResult; // 묶기 결과는 호스트(엔진 시작)만 읽는다 — 서비스를 얻기만 하는 TU 가 등록 표 헤더(EngineSubsystemRegistration.h)를 읽지 않게 앞 선언한다
+
     namespace engine
     {
         // ------------------------------------------------------------------------------

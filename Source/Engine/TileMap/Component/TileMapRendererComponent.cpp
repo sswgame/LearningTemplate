@@ -12,7 +12,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"

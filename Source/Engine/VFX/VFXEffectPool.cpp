@@ -6,7 +6,8 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
 #include "Engine/VFX/VFXComponent.h"
 
 namespace sw

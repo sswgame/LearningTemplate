@@ -4,6 +4,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
 #include "Engine/Visual/2D/Shadow/ShadowCaster2DComponent.h"
 
 namespace sw

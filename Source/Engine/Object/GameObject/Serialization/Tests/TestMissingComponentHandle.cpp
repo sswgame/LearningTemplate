@@ -8,7 +8,7 @@
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/MissingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Serialization/Tests/HandleTestComponents.h"
 #include "Engine/Reflection/TypeInfo.h"

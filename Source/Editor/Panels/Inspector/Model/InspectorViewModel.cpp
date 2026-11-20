@@ -3,6 +3,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorViewModel.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Name/TagID.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
@@ -25,7 +26,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"

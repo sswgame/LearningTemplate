@@ -5,6 +5,7 @@
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
 
 namespace sw
 {

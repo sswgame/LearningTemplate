@@ -5,7 +5,7 @@
 #include "Engine/Navigation/Scene/NavAreaNameValidation.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw

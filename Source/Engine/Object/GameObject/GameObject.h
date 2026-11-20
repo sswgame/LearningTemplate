@@ -12,7 +12,6 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/TagID.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
@@ -25,6 +24,7 @@ namespace sw
     struct AABB;
     struct ObjectIdentity;
     struct ObjectSaveOptions;
+    struct TagID;
 
     class GameObjectManager;
     class ObjectStateSerializer;

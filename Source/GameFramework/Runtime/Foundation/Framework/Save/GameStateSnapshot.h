@@ -17,6 +17,7 @@
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/SceneIterationKey.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include "GameFramework/GameFrameworkExports.h"

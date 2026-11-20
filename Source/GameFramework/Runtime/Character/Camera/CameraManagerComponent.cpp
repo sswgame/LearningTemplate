@@ -13,9 +13,10 @@
 #include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/MeshLODSystem.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"

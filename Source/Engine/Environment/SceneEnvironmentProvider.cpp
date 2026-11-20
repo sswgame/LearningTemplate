@@ -4,6 +4,7 @@
 
 #include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Environment/Sky/SkyComponent.h"
+#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
 
 namespace sw
 {

@@ -6,6 +6,7 @@
 #include "Engine/Graphics/Mesh/MeshBuildVertex.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "Games/VoxelCraft/VoxelGameModeComponent.h"

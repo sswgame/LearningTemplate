@@ -15,7 +15,8 @@
 #include "Editor/Common/Workspace/IEditorPanelService.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 

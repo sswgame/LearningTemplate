@@ -7,7 +7,8 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/Socket/SocketPartPool.h"
-#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw
 {

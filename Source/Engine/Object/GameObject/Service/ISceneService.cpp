@@ -4,6 +4,8 @@
 
 #include "Core/Registry/RegistrationList.h"
 
+#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+
 namespace sw
 {
     namespace

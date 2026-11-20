@@ -5,6 +5,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
 
 using namespace sw;
 
