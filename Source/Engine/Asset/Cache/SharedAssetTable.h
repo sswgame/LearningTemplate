@@ -17,6 +17,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetLoadOperation.h"
 #include "Engine/Asset/Cache/WeakInternTable.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"

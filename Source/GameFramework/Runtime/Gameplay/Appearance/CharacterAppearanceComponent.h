@@ -17,6 +17,7 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetLoadOperation.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"

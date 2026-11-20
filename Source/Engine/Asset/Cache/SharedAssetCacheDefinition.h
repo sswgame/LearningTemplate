@@ -16,6 +16,7 @@
 
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetLoadOperation.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetTable.h"
 #include "Engine/Content/AssetTypeRegistry.h"

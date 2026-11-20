@@ -14,7 +14,7 @@
         { "_header": "Engine/Renderer/Frame/FrameRendererUtil.h", "_limit": 49, "_reason": "리플렉션 레지스트리를 쓰지 않는다 — TypeRegistry.h 포함을 지웠다" },
         { "_header": "Engine/Asset/AssetRef.h", "_limit": 4, "_reason": "캐시 템플릿은 앞선 선언만 둔다 — acquire · request 를 부르는 TU 는 대상 종류의 헤더가 SharedAssetCache.h 를 읽는다" },
         { "_header": "Engine/Asset/Cache/AssetCacheBase.h", "_limit": 1, "_reason": "리로드 함수 형식은 AssetID · ReloadResult 를 앞선 선언으로 쓰고, 등록 매크로(SW_ASSET_CACHE_RELOAD_FUNCTION · DevOnly.h)는 BuiltInAssetCache.h 에 둔다" },
-        { "_header": "Engine/Asset/Cache/SharedAssetCache.h", "_limit": 3, "_reason": "acquire 반환형 SharedAssetRef · 판 WeakInternVersion 은 앞선 선언 — acquire 를 부르는 TU 가 SharedAssetRef.h 를 읽는다" },
+        { "_header": "Engine/Asset/Cache/SharedAssetCache.h", "_limit": 2, "_reason": "acquire 반환형 SharedAssetRef · 판 WeakInternVersion · 로드 핸들 AssetHandle 은 앞선 선언 — acquire 를 부르는 TU 가 SharedAssetRef.h, 핸들을 들거나 request 를 부르는 TU 가 SharedAssetLoadOperation.h 를 읽는다" },
         { "_header": "Engine/Reflection/TypeInfo.h", "_limit": 10, "_reason": "캐스트 머리 · 상수는 직접 포함하고, 메타데이터 상자 사슬로 오던 컨테이너 래퍼 · 글 주소를 끌지 않는다" },
         { "_header": "Engine/Reflection/FunctionInfo.h", "_limit": 2, "_reason": "메타데이터 상자(ReflectionMetadataBox.h)가 리플렉션 매크로 · 컨테이너 래퍼를 끌지 않는다" },
         { "_header": "Engine/Serialization/Format/StateIO.h", "_limit": 3, "_reason": "DeterministicRandom32 · typeFqn 은 앞선 선언 — reflected · reflectedAs · writeReflectedHeader<T> 를 부르는 TU 가 TypeFqn.h 를 읽는다" },
