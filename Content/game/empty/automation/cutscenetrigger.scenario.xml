@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2992dbf4d8aeb51e26b1f34096e82e4c"?>
+<!--
+  지역 진입 컷씬 — 트리거 계약(DesignBacklog "트리거 Enter · Stay · Exit 계약")의 오브젝트 쌍 진입이 SequenceTriggerComponent 로 컷씬을 튼다. 무대 maps/cutscenetrigger.
+  재생 정책은 씬 데이터다: 볼륨의 _bOnce(한 번만 · 다시 재생 — 블루프린트 DoOnce 자리), 디렉터의 _playerMovement · _bHideHUD · _bSkippable · _bAllowFastForward.
+  ① 볼륨 안에서 태어남: Landing(다시 재생)이 첫 물리 스텝의 진입으로 한 번 튼다. 안에 머물러도(유지) 다시 틀지 않고, 나갔다 들어오면 다시 튼다.
+  ② Gate(한 번만)에 들어가면 컷씬이 한 번 — 이동이 막히고 HUD 가 숨으며, 안에 머물러도 다시 틀지 않는다.
+  ③ 빨리감기(Cutscene.FastForward, Period)는 4 배, 놓으면 1 배.
+  ④ 일시정지 메뉴(Esc — UI 맵이라 컷씬 레이어의 막기와 무관)가 뜨면 재생 위치가 서고, 메뉴에서 옵션을 열고 닫아 돌아오면 그 자리부터 잇는다.
+  ⑤ 건너뛰기(Cutscene.Skip, Backspace) → 끝 상태 · 게임 카메라 · 막기와 HUD 숨김이 풀려 W 로 걷는다.
+  ⑥ 범위 제한(Confined)으로 다시 틀면 걷되 Gate 둘레 3 m 밖으로 나가지 못한다(볼륨을 들고 나도 한 번만 하는 볼륨은 다시 틀지 않는다).
+  ⑦ 한 번만 하는 볼륨: 나갔다 들어와도, 폰이 사라졌다 다시 생겨도(로그아웃 · 재접속과 같은 길 — 바디 해제로 이탈, 다시 올려 진입) 다시 틀지 않는다.
+  판정은 감시 값이다(사진 없음): 발동 수 Object.Property SequenceTriggerComponent._fireCount, 시작 수 Sequence.History Started, 겹침 Physics.OverlapCount.
+  체인: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.cutscenetrigger" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/cutscenetrigger.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+
+	<!-- ① 안에서 태어남 — 진입 한 번에 재생 한 번, 유지는 다시 틀지 않는다, 다시 들어오면 다시 튼다 -->
+	<WaitUntil watch="Object.Property" target="Landing" key="SequenceTriggerComponent._fireCount" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="Sequence.History" target="LandingDirector" key="Finished" equals="1" timeoutFrames="60"/>
+	<AdvanceSimulation frames="30"/> <!-- 안에 머문다 — 다시 틀지 않음은 시간이 내용 -->
+	<Expect watch="Physics.OverlapCount" target="Landing" equals="1"/>
+	<Expect watch="Object.Property" target="Landing" key="SequenceTriggerComponent._fireCount" equals="1"/>
+	<Expect watch="Sequence.History" target="LandingDirector" key="Started" equals="1"/>
+	<Expect watch="Sequence.InputBlocked" target="LandingDirector" equals="0"/> <!-- Free — 막지 않는다 -->
+	<DevCommand line="teleport Player 0 0.05 5"/> <!-- 두 볼륨 사이로 -->
+	<WaitUntil watch="Physics.OverlapCount" target="Landing" equals="0" timeoutFrames="10"/>
+	<DevCommand line="teleport Player 0 0.05 0"/>
+	<WaitUntil watch="Object.Property" target="Landing" key="SequenceTriggerComponent._fireCount" equals="2" timeoutFrames="10"/>
+	<Expect watch="Sequence.History" target="LandingDirector" key="Started" equals="2"/>
+	<DevCommand line="teleport Player 0 0.05 5"/>
+	<WaitUntil watch="Physics.OverlapCount" target="Landing" equals="0" timeoutFrames="10"/>
+
+	<!-- ② Gate 진입 — 컷씬 한 번, 이동 막힘 · HUD 숨김 -->
+	<Expect watch="Sequence.InputBlocked" target="GateDirector" equals="0"/>
+	<Expect watch="UI.HUDHidden" equals="0"/>
+	<DevCommand line="teleport Player 0 0.05 10"/>
+	<WaitUntil watch="Object.Property" target="Gate" key="SequenceTriggerComponent._fireCount" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="Sequence.InputBlocked" target="GateDirector" equals="1" timeoutFrames="4"/>
+	<Expect watch="UI.HUDHidden" equals="1"/>
+	<Expect watch="Sequence.History" target="GateDirector" key="Started" equals="1"/>
+	<Store watch="Object.Z" target="Player" as="blockedZ"/>
+	<Press slot="Key.W"/>
+	<AdvanceSimulation frames="20"/> <!-- 누른 채 시간이 흘러야 한다(일어나지 않음은 그 시간 뒤의 값) -->
+	<Expect watch="Object.Z" target="Player" sameAs="blockedZ" tolerance="0.001"/>
+	<Release slot="Key.W"/>
+	<Expect watch="Physics.OverlapCount" target="Gate" equals="1"/>
+	<Expect watch="Sequence.History" target="GateDirector" key="Started" equals="1"/> <!-- 유지로 다시 틀지 않았다 -->
+
+	<!-- ③ 빨리감기: 4 배 — 1 틱에 시퀀스 두 프레임 -->
+	<Press slot="Key.Period"/>
+	<WaitUntil watch="Sequence.PlayRate" target="GateDirector" equals="4" timeoutFrames="4"/>
+	<Store watch="Sequence.Frame" target="GateDirector" as="fastFrame"/>
+	<AdvanceSimulation frames="4"/>
+	<Expect watch="Sequence.Frame" target="GateDirector" increaseFrom="fastFrame" increaseBy="6"/>
+	<Release slot="Key.Period"/>
+	<WaitUntil watch="Sequence.PlayRate" target="GateDirector" equals="1" timeoutFrames="4"/>
+
+	<!-- ④ 일시정지 메뉴 → 옵션 → 닫기. 사람의 누름처럼 여러 프레임 누른다(한 프레임 누름은 같은 Esc 의 뒤로가 메뉴를 닫는 결함을 가린다 — nilecity pause) -->
+	<Tap slot="Key.Escape" hold="6"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/pause.ui.xml" timeoutFrames="30"/>
+	<Store watch="Sequence.Frame" target="GateDirector" as="pausedFrame"/>
+	<AdvanceSimulation frames="10"/>
+	<Expect watch="Sequence.Frame" target="GateDirector" sameAs="pausedFrame"/>
+	<Tap slot="Key.Down" hold="1"/> <!-- Resume → Options -->
+	<AdvanceSimulation frames="2"/>
+	<Tap slot="Key.Enter" hold="1"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/options.ui.xml" timeoutFrames="30"/>
+	<Expect watch="Sequence.Frame" target="GateDirector" sameAs="pausedFrame"/>
+	<Expect watch="Sequence.InputBlocked" target="GateDirector" equals="1"/> <!-- 메뉴가 떠도 컷씬의 막기는 그대로 -->
+	<Tap slot="Key.Escape" hold="6"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/pause.ui.xml" timeoutFrames="30"/>
+	<Tap slot="Key.Escape" hold="6"/>
+	<WaitUntil watch="UI.ActiveScreen" is="none" timeoutFrames="30"/>
+	<WaitUntil watch="Sequence.Frame" target="GateDirector" differsFrom="pausedFrame" timeoutFrames="10"/>
+	<Expect watch="Sequence.Frame" target="GateDirector" increaseFrom="pausedFrame" increaseBy="1"/>
+
+	<!-- ⑤ 건너뛰기 → 끝 상태 · 조작 복귀 -->
+	<Tap slot="Key.Backspace" hold="1"/>
+	<WaitUntil watch="Sequence.History" target="GateDirector" key="Finished" equals="1" timeoutFrames="6"/>
+	<Expect watch="Sequence.Frame" target="GateDirector" equals="300"/>
+	<WaitUntil watch="Camera.FrameObject" is="GameCamera" timeoutFrames="6"/>
+	<Expect watch="Cinematic.CutCamera" target="GateDirector" is="none"/>
+	<Expect watch="Sequence.InputBlocked" target="GateDirector" equals="0"/>
+	<Expect watch="UI.HUDHidden" equals="0"/>
+	<Store watch="Object.Z" target="Player" as="freeZ"/>
+	<Press slot="Key.W"/>
+	<WaitUntil watch="Object.Z" target="Player" differsFrom="freeZ" timeoutFrames="30"/>
+	<Release slot="Key.W"/>
+
+	<!-- ⑥ 범위 제한: 걸을 수 있되 Gate 둘레 3 m 안 -->
+	<DevCommand line="teleport Player 0 0.05 10"/>
+	<AdvanceSimulation frames="2"/> <!-- 순간이동이 물리에 닿는다(프레임 경계) -->
+	<PlaySequence object="GateDirector" movement="Confined"/>
+	<Expect watch="Sequence.InputBlocked" target="GateDirector" equals="0"/>
+	<Press slot="Key.W"/>
+	<AdvanceSimulation frames="120"/> <!-- 2 초 걸으면 3 m 를 넘는다 — 제한이 경계에서 세운다 -->
+	<Expect watch="Object.DistanceTo" target="Player" key="Gate" atMost="3.3"/>
+	<Expect watch="Object.DistanceTo" target="Player" key="Gate" atLeast="2"/>
+	<Release slot="Key.W"/>
+	<SkipSequence object="GateDirector"/>
+	<Expect watch="Object.Property" target="Gate" key="SequenceTriggerComponent._fireCount" equals="1"/>
+
+	<!-- ⑦ 한 번만: 다시 들어와도, 폰이 사라졌다 다시 생겨도(로그아웃 · 재접속) 다시 틀지 않는다 -->
+	<Store watch="Sequence.History" target="GateDirector" key="Started" as="gateStarts"/>
+	<DevCommand line="teleport Player 0 0.05 5"/>
+	<WaitUntil watch="Physics.OverlapCount" target="Gate" equals="0" timeoutFrames="10"/>
+	<DevCommand line="teleport Player 0 0.05 10"/>
+	<WaitUntil watch="Physics.OverlapCount" target="Gate" equals="1" timeoutFrames="10"/>
+	<AdvanceSimulation frames="5"/>
+	<Expect watch="Object.Property" target="Gate" key="SequenceTriggerComponent._fireCount" equals="1"/>
+	<Expect watch="Sequence.History" target="GateDirector" key="Started" sameAs="gateStarts"/>
+	<DevCommand line="object.active Player 0"/> <!-- 로그아웃 — 바디를 놓아 이탈 한 번 -->
+	<WaitUntil watch="Physics.OverlapCount" target="Gate" equals="0" timeoutFrames="10"/>
+	<DevCommand line="object.active Player 1"/> <!-- 재접속 — 안에서 다시 생겨 진입 한 번 -->
+	<WaitUntil watch="Physics.OverlapCount" target="Gate" equals="1" timeoutFrames="10"/>
+	<AdvanceSimulation frames="5"/>
+	<Expect watch="Object.Property" target="Gate" key="SequenceTriggerComponent._fireCount" equals="1"/>
+	<Expect watch="Sequence.History" target="GateDirector" key="Started" sameAs="gateStarts"/>
+	<Expect watch="Sequence.InputBlocked" target="GateDirector" equals="0"/>
+	<Pass/>
+</Scenario>
