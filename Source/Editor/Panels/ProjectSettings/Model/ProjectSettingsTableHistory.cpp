@@ -18,10 +18,7 @@ namespace sw::editor
     {
     }
 
-    ProjectSettingsTableHistory::~ProjectSettingsTableHistory()
-    {
-        releaseFocusedCommandStack( _pStack.get() );
-    }
+    ProjectSettingsTableHistory::~ProjectSettingsTableHistory() = default; // Ctrl+Z 의 스택은 패널 id 로 찾는다 — 사라질 스택을 풀 일이 없다
 
     void ProjectSettingsTableHistory::push( ProjectSettingsPage& page, const ProjectSettingsTableMovedDelegate& onMoved )
     {

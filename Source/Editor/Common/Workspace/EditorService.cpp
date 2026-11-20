@@ -35,9 +35,9 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "EditorFocus";
 
-        CommandStack*            _pFocusedCommandStack{ nullptr }; ///< 포커스된 툴 창의 Undo 스택. nullptr 이면 메인 스택
-        EditorSelection*         _pFocusedSelection{ nullptr };    ///< 겨누는 미리보기 선택. nullptr 이면 메인 선택
-        vector<EditorSelection*> _listPreviewSelection;            ///< 미리보기 씬에 묶인 선택(빌림)
+        string                   _focusedPanelID;               ///< 앞 포커스 패널의 등록 id(Ctrl+Z 를 그 패널의 지금 스택으로 보낸다). 비면 메인 스택
+        EditorSelection*         _pFocusedSelection{ nullptr }; ///< 겨누는 미리보기 선택. nullptr 이면 메인 선택
+        vector<EditorSelection*> _listPreviewSelection;         ///< 미리보기 씬에 묶인 선택(빌림)
         const utf8*              getSubsystemName() const override { return kSubsystemName; }
     };
 } // namespace sw::editor
@@ -140,31 +140,23 @@ namespace sw::editor
     CommandStack* getFocusedCommandStack()
     {
         assertEditorThread();
-        const EditorFocus* const         pFocus      = findSubsystem<EditorFocus>();
-        CommandStack* const              pMain       = findSubsystem<CommandStack>();
-        CommandStack* const              pRegistered = pFocus != nullptr ? pFocus->_pFocusedCommandStack : nullptr;
-        const IEditorPanelService* const pPanels     = findSubsystem<IEditorPanelService>(); // 셸 없는 테스트 호스트에는 패널이 없다
+        const EditorFocus* const         pFocus  = findSubsystem<EditorFocus>();
+        CommandStack* const              pMain   = findSubsystem<CommandStack>();
+        const IEditorPanelService* const pPanels = findSubsystem<IEditorPanelService>(); // 셸 없는 테스트 호스트에는 패널이 없다
         if ( pPanels == nullptr )
-            return pRegistered != nullptr ? pRegistered : pMain;
+            return pMain;
         uint32                          focusedWindowID{ 0 };
         vector<EditorPanelCommandStack> listPanel;
         pPanels->collectPanelCommandStacks( focusedWindowID, listPanel );
-        return IEditorPanelService::chooseFocusedCommandStack( focusedWindowID, listPanel, pRegistered, pMain );
+        return IEditorPanelService::chooseFocusedCommandStack( focusedWindowID, listPanel, pFocus != nullptr ? string_view( pFocus->_focusedPanelID ) : string_view{}, pMain );
     }
 
-    void releaseFocusedCommandStack( const CommandStack* pStack )
+    void setFocusedPanel( string_view panelID )
     {
         assertEditorThread();
-        EditorFocus* const pFocus = findSubsystem<EditorFocus>();
-        if ( pFocus != nullptr && pStack != nullptr && pFocus->_pFocusedCommandStack == pStack )
-            pFocus->_pFocusedCommandStack = nullptr;
-    }
-
-    void setFocusedCommandStack( CommandStack* pStack )
-    {
-        assertEditorThread();
-        if ( EditorFocus* const pFocus = findSubsystem<EditorFocus>() )
-            pFocus->_pFocusedCommandStack = pStack; // 에디터 범위가 내려간 뒤(종료 중 패널 소멸)에는 걸 곳이 없다
+        EditorFocus* const pFocus = findSubsystem<EditorFocus>(); // 에디터 범위가 내려간 뒤(종료 중 패널 소멸)에는 걸 곳이 없다
+        if ( pFocus != nullptr && pFocus->_focusedPanelID != panelID )
+            pFocus->_focusedPanelID = string{ panelID };
     }
 
     EditorSelection* getFocusedSelection()

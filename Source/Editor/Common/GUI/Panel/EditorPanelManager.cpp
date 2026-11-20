@@ -276,22 +276,16 @@ namespace sw::editor
 
     void EditorPanelManager::updateFocusedCommandStack()
     {
-        IEditorPanel* pFocused = nullptr;
+        // 패널 id 만 기억한다 — 닫힌 패널 · 사라진 스택은 읽는 순간의 목록에 없어 손으로 풀 것이 없다(`getFocusedCommandStack`).
         for ( const EditorPanelEntry& entry : _listPanel )
         {
             IEditorPanel* const pPanel = entry._pInstance.get();
-            if ( pPanel == nullptr )
+            if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->isWindowFocused() == false )
                 continue;
-            if ( pPanel->isOpen() == false )
-            {
-                releaseFocusedCommandStack( pPanel->findPanelCommandStack() ); // 닫힌 문서의 스택 — 보이지 않는 문서를 되돌리지 않는다
-                continue;
-            }
-            if ( pFocused == nullptr && pPanel->isWindowFocused() )
-                pFocused = pPanel;
+            if ( pPanel->shouldKeepFocusedCommandStack() == false )
+                setFocusedPanel( entry._id );
+            return;
         }
-        if ( pFocused != nullptr && pFocused->shouldKeepFocusedCommandStack() == false )
-            setFocusedCommandStack( pFocused->findPanelCommandStack() );
     }
 
     void EditorPanelManager::reportPanelTimes()
