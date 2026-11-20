@@ -72,7 +72,7 @@ namespace sw
                 HitInfo            hit;
                 hit._point     = event._hit._position;
                 hit._normal    = event._hit._normal;
-                hit._direction = event._projectile.getSpeed() > 1.0e-6f ? event._projectile._velocity.normalize() : float3{};
+                hit._direction = event._projectile.getSpeed() > MathUtil::kEpsilon ? event._projectile._velocity.normalize() : float3{};
                 spec.setHit( hit );
                 manager.executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, target, spec, extraSpec]()
                 {
