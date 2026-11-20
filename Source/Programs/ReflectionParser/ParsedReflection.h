@@ -24,9 +24,10 @@ namespace sw
         string                          _keyTypeName;
         shared_ptr<ParsedContainerNode> _elementNested;
         ContainerKind                   _containerKind;
-        uint8                           _bIsContainer : 1;
-        uint8                           _bInvalid     : 1; ///< 컨테이너인데 인자를 clang 형식으로 읽지 못했다(알림은 이미 했다) — 프로퍼티가 실패한다
-        [[maybe_unused]] uint8          _reserved     : 6;
+        uint8                           _bIsContainer         : 1;
+        uint8                           _bInvalid             : 1; ///< 컨테이너인데 인자를 clang 형식으로 읽지 못했다(알림은 이미 했다) — 프로퍼티가 실패한다
+        uint8                           _bInPlaceElementWrite : 1; ///< 원소를 제자리에서 쓰는 순서 있는 시퀀스다(표의 State 역할 — 집합 · 맵은 아니다)
+        [[maybe_unused]] uint8          _reserved             : 5;
         [[maybe_unused]] uint16         _padding;
 
         ParsedContainerNode() noexcept
@@ -38,6 +39,7 @@ namespace sw
             , _containerKind{ ContainerKind::None }
             , _bIsContainer{ SW_FALSE }
             , _bInvalid{ SW_FALSE }
+            , _bInPlaceElementWrite{ SW_FALSE }
             , _reserved{ 0 }
             , _padding{ 0 }
         {

@@ -33,10 +33,10 @@ namespace sw
     bool PropertyResolver::isFlatOrderedSequence( const ParsedPropertyInfo& prop )
     {
         // 집합(`set` · `unordered_set`)은 원소의 순서 · 해시가 있어야 컴파일되는데 핸들 · 참조 · 키에는 둘 다 없다 — 생성 단계에서 막아 C++ 오류 대신 이 오류가 뜨게 한다.
-        const ParsedContainerNode* pTree     = prop._containerTree.get();
-        const bool                 bFlat     = pTree == nullptr || pTree->_elementNested == nullptr;
-        const bool                 bSetShape = prop._containerType == "Set" || prop._containerType == "UnorderedSet";
-        return prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._keyTypeName.empty() && bFlat && bSetShape == false;
+        // 집합은 표에서 State 역할이 없는 시퀀스다(래퍼 형식과 컴파일 때 대조된다) — 철자("Set")로 가르지 않는다.
+        const ParsedContainerNode* pTree = prop._containerTree.get();
+        const bool                 bFlat = pTree != nullptr && pTree->_elementNested == nullptr;
+        return prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._keyTypeName.empty() && bFlat && pTree->_bInPlaceElementWrite == SW_TRUE;
     }
 
     void PropertyResolver::normalizeTypedValue( ParsedPropertyInfo& prop, const bool bSingleValue, const string& canonical )

@@ -50,11 +50,14 @@ namespace sw
         return true;
     }
 
-    void ContainerTreeBuilder::markContainer( ParsedContainerNode& node, const ContainerKind kind, const string& wrapperStem )
+    void ContainerTreeBuilder::markContainer( ParsedContainerNode& node, const ContainerKind kind, const string& wrapperStem, const ParserSession& session )
     {
         node._bIsContainer  = SW_TRUE;
         node._containerKind = kind;
         node._containerType = wrapperStem;
+        // 제자리 쓰기 시퀀스인지는 래퍼 줄기의 표 역할(State)이다 — 같은 줄기의 줄은 역할이 같고, 생성 코드가 래퍼 형식과 컴파일 때 대조한다(`matchesTable`).
+        const ContainerTypeRule* pRule = session._containerTypeMap.findByWrapperStem( wrapperStem );
+        node._bInPlaceElementWrite     = pRule != nullptr && pRule->_bState == SW_TRUE ? SW_TRUE : SW_FALSE;
     }
 
     shared_ptr<ParsedContainerNode> ContainerTreeBuilder::makeNestedContainer( const CXType argType, const ParserSession& session )
@@ -154,7 +157,7 @@ namespace sw
             const CXType elementType = clang_getArrayElementType( type );
             // 표의 `array` 줄이 래퍼를 정한다 — 로더가 그 줄이 고정 시퀀스로 있는지 시작할 때 봤다.
             const ContainerTypeRule& fixedArray = *session._containerTypeMap.findByMatch( annotation::kFixedArrayTypeName );
-            markContainer( *node, fixedArray._kind, fixedArray._type );
+            markContainer( *node, fixedArray._kind, fixedArray._type, session );
             node->_typeName        = fixedArray._match;
             node->_elementTypeName = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( elementType ) ) );
             node->_elementNested   = makeContainerFromType( elementType, session );
@@ -169,9 +172,9 @@ namespace sw
         ContainerKind kind = ContainerKind::None;
         string        wrapperStem;
         if ( findReflectContainer( type, kind, wrapperStem ) )
-            markContainer( *node, kind, wrapperStem );
+            markContainer( *node, kind, wrapperStem, session );
         else if ( rule != nullptr )
-            markContainer( *node, rule->_kind, rule->_type );
+            markContainer( *node, rule->_kind, rule->_type, session );
         else
             return node;
 

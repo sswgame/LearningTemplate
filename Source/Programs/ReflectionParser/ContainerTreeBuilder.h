@@ -50,7 +50,7 @@ namespace sw
          */
         [[nodiscard]] static bool findReflectContainer( CXType type, ContainerKind& outKind, string& outWrapperStem );
         /** @brief 노드를 그 종류 · 래퍼의 컨테이너로 표시합니다. */
-        static void markContainer( ParsedContainerNode& node, ContainerKind kind, const string& wrapperStem );
+        static void markContainer( ParsedContainerNode& node, ContainerKind kind, const string& wrapperStem, const ParserSession& session );
         /** @brief 원소 · 값 인자 형식이 컨테이너면 그 중첩 노드, 아니면 nullptr 입니다(인자를 읽지 못한 노드는 그대로 돌려 오류가 트리에 남는다). */
         static shared_ptr<ParsedContainerNode> makeNestedContainer( CXType argType, const ParserSession& session );
         /**
