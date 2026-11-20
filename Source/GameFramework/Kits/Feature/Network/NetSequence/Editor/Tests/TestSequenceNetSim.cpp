@@ -165,7 +165,7 @@ SW_TEST_CASE( SequenceNetSimTest, SkipRequestIsCheckedAgainstTheOwningConnection
     NetMessageWriter           writer;
     SequenceNetSkipRequestBody request;
     request._playID = 1;
-    SW_REQUIRE_TRUE( writer.writeMessage<NetSequenceMessage::Table, NetSequenceMessage::SkipRequest>( request ) );
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetSequenceMessage::Table, NetSequenceMessage::SkipRequest>( request ) ) );
     SW_REQUIRE_TRUE( writer.sendMessage( pSecond->getPeers(), 0 ) );
     harness.stepTicks( 5 );
     SW_EXPECT_EQUAL( 1.0, SequenceNetSimTestUtil::readServerValue( harness, "SkipRejected" ) );

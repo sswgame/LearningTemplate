@@ -35,6 +35,8 @@ namespace sw
     class DestructionNetSession;            // 파괴 넷 세션 시작 — 번호표 잡기
     class PairedAnimationReplicationServer; // 짝 애니 복제 시작 — 번호표 잡기
     class PairedAnimationReplicationClient; // 짝 애니 복제 시작 — 번호표 잡기
+    class SequenceReplicationServer;        // 컷씬 복제 시작 — 번호표 잡기
+    class SequenceReplicationClient;        // 컷씬 복제 시작 — 번호표 잡기
     struct DevSceneIterationAccess;         // 개발 도구 층의 공용 공급자(`DevTools/Diagnostics/DevSceneIterationAccess.h`)
     struct SceneIterationTestAccess;        // 테스트(`Engine/Object/GameObject/Tests/SceneIterationTestAccess.h`)
     namespace editor
@@ -66,6 +68,8 @@ namespace sw
         friend class DestructionNetSession;
         friend class PairedAnimationReplicationServer;
         friend class PairedAnimationReplicationClient;
+        friend class SequenceReplicationServer;
+        friend class SequenceReplicationClient;
         friend struct DevSceneIterationAccess;
         friend struct SceneIterationTestAccess;
         friend struct editor::EditorSceneIterationAccess;
