@@ -1,0 +1,24 @@
+{
+    "_name": "GF_EditorPlugin_NetSequence",
+    "_version": "1.0.0",
+    "_kind": "EditorExtension",
+    "_description": "컷씬 재생 복제의 한 프로세스 재생 본보기 — 본보기 게임 `Sample: cutscene`(서버 판정 · 그 플레이어만 / 전원 · 늦게 들어온 클라이언트 · 건너뛰기 검증)을 NetSimGameRegistry 에 올리고 하니스 테스트를 든다",
+    "_listDependency": [
+        {
+            "_name": "EditorModule"
+        },
+        {
+            "_name": "GF_NetSimulation"
+        },
+        {
+            "_name": "GF_NetSequence"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

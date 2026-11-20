@@ -235,6 +235,16 @@ namespace sw
 
     void SequencePlayerComponent::play()
     {
+        startPlayback( nullopt );
+    }
+
+    void SequencePlayerComponent::playFromFrame( int32 frame )
+    {
+        startPlayback( frame );
+    }
+
+    void SequencePlayerComponent::startPlayback( optional<int32> startFrame )
+    {
         // 다시 틀기는 지금 재생을 끝내고 시작한다 — 되돌릴 값은 이번 재생의 시작 상태여야 한다.
         endPlayback( SequenceHistoryKind::Stopped );
         if ( validateBindings() == false )
@@ -251,7 +261,10 @@ namespace sw
             SequenceTimelineUtil::captureRestoreState( pOwner->getMutableManager(), _player.getAsset(), makeBindingView(), _state._listRestore );
             _state._bRestoreCaptured = SW_TRUE;
         }
-        _player.play();
+        if ( startFrame.has_value() )
+            _player.playFromFrame( *startFrame );
+        else
+            _player.play();
         _history.record( SequenceHistoryKind::Started, _player.getCurrentFrame(), kSequenceNoBinding, _sequencePath.path() );
         applyTimeline( _player.getStartStep() );
     }

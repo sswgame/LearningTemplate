@@ -2,7 +2,11 @@
 
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
@@ -16,6 +20,34 @@ namespace sw
         , _bHasLastIntent{ false }
     {
         _received.initialize( kReceiveCapacity );
+    }
+
+    RemoteControllerComponent* RemoteControllerComponent::spawnForConnection( GameObjectManager& manager, const hashed_string& objectName, int32 connectionID, PawnComponent& pawn )
+    {
+        if ( connectionID < 0 )
+        {
+            SW_LOG_ERROR_ID( "RemoteController.SpawnNegativeConnection", "Remote controller '%#' not spawned: connection id %# is not a connection", objectName.c_str(), connectionID );
+            return nullptr;
+        }
+        GameObject*                pObject = manager.createGameObject( objectName );
+        RemoteControllerComponent* pRemote = pObject != nullptr ? pObject->addComponent<RemoteControllerComponent>() : nullptr;
+        if ( pRemote == nullptr )
+        {
+            SW_LOG_ERROR_ID( "RemoteController.SpawnFailed", "Remote controller '%#' could not be created", objectName.c_str() );
+            if ( pObject != nullptr )
+                manager.destroyGameObject( pObject );
+            return nullptr;
+        }
+        pRemote->setInputConnection( connectionID );
+        pRemote->possess( pawn );
+        return pRemote;
+    }
+
+    void RemoteControllerComponent::onBeginPlay()
+    {
+        ControllerComponent::onBeginPlay();
+        if ( getInputPeer() == 0 )
+            SW_LOG_ERROR_ID( "RemoteController.NoConnection", "Remote controller on '%#' has no connection - spawn it with RemoteControllerComponent::spawnForConnection", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
     }
 
     void RemoteControllerComponent::receiveIntent( uint32 tick, const ControlIntent& intent )

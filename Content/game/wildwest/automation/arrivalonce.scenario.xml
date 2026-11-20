@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4868e0f0828b4322aa346e4686f8f148"?>
+<!--
+  WildWest 도착 컷씬을 트리거 계약 위에서 한 번만 — 마을 앞(TownArrival)의 시퀀스 트리거가 ArrivalDirector 를 튼다. 정책은 씬 데이터다:
+  _progressFlag wildwest.arrivalSeen(본 기록 — 판 상태 플래그라 세이브에 실린다, 언리얼 USaveGame 의 진행 bool 자리) · _bOnce · _spawnInside Ignore(이미 안에 나타난 기수에는 틀지 않음).
+  ① 기수가 안에 선 채 볼륨이 켜지면(나타남 — 스트리밍으로 올라옴 · 불러오기와 같은 길) 틀지 않는다.
+  ② 나갔다 걸어 들어오면 한 번 틀고 플래그가 선다. 재생 중 입력이 막힌다.
+  ③ 재생 중 트리거 밖으로 밀려나도 끊기지 않는다(트리거는 진입만 받는다 — 이탈은 재생과 무관).
+  ④ 건너뛰기(Cutscene.Skip, Backspace) → 끝 · 조작 복귀.
+  ⑤ 다시 들어와도 다시 틀지 않는다.
+  ⑥ 마을 안에서 저장 → 불러오면 플래그가 돌아오고, 안에 나타난 기수 · 다시 걸어 들어온 기수 모두 틀지 않는다.
+  판정은 감시 값이다(사진 없음): 본 기록 Session.Flag, 발동 수 Object.Property SequenceTriggerComponent._fireCount, 재생 Sequence.Frame · Sequence.History, 막기 Sequence.InputBlocked.
+  실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/arrivalonce.scenario.xml -unattended
+-->
+<Scenario name="game.wildwest.arrivalonce" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Session.Flag" key="wildwest.arrivalSeen" equals="0"/>
+	<Expect watch="Object.Property" target="TownArrival" key="SequenceTriggerComponent._fireCount" equals="0"/>
+
+	<!-- ① 안에 선 채 볼륨이 켜짐 = 나타남 → 틀지 않는다 -->
+	<DevCommand line="object.active TownArrival 0"/>
+	<DevCommand line="teleport Player 40 0.05 0"/>
+	<AdvanceSimulation frames="2"/> <!-- 순간이동이 물리에 닿는다(프레임 경계) -->
+	<DevCommand line="object.active TownArrival 1"/>
+	<AdvanceSimulation frames="20"/> <!-- 켜진 볼륨이 안의 기수를 재고도 틀지 않는다(일어나지 않음 — 시간이 내용) -->
+	<Expect watch="Object.Property" target="TownArrival" key="SequenceTriggerComponent._fireCount" equals="0"/>
+	<Expect watch="Session.Flag" key="wildwest.arrivalSeen" equals="0"/>
+	<Expect watch="Sequence.History" target="ArrivalDirector" key="Started" equals="0"/>
+	<Expect watch="Sequence.InputBlocked" target="ArrivalDirector" equals="0"/>
+
+	<!-- ② 나갔다 걸어 들어오면 한 번 — 플래그가 서고 입력이 막힌다 -->
+	<DevCommand line="teleport Player 30 0.05 0"/>
+	<AdvanceSimulation frames="5"/> <!-- 트리거가 바깥에 선 기수를 본다(프레임 경계) -->
+	<DevCommand line="teleport Player 40 0.05 0"/>
+	<WaitUntil watch="Object.Property" target="TownArrival" key="SequenceTriggerComponent._fireCount" equals="1" timeoutFrames="30"/>
+	<Expect watch="Session.Flag" key="wildwest.arrivalSeen" equals="1"/>
+	<Expect watch="Sequence.History" target="ArrivalDirector" key="Started" equals="1"/>
+	<WaitUntil watch="Sequence.InputBlocked" target="ArrivalDirector" equals="1" timeoutFrames="4"/>
+
+	<!-- ③ 재생 중 밖으로 밀려나도 끊기지 않는다 -->
+	<Store watch="Sequence.Frame" target="ArrivalDirector" as="pushedFrame"/>
+	<DevCommand line="teleport Player 30 0.05 0"/>
+	<AdvanceSimulation frames="10"/> <!-- 밖에 선 채 시간이 흘러야 한다(끊기지 않음은 그 시간 뒤의 값) -->
+	<Expect watch="Sequence.Frame" target="ArrivalDirector" increaseFrom="pushedFrame" increaseBy="3"/>
+	<Expect watch="Sequence.History" target="ArrivalDirector" key="Stopped" equals="0"/>
+	<Expect watch="Sequence.InputBlocked" target="ArrivalDirector" equals="1"/>
+
+	<!-- ④ 건너뛰기 → 끝 · 조작 복귀 -->
+	<Tap slot="Key.Backspace" hold="1"/>
+	<WaitUntil watch="Sequence.History" target="ArrivalDirector" key="Finished" equals="1" timeoutFrames="6"/>
+	<Expect watch="Sequence.InputBlocked" target="ArrivalDirector" equals="0"/>
+	<Store watch="Object.Z" target="Player" as="freeZ"/>
+	<Press slot="Key.W"/>
+	<WaitUntil watch="Object.Z" target="Player" differsFrom="freeZ" timeoutFrames="30"/>
+	<Release slot="Key.W"/>
+
+	<!-- ⑤ 다시 들어와도 다시 틀지 않는다 -->
+	<DevCommand line="teleport Player 30 0.05 0"/>
+	<AdvanceSimulation frames="5"/> <!-- 트리거가 바깥에 선 기수를 본다(프레임 경계) -->
+	<DevCommand line="teleport Player 40 0.05 0"/>
+	<AdvanceSimulation frames="30"/> <!-- 다시 닿아도 반 초 동안 틀지 않는다(일어나지 않음 — 시간이 내용) -->
+	<Expect watch="Object.Property" target="TownArrival" key="SequenceTriggerComponent._fireCount" equals="1"/>
+	<Expect watch="Sequence.History" target="ArrivalDirector" key="Started" equals="1"/>
+	<Expect watch="Sequence.InputBlocked" target="ArrivalDirector" equals="0"/>
+
+	<!-- ⑥ 마을 안에서 저장 → 불러오기: 플래그가 돌아오고 다시 틀지 않는다 -->
+	<Store watch="Save.Written" as="writtenBeforeSave"/>
+	<DevCommand line="game.save wildwest/arrivalonce"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBeforeSave" timeoutWallSeconds="10"/>
+	<Store watch="Save.Loaded" as="loadedBefore"/>
+	<DevCommand line="game.load wildwest/arrivalonce"/>
+	<WaitUntil watch="Save.Loaded" differsFrom="loadedBefore" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Session.Flag" key="wildwest.arrivalSeen" equals="1"/>
+	<Store watch="Sequence.History" target="ArrivalDirector" key="Started" as="startsAfterLoad"/>
+	<AdvanceSimulation frames="20"/> <!-- 불러온 기수가 마을 안에 나타났다 — 틀지 않는다(일어나지 않음 — 시간이 내용) -->
+	<Expect watch="Sequence.History" target="ArrivalDirector" key="Started" sameAs="startsAfterLoad"/>
+	<DevCommand line="teleport Player 30 0.05 0"/>
+	<AdvanceSimulation frames="5"/> <!-- 트리거가 바깥에 선 기수를 본다(프레임 경계) -->
+	<DevCommand line="teleport Player 40 0.05 0"/>
+	<AdvanceSimulation frames="30"/> <!-- 걸어 들어와도 틀지 않는다(일어나지 않음 — 시간이 내용) -->
+	<Expect watch="Sequence.History" target="ArrivalDirector" key="Started" sameAs="startsAfterLoad"/>
+	<Expect watch="Sequence.InputBlocked" target="ArrivalDirector" equals="0"/>
+	<Expect watch="Session.Flag" key="wildwest.arrivalSeen" equals="1"/>
+	<Pass/>
+</Scenario>

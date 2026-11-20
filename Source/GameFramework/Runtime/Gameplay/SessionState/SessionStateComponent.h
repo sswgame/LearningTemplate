@@ -15,6 +15,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameFlagsOwnerComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -93,7 +94,7 @@ namespace sw
      *            게임 인스턴스가 생성자에서 `getStateSnapshot().registerStatefulComponent<SessionStateComponent>()` 로 스냅샷에 등록한다.
      */
     REFLECT( Category = "Framework", DisplayName = "Game State", Tooltip = "Shared state (wallet, flags, clock, quests, reputation) used by the kit directors on the same object" )
-    class SW_GF_API SessionStateComponent : public Component
+    class SW_GF_API SessionStateComponent : public GameFlagsOwnerComponent
     {
     public:
         REFLECT_BODY();
@@ -132,23 +133,25 @@ namespace sw
 
         bool isInitialized() const { return _bInitialized == SW_TRUE; }
         /** @brief 이번 판이 새 판으로 열렸으면 true 이고, 복원한 판이면 false 입니다. 디렉터가 시작값을 넣을지 판단할 때 묻습니다. */
-        bool                   isFreshGame() const { return _bFreshGame == SW_TRUE; }
-        Wallet&                getWallet() { return _wallet; }
-        const Wallet&          getWallet() const { return _wallet; }
-        GameFlags&             getFlags() { return _flags; }
-        const GameFlags&       getFlags() const { return _flags; }
-        WorldClock&            getClock() { return _clock; }
-        const WorldClock&      getClock() const { return _clock; }
-        QuestLog&              getQuestLog() { return _questLog; }
-        const QuestLog&        getQuestLog() const { return _questLog; }
-        ReputationState&       getReputation() { return _reputation; }
-        Inventory&             getInventory() { return _inventory; }
-        WeatherSystem&         getWeather() { return _weather; }
-        const WeatherSystem&   getWeather() const { return _weather; }
-        const Inventory&       getInventory() const { return _inventory; }
-        const ReputationState& getReputation() const { return _reputation; }
-        LandRegistry&          getLand() { return _land; }
-        const LandRegistry&    getLand() const { return _land; }
+        bool          isFreshGame() const { return _bFreshGame == SW_TRUE; }
+        Wallet&       getWallet() { return _wallet; }
+        const Wallet& getWallet() const { return _wallet; }
+        /** @brief 열렸으면 판 상태의 플래그입니다(`GameFlagsOwnerComponent` — 아래 층의 활성자 볼륨이 진행 플래그를 적는다). */
+        [[nodiscard]] GameFlags* findOpenFlags() override { return isInitialized() ? &_flags : nullptr; }
+        GameFlags&               getFlags() { return _flags; }
+        const GameFlags&         getFlags() const { return _flags; }
+        WorldClock&              getClock() { return _clock; }
+        const WorldClock&        getClock() const { return _clock; }
+        QuestLog&                getQuestLog() { return _questLog; }
+        const QuestLog&          getQuestLog() const { return _questLog; }
+        ReputationState&         getReputation() { return _reputation; }
+        Inventory&               getInventory() { return _inventory; }
+        WeatherSystem&           getWeather() { return _weather; }
+        const WeatherSystem&     getWeather() const { return _weather; }
+        const Inventory&         getInventory() const { return _inventory; }
+        const ReputationState&   getReputation() const { return _reputation; }
+        LandRegistry&            getLand() { return _land; }
+        const LandRegistry&      getLand() const { return _land; }
         /**
          * @brief 진행 조건 디버거(HUD 섹션 `progress`)의 줄을 씁니다 — 읽기만 한다. 플래그(조건식이 읽는 이름별 값) · 지갑 · 가방(빈 칸 제외) 순이고 @p maxLines 에서 끊는다.
          * @details 퀘스트의 "왜 못 받나" 는 `QuestLog::writeDebugLines`(섹션 `quest`)가 적는다. 카탈로그 정의값이 아니라 이 판의 값이다.

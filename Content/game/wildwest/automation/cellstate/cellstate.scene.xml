@@ -207,5 +207,29 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 셀 경계의 컷씬 트리거(automation/cellcutscene) — 셀 A 에 든 시퀀스 트리거가 늘 올라 있는 ArrivalDirector(prairie)를 튼다. 본 기록은 판 상태 플래그 cellstate.gateSeen 이고,
+		     _spawnInside Activate(트리거 계약 그대로) — 기수가 선 자리에 셀이 올라오면 안에서 생긴 것이라 진입이다. 셀이 내려가면 트리거는 파괴 길로 이탈하고 재생은 이어진다. -->
+		<entity id="207" name="CellGate">
+			<GameObject _schemaVersion="0" _name="CellGate" _bActive="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="-72,0,12"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<SequenceTriggerComponent _componentName="SequenceTriggerComponent"
+					                          _bActive="true"
+					                          _activator="4"
+					                          _radius="2"
+					                          _progressFlag="cellstate.gateSeen"
+					                          _bOnce="true"
+					                          _spawnInside="Activate"
+					                          _sequence="112" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

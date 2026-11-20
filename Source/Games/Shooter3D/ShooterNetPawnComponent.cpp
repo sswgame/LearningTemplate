@@ -250,7 +250,8 @@ namespace sw
         // 발동은 한 프레임만 참이다 — 입력 틱(30 Hz)이 없던 프레임의 발동이 사라지지 않게 매 프레임 모은다.
         if ( _role == Role::Client )
             collectPendingTriggers( *pMovement );
-        if ( _role == Role::Server && _bRemoteRequested == SW_FALSE )
+        // 원격 조종자는 맡을 연결이 정해진 뒤에 세운다 — 연결 id 없이는 세울 수 없다(`RemoteControllerComponent::spawnForConnection`).
+        if ( _role == Role::Server && _bRemoteRequested == SW_FALSE && _controllerID >= 0 )
         {
             _bRemoteRequested = SW_TRUE;
             context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
@@ -309,6 +310,8 @@ namespace sw
             {
                 pRemote->clearReceived();
                 pRemote->setNextInputTick( _nextInputTick );
+                if ( _controllerID >= 0 )
+                    pRemote->transferToConnection( _controllerID ); // 다음 클라이언트가 맡는다 — 폰의 소유 연결도 따라간다
             }
         }
         // 클라이언트는 접속 전에도 틱을 센다 — 조종을 맡은 뒤 처음 받은 틱에서 시작한다.
@@ -465,16 +468,15 @@ namespace sw
             return;
         }
         // 언리얼 서버가 접속마다 PlayerController 를 세우는 자리다 — 씬 데이터가 아니라 네트 역할이 정한다(혼자 하는 게임에는 없다). 씬과 함께 지워진다.
-        GameObject*                pObject = pManager->createGameObject( hashed_string( "ShooterRemoteController" ) );
-        RemoteControllerComponent* pRemote = pObject != nullptr ? pObject->addComponent<RemoteControllerComponent>() : nullptr;
+        // 맡은 연결(`_controllerID`)로 세워 폰의 소유 연결(`PawnComponent::findInputConnection`)이 잡힌다.
+        RemoteControllerComponent* pRemote = RemoteControllerComponent::spawnForConnection( *pManager, hashed_string( "ShooterRemoteController" ), _controllerID, *pPawn );
         if ( pRemote == nullptr )
         {
             SW_LOG_ERROR_ID( "ShooterNetPawn.ShooterNetPawnNoRemote", "Shooter net pawn: the remote controller could not be created - the client's shots and weapons do not reach the server body" );
             return;
         }
         pRemote->setNextInputTick( _nextInputTick );
-        pRemote->possess( *pPawn );
-        _remoteController = pObject->getHandle();
+        _remoteController = pRemote->getOwner()->getHandle();
     }
 
     void ShooterNetPawnComponent::collectPendingTriggers( const ShooterBodyMovementComponent& movement )

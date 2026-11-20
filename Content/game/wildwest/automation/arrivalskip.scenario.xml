@@ -16,6 +16,7 @@
 	<Expect watch="Sequence.InputBlocked" target="ArrivalDirector" equals="0"/>
 	<Expect watch="UI.HUDHidden" equals="0"/>
 
+	<AdvanceSimulation frames="10"/> <!-- 볼륨이 나타난 창(8 프레임 — _spawnInside Ignore)을 지나야 순간이동이 걸어 들어온 것이다 -->
 	<DevCommand line="teleport Player 40 0.05 0"/>
 	<WaitUntil watch="Object.Property" target="TownArrival" key="SequenceTriggerComponent._fireCount" equals="1" timeoutFrames="30"/>
 	<!-- ① 입력 막힘 · HUD 숨김 -->

@@ -36,6 +36,8 @@ namespace sw
 
         /** @brief 새 오브젝트 id 입니다(0 은 쓰지 않는다). */
         uint64 allocateObjectID() { return _nextObjectID.fetch_add( 1, std::memory_order_relaxed ); }
+        /** @brief 다음에 낼 오브젝트 id 입니다(내지 않는다). 이 값보다 크거나 같은 id 는 읽은 뒤에 생긴 오브젝트다 — 활성자 볼륨의 나타남 판정이 쓴다. */
+        uint64 peekNextObjectID() const { return _nextObjectID.load( std::memory_order_relaxed ); }
         /** @brief 정해 둔 오브젝트 id(세이브 · 복사본)를 쓰겠다고 알립니다. 공간을 그 뒤로 밀고 @p objectID 를 그대로 돌려줍니다. */
         uint64 reserveObjectID( uint64 objectID );
         /** @brief 새 컴포넌트 id 입니다(0 은 쓰지 않는다). */
