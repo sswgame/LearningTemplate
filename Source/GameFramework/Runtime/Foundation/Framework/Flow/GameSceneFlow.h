@@ -98,13 +98,15 @@ namespace sw
         /** @brief 타이틀 씬이 있는 게임이면 true 입니다 — 세션 명령(타이틀로)을 걸지 정한다. */
         bool hasTitleScene() const;
         /**
-         * @brief 세션 명령(UI 전역 명령 `ReturnToTitle`)의 등록 구독을 맡깁니다. `unregisterSessionCommands` 가 거둡니다.
+         * @brief 세션 명령(UI 전역 명령 `StartGame` · `ReturnToTitle`)의 등록 구독 하나를 맡깁니다. 여러 번 맡길 수 있고 `unregisterSessionCommands` 가 모두 거둡니다.
          * @details 거는 일은 클라이언트 전용 부분(`IGameInstanceClientHook::bindSessionCommands`)이 한다 — 씬 흐름은 UI 를 모른다. 게임 인스턴스가 종료의 맨 앞에서 거둔다.
          */
         void holdSessionCommand( Subscription registration );
         void unregisterSessionCommands();
         /** @brief UI 전역 명령 `ReturnToTitle` 의 처리 함수입니다(일시정지 메뉴의 "타이틀로"). 클라이언트 전용 부분이 이 함수를 명령에 건다. */
         void onReturnToTitleCommand( const hashed_string& command, Widget& source );
+        /** @brief UI 전역 명령 `StartGame` 의 처리 함수입니다(메인 메뉴의 "시작" — 타이틀 다음 씬 `getEntranceScene`). 클라이언트 전용 부분이 이 함수를 명령에 건다. */
+        void onStartGameCommand( const hashed_string& command, Widget& source );
 
     private:
         /** @brief 맡긴 씬 로드 하나입니다. 끝나면 `update` 가 `SceneLoadCompletedEvent` 를 내고 목록에서 뺍니다. */
@@ -133,7 +135,7 @@ namespace sw
         SaveLock&                _saveLock;                       ///< 게임 인스턴스의 세이브 막기 문(빌림)
         vector<PendingSceneLoad> _listPendingSceneLoad;           ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
         Subscription             _sceneLoadRequestedSubscription; ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
-        Subscription             _returnToTitleRegistration;      ///< UI 전역 명령 ReturnToTitle 의 등록 구독(`holdSessionCommand` 가 받는다)
+        vector<Subscription>     _listSessionCommandRegistration; ///< UI 전역 명령(StartGame · ReturnToTitle)의 등록 구독(`holdSessionCommand` 가 받는다)
         uint8                    _bResumingWorld;                 ///< 초기화 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

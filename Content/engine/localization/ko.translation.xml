@@ -1,6 +1,7 @@
 <TranslationTable culture="ko">
 	<entries>
 		<entry key="Already used by" text="이미 사용 중:" sourceHash="cbdae832bc5ce48d" />
+		<entry key="Amount" text="양" sourceHash="ba98a7152d80b949" />
 		<entry key="Apply" text="적용" sourceHash="b8f855b49234b81b" />
 		<entry key="Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
 		<entry key="Close" text="닫기" sourceHash="5e8250fb85d64c23" />
@@ -659,11 +660,14 @@
 		<entry key="Revert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
 		<entry key="Reverting in" text="되돌리기까지" sourceHash="9cef80c4c43e7e14" />
 		<entry key="Sections" text="섹션" sourceHash="0337d90cf703df0d" />
+		<entry key="Shop.ConfirmCancel" text="취소" sourceHash="2ceb11be2290bb1b" />
 		<entry key="Show HUD (Ctrl+F3)" text="HUD 표시 (Ctrl+F3)" sourceHash="8f553b077c9a458d" />
 		<entry key="Some changes take effect after a restart."
 		       text="일부 변경은 다시 시작한 뒤 적용됩니다."
 		       sourceHash="14441b823018dda4" />
 		<entry key="Swap" text="맞바꾸기" sourceHash="cf28302518a72dee" />
+		<entry key="UIMenu.Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
+		<entry key="UIMenu.QuitTitle" text="게임 종료" sourceHash="92aee0b2e93f7fd0" />
 		<entry key="You have changes that are not applied."
 		       text="적용하지 않은 변경이 있습니다."
 		       sourceHash="9ea9ff2b01f83378" />

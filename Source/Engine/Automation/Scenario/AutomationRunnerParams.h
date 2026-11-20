@@ -82,7 +82,7 @@ namespace sw
         uint32 _pad{ 0 };
     };
 
-    /** @brief `Text` 의 인자입니다. */
+    /** @brief `Text` 의 인자입니다. `composition="true"` 면 확정 글 대신 IME 조합 글(확정 전 — 한글 조합 중인 음절)로 넣습니다. */
     REFLECT()
     struct SW_API AutomationTextStepParams
     {
@@ -90,6 +90,8 @@ namespace sw
 
         PROPERTY( Required )
         string _value{};
+        PROPERTY( Name = "composition" )
+        bool _bComposition{ false }; ///< 확정 글이 아니라 조합 글로 넣는다
     };
 
     /** @brief `Variable` 의 인자입니다. */
