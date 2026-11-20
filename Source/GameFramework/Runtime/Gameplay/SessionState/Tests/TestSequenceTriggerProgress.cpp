@@ -42,6 +42,7 @@ namespace
             _pPlayer = pDirector->addComponent<SequencePlayerComponent>();
             SW_REQUIRE_NOT_NULL( _pPlayer );
             _pPlayer->setSequence( SequenceAsset{} );
+            _pPlayer->setAutoPlay( false ); // 트리거가 트는 디렉터다 — 켜 두면 beginPlay 가 먼저 틀어 트리거가 "재생 중" 으로 본다
 
             _pRider = _manager.createGameObject( hashed_string( "Rider" ) );
             SW_REQUIRE_NOT_NULL( _pRider );

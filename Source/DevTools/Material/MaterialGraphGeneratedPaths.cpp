@@ -12,6 +12,7 @@
 #include "DevTools/Material/MaterialGraph.h"
 #include "DevTools/Material/MaterialGraphCompileResult.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
@@ -80,7 +81,32 @@ namespace sw
                 return true;
             }
 
-            /** @brief 같은 줄기의 옛 해시 셰이더를 지웁니다. 남겨 두면 그 내용을 아무도 안 쓰는데 쿠킹 입력과 저장소에 쌓인다. */
+            /**
+             * @brief 옛 셰이더 곁의 서술(`.meta`)을 지금 셰이더로 옮깁니다 — 생성 셰이더의 정체성(GUID)은 해시 이름이 바뀌어도 그 그래프의 셰이더 하나로 남는다
+             *        (생성 머티리얼이 머리를 옮겨 쓰는 것과 같은 규칙). 지금 셰이더에 서술이 이미 있으면 옛 것만 지운다.
+             */
+            static void carryStaleMeta( const string& staleShaderPath, const string& currentShaderPath )
+            {
+                const string staleMetaPath = AssetMeta::makePath( staleShaderPath );
+                if ( FileUtil::exists( staleMetaPath ) == false )
+                    return;
+                const string currentMetaPath = AssetMeta::makePath( currentShaderPath );
+                if ( FileUtil::exists( currentMetaPath ) == false )
+                {
+                    string                    metaText;
+                    AssetMeta                 meta;
+                    const optional<AssetGUID> guid = FileUtil::readTextFile( staleMetaPath, metaText ) ? meta.parseXML( metaText, staleMetaPath ) : nullopt;
+                    if ( guid.has_value() == false || FileUtil::writeTextFile( currentMetaPath, AssetMeta::makeText( currentShaderPath, *guid, meta._listImportOverride ) ) == false )
+                    {
+                        SW_LOG_WARNING_ID( "MaterialGraph.ShaderMetaNotCarried", "Could not carry '%#' to the new generated shader '%#' - it keeps a new identity", staleMetaPath, currentShaderPath );
+                        return; // 옛 서술을 남겨 손으로 옮길 수 있게 한다
+                    }
+                }
+                if ( FileUtil::removeFile( staleMetaPath ) == false )
+                    SW_LOG_WARNING_ID( "MaterialGraph.StaleShaderNotRemoved", "Could not remove old generated shader '%#'", staleMetaPath );
+            }
+
+            /** @brief 같은 줄기의 옛 해시 셰이더를 지웁니다. 남겨 두면 그 내용을 아무도 안 쓰는데 쿠킹 입력과 저장소에 쌓인다. 곁의 서술은 지금 셰이더로 옮긴다(`carryStaleMeta`). */
             static void removeStaleShaders( const AssetPaths& assetPaths, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath )
             {
                 const optional<AbsolutePath> folder = assetPaths.toDiskPath( paths._shadersFolder );
@@ -95,6 +121,7 @@ namespace sw
                     const string fileName = FileUtil::getFileNamePart( filePath );
                     if ( fileName == currentName || isHashedShaderOfStem( fileName, paths._stem ) == false )
                         continue;
+                    carryStaleMeta( filePath, folder->str() + "/" + currentName );
                     if ( FileUtil::removeFile( filePath ) == false )
                         SW_LOG_WARNING_ID( "MaterialGraph.StaleShaderNotRemoved", "Could not remove old generated shader '%#'", filePath );
                 }

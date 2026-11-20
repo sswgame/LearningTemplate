@@ -1,5 +1,5 @@
 // clang-format off
-// 셰이더 리로드 시나리오(desktop/editor/shaderreload)의 셰이더 — game/playground/shaders/matgraph/matgraph_rim_glow_51edde95.hlsl 의 사본이다(사본 폴더에서 깨뜨리고 되돌린다).
+// 셰이더 리로드 시나리오(desktop/editor/shaderreload)의 셰이더 — game/playground/shaders/matgraph/matgraph_rim_glow_43ab1243.hlsl 의 사본이다(사본 폴더에서 깨뜨리고 되돌린다).
 #include "lighting.hlsli"
 
 SW_MATERIAL_BEGIN

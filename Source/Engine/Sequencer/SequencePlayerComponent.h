@@ -98,6 +98,9 @@ namespace sw
         /** @brief 컷씬 움직임 정책을 바꿉니다. 다음 재생부터 따른다(재생 중의 막기 요청은 끝내기가 같은 값으로 푼다). */
         void                   setPlayerMovement( SequencePlayerMovement movement ) { _playerMovement = movement; }
         SequencePlayerMovement getPlayerMovement() const { return _playerMovement; }
+        /** @brief 시작할 때 스스로 틀지 정합니다(기본 참 — 트리거가 트는 디렉터는 끈다). 코드 · 테스트가 쓴다 — 씬 파일은 PROPERTY 로 든다. */
+        void setAutoPlay( bool bAutoPlay ) { _bAutoPlay = bAutoPlay ? SW_TRUE : SW_FALSE; }
+        bool isAutoPlay() const { return _bAutoPlay == SW_TRUE; }
         /** @brief 범위 제한(`Confined`)의 대상 · 중심 · 반지름을 정합니다. 코드 · 테스트가 쓴다 — 씬 파일은 PROPERTY 로 든다. */
         void setConfine( GameObjectHandle target, GameObjectHandle center, float32 radius )
         {

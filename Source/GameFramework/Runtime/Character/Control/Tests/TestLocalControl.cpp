@@ -20,6 +20,7 @@ using namespace sw;
 /** @brief [LocalControlTest] 플레이어 조종자가 쥔 폰만 로컬이고, 원격 조종자가 쥔 폰은 그 연결을 내며, 쥔 조종자가 없는 폰은 둘 다 아니다 */
 SW_TEST_CASE( LocalControlTest, PlayerControllerPawnIsLocalAndRemotePawnNamesItsConnection )
 {
+    SW_EXPECT_LOG( "Control.AxisActionNotInInputMap" ); // 기본 폰의 Look 축이 빈 입력 맵에 없다 — 이 테스트는 조종 소유만 본다
     GameObjectManager          manager;
     PawnComponent*             pLocalPawn  = manager.createGameObject( hashed_string( "LocalPawn" ) )->addComponent<PawnComponent>();
     PawnComponent*             pRemotePawn = manager.createGameObject( hashed_string( "RemotePawn" ) )->addComponent<PawnComponent>();
@@ -63,6 +64,7 @@ SW_TEST_CASE( LocalControlTest, RemoteControllerNeedsAConnection )
 /** @brief [LocalControlTest] 플레이어 상태는 폰을 쥔 조종자 오브젝트에서 찾히고, 진행 플래그가 상태 저장 왕복을 넘는다 */
 SW_TEST_CASE( LocalControlTest, PlayerStateIsFoundFromThePawnAndRoundTripsItsFlags )
 {
+    SW_EXPECT_LOG( "Control.AxisActionNotInInputMap" ); // 기본 폰의 Look 축이 빈 입력 맵에 없다 — 이 테스트는 조종 소유만 본다
     GameObjectManager          manager;
     GameObject*                pPawnObject = manager.createGameObject( hashed_string( "Pawn" ) );
     PawnComponent*             pPawn       = pPawnObject->addComponent<PawnComponent>();
