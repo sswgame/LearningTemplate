@@ -259,8 +259,16 @@ namespace sw
         virtual bool queryGameplayActive() const { return true; }
         /** @brief 월드 플레이 상태를 호스트 모듈이 정하면 true 를 반환합니다(에디터의 Play, Stop). false 면 `beginFrame` 이 월드를 플레이 상태로 켭니다. */
         virtual bool canControlWorldPlay() const { return false; }
-        /** @brief 무엇을 언로드하든 그 전에 불립니다(에디터 시뮬레이션 멈춤). 게임 상태를 저장하기 전입니다. */
-        virtual void onBeforeSuspendModules() {}
+        /**
+         * @brief 무엇을 언로드하든 그 전에 불립니다. 게임 상태를 저장하기 전입니다.
+         * @return 호스트 모듈이 플레이 세션을 이 내리기 너머로 잇는다면 true 입니다 — 월드를 플레이 중으로 둔다(에디터 PIE 의 리로드 · 백엔드 교체).
+         *         false 면 호스트 모듈을 내린 뒤 월드를 멈춘다(종료 · 호스트 모듈 없음).
+         */
+        [[nodiscard]] virtual bool onBeforeSuspendModules( FlushReason reason )
+        {
+            (void)reason;
+            return false;
+        }
         /** @brief `ModuleScope::Editor` 와 `Both` 를 종료할 때 게임보다 먼저 불립니다(에디터 인스턴스 파괴). */
         virtual void suspendHostModule( bool bReleaseAPITable ) { (void)bReleaseAPITable; }
         /** @brief 렌더 워커와 태스크를 비우기 **앞에서** 불립니다. 호스트 모듈(에디터)의 백그라운드 일에 종료 신호를 올린다(`FlushReason::Shutdown` 일 때만 뜻이 있다). */

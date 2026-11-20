@@ -141,8 +141,8 @@ namespace sw
          *          오브젝트 매니저에 있으므로, 새로 만든 에디터는 멈춤 상태로 시작하는데 월드는 계속 플레이 중입니다(편집한 컴포넌트가 onBeginPlay 를 받고,
          *          플레이 스냅샷은 복원되지 않습니다). 멈추면 플레이가 끝나고 스냅샷이 복원되는데, 이 일은 에디터 컨텍스트가 아직 있는 동안 해야 합니다.
          */
-        void onBeforeSuspendModules() override;
-        void suspendHostModule( bool bReleaseAPITable ) override;
+        [[nodiscard]] bool onBeforeSuspendModules( FlushReason reason ) override;
+        void               suspendHostModule( bool bReleaseAPITable ) override;
         /**
          * @brief 에디터의 "렌더 대기" 표시를 버립니다.
          * @details 그 표시는 렌더 스레드의 postPresent 만 풀 수 있는데, 그 스레드는 방금 일을 끝내고 쉬고 있다. 알려 주지 않으면 다음 updateUI 나

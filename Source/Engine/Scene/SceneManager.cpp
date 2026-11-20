@@ -34,6 +34,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/ScenePlaySnapshot.h"
 #include "Engine/Scene/ScenePreloadList.h"
 
 namespace sw
@@ -72,6 +73,7 @@ namespace sw
         , _pScenePreload{}
         , _preloadHeldFrames{ 0 }
         , _leakCheck{}
+        , _heldPlaySnapshot{}
     {
         _asyncLoad->_services = _services;
     }
@@ -79,6 +81,16 @@ namespace sw
     SceneManager::~SceneManager()
     {
         shutdown();
+    }
+
+    void SceneManager::holdPlaySnapshot( unique_ptr<ScenePlaySnapshot> snapshot )
+    {
+        _heldPlaySnapshot = std::move( snapshot );
+    }
+
+    unique_ptr<ScenePlaySnapshot> SceneManager::takePlaySnapshot()
+    {
+        return std::move( _heldPlaySnapshot );
     }
 
     /**

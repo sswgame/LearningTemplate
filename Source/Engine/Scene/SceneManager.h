@@ -27,6 +27,7 @@ namespace sw
     class ISceneRenderBinding;
     class PreloadSet;
     class Scene;
+    struct ScenePlaySnapshot;
 
     /**
      * @brief 이전 씬의 오브젝트를 가리키는 기록이 무효가 됐다는 알림입니다(활성 씬을 바꿨을 때 · 매니저 종료).
@@ -214,6 +215,14 @@ namespace sw
         /** @brief 월드가 플레이 중이면 true 입니다. */
         bool isWorldPlaying() const { return _bWorldPlaying; }
         /**
+         * @brief 에디터 모듈을 리로드하는 동안 플레이 전 편집 씬의 롤백 스냅샷을 맡습니다. 앞에 맡긴 것은 버립니다.
+         * @details 월드는 리로드 너머로 계속 돈다 — 새 에디터 이미지가 `takePlaySnapshot` 으로 되찾아 Stop 이 편집 씬을 되돌린다. 형이 엔진 것이라
+         *          옛 이미지와 함께 모양이 바뀌지 않아 바이트로 옮기지 않는다(`ScenePlaySnapshot.h`).
+         */
+        void holdPlaySnapshot( unique_ptr<ScenePlaySnapshot> snapshot );
+        /** @brief 맡긴 롤백 스냅샷을 꺼내고 칸을 비웁니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] unique_ptr<ScenePlaySnapshot> takePlaySnapshot();
+        /**
          * @brief 이 매니저가 앞으로 받아들이는 로드 · 활성 씬에 넣을 넷 링크입니다(`SceneNetLink`) — 게임 인스턴스가 전역 세션을 열고 건다. 미리보기 씬에는 넣지 않는다(미리보기 월드는 만드는 쪽이 자기 링크를 올린다).
          * @details 이미 활성인 씬에도 바로 올린다. 값이 비어 있으면(세션 없음) 씬의 링크는 비어 있어 혼자 도는 월드다.
          */
@@ -363,9 +372,10 @@ namespace sw
         SceneLoadRequestedDelegate      _onSceneLoadRequested;      ///< `onSceneLoadRequested`
         NetLinkValue                    _netLink;                   ///< 새로 받아들이는 씬에 올릴 넷 링크(`setNetLink`). 비어 있으면 올리지 않는다
 
-        unique_ptr<PreloadSet> _pScenePreload;     ///< 로드 중이거나 끝난 지 얼마 안 된 씬의 프리로드. 없으면 nullptr
-        uint32                 _preloadHeldFrames; ///< 로드가 끝난 뒤 프리로드를 붙들고 지난 프레임 수
-        SceneLoadLeakCheck     _leakCheck;         ///< 씬 로드 누수 곡선 감시 값(`startLoadLeakCheck`)
+        unique_ptr<PreloadSet>        _pScenePreload;     ///< 로드 중이거나 끝난 지 얼마 안 된 씬의 프리로드. 없으면 nullptr
+        uint32                        _preloadHeldFrames; ///< 로드가 끝난 뒤 프리로드를 붙들고 지난 프레임 수
+        SceneLoadLeakCheck            _leakCheck;         ///< 씬 로드 누수 곡선 감시 값(`startLoadLeakCheck`)
+        unique_ptr<ScenePlaySnapshot> _heldPlaySnapshot;  ///< 에디터 모듈 리로드 동안 맡은 롤백 스냅샷(`holdPlaySnapshot`). 없으면 nullptr
 
         SW_SERVICE_SLOT( SceneManager, Required );
     };
