@@ -196,10 +196,10 @@ job_sanitizer_cpu() {
   return 0
 }
 
-# 배포 프리셋 셋(shipping-check 가 띄우는 것과 같은 목록)을 짓는다 — 쿠킹이 Content 를 읽으므로 임포트 뒤에 띄운다.
+# 배포 프리셋 둘(shipping-check 가 띄우는 것과 같은 목록 — 플레이어 Client 와 전용 Server)을 짓는다 — 쿠킹이 Content 를 읽으므로 임포트 뒤에 띄운다.
 job_shipping_build() {
   local P
-  for P in Ninja-Shipping Ninja-Shipping-Client Ninja-Shipping-Server; do
+  for P in Ninja-Shipping Ninja-Shipping-Server; do
     build_preset $P || return 1
   done
 }
