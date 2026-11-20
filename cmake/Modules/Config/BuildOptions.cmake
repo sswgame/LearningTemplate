@@ -155,10 +155,7 @@ option(SW_ENABLE_TRACY "Tracy 프로파일러 클라이언트 링크(개발 빌�
 # 헤더는 Source/Engine/Text/HarfBuzz · Text/SheenBidi 에서만 include 한다. 켜면 두 패키지가 필수다(못 찾으면 구성이 선다).
 # 기본 꺼짐: vcpkg 설치 트리를 워크트리끼리 나눠 쓰므로 패키지는 main 에서 먼저 설치한다. 설치한 뒤 ON 으로 바꾼다.
 option(SW_ENABLE_COMPLEX_TEXT "HarfBuzz + SheenBidi 복합 문자 셰이핑(아랍어 연결형 · 전체 양방향). 끄면 단순 셰이퍼 · 단순 양방향" OFF)
-# 두 패키지는 vcpkg.json 의 선택 기능 `complex-text` 에 있다 — 기능 없이 켜면 패키지가 설치되지 않은 채 find_package 에서야 선다. 이유를 말하고 먼저 선다.
-if(SW_ENABLE_COMPLEX_TEXT AND NOT "complex-text" IN_LIST VCPKG_MANIFEST_FEATURES)
-	message(FATAL_ERROR "SW_ENABLE_COMPLEX_TEXT=ON needs the vcpkg manifest feature: configure with -DVCPKG_MANIFEST_FEATURES=complex-text")
-endif()
+# 두 패키지는 vcpkg.json 의 선택 기능 `complex-text` 에 있다 — 기능 목록은 아래(힙 백엔드 뒤)에서 이 옵션으로 채운다.
 
 # 힙 백엔드 — `Memory` 아래의 `MemoryBackend`(Source/Core/Memory/MemoryBackend.h) 구현을 고른다. 고른 구현 파일 하나만 링크된다(가상 호출 없음).
 # crt — C 런타임 힙. mimalloc — mimalloc(MIT, vcpkg 선택 기능 `mimalloc`). 웹(Emscripten)은 crt 만 된다(Source/Core/CMakeLists.txt 가 막는다).
@@ -168,10 +165,17 @@ set_property(CACHE SW_MEMORY_BACKEND PROPERTY STRINGS crt mimalloc)
 if(NOT SW_MEMORY_BACKEND MATCHES "^(crt|mimalloc)$")
 	message(FATAL_ERROR "SW_MEMORY_BACKEND='${SW_MEMORY_BACKEND}' is not a heap backend — use crt or mimalloc")
 endif()
-# 패키지는 vcpkg.json 의 선택 기능 `mimalloc` 에 있다 — 복합 문자와 같은 이유로 기능 없이 고르면 이유를 말하고 먼저 선다.
-if(SW_MEMORY_BACKEND STREQUAL "mimalloc" AND NOT "mimalloc" IN_LIST VCPKG_MANIFEST_FEATURES)
-	message(FATAL_ERROR "SW_MEMORY_BACKEND=mimalloc needs the vcpkg manifest feature: configure with -DVCPKG_MANIFEST_FEATURES=mimalloc")
+
+# vcpkg 선택 기능은 위 옵션에서 유도한다 — 옵션과 VCPKG_MANIFEST_FEATURES 를 둘 다 손으로 맞추면 어긋난 구성(옵션은 켜졌는데 패키지가 없다)이 생겼다.
+# vcpkg.json 의 선택 기능은 이 둘뿐이고 정본은 옵션이다 — 손으로 준 값은 덮는다. 툴체인(vcpkg)이 project() 에서 읽으므로 그 전인 여기서 정한다.
+set(list_manifest_feature "")
+if(SW_ENABLE_COMPLEX_TEXT)
+	list(APPEND list_manifest_feature "complex-text")
 endif()
+if(SW_MEMORY_BACKEND STREQUAL "mimalloc")
+	list(APPEND list_manifest_feature "mimalloc")
+endif()
+set(VCPKG_MANIFEST_FEATURES "${list_manifest_feature}" CACHE STRING "vcpkg 선택 기능 — SW_ENABLE_COMPLEX_TEXT · SW_MEMORY_BACKEND 에서 유도(손으로 정하지 않는다)" FORCE)
 
 # 활성화할 대상 게임 팩 선택 (Source/Games/ 하위 디렉터리 이름)
 set(SW_ACTIVE_GAME "Playground" CACHE STRING "활성 게임(Source/Games 폴더 이름) — Bin/Modules/SWGame · Shipping 이 굽는 게임. Dev 는 실행할 때 -game=<게임> 으로 다른 게임도 고른다")
