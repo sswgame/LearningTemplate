@@ -129,8 +129,10 @@ namespace sw::editor
             /** @brief 표시 경로 @p displayPath 의 디스크 자리입니다(`makeDisplayPath` 의 짝 — 작업 도메인은 실행 뿌리 아래, 나머지는 @p resourceRoot 아래). */
             static string makeDiskPath( string_view resourceRoot, string_view displayPath )
             {
-                if ( FileUtil::startsWithPathComponent( displayPath, AssetPaths::kScratchDomain ) )
-                    return FileUtil::joinPath( AssetPaths::getScratchFolderPath(), FileUtil::suffixAfterPathComponent( displayPath, AssetPaths::kScratchDomain ) );
+                // 작업 도메인 아래 부분은 원래 표기 그대로 잇는다(접은 키로 자르면 리눅스에서 다른 파일이 된다).
+                string rest;
+                if ( displayPath == AssetPaths::kScratchDomain || FileUtil::tryMakePathUnderRoot( AssetPaths::kScratchDomain, displayPath, rest ) )
+                    return FileUtil::joinPath( AssetPaths::getScratchFolderPath(), rest );
                 return FileUtil::joinPath( resourceRoot, displayPath );
             }
 

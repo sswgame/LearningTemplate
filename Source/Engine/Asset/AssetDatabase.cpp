@@ -334,7 +334,7 @@ namespace sw
             const string assetID = normalized.substr( root.size() + 1 );
             // 작업 도메인(시나리오 · 테스트 사본 — 실행이 쓰고 지운다)은 기동 색인에 넣지 않는다: 원본을 머리째 복사해 GUID 가 겹친다. 정체성 규칙(`classify`)은
             // 그 안도 보통 에셋으로 본다 — 사본 안의 가져오기 · 내용 바꾸기가 GUID 를 주고 읽어야 한다(editor.assetidentity).
-            if ( FileUtil::startsWithPathComponent( assetID, AssetPaths::kScratchDomain ) )
+            if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( assetID ), AssetPaths::kScratchDomain ) )
                 continue;
             listID.push_back( assetID );
             setID.insert( AssetDatabaseInternal::toLowerID( listID.back() ) );

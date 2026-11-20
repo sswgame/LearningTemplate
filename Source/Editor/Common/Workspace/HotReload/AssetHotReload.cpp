@@ -106,7 +106,7 @@ namespace sw::editor
                 if ( FileUtil::tryMakePathUnderRoot( AssetPaths::getScratchFolderPath(), diskPath, relative ) )
                     return string( AssetPaths::kScratchDomain ) + "/" + relative;
                 if ( FileUtil::tryMakePathUnderRoot( editor::getSubsystem<AssetPaths>().getRootFolderPath(), diskPath, relative ) == false ||
-                     FileUtil::startsWithPathComponent( FileUtil::normalizePath( relative ).str(), AssetPaths::kScratchDomain ) )
+                     FileUtil::startsWithPathComponent( FileUtil::normalizePath( relative ), AssetPaths::kScratchDomain ) )
                     return {};
                 return relative;
             }
@@ -114,8 +114,10 @@ namespace sw::editor
             /** @brief 트리 표기 @p treePath(`makeTreePath`)의 디스크 경로입니다 — 작업 도메인은 실행 뿌리 아래, 나머지는 리소스 루트 아래. */
             static string makeDiskPath( string_view treePath )
             {
-                if ( FileUtil::startsWithPathComponent( treePath, AssetPaths::kScratchDomain ) )
-                    return FileUtil::joinPath( AssetPaths::getScratchFolderPath(), FileUtil::suffixAfterPathComponent( treePath, AssetPaths::kScratchDomain ) );
+                // 작업 도메인 아래 부분은 원래 표기 그대로 잇는다(접은 키로 자르면 리눅스에서 다른 파일이 된다).
+                string rest;
+                if ( treePath == AssetPaths::kScratchDomain || FileUtil::tryMakePathUnderRoot( AssetPaths::kScratchDomain, treePath, rest ) )
+                    return FileUtil::joinPath( AssetPaths::getScratchFolderPath(), rest );
                 return FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), treePath );
             }
 

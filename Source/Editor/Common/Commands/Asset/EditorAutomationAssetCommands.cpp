@@ -425,12 +425,12 @@ namespace sw::editor
              */
             [[nodiscard]] static expected<string> resolveImportFolder( const string& folderID )
             {
-                const string normalized       = FileUtil::normalizePath( folderID ).str();
-                const bool   bOutsideTempArea = FileUtil::startsWithPathComponent( normalized, kImportTempFolder ) == false || normalized.find( ".." ) != string::npos; // 리소스 id 끼리(소문자)
+                const PathKey folderKey        = FileUtil::normalizePath( folderID );
+                const bool    bOutsideTempArea = FileUtil::startsWithPathComponent( folderKey, kImportTempFolder ) == false || folderKey.view().find( ".." ) != string_view::npos; // 리소스 id 끼리(소문자)
                 if ( bOutsideTempArea )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "imports go under the temporary resource folder", kImportTempFolder }.appendDetail( "/: " ).appendDetail( folderID ) );
                 // 작업 도메인은 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`) — 리소스 루트에 id 를 붙이지 않고 도메인 규칙으로 푼다.
-                const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( normalized );
+                const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderKey.str() );
                 if ( folder.has_value() == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the import folder does not resolve to a disk folder", folderID } );
                 return folder->str();
@@ -473,7 +473,7 @@ namespace sw::editor
                     return false; // 원본이 없으면 readSourceFileArgument 가 이유를 적었다
                 const PathKey targetKey = FileUtil::normalizePath( listArgument[0] );
                 const string  targetID  = targetKey.str();
-                if ( FileUtil::startsWithPathComponent( targetID, kImportTempFolder ) == false || targetID.find( ".." ) != string::npos )
+                if ( FileUtil::startsWithPathComponent( targetKey, kImportTempFolder ) == false || targetID.find( ".." ) != string::npos )
                 {
                     outReply = "asset.replaceContent takes a target under " + string( kImportTempFolder ) + "/";
                     return false;

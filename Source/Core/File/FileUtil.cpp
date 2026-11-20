@@ -709,7 +709,7 @@ namespace sw
         return string( sb.view() );
     }
 
-    bool FileUtil::startsWithPathComponent( string_view path, string_view component )
+    bool FileUtil::startsWithComponentText( const string_view path, const string_view component )
     {
         if ( path.size() < component.size() )
             return false;
@@ -718,12 +718,23 @@ namespace sw
         return path.size() == component.size() || path[component.size()] == '/' || path[component.size()] == '\\';
     }
 
-    string FileUtil::suffixAfterPathComponent( string_view path, string_view component )
+    bool FileUtil::startsWithPathComponent( const ComparableDiskPath& path, const ComparableDiskPath& root )
     {
-        if ( path.size() <= component.size() )
+        return startsWithComponentText( path.view(), root.view() );
+    }
+
+    bool FileUtil::startsWithPathComponent( const PathKey& path, const string_view component )
+    {
+        return startsWithComponentText( path.view(), component );
+    }
+
+    string FileUtil::suffixAfterPathComponent( const PathKey& path, const string_view component )
+    {
+        const string_view text = path.view();
+        if ( text.size() <= component.size() )
             return {};
         // "component/" 를 건너뛴다
-        return string{ path.substr( component.size() + 1 ) };
+        return string{ text.substr( component.size() + 1 ) };
     }
 
     bool FileUtil::hasParentComponent( string_view path )
@@ -765,16 +776,16 @@ namespace sw
     {
         if ( hasParentComponent( root ) || hasParentComponent( path ) )
             return false; // `tryMakePathUnderRoot` 와 같다
-        const string rootText = makeComparableDiskPath( root );
+        const ComparableDiskPath rootText = makeComparableDiskPath( root );
         return rootText.empty() == false && startsWithPathComponent( makeComparableDiskPath( path ), rootText );
     }
 
-    string FileUtil::makeComparableDiskPath( string_view path )
+    ComparableDiskPath FileUtil::makeComparableDiskPath( string_view path )
     {
         string text = trimTrailingSlashes( normalizeSeparators( path ) );
         if ( PlatformFileSystem::kPathsAreCaseInsensitive )
             text = StringUtil::toLower( text.c_str() );
-        return text;
+        return ComparableDiskPath{ std::move( text ) };
     }
 
     bool FileUtil::ensureParentDirectoryExists( string_view filePath )

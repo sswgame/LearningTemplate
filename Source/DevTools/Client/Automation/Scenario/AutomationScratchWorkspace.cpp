@@ -66,7 +66,7 @@ namespace sw
 
                 if ( FileUtil::isPathUnderRoot( rootPath, path ) == false )
                     return {};
-                const string target = FileUtil::makeComparableDiskPath( path );
+                const string target = FileUtil::makeComparableDiskPath( path ).str(); // 폴더 이름 판정용 글(OS 규칙으로 접었다)
                 // 골든 기록 실행(`-scenario-update-golden` · `-scenario-record-missing-golden`)만 시나리오 옆 `golden/`(자동화 폴더 아래 어느 깊이든 — `engine/automation/editor/golden/`)에 쓴다.
                 // 그 실행이 하는 일이 바로 그것이고, 쓴 파일은 보고에 남아 리뷰한다. 무엇을 덮을지는 판정(`AutomationGoldenUtil::decide`)이 가른다. 폴더 이름은 판정이 쓰는 것과 같은 상수다.
                 bool bUpdateGolden        = false;

@@ -374,11 +374,13 @@ namespace sw
                 const bool bAssetID = lowerRel.empty() == false && FileUtil::isAbsolutePath( lowerRel ) == false;
                 if ( bAssetID && findMountedDiskDomain( state, lowerRel, outRoot, outKeyUnderRoot ) )
                     return true;
+                // 리소스 id 구간 판정은 접은 키 형식으로 한다(`PathKey` — 이미 접은 글이라 다시 접어도 같다).
+                const PathKey key = FileUtil::normalizePath( lowerRel );
                 // 작업 도메인은 실행 뿌리 아래다(`getScratchFolderPath`) — 처음 쓸 때 생기는 폴더라 아직 없어도 도메인이다(빈 트리의 첫 쓰기가 상대 키로 거절되지 않게).
-                if ( bAssetID && FileUtil::startsWithPathComponent( lowerRel, AssetPaths::kScratchDomain ) )
+                if ( bAssetID && FileUtil::startsWithPathComponent( key, AssetPaths::kScratchDomain ) )
                 {
                     outRoot         = AssetPaths::getScratchFolderPath();
-                    outKeyUnderRoot = FileUtil::suffixAfterPathComponent( lowerRel, AssetPaths::kScratchDomain );
+                    outKeyUnderRoot = FileUtil::suffixAfterPathComponent( key, AssetPaths::kScratchDomain );
                     return true;
                 }
 
@@ -388,9 +390,9 @@ namespace sw
                     return false;
 
                 // 1. game/<pack>/... 형식을 쪼갠다
-                if ( FileUtil::startsWithPathComponent( lowerRel, constant::path::kGamePack ) )
+                if ( FileUtil::startsWithPathComponent( key, constant::path::kGamePack ) )
                 {
-                    const string rest  = FileUtil::suffixAfterPathComponent( lowerRel, constant::path::kGamePack );
+                    const string rest  = FileUtil::suffixAfterPathComponent( key, constant::path::kGamePack );
                     const size_t slash = rest.find( '/' );
                     if ( slash == string::npos )
                     {
@@ -869,7 +871,7 @@ namespace sw
     const string& AssetPaths::getRootFolderPathFor( string_view resourceID ) const
     {
         static const string s_runRootPath = FileUtil::normalizeSeparators( ProcessRoots::get()._run.str() ); // 작업 도메인 폴더의 부모 — 프로세스 동안 바뀌지 않는다
-        return FileUtil::startsWithPathComponent( FileUtil::normalizeSeparators( resourceID ), kScratchDomain ) ? s_runRootPath : getRootFolderPath();
+        return FileUtil::startsWithPathComponent( FileUtil::normalizePath( resourceID ), kScratchDomain ) ? s_runRootPath : getRootFolderPath();
     }
 
     bool AssetPaths::setSearchPriority( const vector<string>& listPriority )

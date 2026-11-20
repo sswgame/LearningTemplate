@@ -112,7 +112,7 @@ namespace sw
     }
 
     bool FileWatchDispatcher::matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent,
-                                            string_view normalizedFullPath ) const
+                                            const ComparableDiskPath& normalizedFullPath ) const
     {
         // 정규화는 둘 다 **이미 끝나 있다.** 접두사는 등록할 때, 전체 경로는 이벤트마다 한 번 한다.
         if ( FileUtil::startsWithPathComponent( normalizedFullPath, entry._normalizedPrefix ) == false )
@@ -126,7 +126,7 @@ namespace sw
         for ( const FileChangeEvent& changeEvent : listEvent )
         {
             // **이벤트당 한 번** 만든다(`matchesWatch` 안에서 만들면 감시 수만큼 다시 만든다).
-            const string normalizedFullPath =
+            const ComparableDiskPath normalizedFullPath =
                 FileUtil::makeComparableDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
 
             bool bAnyMatch{ false };
@@ -208,7 +208,7 @@ namespace sw
         unordered_set<string> uniqueSetEmittedPath;
         for ( const FileChangeEvent& changeEvent : outListEvent )
         {
-            uniqueSetEmittedPath.insert( FileUtil::makeComparableDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) ); // 디스크 경로라 OS 규칙(리눅스는 대소문자를 가른다)
+            uniqueSetEmittedPath.insert( FileUtil::makeComparableDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).str() ); // 디스크 경로라 OS 규칙(리눅스는 대소문자를 가른다)
         }
 
         // 되찾은 개수를 쓰는 곳은 아래 로그뿐이다. SW_LOG_INFO 는 Shipping 에서 통째로 사라지므로
@@ -230,7 +230,7 @@ namespace sw
                 if ( FileUtil::tryGetFileTimestamp( filePath, mtime ) == false || mtime < sinceTimestamp )
                     continue; // 그 사이 지워졌거나 그 뒤로 바뀌지 않았다
 
-                const string normalized = FileUtil::makeComparableDiskPath( filePath );
+                const string normalized = FileUtil::makeComparableDiskPath( filePath ).str(); // 집합 키
                 if ( uniqueSetEmittedPath.insert( normalized ).second == false )
                     continue;
 

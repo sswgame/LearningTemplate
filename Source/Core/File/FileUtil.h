@@ -137,10 +137,10 @@ namespace sw
         [[nodiscard]] static bool isPathAtOrUnderRoot( string_view root, string_view path );
         /**
          * @brief 디스크 경로를 이 OS 의 비교용 글로 만듭니다 — 구분자 `/`, 끝 구분자 없음, 대소문자는 Windows 만 소문자로 접는다.
-         * @details 같은 형태끼리 `startsWithPathComponent` · `==` 로 견주면 포함 · 같음 판정이 OS 규칙을 따른다(감시 접두사처럼 미리 만들어 두는 자리). `normalizePath` 는
-         *          리소스 id · 맵 키용(늘 소문자)이라 디스크 경로의 포함 판정에 쓰지 않는다.
+         * @details 같은 형식끼리 `startsWithPathComponent` · `==` 로 견주면 포함 · 같음 판정이 OS 규칙을 따른다(감시 접두사처럼 미리 만들어 두는 자리). `normalizePath` 는
+         *          리소스 id · 맵 키용(늘 소문자)이라 디스크 경로의 포함 판정에 쓰지 않는다 — 두 결과는 다른 형식이라 섞이지 않는다.
          */
-        static string makeComparableDiskPath( string_view path );
+        [[nodiscard]] static ComparableDiskPath makeComparableDiskPath( string_view path );
         /** @brief 절대 경로를 만듭니다. */
         [[nodiscard]] static bool makeAbsolutePath( string_view path, string& outResult );
         /** @brief 비교 · 맵 키가 아니라 **실제** 경로를 만듭니다(링크 · `.` · `..` · 8.3 짧은 이름을 풀어서). 경로가 없으면 false 입니다. 구분자는 `/` 입니다. */
@@ -180,15 +180,15 @@ namespace sw
          */
         static string joinPath( string_view root, string_view relative );
         /**
-         * @brief `path` 가 `component` 자체이거나 `component/` 로 시작하는지 확인합니다(경로 구간 경계 기준).
-         * @note `games` 와 `gamesfoo` 처럼 접두어만 같은 경우를 맞다고 하지 않습니다. 글을 그대로 견준다 — 디스크 경로면 두 글을 `makeComparableDiskPath` 로 만든 뒤 부르거나
-         *       `isPathAtOrUnderRoot` 를 쓴다(`normalizePath` 한 글은 리눅스에서 대소문자를 잃는다).
+         * @brief 디스크 경로 @p path 가 @p root 자체이거나 그 아래인지 봅니다(경로 구간 경계 기준 — `games` 와 `gamesfoo` 는 다르다). 둘 다 이 OS 의 규칙으로 접은 형식이다.
+         * @note 접은 글을 `string` 으로 받지 않는다 — 범용 `toLower` 글 · `normalizePath` 키는 리눅스에서 대소문자를 잃어 바깥 폴더를 안으로 본다(컴파일 오류로 막는다).
+         *       형식을 만들어 두지 않은 한 번의 판정은 `isPathAtOrUnderRoot` 를 쓴다.
          */
-        static bool startsWithPathComponent( string_view path, string_view component );
-        /**
-         * @brief `component/` 뒤의 상대 경로를 반환합니다(`component` 만 있으면 빈 문자열).
-         */
-        static string suffixAfterPathComponent( string_view path, string_view component );
+        [[nodiscard]] static bool startsWithPathComponent( const ComparableDiskPath& path, const ComparableDiskPath& root );
+        /** @brief 리소스 id @p path 가 id 구간 @p component(늘 소문자 상수 — `AssetPaths::kScratchDomain` 등) 자체이거나 `component/` 로 시작하는지 봅니다. */
+        [[nodiscard]] static bool startsWithPathComponent( const PathKey& path, string_view component );
+        /** @brief 리소스 id @p path 의 `component/` 뒤 부분입니다(`component` 만 있으면 빈 글). 앞이 `component` 인지는 `startsWithPathComponent` 로 먼저 본다. */
+        static string suffixAfterPathComponent( const PathKey& path, string_view component );
         /**
          * @brief 대상 파일이 들어갈 상위 디렉터리가 있게 합니다(없으면 재귀적으로 만듭니다). 폴더 부분이 없는 이름이면 할 일이 없어 true 입니다.
          * @return 디렉터리가 있으면 true. 만들지 못했으면 경로와 이유를 알리고 false 입니다.
@@ -450,6 +450,10 @@ namespace sw
         [[nodiscard]] static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
         /** @brief 디렉터리 아래의 폴더를 모읍니다(경로 규칙 · 반환은 collectFiles 와 같습니다). */
         [[nodiscard]] static bool collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive );
+
+    private:
+        /** @brief 글 @p path 가 @p component 자체이거나 `component/` 로 시작하는지 봅니다 — 형식 있는 `startsWithPathComponent` 둘이 함께 쓴다. */
+        static bool startsWithComponentText( string_view path, string_view component );
     };
 } // namespace sw
 
