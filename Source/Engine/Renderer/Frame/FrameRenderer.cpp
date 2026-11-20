@@ -925,7 +925,7 @@ namespace sw
         // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 박아 넣은
         // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다. 재컴파일 묶음 하나에 한 번만 다시 만든다.
         //
-        // 순서는 loadPipeline 과 같다. ShaderRecompiler 가 ShaderCache 를 비운 뒤에 알렸고(그래야 새 바이트코드를 집는다), 이 함수는 렌더 스레드가
+        // 순서는 loadPipeline 과 같다. ShaderRecompiler 가 바뀐 ShaderCache 항목을 새 바이트로 바꾼 뒤에 알렸고(그래야 새 바이트코드를 집는다), 이 함수는 렌더 스레드가
         // 프레임을 기록하기 전에 돈다 — GPU 를 기다리지 않는다. 옛 PSO · 트랜지언트는 디바이스가 그것을 쓴 프레임의 GPU 완료 뒤로 미뤄 놓는다(백엔드 해제 큐).
         releasePassResources();
         ensurePassResources();

@@ -250,26 +250,24 @@ namespace sw
         string                         cacheKey = inCacheKey;
 
         // 0) 인메모리 캐시 조회 — 넣을 때의 지문(공급자가 센다 - 실행 중 컴파일은 소스와 연 헤더의 내용)이 지금도 같아야 맞다. 파일을 읽는 계산이라 잠금 밖에서 한다(항목을 복사해 나온다).
+        ShaderCacheEntry cachedEntry{};
+        bool             bCached = false;
         {
-            ShaderCacheEntry cachedEntry{};
-            bool             bCached = false;
+            ScopedLock<mutex> lock{ _mutexCache };
+            const auto        iter = _mapCache.find( cacheKey );
+            if ( iter != _mapCache.end() )
             {
-                ScopedLock<mutex> lock{ _mutexCache };
-                const auto        iter = _mapCache.find( cacheKey );
-                if ( iter != _mapCache.end() )
-                {
-                    cachedEntry = iter->second;
-                    bCached     = true;
-                }
+                cachedEntry = iter->second;
+                bCached     = true;
             }
-            if ( bCached )
+        }
+        if ( bCached )
+        {
+            const uint64 currentFingerprint = provider.computeFingerprint( cachedEntry._result, desc );
+            if ( currentFingerprint != 0 && currentFingerprint == cachedEntry._sourceFingerprint )
             {
-                const uint64 currentFingerprint = provider.computeFingerprint( cachedEntry._result, desc );
-                if ( currentFingerprint != 0 && currentFingerprint == cachedEntry._sourceFingerprint )
-                {
-                    ++_memoryHitCount;
-                    return cachedEntry._result;
-                }
+                ++_memoryHitCount;
+                return cachedEntry._result;
             }
         }
 
@@ -281,7 +279,16 @@ namespace sw
             result = provider.load( desc );
         }
         if ( result._bSuccess )
+        {
             storeEntry( std::move( cacheKey ), desc, result );
+            return result;
+        }
+        // 낡은 항목이 있으면(편집하다 깨진 소스) 마지막 성공 판으로 그린다 — 언리얼 · 유니티도 컴파일이 깨진 셰이더는 이전 판을 쓴다. 오류는 위에서 이미 남겼다.
+        if ( bCached && cachedEntry._result._bSuccess )
+        {
+            SW_LOG_WARNING_ID( "ShaderCache.KeptLastGoodShader", "Shader '%#' (%#) failed to compile - keeping the last compiled version", desc._source.c_str(), desc._entryPoint.c_str() );
+            return cachedEntry._result;
+        }
         return result;
     }
 
@@ -312,6 +319,17 @@ namespace sw
         if ( iter == _mapCache.end() )
             return false;
         outBytecode = iter->second._result._bytecode;
+        return true;
+    }
+
+    bool ShaderCache::replaceCompiled( const ShaderCompileDesc& desc, const ShaderCompileResult& result )
+    {
+        if ( result._bSuccess == false || result._bytecode.empty() )
+        {
+            SW_LOG_ERROR_ID( "ShaderCache.ReplaceWithFailedResult", "Shader '%#' (%#): only a successful compile result can replace a cache entry", desc._source.c_str(), desc._entryPoint.c_str() );
+            return false;
+        }
+        storeEntry( makeCacheKey( desc ), desc, result );
         return true;
     }
 
