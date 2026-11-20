@@ -9,7 +9,9 @@
 #include "Engine/Presentation/IPlayerNotificationSink.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Gameplay/Tutorial/TutorialHintComponent.h"
 
 // TutorialHintVolumeTest — 볼륨 바탕(`ActivatorVolumeComponent`)의 거리 판정이 트리거 계약(DesignBacklog "트리거 Enter · Stay · Exit 계약")의 경계를 따르는지
@@ -134,4 +136,20 @@ SW_TEST_CASE( TutorialHintVolumeTest, ProximityActivatorIgnoresItsOverlap )
     sensorOverlap._bOtherTrigger = SW_TRUE;
     rig._pVolume->onOverlapBegin( sensorOverlap );
     SW_EXPECT_EQUAL( 1u, rig._sink._postCount );
+}
+
+/** @brief [TutorialHintVolumeTest] 판정 자리 Local: 클라이언트 넷 월드도 제 진입으로 힌트를 띄운다 — 다만 이 월드의 로컬 플레이어가 조종하지 않는 폰(원격 플레이어의 복제 폰)은 거른다 */
+SW_TEST_CASE( TutorialHintVolumeTest, ClientWorldShowsHintsOnlyForItsLocalPlayer )
+{
+    HintVolumeRig         rig( 50.0f );
+    game::ScopedGameScope scopedScope( rig._scope );
+    GameObject*           pRemotePlayer = rig._manager.createGameObject( hashed_string( "RemotePlayer" ) );
+    (void)pRemotePlayer->addComponent<PawnComponent>();        // 쥔 로컬 조종자가 없다 — 복제된 원격 플레이어 폰 자리
+    SW_EXPECT_TRUE( rig._pVolume->activate( pRemotePlayer ) ); // 넷 링크 없는 월드(혼자 하는 게임)는 거르지 않는다
+    {
+        SceneNetLinkTestBinding client( rig._manager, NetLinkRole::Client );
+        SW_EXPECT_TRUE( rig._pVolume->activate( rig._pWalker ) ); // 폰이 아닌 활성자 — 거를 원격 플레이어가 아니다
+        SW_EXPECT_FALSE( rig._pVolume->activate( pRemotePlayer ) );
+    }
+    SW_EXPECT_EQUAL( 2u, rig._sink._postCount );
 }

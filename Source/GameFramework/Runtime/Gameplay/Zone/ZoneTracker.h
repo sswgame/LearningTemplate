@@ -5,6 +5,8 @@
  *          대상마다 위치 값(`ZoneSample`)과 모듈마다의 기억(`ZoneModuleMemory` — 주기 · 조건 전환 · 지연)을 든다. 대상 역할(들어온 개체 · 탈것 · 탑승자 · 근처)을 풀어 처리기를 부르고,
  *          처리기가 부르는 동작은 출처(`volume:<이름>` · `surface:<종류>`)를 실어 Ability 디버거 · 동작 추적(ActionTrace)에 남는다. 진입 · 이탈 · 전환은 고정 용량 기록(`collectEventLog`)에도 든다.
  *          게임 스레드에서 틱 뒤에 부른다(물리 자리 읽기 · 동작이 오브젝트를 만들고 지운다).
+ *          나타남(`setSpawnInside`): 기본은 트리거 계약대로 안에서 생긴 대상도 진입이다. Ignore 면 활성자 볼륨과 같은 판정(`ActivatorSpawnWindow`)으로 나타난 대상을
+ *          나갈 때까지 대상으로 세지 않는다(진입 · 체류 없음) — 나갔다 다시 들어오면 진입이다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -14,6 +16,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Framework/ActivatorVolumeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
 
 namespace sw
@@ -62,9 +65,14 @@ namespace sw
 
         ZoneTracker();
 
+        /** @brief 이미 안에 있는 채로 나타난 대상을 셀지 정합니다(기본 Activate). 입력(볼륨)이 정한다. */
+        void setSpawnInside( ActivatorSpawnInside spawnInside ) { _spawnInside = spawnInside; }
+        /** @brief 입력이 나타났습니다(볼륨 시작 · 다시 켜짐) — 나타남 창을 다시 열고, 나타남으로 빠져 있던 대상을 잊는다. */
+        void markAppeared( const GameObjectManager& manager );
+
         /** @brief 이번 프레임의 알림을 시작합니다. 이 뒤 `touch` 하지 않은 대상은 `dispatchOverlapEvents` 에서 나간다. */
         void beginFrame();
-        /** @brief 대상 @p target 이 이번 프레임에 안에 있다고 알립니다. 위치 값 @p sample 의 시간은 이 클래스가 센다. */
+        /** @brief 대상 @p target 이 이번 프레임에 안에 있다고 알립니다. 위치 값 @p sample 의 시간은 이 클래스가 센다. 나타남으로 빠진 대상(Ignore)은 대상이 되지 않는다. */
         void touch( const GameObject& target, const ZoneSample& sample );
         /**
          * @brief 이번 프레임을 마칩니다 — 새 대상은 진입, 남은 대상은 체류(게임 초 @p deltaTime), 알리지 않은 대상은 이탈을 처리기에 넘깁니다.
@@ -96,11 +104,17 @@ namespace sw
         /** @brief 모듈 @p module 의 대상 역할을 @p occupant 기준으로 풉니다. */
         static void resolveRoleTargets( GameObjectManager& manager, const ZoneCompiledModule& module, GameObject& occupant, vector<GameObject*>& outListTarget );
         void        appendLog( const ActionSource& source, const OccupantRecord& occupancy, ZoneLogEvent event );
+        /** @brief 안에 든 @p target 을 나타남으로 뺄지입니다(Ignore) — 이미 빠져 있었거나, 아직 대상이 아닌데 진입이 나타남에서 왔으면 뺀다(`_listSpawnHeldNext` 에 적는다). */
+        bool holdSpawnedInside( const GameObject& target );
 
     private:
-        vector<OccupantRecord> _listOccupancy;
-        ZoneLogEntry           _arrLog[kLogCapacity];
-        uint32                 _logCount;
-        uint32                 _stamp;
+        vector<OccupantRecord>   _listOccupancy;
+        vector<GameObjectHandle> _listSpawnHeld;     ///< 나타남으로 안에 있어 대상이 아닌 오브젝트(지난 프레임)
+        vector<GameObjectHandle> _listSpawnHeldNext; ///< 이번 프레임에 다시 빠진 오브젝트 — 알리지 않은(밖에 나간) 것은 빠짐이 풀린다
+        ActivatorSpawnWindow     _spawnWindow;       ///< 나타남 판정(활성자 볼륨과 같은 판정)
+        ZoneLogEntry             _arrLog[kLogCapacity];
+        uint32                   _logCount;
+        uint32                   _stamp;
+        ActivatorSpawnInside     _spawnInside;
     };
 } // namespace sw

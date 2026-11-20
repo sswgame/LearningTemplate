@@ -66,8 +66,6 @@ namespace sw
         [[nodiscard]] bool onVolumeActivated( const GameObject& activator ) override;
         /** @brief `Activator` 면 활성자의 플레이어 상태, `Everyone` 이면 판 상태(바탕)입니다. */
         [[nodiscard]] GameFlags* findProgressFlags( const GameObject* pActivator ) const override;
-        /** @brief 넷 링크가 클라이언트인 월드는 판정하지 않습니다 — 서버가 튼 재생을 넷 키트가 보낸다. 혼자 하는 게임 · 서버는 판정한다. */
-        [[nodiscard]] bool hasActivationAuthority() const override;
 
     private:
         PROPERTY( Category = "Sequence", DisplayName = "Sequence", Tooltip = "Object with the SequencePlayerComponent to play" )
