@@ -61,7 +61,7 @@ namespace
         FakeDeviceRenderDriver( vector<const utf8*>& outEvents, bool bPending, BackendChangeResult result )
             : _events{ outEvents }
             , _result{ result }
-            , _bPending{ bPending ? SW_TRUE : SW_FALSE }
+            , _bPending{ static_cast<uint8>( bPending ? SW_TRUE : SW_FALSE ) }
             , _reserved{ 0 }
         {
         }

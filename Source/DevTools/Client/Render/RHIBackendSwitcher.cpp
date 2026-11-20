@@ -218,6 +218,13 @@ namespace sw
         return EngineSubsystemHost::kClient;
     }
 
+    span<const utf8* const> RHIBackendSwitcher::getSubsystemDependencies() const
+    {
+        // RHI · 렌더 스레드 서브시스템을 참조로 든다 — 먼저 서고 나중에 진다.
+        static constexpr const utf8* kArrDependency[] = { RHISubsystem::kSubsystemName, RenderThreadSubsystem::kSubsystemName };
+        return kArrDependency;
+    }
+
     RHI* RHIBackendSwitcher::findRHI() const
     {
         return _rhiSubsystem.findRHI();

@@ -40,8 +40,14 @@ namespace sw
                 _renderDriver.overrideDeviceLostPolicy( gv_deviceLostPolicy );
             return SubsystemInitResult::Succeeded;
         }
-        void              shutdownSubsystem() override {}
-        const utf8*       getSubsystemName() const override { return kSubsystemName; }
+        void        shutdownSubsystem() override {}
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
+        // 렌더 드라이버를 참조로 든다 — 먼저 서고 나중에 진다.
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { EngineRenderDriverSubsystem::kSubsystemName };
+            return kArrDependency;
+        }
         SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 
     private:

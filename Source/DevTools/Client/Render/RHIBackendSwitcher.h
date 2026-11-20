@@ -46,9 +46,10 @@ namespace sw
         /** @brief `gv_rhiBackend` 변경 훅을 겁니다. 변수가 없으면 기동을 멈춘다(교체 요청이 조용히 사라지지 않게). */
         SubsystemInitResult initializeSubsystem() override;
         /** @brief 변경 훅 · 렌더 스레드 훅을 뗍니다. */
-        void              shutdownSubsystem() override;
-        const utf8*       getSubsystemName() const override { return kSubsystemName; }
-        SubsystemHostMask getSubsystemHost() const override;
+        void                    shutdownSubsystem() override;
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        SubsystemHostMask       getSubsystemHost() const override;
+        span<const utf8* const> getSubsystemDependencies() const override;
 
         // --- 자동화 창구(시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*`) -------------------------------------------------
         /** @brief 지금 확정된(디바이스가 실제로 쓰는) 백엔드입니다. RHI 가 없으면 false 입니다. */
