@@ -143,6 +143,126 @@ namespace sw
 
     App::~App() = default;
 
+    /** @brief 게임(과 에디터) 인스턴스 — 모듈 호스트입니다. `ClientModuleManager` 로 게임과 에디터 인스턴스를 만든다(라이브러리는 `loadModuleLibraries` 가 이미 올렸다). */
+    class App::GameHostService final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "Game";
+
+        explicit GameHostService( App& app )
+            : _app{ app }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            const bool bStarted = _app.getModuleManager()->initialize( _app._launch.getLiveReloadManager(), _app._launch.getEngine().getRHI(), _app._pWindow,
+                                                                       _app._launch.getEngine().getRenderDriver(), _app._bEnableEditor == SW_TRUE );
+            if ( bStarted == false )
+            {
+                SW_LOG_ERROR_ID( "App.GameModuleManagerInitializationFailed", "GameModuleManager initialization failed." );
+                return SubsystemInitResult::Failed;
+            }
+            // 에디터 렌더 훅은 모듈 매니저가 사는 동안만 걸린다(떼는 것은 `shutdownSubsystem` — 렌더 스레드가 사라진 매니저를 부르지 않는다).
+            _app.bindEditorRenderHooks( true );
+            // 시나리오 체인이 단계마다 게임을 처음부터 다시 세운다(`AutomationSession::startStage` 가 `engine::findSubsystem<IGameRestarter>()` 로 찾는다).
+            return _app._launch.getHostScope().bind<IGameRestarter>( _app._launch.getModuleManager() ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        }
+        void shutdownSubsystem() override
+        {
+            _app._launch.getHostScope().unbind<IGameRestarter>();
+            // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드와 RHI 디바이스를 쓴다 — 호스트 서비스는 엔진 종료 앞에서 내려간다.
+            _app.getModuleManager()->shutdown();
+            // 렌더 스레드가 받은 패킷을 끝낸 뒤 훅을 뗀다(`RenderThread::setPresentHook`) — 그 뒤에 매니저를 지운다.
+            _app.bindEditorRenderHooks( false );
+            _app._pModuleManager = nullptr;
+            _app._launch.releaseModuleManager();
+        }
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
+
+    private:
+        App& _app;
+    };
+
+    /** @brief 사용자 설정의 화면 적용입니다. */
+    class App::UserSettingsHostService final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "UserSettings";
+
+        explicit UserSettingsHostService( App& app )
+            : _app{ app }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            _app._userSettingsHost.initialize( _app._launch.getEngine().getRenderDriver(), _app._pWindow );
+            return SubsystemInitResult::Succeeded;
+        }
+        void        shutdownSubsystem() override { _app._userSettingsHost.shutdown(); }
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
+
+    private:
+        App& _app;
+    };
+
+    /** @brief 런타임 UI 의 클립보드 · 접근성 · 끝내기 명령입니다. */
+    class App::RuntimeUIHooksHostService final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "RuntimeUIHooks";
+
+        explicit RuntimeUIHooksHostService( App& app )
+            : _app{ app }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            _app._uiPlatformBinding.install( _app._pWindow, _app._bEnableEditor == SW_TRUE );
+            return SubsystemInitResult::Succeeded;
+        }
+        void        shutdownSubsystem() override { _app._uiPlatformBinding.remove(); }
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
+
+    private:
+        App& _app;
+    };
+
+    /** @brief 개발 콘솔(게임 창 콘솔과 표준 입력 채널)입니다. 명령이 게임이 올린 개발 명령 · 변수를 부른다 — 게임 뒤에 서고 게임보다 먼저 내려간다. */
+    class App::DevConsoleHostService final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "DevConsole";
+
+        explicit DevConsoleHostService( App& app )
+            : _app{ app }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            if ( _app._launch.getDevLayer() != nullptr )
+                _app._launch.getDevLayer()->startConsole( _app._bEnableEditor == SW_TRUE );
+            return SubsystemInitResult::Succeeded;
+        }
+        void shutdownSubsystem() override
+        {
+            if ( _app._launch.getDevLayer() != nullptr )
+                _app._launch.getDevLayer()->stopConsole();
+        }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { GameHostService::kSubsystemName };
+            return kArrDependency;
+        }
+
+    private:
+        App& _app;
+    };
+
     ClientModuleManager* App::getModuleManager() const
     {
         return _pModuleManager;
@@ -224,8 +344,11 @@ namespace sw
 
         // 3. 호스트 서비스(게임 · 에디터 인스턴스, 교체기, 사용자 설정, 런타임 UI 훅, 개발 콘솔)을 의존 순서로 세운다. 내리는 것은 `shutdown` 의 역순 한 줄이다.
         splash.updateStatus( "Loading Modules & Compiling Shaders...", 0.75f );
-        if ( _launch.startHostServices( kArrClientHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &App::startHostService, this ),
-                                        SW_DELEGATE_METHOD( HostServiceStopDelegate, &App::stopHostService, this ) ) == false )
+        _launch.addHostService<GameHostService>( *this );
+        _launch.addHostService<UserSettingsHostService>( *this );
+        _launch.addHostService<RuntimeUIHooksHostService>( *this );
+        _launch.addHostService<DevConsoleHostService>( *this );
+        if ( _launch.startHostServices() == false )
         {
             splash.dismiss();
             return false;
@@ -326,95 +449,6 @@ namespace sw
         return bLoaded;
     }
 
-    bool App::startHostService( HostServiceID id )
-    {
-        const bool bEnableEditor = _bEnableEditor == SW_TRUE;
-        switch ( id )
-        {
-            case HostServiceID::Game:
-            {
-                const bool bStarted = getModuleManager()->initialize( _launch.getLiveReloadManager(), _launch.getEngine().getRHI(), _pWindow, _launch.getEngine().getRenderDriver(), bEnableEditor );
-                if ( bStarted == false )
-                {
-                    SW_LOG_ERROR_ID( "App.GameModuleManagerInitializationFailed", "GameModuleManager initialization failed." );
-                    return false;
-                }
-                // 에디터 렌더 훅은 모듈 매니저가 사는 동안만 걸린다(떼는 것은 stopHostService — 렌더 스레드가 사라진 매니저를 부르지 않는다).
-                bindEditorRenderHooks( true );
-                // 시나리오 체인이 단계마다 게임을 처음부터 다시 세운다(`AutomationSession::startStage` 가 `engine::findSubsystem<IGameRestarter>()` 로 찾는다).
-                return _launch.getHostScope().bind<IGameRestarter>( _launch.getModuleManager() );
-            }
-            case HostServiceID::UserSettings:
-            {
-                _userSettingsHost.initialize( _launch.getEngine().getRenderDriver(), _pWindow );
-                return true;
-            }
-            case HostServiceID::RuntimeUIHooks:
-            {
-                _uiPlatformBinding.install( _pWindow, bEnableEditor );
-                return true;
-            }
-            case HostServiceID::DevConsole:
-            {
-                if ( _launch.getDevLayer() != nullptr )
-                    _launch.getDevLayer()->startConsole( bEnableEditor );
-                return true;
-            }
-            case HostServiceID::Observability:
-            case HostServiceID::CrashReports:
-            case HostServiceID::ServiceContext:
-            case HostServiceID::StandardInput:
-            case HostServiceID::DebugChannel:
-            {
-                break;
-            }
-        }
-        SW_LOG_ERROR_ID( "App.HostServiceNotClient", "Host service %# is not a client service", HostService::getName( id ) );
-        return false;
-    }
-
-    void App::stopHostService( HostServiceID id )
-    {
-        switch ( id )
-        {
-            case HostServiceID::Game:
-            {
-                _launch.getHostScope().unbind<IGameRestarter>();
-                // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드와 RHI 디바이스를 쓴다 — 호스트 서비스는 엔진 종료 앞에서 내려간다.
-                getModuleManager()->shutdown();
-                // 렌더 스레드가 받은 패킷을 끝낸 뒤 훅을 뗀다(`RenderThread::setPresentHook`) — 그 뒤에 매니저를 지운다.
-                bindEditorRenderHooks( false );
-                _pModuleManager = nullptr;
-                _launch.releaseModuleManager();
-                return;
-            }
-            case HostServiceID::UserSettings:
-            {
-                _userSettingsHost.shutdown();
-                return;
-            }
-            case HostServiceID::RuntimeUIHooks:
-            {
-                _uiPlatformBinding.remove();
-                return;
-            }
-            case HostServiceID::DevConsole:
-            {
-                if ( _launch.getDevLayer() != nullptr )
-                    _launch.getDevLayer()->stopConsole();
-                return;
-            }
-            case HostServiceID::Observability:
-            case HostServiceID::CrashReports:
-            case HostServiceID::ServiceContext:
-            case HostServiceID::StandardInput:
-            case HostServiceID::DebugChannel:
-            {
-                return;
-            }
-        }
-    }
-
     void App::onAppLifecycle( const WindowLifecycleEvent event )
     {
         // 표면을 잃고 찾는 것(SurfaceLost · SurfaceRestored)은 렌더러 몫이다 — 앱이 멈추고 돌아오는 것만 본다.
@@ -447,7 +481,7 @@ namespace sw
         // 나눌 필요가 없다.
         if ( _bEnableEditor == SW_TRUE )
         {
-            // 모듈 매니저는 루프가 도는 동안 산다(호스트 서비스 Game 이 세우고 루프 뒤 `shutdown` 이 내린다) — App 이 중계하지 않고 바로 묶는다.
+            // 모듈 매니저는 루프가 도는 동안 산다(호스트 서비스 `GameHostService` 가 세우고 루프 뒤 `shutdown` 이 내린다) — App 이 중계하지 않고 바로 묶는다.
             _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &ClientModuleManager::getSceneViewCamera, static_cast<const ClientModuleManager*>( getModuleManager() ) );
             // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다(언리얼 메인 프레임과 유니티 에디터 창도 최소 크기를 둔다).
             _pWindow->setMinimumClientSize( AppInternal::kEditorMinClientWidth, AppInternal::kEditorMinClientHeight );
@@ -470,7 +504,7 @@ namespace sw
 
     void App::shutdown()
     {
-        // 호스트 서비스를 선 순서의 역순으로 내린다(순서는 `HostService` 의 의존 선언 — 게임에 기대는 콘솔 · 교체기가 게임보다 먼저, 게임이 엔진보다 먼저).
+        // 호스트 서비스를 선 순서의 역순으로 내린다(순서는 각 서비스 형식의 의존 선언 — 게임에 기대는 콘솔이 게임보다 먼저, 게임이 엔진보다 먼저).
         _launch.stopHostServices();
 
         // 창은 엔진(RHI) 뒤에 파괴한다 — 소유자(MainWindow 서브시스템)가 RHI 에 기대는 순서로 내린다(제목은 창 안의 고정 버퍼라 누수 보고에 남지 않는다).
@@ -588,7 +622,7 @@ namespace sw
         _launch.updateModuleReload();
 
         const ModuleFrameState& frameState = getModuleManager()->getFrameState();
-        _launch.getEngine().update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
+        _launch.getEngine().update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE ? SceneTick::Run : SceneTick::Pause );
         getModuleManager()->endEditorFrame();
 
         // 프레임 경계의 장치 교체 · 다시 만들기 — 개발 구성의 백엔드 교체(`gv_rhiBackend`)와 배포도 쓰는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)이 같은 길이다.

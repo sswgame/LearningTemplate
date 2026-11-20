@@ -60,6 +60,13 @@ namespace sw
         DedicatedServer, ///< Server — 창 · GPU · 오디오 장치 · 플레이어 설정 없음
     };
 
+    /** @brief 이번 프레임에 활성 씬의 GameObject 를 틱하는지입니다(`Engine::update`). 맨 bool 인자는 부르는 자리에서 뜻이 안 보인다. */
+    enum class SceneTick : uint8
+    {
+        Run,   ///< 활성 씬을 틱한다
+        Pause, ///< 활성 씬을 틱하지 않는다(에디터 일시정지) — 씬 델타는 0, 미리보기 씬은 제 정책대로 돈다
+    };
+
     /**
      * @class Engine
      * @brief 코어 매니저들을 소유하고 메인 루프(tick)를 돌립니다.
@@ -82,7 +89,7 @@ namespace sw
          *                   이 범위가 **프로세스 범위**(범위 사슬의 뿌리)라, 모듈 서브시스템(`SW_MODULE_SUBSYSTEM( Process, … )`)이 여기에 모듈 이름의 자식 범위로 선다 —
          *                   그래서 쓰기 가능한 범위로 받는다. 없으면 코어 범위가 뿌리다.
          */
-        [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role = EngineHostRole::Client, SubsystemScope* pHostScope = nullptr );
+        [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role, SubsystemScope* pHostScope );
         /**
          * @brief 매니저들을 종료하고 정리합니다.
          * @param hostScope `initialize` 에 넘긴 호스트 범위입니다. 엔진 범위(기동 · 서비스)를 내린 뒤, 코어 범위보다 **먼저** 비웁니다(`destroyAll`).
@@ -105,9 +112,9 @@ namespace sw
          * @param deltaTime 델타 타임
          * @param views 호스트가 요청한 오프스크린 출력(에디터 게임 뷰 · 씬 뷰). 둘 다 비면 백버퍼에 게임 카메라로 그립니다.
          * @param sceneViewCameraProvider 씬 뷰를 그리는 호스트 카메라(에디터 카메라)를 돌려주는 델리게이트. 씬 뷰가 없으면 부르지 않습니다.
-         * @param bTickScene false이면 씬 GameObject tick을 건너뜁니다 (에디터 Pause).
+         * @param sceneTick `Pause` 면 씬 GameObject 틱을 건너뜁니다(에디터 일시정지).
          */
-        void update( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene );
+        void update( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, SceneTick sceneTick );
         /** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
         void endFrame();
 
@@ -175,7 +182,7 @@ namespace sw
          * @brief 활성 씬을 틱합니다. 게임 카메라와 입력이 쓰는 게임 화면 크기를 틱 전에 적고(@p vpWidth · @p vpHeight), 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 돌립니다.
          * @details 미리보기 씬은 @p views 가 이번 프레임에 그려 달라고 한 씬만 틱합니다(`ScenePreviewTick::WhenDrawn`).
          */
-        void updateScenes( float32 deltaTime, const FrameViewports& views, uint32 vpWidth, uint32 vpHeight, bool bTickScene );
+        void updateScenes( float32 deltaTime, const FrameViewports& views, uint32 vpWidth, uint32 vpHeight, SceneTick sceneTick );
         /** @brief 런타임 UI 를 이번 프레임의 게임 상태로 돌립니다(게임 틱 뒤 · 렌더 패킷 앞). 디버그 HUD 와 음성 자막을 먼저 넘기고, 뷰포트는 게임이 그려지는 화면으로 정합니다. */
         void updateRuntimeUI( const ViewportTarget& mainOutput, uint32 vpWidth, uint32 vpHeight );
 

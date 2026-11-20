@@ -94,21 +94,32 @@ namespace sw
         return _moduleManager->loadModuleLibraries( getLiveReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
-    bool HostLaunch::startHostServices( vector_reference<const HostServiceID> listService, const HostServiceStartDelegate& start, const HostServiceStopDelegate& stop )
+    bool HostLaunch::startHostServices()
     {
         const CommandLineManager* pCommandLine = _engine.getCommandLineManager();
         if ( pCommandLine == nullptr )
             return false;
-        // 멤버 이름이 같은 자유 함수(`Engine/HostServiceSet.h`)를 가린다 — 네임스페이스를 적어 부른다.
-        if ( sw::startHostServices( _hostServices, listService, start, stop ) == false )
+        if ( _hostServices.initializeAll( SubsystemHostMask::All ) == false )
         {
             SW_LOG_ERROR_ID( "HostServices.HostServicesFailedStart", "Host services failed to start: %#", _hostServices.getError().c_str() );
             return false;
         }
-        SW_LOG_INFO_ID( "HostServices.HostServicesUp", "Host services up: %#", describeHostServiceOrder( _hostServices ).c_str() );
+        SW_LOG_INFO_ID( "HostServices.HostServicesUp", "Host services up: %#", describeHostServiceOrder().c_str() );
         // 모듈 · 게임이 모두 선 지금까지 가져간 곳이 없는 `-gv_*` 는 오타다.
         warnUnknownGlobalOverrides( *pCommandLine );
         return true;
+    }
+
+    string HostLaunch::describeHostServiceOrder() const
+    {
+        string text;
+        for ( const uint32 index : _hostServices.getInitializedIndices() )
+        {
+            if ( text.empty() == false )
+                text += " > ";
+            text += _hostServices.getSubsystem( index ).getSubsystemName();
+        }
+        return text;
     }
 
     void HostLaunch::updateModuleReload()
