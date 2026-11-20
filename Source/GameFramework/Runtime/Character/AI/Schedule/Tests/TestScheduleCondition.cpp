@@ -27,10 +27,11 @@ namespace
     /** @brief 속성 글 @p pAttributes 로 조건을 읽습니다. 절은 데이터가 적는 줄임말에서 나온다. */
     sw::ScheduleCondition readCondition( const char* pAttributes )
     {
-        sw::XMLDocument       document;
-        const sw::string      text = sw::string( "<Routine id=\"test\" " ) + pAttributes + "/>";
+        sw::XMLDocument                                  document;
+        sw::StringBuilder<sw::constant::buffer::kMax512> text;
+        text.appendFormat( "<Routine id=\"test\" %#/>", pAttributes );
         sw::ScheduleCondition condition;
-        if ( document.parse( text ) )
+        if ( document.parse( text.view() ) )
             (void)condition.loadFromXML( document.getRoot(), sw::ScheduleConditionSchema{}, "test", "test" ); // 틀린 읽기는 오류 로그가 시험을 깬다
         return condition;
     }

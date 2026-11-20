@@ -34,14 +34,22 @@ namespace sw
                     const expected<GameObjectHandle> target = GameplayDebugTarget::resolveTargetArgument( *pManager, listArgument[0] );
                     if ( target.has_value() == false )
                     {
-                        outReply = "debug.target: " + string( target.error().message() ) + " " + string( target.error().detail() );
+                        StringBuilder<constant::buffer::kMax512> replyBuilder;
+                        replyBuilder.appendFormat( "debug.target: %# %#", target.error().message(), target.error().detail() );
+                        outReply = string( replyBuilder.view() );
                         return false;
                     }
                     GameplayDebugTarget::setTarget( *target );
                 }
                 const GameObject* const pTarget = pManager != nullptr ? GameplayDebugTarget::findTargetObject( *pManager ) : nullptr;
-                outReply                        = pTarget != nullptr ? "debug.target: " + string( pTarget->getName().c_str() ) + " #" + to_string( pTarget->getObjectID() )
-                                                                     : string( "debug.target: none (each section shows the first object that has its component)" );
+                if ( pTarget == nullptr )
+                {
+                    outReply = "debug.target: none (each section shows the first object that has its component)";
+                    return true;
+                }
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "debug.target: %# #%#", pTarget->getName().c_str(), pTarget->getObjectID() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };
@@ -89,11 +97,11 @@ namespace sw
             return unexpected( Error{ ErrorKind::NotFound, "no object with id", idText } );
         }
         // 이름은 고르는 입구다 — 겹치면 아무것도 고르지 않고 id 를 알린다(첫 것을 고르면 다른 오브젝트를 조용히 본다).
-        const hashed_string       name( argument );
-        GameObjectHandle          found;
-        string                    listID;
-        uint32                    matchCount = 0;
-        vector<const GameObject*> listSameBase;
+        const hashed_string                      name( argument );
+        GameObjectHandle                         found;
+        StringBuilder<constant::buffer::kMax256> listID;
+        uint32                                   matchCount = 0;
+        vector<const GameObject*>                listSameBase;
         manager.findGameObjectsByBaseName( GameObjectManager::computeBaseName( argument ), listSameBase ); // 밑 이름 색인 — 씬을 돌지 않는다
         for ( const GameObject* pObject : listSameBase )
         {
@@ -101,13 +109,13 @@ namespace sw
                 continue;
             ++matchCount;
             found = GameObjectHandle::make( pObject->getObjectID() );
-            listID += " #" + to_string( pObject->getObjectID() );
+            listID.appendFormat( " #%#", pObject->getObjectID() );
         }
         if ( matchCount == 1 )
             return found;
         if ( matchCount == 0 )
             return unexpected( Error{ ErrorKind::NotFound, "no object named", argument } );
-        return unexpected( Error{ ErrorKind::InvalidArgument, "several objects have this name, pick one by #id:", listID } );
+        return unexpected( Error{ ErrorKind::InvalidArgument, "several objects have this name, pick one by #id:", listID.view() } );
     }
 
     SW_DEV_COMMAND( DebugTarget, "debug.target", "debug.target [object|#id|clear]",

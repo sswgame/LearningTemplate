@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -209,38 +210,41 @@ namespace sw
             writer.addLine( "skills", "no tree" );
             return;
         }
-        writer.addLine( string( "tree " ) + _pTree->_id.c_str(), "points " + to_string( _points ) + ", spent " + to_string( getSpentPoints() ) + ", level " + to_string( characterLevel ) );
+        fixed_string<constant::buffer::kMax128> treeLabel;
+        formatstring( treeLabel.data(), treeLabel.capacity(), "tree %#", _pTree->_id.c_str() );
+        writer.addLineFormat( treeLabel.view(), "points %#, spent %#, level %#", _points, getSpentPoints(), characterLevel );
         uint32 written = 1;
         for ( size_t index = 0; index < _pTree->_listSkill.size(); ++index )
         {
             if ( written >= maxLines )
             {
-                writer.addLine( "...", to_string( static_cast<uint64>( _pTree->_listSkill.size() - index ) ) + " more" );
+                writer.addLineFormat( "...", "%# more", static_cast<uint64>( _pTree->_listSkill.size() - index ) );
                 return;
             }
-            const SkillDef&   skill  = _pTree->_listSkill[index];
-            const SkillResult result = evaluateRankUp( skill._id, characterLevel );
-            string            value  = to_string( _listRank[index] ) + "/" + to_string( skill._maxRank ) + " next: " + getEnumName( result );
+            const SkillDef&                          skill  = _pTree->_listSkill[index];
+            const SkillResult                        result = evaluateRankUp( skill._id, characterLevel );
+            StringBuilder<constant::buffer::kMax256> value;
+            value.appendFormat( "%#/%# next: %#", _listRank[index], skill._maxRank, getEnumName( result ) );
             switch ( result )
             {
                 case SkillResult::LevelTooLow:
-                    value += " (needs level " + to_string( skill._requiredLevel ) + ")";
+                    value.appendFormat( " (needs level %#)", skill._requiredLevel );
                     break;
                 case SkillResult::TierLocked:
-                    value += " (spent " + to_string( getSpentPoints() ) + "/" + to_string( skill._requiredSpent ) + ")";
+                    value.appendFormat( " (spent %#/%#)", getSpentPoints(), skill._requiredSpent );
                     break;
                 case SkillResult::RequirementMissing:
                     for ( const SkillRequirement& requirement : skill._listRequirement )
                     {
                         if ( getRank( requirement._skillID ) < requirement._rank )
-                            value += string( " (needs " ) + requirement._skillID.c_str() + ":" + to_string( requirement._rank ) + ")";
+                            value.appendFormat( " (needs %#:%#)", requirement._skillID.c_str(), requirement._rank );
                     }
                     break;
                 case SkillResult::GroupTaken:
-                    value += string( " (group " ) + skill._group.c_str() + ")";
+                    value.appendFormat( " (group %#)", skill._group.c_str() );
                     break;
                 case SkillResult::NotEnoughPoints:
-                    value += " (points " + to_string( _points ) + "/" + to_string( skill._cost ) + ")";
+                    value.appendFormat( " (points %#/%#)", _points, skill._cost );
                     break;
                 case SkillResult::Ok:
                 case SkillResult::UnknownSkill:
@@ -248,7 +252,7 @@ namespace sw
                 case SkillResult::RequiredByOther:
                     break;
             }
-            writer.addLine( skill._id.c_str(), value );
+            writer.addLine( skill._id.c_str(), value.view() );
             ++written;
         }
     }

@@ -13,6 +13,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/CharacterController2DComponent.h"
@@ -28,15 +29,22 @@ namespace sw
     {
         struct PhysicsDebugSectionsInternal
         {
-            static string formatVector( const float3& value )
-            {
-                return "(" + to_string( value._x ) + ", " + to_string( value._y ) + ", " + to_string( value._z ) + ")";
-            }
+            using LineText = StringBuilder<constant::buffer::kMax256>;
 
-            static string formatObject( const GameObjectManager& manager, uint64 objectID )
+            static void appendVector( LineText& inoutText, const float3& value ) { inoutText.appendFormat( "(%#, %#, %#)", value._x, value._y, value._z ); }
+
+            static void appendObject( LineText& inoutText, const GameObjectManager& manager, uint64 objectID )
             {
                 const GameObject* pObject = objectID != 0 ? manager.findGameObjectByID( objectID ) : nullptr;
-                return pObject != nullptr ? string( pObject->getName().c_str() ) : "#" + to_string( objectID );
+                if ( pObject != nullptr )
+                    inoutText.append( pObject->getName().c_str() );
+                else
+                    inoutText.appendFormat( "#%#", objectID );
+            }
+
+            static void addVectorLine( DebugHUDSectionWriter& writer, string_view label, const float3& value )
+            {
+                writer.addLineFormat( label, "(%#, %#, %#)", value._x, value._y, value._z );
             }
 
             /** @brief `contacts` — 대상(`debug.target`)이 낀 최근 시작 · 끝, 대상을 정하지 않았으면 전부. */
@@ -60,9 +68,21 @@ namespace sw
                         continue;
                     if ( ++lineCount > GameplayDebugTarget::kMaxLines )
                         break;
-                    string value = string( getEnumName( it->_phase ) ) + " " + formatObject( *pManager, it->_objectA ) + " <-> " + formatObject( *pManager, it->_objectB );
-                    value += it->_bOverlap == SW_TRUE ? string( " overlap" ) : " impulse " + to_string( it->_impulse ) + " n " + formatVector( it->_normal );
-                    writer.addLine( "step " + to_string( it->_stepIndex ) + ( it->_bIs2D == SW_TRUE ? " 2D" : "" ), value );
+                    LineText value;
+                    value.appendFormat( "%# ", getEnumName( it->_phase ) );
+                    appendObject( value, *pManager, it->_objectA );
+                    value.append( " <-> " );
+                    appendObject( value, *pManager, it->_objectB );
+                    if ( it->_bOverlap == SW_TRUE )
+                        value.append( " overlap" );
+                    else
+                    {
+                        value.appendFormat( " impulse %# n ", it->_impulse );
+                        appendVector( value, it->_normal );
+                    }
+                    fixed_string<constant::buffer::kMax64> label;
+                    formatstring( label.data(), label.capacity(), "step %#%#", it->_stepIndex, it->_bIs2D == SW_TRUE ? " 2D" : "" );
+                    writer.addLine( label.view(), value.view() );
                 }
                 if ( lineCount == 0 )
                     writer.addLine( "contacts", "no begin/end in the recent log" );
@@ -74,25 +94,27 @@ namespace sw
                 const NavMeshAgentComponent* pAgent = object.getComponent<NavMeshAgentComponent>();
                 if ( pAgent == nullptr )
                     return;
-                writer.addLine( "nav status", string( getEnumName( pAgent->getMoveStatus() ) ) + ( pAgent->isOnNavMesh() ? "" : " (off navmesh)" ) +
-                                                  ( pAgent->isOnOffMeshLink() ? " (on link)" : "" ) );
-                writer.addLine( "nav desired", formatVector( pAgent->getDesiredVelocity() ) );
-                writer.addLine( "nav avoided", formatVector( pAgent->getVelocity() ) );
-                writer.addLine( "nav corner", formatVector( pAgent->getNextCorner() ) );
+                writer.addLineFormat( "nav status", "%#%#%#", getEnumName( pAgent->getMoveStatus() ), pAgent->isOnNavMesh() ? "" : " (off navmesh)", pAgent->isOnOffMeshLink() ? " (on link)" : "" );
+                addVectorLine( writer, "nav desired", pAgent->getDesiredVelocity() );
+                addVectorLine( writer, "nav avoided", pAgent->getVelocity() );
+                addVectorLine( writer, "nav corner", pAgent->getNextCorner() );
             }
 
             static void writeController3D( DebugHUDSectionWriter& writer, const CharacterControllerComponent& controller )
             {
                 const PhysicsCharacterState3D& state = controller.getCharacterState();
-                writer.addLine( "request", formatVector( controller.getRequestedMoveVelocity() ) );
+                addVectorLine( writer, "request", controller.getRequestedMoveVelocity() );
                 if ( controller.getOwner() != nullptr )
                     writeNavAgent( writer, *controller.getOwner() );
-                writer.addLine( "actual", formatVector( state._velocity ) );
+                addVectorLine( writer, "actual", state._velocity );
                 const float32 slope = MathUtil::toDegree( MathUtil::acos( MathUtil::clamp( state._groundNormal._y, -1.0f, 1.0f ) ) );
-                writer.addLine( "grounded", state._bGrounded ? "yes slope " + to_string( slope ) + " / max " + to_string( MathUtil::toDegree( controller.getMaxSlopeAngle() ) ) : string( "no (air)" ) );
-                writer.addLine( "ground normal", formatVector( state._groundNormal ) );
-                writer.addLine( "carried", formatVector( state._carriedVelocity ) + " yaw rate " + to_string( state._groundYawRate ) );
-                writer.addLine( "capsule", "r " + to_string( controller.getRadius() ) + " half " + to_string( controller.getHalfHeight() ) + " step " + to_string( controller.getStepHeight() ) );
+                if ( state._bGrounded )
+                    writer.addLineFormat( "grounded", "yes slope %# / max %#", slope, MathUtil::toDegree( controller.getMaxSlopeAngle() ) );
+                else
+                    writer.addLine( "grounded", "no (air)" );
+                addVectorLine( writer, "ground normal", state._groundNormal );
+                writer.addLineFormat( "carried", "(%#, %#, %#) yaw rate %#", state._carriedVelocity._x, state._carriedVelocity._y, state._carriedVelocity._z, state._groundYawRate );
+                writer.addLineFormat( "capsule", "r %# half %# step %#", controller.getRadius(), controller.getHalfHeight(), controller.getStepHeight() );
                 vector<CharacterControllerComponent::StepRecord> listRecord;
                 controller.collectStepHistory( listRecord );
                 if ( listRecord.empty() )
@@ -103,8 +125,15 @@ namespace sw
                 int32 age = 0;
                 for ( auto it = listRecord.rbegin(); it != listRecord.rend(); ++it, --age )
                 {
-                    writer.addLine( "step " + to_string( age ), "in " + formatVector( it->_stepVelocity ) + " out " + formatVector( it->_result._velocity ) +
-                                                                    ( it->_result._bGrounded ? " grounded" : " air" ) );
+                    LineText value;
+                    value.append( "in " );
+                    appendVector( value, it->_stepVelocity );
+                    value.append( " out " );
+                    appendVector( value, it->_result._velocity );
+                    value.append( it->_result._bGrounded ? " grounded" : " air" );
+                    fixed_string<constant::buffer::kMax32> label;
+                    formatstring( label.data(), label.capacity(), "step %#", age );
+                    writer.addLine( label.view(), value.view() );
                 }
             }
 
@@ -112,9 +141,9 @@ namespace sw
             {
                 const PhysicsCharacterState2D& state = controller.getCharacterState();
                 writer.addLine( "request", to_string( controller.getRequestedMoveVelocity() ) );
-                writer.addLine( "actual", "(" + to_string( state._velocity._x ) + ", " + to_string( state._velocity._y ) + ")" );
+                writer.addLineFormat( "actual", "(%#, %#)", state._velocity._x, state._velocity._y );
                 writer.addLine( "grounded", state._bGrounded ? string( "yes" ) : string( "no (air)" ) );
-                writer.addLine( "ground normal", "(" + to_string( state._groundNormal._x ) + ", " + to_string( state._groundNormal._y ) + ")" );
+                writer.addLineFormat( "ground normal", "(%#, %#)", state._groundNormal._x, state._groundNormal._y );
                 writer.addLine( "max slope", to_string( MathUtil::toDegree( controller.getMaxSlopeAngle() ) ) );
             }
 
@@ -129,13 +158,19 @@ namespace sw
                 }
                 if ( const CharacterControllerComponent* pController = GameplayDebugTarget::findTargetComponent<CharacterControllerComponent>( writer.getSceneIterationKey(), *pManager ) )
                 {
-                    writer.addLine( "target", pController->getOwner() != nullptr ? string( pController->getOwner()->getName().c_str() ) + " (3D)" : string( "? (3D)" ) );
+                    if ( pController->getOwner() != nullptr )
+                        writer.addLineFormat( "target", "%# (3D)", pController->getOwner()->getName().c_str() );
+                    else
+                        writer.addLine( "target", "? (3D)" );
                     writeController3D( writer, *pController );
                     return;
                 }
                 if ( const CharacterController2DComponent* pController = GameplayDebugTarget::findTargetComponent<CharacterController2DComponent>( writer.getSceneIterationKey(), *pManager ) )
                 {
-                    writer.addLine( "target", pController->getOwner() != nullptr ? string( pController->getOwner()->getName().c_str() ) + " (2D)" : string( "? (2D)" ) );
+                    if ( pController->getOwner() != nullptr )
+                        writer.addLineFormat( "target", "%# (2D)", pController->getOwner()->getName().c_str() );
+                    else
+                        writer.addLine( "target", "? (2D)" );
                     writeController2D( writer, *pController );
                     return;
                 }

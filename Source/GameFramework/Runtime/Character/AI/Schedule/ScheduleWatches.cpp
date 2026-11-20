@@ -33,7 +33,14 @@ namespace sw
                     return true;
                 }
             }
-            outValue.setText( listSystem.empty() ? string( "no schedule system is running" ) : "no schedule NPC '" + string( npcID ) + "'" );
+            if ( listSystem.empty() )
+            {
+                outValue.setText( "no schedule system is running" );
+                return false;
+            }
+            fixed_string<constant::buffer::kMax128> text;
+            formatstring( text.data(), text.capacity(), "no schedule NPC '%#'", npcID );
+            outValue.setText( text.view() );
             return false;
         }
 
@@ -87,7 +94,9 @@ namespace sw
             const SchedulePlaceDef* pPlace = pSystem->getCatalog() != nullptr ? pSystem->getCatalog()->findPlace( hashed_string( query._key ) ) : nullptr;
             if ( pPlace == nullptr )
             {
-                outValue.setText( "no schedule place '" + string( query._key ) + "'" );
+                fixed_string<constant::buffer::kMax128> text;
+                formatstring( text.data(), text.capacity(), "no schedule place '%#'", query._key );
+                outValue.setText( text.view() );
                 return false;
             }
             outValue.setNumber( static_cast<float64>( float3::getHorizontalDistance( pSystem->getNPCView( npcIndex )._location._position, pPlace->_position ) ) );

@@ -33,19 +33,29 @@ namespace
 
         static string makeFlatRide( const utf8* pID, const utf8* pName, const utf8* pX, const utf8* pEntranceZ, const utf8* pCost )
         {
-            return string( "<FlatRide id=\"" ) + pID + "\" name=\"" + pName + "\" excitement=\"2\" intensity=\"1\" nausea=\"1\" cycleTime=\"40\" capacity=\"16\" price=\"3\" runningCost=\"3\" cost=\"" + pCost +
-                   "\" x=\"" + pX + "\" z=\"0\" entranceX=\"" + pX + "\" entranceZ=\"" + pEntranceZ + "\" shape=\"Cylinder\" sizeX=\"6\" sizeY=\"2\" sizeZ=\"6\" color=\"1,1,1,1\"/>";
+            StringBuilder<constant::buffer::kMax512> text;
+            text.appendFormat( "<FlatRide id=\"%#\" name=\"%#\" excitement=\"2\" intensity=\"1\" nausea=\"1\" cycleTime=\"40\" capacity=\"16\" price=\"3\" runningCost=\"3\" cost=\"%#\" "
+                               "x=\"%#\" z=\"0\" entranceX=\"%#\" entranceZ=\"%#\" shape=\"Cylinder\" sizeX=\"6\" sizeY=\"2\" sizeZ=\"6\" color=\"1,1,1,1\"/>",
+                               pID, pName, pCost, pX, pX, pEntranceZ );
+            return string( text.view() );
         }
 
-        static string makeLayout( const string& body )
+        static string makeLayout( std::initializer_list<string_view> listBody )
         {
-            return string( "<ParkLayout gateX=\"20\" gateZ=\"-40\" startingCash=\"14000\" entryFee=\"5\">" ) + kParkRules + body + "</ParkLayout>";
+            StringBuilder<constant::buffer::kMax8192> text;
+            text.appendFormat( "<ParkLayout gateX=\"20\" gateZ=\"-40\" startingCash=\"14000\" entryFee=\"5\">%#", kParkRules );
+            for ( const string_view body : listBody )
+            {
+                text.append( body );
+            }
+            text.append( "</ParkLayout>" );
+            return string( text.view() );
         }
 
         /** @brief 평지 둘(서로 먼 자리, 입구는 영역 밖)과 코스터 하나입니다. */
         static string makeCleanLayout()
         {
-            return makeLayout( makeFlatRide( "cups", "Spinning Cups", "45", "-10", "2000" ) + makeFlatRide( "carousel", "Merry-Go-Round", "-10", "-10", "1500" ) + kCoaster );
+            return makeLayout( { makeFlatRide( "cups", "Spinning Cups", "45", "-10", "2000" ), makeFlatRide( "carousel", "Merry-Go-Round", "-10", "-10", "1500" ), kCoaster } );
         }
 
         [[nodiscard]] static bool apply( ParkLayoutViewModel& model, const string& layoutText, const utf8* pCoasters = kCoasters, bool bForce = false )
@@ -113,7 +123,7 @@ SW_TEST_CASE( ParkLayoutViewModelTest, BrokenFileIsReadOnceAndRecoversWhenFixed 
     SW_EXPECT_LOG( "ParkLayout.CoasterLayoutNotCoaster" );
     SW_EXPECT_LOG( "ParkLayoutViewModel.DidNotLoadThrough" );
     ParkLayoutViewModel model;
-    const string        broken = Util::makeLayout( R"(<Coaster layout="nope" x="0" z="0" color="1,1,1,1" capacity="16" loadTime="15" cost="4000"/>)" );
+    const string        broken = Util::makeLayout( { R"(<Coaster layout="nope" x="0" z="0" color="1,1,1,1" capacity="16" loadTime="15" cost="4000"/>)" } );
     SW_EXPECT_TRUE( Util::apply( model, broken ) );
     SW_EXPECT_TRUE( model.getState() == ParkLayoutState::Failed );
     SW_EXPECT_TRUE( model.getRides().empty() );
@@ -176,7 +186,7 @@ SW_TEST_CASE( ParkLayoutViewModelTest, FocusHoldsTheWholeRide )
 SW_TEST_CASE( ParkLayoutViewModelTest, CheckFindsOverlapsOnBothRides )
 {
     ParkLayoutViewModel model;
-    (void)Util::apply( model, Util::makeLayout( Util::makeFlatRide( "a", "A", "0", "-10", "1" ) + Util::makeFlatRide( "b", "B", "5", "-10", "1" ) + Util::makeFlatRide( "c", "C", "50", "-10", "1" ) ) );
+    (void)Util::apply( model, Util::makeLayout( { Util::makeFlatRide( "a", "A", "0", "-10", "1" ), Util::makeFlatRide( "b", "B", "5", "-10", "1" ), Util::makeFlatRide( "c", "C", "50", "-10", "1" ) } ) );
     SW_REQUIRE_EQUAL( size_t{ 3 }, model.getRides().size() );
     SW_REQUIRE_EQUAL( size_t{ 1 }, model.getRides()[0]._listIssue.size() );
     SW_EXPECT_TRUE( model.getRides()[0]._listIssue[0]._kind == ParkRideIssueKind::Overlap );
@@ -190,7 +200,7 @@ SW_TEST_CASE( ParkLayoutViewModelTest, CheckFindsOverlapsOnBothRides )
 SW_TEST_CASE( ParkLayoutViewModelTest, CheckFindsEntranceInsideAndDuplicateID )
 {
     ParkLayoutViewModel model;
-    (void)Util::apply( model, Util::makeLayout( Util::makeFlatRide( "a", "A", "0", "1", "1" ) + Util::makeFlatRide( "b", "B", "50", "-10", "1" ) + Util::makeFlatRide( "b", "B2", "100", "-10", "1" ) ) );
+    (void)Util::apply( model, Util::makeLayout( { Util::makeFlatRide( "a", "A", "0", "1", "1" ), Util::makeFlatRide( "b", "B", "50", "-10", "1" ), Util::makeFlatRide( "b", "B2", "100", "-10", "1" ) } ) );
     SW_REQUIRE_EQUAL( size_t{ 3 }, model.getRides().size() );
     SW_REQUIRE_EQUAL( size_t{ 1 }, model.getRides()[0]._listIssue.size() );
     SW_EXPECT_TRUE( model.getRides()[0]._listIssue[0]._kind == ParkRideIssueKind::EntranceInsideFootprint );
@@ -245,10 +255,10 @@ SW_TEST_CASE( ParkLayoutViewModelTest, SelectionSurvivesAReloadAndFollowsTheRide
     SW_EXPECT_EQUAL( 1u, model.getSelectedRide() );
 
     // 앞 놀이기구가 사라져 번호가 당겨져도 같은 놀이기구를 가리킨다.
-    SW_EXPECT_TRUE( Util::apply( model, Util::makeLayout( Util::makeFlatRide( "carousel", "Merry-Go-Round", "-10", "-10", "1500" ) ) ) );
+    SW_EXPECT_TRUE( Util::apply( model, Util::makeLayout( { Util::makeFlatRide( "carousel", "Merry-Go-Round", "-10", "-10", "1500" ) } ) ) );
     SW_EXPECT_EQUAL( 0u, model.getSelectedRide() );
 
-    SW_EXPECT_TRUE( Util::apply( model, Util::makeLayout( Util::makeFlatRide( "cups", "Spinning Cups", "45", "-10", "2000" ) ) ) );
+    SW_EXPECT_TRUE( Util::apply( model, Util::makeLayout( { Util::makeFlatRide( "cups", "Spinning Cups", "45", "-10", "2000" ) } ) ) );
     SW_EXPECT_EQUAL( ParkLayoutViewModel::kNoRide, model.getSelectedRide() );
 }
 
@@ -265,7 +275,7 @@ SW_TEST_CASE( ParkLayoutViewModelTest, NearestRideIgnoresHeight )
 SW_TEST_CASE( ParkLayoutViewModelTest, SegmentsUseTheSelectedColorAndMarkEntrancesAndGate )
 {
     ParkLayoutViewModel model;
-    (void)Util::apply( model, Util::makeLayout( Util::makeFlatRide( "a", "A", "0", "-10", "1" ) ) );
+    (void)Util::apply( model, Util::makeLayout( { Util::makeFlatRide( "a", "A", "0", "-10", "1" ) } ) );
     ParkLayoutColors colors{};
     colors._gate     = float4{ 0.0f, 1.0f, 0.0f, 1.0f };
     colors._selected = float4{ 1.0f, 0.0f, 0.0f, 1.0f };

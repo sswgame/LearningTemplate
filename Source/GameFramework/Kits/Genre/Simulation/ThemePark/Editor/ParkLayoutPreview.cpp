@@ -64,11 +64,12 @@ namespace sw::editor
         } );
         if ( paths.has_value() == false )
         {
-            const string error = string( paths.error().message() ) + " (" + string( paths.error().detail() ) + ")";
+            StringBuilder<constant::buffer::kMax512> error;
+            error.appendFormat( "%# (%#)", paths.error().message(), paths.error().detail() );
             if ( _bWarned == false )
                 SW_LOG_ERROR_ID( "ParkLayoutPreview.ParkLayoutPreviewNo", "The park layout preview has no path in pack '%#': %#", packRoot.c_str(), error.c_str() );
             _bWarned    = SW_TRUE;
-            _layoutPath = error;
+            _layoutPath = string( error.view() );
             _model.setFailed();
             return false;
         }

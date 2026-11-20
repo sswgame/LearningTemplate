@@ -30,8 +30,10 @@ SW_TEST_CASE( BehaviorTreeEditModelTest, VariantSavesOnlyItsDifference )
 </BehaviorTree>)XML" ) );
     const string baseID = test::ScopedScratchDomain::makeID( "base.bt.xml" ).str();
 
-    BehaviorTreeEditModel model;
-    const expected<void>  parsed = model.parse( "<BehaviorTree _base=\"" + baseID + "\"><Selector id=\"root\" name=\"Guard\"/></BehaviorTree>" );
+    BehaviorTreeEditModel                    model;
+    StringBuilder<constant::buffer::kMax512> treeText;
+    treeText.appendFormat( "<BehaviorTree _base=\"%#\"><Selector id=\"root\" name=\"Guard\"/></BehaviorTree>", baseID );
+    const expected<void> parsed = model.parse( treeText.view() );
     SW_REQUIRE_TRUE_MSG( parsed.has_value(), parsed.has_value() ? "" : parsed.error().message().data() ); // 문장은 리터럴이라 널로 끝난다
     SW_EXPECT_EQUAL( baseID, model.getBaseID() );
 

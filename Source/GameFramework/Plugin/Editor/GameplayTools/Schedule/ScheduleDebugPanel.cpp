@@ -103,7 +103,7 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( npcIndex ) );
             if ( ImGui::Selectable( npcID.c_str(), bSelected ) )
                 _model.selectNPC( npcID );
-            EditorSelfTestMarks::record( ( string( "schedule.npc." ) + npcID ).c_str() ); // 자동화가 NPC 를 고를 자리
+            EditorSelfTestMarks::recordFormat( "schedule.npc.%#", npcID ); // 자동화가 NPC 를 고를 자리
             ImGui::PopID();
         }
     }

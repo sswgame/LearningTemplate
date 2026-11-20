@@ -40,7 +40,9 @@ namespace sw::editor
         string text;
         if ( FileUtil::readTextFile( diskPath, text ) == false )
         {
-            _error = string( diskPath ) + ": cannot read the file";
+            StringBuilder<constant::buffer::kMax512> error;
+            error.appendFormat( "%#: cannot read the file", diskPath );
+            _error = string( error.view() );
             close();
             return false;
         }
@@ -53,7 +55,9 @@ namespace sw::editor
             return false;
         if ( FileUtil::writeTextFile( _diskPath, _text ) == false )
         {
-            _error = _diskPath + ": cannot write the file";
+            StringBuilder<constant::buffer::kMax512> error;
+            error.appendFormat( "%#: cannot write the file", _diskPath );
+            _error = string( error.view() );
             return false;
         }
         _state.markSaved( _text );
@@ -178,15 +182,12 @@ namespace sw::editor
 
     string BodyDataEditModel::makeCoalesceKey( vector_reference<const BodyDataElementKey> path, const utf8* pAttribute )
     {
-        string key;
+        StringBuilder<constant::buffer::kMax256> key;
         for ( const BodyDataElementKey& part : path )
         {
-            key += part._element;
-            key += "[";
-            key += part._keyValue;
-            key += "]/";
+            key.appendFormat( "%#[%#]/", part._element, part._keyValue );
         }
-        key += pAttribute;
-        return key;
+        key.append( pAttribute );
+        return string( key.view() );
     }
 } // namespace sw::editor

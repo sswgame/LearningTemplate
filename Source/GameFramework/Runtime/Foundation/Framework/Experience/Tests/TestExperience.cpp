@@ -179,9 +179,10 @@ SW_TEST_CASE( ExperienceTest, ValidatesGameModeType )
     SW_EXPECT_LOG( "ExperienceDefinition.GameModeNotGameMode" );
     for ( const utf8* pType : { "NoSuchGameModeType", "GameModeComponent", "ExperienceDefinition" } ) // 없음 · 추상 · 게임 모드 아님
     {
-        ExperienceDefinition definition;
-        const string         xml = string( R"(<Experience name="x" map="testproject/experience/minigame.scene.xml" entry="SceneSwitch"><GameMode type=")" ) + pType + R"("/></Experience>)";
-        SW_REQUIRE_TRUE( ExperienceDefinition::loadFromXMLText( xml, "x.experience.xml", definition ) );
+        ExperienceDefinition                     definition;
+        StringBuilder<constant::buffer::kMax256> xml;
+        xml.appendFormat( R"(<Experience name="x" map="testproject/experience/minigame.scene.xml" entry="SceneSwitch"><GameMode type="%#"/></Experience>)", pType );
+        SW_REQUIRE_TRUE( ExperienceDefinition::loadFromXMLText( xml.view(), "x.experience.xml", definition ) );
         SW_EXPECT_FALSE( definition.validate( kits, types, "x.experience.xml" ) );
     }
 }

@@ -79,7 +79,9 @@ namespace sw
                     continue;
                 if ( findOverride( boneOverride._bone ) != nullptr )
                 {
-                    reader.addError( "Character.BoneRepeated", child, string( "repeats bone '" ) + boneOverride._bone.c_str() + "'" );
+                    StringBuilder<constant::buffer::kMax128> message;
+                    message.appendFormat( "repeats bone '%#'", boneOverride._bone.c_str() );
+                    reader.addError( "Character.BoneRepeated", child, message.view() );
                     continue;
                 }
                 _listOverride.push_back( boneOverride );
@@ -209,7 +211,11 @@ namespace sw
                 continue;
             bValid = false;
             if ( pOutIssues != nullptr )
-                pOutIssues->add( "Character.OverrideBoneUnknown", string( "reference pose overrides unknown bone '" ) + boneOverride._bone.c_str() + "'" );
+            {
+                StringBuilder<constant::buffer::kMax128> message;
+                message.appendFormat( "reference pose overrides unknown bone '%#'", boneOverride._bone.c_str() );
+                pOutIssues->add( "Character.OverrideBoneUnknown", string( message.view() ) );
+            }
         }
         for ( const BoneMirrorPair& pair : _listMirrorPair )
         {
@@ -219,7 +225,11 @@ namespace sw
                 continue;
             bValid = false;
             if ( pOutIssues != nullptr )
-                pOutIssues->add( "Character.MirrorPairBoneUnknown", string( "mirror pair names unknown bone '" ) + ( bLeftKnown ? pair._right.c_str() : pair._left.c_str() ) + "'" );
+            {
+                StringBuilder<constant::buffer::kMax128> message;
+                message.appendFormat( "mirror pair names unknown bone '%#'", bLeftKnown ? pair._right.c_str() : pair._left.c_str() );
+                pOutIssues->add( "Character.MirrorPairBoneUnknown", string( message.view() ) );
+            }
         }
         return bValid;
     }

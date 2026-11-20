@@ -72,12 +72,12 @@ namespace sw::editor
                         row._section  = section._name;
                         row._alias    = section._alias;
                         row._bDyeable = section._bDyeable ? SW_TRUE : SW_FALSE;
+                        StringBuilder<constant::buffer::kMax256> groups;
                         for ( const hashed_string& group : section._listGroup )
                         {
-                            if ( row._groups.empty() == false )
-                                row._groups += ", ";
-                            row._groups += group.c_str();
+                            groups.appendFormat( "%#%#", groups.size() == 0 ? "" : ", ", group.c_str() );
                         }
+                        row._groups = string( groups.view() );
                         for ( const ResolvedMaterialValue& value : resolved._listMaterialValue )
                         {
                             const bool bThisSection = value._owner == part._owner && value._section == section._name && value._target == ResolvedMaterialTarget::DyeChannel;
@@ -105,7 +105,9 @@ namespace sw::editor
                             BodyCustomizationViewState::DriveRow row;
                             row._parameter = param._name;
                             row._drive     = drive;
-                            row._label     = string( param._name.c_str() ) + " / " + def._target.c_str();
+                            StringBuilder<constant::buffer::kMax128> label;
+                            label.appendFormat( "%# / %#", param._name.c_str(), def._target.c_str() );
+                            row._label = string( label.view() );
                             outState._listDrive.push_back( std::move( row ) );
                         }
                     }
@@ -331,16 +333,14 @@ namespace sw::editor
     {
         if ( listPoint.size() < 2 )
             return false; // 경로는 점 둘 이상이다(읽기가 거절한다)
-        string text;
+        StringBuilder<constant::buffer::kMax1024> text;
         for ( const float2& point : listPoint )
         {
-            if ( text.empty() == false )
-                text += "; ";
-            text += BodyCustomizationViewModelInternal::formatFloat( point._x ) + " " + BodyCustomizationViewModelInternal::formatFloat( point._y );
+            text.appendFormat( "%#%# %#", text.size() == 0 ? "" : "; ", point._x, point._y );
         }
         vector<BodyDataElementKey> path = BodyCustomizationViewModelInternal::makeProfilePath( profile );
         path.push_back( BodyDataElementKey{ "Fluid", "name", string( fluid.c_str() ) } );
-        return profiles.setAttribute( path, "path", text, bContinuous );
+        return profiles.setAttribute( path, "path", text.view(), bContinuous );
     }
 
     bool BodyCustomizationViewModel::setFluidValue( BodyDataEditModel& profiles, const hashed_string& profile, const hashed_string& fluid, const utf8* pAttribute, float32 value, bool bContinuous )
